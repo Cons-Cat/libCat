@@ -1,4 +1,5 @@
 // -*- mode: c++;-*-
+#pragma once
 
 namespace std {
 

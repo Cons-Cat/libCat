@@ -1,30 +1,11 @@
 // -*- mode: c++;-*-
+#pragma once
+
 #include "unistd.h"
 
-/* +---+--------------------+
- * | r |    Register(s)     |
- * +---+--------------------+
- * | a |   %eax, %ax, %al   |
- * | b |   %ebx, %bx, %bl   |
- * | c |   %ecx, %cx, %cl   |
- * | d |   %edx, %dx, %dl   |
- * | S |   %esi, %si        |
- * | D |   %edi, %di        |
- * +---+--------------------+ */
-
-/* Syscall calling convention
- * Param 	Register
- * 1st   	%rdi
- * 2nd  	%rsi
- * 3rd  	%rdx
- * 4th  	%rcx
- * 5th  	%r8
- * 6th  	%r9
- *
- * syscall number is %rax */
-
-void _start() {  // NOLINT
-    asm(R"(
+// -O0 is required, because this technically is never called.
+void __attribute__((optimize("O0"))) _start() {  // NOLINT
+    asm volatile(R"(
 # Define _start in symbol table:
 .global _start
 _start:
@@ -34,28 +15,32 @@ pop %rdi # Set argc
 movq %rsi,%rsp # Set argv
 call main
 movq %rdi,%rax # Get the return value of main().
-movq $60,%rax # Mov 60 into rax for "exit" syscall.
+movq $60,%rax # Mov 60 into rax for _EXIT(2) syscall.
 syscall)"
-        // : No outputs.
-        // : No inputs.
-        // : No clobbers.
+                 // : No outputs.
+                 // : No inputs.
+                 // : No clobbers.
     );
 }
 
 // TODO: Is a variadic syscall possible?
 
-auto write(int file_descriptor, char const* p_string_buffer,
-           size_t string_length) -> ssize_t {
+// -O0 is required because this might be inlined on -O1.
+auto __attribute__((optimize("O0")))  // NOLINT
+write(int file_descriptor, char const* p_string_buffer, size_t string_length)
+    -> ssize_t {
     ssize_t rax;
-    asm(R"(syscall)"
-        // Return write-only rax value.
-        : "=a"(rax)
-        // D is %edi, which is for string operations.
-        // S is for %rsi, which is the first argument in a syscall.
-        // d is for %rdx, which is the second argument in a syscall.
-        : "0"(1), "D"(file_descriptor), "S"(p_string_buffer), "d"(string_length)
-        // MUTABLE CLOBBERS
-        : "rcx", "r11", "memory");
+    // This does not work without volatile.
+    asm volatile(R"(syscall)"
+                 // Return write-only rax value.
+                 : "=a"(rax)
+                 // D is %edi, which is for string operations.
+                 // S is for %rsi, which is the first argument in a syscall.
+                 // d is for %rdx, which is the second argument in a syscall.
+                 : "0"(1), "D"(file_descriptor), "S"(p_string_buffer),
+                   "d"(string_length)
+                 // MUTABLE CLOBBERS
+                 : "rcx", "r11", "memory");
     return rax;
 }
 
