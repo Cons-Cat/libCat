@@ -1,0 +1,141 @@
+# I am using clang-format 12.0, so some features are unavailable.
+---
+Language:        Cpp
+IndentWidth:     4
+# ConstStyle: Right
+# IndentAccessModifiers: false
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: None
+AlignConsecutiveBitFields: AcrossEmptyLinesAndComments
+AlignConsecutiveDeclarations: None
+AlignEscapedNewlines: Left
+AlignOperands:   Align
+AlignTrailingComments: true
+AllowAllArgumentsOnNextLine: true
+AllowAllConstructorInitializersOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+AllowShortEnumsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortLambdasOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakBeforeMultilineStrings: true
+AlwaysBreakTemplateDeclarations: Yes
+BinPackArguments: true
+BinPackParameters: true
+BraceWrapping:
+  AfterCaseLabel:  false
+  AfterClass:      false
+  AfterControlStatement: Never
+  AfterEnum:       false
+  AfterFunction:   false
+  AfterNamespace:  false
+  AfterObjCDeclaration: false
+  AfterStruct:     false
+  AfterUnion:      false
+  AfterExternBlock: false
+  BeforeCatch:     false
+  BeforeElse:      false
+  BeforeLambdaBody: false
+  BeforeWhile:     false
+  IndentBraces:    false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+BreakBeforeBinaryOperators: None
+BreakBeforeConceptDeclarations: true
+BreakBeforeBraces: Attach
+BreakBeforeInheritanceComma: false
+BreakInheritanceList: BeforeColon
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializersBeforeComma: false
+BreakConstructorInitializers: BeforeColon
+BreakAfterJavaFieldAnnotations: false
+BreakStringLiterals: true
+ColumnLimit:     80
+CompactNamespaces: false
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+Cpp11BracedListStyle: true
+DeriveLineEnding: false
+DerivePointerAlignment: false
+EmptyLineBeforeAccessModifier: LogicalBlock
+ExperimentalAutoDetectBinPacking: false
+FixNamespaceComments: true
+IncludeBlocks:   Regroup
+IncludeCategories:
+  - Regex:           '^<ext/.*\.hpp>'
+    Priority:        2
+    SortPriority:    0
+    CaseSensitive:   true
+  - Regex:           '^<.*\.hpp>'
+    Priority:        1
+    SortPriority:    0
+    CaseSensitive:   true
+  - Regex:           '^<.*\.tpp>'
+    Priority:        1
+    SortPriority:    0
+    CaseSensitive:   true
+  - Regex:           '^<.*'
+    Priority:        2
+    SortPriority:    0
+    CaseSensitive:   true
+  - Regex:           '.*'
+    Priority:        3
+    SortPriority:    0
+    CaseSensitive:   true
+IndentCaseLabels: true
+IndentCaseBlocks: false
+IndentGotoLabels: false
+#PPIndentWidth: 0
+IndentPPDirectives: None
+IndentExternBlock: AfterExternBlock
+IndentRequires:  false
+IndentWrappedFunctionNames: false
+InsertTrailingCommas: None
+JavaScriptQuotes: Leave
+JavaScriptWrapImports: true
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+NamespaceIndentation: None
+PenaltyBreakAssignment: 2
+PenaltyBreakBeforeFirstCallParameter: 1
+PenaltyBreakComment: 300
+PenaltyBreakFirstLessLess: 120
+PenaltyBreakString: 1000
+PenaltyBreakTemplateDeclaration: 10
+PenaltyExcessCharacter: 1000000
+PenaltyReturnTypeOnItsOwnLine: 200
+PenaltyIndentedWhitespace: 0
+PointerAlignment: Left
+ReflowComments:  true
+SortIncludes:    true
+SortUsingDeclarations: true
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: true
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpaceAroundPointerQualifiers: Default
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceInEmptyBlock: false
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 2
+SpacesInAngles:  false
+SpacesInConditionalStatement: false
+SpacesInContainerLiterals: true
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+SpaceBeforeSquareBrackets: false
+BitFieldColonSpacing: Both
+Standard:        Auto
+UseCRLF:         false
+UseTab:          Never
+...

@@ -1,0 +1,19 @@
+---
+Checks:          'bugprone-*,google-*,-google-readability-todo,-google-readability-braces-around-statements,readability-identifier-naming,modernize-use-trailing-return-type'
+
+CheckOptions:
+  - { key: readability-identifier-naming.VariableCase,                    value: lower_case }
+  - { key: readability-identifier-naming.MemberCase,                      value: lower_case }
+  - { key: readability-identifier-naming.StructCase,                      value: CamelCase }
+  - { key: readability-identifier-naming.ClassCase,                       value: CamelCase }
+  - { key: readability-identifier-naming.FunctionCase,                    value: lower_case }
+  - { key: readability-identifier-naming.NamespaceCase,                   value: lower_case }
+  - { key: readability-identifier-naming.PointerParameterPrefix,          value: p_ }
+  - { key: readability-identifier-naming.LocalPointerPrefix,              value: p_ }
+  - { key: readability-identifier-naming.LocalConstantPointerPrefix,      value: p_ }
+
+WarningsAsErrors: ''
+HeaderFilterRegex: ^src
+AnalyzeTemporaryDtors: false
+FormatStyle:     file
+...
