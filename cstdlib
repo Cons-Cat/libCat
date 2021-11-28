@@ -1,0 +1,57 @@
+// -*- mode: c++;-*-
+#include "unistd.h"
+
+/* +---+--------------------+
+ * | r |    Register(s)     |
+ * +---+--------------------+
+ * | a |   %eax, %ax, %al   |
+ * | b |   %ebx, %bx, %bl   |
+ * | c |   %ecx, %cx, %cl   |
+ * | d |   %edx, %dx, %dl   |
+ * | S |   %esi, %si        |
+ * | D |   %edi, %di        |
+ * +---+--------------------+ */
+
+/* Syscall calling convention
+ * Param 	Register
+ * 1st   	%rdi
+ * 2nd  	%rsi
+ * 3rd  	%rdx
+ * 4th  	%rcx
+ * 5th  	%r8
+ * 6th  	%r9
+ *
+ * syscall number is %rax */
+
+void _start() {  // NOLINT
+    asm(".global _start\n"
+        "_start:\n"
+        "   xorl %ebp,%ebp\n"     // mark outermost stack frame
+        "   movq 0(%rsp),%rdi\n"  // get argc
+        "   lea 8(%rsp),%rsi\n"  // the arguments are pushed just below, so argv
+                                 // = %rbp + 8
+        "   call main\n"         // call our bare_main
+        "   movq %rax,%rdi\n"  // take the main return code and use it as first
+                               // argument for...
+        "   movl $60,%eax\n"   // ... the exit syscall
+        "   syscall\n"
+        "   int3\n");  // just in case.
+}
+
+// TODO: Is a variadic syscall possible?
+
+auto write(int file_descriptor, char const* p_string_buffer,
+           size_t string_length) -> ssize_t {
+    ssize_t ret;
+    asm volatile("syscall"
+                 // OUTPUT:
+                 : "=a"(ret)
+                 // INPUT:
+                 : "0"(1), "D"(file_descriptor), "S"(p_string_buffer),
+                   "d"(string_length)
+                 // MUTABLE CLOBBERS
+                 : "rcx", "r11", "memory");
+    return ret;
+}
+
+// TODO: Overload write() with automatic string length.
