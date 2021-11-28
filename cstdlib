@@ -24,34 +24,39 @@
  * syscall number is %rax */
 
 void _start() {  // NOLINT
-    asm(".global _start\n"
-        "_start:\n"
-        "   xorl %ebp,%ebp\n"     // mark outermost stack frame
-        "   movq 0(%rsp),%rdi\n"  // get argc
-        "   lea 8(%rsp),%rsi\n"  // the arguments are pushed just below, so argv
-                                 // = %rbp + 8
-        "   call main\n"         // call our bare_main
-        "   movq %rax,%rdi\n"  // take the main return code and use it as first
-                               // argument for...
-        "   movl $60,%eax\n"   // ... the exit syscall
-        "   syscall\n"
-        "   int3\n");  // just in case.
+    asm(R"(
+# Define _start in symbol table:
+.global _start
+_start:
+
+xor %rbp,%rbp # Zero out stack pointer.
+pop %rdi # Set argc
+movq %rsi,%rsp # Set argv
+call main
+movq %rdi,%rax # Get the return value of main().
+movq $60,%rax # Mov 60 into rax for "exit" syscall.
+syscall)"
+        // : No outputs.
+        // : No inputs.
+        // : No clobbers.
+    );
 }
 
 // TODO: Is a variadic syscall possible?
 
 auto write(int file_descriptor, char const* p_string_buffer,
            size_t string_length) -> ssize_t {
-    ssize_t ret;
-    asm volatile("syscall"
-                 // OUTPUT:
-                 : "=a"(ret)
-                 // INPUT:
-                 : "0"(1), "D"(file_descriptor), "S"(p_string_buffer),
-                   "d"(string_length)
-                 // MUTABLE CLOBBERS
-                 : "rcx", "r11", "memory");
-    return ret;
+    ssize_t rax;
+    asm(R"(syscall)"
+        // Return write-only rax value.
+        : "=a"(rax)
+        // D is %edi, which is for string operations.
+        // S is for %rsi, which is the first argument in a syscall.
+        // d is for %rdx, which is the second argument in a syscall.
+        : "0"(1), "D"(file_descriptor), "S"(p_string_buffer), "d"(string_length)
+        // MUTABLE CLOBBERS
+        : "rcx", "r11", "memory");
+    return rax;
 }
 
 // TODO: Overload write() with automatic string length.
