@@ -3,45 +3,16 @@
 
 #include "unistd.h"
 
-// -O0 is required, because this technically is never called.
-void __attribute__((optimize("O0"))) _start() {  // NOLINT
-    asm volatile(R"(
-# Define _start in symbol table:
-.global _start
-_start:
-
-xor %rbp,%rbp # Zero out stack pointer.
-pop %rdi # Set argc
-movq %rsi,%rsp # Set argv
-call main
-movq %rdi,%rax # Get the return value of main().
-movq $60,%rax # Mov 60 into rax for _EXIT(2) syscall.
-syscall)"
-                 // : No outputs.
-                 // : No inputs.
-                 // : No clobbers.
-    );
-}
-
 // TODO: Is a variadic syscall possible?
 
-// -O0 is required because this might be inlined on -O1.
-auto __attribute__((optimize("O0")))  // NOLINT
-write(int file_descriptor, char const* p_string_buffer, size_t string_length)
-    -> ssize_t {
-    ssize_t rax;
-    // This does not work without volatile.
-    asm volatile(R"(syscall)"
-                 // Return write-only rax value.
-                 : "=a"(rax)
-                 // D is %edi, which is for string operations.
-                 // S is for %rsi, which is the first argument in a syscall.
-                 // d is for %rdx, which is the second argument in a syscall.
-                 : "0"(1), "D"(file_descriptor), "S"(p_string_buffer),
-                   "d"(string_length)
-                 // MUTABLE CLOBBERS
-                 : "rcx", "r11", "memory");
-    return rax;
+void* syscall5(void* p_number, void* p_arg1, void* p_arg2, void* p_arg3,
+               void* p_arg4, void* p_arg5);
+
+ssize_t write(int file_descriptor, char const* p_string_buffer,
+              size_t string_length) {
+    return (ssize_t)syscall5((void*)1, (void*)(ssize_t)(file_descriptor),
+                             (void*)p_string_buffer, (void*)string_length, 0,
+                             0);
 }
 
 // TODO: Overload write() with automatic string length.

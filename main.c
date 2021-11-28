@@ -14,7 +14,7 @@ static intptr write(int fd, void const* data, uintptr nbytes) {
 }
 
 int main(int argc, char* argv[]) {
-    write(1, “hello\n”, 6);
+    write(1, "hello\n", 6);
 
     return 0;
 }
