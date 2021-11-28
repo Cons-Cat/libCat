@@ -1,0 +1,40 @@
+// -*- mode: c++;-*-
+
+namespace std {
+
+template <typename T>
+struct remove_reference {  // NOLINT
+    using type = T;
+};
+template <typename T>
+struct remove_reference<T&> {  // NOLINT
+    using type = T;
+};
+template <typename T>
+struct remove_reference<T&&> {  // NOLINT
+    using type = T;
+};
+
+template <typename T>
+[[nodiscard]] constexpr auto move(T&& arg) ->
+    typename remove_reference<T>::type&& {
+    return static_cast<typename remove_reference<T>::type&&>(arg);
+}
+
+template <typename T>
+[[nodiscard]] constexpr auto forward(typename remove_reference<T>::type& t)
+    -> T&& {
+    return static_cast<T&&>(t);
+}
+
+template <typename T>
+[[nodiscard]] constexpr auto forward(typename remove_reference<T>::type&& t)
+    -> T&& {
+    return static_cast<T&&>(t);
+}
+
+}  // namespace std
+
+using std::forward;
+using std::move;
+using std::remove_reference;
