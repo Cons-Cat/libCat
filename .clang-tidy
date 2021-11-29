@@ -1,5 +1,5 @@
 ---
-Checks:          'bugprone-*,google-*,-google-readability-todo,-google-objc-function-naming,-google-readability-braces-around-statements,readability-identifier-naming,modernize-use-trailing-return-type'
+Checks:          'bugprone-*,google-*,-google-readability-todo,-google-runtime-int,-google-objc-function-naming,-google-readability-braces-around-statements,readability-identifier-naming,modernize-use-trailing-return-type'
 
 CheckOptions:
   - { key: readability-identifier-naming.VariableCase,                    value: lower_case }

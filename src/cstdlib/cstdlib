@@ -1,7 +1,6 @@
 // -*- mode: c++;-*-
 #pragma once
 
-#include <cstdint>
 #include <unistd.h>
 
 // TODO: Is a variadic syscall possible?
