@@ -5,14 +5,15 @@
 
 // TODO: Is a variadic syscall possible?
 
-void* syscall5(void* p_number, void* p_arg1, void* p_arg2, void* p_arg3,
-               void* p_arg4, void* p_arg5);
+extern "C" auto syscall5(void* p_number, void* p_arg1 = nullptr,
+                         void* p_arg2 = nullptr, void* p_arg3 = nullptr,
+                         void* p_arg4 = nullptr, void* p_arg5 = nullptr)
+    -> void*;
 
-ssize_t write(int file_descriptor, char const* p_string_buffer,
-              size_t string_length) {
-    return (ssize_t)syscall5((void*)1, (void*)(ssize_t)(file_descriptor),
-                             (void*)p_string_buffer, (void*)string_length, 0,
-                             0);
+auto write(int file_descriptor, char const* p_string_buffer,
+           usize string_length) -> isize {
+    return (isize)syscall5((void*)1, (void*)(isize)(file_descriptor),
+                           (void*)p_string_buffer, (void*)string_length, 0, 0);
 }
 
 // TODO: Overload write() with automatic string length.
