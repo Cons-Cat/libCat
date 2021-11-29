@@ -3,7 +3,8 @@ project(kitten LANGUAGES CXX ASM)
 
 set(CMAKE_CXX_FLAGS
   "-nostdlib -fno-exceptions -fno-rtti -fno-unwind-tables \
-   -fno-asynchronous-unwind-tables -std=gnu++20")
+   -fno-asynchronous-unwind-tables -std=gnu++20 \
+   -include cstdint")
 
 # Set aggressive space optimizations. -Os is not favorable, however.
 set(CMAKE_CXX_FLAGS_RELEASE
