@@ -1,8 +1,9 @@
+#include "cstdint"
 #include "cstdlib"
-#include "unistd.h"
+#include "unistd"
 
 auto main() -> int {
     write(1, "Hello, Conscat!\n", 16);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
