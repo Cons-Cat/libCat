@@ -1,20 +1,9 @@
 // -*- mode: c++;-*-
 #pragma once
 
-namespace std {
+#include <type_traits>
 
-template <typename T>
-struct remove_reference {  // NOLINT
-    using type = T;
-};
-template <typename T>
-struct remove_reference<T&> {  // NOLINT
-    using type = T;
-};
-template <typename T>
-struct remove_reference<T&&> {  // NOLINT
-    using type = T;
-};
+namespace std {
 
 template <typename T>
 [[nodiscard]] constexpr auto move(T&& arg) ->
@@ -35,7 +24,3 @@ template <typename T>
 }
 
 }  // namespace std
-
-using std::forward;
-using std::move;
-using std::remove_reference;
