@@ -13,7 +13,7 @@ set(CMAKE_CXX_FLAGS_DEBUG
   "-ggdb3 -fno-omit-frame-pointer \
    -fsanitize=undefined \
    -fsanitize=address \
-   -fsanitize=leak \  
+   -fsanitize=leak \
    -Wall -Wextra")
 
 # TODO: Move semantics fail when -static is added in -O3. That should be solved,
