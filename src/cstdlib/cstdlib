@@ -10,11 +10,13 @@ extern "C" auto syscall5(void* p_number, void* p_arg1 = nullptr,
                          void* p_arg4 = nullptr, void* p_arg5 = nullptr)
     -> void*;
 
-auto write(int file_descriptor, char const* p_string_buffer,
-           usize string_length) -> isize {
+auto write(int const& file_descriptor, char const* const& p_string_buffer,
+           usize const& string_length) -> isize {
     return reinterpret_cast<isize>(
-        syscall5((void*)1, (void*)static_cast<isize>(file_descriptor),
-                 (void*)p_string_buffer, (void*)string_length, 0, 0));
+        syscall5(reinterpret_cast<void*>(1),
+                 reinterpret_cast<void*>(static_cast<isize>(file_descriptor)),
+                 (void*)(p_string_buffer),
+                 reinterpret_cast<void*>(string_length), 0, 0));
 }
 
 // TODO: Overload write() with automatic string length.
