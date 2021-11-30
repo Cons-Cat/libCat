@@ -1,0 +1,2 @@
+// -*- mode: c++;-*-
+#pragma once

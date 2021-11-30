@@ -12,11 +12,11 @@
 
 namespace std {
 
-template <typename T, T v>
+template <typename T, T Value>
 struct integral_constant {
-    static constexpr T value = v;
+    static constexpr T value = Value;
     using value_type = T;
-    using type = integral_constant<T, v>;
+    using type = integral_constant<T, Value>;
 
     constexpr explicit operator value_type() const noexcept {
         return value;
@@ -26,8 +26,8 @@ struct integral_constant {
     }
 };
 
-template <bool v>
-using bool_constant = integral_constant<bool, v>;
+template <bool Value>
+using bool_constant = integral_constant<bool, Value>;
 using true_type = bool_constant<true>;
 using false_type = bool_constant<false>;
 
