@@ -1,8 +1,6 @@
 // -*- mode: c++;-*-
 #pragma once
 
-#include <detail/simd.hpp>
-
 /* This library follows the same assumptions as the GNU LibC. These type
  * definitions are accurate for all implementations of GCC, currently, across
  * all environments.
@@ -10,20 +8,15 @@
  * In addition to the standard fixed-width numerical data types, more modern
  * flavored types are provided. */
 
-using int8_t = signed char;
-using i8 = int8_t;
-using uint8_t = unsigned char;
-using u8 = uint8_t;
+namespace std::detail::ints {
 
+using int8_t = signed char;
+using uint8_t = unsigned char;
 using int16_t = signed short int;
-using i16 = int16_t;
 using uint16_t = unsigned short int;
-using u16 = uint16_t;
 
 using int32_t = signed int;
-using i32 = int32_t;
 using uint32_t = unsigned int;
-using u32 = uint32_t;
 
 #if defined __x86_64__ && !defined __ILP32__
 using int64_t = long signed int;
@@ -36,6 +29,25 @@ using uint64_t = long long unsigned int;
 using ssize_t = int32_t;
 using size_t = uint32_t;
 #endif
+
+}  // namespace std::detail::ints
+
+namespace std {
+// Make LibC ints available in the std namespace.
+using namespace std::detail::ints;
+}  // namespace std
+
+// Make LibC ints available in the global namespace.
+using namespace std::detail::ints;
+
+using i8 = int8_t;
+using u8 = uint8_t;
+
+using i16 = int16_t;
+using u16 = uint16_t;
+
+using i32 = int32_t;
+using u32 = uint32_t;
 
 using i64 = int64_t;
 using u64 = uint64_t;
@@ -53,6 +65,7 @@ using bool8 = u8;
 using bool16 = u16;
 using bool32 = u32;
 
-/* #include this here, so that the only -include build flag required is for
- *<cstdint>. */
+/* #include these here, so that the only -include build flag required is for
+ * <cstdint>. */
+#include <detail/simd.hpp>
 #include <detail/vector_primitives.hpp>
