@@ -1,8 +1,10 @@
 #include <cstdlib>
 #include <unistd>
+#include <utility>
 
 auto main() -> int {
-    write(1, "Hello, Conscat!\n", 16);
+    char const* p_str = "Hello, Conscat!\n";
+    write(1, std::move(p_str), 16);
 
     return EXIT_SUCCESS;
 }
