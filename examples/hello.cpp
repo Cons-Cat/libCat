@@ -4,6 +4,7 @@
 
 auto main() -> int {
     char const* p_str = "Hello, Conscat!\n";
-    write(1, std::move(p_str), 16);
+    char const* p_move_str = std::move(p_str);
+    write(1, p_move_str, 16);
     return EXIT_SUCCESS;
 }

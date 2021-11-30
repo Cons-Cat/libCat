@@ -6,21 +6,18 @@
 namespace std {
 
 template <typename T>
-[[nodiscard]] constexpr auto move(T&& arg) ->
-    typename remove_reference<T>::type&& {
-    return static_cast<typename remove_reference<T>::type&&>(arg);
+constexpr auto move(T&& input) -> remove_reference_t<T> {
+    return static_cast<remove_reference_t<T>&&>(input);
 }
 
 template <typename T>
-[[nodiscard]] constexpr auto forward(typename remove_reference<T>::type& t)
-    -> T&& {
-    return static_cast<T&&>(t);
+[[nodiscard]] constexpr auto forward(remove_reference_t<T>& input) -> T&& {
+    return static_cast<T&&>(input);
 }
 
 template <typename T>
-[[nodiscard]] constexpr auto forward(typename remove_reference<T>::type&& t)
-    -> T&& {
-    return static_cast<T&&>(t);
+[[nodiscard]] constexpr auto forward(remove_reference_t<T>&& input) -> T&& {
+    return static_cast<T&&>(input);
 }
 
 }  // namespace std
