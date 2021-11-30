@@ -20,6 +20,6 @@ auto write(int file_descriptor, char const* p_string_buffer,
 
 // TODO: Fill this out.
 extern "C" {
-void __stack_chk_fail(void) {
+void __stack_chk_fail(void) {  // NOLINT
 }
 }

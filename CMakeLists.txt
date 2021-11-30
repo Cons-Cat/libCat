@@ -6,6 +6,9 @@ set(CMAKE_CXX_FLAGS
    -fno-asynchronous-unwind-tables -std=gnu++20 \
    -include cstdint")
 
+set(CMAKE_CXX_FLAGS_DEBUG
+  "-ggdb3")
+
 # Set aggressive space optimizations. -Os is not favorable, however.
 set(CMAKE_CXX_FLAGS_RELEASE
   "-flto -fwhole-file -Wl,-z,norelro,-z,noseparate-code,--gc-sections \
@@ -23,6 +26,7 @@ target_include_directories(kitten-std-headers INTERFACE
   src/cstdint/
   src/type_traits/
   src/utility/
+  src/cstdint/detail
   )
 
 # Combine static objects and C++ headers for convenience.
@@ -30,5 +34,9 @@ add_library(kitten-std INTERFACE)
 target_link_libraries(kitten-std INTERFACE kitten-std-static)
 target_link_libraries(kitten-std INTERFACE kitten-std-headers)
 
+# Build the examples.
 add_executable(hello examples/hello.cpp)
 target_link_libraries(hello PRIVATE kitten-std)
+
+add_executable(sizeof examples/sizeof.cpp)
+target_link_libraries(sizeof PRIVATE kitten-std)

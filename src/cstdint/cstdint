@@ -1,6 +1,8 @@
 // -*- mode: c++;-*-
 #pragma once
 
+#include <detail/simd.hpp>
+
 /* This library follows the same assumptions as the GNU LibC. These type
  * definitions are accurate for all implementations of GCC, currently, across
  * all environments.
@@ -20,7 +22,6 @@ using u16 = uint16_t;
 
 using int32_t = signed int;
 using i32 = int32_t;
-
 using uint32_t = unsigned int;
 using u32 = uint32_t;
 
@@ -47,3 +48,11 @@ using f32 = float;
 using f64 = double;
 using f128 = __float128;
 using x128 = float __attribute__((mode(TC))) _Complex;
+
+using bool8 = u8;
+using bool16 = u16;
+using bool32 = u32;
+
+/* #include this here, so that the only -include build flag required is for
+ *<cstdint>. */
+#include <detail/vector_primitives.hpp>
