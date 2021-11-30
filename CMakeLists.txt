@@ -21,6 +21,7 @@ target_include_directories(kitten-std-headers INTERFACE
   src/unistd/
   src/cstdlib/
   src/cstdint/
+  src/type_traits/
   )
 
 # Combine static objects and C++ headers for convenience.

@@ -1,18 +1,12 @@
 // -*- mode: c++;-*-
 #pragma once
 
-/* ATLAS:
- * Define ints 8 - 32
- * Define int 64 and size
- * Define floats / complex
- */
-
-// This library follows the same assumptions as the GNU LibC. These type
-// definitions are accurate for all implementations of GCC, currently, across
-// all environments.
-
-// In addition to the standard fixed-width numerical data types, more modern
-// flavored types are provided.
+/* This library follows the same assumptions as the GNU LibC. These type
+ * definitions are accurate for all implementations of GCC, currently, across
+ * all environments.
+ *
+ * In addition to the standard fixed-width numerical data types, more modern
+ * flavored types are provided. */
 
 using int8_t = signed char;
 using i8 = int8_t;
