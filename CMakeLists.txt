@@ -6,7 +6,7 @@ project(kitten LANGUAGES CXX ASM)
 
 set(CMAKE_CXX_FLAGS
   "-nostdlib -fno-exceptions -fno-rtti -fno-unwind-tables \
-   -fno-asynchronous-unwind-tables \
+   -fno-asynchronous-unwind-tables -fno-stack-protector \
    -include cstdint")
 
 set(CMAKE_CXX_FLAGS_DEBUG
@@ -27,7 +27,7 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
 
 set(CMAKE_CXX_FLAGS_RELEASE
   "-flto -fwhole-file -Wl,-z,norelro,-z,noseparate-code,--gc-sections \
-   -ffunction-sections -fdata-sections -fomit-frame-pointer")
+   -s -ffunction-sections -fdata-sections -fomit-frame-pointer")
 
 add_library(kitten-std-static STATIC
   src/crt/crt1.S
