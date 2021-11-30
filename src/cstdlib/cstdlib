@@ -17,3 +17,9 @@ auto write(int file_descriptor, char const* p_string_buffer,
 }
 
 // TODO: Overload write() with automatic string length.
+
+// TODO: Fill this out.
+extern "C" {
+void __stack_chk_fail(void) {
+}
+}
