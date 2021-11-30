@@ -14,9 +14,9 @@ set(CMAKE_CXX_FLAGS_RELEASE
 add_library(kitten-std-static STATIC
   src/crt/crt1.S
   )
+target_link_libraries(kitten-std-static gcc)
 
-add_library(kitten-std-headers INTERFACE
-  )
+add_library(kitten-std-headers INTERFACE)
 target_include_directories(kitten-std-headers INTERFACE
   src/unistd/
   src/cstdlib/
