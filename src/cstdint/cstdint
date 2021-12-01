@@ -9,32 +9,23 @@
  * In addition to the standard fixed-width numerical data types, more modern
  * flavored types are provided. */
 
-namespace std::detail::ints {
-
-using int8_t = signed char;
-using uint8_t = unsigned char;
-using int16_t = signed short int;
-using uint16_t = unsigned short int;
-
-using int32_t = signed int;
-using uint32_t = unsigned int;
-
-#if defined __x86_64__ && !defined __ILP32__
-using int64_t = long signed int;
-using uint64_t = long unsigned int;
-using ssize_t = int64_t;
-using size_t = uint64_t;
-#else
-using int64_t = long long signed int;
-using uint64_t = long long unsigned int;
-using ssize_t = int32_t;
-using size_t = uint32_t;
-#endif
-
-}  // namespace std::detail::ints
-
 namespace std {
-// Make LibC ints available in the std namespace.
+
+namespace detail::ints {
+    using int8_t = signed char;
+    using uint8_t = unsigned char;
+    using int16_t = signed short int;
+    using uint16_t = unsigned short int;
+    using int32_t = signed int;
+    using uint32_t = unsigned int;
+    // This assumes that it builds to x86-64, rather than 32-bit x86:
+    using int64_t = long signed int;
+    using uint64_t = long unsigned int;
+    using ssize_t = int64_t;
+    using size_t = uint64_t;
+}  // namespace detail::ints
+
+// Make LibC ints available in the std:: namespace.
 using namespace std::detail::ints;
 }  // namespace std
 

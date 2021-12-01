@@ -30,7 +30,7 @@ BraceWrapping:
   AfterCaseLabel:  false
   AfterClass:      false
   AfterControlStatement: Never
-  AfterEnum:       false
+  AfterEnum:       true
   AfterFunction:   false
   AfterNamespace:  false
   AfterObjCDeclaration: false
@@ -99,7 +99,7 @@ JavaScriptQuotes: Leave
 JavaScriptWrapImports: true
 KeepEmptyLinesAtTheStartOfBlocks: false
 MaxEmptyLinesToKeep: 1
-NamespaceIndentation: None
+NamespaceIndentation: Inner
 PenaltyBreakAssignment: 2
 PenaltyBreakBeforeFirstCallParameter: 1
 PenaltyBreakComment: 300
