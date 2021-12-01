@@ -1,8 +1,7 @@
-#include <cstdlib>
 #include <cunistd>
 #include <utility>
 
-auto main() -> int {
+auto main() -> i32 {
     if (sizeof(bool8) != 1) {
         return EXIT_FAILURE;
     }
