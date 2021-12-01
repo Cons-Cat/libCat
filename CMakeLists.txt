@@ -7,7 +7,8 @@ project(kitten LANGUAGES CXX ASM)
 set(CMAKE_CXX_FLAGS
   "-nostdlib -fno-exceptions -fno-rtti -fno-unwind-tables \
    -fno-asynchronous-unwind-tables -fno-stack-protector \
-   -include cstdint")
+   -no-pie \
+   -include cstdint -include start_exit.hpp")
 
 set(CMAKE_CXX_FLAGS_DEBUG
   "-ggdb3 -fno-omit-frame-pointer \
@@ -32,9 +33,6 @@ set(CMAKE_CXX_FLAGS_RELEASE
 add_library(kitten-std-static STATIC
   src/crt/crt1.S
   )
-target_link_libraries(kitten-std-static gcc)
-target_link_libraries(kitten-std-static asan)
-target_link_libraries(kitten-std-static ubsan)
 
 add_library(kitten-std-headers INTERFACE)
 target_include_directories(kitten-std-headers INTERFACE
@@ -43,13 +41,17 @@ target_include_directories(kitten-std-headers INTERFACE
   src/cstdint/
   src/type_traits/
   src/utility/
-  src/cstdint/detail
+  src/cstdint/detail/
+  src/start_exit/
   )
 
 # Combine static objects and C++ headers for convenience.
 add_library(kitten-std INTERFACE)
 target_link_libraries(kitten-std INTERFACE kitten-std-static)
 target_link_libraries(kitten-std INTERFACE kitten-std-headers)
+target_link_libraries(kitten-std INTERFACE gcc)
+target_link_libraries(kitten-std INTERFACE asan)
+target_link_libraries(kitten-std INTERFACE ubsan)
 
 # Build the examples.
 add_executable(hello examples/hello.cpp)
@@ -57,3 +59,6 @@ target_link_libraries(hello PRIVATE kitten-std)
 
 add_executable(sizeof examples/sizeof.cpp)
 target_link_libraries(sizeof PRIVATE kitten-std)
+
+add_executable(exit_with_10 examples/exit_with_10.cpp)
+target_link_libraries(exit_with_10 PRIVATE kitten-std)
