@@ -1,2 +1,14 @@
 // -*- mode: c++;-*-
 #pragma once
+
+void exit(i32 const& exit_code) {
+    _exit(exit_code);
+}
+
+auto alloca(usize size) -> void* {
+    return __builtin_alloca(size);
+}
+
+constexpr static int EXIT_SUCCESS = 0;
+constexpr static int EXIT_FAILURE = 1;
+constexpr static auto NULL = nullptr;
