@@ -45,6 +45,7 @@ target_include_directories(kitten-std-headers INTERFACE
   src/start_exit/
   src/result/
   src/pthread/
+  src/concepts
   )
 
 # Combine static objects and C++ headers for convenience.
