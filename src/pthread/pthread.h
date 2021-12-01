@@ -49,7 +49,7 @@ struct pthread {
 };
 
 auto get_pthread_pointer() -> pthread* {
-    usize thread_ptr;
-    asm(R"(mov %%fs:0,%0)" : "=r"(thread_ptr));
-    return reinterpret_cast<pthread*>(thread_ptr);
+    pthread* thread_ptr;
+    asm(R"(mov %%fs:0, %0)" : "=r"(thread_ptr));
+    return thread_ptr;
 }
