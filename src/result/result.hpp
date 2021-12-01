@@ -1,4 +1,3 @@
-// -*- mode: c++;-*-
 #pragma once
 
 #include <cstdlib>

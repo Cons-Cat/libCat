@@ -1,4 +1,5 @@
-// -*- mode: c++;-*-
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
 #pragma once
 
 void exit(i32 const& exit_code) {
