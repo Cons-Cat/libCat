@@ -1,0 +1,22 @@
+#include <cunistd>
+#include <errno.h>
+
+enum class ErrorCode
+{
+    OK = 0,
+    FAIL = 1,
+};
+
+auto is_ok(ErrorCode error) -> bool {
+    return error == ErrorCode::OK;
+}
+
+auto result_factory(ErrorCode error) -> Result<void, ErrorCode> {
+    return error;
+}
+
+auto main() -> i32 {
+    result_factory(ErrorCode::OK).or_panic();
+    result_factory(ErrorCode::FAIL).or_panic();
+    return EXIT_SUCCESS;
+}

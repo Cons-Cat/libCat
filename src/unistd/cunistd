@@ -1,11 +1,25 @@
 // -*- mode: c++;-*-
 #pragma once
 
+#include <errno.h>
+
+// TODO: Is a variadic syscall possible?
+
+extern "C" auto syscall5(void* p_number, void* p_arg1 = nullptr,
+                         void* p_arg2 = nullptr, void* p_arg3 = nullptr,
+                         void* p_arg4 = nullptr, void* p_arg5 = nullptr)
+    -> void*;
+
 auto write(int const& file_descriptor, char const* const& p_string_buffer,
-           usize const& string_length) -> isize {
-    return reinterpret_cast<isize>(
+           usize const& string_length) -> Result<void, LinuxError> {
+    reinterpret_cast<isize>(
         syscall5(reinterpret_cast<void*>(1),
                  reinterpret_cast<void*>(static_cast<isize>(file_descriptor)),
                  (void*)(p_string_buffer),
                  reinterpret_cast<void*>(string_length), 0, 0));
+    LinuxError error = get_errno();
+    if (is_ok(error)) {
+        return 0;
+    }
+    return error;
 }

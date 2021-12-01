@@ -8,7 +8,7 @@ set(CMAKE_CXX_FLAGS
   "-nostdlib -fno-exceptions -fno-rtti -fno-unwind-tables \
    -fno-asynchronous-unwind-tables -fno-stack-protector \
    -no-pie \
-   -include cstdint -include start_exit.hpp")
+   -include cstdint -include start_exit.hpp -include result.hpp")
 
 set(CMAKE_CXX_FLAGS_DEBUG
   "-ggdb3 -fno-omit-frame-pointer \
@@ -43,6 +43,8 @@ target_include_directories(kitten-std-headers INTERFACE
   src/utility/
   src/cstdint/detail/
   src/start_exit/
+  src/result/
+  src/pthread/
   )
 
 # Combine static objects and C++ headers for convenience.
@@ -62,3 +64,6 @@ target_link_libraries(sizeof PRIVATE kitten-std)
 
 add_executable(exit_with_10 examples/exit_with_10.cpp)
 target_link_libraries(exit_with_10 PRIVATE kitten-std)
+
+add_executable(error examples/error.cpp)
+target_link_libraries(error PRIVATE kitten-std)
