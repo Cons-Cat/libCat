@@ -1,9 +1,9 @@
-// -*- mode: c++;-*-
 #pragma once
 
 #include <type_traits>
 
 namespace std::detail {
+// TODO: Replace with a general Array type?
 
 // Size is signed to make arithmetic simpler.
 // This vector is not packed, because it is optimized for scalar operations.
@@ -34,7 +34,6 @@ struct PrimitiveVector {
         }
     }
 };
-
 }  // namespace std::detail
 
 /* Primitive vectors of size 3 are not rounded up to 4.

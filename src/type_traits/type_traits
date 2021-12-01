@@ -13,6 +13,27 @@
 
 namespace std {
 
+namespace detail {
+    template <typename T, typename U = T&&>
+    auto declval(i32) -> U;
+
+    template <typename T>
+    auto declval(i64) -> T;
+}  // namespace detail
+
+template <typename T>
+auto declval() -> decltype(detail::declval<T>(0));
+
+template <typename T>
+struct type_identity {
+    using type = T;
+};
+template <typename T>
+using type_identity_t = typename type_identity<T>::type;
+
+template <typename...>
+using void_t = void;
+
 template <typename T, T Value>
 struct integral_constant {
     static constexpr T value = Value;
@@ -33,7 +54,7 @@ using true_type = bool_constant<true>;
 using false_type = bool_constant<false>;
 
 // __is_same() is a GNU builtin.
-template <class T, class U>
+template <typename T, typename U>
 struct is_same : bool_constant<__is_same(T, U)> {};
 
 // __is_base_of() is a GNU builtin.
@@ -84,11 +105,6 @@ struct conditional<false, T, F> {
 };
 template <bool B, typename T, typename F>
 using conditional_t = typename conditional<B, T, F>::type;
-
-template <typename T>
-struct type_identity {
-    using type = T;
-};
 
 template <typename T>
 struct remove_const {
@@ -193,13 +209,28 @@ struct is_function<T&> : public false_type {};
 template <typename T>
 struct is_function<T&&> : public false_type {};
 
+template <typename T, typename = void>
+struct is_referenceable : public false_type {};
+
 template <typename T>
-auto add_pointer_helper(int)
-    -> type_identity<typename remove_reference<T>::type*>;
+struct is_referenceable<T, void_t<T&>> : public true_type {};
+
+namespace detail {
+    template <typename T,
+              bool = conditional<is_referenceable<T>::value,
+                                 is_referenceable<T>, is_void<T>>::value>
+    struct add_pointer {
+        using type = T;
+    };
+
+    template <typename T>
+    struct add_pointer<T, true> {
+        using type = remove_reference_t<T>*;
+    };
+}  // namespace detail
+
 template <typename T>
-auto add_pointer_helper(...) -> type_identity<T>;
-template <class T>
-struct add_pointer : decltype(try_add_pointer<T>(0)) {};
+struct add_pointer : public detail::add_pointer<T> {};
 
 template <typename T>
 struct decay {
@@ -220,5 +251,23 @@ struct underlying_type {
 };
 template <typename T>
 using underlying_type_t = typename underlying_type<T>::type;
+
+namespace detail {
+    template <
+        typename From, typename To,
+        bool = conditional<is_void<From>::value, is_void<From>,
+                           conditional<is_function<To>::value, is_function<To>,
+                                       is_array<To>>>::value>
+    struct is_convertible {
+        typedef typename is_void<To>::type type;
+    };
+}  // namespace detail
+
+template <typename From, typename To>
+struct is_convertible : public detail::is_convertible<From, To>::type {};
+template <typename From, typename To>
+using is_convertible_t = typename is_convertible<From, To>::type;
+template <typename From, typename To>
+constexpr bool is_convertible_v = is_convertible<From, To>::value;
 
 }  // namespace std
