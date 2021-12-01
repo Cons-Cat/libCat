@@ -1,4 +1,5 @@
-// -*- mode: c++;-*-
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
 #pragma once
 
 /* This library follows the same assumptions as the GNU LibC. These type
