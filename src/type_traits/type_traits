@@ -213,4 +213,11 @@ struct decay {
                              typename std::remove_cv<U>::type>::type>::type;
 };
 
+template <typename T>
+struct underlying_type {
+    using type = __underlying_type(T);
+};
+template <typename T>
+using underlying_type_t = typename underlying_type<T>::type;
+
 }  // namespace std
