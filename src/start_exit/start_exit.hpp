@@ -6,7 +6,7 @@ __attribute__((optimize(0))) void _exit(i32 const& exit_code) {
 	asm(R"(syscall
            ret)"
 		   : // No outputs.
-		   :"D" (exit_code), "a"(60)
+		   :"D" (exit_code.data), "a"(60)
 		   : "memory");
     // clang-format on
     __builtin_unreachable();
