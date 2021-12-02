@@ -1,7 +1,7 @@
 #include <cunistd>
 #include <errno.h>
 
-enum class ErrorCode
+enum ErrorCode
 {
     OK = 0,
     FAIL = 1,

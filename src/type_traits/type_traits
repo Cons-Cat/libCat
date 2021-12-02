@@ -15,7 +15,7 @@
  * compile otherwise. */
 using usize = size_t;
 template <typename T>
-struct SafeIntegral;
+struct safe_integral_t;
 
 namespace std {
 
@@ -185,21 +185,21 @@ namespace detail {
     template <typename>
     struct is_safe_integral : false_type {};
     template <>
-    struct is_safe_integral<SafeIntegral<signed char>> : true_type {};
+    struct is_safe_integral<safe_integral_t<signed char>> : true_type {};
     template <>
-    struct is_safe_integral<SafeIntegral<unsigned char>> : true_type {};
+    struct is_safe_integral<safe_integral_t<unsigned char>> : true_type {};
     template <>
-    struct is_safe_integral<SafeIntegral<signed short>> : true_type {};
+    struct is_safe_integral<safe_integral_t<signed short>> : true_type {};
     template <>
-    struct is_safe_integral<SafeIntegral<unsigned short>> : true_type {};
+    struct is_safe_integral<safe_integral_t<unsigned short>> : true_type {};
     template <>
-    struct is_safe_integral<SafeIntegral<signed int>> : true_type {};
+    struct is_safe_integral<safe_integral_t<signed int>> : true_type {};
     template <>
-    struct is_safe_integral<SafeIntegral<unsigned int>> : true_type {};
+    struct is_safe_integral<safe_integral_t<unsigned int>> : true_type {};
     template <>
-    struct is_safe_integral<SafeIntegral<signed long>> : true_type {};
+    struct is_safe_integral<safe_integral_t<signed long>> : true_type {};
     template <>
-    struct is_safe_integral<SafeIntegral<unsigned long>> : true_type {};
+    struct is_safe_integral<safe_integral_t<unsigned long>> : true_type {};
     // TODO: This makes an error, and I'm not sure why:
     // template <>
     // struct is_safe_integral<i128> : true_type {};
