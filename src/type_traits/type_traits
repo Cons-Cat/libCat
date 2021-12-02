@@ -11,14 +11,20 @@
  *
  * Enter at your peril! */
 
+/* .. I don't know why these need to be forward declared. It just doesn't
+ * compile otherwise. */
+using usize = size_t;
+template <typename T>
+struct SafeIntegral;
+
 namespace std {
 
 namespace detail {
     template <typename T, typename U = T&&>
-    auto declval(i32) -> U;
+    auto declval(signed int) -> U;
 
     template <typename T>
-    auto declval(i64) -> T;
+    auto declval(signed long) -> T;
 }  // namespace detail
 
 template <typename T>
@@ -57,15 +63,15 @@ struct remove_cv {
     using type = T;
 };
 template <typename T>
-struct remove_cv<T const> {
+struct remove_cv<const T> {
     using type = T;
 };
 template <typename T>
-struct remove_cv<T volatile> {
+struct remove_cv<volatile T> {
     using type = T;
 };
 template <typename T>
-struct remove_cv<T const volatile> {
+struct remove_cv<const volatile T> {
     using type = T;
 };
 template <typename T>
@@ -97,15 +103,37 @@ struct integral_constant {
     using value_type = T;
     using type = integral_constant<T, Value>;
 
-    constexpr explicit operator value_type() const noexcept {
+    constexpr operator value_type() const {
         return value;
     }
-    constexpr auto operator()() const noexcept -> value_type {
+    constexpr auto operator()() const -> value_type {
         return value;
     }
 };
-template <typename T, T value>
-constexpr T integral_constant<T, value>::value;
+
+// clang-tidy falsely warns about this.
+template <typename T, T Value>                   // NOLINT
+constexpr T integral_constant<T, Value>::value;  // NOLINT
+
+template <bool Value>
+using bool_constant = integral_constant<bool, Value>;
+
+using true_type = bool_constant<true>;
+constexpr bool true_type_v = true_type::value;
+
+using false_type = bool_constant<false>;
+constexpr bool false_type_v = false_type::value;
+
+template <bool Condition, typename T, typename F>
+struct conditional {
+    using type = T;
+};
+template <typename T, typename F>
+struct conditional<false, T, F> {
+    using type = F;
+};
+template <bool B, typename T, typename F>
+using conditional_t = typename conditional<B, T, F>::type;
 
 // __is_enum() is a GNU builtin.
 template <typename T>
@@ -114,11 +142,6 @@ template <typename T>
 constexpr bool is_enum_v = is_enum<T>::value;
 template <typename T>
 using is_enum_t = typename is_enum<T>::type;
-
-template <bool Value>
-using bool_constant = integral_constant<bool, Value>;
-using true_type = bool_constant<true>;
-using false_type = bool_constant<false>;
 
 // __is_same() is a GNU builtin.
 template <typename T, typename U>
@@ -160,31 +183,67 @@ namespace detail {
     // TODO: There has to be a more efficient way to exhaustively check
     // these.
     template <typename>
-    struct is_integral : public false_type {};
+    struct is_safe_integral : false_type {};
     template <>
-    struct is_integral<bool> : public true_type {};
+    struct is_safe_integral<SafeIntegral<signed char>> : true_type {};
     template <>
-    struct is_integral<i8> : public true_type {};
+    struct is_safe_integral<SafeIntegral<unsigned char>> : true_type {};
     template <>
-    struct is_integral<u8> : public true_type {};
+    struct is_safe_integral<SafeIntegral<signed short>> : true_type {};
     template <>
-    struct is_integral<i16> : public true_type {};
+    struct is_safe_integral<SafeIntegral<unsigned short>> : true_type {};
     template <>
-    struct is_integral<u16> : public true_type {};
+    struct is_safe_integral<SafeIntegral<signed int>> : true_type {};
     template <>
-    struct is_integral<i32> : public true_type {};
+    struct is_safe_integral<SafeIntegral<unsigned int>> : true_type {};
     template <>
-    struct is_integral<u32> : public true_type {};
+    struct is_safe_integral<SafeIntegral<signed long>> : true_type {};
     template <>
-    struct is_integral<i64> : public true_type {};
+    struct is_safe_integral<SafeIntegral<unsigned long>> : true_type {};
+    // TODO: This makes an error, and I'm not sure why:
+    // template <>
+    // struct is_safe_integral<i128> : true_type {};
+    // template <>
+    // struct is_safe_integral<u128> : true_type {};
+
+    /* I tried using the fixed-width types initially, but some of the templates
+     * would fail to resolve, for some reason. */
+    template <typename>
+    struct is_integral : false_type {};
     template <>
-    struct is_integral<u64> : public true_type {};
+    struct is_integral<signed char> : true_type {};
+    template <>
+    struct is_integral<unsigned char> : true_type {};
+    template <>
+    struct is_integral<signed short> : true_type {};
+    template <>
+    struct is_integral<unsigned short> : true_type {};
+    template <>
+    struct is_integral<signed int> : true_type {};
+    template <>
+    struct is_integral<unsigned int> : true_type {};
+    template <>
+    struct is_integral<signed long> : true_type {};
+    template <>
+    struct is_integral<unsigned long> : true_type {};
+    template <>
+    struct is_integral<bool> : true_type {};
 }  // namespace detail
 
 template <typename T>
+struct is_safe_integral : detail::is_safe_integral<remove_cv_t<T>> {};
+template <typename T>
+constexpr bool is_safe_integral_v = is_safe_integral<T>::value;
+template <typename T>
+using is_safe_integral_t = typename is_safe_integral<T>::type;
+
+template <typename T>
 struct is_integral : detail::is_integral<remove_cv_t<T>> {};
+// is_integral_v<> does not work, and I am not sure why.
 template <typename T>
 constexpr bool is_integral_v = is_integral<T>::value;
+template <typename T>
+using is_integral_t = typename is_integral<T>::type;
 
 template <typename T>
 struct is_floating_point {
@@ -198,13 +257,12 @@ template <typename T>
 constexpr bool is_floating_point_v = is_floating_point<T>::value;
 
 template <typename T>
-struct is_arithmetic
-    : integral_constant<bool,
-                        is_integral<T>() || is_floating_point<T>()>::type {};
+struct is_arithmetic : conditional<is_integral_v<T>, is_integral<T>,
+                                   is_floating_point<T>>::type {};
 
 namespace detail {
     template <typename T, bool = is_arithmetic<T>::value>
-    struct is_signed : integral_constant<bool, T(-1) < T(0)> {};
+    struct is_signed : bool_constant<T(-1) < T(0)> {};
 
     template <typename T>
     struct is_signed<T, false> : false_type {};
@@ -213,13 +271,13 @@ namespace detail {
 template <typename T>
 struct is_signed : detail::is_signed<T>::type {};
 template <typename T>
-using is_signed_t = typename is_signed<T>::type;
-template <typename T>
 constexpr bool is_signed_v = is_signed<T>::value;
+template <typename T>
+using is_signed_t = typename is_signed<T>::type;
 
 namespace detail {
     template <typename T, bool = is_arithmetic<T>::value>
-    struct is_unsigned : integral_constant<bool, T(0) < T(-1)> {};
+    struct is_unsigned : bool_constant<T(0) < T(-1)> {};
     template <typename T>
     struct is_unsigned<T, false> : false_type {};
 }  // namespace detail
@@ -227,20 +285,9 @@ namespace detail {
 template <typename T>
 struct is_unsigned : detail::is_unsigned<T>::type {};
 template <typename T>
-using is_unsigned_t = typename is_unsigned<T>::type;
-template <typename T>
 constexpr bool is_unsigned_v = is_unsigned<T>::value;
-
-template <bool Condition, typename T, typename F>
-struct conditional {
-    using type = T;
-};
-template <typename T, typename F>
-struct conditional<false, T, F> {
-    using type = F;
-};
-template <bool B, typename T, typename F>
-using conditional_t = typename conditional<B, T, F>::type;
+template <typename T>
+using is_unsigned_t = typename is_unsigned<T>::type;
 
 template <typename T>
 struct is_void : is_same<void, typename remove_cv<T>::type> {};

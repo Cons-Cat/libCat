@@ -1,6 +1,6 @@
 #include <cstdlib>
 
-auto main() -> i32 {
+auto main() -> int {
     if (sizeof(bool8) != 1) {
         return EXIT_FAILURE;
     }

@@ -12,22 +12,61 @@
  */
 #include <detail/legacy_types.hpp>
 
-using i8 = int8_t;
-using u8 = uint8_t;
+#include <concepts>
+#include <type_traits>
 
-using i16 = int16_t;
-using u16 = uint16_t;
+namespace std::detail {
 
-using i32 = int32_t;
-using u32 = uint32_t;
+template <typename T>
+struct SafeIntegral {
+    T data;  // Unitialized by default.
 
-using i64 = int64_t;
-using u64 = uint64_t;
-using isize = ssize_t;
+    SafeIntegral() = default;
+    // Any number that is smaller than this can safely cast into it.
+    SafeIntegral(std::safe_integral auto from) requires(sizeof(from.data) <=
+                                                        sizeof(T)) {
+        data = from.data;
+    }
+    SafeIntegral(std::integral auto from) requires(
+        std::is_signed_v<decltype(from)> == std::is_signed_v<T>) {
+        data = from;
+    }
+    // TODO: Make a concept that limits signed-ness and size.
+    operator std::integral auto() const {
+        return data;
+    };
+
+    auto operator=(std::safe_integral auto from) -> SafeIntegral<T>& requires(
+        (std::is_signed_v<decltype(from.data)> ==
+         std::is_signed_v<T>)&&(sizeof(from.data) <= sizeof(T))) {
+        data = from.data;
+        return *this;
+    }
+    auto operator=(std::integral auto from)
+        -> SafeIntegral<T>& requires(std::is_signed_v<decltype(from)> ==
+                                     std::is_signed_v<T>) {
+        data = from;
+        return *this;
+    }
+};
+
+}  // namespace std::detail
+
+/* These must be type aliases, because derived structs cannot inherit operator
+ * overloading. */
+using i8 = std::detail::SafeIntegral<signed char>;
+using u8 = std::detail::SafeIntegral<unsigned char>;
+using i16 = std::detail::SafeIntegral<signed short>;
+using u16 = std::detail::SafeIntegral<unsigned short>;
+using i32 = std::detail::SafeIntegral<signed int>;
+using u32 = std::detail::SafeIntegral<unsigned int>;
+using i64 = std::detail::SafeIntegral<signed long>;
+using u64 = std::detail::SafeIntegral<unsigned long>;
+using i128 = std::detail::SafeIntegral<int128_t>;
+using u128 = std::detail::SafeIntegral<uint128_t>;
+
 using usize = size_t;
-
-using i128 = int128_t;
-using u128 = uint128_t;
+using isize = ssize_t;
 
 // These are GCC built-in types:
 // using f16 = _Float16;

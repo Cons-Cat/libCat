@@ -11,25 +11,26 @@ struct locale_struct {
 
 using locale_t = locale_struct;
 
+// TODO: union pthread with a safer and more readable type with the same layout.
 struct pthread {
     struct pthread* self;
-    usize* dtv;
+    size_t* dtv;
     struct pthread *prev, *next;
-    usize sysinfo;
-    usize canary;
+    size_t sysinfo;
+    size_t canary;
 
-    i32 tid;
+    int32_t tid;
     LinuxError errno_val;
-    volatile i32 detach_state;
-    volatile i32 cancel;
+    volatile int32_t detach_state;
+    volatile int32_t cancel;
     volatile unsigned char canceldisable, cancelasync;
     unsigned char tsd_used     : 1;
     unsigned char dlerror_flag : 1;
     unsigned char* map_base;
-    usize map_size;
+    size_t map_size;
     void* stack;
-    usize stack_size;
-    usize guard_size;
+    size_t stack_size;
+    size_t guard_size;
     void* result;
     struct __ptcb* cancelbuf;  // NOLINT
     void** tsd;
@@ -40,10 +41,10 @@ struct pthread {
         volatile void* volatile pending;
     } robust_list;
 
-    i32 h_errno_val;
-    volatile i32 timer_id;
+    int32_t h_errno_val;
+    volatile int32_t timer_id;
     locale_t locale;
-    volatile i32 killlock[1];
+    volatile int32_t killlock[1];
     char* dlerror_buf;
     void* stdio_locks;
 };
