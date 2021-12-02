@@ -7,6 +7,7 @@ auto main() -> int {
     // i32 data = 10u;
 
     i64 data_2 = 10;
+    // data_2 = 2.f;
     long foo = data_2;
     int foo2 = data_2;
     data_2 = foo2;
