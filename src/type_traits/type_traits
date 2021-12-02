@@ -2,6 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cstdint>
+
 /* Be warned, ye who trot here!
  * Here be arcane remnants of the dark arts.
  * Black magic befouls the lines between yon
@@ -10,12 +12,6 @@
  * hath driven many a pony to insanity.
  *
  * Enter at your peril! */
-
-/* .. I don't know why these need to be forward declared. It just doesn't
- * compile otherwise. */
-using usize = size_t;
-template <typename T>
-struct safe_integral_t;
 
 namespace std {
 
@@ -182,29 +178,29 @@ using is_literal_type_t = typename is_literal_type<T>::type;
 namespace detail {
     // TODO: There has to be a more efficient way to exhaustively check
     // these.
-    template <typename>
-    struct is_safe_integral : false_type {};
-    template <>
-    struct is_safe_integral<safe_integral_t<signed char>> : true_type {};
-    template <>
-    struct is_safe_integral<safe_integral_t<unsigned char>> : true_type {};
-    template <>
-    struct is_safe_integral<safe_integral_t<signed short>> : true_type {};
-    template <>
-    struct is_safe_integral<safe_integral_t<unsigned short>> : true_type {};
-    template <>
-    struct is_safe_integral<safe_integral_t<signed int>> : true_type {};
-    template <>
-    struct is_safe_integral<safe_integral_t<unsigned int>> : true_type {};
-    template <>
-    struct is_safe_integral<safe_integral_t<signed long>> : true_type {};
-    template <>
-    struct is_safe_integral<safe_integral_t<unsigned long>> : true_type {};
-    // TODO: This makes an error, and I'm not sure why:
+    // template <typename>
+    // struct is_safe_integral : false_type {};
     // template <>
-    // struct is_safe_integral<i128> : true_type {};
+    // struct is_safe_integral<i8> : true_type {};
     // template <>
-    // struct is_safe_integral<u128> : true_type {};
+    // struct is_safe_integral<safe_integral_t<unsigned char>> : true_type {};
+    // template <>
+    // struct is_safe_integral<safe_integral_t<signed short>> : true_type {};
+    // template <>
+    // struct is_safe_integral<safe_integral_t<unsigned short>> : true_type {};
+    // template <>
+    // struct is_safe_integral<safe_integral_t<signed int>> : true_type {};
+    // template <>
+    // struct is_safe_integral<safe_integral_t<unsigned int>> : true_type {};
+    // template <>
+    // struct is_safe_integral<safe_integral_t<signed long>> : true_type {};
+    // template <>
+    // struct is_safe_integral<safe_integral_t<unsigned long>> : true_type {};
+    // // TODO: This makes an error, and I'm not sure why:
+    // // template <>
+    // // struct is_safe_integral<i128> : true_type {};
+    // // template <>
+    // // struct is_safe_integral<u128> : true_type {};
 
     /* I tried using the fixed-width types initially, but some of the templates
      * would fail to resolve, for some reason. */
@@ -230,12 +226,12 @@ namespace detail {
     struct is_integral<bool> : true_type {};
 }  // namespace detail
 
-template <typename T>
-struct is_safe_integral : detail::is_safe_integral<remove_cv_t<T>> {};
-template <typename T>
-constexpr bool is_safe_integral_v = is_safe_integral<T>::value;
-template <typename T>
-using is_safe_integral_t = typename is_safe_integral<T>::type;
+// template <typename T>
+// struct is_safe_integral : detail::is_safe_integral<remove_cv_t<T>> {};
+// template <typename T>
+// constexpr bool is_safe_integral_v = is_safe_integral<T>::value;
+// template <typename T>
+// using is_safe_integral_t = typename is_safe_integral<T>::type;
 
 template <typename T>
 struct is_integral : detail::is_integral<remove_cv_t<T>> {};
@@ -246,15 +242,15 @@ template <typename T>
 using is_integral_t = typename is_integral<T>::type;
 
 template <typename T>
-struct is_floating_point {
-    static constexpr bool value = [] {
-        return is_same<T, float>() || is_same<T, double>();
-    };
-};
-template <typename T>
-using is_floating_point_t = typename is_floating_point<T>::type;
+struct is_floating_point
+    : std::bool_constant<is_same_v<float, remove_cv_t<T>> ||
+                         is_same_v<double, remove_cv_t<T>> ||
+                         is_same_v<long double, remove_cv_t<T>>> {};
+
 template <typename T>
 constexpr bool is_floating_point_v = is_floating_point<T>::value;
+template <typename T>
+using is_floating_point_t = typename is_floating_point<T>::type;
 
 template <typename T>
 struct is_arithmetic : conditional<is_integral_v<T>, is_integral<T>,
@@ -307,7 +303,7 @@ struct is_volatile<T volatile> : true_type {};
 template <typename>
 struct is_array : false_type {};
 
-template <typename T, usize Size>
+	template <typename T, int Size>
 struct is_array<T[Size]> : true_type {};
 
 template <typename T>
@@ -318,7 +314,7 @@ struct remove_extent {
     using type = T;
 };
 
-template <typename T, usize Size>
+template <typename T, int Size>
 struct remove_extent<T[Size]> {
     using type = T;
 };

@@ -23,11 +23,15 @@ template <typename T>
 concept unsigned_integral = integral<T> && std::is_unsigned_v<T>;
 
 template <typename T>
-concept floating_point = std::is_floating_point_v<T>;
+concept floating_point = !integral<T> && std::is_floating_point_v<T>;
+
+template <typename T>
+concept int_or_float = integral<T> || floating_point<T>;
 
 // TODO: std::is_safe_integral<T> does not work.
 template <typename T>
-concept safe_integral = !std::is_integral_v<T>;  // std::is_safe_integral_v<T>;
+concept safe_integral =
+    (!std::is_integral_v<T>)&&(!std::is_floating_point_v<T>);
 
 template <typename Derived, typename Base>
 concept derived_from = std::is_base_of_v<Base, Derived> &&

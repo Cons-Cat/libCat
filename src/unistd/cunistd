@@ -12,10 +12,10 @@ extern "C" auto syscall5(void* p_number, void* p_arg1 = nullptr,
     -> void*;
 
 auto write(int const& file_descriptor, char const* const& p_string_buffer,
-           usize const& string_length) -> Result<void, LinuxError> {
-    reinterpret_cast<isize>(
+           unsigned long const& string_length) -> Result<void, LinuxError> {
+    reinterpret_cast<long*>(
         syscall5(reinterpret_cast<void*>(1),
-                 reinterpret_cast<void*>(static_cast<isize>(file_descriptor)),
+                 reinterpret_cast<void*>(static_cast<int>(file_descriptor)),
                  (void*)(p_string_buffer),
                  reinterpret_cast<void*>(string_length), 0, 0));
     LinuxError error = get_errno();

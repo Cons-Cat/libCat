@@ -39,9 +39,9 @@ target_include_directories(kitten-std-headers INTERFACE
   src/unistd/
   src/cstdlib/
   src/cstdint/
+  src/cstdint/detail/
   src/type_traits/
   src/utility/
-  src/cstdint/detail/
   src/start_exit/
   src/result/
   src/pthread/
