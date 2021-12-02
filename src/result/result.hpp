@@ -50,7 +50,8 @@ struct [[nodiscard]] Result {
     auto or_do(auto callback) {
         if (!is_ok(this->code)) {
             return callback();
-        } else if constexpr (!std::is_void_v<T>) {
+        }
+        if constexpr (!std::is_void_v<T>) {
             if constexpr (!std::is_void_v<T>) {
                 return this->data;
             }

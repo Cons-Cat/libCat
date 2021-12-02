@@ -1,3 +1,3 @@
-auto main() -> i32 {
+auto main() -> int {
     return 10;
 }

@@ -68,3 +68,6 @@ target_link_libraries(exit_with_10 PRIVATE kitten-std)
 
 add_executable(error examples/error.cpp)
 target_link_libraries(error PRIVATE kitten-std)
+
+add_executable(safe_arithmetic examples/safe_arithmetic.cpp)
+target_link_libraries(safe_arithmetic PRIVATE kitten-std)

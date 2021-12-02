@@ -3,7 +3,7 @@
 #include <pthread.h>
 #include <type_traits>
 
-enum class LinuxError : i32
+enum class LinuxError : int32_t
 {
     EPERM = 1,             // Operation not permitted
     ENOENT = 2,            // No such file or directory

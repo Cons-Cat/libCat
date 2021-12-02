@@ -15,7 +15,7 @@ auto result_factory(ErrorCode error) -> Result<void, ErrorCode> {
     return error;
 }
 
-auto main() -> i32 {
+auto main() -> int {
     result_factory(ErrorCode::OK).or_panic();
     result_factory(ErrorCode::FAIL).or_panic();
     return EXIT_SUCCESS;

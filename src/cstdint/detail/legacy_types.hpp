@@ -19,14 +19,10 @@ namespace detail::ints {
     using size_t = uint64_t;
 
     /* These 128 bit types are not required by the C standard, and technically a
-     * LibC is only allowed to define types that range from 1 to 64 bits.
-     * However, clangd gives me an error on unsigned __int128_t, and while it
-     * doesn't complain about __uint128_t, that type was deprecated in
-     * GCC 4.6. I have moved these aliases into this file simply to keep the
-     * error away from any file that I care about. */
+     * LibC is only allowed to define types that range from 1 to 64 bits. */
     // These are GCC built-in types:
     using int128_t = __int128_t;
-    using uint128_t = unsigned __int128_t;
+    using uint128_t = __uint128_t;
 
     // These remaining ints are not used anywhere throughout this library.
     using int_least8_t = int8_t;
