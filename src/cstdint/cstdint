@@ -2,35 +2,15 @@
 // vim: set ft=cpp:
 #pragma once
 
-/* This library follows the same assumptions as the GNU LibC. These type
- * definitions are accurate for all implementations of GCC, currently, across
- * all environments.
+/* legacy_types.hpp contains the numerical data types and constants that are
+ * expected from an implementation of stdint.h. I am considering them deprecated
+ * here, but they are supported because a substantial amout of C code that I
+ * care about requires them.
  *
- * In addition to the standard fixed-width numerical data types, more modern
- * flavored types are provided. */
-
-namespace std {
-
-namespace detail::ints {
-    using int8_t = signed char;
-    using uint8_t = unsigned char;
-    using int16_t = signed short int;
-    using uint16_t = unsigned short int;
-    using int32_t = signed int;
-    using uint32_t = unsigned int;
-    // This assumes that it builds to x86-64, rather than 32-bit x86:
-    using int64_t = long signed int;
-    using uint64_t = long unsigned int;
-    using ssize_t = int64_t;
-    using size_t = uint64_t;
-}  // namespace detail::ints
-
-// Make LibC ints available in the std:: namespace.
-using namespace std::detail::ints;
-}  // namespace std
-
-// Make LibC ints available in the global namespace.
-using namespace std::detail::ints;
+ * Those types and constants are available in both the global namespace as well
+ * as the std:: namespace.
+ */
+#include <detail/legacy_types.hpp>
 
 using i8 = int8_t;
 using u8 = uint8_t;
@@ -45,6 +25,9 @@ using i64 = int64_t;
 using u64 = uint64_t;
 using isize = ssize_t;
 using usize = size_t;
+
+using i128 = int128_t;
+using u128 = uint128_t;
 
 // These are GCC built-in types:
 // using f16 = _Float16;
