@@ -4,7 +4,6 @@
  * extern "C" puts _start and _exit symbols into the binary, so they do
  * not need to be declared explicitly here. */
 
-extern "C" __attribute__((optimize(0))) 
 void _exit(int exit_code) {
     // clang-format off
 	asm(R"(
@@ -17,7 +16,6 @@ void _exit(int exit_code) {
     __builtin_unreachable();
 }
 
-extern "C" __attribute__((optimize(0)))
 void _start() {
     // clang-format off
     asm(R"(

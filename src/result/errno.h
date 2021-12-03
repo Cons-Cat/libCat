@@ -5,6 +5,7 @@
 
 enum class LinuxError : int
 {
+	OK = 0,                // <= 0 is success
     EPERM = 1,             // Operation not permitted
     ENOENT = 2,            // No such file or directory
     ESRCH = 3,             // No such process
@@ -142,5 +143,7 @@ auto __errno_location(void) -> LinuxError* {
 }
 
 auto get_errno(void) -> LinuxError {
-    return get_pthread_pointer()->errno_val;
+	// TODO: This segfaults because we have no pthread yet.
+	// return get_pthread_pointer()->errno_val;
+	return LinuxError::OK;
 }
