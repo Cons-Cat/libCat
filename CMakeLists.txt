@@ -24,18 +24,21 @@ set(CMAKE_CXX_FLAGS_DEBUG
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
   "-ggdb3 \
   -flto -fwhole-file -Wl,-z,norelro,-z,noseparate-code,--gc-sections \
+   -fsanitize=undefined \
+   -fsanitize=address \
+   -fsanitize=leak \
    -ffunction-sections -fdata-sections -fomit-frame-pointer")
 
 set(CMAKE_CXX_FLAGS_RELEASE
   "-flto -fwhole-file -Wl,-z,norelro,-z,noseparate-code,--gc-sections \
    -s -ffunction-sections -fdata-sections -fomit-frame-pointer")
 
-add_library(kitten-std-static STATIC
+add_library(libcat-std-static STATIC
   src/crt/crt1.S
   )
 
-add_library(kitten-std-headers INTERFACE)
-target_include_directories(kitten-std-headers INTERFACE
+add_library(libcat-std-headers INTERFACE)
+target_include_directories(libcat-std-headers INTERFACE
   src/unistd/
   src/cstdlib/
   src/cstdint/
@@ -49,25 +52,29 @@ target_include_directories(kitten-std-headers INTERFACE
   )
 
 # Combine static objects and C++ headers for convenience.
-add_library(kitten-std INTERFACE)
-target_link_libraries(kitten-std INTERFACE kitten-std-static)
-target_link_libraries(kitten-std INTERFACE kitten-std-headers)
-target_link_libraries(kitten-std INTERFACE gcc)
-target_link_libraries(kitten-std INTERFACE asan)
-target_link_libraries(kitten-std INTERFACE ubsan)
+add_library(libcat-std INTERFACE)
+target_link_libraries(libcat-std INTERFACE libcat-std-static)
+target_link_libraries(libcat-std INTERFACE libcat-std-headers)
+target_link_libraries(libcat-std INTERFACE gcc)
+# Only link the sanitizers when debugging.
+target_link_libraries(libcat-std INTERFACE
+  $<$<CONFIG:RelWithDebInfo>:asan>
+  $<$<CONFIG:RelWithDebInfo>:ubsan>
+  $<$<CONFIG:Debug>:asan>
+  $<$<CONFIG:Debug>:ubsan>)
 
 # Build the examples.
 add_executable(hello examples/hello.cpp)
-target_link_libraries(hello PRIVATE kitten-std)
+target_link_libraries(hello PRIVATE libcat-std)
 
 add_executable(sizeof examples/sizeof.cpp)
-target_link_libraries(sizeof PRIVATE kitten-std)
+target_link_libraries(sizeof PRIVATE libcat-std)
 
 add_executable(exit_with_10 examples/exit_with_10.cpp)
-target_link_libraries(exit_with_10 PRIVATE kitten-std)
+target_link_libraries(exit_with_10 PRIVATE libcat-std)
 
 add_executable(error examples/error.cpp)
-target_link_libraries(error PRIVATE kitten-std)
+target_link_libraries(error PRIVATE libcat-std)
 
 add_executable(safe_arithmetic examples/safe_arithmetic.cpp)
-target_link_libraries(safe_arithmetic PRIVATE kitten-std)
+target_link_libraries(safe_arithmetic PRIVATE libcat-std)

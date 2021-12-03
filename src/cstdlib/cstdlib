@@ -3,11 +3,11 @@
 #pragma once
 
 void exit(i32 const& exit_code) {
-    _exit(exit_code);
+    _exit(exit_code.data);
 }
 
 auto alloca(usize size) -> void* {
-    return __builtin_alloca(size);
+    return __builtin_alloca(size.data);
 }
 
 constexpr int EXIT_SUCCESS = 0;
