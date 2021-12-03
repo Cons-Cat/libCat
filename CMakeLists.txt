@@ -25,7 +25,7 @@ set(CMAKE_CXX_FLAGS_DEBUG
 # Set aggressive space optimizations. -Os is not favorable, however.
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
   "-O3 -ggdb3 \
-  -flto -fwhole-file -Wl,-z,norelro,-z,noseparate-code,--gc-sections \
+   -flto -fwhole-file -Wl,-z,norelro,-z,noseparate-code,--gc-sections \
    -fsanitize=undefined \
    -fsanitize=address \
    -fsanitize=leak \
