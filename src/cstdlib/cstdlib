@@ -2,12 +2,14 @@
 // vim: set ft=cpp:
 #pragma once
 
+/* decay_integral() is required here so that this can compile with safe or
+ * unsafe arithmetic. */
 void exit(i32 const& exit_code) {
-    _exit(exit_code.data);
+    _exit(std::decay_integral(exit_code));
 }
 
 auto alloca(usize size) -> void* {
-    return __builtin_alloca(size.data);
+    return __builtin_alloca(std::decay_integral(size));
 }
 
 constexpr int EXIT_SUCCESS = 0;

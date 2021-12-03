@@ -18,6 +18,20 @@
  * keel over after a single glance at this metaprogramming, so I am currently
  * hiding this behind a feature flag. */
 #ifdef SAFE_ARITHMETIC
+namespace std {
+
+// TODO: Rename to decay_safe_value;
+/* Get the value of a primitive number, or the value held by a
+ * safe_integral_t<>. */
+constexpr auto decay_integral(std::int_or_float auto from) {
+    return from;
+}
+constexpr auto decay_integral(auto from) {
+    return from.data;
+}
+
+}  // namespace std
+
 namespace std::detail {
 
 /* safe_integral_t<> is the most interesting part of <cstdlib>. LibCat uses
@@ -41,16 +55,6 @@ namespace std::detail {
  * cannot generate a method that could cause a narrowing conversion between an
  * i64 and an i32 type. This solution is very concise because that same
  * constraint broadly applies to all possible type conversions. */
-
-// TODO: Rename to decay_safe_value;
-/* Get the value of a primitive number, or the value held by a
- * safe_integral_t<>. */
-constexpr auto decay_integral(std::int_or_float auto from) {
-    return from;
-}
-constexpr auto decay_integral(auto from) {
-    return from.data;
-}
 
 // TODO: Rename to safe_value_t
 template <typename T>
@@ -233,6 +237,12 @@ using f64 = std::detail::safe_integral_t<double>;
 using f128 = __float128;
 using x128 = float __attribute__((mode(TC))) _Complex;
 #else
+namespace std {
+constexpr auto decay_integral(std::int_or_float auto from) {
+    return from;
+}
+}  // namespace std
+
 using i8 = int8_t;
 using u8 = uint8_t;
 using i16 = int16_t;
