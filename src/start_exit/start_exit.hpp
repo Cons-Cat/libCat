@@ -1,27 +1,31 @@
 #pragma once
 
-// NOLINTNEXTLINE
-__attribute__((optimize(0))) void _exit(i32 const& exit_code) {
+/* These are the entry and exit points of a program compiled with LibCat.
+ * extern "C" puts _start and _exit symbols into the binary, so they do
+ * not need to be declared explicitly here. */
+
+extern "C" __attribute__((optimize(0))) 
+void _exit(int exit_code) {
     // clang-format off
-	asm(R"(syscall
-           ret)"
-		   : // No outputs.
-		   :"D" (exit_code.data), "a"(60)
-		   : "memory");
+	asm(R"(
+        syscall
+        ret)"
+		: // No outputs.
+		:"D" (exit_code), "a"(60)
+		: "memory");
     // clang-format on
     __builtin_unreachable();
 }
 
-// NOLINTNEXTLINE
-__attribute__((optimize(0))) void _start() {
+extern "C" __attribute__((optimize(0)))
+void _start() {
     // clang-format off
-    asm(R"(.global _start
-           _start:
-           xor %rbp, %rbp # Zero-out the stack pointer.
-           mov %rsp, %rdi # Setup argc
-           lea 8(%rsp), %rsi # Setup argv
-           call main
-           mov %rax, %rdi # Forward main()'s return to _exit.
-           call _exit)");
+    asm(R"(
+        xor %rbp, %rbp # Zero-out the stack pointer.
+        mov %esp, %edi # Setup 32-bit argc
+        lea 8(%rsp), %rsi # Setup argv
+        call main
+        mov %eax, %edi # Forward main()'s 32-bit return to _exit.
+        call _exit)");
     // clang-format on
 }
