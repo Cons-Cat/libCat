@@ -13,6 +13,7 @@ using locale_t = locale_struct;
 
 // TODO: union pthread with a safer and more readable type with the same layout.
 struct pthread {
+    // This layout assumes it targets x86-64.
     struct pthread* self;
     size_t* dtv;
     struct pthread *prev, *next;
