@@ -78,16 +78,28 @@ struct safe_integral_t {
         this->data = decay_integral(from);
         return *this;
     }
-
     auto operator==(auto from) -> bool requires(REQUIRES_HELPER) {
         return this->data == decay_integral(from);
+    }
+
+	auto operator>(auto from) -> bool requires(REQUIRES_HELPER) {
+        return this->data > decay_integral(from);
+    }
+	auto operator>=(auto from) -> bool requires(REQUIRES_HELPER) {
+        return this->data >= decay_integral(from);
+    }
+
+	auto operator<(auto from) -> bool requires(REQUIRES_HELPER) {
+        return this->data < decay_integral(from);
+    }
+	auto operator<=(auto from) -> bool requires(REQUIRES_HELPER) {
+        return this->data <= decay_integral(from);
     }
 
     auto operator+(auto from) -> safe_integral_t<T>
     requires(REQUIRES_HELPER) {
         return this->data + decay_integral(from);
     }
-
     auto operator+=(auto from)
         -> safe_integral_t<T>& requires(REQUIRES_HELPER) {
         this->data = this->data + decay_integral(from);
@@ -101,6 +113,10 @@ struct safe_integral_t {
         return data++;
     }
 
+	auto operator-(auto from) -> safe_integral_t<T>
+		requires(REQUIRES_HELPER) {
+        return this->data - decay_integral(from);
+    }
     auto operator-=(auto from)
         -> safe_integral_t<T>& requires(REQUIRES_HELPER) {
         this->data = this - from;
@@ -118,7 +134,6 @@ struct safe_integral_t {
     requires(REQUIRES_HELPER) {
         return this->data * decay_integral(from);
     }
-
     auto operator*=(auto from)
         -> safe_integral_t<T>& requires(REQUIRES_HELPER) {
 		this->data = this->data * from.data;
@@ -129,12 +144,53 @@ struct safe_integral_t {
     requires(REQUIRES_HELPER) {
         return this->data / decay_integral(from);
     }
-
     auto operator/=(auto from)
         -> safe_integral_t<T>& requires(REQUIRES_HELPER) {
         this->data = this->data / from.data;
 		return *this;
     }
+
+    auto operator%(auto from) -> safe_integral_t<T>
+    requires(REQUIRES_HELPER) {
+        return this->data % decay_integral(from);
+    }
+    auto operator%=(auto from)
+        -> safe_integral_t<T>& requires(REQUIRES_HELPER) {
+        this->data = this->data % from.data;
+		return *this;
+    }
+
+	auto operator&(auto from)->safe_integral_t<T> requires(REQUIRES_HELPER) {
+		return this->data & decay_integral(from);
+	}
+	auto operator&=(auto from)->safe_integral_t<T> &requires(REQUIRES_HELPER) {
+		 this->data = this->data & from.data;
+		 return *this;
+	}
+
+	auto operator|(auto from)->safe_integral_t<T> requires(REQUIRES_HELPER) {
+		return this->data | decay_integral(from);
+	}
+	auto operator|=(auto from)->safe_integral_t<T> &requires(REQUIRES_HELPER) {
+		this->data = this->data | from.data;
+		return *this;
+	}
+
+	auto operator<<(auto from)->safe_integral_t<T> requires(REQUIRES_HELPER) {
+		return this->data << decay_integral(from);
+	}
+	auto operator<<=(auto from)->safe_integral_t<T> &requires(REQUIRES_HELPER) {
+		this->data = this->data << from.data;
+		return *this;
+	}
+
+	auto operator>>(auto from)->safe_integral_t<T> requires(REQUIRES_HELPER) {
+		return this->data >> decay_integral(from);
+	}
+	auto operator>>=(auto from)->safe_integral_t<T> &requires(REQUIRES_HELPER) {
+		this->data = this->data >> from.data;
+		return *this;
+	}
 };
 
 }  // namespace std::detail
