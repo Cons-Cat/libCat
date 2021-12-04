@@ -135,7 +135,7 @@ static auto __errno_location(void) -> LinuxError* {
     return reinterpret_cast<LinuxError*>(&(get_pthread_pointer()->errno_val));
 }
 static auto errno_location() -> LinuxError* {
-    __errno_location();
+    return __errno_location();
 }
 
 static auto get_errno() -> Result<void> {
