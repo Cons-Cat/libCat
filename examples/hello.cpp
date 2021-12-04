@@ -1,7 +1,7 @@
 #include <cstdlib>
 #include <cunistd>
 
-auto meow() -> Result<> {
+void meow() {
     char const* p_str = "Hello, Conscat!\n";
-    return write(1, p_str, 16);
+    write(1, p_str, 16).or_panic();
 }

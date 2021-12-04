@@ -5,6 +5,8 @@
 #include <type_traits>
 #include <utility>
 
+void exit(i32);  // NOLINT
+
 template <typename T = void>
 struct Result;
 
