@@ -2,22 +2,18 @@
 // vim: set ft=cpp:
 #pragma once
 
-// #include <any>
+#include <any>
 #include <errno.h>
 
 // TODO: Is a variadic syscall possible?
 
-extern "C" auto syscall5(void* p_number, void* p_arg1 = nullptr,
-                         void* p_arg2 = nullptr, void* p_arg3 = nullptr,
-                         void* p_arg4 = nullptr, void* p_arg5 = nullptr)
+extern "C" auto syscall5(std::any p_number, std::any p_arg1 = nullptr,
+                         std::any p_arg2 = nullptr, std::any p_arg3 = nullptr,
+                         std::any p_arg4 = nullptr, std::any p_arg5 = nullptr)
     -> void*;
 
 auto write(int const& file_descriptor, char const* const& p_string_buffer,
            unsigned long const& string_length) -> Result<void> {
-    reinterpret_cast<long*>(
-        syscall5(reinterpret_cast<void*>(1),
-                 reinterpret_cast<void*>(static_cast<int>(file_descriptor)),
-                 (void*)(p_string_buffer),
-                 reinterpret_cast<void*>(string_length), 0, 0));
+    syscall5(1, file_descriptor, p_string_buffer, string_length);
     return get_errno();
 }

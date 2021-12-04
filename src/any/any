@@ -1,0 +1,46 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <type_traits>
+#include <utility>
+
+namespace std {
+
+/* This smart pointer is, by design, significantly dumber than the std::any
+ * in the C++20 STL. This type's basic purpose is to make casting to void* less
+ * tedious, at a low cost. There is a cost in casting a 32-bit type into a
+ * 64-bit type, but that is inherent to the idea of using void* for holding
+ * generic data. Monomorphism may be a better solution than std::any in some
+ * cases.
+ *
+ * The primary disadvantages of this type to the canonical std::any is that it
+ * cannot destruct data attached to it automatically, and it cannot allocate
+ * large data-types automatically. Invisible memory allocation is a non-goal of
+ * LibCat, and the STL achieves both of those with a high performance overhead.
+ * For instance, the canonical std::any cannot be held in a 64-bit register,
+ * whereas this one can. */
+struct any {
+    void* data;
+
+    constexpr any(auto input) requires(sizeof(input) <= sizeof(data)) {
+        data = 0;
+        data = (void*)(isize)(std::forward<decltype(input)>(input));
+    };
+
+    operator void*() const {
+        return data;
+    }
+};
+
+template <typename T>
+constexpr auto any_cast(any&& in_any) -> T {
+    static_assert(
+        sizeof(in_any) == sizeof(void*),
+        "any_cast<> may only do a zero-cost cast to pointer-sized types. It "
+        "should be explicitly casted to any other size.");
+    void* any_value = std::forward<void*>(in_any.data);
+    return static_cast<T>(any_value);
+}
+
+}  // namespace std
