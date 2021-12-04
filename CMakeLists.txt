@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 project(libcat LANGUAGES CXX ASM)
 
-# <cstdint> and <result.hpp> are implicitly #included into every LibCat program.
+# <cstdint> and <result.hpp> are implicitly #included into every libCat program.
 set(
   CMAKE_CXX_FLAGS
   "-nostdlib \

@@ -34,7 +34,7 @@ constexpr auto decay_integral(auto from) {
 
 namespace std::detail {
 
-/* safe_integral_t<> is the most interesting part of <cstdlib>. LibCat uses
+/* safe_integral_t<> is the most interesting part of <cstdlib>. libCat uses
  * this struct to represent all of its scalar numerical data types.
  * Operations between two specializations of a safe_integral_t<> that would
  * cause a narrowing conversion such as loss of precision, change in
