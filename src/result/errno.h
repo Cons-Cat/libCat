@@ -5,7 +5,7 @@
 
 enum LinuxError
 {
-    OK = 0,  // 0 means no error has been encountered.
+    LINUX_OK = 0,  // 0 means no error has been encountered.
 
     EPERM = 1,             // Operation not permitted
     ENOENT = 2,            // No such file or directory
@@ -130,8 +130,12 @@ enum LinuxError
     EREMOTEIO = 121,       // Remote I/O error
 };
 
+// This function name is preserved from libC for backwards compatibility.
 static auto __errno_location(void) -> LinuxError* {
     return reinterpret_cast<LinuxError*>(&(get_pthread_pointer()->errno_val));
+}
+static auto errno_location() -> LinuxError* {
+    __errno_location();
 }
 
 static auto get_errno() -> Result<void> {

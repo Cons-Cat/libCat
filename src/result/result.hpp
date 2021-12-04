@@ -13,22 +13,31 @@ struct Result;
 struct Error {
     i32 code;
 
-    explicit Error(auto in_code) {
+    // This must be explicit to disambiguate returning an integer to a Result.
+    constexpr explicit Error(std::integral auto in_code) {
         code = in_code;
+    }
+    // TODO: Figure out why std::enum_class concept doesn't work here.
+    constexpr Error(auto in_code) {
+        code = static_cast<i32>(in_code);
     }
 
     template <typename T>
-    operator Result<T>() const {
+    constexpr operator Result<T>() const {
         auto result = Result<T>(*this);
         return result;
     }
 
     // template <std::integral auto T> does not work for some reason.
     template <typename T>
-    operator T() const
+    constexpr operator T() const
         // TODO: Make is_bool<> traits.
         requires(std::is_integral<T>() || std::is_same_v<T, bool>) {
         return code;
+    }
+
+    constexpr auto operator==(Error right_error) const -> bool {
+        return this->code == right_error.code;
     }
 };
 
@@ -46,12 +55,12 @@ struct [[nodiscard]] Result {
 
     bool is_ok;
 
-    explicit Result(Error&& in_code) {
+    constexpr explicit Result(Error&& in_code) {
         this->code = in_code;
         is_ok = false;
     }
 
-    Result(DataType&& in_data) {
+    constexpr Result(DataType&& in_data) {
         this->data = in_data;
         is_ok = true;
     }

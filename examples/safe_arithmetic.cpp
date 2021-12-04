@@ -1,4 +1,4 @@
-auto meow() -> i64 {
+void meow() {
     int myint = 0;
     u32 test_unsigned = 1u;
 
@@ -35,5 +35,4 @@ auto meow() -> i64 {
 
     // This is a compile error:
     // data_4 = data_3;
-    return 0;
 }
