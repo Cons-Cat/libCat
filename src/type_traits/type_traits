@@ -2,8 +2,6 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cstdint>
-
 /* Be warned, ye who trot here!
  * Here be arcane remnants of the dark arts.
  * Black magic befouls the lines between yon
@@ -294,20 +292,40 @@ template <typename>
 struct is_const : false_type {};
 template <typename T>
 struct is_const<T const> : true_type {};
+template <typename T>
+constexpr bool is_const_v = is_const<T>::value;
+template <typename T>
+using is_const_t = typename is_const<T>::type;
 
 template <typename>
 struct is_volatile : false_type {};
 template <typename T>
 struct is_volatile<T volatile> : true_type {};
 
-template <typename>
-struct is_array : false_type {};
-
-	template <typename T, int Size>
-struct is_array<T[Size]> : true_type {};
+namespace detail {
+    template <typename T>
+    struct is_pointer : false_type {};
+    template <typename T>
+    struct is_pointer<T*> : true_type {};
+}  // namespace detail
 
 template <typename T>
+struct is_pointer : detail::is_pointer<T> {};
+template <typename T>
+constexpr bool is_pointer_v = is_pointer<T>::value;
+template <typename T>
+using is_pointer_t = typename is_pointer<T>::type;
+
+template <typename>
+struct is_array : false_type {};
+template <typename T, int Size>
+struct is_array<T[Size]> : true_type {};
+template <typename T>
 struct is_array<T[]> : true_type {};
+template <typename T>
+constexpr bool is_array_v = is_array<T>::value;
+template <typename T>
+using is_array_t = typename is_array<T>::type;
 
 template <typename T>
 struct remove_extent {
@@ -368,6 +386,8 @@ struct decay {
                              typename add_pointer<U>::type,
                              typename std::remove_cv<U>::type>::type>::type;
 };
+template <typename T>
+using decay_t = typename decay<T>::type;
 
 template <typename T>
 struct underlying_type {

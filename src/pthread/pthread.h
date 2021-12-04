@@ -1,7 +1,5 @@
 #pragma once
 
-enum class LinuxError;
-
 // TODO: Make a locale header.
 struct locale_map;
 
@@ -21,7 +19,7 @@ struct pthread {
     size_t canary;
 
     int32_t tid;
-    LinuxError errno_val;
+    int32_t errno_val;
     volatile int32_t detach_state;
     volatile int32_t cancel;
     volatile unsigned char canceldisable, cancelasync;

@@ -1,3 +1,3 @@
-auto main() -> int {
+auto meow() -> i64 {
     return 10;
 }
