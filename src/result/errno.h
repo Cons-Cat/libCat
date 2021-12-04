@@ -141,5 +141,5 @@ static auto errno_location() -> LinuxError* {
 static auto get_errno() -> Result<void> {
     // TODO: This segfaults because we have no pthread yet.
     // return get_pthread_pointer()->errno_val;
-    return Error(0);
+    return 0;
 }
