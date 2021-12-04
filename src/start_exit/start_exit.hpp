@@ -45,7 +45,7 @@ extern "C" void _start() {
     //     asm(R"(xor %rbp, %rbp # Zero-out the stack pointer.
     //            mov %esp, %edi # Copy 32-bit argc
     //            lea 8(%rsp), %rsi # Load address to argv
-    // /* LibCat user programs enter in meow() rather than main(). This is
+    // /* libCat user programs enter in meow() rather than main(). This is
     //  * done so that they may return a Result instead of an int. */
     //         )");
     //     // clang-format on
