@@ -33,7 +33,7 @@
  * This streamlines out the existence of _exit(). */
 extern "C" void exit(i32 exit_code) {
     asm(R"(syscall)" : : "D"(std::decay_integral(exit_code)), "a"(60));
-    __builtin_unreachable();
+    __builtin_unreachable();  // This elides a retq instruction.
 }
 
 /* in libCat, _start() does almost nothing. It is necessary to store the base
@@ -44,6 +44,7 @@ extern "C" __attribute__((used)) void _start() {
                     call meow
                     mov $0, %edi
                     call exit)");
+    __builtin_unreachable();  // This elides a retq instruction.
 }
 
 auto load_argc() -> i32 {
