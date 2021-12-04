@@ -3,9 +3,10 @@
 #include <pthread.h>
 #include <type_traits>
 
-enum class LinuxError : int
+enum LinuxError
 {
-	OK = 0,                // <= 0 is success
+    OK = 0,  // 0 means no error has been encountered.
+
     EPERM = 1,             // Operation not permitted
     ENOENT = 2,            // No such file or directory
     ESRCH = 3,             // No such process
@@ -129,21 +130,12 @@ enum class LinuxError : int
     EREMOTEIO = 121,       // Remote I/O error
 };
 
-auto linux_error_to_i32(LinuxError const& error) -> i32 {
-    return static_cast<std::underlying_type_t<LinuxError>>(error);
+static auto __errno_location(void) -> LinuxError* {
+    return reinterpret_cast<LinuxError*>(&(get_pthread_pointer()->errno_val));
 }
 
-auto is_ok(LinuxError const& error) -> bool {
-    return linux_error_to_i32(error) <= 0;
-}
-
-// NOLINTNEXTLINE
-auto __errno_location(void) -> LinuxError* {
-    return &(get_pthread_pointer()->errno_val);
-}
-
-auto get_errno(void) -> LinuxError {
-	// TODO: This segfaults because we have no pthread yet.
-	// return get_pthread_pointer()->errno_val;
-	return LinuxError::OK;
+static auto get_errno() -> Result<void> {
+    // TODO: This segfaults because we have no pthread yet.
+    // return get_pthread_pointer()->errno_val;
+    return Error(0);
 }

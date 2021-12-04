@@ -2,10 +2,11 @@
 // vim: set ft=cpp:
 #pragma once
 
-/* decay_integral() is required here so that this can compile with safe or
- * unsafe arithmetic. */
-void exit(i32 const& exit_code) {
-    _exit(std::decay_integral(exit_code));
+// I don't understand yet why this forward declaration is necessary, but it is.
+void _exit(i32);  // NOLINT
+
+void exit(i32 exit_code) {
+    _exit(exit_code);
 }
 
 auto alloca(usize size) -> void* {

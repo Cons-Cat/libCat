@@ -1,6 +1,6 @@
 #include <cstdlib>
 
-auto main() -> int {
+auto meow() -> i64 {
     if (sizeof(bool8) != 1) {
         return EXIT_FAILURE;
     }

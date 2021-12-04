@@ -1,8 +1,4 @@
-#include <cstdint>
-
-using namespace std::detail;
-
-auto main() -> int {
+auto meow() -> i64 {
     int myint = 0;
     u32 test_unsigned = 1u;
 
@@ -39,4 +35,5 @@ auto main() -> int {
 
     // This is a compile error:
     // data_4 = data_3;
+    return 0;
 }
