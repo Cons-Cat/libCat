@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 project(libcat LANGUAGES CXX ASM)
 
-# <cstdint> and <result.hpp> are implicitly #included into every libCat program.
+# <cstdint> and <start_exit.hpp> are implicitly #included into every libCat program.
 set(
   CMAKE_CXX_FLAGS
   "-nostdlib \
@@ -13,7 +13,7 @@ set(
    -include cstdint -include start_exit.hpp \
 "
 )
-#-Wl,-e,meow
+
 set(
   CMAKE_CXX_FLAGS_DEBUG
   "-O0 -ggdb3 \
@@ -91,14 +91,14 @@ target_link_libraries(
 add_executable(hello examples/hello.cpp)
 target_link_libraries(hello PRIVATE libcat-std)
 
-# add_executable(sizeof examples/sizeof.cpp)
-# target_link_libraries(sizeof PRIVATE libcat-std)
+add_executable(sizeof examples/sizeof.cpp)
+target_link_libraries(sizeof PRIVATE libcat-std)
 
-# add_executable(exit_with_10 examples/exit_with_10.cpp)
-# target_link_libraries(exit_with_10 PRIVATE libcat-std)
+add_executable(exit_with_10 examples/exit_with_10.cpp)
+target_link_libraries(exit_with_10 PRIVATE libcat-std)
 
-# add_executable(error examples/error.cpp)
-# target_link_libraries(error PRIVATE libcat-std)
+add_executable(error examples/error.cpp)
+target_link_libraries(error PRIVATE libcat-std)
 
-# add_executable(safe_arithmetic examples/safe_arithmetic.cpp)
-# target_link_libraries(safe_arithmetic PRIVATE libcat-std)
+add_executable(safe_arithmetic examples/safe_arithmetic.cpp)
+target_link_libraries(safe_arithmetic PRIVATE libcat-std)

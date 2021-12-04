@@ -1,3 +1,3 @@
-auto meow() -> i64 {
-    return 10;
+void meow() {
+    exit(10);
 }

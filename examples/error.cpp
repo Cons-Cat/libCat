@@ -1,22 +1,23 @@
 #include <cunistd>
 #include <errno.h>
 
-enum ErrorCode
+#include "result.hpp"
+
+enum class MyErrors
 {
     OK = 0,
     FAIL = 1,
 };
 
-auto is_ok(ErrorCode error) -> bool {
-    return error == ErrorCode::OK;
+auto is_ok(Error error) -> bool {
+    return error.code == 0;
 }
 
-auto result_factory(ErrorCode error) -> Result<void, ErrorCode> {
-    return error;
+auto result_factory(MyErrors error) -> Result<void> {
+    return Error(error);
 }
 
-auto meow() -> i64 {
-    result_factory(ErrorCode::OK).or_panic();
-    result_factory(ErrorCode::FAIL).or_panic();
-    return EXIT_SUCCESS;
+void meow() {
+    result_factory(MyErrors::OK).or_panic();
+    result_factory(MyErrors::FAIL).or_panic();
 }
