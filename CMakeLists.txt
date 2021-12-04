@@ -5,51 +5,74 @@ set(CMAKE_CXX_EXTENSIONS ON)
 project(libcat LANGUAGES CXX ASM)
 
 # <cstdint> and <start_exit.hpp> are implicitly #included into every libCat program.
-set(
-  CMAKE_CXX_FLAGS
-  "-nostdlib \
-   -fno-exceptions -fno-rtti -fno-unwind-tables \
-   -fno-asynchronous-unwind-tables -fno-stack-protector \
-   -include cstdint -include start_exit.hpp \
-"
+list(
+  APPEND
+  LIBCAT_CXX_FLAGS_COMMON
+  -fno-exceptions -fno-rtti -fno-unwind-tables
+  -include global_includes.hpp
 )
 
-set(
-  CMAKE_CXX_FLAGS_DEBUG
-  "-O0 -ggdb3 \
-   -fno-omit-frame-pointer \
-   -fsanitize=undefined \
-   -fsanitize=address \
-   -fsanitize=leak \
-   -Wall -Wextra \
-"
-  )
+list(
+  APPEND
+  LIBCAT_CXX_FLAGS_DEBUG
+  -ggdb3 -pipe
+  -fno-omit-frame-pointer
+  -fstack-protector-strong
+  -fsanitize=undefined
+  -fsanitize=address
+  -fsanitize=leak
+  -Wall -Wextra
+)
 
 # TODO: Move semantics fail when -static is added in -O3. That should be solved,
 # because -static significantly reduces binary size.
 
 # Set aggressive space optimizations. -Os is not favorable, however.
-set(
-  CMAKE_CXX_FLAGS_RELWITHDEBINFO
-  "-O3 -ggdb3 \
-   -flto -fwhole-file -Wl,-z,norelro,-z,noseparate-code,--gc-sections \
-   -fnoomit-frame-pointer \
-   -fsanitize=undefined \
-   -fsanitize=address \
-   -fsanitize=leak \
-   -ffunction-sections -fdata-sections \
-   -fvisibility=hidden -fvisibility-inlines-hidden \
-"
+list(
+  APPEND
+  LIBCAT_CXX_FLAGS_RELEASE
+  -no-pie -fno-stack-protector
+  -fno-asynchronous-unwind-tables
+  -s -fomit-frame-pointer
+  -ffunction-sections -fdata-sections
+  -fvisibility=hidden -fvisibility-inlines-hidden
+  -flto -fwhole-file
+  -Wl,-z,norelro,-z,noseparate-code,--gc-sections
 )
 
-set(
-  CMAKE_CXX_FLAGS_RELEASE
-  "-O3 \
-   -no-pie \
-   -flto -fwhole-file -Wl,-z,norelro,-z,noseparate-code,--gc-sections \
-   -s -ffunction-sections -fdata-sections -fomit-frame-pointer \
-   -fvisibility=hidden -fvisibility-inlines-hidden \
- "
+list(
+  APPEND LIBCAT_CXX_FLAGS
+  ${LIBCAT_CXX_FLAGS_COMMON}
+  $<$<CONFIG:Debug>:${LIBCAT_CXX_FLAGS_DEBUG}>
+  $<$<CONFIG:RelWithDebInfo>:${LIBCAT_CXX_FLAGS_RELWITHDEBINFO}>
+  $<$<CONFIG:Release>:${LIBCAT_CXX_FLAGS_RELEASE}>
+)
+
+list(
+  APPEND
+  LIBCAT_COMMON_LINK_FLAGS
+  -nostdlib
+)
+
+# I can't figure out which flags are for the linker and which
+# are for the compiler, so I just send them all to both.
+list(
+  APPEND
+  LIBCAT_RELEASE_LINK_FLAGS
+  ${LIBCAT_COMMON_LINK_FLAGS}
+  -no-pie -fno-stack-protector
+  -fno-asynchronous-unwind-tables
+  -s -fomit-frame-pointer
+  -ffunction-sections -fdata-sections
+  -fvisibility=hidden -fvisibility-inlines-hidden
+  -flto -fwhole-file
+  -Wl,-z,norelro,-z,noseparate-code,--gc-sections
+)
+
+list(
+  APPEND LIBCAT_LINK_FLAGS
+  $<$<CONFIG:Debug>:${LIBCAT_COMMON_LINK_FLAGS}>
+  $<$<CONFIG:Release>:${LIBCAT_RELEASE_LINK_FLAGS}>
 )
 
 add_library(
@@ -60,6 +83,7 @@ add_library(
 add_library(libcat-std-headers INTERFACE)
 target_include_directories(
   libcat-std-headers INTERFACE
+  src/
   src/unistd/
   src/cstdlib/
   src/cstdint/
@@ -77,7 +101,7 @@ target_include_directories(
 add_library(libcat-std INTERFACE)
 target_link_libraries(libcat-std INTERFACE libcat-std-static)
 target_link_libraries(libcat-std INTERFACE libcat-std-headers)
-# target_link_libraries(libcat-std INTERFACE gcc)
+target_link_libraries(libcat-std INTERFACE gcc)
 # Only link the sanitizers when debugging.
 target_link_libraries(
   libcat-std INTERFACE
@@ -89,16 +113,53 @@ target_link_libraries(
 
 # Build the examples.
 add_executable(hello examples/hello.cpp)
+target_compile_options(hello PRIVATE ${LIBCAT_CXX_FLAGS})
 target_link_libraries(hello PRIVATE libcat-std)
+target_link_options(hello PRIVATE ${LIBCAT_LINK_FLAGS})
 
 add_executable(sizeof examples/sizeof.cpp)
+target_compile_options(sizeof PRIVATE ${LIBCAT_CXX_FLAGS})
 target_link_libraries(sizeof PRIVATE libcat-std)
+target_link_options(sizeof PRIVATE -nostdlib)
 
 add_executable(exit_with_10 examples/exit_with_10.cpp)
+target_compile_options(exit_with_10 PRIVATE ${LIBCAT_CXX_FLAGS})
 target_link_libraries(exit_with_10 PRIVATE libcat-std)
+target_link_options(exit_with_10 PRIVATE -nostdlib)
 
 add_executable(error examples/error.cpp)
+target_compile_options(error PRIVATE ${LIBCAT_CXX_FLAGS})
 target_link_libraries(error PRIVATE libcat-std)
+target_link_options(error PRIVATE -nostdlib)
 
 add_executable(safe_arithmetic examples/safe_arithmetic.cpp)
+target_compile_options(safe_arithmetic PRIVATE ${LIBCAT_CXX_FLAGS})
 target_link_libraries(safe_arithmetic PRIVATE libcat-std)
+target_link_options(safe_arithmetic PRIVATE -nostdlib)
+
+# This executable is only configured for Release
+add_executable(hello_libc examples/hello_libc.cpp)
+# target_link_libraries(hello_libc PRIVATE libcat-std)
+target_compile_options(
+  hello_libc PRIVATE
+  -fno-exceptions -fno-rtti -fno-unwind-tables
+  -no-pie -fno-stack-protector
+  -fno-asynchronous-unwind-tables
+  -s -fomit-frame-pointer
+  -ffunction-sections -fdata-sections
+  -fvisibility=hidden -fvisibility-inlines-hidden
+  -flto -fwhole-file
+  -Wl,-z,norelro,-z,noseparate-code,--gc-sections
+  -O3
+)
+target_link_options(
+  hello_libc PRIVATE
+  -fno-exceptions -fno-rtti -fno-unwind-tables
+  -no-pie -fno-stack-protector
+  -fno-asynchronous-unwind-tables
+  -s -fomit-frame-pointer
+  -ffunction-sections -fdata-sections
+  -fvisibility=hidden -fvisibility-inlines-hidden
+  -flto -fwhole-file
+  -Wl,-z,norelro,-z,noseparate-code,--gc-sections
+)
