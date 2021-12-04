@@ -2,7 +2,9 @@
 
 #include <cstdint>
 
-extern "C" void _start();
+// NOLINTNEXTLINE
+extern "C" void meow() __attribute__((used));
+// NOLINTNEXTLINE
+extern "C" void exit(i32) __attribute__((used));
 
-#include <result.hpp>
 #include <start_exit.hpp>

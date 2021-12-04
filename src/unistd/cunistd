@@ -12,8 +12,8 @@ extern "C" auto syscall5(std::any p_number, std::any p_arg1 = nullptr,
                          std::any p_arg4 = nullptr, std::any p_arg5 = nullptr)
     -> void*;
 
-auto write(i32 const& file_descriptor, char const* const& p_string_buffer,
-           usize const& string_length) -> Result<void> {
+auto write(i32 const& file_descriptor, std::any const& p_string_buffer,
+           usize const& string_length) -> Result<> {
     syscall5(1, file_descriptor, p_string_buffer, string_length);
     return get_errno();
 }
