@@ -8,25 +8,22 @@ project(libcat LANGUAGES CXX ASM)
 set(
   CMAKE_CXX_FLAGS
   "-nostdlib \
-   -Wl,-e,_start \
+   -fno-exceptions -fno-rtti -fno-unwind-tables \
+   -fno-asynchronous-unwind-tables -fno-stack-protector \
    -include cstdint -include start_exit.hpp \
 "
 )
-
-#  -fno-exceptions -fno-rtti -fno-unwind-tables \
-#   -fno-asynchronous-unwind-tables -fno-stack-protector \
-
-# set(
-#   CMAKE_CXX_FLAGS_DEBUG
-#   "-O0 -ggdb3 \
-#    -Wall -Wextra \
-# "
-# )
-
-# -fno-omit-frame-pointer \
-# -fsanitize=undefined \
-# -fsanitize=address \
-# -fsanitize=leak \
+#-Wl,-e,meow
+set(
+  CMAKE_CXX_FLAGS_DEBUG
+  "-O0 -ggdb3 \
+   -fno-omit-frame-pointer \
+   -fsanitize=undefined \
+   -fsanitize=address \
+   -fsanitize=leak \
+   -Wall -Wextra \
+"
+  )
 
 # TODO: Move semantics fail when -static is added in -O3. That should be solved,
 # because -static significantly reduces binary size.
@@ -86,8 +83,8 @@ target_link_libraries(
   libcat-std INTERFACE
   $<$<CONFIG:RelWithDebInfo>:asan>
   $<$<CONFIG:RelWithDebInfo>:ubsan>
-  # $<$<CONFIG:Debug>:asan>
-  # $<$<CONFIG:Debug>:ubsan>
+  $<$<CONFIG:Debug>:asan>
+  $<$<CONFIG:Debug>:ubsan>
 )
 
 # Build the examples.
