@@ -6,21 +6,23 @@
 #include <cstdlib>
 #include <type_traits>
 
-/* meow() is the entry point in a libCat program, so there is no _start().
+/* meow() is the entry point in a libCat program, rather than main(). Why?
  *
- * This allows libCat to do some interesting things, such as making stack
- * initialization explicit and giving the user more control over their program
- * than a libC.
+ * This allows libCat to try some interesting ideas, such as enabling the user
+ * to express explicit stack initialization and giving them generally much more
+ * control over their program than a libC can.
  *
- * That is very generally useful. Do you need to support .init and .fini, or do
- * you use .ctor or .dtor? Or both? Or neither? POSIX and ELF require libC
- * support all four, technically, but there is no good reason to actually do
- * that.
+ * That control is very generally useful. Do you need to support .init and
+ * .fini, or do you only use .ctor or .dtor instead? Or both? Or neither? POSIX
+ * and ELF require libC support all four, technically, but there is no good
+ * reason to actually do that. Very few programs actually need any of them.
  *
- * Does your program need to allocate a stack at all, or can you just use
- * argv[]? Do you even have to populate argp[] at all? There are many creative
- * liberties that open up when you rethink the basic assumption that libC is
- * just how computers work. It's not. They're just idioms. */
+ * Does your program need to allocate a stack at all, or can you just use the
+ * space you're already given in argv[]? Do you even have to populate argp[] at
+ * all? Does your program need to create a main pthread, or not? There are
+ * myriad creative liberties suddenly available once you rethink the basic
+ * assumption that libC is simpley how computers work. It's not. libC is simply
+ * a collection of idioms. Here are alternatives I think could be good: */
 void meow();
 
 /* In libCat, the exit() function is provided globally instead of in <cstdlib>.
@@ -32,7 +34,7 @@ void exit(i32 exit_code = EXIT_SUCCESS) {
            : "D" (std::decay_integral(exit_code)), "a"(60)
            : "memory");
     // clang-format on
-    __builtin_unreachable();
+    // __builtin_unreachable();
 }
 
 /* In libCat, _start() performs no initialization code. It simply invokes

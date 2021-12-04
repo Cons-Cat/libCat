@@ -13,19 +13,17 @@ struct Result;
 struct Error {
     i32 code;
 
+    // TODO: Rethink Error and Result constructors.
+    Error() = default;
+
     // This must be explicit to disambiguate returning an integer to a Result.
-    constexpr explicit Error(std::integral auto in_code) {
-        code = in_code;
-    }
-    // TODO: Figure out why std::enum_class concept doesn't work here.
-    constexpr Error(auto in_code) {
+    Error(auto in_code) {
         code = static_cast<i32>(in_code);
     }
 
     template <typename T>
-    constexpr operator Result<T>() const {
-        auto result = Result<T>(*this);
-        return result;
+    operator Result<T>() const {
+        return Result<T>(code);
     }
 
     // template <std::integral auto T> does not work for some reason.
@@ -36,7 +34,7 @@ struct Error {
         return code;
     }
 
-    constexpr auto operator==(Error right_error) const -> bool {
+    auto operator==(Error right_error) const -> bool {
         return this->code == right_error.code;
     }
 };
@@ -47,20 +45,20 @@ struct [[nodiscard]] Result {
      * extract it from %rax. */
     Error code;  // Error is 32-bits large.
 
-    /* char should be the least intrusive dummy data for when this holds void.
-     * Reflection TS in future C++ will provide conditional-members, which would
-     * be a better solution. */
+    /* char should be a relatively unintrusive dummy data for when this holds
+     * void. Reflection TS in future C++ will provide conditional-members, which
+     * would be a better solution. */
     using DataType = std::conditional_t<std::is_void_v<T>, char, T>;
     DataType data;
 
     bool is_ok;
 
-    constexpr explicit Result(Error&& in_code) {
+    Result(Error in_code) {
         this->code = in_code;
         is_ok = false;
     }
 
-    constexpr Result(DataType&& in_data) {
+    Result(DataType in_data) {
         this->data = in_data;
         is_ok = true;
     }

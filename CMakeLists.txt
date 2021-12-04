@@ -36,7 +36,7 @@ list(
   -s -fomit-frame-pointer
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
-  -flto -fwhole-file
+  -flto -fwhole-file -fno-plt
   -Wl,-z,norelro,-z,noseparate-code,--gc-sections
 )
 
@@ -65,7 +65,7 @@ list(
   -s -fomit-frame-pointer
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
-  -flto -fwhole-file
+  -flto -fwhole-file -fno-plt
   -Wl,-z,norelro,-z,noseparate-code,--gc-sections
 )
 
@@ -139,7 +139,6 @@ target_link_options(safe_arithmetic PRIVATE -nostdlib)
 
 # This executable is only configured for Release
 add_executable(hello_libc examples/hello_libc.cpp)
-# target_link_libraries(hello_libc PRIVATE libcat-std)
 target_compile_options(
   hello_libc PRIVATE
   -fno-exceptions -fno-rtti -fno-unwind-tables
@@ -148,7 +147,7 @@ target_compile_options(
   -s -fomit-frame-pointer
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
-  -flto -fwhole-file
+  -flto -fwhole-file -fno-plt
   -Wl,-z,norelro,-z,noseparate-code,--gc-sections
   -O3
 )
@@ -160,6 +159,6 @@ target_link_options(
   -s -fomit-frame-pointer
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
-  -flto -fwhole-file
+  -flto -fwhole-file -fno-plt
   -Wl,-z,norelro,-z,noseparate-code,--gc-sections
 )
