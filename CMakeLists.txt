@@ -62,7 +62,7 @@ list(
   ${LIBCAT_COMMON_LINK_FLAGS}
   -no-pie -fno-stack-protector
   -fno-asynchronous-unwind-tables
-  -s -fomit-frame-pointer
+  -fomit-frame-pointer
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto -fwhole-file -fno-plt
@@ -72,6 +72,7 @@ list(
 list(
   APPEND LIBCAT_LINK_FLAGS
   $<$<CONFIG:Debug>:${LIBCAT_COMMON_LINK_FLAGS}>
+  $<$<CONFIG:RelWithDebInfo>:${LIBCAT_COMMON_LINK_FLAGS}>
   $<$<CONFIG:Release>:${LIBCAT_RELEASE_LINK_FLAGS}>
 )
 
@@ -120,22 +121,27 @@ target_link_options(hello PRIVATE ${LIBCAT_LINK_FLAGS})
 add_executable(sizeof examples/sizeof.cpp)
 target_compile_options(sizeof PRIVATE ${LIBCAT_CXX_FLAGS})
 target_link_libraries(sizeof PRIVATE libcat-std)
-target_link_options(sizeof PRIVATE -nostdlib)
+target_link_options(sizeof PRIVATE ${LIBCAT_LINK_FLAGS})
 
 add_executable(exit_with_10 examples/exit_with_10.cpp)
 target_compile_options(exit_with_10 PRIVATE ${LIBCAT_CXX_FLAGS})
 target_link_libraries(exit_with_10 PRIVATE libcat-std)
-target_link_options(exit_with_10 PRIVATE -nostdlib)
+target_link_options(exit_with_10 PRIVATE ${LIBCAT_LINK_FLAGS})
 
 add_executable(error examples/error.cpp)
 target_compile_options(error PRIVATE ${LIBCAT_CXX_FLAGS})
 target_link_libraries(error PRIVATE libcat-std)
-target_link_options(error PRIVATE -nostdlib)
+target_link_options(error PRIVATE ${LIBCAT_LINK_FLAGS})
 
 add_executable(safe_arithmetic examples/safe_arithmetic.cpp)
 target_compile_options(safe_arithmetic PRIVATE ${LIBCAT_CXX_FLAGS})
 target_link_libraries(safe_arithmetic PRIVATE libcat-std)
-target_link_options(safe_arithmetic PRIVATE -nostdlib)
+target_link_options(safe_arithmetic PRIVATE ${LIBCAT_LINK_FLAGS})
+
+add_executable(echo examples/echo.cpp)
+target_compile_options(echo PRIVATE ${LIBCAT_CXX_FLAGS})
+target_link_libraries(echo PRIVATE libcat-std)
+target_link_options(echo PRIVATE ${LIBCAT_LINK_FLAGS})
 
 # This executable is only configured for Release
 add_executable(hello_libc examples/hello_libc.cpp)
