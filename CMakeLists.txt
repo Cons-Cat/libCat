@@ -4,6 +4,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 project(libcat LANGUAGES CXX ASM)
 
+set(CMAKE_CONFIGURATION_TYPES  Debug;Release;RelWithDebInfo;RelSmall)
+
 # <cstdint> and <start_exit.hpp> are implicitly #included into every libCat program.
 list(
   APPEND
@@ -41,11 +43,26 @@ list(
 )
 
 list(
+  APPEND
+  LIBCAT_CXX_FLAGS_RELFAST
+  ${LIBCAT_CXX_FLAGS_RELEASE}
+  -O3
+  )
+
+list(
+  APPEND
+  LIBCAT_CXX_FLAGS_RELSMAL
+  ${LIBCAT_CXX_FLAGS_RELEASE}L
+  -Os
+  )
+
+list(
   APPEND LIBCAT_CXX_FLAGS
   ${LIBCAT_CXX_FLAGS_COMMON}
   $<$<CONFIG:Debug>:${LIBCAT_CXX_FLAGS_DEBUG}>
   $<$<CONFIG:RelWithDebInfo>:${LIBCAT_CXX_FLAGS_RELWITHDEBINFO}>
-  $<$<CONFIG:Release>:${LIBCAT_CXX_FLAGS_RELEASE}>
+  $<$<CONFIG:Release>:${LIBCAT_CXX_FLAGS_RELFAST}>
+  $<$<CONFIG:RelSmall>:${LIBCAT_CXX_FLAGS_RELSMALL}>
 )
 
 list(
@@ -74,6 +91,7 @@ list(
   $<$<CONFIG:Debug>:${LIBCAT_COMMON_LINK_FLAGS}>
   $<$<CONFIG:RelWithDebInfo>:${LIBCAT_COMMON_LINK_FLAGS}>
   $<$<CONFIG:Release>:${LIBCAT_RELEASE_LINK_FLAGS}>
+  $<$<CONFIG:RelSmall>:${LIBCAT_RELEASE_LINK_FLAGS}>
 )
 
 add_library(
@@ -155,7 +173,8 @@ target_compile_options(
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto -fwhole-file -fno-plt
   -Wl,-z,norelro,-z,noseparate-code,--gc-sections
-  -O3
+  $<$<CONFIG:Release>:-O3>
+  $<$<CONFIG:RelSmall>:-Os>
 )
 target_link_options(
   hello_libc PRIVATE
