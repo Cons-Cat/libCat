@@ -24,8 +24,7 @@ struct any {
     void* data;
 
     constexpr any(auto input) requires(sizeof(input) <= sizeof(data)) {
-        data = 0;
-        data = (void*)(isize)(std::forward<decltype(input)>(input));
+        data = (void*)(isize)(input);
     };
 
     operator void*() const {
@@ -34,12 +33,12 @@ struct any {
 };
 
 template <typename T>
-constexpr auto any_cast(any&& in_any) -> T {
+constexpr auto any_cast(any in_any) -> T {
     static_assert(
-        sizeof(in_any) == sizeof(void*),
-        "any_cast<> may only do a zero-cost cast to pointer-sized types. It "
-        "should be explicitly casted to any other size.");
-    void* any_value = std::forward<void*>(in_any.data);
+        sizeof(in_any) <= sizeof(void*),
+        "any_cast<> may only do a zero-cost cast to pointer-sized types. It \
+        should be explicitly casted to any other size.");
+    void* any_value = (in_any.data);
     return static_cast<T>(any_value);
 }
 
