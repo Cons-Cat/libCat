@@ -95,8 +95,13 @@ list(
 )
 
 add_library(
-  libcat-std-static
-  src/unistd/syscalls.s
+  libcat-std-static STATIC
+  src/unistd/detail/syscall0.s
+  src/unistd/detail/syscall1.s
+  src/unistd/detail/syscall2.s
+  src/unistd/detail/syscall3.s
+  src/unistd/detail/syscall4.s
+  src/unistd/detail/syscall5.s
 )
 
 add_library(libcat-std-headers INTERFACE)
