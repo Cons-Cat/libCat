@@ -23,6 +23,8 @@ namespace std {
 struct any {
     void* data;
 
+    constexpr any() = default;
+
     constexpr any(auto input) requires(sizeof(input) <= sizeof(data)) {
         data = (void*)(isize)(input);
     };

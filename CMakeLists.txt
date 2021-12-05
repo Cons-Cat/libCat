@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 project(libcat LANGUAGES CXX ASM)
 
-set(CMAKE_CONFIGURATION_TYPES  Debug;Release;RelWithDebInfo;RelSmall)
+set(CMAKE_CONFIGURATION_TYPES Debug;Release;RelWithDebInfo;RelSmall)
 
 # <cstdint> and <start_exit.hpp> are implicitly #included into every libCat program.
 list(
@@ -47,14 +47,14 @@ list(
   LIBCAT_CXX_FLAGS_RELFAST
   ${LIBCAT_CXX_FLAGS_RELEASE}
   -O3
-  )
+)
 
 list(
   APPEND
   LIBCAT_CXX_FLAGS_RELSMAL
   ${LIBCAT_CXX_FLAGS_RELEASE}L
   -Os
-  )
+)
 
 list(
   APPEND LIBCAT_CXX_FLAGS
@@ -95,8 +95,8 @@ list(
 )
 
 add_library(
-  libcat-std-static STATIC
-  src/crt/crt1.S
+  libcat-std-static
+  src/unistd/syscalls.s
 )
 
 add_library(libcat-std-headers INTERFACE)
@@ -107,6 +107,7 @@ target_include_directories(
   src/cstdlib/
   src/cstdint/
   src/cstdint/detail/
+  src/cstdarg/
   src/type_traits/
   src/utility/
   src/start_exit/

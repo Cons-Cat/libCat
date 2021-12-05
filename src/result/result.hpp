@@ -69,10 +69,20 @@ struct [[nodiscard]] Result {
             }
             return;
         }
-        // TODO: Print the error message.
         exit(EXIT_FAILURE);
     }
-
+    // TODO: Overload that prints an error message.
+    /* auto or_panic(char const* error_message) -> T {
+           if (is_ok) {
+           if constexpr (!std::is_void_v<T>) {
+           return this->data;
+           }
+           return;
+           }
+           // TODO: Print the error message.
+           exit(EXIT_FAILURE);
+           }
+        */
     auto or_return(DataType const& in_data) -> DataType {
         return in_data;
     }
