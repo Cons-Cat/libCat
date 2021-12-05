@@ -11,6 +11,10 @@
  * strange codegen. */
 namespace std::detail {
 
+/* The source to these functions is contained in the ./detail/ subdirectory at
+ * the path of this file. They are split into individual files, because GCC
+ * cannot exclude compiling unused functions individually from within one .s
+ * file. */
 extern "C" auto syscall0(std::any) -> void*;
 extern "C" auto syscall1(std::any, std::any) -> void*;
 extern "C" auto syscall2(std::any, std::any, std::any) -> void*;
@@ -23,7 +27,7 @@ extern "C" auto syscall5(std::any, std::any, std::any, std::any, std::any arg4,
 }  // namespace std::detail
 
 template <typename T, typename... Args>
-void syscall(T arg, Args... parameters) {
+void syscall(T, Args... parameters) {
     constexpr i64 stdout = 1;
     constexpr usize length = sizeof...(Args);
     std::any arguments[length] = {parameters...};
