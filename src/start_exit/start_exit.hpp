@@ -50,12 +50,22 @@ extern "C" __attribute__((used)) void _start() {
     __builtin_unreachable();  // This elides a ret instruction.
 }
 
+auto load_base_stack_pointer() -> void* {
+    void* rbp;
+    asm(R"(mov %%rbp, %[rbp])" : [rbp] "=r"(rbp));
+    return rbp;
 }
 
 auto load_argc() -> i32 {
     i32* argc;
     asm(R"(mov %%rbp, %[argc])" : [argc] "=r"(argc));
     return *argc;
+}
+
+auto load_argv() -> char const** {
+    char const** argv;
+    asm("mov 4(%%rbp), %0" : "=r"(argv));
+    return argv;
 }
 
 /* __stack_chk_fail() is called when stack overflow occurs in programs compiled
