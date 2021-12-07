@@ -20,9 +20,9 @@ list(
   -ggdb3 -pipe
   -fno-omit-frame-pointer
   -fstack-protector-strong
-  -fsanitize=undefined
-  -fsanitize=address
-  -fsanitize=leak
+  # -fsanitize=undefined
+  # -fsanitize=address
+  # -fsanitize=leak
   -Wall -Wextra
   -Wno-unused-function
 )
@@ -131,10 +131,10 @@ target_link_libraries(libcat-std INTERFACE gcc)
 # Only link the sanitizers when debugging.
 target_link_libraries(
   libcat-std INTERFACE
-  $<$<CONFIG:RelWithDebInfo>:asan>
-  $<$<CONFIG:RelWithDebInfo>:ubsan>
-  $<$<CONFIG:Debug>:asan>
-  $<$<CONFIG:Debug>:ubsan>
+  # $<$<CONFIG:RelWithDebInfo>:asan>
+  # $<$<CONFIG:RelWithDebInfo>:ubsan>
+  # $<$<CONFIG:Debug>:asan>
+  # $<$<CONFIG:Debug>:ubsan>
 )
 
 # Build the examples.
