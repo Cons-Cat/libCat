@@ -36,6 +36,9 @@ extern "C" void exit(i32 exit_code) {
     __builtin_unreachable();  // This elides a retq instruction.
 }
 
+/* TODO: #ifdef __SANITIZE_ADDRESS__
+ * to handle address sanitizers, which do not work. */
+
 /* in libCat, _start() does almost nothing. It is necessary to store the base
  * stack pointer at this point, but otherwise all initialization logic occurs in
  * meow(). */
@@ -44,7 +47,9 @@ extern "C" __attribute__((used)) void _start() {
                     call meow
                     mov $0, %edi
                     call exit)");
-    __builtin_unreachable();  // This elides a retq instruction.
+    __builtin_unreachable();  // This elides a ret instruction.
+}
+
 }
 
 auto load_argc() -> i32 {
