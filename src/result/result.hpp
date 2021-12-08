@@ -110,12 +110,13 @@ struct [[nodiscard("To skip error-handling, call .unsafe_value()")]] Result {
     auto unsafe_value()->T {
 #ifdef __OPTIMIZE__
         return value;
-#endif
+#else
         if (is_ok) {
             return value;
         }
         // TODO: Error message.
         exit(EXIT_FAILURE);
+#endif
     }
 
     // TODO: Pass in the exit code and error message with overloads.
