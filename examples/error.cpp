@@ -9,12 +9,12 @@ enum class MyErrors
     FAIL = 1,
 };
 
-auto is_ok(Error error) -> bool {
+auto is_ok(Failure error) -> bool {
     return error.code == 0;
 }
 
 auto result_factory(MyErrors error) -> Result<void> {
-    return Error(error);
+    return Failure(error);
 }
 
 void meow() {
