@@ -11,7 +11,7 @@ void meow() {
             len++;
         }
         argv[i][len] = ' ';
-        write(1, argv[i], len + 1).or_panic();
+        write(1, argv[i], len + 1).or_panic_debug();
     }
-    write(1, "\n", 1).or_panic();
+    write(1, "\n", 1).or_panic_debug();
 }
