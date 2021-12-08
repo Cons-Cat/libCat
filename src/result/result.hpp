@@ -6,22 +6,22 @@
 #include <type_traits>
 #include <utility>
 
-/* This file contains a general-purpose error handling tool. Result<> is a
+/* This file contains a general-purpose error-handling tool. Result<> is a
  * templated struct that either contains some data (unless it holds void) or an
  * error-code. The error-code is a 64-bit value that can be either an integer or
  * a pointer to a string that may be printed. To extract a value out of a
- *result, call one of its member functions.
+ * result, call one of its member functions.
  *
- * An error code or string pointer must be wrapped in an Error, such as:
- ** return Error(1);
+ * An error code or string pointer must be wrapped in a Failure, such as:
+ ** return Failure(1);
  *
  * Otherwise, it is presumed that a Result holds a value rather than an error.
  * This is done to prevent monomorphizing the Result on its error types like
- * Rust, which provides type-safety at the cost of pessimized compile-times and
+ * Rust, which provides type-safety at the cost of pessimized compiler-times and
  * runtime overhead. This Result is a zero-overhead abstraction over C-style
  * error handling.
  *
- * Errors are implicitly convertible into a Result, and a T is implicitly
+ * A Failure is implicitly convertible into a Result, and a T is implicitly
  * convertible into a Result<T>.
  *
  * Result types are marked [[nodiscard]]. With confidence that an invocation of
@@ -31,16 +31,16 @@
 template <typename T = void>
 struct Result;
 
-struct [[nodiscard]] Error {
+struct [[nodiscard]] Failure {
     /* TODO: This should be a more precise type. It holds either an i64 or a
      * char const*. */
     std::any code;
 
     // TODO: Rethink Error and Result constructors.
-    Error() = default;
+    Failure() = default;
 
     // This must be explicit to disambiguate returning an integer to a Result.
-    Error(auto in_code) {
+    Failure(auto in_code) {
         code = static_cast<std::any>(in_code);
     }
 
@@ -57,7 +57,7 @@ struct [[nodiscard]] Error {
         return code;
     }
 
-    auto operator==(Error right_error) const -> bool {
+    auto operator==(Failure right_error) const -> bool {
         return this->code == right_error.code;
     }
 };
@@ -66,7 +66,7 @@ template <typename T>
 struct [[nodiscard("To skip error-handling, call .unsafe_value()")]] Result {
     /* The error code must be laid out first, so that _start() can reliably
      * extract it from %rax. */
-    Error error_code;  // Error is a 64-bit value.
+    Failure error_code;  // Error is a 64-bit value.
 
   private:
     /* char should be a relatively unintrusive dummy data for when this holds
@@ -77,7 +77,7 @@ struct [[nodiscard("To skip error-handling, call .unsafe_value()")]] Result {
     bool const is_ok;
 
   public:
-    Result(Error in_code) : error_code(in_code), value(), is_ok(false) {
+    Result(Failure in_code) : error_code(in_code), value(), is_ok(false) {
     }
 
     Result(ValueType in_value) : error_code(), value(in_value), is_ok(true) {
