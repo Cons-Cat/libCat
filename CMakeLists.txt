@@ -121,6 +121,7 @@ target_include_directories(
   src/pthread/
   src/concepts/
   src/any/
+  src/maybe/
 )
 
 # Combine static objects and C++ headers for convenience.
