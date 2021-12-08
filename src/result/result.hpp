@@ -164,7 +164,7 @@ struct [[nodiscard("To skip error-handling, call .unsafe_value()")]] Result {
             }
             return;
         }
-#ifdef __OPTIMIZE__
+#ifndef __OPTIMIZE__
         // TODO: print(error_message);
 #endif
         exit(EXIT_FAILURE);
@@ -179,7 +179,7 @@ struct [[nodiscard("To skip error-handling, call .unsafe_value()")]] Result {
             }
             return;
         }
-#ifdef __OPTIMIZE__
+#ifndef __OPTIMIZE__
         // TODO: print(error_code);
 #endif
         exit(EXIT_FAILURE);
