@@ -265,8 +265,3 @@ using x128 = float __attribute__((mode(TC))) _Complex;
 using bool8 = u8;
 using bool16 = u16;
 using bool32 = u32;
-
-/* #include these here, so that the only -include build flag required is for
- * <cstdint>. */
-#include <detail/simd.hpp>
-#include <detail/vector_primitives.hpp>
