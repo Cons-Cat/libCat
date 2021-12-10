@@ -35,4 +35,9 @@ void meow() {
 
     // This is a compile error:
     // data_4 = data_3;
+
+    f32x4 vec1 = {1.f, 2.f, 3.f, 4.f};
+    f32x4 vec2 = {1.f, 2.f, 3.f, 4.f};
+    f32x4 foobar = vec1 + vec2;
+    foobar += vec1 + vec2;
 }
