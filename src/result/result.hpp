@@ -119,6 +119,8 @@ struct [[nodiscard("To skip error-handling, call .unsafe_value()")]] Result {
 #endif
     }
 
+    void unsafe_discard(){};
+
     // TODO: Pass in the exit code and error message with overloads.
     auto or_panic()->T {
         if (is_ok) {

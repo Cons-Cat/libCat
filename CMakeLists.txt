@@ -11,6 +11,8 @@ list(
   APPEND
   LIBCAT_CXX_FLAGS_COMMON
   -fno-exceptions -fno-rtti -fno-unwind-tables
+  -march=native
+  -fdiagnostics-color
   -include global_includes.hpp
 )
 
