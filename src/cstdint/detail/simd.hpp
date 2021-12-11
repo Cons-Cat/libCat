@@ -1,5 +1,13 @@
 #pragma once
 
+/* The Intel-style _mm_add_ps() and __m128 syntax is completely arbitrary in
+ * GCC. GNU implemented it with wrapper libraries around their own, arguably
+ * more reasonable, compiler intrinsics that already understand arithmetic
+ * operators. Then, authors of SIMD-wrapper libraries will wrap *those* wrappers
+ * to put arithmetic operators back on top with yet more types and functions!
+ *
+ * To streamline this, libCat uses the tools that GNU already provides. */
+
 namespace std::detail {
 
 template <typename T, usize Width>
@@ -7,11 +15,19 @@ struct vector {
     // vector_size is a GCC attribute that represents SIMD data-types.
     T value __attribute__((vector_size(sizeof(T) * Width)));
 
-    auto operator+(vector<T, Width> const& rhs) -> vector<T, Width> {
-        return value + rhs.value;
+    auto operator+(vector<T, Width> const& operand) -> vector<T, Width> {
+        return vector<T, Width>{this->value + operand.value};
     }
-    auto operator+=(vector<T, Width> const& rhs) -> vector<T, Width>& {
-        value = value + rhs.value;
+    auto operator+=(vector<T, Width> const& operand) -> vector<T, Width>& {
+        this->value = this->value + operand.value;
+        return *this;
+    }
+
+    auto operator-(vector<T, Width> const& operand) -> vector<T, Width> {
+        return vector<T, Width>{this->value - operand.value};
+    }
+    auto operator-=(vector<T, Width> const& operand) -> vector<T, Width>& {
+        this->value = this->value - operand.value;
         return *this;
     }
 };
@@ -73,3 +89,59 @@ using bool16x16 = std::detail::vector<bool16, 16>;
 using bool32x2 = std::detail::vector<bool32, 2>;
 using bool32x4 = std::detail::vector<bool32, 4>;
 using bool32x8 = std::detail::vector<bool32, 8>;
+
+// TODO: __builtin_cpu_init() may need to be extracted out.
+auto is_mmx_supported() -> bool {
+    __builtin_cpu_init();
+    return __builtin_cpu_supports("mmx");
+}
+
+auto is_sse1_supported() -> bool {
+    __builtin_cpu_init();
+    return __builtin_cpu_supports("sse");
+}
+
+auto is_sse2_supported() -> bool {
+    __builtin_cpu_init();
+    return __builtin_cpu_supports("sse2");
+}
+
+auto is_sse3_supported() -> bool {
+    __builtin_cpu_init();
+    return __builtin_cpu_supports("sse3");
+}
+
+auto is_ssse3_supported() -> bool {
+    __builtin_cpu_init();
+    return __builtin_cpu_supports("ssse3");
+}
+
+auto is_sse4_1_supported() -> bool {
+    __builtin_cpu_init();
+    return __builtin_cpu_supports("sse4.1");
+}
+
+auto is_sse4_2_supported() -> bool {
+    __builtin_cpu_init();
+    return __builtin_cpu_supports("sse4.2");
+}
+
+auto is_avx_supported() -> bool {
+    __builtin_cpu_init();
+    return __builtin_cpu_supports("avx");
+}
+
+auto is_avx2_supported() -> bool {
+    __builtin_cpu_init();
+    return __builtin_cpu_supports("avx2");
+}
+
+auto is_avx512f_supported() -> bool {
+    __builtin_cpu_init();
+    return __builtin_cpu_supports("avx512f");
+}
+
+auto is_avx512vl_supported() -> bool {
+    __builtin_cpu_init();
+    return __builtin_cpu_supports("avx512vl");
+}
