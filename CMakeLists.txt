@@ -6,7 +6,6 @@ project(libcat LANGUAGES CXX ASM)
 
 set(CMAKE_CONFIGURATION_TYPES Debug;Release;RelWithDebInfo;RelSmall)
 
-# <cstdint> and <start_exit.hpp> are implicitly #included into every libCat program.
 list(
   APPEND
   LIBCAT_CXX_FLAGS_COMMON
@@ -29,16 +28,13 @@ list(
   -Wno-unused-function
 )
 
-# TODO: Move semantics fail when -static is added in -O3. That should be solved,
-# because -static significantly reduces binary size.
-
 # Set aggressive space optimizations. -Os is not favorable, however.
 list(
   APPEND
   LIBCAT_CXX_FLAGS_RELEASE
   -no-pie -fno-stack-protector
   -fno-asynchronous-unwind-tables
-  -s -fomit-frame-pointer
+  -s
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto -fwhole-file -fno-plt
@@ -82,7 +78,6 @@ list(
   ${LIBCAT_COMMON_LINK_FLAGS}
   -no-pie -fno-stack-protector
   -fno-asynchronous-unwind-tables
-  -fomit-frame-pointer
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto -fwhole-file -fno-plt
@@ -181,7 +176,7 @@ target_compile_options(
   -fno-exceptions -fno-rtti -fno-unwind-tables
   -no-pie -fno-stack-protector
   -fno-asynchronous-unwind-tables
-  -s -fomit-frame-pointer
+  -s 
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto -fwhole-file -fno-plt
@@ -194,7 +189,7 @@ target_link_options(
   -fno-exceptions -fno-rtti -fno-unwind-tables
   -no-pie -fno-stack-protector
   -fno-asynchronous-unwind-tables
-  -s -fomit-frame-pointer
+  -s
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto -fwhole-file -fno-plt
