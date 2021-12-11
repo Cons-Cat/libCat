@@ -1,10 +1,10 @@
-#include <any>
-#include <cunistd>
+#include <any.h>
+#include <unistd.h>
 
 void meow() {
-    std::any rbp = load_base_stack_pointer();
-    i32 argc = *std::any_cast<i32*>(rbp);
-    char** argv = std::any_cast<char**>(rbp) + 1;
+    Any rbp = load_base_stack_pointer();
+    i32 argc = *any_cast<i32*>(move(rbp));
+    char** argv = any_cast<char**>(move(rbp)) + 1;
     for (i32 i = 1; i < argc; i++) {
         i32 len = 0;
         while (argv[i][len] != 0) {

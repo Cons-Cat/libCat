@@ -1,0 +1,7 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+/* This file simply forwards an #include to <stdlib.h>.
+ * It exists for backwards compatibility with C++ code. */
+#include <stdlib.h>
