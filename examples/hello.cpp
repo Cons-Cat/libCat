@@ -1,5 +1,5 @@
-#include <cstdlib>
-#include <cunistd>
+#include <stdlib.h>
+#include <unistd.h>
 
 void meow() {
     char const* p_str = "Hello, Conscat!\n";

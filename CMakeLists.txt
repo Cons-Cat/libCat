@@ -14,7 +14,7 @@ list(
   -fomit-frame-pointer # This is required for the stack frame to work.
   -march=native
   -fdiagnostics-color
-  -include global_includes.hpp
+  -include global_includes.h
 )
 
 list(
@@ -99,35 +99,38 @@ list(
 
 add_library(
   libcat-std-static STATIC
-  src/unistd/detail/syscall0.s
-  src/unistd/detail/syscall1.s
-  src/unistd/detail/syscall2.s
-  src/unistd/detail/syscall3.s
-  src/unistd/detail/syscall4.s
-  src/unistd/detail/syscall5.s
+  src/libraries/unistd/detail/syscall0.s
+  src/libraries/unistd/detail/syscall1.s
+  src/libraries/unistd/detail/syscall2.s
+  src/libraries/unistd/detail/syscall3.s
+  src/libraries/unistd/detail/syscall4.s
+  src/libraries/unistd/detail/syscall5.s
 )
+
+# file(GLOB CompatLibs src/compatibility/*.h$)
 
 add_library(libcat-std-headers INTERFACE)
 target_include_directories(
   libcat-std-headers INTERFACE
   src/
-  src/unistd/
-  src/cstdlib/
-  src/cstdint/
-  src/cstdint/detail/
-  src/cstdarg/
-  src/type_traits/
-  src/utility/
-  src/start_exit/
-  src/result/
-  src/pthread/
-  src/concepts/
-  src/any/
-  src/maybe/
+  src/runtime/
+  src/compatibility/
+  src/libraries/unistd/
+  src/libraries/stdlib/
+  src/libraries/numerals/
+  src/libraries/simd/
+  src/libraries/result/
+  src/libraries/maybe/
+  src/libraries/any/
+  src/libraries/type_traits/
+  src/libraries/concepts/
+  src/libraries/utility/
+  src/libraries/pthread/
+  src/libraries/errno/
 )
 
 # Combine static objects and C++ headers for convenience.
-add_library(libcat-std INTERFACE)
+add_library(libcat-std INTERFACE ${CompatLibs})
 target_link_libraries(libcat-std INTERFACE libcat-std-static)
 target_link_libraries(libcat-std INTERFACE libcat-std-headers)
 target_link_libraries(libcat-std INTERFACE gcc)
