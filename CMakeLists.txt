@@ -11,6 +11,7 @@ list(
   APPEND
   LIBCAT_CXX_FLAGS_COMMON
   -fno-exceptions -fno-rtti -fno-unwind-tables
+  -fomit-frame-pointer # This is required for the stack frame to work.
   -march=native
   -fdiagnostics-color
   -include global_includes.hpp
@@ -20,7 +21,6 @@ list(
   APPEND
   LIBCAT_CXX_FLAGS_DEBUG
   -ggdb3 -pipe
-  -fno-omit-frame-pointer
   -fstack-protector-strong
   # -fsanitize=undefined
   # -fsanitize=address

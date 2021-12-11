@@ -13,7 +13,7 @@ namespace std::detail {
 template <typename T, usize Width>
 struct vector {
     // vector_size is a GCC attribute that represents SIMD data-types.
-    T value __attribute__((vector_size(sizeof(T) * Width)));
+    alignas(16) T value __attribute__((vector_size(sizeof(T) * Width)));
 
     auto operator+(vector<T, Width> const& operand) -> vector<T, Width> {
         return vector<T, Width>{this->value + operand.value};
