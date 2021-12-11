@@ -1,4 +1,10 @@
-void meow() {
+__attribute__((optimize("O0"))) void meow() {
+    f32x4 vec1 = {1.f, 2.f, 3.f, 4.f};
+    f32x4 vec2 = {1.f, 2.f, 3.f, 4.f};
+    f32x4 foobar = vec1 + vec2;
+    foobar += vec1 + vec2;
+    foobar -= vec2;
+
     /*
 int myint = 0;
 u32 test_unsigned = 1u;
@@ -33,13 +39,7 @@ auto data_5 = data_4 + data_2;
 static_assert(sizeof(data_3) == 8);
 static_assert(sizeof(data_4) == 4);
 data_3 = data_4;  // Safe
-*/
     // This is a compile error:
     // data_4 = data_3;
-
-    f32x4 vec1 = {1.f, 2.f, 3.f, 4.f};
-    f32x4 vec2 = {1.f, 2.f, 3.f, 4.f};
-    f32x4 foobar = vec1 + vec2;
-    foobar += vec1 + vec2;
-    foobar -= vec2;
+*/
 }
