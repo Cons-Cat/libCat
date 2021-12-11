@@ -117,6 +117,7 @@ target_include_directories(
   src/libraries/result/
   src/libraries/maybe/
   src/libraries/any/
+  src/libraries/string/
   src/libraries/type_traits/
   src/libraries/concepts/
   src/libraries/utility/
