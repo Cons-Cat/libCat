@@ -25,7 +25,7 @@ list(
   # -fsanitize=undefined
   # -fsanitize=address
   # -fsanitize=leak
-  -Wall -Wextra
+  -Wall -Wextra -Wno-unused-function
   -Wno-unused-function
 )
 

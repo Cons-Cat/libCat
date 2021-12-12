@@ -1,8 +1,9 @@
 #pragma once
 
-// auto alloca(usize size) -> void* {
-//     return __builtin_alloca(std::decay_integral(size));
-// }
+// TODO: Use a numeral concept.
+auto alloca(auto size) -> void* {
+    return __builtin_alloca(decay_numeral(size));
+}
 
 constexpr int EXIT_SUCCESS = 0;
 constexpr int EXIT_FAILURE = 1;
