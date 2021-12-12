@@ -103,7 +103,9 @@ add_library(
   src/libraries/unistd/detail/syscall5.s
 )
 
-add_library(libcat-std-headers INTERFACE)
+add_library(libcat-std-headers INTERFACE
+  src/global_includes.h
+  src/runtime/exit.h)
 target_include_directories(
   libcat-std-headers INTERFACE
   src/
@@ -129,7 +131,6 @@ add_library(libcat-std INTERFACE)
 target_link_libraries(libcat-std INTERFACE libcat-std-static)
 target_link_libraries(libcat-std INTERFACE libcat-std-headers)
 target_link_libraries(libcat-std INTERFACE gcc)
-# Only link the sanitizers when debugging.
 target_link_libraries(
   libcat-std INTERFACE
   # $<$<CONFIG:RelWithDebInfo>:asan>
