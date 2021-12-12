@@ -3,10 +3,10 @@
 #pragma once
 
 /* In C++, va_list is essentially useless. It produces inferior codegen to
- * analogous procedures using variadic templates, and is less flexible.
- * Additionally, it can only be fully implemented with preprocessor macros. This
- * library is provided only for backwards compatibility with some libC-based
- * code. */
+ * analogous procedures using variadic templates due to redundant copies and
+ * making function inlining unreliable. It is also less flexible. Moreover,
+ * it can only be fully implemented with preprocessor macros. This header is
+ * provided only for backwards compatibility with some libC-based code. */
 
 using va_list = __builtin_va_list;
 
