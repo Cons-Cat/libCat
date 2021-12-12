@@ -1,10 +1,9 @@
 #include <string.h>
 
-__attribute__((optimize("O0"))) void meow() {
-    char const* string = "Hello, Conscat!";
-    i32 foo = simd_string_length(string);
-    i32 bar = string_length(string);
-    i64 b;
+void meow() {
+    // char const* string = "Hello, Conscat!";
+    // i32 foo = simd_string_length(string);
+    // i32 bar = string_length(string);
 
     // f32x4 vec1 = {1.f, 2.f, 3.f, 4.f};
     // f32x4 vec2 = {1.f, 2.f, 3.f, 4.f};

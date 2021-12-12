@@ -1,7 +1,6 @@
 #pragma once
 
 #include <concepts.h>
-#include <numerals.h>
 #include <type_traits.h>
 
 /* meow() is the user's entry point in a libCat program, rather than main().

@@ -1,3 +1,4 @@
+# I have only tested on CMake 3.21, but this likely works on older versions.
 cmake_minimum_required(VERSION 3.21)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -51,7 +52,7 @@ list(
 list(
   APPEND
   LIBCAT_CXX_FLAGS_RELSMAL
-  ${LIBCAT_CXX_FLAGS_RELEASE}L
+  ${LIBCAT_CXX_FLAGS_RELEASE}
   -Os
 )
 
@@ -108,8 +109,6 @@ target_include_directories(
   src/
   src/runtime/
   src/compatibility/
-  src/libraries/unistd/
-  src/libraries/stdlib/
   src/libraries/numerals/
   src/libraries/simd/
   src/libraries/result/
@@ -119,12 +118,14 @@ target_include_directories(
   src/libraries/type_traits/
   src/libraries/concepts/
   src/libraries/utility/
+  src/libraries/stdlib/
+  src/libraries/unistd/
   src/libraries/pthread/
   src/libraries/errno/
 )
 
 # Combine static objects and C++ headers for convenience.
-add_library(libcat-std INTERFACE ${CompatLibs})
+add_library(libcat-std INTERFACE)
 target_link_libraries(libcat-std INTERFACE libcat-std-static)
 target_link_libraries(libcat-std INTERFACE libcat-std-headers)
 target_link_libraries(libcat-std INTERFACE gcc)

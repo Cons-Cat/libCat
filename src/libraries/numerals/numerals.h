@@ -222,11 +222,12 @@ using f64 = std::detail::safe_integral_t<double>;
 using f128 = __float128;
 using x128 = float __attribute__((mode(TC))) _Complex;
 #else
-// TODO: Rename this to decay_numeral().
-constexpr auto decay_integral(auto from) {
+
+constexpr auto decay_numeral(auto from) {
     return from;
 }
 
+// These macros are defined by the GCC compiler.
 using i8 = __INT8_TYPE__;
 using u8 = __UINT8_TYPE__;
 using i16 = __INT16_TYPE__;
