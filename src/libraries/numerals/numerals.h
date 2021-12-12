@@ -7,21 +7,20 @@
  * hiding this behind a feature flag. */
 #ifdef SAFE_ARITHMETIC
 
-// TODO: Rename to decay_safe_value;
 /* Get the value of a primitive number, or the value held by a
- * safe_integral_t<>. */
-constexpr auto decay_integral(std::int_or_float auto from) {
+ * safe_numeral_t<>. */
+constexpr auto decay_numeral(int_or_float auto from) {
     return from;
 }
-constexpr auto decay_integral(auto from) {
+constexpr auto decay_numeral(auto from) {
     return from.data;
 }
 
 namespace std::detail {
 
-/* safe_integral_t<> is the most interesting part of <stdint.h>. libCat uses
+/* safe_numeral_t<> is the most interesting part of <stdint.h>. libCat uses
  * this struct to represent all of its scalar numerical data types.
- * Operations between two specializations of a safe_integral_t<> that would
+ * Operations between two specializations of a safe_numeral_t<> that would
  * cause a narrowing conversion such as loss of precision, change in
  * signed-ness, or an implicit float to int conversion, *do not compile*, and
  * the code to ensure this is very simple compared to many other mechanisms.
@@ -41,21 +40,20 @@ namespace std::detail {
  * i64 and an i32 type. This solution is very concise because that same
  * constraint broadly applies to all possible type conversions. */
 
-// TODO: Rename to safe_value_t
 template <typename T>
-struct safe_integral_t {
+struct safe_numeral_t {
     // TODO: Rename to value
     T data;  // Uninitialized by default.
 
-    constexpr safe_integral_t() = default;
+    constexpr safe_numeral_t() = default;
     // Any number that is smaller than this can safely cast into it.
-    constexpr safe_integral_t(auto from) requires(
+    constexpr safe_numeral_t(auto from) requires(
         std::is_signed_v<T> ==
-            std::is_signed_v<decltype(decay_integral(from))> &&
-        sizeof(T) >= sizeof(decltype(decay_integral(from))) &&
+            std::is_signed_v<decltype(decay_numeral(from))> &&
+        sizeof(T) >= sizeof(decltype(decay_numeral(from))) &&
         std::is_floating_point_v<T> ==
-            std::is_floating_point_v<decltype(decay_integral(from))>) {
-        this->data = decay_integral(from);
+            std::is_floating_point_v<decltype(decay_numeral(from))>) {
+        this->data = decay_numeral(from);
     }
     // TODO: Make a concept that limits signed-ness and size.
     constexpr operator std::int_or_float auto() const {
@@ -64,134 +62,127 @@ struct safe_integral_t {
 
         /* TODO: Putting concepts or constexpr functions in these requires
          * clauses doesn't work, for some reason. */
-#define REQUIRES_HELPER                                                        \
-    std::is_signed_v<T> == std::is_signed_v<decltype(decay_integral(from))> && \
-        sizeof(T) >= sizeof(decltype(decay_integral(from))) &&                 \
-        std::is_floating_point_v<T> ==                                         \
-            std::is_floating_point_v<decltype(decay_integral(from))>
+#define REQUIRES_HELPER                                                       \
+    std::is_signed_v<T> == std::is_signed_v<decltype(decay_numeral(from))> && \
+        sizeof(T) >= sizeof(decltype(decay_numeral(from))) &&                 \
+        std::is_floating_point_v<T> ==                                        \
+            std::is_floating_point_v<decltype(decay_numeral(from))>
 
-    auto operator=(auto from) -> safe_integral_t<T>& requires(REQUIRES_HELPER) {
-        this->data = decay_integral(from);
+    auto operator=(auto from) -> safe_numeral_t<T>& requires(REQUIRES_HELPER) {
+        this->data = decay_numeral(from);
         return *this;
     }
     auto operator==(auto from) -> bool requires(REQUIRES_HELPER) {
-        return this->data == decay_integral(from);
+        return this->data == decay_numeral(from);
     }
 
     auto operator>(auto from) -> bool requires(REQUIRES_HELPER) {
-        return this->data > decay_integral(from);
+        return this->data > decay_numeral(from);
     }
     auto operator>=(auto from) -> bool requires(REQUIRES_HELPER) {
-        return this->data >= decay_integral(from);
+        return this->data >= decay_numeral(from);
     }
 
     auto operator<(auto from) -> bool requires(REQUIRES_HELPER) {
-        return this->data < decay_integral(from);
+        return this->data < decay_numeral(from);
     }
     auto operator<=(auto from) -> bool requires(REQUIRES_HELPER) {
-        return this->data <= decay_integral(from);
+        return this->data <= decay_numeral(from);
     }
 
-    auto operator+(auto from) -> safe_integral_t<T>
+    auto operator+(auto from) -> safe_numeral_t<T>
     requires(REQUIRES_HELPER) {
-        return this->data + decay_integral(from);
+        return this->data + decay_numeral(from);
     }
-    auto operator+=(auto from)
-        -> safe_integral_t<T>& requires(REQUIRES_HELPER) {
-        this->data = this->data + decay_integral(from);
+    auto operator+=(auto from) -> safe_numeral_t<T>& requires(REQUIRES_HELPER) {
+        this->data = this->data + decay_numeral(from);
         return *this;
     }
 
-    auto operator++() -> safe_integral_t<T> {
+    auto operator++() -> safe_numeral_t<T> {
         return ++data;
     }
-    auto operator++(int) -> safe_integral_t<T> {
+    auto operator++(int) -> safe_numeral_t<T> {
         return data++;
     }
 
-    auto operator-(auto from) -> safe_integral_t<T>
+    auto operator-(auto from) -> safe_numeral_t<T>
     requires(REQUIRES_HELPER) {
-        return this->data - decay_integral(from);
+        return this->data - decay_numeral(from);
     }
-    auto operator-=(auto from)
-        -> safe_integral_t<T>& requires(REQUIRES_HELPER) {
+    auto operator-=(auto from) -> safe_numeral_t<T>& requires(REQUIRES_HELPER) {
         this->data = this - from;
         return *this;
     }
 
-    auto operator--() -> safe_integral_t<T> {
+    auto operator--() -> safe_numeral_t<T> {
         return --data;
     }
-    auto operator--(int) -> safe_integral_t<T> {
+    auto operator--(int) -> safe_numeral_t<T> {
         return data--;
     }
 
-    auto operator*(auto from) -> safe_integral_t<T>
+    auto operator*(auto from) -> safe_numeral_t<T>
     requires(REQUIRES_HELPER) {
-        return this->data * decay_integral(from);
+        return this->data * decay_numeral(from);
     }
-    auto operator*=(auto from)
-        -> safe_integral_t<T>& requires(REQUIRES_HELPER) {
+    auto operator*=(auto from) -> safe_numeral_t<T>& requires(REQUIRES_HELPER) {
         this->data = this->data * from.data;
         return *this;
     }
 
-    auto operator/(auto from) -> safe_integral_t<T>
+    auto operator/(auto from) -> safe_numeral_t<T>
     requires(REQUIRES_HELPER) {
-        return this->data / decay_integral(from);
+        return this->data / decay_numeral(from);
     }
-    auto operator/=(auto from)
-        -> safe_integral_t<T>& requires(REQUIRES_HELPER) {
+    auto operator/=(auto from) -> safe_numeral_t<T>& requires(REQUIRES_HELPER) {
         this->data = this->data / from.data;
         return *this;
     }
 
-    auto operator%(auto from) -> safe_integral_t<T>
+    auto operator%(auto from) -> safe_numeral_t<T>
     requires(REQUIRES_HELPER) {
-        return this->data % decay_integral(from);
+        return this->data % decay_numeral(from);
     }
-    auto operator%=(auto from)
-        -> safe_integral_t<T>& requires(REQUIRES_HELPER) {
+    auto operator%=(auto from) -> safe_numeral_t<T>& requires(REQUIRES_HELPER) {
         this->data = this->data % from.data;
         return *this;
     }
 
-    auto operator&(auto from) -> safe_integral_t<T>
+    auto operator&(auto from) -> safe_numeral_t<T>
     requires(REQUIRES_HELPER) {
-        return this->data & decay_integral(from);
+        return this->data & decay_numeral(from);
     }
-    auto operator&=(auto from)
-        -> safe_integral_t<T>& requires(REQUIRES_HELPER) {
+    auto operator&=(auto from) -> safe_numeral_t<T>& requires(REQUIRES_HELPER) {
         this->data = this->data & from.data;
         return *this;
     }
 
-    auto operator|(auto from) -> safe_integral_t<T>
+    auto operator|(auto from) -> safe_numeral_t<T>
     requires(REQUIRES_HELPER) {
-        return this->data | decay_integral(from);
+        return this->data | decay_numeral(from);
     }
-    auto operator|=(auto from)
-        -> safe_integral_t<T>& requires(REQUIRES_HELPER) {
+    auto operator|=(auto from) -> safe_numeral_t<T>& requires(REQUIRES_HELPER) {
         this->data = this->data | from.data;
         return *this;
     }
 
-    auto operator<<(auto from) -> safe_integral_t<T>
+    auto operator<<(auto from) -> safe_numeral_t<T>
     requires(REQUIRES_HELPER) {
-        return this->data << decay_integral(from);
+        return this->data << decay_numeral(from);
     }
     auto operator<<=(auto from)
-        -> safe_integral_t<T>& requires(REQUIRES_HELPER) {
+        -> safe_numeral_t<T>& requires(REQUIRES_HELPER) {
         this->data = this->data << from.data;
         return *this;
     }
 
-    auto operator>>(auto from) -> safe_integral_t<T>
+    auto operator>>(auto from) -> safe_numeral_t<T>
     requires(REQUIRES_HELPER) {
-        return this->data >> decay_integral(from);
+        return this->data >> decay_numeral(from);
     }
     auto operator>>=(auto from)
-        -> safe_integral_t<T>& requires(REQUIRES_HELPER) {
+        -> safe_numeral_t<T>& requires(REQUIRES_HELPER) {
         this->data = this->data >> from.data;
         return *this;
     }
@@ -201,24 +192,24 @@ struct safe_integral_t {
 
 /* These must be type aliases, because derived structs cannot inherit operator
  * overloading. */
-using i8 = std::detail::safe_integral_t<signed char>;
-using u8 = std::detail::safe_integral_t<unsigned char>;
-using i16 = std::detail::safe_integral_t<signed short>;
-using u16 = std::detail::safe_integral_t<unsigned short>;
-using i32 = std::detail::safe_integral_t<signed int>;
-using u32 = std::detail::safe_integral_t<unsigned int>;
-using i64 = std::detail::safe_integral_t<signed long>;
-using u64 = std::detail::safe_integral_t<unsigned long>;
-using i128 = std::detail::safe_integral_t<int128_t>;
-using u128 = std::detail::safe_integral_t<uint128_t>;
+using i8 = std::detail::safe_numeral_t<signed char>;
+using u8 = std::detail::safe_numeral_t<unsigned char>;
+using i16 = std::detail::safe_numeral_t<signed short>;
+using u16 = std::detail::safe_numeral_t<unsigned short>;
+using i32 = std::detail::safe_numeral_t<signed int>;
+using u32 = std::detail::safe_numeral_t<unsigned int>;
+using i64 = std::detail::safe_numeral_t<signed long>;
+using u64 = std::detail::safe_numeral_t<unsigned long>;
+using i128 = std::detail::safe_numeral_t<int128_t>;
+using u128 = std::detail::safe_numeral_t<uint128_t>;
 
 using usize = u64;
 using isize = i64;
 
 // These are GCC built-in types:
 // using f16 = _Float16;
-using f32 = std::detail::safe_integral_t<float>;
-using f64 = std::detail::safe_integral_t<double>;
+using f32 = std::detail::safe_numeral_t<float>;
+using f64 = std::detail::safe_numeral_t<double>;
 using f128 = __float128;
 using x128 = float __attribute__((mode(TC))) _Complex;
 #else
