@@ -102,8 +102,6 @@ add_library(
   src/libraries/unistd/detail/syscall5.s
 )
 
-# file(GLOB CompatLibs src/compatibility/*.h$)
-
 add_library(libcat-std-headers INTERFACE)
 target_include_directories(
   libcat-std-headers INTERFACE

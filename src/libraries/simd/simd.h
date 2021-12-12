@@ -12,12 +12,13 @@
 
 namespace std::detail {
 
+// TODO: Understand alignment better.
 template <typename T, usize Width>
-struct simd_vector {
+struct alignas(32) simd_vector {
     using type = T;
     static constexpr usize width = Width;
     // vector_size is a GCC attribute that represents SIMD data-types.
-    alignas(16) T value __attribute__((vector_size(sizeof(T) * Width)));
+    T value __attribute__((vector_size(sizeof(T) * Width)));
 
     auto operator+(simd_vector<T, Width> const& operand)
         -> simd_vector<T, Width> {
