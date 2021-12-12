@@ -115,6 +115,7 @@ target_include_directories(
   src/libraries/maybe/
   src/libraries/any/
   src/libraries/string/
+  src/libraries/memory/
   src/libraries/type_traits/
   src/libraries/concepts/
   src/libraries/utility/
@@ -164,6 +165,11 @@ add_executable(safe_arithmetic examples/safe_arithmetic.cpp)
 target_compile_options(safe_arithmetic PRIVATE ${LIBCAT_CXX_FLAGS})
 target_link_libraries(safe_arithmetic PRIVATE libcat-std)
 target_link_options(safe_arithmetic PRIVATE ${LIBCAT_LINK_FLAGS})
+
+add_executable(raii examples/raii.cpp)
+target_compile_options(raii PRIVATE ${LIBCAT_CXX_FLAGS})
+target_link_libraries(raii PRIVATE libcat-std)
+target_link_options(raii PRIVATE ${LIBCAT_LINK_FLAGS})
 
 add_executable(echo examples/echo.cpp)
 target_compile_options(echo PRIVATE ${LIBCAT_CXX_FLAGS})
