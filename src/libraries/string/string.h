@@ -1,6 +1,13 @@
 #pragma once
 
-static auto string_length(char const* p_string) -> i32 {
+/* <legacy_string.h> is a compatibility library to make libC code compile with
+ * libCat. It is not used directly in this header file. */
+#include <legacy_string.h>
+
+/* Unlike strlen(), string_length returns a signed integer, because consistently
+ * using signed integers where reasonable produces generally better codegen in
+ * several regards. */
+constexpr static auto string_length(char const* p_string) -> i32 {
     i32 result = 0;
     while (p_string[result] != '\0') {
         result++;
