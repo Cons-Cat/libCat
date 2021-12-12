@@ -11,7 +11,7 @@ void meow() {
             length++;
         }
         argv[i][length] = ' ';
-        write(1, argv[i], length + 1).unsafe_discard();
+        write(1, argv[i], length + 1).discard_result();
     }
-    write(1, "\n", 1).unsafe_discard();
+    write(1, "\n", 1).discard_result();
 }

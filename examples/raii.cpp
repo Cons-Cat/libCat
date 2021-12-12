@@ -4,16 +4,20 @@
 
 struct Foo {
     Foo() {
-        write(1, "Foo()\n", 6).unsafe_discard();
+        write(1, "Foo()\n", 6).discard_result();
+    }
+    ~Foo() {
+        write(1, "~Foo()\n", 7).discard_result();
     }
 };
 
-void func(RAII<Foo> input) {
+void func(RAII<Foo>) {
 }
 
 void meow() {
     // Call Foo() constructor:
     RAII<Foo> foo;
-    // Call Foo() constructor, then RAII() move-constructor:
+    /* Call Foo() constructor, then RAII() move-constructor, then Foo()
+     * destructor: */
     func(move(foo));
 }
