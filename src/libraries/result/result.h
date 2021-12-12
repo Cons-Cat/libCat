@@ -27,9 +27,6 @@
  * a function returning a Result will never fail, you may call .unsafe_value(),
  * which will skip error-handling when compiler optimizations are enabled. */
 
-// TODO: Remove this?
-extern "C" __attribute__((used)) void exit(i32);
-
 template <typename T = void>
 struct Result;
 

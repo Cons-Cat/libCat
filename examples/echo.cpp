@@ -6,12 +6,12 @@ void meow() {
     i32 argc = *any_cast<i32*>(move(rbp));
     char** argv = any_cast<char**>(move(rbp)) + 1;
     for (i32 i = 1; i < argc; i++) {
-        i32 len = 0;
-        while (argv[i][len] != 0) {
-            len++;
+        i32 length = 0;
+        while (argv[i][length] != 0) {
+            length++;
         }
-        argv[i][len] = ' ';
-        write(1, argv[i], len + 1).unsafe_discard();
+        argv[i][length] = ' ';
+        write(1, argv[i], length + 1).unsafe_discard();
     }
     write(1, "\n", 1).unsafe_discard();
 }
