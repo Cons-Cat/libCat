@@ -63,6 +63,14 @@ auto load_argv() -> char const** {
     return argv;
 }
 
+void align_stack_pointer_16() {
+    asm("and $-16, %rsp");
+}
+
+void align_stack_pointer_32() {
+    asm("and $-32, %rsp");
+}
+
 /* __stack_chk_fail() is called when stack overflow occurs in programs compiled
  * without -fno-stack-protector. */
 extern "C" void __stack_chk_fail() {
