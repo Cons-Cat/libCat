@@ -1,4 +1,7 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
 #pragma once
+
 /* In C++, va_list is essentially useless. It produces inferior codegen to
  * analogous procedures using variadic templates, and is less flexible.
  * Additionally, it can only be fully implemented with preprocessor macros. This

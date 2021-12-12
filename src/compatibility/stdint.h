@@ -1,6 +1,9 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
 #pragma once
 
-/* This file exists for backwards compatibility with C code. */
+// This file exists for backwards compatibility with C code.
+
 using int8_t = __INT8_TYPE__;
 using int16_t = __INT16_TYPE__;
 using int32_t = __INT32_TYPE__;

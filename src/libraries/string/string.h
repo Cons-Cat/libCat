@@ -1,9 +1,13 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
 #pragma once
 
 /* <legacy_string.h> is a compatibility library to make libC code compile with
  * libCat. It is not used directly in this header file. */
 #include <legacy_string.h>
+#include <type_traits>
 
+// TODO: Optimize this.
 /* Unlike strlen(), string_length returns a 32-bit type-safe signed integer,
  * because consistently using signed integers where reasonable produces
  * generally better codegen in several regards. */
@@ -31,7 +35,7 @@ auto simd_string_length(char const* p_string) -> i64 {
             return result + index;
         }
         p_memory++;
-        result += 16;
+        result += sizeof(u8x16);
     }
     /* This point is impossible to reach, because the function would segfault
      * first. */

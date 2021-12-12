@@ -1,6 +1,6 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
 #pragma once
-
-#include <unistd.h>
 
 namespace std::detail {
 
@@ -55,7 +55,7 @@ struct Maybe<T> {
             return value;
         }
         // TODO: Error message.
-        exit(EXIT_FAILURE);
+        exit(1);
 #endif
     }
 
@@ -97,7 +97,7 @@ struct Maybe<T, sentinel> {
             return value;
         }
         // TODO: Error message.
-        exit(EXIT_FAILURE);
+        exit(1);
 #endif
     }
 
