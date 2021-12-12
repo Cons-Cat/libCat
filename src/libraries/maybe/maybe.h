@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unistd.h>
+
 namespace std::detail {
 
 struct none {};

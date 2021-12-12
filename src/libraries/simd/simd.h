@@ -78,8 +78,8 @@ using f32x8 = std::detail::simd_vector<f32, 8>;
 
 // TODO: Evaluate what support for 64-bit ints exists in x86-64.
 // Vectors of up to 4 64-bit floats are supported by AVX2.
-// using f64x2 = std::detail::vector<f64, 2>;
-// using f64x4 = std::detail::vector<f64, 4>;
+using f64x2 = std::detail::simd_vector<f64, 2>;
+using f64x4 = std::detail::simd_vector<f64, 4>;
 
 // Vectors of up to 32 8-bit bools are supported by AVX2.
 using bool8x2 = std::detail::simd_vector<bool8, 2>;

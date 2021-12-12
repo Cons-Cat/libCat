@@ -103,9 +103,7 @@ add_library(
   src/libraries/unistd/detail/syscall5.s
 )
 
-add_library(libcat-std-headers INTERFACE
-  src/global_includes.h
-  src/runtime/exit.h)
+add_library(libcat-std-headers INTERFACE)
 target_include_directories(
   libcat-std-headers INTERFACE
   src/
@@ -127,7 +125,9 @@ target_include_directories(
 )
 
 # Combine static objects and C++ headers for convenience.
-add_library(libcat-std INTERFACE)
+add_library(
+  libcat-std INTERFACE
+)
 target_link_libraries(libcat-std INTERFACE libcat-std-static)
 target_link_libraries(libcat-std INTERFACE libcat-std-headers)
 target_link_libraries(libcat-std INTERFACE gcc)
@@ -177,7 +177,7 @@ target_compile_options(
   -fno-exceptions -fno-rtti -fno-unwind-tables
   -no-pie -fno-stack-protector
   -fno-asynchronous-unwind-tables
-  -s 
+  -s
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto -fwhole-file -fno-plt

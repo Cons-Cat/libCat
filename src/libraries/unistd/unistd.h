@@ -1,6 +1,7 @@
 #pragma once
 
 #include <any.h>
+#include <errno.h>
 
 /* For some reason, writing these syscalls with inline assembly produces bizarre
  * and broken codegen. */
@@ -46,7 +47,8 @@ void syscall(T, Args... parameters) {
     }
 }
 
-auto write(i64 const& file_descriptor, Any p_string_buffer,
+// write() forwards its arguments to a failable stdout syscall.
+auto write(i64 const& file_descriptor, char const* p_string_buffer,
            usize const& string_length) -> Result<> {
     syscall(1, file_descriptor, p_string_buffer, string_length);
     return get_errno();
