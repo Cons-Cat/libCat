@@ -1,3 +1,5 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
 #pragma once
 
 // TODO: Use a numeral concept.

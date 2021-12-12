@@ -1,3 +1,5 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
 #pragma once
 
 /* The Intel-style _mm_add_ps() and __m128 syntax is completely arbitrary in

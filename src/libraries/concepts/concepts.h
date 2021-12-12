@@ -1,3 +1,5 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
 #pragma once
 
 #include <type_traits.h>
@@ -83,6 +85,11 @@ concept equality_comparable = detail::weakly_equality_comparable_with<T, T>;
 
 template <typename T>
 concept enum_class = std::is_scoped_enum_v<T>;
+
+template <typename T, typename U>
+concept narrow_convertible = requires() {
+    U({std::declval<T>()});
+};
 
 /* Some concepts from the STL are not supported, for various reasons.
  * std::destructable is not useful without exception handling. */
