@@ -30,7 +30,6 @@ struct Any {
 };
 
 template <typename T>
-constexpr auto any_cast(Any&& in_any) -> T {
-    void* any_value = (forward<Any>(in_any).value);
-    return static_cast<T>(any_value);
+constexpr auto any_cast(Any in_any) -> T {
+    return static_cast<T>(in_any.value);
 }
