@@ -60,8 +60,17 @@ struct [[nodiscard]] Failure {
     }
 };
 
+namespace std::detail {
+
+struct ok {};
+
+}  // namespace std::detail
+
+// This type may be returned in a function that returns Result<void>.
+constexpr std::detail::ok ok;
+
 template <typename T>
-struct [[nodiscard("To skip error-handling, call .unsafe_value()")]] Result {
+struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
     Failure error_code;  // Error is a 64-bit value.
   private:
     /* char should be a relatively unintrusive dummy data for when this holds
@@ -75,7 +84,12 @@ struct [[nodiscard("To skip error-handling, call .unsafe_value()")]] Result {
     Result(Failure in_code) : error_code(in_code), value(), is_ok(false) {
     }
 
-    Result(ValueType in_value) : error_code(), value(in_value), is_ok(true) {
+    Result(ValueType in_value) requires(!std::is_same_v<T, void>)
+        : error_code(), value(in_value), is_ok(true) {
+    }
+
+    Result(std::detail::ok) requires(std::is_same_v<T, void>)
+        : error_code(), value(), is_ok(true) {
     }
 
     auto or_return(ValueType const& in_value)->ValueType {
