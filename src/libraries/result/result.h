@@ -66,7 +66,7 @@ struct ok {};
 
 }  // namespace std::detail
 
-// This type may be returned in a function that returns Result<void>.
+// This value may be returned in a function that returns Result<void>.
 constexpr std::detail::ok ok;
 
 template <typename T>
