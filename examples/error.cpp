@@ -1,5 +1,3 @@
-#include <result.h>
-
 enum MyErrors
 {
     OK = 0,
@@ -8,12 +6,14 @@ enum MyErrors
 
 auto result_factory(MyErrors error) -> Result<> {
     if (error == ::OK) {
-        return 'a';
+        return ok;
     }
     return Failure(error);
 }
 
 void meow() {
+    // This will never panic:
     result_factory(::OK).or_panic();
+    // This will always panic:
     result_factory(::FAIL).or_panic();
 }
