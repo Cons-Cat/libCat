@@ -140,6 +140,10 @@ target_link_libraries(
   # $<$<CONFIG:Debug>:ubsan>
 )
 
+# Build the tests.
+enable_testing ()
+add_subdirectory(tests/)
+
 # Build the examples.
 add_executable(hello examples/hello.cpp)
 target_compile_options(hello PRIVATE ${LIBCAT_CXX_FLAGS})
