@@ -12,7 +12,7 @@
 
 /* T is the return type of string_length(). It may be signed or unsigned. */
 template <typename T>
-constexpr auto string_length(char const* p_string) -> T {
+constexpr auto string_length(char8_t const* p_string) -> T {
     T result = 0;
     while (p_string[result] != '\0') {
         result++;
@@ -20,12 +20,17 @@ constexpr auto string_length(char const* p_string) -> T {
     return result;
 }
 
+[[deprecated("strlen() is deprecated! Use string_length<T>() instead.")]] auto
+strlen(char8_t const* p_string) -> size_t {
+    string_length<size_t>(p_string);
+}
+
 /* T is the return type of simd_string_length(). It may be signed or unsigned.
  * This function requires SSE4.2 */
 template <typename T>
-auto simd_string_length(char const* p_string) -> T {
+auto simd_string_length(u8 const* p_string) -> T {
     T result = 0;
-    u8x16* p_memory = reinterpret_cast<u8x16*>(const_cast<char*>(p_string));
+    u8x16* p_memory = reinterpret_cast<u8x16*>(const_cast<u8*>(p_string));
     u8x16 zeros = simd_setzero<u8x16>();
     while (true) {
         u8x16 data = simd_load(p_memory);

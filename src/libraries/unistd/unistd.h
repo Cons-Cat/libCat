@@ -50,7 +50,7 @@ void syscall(T, Args... parameters) {
 }
 
 // write() forwards its arguments to a failable stdout syscall.
-auto write(i64 const& file_descriptor, char const* p_string_buffer,
+auto write(i64 const& file_descriptor, char8_t const* p_string_buffer,
            usize const& string_length) -> Result<> {
     syscall(1, file_descriptor, p_string_buffer, string_length);
     return get_errno();

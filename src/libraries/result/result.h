@@ -141,7 +141,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
         exit(1);
     }
 
-    auto or_panic(char const* /*error_message*/)->T {
+    auto or_panic(char8_t const* /*error_message*/)->T {
         if (is_ok) {
             if constexpr (!std::is_void_v<T>) {
                 return this->data;
@@ -168,7 +168,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
     /* It may be desirable to skip the costs of printing error messages in
      * release builds of an application. These following functions only print an
      * error message when building -O0. */
-    auto or_panic_debug(char const* /*error_message*/ = "")->T {
+    auto or_panic_debug(char8_t const* /*error_message*/ = "")->T {
         if (is_ok) {
             if constexpr (!std::is_void_v<T>) {
                 return this->data;

@@ -190,18 +190,17 @@ struct safe_numeral_t {
 
 }  // namespace std::detail
 
-/* These must be type aliases, because derived structs cannot inherit operator
- * overloading. */
-using i8 = std::detail::safe_numeral_t<signed char>;
-using u8 = std::detail::safe_numeral_t<unsigned char>;
-using i16 = std::detail::safe_numeral_t<signed short>;
-using u16 = std::detail::safe_numeral_t<unsigned short>;
-using i32 = std::detail::safe_numeral_t<signed int>;
-using u32 = std::detail::safe_numeral_t<unsigned int>;
-using i64 = std::detail::safe_numeral_t<signed long>;
-using u64 = std::detail::safe_numeral_t<unsigned long>;
-using i128 = std::detail::safe_numeral_t<int128_t>;
-using u128 = std::detail::safe_numeral_t<uint128_t>;
+// These macros are defined by the GCC compiler.
+using i8 = std::detail::safe_numeral_t<__INT8_TYPE__>;
+using u8 = std::detail::safe_numeral_t<__UINT8_TYPE__>;
+using i16 = std::detail::safe_numeral_t<__INT16_TYPE__>;
+using u16 = std::detail::safe_numeral_t<__UINT16_TYPE__>;
+using i32 = std::detail::safe_numeral_t<__INT32_TYPE__>;
+using u32 = std::detail::safe_numeral_t<__UINT32_TYPE__>;
+using i64 = std::detail::safe_numeral_t<__INT64_TYPE__>;
+using u64 = std::detail::safe_numeral_t<__UINT64_TYPE__>;
+// using i128 = std::detail::safe_numeral_t<int128_t>;
+// using u128 = std::detail::safe_numeral_t<uint128_t>;
 
 using usize = u64;
 using isize = i64;

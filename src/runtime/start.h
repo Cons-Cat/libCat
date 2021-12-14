@@ -58,8 +58,8 @@ auto load_argc() -> i32 {
     return *argc;
 }
 
-auto load_argv() -> char const** {
-    char const** argv;
+auto load_argv() -> char8_t const** {
+    char8_t const** argv;
     asm("mov 4(%%rbp), %0" : "=r"(argv));
     return argv;
 }
