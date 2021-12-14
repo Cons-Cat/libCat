@@ -3,6 +3,6 @@
 
 void meow() {
     debugger_entry_point();
-    char const* p_str = "Hello, Conscat!\n";
+    char8_t const* p_str = u8"Hello, Conscat!\n";
     write(1, p_str, 16).or_panic();
 }

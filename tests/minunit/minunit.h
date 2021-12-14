@@ -11,11 +11,11 @@
         if (!(test)) return message; \
     } while (0)
 
-#define mu_run_test(test)             \
-    do {                              \
-        char const* message = test(); \
-        tests_run++;                  \
-        if (message) return message;  \
+#define mu_run_test(test)                \
+    do {                                 \
+        char8_t const* message = test(); \
+        tests_run++;                     \
+        if (message) return message;     \
     } while (0)
 
 extern i32 tests_run;

@@ -1,7 +1,6 @@
 #include <string.h>
 
 void meow() {
-    // char const* string = "Hello, Conscat!";
     // i32 foo = simd_string_length(string);
     // i32 bar = string_length(string);
 
