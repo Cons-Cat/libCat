@@ -2,6 +2,7 @@
 #include <unistd.h>
 
 void meow() {
+    debugger_entry_point();
     Any rbp = load_base_stack_pointer();
     i32 argc = *any_cast<i32*>(rbp);
     char** argv = any_cast<char**>(rbp) + 1;

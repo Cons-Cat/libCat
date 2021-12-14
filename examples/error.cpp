@@ -12,6 +12,7 @@ auto result_factory(MyErrors error) -> Result<> {
 }
 
 void meow() {
+    debugger_entry_point();
     // This will never panic:
     result_factory(::OK).or_panic();
     // This will always panic:
