@@ -15,6 +15,7 @@ void func(RAII<Foo>) {
 }
 
 void meow() {
+    debugger_entry_point();
     // Call Foo() constructor:
     RAII<Foo> foo;
     /* Call Foo() constructor, then RAII() move-constructor, then Foo()
