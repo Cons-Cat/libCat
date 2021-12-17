@@ -117,15 +117,14 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
      * undefined. When building -O0, this function panics if a value is not
      * held. When optimizations are enabled, that safety check is elided. */
     auto unsafe_value()->T {
-#ifdef __OPTIMIZE__
-        return value;
-#else
+#ifndef __OPTIMIZE__
         if (is_ok) {
             return value;
         }
         // TODO: Error message.
         exit(1);
 #endif
+        return value;
     }
 
     void discard_result(){};
@@ -168,7 +167,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
     /* It may be desirable to skip the costs of printing error messages in
      * release builds of an application. These following functions only print an
      * error message when building -O0. */
-    auto or_panic_debug(char8_t const* /*error_message*/ = "")->T {
+    auto or_panic_debug(char8_t const* error_message = u8"")->T {
         if (is_ok) {
             if constexpr (!std::is_void_v<T>) {
                 return this->data;

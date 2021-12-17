@@ -10,7 +10,6 @@ void meow() {
     // Move assigning a buffer:
     Buffer<i32, 1> buffer_3;
     buffer_2 = move(buffer_3);
-    // TODO: This does not work.
     // Move constructing a buffer:
     Buffer<i32, 5> buffer_4(move(buffer_1));
 
