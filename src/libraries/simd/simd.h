@@ -2,21 +2,24 @@
 // vim: set ft=cpp:
 #pragma once
 
-/* The Intel-style _mm_add_ps() and __m128 syntax is completely arbitrary in
- * GCC. GNU implemented it with wrapper libraries around their own, arguably
- * more reasonable, compiler intrinsics that already understand arithmetic
- * operators. Then, authors of SIMD-wrapper libraries will wrap *those* wrappers
- * to put arithmetic operators back on top with yet more types and functions!
+/* The Intel-style SIMD syntax is completely arbitrary in GCC. GNU implemented
+ * it with wrapper libraries around their own, arguably more reasonable,
+ * compiler intrinsics that already understand arithmetic operators. Then,
+ * authors of SIMD-wrapper libraries wrap *those* wrappers to put arithmetic
+ * operators back on top with yet more types and functions!
  *
- * To streamline this, libCat uses the tools that GNU already provides. */
+ * To streamline this, libCat uses the intrinsics which GNU already provides. */
 
 #include <type_traits>
 
 namespace std::detail {
 
-// TODO: Understand alignment better.
+/* Vectors have weak alignment by default. It is up to users at call-site to
+ * determine what alignment is appropriate for their use-case. All simd
+ * functions are unaligned, which has little, if any, penalty to aligned vectors
+ * in modern SSE, AVX, and NEON. */
 template <typename T, usize Width>
-struct alignas(32) simd_vector {
+struct simd_vector {
     using type = T;
     static constexpr usize width = Width;
     // vector_size is a GCC attribute that represents SIMD data-types.
@@ -40,6 +43,13 @@ struct alignas(32) simd_vector {
         -> simd_vector<T, Width>& {
         this->value = this->value - operand.value;
         return *this;
+    }
+
+    /* There is no need to represent loads, only sets, because GCC intrinsics
+     * consider them the same thing. */
+    auto operator=(simd_vector<T, Width> const& operand)
+        -> simd_vector<T, Width>& {
+        this->value = operand->value;
     }
 };
 
@@ -126,7 +136,6 @@ enum VectorMask : u8
     SIDD_UNIT_MASK = 0x40,
 };
 
-// setzero_vector is analogous to the _mm_setzero_ function family.
 template <typename T>
 auto simd_setzero() {
     // TODO: Is there a cleverer way to do this? Variadic templates?
@@ -152,11 +161,13 @@ auto simd_setzero() {
     }
 }
 
-// This is analogous to the _mm_load_ function family.
-auto simd_load(auto const* in_vector) {
-    return *in_vector;
+// TODO: "set" intrinsics.
+
+void simd_shuffle(auto vector_1, auto vector_2, auto mask) {
+    __builtin_shuffle(vector_1, vector_2, mask);
 }
 
+// This function requires 32-byte alignment.
 template <u8 Mask>
 auto simd_cmp_implicit_str_c(auto vector_1, auto vector_2) -> bool {
     static_assert(std::is_same_v<decltype(vector_1), decltype(vector_2)>);
