@@ -18,12 +18,23 @@ namespace std::detail {
  * determine what alignment is appropriate for their use-case. All simd
  * functions are unaligned, which has little, if any, penalty to aligned vectors
  * in modern SSE, AVX, and NEON. */
+
 template <typename T, usize Width>
 struct simd_vector {
-    using type = T;
+    using scalar_type = T;
     static constexpr usize width = Width;
     // vector_size is a GCC attribute that represents SIMD data-types.
-    T value __attribute__((vector_size(sizeof(T) * Width)));
+    T value __attribute__((vector_size(sizeof(T) * Width), __may_alias__,
+                           __aligned__(1)));
+
+    auto operator=(simd_vector<T, Width>& operand) -> simd_vector<T, Width>& {
+        this->value = operand.value;
+        return *this;
+    }
+
+    auto load(simd_vector<T, Width> const* p_vector) {
+        this->value = p_vector->value;
+    }
 
     auto operator+(simd_vector<T, Width> const& operand)
         -> simd_vector<T, Width> {
@@ -43,13 +54,6 @@ struct simd_vector {
         -> simd_vector<T, Width>& {
         this->value = this->value - operand.value;
         return *this;
-    }
-
-    /* There is no need to represent loads, only sets, because GCC intrinsics
-     * consider them the same thing. */
-    auto operator=(simd_vector<T, Width> const& operand)
-        -> simd_vector<T, Width>& {
-        this->value = operand->value;
     }
 };
 
@@ -137,53 +141,59 @@ enum VectorMask : u8
 };
 
 template <typename T>
-auto simd_setzero() {
+consteval auto simd_set_zeros() -> T {
     // TODO: Is there a cleverer way to do this? Variadic templates?
-    using type = typename T::type;
+    // Probably an integer_sequence.
+    using scalar_type = typename T::scalar_type;
     if constexpr (T::width == 2) {
-        return std::detail::simd_vector<type, T::width>{0, 0};
-    }
-    if constexpr (T::width == 4) {
-        return std::detail::simd_vector<type, T::width>{0, 0, 0, 0};
-    }
-    if constexpr (T::width == 8) {
-        return std::detail::simd_vector<type, T::width>{0, 0, 0, 0, 0, 0, 0, 0};
-    }
-    if constexpr (T::width == 16) {
-        return std::detail::simd_vector<type, T::width>{0, 0, 0, 0, 0, 0, 0,
-                                                        0, 0, 0, 0, 0, 0, 0};
-    }
-    if constexpr (T::width == 32) {
-        return std::detail::simd_vector<type, T::width>{
+        return std::detail::simd_vector<scalar_type, T::width>{0, 0};
+    } else if constexpr (T::width == 4) {
+        return std::detail::simd_vector<scalar_type, T::width>{0, 0, 0, 0};
+    } else if constexpr (T::width == 8) {
+        return std::detail::simd_vector<scalar_type, T::width>{0, 0, 0, 0,
+                                                               0, 0, 0, 0};
+    } else if constexpr (T::width == 16) {
+        return std::detail::simd_vector<scalar_type, T::width>{
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    } else if constexpr (T::width == 32) {
+        return std::detail::simd_vector<scalar_type, T::width>{
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        };
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     }
+    __builtin_unreachable();
 }
-
-// TODO: "set" intrinsics.
 
 void simd_shuffle(auto vector_1, auto vector_2, auto mask) {
     __builtin_shuffle(vector_1, vector_2, mask);
 }
 
+template <typename T, u32 Width>
+auto string_to_vector(char8_t const* p_string) {
+    using U = std::detail::simd_vector<T, Width>;
+    return reinterpret_cast<U*>(const_cast<char8_t*>(p_string));
+}
+
 // This function requires 32-byte alignment.
 template <u8 Mask>
-auto simd_cmp_implicit_str_c(auto vector_1, auto vector_2) -> bool {
+auto simd_cmp_implicit_str_c(auto const& vector_1, auto const& vector_2)
+    -> bool {
     static_assert(std::is_same_v<decltype(vector_1), decltype(vector_2)>);
     if constexpr (std::is_same_v<decltype(vector_1), u8x16>) {
         return __builtin_ia32_pcmpistric128(vector_1.value, vector_2.value,
                                             Mask);
     }
+    __builtin_unreachable();
 }
 
 template <u8 Mask>
-auto simd_cmp_implicit_str_i(auto vector_1, auto vector_2) -> i32 {
+auto simd_cmp_implicit_str_i(auto const& vector_1, auto const& vector_2)
+    -> i32 {
     static_assert(std::is_same_v<decltype(vector_1), decltype(vector_2)>);
     if constexpr (std::is_same_v<decltype(vector_1), u8x16>) {
         return __builtin_ia32_pcmpistri128(vector_1.value, vector_2.value,
                                            Mask);
     }
+    __builtin_unreachable();
 }
 
 // TODO: __builtin_cpu_init() may need to be extracted out.

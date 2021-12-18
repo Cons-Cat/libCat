@@ -5,11 +5,14 @@
 // Legacy numerals are required for backwards-compatibility here.
 #include <stdint.h>
 
-[[deprecated("strlen() is deprecated! Use string_length() instead.")]] auto
-strlen(char const* p_string) -> size_t {
-    size_t result = 0;
-    while (p_string[result] != '\0') {
-        result++;
+[[deprecated]] auto memcpy(void* destination, void const* source, size_t length)
+    -> void* {
+    // TODO: Even with only MMX, much better solutions should be possible.
+    char const* source_iterator = static_cast<char const*>(source);
+    char* destination_iterator = static_cast<char*>(destination);
+    while (length > 0) {
+        *destination_iterator++ = *source_iterator++;
+        length--;
     }
-    return result;
+    return destination;
 }
