@@ -4,10 +4,10 @@
 
 struct Foo {
     Foo() {
-        write(1, "Foo()\n", 6).discard_result();
+        write(1, u8"Foo()\n", 6).discard_result();
     }
     ~Foo() {
-        write(1, "~Foo()\n", 7).discard_result();
+        write(1, u8"~Foo()\n", 7).discard_result();
     }
 };
 

@@ -17,6 +17,7 @@
  * libCat, and the STL achieves both of those with a high performance overhead.
  * For instance, the canonical std::any cannot be held in a 64-bit register,
  * whereas libCat's Any can. */
+
 struct Any {
     void* value;
 
