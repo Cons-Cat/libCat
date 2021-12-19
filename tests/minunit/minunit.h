@@ -6,16 +6,16 @@
  * implemented in libCat, so MinUnit is used due to its simplicity. */
 // https://jera.com/techinfo/jtns/jtn002
 
-#define mu_assert(message, test)     \
-    do {                             \
-        if (!(test)) return message; \
+#define mu_assert(test, message) \
+    do {                         \
+        if (!(test)) exit(1);    \
     } while (0)
 
 #define mu_run_test(test)                \
     do {                                 \
         char8_t const* message = test(); \
         tests_run++;                     \
-        if (message) return message;     \
+        if (message) exit(1);            \
     } while (0)
 
 extern i32 tests_run;

@@ -1,9 +1,9 @@
 #include <string.h>
 
 void meow() {
-    alignas(32) char8_t const* string = u8"Hello!\n";
-    alignas(32) i32 bar = string_length_as<i32>(string);
-    alignas(32) i32 foo = simd_string_length_as<i32>(string);
+    // alignas(32) char8_t const* string = u8"Hello!\n";
+    // alignas(32) i32 bar = string_length_as<i32>(string);
+    // alignas(32) i32 foo = simd_string_length_as<i32>(string);
 
     // f32x4 vec1 = {1.f, 2.f, 3.f, 4.f};
     // f32x4 vec2 = {1.f, 2.f, 3.f, 4.f};

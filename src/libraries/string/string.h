@@ -29,14 +29,14 @@ strlen(char8_t const* p_string) -> size_t {
  * This function requires SSE4.2 */
 template <typename T>
 auto simd_string_length_as(char8_t const* p_string) -> T {
+    // TODO: Align pointers.
     T result = 0;
-    u8x16* p_memory = reinterpret_cast<u8x16*>(const_cast<char8_t*>(p_string));
-    // string_to_vector<u8, 16>(p_string);
+    u8x16* p_memory = p_string_to_p_vector<char, 16>(p_string);
     constexpr u8x16 zeroes = simd_set_zeros<u8x16>();
 
     while (true) {
-        alignas(32) u8x16 data;
-        data.load(p_memory);
+        u8x16 data;
+        data = *p_memory;
         constexpr u8 mask =
             ::SIDD_UBYTE_OPS | ::SIDD_CMP_EQUAL_EACH | ::SIDD_LEAST_SIGNIFICANT;
         if (simd_cmp_implicit_str_c<mask>(data, zeroes)) {
@@ -45,10 +45,14 @@ auto simd_string_length_as(char8_t const* p_string) -> T {
         }
         p_memory++;
         result += sizeof(u8x16);
-        return 0;
+        return result;
     }
     // This point unreachable because the function would segfault first.
     __builtin_unreachable();
+}
+
+auto is_aligned(void const volatile* pointer, usize byte_alignment) -> bool {
+    return (reinterpret_cast<usize>(pointer) % byte_alignment) == 0;
 }
 
 void copy_memory(void* source, void* destination, usize bytes) {

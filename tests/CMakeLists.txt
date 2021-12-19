@@ -9,6 +9,10 @@ list(
   APPEND
   LIBCAT_CXX_FLAGS_TEST
   ${LIBCAT_CXX_FLAGS_COMMON}
+  $<$<CONFIG:Debug>:${LIBCAT_CXX_FLAGS_DEBUG}>
+  $<$<CONFIG:RelWithDebInfo>:${LIBCAT_CXX_FLAGS_RELWITHDEBINFO}>
+  $<$<CONFIG:Release>:${LIBCAT_CXX_FLAGS_RELFAST}>
+  $<$<CONFIG:RelSmall>:${LIBCAT_CXX_FLAGS_RELSMALL}>
   # -Wno-unused-variable
 )
 
@@ -35,3 +39,9 @@ add_executable(test_buffers buffers.cpp)
 target_compile_options(test_buffers PRIVATE ${LIBCAT_CXX_FLAGS_TEST})
 target_link_options(test_buffers PRIVATE ${LIBCAT_LINK_FLAGS})
 add_test(NAME TestBuffers COMMAND test_buffers)
+
+# This tests if string_length_as<>() works.
+add_executable(test_strlen string_length.cpp)
+target_compile_options(test_strlen PRIVATE ${LIBCAT_CXX_FLAGS_TEST})
+target_link_options(test_strlen PRIVATE ${LIBCAT_LINK_FLAGS})
+add_test(NAME TestStrlen COMMAND test_strlen)
