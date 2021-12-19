@@ -4,7 +4,8 @@
 
 /* Safe arithmetic does compile with no known issues. However, clangd 12 and 13
  * keel over after a single glance at this metaprogramming, so I am currently
- * hiding this behind a feature flag. */
+ * hiding this behind a feature flag. It likely doesn't work anymore, because I
+ * have been developing libCat mostly without safe arithmetic due to clangd. */
 #ifdef SAFE_ARITHMETIC
 
 /* Get the value of a primitive number, or the value held by a
@@ -240,3 +241,47 @@ using x128 = float __attribute__((mode(TC))) _Complex;
 using bool8 = u8;
 using bool16 = u16;
 using bool32 = u32;
+
+/* anyint is a numeric type which is immutable, convertible to any other numeric
+ * type, and constexpr. It is useful for holding global constants. */
+struct anyint {
+  private:
+    using type = long long int;
+    type const value;
+
+  public:
+    consteval anyint(type const(&in_int)) : value(in_int){};
+
+    consteval operator i8() const {
+        return static_cast<i8>(value);
+    }
+    consteval operator i16() const {
+        return static_cast<i16>(value);
+    }
+    consteval operator i32() const {
+        return static_cast<i32>(value);
+    }
+    consteval operator i64() const {
+        return static_cast<i64>(value);
+    }
+
+    consteval operator u8() const {
+        return static_cast<u8>(value);
+    }
+    consteval operator u16() const {
+        return static_cast<u16>(value);
+    }
+    consteval operator u32() const {
+        return static_cast<u32>(value);
+    }
+    consteval operator u64() const {
+        return static_cast<u64>(value);
+    }
+
+    consteval operator f32() const {
+        return static_cast<f32>(value);
+    }
+    consteval operator f64() const {
+        return static_cast<f64>(value);
+    }
+};
