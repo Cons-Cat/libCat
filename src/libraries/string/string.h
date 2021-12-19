@@ -31,11 +31,11 @@ template <typename T>
 auto simd_string_length_as(char8_t const* p_string) -> T {
     // TODO: Align pointers.
     T result = 0;
-    u8x16* p_memory = p_string_to_p_vector<char, 16>(p_string);
-    constexpr u8x16 zeroes = simd_set_zeros<u8x16>();
+    charx16* p_memory = p_string_to_p_vector<16>(p_string);
+    constexpr charx16 zeroes = simd_set_zeros<charx16>();
 
     while (true) {
-        u8x16 data;
+        charx16 data;
         data = *p_memory;
         constexpr u8 mask =
             ::SIDD_UBYTE_OPS | ::SIDD_CMP_EQUAL_EACH | ::SIDD_LEAST_SIGNIFICANT;
