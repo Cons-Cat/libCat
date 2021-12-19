@@ -20,20 +20,19 @@ namespace std::detail {
  * in modern SSE, AVX, and NEON. */
 
 template <typename T, usize Width>
-struct simd_vector {
+struct alignas(4) simd_vector {
     using scalar_type = T;
+    // NOLINTNEXTLINE
+    typedef T
+        __attribute__((vector_size(sizeof(scalar_type) * Width), aligned(4)))
+        vector_type;
     static constexpr usize width = Width;
     // vector_size is a GCC attribute that represents SIMD data-types.
-    T value __attribute__((vector_size(sizeof(T) * Width), __may_alias__,
-                           __aligned__(1)));
+    vector_type value;
 
     auto operator=(simd_vector<T, Width>& operand) -> simd_vector<T, Width>& {
         this->value = operand.value;
         return *this;
-    }
-
-    auto load(simd_vector<T, Width> const* p_vector) {
-        this->value = p_vector->value;
     }
 
     auto operator+(simd_vector<T, Width> const& operand)
@@ -65,11 +64,12 @@ using i8x4 = std::detail::simd_vector<i8, 4>;
 using i8x8 = std::detail::simd_vector<i8, 8>;
 using i8x16 = std::detail::simd_vector<i8, 16>;
 using i8x32 = std::detail::simd_vector<i8, 32>;
-using u8x2 = std::detail::simd_vector<u8, 2>;
-using u8x4 = std::detail::simd_vector<u8, 4>;
-using u8x8 = std::detail::simd_vector<u8, 8>;
-using u8x16 = std::detail::simd_vector<u8, 16>;  // TODO: Should this be char?
-using u8x32 = std::detail::simd_vector<u8, 32>;
+// char must be used instead of u8 due to compiler weirdness.
+using u8x2 = std::detail::simd_vector<char, 2>;
+using u8x4 = std::detail::simd_vector<char, 4>;
+using u8x8 = std::detail::simd_vector<char, 8>;
+using u8x16 = std::detail::simd_vector<char, 16>;  // TODO: Should this be char?
+using u8x32 = std::detail::simd_vector<char, 32>;
 
 // Vectors of up to 16 16-bit integers are supported by AVX2.
 using i16x2 = std::detail::simd_vector<i16, 2>;
@@ -87,6 +87,12 @@ using u32x2 = std::detail::simd_vector<u32, 2>;
 using u32x4 = std::detail::simd_vector<u32, 4>;
 using u32x8 = std::detail::simd_vector<u32, 8>;
 
+// Vectors of up to 4 64-bit integers are supported by AVX2.
+using i64x2 = std::detail::simd_vector<i64, 2>;
+using i64x4 = std::detail::simd_vector<i64, 4>;
+using u64x2 = std::detail::simd_vector<u64, 2>;
+
+using u64x4 = std::detail::simd_vector<u64, 4>;
 // Vectors of up to 8 32-bit floats are supported by AVX2.
 using f32x2 = std::detail::simd_vector<f32, 2>;
 using f32x4 = std::detail::simd_vector<f32, 4>;
@@ -168,17 +174,24 @@ void simd_shuffle(auto vector_1, auto vector_2, auto mask) {
 }
 
 template <typename T, u32 Width>
-auto string_to_vector(char8_t const* p_string) {
+auto p_string_to_p_vector(char8_t const* p_string) {
     using U = std::detail::simd_vector<T, Width>;
     return reinterpret_cast<U*>(const_cast<char8_t*>(p_string));
 }
 
+// template <typename IntoType, typename SourceType>
+// [[nodiscard]] constexpr auto bit_cast(SourceType const& source) -> IntoType {
+//     return __builtin_bit_cast(IntoType, source);
+// }
+
 // This function requires 32-byte alignment.
 template <u8 Mask>
-auto simd_cmp_implicit_str_c(auto const& vector_1, auto const& vector_2)
+auto simd_cmp_implicit_str_c(u8x16 const& vector_1, u8x16 const& vector_2)
     -> bool {
     static_assert(std::is_same_v<decltype(vector_1), decltype(vector_2)>);
     if constexpr (std::is_same_v<decltype(vector_1), u8x16>) {
+        // u8x16 ivector_1 = *reinterpret_cast<u8x16*>(&vector_1);
+        // u8x16 ivector_2 = *reinterpret_cast<u8x16*>(&vector_2);
         return __builtin_ia32_pcmpistric128(vector_1.value, vector_2.value,
                                             Mask);
     }
@@ -189,56 +202,47 @@ template <u8 Mask>
 auto simd_cmp_implicit_str_i(auto const& vector_1, auto const& vector_2)
     -> i32 {
     static_assert(std::is_same_v<decltype(vector_1), decltype(vector_2)>);
-    if constexpr (std::is_same_v<decltype(vector_1), u8x16>) {
-        return __builtin_ia32_pcmpistri128(vector_1.value, vector_2.value,
-                                           Mask);
-    }
-    __builtin_unreachable();
+    // if constexpr (std::is_same_v<decltype(vector_1), u8x16>) {
+    return __builtin_ia32_pcmpistri128(vector_1.value, vector_2.value, Mask);
+    // }
+    // __builtin_unreachable();
 }
 
-// TODO: __builtin_cpu_init() may need to be extracted out.
+// TODO: __builtin_cpu_init() must be called before these.
+
 auto is_mmx_supported() -> bool {
-    __builtin_cpu_init();
     return __builtin_cpu_supports("mmx");
 }
 
 auto is_sse1_supported() -> bool {
-    __builtin_cpu_init();
     return __builtin_cpu_supports("sse");
 }
 
 auto is_sse2_supported() -> bool {
-    __builtin_cpu_init();
     return __builtin_cpu_supports("sse2");
 }
 
 auto is_sse3_supported() -> bool {
-    __builtin_cpu_init();
     return __builtin_cpu_supports("sse3");
 }
 
 auto is_ssse3_supported() -> bool {
-    __builtin_cpu_init();
     return __builtin_cpu_supports("ssse3");
 }
 
 auto is_sse4_1_supported() -> bool {
-    __builtin_cpu_init();
     return __builtin_cpu_supports("sse4.1");
 }
 
 auto is_sse4_2_supported() -> bool {
-    __builtin_cpu_init();
     return __builtin_cpu_supports("sse4.2");
 }
 
 auto is_avx_supported() -> bool {
-    __builtin_cpu_init();
     return __builtin_cpu_supports("avx");
 }
 
 auto is_avx2_supported() -> bool {
-    __builtin_cpu_init();
     return __builtin_cpu_supports("avx2");
 }
 
@@ -248,6 +252,5 @@ auto is_avx512f_supported() -> bool {
 }
 
 auto is_avx512vl_supported() -> bool {
-    __builtin_cpu_init();
     return __builtin_cpu_supports("avx512vl");
 }
