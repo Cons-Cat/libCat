@@ -19,14 +19,14 @@ namespace std::detail {
  * functions are unaligned, which has little, if any, penalty to aligned vectors
  * in modern SSE, AVX, and NEON. */
 
-template <typename T, usize Width>
+template <typename T, isize Width>
 struct alignas(4) simd_vector {
     using scalar_type = T;
     // NOLINTNEXTLINE
     typedef T
         __attribute__((vector_size(sizeof(scalar_type) * Width), aligned(4)))
         vector_type;
-    static constexpr usize width = Width;
+    static constexpr isize width = Width;
     // vector_size is a GCC attribute that represents SIMD data-types.
     vector_type value;
 
