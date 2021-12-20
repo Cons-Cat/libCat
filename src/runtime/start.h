@@ -33,7 +33,7 @@
 /* TODO: #ifdef __SANITIZE_ADDRESS__
  * to handle address sanitizers, which do not work. */
 
-extern "C" __attribute__((used)) void exit(i32);
+extern "C" __attribute__((used)) void exit(i4);
 
 /* in libCat, _start() does almost nothing. It is necessary to store the
  * base stack pointer at this point, but otherwise all initialization logic
@@ -52,8 +52,8 @@ auto load_base_stack_pointer() -> void* {
     return rbp;
 }
 
-auto load_argc() -> i32 {
-    i32* argc;
+auto load_argc() -> i4 {
+    i4* argc;
     asm(R"(mov %%rbp, %[argc])" : [argc] "=r"(argc));
     return *argc;
 }

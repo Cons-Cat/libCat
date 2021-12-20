@@ -18,4 +18,4 @@
         if (message) exit(1);            \
     } while (0)
 
-extern i32 tests_run;
+extern i4 tests_run;

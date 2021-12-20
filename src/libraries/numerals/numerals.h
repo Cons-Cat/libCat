@@ -38,7 +38,7 @@ namespace std::detail {
  * So, we can provide constraints such as "the operand must have a size that is
  * less than or equal to my own size", and this will guarantee that the compiler
  * cannot generate a method that could cause a narrowing conversion between an
- * i64 and an i32 type. This solution is very concise because that same
+ * i8 and an i4 type. This solution is very concise because that same
  * constraint broadly applies to all possible type conversions. */
 
 template <typename T>
@@ -192,24 +192,24 @@ struct safe_numeral_t {
 }  // namespace std::detail
 
 // These macros are defined by the GCC compiler.
-using i8 = std::detail::safe_numeral_t<__INT8_TYPE__>;
-using u8 = std::detail::safe_numeral_t<__UINT8_TYPE__>;
-using i16 = std::detail::safe_numeral_t<__INT16_TYPE__>;
-using u16 = std::detail::safe_numeral_t<__UINT16_TYPE__>;
-using i32 = std::detail::safe_numeral_t<__INT32_TYPE__>;
-using u32 = std::detail::safe_numeral_t<__UINT32_TYPE__>;
-using i64 = std::detail::safe_numeral_t<__INT64_TYPE__>;
-using u64 = std::detail::safe_numeral_t<__UINT64_TYPE__>;
+using i1 = std::detail::safe_numeral_t<__INT8_TYPE__>;
+using u1 = std::detail::safe_numeral_t<__UINT8_TYPE__>;
+using i2 = std::detail::safe_numeral_t<__INT16_TYPE__>;
+using u2 = std::detail::safe_numeral_t<__UINT16_TYPE__>;
+using i4 = std::detail::safe_numeral_t<__INT32_TYPE__>;
+using u4 = std::detail::safe_numeral_t<__UINT32_TYPE__>;
+using i8 = std::detail::safe_numeral_t<__INT64_TYPE__>;
+using u8 = std::detail::safe_numeral_t<__UINT64_TYPE__>;
 // using i128 = std::detail::safe_numeral_t<int128_t>;
 // using u128 = std::detail::safe_numeral_t<uint128_t>;
 
-using usize = u64;
-using isize = i64;
+using usize = u8;
+using isize = i8;
 
 // These are GCC built-in types:
 // using f16 = _Float16;
-using f32 = std::detail::safe_numeral_t<float>;
-using f64 = std::detail::safe_numeral_t<double>;
+using f4 = std::detail::safe_numeral_t<float>;
+using f8 = std::detail::safe_numeral_t<double>;
 using f128 = __float128;
 using x128 = float __attribute__((mode(TC))) _Complex;
 #else
@@ -219,28 +219,28 @@ constexpr auto decay_numeral(auto from) {
 }
 
 // These macros are defined by the GCC compiler.
-using i8 = __INT8_TYPE__;
-using u8 = __UINT8_TYPE__;
-using i16 = __INT16_TYPE__;
-using u16 = __UINT16_TYPE__;
-using i32 = __INT32_TYPE__;
-using u32 = __UINT32_TYPE__;
-using i64 = __INT64_TYPE__;
-using u64 = __UINT64_TYPE__;
+using i1 = __INT8_TYPE__;
+using u1 = __UINT8_TYPE__;
+using i2 = __INT16_TYPE__;
+using u2 = __UINT16_TYPE__;
+using i4 = __INT32_TYPE__;
+using u4 = __UINT32_TYPE__;
+using i8 = __INT64_TYPE__;
+using u8 = __UINT64_TYPE__;
 using i128 = __int128;
 using u128 = unsigned __int128;
-using usize = u64;
-using isize = i64;
-using f32 = float;
-using f64 = double;
+using usize = u8;
+using isize = i8;
+using f4 = float;
+using f8 = double;
 // These are GCC built-in types:
 using f128 = __float128;
 using x128 = float __attribute__((mode(TC))) _Complex;
 #endif
 
-using bool8 = u8;
-using bool16 = u16;
-using bool32 = u32;
+using bool1 = u1;
+using bool2 = u2;
+using bool4 = u4;
 
 /* anyint is a numeric type which is immutable, convertible to any other numeric
  * type, and constexpr. It is useful for holding global constants. */
@@ -252,36 +252,36 @@ struct anyint {
   public:
     consteval anyint(type const(&in_int)) : value(in_int){};
 
+    consteval operator i1() const {
+        return static_cast<i1>(value);
+    }
+    consteval operator i2() const {
+        return static_cast<i2>(value);
+    }
+    consteval operator i4() const {
+        return static_cast<i4>(value);
+    }
     consteval operator i8() const {
         return static_cast<i8>(value);
     }
-    consteval operator i16() const {
-        return static_cast<i16>(value);
-    }
-    consteval operator i32() const {
-        return static_cast<i32>(value);
-    }
-    consteval operator i64() const {
-        return static_cast<i64>(value);
-    }
 
+    consteval operator u1() const {
+        return static_cast<u1>(value);
+    }
+    consteval operator u2() const {
+        return static_cast<u2>(value);
+    }
+    consteval operator u4() const {
+        return static_cast<u4>(value);
+    }
     consteval operator u8() const {
         return static_cast<u8>(value);
     }
-    consteval operator u16() const {
-        return static_cast<u16>(value);
-    }
-    consteval operator u32() const {
-        return static_cast<u32>(value);
-    }
-    consteval operator u64() const {
-        return static_cast<u64>(value);
-    }
 
-    consteval operator f32() const {
-        return static_cast<f32>(value);
+    consteval operator f4() const {
+        return static_cast<f4>(value);
     }
-    consteval operator f64() const {
-        return static_cast<f64>(value);
+    consteval operator f8() const {
+        return static_cast<f8>(value);
     }
 };
