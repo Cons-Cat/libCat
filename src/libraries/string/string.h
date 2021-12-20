@@ -2,9 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
-/* <legacy_string.h> is a compatibility library to make libC code compile with
- * libCat. It is not used directly in this header file. */
-#include <legacy_string.h>
+#include <stdint.h>
 
 // TODO: Optimize string_length().
 // https://newbedev.com/why-does-glibc-s-strlen-need-to-be-so-complicated-to-run-quickly
