@@ -130,6 +130,8 @@ using bool32x2 = std::detail::simd_vector<bool32, 2>;
 using bool32x4 = std::detail::simd_vector<bool32, 4>;
 using bool32x8 = std::detail::simd_vector<bool32, 8>;
 
+namespace simd {
+
 enum VectorMask : u8
 {
     // Source data format.
@@ -156,7 +158,7 @@ enum VectorMask : u8
 };
 
 template <typename T>
-consteval auto simd_set_zeros() -> T {
+consteval auto set_zeros() -> T {
     // TODO: Is there a cleverer way to do this? Variadic templates?
     // Probably an integer_sequence.
     using scalar_type = typename T::scalar_type;
@@ -178,7 +180,7 @@ consteval auto simd_set_zeros() -> T {
     __builtin_unreachable();
 }
 
-void simd_shuffle(auto vector_1, auto vector_2, auto mask) {
+void shuffle(auto vector_1, auto vector_2, auto mask) {
     __builtin_shuffle(vector_1, vector_2, mask);
 }
 
@@ -197,15 +199,13 @@ auto p_string_to_p_vector(char8_t const* p_string) {
 // TODO: Improve these function names.
 // TODO: Perfect forwarding.
 template <u8 Mask>
-auto simd_cmp_implicit_str_c(auto const& vector_1, auto const& vector_2)
-    -> bool {
+auto cmp_implicit_str_c(auto const& vector_1, auto const& vector_2) -> bool {
     static_assert(std::is_same_v<decltype(vector_1), decltype(vector_2)>);
     return __builtin_ia32_pcmpistric128(vector_1.value, vector_2.value, Mask);
 }
 
 template <u8 Mask>
-auto simd_cmp_implicit_str_i(auto const& vector_1, auto const& vector_2)
-    -> i32 {
+auto cmp_implicit_str_i(auto const& vector_1, auto const& vector_2) -> i32 {
     static_assert(std::is_same_v<decltype(vector_1), decltype(vector_2)>);
     return __builtin_ia32_pcmpistri128(vector_1.value, vector_2.value, Mask);
 }
@@ -238,7 +238,8 @@ __attribute__((artificial)) void inline prefetch(void const* p_source,
     __builtin_prefetch(p_source, (hint & 0x4) >> 2, hint & 0x3);
 }
 
-// TODO: Vector concept.
+// TODO: Constrain parameter with a vector concept.
+// TODO: This code can be simplified a lot.
 // Non-temporally copy a vector into some address.
 template <typename T>
 void stream_in(void const* p_destination, T source) {
@@ -290,6 +291,8 @@ void stream_in(void const* p_destination, T source) {
         __builtin_ia32_movntq256(p_destination, source);
     }
 }
+
+}  // namespace simd
 
 // TODO: __builtin_cpu_init() must be called before these.
 
