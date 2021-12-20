@@ -30,26 +30,27 @@ struct alignas(4) simd_vector {
     // vector_size is a GCC attribute that represents SIMD data-types.
     vector_type value;
 
-    auto operator=(simd_vector<T, Width>& operand) -> simd_vector<T, Width>& {
+    constexpr auto operator=(simd_vector<T, Width>& operand)
+        -> simd_vector<T, Width>& {
         this->value = operand.value;
         return *this;
     }
 
-    auto operator+(simd_vector<T, Width> const& operand)
+    constexpr auto operator+(simd_vector<T, Width> const& operand)
         -> simd_vector<T, Width> {
         return simd_vector<T, Width>{this->value + operand.value};
     }
-    auto operator+=(simd_vector<T, Width> const& operand)
+    constexpr auto operator+=(simd_vector<T, Width> const& operand)
         -> simd_vector<T, Width>& {
         this->value = this->value + operand.value;
         return *this;
     }
 
-    auto operator-(simd_vector<T, Width> const& operand)
+    constexpr auto operator-(simd_vector<T, Width> const& operand)
         -> simd_vector<T, Width> {
         return simd_vector<T, Width>{this->value - operand.value};
     }
-    auto operator-=(simd_vector<T, Width> const& operand)
+    constexpr auto operator-=(simd_vector<T, Width> const& operand)
         -> simd_vector<T, Width>& {
         this->value = this->value - operand.value;
         return *this;
@@ -59,18 +60,18 @@ struct alignas(4) simd_vector {
 }  // namespace std::detail
 
 // Vectors of up to 32 8-bit integers are supported by AVX2.
-using i8x2 = std::detail::simd_vector<i8, 2>;
-using i8x4 = std::detail::simd_vector<i8, 4>;
-using i8x8 = std::detail::simd_vector<i8, 8>;
-using i8x16 = std::detail::simd_vector<i8, 16>;
-using i8x32 = std::detail::simd_vector<i8, 32>;
-using u8x2 = std::detail::simd_vector<u8, 2>;
-using u8x4 = std::detail::simd_vector<u8, 4>;
-using u8x8 = std::detail::simd_vector<u8, 8>;
-using u8x16 = std::detail::simd_vector<u8, 16>;
-using u8x32 = std::detail::simd_vector<u8, 32>;
+using i1x2 = std::detail::simd_vector<i1, 2>;
+using i1x4 = std::detail::simd_vector<i1, 4>;
+using i1x8 = std::detail::simd_vector<i1, 8>;
+using i1x16 = std::detail::simd_vector<i1, 16>;
+using i1x32 = std::detail::simd_vector<i1, 32>;
+using u1x2 = std::detail::simd_vector<u1, 2>;
+using u1x4 = std::detail::simd_vector<u1, 4>;
+using u1x8 = std::detail::simd_vector<u1, 8>;
+using u1x16 = std::detail::simd_vector<u1, 16>;
+using u1x32 = std::detail::simd_vector<u1, 32>;
 
-/* Strings need their own vectors because u8 and i8 are incompatible with some
+/* Strings need their own vectors because u1 and i1 are incompatible with some
  * intrinsic functions.*/
 using charx2 = std::detail::simd_vector<char, 2>;
 using charx4 = std::detail::simd_vector<char, 4>;
@@ -79,60 +80,60 @@ using charx16 = std::detail::simd_vector<char, 16>;
 using charx32 = std::detail::simd_vector<char, 32>;
 
 // Vectors of up to 16 16-bit integers are supported by AVX2.
-using i16x2 = std::detail::simd_vector<i16, 2>;
-using i16x4 = std::detail::simd_vector<i16, 4>;
-using i16x8 = std::detail::simd_vector<i16, 8>;
-using i16x16 = std::detail::simd_vector<i16, 16>;
-using u16x2 = std::detail::simd_vector<u16, 2>;
-using u16x4 = std::detail::simd_vector<u16, 4>;
-using u16x8 = std::detail::simd_vector<u16, 8>;
-using u16x16 = std::detail::simd_vector<u16, 16>;
+using i2x2 = std::detail::simd_vector<i2, 2>;
+using i2x4 = std::detail::simd_vector<i2, 4>;
+using i2x8 = std::detail::simd_vector<i2, 8>;
+using i2x16 = std::detail::simd_vector<i2, 16>;
+using u2x2 = std::detail::simd_vector<u2, 2>;
+using u2x4 = std::detail::simd_vector<u2, 4>;
+using u2x8 = std::detail::simd_vector<u2, 8>;
+using u2x16 = std::detail::simd_vector<u2, 16>;
 
 // Vectors of up to 8 32-bit integers are supported by AVX2.
-using i32x2 = std::detail::simd_vector<i32, 2>;
-using i32x4 = std::detail::simd_vector<i32, 4>;
-using i32x8 = std::detail::simd_vector<i32, 8>;
-using u32x2 = std::detail::simd_vector<u32, 2>;
-using u32x4 = std::detail::simd_vector<u32, 4>;
-using u32x8 = std::detail::simd_vector<u32, 8>;
+using i4x2 = std::detail::simd_vector<i4, 2>;
+using i4x4 = std::detail::simd_vector<i4, 4>;
+using i4x8 = std::detail::simd_vector<i4, 8>;
+using u4x2 = std::detail::simd_vector<u4, 2>;
+using u4x4 = std::detail::simd_vector<u4, 4>;
+using u4x8 = std::detail::simd_vector<u4, 8>;
 
 // Vectors of up to 4 64-bit integers are supported by AVX2.
-using i64x2 = std::detail::simd_vector<i64, 2>;
-using i64x4 = std::detail::simd_vector<i64, 4>;
-using u64x2 = std::detail::simd_vector<u64, 2>;
+using i1x2 = std::detail::simd_vector<i1, 2>;
+using i1x4 = std::detail::simd_vector<i1, 4>;
+using u1x2 = std::detail::simd_vector<u1, 2>;
 
-using u64x4 = std::detail::simd_vector<u64, 4>;
+using u1x4 = std::detail::simd_vector<u1, 4>;
 // Vectors of up to 8 32-bit floats are supported by AVX2.
-using f32x2 = std::detail::simd_vector<f32, 2>;
-using f32x4 = std::detail::simd_vector<f32, 4>;
-using f32x8 = std::detail::simd_vector<f32, 8>;
+using f4x2 = std::detail::simd_vector<f4, 2>;
+using f4x4 = std::detail::simd_vector<f4, 4>;
+using f4x8 = std::detail::simd_vector<f4, 8>;
 
 // TODO: Evaluate what support for 64-bit ints exists in x86-64.
 // Vectors of up to 4 64-bit floats are supported by AVX2.
-using f64x2 = std::detail::simd_vector<f64, 2>;
-using f64x4 = std::detail::simd_vector<f64, 4>;
+using f8x2 = std::detail::simd_vector<f8, 2>;
+using f8x4 = std::detail::simd_vector<f8, 4>;
 
 // Vectors of up to 32 8-bit bools are supported by AVX2.
-using bool8x2 = std::detail::simd_vector<bool8, 2>;
-using bool8x4 = std::detail::simd_vector<bool8, 4>;
-using bool8x8 = std::detail::simd_vector<bool8, 8>;
-using bool8x16 = std::detail::simd_vector<bool8, 16>;
-using bool8x32 = std::detail::simd_vector<bool8, 32>;
+using bool1x2 = std::detail::simd_vector<bool1, 2>;
+using bool1x4 = std::detail::simd_vector<bool1, 4>;
+using bool1x8 = std::detail::simd_vector<bool1, 8>;
+using bool1x16 = std::detail::simd_vector<bool1, 16>;
+using bool1x32 = std::detail::simd_vector<bool1, 32>;
 
 // Vectors of up to 16 8-bit bools are supported by AVX2.
-using bool16x2 = std::detail::simd_vector<bool16, 2>;
-using bool16x4 = std::detail::simd_vector<bool16, 4>;
-using bool16x8 = std::detail::simd_vector<bool16, 8>;
-using bool16x16 = std::detail::simd_vector<bool16, 16>;
+using bool2x2 = std::detail::simd_vector<bool2, 2>;
+using bool2x4 = std::detail::simd_vector<bool2, 4>;
+using bool2x8 = std::detail::simd_vector<bool2, 8>;
+using bool2x16 = std::detail::simd_vector<bool2, 16>;
 
 // Vectors of up to 8 32-bit bools are supported by AVX2.
-using bool32x2 = std::detail::simd_vector<bool32, 2>;
-using bool32x4 = std::detail::simd_vector<bool32, 4>;
-using bool32x8 = std::detail::simd_vector<bool32, 8>;
+using bool4x2 = std::detail::simd_vector<bool4, 2>;
+using bool4x4 = std::detail::simd_vector<bool4, 4>;
+using bool4x8 = std::detail::simd_vector<bool4, 8>;
 
 namespace simd {
 
-enum VectorMask : u8
+enum VectorMask : u1
 {
     // Source data format.
     SIDD_UBYTE_OPS = 0x00,
@@ -187,28 +188,33 @@ auto shuffle(auto in_vector, auto mask) {
     return out_vector;
 }
 
-template <u32 Width>
+// TODO: Implement more types of fences, such as mfence.
+void fence() {
+    __builtin_ia32_sfence();
+}
+
+template <u4 Width>
 auto p_string_to_p_vector(char8_t const* p_string) {
     using U = std::detail::simd_vector<char, Width>;
     return reinterpret_cast<U*>(const_cast<char8_t*>(p_string));
 }
 
-// TODO: Move into a <bit.h> library:
-// template <typename IntoType, typename SourceType>
-// [[nodiscard]] constexpr auto bit_cast(SourceType const& source) -> IntoType {
-//     return __builtin_bit_cast(IntoType, source);
+// // TODO: Move into a <bit.h> library:
+// template <typename T>
+// [[nodiscard]] constexpr auto bit_cast(auto const& source) -> T {
+//     return __builtin_bit_cast(T, source);
 // }
 
 // TODO: Improve these function names.
 // TODO: Perfect forwarding.
-template <u8 Mask>
+template <u1 Mask>
 auto cmp_implicit_str_c(auto const& vector_1, auto const& vector_2) -> bool {
     static_assert(std::is_same_v<decltype(vector_1), decltype(vector_2)>);
     return __builtin_ia32_pcmpistric128(vector_1.value, vector_2.value, Mask);
 }
 
-template <u8 Mask>
-auto cmp_implicit_str_i(auto const& vector_1, auto const& vector_2) -> i32 {
+template <u1 Mask>
+auto cmp_implicit_str_i(auto const& vector_1, auto const& vector_2) -> i4 {
     static_assert(std::is_same_v<decltype(vector_1), decltype(vector_2)>);
     return __builtin_ia32_pcmpistri128(vector_1.value, vector_2.value, Mask);
 }
@@ -233,71 +239,71 @@ enum MM_HINT
     MM_HINT_NTA = 0
 };
 
-// Artificial and inline are required to compile this.
-/* Load a specified cache-line from p_source. */
-__attribute__((artificial)) void inline prefetch(void const* p_source,
-                                                 enum MM_HINT hint) {
-    // I don't know why this works. It's what GlibC does.
-    __builtin_prefetch(p_source, (hint & 0x4) >> 2, hint & 0x3);
-}
+// This will not compile as a function.
+#define prefetch(p_source, hint) \
+    { __builtin_prefetch((p_source), (hint)&0x4 >> 2, (hint)&0x3); }
 
-// TODO: Constrain parameter with a vector concept.
-// TODO: This code can be simplified a lot.
-// Non-temporally copy a vector into some address.
+// TODO: Constrain parameter
+// with a vector concept.
+// TODO: This code can be
+// simplified a lot.
+// Non-temporally copy a vector
+// into some address.
 template <typename T>
-void stream_in(void const* p_destination, T source) {
+void stream_in(void* p_destination, T const* source) {
     // Streaming 32-bit floats.
-    if constexpr (std::is_same_v<T, f32x4>) {
+    if constexpr (std::is_same_v<T, f4x4>) {
         __builtin_ia32_movntps(p_destination, source);
-    } else if constexpr (std::is_same_v<T, f32x8>) {
+    } else if constexpr (std::is_same_v<T, f4x8>) {
         __builtin_ia32_movntps256(p_destination, source);
     }
     // Streaming 64-bit floats.
-    if constexpr (std::is_same_v<T, f64x2>) {
+    if constexpr (std::is_same_v<T, f8x2>) {
         __builtin_ia32_movntpd(p_destination, source);
-    } else if constexpr (std::is_same_v<T, f64x4>) {
+    } else if constexpr (std::is_same_v<T, f8x4>) {
         __builtin_ia32_movntpd256(p_destination, source);
     }
     // Streaming 8-bit ints.
-    else if constexpr (std::is_same_v<T, u8x4> || std::is_same_v<T, i8x4>) {
+    else if constexpr (std::is_same_v<T, u1x4> || std::is_same_v<T, i1x4>) {
         __builtin_ia32_movnti(p_destination, source);
-    } else if constexpr (std::is_same_v<T, u8x8> || std::is_same_v<T, i8x8>) {
+    } else if constexpr (std::is_same_v<T, u1x8> || std::is_same_v<T, i1x8>) {
         __builtin_ia32_movntq(p_destination, source);
-    } else if constexpr (std::is_same_v<T, u8x16> || std::is_same_v<T, i8x16>) {
+    } else if constexpr (std::is_same_v<T, u1x16> || std::is_same_v<T, i1x16>) {
         __builtin_ia32_movntq128(p_destination, source);
-    } else if constexpr (std::is_same_v<T, u8x32> || std::is_same_v<T, i8x32>) {
+    } else if constexpr (std::is_same_v<T, u1x32> || std::is_same_v<T, i1x32>) {
         __builtin_ia32_movntq256(p_destination, source);
     }
     // Streaming 16-bit ints.
-    else if constexpr (std::is_same_v<T, u16x2> || std::is_same_v<T, i16x2>) {
+    else if constexpr (std::is_same_v<T, u2x2> || std::is_same_v<T, i2x2>) {
         __builtin_ia32_movnti(p_destination, source);
-    } else if constexpr (std::is_same_v<T, u16x4> || std::is_same_v<T, i16x4>) {
+    } else if constexpr (std::is_same_v<T, u2x4> || std::is_same_v<T, i2x4>) {
         __builtin_ia32_movntq(p_destination, source);
-    } else if constexpr (std::is_same_v<T, u16x8> || std::is_same_v<T, i16x8>) {
+    } else if constexpr (std::is_same_v<T, u2x8> || std::is_same_v<T, i2x8>) {
         __builtin_ia32_movntq128(p_destination, source);
-    } else if constexpr (std::is_same_v<T, u16x16> ||
-                         std::is_same_v<T, i16x16>) {
+    } else if constexpr (std::is_same_v<T, u2x16> ||
+                         std::is_same_v<T, i2x16>) {
         __builtin_ia32_movntq256(p_destination, source);
     }
     // Streaming 32-bit ints.
-    else if constexpr (std::is_same_v<T, u32x2> || std::is_same_v<T, i32x2>) {
+    else if constexpr (std::is_same_v<T, u4x2> || std::is_same_v<T, i4x2>) {
         __builtin_ia32_movntq(p_destination, source);
-    } else if constexpr (std::is_same_v<T, u32x4> || std::is_same_v<T, i32x4>) {
+    } else if constexpr (std::is_same_v<T, u4x4> || std::is_same_v<T, i4x4>) {
         __builtin_ia32_movntq128(p_destination, source);
-    } else if constexpr (std::is_same_v<T, u32x8> || std::is_same_v<T, i32x8>) {
-        __builtin_ia32_movntq256(p_destination, source);
+    } else if constexpr (std::is_same_v<T, u4x8> || std::is_same_v<T, i4x8>) {
+        __builtin_ia32_movntdq256(p_destination, source.value);
     }
     // Streaming 64-bit ints.
-    else if constexpr (std::is_same_v<T, u64x2> || std::is_same_v<T, i64x2>) {
+    else if constexpr (std::is_same_v<T, u1x2> || std::is_same_v<T, i1x2>) {
         __builtin_ia32_movntq128(p_destination, source);
-    } else if constexpr (std::is_same_v<T, u64x4> || std::is_same_v<T, i64x4>) {
-        __builtin_ia32_movntq256(p_destination, source);
+    } else if constexpr (std::is_same_v<T, u1x4> || std::is_same_v<T, i1x4>) {
+        __builtin_ia32_movntdq256(p_destination, source.value);
     }
 }
 
 }  // namespace simd
 
-// TODO: __builtin_cpu_init() must be called before these.
+// TODO: __builtin_cpu_init()
+// must be called before these.
 
 auto is_mmx_supported() -> bool {
     return __builtin_cpu_supports("mmx");
