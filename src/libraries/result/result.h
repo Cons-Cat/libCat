@@ -72,15 +72,16 @@ constexpr std::detail::ok ok;
 template <typename T>
 struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
     Failure error_code;  // Error is a 64-bit value.
-  private:
     /* char should be a relatively unintrusive dummy data for when this holds
      * void. Reflection TS in future C++ will provide conditional-members, which
      * would be a better solution. */
     using ValueType = std::conditional_t<std::is_void_v<T>, char, T>;
+    /* It is unsafe to access value. You may prefer or_panic_debug() which
+     * provides failure-handling in debug builds, and skips them in optimized
+     * builds. */
     ValueType const value;
     bool const is_ok;
 
-  public:
     Result(Failure in_code) : error_code(in_code), value(), is_ok(false) {
     }
 
@@ -182,7 +183,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
 
     /* Because the error code is 64-bit, it could contain a non-null pointer to
      * an error string. This prints that error message. */
-    auto or_print_debug()->T {
+    auto or_print_panic_debug()->T {
         if (is_ok) {
             if constexpr (!std::is_void_v<T>) {
                 return this->value;
