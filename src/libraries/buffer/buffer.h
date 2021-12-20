@@ -15,7 +15,7 @@ struct Buffer {
     template <typename... U>
     constexpr Buffer(U&&... arguments) requires(sizeof...(arguments) == Size) {
         T unpacked_data[Size] = {arguments...};
-        for (i32 i = 0; i < Size; i++) {
+        for (i4 i = 0; i < Size; i++) {
             this->value[i] = unpacked_data[i];
         }
     }

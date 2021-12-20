@@ -25,7 +25,7 @@ extern "C" auto syscall5(Any, Any, Any, Any, Any arg4, Any) -> void*;
 // TODO: Extract this to a .tpp file.
 template <typename T, typename... Args>
 void syscall(T, Args... parameters) {
-    constexpr i64 stdout = 1;
+    constexpr i8 stdout = 1;
     constexpr isize length = sizeof...(Args);
     Any arguments[length] = {parameters...};
     static_assert(length < 6,
@@ -50,7 +50,7 @@ void syscall(T, Args... parameters) {
 }
 
 // write() forwards its arguments to a failable stdout syscall.
-auto write(i64 const& file_descriptor, char8_t const* p_string_buffer,
+auto write(i8 const& file_descriptor, char8_t const* p_string_buffer,
            isize const& string_length) -> Result<> {
     syscall(1, file_descriptor, p_string_buffer, string_length);
     return get_errno();

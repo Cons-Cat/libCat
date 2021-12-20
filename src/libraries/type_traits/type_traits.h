@@ -181,7 +181,7 @@ namespace detail {
     // template <typename>
     // struct is_safe_integral : false_type {};
     // template <>
-    // struct is_safe_integral<i8> : true_type {};
+    // struct is_safe_integral<i1> : true_type {};
     // template <>
     // struct is_safe_integral<safe_integral_t<unsigned char>> : true_type {};
     // template <>

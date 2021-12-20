@@ -4,10 +4,10 @@
 void meow() {
     debugger_entry_point();
     Any rbp = load_base_stack_pointer();
-    i32 argc = *any_cast<i32*>(rbp);
+    i4 argc = *any_cast<i4*>(rbp);
     char8_t** argv = any_cast<char8_t**>(rbp) + 1;
-    for (i32 i = 1; i < argc; i++) {
-        i32 length = 0;
+    for (i4 i = 1; i < argc; i++) {
+        i4 length = 0;
         while (argv[i][length] != 0) {
             length++;
         }
