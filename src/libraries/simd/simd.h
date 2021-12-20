@@ -81,10 +81,12 @@ using charx32 = std::detail::simd_vector<char, 32>;
 // Vectors of up to 16 16-bit integers are supported by AVX2.
 using i16x2 = std::detail::simd_vector<i16, 2>;
 using i16x4 = std::detail::simd_vector<i16, 4>;
+using i16x8 = std::detail::simd_vector<i16, 8>;
 using i16x16 = std::detail::simd_vector<i16, 16>;
 using u16x2 = std::detail::simd_vector<u16, 2>;
-using u16x3 = std::detail::simd_vector<u16, 3>;
 using u16x4 = std::detail::simd_vector<u16, 4>;
+using u16x8 = std::detail::simd_vector<u16, 8>;
+using u16x16 = std::detail::simd_vector<u16, 16>;
 
 // Vectors of up to 8 32-bit integers are supported by AVX2.
 using i32x2 = std::detail::simd_vector<i32, 2>;
