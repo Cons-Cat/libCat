@@ -4,7 +4,7 @@
 
 #include <utility.h>
 
-template <typename T, usize Size>
+template <typename T, isize Size>
 struct Buffer {
     T value[Size];
 
