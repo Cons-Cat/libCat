@@ -218,6 +218,79 @@ void zero_upper_avx_registers() {
     __builtin_ia32_vzeroupper();
 }
 
+// Constants for prefetch.
+enum MM_HINT
+{
+    // MM_HINT_ET is MM_HINT_T with set 3rd bit.
+    MM_HINT_ET0 = 7,
+    MM_HINT_ET1 = 6,
+    MM_HINT_T0 = 3,
+    MM_HINT_T1 = 2,
+    MM_HINT_T2 = 1,
+    MM_HINT_NTA = 0
+};
+
+// Artificial and inline are required to compile this.
+/* Load a specified cache-line from p_source. */
+__attribute__((artificial)) void inline prefetch(void const* p_source,
+                                                 enum MM_HINT hint) {
+    // I don't know why this works. It's what GlibC does.
+    __builtin_prefetch(p_source, (hint & 0x4) >> 2, hint & 0x3);
+}
+
+// TODO: Vector concept.
+// Non-temporally copy a vector into some address.
+template <typename T>
+void stream_in(void const* p_destination, T source) {
+    // Streaming 32-bit floats.
+    if constexpr (std::is_same_v<T, f32x4>) {
+        __builtin_ia32_movntps(p_destination, source);
+    } else if constexpr (std::is_same_v<T, f32x8>) {
+        __builtin_ia32_movntps256(p_destination, source);
+    }
+    // Streaming 64-bit floats.
+    if constexpr (std::is_same_v<T, f64x2>) {
+        __builtin_ia32_movntpd(p_destination, source);
+    } else if constexpr (std::is_same_v<T, f64x4>) {
+        __builtin_ia32_movntpd256(p_destination, source);
+    }
+    // Streaming 8-bit ints.
+    else if constexpr (std::is_same_v<T, u8x4> || std::is_same_v<T, i8x4>) {
+        __builtin_ia32_movnti(p_destination, source);
+    } else if constexpr (std::is_same_v<T, u8x8> || std::is_same_v<T, i8x8>) {
+        __builtin_ia32_movntq(p_destination, source);
+    } else if constexpr (std::is_same_v<T, u8x16> || std::is_same_v<T, i8x16>) {
+        __builtin_ia32_movntq128(p_destination, source);
+    } else if constexpr (std::is_same_v<T, u8x32> || std::is_same_v<T, i8x32>) {
+        __builtin_ia32_movntq256(p_destination, source);
+    }
+    // Streaming 16-bit ints.
+    else if constexpr (std::is_same_v<T, u16x2> || std::is_same_v<T, i16x2>) {
+        __builtin_ia32_movnti(p_destination, source);
+    } else if constexpr (std::is_same_v<T, u16x4> || std::is_same_v<T, i16x4>) {
+        __builtin_ia32_movntq(p_destination, source);
+    } else if constexpr (std::is_same_v<T, u16x8> || std::is_same_v<T, i16x8>) {
+        __builtin_ia32_movntq128(p_destination, source);
+    } else if constexpr (std::is_same_v<T, u16x16> ||
+                         std::is_same_v<T, i16x16>) {
+        __builtin_ia32_movntq256(p_destination, source);
+    }
+    // Streaming 32-bit ints.
+    else if constexpr (std::is_same_v<T, u32x2> || std::is_same_v<T, i32x2>) {
+        __builtin_ia32_movntq(p_destination, source);
+    } else if constexpr (std::is_same_v<T, u32x4> || std::is_same_v<T, i32x4>) {
+        __builtin_ia32_movntq128(p_destination, source);
+    } else if constexpr (std::is_same_v<T, u32x8> || std::is_same_v<T, i32x8>) {
+        __builtin_ia32_movntq256(p_destination, source);
+    }
+    // Streaming 64-bit ints.
+    else if constexpr (std::is_same_v<T, u64x2> || std::is_same_v<T, i64x2>) {
+        __builtin_ia32_movntq128(p_destination, source);
+    } else if constexpr (std::is_same_v<T, u64x4> || std::is_same_v<T, i64x4>) {
+        __builtin_ia32_movntq256(p_destination, source);
+    }
+}
+
 // TODO: __builtin_cpu_init() must be called before these.
 
 auto is_mmx_supported() -> bool {
