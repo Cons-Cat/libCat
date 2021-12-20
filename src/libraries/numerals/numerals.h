@@ -203,9 +203,6 @@ using u8 = std::detail::safe_numeral_t<__UINT64_TYPE__>;
 // using i128 = std::detail::safe_numeral_t<int128_t>;
 // using u128 = std::detail::safe_numeral_t<uint128_t>;
 
-using usize = u8;
-using isize = i8;
-
 // These are GCC built-in types:
 // using f16 = _Float16;
 using f4 = std::detail::safe_numeral_t<float>;
@@ -218,6 +215,7 @@ constexpr auto decay_numeral(auto from) {
     return from;
 }
 
+// TODO: Add and test 16-byte types and complex numbers.
 // These macros are defined by the GCC compiler.
 using i1 = __INT8_TYPE__;
 using u1 = __UINT8_TYPE__;
@@ -227,16 +225,12 @@ using i4 = __INT32_TYPE__;
 using u4 = __UINT32_TYPE__;
 using i8 = __INT64_TYPE__;
 using u8 = __UINT64_TYPE__;
-using i128 = __int128;
-using u128 = unsigned __int128;
-using usize = u8;
-using isize = i8;
 using f4 = float;
 using f8 = double;
-// These are GCC built-in types:
-using f128 = __float128;
-using x128 = float __attribute__((mode(TC))) _Complex;
 #endif
+
+using usize = u8;
+using isize = i8;
 
 using bool1 = u1;
 using bool2 = u2;
