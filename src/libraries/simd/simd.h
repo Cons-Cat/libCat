@@ -180,8 +180,11 @@ consteval auto set_zeros() -> T {
     __builtin_unreachable();
 }
 
-void shuffle(auto vector_1, auto vector_2, auto mask) {
-    __builtin_shuffle(vector_1, vector_2, mask);
+// TODO: Use a vector concept.
+auto shuffle(auto in_vector, auto mask) {
+    decltype(in_vector) out_vector;
+    __builtin_shuffle(in_vector, out_vector, mask);
+    return out_vector;
 }
 
 template <u32 Width>
