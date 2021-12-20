@@ -186,11 +186,13 @@ auto p_string_to_p_vector(char8_t const* p_string) {
     return reinterpret_cast<U*>(const_cast<char8_t*>(p_string));
 }
 
+// TODO: Move into a <bit.h> library:
 // template <typename IntoType, typename SourceType>
 // [[nodiscard]] constexpr auto bit_cast(SourceType const& source) -> IntoType {
 //     return __builtin_bit_cast(IntoType, source);
 // }
 
+// TODO: Improve these function names.
 // TODO: Perfect forwarding.
 template <u8 Mask>
 auto simd_cmp_implicit_str_c(auto const& vector_1, auto const& vector_2)
@@ -204,6 +206,14 @@ auto simd_cmp_implicit_str_i(auto const& vector_1, auto const& vector_2)
     -> i32 {
     static_assert(std::is_same_v<decltype(vector_1), decltype(vector_2)>);
     return __builtin_ia32_pcmpistri128(vector_1.value, vector_2.value, Mask);
+}
+
+void zero_avx_registers() {
+    __builtin_ia32_vzeroall();
+}
+
+void zero_upper_avx_registers() {
+    __builtin_ia32_vzeroupper();
 }
 
 // TODO: __builtin_cpu_init() must be called before these.
