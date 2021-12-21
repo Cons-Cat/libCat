@@ -23,5 +23,9 @@ __attribute__((alias("main"))) auto debugger_entry_point() -> int;
 #include <numerals.h>
 #include <result.h>
 
-// libCat includes <simd.h>, because vectors are considered primitive types.
+// <stdint.h> is required for libC compatibility.
+#include <stdint.h>
+
+/* libCat includes <simd.h> globally, because vectors are considered primitive
+ * types. */
 #include <simd.h>
