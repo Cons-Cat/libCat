@@ -21,14 +21,28 @@ namespace std::detail {
 
 template <typename T, isize Width>
 struct alignas(4) simd_vector {
-    using scalar_type = T;
-    // NOLINTNEXTLINE
-    typedef T
-        __attribute__((vector_size(sizeof(scalar_type) * Width), aligned(4)))
-        vector_type;
     static constexpr isize width = Width;
+    using ScalarType = T;
     // vector_size is a GCC attribute that represents SIMD data-types.
-    vector_type value;
+    // NOLINTNEXTLINE using does not work here:
+    typedef T
+        __attribute__((vector_size(sizeof(ScalarType) * Width), aligned(4)))
+        IntrinsicType;
+    IntrinsicType value;
+
+    constexpr simd_vector() = default;
+    // TODO: Perfect forwarding.
+    constexpr simd_vector(IntrinsicType const& in_vector) {
+        this->value = in_vector;
+    }
+    constexpr simd_vector(simd_vector<T, Width> const& operand) {
+        this->value = operand.value;
+    }
+    // TODO: It would be nice to get this to work:
+    // template <typename... UList>
+    // constexpr simd_vector(UList... values) {
+    //     this->value((static_cast<T>(values))...);
+    // }
 
     constexpr auto operator=(simd_vector<T, Width>& operand)
         -> simd_vector<T, Width>& {
@@ -163,21 +177,21 @@ template <typename T>
 consteval auto set_zeros() -> T {
     // TODO: Is there a cleverer way to do this? Variadic templates?
     // Probably an integer_sequence.
-    using scalar_type = typename T::scalar_type;
+    using ScalarType = typename T::ScalarType;
+    using VectorType = std::detail::simd_vector<ScalarType, T::width>;
+    using IntrinsicType = decltype(VectorType::value);
+
     if constexpr (T::width == 2) {
-        return std::detail::simd_vector<scalar_type, T::width>{0, 0};
+        return IntrinsicType{0, 0};
     } else if constexpr (T::width == 4) {
-        return std::detail::simd_vector<scalar_type, T::width>{0, 0, 0, 0};
+        return IntrinsicType{0, 0, 0, 0};
     } else if constexpr (T::width == 8) {
-        return std::detail::simd_vector<scalar_type, T::width>{0, 0, 0, 0,
-                                                               0, 0, 0, 0};
+        return IntrinsicType{0, 0, 0, 0, 0, 0, 0, 0};
     } else if constexpr (T::width == 16) {
-        return std::detail::simd_vector<scalar_type, T::width>{
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        return IntrinsicType{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     } else if constexpr (T::width == 32) {
-        return std::detail::simd_vector<scalar_type, T::width>{
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        return IntrinsicType{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     }
     __builtin_unreachable();
 }
