@@ -69,12 +69,11 @@ void copy_memory(void const* p_source, void* p_destination, isize bytes) {
         std::copy_memory(p_source, p_destination, bytes);
     }
 
-    // Align src, dst, and size to 16 bytes
+    // Align source, destination, and bytes to 16 bytes
     padding =
         (32 - ((reinterpret_cast<isize>(p_destination_handle)) & 31)) & 31;
-
-    Vector head = *static_cast<Vector const*>(p_source);
-    *static_cast<Vector*>(p_destination) = head;
+    // Vector head = *static_cast<Vector const*>(p_source);
+    // *static_cast<Vector*>(p_destination) = head;
     p_source_handle += padding;
     p_destination_handle += padding;
     bytes -= padding;
