@@ -9,7 +9,7 @@
 #ifdef SAFE_ARITHMETIC
 
 /* Get the value of a primitive number, or the value held by a
- * safe_numeral_t<>. */
+ * SafeNumeral<>. */
 constexpr auto decay_numeral(int_or_float auto from) {
     return from;
 }
@@ -19,9 +19,9 @@ constexpr auto decay_numeral(auto from) {
 
 namespace std::detail {
 
-/* safe_numeral_t<> is the most interesting part of <stdint.h>. libCat uses
+/* SafeNumeral<> is the most interesting part of <stdint.h>. libCat uses
  * this struct to represent all of its scalar numerical data types.
- * Operations between two specializations of a safe_numeral_t<> that would
+ * Operations between two specializations of a SafeNumeral<> that would
  * cause a narrowing conversion such as loss of precision, change in
  * signed-ness, or an implicit float to int conversion, *do not compile*, and
  * the code to ensure this is very simple compared to many other mechanisms.
@@ -42,13 +42,13 @@ namespace std::detail {
  * constraint broadly applies to all possible type conversions. */
 
 template <typename T>
-struct safe_numeral_t {
+struct SafeNumeral {
     // TODO: Rename to value
     T data;  // Uninitialized by default.
 
-    constexpr safe_numeral_t() = default;
+    constexpr SafeNumeral() = default;
     // Any number that is smaller than this can safely cast into it.
-    constexpr safe_numeral_t(auto from) requires(
+    constexpr SafeNumeral(auto from) requires(
         std::is_signed_v<T> ==
             std::is_signed_v<decltype(decay_numeral(from))> &&
         sizeof(T) >= sizeof(decltype(decay_numeral(from))) &&
@@ -69,7 +69,7 @@ struct safe_numeral_t {
         std::is_floating_point_v<T> ==                                        \
             std::is_floating_point_v<decltype(decay_numeral(from))>
 
-    auto operator=(auto from) -> safe_numeral_t<T>& requires(REQUIRES_HELPER) {
+    auto operator=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
         this->data = decay_numeral(from);
         return *this;
     }
@@ -91,99 +91,97 @@ struct safe_numeral_t {
         return this->data <= decay_numeral(from);
     }
 
-    auto operator+(auto from) -> safe_numeral_t<T>
+    auto operator+(auto from) -> SafeNumeral<T>
     requires(REQUIRES_HELPER) {
         return this->data + decay_numeral(from);
     }
-    auto operator+=(auto from) -> safe_numeral_t<T>& requires(REQUIRES_HELPER) {
+    auto operator+=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
         this->data = this->data + decay_numeral(from);
         return *this;
     }
 
-    auto operator++() -> safe_numeral_t<T> {
+    auto operator++() -> SafeNumeral<T> {
         return ++data;
     }
-    auto operator++(int) -> safe_numeral_t<T> {
+    auto operator++(int) -> SafeNumeral<T> {
         return data++;
     }
 
-    auto operator-(auto from) -> safe_numeral_t<T>
+    auto operator-(auto from) -> SafeNumeral<T>
     requires(REQUIRES_HELPER) {
         return this->data - decay_numeral(from);
     }
-    auto operator-=(auto from) -> safe_numeral_t<T>& requires(REQUIRES_HELPER) {
+    auto operator-=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
         this->data = this - from;
         return *this;
     }
 
-    auto operator--() -> safe_numeral_t<T> {
+    auto operator--() -> SafeNumeral<T> {
         return --data;
     }
-    auto operator--(int) -> safe_numeral_t<T> {
+    auto operator--(int) -> SafeNumeral<T> {
         return data--;
     }
 
-    auto operator*(auto from) -> safe_numeral_t<T>
+    auto operator*(auto from) -> SafeNumeral<T>
     requires(REQUIRES_HELPER) {
         return this->data * decay_numeral(from);
     }
-    auto operator*=(auto from) -> safe_numeral_t<T>& requires(REQUIRES_HELPER) {
+    auto operator*=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
         this->data = this->data * from.data;
         return *this;
     }
 
-    auto operator/(auto from) -> safe_numeral_t<T>
+    auto operator/(auto from) -> SafeNumeral<T>
     requires(REQUIRES_HELPER) {
         return this->data / decay_numeral(from);
     }
-    auto operator/=(auto from) -> safe_numeral_t<T>& requires(REQUIRES_HELPER) {
+    auto operator/=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
         this->data = this->data / from.data;
         return *this;
     }
 
-    auto operator%(auto from) -> safe_numeral_t<T>
+    auto operator%(auto from) -> SafeNumeral<T>
     requires(REQUIRES_HELPER) {
         return this->data % decay_numeral(from);
     }
-    auto operator%=(auto from) -> safe_numeral_t<T>& requires(REQUIRES_HELPER) {
+    auto operator%=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
         this->data = this->data % from.data;
         return *this;
     }
 
-    auto operator&(auto from) -> safe_numeral_t<T>
+    auto operator&(auto from) -> SafeNumeral<T>
     requires(REQUIRES_HELPER) {
         return this->data & decay_numeral(from);
     }
-    auto operator&=(auto from) -> safe_numeral_t<T>& requires(REQUIRES_HELPER) {
+    auto operator&=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
         this->data = this->data & from.data;
         return *this;
     }
 
-    auto operator|(auto from) -> safe_numeral_t<T>
+    auto operator|(auto from) -> SafeNumeral<T>
     requires(REQUIRES_HELPER) {
         return this->data | decay_numeral(from);
     }
-    auto operator|=(auto from) -> safe_numeral_t<T>& requires(REQUIRES_HELPER) {
+    auto operator|=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
         this->data = this->data | from.data;
         return *this;
     }
 
-    auto operator<<(auto from) -> safe_numeral_t<T>
+    auto operator<<(auto from) -> SafeNumeral<T>
     requires(REQUIRES_HELPER) {
         return this->data << decay_numeral(from);
     }
-    auto operator<<=(auto from)
-        -> safe_numeral_t<T>& requires(REQUIRES_HELPER) {
+    auto operator<<=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
         this->data = this->data << from.data;
         return *this;
     }
 
-    auto operator>>(auto from) -> safe_numeral_t<T>
+    auto operator>>(auto from) -> SafeNumeral<T>
     requires(REQUIRES_HELPER) {
         return this->data >> decay_numeral(from);
     }
-    auto operator>>=(auto from)
-        -> safe_numeral_t<T>& requires(REQUIRES_HELPER) {
+    auto operator>>=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
         this->data = this->data >> from.data;
         return *this;
     }
@@ -192,23 +190,20 @@ struct safe_numeral_t {
 }  // namespace std::detail
 
 // These macros are defined by the GCC compiler.
-using i1 = std::detail::safe_numeral_t<__INT8_TYPE__>;
-using u1 = std::detail::safe_numeral_t<__UINT8_TYPE__>;
-using i2 = std::detail::safe_numeral_t<__INT16_TYPE__>;
-using u2 = std::detail::safe_numeral_t<__UINT16_TYPE__>;
-using i4 = std::detail::safe_numeral_t<__INT32_TYPE__>;
-using u4 = std::detail::safe_numeral_t<__UINT32_TYPE__>;
-using i8 = std::detail::safe_numeral_t<__INT64_TYPE__>;
-using u8 = std::detail::safe_numeral_t<__UINT64_TYPE__>;
-// using i128 = std::detail::safe_numeral_t<int128_t>;
-// using u128 = std::detail::safe_numeral_t<uint128_t>;
+using i1 = std::detail::SafeNumeral<__INT8_TYPE__>;
+using u1 = std::detail::SafeNumeral<__UINT8_TYPE__>;
+using i2 = std::detail::SafeNumeral<__INT16_TYPE__>;
+using u2 = std::detail::SafeNumeral<__UINT16_TYPE__>;
+using i4 = std::detail::SafeNumeral<__INT32_TYPE__>;
+using u4 = std::detail::SafeNumeral<__UINT32_TYPE__>;
+using i8 = std::detail::SafeNumeral<__INT64_TYPE__>;
+using u8 = std::detail::SafeNumeral<__UINT64_TYPE__>;
+// using i128 = std::detail::SafeNumeral<int128_t>;
+// using u128 = std::detail::SafeNumeral<uint128_t>;
 
 // These are GCC built-in types:
-// using f16 = _Float16;
-using f4 = std::detail::safe_numeral_t<float>;
-using f8 = std::detail::safe_numeral_t<double>;
-using f128 = __float128;
-using x128 = float __attribute__((mode(TC))) _Complex;
+using f4 = std::detail::SafeNumeral<float>;
+using f8 = std::detail::SafeNumeral<double>;
 #else
 
 constexpr auto decay_numeral(auto from) {

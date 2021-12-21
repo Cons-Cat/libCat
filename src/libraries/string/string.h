@@ -59,7 +59,7 @@ namespace simd {
 void copy_memory(void const* p_source, void* p_destination, isize bytes) {
     // Vector is the width of a 32-byte AVX register.
     // `long long int` is required for some SIMD intrinsics.
-    using Vector = std::detail::simd_vector<long long int, 4>;
+    using VectorType = std::detail::SimdVector<long long int, 4>;
 
     unsigned char const* p_source_handle =
         reinterpret_cast<unsigned char const*>(p_source);
@@ -81,22 +81,23 @@ void copy_memory(void const* p_source, void* p_destination, isize bytes) {
     p_destination_handle += padding;
     bytes -= padding;
 
-    Vector vectors[8];
+    VectorType vectors[8];
     // This routine is optimized for buffers in L3 cache. Streaming is slower.
     if (bytes <= cachesize) {
         while (bytes >= 256) {
 #pragma GCC unroll 8
             for (i4 i = 0; i < 8; i++) {
-                vectors[i] =
-                    *(const_cast<Vector*>(
-                          reinterpret_cast<Vector const*>(p_source_handle)) +
-                      i);
+                vectors[i] = *(
+                    const_cast<VectorType*>(
+                        reinterpret_cast<VectorType const*>(p_source_handle)) +
+                    i);
             }
             prefetch(p_source_handle + 512, simd::MM_HINT_NTA);
             p_source_handle += 256;
 #pragma GCC unroll 8
             for (i4 i = 0; i < 8; i++) {
-                *(reinterpret_cast<Vector*>(p_destination_handle)) = vectors[i];
+                *(reinterpret_cast<VectorType*>(p_destination_handle)) =
+                    vectors[i];
             }
             p_destination_handle += 256;
             bytes -= 256;
@@ -108,10 +109,10 @@ void copy_memory(void const* p_source, void* p_destination, isize bytes) {
         while (bytes >= 256) {
 #pragma GCC unroll 8
             for (i4 i = 0; i < 8; i++) {
-                vectors[i] =
-                    *(const_cast<Vector*>(
-                          reinterpret_cast<Vector const*>(p_source_handle)) +
-                      i);
+                vectors[i] = *(
+                    const_cast<VectorType*>(
+                        reinterpret_cast<VectorType const*>(p_source_handle)) +
+                    i);
             }
             prefetch(p_source_handle + 512, simd::MM_HINT_NTA);
             p_source_handle += 256;

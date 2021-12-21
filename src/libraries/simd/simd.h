@@ -20,7 +20,7 @@ namespace std::detail {
  * in modern SSE, AVX, and NEON. */
 
 template <typename T, isize Width>
-struct alignas(4) simd_vector {
+struct alignas(4) SimdVector {
     static constexpr isize width = Width;
     using ScalarType = T;
     // vector_size is a GCC attribute that represents SIMD data-types.
@@ -30,12 +30,12 @@ struct alignas(4) simd_vector {
         IntrinsicType;
     IntrinsicType value;
 
-    constexpr simd_vector() = default;
+    constexpr SimdVector() = default;
     // TODO: Perfect forwarding.
-    constexpr simd_vector(IntrinsicType const& in_vector) {
+    constexpr SimdVector(IntrinsicType const& in_vector) {
         this->value = in_vector;
     }
-    constexpr simd_vector(simd_vector<T, Width> const& operand) {
+    constexpr SimdVector(SimdVector<T, Width> const& operand) {
         this->value = operand.value;
     }
     // TODO: It would be nice to get this to work:
@@ -44,28 +44,28 @@ struct alignas(4) simd_vector {
     //     this->value((static_cast<T>(values))...);
     // }
 
-    constexpr auto operator=(simd_vector<T, Width>& operand)
-        -> simd_vector<T, Width>& {
+    constexpr auto operator=(SimdVector<T, Width>& operand)
+        -> SimdVector<T, Width>& {
         this->value = operand.value;
         return *this;
     }
 
-    constexpr auto operator+(simd_vector<T, Width> const& operand)
-        -> simd_vector<T, Width> {
-        return simd_vector<T, Width>{this->value + operand.value};
+    constexpr auto operator+(SimdVector<T, Width> const& operand)
+        -> SimdVector<T, Width> {
+        return SimdVector<T, Width>{this->value + operand.value};
     }
-    constexpr auto operator+=(simd_vector<T, Width> const& operand)
-        -> simd_vector<T, Width>& {
+    constexpr auto operator+=(SimdVector<T, Width> const& operand)
+        -> SimdVector<T, Width>& {
         this->value = this->value + operand.value;
         return *this;
     }
 
-    constexpr auto operator-(simd_vector<T, Width> const& operand)
-        -> simd_vector<T, Width> {
-        return simd_vector<T, Width>{this->value - operand.value};
+    constexpr auto operator-(SimdVector<T, Width> const& operand)
+        -> SimdVector<T, Width> {
+        return SimdVector<T, Width>{this->value - operand.value};
     }
-    constexpr auto operator-=(simd_vector<T, Width> const& operand)
-        -> simd_vector<T, Width>& {
+    constexpr auto operator-=(SimdVector<T, Width> const& operand)
+        -> SimdVector<T, Width>& {
         this->value = this->value - operand.value;
         return *this;
     }
@@ -74,77 +74,77 @@ struct alignas(4) simd_vector {
 }  // namespace std::detail
 
 // Vectors of up to 32 1-byte integers are supported by AVX2.
-using i1x2 = std::detail::simd_vector<i1, 2>;
-using i1x4 = std::detail::simd_vector<i1, 4>;
-using i1x8 = std::detail::simd_vector<i1, 8>;
-using i1x16 = std::detail::simd_vector<i1, 16>;
-using i1x32 = std::detail::simd_vector<i1, 32>;
-using u1x2 = std::detail::simd_vector<u1, 2>;
-using u1x4 = std::detail::simd_vector<u1, 4>;
-using u1x8 = std::detail::simd_vector<u1, 8>;
-using u1x16 = std::detail::simd_vector<u1, 16>;
-using u1x32 = std::detail::simd_vector<u1, 32>;
+using i1x2 = std::detail::SimdVector<i1, 2>;
+using i1x4 = std::detail::SimdVector<i1, 4>;
+using i1x8 = std::detail::SimdVector<i1, 8>;
+using i1x16 = std::detail::SimdVector<i1, 16>;
+using i1x32 = std::detail::SimdVector<i1, 32>;
+using u1x2 = std::detail::SimdVector<u1, 2>;
+using u1x4 = std::detail::SimdVector<u1, 4>;
+using u1x8 = std::detail::SimdVector<u1, 8>;
+using u1x16 = std::detail::SimdVector<u1, 16>;
+using u1x32 = std::detail::SimdVector<u1, 32>;
 
 /* Strings need their own vectors because u1 and i1 are incompatible with some
  * intrinsic functions.*/
-using charx2 = std::detail::simd_vector<char, 2>;
-using charx4 = std::detail::simd_vector<char, 4>;
-using charx8 = std::detail::simd_vector<char, 8>;
-using charx16 = std::detail::simd_vector<char, 16>;
-using charx32 = std::detail::simd_vector<char, 32>;
+using charx2 = std::detail::SimdVector<char, 2>;
+using charx4 = std::detail::SimdVector<char, 4>;
+using charx8 = std::detail::SimdVector<char, 8>;
+using charx16 = std::detail::SimdVector<char, 16>;
+using charx32 = std::detail::SimdVector<char, 32>;
 
 // Vectors of up to 16 2-byte integers are supported by AVX2.
-using i2x2 = std::detail::simd_vector<i2, 2>;
-using i2x4 = std::detail::simd_vector<i2, 4>;
-using i2x8 = std::detail::simd_vector<i2, 8>;
-using i2x16 = std::detail::simd_vector<i2, 16>;
-using u2x2 = std::detail::simd_vector<u2, 2>;
-using u2x4 = std::detail::simd_vector<u2, 4>;
-using u2x8 = std::detail::simd_vector<u2, 8>;
-using u2x16 = std::detail::simd_vector<u2, 16>;
+using i2x2 = std::detail::SimdVector<i2, 2>;
+using i2x4 = std::detail::SimdVector<i2, 4>;
+using i2x8 = std::detail::SimdVector<i2, 8>;
+using i2x16 = std::detail::SimdVector<i2, 16>;
+using u2x2 = std::detail::SimdVector<u2, 2>;
+using u2x4 = std::detail::SimdVector<u2, 4>;
+using u2x8 = std::detail::SimdVector<u2, 8>;
+using u2x16 = std::detail::SimdVector<u2, 16>;
 
 // Vectors of up to 8 4-byte integers are supported by AVX2.
-using i4x2 = std::detail::simd_vector<i4, 2>;
-using i4x4 = std::detail::simd_vector<i4, 4>;
-using i4x8 = std::detail::simd_vector<i4, 8>;
-using u4x2 = std::detail::simd_vector<u4, 2>;
-using u4x4 = std::detail::simd_vector<u4, 4>;
-using u4x8 = std::detail::simd_vector<u4, 8>;
+using i4x2 = std::detail::SimdVector<i4, 2>;
+using i4x4 = std::detail::SimdVector<i4, 4>;
+using i4x8 = std::detail::SimdVector<i4, 8>;
+using u4x2 = std::detail::SimdVector<u4, 2>;
+using u4x4 = std::detail::SimdVector<u4, 4>;
+using u4x8 = std::detail::SimdVector<u4, 8>;
 
 // Vectors of up to 4 8-byte integers are supported by AVX2.
-using i1x2 = std::detail::simd_vector<i1, 2>;
-using i1x4 = std::detail::simd_vector<i1, 4>;
-using u1x2 = std::detail::simd_vector<u1, 2>;
+using i1x2 = std::detail::SimdVector<i1, 2>;
+using i1x4 = std::detail::SimdVector<i1, 4>;
+using u1x2 = std::detail::SimdVector<u1, 2>;
 
-using u1x4 = std::detail::simd_vector<u1, 4>;
+using u1x4 = std::detail::SimdVector<u1, 4>;
 // Vectors of up to 8 4-byte floats are supported by AVX2.
-using f4x2 = std::detail::simd_vector<f4, 2>;
-using f4x4 = std::detail::simd_vector<f4, 4>;
-using f4x8 = std::detail::simd_vector<f4, 8>;
+using f4x2 = std::detail::SimdVector<f4, 2>;
+using f4x4 = std::detail::SimdVector<f4, 4>;
+using f4x8 = std::detail::SimdVector<f4, 8>;
 
 // TODO: Evaluate what support for 8-byte ints exists in x86-64.
 //
 // Vectors of up to 4 8-byte floats are supported by AVX2.
-using f8x2 = std::detail::simd_vector<f8, 2>;
-using f8x4 = std::detail::simd_vector<f8, 4>;
+using f8x2 = std::detail::SimdVector<f8, 2>;
+using f8x4 = std::detail::SimdVector<f8, 4>;
 
 // Vectors of up to 32 1-byte bools are supported by AVX2.
-using bool1x2 = std::detail::simd_vector<bool1, 2>;
-using bool1x4 = std::detail::simd_vector<bool1, 4>;
-using bool1x8 = std::detail::simd_vector<bool1, 8>;
-using bool1x16 = std::detail::simd_vector<bool1, 16>;
-using bool1x32 = std::detail::simd_vector<bool1, 32>;
+using bool1x2 = std::detail::SimdVector<bool1, 2>;
+using bool1x4 = std::detail::SimdVector<bool1, 4>;
+using bool1x8 = std::detail::SimdVector<bool1, 8>;
+using bool1x16 = std::detail::SimdVector<bool1, 16>;
+using bool1x32 = std::detail::SimdVector<bool1, 32>;
 
 // Vectors of up to 16 2-byte bools are supported by AVX2.
-using bool2x2 = std::detail::simd_vector<bool2, 2>;
-using bool2x4 = std::detail::simd_vector<bool2, 4>;
-using bool2x8 = std::detail::simd_vector<bool2, 8>;
-using bool2x16 = std::detail::simd_vector<bool2, 16>;
+using bool2x2 = std::detail::SimdVector<bool2, 2>;
+using bool2x4 = std::detail::SimdVector<bool2, 4>;
+using bool2x8 = std::detail::SimdVector<bool2, 8>;
+using bool2x16 = std::detail::SimdVector<bool2, 16>;
 
 // Vectors of up to 8 4-byte bools are supported by AVX2.
-using bool4x2 = std::detail::simd_vector<bool4, 2>;
-using bool4x4 = std::detail::simd_vector<bool4, 4>;
-using bool4x8 = std::detail::simd_vector<bool4, 8>;
+using bool4x2 = std::detail::SimdVector<bool4, 2>;
+using bool4x4 = std::detail::SimdVector<bool4, 4>;
+using bool4x8 = std::detail::SimdVector<bool4, 8>;
 
 namespace simd {
 
@@ -178,7 +178,7 @@ consteval auto set_zeros() -> T {
     // TODO: Is there a cleverer way to do this? Variadic templates?
     // Probably an integer_sequence.
     using ScalarType = typename T::ScalarType;
-    using VectorType = std::detail::simd_vector<ScalarType, T::width>;
+    using VectorType = std::detail::SimdVector<ScalarType, T::width>;
     using IntrinsicType = decltype(VectorType::value);
 
     if constexpr (T::width == 2) {
@@ -210,7 +210,7 @@ void fence() {
 
 template <u4 Width>
 auto p_string_to_p_vector(char8_t const* p_string) {
-    using U = std::detail::simd_vector<char, Width>;
+    using U = std::detail::SimdVector<char, Width>;
     return reinterpret_cast<U*>(const_cast<char8_t*>(p_string));
 }
 
