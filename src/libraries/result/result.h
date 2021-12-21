@@ -76,6 +76,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
      * void. Reflection TS in future C++ will provide conditional-members, which
      * would be a better solution. */
     using ValueType = std::conditional_t<std::is_void_v<T>, char, T>;
+    static constexpr bool is_void = std::is_same_v<T, void>;
     /* It is unsafe to access value. You may prefer or_panic_debug() which
      * provides failure-handling in debug builds, and skips them in optimized
      * builds. */
@@ -84,13 +85,14 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
 
     Result(Failure in_code) : error_code(in_code), value(), is_ok(false) {
     }
-
-    Result(ValueType in_value) requires(!std::is_same_v<T, void>)
+    Result(ValueType in_value) requires(!is_void)
         : error_code(), value(in_value), is_ok(true) {
     }
-
-    Result(std::detail::ok) requires(std::is_same_v<T, void>)
+    Result(std::detail::ok) requires(is_void)
         : error_code(), value(), is_ok(true) {
+    }
+    // TODO: Concept for bool1, bool2, and bool4 as well.
+    Result(bool&& expression) requires(is_void) : value(), is_ok(expression) {
     }
 
     auto or_return(ValueType const& in_value)->ValueType {
@@ -102,8 +104,8 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
         if (!is_ok) {
             return callback();
         }
-        if constexpr (!std::is_void_v<T>) {
-            if constexpr (!std::is_void_v<T>) {
+        if constexpr (!is_void) {
+            if constexpr (!is_void) {
                 return this->value;
             }
         }
@@ -133,20 +135,22 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
     // TODO: Pass in the exit code and error message with overloads.
     auto or_panic()->T {
         if (is_ok) {
-            if constexpr (!std::is_void_v<T>) {
+            if constexpr (!is_void) {
                 return this->value;
+            } else if constexpr (is_void) {
+                return;
             }
-            return;
         }
         exit(1);
     }
 
     auto or_panic(char8_t const* /*error_message*/)->T {
         if (is_ok) {
-            if constexpr (!std::is_void_v<T>) {
+            if constexpr (!is_void) {
                 return this->data;
+            } else if constexpr (is_void) {
+                return;
             }
-            return;
         }
         // TODO: print(error_message);
         exit(1);
@@ -156,10 +160,11 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
      * an error string. This prints that error message. */
     auto or_print_panic()->T {
         if (is_ok) {
-            if constexpr (!std::is_void_v<T>) {
+            if constexpr (!is_void) {
                 return this->value;
+            } else if constexpr (is_void) {
+                return;
             }
-            return;
         }
         // TODO: print(*error_code);
         exit(1);
@@ -170,10 +175,11 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
      * error message when building -O0. */
     auto or_panic_debug(char8_t const* error_message = u8"")->T {
         if (is_ok) {
-            if constexpr (!std::is_void_v<T>) {
+            if constexpr (!is_void) {
                 return this->data;
+            } else if constexpr (is_void) {
+                return;
             }
-            return;
         }
 #ifndef __OPTIMIZE__
         // TODO: print(error_message);
@@ -185,10 +191,11 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
      * an error string. This prints that error message. */
     auto or_print_panic_debug()->T {
         if (is_ok) {
-            if constexpr (!std::is_void_v<T>) {
+            if constexpr (!is_void) {
                 return this->value;
+            } else if constexpr (is_void) {
+                return;
             }
-            return;
         }
 #ifndef __OPTIMIZE__
         // TODO: print(error_code);
