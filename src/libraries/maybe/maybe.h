@@ -11,8 +11,8 @@ struct none {};
 constexpr std::detail::none none;
 
 /* TODO: Any is not a good solution to this, because it cannot hold values
- * larger than 64-bits. That is an edge case issue, because you would never
- * actually use a sentinel if it is larger than 32-bits. */
+ * larger than 8 bytes. That is an edge case issue, because you would never
+ * actually use a sentinel if it is larger than 8 bytes. */
 template <Any value>
 struct Sentinel {
     inline static auto failure_value = value;
