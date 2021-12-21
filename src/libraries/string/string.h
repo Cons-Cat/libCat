@@ -21,7 +21,10 @@ constexpr auto string_length_as(char8_t const* p_string) -> T {
 }
 
 // TODO: This should use an AnyConst container.
-void copy_memory(void const* p_source, void* p_destination, isize bytes) {
+/* With the tree-loop-distribute-patterns optimization, this generates a call to
+ * `memcpy()` which cannot be resolved. */
+__attribute__((optimize("-fno-tree-loop-distribute-patterns"))) void
+copy_memory(void const* p_source, void* p_destination, isize bytes) {
     char const* p_source_handle = static_cast<char const*>(p_source);
     char* p_destination_handle = static_cast<char*>(p_destination);
 
@@ -82,7 +85,7 @@ void copy_memory(void const* p_source, void* p_destination, isize bytes) {
     // This routine is optimized for buffers in L3 cache. Streaming is slower.
     if (bytes <= cachesize) {
         while (bytes >= 256) {
-            // TODO: Unroll the two loops in this scope?
+#pragma GCC unroll 8
             for (i4 i = 0; i < 8; i++) {
                 vectors[i] =
                     *(const_cast<Vector*>(
@@ -91,6 +94,7 @@ void copy_memory(void const* p_source, void* p_destination, isize bytes) {
             }
             prefetch(p_source_handle + 512, simd::MM_HINT_NTA);
             p_source_handle += 256;
+#pragma GCC unroll 8
             for (i4 i = 0; i < 8; i++) {
                 *(reinterpret_cast<Vector*>(p_destination_handle)) = vectors[i];
             }
@@ -102,7 +106,7 @@ void copy_memory(void const* p_source, void* p_destination, isize bytes) {
         /* TODO: This could be improved by using aligned-streaming when
          * possible. */
         while (bytes >= 256) {
-            // TODO: Unroll the two loops in this scope?
+#pragma GCC unroll 8
             for (i4 i = 0; i < 8; i++) {
                 vectors[i] =
                     *(const_cast<Vector*>(
@@ -111,6 +115,7 @@ void copy_memory(void const* p_source, void* p_destination, isize bytes) {
             }
             prefetch(p_source_handle + 512, simd::MM_HINT_NTA);
             p_source_handle += 256;
+#pragma GCC unroll 8
             for (i4 i = 0; i < 8; i++) {
                 stream_in(p_destination_handle, &vectors[i]);
             }
@@ -120,7 +125,7 @@ void copy_memory(void const* p_source, void* p_destination, isize bytes) {
         simd::fence();
     }
     simd::zero_upper_avx_registers();
-}
+}  // namespace simd
 
 /* T is the return type of string_length_as(). It may be signed or
  * unsigned. This function requires SSE4.2 */
