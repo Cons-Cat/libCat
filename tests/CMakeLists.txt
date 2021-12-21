@@ -2,7 +2,6 @@ add_library(libcat-test INTERFACE)
 target_link_libraries(libcat-test INTERFACE libcat-std)
 target_include_directories(
   libcat-test INTERFACE
-  minunit/
 )
 
 list(
