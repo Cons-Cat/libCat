@@ -9,8 +9,8 @@
 
 /* This file contains a general-purpose error-handling tool. Result<> is a
  * templated struct that either contains some data (unless it holds void) or an
- * error-code. The error-code is a 64-bit value that can be either an integer or
- * a pointer to a string that may be printed. To extract a value out of a
+ * error-code. The error-code is an 8-byte value that can be either an integer
+ * or a pointer to a string that may be printed. To extract a value out of a
  * result, call one of its member functions.
  *
  * An error code or string pointer must be wrapped in a Failure, such as:
@@ -71,7 +71,7 @@ constexpr std::detail::ok ok;
 
 template <typename T>
 struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
-    Failure error_code;  // Error is a 64-bit value.
+    Failure error_code;  // Error is a 8-byte value.
     /* char should be a relatively unintrusive dummy data for when this holds
      * void. Reflection TS in future C++ will provide conditional-members, which
      * would be a better solution. */
@@ -152,7 +152,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
         exit(1);
     }
 
-    /* Because the error code is 64-bit, it could contain a non-null pointer to
+    /* Because the error code is 8-bytes, it could contain a non-null pointer to
      * an error string. This prints that error message. */
     auto or_print_panic()->T {
         if (is_ok) {
@@ -181,7 +181,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
         exit(1);
     }
 
-    /* Because the error code is 64-bit, it could contain a non-null pointer to
+    /* Because the error code is 8-bytes, it could contain a non-null pointer to
      * an error string. This prints that error message. */
     auto or_print_panic_debug()->T {
         if (is_ok) {

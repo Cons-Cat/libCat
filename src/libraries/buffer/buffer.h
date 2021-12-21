@@ -19,4 +19,8 @@ struct Buffer {
             this->value[i] = unpacked_data[i];
         }
     }
+
+    auto operator[](isize i) -> T const& {
+        return value[i];
+    }
 };
