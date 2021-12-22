@@ -171,10 +171,15 @@ target_compile_options(echo PRIVATE ${LIBCAT_CXX_FLAGS})
 target_link_libraries(echo PRIVATE libcat-std)
 target_link_options(echo PRIVATE ${LIBCAT_LINK_FLAGS})
 
-# This executable is only configured for Release
-add_executable(hello_libc examples/hello_libc.cpp)
-target_compile_options(
-  hello_libc PRIVATE
+add_executable(memcpy examples/memory_copy.cpp)
+target_compile_options(memcpy PRIVATE ${LIBCAT_CXX_FLAGS})
+target_link_libraries(memcpy PRIVATE libcat-std)
+target_link_options(memcpy PRIVATE ${LIBCAT_LINK_FLAGS})
+
+# libC executables are only configured for Release
+list(
+  APPEND
+  LIBC_RELEASE_FLAGS
   -fno-exceptions -fno-rtti -fno-unwind-tables
   -no-pie -fno-stack-protector
   -fno-asynchronous-unwind-tables
@@ -186,14 +191,23 @@ target_compile_options(
   $<$<CONFIG:Release>:-O3>
   $<$<CONFIG:RelSmall>:-Os>
 )
+
+add_executable(hello_libc examples/hello_libc.cpp)
+target_compile_options(
+  hello_libc PRIVATE
+  ${LIBC_RELEASE_FLAGS}
+)
 target_link_options(
   hello_libc PRIVATE
-  -fno-exceptions -fno-rtti -fno-unwind-tables
-  -no-pie -fno-stack-protector
-  -fno-asynchronous-unwind-tables
-  -s
-  -ffunction-sections -fdata-sections
-  -fvisibility=hidden -fvisibility-inlines-hidden
-  -flto -fwhole-file -fno-plt
-  -Wl,-z,norelro,-z,noseparate-code,--gc-sections
+  ${LIBC_RELEASE_FLAGS}
+)
+
+add_executable(memcpy_libc examples/memory_copy_libc.cpp)
+target_compile_options(
+  memcpy_libc PRIVATE
+  ${LIBC_RELEASE_FLAGS}
+)
+target_link_options(
+  memcpy_libc PRIVATE
+  ${LIBC_RELEASE_FLAGS}
 )
