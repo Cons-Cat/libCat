@@ -44,3 +44,9 @@ add_executable(test_strlen string_length.cpp)
 target_compile_options(test_strlen PRIVATE ${LIBCAT_CXX_FLAGS_TEST})
 target_link_options(test_strlen PRIVATE ${LIBCAT_LINK_FLAGS})
 add_test(NAME TestStrlen COMMAND test_strlen)
+
+# This tests if copy_memory() works.
+add_executable(test_copymem copy_memory.cpp)
+target_compile_options(test_copymem PRIVATE ${LIBCAT_CXX_FLAGS_TEST})
+target_link_options(test_copymem PRIVATE ${LIBCAT_LINK_FLAGS})
+add_test(NAME CopyMem COMMAND test_copymem)
