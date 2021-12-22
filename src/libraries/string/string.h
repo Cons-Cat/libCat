@@ -56,7 +56,7 @@ namespace simd {
 // }
 
 // TODO: Use Any instead of chars.
-void copy_memory(void const* p_source, void* p_destination, isize bytes) {
+void copy_memory(void const* p_source, void* p_destination, usize bytes) {
     // Vector is the width of a 32-byte AVX register.
     // `long long int` is required for some SIMD intrinsics.
     using VectorType = std::detail::SimdVector<long long int, 4>;
@@ -65,8 +65,8 @@ void copy_memory(void const* p_source, void* p_destination, isize bytes) {
         reinterpret_cast<unsigned char const*>(p_source);
     unsigned char* p_destination_handle =
         reinterpret_cast<unsigned char*>(p_destination);
-    static isize cachesize = 0x200000;  // L3-cache size.
-    isize padding;
+    static usize cachesize = 0x200000;  // L3-cache size.
+    usize padding;
 
     if (bytes <= 256) {
         std::copy_memory(p_source, p_destination, bytes);
@@ -75,34 +75,37 @@ void copy_memory(void const* p_source, void* p_destination, isize bytes) {
     // Align source, destination, and bytes to 16 bytes
     padding =
         (32 - ((reinterpret_cast<isize>(p_destination_handle)) & 31)) & 31;
-    // Vector head = *static_cast<Vector const*>(p_source);
-    // *static_cast<Vector*>(p_destination) = head;
+
+    VectorType head = *reinterpret_cast<VectorType const*>(p_source_handle);
+    *static_cast<VectorType*>(p_destination) = head;
+
     p_source_handle += padding;
     p_destination_handle += padding;
     bytes -= padding;
 
     VectorType vectors[8];
+    constexpr usize step_size = sizeof(VectorType) * 8;
     // This routine is optimized for buffers in L3 cache. Streaming is slower.
     if (bytes <= cachesize) {
-        while (bytes >= 256) {
+        while (bytes >= step_size) {
+            /* Load 8 8x4 vectors, then increment the source pointer by that
+             * size. */
 #pragma GCC unroll 8
             for (i4 i = 0; i < 8; i++) {
-                vectors[i] = *(
-                    const_cast<VectorType*>(
-                        reinterpret_cast<VectorType const*>(p_source_handle)) +
-                    i);
+                vectors[i] = ((VectorType*)p_source_handle)[i];
             }
-            prefetch(p_source_handle + 512, simd::MM_HINT_NTA);
-            p_source_handle += 256;
+            prefetch((char const*)(p_source_handle + 512), simd::MM_HINT_NTA);
 #pragma GCC unroll 8
             for (i4 i = 0; i < 8; i++) {
-                *(reinterpret_cast<VectorType*>(p_destination_handle)) =
-                    vectors[i];
+                *((VectorType*)p_destination_handle + i) = vectors[i];
             }
-            p_destination_handle += 256;
-            bytes -= 256;
+            p_source_handle += step_size;
+            p_destination_handle += step_size;
+            bytes -= step_size;
         }
-    } else {
+    }
+    // This routine is run when the memory source cannot fit in cache.
+    else {
         prefetch(p_source_handle + 512, simd::MM_HINT_NTA);
         /* TODO: This could be improved by using aligned-streaming when
          * possible. */
@@ -125,6 +128,8 @@ void copy_memory(void const* p_source, void* p_destination, isize bytes) {
         }
         simd::fence();
     }
+    std::copy_memory(p_source_handle, p_destination_handle,
+                     bytes * static_cast<isize>(sizeof(isize)));
     simd::zero_upper_avx_registers();
 }  // namespace simd
 

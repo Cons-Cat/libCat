@@ -20,7 +20,7 @@ struct Buffer {
         }
     }
 
-    auto operator[](isize i) -> T const& {
+    auto operator[](isize i) -> T& {
         return value[i];
     }
 };

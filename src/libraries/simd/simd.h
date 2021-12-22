@@ -112,11 +112,11 @@ using u4x4 = std::detail::SimdVector<u4, 4>;
 using u4x8 = std::detail::SimdVector<u4, 8>;
 
 // Vectors of up to 4 8-byte integers are supported by AVX2.
-using i1x2 = std::detail::SimdVector<i1, 2>;
-using i1x4 = std::detail::SimdVector<i1, 4>;
-using u1x2 = std::detail::SimdVector<u1, 2>;
+using i8x2 = std::detail::SimdVector<i8, 2>;
+using i8x4 = std::detail::SimdVector<i8, 4>;
+using u8x2 = std::detail::SimdVector<u8, 2>;
+using u8x4 = std::detail::SimdVector<u8, 4>;
 
-using u1x4 = std::detail::SimdVector<u1, 4>;
 // Vectors of up to 8 4-byte floats are supported by AVX2.
 using f4x2 = std::detail::SimdVector<f4, 2>;
 using f4x4 = std::detail::SimdVector<f4, 4>;
