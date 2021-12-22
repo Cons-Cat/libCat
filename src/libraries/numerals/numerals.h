@@ -235,11 +235,13 @@ using bool4 = u4;
  * type, and constexpr. It is useful for holding global constants. */
 struct anyint {
   private:
-    using type = long long int;
-    type const value;
+    using IntType = long long int;
+    IntType const value;
 
   public:
-    consteval anyint(type const(&in_int)) : value(in_int){};
+    anyint() = delete;
+    consteval anyint(IntType&& in_int) : value(in_int){};
+    auto operator=(auto) = delete;
 
     consteval operator i1() const {
         return static_cast<i1>(value);
