@@ -19,6 +19,6 @@ void meow() {
     for (i4 i = 0; i < 2000; i++) {
         Result(source_2000[i] == dest_2000[i]).or_panic();
     }
-    // TODO: I'm not sure why this exits 1 otherwise.
+    // TODO: Without this exit(), it exits 1 somehow.
     exit(0);
 };

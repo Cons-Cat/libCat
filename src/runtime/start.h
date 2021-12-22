@@ -72,6 +72,10 @@ void align_stack_pointer_32() {
     asm("and $-32, %rsp");
 }
 
+void dont_optimize_out(auto& variable) {
+    asm volatile("" ::"m"(variable));
+}
+
 /* __stack_chk_fail() is called when stack overflow occurs in programs compiled
  * without -fno-stack-protector. */
 extern "C" void __stack_chk_fail() {
