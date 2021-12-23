@@ -8,6 +8,8 @@
  * have been developing libCat mostly without safe arithmetic due to clangd. */
 #ifdef SAFE_ARITHMETIC
 
+namespace meta {
+
 /* Get the value of a primitive number, or the value held by a
  * SafeNumeral<>. */
 constexpr auto decay_numeral(int_or_float auto from) {
@@ -16,6 +18,8 @@ constexpr auto decay_numeral(int_or_float auto from) {
 constexpr auto decay_numeral(auto from) {
     return from.data;
 }
+
+}  // namespace meta
 
 namespace std::detail {
 
@@ -206,9 +210,13 @@ using f4 = std::detail::SafeNumeral<float>;
 using f8 = std::detail::SafeNumeral<double>;
 #else
 
+namespace meta {
+
 constexpr auto decay_numeral(auto from) {
     return from;
 }
+
+}  // namespace meta
 
 // TODO: Add and test 16-byte types and complex numbers.
 // These macros are defined by the GCC compiler.
