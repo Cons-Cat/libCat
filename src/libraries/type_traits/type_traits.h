@@ -9,7 +9,7 @@
  *
  * Enter at your peril! */
 
-namespace std {
+namespace meta {
 
 // TODO: Assess if a type_traits library is really necessary.
 
@@ -243,9 +243,9 @@ using is_integral_t = typename is_integral<T>::type;
 
 template <typename T>
 struct is_floating_point
-    : std::bool_constant<is_same_v<float, remove_cv_t<T>> ||
-                         is_same_v<double, remove_cv_t<T>> ||
-                         is_same_v<long double, remove_cv_t<T>>> {};
+    : bool_constant<is_same_v<float, remove_cv_t<T>> ||
+                    is_same_v<double, remove_cv_t<T>> ||
+                    is_same_v<long double, remove_cv_t<T>>> {};
 
 template <typename T>
 constexpr bool is_floating_point_v = is_floating_point<T>::value;
@@ -379,14 +379,14 @@ struct add_pointer : detail::add_pointer<T> {};
 template <typename T>
 struct decay {
   private:
-    using U = typename std::remove_reference<T>::type;
+    using U = typename remove_reference<T>::type;
 
   public:
     using type = typename conditional<
         is_array<U>::value, typename remove_extent<U>::type*,
         typename conditional<is_function<U>::value,
                              typename add_pointer<U>::type,
-                             typename std::remove_cv<U>::type>::type>::type;
+                             typename remove_cv<U>::type>::type>::type;
 };
 template <typename T>
 using decay_t = typename decay<T>::type;
@@ -405,7 +405,7 @@ namespace detail {
                            conditional<is_function<To>::value, is_function<To>,
                                        is_array<To>>>::value>
     struct is_convertible {
-        typedef typename is_void<To>::type type;
+        using type = typename is_void<To>::type;
     };
 }  // namespace detail
 
@@ -463,7 +463,7 @@ namespace detail {
 /// is_constructible
 template <typename T, typename... Args>
 struct is_constructible : detail::is_constructible<T, Args...> {
-    static_assert(std::is_complete_or_unbounded(type_identity<T>{}));
+    static_assert(is_complete_or_unbounded(type_identity<T>{}));
 };
 template <typename T, typename... Args>
 constexpr bool is_constructible_v = is_constructible<T, Args...>::value;
@@ -472,11 +472,11 @@ using is_constructible_t = typename is_constructible<T, Args...>::type;
 
 template <typename T>
 struct is_default_constructible : detail::is_constructible<T>::type {
-    static_assert(std::is_complete_or_unbounded(type_identity<T>{}));
+    static_assert(is_complete_or_unbounded(type_identity<T>{}));
 };
 template <typename T, typename>
 constexpr bool is_default_constructible_v = is_default_constructible<T>::value;
 template <typename T, typename>
 using is_default_constructible_t = typename is_default_constructible<T>::type;
 
-}  // namespace std
+}  // namespace meta
