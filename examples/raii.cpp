@@ -11,6 +11,8 @@ struct Foo {
     }
 };
 
+/* clangd says this is incorrect, because it cannot reason very well about
+ * concepts yet. */
 void func(RAII<Foo>) {
 }
 
