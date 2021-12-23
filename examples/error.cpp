@@ -17,4 +17,5 @@ void meow() {
     result_factory(::OK).or_panic();
     // This will always panic:
     result_factory(::FAIL).or_panic();
+    exit(0);
 }
