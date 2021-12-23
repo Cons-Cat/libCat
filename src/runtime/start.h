@@ -33,9 +33,13 @@
  * to handle address sanitizers, which do not work. */
 
 /* in libCat, `_start()` does almost nothing. It is necessary to store the
- * base stack pointer for future use, because it is impossible after memory is
+ * base stack pointer for future use, because that is impossible after memory is
  * pushed to the stack, but otherwise all initialization logic shall occur in
- * meow(). */
+ * meow().
+ *
+ * an _exit syscall is also not made in _start(), because GCC cannot inline
+ * `call` assembly instructions, and a more sophisticated exit strategy may be
+ * desired by a user anyways. In libCat, program termination is explicit. */
 extern "C" __attribute__((used)) void _start() {
     /* This cannot be simplified any further without producing unreliable
      * codegen. */
