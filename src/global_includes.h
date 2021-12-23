@@ -46,4 +46,4 @@ struct __attribute__((unused)) unused {
 };
 
 }  // namespace std::detail
-std::detail::unused _;
+std::detail::unused _{};

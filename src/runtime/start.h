@@ -40,9 +40,7 @@ extern "C" __attribute__((used)) void _start() {
     /* This cannot be simplified any further without producing unreliable
      * codegen. */
     asm(R"(mov %rsp, %rbp
-           call meow
-           mov $0, %edi
-           call exit)");
+           call meow)");
     __builtin_unreachable();  // This elides a ret instruction.
 }
 

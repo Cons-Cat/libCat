@@ -22,4 +22,5 @@ void meow() {
     Result(true).or_panic();
     // Do not panic when false comes from a different constructor.
     make_false().or_panic();
+    exit(0);
 }
