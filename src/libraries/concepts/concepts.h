@@ -9,41 +9,42 @@
  * concepts have no prefix. */
 
 // TODO: Remove usage of type_traits as much as possible.
+namespace meta {
 
 template <typename T, typename U>
-concept same_as = std::is_same_v<T, U>;
+concept same_as = meta::is_same_v<T, U>;
 
 template <typename T>
-concept integral = std::is_integral_v<T>;
+concept integral = meta::is_integral_v<T>;
 
 template <typename T>
-concept signed_integral = integral<T> && std::is_signed_v<T>;
+concept signed_integral = integral<T> && meta::is_signed_v<T>;
 
 template <typename T>
-concept unsigned_integral = integral<T> && std::is_unsigned_v<T>;
+concept unsigned_integral = integral<T> && meta::is_unsigned_v<T>;
 
 template <typename T>
-concept floating_point = !integral<T> && std::is_floating_point_v<T>;
+concept floating_point = !integral<T> && meta::is_floating_point_v<T>;
 
 template <typename T>
 concept int_or_float = integral<T> || floating_point<T>;
 
-// TODO: std::is_safe_integral<T> does not work.
+// TODO: meta::is_safe_integral<T> does not work.
 template <typename T>
 concept safe_integral =
-    (!std::is_integral_v<T>)&&(!std::is_floating_point_v<T>);
+    (!meta::is_integral_v<T>)&&(!meta::is_floating_point_v<T>);
 
 template <typename Derived, typename Base>
-concept derived_from = std::is_base_of_v<Base, Derived> &&
-    std::is_convertible_v<const volatile Derived*, const volatile Base*>;
+concept derived_from = meta::is_base_of_v<Base, Derived> &&
+    meta::is_convertible_v<const volatile Derived*, const volatile Base*>;
 
 template <typename From, typename To>
-concept convertible_to = std::is_convertible_v<From, To> && requires {
-    static_cast<To>(std::declval<From>());
+concept convertible_to = meta::is_convertible_v<From, To> && requires {
+    static_cast<To>(meta::declval<From>());
 };
 
 template <typename T, typename... Args>
-concept constructible_from = std::is_constructible_v<T, Args...>;
+concept constructible_from = meta::is_constructible_v<T, Args...>;
 
 template <typename T>
 concept move_constructible = constructible_from<T, T> && convertible_to<T, T>;
@@ -71,8 +72,8 @@ concept boolean_testable = detail::boolean_testable<T> && requires(T&& b) {
 namespace detail {
     template <typename T, typename U>
     concept weakly_equality_comparable_with =
-        requires(std::remove_reference_t<T> const& t,
-                 std::remove_reference_t<U> const& u) {
+        requires(meta::remove_reference_t<T> const& t,
+                 meta::remove_reference_t<U> const& u) {
         { t == u } -> boolean_testable;
         { t != u } -> boolean_testable;
         { u == t } -> boolean_testable;
@@ -84,12 +85,14 @@ template <typename T>
 concept equality_comparable = detail::weakly_equality_comparable_with<T, T>;
 
 template <typename T>
-concept enum_class = std::is_scoped_enum_v<T>;
+concept enum_class = meta::is_scoped_enum_v<T>;
 
 template <typename T, typename U>
 concept narrow_convertible = requires() {
-    U({std::declval<T>()});
+    U({meta::declval<T>()});
 };
 
 /* Some concepts from the STL are not supported, for various reasons.
  * std::destructable is not useful without exception handling. */
+
+}  // namespace meta
