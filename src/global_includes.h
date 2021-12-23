@@ -29,3 +29,27 @@ __attribute__((alias("main"))) auto debugger_entry_point() -> int;
 /* libCat includes <simd.h> globally, because vectors are considered primitive
  * types. */
 #include <simd.h>
+
+/* libCat provides a `_` variable that consumes a function's output, but cannot
+ * be assigned to any variable. */
+namespace std::detail {
+
+struct unused {
+    // When optimizing, an unused value should be elided.
+#ifdef __OPTIMIZE__
+    unused() {
+        dont_optimize_out(*this);
+    }
+#endif
+    // Any type can be converted into `unused`, except for `Result`s.
+    template <typename T>
+    auto operator=(T const&)
+        -> unused& requires(!meta::is_specialization<T, Result>::value) {
+    };
+    // `unused` cannot be assigned to any variable.
+    template <typename T>
+    operator T() = delete;
+};
+
+}  // namespace std::detail
+std::detail::unused _;

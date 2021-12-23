@@ -13,17 +13,14 @@ void meow() {
     Buffer<i4, 1> buffer_3;
     buffer_2 = meta::move(buffer_3);
     // Move constructing a buffer:
-    Buffer<i4, 5> buffer_4(meta::move(buffer_1));
-    dont_optimize_out(buffer_4);
+    _ = meta::move(buffer_1);
 
     // Repeat those tests in a constexpr context.
     constexpr auto constant = []() {
         Buffer<i4, 1> const_buffer_1;
         Buffer<i4, 1> const_buffer_2 = {1};
-        Buffer<i4, 1> const_buffer_3 = meta::move(const_buffer_1);
-        Buffer<i4, 1> const_buffer_4(meta::move(const_buffer_2));
-        dont_optimize_out(const_buffer_3);
-        dont_optimize_out(const_buffer_4);
+        _ = meta::move(const_buffer_1);
+        _ = meta::move(const_buffer_2);
     };
     constant();
 };
