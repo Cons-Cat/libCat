@@ -479,4 +479,11 @@ constexpr bool is_default_constructible_v = is_default_constructible<T>::value;
 template <typename T, typename>
 using is_default_constructible_t = typename is_default_constructible<T>::type;
 
+// https://stackoverflow.com/a/31763111
+template <typename T, template <typename...> typename Template>
+struct is_specialization : false_type {};
+
+template <template <typename...> typename Template, typename... Args>
+struct is_specialization<Template<Args...>, Template> : true_type {};
+
 }  // namespace meta
