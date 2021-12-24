@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <any.h>
 #include <type_traits.h>
 #include <utility.h>
 
@@ -91,6 +92,27 @@ template <typename T, typename U>
 concept narrow_convertible = requires() {
     U({meta::declval<T>()});
 };
+
+template <typename T, typename U>
+concept allocator = requires(T allocator, isize input) {
+    // Allocators hold an enum for failure codes named `failures`.
+    meta::is_enum_v<typename T::failures>;
+    allocator.failures;
+    /* Allocators hold a `malloc()` method which takes a generic type and
+     * returns a `Result<void*>` address to the allocated memory. */
+    { allocator.template malloc<U>() } -> meta::convertible_to<Result<void*>>;
+    /* Allocators should have a `free()` method which takes no parameters, and
+     * returns void. This shall be used to free all of its allocated memory. */
+    {allocator.free()};
+
+    // TODO: `delete_at()` should only be in `random_access_allocator`s.
+    /* Allocators hold a `delete_at()` which takes an `isize` and returns a
+     * `Result<void>`. */
+    // { allocator.delete_at(input) } -> meta::convertible_to<Result<>>;
+};
+
+// TODO: Allocators should be iterables.
+// TODO: Add a random_access concept and a random_access_allocator concept.
 
 /* Some concepts from the STL are not supported, for various reasons.
  * `std::destructable` is not useful without exception handling. */

@@ -118,6 +118,7 @@ target_include_directories(
   src/libraries/buffer/
   src/libraries/string/
   src/libraries/memory/
+  src/libraries/allocators/
   src/libraries/type_traits/
   src/libraries/concepts/
   src/libraries/utility/
