@@ -20,4 +20,12 @@ constexpr auto forward(meta::remove_reference_t<T>&& input)
     return static_cast<T&&>(input);
 }
 
+constexpr auto is_constant_evaluated() -> bool {
+    return __builtin_is_constant_evaluated();
+}
+
+consteval auto constant_evaluate(auto value) {
+    return value;
+}
+
 }  // namespace meta
