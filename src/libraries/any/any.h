@@ -32,7 +32,8 @@ struct Any {
     }
 };
 
+// TODO: Make this an implicit conversion operator.
 template <typename T>
 constexpr auto any_cast(Any in_any) -> T {
-    return static_cast<T>(in_any.value);
+    return *reinterpret_cast<T*>(in_any.value);
 }
