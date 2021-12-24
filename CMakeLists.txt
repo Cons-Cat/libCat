@@ -7,6 +7,14 @@ project(libcat LANGUAGES CXX ASM)
 
 set(CMAKE_CONFIGURATION_TYPES Debug;Release;RelWithDebInfo;RelSmall)
 
+# Link .gdbinit to build directories.
+add_custom_target(
+  debug_target ALL
+  COMMAND ${CMAKE_COMMAND} -E create_symlink
+  ${PROJECT_SOURCE_DIR}/.gdbinit $<OUTPUT_CONFIG:$<CONFIG>>/.gdbinit
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}
+)
+
 list(
   APPEND
   LIBCAT_CXX_FLAGS_COMMON
@@ -129,9 +137,7 @@ target_include_directories(
 )
 
 # Combine static objects and C++ headers for convenience.
-add_library(
-  libcat-std INTERFACE
-)
+add_library(libcat-std INTERFACE)
 target_link_libraries(libcat-std INTERFACE libcat-std-static)
 target_link_libraries(libcat-std INTERFACE libcat-std-headers)
 target_link_libraries(libcat-std INTERFACE gcc)
@@ -144,7 +150,7 @@ target_link_libraries(
 )
 
 # Build the tests.
-enable_testing ()
+enable_testing()
 add_subdirectory(tests/)
 
 # Build the examples.
