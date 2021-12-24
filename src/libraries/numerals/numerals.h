@@ -1,3 +1,5 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
 #pragma once
 
 #include <concepts.h>
@@ -233,7 +235,8 @@ using f8 = double;
 #endif
 
 using usize = u8;
-using isize = i8;
+// TODO: Solve circular dependency:
+// using isize = i8;
 
 using bool1 = u1;
 using bool2 = u2;
