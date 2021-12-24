@@ -94,26 +94,37 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
     // TODO: Concept for bool1, bool2, and bool4 as well.
     Result(bool&& expression) requires(is_void) : value(), is_okay(expression) {
     }
+    /* Attempt to cast an inputted Result to this. This is useful for
+     * `Result<Any>`. */
+    template <typename U>
+    Result(Result<U> && in_result)
+        : value(in_result.value), is_okay(in_result.is_okay) {
+    }
 
-    auto or_return(ValueType const& in_value)->ValueType {
-        return in_value;
+    // Return a specified value when is_okay is false.
+    auto or_its(ValueType const& in_value)->ValueType {
+        if (!is_okay) {
+            return in_value;
+        }
+        return this->value;
+    }
+    // nullptr must be special-cased.
+    auto or_its(decltype(nullptr) in_value)
+        ->ValueType /* requires(meta::is_pointer_v<ValueType>) */ {
+        if (!is_okay) {
+            return static_cast<ValueType>(in_value);
+        }
+        return this->value;
     }
 
     // TODO: Add an invokable concept
-    auto or_do(auto callback) {
+    auto or_do(auto callback)->T {
         if (!is_okay) {
             return callback();
         }
         if constexpr (!is_void) {
-            if constexpr (!is_void) {
-                return this->value;
-            }
+            return this->value;
         }
-    }
-
-    // This function is intended to be the return value of its calling function.
-    [[nodiscard]] auto or_propagate()->Result<T> {
-        return *this;
     }
 
     /* If this object does not hold a value, the return of this function is
