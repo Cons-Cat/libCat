@@ -109,7 +109,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
         return this->value;
     }
     // nullptr must be special-cased.
-    auto or_its(decltype(nullptr) in_value)
+    auto or_it_is(decltype(nullptr) in_value)
         ->ValueType /* requires(meta::is_pointer_v<ValueType>) */ {
         if (!is_okay) {
             return static_cast<ValueType>(in_value);
