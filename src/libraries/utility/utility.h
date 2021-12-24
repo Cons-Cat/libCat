@@ -1,3 +1,5 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
 #pragma once
 
 #include <type_traits.h>
