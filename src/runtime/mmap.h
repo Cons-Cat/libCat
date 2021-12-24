@@ -25,8 +25,8 @@ constexpr usize page_size = 4096u;
 
 // TODO: Create an enum for unique failure codes.
 /* `map_memory()` represents the mmap Linux syscall. It takes unsigned
- * arguments, as per the Linux ABI. It returns the address that it has allocated
- * at. */
+ * arguments, as per the Linux ABI. It returns the address which it has
+ * allocated at. */
 auto map_memory(usize beginning_address, usize bytes_size,
                 ProtectionFlags protections, VisibilityFlags flags,
                 i4 file_descriptor, usize byte_offset) -> Result<void*> {
@@ -47,4 +47,5 @@ auto map_memory(usize beginning_address, usize bytes_size,
 }
 
 auto unmap_memory() -> Result<> {
+    return okay;
 }
