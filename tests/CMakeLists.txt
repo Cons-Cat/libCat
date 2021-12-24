@@ -1,8 +1,14 @@
+# Link .gdbinit to build directories.
+add_custom_target(
+  test_debug_target ALL
+  COMMAND ${CMAKE_COMMAND} -E create_symlink
+  ${PROJECT_SOURCE_DIR}/.gdbinit $<OUTPUT_CONFIG:$<CONFIG>>/.gdbinit
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}
+)
+
 add_library(libcat-test INTERFACE)
 target_link_libraries(libcat-test INTERFACE libcat-std)
-target_include_directories(
-  libcat-test INTERFACE
-)
+target_include_directories(libcat-test INTERFACE)
 
 list(
   APPEND

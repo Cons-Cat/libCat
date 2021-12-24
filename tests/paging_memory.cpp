@@ -1,6 +1,8 @@
+
 #include <page_allocator.h>
 
 void meow() {
+    debugger_entry_point();
     // Initialize an allocator.
     PageAllocator allocator;
     // Allocate a page.

@@ -6,11 +6,12 @@
    done using the --include flag, as in --include global_includes.h */
 extern "C" __attribute__((used)) void meow();
 
-/* Many debuggers, including GDB, will enter by default at the symbol
- * .main. Because main() is not used in libCat, an alias to it is required for
- * mocking an entry point to debuggers. */
-// TODO: Prevent this from being optimized out in RelWithDebInfo.
 auto main() -> int{};
+/* Many debuggers, including GDB, will enter, by default, at the symbol
+ * `.main`. Because `main()` cannot be used in libCat, an alias to it may mock
+ * an entry point for debuggers. This is not necessary if the
+ * `.gdbinit` file at the top of this project's directory is used. */
+// TODO: Prevent this from being optimized out in RelWithDebInfo.
 __attribute__((alias("main"))) auto debugger_entry_point() -> int;
 
 template <typename T>
