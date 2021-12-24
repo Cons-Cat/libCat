@@ -46,7 +46,7 @@ namespace std::detail {
 struct __attribute__((unused)) unused {
     // Any type can be converted into `unused`, except for `Result`s.
     template <typename T>
-    void operator=(T const&) requires(
+    constexpr void operator=(T const&) requires(
         !meta::is_specialization<T, Result>::value) {
     };
     // `unused` cannot be assigned to any variable.

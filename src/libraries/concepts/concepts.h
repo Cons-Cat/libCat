@@ -93,6 +93,6 @@ concept narrow_convertible = requires() {
 };
 
 /* Some concepts from the STL are not supported, for various reasons.
- * std::destructable is not useful without exception handling. */
+ * `std::destructable` is not useful without exception handling. */
 
 }  // namespace meta
