@@ -6,7 +6,7 @@ enum MyErrors
 
 auto result_factory(MyErrors error) -> Result<> {
     if (error == ::OK) {
-        return ok;
+        return okay;
     }
     return Failure(error);
 }

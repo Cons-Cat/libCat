@@ -66,8 +66,8 @@ struct ok {};
 
 }  // namespace std::detail
 
-// This value may be returned in a function that returns Result<void>.
-constexpr std::detail::ok ok;
+// `Okay` may be returned in a function that returns Result<void>.
+constexpr std::detail::ok okay{};
 
 template <typename T>
 struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
@@ -81,18 +81,18 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
      * provides failure-handling in debug builds, and skips them in optimized
      * builds. */
     ValueType const value;
-    bool const is_ok;
+    bool const is_okay;
 
-    Result(Failure in_code) : error_code(in_code), value(), is_ok(false) {
+    Result(Failure in_code) : error_code(in_code), value(), is_okay(false) {
     }
     Result(ValueType in_value) requires(!is_void)
-        : error_code(), value(in_value), is_ok(true) {
+        : error_code(), value(in_value), is_okay(true) {
     }
     Result(std::detail::ok) requires(is_void)
-        : error_code(), value(), is_ok(true) {
+        : error_code(), value(), is_okay(true) {
     }
     // TODO: Concept for bool1, bool2, and bool4 as well.
-    Result(bool&& expression) requires(is_void) : value(), is_ok(expression) {
+    Result(bool&& expression) requires(is_void) : value(), is_okay(expression) {
     }
 
     auto or_return(ValueType const& in_value)->ValueType {
@@ -101,7 +101,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
 
     // TODO: Add an invokable concept
     auto or_do(auto callback) {
-        if (!is_ok) {
+        if (!is_okay) {
             return callback();
         }
         if constexpr (!is_void) {
@@ -121,7 +121,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
      * held. When optimizations are enabled, that safety check is elided. */
     auto unsafe_value()->T {
 #ifndef __OPTIMIZE__
-        if (is_ok) {
+        if (is_okay) {
             return value;
         }
         // TODO: Error message.
@@ -134,7 +134,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
 
     // TODO: Pass in the exit code and error message with overloads.
     auto or_panic()->T {
-        if (is_ok) {
+        if (is_okay) {
             if constexpr (!is_void) {
                 return this->value;
             } else if constexpr (is_void) {
@@ -145,7 +145,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
     }
 
     auto or_panic(char8_t const* /*error_message*/)->T {
-        if (is_ok) {
+        if (is_okay) {
             if constexpr (!is_void) {
                 return this->data;
             } else if constexpr (is_void) {
@@ -159,7 +159,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
     /* Because the error code is 8-bytes, it could contain a non-null pointer to
      * an error string. This prints that error message. */
     auto or_print_panic()->T {
-        if (is_ok) {
+        if (is_okay) {
             if constexpr (!is_void) {
                 return this->value;
             } else if constexpr (is_void) {
@@ -174,7 +174,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
      * release builds of an application. These following functions only print an
      * error message when building -O0. */
     auto or_panic_debug(char8_t const* error_message = u8"")->T {
-        if (is_ok) {
+        if (is_okay) {
             if constexpr (!is_void) {
                 return this->data;
             } else if constexpr (is_void) {
@@ -190,7 +190,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
     /* Because the error code is 8-bytes, it could contain a non-null pointer to
      * an error string. This prints that error message. */
     auto or_print_panic_debug()->T {
-        if (is_ok) {
+        if (is_okay) {
             if constexpr (!is_void) {
                 return this->value;
             } else if constexpr (is_void) {
