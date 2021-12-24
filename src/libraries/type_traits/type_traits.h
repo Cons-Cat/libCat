@@ -93,18 +93,12 @@ struct remove_cvref {
 template <typename T>
 using remove_cvref_t = typename remove_cvref<T>::type;
 
+/* integral_constant has no constructor, because a `*_v` suffix contributes less
+ * noise than parentheses or curly braces. */
 template <typename T, T Value>
 struct integral_constant {
     static constexpr T value = Value;
-    using value_type = T;
     using type = integral_constant<T, Value>;
-
-    constexpr operator value_type() const {
-        return value;
-    }
-    constexpr auto operator()() const -> value_type {
-        return value;
-    }
 };
 
 // clang-tidy falsely warns about this.
