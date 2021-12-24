@@ -13,6 +13,16 @@ extern "C" __attribute__((used)) void meow();
 auto main() -> int{};
 __attribute__((alias("main"))) auto debugger_entry_point() -> int;
 
+template <typename T>
+struct Result;
+
+// TODO: Fix this declaration in <numerals.h>
+using isize = int long long;
+
+#include <numerals.h>
+
+// using isize = int long long;
+
 // Including <start.h> and <exit.h> is required to link a libCat program.
 #include <exit.h>
 #include <start.h>
@@ -20,7 +30,6 @@ __attribute__((alias("main"))) auto debugger_entry_point() -> int;
 /* <result.h> and <numerals.h> are analogous to exceptions and stdint.h in that
  * they are used throughout the library and should be accessible to a user by
  * default. */
-#include <numerals.h>
 #include <result.h>
 
 // <stdint.h> is required for libC compatibility.
