@@ -24,8 +24,9 @@ constexpr auto is_constant_evaluated() -> bool {
     return __builtin_is_constant_evaluated();
 }
 
+// TODO: add a meta::invocable concept.
 consteval auto constant_evaluate(auto value) {
-    return value;
+    return value();
 }
 
 }  // namespace meta
