@@ -27,13 +27,8 @@ struct Any {
         value = (void*)(isize)(input);
     };
 
-    operator void*() const {
-        return value;
+    template <typename T>
+    operator T() const {
+        return *reinterpret_cast<T*>(this->value);
     }
 };
-
-// TODO: Make this an implicit conversion operator.
-template <typename T>
-constexpr auto any_cast(Any in_any) -> T {
-    return *reinterpret_cast<T*>(in_any.value);
-}
