@@ -12,7 +12,8 @@ list(
   LIBCAT_CXX_FLAGS_COMMON
   -fno-exceptions -fno-rtti -fno-unwind-tables
   -fomit-frame-pointer # This is required for the stack frame to work.
-  -march=native
+  -msse4.2
+  -mavx2
   -fdiagnostics-color
   -include global_includes.h
 )
