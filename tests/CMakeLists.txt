@@ -50,3 +50,9 @@ add_executable(test_copymem copy_memory.cpp)
 target_compile_options(test_copymem PRIVATE ${LIBCAT_CXX_FLAGS_TEST})
 target_link_options(test_copymem PRIVATE ${LIBCAT_LINK_FLAGS})
 add_test(NAME CopyMem COMMAND test_copymem)
+
+# This tests if page_allocator works.
+add_executable(test_paging paging_memory.cpp)
+target_compile_options(test_paging PRIVATE ${LIBCAT_CXX_FLAGS_TEST})
+target_link_options(test_paging PRIVATE ${LIBCAT_LINK_FLAGS})
+add_test(NAME PagingMemory COMMAND test_paging)
