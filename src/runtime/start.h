@@ -40,7 +40,7 @@
  * an _exit syscall is also not made in _start(), because GCC cannot inline
  * `call` assembly instructions, and a more sophisticated exit strategy may be
  * desired by a user anyways. In libCat, program termination is explicit. */
-extern "C" __attribute__((used)) void _start() {
+extern "C" [[gnu::used]] void _start() {
     /* This cannot be simplified any further without producing unreliable
      * codegen. */
     asm(R"(mov %rsp, %rbp

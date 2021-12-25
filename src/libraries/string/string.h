@@ -23,8 +23,8 @@ constexpr auto string_length_as(char8_t const* p_string) -> T {
 // TODO: This should use an AnyConst container.
 /* With the tree-loop-distribute-patterns optimization, this generates a call to
  * `memcpy()` which cannot be resolved. */
-__attribute__((optimize("-fno-tree-loop-distribute-patterns"))) void
-copy_memory(void const* p_source, void* p_destination, isize bytes) {
+[[gnu::optimize("-fno-tree-loop-distribute-patterns")]] void copy_memory(
+    void const* p_source, void* p_destination, isize bytes) {
     char const* p_source_handle = static_cast<char const*>(p_source);
     char* p_destination_handle = static_cast<char*>(p_destination);
 

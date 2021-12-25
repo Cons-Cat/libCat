@@ -4,7 +4,7 @@
 
 /* This file should be implicitly included in all other files. With GCC, this is
    done using the --include flag, as in --include global_includes.h */
-extern "C" __attribute__((used)) void meow();
+extern "C" [[gnu::used]] void meow();
 
 auto main() -> int{};
 /* Many debuggers, including GDB, will enter, by default, at the symbol
@@ -12,7 +12,7 @@ auto main() -> int{};
  * an entry point for debuggers. This is not necessary if the
  * `.gdbinit` file at the top of this project's directory is used. */
 // TODO: Prevent this from being optimized out in RelWithDebInfo.
-__attribute__((alias("main"))) auto debugger_entry_point() -> int;
+[[gnu::alias("main")]] auto debugger_entry_point() -> int;
 
 template <typename T>
 struct Result;
@@ -44,7 +44,7 @@ using isize = int long long;
  * be assigned to any variable. */
 namespace std::detail {
 
-struct __attribute__((unused)) unused {
+struct [[gnu::unused]] unused {
     // Any type can be converted into `unused`, except for `Result`s.
     template <typename T>
     constexpr void operator=(T const&) requires(

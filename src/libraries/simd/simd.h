@@ -23,9 +23,10 @@ template <typename T, isize Width>
 struct alignas(4) SimdVector {
     static constexpr isize width = Width;
     using ScalarType = T;
-    // vector_size is a GCC attribute that represents SIMD data-types.
-    // NOLINTNEXTLINE using does not work here:
-    typedef T
+    /* vector_size is a GCC attribute that represents SIMD data-types.
+     * `using` and `alignas` do not work on a builtin vector type. Generalized
+     * attribute syntax also does not work. */
+    typedef T  // NOLINT
         __attribute__((vector_size(sizeof(ScalarType) * Width), aligned(4)))
         IntrinsicType;
     IntrinsicType value;
@@ -43,6 +44,8 @@ struct alignas(4) SimdVector {
     // constexpr simd_vector(UList... values) {
     //     this->value((static_cast<T>(values))...);
     // }
+
+    // TODO: `__builtin_convertvector()` wrapped by conversion operators.
 
     constexpr auto operator=(SimdVector<T, Width>& operand)
         -> SimdVector<T, Width>& {
