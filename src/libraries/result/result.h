@@ -98,7 +98,8 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
      * `Result<Any>`. */
     template <typename U>
     Result(Result<U> && in_result)
-        : value(in_result.value), is_okay(in_result.is_okay) {
+        : value(meta::bit_cast<T>(in_result.value)),
+          is_okay(in_result.is_okay) {
     }
 
     // Return a specified value when is_okay is false.

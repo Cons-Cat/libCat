@@ -31,12 +31,12 @@ auto syscall6(Any call, Any arg1, Any arg2, Any arg3, Any arg4, Any arg5,
                     mov %[f],%%r9
                     syscall)"
                  : "=a"(result)
-                 : "0"((i4)(call)), "D"(arg1), "S"(arg2),
+                 : "0"(meta::bit_cast<i4>(call)), "D"(arg1), "S"(arg2),
                    "d"(arg3), [d] "g"(arg4), [e] "g"(arg5), [f] "g"(arg6)
                  : "r11", "rcx", "r8", "r10", "r9", "memory");
-    if ((i8)(result) < 0) {
+    if (meta::bit_cast<i8>(result) < 0) {
         // The negative of `result` represents Linux's errno.
-        return Failure(-(i8)(result));
+        return Failure(-meta::bit_cast<i8>(result));
     }
     return result;
 }
