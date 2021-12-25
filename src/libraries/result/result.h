@@ -88,8 +88,8 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
     Result(ValueType in_value) requires(!is_void)
         : error_code(), value(in_value), is_okay(true) {
     }
-    Result(std::detail::ok) requires(is_void)
-        : error_code(), value(), is_okay(true) {
+    // Special-case consuming data when holding `void`. This includes `okay`.
+    Result(auto) requires(is_void) : error_code(), value(), is_okay(true) {
     }
     // TODO: Concept for bool1, bool2, and bool4 as well.
     Result(bool&& expression) requires(is_void) : value(), is_okay(expression) {
@@ -97,7 +97,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
     /* Attempt to cast an inputted Result to this. This is useful for
      * `Result<Any>`. */
     template <typename U>
-    Result(Result<U> && in_result)
+    Result(Result<U> && in_result) requires(!is_void)
         : value(meta::bit_cast<T>(in_result.value)),
           is_okay(in_result.is_okay) {
     }
