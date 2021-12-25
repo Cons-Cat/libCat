@@ -11,13 +11,19 @@ struct PageAllocator {
     enum failures
     {};
 
-    auto malloc(isize) -> Result<void*> {
+    /* Allocate memory in multiples of a page-size,
+     * which is 4 KiB on x86-64. For instance, If fewer that `4096u` bytes are
+     * allocated, that amount will be rounded up to `4096u`. There is generally
+     * very little reason to allocate any other amount of bytes with
+     * `PageAllocator`. */
+    auto malloc(usize bytes) -> Result<void*> {
         this->address =
-            map_memory(
-                0u, 4u * page_size,
-                static_cast<ProtectionFlags>(::PROT_READ | ::PROT_WRITE),
-                static_cast<VisibilityFlags>(::MAP_PRIVATE | ::MAP_ANONYMOUS),
-                -1, 0u)
+            map_memory(0u, bytes, ::PROT_READ | ::PROT_WRITE,
+                       ::MAP_PRIVATE | ::MAP_POPULATE | ::MAP_ANONYMOUS,
+                       // Anonymous pages must have `-1`.
+                       -1,
+                       // Anonymous pages must have `0u`.
+                       0u)
                 .or_it_is(nullptr);
         if (this->address == nullptr) {
             return Failure(1);
