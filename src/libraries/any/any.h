@@ -24,11 +24,11 @@ struct Any {
     constexpr Any() = default;
 
     constexpr Any(auto input) requires(sizeof(input) <= sizeof(value)) {
-        value = (void*)(isize)(input);
+        meta::bit_cast<void*>(input);
     };
 
     template <typename T>
     operator T() const {
-        return *reinterpret_cast<T*>(this->value);
+        return meta::bit_cast<T>(this->value);
     }
 };

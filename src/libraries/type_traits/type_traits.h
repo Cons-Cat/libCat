@@ -39,6 +39,9 @@ struct remove_const {
     using type = T;
 };
 template <typename T>
+using remove_const_t = typename remove_const<T>::type;
+
+template <typename T>
 struct remove_const<T const> {
     using type = T;
 };
@@ -92,6 +95,34 @@ struct remove_cvref {
 };
 template <typename T>
 using remove_cvref_t = typename remove_cvref<T>::type;
+
+namespace std::detail {
+    template <class T>
+    struct remove_pointer {
+        using type = T;
+    };
+    template <class T>
+    struct remove_pointer<T*> {
+        using type = T;
+    };
+    template <class T>
+    struct remove_pointer<T* const> {
+        using type = T;
+    };
+    template <class T>
+    struct remove_pointer<T* volatile> {
+        using type = T;
+    };
+    template <class T>
+    struct remove_pointer<T* const volatile> {
+        using type = T;
+    };
+}  // namespace std::detail
+
+template <typename T>
+struct remove_pointer : std::detail::remove_pointer<T> {};
+template <typename T>
+using remove_pointer_t = typename remove_pointer<T>::type;
 
 /* integral_constant has no constructor, because a `*_v` suffix contributes less
  * noise than parentheses or curly braces. */
@@ -449,12 +480,12 @@ constexpr auto is_complete_or_unbounded(type_identity<T>) -> true_type {
     return {};
 }
 
+// __is_constructible is a GCC built-in.
 namespace detail {
     template <typename T, typename... Args>
     struct is_constructible : bool_constant<__is_constructible(T, Args...)> {};
 }  // namespace detail
 
-/// is_constructible
 template <typename T, typename... Args>
 struct is_constructible : detail::is_constructible<T, Args...> {
     static_assert(is_complete_or_unbounded(type_identity<T>{}));
