@@ -214,12 +214,6 @@ auto p_string_to_p_vector(char8_t const* p_string) {
     return reinterpret_cast<U*>(const_cast<char8_t*>(p_string));
 }
 
-// // TODO: Move into a <bit.h> library:
-// template <typename T>
-// [[nodiscard]] constexpr auto bit_cast(auto const& source) -> T {
-//     return __builtin_bit_cast(T, source);
-// }
-
 // TODO: Improve these function names.
 // TODO: Perfect forwarding.
 template <u1 Mask>

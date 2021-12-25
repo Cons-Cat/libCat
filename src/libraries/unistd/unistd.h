@@ -25,15 +25,26 @@ extern "C" auto syscall4(Any, Any, Any, Any, Any arg4) -> void*;
 extern "C" auto syscall5(Any, Any, Any, Any, Any arg4, Any) -> void*;
 auto syscall6(Any call, Any arg1, Any arg2, Any arg3, Any arg4, Any arg5,
               Any arg6) -> Result<Any> {
+    register auto a1 asm("r10") = arg1;
+    register auto a3 asm("r8") = arg3;
+    register auto a4 asm("r9") = arg4;
+
+    void* unused_output;
+    register void* unused_output2 asm("r11");
+
     Any result;
-    asm volatile(R"(mov %[d],%%r10
-                    mov %[e],%%r8
-                    mov %[f],%%r9
-                    syscall)"
-                 : "=a"(result)
-                 : "0"(meta::bit_cast<i4>(call)), "D"(arg1), "S"(arg2),
-                   "d"(arg3), [d] "g"(arg4), [e] "g"(arg5), [f] "g"(arg6)
-                 : "r11", "rcx", "r8", "r10", "r9", "memory");
+    asm volatile(R"(sub $64, %%rsp
+                    movq %[a5], 40(%%rsp)
+                    movq %[a6], 48(%%rsp)
+                    syscall
+                    add $64, %%rsp)"
+                 : "=a"(result), "=r"(a1), "=d"(arg2), "=r"(a3), "=r"(a4),
+                   "=c"(unused_output), "=r"(unused_output2)
+                 : "a"(call), "r"(a1), "d"(arg2), "r"(a3),
+                   "r"(a4), [a5] "re"(meta::bit_cast<void*>(arg5)),
+                   // TODO: Fix this segfaulting with static_cast<void*>():
+                   [a6] "re"(meta::bit_cast<void*>(arg6))
+                 : "memory", "cc");
     if (meta::bit_cast<i8>(result) < 0) {
         // The negative of `result` represents Linux's errno.
         return Failure(-meta::bit_cast<i8>(result));
