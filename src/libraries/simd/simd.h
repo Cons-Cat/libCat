@@ -3,29 +3,32 @@
 #pragma once
 
 /* The Intel-style SIMD syntax is completely arbitrary in GCC. GNU implemented
- * it with wrapper libraries around their own, arguably more reasonable,
- * compiler intrinsics that already understand arithmetic operators. Then,
- * authors of SIMD-wrapper libraries wrap *those* wrappers to put arithmetic
- * operators back on top with yet more types and functions!
+ * it with wrapper libraries around their own basic, arguably more reasonable,
+ * compiler intrinsics that already understand arithmetic operators, sets,
+ * loads, and many other operations. Then, authors of a SIMD wrapper library
+ * wrap *those* wrappers with new ones to enhance their quality of life with
+ * features that the basic compiler intrinsics largely already had. There are
+ * three layers of technology to this for no reason!
  *
- * To streamline this, libCat uses the intrinsics which GNU already provides. */
+ * To streamline this, libCat uses the intrinsics which GNU already provides,
+ * and wraps it in one thin layer of technology. */
 
 #include <type_traits>
 
 namespace std::detail {
 
 /* Vectors have weak alignment by default. It is up to users at call-site to
- * determine what alignment is appropriate for their use-case. All simd
- * functions are unaligned, which has little, if any, penalty to aligned vectors
- * in modern SSE, AVX, and NEON. */
+ * determine what alignment is appropriate for their use-case. All SIMD
+ * functions are unaligned, which pays little, if any, penalty to aligned
+ * vectors in modern implementations of SSE, AVX, and NEON architectures. */
 
 template <typename T, isize Width>
 struct alignas(4) SimdVector {
     static constexpr isize width = Width;
     using ScalarType = T;
-    /* vector_size is a GCC attribute that represents SIMD data-types.
+    /* `vector_size` is a GCC attribute that represents SIMD data-types.
      * `using` and `alignas` do not work on a builtin vector type. Generalized
-     * attribute syntax also does not work. */
+     * attribute syntax also does not appear to work. */
     typedef T  // NOLINT
         __attribute__((vector_size(sizeof(ScalarType) * Width), aligned(4)))
         IntrinsicType;

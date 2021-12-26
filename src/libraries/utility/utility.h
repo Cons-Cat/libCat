@@ -37,15 +37,14 @@ consteval auto constant_evaluate(auto value) {
  * at its own address. Compilers are good at optimizing out this pattern. Four
  * overloads are required, which I believe is still simpler than metaprogramming
  * one `bit_cast` function. A `void*`, `void* const`, `T`, and `T const` each
- * resolve to different overloads. These are optimized because it is
- * sometimes semantically necessary that these have zero-overhead. */
-
-/* TODO: This code has changed significantly since the overhead was last
- * verified. Optimization should be assessed again. */
+ * resolve to different overloads. These are optimized and inlined because it is
+ * sometimes semantically necessary that these have zero-overhead, and those
+ * attributes guarantee this even in -O0. */
 
 // TODO: Consider using a `memcpy`, as it may be easier for the compiler.
 template <typename T>
-[[gnu::optimize("-O3")]] auto bit_cast(  // NOLINT
+
+[[gnu::optimize("-O3")]] [[gnu::always_inline]] inline auto bit_cast(  // NOLINT
     auto& from_value)
     // If this is a non-`const` `void*`
     requires(meta::is_same_v<void*&, decltype(from_value)>) {
@@ -58,7 +57,7 @@ template <typename T>
 }
 
 template <typename T>
-[[gnu::optimize("-O3")]] auto bit_cast(  // NOLINT
+[[gnu::optimize("-O3")]] [[gnu::always_inline]] inline auto bit_cast(  // NOLINT
     auto& from_value)
     // If this is a `void* const`
     requires(meta::is_same_v<void* const&, decltype(from_value)>) {
@@ -71,7 +70,7 @@ template <typename T>
 }
 
 template <typename T>
-[[gnu::optimize("-O3")]] auto bit_cast(  // NOLINT
+[[gnu::optimize("-O3")]] [[gnu::always_inline]] inline auto bit_cast(  // NOLINT
     auto& from_value)
     // If not a `void*`, and not `const`:
     requires(
@@ -86,7 +85,7 @@ template <typename T>
 }
 
 template <typename T>
-[[gnu::optimize("-O3")]] auto bit_cast(  // NOLINT
+[[gnu::optimize("-O3")]] [[gnu::always_inline]] inline auto bit_cast(  // NOLINT
     auto& from_value)
     // If not a `void*` or `void* const`, and is `const`:
     requires(!meta::is_same_v<void*&, decltype(from_value)> &&

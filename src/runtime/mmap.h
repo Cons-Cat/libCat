@@ -43,8 +43,9 @@ constexpr usize page_size = 4096u;
 auto map_memory(usize beginning_address, usize bytes_size, usize protections,
                 usize flags, isize file_descriptor, usize pages_offset)
     -> Result<void*> {
-    return syscall<void*>(9, beginning_address, bytes_size, protections, flags,
-                          file_descriptor, pages_offset * page_size);
+    return syscall<void*, usize>(9u, beginning_address, bytes_size, protections,
+                                 flags, file_descriptor,
+                                 pages_offset * page_size);
 }
 
 auto unmap_memory() -> Result<> {

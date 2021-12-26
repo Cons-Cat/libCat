@@ -12,7 +12,7 @@ struct PageAllocator {
     {};
 
     /* Allocate memory in multiples of a page-size,
-     * which is 4 KiB on x86-64. For instance, If fewer that `4096u` bytes are
+     * which is `4` KiB on x86-64. For instance, If fewer that `4096u` bytes are
      * allocated, that amount will be rounded up to `4096u`. There is generally
      * very little reason to allocate any other amount of bytes with
      * `PageAllocator`. */
