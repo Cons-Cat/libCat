@@ -17,7 +17,7 @@ add_custom_target(
 
 list(
   APPEND
-  LIBCAT_CXX_FLAGS_COMMON
+  CAT_CXX_FLAGS_COMMON
   -fno-exceptions -fno-rtti -fno-unwind-tables
   -fomit-frame-pointer # This is required for the stack frame to work.
   -msse4.2
@@ -28,7 +28,7 @@ list(
 
 list(
   APPEND
-  LIBCAT_CXX_FLAGS_DEBUG
+  CAT_CXX_FLAGS_DEBUG
   -ggdb3 -pipe
   -fstack-protector-strong
   # -fsanitize=undefined
@@ -41,7 +41,7 @@ list(
 # Set aggressive space optimizations. -Os is not favorable, however.
 list(
   APPEND
-  LIBCAT_CXX_FLAGS_RELEASE
+  CAT_CXX_FLAGS_RELEASE
   -no-pie -fno-stack-protector
   -fno-asynchronous-unwind-tables
   -s
@@ -53,30 +53,30 @@ list(
 
 list(
   APPEND
-  LIBCAT_CXX_FLAGS_RELFAST
-  ${LIBCAT_CXX_FLAGS_RELEASE}
+  CAT_CXX_FLAGS_RELFAST
+  ${CAT_CXX_FLAGS_RELEASE}
   -O3
 )
 
 list(
   APPEND
-  LIBCAT_CXX_FLAGS_RELSMAL
-  ${LIBCAT_CXX_FLAGS_RELEASE}
+  CAT_CXX_FLAGS_RELSMAL
+  ${CAT_CXX_FLAGS_RELEASE}
   -Os
 )
 
 list(
-  APPEND LIBCAT_CXX_FLAGS
-  ${LIBCAT_CXX_FLAGS_COMMON}
-  $<$<CONFIG:Debug>:${LIBCAT_CXX_FLAGS_DEBUG}>
-  $<$<CONFIG:RelWithDebInfo>:${LIBCAT_CXX_FLAGS_RELWITHDEBINFO}>
-  $<$<CONFIG:Release>:${LIBCAT_CXX_FLAGS_RELFAST}>
-  $<$<CONFIG:RelSmall>:${LIBCAT_CXX_FLAGS_RELSMALL}>
+  APPEND CAT_CXX_FLAGS
+  ${CAT_CXX_FLAGS_COMMON}
+  $<$<CONFIG:Debug>:${CAT_CXX_FLAGS_DEBUG}>
+  $<$<CONFIG:RelWithDebInfo>:${CAT_CXX_FLAGS_RELWITHDEBINFO}>
+  $<$<CONFIG:Release>:${CAT_CXX_FLAGS_RELFAST}>
+  $<$<CONFIG:RelSmall>:${CAT_CXX_FLAGS_RELSMALL}>
 )
 
 list(
   APPEND
-  LIBCAT_COMMON_LINK_FLAGS
+  CAT_COMMON_LINK_FLAGS
   -nostdlib
 )
 
@@ -84,8 +84,8 @@ list(
 # are for the compiler, so I just send them all to both.
 list(
   APPEND
-  LIBCAT_RELEASE_LINK_FLAGS
-  ${LIBCAT_COMMON_LINK_FLAGS}
+  CAT_RELEASE_LINK_FLAGS
+  ${CAT_COMMON_LINK_FLAGS}
   -no-pie -fno-stack-protector
   -fno-asynchronous-unwind-tables
   -ffunction-sections -fdata-sections
@@ -95,11 +95,11 @@ list(
 )
 
 list(
-  APPEND LIBCAT_LINK_FLAGS
-  $<$<CONFIG:Debug>:${LIBCAT_COMMON_LINK_FLAGS}>
-  $<$<CONFIG:RelWithDebInfo>:${LIBCAT_COMMON_LINK_FLAGS}>
-  $<$<CONFIG:Release>:${LIBCAT_RELEASE_LINK_FLAGS}>
-  $<$<CONFIG:RelSmall>:${LIBCAT_RELEASE_LINK_FLAGS}>
+  APPEND CAT_LINK_FLAGS
+  $<$<CONFIG:Debug>:${CAT_COMMON_LINK_FLAGS}>
+  $<$<CONFIG:RelWithDebInfo>:${CAT_COMMON_LINK_FLAGS}>
+  $<$<CONFIG:Release>:${CAT_RELEASE_LINK_FLAGS}>
+  $<$<CONFIG:RelSmall>:${CAT_RELEASE_LINK_FLAGS}>
 )
 
 add_library(
@@ -155,19 +155,19 @@ add_subdirectory(tests/)
 
 # Build the examples.
 add_executable(hello examples/hello.cpp)
-target_compile_options(hello PRIVATE ${LIBCAT_CXX_FLAGS})
+target_compile_options(hello PRIVATE ${CAT_CXX_FLAGS})
 target_link_libraries(hello PRIVATE libcat-std)
-target_link_options(hello PRIVATE ${LIBCAT_LINK_FLAGS})
+target_link_options(hello PRIVATE ${CAT_LINK_FLAGS})
 
 add_executable(echo examples/echo.cpp)
-target_compile_options(echo PRIVATE ${LIBCAT_CXX_FLAGS})
+target_compile_options(echo PRIVATE ${CAT_CXX_FLAGS})
 target_link_libraries(echo PRIVATE libcat-std)
-target_link_options(echo PRIVATE ${LIBCAT_LINK_FLAGS})
+target_link_options(echo PRIVATE ${CAT_LINK_FLAGS})
 
 add_executable(memcpy examples/memory_copy.cpp)
-target_compile_options(memcpy PRIVATE ${LIBCAT_CXX_FLAGS})
+target_compile_options(memcpy PRIVATE ${CAT_CXX_FLAGS})
 target_link_libraries(memcpy PRIVATE libcat-std)
-target_link_options(memcpy PRIVATE ${LIBCAT_LINK_FLAGS})
+target_link_options(memcpy PRIVATE ${CAT_LINK_FLAGS})
 
 # libC executables are only configured for Release
 list(
