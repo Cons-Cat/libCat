@@ -56,14 +56,14 @@ auto load_base_stack_pointer() -> void* {
 }
 
 auto load_argc() -> i4 {
-    i4* argc;
-    asm("mov %%rbp, %[argc]" : [argc] "=r"(argc));
-    return *argc;
+    i4 argc;
+    asm("mov 0(%%rbp), %[argc]" : [argc] "=r"(argc));
+    return argc;
 }
 
-auto load_argv() -> char8_t const** {
-    char8_t const** argv;
-    asm("mov 4(%%rbp), %0" : "=r"(argv));
+auto load_argv() -> char8_t** {
+    char8_t** argv;
+    asm("lea 8(%%rbp), %[argv]" : [argv] "=r"(argv));
     return argv;
 }
 
