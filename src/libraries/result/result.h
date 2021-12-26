@@ -92,7 +92,8 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
     Result(auto) requires(is_void) : error_code(), value(), is_okay(true) {
     }
     // TODO: Concept for bool1, bool2, and bool4 as well.
-    Result(bool&& expression) requires(is_void) : value(), is_okay(expression) {
+    Result(bool const&& expression) requires(is_void)
+        : value(), is_okay(expression) {
     }
     /* Attempt to cast an inputted Result to this. This is useful for
      * `Result<Any>`. */
