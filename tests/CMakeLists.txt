@@ -6,9 +6,9 @@ add_custom_target(
   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-add_library(libcat-test INTERFACE)
-target_link_libraries(libcat-test INTERFACE libcat-std)
-target_include_directories(libcat-test INTERFACE)
+add_library(cat-test INTERFACE)
+target_link_libraries(cat-test INTERFACE cat-std)
+target_include_directories(cat-test INTERFACE)
 
 list(
   APPEND
@@ -23,7 +23,7 @@ list(
 
 # TODO: Get these working:
 # add_compile_options(${CAT_CXX_FLAGS})
-link_libraries(libcat-test)
+link_libraries(cat-test)
 # add_link_options(${CAT_LINK_FLAGS})
 
 # This tests that a Result<void> does not panic if it holds ok.
