@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.21)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
-project(libcat LANGUAGES CXX ASM)
+project(cat LANGUAGES CXX ASM)
 
 set(CMAKE_CONFIGURATION_TYPES Debug;Release;RelWithDebInfo;RelSmall)
 
@@ -102,8 +102,7 @@ list(
   $<$<CONFIG:RelSmall>:${CAT_RELEASE_LINK_FLAGS}>
 )
 
-add_library(
-  libcat-std-static STATIC
+add_library(cat-std STATIC
   src/libraries/unistd/detail/syscall0.s
   src/libraries/unistd/detail/syscall1.s
   src/libraries/unistd/detail/syscall2.s
@@ -111,10 +110,8 @@ add_library(
   src/libraries/unistd/detail/syscall4.s
   src/libraries/unistd/detail/syscall5.s
 )
-
-add_library(libcat-std-headers INTERFACE)
 target_include_directories(
-  libcat-std-headers INTERFACE
+  cat-std PUBLIC
   src/
   src/runtime/
   src/compatibility/
@@ -135,19 +132,14 @@ target_include_directories(
   src/libraries/pthread/
   src/libraries/errno/
 )
-
-# Combine static objects and C++ headers for convenience.
-add_library(libcat-std INTERFACE)
-target_link_libraries(libcat-std INTERFACE libcat-std-static)
-target_link_libraries(libcat-std INTERFACE libcat-std-headers)
-target_link_libraries(libcat-std INTERFACE gcc)
-target_link_libraries(
-  libcat-std INTERFACE
-  # $<$<CONFIG:RelWithDebInfo>:asan>
-  # $<$<CONFIG:RelWithDebInfo>:ubsan>
-  # $<$<CONFIG:Debug>:asan>
-  # $<$<CONFIG:Debug>:ubsan>
-)
+target_link_libraries(cat-std INTERFACE gcc)
+# target_link_libraries(
+#   cat-std INTERFACE
+#   # $<$<CONFIG:RelWithDebInfo>:asan>
+#   # $<$<CONFIG:RelWithDebInfo>:ubsan>
+#   # $<$<CONFIG:Debug>:asan>
+#   # $<$<CONFIG:Debug>:ubsan>
+# )
 
 # Build the tests.
 enable_testing()
@@ -156,17 +148,17 @@ add_subdirectory(tests/)
 # Build the examples.
 add_executable(hello examples/hello.cpp)
 target_compile_options(hello PRIVATE ${CAT_CXX_FLAGS})
-target_link_libraries(hello PRIVATE libcat-std)
+target_link_libraries(hello PRIVATE cat-std)
 target_link_options(hello PRIVATE ${CAT_LINK_FLAGS})
 
 add_executable(echo examples/echo.cpp)
 target_compile_options(echo PRIVATE ${CAT_CXX_FLAGS})
-target_link_libraries(echo PRIVATE libcat-std)
+target_link_libraries(echo PRIVATE cat-std)
 target_link_options(echo PRIVATE ${CAT_LINK_FLAGS})
 
 add_executable(memcpy examples/memory_copy.cpp)
 target_compile_options(memcpy PRIVATE ${CAT_CXX_FLAGS})
-target_link_libraries(memcpy PRIVATE libcat-std)
+target_link_libraries(memcpy PRIVATE cat-std)
 target_link_options(memcpy PRIVATE ${CAT_LINK_FLAGS})
 
 # libC executables are only configured for Release
