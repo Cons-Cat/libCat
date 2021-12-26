@@ -159,21 +159,6 @@ target_compile_options(hello PRIVATE ${LIBCAT_CXX_FLAGS})
 target_link_libraries(hello PRIVATE libcat-std)
 target_link_options(hello PRIVATE ${LIBCAT_LINK_FLAGS})
 
-add_executable(exit_with_10 examples/exit_with_10.cpp)
-target_compile_options(exit_with_10 PRIVATE ${LIBCAT_CXX_FLAGS})
-target_link_libraries(exit_with_10 PRIVATE libcat-std)
-target_link_options(exit_with_10 PRIVATE ${LIBCAT_LINK_FLAGS})
-
-add_executable(error examples/error.cpp)
-target_compile_options(error PRIVATE ${LIBCAT_CXX_FLAGS})
-target_link_libraries(error PRIVATE libcat-std)
-target_link_options(error PRIVATE ${LIBCAT_LINK_FLAGS})
-
-add_executable(raii examples/raii.cpp)
-target_compile_options(raii PRIVATE ${LIBCAT_CXX_FLAGS})
-target_link_libraries(raii PRIVATE libcat-std)
-target_link_options(raii PRIVATE ${LIBCAT_LINK_FLAGS})
-
 add_executable(echo examples/echo.cpp)
 target_compile_options(echo PRIVATE ${LIBCAT_CXX_FLAGS})
 target_link_libraries(echo PRIVATE libcat-std)
