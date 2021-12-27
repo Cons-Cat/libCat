@@ -210,9 +210,7 @@ auto shuffle(auto in_vector, auto mask) {
 }
 
 // TODO: Implement more types of fences, such as mfence.
-void fence() {
-    __builtin_ia32_sfence();
-}
+void fence();
 
 template <u4 Width>
 auto p_string_to_p_vector(char8_t const* p_string) {
@@ -234,13 +232,8 @@ auto cmp_implicit_str_i(auto const& vector_1, auto const& vector_2) -> i4 {
     return __builtin_ia32_pcmpistri128(vector_1.value, vector_2.value, Mask);
 }
 
-void zero_avx_registers() {
-    __builtin_ia32_vzeroall();
-}
-
-void zero_upper_avx_registers() {
-    __builtin_ia32_vzeroupper();
-}
+void zero_avx_registers();
+void zero_upper_avx_registers();
 
 // Constants for prefetch.
 enum MM_HINT
@@ -320,47 +313,14 @@ void stream_in(void* p_destination, T const* source) {
 // TODO: __builtin_cpu_init()
 // must be called before these.
 
-auto is_mmx_supported() -> bool {
-    return __builtin_cpu_supports("mmx");
-}
-
-auto is_sse1_supported() -> bool {
-    return __builtin_cpu_supports("sse");
-}
-
-auto is_sse2_supported() -> bool {
-    return __builtin_cpu_supports("sse2");
-}
-
-auto is_sse3_supported() -> bool {
-    return __builtin_cpu_supports("sse3");
-}
-
-auto is_ssse3_supported() -> bool {
-    return __builtin_cpu_supports("ssse3");
-}
-
-auto is_sse4_1_supported() -> bool {
-    return __builtin_cpu_supports("sse4.1");
-}
-
-auto is_sse4_2_supported() -> bool {
-    return __builtin_cpu_supports("sse4.2");
-}
-
-auto is_avx_supported() -> bool {
-    return __builtin_cpu_supports("avx");
-}
-
-auto is_avx2_supported() -> bool {
-    return __builtin_cpu_supports("avx2");
-}
-
-auto is_avx512f_supported() -> bool {
-    __builtin_cpu_init();
-    return __builtin_cpu_supports("avx512f");
-}
-
-auto is_avx512vl_supported() -> bool {
-    return __builtin_cpu_supports("avx512vl");
-}
+auto is_mmx_supported() -> bool;
+auto is_sse1_supported() -> bool;
+auto is_sse2_supported() -> bool;
+auto is_sse3_supported() -> bool;
+auto is_ssse3_supported() -> bool;
+auto is_sse4_1_supported() -> bool;
+auto is_sse4_2_supported() -> bool;
+auto is_avx_supported() -> bool;
+auto is_avx2_supported() -> bool;
+auto is_avx512f_supported() -> bool;
+auto is_avx512vl_supported() -> bool;

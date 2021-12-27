@@ -6,13 +6,16 @@
    done using the --include flag, as in --include global_includes.h */
 extern "C" [[gnu::used]] void meow();
 
-auto main() -> int{};
+// auto main() -> int{};
 /* Many debuggers, including GDB, will enter, by default, at the symbol
  * `.main`. Because `main()` cannot be used in libCat, an alias to it may mock
  * an entry point for debuggers. This is not necessary if the
  * `.gdbinit` file at the top of this project's directory is used. */
 // TODO: Prevent this from being optimized out in RelWithDebInfo.
-[[gnu::alias("main")]] auto debugger_entry_point() -> int;
+// [[gnu::alias("main")]]
+inline auto debugger_entry_point() -> int {
+    return 0;
+}
 
 template <typename T>
 struct Result;
@@ -56,4 +59,6 @@ struct [[gnu::unused]] unused {
 };
 
 }  // namespace std::detail
-std::detail::unused _{};
+
+// TODO: Ensure that this static global is zero-overhead.
+[[gnu::unused]] static std::detail::unused _;
