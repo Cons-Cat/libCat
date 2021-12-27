@@ -19,7 +19,7 @@ namespace std::detail {
 extern "C" auto syscall0(Any) -> void*;
 extern "C" auto syscall1(Any, Any) -> void*;
 extern "C" auto syscall2(Any, Any, Any) -> void*;
-extern "C" auto syscall3(Any, Any, Any, Any) -> void*;
+auto syscall3(Any, Any, Any, Any) -> Result<Any>;
 extern "C" auto syscall4(Any, Any, Any, Any, Any arg4) -> void*;
 extern "C" auto syscall5(Any, Any, Any, Any, Any arg4, Any) -> void*;
 auto syscall6(Any call, Any arg1, Any arg2, Any arg3, Any arg4, Any args,
@@ -45,8 +45,7 @@ requires(sizeof...(Args) < 7) {
         syscall2(call, arguments[0], arguments[1]);
         return okay;
     } else if constexpr (length == 3) {
-        syscall3(call, arguments[0], arguments[1], arguments[2]);
-        return okay;
+        return syscall3(call, arguments[0], arguments[1], arguments[2]);
     } else if constexpr (length == 4) {
         syscall4(call, arguments[0], arguments[1], arguments[2], arguments[3]);
         return okay;
@@ -63,4 +62,4 @@ requires(sizeof...(Args) < 7) {
 
 // write() forwards its arguments to a failable stdout syscall.
 auto write(i8 const& file_descriptor, char8_t const* p_string_buffer,
-           isize const& string_length) -> Result<>;
+           isize const& string_length) -> Result<isize>;
