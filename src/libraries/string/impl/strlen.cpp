@@ -1,5 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
+#include <stdint.h>
 #include <string.h>
 
 [[deprecated(

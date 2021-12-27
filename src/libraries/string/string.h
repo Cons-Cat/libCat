@@ -2,8 +2,6 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <stdint.h>
-
 // TODO: Optimize string_length().
 // https://newbedev.com/why-does-glibc-s-strlen-need-to-be-so-complicated-to-run-quickly
 // https://git.musl-libc.org/cgit/musl/tree/src/string/strlen.c
@@ -19,13 +17,7 @@ namespace std {
 /* `T` is the return type of `string_length()`. It may be signed or unsigned.
  * There exists `simd::string_length_as<>()`. */
 template <typename T>
-constexpr auto string_length_as(char8_t const* p_string) -> T {
-    T result = 0;
-    while (p_string[result] != '\0') {
-        result++;
-    }
-    return result;
-}
+constexpr auto string_length_as(char8_t const* p_string) -> T;
 
 auto is_aligned(void const volatile* pointer, isize byte_alignment) -> bool;
 
@@ -46,33 +38,10 @@ namespace simd {
 //     *reinterpret_cast<Vector*>(p_destination) = source_vector;
 // }
 
-void copy_memory(void const* p_source, void* p_destination, usize bytes);
-
-/* T is the return type of string_length_as(). It may be signed or
- * unsigned. This function requires SSE4.2 */
 template <typename T>
-auto string_length_as(char8_t const* p_string) -> T {
-    // TODO: Align pointers.
-    T result = 0;
-    charx16* p_memory = p_string_to_p_vector<16>(p_string);
-    constexpr charx16 zeroes = simd::set_zeros<charx16>();
+auto string_length_as(char8_t const* p_string) -> T;
 
-    while (true) {
-        charx16 data;
-        data = *p_memory;
-        constexpr u1 mask =
-            SIDD_UBYTE_OPS | SIDD_CMP_EQUAL_EACH | SIDD_LEAST_SIGNIFICANT;
-        if (simd::cmp_implicit_str_c<mask>(data, zeroes)) {
-            i1 const index = simd::cmp_implicit_str_i<mask>(data, zeroes);
-            return result + index;
-        }
-        p_memory++;
-        result += sizeof(u1x16);
-        return result;
-    }
-    // This point unreachable because the function would segfault first.
-    __builtin_unreachable();
-}
+void copy_memory(void const* p_source, void* p_destination, usize bytes);
 
 }  // namespace simd
 
@@ -82,3 +51,5 @@ auto string_length_as(char8_t const* p_string) -> T {
 auto memcpy(void* p_destination, void const* p_source, size_t bytes) -> void*;
 // Deprecated call to `strlen()`. Consider using `string_length_as<>()` instead.
 auto strlen(char8_t const* p_string) -> size_t;
+
+#include "./impl/string_length_as.tpp"
