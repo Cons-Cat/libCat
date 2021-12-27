@@ -140,48 +140,48 @@ add_subdirectory(tests/)
 add_executable(hello examples/hello.cpp)
 target_link_libraries(hello PRIVATE cat-std)
 
-# add_executable(echo examples/echo.cpp)
-# target_compile_options(echo PRIVATE ${CAT_CXX_FLAGS})
-# target_link_libraries(echo PRIVATE cat-std)
-# target_link_options(echo PRIVATE ${CAT_LINK_FLAGS})
+add_executable(echo examples/echo.cpp)
+target_compile_options(echo PRIVATE ${CAT_CXX_FLAGS})
+target_link_libraries(echo PRIVATE cat-std)
+target_link_options(echo PRIVATE ${CAT_LINK_FLAGS})
 
-# add_executable(memcpy examples/memory_copy.cpp)
-# target_compile_options(memcpy PRIVATE ${CAT_CXX_FLAGS})
-# target_link_libraries(memcpy PRIVATE cat-std)
-# target_link_options(memcpy PRIVATE ${CAT_LINK_FLAGS})
+add_executable(memcpy examples/memory_copy.cpp)
+target_compile_options(memcpy PRIVATE ${CAT_CXX_FLAGS})
+target_link_libraries(memcpy PRIVATE cat-std)
+target_link_options(memcpy PRIVATE ${CAT_LINK_FLAGS})
 
-# # libC executables are only configured for Release
-# list(
-#   APPEND
-#   LIBC_RELEASE_FLAGS
-#   -fno-exceptions -fno-rtti -fno-unwind-tables
-#   -no-pie -fno-stack-protector
-#   -fno-asynchronous-unwind-tables
-#   -s
-#   -ffunction-sections -fdata-sections
-#   -fvisibility=hidden -fvisibility-inlines-hidden
-#   -flto -fwhole-file -fno-plt
-#   -Wl,-z,norelro,-z,noseparate-code,--gc-sections
-#   $<$<CONFIG:Release>:-O3>
-#   $<$<CONFIG:RelSmall>:-Os>
-# )
+# libC executables are only configured for Release
+list(
+  APPEND
+  LIBC_RELEASE_FLAGS
+  -fno-exceptions -fno-rtti -fno-unwind-tables
+  -no-pie -fno-stack-protector
+  -fno-asynchronous-unwind-tables
+  -s
+  -ffunction-sections -fdata-sections
+  -fvisibility=hidden -fvisibility-inlines-hidden
+  -flto -fwhole-file -fno-plt
+  -Wl,-z,norelro,-z,noseparate-code,--gc-sections
+  $<$<CONFIG:Release>:-O3>
+  $<$<CONFIG:RelSmall>:-Os>
+)
 
-# add_executable(hello_libc examples/hello_libc.cpp)
-# target_compile_options(
-#   hello_libc PRIVATE
-#   ${LIBC_RELEASE_FLAGS}
-# )
-# target_link_options(
-#   hello_libc PRIVATE
-#   ${LIBC_RELEASE_FLAGS}
-# )
+add_executable(hello_libc examples/hello_libc.cpp)
+target_compile_options(
+  hello_libc PRIVATE
+  ${LIBC_RELEASE_FLAGS}
+)
+target_link_options(
+  hello_libc PRIVATE
+  ${LIBC_RELEASE_FLAGS}
+)
 
-# add_executable(memcpy_libc examples/memory_copy_libc.cpp)
-# target_compile_options(
-#   memcpy_libc PRIVATE
-#   ${LIBC_RELEASE_FLAGS}
-# )
-# target_link_options(
-#   memcpy_libc PRIVATE
-#   ${LIBC_RELEASE_FLAGS}
-# )
+add_executable(memcpy_libc examples/memory_copy_libc.cpp)
+target_compile_options(
+  memcpy_libc PRIVATE
+  ${LIBC_RELEASE_FLAGS}
+)
+target_link_options(
+  memcpy_libc PRIVATE
+  ${LIBC_RELEASE_FLAGS}
+)
