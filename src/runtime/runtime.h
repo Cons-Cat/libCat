@@ -42,6 +42,11 @@
  * memory. In libCat, program termination is completely explicit. */
 extern "C" [[gnu::used]] void _start();
 
+// TODO: Use `isize` here:
+/* In libCat, the `exit()` function is provided globally.
+ * This streamlines out the existence of `_exit()`. */
+extern "C" [[gnu::used]] void exit(int exit_code);
+
 auto load_base_stack_pointer() -> void*;
 auto load_argc() -> i4;
 auto load_argv() -> char8_t**;
