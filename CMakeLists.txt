@@ -175,22 +175,27 @@ list(
   $<$<CONFIG:RelSmall>:-Os>
 )
 
-add_executable(hello_libc examples/hello_libc.cpp)
-target_compile_options(
-  hello_libc PRIVATE
-  ${LIBC_RELEASE_FLAGS}
-)
-target_link_options(
-  hello_libc PRIVATE
-  ${LIBC_RELEASE_FLAGS}
-)
+# Mold cannot link the libC examples for some reason, but the GNU linker can.
+option(BUILD_LIBC_EXAMPLES "Enable libC examples to compare against libCat." OFF)
 
-add_executable(memcpy_libc examples/memory_copy_libc.cpp)
-target_compile_options(
-  memcpy_libc PRIVATE
-  ${LIBC_RELEASE_FLAGS}
-)
-target_link_options(
-  memcpy_libc PRIVATE
-  ${LIBC_RELEASE_FLAGS}
-)
+if(BUILD_LIBC_EXAMPLES)
+  add_executable(hello_libc examples/hello_libc.cpp)
+  target_compile_options(
+    hello_libc PRIVATE
+    ${LIBC_RELEASE_FLAGS}
+  )
+  target_link_options(
+    hello_libc PRIVATE
+    ${LIBC_RELEASE_FLAGS}
+  )
+
+  add_executable(memcpy_libc examples/memory_copy_libc.cpp)
+  target_compile_options(
+    memcpy_libc PRIVATE
+    ${LIBC_RELEASE_FLAGS}
+  )
+  target_link_options(
+    memcpy_libc PRIVATE
+    ${LIBC_RELEASE_FLAGS}
+  )
+endif()
