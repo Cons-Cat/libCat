@@ -114,12 +114,36 @@ add_library(
 # set_target_properties(cat-std PROPERTIES LINKER_LANGUAGE CXX)
 target_sources(
   cat-std PRIVATE
-  src/runtime/start.cpp
-  src/runtime/exit.cpp
-  src/libraries/numerals/numerals.cpp
-  src/libraries/simd/simd.cpp
-  src/libraries/result/result.cpp
-  src/libraries/unistd/unistd.cpp
+  ${CMAKE_SOURCE_DIR}/src/runtime/cpp/_start.cpp
+  ${CMAKE_SOURCE_DIR}/src/runtime/cpp/exit.cpp
+  ${CMAKE_SOURCE_DIR}/src/runtime/cpp/__stack_chk_fail.cpp
+  ${CMAKE_SOURCE_DIR}/src/runtime/cpp/align_stack_pointer_16.cpp
+  ${CMAKE_SOURCE_DIR}/src/runtime/cpp/align_stack_pointer_32.cpp
+  ${CMAKE_SOURCE_DIR}/src/runtime/cpp/dont_optimize_out.cpp
+  ${CMAKE_SOURCE_DIR}/src/runtime/cpp/load_argc.cpp
+  ${CMAKE_SOURCE_DIR}/src/runtime/cpp/load_argv.cpp
+  ${CMAKE_SOURCE_DIR}/src/runtime/cpp/load_base_stack_pointer.cpp
+  ${CMAKE_SOURCE_DIR}/src/runtime/cpp/mmap.cpp
+  ${CMAKE_SOURCE_DIR}/src/runtime/cpp/munmap.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/simd/cpp/is_avx2_supported.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/simd/cpp/is_avx512f_supported.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/simd/cpp/is_avx_supported.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/simd/cpp/is_mmx_supported.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/simd/cpp/is_sse1_supported.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/simd/cpp/is_sse2_supported.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/simd/cpp/is_sse3_supported.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/simd/cpp/is_sse4_1_supported.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/simd/cpp/is_sse4_2_supported.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/simd/cpp/is_sse3_supported.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/simd/cpp/sfence.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/simd/cpp/zero_avx_registers.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/simd/cpp/zero_upper_avx_registers.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/string/cpp/copy_memory.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/string/cpp/is_aligned.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/string/cpp/memcpy.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/string/cpp/strlen.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/unistd/cpp/syscall.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/unistd/cpp/write.cpp
 )
 
 target_include_directories(

@@ -209,9 +209,6 @@ auto shuffle(auto in_vector, auto mask) {
     return out_vector;
 }
 
-// TODO: Implement more types of fences, such as mfence.
-void fence();
-
 template <u4 Width>
 auto p_string_to_p_vector(char8_t const* p_string) {
     using U = std::detail::SimdVector<char, Width>;
@@ -232,6 +229,8 @@ auto cmp_implicit_str_i(auto const& vector_1, auto const& vector_2) -> i4 {
     return __builtin_ia32_pcmpistri128(vector_1.value, vector_2.value, Mask);
 }
 
+// TODO: Add `simd::mfence` and `simd::lfence`.
+void sfence();
 void zero_avx_registers();
 void zero_upper_avx_registers();
 

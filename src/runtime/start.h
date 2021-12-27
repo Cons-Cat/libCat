@@ -40,7 +40,6 @@
  * `call` assembly instructions, and a more sophisticated exit strategy may be
  * desired by a user anyways. For instance, stack unwinding or zero-ing out
  * memory. In libCat, program termination is completely explicit. */
-
 extern "C" [[gnu::used]] void _start();
 
 auto load_base_stack_pointer() -> void*;

@@ -1,3 +1,5 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
 #include <exit.h>
 
 extern "C" [[gnu::used]] void exit(int exit_code) {
