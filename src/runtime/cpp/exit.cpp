@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-#include <exit.h>
+#include <runtime.h>
 
 extern "C" [[gnu::used]] void exit(int exit_code) {
     asm(R"(syscall)" : : "D"(meta::decay_numeral(exit_code)), "a"(60));

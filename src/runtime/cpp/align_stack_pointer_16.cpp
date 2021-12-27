@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-#include <start.h>
+#include <runtime.h>
 
 /* Advance the `%rsp` stack-pointer register to the nearest 16-byte aligned
  * address. */

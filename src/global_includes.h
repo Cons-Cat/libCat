@@ -27,9 +27,8 @@ using isize = int long long;
 
 // using isize = int long long;
 
-// Including <start.h> and <exit.h> is required to link a libCat program.
-#include <exit.h>
-#include <start.h>
+// Including the `<runtime.h>` library is required to link a libCat program.
+#include <runtime.h>
 
 /* <result.h> and <numerals.h> are analogous to exceptions and stdint.h in that
  * they are used throughout the library and should be accessible to a user by
