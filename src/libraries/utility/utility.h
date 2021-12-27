@@ -43,7 +43,6 @@ consteval auto constant_evaluate(auto value) {
 
 // TODO: Consider using a `memcpy`, as it may be easier for the compiler.
 template <typename T>
-
 [[gnu::optimize("-O3")]] [[gnu::always_inline]] inline auto bit_cast(  // NOLINT
     auto& from_value)
     // If this is a non-`const` `void*`
@@ -111,16 +110,5 @@ template <typename T>
     }
     return *p_to;
 }
-
-/*
-auto memcpy(void*, void const*, size_t) -> void*;
-template <typename T>
-auto bit_cast(auto& from_data) -> T {
-T* p_output = &from_data;
-// &const_cast<meta::remove_const<decltype(from_data)>>(from_data);
-memcpy(p_output, &from_data, sizeof(T));
-return *p_output;
-}
-*/
 
 }  // namespace meta

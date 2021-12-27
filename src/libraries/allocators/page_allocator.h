@@ -17,14 +17,13 @@ struct PageAllocator {
      * very little reason to allocate any other amount of bytes with
      * `PageAllocator`. */
     auto malloc(usize bytes) -> Result<void*> {
-        this->address =
-            map_memory(0u, bytes, ::PROT_READ | ::PROT_WRITE,
-                       ::MAP_PRIVATE | ::MAP_POPULATE | ::MAP_ANONYMOUS,
-                       // Anonymous pages must have `-1`.
-                       -1,
-                       // Anonymous pages must have `0u`.
-                       0u)
-                .or_it_is(nullptr);
+        this->address = mmap(0u, bytes, ::PROT_READ | ::PROT_WRITE,
+                             ::MAP_PRIVATE | ::MAP_POPULATE | ::MAP_ANONYMOUS,
+                             // Anonymous pages must have `-1`.
+                             -1,
+                             // Anonymous pages must have `0u`.
+                             0u)
+                            .or_it_is(nullptr);
         if (this->address == nullptr) {
             return Failure(1);
         }

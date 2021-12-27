@@ -6,6 +6,8 @@ extern "C" [[gnu::used]] void _start() {
     __builtin_unreachable();  // This elides a `ret` instruction.
 }
 
+/* This returns a pointer to the base of this running program's stack. That
+ * value is saved in `%rbp` inside of `_start()`. */
 auto load_base_stack_pointer() -> void* {
     void* rbp;
     asm("mov %%rbp, %[rbp]" : [rbp] "=r"(rbp));

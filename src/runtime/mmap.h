@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+// TODO: Create an enum for unique failure codes.
 #include <unistd.h>
 
 enum ProtectionFlags : u4
@@ -36,18 +37,8 @@ enum Flags : u4
 
 constexpr usize page_size = 4096u;
 
-// TODO: Create an enum for unique failure codes.
-/* `map_memory()` represents the mmap Linux syscall. It takes unsigned
- * arguments, as per the Linux ABI. It returns the address which it has
- * allocated at. */
-auto map_memory(usize beginning_address, usize bytes_size, usize protections,
-                usize flags, isize file_descriptor, usize pages_offset)
-    -> Result<void*> {
-    return syscall<void*, usize>(9u, beginning_address, bytes_size, protections,
-                                 flags, file_descriptor,
-                                 pages_offset * page_size);
-}
+auto mmap(usize beginning_address, usize bytes_size, usize protections,
+          usize flags, isize file_descriptor, usize pages_offset)
+    -> Result<void*>;
 
-auto unmap_memory() -> Result<> {
-    return okay;
-}
+auto munmap() -> Result<>;
