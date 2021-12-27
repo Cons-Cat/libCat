@@ -2,6 +2,22 @@
 // vim: set ft=cpp:
 #include <unistd.h>
 
+auto std::detail::syscall3(Any call, Any arg1, Any arg2, Any arg3)
+    -> Result<Any> {
+    Any result;
+    asm volatile(
+        "syscall"
+        : "=a"(result)
+        : "a"(call), "D"(arg1), "S"(arg2), "d"(arg3)
+        /* Clobbering all of these is necessary to preven a segfault: */
+        : "memory", "cc", "rcx", "r11");
+    if (meta::bit_cast<i8>(result) < 0) {
+        // The negative of `result` represents Linux's errno.
+        return Failure(-meta::bit_cast<i8>(result));
+    }
+    return result;
+}
+
 auto std::detail::syscall6(Any call, Any arg1, Any arg2, Any arg3, Any arg4,
                            Any arg5, Any arg6) -> Result<Any> {
     register Any r10 asm("r10") = arg4;

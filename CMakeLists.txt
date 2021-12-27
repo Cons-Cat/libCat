@@ -16,6 +16,8 @@ list(
   -mavx2
   -fdiagnostics-color
   -include global_includes.h
+  # This is enabled by default, but it's counter-productive to libCat's vision.
+  -Wno-builtin-declaration-mismatch
 )
 
 list(
@@ -27,6 +29,7 @@ list(
   # -fsanitize=address
   # -fsanitize=leak
   -Wall -Wextra -Wno-unused-function
+  # The following warnings are counter-productive for a basic-level library:
   -Wno-unused-function
 )
 
@@ -48,6 +51,13 @@ list(
   CAT_CXX_FLAGS_RELFAST
   ${CAT_CXX_FLAGS_RELEASE}
   -O3
+)
+
+list(
+  APPEND
+  CAT_CXX_FLAGS_RELWITHDEBINFO
+  ${CAT_CXX_FLAGS_DEBUG}
+  ${CAT_CXX_FLAGS_RELFAST}
 )
 
 list(
@@ -100,7 +110,6 @@ add_library(
   src/libraries/unistd/detail/syscall0.s
   src/libraries/unistd/detail/syscall1.s
   src/libraries/unistd/detail/syscall2.s
-  src/libraries/unistd/detail/syscall3.s
   src/libraries/unistd/detail/syscall4.s
   src/libraries/unistd/detail/syscall5.s
 )
