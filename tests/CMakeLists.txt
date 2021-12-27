@@ -2,6 +2,7 @@
 add_custom_target(
   test_debug_target ALL
   COMMAND ${CMAKE_COMMAND} -E create_symlink
+  # This requires CMake 3.20:
   ${PROJECT_SOURCE_DIR}/.gdbinit $<OUTPUT_CONFIG:$<CONFIG>>/.gdbinit
   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}
 )
