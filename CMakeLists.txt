@@ -7,14 +7,6 @@ project(cat LANGUAGES CXX ASM)
 
 set(CMAKE_CONFIGURATION_TYPES Debug;Release;RelWithDebInfo;RelSmall)
 
-# Link .gdbinit to build directories.
-add_custom_target(
-  debug_target ALL
-  COMMAND ${CMAKE_COMMAND} -E create_symlink
-  ${PROJECT_SOURCE_DIR}/.gdbinit $<OUTPUT_CONFIG:$<CONFIG>>/.gdbinit
-  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}
-)
-
 list(
   APPEND
   CAT_CXX_FLAGS_COMMON
@@ -131,6 +123,15 @@ target_link_libraries(cat-std PUBLIC gcc)
 
 target_compile_options(cat-std PUBLIC ${CAT_CXX_FLAGS})
 target_link_options(cat-std PUBLIC ${CAT_LINK_FLAGS})
+
+# Link .gdbinit to build directories.
+add_custom_target(
+  cat-debug ALL
+  COMMAND ${CMAKE_COMMAND} -E create_symlink
+  ${PROJECT_SOURCE_DIR}/.gdbinit $<OUTPUT_CONFIG:$<CONFIG>>/.gdbinit
+  # DEPENDS ${CMAKE_CURRENT_BINARY_DIR}
+)
+add_dependencies(cat-std cat-debug)
 
 # Build the tests.
 enable_testing()
