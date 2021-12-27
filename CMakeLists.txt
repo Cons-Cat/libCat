@@ -102,7 +102,8 @@ list(
   $<$<CONFIG:RelSmall>:${CAT_RELEASE_LINK_FLAGS}>
 )
 
-add_library(cat-std STATIC
+add_library(
+  cat-std STATIC
   src/libraries/unistd/detail/syscall0.s
   src/libraries/unistd/detail/syscall1.s
   src/libraries/unistd/detail/syscall2.s
@@ -110,6 +111,17 @@ add_library(cat-std STATIC
   src/libraries/unistd/detail/syscall4.s
   src/libraries/unistd/detail/syscall5.s
 )
+# set_target_properties(cat-std PROPERTIES LINKER_LANGUAGE CXX)
+target_sources(
+  cat-std PRIVATE
+  src/runtime/start.cpp
+  src/runtime/exit.cpp
+  src/libraries/numerals/numerals.cpp
+  src/libraries/simd/simd.cpp
+  src/libraries/result/result.cpp
+  src/libraries/unistd/unistd.cpp
+)
+
 target_include_directories(
   cat-std PUBLIC
   src/
@@ -129,10 +141,9 @@ target_include_directories(
   src/libraries/utility/
   src/libraries/stdlib/
   src/libraries/unistd/
-  src/libraries/pthread/
-  src/libraries/errno/
 )
-target_link_libraries(cat-std INTERFACE gcc)
+
+target_link_libraries(cat-std PUBLIC gcc)
 # target_link_libraries(
 #   cat-std INTERFACE
 #   # $<$<CONFIG:RelWithDebInfo>:asan>
@@ -140,6 +151,8 @@ target_link_libraries(cat-std INTERFACE gcc)
 #   # $<$<CONFIG:Debug>:asan>
 #   # $<$<CONFIG:Debug>:ubsan>
 # )
+target_compile_options(cat-std PUBLIC ${CAT_CXX_FLAGS})
+target_link_options(cat-std PUBLIC ${CAT_LINK_FLAGS})
 
 # Build the tests.
 enable_testing()
@@ -147,9 +160,7 @@ add_subdirectory(tests/)
 
 # Build the examples.
 add_executable(hello examples/hello.cpp)
-target_compile_options(hello PRIVATE ${CAT_CXX_FLAGS})
 target_link_libraries(hello PRIVATE cat-std)
-target_link_options(hello PRIVATE ${CAT_LINK_FLAGS})
 
 add_executable(echo examples/echo.cpp)
 target_compile_options(echo PRIVATE ${CAT_CXX_FLAGS})
