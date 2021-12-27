@@ -27,39 +27,12 @@ auto syscall6(Any call, Any arg1, Any arg2, Any arg3, Any arg4, Any args,
 
 }  // namespace std::detail
 
-// TODO: Extract this to a .tpp file.
 template <typename ReturnType, typename T, typename... Args>
 auto syscall(T call, Args... parameters) -> Result<ReturnType>
-requires(sizeof...(Args) < 7) {
-    static constexpr isize length = sizeof...(Args);
-    Any arguments[length] = {parameters...};
-
-    using namespace std::detail;
-    if constexpr (length == 0) {
-        syscall0(call);
-        return okay;
-    } else if constexpr (length == 1) {
-        syscall1(call, arguments[0]);
-        return okay;
-    } else if constexpr (length == 2) {
-        syscall2(call, arguments[0], arguments[1]);
-        return okay;
-    } else if constexpr (length == 3) {
-        return syscall3(call, arguments[0], arguments[1], arguments[2]);
-    } else if constexpr (length == 4) {
-        syscall4(call, arguments[0], arguments[1], arguments[2], arguments[3]);
-        return okay;
-    } else if constexpr (length == 5) {
-        syscall5(call, arguments[0], arguments[1], arguments[2], arguments[3],
-                 arguments[4]);
-        return okay;
-    } else if constexpr (length == 6) {
-        return syscall6(call, arguments[0], arguments[1], arguments[2],
-                        arguments[3], arguments[4], arguments[5]);
-    }
-    __builtin_unreachable();
-}
+requires(sizeof...(Args) < 7);
 
 // write() forwards its arguments to a failable stdout syscall.
 auto write(i8 const& file_descriptor, char8_t const* p_string_buffer,
            isize const& string_length) -> Result<isize>;
+
+#include "./impl/syscall.tpp"

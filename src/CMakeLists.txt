@@ -38,24 +38,36 @@ set(
   ${CAT_SRC}/runtime/cpp/load_base_stack_pointer.cpp
   ${CAT_SRC}/runtime/cpp/mmap.cpp
   ${CAT_SRC}/runtime/cpp/munmap.cpp
-  ${CAT_SRC}/libraries/simd/cpp/is_avx2_supported.cpp
-  ${CAT_SRC}/libraries/simd/cpp/is_avx512f_supported.cpp
-  ${CAT_SRC}/libraries/simd/cpp/is_avx_supported.cpp
-  ${CAT_SRC}/libraries/simd/cpp/is_mmx_supported.cpp
-  ${CAT_SRC}/libraries/simd/cpp/is_sse1_supported.cpp
-  ${CAT_SRC}/libraries/simd/cpp/is_sse2_supported.cpp
-  ${CAT_SRC}/libraries/simd/cpp/is_sse3_supported.cpp
-  ${CAT_SRC}/libraries/simd/cpp/is_sse4_1_supported.cpp
-  ${CAT_SRC}/libraries/simd/cpp/is_sse4_2_supported.cpp
-  ${CAT_SRC}/libraries/simd/cpp/is_sse3_supported.cpp
-  ${CAT_SRC}/libraries/simd/cpp/sfence.cpp
-  ${CAT_SRC}/libraries/simd/cpp/zero_avx_registers.cpp
-  ${CAT_SRC}/libraries/simd/cpp/zero_upper_avx_registers.cpp
-  ${CAT_SRC}/libraries/string/cpp/copy_memory.cpp
-  ${CAT_SRC}/libraries/string/cpp/is_aligned.cpp
-  ${CAT_SRC}/libraries/string/cpp/memcpy.cpp
-  ${CAT_SRC}/libraries/string/cpp/strlen.cpp
-  ${CAT_SRC}/libraries/unistd/cpp/syscall.cpp
-  ${CAT_SRC}/libraries/unistd/cpp/write.cpp
+  ${CAT_SRC}/libraries/simd/impl/is_avx2_supported.cpp
+  ${CAT_SRC}/libraries/simd/impl/is_avx512f_supported.cpp
+  ${CAT_SRC}/libraries/simd/impl/is_avx_supported.cpp
+  ${CAT_SRC}/libraries/simd/impl/is_mmx_supported.cpp
+  ${CAT_SRC}/libraries/simd/impl/is_sse1_supported.cpp
+  ${CAT_SRC}/libraries/simd/impl/is_sse2_supported.cpp
+  ${CAT_SRC}/libraries/simd/impl/is_sse3_supported.cpp
+  ${CAT_SRC}/libraries/simd/impl/is_sse4_1_supported.cpp
+  ${CAT_SRC}/libraries/simd/impl/is_sse4_2_supported.cpp
+  ${CAT_SRC}/libraries/simd/impl/is_sse3_supported.cpp
+  ${CAT_SRC}/libraries/simd/impl/sfence.cpp
+  ${CAT_SRC}/libraries/simd/impl/zero_avx_registers.cpp
+  ${CAT_SRC}/libraries/simd/impl/zero_upper_avx_registers.cpp
+  ${CAT_SRC}/libraries/simd/impl/cmp_implicit_str_c.tpp
+  ${CAT_SRC}/libraries/simd/impl/cmp_implicit_str_i.tpp
+  ${CAT_SRC}/libraries/simd/impl/set_zeros.tpp
+  ${CAT_SRC}/libraries/simd/impl/shuffle.tpp
+  ${CAT_SRC}/libraries/simd/impl/stream_in.tpp
+  ${CAT_SRC}/libraries/string/impl/copy_memory.cpp
+  ${CAT_SRC}/libraries/string/impl/is_aligned.cpp
+  ${CAT_SRC}/libraries/string/impl/memcpy.cpp
+  ${CAT_SRC}/libraries/string/impl/strlen.cpp
+  ${CAT_SRC}/libraries/string/impl/string_length_as.tpp
+  ${CAT_SRC}/libraries/unistd/impl/syscall.cpp
+  ${CAT_SRC}/libraries/unistd/impl/syscall.tpp
+  ${CAT_SRC}/libraries/unistd/impl/write.cpp
+  ${CAT_SRC}/libraries/utility/impl/move.tpp
+  ${CAT_SRC}/libraries/utility/impl/forward.tpp
+  ${CAT_SRC}/libraries/utility/impl/is_constant_evaluated.tpp
+  ${CAT_SRC}/libraries/utility/impl/constant_evaluate.tpp
+  ${CAT_SRC}/libraries/utility/impl/bit_cast.tpp
   PARENT_SCOPE
 )

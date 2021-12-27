@@ -175,7 +175,7 @@ list(
   $<$<CONFIG:RelSmall>:-Os>
 )
 
-# Mold cannot link the libC examples for some reason, but the GNU linker can.
+# Do not build libC examples by default.
 option(BUILD_LIBC_EXAMPLES "Enable libC examples to compare against libCat." OFF)
 
 if(BUILD_LIBC_EXAMPLES)
