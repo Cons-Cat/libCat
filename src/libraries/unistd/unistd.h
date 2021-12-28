@@ -35,4 +35,4 @@ requires(sizeof...(Args) < 7);
 auto write(i8 const& file_descriptor, char8_t const* p_string_buffer,
            isize const& string_length) -> Result<isize>;
 
-#include "./impl/syscall.tpp"
+#include "./implementations/syscall.tpp"

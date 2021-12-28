@@ -26,8 +26,8 @@ auto bit_cast(auto& from_value) -> T;
 }  // namespace meta
 
 // clangd emits diagnostic false positives in this file:
-#include "./impl/bit_cast.tpp"
-#include "./impl/constant_evaluate.tpp"
-#include "./impl/forward.tpp"
-#include "./impl/is_constant_evaluated.tpp"
-#include "./impl/move.tpp"
+#include "./implementations/bit_cast.tpp"
+#include "./implementations/constant_evaluate.tpp"
+#include "./implementations/forward.tpp"
+#include "./implementations/is_constant_evaluated.tpp"
+#include "./implementations/move.tpp"

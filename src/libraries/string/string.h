@@ -50,4 +50,4 @@ auto memcpy(void* p_destination, void const* p_source, size_t bytes) -> void*;
 // Deprecated call to `strlen()`. Consider using `string_length_as<>()` instead.
 auto strlen(char8_t const* p_string) -> size_t;
 
-#include "./impl/string_length_as.tpp"
+#include "./implementations/string_length_as.tpp"
