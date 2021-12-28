@@ -240,8 +240,8 @@ auto is_avx2_supported() -> bool;
 auto is_avx512f_supported() -> bool;
 auto is_avx512vl_supported() -> bool;
 
-#include "./impl/cmp_implicit_str_c.tpp"
-#include "./impl/cmp_implicit_str_i.tpp"
-#include "./impl/set_zeros.tpp"
-#include "./impl/shuffle.tpp"
-#include "./impl/stream_in.tpp"
+#include "./implementations/cmp_implicit_str_c.tpp"
+#include "./implementations/cmp_implicit_str_i.tpp"
+#include "./implementations/set_zeros.tpp"
+#include "./implementations/shuffle.tpp"
+#include "./implementations/stream_in.tpp"
