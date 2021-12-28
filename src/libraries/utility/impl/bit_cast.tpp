@@ -1,5 +1,7 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
+#pragma once
+#include <utility.h>
 
 /* As far as I can prove, `bit_cast` is a zero-overhead abstraction on `-O3`.
  * It copies data at some memory byte-by-byte into a differently-typed variable
@@ -10,7 +12,7 @@
  * sometimes semantically necessary that these have zero-overhead, and those
  * attributes guarantee this even in -O0. */
 
-/* clangd emits diagnistic false positives in this file. */
+// clangd emits diagnistic false positives in this file.
 
 template <typename T>
 // NOLINTNEXTLINE
@@ -31,7 +33,7 @@ template <typename T>
 template <typename T>
 // NOLINTNEXTLINE
 [[gnu::optimize("-O3")]] [[gnu::always_inline]] inline auto meta::bit_cast(
-    auto& from_value)
+    auto& from_value) -> T
     // If this is a `void* const`
     requires(meta::is_same_v<void* const&, decltype(from_value)>) {
     char* p_from = static_cast<char*>(const_cast<void*>(from_value));
@@ -47,7 +49,7 @@ template <typename T>
 template <typename T>
 // NOLINTNEXTLINE
 [[gnu::optimize("-O3")]] [[gnu::always_inline]] inline auto meta::bit_cast(
-    auto& from_value)
+    auto& from_value) -> T
     // If not a `void*`, and not `const`:
     requires(
         !meta::is_same_v<void*&, decltype(from_value)> &&
@@ -65,7 +67,7 @@ template <typename T>
 template <typename T>
 // NOLINTNEXTLINE
 [[gnu::optimize("-O3")]] [[gnu::always_inline]] inline auto meta::bit_cast(
-    auto& from_value)
+    auto& from_value) -> T
     // If not a `void*` or `void* const`, and is `const`:
     requires(!meta::is_same_v<void*&, decltype(from_value)> &&
              !meta::is_same_v<void* const&, decltype(from_value)> &&

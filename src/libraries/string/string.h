@@ -14,8 +14,6 @@ namespace std {
 [[gnu::optimize("-fno-tree-loop-distribute-patterns")]] void copy_memory(
     void const* p_source, void* p_destination, isize bytes);
 
-/* `T` is the return type of `string_length()`. It may be signed or unsigned.
- * There exists `simd::string_length_as<>()`. */
 template <typename T>
 constexpr auto string_length_as(char8_t const* p_string) -> T;
 

@@ -3,12 +3,13 @@
 #pragma once
 
 /* The Intel-style SIMD syntax is completely arbitrary in GCC. GNU implemented
- * it with wrapper libraries around their own basic, arguably more reasonable,
- * compiler intrinsics that already understand arithmetic operators, sets,
- * loads, and many other operations. Then, authors of a SIMD wrapper library
- * wrap *those* wrappers with new ones to enhance their quality of life with
- * features that the basic compiler intrinsics largely already had. There are
- * three layers of technology to this for no reason!
+ * it with wrapper libraries around their own more basic, arguably more
+ * reasonable, compiler intrinsics which already understand arithmetic
+ * operators, loads, sets, and many other common operations that Intel's wrap
+ * inside a cumbersome interface. Then, authors of a SIMD wrapper library wrap
+ * *those* wrappers with new ones to enhance their quality of life with features
+ * that the basic compiler intrinsics largely already had. There are three
+ * layers of technology to this for no reason!
  *
  * To streamline this, libCat uses the intrinsics which GNU already provides,
  * and wraps it in one thin layer of technology. */
@@ -17,6 +18,7 @@
 
 namespace std::detail {
 
+// TODO: This comment is not currently accurate:
 /* Vectors have weak alignment by default. It is up to users at call-site to
  * determine what alignment is appropriate for their use-case. All SIMD
  * functions are unaligned, which pays little, if any, penalty to aligned
@@ -223,8 +225,8 @@ void stream_in(void* p_destination, T const* source);
 
 }  // namespace simd
 
-// TODO: __builtin_cpu_init()
-// must be called before these.
+/* TODO: __builtin_cpu_init()
+ * must be called before these. */
 
 auto is_mmx_supported() -> bool;
 auto is_sse1_supported() -> bool;
