@@ -14,6 +14,7 @@ constexpr auto std::string_length_as(char8_t const* p_string) -> T {
     return result;
 }
 
+// TODO: Use [[gnu::]] multiversioning attributes to support SSE4.1.
 /* T is the return type of string_length_as(). It may be signed or
  * unsigned. This function requires SSE4.2 */
 template <typename T>
