@@ -2,8 +2,7 @@
 // vim: set ft=cpp:
 #include <unistd.h>
 
-auto std::detail::syscall3(Any call, Any arg1, Any arg2, Any arg3)
-    -> Result<Any> {
+auto syscall3(Any call, Any arg1, Any arg2, Any arg3) -> Result<Any> {
     Any result;
     asm volatile(
         "syscall"
@@ -18,8 +17,8 @@ auto std::detail::syscall3(Any call, Any arg1, Any arg2, Any arg3)
     return result;
 }
 
-auto std::detail::syscall6(Any call, Any arg1, Any arg2, Any arg3, Any arg4,
-                           Any arg5, Any arg6) -> Result<Any> {
+auto syscall6(Any call, Any arg1, Any arg2, Any arg3, Any arg4, Any arg5,
+              Any arg6) -> Result<Any> {
     register Any r10 asm("r10") = arg4;
     register Any r8 asm("r8") = arg5;
     register Any r9 asm("r9") = arg6;

@@ -7,7 +7,6 @@ requires(sizeof...(Args) < 7) {
     static constexpr isize length = sizeof...(Args);
     Any arguments[length] = {parameters...};
 
-    using namespace std::detail;
     if constexpr (length == 0) {
         syscall0(call);
         return okay;
