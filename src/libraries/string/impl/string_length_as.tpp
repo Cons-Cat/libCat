@@ -1,5 +1,7 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
+#pragma once
+#include <string.h>
 
 /* `T` is the return type of `string_length()`. It may be signed or unsigned.
  * There exists `simd::string_length_as<>()`. */

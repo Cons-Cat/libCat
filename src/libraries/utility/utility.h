@@ -2,7 +2,6 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <stdint.h>
 #include <type_traits.h>
 
 namespace meta {
@@ -19,16 +18,14 @@ constexpr auto forward(meta::remove_reference_t<T>&& input)
 
 constexpr auto is_constant_evaluated() -> bool;
 
-// TODO: add a `meta::invocable` concept.
 consteval auto constant_evaluate(auto value);
 
 template <typename T>
-// NOLINTNEXTLINE
-[[gnu::optimize("-O3")]] [[gnu::always_inline]] inline auto bit_cast(
-    auto& from_value);
+auto bit_cast(auto& from_value) -> T;
 
 }  // namespace meta
 
+// clangd emits diagnostic false positives in this file:
 #include "./impl/bit_cast.tpp"
 #include "./impl/constant_evaluate.tpp"
 #include "./impl/forward.tpp"
