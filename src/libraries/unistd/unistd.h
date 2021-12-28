@@ -4,7 +4,11 @@
 
 #include <any.h>
 
-// TODO: Remove all trace of `errno`.
+// TODO: Remove `unistd.h` and create a general Linux library.
+
+// TODO: Enforce that this cannot be constructed with a negative value.
+// This is an index into the kernel's file descriptor table.
+using FileDescriptor = i4;
 
 // TODO: Make all syscalls inline assembly. It did not work, last I tried.
 /* The source to these functions is contained in the ./detail/ subdirectory at

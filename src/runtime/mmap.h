@@ -38,7 +38,7 @@ enum Flags : u4
 constexpr usize page_size = 4096u;
 
 auto mmap(usize beginning_address, usize bytes_size, usize protections,
-          usize flags, isize file_descriptor, usize pages_offset)
+          usize flags, FileDescriptor file_descriptor, usize pages_offset)
     -> Result<void*>;
 
 auto munmap() -> Result<>;
