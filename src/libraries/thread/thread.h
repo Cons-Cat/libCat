@@ -65,20 +65,21 @@ struct CloneArguments {
     u8 cgroup;
 };
 
-extern "C" void clone_asm(isize (*function)(void*), void*, i4, auto&,
+extern "C" void clone_asm(isize (*function)(void*), void*, i4, auto*,
                           ProcessId*, void*, ProcessId*);
 
 auto clone(isize (*function)(void*), void* p_stack, i4 flags,
-           auto& function_arguments, ProcessId* p_parent_thread_id = nullptr,
+           auto function_arguments, ProcessId* p_parent_thread_id = nullptr,
            void* p_tls = nullptr, ProcessId* p_child_thread_id = nullptr)
     -> ProcessId {
-    register ProcessId result asm("rax");
+    // register ProcessId result asm("rax");
     // TODO: Replace this with inline asm.
     // This is just Musl code.
     clone_asm(function, p_stack, flags, function_arguments, p_parent_thread_id,
               p_tls, p_child_thread_id);
     // TODO: Failure handling.
-    return result;
+    // return result;
+    return 0;
 }
 
 // TODO: Replace the esoteric Linux names.
@@ -153,10 +154,11 @@ struct Thread {
 
         // TODO: This does not compile:
         // `clone()` will always return a value.
-        isize exit_code =
-            clone(&function, this->p_stack, flags, p_arguments_struct);
-        joinable = (exit_code == 0);
-        return this->process_id;
+        // isize exit_code =
+        clone_asm(&function, this->p_stack, flags, p_arguments_struct, nullptr,
+                  nullptr, nullptr);
+        // joinable = (exit_code == 0);
+        // return this->process_id;
     }
 
     auto join() -> Result<> {
@@ -166,6 +168,6 @@ struct Thread {
     }
 
     auto detach() -> Result<> {
-        return okay;
+        // return okay;
     }
 };
