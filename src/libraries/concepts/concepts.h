@@ -93,6 +93,7 @@ concept narrow_convertible = requires() {
     U({meta::declval<T>()});
 };
 
+// TODO: This does not work correctly.
 template <typename T>
 concept allocator = requires(T allocator, isize input) {
     // Allocators hold an enum for failure codes named `failures`.
