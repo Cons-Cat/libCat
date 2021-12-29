@@ -66,11 +66,44 @@ struct CloneArguments {
 };
 
 auto clone(isize (*function)(void*), void* p_stack, i4 flags,
-           auto const& function_arguments /* ,
+           auto const& function_arguments,
            ProcessId* p_parent_thread_id = nullptr, void* p_tls = nullptr,
-           ProcessId* p_child_thread_id = nullptr*/ ) -> Result<ProcessId> {
-    return syscall4(56u, function, p_stack, flags, &function_arguments
-                    /* , p_parent_thread_id, p_tls, p_child_thread_id */);
+           ProcessId* p_child_thread_id = nullptr) -> ProcessId {
+    register ProcessId result asm("rax");
+    // TODO: Replace this with inline asm.
+    // This is just Musl code.
+    clone_asm(function, p_stack, flags, function_arguments, p_parent_thread_id,
+              p_tls, p_child_thread_id);
+    // TODO: Failure handling.
+    return result;
+}
+
+// TODO: Replace the esoteric Linux names.
+struct ResourceUsage {
+    // struct timeval ru_utime;
+    // struct timeval ru_stime;
+    i8 ru_maxrss;
+    i8 ru_ixrss;
+    i8 ru_idrss;
+    i8 ru_isrss;
+    i8 ru_minflt;
+    i8 ru_majflt;
+    i8 ru_nswap;
+    i8 ru_inblock;
+    i8 ru_oublock;
+    i8 ru_msgsnd;
+    i8 ru_msgrcv;
+    i8 ru_nsignals;
+    i8 ru_nvcsw;
+    i8 ru_nivcsw;
+};
+
+// TODO: Return a `ProcessId`
+// TODO: Replace this with a more general `wait4` syscall.
+auto waitpid(ProcessId child_process, i4 options) -> Result<> {
+    // TODO: Use `p_termination_status` for failure-handling.
+    i4* p_termination_status;
+    return syscall4(61, child_process, p_termination_status, options, nullptr);
 }
 
 struct Thread {
@@ -116,10 +149,12 @@ struct Thread {
         }
 
         auto unpacked_arguments = {arguments...};
-        Result<ProcessId> result =
-            clone(&function, this->p_stack, flags, &unpacked_arguments);
-        joinable = result.is_okay;
-        return result;
+        // `clone()` will always return a value.
+        isize exit_code =
+            clone(&function, this->p_stack, flags, &unpacked_arguments)
+                .unsafe_value();
+        joinable = exit_code == 0;
+        return this->id;
     }
 
     auto join() -> Result<> {
