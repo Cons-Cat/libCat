@@ -21,6 +21,7 @@ set(
   ${CAT_SRC}/libraries/utility/
   ${CAT_SRC}/libraries/stdlib/
   ${CAT_SRC}/libraries/unistd/
+  ${CAT_SRC}/libraries/thread/
   PARENT_SCOPE
 )
 

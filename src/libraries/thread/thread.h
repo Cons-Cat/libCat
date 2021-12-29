@@ -65,10 +65,13 @@ struct CloneArguments {
     u8 cgroup;
 };
 
+extern "C" void clone_asm(isize (*function)(void*), void*, i4, auto&,
+                          ProcessId*, void*, ProcessId*);
+
 auto clone(isize (*function)(void*), void* p_stack, i4 flags,
-           auto const& function_arguments,
-           ProcessId* p_parent_thread_id = nullptr, void* p_tls = nullptr,
-           ProcessId* p_child_thread_id = nullptr) -> ProcessId {
+           auto& function_arguments, ProcessId* p_parent_thread_id = nullptr,
+           void* p_tls = nullptr, ProcessId* p_child_thread_id = nullptr)
+    -> ProcessId {
     register ProcessId result asm("rax");
     // TODO: Replace this with inline asm.
     // This is just Musl code.
@@ -107,7 +110,7 @@ auto waitpid(ProcessId child_process, i4 options) -> Result<> {
 }
 
 struct Thread {
-    i4 id;
+    ProcessId process_id;
 
     /* `joinable` is `true` if this thread can currently be joined, otherwise it
      * is `false`. */
@@ -126,12 +129,12 @@ struct Thread {
     }
 
     // TODO: Make this `Result` hold `void` and store the PID in a member.
+    // TODO: Use a `meta::allocator` concept here when it's working.
     // TODO: Add a method for allocating guard memory.
     // Add meta::invocable concept.
-    template <typename... Args>
-    auto create(meta::allocator auto const& allocator,
-                usize const initial_stack_size, auto const&& function,
-                Args const&&... arguments) -> Result<ProcessId> {
+    auto create(auto& allocator, usize const initial_stack_size,
+                auto const& function, auto* p_arguments_struct)
+        -> Result<ProcessId> {
         // Similar to `pthread_create`.
         u4 const flags = ::CLONE_VM | ::CLONE_FS | ::CLONE_FILES |
                          ::CLONE_SIGHAND | ::CLONE_THREAD | ::CLONE_SYSVSEM |
@@ -148,17 +151,18 @@ struct Thread {
             return Failure(1);
         }
 
-        auto unpacked_arguments = {arguments...};
+        // TODO: This does not compile:
         // `clone()` will always return a value.
         isize exit_code =
-            clone(&function, this->p_stack, flags, &unpacked_arguments)
-                .unsafe_value();
-        joinable = exit_code == 0;
-        return this->id;
+            clone(&function, this->p_stack, flags, p_arguments_struct);
+        joinable = (exit_code == 0);
+        return this->process_id;
     }
 
     auto join() -> Result<> {
-        return okay;
+        this->joinable = false;
+        return waitpid(this->process_id, 0);
+        // TODO: Free the stack memory.
     }
 
     auto detach() -> Result<> {
