@@ -80,7 +80,7 @@ struct Thread {
      * is `false`. */
     bool joinable = false;
 
-    void* stack;
+    void* p_stack;
     usize stack_size;
 
     Thread() = default;
@@ -96,9 +96,9 @@ struct Thread {
     // TODO: Add a method for allocating guard memory.
     // Add meta::invocable concept.
     template <typename... Args>
-    auto create(meta::allocator auto const& allocator, usize const stack_size,
-                auto const&& function, Args const&&... arguments)
-        -> Result<ProcessId> {
+    auto create(meta::allocator auto const& allocator,
+                usize const initial_stack_size, auto const&& function,
+                Args const&&... arguments) -> Result<ProcessId> {
         // Similar to `pthread_create`.
         u4 const flags = ::CLONE_VM | ::CLONE_FS | ::CLONE_FILES |
                          ::CLONE_SIGHAND | ::CLONE_THREAD | ::CLONE_SYSVSEM |
@@ -109,14 +109,15 @@ struct Thread {
         // void* p_stack = mmap(0, stack_size, ::PROT_READ | ::PROT_WRITE,
         //                      ::MAP_PRIVATE | ::MAP_ANONYMOUS, -1, 0)
         //                     .or_panic();
-        void* p_stack = allocator.malloc(stack_size).or_it_is(nullptr);
-        if (p_stack == nullptr) {
+        this->stack_size = initial_stack_size;
+        this->p_stack = allocator.malloc(stack_size).or_it_is(nullptr);
+        if (this->p_stack == nullptr) {
             return Failure(1);
         }
 
-        // TODO: Call `clone()`.
-        auto args = {arguments...};
-        Result<ProcessId> result = clone(&function, p_stack, flags, &args);
+        auto unpacked_arguments = {arguments...};
+        Result<ProcessId> result =
+            clone(&function, this->p_stack, flags, &unpacked_arguments);
         joinable = result.is_okay;
         return result;
     }
