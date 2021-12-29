@@ -2,11 +2,10 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <any.h>
 #include <concepts.h>
 #include <mmap.h>
 #include <syscall.h>
-
-#include "unistd.h"
 
 struct Thread;
 
@@ -65,22 +64,23 @@ struct CloneArguments {
     u8 cgroup;
 };
 
-extern "C" void clone_asm(isize (*function)(void*), void*, i4, auto*,
+extern "C" void clone_asm(isize (*function)(void*), void*, i4, void*,
                           ProcessId*, void*, ProcessId*);
 
-auto clone(isize (*function)(void*), void* p_stack, i4 flags,
-           auto function_arguments, ProcessId* p_parent_thread_id = nullptr,
-           void* p_tls = nullptr, ProcessId* p_child_thread_id = nullptr)
-    -> ProcessId {
-    // register ProcessId result asm("rax");
-    // TODO: Replace this with inline asm.
-    // This is just Musl code.
-    clone_asm(function, p_stack, flags, function_arguments, p_parent_thread_id,
-              p_tls, p_child_thread_id);
-    // TODO: Failure handling.
-    // return result;
-    return 0;
-}
+// auto clone(isize (*function)(void*), void* p_stack, i4 flags,
+//            auto function_arguments, ProcessId* p_parent_thread_id = nullptr,
+//            void* p_tls = nullptr, ProcessId* p_child_thread_id = nullptr)
+//     -> ProcessId {
+//     // register ProcessId result asm("rax");
+//     // TODO: Replace this with inline asm.
+//     // This is just Musl code.
+//     clone_asm(function, p_stack, flags, function_arguments,
+//     p_parent_thread_id,
+//               p_tls, p_child_thread_id);
+//     // TODO: Failure handling.
+//     // return result;
+//     return 0;
+// }
 
 // TODO: Replace the esoteric Linux names.
 struct ResourceUsage {
@@ -134,20 +134,25 @@ struct Thread {
     // TODO: Add a method for allocating guard memory.
     // Add meta::invocable concept.
     auto create(auto& allocator, usize const initial_stack_size,
-                auto const& function, auto* p_arguments_struct)
+                auto const& function, void* p_arguments_struct)
         -> Result<ProcessId> {
         // Similar to `pthread_create`.
-        u4 const flags = ::CLONE_VM | ::CLONE_FS | ::CLONE_FILES |
-                         ::CLONE_SIGHAND | ::CLONE_THREAD | ::CLONE_SYSVSEM |
-                         ::CLONE_SETTLS | ::CLONE_PARENT_SETTID |
-                         ::CLONE_CHILD_CLEARTID | ::CLONE_DETACHED;
+        u4 const flags = ::CLONE_NEWUTS;
+        // u4 const flags = ::CLONE_VM | ::CLONE_FS | ::CLONE_FILES |
+        //                  ::CLONE_SIGHAND | ::CLONE_THREAD | ::CLONE_SYSVSEM |
+        //                  ::CLONE_SETTLS | ::CLONE_PARENT_SETTID |
+        //                  ::CLONE_CHILD_CLEARTID | ::CLONE_DETACHED;
         // Thread* self = get_p_thread();
 
-        // void* p_stack = mmap(0, stack_size, ::PROT_READ | ::PROT_WRITE,
-        //                      ::MAP_PRIVATE | ::MAP_ANONYMOUS, -1, 0)
-        //                     .or_panic();
         this->stack_size = initial_stack_size;
-        this->p_stack = allocator.malloc(stack_size).or_it_is(nullptr);
+        this->p_stack =
+            static_cast<char*>(mmap(0, stack_size, ::PROT_READ | ::PROT_WRITE,
+                                    ::MAP_GROWSDOWN | ::MAP_STACK |
+                                        ::MAP_PRIVATE | ::MAP_ANONYMOUS,
+                                    -1, 0)
+                                   .or_panic()) +
+            this->stack_size;
+        // this->p_stack = allocator.malloc(stack_size).or_it_is(nullptr);
         if (this->p_stack == nullptr) {
             return Failure(1);
         }
