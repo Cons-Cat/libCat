@@ -93,14 +93,16 @@ concept narrow_convertible = requires() {
     U({meta::declval<T>()});
 };
 
-template <typename T, typename U>
+template <typename T>
 concept allocator = requires(T allocator, isize input) {
     // Allocators hold an enum for failure codes named `failures`.
     meta::is_enum_v<typename T::failures>;
     allocator.failures;
+
     /* Allocators hold a `malloc()` method which takes a generic type and
      * returns a `Result<void*>` address to the allocated memory. */
-    { allocator.template malloc<U>() } -> meta::convertible_to<Result<void*>>;
+    { allocator.template malloc() } -> meta::convertible_to<Result<void*>>;
+
     /* Allocators should have a `free()` method which takes no parameters, and
      * returns void. This shall be used to free all of its allocated memory. */
     {allocator.free()};

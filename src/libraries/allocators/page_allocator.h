@@ -24,12 +24,14 @@ struct PageAllocator {
                              // Anonymous pages must have `0u`.
                              0u)
                             .or_it_is(nullptr);
+        // TODO: This is quite inefficient. Consider failure-propagation.
         if (this->address == nullptr) {
             return Failure(1);
         }
         return this->address;
     }
 
+    // TODO: `munmap()` here.
     void free(){};
 
     // NOLINTNEXTLINE
