@@ -4,6 +4,9 @@
 
 #include <concepts.h>
 #include <mmap.h>
+#include <syscall.h>
+
+#include "unistd.h"
 
 struct Thread;
 
@@ -43,6 +46,33 @@ enum ThreadFlags : u4
     CLONE_IO = 0x80000000,
 };
 
+using UserId = u4;
+using GroupId = u4;
+using ProcessId = i4;
+
+struct CloneArguments {
+    u8 flags;
+    FileDescriptor* process_id_file_descriptor;
+    ProcessId* child_thread_id;
+    ProcessId* parent_thread_id;
+    i8 exit_code;
+    void* p_stack;
+    usize stack_size;
+    // TODO: Deal with these later:
+    void* p_tls;
+    ProcessId* set_tid;
+    usize set_tid_size;
+    u8 cgroup;
+};
+
+auto clone(isize (*function)(void*), void* p_stack, i4 flags,
+           auto const& function_arguments /* ,
+           ProcessId* p_parent_thread_id = nullptr, void* p_tls = nullptr,
+           ProcessId* p_child_thread_id = nullptr*/ ) -> Result<ProcessId> {
+    return syscall4(56u, function, p_stack, flags, &function_arguments
+                    /* , p_parent_thread_id, p_tls, p_child_thread_id */);
+}
+
 struct Thread {
     i4 id;
 
@@ -62,17 +92,20 @@ struct Thread {
         }
     }
 
+    // TODO: Make this `Result` hold `void` and store the PID in a member.
     // TODO: Add a method for allocating guard memory.
     // Add meta::invocable concept.
     template <typename... Args>
     auto create(meta::allocator auto const& allocator, usize const stack_size,
-                auto&& function, Args&&... arguments) -> Result<> {
+                auto const&& function, Args const&&... arguments)
+        -> Result<ProcessId> {
         // Similar to `pthread_create`.
-        u4 flags = ::CLONE_VM | ::CLONE_FS | ::CLONE_FILES | ::CLONE_SIGHAND |
-                   ::CLONE_THREAD | ::CLONE_SYSVSEM | ::CLONE_SETTLS |
-                   ::CLONE_PARENT_SETTID | ::CLONE_CHILD_CLEARTID |
-                   ::CLONE_DETACHED;
-        Thread* self = get_p_thread();
+        u4 const flags = ::CLONE_VM | ::CLONE_FS | ::CLONE_FILES |
+                         ::CLONE_SIGHAND | ::CLONE_THREAD | ::CLONE_SYSVSEM |
+                         ::CLONE_SETTLS | ::CLONE_PARENT_SETTID |
+                         ::CLONE_CHILD_CLEARTID | ::CLONE_DETACHED;
+        // Thread* self = get_p_thread();
+
         // void* p_stack = mmap(0, stack_size, ::PROT_READ | ::PROT_WRITE,
         //                      ::MAP_PRIVATE | ::MAP_ANONYMOUS, -1, 0)
         //                     .or_panic();
@@ -80,10 +113,12 @@ struct Thread {
         if (p_stack == nullptr) {
             return Failure(1);
         }
-        // TODO: Call `clone()`.
 
-        joinable = true;
-        return okay;
+        // TODO: Call `clone()`.
+        auto args = {arguments...};
+        Result<ProcessId> result = clone(&function, p_stack, flags, &args);
+        joinable = result.is_okay;
+        return result;
     }
 
     auto join() -> Result<> {
