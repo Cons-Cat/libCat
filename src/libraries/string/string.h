@@ -39,7 +39,7 @@ namespace simd {
 template <typename T>
 auto string_length_as(char8_t const* p_string) -> T;
 
-void copy_memory(void const* p_source, void* p_destination, usize bytes);
+void copy_memory(void const* p_source, void* p_destination, isize bytes);
 
 }  // namespace simd
 

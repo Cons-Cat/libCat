@@ -20,6 +20,7 @@ struct Buffer {
         }
     }
 
+    // TODO: Non-pessimize unsigned indices as well.
     auto operator[](isize i) -> T& {
         return value[i];
     }

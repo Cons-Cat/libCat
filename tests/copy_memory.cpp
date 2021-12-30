@@ -21,7 +21,7 @@ void meow() {
 
     Buffer<i4, 2000> dest_2000;
     for (i4 i = 0; i < 2000; i++) {
-        source_2000[i] = 1;
+        dest_2000[i] = 0;
     }
     simd::copy_memory(&source_2000, &dest_2000, sizeof(dest_2000));
     for (i4 i = 0; i < 2000; i++) {
