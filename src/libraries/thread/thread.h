@@ -9,6 +9,7 @@
 
 struct Thread;
 
+// Use intrinsics for this.
 auto get_p_thread() -> Thread* {
     Thread* p_thread;
     asm("mov %%fs:0,%0" : "=r"(p_thread));
@@ -64,8 +65,8 @@ struct CloneArguments {
     u8 cgroup;
 };
 
-extern "C" auto clone_asm(isize (*function)(void*), void*, i4, void*,
-                          ProcessId*, void*, ProcessId*) -> ProcessId;
+extern "C" auto clone_asm(void (*function)(void*), void*, i4, void*, ProcessId*,
+                          void*, ProcessId*) -> ProcessId;
 
 enum ProcessControl
 {
@@ -252,10 +253,10 @@ struct ResourceUsage {
 
 // TODO: Return a `ProcessId`
 // TODO: Replace this with a more general `wait4` syscall.
-auto waitpid(ProcessId child_process, i4 options) -> Result<> {
+auto waitpid(ProcessId child_process, i4* p_status_output, i4 options)
+    -> Result<> {
     // TODO: Use `p_termination_status` for failure-handling.
-    i4* p_termination_status;
-    return syscall4(61, child_process, p_termination_status, options, nullptr);
+    return syscall4(61, child_process, p_status_output, options, nullptr);
 }
 
 struct Thread {
@@ -314,16 +315,17 @@ struct Thread {
         this->process_id =
             clone_asm(&function, p_stack_top, flags, p_arguments_struct, p_pid,
                       p_stack_top, p_pid);
+        this->process_id = *p_pid;
         return this->process_id;
     }
 
     auto join() -> Result<> {
         this->joinable = false;
-        return waitpid(this->process_id, 0);
+        return waitpid(this->process_id, nullptr, 0);
         // TODO: Free the stack memory.
     }
 
     auto detach() -> Result<> {
-        // return okay;
+        return okay;
     }
 };
