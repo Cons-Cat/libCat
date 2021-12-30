@@ -424,18 +424,32 @@ template <typename T>
 using underlying_type_t = typename underlying_type<T>::type;
 
 namespace detail {
-    template <
-        typename From, typename To,
-        bool = conditional<is_void<From>::value, is_void<From>,
-                           conditional<is_function<To>::value, is_function<To>,
-                                       is_array<To>>>::value>
-    struct is_convertible {
-        using type = typename is_void<To>::type;
-    };
+
+    template <class T>
+    auto test_returnable(int)
+        -> decltype(void(static_cast<T (*)()>(nullptr)), meta::true_type{});
+    template <class>
+    auto test_returnable(...) -> meta::false_type;
+
+    template <class From, class To>
+    auto test_implicitly_convertible(int)
+        -> decltype(void(meta::declval<void (&)(To)>()(meta::declval<From>())),
+                    meta::true_type{});
+    template <class, class>
+    auto test_implicitly_convertible(...) -> meta::false_type;
+
+    template <typename From, typename To>
+    struct is_convertible
+        : meta::integral_constant<
+              bool,
+              (decltype(detail::test_returnable<To>(0))::
+                   value&& decltype(detail::test_implicitly_convertible<
+                                    From, To>(0))::value) ||
+                  (meta::is_void<From>::value && meta::is_void<To>::value)> {};
 }  // namespace detail
 
 template <typename From, typename To>
-struct is_convertible : detail::is_convertible<From, To>::type {};
+struct is_convertible : detail::is_convertible<From, To> {};
 template <typename From, typename To>
 using is_convertible_t = typename is_convertible<From, To>::type;
 template <typename From, typename To>
