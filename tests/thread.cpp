@@ -2,11 +2,12 @@
 #include <thread.h>
 #include <unistd.h>
 
-auto function(void*) -> isize {
-    while (true) {
+void function(void*) {
+    for (i4 i = 0; i < 10; i++) {
+        write(2, u8"Moo!\n", 5).discard_result();
     }
     write(2, u8"Boo!\n", 5).discard_result();
-    return 0;
+    exit(0);
 }
 
 void meow() {
@@ -15,6 +16,6 @@ void meow() {
     struct function_arguments {
     } args;
     thread.create(allocator, 4096, function, &args).or_panic();
-    thread.join().or_panic();
+    thread.join().discard_result();
     exit(0);
 }
