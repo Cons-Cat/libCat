@@ -17,15 +17,4 @@ clone_asm:
     mov %r9,%r8
     mov 8(%rsp),%r10
     syscall
-
-    test %eax,%eax
-    jnz 1f
-    xor %ebp,%ebp
-    pop %rdi
-    call *%r9
-    mov %eax,%edi
-    xor %eax,%eax
-    mov $60,%al
-    syscall
-    hlt
-1:  ret
+    ret
