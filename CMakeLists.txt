@@ -11,8 +11,10 @@ list(
   CAT_CXX_FLAGS_COMMON
   -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
   -fomit-frame-pointer # This is required for the stack frame to work.
+  -fno-stack-protector # This is required for threads to work.
   -msse4.2 # -march=native does not compile on some computers, apparently.
   -mavx2
+  -mfsgsbase
   -fdiagnostics-color
   -include global_includes.h
   # This is enabled by default, but it's counter-productive to libCat's vision.
@@ -23,7 +25,6 @@ list(
   APPEND
   CAT_CXX_FLAGS_DEBUG
   -ggdb3 -pipe
-  -fstack-protector-strong
   # -fsanitize=undefined
   # -fsanitize=address
   # -fsanitize=leak
@@ -36,7 +37,7 @@ list(
 list(
   APPEND
   CAT_CXX_FLAGS_RELEASE
-  -no-pie -fno-stack-protector
+  -no-pie
   -s
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
@@ -87,7 +88,7 @@ list(
   APPEND
   CAT_RELEASE_LINK_FLAGS
   ${CAT_COMMON_LINK_FLAGS}
-  -no-pie -fno-stack-protector
+  -no-pie
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto -fwhole-file -fno-plt
@@ -164,7 +165,7 @@ list(
   LIBC_RELEASE_FLAGS
   -fno-exceptions -fno-rtti -fno-unwind-tables
   -fno-asynchronous-unwind-tables
-  -no-pie -fno-stack-protector
+  -no-pie
   -s
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden

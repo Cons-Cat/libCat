@@ -3,6 +3,8 @@
 #include <unistd.h>
 
 auto function(void*) -> isize {
+    while (true) {
+    }
     write(2, u8"Boo!\n", 5).discard_result();
     return 0;
 }

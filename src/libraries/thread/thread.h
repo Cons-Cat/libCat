@@ -210,11 +210,9 @@ enum ProcessControl
 };
 
 template <typename... T>
-auto prctl(ProcessControl option, T... arguments) -> Result<>
+auto prctl(ProcessControl const option, T... arguments) -> Result<>
 requires(sizeof...(arguments) <= 4) {
-    // TODO: Implement failure handling when syscalls are factored.
-    syscall<void>(157u, option, arguments...).or_panic();
-    return okay;
+    return syscall<void>(157u, option, arguments...);
 }
 
 // auto clone(isize (*function)(void*), void* p_stack, i4 flags,
@@ -287,29 +285,35 @@ struct Thread {
                 auto const& function, void* p_arguments_struct)
         -> Result<ProcessId> {
         u4 const flags = ::CLONE_VM | ::CLONE_FS | ::CLONE_FILES |
-                         ::CLONE_SIGHAND | ::CLONE_THREAD | ::CLONE_SYSVSEM |
+                         ::CLONE_SIGHAND |
+                         ::CLONE_THREAD |  // ::CLONE_SYSVSEM |
                          ::CLONE_SETTLS | ::CLONE_PARENT_SETTID |
                          ::CLONE_CHILD_CLEARTID | ::CLONE_DETACHED;
 
         this->stack_size = initial_stack_size;
         /* Allocate a stack for this thread, and get an address to the top of
-         * it. We need the top because memory will be pushed to it downwards on
-         * x86-64. */
-        this->p_stack =
-            allocator.malloc(stack_size).or_it_is(nullptr) + this->stack_size;
+         * it. */
+        this->p_stack = allocator.malloc(stack_size).or_it_is(nullptr);
         if (this->p_stack == nullptr) {
             return Failure(1);
         }
+        /* We need the top because memory will be pushed to it downwards on
+         * x86-64. */
+        void* p_stack_top =
+            static_cast<char*>(this->p_stack) + this->stack_size;
+        // The ProcessId is the first data stored in a thread.
+        ProcessId* p_pid = static_cast<ProcessId*>(p_stack_top);
 
-        void* p_tls;
-        prctl(ARCH_SET_GS, p_tls).or_panic();
+        // prctl(ARCH_SET_GS, p_tls).or_panic();
+        // __builtin_ia32_wrfsbase64(); // Write to `%fs`.
+        // __builtin_ia32_rdfsbase64(); // Read from `%fs`.
+        // __builtin_ia32_wrgsbase64(); // Write to `%gs`.
+        // __builtin_ia32_rdgsbase64(); // Read from `%gs`.
 
-        // TODO: This does not compile:
         // `clone()` will always return a value.
         this->process_id =
-            clone_asm(&function, this->p_stack, flags, p_arguments_struct,
-                      nullptr, p_tls, nullptr);
-        // joinable = (exit_code == 0);
+            clone_asm(&function, p_stack_top, flags, p_arguments_struct, p_pid,
+                      p_stack_top, p_pid);
         return this->process_id;
     }
 
