@@ -64,8 +64,8 @@ struct CloneArguments {
     u8 cgroup;
 };
 
-extern "C" void clone_asm(isize (*function)(void*), void*, i4, void*,
-                          ProcessId*, void*, ProcessId*);
+extern "C" auto clone_asm(isize (*function)(void*), void*, i4, void*,
+                          ProcessId*, void*, ProcessId*) -> ProcessId;
 
 // auto clone(isize (*function)(void*), void* p_stack, i4 flags,
 //            auto function_arguments, ProcessId* p_parent_thread_id = nullptr,
@@ -137,11 +137,10 @@ struct Thread {
                 auto const& function, void* p_arguments_struct)
         -> Result<ProcessId> {
         // Similar to `pthread_create`.
-        u4 const flags = ::CLONE_NEWUTS;
-        // u4 const flags = ::CLONE_VM | ::CLONE_FS | ::CLONE_FILES |
-        //                  ::CLONE_SIGHAND | ::CLONE_THREAD | ::CLONE_SYSVSEM |
-        //                  ::CLONE_SETTLS | ::CLONE_PARENT_SETTID |
-        //                  ::CLONE_CHILD_CLEARTID | ::CLONE_DETACHED;
+        u4 const flags = ::CLONE_VM | ::CLONE_FS | ::CLONE_FILES |
+                         ::CLONE_SIGHAND | ::CLONE_THREAD | ::CLONE_SYSVSEM |
+                         ::CLONE_SETTLS | ::CLONE_PARENT_SETTID |
+                         ::CLONE_CHILD_CLEARTID | ::CLONE_DETACHED;
         // Thread* self = get_p_thread();
 
         this->stack_size = initial_stack_size;
@@ -160,10 +159,11 @@ struct Thread {
         // TODO: This does not compile:
         // `clone()` will always return a value.
         // isize exit_code =
-        clone_asm(&function, this->p_stack, flags, p_arguments_struct, nullptr,
-                  nullptr, nullptr);
+        this->process_id =
+            clone_asm(&function, this->p_stack, flags, p_arguments_struct,
+                      nullptr, nullptr, nullptr);
         // joinable = (exit_code == 0);
-        // return this->process_id;
+        return this->process_id;
     }
 
     auto join() -> Result<> {
