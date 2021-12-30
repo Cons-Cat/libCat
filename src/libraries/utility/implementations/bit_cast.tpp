@@ -17,42 +17,9 @@
 template <typename T>
 // NOLINTNEXTLINE
 [[gnu::optimize("-O3")]] [[gnu::always_inline]] inline auto meta::bit_cast(
-    auto& from_value)
-    // If this is a non-`const` `void*`
-    requires(meta::is_same_v<void*&, decltype(from_value)>) {
-    char* p_from = static_cast<char*>(from_value);
-
-    T* p_to = static_cast<T*>(static_cast<void*>(p_from));
-    // GCC optimizes this pattern into a bit-cast:
-    for (unsigned i = 0; i < sizeof(T); i++) {
-        static_cast<char*>(static_cast<void*>(p_to))[i] = p_from[i];
-    }
-    return *p_to;
-}
-
-template <typename T>
-// NOLINTNEXTLINE
-[[gnu::optimize("-O3")]] [[gnu::always_inline]] inline auto meta::bit_cast(
     auto& from_value) -> T
-    // If this is a `void* const`
-    requires(meta::is_same_v<void* const&, decltype(from_value)>) {
-    char* p_from = static_cast<char*>(const_cast<void*>(from_value));
-
-    T* p_to = static_cast<T*>(static_cast<void*>(p_from));
-    // GCC optimizes this pattern into a bit-cast:
-    for (unsigned i = 0; i < sizeof(T); i++) {
-        static_cast<char*>(static_cast<void*>(p_to))[i] = p_from[i];
-    }
-    return *p_to;
-}
-
-template <typename T>
-// NOLINTNEXTLINE
-[[gnu::optimize("-O3")]] [[gnu::always_inline]] inline auto meta::bit_cast(
-    auto& from_value) -> T
-    // If not a `void*`, and not `const`:
+    // If the value is not `const`:
     requires(
-        !meta::is_same_v<void*&, decltype(from_value)> &&
         !meta::is_const_v<meta::remove_reference_t<decltype(from_value)>>) {
     char* p_from = static_cast<char*>(static_cast<void*>(&from_value));
 
@@ -68,10 +35,8 @@ template <typename T>
 // NOLINTNEXTLINE
 [[gnu::optimize("-O3")]] [[gnu::always_inline]] inline auto meta::bit_cast(
     auto& from_value) -> T
-    // If not a `void*` or `void* const`, and is `const`:
-    requires(!meta::is_same_v<void*&, decltype(from_value)> &&
-             !meta::is_same_v<void* const&, decltype(from_value)> &&
-             meta::is_const_v<meta::remove_reference_t<decltype(from_value)>>) {
+    // If the value is `const`:
+    requires(meta::is_const_v<meta::remove_reference_t<decltype(from_value)>>) {
     /* Cast the address of `from_value` into a pointer of its type (with the
      * reference removed), then remove its `const` qualifier. Cast that to
      * `void*`, then cast that to `char*`, which represents bytes. */
