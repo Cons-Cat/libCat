@@ -9,7 +9,7 @@ set(CMAKE_CONFIGURATION_TYPES Debug;Release;RelWithDebInfo;RelSmall)
 list(
   APPEND
   CAT_CXX_FLAGS_COMMON
-  -fno-exceptions -fno-rtti -fno-unwind-tables
+  -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
   -fomit-frame-pointer # This is required for the stack frame to work.
   -msse4.2 # -march=native does not compile on some computers, apparently.
   -mavx2
@@ -37,7 +37,6 @@ list(
   APPEND
   CAT_CXX_FLAGS_RELEASE
   -no-pie -fno-stack-protector
-  -fno-asynchronous-unwind-tables
   -s
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
@@ -89,7 +88,6 @@ list(
   CAT_RELEASE_LINK_FLAGS
   ${CAT_COMMON_LINK_FLAGS}
   -no-pie -fno-stack-protector
-  -fno-asynchronous-unwind-tables
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto -fwhole-file -fno-plt
@@ -165,8 +163,8 @@ list(
   APPEND
   LIBC_RELEASE_FLAGS
   -fno-exceptions -fno-rtti -fno-unwind-tables
-  -no-pie -fno-stack-protector
   -fno-asynchronous-unwind-tables
+  -no-pie -fno-stack-protector
   -s
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
