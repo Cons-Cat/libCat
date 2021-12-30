@@ -16,6 +16,9 @@ void meow() {
     struct function_arguments {
     } args;
     thread.create(allocator, 4096, function, &args).or_panic();
+    for (i4 i = 0; i < 10; i++) {
+        write(2, u8"Foo!\n", 5).discard_result();
+    }
     thread.join().discard_result();
     exit(0);
 }
