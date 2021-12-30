@@ -22,7 +22,7 @@ struct PageAllocator {
                              // Anonymous pages must have `-1`.
                              -1,
                              // Anonymous pages must have `0u`.
-                             0u)
+                             0ull)
                             .or_it_is(nullptr);
         // TODO: This is quite inefficient. Consider failure-propagation.
         if (this->address == nullptr) {

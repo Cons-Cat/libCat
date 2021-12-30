@@ -17,4 +17,9 @@ clone_asm:
     mov %r9,%r8
     mov 8(%rsp),%r10
     syscall
+    
+    xorl    %ebp, %ebp
+	popq    %rax
+	popq    %rdi
+	call    *%rax
     ret
