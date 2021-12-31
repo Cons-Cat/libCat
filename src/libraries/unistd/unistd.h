@@ -21,7 +21,7 @@ extern "C" auto syscall1(Any, Any) -> void*;
 extern "C" auto syscall2(Any, Any, Any) -> void*;
 auto syscall3(Any, Any, Any, Any) -> Result<Any>;
 extern "C" auto syscall4(Any, Any, Any, Any, Any) -> void*;
-extern "C" auto syscall5(Any, Any, Any, Any, Any, Any) -> void*;
+extern "C" auto syscall5(Any, Any, Any, Any, Any, Any) -> Any;
 auto syscall6(Any call, Any arg1, Any arg2, Any arg3, Any arg4, Any args,
               Any arg6) -> Result<Any>;
 

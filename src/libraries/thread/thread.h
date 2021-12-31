@@ -6,6 +6,7 @@
 #include <concepts.h>
 #include <mmap.h>
 #include <syscall.h>
+#include <utility.h>
 
 struct Thread;
 
@@ -280,8 +281,12 @@ enum WaitIdType
 };
 
 auto waitid(WaitIdType type, ProcessId id, i8 options) -> Result<> {
-    // TODO: Handle failures.
-    syscall5(247u, type, id, nullptr, options, nullptr);
+    // TODO: Handle failures in `syscall5`.
+    i4 result = -1;
+    result = syscall5(247u, type, id, nullptr, options, nullptr);
+    if (result < 0) {
+        return -result;
+    }
     return okay;
 }
 
@@ -311,10 +316,9 @@ struct Thread {
     // Add meta::invocable concept.
     auto create(auto& allocator, usize const initial_stack_size,
                 auto const& function, void* p_arguments_struct) -> Result<> {
-        u4 const flags =
-            ::CLONE_VM | ::CLONE_FS | ::CLONE_FILES | ::CLONE_SIGHAND |
-            ::CLONE_THREAD |  // ::CLONE_SYSVSEM |
-            ::CLONE_SETTLS | ::CLONE_PARENT_SETTID | ::CLONE_CHILD_CLEARTID;
+        u4 const flags = ::CLONE_VM | ::CLONE_FS | ::CLONE_FILES |
+                         ::CLONE_SIGHAND | ::CLONE_SETTLS |
+                         ::CLONE_PARENT_SETTID | ::CLONE_CHILD_CLEARTID;
 
         this->stack_size = initial_stack_size;
         /* Allocate a stack for this thread, and get an address to the top of
@@ -349,7 +353,8 @@ struct Thread {
         /* Wait on this thread, without storing its status, or waiting with
          * special options. */
         // return wait4(this->process_id, nullptr, 0, nullptr);
-        return waitid(::P_PID, this->process_id, ::WEXITED | ::WCLONE);
+        return waitid(::P_PID, this->process_id,
+                      ::WEXITED | ::WCLONE | ::WNOWAIT);
         // TODO: Free the stack memory.
     }
 };
