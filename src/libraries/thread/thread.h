@@ -231,6 +231,19 @@ requires(sizeof...(arguments) <= 4) {
 //     return 0;
 // }
 
+enum WaitOptions : i8
+{
+    WNOHANG = 1,
+    WUNTRACED = 2,
+    WSTOPPED = 2,
+    WEXITED = 4,
+    WCONTINUED = 8,
+    WNOWAIT = 0x1000000,
+    WNOTHREAD = 0x20000000,
+    WALL = 0x40000000,
+    WCLONE = 0x80000000,
+};
+
 // TODO: Replace the esoteric Linux names.
 struct ResourceUsage {
     // struct timeval ru_utime;
@@ -251,12 +264,25 @@ struct ResourceUsage {
     i8 ru_nivcsw;
 };
 
-// TODO: Return a `ProcessId`
-// TODO: Replace this with a more general `wait4` syscall.
-auto waitpid(ProcessId child_process, i4* p_status_output, i4 options)
-    -> Result<> {
-    // TODO: Use `p_termination_status` for failure-handling.
-    return syscall4(61, child_process, p_status_output, options, nullptr);
+auto wait4(ProcessId waiting_on_id, i4* p_status_output, i4 options,
+           void* p_resource_usage) -> Result<> {
+    // TODO: Use `p_status_output` for failure-handling.
+    return syscall4(61u, waiting_on_id, p_status_output, options,
+                    p_resource_usage);
+}
+
+enum WaitIdType
+{
+    P_ALL = 0,
+    P_PID = 1,
+    P_PGID = 2,
+    P_PIDFD = 3
+};
+
+auto waitid(WaitIdType type, ProcessId id, i8 options) -> Result<> {
+    // TODO: Handle failures.
+    syscall5(247u, type, id, nullptr, options, nullptr);
+    return okay;
 }
 
 struct Thread {
@@ -267,6 +293,7 @@ struct Thread {
     bool joinable = false;
 
     void* p_stack;
+    // TODO: This could be `isize` if it being non-negative is asserted.
     usize stack_size;
 
     Thread() = default;
@@ -283,13 +310,11 @@ struct Thread {
     // TODO: Add a method for allocating guard memory.
     // Add meta::invocable concept.
     auto create(auto& allocator, usize const initial_stack_size,
-                auto const& function, void* p_arguments_struct)
-        -> Result<ProcessId> {
-        u4 const flags = ::CLONE_VM | ::CLONE_FS | ::CLONE_FILES |
-                         ::CLONE_SIGHAND |
-                         ::CLONE_THREAD |  // ::CLONE_SYSVSEM |
-                         ::CLONE_SETTLS | ::CLONE_PARENT_SETTID |
-                         ::CLONE_CHILD_CLEARTID | ::CLONE_DETACHED;
+                auto const& function, void* p_arguments_struct) -> Result<> {
+        u4 const flags =
+            ::CLONE_VM | ::CLONE_FS | ::CLONE_FILES | ::CLONE_SIGHAND |
+            ::CLONE_THREAD |  // ::CLONE_SYSVSEM |
+            ::CLONE_SETTLS | ::CLONE_PARENT_SETTID | ::CLONE_CHILD_CLEARTID;
 
         this->stack_size = initial_stack_size;
         /* Allocate a stack for this thread, and get an address to the top of
@@ -312,20 +337,19 @@ struct Thread {
         // __builtin_ia32_rdgsbase64(); // Read from `%gs`.
 
         // `clone()` will always return a value.
-        this->process_id =
-            clone_asm(&function, p_stack_top, flags, p_arguments_struct, p_pid,
-                      p_stack_top, p_pid);
+        clone_asm(&function, p_stack_top, flags, p_arguments_struct, p_pid,
+                  p_stack_top, p_pid);
         this->process_id = *p_pid;
-        return this->process_id;
+        this->joinable = true;
+        return okay;
     }
 
     auto join() -> Result<> {
         this->joinable = false;
-        return waitpid(this->process_id, nullptr, 0);
+        /* Wait on this thread, without storing its status, or waiting with
+         * special options. */
+        // return wait4(this->process_id, nullptr, 0, nullptr);
+        return waitid(::P_PID, this->process_id, ::WEXITED | ::WCLONE);
         // TODO: Free the stack memory.
-    }
-
-    auto detach() -> Result<> {
-        return okay;
     }
 };
