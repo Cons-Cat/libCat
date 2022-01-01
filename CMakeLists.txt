@@ -105,11 +105,6 @@ list(
 
 add_library(
   cat-std STATIC
-  src/libraries/unistd/detail/syscall0.s
-  src/libraries/unistd/detail/syscall1.s
-  src/libraries/unistd/detail/syscall2.s
-  src/libraries/unistd/detail/syscall4.s
-  src/libraries/unistd/detail/syscall5.s
   src/libraries/thread/clone.s
 )
 

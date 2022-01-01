@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-#include <mmap.h>
+#include <linux>
 
 auto munmap() -> Result<> {
     return okay;
