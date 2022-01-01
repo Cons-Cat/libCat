@@ -1,7 +1,8 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
 #pragma once
-#include <unistd.h>
+
+#include <linux>
 
 enum ProtocolFamilies
 {

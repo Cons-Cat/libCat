@@ -20,7 +20,8 @@ set(
   ${CAT_SRC}/libraries/concepts/
   ${CAT_SRC}/libraries/utility/
   ${CAT_SRC}/libraries/stdlib/
-  ${CAT_SRC}/libraries/unistd/
+  ${CAT_SRC}/libraries/linux/
+  ${CAT_SRC}/libraries/linux/detail/
   ${CAT_SRC}/libraries/thread/
   PARENT_SCOPE
 )
@@ -37,7 +38,6 @@ set(
   ${CAT_SRC}/runtime/implementations/load_argc.cpp
   ${CAT_SRC}/runtime/implementations/load_argv.cpp
   ${CAT_SRC}/runtime/implementations/load_base_stack_pointer.cpp
-  ${CAT_SRC}/runtime/implementations/mmap.cpp
   ${CAT_SRC}/runtime/implementations/munmap.cpp
   ${CAT_SRC}/libraries/simd/implementations/is_avx2_supported.cpp
   ${CAT_SRC}/libraries/simd/implementations/is_avx512f_supported.cpp
@@ -62,9 +62,12 @@ set(
   ${CAT_SRC}/libraries/string/implementations/memcpy.cpp
   ${CAT_SRC}/libraries/string/implementations/strlen.cpp
   ${CAT_SRC}/libraries/string/implementations/string_length_as.tpp
-  ${CAT_SRC}/libraries/unistd/implementations/syscall.cpp
-  ${CAT_SRC}/libraries/unistd/implementations/syscall.tpp
-  ${CAT_SRC}/libraries/unistd/implementations/write.cpp
+  ${CAT_SRC}/libraries/linux/implementations/syscall.cpp
+  ${CAT_SRC}/libraries/linux/implementations/syscall.tpp
+  ${CAT_SRC}/libraries/linux/implementations/write.cpp
+  ${CAT_SRC}/libraries/linux/implementations/mmap.cpp
+  ${CAT_SRC}/libraries/linux/implementations/wait4.cpp
+  ${CAT_SRC}/libraries/linux/implementations/waitid.cpp
   ${CAT_SRC}/libraries/utility/implementations/move.tpp
   ${CAT_SRC}/libraries/utility/implementations/forward.tpp
   ${CAT_SRC}/libraries/utility/implementations/is_constant_evaluated.tpp
