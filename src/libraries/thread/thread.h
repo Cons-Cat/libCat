@@ -37,6 +37,7 @@ struct Thread {
         this->stack_size = initial_stack_size;
         /* Allocate a stack for this thread, and get an address to the top of
          * it. */
+        // TODO: There has to be a way to streamline this:
         this->p_stack = allocator.malloc(stack_size).or_it_is(nullptr);
         if (this->p_stack == nullptr) {
             return Failure(1);
@@ -66,7 +67,6 @@ struct Thread {
         this->joinable = false;
         /* Wait on this thread, without storing its status, or waiting with
          * special options. */
-        // return wait4(this->process_id, nullptr, 0, nullptr);
         return waitid(
             WaitIdType::P_PID, this->process_id,
             WaitOptions::WEXITED | WaitOptions::WCLONE | WaitOptions::WNOWAIT);
