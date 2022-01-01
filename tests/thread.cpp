@@ -16,7 +16,7 @@ void meow() {
     for (i4 i = 0; i < 10; i++) {
         write(2, u8"Boo!\n", 5).discard_result();
     }
-    thread.join().or_panic();
+    _ = thread.join().or_panic();
     write(2, u8"Finished!\n", 10).discard_result();
     exit(0);
 }
