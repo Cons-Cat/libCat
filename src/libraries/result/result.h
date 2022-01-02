@@ -104,14 +104,14 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
     }
 
     // Return a specified value when is_okay is false.
-    auto or_its(ValueType const& in_value)->ValueType {
+    auto or_is(ValueType const& in_value)->ValueType {
         if (!is_okay) {
             return in_value;
         }
         return this->value;
     }
     // nullptr must be special-cased.
-    auto or_it_is(decltype(nullptr) in_value)
+    auto or_is(decltype(nullptr) in_value)
         ->ValueType /* requires(meta::is_pointer_v<ValueType>) */ {
         if (!is_okay) {
             return static_cast<ValueType>(in_value);
@@ -184,10 +184,9 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
         exit(1);
     }
 
-    /* It may be desirable to skip the costs of printing error messages in
-     * release builds of an application. These following functions only print an
-     * error message when building -O0. */
-    auto or_panic_debug(char8_t const* error_message = u8"")->T {
+    // Panic at a failure when built with `-O0`, but no-op otherwise.
+    void or_panic_debug(char8_t const* error_message = u8"") {
+#ifndef __OPTIMIZE__
         if (is_okay) {
             if constexpr (!is_void) {
                 return this->data;
@@ -195,15 +194,16 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
                 return;
             }
         }
-#ifndef __OPTIMIZE__
         // TODO: print(error_message);
-#endif
         exit(1);
+#endif
+        return this->value;
     }
 
-    /* Because the error code is 8-bytes, it could contain a non-null pointer to
-     * an error string. This prints that error message. */
+    // Panic and print an error string at a failure when built with `-O0`, but
+    // no-op otherwise.
     auto or_print_panic_debug()->T {
+#ifndef __OPTIMIZE__
         if (is_okay) {
             if constexpr (!is_void) {
                 return this->value;
@@ -211,9 +211,9 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
                 return;
             }
         }
-#ifndef __OPTIMIZE__
         // TODO: print(error_code);
-#endif
         exit(1);
+#endif
+        return this->value;
     }
 };
