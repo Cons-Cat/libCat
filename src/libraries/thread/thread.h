@@ -38,7 +38,7 @@ struct Thread {
         /* Allocate a stack for this thread, and get an address to the top of
          * it. */
         // TODO: There has to be a way to streamline this:
-        this->p_stack = allocator.malloc(stack_size).or_it_is(nullptr);
+        this->p_stack = allocator.malloc(stack_size).or_is(nullptr);
         if (this->p_stack == nullptr) {
             return Failure(1);
         }
