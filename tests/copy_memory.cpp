@@ -2,7 +2,6 @@
 #include <string>
 
 void meow() {
-    debugger_entry_point();
     Buffer<i4, 200> source_200;
     for (i4 i = 0; i < 200; i++) {
         source_200[i] = i;
