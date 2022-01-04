@@ -38,7 +38,6 @@ list(
   APPEND
   CAT_CXX_FLAGS_RELEASE
   -no-pie
-  -s
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto -fwhole-file -fno-plt
@@ -161,7 +160,6 @@ list(
   -fno-exceptions -fno-rtti -fno-unwind-tables
   -fno-asynchronous-unwind-tables
   -no-pie
-  -s
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto -fwhole-file -fno-plt
