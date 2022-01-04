@@ -53,8 +53,7 @@ struct [[gnu::unused]] unused {
         !meta::is_specialization<T, Result>::value) {
     };
     // `unused` cannot be assigned to any variable.
-    template <typename T>
-    operator T() = delete;
+    operator auto() = delete;
 };
 
 }  // namespace std::detail

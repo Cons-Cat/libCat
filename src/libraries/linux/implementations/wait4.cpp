@@ -1,7 +1,5 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-#pragma once
-
 #include <linux>
 
 auto wait4(ProcessId waiting_on_id, i4* p_status_output, i4 options,
