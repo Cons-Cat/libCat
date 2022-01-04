@@ -20,27 +20,27 @@ inline auto debugger_entry_point() -> int {
 template <typename T>
 struct Result;
 
-// TODO: Fix this declaration in <numerals.h>
+// TODO: Fix this declaration in `<numerals>`
 using isize = int long long;
 
-#include <numerals.h>
+#include <numerals>
 
 // using isize = int long long;
 
-// Including the `<runtime.h>` library is required to link a libCat program.
-#include <runtime.h>
+// Including the `<runtime>` library is required to link a libCat program.
+#include <runtime>
 
-/* <result.h> and <numerals.h> are analogous to exceptions and stdint.h in that
- * they are used throughout the library and should be accessible to a user by
- * default. */
-#include <result.h>
+/* `<result>` and `<numerals>` are analogous to exceptions and `<stdint.h>` in
+ * that they are used throughout the library and should be accessible to a user
+ * by default. */
+#include <result>
 
 // <stdint.h> is required for libC compatibility.
 #include <stdint.h>
 
-/* libCat includes <simd.h> globally, because vectors are considered primitive
+/* libCat includes `<simd>` globally, because vectors are considered primitive
  * types. */
-#include <simd.h>
+#include <simd>
 
 /* libCat provides a `_` variable that consumes a function's output, but cannot
  * be assigned to any variable. */

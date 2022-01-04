@@ -1,7 +1,8 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
 #pragma once
-#include <utility.h>
+
+#include <utility>
 
 /* As far as I can prove, `bit_cast` is a zero-overhead abstraction on `-O3`.
  * It copies data at some memory byte-by-byte into a differently-typed variable

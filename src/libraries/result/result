@@ -2,10 +2,10 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <any.h>
-#include <concepts.h>
-#include <type_traits.h>
-#include <utility.h>
+#include <any>
+#include <concepts>
+#include <type_traits>
+#include <utility>
 
 /* This file contains a general-purpose error-handling tool. Result<> is a
  * templated struct that either contains some data (unless it holds void) or an

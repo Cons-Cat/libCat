@@ -1,6 +1,6 @@
+#include <allocators>
 #include <linux>
-#include <page_allocator.h>
-#include <thread.h>
+#include <thread>
 
 void function(void*) {
     for (i4 i = 0; i < 15; i++) {

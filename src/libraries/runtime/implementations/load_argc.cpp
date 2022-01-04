@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-#include <runtime.h>
+#include <runtime>
 
 auto load_argc() -> i4 {
     i4 argc;

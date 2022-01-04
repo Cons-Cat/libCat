@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-#include <runtime.h>
+#include <runtime>
 
 extern "C" [[gnu::used]] void _start() {
     /* This cannot be simplified any further without producing pessimized

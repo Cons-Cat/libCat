@@ -1,7 +1,7 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
 #include <stdint.h>
-#include <string.h>
+#include <string>
 
 [[deprecated(
     "strlen() is deprecated! Use simd::string_length<T>() instead.")]] auto

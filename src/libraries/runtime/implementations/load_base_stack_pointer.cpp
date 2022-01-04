@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-#include <runtime.h>
+#include <runtime>
 
 auto load_base_stack_pointer() -> void* {
     void* rbp;

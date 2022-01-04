@@ -5,8 +5,8 @@ set(CAT_SRC ${CMAKE_SOURCE_DIR}/src)
 set(
   cat-std-include
   ${CAT_SRC}/
-  ${CAT_SRC}/runtime/
   ${CAT_SRC}/compatibility/
+  ${CAT_SRC}/libraries/runtime/
   ${CAT_SRC}/libraries/numerals/
   ${CAT_SRC}/libraries/simd/
   ${CAT_SRC}/libraries/result/
@@ -29,16 +29,16 @@ set(
 # target_sources(
 set(
   cat-std-cpp
-  ${CAT_SRC}/runtime/implementations/_start.cpp
-  ${CAT_SRC}/runtime/implementations/exit.cpp
-  ${CAT_SRC}/runtime/implementations/__stack_chk_fail.cpp
-  ${CAT_SRC}/runtime/implementations/align_stack_pointer_16.cpp
-  ${CAT_SRC}/runtime/implementations/align_stack_pointer_32.cpp
-  ${CAT_SRC}/runtime/implementations/dont_optimize_out.cpp
-  ${CAT_SRC}/runtime/implementations/load_argc.cpp
-  ${CAT_SRC}/runtime/implementations/load_argv.cpp
-  ${CAT_SRC}/runtime/implementations/load_base_stack_pointer.cpp
-  ${CAT_SRC}/runtime/implementations/munmap.cpp
+  ${CAT_SRC}/libraries/runtime/implementations/_start.cpp
+  ${CAT_SRC}/libraries/runtime/implementations/exit.cpp
+  ${CAT_SRC}/libraries/runtime/implementations/__stack_chk_fail.cpp
+  ${CAT_SRC}/libraries/runtime/implementations/align_stack_pointer_16.cpp
+  ${CAT_SRC}/libraries/runtime/implementations/align_stack_pointer_32.cpp
+  ${CAT_SRC}/libraries/runtime/implementations/dont_optimize_out.cpp
+  ${CAT_SRC}/libraries/runtime/implementations/load_argc.cpp
+  ${CAT_SRC}/libraries/runtime/implementations/load_argv.cpp
+  ${CAT_SRC}/libraries/runtime/implementations/load_base_stack_pointer.cpp
+  ${CAT_SRC}/libraries/runtime/implementations/munmap.cpp
   ${CAT_SRC}/libraries/simd/implementations/is_avx2_supported.cpp
   ${CAT_SRC}/libraries/simd/implementations/is_avx512f_supported.cpp
   ${CAT_SRC}/libraries/simd/implementations/is_avx_supported.cpp

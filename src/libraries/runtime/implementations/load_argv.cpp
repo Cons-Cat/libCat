@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-#include <runtime.h>
+#include <runtime>
 
 /* Get a pointer to an array of UTF-8 encoded command-line arguments. This array
  * is 1 KiB long. */

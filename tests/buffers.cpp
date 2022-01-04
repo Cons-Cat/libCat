@@ -1,4 +1,4 @@
-#include <buffer.h>
+#include <buffer>
 
 void meow() {
     // Initializing a buffer:
