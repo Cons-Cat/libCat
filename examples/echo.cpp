@@ -1,7 +1,6 @@
 #include <linux>
 
 void meow() {
-    debugger_entry_point();
     i4 argc = load_argc();
     char8_t** argv = load_argv();
     for (i4 i = 1; i < argc; i++) {
