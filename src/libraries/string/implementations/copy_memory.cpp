@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-#include <string.h>
+#include <string>
 
 // TODO: This should use an AnyConst container.
 /* Copy some bytes from one address to another address. There exists

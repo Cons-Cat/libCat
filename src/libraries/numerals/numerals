@@ -2,7 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <concepts.h>
+#include <concepts>
 
 /* Safe arithmetic does compile with no known issues. However, clangd 12 and 13
  * keel over after a single glance at this metaprogramming, so I am currently

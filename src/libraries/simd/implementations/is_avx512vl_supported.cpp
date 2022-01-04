@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-#include <simd.h>
+#include <simd>
 
 // TODO: Document.
 auto is_avx512vl_supported() -> bool {

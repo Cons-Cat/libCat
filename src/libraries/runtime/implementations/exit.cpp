@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-#include <runtime.h>
+#include <runtime>
 
 // Linux requires an unsigned 8-byte integer exit code for this syscall.
 extern "C" [[gnu::used]] void exit(i8 exit_code) {

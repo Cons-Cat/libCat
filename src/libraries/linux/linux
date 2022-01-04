@@ -2,11 +2,10 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <any.h>
-#include <concepts.h>
+#include <any>
+#include <concepts>
 #include <linux_flags>
-#include <syscall.h>
-#include <utility.h>
+#include <utility>
 
 // write() forwards its arguments to a failable stdout syscall.
 auto write(i8 const& file_descriptor, char8_t const* p_string_buffer,

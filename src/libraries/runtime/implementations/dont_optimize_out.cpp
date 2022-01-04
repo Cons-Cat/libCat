@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-#include <runtime.h>
+#include <runtime>
 
 /* This function wraps a volatile no-op instruction that will prevent many
  * optimizations such as loop unrolling, or constant-folding out a variable

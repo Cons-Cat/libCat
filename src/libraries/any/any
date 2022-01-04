@@ -2,8 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <type_traits.h>
-#include <utility.h>
+#include <type_traits>
+#include <utility>
 
 /* This smart pointer is, by design, significantly dumber than the `std::any`
  * in the C++20 STL. This type's basic purpose is to make casting to `void*`

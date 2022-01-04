@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-#include <simd.h>
+#include <simd>
 
 // TODO: Document.
 void simd::zero_avx_registers() {

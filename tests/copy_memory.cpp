@@ -1,5 +1,5 @@
-#include <buffer.h>
-#include <string.h>
+#include <buffer>
+#include <string>
 
 void meow() {
     debugger_entry_point();
