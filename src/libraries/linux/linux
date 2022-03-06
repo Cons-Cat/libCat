@@ -32,6 +32,7 @@ auto munmap() -> Result<>;
 
 struct Thread;
 
+// TODO: Make this inline asm.
 extern "C" auto clone_asm(void (*function)(void*), void*, int4, void*,
                           ProcessId*, void*, ProcessId*) -> ProcessId;
 
@@ -57,8 +58,8 @@ auto syscall5(Any, Any, Any, Any, Any, Any) -> Result<Any>;
 auto syscall6(Any call, Any arg1, Any arg2, Any arg3, Any arg4, Any args,
               Any arg6) -> Result<Any>;
 
-template <typename ReturnType, typename T, typename... Args>
-auto syscall(T call, Args... parameters) -> Result<ReturnType>
+template <typename ReturnType, typename... Args>
+auto syscall(Any call, Args... parameters) -> Result<ReturnType>
 requires(sizeof...(Args) < 7);
 
 #include "./implementations/syscall.tpp"

@@ -1,30 +1,29 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
+#pragma once
 
-template <typename ReturnType, typename T, typename... Args>
-auto syscall(T call, Args... parameters) -> Result<ReturnType>
+#include <linux>
+
+template <typename ReturnType, typename... Args>
+auto syscall(Any call, Args... parameters) -> Result<ReturnType>
 requires(sizeof...(Args) < 7) {
     static constexpr isize length = sizeof...(Args);
     Any arguments[length] = {parameters...};
 
     if constexpr (length == 0) {
-        syscall0(call);
-        return okay;
+        return syscall0(call);
     } else if constexpr (length == 1) {
-        syscall1(call, arguments[0]);
-        return okay;
+        return syscall1(call, arguments[0]);
     } else if constexpr (length == 2) {
-        syscall2(call, arguments[0], arguments[1]);
-        return okay;
+        return syscall2(call, arguments[0], arguments[1]);
     } else if constexpr (length == 3) {
         return syscall3(call, arguments[0], arguments[1], arguments[2]);
     } else if constexpr (length == 4) {
-        syscall4(call, arguments[0], arguments[1], arguments[2], arguments[3]);
-        return okay;
+        return syscall4(call, arguments[0], arguments[1], arguments[2],
+                        arguments[3]);
     } else if constexpr (length == 5) {
-        syscall5(call, arguments[0], arguments[1], arguments[2], arguments[3],
-                 arguments[4]);
-        return okay;
+        return syscall5(call, arguments[0], arguments[1], arguments[2],
+                        arguments[3], arguments[4]);
     } else if constexpr (length == 6) {
         return syscall6(call, arguments[0], arguments[1], arguments[2],
                         arguments[3], arguments[4], arguments[5]);
