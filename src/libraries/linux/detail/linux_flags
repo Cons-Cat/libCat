@@ -2,7 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
-enum ProtectionFlags : u4
+enum ProtectionFlags : uint4
 {
     PROT_NONE = 0b000,   // Data cannot be accessed at all.
     PROT_READ = 0b001,   // Data is readable.
@@ -10,7 +10,7 @@ enum ProtectionFlags : u4
     PROT_EXEC = 0b100,   // Data can be executed.
 };
 
-enum Flags : u4
+enum Flags : uint4
 {
     MAP_SHARED = 0b1,    // Writes change the underlying object.
     MAP_PRIVATE = 0b10,  // Writes only change the calling process.
@@ -36,12 +36,12 @@ struct Thread;
 
 // TODO: Enforce that `FileDescriptor` cannot be constructed with a negative
 // value. This is an index into the kernel's file descriptor table.
-using FileDescriptor = i4;
+using FileDescriptor = int4;
 
 // TODO: Document these:
-using UserId = u4;
-using GroupId = u4;
-using ProcessId = i4;
+using UserId = uint4;
+using GroupId = uint4;
+using ProcessId = int4;
 
 enum WaitIdType
 {
@@ -51,7 +51,7 @@ enum WaitIdType
     P_PIDFD = 3
 };
 
-enum ThreadFlags : u4
+enum ThreadFlags : uint4
 {
     CSIGNAL = 0x000000ff,
     CLONE_NEWTIME = 0x00000080,
@@ -82,18 +82,18 @@ enum ThreadFlags : u4
 };
 
 struct CloneArguments {
-    u8 flags;
+    uint8 flags;
     FileDescriptor* process_id_file_descriptor;
     ProcessId* child_thread_id;
     ProcessId* parent_thread_id;
-    i8 exit_code;
+    int8 exit_code;
     void* p_stack;
     usize stack_size;
     // TODO: Deal with these later:
     void* p_tls;
     ProcessId* set_tid;
     usize set_tid_size;
-    u8 cgroup;
+    uint8 cgroup;
 };
 
 enum ProcessControl
@@ -238,7 +238,7 @@ enum ProcessControl
     PR_GET_IO_FLUSHER = 58,
 };
 
-enum WaitOptions : i8
+enum WaitOptions : int8
 {
     WNOHANG = 1,
     WUNTRACED = 2,
@@ -255,18 +255,18 @@ enum WaitOptions : i8
 struct ResourceUsage {
     // struct timeval ru_utime;
     // struct timeval ru_stime;
-    i8 ru_maxrss;
-    i8 ru_ixrss;
-    i8 ru_idrss;
-    i8 ru_isrss;
-    i8 ru_minflt;
-    i8 ru_majflt;
-    i8 ru_nswap;
-    i8 ru_inblock;
-    i8 ru_oublock;
-    i8 ru_msgsnd;
-    i8 ru_msgrcv;
-    i8 ru_nsignals;
-    i8 ru_nvcsw;
-    i8 ru_nivcsw;
+    int8 ru_maxrss;
+    int8 ru_ixrss;
+    int8 ru_idrss;
+    int8 ru_isrss;
+    int8 ru_minflt;
+    int8 ru_majflt;
+    int8 ru_nswap;
+    int8 ru_inblock;
+    int8 ru_oublock;
+    int8 ru_msgsnd;
+    int8 ru_msgrcv;
+    int8 ru_nsignals;
+    int8 ru_nvcsw;
+    int8 ru_nivcsw;
 };

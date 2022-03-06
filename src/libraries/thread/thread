@@ -30,9 +30,9 @@ struct Thread {
     // Add meta::invocable concept.
     auto create(auto& allocator, usize const initial_stack_size,
                 auto const& function, void* p_arguments_struct) -> Result<> {
-        u4 const flags = ::CLONE_VM | ::CLONE_FS | ::CLONE_FILES |
-                         ::CLONE_SIGHAND | ::CLONE_SETTLS |
-                         ::CLONE_PARENT_SETTID | ::CLONE_CHILD_CLEARTID;
+        uint4 const flags = ::CLONE_VM | ::CLONE_FS | ::CLONE_FILES |
+                            ::CLONE_SIGHAND | ::CLONE_SETTLS |
+                            ::CLONE_PARENT_SETTID | ::CLONE_CHILD_CLEARTID;
 
         this->stack_size = initial_stack_size;
         /* Allocate a stack for this thread, and get an address to the top of

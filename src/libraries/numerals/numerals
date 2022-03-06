@@ -196,20 +196,20 @@ struct SafeNumeral {
 }  // namespace std::detail
 
 // These macros are defined by the GCC compiler.
-using i1 = std::detail::SafeNumeral<__INT8_TYPE__>;
-using u1 = std::detail::SafeNumeral<__UINT8_TYPE__>;
-using i2 = std::detail::SafeNumeral<__INT16_TYPE__>;
-using u2 = std::detail::SafeNumeral<__UINT16_TYPE__>;
-using i4 = std::detail::SafeNumeral<__INT32_TYPE__>;
-using u4 = std::detail::SafeNumeral<__UINT32_TYPE__>;
-using i8 = std::detail::SafeNumeral<__INT64_TYPE__>;
-using u8 = std::detail::SafeNumeral<__UINT64_TYPE__>;
+using int1 = std::detail::SafeNumeral<__INT8_TYPE__>;
+using uint1 = std::detail::SafeNumeral<__UINT8_TYPE__>;
+using int2 = std::detail::SafeNumeral<__INT16_TYPE__>;
+using uint2 = std::detail::SafeNumeral<__UINT16_TYPE__>;
+using int4 = std::detail::SafeNumeral<__INT32_TYPE__>;
+using uint4 = std::detail::SafeNumeral<__UINT32_TYPE__>;
+using int8 = std::detail::SafeNumeral<__INT64_TYPE__>;
+using uint8 = std::detail::SafeNumeral<__UINT64_TYPE__>;
 // using i128 = std::detail::SafeNumeral<int128_t>;
 // using u128 = std::detail::SafeNumeral<uint128_t>;
 
 // These are GCC built-in types:
-using f4 = std::detail::SafeNumeral<float>;
-using f8 = std::detail::SafeNumeral<double>;
+using float4 = std::detail::SafeNumeral<float>;
+using float8 = std::detail::SafeNumeral<double>;
 #else
 
 namespace meta {
@@ -222,22 +222,22 @@ constexpr auto decay_numeral(auto from) {
 
 // TODO: Add and test 16-byte types and complex numbers.
 // These macros are defined by the GCC compiler.
-using i1 = __INT8_TYPE__;
-using u1 = __UINT8_TYPE__;
-using i2 = __INT16_TYPE__;
-using u2 = __UINT16_TYPE__;
-using i4 = __INT32_TYPE__;
-using u4 = __UINT32_TYPE__;
-using i8 = __INT64_TYPE__;
-using u8 = __UINT64_TYPE__;
-using f4 = float;
-using f8 = double;
+using int1 = __INT8_TYPE__;
+using uint1 = __UINT8_TYPE__;
+using int2 = __INT16_TYPE__;
+using uint2 = __UINT16_TYPE__;
+using int4 = __INT32_TYPE__;
+using uint4 = __UINT32_TYPE__;
+using int8 = __INT64_TYPE__;
+using uint8 = __UINT64_TYPE__;
+using float4 = float;
+using float8 = double;
 #endif
 
-using usize = u8;
+using usize = uint8;
 // TODO: Solve circular dependency:
 // using isize = i8;
 
-using bool1 = u1;
-using bool2 = u2;
-using bool4 = u4;
+using bool1 = uint1;
+using bool2 = uint2;
+using bool4 = uint4;

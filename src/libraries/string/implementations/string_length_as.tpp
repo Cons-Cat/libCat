@@ -26,14 +26,14 @@ auto simd::string_length_as(char8_t const* p_string) -> T {
     while (true) {
         charx16 data;
         data = *p_memory;
-        constexpr u1 mask =
+        constexpr uint1 mask =
             SIDD_UBYTE_OPS | SIDD_CMP_EQUAL_EACH | SIDD_LEAST_SIGNIFICANT;
         if (simd::cmp_implicit_str_c<mask>(data, zeros)) {
-            i1 const index = simd::cmp_implicit_str_i<mask>(data, zeros);
+            int1 const index = simd::cmp_implicit_str_i<mask>(data, zeros);
             return result + index;
         }
         p_memory++;
-        result += sizeof(u1x16);
+        result += sizeof(uint1x16);
         return result;
     }
     // This point unreachable because the function would segfault first.

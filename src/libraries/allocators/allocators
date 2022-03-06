@@ -18,7 +18,7 @@ concept allocator = requires(T allocator, isize input) {
 
     /* Allocators should have a `free()` method which takes no parameters, and
      * returns void. This shall be used to free all of its allocated memory. */
-    {allocator.free()};
+    { allocator.free() };
 
     // TODO: `delete_at()` should only be in `random_access_allocator`s.
     /* Allocators hold a `delete_at()` which takes an `isize` and returns a
@@ -62,7 +62,7 @@ struct PageAllocator {
     void free(){};
 
     // NOLINTNEXTLINE
-    auto operator[](isize byte_index) -> u8& {
-        return reinterpret_cast<u8*>(address)[byte_index];
+    auto operator[](isize byte_index) -> uint8& {
+        return reinterpret_cast<uint8*>(address)[byte_index];
     }
 };
