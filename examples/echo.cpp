@@ -1,10 +1,10 @@
 #include <linux>
 
 void meow() {
-    i4 argc = load_argc();
+    int4 argc = load_argc();
     char8_t** argv = load_argv();
-    for (i4 i = 1; i < argc; i++) {
-        i4 length = 0;
+    for (int4 i = 1; i < argc; i++) {
+        int4 length = 0;
         while (argv[i][length] != 0) {
             length++;
         }

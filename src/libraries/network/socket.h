@@ -41,13 +41,13 @@ enum ProtocolFamilies
     AF_XDP,  // XDP (express data path) interface.
 };
 
-auto socket(i4 protocol_family, i4 type, i4 protocol)
+auto socket(Int4 protocol_family, Int4 type, Int4 protocol)
     -> Result<FileDescriptor> {
     return syscall3(41u, protocol_family, type, protocol);
 }
 
 struct SocketAddr {
-    u2 socket_address_family;
+    UInt2 socket_address_family;
     char socket_address_data[14];
 };
 
@@ -66,19 +66,19 @@ auto accept(FileDescriptor socket_descriptor, SocketAddr* p_socket,
 
 auto bind(FileDescriptor socket_descriptor, SocketAddr* p_socket,
           meta::integral auto p_addr_len) -> Result<> {
-    return syscall4(49u, socket_descriptor, p_socket, p_addr_len);
+    return syscall3(49u, socket_descriptor, p_socket, p_addr_len);
 }
 
 // Mark a socket as available to make connections with `accept()`.
-auto listen(FileDescriptor socket_descriptor, i4 backlog) -> Result<> {
+auto listen(FileDescriptor socket_descriptor, Int4 backlog) -> Result<> {
     return syscall2(50u, socket_descriptor, backlog);
 }
 
 // Returns the number of characters sent to `destination_socket`.
 auto send_buffer_to(FileDescriptor socket_descriptor,
-                    void const* p_message_buffer, u8 buffer_length, i4 flags,
+                    void const* p_message_buffer, u8 buffer_length, Int4 flags,
                     SocketAddr* p_destination_socket, u8 addr_length)
-    -> Result<i8> {
+    -> Result<Int8> {
     return syscall6(44u, socket_descriptor, p_message_buffer, buffer_length,
                     flags, p_destination_socket, addr_length);
 }

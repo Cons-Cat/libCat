@@ -8,7 +8,7 @@
 #include <utility>
 
 // write() forwards its arguments to a failable stdout syscall.
-auto write(i8 const& file_descriptor, char8_t const* p_string_buffer,
+auto write(int8 const& file_descriptor, char8_t const* p_string_buffer,
            isize const& string_length) -> Result<isize>;
 
 constexpr usize page_size = 4096u;
@@ -21,13 +21,13 @@ auto munmap() -> Result<>;
 
 struct Thread;
 
-extern "C" auto clone_asm(void (*function)(void*), void*, i4, void*, ProcessId*,
-                          void*, ProcessId*) -> ProcessId;
+extern "C" auto clone_asm(void (*function)(void*), void*, int4, void*,
+                          ProcessId*, void*, ProcessId*) -> ProcessId;
 
-auto wait4(ProcessId waiting_on_id, i4* p_status_output, i4 options,
+auto wait4(ProcessId waiting_on_id, int4* p_status_output, int4 options,
            void* p_resource_usage) -> Result<Any>;
 
-auto waitid(WaitIdType type, ProcessId id, i8 options) -> Result<Any>;
+auto waitid(WaitIdType type, ProcessId id, int8 options) -> Result<Any>;
 
 struct CloneArguments;
 

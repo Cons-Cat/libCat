@@ -57,12 +57,12 @@ void simd::copy_memory(void const* p_source, void* p_destination, isize bytes) {
             /* Load 8 8x4 vectors, then increment the source pointer by that
              * size. */
 #pragma GCC unroll 8
-            for (i4 i = 0; i < 8; i++) {
+            for (int4 i = 0; i < 8; i++) {
                 vectors[i] = meta::bit_cast<VectorType*>(p_source_handle)[i];
             }
             prefetch((char const*)(p_source_handle + 512), simd::MM_HINT_NTA);
 #pragma GCC unroll 8
-            for (i4 i = 0; i < 8; i++) {
+            for (int4 i = 0; i < 8; i++) {
                 meta::bit_cast<VectorType*>(p_destination_handle)[i] =
                     vectors[i];
             }
@@ -78,13 +78,13 @@ void simd::copy_memory(void const* p_source, void* p_destination, isize bytes) {
          * possible. */
         while (bytes >= 256) {
 #pragma GCC unroll 8
-            for (i4 i = 0; i < 8; i++) {
+            for (int4 i = 0; i < 8; i++) {
                 vectors[i] = meta::bit_cast<VectorType*>((p_source_handle))[i];
             }
             prefetch(p_source_handle + 512, simd::MM_HINT_NTA);
             p_source_handle += 256;
 #pragma GCC unroll 8
-            for (i4 i = 0; i < 8; i++) {
+            for (int4 i = 0; i < 8; i++) {
                 stream_in(p_destination_handle, &vectors[i]);
             }
             p_destination_handle += 256;
