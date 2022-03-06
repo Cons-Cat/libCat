@@ -15,7 +15,7 @@ void simd::stream_in(void* p_destination, T const* source) {
         __builtin_ia32_movntps256(p_destination, source);
     }
     // Streaming 8-byte floats.
-    if constexpr (meta::is_same_v<T, float8x2>) {
+    else if constexpr (meta::is_same_v<T, float8x2>) {
         __builtin_ia32_movntpd(p_destination, source);
     } else if constexpr (meta::is_same_v<T, float8x4>) {
         __builtin_ia32_movntpd256(p_destination, source);
