@@ -2,7 +2,12 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <concepts>
 #include <linux>
+
+#include "linux_flags"
+
+// TODO: Socket descriptor types for SOCK_STREAM and SOCK_SEQPACKET.
 
 enum ProtocolFamilies
 {
@@ -41,51 +46,39 @@ auto socket(i4 protocol_family, i4 type, i4 protocol)
     return syscall3(41u, protocol_family, type, protocol);
 }
 
-// TODO: Make this into a `concept`.
 struct SocketAddr {
-    u4 socket_address_family;    // address family.
-    char socket_address_data[];  // socket address (variable-length data)
+    u2 socket_address_family;
+    char socket_address_data[14];
 };
 
-template <typename SocketType>
-auto connect_to(FileDescriptor connecting_socket, SocketType* p_socket)
+auto connect(FileDescriptor socket_descriptor, SocketAddr* p_socket)
     -> Result<> {
-    return syscall3(42u, connecting_socket, p_socket, sizeof(SocketType));
+    return syscall3(42u, socket_descriptor, p_socket, sizeof(SocketAddr));
 }
 
-/* Returns a `FileDescriptor` for a socket that is requesting a connection, and
- * has been accepted. A `Failure` is returned if the request failed.
- *
- * `listening_socket` must be initialized and binded before calling `accept()`.
- * `p_accepted_socket` is a pointer to a socket `struct` which has the same
- * binary layout as that socket which this expects to connect with. A
- * `FileDescriptor` representing the accepted socket is returned.
- *
- * This function is side-effectful. `p_accepted_socket` is assigned the address
- * of an accepted socket. */
-template <typename SocketType>
-auto accept_connection(FileDescriptor listening_socket,
-                       SocketType* p_accepted_socket, i4 flags = 0)
-    -> Result<FileDescriptor> {
-    // TODO: This seems to be blocked by atomic intrinsics.
-    // TODO: Make an enum for `accept4()` Linux flags.
-    isize socket_size = sizeof(SocketType);
-    syscall4(288u, listening_socket, p_accepted_socket, &socket_size, flags);
-    // TODO: Return file descriptor.
-    // https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/net/socket.c#n1838
-    // https://docs.huihoo.com/doxygen/linux/kernel/3.7/include_2linux_2file_8h_source.html
-    // https://docs.huihoo.com/doxygen/linux/kernel/3.7/fs_2file_8c_source.html#l00773
-    return 0;
+// Make a connection over a socket. This returns a new socket which has been
+// connected to. This new socket is not in a listening state.
+// TODO: Add flags for Linux syscall `288u`.
+auto accept(FileDescriptor socket_descriptor, SocketAddr* p_socket,
+            meta::integral auto* p_addr_len) -> Result<FileDescriptor> {
+    return syscall3(43u, socket_descriptor, p_socket, p_addr_len);
+}
+
+auto bind(FileDescriptor socket_descriptor, SocketAddr* p_socket,
+          meta::integral auto p_addr_len) -> Result<> {
+    return syscall4(49u, socket_descriptor, p_socket, p_addr_len);
+}
+
+// Mark a socket as available to make connections with `accept()`.
+auto listen(FileDescriptor socket_descriptor, i4 backlog) -> Result<> {
+    return syscall2(50u, socket_descriptor, backlog);
 }
 
 // Returns the number of characters sent to `destination_socket`.
-template <typename SocketType>
-auto send_buffer_to(FileDescriptor sending_socket, void const* p_message_buffer,
-                    usize buffer_length, i4 flags,
-                    SocketType const* p_destination_socket) -> Result<isize> {
-    // TODO: This seems to be blocked by atomic intrinsics.
-    // TODO: Implement this behavior.
-    // https://filippo.io/linux-syscall-table/
-    // https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/net/socket.c#n2005
-    return 0;
+auto send_buffer_to(FileDescriptor socket_descriptor,
+                    void const* p_message_buffer, u8 buffer_length, i4 flags,
+                    SocketAddr* p_destination_socket, u8 addr_length)
+    -> Result<i8> {
+    return syscall6(44u, socket_descriptor, p_message_buffer, buffer_length,
+                    flags, p_destination_socket, addr_length);
 }
