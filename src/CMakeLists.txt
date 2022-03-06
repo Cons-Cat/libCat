@@ -65,8 +65,9 @@ set(
   ${CAT_SRC}/libraries/string/implementations/string_length_as.tpp
   ${CAT_SRC}/libraries/linux/implementations/syscall.cpp
   ${CAT_SRC}/libraries/linux/implementations/syscall.tpp
-  ${CAT_SRC}/libraries/linux/implementations/read.tpp
-  ${CAT_SRC}/libraries/linux/implementations/write.tpp
+  ${CAT_SRC}/libraries/linux/implementations/read.cpp
+  ${CAT_SRC}/libraries/linux/implementations/write.cpp
+  ${CAT_SRC}/libraries/linux/implementations/unlink.cpp
   ${CAT_SRC}/libraries/linux/implementations/mmap.cpp
   ${CAT_SRC}/libraries/linux/implementations/wait4.cpp
   ${CAT_SRC}/libraries/linux/implementations/waitid.cpp
