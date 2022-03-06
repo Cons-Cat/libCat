@@ -18,6 +18,8 @@ auto read(FileDescriptor const file_descriptor, char8_t const* p_string_buffer,
 auto write(FileDescriptor const file_descriptor, char8_t const* p_string_buffer,
            isize const string_length) -> Result<isize>;
 
+auto close(FileDescriptor const object) -> Result<>;
+
 auto unlink(char8_t const* path_name) -> Result<>;
 
 constexpr usize page_size = 4096u;
