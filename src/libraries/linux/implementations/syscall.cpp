@@ -8,7 +8,7 @@ auto syscall0(Any call) -> Result<Any> {
         "syscall"
         : "=a"(result)
         : "a"(call)
-        /* Clobbering all of these is necessary to preven a segfault: */
+        /* Clobbering all of these is necessary to prevent a segfault: */
         : "memory", "cc", "rcx", "r11");
     if (meta::bit_cast<int8>(result) < 0) {
         // The negative of `result` represents Linux's errno.
@@ -23,7 +23,7 @@ auto syscall1(Any call, Any arg) -> Result<Any> {
         "syscall"
         : "=a"(result)
         : "a"(call), "D"(arg)
-        /* Clobbering all of these is necessary to preven a segfault: */
+        /* Clobbering all of these is necessary to prevent a segfault: */
         : "memory", "cc", "rcx", "r11");
     if (meta::bit_cast<int8>(result) < 0) {
         // The negative of `result` represents Linux's errno.
@@ -38,7 +38,7 @@ auto syscall2(Any call, Any arg1, Any arg2) -> Result<Any> {
         "syscall"
         : "=a"(result)
         : "a"(call), "D"(arg1), "S"(arg2)
-        /* Clobbering all of these is necessary to preven a segfault: */
+        /* Clobbering all of these is necessary to prevent a segfault: */
         : "memory", "cc", "rcx", "r11");
     if (meta::bit_cast<int8>(result) < 0) {
         // The negative of `result` represents Linux's errno.
@@ -53,7 +53,7 @@ auto syscall3(Any call, Any arg1, Any arg2, Any arg3) -> Result<Any> {
         "syscall"
         : "=a"(result)
         : "a"(call), "D"(arg1), "S"(arg2), "d"(arg3)
-        /* Clobbering all of these is necessary to preven a segfault: */
+        /* Clobbering all of these is necessary to prevent a segfault: */
         : "memory", "cc", "rcx", "r11");
     if (meta::bit_cast<int8>(result) < 0) {
         // The negative of `result` represents Linux's errno.
