@@ -11,12 +11,14 @@
 
 // `read()` transmits a number of bytes into a file descriptor.
 auto read(FileDescriptor const file_descriptor, char8_t const* p_string_buffer,
-          meta::integral auto const string_length) -> Result<isize>;
+          isize const string_length) -> Result<isize>;
 
 // `write()` forwards its arguments to a failable stdout syscall. It returns the
 // number of bytes that it wrote.
 auto write(FileDescriptor const file_descriptor, char8_t const* p_string_buffer,
-           meta::integral auto const string_length) -> Result<isize>;
+           isize const string_length) -> Result<isize>;
+
+auto unlink(char8_t const* path_name) -> Result<>;
 
 constexpr usize page_size = 4096u;
 
@@ -57,6 +59,4 @@ template <typename ReturnType, typename T, typename... Args>
 auto syscall(T call, Args... parameters) -> Result<ReturnType>
 requires(sizeof...(Args) < 7);
 
-#include "./implementations/read.tpp"
 #include "./implementations/syscall.tpp"
-#include "./implementations/write.tpp"
