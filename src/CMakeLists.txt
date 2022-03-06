@@ -23,6 +23,7 @@ set(
   ${CAT_SRC}/libraries/linux/
   ${CAT_SRC}/libraries/linux/detail/
   ${CAT_SRC}/libraries/thread/
+  ${CAT_SRC}/libraries/network/
   PARENT_SCOPE
 )
 
@@ -73,5 +74,6 @@ set(
   ${CAT_SRC}/libraries/utility/implementations/is_constant_evaluated.tpp
   ${CAT_SRC}/libraries/utility/implementations/constant_evaluate.tpp
   ${CAT_SRC}/libraries/utility/implementations/bit_cast.tpp
+  ${CAT_SRC}/libraries/network/socket.h
   PARENT_SCOPE
 )
