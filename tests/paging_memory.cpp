@@ -8,5 +8,5 @@ void meow() {
     // Write to the page.
     allocator[0] = 10;
     Result(allocator[0] == 10).or_panic();
-    exit(0);
+    exit();
 };

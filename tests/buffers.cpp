@@ -21,5 +21,5 @@ void meow() {
         _ = meta::move(const_buffer_2);
     };
     meta::constant_evaluate(constant);
-    exit(0);
+    exit();
 };

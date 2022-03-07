@@ -26,5 +26,5 @@ void meow() {
     for (int4 i = 0; i < 2000; i++) {
         Result(source_2000[i] == dest_2000[i]).or_panic();
     }
-    exit(0);
+    exit();
 };
