@@ -148,6 +148,16 @@ target_compile_options(echo PRIVATE ${CAT_CXX_FLAGS})
 target_link_libraries(echo PRIVATE cat-std)
 target_link_options(echo PRIVATE ${CAT_LINK_FLAGS})
 
+add_executable(client examples/client.cpp)
+target_compile_options(client PRIVATE ${CAT_CXX_FLAGS})
+target_link_libraries(client PRIVATE cat-std)
+target_link_options(client PRIVATE ${CAT_LINK_FLAGS})
+
+add_executable(server examples/server.cpp)
+target_compile_options(server PRIVATE ${CAT_CXX_FLAGS})
+target_link_libraries(server PRIVATE cat-std)
+target_link_options(server PRIVATE ${CAT_LINK_FLAGS})
+
 add_executable(memcpy examples/memory_copy.cpp)
 target_compile_options(memcpy PRIVATE ${CAT_CXX_FLAGS})
 target_link_libraries(memcpy PRIVATE cat-std)

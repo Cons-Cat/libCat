@@ -9,12 +9,12 @@
 // Basic Socket type that any other sockets must convert into.
 struct Socket {
     uint2 family;
-    uint1 data[14];
+    char data[14];
 };
 
 struct SocketLocal {
     uint2 const family = 1u;
-    uint1 path_name[108];
+    char path_name[108];
 };
 
 // Create and return a `Socket`.
@@ -31,7 +31,7 @@ auto create_socket_local(int8 const type, int8 const protocol)
 
 // Connect a `Socket` to an address.
 auto connect_socket(FileDescriptor const socket_descriptor,
-                    Socket const* p_socket) -> Result<> {
+                    void const* p_socket) -> Result<> {
     return syscall3(42u, socket_descriptor, p_socket, sizeof(Socket));
 }
 
@@ -39,7 +39,7 @@ auto connect_socket(FileDescriptor const socket_descriptor,
 // connected to. This new `Socket` is not in a listening state.
 // TODO: Add flags for Linux syscall `288u`.
 auto accept_socket(FileDescriptor const socket_descriptor,
-                   Socket const* __restrict p_socket,
+                   void const* __restrict p_socket,
                    isize const* __restrict p_addr_len)
     -> Result<FileDescriptor> {
     return syscall3(43u, socket_descriptor, p_socket, p_addr_len);
@@ -54,14 +54,14 @@ auto recieve_buffer(FileDescriptor const socket_descriptor,
                     p_addr, p_addr_length);
 }
 
-auto bind_socket(FileDescriptor const socket_descriptor, Socket const* p_socket,
+auto bind_socket(FileDescriptor const socket_descriptor, void const* p_socket,
                  isize const p_addr_len) -> Result<> {
     return syscall3(49u, socket_descriptor, p_socket, p_addr_len);
 }
 
 // Mark a socket as available to make connections with `accept()`.
-auto listen_socket(FileDescriptor const socket_descriptor, int8 const backlog)
-    -> Result<> {
+auto listen_to_socket(FileDescriptor const socket_descriptor,
+                      int8 const backlog) -> Result<> {
     return syscall2(50u, socket_descriptor, backlog);
 }
 
