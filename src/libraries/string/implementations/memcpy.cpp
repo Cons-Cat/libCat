@@ -4,6 +4,6 @@
 
 [[deprecated("memcpy() is deprecated! Use simd::copy_buffer() instead!")]] auto
 memcpy(void* p_destination, void const* p_source, size_t bytes) -> void* {
-    simd::copy_memory(p_source, p_destination, bytes);
+    std::copy_memory(p_source, p_destination, static_cast<isize>(bytes));
     return p_destination;
 }

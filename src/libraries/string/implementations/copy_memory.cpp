@@ -2,28 +2,9 @@
 // vim: set ft=cpp:
 #include <string>
 
-// TODO: This should use an AnyConst container.
-/* Copy some bytes from one address to another address. There exists
- * `simd::string_length_as<>()`. With the tree-loop-distribute-patterns
- * optimization, this generates a call to `memcpy()` which cannot be resolved,
- * so that must be disabled for this function, or it cannot be linked.
- */
-// NOLINTNEXTLINE
-[[gnu::optimize("-fno-tree-loop-distribute-patterns")]] void std::copy_memory(
-    void const* p_source, void* p_destination, isize bytes) {
-    unsigned char const* p_source_handle =
-        static_cast<unsigned char const*>(p_source);
-    unsigned char* p_destination_handle =
-        static_cast<unsigned char*>(p_destination);
-
-    for (isize i = 0; i < bytes; i++) {
-        p_destination_handle[i] = p_source_handle[i];
-    }
-}
-
 // TODO: Make integers consistently signed.
 /* Copy some bytes from one address to another address. */
-void simd::copy_memory(void const* p_source, void* p_destination, isize bytes) {
+void std::copy_memory(void const* p_source, void* p_destination, isize bytes) {
     // Vector is the width of a 32-byte AVX register.
     // `long long int` is required for some SIMD intrinsics.
     using VectorType = std::detail::SimdVector<long long int, 4>;
@@ -85,7 +66,7 @@ void simd::copy_memory(void const* p_source, void* p_destination, isize bytes) {
             p_source_handle += 256;
 #pragma GCC unroll 8
             for (int4 i = 0; i < 8; i++) {
-                stream_in(p_destination_handle, &vectors[i]);
+                simd::stream_in(p_destination_handle, &vectors[i]);
             }
             p_destination_handle += 256;
             bytes -= 256;
