@@ -6,7 +6,7 @@ void function(void*) {
     for (int4 i = 0; i < 15; i++) {
         write(2, u8"Moo?\n", 5).discard_result();
     }
-    exit(0);
+    exit();
 }
 
 void meow() {
@@ -18,5 +18,5 @@ void meow() {
     }
     _ = thread.join().or_panic();
     write(2, u8"Finished!\n", 10).discard_result();
-    exit(0);
+    exit();
 }

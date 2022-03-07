@@ -23,5 +23,5 @@ void meow() {
     /* Call Foo() constructor, then RAII() move-constructor, then Foo()
      * destructor: */
     func(meta::move(foo));
-    exit(0);
+    exit();
 }
