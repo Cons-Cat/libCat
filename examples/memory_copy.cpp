@@ -1,5 +1,5 @@
 #include <buffer>
-#include <string>
+#include <memory>
 
 void meow() {
     Buffer<int4, 200000> source_2000;

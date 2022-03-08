@@ -4,21 +4,6 @@
 
 namespace std {
 
-// NOLINTNEXTLINE
-[[gnu::optimize("-fno-tree-loop-distribute-patterns")]] void copy_memory(
-    void const* p_source, void* p_destination, isize bytes);
-
-auto is_aligned(void const volatile* pointer, isize byte_alignment) -> bool;
-
-// TODO: Power-of-two concept.
-// template <isize Width>
-// void copy_memory_small(void* p_destination, void const* p_source) {
-//     static_assert(Width <= 256);
-//     using Vector = std::detail::simd_vector<i1, Width>;
-//     Vector source_vector = *reinterpret_cast<Vector const*>(p_source);
-//     *reinterpret_cast<Vector*>(p_destination) = source_vector;
-// }
-
 template <typename T = isize>
 auto string_length(char8_t const* p_string) -> T;
 
@@ -26,9 +11,10 @@ auto string_length(char8_t const* p_string) -> T;
 
 // These use primitive C types to be API compatible with libC.
 
-// Deprecated call to `memcpy()`. Consider using `copy_buffer()` instead.
-auto memcpy(void* p_destination, void const* p_source, size_t bytes) -> void*;
-// Deprecated call to `strlen()`. Consider using `string_length_as<>()` instead.
-auto strlen(char const* p_string) -> size_t;
+// // Deprecated call to `memcpy()`. Consider using `copy_buffer()` instead.
+// auto memcpy(void* p_destination, void const* p_source, size_t bytes) ->
+// void*;
+// // Deprecated call to `strlen()`. Consider using `string_length_as<>()`
+// instead. auto strlen(char const* p_string) -> size_t;
 
 #include "./implementations/string_length.tpp"
