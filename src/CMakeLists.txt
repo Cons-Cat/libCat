@@ -58,8 +58,9 @@ set(
   ${CAT_SRC}/libraries/simd/implementations/set_zeros.tpp
   ${CAT_SRC}/libraries/simd/implementations/shuffle.tpp
   ${CAT_SRC}/libraries/simd/implementations/stream_in.tpp
-  ${CAT_SRC}/libraries/string/implementations/copy_memory.cpp
-  ${CAT_SRC}/libraries/string/implementations/is_aligned.cpp
+  ${CAT_SRC}/libraries/memory/implementations/copy_memory.cpp
+  ${CAT_SRC}/libraries/memory/implementations/copy_memory_small.cpp
+  ${CAT_SRC}/libraries/memory/implementations/is_aligned.cpp
   ${CAT_SRC}/libraries/string/implementations/memcpy.cpp
   ${CAT_SRC}/libraries/string/implementations/strlen.cpp
   ${CAT_SRC}/libraries/string/implementations/string_length.tpp

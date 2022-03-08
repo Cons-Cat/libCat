@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-#include <string>
+#include <memory>
 
 // TODO: Make integers consistently signed.
 /* Copy some bytes from one address to another address. */
@@ -17,7 +17,7 @@ void std::copy_memory(void const* p_source, void* p_destination, isize bytes) {
     isize padding;
 
     if (bytes <= 256) {
-        std::copy_memory(p_source, p_destination, bytes);
+        std::copy_memory_small(p_source, p_destination, bytes);
     }
 
     // Align source, destination, and bytes to 16 bytes
@@ -32,7 +32,8 @@ void std::copy_memory(void const* p_source, void* p_destination, isize bytes) {
 
     VectorType vectors[8];
     constexpr isize step_size = sizeof(VectorType) * 8;
-    // This routine is optimized for buffers in L3 cache. Streaming is slower.
+    // This routine is optimized for buffers in L3 cache. Streaming is
+    // slower.
     if (bytes <= cachesize) {
         while (bytes >= step_size) {
             /* Load 8 8x4 vectors, then increment the source pointer by that
@@ -73,6 +74,6 @@ void std::copy_memory(void const* p_source, void* p_destination, isize bytes) {
         }
         simd::sfence();
     }
-    std::copy_memory(p_source_handle, p_destination_handle, bytes);
+    std::copy_memory_small(p_source_handle, p_destination_handle, bytes);
     simd::zero_upper_avx_registers();
 }  // namespace simd
