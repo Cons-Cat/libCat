@@ -187,10 +187,11 @@ consteval auto set_zeros() -> T;
 // TODO: Use a vector concept.
 auto shuffle(auto in_vector, auto mask);
 
+// TODO: Make this const-correct.
 template <uint4 Width>
-auto p_string_to_p_vector(char8_t const* p_string) {
+auto p_string_to_p_vector(meta::string auto p_string) {
     using U = std::detail::SimdVector<char, Width>;
-    return reinterpret_cast<U*>(const_cast<char8_t*>(p_string));
+    return meta::bit_cast<U*>(p_string);
 }
 
 template <uint1 Mask>

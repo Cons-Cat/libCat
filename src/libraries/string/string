@@ -2,19 +2,32 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <concepts>
+#include <memory>
+#include <utility>
+
 namespace std {
 
 template <typename T = isize>
-auto string_length(char8_t const* p_string) -> T;
+auto string_length(meta::string auto&& p_string) -> T;
 
 }  // namespace std
 
 // These use primitive C types to be API compatible with libC.
 
-// // Deprecated call to `memcpy()`. Consider using `copy_buffer()` instead.
-// auto memcpy(void* p_destination, void const* p_source, size_t bytes) ->
-// void*;
-// // Deprecated call to `strlen()`. Consider using `string_length_as<>()`
-// instead. auto strlen(char const* p_string) -> size_t;
+// Deprecated call to `memcpy()`. Consider using `std::copy_buffer()` instead.
+auto memcpy(void* p_destination, void const* p_source, size_t bytes) -> void*;
+// Deprecated call to `strlen()`. Consider using `std::string_length()` instead.
+auto strlen(meta::string auto const* p_string) -> size_t;
+
+struct StringView {
+    char8_t const* p_data;
+    isize length;
+
+    StringView() = delete;
+    constexpr StringView(auto p_string) : p_data(p_string){};
+    constexpr StringView(StringView const&& string)
+        : p_data(string.p_data), length(string.length){};
+};
 
 #include "./implementations/string_length.tpp"
