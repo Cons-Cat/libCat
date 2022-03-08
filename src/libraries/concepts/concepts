@@ -35,6 +35,14 @@ template <typename T>
 concept safe_integral =
     (!meta::is_integral_v<T>)&&(!meta::is_floating_point_v<T>);
 
+// TODO: Support more string types.
+template <typename T>
+concept string =
+    (meta::is_same_v<meta::remove_const_t<meta::remove_reference_t<T>>,
+                     char8_t const*> ||
+     meta::is_same_v<meta::remove_const_t<meta::remove_reference_t<T>>,
+                     char const*>);
+
 template <typename Derived, typename Base>
 concept derived_from = meta::is_base_of_v<Base, Derived> &&
     meta::is_convertible_v<const volatile Derived*, const volatile Base*>;
