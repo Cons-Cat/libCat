@@ -25,7 +25,6 @@ list(
   APPEND
   CAT_CXX_FLAGS_DEBUG
   -ggdb3 -pipe
-  -fconcepts-diagnostics-depth=2
   # -fsanitize=undefined
   # -fsanitize=address
   # -fsanitize=leak

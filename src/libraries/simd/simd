@@ -52,13 +52,18 @@ struct alignas(4) SimdVector {
 
     // TODO: `__builtin_convertvector()` wrapped by conversion operators.
 
-    constexpr auto operator=(SimdVector<T, Width>& operand)
+    constexpr auto operator=(SimdVector<T, Width> operand)
         -> SimdVector<T, Width>& {
         this->value = operand.value;
         return *this;
     }
 
-    constexpr auto operator+(SimdVector<T, Width> const& operand)
+    constexpr auto operator==(SimdVector<T, Width> const& operand)
+        -> SimdVector<T, Width> {
+        return SimdVector<T, Width>{.value = this->value == operand.value};
+    }
+
+    constexpr auto operator+(SimdVector<T, Width> operand)
         -> SimdVector<T, Width> {
         return SimdVector<T, Width>{this->value + operand.value};
     }
@@ -68,7 +73,7 @@ struct alignas(4) SimdVector {
         return *this;
     }
 
-    constexpr auto operator-(SimdVector<T, Width> const& operand)
+    constexpr auto operator-(SimdVector<T, Width> operand)
         -> SimdVector<T, Width> {
         return SimdVector<T, Width>{this->value - operand.value};
     }

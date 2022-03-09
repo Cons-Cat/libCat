@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-#include <simd>
+#pragma once
 
 // TODO: Constrain parameter with a vector concept.
 // TODO: This code can be simplified a lot.
