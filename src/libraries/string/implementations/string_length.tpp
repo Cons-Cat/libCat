@@ -7,7 +7,7 @@
 /* T is the return type of `string_length()`. It may be signed or
  * unsigned. This function requires SSE4.2 */
 template <typename T>
-auto std::string_length(meta::string auto&& p_string) -> T {
+constexpr auto std::string_length(char const* p_string) -> T {
     // TODO: Align pointers.
     T result = 0;
     charx16* p_memory = simd::p_string_to_p_vector<16>((p_string));

@@ -74,6 +74,7 @@ void std::copy_memory(void const* p_source, void* p_destination, isize bytes) {
         }
         simd::sfence();
     }
+
     std::copy_memory_small(p_source_handle, p_destination_handle, bytes);
     simd::zero_upper_avx_registers();
 }  // namespace simd

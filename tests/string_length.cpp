@@ -1,14 +1,16 @@
 #include <string>
 
 void meow() {
-    char8_t const* p_string_1 = u8"Hello!";
+    char const* p_string_1 = "Hello!";
     char const* const p_string_2 = "Hello!";
 
-    char8_t const* const p_string_3 = u8"Hello!";
+    char const* const p_string_3 = "Hello!";
     char const* p_string_4 = "Hello!";
 
-    char8_t const* const p_string_5 = u8"Hello!";
-    char8_t const* const p_string_6 = u8"Hello!";
+    char const* const p_string_5 = "Hello!";
+    char const* const p_string_6 = "Hello!";
+
+    std::compare_strings(p_string_1, p_string_4);
 
     isize len_1 = std::string_length(p_string_1);
     isize len_2 = std::string_length(p_string_2);

@@ -9,7 +9,7 @@
 namespace std {
 
 template <typename T = isize>
-auto string_length(meta::string auto&& p_string) -> T;
+constexpr auto string_length(char const* p_string) -> T;
 
 }  // namespace std
 
@@ -17,15 +17,14 @@ auto string_length(meta::string auto&& p_string) -> T;
 
 // Deprecated call to `memcpy()`. Consider using `std::copy_buffer()` instead.
 auto memcpy(void* p_destination, void const* p_source, size_t bytes) -> void*;
-// Deprecated call to `strlen()`. Consider using `std::string_length()` instead.
-auto strlen(meta::string auto const* p_string) -> size_t;
 
 struct StringView {
-    char8_t const* p_data;
+    char const* p_data;
     isize length;
 
     StringView() = delete;
-    constexpr StringView(auto p_string) : p_data(p_string){};
+    constexpr StringView(char const* p_string)
+        : p_data(p_string), length(std::string_length(p_string)){};
     constexpr StringView(StringView const&& string)
         : p_data(string.p_data), length(string.length){};
 };

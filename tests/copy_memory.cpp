@@ -23,9 +23,11 @@ void meow() {
     for (int4 i = 0; i < 2000; i++) {
         dest_2000[i] = 0;
     }
+
     std::copy_memory(&source_2000, &dest_2000, sizeof(dest_2000));
     for (int4 i = 0; i < 2000; i++) {
         Result(source_2000[i] == dest_2000[i]).or_panic();
     }
+
     exit();
 };
