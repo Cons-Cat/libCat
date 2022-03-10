@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-#include <memory>
+#include <string>
 
 // NOLINTNEXTLINE clangd doesn't recognize the `gnu::optimize()` attribute.
 [[gnu::optimize("-fno-tree-loop-distribute-patterns")]] void
