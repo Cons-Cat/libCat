@@ -10,8 +10,6 @@ void meow() {
     char const* const p_string_5 = "Hello!";
     char const* const p_string_6 = "Hello!";
 
-    std::compare_strings(p_string_1, p_string_4);
-
     isize len_1 = std::string_length(p_string_1);
     isize len_2 = std::string_length(p_string_2);
     isize len_3 = std::string_length(p_string_3);
