@@ -15,22 +15,29 @@ auto std::compare_strings(StringView const& string_1,
         return false;
     }
 
-    Buffer<charx32, 4> vector_1;
-    Buffer<charx32, 4> vector_2;
-    Buffer<charx32, 4> mask;
+    // TODO: Support Armv8a and i386.
+#ifdef __x86_64__
+    using VectorType = charx32;
+#endif
+
+    Buffer<VectorType, 4> vector_1;
+    Buffer<VectorType, 4> vector_2;
+    Buffer<VectorType, 4> mask;
     Buffer<uint4, 4> results;
     isize length = string_1.length;
+    isize vector_size = sizeof(VectorType);
     char const* p_chars_1 = string_1.p_data;
     char const* p_chars_2 = string_2.p_data;
 
     auto loop = [&](isize size) -> bool {
-        for (; length >= 32 * size; length -= 32 * size, p_chars_1 += 32 * size,
-                                    p_chars_2 += 32 * size) {
+        for (; length >= vector_size * size; length -= vector_size * size,
+                                             p_chars_1 += vector_size * size,
+                                             p_chars_2 += vector_size * size) {
             for (int i = 0; i < size; i++) {
-                vector_1[i] =
-                    *(meta::bit_cast<charx32*>(string_1.p_data) + (i * size));
-                vector_2[i] =
-                    *(meta::bit_cast<charx32*>(string_2.p_data) + (i * size));
+                vector_1[i] = *(meta::bit_cast<VectorType*>(string_1.p_data) +
+                                (i * size));
+                vector_2[i] = *(meta::bit_cast<VectorType*>(string_2.p_data) +
+                                (i * size));
                 mask[i] = vector_1[i] + vector_2[i];
                 results[i] = simd::move_mask(mask[i]);
             }
