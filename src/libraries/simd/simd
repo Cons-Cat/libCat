@@ -229,6 +229,18 @@ enum MM_HINT
 template <typename T>
 void stream_in(void* p_destination, T const* source);
 
+template <typename T>
+auto move_mask(T vector) -> int4 {
+    if constexpr (sizeof(typename T::ScalarType) == 1) {
+        return __builtin_ia32_pmovmskb256(
+            meta::bit_cast<std::detail::SimdVector<char, vector.width>>(vector)
+                .value);
+    } else {
+        // TODO: Support additional vector sizes.
+        static_assert("BAD!");
+    }
+}
+
 }  // namespace simd
 
 /* TODO: __builtin_cpu_init()

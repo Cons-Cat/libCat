@@ -27,44 +27,50 @@ list(
 link_libraries(cat-test)
 # add_link_options(${CAT_LINK_FLAGS})
 
-# This tests that a Result<void> does not panic if it holds ok.
+# This tests that `Result<void>` does not panic if it holds `okay`.
 add_executable(test_result_ok result_success.cpp)
 target_compile_options(test_result_ok PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_result_ok PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME TestResultOk COMMAND test_result_ok)
 
-# This tests that a Result<void> will panic if it holds a Failure.
+# This tests that `Result<void>` will panic if it holds a `Failure`.
 add_executable(test_result_fail result_failure.cpp)
 target_compile_options(test_result_fail PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_result_fail PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME TestResultFail COMMAND test_result_fail)
 set_tests_properties(TestResultFail PROPERTIES WILL_FAIL TRUE)
 
-# This tests if <buffer.h> works.
+# This tests if `<buffer.h>` works.
 add_executable(test_buffers buffers.cpp)
 target_compile_options(test_buffers PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_buffers PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME TestBuffers COMMAND test_buffers)
 
-# This tests if string_length_as<>() works.
+# This tests if `string_length<>()` works.
 add_executable(test_strlen string_length.cpp)
 target_compile_options(test_strlen PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_strlen PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME TestStrlen COMMAND test_strlen)
 
-# This tests if copy_memory() works.
+# This tests if `compare_strings()` works.
+add_executable(test_strcmp compare_strings.cpp)
+target_compile_options(test_strcmp PRIVATE ${CAT_CXX_FLAGS_TEST})
+target_link_options(test_strcmp PRIVATE ${CAT_LINK_FLAGS})
+add_test(NAME TestStrCmp COMMAND test_strcmp)
+
+# This tests if `copy_memory()` works.
 add_executable(test_copymem copy_memory.cpp)
 target_compile_options(test_copymem PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_copymem PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME CopyMem COMMAND test_copymem)
 
-# This tests if page_allocator works.
+# This tests if `PageAllocator` works.
 add_executable(test_paging paging_memory.cpp)
 target_compile_options(test_paging PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_paging PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME PagingMemory COMMAND test_paging)
 
-# This tests if threads basically work.
+# This tests if `Thread`s basically work.
 add_executable(test_threads thread.cpp)
 target_compile_options(test_threads PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_threads PRIVATE ${CAT_LINK_FLAGS})

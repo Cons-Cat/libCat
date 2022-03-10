@@ -13,9 +13,9 @@ constexpr auto string_length(char const* p_string) -> T;
 
 }  // namespace std
 
-// These use primitive C types to be API compatible with libC.
-
 // Deprecated call to `memcpy()`. Consider using `std::copy_buffer()` instead.
+// This uses a non-idiomatic type `size_t` to be semantically equivalent with
+// libC.
 auto memcpy(void* p_destination, void const* p_source, size_t bytes) -> void*;
 
 struct StringView {
@@ -29,4 +29,12 @@ struct StringView {
         : p_data(string.p_data), length(string.length){};
 };
 
+namespace std {
+
+auto compare_strings(StringView const& string_1, StringView const& string_2)
+    -> bool;
+
+}
+
+#include "./implementations/compare_strings.tpp"
 #include "./implementations/string_length.tpp"
