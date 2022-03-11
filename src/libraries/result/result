@@ -62,12 +62,12 @@ struct [[nodiscard]] Failure {
 
 namespace std::detail {
 
-struct ok {};
+struct okay {};
 
 }  // namespace std::detail
 
-// `Okay` may be returned in a function that returns Result<void>.
-constexpr std::detail::ok okay{};
+// `Okay` may be returned in a function that returns `Result<void>`.
+constexpr std::detail::okay okay{};
 
 template <typename T>
 struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {

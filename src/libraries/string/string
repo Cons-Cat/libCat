@@ -19,18 +19,29 @@ constexpr auto string_length(char const* p_string) -> T;
 auto memcpy(void* p_destination, void const* p_source, size_t bytes) -> void*;
 
 struct StringView {
-    char const* p_data;
-    isize length;
+    using Detail = struct {
+        char const* p_data;
+        isize length;
+    };
+    Detail detail;
 
     StringView() = delete;
     constexpr StringView(char const* p_string)
-        : p_data(p_string), length(std::string_length(p_string)){};
-    constexpr StringView(StringView const&& string)
-        : p_data(string.p_data), length(string.length){};
+        : detail{.p_data = p_string, .length = std::string_length(p_string)} {};
+    constexpr StringView(StringView const&& string) : detail(string.detail){};
+
+    auto data() const -> char const* {
+        return this->detail.p_data;
+    }
+
+    auto length() const -> isize {
+        return this->detail.length;
+    }
 };
 
 namespace std {
 
+template <typename T = int>
 auto compare_strings(StringView const& string_1, StringView const& string_2)
     -> bool;
 
