@@ -8,32 +8,25 @@
 
 auto std::compare_strings(StringView const& string_1,
                           StringView const& string_2) -> bool {
-    // This function's design is based on
-    // https://github.com/kalamay/pcmp/
-
     if (string_1.length != string_2.length) {
         return false;
     }
 
-    // TODO: Support Armv8a and i386.
-#ifdef __x86_64__
+    // TODO: Use a type for an ISA-specific widest vector.
     using VectorType = charx32;
-#endif
 
     Buffer<VectorType, 4> vector_1;
     Buffer<VectorType, 4> vector_2;
     Buffer<VectorType, 4> mask;
     Buffer<uint4, 4> results;
-    isize length = string_1.length;
+    isize length_iterator = string_1.length;
     isize vector_size = sizeof(VectorType);
-    char const* p_chars_1 = string_1.p_data;
-    char const* p_chars_2 = string_2.p_data;
+    char const* p_string_1_iterator = string_1.p_data;
+    char const* p_string_2_iterator = string_2.p_data;
 
     auto loop = [&](isize size) -> bool {
-        for (; length >= vector_size * size; length -= vector_size * size,
-                                             p_chars_1 += vector_size * size,
-                                             p_chars_2 += vector_size * size) {
-            for (int i = 0; i < size; i++) {
+        while (length_iterator >= vector_size * size) {
+            for (isize i = 0; i < size; i++) {
                 vector_1[i] = *(meta::bit_cast<VectorType*>(string_1.p_data) +
                                 (i * size));
                 vector_2[i] = *(meta::bit_cast<VectorType*>(string_2.p_data) +
@@ -42,16 +35,21 @@ auto std::compare_strings(StringView const& string_1,
                 results[i] = simd::move_mask(mask[i]);
             }
 
-            for (int i = 0; i < size; i++) {
+            for (isize i = 0; i < size; i++) {
                 if (results[i] != std::numeric_limits<uint4>::max()) {
                     return false;
                 }
             }
+
+            length_iterator -= vector_size * size;
+            p_string_1_iterator += vector_size * size;
+            p_string_2_iterator += vector_size * size;
         }
 
         return true;
     };
 
+    // Compare four, two, then one vectors of characters at a time.
     if (!loop(4)) {
         return false;
     }
@@ -62,8 +60,10 @@ auto std::compare_strings(StringView const& string_1,
         return false;
     }
 
-    for (; length > 0; length--, p_chars_1++, p_chars_2++) {
-        if (*p_chars_1 != *p_chars_2) {
+    // Compare remaining characters individually.
+    for (isize i = 0; i < length_iterator;
+         i++, p_string_1_iterator++, p_string_2_iterator++) {
+        if (*p_string_1_iterator != *p_string_2_iterator) {
             return false;
         }
     }
