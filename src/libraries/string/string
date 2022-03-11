@@ -41,7 +41,6 @@ struct StringView {
 
 namespace std {
 
-template <typename T = int>
 auto compare_strings(StringView const& string_1, StringView const& string_2)
     -> bool;
 
@@ -49,5 +48,4 @@ auto compare_strings(StringView const& string_1, StringView const& string_2)
 
 }  // namespace std
 
-#include "./implementations/compare_strings.tpp"
 #include "./implementations/string_length.tpp"
