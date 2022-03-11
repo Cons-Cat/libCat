@@ -71,47 +71,51 @@ constexpr std::detail::okay okay{};
 
 template <typename T>
 struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
-    Failure error_code;  // Error is a 8-byte value.
-    /* char should be a relatively unintrusive dummy data for when this holds
+    Failure failure_code;  // `Failure` is an 8-byte value.
+    /* `char` should be a relatively unintrusive dummy data for when this holds
      * void. Reflection TS in future C++ will provide conditional-members, which
-     * would be a better solution. */
+     * would be a better solution. TODO: Solve this with a partial template
+     * specialization. */
     using ValueType = meta::conditional_t<meta::is_void_v<T>, char, T>;
     static constexpr bool is_void = meta::is_same_v<T, void>;
-    /* It is unsafe to access value. You may prefer or_panic_debug() which
+    /* It is unsafe to access value. You may prefer `or_panic_debug()` which
      * provides failure-handling in debug builds, and skips them in optimized
      * builds. */
     ValueType const value;
     bool const is_okay;
 
-    Result(Failure in_code) : error_code(in_code), value(), is_okay(false) {
+    constexpr Result(Failure in_code)
+        : failure_code(in_code), value(), is_okay(false) {
     }
-    Result(ValueType in_value) requires(!is_void)
-        : error_code(), value(in_value), is_okay(true) {
+    constexpr Result(ValueType in_value) requires(!is_void)
+        : failure_code(), value(in_value), is_okay(true) {
     }
     // Special-case consuming data when holding `void`. This includes `okay`.
-    Result(auto) requires(is_void) : error_code(), value(), is_okay(true) {
+    constexpr Result(auto) requires(is_void)
+        : failure_code(), value(), is_okay(true) {
     }
-    // TODO: Concept for bool1, bool2, and bool4 as well.
-    Result(bool const&& expression) requires(is_void)
+    // TODO: Concept for `bool1`, `bool2`, and `bool4` as well.
+    constexpr Result(bool const&& expression) requires(is_void)
         : value(), is_okay(expression) {
     }
-    /* Attempt to cast an inputted Result to this. This is useful for
+    /* Implicity cast an inputted `Result` to this. This is useful for
      * `Result<Any>`. */
     template <typename U>
-    Result(Result<U> && in_result) requires(!is_void)
+    constexpr Result(Result<U> && in_result) requires(!is_void)
         : value(meta::bit_cast<T>(in_result.value)),
           is_okay(in_result.is_okay) {
     }
 
-    // Return a specified value when is_okay is false.
-    auto or_is(ValueType const& in_value)->ValueType {
+    // Return a specified value when `is_okay` is `false`.
+    constexpr auto or_is(ValueType const& in_value)->ValueType {
         if (!is_okay) {
             return in_value;
         }
         return this->value;
     }
-    // nullptr must be special-cased.
-    auto or_is(decltype(nullptr) in_value)
+
+    // `nullptr` must be special-cased.
+    constexpr auto or_is(decltype(nullptr) in_value)
         ->ValueType /* requires(meta::is_pointer_v<ValueType>) */ {
         if (!is_okay) {
             return static_cast<ValueType>(in_value);
@@ -119,8 +123,8 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
         return this->value;
     }
 
-    // TODO: Add an invokable concept
-    auto or_do(auto callback)->T {
+    // TODO: Add a `meta::invokable` concept
+    constexpr auto or_do(auto callback)->T {
         if (!is_okay) {
             return callback();
         }
@@ -130,20 +134,23 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
     }
 
     /* If this object does not hold a value, the return of this function is
-     * undefined. When building -O0, this function panics if a value is not
-     * held. When optimizations are enabled, that safety check is elided. */
-    auto unsafe_value()->T {
+     * undefined. When building `-O0`, this function panics if a value is not
+     * held. When optimizations are enabled, that safety check is elided. This
+     * function cannot fail in a `constexpr` context. */
+    constexpr auto unsafe_value()->T {
+        if (!meta::is_constant_evaluated()) {
 #ifndef __OPTIMIZE__
-        if (is_okay) {
-            return value;
-        }
-        // TODO: Error message.
-        exit(1);
+            if (is_okay) {
+                return value;
+            }
+            // TODO: Error message.
+            exit(1);
 #endif
+        }
         return value;
     }
 
-    void discard_result(){};
+    constexpr void discard_result(){};
 
     // TODO: Pass in the exit code and error message with overloads.
     auto or_panic()->T {
@@ -161,7 +168,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
     auto or_panic(char8_t const* /*error_message*/)->T {
         if (is_okay) {
             if constexpr (!is_void) {
-                return this->data;
+                return this->value;
             } else if constexpr (is_void) {
                 return;
             }
@@ -170,8 +177,8 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
         exit(1);
     }
 
-    /* Because the error code is 8-bytes, it could contain a non-null pointer to
-     * an error string. This prints that error message. */
+    /* Because the error code is 8-bytes, it could contain a non-null
+     * pointer to an error string. This prints that error message. */
     auto or_print_panic()->T {
         if (is_okay) {
             if constexpr (!is_void) {
@@ -185,11 +192,11 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
     }
 
     // Panic at a failure when built with `-O0`, but no-op otherwise.
-    void or_panic_debug(char8_t const* error_message = u8"") {
+    void or_panic_debug(char const* p_error_message = "") {
 #ifndef __OPTIMIZE__
         if (is_okay) {
             if constexpr (!is_void) {
-                return this->data;
+                return this->value;
             } else if constexpr (is_void) {
                 return;
             }
@@ -200,8 +207,8 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
         return this->value;
     }
 
-    // Panic and print an error string at a failure when built with `-O0`, but
-    // no-op otherwise.
+    // Panic and print an error string at a failure when built with `-O0`,
+    // but no-op otherwise.
     auto or_print_panic_debug()->T {
 #ifndef __OPTIMIZE__
         if (is_okay) {
