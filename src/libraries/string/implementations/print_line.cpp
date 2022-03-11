@@ -13,7 +13,7 @@ auto std::print_line(char const* p_string) -> Result<> {
 }
 
 auto std::print_line(StringView const string) -> Result<> {
-    auto result_1 = write(1, string.data(), string.length());
+    auto result_1 = write(1, string.p_data, string.length);
     if (!result_1.is_okay) {
         return result_1.failure_code;
     }

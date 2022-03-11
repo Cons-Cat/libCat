@@ -4,7 +4,7 @@
 
 auto std::compare_strings(StringView const& string_1,
                           StringView const& string_2) -> bool {
-    if (string_1.length() != string_2.length()) {
+    if (string_1.length != string_2.length) {
         return false;
     }
 
@@ -15,21 +15,21 @@ auto std::compare_strings(StringView const& string_1,
     Buffer<VectorType, 4> vector_2;
     Buffer<VectorType, 4> mask;
     Buffer<uint4, 4> results;
-    isize length_iterator = string_1.length();
+    isize length_iterator = string_1.length;
     isize vector_size = sizeof(VectorType);
-    char const* p_string_1_iterator = string_1.data();
-    char const* p_string_2_iterator = string_2.data();
+    char const* p_string_1_iterator = string_1.p_data;
+    char const* p_string_2_iterator = string_2.p_data;
 
     auto loop = [&](isize const size) -> bool {
         while (length_iterator >= vector_size * size) {
             for (isize i = 0; i < size; i++) {
                 // TODO: Use `StringView::data()` getter methods.
-                vector_1[i] = *(
-                    meta::bit_cast<VectorType const*>(string_1.detail.p_data) +
-                    (i * size));
-                vector_2[i] = *(
-                    meta::bit_cast<VectorType const*>(string_2.detail.p_data) +
-                    (i * size));
+                vector_1[i] =
+                    *(meta::bit_cast<VectorType const*>(string_1.p_data) +
+                      (i * size));
+                vector_2[i] =
+                    *(meta::bit_cast<VectorType const*>(string_2.p_data) +
+                      (i * size));
                 mask[i] = vector_1[i] + vector_2[i];
                 results[i] = simd::move_mask(mask[i]);
             }

@@ -7,5 +7,5 @@ auto std::print(char const* p_string) -> Result<> {
 }
 
 auto std::print(StringView const string) -> Result<> {
-    return write(1, string.data(), string.length());
+    return write(1, string.p_data, string.length);
 }
