@@ -4,9 +4,6 @@
 #include <socket.h>
 #include <string>
 
-#include "linux_flags"
-#include "runtime"
-
 void meow() {
     int4 argc = load_argc();
     char** argv = load_argv();
