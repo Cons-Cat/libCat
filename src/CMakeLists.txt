@@ -62,7 +62,7 @@ set(
   ${CAT_SRC}/libraries/memory/implementations/copy_memory_small.cpp
   ${CAT_SRC}/libraries/memory/implementations/is_aligned.cpp
   ${CAT_SRC}/libraries/string/implementations/memcpy.cpp
-  ${CAT_SRC}/libraries/string/implementations/compare_strings.tpp
+  ${CAT_SRC}/libraries/string/implementations/compare_strings.cpp
   ${CAT_SRC}/libraries/string/implementations/string_length.tpp
   ${CAT_SRC}/libraries/linux/implementations/syscall.cpp
   ${CAT_SRC}/libraries/linux/implementations/syscall.tpp

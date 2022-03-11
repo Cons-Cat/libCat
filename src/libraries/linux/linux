@@ -5,22 +5,26 @@
 #include <any>
 #include <concepts>
 #include <linux_flags>
+#include <string>
 #include <utility>
 
 #include "global_includes.h"
 
 // `read()` transmits a number of bytes into a file descriptor.
-auto read(FileDescriptor const file_descriptor, char8_t const* p_string_buffer,
+auto read(FileDescriptor const file_descriptor, char const* p_string_buffer,
           isize const string_length) -> Result<isize>;
 
 // `write()` forwards its arguments to a failable stdout syscall. It returns the
 // number of bytes that it wrote.
-auto write(FileDescriptor const file_descriptor, char8_t const* p_string_buffer,
+auto write(FileDescriptor const file_descriptor, char const* p_string_buffer,
            isize const string_length) -> Result<isize>;
+
+// auto write(FileDescriptor const file_descriptor, StringView const string)
+//     -> Result<isize>;
 
 auto close(FileDescriptor const object) -> Result<>;
 
-auto unlink(char8_t const* path_name) -> Result<>;
+auto unlink(char const* path_name) -> Result<>;
 
 constexpr usize page_size = 4096u;
 

@@ -6,10 +6,10 @@
 
 void meow() {
     SocketLocal socket;
-    char8_t const* socket_name = u8"/tmp/temp.sock";
+    char const* socket_name = "/tmp/temp.sock";
     FileDescriptor listening_socket;
     FileDescriptor recieving_socket;
-    Buffer<char8_t, 12> buffer;
+    Buffer<char, 12> buffer;
 
     unlink(socket_name).discard_result();
 

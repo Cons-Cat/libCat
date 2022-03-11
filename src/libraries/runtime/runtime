@@ -49,7 +49,7 @@ extern "C" [[gnu::used]] void exit(int8 exit_code = 0);
 
 auto load_base_stack_pointer() -> void*;
 auto load_argc() -> int4;
-auto load_argv() -> char8_t**;
+auto load_argv() -> char**;
 void align_stack_pointer_16();
 void align_stack_pointer_32();
 void dont_optimize_out(auto& variable);
