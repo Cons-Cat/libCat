@@ -200,7 +200,7 @@ auto p_string_to_p_vector(meta::string auto p_string) {
 }
 
 template <uint1 Mask>
-auto cmp_implicit_str_c(auto const& vector_1, auto const& vector_2) -> bool;
+auto cmp_implicit_str_count(auto const& vector_1, auto const& vector_2) -> bool;
 
 template <uint1 Mask>
 auto cmp_implicit_str_i(auto const& vector_1, auto const& vector_2) -> int4;

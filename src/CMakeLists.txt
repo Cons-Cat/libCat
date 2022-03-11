@@ -35,9 +35,6 @@ set(
   ${CAT_SRC}/libraries/runtime/implementations/__stack_chk_fail.cpp
   ${CAT_SRC}/libraries/runtime/implementations/align_stack_pointer_16.cpp
   ${CAT_SRC}/libraries/runtime/implementations/align_stack_pointer_32.cpp
-  ${CAT_SRC}/libraries/runtime/implementations/dont_optimize_out.cpp
-  ${CAT_SRC}/libraries/runtime/implementations/load_argc.cpp
-  ${CAT_SRC}/libraries/runtime/implementations/load_argv.cpp
   ${CAT_SRC}/libraries/runtime/implementations/load_base_stack_pointer.cpp
   ${CAT_SRC}/libraries/runtime/implementations/munmap.cpp
   ${CAT_SRC}/libraries/simd/implementations/is_avx2_supported.cpp

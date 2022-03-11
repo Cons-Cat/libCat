@@ -1,8 +1,6 @@
 #include <linux>
 
-void meow() {
-    int4 argc = load_argc();
-    char** argv = load_argv();
+void meow(int argc, char* argv[]) {
     for (int4 i = 1; i < argc; i++) {
         int4 length = 0;
         while (argv[i][length] != 0) {
