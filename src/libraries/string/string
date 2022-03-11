@@ -34,7 +34,9 @@ namespace std {
 auto compare_strings(StringView const& string_1, StringView const& string_2)
     -> bool;
 
-}
+// TODO: Make a comparison function for null-terminated string pointers.
+
+}  // namespace std
 
 #include "./implementations/compare_strings.tpp"
 #include "./implementations/string_length.tpp"
