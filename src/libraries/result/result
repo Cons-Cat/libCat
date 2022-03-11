@@ -162,7 +162,6 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
             }
         }
         exit(1);
-        __builtin_unreachable();  // This prevents a build warning.
     }
 
     auto or_panic(char8_t const* /*error_message*/)->T {
