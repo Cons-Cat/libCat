@@ -64,6 +64,8 @@ set(
   ${CAT_SRC}/libraries/string/implementations/memcpy.cpp
   ${CAT_SRC}/libraries/string/implementations/compare_strings.cpp
   ${CAT_SRC}/libraries/string/implementations/string_length.tpp
+  ${CAT_SRC}/libraries/string/implementations/print.cpp
+  ${CAT_SRC}/libraries/string/implementations/print_line.cpp
   ${CAT_SRC}/libraries/linux/implementations/syscall.cpp
   ${CAT_SRC}/libraries/linux/implementations/syscall.tpp
   ${CAT_SRC}/libraries/linux/implementations/read.cpp
