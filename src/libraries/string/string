@@ -39,11 +39,11 @@ auto compare_strings(StringView const& string_1, StringView const& string_2)
 
 auto print(char const* p_string) -> Result<>;
 
-auto print(StringView const string) -> Result<>;
+auto print(StringView const& string) -> Result<>;
 
 auto print_line(char const* p_string) -> Result<>;
 
-auto print_line(StringView const string) -> Result<>;
+auto print_line(StringView const& string) -> Result<>;
 
 // TODO: Make a comparison function for null-terminated string pointers.
 

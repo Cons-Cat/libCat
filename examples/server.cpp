@@ -11,7 +11,7 @@ void meow() {
     FileDescriptor recieving_socket;
     Buffer<char, 12> buffer;
 
-    unlink(socket_name).discard_result();
+    unlink(socket_name).or_panic();
 
     // `1` is a streaming socket.
     listening_socket = create_socket_local(1, 0).or_panic();
@@ -23,15 +23,29 @@ void meow() {
     while (true) {
         recieving_socket =
             accept_socket(listening_socket, nullptr, nullptr).or_panic();
+        bool exit = false;
 
         while (true) {
-            recieve_buffer(recieving_socket, &buffer, 12).or_panic();
-            buffer[11] = 0;  // Make `buffer` null-terminated.
-            break;
+            recieve_buffer(recieving_socket, &buffer, buffer.length).or_panic();
+            StringView input = buffer.to_string();
+
+            if (std::compare_strings(input, "exit")) {
+                std::print_line("Exitting.").or_panic();
+                exit = true;
+                break;
+            }
+
+            if (!std::compare_strings(input, "")) {
+                std::print("Recieved: ").or_panic();
+                std::print_line(input).or_panic();
+                break;
+            }
         }
 
-        close(recieving_socket).or_panic();
-        break;
+        if (exit) {
+            close(recieving_socket).or_panic();
+            break;
+        }
     }
 
     close(listening_socket).or_panic();
