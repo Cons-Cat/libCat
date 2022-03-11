@@ -2,10 +2,12 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <string>
 #include <utility>
 
 template <typename T, isize Size>
 struct Buffer {
+    static constexpr isize length = Size;
     T value[Size];
 
     constexpr Buffer() = default;
@@ -23,5 +25,11 @@ struct Buffer {
     // TODO: Non-pessimize unsigned indices as well.
     auto operator[](isize i) -> T& {
         return value[i];
+    }
+
+    auto to_string() -> StringView
+        requires(meta::is_same_v<meta::remove_const_t<T>, char>) {
+        return StringView(static_cast<char const*>(static_cast<void*>(&value)),
+                          Size);
     }
 };

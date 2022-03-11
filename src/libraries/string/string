@@ -19,24 +19,17 @@ constexpr auto string_length(char const* p_string) -> T;
 auto memcpy(void* p_destination, void const* p_source, size_t bytes) -> void*;
 
 struct StringView {
-    using Detail = struct {
-        char const* p_data;
-        isize length;
-    };
-    Detail detail;
+    char const* p_data;
+    isize length;
 
-    StringView() = delete;
+    StringView() = default;
+    // TODO: Confirm that `std::string_length()` can be constant-folded by GCC.
     constexpr StringView(char const* p_string)
-        : detail{.p_data = p_string, .length = std::string_length(p_string)} {};
-    constexpr StringView(StringView const&& string) : detail(string.detail){};
-
-    auto data() const -> char const* {
-        return this->detail.p_data;
-    }
-
-    auto length() const -> isize {
-        return this->detail.length;
-    }
+        : p_data(p_string), length(std::string_length(p_string)){};
+    constexpr StringView(char const* p_string, isize in_length)
+        : p_data(p_string), length(in_length){};
+    constexpr StringView(StringView const&& string)
+        : p_data(string.p_data), length(string.length){};
 };
 
 namespace std {
