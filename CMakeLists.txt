@@ -141,15 +141,19 @@ add_subdirectory(tests/)
 
 # Build the examples.
 add_executable(hello examples/hello.cpp)
+target_compile_options(hello PRIVATE ${CAT_CXX_FLAGS})
 target_link_libraries(hello PRIVATE cat-std)
+target_link_options(hello PRIVATE ${CAT_LINK_FLAGS})
 
 add_executable(echo examples/echo.cpp)
 target_compile_options(echo PRIVATE ${CAT_CXX_FLAGS})
+target_compile_definitions(echo PRIVATE "load_argc_argv")
 target_link_libraries(echo PRIVATE cat-std)
 target_link_options(echo PRIVATE ${CAT_LINK_FLAGS})
 
 add_executable(client examples/client.cpp)
 target_compile_options(client PRIVATE ${CAT_CXX_FLAGS})
+target_compile_definitions(client PRIVATE "load_argc_argv")
 target_link_libraries(client PRIVATE cat-std)
 target_link_options(client PRIVATE ${CAT_LINK_FLAGS})
 
@@ -158,12 +162,7 @@ target_compile_options(server PRIVATE ${CAT_CXX_FLAGS})
 target_link_libraries(server PRIVATE cat-std)
 target_link_options(server PRIVATE ${CAT_LINK_FLAGS})
 
-add_executable(memcpy examples/memory_copy.cpp)
-target_compile_options(memcpy PRIVATE ${CAT_CXX_FLAGS})
-target_link_libraries(memcpy PRIVATE cat-std)
-target_link_options(memcpy PRIVATE ${CAT_LINK_FLAGS})
-
-# libC executables are only configured for Release
+# libC executables are only configured for Release.
 list(
   APPEND
   LIBC_RELEASE_FLAGS

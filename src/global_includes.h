@@ -5,7 +5,11 @@
 /* This file should be implicitly included in all other files. With GCC, this is
  * done using the `--include` flag, as in `--include global_includes.h`. The
  * `CMakeLists.txt` in this repository's top level directory does this. */
-extern "C" [[gnu::used]] void meow();
+extern "C" [[gnu::used]] void meow(
+#ifdef load_argc_argv
+    int argc, char* argv[]
+#endif
+);
 
 template <typename T>
 struct Result;

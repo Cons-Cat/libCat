@@ -4,10 +4,7 @@
 #include <socket.h>
 #include <string>
 
-void meow() {
-    int4 argc = load_argc();
-    char** argv = load_argv();
-
+void meow(int argc, char* argv[]) {
     SocketLocal socket;
     char const* socket_name = "/tmp/temp.sock";
 
@@ -22,6 +19,9 @@ void meow() {
     for (isize i = 1; i < argc; i++) {
         send_buffer(data_socket, argv[i], std::string_length(argv[i]), 0)
             .or_panic();
+        if (i < argc - 1) {
+            send_buffer(data_socket, " ", 1, 0).or_panic();
+        }
     }
 
     close(data_socket).or_panic();
