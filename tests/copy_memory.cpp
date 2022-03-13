@@ -29,5 +29,5 @@ void meow() {
         Result(source_2000[i] == dest_2000[i]).or_panic();
     }
 
-    exit();
+    std::exit();
 };

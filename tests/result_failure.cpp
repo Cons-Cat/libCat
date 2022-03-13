@@ -13,5 +13,5 @@ auto result_factory(MyErrors error) -> Result<> {
 
 void meow() {
     result_factory(::FAIL).or_panic();
-    exit();
+    std::exit();
 }

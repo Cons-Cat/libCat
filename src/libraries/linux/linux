@@ -8,14 +8,14 @@
 #include <string>
 #include <utility>
 
-#include "global_includes.h"
+namespace nix {
 
 // `read()` transmits a number of bytes into a file descriptor.
 auto read(FileDescriptor const file_descriptor, char const* p_string_buffer,
           isize const string_length) -> Result<isize>;
 
-// `write()` forwards its arguments to a failable stdout syscall. It returns the
-// number of bytes that it wrote.
+// `write()` forwards its arguments to a failable stdout syscall. It returns
+// the number of bytes that it wrote.
 auto write(FileDescriptor const file_descriptor, char const* p_string_buffer,
            isize const string_length) -> Result<isize>;
 
@@ -48,10 +48,10 @@ auto waitid(WaitIdType type, ProcessId id, int8 options) -> Result<Any>;
 struct CloneArguments;
 
 // TODO: Make all syscalls inline assembly. It did not work, last I tried.
-/* The source to these functions is contained in the ./detail/ subdirectory at
- * the path of this file. They are split into individual files, because GCC
- * cannot exclude compiling unused functions individually from within one .s
- * file. */
+/* The source to these functions is contained in the ./detail/ subdirectory
+ * at the path of this file. They are split into individual files, because
+ * GCC cannot exclude compiling unused functions individually from within
+ * one .s file. */
 // TODO: All syscalls should return a `Result`.
 auto syscall0(Any) -> Result<Any>;
 auto syscall1(Any, Any) -> Result<Any>;
@@ -65,5 +65,48 @@ auto syscall6(Any call, Any arg1, Any arg2, Any arg3, Any arg4, Any args,
 template <typename ReturnType, typename... Args>
 auto syscall(Any call, Args... parameters) -> Result<ReturnType>
 requires(sizeof...(Args) < 7);
+
+struct Socket;
+
+// Create and return a `Socket`.
+auto create_socket(int8 const protocol_family, int8 const type,
+                   int8 const protocol) -> Result<FileDescriptor>;
+
+// Create and return a `SocketLocal` (also known as Unix socket).
+auto create_socket_local(int8 const type, int8 const protocol)
+    -> Result<FileDescriptor>;
+
+// Connect a `Socket` to an address.
+auto connect_socket(FileDescriptor const socket_descriptor,
+                    void const* p_socket, isize socket_size) -> Result<>;
+
+// Make a connection over a `Socket`. This returns a new socket which has
+// been connected to. This new `Socket` is not in a listening state.
+// TODO: Add flags for Linux syscall `288u`.
+auto accept_socket(FileDescriptor const socket_descriptor,
+                   void const* __restrict p_socket,
+                   isize const* __restrict p_addr_len)
+    -> Result<FileDescriptor>;
+
+auto recieve_buffer(FileDescriptor const socket_descriptor,
+                    void const* p_message_buffer, isize const buffer_length,
+                    Socket const* __restrict p_addr = nullptr,
+                    isize const* __restrict p_addr_length = nullptr)
+    -> Result<isize>;
+
+auto bind_socket(FileDescriptor const socket_descriptor, void const* p_socket,
+                 isize const p_addr_len) -> Result<>;
+
+// Mark a socket as available to make connections with `accept()`.
+auto listen_to_socket(FileDescriptor const socket_descriptor,
+                      int8 const backlog) -> Result<>;
+
+// Returns the number of characters sent to `destination_socket`.
+auto send_buffer(FileDescriptor const socket_descriptor,
+                 void const* p_message_buffer, isize const buffer_length,
+                 int4 const flags, Socket const* p_destination_socket = nullptr,
+                 isize const addr_length = 0) -> Result<isize>;
+
+}  // namespace nix
 
 #include "./implementations/syscall.tpp"
