@@ -144,12 +144,14 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
                 return value;
             }
             // TODO: Error message.
-            exit(1);
+            std::exit(1);
 #endif
         }
         return value;
     }
 
+    // This method does not yield `value`. It is useful for side-effectful
+    // functions.
     constexpr void discard_result(){};
 
     // TODO: Pass in the exit code and error message with overloads.
@@ -161,7 +163,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
                 return;
             }
         }
-        exit(1);
+        std::exit(1);
         __builtin_unreachable();  // This prevents a build warning.
     }
 
@@ -174,7 +176,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
             }
         }
         // TODO: print(error_message);
-        exit(1);
+        std::exit(1);
     }
 
     /* Because the error code is 8-bytes, it could contain a non-null
@@ -188,7 +190,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
             }
         }
         // TODO: print(*error_code);
-        exit(1);
+        std::exit(1);
     }
 
     // Panic at a failure when built with `-O0`, but no-op otherwise.
@@ -202,7 +204,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
             }
         }
         // TODO: print(error_message);
-        exit(1);
+        std::exit(1);
 #endif
         return this->value;
     }
@@ -219,7 +221,7 @@ struct [[nodiscard("To skip error-handling, call .discard_result()")]] Result {
             }
         }
         // TODO: print(error_code);
-        exit(1);
+        std::exit(1);
 #endif
         return this->value;
     }

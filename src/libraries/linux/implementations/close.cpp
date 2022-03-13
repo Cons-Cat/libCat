@@ -2,6 +2,6 @@
 // vim: set ft=cpp:
 #include <linux>
 
-auto close(FileDescriptor const object) -> Result<> {
-    return syscall1(3, object);
+auto nix::close(FileDescriptor const object) -> Result<> {
+    return nix::syscall1(3, object);
 }

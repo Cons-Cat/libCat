@@ -45,9 +45,12 @@ extern "C" [[gnu::used]] void _start();
 // TODO: Use `isize` here:
 /* In libCat, the `exit()` function is provided globally.
  * This streamlines out the existence of `_exit()`. */
+namespace std {
 extern "C" [[gnu::used]] void exit(int8 exit_code = 0);
 
 auto load_base_stack_pointer() -> void*;
 void align_stack_pointer_16();
 void align_stack_pointer_32();
 extern "C" void __stack_chk_fail();
+
+}  // namespace std

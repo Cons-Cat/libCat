@@ -72,11 +72,18 @@ set(
   ${CAT_SRC}/libraries/linux/implementations/mmap.cpp
   ${CAT_SRC}/libraries/linux/implementations/wait4.cpp
   ${CAT_SRC}/libraries/linux/implementations/waitid.cpp
+  ${CAT_SRC}/libraries/linux/implementations/create_socket.cpp
+  ${CAT_SRC}/libraries/linux/implementations/create_socket_local.cpp
+  ${CAT_SRC}/libraries/linux/implementations/accept_socket.cpp
+  ${CAT_SRC}/libraries/linux/implementations/bind_socket.cpp
+  ${CAT_SRC}/libraries/linux/implementations/connect_socket.cpp
+  ${CAT_SRC}/libraries/linux/implementations/listen_to_socket.cpp
+  ${CAT_SRC}/libraries/linux/implementations/recieve_buffer.cpp
+  ${CAT_SRC}/libraries/linux/implementations/send_buffer.cpp
   ${CAT_SRC}/libraries/utility/implementations/move.tpp
   ${CAT_SRC}/libraries/utility/implementations/forward.tpp
   ${CAT_SRC}/libraries/utility/implementations/is_constant_evaluated.tpp
   ${CAT_SRC}/libraries/utility/implementations/constant_evaluate.tpp
   ${CAT_SRC}/libraries/utility/implementations/bit_cast.tpp
-  ${CAT_SRC}/libraries/network/socket.h
   PARENT_SCOPE
 )

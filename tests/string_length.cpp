@@ -21,5 +21,5 @@ void meow() {
     Result(len_3 == len_4).or_print_panic();
     Result(len_5 == len_6).or_print_panic();
 
-    exit();
+    std::exit();
 }

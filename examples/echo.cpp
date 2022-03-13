@@ -1,5 +1,6 @@
 #include <linux>
 
+// TODO: Make this cross-platform.
 void meow(int argc, char* argv[]) {
     for (int4 i = 1; i < argc; i++) {
         int4 length = 0;
@@ -7,8 +8,8 @@ void meow(int argc, char* argv[]) {
             length++;
         }
         argv[i][length] = ' ';
-        write(1, argv[i], length + 1).discard_result();
+        nix::write(1, argv[i], length + 1).discard_result();
     }
-    write(1, "\n", 1).discard_result();
-    exit();
+    nix::write(1, "\n", 1).discard_result();
+    std::exit();
 }

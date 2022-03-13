@@ -4,6 +4,6 @@
 
 /* Advance the `%rsp` stack-pointer register to the nearest 16-byte aligned
  * address. */
-void align_stack_pointer_16() {
+void std::align_stack_pointer_16() {
     asm("and $-16, %rsp");
 }

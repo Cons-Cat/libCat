@@ -20,7 +20,7 @@ struct Thread {
 
     ~Thread() {
         if (joinable) {
-            exit();
+			std::exit();
         }
     }
 
@@ -56,7 +56,7 @@ struct Thread {
         // __builtin_ia32_rdgsbase64(); // Read from `%gs`.
 
         // `clone()` will always return a value.
-        clone_asm(&function, p_stack_top, flags, p_arguments_struct, p_pid,
+		nix::clone_asm(&function, p_stack_top, flags, p_arguments_struct, p_pid,
                   p_stack_top, p_pid);
         this->process_id = *p_pid;
         this->joinable = true;
@@ -67,7 +67,7 @@ struct Thread {
         this->joinable = false;
         /* Wait on this thread, without storing its status, or waiting with
          * special options. */
-        return waitid(
+        return nix::waitid(
             WaitIdType::P_PID, this->process_id,
             WaitOptions::WEXITED | WaitOptions::WCLONE | WaitOptions::WNOWAIT);
         // TODO: Free the stack memory.
