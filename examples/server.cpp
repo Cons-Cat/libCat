@@ -31,7 +31,7 @@ void meow() {
             StringView input = buffer.to_string();
 
             if (std::compare_strings(input, "exit")) {
-                std::print_line("Exitting.").or_panic();
+                std::print_line("Exiting.").or_panic();
                 exit = true;
                 break;
             }

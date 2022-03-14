@@ -31,7 +31,6 @@ struct SocketDescriptor {
     int2 family = Family;
     static constexpr SocketType type = Type;
     static constexpr int4 protocol = Protocol;
-    FileDescriptor value;
 };
 
 template <SocketType Type, int4 Protocol = 0>
