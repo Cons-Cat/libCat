@@ -13,7 +13,7 @@ void meow(int argc, char* argv[]) {
     std::copy_memory(socket_name, &socket.path_name,
                      sizeof(socket.path_name) - 1);
 
-    nix::connect_socket(data_socket, &socket, sizeof(socket)).or_panic();
+    nix::connect_socket(data_socket, &socket, socket.get_size()).or_panic();
 
     // Send all command line arguments to the server.
     for (isize i = 1; i < argc; i++) {

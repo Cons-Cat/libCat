@@ -5,8 +5,6 @@
 #include <buffer>
 #include <linux>
 
-#include "linux_flags"
-
 // TODO: Socket descriptor types for `SOCK_STREAM` and `SOCK_SEQPACKET`.
 
 // Basic Socket type that any other sockets must convert into.
@@ -26,41 +24,47 @@ enum class SocketType
 };
 
 template <int2 Family, SocketType Type, int4 Protocol>
-struct SocketDescriptor {
+struct SocketAttributes {
     // static constexpr int2 family = Family;
-    int2 family = Family;
+    int2 const family = Family;
     static constexpr SocketType type = Type;
     static constexpr int4 protocol = Protocol;
 };
 
 template <SocketType Type, int4 Protocol = 0>
 struct SocketLocal {
-    SocketDescriptor<1, Type, Protocol> descriptor;
+    SocketAttributes<1, Type, Protocol> const attributes;
     // TODO: `path_name` should be some kind of span type.
     Buffer<char, 108> path_name;
+    FileDescriptor descriptor;
 
-    // TODO: Constructor for `FileDescriptor`.
+    SocketLocal() = default;
+    SocketLocal(FileDescriptor const in_descriptor) {
+        this->descriptor = in_descriptor;
+    }
+
+    // Get the size of this struct, not considering the `FileDescriptor` that it
+    // holds.
+    auto get_size() -> isize {
+        return sizeof(attributes) + sizeof(path_name);
+    }
 
     // Create and return a `Socket`.
     auto create() -> Result<> {
-        Result<int8> result = nix::syscall3(
-            41u, descriptor.family, descriptor.type, descriptor.protocol);
+        Result<int8> result = nix::create_socket(
+            this->attributes.family, static_cast<int>(Type), Protocol);
         if (result.is_okay) {
-            this->descriptor.value = result.value;
+            this->descriptor = result.value;
         }
         return result;
     }
 
     // Connect a `Socket` to an address.
     auto connect() -> Result<> {
-        return syscall3(
-            42u, this->descriptor.value,
-            // Because this holds no 2-byte `family` value at runtime, that must
-            // be accounted for in the address of this socket.
-            static_cast<char*>(static_cast<void*>(this)), sizeof(SocketLocal));
+        return nix::connect_socket(this->descriptor, this, this->get_size());
     }
 
     auto close() -> Result<> {
-        return nix::close(this->descriptor.value);
+        return nix::close(this->descriptor);
     }
 };
