@@ -17,7 +17,7 @@ void meow() {
     listening_socket = nix::create_socket_local(1, 0).or_panic();
     std::copy_memory(socket_name, &socket.path_name,
                      sizeof(socket.path_name) - 1);
-    nix::bind_socket(listening_socket, &socket, sizeof(socket)).or_panic();
+    nix::bind_socket(listening_socket, &socket, socket.get_size()).or_panic();
     nix::listen_to_socket(listening_socket, 20).or_panic();
 
     while (true) {
