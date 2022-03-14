@@ -17,9 +17,9 @@ void meow() {
     isize len_5 = std::string_length(p_string_5);
     isize len_6 = std::string_length(p_string_6);
 
-    Result(len_1 == len_2).or_print_panic();
-    Result(len_3 == len_4).or_print_panic();
-    Result(len_5 == len_6).or_print_panic();
+    Result(len_1 == len_2).or_panic();
+    Result(len_3 == len_4).or_panic();
+    Result(len_5 == len_6).or_panic();
 
     std::exit();
 }
