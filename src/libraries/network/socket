@@ -64,6 +64,53 @@ struct SocketLocal {
         return nix::connect_socket(this->descriptor, this, this->get_size());
     }
 
+    auto send_buffer(StringView const& message, int8 flags,
+                     Socket const* p_destination_socket = nullptr,
+                     isize const addr_length = 0) -> Result<> {
+        return nix::send_buffer(this->descriptor, message.p_data,
+                                message.length, flags, p_destination_socket,
+                                addr_length);
+    }
+
+    auto bind() -> Result<> {
+        return nix::bind_socket(this->descriptor, this, this->get_size());
+    }
+
+    auto listen(int8 const backlog) -> Result<> {
+        return nix::listen_to_socket(this->descriptor, backlog);
+    }
+
+    auto accept(FileDescriptor listening_socket, void const* p_socket = nullptr,
+                isize const* p_addr_len = nullptr) -> Result<> {
+        auto result =
+            nix::accept_socket(listening_socket, p_socket, p_addr_len);
+        if (result.is_okay) {
+            this->descriptor = result.value;
+            return okay;
+        }
+        return result;
+    }
+
+    auto accept(SocketLocal<Type, Protocol> const& listening_socket,
+                void const* p_socket = nullptr,
+                isize const* p_addr_len = nullptr) -> Result<> {
+        auto result = nix::accept_socket(listening_socket.descriptor, p_socket,
+                                         p_addr_len);
+        if (result.is_okay) {
+            this->descriptor = result.value;
+            return okay;
+        }
+        return result;
+    }
+
+    auto recieve(void const* p_message_buffer, isize const buffer_length,
+                 Socket const* __restrict p_addr = nullptr,
+                 isize const* __restrict p_addr_length = nullptr)
+        -> Result<isize> {
+        return nix::recieve_buffer(this->descriptor, p_message_buffer,
+                                   buffer_length, p_addr, p_addr_length);
+    }
+
     auto close() -> Result<> {
         return nix::close(this->descriptor);
     }
