@@ -8,6 +8,8 @@
 #include <string>
 #include <utility>
 
+struct Socket;
+
 namespace nix {
 
 // `read()` transmits a number of bytes into a file descriptor.
@@ -66,8 +68,6 @@ template <typename ReturnType, typename... Args>
 auto syscall(Any call, Args... parameters) -> Result<ReturnType>
 requires(sizeof...(Args) < 7);
 
-struct Socket;
-
 // Create and return a `Socket`.
 auto create_socket(int8 const protocol_family, int8 const type,
                    int8 const protocol) -> Result<FileDescriptor>;
@@ -84,8 +84,8 @@ auto connect_socket(FileDescriptor const socket_descriptor,
 // been connected to. This new `Socket` is not in a listening state.
 // TODO: Add flags for Linux syscall `288u`.
 auto accept_socket(FileDescriptor const socket_descriptor,
-                   void const* __restrict p_socket,
-                   isize const* __restrict p_addr_len)
+                   void const* __restrict p_socket = nullptr,
+                   isize const* __restrict p_addr_len = nullptr)
     -> Result<FileDescriptor>;
 
 auto recieve_buffer(FileDescriptor const socket_descriptor,
