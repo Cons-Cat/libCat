@@ -19,9 +19,9 @@ void meow() {
     listening_socket.bind().or_panic();
     listening_socket.listen(20).or_panic();
 
-    while (true) {
+    bool exit = false;
+    while (!exit) {
         recieving_socket.accept(listening_socket).or_panic();
-        bool exit = false;
 
         while (true) {
             recieving_socket.recieve(&buffer, buffer.length).or_panic();
@@ -40,13 +40,9 @@ void meow() {
                 break;
             }
         }
-
-        if (exit) {
-            recieving_socket.close().or_panic();
-            break;
-        }
     }
 
+    recieving_socket.close().or_panic();
     listening_socket.close().or_panic();
     nix::unlink(socket_name).or_panic();
     std::exit();
