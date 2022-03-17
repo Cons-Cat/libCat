@@ -407,7 +407,6 @@ template <typename T>
 struct decay {
   private:
     using U = typename remove_reference<T>::type;
-
   public:
     using type = typename conditional<
         is_array<U>::value, typename remove_extent<U>::type*,

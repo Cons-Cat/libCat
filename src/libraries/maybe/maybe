@@ -27,7 +27,6 @@ template <typename T>
 struct Maybe<T> {
   private:
     T const value;
-
   public:
     bool const has_some;
 
