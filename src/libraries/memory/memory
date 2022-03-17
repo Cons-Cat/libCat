@@ -20,10 +20,10 @@ struct RAII : T {
 
 namespace std {
 
-void copy_memory(void const* p_source, void* p_destination, isize bytes);
+void copy_memory(void const* p_source, void* p_destination, ssize bytes);
 
-void copy_memory_small(void const* p_source, void* p_destination, isize bytes);
+void copy_memory_small(void const* p_source, void* p_destination, ssize bytes);
 
-auto is_aligned(void const volatile* pointer, isize byte_alignment) -> bool;
+auto is_aligned(void const volatile* pointer, ssize byte_alignment) -> bool;
 
 }  // namespace std

@@ -4,7 +4,7 @@
 
 // TODO: Make integers consistently signed.
 /* Copy some bytes from one address to another address. */
-void std::copy_memory(void const* p_source, void* p_destination, isize bytes) {
+void std::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
     // Vector is the width of a 32-byte AVX register.
     // `long long int` is required for some SIMD intrinsics.
     using VectorType = std::detail::SimdVector<long long int, 4>;
@@ -13,15 +13,15 @@ void std::copy_memory(void const* p_source, void* p_destination, isize bytes) {
         meta::bit_cast<unsigned char const*>(p_source);
     unsigned char* p_destination_handle =
         meta::bit_cast<unsigned char*>(p_destination);
-    constexpr isize cachesize = 0x200000;  // L3-cache size.
-    isize padding;
+    constexpr ssize cachesize = 0x200000;  // L3-cache size.
+    ssize padding;
 
     if (bytes <= 256) {
         std::copy_memory_small(p_source, p_destination, bytes);
     }
 
     // Align source, destination, and bytes to 16 bytes
-    padding = (32 - ((meta::bit_cast<isize>(p_destination_handle)) & 31)) & 31;
+    padding = (32 - ((meta::bit_cast<ssize>(p_destination_handle)) & 31)) & 31;
 
     VectorType head = *meta::bit_cast<VectorType const*>(p_source_handle);
     *static_cast<VectorType*>(p_destination) = head;
@@ -31,7 +31,7 @@ void std::copy_memory(void const* p_source, void* p_destination, isize bytes) {
     bytes -= padding;
 
     VectorType vectors[8];
-    constexpr isize step_size = sizeof(VectorType) * 8;
+    constexpr ssize step_size = sizeof(VectorType) * 8;
     // This routine is optimized for buffers in L3 cache. Streaming is
     // slower.
     if (bytes <= cachesize) {

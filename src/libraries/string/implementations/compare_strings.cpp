@@ -15,14 +15,14 @@ auto std::compare_strings(StringView const& string_1,
     Buffer<VectorType, 4> vector_2;
     Buffer<VectorType, 4> mask;
     Buffer<uint4, 4> results;
-    isize length_iterator = string_1.length;
-    isize vector_size = sizeof(VectorType);
+    ssize length_iterator = string_1.length;
+    ssize vector_size = sizeof(VectorType);
     char const* p_string_1_iterator = string_1.p_data;
     char const* p_string_2_iterator = string_2.p_data;
 
-    auto loop = [&](isize const size) -> bool {
+    auto loop = [&](ssize const size) -> bool {
         while (length_iterator >= vector_size * size) {
-            for (isize i = 0; i < size; i++) {
+            for (ssize i = 0; i < size; i++) {
                 // TODO: Use `StringView::data()` getter methods.
                 vector_1[i] =
                     *(meta::bit_cast<VectorType const*>(string_1.p_data) +
@@ -34,7 +34,7 @@ auto std::compare_strings(StringView const& string_1,
                 results[i] = simd::move_mask(mask[i]);
             }
 
-            for (isize i = 0; i < size; i++) {
+            for (ssize i = 0; i < size; i++) {
                 if (results[i] != std::numeric_limits<uint4>::max()) {
                     return false;
                 }
@@ -60,7 +60,7 @@ auto std::compare_strings(StringView const& string_1,
     }
 
     // Compare remaining characters individually.
-    for (isize i = 0; i < length_iterator;
+    for (ssize i = 0; i < length_iterator;
          i++, p_string_1_iterator++, p_string_2_iterator++) {
         if (*p_string_1_iterator != *p_string_2_iterator) {
             return false;

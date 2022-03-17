@@ -12,7 +12,7 @@ struct Thread {
     bool joinable = false;
 
     void* p_stack;
-    // TODO: This could be `isize` if it being non-negative is asserted.
+    // TODO: This could be `ssize` if it being non-negative is asserted.
     usize stack_size;
 
     Thread() = default;
@@ -20,7 +20,7 @@ struct Thread {
 
     ~Thread() {
         if (joinable) {
-			std::exit();
+            std::exit();
         }
     }
 
@@ -56,8 +56,8 @@ struct Thread {
         // __builtin_ia32_rdgsbase64(); // Read from `%gs`.
 
         // `clone()` will always return a value.
-		nix::clone_asm(&function, p_stack_top, flags, p_arguments_struct, p_pid,
-                  p_stack_top, p_pid);
+        nix::clone_asm(&function, p_stack_top, flags, p_arguments_struct, p_pid,
+                       p_stack_top, p_pid);
         this->process_id = *p_pid;
         this->joinable = true;
         return okay;

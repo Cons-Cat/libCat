@@ -15,7 +15,7 @@ void meow(int argc, char* argv[]) {
     socket.connect().or_panic();
 
     // Send all command line arguments to the server.
-    for (isize i = 1; i < argc; i++) {
+    for (ssize i = 1; i < argc; i++) {
         socket.send_buffer(argv[i], 0).or_panic();
         if (i < argc - 1) {
             socket.send_buffer(" ", 1).or_panic();

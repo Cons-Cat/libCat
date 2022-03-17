@@ -33,14 +33,14 @@ template <typename T = void>
 struct Result;
 
 struct [[nodiscard]] Failure {
-    isize code;
+    ssize code;
 
     // TODO: Rethink Error and Result constructors.
     Failure() = default;
 
     // This must be explicit to disambiguate returning an integer to a Result.
-    explicit Failure(isize in_code) {
-        code = static_cast<isize>(in_code);
+    explicit Failure(ssize in_code) {
+        code = static_cast<ssize>(in_code);
     }
 
     template <typename T>
@@ -51,7 +51,7 @@ struct [[nodiscard]] Failure {
     template <typename T>
     constexpr operator T() const
         // TODO: Make is_bool<> traits.
-        requires(meta::is_same_v<T, isize>() || meta::is_same_v<T, bool>) {
+        requires(meta::is_same_v<T, ssize>() || meta::is_same_v<T, bool>) {
         return code;
     }
 

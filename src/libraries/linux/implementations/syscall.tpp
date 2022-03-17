@@ -7,7 +7,7 @@
 template <typename ReturnType, typename... Args>
 auto nix::syscall(Any call, Args... parameters) -> Result<ReturnType>
 requires(sizeof...(Args) < 7) {
-    static constexpr isize length = sizeof...(Args);
+    static constexpr ssize length = sizeof...(Args);
     Any arguments[length] = {parameters...};
 
     if constexpr (length == 0) {
