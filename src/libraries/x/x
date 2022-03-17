@@ -1,0 +1,282 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <socket>
+
+// https://www.x.org/releases/X11R7.7/doc/xproto/x11protocol.pdf
+namespace xwin {
+
+enum class OperationCode : unsigned char
+{
+    error = 0,
+    create_window = 1,
+    change_window_attributes = 2,
+    get_window_attributes = 3,
+    destroy_window = 4,
+    destroy_subwindows = 5,
+    change_save_set = 6,
+    reparent_window = 7,
+    map_window = 8,
+    map_subwindows = 9,
+    unmap_window = 10,
+    unmap_subwindows = 11,
+    configure_window = 12,
+    circulate_window = 13,
+    get_geometry = 14,
+    query_tree = 15,
+    intern_atom = 16,
+    get_atom_name = 17,
+    change_property = 18,
+    delete_property = 19,
+    get_property = 20,
+    list_properties = 21,
+    set_selection_owner = 22,
+    get_selection_owner = 23,
+    convert_selection = 24,
+    send_event = 25,
+    grab_pointer = 26,
+    ungrab_pointer = 27,
+    grab_button = 28,
+    ungrab_button = 29,
+    change_active_pointer_grab = 30,
+    grab_keyboard = 31,
+    ungrab_keyboard = 32,
+    grab_key = 33,
+    ungrab_key = 34,
+    allow_events = 35,
+    grab_server = 36,
+    ungrab_server = 37,
+    query_pointer = 38,
+    get_motion_events = 39,
+    translate_coordinates = 40,
+    warp_pointer = 41,
+    set_input_focus = 42,
+    get_input_focus = 43,
+    query_keymap = 44,
+    open_font = 45,
+    close_font = 46,
+    query_font = 47,
+    query_text_extents = 48,
+    list_fonts = 49,
+    list_fonts_with_info = 50,
+    set_font_path = 51,
+    get_font_path = 52,
+    create_pixmap = 53,
+    free_pixmap = 54,
+    create_gc = 55,
+    change_gc = 56,
+    copy_gc = 57,
+    set_dashes = 58,
+    set_clip_rectangles = 59,
+    gree_gc = 60,
+    clear_area = 61,
+    copy_area = 62,
+    copy_plane = 63,
+    poly_point = 64,
+    poly_line = 65,
+    poly_segment = 66,
+    poly_rectangle = 67,
+    poly_arc = 68,
+    fill_poly = 69,
+    poly_fill_rectangle = 70,
+    poly_fill_arc = 71,
+    put_image = 72,
+    get_image = 73,
+    poly_text8 = 74,
+    poly_text16 = 75,
+    image_text8 = 76,
+    image_text16 = 77,
+    create_colormap = 78,
+    free_Colormap = 79,
+    copy_Colormap_and_free = 80,
+    install_colormap = 81,
+    uninstall_colormap = 82,
+    list_installed_colormaps = 83,
+    alloc_color = 84,
+    alloc_named_color = 85,
+    alloc_color_cells = 86,
+    alloc_color_planes = 87,
+    free_colors = 88,
+    store_colors = 89,
+    store_named_colors = 90,
+    query_colors = 91,
+    lookup_color = 92,
+    create_cursor = 93,
+    create_glyph_cursor = 94,
+    free_cursor = 95,
+    recolor_cursor = 96,
+    query_best_size = 97,
+    query_extension = 98,
+    list_extensions = 99,
+    change_keyboard_mapping = 100,
+    get_keyboard_mapping = 101,
+    change_keyboard_control = 102,
+    get_keyboard_control = 103,
+    bell = 104,
+    change_pointer_control = 105,
+    get_pointer_control = 106,
+    set_screen_saver = 107,
+    get_screen_saver = 108,
+    change_hosts = 109,
+    list_hosts = 110,
+    set_access_control = 111,
+    set_close_down_mode = 112,
+    kill_client = 113,
+    rotate_properties = 114,
+    force_screen_saver = 115,
+    set_pointer_mapping = 116,
+    get_pointer_mapping = 117,
+    set_modifier_mapping = 118,
+    get_modifier_mapping = 119,
+    no_operation = 120
+};
+
+enum class EventCode : unsigned char
+{
+    key_press = 2,
+    key_release = 3,
+    button_press = 4,
+    button_release = 5,
+    motion_notify = 6,
+    enter_notify = 7,
+    leave_notify = 8,
+    focus_in = 9,
+    focus_out = 10,
+    keymap_notify = 11,
+    expose = 12,
+    graphics_exposure = 13,
+    no_exposure = 14,
+    visibility_notify = 15,
+    create_notify = 16,
+    destroy_notify = 17,
+    unmap_notify = 18,
+    map_notify = 19,
+    map_request = 20,
+    reparent_notify = 21,
+    configure_notify = 22,
+    configure_request = 23,
+    gravity_notify = 24,
+    resize_request = 25,
+    circulate_notify = 26,
+    circulate_request = 27,
+    property_notify = 28,
+    selection_clear = 29,
+    selection_request = 30,
+    selection_notify = 31,
+    colormap_notify = 32,
+    client_message = 33,
+    mapping_notify = 34,
+};
+
+struct [[gnu::packed]] EventMask {
+    bool key_press = false;
+    bool key_release = false;
+    bool button_press = false;
+    bool button_release = false;
+    bool enter_window = false;
+    bool leave_window = false;
+    bool pointer_motion = false;
+    bool pointer_motion_hint = false;
+    bool button1_motion = false;
+    bool button2_motion = false;
+    bool button3_motion = false;
+    bool button4_motion = false;
+    bool button5_motion = false;
+    bool button_motion = false;
+    bool keymap_state = false;
+    bool exposure = false;
+    bool visibility_change = false;
+    bool structure_notify = false;
+    bool resize_redirect = false;
+    bool substructure_notify = false;
+    bool substructure_redirect = false;
+    bool focus_change = false;
+    bool property_change = false;
+    bool colormap_change = false;
+    bool owner_grab_button = false;
+    unsigned padding : 7 = 0u;
+};
+
+struct Error {
+    uint1 response_operation = 0;
+    enum : unsigned char
+    {
+        request = 1,
+        value = 2,
+        window = 3,
+        pixmap = 4,
+        atom = 5,
+        cursor = 6,
+        font = 7,
+        match = 8,
+        drawable = 9,
+        access = 10,
+        alloc = 11,
+        colormap = 12,
+        g_context = 13,
+        id_choice = 14,
+        name = 15,
+        length = 16,
+        implementation = 17,
+    } code;
+    uint2 sequence;
+    uint4 resource_id;
+    uint2 minor_operation;
+    OperationCode major_operation;
+
+  private:
+    [[gnu::unused]] Buffer<uint1, 21> padding;
+
+  public:
+    uint4 full_sequence;
+};
+
+struct Cookie {
+    uint4 sequence;
+};
+
+struct Reply {
+    uint2 response_type;
+    uint2 sequence;
+    uint4 response_length;
+};
+
+struct Event {
+    uint2 response_type;
+    uint2 sequence;
+    uint4 length;
+    EventCode event_type;
+    [[gnu::unused]] Buffer<uint1, 23> padding;
+    uint4 full_sequence;
+};
+
+struct AuthorizationInfo {
+    int4 name_length;
+    char* name;
+    int4 data_length;
+    char* data;
+};
+
+struct OpaqueConnection {};
+
+struct ConnectRequest {
+    // TODO:
+};
+
+struct CreateWindowRequest {
+    OperationCode operation = OperationCode::create_window;
+    uint1 depth;
+    uint2 length;
+    int2 x, y;
+    uint2 width, height;
+    enum : unsigned char
+    {
+        input_output,
+        input_only,
+        copy_from_parent
+    } window_class;
+    // visual_id
+};
+
+}  // namespace xwin

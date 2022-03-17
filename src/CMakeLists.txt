@@ -24,6 +24,7 @@ set(
   ${CAT_SRC}/libraries/linux/detail/
   ${CAT_SRC}/libraries/thread/
   ${CAT_SRC}/libraries/network/
+  ${CAT_SRC}/libraries/x/
   PARENT_SCOPE
 )
 
