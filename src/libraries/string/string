@@ -8,7 +8,7 @@
 
 namespace std {
 
-template <typename T = isize>
+template <typename T = ssize>
 constexpr auto string_length(char const* p_string) -> T;
 
 }  // namespace std
@@ -20,13 +20,13 @@ auto memcpy(void* p_destination, void const* p_source, size_t bytes) -> void*;
 
 struct StringView {
     char const* p_data;
-    isize length;
+    ssize length;
 
     StringView() = default;
     // TODO: Confirm that `std::string_length()` can be constant-folded by GCC.
     constexpr StringView(char const* p_string)
         : p_data(p_string), length(std::string_length(p_string)){};
-    constexpr StringView(char const* p_string, isize in_length)
+    constexpr StringView(char const* p_string, ssize in_length)
         : p_data(p_string), length(in_length){};
     constexpr StringView(StringView const&& string)
         : p_data(string.p_data), length(string.length){};

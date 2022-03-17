@@ -236,7 +236,7 @@ using float8 = double;
 
 using usize = uint8;
 // TODO: Solve circular dependency:
-// using isize = i8;
+// using ssize = i8;
 
 using bool1 = uint1;
 using bool2 = uint2;

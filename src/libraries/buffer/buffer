@@ -5,9 +5,9 @@
 #include <string>
 #include <utility>
 
-template <typename T, isize Size>
+template <typename T, ssize Size>
 struct Buffer {
-    static constexpr isize length = Size;
+    static constexpr ssize length = Size;
     T value[Size];
 
     constexpr Buffer() = default;
@@ -23,7 +23,7 @@ struct Buffer {
     }
 
     // TODO: Non-pessimize unsigned indices as well.
-    auto operator[](isize i) -> T& {
+    auto operator[](ssize i) -> T& {
         return value[i];
     }
 

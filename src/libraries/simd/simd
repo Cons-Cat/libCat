@@ -24,9 +24,9 @@ namespace std::detail {
  * functions are unaligned, which pays little, if any, penalty to aligned
  * vectors in modern implementations of SSE, AVX, and NEON architectures. */
 
-template <typename T, isize Width>
+template <typename T, ssize Width>
 struct alignas(4) SimdVector {
-    static constexpr isize width = Width;
+    static constexpr ssize width = Width;
     using ScalarType = T;
     /* `vector_size` is a GCC attribute that represents SIMD data-types.
      * `using` and `alignas` do not work on a builtin vector type. Generalized

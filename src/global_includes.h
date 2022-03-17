@@ -15,7 +15,7 @@ template <typename T>
 struct Result;
 
 // TODO: Fix this declaration in `<numerals>`
-using isize = int long long;
+using ssize = int long long;
 
 #include <numerals>
 

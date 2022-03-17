@@ -7,7 +7,7 @@
 
 // TODO: This does not work correctly.
 template <typename T>
-concept allocator = requires(T allocator, isize input) {
+concept allocator = requires(T allocator, ssize input) {
     // Allocators hold an enum for failure codes named `failures`.
     meta::is_enum_v<typename T::failures>;
     allocator.failures;
@@ -63,7 +63,7 @@ struct PageAllocator {
     void free(){};
 
     // NOLINTNEXTLINE
-    auto operator[](isize byte_index) -> uint8& {
+    auto operator[](ssize byte_index) -> uint8& {
         return reinterpret_cast<uint8*>(address)[byte_index];
     }
 };
