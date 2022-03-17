@@ -25,6 +25,7 @@ set(
   ${CAT_SRC}/libraries/thread/
   ${CAT_SRC}/libraries/network/
   ${CAT_SRC}/libraries/x/
+  ${CAT_SRC}/libraries/bit/
   PARENT_SCOPE
 )
 
