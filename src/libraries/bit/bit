@@ -1,0 +1,31 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <concepts>
+#include <type_traits>
+
+// i386 and x86-64 are little endian.
+// NOLINTNEXTLINE TODO
+constexpr bool1 is_little_endian = true;
+// NOLINTNEXTLINE TODO
+constexpr bool1 is_big_endian = false;
+
+namespace std {
+
+auto invert_endianess(meta::integral auto value) {
+    if constexpr (sizeof(value) == 1) {
+        return __builtin_bswap8(value);
+    }
+    if constexpr (sizeof(value) == 2) {
+        return __builtin_bswap16(value);
+    }
+    if constexpr (sizeof(value) == 4) {
+        return __builtin_bswap32(value);
+    }
+    if constexpr (sizeof(value) == 8) {
+        return __builtin_bswap64(value);
+    }
+}
+
+}  // namespace std
