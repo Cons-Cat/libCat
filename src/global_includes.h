@@ -38,7 +38,7 @@ using ssize = int long long;
  * be assigned to any variable. */
 namespace std::detail {
 
-struct [[gnu::unused]] unused {
+struct [[maybe_unused]] unused {
     // Any type can be converted into `unused`, except for `Result`s.
     template <typename T>
     constexpr void operator=(T const&) requires(
@@ -51,4 +51,4 @@ struct [[gnu::unused]] unused {
 }  // namespace std::detail
 
 // TODO: Ensure that this static global is zero-overhead.
-[[gnu::unused]] static std::detail::unused _;
+[[maybe_unused]] static std::detail::unused _;
