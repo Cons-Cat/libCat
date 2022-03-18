@@ -2,6 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
+// TODO: Consolidate this into `<linux>`. And a lot of this is unnecessary.
+
 enum ProtectionFlags : uint4
 {
     PROT_NONE = 0b000,   // Data cannot be accessed at all.
@@ -36,7 +38,14 @@ struct Thread;
 
 // TODO: Enforce that `FileDescriptor` cannot be constructed with a negative
 // value. This is an index into the kernel's file descriptor table.
-using FileDescriptor = int4;
+struct FileDescriptor {
+    int4 value;
+
+    FileDescriptor() = default;
+    FileDescriptor(int4 input) {
+        this->value = input;
+    }
+};
 
 // TODO: Document these:
 using UserId = uint4;

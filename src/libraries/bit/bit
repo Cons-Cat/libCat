@@ -6,10 +6,10 @@
 #include <type_traits>
 
 // i386 and x86-64 are little endian.
-// NOLINTNEXTLINE TODO
+// NOLINTNEXTLINE TODO: Make `bool1` construct on `bool`.
 constexpr bool1 is_little_endian = true;
-// NOLINTNEXTLINE TODO
-constexpr bool1 is_big_endian = false;
+// NOLINTNEXTLINE TODO: Make `bool1` construct on `bool`.
+constexpr bool1 is_big_endian = !is_little_endian;
 
 namespace std {
 
