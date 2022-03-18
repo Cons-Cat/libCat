@@ -212,7 +212,7 @@ struct Atomic {
 
     void store(auto storing,
                atom::MemoryOrder operand = atom::MemoryOrder::seq_cst) {
-        atom::MemoryOrder test_value [[gnu::unused]] =
+        atom::MemoryOrder test_value [[maybe_unused]] =
             operand & atom::detail::mask;
 
         Result(test_value != atom::MemoryOrder::acquire).or_panic_debug();
@@ -224,7 +224,7 @@ struct Atomic {
 
     void store(auto operand,
                atom::MemoryOrder order = atom::MemoryOrder::seq_cst) volatile {
-        atom::MemoryOrder test_value [[gnu::unused]] =
+        atom::MemoryOrder test_value [[maybe_unused]] =
             order & atom::detail::mask;
 
         Result(test_value != atom::MemoryOrder::acquire).or_panic_debug();
@@ -235,7 +235,7 @@ struct Atomic {
     }
 
     auto load(atom::MemoryOrder order = atom::MemoryOrder::seq_cst) const -> T {
-        atom::MemoryOrder test_value [[gnu::unused]] =
+        atom::MemoryOrder test_value [[maybe_unused]] =
             order & atom::detail::mask;
 
         Result(test_value != atom::MemoryOrder::release).or_panic_debug();
@@ -246,7 +246,7 @@ struct Atomic {
 
     auto load(atom::MemoryOrder order = atom::MemoryOrder::seq_cst) const
         volatile -> T {
-        atom::MemoryOrder test_value [[gnu::unused]] =
+        atom::MemoryOrder test_value [[maybe_unused]] =
             order & atom::detail::mask;
 
         Result(test_value != atom::MemoryOrder::release).or_panic_debug();
@@ -269,9 +269,9 @@ struct Atomic {
     auto compare_exchange_weak(T& operand, T success_value,
                                atom::MemoryOrder success_order,
                                atom::MemoryOrder failure_order) -> bool1 {
-        atom::MemoryOrder test_value1 [[gnu::unused]] =
+        atom::MemoryOrder test_value1 [[maybe_unused]] =
             success_order & atom::detail::mask;
-        atom::MemoryOrder test_value2 [[gnu::unused]] =
+        atom::MemoryOrder test_value2 [[maybe_unused]] =
             failure_order & atom::detail::mask;
 
         Result(test_value2 != atom::MemoryOrder::release).or_panic_debug();
@@ -287,9 +287,9 @@ struct Atomic {
                                atom::MemoryOrder success_order,
                                atom::MemoryOrder failure_order) volatile
         -> bool1 {
-        atom::MemoryOrder test_value1 [[gnu::unused]] =
+        atom::MemoryOrder test_value1 [[maybe_unused]] =
             success_order & atom::detail::mask;
-        atom::MemoryOrder test_value2 [[gnu::unused]] =
+        atom::MemoryOrder test_value2 [[maybe_unused]] =
             failure_order & atom::detail::mask;
 
         Result(test_value2 != atom::MemoryOrder::release).or_panic_debug();
@@ -321,9 +321,9 @@ struct Atomic {
     auto compare_exchange_strong(T& operand, T success_value,
                                  atom::MemoryOrder success_order,
                                  atom::MemoryOrder failure_order) -> bool1 {
-        atom::MemoryOrder test_value1 [[gnu::unused]] =
+        atom::MemoryOrder test_value1 [[maybe_unused]] =
             success_order & atom::detail::mask;
-        atom::MemoryOrder test_value2 [[gnu::unused]] =
+        atom::MemoryOrder test_value2 [[maybe_unused]] =
             failure_order & atom::detail::mask;
 
         Result(test_value2 != atom::MemoryOrder::release).or_panic_debug();
@@ -339,9 +339,9 @@ struct Atomic {
                                  atom::MemoryOrder success_order,
                                  atom::MemoryOrder failure_order) volatile
         -> bool1 {
-        atom::MemoryOrder test_value1 [[gnu::unused]] =
+        atom::MemoryOrder test_value1 [[maybe_unused]] =
             success_order & atom::detail::mask;
-        atom::MemoryOrder test_value2 [[gnu::unused]] =
+        atom::MemoryOrder test_value2 [[maybe_unused]] =
             failure_order & atom::detail::mask;
 
         Result(test_value2 != atom::MemoryOrder::release).or_panic_debug();
