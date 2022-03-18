@@ -11,8 +11,9 @@ auto result_factory(MyErrors error) -> Result<> {
     return Failure(error);
 }
 
-auto make_false() -> Result<bool> {
-    return false;
+auto make_false() -> Result<bool1> {
+    // TODO: Find a way to simplify this.
+    return bool1(false);
 }
 
 void meow() {

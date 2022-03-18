@@ -3,7 +3,7 @@
 #include <string>
 
 auto std::compare_strings(StringView const& string_1,
-                          StringView const& string_2) -> bool {
+                          StringView const& string_2) -> bool1 {
     if (string_1.length != string_2.length) {
         return false;
     }
@@ -20,7 +20,7 @@ auto std::compare_strings(StringView const& string_1,
     char const* p_string_1_iterator = string_1.p_data;
     char const* p_string_2_iterator = string_2.p_data;
 
-    auto loop = [&](ssize const size) -> bool {
+    auto loop = [&](ssize const size) -> bool1 {
         while (length_iterator >= vector_size * size) {
             for (ssize i = 0; i < size; i++) {
                 // TODO: Use `StringView::data()` getter methods.

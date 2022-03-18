@@ -42,7 +42,7 @@ struct FileDescriptor {
     int4 value;
 
     FileDescriptor() = default;
-    FileDescriptor(int4 input) {
+    FileDescriptor(int4 const input) {
         this->value = input;
     }
 };

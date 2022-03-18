@@ -35,6 +35,7 @@ concept allocator = requires(T allocator, ssize input) {
 struct PageAllocator {
     void* address = nullptr;
 
+    // TODO: Think about this.
     enum failures
     {};
 

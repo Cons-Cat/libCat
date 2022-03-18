@@ -28,7 +28,7 @@ struct Maybe<T> {
   private:
     T const value;
   public:
-    bool const has_some;
+    bool1 const has_some;
 
     Maybe() = delete;
     constexpr Maybe(std::detail::none) : value(), has_some(false) {

@@ -16,6 +16,7 @@ template <typename T>
 constexpr auto forward(meta::remove_reference_t<T>&& input)
     -> T&& requires(!meta::is_lvalue_reference_v<T>);
 
+// TODO: Figure out how to make this return `bool1`.
 constexpr auto is_constant_evaluated() -> bool;
 
 consteval auto constant_evaluate(auto value);
