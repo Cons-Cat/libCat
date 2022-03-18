@@ -3,6 +3,7 @@
 #pragma once
 
 #include <any>
+#include <bit>
 #include <concepts>
 #include <linux_flags>
 #include <string>
@@ -11,6 +12,8 @@
 struct Socket;
 
 namespace nix {
+
+constexpr usize page_size = 4096_ki;
 
 // `read()` transmits a number of bytes into a file descriptor.
 auto read(FileDescriptor const file_descriptor, char const* p_string_buffer,
@@ -27,8 +30,6 @@ auto write(FileDescriptor const file_descriptor, char const* p_string_buffer,
 auto close(FileDescriptor const object) -> Result<>;
 
 auto unlink(char const* path_name) -> Result<>;
-
-constexpr usize page_size = 4096u;
 
 auto mmap(usize beginning_address, usize bytes_size, usize protections,
           usize flags, FileDescriptor file_descriptor, usize pages_offset)

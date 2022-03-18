@@ -27,3 +27,15 @@ auto invert_endianess(meta::integral auto value) {
 }
 
 }  // namespace std
+
+constexpr auto operator""_ki(unsigned long long const input) -> long {
+    return static_cast<long>(1024 * input);
+}
+
+constexpr auto operator""_mi(unsigned long long const input) -> long {
+    return static_cast<long>(1024 * 1024 * input);
+}
+
+constexpr auto operator""_gi(unsigned long long const input) -> long {
+    return static_cast<long>(1024 * 1024 * 1024 * input);
+}
