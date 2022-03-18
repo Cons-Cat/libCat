@@ -202,7 +202,7 @@ struct [[nodiscard]] Result {
      * undefined. When building `-O0`, this function panics if a value is not
      * held. When optimizations are enabled, that safety check is elided. This
      * function cannot fail in a `constexpr` context. */
-    constexpr auto or_panic_debug(StringView const& p_error_message) -> T {
+    constexpr auto or_panic_debug(StringView const& error_message) -> T {
         if (!meta::is_constant_evaluated()) {
 #ifndef __OPTIMIZE__
             if (is_okay) {
@@ -212,7 +212,7 @@ struct [[nodiscard]] Result {
                     return;
                 }
             }
-            std::print_line(p_error_message).discard_result();
+            std::print_line(error_message).discard_result();
             std::exit(1);
 #endif
         }

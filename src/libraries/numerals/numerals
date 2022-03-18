@@ -238,6 +238,36 @@ using usize = uint8;
 // TODO: Solve circular dependency:
 // using ssize = i8;
 
-using bool1 = uint1;
-using bool2 = uint2;
-using bool4 = uint4;
+// TODO: Document `bool1`.
+struct bool1 {
+    uint1 value;
+    constexpr bool1() = default;
+    constexpr bool1(bool const input) {
+        this->value = static_cast<uint1>(input);
+    }
+    constexpr operator auto() const {
+        return static_cast<bool>(this->value);
+    }
+};
+
+struct bool2 {
+    uint1 value;
+    constexpr bool2() = default;
+    constexpr bool2(bool1 const input) {
+        this->value = static_cast<uint4>(input);
+    }
+    constexpr operator auto() const {
+        return static_cast<bool>(this->value);
+    }
+};
+
+struct bool4 {
+    uint4 value;
+    constexpr bool4() = default;
+    constexpr bool4(bool2 const input) {
+        this->value = static_cast<uint4>(input);
+    }
+    constexpr operator auto() const {
+        return static_cast<bool>(this->value);
+    }
+};

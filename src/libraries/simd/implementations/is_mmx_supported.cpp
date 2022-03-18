@@ -3,6 +3,6 @@
 #include <simd>
 
 // TODO: Document.
-auto is_mmx_supported() -> bool {
+auto is_mmx_supported() -> bool1 {
     return __builtin_cpu_supports("mmx");
 }

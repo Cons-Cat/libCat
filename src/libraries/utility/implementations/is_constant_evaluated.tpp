@@ -1,5 +1,8 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
+#pragma once
+
+#include <numerals>
 #include <utility>
 
 constexpr auto meta::is_constant_evaluated() -> bool {

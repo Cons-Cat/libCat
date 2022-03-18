@@ -200,7 +200,8 @@ auto p_string_to_p_vector(meta::string auto p_string) {
 }
 
 template <uint1 Mask>
-auto cmp_implicit_str_count(auto const& vector_1, auto const& vector_2) -> bool;
+auto cmp_implicit_str_count(auto const& vector_1, auto const& vector_2)
+    -> bool1;
 
 template <uint1 Mask>
 auto cmp_implicit_str_i(auto const& vector_1, auto const& vector_2) -> int4;
@@ -246,17 +247,17 @@ auto move_mask(T vector) -> int4 {
 /* TODO: __builtin_cpu_init()
  * must be called before these. */
 
-auto is_mmx_supported() -> bool;
-auto is_sse1_supported() -> bool;
-auto is_sse2_supported() -> bool;
-auto is_sse3_supported() -> bool;
-auto is_ssse3_supported() -> bool;
-auto is_sse4_1_supported() -> bool;
-auto is_sse4_2_supported() -> bool;
-auto is_avx_supported() -> bool;
-auto is_avx2_supported() -> bool;
-auto is_avx512f_supported() -> bool;
-auto is_avx512vl_supported() -> bool;
+auto is_mmx_supported() -> bool1;
+auto is_sse1_supported() -> bool1;
+auto is_sse2_supported() -> bool1;
+auto is_sse3_supported() -> bool1;
+auto is_ssse3_supported() -> bool1;
+auto is_sse4_1_supported() -> bool1;
+auto is_sse4_2_supported() -> bool1;
+auto is_avx_supported() -> bool1;
+auto is_avx2_supported() -> bool1;
+auto is_avx512f_supported() -> bool1;
+auto is_avx512vl_supported() -> bool1;
 
 #include "./implementations/cmp_implicit_str_c.tpp"
 #include "./implementations/cmp_implicit_str_i.tpp"

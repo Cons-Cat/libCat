@@ -19,7 +19,7 @@ void meow() {
     listening_socket.bind().or_panic();
     listening_socket.listen(20).or_panic();
 
-    bool exit = false;
+    bool1 exit = false;
     while (!exit) {
         recieving_socket.accept(listening_socket).or_panic();
 

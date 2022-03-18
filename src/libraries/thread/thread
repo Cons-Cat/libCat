@@ -9,7 +9,7 @@ struct Thread {
 
     /* `joinable` is `true` if this thread can currently be joined, otherwise it
      * is `false`. */
-    bool joinable = false;
+    bool1 joinable = false;
 
     void* p_stack;
     // TODO: This could be `ssize` if it being non-negative is asserted.

@@ -65,7 +65,8 @@ concept copy_constructible = move_constructible<T> &&
     constructible_from<T, T const> && convertible_to<T const, T>;
 
 /* boolean_testable is adapted from the exposition-only concept
-   boolean-testable. */
+   boolean-testable. This converts a type into `bool` rather than `bool1`
+   because that simplifies compilation. */
 namespace detail {
     template <typename T>
     concept boolean_testable = convertible_to<T, bool>;
