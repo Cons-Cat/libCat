@@ -169,7 +169,7 @@ struct [[nodiscard]] Result {
                 return;
             }
         }
-        std::print_line(p_error_message);
+        std::print_line(p_error_message).discard_result();
         std::exit(1);
     }
 
@@ -178,7 +178,7 @@ struct [[nodiscard]] Result {
      * held. When optimizations are enabled, that safety check is elided. This
      * function cannot fail in a `constexpr` context. */
     constexpr void or_panic_debug() {
-        if (meta::is_constant_evaluated()) {
+        if (!meta::is_constant_evaluated()) {
 #ifndef __OPTIMIZE__
             if (is_okay) {
                 if constexpr (!is_void) {
@@ -190,7 +190,12 @@ struct [[nodiscard]] Result {
             std::exit(1);
 #endif
         }
-        return this->value;
+        // Unconditionally return `value`.
+        if constexpr (!is_void) {
+            return this->value;
+        } else if constexpr (is_void) {
+            return;
+        }
     }
 
     /* If this object does not hold a value, the return of this function is
@@ -198,7 +203,7 @@ struct [[nodiscard]] Result {
      * held. When optimizations are enabled, that safety check is elided. This
      * function cannot fail in a `constexpr` context. */
     constexpr auto or_panic_debug(StringView const& p_error_message) -> T {
-        if (meta::is_constant_evaluated()) {
+        if (!meta::is_constant_evaluated()) {
 #ifndef __OPTIMIZE__
             if (is_okay) {
                 if constexpr (!is_void) {
@@ -207,10 +212,15 @@ struct [[nodiscard]] Result {
                     return;
                 }
             }
-            std::print_line(p_error_message);
+            std::print_line(p_error_message).discard_result();
             std::exit(1);
 #endif
         }
-        return this->value;
+        // Unconditionally return `value`.
+        if constexpr (!is_void) {
+            return this->value;
+        } else if constexpr (is_void) {
+            return;
+        }
     }
 };
