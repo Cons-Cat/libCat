@@ -59,7 +59,7 @@ struct SocketLocal {
         return result;
     }
 
-    // Connect a `Socket` to an address.
+    // Connect a `Socket`.
     auto connect() -> Result<> {
         return nix::connect_socket(this->descriptor, this, this->get_size());
     }
