@@ -6,12 +6,9 @@
 
 void meow(int argc, char* argv[]) {
     SocketLocal<SocketType::stream> socket;
-    char const* socket_name = "/tmp/temp.sock";
+    socket.path_name = "/tmp/temp.sock";
 
     socket.create().or_panic();
-    std::copy_memory(socket_name, &socket.path_name,
-                     sizeof(socket.path_name) - 1);
-
     socket.connect().or_panic();
 
     // Send all command line arguments to the server.

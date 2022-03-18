@@ -2,8 +2,12 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <memory>
 #include <string>
+#include <type_traits>
 #include <utility>
+
+#include "result"
 
 template <typename T, ssize Size>
 struct Buffer {
@@ -12,7 +16,18 @@ struct Buffer {
 
     constexpr Buffer() = default;
     constexpr Buffer(Buffer<T, Size>&& in_buffer) = default;
+    constexpr Buffer(StringView const& string) requires(
+        meta::is_same_v<meta::remove_const_t<T>, char>) {
+        std::copy_memory(string.p_data, &(this->value), string.length);
+    }
+
     constexpr auto operator=(Buffer<T, Size>&&) -> Buffer<T, Size>& = default;
+    constexpr auto operator=(StringView const&& string) -> Buffer<T, Size>
+    requires(meta::is_same_v<T, char>) {
+        Buffer<T, Size> buffer;
+        std::copy_memory(string.p_data, &(this->value), string.length);
+        return buffer;
+    }
 
     template <typename... U>
     constexpr Buffer(U&&... arguments) requires(sizeof...(arguments) == Size) {
