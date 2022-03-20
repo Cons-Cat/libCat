@@ -4,7 +4,7 @@
 
 // TODO: Consolidate this into `<linux>`. And a lot of this is unnecessary.
 
-enum ProtectionFlags : uint4
+enum ProtectionFlags : unsigned int
 {
     PROT_NONE = 0b000,   // Data cannot be accessed at all.
     PROT_READ = 0b001,   // Data is readable.
@@ -12,7 +12,7 @@ enum ProtectionFlags : uint4
     PROT_EXEC = 0b100,   // Data can be executed.
 };
 
-enum Flags : uint4
+enum Flags : unsigned int
 {
     MAP_SHARED = 0b1,    // Writes change the underlying object.
     MAP_PRIVATE = 0b10,  // Writes only change the calling process.
@@ -34,7 +34,7 @@ enum Flags : uint4
         0x100000,  // MAP_FIXED but do not unmap underlying mapping.
 };
 
-struct Thread;
+struct Process;
 
 // TODO: Enforce that `FileDescriptor` cannot be constructed with a negative
 // value. This is an index into the kernel's file descriptor table.
@@ -60,7 +60,7 @@ enum WaitIdType
     P_PIDFD = 3
 };
 
-enum ThreadFlags : uint4
+enum ThreadFlags : unsigned int
 {
     CSIGNAL = 0x000000ff,
     CLONE_NEWTIME = 0x00000080,
