@@ -38,7 +38,9 @@ struct SocketLocal {
     Buffer<char, 108> path_name;
     FileDescriptor descriptor;
 
-    SocketLocal() = default;
+    // Using `SocketLocal(){};` instead of `SockeLocal() = default;` prevents a
+    // false-positive clangd diagnostic here.
+    SocketLocal(){};  // NOLINT
     SocketLocal(FileDescriptor const in_descriptor) {
         this->descriptor = in_descriptor;
     }
