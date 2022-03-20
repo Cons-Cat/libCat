@@ -7,27 +7,30 @@
 #include <type_traits>
 #include <utility>
 
-/* This file contains a general-purpose error-handling tool. Result<> is a
- * templated struct that either contains some data (unless it holds void) or an
- * error-code. The error-code is an 8-byte value that can be either an integer
+/* This file contains a general-purpose error-handling tool. `Result<>` is a
+ * templated struct that either contains some data (unless it holds `void`) or
+ * a error code. The code is an 8-byte value that can be either an integer
  * or a pointer to a string that may be printed. To extract a value out of a
- * result, call one of its member functions.
+ * `Result`, call one of its member functions.
  *
- * An error code or string pointer must be wrapped in a Failure, such as:
- ** return Failure(1);
+ * An error code or string pointer must be wrapped by a `Failure`, such as:
+ * `return Failure(1);`
  *
- * Otherwise, it is presumed that a Result holds a value rather than an error.
- * This is done to prevent monomorphizing the Result on its error types like
- * Rust, which provides type-safety at the cost of pessimized compiler-times and
- * runtime overhead. This Result is a zero-overhead abstraction over C-style
- * error handling.
+ * Otherwise, it is presumed that a `Result` holds a value rather than a
+ * `Failure`. This is done to prevent monomorphizing the `Result` on its error
+ * types like a variant type, which provides type-safety at the cost of
+ * pessimized build-times and runtime overhead. This `Result` is a zero-overhead
+ * abstraction over C-style error handling.
  *
- * A Failure is implicitly convertible into a Result, and a T is implicitly
- * convertible into a Result<T>.
+ * A `Failure` is implicitly convertible into a `Result`, and a `T` is
+ * implicitly convertible into a `Result<T>`. A `Result<T>` is implicitly
+ * convertible into a `Result<>`, to aid some low-level routines.
  *
- * Result types are marked [[nodiscard]]. With confidence that an invocation of
- * a function returning a Result will never fail, you may call .unsafe_value(),
- * which will skip error-handling when compiler optimizations are enabled. */
+ * `Result` types are marked `[[nodiscard]]`. With confidence that an invocation
+ * of a function returning a `Result` will never fail, you may call
+ * `.or_panic_debug()`, which will skip error-handling when compiler
+ * optimizations are enabled. A `Result` cannot be consumed by the `_` global.
+ */
 
 template <typename T = void>
 struct Result;
@@ -142,8 +145,7 @@ struct [[nodiscard]] Result {
         }
     }
 
-    // This method does not yield `value`. It is useful for side-effectful
-    // functions.
+    // This method does not yield `value`. It is useful for impure functions.
     constexpr void discard_result(){};
 
     // TODO: Pass in the exit code and error message with overloads.
@@ -198,10 +200,11 @@ struct [[nodiscard]] Result {
         }
     }
 
-    /* If this object does not hold a value, the return of this function is
-     * undefined. When building `-O0`, this function panics if a value is not
-     * held. When optimizations are enabled, that safety check is elided. This
-     * function cannot fail in a `constexpr` context. */
+    /* If this object does not hold a value, the return of this function
+     * is undefined. When building `-O0`, this function panics if a
+     * value is not held. When optimizations are enabled, that safety
+     * check is elided. This function cannot fail in a `constexpr`
+     * context. */
     constexpr auto or_panic_debug(StringView const& error_message) -> T {
         if (!meta::is_constant_evaluated()) {
 #ifndef __OPTIMIZE__

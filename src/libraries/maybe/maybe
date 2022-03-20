@@ -54,7 +54,7 @@ struct Maybe<T> {
             return value;
         }
         // TODO: Error message.
-        exit(1);
+        std::exit(1);
 #endif
     }
 
@@ -96,7 +96,7 @@ struct Maybe<T, sentinel> {
             return value;
         }
         // TODO: Error message.
-        exit(1);
+        std::exit(1);
 #endif
     }
 

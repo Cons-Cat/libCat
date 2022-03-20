@@ -11,7 +11,7 @@ void function(void*) {
 }
 
 void meow() {
-    Thread thread;
+    nix::Process thread;
     PageAllocator allocator;
     thread.create(allocator, 4096, function, nullptr).or_panic();
     for (int4 i = 0; i < 10; i++) {
