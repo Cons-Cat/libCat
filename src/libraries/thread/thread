@@ -4,7 +4,11 @@
 
 #include <linux>
 
-struct Thread {
+#include "runtime"
+
+namespace nix {
+
+struct Process {
     ProcessId process_id;
 
     /* `joinable` is `true` if this thread can currently be joined, otherwise it
@@ -12,13 +16,12 @@ struct Thread {
     bool1 joinable = false;
 
     void* p_stack;
-    // TODO: This could be `ssize` if it being non-negative is asserted.
-    usize stack_size;
+    ssize stack_size;
 
-    Thread() = default;
-    Thread(Thread const&) = delete;
+    Process() = default;
+    Process(Process const&) = delete;
 
-    ~Thread() {
+    ~Process() {
         if (joinable) {
             std::exit();
         }
@@ -28,17 +31,16 @@ struct Thread {
     // TODO: Use a `meta::allocator` concept here when it's working.
     // TODO: Add a method for allocating guard memory.
     // Add meta::invocable concept.
-    auto create(auto& allocator, usize const initial_stack_size,
+    auto create(auto& allocator, ssize const initial_stack_size,
                 auto const& function, void* p_arguments_struct) -> Result<> {
-        uint4 const flags = ::CLONE_VM | ::CLONE_FS | ::CLONE_FILES |
-                            ::CLONE_SIGHAND | ::CLONE_SETTLS |
-                            ::CLONE_PARENT_SETTID | ::CLONE_CHILD_CLEARTID;
+        constexpr uint4 flags = ::CLONE_VM | ::CLONE_FS | ::CLONE_FILES |
+                                ::CLONE_SIGHAND | ::CLONE_SETTLS |
+                                ::CLONE_PARENT_SETTID | ::CLONE_CHILD_CLEARTID;
 
         this->stack_size = initial_stack_size;
         /* Allocate a stack for this thread, and get an address to the top of
          * it. */
-        // TODO: There has to be a way to streamline this:
-        this->p_stack = allocator.malloc(stack_size).or_is(nullptr);
+        this->p_stack = allocator.malloc(initial_stack_size).or_is(nullptr);
         if (this->p_stack == nullptr) {
             return Failure(1);
         }
@@ -55,9 +57,48 @@ struct Thread {
         // __builtin_ia32_wrgsbase64(); // Write to `%gs`.
         // __builtin_ia32_rdgsbase64(); // Read from `%gs`.
 
-        // `clone()` will always return a value.
+#ifdef foooo
+        Any result;
+        // register ProcessId* r10 asm("r10") = p_pid;  // TODO: Use for parent
+        // PID.
+        // register ProcessId* r8 asm("r8") = p_pid;
+        // register void* r9 asm("r9") = p_stack_top;
+        asm(R"(mov $56, %%rax
+               mov %%rsi, %%r8
+               mov %%rsi, %%r9
+
+               # Put the arguments struct pointer near the front of the new stack.
+               # The stack pointer then points beneath both the function pointer,
+               # and the arguments struct pointer.
+               sub $16, %%rsi
+               mov %%rcx, 8(%%rsi)
+
+               # Place the function pointer at the front of the new stack.
+               mov %%rdi, 0(%%rsi)
+
+
+               # Put process flags into rdi.
+               mov %%rdx, %%rdi
+               # Put PID pointer into rdx. It is also already in r10.
+               mov %%r8, %%rdx
+               mov %%r8, %%r10
+               # Put the stack pointer into r8.
+               mov %%r9, %%r8
+               syscall
+               # TODO: Test that rax is non-zero. Fail otherwise.
+
+               pop %%rax
+               pop %%rdi
+               call *%%rax)"
+            : "=a"(result)
+            : "D"(&function), "S"(p_stack_top), "d"(flags),
+              "c"(p_arguments_struct)  // , "r"(r8), "r"(r9)
+            : "r8", "r9", "r10", "r11", "memory", "cc");
+#endif
+
         nix::clone_asm(&function, p_stack_top, flags, p_arguments_struct, p_pid,
                        p_stack_top, p_pid);
+
         this->process_id = *p_pid;
         this->joinable = true;
         return okay;
@@ -73,3 +114,5 @@ struct Thread {
         // TODO: Free the stack memory.
     }
 };
+
+}  // namespace nix

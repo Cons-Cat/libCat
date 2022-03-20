@@ -42,9 +42,9 @@ struct PageAllocator {
     /* Allocate memory in multiples of a page-size,
      * which is `4` KiB on x86-64. For instance, If fewer that `4096u` bytes are
      * allocated, that amount will be rounded up to `4096u`. There is generally
-     * very little reason to allocate any other amount of bytes with
+     * very little reason to allocate any smaller amount of bytes using
      * `PageAllocator`. */
-    auto malloc(usize bytes) -> Result<void*> {
+    auto malloc(ssize bytes) -> Result<void*> {
         this->address =
             nix::mmap(0u, bytes, ::PROT_READ | ::PROT_WRITE,
                       ::MAP_PRIVATE | ::MAP_POPULATE | ::MAP_ANONYMOUS,
@@ -63,7 +63,7 @@ struct PageAllocator {
     // TODO: `munmap()` here.
     void free(){};
 
-    // NOLINTNEXTLINE
+    // NOLINTNEXTLINE TODO: Why no lint?
     auto operator[](ssize byte_index) -> uint8& {
         return reinterpret_cast<uint8*>(address)[byte_index];
     }

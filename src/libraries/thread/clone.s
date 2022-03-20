@@ -2,14 +2,10 @@
 .global clone_asm
 .type   clone_asm,@function
 clone_asm:
-    xor %eax,%eax
-    mov $56,%al
-    mov %r11,%r9
+    mov $56,%rax
 
-    and $-16,%rsi
     mov %rcx,-8(%rsi)
-    sub $16,%rsi
-    mov %rdi,0(%rsi)
+    mov %rdi,%rsi
 	
     mov %rdx,%rdi
     mov %rdi,%r11
