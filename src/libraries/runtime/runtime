@@ -49,7 +49,10 @@ namespace std {
 extern "C" [[gnu::used]] void exit(ssize exit_code = 0);
 
 auto load_base_stack_pointer() -> void*;
-void align_stack_pointer_16();
+// These must be inlined in debug builds, or their semantics are incorrect.
+[[gnu::always_inline]] inline void align_stack_pointer_16() {
+    asm("and $-16, %rsp");
+}
 void align_stack_pointer_32();
 extern "C" void __stack_chk_fail();
 
