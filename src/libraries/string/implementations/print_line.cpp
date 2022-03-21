@@ -9,7 +9,7 @@ auto std::print_line(char const* p_string) -> Result<> {
     if (!result_1.is_okay) {
         return result_1.failure_code;
     }
-    return nix::write(1, "/n", 1);
+    return nix::write(1, "\n", 1);
 }
 
 auto std::print_line(StringView const& string) -> Result<> {

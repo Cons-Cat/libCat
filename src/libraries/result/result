@@ -173,6 +173,7 @@ struct [[nodiscard]] Result {
         }
         std::print_line(p_error_message).discard_result();
         std::exit(1);
+        __builtin_unreachable();  // This prevents a build warning.
     }
 
     /* If this object does not hold a value, the return of this function is
