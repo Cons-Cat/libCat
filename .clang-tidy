@@ -1,19 +1,19 @@
 ---
-Checks:          'bugprone-*,-bugprone-reserved-identifier,performance-*,-performance-noexcept-move-constructor,modernize-use-trailing-return-type,cppcoreguidelines-narrowing-conversions,readability-braces-around-statements,readability-const-return-type,readability-else-after-return,readability-implicit-bool-conversion,readability-make-member-function-const,readability-non-const-parameter,readability-qualified-auto,readability-redundant-control-flow,readability-redundant-declaration,readability-redundant-function-ptr-dereference,readability-redundant-member-init,readability-simplify-boolean-expr,modernize-pass-by-value,misc-non-copyable-objects,misc-misplaced-const,modernize-use-using,modernize-use-equals-default,misc-definitions-in-headers,cppcoreguidelines-pro-type-cstyle-cast,google-readability-casting'
+Checks:          'bugprone-*,-bugprone-reserved-identifier,performance-*,-performance-noexcept-move-constructor,modernize-use-trailing-return-type,cppcoreguidelines-narrowing-conversions,readability-braces-around-statements,readability-const-return-type,readability-else-after-return,readability-implicit-bool-conversion,readability-make-member-function-const,readability-non-const-parameter,readability-qualified-auto,readability-redundant-control-flow,readability-redundant-declaration,readability-redundant-function-ptr-dereference,readability-redundant-member-init,readability-simplify-boolean-expr,modernize-pass-by-value,misc-non-copyable-objects,misc-misplaced-const,modernize-use-using,modernize-use-equals-default,misc-definitions-in-headers,cppcoreguidelines-pro-type-cstyle-cast,google-readability-casting,readability-identifier-naming'
 
 CheckOptions:
   - { key: readability-identifier-naming.VariableCase,                    value: lower_case }
   - { key: readability-identifier-naming.MemberCase,                      value: lower_case }
-
-# Some structs do not conform to PascalCase, but these are generally favored.
-#  - { key: readability-identifier-naming.StructCase,                      value: CamelCase }
-#  - { key: readability-identifier-naming.ClassCase,                       value: CamelCase }
-
   - { key: readability-identifier-naming.FunctionCase,                    value: lower_case }
   - { key: readability-identifier-naming.NamespaceCase,                   value: lower_case }
   - { key: readability-identifier-naming.PointerParameterPrefix,          value: p_ }
   - { key: readability-identifier-naming.LocalPointerPrefix,              value: p_ }
   - { key: readability-identifier-naming.LocalConstantPointerPrefix,      value: p_ }
+
+# Some structs do not conform to PascalCase, but these are generally favored.
+  - { key: readability-identifier-naming.StructCase,                      value: CamelCase }
+  - { key: readability-identifier-naming.ClassCase,                       value: CamelCase }
+
 
 WarningsAsErrors: ''
 HeaderFilterRegex: ^src
