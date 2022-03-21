@@ -239,7 +239,7 @@ using usize = uint8;
 // using ssize = i8;
 
 // TODO: Document `bool1`.
-struct bool1 {
+struct bool1 {  // NOLINT
     uint1 value;
     constexpr bool1() = default;
     constexpr bool1(bool const input) {
@@ -250,9 +250,12 @@ struct bool1 {
     }
 };
 
-struct bool2 {
+struct bool2 {  // NOLINT
     uint1 value;
     constexpr bool2() = default;
+    constexpr bool2(bool const input) {
+        this->value = static_cast<uint4>(input);
+    }
     constexpr bool2(bool1 const input) {
         this->value = static_cast<uint4>(input);
     }
@@ -261,9 +264,15 @@ struct bool2 {
     }
 };
 
-struct bool4 {
+struct bool4 {  // NOLINT
     uint4 value;
     constexpr bool4() = default;
+    constexpr bool4(bool const input) {
+        this->value = static_cast<uint4>(input);
+    }
+    constexpr bool4(bool1 const input) {
+        this->value = static_cast<uint4>(input);
+    }
     constexpr bool4(bool2 const input) {
         this->value = static_cast<uint4>(input);
     }
