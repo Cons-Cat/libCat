@@ -4,8 +4,6 @@
 
 #include <linux>
 
-#include "runtime"
-
 namespace nix {
 
 struct Process {
@@ -27,79 +25,59 @@ struct Process {
         }
     }
 
+    static constexpr uint4 default_flags =
+        CloneFlags::vm | CloneFlags::fs | CloneFlags::files |
+        CloneFlags::sighand | CloneFlags::parent | CloneFlags::io |
+        CloneFlags::thread | CloneFlags::clone_parent_settid;
+
     // TODO: Make this `Result` hold `void` and store the PID in a member.
     // TODO: Use a `meta::allocator` concept here when it's working.
     // TODO: Add a method for allocating guard memory.
     // Add meta::invocable concept.
     auto create(auto& allocator, ssize const initial_stack_size,
-                auto const& function, void* p_arguments_struct) -> Result<> {
-        constexpr uint4 flags = ::CLONE_VM | ::CLONE_FS | ::CLONE_FILES |
-                                ::CLONE_SIGHAND | ::CLONE_SETTLS |
-                                ::CLONE_PARENT_SETTID | ::CLONE_CHILD_CLEARTID;
-
+                auto const& function, void* p_arguments_struct,
+                uint4 const flags = default_flags) -> Result<> {
         this->stack_size = initial_stack_size;
+
         /* Allocate a stack for this thread, and get an address to the top of
          * it. */
         this->p_stack = allocator.malloc(initial_stack_size).or_is(nullptr);
         if (this->p_stack == nullptr) {
             return Failure(1);
         }
+
         /* We need the top because memory will be pushed to it downwards on
          * x86-64. */
         void* p_stack_top =
             static_cast<char*>(this->p_stack) + this->stack_size;
-        // The ProcessId is the first data stored in a thread.
-        ProcessId* p_pid = static_cast<ProcessId*>(p_stack_top);
 
-        // prctl(ARCH_SET_GS, p_tls).or_panic();
-        // __builtin_ia32_wrfsbase64(); // Write to `%fs`.
-        // __builtin_ia32_rdfsbase64(); // Read from `%fs`.
-        // __builtin_ia32_wrgsbase64(); // Write to `%gs`.
-        // __builtin_ia32_rdgsbase64(); // Read from `%gs`.
-
-#ifdef foooo
         Any result;
-        // register ProcessId* r10 asm("r10") = p_pid;  // TODO: Use for parent
-        // PID.
-        // register ProcessId* r8 asm("r8") = p_pid;
-        // register void* r9 asm("r9") = p_stack_top;
-        asm(R"(mov $56, %%rax
-               mov %%rsi, %%r8
-               mov %%rsi, %%r9
-
-               # Put the arguments struct pointer near the front of the new stack.
-               # The stack pointer then points beneath both the function pointer,
-               # and the arguments struct pointer.
-               sub $16, %%rsi
-               mov %%rcx, 8(%%rsi)
-
-               # Place the function pointer at the front of the new stack.
-               mov %%rdi, 0(%%rsi)
-
-
-               # Put process flags into rdi.
-               mov %%rdx, %%rdi
-               # Put PID pointer into rdx. It is also already in r10.
-               mov %%r8, %%rdx
-               mov %%r8, %%r10
-               # Put the stack pointer into r8.
-               mov %%r9, %%r8
+        asm goto(
+            R"(
+sub $8, %%rsi
+ mov %[p_callback], 0(%%rsi)
+               mov %[p_args], 8(%%rsi)
                syscall
-               # TODO: Test that rax is non-zero. Fail otherwise.
 
-               pop %%rax
-               pop %%rdi
-               call *%%rax)"
-            : "=a"(result)
-            : "D"(&function), "S"(p_stack_top), "d"(flags),
-              "c"(p_arguments_struct)  // , "r"(r8), "r"(r9)
-            : "r8", "r9", "r10", "r11", "memory", "cc");
-#endif
+mov %%rax, %[result]
+test %%rax, %%rax
+jnz %l[parent_thread]
 
-        nix::clone_asm(&function, p_stack_top, flags, p_arguments_struct, p_pid,
-                       p_stack_top, p_pid);
+pop %%rax
+pop %%rdi
+call *%%rax)"
+            : /* There are no outputs. */
+            : "a"(56), "D"(flags), "S"(p_stack_top),
+              [pid] "d"(&(this->process_id)), [p_callback] "r"(&function),
+              [p_args] "r"(p_arguments_struct), [result] "r"(result)
+            : "rcx", "r8", "r9", "r10", "r11", "memory", "cc"
+            : parent_thread);
 
-        this->process_id = *p_pid;
+parent_thread:
+        if (static_cast<int4>(result) < 0) {
+            return Failure(result);
+        }
+        // `this->process_id` was initialized by the syscall.
         this->joinable = true;
         return okay;
     }
@@ -109,8 +87,8 @@ struct Process {
         /* Wait on this thread, without storing its status, or waiting with
          * special options. */
         return nix::waitid(
-            WaitIdType::P_PID, this->process_id,
-            WaitOptions::WEXITED | WaitOptions::WCLONE | WaitOptions::WNOWAIT);
+            WaitIdType::pid, this->process_id,
+            WaitOptions::exited | WaitOptions::clone | WaitOptions::no_wait);
         // TODO: Free the stack memory.
     }
 };

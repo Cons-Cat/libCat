@@ -46,12 +46,13 @@ struct PageAllocator {
      * `PageAllocator`. */
     auto malloc(ssize bytes) -> Result<void*> {
         this->address =
-            nix::mmap(0u, bytes, ::PROT_READ | ::PROT_WRITE,
-                      ::MAP_PRIVATE | ::MAP_POPULATE | ::MAP_ANONYMOUS,
+            nix::mmap(0u, bytes, ProtectionFlags::read | ProtectionFlags::write,
+                      MapFlags::MAP_PRIVATE | MapFlags::populate |
+                          MapFlags::anonymous,
                       // Anonymous pages must have `-1`.
                       -1,
                       // Anonymous pages must have `0u`.
-                      0ull)
+                      0u)
                 .or_is(nullptr);
         // TODO: This is quite inefficient. Consider failure-propagation.
         if (this->address == nullptr) {
