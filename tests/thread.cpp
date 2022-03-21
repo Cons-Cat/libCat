@@ -12,14 +12,14 @@ void function(void*) {
 }
 
 void meow() {
-    nix::Process thread;
+    std::Thread thread;
     PageAllocator allocator;
     thread.create(allocator, 4_ki, function, nullptr)
         .or_panic("Failed to make thread!");
     for (int4 i = 0; i < 10; i++) {
         std::print_line("Boo!").discard_result();
     }
-    thread.wait().or_panic("Failed to join thread!");
+    thread.join().or_panic("Failed to join thread!");
     std::print_line("Finished!").discard_result();
     std::exit();
 }
