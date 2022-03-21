@@ -57,9 +57,9 @@ using ProcessId = int8;
 enum WaitIdType
 {
     all = 0,
-    pid = 1,
-    pgid = 2,
-    pidfd = 3
+    process_id = 1,
+    process_group = 2,
+    file_descriptor = 3
 };
 
 // TODO: Write comments for these, and simplifiy names.
@@ -80,11 +80,11 @@ enum CloneFlags : unsigned int
     newns = 0x00020000,
     sysvsem = 0x00040000,
     settls = 0x00080000,
-    clone_parent_settid = 0x00100000,
-    child_cleartid = 0x00200000,
+    parent_set_tid = 0x00100000,
+    child_clear_tid = 0x00200000,
     detached = 0x00400000,
     untraced = 0x00800000,
-    child_settid = 0x01000000,
+    child_set_tid = 0x01000000,
     newcgroup = 0x02000000,
     newuts = 0x04000000,
     newipc = 0x08000000,
