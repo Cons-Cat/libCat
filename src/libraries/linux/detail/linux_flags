@@ -12,7 +12,7 @@ enum ProtectionFlags : unsigned int
     execute = 0b100,  // Data can be executed.
 };
 
-enum MapFlags : unsigned int
+enum MmapFlags : unsigned int
 {
     shared = 0b1,          // Writes change the underlying object.
     MAP_PRIVATE = 0b10,    // Writes only change the calling process.
@@ -68,21 +68,20 @@ enum CloneFlags : unsigned int
 {
     csignal = 0x000000ff,
     newtime = 0x00000080,
-    vm = 0x00000100,
-    fs = 0x00000200,
-    files = 0x00000400,
-    sighand = 0x00000800,
-    clone_pidfd = 0x00001000,
+    virtual_memory = 0x00000100,
+    file_system = 0x00000200,
+    file_descriptor_table = 0x00000400,
+    sighand = 0x00000800 | CloneFlags::virtual_memory,
+    pid_fd = 0x00001000,
     ptrace = 0x00002000,
     vfork = 0x00004000,
     parent = 0x00008000,
-    thread = 0x00010000,
+    thread = 0x00010000 | CloneFlags::sighand,
     newns = 0x00020000,
-    sysvsem = 0x00040000,
-    settls = 0x00080000,
+    sysv_semaphore = 0x00040000,
+    set_tls = 0x00080000,
     parent_set_tid = 0x00100000,
     child_clear_tid = 0x00200000,
-    detached = 0x00400000,
     untraced = 0x00800000,
     child_set_tid = 0x01000000,
     newcgroup = 0x02000000,
