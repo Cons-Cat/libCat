@@ -43,9 +43,10 @@ struct Thread;
 extern "C" auto clone_asm(void (*function)(void*), void*, int4, void*,
                           ProcessId*, void*, ProcessId*) -> ProcessId;
 
-auto wait4(ProcessId waiting_on_id, int4* p_status_output, int4 options,
-           void* p_resource_usage) -> Result<Any>;
+auto wait(ProcessId waiting_on_id, int4* p_status_output, int4 options,
+          void* p_resource_usage) -> Result<Any>;
 
+// TODO: Separate this into separate functions for waiting on pid, gid, etc.
 auto waitid(WaitIdType type, ProcessId id, int8 options) -> Result<Any>;
 
 struct CloneArguments;

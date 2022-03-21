@@ -7,7 +7,7 @@
 namespace nix {
 
 struct Process {
-    ProcessId process_id;
+    ProcessId id;
 
     /* `joinable` is `true` if this thread can currently be joined, otherwise it
      * is `false`. */
@@ -19,21 +19,13 @@ struct Process {
     Process() = default;
     Process(Process const&) = delete;
 
-    ~Process() {
-        if (joinable) {
-            std::exit();
-        }
-    }
-
     static constexpr uint4 default_flags =
         CloneFlags::vm | CloneFlags::fs | CloneFlags::files |
         CloneFlags::sighand | CloneFlags::parent | CloneFlags::io |
-        CloneFlags::thread | CloneFlags::clone_parent_settid;
+        CloneFlags::thread | CloneFlags::parent_set_tid;
 
-    // TODO: Make this `Result` hold `void` and store the PID in a member.
-    // TODO: Use a `meta::allocator` concept here when it's working.
-    // TODO: Add a method for allocating guard memory.
-    // Add meta::invocable concept.
+    // TODO: Add a `meta::allocator` concept.
+    // TODO: Add `meta::invocable` concept.
     auto create(auto& allocator, ssize const initial_stack_size,
                 auto const& function, void* p_arguments_struct,
                 uint4 const flags = default_flags) -> Result<> {
@@ -53,23 +45,24 @@ struct Process {
 
         Any result;
         asm goto(
-            R"(
-sub $8, %%rsi
- mov %[p_callback], 0(%%rsi)
+            R"(sub $8, %%rsi
+               mov %[p_callback], 0(%%rsi)
                mov %[p_args], 8(%%rsi)
                syscall
 
-mov %%rax, %[result]
-test %%rax, %%rax
-jnz %l[parent_thread]
+               # Branch if this is the parent process.
+               mov %%rax, %[result]
+               test %%rax, %%rax
+               jnz %l[parent_thread]
 
-pop %%rax
-pop %%rdi
-call *%%rax)"
+               # Call the function pointer if this is the child process.
+               pop %%rax
+               pop %%rdi
+               call *%%rax)"
             : /* There are no outputs. */
-            : "a"(56), "D"(flags), "S"(p_stack_top),
-              [pid] "d"(&(this->process_id)), [p_callback] "r"(&function),
-              [p_args] "r"(p_arguments_struct), [result] "r"(result)
+            : "a"(56), "D"(flags), "S"(p_stack_top), [pid] "d"(&(this->id)),
+              [p_callback] "r"(&function), [p_args] "r"(p_arguments_struct),
+              [result] "r"(result)
             : "rcx", "r8", "r9", "r10", "r11", "memory", "cc"
             : parent_thread);
 
@@ -84,11 +77,9 @@ parent_thread:
 
     auto join() -> Result<Any> {
         this->joinable = false;
-        /* Wait on this thread, without storing its status, or waiting with
-         * special options. */
-        return nix::waitid(
-            WaitIdType::pid, this->process_id,
-            WaitOptions::exited | WaitOptions::clone | WaitOptions::no_wait);
+        return nix::waitid(WaitIdType::process_id, this->id,
+                           WaitOptions::no_wait | WaitOptions::exited |
+                               WaitOptions::clone | WaitOptions::no_wait);
         // TODO: Free the stack memory.
     }
 };
