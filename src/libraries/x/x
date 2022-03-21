@@ -2,10 +2,14 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <bit>
 #include <socket>
 
 // https://www.x.org/releases/X11R7.7/doc/xproto/x11protocol.pdf
+
 namespace xwin {
+
+constexpr char const* socket_path = "/tmp/.X11-unix/X0";
 
 enum class OperationCode : unsigned char
 {
@@ -170,31 +174,31 @@ enum class EventCode : unsigned char
 };
 
 struct [[gnu::packed]] EventMask {
-    bool key_press = false;
-    bool key_release = false;
-    bool button_press = false;
-    bool button_release = false;
-    bool enter_window = false;
-    bool leave_window = false;
-    bool pointer_motion = false;
-    bool pointer_motion_hint = false;
-    bool button1_motion = false;
-    bool button2_motion = false;
-    bool button3_motion = false;
-    bool button4_motion = false;
-    bool button5_motion = false;
-    bool button_motion = false;
-    bool keymap_state = false;
-    bool exposure = false;
-    bool visibility_change = false;
-    bool structure_notify = false;
-    bool resize_redirect = false;
-    bool substructure_notify = false;
-    bool substructure_redirect = false;
-    bool focus_change = false;
-    bool property_change = false;
-    bool colormap_change = false;
-    bool owner_grab_button = false;
+    bool1 key_press = false;
+    bool1 key_release = false;
+    bool1 button_press = false;
+    bool1 button_release = false;
+    bool1 enter_window = false;
+    bool1 leave_window = false;
+    bool1 pointer_motion = false;
+    bool1 pointer_motion_hint = false;
+    bool1 button1_motion = false;
+    bool1 button2_motion = false;
+    bool1 button3_motion = false;
+    bool1 button4_motion = false;
+    bool1 button5_motion = false;
+    bool1 button_motion = false;
+    bool1 keymap_state = false;
+    bool1 exposure = false;
+    bool1 visibility_change = false;
+    bool1 structure_notify = false;
+    bool1 resize_redirect = false;
+    bool1 substructure_notify = false;
+    bool1 substructure_redirect = false;
+    bool1 focus_change = false;
+    bool1 property_change = false;
+    bool1 colormap_change = false;
+    bool1 owner_grab_button = false;
     unsigned padding : 7 = 0u;
 };
 
@@ -224,10 +228,8 @@ struct Error {
     uint4 resource_id;
     uint2 minor_operation;
     OperationCode major_operation;
-
   private:
-    [[gnu::unused]] Buffer<uint1, 21> padding;
-
+    [[maybe_unused]] Buffer<uint1, 21> padding;
   public:
     uint4 full_sequence;
 };
@@ -236,7 +238,7 @@ struct Cookie {
     uint4 sequence;
 };
 
-struct Reply {
+struct ServerReply {
     uint2 response_type;
     uint2 sequence;
     uint4 response_length;
@@ -247,7 +249,7 @@ struct Event {
     uint2 sequence;
     uint4 length;
     EventCode event_type;
-    [[gnu::unused]] Buffer<uint1, 23> padding;
+    [[maybe_unused]] Buffer<uint1, 23> padding;
     uint4 full_sequence;
 };
 
@@ -258,25 +260,65 @@ struct AuthorizationInfo {
     char* data;
 };
 
-struct OpaqueConnection {};
-
-struct ConnectRequest {
-    // TODO:
+struct Connection {
+    int4 has_error;
+    Connection* p_setup;
+    FileDescriptor file_descriptor;
+    int in_lock;
 };
+
+// TODO: Make this a span.
+struct IoVirtualization {
+    void* p_base;
+    ssize length;
+};
+
+struct Window {
+    uint4 value;
+};
+
+// Every X request begins with an `xwin::RequestHeader`.
+struct RequestHeader {
+    uint1 endianness = is_little_endian ? 'l' : 'B';
+  private:
+    [[maybe_unused]] int1 padding_1;
+  public:
+    uint2 x_major_version = 11;
+    uint2 x_minor_version = 0;
+    uint2 authorization_protocol_name_length;
+    uint2 authorization_protocol_data_length;
+  private:
+    [[maybe_unused]] int2 padding_2;
+};
+
+struct InitiateConnectionInfo {
+    RequestHeader header;
+};
+
+auto initiate_connection(Connection* p_connection,
+                         AuthorizationInfo* p_authorization) -> Result<int4> {
+    InitiateConnectionInfo request;
+    SocketLocal<SocketType::stream> socket;
+    socket.path_name = socket_path;
+}
 
 struct CreateWindowRequest {
     OperationCode operation = OperationCode::create_window;
     uint1 depth;
-    uint2 length;
+    uint2 const length = sizeof(CreateWindowRequest) / 4;
+    Window window_id, parent_id;
     int2 x, y;
-    uint2 width, height;
+    uint2 width, height, border_width;
     enum : unsigned char
     {
-        input_output,
-        input_only,
-        copy_from_parent
+        input_output = 0,
+        input_only = 1,
+        copy_from_parent = 2
     } window_class;
-    // visual_id
+    uint4 visual_id;
+    uint4 value_mask;  // TODO: Make a `Bitset` type.
+    // TODO: Confirm that this field should exist.
+    uint4 const* p_values;
 };
 
 }  // namespace xwin
