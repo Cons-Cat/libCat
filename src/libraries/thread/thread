@@ -4,76 +4,29 @@
 
 #include <linux>
 
-namespace nix {
+namespace std {
 
-struct Process {
-    ProcessId id;
+struct Thread {
+    Any id;
     void* p_stack;
     ssize stack_size;
 
-    Process() = default;
-    Process(Process const&) = delete;
-    // TODO: Add a `meta::allocator` concept.
-    // TODO: Add `meta::invocable` concept.
+    // This is platform-specific hidden code.
+  private:
+    nix::Process process;
+  public:
+    Thread() = default;
+    Thread(Thread const&) = delete;
+
     auto create(auto& allocator, ssize const initial_stack_size,
                 auto const& function, void* p_arguments_struct) -> Result<> {
-        this->stack_size = initial_stack_size;
-
-        // TODO: Why tls not work?
-        static constexpr uint4 flags =
-            CloneFlags::virtual_memory | CloneFlags::file_system |
-            CloneFlags::file_descriptor_table | CloneFlags::io |
-            CloneFlags::parent_set_tid;
-
-        // Allocate a stack for this thread, and get an address to the top of
-        // it.
-        this->p_stack = allocator.malloc(initial_stack_size).or_is(nullptr);
-        if (this->p_stack == nullptr) {
-            return Failure(1);
-        }
-
-        // We need the top because memory will be pushed to it downwards on
-        //  x86-64.
-        void* p_stack_top =
-            static_cast<char*>(this->p_stack) + this->stack_size;
-
-        Any result;
-        asm goto(R"(sub $8, %%rsi
-                    mov %[p_callback], 0(%%rsi)
-                    mov %[p_args], 8(%%rsi)
-                    syscall
-
-                    # Branch if this is the parent process.
-                    mov %%rax, %[result]
-                    test %%rax, %%rax
-                    jnz %l[parent_thread]
-
-                    # Call the function pointer if this is the child process.
-                    pop %%rax
-                    pop %%rdi
-                    call *%%rax)"
-                 : /* There are no outputs. */
-                 : "a"(56), "D"(flags), "S"(p_stack_top),
-                   "d"(&(this->id)), [p_callback] "r"(&function),
-                   [p_args] "r"(p_arguments_struct), [result] "r"(result)
-                 : "rcx", "r8", "r9", "r10", "r11", "memory", "cc"
-                 : parent_thread);
-
-parent_thread:
-        if (static_cast<int4>(result) < 0) {
-            return Failure(result);
-        }
-        // `this->process_id` was initialized by the syscall.
-        return okay;
+        return this->process.create(allocator, initial_stack_size, function,
+                                    p_arguments_struct);
     }
 
-    auto wait() const -> Result<Any> {
-        auto foo = nix::waitid(
-            WaitIdType::process_id, this->id,
-            WaitOptions::exited | WaitOptions::clone | WaitOptions::no_wait);
-        return foo;
-        // TODO: Free the stack memory.
+    auto join() const -> Result<> {
+        return this->process.wait();
     }
 };
 
-}  // namespace nix
+}  // namespace std
