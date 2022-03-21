@@ -8,78 +8,70 @@ namespace nix {
 
 struct Process {
     ProcessId id;
-
-    /* `joinable` is `true` if this thread can currently be joined, otherwise it
-     * is `false`. */
-    bool1 joinable = false;
-
     void* p_stack;
     ssize stack_size;
 
     Process() = default;
     Process(Process const&) = delete;
-
-    static constexpr uint4 default_flags =
-        CloneFlags::vm | CloneFlags::fs | CloneFlags::files |
-        CloneFlags::sighand | CloneFlags::parent | CloneFlags::io |
-        CloneFlags::thread | CloneFlags::parent_set_tid;
-
     // TODO: Add a `meta::allocator` concept.
     // TODO: Add `meta::invocable` concept.
     auto create(auto& allocator, ssize const initial_stack_size,
-                auto const& function, void* p_arguments_struct,
-                uint4 const flags = default_flags) -> Result<> {
+                auto const& function, void* p_arguments_struct) -> Result<> {
         this->stack_size = initial_stack_size;
 
-        /* Allocate a stack for this thread, and get an address to the top of
-         * it. */
+        // TODO: Why tls not work?
+        static constexpr uint4 flags =
+            CloneFlags::virtual_memory | CloneFlags::file_system |
+            CloneFlags::file_descriptor_table | CloneFlags::io |
+            CloneFlags::parent_set_tid;
+
+        // Allocate a stack for this thread, and get an address to the top of
+        // it.
         this->p_stack = allocator.malloc(initial_stack_size).or_is(nullptr);
         if (this->p_stack == nullptr) {
             return Failure(1);
         }
 
-        /* We need the top because memory will be pushed to it downwards on
-         * x86-64. */
+        // We need the top because memory will be pushed to it downwards on
+        //  x86-64.
         void* p_stack_top =
             static_cast<char*>(this->p_stack) + this->stack_size;
 
         Any result;
-        asm goto(
-            R"(sub $8, %%rsi
-               mov %[p_callback], 0(%%rsi)
-               mov %[p_args], 8(%%rsi)
-               syscall
+        asm goto(R"(sub $8, %%rsi
+                    mov %[p_callback], 0(%%rsi)
+                    mov %[p_args], 8(%%rsi)
+                    syscall
 
-               # Branch if this is the parent process.
-               mov %%rax, %[result]
-               test %%rax, %%rax
-               jnz %l[parent_thread]
+                    # Branch if this is the parent process.
+                    mov %%rax, %[result]
+                    test %%rax, %%rax
+                    jnz %l[parent_thread]
 
-               # Call the function pointer if this is the child process.
-               pop %%rax
-               pop %%rdi
-               call *%%rax)"
-            : /* There are no outputs. */
-            : "a"(56), "D"(flags), "S"(p_stack_top), [pid] "d"(&(this->id)),
-              [p_callback] "r"(&function), [p_args] "r"(p_arguments_struct),
-              [result] "r"(result)
-            : "rcx", "r8", "r9", "r10", "r11", "memory", "cc"
-            : parent_thread);
+                    # Call the function pointer if this is the child process.
+                    pop %%rax
+                    pop %%rdi
+                    call *%%rax)"
+                 : /* There are no outputs. */
+                 : "a"(56), "D"(flags), "S"(p_stack_top),
+                   "d"(&(this->id)), [p_callback] "r"(&function),
+                   [p_args] "r"(p_arguments_struct), [result] "r"(result)
+                 : "rcx", "r8", "r9", "r10", "r11", "memory", "cc"
+                 : parent_thread);
 
 parent_thread:
         if (static_cast<int4>(result) < 0) {
             return Failure(result);
         }
         // `this->process_id` was initialized by the syscall.
-        this->joinable = true;
         return okay;
     }
 
-    auto join() -> Result<Any> {
-        this->joinable = false;
-        return nix::waitid(WaitIdType::process_id, this->id,
-                           WaitOptions::no_wait | WaitOptions::exited |
-                               WaitOptions::clone | WaitOptions::no_wait);
+    auto wait() const -> Result<Any> {
+        auto foo = nix::waitid(
+            WaitIdType::process_id, this->id,
+            WaitOptions::exited | WaitOptions::clone | WaitOptions::no_wait);
+        return foo;
         // TODO: Free the stack memory.
     }
 };

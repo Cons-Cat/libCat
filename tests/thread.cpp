@@ -19,7 +19,7 @@ void meow() {
     for (int4 i = 0; i < 10; i++) {
         std::print_line("Boo!").discard_result();
     }
-    thread.join().or_panic("Failed to join thread!");
+    thread.wait().or_panic("Failed to join thread!");
     std::print_line("Finished!").discard_result();
     std::exit();
 }

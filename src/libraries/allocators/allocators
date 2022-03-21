@@ -47,8 +47,8 @@ struct PageAllocator {
     auto malloc(ssize bytes) -> Result<void*> {
         this->address =
             nix::mmap(0u, bytes, ProtectionFlags::read | ProtectionFlags::write,
-                      MapFlags::MAP_PRIVATE | MapFlags::populate |
-                          MapFlags::anonymous,
+                      MmapFlags::MAP_PRIVATE | MmapFlags::populate |
+                          MmapFlags::anonymous,
                       // Anonymous pages must have `-1`.
                       -1,
                       // Anonymous pages must have `0u`.

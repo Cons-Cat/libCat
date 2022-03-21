@@ -23,6 +23,10 @@ struct Any {
 
     constexpr Any() = default;
 
+    constexpr Any(void* const p_input) {
+        this->value = p_input;
+    };
+
     constexpr Any(auto const& input) requires(sizeof(input) <= sizeof(value)) {
         this->value = meta::bit_cast<void*>(input);
     };
