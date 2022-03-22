@@ -173,32 +173,37 @@ enum class EventCode : unsigned char
     mapping_notify = 34,
 };
 
+enum class KeyCode : unsigned char
+{};
+
 struct [[gnu::packed]] EventMask {
-    bool1 key_press = false;
-    bool1 key_release = false;
-    bool1 button_press = false;
-    bool1 button_release = false;
-    bool1 enter_window = false;
-    bool1 leave_window = false;
-    bool1 pointer_motion = false;
-    bool1 pointer_motion_hint = false;
-    bool1 button1_motion = false;
-    bool1 button2_motion = false;
-    bool1 button3_motion = false;
-    bool1 button4_motion = false;
-    bool1 button5_motion = false;
-    bool1 button_motion = false;
-    bool1 keymap_state = false;
-    bool1 exposure = false;
-    bool1 visibility_change = false;
-    bool1 structure_notify = false;
-    bool1 resize_redirect = false;
-    bool1 substructure_notify = false;
-    bool1 substructure_redirect = false;
-    bool1 focus_change = false;
-    bool1 property_change = false;
-    bool1 colormap_change = false;
-    bool1 owner_grab_button = false;
+    // These are `bool` instead of `bool1` because they cannot be packed in C++
+    // otherwise.
+    bool key_press = false;
+    bool key_release = false;
+    bool button_press = false;
+    bool button_release = false;
+    bool enter_window = false;
+    bool leave_window = false;
+    bool pointer_motion = false;
+    bool pointer_motion_hint = false;
+    bool button1_motion = false;
+    bool button2_motion = false;
+    bool button3_motion = false;
+    bool button4_motion = false;
+    bool button5_motion = false;
+    bool button_motion = false;
+    bool keymap_state = false;
+    bool exposure = false;
+    bool visibility_change = false;
+    bool structure_notify = false;
+    bool resize_redirect = false;
+    bool substructure_notify = false;
+    bool substructure_redirect = false;
+    bool focus_change = false;
+    bool property_change = false;
+    bool colormap_change = false;
+    bool owner_grab_button = false;
     unsigned padding : 7 = 0u;
 };
 
@@ -219,29 +224,32 @@ struct Error {
         alloc = 11,
         colormap = 12,
         g_context = 13,
-        id_choice = 14,
+        resource_id_choice = 14,
         name = 15,
         length = 16,
         implementation = 17,
     } code;
     uint2 sequence;
-    uint4 resource_id;
+    uint4 resource_resource_id;
     uint2 minor_operation;
     OperationCode major_operation;
   private:
-    [[maybe_unused]] Buffer<uint1, 21> padding;
+    Buffer<uint1, 21> padding;  // NOLINT
   public:
     uint4 full_sequence;
 };
 
-struct Cookie {
-    uint4 sequence;
+struct WindowResource {
+    uint4 value;
+
+    WindowResource() = default;
+    WindowResource(uint4 input) {
+        this->value = input;
+    }
 };
 
-struct ServerReply {
-    uint2 response_type;
-    uint2 sequence;
-    uint4 response_length;
+struct Cookie {
+    uint4 sequence;
 };
 
 struct Event {
@@ -249,22 +257,10 @@ struct Event {
     uint2 sequence;
     uint4 length;
     EventCode event_type;
-    [[maybe_unused]] Buffer<uint1, 23> padding;
+  private:
+    Buffer<uint1, 23> padding;  // NOLINT
+  public:
     uint4 full_sequence;
-};
-
-struct AuthorizationInfo {
-    int4 name_length;
-    char* name;
-    int4 data_length;
-    char* data;
-};
-
-struct Connection {
-    int4 has_error;
-    Connection* p_setup;
-    FileDescriptor file_descriptor;
-    int in_lock;
 };
 
 // TODO: Make this a span.
@@ -273,49 +269,212 @@ struct IoVirtualization {
     ssize length;
 };
 
-struct Window {
-    uint4 value;
+// Every X client request begins with an `xwin::ClientRequestHeader`.
+struct ClientRequestHeader {
+    OperationCode operation;
+    // `message_length` represents a multiple of four bytes.
+    uint2 message_length;
 };
 
-// Every X request begins with an `xwin::RequestHeader`.
-struct RequestHeader {
-    uint1 endianness = is_little_endian ? 'l' : 'B';
+// Every X server reply begins with an `xwin::ServerReplyHeader`.
+struct ServerReplyHeader {
+    uint1 response_type;
   private:
-    [[maybe_unused]] int1 padding_1;
+    int1 padding;  // NOLINT
   public:
-    uint2 x_major_version = 11;
-    uint2 x_minor_version = 0;
-    uint2 authorization_protocol_name_length;
-    uint2 authorization_protocol_data_length;
-  private:
-    [[maybe_unused]] int2 padding_2;
+    uint2 major_code, minor_code;
+    // `message_length` represents a multiple of four bytes.
+    uint2 message_length;
 };
 
+// This packet is used to initiate a connection handshake with an X server.
 struct InitiateConnectionInfo {
-    RequestHeader header;
+    char endianness = is_little_endian ? 'l' : 'B';
+  private:
+    int1 padding_1;  // NOLINT
+  public:
+    // This should almost always be `{11, 0}`.
+    Buffer<uint2, 2> x_version = {uint2(11), uint2(0)};
+    // No explicit protocol is specified if this is `0`.
+    uint2 authorization_protocol = 0;
+    // No explicit protocol is specified if this is `0`.
+    uint2 authorization_data = 0;
+  private:
+    int2 padding_2;  // NOLINT
 };
 
-auto initiate_connection(Connection* p_connection,
-                         AuthorizationInfo* p_authorization) -> Result<int4> {
+struct ConnectionSetupInfo {
+    // The version of an X server that has been connected to.
+    uint4 release_number;
+    // TODO: These should be bitsets.
+    uint4 resource_id_base, resource_id_mask;
+    uint4 motion_buffer_size;
+    // Length of the X server's name string.
+    uint2 vendor_length;
+    // Maximum length of a request that this server can handle.
+    uint2 request_maximum_length;
+    // The number of root windows hosted by this server. These are transmitted
+    // as `RootWindowPacket`s immediately after the pixel map formats. This can
+    // determine the number of screens held by the server.
+    uint1 root_windows_count;
+    // The number of pixel map formats available for this server. These are
+    // transmitted as `PixelMapFormatPacket`s immediately after this struct's
+    // data.
+    uint1 pixel_map_formats_count;
+    // Endianness of images, specified by the server.
+    uint1 image_endianness;
+    // The leftmost bit in the bitmap is either the least significant or most
+    // significant bit in the scanline unit, as given by `bitmap_order`.
+    uint1 bitmap_endianness;
+    // These will be `8`, `16`, or `32`.
+    uint1 scanline_unit, scanline_padding;
+    // This is the smallest key code the server will transmit.
+    KeyCode keycode_minimum;
+    // This is the largest key code the server will transmit.
+    KeyCode keycode_maximum;
+  private:
+    int4 padding;  // NOLINT
+};
+
+struct PixelMapFormatPacket {
+    uint1 color_depth;
+    uint1 bits_per_pixel;
+    uint1 scanline_padding;
+  private:
+    Buffer<uint1, 5> padding;  // NOLINT
+};
+
+// There is one root window per screen, so multiple `RootWindowPacket`s will be
+// recieved if there are multiple screens.
+struct RootWindowPacket {
+    WindowResource window_id;
+    uint4 default_colormap;
+    uint4 white_pixel, black_pixel;
+    uint4 input_mask;
+    // The window's dimensions in pixels.
+    uint2 width, height;
+    // The window's dimensions in millimeters.
+    uint2 width_mm, height_mm;
+    uint2 minimum_installed_maps, maximum_installed_maps;
+    uint4 root_visual_id;
+    uint1 backing_store_state;
+    uint1 save_unders;
+    uint1 root_depth;
+    // The number of `DepthPacket`s transmitted immediately after this packet.
+    uint1 depth_count;
+};
+
+struct DepthPacket {
+    uint1 depth;
+  private:
+    uint1 padding_1;  // NOLINT
+  public:
+    // The number of `VisualPacket`s transmitted immediately after this packet.
+    uint2 visuals_count;
+  private:
+    uint4 padding_2;  // NOLINT
+};
+
+struct VisualPacket {
+    uint1 group;
+    uint1 bits_per_rgb;
+    uint2 colormap_entries;
+    uint4 mask_red, mask_green, mask_blue;
+  private:
+    uint4 padding;  // NOLINT
+};
+
+struct Connection {
+    FileDescriptor socket_descriptor;
+    ServerReplyHeader header;
+    ConnectionSetupInfo* p_setup;
+    // TODO: A `p_vendor_name` could go here. Consider it?
+    PixelMapFormatPacket* p_pixel_map_formats;
+    RootWindowPacket* p_root_windows;
+    DepthPacket* p_depths;
+    VisualPacket* p_visuals;
+};
+
+// TODO: Propagate errors instead of panicking.
+// TODO: Use a `meta::allocator` `concept`.
+auto handshake(auto& allocator, SocketLocal<SocketType::stream>& socket)
+    -> Result<Connection&> {
+    Connection connection;
+    // Initialize a request with default-initialized fields.
     InitiateConnectionInfo request;
+
+    // If `send_struct()` fails, a later function will fail, so failure handling
+    // is unnecessary.
+    socket.send_struct(request).discard_result();
+
+    socket.recieve(&connection.header, sizeof(connection.header)).or_panic();
+    // A dynamic allocation must be made, because the size of the packets is
+    // unknown and potentially as much as 2 kibibytes.
+    connection.p_setup =
+        allocator.malloc(connection.header.message_length * 4).or_is(nullptr);
+    socket.recieve(&connection.header, connection.header.message_length * 4)
+        .or_panic();
+
+    // Copy pointers to that recieved data from the allocated buffer into
+    // `connection`.
+    char* p_iterator = static_cast<char*>(
+        static_cast<void*>(connection.p_setup +
+                           sizeof(ConnectionSetupInfo)
+                           // For now, skip past the vendor name string.
+                           + connection.p_setup->vendor_length));
+
+    connection.p_pixel_map_formats =
+        static_cast<PixelMapFormatPacket*>(static_cast<void*>(p_iterator));
+    p_iterator += sizeof(PixelMapFormatPacket) *
+                  connection.p_setup->pixel_map_formats_count;
+
+    connection.p_root_windows =
+        static_cast<RootWindowPacket*>(static_cast<void*>(p_iterator));
+    p_iterator +=
+        sizeof(RootWindowPacket) * connection.p_setup->root_windows_count;
+
+    connection.p_depths =
+        static_cast<DepthPacket*>(static_cast<void*>(p_iterator));
+    p_iterator += sizeof(DepthPacket);
+
+    connection.p_visuals =
+        static_cast<VisualPacket*>(static_cast<void*>(p_iterator));
+
+    return connection;
+}
+
+// Attempt to connect to an X server over local sockets.
+// TODO: Use a `meta::allocator` `concept`.
+auto initiate_connection(auto& allocator) -> Result<> {
     SocketLocal<SocketType::stream> socket;
     socket.path_name = socket_path;
+
+    auto result_1 = socket.create();
+    if (!result_1.is_okay) {
+        return result_1;
+    }
+    auto result_2 = socket.connect();
+    if (!result_2.is_okay) {
+        return result_2;
+    }
+
+    return handshake(allocator, socket);
 }
 
 struct CreateWindowRequest {
     OperationCode operation = OperationCode::create_window;
     uint1 depth;
     uint2 const length = sizeof(CreateWindowRequest) / 4;
-    Window window_id, parent_id;
+    WindowResource window_id, parent_id;
     int2 x, y;
-    uint2 width, height, border_width;
+    uint2 wresource_idth, height, border_wresource_idth;
     enum : unsigned char
     {
         input_output = 0,
         input_only = 1,
         copy_from_parent = 2
     } window_class;
-    uint4 visual_id;
+    uint4 visual_resource_id;
     uint4 value_mask;  // TODO: Make a `Bitset` type.
     // TODO: Confirm that this field should exist.
     uint4 const* p_values;

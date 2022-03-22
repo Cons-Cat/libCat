@@ -217,7 +217,7 @@ auto listen_to_socket(FileDescriptor const socket_descriptor,
 // Returns the number of characters sent to `destination_socket`.
 auto send_buffer(FileDescriptor const socket_descriptor,
                  void const* p_message_buffer, ssize const buffer_length,
-                 int4 const flags, Socket const* p_destination_socket = nullptr,
+                 int8 const flags, Socket const* p_destination_socket = nullptr,
                  ssize const addr_length = 0) -> Result<ssize>;
 
 struct Process {
