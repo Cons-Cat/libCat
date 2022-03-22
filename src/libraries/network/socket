@@ -36,12 +36,12 @@ struct SocketLocal {
     SocketAttributes<1, Type, Protocol> const attributes;
     // TODO: `path_name` should be some kind of span type.
     Buffer<char, 108> path_name;
-    FileDescriptor descriptor;
+    nix::FileDescriptor descriptor;
 
     // Using `SocketLocal(){};` instead of `SockeLocal() = default;` prevents a
     // false-positive clangd diagnostic here.
     SocketLocal(){};  // NOLINT
-    SocketLocal(FileDescriptor const in_descriptor) {
+    SocketLocal(nix::FileDescriptor const in_descriptor) {
         this->descriptor = in_descriptor;
     }
 
@@ -90,7 +90,8 @@ struct SocketLocal {
         return nix::listen_to_socket(this->descriptor, backlog);
     }
 
-    auto accept(FileDescriptor listening_socket, void const* p_socket = nullptr,
+    auto accept(nix::FileDescriptor listening_socket,
+                void const* p_socket = nullptr,
                 ssize const* p_addr_len = nullptr) -> Result<> {
         auto result =
             nix::accept_socket(listening_socket, p_socket, p_addr_len);
