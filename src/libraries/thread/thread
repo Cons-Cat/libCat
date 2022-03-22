@@ -27,5 +27,4 @@ struct Thread {
     }
 };
 
-// namespace sync {
-// }  // namespace sync
+namespace sync {}  // namespace sync
