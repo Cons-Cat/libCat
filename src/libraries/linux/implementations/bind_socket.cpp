@@ -1,7 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
 #include <linux>
-#include <linux_flags>
 
 auto nix::bind_socket(FileDescriptor const socket_descriptor,
                       void const* p_socket, ssize const p_addr_len)

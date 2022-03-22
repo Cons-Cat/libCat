@@ -99,23 +99,23 @@ template <typename T>
 using remove_cvref_t = typename remove_cvref<T>::type;
 
 namespace std::detail {
-    template <class T>
+    template <typename T>
     struct remove_pointer {
         using type = T;
     };
-    template <class T>
+    template <typename T>
     struct remove_pointer<T*> {
         using type = T;
     };
-    template <class T>
+    template <typename T>
     struct remove_pointer<T* const> {
         using type = T;
     };
-    template <class T>
+    template <typename T>
     struct remove_pointer<T* volatile> {
         using type = T;
     };
-    template <class T>
+    template <typename T>
     struct remove_pointer<T* const volatile> {
         using type = T;
     };
@@ -425,27 +425,26 @@ template <typename T>
 using underlying_type_t = typename underlying_type<T>::type;
 
 namespace detail {
-
-    template <class T>
-    auto test_returnable(int)
+    template <typename T>
+    auto returnable(int)
         -> decltype(void(static_cast<T (*)()>(nullptr)), meta::true_type{});
-    template <class>
-    auto test_returnable(...) -> meta::false_type;
+    template <typename>
+    auto returnable(...) -> meta::false_type;
 
-    template <class From, class To>
-    auto test_implicitly_convertible(int)
+    template <typename From, typename To>
+    auto implicitly_convertible(int)
         -> decltype(void(meta::declval<void (&)(To)>()(meta::declval<From>())),
                     meta::true_type{});
-    template <class, class>
-    auto test_implicitly_convertible(...) -> meta::false_type;
+    template <typename, typename>
+    auto implicitly_convertible(...) -> meta::false_type;
 
     template <typename From, typename To>
     struct is_convertible
         : meta::integral_constant<
               bool,
-              (decltype(detail::test_returnable<To>(0))::
-                   value&& decltype(detail::test_implicitly_convertible<
-                                    From, To>(0))::value) ||
+              (decltype(detail::returnable<To>(0))::
+                   value&& decltype(detail::implicitly_convertible<From, To>(
+                       0))::value) ||
                   (meta::is_void<From>::value && meta::is_void<To>::value)> {};
 }  // namespace detail
 
@@ -456,21 +455,50 @@ using is_convertible_t = typename is_convertible<From, To>::type;
 template <typename From, typename To>
 constexpr bool is_convertible_v = is_convertible<From, To>::value;
 
-// is_scoped_enum is a C++23 type_trait.
+template <typename...>
+struct conjunction : meta::true_type {};
+template <typename B1>
+struct conjunction<B1> : B1 {};
+template <typename B1, typename... Bn>
+struct conjunction<B1, Bn...>
+    : meta::conditional_t<bool(B1::value), conjunction<Bn...>, B1> {};
+
+template <typename B1, typename... Bn>
+using conjunction_t = typename conjunction<B1, Bn...>::type;
+template <typename B1, typename... Bn>
+constexpr bool conjunction_v = conjunction<B1, Bn...>::value;
+
 namespace detail {
-    template <typename T, bool = is_enum_v<T>>
-    struct is_scoped_enum : false_type {};
     template <typename T>
-    struct is_scoped_enum<T, true>
-        : bool_constant<!is_convertible_v<T, underlying_type_t<T>>> {};
+    auto sizable(int) -> decltype(sizeof(T), meta::true_type{});
+    template <typename>
+    auto sizable(...) -> meta::false_type;
+
+    template <typename T>
+    auto nonconvertible_to_int(int)
+        -> decltype(static_cast<meta::false_type (*)(int)>(nullptr)(
+            meta::declval<T>()));
+    template <typename>
+    auto nonconvertible_to_int(...) -> meta::true_type;
+
+    template <typename T>
+    constexpr bool is_scoped_enum =
+        meta::conjunction_v<decltype(sizable<T>(0)),
+                            decltype(nonconvertible_to_int<T>(0))>;
 }  // namespace detail
 
+template <typename>
+struct is_scoped_enum : meta::false_type {};
+
 template <typename T>
-struct is_scoped_enum : detail::is_scoped_enum<T> {};
-template <typename T>
-constexpr bool is_scoped_enum_v = is_scoped_enum<T>::value;
+requires meta::is_enum_v<T>
+struct is_scoped_enum<T> : meta::bool_constant<detail::is_scoped_enum<T>> {
+};
+
 template <typename T>
 using is_scoped_enum_t = typename is_scoped_enum<T>::type;
+template <typename T>
+constexpr bool is_scoped_enum_v = is_scoped_enum<T>::value;
 
 template <typename>
 struct is_lvalue_reference : false_type {};
