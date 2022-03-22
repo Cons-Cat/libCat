@@ -15,6 +15,12 @@ constexpr auto operator|(T flag_1, T flag_2) -> T {
     return static_cast<T>(static_cast<U>(flag_1) | static_cast<U>(flag_2));
 }
 
+struct Socket;
+
+constexpr usize page_size = 4096_ki;
+
+namespace nix {
+
 enum class MmapProtectionFlags : unsigned int
 {
     none = 0b000,     // Data cannot be accessed at all.
@@ -123,12 +129,6 @@ enum class WaitOptionsFlags : long int
     wait_all = 0x40000000,
     clone = 0x80000000,
 };
-
-struct Socket;
-
-namespace nix {
-
-constexpr usize page_size = 4096_ki;
 
 // `read()` transmits a number of bytes into a file descriptor.
 auto read(FileDescriptor const file_descriptor, char const* p_string_buffer,
