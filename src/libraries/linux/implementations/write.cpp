@@ -8,3 +8,9 @@ auto nix::write(FileDescriptor const file_descriptor,
     // TODO: Handle partial writes somehow.
     return nix::syscall3(1, file_descriptor, p_string_buffer, string_length);
 }
+
+auto nix::write(FileDescriptor const file_descriptor, StringView const& string)
+    -> Result<ssize> {
+    // TODO: Handle partial writes somehow.
+    return nix::syscall3(1, file_descriptor, string.p_data, string.length);
+}
