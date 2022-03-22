@@ -22,7 +22,7 @@ constexpr auto is_constant_evaluated() -> bool;
 consteval auto constant_evaluate(auto value);
 
 template <typename T>
-auto bit_cast(auto& from_value) -> T const;
+constexpr auto bit_cast(auto& from_value) -> T;
 
 }  // namespace meta
 
