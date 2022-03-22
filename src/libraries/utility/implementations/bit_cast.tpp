@@ -18,8 +18,8 @@
 template <typename T>
 [[gnu::warning(
     "This function is intended to be inlined and constant-folded \
-out.")]] [[gnu::optimize("-O3")]] [[gnu::always_inline]] inline auto
-meta::bit_cast(auto& from_value) -> T const
+out.")]] [[gnu::optimize("-O3")]] [[gnu::always_inline]] constexpr inline auto
+meta::bit_cast(auto& from_value) -> T
     // If the value is not `const`:
     requires(
         !meta::is_const_v<meta::remove_reference_t<decltype(from_value)>>) {
@@ -36,8 +36,8 @@ meta::bit_cast(auto& from_value) -> T const
 template <typename T>
 [[gnu::warning(
     "This function is intended to be inlined and constant-folded \
-out.")]] [[gnu::optimize("-O3")]] [[gnu::always_inline]] inline auto
-meta::bit_cast(auto& from_value) -> T const
+out.")]] [[gnu::optimize("-O3")]] [[gnu::always_inline]] constexpr inline auto
+meta::bit_cast(auto& from_value) -> T
     // If the value is `const`:
     requires(meta::is_const_v<meta::remove_reference_t<decltype(from_value)>>) {
     /* Cast the address of `from_value` into a pointer of its type (with the

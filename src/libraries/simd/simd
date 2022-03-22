@@ -194,17 +194,18 @@ auto shuffle(auto in_vector, auto mask);
 
 // TODO: Make this const-correct.
 template <uint4 Width>
-auto p_string_to_p_vector(meta::string auto p_string) {
+constexpr auto p_string_to_p_vector(meta::string auto p_string) {
     using U = std::detail::SimdVector<char, Width>;
     return meta::bit_cast<U*>(p_string);
 }
 
 template <uint1 Mask>
-auto cmp_implicit_str_count(auto const& vector_1, auto const& vector_2)
-    -> bool1;
+constexpr auto cmp_implicit_str_count(auto const& vector_1,
+                                      auto const& vector_2) -> bool1;
 
 template <uint1 Mask>
-auto cmp_implicit_str_i(auto const& vector_1, auto const& vector_2) -> int4;
+constexpr auto cmp_implicit_str_i(auto const& vector_1, auto const& vector_2)
+    -> int4;
 
 // TODO: Add `simd::mfence` and `simd::lfence`.
 void sfence();
