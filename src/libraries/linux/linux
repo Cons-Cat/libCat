@@ -139,8 +139,8 @@ auto read(FileDescriptor const file_descriptor, char const* p_string_buffer,
 auto write(FileDescriptor const file_descriptor, char const* p_string_buffer,
            ssize const string_length) -> Result<ssize>;
 
-// auto write(FileDescriptor const file_descriptor, StringView const string)
-//     -> Result<isize>;
+auto write(FileDescriptor const file_descriptor, StringView const& string)
+    -> Result<ssize>;
 
 auto close(FileDescriptor const object) -> Result<>;
 
@@ -175,8 +175,7 @@ auto syscall2(Any, Any, Any) -> Result<Any>;
 auto syscall3(Any, Any, Any, Any) -> Result<Any>;
 auto syscall4(Any, Any, Any, Any, Any) -> Result<Any>;
 auto syscall5(Any, Any, Any, Any, Any, Any) -> Result<Any>;
-auto syscall6(Any call, Any arg1, Any arg2, Any arg3, Any arg4, Any args,
-              Any arg6) -> Result<Any>;
+auto syscall6(Any, Any, Any, Any, Any, Any, Any) -> Result<Any>;
 
 template <typename ReturnType, typename... Args>
 auto syscall(Any call, Args... parameters) -> Result<ReturnType>
