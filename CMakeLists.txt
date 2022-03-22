@@ -54,8 +54,15 @@ list(
 list(
   APPEND
   CAT_CXX_FLAGS_RELWITHDEBINFO
-  ${CAT_CXX_FLAGS_DEBUG}
-  ${CAT_CXX_FLAGS_RELFAST}
+  -O3 -ggdb3 -pipe
+  -Wall -Wextra -Wno-unused-function
+  -Wno-unused-function
+
+  -no-pie
+  -ffunction-sections -fdata-sections
+  -fvisibility=hidden -fvisibility-inlines-hidden
+  -flto -fwhole-file -fno-plt
+  -Wl,-z,norelro,-z,noseparate-code,--gc-sections
 )
 
 list(
