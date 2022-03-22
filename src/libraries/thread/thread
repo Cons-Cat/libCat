@@ -4,8 +4,6 @@
 
 #include <linux>
 
-namespace std {
-
 struct Thread {
     Any id;
     void* p_stack;
@@ -29,4 +27,5 @@ struct Thread {
     }
 };
 
-}  // namespace std
+// namespace sync {
+// }  // namespace sync

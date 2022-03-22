@@ -1,7 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
 #include <linux>
-#include <linux_flags>
 
 auto nix::recieve_buffer(FileDescriptor const socket_descriptor,
                          void const* p_message_buffer,

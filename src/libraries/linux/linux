@@ -5,9 +5,124 @@
 #include <any>
 #include <bit>
 #include <concepts>
-#include <linux_flags>
 #include <string>
 #include <utility>
+
+// TODO: Is here the appropriate place for this operator?
+template <meta::enum_class T>
+constexpr auto operator|(T flag_1, T flag_2) -> T {
+    using U = meta::underlying_type_t<T>;
+    return static_cast<T>(static_cast<U>(flag_1) | static_cast<U>(flag_2));
+}
+
+enum class MmapProtectionFlags : unsigned int
+{
+    none = 0b000,     // Data cannot be accessed at all.
+    read = 0b001,     // Data is readable.
+    write = 0b010,    // Data is writable.
+    execute = 0b100,  // Data can be executed.
+};
+
+enum class MmapMemoryFlags : unsigned int
+{
+    shared = 0b1,          // Writes change the underlying object.
+    privately = 0b10,      // Writes only change the calling process.
+    fixed = 0b10000,       /* Map to precisely this address, rather than virtual
+                            * memory. This may fail. */
+    anonymous = 0b100000,  // Not backed by a file descriptor.
+    // TODO: Make binary/hexa format consistent.
+    grows_down = 0x00100,    // Stack-like segment.
+    denywrite = 0x00800,     // ETXTBSY.
+    executable = 0x01000,    // Mark it as an executable.
+    locked = 0x02000,        // Lock the mapping.
+    no_reserve = 0x04000,    // Don't check for reservations.
+    populate = 0x08000,      // Populate (prefault) pagetables.
+    non_blocking = 0x10000,  // Do not block on IO.
+    stack = 0x20000,         // Allocation is for a stack.
+    hugetlb = 0x40000,       // Create huge page mapping.
+    sync = 0x80000,          // Perform synchronous page faults for the mapping.
+    fixed_noreplace = 0x100000,  // `MmapMemoryFlags::fixed` but do not unmap
+                                 // underlying mapping.
+};
+
+struct Process;
+
+// TODO: Enforce that `FileDescriptor` cannot be constructed with a negative
+// value. This is an index into the kernel's file descriptor table.
+struct FileDescriptor {
+    int4 value;
+
+    FileDescriptor() = default;
+    FileDescriptor(int4 const input) {
+        this->value = input;
+    }
+};
+
+struct ProcessId {
+    int8 value;
+
+    ProcessId() = default;
+    ProcessId(int8 const input) {
+        this->value = input;
+    }
+};
+
+// TODO: Document these:
+// TODO: Make these strongly typed.
+using UserId = uint8;
+using GroupId = uint8;
+
+enum class WaitIdType
+{
+    all = 0,
+    process_id = 1,
+    process_group = 2,
+    file_descriptor = 3
+};
+
+// TODO: Write comments for these, and simplifiy names.
+// https://linux.die.net/man/2/clone
+enum class CloneFlags : unsigned int
+{
+    csignal = 0x000000ff,
+    newtime = 0x00000080,
+    virtual_memory = 0x00000100,
+    file_system = 0x00000200,
+    file_descriptor_table = 0x00000400,
+    sighand = 0x00000800 | CloneFlags::virtual_memory,
+    pid_fd = 0x00001000,
+    ptrace = 0x00002000,
+    vfork = 0x00004000,
+    parent = 0x00008000,
+    thread = 0x00010000 | CloneFlags::sighand,
+    newns = 0x00020000,
+    sysv_semaphore = 0x00040000,
+    set_tls = 0x00080000,
+    parent_set_tid = 0x00100000,
+    child_clear_tid = 0x00200000,
+    untraced = 0x00800000,
+    child_set_tid = 0x01000000,
+    newcgroup = 0x02000000,
+    newuts = 0x04000000,
+    newipc = 0x08000000,
+    newuser = 0x10000000,
+    newpid = 0x20000000,
+    newnet = 0x40000000,
+    io = 0x80000000,
+};
+
+enum class WaitOptionsFlags : long int
+{
+    no_hang = 1,
+    untraced = 2,
+    stopped = 2,
+    exited = 4,
+    continued = 8,
+    no_wait = 0x1000000,
+    no_thread = 0x20000000,
+    wait_all = 0x40000000,
+    clone = 0x80000000,
+};
 
 struct Socket;
 
@@ -29,21 +144,22 @@ auto write(FileDescriptor const file_descriptor, char const* p_string_buffer,
 
 auto close(FileDescriptor const object) -> Result<>;
 
-auto unlink(char const* path_name) -> Result<>;
+auto unlink(char const* p_path_name) -> Result<>;
 
-auto mmap(usize beginning_address, usize bytes_size, usize protections,
-          usize flags, FileDescriptor file_descriptor, usize pages_offset)
-    -> Result<void*>;
+auto mmap(usize beginning_address, usize bytes_size,
+          MmapProtectionFlags protections, MmapMemoryFlags flags,
+          FileDescriptor file_descriptor, usize pages_offset) -> Result<void*>;
 
 auto munmap() -> Result<>;
 
 struct Thread;
 
-auto wait(ProcessId waiting_on_id, int4* p_status_output, int4 options,
-          void* p_resource_usage) -> Result<Any>;
+auto wait(ProcessId waiting_on_id, int4* p_status_output,
+          WaitOptionsFlags options, void* p_resource_usage) -> Result<Any>;
 
 // TODO: Separate this into separate functions for waiting on pid, gid, etc.
-auto waitid(WaitIdType type, ProcessId id, int8 options) -> Result<Any>;
+auto waitid(WaitIdType type, ProcessId id, WaitOptionsFlags options)
+    -> Result<Any>;
 
 struct CloneArguments;
 
@@ -111,7 +227,7 @@ struct Process {
     ssize stack_size;
 
     // TODO: Why tls not work?
-    static constexpr uint4 default_flags =
+    static constexpr CloneFlags default_flags =
         CloneFlags::virtual_memory | CloneFlags::file_system |
         CloneFlags::file_descriptor_table | CloneFlags::io |
         CloneFlags::parent_set_tid;
@@ -122,7 +238,7 @@ struct Process {
     // TODO: Add `meta::invocable` concept.
     auto create(auto& allocator, ssize const initial_stack_size,
                 auto const& function, void* p_arguments_struct,
-                uint4 const flags = default_flags) -> Result<> {
+                CloneFlags const flags = default_flags) -> Result<> {
         this->stack_size = initial_stack_size;
         // Allocate a stack for this thread, and get an address to the top of
         // it.
@@ -168,9 +284,10 @@ parent_thread:
     }
 
     auto wait() const -> Result<ProcessId> {
-        auto foo = nix::waitid(
-            WaitIdType::process_id, this->id,
-            WaitOptions::exited | WaitOptions::clone | WaitOptions::no_wait);
+        auto foo =
+            nix::waitid(WaitIdType::process_id, this->id,
+                        WaitOptionsFlags::exited | WaitOptionsFlags::clone |
+                            WaitOptionsFlags::no_wait);
         return foo;
         // TODO: Free the stack memory.
     }

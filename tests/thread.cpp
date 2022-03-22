@@ -12,7 +12,7 @@ void function(void*) {
 }
 
 void meow() {
-    std::Thread thread;
+    Thread thread;
     PageAllocator allocator;
     thread.create(allocator, 4_ki, function, nullptr)
         .or_panic("Failed to make thread!");

@@ -1,7 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
 #include <linux>
-#include <linux_flags>
 
 auto nix::accept_socket(FileDescriptor const socket_descriptor,
                         void const* __restrict p_socket,
