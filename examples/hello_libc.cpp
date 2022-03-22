@@ -1,9 +1,10 @@
+#include <cstdio>
 #include <cstdlib>
-#include <unistd.h>
 
-auto main() -> int {
-    char const* p_str = "Hello, Conscat!\n";
-    if (write(1, p_str, 16) == -1) {
-        exit(EXIT_FAILURE);
+auto main() -> int32_t {
+    constexpr char const* p_string = "Hello, Conscat!\n";
+    // `printf()` is actually optimized here better by GCC than `write()`.
+    if (printf(p_string) < 0) {
+        exit(1);
     };
 };
