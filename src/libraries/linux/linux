@@ -133,11 +133,12 @@ struct Process {
 
         // We need the top because memory will be pushed to it downwards on
         //  x86-64.
-        void* p_stack_top =
+        volatile void* p_stack_top =
             static_cast<char*>(this->p_stack) + this->stack_size;
 
         Any result;
-        asm goto(R"(sub $8, %%rsi
+        asm goto volatile(
+            R"(sub $8, %%rsi
                     mov %[p_callback], 0(%%rsi)
                     mov %[p_args], 8(%%rsi)
                     syscall
@@ -151,12 +152,12 @@ struct Process {
                     pop %%rax
                     pop %%rdi
                     call *%%rax)"
-                 : /* There are no outputs. */
-                 : "a"(56), "D"(flags), "S"(p_stack_top),
-                   "d"(&(this->id)), [p_callback] "r"(&function),
-                   [p_args] "r"(p_arguments_struct), [result] "r"(result)
-                 : "rcx", "r8", "r9", "r10", "r11", "memory", "cc"
-                 : parent_thread);
+            : /* There are no outputs. */
+            : "a"(56), "D"(flags), "S"(p_stack_top),
+              "d"(&(this->id)), [p_callback] "r"(&function),
+              [p_args] "r"(p_arguments_struct), [result] "r"(result)
+            : "rcx", "r8", "r9", "r10", "r11", "memory", "cc"
+            : parent_thread);
 
 parent_thread:
         if (static_cast<int4>(result) < 0) {

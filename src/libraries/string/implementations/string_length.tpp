@@ -19,7 +19,6 @@ constexpr auto std::string_length(char const* p_string) -> T {
             result += 1;
         }
     } else {
-        // TODO: Align pointers.
         T result = 0;
         charx16* p_memory = simd::p_string_to_p_vector<16>(p_string);
         constexpr charx16 zeros = simd::set_zeros<charx16>();
@@ -35,7 +34,6 @@ constexpr auto std::string_length(char const* p_string) -> T {
             }
             p_memory++;
             result += sizeof(uint1x16);
-            return result;
         }
         // This point unreachable because the function would segfault first.
         __builtin_unreachable();
