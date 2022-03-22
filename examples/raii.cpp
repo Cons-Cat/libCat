@@ -4,24 +4,21 @@
 
 struct Foo {
     Foo() {
-        write(1, u8"Foo()\n", 6).discard_result();
+        std::print("Foo()\n").or_panic();
     }
     ~Foo() {
-        write(1, u8"~Foo()\n", 7).discard_result();
+        std::print("~Foo()\n").or_panic();
     }
 };
 
-/* clangd says this is incorrect, because it cannot reason very well about
- * concepts yet. */
-void func(RAII<Foo>) {
+void func(Raii<Foo>) {
 }
 
 void meow() {
-    debugger_entry_point();
     // Call Foo() constructor:
-    RAII<Foo> foo;
+    Raii<Foo> foo;
     /* Call Foo() constructor, then RAII() move-constructor, then Foo()
      * destructor: */
     func(meta::move(foo));
-    exit();
+    std::exit();
 }

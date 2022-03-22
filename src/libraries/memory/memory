@@ -7,13 +7,13 @@
  * method on the type they wrap iff that types has a free() method. */
 
 template <typename T>
-struct RAII : T {
-    RAII() = default;
-    RAII(RAII<T>&&){};
+struct Raii : T {
+    Raii() = default;
+    Raii(Raii<T>&&){};
 
-    ~RAII() = default;
+    ~Raii() = default;
     // clangd gives a false-positive error due to this destructor:
-    ~RAII() requires(T::free()) {
+    ~Raii() requires(T::free()) {
         this->free();
     }
 };
