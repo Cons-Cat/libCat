@@ -169,6 +169,11 @@ target_compile_options(server PRIVATE ${CAT_CXX_FLAGS})
 target_link_libraries(server PRIVATE cat-std)
 target_link_options(server PRIVATE ${CAT_LINK_FLAGS})
 
+add_executable(window examples/window.cpp)
+target_compile_options(window PRIVATE ${CAT_CXX_FLAGS})
+target_link_libraries(window PRIVATE cat-std)
+target_link_options(window PRIVATE ${CAT_LINK_FLAGS})
+
 # libC executables are only configured for Release.
 list(
   APPEND

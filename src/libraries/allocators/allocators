@@ -44,9 +44,9 @@ struct PageAllocator {
      * allocated, that amount will be rounded up to `4096u`. There is generally
      * very little reason to allocate any smaller amount of bytes using
      * `PageAllocator`. */
-    auto malloc(ssize bytes) -> Result<void*> {
+    auto malloc(ssize allocation_size) -> Result<Any> {
         this->address =
-            nix::mmap(0u, bytes,
+            nix::mmap(0u, allocation_size,
                       MmapProtectionFlags::read | MmapProtectionFlags::write,
                       MmapMemoryFlags::privately | MmapMemoryFlags::populate |
                           MmapMemoryFlags::anonymous,
@@ -59,7 +59,7 @@ struct PageAllocator {
         if (this->address == nullptr) {
             return Failure(1);
         }
-        return this->address;
+        return Any(this->address);
     }
 
     // TODO: `munmap()` here.
