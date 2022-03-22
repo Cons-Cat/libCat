@@ -98,13 +98,13 @@ list(
   APPEND CAT_LINK_FLAGS
   $<$<CONFIG:Debug>:${CAT_COMMON_LINK_FLAGS}>
   $<$<CONFIG:RelWithDebInfo>:${CAT_COMMON_LINK_FLAGS}>
+  $<$<CONFIG:RelWithDebInfo>:${CAT_RELEASE_LINK_FLAGS}>
   $<$<CONFIG:Release>:${CAT_RELEASE_LINK_FLAGS}>
   $<$<CONFIG:RelSmall>:${CAT_RELEASE_LINK_FLAGS}>
 )
 
 add_library(
   cat-std STATIC
-  src/libraries/thread/clone.s
 )
 
 # src/CMakeLists.txt holds the recipes for `cat-std-cpp`
