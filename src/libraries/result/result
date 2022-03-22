@@ -43,19 +43,24 @@ struct [[nodiscard]] Failure {
 
     // This must be explicit to disambiguate returning an integer to a Result.
     explicit Failure(ssize in_code) {
-        code = static_cast<ssize>(in_code);
+        this->code = static_cast<ssize>(in_code);
+    }
+
+    template <meta::enum_class T>
+    constexpr Failure(T in_code) {
+        this->code = static_cast<meta::underlying_type_t<T>>(in_code);
     }
 
     template <typename T>
     operator Result<T>() const {
-        return Result<T>(code);
+        return Result<T>(this->code);
     }
 
     template <typename T>
     constexpr operator T() const
         // TODO: Make is_bool<> traits.
         requires(meta::is_same_v<T, ssize>() || meta::is_same_v<T, bool>) {
-        return code;
+        return this->code;
     }
 
     auto operator==(Failure operand) const -> bool {
