@@ -4,6 +4,7 @@
 
 #include <bit>
 #include <socket>
+#include <type_traits>
 
 // https://www.x.org/releases/X11R7.7/doc/xproto/x11protocol.pdf
 
@@ -278,7 +279,11 @@ struct ClientRequestHeader {
 
 // Every X server reply begins with an `xwin::ServerReplyHeader`.
 struct ServerReplyHeader {
-    uint1 response_type;
+    enum class SuccessCode : unsigned char
+    {
+        failed = 0,
+        success = 1
+    } success_code;
   private:
     int1 padding;  // NOLINT
   public:
@@ -385,33 +390,42 @@ struct VisualPacket {
 };
 
 struct Connection {
-    FileDescriptor socket_descriptor;
-    ServerReplyHeader header;
-    ConnectionSetupInfo* p_setup;
+    nix::FileDescriptor socket_descriptor;
+    xwin::ServerReplyHeader header;
+    xwin::ConnectionSetupInfo* p_setup;
     // TODO: A `p_vendor_name` could go here. Consider it?
-    PixelMapFormatPacket* p_pixel_map_formats;
-    RootWindowPacket* p_root_windows;
-    DepthPacket* p_depths;
-    VisualPacket* p_visuals;
+    xwin::PixelMapFormatPacket* p_pixel_map_formats;
+    xwin::RootWindowPacket* p_root_windows;
+    xwin::DepthPacket* p_depths;
+    xwin::VisualPacket* p_visuals;
 };
 
 // TODO: Propagate errors instead of panicking.
 // TODO: Use a `meta::allocator` `concept`.
 auto handshake(auto& allocator, SocketLocal<SocketType::stream>& socket)
-    -> Result<Connection&> {
-    Connection connection;
+    -> Result<xwin::Connection> {
+    xwin::Connection connection;
     // Initialize a request with default-initialized fields.
-    InitiateConnectionInfo request;
+    xwin::InitiateConnectionInfo request;
 
-    // If `send_struct()` fails, a later function will fail, so failure handling
-    // is unnecessary.
+    // If `send_struct()` fails, a later function will also fail, so failure
+    // handling is unnecessary.
     socket.send_struct(request).discard_result();
 
     socket.recieve(&connection.header, sizeof(connection.header)).or_panic();
+    if (connection.header.success_code !=
+        xwin::ServerReplyHeader::SuccessCode::success) {
+        return Failure(connection.header.success_code);
+    }
+
     // A dynamic allocation must be made, because the size of the packets is
     // unknown and potentially as much as 2 kibibytes.
     connection.p_setup =
         allocator.malloc(connection.header.message_length * 4).or_is(nullptr);
+    if (!connection.p_setup) {
+        return Failure(-1);
+    }
+
     socket.recieve(&connection.header, connection.header.message_length * 4)
         .or_panic();
 
@@ -419,33 +433,33 @@ auto handshake(auto& allocator, SocketLocal<SocketType::stream>& socket)
     // `connection`.
     char* p_iterator = static_cast<char*>(
         static_cast<void*>(connection.p_setup +
-                           sizeof(ConnectionSetupInfo)
+                           sizeof(xwin::ConnectionSetupInfo)
                            // For now, skip past the vendor name string.
                            + connection.p_setup->vendor_length));
 
-    connection.p_pixel_map_formats =
-        static_cast<PixelMapFormatPacket*>(static_cast<void*>(p_iterator));
-    p_iterator += sizeof(PixelMapFormatPacket) *
+    connection.p_pixel_map_formats = static_cast<xwin::PixelMapFormatPacket*>(
+        static_cast<void*>(p_iterator));
+    p_iterator += sizeof(xwin::PixelMapFormatPacket) *
                   connection.p_setup->pixel_map_formats_count;
 
     connection.p_root_windows =
-        static_cast<RootWindowPacket*>(static_cast<void*>(p_iterator));
+        static_cast<xwin::RootWindowPacket*>(static_cast<void*>(p_iterator));
     p_iterator +=
-        sizeof(RootWindowPacket) * connection.p_setup->root_windows_count;
+        sizeof(xwin::RootWindowPacket) * connection.p_setup->root_windows_count;
 
     connection.p_depths =
-        static_cast<DepthPacket*>(static_cast<void*>(p_iterator));
-    p_iterator += sizeof(DepthPacket);
+        static_cast<xwin::DepthPacket*>(static_cast<void*>(p_iterator));
+    p_iterator += sizeof(xwin::DepthPacket);
 
     connection.p_visuals =
-        static_cast<VisualPacket*>(static_cast<void*>(p_iterator));
+        static_cast<xwin::VisualPacket*>(static_cast<void*>(p_iterator));
 
     return connection;
 }
 
 // Attempt to connect to an X server over local sockets.
 // TODO: Use a `meta::allocator` `concept`.
-auto initiate_connection(auto& allocator) -> Result<> {
+auto initiate_connection(auto& allocator) -> Result<xwin::Connection> {
     SocketLocal<SocketType::stream> socket;
     socket.path_name = socket_path;
 
@@ -458,17 +472,18 @@ auto initiate_connection(auto& allocator) -> Result<> {
         return result_2;
     }
 
-    return handshake(allocator, socket);
+    return xwin::handshake(allocator, socket);
 }
 
-struct CreateWindowRequest {
-    OperationCode operation = OperationCode::create_window;
-    uint1 depth;
-    uint2 const length = sizeof(CreateWindowRequest) / 4;
+struct CreateWindowRequestInfo {
+    ClientRequestHeader header = {
+        .operation = OperationCode::create_window,
+        .message_length = sizeof(CreateWindowRequestInfo) / 4};
+    uint1 window_depth;
     WindowResource window_id, parent_id;
     int2 x, y;
     uint2 wresource_idth, height, border_wresource_idth;
-    enum : unsigned char
+    enum class WindowClass : unsigned char
     {
         input_output = 0,
         input_only = 1,
