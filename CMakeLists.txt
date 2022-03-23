@@ -110,28 +110,30 @@ list(
   $<$<CONFIG:RelSmall>:${CAT_RELEASE_LINK_FLAGS}>
 )
 
-add_library(
-  cat-std STATIC
+add_library(cat)
+set_target_properties(cat
+    PROPERTIES
+      OUTPUT_NAME "cat"
 )
 
-# src/CMakeLists.txt holds the recipes for `cat-std-cpp`
-# and `cat-std-include`.
+# `src/CMakeLists.txt` holds the recipes for `cat-cpp`
+# and `cat-include`.
 add_subdirectory(src/)
 
-target_sources(cat-std PUBLIC ${cat-std-cpp})
-target_include_directories(cat-std PUBLIC ${cat-std-include})
+target_sources(cat PUBLIC ${cat-cpp})
+target_include_directories(cat PUBLIC ${cat-include})
 
-target_link_libraries(cat-std PUBLIC gcc)
+target_link_libraries(cat PUBLIC gcc)
 # target_link_libraries(
-#   cat-std INTERFACE
+#   cat INTERFACE
 #   # $<$<CONFIG:RelWithDebInfo>:asan>
 #   # $<$<CONFIG:RelWithDebInfo>:ubsan>
 #   # $<$<CONFIG:Debug>:asan>
 #   # $<$<CONFIG:Debug>:ubsan>
 # )
 
-target_compile_options(cat-std PUBLIC ${CAT_CXX_FLAGS})
-target_link_options(cat-std PUBLIC ${CAT_LINK_FLAGS})
+target_compile_options(cat PUBLIC ${CAT_CXX_FLAGS})
+target_link_options(cat PUBLIC ${CAT_LINK_FLAGS})
 
 # Link .gdbinit to build directories.
 add_custom_target(
@@ -140,7 +142,7 @@ add_custom_target(
   ${PROJECT_SOURCE_DIR}/.gdbinit $<OUTPUT_CONFIG:$<CONFIG>>/.gdbinit
   # DEPENDS ${CMAKE_CURRENT_BINARY_DIR}
 )
-add_dependencies(cat-std cat-debug)
+add_dependencies(cat cat-debug)
 
 # Build the tests.
 enable_testing()
@@ -149,35 +151,35 @@ add_subdirectory(tests/)
 # Build the examples.
 add_executable(hello examples/hello.cpp)
 target_compile_options(hello PRIVATE ${CAT_CXX_FLAGS})
-target_link_libraries(hello PRIVATE cat-std)
+target_link_libraries(hello PRIVATE cat)
 target_link_options(hello PRIVATE ${CAT_LINK_FLAGS})
 
 # Build the examples.
 add_executable(error examples/error.cpp)
 target_compile_options(error PRIVATE ${CAT_CXX_FLAGS})
-target_link_libraries(error PRIVATE cat-std)
+target_link_libraries(error PRIVATE cat)
 target_link_options(error PRIVATE ${CAT_LINK_FLAGS})
 
 add_executable(echo examples/echo.cpp)
 target_compile_options(echo PRIVATE ${CAT_CXX_FLAGS})
 target_compile_definitions(echo PRIVATE "load_argc_argv")
-target_link_libraries(echo PRIVATE cat-std)
+target_link_libraries(echo PRIVATE cat)
 target_link_options(echo PRIVATE ${CAT_LINK_FLAGS})
 
 add_executable(client examples/client.cpp)
 target_compile_options(client PRIVATE ${CAT_CXX_FLAGS})
 target_compile_definitions(client PRIVATE "load_argc_argv")
-target_link_libraries(client PRIVATE cat-std)
+target_link_libraries(client PRIVATE cat)
 target_link_options(client PRIVATE ${CAT_LINK_FLAGS})
 
 add_executable(server examples/server.cpp)
 target_compile_options(server PRIVATE ${CAT_CXX_FLAGS})
-target_link_libraries(server PRIVATE cat-std)
+target_link_libraries(server PRIVATE cat)
 target_link_options(server PRIVATE ${CAT_LINK_FLAGS})
 
 add_executable(window examples/window.cpp)
 target_compile_options(window PRIVATE ${CAT_CXX_FLAGS})
-target_link_libraries(window PRIVATE cat-std)
+target_link_libraries(window PRIVATE cat)
 target_link_options(window PRIVATE ${CAT_LINK_FLAGS})
 
 # libC executables are only configured for Release.
