@@ -38,7 +38,6 @@ set(
   ${CAT_SRC}/libraries/runtime/implementations/align_stack_pointer_16.cpp
   ${CAT_SRC}/libraries/runtime/implementations/align_stack_pointer_32.cpp
   ${CAT_SRC}/libraries/runtime/implementations/load_base_stack_pointer.cpp
-  ${CAT_SRC}/libraries/runtime/implementations/munmap.cpp
   ${CAT_SRC}/libraries/simd/implementations/is_avx2_supported.cpp
   ${CAT_SRC}/libraries/simd/implementations/is_avx512f_supported.cpp
   ${CAT_SRC}/libraries/simd/implementations/is_avx_supported.cpp
