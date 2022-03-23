@@ -16,6 +16,7 @@ struct Buffer {
 
     constexpr Buffer() = default;
     constexpr Buffer(Buffer<T, Size>&& in_buffer) = default;
+    constexpr Buffer(Buffer<T, Size> const& in_buffer) = default;
     constexpr Buffer(StringView const& string) requires(
         meta::is_same_v<meta::remove_const_t<T>, char>) {
         std::copy_memory(string.p_data, &(this->value), string.length);
@@ -38,11 +39,11 @@ struct Buffer {
     }
 
     // TODO: Non-pessimize unsigned indices as well.
-    auto operator[](ssize i) -> T& {
+    constexpr auto operator[](ssize i) -> T& {
         return value[i];
     }
 
-    auto to_string() -> StringView
+    constexpr auto to_string() -> StringView
         requires(meta::is_same_v<meta::remove_const_t<T>, char>) {
         return StringView(static_cast<char const*>(static_cast<void*>(&value)),
                           Size);
