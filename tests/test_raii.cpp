@@ -12,12 +12,13 @@ struct Foo {
 };
 
 void func(Raii<Foo>) {
+	return;
 }
 
 void meow() {
-    // Call Foo() constructor:
+    // Call `Foo()` constructor:
     Raii<Foo> foo;
-    /* Call Foo() constructor, then RAII() move-constructor, then Foo()
+    /* Call `Foo()` constructor, then `Raii()` move-constructor, then `Foo()`
      * destructor: */
     func(meta::move(foo));
     std::exit();
