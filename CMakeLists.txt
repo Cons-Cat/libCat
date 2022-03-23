@@ -152,6 +152,12 @@ target_compile_options(hello PRIVATE ${CAT_CXX_FLAGS})
 target_link_libraries(hello PRIVATE cat-std)
 target_link_options(hello PRIVATE ${CAT_LINK_FLAGS})
 
+# Build the examples.
+add_executable(error examples/error.cpp)
+target_compile_options(error PRIVATE ${CAT_CXX_FLAGS})
+target_link_libraries(error PRIVATE cat-std)
+target_link_options(error PRIVATE ${CAT_LINK_FLAGS})
+
 add_executable(echo examples/echo.cpp)
 target_compile_options(echo PRIVATE ${CAT_CXX_FLAGS})
 target_compile_definitions(echo PRIVATE "load_argc_argv")
