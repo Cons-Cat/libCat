@@ -1,4 +1,4 @@
-# Link .gdbinit to build directories.
+# Link `.gdbinit` to build directories.
 add_custom_target(
   test_debug_target ALL
   COMMAND ${CMAKE_COMMAND} -E create_symlink
@@ -19,7 +19,7 @@ list(
   $<$<CONFIG:RelWithDebInfo>:${CAT_CXX_FLAGS_RELWITHDEBINFO}>
   $<$<CONFIG:Release>:${CAT_CXX_FLAGS_RELFAST}>
   $<$<CONFIG:RelSmall>:${CAT_CXX_FLAGS_RELSMALL}>
-  # -Wno-unused-variable
+  -Wno-unused-variable
 )
 
 # TODO: Get these working:
