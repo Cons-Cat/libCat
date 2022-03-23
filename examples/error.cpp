@@ -1,21 +1,20 @@
-enum MyErrors
+enum class MyErrors
 {
-    OK = 0,
-    FAIL = 1,
+    ok = 0,
+    fail = 1,
 };
 
 auto result_factory(MyErrors error) -> Result<> {
-    if (error == ::OK) {
+    if (error == MyErrors::ok) {
         return okay;
     }
     return Failure(error);
 }
 
 void meow() {
-    debugger_entry_point();
     // This will never panic:
-    result_factory(::OK).or_panic();
+    result_factory(MyErrors::ok).or_panic();
     // This will always panic:
-    result_factory(::FAIL).or_panic();
-    exit();
+    result_factory(MyErrors::fail).or_panic();
+    std::exit();
 }
