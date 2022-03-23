@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
-project(cat LANGUAGES CXX ASM)
+project(cat LANGUAGES CXX)
 
 set(CMAKE_CONFIGURATION_TYPES Debug;Release;RelWithDebInfo;RelSmall)
 
@@ -57,7 +57,7 @@ list(
   -O3 -ggdb3 -pipe
   -Wall -Wextra -Wno-unused-function
   -Wno-unused-function
-
+  
   -no-pie
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
@@ -111,13 +111,13 @@ list(
 )
 
 add_library(cat)
-set_target_properties(cat
-    PROPERTIES
-      OUTPUT_NAME "cat"
+set_target_properties(
+  cat
+  PROPERTIES
+  OUTPUT_NAME "cat"
 )
 
-# `src/CMakeLists.txt` holds the recipes for `cat-cpp`
-# and `cat-include`.
+# `src/CMakeLists.txt` holds the recipes for `cat-cpp` and `cat-include`.
 add_subdirectory(src/)
 
 target_sources(cat PUBLIC ${cat-cpp})
@@ -140,7 +140,6 @@ add_custom_target(
   cat-debug ALL
   COMMAND ${CMAKE_COMMAND} -E create_symlink
   ${PROJECT_SOURCE_DIR}/.gdbinit $<OUTPUT_CONFIG:$<CONFIG>>/.gdbinit
-  # DEPENDS ${CMAKE_CURRENT_BINARY_DIR}
 )
 add_dependencies(cat cat-debug)
 
@@ -154,7 +153,6 @@ target_compile_options(hello PRIVATE ${CAT_CXX_FLAGS})
 target_link_libraries(hello PRIVATE cat)
 target_link_options(hello PRIVATE ${CAT_LINK_FLAGS})
 
-# Build the examples.
 add_executable(error examples/error.cpp)
 target_compile_options(error PRIVATE ${CAT_CXX_FLAGS})
 target_link_libraries(error PRIVATE cat)

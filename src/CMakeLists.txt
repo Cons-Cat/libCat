@@ -1,5 +1,5 @@
-# Create collect all of the files needed to build the `cat`
-# library in `../CMakeLists.txt`.
+# Create collect all of the files needed to build the `cat` library
+# in `../CMakeLists.txt`.
 set(CAT_SRC ${CMAKE_SOURCE_DIR}/src)
 
 set(
@@ -29,7 +29,6 @@ set(
   PARENT_SCOPE
 )
 
-# target_sources(
 set(
   cat-cpp
   ${CAT_SRC}/libraries/runtime/implementations/_start.cpp
