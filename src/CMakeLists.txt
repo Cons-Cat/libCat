@@ -71,7 +71,8 @@ set(
   ${CAT_SRC}/libraries/linux/implementations/write.cpp
   ${CAT_SRC}/libraries/linux/implementations/close.cpp
   ${CAT_SRC}/libraries/linux/implementations/unlink.cpp
-  ${CAT_SRC}/libraries/linux/implementations/mmap.cpp
+  ${CAT_SRC}/libraries/linux/implementations/map_memory.cpp
+  ${CAT_SRC}/libraries/linux/implementations/unmap_memory.cpp
   ${CAT_SRC}/libraries/linux/implementations/wait4.cpp
   ${CAT_SRC}/libraries/linux/implementations/waitid.cpp
   ${CAT_SRC}/libraries/linux/implementations/create_socket.cpp

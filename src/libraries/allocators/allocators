@@ -45,16 +45,16 @@ struct PageAllocator {
      * very little reason to allocate any smaller amount of bytes using
      * `PageAllocator`. */
     auto malloc(ssize allocation_size) -> Result<Any> {
-        this->address = nix::mmap(0u, allocation_size,
-                                  nix::MmapProtectionFlags::read |
-                                      nix::MmapProtectionFlags::write,
-                                  nix::MmapMemoryFlags::privately |
-                                      nix::MmapMemoryFlags::populate |
-                                      nix::MmapMemoryFlags::anonymous,
-                                  // Anonymous pages must have `-1`.
-                                  -1,
-                                  // Anonymous pages must have `0u`.
-                                  0u)
+        this->address = nix::map_memory(0u, allocation_size,
+                                        nix::MmapProtectionFlags::read |
+                                            nix::MmapProtectionFlags::write,
+                                        nix::MmapMemoryFlags::privately |
+                                            nix::MmapMemoryFlags::populate |
+                                            nix::MmapMemoryFlags::anonymous,
+                                        // Anonymous pages must have `-1`.
+                                        -1,
+                                        // Anonymous pages must have `0u`.
+                                        0u)
                             .or_is(nullptr);
         // TODO: This is quite inefficient. Consider failure-propagation.
         if (this->address == nullptr) {
