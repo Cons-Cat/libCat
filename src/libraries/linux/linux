@@ -146,11 +146,12 @@ auto close(FileDescriptor const object) -> Result<>;
 
 auto unlink(char const* p_path_name) -> Result<>;
 
-auto mmap(usize beginning_address, usize bytes_size,
-          MmapProtectionFlags protections, MmapMemoryFlags flags,
-          FileDescriptor file_descriptor, usize pages_offset) -> Result<void*>;
+auto map_memory(usize beginning_address, usize bytes_size,
+                MmapProtectionFlags protections, MmapMemoryFlags flags,
+                FileDescriptor file_descriptor, ssize pages_offset)
+    -> Result<void*>;
 
-auto munmap() -> Result<>;
+auto unmap_memory() -> Result<>;
 
 struct Thread;
 
