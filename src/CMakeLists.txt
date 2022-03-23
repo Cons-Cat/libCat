@@ -1,9 +1,9 @@
-# Create collect all of the files needed to build the `cat-std`
+# Create collect all of the files needed to build the `cat`
 # library in `../CMakeLists.txt`.
 set(CAT_SRC ${CMAKE_SOURCE_DIR}/src)
 
 set(
-  cat-std-include
+  cat-include
   ${CAT_SRC}/
   ${CAT_SRC}/compatibility/
   ${CAT_SRC}/libraries/runtime/
@@ -31,12 +31,10 @@ set(
 
 # target_sources(
 set(
-  cat-std-cpp
+  cat-cpp
   ${CAT_SRC}/libraries/runtime/implementations/_start.cpp
   ${CAT_SRC}/libraries/runtime/implementations/exit.cpp
   ${CAT_SRC}/libraries/runtime/implementations/__stack_chk_fail.cpp
-  ${CAT_SRC}/libraries/runtime/implementations/align_stack_pointer_16.cpp
-  ${CAT_SRC}/libraries/runtime/implementations/align_stack_pointer_32.cpp
   ${CAT_SRC}/libraries/runtime/implementations/load_base_stack_pointer.cpp
   ${CAT_SRC}/libraries/simd/implementations/is_avx2_supported.cpp
   ${CAT_SRC}/libraries/simd/implementations/is_avx512f_supported.cpp

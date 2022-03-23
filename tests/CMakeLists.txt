@@ -8,7 +8,7 @@ add_custom_target(
 )
 
 add_library(cat-test INTERFACE)
-target_link_libraries(cat-test INTERFACE cat-std)
+target_link_libraries(cat-test INTERFACE cat)
 target_include_directories(cat-test INTERFACE)
 
 list(
