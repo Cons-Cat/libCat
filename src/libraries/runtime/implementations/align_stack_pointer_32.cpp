@@ -1,9 +1,0 @@
-// -*- mode: c++ -*-
-// vim: set ft=cpp:
-#include <runtime>
-
-/* Advance the `%rsp` stack-pointer register to the nearest 32-byte aligned
- * address. */
-void std::align_stack_pointer_32() {
-    asm("and $-32, %rsp");
-}
