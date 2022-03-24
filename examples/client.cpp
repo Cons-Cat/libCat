@@ -5,7 +5,7 @@
 #include <string>
 
 void meow(int argc, char* argv[]) {
-    SocketLocal<SocketType::stream> socket;
+    SocketUnix<SocketType::stream> socket;
     socket.path_name = "/tmp/temp.sock";
 
     socket.create().or_panic();

@@ -5,9 +5,9 @@
 #include <string>
 
 void meow() {
-    SocketLocal<SocketType::stream> listening_socket;
+    SocketUnix<SocketType::stream> listening_socket;
     listening_socket.path_name = "/tmp/temp.sock";
-    SocketLocal<SocketType::stream> recieving_socket;
+    SocketUnix<SocketType::stream> recieving_socket;
 
     Buffer<char, 12> message_buffer;
 
