@@ -65,7 +65,9 @@ struct FileDescriptor {
 };
 
 struct ProcessId {
-    int8 value;
+    // Linux supports the better part of `8` byte process IDs on 64-bit systems,
+    // but only up to `4` byte process IDs on 32-bit systems.
+    ssize value;
 
     ProcessId() = default;
     ProcessId(int8 const input) {
@@ -73,10 +75,23 @@ struct ProcessId {
     }
 };
 
-// TODO: Document these:
-// TODO: Make these strongly typed.
-using UserId = uint8;
-using GroupId = uint8;
+struct UserId {
+    int4 value;
+
+    UserId() = default;
+    UserId(int4 const input) {
+        this->value = input;
+    }
+};
+
+struct GroupId {
+    int4 value;
+
+    GroupId() = default;
+    GroupId(int4 const input) {
+        this->value = input;
+    }
+};
 
 enum class WaitIdType
 {
