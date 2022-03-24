@@ -9,6 +9,7 @@
 template <typename T>
 struct Raii : T {
     Raii() = default;
+    Raii(T const&) = delete;
     Raii(Raii<T>&&){};
 
     ~Raii() = default;
