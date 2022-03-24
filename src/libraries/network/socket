@@ -5,7 +5,8 @@
 #include <buffer>
 #include <linux>
 
-// TODO: Socket descriptor types for `SOCK_STREAM` and `SOCK_SEQPACKET`.
+// TODO: Socket `concept`.
+// TODO: Socket types for sequenced packets.
 
 // Basic Socket type that any other sockets must convert into.
 struct Socket {
@@ -20,28 +21,28 @@ enum class SocketType
     raw = 3,
     reliable_data_gram = 4,
     sequenced_packet = 5,
-    dccp = 6
+    datagram_congestion_control = 6
 };
 
 template <int2 Family, SocketType Type, int4 Protocol>
 struct SocketAttributes {
-    // static constexpr int2 family = Family;
     int2 const family = Family;
     static constexpr SocketType type = Type;
     static constexpr int4 protocol = Protocol;
 };
 
 template <SocketType Type, int4 Protocol = 0>
-struct SocketLocal {
+struct SocketUnix {
     SocketAttributes<1, Type, Protocol> const attributes;
-    // TODO: `path_name` should be some kind of span type.
     Buffer<char, 108> path_name;
     nix::FileDescriptor descriptor;
 
-    // Using `SocketLocal(){};` instead of `SockeLocal() = default;` prevents a
+    // TODO: Create flags that corresponds to the value of `Protocol`.
+
+    // Using `SocketUnix(){};` instead of `SockeUnix() = default;` prevents a
     // false-positive clangd diagnostic here.
-    SocketLocal(){};  // NOLINT
-    SocketLocal(nix::FileDescriptor const in_descriptor) {
+    SocketUnix(){};  // NOLINT
+    SocketUnix(nix::FileDescriptor const in_descriptor) {
         this->descriptor = in_descriptor;
     }
 
@@ -102,7 +103,7 @@ struct SocketLocal {
         return result;
     }
 
-    auto accept(SocketLocal<Type, Protocol> const& listening_socket,
+    auto accept(SocketUnix<Type, Protocol> const& listening_socket,
                 void const* p_socket = nullptr,
                 ssize const* p_addr_len = nullptr) -> Result<> {
         auto result = nix::accept_socket(listening_socket.descriptor, p_socket,
