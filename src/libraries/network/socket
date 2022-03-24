@@ -66,7 +66,7 @@ struct SocketLocal {
         return nix::connect_socket(this->descriptor, this, this->get_size());
     }
 
-    auto send_buffer(StringView const& message, int8 flags = 0,
+    auto send_string(StringView const& message, int8 flags = 0,
                      Socket const* p_destination_socket = nullptr,
                      ssize const addr_length = 0) -> Result<> {
         return nix::send_buffer(this->descriptor, message.p_data,
