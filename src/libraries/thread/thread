@@ -27,4 +27,10 @@ struct Thread {
     }
 };
 
-namespace sync {}  // namespace sync
+namespace sync {
+
+void relax_cpu() {
+    asm volatile("pause" ::: "memory");
+}
+
+}  // namespace sync
