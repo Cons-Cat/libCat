@@ -6,8 +6,7 @@
 
 namespace atom {
 
-enum MemoryOrder : int
-{
+enum MemoryOrder : int {
     relaxed,
     consume,
     acquire,
@@ -17,8 +16,7 @@ enum MemoryOrder : int
 };
 
 namespace detail {
-    enum MemoryOrderModifier
-    {
+    enum MemoryOrderModifier {
         mask = 0x0ffff,
         modifier_mask = 0xffff0000,
         hle_acquire = 0x10000,

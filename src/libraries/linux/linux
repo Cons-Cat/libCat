@@ -21,16 +21,14 @@ constexpr usize page_size = 4096_ki;
 
 namespace nix {
 
-enum class MmapProtectionFlags : unsigned int
-{
+enum class MmapProtectionFlags : unsigned int {
     none = 0b000,     // Data cannot be accessed at all.
     read = 0b001,     // Data is readable.
     write = 0b010,    // Data is writable.
     execute = 0b100,  // Data can be executed.
 };
 
-enum class MmapMemoryFlags : unsigned int
-{
+enum class MmapMemoryFlags : unsigned int {
     shared = 0b1,          // Writes change the underlying object.
     privately = 0b10,      // Writes only change the calling process.
     fixed = 0b10000,       /* Map to precisely this address, rather than virtual
@@ -93,8 +91,7 @@ struct GroupId {
     }
 };
 
-enum class WaitIdType
-{
+enum class WaitIdType {
     all = 0,
     process_id = 1,
     process_group = 2,
@@ -103,8 +100,7 @@ enum class WaitIdType
 
 // TODO: Write comments for these, and simplifiy names.
 // https://linux.die.net/man/2/clone
-enum class CloneFlags : unsigned int
-{
+enum class CloneFlags : unsigned int {
     csignal = 0x000000ff,
     newtime = 0x00000080,
     virtual_memory = 0x00000100,
@@ -132,8 +128,7 @@ enum class CloneFlags : unsigned int
     io = 0x80000000,
 };
 
-enum class WaitOptionsFlags : long int
-{
+enum class WaitOptionsFlags : long int {
     no_hang = 1,
     untraced = 2,
     stopped = 2,

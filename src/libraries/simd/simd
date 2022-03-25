@@ -161,8 +161,7 @@ using bool4x8 = std::detail::SimdVector<bool4, 8>;
 
 namespace simd {
 
-enum VectorMask : uint1
-{
+enum VectorMask : uint1 {
     // Source data format.
     SIDD_UBYTE_OPS = 0x00,
     SIDD_UWORD_OPS = 0x01,
@@ -213,8 +212,7 @@ void zero_avx_registers();
 void zero_upper_avx_registers();
 
 // Constants for prefetch.
-enum MM_HINT
-{
+enum MM_HINT {
     // MM_HINT_ET is MM_HINT_T with set 3rd bit.
     MM_HINT_ET0 = 7,
     MM_HINT_ET1 = 6,

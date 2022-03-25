@@ -1,5 +1,4 @@
-enum MyErrors
-{
+enum MyErrors {
     OK = 0,
     FAIL = 1,
 };
