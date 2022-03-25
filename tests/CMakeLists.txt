@@ -40,25 +40,25 @@ target_link_options(test_result_fail PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME TestResultFail COMMAND test_result_fail)
 set_tests_properties(TestResultFail PROPERTIES WILL_FAIL TRUE)
 
-# This tests if `<buffer.h>` works.
-add_executable(test_buffers buffers.cpp)
-target_compile_options(test_buffers PRIVATE ${CAT_CXX_FLAGS_TEST})
-target_link_options(test_buffers PRIVATE ${CAT_LINK_FLAGS})
-add_test(NAME TestBuffers COMMAND test_buffers)
+# This tests if `<array>` works.
+add_executable(test_arrays arrays.cpp)
+target_compile_options(test_arrays PRIVATE ${CAT_CXX_FLAGS_TEST})
+target_link_options(test_arrays PRIVATE ${CAT_LINK_FLAGS})
+add_test(NAME TestBuffers COMMAND test_arrays)
 
-# This tests if `string_length<>()` works.
+# This tests if `std::string_length()` works.
 add_executable(test_strlen string_length.cpp)
 target_compile_options(test_strlen PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_strlen PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME TestStrlen COMMAND test_strlen)
 
-# This tests if `compare_strings()` works.
+# This tests if `std::compare_strings()` works.
 add_executable(test_strcmp compare_strings.cpp)
 target_compile_options(test_strcmp PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_strcmp PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME TestStrCmp COMMAND test_strcmp)
 
-# This tests if `copy_memory()` works.
+# This tests if `std::copy_memory()` works.
 add_executable(test_copymem copy_memory.cpp)
 target_compile_options(test_copymem PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_copymem PRIVATE ${CAT_LINK_FLAGS})

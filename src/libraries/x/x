@@ -292,7 +292,7 @@ struct ServerReplyHeader {
     int1 padding;  // NOLINT
   public:
     // This field is only initialized if `SuccessCode` is `failed`.
-    Buffer<uint2, 2> x_version;
+    Array<uint2, 2> x_version;
     // `message_length` represents a multiple of four bytes.
     uint2 message_length;
 };
@@ -304,7 +304,7 @@ struct ConnectionRequestInfo {
     int1 padding_1;  // NOLINT
   public:
     // This should almost always be `{11, 0}`.
-    Buffer<uint2, 2> x_version = {uint2(11), uint2(0)};
+    Array<uint2, 2> x_version = {uint2(11), uint2(0)};
     // No explicit protocol is specified if this is `0`.
     uint2 authorization_protocol_length = 0;
     // No explicit protocol is specified if this is `0`.

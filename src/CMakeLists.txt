@@ -12,7 +12,7 @@ set(
   ${CAT_SRC}/libraries/result/
   ${CAT_SRC}/libraries/maybe/
   ${CAT_SRC}/libraries/any/
-  ${CAT_SRC}/libraries/buffer/
+  ${CAT_SRC}/libraries/array/
   ${CAT_SRC}/libraries/string/
   ${CAT_SRC}/libraries/memory/
   ${CAT_SRC}/libraries/allocators/
