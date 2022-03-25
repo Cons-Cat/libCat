@@ -1,4 +1,4 @@
-#include <buffer>
+#include <array>
 #include <limits>
 #include <string>
 
@@ -11,10 +11,10 @@ auto std::compare_strings(StringView const& string_1,
     // TODO: Use a type for an ISA-specific widest vector.
     using VectorType = charx32;
 
-    Buffer<VectorType, 4> vector_1;
-    Buffer<VectorType, 4> vector_2;
-    Buffer<VectorType, 4> mask;
-    Buffer<uint4, 4> results;
+    Array<VectorType, 4> vector_1;
+    Array<VectorType, 4> vector_2;
+    Array<VectorType, 4> mask;
+    Array<uint4, 4> results;
     ssize length_iterator = string_1.length;
     ssize vector_size = sizeof(VectorType);
     char const* p_string_1_iterator = string_1.p_data;

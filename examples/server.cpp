@@ -1,4 +1,4 @@
-#include <buffer>
+#include <array>
 #include <linux>
 #include <memory>
 #include <socket>
@@ -9,7 +9,7 @@ void meow() {
     listening_socket.path_name = "/tmp/temp.sock";
     SocketUnix<SocketType::stream> recieving_socket;
 
-    Buffer<char, 12> message_buffer;
+    Array<char, 12> message_buffer;
 
     nix::unlink(listening_socket.path_name.value).or_panic();
 

@@ -7,31 +7,29 @@
 #include <type_traits>
 #include <utility>
 
-#include "result"
-
 template <typename T, ssize Size>
-struct Buffer {
+struct Array {
     static constexpr ssize length = Size;
     T value[Size];
 
-    constexpr Buffer() = default;
-    constexpr Buffer(Buffer<T, Size>&& in_buffer) = default;
-    constexpr Buffer(Buffer<T, Size> const& in_buffer) = default;
-    constexpr Buffer(StringView const& string) requires(
+    constexpr Array() = default;
+    constexpr Array(Array<T, Size>&& in_array) = default;
+    constexpr Array(Array<T, Size> const& in_array) = default;
+    constexpr Array(StringView const& string) requires(
         meta::is_same_v<meta::remove_const_t<T>, char>) {
         std::copy_memory(string.p_data, &(this->value), string.length);
     }
 
-    constexpr auto operator=(Buffer<T, Size>&&) -> Buffer<T, Size>& = default;
-    constexpr auto operator=(StringView const&& string) -> Buffer<T, Size>
+    constexpr auto operator=(Array<T, Size>&&) -> Array<T, Size>& = default;
+    constexpr auto operator=(StringView const&& string) -> Array<T, Size>
     requires(meta::is_same_v<T, char>) {
-        Buffer<T, Size> buffer;
+        Array<T, Size> array;
         std::copy_memory(string.p_data, &(this->value), string.length);
-        return buffer;
+        return array;
     }
 
     template <typename... U>
-    constexpr Buffer(U&&... arguments) requires(sizeof...(arguments) == Size) {
+    constexpr Array(U&&... arguments) requires(sizeof...(arguments) == Size) {
         T unpacked_data[Size] = {arguments...};
         for (int4 i = 0; i < Size; i++) {
             this->value[i] = unpacked_data[i];

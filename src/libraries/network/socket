@@ -2,7 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <buffer>
+#include <array>
 #include <linux>
 #include <string>
 
@@ -15,8 +15,7 @@ struct Socket {
     char data[14];
 };
 
-enum class SocketType
-{
+enum class SocketType {
     stream = 1,
     data_gram = 2,
     raw = 3,
@@ -35,7 +34,7 @@ struct SocketAttributes {
 template <SocketType Type, int4 Protocol = 0>
 struct SocketUnix {
     SocketAttributes<1, Type, Protocol> const attributes;
-    Buffer<char, 108> path_name;
+    Array<char, 108> path_name;
     nix::FileDescriptor descriptor;
 
     // TODO: Create flags that corresponds to the value of `Protocol`.
