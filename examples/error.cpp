@@ -1,5 +1,4 @@
-enum class MyErrors
-{
+enum class MyErrors {
     ok = 0,
     fail = 1,
 };

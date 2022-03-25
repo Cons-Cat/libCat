@@ -442,9 +442,8 @@ namespace detail {
     struct is_convertible
         : meta::integral_constant<
               bool,
-              (decltype(detail::returnable<To>(0))::
-                   value&& decltype(detail::implicitly_convertible<From, To>(
-                       0))::value) ||
+              (decltype(detail::returnable<To>(0))::value &&
+               decltype(detail::implicitly_convertible<From, To>(0))::value) ||
                   (meta::is_void<From>::value && meta::is_void<To>::value)> {};
 }  // namespace detail
 

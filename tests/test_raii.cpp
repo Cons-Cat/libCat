@@ -12,7 +12,7 @@ struct Foo {
 };
 
 void func(Raii<Foo>) {
-	return;
+    return;
 }
 
 void meow() {
