@@ -30,6 +30,11 @@ struct StringView {
         : p_data(p_string), length(in_length){};
     constexpr StringView(StringView const&& string)
         : p_data(string.p_data), length(string.length){};
+
+    auto operator=(StringView string) {
+        p_data = string.p_data;
+        length = string.length;
+    }
 };
 
 namespace std {

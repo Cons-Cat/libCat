@@ -4,6 +4,7 @@
 
 #include <buffer>
 #include <linux>
+#include <string>
 
 // TODO: Socket `concept`.
 // TODO: Socket types for sequenced packets.
@@ -64,7 +65,10 @@ struct SocketUnix {
 
     // Connect a `Socket`.
     auto connect() -> Result<> {
-        return nix::connect_socket(this->descriptor, this, this->get_size());
+        return nix::connect_socket(
+            this->descriptor, this,
+            sizeof(attributes) + std::string_length(static_cast<char const*>(
+                                     static_cast<void*>(&this->path_name))));
     }
 
     auto send_string(StringView const& message, int8 flags = 0,
