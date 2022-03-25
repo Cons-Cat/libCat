@@ -37,6 +37,8 @@ void meow() {
             if (!std::compare_strings(input, "")) {
                 std::print("Recieved: ").or_panic();
                 std::print_line(input).or_panic();
+                // TODO: `std::set_memory()` or something is needed to zero-out
+                // `message_buffer` here.
                 break;
             }
         }
