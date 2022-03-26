@@ -35,7 +35,7 @@ inline constexpr std::detail::maybe::None none;
 // struct Maybe {};
 
 template <typename T>
-struct Maybe {
+class Maybe {
     struct Dummy {};
     union {
         // `Dummy` is required so that `Maybe` can be initialized in a
@@ -46,13 +46,16 @@ struct Maybe {
     };
     bool1 has_some = false;
 
+    // `Maybe`'s constructors, assignment operators, and destructors are
+    // relatively complex. Consider paying special attention to them.
+  public:
+    // If constructors are not conditionally specialized by their
+    // `requires`, they should be `default` or deleted.
     constexpr Maybe() requires(meta::is_default_constructible<T>::value) =
         default;
     constexpr Maybe() = delete;
     constexpr Maybe(std::detail::maybe::None){};
 
-    // If other constructors are not conditionally specialized by their
-    // `requires`, they should be default.
     constexpr Maybe(Maybe const& maybe) requires(
         meta::is_copy_constructible_v<T>) = default;
     constexpr Maybe(Maybe const& maybe) = delete;
@@ -61,7 +64,7 @@ struct Maybe {
     constexpr Maybe(Maybe&& maybe) = default;
 
     // If other assignment operators are not conditionally specialized by their
-    // `requires`, they should be default or deleted.
+    // `requires`, they should be `default` or deleted.
     auto operator=(Maybe const& maybe)
         -> Maybe& requires(meta::is_copy_assignable_v<T>) = default;
     auto operator=(Maybe const& maybe) -> Maybe& = delete;
@@ -128,14 +131,6 @@ struct Maybe {
         return *this;
     }
 
-    // Construct the value in-place and destroy the held value iff it exists.
-    template <typename... Args>
-    auto emplace(Args&&... args) -> T& {
-        *this = none;
-        this->construct(meta::forward<Args>(args)...);
-        return this->value;
-    }
-
     // Get the state of this `Maybe` by testing whichever sentinel value or
     // expression it is specialized with.
     constexpr auto has_value() const -> bool1 {
@@ -156,11 +151,19 @@ struct Maybe {
             return value;
         }
         std::print(
-            "`.unwrap()` was illegally called on a `Maybe` that did not hold a \
+            "`.unwrap()` was illegally called on a `Maybe` which did not hold a \
 value!\n")
             .or_panic_debug();
         std::exit(1);
 #endif
+    }
+
+    // Construct the value in-place and destroy the held value iff it exists.
+    template <typename... Args>
+    auto emplace(Args&&... args) -> T& {
+        *this = none;
+        this->construct(meta::forward<Args>(args)...);
+        return this->value;
     }
 
     // Internal helper functions:
@@ -197,5 +200,50 @@ value!\n")
         } else if (maybe.has_value()) {
             this->construct(meta::forward<U>(maybe).get_value());
         }
+    }
+};
+
+// The only way to support a maybe-reference in C++20 is with a partial
+// template specialization.
+template <typename T>
+class Maybe<T&> {
+    T* p_value = nullptr;
+  public:
+    Maybe() = default;
+    Maybe(T&&) = delete;
+
+    constexpr Maybe(T& maybe) requires(meta::is_reference_v<T>)
+        : p_value(std::address_of(maybe)){};
+
+    constexpr Maybe(std::detail::maybe::None){};
+
+    // Rebind the reference if this is assigned a new value.
+    constexpr auto operator=(T& maybe) -> T& {
+        this->p_value = std::address_of(maybe);
+        return *this;
+    }
+
+    // Invalidate the reference if this is assigned `none`.
+    constexpr auto operator=(std::detail::maybe::None) -> T& {
+        this->p_value = nullptr;
+        return *this;
+    }
+
+    constexpr auto unwrap() -> T& {
+        if (meta::is_constant_evaluated()) {
+            return *(this->p_value);
+        }
+#ifdef __OPTIMIZE__
+        return *(this->p_value);
+#else
+        if (this->has_value()) {
+            return *(this->p_value);
+        }
+        std::print(
+            "`.unwrap()` was illegally called on a `Maybe` which did not hold a \
+value!\n")
+            .or_panic_debug();
+        std::exit(1);
+#endif
     }
 };
