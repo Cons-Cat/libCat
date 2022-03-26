@@ -98,7 +98,7 @@ struct remove_cvref {
 template <typename T>
 using remove_cvref_t = typename remove_cvref<T>::type;
 
-namespace std::detail {
+namespace detail {
     template <typename T>
     struct remove_pointer {
         using type = T;
@@ -119,10 +119,10 @@ namespace std::detail {
     struct remove_pointer<T* const volatile> {
         using type = T;
     };
-}  // namespace std::detail
+}  // namespace detail
 
 template <typename T>
-struct remove_pointer : std::detail::remove_pointer<T> {};
+struct remove_pointer : meta::detail::remove_pointer<T> {};
 template <typename T>
 using remove_pointer_t = typename remove_pointer<T>::type;
 
@@ -201,6 +201,16 @@ template <typename T>
 constexpr bool is_literal_type_v = is_literal_type<T>::value;
 template <typename T>
 using is_literal_type_t = typename is_literal_type<T>::type;
+
+template <typename T>
+struct is_reference : false_type {};
+template <typename T>
+struct is_reference<T&> : true_type {};
+template <typename T>
+struct is_reference<T&&> : true_type {};
+
+template <typename T>
+constexpr bool is_reference_v = is_reference<T>::value;
 
 namespace detail {
     // TODO: There has to be a more efficient way to exhaustively check
@@ -386,6 +396,35 @@ struct is_referenceable : false_type {};
 template <typename T>
 struct is_referenceable<T, void_t<T&>> : true_type {};
 
+template <class T>
+struct is_member_pointer_helper : false_type {};
+
+template <class T, class U>
+struct is_member_pointer_helper<T U::*> : true_type {};
+
+template <class T>
+struct is_member_pointer
+    : is_member_pointer_helper<typename remove_cv<T>::type> {};
+
+template <class T>
+constexpr bool is_member_pointer_v = is_member_pointer<T>::value;
+
+template <class T>
+struct is_null_pointer : is_same<decltype(nullptr), remove_cv_t<T>> {};
+
+template <class T>
+constexpr bool is_null_pointer_v = is_null_pointer<T>::value;
+
+template <class T>
+struct is_scalar
+    : integral_constant<bool, is_arithmetic<T>::value || is_enum<T>::value ||
+                                  is_pointer<T>::value ||
+                                  is_member_pointer<T>::value ||
+                                  is_null_pointer<T>::value> {};
+
+template <class T>
+constexpr bool is_scalar_v = is_scalar<T>::value;
+
 namespace detail {
     template <typename T,
               bool = conditional<is_referenceable<T>::value,
@@ -522,6 +561,21 @@ constexpr auto is_complete_or_unbounded(type_identity<T>) -> true_type {
     return {};
 }
 
+template <typename, unsigned = 0>
+struct extent;
+
+template <typename>
+struct remove_all_extents;
+
+template <typename T>
+struct is_bounded_array : false_type {};
+
+template <typename T, ssize N>
+struct is_bounded_array<T[N]> : true_type {};
+
+template <typename T>
+constexpr bool is_bounded_array_v = is_bounded_array<T>::value;
+
 // __is_constructible is a GCC built-in.
 namespace detail {
     template <typename T, typename... Args>
@@ -545,6 +599,55 @@ template <typename T, typename>
 constexpr bool is_default_constructible_v = is_default_constructible<T>::value;
 template <typename T, typename>
 using is_default_constructible_t = typename is_default_constructible<T>::type;
+
+namespace detail {
+
+    struct try_destructor {
+        template <typename T, typename = decltype(declval<T&>().~T())>
+        static auto truth_value(int) -> meta::true_type;
+
+        template <typename T>
+        static auto truth_value(...) -> meta::false_type;
+    };
+
+    template <typename T>
+    struct is_destructible : public try_destructor {
+        using type = decltype(truth_value<T>(0));
+    };
+
+    template <typename T,
+              bool = is_void_v<T> || !is_bounded_array_v<T> ||
+                     is_function<T>::value,
+              bool = is_reference_v<T> || is_scalar_v<T>>
+    struct is_destructible_safe;
+
+    template <typename T>
+    struct is_destructible_safe<T, false, false>
+        : public is_destructible<typename remove_all_extents<T>::type>::type {};
+
+    template <typename T>
+    struct is_destructible_safe<T, true, false> : public false_type {};
+
+    template <typename T>
+    struct is_destructible_safe<T, false, true> : public true_type {};
+
+}  // namespace detail
+
+template <typename T>
+struct is_destructible : public detail::is_destructible_safe<T>::type {};
+
+template <class T>
+constexpr bool is_destructible_v = is_destructible<T>::value;
+
+template <typename T>
+struct is_trivially_destructible
+    // `__has_trivial_destructor()` is a GCC builtin.
+    : meta::integral_constant<bool, __has_trivial_destructor(T) &&
+                                        meta::is_destructible<T>::value> {};
+
+template <class T>
+constexpr bool is_trivially_destructible_v =
+    is_trivially_destructible<T>::value;
 
 // https://stackoverflow.com/a/31763111
 template <typename T, template <typename...> typename Template>
