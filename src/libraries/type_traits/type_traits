@@ -36,7 +36,7 @@ using void_t = void;
 
 template <typename T>
 struct add_cv {
-    using type = const volatile T;
+    using type = T const volatile;
 };
 
 template <typename T>
@@ -52,7 +52,7 @@ using add_const_t = typename add_const<T>::type;
 
 template <typename T>
 struct add_volatile {
-    using type = volatile T;
+    using type = T volatile;
 };
 
 template <typename T>
@@ -84,15 +84,15 @@ struct remove_cv {
     using type = T;
 };
 template <typename T>
-struct remove_cv<const T> {
+struct remove_cv<T const> {
     using type = T;
 };
 template <typename T>
-struct remove_cv<volatile T> {
+struct remove_cv<T volatile> {
     using type = T;
 };
 template <typename T>
-struct remove_cv<const volatile T> {
+struct remove_cv<T const volatile> {
     using type = T;
 };
 template <typename T>
@@ -148,20 +148,18 @@ struct remove_pointer : meta::detail::remove_pointer<T> {};
 template <typename T>
 using remove_pointer_t = typename remove_pointer<T>::type;
 
-/* integral_constant has no constructor, because a `*_v` suffix contributes less
- * noise than parentheses or curly braces. */
 template <typename T, T Value>
 struct integral_constant {
     static constexpr T value = Value;
     using type = integral_constant<T, Value>;
 };
-
-// clang-tidy falsely warns about this.
-template <typename T, T Value>                   // NOLINT
-constexpr T integral_constant<T, Value>::value;  // NOLINT
+template <typename T, T Value>
+constexpr auto integral_constant_v = integral_constant<T, Value>::value;
 
 template <bool Value>
 using bool_constant = integral_constant<bool, Value>;
+template <bool Value>
+constexpr auto bool_constant_v = bool_constant<Value>::value;
 
 using true_type = bool_constant<true>;
 constexpr bool true_type_v = true_type::value;
@@ -207,10 +205,14 @@ using is_base_of_t = typename is_base_of<T, U>::type;
 // `__is_union()` is a GNU builtin.
 template <typename T>
 struct is_union : public integral_constant<bool, __is_union(T)> {};
+template <typename T>
+constexpr bool is_union_v = is_union<T>::value;
 
 // `__is_class()` is a GNU builtin.
 template <typename T>
 struct is_class : public integral_constant<bool, __is_class(T)> {};
+template <typename T>
+constexpr bool is_class_v = is_class<T>::value;
 
 // `__is_literal_type()` is a GNU builtin.
 template <typename T>
@@ -342,7 +344,7 @@ template <typename T>
 using is_unsigned_t = typename is_unsigned<T>::type;
 
 template <typename T>
-struct is_void : is_same<void, typename remove_cv<T>::type> {};
+struct is_void : is_same<void, remove_cv_t<T>> {};
 template <typename T>
 constexpr bool is_void_v = is_void<T>::value;
 
@@ -401,7 +403,7 @@ struct remove_extent<T[]> {
 };
 
 template <typename T>
-struct is_function : public bool_constant<!is_const<const T>::value> {};
+struct is_function : public bool_constant<!is_const_v<T const>> {};
 
 template <typename T>
 struct is_function<T&> : false_type {};
@@ -411,20 +413,16 @@ struct is_function<T&&> : false_type {};
 
 template <typename T, typename = void>
 struct is_referenceable : false_type {};
-
 template <typename T>
 struct is_referenceable<T, void_t<T&>> : true_type {};
 
 template <typename T>
 struct is_member_pointer_helper : false_type {};
-
 template <typename T, typename U>
 struct is_member_pointer_helper<T U::*> : true_type {};
 
 template <typename T>
-struct is_member_pointer
-    : is_member_pointer_helper<typename remove_cv<T>::type> {};
-
+struct is_member_pointer : is_member_pointer_helper<remove_cv_t<T>> {};
 template <typename T>
 constexpr bool is_member_pointer_v = is_member_pointer<T>::value;
 
@@ -527,7 +525,7 @@ namespace detail {
               bool,
               (decltype(detail::returnable<To>(0))::value &&
                decltype(detail::implicitly_convertible<From, To>(0))::value) ||
-                  (meta::is_void<From>::value && meta::is_void<To>::value)> {};
+                  (meta::is_void_v<From> && meta::is_void_v<To>)> {};
 }  // namespace detail
 
 template <typename From, typename To>
@@ -584,10 +582,10 @@ constexpr bool is_scoped_enum_v = is_scoped_enum<T>::value;
 
 template <typename T>
 struct is_object
-    : meta::integral_constant<
-          bool, meta::is_scalar<T>::value || meta::is_array<T>::value ||
-                    meta::is_union<T>::value || meta::is_class<T>::value> {};
-
+    : meta::integral_constant<bool,
+                              meta::is_scalar_v<T> || meta::is_array_v<T> ||
+                                  meta::is_union_v<T> || meta::is_class_v<T>> {
+};
 template <typename T>
 constexpr bool is_object_v = is_object<T>::value;
 
@@ -667,20 +665,31 @@ struct is_trivially_default_constructible
 
 template <typename T>
 struct is_copy_constructible
-    : meta::is_constructible<T, typename meta::add_lvalue_reference<
-                                    typename meta::add_const<T>::type>::type> {
-};
+    : meta::is_constructible<
+          T, meta::add_lvalue_reference_t<meta::add_const_t<T>>> {};
 template <typename T>
 constexpr bool is_copy_constructible_v = is_copy_constructible<T>::value;
 
 template <typename T>
 struct is_trivially_copy_constructible
     : meta::is_trivially_constructible<
-          T, typename meta::add_lvalue_reference<
-                 typename meta::add_const<T>::type>::type> {};
+          T, meta::add_lvalue_reference_t<meta::add_const_t<T>>> {};
 template <typename T>
 constexpr bool is_trivially_copy_constructible_v =
     is_trivially_copy_constructible<T>::value;
+
+template <typename T>
+struct is_move_constructible
+    : meta::is_constructible<T, meta::add_rvalue_reference<T>> {};
+template <typename T>
+constexpr bool is_move_constructible_v = is_move_constructible<T>::value;
+
+template <typename T>
+struct is_trivially_move_constructible
+    : meta::is_trivially_constructible<T, meta::add_rvalue_reference_t<T>> {};
+template <typename T>
+constexpr bool is_trivially_move_constructible_v =
+    is_trivially_move_constructible<T>::value;
 
 namespace detail {
     struct try_destructor {
@@ -715,7 +724,6 @@ namespace detail {
 
 template <typename T>
 struct is_destructible : public detail::is_destructible_safe<T>::type {};
-
 template <typename T>
 constexpr bool is_destructible_v = is_destructible<T>::value;
 
@@ -723,11 +731,53 @@ constexpr bool is_destructible_v = is_destructible<T>::value;
 template <typename T>
 struct is_trivially_destructible
     : meta::integral_constant<bool, __has_trivial_destructor(T) &&
-                                        meta::is_destructible<T>::value> {};
-
+                                        meta::is_destructible_v<T>> {};
 template <typename T>
 constexpr bool is_trivially_destructible_v =
     is_trivially_destructible<T>::value;
+
+// `__is_assingable` is a GNU builtin.
+template <typename T, typename U>
+struct is_assignable : public bool_constant<__is_assignable(T, U)> {};
+template <typename T, typename U>
+constexpr bool is_assignable_v = is_assignable<T, U>::value;
+
+// `__is_trivially_assignable` is a GNU builtin.
+template <typename T, typename U>
+struct is_trivially_assignable
+    : public bool_constant<__is_trivially_assignable(T, U)> {};
+template <typename T, typename U>
+constexpr bool is_trivially_assignable_v = is_trivially_assignable<T, U>::value;
+
+template <typename T>
+struct is_copy_assignable
+    : meta::is_assignable<meta::add_lvalue_reference_t<T>,
+                          meta::add_lvalue_reference_t<T const>> {};
+template <typename T>
+constexpr bool is_copy_assignable_v = is_copy_assignable<T>::value;
+
+template <typename T>
+struct is_trivially_copy_assignable
+    : meta::is_trivially_assignable<meta::add_lvalue_reference_t<T>,
+                                    meta::add_lvalue_reference_t<T const>> {};
+template <typename T>
+constexpr bool is_trivially_copy_assignable_v =
+    is_trivially_copy_assignable<T>::value;
+
+template <typename T>
+struct is_move_assignable
+    : meta::is_assignable<meta::add_lvalue_reference_t<T>,
+                          meta::add_rvalue_reference_t<T>> {};
+template <typename T>
+constexpr bool is_move_assignable_v = is_move_assignable<T>::value;
+
+template <typename T>
+struct is_trivially_move_assignable
+    : meta::is_trivially_assignable<meta::add_lvalue_reference_t<T>,
+                                    meta::add_rvalue_reference_t<T>> {};
+template <typename T>
+constexpr bool is_trivially_move_assignable_v =
+    is_trivially_move_assignable<T>::value;
 
 // https://stackoverflow.com/a/31763111
 template <typename T, template <typename...> typename Template>
