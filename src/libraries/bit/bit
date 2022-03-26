@@ -26,17 +26,6 @@ auto invert_endianess(meta::integral auto value) {
     }
 }
 
-template <typename T>
-auto address_of(T& arg) -> T* requires(meta::is_object_v<T>) {
-    return reinterpret_cast<T*>(
-        &const_cast<char&>(reinterpret_cast<char const volatile&>(arg)));
-}
-
-template <typename T>
-auto address_of(T& arg) -> T* {
-    return &arg;
-}
-
 }  // namespace std
 
 constexpr auto operator""_ki(unsigned long long const input) -> long {

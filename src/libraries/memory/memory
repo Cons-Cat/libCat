@@ -25,6 +25,11 @@ void copy_memory(void const* p_source, void* p_destination, ssize bytes);
 
 void copy_memory_small(void const* p_source, void* p_destination, ssize bytes);
 
-auto is_aligned(void const volatile* pointer, ssize byte_alignment) -> bool1;
+auto is_aligned(void const volatile* p_pointer, ssize byte_alignment) -> bool1;
+
+template <typename T>
+constexpr auto address_of(T& value) -> T* {
+    __builtin_addressof(value);
+}
 
 }  // namespace std
