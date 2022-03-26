@@ -2,109 +2,200 @@
 // vim: set ft=cpp:
 #pragma once
 
-namespace std::detail {
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <utility>
 
-struct none {};
+namespace std::detail::maybe {
 
-}  // namespace std::detail
+// A `None` is consumed by a `Maybe` constructor to prevent initializing its
+// `value` member.
+struct None {};
 
-constexpr std::detail::none none;
+// A `Monostate` represents a `Maybe` that holds no `value`.
+struct Monostate {};
+
+}  // namespace std::detail::maybe
+
+inline constexpr std::detail::maybe::None none;
 
 /* TODO: Any is not a good solution to this, because it cannot hold values
  * larger than 8 bytes. That is an edge case issue, because you would never
  * actually use a sentinel if it is larger than 8 bytes. */
-template <Any value>
-struct Sentinel {
-    inline static auto failure_value = value;
-};
+// template <Any value>
+// struct Sentinel {
+//     inline static auto failure_value = value;
+// };
 
-/* In order to overload the template parameter list of a struct, specializing a
- * variadic template is required. */
-template <typename T, Sentinel...>
-struct Maybe {};
+// // In order to overload the template parameter list of a struct, specializing
+// a
+// // variadic template is required.
+// template <typename T, Sentinel...>
+// struct Maybe {};
 
 template <typename T>
-struct Maybe<T> {
+struct Maybe {
+    struct Dummy {};
+    union {
+        // `Dummy` is required so that `Maybe` can be initialized in a
+        // `constexpr` context, because a member union must have at least one
+        // initialized field, and it should not be `value`.
+        Dummy dummy;
+        T value;
+    };
+    bool1 has_some = false;
+
+    constexpr Maybe() requires(meta::is_default_constructible<T>::value) =
+        default;
+    constexpr Maybe() = delete;
+    constexpr Maybe(std::detail::maybe::None){};
+
+    // If other constructors are not conditionally specialized by their
+    // `requires`, they should be default.
+    constexpr Maybe(Maybe const& maybe) requires(
+        meta::is_copy_constructible_v<T>) = default;
+    constexpr Maybe(Maybe const& maybe) = delete;
+    constexpr Maybe(Maybe&& maybe) requires(meta::is_move_constructible_v<T>) =
+        default;
+    constexpr Maybe(Maybe&& maybe) = default;
+
+    // If other assignment operators are not conditionally specialized by their
+    // `requires`, they should be default or deleted.
+    auto operator=(Maybe const& maybe)
+        -> Maybe& requires(meta::is_copy_assignable_v<T>) = default;
+    auto operator=(Maybe const& maybe) -> Maybe& = delete;
+
+    auto operator=(Maybe&& maybe)
+        -> Maybe& requires(meta::is_move_assignable_v<T>) = default;
+    auto operator=(Maybe&& maybe) -> Maybe& = delete;
+
+    // If `T` is not trivially copy constructible, then manually construct it
+    // in-place.
+    constexpr Maybe(Maybe const& maybe) requires(
+        meta::is_trivially_copy_constructible_v<T> &&
+        !meta::is_trivially_copy_constructible_v<T>) {
+        if (maybe.has_value()) {
+            this->construct(maybe.get_value());
+        } else {
+            this->has_some = false;
+        }
+    }
+
+    // If `T` is not trivially copy assignable, then manually construct it
+    // in-place.
+    auto operator=(Maybe const& maybe)
+        -> Maybe& requires(meta::is_copy_assignable_v<T> &&
+                           !meta::is_trivially_copy_assignable_v<T>) {
+        this->assign(maybe);
+        return *this;
+    }
+
+    // If `T` is not trivially move constructible, then manually invoke
+    // `meta::move` on it.
+    Maybe(Maybe&& maybe) requires(meta::is_move_constructible_v<T> &&
+                                  !meta::is_trivially_move_constructible_v<T>) {
+        if (maybe.has_value()) {
+            this->construct(meta::move(maybe.get_value()));
+        } else {
+            this->has_some = false;
+        }
+    }
+
+    // If `T` is not trivially move assignable, then manually invoke
+    // `meta::move()` on it.
+    constexpr auto operator=(Maybe&& maybe)
+        -> Maybe& requires(meta::is_move_assignable_v<T> &&
+                           !meta::is_trivially_move_assignable_v<T>) {
+        this->assign(meta::move(maybe));
+        return *this;
+    }
+
+    // If `T` is not trivially destructible, then manually invoke its
+    // destructor.
+    constexpr ~Maybe() requires(!meta::is_trivially_destructible_v<T>) {
+        if (this->has_some) {
+            this->value.~T();
+        }
+    }
+
+    // Assigning `none` will destroy the held value.
+    auto operator=(std::detail::maybe::None) -> Maybe& {
+        if (this->has_value()) {
+            this->value.~T();
+            this->has_value = false;
+        }
+        return *this;
+    }
+
+    // Construct the value in-place and destroy the held value iff it exists.
+    template <typename... Args>
+    auto emplace(Args&&... args) -> T& {
+        *this = none;
+        this->construct(meta::forward<Args>(args)...);
+        return this->value;
+    }
+
+    // Get the state of this `Maybe` by testing whichever sentinel value or
+    // expression it is specialized with.
+    constexpr auto has_value() const -> bool1 {
+        return this->has_some;
+    }
+
+    // Get the held `value` unconditionally. If `has_value()` is `false`, this
+    // data is undefined. If this method is used in `-O0`, it will panic in that
+    // case, unless used in a `constexpr` context.
+    constexpr auto unwrap() {
+        if (meta::is_constant_evaluated()) {
+            return this->get_value();
+        }
+#ifdef __OPTIMIZE__
+        return this->get_value();
+#else
+        if (this->has_value()) {
+            return value;
+        }
+        std::print(
+            "`.unwrap()` was illegally called on a `Maybe` that did not hold a \
+value!\n")
+            .or_panic_debug();
+        std::exit(1);
+#endif
+    }
+
+    // Internal helper functions:
   private:
-    T const value;
-  public:
-    bool1 const has_some;
-
-    Maybe() = delete;
-    constexpr Maybe(std::detail::none) : value(), has_some(false) {
+    constexpr auto get_value() & -> T& {
+        return this->value;
     }
-    constexpr Maybe(T in_value) : value(in_value), has_some(false) {
+    constexpr auto get_value() const& -> T const& {
+        return this->value;
+    }
+    constexpr auto get_value() && -> T&& {
+        return meta::move(this->value);
+    }
+    constexpr auto get_value() const&& -> T&& {
+        return meta::move(this->value);
     }
 
-    constexpr auto or_return(T fallback_value) -> T {
-        if (has_some) {
-            return value;
+    // TODO: Factor into `std::construct_at()`.
+    template <typename... Args>
+    void construct(Args&&... args) {
+        new (std::address_of(this->value)) T(meta::forward<Args>(args)...);
+        this->has_some = true;
+    }
+
+    template <typename U>
+    constexpr void assign(U&& maybe) {
+        if (this->has_some) {
+            if (maybe.has_value()) {
+                this->value = meta::forward<U>(maybe).get_value();
+            } else {
+                this->value.~T();
+                this->has_some = false;
+            }
+        } else if (maybe.has_value()) {
+            this->construct(meta::forward<U>(maybe).get_value());
         }
-        return fallback_value;
-    }
-
-    /* If this object does not hold a value, the return of this function is
-     * undefined. When building -O0, this function panics if a value is not
-     * held. When optimizations are enabled, that safety check is elided. */
-    constexpr auto unsafe_value() -> T {
-#ifdef __OPTIMIZE__
-        return value;
-#else
-        if (has_some) {
-            return value;
-        }
-        // TODO: Error message.
-        std::exit(1);
-#endif
-    }
-
-    // TODO: Use an invocable concept.
-    constexpr auto and_then(auto callback) -> Maybe<T> {
-        if (has_some) {
-            return callback(value);
-        }
-        return none;
-    }
-};
-
-// TODO: Reduce excessive code duplication.
-template <typename T, Sentinel sentinel>
-struct Maybe<T, sentinel> {
-    T const value;
-
-    Maybe() = delete;
-    constexpr Maybe(std::detail::none) : value() {
-    }
-    constexpr Maybe(T in_value) : value(in_value) {
-    }
-
-    constexpr auto or_return(T fallback_value) -> T {
-        if (value != sentinel) {
-            return value;
-        }
-        return fallback_value;
-    }
-
-    /* If this object does not hold a value, the return of this function is
-     * undefined. When building -O0, this function panics if a value is not
-     * held. When optimizations are enabled, that safety check is elided. */
-    constexpr auto unsafe_value() -> T {
-#ifdef __OPTIMIZE__
-        return value;
-#else
-        if (value != sentinel) {
-            return value;
-        }
-        // TODO: Error message.
-        std::exit(1);
-#endif
-    }
-
-    // TODO: Use an invocable concept.
-    constexpr auto and_then(auto callback) -> Maybe<T, sentinel> {
-        if (value != sentinel) {
-            return callback(value);
-        }
-        return none;
     }
 };
