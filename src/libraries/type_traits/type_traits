@@ -13,8 +13,6 @@
 
 namespace meta {
 
-// TODO: Assess if a type_traits library is really necessary.
-
 namespace detail {
     template <typename T, typename U = T&&>
     auto declval(signed int) -> U;
@@ -182,7 +180,7 @@ struct conditional<false, T, F> {
 template <bool B, typename T, typename F>
 using conditional_t = typename conditional<B, T, F>::type;
 
-// __is_enum() is a GNU builtin.
+// `__is_enum()` is a GNU builtin.
 template <typename T>
 struct is_enum : public integral_constant<bool, __is_enum(T)> {};
 template <typename T>
@@ -190,7 +188,7 @@ constexpr bool is_enum_v = is_enum<T>::value;
 template <typename T>
 using is_enum_t = typename is_enum<T>::type;
 
-// __is_same() is a GNU builtin.
+// `__is_same()` is a GNU builtin.
 template <typename T, typename U>
 struct is_same : bool_constant<__is_same(T, U)> {};
 template <typename T, typename U>
@@ -198,7 +196,7 @@ using is_same_t = typename is_same<T, U>::type;
 template <typename T, typename U>
 constexpr bool is_same_v = is_same<T, U>::value;
 
-// __is_base_of() is a GNU builtin.
+// `__is_base_of()` is a GNU builtin.
 template <typename T, typename U>
 struct is_base_of : bool_constant<__is_base_of(T, U)> {};
 template <typename T, typename U>
@@ -206,18 +204,15 @@ constexpr bool is_base_of_v = is_base_of<T, U>::value;
 template <typename T, typename U>
 using is_base_of_t = typename is_base_of<T, U>::type;
 
-// __is_union() is a GNU builtin.
+// `__is_union()` is a GNU builtin.
 template <typename T>
 struct is_union : public integral_constant<bool, __is_union(T)> {};
 
-// __is_class() is a GNU builtin.
+// `__is_class()` is a GNU builtin.
 template <typename T>
 struct is_class : public integral_constant<bool, __is_class(T)> {};
 
-/* is_literal_type was removed in C++17, but it was not replaced by a
- * better alternative. The standards committee decided it was generally
- * not useful, but I disagree. */
-// __is_literal_type() is a GNU builtin.
+// `__is_literal_type()` is a GNU builtin.
 template <typename T>
 struct is_literal_type : public integral_constant<bool, __is_literal_type(T)> {
 };
@@ -296,7 +291,7 @@ namespace detail {
 
 template <typename T>
 struct is_integral : detail::is_integral<remove_cv_t<T>> {};
-// is_integral_v<> does not work, and I am not sure why.
+// TODO: `is_integral_v` does not work, and I am not sure why.
 template <typename T>
 constexpr bool is_integral_v = is_integral<T>::value;
 template <typename T>
@@ -504,6 +499,7 @@ struct decay {
 template <typename T>
 using decay_t = typename decay<T>::type;
 
+// `__underlying_type` is a GNU builtin.
 template <typename T>
 struct underlying_type {
     using type = __underlying_type(T);
@@ -633,8 +629,8 @@ struct is_bounded_array<T[N]> : true_type {};
 template <typename T>
 constexpr bool is_bounded_array_v = is_bounded_array<T>::value;
 
-// __is_constructible is a GCC built-in.
 namespace detail {
+    // `__is_constructible` is a GNU builtin.
     template <typename T, typename... Args>
     struct is_constructible : bool_constant<__is_constructible(T, Args...)> {};
 }  // namespace detail
@@ -648,9 +644,9 @@ constexpr bool is_constructible_v = is_constructible<T, Args...>::value;
 template <typename T, typename... Args>
 using is_constructible_t = typename is_constructible<T, Args...>::type;
 
+// `__is_trivially_constructible` is a GNU builtin.
 template <typename T, typename... Args>
 struct is_trivially_constructible
-    // `__is_trivially_constructible` is a GCC builtin.
     : public bool_constant<__is_trivially_constructible(T, Args...)> {};
 template <typename T, typename... Args>
 constexpr bool is_trivially_constructible_v =
@@ -687,7 +683,6 @@ constexpr bool is_trivially_copy_constructible_v =
     is_trivially_copy_constructible<T>::value;
 
 namespace detail {
-
     struct try_destructor {
         template <typename T, typename = decltype(declval<T&>().~T())>
         static auto truth_value(int) -> meta::true_type;
@@ -716,7 +711,6 @@ namespace detail {
 
     template <typename T>
     struct is_destructible_safe<T, false, true> : public true_type {};
-
 }  // namespace detail
 
 template <typename T>
@@ -725,9 +719,9 @@ struct is_destructible : public detail::is_destructible_safe<T>::type {};
 template <typename T>
 constexpr bool is_destructible_v = is_destructible<T>::value;
 
+// `__has_trivial_destructor()` is a GNU builtin.
 template <typename T>
 struct is_trivially_destructible
-    // `__has_trivial_destructor()` is a GCC builtin.
     : meta::integral_constant<bool, __has_trivial_destructor(T) &&
                                         meta::is_destructible<T>::value> {};
 
