@@ -38,8 +38,8 @@ using ssize = int long long;
  * be assigned to any variable. */
 namespace std::detail {
 
-struct [[maybe_unused]] unused {
-    // Any type can be converted into `unused`, except for `Result`s.
+struct [[maybe_unused]] Unused {
+    // Any type can be converted into an `Unused`, except for `Result`.
     template <typename T>
     constexpr void operator=(T const&) requires(
         !meta::is_specialization<T, Result>::value) {
@@ -50,5 +50,7 @@ struct [[maybe_unused]] unused {
 
 }  // namespace std::detail
 
-// TODO: Ensure that this static global is zero-overhead.
-[[maybe_unused]] static std::detail::unused _;
+// `_` can consume any value to explicitly disregard a ``[[nodiscard]]``
+// attribute from a function with side effects. Consuming a `Result` value is
+// not possible.
+[[maybe_unused]] inline std::detail::Unused _;
