@@ -9,5 +9,5 @@ void meow() {
     allocator[0] = 10;
     Result(allocator[0] == 10).or_panic();
 
-    std::exit();
+    cat::exit();
 };

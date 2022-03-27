@@ -6,14 +6,14 @@
 #include <memory>
 #include <utility>
 
-namespace std {
+namespace cat {
 
 template <typename T = ssize>
 constexpr auto string_length(char const* p_string) -> T;
 
-}  // namespace std
+}  // namespace cat
 
-// Deprecated call to `memcpy()`. Consider using `std::copy_buffer()` instead.
+// Deprecated call to `memcpy()`. Consider using `cat::copy_buffer()` instead.
 // This uses a non-idiomatic type `size_t` to be semantically equivalent with
 // libC.
 auto memcpy(void* p_destination, void const* p_source, size_t bytes) -> void*;
@@ -23,9 +23,9 @@ struct StringView {
     ssize length;
 
     constexpr StringView() = default;
-    // TODO: Confirm that `std::string_length()` can be constant-folded by GCC.
+    // TODO: Confirm that `cat::string_length()` can be constant-folded by GCC.
     constexpr StringView(char const* p_string)
-        : p_data(p_string), length(std::string_length(p_string)){};
+        : p_data(p_string), length(cat::string_length(p_string)){};
     constexpr StringView(char const* p_string, ssize in_length)
         : p_data(p_string), length(in_length){};
     constexpr StringView(StringView const&& string)
@@ -37,7 +37,7 @@ struct StringView {
     }
 };
 
-namespace std {
+namespace cat {
 
 auto compare_strings(StringView const& string_1, StringView const& string_2)
     -> bool1;
@@ -51,6 +51,6 @@ auto print_line(StringView const& string) -> Result<>;
 
 // TODO: Make a comparison function for null-terminated string pointers.
 
-}  // namespace std
+}  // namespace cat
 
 #include "./implementations/string_length.tpp"

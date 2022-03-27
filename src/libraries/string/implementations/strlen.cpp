@@ -1,10 +1,10 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-#include <stdint.h>
+#include <catint.h>
 #include <string>
 
 [[deprecated(
-    "strlen() is deprecated! Use std::string_length<T>() instead.")]] auto
+    "strlen() is deprecated! Use cat::string_length<T>() instead.")]] auto
 strlen(char const* p_string) -> size_t {
-    return std::string_length<size_t>(p_string);
+    return cat::string_length<size_t>(p_string);
 }

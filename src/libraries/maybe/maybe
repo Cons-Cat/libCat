@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace std::detail {
+namespace cat::detail {
 
 // A `None` is consumed by a `Maybe` constructor to prevent initializing its
 // `value` member.
@@ -16,18 +16,15 @@ struct None {};
 // A `Monostate` represents a `Maybe` that holds no `value`.
 struct Monostate {};
 
-}  // namespace std::detail
+}  // namespace cat::detail
 
-inline constexpr std::detail::None none;
+inline constexpr cat::detail::None none;
 
 template <typename T, T sentinel>
 struct Sentinel {};
 
 template <typename T, auto predicate, T sentinel>
 struct Predicate {};
-
-// template <typename...>
-// class Maybe;
 
 template <typename T>
 class Maybe {
@@ -51,7 +48,7 @@ class Maybe {
     //     default;
     // constexpr Maybe() = delete;
     constexpr Maybe() = default;
-    constexpr Maybe(std::detail::None){};
+    constexpr Maybe(cat::detail::None){};
 
     constexpr Maybe(Maybe const& maybe) requires(
         meta::is_copy_constructible_v<T>) = default;
@@ -134,7 +131,7 @@ class Maybe {
     }
 
     // Assigning `none` will destroy the held value.
-    auto operator=(std::detail::None) -> Maybe& {
+    auto operator=(cat::detail::None) -> Maybe& {
         if (this->has_some) {
             this->value.~T();
             this->has_some = false;
@@ -188,11 +185,11 @@ class Maybe {
         if (this->has_value()) {
             return this->get_value();
         }
-        std::print(
+        cat::print(
             "`.unwrap()` was illegally called on a `Maybe` which did not hold a \
 value!\n")
             .or_panic_debug();
-        std::exit(1);
+        cat::exit(1);
 #endif
         __builtin_unreachable();
     }
@@ -212,11 +209,11 @@ value!\n")
     // Internal helper functions:
   protected:
     // Construct an object at the address of the held `value`.
-    // TODO: Factor into `std::construct_at()`.
+    // TODO: Factor into `cat::construct_at()`.
     template <typename... Args>
     void construct(Args&&... args) {
         // TODO: Get this working.
-        // new (std::address_of(this->value)) T(meta::forward<Args>(args)...);
+        // new (cat::address_of(this->value)) T(meta::forward<Args>(args)...);
         this->value = T(meta::forward<Args>(args)...);
         this->has_some = true;
     }
@@ -259,27 +256,27 @@ class Maybe<T&> {
     ~Maybe() = default;
 
     template <typename U = T>
-    constexpr Maybe(U&& in_value) : p_value(std::address_of(in_value)){};
+    constexpr Maybe(U&& in_value) : p_value(cat::address_of(in_value)){};
 
     template <typename U>
     constexpr explicit Maybe(Maybe<U> const& maybe)
         : p_value(maybe.get_value()){};
 
     constexpr Maybe(T& maybe) requires(meta::is_reference_v<T>)
-        : p_value(std::address_of(maybe)){};
+        : p_value(cat::address_of(maybe)){};
 
-    constexpr Maybe(std::detail::None) : p_value(nullptr){};
+    constexpr Maybe(cat::detail::None) : p_value(nullptr){};
 
     // Rebind the reference if this is assigned a new value.
     constexpr auto operator=(T& maybe) -> T& {
-        this->value = std::address_of(maybe);
+        this->value = cat::address_of(maybe);
         return *this;
     }
 
     constexpr auto operator=(Maybe const& maybe) -> Maybe<T&>& = default;
 
     // Invalidate the reference if this is assigned `none`.
-    constexpr auto operator=(std::detail::None) -> Maybe<T&>& {
+    constexpr auto operator=(cat::detail::None) -> Maybe<T&>& {
         this->p_value = nullptr;
         return *this;
     }
@@ -294,11 +291,11 @@ class Maybe<T&> {
         if (this->has_value()) {
             return *(this->p_value);
         }
-        std::print(
+        cat::print(
             "`.unwrap()` was illegally called on a `Maybe` which did not hold a \
 value!\n")
             .or_panic_debug();
-        std::exit(1);
+        cat::exit(1);
 #endif
     }
 
@@ -324,13 +321,13 @@ class Maybe<Sentinel<T, sentinel>> {
         : value(maybe.get_value()){};
 
     constexpr Maybe(T& maybe) requires(meta::is_reference_v<T>)
-        : value(std::address_of(maybe)){};
+        : value(cat::address_of(maybe)){};
 
-    constexpr Maybe(std::detail::None) : value(sentinel){};
+    constexpr Maybe(cat::detail::None) : value(sentinel){};
 
     // Rebind the reference if this is assigned a new value.
     constexpr auto operator=(T& maybe) -> T& {
-        this->value = std::address_of(maybe);
+        this->value = cat::address_of(maybe);
         return *this;
     }
 
@@ -338,7 +335,7 @@ class Maybe<Sentinel<T, sentinel>> {
         -> Maybe<Sentinel<T, sentinel>>& = default;
 
     // Invalidate the reference if this is assigned `none`.
-    constexpr auto operator=(std::detail::None)
+    constexpr auto operator=(cat::detail::None)
         -> Maybe<Sentinel<T, sentinel>>& {
         this->value = sentinel;
         return *this;
@@ -354,11 +351,11 @@ class Maybe<Sentinel<T, sentinel>> {
         if (this->has_value()) {
             return *(this->value);
         }
-        std::print(
+        cat::print(
             "`.unwrap()` was illegally called on a `Maybe` which did not hold a \
 value!\n")
             .or_panic_debug();
-        std::exit(1);
+        cat::exit(1);
 #endif
     }
 
@@ -387,14 +384,14 @@ class Maybe<Predicate<T, predicate, sentinel>> {
 
     constexpr Maybe(T& maybe) requires(!predicate(sentinel) &&
                                        meta::is_reference_v<T>)
-        : value(std::address_of(maybe)){};
+        : value(cat::address_of(maybe)){};
 
-    constexpr Maybe(std::detail::None) requires(!predicate(sentinel))
+    constexpr Maybe(cat::detail::None) requires(!predicate(sentinel))
         : value(sentinel){};
 
     // Rebind the reference if this is assigned a new value.
     constexpr auto operator=(T& maybe) -> T& {
-        this->value = std::address_of(maybe);
+        this->value = cat::address_of(maybe);
         return *this;
     }
 
@@ -402,7 +399,7 @@ class Maybe<Predicate<T, predicate, sentinel>> {
         -> Maybe<Predicate<T, predicate, sentinel>>& = default;
 
     // Invalidate the reference if this is assigned `none`.
-    constexpr auto operator=(std::detail::None)
+    constexpr auto operator=(cat::detail::None)
         -> Maybe<Predicate<T, predicate, sentinel>>& {
         this->value = sentinel;
         return *this;
@@ -418,11 +415,11 @@ class Maybe<Predicate<T, predicate, sentinel>> {
         if (this->has_value()) {
             return *(this->value);
         }
-        std::print(
+        cat::print(
             "`.unwrap()` was illegally called on a `Maybe` which did not hold a \
 value!\n")
             .or_panic_debug();
-        std::exit(1);
+        cat::exit(1);
 #endif
     }
 

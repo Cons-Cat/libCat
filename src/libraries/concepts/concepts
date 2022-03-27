@@ -5,7 +5,7 @@
 #include <any>
 #include <type_traits>
 
-/* To enhance legibility, I have prefixed type traits with std::, whereas
+/* To enhance legibility, I have prefixed type traits with cat::, whereas
  * concepts have no prefix. */
 
 // TODO: Remove usage of type_traits as much as possible.

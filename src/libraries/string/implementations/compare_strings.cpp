@@ -2,7 +2,7 @@
 #include <limits>
 #include <string>
 
-auto std::compare_strings(StringView const& string_1,
+auto cat::compare_strings(StringView const& string_1,
                           StringView const& string_2) -> bool1 {
     if (string_1.length != string_2.length) {
         return false;
@@ -35,7 +35,7 @@ auto std::compare_strings(StringView const& string_1,
             }
 
             for (ssize i = 0; i < size; i++) {
-                if (results[i] != std::numeric_limits<uint4>::max()) {
+                if (results[i] != cat::numeric_limits<uint4>::max()) {
                     return false;
                 }
             }

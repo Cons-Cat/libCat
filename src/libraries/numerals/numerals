@@ -23,7 +23,7 @@ constexpr auto decay_numeral(auto from) {
 
 }  // namespace meta
 
-namespace std::detail {
+namespace cat::detail {
 
 /* SafeNumeral<> is the most interesting part of <stdint.h>. libCat uses
  * this struct to represent all of its scalar numerical data types.
@@ -55,25 +55,25 @@ struct SafeNumeral {
     constexpr SafeNumeral() = default;
     // Any number that is smaller than this can safely cast into it.
     constexpr SafeNumeral(auto from) requires(
-        std::is_signed_v<T> ==
-            std::is_signed_v<decltype(decay_numeral(from))> &&
+        cat::is_signed_v<T> ==
+            cat::is_signed_v<decltype(decay_numeral(from))> &&
         sizeof(T) >= sizeof(decltype(decay_numeral(from))) &&
-        std::is_floating_point_v<T> ==
-            std::is_floating_point_v<decltype(decay_numeral(from))>) {
+        cat::is_floating_point_v<T> ==
+            cat::is_floating_point_v<decltype(decay_numeral(from))>) {
         this->data = decay_numeral(from);
     }
     // TODO: Make a concept that limits signed-ness and size.
-    constexpr operator std::int_or_float auto() const {
+    constexpr operator cat::int_or_float auto() const {
         return this->data;
     };
 
         /* TODO: Putting concepts or constexpr functions in these requires
          * clauses doesn't work, for some reason. */
 #define REQUIRES_HELPER                                                       \
-    std::is_signed_v<T> == std::is_signed_v<decltype(decay_numeral(from))> && \
+    cat::is_signed_v<T> == cat::is_signed_v<decltype(decay_numeral(from))> && \
         sizeof(T) >= sizeof(decltype(decay_numeral(from))) &&                 \
-        std::is_floating_point_v<T> ==                                        \
-            std::is_floating_point_v<decltype(decay_numeral(from))>
+        cat::is_floating_point_v<T> ==                                        \
+            cat::is_floating_point_v<decltype(decay_numeral(from))>
 
     auto operator=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
         this->data = decay_numeral(from);
@@ -193,23 +193,23 @@ struct SafeNumeral {
     }
 };
 
-}  // namespace std::detail
+}  // namespace cat::detail
 
 // These macros are defined by the GCC compiler.
-using int1 = std::detail::SafeNumeral<__INT8_TYPE__>;
-using uint1 = std::detail::SafeNumeral<__UINT8_TYPE__>;
-using int2 = std::detail::SafeNumeral<__INT16_TYPE__>;
-using uint2 = std::detail::SafeNumeral<__UINT16_TYPE__>;
-using int4 = std::detail::SafeNumeral<__INT32_TYPE__>;
-using uint4 = std::detail::SafeNumeral<__UINT32_TYPE__>;
-using int8 = std::detail::SafeNumeral<__INT64_TYPE__>;
-using uint8 = std::detail::SafeNumeral<__UINT64_TYPE__>;
-// using i128 = std::detail::SafeNumeral<int128_t>;
-// using u128 = std::detail::SafeNumeral<uint128_t>;
+using int1 = cat::detail::SafeNumeral<__INT8_TYPE__>;
+using uint1 = cat::detail::SafeNumeral<__UINT8_TYPE__>;
+using int2 = cat::detail::SafeNumeral<__INT16_TYPE__>;
+using uint2 = cat::detail::SafeNumeral<__UINT16_TYPE__>;
+using int4 = cat::detail::SafeNumeral<__INT32_TYPE__>;
+using uint4 = cat::detail::SafeNumeral<__UINT32_TYPE__>;
+using int8 = cat::detail::SafeNumeral<__INT64_TYPE__>;
+using uint8 = cat::detail::SafeNumeral<__UINT64_TYPE__>;
+// using i128 = cat::detail::SafeNumeral<int128_t>;
+// using u128 = cat::detail::SafeNumeral<uint128_t>;
 
 // These are GCC built-in types:
-using float4 = std::detail::SafeNumeral<float>;
-using float8 = std::detail::SafeNumeral<double>;
+using float4 = cat::detail::SafeNumeral<float>;
+using float8 = cat::detail::SafeNumeral<double>;
 #else
 
 namespace meta {

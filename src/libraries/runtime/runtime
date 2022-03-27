@@ -43,9 +43,9 @@
 
 extern "C" [[gnu::used]] void _start();  // NOLINT
 
-// The `std::exit()` function is provided globally. This streamlines out the
+// The `cat::exit()` function is provided globally. This streamlines out the
 // existence of `_exit()`.
-namespace std {
+namespace cat {
 
 extern "C" [[gnu::used]] void exit(ssize exit_code = 0);
 
@@ -63,4 +63,4 @@ auto load_base_stack_pointer() -> void*;
 
 extern "C" void __stack_chk_fail();  // NOLINT
 
-}  // namespace std
+}  // namespace cat

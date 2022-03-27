@@ -20,5 +20,5 @@ void meow(int argc, char* argv[]) {
     }
 
     socket.close().or_panic();
-    std::exit();
+    cat::exit();
 }

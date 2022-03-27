@@ -26,6 +26,7 @@ set(
   ${CAT_SRC}/libraries/network/
   ${CAT_SRC}/libraries/x/
   ${CAT_SRC}/libraries/bit/
+  ${CAT_SRC}/libraries/numeric_limits/
   PARENT_SCOPE
 )
 

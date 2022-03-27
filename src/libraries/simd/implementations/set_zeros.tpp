@@ -6,7 +6,7 @@ consteval auto simd::set_zeros() -> T {
     // TODO: Is there a cleverer way to do this? Variadic templates?
     // Probably an integer_sequence.
     using ScalarType = typename T::ScalarType;
-    using VectorType = std::detail::SimdVector<ScalarType, T::width>;
+    using VectorType = cat::detail::SimdVector<ScalarType, T::width>;
     using IntrinsicType = decltype(VectorType::value);
 
     if constexpr (T::width == 2) {
