@@ -14,9 +14,7 @@ constexpr auto string_length(char const* p_string) -> T;
 }  // namespace cat
 
 // Deprecated call to `memcpy()`. Consider using `cat::copy_buffer()` instead.
-// This uses a non-idiomatic type `size_t` to be semantically equivalent with
-// libC.
-auto memcpy(void* p_destination, void const* p_source, size_t bytes) -> void*;
+auto memcpy(void* p_destination, void const* p_source, usize bytes) -> void*;
 
 struct StringView {
     char const* p_data;
