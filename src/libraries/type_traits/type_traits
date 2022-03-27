@@ -620,12 +620,15 @@ struct remove_all_extents;
 
 template <typename T>
 struct is_bounded_array : false_type {};
-
 template <typename T, ssize N>
 struct is_bounded_array<T[N]> : true_type {};
-
 template <typename T>
 constexpr bool is_bounded_array_v = is_bounded_array<T>::value;
+
+template <typename T>
+struct is_unbounded_array : true_type {};
+template <typename T, ssize N>
+struct is_unbounded_array<T[N]> : false_type {};
 
 namespace detail {
     // `__is_constructible` is a GNU builtin.
@@ -635,7 +638,7 @@ namespace detail {
 
 template <typename T, typename... Args>
 struct is_constructible : detail::is_constructible<T, Args...> {
-    static_assert(is_complete_or_unbounded(type_identity<T>{}));
+    // static_assert(is_complete_or_unbounded(type_identity<T>{}));
 };
 template <typename T, typename... Args>
 constexpr bool is_constructible_v = is_constructible<T, Args...>::value;
@@ -701,37 +704,41 @@ namespace detail {
     };
 
     template <typename T>
-    struct is_destructible : public try_destructor {
+    struct is_destructible_base : public try_destructor {
         using type = decltype(truth_value<T>(0));
     };
 
     template <typename T,
-              bool = is_void_v<T> || !is_bounded_array_v<T> ||
-                     is_function<T>::value,
-              bool = is_reference_v<T> || is_scalar_v<T>>
-    struct is_destructible_safe;
+              bool = conditional_t<is_void_v<T>, is_unbounded_array<T>,
+                                   is_function<T>>::value,
+              bool = conditional_t<is_reference_v<T>, is_reference<T>,
+                                   is_scalar<T>>::value>
+    struct is_destructible;
 
     template <typename T>
-    struct is_destructible_safe<T, false, false>
-        : public is_destructible<typename remove_all_extents<T>::type>::type {};
+    struct is_destructible<T, false, false>
+        : public is_destructible_base<
+              typename remove_all_extents<T>::type>::type {};
 
     template <typename T>
-    struct is_destructible_safe<T, true, false> : public false_type {};
+    struct is_destructible<T, true, false> : public false_type {};
 
     template <typename T>
-    struct is_destructible_safe<T, false, true> : public true_type {};
+    struct is_destructible<T, false, true> : public true_type {};
 }  // namespace detail
 
 template <typename T>
-struct is_destructible : public detail::is_destructible_safe<T>::type {};
+struct is_destructible : public detail::is_destructible<T>::type {};
 template <typename T>
 constexpr bool is_destructible_v = is_destructible<T>::value;
 
 // `__has_trivial_destructor()` is a GNU builtin.
 template <typename T>
 struct is_trivially_destructible
-    : meta::integral_constant<bool, __has_trivial_destructor(T) &&
-                                        meta::is_destructible_v<T>> {};
+    : public conditional_t<is_destructible_v<T>,
+                           bool_constant<__has_trivial_destructor(T)>,
+                           is_destructible<T>> {};
+
 template <typename T>
 constexpr bool is_trivially_destructible_v =
     is_trivially_destructible<T>::value;
