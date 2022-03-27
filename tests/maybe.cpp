@@ -1,4 +1,3 @@
-#include <cstdlib>
 #include <maybe>
 
 // TODO: Use `Result<>` asserts.
@@ -34,12 +33,48 @@ void meow() {
     Maybe<int4&> goo_2 = none;
     Maybe<int4&> boo = myint;
     goo = boo;
+
+    if (!goo.has_value()) {
+        std::exit(1);
+    }
+
     goo = none;
 
     if (goo.has_value()) {
         std::exit(1);
     }
     if (goo_2.has_value()) {
+        std::exit(1);
+    }
+
+    // Maybe with predicate.
+    Maybe<Predicate<int4,
+                    [](int4 input) -> bool {
+                        return input >= 0;
+                    },
+                    -1>>
+        positive;
+    if (positive.has_value()) {
+        std::exit(1);
+    }
+
+    positive = -10;
+    if (positive.has_value()) {
+        std::exit(1);
+    }
+
+    positive = 0;
+    if (!positive.has_value()) {
+        std::exit(1);
+    }
+
+    positive = 10;
+    if (!positive.has_value()) {
+        std::exit(1);
+    }
+
+    positive = none;
+    if (positive.has_value()) {
         std::exit(1);
     }
 

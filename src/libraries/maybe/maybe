@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace std::detail::maybe {
+namespace std::detail {
 
 // A `None` is consumed by a `Maybe` constructor to prevent initializing its
 // `value` member.
@@ -16,14 +16,14 @@ struct None {};
 // A `Monostate` represents a `Maybe` that holds no `value`.
 struct Monostate {};
 
-}  // namespace std::detail::maybe
+}  // namespace std::detail
 
-inline constexpr std::detail::maybe::None none;
+inline constexpr std::detail::None none;
 
 template <typename T, T sentinel>
 struct Sentinel {};
 
-template <typename T, auto predicate>
+template <typename T, auto predicate, T sentinel>
 struct Predicate {};
 
 // template <typename...>
@@ -51,7 +51,7 @@ class Maybe {
     //     default;
     // constexpr Maybe() = delete;
     constexpr Maybe() = default;
-    constexpr Maybe(std::detail::maybe::None){};
+    constexpr Maybe(std::detail::None){};
 
     constexpr Maybe(Maybe const& maybe) requires(
         meta::is_copy_constructible_v<T>) = default;
@@ -134,7 +134,7 @@ class Maybe {
     }
 
     // Assigning `none` will destroy the held value.
-    auto operator=(std::detail::maybe::None) -> Maybe& {
+    auto operator=(std::detail::None) -> Maybe& {
         if (this->has_some) {
             this->value.~T();
             this->has_some = false;
@@ -258,17 +258,17 @@ class Maybe<T&> {
     Maybe() = default;
     ~Maybe() = default;
 
-    template <class U = T>
+    template <typename U = T>
     constexpr Maybe(U&& in_value) : p_value(std::address_of(in_value)){};
 
-    template <class U>
+    template <typename U>
     constexpr explicit Maybe(Maybe<U> const& maybe)
         : p_value(maybe.get_value()){};
 
     constexpr Maybe(T& maybe) requires(meta::is_reference_v<T>)
         : p_value(std::address_of(maybe)){};
 
-    constexpr Maybe(std::detail::maybe::None) : p_value(nullptr){};
+    constexpr Maybe(std::detail::None) : p_value(nullptr){};
 
     // Rebind the reference if this is assigned a new value.
     constexpr auto operator=(T& maybe) -> T& {
@@ -279,7 +279,7 @@ class Maybe<T&> {
     constexpr auto operator=(Maybe const& maybe) -> Maybe<T&>& = default;
 
     // Invalidate the reference if this is assigned `none`.
-    constexpr auto operator=(std::detail::maybe::None) -> Maybe<T&>& {
+    constexpr auto operator=(std::detail::None) -> Maybe<T&>& {
         this->p_value = nullptr;
         return *this;
     }
@@ -304,5 +304,129 @@ value!\n")
 
     constexpr auto has_value() const -> bool1 {
         return this->p_value != nullptr;
+    }
+};
+
+template <typename T, T sentinel>
+class Maybe<Sentinel<T, sentinel>> {
+    T value = sentinel;
+  public:
+    Maybe() = default;
+    ~Maybe() = default;
+
+    template <typename U = T>
+    constexpr Maybe(U&& in_value) requires(meta::is_same_v<U, T> ||
+                                           meta::is_convertible_v<U, T>)
+        : value(in_value){};
+
+    template <typename U>
+    constexpr explicit Maybe(Maybe<Sentinel<U, sentinel>> const& maybe)
+        : value(maybe.get_value()){};
+
+    constexpr Maybe(T& maybe) requires(meta::is_reference_v<T>)
+        : value(std::address_of(maybe)){};
+
+    constexpr Maybe(std::detail::None) : value(sentinel){};
+
+    // Rebind the reference if this is assigned a new value.
+    constexpr auto operator=(T& maybe) -> T& {
+        this->value = std::address_of(maybe);
+        return *this;
+    }
+
+    constexpr auto operator=(Maybe const& maybe)
+        -> Maybe<Sentinel<T, sentinel>>& = default;
+
+    // Invalidate the reference if this is assigned `none`.
+    constexpr auto operator=(std::detail::None)
+        -> Maybe<Sentinel<T, sentinel>>& {
+        this->value = sentinel;
+        return *this;
+    }
+
+    constexpr auto unwrap() -> T& {
+        if (meta::is_constant_evaluated()) {
+            return *(this->value);
+        }
+#ifdef __OPTIMIZE__
+        return *(this->value);
+#else
+        if (this->has_value()) {
+            return *(this->value);
+        }
+        std::print(
+            "`.unwrap()` was illegally called on a `Maybe` which did not hold a \
+value!\n")
+            .or_panic_debug();
+        std::exit(1);
+#endif
+    }
+
+    constexpr auto has_value() const -> bool1 {
+        return this->value != sentinel;
+    }
+};
+
+template <typename T, auto predicate, T sentinel>
+class Maybe<Predicate<T, predicate, sentinel>> {
+    T value = sentinel;
+  public:
+    Maybe() requires(!predicate(sentinel)) = default;
+    ~Maybe() = default;
+
+    template <typename U = T>
+    constexpr Maybe(U&& in_value) requires(!predicate(sentinel) &&
+                                           (meta::is_same_v<U, T> ||
+                                            meta::is_convertible_v<U, T>))
+        : value(in_value){};
+
+    template <typename U>
+    constexpr explicit Maybe(Maybe<Predicate<U, predicate, sentinel>> const&
+                                 maybe) requires(!predicate(sentinel))
+        : value(maybe.get_value()){};
+
+    constexpr Maybe(T& maybe) requires(!predicate(sentinel) &&
+                                       meta::is_reference_v<T>)
+        : value(std::address_of(maybe)){};
+
+    constexpr Maybe(std::detail::None) requires(!predicate(sentinel))
+        : value(sentinel){};
+
+    // Rebind the reference if this is assigned a new value.
+    constexpr auto operator=(T& maybe) -> T& {
+        this->value = std::address_of(maybe);
+        return *this;
+    }
+
+    constexpr auto operator=(Maybe const& maybe)
+        -> Maybe<Predicate<T, predicate, sentinel>>& = default;
+
+    // Invalidate the reference if this is assigned `none`.
+    constexpr auto operator=(std::detail::None)
+        -> Maybe<Predicate<T, predicate, sentinel>>& {
+        this->value = sentinel;
+        return *this;
+    }
+
+    constexpr auto unwrap() -> T& {
+        if (meta::is_constant_evaluated()) {
+            return *(this->value);
+        }
+#ifdef __OPTIMIZE__
+        return *(this->value);
+#else
+        if (this->has_value()) {
+            return *(this->value);
+        }
+        std::print(
+            "`.unwrap()` was illegally called on a `Maybe` which did not hold a \
+value!\n")
+            .or_panic_debug();
+        std::exit(1);
+#endif
+    }
+
+    constexpr auto has_value() const -> bool1 {
+        return predicate(this->value);
     }
 };
