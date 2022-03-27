@@ -637,9 +637,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T, typename... Args>
-struct is_constructible : detail::is_constructible<T, Args...> {
-    // static_assert(is_complete_or_unbounded(type_identity<T>{}));
-};
+struct is_constructible : detail::is_constructible<T, Args...> {};
 template <typename T, typename... Args>
 constexpr bool is_constructible_v = is_constructible<T, Args...>::value;
 template <typename T, typename... Args>
@@ -654,13 +652,7 @@ constexpr bool is_trivially_constructible_v =
     is_trivially_constructible<T, Args...>::value;
 
 template <typename T>
-struct is_default_constructible : detail::is_constructible<T>::type {
-    static_assert(is_complete_or_unbounded(type_identity<T>{}));
-};
-// template <typename T, typename>
-// constexpr bool is_default_constructible_v =
-// is_default_constructible<T>::value; template <typename T, typename> using
-// is_default_constructible_t = typename is_default_constructible<T>::type;
+struct is_default_constructible : detail::is_constructible<T>::type {};
 
 template <typename T>
 struct is_trivially_default_constructible
