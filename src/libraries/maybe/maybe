@@ -20,27 +20,22 @@ struct Monostate {};
 
 inline constexpr std::detail::maybe::None none;
 
-/* TODO: Any is not a good solution to this, because it cannot hold values
- * larger than 8 bytes. That is an edge case issue, because you would never
- * actually use a sentinel if it is larger than 8 bytes. */
-// template <Any value>
-// struct Sentinel {
-//     inline static auto failure_value = value;
-// };
+template <typename T, T sentinel>
+struct Sentinel {};
 
-// // In order to overload the template parameter list of a struct, specializing
-// a
-// // variadic template is required.
-// template <typename T, Sentinel...>
-// struct Maybe {};
+template <typename T, auto predicate>
+struct Predicate {};
+
+// template <typename...>
+// class Maybe;
 
 template <typename T>
 class Maybe {
     struct Dummy {};
     union {
         // `Dummy` is required so that `Maybe` can be initialized in a
-        // `constexpr` context, because a member union must have at least one
-        // initialized field, and it should not be `value`.
+        // `constexpr` context, because a member union must have at least
+        // one initialized field, and it should not be `value`.
         Dummy dummy;
         T value;
     };
@@ -51,9 +46,11 @@ class Maybe {
   public:
     // If constructors are not conditionally specialized by their
     // `requires`, they should be `default` or deleted.
-    constexpr Maybe() requires(meta::is_default_constructible<T>::value) =
-        default;
-    constexpr Maybe() = delete;
+    // constexpr Maybe() requires(meta::is_default_constructible<T>::value)
+    // =
+    //     default;
+    // constexpr Maybe() = delete;
+    constexpr Maybe() = default;
     constexpr Maybe(std::detail::maybe::None){};
 
     constexpr Maybe(Maybe const& maybe) requires(
@@ -63,15 +60,9 @@ class Maybe {
         default;
     constexpr Maybe(Maybe&& maybe) = default;
 
-    // If other assignment operators are not conditionally specialized by their
+    // If other destructors are not conditionally specialized by their
     // `requires`, they should be `default` or deleted.
-    auto operator=(Maybe const& maybe)
-        -> Maybe& requires(meta::is_copy_assignable_v<T>) = default;
-    auto operator=(Maybe const& maybe) -> Maybe& = delete;
-
-    auto operator=(Maybe&& maybe)
-        -> Maybe& requires(meta::is_move_assignable_v<T>) = default;
-    auto operator=(Maybe&& maybe) -> Maybe& = delete;
+    constexpr ~Maybe() = default;
 
     // If `T` is not trivially copy constructible, then manually construct it
     // in-place.
@@ -85,15 +76,6 @@ class Maybe {
         }
     }
 
-    // If `T` is not trivially copy assignable, then manually construct it
-    // in-place.
-    auto operator=(Maybe const& maybe)
-        -> Maybe& requires(meta::is_copy_assignable_v<T> &&
-                           !meta::is_trivially_copy_assignable_v<T>) {
-        this->assign(maybe);
-        return *this;
-    }
-
     // If `T` is not trivially move constructible, then manually invoke
     // `meta::move` on it.
     Maybe(Maybe&& maybe) requires(meta::is_move_constructible_v<T> &&
@@ -105,6 +87,43 @@ class Maybe {
         }
     }
 
+    // If `T` is not trivially destructible, then manually invoke its
+    // destructor.
+    constexpr ~Maybe() requires(!meta::is_trivially_destructible_v<T>) {
+        if (this->has_some) {
+            this->value.~T();
+        }
+    }
+
+    // TODO: Handle non-trivial `U`.
+    // If a `Maybe` consumes a `T` or a type that is convertible to `T`, it
+    // should be constructed.
+    template <typename U = T>
+    constexpr Maybe(U in_value) requires(meta::is_same_v<U, T> ||
+                                         meta::is_convertible_v<U, T>) {
+        this->value = in_value;
+        this->has_some = true;
+    }
+
+    // If other assignment operators are not conditionally specialized by their
+    // `requires`, they should be `default` or deleted.
+    auto operator=(Maybe const& maybe)
+        -> Maybe& requires(meta::is_copy_assignable_v<T>) = default;
+    auto operator=(Maybe const& maybe) -> Maybe& = delete;
+
+    auto operator=(Maybe&& maybe)
+        -> Maybe& requires(meta::is_move_assignable_v<T>) = default;
+    auto operator=(Maybe&& maybe) -> Maybe& = delete;
+
+    // If `T` is not trivially copy assignable, then manually construct it
+    // in-place.
+    auto operator=(Maybe const& maybe)
+        -> Maybe& requires(meta::is_copy_assignable_v<T> &&
+                           !meta::is_trivially_copy_assignable_v<T>) {
+        this->assign(maybe);
+        return *this;
+    }
+
     // If `T` is not trivially move assignable, then manually invoke
     // `meta::move()` on it.
     constexpr auto operator=(Maybe&& maybe)
@@ -114,33 +133,52 @@ class Maybe {
         return *this;
     }
 
-    // If `T` is not trivially destructible, then manually invoke its
-    // destructor.
-    constexpr ~Maybe() requires(!meta::is_trivially_destructible_v<T>) {
-        if (this->has_some) {
-            this->value.~T();
-        }
-    }
-
     // Assigning `none` will destroy the held value.
     auto operator=(std::detail::maybe::None) -> Maybe& {
-        if (this->has_value()) {
+        if (this->has_some) {
             this->value.~T();
-            this->has_value = false;
+            this->has_some = false;
         }
         return *this;
     }
 
-    // Get the state of this `Maybe` by testing whichever sentinel value or
-    // expression it is specialized with.
-    constexpr auto has_value() const -> bool1 {
-        return this->has_some;
+    // If `T`, or a type that is convertible to `T`, is assigned to this,
+    // then replace a potentially held value.
+    template <typename U = T>
+    auto operator=(U&& in_value)
+        -> Maybe<T>& requires(meta::is_same_v<U, T> ||
+                              meta::is_convertible_v<U, T>) {
+        if (this->has_value()) {
+            this->value = meta::forward<U>(in_value);
+        } else {
+            this->construct(meta::forward<U>(in_value));
+        }
+        return *this;
+    }
+
+    // If a `Maybe` is assigned to this which wraps a type that can be
+    // converted, then convert that `Maybe` to this type implicitly.
+    template <typename U>
+    auto operator=(Maybe<U> const& maybe)
+        -> Maybe<T>& requires(meta::is_convertible_v<U, T>) {
+        if (this->has_some) {
+            if (maybe.has_value()) {
+                this->value = *maybe;
+            } else {
+                this->value.~T();
+                this->has_some = false;
+            }
+        }
+        if (maybe.has_value()) {
+            this->construct(*maybe);
+        }
+        return *this;
     }
 
     // Get the held `value` unconditionally. If `has_value()` is `false`, this
     // data is undefined. If this method is used in `-O0`, it will panic in that
     // case, unless used in a `constexpr` context.
-    constexpr auto unwrap() {
+    constexpr auto unwrap() -> T {
         if (meta::is_constant_evaluated()) {
             return this->get_value();
         }
@@ -148,7 +186,7 @@ class Maybe {
         return this->get_value();
 #else
         if (this->has_value()) {
-            return value;
+            return this->get_value();
         }
         std::print(
             "`.unwrap()` was illegally called on a `Maybe` which did not hold a \
@@ -156,6 +194,7 @@ value!\n")
             .or_panic_debug();
         std::exit(1);
 #endif
+        __builtin_unreachable();
     }
 
     // Construct the value in-place and destroy the held value iff it exists.
@@ -166,8 +205,22 @@ value!\n")
         return this->value;
     }
 
+    constexpr auto has_value() const -> bool1 {
+        return this->has_some;
+    }
+
     // Internal helper functions:
-  private:
+  protected:
+    // Construct an object at the address of the held `value`.
+    // TODO: Factor into `std::construct_at()`.
+    template <typename... Args>
+    void construct(Args&&... args) {
+        // TODO: Get this working.
+        // new (std::address_of(this->value)) T(meta::forward<Args>(args)...);
+        this->value = T(meta::forward<Args>(args)...);
+        this->has_some = true;
+    }
+
     constexpr auto get_value() & -> T& {
         return this->value;
     }
@@ -181,16 +234,9 @@ value!\n")
         return meta::move(this->value);
     }
 
-    // TODO: Factor into `std::construct_at()`.
-    template <typename... Args>
-    void construct(Args&&... args) {
-        new (std::address_of(this->value)) T(meta::forward<Args>(args)...);
-        this->has_some = true;
-    }
-
     template <typename U>
     constexpr void assign(U&& maybe) {
-        if (this->has_some) {
+        if (this->has_value()) {
             if (maybe.has_value()) {
                 this->value = meta::forward<U>(maybe).get_value();
             } else {
@@ -210,21 +256,30 @@ class Maybe<T&> {
     T* p_value = nullptr;
   public:
     Maybe() = default;
-    Maybe(T&&) = delete;
+    ~Maybe() = default;
+
+    template <class U = T>
+    constexpr Maybe(U&& in_value) : p_value(std::address_of(in_value)){};
+
+    template <class U>
+    constexpr explicit Maybe(Maybe<U> const& maybe)
+        : p_value(maybe.get_value()){};
 
     constexpr Maybe(T& maybe) requires(meta::is_reference_v<T>)
         : p_value(std::address_of(maybe)){};
 
-    constexpr Maybe(std::detail::maybe::None){};
+    constexpr Maybe(std::detail::maybe::None) : p_value(nullptr){};
 
     // Rebind the reference if this is assigned a new value.
     constexpr auto operator=(T& maybe) -> T& {
-        this->p_value = std::address_of(maybe);
+        this->value = std::address_of(maybe);
         return *this;
     }
 
+    constexpr auto operator=(Maybe const& maybe) -> Maybe<T&>& = default;
+
     // Invalidate the reference if this is assigned `none`.
-    constexpr auto operator=(std::detail::maybe::None) -> T& {
+    constexpr auto operator=(std::detail::maybe::None) -> Maybe<T&>& {
         this->p_value = nullptr;
         return *this;
     }
@@ -245,5 +300,9 @@ value!\n")
             .or_panic_debug();
         std::exit(1);
 #endif
+    }
+
+    constexpr auto has_value() const -> bool1 {
+        return this->p_value != nullptr;
     }
 };
