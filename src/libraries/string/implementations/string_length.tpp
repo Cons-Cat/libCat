@@ -9,7 +9,7 @@
  * unsigned. This function requires SSE4.2, unless it is used in a `constexpr`
  * context. */
 template <typename T>
-constexpr auto std::string_length(char const* p_string) -> T {
+constexpr auto cat::string_length(char const* p_string) -> T {
     if (meta::is_constant_evaluated()) {
         T result = 0;
         while (true) {

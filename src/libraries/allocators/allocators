@@ -30,7 +30,7 @@ concept allocator = requires(T allocator, ssize input) {
 // TODO: Add a random_access concept and a random_access_allocator concept.
 
 /* Some concepts from the STL are not supported, for various reasons.
- * `std::destructable` is not useful without exception handling. */
+ * `cat::destructable` is not useful without exception handling. */
 
 struct PageAllocator {
     void* address = nullptr;

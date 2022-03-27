@@ -9,7 +9,7 @@
 constexpr bool1 is_little_endian = true;
 constexpr bool1 is_big_endian = !is_little_endian;
 
-namespace std {
+namespace cat {
 
 auto invert_endianess(meta::integral auto value) {
     if constexpr (sizeof(value) == 1) {
@@ -26,7 +26,7 @@ auto invert_endianess(meta::integral auto value) {
     }
 }
 
-}  // namespace std
+}  // namespace cat
 
 constexpr auto operator""_ki(unsigned long long const input) -> long {
     return static_cast<long>(1024 * input);

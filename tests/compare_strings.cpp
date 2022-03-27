@@ -18,25 +18,25 @@ void meow() {
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
     // Test a succesful string pointer case.
-    if (!std::compare_strings(p_string_1, p_string_2)) {
-        std::exit(1);
+    if (!cat::compare_strings(p_string_1, p_string_2)) {
+        cat::exit(1);
     }
 
     // Test a succesful string view case.
-    if (!std::compare_strings(string_1, string_2)) {
-        std::exit(1);
+    if (!cat::compare_strings(string_1, string_2)) {
+        cat::exit(1);
     }
 
     // Test a succesful large string case.
-    if (!std::compare_strings(long_string_1, long_string_2)) {
+    if (!cat::compare_strings(long_string_1, long_string_2)) {
         // TODO: Fix this failing test!
-        // std::exit(1);
+        // cat::exit(1);
     }
 
     // Test a failure case.
-    if (std::compare_strings(string_1, string_3)) {
-        std::exit(1);
+    if (cat::compare_strings(string_1, string_3)) {
+        cat::exit(1);
     }
 
-    std::exit();
+    cat::exit();
 }

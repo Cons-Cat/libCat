@@ -1,0 +1,37 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+namespace cat {
+
+template <typename T>
+struct numeric_limits {
+    consteval static auto max() {
+        if constexpr (meta::is_same_v<T, int1>) {
+            return 127;
+        }
+        if constexpr (meta::is_same_v<T, int2>) {
+            return 32'767;
+        }
+        if constexpr (meta::is_same_v<T, int4>) {
+            return 2'147'483'647;
+        }
+        if constexpr (meta::is_same_v<T, int8>) {
+            return 9'223'372'036'854'775'807;
+        }
+        if constexpr (meta::is_same_v<T, uint1>) {
+            return 255u;
+        }
+        if constexpr (meta::is_same_v<T, uint2>) {
+            return 65'535u;
+        }
+        if constexpr (meta::is_same_v<T, uint4>) {
+            return 4'294'967'295u;
+        }
+        if constexpr (meta::is_same_v<T, uint8>) {
+            return 18'446'744'073'709'551'615u;
+        }
+    }
+};
+
+}  // namespace cat

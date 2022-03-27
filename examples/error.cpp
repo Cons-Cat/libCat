@@ -15,5 +15,5 @@ void meow() {
     result_factory(MyErrors::ok).or_panic();
     // This will always panic:
     result_factory(MyErrors::fail).or_panic();
-    std::exit();
+    cat::exit();
 }

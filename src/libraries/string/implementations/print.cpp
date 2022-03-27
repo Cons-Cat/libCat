@@ -2,6 +2,6 @@
 #include <result>
 #include <string>
 
-auto std::print(StringView const& string) -> Result<> {
+auto cat::print(StringView const& string) -> Result<> {
     return nix::write(1, string.p_data, string.length);
 }

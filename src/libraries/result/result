@@ -68,18 +68,18 @@ struct [[nodiscard]] Failure {
     }
 };
 
-namespace std::detail {
+namespace cat::detail {
 struct Okay {};
-}  // namespace std::detail
+}  // namespace cat::detail
 
 // `okay` may be returned in a function that returns `Result<void>`.
-constexpr std::detail::Okay okay{};
+constexpr cat::detail::Okay okay{};
 
 // These forward declarations are necessary for `Result`.
 template <typename T>
 struct Result;
 struct StringView;
-namespace std {
+namespace cat {
 auto print_line(StringView const&) -> Result<>;
 }
 
@@ -162,7 +162,7 @@ struct [[nodiscard]] Result {
                 return;
             }
         }
-        std::exit(1);
+        cat::exit(1);
         __builtin_unreachable();  // This prevents a build warning.
     }
 
@@ -176,8 +176,8 @@ struct [[nodiscard]] Result {
                 return;
             }
         }
-        std::print_line(p_error_message).discard_result();
-        std::exit(1);
+        cat::print_line(p_error_message).discard_result();
+        cat::exit(1);
         __builtin_unreachable();  // This prevents a build warning.
     }
 
@@ -195,7 +195,7 @@ struct [[nodiscard]] Result {
                     return;
                 }
             }
-            std::exit(1);
+            cat::exit(1);
 #endif
         }
         // Unconditionally return `value`.
@@ -221,8 +221,8 @@ struct [[nodiscard]] Result {
                     return;
                 }
             }
-            std::print_line(error_message).discard_result();
-            std::exit(1);
+            cat::print_line(error_message).discard_result();
+            cat::exit(1);
 #endif
         }
         // Unconditionally return `value`.

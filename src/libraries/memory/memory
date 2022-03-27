@@ -18,7 +18,7 @@ struct Raii : T {
     }
 };
 
-namespace std {
+namespace cat {
 
 void copy_memory(void const* p_source, void* p_destination, ssize bytes);
 
@@ -26,7 +26,7 @@ void copy_memory_small(void const* p_source, void* p_destination, ssize bytes);
 
 auto is_aligned(void const volatile* p_pointer, ssize byte_alignment) -> bool1;
 
-// `std::address_of()` should be used instead of a `&` for containers that might
+// `cat::address_of()` should be used instead of a `&` for containers that might
 // hold a generic object, because this will produce correct results even if a
 // `&` prefix operator has been overloaded.
 template <typename T>
@@ -34,4 +34,4 @@ constexpr auto address_of(T& value) -> T* {
     return __builtin_addressof(value);
 }
 
-}  // namespace std
+}  // namespace cat

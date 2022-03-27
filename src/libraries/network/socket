@@ -66,7 +66,7 @@ struct SocketUnix {
     auto connect() -> Result<> {
         return nix::connect_socket(
             this->descriptor, this,
-            sizeof(attributes) + std::string_length(static_cast<char const*>(
+            sizeof(attributes) + cat::string_length(static_cast<char const*>(
                                      static_cast<void*>(&this->path_name))));
     }
 

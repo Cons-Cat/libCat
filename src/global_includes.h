@@ -36,7 +36,7 @@ using ssize = int long long;
 
 /* libCat provides a `_` variable that consumes a function's output, but cannot
  * be assigned to any variable. */
-namespace std::detail {
+namespace cat::detail {
 
 struct [[maybe_unused]] Unused {
     // Any type can be converted into an `Unused`, except for `Result`.
@@ -48,9 +48,9 @@ struct [[maybe_unused]] Unused {
     operator auto() = delete;
 };
 
-}  // namespace std::detail
+}  // namespace cat::detail
 
 // `_` can consume any value to explicitly disregard a ``[[nodiscard]]``
 // attribute from a function with side effects. Consuming a `Result` value is
 // not possible.
-[[maybe_unused]] inline std::detail::Unused _;
+[[maybe_unused]] inline cat::detail::Unused _;

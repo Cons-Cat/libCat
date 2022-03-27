@@ -4,10 +4,10 @@
 
 // TODO: Make integers consistently signed.
 /* Copy some bytes from one address to another address. */
-void std::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
+void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
     // Vector is the width of a 32-byte AVX register.
     // `long long int` is required for some SIMD intrinsics.
-    using VectorType = std::detail::SimdVector<long long int, 4>;
+    using VectorType = cat::detail::SimdVector<long long int, 4>;
 
     unsigned char const* p_source_handle =
         meta::bit_cast<unsigned char const*>(p_source);
@@ -17,7 +17,7 @@ void std::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
     ssize padding;
 
     if (bytes <= 256) {
-        std::copy_memory_small(p_source, p_destination, bytes);
+        cat::copy_memory_small(p_source, p_destination, bytes);
     }
 
     // Align source, destination, and bytes to 16 bytes
@@ -75,6 +75,6 @@ void std::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
         simd::sfence();
     }
 
-    std::copy_memory_small(p_source_handle, p_destination_handle, bytes);
+    cat::copy_memory_small(p_source_handle, p_destination_handle, bytes);
     simd::zero_upper_avx_registers();
 }  // namespace simd

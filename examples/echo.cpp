@@ -11,5 +11,5 @@ void meow(int argc, char* argv[]) {
         nix::write(1, argv[i], length + 1).discard_result();
     }
     nix::write(1, "\n", 1).discard_result();
-    std::exit();
+    cat::exit();
 }

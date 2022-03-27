@@ -28,16 +28,16 @@ void meow() {
 
             StringView input = message_buffer.to_string();
 
-            if (std::compare_strings(input, "exit")) {
-                std::print_line("Exiting.").or_panic();
+            if (cat::compare_strings(input, "exit")) {
+                cat::print_line("Exiting.").or_panic();
                 exit = true;
                 break;
             }
 
-            if (!std::compare_strings(input, "")) {
-                std::print("Recieved: ").or_panic();
-                std::print_line(input).or_panic();
-                // TODO: `std::set_memory()` or something is needed to zero-out
+            if (!cat::compare_strings(input, "")) {
+                cat::print("Recieved: ").or_panic();
+                cat::print_line(input).or_panic();
+                // TODO: `cat::set_memory()` or something is needed to zero-out
                 // `message_buffer` here.
                 break;
             }
@@ -47,5 +47,5 @@ void meow() {
     recieving_socket.close().or_panic();
     listening_socket.close().or_panic();
     nix::unlink(listening_socket.path_name.value).or_panic();
-    std::exit();
+    cat::exit();
 }

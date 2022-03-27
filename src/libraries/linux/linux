@@ -144,7 +144,7 @@ enum class WaitOptionsFlags : long int {
 auto read(FileDescriptor const file_descriptor, char const* p_string_buffer,
           ssize const string_length) -> Result<ssize>;
 
-// `write()` forwards its arguments to a failable stdout syscall. It returns
+// `write()` forwards its arguments to a failable catout syscall. It returns
 // the number of bytes that it wrote.
 auto write(FileDescriptor const file_descriptor, char const* p_string_buffer,
            ssize const string_length) -> Result<ssize>;

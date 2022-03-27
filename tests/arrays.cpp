@@ -22,5 +22,5 @@ void meow() {
     };
     meta::constant_evaluate(constant);
 
-    std::exit();
+    cat::exit();
 };

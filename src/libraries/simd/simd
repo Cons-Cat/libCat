@@ -16,7 +16,7 @@
 
 #include <type_traits>
 
-namespace std::detail {
+namespace cat::detail {
 
 // TODO: This comment is not currently accurate:
 /* Vectors have weak alignment by default. It is up to users at call-site to
@@ -84,80 +84,80 @@ struct alignas(4) SimdVector {
     }
 };
 
-}  // namespace std::detail
+}  // namespace cat::detail
 
 // Vectors of up to 32 1-byte integers are supported by AVX2.
-using int1x2 = std::detail::SimdVector<int1, 2>;
-using int1x4 = std::detail::SimdVector<int1, 4>;
-using int1x8 = std::detail::SimdVector<int1, 8>;
-using int1x16 = std::detail::SimdVector<int1, 16>;
-using int1x32 = std::detail::SimdVector<int1, 32>;
-using uint1x2 = std::detail::SimdVector<uint1, 2>;
-using uint1x4 = std::detail::SimdVector<uint1, 4>;
-using uint1x8 = std::detail::SimdVector<uint1, 8>;
-using uint1x16 = std::detail::SimdVector<uint1, 16>;
-using uint1x32 = std::detail::SimdVector<uint1, 32>;
+using int1x2 = cat::detail::SimdVector<int1, 2>;
+using int1x4 = cat::detail::SimdVector<int1, 4>;
+using int1x8 = cat::detail::SimdVector<int1, 8>;
+using int1x16 = cat::detail::SimdVector<int1, 16>;
+using int1x32 = cat::detail::SimdVector<int1, 32>;
+using uint1x2 = cat::detail::SimdVector<uint1, 2>;
+using uint1x4 = cat::detail::SimdVector<uint1, 4>;
+using uint1x8 = cat::detail::SimdVector<uint1, 8>;
+using uint1x16 = cat::detail::SimdVector<uint1, 16>;
+using uint1x32 = cat::detail::SimdVector<uint1, 32>;
 
 /* Strings need their own vectors because uint1 and int1 are incompatible with
  * some intrinsic functions.*/
-using charx2 = std::detail::SimdVector<char, 2>;
-using charx4 = std::detail::SimdVector<char, 4>;
-using charx8 = std::detail::SimdVector<char, 8>;
-using charx16 = std::detail::SimdVector<char, 16>;
-using charx32 = std::detail::SimdVector<char, 32>;
+using charx2 = cat::detail::SimdVector<char, 2>;
+using charx4 = cat::detail::SimdVector<char, 4>;
+using charx8 = cat::detail::SimdVector<char, 8>;
+using charx16 = cat::detail::SimdVector<char, 16>;
+using charx32 = cat::detail::SimdVector<char, 32>;
 
 // Vectors of up to 16 2-byte integers are supported by AVX2.
-using int2x2 = std::detail::SimdVector<int2, 2>;
-using int2x4 = std::detail::SimdVector<int2, 4>;
-using int2x8 = std::detail::SimdVector<int2, 8>;
-using int2x16 = std::detail::SimdVector<int2, 16>;
-using uint2x2 = std::detail::SimdVector<uint2, 2>;
-using uint2x4 = std::detail::SimdVector<uint2, 4>;
-using uint2x8 = std::detail::SimdVector<uint2, 8>;
-using uint2x16 = std::detail::SimdVector<uint2, 16>;
+using int2x2 = cat::detail::SimdVector<int2, 2>;
+using int2x4 = cat::detail::SimdVector<int2, 4>;
+using int2x8 = cat::detail::SimdVector<int2, 8>;
+using int2x16 = cat::detail::SimdVector<int2, 16>;
+using uint2x2 = cat::detail::SimdVector<uint2, 2>;
+using uint2x4 = cat::detail::SimdVector<uint2, 4>;
+using uint2x8 = cat::detail::SimdVector<uint2, 8>;
+using uint2x16 = cat::detail::SimdVector<uint2, 16>;
 
 // Vectors of up to 8 4-byte integers are supported by AVX2.
-using int4x2 = std::detail::SimdVector<int4, 2>;
-using int4x4 = std::detail::SimdVector<int4, 4>;
-using int4x8 = std::detail::SimdVector<int4, 8>;
-using uint4x2 = std::detail::SimdVector<uint4, 2>;
-using uint4x4 = std::detail::SimdVector<uint4, 4>;
-using uint4x8 = std::detail::SimdVector<uint4, 8>;
+using int4x2 = cat::detail::SimdVector<int4, 2>;
+using int4x4 = cat::detail::SimdVector<int4, 4>;
+using int4x8 = cat::detail::SimdVector<int4, 8>;
+using uint4x2 = cat::detail::SimdVector<uint4, 2>;
+using uint4x4 = cat::detail::SimdVector<uint4, 4>;
+using uint4x8 = cat::detail::SimdVector<uint4, 8>;
 
 // Vectors of up to 4 8-byte integers are supported by AVX2.
-using int8x2 = std::detail::SimdVector<int8, 2>;
-using int8x4 = std::detail::SimdVector<int8, 4>;
-using uint8x2 = std::detail::SimdVector<uint8, 2>;
-using uint8x4 = std::detail::SimdVector<uint8, 4>;
+using int8x2 = cat::detail::SimdVector<int8, 2>;
+using int8x4 = cat::detail::SimdVector<int8, 4>;
+using uint8x2 = cat::detail::SimdVector<uint8, 2>;
+using uint8x4 = cat::detail::SimdVector<uint8, 4>;
 
 // Vectors of up to 8 4-byte floats are supported by AVX2.
-using float4x2 = std::detail::SimdVector<float4, 2>;
-using float4x4 = std::detail::SimdVector<float4, 4>;
-using float4x8 = std::detail::SimdVector<float4, 8>;
+using float4x2 = cat::detail::SimdVector<float4, 2>;
+using float4x4 = cat::detail::SimdVector<float4, 4>;
+using float4x8 = cat::detail::SimdVector<float4, 8>;
 
 // TODO: Evaluate what support for 8-byte ints exists in x86-64.
 //
 // Vectors of up to 4 8-byte floats are supported by AVX2.
-using float8x2 = std::detail::SimdVector<float8, 2>;
-using float8x4 = std::detail::SimdVector<float8, 4>;
+using float8x2 = cat::detail::SimdVector<float8, 2>;
+using float8x4 = cat::detail::SimdVector<float8, 4>;
 
 // Vectors of up to 32 1-byte bools are supported by AVX2.
-using bool1x2 = std::detail::SimdVector<bool1, 2>;
-using bool1x4 = std::detail::SimdVector<bool1, 4>;
-using bool1x8 = std::detail::SimdVector<bool1, 8>;
-using bool1x16 = std::detail::SimdVector<bool1, 16>;
-using bool1x32 = std::detail::SimdVector<bool1, 32>;
+using bool1x2 = cat::detail::SimdVector<bool1, 2>;
+using bool1x4 = cat::detail::SimdVector<bool1, 4>;
+using bool1x8 = cat::detail::SimdVector<bool1, 8>;
+using bool1x16 = cat::detail::SimdVector<bool1, 16>;
+using bool1x32 = cat::detail::SimdVector<bool1, 32>;
 
 // Vectors of up to 16 2-byte bools are supported by AVX2.
-using bool2x2 = std::detail::SimdVector<bool2, 2>;
-using bool2x4 = std::detail::SimdVector<bool2, 4>;
-using bool2x8 = std::detail::SimdVector<bool2, 8>;
-using bool2x16 = std::detail::SimdVector<bool2, 16>;
+using bool2x2 = cat::detail::SimdVector<bool2, 2>;
+using bool2x4 = cat::detail::SimdVector<bool2, 4>;
+using bool2x8 = cat::detail::SimdVector<bool2, 8>;
+using bool2x16 = cat::detail::SimdVector<bool2, 16>;
 
 // Vectors of up to 8 4-byte bools are supported by AVX2.
-using bool4x2 = std::detail::SimdVector<bool4, 2>;
-using bool4x4 = std::detail::SimdVector<bool4, 4>;
-using bool4x8 = std::detail::SimdVector<bool4, 8>;
+using bool4x2 = cat::detail::SimdVector<bool4, 2>;
+using bool4x4 = cat::detail::SimdVector<bool4, 4>;
+using bool4x8 = cat::detail::SimdVector<bool4, 8>;
 
 namespace simd {
 
@@ -194,7 +194,7 @@ auto shuffle(auto in_vector, auto mask);
 // TODO: Make this const-correct.
 template <uint4 Width>
 constexpr auto p_string_to_p_vector(meta::string auto p_string) {
-    using U = std::detail::SimdVector<char, Width>;
+    using U = cat::detail::SimdVector<char, Width>;
     return meta::bit_cast<U*>(p_string);
 }
 
@@ -233,7 +233,7 @@ template <typename T>
 auto move_mask(T vector) -> int4 {
     if constexpr (sizeof(typename T::ScalarType) == 1) {
         return __builtin_ia32_pmovmskb256(
-            meta::bit_cast<std::detail::SimdVector<char, vector.width>>(vector)
+            meta::bit_cast<cat::detail::SimdVector<char, vector.width>>(vector)
                 .value);
     } else {
         // TODO: Support additional vector sizes.
