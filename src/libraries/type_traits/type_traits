@@ -169,16 +169,16 @@ constexpr bool true_type_v = true_type::value;
 using false_type = bool_constant<false>;
 constexpr bool false_type_v = false_type::value;
 
-template <bool Condition, typename T, typename Functions>
+template <bool Condition, typename T, typename Function>
 struct conditional {
     using type = T;
 };
-template <typename T, typename Functions>
-struct conditional<false, T, Functions> {
-    using type = Functions;
+template <typename T, typename Function>
+struct conditional<false, T, Function> {
+    using type = Function;
 };
-template <bool B, typename T, typename Functions>
-using conditional_t = typename conditional<B, T, Functions>::type;
+template <bool B, typename T, typename Function>
+using conditional_t = typename conditional<B, T, Function>::type;
 
 // `__is_enum()` is a GNU builtin.
 template <typename T>
@@ -800,14 +800,12 @@ constexpr auto forward(meta::remove_reference_t<T>&& input)
 // TODO: Figure out how to make this return `bool1`.
 constexpr auto is_constant_evaluated() -> bool;
 
-consteval auto constant_evaluate(auto value);
-
 namespace detail {
     template <typename T>
     struct invoke {
-        template <typename Functions, typename... Args>
-        static auto call(Functions&& f, Args&&... args)
-            -> decltype(meta::forward<Functions>(f)(
+        template <typename Function, typename... Args>
+        static auto call(Function&& f, Args&&... args)
+            -> decltype(meta::forward<Function>(f)(
                 meta::forward<Args>(args)...));
     };
 
@@ -831,10 +829,10 @@ namespace detail {
             -> decltype(*(invoke::get(meta::forward<T>(t)).p_function));
     };
 
-    template <typename Functions, typename... Args,
-              typename Fd = typename meta::decay<Functions>::type>
-    auto try_invoke(Functions&& f, Args&&... args)
-        -> decltype(invoke<Fd>::call(meta::forward<Functions>(f),
+    template <typename Function, typename... Args,
+              typename Fd = typename meta::decay<Function>::type>
+    auto try_invoke(Function&& f, Args&&... args)
+        -> decltype(invoke<Fd>::call(meta::forward<Function>(f),
                                      meta::forward<Args>(args)...));
 
     template <typename AlwaysVoid, typename, typename...>
@@ -849,8 +847,11 @@ namespace detail {
     };
 }  // namespace detail
 
-template <typename Functions, typename... ArgTypes>
-struct invoke_result : detail::invoke_result<void, Functions, ArgTypes...> {};
+template <typename Function, typename... ArgTypes>
+struct invoke_result : detail::invoke_result<void, Function, ArgTypes...> {};
+
+template <typename Function, typename... ArgTypes>
+using invoke_result_t = typename invoke_result<Function, ArgTypes...>::type;
 
 namespace detail {
     template <typename T, typename U, bool = is_void<U>::value, typename = void>
@@ -878,13 +879,28 @@ namespace detail {
     };
 }  // namespace detail
 
-template <typename Functions, typename... ArgTypes>
+template <typename Function, typename... ArgTypes>
 struct is_invocable
-    : detail::is_invocable<invoke_result<Functions, ArgTypes...>, void>::type {
-};
-template <typename Functions, typename... Args>
-constexpr bool is_invocable_v = meta::is_invocable<Functions, Args...>::value;
+    : detail::is_invocable<invoke_result<Function, ArgTypes...>, void>::type {};
+template <typename Function, typename... Args>
+constexpr bool is_invocable_v = meta::is_invocable<Function, Args...>::value;
+
+template <typename Function, typename... Args>
+constexpr auto invoke(Function&& f, Args&&... args)
+    -> invoke_result_t<Function, Args...> {
+    // TODO: Handle member functions.
+    return meta::forward<Function>(f)(meta::forward<Args>(args)...);
+}
+
+template <typename Function>
+consteval auto constant_evaluate(auto value) requires(
+    meta::is_invocable_v<Function>);
+
+consteval auto constant_evaluate(auto value);
 
 }  // namespace meta
 
+#include "./implementations/constant_evaluate.tpp"
 #include "./implementations/forward.tpp"
+#include "./implementations/is_constant_evaluated.tpp"
+#include "./implementations/move.tpp"

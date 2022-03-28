@@ -4,6 +4,7 @@
 
 #include <concepts>
 #include <memory>
+#include <type_traits>
 #include <utility>
 
 namespace cat {
@@ -20,6 +21,12 @@ struct StringView {
     char const* p_data;
     ssize length;
 
+    template <ssize Length>
+    consteval StringView(char const (&str)[Length]) {
+        this->p_data = str;
+        this->length = Length;
+    }
+
     constexpr StringView() = default;
     // TODO: Confirm that `cat::string_length()` can be constant-folded by GCC.
     constexpr StringView(char const* p_string)
@@ -30,8 +37,8 @@ struct StringView {
         : p_data(string.p_data), length(string.length){};
 
     auto operator=(StringView string) {
-        p_data = string.p_data;
-        length = string.length;
+        this->p_data = string.p_data;
+        this->length = string.length;
     }
 };
 
