@@ -22,14 +22,13 @@ struct StringView {
     ssize length;
 
     template <ssize Length>
-    consteval StringView(char const (&str)[Length]) {
-        this->p_data = str;
+    consteval StringView(char const (&string)[Length]) {
+        this->p_data = string;
         this->length = Length;
     }
 
     constexpr StringView() = default;
-    // TODO: Confirm that `cat::string_length()` can be constant-folded by GCC.
-    constexpr StringView(char const* p_string)
+    StringView(auto p_string)
         : p_data(p_string), length(cat::string_length(p_string)){};
     constexpr StringView(char const* p_string, ssize in_length)
         : p_data(p_string), length(in_length){};
