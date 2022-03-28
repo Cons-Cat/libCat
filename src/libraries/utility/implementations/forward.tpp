@@ -1,6 +1,8 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-#include <utility>
+#pragma once
+
+#include <type_traits>
 
 template <typename T>
 constexpr auto meta::forward(meta::remove_reference_t<T>& input) -> T&& {

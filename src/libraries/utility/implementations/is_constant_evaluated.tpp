@@ -3,7 +3,7 @@
 #pragma once
 
 #include <numerals>
-#include <utility>
+#include <type_traits>
 
 constexpr auto meta::is_constant_evaluated() -> bool {
     return __builtin_is_constant_evaluated();

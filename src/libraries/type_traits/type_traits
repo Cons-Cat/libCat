@@ -11,6 +11,8 @@
  *
  * Enter at your peril! */
 
+#include <numerals>
+
 namespace meta {
 
 namespace detail {
@@ -44,7 +46,7 @@ using add_cv_t = typename add_cv<T>::type;
 
 template <typename T>
 struct add_const {
-    using type = const T;
+    using type = T const;
 };
 
 template <typename T>
@@ -167,16 +169,16 @@ constexpr bool true_type_v = true_type::value;
 using false_type = bool_constant<false>;
 constexpr bool false_type_v = false_type::value;
 
-template <bool Condition, typename T, typename F>
+template <bool Condition, typename T, typename Functions>
 struct conditional {
     using type = T;
 };
-template <typename T, typename F>
-struct conditional<false, T, F> {
-    using type = F;
+template <typename T, typename Functions>
+struct conditional<false, T, Functions> {
+    using type = Functions;
 };
-template <bool B, typename T, typename F>
-using conditional_t = typename conditional<B, T, F>::type;
+template <bool B, typename T, typename Functions>
+using conditional_t = typename conditional<B, T, Functions>::type;
 
 // `__is_enum()` is a GNU builtin.
 template <typename T>
@@ -404,12 +406,12 @@ struct remove_extent<T[]> {
 
 template <typename T>
 struct is_function : public bool_constant<!is_const_v<T const>> {};
-
 template <typename T>
 struct is_function<T&> : false_type {};
-
 template <typename T>
 struct is_function<T&&> : false_type {};
+template <typename T>
+constexpr bool is_function_v = is_function<T>::value;
 
 template <typename T, typename = void>
 struct is_referenceable : false_type {};
@@ -785,4 +787,104 @@ struct is_specialization : false_type {};
 template <template <typename...> typename Template, typename... Args>
 struct is_specialization<Template<Args...>, Template> : true_type {};
 
+template <typename T>
+constexpr auto move(T&& input) -> meta::remove_reference_t<T>&&;
+
+template <typename T>
+constexpr auto forward(meta::remove_reference_t<T>& input) -> T&&;
+
+template <typename T>
+constexpr auto forward(meta::remove_reference_t<T>&& input)
+    -> T&& requires(!meta::is_lvalue_reference_v<T>);
+
+// TODO: Figure out how to make this return `bool1`.
+constexpr auto is_constant_evaluated() -> bool;
+
+consteval auto constant_evaluate(auto value);
+
+namespace detail {
+    template <typename T>
+    struct invoke {
+        template <typename Functions, typename... Args>
+        static auto call(Functions&& f, Args&&... args)
+            -> decltype(meta::forward<Functions>(f)(
+                meta::forward<Args>(args)...));
+    };
+
+    template <typename B, typename MyType>
+    struct invoke<MyType B::*> {
+        template <typename T>
+        static auto get(T&& t)
+            -> T&& requires(meta::is_base_of_v<B, meta::decay_t<T>>);
+
+        template <typename T>
+        static auto get(T&& t) -> decltype(*meta::forward<T>(t)) requires(
+            !meta::is_base_of_v<B, meta::decay_t<T>>);
+
+        template <typename T, typename... Args, typename U>
+        static auto call(U B::*p_function, T&& t, Args&&... args)
+            -> decltype((*(invoke::get(meta::forward<T>(t)).p_function))(
+                meta::forward<Args>(args)...)) requires(meta::is_function_v<U>);
+
+        template <typename T>
+        static auto call(MyType B::*p_function, T&& t)
+            -> decltype(*(invoke::get(meta::forward<T>(t)).p_function));
+    };
+
+    template <typename Functions, typename... Args,
+              typename Fd = typename meta::decay<Functions>::type>
+    auto try_invoke(Functions&& f, Args&&... args)
+        -> decltype(invoke<Fd>::call(meta::forward<Functions>(f),
+                                     meta::forward<Args>(args)...));
+
+    template <typename AlwaysVoid, typename, typename...>
+    struct invoke_result {};
+    template <typename Function, typename... Args>
+    struct invoke_result<decltype(void(
+                             detail::try_invoke(meta::declval<Function>(),
+                                                meta::declval<Args>()...))),
+                         Function, Args...> {
+        using type = decltype(detail::try_invoke(meta::declval<Function>(),
+                                                 meta::declval<Args>()...));
+    };
+}  // namespace detail
+
+template <typename Functions, typename... ArgTypes>
+struct invoke_result : detail::invoke_result<void, Functions, ArgTypes...> {};
+
+namespace detail {
+    template <typename T, typename U, bool = is_void<U>::value, typename = void>
+    struct is_invocable : false_type {};
+
+    template <typename T, typename U>
+    struct is_invocable<T, U, true, void_t<typename T::type>> : true_type {};
+
+    template <typename TResult, typename UReturn>
+    struct is_invocable<TResult, UReturn, false,
+                        void_t<typename TResult::type>> {
+      private:
+        static auto get() -> typename TResult::type;
+
+        template <typename T>
+        static void try_conversion(T);
+
+        template <typename T, typename = decltype(try_conversion<T>(get()))>
+        static auto test(int) -> true_type;
+
+        template <typename T>
+        static auto test(...) -> false_type;
+      public:
+        using type = decltype(test<UReturn>(1));
+    };
+}  // namespace detail
+
+template <typename Functions, typename... ArgTypes>
+struct is_invocable
+    : detail::is_invocable<invoke_result<Functions, ArgTypes...>, void>::type {
+};
+template <typename Functions, typename... Args>
+constexpr bool is_invocable_v = meta::is_invocable<Functions, Args...>::value;
+
 }  // namespace meta
+
+#include "./implementations/forward.tpp"

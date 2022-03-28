@@ -101,4 +101,7 @@ concept narrow_convertible = requires() {
     U({meta::declval<T>()});
 };
 
+template <typename Function, typename... Args>
+concept invocable = meta::is_invocable_v<Function, Args...>;
+
 }  // namespace meta
