@@ -1,7 +1,7 @@
 #include <string>
+#include <type_traits>
 
 void meow() {
-    constexpr StringView string = "Hello, Conscat!\n";
-    cat::print(string).or_panic();
+    cat::print(meta::constant_evaluate(StringView("Hello, Conscat!\n")));
     cat::exit();
 }

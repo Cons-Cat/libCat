@@ -5,6 +5,12 @@
 #include <type_traits>
 
 // TODO: add a `meta::invocable` concept.
-consteval auto meta::constant_evaluate(auto value) {
+template <typename Function>
+consteval auto meta::constant_evaluate(auto value) requires(
+    meta::is_invocable_v<Function>) {
     return value();
+}
+
+consteval auto meta::constant_evaluate(auto value) {
+    return value;
 }
