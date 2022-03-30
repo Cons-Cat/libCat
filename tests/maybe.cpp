@@ -109,7 +109,27 @@ void meow() {
     if (moo.transform([](auto input) {
                return input * 2;
            })
-            .and_then([](Maybe<int4> input) -> Maybe<int4> {
+            .and_then([](auto input) {
+                return input;
+            })
+            .has_value()) {
+        cat::exit(1);
+    }
+
+    positive = none;
+    if (positive
+            .transform([](auto input) {
+                return input * 2;
+            })
+            .has_value()) {
+        cat::exit(1);
+    }
+
+    if (positive
+            .transform([](auto input) {
+                return input * 2;
+            })
+            .and_then([](auto input) {
                 return input;
             })
             .has_value()) {
