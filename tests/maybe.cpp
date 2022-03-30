@@ -23,7 +23,7 @@ void meow() {
     // Unwrap a value.
     Maybe<int4> moo = 1;
     moo = 2;
-    if (moo.unwrap() != 2) {
+    if (moo.get_value() != 2) {
         cat::exit(1);
     }
 

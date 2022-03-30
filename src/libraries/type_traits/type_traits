@@ -169,16 +169,16 @@ constexpr bool true_type_v = true_type::value;
 using false_type = bool_constant<false>;
 constexpr bool false_type_v = false_type::value;
 
-template <bool Condition, typename T, typename Function>
+template <bool Condition, typename T, typename U>
 struct conditional {
     using type = T;
 };
-template <typename T, typename Function>
-struct conditional<false, T, Function> {
-    using type = Function;
+template <typename T, typename U>
+struct conditional<false, T, U> {
+    using type = U;
 };
-template <bool B, typename T, typename Function>
-using conditional_t = typename conditional<B, T, Function>::type;
+template <bool B, typename T, typename U>
+using conditional_t = typename conditional<B, T, U>::type;
 
 // `__is_enum()` is a GNU builtin.
 template <typename T>
@@ -784,6 +784,7 @@ constexpr bool is_trivially_move_assignable_v =
 template <typename T, template <typename...> typename Template>
 struct is_specialization : false_type {};
 
+// TODO: Support template with multiple parameters.
 template <template <typename...> typename Template, typename... Args>
 struct is_specialization<Template<Args...>, Template> : true_type {};
 
