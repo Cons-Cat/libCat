@@ -621,6 +621,21 @@ template <typename>
 struct remove_all_extents;
 
 template <typename T>
+struct remove_all_extents {
+    using type = T;
+};
+
+template <typename T>
+struct remove_all_extents<T[]> {
+    using type = typename remove_all_extents<T>::type;
+};
+
+template <typename T, unsigned long long N>
+struct remove_all_extents<T[N]> {
+    using type = typename remove_all_extents<T>::type;
+};
+
+template <typename T>
 struct is_bounded_array : false_type {};
 template <typename T, ssize N>
 struct is_bounded_array<T[N]> : true_type {};
@@ -805,8 +820,8 @@ namespace detail {
     template <typename T>
     struct invoke {
         template <typename Function, typename... Args>
-        static auto call(Function&& f, Args&&... args)
-            -> decltype(meta::forward<Function>(f)(
+        static auto call(Function&& callback, Args&&... args)
+            -> decltype(meta::forward<Function>(callback)(
                 meta::forward<Args>(args)...));
     };
 
@@ -832,8 +847,8 @@ namespace detail {
 
     template <typename Function, typename... Args,
               typename Fd = typename meta::decay<Function>::type>
-    auto try_invoke(Function&& f, Args&&... args)
-        -> decltype(invoke<Fd>::call(meta::forward<Function>(f),
+    auto try_invoke(Function&& callback, Args&&... args)
+        -> decltype(invoke<Fd>::call(meta::forward<Function>(callback),
                                      meta::forward<Args>(args)...));
 
     template <typename AlwaysVoid, typename, typename...>
@@ -887,10 +902,10 @@ template <typename Function, typename... Args>
 constexpr bool is_invocable_v = meta::is_invocable<Function, Args...>::value;
 
 template <typename Function, typename... Args>
-constexpr auto invoke(Function&& f, Args&&... args)
+constexpr auto invoke(Function&& callback, Args&&... args)
     -> invoke_result_t<Function, Args...> {
     // TODO: Handle member functions.
-    return meta::forward<Function>(f)(meta::forward<Args>(args)...);
+    return meta::forward<Function>(callback)(meta::forward<Args>(args)...);
 }
 
 template <typename Function>
