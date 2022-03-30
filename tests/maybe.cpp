@@ -1,4 +1,7 @@
 #include <maybe>
+#include <memory>
+
+#include "runtime"
 
 // TODO: Use `Result<>` asserts.
 void meow() {
@@ -23,31 +26,31 @@ void meow() {
     // Unwrap a value.
     Maybe<int4> moo = 1;
     moo = 2;
-    if (moo.get_value() != 2) {
+    if (moo.value() != 2) {
         cat::exit(1);
     }
 
     // Maybe reference.
-    int4 myint = 0;
-    Maybe<int4&> goo;
-    Maybe<int4&> goo_2 = none;
-    Maybe<int4&> boo = myint;
-    goo = boo;
+    int4 goo = 0;
+    Maybe<int4&> ref;
+    Maybe<int4&> ref_2 = none;
+    Maybe<int4&> boo = goo;
+    ref = boo;
 
-    if (!goo.has_value()) {
+    if (!ref.has_value()) {
         cat::exit(1);
     }
 
-    goo = none;
+    ref = none;
 
-    if (goo.has_value()) {
+    if (ref.has_value()) {
         cat::exit(1);
     }
-    if (goo_2.has_value()) {
+    if (ref_2.has_value()) {
         cat::exit(1);
     }
 
-    // Maybe with predicate.
+    // Maybe with a predicate.
     Maybe<Predicate<int4,
                     [](int4 input) -> bool {
                         return input >= 0;
@@ -77,6 +80,44 @@ void meow() {
     if (positive.has_value()) {
         cat::exit(1);
     }
+
+    // Monadic methods.
+    if (moo.transform([](auto input) {
+               return input * 2;
+           })
+            .value() != 4) {
+        cat::exit(1);
+    }
+
+    _ = moo.or_else([]() {
+        cat::exit(1);
+    });
+
+    moo = none;
+    if (moo.transform([](auto input) {
+               return input * 2;
+           })
+            .has_value()) {
+        cat::exit(1);
+    }
+
+    _ = moo.and_then([](Maybe<int4> input) -> Maybe<int4> {
+        cat::exit(1);
+        return input;
+    });
+
+    if (moo.transform([](auto input) {
+               return input * 2;
+           })
+            .and_then([](Maybe<int4> input) -> Maybe<int4> {
+                return input;
+            })
+            .has_value()) {
+        cat::exit(1);
+    }
+
+    // TODO: Monadic methods on reference types.
+    // TODO: Monadic methods on move-only types.
 
     cat::exit();
 };
