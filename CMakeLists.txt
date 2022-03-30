@@ -15,6 +15,8 @@ list(
   -msse4.2 # -march=native does not compile on some computers, apparently.
   -mavx2
   -mfsgsbase
+  -fimplicit-constexpr
+  -ffold-simple-inlines
   -fdiagnostics-color
   -include global_includes.h
   # This is enabled by default, but it's counter-productive to libCat's vision.
