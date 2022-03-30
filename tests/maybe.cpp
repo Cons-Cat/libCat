@@ -1,8 +1,6 @@
 #include <maybe>
 #include <memory>
 
-#include "runtime"
-
 // TODO: Use `Result<>` asserts.
 void meow() {
     // Initialize empty.
@@ -81,6 +79,24 @@ void meow() {
         cat::exit(1);
     }
 
+    // This crashes clangd, but it passes tests, last I checked.
+    /*
+    Maybe<Sentinel<int4, 0>> nonzero = none;
+if (nonzero.has_value()) {
+            cat::exit(1);
+    }
+
+nonzero = 1;
+if (!nonzero.has_value()) {
+     cat::exit(1);
+ }
+
+nonzero = 0;
+if (nonzero.has_value()) {
+     cat::exit(1);
+ }
+    */
+
     // Monadic methods.
     if (moo.transform([](auto input) {
                return input * 2;
@@ -136,8 +152,9 @@ void meow() {
         cat::exit(1);
     }
 
-    // TODO: Monadic methods on reference types.
-    // TODO: Monadic methods on move-only types.
+    // TODO: Test monadic methods on reference types.
+    // TODO: Test monadic methods on move-only types.
+    // TODO: Test `Maybe<> const`.
 
     cat::exit();
 };

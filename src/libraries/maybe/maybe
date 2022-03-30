@@ -20,12 +20,13 @@ struct Monostate {};
 }  // namespace cat::detail
 
 inline constexpr cat::detail::None none;
+
 template <typename T, auto predicate, T sentinel>
 struct Predicate {};
 
 template <typename T, T sentinel>
 using Sentinel = Predicate<T,
-                           [](T value) {
+                           [](T const value) {
                                return value != sentinel;
                            },
                            sentinel>;
@@ -284,46 +285,21 @@ class Maybe {
     Maybe() = delete;
 
     // Forward constructors to `storage`.
-    Maybe(typename StorageType::Type& input) requires(
+    Maybe(auto& input) requires(
         meta::is_same_v<StorageType, MaybeReferenceStorage<T>>)
         : storage(StorageType(input)){};
 
-    Maybe(typename StorageType::Type const& input) requires(
+    Maybe(auto const& input) requires(
         meta::is_copy_constructible_v<typename StorageType::Type>)
         : storage(StorageType(input)){};
 
     // Forward move-constructors.
-    Maybe(typename StorageType::Type&& input) requires(
-        meta::is_move_constructible_v<StorageType>)
+    Maybe(auto&& input) requires(meta::is_move_constructible_v<StorageType>)
         : storage(meta::move(StorageType(input))){};
 
-    Maybe(typename StorageType::Type const&& input) requires(
+    Maybe(auto const&& input) requires(
         meta::is_move_constructible_v<StorageType>)
         : storage(meta::move(StorageType(input))){};
-
-    // Forward `none` constructors.
-    Maybe(cat::detail::None const) : storage(StorageType(none)){};
-    // Maybe(cat::detail::None const&&) requires(
-    //     meta::is_move_constructible_v<StorageType>) {
-    //     this->storage = meta::move(none);
-    // }
-
-    // Forward assignment operators to `storage`.
-    auto operator=(typename StorageType::Type& maybe) {
-        this->storage = maybe;
-    };
-    auto operator=(typename StorageType::Type const& maybe) requires(
-        meta::is_copy_assignable_v<StorageType>) {
-        this->storage = maybe;
-    };
-    auto operator=(typename StorageType::Type&& maybe) requires(
-        meta::is_move_assignable_v<StorageType>) {
-        this->storage = meta::move(maybe);
-    };
-    auto operator=(typename StorageType::Type const&& maybe) requires(
-        meta::is_move_assignable_v<StorageType>) {
-        this->storage = meta::move(maybe);
-    };
 
     constexpr auto has_value() const -> bool1 {
         return this->storage.has_value();
@@ -492,54 +468,60 @@ a value!\n")
 
 template <typename T, auto predicate, T sentinel>
 class Maybe<Predicate<T, predicate, sentinel>> {
-    using StorageType =
-        meta::conditional_t<meta::is_reference_v<T>, MaybeReferenceStorage<T>,
-                            MaybeValueStorage<T>>;
-    StorageType storage = sentinel;
+    T storage = sentinel;
   public:
     Maybe() = delete;
     ~Maybe() = default;
 
     template <typename U = T>
-    constexpr Maybe(U&& in_value) requires(!predicate(sentinel) &&
-                                           (meta::is_same_v<U, T> ||
-                                            meta::is_convertible_v<U, T>))
-        : storage(in_value){};
+    constexpr Maybe(U& value) requires(!predicate(sentinel) &&
+                                       (meta::is_same_v<U, T> ||
+                                        meta::is_convertible_v<U, T>))
+        : storage(value){};
 
     template <typename U = T>
-    constexpr Maybe(U const&& in_value) requires(!predicate(sentinel) &&
-                                                 (meta::is_same_v<U, T> ||
-                                                  meta::is_convertible_v<U, T>))
-        : storage(in_value){};
+    constexpr Maybe(U const& value) requires(!predicate(sentinel) &&
+                                             (meta::is_same_v<U, T> ||
+                                              meta::is_convertible_v<U, T>))
+        : storage(value){};
 
-    template <typename U>
-    constexpr explicit Maybe(Maybe<Predicate<U, predicate, sentinel>> const&
-                                 maybe) requires(!predicate(sentinel))
-        : storage(maybe.value()){};
+    template <typename U = T>
+    constexpr Maybe(U&& value) requires(!predicate(sentinel) &&
+                                        (meta::is_same_v<U, T> ||
+                                         meta::is_convertible_v<U, T>))
+        : storage(meta::move(value)){};
 
-    constexpr Maybe(T& maybe) requires(!predicate(sentinel) &&
-                                       meta::is_reference_v<T>)
-        : storage(cat::address_of(maybe)){};
+    template <typename U = T>
+    constexpr Maybe(U const&& value) requires(!predicate(sentinel) &&
+                                              (meta::is_same_v<U, T> ||
+                                               meta::is_convertible_v<U, T>))
+        : storage(meta::move(value)){};
 
-    constexpr Maybe(T const& maybe) requires(!predicate(sentinel) &&
-                                             meta::is_reference_v<T>)
-        : storage(cat::address_of(maybe)){};
+    constexpr Maybe(cat::detail::None) : storage(sentinel){};
 
-    constexpr Maybe(cat::detail::None) requires(!predicate(sentinel))
-        : storage(sentinel){};
-
-    // Rebind the reference if this is assigned a new value.
-    constexpr auto operator=(T& maybe) -> T& {
-        this->storage = cat::address_of(maybe);
+    // Forward assignment operators to `storage`:
+    constexpr auto operator=(auto& input) {
+        this->storage = input;
         return *this;
     }
 
-    constexpr auto operator=(Maybe const& maybe)
-        -> Maybe<Predicate<T, predicate, sentinel>>& = default;
+    constexpr auto operator=(auto const& input) {
+        this->storage = input;
+        return *this;
+    }
 
-    // Invalidate the reference if this is assigned `none`.
-    constexpr auto operator=(cat::detail::None)
-        -> Maybe<Predicate<T, predicate, sentinel>>& {
+    constexpr auto operator=(auto&& input) {
+        this->storage = meta::move(input);
+        return *this;
+    }
+
+    constexpr auto operator=(auto const&& input) {
+        this->storage = meta::move(input);
+        return *this;
+    }
+
+    // Specify the unusual `none` assignment operator.
+    constexpr auto operator=(cat::detail::None) {
         this->storage = sentinel;
         return *this;
     }
@@ -550,13 +532,13 @@ class Maybe<Predicate<T, predicate, sentinel>> {
     // case, unless used in a `constexpr` context.
     constexpr auto value() -> T const& {
         if (meta::is_constant_evaluated()) {
-            return this->storage.get_value();
+            return this->storage;
         }
 #ifdef __OPTIMIZE__
-        return this->storage.get_value();
+        return this->storage;
 #else
-        if (this->storage.has_value()) {
-            return this->storage.get_value();
+        if (this->has_value()) {
+            return this->storage;
         }
         cat::print(
             "`.has_value()` was illegally called on a `Maybe` which did not hold\
@@ -567,16 +549,16 @@ a value!\n")
         __builtin_unreachable();
     }
 
-    constexpr auto value_or(StorageType const fallback) const& -> T& {
-        if (this->storage.has_value()) {
-            return this->storage.get_value();
+    constexpr auto value_or(T const fallback) const& -> T& {
+        if (this->has_value()) {
+            return this->storage;
         }
         return fallback;
     }
 
-    constexpr auto value_or(StorageType const&& fallback) && -> T&& {
-        if (this->storage.has_value()) {
-            return meta::move(this->storage.get_value());
+    constexpr auto value_or(T const&& fallback) && -> T&& {
+        if (this->has_value()) {
+            return meta::move(this->storage);
         }
         return meta::move(fallback);
     }
@@ -590,10 +572,10 @@ a value!\n")
     // function. Otherwise, propagate an empty `Maybe`.
     template <typename Function>
     constexpr auto transform(Function&& callback) & {
-        if (this->storage.has_value()) {
+        if (this->has_value()) {
             return Maybe<Predicate<T, predicate, sentinel>>(callback(
                 meta::forward<Maybe<Predicate<T, predicate, sentinel>>>(*this)
-                    .storage.get_value()));
+                    .storage));
         }
         return Maybe<Predicate<T, predicate, sentinel>>(none);
     }
@@ -602,10 +584,10 @@ a value!\n")
     // function. Otherwise, propagate an empty `Maybe`.
     template <typename Function>
     constexpr auto transform(Function&& callback) const& {
-        if (this->storage.has_value()) {
+        if (this->has_value()) {
             return Maybe<Predicate<T, predicate, sentinel>>(callback(
                 meta::forward<Maybe<Predicate<T, predicate, sentinel>>>(*this)
-                    .storage.get_value()));
+                    .storage));
         }
         return Maybe<Predicate<T, predicate, sentinel>>(none);
     }
@@ -614,10 +596,10 @@ a value!\n")
     // non -`void` function. Otherwise, propagate an empty `Maybe`.
     template <typename Function>
     constexpr auto transform(Function&& callback) && {
-        if (this->storage.has_value()) {
+        if (this->has_value()) {
             return Maybe<Predicate<T, predicate, sentinel>>(callback(meta::move(
                 meta::forward<Maybe<Predicate<T, predicate, sentinel>>>(*this)
-                    .storage.get_value())));
+                    .storage)));
         }
         return Maybe<Predicate<T, predicate, sentinel>>(none);
     }
@@ -626,10 +608,10 @@ a value!\n")
     // function. Otherwise, propagate an empty `Maybe`.
     template <typename Function>
     constexpr auto transform(Function&& callback) const&& {
-        if (this->storage.has_value()) {
+        if (this->has_value()) {
             return Maybe<Predicate<T, predicate, sentinel>>(callback(meta::move(
                 meta::forward<Maybe<Predicate<T, predicate, sentinel>>>(*this)
-                    .storage.get_value())));
+                    .storage)));
         }
         return Maybe<Predicate<T, predicate, sentinel>>(none);
     }
@@ -640,7 +622,7 @@ a value!\n")
     constexpr auto and_then(Function&& callback) & {
         return this->has_value()
                    ? Maybe<Predicate<T, predicate, sentinel>>(
-                         callback(this->storage.get_value()))
+                         callback(this->storage))
                    : Maybe<Predicate<T, predicate, sentinel>>(none);
     }
 
@@ -650,7 +632,7 @@ a value!\n")
     constexpr auto and_then(Function&& callback) const& {
         return this->has_value()
                    ? Maybe<Predicate<T, predicate, sentinel>>(
-                         callback(this->storage.get_value()))
+                         callback(this->storage))
                    : Maybe<Predicate<T, predicate, sentinel>>(none);
     }
 
@@ -660,7 +642,7 @@ a value!\n")
     constexpr auto and_then(Function&& callback) && {
         return this->has_value()
                    ? Maybe<Predicate<T, predicate, sentinel>>(
-                         callback(meta::move(this->storage.get_value())))
+                         callback(meta::move(this->storage)))
                    : Maybe<Predicate<T, predicate, sentinel>>(none);
     }
 
@@ -670,14 +652,14 @@ a value!\n")
     constexpr auto and_then(Function&& callback) const&& {
         return this->has_value()
                    ? Maybe<Predicate<T, predicate, sentinel>>(
-                         callback(meta::move(this->storage.get_value())))
+                         callback(meta::move(this->storage)))
                    : Maybe<Predicate<T, predicate, sentinel>>(none);
     }
 
     template <typename Function>
     constexpr auto or_else(
         Function&& callback) & -> Maybe<Predicate<T, predicate, sentinel>> {
-        if (!this->storage.has_value()) {
+        if (!this->has_value()) {
             callback();
         }
         return *this;
@@ -686,7 +668,7 @@ a value!\n")
     template <typename Function>
     constexpr auto or_else(Function&& callback)
         const& -> Maybe<Predicate<T, predicate, sentinel>> {
-        if (!this->storage.has_value()) {
+        if (!this->has_value()) {
             callback();
         }
         return *this;
@@ -695,7 +677,7 @@ a value!\n")
     template <typename Function>
     constexpr auto or_else(
         Function&& callback) && -> Maybe<Predicate<T, predicate, sentinel>> {
-        if (!this->storage.has_value()) {
+        if (!this->has_value()) {
             callback();
         }
         return meta::move(*this);
@@ -704,13 +686,13 @@ a value!\n")
     template <typename Function>
     constexpr auto or_else(Function&& callback)
         const&& -> Maybe<Predicate<T, predicate, sentinel>> {
-        if (!this->storage.has_value()) {
+        if (!this->has_value()) {
             callback();
         }
         return meta::move(*this);
     }
 
     constexpr auto has_value() const -> bool1 {
-        return predicate(this->storage.get_value());
+        return predicate(this->storage);
     }
 };
