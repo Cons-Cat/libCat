@@ -6,7 +6,7 @@
 // TODO: Use `Result<>` asserts.
 void meow() {
     // Initialize empty.
-    Maybe<int4> foo;
+    Maybe<int4> foo(none);
     if (foo.has_value()) {
         cat::exit(1);
     }
@@ -32,7 +32,7 @@ void meow() {
 
     // Maybe reference.
     int4 goo = 0;
-    Maybe<int4&> ref;
+    Maybe<int4&> ref(none);
     Maybe<int4&> ref_2 = none;
     Maybe<int4&> boo = goo;
     ref = boo;
@@ -56,7 +56,7 @@ void meow() {
                         return input >= 0;
                     },
                     -1>>
-        positive;
+        positive(none);
     if (positive.has_value()) {
         cat::exit(1);
     }

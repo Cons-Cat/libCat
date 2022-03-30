@@ -47,9 +47,9 @@ struct MaybeValueStorage {
     // `MaybeValueStorage`'s constructors, assignment operators, and
     // destructors are relatively complex. Consider paying special attention to
     // them.
-    constexpr MaybeValueStorage() = default;
     constexpr MaybeValueStorage(cat::meta::None){};
 
+    // Enable copy and move constructors iff `Maybevaluestorage` supports them.
     constexpr MaybeValueStorage(MaybeValueStorage const& maybe) requires(
         meta::is_copy_constructible_v<T>) = default;
     constexpr MaybeValueStorage(MaybeValueStorage const& maybe) = delete;
@@ -225,8 +225,6 @@ struct MaybeReferenceStorage {
     using Type = meta::remove_reference_t<T>;
     Type* p_value = nullptr;
   public:
-    constexpr MaybeReferenceStorage() = default;
-
     template <typename U = Type>
     constexpr MaybeReferenceStorage(U&& in_value)
         : p_value(cat::address_of(in_value)){};
@@ -282,9 +280,10 @@ class Maybe {
                             MaybeValueStorage<T>>;
     StorageType storage;
   public:
-    // Forward constructors to `storage`.
-    Maybe() : storage(){};
+    // Default-initialization is not supported.
+    Maybe() = delete;
 
+    // Forward constructors to `storage`.
     Maybe(typename StorageType::Type& input) requires(
         meta::is_same_v<StorageType, MaybeReferenceStorage<T>>)
         : storage(StorageType(input)){};
@@ -495,13 +494,19 @@ template <typename T, auto predicate, T sentinel>
 class Maybe<Predicate<T, predicate, sentinel>> {
     T value = sentinel;
   public:
-    Maybe() requires(!predicate(sentinel)) = default;
+    Maybe() = delete;
     ~Maybe() = default;
 
     template <typename U = T>
     constexpr Maybe(U&& in_value) requires(!predicate(sentinel) &&
                                            (meta::is_same_v<U, T> ||
                                             meta::is_convertible_v<U, T>))
+        : value(in_value){};
+
+    template <typename U = T>
+    constexpr Maybe(U const&& in_value) requires(!predicate(sentinel) &&
+                                                 (meta::is_same_v<U, T> ||
+                                                  meta::is_convertible_v<U, T>))
         : value(in_value){};
 
     template <typename U>
@@ -511,6 +516,10 @@ class Maybe<Predicate<T, predicate, sentinel>> {
 
     constexpr Maybe(T& maybe) requires(!predicate(sentinel) &&
                                        meta::is_reference_v<T>)
+        : value(cat::address_of(maybe)){};
+
+    constexpr Maybe(T const& maybe) requires(!predicate(sentinel) &&
+                                             meta::is_reference_v<T>)
         : value(cat::address_of(maybe)){};
 
     constexpr Maybe(cat::meta::None) requires(!predicate(sentinel))
