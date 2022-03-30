@@ -11,6 +11,7 @@ struct Raii : T {
     Raii() = default;
     Raii(T const&) = delete;
     Raii(Raii<T>&&){};
+    Raii(T const&&){};
 
     ~Raii() = default;
     ~Raii() requires(T::free()) {
