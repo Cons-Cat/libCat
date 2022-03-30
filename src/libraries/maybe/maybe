@@ -19,51 +19,49 @@ struct Monostate {};
 }  // namespace cat::detail
 
 inline constexpr cat::detail::None none;
-
-template <typename T, T sentinel>
-struct Sentinel {};
-
 template <typename T, auto predicate, T sentinel>
 struct Predicate {};
 
+template <typename T, T sentinel>
+using Sentinel = Predicate<T,
+                           [](T value) {
+                               return value != sentinel;
+                           },
+                           sentinel>;
+
 template <typename T>
-class Maybe {
+struct MaybeValueStorage {
     struct Dummy {};
     union {
-        // `Dummy` is required so that `Maybe` can be initialized in a
-        // `constexpr` context, because a member union must have at least
-        // one initialized field, and it should not be `value`.
+        // `Dummy` is required so that `MaybeCommonStorage` can be initialized
+        // in a `constexpr` context, because a member `union` must have at least
+        // one initialized field, and it should not be `value`. `Dummy` can be
+        // default-initialized, so this is well-formed.
         Dummy dummy;
         T value;
     };
     bool1 has_some = false;
 
-    // `Maybe`'s constructors, assignment operators, and destructors are
-    // relatively complex. Consider paying special attention to them.
-  public:
-    // If constructors are not conditionally specialized by their
-    // `requires`, they should be `default` or deleted.
-    // constexpr Maybe() requires(meta::is_default_constructible<T>::value)
-    // =
-    //     default;
-    // constexpr Maybe() = delete;
-    constexpr Maybe() = default;
-    constexpr Maybe(cat::detail::None){};
+    // `MaybeCommonStorage`'s constructors, assignment operators, and
+    // destructors are relatively complex. Consider paying special attention to
+    // them.
+    constexpr MaybeValueStorage() = default;
+    constexpr MaybeValueStorage(cat::detail::None){};
 
-    constexpr Maybe(Maybe const& maybe) requires(
+    constexpr MaybeValueStorage(MaybeValueStorage const& maybe) requires(
         meta::is_copy_constructible_v<T>) = default;
-    constexpr Maybe(Maybe const& maybe) = delete;
-    constexpr Maybe(Maybe&& maybe) requires(meta::is_move_constructible_v<T>) =
-        default;
-    constexpr Maybe(Maybe&& maybe) = default;
+    constexpr MaybeValueStorage(MaybeValueStorage const& maybe) = delete;
+    constexpr MaybeValueStorage(MaybeValueStorage&& maybe) requires(
+        meta::is_move_constructible_v<T>) = default;
+    constexpr MaybeValueStorage(MaybeValueStorage&& maybe) = default;
 
     // If other destructors are not conditionally specialized by their
     // `requires`, they should be `default` or deleted.
-    constexpr ~Maybe() = default;
+    constexpr ~MaybeValueStorage() = default;
 
     // If `T` is not trivially copy constructible, then manually construct it
     // in-place.
-    constexpr Maybe(Maybe const& maybe) requires(
+    constexpr MaybeValueStorage(MaybeValueStorage const& maybe) requires(
         meta::is_trivially_copy_constructible_v<T> &&
         !meta::is_trivially_copy_constructible_v<T>) {
         if (maybe.has_value()) {
@@ -75,8 +73,9 @@ class Maybe {
 
     // If `T` is not trivially move constructible, then manually invoke
     // `meta::move` on it.
-    Maybe(Maybe&& maybe) requires(meta::is_move_constructible_v<T> &&
-                                  !meta::is_trivially_move_constructible_v<T>) {
+    MaybeValueStorage(MaybeValueStorage&& maybe) requires(
+        meta::is_move_constructible_v<T> &&
+        !meta::is_trivially_move_constructible_v<T>) {
         if (maybe.has_value()) {
             this->construct(meta::move(maybe.get_value()));
         } else {
@@ -86,52 +85,56 @@ class Maybe {
 
     // If `T` is not trivially destructible, then manually invoke its
     // destructor.
-    constexpr ~Maybe() requires(!meta::is_trivially_destructible_v<T>) {
+    constexpr ~MaybeValueStorage() requires(
+        !meta::is_trivially_destructible_v<T>) {
         if (this->has_some) {
             this->value.~T();
         }
     }
 
     // TODO: Handle non-trivial `U`.
-    // If a `Maybe` consumes a `T` or a type that is convertible to `T`, it
-    // should be constructed.
+    // If a `MaybeCommonStorage` consumes a `T` or a type that is convertible to
+    // `T`, it should be constructed.
     template <typename U = T>
-    constexpr Maybe(U in_value) requires(meta::is_same_v<U, T> ||
-                                         meta::is_convertible_v<U, T>) {
+    constexpr MaybeValueStorage(U in_value) requires(
+        meta::is_same_v<U, T> || meta::is_convertible_v<U, T>) {
         this->value = in_value;
         this->has_some = true;
     }
 
     // If other assignment operators are not conditionally specialized by their
     // `requires`, they should be `default` or deleted.
-    auto operator=(Maybe const& maybe)
-        -> Maybe& requires(meta::is_copy_assignable_v<T>) = default;
-    auto operator=(Maybe const& maybe) -> Maybe& = delete;
+    auto operator=(MaybeValueStorage const& maybe)
+        -> MaybeValueStorage& requires(meta::is_copy_assignable_v<T>) = default;
+    auto operator=(MaybeValueStorage const& maybe)
+        -> MaybeValueStorage& = delete;
 
-    auto operator=(Maybe&& maybe)
-        -> Maybe& requires(meta::is_move_assignable_v<T>) = default;
-    auto operator=(Maybe&& maybe) -> Maybe& = delete;
+    auto operator=(MaybeValueStorage&& maybe)
+        -> MaybeValueStorage& requires(meta::is_move_assignable_v<T>) = default;
+    auto operator=(MaybeValueStorage&& maybe) -> MaybeValueStorage& = delete;
 
     // If `T` is not trivially copy assignable, then manually construct it
     // in-place.
-    auto operator=(Maybe const& maybe)
-        -> Maybe& requires(meta::is_copy_assignable_v<T> &&
-                           !meta::is_trivially_copy_assignable_v<T>) {
+    auto operator=(MaybeValueStorage const& maybe)
+        -> MaybeValueStorage& requires(
+            meta::is_copy_assignable_v<T> &&
+            !meta::is_trivially_copy_assignable_v<T>) {
         this->assign(maybe);
         return *this;
     }
 
     // If `T` is not trivially move assignable, then manually invoke
     // `meta::move()` on it.
-    constexpr auto operator=(Maybe&& maybe)
-        -> Maybe& requires(meta::is_move_assignable_v<T> &&
-                           !meta::is_trivially_move_assignable_v<T>) {
+    constexpr auto operator=(MaybeValueStorage&& maybe)
+        -> MaybeValueStorage& requires(
+            meta::is_move_assignable_v<T> &&
+            !meta::is_trivially_move_assignable_v<T>) {
         this->assign(meta::move(maybe));
         return *this;
     }
 
     // Assigning `none` will destroy the held value.
-    auto operator=(cat::detail::None) -> Maybe& {
+    auto operator=(cat::detail::None) -> MaybeValueStorage& {
         if (this->has_some) {
             this->value.~T();
             this->has_some = false;
@@ -143,8 +146,8 @@ class Maybe {
     // then replace a potentially held value.
     template <typename U = T>
     auto operator=(U&& in_value)
-        -> Maybe<T>& requires(meta::is_same_v<U, T> ||
-                              meta::is_convertible_v<U, T>) {
+        -> MaybeValueStorage<T>& requires(meta::is_same_v<U, T> ||
+                                          meta::is_convertible_v<U, T>) {
         if (this->has_value()) {
             this->value = meta::forward<U>(in_value);
         } else {
@@ -153,11 +156,12 @@ class Maybe {
         return *this;
     }
 
-    // If a `Maybe` is assigned to this which wraps a type that can be
-    // converted, then convert that `Maybe` to this type implicitly.
+    // If a `MaybeCommonStorage` is assigned to this which wraps a type that can
+    // be converted, then convert that `MaybeCommonStorage` to this type
+    // implicitly.
     template <typename U>
-    auto operator=(Maybe<U> const& maybe)
-        -> Maybe<T>& requires(meta::is_convertible_v<U, T>) {
+    auto operator=(MaybeValueStorage<U> const& maybe)
+        -> MaybeValueStorage<T>& requires(meta::is_convertible_v<U, T>) {
         if (this->has_some) {
             if (maybe.has_value()) {
                 this->value = *maybe;
@@ -172,52 +176,6 @@ class Maybe {
         return *this;
     }
 
-    // Get the held `value` unconditionally. If `has_value()` is `false`, this
-    // data is undefined. If this method is used in `-O0`, it will panic in that
-    // case, unless used in a `constexpr` context.
-    constexpr auto unwrap() -> T {
-        if (meta::is_constant_evaluated()) {
-            return this->get_value();
-        }
-#ifdef __OPTIMIZE__
-        return this->get_value();
-#else
-        if (this->has_value()) {
-            return this->get_value();
-        }
-        cat::print(
-            "`.unwrap()` was illegally called on a `Maybe` which did not hold a \
-value!\n")
-            .or_panic_debug();
-        cat::exit(1);
-#endif
-        __builtin_unreachable();
-    }
-
-    // Construct the value in-place and destroy the held value iff it exists.
-    template <typename... Args>
-    auto emplace(Args&&... args) -> T& {
-        *this = none;
-        this->construct(meta::forward<Args>(args)...);
-        return this->value;
-    }
-
-    constexpr auto has_value() const -> bool1 {
-        return this->has_some;
-    }
-
-    // Internal helper functions:
-  protected:
-    // Construct an object at the address of the held `value`.
-    // TODO: Factor into `cat::construct_at()`.
-    template <typename... Args>
-    void construct(Args&&... args) {
-        // TODO: Get this working.
-        // new (cat::address_of(this->value)) T(meta::forward<Args>(args)...);
-        this->value = T(meta::forward<Args>(args)...);
-        this->has_some = true;
-    }
-
     constexpr auto get_value() & -> T& {
         return this->value;
     }
@@ -229,6 +187,20 @@ value!\n")
     }
     constexpr auto get_value() const&& -> T&& {
         return meta::move(this->value);
+    }
+
+    constexpr auto has_value() const -> bool1 {
+        return has_some;
+    }
+
+    // Construct an object at the address of the held `value`.
+    // TODO: Factor into `cat::construct_at()`.
+    template <typename... Args>
+    void construct(Args&&... args) {
+        // TODO: Get this working.
+        // new (cat::address_of(this->value)) T(meta::forward<Args>(args)...);
+        this->value = T(meta::forward<Args>(args)...);
+        this->has_some = true;
     }
 
     template <typename U>
@@ -246,57 +218,42 @@ value!\n")
     }
 };
 
-// The only way to support a maybe-reference in C++20 is with a partial
-// template specialization.
 template <typename T>
-class Maybe<T&> {
-    T* p_value = nullptr;
+struct MaybeReferenceStorage {
+    using UnderlyingT = meta::remove_reference_t<T>;
+    UnderlyingT* p_value = nullptr;
   public:
-    Maybe() = default;
-    ~Maybe() = default;
+    constexpr MaybeReferenceStorage() = default;
 
-    template <typename U = T>
-    constexpr Maybe(U&& in_value) : p_value(cat::address_of(in_value)){};
+    template <typename U = UnderlyingT>
+    constexpr MaybeReferenceStorage(U&& in_value)
+        : p_value(cat::address_of(in_value)){};
 
     template <typename U>
-    constexpr explicit Maybe(Maybe<U> const& maybe)
+    constexpr explicit MaybeReferenceStorage(
+        MaybeReferenceStorage<U> const& maybe)
         : p_value(maybe.get_value()){};
 
-    constexpr Maybe(T& maybe) requires(meta::is_reference_v<T>)
+    constexpr MaybeReferenceStorage(UnderlyingT& maybe) requires(
+        meta::is_reference_v<UnderlyingT>)
         : p_value(cat::address_of(maybe)){};
 
-    constexpr Maybe(cat::detail::None) : p_value(nullptr){};
+    constexpr MaybeReferenceStorage(cat::detail::None) : p_value(nullptr){};
 
     // Rebind the reference if this is assigned a new value.
-    constexpr auto operator=(T& maybe) -> T& {
+    constexpr auto operator=(UnderlyingT& maybe) -> UnderlyingT& {
         this->value = cat::address_of(maybe);
         return *this;
     }
 
-    constexpr auto operator=(Maybe const& maybe) -> Maybe<T&>& = default;
+    constexpr auto operator=(MaybeReferenceStorage const& maybe)
+        -> MaybeReferenceStorage<UnderlyingT&>& = default;
 
     // Invalidate the reference if this is assigned `none`.
-    constexpr auto operator=(cat::detail::None) -> Maybe<T&>& {
+    constexpr auto operator=(cat::detail::None)
+        -> MaybeReferenceStorage<UnderlyingT&>& {
         this->p_value = nullptr;
         return *this;
-    }
-
-    constexpr auto unwrap() -> T& {
-        if (meta::is_constant_evaluated()) {
-            return *(this->p_value);
-        }
-#ifdef __OPTIMIZE__
-        return *(this->p_value);
-#else
-        if (this->has_value()) {
-            return *(this->p_value);
-        }
-        cat::print(
-            "`.unwrap()` was illegally called on a `Maybe` which did not hold a \
-value!\n")
-            .or_panic_debug();
-        cat::exit(1);
-#endif
     }
 
     constexpr auto has_value() const -> bool1 {
@@ -304,63 +261,50 @@ value!\n")
     }
 };
 
-template <typename T, T sentinel>
-class Maybe<Sentinel<T, sentinel>> {
-    T value = sentinel;
+template <typename T>
+class Maybe {
+    using StorageType =
+        meta::conditional_t<meta::is_reference_v<T>, MaybeReferenceStorage<T>,
+                            MaybeValueStorage<T>>;
+    StorageType storage;
   public:
-    Maybe() = default;
-    ~Maybe() = default;
-
-    template <typename U = T>
-    constexpr Maybe(U&& in_value) requires(meta::is_same_v<U, T> ||
-                                           meta::is_convertible_v<U, T>)
-        : value(in_value){};
-
-    template <typename U>
-    constexpr explicit Maybe(Maybe<Sentinel<U, sentinel>> const& maybe)
-        : value(maybe.get_value()){};
-
-    constexpr Maybe(T& maybe) requires(meta::is_reference_v<T>)
-        : value(cat::address_of(maybe)){};
-
-    constexpr Maybe(cat::detail::None) : value(sentinel){};
-
-    // Rebind the reference if this is assigned a new value.
-    constexpr auto operator=(T& maybe) -> T& {
-        this->value = cat::address_of(maybe);
-        return *this;
+    Maybe() : storage(){};
+    Maybe(auto input) {
+        storage = StorageType(input);
     }
 
-    constexpr auto operator=(Maybe const& maybe)
-        -> Maybe<Sentinel<T, sentinel>>& = default;
-
-    // Invalidate the reference if this is assigned `none`.
-    constexpr auto operator=(cat::detail::None)
-        -> Maybe<Sentinel<T, sentinel>>& {
-        this->value = sentinel;
-        return *this;
-    }
-
-    constexpr auto unwrap() -> T& {
+    // Get the held `value` unconditionally. If `has_value()` is `false`, this
+    // data is undefined. If this method is used in `-O0`, it will panic in that
+    // case, unless used in a `constexpr` context.
+    constexpr auto get_value() -> T {
         if (meta::is_constant_evaluated()) {
-            return *(this->value);
+            return this->storage.get_value();
         }
 #ifdef __OPTIMIZE__
-        return *(this->value);
+        return this->storage.get_value();
 #else
-        if (this->has_value()) {
-            return *(this->value);
+        if (this->storage.has_value()) {
+            return this->storage.get_value();
         }
         cat::print(
-            "`.unwrap()` was illegally called on a `Maybe` which did not hold a \
-value!\n")
+            "`.has_value()` was illegally called on a `Maybe` which did not hold\
+a value!\n")
             .or_panic_debug();
         cat::exit(1);
 #endif
+        __builtin_unreachable();
+    }
+
+    // Construct the value in-place and destroy the held value iff it exists.
+    template <typename... Args>
+    auto emplace(Args&&... args) -> T& {
+        *this = none;
+        this->storage.construct(meta::forward<Args>(args)...);
+        return this->storage.get_value();
     }
 
     constexpr auto has_value() const -> bool1 {
-        return this->value != sentinel;
+        return this->storage.has_value();
     }
 };
 
