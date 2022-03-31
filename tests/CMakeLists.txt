@@ -77,7 +77,7 @@ target_link_options(test_threads PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME MultiThreading COMMAND test_threads)
 
 # This tests if `Raii<>` basically works.
-add_executable(test_raii thread.cpp)
+add_executable(test_raii test_raii.cpp)
 target_compile_options(test_raii PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_raii PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME Raii COMMAND test_raii)
