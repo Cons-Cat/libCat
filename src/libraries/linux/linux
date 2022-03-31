@@ -252,7 +252,8 @@ struct Process {
         this->stack_size = initial_stack_size;
         // Allocate a stack for this thread, and get an address to the top of
         // it.
-        this->p_stack = allocator.malloc(initial_stack_size).or_is(nullptr);
+        this->p_stack =
+            allocator.malloc(initial_stack_size).or_is(nullptr).get_address();
         if (this->p_stack == nullptr) {
             return Failure(1);
         }
@@ -294,11 +295,11 @@ parent_thread:
     }
 
     auto wait() const -> Result<ProcessId> {
-        auto foo =
+        Result<ProcessId> result =
             nix::waitid(WaitIdType::process_id, this->id,
                         WaitOptionsFlags::exited | WaitOptionsFlags::clone |
                             WaitOptionsFlags::no_wait);
-        return foo;
+        return result;
         // TODO: Free the stack memory.
     }
 };

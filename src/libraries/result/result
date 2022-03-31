@@ -38,27 +38,20 @@ struct Result;
 struct [[nodiscard]] Failure {
     ssize code;
 
-    // TODO: Rethink Error and Result constructors.
+    // The default constructor should only be called by `Result`.
     Failure() = default;
 
     // This must be explicit to disambiguate returning an integer to a Result.
-    explicit Failure(ssize in_code) {
-        this->code = static_cast<ssize>(in_code);
-    }
+    explicit Failure(ssize const in_code) : code(in_code){};
 
+    // `Failure` can consume any `enum class`.
     template <meta::enum_class T>
-    constexpr Failure(T in_code) {
-        this->code = static_cast<meta::underlying_type_t<T>>(in_code);
-    }
-
-    template <typename T>
-    operator Result<T>() const {
-        return Result<T>(this->code);
-    }
+    constexpr Failure(T in_code)
+        : code(static_cast<meta::underlying_type_t<T>>(in_code)){};
 
     template <typename T>
     constexpr operator T() const
-        // TODO: Make is_bool<> traits.
+        // TODO: Make an `is_bool<>` trait to support libCat's safe bools.
         requires(meta::is_same_v<T, ssize>() || meta::is_same_v<T, bool>) {
         return this->code;
     }
@@ -73,62 +66,109 @@ struct Okay {};
 }  // namespace cat::detail
 
 // `okay` may be returned in a function that returns `Result<void>`.
-constexpr cat::detail::Okay okay{};
+inline constexpr cat::detail::Okay okay{};
 
 // These forward declarations are necessary for `Result`.
 template <typename T>
-struct Result;
+class Result;
 struct StringView;
+
+// Forward-declare a print function for panics.
 namespace cat {
 auto print_line(StringView const&) -> Result<>;
 }
 
 // `Result<>` is a general-purpose failure-handling object.
 template <typename T>
-struct [[nodiscard]] Result {
+class [[nodiscard]] Result {
+  public:
     Failure failure_code;  // `Failure` is an 8-byte value.
-    /* `char` should be a relatively unintrusive dummy data for when this holds
-     * void. Reflection TS in future C++ will provide conditional-members, which
-     * would be a better solution. TODO: Solve this with a partial template
-     * specialization. */
+
+    // `char` should be a relatively unintrusive dummy data for when this holds
+    // `void`. Reflection TS in future C++ will provide conditional-members,
+    // which would be a better solution.
+    // TODO: Solve this with a partial template specialization.
     using ValueType = meta::conditional_t<meta::is_void_v<T>, char, T>;
     static constexpr bool is_void = meta::is_same_v<T, void>;
 
-    /* It is unsafe to access `value`. You may prefer `or_panic_debug()` which
-     * provides failure-handling in debug builds, and skips them in optimized
-     * builds. */
-    ValueType const value;
+    ValueType storage;
+    bool1 is_okay;
+  public:
+    constexpr Result(Failure const& failure)
+        : failure_code(failure), is_okay(false){};
 
-    bool const is_okay;
+    constexpr Result(ValueType const value) requires(
+        !is_void && meta::is_constructible_v<ValueType> &&
+        !meta::is_same_v<ValueType, Any>)
+        : storage(value), is_okay(true){};
 
-    constexpr Result(Failure in_code)
-        : failure_code(in_code), value(), is_okay(false) {
-    }
-    constexpr Result(ValueType in_value) requires(!is_void)
-        : failure_code(), value(in_value), is_okay(true) {
-    }
-    // Special-case consuming data when holding `void`. This includes `okay`.
-    constexpr Result(auto) requires(is_void)
-        : failure_code(), value(), is_okay(true) {
-    }
-    // TODO: Concept for `bool1`, `bool2`, and `bool4` as well.
-    constexpr Result(bool const&& expression) requires(is_void)
-        : value(), is_okay(expression) {
-    }
-    /* Implicity cast an inputted `Result` to this. This is useful for
-     * `Result<Any>`. */
+    // constexpr Result(ValueType const& value) requires(
+    //     !is_void && meta::is_trivially_copy_constructible_v<ValueType>)
+    //     : storage(value), is_okay(true) {
+    // }
+
+    // constexpr Result(ValueType const&& value) requires(
+    //     !is_void && meta::is_trivially_move_constructible_v<ValueType> &&
+    //     !meta::is_same_v<ValueType, Any>)
+    //     : storage(value), is_okay(true){};
+
+    // Implicity cast an inputted `Result` to this. This is useful for
+    // `Result<Any>`.
     template <typename U>
-    constexpr Result(Result<U>&& in_result) requires(!is_void)
-        : value(meta::bit_cast<T>(in_result.value)),
-          is_okay(in_result.is_okay) {
-    }
+    constexpr Result(Result<U> const result) requires(
+        !is_void && meta::is_default_constructible<U>::value &&
+        meta::is_convertible_v<T, U> && !meta::is_same_v<U, Any>)
+        : storage(static_cast<T>(result.storage)), is_okay(result.is_okay){};
+
+    // Implicity cast an inputted `Result` to this. This is useful for
+    // `Result<Any>`.
+    template <typename U>
+    constexpr Result(Result<U> const& result) requires(
+        !is_void && meta::is_trivially_copy_constructible_v<U> &&
+        meta::is_convertible_v<T, U> && !meta::is_same_v<U, Any>)
+        : storage(static_cast<T>(result.storage)), is_okay(result.is_okay){};
+
+    // Implicity cast an inputted `Result` to this. This is useful for
+    // `Result<Any>`.
+    template <typename U>
+    constexpr Result(Result<U>&& result) requires(
+        !is_void && meta::is_trivially_move_constructible_v<U> &&
+        meta::is_convertible_v<T, U> && !meta::is_same_v<U, Any>)
+        : storage(static_cast<T>(result.storage)), is_okay(result.is_okay){};
+
+    template <typename U>
+    constexpr Result(Result<U> const&& result) requires(
+        !is_void && meta::is_trivially_move_constructible_v<U> &&
+        meta::is_convertible_v<T, U> && !meta::is_same_v<U, Any>)
+        : storage(static_cast<T>(result.storage)), is_okay(result.is_okay){};
+
+    // Special-case consuming a `Result<void>`.
+    constexpr Result(Result<void> const& result) requires(!is_void)
+        : is_okay(result.is_okay){};
+
+    // Special-case consuming a `Result<Any>`.
+    constexpr Result(Result<Any> const& result) requires(!is_void)
+        : storage(meta::bit_cast<T>(result.storage)), is_okay(result.is_okay){};
+
+    // Special-case consuming an `Any>`.
+    constexpr Result(Any const result) requires(!is_void)
+        : storage(meta::bit_cast<T>(result)), is_okay(true){};
+
+    // TODO: Concept for `bool1`, `bool2`, and `bool4` as well.
+    // Consume a `bool` temporary. This is useful for debugging with asserts.
+    constexpr Result(bool const& expression) requires(is_void)
+        : storage(), is_okay(expression){};
+
+    // Special-case consuming `okay` when holding `void`.
+    constexpr Result(auto) requires(is_void) : is_okay(true){};
+    // constexpr Result(cat::detail::Okay) requires(is_void) : is_okay(true){};
 
     // Return a specified value when `is_okay` is `false`.
     constexpr auto or_is(ValueType const& in_value) -> ValueType {
         if (!is_okay) {
             return in_value;
         }
-        return this->value;
+        return this->storage;
     }
 
     // `nullptr` must be special-cased.
@@ -137,7 +177,7 @@ struct [[nodiscard]] Result {
         if (!is_okay) {
             return static_cast<ValueType>(in_value);
         }
-        return this->value;
+        return this->storage;
     }
 
     // TODO: Add a `meta::invokable` concept
@@ -146,7 +186,7 @@ struct [[nodiscard]] Result {
             return callback();
         }
         if constexpr (!is_void) {
-            return this->value;
+            return this->storage;
         }
     }
 
@@ -157,7 +197,7 @@ struct [[nodiscard]] Result {
     auto or_panic() -> T {
         if (is_okay) {
             if constexpr (!is_void) {
-                return this->value;
+                return this->storage;
             } else if constexpr (is_void) {
                 return;
             }
@@ -171,7 +211,7 @@ struct [[nodiscard]] Result {
     auto or_panic(StringView const& p_error_message) -> T {
         if (is_okay) {
             if constexpr (!is_void) {
-                return this->value;
+                return this->storage;
             } else if constexpr (is_void) {
                 return;
             }
@@ -190,7 +230,7 @@ struct [[nodiscard]] Result {
 #ifndef __OPTIMIZE__
             if (is_okay) {
                 if constexpr (!is_void) {
-                    return this->value;
+                    return this->storage;
                 } else if constexpr (is_void) {
                     return;
                 }
@@ -200,7 +240,7 @@ struct [[nodiscard]] Result {
         }
         // Unconditionally return `value`.
         if constexpr (!is_void) {
-            return this->value;
+            return this->storage;
         } else if constexpr (is_void) {
             return;
         }
@@ -216,7 +256,7 @@ struct [[nodiscard]] Result {
 #ifndef __OPTIMIZE__
             if (is_okay) {
                 if constexpr (!is_void) {
-                    return this->value;
+                    return this->storage;
                 } else if constexpr (is_void) {
                     return;
                 }
@@ -227,7 +267,7 @@ struct [[nodiscard]] Result {
         }
         // Unconditionally return `value`.
         if constexpr (!is_void) {
-            return this->value;
+            return this->storage;
         } else if constexpr (is_void) {
             return;
         }

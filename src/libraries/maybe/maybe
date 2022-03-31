@@ -8,6 +8,8 @@
 #include <type_traits>
 #include <utility>
 
+// TODO: Support `Maybe<void>`.
+
 namespace cat::detail {
 
 // A `None` is consumed by a `Maybe` constructor to prevent initializing its
@@ -65,7 +67,6 @@ struct MaybeValueStorage {
     // If `T` is not trivially copy constructible, then manually construct it
     // in-place.
     constexpr MaybeValueStorage(MaybeValueStorage const& maybe) requires(
-        meta::is_trivially_copy_constructible_v<T> &&
         !meta::is_trivially_copy_constructible_v<T>) {
         if (maybe.has_value()) {
             this->construct(maybe.get_value());
