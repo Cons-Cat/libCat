@@ -62,19 +62,19 @@ void meow() {
 
     positive = none;
     Result(!positive.has_value()).or_panic();
-	
+
     // This crashes clangd, but it passes tests, last I checked.
-	/* 
-	Maybe<Sentinel<int4, 0>> nonzero = none;
-	Result(!nonzero.has_value()).or_panic();
+    /*
+    Maybe<Sentinel<int4, 0>> nonzero = none;
+    Result(!nonzero.has_value()).or_panic();
 
-	nonzero = 1;
-	Result(nonzero.has_value()).or_panic();
+    nonzero = 1;
+    Result(nonzero.has_value()).or_panic();
 
-	nonzero = 0;
-	Result(!nonzero.has_value()).or_panic();
-	*/
-	
+    nonzero = 0;
+    Result(!nonzero.has_value()).or_panic();
+    */
+
     // Monadic methods.
     moo = 2;
     Result(moo.transform([](auto input) {
@@ -129,6 +129,7 @@ void meow() {
     // TODO: Test monadic methods on reference types.
     // TODO: Test monadic methods on move-only types.
     // TODO: Test `Maybe<> const`.
+    // TODO: Test constructing from another `Maybe<>`.
 
     cat::exit();
 };
