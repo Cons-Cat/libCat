@@ -1,5 +1,5 @@
 #include <linux>
-#include <memory.h>
+#include <memory>
 #include <utility>
 
 struct Foo {
@@ -12,7 +12,6 @@ struct Foo {
 };
 
 void func(Raii<Foo>) {
-    return;
 }
 
 void meow() {
