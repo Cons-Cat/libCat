@@ -12,7 +12,7 @@ extern "C" [[gnu::used]] void meow(
 );
 
 template <typename T>
-struct Result;
+class Result;
 
 // TODO: Fix this declaration in `<numerals>`
 using ssize = int long long;

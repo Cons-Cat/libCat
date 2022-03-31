@@ -1,6 +1,12 @@
 #include <maybe>
 #include <memory>
 
+struct Movable {
+    Movable() = default;
+    Movable(Movable&&) = default;
+    auto operator=(Movable&&){};
+};
+
 void meow() {
     // Initialize empty.
     Maybe<int4> foo(none);
@@ -88,7 +94,7 @@ void meow() {
     });
 
     moo = none;
-    Result(!moo.transform([](auto input) {
+    Result(!moo.transform([](int4 input) {
                    return input * 2;
                })
                 .has_value())
@@ -99,10 +105,10 @@ void meow() {
         return input;
     });
 
-    Result(!moo.transform([](auto input) {
+    Result(!moo.transform([](int4 input) {
                    return input * 2;
                })
-                .and_then([](auto input) {
+                .and_then([](int4 input) {
                     return input;
                 })
                 .has_value())
@@ -110,17 +116,17 @@ void meow() {
 
     positive = none;
     Result(!positive
-                .transform([](auto input) {
+                .transform([](int4 input) {
                     return input * 2;
                 })
                 .has_value())
         .or_panic();
 
     Result(!positive
-                .transform([](auto input) {
+                .transform([](int4 input) {
                     return input * 2;
                 })
-                .and_then([](auto input) {
+                .and_then([](int4 input) {
                     return input;
                 })
                 .has_value())
@@ -130,6 +136,9 @@ void meow() {
     // TODO: Test monadic methods on move-only types.
     // TODO: Test `Maybe<> const`.
     // TODO: Test constructing from another `Maybe<>`.
+
+    Movable mov;
+    Maybe<Movable> maybe_movs(meta::move(mov));
 
     cat::exit();
 };

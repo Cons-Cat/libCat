@@ -33,7 +33,7 @@
  */
 
 template <typename T = void>
-struct Result;
+class Result;
 
 struct [[nodiscard]] Failure {
     ssize code;
@@ -83,6 +83,7 @@ template <typename T>
 class [[nodiscard]] Result {
   public:
     Failure failure_code;  // `Failure` is an 8-byte value.
+    static_assert(sizeof(Failure) == 8);
 
     // `char` should be a relatively unintrusive dummy data for when this holds
     // `void`. Reflection TS in future C++ will provide conditional-members,
