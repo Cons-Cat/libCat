@@ -54,10 +54,10 @@ struct SocketUnix {
 
     // Create and return a `Socket`.
     auto create() -> Result<> {
-        Result<int8> result = nix::create_socket(
+        Result<nix::FileDescriptor> result = nix::create_socket(
             this->attributes.family, static_cast<int>(Type), Protocol);
         if (result.is_okay) {
-            this->descriptor = result.value;
+            this->descriptor = result.storage;
         }
         return result;
     }
@@ -100,7 +100,7 @@ struct SocketUnix {
         auto result =
             nix::accept_socket(listening_socket, p_socket, p_addr_len);
         if (result.is_okay) {
-            this->descriptor = result.value;
+            this->descriptor = result.storage;
             return okay;
         }
         return result;
@@ -112,7 +112,7 @@ struct SocketUnix {
         auto result = nix::accept_socket(listening_socket.descriptor, p_socket,
                                          p_addr_len);
         if (result.is_okay) {
-            this->descriptor = result.value;
+            this->descriptor = result.storage;
             return okay;
         }
         return result;

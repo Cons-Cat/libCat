@@ -5,6 +5,8 @@
 #include <linux>
 #include <type_traits>
 
+#include "any"
+
 // TODO: This does not work correctly.
 template <typename T>
 concept allocator = requires(T allocator, ssize input) {
@@ -32,6 +34,14 @@ concept allocator = requires(T allocator, ssize input) {
 /* Some concepts from the STL are not supported, for various reasons.
  * `cat::destructable` is not useful without exception handling. */
 
+struct MemoryHandle {
+    Any storage;
+
+    auto get_address() -> void* {
+        return this;
+    }
+};
+
 struct PageAllocator {
     void* address = nullptr;
 
@@ -44,7 +54,7 @@ struct PageAllocator {
      * allocated, that amount will be rounded up to `4096u`. There is generally
      * very little reason to allocate any smaller amount of bytes using
      * `PageAllocator`. */
-    auto malloc(ssize allocation_size) -> Result<Any> {
+    auto malloc(ssize allocation_size) -> Result<MemoryHandle> {
         this->address = nix::map_memory(0u, allocation_size,
                                         nix::MmapProtectionFlags::read |
                                             nix::MmapProtectionFlags::write,
@@ -60,7 +70,7 @@ struct PageAllocator {
         if (this->address == nullptr) {
             return Failure(1);
         }
-        return Any(this->address);
+        return MemoryHandle{this->address};
     }
 
     // TODO: `munmap()` here.
