@@ -323,20 +323,34 @@ class Maybe {
         cat::print(
             "`.has_value()` was illegally called on a `Maybe` which did not hold\
 a value!\n")
-            .or_panic_debug();
+            .assert();
         cat::exit(1);
 #endif
         __builtin_unreachable();
     }
 
-    constexpr auto value_or(StorageType const fallback) const& -> T& {
+    constexpr auto value_or(typename StorageType::Type const fallback) & -> T {
         if (this->storage.has_value()) {
             return this->storage.get_value();
         }
         return fallback;
     }
 
-    constexpr auto value_or(StorageType const&& fallback) && -> T&& {
+    constexpr auto value_or(StorageType const fallback) const& -> T {
+        if (this->storage.has_value()) {
+            return this->storage.get_value();
+        }
+        return fallback;
+    }
+
+    constexpr auto value_or(StorageType&& fallback) && -> T&& {
+        if (this->storage.has_value()) {
+            return meta::move(this->storage.get_value());
+        }
+        return meta::move(fallback);
+    }
+
+    constexpr auto value_or(StorageType const&& fallback) const&& -> T&& {
         if (this->storage.has_value()) {
             return meta::move(this->storage.get_value());
         }
@@ -544,7 +558,7 @@ class Maybe<Predicate<T, predicate, sentinel>> {
         cat::print(
             "`.has_value()` was illegally called on a `Maybe` which did not hold\
 a value!\n")
-            .or_panic_debug();
+            .assert();
         cat::exit(1);
 #endif
         __builtin_unreachable();
