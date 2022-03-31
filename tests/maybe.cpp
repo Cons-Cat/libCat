@@ -1,52 +1,46 @@
 #include <maybe>
 #include <memory>
 
-// TODO: Use `Result<>` asserts.
 void meow() {
     // Initialize empty.
     Maybe<int4> foo(none);
-    if (foo.has_value()) {
-        cat::exit(1);
-    }
+    Result(!foo.has_value()).or_panic();
 
     // Assign a value.
     foo = 1;
-    if (!foo.has_value()) {
-        cat::exit(1);
-    }
+    Result(foo.has_value()).or_panic();
 
     // Remove a value.
     foo = none;
-    if (foo.has_value()) {
-        cat::exit(1);
-    }
+    Result(!foo.has_value()).or_panic();
 
     // Unwrap a value.
     Maybe<int4> moo = 1;
     moo = 2;
-    if (moo.value() != 2) {
-        cat::exit(1);
-    }
+    Result(moo.value() == 2).or_panic();
+
+    moo = none;
+    Result(moo.value_or(100) == 100).or_panic();
 
     // Maybe reference.
-    int4 goo = 0;
     Maybe<int4&> ref(none);
     Maybe<int4&> ref_2 = none;
+
+    Result(!ref.has_value()).or_panic();
+    Result(!ref_2.has_value()).or_panic();
+
+    // Rebind.
+    int4 goo = 0;
     Maybe<int4&> boo = goo;
     ref = boo;
+    boo = none;
 
-    if (!ref.has_value()) {
-        cat::exit(1);
-    }
+    Result(ref.has_value()).or_panic();
 
     ref = none;
 
-    if (ref.has_value()) {
-        cat::exit(1);
-    }
-    if (ref_2.has_value()) {
-        cat::exit(1);
-    }
+    Result(!ref.has_value()).or_panic();
+    Result(ref_2.has_value()).or_panic();
 
     // Maybe with a predicate.
     Maybe<Predicate<int4,
@@ -55,102 +49,82 @@ void meow() {
                     },
                     -1>>
         positive(none);
-    if (positive.has_value()) {
-        cat::exit(1);
-    }
+    Result(!positive.has_value()).or_panic();
 
     positive = -10;
-    if (positive.has_value()) {
-        cat::exit(1);
-    }
+    Result(!positive.has_value()).or_panic();
 
     positive = 0;
-    if (!positive.has_value()) {
-        cat::exit(1);
-    }
+    Result(positive.has_value()).or_panic();
 
     positive = 10;
-    if (!positive.has_value()) {
-        cat::exit(1);
-    }
+    Result(positive.has_value()).or_panic();
 
     positive = none;
-    if (positive.has_value()) {
-        cat::exit(1);
-    }
-
+    Result(!positive.has_value()).or_panic();
+	
     // This crashes clangd, but it passes tests, last I checked.
-    /*
-    Maybe<Sentinel<int4, 0>> nonzero = none;
-if (nonzero.has_value()) {
-            cat::exit(1);
-    }
+	/* 
+	Maybe<Sentinel<int4, 0>> nonzero = none;
+	Result(!nonzero.has_value()).or_panic();
 
-nonzero = 1;
-if (!nonzero.has_value()) {
-     cat::exit(1);
- }
+	nonzero = 1;
+	Result(nonzero.has_value()).or_panic();
 
-nonzero = 0;
-if (nonzero.has_value()) {
-     cat::exit(1);
- }
-    */
-
+	nonzero = 0;
+	Result(!nonzero.has_value()).or_panic();
+	*/
+	
     // Monadic methods.
-    if (moo.transform([](auto input) {
-               return input * 2;
-           })
-            .value() != 4) {
-        cat::exit(1);
-    }
+    moo = 2;
+    Result(moo.transform([](auto input) {
+                  return input * 2;
+              })
+               .value() == 4)
+        .or_panic();
 
     _ = moo.or_else([]() {
         cat::exit(1);
     });
 
     moo = none;
-    if (moo.transform([](auto input) {
-               return input * 2;
-           })
-            .has_value()) {
-        cat::exit(1);
-    }
+    Result(!moo.transform([](auto input) {
+                   return input * 2;
+               })
+                .has_value())
+        .or_panic();
 
     _ = moo.and_then([](Maybe<int4> input) -> Maybe<int4> {
         cat::exit(1);
         return input;
     });
 
-    if (moo.transform([](auto input) {
-               return input * 2;
-           })
-            .and_then([](auto input) {
-                return input;
-            })
-            .has_value()) {
-        cat::exit(1);
-    }
+    Result(!moo.transform([](auto input) {
+                   return input * 2;
+               })
+                .and_then([](auto input) {
+                    return input;
+                })
+                .has_value())
+        .or_panic();
 
     positive = none;
-    if (positive
-            .transform([](auto input) {
-                return input * 2;
-            })
-            .has_value()) {
-        cat::exit(1);
-    }
+    Result(!positive
+                .transform([](auto input) {
+                    return input * 2;
+                })
+                .has_value())
+        .or_panic();
 
-    if (positive
-            .transform([](auto input) {
-                return input * 2;
-            })
-            .and_then([](auto input) {
-                return input;
-            })
-            .has_value()) {
-        cat::exit(1);
-    }
+    Result(!positive
+                .transform([](auto input) {
+                    return input * 2;
+                })
+                .and_then([](auto input) {
+                    return input;
+                })
+                .has_value())
+        .or_panic();
 
     // TODO: Test monadic methods on reference types.
     // TODO: Test monadic methods on move-only types.

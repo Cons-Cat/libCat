@@ -20,7 +20,7 @@ void meow() {
         _ = meta::move(const_array_1);
         _ = meta::move(const_array_2);
     };
-    meta::constant_evaluate(constant);
+    _ = meta::constant_evaluate(constant);
 
     cat::exit();
 };
