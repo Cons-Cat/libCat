@@ -426,7 +426,7 @@ auto handshake(auto& allocator, SocketUnix<SocketType::stream>& socket)
     // recieved packets is unknown and potentially a very large amount.
     x_connection.p_setup = static_cast<ConnectionResponseInfo*>(
         allocator.malloc(x_connection.header.message_length * 4)
-            .or_is(nullptr)
+            .value_or(nullptr)
             .get_address());
     if (!x_connection.p_setup) {
         return Failure(0x0);

@@ -103,34 +103,41 @@ class [[nodiscard]] Result {
         !meta::is_same_v<ValueType, Any>)
         : storage(value), is_okay(true){};
 
+    // If this holds `void`, any specialization of `Result<>` or an `okay` can
+    // convert into this.
+    template <typename U>
+    constexpr Result(U const) requires(
+        is_void && (meta::is_specialization<U, Result>::value ||
+                    meta::is_same_v<U, cat::detail::Okay>))
+        : is_okay(true){};
+
+    // TODO: Trivially and non-trivially Copy and move construct `ValueType`.
+
     // constexpr Result(ValueType const& value) requires(
     //     !is_void && meta::is_trivially_copy_constructible_v<ValueType>)
     //     : storage(value), is_okay(true) {
     // }
 
-    // constexpr Result(ValueType const&& value) requires(
+    // constexpr Result(ValueType&& value) requires(
     //     !is_void && meta::is_trivially_move_constructible_v<ValueType> &&
     //     !meta::is_same_v<ValueType, Any>)
     //     : storage(value), is_okay(true){};
 
-    // Implicity cast an inputted `Result` to this. This is useful for
-    // `Result<Any>`.
+    // Implicity cast an inputted compatible `Result` to this.
     template <typename U>
     constexpr Result(Result<U> const result) requires(
         !is_void && meta::is_default_constructible<U>::value &&
         meta::is_convertible_v<T, U> && !meta::is_same_v<U, Any>)
         : storage(static_cast<T>(result.storage)), is_okay(result.is_okay){};
 
-    // Implicity cast an inputted `Result` to this. This is useful for
-    // `Result<Any>`.
+    // Implicity cast an inputted compatible `Result` to this.
     template <typename U>
     constexpr Result(Result<U> const& result) requires(
         !is_void && meta::is_trivially_copy_constructible_v<U> &&
         meta::is_convertible_v<T, U> && !meta::is_same_v<U, Any>)
         : storage(static_cast<T>(result.storage)), is_okay(result.is_okay){};
 
-    // Implicity cast an inputted `Result` to this. This is useful for
-    // `Result<Any>`.
+    // Implicity cast an inputted compatible `Result` to this.
     template <typename U>
     constexpr Result(Result<U>&& result) requires(
         !is_void && meta::is_trivially_move_constructible_v<U> &&
@@ -149,49 +156,121 @@ class [[nodiscard]] Result {
 
     // Special-case consuming a `Result<Any>`.
     constexpr Result(Result<Any> const& result) requires(!is_void)
-        : storage(meta::bit_cast<T>(result.storage)), is_okay(result.is_okay){};
+        : storage(static_cast<T>(result.storage)), is_okay(result.is_okay){};
 
     // Special-case consuming an `Any>`.
     constexpr Result(Any const result) requires(!is_void)
-        : storage(meta::bit_cast<T>(result)), is_okay(true){};
+        : storage(static_cast<T>(result)), is_okay(true){};
 
     // TODO: Concept for `bool1`, `bool2`, and `bool4` as well.
     // Consume a `bool` temporary. This is useful for debugging with asserts.
     constexpr Result(bool const& expression) requires(is_void)
         : storage(), is_okay(expression){};
 
-    // Special-case consuming `okay` when holding `void`.
-    constexpr Result(auto) requires(is_void) : is_okay(true){};
-    // constexpr Result(cat::detail::Okay) requires(is_void) : is_okay(true){};
+    constexpr auto value() {
+        if (meta::is_constant_evaluated()) {
+            if constexpr (is_void) {
+                return this->storage;
+            }
+            return;
+        }
+#ifdef __OPTIMIZE__
+        return this->storage;
+#else
+        if (this->is_okay) [[likely]] {
+            if constexpr (is_void) {
+                return this->storage;
+            }
+            return;
+        }
+        // TODO: Print an error message.
+        cat::exit(1);
+#endif
+        __builtin_unreachable();
+    }
 
     // Return a specified value when `is_okay` is `false`.
-    constexpr auto or_is(ValueType const& in_value) -> ValueType {
-        if (!is_okay) {
-            return in_value;
+    constexpr auto value_or(ValueType const& value) -> ValueType {
+        if (!this->is_okay) {
+            return value;
         }
         return this->storage;
     }
 
     // `nullptr` must be special-cased.
-    constexpr auto or_is(decltype(nullptr) in_value) -> ValueType
-    /* requires(meta::is_pointer_v<ValueType>) */ {
-        if (!is_okay) {
-            return static_cast<ValueType>(in_value);
+    constexpr auto value_or(decltype(nullptr) value) -> ValueType {
+        if (!this->is_okay) {
+            return static_cast<ValueType>(value);
         }
         return this->storage;
     }
 
-    // TODO: Add a `meta::invokable` concept
-    constexpr auto or_do(auto callback) -> T {
-        if (!is_okay) {
-            return callback();
+    // If this non-`const`-qualified `Result` holds a value, transform it by a
+    // non-`void` function. Otherwise, propagate an empty `Result`.
+    template <typename Function>
+    constexpr auto transform(Function&& callback) & {
+        if (this->is_okay) {
+            return Result<T>(meta::forward<Function>(callback)(this->storage));
+        }
+        return *this;
+    }
+
+    // If this `const`-qualified `Result` holds a value, transform it by a
+    // non-`void` function without side-effects. Otherwise, propagate an empty
+    // `Result`.
+    template <typename Function>
+    constexpr auto transform(Function&& callback) const& {
+        if (this->is_okay) {
+            return Result<T>(meta::forward<Function>(callback(this->storage)));
+        }
+        return *this;
+    }
+
+    // Invoke a callback on the value of a non-`const`-qualified `Result` and
+    // propagate the result, if it holds a value.
+    template <typename Function>
+    constexpr auto and_then(Function&& callback) & {
+        return this->is_okay
+                   ? Result<T>(meta::forward<Function>(callback)(this->storage))
+                   : *this;
+    }
+
+    // Invoke a callback on the value of a `const`-qualified `Result` and
+    // propagate the result, if it holds a value.
+    template <typename Function>
+    constexpr auto and_then(Function&& callback) const& {
+        return this->is_okay
+                   ? Result<T>(meta::forward<Function>(callback)(this->storage))
+                   : *this;
+    }
+
+    // TODO: Add a `meta::invokable` concept.
+    // TODO: This does work with `void` and non-`void`.
+    // Invoke a callback if a non-`const`-qualified `Result` holds no value.
+    template <typename Function>
+    constexpr auto or_else(Function&& callback) -> Result<T> {
+        if (!this->is_okay) {
+            return meta::forward<Function>(callback)();
         }
         if constexpr (!is_void) {
             return this->storage;
         }
     }
 
-    // This method does not yield `value`. It is useful for impure functions.
+    // TODO: Add a `meta::invokable` concept.
+    // TODO: This does work with `void` and non-`void`.
+    // Invoke a callback if a `const`-qualified `Result` holds no value.
+    template <typename Function>
+    constexpr auto or_else(Function&& callback) const -> Result<T> {
+        if (!this->is_okay) {
+            return meta::forward<Function>(callback)();
+        }
+        if constexpr (!is_void) {
+            return this->storage;
+        }
+    }
+
+    // This method does not yield any value. It is useful for impure functions.
     constexpr void discard_result(){};
 
     // TODO: Pass in the exit code and error message with overloads.
@@ -207,9 +286,10 @@ class [[nodiscard]] Result {
         __builtin_unreachable();  // This prevents a build warning.
     }
 
-    /* Because the error code is 8-bytes, it could contain a non-null
-     * pointer to an error string. This prints that error message. */
-    auto or_panic(StringView const& p_error_message) -> T {
+    // TODO: Make this work.
+    // Because the error code is 8-bytes, it could contain a non-null
+    // pointer to an error string. This prints that error message.
+    auto or_panic(StringView const& error_message) -> T {
         if (is_okay) {
             if constexpr (!is_void) {
                 return this->storage;
@@ -217,50 +297,36 @@ class [[nodiscard]] Result {
                 return;
             }
         }
-        cat::print_line(p_error_message).discard_result();
+        cat::print_line(error_message).discard_result();
         cat::exit(1);
         __builtin_unreachable();  // This prevents a build warning.
     }
 
-    /* If this object does not hold a value, the return of this function is
-     * undefined. When building `-O0`, this function panics if a value is not
-     * held. When optimizations are enabled, that safety check is elided. This
-     * function cannot fail in a `constexpr` context. */
-    constexpr auto assert() {
-        if (!meta::is_constant_evaluated()) {
-#ifndef __OPTIMIZE__
-            if (!is_okay) {
-                cat::exit(1);
-            }
-#endif
-        }
-        // Unconditionally return `value`.
-        if constexpr (!is_void) {
-            return this->storage;
-        } else if constexpr (is_void) {
+    // When building `-O0`, this function panics if a value is not
+    // held. When optimizations are enabled, that safety check is elided.
+    constexpr auto assert() const {
+        if (meta::is_constant_evaluated()) {
             return;
         }
+#ifndef __OPTIMIZE__
+        if (!this->is_okay) {
+            cat::exit(1);
+        }
+#endif
     }
 
-    /* If this object does not hold a value, the return of this function
-     * is undefined. When building `-O0`, this function panics if a
-     * value is not held. When optimizations are enabled, that safety
-     * check is elided. This function cannot fail in a `constexpr`
-     * context. */
-    constexpr auto or_panic_debug(StringView const& error_message) -> T {
-        if (!meta::is_constant_evaluated()) {
-#ifndef __OPTIMIZE__
-            if (!is_okay) {
-                cat::print_line(error_message).discard_result();
-                cat::exit(1);
-            }
-#endif
-        }
-        // Unconditionally return `value`.
-        if constexpr (!is_void) {
-            return this->storage;
-        } else if constexpr (is_void) {
+    // TODO: Make this work.
+    // When building `-O0`, this function panics if a value is not
+    // held. When optimizations are enabled, that safety check is elided.
+    constexpr auto assert(StringView const& error_message) {
+        if (meta::is_constant_evaluated()) {
             return;
         }
+#ifndef __OPTIMIZE__
+        if (!this->is_okay) {
+            cat::print_line(error_message).discard_result();
+            cat::exit(1);
+        }
+#endif
     }
 };
