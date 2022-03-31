@@ -352,13 +352,13 @@ class Maybe {
 #ifdef __OPTIMIZE__
         return this->storage.get_value();
 #else
-        if (this->storage.has_value()) {
+        if (this->storage.has_value()) [[likely]] {
             return this->storage.get_value();
         }
         cat::print(
-            "`.has_value()` was illegally called on a `Maybe` which did not hold\
-a value!\n")
-            .assert();
+            "`.value()` was illegally called on a `Maybe` which did not hold a \
+value!\n")
+            .discard_result();
         cat::exit(1);
 #endif
         __builtin_unreachable();
@@ -455,8 +455,8 @@ a value!\n")
         return *this;
     }
 
-    // Invoke a callback on the value of a non-`const`-qualified `Maybe` that
-    // potentially mutates global state, and propagate the result.
+    // Invoke a callback on the value of a `const`-qualified `Maybe` and
+    // propagate the result, if it holds a value.
     template <typename Function>
     constexpr auto and_then(Function&& callback) & {
         return this->has_value() ? Maybe<T>(meta::forward<Function>(callback)(
@@ -464,8 +464,8 @@ a value!\n")
                                  : *this;
     }
 
-    // Invoke a callback on the value of a `const`-qualified `Maybe`, and
-    // propagate the result.
+    // Invoke a callback on the value of a `const`-qualified `Maybe` and
+    // propagate the result, if it holds a value.
     template <typename Function>
     constexpr auto and_then(Function&& callback) const& {
         return this->has_value() ? Maybe<T>(meta::forward<Function>(callback)(
@@ -473,8 +473,8 @@ a value!\n")
                                  : *this;
     }
 
-    // Invoke a callback on the value of a non-`const`-qualified `Maybe` that
-    // potentially mutates global state, and propagate the result.
+    // Invoke a callback on the value of a non-`const`-qualified `Maybe` and
+    // propagate the result, if it holds a value.
     template <typename Function>
     constexpr auto and_then(Function&& callback) && {
         return this->has_value() ? Maybe<T>(meta::forward<Function>(callback)(
@@ -482,38 +482,47 @@ a value!\n")
                                  : meta::move(*this);
     }
 
-    // Invoke a callback if a non-`const`-qualified `Maybe` holds no value.
+    // Invoke a callback on the value of a `const`-qualified `Maybe` and
+    // propagate the result, if it holds a value.
     template <typename Function>
-    constexpr auto or_else(Function&& callback) & {
+    constexpr auto and_then(Function&& callback) const&& {
+        return this->has_value() ? Maybe<T>(meta::forward<Function>(callback)(
+                                       meta::move(this->storage.get_value())))
+                                 : meta::move(*this);
+    }
+
+    // Invoke a callback iff a non-`const`-qualified `Maybe` holds no value.
+    template <typename Function>
+    constexpr auto or_else(Function&& callback) & -> Maybe<T> {
         if (!this->storage.has_value()) {
             meta::forward<Function>(callback)();
         }
         return *this;
     }
 
-    // Invoke a callback if a `const`-qualified `Maybe` holds no value.
+    // Invoke a callback iff a `const`-qualified `Maybe` holds no value.
     template <typename Function>
-    constexpr auto or_else(Function&& callback) const& {
+    constexpr auto or_else(Function&& callback) const& -> Maybe<T> {
         if (!this->storage.has_value()) {
             meta::forward<Function>(callback)();
         }
         return *this;
     }
 
-    // Invoke a callback if a non-`const`-qualified move-only `Maybe` holds no
+    // Invoke a callback iff a non-`const`-qualified move-only `Maybe` holds no
     // value.
     template <typename Function>
-    constexpr auto or_else(Function&& callback) && {
+    constexpr auto or_else(Function&& callback) && -> Maybe<T> {
         if (!this->storage.has_value()) {
             meta::forward<Function>(callback)();
         }
         return meta::move(*this);
     }
 
-    // Invoke a callback if a `const`-qualified move-only `Maybe` holds no
+    // Invoke a callback iff a `const`-qualified move-only `Maybe` holds no
     // value.
     template <typename Function>
-    constexpr auto or_else(Function&& callback) const&& {
+    constexpr auto or_else(Function&& callback) const&& -> Maybe<T> {
         if (!this->storage.has_value()) {
             meta::forward<Function>(callback)();
         }
@@ -601,13 +610,13 @@ class Maybe<Predicate<T, predicate, sentinel>> {
 #ifdef __OPTIMIZE__
         return this->storage;
 #else
-        if (this->has_value()) {
+        if (this->has_value()) [[likely]] {
             return this->storage;
         }
         cat::print(
-            "`.has_value()` was illegally called on a `Maybe` which did not hold\
-a value!\n")
-            .assert();
+            "`.value()` was illegally called on a `Maybe` which did not hold a \
+value!\n")
+            .discard_result();
         cat::exit(1);
 #endif
         __builtin_unreachable();
@@ -740,7 +749,8 @@ a value!\n")
                 : Maybe<Predicate<T, predicate, sentinel>>(none));
     }
 
-    // Invoke a callback if a non-`const`-qualified `Maybe` holds no value.
+    // Invoke a callback iff a non-`const`-qualified `Maybe` holds no value,
+    // then return the value.
     template <typename Function>
     constexpr auto or_else(Function&& callback) & {
         if (!this->has_value()) {
@@ -749,7 +759,7 @@ a value!\n")
         return *this;
     }
 
-    // Invoke a callback if a `const`-qualified `Maybe` holds no value.
+    // Invoke a callback iff a `const`-qualified `Maybe` holds no value.
     template <typename Function>
     constexpr auto or_else(Function&& callback) const& {
         if (!this->has_value()) {
@@ -758,7 +768,7 @@ a value!\n")
         return *this;
     }
 
-    // Invoke a callback if a non-`const`-qualified move-only `Maybe` holds no
+    // Invoke a callback iff a non-`const`-qualified move-only `Maybe` holds no
     // value.
     template <typename Function>
     constexpr auto or_else(Function&& callback) && {
@@ -768,7 +778,7 @@ a value!\n")
         return meta::move(*this);
     }
 
-    // Invoke a callback if a `const`-qualified move-only `Maybe` holds no
+    // Invoke a callback iff a `const`-qualified move-only `Maybe` holds no
     // value.
     template <typename Function>
     constexpr auto or_else(Function&& callback) const&& {

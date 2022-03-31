@@ -18,8 +18,15 @@ auto make_false() -> Result<bool1> {
 void meow() {
     // Do not panic when taking in a non-Failure.
     result_factory(MyErrors::OK).or_panic();
-    // Construct on a bool r-value.
+
+    // Construct on a `bool` r-value.
+    Result(true).assert();
+    // TODO: This line does not compile:
+    // Result(true).assert("Text");
     Result(true).or_panic();
+    // TODO: This line does not compile:
+    // Result(true).or_panic("Foo");
+
     // Do not panic when false comes from a different constructor.
     make_false().or_panic();
     cat::exit();
