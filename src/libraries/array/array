@@ -2,48 +2,94 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <iterator>
 #include <memory>
 #include <string>
 #include <type_traits>
 #include <utility>
 
-template <typename T, ssize Size>
+namespace detail {
+
+// template <ssize end_index>
+// };
+
+}  // namespace detail
+
+template <typename T, ssize size>
 struct Array {
-    static constexpr ssize length = Size;
-    T value[Size];
+    static constexpr ssize length = size;
+    T storage[size];
 
     constexpr Array() = default;
-    constexpr Array(Array<T, Size>&& in_array) = default;
-    constexpr Array(Array<T, Size> const& in_array) = default;
+    constexpr Array(Array<T, size>&& in_array) = default;
+    constexpr Array(Array<T, size> const& in_array) = default;
     constexpr Array(StringView const& string) requires(
         meta::is_same_v<meta::remove_const_t<T>, char>) {
-        cat::copy_memory(string.p_data, &(this->value), string.length);
+        cat::copy_memory(string.p_data, &(this->storage), string.length);
     }
 
-    constexpr auto operator=(Array<T, Size>&&) -> Array<T, Size>& = default;
-    constexpr auto operator=(StringView const&& string) -> Array<T, Size>
+    constexpr auto operator=(Array<T, size>&&) -> Array<T, size>& = default;
+    constexpr auto operator=(StringView const&& string) -> Array<T, size>
     requires(meta::is_same_v<T, char>) {
-        Array<T, Size> array;
-        cat::copy_memory(string.p_data, &(this->value), string.length);
+        Array<T, size> array;
+        cat::copy_memory(string.p_data, &(this->storage), string.length);
         return array;
     }
 
     template <typename... U>
-    constexpr Array(U&&... arguments) requires(sizeof...(arguments) == Size) {
-        T unpacked_data[Size] = {arguments...};
-        for (int4 i = 0; i < Size; i++) {
-            this->value[i] = unpacked_data[i];
+    constexpr Array(U&&... arguments) requires(sizeof...(arguments) == size) {
+        T unpacked_data[size] = {arguments...};
+        for (int4 i = 0; i < size; i++) {
+            this->storage[i] = unpacked_data[i];
         }
     }
 
     // TODO: Non-pessimize unsigned indices as well.
     constexpr auto operator[](ssize i) -> T& {
-        return value[i];
+        return storage[i];
     }
 
     constexpr auto to_string() -> StringView
         requires(meta::is_same_v<meta::remove_const_t<T>, char>) {
-        return StringView(static_cast<char const*>(static_cast<void*>(&value)),
-                          Size);
+        return StringView(
+            static_cast<char const*>(static_cast<void*>(&storage)), size);
+    }
+
+    struct ArrayIterator : IteratorFacade<ArrayIterator> {
+        ssize current_index = 0;
+        T const* const p_array;
+
+        constexpr ArrayIterator() = default;
+        constexpr explicit ArrayIterator(ssize index, T const* const p_in_array)
+            : current_index(index), p_array(p_in_array){};
+
+        // TODO: Correct dereference.
+        auto dereference() const -> T const& {
+            return this->p_array[current_index];
+        }
+
+        void advance(int offset) {
+            current_index += offset;
+        }
+
+        auto distance_to(ArrayIterator other) const -> int {
+            return int(other.current_index) - static_cast<int>(current_index);
+        }
+    };
+
+    constexpr auto begin() const {
+        return ArrayIterator(0, this->storage);
+    }
+
+    constexpr auto end() const {
+        return ArrayIterator(size, this->storage);
+    }
+
+    constexpr auto rbegin() const {
+        return this->end();
+    }
+
+    constexpr auto rend() const {
+        return this->begin();
     }
 };

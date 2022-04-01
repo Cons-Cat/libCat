@@ -27,6 +27,7 @@ set(
   ${CAT_SRC}/libraries/x/
   ${CAT_SRC}/libraries/bit/
   ${CAT_SRC}/libraries/numeric_limits/
+  ${CAT_SRC}/libraries/iterator/
   PARENT_SCOPE
 )
 

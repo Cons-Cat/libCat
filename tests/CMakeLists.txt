@@ -44,7 +44,7 @@ set_tests_properties(TestResultFail PROPERTIES WILL_FAIL TRUE)
 add_executable(test_arrays arrays.cpp)
 target_compile_options(test_arrays PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_arrays PRIVATE ${CAT_LINK_FLAGS})
-add_test(NAME TestBuffers COMMAND test_arrays)
+add_test(NAME TestArray COMMAND test_arrays)
 
 # This tests if `cat::string_length()` works.
 add_executable(test_strlen string_length.cpp)
