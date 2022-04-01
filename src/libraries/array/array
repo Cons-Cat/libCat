@@ -8,13 +8,6 @@
 #include <type_traits>
 #include <utility>
 
-namespace detail {
-
-// template <ssize end_index>
-// };
-
-}  // namespace detail
-
 template <typename T, ssize size>
 struct Array {
     static constexpr ssize length = size;
@@ -55,15 +48,14 @@ struct Array {
             static_cast<char const*>(static_cast<void*>(&storage)), size);
     }
 
-    struct ArrayIterator : IteratorFacade<ArrayIterator> {
+    struct Iterator : IteratorFacade<Iterator> {
         ssize current_index = 0;
         T const* const p_array;
 
-        constexpr ArrayIterator() = default;
-        constexpr explicit ArrayIterator(ssize index, T const* const p_in_array)
+        constexpr Iterator() = default;
+        constexpr explicit Iterator(ssize index, T const* const p_in_array)
             : current_index(index), p_array(p_in_array){};
 
-        // TODO: Correct dereference.
         auto dereference() const -> T const& {
             return this->p_array[current_index];
         }
@@ -72,24 +64,49 @@ struct Array {
             current_index += offset;
         }
 
-        auto distance_to(ArrayIterator other) const -> int {
+        auto distance_to(Iterator other) const -> int {
+            return int(other.current_index) - static_cast<int>(current_index);
+        }
+    };
+
+    // TODO: Try to simplify this again.
+    struct ReverseIterator
+        : public IteratorFacade<ReverseIterator,
+                                cat::detail::IteratorDirection::backwards> {
+        ssize current_index = 0;
+        T const* const p_array;
+
+        constexpr ReverseIterator() = default;
+        constexpr explicit ReverseIterator(ssize index,
+                                           T const* const p_in_array)
+            : current_index(index), p_array(p_in_array){};
+
+        auto dereference() const -> T const& {
+            return this->p_array[current_index];
+        }
+
+        void advance(int offset) {
+            this->current_index += offset;
+        }
+
+        auto distance_to(ReverseIterator other) const -> int {
             return int(other.current_index) - static_cast<int>(current_index);
         }
     };
 
     constexpr auto begin() const {
-        return ArrayIterator(0, this->storage);
+        return Iterator(0, this->storage);
     }
 
     constexpr auto end() const {
-        return ArrayIterator(size, this->storage);
+        return Iterator(size, this->storage);
     }
 
     constexpr auto rbegin() const {
-        return this->end();
+        return ReverseIterator(size - 1, this->storage);
     }
 
     constexpr auto rend() const {
-        return this->begin();
+        return ReverseIterator(-1, this->storage);
     }
 };
