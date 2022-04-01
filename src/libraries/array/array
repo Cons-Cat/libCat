@@ -69,31 +69,6 @@ struct Array {
         }
     };
 
-    // TODO: Try to simplify this again.
-    struct ReverseIterator
-        : public IteratorFacade<ReverseIterator,
-                                cat::detail::IteratorDirection::backwards> {
-        ssize current_index = 0;
-        T const* const p_array;
-
-        constexpr ReverseIterator() = default;
-        constexpr explicit ReverseIterator(ssize index,
-                                           T const* const p_in_array)
-            : current_index(index), p_array(p_in_array){};
-
-        auto dereference() const -> T const& {
-            return this->p_array[current_index];
-        }
-
-        void advance(int offset) {
-            this->current_index += offset;
-        }
-
-        auto distance_to(ReverseIterator other) const -> int {
-            return int(other.current_index) - static_cast<int>(current_index);
-        }
-    };
-
     constexpr auto begin() const {
         return Iterator(0, this->storage);
     }
@@ -103,10 +78,10 @@ struct Array {
     }
 
     constexpr auto rbegin() const {
-        return ReverseIterator(size - 1, this->storage);
+        return cat::ReversedIterator<Iterator>(size - 1, this->storage);
     }
 
     constexpr auto rend() const {
-        return ReverseIterator(-1, this->storage);
+        return cat::ReversedIterator<Iterator>(-1, this->storage);
     }
 };
