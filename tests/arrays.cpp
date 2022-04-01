@@ -29,5 +29,10 @@ void meow() {
         count++;
     }
 
+    for (int4 const& a : cat::Reverse(array_1)) {
+        count--;
+        Result(a == array_1[count]).or_panic();
+    }
+
     cat::exit();
 };
