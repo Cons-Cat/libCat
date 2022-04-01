@@ -67,6 +67,10 @@ class Array {
         return this->storage[length - 1];
     }
 
+    constexpr auto is_empty() -> bool1 {
+        return length > 0;
+    }
+
     constexpr auto to_string() -> StringView
         requires(meta::is_same_v<meta::remove_const_t<T>, char>) {
         return StringView(

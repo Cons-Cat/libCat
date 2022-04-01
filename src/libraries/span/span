@@ -1,0 +1,100 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// TODO: Add tests.
+// TODO: Add many comments.
+
+#include <memory>
+template <typename T>
+class Span {
+    // This is arranged as pointer, then size, to follow the ABI of Linux
+    // standard `iovec`s.
+    T* p_storage;
+    ssize length;
+  public:
+    constexpr Span() = default;
+    constexpr Span(Span&&) = default;
+
+    constexpr Span(T* p_in_data, ssize in_length)
+        : p_storage(p_in_data), length(in_length){};
+
+    constexpr Span(T* p_start, T* p_end)
+        : p_storage(p_start), length(static_cast<ssize>(p_end - p_start)){};
+
+    // TODO: Make a `Container` `concept`.
+    constexpr Span(auto& container)
+        : p_storage(container.p_storage()), length(container.size()){};
+
+    constexpr Span(auto const& container)
+        : p_storage(container.p_storage()), length(container.size()){};
+
+    template <ssize size>
+    constexpr Span(T (&array)[size])
+        : p_storage(cat::address_of(array)), length(size){};
+
+    constexpr auto subspan(ssize start_index, ssize end_index) -> Span<T> {
+        Result{start_index >= end_index}.assert();
+        Result{end_index <= length}.assert();
+        Span<T> span;
+        span.length = end_index - start_index;
+        span.p_storage = this->p_storage + start_index;
+    }
+
+    constexpr auto first(ssize offset) -> Span<T> {
+        Result{offset < length}.assert();
+        Span<T> span;
+        span.length = offset;
+        span.p_storage = this->p_storage;
+    }
+
+    constexpr auto last(ssize offset) -> Span<T> {
+        Result{offset < length}.assert();
+        Span<T> span;
+        span.length = offset;
+        span.p_storage = this->p_storage + length - offset;
+    }
+
+    constexpr auto set_subspan(ssize start_index, ssize end_index) -> Span<T> {
+        Result{start_index >= end_index}.assert();
+        Result{end_index <= length}.assert();
+        this->length = end_index - start_index;
+        this->p_storage += start_index;
+    }
+
+    constexpr auto set_first(ssize offset) -> Span<T> {
+        Result{offset < length}.assert();
+        this->length = offset;
+    }
+
+    constexpr auto set_last(ssize offset) -> Span<T> {
+        Result{offset < length}.assert();
+        this->length = offset;
+        this->p_storage += length - offset;
+    }
+
+    constexpr auto operator[](ssize index) const -> T& {
+        Result{index < length}.assert();
+        return p_storage[index];
+    }
+
+    constexpr auto p_data() -> T const* {
+        return p_storage;
+    }
+
+    constexpr auto size() -> ssize {
+        return this->length;
+    }
+
+    constexpr auto front() -> T& {
+        return this->p_storage[0];
+    }
+
+    constexpr auto back() -> T& {
+        return this->p_storage[this->length - 1];
+    }
+
+    constexpr auto is_empty() -> bool1 {
+        return this->length > 0;
+    }
+};
