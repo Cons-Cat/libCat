@@ -28,7 +28,7 @@
  *
  * `Result` types are marked `[[nodiscard]]`. With confidence that an invocation
  * of a function returning a `Result` will never fail, you may call
- * `.or_panic_debug()`, which will skip error-handling when compiler
+ * `.assert()`, which will skip error-handling when compiler
  * optimizations are enabled. A `Result` cannot be consumed by the `_` global.
  */
 

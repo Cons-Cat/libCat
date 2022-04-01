@@ -22,5 +22,12 @@ void meow() {
     };
     _ = meta::constant_evaluate(constant);
 
+    // Test iterable.
+    ssize count = 0;
+    for (int4 const& a : array_1) {
+        Result(a == array_1[count]).or_panic();
+        count++;
+    }
+
     cat::exit();
 };
