@@ -3,49 +3,75 @@
 #pragma once
 
 #include <iterator>
+#include <maybe>
 #include <memory>
 #include <string>
 #include <type_traits>
 #include <utility>
 
-template <typename T, ssize size>
-struct Array {
-    static constexpr ssize length = size;
-    T storage[size];
-
+template <typename T, ssize length>
+class Array {
+    T storage[length];
+  public:
     constexpr Array() = default;
-    constexpr Array(Array<T, size>&& in_array) = default;
-    constexpr Array(Array<T, size> const& in_array) = default;
+    constexpr Array(Array<T, length>&& in_array) = default;
+    constexpr Array(Array<T, length> const& in_array) = default;
     constexpr Array(StringView const& string) requires(
         meta::is_same_v<meta::remove_const_t<T>, char>) {
         cat::copy_memory(string.p_data, &(this->storage), string.length);
     }
 
-    constexpr auto operator=(Array<T, size>&&) -> Array<T, size>& = default;
-    constexpr auto operator=(StringView const&& string) -> Array<T, size>
-    requires(meta::is_same_v<T, char>) {
-        Array<T, size> array;
-        cat::copy_memory(string.p_data, &(this->storage), string.length);
-        return array;
-    }
-
     template <typename... U>
-    constexpr Array(U&&... arguments) requires(sizeof...(arguments) == size) {
-        T unpacked_data[size] = {arguments...};
-        for (int4 i = 0; i < size; i++) {
+    constexpr Array(U&&... arguments) requires(sizeof...(arguments) == length) {
+        T unpacked_data[length] = {arguments...};
+        for (int4 i = 0; i < length; i++) {
             this->storage[i] = unpacked_data[i];
         }
     }
 
-    // TODO: Non-pessimize unsigned indices as well.
-    constexpr auto operator[](ssize i) -> T& {
-        return storage[i];
+    constexpr auto operator=(Array<T, length>&&) -> Array<T, length>& = default;
+    constexpr auto operator=(StringView const&& string) -> Array<T, length>
+    requires(meta::is_same_v<T, char>) {
+        Array<T, length> array;
+        cat::copy_memory(string.p_data, &(this->storage), string.length);
+        return array;
+    }
+
+    constexpr auto operator[](ssize index) -> T& {
+        Result{index >= 0}.assert();
+        Result{index < length}.assert();
+        return this->storage[index];
+    }
+
+    constexpr auto at(ssize index) -> Maybe<T&> {
+        Result{index >= 0}.assert();
+        if (index < length) {
+            return Maybe<T&>(this->storage[index]);
+        }
+        return none;
+    }
+
+    constexpr auto p_data() -> T const* {
+        return &(this->storage[0]);
+    }
+
+    consteval auto size() -> ssize {
+        return length;
+    }
+
+    constexpr auto front() -> T& {
+        return this->storage[0];
+    }
+
+    constexpr auto back() -> T& {
+        return this->storage[length - 1];
     }
 
     constexpr auto to_string() -> StringView
         requires(meta::is_same_v<meta::remove_const_t<T>, char>) {
         return StringView(
-            static_cast<char const*>(static_cast<void*>(&storage)), size);
+            static_cast<char const*>(static_cast<void*>(&this->storage)),
+            length);
     }
 
     struct Iterator : IteratorFacade<Iterator> {
@@ -74,11 +100,11 @@ struct Array {
     }
 
     constexpr auto end() const {
-        return Iterator(size, this->storage);
+        return Iterator(length, this->storage);
     }
 
     constexpr auto rbegin() const {
-        return cat::ReversedIterator<Iterator>(size - 1, this->storage);
+        return cat::ReversedIterator<Iterator>(length - 1, this->storage);
     }
 
     constexpr auto rend() const {

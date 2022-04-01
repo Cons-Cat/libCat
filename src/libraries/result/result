@@ -167,6 +167,9 @@ class [[nodiscard]] Result {
     constexpr Result(bool const& expression) requires(is_void)
         : storage(), is_okay(expression){};
 
+    constexpr Result(bool&& expression) requires(is_void)
+        : storage(), is_okay(meta::move(expression)){};
+
     constexpr auto value() {
         if (meta::is_constant_evaluated()) {
             if constexpr (is_void) {
@@ -275,7 +278,7 @@ class [[nodiscard]] Result {
 
     // TODO: Pass in the exit code and error message with overloads.
     auto or_panic() -> T {
-        if (is_okay) {
+        if (is_okay) [[likely]] {
             if constexpr (!is_void) {
                 return this->storage;
             } else if constexpr (is_void) {
@@ -290,7 +293,7 @@ class [[nodiscard]] Result {
     // Because the error code is 8-bytes, it could contain a non-null
     // pointer to an error string. This prints that error message.
     auto or_panic(StringView const& error_message) -> T {
-        if (is_okay) {
+        if (is_okay) [[likely]] {
             if constexpr (!is_void) {
                 return this->storage;
             } else if constexpr (is_void) {
@@ -309,7 +312,7 @@ class [[nodiscard]] Result {
             return;
         }
 #ifndef __OPTIMIZE__
-        if (!this->is_okay) {
+        if (!this->is_okay) [[unlikely]] {
             cat::exit(1);
         }
 #endif

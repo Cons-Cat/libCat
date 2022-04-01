@@ -11,7 +11,7 @@ void meow() {
 
     Array<char, 12> message_buffer;
 
-    nix::unlink(listening_socket.path_name.storage).or_panic();
+    nix::unlink(listening_socket.path_name.p_data()).or_panic();
 
     listening_socket.create().or_panic();
 
@@ -23,7 +23,7 @@ void meow() {
         recieving_socket.accept(listening_socket).or_panic();
 
         while (true) {
-            recieving_socket.recieve(&message_buffer, message_buffer.length)
+            recieving_socket.recieve(&message_buffer, message_buffer.size())
                 .or_panic();
 
             StringView input = message_buffer.to_string();
@@ -46,6 +46,6 @@ void meow() {
 
     recieving_socket.close().or_panic();
     listening_socket.close().or_panic();
-    nix::unlink(listening_socket.path_name.storage).or_panic();
+    nix::unlink(listening_socket.path_name.p_data()).or_panic();
     cat::exit();
 }

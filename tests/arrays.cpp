@@ -34,5 +34,12 @@ void meow() {
         Result(a == array_1[count]).or_panic();
     }
 
+    Result(array_1.front() == 5).or_panic();
+    Result(array_1.back() == 9).or_panic();
+
+    // Index in and out of bounds.
+    Result(array_1.at(0).value() == 5).or_panic();
+    Result(!array_1.at(6).has_value()).or_panic();
+
     cat::exit();
 };

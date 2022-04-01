@@ -267,16 +267,16 @@ struct MaybeReferenceStorage {
     }
 
     constexpr auto get_value() & -> ValueType& {
-        return this->p_value;
+        return *(this->p_value);
     }
     constexpr auto get_value() const& -> ValueType& {
-        return this->p_value;
+        return *(this->p_value);
     }
     constexpr auto get_value() && -> ValueType&& {
-        return meta::move(this->p_value);
+        return *(meta::move(this->p_value));
     }
     constexpr auto get_value() const&& -> ValueType&& {
-        return meta::move(this->p_value);
+        return *(meta::move(this->p_value));
     }
 
     constexpr auto has_value() const -> bool1 {
@@ -345,7 +345,7 @@ class Maybe {
     // Get the held `value` unconditionally. If `has_value()` is `false`, this
     // data is undefined. If this method is used in `-O0`, it will panic in that
     // case, unless used in a `constexpr` context.
-    constexpr auto value() -> T const& {
+    constexpr auto value() -> typename StorageType::ValueType const& {
         if (meta::is_constant_evaluated()) {
             return this->storage.get_value();
         }
