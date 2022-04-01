@@ -235,23 +235,6 @@ struct IteratorFacade {
 
 namespace cat {
 
-template <typename T>
-class Reverse {
-  private:
-    T& iterable;
-  public:
-    explicit Reverse(T& iterable) : iterable{iterable} {
-    }
-
-    auto begin() const {
-        return iterable.rbegin();
-    }
-
-    auto end() const {
-        return iterable.rend();
-    }
-};
-
 struct RandomAccessIteratorTag {};
 struct BidirectionalIteratorTag {};
 struct InputIteratorTag {};
@@ -279,6 +262,44 @@ struct iterator_traits {
                                 // Default to a forward iterator.
                                 ForwardIteratorTag>>>;
     // using IteratorConcept = Category;
+};
+
+template <typename T>
+struct ReversedIterator : public IteratorFacade<ReversedIterator<T>> {
+    T iterator;
+
+    // Forward any constructor to `iterator`.
+    template <typename... Args>
+    ReversedIterator(Args&&... args) : iterator(meta::forward<Args>(args)...){};
+
+    auto dereference() const {
+        return this->iterator.dereference();
+    }
+
+    void advance(int offset) {
+        this->iterator.advance(-offset);
+    }
+
+    auto distance_to(ReversedIterator<T> other) const -> int {
+        return this->iterator.distance_to(other.iterator);
+    }
+};
+
+template <typename T>
+class Reverse {
+  private:
+    T& iterable;
+  public:
+    explicit Reverse(T& iterable) : iterable{iterable} {
+    }
+
+    auto begin() const {
+        return iterable.rbegin();
+    }
+
+    auto end() const {
+        return iterable.rend();
+    }
 };
 
 }  // namespace cat
