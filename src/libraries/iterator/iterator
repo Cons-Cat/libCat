@@ -266,7 +266,7 @@ struct iterator_traits {
 };
 
 template <typename T>
-struct ReversedIterator : public IteratorFacade<ReversedIterator<T>> {
+struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
     T iterator;
 
     // Forward any constructor to `iterator`.

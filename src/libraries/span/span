@@ -13,7 +13,8 @@ template <typename T>
 class Span {
   protected:
     // This is arranged as pointer, then size, to follow the ABI of Linux
-    // standard `iovec`s.
+    // standard `iovec`s. Unfortunately, that is opposite of Windws' standard
+    // `WSABUF`. TODO: Consider making this ABI vary by build target?
     T* p_storage;
     ssize length;
   public:

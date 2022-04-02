@@ -304,6 +304,10 @@ parent_thread:
     }
 };
 
+struct IoVector : Span<Any> {
+    static constexpr ssize max_size = 1_ki;
+};
+
 }  // namespace nix
 
 #include "./implementations/syscall.tpp"
