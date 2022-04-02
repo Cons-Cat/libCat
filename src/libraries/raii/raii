@@ -2,7 +2,6 @@
 // vim: set ft=cpp:
 #pragma once
 
-
 // `Raii` wrappers are curiously-recurring-template-pattern types that cannot be
 // copy-constructed. They must be moved to pass into functions. Their destructor
 // will call an `raii()` method on the type they wrap iff that type has an
@@ -24,7 +23,7 @@ class Raii {
     constexpr Raii(Raii<T> const&) = delete;
 
     // Allow default-construction and move-construction.
-    constexpr Raii() = default;
+    constexpr Raii() : storage(T()){};
     constexpr Raii(Raii<T>&& raii) : storage(raii.get()) {
         raii.owns_data = false;
     };
@@ -80,7 +79,12 @@ class Raii {
         }
     }
 
+    constexpr auto has_ownership() -> bool1 {
+        return this->owns_data;
+    }
+
     constexpr auto get() -> T& {
+        this->owns_data = false;
         return this->storage;
     }
 };
