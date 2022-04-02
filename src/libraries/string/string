@@ -4,11 +4,9 @@
 
 #include <concepts>
 #include <memory>
-// #include <span>
+#include <span>
 #include <type_traits>
 #include <utility>
-
-#include "libraries/span/span"
 
 // Deprecated call to `memcpy()`. Consider using `cat::copy_buffer()` instead.
 // `memcpy()` exists to enable some GCC optimizations.
