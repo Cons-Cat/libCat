@@ -140,7 +140,7 @@ struct IteratorFacade {
             // `ref` is *not* a reference. Returning its address would be
             // the address of a local. Return that thing wrapped in an
             // arrow_proxy.
-            return arrow_proxy(meta::move(reference));
+            return arrow_proxy(cat::move(reference));
         }
     }
 

@@ -10,6 +10,44 @@ namespace meta {
 template <typename T>
 constexpr auto bit_cast(auto& from_value) -> T;
 
+constexpr auto is_constant_evaluated() -> bool;
+
 }  // namespace meta
 
+// These symbols must be declared in `std::` to enable some useful GCC
+// features, such as move-semantics warnings, and preventing GDB from stepping
+// into the functions.
+namespace std {
+
+// NOLINTBEGIN(readability-redundant-declaration)
+// The following functions are forward-declared in `<type_traits>`, but they
+// belong to the `<utility>` library.
+
+template <typename T>
+constexpr auto forward(typename meta::remove_reference<T>::type& input) -> T&&;
+
+template <typename T>
+constexpr auto forward(typename meta::remove_reference<T>::type&& input)
+    -> T&& requires(!meta::is_lvalue_reference<T>::value);
+
+template <typename T>
+constexpr auto move(T&& input) -> typename meta::remove_reference<T>::type&&;
+
+// NOLINTEND(readability-redundant-declaration)
+
+}  // namespace std
+
+// `forward()` and `move()` should be usable from within a libCat namespace.
+// This apparently does not prevent the aformentioned GCC features from working.
+namespace meta {
+using std::forward;
+}  // namespace meta
+namespace cat {
+using std::move;
+}  // namespace cat
+
 #include "./implementations/bit_cast.tpp"
+#include "./implementations/constant_evaluate.tpp"
+#include "./implementations/forward.tpp"
+#include "./implementations/is_constant_evaluated.tpp"
+#include "./implementations/move.tpp"

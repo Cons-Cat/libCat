@@ -168,7 +168,7 @@ class [[nodiscard]] Result {
         : storage(), is_okay(expression){};
 
     constexpr Result(bool&& expression) requires(is_void)
-        : storage(), is_okay(meta::move(expression)){};
+        : storage(), is_okay(expression){};
 
     constexpr auto value() {
         if (meta::is_constant_evaluated()) {

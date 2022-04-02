@@ -13,7 +13,30 @@
 
 #include <numerals>
 
+// These forward declarations are required.
 namespace meta {
+template <typename T>
+struct remove_reference;
+template <typename>
+struct is_lvalue_reference;
+}  // namespace meta
+
+namespace std {
+template <typename T>
+constexpr auto move(T&& input) -> typename meta::remove_reference<T>::type&&;
+template <typename T>
+constexpr auto forward(typename meta::remove_reference<T>::type& input) -> T&&;
+template <typename T>
+constexpr auto forward(typename meta::remove_reference<T>::type&& input)
+    -> T&& requires(!meta::is_lvalue_reference<T>::value);
+}  // namespace std
+
+namespace cat {
+using std::move;
+}  // namespace cat
+
+namespace meta {
+using std::forward;
 
 namespace detail {
     template <typename T, typename U = T&&>
@@ -801,19 +824,6 @@ struct is_specialization : false_type {};
 template <template <typename...> typename Template, typename... Args>
 struct is_specialization<Template<Args...>, Template> : true_type {};
 
-template <typename T>
-constexpr auto move(T&& input) -> meta::remove_reference_t<T>&&;
-
-template <typename T>
-constexpr auto forward(meta::remove_reference_t<T>& input) -> T&&;
-
-template <typename T>
-constexpr auto forward(meta::remove_reference_t<T>&& input)
-    -> T&& requires(!meta::is_lvalue_reference_v<T>);
-
-// TODO: Figure out how to make this return `bool1`.
-constexpr auto is_constant_evaluated() -> bool;
-
 namespace detail {
     template <typename T>
     struct invoke {
@@ -913,8 +923,3 @@ consteval auto constant_evaluate(auto value) requires(
 consteval auto constant_evaluate(auto value);
 
 }  // namespace meta
-
-#include "./implementations/constant_evaluate.tpp"
-#include "./implementations/forward.tpp"
-#include "./implementations/is_constant_evaluated.tpp"
-#include "./implementations/move.tpp"
