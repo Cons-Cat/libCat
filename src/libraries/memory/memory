@@ -2,23 +2,6 @@
 // vim: set ft=cpp:
 #pragma once
 
-// Raii wrappers are CRTP types that cannot be copy-constructed. They must be
-// moved to pass into functions. Their destructor will call a `free()` method on
-// the type they wrap iff that types has a `free()` method.
-
-template <typename T>
-struct Raii : T {
-    Raii() = default;
-    Raii(T const&) = delete;
-    Raii(Raii<T>&&){};
-    Raii(T const&&){};
-
-    ~Raii() = default;
-    ~Raii() requires(T::free()) {
-        this->free();
-    }
-};
-
 namespace cat {
 
 void copy_memory(void const* p_source, void* p_destination, ssize bytes);

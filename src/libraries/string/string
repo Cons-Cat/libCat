@@ -36,6 +36,9 @@ class String : public Span<char const> {
     constexpr String(char const* p_string, ssize in_length)
         : Span<char const>(p_string, in_length){};
 
+    constexpr String(String const& string)
+        : Span<char const>(string.p_storage, string.length){};
+
     constexpr String(String&& string)
         : Span<char const>(string.p_storage, string.length){};
 
