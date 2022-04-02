@@ -12,6 +12,7 @@ set(
   ${CAT_SRC}/libraries/result/
   ${CAT_SRC}/libraries/maybe/
   ${CAT_SRC}/libraries/any/
+  ${CAT_SRC}/libraries/raii/
   ${CAT_SRC}/libraries/array/
   ${CAT_SRC}/libraries/span/
   ${CAT_SRC}/libraries/string/
