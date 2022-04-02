@@ -1,14 +1,9 @@
-#include <ccatio>
-#include <ccatlib>
-// #include <cstring>
-// #include <unicat.h>
+#include <cstdio>
+#include <cstdlib>
+
+// `printf()` is actually optimized here better by GCC than `write()`,
+// because its `strlen` invocation can be constant-folded.
 
 auto main() -> int32_t {
-    constexpr char const* p_string = "Hello, Conscat!\n";
-    // `printf()` is actually optimized here better by GCC than `write()`,
-    // somehow.
-    if (printf(p_string) < 0) {
-        // if (write(1, p_string, strlen(p_string)) <= 0) {
-        exit(1);
-    };
-};
+    printf("Hello, Conscat!\n");
+}
