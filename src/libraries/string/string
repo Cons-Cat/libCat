@@ -48,9 +48,14 @@ class String : public Span<char const> {
         this->length = Length;
     }
 
-    auto operator=(String string) {
+    auto operator=(String const& string) {
         this->p_storage = string.p_storage;
         this->length = string.length;
+    }
+
+    auto operator=(String&& string) {
+        this->p_storage = string.p_storage;
+        this->length = cat::move(string).length;
     }
 };
 
