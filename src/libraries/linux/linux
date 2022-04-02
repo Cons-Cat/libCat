@@ -180,15 +180,15 @@ struct CloneArguments;
  * one .s file. */
 // TODO: All syscalls should return a `Result`.
 auto syscall0(Any) -> Result<Any>;
-auto syscall1(Any, Any) -> Result<Any>;
-auto syscall2(Any, Any, Any) -> Result<Any>;
-auto syscall3(Any, Any, Any, Any) -> Result<Any>;
-auto syscall4(Any, Any, Any, Any, Any) -> Result<Any>;
-auto syscall5(Any, Any, Any, Any, Any, Any) -> Result<Any>;
-auto syscall6(Any, Any, Any, Any, Any, Any, Any) -> Result<Any>;
+auto syscall1(int8 const, Any) -> Result<Any>;
+auto syscall2(int8 const, Any, Any) -> Result<Any>;
+auto syscall3(int8 const, Any, Any, Any) -> Result<Any>;
+auto syscall4(int8 const, Any, Any, Any, Any) -> Result<Any>;
+auto syscall5(int8 const, Any, Any, Any, Any, Any) -> Result<Any>;
+auto syscall6(int8 const, Any, Any, Any, Any, Any, Any) -> Result<Any>;
 
 template <typename Return, typename... Args>
-auto syscall(Any call, Args... parameters) -> Result<Return>
+auto syscall(int8 const call, Args... parameters) -> Result<Return>
 requires(sizeof...(Args) < 7);
 
 // Create and return a `Socket`.

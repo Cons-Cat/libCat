@@ -19,7 +19,7 @@ auto nix::syscall0(Any call) -> Result<Any> {
     return result;
 }
 
-auto nix::syscall1(Any call, Any arg) -> Result<Any> {
+auto nix::syscall1(int8 const call, Any arg) -> Result<Any> {
     Any result;
     asm volatile(
         "syscall"
@@ -34,7 +34,7 @@ auto nix::syscall1(Any call, Any arg) -> Result<Any> {
     return result;
 }
 
-auto nix::syscall2(Any call, Any arg1, Any arg2) -> Result<Any> {
+auto nix::syscall2(int8 const call, Any arg1, Any arg2) -> Result<Any> {
     Any result;
     asm volatile(
         "syscall"
@@ -49,7 +49,8 @@ auto nix::syscall2(Any call, Any arg1, Any arg2) -> Result<Any> {
     return result;
 }
 
-auto nix::syscall3(Any call, Any arg1, Any arg2, Any arg3) -> Result<Any> {
+auto nix::syscall3(int8 const call, Any arg1, Any arg2, Any arg3)
+    -> Result<Any> {
     Any result;
     // `volatile` is required with optimizations on.
     asm volatile(
@@ -65,7 +66,7 @@ auto nix::syscall3(Any call, Any arg1, Any arg2, Any arg3) -> Result<Any> {
     return result;
 }
 
-auto nix::syscall4(Any call, Any arg1, Any arg2, Any arg3, Any arg4)
+auto nix::syscall4(int8 const call, Any arg1, Any arg2, Any arg3, Any arg4)
     -> Result<Any> {
     register Any r10 asm("r10") = arg4;
 
@@ -81,8 +82,8 @@ auto nix::syscall4(Any call, Any arg1, Any arg2, Any arg3, Any arg4)
     return result;
 }
 
-auto nix::syscall5(Any call, Any arg1, Any arg2, Any arg3, Any arg4, Any arg5)
-    -> Result<Any> {
+auto nix::syscall5(int8 const call, Any arg1, Any arg2, Any arg3, Any arg4,
+                   Any arg5) -> Result<Any> {
     register Any r10 asm("r10") = arg4;
     register Any r8 asm("r8") = arg5;
 
@@ -98,8 +99,8 @@ auto nix::syscall5(Any call, Any arg1, Any arg2, Any arg3, Any arg4, Any arg5)
     return result;
 }
 
-auto nix::syscall6(Any call, Any arg1, Any arg2, Any arg3, Any arg4, Any arg5,
-                   Any arg6) -> Result<Any> {
+auto nix::syscall6(int8 const call, Any arg1, Any arg2, Any arg3, Any arg4,
+                   Any arg5, Any arg6) -> Result<Any> {
     register Any r10 asm("r10") = arg4;
     register Any r8 asm("r8") = arg5;
     register Any r9 asm("r9") = arg6;
