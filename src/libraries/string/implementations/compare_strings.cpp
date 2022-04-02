@@ -4,7 +4,7 @@
 
 auto cat::compare_strings(String const& string_1, String const& string_2)
     -> bool1 {
-    if (string_1.length != string_2.length) {
+    if (string_1.size() != string_2.size()) {
         return false;
     }
 
@@ -15,20 +15,22 @@ auto cat::compare_strings(String const& string_1, String const& string_2)
     Array<VectorType, 4> vector_2;
     Array<VectorType, 4> mask;
     Array<uint4, 4> results;
-    ssize length_iterator = string_1.length;
+    ssize length_iterator = string_1.size();
     ssize vector_size = sizeof(VectorType);
-    char const* p_string_1_iterator = string_1.p_data;
-    char const* p_string_2_iterator = string_2.p_data;
+    char const* p_string_1_iterator = string_1.p_data();
+    char const* p_string_2_iterator = string_2.p_data();
 
     auto loop = [&](ssize const size) -> bool1 {
         while (length_iterator >= vector_size * size) {
             for (ssize i = 0; i < size; i++) {
                 // TODO: Use `String::data()` getter methods.
                 vector_1[i] =
-                    *(meta::bit_cast<VectorType const*>(string_1.p_data) +
+                    *(static_cast<VectorType const*>(
+                          static_cast<void const*>(string_1.p_data())) +
                       (i * size));
                 vector_2[i] =
-                    *(meta::bit_cast<VectorType const*>(string_2.p_data) +
+                    *(static_cast<VectorType const*>(
+                          static_cast<void const*>(string_2.p_data())) +
                       (i * size));
                 mask[i] = vector_1[i] + vector_2[i];
                 results[i] = simd::move_mask(mask[i]);

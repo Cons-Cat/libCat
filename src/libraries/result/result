@@ -71,7 +71,7 @@ inline constexpr cat::detail::Okay okay{};
 // These forward declarations are necessary for `Result`.
 template <typename T>
 class Result;
-struct String;
+class String;
 
 // Forward-declare a print function for panics.
 namespace cat {

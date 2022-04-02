@@ -12,5 +12,5 @@ auto nix::write(FileDescriptor const file_descriptor,
 auto nix::write(FileDescriptor const file_descriptor, String const& string)
     -> Result<ssize> {
     // TODO: Handle partial writes somehow.
-    return nix::syscall3(1, file_descriptor, string.p_data, string.length);
+    return nix::syscall3(1, file_descriptor, string.p_data(), string.size());
 }

@@ -18,7 +18,7 @@ class Array {
     constexpr Array(Array<T, length> const& in_array) = default;
     constexpr Array(String const& string) requires(
         meta::is_same_v<meta::remove_const_t<T>, char>) {
-        cat::copy_memory(string.p_data, &(this->storage), string.length);
+        cat::copy_memory(string.p_data(), &(this->storage), string.size());
     }
 
     template <typename... U>
@@ -33,7 +33,7 @@ class Array {
     constexpr auto operator=(String const&& string) -> Array<T, length>
     requires(meta::is_same_v<T, char>) {
         Array<T, length> array;
-        cat::copy_memory(string.p_data, &(this->storage), string.length);
+        cat::copy_memory(string.p_data(), &(this->storage), string.size());
         return array;
     }
 
