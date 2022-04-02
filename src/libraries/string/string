@@ -17,25 +17,25 @@ constexpr auto string_length(char const* p_string) -> T;
 // Deprecated call to `memcpy()`. Consider using `cat::copy_buffer()` instead.
 auto memcpy(void* p_destination, void const* p_source, usize bytes) -> void*;
 
-struct StringView {
+struct String {
     char const* p_data;
     ssize length;
 
     template <ssize Length>
-    consteval StringView(char const (&string)[Length]) {
+    consteval String(char const (&string)[Length]) {
         this->p_data = string;
         this->length = Length;
     }
 
-    constexpr StringView() = default;
-    StringView(auto p_string)
+    constexpr String() = default;
+    String(auto p_string)
         : p_data(p_string), length(cat::string_length(p_string)){};
-    constexpr StringView(char const* p_string, ssize in_length)
+    constexpr String(char const* p_string, ssize in_length)
         : p_data(p_string), length(in_length){};
-    constexpr StringView(StringView const&& string)
+    constexpr String(String const&& string)
         : p_data(string.p_data), length(string.length){};
 
-    auto operator=(StringView string) {
+    auto operator=(String string) {
         this->p_data = string.p_data;
         this->length = string.length;
     }
@@ -43,15 +43,14 @@ struct StringView {
 
 namespace cat {
 
-auto compare_strings(StringView const& string_1, StringView const& string_2)
-    -> bool1;
+auto compare_strings(String const& string_1, String const& string_2) -> bool1;
 
-auto print(StringView const& string) -> Result<>;
+auto print(String const& string) -> Result<>;
 
 // auto print_line(char const* p_string) -> Result<>;
 
 // NOLINTNEXTLINE This is forward declared in `<result>`.
-auto print_line(StringView const& string) -> Result<>;
+auto print_line(String const& string) -> Result<>;
 
 // TODO: Make a comparison function for null-terminated string pointers.
 

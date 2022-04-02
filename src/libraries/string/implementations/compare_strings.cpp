@@ -2,8 +2,8 @@
 #include <limits>
 #include <string>
 
-auto cat::compare_strings(StringView const& string_1,
-                          StringView const& string_2) -> bool1 {
+auto cat::compare_strings(String const& string_1, String const& string_2)
+    -> bool1 {
     if (string_1.length != string_2.length) {
         return false;
     }
@@ -23,7 +23,7 @@ auto cat::compare_strings(StringView const& string_1,
     auto loop = [&](ssize const size) -> bool1 {
         while (length_iterator >= vector_size * size) {
             for (ssize i = 0; i < size; i++) {
-                // TODO: Use `StringView::data()` getter methods.
+                // TODO: Use `String::data()` getter methods.
                 vector_1[i] =
                     *(meta::bit_cast<VectorType const*>(string_1.p_data) +
                       (i * size));

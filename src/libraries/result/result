@@ -71,11 +71,11 @@ inline constexpr cat::detail::Okay okay{};
 // These forward declarations are necessary for `Result`.
 template <typename T>
 class Result;
-struct StringView;
+struct String;
 
 // Forward-declare a print function for panics.
 namespace cat {
-auto print_line(StringView const&) -> Result<>;
+auto print_line(String const&) -> Result<>;
 }
 
 // `Result<>` is a general-purpose failure-handling object.
@@ -292,7 +292,7 @@ class [[nodiscard]] Result {
     // TODO: Make this work.
     // Because the error code is 8-bytes, it could contain a non-null
     // pointer to an error string. This prints that error message.
-    auto or_panic(StringView const& error_message) -> T {
+    auto or_panic(String const& error_message) -> T {
         if (is_okay) [[likely]] {
             if constexpr (!is_void) {
                 return this->storage;
@@ -321,7 +321,7 @@ class [[nodiscard]] Result {
     // TODO: Make this work.
     // When building `-O0`, this function panics if a value is not
     // held. When optimizations are enabled, that safety check is elided.
-    constexpr auto assert(StringView const& error_message) {
+    constexpr auto assert(String const& error_message) {
         if (meta::is_constant_evaluated()) {
             return;
         }

@@ -4,15 +4,15 @@ void meow() {
     char const* p_string_1 = "Hello!";
     char const* const p_string_2 = "Hello!";
 
-    StringView string_1 = "Hello!";
-    StringView const string_2 = "Hello!";
-    StringView string_3 = "Goodbye!";
+    String string_1 = "Hello!";
+    String const string_2 = "Hello!";
+    String string_3 = "Goodbye!";
 
-    StringView long_string_1 =
+    String long_string_1 =
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    StringView long_string_2 =
+    String long_string_2 =
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
