@@ -182,7 +182,7 @@ using conditional_t = typename conditional<B, T, U>::type;
 
 // `__is_enum()` is a GNU builtin.
 template <typename T>
-struct is_enum : public integral_constant<bool, __is_enum(T)> {};
+struct is_enum : integral_constant<bool, __is_enum(T)> {};
 template <typename T>
 constexpr bool is_enum_v = is_enum<T>::value;
 template <typename T>
@@ -206,20 +206,19 @@ using is_base_of_t = typename is_base_of<T, U>::type;
 
 // `__is_union()` is a GNU builtin.
 template <typename T>
-struct is_union : public integral_constant<bool, __is_union(T)> {};
+struct is_union : integral_constant<bool, __is_union(T)> {};
 template <typename T>
 constexpr bool is_union_v = is_union<T>::value;
 
 // `__is_class()` is a GNU builtin.
 template <typename T>
-struct is_class : public integral_constant<bool, __is_class(T)> {};
+struct is_class : integral_constant<bool, __is_class(T)> {};
 template <typename T>
 constexpr bool is_class_v = is_class<T>::value;
 
 // `__is_literal_type()` is a GNU builtin.
 template <typename T>
-struct is_literal_type : public integral_constant<bool, __is_literal_type(T)> {
-};
+struct is_literal_type : integral_constant<bool, __is_literal_type(T)> {};
 template <typename T>
 constexpr bool is_literal_type_v = is_literal_type<T>::value;
 template <typename T>
@@ -405,7 +404,7 @@ struct remove_extent<T[]> {
 };
 
 template <typename T>
-struct is_function : public bool_constant<!is_const_v<T const>> {};
+struct is_function : bool_constant<!is_const_v<T const>> {};
 template <typename T>
 struct is_function<T&> : false_type {};
 template <typename T>
@@ -663,7 +662,7 @@ using is_constructible_t = typename is_constructible<T, Args...>::type;
 // `__is_trivially_constructible` is a GNU builtin.
 template <typename T, typename... Args>
 struct is_trivially_constructible
-    : public bool_constant<__is_trivially_constructible(T, Args...)> {};
+    : bool_constant<__is_trivially_constructible(T, Args...)> {};
 template <typename T, typename... Args>
 constexpr bool is_trivially_constructible_v =
     is_trivially_constructible<T, Args...>::value;
@@ -673,7 +672,7 @@ struct is_default_constructible : detail::is_constructible<T>::type {};
 
 template <typename T>
 struct is_trivially_default_constructible
-    : public bool_constant<is_trivially_constructible_v<T>> {};
+    : bool_constant<is_trivially_constructible_v<T>> {};
 
 template <typename T>
 struct is_copy_constructible
@@ -713,7 +712,7 @@ namespace detail {
     };
 
     template <typename T>
-    struct is_destructible_base : public try_destructor {
+    struct is_destructible_base : try_destructor {
         using type = decltype(truth_value<T>(0));
     };
 
@@ -726,27 +725,26 @@ namespace detail {
 
     template <typename T>
     struct is_destructible<T, false, false>
-        : public is_destructible_base<
-              typename remove_all_extents<T>::type>::type {};
+        : is_destructible_base<typename remove_all_extents<T>::type>::type {};
 
     template <typename T>
-    struct is_destructible<T, true, false> : public false_type {};
+    struct is_destructible<T, true, false> : false_type {};
 
     template <typename T>
-    struct is_destructible<T, false, true> : public true_type {};
+    struct is_destructible<T, false, true> : true_type {};
 }  // namespace detail
 
 template <typename T>
-struct is_destructible : public detail::is_destructible<T>::type {};
+struct is_destructible : detail::is_destructible<T>::type {};
 template <typename T>
 constexpr bool is_destructible_v = is_destructible<T>::value;
 
 // `__has_trivial_destructor()` is a GNU builtin.
 template <typename T>
 struct is_trivially_destructible
-    : public conditional_t<is_destructible_v<T>,
-                           bool_constant<__has_trivial_destructor(T)>,
-                           is_destructible<T>> {};
+    : conditional_t<is_destructible_v<T>,
+                    bool_constant<__has_trivial_destructor(T)>,
+                    is_destructible<T>> {};
 
 template <typename T>
 constexpr bool is_trivially_destructible_v =
@@ -754,14 +752,14 @@ constexpr bool is_trivially_destructible_v =
 
 // `__is_assingable` is a GNU builtin.
 template <typename T, typename U>
-struct is_assignable : public bool_constant<__is_assignable(T, U)> {};
+struct is_assignable : bool_constant<__is_assignable(T, U)> {};
 template <typename T, typename U>
 constexpr bool is_assignable_v = is_assignable<T, U>::value;
 
 // `__is_trivially_assignable` is a GNU builtin.
 template <typename T, typename U>
 struct is_trivially_assignable
-    : public bool_constant<__is_trivially_assignable(T, U)> {};
+    : bool_constant<__is_trivially_assignable(T, U)> {};
 template <typename T, typename U>
 constexpr bool is_trivially_assignable_v = is_trivially_assignable<T, U>::value;
 
