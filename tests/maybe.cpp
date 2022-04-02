@@ -140,7 +140,7 @@ void meow() {
     // TODO: Test constructing from another `Maybe<>`.
 
     Movable mov;
-    Maybe<Movable> maybe_movs(meta::move(mov));
+    Maybe<Movable> maybe_movs(cat::move(mov));
 
     cat::exit();
 };

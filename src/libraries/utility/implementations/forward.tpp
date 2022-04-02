@@ -2,15 +2,15 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <type_traits>
+#include <utility>
 
 template <typename T>
-constexpr auto meta::forward(meta::remove_reference_t<T>& input) -> T&& {
+constexpr auto std::forward(meta::remove_reference_t<T>& input) -> T&& {
     return static_cast<T&&>(input);
 }
 
 template <typename T>
-constexpr auto meta::forward(meta::remove_reference_t<T>&& input)
+constexpr auto std::forward(meta::remove_reference_t<T>&& input)
     -> T&& requires(!meta::is_lvalue_reference_v<T>) {
     return static_cast<T&&>(input);
 }

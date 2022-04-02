@@ -9,16 +9,18 @@ void meow() {
     Array<int4, 1> array_2;
     // Move assigning a array:
     Array<int4, 1> array_3;
-    array_2 = meta::move(array_3);
+    array_2 = cat::move(array_3);  // NOLINT
     // Move constructing a array:
-    _ = meta::move(array_1);
+    _ = cat::move(array_1);  // NOLINT
 
     // Repeat those tests in a constexpr context.
     auto constant = []() constexpr {
         Array<int4, 1> const_array_1;
         Array<int4, 1> const_array_2 = {1};
-        _ = meta::move(const_array_1);
-        _ = meta::move(const_array_2);
+        // NOLINTNEXTLINE Just be explicit about the move here.
+        _ = cat::move(const_array_1);
+        // NOLINTNEXTLINE Just be explicit about the move here.
+        _ = cat::move(const_array_2);
     };
     _ = meta::constant_evaluate(constant);
 

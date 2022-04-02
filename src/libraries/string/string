@@ -10,16 +10,17 @@
 
 #include "libraries/span/span"
 
+// Deprecated call to `memcpy()`. Consider using `cat::copy_buffer()` instead.
+// `memcpy()` exists to enable some GCC optimizations.
+extern "C" auto memcpy(void* p_destination, void const* p_source, usize bytes)
+    -> void*;
+
 namespace cat {
 
 template <typename T = ssize>
 constexpr auto string_length(char const* p_string) -> T;
 
 }  // namespace cat
-
-// Deprecated call to `memcpy()`. Consider using `cat::copy_buffer()` instead.
-auto memcpy(void* p_destination, void const* p_source, usize bytes) -> void*;
-
 class String : public Span<char const> {
     // `String` inherits:
     //

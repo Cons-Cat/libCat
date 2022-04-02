@@ -54,7 +54,7 @@ struct MaybeValueStorage {
     constexpr MaybeValueStorage(T const& in_value) = delete;
     constexpr MaybeValueStorage(T&& in_value) requires(
         meta::is_move_constructible_v<T>)
-        : value(meta::move(in_value)), has_some(true){};
+        : value(cat::move(in_value)), has_some(true){};
     constexpr MaybeValueStorage(T&& in_value) = delete;
 
     // If other destructors are not conditionally specialized by their
@@ -73,12 +73,12 @@ struct MaybeValueStorage {
     }
 
     // If `T` is not trivially move constructible, then manually invoke
-    // `meta::move` on it.
+    // `cat::move` on it.
     MaybeValueStorage(T&& in_value) requires(
         meta::is_move_constructible_v<T> &&
         !meta::is_trivially_move_constructible_v<T>) {
         if (in_value.has_value()) {
-            this->construct(meta::move(in_value.get_value()));
+            this->construct(cat::move(in_value.get_value()));
         } else {
             this->has_some = false;
         }
@@ -157,7 +157,7 @@ struct MaybeValueStorage {
     auto operator=(T&& in_value) -> MaybeValueStorage& = delete;
 
     // If `T` is not trivially move assignable, then manually invoke
-    // `meta::move()` on it.
+    // `cat::move()` on it.
     template <typename U>
     constexpr auto operator=(U&& in_value) -> MaybeValueStorage& requires(
         meta::is_convertible_v<U, T>&& meta::is_move_assignable_v<U> &&
@@ -194,7 +194,7 @@ struct MaybeValueStorage {
         return this->value;
     }
     constexpr auto get_value() && -> T&& {
-        return meta::move(this->value);
+        return cat::move(this->value);
     }
 
     constexpr auto has_value() const -> bool1 {
@@ -244,7 +244,7 @@ struct MaybeReferenceStorage {
     // constexpr MaybeReferenceStorage(U&& in_value) requires(
     //     !meta::is_same_v<U, cat::detail::None> &&
     //     meta::is_move_constructible_v<U>)
-    //     : p_value(cat::address_of(meta::move(in_value))){};
+    //     : p_value(cat::address_of(cat::move(in_value))){};
 
     constexpr MaybeReferenceStorage(cat::detail::None) : p_value(nullptr){};
 
@@ -273,10 +273,10 @@ struct MaybeReferenceStorage {
         return *(this->p_value);
     }
     constexpr auto get_value() && -> ValueType&& {
-        return *(meta::move(this->p_value));
+        return *(cat::move(this->p_value));
     }
     constexpr auto get_value() const&& -> ValueType&& {
-        return *(meta::move(this->p_value));
+        return *(cat::move(this->p_value));
     }
 
     constexpr auto has_value() const -> bool1 {
@@ -327,13 +327,13 @@ class Maybe {
     }
 
     auto operator=(auto&& value) && {
-        this->storage = meta::move(value);
-        return meta::move(*this);
+        this->storage = cat::move(value);
+        return cat::move(*this);
     }
 
     auto operator=(auto&& value) const&& {
-        this->storage = meta::move(value);
-        return meta::move(*this);
+        this->storage = cat::move(value);
+        return cat::move(*this);
     }
 
     constexpr auto has_value() const -> bool1 {
@@ -389,9 +389,9 @@ value!\n")
     constexpr auto value_or(
         typename StorageType::ValueType&& fallback) && -> T&& {
         if (this->storage.has_value()) {
-            return meta::move(this->storage.get_value());
+            return cat::move(this->storage.get_value());
         }
-        return meta::move(fallback);
+        return cat::move(fallback);
     }
 
     // Get the value held by a `const`-qualified `Maybe`, or a fallback
@@ -399,9 +399,9 @@ value!\n")
     constexpr auto value_or(
         typename StorageType::ValueType&& fallback) const&& -> T&& {
         if (this->storage.has_value()) {
-            return meta::move(this->storage.get_value());
+            return cat::move(this->storage.get_value());
         }
-        return meta::move(fallback);
+        return cat::move(fallback);
     }
 
     // Monadic methods:
@@ -438,7 +438,7 @@ value!\n")
     constexpr auto transform(Function&& callback) && {
         if (this->storage.has_value()) {
             return Maybe<T>(meta::forward<Function>(
-                callback(meta::move(this->storage.get_value()))));
+                callback(cat::move(this->storage.get_value()))));
         }
         return *this;
     }
@@ -450,7 +450,7 @@ value!\n")
     constexpr auto transform(Function&& callback) const&& {
         if (this->storage.has_value()) {
             return Maybe<T>(meta::forward<Function>(
-                callback(meta::move(this->storage.get_value()))));
+                callback(cat::move(this->storage.get_value()))));
         }
         return *this;
     }
@@ -478,8 +478,8 @@ value!\n")
     template <typename Function>
     constexpr auto and_then(Function&& callback) && {
         return this->has_value() ? Maybe<T>(meta::forward<Function>(callback)(
-                                       meta::move(this->storage.get_value())))
-                                 : meta::move(*this);
+                                       cat::move(this->storage.get_value())))
+                                 : cat::move(*this);
     }
 
     // Invoke a callback on the value of a `const`-qualified `Maybe` and
@@ -487,8 +487,8 @@ value!\n")
     template <typename Function>
     constexpr auto and_then(Function&& callback) const&& {
         return this->has_value() ? Maybe<T>(meta::forward<Function>(callback)(
-                                       meta::move(this->storage.get_value())))
-                                 : meta::move(*this);
+                                       cat::move(this->storage.get_value())))
+                                 : cat::move(*this);
     }
 
     // Invoke a callback iff a non-`const`-qualified `Maybe` holds no value.
@@ -516,7 +516,7 @@ value!\n")
         if (!this->storage.has_value()) {
             meta::forward<Function>(callback)();
         }
-        return meta::move(*this);
+        return cat::move(*this);
     }
 
     // Invoke a callback iff a `const`-qualified move-only `Maybe` holds no
@@ -526,7 +526,7 @@ value!\n")
         if (!this->storage.has_value()) {
             meta::forward<Function>(callback)();
         }
-        return meta::move(*this);
+        return cat::move(*this);
     }
 
     // Construct the value in-place and destroy the held value iff it exists.
@@ -561,13 +561,13 @@ class Maybe<Predicate<T, predicate, sentinel>> {
     constexpr Maybe(U&& value) requires(!predicate(sentinel) &&
                                         (meta::is_same_v<U, T> ||
                                          meta::is_convertible_v<U, T>))
-        : storage(meta::move(value)){};
+        : storage(cat::move(value)){};
 
     template <typename U = T>
     constexpr Maybe(U const&& value) requires(!predicate(sentinel) &&
                                               (meta::is_same_v<U, T> ||
                                                meta::is_convertible_v<U, T>))
-        : storage(meta::move(value)){};
+        : storage(cat::move(value)){};
 
     constexpr Maybe(cat::detail::None) : storage(sentinel){};
 
@@ -583,12 +583,12 @@ class Maybe<Predicate<T, predicate, sentinel>> {
     }
 
     constexpr auto operator=(auto&& input) {
-        this->storage = meta::move(input);
+        this->storage = cat::move(input);
         return *this;
     }
 
     constexpr auto operator=(auto const&& input) {
-        this->storage = meta::move(input);
+        this->storage = cat::move(input);
         return *this;
     }
 
@@ -644,18 +644,18 @@ value!\n")
     // value if it does not hold a value.
     constexpr auto value_or(T&& fallback) && -> T&& {
         if (this->has_value()) {
-            return meta::move(this->storage);
+            return cat::move(this->storage);
         }
-        return meta::move(fallback);
+        return cat::move(fallback);
     }
 
     // Get the value held by a `const`-qualified `Maybe`, or a fallback
     // value if it does not hold a value.
     constexpr auto value_or(T&& fallback) const&& -> T&& {
         if (this->has_value()) {
-            return meta::move(this->storage);
+            return cat::move(this->storage);
         }
-        return meta::move(fallback);
+        return cat::move(fallback);
     }
 
     // Monadic methods:
@@ -691,7 +691,7 @@ value!\n")
     constexpr auto transform(Function&& callback) && {
         if (this->has_value()) {
             return Maybe<Predicate<T, predicate, sentinel>>(
-                meta::forward<Function>(callback)(meta::move(this->storage)));
+                meta::forward<Function>(callback)(cat::move(this->storage)));
         }
         return Maybe<Predicate<T, predicate, sentinel>>(none);
     }
@@ -702,7 +702,7 @@ value!\n")
     constexpr auto transform(Function&& callback) const&& {
         if (this->has_value()) {
             return Maybe<Predicate<T, predicate, sentinel>>(
-                meta::forward<Function>(callback)(meta::move(this->storage)));
+                meta::forward<Function>(callback)(cat::move(this->storage)));
         }
         return Maybe<Predicate<T, predicate, sentinel>>(none);
     }
@@ -731,7 +731,7 @@ value!\n")
     // potentially mutates global state, and propagate the result.
     template <typename Function>
     constexpr auto and_then(Function&& callback) && {
-        return meta::move(
+        return cat::move(
             this->has_value()
                 ? Maybe<Predicate<T, predicate, sentinel>>(
                       meta::forward<Function>(callback)(this->storage))
@@ -742,7 +742,7 @@ value!\n")
     // propagate the result.
     template <typename Function>
     constexpr auto and_then(Function&& callback) const&& {
-        return meta::move(
+        return cat::move(
             this->has_value()
                 ? Maybe<Predicate<T, predicate, sentinel>>(
                       meta::forward<Function>(callback)(this->storage))
@@ -775,7 +775,7 @@ value!\n")
         if (!this->has_value()) {
             meta::forward<Function>(callback)();
         }
-        return meta::move(*this);
+        return cat::move(*this);
     }
 
     // Invoke a callback iff a `const`-qualified move-only `Maybe` holds no
@@ -785,7 +785,7 @@ value!\n")
         if (!this->has_value()) {
             meta::forward<Function>(callback)();
         }
-        return meta::move(*this);
+        return cat::move(*this);
     }
 
     constexpr auto has_value() const -> bool1 {
