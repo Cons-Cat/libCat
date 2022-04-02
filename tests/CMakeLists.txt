@@ -82,8 +82,8 @@ target_compile_options(test_raii PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_raii PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME Raii COMMAND test_raii)
 
-# This tests if `Maybe<>` basically works.
-add_executable(test_maybe maybe.cpp)
-target_compile_options(test_maybe PRIVATE ${CAT_CXX_FLAGS_TEST})
-target_link_options(test_maybe PRIVATE ${CAT_LINK_FLAGS})
-add_test(NAME Maybe COMMAND test_maybe)
+# This tests if `Optional<>` basically works.
+add_executable(test_optional optional.cpp)
+target_compile_options(test_optional PRIVATE ${CAT_CXX_FLAGS_TEST})
+target_link_options(test_optional PRIVATE ${CAT_LINK_FLAGS})
+add_test(NAME Maybe COMMAND test_optional)

@@ -3,8 +3,8 @@
 #pragma once
 
 #include <iterator>
-#include <maybe>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -43,10 +43,10 @@ class Array {
         return this->storage[index];
     }
 
-    constexpr auto at(ssize index) -> Maybe<T&> {
+    constexpr auto at(ssize index) -> Optional<T&> {
         Result{index >= 0}.assert();
         if (index < length) {
-            return Maybe<T&>(this->storage[index]);
+            return Optional<T&>(this->storage[index]);
         }
         return none;
     }

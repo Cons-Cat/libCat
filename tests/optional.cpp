@@ -1,5 +1,5 @@
-#include <maybe>
 #include <memory>
+#include <optional>
 
 struct Movable {
     Movable() = default;
@@ -28,7 +28,7 @@ void meow() {
     moo = none;
     Result(moo.value_or(100) == 100).or_panic();
 
-    // Maybe reference.
+    // Optional reference.
     Optional<int4&> ref(none);
     Optional<int4&> ref_2 = none;
 
@@ -50,12 +50,12 @@ void meow() {
     // ref_2 = goo;
     // Result(ref_2.has_value()).or_panic();
 
-    // Maybe with a predicate.
-    Maybe<Predicate<int4,
-                    [](int4 input) -> bool {
-                        return input >= 0;
-                    },
-                    -1>>
+    // Optional with a predicate.
+    Optional<Predicate<int4,
+                       [](int4 input) -> bool {
+                           return input >= 0;
+                       },
+                       -1>>
         positive(none);
     Result(!positive.has_value()).or_panic();
 
@@ -73,7 +73,7 @@ void meow() {
 
     // This crashes clangd, but it passes tests, last I checked.
     /*
-    Maybe<Sentinel<int4, 0>> nonzero = none;
+    Optional<Sentinel<int4, 0>> nonzero = none;
     Result(!nonzero.has_value()).or_panic();
 
     nonzero = 1;
@@ -136,8 +136,8 @@ void meow() {
 
     // TODO: Test monadic methods on reference types.
     // TODO: Test monadic methods on move-only types.
-    // TODO: Test `Maybe<> const`.
-    // TODO: Test constructing from another `Maybe<>`.
+    // TODO: Test `Optional<> const`.
+    // TODO: Test constructing from another `Optional<>`.
 
     Movable mov;
     Optional<Movable> maybe_movs(cat::move(mov));
