@@ -72,7 +72,7 @@ auto kill_dependency(T expression) -> T {
 // wraps a `bool1`, it does not have fetch methods or operators.
 template <typename T>
 struct Atomic {
-    // using ValueType = T;
+    // using Value = T;
     static constexpr int4 alignment = sizeof(T) > alignof(T) ? sizeof(T)
                                                              : alignof(T);
 

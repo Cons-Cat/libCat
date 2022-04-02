@@ -5,9 +5,9 @@
 // TODO: Make integers consistently signed.
 /* Copy some bytes from one address to another address. */
 void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
-    // Vector is the width of a 32-byte AVX register.
+    // `Vector` is the width of a 32-byte AVX register.
     // `long long int` is required for some SIMD intrinsics.
-    using VectorType = cat::detail::SimdVector<long long int, 4>;
+    using Vector = cat::detail::Simd<long long int, 4>;
 
     unsigned char const* p_source_handle =
         meta::bit_cast<unsigned char const*>(p_source);
@@ -23,15 +23,15 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
     // Align source, destination, and bytes to 16 bytes
     padding = (32 - ((meta::bit_cast<ssize>(p_destination_handle)) & 31)) & 31;
 
-    VectorType head = *meta::bit_cast<VectorType const*>(p_source_handle);
-    *static_cast<VectorType*>(p_destination) = head;
+    Vector head = *meta::bit_cast<Vector const*>(p_source_handle);
+    *static_cast<Vector*>(p_destination) = head;
 
     p_source_handle += padding;
     p_destination_handle += padding;
     bytes -= padding;
 
-    VectorType vectors[8];
-    constexpr ssize step_size = sizeof(VectorType) * 8;
+    Vector vectors[8];
+    constexpr ssize step_size = sizeof(Vector) * 8;
     // This routine is optimized for buffers in L3 cache. Streaming is
     // slower.
     if (bytes <= cachesize) {
@@ -40,13 +40,12 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
              * size. */
 #pragma GCC unroll 8
             for (int4 i = 0; i < 8; i++) {
-                vectors[i] = meta::bit_cast<VectorType*>(p_source_handle)[i];
+                vectors[i] = meta::bit_cast<Vector*>(p_source_handle)[i];
             }
             prefetch((char const*)(p_source_handle + 512), simd::MM_HINT_NTA);
 #pragma GCC unroll 8
             for (int4 i = 0; i < 8; i++) {
-                meta::bit_cast<VectorType*>(p_destination_handle)[i] =
-                    vectors[i];
+                meta::bit_cast<Vector*>(p_destination_handle)[i] = vectors[i];
             }
             p_source_handle += step_size;
             p_destination_handle += step_size;
@@ -61,7 +60,7 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
         while (bytes >= 256) {
 #pragma GCC unroll 8
             for (int4 i = 0; i < 8; i++) {
-                vectors[i] = meta::bit_cast<VectorType*>((p_source_handle))[i];
+                vectors[i] = meta::bit_cast<Vector*>((p_source_handle))[i];
             }
             prefetch(p_source_handle + 512, simd::MM_HINT_NTA);
             p_source_handle += 256;

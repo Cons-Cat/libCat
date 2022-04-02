@@ -91,7 +91,7 @@ struct GroupId {
     }
 };
 
-enum class WaitIdType {
+enum class WaitId {
     all = 0,
     process_id = 1,
     process_group = 2,
@@ -169,8 +169,7 @@ auto wait(ProcessId waiting_on_id, int4* p_status_output,
           WaitOptionsFlags options, void* p_resource_usage) -> Result<Any>;
 
 // TODO: Separate this into separate functions for waiting on pid, gid, etc.
-auto waitid(WaitIdType type, ProcessId id, WaitOptionsFlags options)
-    -> Result<Any>;
+auto waitid(WaitId type, ProcessId id, WaitOptionsFlags options) -> Result<Any>;
 
 struct CloneArguments;
 
@@ -188,8 +187,8 @@ auto syscall4(Any, Any, Any, Any, Any) -> Result<Any>;
 auto syscall5(Any, Any, Any, Any, Any, Any) -> Result<Any>;
 auto syscall6(Any, Any, Any, Any, Any, Any, Any) -> Result<Any>;
 
-template <typename ReturnType, typename... Args>
-auto syscall(Any call, Args... parameters) -> Result<ReturnType>
+template <typename Return, typename... Args>
+auto syscall(Any call, Args... parameters) -> Result<Return>
 requires(sizeof...(Args) < 7);
 
 // Create and return a `Socket`.
@@ -297,7 +296,7 @@ parent_thread:
 
     auto wait() const -> Result<ProcessId> {
         Result<ProcessId> result =
-            nix::waitid(WaitIdType::process_id, this->id,
+            nix::waitid(WaitId::process_id, this->id,
                         WaitOptionsFlags::exited | WaitOptionsFlags::clone |
                             WaitOptionsFlags::no_wait);
         return result;
