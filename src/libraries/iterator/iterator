@@ -43,6 +43,7 @@ template <typename T>
 concept HasEqualTo = requires(T const it) {
     { it.equal_to(it) } -> meta::convertible_to<bool>;  // -> boolean;
 };
+
 template <typename>
 struct InferDifferenceType {
     using type = ssize;

@@ -2,6 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <iterator>
+
 // TODO: Add tests.
 // TODO: Add many comments.
 
@@ -96,5 +98,42 @@ class Span {
 
     constexpr auto is_empty() -> bool1 {
         return this->length > 0;
+    }
+
+    struct Iterator : IteratorFacade<Iterator> {
+        ssize current_index;
+        T const* const p_array;
+
+        constexpr Iterator() = default;
+        constexpr explicit Iterator(ssize index, T const* const p_in_array)
+            : current_index(index), p_array(p_in_array){};
+
+        auto dereference() const -> T const& {
+            return this->p_array[current_index];
+        }
+
+        void advance(ssize offset) {
+            current_index += offset;
+        }
+
+        auto distance_to(Iterator other) const -> ssize {
+            return other.current_index - current_index;
+        }
+    };
+
+    constexpr auto begin() const {
+        return Iterator(0, this->storage);
+    }
+
+    constexpr auto end() const {
+        return Iterator(length, this->storage);
+    }
+
+    constexpr auto rbegin() const {
+        return cat::ReversedIterator<Iterator>(length - 1, this->storage);
+    }
+
+    constexpr auto rend() const {
+        return cat::ReversedIterator<Iterator>(-1, this->storage);
     }
 };

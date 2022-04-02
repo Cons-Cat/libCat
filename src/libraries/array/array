@@ -79,7 +79,7 @@ class Array {
     }
 
     struct Iterator : IteratorFacade<Iterator> {
-        ssize current_index = 0;
+        ssize current_index;
         T const* const p_array;
 
         constexpr Iterator() = default;
@@ -90,12 +90,12 @@ class Array {
             return this->p_array[current_index];
         }
 
-        void advance(int offset) {
+        void advance(ssize offset) {
             current_index += offset;
         }
 
-        auto distance_to(Iterator other) const -> int {
-            return int(other.current_index) - static_cast<int>(current_index);
+        auto distance_to(Iterator other) const -> ssize {
+            return other.current_index - current_index;
         }
     };
 
