@@ -70,7 +70,7 @@ struct SocketUnix {
                                      static_cast<void*>(&this->path_name))));
     }
 
-    auto send_string(StringView const& message, int8 flags = 0,
+    auto send_string(String const& message, int8 flags = 0,
                      Socket const* p_destination_socket = nullptr,
                      ssize const addr_length = 0) -> Result<> {
         return nix::send_buffer(this->descriptor, message.p_data,

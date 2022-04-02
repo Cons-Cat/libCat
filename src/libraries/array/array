@@ -16,7 +16,7 @@ class Array {
     constexpr Array() = default;
     constexpr Array(Array<T, length>&& in_array) = default;
     constexpr Array(Array<T, length> const& in_array) = default;
-    constexpr Array(StringView const& string) requires(
+    constexpr Array(String const& string) requires(
         meta::is_same_v<meta::remove_const_t<T>, char>) {
         cat::copy_memory(string.p_data, &(this->storage), string.length);
     }
@@ -30,7 +30,7 @@ class Array {
     }
 
     constexpr auto operator=(Array<T, length>&&) -> Array<T, length>& = default;
-    constexpr auto operator=(StringView const&& string) -> Array<T, length>
+    constexpr auto operator=(String const&& string) -> Array<T, length>
     requires(meta::is_same_v<T, char>) {
         Array<T, length> array;
         cat::copy_memory(string.p_data, &(this->storage), string.length);
@@ -71,9 +71,9 @@ class Array {
         return length > 0;
     }
 
-    constexpr auto to_string() -> StringView
+    constexpr auto to_string() -> String
         requires(meta::is_same_v<meta::remove_const_t<T>, char>) {
-        return StringView(
+        return String(
             static_cast<char const*>(static_cast<void*>(&this->storage)),
             length);
     }

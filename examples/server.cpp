@@ -26,7 +26,7 @@ void meow() {
             recieving_socket.recieve(&message_buffer, message_buffer.size())
                 .or_panic();
 
-            StringView input = message_buffer.to_string();
+            String input = message_buffer.to_string();
 
             if (cat::compare_strings(input, "exit")) {
                 cat::print_line("Exiting.").or_panic();

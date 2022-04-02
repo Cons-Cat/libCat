@@ -12,7 +12,7 @@
 namespace xwin {
 
 // TODO: Handle `$DISPLAY`.
-constexpr StringView socket_path = "/tmp/.X11-unix/X0";
+constexpr String socket_path = "/tmp/.X11-unix/X0";
 // This is in the abstract namespace:
 // constexpr StringView socket_path = "\0/tmp/.X11-unix/X0";
 
