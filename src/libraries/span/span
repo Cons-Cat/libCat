@@ -8,8 +8,10 @@
 // TODO: Add many comments.
 
 #include <memory>
+
 template <typename T>
 class Span {
+  protected:
     // This is arranged as pointer, then size, to follow the ABI of Linux
     // standard `iovec`s.
     T* p_storage;
@@ -36,11 +38,12 @@ class Span {
         : p_storage(cat::address_of(array)), length(size){};
 
     constexpr auto subspan(ssize start_index, ssize end_index) -> Span<T> {
-        Result{start_index >= end_index}.assert();
+        Result{start_index >= 0}.assert();
         Result{end_index <= length}.assert();
         Span<T> span;
         span.length = end_index - start_index;
         span.p_storage = this->p_storage + start_index;
+        return span;
     }
 
     constexpr auto first(ssize offset) -> Span<T> {
@@ -48,6 +51,7 @@ class Span {
         Span<T> span;
         span.length = offset;
         span.p_storage = this->p_storage;
+        return span;
     }
 
     constexpr auto last(ssize offset) -> Span<T> {
@@ -55,48 +59,52 @@ class Span {
         Span<T> span;
         span.length = offset;
         span.p_storage = this->p_storage + length - offset;
+        return span;
     }
 
-    constexpr auto set_subspan(ssize start_index, ssize end_index) -> Span<T> {
+    constexpr auto set_subspan(ssize start_index, ssize end_index) -> Span<T>& {
         Result{start_index >= end_index}.assert();
         Result{end_index <= length}.assert();
         this->length = end_index - start_index;
         this->p_storage += start_index;
+        return *this;
     }
 
-    constexpr auto set_first(ssize offset) -> Span<T> {
+    constexpr auto set_first(ssize offset) -> Span<T>& {
         Result{offset < length}.assert();
         this->length = offset;
+        return *this;
     }
 
-    constexpr auto set_last(ssize offset) -> Span<T> {
+    constexpr auto set_last(ssize offset) -> Span<T>& {
         Result{offset < length}.assert();
         this->length = offset;
         this->p_storage += length - offset;
+        return *this;
     }
 
     constexpr auto operator[](ssize index) const -> T& {
         Result{index < length}.assert();
-        return p_storage[index];
+        return this->p_storage[index];
     }
 
-    constexpr auto p_data() -> T const* {
-        return p_storage;
+    constexpr auto p_data() const -> T* {
+        return this->p_storage;
     }
 
-    constexpr auto size() -> ssize {
+    constexpr auto size() const -> ssize {
         return this->length;
     }
 
-    constexpr auto front() -> T& {
+    constexpr auto front() const -> T& {
         return this->p_storage[0];
     }
 
-    constexpr auto back() -> T& {
+    constexpr auto back() const -> T& {
         return this->p_storage[this->length - 1];
     }
 
-    constexpr auto is_empty() -> bool1 {
+    constexpr auto is_empty() const -> bool1 {
         return this->length > 0;
     }
 

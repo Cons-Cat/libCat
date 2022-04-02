@@ -21,9 +21,20 @@ void meow() {
     ssize len_7 = cat::string_length(p_string_7);
 
     Result(len_1 == len_2).or_panic();
+    Result(len_1 == 6).or_panic();
     Result(len_3 == len_4).or_panic();
     Result(len_5 == len_6).or_panic();
     Result(len_7 == 14).or_panic();
+
+    // Test `String`s.
+    String string_1 = p_string_1;
+    Result(string_1.size() == len_1).or_panic();
+    Result(string_1.subspan(1, 4).size() == 3).or_panic();
+    Result(string_1.first(4).size() == 4).or_panic();
+    Result(string_1.last(3).size() == 3).or_panic();
+    // TODO: The length here is null-terminated, and the other lengths are not.
+    // Should this be made more consistent?
+    Result(String("Hello!").size() - 1 == len_1).or_panic();
 
     cat::exit();
 }

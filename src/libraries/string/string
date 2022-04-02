@@ -4,8 +4,11 @@
 
 #include <concepts>
 #include <memory>
+// #include <span>
 #include <type_traits>
 #include <utility>
+
+#include "libraries/span/span"
 
 namespace cat {
 
@@ -17,26 +20,32 @@ constexpr auto string_length(char const* p_string) -> T;
 // Deprecated call to `memcpy()`. Consider using `cat::copy_buffer()` instead.
 auto memcpy(void* p_destination, void const* p_source, usize bytes) -> void*;
 
-struct String {
-    char const* p_data;
-    ssize length;
+class String : public Span<char const> {
+    // `String` inherits:
+    //
+    // `char const* p_storage;`
+    // `ssize length;`
+  public:
+    constexpr String() : Span<char const>(){};
+
+    // This is `auto` to deduce lower than the array-literal constructor.
+    String(auto p_string)
+        : Span<char const>(p_string, cat::string_length(p_string)){};
+
+    constexpr String(char const* p_string, ssize in_length)
+        : Span<char const>(p_string, in_length){};
+
+    constexpr String(String&& string)
+        : Span<char const>(string.p_storage, string.length){};
 
     template <ssize Length>
     consteval String(char const (&string)[Length]) {
-        this->p_data = string;
+        this->p_storage = string;
         this->length = Length;
     }
 
-    constexpr String() = default;
-    String(auto p_string)
-        : p_data(p_string), length(cat::string_length(p_string)){};
-    constexpr String(char const* p_string, ssize in_length)
-        : p_data(p_string), length(in_length){};
-    constexpr String(String const&& string)
-        : p_data(string.p_data), length(string.length){};
-
     auto operator=(String string) {
-        this->p_data = string.p_data;
+        this->p_storage = string.p_storage;
         this->length = string.length;
     }
 };
