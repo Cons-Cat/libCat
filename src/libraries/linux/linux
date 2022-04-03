@@ -140,12 +140,9 @@ enum class WaitOptionsFlags : long int {
     clone = 0x80000000,
 };
 
-// `read()` transmits a number of bytes into a file descriptor.
 auto read(FileDescriptor const file_descriptor, char const* p_string_buffer,
           ssize const string_length) -> Result<ssize>;
 
-// `write()` forwards its arguments to a failable catout syscall. It returns
-// the number of bytes that it wrote.
 auto write(FileDescriptor const file_descriptor, char const* p_string_buffer,
            ssize const string_length) -> Result<ssize>;
 
@@ -307,6 +304,12 @@ parent_thread:
 struct IoVector : Span<Any> {
     static constexpr ssize max_size = 1_ki;
 };
+
+auto write_vector(FileDescriptor const file_descriptor,
+                  Span<IoVector> const& vectors) -> Result<ssize>;
+
+auto read_vector(FileDescriptor const file_descriptor,
+                 Span<IoVector> const& vectors) -> Result<ssize>;
 
 }  // namespace nix
 

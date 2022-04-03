@@ -83,6 +83,8 @@ set(
   ${CAT_SRC}/libraries/linux/implementations/listen_to_socket.cpp
   ${CAT_SRC}/libraries/linux/implementations/recieve_buffer.cpp
   ${CAT_SRC}/libraries/linux/implementations/send_buffer.cpp
+  ${CAT_SRC}/libraries/linux/implementations/write_vector.cpp
+  ${CAT_SRC}/libraries/linux/implementations/read_vector.cpp
   ${CAT_SRC}/libraries/utility/implementations/move.tpp
   ${CAT_SRC}/libraries/utility/implementations/forward.tpp
   ${CAT_SRC}/libraries/utility/implementations/is_constant_evaluated.tpp
