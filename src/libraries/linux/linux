@@ -159,7 +159,53 @@ auto write(FileDescriptor const file_descriptor, char const* p_string_buffer,
 auto write(FileDescriptor const file_descriptor, String const& string)
     -> Result<ssize>;
 
-auto close(FileDescriptor const object) -> Result<>;
+enum class OpenMode {
+    read_only = 00,
+    write_only = 01,
+    // This flag cannot be use on a FIFO.
+    read_write = 02
+};
+
+enum class OpenFlags : int {
+    // This will create a new file. If that file already exists, it is no-op
+    // unless combined with `OpenFlags::exclusive`.
+    create = 0100,
+    // This flag can only be used in combination with `OpenFlags::create`. This
+    // will make a syscall fail if the file already exists.
+    exclusive = 0200,
+    no_control_tty = 0400,
+    truncate = 01000,
+    append_file = 02000,
+    nonblocking = 04000,
+    // Write I/O operations on the `FileDescriptor` shall complete as defined by
+    // synchronized I/O data integrity completion.
+    dsync = 010000,
+    sync = 04010000,
+    read_sync = 04010000,
+    directory = 0200000,
+    nofollow = 0400000,
+    // Close the `FileDescriptor` automatically when finished with this
+    // operation.
+    close_exec = 02000000,
+
+    async = 020000,
+    direct = 040000,
+    largefile = 0100000,
+    noatime = 01000000,
+    path = 010000000,
+    temporary_file = 020200000,
+    // This flag is used by `open_file()` implicitly. It specifies that the
+    // offset value is 8-bytes.
+    large_file = 0100000,
+};
+
+auto open_file(char const* p_file_path, OpenMode file_mode, OpenFlags flags)
+    -> Result<FileDescriptor>;
+
+auto create_file(char const* p_file_path, nix::OpenMode file_mode)
+    -> Result<FileDescriptor>;
+
+auto close(FileDescriptor const file_descriptor) -> Result<>;
 
 auto unlink(char const* p_path_name) -> Result<>;
 
