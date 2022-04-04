@@ -82,7 +82,7 @@ auto print_line(String const&) -> Result<>;
 template <typename T>
 class [[nodiscard]] Result {
   public:
-    Failure failure_code;  // `Failure` is an 8-byte value.
+    Failure failure;  // `Failure` is an 8-byte value.
     static_assert(sizeof(Failure) == 8);
 
     // `char` should be a relatively unintrusive dummy data for when this holds
@@ -96,7 +96,7 @@ class [[nodiscard]] Result {
     bool1 is_okay;
   public:
     constexpr Result(Failure const& failure)
-        : failure_code(failure), is_okay(false){};
+        : failure(failure), is_okay(false){};
 
     constexpr Result(ValueType const value) requires(
         !is_void && meta::is_constructible_v<ValueType> &&

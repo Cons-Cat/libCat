@@ -367,6 +367,65 @@ auto write_vector(FileDescriptor const file_descriptor,
 auto read_vector(FileDescriptor const file_descriptor,
                  Span<IoVector> const& vectors) -> Result<ssize>;
 
+// TODO: Flesh this out:
+struct FileStatus {
+    uint8 dev;
+    uint8 ino;
+    usize nlink;
+
+    uint4 mode;
+    UserId uid;
+    GroupId gid;
+  private:
+    uint4 padding;  // NOLINT
+  public:
+    uint8 rdev;
+    int8 size;
+    ssize blksize;
+    int8 blocks;
+
+    using Timespec = struct {
+        ssize tv_sec;
+        ssize tv_nsec;
+    };
+
+    Timespec atim;
+    Timespec mtim;
+    Timespec ctim;
+  private:
+    int4 unused[3];  // NOLINT
+  public:
+    auto is_regular() const -> bool1 {
+        return (this->mode & 0170000) == 0100000;
+    }
+
+    auto is_directory() const -> bool1 {
+        return (this->mode & 0170000) == 0040000;
+    }
+
+    auto is_character_device() const -> bool1 {
+        return (this->mode & 0170000) == 0020000;
+    }
+
+    auto is_block_device() const -> bool1 {
+        return (this->mode & 0170000) == 0060000;
+    }
+
+    auto is_fifo() const -> bool1 {
+        return (this->mode & 0170000) == 0010000;
+    }
+
+    auto is_symbolic_link() const -> bool1 {
+        return (this->mode & 0170000) == 0120000;
+    }
+
+    auto is_socket() const -> bool1 {
+        return (this->mode & 0170000) == 0140000;
+    }
+};
+
+auto file_status(FileDescriptor file_descriptor) -> Result<FileStatus>;
+
 }  // namespace nix
 
 #include "./implementations/syscall.tpp"
