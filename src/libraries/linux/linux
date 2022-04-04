@@ -240,8 +240,8 @@ auto syscall4(int8 const, Any, Any, Any, Any) -> Result<Any>;
 auto syscall5(int8 const, Any, Any, Any, Any, Any) -> Result<Any>;
 auto syscall6(int8 const, Any, Any, Any, Any, Any, Any) -> Result<Any>;
 
-template <typename Return, typename... Args>
-auto syscall(int8 const call, Args... parameters) -> Result<Return>
+template <typename... Args>
+auto syscall(int8 const call, Args... parameters) -> Result<Any>
 requires(sizeof...(Args) < 7);
 
 // Create and return a `Socket`.
