@@ -4,8 +4,8 @@
 
 #include <linux>
 
-template <typename ReturnType, typename... Args>
-auto nix::syscall(int8 const call, Args... parameters) -> Result<ReturnType>
+template <typename... Args>
+auto nix::syscall(int8 const call, Args... parameters) -> Result<Any>
 requires(sizeof...(Args) < 7) {
     static constexpr ssize length = sizeof...(Args);
     Any arguments[length] = {parameters...};
