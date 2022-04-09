@@ -2,7 +2,7 @@
 // vim: set ft=cpp:
 #include <linux>
 
-auto nix::file_status(nix::FileDescriptor file_descriptor)
+auto nix::file_descriptor_status(nix::FileDescriptor const file_descriptor)
     -> Result<nix::FileStatus> {
     nix::FileStatus status;
     return static_cast<Result<FileStatus>>(
