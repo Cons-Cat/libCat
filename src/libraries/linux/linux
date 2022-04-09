@@ -166,7 +166,7 @@ enum class OpenMode {
     read_write = 02
 };
 
-enum class OpenFlags : int {
+enum class OpenFlags {
     // This will create a new file. If that file already exists, it is no-op
     // unless combined with `OpenFlags::exclusive`.
     create = 0100,
@@ -369,6 +369,10 @@ auto write_vector(FileDescriptor const file_descriptor,
 auto read_vector(FileDescriptor const file_descriptor,
                  Span<IoVector> const& vectors) -> Result<ssize>;
 
+struct File {
+    char x;
+};
+
 // TODO: Flesh this out:
 struct FileStatus {
     uint8 dev;
@@ -426,7 +430,10 @@ struct FileStatus {
     }
 };
 
-auto file_status(FileDescriptor file_descriptor) -> Result<FileStatus>;
+auto file_path_status(String const& file_path) -> Result<FileStatus>;
+
+auto file_descriptor_status(FileDescriptor const file_descriptor)
+    -> Result<FileStatus>;
 
 }  // namespace nix
 
