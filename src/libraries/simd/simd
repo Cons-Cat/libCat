@@ -25,16 +25,15 @@ namespace cat::detail {
  * functions are unaligned, which pays little, if any, penalty to aligned
  * vectors in modern implementations of SSE, AVX, and NEON architectures. */
 
-template <typename T, ssize Width>
+template <typename T, ssize lanes>
 struct alignas(4) Simd {
-    static constexpr ssize width = Width;
+    static constexpr ssize width = lanes;
     using Scalar = T;
     /* `vector_size` is a GCC attribute that represents SIMD data-types.
      * `using` and `alignas` do not work on a builtin vector type. Generalized
      * attribute syntax also does not appear to work. */
-    typedef T  // NOLINT
-        __attribute__((vector_size(sizeof(Scalar) * Width), aligned(4)))
-        Intrinsic;
+    using Intrinsic [[gnu::vector_size(sizeof(T) * lanes), gnu::aligned(4)]] =
+        T;
     Intrinsic value;
 
     constexpr Simd() = default;
@@ -42,7 +41,7 @@ struct alignas(4) Simd {
     constexpr Simd(Intrinsic const& in_vector) {
         this->value = in_vector;
     }
-    constexpr Simd(Simd<T, Width> const& operand) {
+    constexpr Simd(Simd<T, lanes> const& operand) {
         this->value = operand.value;
     }
     // TODO: It would be nice to get this to work:
@@ -53,29 +52,29 @@ struct alignas(4) Simd {
 
     // TODO: `__builtin_convertvector()` wrapped by conversion operators.
 
-    constexpr auto operator=(Simd<T, Width> operand) -> Simd<T, Width>& {
+    constexpr auto operator=(Simd<T, lanes> operand) -> Simd<T, lanes>& {
         this->value = operand.value;
         return *this;
     }
 
-    constexpr auto operator==(Simd<T, Width> const& operand) -> Simd<T, Width> {
-        return Simd<T, Width>{.value = this->value == operand.value};
+    constexpr auto operator==(Simd<T, lanes> const& operand) -> Simd<T, lanes> {
+        return Simd<T, lanes>{.value = this->value == operand.value};
     }
 
-    constexpr auto operator+(Simd<T, Width> operand) -> Simd<T, Width> {
-        return Simd<T, Width>{this->value + operand.value};
+    constexpr auto operator+(Simd<T, lanes> operand) -> Simd<T, lanes> {
+        return Simd<T, lanes>{this->value + operand.value};
     }
-    constexpr auto operator+=(Simd<T, Width> const& operand)
-        -> Simd<T, Width>& {
+    constexpr auto operator+=(Simd<T, lanes> const& operand)
+        -> Simd<T, lanes>& {
         this->value = this->value + operand.value;
         return *this;
     }
 
-    constexpr auto operator-(Simd<T, Width> operand) -> Simd<T, Width> {
-        return Simd<T, Width>{this->value - operand.value};
+    constexpr auto operator-(Simd<T, lanes> operand) -> Simd<T, lanes> {
+        return Simd<T, lanes>{this->value - operand.value};
     }
-    constexpr auto operator-=(Simd<T, Width> const& operand)
-        -> Simd<T, Width>& {
+    constexpr auto operator-=(Simd<T, lanes> const& operand)
+        -> Simd<T, lanes>& {
         this->value = this->value - operand.value;
         return *this;
     }
