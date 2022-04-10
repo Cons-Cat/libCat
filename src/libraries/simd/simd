@@ -205,9 +205,9 @@ consteval auto set_zeros() -> T;
 auto shuffle(auto in_vector, auto mask);
 
 // TODO: Make this const-correct.
-template <uint4 Width>
+template <ssize width>
 constexpr auto p_string_to_p_vector(meta::string auto p_string) {
-    using U = cat::detail::Simd<char, Width>;
+    using U = cat::detail::Simd<char, width>;
     return meta::bit_cast<U*>(p_string);
 }
 
@@ -225,19 +225,44 @@ void zero_avx_registers();
 void zero_upper_avx_registers();
 
 // Constants for prefetch.
-enum MM_HINT {
-    // MM_HINT_ET is MM_HINT_T with set 3rd bit.
-    MM_HINT_ET0 = 7,
-    MM_HINT_ET1 = 6,
-    MM_HINT_T0 = 3,
-    MM_HINT_T1 = 2,
-    MM_HINT_T2 = 1,
-    MM_HINT_NTA = 0
+enum class PrefetchHint : int {
+    // Prefetch data into non-temporal cache structure and into a location close
+    // to the processor, minimizing cache pollution.
+    non_temporal = 0,
+    // Prefetch data into level 3 cache and higher, or an
+    // implementation-specific choice.
+    temporal_2 = 1,
+    // Prefetch data into level 2 cache and higher.
+    temporal_1 = 2,
+    // Prefetch data into all levels of the cache hierarchy.
+    temporal_0 = 3,
 };
 
-// This will not compile as a function.
-#define prefetch(p_source, hint) \
-    { __builtin_prefetch((p_source), (hint)&0x4 >> 2, (hint)&0x3); }
+template <PrefetchHint hint>
+void prefetch(void const* p_source) {
+    __builtin_prefetch(p_source, static_cast<int>(hint) & 0x4 >> 2,
+                       static_cast<int>(hint) & 0x3);
+}
+
+void prefetch_for_one_read(auto const* p_vector) {
+    prefetch<PrefetchHint::non_temporal>(p_vector);
+}
+
+void prefetch_close(auto const* p_vector) {
+    prefetch<PrefetchHint::temporal_0>(p_vector);
+}
+
+void prefetch_mid(auto const* p_vector) {
+    prefetch<PrefetchHint::temporal_1>(p_vector);
+}
+
+void prefetch_far(auto const* p_vector) {
+    prefetch<PrefetchHint::temporal_2>(p_vector);
+}
+
+void prefetch_for_modify(auto const* p_vector) {
+    prefetch<PrefetchHint::temporal_0>(p_vector);
+}
 
 template <typename T>
 void stream_in(void* p_destination, T const* p_source);
