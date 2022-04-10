@@ -42,7 +42,7 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
             for (int4 i = 0; i < 8; i++) {
                 vectors[i] = meta::bit_cast<Vector*>(p_source_handle)[i];
             }
-            prefetch((char const*)(p_source_handle + 512), simd::MM_HINT_NTA);
+            simd::prefetch_for_one_read(p_source_handle + 512);
 #pragma GCC unroll 8
             for (int4 i = 0; i < 8; i++) {
                 meta::bit_cast<Vector*>(p_destination_handle)[i] = vectors[i];
@@ -54,7 +54,7 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
     }
     // This routine is run when the memory source cannot fit in cache.
     else {
-        prefetch(p_source_handle + 512, simd::MM_HINT_NTA);
+        simd::prefetch_for_one_read(p_source_handle + 512);
         /* TODO: This could be improved by using aligned-streaming when
          * possible. */
         while (bytes >= 256) {
@@ -62,7 +62,7 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
             for (int4 i = 0; i < 8; i++) {
                 vectors[i] = meta::bit_cast<Vector*>((p_source_handle))[i];
             }
-            prefetch(p_source_handle + 512, simd::MM_HINT_NTA);
+            simd::prefetch_for_one_read(p_source_handle + 512);
             p_source_handle += 256;
 #pragma GCC unroll 8
             for (int4 i = 0; i < 8; i++) {
