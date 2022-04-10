@@ -38,19 +38,23 @@ class Simd {
     Intrinsic value;
 
     constexpr Simd() = default;
-    // TODO: Perfect forwarding.
-    constexpr Simd(Intrinsic const& in_vector) {
-        this->value = in_vector;
-    }
 
     constexpr Simd(Vector const& operand) {
         this->value = operand.value;
     }
-    // TODO: It would be nice to get this to work:
-    // template <typename... UList>
-    // constexpr simd_vector(UList... values) {
-    //     this->value((static_cast<T>(values))...);
-    // }
+
+    constexpr Simd(Intrinsic const& values) {
+        this->value = values;
+    }
+
+    constexpr Simd(Intrinsic&& values) {
+        this->value = meta::forward<Intrinsic>(values);
+    }
+
+    template <typename... U>
+    constexpr Simd(U... values) {
+        this->value = Intrinsic{values...};
+    }
 
     // TODO: `__builtin_convertvector()` wrapped by conversion operators.
 
@@ -227,7 +231,7 @@ constexpr auto operator|(StringControl flag_1, StringControl flag_2)
 }
 
 template <typename T>
-consteval auto set_zeros() -> T;
+consteval auto set_zeros() -> typename T::Intrinsic;
 
 // TODO: Use a vector concept.
 auto shuffle(auto in_vector, auto mask);

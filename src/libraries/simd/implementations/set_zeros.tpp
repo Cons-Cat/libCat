@@ -2,12 +2,10 @@
 // vim: set ft=cpp:
 
 template <typename T>
-consteval auto simd::set_zeros() -> T {
+consteval auto simd::set_zeros() -> typename T::Intrinsic {
     // TODO: Is there a cleverer way to do this? Variadic templates?
     // Probably an integer_sequence.
-    using Scalar = typename T::Scalar;
-    using Vector = cat::detail::Simd<Scalar, T::size(), alignof(T)>;
-    using Intrinsic = decltype(Vector::value);
+    using Intrinsic = typename T::Intrinsic;
 
     if constexpr (T::size() == 2) {
         return Intrinsic{0, 0};
@@ -21,5 +19,6 @@ consteval auto simd::set_zeros() -> T {
         return Intrinsic{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     }
+
     __builtin_unreachable();
 }
