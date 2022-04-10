@@ -9,7 +9,7 @@ auto cat::compare_strings(String const& string_1, String const& string_2)
     }
 
     // TODO: Use a type for an ISA-specific widest vector.
-    using VectorType = charx32;
+    using VectorType = char1x32;
 
     Array<VectorType, 4> vector_1;
     Array<VectorType, 4> vector_2;

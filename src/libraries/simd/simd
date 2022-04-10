@@ -94,13 +94,18 @@ using uint1x8 = cat::detail::Simd<uint1, 8>;
 using uint1x16 = cat::detail::Simd<uint1, 16>;
 using uint1x32 = cat::detail::Simd<uint1, 32>;
 
-/* Strings need their own vectors because uint1 and int1 are incompatible with
- * some intrinsic functions.*/
-using charx2 = cat::detail::Simd<char, 2>;
-using charx4 = cat::detail::Simd<char, 4>;
-using charx8 = cat::detail::Simd<char, 8>;
+// Strings need their own vectors.
+using char1x2 = cat::detail::Simd<char, 2>;
+using char1x4 = cat::detail::Simd<char, 4>;
+using char1x8 = cat::detail::Simd<char, 8>;
 using char1x16 = cat::detail::Simd<char, 16>;
-using charx32 = cat::detail::Simd<char, 32>;
+using char1x32 = cat::detail::Simd<char, 32>;
+
+// TODO: Support 2-byte chars in string algorithms.
+using char2x2 = cat::detail::Simd<char16_t, 2>;
+using char2x4 = cat::detail::Simd<char16_t, 4>;
+using char2x8 = cat::detail::Simd<char16_t, 8>;
+using char2x16 = cat::detail::Simd<char16_t, 16>;
 
 // Vectors of up to 16 2-byte integers are supported by AVX2.
 using int2x2 = cat::detail::Simd<int2, 2>;
@@ -281,8 +286,8 @@ auto move_mask(T vector) -> int4 {
 
 }  // namespace simd
 
-/* TODO: __builtin_cpu_init()
- * must be called before these. */
+// TODO: __builtin_cpu_init()
+// must be called before these.
 
 auto is_mmx_supported() -> bool1;
 auto is_sse1_supported() -> bool1;
