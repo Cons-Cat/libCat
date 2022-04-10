@@ -14,6 +14,7 @@
  * To streamline this, libCat uses the intrinsics which GNU already provides,
  * and wraps it in one thin layer of technology. */
 
+// #include <string>
 #include <type_traits>
 
 namespace cat::detail {
@@ -99,7 +100,7 @@ using uint1x32 = cat::detail::Simd<uint1, 32>;
 using charx2 = cat::detail::Simd<char, 2>;
 using charx4 = cat::detail::Simd<char, 4>;
 using charx8 = cat::detail::Simd<char, 8>;
-using charx16 = cat::detail::Simd<char, 16>;
+using char1x16 = cat::detail::Simd<char, 16>;
 using charx32 = cat::detail::Simd<char, 32>;
 
 // Vectors of up to 16 2-byte integers are supported by AVX2.
@@ -157,29 +158,46 @@ using bool4x8 = cat::detail::Simd<bool4, 8>;
 
 namespace simd {
 
-enum VectorMask : uint1 {
-    // Source data format.
-    SIDD_UBYTE_OPS = 0x00,
-    SIDD_UWORD_OPS = 0x01,
-    SIDD_SBYTE_OPS = 0x02,
-    SIDD_SWORD_OPS = 0x03,
-    // Comparison operation.
-    SIDD_CMP_EQUAL_ANY = 0x00,
-    SIDD_CMP_RANGES = 0x04,
-    SIDD_CMP_EQUAL_EACH = 0x08,
-    SIDD_CMP_EQUAL_ORDERED = 0x0c,
+enum class StringControl : unsigned char {
+    // Unsigned 1-byte characters.
+    unsigned_byte = 0x00,
+    // Unsigned 2-byte characters.
+    unsigned_word = 0x01,
+    // Signed 1-byte characters.
+    signed_byte = 0x02,
+    // Signed 2-byte characters.
+    signed_word = 0x03,
+    // Compare if any characters are equal.
+    compare_equal_any = 0x00,
+    // Compare ranges.
+    compare_ranges = 0x04,
+    // Compare if every character is equal.
+    compare_equal_each = 0x08,
+    // Compare equal ordered.
+    compare_equal_ordered = 0x0c,
     // Polarity.
-    SIDD_POSITIVE_POLARITY = 0x00,
-    SIDD_NEGATIVE_POLARITY = 0x10,
-    SIDD_MASKED_POSITIVE_POLARITY = 0x20,
-    SIDD_MASKED_NEGATIVE_POLARITY = 0x30,
-    // Output selection in _mm_cmpXstri()
-    SIDD_LEAST_SIGNIFICANT = 0x00,
-    SIDD_MOST_SIGNIFICANT = 0x40,
-    // Output selection in _mm_cmpXstrm ().
-    SIDD_BIT_MASK = 0x00,
-    SIDD_UNIT_MASK = 0x40,
+    positive_polarity = 0x00,
+    // Negate the results.
+    negative_polarity = 0x10,
+    masked_positive_polarity = 0x20,
+    // Negate the results only before the end of the string.
+    masked_negative_polarity = 0x30,
+    // Return the least significant bit.
+    least_significant = 0x00,
+    // Return the most significant bit.
+    most_significant = 0x40,
+    // Return a bit mask.
+    bit_mask = 0x00,
+    // Return a byte/word mask.
+    unit_mask = 0x40,
 };
+
+// TODO: Generalize this.
+constexpr auto operator|(StringControl flag_1, StringControl flag_2)
+    -> StringControl {
+    return static_cast<StringControl>(static_cast<unsigned char>(flag_1) |
+                                      static_cast<unsigned char>(flag_2));
+}
 
 template <typename T>
 consteval auto set_zeros() -> T;
@@ -194,13 +212,13 @@ constexpr auto p_string_to_p_vector(meta::string auto p_string) {
     return meta::bit_cast<U*>(p_string);
 }
 
-template <uint1 Mask>
-constexpr auto cmp_implicit_str_count(auto const& vector_1,
-                                      auto const& vector_2) -> bool1;
+template <StringControl control_mask>
+constexpr auto compare_implicit_length_strings(auto const& vector_1,
+                                               auto const& vector_2) -> bool1;
 
-template <uint1 Mask>
-constexpr auto cmp_implicit_str_i(auto const& vector_1, auto const& vector_2)
-    -> int4;
+template <StringControl control_mask>
+constexpr auto compare_implicit_length_strings_return_index(
+    auto const& vector_1, auto const& vector_2) -> int4;
 
 // TODO: Add `simd::mfence` and `simd::lfence`.
 void sfence();
@@ -223,7 +241,7 @@ enum MM_HINT {
     { __builtin_prefetch((p_source), (hint)&0x4 >> 2, (hint)&0x3); }
 
 template <typename T>
-void stream_in(void* p_destination, T const* source);
+void stream_in(void* p_destination, T const* p_source);
 
 template <typename T>
 auto move_mask(T vector) -> int4 {
@@ -254,8 +272,10 @@ auto is_avx2_supported() -> bool1;
 auto is_avx512f_supported() -> bool1;
 auto is_avx512vl_supported() -> bool1;
 
-#include "./implementations/cmp_implicit_str_c.tpp"
-#include "./implementations/cmp_implicit_str_i.tpp"
+// clang-format off
+#include "./implementations/compare_implicit_length_strings.tpp"
+#include "./implementations/compare_implicit_length_strings_return_index.tpp"
 #include "./implementations/set_zeros.tpp"
 #include "./implementations/shuffle.tpp"
 #include "./implementations/stream_in.tpp"
+// clang-format on

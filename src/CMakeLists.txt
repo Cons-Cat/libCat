@@ -52,8 +52,8 @@ set(
   ${CAT_SRC}/libraries/simd/implementations/sfence.cpp
   ${CAT_SRC}/libraries/simd/implementations/zero_avx_registers.cpp
   ${CAT_SRC}/libraries/simd/implementations/zero_upper_avx_registers.cpp
-  ${CAT_SRC}/libraries/simd/implementations/cmp_implicit_str_c.tpp
-  ${CAT_SRC}/libraries/simd/implementations/cmp_implicit_str_i.tpp
+  ${CAT_SRC}/libraries/simd/implementations/compare_implicit_length_strings.tpp
+  ${CAT_SRC}/libraries/simd/implementations/compare_implicit_length_strings_return_index.tpp
   ${CAT_SRC}/libraries/simd/implementations/set_zeros.tpp
   ${CAT_SRC}/libraries/simd/implementations/shuffle.tpp
   ${CAT_SRC}/libraries/simd/implementations/stream_in.tpp

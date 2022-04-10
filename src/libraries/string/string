@@ -15,10 +15,10 @@ extern "C" auto memcpy(void* p_destination, void const* p_source, usize bytes)
 
 namespace cat {
 
-template <typename T = ssize>
-constexpr auto string_length(char const* p_string) -> T;
+constexpr auto string_length(char const* p_string) -> ssize;
 
 }  // namespace cat
+
 class String : public Span<char const> {
     // `String` inherits:
     //
