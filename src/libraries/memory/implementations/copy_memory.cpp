@@ -7,7 +7,7 @@
 void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
     // `Vector` is the width of a 32-byte AVX register.
     // `long long int` is required for some SIMD intrinsics.
-    using Vector = cat::detail::Simd<long long int, 4>;
+    using Vector = cat::detail::Simd<long long int, 4, 4>;
 
     unsigned char const* p_source_handle =
         meta::bit_cast<unsigned char const*>(p_source);

@@ -17,7 +17,7 @@ constexpr auto cat::string_length(char const* p_string) -> ssize {
         }
     } else {
         ssize result = 0;
-        char1x16* p_memory = simd::p_string_to_p_vector<16>(p_string);
+        char1x16* p_memory = simd::p_string_to_p_vector<char1x16>(p_string);
         constexpr char1x16 zeros = simd::set_zeros<char1x16>();
 
         while (true) {
