@@ -1,5 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
+#include <bit>
 #include <memory>
 
 // TODO: Make integers consistently signed.
@@ -7,21 +8,25 @@
 void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
     // `Vector` is the width of a 32-byte AVX register.
     // `long long int` is required for some SIMD intrinsics.
-    using Vector = cat::detail::Simd<long long int, 4, 4>;
+    // using Vector = cat::detail::Simd<long long int, 4, 4>;
+    using Vector = int8x_;
 
     unsigned char const* p_source_handle =
         meta::bit_cast<unsigned char const*>(p_source);
     unsigned char* p_destination_handle =
         meta::bit_cast<unsigned char*>(p_destination);
-    constexpr ssize cachesize = 0x200000;  // L3-cache size.
+    constexpr ssize l3_cache_size = 2_mi;
     ssize padding;
 
     if (bytes <= 256) {
         cat::copy_memory_small(p_source, p_destination, bytes);
     }
 
-    // Align source, destination, and bytes to 16 bytes
-    padding = (32 - ((meta::bit_cast<ssize>(p_destination_handle)) & 31)) & 31;
+    // Align source, destination, and bytes to the vector's optimal alignment.
+    padding = static_cast<ssize>(
+        (sizeof(Vector) - ((meta::bit_cast<usize>(p_destination_handle)) &
+                           (sizeof(Vector) - 1))) &
+        (sizeof(Vector) - 1));
 
     Vector head = *meta::bit_cast<Vector const*>(p_source_handle);
     *static_cast<Vector*>(p_destination) = head;
@@ -34,7 +39,7 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
     constexpr ssize step_size = sizeof(Vector) * 8;
     // This routine is optimized for buffers in L3 cache. Streaming is
     // slower.
-    if (bytes <= cachesize) {
+    if (bytes <= l3_cache_size) {
         while (bytes >= step_size) {
             /* Load 8 8x4 vectors, then increment the source pointer by that
              * size. */
