@@ -2,40 +2,44 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <simd>
 #include <string>
-#include <utility>
 
-/* T is the return type of `string_length()`. It may be signed or
- * unsigned. This function requires SSE4.2, unless it is used in a `constexpr`
- * context. */
-template <typename T>
-constexpr auto cat::string_length(char const* p_string) -> T {
+/* This function requires SSE4.2, unless it is used in a `constexpr` context. */
+constexpr auto cat::string_length(char const* p_string) -> ssize {
     if (meta::is_constant_evaluated()) {
-        T result = 0;
+        ssize result = 0;
         while (true) {
             if (p_string[result] == '\0') {
                 return result;
             }
-            result += 1;
+            result++;
         }
     } else {
-        T result = 0;
-        charx16* p_memory = simd::p_string_to_p_vector<16>(p_string);
-        constexpr charx16 zeros = simd::set_zeros<charx16>();
+        ssize result = 0;
+        char1x16* p_memory = simd::p_string_to_p_vector<16>(p_string);
+        constexpr char1x16 zeros = simd::set_zeros<char1x16>();
 
         while (true) {
-            charx16 data = *p_memory;
-            constexpr uint1 mask = simd::SIDD_UBYTE_OPS |
-                                   simd::SIDD_CMP_EQUAL_EACH |
-                                   simd::SIDD_LEAST_SIGNIFICANT;
-            if (simd::cmp_implicit_str_count<mask>(data, zeros)) {
-                int4 const index = simd::cmp_implicit_str_i<mask>(data, zeros);
-                return result + index;
+            char1x16 data = *p_memory;
+            constexpr simd::StringControl mask =
+                simd::StringControl::unsigned_byte |
+                simd::StringControl::compare_equal_each |
+                simd::StringControl::least_significant;
+
+            // If there are one or more `0` bytes in `data`:
+            if (simd::compare_implicit_length_strings<mask>(data, zeros)) {
+                int4 const index =
+                    simd::compare_implicit_length_strings_return_index<mask>(
+                        data, zeros);
+                // Adding `1` is required to count the null terminator.
+                return result + index + 1;
             }
+
             p_memory++;
             result += sizeof(uint1x16);
         }
-        // This point unreachable because the function would segfault first.
+
         __builtin_unreachable();
     }
 }

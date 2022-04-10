@@ -180,6 +180,12 @@ target_compile_options(window PRIVATE ${CAT_CXX_FLAGS})
 target_link_libraries(window PRIVATE cat)
 target_link_options(window PRIVATE ${CAT_LINK_FLAGS})
 
+add_executable(unixcat examples/cat.cpp)
+target_compile_options(unixcat PRIVATE ${CAT_CXX_FLAGS})
+target_link_libraries(unixcat PRIVATE cat)
+target_link_options(unixcat PRIVATE ${CAT_LINK_FLAGS})
+set_target_properties(unixcat PROPERTIES OUTPUT_NAME cat)
+
 # libC executables are only configured for Release.
 list(
   APPEND

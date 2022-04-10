@@ -151,10 +151,10 @@ enum class WaitOptionsFlags : long int {
 };
 
 auto read(FileDescriptor const file_descriptor, char const* p_string_buffer,
-          ssize const string_length) -> Result<ssize>;
+          ssize const length) -> Result<ssize>;
 
 auto write(FileDescriptor const file_descriptor, char const* p_string_buffer,
-           ssize const string_length) -> Result<ssize>;
+           ssize const length) -> Result<ssize>;
 
 auto write(FileDescriptor const file_descriptor, String const& string)
     -> Result<ssize>;
