@@ -114,3 +114,6 @@ class Array {
         return cat::ReversedIterator<Iterator>(-1, this->storage);
     }
 };
+
+template <typename T, typename... Args>
+Array(T, Args...) -> Array<T, sizeof...(Args) + 1>;
