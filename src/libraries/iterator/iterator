@@ -119,19 +119,19 @@ struct IteratorFacade {
             static_cast<int>(direction) * -1);
     }
 
-    auto self() -> Derived& {
+    constexpr auto self() -> Derived& {
         return static_cast<Derived&>(*this);
     }
 
-    auto self() const -> Derived const& {
+    constexpr auto self() const -> Derived const& {
         return static_cast<Derived const&>(*this);
     }
 
-    auto operator*() const -> decltype(auto) {
+    constexpr auto operator*() const -> decltype(auto) {
         return this->self().dereference();
     }
 
-    auto operator->() const {
+    constexpr auto operator->() const {
         decltype(auto) reference = **this;
         if constexpr (meta::is_reference_v<decltype(reference)>) {
             // `ref` is a true reference, and we're safe to take its address
@@ -144,7 +144,8 @@ struct IteratorFacade {
         }
     }
 
-    friend auto operator==(Derived const& left, Derived const& right) -> bool {
+    constexpr friend auto operator==(Derived const& left, Derived const& right)
+        -> bool {
         if constexpr (cat::detail::HasEqualTo<Derived>) {
             return left.equal_to(right);
         } else {
@@ -152,30 +153,33 @@ struct IteratorFacade {
         }
     }
 
-    friend auto operator==(Derived const& self,
-                           cat::detail::HasSentinel<Derived> auto) -> bool {
+    constexpr friend auto operator==(Derived const& self,
+                                     cat::detail::HasSentinel<Derived> auto)
+        -> bool {
         return self.at_end();
     }
 
-    friend auto operator+(Derived left, DifferenceTypeArg<Derived> auto offset)
+    constexpr friend auto operator+(Derived left,
+                                    DifferenceTypeArg<Derived> auto offset)
         -> Derived requires cat::detail::HasAdvance<Derived> {
         return left += offset * static_cast<int>(direction);
     }
 
-    friend auto operator+(DifferenceTypeArg<Derived> auto offset, Derived right)
+    constexpr friend auto operator+(DifferenceTypeArg<Derived> auto offset,
+                                    Derived right)
         -> Derived requires cat::detail::HasAdvance<Derived> {
         return right += offset * static_cast<int>(direction);
     }
 
-    friend auto operator+=(Derived& self,
-                           DifferenceTypeArg<Derived> auto offset)
+    constexpr friend auto operator+=(Derived& self,
+                                     DifferenceTypeArg<Derived> auto offset)
         -> Derived& requires cat::detail::HasAdvance<Derived> {
         self.advance(static_cast<int>(offset));
         return self;
     }
 
     // Increment or advance forwards with prefix notation.
-    auto operator++() -> Derived& {
+    constexpr auto operator++() -> Derived& {
         if constexpr (cat::detail::HasIncrement<Derived>) {
             this->self().increment();
         } else {
@@ -185,30 +189,31 @@ struct IteratorFacade {
     }
 
     // Increment or advance forwards with postfix notation.
-    auto operator++(int) -> Derived {
+    constexpr auto operator++(int) -> Derived {
         auto copy = this->self();
         ++(*this);
         return copy;
     }
 
-    friend auto operator-(const Derived& left, const Derived& right)
+    constexpr friend auto operator-(const Derived& left, const Derived& right)
         -> Derived& requires cat::detail::HasAdvance<Derived> {
         return right.distance_to(left);
     }
 
-    friend auto operator-(Derived left, DifferenceTypeArg<Derived> auto offset)
+    constexpr friend auto operator-(Derived left,
+                                    DifferenceTypeArg<Derived> auto offset)
         -> Derived requires cat::detail::HasAdvance<Derived> {
         return left - offset * static_cast<int>(direction);
     }
 
-    friend auto operator-=(Derived& left,
-                           DifferenceTypeArg<Derived> auto offset)
+    constexpr friend auto operator-=(Derived& left,
+                                     DifferenceTypeArg<Derived> auto offset)
         -> Derived& requires cat::detail::HasAdvance<Derived> {
         return left -= offset * static_cast<int>(direction);
     }
 
     // Decrement or advance backwards with prefix notation.
-    auto operator--() -> Derived& {
+    constexpr auto operator--() -> Derived& {
         if constexpr (cat::detail::HasDecrement<Derived>) {
             this->self().decrement();
         } else {
@@ -218,7 +223,7 @@ struct IteratorFacade {
     }
 
     // Decrement or advance backwards with postfix notation.
-    auto operator--(int)
+    constexpr auto operator--(int)
         -> Derived& requires cat::detail::HasDecrement<Derived> {
         auto copy = *this;
         --(*this);
@@ -226,7 +231,7 @@ struct IteratorFacade {
     }
 
     // Random-access.
-    auto operator[](DifferenceTypeArg<Derived> auto offset)
+    constexpr auto operator[](DifferenceTypeArg<Derived> auto offset)
         -> decltype(auto) requires cat::detail::HasAdvance<Derived> {
         return *(this->self() + offset);
     }
