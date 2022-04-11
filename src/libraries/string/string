@@ -54,7 +54,7 @@ class String : public Span<char const> {
     // TODO: Make this `consteval`.
     template <ssize other_length>
     String(StaticString<other_length> const& string) {
-        this->p_storage = &(string.string[0]);
+        this->p_storage = &(string.storage[0]);
         this->length = other_length;
     }
 
@@ -69,26 +69,31 @@ class String : public Span<char const> {
     }
 };
 
+// TODO: Replace this with `Array`.
 template <ssize length>
 struct StaticString {
-    char string[length + 1];
+    char storage[length + 1];
 
-    consteval StaticString(char const (&in)[length]) : string{} {
+    constexpr StaticString(char const (&in)[length]) : storage{} {
         for (int4 i = 0; i < length - 1; i++) {
-            string[i] = in[i];
+            storage[i] = in[i];
         }
-        string[length] = '\0';
+        storage[length] = '\0';
     }
 
-    consteval StaticString(String const& in) : string{} {
+    consteval StaticString(String const& in) : storage{} {
         for (int4 i = 0; i < in.size() - 1; i++) {
-            string[i] = in.p_data()[i];
+            storage[i] = in.p_data()[i];
         }
-        string[length] = '\0';
+        storage[length] = '\0';
     }
 
-    consteval auto get_string() {
-        return this->string;
+    constexpr auto get_string() const {
+        return this->storage;
+    }
+
+    constexpr auto size() const -> ssize {
+        return length;
     }
 };
 
@@ -100,11 +105,11 @@ consteval auto operator+(StaticString<length_1> const& string_1,
     char array[length_1 - 1 + length_2];
 
     for (ssize i = 0; i < length_1 - 1; i++) {
-        array[i] = string_1.string[i];
+        array[i] = string_1.storage[i];
     }
 
     for (ssize i = length_1 - 1; i < length_1 - 1 + length_2 - 1; i++) {
-        array[i] = string_2.string[i - length_1 + 1];
+        array[i] = string_2.storage[i - length_1 + 1];
     }
 
     // Make this string null-terminated.
