@@ -92,7 +92,7 @@ struct StaticString {
         return this->storage;
     }
 
-    constexpr auto size() const -> ssize {
+    static consteval auto size() -> ssize {
         return length;
     }
 };

@@ -1,4 +1,5 @@
 #include <array>
+#include <string>
 
 void meow() {
     // Initializing a array:
@@ -42,6 +43,21 @@ void meow() {
     // Index in and out of bounds.
     Result(array_1.at(0).value() == 5).or_panic();
     Result(!array_1.at(6).has_value()).or_panic();
+
+    // Deduced type.
+    Array implicit_array_1 = {0, 1, 2, 3, 4};
+    Array implicit_array_2{0, 1, 2, 3, 4};
+    Array implicit_array_3(0, 1, 2, 3, 4);
+    static_assert(implicit_array_1.size() == 5);
+    static_assert(implicit_array_2.size() == 5);
+    static_assert(implicit_array_3.size() == 5);
+
+    // TODO: String deduction:
+    // Array implicit_string = "Hi, Conscat!";
+    // static_assert(implicit_string.size() ==
+    //               cat::string_length("Hi, Conscat!"));
+
+    // TODO: Test `constexpr`.
 
     cat::exit();
 };
