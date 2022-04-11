@@ -86,4 +86,10 @@ add_test(NAME Raii COMMAND test_raii)
 add_executable(test_optional optional.cpp)
 target_compile_options(test_optional PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_optional PRIVATE ${CAT_LINK_FLAGS})
-add_test(NAME Maybe COMMAND test_optional)
+add_test(NAME Optional COMMAND test_optional)
+
+# This tests if SIMD basically works.
+add_executable(test_simd simd.cpp)
+target_compile_options(test_simd PRIVATE ${CAT_CXX_FLAGS_TEST})
+target_link_options(test_simd PRIVATE ${CAT_LINK_FLAGS})
+add_test(NAME Simd COMMAND test_simd)
