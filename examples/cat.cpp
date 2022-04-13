@@ -8,7 +8,7 @@ void meow(int, char* p_argv[]) {
     nix::FileStatus status = nix::file_descriptor_status(file).or_panic(
         "Failed to get file status!");
     PageAllocator allocator;
-    ssize size = status.blksize;
+    ssize size = status.block_size;
     char* p_buffer = static_cast<char*>(static_cast<void*>(
         allocator.malloc(size).or_panic("Failed to allocate memory!")));
     String string = String{p_buffer, size};
