@@ -40,6 +40,10 @@ struct MemoryHandle {
     auto get_address() -> void* {
         return this;
     }
+
+    explicit operator void*() const {
+        return storage;
+    }
 };
 
 struct PageAllocator {
