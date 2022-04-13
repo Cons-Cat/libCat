@@ -182,6 +182,7 @@ target_link_options(window PRIVATE ${CAT_LINK_FLAGS})
 
 add_executable(unixcat examples/cat.cpp)
 target_compile_options(unixcat PRIVATE ${CAT_CXX_FLAGS})
+target_compile_definitions(unixcat PRIVATE "load_argc_argv")
 target_link_libraries(unixcat PRIVATE cat)
 target_link_options(unixcat PRIVATE ${CAT_LINK_FLAGS})
 set_target_properties(unixcat PROPERTIES OUTPUT_NAME cat)
