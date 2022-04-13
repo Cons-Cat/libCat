@@ -8,12 +8,11 @@ void meow(int, char* p_argv[]) {
     nix::FileStatus status = nix::file_descriptor_status(file).or_panic(
         "Failed to get file status!");
     PageAllocator allocator;
-    ssize size = status.block_size;
     char* p_buffer = static_cast<char*>(static_cast<void*>(
-        allocator.malloc(size).or_panic("Failed to allocate memory!")));
-    String string = String{p_buffer, size};
+        allocator.malloc(status.size).or_panic("Failed to allocate memory!")));
+    String string = String{p_buffer, status.size};
 
-    nix::read(file, string.p_data(), size)
+    nix::read(file, string.p_data(), status.size)
         .or_panic("Failed to read from the open file!");
     cat::print(string).or_panic();
     cat::exit();
