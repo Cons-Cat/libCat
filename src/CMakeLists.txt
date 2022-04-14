@@ -70,7 +70,7 @@ set(
   ${CAT_SRC}/libraries/linux/implementations/read.cpp
   ${CAT_SRC}/libraries/linux/implementations/write.cpp
   ${CAT_SRC}/libraries/linux/implementations/close.cpp
-  ${CAT_SRC}/libraries/linux/implementations/open.cpp
+  ${CAT_SRC}/libraries/linux/implementations/open_file.cpp
   ${CAT_SRC}/libraries/linux/implementations/unlink.cpp
   ${CAT_SRC}/libraries/linux/implementations/map_memory.cpp
   ${CAT_SRC}/libraries/linux/implementations/unmap_memory.cpp
