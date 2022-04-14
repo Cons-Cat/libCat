@@ -33,15 +33,27 @@ auto min(T&& value_1, U&& value_2, Remaining&&... remaining) -> Out {
             : cat::min(value_2, meta::forward<Remaining>(remaining)...));
 }
 
-constexpr auto min(meta::iterable auto& iterable) {
-    using T = meta::remove_reference_t<typename meta::remove_const_t<
-        typename cat::iterator_traits<decltype(iterable.begin())>::Value>>;
-    T minimum{};
+constexpr auto min(meta::iterable auto&& iterable) {
+    auto iterator = iterable.begin();
+    auto maximum = *iterator;
+    ++iterator;
 
-    for (T const& it : iterable) {
-        minimum = cat::min(it, minimum);
+    for (; iterator != iterable.end(); ++iterator) {
+        maximum = *iterator < maximum ? *iterator : maximum;
     }
-    return minimum;
+    return maximum;
+}
+
+template <typename T>
+constexpr auto min(meta::iterable auto&& iterable) -> T {
+    auto iterator = iterable.begin();
+    auto maximum = *iterator;
+    ++iterator;
+
+    for (; iterator != iterable.end(); ++iterator) {
+        maximum = *iterator < maximum ? *iterator : maximum;
+    }
+    return static_cast<T>(maximum);
 }
 
 template <typename T>
@@ -69,15 +81,27 @@ constexpr auto max(T&& value_1, U&& value_2, Remaining&&... remaining) -> Out {
             : cat::max(value_2, meta::forward<Remaining>(remaining)...));
 }
 
-constexpr auto max(meta::iterable auto& iterable) {
-    using T = meta::remove_reference_t<typename meta::remove_const_t<
-        typename cat::iterator_traits<decltype(iterable.begin())>::Value>>;
-    T maximum{};
+constexpr auto max(meta::iterable auto&& iterable) {
+    auto iterator = iterable.begin();
+    auto maximum = *iterator;
+    ++iterator;
 
-    for (T const& it : iterable) {
-        maximum = cat::max(it, maximum);
+    for (; iterator != iterable.end(); ++iterator) {
+        maximum = *iterator > maximum ? *iterator : maximum;
     }
     return maximum;
+}
+
+template <typename T>
+constexpr auto max(meta::iterable auto&& iterable) -> T {
+    auto iterator = iterable.begin();
+    auto maximum = *iterator;
+    ++iterator;
+
+    for (; iterator != iterable.end(); ++iterator) {
+        maximum = *iterator > maximum ? *iterator : maximum;
+    }
+    return static_cast<T>(maximum);
 }
 
 }  // namespace cat
