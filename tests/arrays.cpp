@@ -54,12 +54,16 @@ void meow() {
     static_assert(implicit_array_3.size() == 5);
 
     // Max
-    Array array_4 = {0, 2, 8, 5};
-    int4 max = cat::max(array_4);
-    Result(max == 0).or_panic();
+    constexpr Array array_4 = {0, 2, 8, 5};
+    constexpr int4 max_1 = cat::max(array_4);
+    float4 max_2 = cat::max<float4>(array_4);
+    Result(max_1 == 8).or_panic();
+    Result(max_2 == 8.f).or_panic();
 
-    int4 min = cat::min(array_4);
-    Result(min == 0).or_panic();
+    int4 min_1 = cat::min(array_4);
+    float4 min_2 = cat::min<float4>(array_4);
+    Result(min_1 == 0).or_panic();
+    Result(min_2 == 0.f).or_panic();
 
     // TODO: String deduction:
     // Array implicit_string = "Hi, Conscat!";
