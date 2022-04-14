@@ -100,7 +100,7 @@ concept DifferenceTypeArg =
     meta::convertible_to<Arg, InferDifferenceType<Iter>>;
 
 template <typename T>
-using InferValueType = typename cat::detail::InferValueType<T>::type;
+using InferValueType_t = typename cat::detail::InferValueType<T>::type::type;
 
 // https://vector-of-bool.github.io/2020/06/13/cpp20-iter-facade.html
 // Every `IteratorFacade` is `indirectly_readable` and is a `forward_iterator`.
@@ -250,7 +250,7 @@ template <typename T>
 requires meta::is_base_of_v<IteratorFacade<T>, T>
 struct iterator_traits {
     static T const& it;
-    using Value = InferValueType<T>;
+    using Value = typename InferValueType_t<T>::type;
     using Reference = decltype(*it);
     using Pointer = decltype(it.operator->());
     using Difference = InferDifferenceType<T>;
@@ -309,3 +309,12 @@ class Reverse {
 };
 
 }  // namespace cat
+
+namespace meta {
+template <typename T>
+concept iterable = requires(T t) {
+    t.begin();
+    t.end();
+};
+
+}  // namespace meta
