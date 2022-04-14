@@ -15,7 +15,7 @@ template <typename T>
 class Result;
 
 // TODO: Fix this declaration in `<numerals>`
-using ssize = int long long;
+using ssize = signed long long;
 
 #include <numerals>
 

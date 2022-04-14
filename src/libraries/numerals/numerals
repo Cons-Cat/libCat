@@ -283,137 +283,142 @@ struct bool4 {  // NOLINT
 };
 
 struct intptr {  // NOLINT
-    ssize storage;
+    ssize value;
 
     constexpr intptr() = default;
 
     constexpr intptr(intptr const& input) {
-        this->storage = input.storage;
+        this->value = input.value;
     }
 
     constexpr intptr(intptr&& input) {
-        this->storage = cat::move(input).storage;
+        this->value = cat::move(input).value;
     }
 
     constexpr intptr(meta::integral auto const& input) {
-        this->storage = input;
+        this->value = input;
     }
 
     template <meta::integral T>
-    constexpr intptr(T&& input) {
-        this->storage = meta::forward<T>(input);
+    constexpr intptr(T&& input) {  // NOLINT
+        this->value = meta::forward<T>(input);
     }
 
     constexpr intptr(auto* p_input) {
-        this->storage = static_cast<ssize>(Any{p_input});
+        this->value = meta::bit_cast<ssize>(p_input);
     }
 
     auto operator=(meta::integral auto from) -> intptr& {
-        this->storage = from;
+        this->value = from;
         return *this;
     }
 
     auto operator==(meta::integral auto from) -> bool1 {
-        return this->storage == from;
+        return this->value == from;
     }
 
     auto operator>(meta::integral auto from) -> bool1 {
-        return this->storage > from;
+        return this->value > from;
     }
     auto operator>=(meta::integral auto from) -> bool1 {
-        return this->storage >= from;
+        return this->value >= from;
     }
 
     auto operator<(meta::integral auto from) -> bool1 {
-        return this->storage < from;
+        return this->value < from;
     }
     auto operator<=(meta::integral auto from) -> bool1 {
-        return this->storage <= from;
+        return this->value <= from;
     }
 
     auto operator+(meta::integral auto from) -> intptr {
-        return this->storage + from;
+        return this->value + from;
     }
     auto operator+=(meta::integral auto from) -> intptr& {
-        this->storage = this->storage + from;
+        this->value = this->value + from;
         return *this;
     }
 
     auto operator++() -> intptr {
-        return ++this->storage;
+        return ++this->value;
     }
     auto operator++(int) -> intptr {
-        return this->storage++;
+        return this->value++;
     }
 
     auto operator-(meta::integral auto from) -> intptr {
-        return this->storage - from;
+        return this->value - from;
     }
     auto operator-=(meta::integral auto from) -> intptr& {
-        this->storage = this->storage - from;
+        this->value = this->value - from;
         return *this;
     }
 
     auto operator--() -> intptr {
-        return --storage;
+        return --value;
     }
     auto operator--(int) -> intptr {
-        return storage--;
+        return value--;
     }
 
     auto operator*(meta::integral auto from) -> intptr {
-        return this->storage * from;
+        return this->value * from;
     }
     auto operator*=(meta::integral auto from) -> intptr& {
-        this->storage = this->storage * from;
+        this->value = this->value * from;
         return *this;
     }
 
     auto operator/(meta::integral auto from) -> intptr {
-        return this->storage / from;
+        return this->value / from;
     }
     auto operator/=(meta::integral auto from) -> intptr& {
-        this->storage = this->storage / from;
+        this->value = this->value / from;
         return *this;
     }
 
     auto operator%(meta::integral auto from) -> intptr {
-        return this->storage % from;
+        return this->value % from;
     }
     auto operator%=(meta::integral auto from) -> intptr& {
-        this->storage = this->storage % from;
+        this->value = this->value % from;
         return *this;
     }
 
     auto operator&(meta::integral auto from) -> intptr {
-        return this->storage & from;
+        return this->value & from;
     }
     auto operator&=(meta::integral auto from) -> intptr& {
-        this->storage = this->storage & from;
+        this->value = this->value & from;
         return *this;
     }
 
     auto operator|(meta::integral auto from) -> intptr {
-        return this->storage | from;
+        return this->value | from;
     }
     auto operator|=(meta::integral auto from) -> intptr& {
-        this->storage = this->storage | from;
+        this->value = this->value | from;
         return *this;
     }
 
     auto operator<<(meta::integral auto from) -> intptr {
-        return this->storage << from;
+        return this->value << from;
     }
     auto operator<<=(meta::integral auto from) -> intptr& {
-        this->storage = this->storage << from;
+        this->value = this->value << from;
         return *this;
     }
 
     auto operator>>(meta::integral auto from) -> intptr {
-        return this->storage >> from;
+        return this->value >> from;
     }
     auto operator>>=(meta::integral auto from) -> intptr& {
-        this->storage = this->storage >> from;
+        this->value = this->value >> from;
         return *this;
+    }
+
+    template <typename T>
+    operator T*() {
+        return meta::bit_cast<T*>(this->value);
     }
 };
