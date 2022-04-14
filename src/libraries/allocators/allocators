@@ -6,8 +6,6 @@
 #include <memory>
 #include <type_traits>
 
-#include "any"
-
 // TODO: This does not work correctly.
 template <typename T>
 concept allocator = requires(T allocator, ssize input) {
@@ -39,35 +37,26 @@ struct MemoryHandle {
     union {
         void* p_storage;
         ssize storage;
-    } value;
-
-    constexpr MemoryHandle() = default;
-
-    constexpr MemoryHandle(decltype(nullptr)) {
-        this->value.p_storage = nullptr;
-    }
-
-    template <typename T>
-    constexpr MemoryHandle(T* p_value) {
-        this->value.p_storage = meta::forward<T*>(p_value);
-    }
+    };
 
     constexpr auto as_address() const -> void* {
-        return this->value.p_storage;
+        return this->p_storage;
     }
 
     constexpr auto as_index() const -> ssize {
-        return value.storage;
+        return storage;
     }
 
     constexpr explicit operator void*() const {
-        return this->value.p_storage;
+        return this->p_storage;
     }
 };
 
-struct PageAllocator {
-    void* address = nullptr;
+struct PageMemoryHandle : public MemoryHandle {
+    ssize size;
+};
 
+struct PageAllocator {
     // TODO: Think about this.
     enum failures {
     };
@@ -77,30 +66,23 @@ struct PageAllocator {
      * allocated, that amount will be rounded up to `4096u`. There is generally
      * very little reason to allocate any smaller amount of bytes using
      * `PageAllocator`. */
-    auto malloc(ssize allocation_size) -> Result<MemoryHandle> {
-        this->address = nix::map_memory(0u, allocation_size,
-                                        nix::MmapProtectionFlags::read |
-                                            nix::MmapProtectionFlags::write,
-                                        nix::MmapMemoryFlags::privately |
-                                            nix::MmapMemoryFlags::populate |
-                                            nix::MmapMemoryFlags::anonymous,
-                                        // Anonymous pages must have `-1`.
-                                        -1,
-                                        // Anonymous pages must have `0u`.
-                                        0u)
-                            .value_or(nullptr);
-        // TODO: This is quite inefficient. Consider failure-propagation.
-        if (this->address == nullptr) {
-            return Failure(1);
-        }
-        return MemoryHandle{this->address};
+    auto malloc(ssize allocation_size) -> Result<PageMemoryHandle> {
+        return nix::map_memory(0u, allocation_size,
+                               nix::MmapProtectionFlags::read |
+                                   nix::MmapProtectionFlags::write,
+                               nix::MmapMemoryFlags::privately |
+                                   nix::MmapMemoryFlags::populate |
+                                   nix::MmapMemoryFlags::anonymous,
+                               // Anonymous pages must have `-1`.
+                               -1,
+                               // Anonymous pages must have `0u`.
+                               0u)
+            .transform<PageMemoryHandle>([=](void* p_value) {
+                return PageMemoryHandle{{p_value}, allocation_size};
+            });
     }
 
-    // TODO: `munmap()` here.
-    void free(){};
-
-    // NOLINTNEXTLINE TODO: Why no lint?
-    auto operator[](ssize byte_index) -> uint8& {
-        return reinterpret_cast<uint8*>(address)[byte_index];
-    }
+    auto free(PageMemoryHandle memory) -> Result<> {
+        return nix::unmap_memory(memory.as_address(), memory.size);
+    };
 };

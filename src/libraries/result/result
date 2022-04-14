@@ -210,23 +210,23 @@ class [[nodiscard]] Result {
 
     // If this non-`const`-qualified `Result` holds a value, transform it by a
     // non-`void` function. Otherwise, propagate an empty `Result`.
-    template <typename Function>
-    constexpr auto transform(Function&& callback) & {
+    template <typename U = T, typename Function>
+    constexpr auto transform(Function&& callback) -> Result<U> {
         if (this->is_okay) {
-            return Result<T>(meta::forward<Function>(callback)(this->storage));
+            return Result<U>(meta::forward<Function>(callback)(this->storage));
         }
-        return *this;
+        return Failure(this->failure.code);
     }
 
     // If this `const`-qualified `Result` holds a value, transform it by a
     // non-`void` function without side-effects. Otherwise, propagate an empty
     // `Result`.
-    template <typename Function>
-    constexpr auto transform(Function&& callback) const& {
+    template <typename U = T, typename Function>
+    constexpr auto transform(Function&& callback) const -> Result<U> {
         if (this->is_okay) {
-            return Result<T>(meta::forward<Function>(callback(this->storage)));
+            return Result<U>(meta::forward<Function>(callback(this->storage)));
         }
-        return *this;
+        return Failure(this->failure.code);
     }
 
     // Invoke a callback on the value of a non-`const`-qualified `Result` and

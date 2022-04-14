@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <allocators>
 #include <bit>
 #include <linux>
 #include <socket>
@@ -300,7 +301,7 @@ struct ConnectionRequestInfo {
     int1 padding_1;  // NOLINT
   public:
     // This should almost always be `{11, 0}`.
-    Array<uint2, 2> x_version = {uint2(11), uint2(0)};
+    Array<uint2, 2> x_version = {uint2{11}, uint2{0}};
     // No explicit protocol is specified if this is `0`.
     uint2 authorization_protocol_length = 0;
     // No explicit protocol is specified if this is `0`.
@@ -426,8 +427,10 @@ auto handshake(auto& allocator, SocketUnix<SocketType::stream>& socket)
     // recieved packets is unknown and potentially a very large amount.
     x_connection.p_setup = static_cast<ConnectionResponseInfo*>(
         allocator.malloc(x_connection.header.message_length * 4)
-            .value_or(nullptr)
-            .as_address());
+            .template transform<void*>([](auto allocation) {
+                return allocation.as_address();
+            })
+            .value_or(nullptr));
     if (!x_connection.p_setup) {
         return Failure(0x0);
     }
