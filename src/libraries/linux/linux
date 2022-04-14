@@ -306,9 +306,8 @@ struct Process {
         this->stack_size = initial_stack_size;
         // Allocate a stack for this thread, and get an address to the top of
         // it.
-        this->p_stack = allocator.malloc(initial_stack_size)
-                            .value_or(nullptr)
-                            .get_address();
+        this->p_stack =
+            allocator.malloc(initial_stack_size).value_or(nullptr).as_address();
         if (this->p_stack == nullptr) {
             return Failure(1);
         }
@@ -343,7 +342,7 @@ struct Process {
 
 parent_thread:
         if (static_cast<int4>(result) < 0) {
-            return Failure(result);
+            return Failure{result};
         }
         // `this->process_id` was initialized by the syscall.
         return okay;
@@ -359,8 +358,32 @@ parent_thread:
     }
 };
 
-struct IoVector : Span<Any> {
+struct IoVector : Span<byte> {
     static constexpr ssize max_size = 1_ki;
+
+    constexpr IoVector() = default;
+    constexpr IoVector(IoVector&&) = default;
+
+    // Construct from any reasonable pointer type.
+    template <typename T>
+    constexpr IoVector(T* p_in_data, ssize in_length)
+        : Span<byte>(static_cast<byte*>(p_in_data), in_length){};
+
+    // Construct from any reasonable pointer type.
+    template <typename T>
+    constexpr IoVector(T* p_start, T* p_end)
+        : Span<byte>(static_cast<byte*>(p_start),
+                     static_cast<byte*>(p_end) - static_cast<byte*>(p_start)){};
+
+    constexpr auto operator=(IoVector const& io_vector) {
+        this->p_storage = io_vector.p_storage;
+        this->length = io_vector.length;
+    }
+
+    constexpr auto operator=(IoVector&& io_vector) {
+        this->p_storage = io_vector.p_storage;
+        this->length = cat::move(io_vector).length;
+    }
 };
 
 auto write_vector(FileDescriptor const file_descriptor,
@@ -386,7 +409,7 @@ struct FileStatus {
     uint4 padding;  // NOLINT
   public:
     uint8 rdev;
-    int8 size;
+    int8 file_size;
     ssize block_size;
     int8 blocks_count;
 
