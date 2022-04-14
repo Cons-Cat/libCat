@@ -41,8 +41,8 @@ enum class MmapProtectionFlags : unsigned int {
 enum class MmapMemoryFlags : unsigned int {
     shared = 0b1,          // Writes change the underlying object.
     privately = 0b10,      // Writes only change the calling process.
-    fixed = 0b10000,       /* Map to precisely this address, rather than virtual
-                            * memory. This may fail. */
+    fixed = 0b10000,       // Map to precisely this address, rather than virtual
+                           // memory. This may fail.
     anonymous = 0b100000,  // Not backed by a file descriptor.
     // TODO: Make binary/hexa format consistent.
     grows_down = 0x00100,    // Stack-like segment.
@@ -199,8 +199,8 @@ enum class OpenFlags {
     large_file = 0100000,
 };
 
-auto open_file(char const* p_file_path, OpenMode file_mode, OpenFlags flags)
-    -> Result<FileDescriptor>;
+auto open_file(char const* p_file_path, OpenMode file_mode,
+               OpenFlags flags = OpenFlags{0}) -> Result<FileDescriptor>;
 
 auto create_file(char const* p_file_path, nix::OpenMode file_mode)
     -> Result<FileDescriptor>;
