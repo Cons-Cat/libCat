@@ -1,0 +1,38 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <type_traits>
+#include <utility>
+
+namespace cat {
+
+template <typename T>
+auto min(T&& val) -> T&& {
+    return meta::forward<T>(val);
+}
+
+template <typename T, typename U, typename... Remaining>
+auto min(T&& value_1, U&& value_2, Remaining&&... remaining) {
+    // Recurse through the list of variadic arguments, discarding the larger
+    // element each time.
+    return (value_1 < value_2)
+               ? cat::min(value_1, meta::forward<Remaining>(remaining)...)
+               : cat::min(value_2, meta::forward<Remaining>(remaining)...);
+}
+
+template <typename T>
+auto max(T&& val) -> T&& {
+    return meta::forward<T>(val);
+}
+
+template <typename T, typename U, typename... Remaining>
+auto max(T&& value_1, U&& value_2, Remaining&&... remaining) {
+    // Recurse through the list of variadic arguments, discarding the smaller
+    // element each time.
+    return (value_2 > value_1)
+               ? cat::max(value_2, meta::forward<Remaining>(remaining)...)
+               : cat::max(value_1, meta::forward<Remaining>(remaining)...);
+}
+
+}  // namespace cat

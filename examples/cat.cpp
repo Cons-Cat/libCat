@@ -1,5 +1,6 @@
 #include <allocators>
 #include <linux>
+#include <math>
 #include <optional>
 
 constexpr ssize block_size = 4_ki;
@@ -16,7 +17,6 @@ auto get_file_size(nix::FileDescriptor file_descriptor) -> Optional<ssize> {
     return none;
 }
 
-// TODO: Is this actually faster than `cat::print()`ing a `String`?
 void output_to_console(nix::IoVector const& io_vector) {
     // TODO: Create a mutable string type to prevent this undefined behavior.
     // TODO: Make this buffered output to reduce syscalls.
@@ -24,7 +24,6 @@ void output_to_console(nix::IoVector const& io_vector) {
     nix::write(1, p_buffer++, io_vector.size()).discard_result();
 }
 
-// TODO: Support `Optional<void>`.
 void read_and_print_file(char* p_file_name) {
     nix::FileDescriptor file_descriptor =
         nix::open_file(p_file_name, nix::OpenMode::read_only)
@@ -45,11 +44,7 @@ void read_and_print_file(char* p_file_name) {
         blocks};
 
     while (bytes_remaining > 0) {
-        // TODO: Use `cat::max()`
-        ssize current_block_size = bytes_remaining;
-        if (current_block_size > block_size) {
-            current_block_size = block_size;
-        }
+        ssize current_block_size = cat::min(bytes_remaining, block_size);
 
         // `p_buffer` should be 4_ki-aligned.
         void* p_buffer = allocator.malloc(block_size).or_panic().as_address();
