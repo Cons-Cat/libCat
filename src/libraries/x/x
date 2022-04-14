@@ -427,7 +427,7 @@ auto handshake(auto& allocator, SocketUnix<SocketType::stream>& socket)
     x_connection.p_setup = static_cast<ConnectionResponseInfo*>(
         allocator.malloc(x_connection.header.message_length * 4)
             .value_or(nullptr)
-            .get_address());
+            .as_address());
     if (!x_connection.p_setup) {
         return Failure(0x0);
     }

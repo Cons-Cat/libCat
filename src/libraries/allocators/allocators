@@ -3,6 +3,7 @@
 #pragma once
 
 #include <linux>
+#include <memory>
 #include <type_traits>
 
 #include "any"
@@ -35,14 +36,32 @@ concept allocator = requires(T allocator, ssize input) {
  * `cat::destructable` is not useful without exception handling. */
 
 struct MemoryHandle {
-    Any storage;
+    union {
+        void* p_storage;
+        ssize storage;
+    } value;
 
-    auto get_address() -> void* {
-        return this;
+    constexpr MemoryHandle() = default;
+
+    constexpr MemoryHandle(decltype(nullptr)) {
+        this->value.p_storage = nullptr;
     }
 
-    explicit operator void*() const {
-        return storage;
+    template <typename T>
+    constexpr MemoryHandle(T* p_value) {
+        this->value.p_storage = meta::forward<T*>(p_value);
+    }
+
+    constexpr auto as_address() const -> void* {
+        return this->value.p_storage;
+    }
+
+    constexpr auto as_index() const -> ssize {
+        return value.storage;
+    }
+
+    constexpr explicit operator void*() const {
+        return this->value.p_storage;
     }
 };
 
