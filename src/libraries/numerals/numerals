@@ -3,6 +3,7 @@
 #pragma once
 
 #include <concepts>
+#include <type_traits>
 
 /* Safe arithmetic does compile with no known issues. However, clangd 12 and 13
  * keel over after a single glance at this metaprogramming, so I am currently
@@ -278,5 +279,141 @@ struct bool4 {  // NOLINT
     }
     constexpr operator auto() const {
         return static_cast<bool>(this->value);
+    }
+};
+
+struct intptr {  // NOLINT
+    ssize storage;
+
+    constexpr intptr() = default;
+
+    constexpr intptr(intptr const& input) {
+        this->storage = input.storage;
+    }
+
+    constexpr intptr(intptr&& input) {
+        this->storage = cat::move(input).storage;
+    }
+
+    constexpr intptr(meta::integral auto const& input) {
+        this->storage = input;
+    }
+
+    template <meta::integral T>
+    constexpr intptr(T&& input) {
+        this->storage = meta::forward<T>(input);
+    }
+
+    constexpr intptr(auto* p_input) {
+        this->storage = static_cast<ssize>(Any{p_input});
+    }
+
+    auto operator=(meta::integral auto from) -> intptr& {
+        this->storage = from;
+        return *this;
+    }
+
+    auto operator==(meta::integral auto from) -> bool1 {
+        return this->storage == from;
+    }
+
+    auto operator>(meta::integral auto from) -> bool1 {
+        return this->storage > from;
+    }
+    auto operator>=(meta::integral auto from) -> bool1 {
+        return this->storage >= from;
+    }
+
+    auto operator<(meta::integral auto from) -> bool1 {
+        return this->storage < from;
+    }
+    auto operator<=(meta::integral auto from) -> bool1 {
+        return this->storage <= from;
+    }
+
+    auto operator+(meta::integral auto from) -> intptr {
+        return this->storage + from;
+    }
+    auto operator+=(meta::integral auto from) -> intptr& {
+        this->storage = this->storage + from;
+        return *this;
+    }
+
+    auto operator++() -> intptr {
+        return ++this->storage;
+    }
+    auto operator++(int) -> intptr {
+        return this->storage++;
+    }
+
+    auto operator-(meta::integral auto from) -> intptr {
+        return this->storage - from;
+    }
+    auto operator-=(meta::integral auto from) -> intptr& {
+        this->storage = this->storage - from;
+        return *this;
+    }
+
+    auto operator--() -> intptr {
+        return --storage;
+    }
+    auto operator--(int) -> intptr {
+        return storage--;
+    }
+
+    auto operator*(meta::integral auto from) -> intptr {
+        return this->storage * from;
+    }
+    auto operator*=(meta::integral auto from) -> intptr& {
+        this->storage = this->storage * from;
+        return *this;
+    }
+
+    auto operator/(meta::integral auto from) -> intptr {
+        return this->storage / from;
+    }
+    auto operator/=(meta::integral auto from) -> intptr& {
+        this->storage = this->storage / from;
+        return *this;
+    }
+
+    auto operator%(meta::integral auto from) -> intptr {
+        return this->storage % from;
+    }
+    auto operator%=(meta::integral auto from) -> intptr& {
+        this->storage = this->storage % from;
+        return *this;
+    }
+
+    auto operator&(meta::integral auto from) -> intptr {
+        return this->storage & from;
+    }
+    auto operator&=(meta::integral auto from) -> intptr& {
+        this->storage = this->storage & from;
+        return *this;
+    }
+
+    auto operator|(meta::integral auto from) -> intptr {
+        return this->storage | from;
+    }
+    auto operator|=(meta::integral auto from) -> intptr& {
+        this->storage = this->storage | from;
+        return *this;
+    }
+
+    auto operator<<(meta::integral auto from) -> intptr {
+        return this->storage << from;
+    }
+    auto operator<<=(meta::integral auto from) -> intptr& {
+        this->storage = this->storage << from;
+        return *this;
+    }
+
+    auto operator>>(meta::integral auto from) -> intptr {
+        return this->storage >> from;
+    }
+    auto operator>>=(meta::integral auto from) -> intptr& {
+        this->storage = this->storage >> from;
+        return *this;
     }
 };

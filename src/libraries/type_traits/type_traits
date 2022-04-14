@@ -33,6 +33,7 @@ constexpr auto forward(typename meta::remove_reference<T>::type&& input)
 
 namespace cat {
 using std::move;
+struct intptr;
 }  // namespace cat
 
 namespace meta {
@@ -304,6 +305,12 @@ namespace detail {
     struct is_integral<signed long> : true_type {};
     template <>
     struct is_integral<unsigned long> : true_type {};
+    template <>
+    struct is_integral<signed long long> : true_type {};
+    template <>
+    struct is_integral<unsigned long long> : true_type {};
+    template <>
+    struct is_integral<cat::intptr> : true_type {};
     template <>
     struct is_integral<bool> : true_type {};
 }  // namespace detail
