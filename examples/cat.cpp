@@ -37,11 +37,11 @@ void read_and_print_file(char* p_file_name) {
     }
 
     PageAllocator allocator;
-    Span<nix::IoVector> io_vectors = {
+    auto io_buffer =
         allocator.malloc(meta::ssizeof<Span<nix::IoVector>>() * blocks)
-            .or_panic()
-            .as_address(),
-        blocks};
+            .or_panic();
+
+    Span<nix::IoVector> io_vectors = {io_buffer.as_address(), blocks};
 
     while (bytes_remaining > 0) {
         ssize current_block_size = cat::min(bytes_remaining, block_size);
@@ -58,6 +58,7 @@ void read_and_print_file(char* p_file_name) {
     for (nix::IoVector const& iov : io_vectors) {
         output_to_console(iov);
     }
+    allocator.free(io_buffer).discard_result();
 }
 
 void meow(int argc, char* p_argv[]) {
