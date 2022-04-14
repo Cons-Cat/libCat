@@ -1,4 +1,5 @@
 #include <array>
+#include <math>
 #include <string>
 
 void meow() {
@@ -51,6 +52,14 @@ void meow() {
     static_assert(implicit_array_1.size() == 5);
     static_assert(implicit_array_2.size() == 5);
     static_assert(implicit_array_3.size() == 5);
+
+    // Max
+    Array array_4 = {0, 2, 8, 5};
+    int4 max = cat::max(array_4);
+    Result(max == 0).or_panic();
+
+    int4 min = cat::min(array_4);
+    Result(min == 0).or_panic();
 
     // TODO: String deduction:
     // Array implicit_string = "Hi, Conscat!";

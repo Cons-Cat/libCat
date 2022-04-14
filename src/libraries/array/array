@@ -85,15 +85,15 @@ class Array {
         constexpr explicit Iterator(ssize index, T const* const p_in_array)
             : current_index(index), p_array(p_in_array){};
 
-        auto dereference() const -> T const& {
+        constexpr auto dereference() const -> T const& {
             return this->p_array[current_index];
         }
 
-        void advance(ssize offset) {
+        constexpr void advance(ssize offset) {
             current_index += offset;
         }
 
-        auto distance_to(Iterator other) const -> ssize {
+        constexpr auto distance_to(Iterator other) const -> ssize {
             return other.current_index - current_index;
         }
     };
