@@ -73,8 +73,8 @@ struct FileDescriptor {
 };
 
 struct ProcessId {
-    // Linux supports the better part of `8` byte process IDs on 64-bit systems,
-    // but only up to `4` byte process IDs on 32-bit systems.
+    // Linux supports the better part of `8` cat::Byte process IDs on 64-bit
+    // systems, but only up to `4` cat::Byte process IDs on 32-bit systems.
     ssize value;
 
     ProcessId() = default;
@@ -358,7 +358,7 @@ parent_thread:
     }
 };
 
-struct IoVector : Span<byte> {
+struct IoVector : Span<cat::Byte> {
     static constexpr ssize max_size = 1_ki;
 
     constexpr IoVector() = default;
@@ -367,13 +367,14 @@ struct IoVector : Span<byte> {
     // Construct from any reasonable pointer type.
     template <typename T>
     constexpr IoVector(T* p_in_data, ssize in_length)
-        : Span<byte>(static_cast<byte*>(p_in_data), in_length){};
+        : Span<cat::Byte>(static_cast<cat::Byte*>(p_in_data), in_length){};
 
     // Construct from any reasonable pointer type.
     template <typename T>
     constexpr IoVector(T* p_start, T* p_end)
-        : Span<byte>(static_cast<byte*>(p_start),
-                     static_cast<byte*>(p_end) - static_cast<byte*>(p_start)){};
+        : Span<cat::Byte>(static_cast<cat::Byte*>(p_start),
+                          static_cast<cat::Byte*>(p_end) -
+                              static_cast<cat::Byte*>(p_start)){};
 
     constexpr auto operator=(IoVector const& io_vector) {
         this->p_storage = io_vector.p_storage;

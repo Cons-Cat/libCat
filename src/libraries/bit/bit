@@ -26,6 +26,65 @@ auto invert_endianess(meta::integral auto value) {
     }
 }
 
+
+// `Byte` is a strongly-typed `struct` rather than an `enum class`, as in the
+// STL, so that it can carry member functions.
+// TODO: Add some member functions.
+struct Byte {  // NOLINT
+    unsigned char value;
+
+    constexpr Byte(auto input) requires(sizeof(input) == 1) {
+        this->value = input;
+    }
+
+    constexpr Byte(auto const& input) requires(sizeof(input) == 1) {
+        this->value = input;
+    }
+
+    template <typename T>
+    constexpr Byte(T&& input)  // NOLINT
+        requires(sizeof(input) == 1) {
+        this->value = meta::forward<T>(input);
+    }
+
+	template<typename T>
+	explicit operator T()requires(sizeof(T) == 1){
+		return meta::bit_cast<T>(value);
+	}
+	
+    constexpr auto operator&(meta::integral auto from) -> Byte {
+        return this->value & from;
+    }
+    constexpr auto operator&=(meta::integral auto from) -> Byte& {
+        this->value = this->value & from;
+        return *this;
+    }
+
+    constexpr auto operator|(meta::integral auto from) -> Byte {
+        return this->value | from;
+    }
+    constexpr auto operator|=(meta::integral auto from) -> Byte& {
+        this->value = this->value | from;
+        return *this;
+    }
+
+    constexpr auto operator<<(meta::integral auto from) -> Byte {
+        return this->value << from;
+    }
+    constexpr auto operator<<=(meta::integral auto from) -> Byte& {
+        this->value = this->value << from;
+        return *this;
+    }
+
+    constexpr auto operator>>(meta::integral auto from) -> Byte {
+        return this->value >> from;
+    }
+    constexpr auto operator>>=(meta::integral auto from) -> Byte& {
+        this->value = this->value >> from;
+        return *this;
+    }
+};
+    
 }  // namespace cat
 
 constexpr auto operator""_ki(unsigned long long const input) -> long {
