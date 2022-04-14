@@ -8,8 +8,8 @@
 namespace cat {
 
 template <typename T>
-auto min(T&& val) -> T&& {
-    return meta::forward<T>(val);
+auto min(T&& value) -> T&& {
+    return meta::forward<T>(value);
 }
 
 template <typename T, typename U, typename... Remaining>
@@ -22,8 +22,8 @@ auto min(T&& value_1, U&& value_2, Remaining&&... remaining) {
 }
 
 template <typename T>
-auto max(T&& val) -> T&& {
-    return meta::forward<T>(val);
+auto max(T&& value) -> T&& {
+    return meta::forward<T>(value);
 }
 
 template <typename T, typename U, typename... Remaining>
