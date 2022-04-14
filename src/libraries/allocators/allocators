@@ -33,7 +33,7 @@ concept allocator = requires(T allocator, ssize input) {
 /* Some concepts from the STL are not supported, for various reasons.
  * `cat::destructable` is not useful without exception handling. */
 
-struct MemoryHandle {
+struct BaseMemoryHandle {
     union {
         void* p_storage;
         ssize storage;
@@ -52,9 +52,13 @@ struct MemoryHandle {
     }
 };
 
-struct PageMemoryHandle : public MemoryHandle {
+namespace detail {
+
+struct PageMemoryHandle : public BaseMemoryHandle {
     ssize size;
 };
+
+}  // namespace detail
 
 struct PageAllocator {
     // TODO: Think about this.
@@ -66,7 +70,7 @@ struct PageAllocator {
      * allocated, that amount will be rounded up to `4096u`. There is generally
      * very little reason to allocate any smaller amount of bytes using
      * `PageAllocator`. */
-    auto malloc(ssize allocation_size) -> Result<PageMemoryHandle> {
+    auto malloc(ssize allocation_size) -> Result<detail::PageMemoryHandle> {
         return nix::map_memory(0u, allocation_size,
                                nix::MmapProtectionFlags::read |
                                    nix::MmapProtectionFlags::write,
@@ -77,12 +81,12 @@ struct PageAllocator {
                                -1,
                                // Anonymous pages must have `0u`.
                                0u)
-            .transform<PageMemoryHandle>([=](void* p_value) {
-                return PageMemoryHandle{{p_value}, allocation_size};
+            .transform<detail::PageMemoryHandle>([=](void* p_value) {
+                return detail::PageMemoryHandle{{p_value}, allocation_size};
             });
     }
 
-    auto free(PageMemoryHandle memory) -> Result<> {
+    auto free(detail::PageMemoryHandle memory) -> Result<> {
         return nix::unmap_memory(memory.as_address(), memory.size);
     };
 };
