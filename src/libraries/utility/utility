@@ -12,6 +12,11 @@ constexpr auto bit_cast(auto& from_value) -> T;
 
 constexpr auto is_constant_evaluated() -> bool;
 
+consteval auto ssizeof(auto anything) -> ssize;
+
+template <typename T>
+consteval auto ssizeof() -> ssize;
+
 }  // namespace meta
 
 // These symbols must be declared in `std::` to enable some useful GCC
@@ -51,3 +56,4 @@ using std::move;
 #include "./implementations/forward.tpp"
 #include "./implementations/is_constant_evaluated.tpp"
 #include "./implementations/move.tpp"
+#include "./implementations/ssizeof.tpp"

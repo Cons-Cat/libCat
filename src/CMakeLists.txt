@@ -92,6 +92,7 @@ set(
   ${CAT_SRC}/libraries/utility/implementations/forward.tpp
   ${CAT_SRC}/libraries/utility/implementations/is_constant_evaluated.tpp
   ${CAT_SRC}/libraries/utility/implementations/constant_evaluate.tpp
+  ${CAT_SRC}/libraries/utility/implementations/ssizeof.tpp
   ${CAT_SRC}/libraries/utility/implementations/bit_cast.tpp
   PARENT_SCOPE
 )
