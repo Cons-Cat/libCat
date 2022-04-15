@@ -425,6 +425,7 @@ auto handshake(auto& allocator, SocketUnix<SocketType::stream>& socket)
 
     // A dynamic allocation must be made because the total size of all
     // recieved packets is unknown and potentially a very large amount.
+    // TODO: Deallocate this somehow.
     x_connection.p_setup = static_cast<ConnectionResponseInfo*>(
         allocator.malloc(x_connection.header.message_length * 4)
             .template transform<void*>([](auto allocation) {
