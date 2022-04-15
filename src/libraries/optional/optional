@@ -583,13 +583,9 @@ class Optional<Predicate<T, predicate, sentinel>> {
         return *this;
     }
 
-    constexpr auto operator=(auto&& input) {
-        this->storage = cat::move(input);
-        return *this;
-    }
-
-    constexpr auto operator=(auto const&& input) {
-        this->storage = cat::move(input);
+    template <typename U>
+    constexpr auto operator=(U&& input) {
+        this->storage = meta::forward<U>(input);
         return *this;
     }
 
