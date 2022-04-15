@@ -13,7 +13,7 @@ void function(void*) {
 
 void meow() {
     Thread thread;
-    PageAllocator allocator;
+    cat::PageAllocator allocator;
     thread.create(allocator, 4_ki, function, nullptr)
         .or_panic("Failed to make thread!");
     for (int4 i = 0; i < 10; i++) {

@@ -31,6 +31,7 @@ list(
   -Wall -Wextra -Wno-unused-function
   # The following warnings are counter-productive for a basic-level library:
   -Wno-unused-function
+  -fconcepts-diagnostics-depth=2
 )
 
 # Set aggressive space optimizations. -Os is not favorable, however.

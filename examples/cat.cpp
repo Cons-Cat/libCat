@@ -36,7 +36,7 @@ void read_and_print_file(char* p_file_name) {
         blocks++;
     }
 
-    PageAllocator allocator;
+    cat::PageAllocator allocator;
     auto io_buffer =
         allocator.malloc(meta::ssizeof<Span<nix::IoVector>>() * blocks)
             .or_panic();
