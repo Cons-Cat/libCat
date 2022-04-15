@@ -4,6 +4,7 @@
 
 #include <linux>
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 // TODO: Some allocators should be iterable.
@@ -62,22 +63,26 @@ struct PageAllocator {
      * generally very little reason to allocate any smaller amount of bytes
      * using `PageAllocator`. */
     template <typename T = void*>
-    auto malloc(ssize const allocation_size = sizeof(T)) -> Result<Handle<T>> {
-        return nix::map_memory(0u, allocation_size,
-                               nix::MemoryProtectionFlags::read |
-                                   nix::MemoryProtectionFlags::write,
-                               nix::MemoryFlags::privately |
-                                   nix::MemoryFlags::populate |
-                                   nix::MemoryFlags::anonymous,
-                               // Anonymous pages must have `-1`.
-                               -1,
-                               // Anonymous pages must have `0u`.
-                               0u)
-            .transform<Handle<T>>([=](void* p_value) {
-                return Handle<T>{{p_value}, allocation_size};
-            });
+    auto malloc(ssize const allocation_size = sizeof(T))
+        -> Optional<Handle<T>> {
+        Result<void*> memory = nix::map_memory(
+            0u, allocation_size,
+            nix::MemoryProtectionFlags::read |
+                nix::MemoryProtectionFlags::write,
+            nix::MemoryFlags::privately | nix::MemoryFlags::populate |
+                nix::MemoryFlags::anonymous,
+            // Anonymous pages must have `-1`.
+            -1,
+            // Anonymous pages must have `0u`.
+            0u);
+
+        if (memory.is_okay) {
+            return Handle<T>{{memory.value()}, allocation_size};
+        }
+        return none;
     }
 
+    // TODO: Use an `Optional<void>`.
     template <typename T>
     auto free(Handle<T> const& memory) -> Result<> {
         return nix::unmap_memory(memory.p_storage, memory.allocation_size);
@@ -87,6 +92,10 @@ struct PageAllocator {
     auto get(Handle<T> const& memory) -> T& {
         return *static_cast<T*>(memory.p_storage);
     }
+};
+
+struct FixedBufferAllocator {
+    //
 };
 
 }  // namespace cat

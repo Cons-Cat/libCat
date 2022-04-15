@@ -305,12 +305,8 @@ struct Process {
         this->stack_size = initial_stack_size;
         // Allocate a stack for this thread, and get an address to the top of
         // it.
-        this->p_stack = allocator.malloc(initial_stack_size)
-                            .template transform<void*>([&](auto allocation) {
-                                return &allocator.get(allocation);
-                            })
-                            .value_or(nullptr);
-        if (this->p_stack == nullptr) {
+        this->p_stack = &allocator.malloc(initial_stack_size).value();
+        if (this->p_stack == intptr{-1}) {
             return Failure(1);
         }
 
