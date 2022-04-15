@@ -3,7 +3,7 @@
 
 void meow() {
     // Initialize an allocator.
-    PageAllocator allocator;
+    cat::PageAllocator allocator;
     // Allocate a page.
     auto memory = allocator.malloc<int4>().or_panic();
     // Write to the page.

@@ -6,32 +6,13 @@
 #include <memory>
 #include <type_traits>
 
-// TODO: This does not work correctly.
-template <typename T>
-concept allocator = requires(T allocator, ssize input) {
-    // Allocators hold an enum for failure codes named `failures`.
-    meta::is_enum_v<typename T::failures>;
-    allocator.failures;
-
-    /* Allocators hold a `malloc()` method which takes a generic type and
-     * returns a `Result<void*>` address to the allocated memory. */
-    { allocator.template malloc() } -> meta::convertible_to<Result<void*>>;
-
-    /* Allocators should have a `free()` method which takes no parameters, and
-     * returns void. This shall be used to free all of its allocated memory. */
-    {allocator.free()};
-
-    // TODO: `delete_at()` should only be in `random_access_allocator`s.
-    /* Allocators hold a `delete_at()` which takes an `isize` and returns a
-     * `Result<void>`. */
-    // { allocator.delete_at(input) } -> meta::convertible_to<Result<>>;
-};
-
-// TODO: Allocators should be iterables.
+// TODO: Some allocators should be iterable.
 // TODO: Add a random_access concept and a random_access_allocator concept.
 
 /* Some concepts from the STL are not supported, for various reasons.
  * `cat::destructable` is not useful without exception handling. */
+
+namespace cat {
 
 struct BaseMemoryHandle {
     union {
@@ -54,21 +35,37 @@ struct BaseMemoryHandle {
 
 namespace detail {
 
-template <typename T>
-struct PageMemoryHandle : public BaseMemoryHandle {
-    ssize size;
+    template <typename T>
+    struct PageMemoryHandle : public BaseMemoryHandle {
+        ssize size;
 
-    constexpr auto get() const -> T& {
-        return *static_cast<T*>(p_storage);
-    }
-};
+        constexpr auto get() const -> T& {
+            return *static_cast<T*>(p_storage);
+        }
+    };
 
 }  // namespace detail
 
+}  // namespace cat
+
+namespace meta {
+
+template <typename AllocatorT, typename AllocationU = void*>
+concept Allocator = requires(AllocatorT allocator) {
+    // Every allocator has a `.malloc()` and `.free()` method.
+    // TODO: Handle non-arbitrary allocation sizes.
+    allocator.malloc(sizeof(AllocationU));
+    allocator.template malloc<AllocationU>();
+    allocator.free(typename AllocatorT::template Handle<AllocationU>{});
+};
+
+}  // namespace meta
+
+namespace cat {
+
 struct PageAllocator {
-    // TODO: Think about this.
-    enum failures {
-    };
+    template <typename T>
+    using Handle = cat::detail::PageMemoryHandle<T>;
 
     /* Allocate memory in multiples of a page-size,
      * which is `4` KiB on x86-64. For instance, If fewer that `4096u` bytes are
@@ -99,3 +96,5 @@ struct PageAllocator {
         return nix::unmap_memory(memory.as_address(), memory.size);
     };
 };
+
+}  // namespace cat
