@@ -209,12 +209,12 @@ auto close(FileDescriptor const file_descriptor) -> Result<>;
 
 auto unlink(char const* p_path_name) -> Result<>;
 
-auto map_memory(usize beginning_address, usize bytes_size,
-                MemoryProtectionFlags protections, MemoryFlags flags,
-                FileDescriptor file_descriptor, ssize pages_offset)
-    -> Result<void*>;
+auto map_memory(usize const beginning_address, usize const bytes_size,
+                MemoryProtectionFlags const protections,
+                MemoryFlags const flags, FileDescriptor const file_descriptor,
+                ssize const pages_offset) -> Result<void*>;
 
-auto unmap_memory(void* p_memory, ssize length) -> Result<>;
+auto unmap_memory(void const* const p_memory, ssize const length) -> Result<>;
 
 struct Thread;
 

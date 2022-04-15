@@ -17,9 +17,8 @@ struct Thread {
     Thread() = default;
     Thread(Thread const&) = delete;
 
-    auto create(meta::Allocator<void*> auto& allocator,
-                ssize const initial_stack_size, auto const& function,
-                void* p_arguments_struct) -> Result<> {
+    auto create(meta::Allocator auto& allocator, ssize const initial_stack_size,
+                auto const& function, void* p_arguments_struct) -> Result<> {
         return this->process.create(allocator, initial_stack_size, function,
                                     p_arguments_struct);
     }
