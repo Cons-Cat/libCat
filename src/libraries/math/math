@@ -104,4 +104,8 @@ constexpr auto max(meta::iterable auto&& iterable) -> T {
     return static_cast<T>(maximum);
 }
 
+constexpr auto abs(auto value) {
+    return value < 0 ? value * -1 : value;
+}
+
 }  // namespace cat

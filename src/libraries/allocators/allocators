@@ -26,13 +26,19 @@ struct BaseMemoryHandle {
     }
 };
 
-namespace detail {
+template <typename T>
+struct BaseSmallMemoryHandle : T {
+    bool1 is_on_stack;
+    BaseSmallMemoryHandle(auto* p_memory, ssize size, bool1 stack)
+        : T{{p_memory}, size}, is_on_stack(stack){};
+    BaseSmallMemoryHandle(T, bool1 stack) : T(), is_on_stack(stack){};
+};
 
+namespace detail {
     template <typename T>
     struct PageMemoryHandle : public BaseMemoryHandle {
         ssize allocation_size;
     };
-
 }  // namespace detail
 
 }  // namespace cat
@@ -56,6 +62,8 @@ namespace cat {
 struct PageAllocator {
     template <typename T>
     using Handle = cat::detail::PageMemoryHandle<T>;
+    template <typename T>
+    using SmallHandle = BaseSmallMemoryHandle<Handle<T>>;
 
     /* Allocate memory in multiples of a page-size,
      * which is `4_ki` on x86-64. For instance, If fewer that `4096` bytes
@@ -82,12 +90,51 @@ struct PageAllocator {
         return none;
     }
 
+    // Unmap a handle to page(s) of virtual memory.
     // TODO: Use an `Optional<void>`.
     template <typename T>
-    auto free(Handle<T> const& memory) -> Result<> {
+    auto free(T const& memory) -> Result<>
+    // Taking a `Handle<T>` parameter accepts `SmallHandle<T>`, which is
+    // incorrect.
+    requires(meta::is_specialization<T, Handle>::value) {
         return nix::unmap_memory(memory.p_storage, memory.allocation_size);
     };
 
+    template <typename T = void*>
+    auto malloca(ssize const allocation_size = sizeof(T))
+        -> Optional<SmallHandle<T>> {
+        if (allocation_size > 256) {
+            // TODO: Fix `.transform()`, and use it here.
+            bool1 failed = false;
+            Handle<T> handle = this->malloc<T>(allocation_size)
+                                   .or_else([&]() {
+                                       failed = true;
+                                   })
+                                   .value();
+            if (failed) {
+                return none;
+            }
+            return SmallHandle<T>{handle, false};
+        }
+
+        return SmallHandle<T>{
+            static_cast<T*>(__builtin_alloca(allocation_size)), allocation_size,
+            true};
+    }
+
+    // Unmap a handle to page(s) of virtual memory or stack-allocated memory.
+    // TODO: Use an `Optional<void>`.
+    template <typename T>
+    auto freea(SmallHandle<T> const& memory) -> Result<> {
+        if (memory.is_on_stack) {
+            return okay;
+        }
+        // Small memory handles can only add members to the basic handle, so
+        // bit-casting them is safe.
+        return this->free(meta::bit_cast<Handle<T>>(memory));
+    };
+
+    // Acquire a reference to a page of memory.
     template <typename T>
     auto get(Handle<T> const& memory) -> T& {
         return *static_cast<T*>(memory.p_storage);
