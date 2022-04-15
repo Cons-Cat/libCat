@@ -298,13 +298,15 @@ class Optional {
     // Forward all constructors to `storage`.
 
     // If this is a reference storage, allow consuming a non-`const` reference.
-    Optional(auto input) requires(
+    template <typename U>
+    Optional(U input) requires(
         meta::is_same_v<Storage, OptionalReferenceStorage<T>>&&
             meta::is_default_constructible<typename Storage::Value>::value)
         : storage(input){};
 
     // A reference type cannot be copy-constructed.
-    Optional(auto const& input) requires(
+    template <typename U>
+    Optional(U const& input) requires(
         !meta::is_same_v<Storage, OptionalReferenceStorage<T>> &&
         meta::is_copy_constructible_v<typename Storage::Value>)
         : storage(input){};
@@ -315,6 +317,8 @@ class Optional {
         !meta::is_reference_v<T> &&
         meta::is_convertible_v<U, typename Storage::Value>)
         : storage(meta::forward<U>(input)){};
+
+    constexpr Optional(cat::detail::None) : storage(none){};
 
     // Forward all assignment operators to `storage`.
     auto operator=(auto const& value) {
@@ -327,13 +331,15 @@ class Optional {
         return *this;
     }
 
-    auto operator=(auto&& value) && {
-        this->storage = cat::move(value);
+    template <typename U>
+    auto operator=(U&& value) && {
+        this->storage = meta::forward<U>(value);
         return cat::move(*this);
     }
 
-    auto operator=(auto&& value) const&& {
-        this->storage = cat::move(value);
+    template <typename U>
+    auto operator=(U&& value) const&& {
+        this->storage = meta::forward<U>(value);
         return cat::move(*this);
     }
 
@@ -347,7 +353,7 @@ class Optional {
     // Get the held `value` unconditionally. If `has_value()` is `false`, this
     // data is undefined. If this method is used in `-O0`, it will panic in that
     // case, unless used in a `constexpr` context.
-    constexpr auto value() -> typename Storage::Value const& {
+    constexpr auto value() -> typename Storage::Value& {
         if (meta::is_constant_evaluated()) {
             return this->storage.get_value();
         }
@@ -559,16 +565,16 @@ class Optional<Predicate<T, predicate, sentinel>> {
         : storage(value){};
 
     template <typename U = T>
-    constexpr Optional(U&& value) requires(!predicate(sentinel) &&
-                                           (meta::is_same_v<U, T> ||
-                                            meta::is_convertible_v<U, T>))
-        : storage(cat::move(value)){};
-
-    template <typename U = T>
     constexpr Optional(U const&& value) requires(!predicate(sentinel) &&
                                                  (meta::is_same_v<U, T> ||
                                                   meta::is_convertible_v<U, T>))
         : storage(cat::move(value)){};
+
+    template <typename U = T>
+    constexpr Optional(U&& value) requires(!predicate(sentinel) &&
+                                           (meta::is_same_v<U, T> ||
+                                            meta::is_convertible_v<U, T>))
+        : storage(meta::forward<U>(value)){};
 
     constexpr Optional(cat::detail::None) : storage(sentinel){};
 
