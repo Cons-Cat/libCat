@@ -12,12 +12,14 @@ constexpr auto bit_cast(auto& from_value) -> T;
 
 constexpr auto is_constant_evaluated() -> bool;
 
-consteval auto ssizeof(auto anything) -> ssize;
+constexpr auto ssizeof(auto const& anything) -> ssize;
 
 template <typename T>
-consteval auto ssizeof() -> ssize;
+constexpr auto ssizeof() -> ssize;
 
 }  // namespace meta
+
+using meta::ssizeof;
 
 // These symbols must be declared in `std::` to enable some useful GCC
 // features, such as move-semantics warnings, and preventing GDB from stepping
