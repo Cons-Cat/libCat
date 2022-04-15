@@ -39,10 +39,16 @@ void read_and_print_file(char* p_file_name) {
     cat::PageAllocator allocator;
     Span<nix::IoVector> io_vectors;
 
-    // TODO: Handle allocation failure.
+    bool1 failed = false;
     auto io_buffer =
         allocator.malloc<nix::IoVector>(meta::ssizeof(io_vectors) * blocks)
+            .or_else([&]() {
+                failed = true;
+            })
             .value();
+    if (failed) {
+        cat::exit(1);
+    }
     io_vectors = Span<nix::IoVector>{&allocator.get(io_buffer), blocks};
 
     while (bytes_remaining > 0) {
@@ -51,7 +57,16 @@ void read_and_print_file(char* p_file_name) {
         // `buffer` should be 4_ki-aligned.
         // TODO: Create an `AnyPtr` to make `Iovector` take in a `void**`.
         // TODO: Handle allocation failure.
-        auto buffer = allocator.malloc<cat::Byte>(block_size).value();
+        bool1 failed = false;
+        auto buffer = allocator.malloc<cat::Byte>(block_size)
+                          .or_else([&]() {
+                              failed = true;
+                          })
+                          .value();
+        if (failed) {
+            allocator.free(io_buffer).discard_result();
+            cat::exit(1);
+        }
         io_vectors[current_block] =
             nix::IoVector{&allocator.get(buffer), current_block_size};
         current_block++;
