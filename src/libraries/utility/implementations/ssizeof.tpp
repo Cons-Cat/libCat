@@ -4,13 +4,11 @@
 
 #include <utility>
 
-#include "global_includes.h"
-
-consteval auto meta::ssizeof(auto anything) -> ssize {
+constexpr auto meta::ssizeof(auto const& anything) -> ssize {
     return static_cast<ssize>(sizeof(anything));
 }
 
 template <typename T>
-consteval auto meta::ssizeof() -> ssize {
+constexpr auto meta::ssizeof() -> ssize {
     return static_cast<ssize>(sizeof(T));
 }
