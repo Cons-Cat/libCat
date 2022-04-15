@@ -37,11 +37,7 @@ namespace detail {
 
     template <typename T>
     struct PageMemoryHandle : public BaseMemoryHandle {
-        ssize size;
-
-        constexpr auto get() const -> T& {
-            return *static_cast<T*>(p_storage);
-        }
+        ssize allocation_size;
     };
 
 }  // namespace detail
@@ -52,11 +48,12 @@ namespace meta {
 
 template <typename AllocatorT, typename AllocationU = void*>
 concept Allocator = requires(AllocatorT allocator) {
-    // Every allocator has a `.malloc()` and `.free()` method.
+    // Every allocator has a `.malloc()`, `.free()`, and `.get()` method.
     // TODO: Handle non-arbitrary allocation sizes.
     allocator.malloc(sizeof(AllocationU));
     allocator.template malloc<AllocationU>();
     allocator.free(typename AllocatorT::template Handle<AllocationU>{});
+    allocator.get(typename AllocatorT::template Handle<AllocationU>{});
 };
 
 }  // namespace meta
@@ -68,13 +65,12 @@ struct PageAllocator {
     using Handle = cat::detail::PageMemoryHandle<T>;
 
     /* Allocate memory in multiples of a page-size,
-     * which is `4` KiB on x86-64. For instance, If fewer that `4096u` bytes are
-     * allocated, that amount will be rounded up to `4096u`. There is generally
-     * very little reason to allocate any smaller amount of bytes using
-     * `PageAllocator`. */
+     * which is `4_ki` on x86-64. For instance, If fewer that `4096` bytes
+     * are allocated, that amount will be rounded up to `4096`. There is
+     * generally very little reason to allocate any smaller amount of bytes
+     * using `PageAllocator`. */
     template <typename T = void*>
-    auto malloc(ssize allocation_size = sizeof(T))
-        -> Result<detail::PageMemoryHandle<T>> {
+    auto malloc(ssize const allocation_size = sizeof(T)) -> Result<Handle<T>> {
         return nix::map_memory(0u, allocation_size,
                                nix::MemoryProtectionFlags::read |
                                    nix::MemoryProtectionFlags::write,
@@ -85,16 +81,20 @@ struct PageAllocator {
                                -1,
                                // Anonymous pages must have `0u`.
                                0u)
-            .transform<detail::PageMemoryHandle<T>>([=](void* p_value) {
-                return detail::PageMemoryHandle<T>{{p_value}, allocation_size};
+            .transform<Handle<T>>([=](void* p_value) {
+                return Handle<T>{{p_value}, allocation_size};
             });
     }
 
     template <typename T>
-    auto free(T memory) -> Result<>
-    requires(meta::is_specialization<T, detail::PageMemoryHandle>::value) {
-        return nix::unmap_memory(memory.as_address(), memory.size);
+    auto free(Handle<T> const& memory) -> Result<> {
+        return nix::unmap_memory(memory.as_address(), memory.allocation_size);
     };
+
+    template <typename T>
+    auto get(Handle<T> const& memory) -> T& {
+        return *static_cast<T*>(memory.as_address());
+    }
 };
 
 }  // namespace cat
