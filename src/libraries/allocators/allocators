@@ -54,8 +54,13 @@ struct BaseMemoryHandle {
 
 namespace detail {
 
+template <typename T>
 struct PageMemoryHandle : public BaseMemoryHandle {
     ssize size;
+
+    constexpr auto get() const -> T& {
+        return *static_cast<T*>(p_storage);
+    }
 };
 
 }  // namespace detail
@@ -72,7 +77,7 @@ struct PageAllocator {
      * `PageAllocator`. */
     template <typename T = void*>
     auto malloc(ssize allocation_size = sizeof(T))
-        -> Result<detail::PageMemoryHandle> {
+        -> Result<detail::PageMemoryHandle<T>> {
         return nix::map_memory(0u, allocation_size,
                                nix::MmapProtectionFlags::read |
                                    nix::MmapProtectionFlags::write,
@@ -83,12 +88,14 @@ struct PageAllocator {
                                -1,
                                // Anonymous pages must have `0u`.
                                0u)
-            .transform<detail::PageMemoryHandle>([=](void* p_value) {
-                return detail::PageMemoryHandle{{p_value}, allocation_size};
+            .transform<detail::PageMemoryHandle<T>>([=](void* p_value) {
+                return detail::PageMemoryHandle<T>{{p_value}, allocation_size};
             });
     }
 
-    auto free(detail::PageMemoryHandle memory) -> Result<> {
+    template <typename T>
+    auto free(T memory) -> Result<>
+    requires(meta::is_specialization<T, detail::PageMemoryHandle>::value) {
         return nix::unmap_memory(memory.as_address(), memory.size);
     };
 };
