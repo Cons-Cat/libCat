@@ -31,14 +31,14 @@ constexpr usize page_size = 4096_ki;
 
 namespace nix {
 
-enum class MmapProtectionFlags : unsigned int {
+enum class MemoryProtectionFlags : unsigned int {
     none = 0b000,     // Data cannot be accessed at all.
     read = 0b001,     // Data is readable.
     write = 0b010,    // Data is writable.
     execute = 0b100,  // Data can be executed.
 };
 
-enum class MmapMemoryFlags : unsigned int {
+enum class MemoryFlags : unsigned int {
     shared = 0b1,          // Writes change the underlying object.
     privately = 0b10,      // Writes only change the calling process.
     fixed = 0b10000,       // Map to precisely this address, rather than virtual
@@ -210,7 +210,7 @@ auto close(FileDescriptor const file_descriptor) -> Result<>;
 auto unlink(char const* p_path_name) -> Result<>;
 
 auto map_memory(usize beginning_address, usize bytes_size,
-                MmapProtectionFlags protections, MmapMemoryFlags flags,
+                MemoryProtectionFlags protections, MemoryFlags flags,
                 FileDescriptor file_descriptor, ssize pages_offset)
     -> Result<void*>;
 
