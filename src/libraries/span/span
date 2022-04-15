@@ -32,18 +32,20 @@ class Span {
 
     // TODO: Make a `Container` `concept`.
     constexpr Span(auto& container)
-        : p_storage(container.p_storage()), length(container.size()){};
+        : p_storage(container.p_data()), length(container.size()){};
 
     constexpr Span(auto const& container)
-        : p_storage(container.p_storage()), length(container.size()){};
+        : p_storage(container.p_data()), length(container.size()){};
 
     template <ssize size>
     constexpr Span(T (&array)[size])
         : p_storage(cat::address_of(array)), length(size){};
 
-    auto operator=(Span<T> span) {
+    // NOLINTNEXTLINE Copying the pointer is reasonable here.
+    constexpr auto operator=(Span<T> const& span) {
         this->p_storage = span.p_storage;
         this->length = span.length;
+        return *this;
     }
 
     auto operator=(Span<T>&& span) {
