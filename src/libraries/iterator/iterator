@@ -135,7 +135,7 @@ struct IteratorFacade {
         decltype(auto) reference = **this;
         if constexpr (meta::is_reference_v<decltype(reference)>) {
             // `ref` is a true reference, and we're safe to take its address
-            return cat::address_of(reference);
+            return cat::addressof(reference);
         } else {
             // `ref` is *not* a reference. Returning its address would be
             // the address of a local. Return that thing wrapped in an

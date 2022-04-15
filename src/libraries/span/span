@@ -39,7 +39,7 @@ class Span {
 
     template <ssize size>
     constexpr Span(T (&array)[size])
-        : p_storage(cat::address_of(array)), length(size){};
+        : p_storage(cat::addressof(array)), length(size){};
 
     // NOLINTNEXTLINE Copying the pointer is reasonable here.
     constexpr auto operator=(Span<T> const& span) {

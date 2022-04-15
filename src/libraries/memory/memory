@@ -14,8 +14,10 @@ auto is_aligned(void const volatile* p_pointer, ssize byte_alignment) -> bool1;
 // hold a generic object, because this will produce correct results even if a
 // `&` prefix operator has been overloaded.
 template <typename T>
-constexpr auto address_of(T& value) -> T* {
+constexpr auto addressof(T& value) -> T* {
     return __builtin_addressof(value);
 }
 
 }  // namespace cat
+
+using cat::addressof;

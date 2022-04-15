@@ -235,10 +235,10 @@ struct OptionalReferenceStorage {
 
     constexpr OptionalReferenceStorage(Value& in_value) requires(
         meta::is_default_constructible<Value>::value)
-        : p_value(cat::address_of(in_value)){};
+        : p_value(cat::addressof(in_value)){};
 
     constexpr OptionalReferenceStorage(Value const& in_value)
-        : p_value(cat::address_of(in_value)){};
+        : p_value(cat::addressof(in_value)){};
 
     // template <typename U>
     // constexpr OptionalReferenceStorage(U&& in_value) requires(
@@ -250,13 +250,13 @@ struct OptionalReferenceStorage {
 
     // Rebind the reference if this is assigned a new value.
     constexpr auto operator=(Value& option) -> OptionalReferenceStorage<T>& {
-        this->p_value = cat::address_of(option);
+        this->p_value = cat::addressof(option);
         return *this;
     }
 
     constexpr auto operator=(Value const& option)
         -> OptionalReferenceStorage<T>& {
-        this->p_value = cat::address_of((option));
+        this->p_value = cat::addressof((option));
         return *this;
     };
 
