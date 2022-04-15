@@ -79,11 +79,11 @@ struct PageAllocator {
     auto malloc(ssize allocation_size = sizeof(T))
         -> Result<detail::PageMemoryHandle<T>> {
         return nix::map_memory(0u, allocation_size,
-                               nix::MmapProtectionFlags::read |
-                                   nix::MmapProtectionFlags::write,
-                               nix::MmapMemoryFlags::privately |
-                                   nix::MmapMemoryFlags::populate |
-                                   nix::MmapMemoryFlags::anonymous,
+                               nix::MemoryProtectionFlags::read |
+                                   nix::MemoryProtectionFlags::write,
+                               nix::MemoryFlags::privately |
+                                   nix::MemoryFlags::populate |
+                                   nix::MemoryFlags::anonymous,
                                // Anonymous pages must have `-1`.
                                -1,
                                // Anonymous pages must have `0u`.
