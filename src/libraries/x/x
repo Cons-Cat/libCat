@@ -426,12 +426,12 @@ auto handshake(meta::Allocator auto& allocator,
     // A dynamic allocation must be made because the total size of all
     // recieved packets is unknown and potentially a very large amount.
     // TODO: Deallocate this somehow.
-    x_connection.p_setup = static_cast<ConnectionResponseInfo*>(
-        allocator.malloc(x_connection.header.message_length * 4)
-            .template transform<void*>([](auto allocation) {
-                return allocation.as_address();
-            })
-            .value_or(nullptr));
+    // TODO: Handle allocation failure.
+    auto memory = allocator
+                      .template malloc<ConnectionResponseInfo>(
+                          x_connection.header.message_length * 4)
+                      .value();
+    x_connection.p_setup = &allocator.get(memory);
     if (!x_connection.p_setup) {
         return Failure(0x0);
     }

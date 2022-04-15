@@ -20,14 +20,6 @@ struct BaseMemoryHandle {
         ssize storage;
     };
 
-    constexpr auto as_address() const -> void* {
-        return this->p_storage;
-    }
-
-    constexpr auto as_index() const -> ssize {
-        return storage;
-    }
-
     constexpr explicit operator void*() const {
         return this->p_storage;
     }
@@ -88,12 +80,12 @@ struct PageAllocator {
 
     template <typename T>
     auto free(Handle<T> const& memory) -> Result<> {
-        return nix::unmap_memory(memory.as_address(), memory.allocation_size);
+        return nix::unmap_memory(memory.p_storage, memory.allocation_size);
     };
 
     template <typename T>
     auto get(Handle<T> const& memory) -> T& {
-        return *static_cast<T*>(memory.as_address());
+        return *static_cast<T*>(memory.p_storage);
     }
 };
 

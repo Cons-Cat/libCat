@@ -174,8 +174,9 @@ class [[nodiscard]] Result {
         if (meta::is_constant_evaluated()) {
             if constexpr (!is_void) {
                 return this->storage;
+            } else {
+                return;
             }
-            return;
         }
 #ifdef __OPTIMIZE__
         return this->storage;
@@ -183,8 +184,9 @@ class [[nodiscard]] Result {
         if (this->is_okay) [[likely]] {
             if constexpr (!is_void) {
                 return this->storage;
+            } else {
+                return;
             }
-            return;
         }
         // TODO: Print an error message.
         cat::exit(1);
@@ -281,7 +283,7 @@ class [[nodiscard]] Result {
         if (is_okay) [[likely]] {
             if constexpr (!is_void) {
                 return this->storage;
-            } else if constexpr (is_void) {
+            } else {
                 return;
             }
         }
@@ -296,7 +298,7 @@ class [[nodiscard]] Result {
         if (is_okay) [[likely]] {
             if constexpr (!is_void) {
                 return this->storage;
-            } else if constexpr (is_void) {
+            } else {
                 return;
             }
         }
