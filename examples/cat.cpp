@@ -20,8 +20,8 @@ auto get_file_size(nix::FileDescriptor file_descriptor) -> Optional<ssize> {
 void output_to_console(nix::IoVector const& io_vector) {
     // TODO: Create a mutable string type to prevent this undefined behavior.
     // TODO: Make this buffered output to reduce syscalls.
-    char* p_buffer = static_cast<char*>(static_cast<void*>(io_vector.p_data()));
-    nix::write(1, p_buffer++, io_vector.size()).discard_result();
+    char* buffer = static_cast<char*>(static_cast<void*>(io_vector.p_data()));
+    nix::write(1, buffer++, io_vector.size()).discard_result();
 }
 
 void read_and_print_file(char* p_file_name) {
@@ -37,18 +37,21 @@ void read_and_print_file(char* p_file_name) {
     }
 
     cat::PageAllocator allocator;
-    auto io_buffer =
-        allocator.malloc(meta::ssizeof<Span<nix::IoVector>>() * blocks)
-            .or_panic();
+    Span<nix::IoVector> io_vectors;
 
-    Span<nix::IoVector> io_vectors = {io_buffer.as_address(), blocks};
+    auto io_buffer =
+        allocator.malloc<nix::IoVector>(meta::ssizeof(io_vectors) * blocks)
+            .or_panic();
+    io_vectors = Span<nix::IoVector>{&allocator.get(io_buffer), blocks};
 
     while (bytes_remaining > 0) {
         ssize current_block_size = cat::min(bytes_remaining, block_size);
 
-        // `p_buffer` should be 4_ki-aligned.
-        void* p_buffer = allocator.malloc(block_size).or_panic().as_address();
-        io_vectors[current_block] = nix::IoVector{p_buffer, current_block_size};
+        // `buffer` should be 4_ki-aligned.
+        // TODO: Create an `AnyPtr` to make `Iovector` take in a `void**`.
+        auto buffer = allocator.malloc<cat::Byte>(block_size).or_panic();
+        io_vectors[current_block] =
+            nix::IoVector{&allocator.get(buffer), current_block_size};
         current_block++;
         bytes_remaining -= current_block_size;
     }
