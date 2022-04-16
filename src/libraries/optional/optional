@@ -796,3 +796,6 @@ value!\n")
         return predicate(this->storage);
     }
 };
+
+template <typename T>
+Optional(T) -> Optional<T>;
