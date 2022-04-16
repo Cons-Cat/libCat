@@ -32,6 +32,8 @@ auto invert_endianess(meta::integral auto value) {
 struct Byte {  // NOLINT
     unsigned char value;
 
+    constexpr Byte() = default;
+    
     constexpr Byte(auto input) requires(sizeof(input) == 1) {
         this->value = input;
     }

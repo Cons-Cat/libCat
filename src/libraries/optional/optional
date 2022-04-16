@@ -89,8 +89,10 @@ struct OptionalValueStorage {
     // destructor.
     constexpr ~OptionalValueStorage() requires(
         !meta::is_trivially_destructible_v<T>) {
-        if (this->has_some) {
-            this->value.~T();
+        if constexpr (requires { this->value.~T(); }) {
+            if (this->has_some) {
+                this->value.~T();
+            }
         }
     }
 

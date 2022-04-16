@@ -54,3 +54,9 @@ struct [[maybe_unused]] Unused {
 // attribute from a function with side effects. Consuming a `Result` value is
 // not possible.
 [[maybe_unused]] inline cat::detail::Unused _;
+
+// Placement `new`.
+[[nodiscard]] inline auto operator new(unsigned long, void* p_address)
+    -> void* {
+    return p_address;
+}

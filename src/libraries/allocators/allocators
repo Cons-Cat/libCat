@@ -27,7 +27,7 @@ struct SmallMemoryHandle {
     using Type = typename T::Type;
     union {
         T allocator_storage;
-        typename T::Type stack_storage;
+        Type stack_storage;
     };
     bool1 is_on_stack;
 
@@ -36,6 +36,13 @@ struct SmallMemoryHandle {
 
     SmallMemoryHandle(typename T::Type const& value)
         : stack_storage(value), is_on_stack(true){};
+
+    // TODO: `Optional` does not handle non-trivial destructors correctly.
+    // ~SmallMemoryHandle() {
+    //     if (this->is_on_stack) {
+    //         this->stack_storage.~Type();
+    //     }
+    // }
 };
 
 }  // namespace cat
@@ -76,16 +83,24 @@ struct AllocatorFacade {
         // `allocate()` returns either an `Optional` or a `Result`, both of
         // which have `.has_value()`.
         if (maybe_memory.has_value()) {
-            // TODO: In-place construction.
-            return Optional<Handle>(this->self().template make_handle<T>(
-                maybe_memory.value(), allocation_size));
+            auto memory = maybe_memory.value();
+            // Construct the object in place and return a handle to it.
+            new (memory) T();
+            return Optional<Handle>(
+                this->self().template make_handle<T>(memory, allocation_size));
         }
         return Optional<Handle>(none);
     }
 
-    template <typename T>
-    auto free(T const& memory) -> Result<> {
-        // TODO: Invoke destructor.
+    template <typename Handle>
+    auto free(Handle const& memory) -> Result<> {
+        using U = typename Handle::Type;
+
+        // Invoke the destructor.
+        if constexpr (requires { this->get(memory).~U(); }) {
+            this->get(memory).~U();
+        }
+
         auto result = this->self().deallocate(memory);
         if (result.has_value()) {
             return okay;
@@ -104,7 +119,8 @@ struct AllocatorFacade {
         if (allocation_size > 256) {
             auto maybe_memory = this->malloc<T>(allocation_size);
             if (maybe_memory.has_value()) {
-                return Optional<SmallHandle>(Handle{maybe_memory.value()});
+                return Optional<SmallHandle>(
+                    SmallHandle{Handle{maybe_memory.value()}});
             }
             return Optional<SmallHandle>(none);
         }
