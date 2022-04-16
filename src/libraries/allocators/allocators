@@ -65,11 +65,11 @@ struct PageAllocator {
     template <typename T>
     using SmallHandle = BaseSmallMemoryHandle<Handle<T>>;
 
-    /* Allocate memory in multiples of a page-size,
-     * which is `4_ki` on x86-64. For instance, If fewer that `4096` bytes
-     * are allocated, that amount will be rounded up to `4096`. There is
-     * generally very little reason to allocate any smaller amount of bytes
-     * using `PageAllocator`. */
+    // Allocate memory in multiples of a page-size,
+    // which is `4_ki` on x86-64. For instance, If fewer that `4096` bytes
+    // are allocated, that amount will be rounded up to `4096`. There is
+    // generally very little reason to allocate any smaller amount of bytes
+    // using `PageAllocator`.
     template <typename T = void*>
     auto malloc(ssize const allocation_size = sizeof(T))
         -> Optional<Handle<T>> {
@@ -85,6 +85,7 @@ struct PageAllocator {
             0u);
 
         if (memory.is_okay) {
+            // TODO: In-place construction.
             return Handle<T>{{memory.value()}, allocation_size};
         }
         return none;
@@ -97,6 +98,7 @@ struct PageAllocator {
     // Taking a `Handle<T>` parameter accepts `SmallHandle<T>`, which is
     // incorrect.
     requires(meta::is_specialization<T, Handle>::value) {
+        // TODO: Invoke destructor.
         return nix::unmap_memory(memory.p_storage, memory.allocation_size);
     };
 
@@ -114,6 +116,7 @@ struct PageAllocator {
             if (failed) {
                 return none;
             }
+            // TODO: In-place construction.
             return SmallHandle<T>{handle, false};
         }
 
@@ -126,6 +129,7 @@ struct PageAllocator {
     // TODO: Use an `Optional<void>`.
     template <typename T>
     auto freea(SmallHandle<T> const& memory) -> Result<> {
+        // TODO: Invoke destructor.
         if (memory.is_on_stack) {
             return okay;
         }
@@ -139,10 +143,6 @@ struct PageAllocator {
     auto get(Handle<T> const& memory) -> T& {
         return *static_cast<T*>(memory.p_storage);
     }
-};
-
-struct FixedBufferAllocator {
-    //
 };
 
 }  // namespace cat

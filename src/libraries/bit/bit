@@ -26,7 +26,6 @@ auto invert_endianess(meta::integral auto value) {
     }
 }
 
-
 // `Byte` is a strongly-typed `struct` rather than an `enum class`, as in the
 // STL, so that it can carry member functions.
 // TODO: Add some member functions.
@@ -47,11 +46,11 @@ struct Byte {  // NOLINT
         this->value = meta::forward<T>(input);
     }
 
-	template<typename T>
-	explicit operator T()requires(sizeof(T) == 1){
-		return meta::bit_cast<T>(value);
-	}
-	
+    template <typename T>
+    constexpr explicit operator T() requires(sizeof(T) == 1) {
+        return meta::bit_cast<T>(value);
+    }
+
     constexpr auto operator&(meta::integral auto from) -> Byte {
         return this->value & from;
     }
@@ -84,7 +83,7 @@ struct Byte {  // NOLINT
         return *this;
     }
 };
-    
+
 }  // namespace cat
 
 constexpr auto operator""_ki(unsigned long long const input) -> long {
