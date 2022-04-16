@@ -7,6 +7,17 @@
 
 // TODO: Support `single_pass` iterators.
 
+namespace meta {
+
+// TODO: More iterable related concepts.
+template <typename T>
+concept Iterable = requires(T t) {
+    t.begin();
+    t.end();
+};
+
+}  // namespace meta
+
 namespace cat::detail {
 
 enum class IteratorDirection {
@@ -291,7 +302,7 @@ struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
     }
 };
 
-template <typename T>
+template <meta::Iterable T>
 class Reverse {
   private:
     T& iterable;
@@ -309,12 +320,3 @@ class Reverse {
 };
 
 }  // namespace cat
-
-namespace meta {
-template <typename T>
-concept iterable = requires(T t) {
-    t.begin();
-    t.end();
-};
-
-}  // namespace meta
