@@ -313,6 +313,9 @@ struct intptr {  // NOLINT
         return static_cast<T>(this->value);
     }
 
+    constexpr auto operator=(intptr const& from) -> intptr& = default;
+    constexpr auto operator=(intptr&& from) -> intptr& = default;
+
     constexpr auto operator=(meta::integral auto from) -> intptr& {
         this->value = static_cast<ssize>(from);
         return *this;
