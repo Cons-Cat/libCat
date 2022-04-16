@@ -373,3 +373,6 @@ class [[nodiscard]] Result {
         }
     }
 };
+
+template <typename T>
+Result(T) -> Result<T>;

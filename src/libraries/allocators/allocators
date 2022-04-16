@@ -37,6 +37,7 @@ struct BaseSmallMemoryHandle : T {
 namespace detail {
     template <typename T>
     struct PageMemoryHandle : public BaseMemoryHandle {
+        using Type = T;
         ssize allocation_size;
     };
 }  // namespace detail
@@ -49,98 +50,134 @@ template <typename AllocatorT, typename AllocationU = void*>
 concept Allocator = requires(AllocatorT allocator) {
     // Every allocator has a `.malloc()`, `.free()`, and `.get()` method.
     // TODO: Handle non-arbitrary allocation sizes.
-    allocator.malloc(sizeof(AllocationU));
-    allocator.template malloc<AllocationU>();
-    allocator.free(typename AllocatorT::template Handle<AllocationU>{});
-    allocator.get(typename AllocatorT::template Handle<AllocationU>{});
+    // allocator.malloc(sizeof(AllocationU));
+    // allocator.template malloc<AllocationU>();
+    // allocator.free(typename AllocatorT::template Handle<AllocationU>{});
+    // allocator.get(typename AllocatorT::template Handle<AllocationU>{});
+    true;
 };
 
 }  // namespace meta
 
 namespace cat {
 
-struct PageAllocator {
-    template <typename T>
-    using Handle = cat::detail::PageMemoryHandle<T>;
-    template <typename T>
-    using SmallHandle = BaseSmallMemoryHandle<Handle<T>>;
-
-    // Allocate memory in multiples of a page-size,
-    // which is `4_ki` on x86-64. For instance, If fewer that `4096` bytes
-    // are allocated, that amount will be rounded up to `4096`. There is
-    // generally very little reason to allocate any smaller amount of bytes
-    // using `PageAllocator`.
-    template <typename T = void*>
-    auto malloc(ssize const allocation_size = sizeof(T))
-        -> Optional<Handle<T>> {
-        Result<void*> memory = nix::map_memory(
-            0u, allocation_size,
-            nix::MemoryProtectionFlags::read |
-                nix::MemoryProtectionFlags::write,
-            nix::MemoryFlags::privately | nix::MemoryFlags::populate |
-                nix::MemoryFlags::anonymous,
-            // Anonymous pages must have `-1`.
-            -1,
-            // Anonymous pages must have `0u`.
-            0u);
-
-        if (memory.has_value()) {
-            // TODO: In-place construction.
-            return Handle<T>{{memory.value()}, allocation_size};
-        }
-        return none;
+template <typename Derived>
+struct AllocatorFacade {
+    constexpr auto self() -> Derived& {
+        return static_cast<Derived&>(*this);
     }
 
-    // Unmap a handle to page(s) of virtual memory.
-    // TODO: Use an `Optional<void>`.
+    template <typename T = void*>
+    auto malloc(ssize const allocation_size = sizeof(T)) {
+        auto maybe_memory = this->self().template allocate<T>(allocation_size);
+        using Handle = decltype(this->self().template make_handle<T>(
+            maybe_memory.value(), allocation_size));
+
+        static_assert(
+            meta::is_same_v<Handle, cat::detail::PageMemoryHandle<T>>);
+
+        // `allocate()` returns either an `Optional` or a `Result`, both of
+        // which have `.has_value()`.
+        if (maybe_memory.has_value()) {
+            // TODO: In-place construction.
+            return Optional<Handle>(this->self().template make_handle<T>(
+                maybe_memory.value(), allocation_size));
+        }
+        return Optional<Handle>(none);
+    }
+
     template <typename T>
     auto free(T const& memory) -> Result<>
     // Taking a `Handle<T>` parameter accepts `SmallHandle<T>`, which is
     // incorrect.
-    requires(meta::is_specialization<T, Handle>::value) {
+    // requires(meta::is_specialization<T, Handle>::value)
+    {
         // TODO: Invoke destructor.
-        return nix::unmap_memory(memory.p_storage, memory.allocation_size);
+        auto result = this->self().deallocate(memory);
+        if (result.has_value()) {
+            return okay;
+        }
+        return Failure(1);
     };
 
+    // Allocate small-size optimized memory.
     template <typename T = void*>
-    auto malloca(ssize const allocation_size = sizeof(T))
-        -> Optional<SmallHandle<T>> {
+    auto malloca(ssize const allocation_size = sizeof(T)) {
         if (allocation_size > 256) {
             // TODO: Fix `.transform()`, and use it here.
-            bool1 failed = false;
-            Handle<T> handle = this->malloc<T>(allocation_size)
-                                   .or_else([&]() {
-                                       failed = true;
-                                   })
-                                   .value();
-            if (failed) {
+            auto handle = this->malloc<T>(allocation_size);
+            if (!handle.has_value()) {
                 return none;
             }
+            // return
             // TODO: In-place construction.
-            return SmallHandle<T>{handle, false};
+            // return SmallHandle<T>{handle, false};
         }
 
-        return SmallHandle<T>{
-            static_cast<T*>(__builtin_alloca(allocation_size)), allocation_size,
-            true};
+        // TODO: Verify that this actually works.
+        // return SmallHandle<T>{
+        //     static_cast<T*>(__builtin_alloca(allocation_size)),
+        //     allocation_size, true};
+        return none;
     }
 
-    // Unmap a handle to page(s) of virtual memory or stack-allocated memory.
+    // Free small-size optimized memory.
     // TODO: Use an `Optional<void>`.
     template <typename T>
-    auto freea(SmallHandle<T> const& memory) -> Result<> {
+    auto freea(/* SmallHandle<T>*/ auto const& memory) -> Result<> {
         // TODO: Invoke destructor.
         if (memory.is_on_stack) {
             return okay;
         }
+        // TODO: I don't think this is correct.
         // Small memory handles can only add members to the basic handle, so
         // bit-casting them is safe.
-        return this->free(meta::bit_cast<Handle<T>>(memory));
+        // return this->free(meta::bit_cast<Handle<T>>(memory));
+        return okay;
     };
 
-    // Acquire a reference to a page of memory.
+    // Get a reference to the data in a memory handle.
+    auto get(auto const& memory) -> auto& {
+        using T = typename meta::remove_cvref_t<decltype(memory)>;
+        using U = typename T::Type;
+        return this->self().template access<U>(memory);
+    }
+};
+
+struct PageAllocator : AllocatorFacade<PageAllocator> {
     template <typename T>
-    auto get(Handle<T> const& memory) -> T& {
+    using MemoryHandle = cat::detail::PageMemoryHandle<T>;
+
+    // Allocate memory in multiples of a page-size. A page is `4_ki` large on
+    // x86-64. If fewer that `4096` bytes are allocated, that amount will be
+    // rounded up to `4096`.
+    template <typename T = void*>
+    auto allocate(ssize const allocation_size = sizeof(T)) -> Result<void*> {
+        return nix::map_memory(0u, allocation_size,
+                               nix::MemoryProtectionFlags::read |
+                                   nix::MemoryProtectionFlags::write,
+                               nix::MemoryFlags::privately |
+                                   nix::MemoryFlags::populate |
+                                   nix::MemoryFlags::anonymous,
+                               // Anonymous pages must have `-1`.
+                               -1,
+                               // Anonymous pages must have `0u`.
+                               0u);
+    }
+
+    // Unmap a handle to page(s) of virtual memory.
+    auto deallocate(auto const& memory) -> Result<> {
+        return nix::unmap_memory(memory.p_storage, memory.allocation_size);
+    };
+
+    template <typename T>
+    auto make_handle(auto data, ssize size) -> MemoryHandle<T> {
+        return MemoryHandle<T>{{data}, size};
+    }
+
+    // Access a page(s) of virtual memory.
+    template <typename T>
+    auto access(MemoryHandle<T> const& memory) -> T& {
         return *static_cast<T*>(memory.p_storage);
     }
 };
