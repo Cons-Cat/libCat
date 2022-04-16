@@ -10,9 +10,6 @@
 // TODO: Some allocators should be iterable.
 // TODO: Add a random_access concept and a random_access_allocator concept.
 
-/* Some concepts from the STL are not supported, for various reasons.
- * `cat::destructable` is not useful without exception handling. */
-
 namespace cat {
 
 template <typename T>
@@ -47,7 +44,7 @@ namespace meta {
 
 template <typename AllocatorT, typename AllocationU = void*>
 concept Allocator = requires(AllocatorT allocator) {
-    // Every allocator has a `.malloc()` and `.free()` method.
+    // Every allocator has a `.malloc()` method.
     allocator.malloc(sizeof(AllocationU));
     allocator.template malloc<AllocationU>();
 
@@ -62,6 +59,7 @@ concept Allocator = requires(AllocatorT allocator) {
 
 namespace cat {
 
+// TODO: Support aligned allocations.
 template <typename Derived>
 struct AllocatorFacade {
     constexpr auto self() -> Derived& {
@@ -142,14 +140,13 @@ struct AllocatorFacade {
 struct PageAllocator : AllocatorFacade<PageAllocator> {
     template <typename T>
     struct PageMemoryHandle : BaseMemoryHandle<T> {
-        using Type = typename BaseMemoryHandle<T>::Type;
         ssize allocation_size;
     };
 
     // Allocate memory in multiples of a page-size. A page is `4_ki` large on
     // x86-64. If fewer that `4096` bytes are allocated, that amount will be
     // rounded up to `4096`.
-    template <typename T = void*>
+    template <typename T>
     auto allocate(ssize const allocation_size = sizeof(T)) -> Result<void*> {
         return nix::map_memory(0u, allocation_size,
                                nix::MemoryProtectionFlags::read |
