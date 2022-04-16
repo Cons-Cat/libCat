@@ -2,6 +2,18 @@
 #include <array>
 #include <math>
 
+int4 global_int_1 = 0;
+int4 global_int_2 = 0;
+
+struct TestType {
+    TestType() {
+        global_int_1++;
+    }
+    ~TestType() {
+        global_int_2++;
+    }
+};
+
 void meow() {
     // Initialize an allocator.
     cat::PageAllocator allocator;
@@ -37,6 +49,18 @@ void meow() {
                     intptr{&allocator.get(small_memory)}) > 512)
         .or_panic();
     allocator.freea(small_memory).discard_result();
+
+    // Test constructor being called.
+    Optional testtype = allocator.malloc<TestType>();
+    allocator.free(testtype.value()).discard_result();
+
+    // That constructor increments `global_int_1`.
+    Result(global_int_1 == 1).or_panic();
+    // That destructor increments `global_int_2`.
+    Result(global_int_2 == 1).or_panic();
+
+    // Optional smalltesttype = allocator.malloca<TestType>();
+    // allocator.freea(smalltesttype.value()).discard_result();
 
     cat::exit();
 };
