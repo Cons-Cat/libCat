@@ -74,7 +74,7 @@ struct AllocatorFacade {
     }
 
     // Try to allocate some memory.
-    template <typename T = void*>
+    template <typename T = cat::Byte>
     auto malloc(ssize const allocation_size = sizeof(T)) {
         auto maybe_memory = this->self().template allocate<T>(allocation_size);
         using Handle = decltype(this->self().template make_handle<T>(
@@ -83,11 +83,11 @@ struct AllocatorFacade {
         // `allocate()` returns either an `Optional` or a `Result`, both of
         // which have `.has_value()`.
         if (maybe_memory.has_value()) {
-            auto memory = maybe_memory.value();
+            auto handle = this->self().template make_handle<T>(
+                maybe_memory.value(), allocation_size);
             // Construct the object in place and return a handle to it.
-            new (memory) T();
-            return Optional<Handle>(
-                this->self().template make_handle<T>(memory, allocation_size));
+            new (this->self().access(handle)) T();
+            return Optional<Handle>(handle);
         }
         return Optional<Handle>(none);
     }
@@ -146,9 +146,9 @@ struct AllocatorFacade {
             if (memory.is_on_stack) {
                 return memory.stack_storage;
             }
-            return this->self().template access<U>(memory.allocator_storage);
+            return *this->self().template access<U>(memory.allocator_storage);
         } else {
-            return this->self().template access<U>(memory);
+            return *this->self().template access<U>(memory);
         }
     }
 };
@@ -189,8 +189,8 @@ struct PageAllocator : AllocatorFacade<PageAllocator> {
 
     // Access a page(s) of virtual memory.
     template <typename T>
-    auto access(PageMemoryHandle<T> const& memory) -> T& {
-        return *static_cast<T*>(memory.p_storage);
+    auto access(PageMemoryHandle<T> const& memory) -> T* {
+        return static_cast<T*>(memory.p_storage);
     }
 };
 
