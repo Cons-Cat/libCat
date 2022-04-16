@@ -6,7 +6,7 @@
 
 auto cat::print_line(String const& string) -> Result<> {
     auto result = nix::write(1, string.p_data(), string.size());
-    if (!result.is_okay) {
+    if (!result.has_value()) {
         return Failure(result.failure);
     }
     return nix::write(1, "\n", 1);
