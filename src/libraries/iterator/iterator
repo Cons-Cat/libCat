@@ -115,20 +115,10 @@ using InferValueType_t = typename cat::detail::InferValueType<T>::type::type;
 
 // https://vector-of-bool.github.io/2020/06/13/cpp20-iter-facade.html
 // Every `IteratorFacade` is `indirectly_readable` and is a `forward_iterator`.
-template <typename Derived, cat::detail::IteratorDirection direction =
-                                cat::detail::IteratorDirection::forwards>
+template <typename Derived>
 struct IteratorFacade {
     // `Type` is needed for reversing.
     using Type = Derived;
-
-    consteval static auto get_direction() {
-        return direction;
-    }
-
-    consteval static auto get_reverse_direction() {
-        return static_cast<cat::detail::IteratorDirection>(
-            static_cast<int>(direction) * -1);
-    }
 
     constexpr auto self() -> Derived& {
         return static_cast<Derived&>(*this);
@@ -173,13 +163,13 @@ struct IteratorFacade {
     constexpr friend auto operator+(Derived left,
                                     DifferenceTypeArg<Derived> auto offset)
         -> Derived requires cat::detail::HasAdvance<Derived> {
-        return left += offset * static_cast<int>(direction);
+        return left += offset;
     }
 
     constexpr friend auto operator+(DifferenceTypeArg<Derived> auto offset,
                                     Derived right)
         -> Derived requires cat::detail::HasAdvance<Derived> {
-        return right += offset * static_cast<int>(direction);
+        return right += offset;
     }
 
     constexpr friend auto operator+=(Derived& self,
@@ -194,7 +184,7 @@ struct IteratorFacade {
         if constexpr (cat::detail::HasIncrement<Derived>) {
             this->self().increment();
         } else {
-            this->self().advance(1 * static_cast<int>(direction));
+            this->self().advance(1);
         }
         return this->self();
     }
@@ -214,13 +204,13 @@ struct IteratorFacade {
     constexpr friend auto operator-(Derived left,
                                     DifferenceTypeArg<Derived> auto offset)
         -> Derived requires cat::detail::HasAdvance<Derived> {
-        return left - offset * static_cast<int>(direction);
+        return left - offset;
     }
 
     constexpr friend auto operator-=(Derived& left,
                                      DifferenceTypeArg<Derived> auto offset)
         -> Derived& requires cat::detail::HasAdvance<Derived> {
-        return left -= offset * static_cast<int>(direction);
+        return left -= offset;
     }
 
     // Decrement or advance backwards with prefix notation.
@@ -228,7 +218,7 @@ struct IteratorFacade {
         if constexpr (cat::detail::HasDecrement<Derived>) {
             this->self().decrement();
         } else {
-            this->self().advance(-1 * static_cast<int>(direction));
+            this->self().advance(-1);
         }
         return this->self();
     }
@@ -307,8 +297,7 @@ class Reverse {
   private:
     T& iterable;
   public:
-    explicit Reverse(T& iterable) : iterable{iterable} {
-    }
+    explicit Reverse(T& iterable) : iterable{iterable} {};
 
     auto begin() const {
         return iterable.rbegin();
