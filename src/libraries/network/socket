@@ -54,12 +54,8 @@ struct SocketUnix {
 
     // Create and return a `Socket`.
     auto create() -> Result<> {
-        Result<nix::FileDescriptor> result = nix::create_socket(
-            this->attributes.family, static_cast<int>(Type), Protocol);
-        if (result.is_okay) {
-            this->descriptor = result.storage;
-        }
-        return result;
+        return nix::create_socket(this->attributes.family,
+                                  static_cast<int>(Type), Protocol);
     }
 
     // Connect a `Socket`.
@@ -97,25 +93,14 @@ struct SocketUnix {
     auto accept(nix::FileDescriptor listening_socket,
                 void const* p_socket = nullptr,
                 ssize const* p_addr_len = nullptr) -> Result<> {
-        auto result =
-            nix::accept_socket(listening_socket, p_socket, p_addr_len);
-        if (result.is_okay) {
-            this->descriptor = result.storage;
-            return okay;
-        }
-        return result;
+        return nix::accept_socket(listening_socket, p_socket, p_addr_len);
     }
 
     auto accept(SocketUnix<Type, Protocol> const& listening_socket,
                 void const* p_socket = nullptr,
                 ssize const* p_addr_len = nullptr) -> Result<> {
-        auto result = nix::accept_socket(listening_socket.descriptor, p_socket,
-                                         p_addr_len);
-        if (result.is_okay) {
-            this->descriptor = result.storage;
-            return okay;
-        }
-        return result;
+        return nix::accept_socket(listening_socket.descriptor, p_socket,
+                                  p_addr_len);
     }
 
     auto recieve(void const* p_message_buffer, ssize const buffer_length,

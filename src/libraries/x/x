@@ -477,12 +477,12 @@ auto initiate_connection(meta::Allocator auto& allocator)
     socket.path_name = xwin::socket_path;
 
     auto result_1 = socket.create();
-    if (!result_1.is_okay) {
+    if (!result_1.has_value() s) {
         return result_1;
     }
 
     auto result_2 = socket.connect();
-    if (!result_2.is_okay) {
+    if (!result_2.has_value()) {
         return result_2;
     }
 

@@ -84,7 +84,7 @@ struct PageAllocator {
             // Anonymous pages must have `0u`.
             0u);
 
-        if (memory.is_okay) {
+        if (memory.has_value()) {
             // TODO: In-place construction.
             return Handle<T>{{memory.value()}, allocation_size};
         }
