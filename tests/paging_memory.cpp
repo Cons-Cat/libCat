@@ -19,24 +19,24 @@ void meow() {
     // Free the page.
     allocator.free(memory).or_panic();
 
-    // // Allocation with small-size optimization.
-    // int stack_variable;
-    // auto small_memory = allocator.malloca<int4>().value();
-    // allocator.get(small_memory) = 2;
-    // // Both values should be on stack, so these addresses are close
-    // // together.
-    // Result(cat::abs(intptr{&stack_variable} -
-    //                 intptr{&allocator.get(small_memory)}) < 512)
-    //     .or_panic();
-    // allocator.freea(small_memory).discard_result();
+    // Allocation with small-size optimization.
+    int stack_variable;
+    auto small_memory = allocator.malloca<int4>().value();
+    allocator.get(small_memory) = 2;
+    // Both values should be on stack, so these addresses are close
+    // together.
+    Result(cat::abs(intptr{&stack_variable} -
+                    intptr{&allocator.get(small_memory)}) < 512)
+        .or_panic();
+    allocator.freea(small_memory).discard_result();
 
-    // small_memory = allocator.malloca<int4>(1_ki).value();
-    // // `small_memory` should be in a page, so these addresses are far
-    // // apart.
-    // Result(cat::abs(intptr{&stack_variable} -
-    //                 intptr{&allocator.get(small_memory)}) > 512)
-    //     .or_panic();
-    // allocator.freea(small_memory).discard_result();
+    small_memory = allocator.malloca<int4>(1_ki).value();
+    // `small_memory` should be in a page, so these addresses are far
+    // apart.
+    Result(cat::abs(intptr{&stack_variable} -
+                    intptr{&allocator.get(small_memory)}) > 512)
+        .or_panic();
+    allocator.freea(small_memory).discard_result();
 
     cat::exit();
 };
