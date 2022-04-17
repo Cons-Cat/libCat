@@ -29,6 +29,7 @@ struct SmallMemoryHandle {
         T allocator_storage;
         Type stack_storage;
     };
+    // TODO: Make this `const`.
     bool1 is_on_stack;
 
     SmallMemoryHandle(T const& handle)
@@ -37,12 +38,11 @@ struct SmallMemoryHandle {
     SmallMemoryHandle(typename T::Type const& value)
         : stack_storage(value), is_on_stack(true){};
 
-    // TODO: `Optional` does not handle non-trivial destructors correctly.
-    // ~SmallMemoryHandle() {
-    //     if (this->is_on_stack) {
-    //         this->stack_storage.~Type();
-    //     }
-    // }
+    ~SmallMemoryHandle() {
+        if (this->is_on_stack) {
+            this->stack_storage.~Type();
+        }
+    }
 };
 
 }  // namespace cat
@@ -115,24 +115,28 @@ struct AllocatorFacade {
             T{}, allocation_size));
         using SmallHandle = SmallMemoryHandle<Handle>;
 
-        // TODO: In-place construction.
         if (allocation_size > 256) {
             auto maybe_memory = this->malloc<T>(allocation_size);
             if (maybe_memory.has_value()) {
-                return Optional<SmallHandle>(
-                    SmallHandle{Handle{maybe_memory.value()}});
+                auto handle = this->self().template make_handle<T>(
+                    maybe_memory.value(), allocation_size);
+                new (this->self().access(handle)) T();
+
+                return Optional<SmallHandle>(SmallHandle{handle});
             }
             return Optional<SmallHandle>(none);
         }
 
-        return Optional<SmallHandle>(T{});
+        return Optional<SmallHandle>(SmallHandle(T{}));
     }
 
     // Deallocate small-size optimized memory.
     // TODO: Use an `Optional<void>`.
-    auto freea(auto const& memory) -> Result<> {
-        // TODO: Invoke destructor.
+    template <typename Handle>
+    auto freea(Handle const& memory) -> Result<> {
         if (memory.is_on_stack) {
+            using U = typename Handle::Type;
+            this->get(memory).~U();
             return okay;
         }
         return this->free(memory.allocator_storage);
@@ -143,11 +147,28 @@ struct AllocatorFacade {
         using T = typename meta::remove_cvref_t<decltype(memory)>;
         using U = typename T::Type;
         if constexpr (requires { memory.is_on_stack; }) {
+            // Get small-size optimized data:
             if (memory.is_on_stack) {
                 return memory.stack_storage;
             }
             return *this->self().template access<U>(memory.allocator_storage);
         } else {
+            // Get non-small-size optimized data:
+            return *this->self().template access<U>(memory);
+        }
+    }
+
+    auto get(auto const& memory) -> auto const& {
+        using T = typename meta::remove_cvref_t<decltype(memory)>;
+        using U = typename T::Type;
+        if constexpr (requires { memory.is_on_stack; }) {
+            // Get small-size optimized data:
+            if (memory.is_on_stack) {
+                return memory.stack_storage;
+            }
+            return *this->self().template access<U>(memory.allocator_storage);
+        } else {
+            // Get non-small-size optimized data:
             return *this->self().template access<U>(memory);
         }
     }

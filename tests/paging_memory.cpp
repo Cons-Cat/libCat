@@ -66,8 +66,9 @@ void meow() {
     // That destructor increments `global_int_2`.
     Result(global_int_2 == 1).or_panic();
 
-    // Optional smalltesttype = allocator.malloca<TestType>();
-    // allocator.freea(smalltesttype.value()).discard_result();
+    auto smalltesttype = allocator.malloca<TestType>().value();
+    allocator.get(smalltesttype) = TestType{};
+    allocator.freea(smalltesttype).discard_result();
 
     cat::exit();
 };
