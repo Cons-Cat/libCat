@@ -1,8 +1,6 @@
 #include <memory>
 #include <optional>
 
-#include "result"
-
 struct Movable {
     Movable() = default;
     Movable(Movable&&) = default;
