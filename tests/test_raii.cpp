@@ -10,13 +10,13 @@ struct Foo {
     Foo() = default;
 
     Foo(String string) : data(std::move(string)) {
-        cat::print(data).discard_result();
-        cat::print_line(" constructor").discard_result();
+        _ = cat::print(data);
+        _ = cat::print_line(" constructor");
     }
 
     ~Foo() {
-        cat::print("~").discard_result();
-        cat::print_line(this->data).discard_result();
+        _ = cat::print("~");
+        _ = cat::print_line(this->data);
     }
 
     auto operator=(String string) {
@@ -25,8 +25,8 @@ struct Foo {
     }
 
     void raii() const {
-        cat::print(this->data).discard_result();
-        cat::print_line(" calls raii()!").discard_result();
+        _ = cat::print(this->data);
+        _ = cat::print_line(" calls raii()!");
         global++;
     }
 };
@@ -34,7 +34,7 @@ struct Foo {
 void func(Raii<Foo>){};
 
 void meow() {
-    cat::print_line("Construct objects.").discard_result();
+    _ = cat::print_line("Construct objects.");
     // Test constructor.
     Raii<Foo> foo(String("foo"));
     // Test assignment.
@@ -45,11 +45,11 @@ void meow() {
     Result(moo.has_ownership()).or_panic();
 
     // Test move-assignment.
-    cat::print_line("Move moo into foo.").discard_result();
+    _ = cat::print_line("Move moo into foo.");
     foo = cat::move(moo);
     Result(!moo.has_ownership()).or_panic();
 
-    cat::print_line("Move foo into func().").discard_result();
+    _ = cat::print_line("Move foo into func().");
     // `cat::move()` is required:
     func(cat::move(foo));
     Result(!foo.has_ownership()).or_panic();
@@ -57,7 +57,7 @@ void meow() {
     // This is correctly ill-formed:
     // func(foo);
 
-    cat::print_line("Everything falls out of scope.").discard_result();
+    _ = cat::print_line("Everything falls out of scope.");
 
     // Default construct `Raii<Foo>`.
     Raii<Foo> goo;

@@ -21,7 +21,7 @@ void meow() {
     // Allocate a page.
     Optional maybe_memory = allocator.malloc<int4>(1_ki);
     if (!maybe_memory.has_value()) {
-        cat::print_line("Failed to allocate memory!").discard_result();
+        _ = cat::print_line("Failed to allocate memory!");
         cat::exit(1);
     }
     auto memory = maybe_memory.value();
@@ -47,7 +47,7 @@ void meow() {
     intref = 10;
     Result(allocator.get(small_memory) == 10).or_panic();
 
-    allocator.freea(small_memory).discard_result();
+    _ = allocator.freea(small_memory);
 
     small_memory = allocator.malloca<int4>(1_ki).value();
     // `small_memory` should be in a page, so these addresses are far
@@ -55,11 +55,11 @@ void meow() {
     Result(cat::abs(intptr{&stack_variable} -
                     intptr{&allocator.get(small_memory)}) > 512)
         .or_panic();
-    allocator.freea(small_memory).discard_result();
+    _ = allocator.freea(small_memory);
 
     // Test constructor being called.
     Optional testtype = allocator.malloc<TestType>();
-    allocator.free(testtype.value()).discard_result();
+    _ = allocator.free(testtype.value());
 
     // That constructor increments `global_int_1`.
     Result(global_int_1 == 1).or_panic();
@@ -68,7 +68,7 @@ void meow() {
 
     auto smalltesttype = allocator.malloca<TestType>().value();
     allocator.get(smalltesttype) = TestType{};
-    allocator.freea(smalltesttype).discard_result();
+    _ = allocator.freea(smalltesttype);
 
     cat::exit();
 };

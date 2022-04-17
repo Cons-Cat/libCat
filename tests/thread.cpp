@@ -6,7 +6,7 @@
 
 void function(void*) {
     for (int4 i = 0; i < 15; i++) {
-        cat::print_line("Moo?").discard_result();
+        _ = cat::print_line("Moo?");
     }
     cat::exit();
 }
@@ -17,9 +17,9 @@ void meow() {
     thread.create(allocator, 4_ki, function, nullptr)
         .or_panic("Failed to make thread!");
     for (int4 i = 0; i < 10; i++) {
-        cat::print_line("Boo!").discard_result();
+        _ = cat::print_line("Boo!");
     }
     thread.join().or_panic("Failed to join thread!");
-    cat::print_line("Finished!").discard_result();
+    _ = cat::print_line("Finished!");
     cat::exit();
 }

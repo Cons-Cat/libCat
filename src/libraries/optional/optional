@@ -381,10 +381,9 @@ class Optional {
         if (this->storage.has_value()) [[likely]] {
             return this->storage.get_value();
         }
-        cat::print(
+        _ = cat::print(
             "`.value()` was illegally called on a `Optional` which did not hold a \
-value!\n")
-            .discard_result();
+value!\n");
         cat::exit(1);
 #endif
         __builtin_unreachable();
@@ -635,10 +634,9 @@ class Optional<Predicate<T, predicate, sentinel>> {
         if (this->has_value()) [[likely]] {
             return this->storage;
         }
-        cat::print(
+        _ = cat::print(
             "`.value()` was illegally called on a `Optional` which did not hold a \
-value!\n")
-            .discard_result();
+value!\n");
         cat::exit(1);
 #endif
         __builtin_unreachable();
