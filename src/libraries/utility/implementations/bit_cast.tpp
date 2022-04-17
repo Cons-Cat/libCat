@@ -21,8 +21,7 @@ template <typename T>
 out.")]] [[gnu::optimize("-O3")]] [[gnu::always_inline]] constexpr inline auto
 meta::bit_cast(auto& from_value) -> T
     // If the value is not `const`:
-    requires(
-        !meta::is_const_v<meta::remove_reference_t<decltype(from_value)>>) {
+    requires(!meta::is_const<meta::RemoveReference<decltype(from_value)>>) {
     char* p_from = static_cast<char*>(static_cast<void*>(&from_value));
 
     T* p_to = static_cast<T*>(static_cast<void*>(p_from));
@@ -39,13 +38,14 @@ template <typename T>
 out.")]] [[gnu::optimize("-O3")]] [[gnu::always_inline]] constexpr inline auto
 meta::bit_cast(auto& from_value) -> T
     // If the value is `const`:
-    requires(meta::is_const_v<meta::remove_reference_t<decltype(from_value)>>) {
+    requires(meta::is_const<meta::RemoveReference<decltype(from_value)>>) {
     /* Cast the address of `from_value` into a pointer of its type (with the
      * reference removed), then remove its `const` qualifier. Cast that to
      * `void*`, then cast that to `char*`, which represents bytes. */
     char* p_from = static_cast<char*>(static_cast<void*>(
-        const_cast<meta::remove_const_t<
-            meta::remove_reference_t<decltype(from_value)>>*>(&from_value)));
+        const_cast<
+            meta::RemoveConst<meta::RemoveReference<decltype(from_value)>>*>(
+            &from_value)));
 
     T* p_to = static_cast<T*>(static_cast<void*>(p_from));
     // GCC optimizes this pattern into a bit-cast:

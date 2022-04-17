@@ -7,7 +7,7 @@
 // TODO: add a `meta::invocable` concept.
 template <typename Function>
 consteval auto meta::constant_evaluate(auto value) requires(
-    meta::is_invocable_v<Function>) {
+    meta::is_invocable<Function>) {
     return value();
 }
 

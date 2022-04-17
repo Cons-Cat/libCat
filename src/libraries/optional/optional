@@ -52,14 +52,14 @@ struct OptionalValueStorage {
 
     // If `T` is trivially copy-constructible, use this simple copy constructor.
     constexpr OptionalValueStorage(T const& in_value) requires(
-        meta::is_trivially_copy_constructible_v<T>)
+        meta::is_trivially_copy_constructible<T>)
         : value(in_value), has_some(true){};
 
     // If `T` is not trivially copy-constructible, then manually construct it
     // in-place.
     constexpr OptionalValueStorage(T const& in_value) requires(
-        meta::is_copy_constructible_v<T> &&
-        !meta::is_trivially_copy_constructible_v<T>) {
+        meta::is_copy_constructible<T> &&
+        !meta::is_trivially_copy_constructible<T>) {
         if (in_value.has_value()) {
             this->construct(in_value.get_value());
         } else {
@@ -69,25 +69,25 @@ struct OptionalValueStorage {
 
     // If `T` is not copy-constructible, delete this copy constructor.
     constexpr OptionalValueStorage(T const& in_value) requires(
-        !meta::is_copy_constructible_v<T>) = delete;
+        !meta::is_copy_constructible<T>) = delete;
 
     // If `T` is trivially move-constructible, use this simple move constructor.
     constexpr OptionalValueStorage(T&& in_value) requires(
-        meta::is_trivially_move_constructible_v<T>)
+        meta::is_trivially_move_constructible<T>)
         : value(meta::forward<T>(in_value)), has_some(true){};
 
     // If `T` is not trivially move-constructible, then manually invoke
     // `cat::move` on it.
     OptionalValueStorage(T&& in_value) requires(
-        meta::is_move_constructible_v<T> &&
-        !meta::is_trivially_move_constructible_v<T>) {
+        meta::is_move_constructible<T> &&
+        !meta::is_trivially_move_constructible<T>) {
         this->construct(meta::forward<T>(in_value));
         this->has_some = true;
     }
 
     // If `T` is not move-constructible, delete this move constructor.
     constexpr OptionalValueStorage(T&& in_value) requires(
-        !meta::is_move_constructible_v<T>) = delete;
+        !meta::is_move_constructible<T>) = delete;
 
     // If other destructors are not conditionally specialized by their
     // `requires`, they should be `default` or deleted.
@@ -96,7 +96,7 @@ struct OptionalValueStorage {
     // If `T` is not trivially destructible, then manually invoke its
     // destructor.
     constexpr ~OptionalValueStorage() requires(
-        !meta::is_trivially_destructible_v<T>) {
+        !meta::is_trivially_destructible<T>) {
         if constexpr (requires { this->value.~T(); }) {
             if (this->has_some) {
                 this->value.~T();
@@ -110,7 +110,7 @@ struct OptionalValueStorage {
     // If other assignment operators are not conditionally specialized by their
     // `requires`, they should be `default` or deleted.
     auto operator=(T const& in_value) -> OptionalValueStorage& requires(
-        meta::is_trivially_copy_assignable_v<T>) {
+        meta::is_trivially_copy_assignable<T>) {
         this->value = in_value;
         this->has_some = true;
         return *this;
@@ -119,8 +119,7 @@ struct OptionalValueStorage {
     // If `T` is not trivially copy assignable, then manually construct it
     // in-place.
     auto operator=(T const& in_value) -> OptionalValueStorage& requires(
-        meta::is_copy_assignable_v<T> &&
-        !meta::is_trivially_copy_assignable_v<T>) {
+        meta::is_copy_assignable<T> && !meta::is_trivially_copy_assignable<T>) {
         this->assign(in_value);
         return *this;
     }
@@ -132,7 +131,7 @@ struct OptionalValueStorage {
     // implicitly.
     template <typename U>
     auto operator=(U const& in_value)
-        -> OptionalValueStorage<T>& requires(meta::is_convertible_v<U, T>) {
+        -> OptionalValueStorage<T>& requires(meta::is_convertible<U, T>) {
         if (this->has_some) {
             if (in_value.has_value()) {
                 this->value = *in_value;
@@ -152,8 +151,7 @@ struct OptionalValueStorage {
     // If `T` is trivially move assignable, then forward.
     template <typename U>
     auto operator=(U&& in_value) -> OptionalValueStorage& requires(
-        meta::is_convertible_v<U, T>&&
-            meta::is_trivially_move_assignable_v<U>) {
+        meta::is_convertible<U, T>&& meta::is_trivially_move_assignable<U>) {
         this->value = meta::forward<U>(in_value);
         this->has_some = true;
         return *this;
@@ -164,15 +162,15 @@ struct OptionalValueStorage {
     // `cat::move()` on it.
     template <typename U>
     constexpr auto operator=(U&& in_value) -> OptionalValueStorage& requires(
-        meta::is_convertible_v<U, T>&& meta::is_move_assignable_v<U> &&
-        !meta::is_trivially_move_assignable_v<U>) {
+        meta::is_convertible<U, T>&& meta::is_move_assignable<U> &&
+        !meta::is_trivially_move_assignable<U>) {
         this->assign(meta::forward<U>(in_value));
         return *this;
     }
 
     template <typename U>
     auto operator=(U&& in_value)
-        -> OptionalValueStorage<T>& requires(meta::is_convertible_v<U, T>) {
+        -> OptionalValueStorage<T>& requires(meta::is_convertible<U, T>) {
         if (this->has_value()) {
             this->value = meta::forward<U>(in_value);
             this->has_some = true;
@@ -230,13 +228,13 @@ struct OptionalValueStorage {
 
 template <typename T>
 struct OptionalReferenceStorage {
-    using Value = meta::remove_reference_t<T>;
+    using Value = meta::RemoveReference<T>;
     Value* p_value = nullptr;
   public:
     // TODO: Handle non-trivial constructors and assignment operators.
 
     constexpr OptionalReferenceStorage(Value& in_value) requires(
-        meta::is_default_constructible<Value>::value)
+        meta::is_default_constructible<Value>)
         : p_value(cat::addressof(in_value)){};
 
     constexpr OptionalReferenceStorage(Value const& in_value)
@@ -244,7 +242,7 @@ struct OptionalReferenceStorage {
 
     template <typename U>
     constexpr OptionalReferenceStorage(U&& in_value) requires(
-        !meta::is_same_v<typeof(U), cat::detail::None>
+        !meta::is_same<typeof(U), cat::detail::None>
         // && meta::is_move_constructible_v<U>
         )
         : p_value(cat::addressof(meta::forward<U>(in_value))){};
@@ -290,9 +288,10 @@ struct OptionalReferenceStorage {
 
 template <typename T>
 class Optional {
-    using Storage = meta::conditional_t<meta::is_reference_v<T>,
-                                        OptionalReferenceStorage<T>,
-                                        OptionalValueStorage<T>>;
+    using Storage =
+        meta::Conditional<meta::is_reference<T>, OptionalReferenceStorage<T>,
+                          OptionalValueStorage<T>>;
+    using Value = typename Storage::Value;
     Storage storage;
   public:
     // Default-initialization is not supported.
@@ -305,8 +304,7 @@ class Optional {
     // If this is a reference storage, allow consuming a non-`const` reference.
     template <typename U>
     Optional(U input) requires(
-        meta::is_reference_v<T>&&
-            meta::is_default_constructible<typename Storage::Value>::value)
+        meta::is_reference<T>&& meta::is_default_constructible<Value>)
         : storage(input){};
 
     // TODO: If this is a reference storage, allow moving a value.
@@ -322,17 +320,15 @@ class Optional {
 
     // A reference type cannot be copy-constructed, but other types can.
     template <typename U>
-    Optional(U const& input) requires(
-        !meta::is_reference_v<T> &&
-        meta::is_convertible_v<U, typename Storage::Value> &&
-        meta::is_copy_constructible_v<typename Storage::Value>)
+    Optional(U const& input) requires(!meta::is_reference<T> &&
+                                      meta::is_convertible<U, Value> &&
+                                      meta::is_copy_constructible<Value>)
         : storage(input){};
 
     // Reference types cannot be moved, but other types can.
     template <typename U>
-    Optional(U&& input) requires(
-        !meta::is_reference_v<T> &&
-        meta::is_convertible_v<U, typename Storage::Value>)
+    Optional(U&& input) requires(!meta::is_reference<T> &&
+                                 meta::is_convertible<U, Value>)
         : storage(meta::forward<U>(input)){};
 
     // Consuming `none` is forwarded to `storage`.
@@ -371,7 +367,7 @@ class Optional {
     // Get the held `value` unconditionally. If `has_value()` is `false`, this
     // data is undefined. If this method is used in `-O0`, it will panic in that
     // case, unless used in a `constexpr` context.
-    constexpr auto value() -> typename Storage::Value& {
+    constexpr auto value() -> Value& {
         if (meta::is_constant_evaluated()) {
             return this->storage.get_value();
         }
@@ -391,7 +387,7 @@ value!\n");
 
     // Get the value held by a non-`const`-qualified `Optional`, or a fallback
     // value if it does not hold a value.
-    constexpr auto value_or(typename Storage::Value const fallback) & -> T {
+    constexpr auto value_or(Value const fallback) & -> T {
         if (this->storage.has_value()) {
             return this->storage.get_value();
         }
@@ -400,8 +396,7 @@ value!\n");
 
     // Get the value held by a `const`-qualified `Optional`, or a fallback
     // value if it does not hold a value.
-    constexpr auto value_or(
-        typename Storage::Value const fallback) const& -> T {
+    constexpr auto value_or(Value const fallback) const& -> T {
         if (this->storage.has_value()) {
             return this->storage.get_value();
         }
@@ -410,7 +405,7 @@ value!\n");
 
     // Get the value held by a non-`const`-qualified `Optional`, or a fallback
     // value if it does not hold a value.
-    constexpr auto value_or(typename Storage::Value&& fallback) && -> T&& {
+    constexpr auto value_or(Value&& fallback) && -> T&& {
         if (this->storage.has_value()) {
             return cat::move(this->storage.get_value());
         }
@@ -419,7 +414,7 @@ value!\n");
 
     // Get the value held by a `const`-qualified `Optional`, or a fallback
     // value if it does not hold a value.
-    constexpr auto value_or(typename Storage::Value&& fallback) const&& -> T&& {
+    constexpr auto value_or(Value&& fallback) const&& -> T&& {
         if (this->storage.has_value()) {
             return cat::move(this->storage.get_value());
         }
@@ -571,26 +566,26 @@ class Optional<Predicate<T, predicate, sentinel>> {
 
     template <typename U = T>
     constexpr Optional(U& value) requires(!predicate(sentinel) &&
-                                          (meta::is_same_v<U, T> ||
-                                           meta::is_convertible_v<U, T>))
+                                          (meta::is_same<U, T> ||
+                                           meta::is_convertible<U, T>))
         : storage(value){};
 
     template <typename U = T>
     constexpr Optional(U const& value) requires(!predicate(sentinel) &&
-                                                (meta::is_same_v<U, T> ||
-                                                 meta::is_convertible_v<U, T>))
+                                                (meta::is_same<U, T> ||
+                                                 meta::is_convertible<U, T>))
         : storage(value){};
 
     template <typename U = T>
     constexpr Optional(U const&& value) requires(!predicate(sentinel) &&
-                                                 (meta::is_same_v<U, T> ||
-                                                  meta::is_convertible_v<U, T>))
+                                                 (meta::is_same<U, T> ||
+                                                  meta::is_convertible<U, T>))
         : storage(cat::move(value)){};
 
     template <typename U = T>
     constexpr Optional(U&& value) requires(!predicate(sentinel) &&
-                                           (meta::is_same_v<U, T> ||
-                                            meta::is_convertible_v<U, T>))
+                                           (meta::is_same<U, T> ||
+                                            meta::is_convertible<U, T>))
         : storage(meta::forward<U>(value)){};
 
     constexpr Optional(cat::detail::None) : storage(sentinel){};
