@@ -1,10 +1,25 @@
 #include <memory>
 #include <optional>
 
+#include "result"
+
 struct Movable {
     Movable() = default;
     Movable(Movable&&) = default;
     auto operator=(Movable&&){};
+};
+
+int4 global_int = 0;
+struct NonTrivial {
+    int4 data;
+    NonTrivial() {
+        this->data = 1;
+        global_int++;
+    }
+    ~NonTrivial() {
+        this->data = 0;
+        global_int++;
+    }
 };
 
 void meow() {
@@ -141,6 +156,11 @@ void meow() {
 
     Movable mov;
     Optional<Movable> maybe_movs(cat::move(mov));
+
+    // Non-trivial constructor and destructor.
+    Optional<NonTrivial> nontrivial = NonTrivial();
+    Result(global_int == 2).or_panic();
+    Result(nontrivial.value().data == 1).or_panic();
 
     cat::exit();
 };
