@@ -1,4 +1,5 @@
 #include <memory>
+#include<utility>
 #include <optional>
 
 struct Movable {
@@ -12,6 +13,14 @@ struct NonTrivial {
     int4 data;
     NonTrivial() {
         this->data = 1;
+        global_int++;
+    }
+	// This should never be getting called.
+    NonTrivial(NonTrivial const& in) : data(in.data + 1){
+        global_int++;
+    }
+	// This should never be getting called.
+    NonTrivial(NonTrivial&& in) : data(cat::move(in.data) + 1){
         global_int++;
     }
     ~NonTrivial() {
