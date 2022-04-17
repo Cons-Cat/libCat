@@ -49,22 +49,16 @@ struct OptionalValueStorage {
 
     // Enable copy and move constructors iff `Optionalvaluestorage` supports
     // them.
+
+    // If `T` is trivially copy-constructible, use this simple copy constructor.
     constexpr OptionalValueStorage(T const& in_value) requires(
-        meta::is_copy_constructible_v<T>)
+        meta::is_trivially_copy_constructible_v<T>)
         : value(in_value), has_some(true){};
-    constexpr OptionalValueStorage(T const& in_value) = delete;
-    constexpr OptionalValueStorage(T&& in_value) requires(
-        meta::is_move_constructible_v<T>)
-        : value(cat::move(in_value)), has_some(true){};
-    constexpr OptionalValueStorage(T&& in_value) = delete;
 
-    // If other destructors are not conditionally specialized by their
-    // `requires`, they should be `default` or deleted.
-    constexpr ~OptionalValueStorage() = default;
-
-    // If `T` is not trivially copy constructible, then manually construct it
+    // If `T` is not trivially copy-constructible, then manually construct it
     // in-place.
     constexpr OptionalValueStorage(T const& in_value) requires(
+        meta::is_copy_constructible_v<T> &&
         !meta::is_trivially_copy_constructible_v<T>) {
         if (in_value.has_value()) {
             this->construct(in_value.get_value());
@@ -73,17 +67,31 @@ struct OptionalValueStorage {
         }
     }
 
-    // If `T` is not trivially move constructible, then manually invoke
+    // If `T` is not copy-constructible, delete this copy constructor.
+    constexpr OptionalValueStorage(T const& in_value) requires(
+        !meta::is_copy_constructible_v<T>) = delete;
+
+    // If `T` is trivially move-constructible, use this simple move constructor.
+    constexpr OptionalValueStorage(T&& in_value) requires(
+        meta::is_trivially_move_constructible_v<T>)
+        : value(meta::forward<T>(in_value)), has_some(true){};
+
+    // If `T` is not trivially move-constructible, then manually invoke
     // `cat::move` on it.
     OptionalValueStorage(T&& in_value) requires(
         meta::is_move_constructible_v<T> &&
         !meta::is_trivially_move_constructible_v<T>) {
-        if (in_value.has_value()) {
-            this->construct(cat::move(in_value.get_value()));
-        } else {
-            this->has_some = false;
-        }
+        this->construct(meta::forward<T>(in_value));
+        this->has_some = true;
     }
+
+    // If `T` is not move-constructible, delete this move constructor.
+    constexpr OptionalValueStorage(T&& in_value) requires(
+        !meta::is_move_constructible_v<T>) = delete;
+
+    // If other destructors are not conditionally specialized by their
+    // `requires`, they should be `default` or deleted.
+    constexpr ~OptionalValueStorage() = default;
 
     // If `T` is not trivially destructible, then manually invoke its
     // destructor.
@@ -92,19 +100,10 @@ struct OptionalValueStorage {
         if constexpr (requires { this->value.~T(); }) {
             if (this->has_some) {
                 this->value.~T();
+                this->has_some = false;
             }
         }
     }
-
-    // TODO: Handle non-trivial `U`.
-
-    // If a `OptionalValueStorage` consumes a `T` or a type that is convertible
-    // to `T`, it should be constructed. template <typename U> constexpr
-    // OptionalValueStorage(U in_value) requires(
-    //     !meta::is_move_constructible_v<T> && meta::is_convertible_v<U, T>) {
-    //     this->value = in_value;
-    //     this->has_some = true;
-    // }
 
     constexpr OptionalValueStorage(cat::detail::None){};
 
@@ -116,7 +115,6 @@ struct OptionalValueStorage {
         this->has_some = true;
         return *this;
     }
-    auto operator=(T const& in_value) -> OptionalValueStorage& = delete;
 
     // If `T` is not trivially copy assignable, then manually construct it
     // in-place.
@@ -126,6 +124,8 @@ struct OptionalValueStorage {
         this->assign(in_value);
         return *this;
     }
+
+    auto operator=(T const& in_value) -> OptionalValueStorage& = delete;
 
     // If a `OptionalValueStorage` is assigned to this which wraps a type that
     // can be converted, then convert that `OptionalValueStorage` to this type
@@ -137,12 +137,14 @@ struct OptionalValueStorage {
             if (in_value.has_value()) {
                 this->value = *in_value;
             } else {
+                // If the incoming `Optional` is empty, then empty this one.
                 this->value.~T();
                 this->has_some = false;
             }
-        }
-        if (in_value.has_value()) {
-            this->construct(*in_value);
+        } else {
+            if (in_value.has_value()) {
+                this->construct(*in_value);
+            }
         }
         return *this;
     }
@@ -207,9 +209,7 @@ struct OptionalValueStorage {
     // TODO: Factor into `cat::construct_at()`.
     template <typename... Args>
     void construct(Args&&... args) {
-        // TODO: Get this working.
-        // new (cat::address_of(this->value)) T(meta::forward<Args>(args)...);
-        this->value = T(meta::forward<Args>(args)...);
+        new (cat::addressof(this->value)) T(meta::forward<Args>(args)...);
         this->has_some = true;
     }
 
@@ -242,11 +242,12 @@ struct OptionalReferenceStorage {
     constexpr OptionalReferenceStorage(Value const& in_value)
         : p_value(cat::addressof(in_value)){};
 
-    // template <typename U>
-    // constexpr OptionalReferenceStorage(U&& in_value) requires(
-    //     !meta::is_same_v<U, cat::detail::None> &&
-    //     meta::is_move_constructible_v<U>)
-    //     : p_value(cat::address_of(cat::move(in_value))){};
+    template <typename U>
+    constexpr OptionalReferenceStorage(U&& in_value) requires(
+        !meta::is_same_v<typeof(U), cat::detail::None>
+        // && meta::is_move_constructible_v<U>
+        )
+        : p_value(cat::addressof(meta::forward<U>(in_value))){};
 
     constexpr OptionalReferenceStorage(cat::detail::None) : p_value(nullptr){};
 
@@ -299,27 +300,42 @@ class Optional {
 
     // Forward all constructors to `storage`.
 
+    // TODO: Converting reference constructors.
+
     // If this is a reference storage, allow consuming a non-`const` reference.
     template <typename U>
     Optional(U input) requires(
-        meta::is_same_v<Storage, OptionalReferenceStorage<T>>&&
+        meta::is_reference_v<T>&&
             meta::is_default_constructible<typename Storage::Value>::value)
         : storage(input){};
 
-    // A reference type cannot be copy-constructed.
+    // TODO: If this is a reference storage, allow moving a value.
+    // template <typename U>
+    // Optional(U&& input) requires(
+    //     meta::is_same_v<Storage, OptionalReferenceStorage<T>>&&
+    //         meta::is_reference_v<T>&&
+    //             // !meta::is_same_v<typeof(U), cat::detail::None> &&
+    //             // meta::is_move_constructible_v<U>&&
+    //             meta::is_default_constructible<typename
+    //             Storage::Value>::value)
+    //     : storage(meta::forward<U>(input)){};
+
+    // A reference type cannot be copy-constructed, but other types can.
     template <typename U>
     Optional(U const& input) requires(
-        !meta::is_same_v<Storage, OptionalReferenceStorage<T>> &&
+        !meta::is_reference_v<T> &&
+        meta::is_convertible_v<U, typename Storage::Value> &&
         meta::is_copy_constructible_v<typename Storage::Value>)
         : storage(input){};
 
-    // Reference types cannot be moved.
+    // Reference types cannot be moved, but other types can.
     template <typename U>
     Optional(U&& input) requires(
         !meta::is_reference_v<T> &&
         meta::is_convertible_v<U, typename Storage::Value>)
         : storage(meta::forward<U>(input)){};
 
+    // Consuming `none` is forwarded to `storage`.
     constexpr Optional(cat::detail::None) : storage(none){};
 
     // Forward all assignment operators to `storage`.
