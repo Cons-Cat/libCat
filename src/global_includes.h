@@ -11,6 +11,26 @@ extern "C" [[gnu::used]] void meow(
 #endif
 );
 
+/* libCat provides a `_` variable that consumes a function's output, but cannot
+ * be assigned to any variable. */
+namespace cat::detail {
+
+struct [[maybe_unused]] Unused {
+    // Any type can be converted into an `Unused`, except for `Result`.
+    template <typename T>
+    constexpr void operator=(T const&)  {
+    };
+    // `unused` cannot be assigned to any variable.
+    operator auto() = delete;
+};
+
+}  // namespace cat::detail
+
+// `_` can consume any value to explicitly disregard a ``[[nodiscard]]``
+// attribute from a function with side effects. Consuming a `Result` value is
+// not possible.
+[[maybe_unused]] inline cat::detail::Unused _;
+
 template <typename T>
 class Result;
 
@@ -33,27 +53,6 @@ using ssize = signed long long;
 /* libCat includes `<simd>` globally, because vectors are considered primitive
  * types. */
 #include <simd>
-
-/* libCat provides a `_` variable that consumes a function's output, but cannot
- * be assigned to any variable. */
-namespace cat::detail {
-
-struct [[maybe_unused]] Unused {
-    // Any type can be converted into an `Unused`, except for `Result`.
-    template <typename T>
-    constexpr void operator=(T const&) requires(
-        !meta::is_specialization<T, Result>::value) {
-    };
-    // `unused` cannot be assigned to any variable.
-    operator auto() = delete;
-};
-
-}  // namespace cat::detail
-
-// `_` can consume any value to explicitly disregard a ``[[nodiscard]]``
-// attribute from a function with side effects. Consuming a `Result` value is
-// not possible.
-[[maybe_unused]] inline cat::detail::Unused _;
 
 // Placement `new`.
 [[nodiscard]] inline auto operator new(unsigned long, void* p_address)

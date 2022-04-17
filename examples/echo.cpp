@@ -8,9 +8,9 @@ void meow(int argc, char* p_argv[]) {
             length++;
         }
         p_argv[i][length] = ' ';
-        nix::write(1, p_argv[i], length + 1).discard_result();
+        _ = nix::write(1, p_argv[i], length + 1);
     }
 
-    nix::write(1, "\n", 1).discard_result();
+    _ = nix::write(1, "\n", 1);
     cat::exit();
 }

@@ -1,6 +1,6 @@
 #include <string>
 
 void meow() {
-    cat::print("Hello, world!\n").discard_result();
+    _ = cat::print("Hello, world!\n");
     cat::exit();
 }

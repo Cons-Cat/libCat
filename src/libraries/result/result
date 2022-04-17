@@ -314,9 +314,6 @@ class [[nodiscard]] Result {
         }
     }
 
-    // This method does not yield any value. It is useful for impure functions.
-    constexpr void discard_result(){};
-
     // TODO: Pass in the exit code and error message with overloads.
     auto or_panic() -> T {
         if (is_okay) [[likely]] {
@@ -341,7 +338,7 @@ class [[nodiscard]] Result {
                 return;
             }
         }
-        cat::print_line(error_message).discard_result();
+        _ = cat::print_line(error_message);
         cat::exit(1);
         __builtin_unreachable();  // This prevents a build warning.
     }
@@ -366,7 +363,7 @@ class [[nodiscard]] Result {
         } else {
 #ifndef __OPTIMIZE__
             if (!this->has_value()) [[unlikely]] {
-                cat::print_line(error_message).discard_result();
+                _ = cat::print_line(error_message);
                 cat::exit(1);
             }
 #endif
