@@ -31,14 +31,14 @@ namespace std {
 // belong to the `<utility>` library.
 
 template <typename T>
-constexpr auto forward(typename meta::remove_reference<T>::type& input) -> T&&;
+constexpr auto forward(meta::RemoveReference<T>& input) -> T&&;
 
 template <typename T>
-constexpr auto forward(typename meta::remove_reference<T>::type&& input)
-    -> T&& requires(!meta::is_lvalue_reference<T>::value);
+constexpr auto forward(typename meta::RemoveReferenceTrait<T>::type&& input)
+    -> T&& requires(!meta::is_lvalue_reference<T>);
 
 template <typename T>
-constexpr auto move(T&& input) -> typename meta::remove_reference<T>::type&&;
+constexpr auto move(T&& input) -> meta::RemoveReference<T>&&;
 
 // NOLINTEND(readability-redundant-declaration)
 

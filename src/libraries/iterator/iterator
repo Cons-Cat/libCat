@@ -52,7 +52,7 @@ concept HasDistanceTo = requires(T const t) {
 
 template <typename T>
 concept HasEqualTo = requires(T const it) {
-    { it.equal_to(it) } -> meta::convertible_to<bool>;  // -> boolean;
+    { it.equal_to(it) } -> meta::ConvertibleTo<bool>;  // -> boolean;
 };
 
 template <typename>
@@ -73,7 +73,7 @@ struct InferValueType {};
 template <typename T>
 struct InferValueType<T> {
     static const T& it;
-    using type = meta::remove_cvref_t<decltype(*it)>;
+    using type = meta::RemoveCvref<decltype(*it)>;
 };
 
 template <typename T>
@@ -99,7 +99,7 @@ template <typename T>
 concept HasSinglePass = bool(T::single_pass_iterator);
 
 template <typename Iter, typename T>
-concept HasSentinel = meta::same_as<T, typename T::sentinel_type>;
+concept HasSentinel = meta::SameAs<T, typename T::sentinel_type>;
 
 }  // namespace cat::detail
 
@@ -107,8 +107,7 @@ template <typename T>
 using InferDifferenceType = typename cat::detail::InferDifferenceType<T>::type;
 
 template <typename Arg, typename Iter>
-concept DifferenceTypeArg =
-    meta::convertible_to<Arg, InferDifferenceType<Iter>>;
+concept DifferenceTypeArg = meta::ConvertibleTo<Arg, InferDifferenceType<Iter>>;
 
 template <typename T>
 using InferValueType_t = typename cat::detail::InferValueType<T>::type::type;
@@ -134,7 +133,7 @@ struct IteratorFacade {
 
     constexpr auto operator->() const {
         decltype(auto) reference = **this;
-        if constexpr (meta::is_reference_v<decltype(reference)>) {
+        if constexpr (meta::is_reference<decltype(reference)>) {
             // `ref` is a true reference, and we're safe to take its address
             return cat::addressof(reference);
         } else {
@@ -248,26 +247,26 @@ struct InputIteratorTag {};
 struct ForwardIteratorTag {};
 
 template <typename T>
-requires meta::is_base_of_v<IteratorFacade<T>, T>
-struct iterator_traits {
+requires meta::is_base_of<IteratorFacade<T>, T>
+struct IteratorTraits {
     static T const& it;
     using Value = typename InferValueType_t<T>::type;
     using Reference = decltype(*it);
     using Pointer = decltype(it.operator->());
     using Difference = InferDifferenceType<T>;
-    using Category = meta::conditional_t<
+    using Category = meta::Conditional<
         // If this can be a random access iterator, it always will be.
         cat::detail::HasRandomAccess<T>, RandomAccessIteratorTag,
-        meta::conditional_t<
+        meta::Conditional<
             // If this has a `++` and a `--` operator, this is a bidirectional
             // iterator.
             cat::detail::HasBidirectional<T>, BidirectionalIteratorTag,
-            meta::conditional_t<cat::detail::HasSinglePass<T>,
-                                // If it is single-pass, this is a forward
-                                // iterator.
-                                InputIteratorTag,
-                                // Default to a forward iterator.
-                                ForwardIteratorTag>>>;
+            meta::Conditional<cat::detail::HasSinglePass<T>,
+                              // If it is single-pass, this is a forward
+                              // iterator.
+                              InputIteratorTag,
+                              // Default to a forward iterator.
+                              ForwardIteratorTag>>>;
     // using IteratorConcept = Category;
 };
 

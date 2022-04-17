@@ -144,7 +144,7 @@ struct AllocatorFacade {
 
     // Get a reference to the data in a memory handle.
     auto get(auto& memory) -> auto& {
-        using T = typename meta::remove_cvref_t<decltype(memory)>;
+        using T = typename meta::RemoveCvref<decltype(memory)>;
         using U = typename T::Type;
         if constexpr (requires { memory.is_on_stack; }) {
             // Get small-size optimized data:
@@ -159,7 +159,7 @@ struct AllocatorFacade {
     }
 
     auto get(auto const& memory) -> auto const& {
-        using T = typename meta::remove_cvref_t<decltype(memory)>;
+        using T = typename meta::RemoveCvref<decltype(memory)>;
         using U = typename T::Type;
         if constexpr (requires { memory.is_on_stack; }) {
             // Get small-size optimized data:

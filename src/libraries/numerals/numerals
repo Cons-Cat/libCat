@@ -295,11 +295,11 @@ struct intptr {  // NOLINT
         this->value = cat::move(input).value;
     }
 
-    constexpr intptr(meta::integral auto const& input) {
+    constexpr intptr(meta::Integral auto const& input) {
         this->value = input;
     }
 
-    template <meta::integral T>
+    template <meta::Integral T>
     constexpr intptr(T&& input) {  // NOLINT
         this->value = meta::forward<T>(input);
     }
@@ -308,7 +308,7 @@ struct intptr {  // NOLINT
         this->value = meta::bit_cast<ssize>(p_input);
     }
 
-    template <meta::integral T>
+    template <meta::Integral T>
     constexpr operator T() {
         return static_cast<T>(this->value);
     }
@@ -316,33 +316,33 @@ struct intptr {  // NOLINT
     constexpr auto operator=(intptr const& from) -> intptr& = default;
     constexpr auto operator=(intptr&& from) -> intptr& = default;
 
-    constexpr auto operator=(meta::integral auto from) -> intptr& {
+    constexpr auto operator=(meta::Integral auto from) -> intptr& {
         this->value = static_cast<ssize>(from);
         return *this;
     }
 
-    constexpr auto operator==(meta::integral auto from) -> bool1 {
+    constexpr auto operator==(meta::Integral auto from) -> bool1 {
         return this->value == static_cast<ssize>(from);
     }
 
-    constexpr auto operator>(meta::integral auto from) -> bool1 {
+    constexpr auto operator>(meta::Integral auto from) -> bool1 {
         return this->value > static_cast<ssize>(from);
     }
-    constexpr auto operator>=(meta::integral auto from) -> bool1 {
+    constexpr auto operator>=(meta::Integral auto from) -> bool1 {
         return this->value >= static_cast<ssize>(from);
     }
 
-    constexpr auto operator<(meta::integral auto from) -> bool1 {
+    constexpr auto operator<(meta::Integral auto from) -> bool1 {
         return this->value < static_cast<ssize>(from);
     }
-    constexpr auto operator<=(meta::integral auto from) -> bool1 {
+    constexpr auto operator<=(meta::Integral auto from) -> bool1 {
         return this->value <= static_cast<ssize>(from);
     }
 
-    constexpr auto operator+(meta::integral auto from) -> intptr {
+    constexpr auto operator+(meta::Integral auto from) -> intptr {
         return this->value + static_cast<ssize>(from);
     }
-    constexpr auto operator+=(meta::integral auto from) -> intptr& {
+    constexpr auto operator+=(meta::Integral auto from) -> intptr& {
         this->value = this->value + static_cast<ssize>(from);
         return *this;
     }
@@ -354,10 +354,10 @@ struct intptr {  // NOLINT
         return this->value++;
     }
 
-    constexpr auto operator-(meta::integral auto from) -> intptr {
+    constexpr auto operator-(meta::Integral auto from) -> intptr {
         return this->value - static_cast<ssize>(from);
     }
-    constexpr auto operator-=(meta::integral auto from) -> intptr& {
+    constexpr auto operator-=(meta::Integral auto from) -> intptr& {
         this->value = this->value - static_cast<ssize>(from);
         return *this;
     }
@@ -369,58 +369,58 @@ struct intptr {  // NOLINT
         return value--;
     }
 
-    constexpr auto operator*(meta::integral auto from) -> intptr {
+    constexpr auto operator*(meta::Integral auto from) -> intptr {
         return this->value * static_cast<ssize>(from);
     }
-    constexpr auto operator*=(meta::integral auto from) -> intptr& {
+    constexpr auto operator*=(meta::Integral auto from) -> intptr& {
         this->value = this->value * static_cast<ssize>(from);
         return *this;
     }
 
-    constexpr auto operator/(meta::integral auto from) -> intptr {
+    constexpr auto operator/(meta::Integral auto from) -> intptr {
         return this->value / static_cast<ssize>(from);
     }
-    constexpr auto operator/=(meta::integral auto from) -> intptr& {
+    constexpr auto operator/=(meta::Integral auto from) -> intptr& {
         this->value = this->value / static_cast<ssize>(from);
         return *this;
     }
 
-    constexpr auto operator%(meta::integral auto from) -> intptr {
+    constexpr auto operator%(meta::Integral auto from) -> intptr {
         return this->value % static_cast<ssize>(from);
     }
-    constexpr auto operator%=(meta::integral auto from) -> intptr& {
+    constexpr auto operator%=(meta::Integral auto from) -> intptr& {
         this->value = this->value % static_cast<ssize>(from);
         return *this;
     }
 
-    constexpr auto operator&(meta::integral auto from) -> intptr {
+    constexpr auto operator&(meta::Integral auto from) -> intptr {
         return this->value & static_cast<ssize>(from);
     }
-    constexpr auto operator&=(meta::integral auto from) -> intptr& {
+    constexpr auto operator&=(meta::Integral auto from) -> intptr& {
         this->value = this->value & static_cast<ssize>(from);
         return *this;
     }
 
-    constexpr auto operator|(meta::integral auto from) -> intptr {
+    constexpr auto operator|(meta::Integral auto from) -> intptr {
         return this->value | static_cast<ssize>(from);
     }
-    constexpr auto operator|=(meta::integral auto from) -> intptr& {
+    constexpr auto operator|=(meta::Integral auto from) -> intptr& {
         this->value = this->value | static_cast<ssize>(from);
         return *this;
     }
 
-    constexpr auto operator<<(meta::integral auto from) -> intptr {
+    constexpr auto operator<<(meta::Integral auto from) -> intptr {
         return this->value << static_cast<ssize>(from);
     }
-    constexpr auto operator<<=(meta::integral auto from) -> intptr& {
+    constexpr auto operator<<=(meta::Integral auto from) -> intptr& {
         this->value = this->value << static_cast<ssize>(from);
         return *this;
     }
 
-    constexpr auto operator>>(meta::integral auto from) -> intptr {
+    constexpr auto operator>>(meta::Integral auto from) -> intptr {
         return this->value >> static_cast<ssize>(from);
     }
-    constexpr auto operator>>=(meta::integral auto from) -> intptr& {
+    constexpr auto operator>>=(meta::Integral auto from) -> intptr& {
         this->value = this->value >> static_cast<ssize>(from);
         return *this;
     }

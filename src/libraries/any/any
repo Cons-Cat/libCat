@@ -32,7 +32,7 @@ struct Any {
     };
 
     template <typename T>
-    operator T() const requires(!meta::is_same_v<void, T>) {
+    operator T() const requires(!meta::is_same<void, T>) {
         return meta::bit_cast<T>(this->value);
     }
 };

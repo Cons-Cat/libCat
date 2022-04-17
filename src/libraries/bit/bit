@@ -11,7 +11,7 @@ constexpr bool1 is_big_endian = !is_little_endian;
 
 namespace cat {
 
-auto invert_endianess(meta::integral auto value) {
+auto invert_endianess(meta::Integral auto value) {
     if constexpr (sizeof(value) == 1) {
         return __builtin_bswap8(value);
     }
@@ -33,7 +33,7 @@ struct Byte {  // NOLINT
     unsigned char value;
 
     constexpr Byte() = default;
-    
+
     constexpr Byte(auto input) requires(sizeof(input) == 1) {
         this->value = input;
     }
@@ -53,34 +53,34 @@ struct Byte {  // NOLINT
         return meta::bit_cast<T>(value);
     }
 
-    constexpr auto operator&(meta::integral auto from) -> Byte {
+    constexpr auto operator&(meta::Integral auto from) -> Byte {
         return this->value & from;
     }
-    constexpr auto operator&=(meta::integral auto from) -> Byte& {
+    constexpr auto operator&=(meta::Integral auto from) -> Byte& {
         this->value = this->value & from;
         return *this;
     }
 
-    constexpr auto operator|(meta::integral auto from) -> Byte {
+    constexpr auto operator|(meta::Integral auto from) -> Byte {
         return this->value | from;
     }
-    constexpr auto operator|=(meta::integral auto from) -> Byte& {
+    constexpr auto operator|=(meta::Integral auto from) -> Byte& {
         this->value = this->value | from;
         return *this;
     }
 
-    constexpr auto operator<<(meta::integral auto from) -> Byte {
+    constexpr auto operator<<(meta::Integral auto from) -> Byte {
         return this->value << from;
     }
-    constexpr auto operator<<=(meta::integral auto from) -> Byte& {
+    constexpr auto operator<<=(meta::Integral auto from) -> Byte& {
         this->value = this->value << from;
         return *this;
     }
 
-    constexpr auto operator>>(meta::integral auto from) -> Byte {
+    constexpr auto operator>>(meta::Integral auto from) -> Byte {
         return this->value >> from;
     }
-    constexpr auto operator>>=(meta::integral auto from) -> Byte& {
+    constexpr auto operator>>=(meta::Integral auto from) -> Byte& {
         this->value = this->value >> from;
         return *this;
     }

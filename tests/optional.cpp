@@ -1,6 +1,6 @@
 #include <memory>
-#include<utility>
 #include <optional>
+#include <utility>
 
 struct Movable {
     Movable() = default;
@@ -15,12 +15,12 @@ struct NonTrivial {
         this->data = 1;
         global_int++;
     }
-	// This should never be getting called.
-    NonTrivial(NonTrivial const& in) : data(in.data + 1){
+    // This should never get called. It would make `data` == 3.
+    NonTrivial(NonTrivial const& in) : data(in.data + 2) {
         global_int++;
     }
-	// This should never be getting called.
-    NonTrivial(NonTrivial&& in) : data(cat::move(in.data) + 1){
+    // This gets called once, making `data` == 2.
+    NonTrivial(NonTrivial&& in) : data(in.data + 1) {
         global_int++;
     }
     ~NonTrivial() {
@@ -166,8 +166,8 @@ void meow() {
 
     // Non-trivial constructor and destructor.
     Optional<NonTrivial> nontrivial = NonTrivial();
-    Result(global_int == 2).or_panic();
-    Result(nontrivial.value().data == 1).or_panic();
+    Result(global_int == 3).or_panic();
+    Result(nontrivial.value().data == 2).or_panic();
 
     cat::exit();
 };
