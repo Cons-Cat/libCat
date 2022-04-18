@@ -202,8 +202,8 @@ struct AllocatorFacade {
     // Try to allocate small-size optimized memory guaranteed to be aligned
     // to a boundary. TODO: Work on this after improving `malloca()`.
     template <typename T = void*>
-    auto aligned_alloca(ssize const alignment,
-                        ssize const allocation_size = sizeof(T)) {
+    auto aligned_malloca(ssize const alignment,
+                         ssize const allocation_size = sizeof(T)) {
         return this->meta_allocate<T, true, true, true>(alignment,
                                                         allocation_size);
     }
@@ -293,6 +293,10 @@ struct AllocatorFacade {
             }
         }
     }
+
+    // If the allocator does not provide a `.reset()` method, produce a no-op.
+    void reset() requires(!Derived::reset()) {
+    }
 };
 
 struct PageAllocator : AllocatorFacade<PageAllocator> {
@@ -349,6 +353,73 @@ struct PageAllocator : AllocatorFacade<PageAllocator> {
     template <typename T>
     auto access(PageMemoryHandle<T> const& memory) -> T* {
         return static_cast<T*>(memory.p_storage);
+    }
+};
+
+struct LinearAllocator : AllocatorFacade<LinearAllocator> {
+    template <typename T>
+    struct LinearMemoryHandle : BaseMemoryHandle<T> {
+        ssize allocation_size;
+    };
+    intptr const p_arena_begin;
+    intptr const p_arena_end;
+    intptr p_arena_current = p_arena_begin;
+
+    LinearAllocator(void* const p_address, ssize const arena_size)
+        : p_arena_begin(intptr{p_address} + arena_size),
+          p_arena_end(p_address){};
+
+    // Try to allocate memory and bump the pointer.
+    template <typename T>
+    auto allocate(ssize const allocation_size) -> Result<void*> {
+        intptr p_allocation = p_arena_current - allocation_size;
+        if (p_allocation >= p_arena_end) {
+            p_arena_current = p_allocation;
+            return static_cast<void*>(p_arena_current);
+        }
+        return Failure(1);
+    }
+
+    // In general, memory cannot be deallocated in a linear allocator, so this
+    // function is no-op.
+    auto deallocate(auto const&) -> Result<> {
+        return okay;
+    };
+
+    // Try to allocate memory aligned to some boundary and bump the pointer.
+    template <typename T>
+    auto aligned_allocate(ssize const alignment, ssize const allocation_size)
+        -> Result<void*> {
+        intptr p_allocation =
+            cat::align_down(p_arena_current - allocation_size, alignment);
+        if (p_allocation >= p_arena_end) {
+            p_arena_current = p_allocation;
+            return static_cast<void*>(p_arena_current);
+        }
+        return Failure(1);
+    }
+
+    // In general, memory cannot be deallocated in a linear allocator, so this
+    // function is no-op.
+    auto aligned_deallocate(auto const&) -> Result<> {
+        return okay;
+    };
+
+    // Produce a handle to allocated memory.
+    template <typename T>
+    auto make_handle(auto data, ssize size) -> LinearMemoryHandle<T> {
+        return LinearMemoryHandle<T>{{data}, size};
+    }
+
+    // Access some memory.
+    template <typename T>
+    auto access(LinearMemoryHandle<T> const& memory) -> T* {
+        return static_cast<T*>(memory.p_storage);
+    }
+
+    // Reset the bumped pointer to the beginning of this arena.
+    void reset() {
+        p_arena_current = p_arena_begin;
     }
 };
 
