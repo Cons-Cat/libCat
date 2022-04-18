@@ -105,10 +105,22 @@ constexpr auto operator""_ki(unsigned long long const input) -> long {
     return static_cast<long>(1024 * input);
 }
 
+constexpr auto operator""_ki(long double const input) -> long {
+    return static_cast<long>(1024.f * input);
+}
+
 constexpr auto operator""_mi(unsigned long long const input) -> long {
     return static_cast<long>(1024 * 1024 * input);
 }
 
+constexpr auto operator""_mi(long double const input) -> long {
+    return static_cast<long>(1024.f * 1024.f * input);
+}
+
 constexpr auto operator""_gi(unsigned long long const input) -> long {
     return static_cast<long>(1024 * 1024 * 1024 * input);
+}
+
+constexpr auto operator""_gi(long double const input) -> long {
+    return static_cast<long>(1024.f * 1024.f * 1024.f * 1024.f * input);
 }
