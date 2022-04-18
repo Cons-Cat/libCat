@@ -144,6 +144,7 @@ struct RemoveReferenceTrait<T&&> {
 template <typename T>
 using RemoveReference = typename RemoveReferenceTrait<T>::type;
 
+// TODO: Rename to `CvRef`.
 template <typename T>
 struct RemoveCvrefTrait {
     using type = RemoveCvTrait<RemoveReferenceTrait<T>>;

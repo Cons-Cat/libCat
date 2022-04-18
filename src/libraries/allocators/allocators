@@ -7,6 +7,8 @@
 #include <optional>
 #include <type_traits>
 
+#include "result"
+
 // TODO: Some allocators should be iterable.
 // TODO: Add a random_access concept and a random_access_allocator concept.
 
@@ -29,7 +31,6 @@ struct SmallMemoryHandle {
         T allocator_storage;
         Type stack_storage;
     };
-    // TODO: Make this `const`.
     bool1 is_on_stack;
 
     SmallMemoryHandle(T const& handle)
@@ -42,6 +43,21 @@ struct SmallMemoryHandle {
         if (this->is_on_stack) {
             this->stack_storage.~Type();
         }
+    }
+};
+
+template <typename T>
+struct AlignedMemoryHandle {
+    using Handle = T;
+    using Type = typename T::Type;
+    Type storage;
+    ssize alignment;
+
+    AlignedMemoryHandle(T const& handle, ssize in_alignment)
+        : storage(handle), alignment(in_alignment){};
+
+    ~AlignedMemoryHandle() {
+        this->storage.~Type();
     }
 };
 
@@ -69,80 +85,135 @@ namespace cat {
 // TODO: Support aligned allocations.
 template <typename Derived>
 struct AllocatorFacade {
+  protected:
     constexpr auto self() -> Derived& {
         return static_cast<Derived&>(*this);
     }
 
-    // Try to allocate some memory.
+    template <typename T, bool is_small_optimized, bool is_fail_safe,
+              bool is_aligned>
+    auto meta_allocate(ssize const /* alignment*/,
+                       ssize const allocation_size = sizeof(T)) {
+        // Produce a basic handle for this memory type.
+        using UnderlyingHandle = decltype(this->self().template make_handle<T>(
+            T{}, allocation_size));
+
+        // Get the return value of a user-supplied `.allocate()`. This must be
+        // a container that holds `T*`.
+        // TODO: Support `ssize`.
+        using Allocation =
+            decltype(this->self().template allocate<T>(allocation_size));
+
+        // Produce an appropriate handle type for this allocation.
+        using Handle = meta::Conditional<
+            is_aligned,
+            meta::Conditional<
+                is_small_optimized,
+                // If this is aligned and it is small-optimized:
+                AlignedMemoryHandle<SmallMemoryHandle<UnderlyingHandle>>,
+                // If this is aligned and it is not small-optimized:
+                AlignedMemoryHandle<UnderlyingHandle>>,
+            // If this is not aligned but it is small-optimized:
+            meta::Conditional<is_small_optimized,
+                              // If this is not aligned and it is
+                              // small-optimized:
+                              SmallMemoryHandle<UnderlyingHandle>,
+                              // If this is not aligned and it is not
+                              // small-optimized:
+                              UnderlyingHandle>>;
+
+        // Initialize either an `Optional` or a `Result` with an empty value.
+        Allocation maybe_memory = meta::Conditional<
+            meta::IsSpecializationTrait<Allocation, Optional>::value,
+            cat::detail::None, Failure>{};
+
+        if constexpr (!is_aligned) {
+            if constexpr (is_small_optimized) {
+                if (allocation_size < 256) {
+                    // Allocate memory on this stack frame and return it, iff
+                    // that would bex smaller than 256 bytes.
+                    T stack_memory;
+                    return Optional<Handle>(T{});
+                }
+            }
+            maybe_memory = this->self().template allocate<T>(allocation_size);
+        }
+
+        if constexpr (is_fail_safe) {
+            // `allocate()` returns either an `Optional` or a `Result`, both of
+            // which have `.has_value()`.
+            if (!maybe_memory.has_value()) {
+                // Return an empty optional if this failed to allocate.
+                return Optional<Handle>(none);
+            }
+        }
+
+        UnderlyingHandle handle = this->self().template make_handle<T>(
+            maybe_memory.value(), allocation_size);
+
+        // `.access()` produces a pointer to the data, which is constructed
+        // in-place.
+        new (this->self().access(handle)) T();
+
+        if constexpr (is_fail_safe) {
+            return Optional<Handle>(Handle{handle});
+        } else {
+            return Handle{handle};
+        }
+    }
+  public:
+    // Try to allocate some memory with arbitrary alignment.
     template <typename T = cat::Byte>
     auto malloc(ssize const allocation_size = sizeof(T)) {
-        auto maybe_memory = this->self().template allocate<T>(allocation_size);
-        using Handle = decltype(this->self().template make_handle<T>(
-            maybe_memory.value(), allocation_size));
-
-        // `allocate()` returns either an `Optional` or a `Result`, both of
-        // which have `.has_value()`.
-        if (maybe_memory.has_value()) {
-            auto handle = this->self().template make_handle<T>(
-                maybe_memory.value(), allocation_size);
-            // Construct the object in place and return a handle to it.
-            new (this->self().access(handle)) T();
-            return Optional<Handle>(handle);
-        }
-        return Optional<Handle>(none);
+        return this->meta_allocate<T, false, true, false>(1, allocation_size);
     }
 
-    template <typename Handle>
-    auto free(Handle const& memory) -> Result<> {
-        using U = typename Handle::Type;
-
-        // Invoke the destructor.
-        if constexpr (requires { this->get(memory).~U(); }) {
-            this->get(memory).~U();
-        }
-
-        auto result = this->self().deallocate(memory);
-        if (result.has_value()) {
-            return okay;
-        }
-        return Failure(1);
-    };
+    // Try to allocate some memory guaranteed to be aligned to some
+    // boundary.
+    template <typename T = cat::Byte>
+    auto aligned_alloc(ssize const alignment,
+                       ssize const allocation_size = sizeof(T)) {
+        return meta_allocate<T, false, true, true>(alignment, allocation_size);
+    }
 
     // Try to allocate small-size optimized memory.
     template <typename T = void*>
     auto malloca(ssize const allocation_size = sizeof(T)) {
-        using Handle = decltype(this->self().template make_handle<T>(
-            T{}, allocation_size));
-        using SmallHandle = SmallMemoryHandle<Handle>;
-
-        if (allocation_size > 256) {
-            auto maybe_memory = this->malloc<T>(allocation_size);
-            if (maybe_memory.has_value()) {
-                auto handle = this->self().template make_handle<T>(
-                    maybe_memory.value(), allocation_size);
-                new (this->self().access(handle)) T();
-
-                return Optional<SmallHandle>(SmallHandle{handle});
-            }
-            return Optional<SmallHandle>(none);
-        }
-
-        return Optional<SmallHandle>(SmallHandle(T{}));
+        return meta_allocate<T, true, true, false>(allocation_size);
     }
 
-    // Deallocate small-size optimized memory.
-    // TODO: Use an `Optional<void>`.
+    // Invalidate any memory handle, invoking its data's destructor.
     template <typename Handle>
-    auto freea(Handle const& memory) -> Result<> {
-        if (memory.is_on_stack) {
-            using U = typename Handle::Type;
-            this->get(memory).~U();
-            return okay;
+    auto free(Handle const& memory) -> Result<> {
+        using U = typename Handle::Type;
+
+        // If this is a small-size optimized handle:
+        if constexpr (meta::IsSpecializationTrait<Handle,
+                                                  SmallMemoryHandle>::value) {
+            if (memory.is_on_stack) {
+                if constexpr (requires { this->get(memory).~U(); }) {
+                    this->get(memory).~U();
+                }
+                return okay;
+            }
+            // Recurse with the underlying memory handle.
+            return this->free(memory.allocator_storage);
         }
-        return this->free(memory.allocator_storage);
+        // If this is not a small-size optimized handle:
+        else {
+            if constexpr (requires { this->get(memory).~U(); }) {
+                this->get(memory).~U();
+            }
+
+            auto result = this->self().deallocate(memory);
+            if (result.has_value()) {
+                return okay;
+            }
+            return Failure(1);
+        }
     };
 
-    // Get a reference to the data in a memory handle.
+    // Get a reference to the data in any memory handle.
     auto get(auto& memory) -> auto& {
         using T = typename meta::RemoveCvref<decltype(memory)>;
         using U = typename T::Type;
@@ -158,6 +229,7 @@ struct AllocatorFacade {
         }
     }
 
+    // Get a `const` reference to the data in any memory handle.
     auto get(auto const& memory) -> auto const& {
         using T = typename meta::RemoveCvref<decltype(memory)>;
         using U = typename T::Type;
@@ -180,11 +252,11 @@ struct PageAllocator : AllocatorFacade<PageAllocator> {
         ssize allocation_size;
     };
 
-    // Allocate memory in multiples of a page-size. A page is `4_ki` large on
-    // x86-64. If fewer that `4096` bytes are allocated, that amount will be
-    // rounded up to `4096`.
+    // Allocate memory in multiples of a page-size. A page is `4_ki` large
+    // on x86-64. If fewer that `4096` bytes are allocated, that amount will
+    // be rounded up to `4096`.
     template <typename T>
-    auto allocate(ssize const allocation_size = sizeof(T)) -> Result<void*> {
+    auto allocate(ssize const allocation_size) -> Result<void*> {
         return nix::map_memory(0u, allocation_size,
                                nix::MemoryProtectionFlags::read |
                                    nix::MemoryProtectionFlags::write,
