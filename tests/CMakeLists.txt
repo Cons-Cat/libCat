@@ -70,6 +70,12 @@ target_compile_options(test_paging PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_paging PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME PagingMemory COMMAND test_paging)
 
+# This tests if `LinearAllocator` works.
+add_executable(test_linear linear_allocator.cpp)
+target_compile_options(test_linear PRIVATE ${CAT_CXX_FLAGS_TEST})
+target_link_options(test_linear PRIVATE ${CAT_LINK_FLAGS})
+add_test(NAME LinearAllocator COMMAND test_linear)
+
 # This tests if `Thread`s basically work.
 add_executable(test_threads thread.cpp)
 target_compile_options(test_threads PRIVATE ${CAT_CXX_FLAGS_TEST})
