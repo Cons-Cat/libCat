@@ -41,13 +41,13 @@ void meow() {
     Result(cat::abs(intptr{&stack_variable} -
                     intptr{&allocator.get(small_memory)}) < 512)
         .or_panic();
-    // The handle's address should be the same as the data's if it was allocated
-    // on the stack.
+    // The handle's address should be the same as the data's if it was
+    // allocated on the stack.
     int4& intref = *static_cast<int4*>(static_cast<void*>(&small_memory));
     intref = 10;
     Result(allocator.get(small_memory) == 10).or_panic();
 
-    _ = allocator.freea(small_memory);
+    _ = allocator.free(small_memory);
 
     small_memory = allocator.malloca<int4>(1_ki).value();
     // `small_memory` should be in a page, so these addresses are far
@@ -55,7 +55,7 @@ void meow() {
     Result(cat::abs(intptr{&stack_variable} -
                     intptr{&allocator.get(small_memory)}) > 512)
         .or_panic();
-    _ = allocator.freea(small_memory);
+    _ = allocator.free(small_memory);
 
     // Test constructor being called.
     Optional testtype = allocator.malloc<TestType>();
@@ -68,7 +68,7 @@ void meow() {
 
     auto smalltesttype = allocator.malloca<TestType>().value();
     allocator.get(smalltesttype) = TestType{};
-    _ = allocator.freea(smalltesttype);
+    _ = allocator.free(smalltesttype);
 
     cat::exit();
 };
