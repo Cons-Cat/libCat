@@ -321,25 +321,25 @@ struct intptr {  // NOLINT
         return *this;
     }
 
-    constexpr auto operator==(meta::Integral auto from) -> bool1 {
+    constexpr auto operator==(meta::Integral auto from) const -> bool1 {
         return this->value == static_cast<ssize>(from);
     }
 
-    constexpr auto operator>(meta::Integral auto from) -> bool1 {
+    constexpr auto operator>(meta::Integral auto from) const -> bool1 {
         return this->value > static_cast<ssize>(from);
     }
     constexpr auto operator>=(meta::Integral auto from) -> bool1 {
         return this->value >= static_cast<ssize>(from);
     }
 
-    constexpr auto operator<(meta::Integral auto from) -> bool1 {
+    constexpr auto operator<(meta::Integral auto from) const -> bool1 {
         return this->value < static_cast<ssize>(from);
     }
     constexpr auto operator<=(meta::Integral auto from) -> bool1 {
         return this->value <= static_cast<ssize>(from);
     }
 
-    constexpr auto operator+(meta::Integral auto from) -> intptr {
+    constexpr auto operator+(meta::Integral auto from) const -> intptr {
         return this->value + static_cast<ssize>(from);
     }
     constexpr auto operator+=(meta::Integral auto from) -> intptr& {
@@ -354,7 +354,7 @@ struct intptr {  // NOLINT
         return this->value++;
     }
 
-    constexpr auto operator-(meta::Integral auto from) -> intptr {
+    constexpr auto operator-(meta::Integral auto from) const -> intptr {
         return this->value - static_cast<ssize>(from);
     }
     constexpr auto operator-=(meta::Integral auto from) -> intptr& {
@@ -369,7 +369,7 @@ struct intptr {  // NOLINT
         return value--;
     }
 
-    constexpr auto operator*(meta::Integral auto from) -> intptr {
+    constexpr auto operator*(meta::Integral auto from) const -> intptr {
         return this->value * static_cast<ssize>(from);
     }
     constexpr auto operator*=(meta::Integral auto from) -> intptr& {
@@ -377,7 +377,7 @@ struct intptr {  // NOLINT
         return *this;
     }
 
-    constexpr auto operator/(meta::Integral auto from) -> intptr {
+    constexpr auto operator/(meta::Integral auto from) const -> intptr {
         return this->value / static_cast<ssize>(from);
     }
     constexpr auto operator/=(meta::Integral auto from) -> intptr& {
@@ -385,7 +385,7 @@ struct intptr {  // NOLINT
         return *this;
     }
 
-    constexpr auto operator%(meta::Integral auto from) -> intptr {
+    constexpr auto operator%(meta::Integral auto from) const -> intptr {
         return this->value % static_cast<ssize>(from);
     }
     constexpr auto operator%=(meta::Integral auto from) -> intptr& {
@@ -393,7 +393,7 @@ struct intptr {  // NOLINT
         return *this;
     }
 
-    constexpr auto operator&(meta::Integral auto from) -> intptr {
+    constexpr auto operator&(meta::Integral auto from) const -> intptr {
         return this->value & static_cast<ssize>(from);
     }
     constexpr auto operator&=(meta::Integral auto from) -> intptr& {
@@ -401,7 +401,7 @@ struct intptr {  // NOLINT
         return *this;
     }
 
-    constexpr auto operator|(meta::Integral auto from) -> intptr {
+    constexpr auto operator|(meta::Integral auto from) const -> intptr {
         return this->value | static_cast<ssize>(from);
     }
     constexpr auto operator|=(meta::Integral auto from) -> intptr& {
@@ -409,7 +409,7 @@ struct intptr {  // NOLINT
         return *this;
     }
 
-    constexpr auto operator<<(meta::Integral auto from) -> intptr {
+    constexpr auto operator<<(meta::Integral auto from) const -> intptr {
         return this->value << static_cast<ssize>(from);
     }
     constexpr auto operator<<=(meta::Integral auto from) -> intptr& {
@@ -417,7 +417,7 @@ struct intptr {  // NOLINT
         return *this;
     }
 
-    constexpr auto operator>>(meta::Integral auto from) -> intptr {
+    constexpr auto operator>>(meta::Integral auto from) const -> intptr {
         return this->value >> static_cast<ssize>(from);
     }
     constexpr auto operator>>=(meta::Integral auto from) -> intptr& {
@@ -427,6 +427,11 @@ struct intptr {  // NOLINT
 
     template <typename T>
     constexpr operator T*() {
+        return meta::bit_cast<T*>(this->value);
+    }
+
+    template <typename T>
+    constexpr operator T*() const {
         return meta::bit_cast<T*>(this->value);
     }
 };
