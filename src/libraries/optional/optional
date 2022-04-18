@@ -60,11 +60,7 @@ struct OptionalValueStorage {
     constexpr OptionalValueStorage(T const& in_value) requires(
         meta::is_copy_constructible<T> &&
         !meta::is_trivially_copy_constructible<T>) {
-        if (in_value.has_value()) {
-            this->construct(in_value.get_value());
-        } else {
-            this->has_some = false;
-        }
+        this->construct(in_value);
     }
 
     // If `T` is not copy-constructible, delete this copy constructor.
