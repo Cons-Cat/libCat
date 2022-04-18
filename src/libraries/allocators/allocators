@@ -7,8 +7,6 @@
 #include <optional>
 #include <type_traits>
 
-#include "result"
-
 // TODO: Some allocators should be iterable.
 // TODO: Add a random_access concept and a random_access_allocator concept.
 
@@ -23,43 +21,43 @@ struct BaseMemoryHandle {
     };
 };
 
-template <typename T>
-struct SmallMemoryHandle {
-    using Handle = T;
-    using Type = typename T::Type;
-    union {
-        T allocator_storage;
-        Type stack_storage;
-    };
-    bool1 is_on_stack;
+namespace detail {
+    template <typename Handle>
+    struct SmallMemoryHandle {
+        using Type = typename Handle::Type;
+        union {
+            Handle allocator_storage;
+            Type stack_storage;
+        };
+        bool1 is_on_stack;
 
-    SmallMemoryHandle(T const& handle)
-        : allocator_storage(handle), is_on_stack(false){};
+        SmallMemoryHandle(Handle const& handle)
+            : allocator_storage(handle), is_on_stack(false){};
 
-    SmallMemoryHandle(typename T::Type const& value)
-        : stack_storage(value), is_on_stack(true){};
+        SmallMemoryHandle(typename Handle::Type const& value)
+            : stack_storage(value), is_on_stack(true){};
 
-    ~SmallMemoryHandle() {
-        if (this->is_on_stack) {
-            this->stack_storage.~Type();
+        ~SmallMemoryHandle() {
+            if (this->is_on_stack) {
+                this->stack_storage.~Type();
+            }
         }
-    }
-};
+    };
 
-template <typename T>
-struct AlignedMemoryHandle {
-    using Handle = T;
-    using Type = typename T::Type;
-    Type storage;
-    ssize alignment;
+    template <typename Handle>
+    struct AlignedMemoryHandle {
+        using Type = typename Handle::Type;
+        Handle storage;
+        ssize alignment;
 
-    AlignedMemoryHandle(T const& handle, ssize in_alignment)
-        : storage(handle), alignment(in_alignment){};
+        AlignedMemoryHandle(Handle const& handle, ssize in_alignment)
+            : storage(handle), alignment(in_alignment){};
 
-    ~AlignedMemoryHandle() {
-        this->storage.~Type();
-    }
-};
+        ~AlignedMemoryHandle() {
+            this->storage.~Handle();
+        }
+    };
+}  // namespace detail
 
 }  // namespace cat
 
@@ -90,9 +88,10 @@ struct AllocatorFacade {
         return static_cast<Derived&>(*this);
     }
 
+    // TODO: Forward `T` constructor arguments.
     template <typename T, bool is_small_optimized, bool is_fail_safe,
               bool is_aligned>
-    auto meta_allocate(ssize const /* alignment*/,
+    auto meta_allocate(ssize const alignment,
                        ssize const allocation_size = sizeof(T)) {
         // Produce a basic handle for this memory type.
         using UnderlyingHandle = decltype(this->self().template make_handle<T>(
@@ -110,14 +109,15 @@ struct AllocatorFacade {
             meta::Conditional<
                 is_small_optimized,
                 // If this is aligned and it is small-optimized:
-                AlignedMemoryHandle<SmallMemoryHandle<UnderlyingHandle>>,
-                // If this is aligned and it is not small-optimized:
-                AlignedMemoryHandle<UnderlyingHandle>>,
-            // If this is not aligned but it is small-optimized:
+                cat::detail::AlignedMemoryHandle<
+                    cat::detail::SmallMemoryHandle<UnderlyingHandle>>,
+                // If this is aligned but it is not
+                // small-optimized:
+                cat::detail::AlignedMemoryHandle<UnderlyingHandle>>,
             meta::Conditional<is_small_optimized,
-                              // If this is not aligned and it is
+                              // If this is not aligned but it is
                               // small-optimized:
-                              SmallMemoryHandle<UnderlyingHandle>,
+                              cat::detail::SmallMemoryHandle<UnderlyingHandle>,
                               // If this is not aligned and it is not
                               // small-optimized:
                               UnderlyingHandle>>;
@@ -131,12 +131,15 @@ struct AllocatorFacade {
             if constexpr (is_small_optimized) {
                 if (allocation_size < 256) {
                     // Allocate memory on this stack frame and return it, iff
-                    // that would bex smaller than 256 bytes.
+                    // that would be smaller than 256 bytes.
                     T stack_memory;
                     return Optional<Handle>(T{});
                 }
             }
             maybe_memory = this->self().template allocate<T>(allocation_size);
+        } else {
+            maybe_memory = this->self().template aligned_allocate<T>(
+                alignment, allocation_size);
         }
 
         if constexpr (is_fail_safe) {
@@ -151,14 +154,28 @@ struct AllocatorFacade {
         UnderlyingHandle handle = this->self().template make_handle<T>(
             maybe_memory.value(), allocation_size);
 
-        // `.access()` produces a pointer to the data, which is constructed
-        // in-place.
-        new (this->self().access(handle)) T();
+        // TODO: It should be possible to streamline this:
+        if constexpr (is_aligned) {
+            Handle aligned_handle = Handle{handle, alignment};
+            // `.access()` produces a pointer to the data, which is constructed
+            // in-place.
+            new (this->self().access(handle)) T();
 
-        if constexpr (is_fail_safe) {
-            return Optional<Handle>(Handle{handle});
+            if constexpr (is_fail_safe) {
+                return Optional<Handle>(aligned_handle);
+            } else {
+                return aligned_handle;
+            }
         } else {
-            return Handle{handle};
+            // `.access()` produces a pointer to the data, which is constructed
+            // in-place.
+            new (this->self().access(handle)) T();
+
+            if constexpr (is_fail_safe) {
+                return Optional<Handle>(Handle{handle});
+            } else {
+                return Handle{handle};
+            }
         }
     }
   public:
@@ -173,26 +190,36 @@ struct AllocatorFacade {
     template <typename T = cat::Byte>
     auto aligned_alloc(ssize const alignment,
                        ssize const allocation_size = sizeof(T)) {
-        return meta_allocate<T, false, true, true>(alignment, allocation_size);
+        return this->meta_allocate<T, false, true, true>(alignment,
+                                                         allocation_size);
     }
 
     // Try to allocate small-size optimized memory.
     template <typename T = void*>
     auto malloca(ssize const allocation_size = sizeof(T)) {
-        return meta_allocate<T, true, true, false>(allocation_size);
+        return this->meta_allocate<T, true, true, false>(1, allocation_size);
+    }
+
+    // Try to allocate small-size optimized memory guaranteed to be aligned
+    // to a boundary. TODO: Work on this after improving `malloca()`.
+    template <typename T = void*>
+    auto aligned_malloca(ssize const alignment,
+                         ssize const allocation_size = sizeof(T)) {
+        return this->meta_allocate<T, true, true, true>(alignment,
+                                                        allocation_size);
     }
 
     // Invalidate any memory handle, invoking its data's destructor.
     template <typename Handle>
     auto free(Handle const& memory) -> Result<> {
-        using U = typename Handle::Type;
+        using Type = typename Handle::Type;
 
         // If this is a small-size optimized handle:
-        if constexpr (meta::IsSpecializationTrait<Handle,
-                                                  SmallMemoryHandle>::value) {
+        if constexpr (meta::IsSpecializationTrait<
+                          Handle, cat::detail::SmallMemoryHandle>::value) {
             if (memory.is_on_stack) {
-                if constexpr (requires { this->get(memory).~U(); }) {
-                    this->get(memory).~U();
+                if constexpr (requires { this->get(memory).~Type(); }) {
+                    this->get(memory).~Type();
                 }
                 return okay;
             }
@@ -201,47 +228,70 @@ struct AllocatorFacade {
         }
         // If this is not a small-size optimized handle:
         else {
-            if constexpr (requires { this->get(memory).~U(); }) {
-                this->get(memory).~U();
+            if constexpr (requires { this->get(memory).~Type(); }) {
+                this->get(memory).~Type();
             }
 
-            auto result = this->self().deallocate(memory);
-            if (result.has_value()) {
-                return okay;
+            if constexpr (requires { memory.alignment; }) {
+                auto result = this->self().aligned_deallocate(memory.storage);
+                if (result.has_value()) {
+                    return okay;
+                }
+                return Failure(1);
+            } else {
+                auto result = this->self().deallocate(memory);
+                if (result.has_value()) {
+                    return okay;
+                }
+                return Failure(1);
             }
-            return Failure(1);
         }
+        __builtin_unreachable();
     };
 
     // Get a reference to the data in any memory handle.
     auto get(auto& memory) -> auto& {
-        using T = typename meta::RemoveCvref<decltype(memory)>;
-        using U = typename T::Type;
+        using Handle = typename meta::RemoveCvref<decltype(memory)>;
+        using Type = typename Handle::Type;
         if constexpr (requires { memory.is_on_stack; }) {
             // Get small-size optimized data:
             if (memory.is_on_stack) {
                 return memory.stack_storage;
             }
-            return *this->self().template access<U>(memory.allocator_storage);
+            return *this->self().template access<Type>(
+                memory.allocator_storage);
         } else {
             // Get non-small-size optimized data:
-            return *this->self().template access<U>(memory);
+            if constexpr (requires { memory.alignment; }) {
+                // Get aligned data:
+                return *this->self().template access<Type>(memory.storage);
+            } else {
+                // Get not aligned data:
+                return *this->self().template access<Type>(memory);
+            }
         }
     }
 
     // Get a `const` reference to the data in any memory handle.
     auto get(auto const& memory) -> auto const& {
-        using T = typename meta::RemoveCvref<decltype(memory)>;
-        using U = typename T::Type;
+        using Handle = typename meta::RemoveCvref<decltype(memory)>;
+        using Type = typename Handle::Type;
         if constexpr (requires { memory.is_on_stack; }) {
             // Get small-size optimized data:
             if (memory.is_on_stack) {
                 return memory.stack_storage;
             }
-            return *this->self().template access<U>(memory.allocator_storage);
+            return *this->self().template access<Type>(
+                memory.allocator_storage);
         } else {
             // Get non-small-size optimized data:
-            return *this->self().template access<U>(memory);
+            if constexpr (requires { memory.alignment; }) {
+                // Get aligned data:
+                return *this->self().template access<Type>(memory.storage);
+            } else {
+                // Get not aligned data:
+                return *this->self().template access<Type>(memory);
+            }
         }
     }
 };
@@ -271,6 +321,22 @@ struct PageAllocator : AllocatorFacade<PageAllocator> {
 
     // Unmap a handle to page(s) of virtual memory.
     auto deallocate(auto const& memory) -> Result<> {
+        return nix::unmap_memory(memory.p_storage, memory.allocation_size);
+    };
+
+    // Allocate a page(s) of virtual memory that is guaranteed to align to
+    // any power of two, less than `4_ki`.
+    template <typename T>
+    auto aligned_allocate(ssize const alignment, ssize const allocation_size)
+        -> Result<void*> {
+        Result(alignment <= 4_ki).assert();
+        // A normal page allocation already has these semantics.
+        return this->allocate<T>(allocation_size);
+    }
+
+    // Unmap a handle to page(s) of aligned virtual memory.
+    auto aligned_deallocate(auto const& memory) -> Result<> {
+        // There are no special semantics for deallocation aligned memory.
         return nix::unmap_memory(memory.p_storage, memory.allocation_size);
     };
 

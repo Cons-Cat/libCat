@@ -70,5 +70,11 @@ void meow() {
     allocator.get(smalltesttype) = TestType{};
     _ = allocator.free(smalltesttype);
 
+    // Aligned memory allocations.
+    auto aligned_mem = allocator.aligned_alloc<int4>(32, 4).value();
+    allocator.get(aligned_mem) = 10;
+    Result(allocator.get(aligned_mem) == 10).or_panic();
+    _ = allocator.free(aligned_mem);
+
     cat::exit();
 };
