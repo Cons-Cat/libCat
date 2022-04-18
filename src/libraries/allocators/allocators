@@ -80,7 +80,6 @@ concept Allocator = requires(AllocatorT allocator) {
 
 namespace cat {
 
-// TODO: Support aligned allocations.
 template <typename Derived>
 struct AllocatorFacade {
   protected:
@@ -203,8 +202,8 @@ struct AllocatorFacade {
     // Try to allocate small-size optimized memory guaranteed to be aligned
     // to a boundary. TODO: Work on this after improving `malloca()`.
     template <typename T = void*>
-    auto aligned_malloca(ssize const alignment,
-                         ssize const allocation_size = sizeof(T)) {
+    auto aligned_alloca(ssize const alignment,
+                        ssize const allocation_size = sizeof(T)) {
         return this->meta_allocate<T, true, true, true>(alignment,
                                                         allocation_size);
     }

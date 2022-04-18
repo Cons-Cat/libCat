@@ -60,7 +60,6 @@ set(
   ${CAT_SRC}/libraries/simd/implementations/stream_in.tpp
   ${CAT_SRC}/libraries/memory/implementations/copy_memory.cpp
   ${CAT_SRC}/libraries/memory/implementations/copy_memory_small.cpp
-  ${CAT_SRC}/libraries/memory/implementations/is_aligned.cpp
   ${CAT_SRC}/libraries/string/implementations/memcpy.cpp
   ${CAT_SRC}/libraries/string/implementations/compare_strings.cpp
   ${CAT_SRC}/libraries/string/implementations/string_length.tpp
@@ -95,5 +94,8 @@ set(
   ${CAT_SRC}/libraries/utility/implementations/constant_evaluate.tpp
   ${CAT_SRC}/libraries/utility/implementations/ssizeof.tpp
   ${CAT_SRC}/libraries/utility/implementations/bit_cast.tpp
+  ${CAT_SRC}/libraries/bit/implementations/is_aligned.tpp
+  ${CAT_SRC}/libraries/bit/implementations/align_up.tpp
+  ${CAT_SRC}/libraries/bit/implementations/align_down.tpp
   PARENT_SCOPE
 )

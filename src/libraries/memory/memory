@@ -8,9 +8,6 @@ void copy_memory(void const* p_source, void* p_destination, ssize bytes);
 
 void copy_memory_small(void const* p_source, void* p_destination, ssize bytes);
 
-// TODO: Support `volatile`.
-auto is_aligned(intptr const& p_pointer, ssize const alignment) -> bool1;
-
 // `cat::address_of()` should be used instead of a `&` for containers that might
 // hold a generic object, because this will produce correct results even if a
 // `&` prefix operator has been overloaded.

@@ -86,18 +86,19 @@ struct Byte {  // NOLINT
     }
 };
 
+// TODO: Support `volatile` qualified pointers.
 // TODO: Aligned pointer types and alignment casts.
 // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4201.html
 
-// TODO: Support `volatile`.
-constexpr auto align_up(intptr const& value, ssize const alignment) {
-    return (value + (alignment - 1)) & (~(alignment - 1));
-}
+// Returns `true` if `value` is aligned to the `alignment` boundary.
+constexpr auto is_aligned(intptr const& value, ssize const alignment) -> bool;
 
-// TODO: Support `volatile`.
-constexpr auto align_down(intptr const& value, ssize const alignment) {
-    return value & (~(alignment - 1));
-}
+// Returns a value rounded up from `value` to the nearest `alignment` boundary.
+constexpr auto align_up(intptr const& value, ssize const alignment) -> intptr;
+
+// Returns a value rounded down from `value` to the nearest `alignment`
+// boundary.
+constexpr auto align_down(intptr const& value, ssize const alignment) -> intptr;
 
 }  // namespace cat
 
@@ -124,3 +125,7 @@ constexpr auto operator""_gi(unsigned long long const input) -> long {
 constexpr auto operator""_gi(long double const input) -> long {
     return static_cast<long>(1024.f * 1024.f * 1024.f * 1024.f * input);
 }
+
+#include "./implementations/align_down.tpp"
+#include "./implementations/align_up.tpp"
+#include "./implementations/is_aligned.tpp"
