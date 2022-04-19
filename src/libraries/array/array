@@ -47,7 +47,7 @@ class Array {
         if (index < length) {
             return Optional<T&>(this->storage[index]);
         }
-        return none;
+        return nullopt;
     }
 
     constexpr auto p_data() -> T const* {

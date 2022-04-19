@@ -12,16 +12,16 @@
 
 namespace cat::detail {
 
-// A `None` is consumed by a `Optional` constructor to prevent initializing its
-// `value` member.
-struct None {};
+// A `NullOpt` is consumed by a `Optional` constructor to prevent initializing
+// its `value` member.
+struct NullOpt {};
 
 // A `Monostate` represents a `Optional` that holds no `value`.
 struct Monostate {};
 
 }  // namespace cat::detail
 
-inline constexpr cat::detail::None none;
+inline constexpr cat::detail::NullOpt nullopt;
 
 template <typename T, auto predicate, T sentinel>
 struct Predicate {};
@@ -101,7 +101,7 @@ struct OptionalValueStorage {
         }
     }
 
-    constexpr OptionalValueStorage(cat::detail::None){};
+    constexpr OptionalValueStorage(cat::detail::NullOpt){};
 
     // If other assignment operators are not conditionally specialized by their
     // `requires`, they should be `default` or deleted.
@@ -176,8 +176,8 @@ struct OptionalValueStorage {
         return *this;
     }
 
-    // Assigning `none` will destroy the held value.
-    auto operator=(cat::detail::None) -> OptionalValueStorage& {
+    // Assigning `nullopt` will destroy the held value.
+    auto operator=(cat::detail::NullOpt) -> OptionalValueStorage& {
         if (this->has_some) {
             this->value.~T();
             this->has_some = false;
@@ -238,12 +238,13 @@ struct OptionalReferenceStorage {
 
     template <typename U>
     constexpr OptionalReferenceStorage(U&& in_value) requires(
-        !meta::is_same<typeof(U), cat::detail::None>
+        !meta::is_same<typeof(U), cat::detail::NullOpt>
         // && meta::is_move_constructible_v<U>
         )
         : p_value(cat::addressof(meta::forward<U>(in_value))){};
 
-    constexpr OptionalReferenceStorage(cat::detail::None) : p_value(nullptr){};
+    constexpr OptionalReferenceStorage(cat::detail::NullOpt)
+        : p_value(nullptr){};
 
     // Rebind the reference if this is assigned a new value.
     constexpr auto operator=(Value& option) -> OptionalReferenceStorage<T>& {
@@ -257,8 +258,8 @@ struct OptionalReferenceStorage {
         return *this;
     };
 
-    // Invalidate the reference if this is assigned `none`.
-    constexpr auto operator=(cat::detail::None)
+    // Invalidate the reference if this is assigned `nullopt`.
+    constexpr auto operator=(cat::detail::NullOpt)
         -> OptionalReferenceStorage<T>& {
         this->p_value = nullptr;
         return *this;
@@ -308,7 +309,7 @@ class Optional {
     // Optional(U&& input) requires(
     //     meta::is_same_v<Storage, OptionalReferenceStorage<T>>&&
     //         meta::is_reference_v<T>&&
-    //             // !meta::is_same_v<typeof(U), cat::detail::None> &&
+    //             // !meta::is_same_v<typeof(U), cat::detail::NullOpt> &&
     //             // meta::is_move_constructible_v<U>&&
     //             meta::is_default_constructible<typename
     //             Storage::Value>::value)
@@ -327,8 +328,8 @@ class Optional {
                                  meta::is_convertible<U, Value>)
         : storage(meta::forward<U>(input)){};
 
-    // Consuming `none` is forwarded to `storage`.
-    constexpr Optional(cat::detail::None) : storage(none){};
+    // Consuming `nullopt` is forwarded to `storage`.
+    constexpr Optional(cat::detail::NullOpt) : storage(nullopt){};
 
     // Forward all assignment operators to `storage`.
     auto operator=(auto const& value) {
@@ -547,7 +548,7 @@ value!\n");
     // Construct the value in-place and destroy the held value iff it exists.
     template <typename... Args>
     auto emplace(Args&&... args) -> T& {
-        *this = none;
+        *this = nullopt;
         this->storage.construct(meta::forward<Args>(args)...);
         return this->storage.get_value();
     }
@@ -584,7 +585,7 @@ class Optional<Predicate<T, predicate, sentinel>> {
                                             meta::is_convertible<U, T>))
         : storage(meta::forward<U>(value)){};
 
-    constexpr Optional(cat::detail::None) : storage(sentinel){};
+    constexpr Optional(cat::detail::NullOpt) : storage(sentinel){};
 
     // Forward assignment operators to `storage`:
     constexpr auto operator=(auto& input) {
@@ -603,8 +604,8 @@ class Optional<Predicate<T, predicate, sentinel>> {
         return *this;
     }
 
-    // Specify the unusual `none` assignment operator.
-    constexpr auto operator=(cat::detail::None) {
+    // Specify the unusual `nullopt` assignment operator.
+    constexpr auto operator=(cat::detail::NullOpt) {
         this->storage = sentinel;
         return *this;
     }
@@ -682,7 +683,7 @@ value!\n");
             return Optional<Predicate<T, predicate, sentinel>>(
                 meta::forward<Function>(callback)(this->storage));
         }
-        return Optional<Predicate<T, predicate, sentinel>>(none);
+        return Optional<Predicate<T, predicate, sentinel>>(nullopt);
     }
 
     // If this `const`-qualified `Optional` holds a value, transform it by a
@@ -693,7 +694,7 @@ value!\n");
             return Optional<Predicate<T, predicate, sentinel>>(
                 meta::forward<Function>(callback)(this->storage));
         }
-        return Optional<Predicate<T, predicate, sentinel>>(none);
+        return Optional<Predicate<T, predicate, sentinel>>(nullopt);
     }
 
     // If this non-`const`-qualified `Optional` holds a value, transform it by a
@@ -704,7 +705,7 @@ value!\n");
             return Optional<Predicate<T, predicate, sentinel>>(
                 meta::forward<Function>(callback)(cat::move(this->storage)));
         }
-        return Optional<Predicate<T, predicate, sentinel>>(none);
+        return Optional<Predicate<T, predicate, sentinel>>(nullopt);
     }
 
     // If this `const`-qualified `Optional` holds a value, transform it by a
@@ -715,7 +716,7 @@ value!\n");
             return Optional<Predicate<T, predicate, sentinel>>(
                 meta::forward<Function>(callback)(cat::move(this->storage)));
         }
-        return Optional<Predicate<T, predicate, sentinel>>(none);
+        return Optional<Predicate<T, predicate, sentinel>>(nullopt);
     }
 
     // Invoke a callback on the value of a non-`const`-qualified `Optional` that
@@ -725,7 +726,7 @@ value!\n");
         return this->has_value()
                    ? Optional<Predicate<T, predicate, sentinel>>(
                          meta::forward<Function>(callback)(this->storage))
-                   : Optional<Predicate<T, predicate, sentinel>>(none);
+                   : Optional<Predicate<T, predicate, sentinel>>(nullopt);
     }
 
     // Invoke a callback on the value of a `const`-qualified `Optional`, and
@@ -735,7 +736,7 @@ value!\n");
         return this->has_value()
                    ? Optional<Predicate<T, predicate, sentinel>>(
                          meta::forward<Function>(callback)(this->storage))
-                   : Optional<Predicate<T, predicate, sentinel>>(none);
+                   : Optional<Predicate<T, predicate, sentinel>>(nullopt);
     }
 
     // Invoke a callback on the value of a non-`const`-qualified `Optional` that
@@ -746,7 +747,7 @@ value!\n");
             this->has_value()
                 ? Optional<Predicate<T, predicate, sentinel>>(
                       meta::forward<Function>(callback)(this->storage))
-                : Optional<Predicate<T, predicate, sentinel>>(none));
+                : Optional<Predicate<T, predicate, sentinel>>(nullopt));
     }
 
     // Invoke a callback on the value of a `const`-qualified `Optional`, and
@@ -757,7 +758,7 @@ value!\n");
             this->has_value()
                 ? Optional<Predicate<T, predicate, sentinel>>(
                       meta::forward<Function>(callback)(this->storage))
-                : Optional<Predicate<T, predicate, sentinel>>(none));
+                : Optional<Predicate<T, predicate, sentinel>>(nullopt));
     }
 
     // Invoke a callback iff a non-`const`-qualified `Optional` holds no value,

@@ -129,7 +129,7 @@ struct AllocatorFacade {
         // Initialize either an `Optional` or a `Result` with an empty value.
         Allocation maybe_memory = meta::Conditional<
             meta::IsSpecializationTrait<Allocation, Optional>::value,
-            cat::detail::None, Failure>{};
+            cat::detail::NullOpt, Failure>{};
 
         if constexpr (!is_aligned) {
             if constexpr (is_small_optimized) {
@@ -152,7 +152,7 @@ struct AllocatorFacade {
             // which have `.has_value()`.
             if (!maybe_memory.has_value()) {
                 // Return an empty optional if this failed to allocate.
-                return Optional<Handle>(none);
+                return Optional<Handle>(nullopt);
             }
         }
 

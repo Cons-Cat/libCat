@@ -14,7 +14,7 @@ auto get_file_size(nix::FileDescriptor file_descriptor) -> Optional<ssize> {
     if (status.is_block_device()) {
         return status.block_size;
     }
-    return none;
+    return nullopt;
 }
 
 void output_to_console(nix::IoVector const& io_vector) {
