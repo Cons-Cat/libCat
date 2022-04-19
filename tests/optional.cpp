@@ -31,7 +31,7 @@ struct NonTrivial {
 
 void meow() {
     // Initialize empty.
-    Optional<int4> foo(none);
+    Optional<int4> foo(nullopt);
     Result(!foo.has_value()).or_panic();
 
     // Assign a value.
@@ -39,7 +39,7 @@ void meow() {
     Result(foo.has_value()).or_panic();
 
     // Remove a value.
-    foo = none;
+    foo = nullopt;
     Result(!foo.has_value()).or_panic();
 
     // Unwrap a value.
@@ -47,12 +47,12 @@ void meow() {
     moo = 2;
     Result(moo.value() == 2).or_panic();
 
-    moo = none;
+    moo = nullopt;
     Result(moo.value_or(100) == 100).or_panic();
 
     // Optional reference.
-    Optional<int4&> ref(none);
-    Optional<int4&> ref_2 = none;
+    Optional<int4&> ref(nullopt);
+    Optional<int4&> ref_2 = nullopt;
 
     Result(!ref.has_value()).or_panic();
     Result(!ref_2.has_value()).or_panic();
@@ -61,11 +61,11 @@ void meow() {
     int4 goo = 0;
     Optional<int4&> boo = goo;
     ref = boo;
-    boo = none;
+    boo = nullopt;
 
     Result(ref.has_value()).or_panic();
 
-    ref = none;
+    ref = nullopt;
     Result(!ref.has_value()).or_panic();
 
     // TODO: This isn't working:
@@ -78,7 +78,7 @@ void meow() {
                            return input >= 0;
                        },
                        -1>>
-        positive(none);
+        positive(nullopt);
     Result(!positive.has_value()).or_panic();
 
     positive = -10;
@@ -90,12 +90,12 @@ void meow() {
     positive = 10;
     Result(positive.has_value()).or_panic();
 
-    positive = none;
+    positive = nullopt;
     Result(!positive.has_value()).or_panic();
 
     // This crashes clangd, but it passes tests, last I checked.
     /*
-    Optional<Sentinel<int4, 0>> nonzero = none;
+    Optional<Sentinel<int4, 0>> nonzero = nullopt;
     Result(!nonzero.has_value()).or_panic();
 
     nonzero = 1;
@@ -117,7 +117,7 @@ void meow() {
         cat::exit(1);
     });
 
-    moo = none;
+    moo = nullopt;
     Result(!moo.transform([](int4 input) {
                    return input * 2;
                })
@@ -138,7 +138,7 @@ void meow() {
                 .has_value())
         .or_panic();
 
-    positive = none;
+    positive = nullopt;
     Result(!positive
                 .transform([](int4 input) {
                     return input * 2;
