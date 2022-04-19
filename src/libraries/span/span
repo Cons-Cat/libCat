@@ -130,3 +130,6 @@ class Span {
         return cat::ReversedIterator<Iterator>(-1, this->p_storage);
     }
 };
+
+template <typename T>
+Span(T) -> Span<T>;
