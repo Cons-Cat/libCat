@@ -38,5 +38,15 @@ didnt_overallocate:
     // This is now 4-byte-aligned.
     Result(!cat::is_aligned(&allocator.get(handle_2), 8)).or_panic();
 
+    // Small size allocations shouldn't bump the allocator.
+    for (int4 i = 0; i < 20; i++) {
+        auto memory = allocator.malloca<int4>();
+        Result(memory.has_value()).or_panic();
+    }
+    Optional handle_3 = allocator.malloc<int4>();
+    Result(handle_3.has_value()).or_panic();
+
+    paging_allocator.free(page).or_panic();
+
     cat::exit();
 }

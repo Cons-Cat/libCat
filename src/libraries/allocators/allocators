@@ -22,12 +22,17 @@ struct BaseMemoryHandle {
 };
 
 namespace detail {
+    constexpr ssize small_size_threshold = 256;
+
     template <typename Handle>
     struct SmallMemoryHandle {
         using Type = typename Handle::Type;
         union {
             Handle allocator_storage;
             Type stack_storage;
+            // Reserve `small_size_threshold` bytes to make the size
+            // of this handle predictible.
+            cat::Byte empty[cat::detail::small_size_threshold];
         };
         bool1 is_on_stack;
 
@@ -128,9 +133,10 @@ struct AllocatorFacade {
 
         if constexpr (!is_aligned) {
             if constexpr (is_small_optimized) {
-                if (allocation_size < 256) {
+                if (allocation_size < cat::detail::small_size_threshold) {
                     // Allocate memory on this stack frame and return it, iff
-                    // that would be smaller than 256 bytes.
+                    // that would be smaller than
+                    // cat::detail::small_size_threshold bytes.
                     T stack_memory;
                     return Optional<Handle>(T{});
                 }

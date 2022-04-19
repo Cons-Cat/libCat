@@ -34,28 +34,39 @@ void meow() {
 
     // Allocation with small-size optimization.
     int stack_variable;
-    auto small_memory = allocator.malloca<int4>().value();
-    allocator.get(small_memory) = 2;
+    auto small_memory_1 = allocator.malloca<int4>().value();
+    allocator.get(small_memory_1) = 2;
     // Both values should be on stack, so these addresses are close
     // together.
     Result(cat::abs(intptr{&stack_variable} -
-                    intptr{&allocator.get(small_memory)}) < 512)
+                    intptr{&allocator.get(small_memory_1)}) < 512)
         .or_panic();
     // The handle's address should be the same as the data's if it was
     // allocated on the stack.
-    int4& intref = *static_cast<int4*>(static_cast<void*>(&small_memory));
+    int4& intref = *static_cast<int4*>(static_cast<void*>(&small_memory_1));
     intref = 10;
-    Result(allocator.get(small_memory) == 10).or_panic();
+    Result(allocator.get(small_memory_1) == 10).or_panic();
 
-    _ = allocator.free(small_memory);
+    _ = allocator.free(small_memory_1);
 
-    small_memory = allocator.malloca<int4>(1_ki).value();
-    // `small_memory` should be in a page, so these addresses are far
+    small_memory_1 = allocator.malloca<int4>(1_ki).value();
+    // `small_memory_1` should be in a page, so these addresses are far
     // apart.
     Result(cat::abs(intptr{&stack_variable} -
-                    intptr{&allocator.get(small_memory)}) > 512)
+                    intptr{&allocator.get(small_memory_1)}) > 512)
         .or_panic();
-    _ = allocator.free(small_memory);
+    _ = allocator.free(small_memory_1);
+
+    // Small-size handles have unique storage.
+    auto small_memory_2 = allocator.malloca<int4>().value();
+    allocator.get(small_memory_2) = 1;
+    auto small_memory_3 = allocator.malloca<int4>().value();
+    allocator.get(small_memory_3) = 2;
+    auto small_memory_4 = allocator.malloca<int4>().value();
+    allocator.get(small_memory_4) = 3;
+    Result(allocator.get(small_memory_2) == 1).or_panic();
+    Result(allocator.get(small_memory_3) == 2).or_panic();
+    Result(allocator.get(small_memory_4) == 3).or_panic();
 
     // Test constructor being called.
     Optional testtype = allocator.malloc<TestType>();
