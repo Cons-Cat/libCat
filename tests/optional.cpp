@@ -63,14 +63,16 @@ void meow() {
     ref = boo;
     boo = nullopt;
 
+    // Because `boo` was rebinded when assigned `nullopt`, `boo` should still
+    // hold a value.
     Result(ref.has_value()).or_panic();
 
     ref = nullopt;
     Result(!ref.has_value()).or_panic();
 
-    // TODO: This isn't working:
-    // ref_2 = goo;
-    // Result(ref_2.has_value()).or_panic();
+    ref_2 = goo;
+    Result(ref_2.has_value()).or_panic();
+    Result(ref_2.value() == goo).or_panic();
 
     // Optional with a predicate.
     Optional<Predicate<int4,
@@ -158,8 +160,16 @@ void meow() {
 
     // TODO: Test monadic methods on reference types.
     // TODO: Test monadic methods on move-only types.
-    // TODO: Test `Optional<> const`.
     // TODO: Test constructing from another `Optional<>`.
+
+    // `Optional const`
+    Optional<int4> const constant_val = 1;
+    Optional<int4> const constant_null = nullopt;
+    auto con = constant_val.value();
+
+    // TODO: This does not work:
+    // int4 const constant_int = 0;
+    // Optional<int4 const&> const constant_ref = constant_int;
 
     Movable mov;
     Optional<Movable> maybe_movs(cat::move(mov));
@@ -170,4 +180,4 @@ void meow() {
     Result(nontrivial.value().data == 2).or_panic();
 
     cat::exit();
-};
+}

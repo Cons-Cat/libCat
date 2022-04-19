@@ -16,6 +16,11 @@ constexpr auto addressof(T& value) -> T* {
     return __builtin_addressof(value);
 }
 
+template <typename T>
+constexpr auto addressof(T const& value) -> T const* {
+    return __builtin_addressof(value);
+}
+
 }  // namespace cat
 
 using cat::addressof;
