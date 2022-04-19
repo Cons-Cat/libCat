@@ -70,6 +70,21 @@ class Array {
         return length > 0;
     }
 
+    constexpr auto slice(ssize const start_index, ssize const end_index)
+        -> Span<T> {
+        Result{start_index >= 0}.assert();
+        Result{end_index <= length}.assert();
+        return Span<T>(this->p_storage + start_index, end_index - start_index);
+    }
+
+    constexpr auto first(ssize const count) -> Span<T> {
+        return this->slice(0, count);
+    }
+
+    constexpr auto last(ssize const count) -> Span<T> {
+        return this->slice(length - count, length);
+    }
+
     constexpr auto to_string() -> String
         requires(meta::is_same<meta::RemoveConst<T>, char>) {
         return String(

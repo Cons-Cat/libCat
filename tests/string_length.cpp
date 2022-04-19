@@ -29,7 +29,7 @@ void meow() {
     // Test `String`s.
     String string_1 = p_string_1;
     Result(string_1.size() == len_1).or_panic();
-    Result(string_1.subspan(1, 4).size() == 3).or_panic();
+    Result(string_1.slice(1, 4).size() == 3).or_panic();
     Result(string_1.first(4).size() == 4).or_panic();
     Result(string_1.last(3).size() == 3).or_panic();
     Result(String("Hello!").size() == len_1).or_panic();

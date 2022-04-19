@@ -53,50 +53,19 @@ class Span {
         this->length = cat::move(span).length;
     }
 
-    constexpr auto subspan(ssize start_index, ssize end_index) -> Span<T> {
+    constexpr auto slice(ssize const start_index, ssize const end_index)
+        -> Span<T> {
         Result{start_index >= 0}.assert();
         Result{end_index <= length}.assert();
-        Span<T> span;
-        span.length = end_index - start_index;
-        span.p_storage = this->p_storage + start_index;
-        return span;
+        return Span<T>(this->p_storage + start_index, end_index - start_index);
     }
 
-    constexpr auto first(ssize offset) -> Span<T> {
-        Result{offset < length}.assert();
-        Span<T> span;
-        span.length = offset;
-        span.p_storage = this->p_storage;
-        return span;
+    constexpr auto first(ssize const count) -> Span<T> {
+        return this->slice(0, count);
     }
 
-    constexpr auto last(ssize offset) -> Span<T> {
-        Result{offset < length}.assert();
-        Span<T> span;
-        span.length = offset;
-        span.p_storage = this->p_storage + length - offset;
-        return span;
-    }
-
-    constexpr auto set_subspan(ssize start_index, ssize end_index) -> Span<T>& {
-        Result{start_index >= end_index}.assert();
-        Result{end_index <= length}.assert();
-        this->length = end_index - start_index;
-        this->p_storage += start_index;
-        return *this;
-    }
-
-    constexpr auto set_first(ssize offset) -> Span<T>& {
-        Result{offset < length}.assert();
-        this->length = offset;
-        return *this;
-    }
-
-    constexpr auto set_last(ssize offset) -> Span<T>& {
-        Result{offset < length}.assert();
-        this->length = offset;
-        this->p_storage += length - offset;
-        return *this;
+    constexpr auto last(ssize const count) -> Span<T> {
+        return this->slice(length - count, length);
     }
 
     constexpr auto operator[](ssize index) const -> T& {
