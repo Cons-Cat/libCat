@@ -162,6 +162,13 @@ void meow() {
     // TODO: Test monadic methods on move-only types.
     // TODO: Test constructing from another `Optional<>`.
 
+    // Getting pointers.
+    foo = 1;
+    int4 const& ref_foo = foo.value();
+    Result(&ref_foo == &foo.value()).or_panic();
+    Result(foo.p_value() == &foo.value()).or_panic();
+    Result(foo.p_value() == addressof(foo.value())).or_panic();
+
     // `Optional const`
     Optional<int4> const constant_val = 1;
     Optional<int4> const constant_null = nullopt;
