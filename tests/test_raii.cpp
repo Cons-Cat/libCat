@@ -1,5 +1,5 @@
-#include <raii>
 #include <string>
+#include <unique>
 #include <utility>
 
 int4 global = 0;
@@ -31,17 +31,17 @@ struct Foo {
     }
 };
 
-void func(Raii<Foo>){};
+void func(UniqueWeak<Foo>){};
 
 void meow() {
     _ = cat::print_line("Construct objects.");
     // Test constructor.
-    Raii<Foo> foo(String("foo"));
+    UniqueWeak<Foo> foo(String("foo"));
     // Test assignment.
     foo = "foo";
     Result(foo.has_ownership()).or_panic();
 
-    Raii<Foo> moo(String("moo"));
+    UniqueWeak<Foo> moo(String("moo"));
     Result(moo.has_ownership()).or_panic();
 
     // Test move-assignment.
@@ -59,13 +59,32 @@ void meow() {
 
     _ = cat::print_line("Everything falls out of scope.");
 
-    // Default construct `Raii<Foo>`.
-    Raii<Foo> goo;
+    // Default construct `Unique<Foo>`.
+    UniqueWeak<Foo> goo;
+    Result(goo.has_ownership()).or_panic();
     // Extract goo.
-    _ = goo.get();
+    _ = goo.borrow();
     Result(!goo.has_ownership()).or_panic();
 
     // `raii()` should have been called exactly twice.
     Result(global == 2).or_panic();
+
+    // Deduction guides should work.
+    UniqueWeak weak = 1;
+    Unique unique = weak.borrow();
+
+    // Borrowing `weak`'s data makes it lose ownership.
+    Result(!weak.has_ownership()).or_panic();
+    weak = 2;
+    Result(weak.has_ownership()).or_panic();
+
+    // Permanately transferring ownership a `Unique's storage is unsafe, but
+    // possible:
+    weak = unique.borrow();
+    Result(weak.has_ownership()).or_panic();
+
+    // Unique can be assigned over, which will call its old data's destructor.
+    unique = 2;
+
     cat::exit();
 }
