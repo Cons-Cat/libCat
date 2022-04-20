@@ -12,11 +12,11 @@
 
 namespace cat::detail {
 
-// A `NullOpt` is consumed by a `Optional` constructor to prevent initializing
+// A `NullOpt` is consumed by an `Optional` constructor to prevent initializing
 // its `value` member.
 struct NullOpt {};
 
-// A `Monostate` represents a `Optional` that holds no `value`.
+// A `Monostate` represents an `Optional` that holds no `value`.
 struct Monostate {};
 
 // A `PredicateConstructor` is the only type that can construct a `Predicate`.
@@ -554,86 +554,55 @@ class Optional {
 
     // TODO: Simplify `.value()`.
 
-    // Get the held `storage` unconditionally. If `has_value()` is `false`, this
-    // data is undefined. If this method is used in `-O0`, it will panic in that
-    // case, unless used in a `constexpr` context.
-    constexpr auto value() -> T& {
-        if (meta::is_constant_evaluated()) {
-            return this->storage.value();
+    // Get the `storage` unconditionally.
+    constexpr auto value() & -> Value& {
+        if (!meta::is_constant_evaluated()) {
+            Result(this->has_value())
+                .assert(
+                    "`.value()` was illegally called on an `Optional` which "
+                    "did not hold a value!\n");
         }
-#ifdef __OPTIMIZE__
         return this->storage.value();
-#else
-        if (this->storage.has_value()) [[likely]] {
-            return this->storage.value();
-        }
-        _ = cat::print(
-            "`.value()` was illegally called on a `Optional` which did not hold a \
-value!\n");
-        cat::exit(1);
-#endif
-        __builtin_unreachable();
     }
 
-    constexpr auto value() const -> T const& {
-        if (meta::is_constant_evaluated()) {
-            return this->storage.value();
+    // Get the const-qualified `storage` unconditionally.
+    constexpr auto value() const& -> Value const& {
+        if (!meta::is_constant_evaluated()) {
+            Result(this->has_value())
+                .assert(
+                    "`.value()` was illegally called on an `Optional` which "
+                    "did not hold a value!\n");
         }
-#ifdef __OPTIMIZE__
         return this->storage.value();
-#else
-        if (this->storage.has_value()) [[likely]] {
-            return this->storage.value();
-        }
-        _ = cat::print(
-            "`.value()` was illegally called on a `Optional` which did not hold a \
-value!\n");
-        cat::exit(1);
-#endif
-        __builtin_unreachable();
     }
 
-    // Reference types cannot be moved.
-    constexpr auto value() -> T&& requires(!meta::is_reference<T>) {
-        if (meta::is_constant_evaluated()) {
-            return cat::move(this->storage.value());
+    // Move the `storage` unconditionally. Reference types cannot be moved.
+    constexpr auto value() && -> Value&& requires(!meta::is_reference<T>) {
+        if (!meta::is_constant_evaluated()) {
+            Result(this->has_value())
+                .assert(
+                    "`.value()` was illegally called on an `Optional` which "
+                    "did not hold a value!\n");
         }
-#ifdef __OPTIMIZE__
         return cat::move(this->storage.value());
-#else
-        if (this->storage.has_value()) [[likely]] {
-            return cat::move(this->storage.value());
-        }
-        _ = cat::print(
-            "`.value()` was illegally called on a `Optional` which did not hold a \
-value!\n");
-        cat::exit(1);
-#endif
-        __builtin_unreachable();
     }
 
-    // Reference types cannot be moved.
-    constexpr auto value() const -> T const&& requires(!meta::is_reference<T>) {
-        if (meta::is_constant_evaluated()) {
-            return cat::move(this->storage.value());
+    // Move the const-qualified `storage` unconditionally. Reference types
+    // cannot be moved.
+    constexpr auto value() const&& -> Value const&& requires(
+        !meta::is_reference<T>) {
+        if (!meta::is_constant_evaluated()) {
+            Result(this->has_value())
+                .assert(
+                    "`.value()` was illegally called on an `Optional` which "
+                    "did not hold a value!\n");
         }
-#ifdef __OPTIMIZE__
         return cat::move(this->storage.value());
-#else
-        if (this->storage.has_value()) [[likely]] {
-            return cat::move(this->storage.value());
-        }
-        _ = cat::print(
-            "`.value()` was illegally called on a `Optional` which did not hold a \
-value!\n");
-        cat::exit(1);
-#endif
-        __builtin_unreachable();
     }
 
     // Get the value held by a non-`const`-qualified `Optional`, or a fallback
     // value if it does not hold a value.
-    constexpr auto value_or(Value const fallback) & -> T {
+    constexpr auto value_or(Value const fallback) & -> Value {
         if (this->storage.has_value()) {
             return this->storage.value();
         }
@@ -642,7 +611,7 @@ value!\n");
 
     // Get the value held by a `const`-qualified `Optional`, or a fallback
     // value if it does not hold a value.
-    constexpr auto value_or(Value const fallback) const& -> T {
+    constexpr auto value_or(Value const fallback) const& -> Value {
         if (this->storage.has_value()) {
             return this->storage.value();
         }
@@ -651,7 +620,7 @@ value!\n");
 
     // Get the value held by a non-`const`-qualified `Optional`, or a fallback
     // value if it does not hold a value.
-    constexpr auto value_or(Value&& fallback) && -> T&& {
+    constexpr auto value_or(Value&& fallback) && -> Value&& {
         if (this->storage.has_value()) {
             return cat::move(this->storage.value());
         }
@@ -660,7 +629,7 @@ value!\n");
 
     // Get the value held by a `const`-qualified `Optional`, or a fallback
     // value if it does not hold a value.
-    constexpr auto value_or(Value&& fallback) const&& -> T&& {
+    constexpr auto value_or(Value&& fallback) const&& -> Value&& {
         if (this->storage.has_value()) {
             return cat::move(this->storage.value());
         }
