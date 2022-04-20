@@ -19,12 +19,21 @@ struct NullOpt {};
 // A `Monostate` represents a `Optional` that holds no `value`.
 struct Monostate {};
 
+// A `PredicateConstructor` is the only type that can construct a `Predicate`.
+struct PredicateConstructor {};
+
 }  // namespace cat::detail
 
 inline constexpr cat::detail::NullOpt nullopt;
 
 template <typename T, auto predicate, T sentinel>
-struct Predicate {};
+struct Predicate {
+    using Type = T;
+    static constexpr auto predicate_function = predicate;
+    static constexpr T sentinel_value = sentinel;
+
+    Predicate(cat::detail::PredicateConstructor){};
+};
 
 template <typename T, T sentinel>
 using Sentinel = Predicate<T,
@@ -38,19 +47,19 @@ class Optional;
 
 template <typename T>
 struct OptionalValueStorage {
-    struct Dummy {};
+    // A `union` member will not be default-constructed.
     union {
-        // `Dummy` is required so that `OptionalValueStorage` can be initialized
+        // `dummy` is required so that `OptionalValueStorage` can be initialized
         // in a `constexpr` context, because a member `union` must have at least
-        // one initialized field, and it should not be `value`. `Dummy` can be
+        // one initialized field in a `constexpr` context. `char` can be
         // default-initialized, so this is well-formed.
-        Dummy dummy;
+        char dummy;
         T storage;
     };
     using Value = T;
     bool1 has_some = false;
 
-    // Enable copy and move constructors iff `Optionalvaluestorage` supports
+    // Enable copy and move constructors iff `OptionalValuestorage` supports
     // them.
 
     // If `T` is trivially copy-constructible, use this simple copy constructor.
@@ -174,7 +183,7 @@ struct OptionalValueStorage {
         this->has_some = false;
     }
 
-    // Construct an object at the address of the held `value`.
+    // Construct an object at the address of the held `storage`.
     template <typename... Args>
     void construct(Args&&... args) {
         new (cat::addressof(this->storage)) T(meta::forward<Args>(args)...);
@@ -182,14 +191,13 @@ struct OptionalValueStorage {
     }
 
     // If this is assigned an `Optional` which wraps a type that can be
-    // converted to `T` , then convert that `OptionalValueStorage` to this type
-    // implicitly.
+    // converted to `T` , then convert that storage to this type implicitly.
     template <typename OtherOptional>
     constexpr void assign(OtherOptional&& optional) requires(
         meta::is_convertible<typename OtherOptional::Value, T>) {
         if (this->has_value()) {
             if (optional.has_value()) {
-                this->storage = optional.value();
+                this->p_value = meta::forward<OtherOptional>(optional).value();
             } else {
                 // If the incoming `Optional` is empty, then empty this one.
                 this->hard_reset();
@@ -206,75 +214,238 @@ struct OptionalValueStorage {
 template <typename T>
 struct OptionalReferenceStorage {
     using Value = meta::RemoveReference<T>;
-    Value* p_value = nullptr;
-  public:
+    Value* p_storage = nullptr;
     // TODO: Handle non-trivial constructors and assignment operators.
 
     constexpr OptionalReferenceStorage(Value& in_value) requires(
         meta::is_default_constructible<Value>)
-        : p_value(cat::addressof(in_value)){};
+        : p_storage(cat::addressof(in_value)){};
 
     constexpr OptionalReferenceStorage(Value const& in_value)
-        : p_value(cat::addressof(in_value)){};
+        : p_storage(cat::addressof(in_value)){};
 
     template <typename U>
     constexpr OptionalReferenceStorage(U&& in_value)
-        : p_value(cat::addressof(meta::forward<U>(in_value))){};
+        : p_storage(cat::addressof(meta::forward<U>(in_value))){};
 
     constexpr OptionalReferenceStorage(cat::detail::NullOpt)
-        : p_value(nullptr){};
+        : p_storage(nullptr){};
 
     // Rebind the reference if this is assigned a new value.
     constexpr auto operator=(Value& option) -> OptionalReferenceStorage& {
-        this->p_value = cat::addressof(option);
+        this->p_storage = cat::addressof(option);
         return *this;
     }
 
     constexpr auto operator=(Value const& option)
         -> OptionalReferenceStorage const& {
-        this->p_value = cat::addressof(option);
+        this->p_storage = cat::addressof(option);
         return *this;
     };
 
     constexpr auto value() & -> Value& {
-        return *(this->p_value);
+        return *(this->p_storage);
     }
     constexpr auto value() const& -> Value& {
-        return *(this->p_value);
+        return *(this->p_storage);
     }
     constexpr auto value() && -> Value&& {
-        return *(cat::move(this->p_value));
+        return *(cat::move(this->p_storage));
     }
     constexpr auto value() const&& -> Value&& {
-        return *(cat::move(this->p_value));
+        return *(cat::move(this->p_storage));
     }
 
     constexpr auto has_value() const -> bool1 {
-        return this->p_value != nullptr;
+        return this->p_storage != nullptr;
     }
 
     // Destroy the storage unconditionally.
     void hard_reset() {
-        this->p_value->~Value();
-        this->p_value = nullptr;
+        this->p_storage->~Value();
+        this->p_storage = nullptr;
     }
 
-    // Construct an object at the address of the held `value`.
+    // Construct an object at the address of the held `storage`.
     template <typename... Args>
     void construct(Args&&... args) {
         Result(this->has_value()).assert();
-        new (this->p_value) T(meta::forward<Args>(args)...);
+        new (this->p_storage) T(meta::forward<Args>(args)...);
     }
 
     // If this is assigned an `Optional` which wraps a type that can be
-    // converted to `T` , then convert that `OptionalValueStorage` to this type
-    // implicitly.
+    // converted to `T` , then convert that storage to this type implicitly.
     template <typename OtherOptional>
     constexpr void assign(OtherOptional&& optional) requires(
         meta::is_convertible<typename OtherOptional::Value, T>) {
         if (this->has_value()) {
             if (optional.has_value()) {
-                this->storage = optional.value();
+                this->p_storage =
+                    meta::forward<OtherOptional>(optional).value();
+            } else {
+                // If the incoming `Optional` is empty, then empty this one.
+                this->hard_reset();
+            }
+        } else {
+            if (optional.has_value()) {
+                this->construct(optional.value());
+            }
+            // If both `Optional`s are empty, nothing happens.
+        }
+    }
+};
+
+// `T` is a `Predicate<Type, function, sentinel>`.
+template <typename T>
+struct OptionalPredicateStorage {
+    using Value = typename T::Type;
+    Value storage;
+
+    // Default-initialization is not supported.
+    // TODO: Support it.
+    OptionalPredicateStorage() = delete;
+
+    // Enable copy and move constructors iff `OptionalPredicateStorage` supports
+    // them.
+
+    // If `Value` is trivially copy-constructible, use this simple copy
+    // constructor.
+    constexpr OptionalPredicateStorage(Value const& in_value) requires(
+        meta::is_trivially_copy_constructible<Value>)
+        : storage(in_value){};
+
+    // If `Value` is not trivially copy-constructible, then manually construct
+    // it in-place.
+    constexpr OptionalPredicateStorage(Value const& in_value) requires(
+        meta::is_copy_constructible<Value> &&
+        !meta::is_trivially_copy_constructible<Value>) {
+        this->construct(in_value);
+    }
+
+    // If `Value` is not copy-constructible, delete this copy constructor.
+    constexpr OptionalPredicateStorage(Value const& in_value) requires(
+        !meta::is_copy_constructible<Value>) = delete;
+
+    // If `Value` is trivially move-constructible, use this simple move
+    // constructor.
+    constexpr OptionalPredicateStorage(Value&& in_value) requires(
+        meta::is_trivially_move_constructible<Value>)
+        : storage(meta::forward<Value>(in_value)){};
+
+    // If `Value` is not trivially move-constructible, then manually invoke
+    // `cat::move` on it.
+    OptionalPredicateStorage(Value&& in_value) requires(
+        meta::is_move_constructible<Value> &&
+        !meta::is_trivially_move_constructible<Value>) {
+        this->construct(meta::forward<Value>(in_value));
+    }
+
+    // If `Value` is not move-constructible, delete this move constructor.
+    constexpr OptionalPredicateStorage(Value&& in_value) requires(
+        !meta::is_move_constructible<Value>) = delete;
+
+    // If other destructors are not conditionally specialized by their
+    // `requires`, they should be `default` or deleted.
+    constexpr ~OptionalPredicateStorage() = default;
+
+    // If `Value` is not trivially destructible, then manually invoke its
+    // destructor.
+    constexpr ~OptionalPredicateStorage() requires(
+        !meta::is_trivially_destructible<Value>) {
+        if constexpr (requires { this->storage.~Value(); }) {
+            if (this->has_value()) {
+                this->storage.~Value();
+            }
+        }
+    }
+
+    constexpr OptionalPredicateStorage(cat::detail::NullOpt)
+        : storage(T::sentinel_value){};
+
+    // If other assignment operators are not conditionally specialized by their
+    // `requires`, they should be `default` or deleted.
+
+    // If `Value` is trivially copy-assignable, then forward this value.
+    auto operator=(Value const& in_value) -> OptionalPredicateStorage& requires(
+        meta::is_trivially_copy_assignable<Value>) {
+        this->storage = in_value;
+        return *this;
+    }
+
+    // If `Value` is non-trivially copy-assignable, then manually construct it
+    // in-place.
+    auto operator=(Value const& in_value) -> OptionalPredicateStorage& requires(
+        meta::is_copy_assignable<Value> &&
+        !meta::is_trivially_copy_assignable<Value>) {
+        this->assign(in_value);
+        return *this;
+    }
+
+    // If `Value` is not copy-assignable, delete this assignment operator to
+    // prevent ambiguous overload resolution.
+    auto operator=(Value const& in_value) -> OptionalPredicateStorage& requires(
+        !meta::is_copy_assignable<Value>) = delete;
+
+    // If `Value` is trivially move-assignable, then forward this value.
+    auto operator=(Value&& in_value) -> OptionalPredicateStorage& requires(
+        meta::is_trivially_move_assignable<Value>) {
+        this->storage = meta::forward<Value>(in_value);
+        return *this;
+    }
+
+    // If `Value` is non-trivially move-assignable, then manually invoke
+    // `cat::move()` on it.
+    constexpr auto operator=(Value&& in_value)
+        -> OptionalPredicateStorage& requires(
+            meta::is_move_assignable<Value> &&
+            !meta::is_trivially_move_assignable<Value>) {
+        this->assign(meta::forward<Value>(in_value));
+        return *this;
+    }
+
+    // If `Value` is not move-assignable, delete this assignment operator to
+    // prevent ambiguous overload resolution.
+    auto operator=(Value&& in_value) -> OptionalPredicateStorage& requires(
+        !meta::is_move_assignable<Value>) = delete;
+
+    constexpr auto value() & -> Value& {
+        return this->storage;
+    }
+    constexpr auto value() const& -> Value const& {
+        return this->storage;
+    }
+    constexpr auto value() && -> Value&& {
+        return cat::move(this->storage);
+    }
+    constexpr auto value() const&& -> Value&& {
+        return cat::move(this->storage);
+    }
+
+    constexpr auto has_value() const -> bool1 {
+        return T::predicate_function(this->storage);
+    }
+
+    // Destroy the storage unconditionally.
+    void hard_reset() {
+        this->storage.~Value();
+        this->storage = T::sentinel_value;
+    }
+
+    // Construct an object at the address of the held `storage`.
+    template <typename... Args>
+    void construct(Args&&... args) {
+        Result(this->has_value()).assert();
+        new (this->storage) T(meta::forward<Args>(args)...);
+    }
+
+    // If this is assigned an `Optional` which wraps a type that can be
+    // converted to `T` , then convert that storage to this type implicitly.
+    template <typename OtherOptional>
+    constexpr void assign(OtherOptional&& optional) requires(
+        meta::is_convertible<typename OtherOptional::Value, T>) {
+        if (this->has_value()) {
+            if (optional.has_value()) {
+                this->storage = meta::forward<OtherOptional>(optional).value();
             } else {
                 // If the incoming `Optional` is empty, then empty this one.
                 this->hard_reset();
@@ -290,13 +461,26 @@ struct OptionalReferenceStorage {
 
 template <typename T>
 class Optional {
+    static constexpr bool is_predicate = requires {
+        // `Predicate` is the only type that can be constructed by a
+        // `PredicateConstructor` value.
+        T(cat::detail::PredicateConstructor{});
+    };
+
     using Storage =
-        meta::Conditional<meta::is_reference<T>, OptionalReferenceStorage<T>,
-                          OptionalValueStorage<T>>;
+        meta::Conditional<is_predicate,
+                          // If `T` is a `Predicate`:
+                          OptionalPredicateStorage<T>,
+                          meta::Conditional<meta::is_reference<T>,
+                                            // If `T` is a reference type:
+                                            OptionalReferenceStorage<T>,
+                                            // If `T` is a value type:
+                                            OptionalValueStorage<T>>>;
     using Value = typename Storage::Value;
     Storage storage;
   public:
     // Default-initialization is not supported.
+    // TODO: Support it.
     Optional() = delete;
 
     // Forward all constructors to `storage`.
@@ -368,9 +552,9 @@ class Optional {
         return this->storage.has_value();
     }
 
-    // TODO: Support move semantics.
+    // TODO: Simplify `.value()`.
 
-    // Get the held `value` unconditionally. If `has_value()` is `false`, this
+    // Get the held `storage` unconditionally. If `has_value()` is `false`, this
     // data is undefined. If this method is used in `-O0`, it will panic in that
     // case, unless used in a `constexpr` context.
     constexpr auto value() -> T& {
@@ -616,257 +800,6 @@ value!\n");
         *this = nullopt;
         this->storage.construct(meta::forward<Args>(args)...);
         return this->storage.value();
-    }
-};
-
-template <typename T, auto predicate, T sentinel>
-class Optional<Predicate<T, predicate, sentinel>> {
-    T storage = sentinel;
-  public:
-    Optional() = delete;
-    ~Optional() = default;
-
-    template <typename U = T>
-    constexpr Optional(U& value) requires(!predicate(sentinel) &&
-                                          (meta::is_same<U, T> ||
-                                           meta::is_convertible<U, T>))
-        : storage(value){};
-
-    template <typename U = T>
-    constexpr Optional(U const& value) requires(!predicate(sentinel) &&
-                                                (meta::is_same<U, T> ||
-                                                 meta::is_convertible<U, T>))
-        : storage(value){};
-
-    template <typename U = T>
-    constexpr Optional(U const&& value) requires(!predicate(sentinel) &&
-                                                 (meta::is_same<U, T> ||
-                                                  meta::is_convertible<U, T>))
-        : storage(cat::move(value)){};
-
-    template <typename U = T>
-    constexpr Optional(U&& value) requires(!predicate(sentinel) &&
-                                           (meta::is_same<U, T> ||
-                                            meta::is_convertible<U, T>))
-        : storage(meta::forward<U>(value)){};
-
-    constexpr Optional(cat::detail::NullOpt) : storage(sentinel){};
-
-    // Forward assignment operators to `storage`:
-    constexpr auto operator=(auto& input) {
-        this->storage = input;
-        return *this;
-    }
-
-    constexpr auto operator=(auto const& input) {
-        this->storage = input;
-        return *this;
-    }
-
-    template <typename U>
-    constexpr auto operator=(U&& input) {
-        this->storage = meta::forward<U>(input);
-        return *this;
-    }
-
-    // Specify the unusual `nullopt` assignment operator.
-    constexpr auto operator=(cat::detail::NullOpt) {
-        this->storage = sentinel;
-        return *this;
-    }
-
-    // TODO: Support non-`const`-qualified `Optional` when `has_value()` is
-    // impure.
-    // TODO: Support move semantics.
-    // Get the held `value` unconditionally. If `has_value()` is `false`, this
-    // data is undefined. If this method is used in `-O0`, it will panic in that
-    // case, unless used in a `constexpr` context.
-    constexpr auto value() -> T const& {
-        if (meta::is_constant_evaluated()) {
-            return this->storage;
-        }
-#ifdef __OPTIMIZE__
-        return this->storage;
-#else
-        if (this->has_value()) [[likely]] {
-            return this->storage;
-        }
-        _ = cat::print(
-            "`.value()` was illegally called on a `Optional` which did not hold a \
-value!\n");
-        cat::exit(1);
-#endif
-        __builtin_unreachable();
-    }
-
-    // Get the value held by a non-`const`-qualified `Optional`, or a fallback
-    // value if it does not hold a value.
-    constexpr auto value_or(T const fallback) & -> T& {
-        if (this->has_value()) {
-            return this->storage;
-        }
-        return fallback;
-    }
-
-    // Get the value held by a `const`-qualified `Optional`, or a fallback
-    // value if it does not hold a value.
-    constexpr auto value_or(T const fallback) const& -> T& {
-        if (this->has_value()) {
-            return this->storage;
-        }
-        return fallback;
-    }
-
-    // Get the value held by a non-`const`-qualified `Optional`, or a fallback
-    // value if it does not hold a value.
-    constexpr auto value_or(T&& fallback) && -> T&& {
-        if (this->has_value()) {
-            return cat::move(this->storage);
-        }
-        return cat::move(fallback);
-    }
-
-    // Get the value held by a `const`-qualified `Optional`, or a fallback
-    // value if it does not hold a value.
-    constexpr auto value_or(T&& fallback) const&& -> T&& {
-        if (this->has_value()) {
-            return cat::move(this->storage);
-        }
-        return cat::move(fallback);
-    }
-
-    // Monadic methods:
-
-    // TODO: Support callbacks for `.transform()` that return `void`.
-    // TODO: Use a `meta::invocable` `concept`.
-
-    // If this non-`const`-qualified `Optional` holds a value, transform it by a
-    // non-`void` function. Otherwise, propagate an empty `Optional`.
-    template <typename Function>
-    constexpr auto transform(Function&& callback) & {
-        if (this->has_value()) {
-            return Optional<Predicate<T, predicate, sentinel>>(
-                meta::forward<Function>(callback)(this->storage));
-        }
-        return Optional<Predicate<T, predicate, sentinel>>(nullopt);
-    }
-
-    // If this `const`-qualified `Optional` holds a value, transform it by a
-    // non-`void` function. Otherwise, propagate an empty `Optional`.
-    template <typename Function>
-    constexpr auto transform(Function&& callback) const& {
-        if (this->has_value()) {
-            return Optional<Predicate<T, predicate, sentinel>>(
-                meta::forward<Function>(callback)(this->storage));
-        }
-        return Optional<Predicate<T, predicate, sentinel>>(nullopt);
-    }
-
-    // If this non-`const`-qualified `Optional` holds a value, transform it by a
-    // non -`void` function. Otherwise, propagate an empty `Optional`.
-    template <typename Function>
-    constexpr auto transform(Function&& callback) && {
-        if (this->has_value()) {
-            return Optional<Predicate<T, predicate, sentinel>>(
-                meta::forward<Function>(callback)(cat::move(this->storage)));
-        }
-        return Optional<Predicate<T, predicate, sentinel>>(nullopt);
-    }
-
-    // If this `const`-qualified `Optional` holds a value, transform it by a
-    // non-`void` function. Otherwise, propagate an empty `Optional`.
-    template <typename Function>
-    constexpr auto transform(Function&& callback) const&& {
-        if (this->has_value()) {
-            return Optional<Predicate<T, predicate, sentinel>>(
-                meta::forward<Function>(callback)(cat::move(this->storage)));
-        }
-        return Optional<Predicate<T, predicate, sentinel>>(nullopt);
-    }
-
-    // Invoke a callback on the value of a non-`const`-qualified `Optional` that
-    // potentially mutates global state, and propagate the result.
-    template <typename Function>
-    constexpr auto and_then(Function&& callback) & {
-        return this->has_value()
-                   ? Optional<Predicate<T, predicate, sentinel>>(
-                         meta::forward<Function>(callback)(this->storage))
-                   : Optional<Predicate<T, predicate, sentinel>>(nullopt);
-    }
-
-    // Invoke a callback on the value of a `const`-qualified `Optional`, and
-    // propagate the result.
-    template <typename Function>
-    constexpr auto and_then(Function&& callback) const& {
-        return this->has_value()
-                   ? Optional<Predicate<T, predicate, sentinel>>(
-                         meta::forward<Function>(callback)(this->storage))
-                   : Optional<Predicate<T, predicate, sentinel>>(nullopt);
-    }
-
-    // Invoke a callback on the value of a non-`const`-qualified `Optional` that
-    // potentially mutates global state, and propagate the result.
-    template <typename Function>
-    constexpr auto and_then(Function&& callback) && {
-        return cat::move(
-            this->has_value()
-                ? Optional<Predicate<T, predicate, sentinel>>(
-                      meta::forward<Function>(callback)(this->storage))
-                : Optional<Predicate<T, predicate, sentinel>>(nullopt));
-    }
-
-    // Invoke a callback on the value of a `const`-qualified `Optional`, and
-    // propagate the result.
-    template <typename Function>
-    constexpr auto and_then(Function&& callback) const&& {
-        return cat::move(
-            this->has_value()
-                ? Optional<Predicate<T, predicate, sentinel>>(
-                      meta::forward<Function>(callback)(this->storage))
-                : Optional<Predicate<T, predicate, sentinel>>(nullopt));
-    }
-
-    // Invoke a callback iff a non-`const`-qualified `Optional` holds no value,
-    // then return the value.
-    template <typename Function>
-    constexpr auto or_else(Function&& callback) & {
-        if (!this->has_value()) {
-            meta::forward<Function>(callback)();
-        }
-        return *this;
-    }
-
-    // Invoke a callback iff a `const`-qualified `Optional` holds no value.
-    template <typename Function>
-    constexpr auto or_else(Function&& callback) const& {
-        if (!this->has_value()) {
-            meta::forward<Function>(callback)();
-        }
-        return *this;
-    }
-
-    // Invoke a callback iff a non-`const`-qualified move-only `Optional` holds
-    // no value.
-    template <typename Function>
-    constexpr auto or_else(Function&& callback) && {
-        if (!this->has_value()) {
-            meta::forward<Function>(callback)();
-        }
-        return cat::move(*this);
-    }
-
-    // Invoke a callback iff a `const`-qualified move-only `Optional` holds no
-    // value.
-    template <typename Function>
-    constexpr auto or_else(Function&& callback) const&& {
-        if (!this->has_value()) {
-            meta::forward<Function>(callback)();
-        }
-        return cat::move(*this);
-    }
-
-    constexpr auto has_value() const -> bool1 {
-        return predicate(this->storage);
     }
 };
 

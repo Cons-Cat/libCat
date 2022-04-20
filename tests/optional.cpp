@@ -63,7 +63,7 @@ void meow() {
     ref = boo;
     boo = nullopt;
 
-    // Because `boo` was rebinded when assigned `nullopt`, `boo` should still
+    // Because `boo` was rebinded when assigned `nullopt`, `ref` should still
     // hold a value.
     Result(ref.has_value()).or_panic();
 
