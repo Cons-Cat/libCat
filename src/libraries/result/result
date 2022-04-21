@@ -123,51 +123,23 @@ class [[nodiscard]] Result {
     }
 
     constexpr auto value() {
-        if (meta::is_constant_evaluated()) {
-            if constexpr (!meta::is_void<T>) {
-                return this->storage;
-            } else {
-                return;
-            }
+        // TODO: Make this work:
+        // Result(this->has_value()).assert();
+        if constexpr (!meta::is_void<T>) {
+            return this->storage;
+        } else {
+            return;
         }
-#ifdef __OPTIMIZE__
-        return this->storage;
-#else
-        if (this->has_value()) [[likely]] {
-            if constexpr (!meta::is_void<T>) {
-                return this->storage;
-            } else {
-                return;
-            }
-        }
-        // TODO: Print an error message.
-        cat::exit(1);
-#endif
-        __builtin_unreachable();
     }
 
     constexpr auto value() const {
-        if (meta::is_constant_evaluated()) {
-            if constexpr (!meta::is_void<T>) {
-                return this->storage;
-            } else {
-                return;
-            }
+        // TODO: Make this work:
+        // Result(this->has_value()).assert();
+        if constexpr (!meta::is_void<T>) {
+            return this->storage;
+        } else {
+            return;
         }
-#ifdef __OPTIMIZE__
-        return this->storage;
-#else
-        if (this->has_value()) [[likely]] {
-            if constexpr (!meta::is_void<T>) {
-                return this->storage;
-            } else {
-                return;
-            }
-        }
-        // TODO: Print an error message.
-        cat::exit(1);
-#endif
-        __builtin_unreachable();
     }
 
     // constexpr Result(ValueType const& value) requires(
@@ -351,8 +323,7 @@ class [[nodiscard]] Result {
     // When building `-O0`, this function panics if a value is not
     // held. When optimizations are enabled, that safety check is elided.
     constexpr void assert() const {
-        if (meta::is_constant_evaluated()) {
-        } else {
+        if (!meta::is_constant_evaluated()) {
 #ifndef __OPTIMIZE__
             if (!this->has_value()) [[unlikely]] {
                 cat::exit(1);
@@ -364,8 +335,7 @@ class [[nodiscard]] Result {
     // When building `-O0`, this function panics if a value is not
     // held. When optimizations are enabled, that safety check is elided.
     constexpr void assert(String const& error_message) {
-        if (meta::is_constant_evaluated()) {
-        } else {
+        if (!meta::is_constant_evaluated()) {
 #ifndef __OPTIMIZE__
             if (!this->has_value()) [[unlikely]] {
                 _ = cat::print_line(error_message);

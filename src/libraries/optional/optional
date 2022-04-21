@@ -591,34 +591,28 @@ class Optional {
 
     // Get the `storage` unconditionally.
     constexpr auto value() & -> Value& {
-        if (!meta::is_constant_evaluated()) {
-            Result(this->has_value())
-                .assert(
-                    "`.value()` was illegally called on an `Optional` which "
-                    "did not hold a value!\n");
-        }
+        Result(this->has_value())
+            .assert(
+                "`.value()` was illegally called on an `Optional` which "
+                "did not hold a value!\n");
         return this->storage.value();
     }
 
     // Get the const-qualified `storage` unconditionally.
     constexpr auto value() const& -> Value const& {
-        if (!meta::is_constant_evaluated()) {
-            Result(this->has_value())
-                .assert(
-                    "`.value()` was illegally called on an `Optional` which "
-                    "did not hold a value!\n");
-        }
+        Result(this->has_value())
+            .assert(
+                "`.value()` was illegally called on an `Optional` which "
+                "did not hold a value!\n");
         return this->storage.value();
     }
 
     // Move the `storage` unconditionally. Reference types cannot be moved.
     constexpr auto value() && -> Value&& requires(!meta::is_reference<T>) {
-        if (!meta::is_constant_evaluated()) {
-            Result(this->has_value())
-                .assert(
-                    "`.value()` was illegally called on an `Optional` which "
-                    "did not hold a value!\n");
-        }
+        Result(this->has_value())
+            .assert(
+                "`.value()` was illegally called on an `Optional` which "
+                "did not hold a value!\n");
         return cat::move(this->storage.value());
     }
 
@@ -626,12 +620,10 @@ class Optional {
     // cannot be moved.
     constexpr auto value() const&& -> Value const&& requires(
         !meta::is_reference<T>) {
-        if (!meta::is_constant_evaluated()) {
-            Result(this->has_value())
-                .assert(
-                    "`.value()` was illegally called on an `Optional` which "
-                    "did not hold a value!\n");
-        }
+        Result(this->has_value())
+            .assert(
+                "`.value()` was illegally called on an `Optional` which "
+                "did not hold a value!\n");
         return cat::move(this->storage.value());
     }
 
