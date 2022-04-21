@@ -34,6 +34,13 @@ void meow() {
     Optional<int4> foo(nullopt);
     Result(!foo.has_value()).or_panic();
 
+    Optional<int4> inplace_1{};
+    Result(!inplace_1.has_value()).or_panic();
+
+    // `int4` default-initializes to `0`.
+    Optional<int4> inplace_2{in_place};
+    Result(inplace_2.value() == 0).or_panic();
+
     // Assign a value.
     foo = 1;
     Result(foo.has_value()).or_panic();
@@ -162,9 +169,17 @@ void meow() {
                 .has_value())
         .or_panic();
 
+    decltype(positive) default_predicate_1{};
+    Result(!default_predicate_1.has_value()).or_panic();
+
+    // The default value of `int4` is `0`.
+    decltype(positive) default_predicate_2{in_place};
+    Result(default_predicate_2.value() == 0).or_panic();
+
     // TODO: Test monadic methods on reference types.
     // TODO: Test monadic methods on move-only types.
     // TODO: Test constructing from another `Optional<>`.
+    // TODO: Test non-trivial reference.
 
     // Getting pointers.
     foo = 1;
