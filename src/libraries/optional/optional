@@ -490,12 +490,12 @@ class Optional {
     Optional(U const& input) requires(!meta::is_reference<T> &&
                                       meta::is_convertible<U, Value> &&
                                       meta::is_copy_constructible<Value>)
-        : storage(input){};
+        : storage(static_cast<T>(input)){};
 
     template <typename U>
     Optional(U const& input) requires(
         meta::is_reference<T>&& meta::is_convertible<U, Value>)
-        : storage(input){};
+        : storage(static_cast<T>(input)){};
 
     template <typename U>
     Optional(U&& input) requires(meta::is_convertible<U, Value>)
@@ -517,33 +517,35 @@ class Optional {
     // Forward all assignment operators to `storage`, except when assigning
     // `nullopt`.
     template <typename U>
-    auto operator=(U const& value) requires(meta::is_convertible<U, T>) {
+    auto operator=(U const& value)
+        -> Optional& requires(meta::is_convertible<U, T>) {
         this->storage = static_cast<T>(value);
         return *this;
     }
 
     template <typename U>
-    auto operator=(U&& value) requires(meta::is_convertible<U, T>) {
-        this->storage = static_cast<T>(meta::forward<T>(value));
+    auto operator=(U&& value)
+        -> Optional& requires(meta::is_convertible<U, T>) {
+        this->storage = static_cast<T>(meta::forward<U>(value));
         return *this;
     }
 
     template <typename U>
-    auto operator=(Optional<U> const& optional) requires(
-        meta::is_convertible<U, T>) {
-        this->storage.assign(optional);
+    auto operator=(Optional<U> const& optional)
+        -> Optional& requires(meta::is_convertible<U, T>) {
+        this->storage.assign(static_cast<T>(optional));
         return *this;
     }
 
     template <typename U>
-    auto operator=(Optional<U>&& optional) requires(
-        meta::is_convertible<U, T>) {
+    auto operator=(Optional<U>&& optional)
+        -> Optional& requires(meta::is_convertible<U, T>) {
         this->storage.assign(meta::forward<Optional<U>>(optional));
         return *this;
     }
 
     // Assigning `nullopt` destroys any value.
-    auto operator=(cat::detail::NullOpt) {
+    auto operator=(cat::detail::NullOpt) -> Optional& {
         this->storage.hard_reset();
         return *this;
     }
@@ -551,8 +553,6 @@ class Optional {
     constexpr auto has_value() const -> bool1 {
         return this->storage.has_value();
     }
-
-    // TODO: Simplify `.value()`.
 
     // Get the `storage` unconditionally.
     constexpr auto value() & -> Value& {
