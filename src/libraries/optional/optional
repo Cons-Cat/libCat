@@ -8,8 +8,6 @@
 #include <type_traits>
 #include <utility>
 
-// TODO: Support `Optional<void>`.
-
 namespace cat::detail {
 
 // A `NullOpt` is consumed by an `Optional` constructor to prevent initializing
@@ -52,6 +50,8 @@ using Sentinel = Predicate<T,
 template <typename T>
 class Optional;
 
+// `OptionalValueStorage` holds a non-reference, non-pointer, non-`void` type
+// `T` and a `bool1` flag to represent holding a value or not.
 template <typename T>
 struct OptionalValueStorage {
     // A `union` member will not be default-constructed.
@@ -65,9 +65,6 @@ struct OptionalValueStorage {
     };
     using Value = T;
     bool1 has_some = false;
-
-    // Enable copy and move constructors iff `OptionalValuestorage` supports
-    // them.
 
     // If `T` is trivially copy-constructible, use this simple copy constructor.
     constexpr OptionalValueStorage(T const& in_value) requires(
@@ -120,10 +117,8 @@ struct OptionalValueStorage {
         }
     }
 
+    // `nullopt` initializes this without a value.
     constexpr OptionalValueStorage(cat::detail::NullOpt) : has_some(false){};
-
-    // If other assignment operators are not conditionally specialized by their
-    // `requires`, they should be `default` or deleted.
 
     // If `T` is trivially copy-assignable, then forward this value.
     auto operator=(T const& in_value) -> OptionalValueStorage& requires(
@@ -167,6 +162,7 @@ struct OptionalValueStorage {
     auto operator=(T&& in_value) -> OptionalValueStorage& requires(
         !meta::is_move_assignable<T>) = delete;
 
+    // The following methods are homogenous to all `Optional...Storage` types.
     constexpr auto value() & -> T& {
         return this->storage;
     }
@@ -247,6 +243,7 @@ struct OptionalReferenceStorage {
         return *this;
     };
 
+    // The following methods are homogenous to all `Optional...Storage` types.
     constexpr auto value() & -> Value& {
         return *(this->p_storage);
     }
@@ -410,6 +407,7 @@ struct OptionalPredicateStorage {
     auto operator=(Value&& in_value) -> OptionalPredicateStorage& requires(
         !meta::is_move_assignable<Value>) = delete;
 
+    // The following methods are homogenous to all `Optional...Storage` types.
     constexpr auto value() & -> Value& {
         return this->storage;
     }
@@ -518,7 +516,7 @@ class Optional {
     constexpr Optional(cat::detail::InPlace) requires(meta::is_void<T>)
         : storage(true){};
 
-    // Forward all constructors to `storage`.
+    // Forward all constructors to the `storage` member.
 
     // A reference type cannot be copy-constructed, but other types can.
     template <typename U>
