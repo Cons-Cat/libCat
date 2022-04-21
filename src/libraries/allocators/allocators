@@ -127,6 +127,7 @@ struct AllocatorFacade {
                               UnderlyingHandle>>;
 
         // Initialize either an `Optional` or a `Result` with an empty value.
+        // TODO: This can be simplified when `Result` accepts `in_place`.
         Allocation maybe_memory = meta::Conditional<
             meta::IsSpecializationTrait<Allocation, Optional>::value,
             cat::detail::NullOpt, Failure>{};

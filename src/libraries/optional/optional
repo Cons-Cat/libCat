@@ -22,9 +22,16 @@ struct Monostate {};
 // A `PredicateConstructor` is the only type that can construct a `Predicate`.
 struct PredicateConstructor {};
 
+// `InPlace` is consumed by wrapper classes to default-initialize their storage.
+struct InPlace {};
+
 }  // namespace cat::detail
 
 inline constexpr cat::detail::NullOpt nullopt;
+
+// `in_place` is consumed by wrapper classes to default-initialize their
+// storage.
+inline constexpr cat::detail::InPlace in_place;
 
 template <typename T, auto predicate, T sentinel>
 struct Predicate {
@@ -215,17 +222,14 @@ template <typename T>
 struct OptionalReferenceStorage {
     using Value = meta::RemoveReference<T>;
     Value* p_storage = nullptr;
-    // TODO: Handle non-trivial constructors and assignment operators.
 
-    constexpr OptionalReferenceStorage(Value& in_value) requires(
-        meta::is_default_constructible<Value>)
-        : p_storage(cat::addressof(in_value)){};
-
-    constexpr OptionalReferenceStorage(Value const& in_value)
+    template <typename U>
+    constexpr OptionalReferenceStorage(U const& in_value)
         : p_storage(cat::addressof(in_value)){};
 
     template <typename U>
-    constexpr OptionalReferenceStorage(U&& in_value)
+    constexpr OptionalReferenceStorage(U&& in_value) requires(
+        meta::is_convertible<U, T>)
         : p_storage(cat::addressof(meta::forward<U>(in_value))){};
 
     constexpr OptionalReferenceStorage(cat::detail::NullOpt)
@@ -301,9 +305,7 @@ struct OptionalPredicateStorage {
     using Value = typename T::Type;
     Value storage;
 
-    // Default-initialization is not supported.
-    // TODO: Support it.
-    OptionalPredicateStorage() = delete;
+    // TODO: Handle non-trivial constructors and assignment operators.
 
     // Enable copy and move constructors iff `OptionalPredicateStorage` supports
     // them.
@@ -461,53 +463,58 @@ struct OptionalPredicateStorage {
 
 template <typename T>
 class Optional {
-    static constexpr bool is_predicate = requires {
-        // `Predicate` is the only type that can be constructed by a
-        // `PredicateConstructor` value.
-        T(cat::detail::PredicateConstructor{});
-    };
-
+    // clang-format off
+    // Clang Format 12 does not understand how to format this well:
     using Storage =
-        meta::Conditional<is_predicate,
-                          // If `T` is a `Predicate`:
-                          OptionalPredicateStorage<T>,
-                          meta::Conditional<meta::is_reference<T>,
-                                            // If `T` is a reference type:
-                                            OptionalReferenceStorage<T>,
-                                            // If `T` is a value type:
-                                            OptionalValueStorage<T>>>;
+		meta::Conditional<requires {
+                // `Predicate` is the only type that can be constructed by a
+                // `PredicateConstructor` value.
+                T(cat::detail::PredicateConstructor{});
+	        }, // If `T` is a `Predicate`:
+            OptionalPredicateStorage<T>,
+	        meta::Conditional<meta::is_reference<T>,
+                // If `T` is a reference type:
+                OptionalReferenceStorage<T>,
+                // If `T` is a value type:
+                OptionalValueStorage <T>>>;
+    // clang-format on
+
     using Value = typename Storage::Value;
     Storage storage;
   public:
-    // Default-initialization is not supported.
-    // TODO: Support it.
-    Optional() = delete;
+    // `Optional`s are default-constructed as empty.
+    constexpr Optional() : storage(nullopt){};
+
+    // `Optional`s can be constructed with `in_place` to have their storage
+    // default-constructed, unless they are reference types.
+    constexpr Optional(cat::detail::InPlace) requires(!meta::is_reference<T>)
+        : storage(Value{}){};
 
     // Forward all constructors to `storage`.
 
     // A reference type cannot be copy-constructed, but other types can.
     template <typename U>
-    Optional(U const& input) requires(!meta::is_reference<T> &&
-                                      meta::is_convertible<U, Value> &&
-                                      meta::is_copy_constructible<Value>)
-        : storage(static_cast<T>(input)){};
+    constexpr Optional(U const& input) requires(
+        !meta::is_reference<T> && meta::is_convertible<U, Value> &&
+        meta::is_copy_constructible<Value>)
+        : storage(static_cast<Value>(input)){};
 
     template <typename U>
-    Optional(U const& input) requires(
+    constexpr Optional(U const& input) requires(
         meta::is_reference<T>&& meta::is_convertible<U, Value>)
         : storage(static_cast<T>(input)){};
 
     template <typename U>
-    Optional(U&& input) requires(meta::is_convertible<U, Value>)
+    constexpr Optional(U&& input) requires(meta::is_convertible<U, T>)
         : storage(meta::forward<U>(input)){};
 
     template <typename U>
-    Optional(Optional<U> const& input) {
+    constexpr Optional(Optional<U> const& input) {
         this->storage.assign(input);
     }
 
     template <typename U>
-    Optional(Optional<U>&& input) {
+    constexpr Optional(Optional<U>&& input) {
         this->storage.assign(meta::forward<Optional<U>>(input));
     }
 
@@ -517,7 +524,7 @@ class Optional {
     // Forward all assignment operators to `storage`, except when assigning
     // `nullopt`.
     template <typename U>
-    auto operator=(U const& value)
+    constexpr auto operator=(U const& value)
         -> Optional& requires(meta::is_convertible<U, T>) {
         this->storage = static_cast<T>(value);
         return *this;
