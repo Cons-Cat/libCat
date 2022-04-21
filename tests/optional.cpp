@@ -65,7 +65,7 @@ void meow() {
     Result(!ref_2.has_value()).or_panic();
 
     // Rebind.
-    int4 goo = 0;
+    int4 goo = 1;
     Optional<int4&> boo = goo;
     ref = boo;
     boo = nullopt;
@@ -73,6 +73,18 @@ void meow() {
     // Because `boo` was rebinded when assigned `nullopt`, `ref` should still
     // hold a value.
     Result(ref.has_value()).or_panic();
+
+    Result(ref.value() == 1).or_panic();
+    goo = 2;
+    Result(ref.value() == 2).or_panic();
+
+    int4 goo_2 = 3;
+    // `ref` is rebinded to `goo_2`, instead of `3` assigning through into
+    // `goo`.
+    ref = goo_2;
+    Result(goo == 2).or_panic();
+    goo = 0;
+    Result(ref.value() == 3).or_panic();
 
     ref = nullopt;
     Result(!ref.has_value()).or_panic();
