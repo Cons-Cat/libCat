@@ -1,5 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
+#pragma once
 
 template <typename T>
 consteval auto simd::set_zeros() -> typename T::Intrinsic {
