@@ -107,6 +107,10 @@ void meow() {
     Result(!nonzero.has_value()).or_panic();
     */
 
+    // Converting assignment.
+    foo = 1;
+    foo = uint4{2};
+
     // Monadic methods.
     moo = 2;
     Result(moo.transform([](auto input) {
@@ -171,7 +175,7 @@ void meow() {
 
     // `Optional const`
     Optional<int4> const constant_val = 1;
-    Optional<int4> const constant_null = nullopt;
+    [[maybe_unused]] Optional<int4> const constant_null = nullopt;
     auto con = constant_val.value();
 
     // TODO: This does not work:
