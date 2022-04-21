@@ -192,7 +192,7 @@ struct OptionalValueStorage {
 
     // Construct an object at the address of the held `storage`.
     template <typename... Args>
-    void construct(Args&&... args) {
+    constexpr void construct(Args&&... args) {
         new (cat::addressof(this->storage)) T(meta::forward<Args>(args)...);
         this->has_some = true;
     }
@@ -272,7 +272,7 @@ struct OptionalReferenceStorage {
 
     // Construct an object at the address of the held `storage`.
     template <typename... Args>
-    void construct(Args&&... args) {
+    constexpr void construct(Args&&... args) {
         Result(this->has_value()).assert();
         new (this->p_storage) T(meta::forward<Args>(args)...);
     }
@@ -435,7 +435,7 @@ struct OptionalPredicateStorage {
 
     // Construct an object at the address of the held `storage`.
     template <typename... Args>
-    void construct(Args&&... args) {
+    constexpr void construct(Args&&... args) {
         Result(this->has_value()).assert();
         new (this->storage) T(meta::forward<Args>(args)...);
     }
@@ -461,34 +461,62 @@ struct OptionalPredicateStorage {
     }
 };
 
+// This partial specialization of `Optional` doesn't work, unfortunately:
+// class Optional<void> : public Optional<Sentinel<bool, false>> {};
+struct OptionalVoidStorage {
+    using Value = bool;
+    bool has_some;
+
+    constexpr OptionalVoidStorage(bool const& in_bool) : has_some(in_bool){};
+    constexpr OptionalVoidStorage(bool&& in_bool) : has_some(in_bool){};
+    constexpr OptionalVoidStorage(cat::detail::NullOpt) : has_some(false){};
+
+    constexpr auto has_value() const -> bool {
+        return this->has_some;
+    }
+
+    // Destroy the storage unconditionally.
+    void hard_reset() {
+        this->has_some = false;
+    }
+};
+
 template <typename T>
 class Optional {
     // clang-format off
     // Clang Format 12 does not understand how to format this well:
     using Storage =
-		meta::Conditional<requires {
+        meta::Conditional<meta::is_void<T>,
+            // If `T` is `void`:
+		    OptionalVoidStorage, 
+            meta::Conditional<requires {
                 // `Predicate` is the only type that can be constructed by a
                 // `PredicateConstructor` value.
                 T(cat::detail::PredicateConstructor{});
 	        }, // If `T` is a `Predicate`:
-            OptionalPredicateStorage<T>,
-	        meta::Conditional<meta::is_reference<T>,
-                // If `T` is a reference type:
-                OptionalReferenceStorage<T>,
-                // If `T` is a value type:
-                OptionalValueStorage <T>>>;
+                OptionalPredicateStorage<T>,
+                meta::Conditional<meta::is_reference<T>,
+                    // If `T` is a reference type:
+                    OptionalReferenceStorage<T>,
+                    // If `T` is a value type:
+					OptionalValueStorage<T>>>>;
     // clang-format on
 
     using Value = typename Storage::Value;
     Storage storage;
   public:
-    // `Optional`s are default-constructed as empty.
+    // All `Optional`s are default-constructed as empty.
     constexpr Optional() : storage(nullopt){};
 
     // `Optional`s can be constructed with `in_place` to have their storage
     // default-constructed, unless they are reference types.
-    constexpr Optional(cat::detail::InPlace) requires(!meta::is_reference<T>)
+    constexpr Optional(cat::detail::InPlace) requires(!meta::is_reference<T> &&
+                                                      !meta::is_void<T>)
         : storage(Value{}){};
+
+    // `Optional<void>` cannot be default-initialized to `false`.
+    constexpr Optional(cat::detail::InPlace) requires(meta::is_void<T>)
+        : storage(true){};
 
     // Forward all constructors to `storage`.
 
@@ -811,12 +839,13 @@ class Optional {
     }
 
     // Construct the value in-place and destroy the held value iff it exists.
-    template <typename... Args>
-    auto emplace(Args&&... args) -> T& {
-        *this = nullopt;
-        this->storage.construct(meta::forward<Args>(args)...);
-        return this->storage.value();
-    }
+    // template <typename... Args>
+    // constexpr auto emplace(Args&&... args) -> T& requires(!meta::is_void<T>)
+    // {
+    //     *this = nullopt;
+    //     this->storage.construct(meta::forward<Args>(args)...);
+    //     return this->storage.value();
+    // }
 };
 
 template <typename T>
