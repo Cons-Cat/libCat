@@ -217,5 +217,33 @@ void meow() {
     Result(global_int == 3).or_panic();
     Result(nontrivial.value().data == 2).or_panic();
 
+    // `Optional<void>` default-initializes empty:
+    Optional<void> optvoid;
+    Result(!optvoid.has_value()).or_panic();
+    // `true` initializes a value:
+    Optional<void> optvoid_2{true};
+    Result(optvoid_2.has_value()).or_panic();
+
+    // `false` initializes empty:
+    Optional<void> optvoid_3{false};
+    Result(!optvoid_3.has_value()).or_panic();
+    // `in_place` initializes a value:
+    Optional<void> optvoid_4{in_place};
+    Result(optvoid_4.has_value()).or_panic();
+    // `nullopt` initializes empty:
+    Optional<void> optvoid_5{nullopt};
+    Result(!optvoid_5.has_value()).or_panic();
+
+    // Assign value:
+    optvoid = true;
+    Result(optvoid.has_value()).or_panic();
+    // Remove value:
+    optvoid = false;
+    Result(!optvoid.has_value()).or_panic();
+    // Assign `nullopt`:
+    optvoid = true;
+    optvoid = nullopt;
+    Result(!optvoid.has_value()).or_panic();
+
     cat::exit();
 }
