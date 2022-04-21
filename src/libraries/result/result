@@ -228,10 +228,11 @@ class [[nodiscard]] Result {
 
     // TODO: Concept for `bool1`, `bool2`, and `bool4` as well.
     // Consume a `bool` temporary. This is useful for debugging with asserts.
-    constexpr Result(bool const& expression) requires(meta::is_void<T>)
+    constexpr Result(meta::Bool auto const& expression) requires(
+        meta::is_void<T>)
         : storage(), is_okay(expression){};
 
-    constexpr Result(bool&& expression) requires(meta::is_void<T>)
+    constexpr Result(meta::Bool auto&& expression) requires(meta::is_void<T>)
         : storage(), is_okay(expression){};
 
     // Return a specified value when `is_okay` is `false`.
