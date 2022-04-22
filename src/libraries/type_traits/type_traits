@@ -38,16 +38,16 @@ using std::move;
 // Forward declare numeric types.
 namespace cat::detail {
 template <typename T>
-struct SafeNumeral;
+struct Numeral;
 }
-using int1 = cat::detail::SafeNumeral<__INT8_TYPE__>;
-using uint1 = cat::detail::SafeNumeral<__UINT8_TYPE__>;
-using int2 = cat::detail::SafeNumeral<__INT16_TYPE__>;
-using uint2 = cat::detail::SafeNumeral<__UINT16_TYPE__>;
-using int4 = cat::detail::SafeNumeral<__INT32_TYPE__>;
-using uint4 = cat::detail::SafeNumeral<__UINT32_TYPE__>;
-using int8 = cat::detail::SafeNumeral<__INT64_TYPE__>;
-using uint8 = cat::detail::SafeNumeral<__UINT64_TYPE__>;
+using int1 = cat::detail::Numeral<__INT8_TYPE__>;
+using uint1 = cat::detail::Numeral<__UINT8_TYPE__>;
+using int2 = cat::detail::Numeral<__INT16_TYPE__>;
+using uint2 = cat::detail::Numeral<__UINT16_TYPE__>;
+using int4 = cat::detail::Numeral<__INT32_TYPE__>;
+using uint4 = cat::detail::Numeral<__UINT32_TYPE__>;
+using int8 = cat::detail::Numeral<__INT64_TYPE__>;
+using uint8 = cat::detail::Numeral<__UINT64_TYPE__>;
 
 struct intptr;
 

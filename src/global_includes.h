@@ -35,7 +35,7 @@ class Result;
 
 namespace cat::detail {
 template <typename T>
-struct SafeNumeral;
+struct Numeral;
 }
 
 namespace meta {
