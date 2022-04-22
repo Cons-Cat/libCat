@@ -373,8 +373,7 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
     intptr p_arena_current = p_arena_begin;
 
     LinearAllocator(void* const p_address, ssize const arena_size)
-        : p_arena_begin(intptr{p_address} + arena_size),
-          p_arena_end(p_address){};
+        : p_arena_begin(p_address + arena_size), p_arena_end(p_address){};
 
     // Try to allocate memory and bump the pointer.
     template <typename T>

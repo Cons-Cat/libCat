@@ -86,7 +86,7 @@ struct StaticString {
     }
 
     consteval StaticString(String const& in) : storage{} {
-        for (int i = 0; i < in.size().c() - 1; i++) {
+        for (int i = 0; i < in.size() - 1; i++) {
             storage[i] = in.p_data()[i];
         }
         storage[length] = '\0';

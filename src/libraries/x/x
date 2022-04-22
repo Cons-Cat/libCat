@@ -445,11 +445,12 @@ auto handshake(meta::Allocator auto& allocator,
 
     // Copy pointers to that recieved data from the allocated buffer into
     // `connection`.
+    // TODO: Use `intptr`.
     char* p_iterator = static_cast<char*>(
         static_cast<void*>(x_connection.p_setup +
                            sizeof(xwin::ConnectionResponseInfo)
                            // For now, skip past the vendor name string.
-                           + x_connection.p_setup->vendor_string_length.c()));
+                           + x_connection.p_setup->vendor_string_length));
 
     x_connection.p_pixel_map_formats = static_cast<xwin::PixelMapFormatPacket*>(
         static_cast<void*>(p_iterator));

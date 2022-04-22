@@ -23,7 +23,7 @@ class Array {
     template <typename... U>
     constexpr Array(U&&... arguments) requires(sizeof...(arguments) == length) {
         T unpacked_data[length.c()] = {arguments...};
-        for (int i = 0; i < length.c(); i++) {
+        for (int i = 0; i < length; i++) {
             this->storage[i] = unpacked_data[i];
         }
     }
@@ -75,8 +75,7 @@ class Array {
         -> Span<T> {
         Result{start_index >= 0}.assert();
         Result{end_index <= length}.assert();
-        return Span<T>(this->p_storage + start_index.c(),
-                       end_index - start_index);
+        return Span<T>(this->p_storage + start_index, end_index - start_index);
     }
 
     constexpr auto first(ssize const count) -> Span<T> {
