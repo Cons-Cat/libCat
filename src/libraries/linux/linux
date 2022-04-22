@@ -8,23 +8,6 @@
 #include <string>
 #include <utility>
 
-// TODO: Is here the appropriate place for this operator?
-template <meta::EnumClass T>
-constexpr auto operator|(T flag_1, T flag_2) -> T {
-    using U = meta::UnderlyingType<T>;
-    return static_cast<T>(static_cast<U>(flag_1) | static_cast<U>(flag_2));
-}
-
-template <meta::EnumClass T, typename U = meta::UnderlyingType<T>>
-constexpr auto operator|(T flag_1, U flag_2) -> T {
-    return static_cast<T>(static_cast<U>(flag_1) | static_cast<U>(flag_2));
-}
-
-template <meta::EnumClass T, typename U = meta::UnderlyingType<T>>
-constexpr auto operator&(T flag_1, U flag_2) -> T {
-    return static_cast<T>(static_cast<U>(flag_1) & static_cast<U>(flag_2));
-}
-
 struct Socket;
 
 constexpr usize page_size = 4096_ki;
@@ -150,15 +133,6 @@ enum class WaitOptionsFlags : long int {
     clone = 0x80000000,
 };
 
-auto read(FileDescriptor const file_descriptor, char const* p_string_buffer,
-          ssize const length) -> Result<ssize>;
-
-auto write(FileDescriptor const file_descriptor, char const* p_string_buffer,
-           ssize const length) -> Result<ssize>;
-
-auto write(FileDescriptor const file_descriptor, String const& string)
-    -> Result<ssize>;
-
 enum class OpenMode {
     read_only = 00,
     write_only = 01,
@@ -198,6 +172,31 @@ enum class OpenFlags {
     // offset value is 8-bytes.
     large_file = 0100000,
 };
+
+}  // namespace nix
+
+// Enable using these `enum class`es as bit-flags.
+template <>
+struct meta::EnumFlagTrait<nix::MemoryProtectionFlags> : meta::TrueTypeTrait {};
+template <>
+struct meta::EnumFlagTrait<nix::MemoryFlags> : meta::TrueTypeTrait {};
+template <>
+struct meta::EnumFlagTrait<nix::OpenFlags> : meta::TrueTypeTrait {};
+template <>
+struct meta::EnumFlagTrait<nix::CloneFlags> : meta::TrueTypeTrait {};
+template <>
+struct meta::EnumFlagTrait<nix::WaitOptionsFlags> : meta::TrueTypeTrait {};
+
+namespace nix {
+
+auto read(FileDescriptor const file_descriptor, char const* p_string_buffer,
+          ssize const length) -> Result<ssize>;
+
+auto write(FileDescriptor const file_descriptor, char const* p_string_buffer,
+           ssize const length) -> Result<ssize>;
+
+auto write(FileDescriptor const file_descriptor, String const& string)
+    -> Result<ssize>;
 
 auto open_file(char const* p_file_path, OpenMode file_mode,
                OpenFlags flags = OpenFlags{0}) -> Result<FileDescriptor>;

@@ -102,6 +102,40 @@ constexpr auto align_down(intptr const& value, ssize const alignment) -> intptr;
 
 }  // namespace cat
 
+namespace meta {
+
+template <typename>
+struct EnumFlagTrait : meta::FalseTypeTrait {};
+
+template <typename T>
+concept EnumFlag = requires(T) {
+    meta::EnumFlagTrait<T>::value;
+};
+
+}  // namespace meta
+
+template <meta::EnumFlag T>
+constexpr auto operator|(T flag_1, T flag_2) -> T {
+    using U = meta::UnderlyingType<T>;
+    return static_cast<T>(static_cast<U>(flag_1) | static_cast<U>(flag_2));
+}
+
+template <meta::EnumFlag T, typename U = meta::UnderlyingType<T>>
+constexpr auto operator|(T flag_1, U flag_2) -> T {
+    return static_cast<T>(static_cast<U>(flag_1) | static_cast<U>(flag_2));
+}
+
+template <meta::EnumFlag T>
+constexpr auto operator&(T flag_1, T flag_2) -> T {
+    using U = meta::UnderlyingType<T>;
+    return static_cast<T>(static_cast<U>(flag_1) & static_cast<U>(flag_2));
+}
+
+template <meta::EnumFlag T, typename U = meta::UnderlyingType<T>>
+constexpr auto operator&(T flag_1, U flag_2) -> T {
+    return static_cast<T>(static_cast<U>(flag_1) & static_cast<U>(flag_2));
+}
+
 constexpr auto operator""_ki(unsigned long long const input) -> long {
     return static_cast<long>(1024 * input);
 }
