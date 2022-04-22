@@ -453,7 +453,7 @@ struct intptr {  // NOLINT
 
     template <typename T>
     constexpr operator T*() {
-        return static_cast<T*>(static_cast<void*>(this));
+        return reinterpret_cast<T*>(this->storage);
     }
 
     template <typename T>
@@ -465,8 +465,7 @@ struct intptr {  // NOLINT
     constexpr auto operator=(intptr&& from) -> intptr& = default;
 
     constexpr auto operator=(meta::Integral auto const from) -> intptr& {
-        // TODO: Lol, fix and test this:
-        this->storage = reintret_cast<char*>(from);
+        this->storage = from;
         return *this;
     }
 
