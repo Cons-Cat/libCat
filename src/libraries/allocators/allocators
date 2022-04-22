@@ -372,16 +372,15 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
     intptr const p_arena_end;
     intptr p_arena_current = p_arena_begin;
 
-    LinearAllocator(void* const p_address, ssize const arena_size)
+    LinearAllocator(intptr const p_address, ssize const arena_size)
         : p_arena_begin(p_address + arena_size), p_arena_end(p_address){};
 
-    // Try to allocate memory and bump the pointer.
+    // Try to allocate memory and bump the pointer down.
     template <typename T>
     auto allocate(ssize const allocation_size) -> Result<void*> {
-        intptr p_allocation = p_arena_current - allocation_size;
-        if (p_allocation >= p_arena_end) {
-            p_arena_current = p_allocation;
-            return static_cast<void*>(p_arena_current);
+        this->p_arena_current -= allocation_size;
+        if (this->p_arena_current >= p_arena_end) {
+            return static_cast<void*>(this->p_arena_current);
         }
         return Failure(1);
     }
@@ -392,15 +391,16 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
         return okay;
     };
 
-    // Try to allocate memory aligned to some boundary and bump the pointer.
+    // Try to allocate memory aligned to some boundary and bump the pointer
+    // down.
     template <typename T>
     auto aligned_allocate(ssize const alignment, ssize const allocation_size)
         -> Result<void*> {
         intptr p_allocation =
-            cat::align_down(p_arena_current - allocation_size, alignment);
+            cat::align_down(this->p_arena_current - allocation_size, alignment);
         if (p_allocation >= p_arena_end) {
-            p_arena_current = p_allocation;
-            return static_cast<void*>(p_arena_current);
+            this->p_arena_current = p_allocation;
+            return static_cast<void*>(this->p_arena_current);
         }
         return Failure(1);
     }
@@ -425,7 +425,7 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
 
     // Reset the bumped pointer to the beginning of this arena.
     void reset() {
-        p_arena_current = p_arena_begin;
+        this->p_arena_current = p_arena_begin;
     }
 };
 
