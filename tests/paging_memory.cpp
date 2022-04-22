@@ -1,6 +1,7 @@
 #include <allocators>
 #include <array>
 #include <math>
+#include <numerals>
 #include <utility>
 
 int4 global_int_1 = 0;

@@ -2,7 +2,6 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <any>
 #include <type_traits>
 
 // TODO: Remove usage of type_traits as much as possible.
@@ -41,13 +40,8 @@ concept SafeIntegral = (!meta::is_integral<T>)&&(!meta::is_floating_point<T>);
 //      meta::is_same<meta::RemoveConst<meta::RemoveReference<T>>, char
 //      const*>);
 
-struct bool1;
-struct bool2;
-struct bool4;
-
 template <typename T>
-concept Bool = (meta::is_same<T, bool> || meta::is_same<T, bool1> ||
-                meta::is_same<T, bool2> || meta::is_same<T, bool4>);
+concept Bool = meta::is_bool<T>;
 
 template <typename Derived, typename Base>
 concept DerivedFrom = meta::is_base_of<Base, Derived> &&

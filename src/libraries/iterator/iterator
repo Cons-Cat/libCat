@@ -287,7 +287,7 @@ struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
     }
 
     auto distance_to(ReversedIterator<T> other) const -> int {
-        return this->iterator.distance_to(other.iterator);
+        return this->iterator.distance_to(other.iterator).c();
     }
 };
 

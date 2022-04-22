@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <type_traits>
 #include <utility>
 
 /* As far as I can prove, `bit_cast` is a zero-overhead abstraction on `-O3`.

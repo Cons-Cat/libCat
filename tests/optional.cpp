@@ -94,8 +94,8 @@ void meow() {
     Result(ref_2.value() == goo).or_panic();
 
     // Optional with a predicate.
-    Optional<Predicate<int4,
-                       [](int4 input) -> bool {
+    Optional<Predicate<int,
+                       [](int input) -> bool {
                            return input >= 0;
                        },
                        -1>>

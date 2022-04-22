@@ -5,194 +5,226 @@
 #include <concepts>
 #include <type_traits>
 
-/* Safe arithmetic does compile with no known issues. However, clangd 12 and 13
- * keel over after a single glance at this metaprogramming, so I am currently
- * hiding this behind a feature flag. It likely doesn't work anymore, because I
- * have been developing libCat mostly without safe arithmetic due to clangd. */
-#ifdef SAFE_ARITHMETIC
-
-namespace meta {
-
-/* Get the value of a primitive number, or the value held by a
- * SafeNumeral<>. */
-constexpr auto decay_numeral(int_or_float auto from) {
-    return from;
-}
-constexpr auto decay_numeral(auto from) {
-    return from.data;
-}
-
-}  // namespace meta
-
 namespace cat::detail {
 
-/* SafeNumeral<> is the most interesting part of <stdint.h>. libCat uses
- * this struct to represent all of its scalar numerical data types.
- * Operations between two specializations of a SafeNumeral<> that would
- * cause a narrowing conversion such as loss of precision, change in
- * signed-ness, or an implicit float to int conversion, *do not compile*, and
- * the code to ensure this is very simple compared to many other mechanisms.
- *
- * This works because all of its implicit conversion operators, arithmetic
- * operators, and constructors are generic with constraints. In other words,
- * these methods do not exist until they are actually called somewhere.
- *
- * At a method's call site, the compiler will attempt to find an overload of the
- * generic method that satisfies the inputs you provided. Because these methods
- * are constrained by concepts, it is possible that the compiler will fail to
- * find any satisfying overload, and thus not compile.
- *
- * So, we can provide constraints such as "the operand must have a size that is
- * less than or equal to my own size", and this will guarantee that the compiler
- * cannot generate a method that could cause a narrowing conversion between an
- * i8 and an i4 type. This solution is very concise because that same
- * constraint broadly applies to all possible type conversions. */
-
+// `SafeNumeral` is a container for numeric data types which prevents unsafe or
+// pessimizing implicit casts, such as loss of precision, change in
+// signed-ness, or `float4` to `float8` conversion.
+//
+// All of its conversion operators, arithmetic operators and constructors are
+// generic with constraints. Because these methods are constrained, it is
+// possible that the compiler will fail to resolve any satisfying overloads for
+// an invocation of an arithmetic operator, constructor, or conversion operator,
+// and thus prevent compilation.
+//
+// Constraints such as "the operand's size must be less than or equal to my own
+// size" guarantee that the an unwanted overload cannot be resolved. This
+// solution is concise, because any constraint broadly applies to all possible
+// type conversions.
 template <typename T>
 struct SafeNumeral {
-    // TODO: Rename to value
-    T data;  // Uninitialized by default.
+    // `Type` allows SIMD specializations to easily get the underlying numeric
+    // data type of a `SafeNumeral`.
+    using Type = T;
+    T storage;
 
     constexpr SafeNumeral() = default;
-    // Any number that is smaller than this can safely cast into it.
-    constexpr SafeNumeral(auto from) requires(
-        cat::is_signed_v<T> ==
-            cat::is_signed_v<decltype(decay_numeral(from))> &&
-        sizeof(T) >= sizeof(decltype(decay_numeral(from))) &&
-        cat::is_floating_point_v<T> ==
-            cat::is_floating_point_v<decltype(decay_numeral(from))>) {
-        this->data = decay_numeral(from);
-    }
-    // TODO: Make a concept that limits signed-ness and size.
-    constexpr operator cat::int_or_float auto() const {
-        return this->data;
-    };
 
-        /* TODO: Putting concepts or constexpr functions in these requires
-         * clauses doesn't work, for some reason. */
-#define REQUIRES_HELPER                                                       \
-    cat::is_signed_v<T> == cat::is_signed_v<decltype(decay_numeral(from))> && \
-        sizeof(T) >= sizeof(decltype(decay_numeral(from))) &&                 \
-        cat::is_floating_point_v<T> ==                                        \
-            cat::is_floating_point_v<decltype(decay_numeral(from))>
+    constexpr SafeNumeral(T value) : storage(value){};
 
-    auto operator=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
-        this->data = decay_numeral(from);
-        return *this;
-    }
-    auto operator==(auto from) -> bool requires(REQUIRES_HELPER) {
-        return this->data == decay_numeral(from);
+    template <typename U>
+    constexpr SafeNumeral(U const from) requires(
+        // clang-format off
+        // Any number that is smaller than this can safely cast into it.
+        sizeof(T) >= sizeof(from)
+		/* &&
+            (meta::is_signed<T> ==
+                 meta::is_signed<decltype(decay_numeral(from))> &&
+             meta::is_floating_point<T> ==
+                 meta::is_floating_point<decltype(decay_numeral(from))>) ||
+        (meta::is_bool<U> && meta::is_integral<T>)
+		*/
+        // clang-format on
+        )
+        : storage(from){};
+
+    template <typename U>
+    constexpr explicit operator U() const {
+        return static_cast<U>(this->storage);
     }
 
-    auto operator>(auto from) -> bool requires(REQUIRES_HELPER) {
-        return this->data > decay_numeral(from);
-    }
-    auto operator>=(auto from) -> bool requires(REQUIRES_HELPER) {
-        return this->data >= decay_numeral(from);
+    // Get the underlying C API type.
+    constexpr auto c() const -> T {
+        return this->storage;
     }
 
-    auto operator<(auto from) -> bool requires(REQUIRES_HELPER) {
-        return this->data < decay_numeral(from);
-    }
-    auto operator<=(auto from) -> bool requires(REQUIRES_HELPER) {
-        return this->data <= decay_numeral(from);
-    }
+    // TODO: Putting concepts or constexpr functions in these `requires`
+    // clauses doesn't work, for some reason.
+#define REQUIRES_HELPER true
 
-    auto operator+(auto from) -> SafeNumeral<T>
-    requires(REQUIRES_HELPER) {
-        return this->data + decay_numeral(from);
-    }
-    auto operator+=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
-        this->data = this->data + decay_numeral(from);
+    /* cat::is_signed_v<T> == cat::is_signed_v<decltype(decay_numeral(from))> &&
+       \
+            sizeof(T) >= sizeof(decltype(decay_numeral(from))) && \
+            cat::is_floating_point_v<T> == \
+                cat::is_floating_point_v<decltype(decay_numeral(from))>
+    */
+
+    constexpr auto operator=(auto const from)
+        -> SafeNumeral& requires(REQUIRES_HELPER) {
+        this->storage = static_cast<T const>(from);
         return *this;
     }
 
-    auto operator++() -> SafeNumeral<T> {
-        return ++data;
-    }
-    auto operator++(int) -> SafeNumeral<T> {
-        return data++;
+    constexpr auto operator==(auto const from) const
+        -> bool requires(REQUIRES_HELPER) {
+        return this->storage == static_cast<T const>(from);
     }
 
-    auto operator-(auto from) -> SafeNumeral<T>
-    requires(REQUIRES_HELPER) {
-        return this->data - decay_numeral(from);
+    constexpr auto operator>(auto const from) const
+        -> bool requires(REQUIRES_HELPER) {
+        return this->storage > static_cast<T const>(from);
     }
-    auto operator-=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
-        this->data = this - from;
+
+    constexpr auto operator>=(auto const from) const
+        -> bool requires(REQUIRES_HELPER) {
+        return this->storage >= static_cast<T const>(from);
+    }
+
+    constexpr auto operator<(auto const from) const
+        -> bool requires(REQUIRES_HELPER) {
+        return this->storage < static_cast<T const>(from);
+    }
+
+    constexpr auto operator<=(auto const from) const
+        -> bool requires(REQUIRES_HELPER) {
+        return this->storage <= static_cast<T const>(from);
+    }
+
+    constexpr auto operator+(auto const from) const -> SafeNumeral<T>
+    requires(REQUIRES_HELPER) {
+        return static_cast<T const>(this->storage + static_cast<T const>(from));
+    }
+
+    constexpr auto operator+=(auto const from)
+        -> SafeNumeral& requires(REQUIRES_HELPER) {
+        this->storage = this->storage + static_cast<T const>(from);
         return *this;
     }
 
-    auto operator--() -> SafeNumeral<T> {
-        return --data;
-    }
-    auto operator--(int) -> SafeNumeral<T> {
-        return data--;
-    }
-
-    auto operator*(auto from) -> SafeNumeral<T>
-    requires(REQUIRES_HELPER) {
-        return this->data * decay_numeral(from);
-    }
-    auto operator*=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
-        this->data = this->data * from.data;
+    constexpr auto operator++() -> SafeNumeral& {
+        ++storage;
         return *this;
     }
 
-    auto operator/(auto from) -> SafeNumeral<T>
-    requires(REQUIRES_HELPER) {
-        return this->data / decay_numeral(from);
-    }
-    auto operator/=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
-        this->data = this->data / from.data;
+    constexpr auto operator++(int) -> SafeNumeral& {
+        storage++;
         return *this;
     }
 
-    auto operator%(auto from) -> SafeNumeral<T>
+    constexpr auto operator-(auto const from) const -> SafeNumeral<T>
     requires(REQUIRES_HELPER) {
-        return this->data % decay_numeral(from);
+        return static_cast<T const>(this->storage - static_cast<T const>(from));
     }
-    auto operator%=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
-        this->data = this->data % from.data;
+
+    constexpr auto operator-=(auto const from)
+        -> SafeNumeral& requires(REQUIRES_HELPER) {
+        this->storage = this->storage - static_cast<T const>(from);
         return *this;
     }
 
-    auto operator&(auto from) -> SafeNumeral<T>
-    requires(REQUIRES_HELPER) {
-        return this->data & decay_numeral(from);
+    constexpr auto operator--() -> SafeNumeral<T> {
+        return --storage;
     }
-    auto operator&=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
-        this->data = this->data & from.data;
+
+    constexpr auto operator--(int) -> SafeNumeral<T> {
+        return storage--;
+    }
+
+    constexpr auto operator*(auto const from) const -> SafeNumeral<T>
+    requires(REQUIRES_HELPER) {
+        return static_cast<T const>(this->storage * static_cast<T const>(from));
+    }
+
+    constexpr auto operator*=(auto const from)
+        -> SafeNumeral& requires(REQUIRES_HELPER) {
+        this->storage = this->storage * static_cast<T const>(from);
         return *this;
     }
 
-    auto operator|(auto from) -> SafeNumeral<T>
+    constexpr auto operator/(auto const from) const -> SafeNumeral<T>
     requires(REQUIRES_HELPER) {
-        return this->data | decay_numeral(from);
+        return static_cast<T const>(this->storage / static_cast<T const>(from));
     }
-    auto operator|=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
-        this->data = this->data | from.data;
+
+    constexpr auto operator/=(auto const from)
+        -> SafeNumeral& requires(REQUIRES_HELPER) {
+        this->storage = this->storage / static_cast<T const>(from);
         return *this;
     }
 
-    auto operator<<(auto from) -> SafeNumeral<T>
+    constexpr auto operator%(auto const from) const -> SafeNumeral<T>
     requires(REQUIRES_HELPER) {
-        return this->data << decay_numeral(from);
+        return static_cast<T const>(this->storage % static_cast<T const>(from));
     }
-    auto operator<<=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
-        this->data = this->data << from.data;
+
+    constexpr auto operator%=(auto const from)
+        -> SafeNumeral& requires(REQUIRES_HELPER) {
+        this->storage = this->storage % static_cast<T const>(from);
         return *this;
     }
 
-    auto operator>>(auto from) -> SafeNumeral<T>
+    constexpr auto operator&(auto const from) const -> SafeNumeral<T>
     requires(REQUIRES_HELPER) {
-        return this->data >> decay_numeral(from);
+        return static_cast<T const>(this->storage & static_cast<T const>(from));
     }
-    auto operator>>=(auto from) -> SafeNumeral<T>& requires(REQUIRES_HELPER) {
-        this->data = this->data >> from.data;
+
+    constexpr auto operator&=(auto const from)
+        -> SafeNumeral& requires(REQUIRES_HELPER) {
+        this->storage = this->storage & static_cast<T const>(from);
+        return *this;
+    }
+
+    constexpr auto operator|(auto const from) const -> SafeNumeral<T>
+    requires(REQUIRES_HELPER) {
+        return static_cast<T const>(this->storage | static_cast<T const>(from));
+    }
+
+    constexpr auto operator|=(auto const from)
+        -> SafeNumeral& requires(REQUIRES_HELPER) {
+        this->storage = this->storage | static_cast<T const>(from);
+        return *this;
+    }
+
+    constexpr auto operator<<(auto const from) const -> SafeNumeral<T>
+    requires(REQUIRES_HELPER) {
+        return static_cast<T const>(this->storage << static_cast<T>(from));
+    }
+
+    constexpr auto operator<<=(auto const from)
+        -> SafeNumeral& requires(REQUIRES_HELPER) {
+        this->storage = this->storage << static_cast<T const>(from);
+        return *this;
+    }
+
+    constexpr auto operator>>(auto const from) const -> SafeNumeral<T>
+    requires(REQUIRES_HELPER) {
+        return static_cast<T const>(this->storage >> static_cast<T>(from));
+    }
+
+    constexpr auto operator>>=(auto const from)
+        -> SafeNumeral& requires(REQUIRES_HELPER) {
+        this->storage = this->storage >> static_cast<T const>(from);
+        return *this;
+    }
+
+    constexpr auto operator~() -> SafeNumeral& {
+        this->storage = ~(this->storage);
         return *this;
     }
 };
+
+template <typename T>
+SafeNumeral(T) -> SafeNumeral<T>;
 
 }  // namespace cat::detail
 
@@ -208,43 +240,19 @@ using uint8 = cat::detail::SafeNumeral<__UINT64_TYPE__>;
 // using i128 = cat::detail::SafeNumeral<int128_t>;
 // using u128 = cat::detail::SafeNumeral<uint128_t>;
 
-// These are GCC built-in types:
 using float4 = cat::detail::SafeNumeral<float>;
 using float8 = cat::detail::SafeNumeral<double>;
-#else
-
-namespace meta {
-
-constexpr auto decay_numeral(auto from) {
-    return from;
-}
-
-}  // namespace meta
-
-// TODO: Add and test 16-byte types and complex numbers.
-// These macros are defined by the GCC compiler.
-using int1 = __INT8_TYPE__;
-using uint1 = __UINT8_TYPE__;
-using int2 = __INT16_TYPE__;
-using uint2 = __UINT16_TYPE__;
-using int4 = __INT32_TYPE__;
-using uint4 = __UINT32_TYPE__;
-using int8 = __INT64_TYPE__;
-using uint8 = __UINT64_TYPE__;
-using float4 = float;
-using float8 = double;
-#endif
 
 using usize = uint8;
-// TODO: Solve circular dependency:
-// using ssize = i8;
+using ssize = int8;
 
 // TODO: Document `bool1`.
 struct bool1 {  // NOLINT
+    using Type = uint1;
     uint1 value;
     constexpr bool1() = default;
     constexpr bool1(bool const input) {
-        this->value = static_cast<uint1>(input);
+        this->value = input;
     }
     constexpr operator auto() const {
         return static_cast<bool>(this->value);
@@ -252,13 +260,14 @@ struct bool1 {  // NOLINT
 };
 
 struct bool2 {  // NOLINT
-    uint1 value;
+    using Type = uint2;
+    uint2 value;
     constexpr bool2() = default;
     constexpr bool2(bool const input) {
-        this->value = static_cast<uint4>(input);
+        this->value = input;
     }
     constexpr bool2(bool1 const input) {
-        this->value = static_cast<uint4>(input);
+        this->value = input;
     }
     constexpr operator auto() const {
         return static_cast<bool>(this->value);
@@ -266,172 +275,185 @@ struct bool2 {  // NOLINT
 };
 
 struct bool4 {  // NOLINT
+    using Type = uint4;
     uint4 value;
     constexpr bool4() = default;
     constexpr bool4(bool const input) {
-        this->value = static_cast<uint4>(input);
+        this->value = input;
     }
     constexpr bool4(bool1 const input) {
-        this->value = static_cast<uint4>(input);
+        this->value = input;
     }
     constexpr bool4(bool2 const input) {
-        this->value = static_cast<uint4>(input);
+        this->value = input;
     }
     constexpr operator auto() const {
         return static_cast<bool>(this->value);
     }
 };
 
+// using intptr = cat::detail::SafeNumeral<__INTPTR_TYPE__>;
+
 struct intptr {  // NOLINT
-    ssize value;
+    using Type = __INTPTR_TYPE__;
+    // This macro is a GCC builtin.
+    Type storage;
 
     constexpr intptr() = default;
 
-    constexpr intptr(intptr const& input) {
-        this->value = input.value;
-    }
+    constexpr intptr(intptr const& input) = default;
 
-    constexpr intptr(intptr&& input) {
-        this->value = cat::move(input).value;
-    }
+    constexpr intptr(intptr&& input) : storage(cat::move(input).storage){};
 
-    constexpr intptr(meta::Integral auto const& input) {
-        this->value = input;
-    }
+    constexpr intptr(meta::Integral auto const& input) : storage(input){};
 
-    template <meta::Integral T>
-    constexpr intptr(T&& input) {  // NOLINT
-        this->value = meta::forward<T>(input);
-    }
+    // template <meta::Integral T>
+    // constexpr intptr(T input) : storage(input){};
 
-    constexpr intptr(auto* p_input) {
-        this->value = meta::bit_cast<ssize>(p_input);
+    template <typename T>
+    constexpr intptr(T* const p_input) {
+        this->storage = reinterpret_cast<Type>(p_input);
     }
 
     template <meta::Integral T>
-    constexpr operator T() {
-        return static_cast<T>(this->value);
+    constexpr operator T() const {
+        return static_cast<T>(this->storage);
     }
 
     constexpr auto operator=(intptr const& from) -> intptr& = default;
     constexpr auto operator=(intptr&& from) -> intptr& = default;
 
-    constexpr auto operator=(meta::Integral auto from) -> intptr& {
-        this->value = static_cast<ssize>(from);
+    constexpr auto operator=(meta::Integral auto const from) -> intptr& {
+        this->storage = reintret_cast<char*>(from);
         return *this;
     }
 
-    constexpr auto operator==(meta::Integral auto from) const -> bool1 {
-        return this->value == static_cast<ssize>(from);
+    constexpr auto operator==(meta::Integral auto const from) const -> bool1 {
+        return this->storage == static_cast<ssize const>(from);
     }
 
-    constexpr auto operator>(meta::Integral auto from) const -> bool1 {
-        return this->value > static_cast<ssize>(from);
-    }
-    constexpr auto operator>=(meta::Integral auto from) -> bool1 {
-        return this->value >= static_cast<ssize>(from);
+    constexpr auto operator>(meta::Integral auto const from) const -> bool1 {
+        return this->storage > static_cast<Type>(from);
     }
 
-    constexpr auto operator<(meta::Integral auto from) const -> bool1 {
-        return this->value < static_cast<ssize>(from);
-    }
-    constexpr auto operator<=(meta::Integral auto from) -> bool1 {
-        return this->value <= static_cast<ssize>(from);
+    constexpr auto operator>=(meta::Integral auto const from) -> bool1 {
+        return this->storage >= static_cast<Type>(from);
     }
 
-    constexpr auto operator+(meta::Integral auto from) const -> intptr {
-        return this->value + static_cast<ssize>(from);
+    constexpr auto operator<(meta::Integral auto const from) const -> bool1 {
+        return this->storage < static_cast<Type>(from);
     }
-    constexpr auto operator+=(meta::Integral auto from) -> intptr& {
-        this->value = this->value + static_cast<ssize>(from);
+
+    constexpr auto operator<=(meta::Integral auto const from) -> bool1 {
+        return this->storage <= static_cast<Type>(from);
+    }
+
+    constexpr auto operator+(meta::Integral auto const from) const -> intptr {
+        return this->storage + static_cast<Type>(from);
+    }
+
+    constexpr auto operator+=(meta::Integral auto const from) -> intptr& {
+        this->storage += static_cast<Type>(from);
         return *this;
     }
 
     constexpr auto operator++() -> intptr {
-        return ++this->value;
-    }
-    constexpr auto operator++(int) -> intptr {
-        return this->value++;
+        return ++(this->storage);
     }
 
-    constexpr auto operator-(meta::Integral auto from) const -> intptr {
-        return this->value - static_cast<ssize>(from);
+    constexpr auto operator++(int) -> intptr {
+        return (this->storage)++;
     }
-    constexpr auto operator-=(meta::Integral auto from) -> intptr& {
-        this->value = this->value - static_cast<ssize>(from);
+
+    constexpr auto operator-(meta::Integral auto const from) const -> intptr {
+        return this->storage - static_cast<Type>(from);
+    }
+
+    constexpr auto operator-=(meta::Integral auto const from) -> intptr& {
+        this->storage = this->storage - static_cast<Type>(from);
         return *this;
     }
 
     constexpr auto operator--() -> intptr {
-        return --value;
+        return --(this->storage);
     }
+
     constexpr auto operator--(int) -> intptr {
-        return value--;
+        return (this->storage)--;
     }
 
-    constexpr auto operator*(meta::Integral auto from) const -> intptr {
-        return this->value * static_cast<ssize>(from);
+    constexpr auto operator*(meta::Integral auto const from) const -> intptr {
+        return this->storage * static_cast<Type>(from);
     }
-    constexpr auto operator*=(meta::Integral auto from) -> intptr& {
-        this->value = this->value * static_cast<ssize>(from);
+
+    constexpr auto operator*=(meta::Integral auto const from) -> intptr& {
+        this->storage = this->storage * static_cast<Type>(from);
         return *this;
     }
 
-    constexpr auto operator/(meta::Integral auto from) const -> intptr {
-        return this->value / static_cast<ssize>(from);
+    constexpr auto operator/(meta::Integral auto const from) const -> intptr {
+        return this->storage / static_cast<Type>(from);
     }
-    constexpr auto operator/=(meta::Integral auto from) -> intptr& {
-        this->value = this->value / static_cast<ssize>(from);
+
+    constexpr auto operator/=(meta::Integral auto const from) -> intptr& {
+        this->storage = this->storage / static_cast<Type>(from);
         return *this;
     }
 
-    constexpr auto operator%(meta::Integral auto from) const -> intptr {
-        return this->value % static_cast<ssize>(from);
+    constexpr auto operator%(meta::Integral auto const from) const -> intptr {
+        return this->storage % static_cast<Type>(from);
     }
-    constexpr auto operator%=(meta::Integral auto from) -> intptr& {
-        this->value = this->value % static_cast<ssize>(from);
+
+    constexpr auto operator%=(meta::Integral auto const from) -> intptr& {
+        this->storage = this->storage % static_cast<Type>(from);
         return *this;
     }
 
-    constexpr auto operator&(meta::Integral auto from) const -> intptr {
-        return this->value & static_cast<ssize>(from);
+    constexpr auto operator&(meta::Integral auto const from) const -> intptr {
+        return this->storage & static_cast<Type>(from);
     }
-    constexpr auto operator&=(meta::Integral auto from) -> intptr& {
-        this->value = this->value & static_cast<ssize>(from);
+
+    constexpr auto operator&=(meta::Integral auto const from) -> intptr& {
+        this->storage = this->storage & static_cast<Type>(from);
         return *this;
     }
 
-    constexpr auto operator|(meta::Integral auto from) const -> intptr {
-        return this->value | static_cast<ssize>(from);
+    constexpr auto operator|(meta::Integral auto const from) const -> intptr {
+        return this->storage | static_cast<Type>(from);
     }
-    constexpr auto operator|=(meta::Integral auto from) -> intptr& {
-        this->value = this->value | static_cast<ssize>(from);
+
+    constexpr auto operator|=(meta::Integral auto const from) -> intptr& {
+        this->storage = this->storage | static_cast<Type>(from);
         return *this;
     }
 
-    constexpr auto operator<<(meta::Integral auto from) const -> intptr {
-        return this->value << static_cast<ssize>(from);
+    constexpr auto operator<<(meta::Integral auto const from) const -> intptr {
+        return this->storage << static_cast<Type>(from);
     }
-    constexpr auto operator<<=(meta::Integral auto from) -> intptr& {
-        this->value = this->value << static_cast<ssize>(from);
+
+    constexpr auto operator<<=(meta::Integral auto const from) -> intptr& {
+        this->storage = this->storage << static_cast<Type>(from);
         return *this;
     }
 
-    constexpr auto operator>>(meta::Integral auto from) const -> intptr {
-        return this->value >> static_cast<ssize>(from);
+    constexpr auto operator>>(meta::Integral auto const from) const -> intptr {
+        return this->storage >> static_cast<Type>(from);
     }
-    constexpr auto operator>>=(meta::Integral auto from) -> intptr& {
-        this->value = this->value >> static_cast<ssize>(from);
+
+    constexpr auto operator>>=(meta::Integral auto const from) -> intptr& {
+        this->storage = this->storage >> static_cast<Type>(from);
         return *this;
     }
 
     template <typename T>
     constexpr operator T*() {
-        return meta::bit_cast<T*>(this->value);
+        return static_cast<T*>(static_cast<void*>(this));
+        // return meta::bit_cast<T*>(this->storage);
     }
 
     template <typename T>
     constexpr operator T*() const {
-        return meta::bit_cast<T*>(this->value);
+        return static_cast<T const*>(static_cast<void const*>(this));
+        // return meta::bit_cast<T*>(this->storage);
     }
 };

@@ -37,7 +37,7 @@ class Span {
     constexpr Span(auto const& container)
         : p_storage(container.p_data()), length(container.size()){};
 
-    template <ssize size>
+    template <unsigned size>
     constexpr Span(T (&array)[size])
         : p_storage(cat::addressof(array)), length(size){};
 
@@ -57,7 +57,8 @@ class Span {
         -> Span<T> {
         Result{start_index >= 0}.assert();
         Result{end_index <= length}.assert();
-        return Span<T>(this->p_storage + start_index, end_index - start_index);
+        return Span<T>(this->p_storage + start_index.c(),
+                       end_index - start_index);
     }
 
     constexpr auto first(ssize const count) -> Span<T> {
@@ -68,10 +69,12 @@ class Span {
         return this->slice(length - count, length);
     }
 
-    constexpr auto operator[](ssize index) const -> T& {
+    constexpr auto operator[](ssize const index) const -> T& {
         Result{index < length}.assert();
-        return this->p_storage[index];
+        return this->p_storage[index.c()];
     }
+
+    // TODO: Add an `at()` method.
 
     constexpr auto p_data() const -> T* {
         return this->p_storage;
@@ -102,7 +105,7 @@ class Span {
             : current_index(index), p_array(p_in_array){};
 
         constexpr auto dereference() const -> T const& {
-            return this->p_array[current_index];
+            return this->p_array[current_index.c()];
         }
 
         constexpr void advance(ssize offset) {

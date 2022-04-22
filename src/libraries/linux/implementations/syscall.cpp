@@ -14,7 +14,7 @@ auto nix::syscall0(int8 const call) -> Result<Any> {
         : "memory", "cc", "rcx", "r11");
     if (meta::bit_cast<int8>(result) < 0) {
         // The negative of `result` represents Linux's errno.
-        return Failure(-meta::bit_cast<int8>(result));
+        return Failure(meta::bit_cast<int8>(result));
     }
     return result;
 }
@@ -29,7 +29,7 @@ auto nix::syscall1(int8 const call, Any const arg) -> Result<Any> {
         : "memory", "cc", "rcx", "r11");
     if (meta::bit_cast<int8>(result) < 0) {
         // The negative of `result` represents Linux's errno.
-        return Failure(-meta::bit_cast<int8>(result));
+        return Failure(meta::bit_cast<int8>(result));
     }
     return result;
 }
@@ -45,7 +45,7 @@ auto nix::syscall2(int8 const call, Any const arg1, Any const arg2)
         : "memory", "cc", "rcx", "r11");
     if (meta::bit_cast<int8>(result) < 0) {
         // The negative of `result` represents Linux's errno.
-        return Failure(-meta::bit_cast<int8>(result));
+        return Failure(meta::bit_cast<int8>(result));
     }
     return result;
 }
@@ -62,7 +62,7 @@ auto nix::syscall3(int8 const call, Any const arg1, Any const arg2,
         : "memory", "cc", "rcx", "r11");
     if (meta::bit_cast<int8>(result) < 0) {
         // The negative of `result` represents Linux's errno.
-        return Failure(-meta::bit_cast<int8>(result));
+        return Failure(meta::bit_cast<int8>(result));
     }
     return result;
 }
@@ -78,7 +78,7 @@ auto nix::syscall4(int8 const call, Any const arg1, Any const arg2,
                  : "rcx", "r11", "memory", "cc");
     if (meta::bit_cast<int8>(result) < 0) {
         // The negative of `result` represents Linux's errno.
-        return Failure(-meta::bit_cast<int8>(result));
+        return Failure(meta::bit_cast<int8>(result));
     }
     return result;
 }
@@ -96,7 +96,7 @@ auto nix::syscall5(int8 const call, Any const arg1, Any const arg2,
                  : "rcx", "r11", "memory", "cc");
     if (meta::bit_cast<int8>(result) < 0) {
         // The negative of `result` represents Linux's errno.
-        return Failure(-meta::bit_cast<int8>(result));
+        return Failure(meta::bit_cast<int8>(result));
     }
     return result;
 }
@@ -118,7 +118,7 @@ auto nix::syscall6(int8 const call, Any const arg1, Any const arg2,
                  : "rcx", "r11", "memory", "cc");
     if (meta::bit_cast<int8>(result) < 0) {
         // The negative of `result` represents Linux's errno.
-        return Failure(-meta::bit_cast<int8>(result));
+        return Failure(meta::bit_cast<int8>(result));
     }
     return result;
 }

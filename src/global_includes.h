@@ -18,8 +18,7 @@ namespace cat::detail {
 struct [[maybe_unused]] Unused {
     // Any type can be converted into an `Unused`, except for `Result`.
     template <typename T>
-    constexpr void operator=(T const&)  {
-    };
+    constexpr void operator=(T const&){};
     // `unused` cannot be assigned to any variable.
     operator auto() = delete;
 };
@@ -34,17 +33,24 @@ struct [[maybe_unused]] Unused {
 template <typename T>
 class Result;
 
-// TODO: Fix this declaration in `<numerals>`
-using ssize = signed long long;
+namespace cat::detail {
+template <typename T>
+struct SafeNumeral;
+}
 
+namespace meta {
+template <typename T>
+constexpr auto bit_cast(auto& from_value) -> T;
+}
+
+// `<numerals>` should make basic data types global, similarly to `<stdint.h>`
+// being globally available.
 #include <numerals>
 
 // Including the `<runtime>` library is required to link a libCat program.
 #include <runtime>
 
-/* `<result>` and `<numerals>` are analogous to exceptions and `<stdint.h>` in
- * that they are used throughout the library and should be accessible to a user
- * by default. */
+// `Result` is used throughout the library.
 #include <result>
 
 // <stdint.h> is required for libC compatibility.

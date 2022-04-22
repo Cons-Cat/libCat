@@ -33,7 +33,7 @@ struct SocketAttributes {
 
 template <SocketType Type, int4 Protocol = 0>
 struct SocketUnix {
-    SocketAttributes<1, Type, Protocol> const attributes;
+    SocketAttributes<static_cast<short>(1), Type, Protocol> const attributes;
     Array<char, 108> path_name;
     nix::FileDescriptor descriptor;
 
@@ -62,8 +62,8 @@ struct SocketUnix {
     auto connect() -> Result<> {
         return nix::connect_socket(
             this->descriptor, this,
-            sizeof(attributes) + cat::string_length(static_cast<char const*>(
-                                     static_cast<void*>(&this->path_name))));
+            ssizeof(attributes) + cat::string_length(static_cast<char const*>(
+                                      static_cast<void*>(&this->path_name))));
     }
 
     auto send_string(String const& message, int8 flags = 0,

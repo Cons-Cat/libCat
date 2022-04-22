@@ -21,7 +21,7 @@ constexpr auto string_length(char const* p_string) -> ssize;
 
 #include "./implementations/string_length.tpp"
 
-template <ssize length>
+template <unsigned long length>
 struct StaticString;
 
 class String : public Span<char const> {
@@ -32,10 +32,6 @@ class String : public Span<char const> {
   public:
     constexpr String() : Span<char const>(){};
 
-    // This is `auto` to deduce lower than the array-literal constructor.
-    constexpr String(auto p_string)
-        : Span<char const>(p_string, cat::string_length(p_string)){};
-
     constexpr String(char const* p_string, ssize in_length)
         : Span<char const>(p_string, in_length){};
 
@@ -45,15 +41,20 @@ class String : public Span<char const> {
     constexpr String(String&& string)
         : Span<char const>(string.p_storage, string.length){};
 
-    template <ssize other_length>
+    // This is `auto` to deduce lower than the array-literal constructor.
+    template <typename T>
+    constexpr String(T p_string) requires(meta::is_pointer<T>)
+        : Span<char const>(p_string, cat::string_length(p_string)){};
+
+    template <unsigned int other_length>
     consteval String(char const (&string)[other_length]) {
         this->p_storage = string;
         this->length = other_length;
     }
 
     // TODO: Make this `consteval`.
-    template <ssize other_length>
-    String(StaticString<other_length> const& string) {
+    template <unsigned int other_length>
+    constexpr String(StaticString<other_length> const& string) {
         this->p_storage = &(string.storage[0]);
         this->length = other_length;
     }
@@ -69,20 +70,23 @@ class String : public Span<char const> {
     }
 };
 
-// TODO: Replace this with `Array`.
-template <ssize length>
+// This is `unsigned long` because the compiler cannot deduce a string literal's
+// length as `ssize`.
+// TODO: Try a deduction guide.
+template <unsigned long length>
 struct StaticString {
+    // TODO: Use an `Array`.
     char storage[length + 1];
 
     constexpr StaticString(char const (&in)[length]) : storage{} {
-        for (int4 i = 0; i < length - 1; i++) {
+        for (int i = 0; i < length - 1; i++) {
             storage[i] = in[i];
         }
         storage[length] = '\0';
     }
 
     consteval StaticString(String const& in) : storage{} {
-        for (int4 i = 0; i < in.size() - 1; i++) {
+        for (int i = 0; i < in.size().c() - 1; i++) {
             storage[i] = in.p_data()[i];
         }
         storage[length] = '\0';
@@ -98,22 +102,27 @@ struct StaticString {
 };
 
 // Concatenate constant-evaluated strings.
-template <ssize length_1, ssize length_2>
+
+// This is `unsigned long` because the compiler cannot deduce a string literal's
+// length as `ssize`.
+// TODO: Try a deduction guide.
+template <unsigned long length_1, unsigned long length_2>
 consteval auto operator+(StaticString<length_1> const& string_1,
                          StaticString<length_2> const& string_2)
     -> StaticString<length_1 - 1 + length_2> {
+    // TODO: Use an `Array`.
     char array[length_1 - 1 + length_2];
 
-    for (ssize i = 0; i < length_1 - 1; i++) {
+    for (int i = 0; i < length_1 - 1; i++) {
         array[i] = string_1.storage[i];
     }
 
-    for (ssize i = length_1 - 1; i < length_1 - 1 + length_2 - 1; i++) {
+    for (int i = length_1 - 1; i < length_1 - 1 + length_2 - 1; i++) {
         array[i] = string_2.storage[i - length_1 + 1];
     }
 
     // Make this string null-terminated.
-    array[length_1 - 1 + length_2 - 1] = '\0';
+    array[(length_1 - 1 + length_2 - 1)] = '\0';
     StaticString static_string = array;
     return static_string;
 }
