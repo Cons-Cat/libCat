@@ -31,8 +31,8 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
 
     cat::copy_memory_small(p_source, p_destination, padding);
 
-    p_source_handle += padding.c();
-    p_destination_handle += padding.c();
+    p_source_handle += padding;
+    p_destination_handle += padding;
     bytes -= padding;
     Vector vectors[8];
 
@@ -40,20 +40,20 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
     // slower there.
     if (bytes <= l3_cache_size) {
         while (bytes >= step_size) {
-            /* Load 8 vectors, then increment the source pointer by that
-             * size. */
+            // Load 8 vectors, then increment the source pointer by that
+            // size.
 #pragma GCC unroll 8
             for (int i = 0; i < 8; i++) {
                 vectors[i] = meta::bit_cast<Vector const*>(p_source_handle)[i];
             }
-            simd::prefetch_for_one_read(p_source_handle + (step_size * 2).c());
+            simd::prefetch_for_one_read(p_source_handle + (step_size * 2));
 
 #pragma GCC unroll 8
             for (int i = 0; i < 8; i++) {
                 meta::bit_cast<Vector*>(p_destination_handle)[i] = vectors[i];
             }
-            p_source_handle += step_size.c();
-            p_destination_handle += step_size.c();
+            p_source_handle += step_size;
+            p_destination_handle += step_size;
             bytes -= step_size;
         }
     }
@@ -62,8 +62,8 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
     else {
         simd::prefetch_for_one_read(p_source_handle + 512);
         // TODO: This code block has fallen far out of date.
-        /* TODO: This could be improved by using aligned-streaming when
-         * possible. */
+        // TODO: This could be improved by using aligned-streaming when
+        // possible.
         while (bytes >= 256) {
 #pragma GCC unroll 8
             for (int i = 0; i < 8; i++) {

@@ -75,11 +75,6 @@ struct SafeNumeral {
         return *this;
     }
 
-    constexpr auto operator==(auto const from) const
-        -> bool requires(REQUIRES_HELPER) {
-        return this->storage == static_cast<T const>(from);
-    }
-
     constexpr auto operator>(auto const from) const
         -> bool requires(REQUIRES_HELPER) {
         return this->storage > static_cast<T const>(from);
@@ -100,11 +95,6 @@ struct SafeNumeral {
         return this->storage <= static_cast<T const>(from);
     }
 
-    constexpr auto operator+(auto const from) const -> SafeNumeral<T>
-    requires(REQUIRES_HELPER) {
-        return static_cast<T const>(this->storage + static_cast<T const>(from));
-    }
-
     constexpr auto operator+=(auto const from)
         -> SafeNumeral& requires(REQUIRES_HELPER) {
         this->storage = this->storage + static_cast<T const>(from);
@@ -121,11 +111,6 @@ struct SafeNumeral {
         return *this;
     }
 
-    constexpr auto operator-(auto const from) const -> SafeNumeral<T>
-    requires(REQUIRES_HELPER) {
-        return static_cast<T const>(this->storage - static_cast<T const>(from));
-    }
-
     constexpr auto operator-=(auto const from)
         -> SafeNumeral& requires(REQUIRES_HELPER) {
         this->storage = this->storage - static_cast<T const>(from);
@@ -138,11 +123,6 @@ struct SafeNumeral {
 
     constexpr auto operator--(int) -> SafeNumeral<T> {
         return storage--;
-    }
-
-    constexpr auto operator*(auto const from) const -> SafeNumeral<T>
-    requires(REQUIRES_HELPER) {
-        return static_cast<T const>(this->storage * static_cast<T const>(from));
     }
 
     constexpr auto operator*=(auto const from)
@@ -173,20 +153,10 @@ struct SafeNumeral {
         return *this;
     }
 
-    constexpr auto operator&(auto const from) const -> SafeNumeral<T>
-    requires(REQUIRES_HELPER) {
-        return static_cast<T const>(this->storage & static_cast<T const>(from));
-    }
-
     constexpr auto operator&=(auto const from)
         -> SafeNumeral& requires(REQUIRES_HELPER) {
         this->storage = this->storage & static_cast<T const>(from);
         return *this;
-    }
-
-    constexpr auto operator|(auto const from) const -> SafeNumeral<T>
-    requires(REQUIRES_HELPER) {
-        return static_cast<T const>(this->storage | static_cast<T const>(from));
     }
 
     constexpr auto operator|=(auto const from)
@@ -225,6 +195,171 @@ struct SafeNumeral {
 
 template <typename T>
 SafeNumeral(T) -> SafeNumeral<T>;
+
+// Compare primitive numerals to `SafeNumeral`s.
+template <typename T, typename U>
+constexpr auto operator>(T const lhs, SafeNumeral<U> const rhs)
+    -> bool requires(meta::is_convertible<U, T> &&
+                     !meta::IsSpecializationTrait<T, SafeNumeral>::value) {
+    return lhs > rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator>=(T const lhs, SafeNumeral<U> const rhs)
+    -> bool requires(meta::is_convertible<U, T> &&
+                     !meta::IsSpecializationTrait<T, SafeNumeral>::value) {
+    return lhs >= rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator<(T const lhs, SafeNumeral<U> const rhs)
+    -> bool requires(meta::is_convertible<U, T> &&
+                     !meta::IsSpecializationTrait<T, SafeNumeral>::value) {
+    return lhs < rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator<=(T const lhs, SafeNumeral<U> const rhs)
+    -> bool requires(meta::is_convertible<U, T> &&
+                     !meta::IsSpecializationTrait<T, SafeNumeral>::value) {
+    return lhs <= rhs.storage;
+}
+
+// Order-independant operators for `SafeNumeral` and primitive numerals.
+template <typename T>
+constexpr auto operator==(SafeNumeral<T> const lhs, auto const rhs) -> bool {
+    return lhs.storage == static_cast<T const>(rhs);
+}
+
+template <typename T>
+constexpr auto operator+(SafeNumeral<T> const lhs, auto const rhs)
+    -> SafeNumeral<T> {
+    return lhs.storage + static_cast<T const>(rhs);
+}
+
+template <typename T>
+constexpr auto operator-(SafeNumeral<T> const lhs, auto const rhs)
+    -> SafeNumeral<T> {
+    return lhs.storage - static_cast<T const>(rhs);
+}
+
+template <typename T>
+constexpr auto operator*(SafeNumeral<T> const lhs, auto const rhs)
+    -> SafeNumeral<T> {
+    return lhs.storage * static_cast<T const>(rhs);
+}
+
+template <typename T>
+constexpr auto operator&(SafeNumeral<T> const lhs, auto const rhs)
+    -> SafeNumeral<T> {
+    return lhs.storage & static_cast<T const>(rhs);
+}
+
+template <typename T>
+constexpr auto operator|(SafeNumeral<T> const lhs,
+                         meta::Integral auto const rhs) -> SafeNumeral<T> {
+    return lhs.storage | static_cast<T>(rhs);
+}
+
+// Pointer arithmetic operators for `SafeNumeral`s.
+template <typename T, typename U>
+constexpr auto operator+(T* const p_lhs, SafeNumeral<U> const rhs) -> T* {
+    return p_lhs + rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator+=(T*& p_lhs, SafeNumeral<U> const rhs) -> T*& {
+    p_lhs += rhs.storage;
+    return p_lhs;
+}
+
+template <typename T, typename U>
+constexpr auto operator-(T* const p_lhs, SafeNumeral<U> const rhs) -> T* {
+    return p_lhs - rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator-=(T*& p_lhs, SafeNumeral<U> const rhs) -> T*& {
+    p_lhs -= rhs.storage;
+    return p_lhs;
+}
+
+template <typename T, typename U>
+constexpr auto operator*(T* const p_lhs, SafeNumeral<U> const rhs) -> T* {
+    return p_lhs * rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator*=(T*& p_lhs, SafeNumeral<U> const rhs) -> T*& {
+    p_lhs *= rhs.storage;
+    return p_lhs;
+}
+
+template <typename T, typename U>
+constexpr auto operator/(T* const p_lhs, SafeNumeral<U> const rhs) -> T* {
+    return p_lhs / rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator/=(T*& p_lhs, SafeNumeral<U> const rhs) -> T*& {
+    p_lhs /= rhs.storage;
+    return p_lhs;
+}
+
+template <typename T, typename U>
+constexpr auto operator<<(T* const p_lhs, SafeNumeral<U> const rhs) -> T* {
+    return p_lhs << rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator<<=(T*& p_lhs, SafeNumeral<U> const rhs) -> T*& {
+    p_lhs <<= rhs.storage;
+    return p_lhs;
+}
+
+template <typename T, typename U>
+constexpr auto operator>>(T* const p_lhs, SafeNumeral<U> const rhs) -> T* {
+    return p_lhs >> rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator>>=(T*& p_lhs, SafeNumeral<U> const rhs) -> T*& {
+    p_lhs >>= rhs.storage;
+    return p_lhs;
+}
+
+template <typename T, typename U>
+constexpr auto operator%(T* const p_lhs, SafeNumeral<U> const rhs) -> T* {
+    return p_lhs % rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator%=(T*& p_lhs, SafeNumeral<U> const rhs) -> T*& {
+    p_lhs %= rhs.storage;
+    return p_lhs;
+}
+
+template <typename T, typename U>
+constexpr auto operator&(T* const p_lhs, SafeNumeral<U> const rhs) -> T* {
+    return p_lhs & rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator&=(T*& p_lhs, SafeNumeral<U> const rhs) -> T*& {
+    p_lhs &= rhs.storage;
+    return p_lhs;
+}
+
+template <typename T, typename U>
+constexpr auto operator|(T* const p_lhs, SafeNumeral<U> const rhs) -> T* {
+    return p_lhs | rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator|=(T*& p_lhs, SafeNumeral<U> const rhs) -> T*& {
+    p_lhs |= rhs.storage;
+    return p_lhs;
+}
 
 }  // namespace cat::detail
 
@@ -292,11 +427,9 @@ struct bool4 {  // NOLINT
     }
 };
 
-// using intptr = cat::detail::SafeNumeral<__INTPTR_TYPE__>;
-
 struct intptr {  // NOLINT
-    using Type = __INTPTR_TYPE__;
     // This macro is a GCC builtin.
+    using Type = __INTPTR_TYPE__;
     Type storage;
 
     constexpr intptr() = default;
@@ -307,12 +440,14 @@ struct intptr {  // NOLINT
 
     constexpr intptr(meta::Integral auto const& input) : storage(input){};
 
-    // template <meta::Integral T>
-    // constexpr intptr(T input) : storage(input){};
-
     template <typename T>
     constexpr intptr(T* const p_input) {
         this->storage = reinterpret_cast<Type>(p_input);
+    }
+
+    template <meta::Integral T>
+    constexpr operator T() {
+        return static_cast<T>(this->storage);
     }
 
     template <meta::Integral T>
@@ -320,16 +455,23 @@ struct intptr {  // NOLINT
         return static_cast<T>(this->storage);
     }
 
+    template <typename T>
+    constexpr operator T*() {
+        return static_cast<T*>(static_cast<void*>(this));
+    }
+
+    template <typename T>
+    constexpr operator T*() const {
+        return static_cast<T const*>(static_cast<void const*>(this));
+    }
+
     constexpr auto operator=(intptr const& from) -> intptr& = default;
     constexpr auto operator=(intptr&& from) -> intptr& = default;
 
     constexpr auto operator=(meta::Integral auto const from) -> intptr& {
+        // TODO: Lol, fix and test this:
         this->storage = reintret_cast<char*>(from);
         return *this;
-    }
-
-    constexpr auto operator==(meta::Integral auto const from) const -> bool1 {
-        return this->storage == static_cast<ssize const>(from);
     }
 
     constexpr auto operator>(meta::Integral auto const from) const -> bool1 {
@@ -348,10 +490,6 @@ struct intptr {  // NOLINT
         return this->storage <= static_cast<Type>(from);
     }
 
-    constexpr auto operator+(meta::Integral auto const from) const -> intptr {
-        return this->storage + static_cast<Type>(from);
-    }
-
     constexpr auto operator+=(meta::Integral auto const from) -> intptr& {
         this->storage += static_cast<Type>(from);
         return *this;
@@ -365,10 +503,6 @@ struct intptr {  // NOLINT
         return (this->storage)++;
     }
 
-    constexpr auto operator-(meta::Integral auto const from) const -> intptr {
-        return this->storage - static_cast<Type>(from);
-    }
-
     constexpr auto operator-=(meta::Integral auto const from) -> intptr& {
         this->storage = this->storage - static_cast<Type>(from);
         return *this;
@@ -380,10 +514,6 @@ struct intptr {  // NOLINT
 
     constexpr auto operator--(int) -> intptr {
         return (this->storage)--;
-    }
-
-    constexpr auto operator*(meta::Integral auto const from) const -> intptr {
-        return this->storage * static_cast<Type>(from);
     }
 
     constexpr auto operator*=(meta::Integral auto const from) -> intptr& {
@@ -407,10 +537,6 @@ struct intptr {  // NOLINT
     constexpr auto operator%=(meta::Integral auto const from) -> intptr& {
         this->storage = this->storage % static_cast<Type>(from);
         return *this;
-    }
-
-    constexpr auto operator&(meta::Integral auto const from) const -> intptr {
-        return this->storage & static_cast<Type>(from);
     }
 
     constexpr auto operator&=(meta::Integral auto const from) -> intptr& {
@@ -445,15 +571,35 @@ struct intptr {  // NOLINT
         return *this;
     }
 
-    template <typename T>
-    constexpr operator T*() {
-        return static_cast<T*>(static_cast<void*>(this));
-        // return meta::bit_cast<T*>(this->storage);
-    }
-
-    template <typename T>
-    constexpr operator T*() const {
-        return static_cast<T const*>(static_cast<void const*>(this));
-        // return meta::bit_cast<T*>(this->storage);
+    constexpr auto operator~() -> intptr& {
+        this->storage = ~(this->storage);
+        return *this;
     }
 };
+
+// Order independant.storage operators between an `intptr` and an integral or
+// pointer.
+
+constexpr auto operator==(intptr const lhs, auto rhs) -> intptr {
+    return lhs.storage == intptr{rhs}.storage;
+}
+
+constexpr auto operator+(intptr const lhs, auto rhs) -> intptr {
+    return lhs.storage + intptr{rhs}.storage;
+}
+
+constexpr auto operator-(intptr const lhs, auto rhs) -> intptr {
+    return lhs.storage - intptr{rhs}.storage;
+}
+
+constexpr auto operator*(intptr const lhs, auto rhs) -> intptr {
+    return lhs.storage * intptr{rhs}.storage;
+}
+
+constexpr auto operator&(intptr const lhs, auto rhs) -> intptr {
+    return lhs.storage & intptr{rhs}.storage;
+}
+
+constexpr auto operator|(intptr const lhs, auto rhs) -> intptr {
+    return lhs.storage | intptr{rhs}.storage;
+}

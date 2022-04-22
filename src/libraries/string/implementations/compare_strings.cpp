@@ -43,8 +43,8 @@ auto cat::compare_strings(String const& string_1, String const& string_2)
             }
 
             length_iterator -= vector_size * size;
-            p_string_1_iterator += vector_size.c() * size;
-            p_string_2_iterator += vector_size.c() * size;
+            p_string_1_iterator += vector_size * size;
+            p_string_2_iterator += vector_size * size;
         }
 
         return true;
