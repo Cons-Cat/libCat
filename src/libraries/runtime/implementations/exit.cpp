@@ -6,6 +6,6 @@
 // the target operating system.
 extern "C" [[gnu::used]] void cat::exit(ssize exit_code) {
     // TODO: is `meta::decay_numeral()` needed here? Why?
-    asm("syscall" : : "D"(meta::decay_numeral(exit_code)), "a"(60));
+    asm("syscall" : : "D"(exit_code), "a"(60));
     __builtin_unreachable();  // This elides a `ret` instruction.
 }

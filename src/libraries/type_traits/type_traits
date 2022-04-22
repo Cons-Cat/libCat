@@ -11,8 +11,6 @@
  *
  * Enter at your peril! */
 
-#include <numerals>
-
 // These forward declarations are required.
 namespace meta {
 template <typename T>
@@ -36,6 +34,21 @@ constexpr auto forward(typename meta::RemoveReferenceTrait<T>::type&& input)
 namespace cat {
 using std::move;
 }  // namespace cat
+
+// Forward declare numeric types.
+namespace cat::detail {
+template <typename T>
+struct SafeNumeral;
+}
+using int1 = cat::detail::SafeNumeral<__INT8_TYPE__>;
+using uint1 = cat::detail::SafeNumeral<__UINT8_TYPE__>;
+using int2 = cat::detail::SafeNumeral<__INT16_TYPE__>;
+using uint2 = cat::detail::SafeNumeral<__UINT16_TYPE__>;
+using int4 = cat::detail::SafeNumeral<__INT32_TYPE__>;
+using uint4 = cat::detail::SafeNumeral<__UINT32_TYPE__>;
+using int8 = cat::detail::SafeNumeral<__INT64_TYPE__>;
+using uint8 = cat::detail::SafeNumeral<__UINT64_TYPE__>;
+
 struct intptr;
 
 namespace meta {
@@ -266,11 +279,10 @@ template <typename T>
 constexpr bool is_reference = IsReferenceTrait<T>::value;
 
 namespace detail {
-    // TODO: There has to be a more efficient way to exhaustively check
-
     template <typename>
     struct IsIntegralTraitDetail : FalseTypeTrait {};
     template <>
+
     struct IsIntegralTraitDetail<signed char> : TrueTypeTrait {};
     template <>
     struct IsIntegralTraitDetail<unsigned char> : TrueTypeTrait {};
@@ -290,6 +302,24 @@ namespace detail {
     struct IsIntegralTraitDetail<signed long long> : TrueTypeTrait {};
     template <>
     struct IsIntegralTraitDetail<unsigned long long> : TrueTypeTrait {};
+
+    template <>
+    struct IsIntegralTraitDetail<int1> : TrueTypeTrait {};
+    template <>
+    struct IsIntegralTraitDetail<uint1> : TrueTypeTrait {};
+    template <>
+    struct IsIntegralTraitDetail<int2> : TrueTypeTrait {};
+    template <>
+    struct IsIntegralTraitDetail<uint2> : TrueTypeTrait {};
+    template <>
+    struct IsIntegralTraitDetail<int4> : TrueTypeTrait {};
+    template <>
+    struct IsIntegralTraitDetail<uint4> : TrueTypeTrait {};
+    template <>
+    struct IsIntegralTraitDetail<int8> : TrueTypeTrait {};
+    template <>
+    struct IsIntegralTraitDetail<uint8> : TrueTypeTrait {};
+
     template <>
     struct IsIntegralTraitDetail<intptr> : TrueTypeTrait {};
     template <>
@@ -311,8 +341,18 @@ struct IsFloatingPointTrait
                         is_same<long double, RemoveCv<T>>> {};
 template <typename T>
 constexpr bool is_floating_point = IsFloatingPointTrait<T>::value;
+
+struct bool1;
+struct bool2;
+struct bool4;
+
 template <typename T>
-using IsFloatingPoint = typename IsFloatingPointTrait<T>::type;
+struct IsBoolTrait
+    : BoolConstantTrait<
+          is_same<bool, RemoveCv<T>> || is_same<bool1, RemoveCv<T>> ||
+          is_same<bool2, RemoveCv<T>> || is_same<bool4, RemoveCv<T>>> {};
+template <typename T>
+constexpr bool is_bool = IsBoolTrait<T>::value;
 
 template <typename T>
 struct IsArithmeticTrait : ConditionalTrait<is_integral<T>, IsIntegralTrait<T>,
@@ -566,8 +606,6 @@ template <typename From, typename To>
 struct IsConvertibleTrait : detail::IsConvertibleTraitDetail<From, To> {};
 template <typename From, typename To>
 constexpr bool is_convertible = IsConvertibleTrait<From, To>::value;
-template <typename From, typename To>
-using IsConvertible = typename IsConvertibleTrait<From, To>::type;
 
 template <typename...>
 struct ConjunctionTrait : meta::TrueTypeTrait {};
@@ -654,14 +692,14 @@ struct RemoveAllExtentsTrait<T[N]> {
 
 template <typename T>
 struct IsBoundedArrayTrait : FalseTypeTrait {};
-template <typename T, ssize N>
+template <typename T, signed long long N>
 struct IsBoundedArrayTrait<T[N]> : TrueTypeTrait {};
 template <typename T>
 constexpr bool is_bounded_array = IsBoundedArrayTrait<T>::value;
 
 template <typename T>
 struct IsUnboundedArrayTrait : TrueTypeTrait {};
-template <typename T, ssize N>
+template <typename T, signed long long N>
 struct IsUnboundedArrayTrait<T[N]> : FalseTypeTrait {};
 
 namespace detail {

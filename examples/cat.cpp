@@ -21,7 +21,7 @@ void output_to_console(nix::IoVector const& io_vector) {
     // TODO: Create a mutable string type to prevent this undefined behavior.
     // TODO: Make this buffered output to reduce syscalls.
     char* buffer = static_cast<char*>(static_cast<void*>(io_vector.p_data()));
-    _ = nix::write(1, buffer++, io_vector.size());
+    _ = nix::write(nix::FileDescriptor{1}, buffer++, io_vector.size());
 }
 
 void read_and_print_file(char* p_file_name) {
@@ -82,7 +82,7 @@ void read_and_print_file(char* p_file_name) {
 }
 
 void meow(int argc, char* p_argv[]) {
-    for (ssize i = 1; i < argc; i++) {
+    for (int i = 1; i < argc; i++) {
         read_and_print_file(p_argv[i]);
     }
 

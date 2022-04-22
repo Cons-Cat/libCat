@@ -43,7 +43,7 @@ void meow() {
     constexpr StaticString const_string_3 = "Hello, ";
     constexpr StaticString const_string_4 = "world!";
     // TODO: Make this `constexpr`.
-    String foo = (const_string_3 + const_string_4);
+    // String foo = (const_string_3 + const_string_4);
 
     cat::exit();
 }

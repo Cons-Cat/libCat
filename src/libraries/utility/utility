@@ -2,9 +2,6 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <concepts>
-#include <type_traits>
-
 namespace meta {
 
 template <typename T>

@@ -10,7 +10,7 @@
 
 template <typename T, ssize length>
 class Array {
-    T storage[length];
+    T storage[length.c()];
   public:
     constexpr Array() = default;
     constexpr Array(Array<T, length>&& in_array) = default;
@@ -22,13 +22,14 @@ class Array {
 
     template <typename... U>
     constexpr Array(U&&... arguments) requires(sizeof...(arguments) == length) {
-        T unpacked_data[length] = {arguments...};
-        for (int4 i = 0; i < length; i++) {
+        T unpacked_data[length.c()] = {arguments...};
+        for (int i = 0; i < length.c(); i++) {
             this->storage[i] = unpacked_data[i];
         }
     }
 
     constexpr auto operator=(Array<T, length>&&) -> Array<T, length>& = default;
+
     constexpr auto operator=(String const&& string) -> Array<T, length>
     requires(meta::is_same<T, char>) {
         Array<T, length> array;
@@ -36,16 +37,16 @@ class Array {
         return array;
     }
 
-    constexpr auto operator[](ssize index) -> T& {
+    constexpr auto operator[](ssize const index) -> T& {
         Result{index >= 0}.assert();
         Result{index < length}.assert();
-        return this->storage[index];
+        return this->storage[index.c()];
     }
 
-    constexpr auto at(ssize index) -> Optional<T&> {
+    constexpr auto at(ssize const index) -> Optional<T&> {
         Result{index >= 0}.assert();
         if (index < length) {
-            return Optional<T&>(this->storage[index]);
+            return Optional<T&>(this->storage[index.c()]);
         }
         return nullopt;
     }
@@ -63,7 +64,7 @@ class Array {
     }
 
     constexpr auto back() -> T& {
-        return this->storage[length - 1];
+        return this->storage[length.c() - 1];
     }
 
     constexpr auto is_empty() -> bool1 {
@@ -74,7 +75,8 @@ class Array {
         -> Span<T> {
         Result{start_index >= 0}.assert();
         Result{end_index <= length}.assert();
-        return Span<T>(this->p_storage + start_index, end_index - start_index);
+        return Span<T>(this->p_storage + start_index.c(),
+                       end_index - start_index);
     }
 
     constexpr auto first(ssize const count) -> Span<T> {
@@ -101,7 +103,7 @@ class Array {
             : current_index(index), p_array(p_in_array){};
 
         constexpr auto dereference() const -> T const& {
-            return this->p_array[current_index];
+            return this->p_array[current_index.c()];
         }
 
         constexpr void advance(ssize offset) {

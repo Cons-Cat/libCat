@@ -212,7 +212,7 @@ struct [[gnu::packed]] EventMask {
 };
 
 struct Error {
-    uint1 response_operation = 0;
+    uint1 response_operation = static_cast<signed char>(0);
     enum : unsigned char {
         request = 1,
         value = 2,
@@ -301,11 +301,12 @@ struct ConnectionRequestInfo {
     int1 padding_1;  // NOLINT
   public:
     // This should almost always be `{11, 0}`.
-    Array<uint2, 2> x_version = {uint2{11}, uint2{0}};
+    Array<uint2, 2> x_version = {static_cast<unsigned char>(11),
+                                 static_cast<unsigned char>(0)};
     // No explicit protocol is specified if this is `0`.
-    uint2 authorization_protocol_length = 0;
+    uint2 authorization_protocol_length = static_cast<unsigned char>(0);
     // No explicit protocol is specified if this is `0`.
-    uint2 authorization_data_length = 0;
+    uint2 authorization_data_length = static_cast<unsigned char>(0);
   private:
     int2 padding_2;  // NOLINT
 };
@@ -448,17 +449,17 @@ auto handshake(meta::Allocator auto& allocator,
         static_cast<void*>(x_connection.p_setup +
                            sizeof(xwin::ConnectionResponseInfo)
                            // For now, skip past the vendor name string.
-                           + x_connection.p_setup->vendor_string_length));
+                           + x_connection.p_setup->vendor_string_length.c()));
 
     x_connection.p_pixel_map_formats = static_cast<xwin::PixelMapFormatPacket*>(
         static_cast<void*>(p_iterator));
     p_iterator += sizeof(xwin::PixelMapFormatPacket) *
-                  x_connection.p_setup->pixel_map_formats_count;
+                  x_connection.p_setup->pixel_map_formats_count.c();
 
     x_connection.p_root_windows =
         static_cast<xwin::RootWindowPacket*>(static_cast<void*>(p_iterator));
     p_iterator += sizeof(xwin::RootWindowPacket) *
-                  x_connection.p_setup->root_windows_count;
+                  x_connection.p_setup->root_windows_count.c();
 
     x_connection.p_depths =
         static_cast<xwin::DepthPacket*>(static_cast<void*>(p_iterator));
@@ -490,9 +491,9 @@ auto initiate_connection(meta::Allocator auto& allocator)
 }
 
 struct CreateWindowRequestInfo {
-    ClientRequestHeader header = {
-        .operation = OperationCode::create_window,
-        .message_length = sizeof(CreateWindowRequestInfo) / 4};
+    ClientRequestHeader header = {.operation = OperationCode::create_window,
+                                  .message_length = static_cast<unsigned short>(
+                                      sizeof(CreateWindowRequestInfo) / 4)};
     uint1 window_depth;
     WindowResource window_id, parent_id;
     int2 x, y;

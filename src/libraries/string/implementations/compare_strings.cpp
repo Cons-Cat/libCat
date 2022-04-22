@@ -20,9 +20,9 @@ auto cat::compare_strings(String const& string_1, String const& string_2)
     char const* p_string_1_iterator = string_1.p_data();
     char const* p_string_2_iterator = string_2.p_data();
 
-    auto loop = [&](ssize const size) -> bool1 {
+    auto loop = [&](int const size) -> bool1 {
         while (length_iterator >= vector_size * size) {
-            for (ssize i = 0; i < size; i++) {
+            for (int i = 0; i < size; i++) {
                 // TODO: Use `String::data()` getter methods.
                 vector_1[i] =
                     *(static_cast<VectorType const*>(
@@ -36,15 +36,15 @@ auto cat::compare_strings(String const& string_1, String const& string_2)
                 results[i] = simd::move_mask(mask[i]);
             }
 
-            for (ssize i = 0; i < size; i++) {
+            for (int i = 0; i < size; i++) {
                 if (results[i] != cat::numeric_limits<uint4>::max()) {
                     return false;
                 }
             }
 
             length_iterator -= vector_size * size;
-            p_string_1_iterator += vector_size * size;
-            p_string_2_iterator += vector_size * size;
+            p_string_1_iterator += vector_size.c() * size;
+            p_string_2_iterator += vector_size.c() * size;
         }
 
         return true;

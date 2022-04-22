@@ -316,10 +316,11 @@ struct Process {
         }
         this->p_stack = &allocator.get(memory);
 
+        // TODO: Use `intptr`.
         // We need the top because memory will be pushed to it downwards on
         //  x86-64.
         volatile void* p_stack_top =
-            static_cast<char*>(this->p_stack) + this->stack_size;
+            static_cast<char*>(this->p_stack) + this->stack_size.c();
 
         Any result;
         asm goto volatile(

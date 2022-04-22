@@ -5,7 +5,6 @@
 #include <linux>
 #include <memory>
 #include <optional>
-#include <type_traits>
 
 // TODO: Some allocators should be iterable.
 // TODO: Add a random_access concept and a random_access_allocator concept.
@@ -32,7 +31,7 @@ namespace detail {
             Type stack_storage;
             // Reserve `small_size_threshold` bytes to make the size
             // of this handle predictible.
-            cat::Byte empty[cat::detail::small_size_threshold];
+            cat::Byte empty[cat::detail::small_size_threshold.c()];
         };
         bool1 is_on_stack;
 
@@ -137,9 +136,10 @@ struct AllocatorFacade {
                 if (allocation_size < cat::detail::small_size_threshold) {
                     // Allocate memory on this stack frame and return it, iff
                     // that would be smaller than
-                    // cat::detail::small_size_threshold bytes.
+                    // `cat::detail::small_size_threshold`.
                     T stack_memory;
-                    return Optional<Handle>(T{});
+                    Handle stack_handle = stack_memory;
+                    return Optional<Handle>(stack_handle);
                 }
             }
             maybe_memory = this->self().template allocate<T>(allocation_size);
@@ -324,7 +324,7 @@ struct PageAllocator : AllocatorFacade<PageAllocator> {
                                    nix::MemoryFlags::populate |
                                    nix::MemoryFlags::anonymous,
                                // Anonymous pages must have `-1`.
-                               -1,
+                               nix::FileDescriptor{-1},
                                // Anonymous pages must have `0u`.
                                0u);
     }

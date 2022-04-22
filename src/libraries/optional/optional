@@ -17,9 +17,6 @@ struct NullOpt {};
 // A `Monostate` represents an `Optional` that holds no `value`.
 struct Monostate {};
 
-// A `PredicateConstructor` is the only type that can construct a `Predicate`.
-struct PredicateConstructor {};
-
 // `InPlace` is consumed by wrapper classes to default-initialize their storage.
 struct InPlace {};
 
@@ -36,8 +33,7 @@ struct Predicate {
     using Type = T;
     static constexpr auto predicate_function = predicate;
     static constexpr T sentinel_value = sentinel;
-
-    Predicate(cat::detail::PredicateConstructor){};
+    consteval Predicate() requires(predicate(sentinel)) = default;
 };
 
 template <typename T, T sentinel>
@@ -301,11 +297,10 @@ template <typename T>
 struct OptionalPredicateStorage {
     using Value = typename T::Type;
     Value storage;
-
     // TODO: Handle non-trivial constructors and assignment operators.
 
-    // Enable copy and move constructors iff `OptionalPredicateStorage` supports
-    // them.
+    // Enable copy and move constructors iff `OptionalPredicateStorage`
+    // supports them.
 
     // If `Value` is trivially copy-constructible, use this simple copy
     // constructor.
@@ -313,8 +308,8 @@ struct OptionalPredicateStorage {
         meta::is_trivially_copy_constructible<Value>)
         : storage(in_value){};
 
-    // If `Value` is not trivially copy-constructible, then manually construct
-    // it in-place.
+    // If `Value` is not trivially copy-constructible, then manually
+    // construct it in-place.
     constexpr OptionalPredicateStorage(Value const& in_value) requires(
         meta::is_copy_constructible<Value> &&
         !meta::is_trivially_copy_constructible<Value>) {
@@ -486,18 +481,18 @@ class Optional {
     using Storage =
         meta::Conditional<meta::is_void<T>,
             // If `T` is `void`:
-		    OptionalVoidStorage, 
+            OptionalVoidStorage,
             meta::Conditional<requires {
-                // `Predicate` is the only type that can be constructed by a
-                // `PredicateConstructor` value.
-                T(cat::detail::PredicateConstructor{});
-	        }, // If `T` is a `Predicate`:
+                   // T::predicate_function(T::Type());
+                    T::sentinel_value;
+                },
+                // If `T` is a `Predicate`:
                 OptionalPredicateStorage<T>,
                 meta::Conditional<meta::is_reference<T>,
                     // If `T` is a reference type:
                     OptionalReferenceStorage<T>,
                     // If `T` is a value type:
-					OptionalValueStorage<T>>>>;
+                    OptionalValueStorage<T>>>>;
     // clang-format on
 
     using Value = typename Storage::Value;
