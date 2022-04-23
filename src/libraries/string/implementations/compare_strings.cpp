@@ -14,9 +14,9 @@ auto cat::compare_strings(String const& string_1, String const& string_2)
     Array<VectorType, 4> vector_1;
     Array<VectorType, 4> vector_2;
     Array<VectorType, 4> mask;
-    Array<uint4, 4> results;
+    Array<int4, 4> results;
     ssize length_iterator = string_1.size();
-    ssize vector_size = sizeof(VectorType);
+    ssize vector_size = ssizeof<VectorType>();
     char const* p_string_1_iterator = string_1.p_data();
     char const* p_string_2_iterator = string_2.p_data();
 

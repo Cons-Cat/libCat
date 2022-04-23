@@ -49,7 +49,7 @@ struct SocketUnix {
     // Get the size of this struct, not considering the `FileDescriptor` that it
     // holds.
     auto get_size() -> ssize {
-        return sizeof(attributes) + sizeof(path_name);
+        return ssizeof(attributes) + ssizeof(path_name);
     }
 
     // Create and return a `Socket`.
@@ -78,7 +78,7 @@ struct SocketUnix {
                      Socket const* p_destination_socket = nullptr,
                      ssize const addr_length = 0) -> Result<> {
         return nix::send_buffer(this->descriptor, &message_struct,
-                                sizeof(message_struct), flags,
+                                ssizeof(message_struct), flags,
                                 p_destination_socket, addr_length);
     }
 

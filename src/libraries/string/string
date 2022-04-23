@@ -46,17 +46,19 @@ class String : public Span<char const> {
     constexpr String(T p_string) requires(meta::is_pointer<T>)
         : Span<char const>(p_string, cat::string_length(p_string)){};
 
-    template <unsigned int other_length>
+    template <unsigned int long other_length>
     consteval String(char const (&string)[other_length]) {
         this->p_storage = string;
-        this->length = other_length;
+        this->length = static_cast<signed int long>(other_length);
     }
 
     // TODO: Make this `consteval`.
-    template <unsigned int other_length>
-    constexpr String(StaticString<other_length> const& string) {
+    template <unsigned int long other_length>
+    constexpr String(
+        StaticString<static_cast<signed int long>(other_length)> const&
+            string) {
         this->p_storage = &(string.storage[0]);
-        this->length = other_length;
+        this->length = static_cast<signed int long>(other_length);
     }
 
     // A `String` consuming `nullptr` would cause undefined behavior.

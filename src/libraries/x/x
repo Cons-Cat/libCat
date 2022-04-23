@@ -8,6 +8,8 @@
 #include <socket>
 #include <type_traits>
 
+#include "result"
+
 // https://www.x.org/releases/X11R7.7/doc/xproto/x11protocol.pdf
 
 namespace xwin {
@@ -212,7 +214,7 @@ struct [[gnu::packed]] EventMask {
 };
 
 struct Error {
-    uint1 response_operation = static_cast<signed char>(0);
+    uint1 response_operation = static_cast<unsigned char>(0);
     enum : unsigned char {
         request = 1,
         value = 2,
@@ -415,7 +417,7 @@ auto handshake(meta::Allocator auto& allocator,
     socket.send_struct(xwin::ConnectionRequestInfo()).or_panic();
 
     x_connection.socket_descriptor = socket.descriptor;
-    socket.recieve(&x_connection.header, sizeof(x_connection.header))
+    socket.recieve(&x_connection.header, ssizeof(x_connection.header))
         .or_panic();
 
     // TODO: This will fail if Xauth is enabled. This must handle X11 cookies.

@@ -3,6 +3,7 @@
 #pragma once
 
 #include <concepts>
+#include <cstdint>
 #include <type_traits>
 
 // i386 and x86-64 are little endian.
@@ -136,28 +137,107 @@ constexpr auto operator&(T flag_1, U flag_2) -> T {
     return static_cast<T>(static_cast<U>(flag_1) & static_cast<U>(flag_2));
 }
 
-constexpr auto operator""_ki(unsigned long long const input) -> long {
-    return static_cast<long>(1024 * input);
+namespace cat::detail {
+
+// `BinaryStorage` is a strongly type integer that can implicitly convert into
+// either a signed or unsigned size type
+struct BinarySize {
+    // This macro is provided by GCC.
+    using Type = __UINT64_TYPE__;
+    Type storage;
+
+    constexpr BinarySize() = default;
+
+    constexpr BinarySize(meta::Integral auto value)
+        : storage(static_cast<Type>(value)){};
+
+    constexpr BinarySize(ssize value)
+        : storage(static_cast<Type>(value.storage)){};
+
+    constexpr BinarySize(usize value)
+        : storage(static_cast<Type>(value.storage)){};
+
+    constexpr BinarySize(long double value)
+        : storage(static_cast<Type>(value)){};
+
+    constexpr operator ssize() const {
+        // This macro is provided by GCC.
+        return static_cast<__INT64_TYPE__>(this->storage);
+    }
+
+    constexpr operator usize() const {
+        return storage;
+    }
+
+    constexpr auto operator==(BinarySize const operand) const -> bool {
+        return this->storage == operand.storage;
+    }
+
+    constexpr auto operator<(BinarySize const operand) const -> bool {
+        return this->storage < operand.storage;
+    }
+
+    constexpr auto operator<=(BinarySize const operand) const -> bool {
+        return this->storage <= operand.storage;
+    }
+
+    constexpr auto operator>(BinarySize const operand) const -> bool {
+        return this->storage > operand.storage;
+    }
+
+    constexpr auto operator>=(BinarySize const operand) const -> bool {
+        return this->storage >= operand.storage;
+    }
+
+    constexpr auto operator+(BinarySize const operand) const {
+        return this->storage + operand.storage;
+    }
+
+    constexpr auto operator-(BinarySize const operand) const {
+        return this->storage - operand.storage;
+    }
+
+    constexpr auto operator*(BinarySize const operand) const {
+        return this->storage * operand.storage;
+    }
+
+    constexpr auto operator&(BinarySize const operand) const {
+        return this->storage & operand.storage;
+    }
+
+    constexpr auto operator|(BinarySize const operand) const {
+        return this->storage | operand.storage;
+    }
+};
+
+}  // namespace cat::detail
+
+// template <>
+// struct meta::IsIntegralTrait<cat::detail::BinarySize> : TrueTypeTrait {};
+
+constexpr auto operator""_ki(unsigned long long const input) -> ssize {
+    return 1024 * static_cast<signed long long>(input);
 }
 
-constexpr auto operator""_ki(long double const input) -> long {
-    return static_cast<long>(1024.f * input);
+constexpr auto operator""_ki(long double const input) -> ssize {
+    return static_cast<signed long long>(1024.f * input);
 }
 
-constexpr auto operator""_mi(unsigned long long const input) -> long {
-    return static_cast<long>(1024 * 1024 * input);
+constexpr auto operator""_mi(unsigned long long const input) -> ssize {
+    return 1024 * 1024 * static_cast<signed long long>(input);
 }
 
-constexpr auto operator""_mi(long double const input) -> long {
-    return static_cast<long>(1024.f * 1024.f * input);
+constexpr auto operator""_mi(long double const input) -> ssize {
+    return static_cast<signed long long>(1024.f * 1024.f * input);
 }
 
-constexpr auto operator""_gi(unsigned long long const input) -> long {
-    return static_cast<long>(1024 * 1024 * 1024 * input);
+constexpr auto operator""_gi(unsigned long long const input) -> ssize {
+    return 1024 * 1024 * 1024 * static_cast<signed long long>(input);
 }
 
-constexpr auto operator""_gi(long double const input) -> long {
-    return static_cast<long>(1024.f * 1024.f * 1024.f * 1024.f * input);
+constexpr auto operator""_gi(long double const input) -> ssize {
+    return static_cast<signed long long>(1024.f * 1024.f * 1024.f * 1024.f *
+                                         input);
 }
 
 #include "./implementations/align_down.tpp"

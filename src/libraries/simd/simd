@@ -299,10 +299,13 @@ template <typename T>
 void stream_in(void* p_destination, T const* p_source);
 
 template <typename T>
-auto move_mask(T vector) -> int4 {
+auto move_mask(T vector) {
     if constexpr (sizeof(typename T::Scalar) == 1) {
         return __builtin_ia32_pmovmskb256(
-            meta::bit_cast<cat::detail::Simd<char, T::size(), alignof(T)>>(
+            meta::bit_cast<
+                cat::detail::Simd<char, T::size(),
+                                  // TODO: Make an `salignof()`.
+                                  static_cast<signed int long>(alignof(T))>>(
                 vector)
                 .value);
     } else {

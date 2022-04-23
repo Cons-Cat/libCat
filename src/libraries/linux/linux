@@ -10,7 +10,7 @@
 
 struct Socket;
 
-constexpr usize page_size = 4096_ki;
+constexpr ssize page_size = 4096_ki;
 
 namespace nix {
 
@@ -208,7 +208,7 @@ auto close(FileDescriptor const file_descriptor) -> Result<>;
 
 auto unlink(char const* p_path_name) -> Result<>;
 
-auto map_memory(usize const beginning_address, usize const bytes_size,
+auto map_memory(usize const beginning_address, ssize const bytes_size,
                 MemoryProtectionFlags const protections,
                 MemoryFlags const flags, FileDescriptor const file_descriptor,
                 ssize const pages_offset) -> Result<void*>;
@@ -431,31 +431,31 @@ struct FileStatus {
     int4 unused[3];  // NOLINT
   public:
     auto is_regular() const -> bool1 {
-        return (this->protections_mode & 0170000) == 0100000;
+        return (this->protections_mode & 0170000u) == 0100000u;
     }
 
     auto is_directory() const -> bool1 {
-        return (this->protections_mode & 0170000) == 0040000;
+        return (this->protections_mode & 0170000u) == 0040000u;
     }
 
     auto is_character_device() const -> bool1 {
-        return (this->protections_mode & 0170000) == 0020000;
+        return (this->protections_mode & 0170000u) == 0020000u;
     }
 
     auto is_block_device() const -> bool1 {
-        return (this->protections_mode & 0170000) == 0060000;
+        return (this->protections_mode & 0170000u) == 0060000u;
     }
 
     auto is_fifo() const -> bool1 {
-        return (this->protections_mode & 0170000) == 0010000;
+        return (this->protections_mode & 0170000u) == 0010000u;
     }
 
     auto is_symbolic_link() const -> bool1 {
-        return (this->protections_mode & 0170000) == 0120000;
+        return (this->protections_mode & 0170000u) == 0120000u;
     }
 
     auto is_socket() const -> bool1 {
-        return (this->protections_mode & 0170000) == 0140000;
+        return (this->protections_mode & 0170000u) == 0140000u;
     }
 };
 
