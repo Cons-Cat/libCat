@@ -48,6 +48,8 @@ using int4 = cat::detail::Numeral<__INT32_TYPE__>;
 using uint4 = cat::detail::Numeral<__UINT32_TYPE__>;
 using int8 = cat::detail::Numeral<__INT64_TYPE__>;
 using uint8 = cat::detail::Numeral<__UINT64_TYPE__>;
+using float4 = cat::detail::Numeral<float>;
+using float8 = cat::detail::Numeral<double>;
 
 struct intptr;
 
@@ -336,9 +338,10 @@ using IsIntegral = typename IsIntegralTrait<T>::type;
 
 template <typename T>
 struct IsFloatingPointTrait
-    : BoolConstantTrait<is_same<float, RemoveCv<T>> ||
-                        is_same<double, RemoveCv<T>> ||
-                        is_same<long double, RemoveCv<T>>> {};
+    : BoolConstantTrait<
+          is_same<float, RemoveCv<T>> || is_same<double, RemoveCv<T>> ||
+          is_same<float4, RemoveCv<T>> || is_same<float8, RemoveCv<T>> ||
+          is_same<long double, RemoveCv<T>>> {};
 template <typename T>
 constexpr bool is_floating_point = IsFloatingPointTrait<T>::value;
 

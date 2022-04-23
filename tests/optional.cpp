@@ -203,7 +203,7 @@ void meow() {
     // `Optional const`
     Optional<int4> const constant_val = 1;
     [[maybe_unused]] Optional<int4> const constant_null = nullopt;
-    auto con = constant_val.value();
+    [[maybe_unused]] auto con = constant_val.value();
 
     // TODO: This does not work:
     // int4 const constant_int = 0;

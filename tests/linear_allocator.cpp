@@ -15,7 +15,7 @@ void meow() {
     for (int i = 0; i < 7; i++) {
         Optional handle = allocator.malloc<int4>();
         if (!handle.has_value()) {
-			Result(i == 6).or_panic();
+            Result(i == 6).or_panic();
             goto didnt_overallocate;
         }
     }

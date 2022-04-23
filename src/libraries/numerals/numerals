@@ -7,6 +7,15 @@
 
 namespace cat::detail {
 
+template <typename T, typename U>
+consteval auto is_safe_conversion() -> bool {
+    // TODO: Check signedness and floatness of operands.
+    return (sizeof(T) >= sizeof(U))
+        // && (meta::is_signed<T> == meta::is_signed<U>)
+        // &&(meta::is_floating_point<T> == meta::is_floating_point<U>)
+        ;
+}
+
 // `Numeral` is a container for numeric data types which prevents unsafe or
 // pessimizing implicit casts, such as loss of precision, change in
 // signed-ness, or `float4` to `float8` conversion.
@@ -33,19 +42,7 @@ struct Numeral {
     constexpr Numeral(T value) : storage(value){};
 
     template <typename U>
-    constexpr Numeral(U const from) requires(
-        // clang-format off
-        // Any number that is smaller than this can safely cast into it.
-        sizeof(T) >= sizeof(from)
-		/* &&
-            (meta::is_signed<T> ==
-                 meta::is_signed<decltype(decay_numeral(from))> &&
-             meta::is_floating_point<T> ==
-                 meta::is_floating_point<decltype(decay_numeral(from))>) ||
-        (meta::is_bool<U> && meta::is_integral<T>)
-		*/
-        // clang-format on
-        )
+    constexpr Numeral(U const from) requires(is_safe_conversion<T, U>())
         : storage(from){};
 
     template <typename U>
@@ -58,45 +55,40 @@ struct Numeral {
         return this->storage;
     }
 
-    // TODO: Putting concepts or constexpr functions in these `requires`
-    // clauses doesn't work, for some reason.
-#define REQUIRES_HELPER true
-
-    /* cat::is_signed_v<T> == cat::is_signed_v<decltype(decay_numeral(from))> &&
-       \
-            sizeof(T) >= sizeof(decltype(decay_numeral(from))) && \
-            cat::is_floating_point_v<T> == \
-                cat::is_floating_point_v<decltype(decay_numeral(from))>
-    */
-
-    constexpr auto operator=(auto const from)
-        -> Numeral& requires(REQUIRES_HELPER) {
+    template <typename U>
+    constexpr auto operator=(U const from)
+        -> Numeral& requires(is_safe_conversion<T, U>()) {
         this->storage = static_cast<T const>(from);
         return *this;
     }
 
-    constexpr auto operator>(auto const from) const
-        -> bool requires(REQUIRES_HELPER) {
+    template <typename U>
+    constexpr auto operator>(U const from) const
+        -> bool requires(is_safe_conversion<T, U>()) {
         return this->storage > static_cast<T const>(from);
     }
 
-    constexpr auto operator>=(auto const from) const
-        -> bool requires(REQUIRES_HELPER) {
+    template <typename U>
+    constexpr auto operator>=(U const from) const
+        -> bool requires(is_safe_conversion<T, U>()) {
         return this->storage >= static_cast<T const>(from);
     }
 
-    constexpr auto operator<(auto const from) const
-        -> bool requires(REQUIRES_HELPER) {
+    template <typename U>
+    constexpr auto operator<(U const from) const
+        -> bool requires(is_safe_conversion<T, U>()) {
         return this->storage < static_cast<T const>(from);
     }
 
-    constexpr auto operator<=(auto const from) const
-        -> bool requires(REQUIRES_HELPER) {
+    template <typename U>
+    constexpr auto operator<=(U const from) const
+        -> bool requires(is_safe_conversion<T, U>()) {
         return this->storage <= static_cast<T const>(from);
     }
 
-    constexpr auto operator+=(auto const from)
-        -> Numeral& requires(REQUIRES_HELPER) {
+    template <typename U>
+    constexpr auto operator+=(U const from)
+        -> Numeral& requires(is_safe_conversion<T, U>()) {
         this->storage = this->storage + static_cast<T const>(from);
         return *this;
     }
@@ -111,8 +103,9 @@ struct Numeral {
         return *this;
     }
 
-    constexpr auto operator-=(auto const from)
-        -> Numeral& requires(REQUIRES_HELPER) {
+    template <typename U>
+    constexpr auto operator-=(U const from)
+        -> Numeral& requires(is_safe_conversion<T, U>()) {
         this->storage = this->storage - static_cast<T const>(from);
         return *this;
     }
@@ -125,64 +118,75 @@ struct Numeral {
         return storage--;
     }
 
-    constexpr auto operator*=(auto const from)
-        -> Numeral& requires(REQUIRES_HELPER) {
+    template <typename U>
+    constexpr auto operator*=(U const from)
+        -> Numeral& requires(is_safe_conversion<T, U>()) {
         this->storage = this->storage * static_cast<T const>(from);
         return *this;
     }
 
-    constexpr auto operator/(auto const from) const -> Numeral<T>
-    requires(REQUIRES_HELPER) {
+    template <typename U>
+    constexpr auto operator/(U const from) const -> Numeral<T>
+    requires(is_safe_conversion<T, U>()) {
         return static_cast<T const>(this->storage / static_cast<T const>(from));
     }
 
-    constexpr auto operator/=(auto const from)
-        -> Numeral& requires(REQUIRES_HELPER) {
+    template <typename U>
+    constexpr auto operator/=(U const from)
+        -> Numeral& requires(is_safe_conversion<T, U>()) {
         this->storage = this->storage / static_cast<T const>(from);
         return *this;
     }
 
-    constexpr auto operator%(auto const from) const -> Numeral<T>
-    requires(REQUIRES_HELPER) {
+    template <typename U>
+    constexpr auto operator%(U const from) const -> Numeral<T>
+    requires(is_safe_conversion<T, U>()) {
         return static_cast<T const>(this->storage % static_cast<T const>(from));
     }
 
-    constexpr auto operator%=(auto const from)
-        -> Numeral& requires(REQUIRES_HELPER) {
+    template <typename U>
+    constexpr auto operator%=(U const from)
+        -> Numeral& requires(is_safe_conversion<T, U>()) {
         this->storage = this->storage % static_cast<T const>(from);
         return *this;
     }
 
-    constexpr auto operator&=(auto const from)
-        -> Numeral& requires(REQUIRES_HELPER) {
+    template <typename U>
+    constexpr auto operator&=(U const from)
+        -> Numeral& requires(is_safe_conversion<T, U>()) {
         this->storage = this->storage & static_cast<T const>(from);
         return *this;
     }
 
-    constexpr auto operator|=(auto const from)
-        -> Numeral& requires(REQUIRES_HELPER) {
+    template <typename U>
+    constexpr auto operator|=(U const from)
+        -> Numeral& requires(is_safe_conversion<T, U>()) {
         this->storage = this->storage | static_cast<T const>(from);
         return *this;
     }
 
-    constexpr auto operator<<(auto const from) const -> Numeral<T>
-    requires(REQUIRES_HELPER) {
+    template <typename U>
+    constexpr auto operator<<(U const from) const -> Numeral<T>
+    requires(is_safe_conversion<T, U>()) {
         return static_cast<T const>(this->storage << static_cast<T>(from));
     }
 
-    constexpr auto operator<<=(auto const from)
-        -> Numeral& requires(REQUIRES_HELPER) {
+    template <typename U>
+    constexpr auto operator<<=(U const from)
+        -> Numeral& requires(is_safe_conversion<T, U>()) {
         this->storage = this->storage << static_cast<T const>(from);
         return *this;
     }
 
-    constexpr auto operator>>(auto const from) const -> Numeral<T>
-    requires(REQUIRES_HELPER) {
+    template <typename U>
+    constexpr auto operator>>(U const from) const -> Numeral<T>
+    requires(is_safe_conversion<T, U>()) {
         return static_cast<T const>(this->storage >> static_cast<T>(from));
     }
 
-    constexpr auto operator>>=(auto const from)
-        -> Numeral& requires(REQUIRES_HELPER) {
+    template <typename U>
+    constexpr auto operator>>=(U const from)
+        -> Numeral& requires(is_safe_conversion<T, U>()) {
         this->storage = this->storage >> static_cast<T const>(from);
         return *this;
     }
@@ -197,6 +201,7 @@ template <typename T>
 Numeral(T) -> Numeral<T>;
 
 // Compare primitive numerals to `Numeral`s.
+// TODO: Return a `Numeral` that is the larger size of either operand.
 template <typename T, typename U>
 constexpr auto operator>(T const lhs, Numeral<U> const rhs)
     -> bool requires(meta::is_convertible<U, T> &&
@@ -226,34 +231,49 @@ constexpr auto operator<=(T const lhs, Numeral<U> const rhs)
 }
 
 // Order-independant operators for `Numeral` and primitive numerals.
-template <typename T>
-constexpr auto operator==(Numeral<T> const lhs, auto const rhs) -> bool {
+template <typename T, typename U>
+constexpr auto operator==(Numeral<T> const lhs, U const rhs)
+    -> bool requires(is_safe_conversion<T, U>()) {
     return lhs.storage == static_cast<T const>(rhs);
 }
 
-template <typename T>
-constexpr auto operator+(Numeral<T> const lhs, auto const rhs) -> Numeral<T> {
+template <typename T, typename U>
+constexpr auto operator+(Numeral<T> const lhs, U const rhs)
+    -> meta::Conditional<sizeof(T) >= sizeof(U), Numeral<T>, Numeral<U>>
+requires(meta::is_signed<T> == meta::is_signed<U> &&
+         meta::is_floating_point<T> == meta::is_floating_point<U>) {
     return lhs.storage + static_cast<T const>(rhs);
 }
 
-template <typename T>
-constexpr auto operator-(Numeral<T> const lhs, auto const rhs) -> Numeral<T> {
+template <typename T, typename U>
+constexpr auto operator-(Numeral<T> const lhs, U const rhs)
+    -> meta::Conditional<sizeof(T) >= sizeof(U), Numeral<T>, Numeral<U>>
+requires(meta::is_signed<T> == meta::is_signed<U> &&
+         meta::is_floating_point<T> == meta::is_floating_point<U>) {
     return lhs.storage - static_cast<T const>(rhs);
 }
 
-template <typename T>
-constexpr auto operator*(Numeral<T> const lhs, auto const rhs) -> Numeral<T> {
+template <typename T, typename U>
+constexpr auto operator*(Numeral<T> const lhs, U const rhs)
+    -> meta::Conditional<sizeof(T) >= sizeof(U), Numeral<T>, Numeral<U>>
+requires(meta::is_signed<T> == meta::is_signed<U> &&
+         meta::is_floating_point<T> == meta::is_floating_point<U>) {
     return lhs.storage * static_cast<T const>(rhs);
 }
 
-template <typename T>
-constexpr auto operator&(Numeral<T> const lhs, auto const rhs) -> Numeral<T> {
+template <typename T, typename U>
+constexpr auto operator&(Numeral<T> const lhs, U const rhs)
+    -> meta::Conditional<sizeof(T) >= sizeof(U), Numeral<T>, Numeral<U>>
+requires(meta::is_signed<T> == meta::is_signed<U> &&
+         meta::is_floating_point<T> == meta::is_floating_point<U>) {
     return lhs.storage & static_cast<T const>(rhs);
 }
 
-template <typename T>
-constexpr auto operator|(Numeral<T> const lhs, meta::Integral auto const rhs)
-    -> Numeral<T> {
+template <typename T, meta::Integral U>
+constexpr auto operator|(Numeral<T> const lhs, U const rhs)
+    -> meta::Conditional<sizeof(T) >= sizeof(U), Numeral<T>, Numeral<U>>
+requires(meta::is_signed<T> == meta::is_signed<U> &&
+         meta::is_floating_point<T> == meta::is_floating_point<U>) {
     return lhs.storage | static_cast<T>(rhs);
 }
 

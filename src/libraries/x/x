@@ -430,7 +430,8 @@ auto handshake(meta::Allocator auto& allocator,
     bool1 failed = false;
     auto memory = allocator
                       .template malloc<ConnectionResponseInfo>(
-                          x_connection.header.message_length * 4)
+                          // TODO: Remove `.c()`.
+                          x_connection.header.message_length.c() * 4)
                       .or_else([&]() {
                           failed = true;
                       })
@@ -440,7 +441,10 @@ auto handshake(meta::Allocator auto& allocator,
     }
     x_connection.p_setup = &allocator.get(memory);
 
-    socket.recieve(x_connection.p_setup, x_connection.header.message_length * 4)
+    // TODO: Remove `.c()`.
+    socket
+        .recieve(x_connection.p_setup,
+                 x_connection.header.message_length.c() * 4)
         .or_panic();
 
     // Copy pointers to that recieved data from the allocated buffer into
