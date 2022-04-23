@@ -59,6 +59,9 @@ class String : public Span<char const> {
         this->length = other_length;
     }
 
+    // A `String` consuming `nullptr` would cause undefined behavior.
+    constexpr String(decltype(nullptr)) = delete;
+
     constexpr auto operator=(String const& string) {
         this->p_storage = string.p_storage;
         this->length = string.length;
