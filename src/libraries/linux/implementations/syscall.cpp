@@ -13,7 +13,6 @@ auto nix::syscall0(int8 const call) -> Result<Any> {
         /* Clobbering all of these is necessary to prevent a segfault: */
         : "memory", "cc", "rcx", "r11");
     if (meta::bit_cast<int8>(result) < 0) {
-        // The negative of `result` represents Linux's errno.
         return Failure(meta::bit_cast<int8>(result));
     }
     return result;
@@ -28,7 +27,6 @@ auto nix::syscall1(int8 const call, Any const arg) -> Result<Any> {
         /* Clobbering all of these is necessary to prevent a segfault: */
         : "memory", "cc", "rcx", "r11");
     if (meta::bit_cast<int8>(result) < 0) {
-        // The negative of `result` represents Linux's errno.
         return Failure(meta::bit_cast<int8>(result));
     }
     return result;
@@ -44,7 +42,6 @@ auto nix::syscall2(int8 const call, Any const arg1, Any const arg2)
         /* Clobbering all of these is necessary to prevent a segfault: */
         : "memory", "cc", "rcx", "r11");
     if (meta::bit_cast<int8>(result) < 0) {
-        // The negative of `result` represents Linux's errno.
         return Failure(meta::bit_cast<int8>(result));
     }
     return result;
@@ -61,7 +58,6 @@ auto nix::syscall3(int8 const call, Any const arg1, Any const arg2,
         /* Clobbering all of these is necessary to prevent a segfault: */
         : "memory", "cc", "rcx", "r11");
     if (meta::bit_cast<int8>(result) < 0) {
-        // The negative of `result` represents Linux's errno.
         return Failure(meta::bit_cast<int8>(result));
     }
     return result;
@@ -77,7 +73,6 @@ auto nix::syscall4(int8 const call, Any const arg1, Any const arg2,
                  : "a"(call), "D"(arg1), "S"(arg2), "d"(arg3), "r"(r10)
                  : "rcx", "r11", "memory", "cc");
     if (meta::bit_cast<int8>(result) < 0) {
-        // The negative of `result` represents Linux's errno.
         return Failure(meta::bit_cast<int8>(result));
     }
     return result;
@@ -95,7 +90,6 @@ auto nix::syscall5(int8 const call, Any const arg1, Any const arg2,
                  : "a"(call), "D"(arg1), "S"(arg2), "d"(arg3), "r"(r10), "r"(r8)
                  : "rcx", "r11", "memory", "cc");
     if (meta::bit_cast<int8>(result) < 0) {
-        // The negative of `result` represents Linux's errno.
         return Failure(meta::bit_cast<int8>(result));
     }
     return result;
@@ -117,7 +111,6 @@ auto nix::syscall6(int8 const call, Any const arg1, Any const arg2,
                    [a6] "re"(meta::bit_cast<void*>(arg6))
                  : "rcx", "r11", "memory", "cc");
     if (meta::bit_cast<int8>(result) < 0) {
-        // The negative of `result` represents Linux's errno.
         return Failure(meta::bit_cast<int8>(result));
     }
     return result;
