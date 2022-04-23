@@ -38,10 +38,12 @@ void meow() {
         cat::exit(1);
     }
 
-    constexpr String const_string_1 = "Hello, ";
-    constexpr String const_string_2 = "world!";
-    constexpr StaticString const_string_3 = "Hello, ";
-    constexpr StaticString const_string_4 = "world!";
+    [[maybe_unused]] constexpr String const_string_1 = "Hello, ";
+    [[maybe_unused]] constexpr String const_string_2 = "world!";
+    // TODO: Fix these:
+    // constexpr StaticString const_string_3 = "Hello, ";
+    // constexpr StaticString const_string_4 = "world!";
+
     // TODO: Make this `constexpr`.
     // String foo = (const_string_3 + const_string_4);
 

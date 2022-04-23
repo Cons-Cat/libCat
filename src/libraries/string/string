@@ -21,7 +21,7 @@ constexpr auto string_length(char const* p_string) -> ssize;
 
 #include "./implementations/string_length.tpp"
 
-template <unsigned long length>
+template <ssize length>
 struct StaticString;
 
 class String : public Span<char const> {
@@ -70,15 +70,15 @@ class String : public Span<char const> {
     }
 };
 
-// This is `unsigned long` because the compiler cannot deduce a string literal's
-// length as `ssize`.
+// This could be `unsigned long` because the compiler cannot deduce a string
+// literal's length as `ssize`.
 // TODO: Try a deduction guide.
-template <unsigned long length>
+template <ssize length>
 struct StaticString {
     // TODO: Use an `Array`.
-    char storage[length + 1];
+    char storage[length.c() + 1];
 
-    constexpr StaticString(char const (&in)[length]) : storage{} {
+    constexpr StaticString(char const (&in)[length.c()]) : storage{} {
         for (int i = 0; i < length - 1; i++) {
             storage[i] = in[i];
         }
@@ -101,28 +101,31 @@ struct StaticString {
     }
 };
 
+// template <unsigned long length>
+// StaticString(length) -> StaticString<ssize{length}>;
+
 // Concatenate constant-evaluated strings.
 
-// This is `unsigned long` because the compiler cannot deduce a string literal's
-// length as `ssize`.
+// This could be `unsigned long` because the compiler cannot deduce a string
+// literal's length as `ssize`.
 // TODO: Try a deduction guide.
-template <unsigned long length_1, unsigned long length_2>
+template <ssize length_1, ssize length_2>
 consteval auto operator+(StaticString<length_1> const& string_1,
                          StaticString<length_2> const& string_2)
     -> StaticString<length_1 - 1 + length_2> {
     // TODO: Use an `Array`.
-    char array[length_1 - 1 + length_2];
+    char array[length_1.c() - 1 + length_2.c()];
 
     for (int i = 0; i < length_1 - 1; i++) {
         array[i] = string_1.storage[i];
     }
 
-    for (int i = length_1 - 1; i < length_1 - 1 + length_2 - 1; i++) {
-        array[i] = string_2.storage[i - length_1 + 1];
+    for (int i = length_1.c() - 1; i < length_1 - 1 + length_2 - 1; i++) {
+        array[i] = string_2.storage[i - length_1.c() + 1];
     }
 
     // Make this string null-terminated.
-    array[(length_1 - 1 + length_2 - 1)] = '\0';
+    array[(length_1.c() - 1 + length_2.c() - 1)] = '\0';
     StaticString static_string = array;
     return static_string;
 }
