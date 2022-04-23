@@ -128,7 +128,7 @@ void meow() {
 
     // Converting assignment.
     foo = 1;
-    foo = uint4{2};
+    foo = short{2};
 
     // Monadic methods.
     moo = 2;

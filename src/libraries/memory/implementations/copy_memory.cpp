@@ -15,7 +15,7 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
     constexpr ssize l3_cache_size = 2_mi;
     ssize padding;
 
-    constexpr ssize step_size = sizeof(Vector) * 8;
+    constexpr ssize step_size = ssizeof<Vector>() * 8;
 
     if (bytes <= step_size) {
         cat::copy_memory_small(p_source, p_destination, bytes);
@@ -23,7 +23,7 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
     }
 
     // Align source, destination, and bytes to the vector's optimal alignment.
-    padding = static_cast<ssize>(
+    padding = static_cast<signed int long>(
         (alignof(Vector) -
          ((meta::bit_cast<__UINTPTR_TYPE__>(p_destination_handle)) &
           (alignof(Vector) - 1))) &

@@ -280,11 +280,39 @@ struct IsReferenceTrait<T&&> : TrueTypeTrait {};
 template <typename T>
 constexpr bool is_reference = IsReferenceTrait<T>::value;
 
+template <typename>
+struct IsCatNumeral : FalseTypeTrait {};
+template <>
+struct IsCatNumeral<int1> : TrueTypeTrait {};
+template <>
+struct IsCatNumeral<int2> : TrueTypeTrait {};
+template <>
+struct IsCatNumeral<int4> : TrueTypeTrait {};
+template <>
+struct IsCatNumeral<int8> : TrueTypeTrait {};
+template <>
+struct IsCatNumeral<uint1> : TrueTypeTrait {};
+template <>
+struct IsCatNumeral<uint2> : TrueTypeTrait {};
+template <>
+struct IsCatNumeral<uint4> : TrueTypeTrait {};
+template <>
+struct IsCatNumeral<uint8> : TrueTypeTrait {};
+template <>
+struct IsCatNumeral<float4> : TrueTypeTrait {};
+template <>
+struct IsCatNumeral<float8> : TrueTypeTrait {};
+template <>
+struct IsCatNumeral<intptr> : TrueTypeTrait {};
+
+template <typename T>
+constexpr bool is_cat_numeral = IsCatNumeral<T>::value;
+
 namespace detail {
     template <typename>
     struct IsIntegralTraitDetail : FalseTypeTrait {};
-    template <>
 
+    template <>
     struct IsIntegralTraitDetail<signed char> : TrueTypeTrait {};
     template <>
     struct IsIntegralTraitDetail<unsigned char> : TrueTypeTrait {};
@@ -330,11 +358,8 @@ namespace detail {
 
 template <typename T>
 struct IsIntegralTrait : meta::detail::IsIntegralTraitDetail<RemoveCv<T>> {};
-// TODO: `is_integral` does not work, and I am not sure why.
 template <typename T>
 constexpr bool is_integral = IsIntegralTrait<T>::value;
-template <typename T>
-using IsIntegral = typename IsIntegralTrait<T>::type;
 
 template <typename T>
 struct IsFloatingPointTrait
@@ -364,6 +389,9 @@ struct IsArithmeticTrait : ConditionalTrait<is_integral<T>, IsIntegralTrait<T>,
 namespace detail {
     template <typename T, bool = IsArithmeticTrait<T>::value>
     struct IsSignedTraitDetail : BoolConstantTrait<T(-1) < T(0)> {};
+
+    template <>
+    struct IsSignedTraitDetail<int1, true> : TrueTypeTrait {};
 
     template <typename T>
     struct IsSignedTraitDetail<T, false> : FalseTypeTrait {};
@@ -647,8 +675,7 @@ template <typename>
 struct IsScopedEnumTrait : meta::FalseTypeTrait {};
 
 template <typename T>
-requires meta::is_enum<T>
-struct IsScopedEnumTrait<T>
+requires(meta::is_enum<T> && !meta::is_integral<T>) struct IsScopedEnumTrait<T>
     : meta::BoolConstantTrait<detail::is_scoped_enum<T>> {
 };
 

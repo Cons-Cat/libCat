@@ -37,7 +37,7 @@ constexpr auto cat::string_length(char const* p_string) -> ssize {
             }
 
             p_memory++;
-            result += sizeof(char1x16);
+            result += ssizeof<char1x16>();
         }
 
         __builtin_unreachable();

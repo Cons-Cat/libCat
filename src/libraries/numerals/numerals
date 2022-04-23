@@ -5,15 +5,53 @@
 #include <concepts>
 #include <type_traits>
 
+template <typename T>
+concept CatNumeral = meta::is_cat_numeral<T>;
+
 namespace cat::detail {
 
 template <typename T, typename U>
 consteval auto is_safe_conversion() -> bool {
-    // TODO: Check signedness and floatness of operands.
+    // clang-format off
     return (sizeof(T) >= sizeof(U))
-        // && (meta::is_signed<T> == meta::is_signed<U>)
-        // &&(meta::is_floating_point<T> == meta::is_floating_point<U>)
-        ;
+		   && (meta::is_signed<T> == meta::is_signed<U>)
+	       && (meta::is_floating_point<T> == meta::is_floating_point<U>);
+    // clang-format on
+}
+
+template <CatNumeral T, typename U>
+consteval auto is_safe_conversion() -> bool {
+    using UnderlyingT = typename T::Type;
+    // clang-format off
+    return (sizeof(UnderlyingT) >= sizeof(U))
+		   && (meta::is_signed<UnderlyingT> == meta::is_signed<U>)
+	       && (meta::is_floating_point<UnderlyingT>
+               == meta::is_floating_point<U>);
+    // clang-format on
+}
+
+template <typename T, CatNumeral U>
+consteval auto is_safe_conversion() -> bool {
+    using UnderlyingU = typename U::Type;
+    // clang-format off
+    return (sizeof(T) >= sizeof(UnderlyingU))
+		   && (meta::is_signed<T> == meta::is_signed<UnderlyingU>)
+	       && (meta::is_floating_point<T>
+               == meta::is_floating_point<UnderlyingU>);
+    // clang-format on
+}
+
+template <CatNumeral T, CatNumeral U>
+consteval auto is_safe_conversion() -> bool {
+    using UnderlyingT = typename T::Type;
+    using UnderlyingU = typename U::Type;
+    // clang-format off
+    return (sizeof(UnderlyingT) >= sizeof(UnderlyingU))
+		   && (meta::is_signed<UnderlyingT>
+               == meta::is_signed<UnderlyingU>)
+	       && (meta::is_floating_point<UnderlyingT>
+               == meta::is_floating_point<UnderlyingU>);
+    // clang-format on
 }
 
 // `Numeral` is a container for numeric data types which prevents unsafe or
@@ -39,15 +77,21 @@ struct Numeral {
 
     constexpr Numeral() = default;
 
-    constexpr Numeral(T value) : storage(value){};
+    // constexpr Numeral(T value) : storage(value){};
 
     template <typename U>
     constexpr Numeral(U const from) requires(is_safe_conversion<T, U>())
-        : storage(from){};
+        : storage(static_cast<T>(from)){};
 
     template <typename U>
     constexpr explicit operator U() const {
-        return static_cast<U>(this->storage);
+        if constexpr (meta::IsSpecializationTrait<U, Numeral>::value) {
+            // If `U` is a `Numeral`, cast into `U`'s underlying type.
+            return static_cast<typename U::Type>(this->storage);
+        } else {
+            // If `U` is not a `Numeral`, cast into `U`.
+            return static_cast<U>(this->storage);
+        }
     }
 
     // Get the underlying C API type.
@@ -233,48 +277,44 @@ constexpr auto operator<=(T const lhs, Numeral<U> const rhs)
 // Order-independant operators for `Numeral` and primitive numerals.
 template <typename T, typename U>
 constexpr auto operator==(Numeral<T> const lhs, U const rhs)
-    -> bool requires(is_safe_conversion<T, U>()) {
+    -> bool requires(meta::is_signed<T> == meta::is_signed<U> &&
+                     meta::is_floating_point<T> == meta::is_floating_point<U>) {
     return lhs.storage == static_cast<T const>(rhs);
 }
 
 template <typename T, typename U>
-constexpr auto operator+(Numeral<T> const lhs, U const rhs)
-    -> meta::Conditional<sizeof(T) >= sizeof(U), Numeral<T>, Numeral<U>>
-requires(meta::is_signed<T> == meta::is_signed<U> &&
-         meta::is_floating_point<T> == meta::is_floating_point<U>) {
-    return lhs.storage + static_cast<T const>(rhs);
+constexpr auto operator+(Numeral<T> const lhs, U const rhs) requires(
+    meta::is_signed<T> == meta::is_signed<U> &&
+    meta::is_floating_point<T> == meta::is_floating_point<U>) {
+    return Numeral{lhs.storage + static_cast<T const>(rhs)};
 }
 
 template <typename T, typename U>
-constexpr auto operator-(Numeral<T> const lhs, U const rhs)
-    -> meta::Conditional<sizeof(T) >= sizeof(U), Numeral<T>, Numeral<U>>
-requires(meta::is_signed<T> == meta::is_signed<U> &&
-         meta::is_floating_point<T> == meta::is_floating_point<U>) {
-    return lhs.storage - static_cast<T const>(rhs);
+constexpr auto operator-(Numeral<T> const lhs, U const rhs) requires(
+    meta::is_signed<T> == meta::is_signed<U> &&
+    meta::is_floating_point<T> == meta::is_floating_point<U>) {
+    return Numeral{lhs.storage - static_cast<T const>(rhs)};
 }
 
 template <typename T, typename U>
-constexpr auto operator*(Numeral<T> const lhs, U const rhs)
-    -> meta::Conditional<sizeof(T) >= sizeof(U), Numeral<T>, Numeral<U>>
-requires(meta::is_signed<T> == meta::is_signed<U> &&
-         meta::is_floating_point<T> == meta::is_floating_point<U>) {
-    return lhs.storage * static_cast<T const>(rhs);
+constexpr auto operator*(Numeral<T> const lhs, U const rhs) requires(
+    meta::is_signed<T> == meta::is_signed<U> &&
+    meta::is_floating_point<T> == meta::is_floating_point<U>) {
+    return Numeral{lhs.storage * static_cast<T const>(rhs)};
 }
 
 template <typename T, typename U>
-constexpr auto operator&(Numeral<T> const lhs, U const rhs)
-    -> meta::Conditional<sizeof(T) >= sizeof(U), Numeral<T>, Numeral<U>>
-requires(meta::is_signed<T> == meta::is_signed<U> &&
-         meta::is_floating_point<T> == meta::is_floating_point<U>) {
-    return lhs.storage & static_cast<T const>(rhs);
+constexpr auto operator&(Numeral<T> const lhs, U const rhs) requires(
+    meta::is_signed<T> == meta::is_signed<U> &&
+    meta::is_floating_point<T> == meta::is_floating_point<U>) {
+    return Numeral{lhs.storage & static_cast<T const>(rhs)};
 }
 
 template <typename T, meta::Integral U>
-constexpr auto operator|(Numeral<T> const lhs, U const rhs)
-    -> meta::Conditional<sizeof(T) >= sizeof(U), Numeral<T>, Numeral<U>>
-requires(meta::is_signed<T> == meta::is_signed<U> &&
-         meta::is_floating_point<T> == meta::is_floating_point<U>) {
-    return lhs.storage | static_cast<T>(rhs);
+constexpr auto operator|(Numeral<T> const lhs, U const rhs) requires(
+    meta::is_signed<T> == meta::is_signed<U> &&
+    meta::is_floating_point<T> == meta::is_floating_point<U>) {
+    return Numeral{lhs.storage | static_cast<T>(rhs)};
 }
 
 // Pointer arithmetic operators for `Numeral`s.
@@ -394,6 +434,7 @@ using uint8 = cat::detail::Numeral<__UINT64_TYPE__>;
 using float4 = cat::detail::Numeral<float>;
 using float8 = cat::detail::Numeral<double>;
 
+// TODO: `__SIZE_TYPE__`.
 using usize = uint8;
 using ssize = int8;
 
@@ -592,29 +633,64 @@ struct intptr {  // NOLINT
     }
 };
 
-// Order independant.storage operators between an `intptr` and an integral or
-// pointer.
+// Order-independant operators between an `intptr` and a pointer.
+template <typename T>
+constexpr auto operator==(intptr const lhs, T* const p_rhs) -> bool {
+    return lhs.storage == intptr{p_rhs}.storage;
+}
 
-constexpr auto operator==(intptr const lhs, auto rhs) -> intptr {
+template <typename T>
+constexpr auto operator+(intptr const lhs, T* const p_rhs) -> intptr {
+    return lhs.storage + intptr{p_rhs}.storage;
+}
+
+template <typename T>
+constexpr auto operator-(intptr const lhs, T* const p_rhs) -> intptr {
+    return lhs.storage - intptr{p_rhs}.storage;
+}
+
+template <typename T>
+constexpr auto operator*(intptr const lhs, T* const p_rhs) -> intptr {
+    return lhs.storage * intptr{p_rhs}.storage;
+}
+
+template <typename T>
+constexpr auto operator&(intptr const lhs, T* const p_rhs) -> intptr {
+    return lhs.storage & intptr{p_rhs}.storage;
+}
+
+template <typename T>
+constexpr auto operator|(intptr const lhs, T* const p_rhs) -> intptr {
+    return lhs.storage | intptr{p_rhs}.storage;
+}
+
+// Order-independant operators between an `intptr` and an integer.
+template <meta::Integral T>
+constexpr auto operator==(intptr const lhs, T const rhs) -> bool {
     return lhs.storage == intptr{rhs}.storage;
 }
 
-constexpr auto operator+(intptr const lhs, auto rhs) -> intptr {
+constexpr auto operator+(intptr const lhs, meta::Integral auto const rhs)
+    -> intptr {
     return lhs.storage + intptr{rhs}.storage;
 }
 
-constexpr auto operator-(intptr const lhs, auto rhs) -> intptr {
+constexpr auto operator-(intptr const lhs, meta::Integral auto const rhs)
+    -> intptr {
     return lhs.storage - intptr{rhs}.storage;
 }
 
-constexpr auto operator*(intptr const lhs, auto rhs) -> intptr {
+constexpr auto operator*(intptr const lhs, meta::Integral auto const rhs)
+    -> intptr {
     return lhs.storage * intptr{rhs}.storage;
 }
 
-constexpr auto operator&(intptr const lhs, auto rhs) -> intptr {
+constexpr auto operator&(intptr const lhs, meta::Integral auto const rhs)
+    -> intptr {
     return lhs.storage & intptr{rhs}.storage;
 }
 
-constexpr auto operator|(intptr const lhs, auto rhs) -> intptr {
+constexpr auto operator|(intptr const lhs, meta::Integral auto const rhs)
+    -> intptr {
     return lhs.storage | intptr{rhs}.storage;
 }

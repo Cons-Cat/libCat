@@ -6,5 +6,5 @@
 
 constexpr auto cat::align_up(intptr const& value, ssize const alignment)
     -> intptr {
-    return (value + (alignment - 1)) & (~(alignment - 1));
+    return (value + (alignment - 1).c()) & (~(alignment - 1));
 }

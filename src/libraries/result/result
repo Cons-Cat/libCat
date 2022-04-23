@@ -36,13 +36,13 @@ template <typename T = void>
 class Result;
 
 struct [[nodiscard]] Failure {
-    ssize code;
+    signed long long code;
 
     // The default constructor should only be called by `Result`.
     Failure() = default;
 
     // This must be explicit to disambiguate returning an integer to a Result.
-    explicit Failure(ssize const in_code) : code(in_code){};
+    explicit Failure(signed long long const in_code) : code(in_code){};
 
     // `Failure` can consume any `enum class`.
     template <meta::EnumClass T>

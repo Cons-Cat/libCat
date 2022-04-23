@@ -20,11 +20,6 @@ concept Iterable = requires(T t) {
 
 namespace cat::detail {
 
-enum class IteratorDirection {
-    backwards = -1,
-    forwards = 1
-};
-
 // https://quuxplusone.github.io/blog/2019/02/06/arrow-proxy/
 // TODO: Move this into somewhere generally useful.
 template <class Reference>

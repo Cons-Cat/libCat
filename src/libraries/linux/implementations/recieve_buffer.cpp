@@ -8,6 +8,6 @@ auto nix::recieve_buffer(FileDescriptor const socket_descriptor,
                          Socket const* __restrict p_addr,
                          ssize const* __restrict p_addr_length)
     -> Result<ssize> {
-    return nix::syscall5(45u, socket_descriptor, p_message_buffer,
-                         buffer_length, p_addr, p_addr_length);
+    return nix::syscall5(45, socket_descriptor, p_message_buffer, buffer_length,
+                         p_addr, p_addr_length);
 }
