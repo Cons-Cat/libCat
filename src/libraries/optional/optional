@@ -660,40 +660,34 @@ class Optional {
     // raw pointer, this is equivalent to `.value()`, otherwise this is
     // equivalent to `addressof(optional.value())`.
     constexpr auto p_value() {
-        auto get_p_value = [&]() {
-            if constexpr (meta::is_pointer<Value>) {
-                return this->storage.value();
-            } else {
-                return addressof(this->storage.value());
-            }
-        };
         if (!meta::is_constant_evaluated()) {
             Result(this->has_value())
                 .assert(
                     "`.value()` was illegally called on an `Optional` which "
                     "did not hold a value!\n");
         }
-        return get_p_value();
+        if constexpr (meta::is_pointer<Value>) {
+            return this->storage.value();
+        } else {
+            return addressof(this->storage.value());
+        }
     }
 
     // Get a pointer to the data owned by this `Optional`. If `Optional` holds a
     // raw pointer, this is equivalent to `.value()`, otherwise this is
     // equivalent to `addressof(optional.value())`.
     constexpr auto p_value() const {
-        auto get_p_value = [&]() {
-            if constexpr (meta::is_pointer<Value>) {
-                return this->storage.value();
-            } else {
-                return addressof(this->storage.value());
-            }
-        };
         if (!meta::is_constant_evaluated()) {
             Result(this->has_value())
                 .assert(
                     "`.value()` was illegally called on an `Optional` which "
                     "did not hold a value!\n");
         }
-        return get_p_value();
+        if constexpr (meta::is_pointer<Value>) {
+            return this->storage.value();
+        } else {
+            return addressof(this->storage.value());
+        }
     }
 
     // Monadic methods:
