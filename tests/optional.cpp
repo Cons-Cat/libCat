@@ -165,17 +165,17 @@ void meow() {
 
     positive = nullopt;
     Result(!positive
-                .transform([](int4 input) {
+                .transform([](int input) {
                     return input * 2;
                 })
                 .has_value())
         .or_panic();
 
     Result(!positive
-                .transform([](int4 input) {
+                .transform([](int input) {
                     return input * 2;
                 })
-                .and_then([](int4 input) {
+                .and_then([](int input) {
                     return input;
                 })
                 .has_value())
@@ -183,6 +183,31 @@ void meow() {
 
     decltype(positive) default_predicate_1{};
     Result(!default_predicate_1.has_value()).or_panic();
+
+    // Test function calls.
+    auto return_int = [](auto input) -> int4 {
+        return input + 1;
+    };
+    auto return_none = [](auto) -> Optional<int4> {
+        return nullopt;
+    };
+    auto return_opt = [](auto input) -> Optional<int4> {
+        return input;
+    };
+    auto return_void = [](auto) -> void {
+    };
+
+    Optional<int4> monadic;
+    monadic = return_none(0).and_then(return_opt);
+    Result(!monadic.has_value()).or_panic();
+
+    monadic = return_opt(1).and_then(return_int);
+    Result(monadic.has_value()).or_panic();
+    Result(monadic.value() == 2).or_panic();
+
+    Optional<void> monadic_void =
+        return_opt(1).and_then(return_int).and_then(return_void);
+    Result(monadic_void.has_value()).or_panic();
 
     // The default value of `int4` is `0`.
     decltype(positive) default_predicate_2{in_place};
@@ -220,13 +245,10 @@ void meow() {
     // `Optional<void>` default-initializes empty:
     Optional<void> optvoid;
     Result(!optvoid.has_value()).or_panic();
-    // `true` initializes a value:
-    Optional<void> optvoid_2{true};
+    // `monostate` initializes a value:
+    Optional<void> optvoid_2{monostate};
     Result(optvoid_2.has_value()).or_panic();
 
-    // `false` initializes empty:
-    Optional<void> optvoid_3{false};
-    Result(!optvoid_3.has_value()).or_panic();
     // `in_place` initializes a value:
     Optional<void> optvoid_4{in_place};
     Result(optvoid_4.has_value()).or_panic();
@@ -235,13 +257,9 @@ void meow() {
     Result(!optvoid_5.has_value()).or_panic();
 
     // Assign value:
-    optvoid = true;
+    optvoid = monostate;
     Result(optvoid.has_value()).or_panic();
     // Remove value:
-    optvoid = false;
-    Result(!optvoid.has_value()).or_panic();
-    // Assign `nullopt`:
-    optvoid = true;
     optvoid = nullopt;
     Result(!optvoid.has_value()).or_panic();
 
