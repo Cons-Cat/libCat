@@ -188,6 +188,11 @@ struct AllocatorFacade {
     // Try to allocate some memory with arbitrary alignment.
     template <typename T = cat::Byte>
     auto malloc(ssize const allocation_size = ssizeof<T>()) {
+        if constexpr (alignof(T) > 8) {
+            // If the alignment of `T` is greater than 8, it should have implied
+            // strong alignment guarantees.
+            return this->aligned_alloc(alignof(T), allocation_size);
+        }
         return this->meta_allocate<T, false, true, false>(1, allocation_size);
     }
 
@@ -203,6 +208,11 @@ struct AllocatorFacade {
     // Try to allocate small-size optimized memory.
     template <typename T = void*>
     auto malloca(ssize const allocation_size = ssizeof<T>()) {
+        if constexpr (alignof(T) > 8) {
+            // If the alignment of `T` is greater than 8, it should have implied
+            // strong alignment guarantees.
+            return this->aligned_alloca(alignof(T), allocation_size);
+        }
         return this->meta_allocate<T, true, true, false>(1, allocation_size);
     }
 
