@@ -14,19 +14,10 @@ namespace cat::detail {
 // its `value` member.
 struct NullOpt {};
 
-// A `Monostate` represents an `Optional` that holds no `value`.
-struct Monostate {};
-
-// `InPlace` is consumed by wrapper classes to default-initialize their storage.
-struct InPlace {};
-
 }  // namespace cat::detail
 
+// `nullopt` is consumed by `Optional` to represent an empty value.
 inline constexpr cat::detail::NullOpt nullopt;
-
-// `in_place` is consumed by wrapper classes to default-initialize their
-// storage.
-inline constexpr cat::detail::InPlace in_place;
 
 template <typename T, auto predicate, T sentinel>
 struct Predicate {
@@ -34,6 +25,11 @@ struct Predicate {
     static constexpr auto predicate_function = predicate;
     static constexpr T sentinel_value = sentinel;
     consteval Predicate() requires(predicate(sentinel)) = default;
+
+    // template <typename U>
+    // constexpr operator U() requires(true) {
+    //     return static_cast<U>(T{});
+    // }
 };
 
 template <typename T, T sentinel>
@@ -45,6 +41,16 @@ using Sentinel = Predicate<T,
 
 template <typename T>
 class Optional;
+
+namespace meta {
+
+template <typename T>
+concept Option = requires(T optional) {
+    (bool)optional.has_value();
+    _ = optional.value();
+};
+
+}  // namespace meta
 
 // `OptionalValueStorage` holds a non-reference, non-pointer, non-`void` type
 // `T` and a `bool1` flag to represent holding a value or not.
@@ -192,11 +198,10 @@ struct OptionalValueStorage {
     // If this is assigned an `Optional` which wraps a type that can be
     // converted to `T` , then convert that storage to this type implicitly.
     template <typename OtherOptional>
-    constexpr void assign(OtherOptional&& optional) requires(
-        meta::is_convertible<typename OtherOptional::Value, T>) {
+    constexpr void assign(OtherOptional&& optional) {
         if (this->has_value()) {
             if (optional.has_value()) {
-                this->p_value = meta::forward<OtherOptional>(optional).value();
+                this->storage = meta::forward<OtherOptional>(optional).value();
             } else {
                 // If the incoming `Optional` is empty, then empty this one.
                 this->hard_reset();
@@ -454,34 +459,15 @@ struct OptionalPredicateStorage {
     }
 };
 
-// This partial specialization of `Optional` doesn't work, unfortunately:
-// class Optional<void> : public Optional<Sentinel<bool, false>> {};
-struct OptionalVoidStorage {
-    using Value = bool;
-    bool has_some;
-
-    constexpr OptionalVoidStorage(bool const& in_bool) : has_some(in_bool){};
-    constexpr OptionalVoidStorage(bool&& in_bool) : has_some(in_bool){};
-    constexpr OptionalVoidStorage(cat::detail::NullOpt) : has_some(false){};
-
-    constexpr auto has_value() const -> bool {
-        return this->has_some;
-    }
-
-    // Destroy the storage unconditionally.
-    void hard_reset() {
-        this->has_some = false;
-    }
-};
-
 template <typename T>
 class Optional {
+  public:
     // clang-format off
     // Clang Format 12 does not understand how to format this well:
     using Storage =
         meta::Conditional<meta::is_void<T>,
             // If `T` is `void`:
-            OptionalVoidStorage,
+            OptionalValueStorage<cat::detail::Monostate>,
             meta::Conditional<requires {
                    // T::predicate_function(T::Type());
                     T::sentinel_value;
@@ -503,13 +489,8 @@ class Optional {
 
     // `Optional`s can be constructed with `in_place` to have their storage
     // default-constructed, unless they are reference types.
-    constexpr Optional(cat::detail::InPlace) requires(!meta::is_reference<T> &&
-                                                      !meta::is_void<T>)
+    constexpr Optional(cat::detail::InPlace) requires(!meta::is_reference<T>)
         : storage(Value{}){};
-
-    // `Optional<void>` cannot be default-initialized to `false`.
-    constexpr Optional(cat::detail::InPlace) requires(meta::is_void<T>)
-        : storage(true){};
 
     // Forward all constructors to the `storage` member.
 
@@ -529,18 +510,37 @@ class Optional {
     constexpr Optional(U&& input) requires(meta::is_convertible<U, T>)
         : storage(meta::forward<U>(input)){};
 
+    // `Optional` can be constructed by another `Optional`.
     template <typename U>
-    constexpr Optional(Optional<U> const& input) {
+    constexpr Optional(Optional<U> const& input) requires(
+        meta::is_convertible<U, T>) {
         this->storage.assign(input);
     }
 
     template <typename U>
-    constexpr Optional(Optional<U>&& input) {
+    constexpr Optional(Optional<U>&& input) requires(
+        meta::is_convertible<U, T>) {
         this->storage.assign(meta::forward<Optional<U>>(input));
     }
 
     // Consuming `nullopt` is forwarded to `storage`.
     constexpr Optional(cat::detail::NullOpt) : storage(nullopt){};
+
+    // Consuming `monostate` default-initializes the `Optional`.
+    constexpr Optional(cat::detail::Monostate) : storage(Value{}){};
+
+    // Any `Optional` can convert into another.
+    template <typename U>
+    constexpr operator Optional<U>() {
+        if (this->has_value()) {
+            if constexpr (meta::is_same<U, void>) {
+                return monostate;
+            } else {
+                return Optional<U>(this->value());
+            }
+        }
+        return Optional<U>(nullopt);
+    }
 
     // Forward all assignment operators to `storage`, except when assigning
     // `nullopt`.
@@ -744,39 +744,113 @@ class Optional {
     // Invoke a callback on the value of a `const`-qualified `Optional` and
     // propagate the result, if it holds a value.
     template <typename Function>
-    constexpr auto and_then(Function&& callback) & {
-        return this->has_value() ? Optional<T>(meta::forward<Function>(
-                                       callback)(this->storage.value()))
-                                 : *this;
+    constexpr auto and_then(Function&& callback) & -> Optional {
+        using U = decltype(callback(this->value()));
+
+        if constexpr (meta::is_void<U>) {
+            return this->has_value() ? Optional<void>{monostate}
+                                     : Optional<void>{nullopt};
+        } else {
+            if constexpr (meta::IsSpecializationTrait<U, Optional>::value) {
+                // If this callback returns an `Optional`, then propagate its
+                // value.
+                if (this->has_value()) {
+                    return meta::forward<Function>(callback)(this->value());
+                }
+                return nullopt;
+            } else {
+                // If this callback does not return an `Optional`, construct an
+                // optional from it.
+                return this->has_value() ? Optional<U>(meta::forward<Function>(
+                                               callback)(this->value()))
+                                         : Optional<U>(nullopt);
+            }
+        }
     }
 
     // Invoke a callback on the value of a `const`-qualified `Optional` and
     // propagate the result, if it holds a value.
     template <typename Function>
-    constexpr auto and_then(Function&& callback) const& {
-        return this->has_value() ? Optional<T>(meta::forward<Function>(
-                                       callback)(this->storage.value()))
-                                 : *this;
+    constexpr auto and_then(Function&& callback) const& -> Optional {
+        using U = decltype(callback(this->value()));
+
+        if constexpr (meta::is_void<U>) {
+            return this->has_value() ? Optional<void>{monostate}
+                                     : Optional<void>{nullopt};
+        } else {
+            if constexpr (meta::IsSpecializationTrait<U, Optional>::value) {
+                // If this callback returns an `Optional`, then propagate its
+                // value.
+                if (this->has_value()) {
+                    return meta::forward<Function>(callback)(this->value());
+                }
+                return nullopt;
+            } else {
+                // If this callback does not return an `Optional`, construct an
+                // optional from it.
+                return this->has_value() ? Optional<U>(meta::forward<Function>(
+                                               callback)(this->value()))
+                                         : Optional<U>(nullopt);
+            }
+        }
     }
 
     // Invoke a callback on the value of a non-`const`-qualified `Optional` and
     // propagate the result, if it holds a value.
     template <typename Function>
-    constexpr auto and_then(Function&& callback) && {
-        return this->has_value()
-                   ? Optional<T>(meta::forward<Function>(callback)(
-                         cat::move(this->storage.value())))
-                   : cat::move(*this);
+    constexpr auto and_then(Function&& callback) && -> Optional {
+        using U = decltype(callback(this->value()));
+
+        if constexpr (meta::is_void<U>) {
+            return this->has_value() ? Optional<void>{monostate}
+                                     : Optional<void>{nullopt};
+        } else {
+            if constexpr (meta::IsSpecializationTrait<U, Optional>::value) {
+                // If this callback returns an `Optional`, then propagate its
+                // value.
+                if (this->has_value()) {
+                    return meta::forward<Function>(callback)(
+                        cat::move(this->value()));
+                }
+                return nullopt;
+            } else {
+                // If this callback does not return an `Optional`, construct an
+                // optional from it.
+                return this->has_value()
+                           ? Optional<U>(meta::forward<Function>(callback)(
+                                 cat::move(this->value())))
+                           : Optional<U>(nullopt);
+            }
+        }
     }
 
     // Invoke a callback on the value of a `const`-qualified `Optional` and
     // propagate the result, if it holds a value.
     template <typename Function>
-    constexpr auto and_then(Function&& callback) const&& {
-        return this->has_value()
-                   ? Optional<T>(meta::forward<Function>(callback)(
-                         cat::move(this->storage.value())))
-                   : cat::move(*this);
+    constexpr auto and_then(Function&& callback) const&& -> Optional {
+        using U = decltype(callback(this->value()));
+
+        if constexpr (meta::is_void<U>) {
+            return this->has_value() ? Optional<void>{monostate}
+                                     : Optional<void>{nullopt};
+        } else {
+            if constexpr (meta::IsSpecializationTrait<U, Optional>::value) {
+                // If this callback returns an `Optional`, then propagate its
+                // value.
+                if (this->has_value()) {
+                    return meta::forward<Function>(callback)(
+                        cat::move(this->value()));
+                }
+                return nullopt;
+            } else {
+                // If this callback does not return an `Optional`, construct an
+                // optional from it.
+                return this->has_value()
+                           ? Optional<U>(meta::forward<Function>(callback)(
+                                 cat::move(this->value())))
+                           : Optional<U>(nullopt);
+            }
+        }
     }
 
     // Invoke a callback iff a non-`const`-qualified `Optional` holds no value.

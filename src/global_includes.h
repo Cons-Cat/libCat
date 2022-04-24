@@ -23,12 +23,30 @@ struct [[maybe_unused]] Unused {
     operator auto() = delete;
 };
 
+// A `Monostate` is an object that can hold anything, and convert into anything
+// or from anything. It has no storage or behavior.
+struct Monostate {
+    constexpr Monostate() = default;
+    constexpr Monostate(auto){};
+    constexpr operator auto(){};
+};
+
+// `InPlace` is consumed by wrapper classes to default-initialize their storage.
+struct InPlace {};
+
 }  // namespace cat::detail
 
 // `_` can consume any value to explicitly disregard a ``[[nodiscard]]``
 // attribute from a function with side effects. Consuming a `Result` value is
 // not possible.
 [[maybe_unused]] inline cat::detail::Unused _;
+
+// `in_place` is consumed by wrapper classes to default-initialize their
+// storage.
+inline constexpr cat::detail::InPlace in_place;
+
+// `monostate` can be consumed by wrapper classes to represent no storage.
+inline constexpr cat::detail::Monostate monostate;
 
 template <typename T>
 class Result;
