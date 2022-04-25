@@ -140,7 +140,7 @@ void meow() {
                .value() == 4)
         .or_panic();
 
-    _ = moo.or_else([]() {
+    moo.or_else([] {
         cat::exit(1);
     });
 
@@ -201,6 +201,15 @@ void meow() {
     auto return_opt_void = [](int4) -> Optional<void> {
         return monostate;
     };
+    auto nothing = []() -> void {
+    };
+    auto maybe_nothing = []() -> Optional<void> {
+        return nullopt;
+    };
+
+    foo.transform(return_int).and_then(return_opt_void).or_else(nothing);
+
+    foo.transform(return_int).and_then(return_opt_void).or_else(maybe_nothing);
 
     Optional<int4> monadic;
     monadic = return_none(0).and_then(return_opt);
