@@ -84,6 +84,17 @@ struct Numeral {
         : storage(static_cast<T>(from)){};
 
     template <typename U>
+    constexpr explicit operator U() {
+        if constexpr (meta::IsSpecializationTrait<U, Numeral>::value) {
+            // If `U` is a `Numeral`, cast into `U`'s underlying type.
+            return static_cast<typename U::Type>(this->storage);
+        } else {
+            // If `U` is not a `Numeral`, cast into `U`.
+            return static_cast<U>(this->storage);
+        }
+    }
+
+    template <typename U>
     constexpr explicit operator U() const {
         if constexpr (meta::IsSpecializationTrait<U, Numeral>::value) {
             // If `U` is a `Numeral`, cast into `U`'s underlying type.

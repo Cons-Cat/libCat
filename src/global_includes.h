@@ -27,7 +27,7 @@ struct [[maybe_unused]] Unused {
 // or from anything. It has no storage or behavior.
 struct Monostate {
     constexpr Monostate() = default;
-    constexpr Monostate(auto){};
+    // constexpr Monostate(auto){};
     constexpr operator auto(){};
 };
 
