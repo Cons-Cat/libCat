@@ -6,19 +6,17 @@
 #include <type_traits>
 
 // TODO: Support `single_pass` iterators.
+//
+// Many of the ideas in this file are explained here:
+// https://vector-of-bool.github.io/2020/06/13/cpp20-iter-facade.html
 
 namespace meta {
-
 // TODO: More iterable related concepts.
 template <typename T>
 concept Iterable = requires(T t) {
     t.begin();
     t.end();
 };
-
-}  // namespace meta
-
-namespace cat::detail {
 
 // https://quuxplusone.github.io/blog/2019/02/06/arrow-proxy/
 // TODO: Move this into somewhere generally useful.
@@ -29,6 +27,10 @@ struct ArrowProxy {
         return &r;
     }
 };
+
+}  // namespace meta
+
+namespace cat::detail {
 
 template <typename T>
 concept HasIncrement = requires(T it) {
@@ -129,13 +131,10 @@ struct IteratorFacade {
     constexpr auto operator->() const {
         decltype(auto) reference = **this;
         if constexpr (meta::is_reference<decltype(reference)>) {
-            // `ref` is a true reference, and we're safe to take its address
+            // If `reference` is actually a reference type, return its address.
             return cat::addressof(reference);
         } else {
-            // `ref` is *not* a reference. Returning its address would be
-            // the address of a local. Return that thing wrapped in an
-            // arrow_proxy.
-            return arrow_proxy(cat::move(reference));
+            return ArrowProxy(cat::move(reference));
         }
     }
 

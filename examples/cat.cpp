@@ -39,17 +39,12 @@ void read_and_print_file(char* p_file_name) {
     cat::PageAllocator allocator;
     Span<nix::IoVector> io_vectors;
 
-    bool1 failed = false;
     auto io_buffer =
-        allocator.malloc<nix::IoVector>(meta::ssizeof(io_vectors) * blocks)
-            .or_else([&]() {
-                failed = true;
-            })
-            .value();
-    if (failed) {
+        allocator.malloc<nix::IoVector>(meta::ssizeof(io_vectors) * blocks);
+    if (!io_buffer.has_value()) {
         cat::exit(1);
     }
-    io_vectors = Span<nix::IoVector>{&allocator.get(io_buffer), blocks};
+    io_vectors = Span<nix::IoVector>{&allocator.get(io_buffer.value()), blocks};
 
     while (bytes_remaining > 0) {
         ssize current_block_size = cat::min(bytes_remaining, block_size);
@@ -57,18 +52,14 @@ void read_and_print_file(char* p_file_name) {
         // `buffer` should be 4_ki-aligned.
         // TODO: Create an `AnyPtr` to make `Iovector` take in a `void**`.
         // TODO: Handle allocation failure.
-        bool1 failed = false;
-        auto buffer = allocator.malloc<cat::Byte>(block_size)
-                          .or_else([&]() {
-                              failed = true;
-                          })
-                          .value();
-        if (failed) {
-            _ = allocator.free(io_buffer);
+        Optional buffer = allocator.malloc<cat::Byte>(block_size);
+        if (!buffer.has_value()) {
+            _ = allocator.free(io_buffer.value());
             cat::exit(1);
         }
+
         io_vectors[current_block] =
-            nix::IoVector{&allocator.get(buffer), current_block_size};
+            nix::IoVector{&allocator.get(buffer.value()), current_block_size};
         current_block++;
         bytes_remaining -= current_block_size;
     }
@@ -78,7 +69,7 @@ void read_and_print_file(char* p_file_name) {
     for (nix::IoVector const& iov : io_vectors) {
         output_to_console(iov);
     }
-    _ = allocator.free(io_buffer);
+    _ = allocator.free(io_buffer.value());
 }
 
 void meow(int argc, char* p_argv[]) {

@@ -429,19 +429,14 @@ auto handshake(meta::Allocator auto& allocator,
     // A dynamic allocation must be made because the total size of all
     // recieved packets is unknown and potentially a very large amount.
     // TODO: Deallocate this somehow.
-    bool1 failed = false;
-    auto memory = allocator
-                      .template malloc<ConnectionResponseInfo>(
-                          // TODO: Remove `.c()`.
-                          x_connection.header.message_length.c() * 4)
-                      .or_else([&]() {
-                          failed = true;
-                      })
-                      .value();
-    if (failed) {
+    Optional memory = allocator.template malloc<ConnectionResponseInfo>(
+        // TODO: Remove `.c()`.
+        x_connection.header.message_length.c() * 4);
+    if (!memory.has_value()) {
         return Failure(1);
     }
-    x_connection.p_setup = &allocator.get(memory);
+
+    x_connection.p_setup = &allocator.get(memory.value());
 
     // TODO: Remove `.c()`.
     socket

@@ -832,41 +832,95 @@ class Optional {
     }
 
     // Invoke a callback iff a non-`const`-qualified `Optional` holds no value.
+    // This callback can return `void` or an `Optional`.
     template <typename Function>
-    constexpr auto or_else(Function&& callback) & -> Optional<T> {
+    constexpr auto or_else(Function&& callback) & {
+        using U = decltype(callback());
+        static_assert(meta::is_void<U> ||
+                      meta::IsSpecializationTrait<U, Optional>::value);
+
         if (!this->storage.has_value()) {
-            meta::forward<Function>(callback)();
+            if constexpr (meta::is_void<U>) {
+                meta::forward<Function>(callback)();
+            } else {
+                return meta::forward<Function>(callback)();
+            }
         }
-        return *this;
+
+        if constexpr (meta::is_void<U>) {
+            return;
+        } else {
+            return U{nullopt};
+        }
     }
 
-    // Invoke a callback iff a `const`-qualified `Optional` holds no value.
+    // Invoke a callback iff a `const`-qualified `Optional` holds no value. This
+    // callback can return `void` or an `Optional`.
     template <typename Function>
-    constexpr auto or_else(Function&& callback) const& -> Optional<T> {
+    constexpr auto or_else(Function&& callback) const& {
+        using U = decltype(callback());
+        static_assert(meta::is_void<U> ||
+                      meta::IsSpecializationTrait<U, Optional>::value);
+
         if (!this->storage.has_value()) {
-            meta::forward<Function>(callback)();
+            if constexpr (meta::is_void<U>) {
+                meta::forward<Function>(callback)();
+            } else {
+                return meta::forward<Function>(callback)();
+            }
         }
-        return *this;
+
+        if constexpr (meta::is_void<U>) {
+            return;
+        } else {
+            return U{nullopt};
+        }
     }
 
     // Invoke a callback iff a non-`const`-qualified move-only `Optional` holds
-    // no value.
+    // no value. This callback can return `void` or an `Optional`.
     template <typename Function>
-    constexpr auto or_else(Function&& callback) && -> Optional<T> {
+    constexpr auto or_else(Function&& callback) && {
+        using U = decltype(callback());
+        static_assert(meta::is_void<U> ||
+                      meta::IsSpecializationTrait<U, Optional>::value);
+
         if (!this->storage.has_value()) {
-            meta::forward<Function>(callback)();
+            if constexpr (meta::is_void<U>) {
+                meta::forward<Function>(callback)();
+            } else {
+                return cat::move(meta::forward<Function>(callback)());
+            }
         }
-        return cat::move(*this);
+
+        if constexpr (meta::is_void<U>) {
+            return;
+        } else {
+            return U{nullopt};
+        }
     }
 
     // Invoke a callback iff a `const`-qualified move-only `Optional` holds no
-    // value.
+    // value.  This callback can return `void` or an `Optional`.
     template <typename Function>
-    constexpr auto or_else(Function&& callback) const&& -> Optional<T> {
+    constexpr auto or_else(Function&& callback) const&& {
+        using U = decltype(callback());
+        static_assert(meta::is_void<U> ||
+                      meta::IsSpecializationTrait<U, Optional>::value);
+
         if (!this->storage.has_value()) {
-            meta::forward<Function>(callback)();
+            if constexpr (meta::is_void<U>) {
+                meta::forward<Function>(callback)();
+            } else {
+                return cat::move(meta::forward<Function>(callback)());
+            }
         }
-        return cat::move(*this);
+
+        if constexpr (meta::is_void<U>) {
+            return;
+        } else {
+            return U{nullopt};
+        }
     }
 
     // Construct the value in-place and destroy the held value iff it exists.
