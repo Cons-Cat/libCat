@@ -233,12 +233,14 @@ struct OptionalReferenceStorage {
         : p_storage(nullptr){};
 
     // Rebind the reference if this is assigned a new value.
-    constexpr auto operator=(Value& option) -> OptionalReferenceStorage& {
+    template <typename U>
+    constexpr auto operator=(U& option) -> OptionalReferenceStorage& {
         this->p_storage = cat::addressof(option);
         return *this;
     }
 
-    constexpr auto operator=(Value const& option)
+    template <typename U>
+    constexpr auto operator=(U const& option)
         -> OptionalReferenceStorage const& {
         this->p_storage = cat::addressof(option);
         return *this;

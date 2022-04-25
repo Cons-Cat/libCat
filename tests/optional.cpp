@@ -1,5 +1,6 @@
 #include <memory>
 #include <optional>
+#include <unique>
 #include <utility>
 
 struct Movable {
@@ -126,8 +127,8 @@ void meow() {
     Result(!nonzero.has_value()).or_panic();
     */
 
-    // Converting assignment.
-    foo = 1;
+    // Converting assignments. `foo` is `int4`.
+    foo = int{1};
     foo = short{2};
 
     // Monadic methods.
@@ -209,14 +210,38 @@ void meow() {
         return_opt(1).and_then(return_int).and_then(return_void);
     Result(monadic_void.has_value()).or_panic();
 
+    monadic_void = return_none(0).and_then(return_none);
+    Result(!monadic_void.has_value()).or_panic();
+
+    // Test monadic methods on reference types.
+    Optional<int4&> monadic_ref;
+    int4 mon_ref = 1;
+    monadic_ref = Optional{mon_ref}.and_then(return_int);
+    // Be sure that this did not assign through.
+    Result(mon_ref == 1).or_panic();
+
+    monadic_ref = return_none(0).and_then(return_int);
+    Result(!monadic_ref.has_value()).or_panic();
+
     // The default value of `int4` is `0`.
     decltype(positive) default_predicate_2{in_place};
     Result(default_predicate_2.value() == 0).or_panic();
 
-    // TODO: Test monadic methods on reference types.
-    // TODO: Test monadic methods on move-only types.
-    // TODO: Test constructing from another `Optional<>`.
-    // TODO: Test non-trivial reference.
+    // Test monadic methods on move-only types.
+    Optional<Unique<int4>> monadic_move = 1;
+    monadic_move = return_none(0).and_then(return_opt);
+    Result(!monadic_move.has_value()).or_panic();
+
+    monadic_move = return_opt(1).and_then(return_int);
+    Result(monadic_move.has_value()).or_panic();
+    Result(monadic_move.value().borrow() == 2).or_panic();
+
+    // Test copying `Optional`s into other `Optional`s.
+    Optional<int4> opt_original = 10;
+    Optional<int4> opt_copy_1 = Optional{opt_original};
+    Optional<int4> opt_copy_2 = opt_original;
+    Result(opt_copy_1.value() = 10).or_panic();
+    Result(opt_copy_2.value() = 10).or_panic();
 
     // Getting pointers.
     foo = 1;
@@ -225,14 +250,15 @@ void meow() {
     Result(foo.p_value() == &foo.value()).or_panic();
     Result(foo.p_value() == addressof(foo.value())).or_panic();
 
+    // TODO: Test non-trivial reference.
+
     // `Optional const`
     Optional<int4> const constant_val = 1;
     [[maybe_unused]] Optional<int4> const constant_null = nullopt;
     [[maybe_unused]] auto con = constant_val.value();
 
-    // TODO: This does not work:
-    // int4 const constant_int = 0;
-    // Optional<int4 const&> const constant_ref = constant_int;
+    int4 const constant_int = 0;
+    [[maybe_unused]] Optional<int4 const&> const constant_ref = constant_int;
 
     Movable mov;
     Optional<Movable> maybe_movs(cat::move(mov));
