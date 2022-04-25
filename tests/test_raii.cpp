@@ -86,5 +86,8 @@ void meow() {
     // Unique can be assigned over, which will call its old data's destructor.
     unique = 2;
 
+    Unique<int> original = 0;
+    Unique<int8> into = cat::move(original);
+
     cat::exit();
 }
