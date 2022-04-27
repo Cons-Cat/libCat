@@ -21,6 +21,16 @@ constexpr auto addressof(T const& value) -> T const* {
     return __builtin_addressof(value);
 }
 
+// `cat::AlignedStorage` is a buffer of arbitrary memory with some guaranteed
+// alignment.
+template <ssize length, ssize alignment>
+requires(length > 0) struct AlignedStorage {
+    struct Type {
+        // TODO: Use `cat::Array` and `cat::Byte`.
+        alignas(alignment) unsigned char storage[length.c()];
+    };
+};
+
 }  // namespace cat
 
 using cat::addressof;
