@@ -1,0 +1,84 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <concepts>
+#include <math>
+#include <memory>
+#include <type_list>
+#include <type_traits>
+
+// Given an index, selects a data type from a list of types.
+template <ssize i, typename... items>
+struct VariantAlternative;
+
+template <typename HeadItem, typename... TailItems>
+struct VariantAlternative<0, HeadItem, TailItems...> {
+    using Type = HeadItem;
+};
+
+template <ssize i, typename HeadItem, typename... TailItems>
+struct VariantAlternative<i, HeadItem, TailItems...> {
+    using Type = typename VariantAlternative<i - 1, TailItems...>::Type;
+};
+
+template <typename... Ts>
+class Variant {
+    static constexpr ssize size = cat::max(ssizeof<Ts>()...);
+    static constexpr usize alignment = cat::max(alignof(Ts)...);
+
+    // using helper_t = variant_helper<Ts...>;
+    using Storage = cat::AlignedStorage<size, alignment>;
+    Storage storage;
+
+    template <ssize index>
+    using Alternative = typename VariantAlternative<index, Ts...>::Type;
+    uint1 discriminant;
+
+    template <typename T, ssize index>
+    constexpr auto find_index_of_type() -> uint1 {
+        using IndexType = typename meta::TypeList<Ts...>::template Get<index>;
+        if constexpr (meta::is_same<T, IndexType>) {
+            return static_cast<uint1>(index);
+        } else {
+            static_assert(index >= 1, "No type in this list was found!");
+            return find_index_of_type<T, index - 1>();
+        }
+    }
+  public:
+    constexpr Variant() = default;
+
+    // Consume anything that is a valid type.
+    template <typename T>
+    constexpr Variant(T input) {
+        this->discriminant = this->type_index<T>();
+        new (cat::addressof(storage)) decltype(input){input};
+    };
+
+    template <typename T>
+    constexpr auto operator=(T const& operand) -> Variant<Ts...>& {
+        this->discriminant = this->type_index<T>();
+        new (cat::addressof(storage)) T{operand};
+        return *this;
+    }
+
+    template <typename T>
+    constexpr auto value() -> T& {
+        // TODO: Make this assert work.
+        // Result(this->is_type<T>).assert();
+
+        // This cast is safe when the precondition holds true.
+        return *reinterpret_cast<T*>(&this->storage);
+    }
+
+    template <typename T>
+    constexpr auto type_index() -> uint1 {
+        return this
+            ->find_index_of_type<T, static_cast<ssize>(sizeof...(Ts)) - 1>();
+    }
+
+    template <typename T>
+    constexpr auto is_type() -> bool1 {
+        return this->discriminant == this->type_index<T>();
+    }
+};

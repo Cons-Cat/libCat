@@ -1,0 +1,61 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// #include <iterator>
+#include <array>
+#include <type_traits>
+
+namespace meta {
+
+template <typename T>
+struct HigherType {
+    using Type = T;
+
+    consteval HigherType() = default;
+
+    template <typename U>
+    consteval auto operator==(HigherType<U> const) -> bool {
+        return meta::is_same<U, T>;
+    }
+};
+
+template <typename T>
+HigherType(T) -> HigherType<T>;
+
+template <typename... Ts>
+class TypeList {
+    template <typename>
+    struct GetFirstElement;
+
+    template <typename Head, typename... Tail>
+    struct GetFirstElement<TypeList<Head, Tail...>> {
+        using Result = Head;
+    };
+
+    // Overload for the end of the type list.
+    template <typename, ssize>
+    struct RecurseForTypeAtIndex;
+
+    // Shortcut for accessing the 0th element.
+    template <typename Head, typename... Tail>
+    struct RecurseForTypeAtIndex<TypeList<Head, Tail...>, 0> {
+        using Result = Head;
+    };
+
+    // Recurse from the tail down to the index in this list.
+    template <typename Head, typename... Tail, ssize index>
+    struct RecurseForTypeAtIndex<TypeList<Head, Tail...>, index> {
+        using Result = typename RecurseForTypeAtIndex<TypeList<Tail...>,
+                                                      index - 1>::Result;
+    };
+  public:
+    // `TypeList` should never be instantiated.
+    consteval TypeList() = delete;
+
+    template <ssize index>
+    using Get =
+        typename RecurseForTypeAtIndex<meta::TypeList<Ts...>, index>::Result;
+};
+
+}  // namespace meta

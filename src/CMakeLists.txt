@@ -31,6 +31,8 @@ set(
   ${CAT_SRC}/libraries/numeric_limits/
   ${CAT_SRC}/libraries/iterator/
   ${CAT_SRC}/libraries/math/
+  ${CAT_SRC}/libraries/type_list/
+  ${CAT_SRC}/libraries/variant/
   PARENT_SCOPE
 )
 
