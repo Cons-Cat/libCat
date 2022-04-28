@@ -77,10 +77,8 @@ struct Numeral {
 
     constexpr Numeral() = default;
 
-    // constexpr Numeral(T value) : storage(value){};
-
     template <typename U>
-    constexpr Numeral(U const from) requires(is_safe_conversion<T, U>())
+    constexpr explicit(!is_safe_conversion<T, U>()) Numeral(U const from) 
         : storage(static_cast<T>(from)){};
 
     template <typename U>
