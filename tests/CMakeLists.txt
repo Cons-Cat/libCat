@@ -99,3 +99,9 @@ add_executable(test_simd simd.cpp)
 target_compile_options(test_simd PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_simd PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME Simd COMMAND test_simd)
+
+# This tests if type reflection basically works.
+add_executable(test_reflection test_reflection.cpp)
+target_compile_options(test_reflection PRIVATE ${CAT_CXX_FLAGS_TEST})
+target_link_options(test_reflection PRIVATE ${CAT_LINK_FLAGS})
+add_test(NAME TypeReflection COMMAND test_reflection)
