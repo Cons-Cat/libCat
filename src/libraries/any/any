@@ -31,7 +31,7 @@ struct Any {
     };
 
     template <typename T>
-    operator T() const requires(!meta::is_void<T>) {
+    constexpr operator T() const requires(!meta::is_void<T>) {
         return meta::bit_cast<T>(this->value);
     }
 };
