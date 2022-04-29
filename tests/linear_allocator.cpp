@@ -1,9 +1,8 @@
+#include <allocators>
 #include <array>
 #include <math>
 #include <numerals>
 #include <utility>
-//
-#include <allocators>
 
 void meow() {
     // Initialize an allocator.
@@ -14,7 +13,7 @@ void meow() {
     // It should not be possible to allocate 7 times here, because 24 bytes can
     // only hold 6 `int4`s.
     for (int i = 0; i < 7; i++) {
-        Optional handle = allocator.malloc<int4>();
+        cat::Optional handle = allocator.malloc<int4>();
         if (!handle.has_value()) {
             Result(i == 6).or_panic();
             goto didnt_overallocate;
@@ -26,7 +25,7 @@ didnt_overallocate:
     // Invalidate all memory handles, and allocate again.
     allocator.reset();
     for (int4 i = 0; i < 4; i++) {
-        Optional handle = allocator.malloc();
+        cat::Optional handle = allocator.malloc();
         Result(handle.has_value()).or_panic();
     }
     // This allocated 16 bytes, which is 8-byte-aligned. Another int allocation
@@ -46,7 +45,7 @@ didnt_overallocate:
         auto memory = allocator.malloca<int4>();
         Result(memory.has_value()).or_panic();
     }
-    Optional handle_3 = allocator.malloc<int4>();
+    cat::Optional handle_3 = allocator.malloc<int4>();
     Result(handle_3.has_value()).or_panic();
 
     paging_allocator.free(page).or_panic();

@@ -31,14 +31,14 @@ struct NonTrivial {
 
 void meow() {
     // Initialize empty.
-    Optional<int4> foo(nullopt);
+    cat::Optional<int4> foo(nullopt);
     Result(!foo.has_value()).or_panic();
 
-    Optional<int4> inplace_1{};
+    cat::Optional<int4> inplace_1{};
     Result(!inplace_1.has_value()).or_panic();
 
     // `int4` default-initializes to `0`.
-    Optional<int4> inplace_2{in_place};
+    cat::Optional<int4> inplace_2{in_place};
     Result(inplace_2.value() == 0).or_panic();
 
     // Assign a value.
@@ -50,23 +50,23 @@ void meow() {
     Result(!foo.has_value()).or_panic();
 
     // Unwrap a value.
-    Optional<int4> moo = 1;
+    cat::Optional<int4> moo = 1;
     moo = 2;
     Result(moo.value() == 2).or_panic();
 
     moo = nullopt;
     Result(moo.value_or(100) == 100).or_panic();
 
-    // Optional reference.
-    Optional<int4&> ref(nullopt);
-    Optional<int4&> ref_2 = nullopt;
+    // 	cat::Optional reference.
+    cat::Optional<int4&> ref(nullopt);
+    cat::Optional<int4&> ref_2 = nullopt;
 
     Result(!ref.has_value()).or_panic();
     Result(!ref_2.has_value()).or_panic();
 
     // Rebind.
     int4 goo = 1;
-    Optional<int4&> boo = goo;
+    cat::Optional<int4&> boo = goo;
     ref = boo;
     boo = nullopt;
 
@@ -93,12 +93,12 @@ void meow() {
     Result(ref_2.has_value()).or_panic();
     Result(ref_2.value() == goo).or_panic();
 
-    // Optional with a predicate.
-    Optional<Predicate<int4,
-                       [](int4 input) -> bool1 {
-                           return input >= 0;
-                       },
-                       -1>>
+    // 	cat::Optional with a predicate.
+    cat::Optional<cat::Predicate<int4,
+                                 [](int4 input) -> bool1 {
+                                     return input >= 0;
+                                 },
+                                 -1>>
         positive(nullopt);
     Result(!positive.has_value()).or_panic();
 
@@ -116,7 +116,7 @@ void meow() {
 
     // This crashes clangd, but it passes tests, last I checked.
     /*
-    Optional<Sentinel<int4, 0>> nonzero = nullopt;
+        cat::Optional<Sentinel<int4, 0>> nonzero = nullopt;
     Result(!nonzero.has_value()).or_panic();
 
     nonzero = 1;
@@ -151,7 +151,7 @@ void meow() {
                 .has_value())
         .or_panic();
 
-    _ = moo.and_then([](int4 input) -> Optional<int4> {
+    _ = moo.and_then([](int4 input) -> cat::Optional<int4> {
         cat::exit(1);
         return input;
     });
@@ -159,7 +159,7 @@ void meow() {
     Result(!moo.transform([](int4 input) {
                    return input * 2;
                })
-                .and_then([](int4 input) -> Optional<int4> {
+                .and_then([](int4 input) -> cat::Optional<int4> {
                     return input;
                 })
                 .has_value())
@@ -177,7 +177,7 @@ void meow() {
                 .transform([](int4 input) {
                     return input * 2;
                 })
-                .and_then([](int4 input) -> Optional<int4> {
+                .and_then([](int4 input) -> cat::Optional<int4> {
                     return input;
                 })
                 .has_value())
@@ -190,20 +190,20 @@ void meow() {
     auto return_int = [](int4 input) -> int4 {
         return input + 1;
     };
-    auto return_none = [](int4) -> Optional<int4> {
+    auto return_none = [](int4) -> cat::Optional<int4> {
         return nullopt;
     };
-    auto return_opt = [](int4 input) -> Optional<int4> {
+    auto return_opt = [](int4 input) -> cat::Optional<int4> {
         return input;
     };
     auto return_void = [](int4) -> void {
     };
-    auto return_opt_void = [](int4) -> Optional<void> {
+    auto return_opt_void = [](int4) -> cat::Optional<void> {
         return monostate;
     };
     auto nothing = []() -> void {
     };
-    auto maybe_nothing = []() -> Optional<void> {
+    auto maybe_nothing = []() -> cat::Optional<void> {
         return nullopt;
     };
 
@@ -211,7 +211,7 @@ void meow() {
 
     foo.transform(return_int).and_then(return_opt_void).or_else(maybe_nothing);
 
-    Optional<int4> monadic;
+    cat::Optional<int4> monadic;
     monadic = return_none(0).and_then(return_opt);
     Result(!monadic.has_value()).or_panic();
 
@@ -219,14 +219,15 @@ void meow() {
     Result(monadic.has_value()).or_panic();
     Result(monadic.value() == 2).or_panic();
 
-    Optional<void> monadic_void =
+    cat::Optional<void> monadic_void =
         return_opt(1).transform(return_int).transform(return_void);
     Result(monadic_void.has_value()).or_panic();
 
     // Test monadic methods on reference types.
-    Optional<int4&> monadic_ref;
+    cat::Optional<int4&> monadic_ref;
     int4 mon_ref = 1;
-    Optional<void> mon_void_ref = Optional{mon_ref}.and_then(return_opt_void);
+    cat::Optional<void> mon_void_ref =
+        cat::Optional{mon_ref}.and_then(return_opt_void);
     // Be sure that this did not assign through.
     Result(mon_void_ref.has_value()).or_panic();
 
@@ -235,7 +236,7 @@ void meow() {
     Result(default_predicate_2.value() == 0).or_panic();
 
     // Test monadic methods on move-only types.
-    Optional<Unique<int4>> monadic_move = 1;
+    cat::Optional<cat::Unique<int4>> monadic_move = 1;
     monadic_move = return_none(0).and_then(return_opt);
     Result(!monadic_move.has_value()).or_panic();
 
@@ -243,10 +244,10 @@ void meow() {
     Result(monadic_move.has_value()).or_panic();
     Result(monadic_move.value().borrow() == 2).or_panic();
 
-    // Test copying `Optional`s into other `Optional`s.
-    Optional<int4> opt_original = 10;
-    Optional<int4> opt_copy_1 = Optional{opt_original};
-    Optional<int4> opt_copy_2 = opt_original;
+    // Test copying `	cat::Optional`s into other `	cat::Optional`s.
+    cat::Optional<int4> opt_original = 10;
+    cat::Optional<int4> opt_copy_1 = cat::Optional{opt_original};
+    cat::Optional<int4> opt_copy_2 = opt_original;
     Result(opt_copy_1.value() = 10).or_panic();
     Result(opt_copy_2.value() = 10).or_panic();
 
@@ -259,35 +260,36 @@ void meow() {
 
     // TODO: Test non-trivial reference.
 
-    // `Optional const`
-    Optional<int4> const constant_val = 1;
-    [[maybe_unused]] Optional<int4> const constant_null = nullopt;
+    // `	cat::Optional const`
+    cat::Optional<int4> const constant_val = 1;
+    [[maybe_unused]] cat::Optional<int4> const constant_null = nullopt;
     [[maybe_unused]] auto con = constant_val.value();
 
     int4 const constant_int = 0;
-    [[maybe_unused]] Optional<int4 const&> const constant_ref = constant_int;
+    [[maybe_unused]] cat::Optional<int4 const&> const constant_ref =
+        constant_int;
 
     Movable mov;
-    Optional<Movable> maybe_movs(cat::move(mov));
+    cat::Optional<Movable> maybe_movs(cat::move(mov));
 
     // Non-trivial constructor and destructor.
-    Optional<NonTrivial> nontrivial = NonTrivial();
+    cat::Optional<NonTrivial> nontrivial = NonTrivial();
     Result(nontrivial.value().data == 2).or_panic();
     // Result(global_int == 3).or_panic();
     // Result(nontrivial.value().data == 3).or_panic();
 
-    // `Optional<void>` default-initializes empty:
-    Optional<void> optvoid;
+    // `	cat::Optional<void>` default-initializes empty:
+    cat::Optional<void> optvoid;
     Result(!optvoid.has_value()).or_panic();
     // `monostate` initializes a value:
-    Optional<void> optvoid_2{monostate};
+    cat::Optional<void> optvoid_2{monostate};
     Result(optvoid_2.has_value()).or_panic();
 
     // `in_place` initializes a value:
-    Optional<void> optvoid_4{in_place};
+    cat::Optional<void> optvoid_4{in_place};
     Result(optvoid_4.has_value()).or_panic();
     // `nullopt` initializes empty:
-    Optional<void> optvoid_5{nullopt};
+    cat::Optional<void> optvoid_5{nullopt};
     Result(!optvoid_5.has_value()).or_panic();
 
     // Assign value:

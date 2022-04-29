@@ -4,6 +4,7 @@
 
 #include <utility>
 
+// TODO: This comment sucks.
 /* This smart pointer is, by design, significantly dumber than the `std::any`
  * in the C++20 STL. This type's basic purpose is to make casting to `void*`
  * less tedious, at a low overhead. There is a cost in casting any 4-byte type
@@ -16,6 +17,8 @@
  * libCat, and the STL achieves both of those with a high performance overhead.
  * For instance, the canonical `std::any` cannot be held in an 8-byte register,
  * whereas libCat's `Any` can. */
+
+namespace cat{
 
 struct Any {
     void* value;
@@ -35,3 +38,5 @@ struct Any {
         return meta::bit_cast<T>(this->value);
     }
 };
+
+}

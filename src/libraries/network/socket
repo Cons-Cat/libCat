@@ -9,6 +9,8 @@
 // TODO: Socket `concept`.
 // TODO: Socket types for sequenced packets.
 
+namespace cat {
+
 // Basic Socket type that any other sockets must convert into.
 struct Socket {
     uint2 family;
@@ -34,7 +36,7 @@ struct SocketAttributes {
 template <SocketType Type, int4 Protocol = 0>
 struct SocketUnix {
     SocketAttributes<static_cast<short>(1), Type, Protocol> const attributes;
-    Array<char, 108> path_name;
+    cat::Array<char, 108> path_name;
     nix::FileDescriptor descriptor;
 
     // TODO: Create flags that corresponds to the value of `Protocol`.
@@ -67,7 +69,7 @@ struct SocketUnix {
     }
 
     auto send_string(String const& message, int8 flags = 0,
-                     Socket const* p_destination_socket = nullptr,
+                     cat::Socket const* p_destination_socket = nullptr,
                      ssize const addr_length = 0) -> Result<> {
         return nix::send_buffer(this->descriptor, message.p_data(),
                                 message.size(), flags, p_destination_socket,
@@ -75,7 +77,7 @@ struct SocketUnix {
     }
 
     auto send_struct(auto const& message_struct, int8 flags = 0,
-                     Socket const* p_destination_socket = nullptr,
+                     cat::Socket const* p_destination_socket = nullptr,
                      ssize const addr_length = 0) -> Result<> {
         return nix::send_buffer(this->descriptor, &message_struct,
                                 ssizeof(message_struct), flags,
@@ -115,3 +117,5 @@ struct SocketUnix {
         return nix::close(this->descriptor);
     }
 };
+
+}  // namespace cat

@@ -4,15 +4,15 @@ void meow() {
     char const* p_string_1 = "Hello!";
     char const* const p_string_2 = "Hello!";
 
-    String string_1 = "Hello!";
-    String const string_2 = "Hello!";
-    String string_3 = "Goodbye!";
+    cat::String string_1 = "Hello!";
+    cat::String const string_2 = "Hello!";
+    cat::String string_3 = "Goodbye!";
 
-    String long_string_1 =
+    cat::String long_string_1 =
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    String long_string_2 =
+    cat::String long_string_2 =
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -38,14 +38,14 @@ void meow() {
         cat::exit(1);
     }
 
-    [[maybe_unused]] constexpr String const_string_1 = "Hello, ";
-    [[maybe_unused]] constexpr String const_string_2 = "world!";
+    [[maybe_unused]] constexpr cat::String const_string_1 = "Hello, ";
+    [[maybe_unused]] constexpr cat::String const_string_2 = "world!";
     // TODO: Fix these:
     // constexpr StaticString const_string_3 = "Hello, ";
     // constexpr StaticString const_string_4 = "world!";
 
     // TODO: Make this `constexpr`.
-    // String foo = (const_string_3 + const_string_4);
+    //     cat::String foo = (const_string_3 + const_string_4);
 
     cat::exit();
 }

@@ -17,15 +17,17 @@ concept HasRaii = requires(T it) {
     it.raii();
 };
 
+namespace cat {
+
 template <typename T>
 class UniqueWeak;
 
 namespace detail {
 
-template <typename T>
-concept NonUniqueWeak = requires {
-    meta::IsSpecializationTrait<T, UniqueWeak>::value;
-};
+    template <typename T>
+    concept NonUniqueWeak = requires {
+        ::meta::IsSpecializationTrait<T, UniqueWeak>::value;
+    };
 
 }  // namespace detail
 
@@ -41,27 +43,27 @@ class Unique {
     constexpr Unique() = default;
 
     template <typename U>
-    constexpr Unique(Unique<U>&& raii) requires(meta::is_convertible<U, T>)
+    constexpr Unique(Unique<U>&& raii) requires(::meta::is_convertible<U, T>)
         : storage(static_cast<T>(raii.borrow())){};
 
     // Consume any type convertible into `T`.
     template <typename U>
-    constexpr Unique(U const& value) requires(meta::is_convertible<U, T>)
+    constexpr Unique(U const& value) requires(::meta::is_convertible<U, T>)
         : storage(static_cast<T>(value)){};
 
     template <typename U>
-    constexpr Unique(U&& value) requires(meta::is_convertible<U, T>)
-        : storage(meta::forward<U>(value)){};
+    constexpr Unique(U&& value) requires(::meta::is_convertible<U, T>)
+        : storage(::meta::forward<U>(value)){};
 
     // Forward any possible constructor into `storage`.
     template <typename... Args>
     Unique(Args&&... args) requires(sizeof...(Args) > 1)
-        : storage(meta::forward<Args>(args)...){};
+        : storage(::meta::forward<Args>(args)...){};
 
     // Allow move-assignment.
     auto operator=(T&& t) -> Unique& {
         this->storage_destructor();
-        this->storage = meta::forward<T>(t);
+        this->storage = ::meta::forward<T>(t);
         return *this;
     }
 
@@ -86,7 +88,7 @@ class Unique {
     }
 
     constexpr auto borrow() -> T&& {
-        return meta::forward<T>(this->storage);
+        return ::meta::forward<T>(this->storage);
     }
   protected:
     void storage_destructor() {
@@ -95,7 +97,7 @@ class Unique {
         if constexpr (HasRaii<T>) {
             this->storage.raii();
         }
-        if constexpr (!meta::is_trivially_destructible<T>) {
+        if constexpr (!::meta::is_trivially_destructible<T>) {
             this->storage.~T();
         }
     }
@@ -117,31 +119,31 @@ class UniqueWeak {
 
     template <typename U>
     constexpr UniqueWeak(UniqueWeak<U>&& raii) requires(
-        meta::is_convertible<U, T>)
+        ::meta::is_convertible<U, T>)
         : storage(static_cast<T>(raii.borrow())) {
         raii.owns_data = false;
     };
 
     // Consume any type convertible into `T`.
     template <typename U>
-    constexpr UniqueWeak(U const& value) requires(meta::is_convertible<U, T>)
+    constexpr UniqueWeak(U const& value) requires(::meta::is_convertible<U, T>)
         : storage(static_cast<T>(value)){};
 
     template <typename U>
-    constexpr UniqueWeak(U&& value) requires(meta::is_convertible<U, T>)
-        : storage(meta::forward<U>(value)){};
+    constexpr UniqueWeak(U&& value) requires(::meta::is_convertible<U, T>)
+        : storage(::meta::forward<U>(value)){};
 
     // Forward any possible constructor into `storage`.
-    constexpr UniqueWeak(T&& t) : storage(meta::forward<T>(t)){};
+    constexpr UniqueWeak(T&& t) : storage(::meta::forward<T>(t)){};
 
     template <typename... Args>
-    UniqueWeak(Args&&... args) : storage(meta::forward<Args>(args)...){};
+    UniqueWeak(Args&&... args) : storage(::meta::forward<Args>(args)...){};
 
     // Allow move-assignment.
     auto operator=(T&& t) -> UniqueWeak<T>& {
         this->owns_data = true;
         this->storage_destructor();
-        this->storage = meta::forward<T>(t);
+        this->storage = ::meta::forward<T>(t);
         return *this;
     }
 
@@ -163,7 +165,7 @@ class UniqueWeak {
 
     constexpr auto borrow() -> T&& {
         this->owns_data = false;
-        return meta::forward<T>(this->storage);
+        return ::meta::forward<T>(this->storage);
     }
 
     ~UniqueWeak() {
@@ -179,7 +181,7 @@ class UniqueWeak {
                 this->storage.raii();
             }
             // If a destructor is non-trivial, it must be invoked manually.
-            if constexpr (!meta::is_trivially_destructible<T>) {
+            if constexpr (!::meta::is_trivially_destructible<T>) {
                 this->storage.~T();
             }
         }
@@ -188,3 +190,5 @@ class UniqueWeak {
 
 template <typename T>
 UniqueWeak(T) -> UniqueWeak<T>;
+
+}  // namespace cat

@@ -17,34 +17,30 @@ namespace cat {
 
 constexpr auto string_length(char const* p_string) -> ssize;
 
-}  // namespace cat
-
-#include "./implementations/string_length.tpp"
-
 template <ssize length>
 struct StaticString;
 
-class String : public Span<char const> {
+class String : public cat::Span<char const> {
     // `String` inherits:
     //
     // `char const* p_storage;`
     // `ssize length;`
   public:
-    constexpr String() : Span<char const>(){};
+    constexpr String() : cat::Span<char const>(){};
 
     constexpr String(char const* p_string, ssize in_length)
-        : Span<char const>(p_string, in_length){};
+        : cat::Span<char const>(p_string, in_length){};
 
     constexpr String(String const& string)
-        : Span<char const>(string.p_storage, string.length){};
+        : cat::Span<char const>(string.p_storage, string.length){};
 
     constexpr String(String&& string)
-        : Span<char const>(string.p_storage, string.length){};
+        : cat::Span<char const>(string.p_storage, string.length){};
 
     // This is `auto` to deduce lower than the array-literal constructor.
     template <typename T>
     constexpr String(T p_string) requires(meta::is_pointer<T>)
-        : Span<char const>(p_string, cat::string_length(p_string)){};
+        : cat::Span<char const>(p_string, cat::string_length(p_string)){};
 
     template <unsigned int long other_length>
     consteval String(char const (&string)[other_length]) {
@@ -134,8 +130,6 @@ consteval auto operator+(StaticString<length_1> const& string_1,
     StaticString static_string = array;
     return static_string;
 }
-
-namespace cat {
 
 auto compare_strings(String const& string_1, String const& string_2) -> bool1;
 

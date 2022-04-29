@@ -15,7 +15,7 @@
 namespace xwin {
 
 // TODO: Handle `$DISPLAY`.
-constexpr String socket_path = "/tmp/.X11-unix/X0";
+constexpr cat::String socket_path = "/tmp/.X11-unix/X0";
 // This is in the abstract namespace:
 // constexpr StringView socket_path = "\0/tmp/.X11-unix/X0";
 
@@ -289,7 +289,7 @@ struct ServerReplyHeader {
     int1 padding;  // NOLINT
   public:
     // This field is only initialized if `SuccessCode` is `failed`.
-    Array<uint2, 2> x_version;
+    cat::Array<uint2, 2> x_version;
     // `message_length` represents a multiple of four bytes.
     uint2 message_length;
 };
@@ -301,8 +301,8 @@ struct ConnectionRequestInfo {
     int1 padding_1;  // NOLINT
   public:
     // This should almost always be `{11, 0}`.
-    Array<uint2, 2> x_version = {static_cast<unsigned char>(11),
-                                 static_cast<unsigned char>(0)};
+    cat::Array<uint2, 2> x_version = {static_cast<unsigned char>(11),
+                                      static_cast<unsigned char>(0)};
     // No explicit protocol is specified if this is `0`.
     uint2 authorization_protocol_length = static_cast<unsigned char>(0);
     // No explicit protocol is specified if this is `0`.
@@ -407,7 +407,7 @@ struct Connection {
 
 // TODO: Propagate errors instead of panicking.
 auto handshake(meta::Allocator auto& allocator,
-               SocketUnix<SocketType::stream>& socket)
+               cat::SocketUnix<cat::SocketType::stream>& socket)
     -> Result<xwin::Connection> {
     xwin::Connection x_connection;
 
@@ -427,7 +427,7 @@ auto handshake(meta::Allocator auto& allocator,
     // A dynamic allocation must be made because the total size of all
     // recieved packets is unknown and potentially a very large amount.
     // TODO: Deallocate this somehow.
-    Optional memory = allocator.template malloc<ConnectionResponseInfo>(
+    cat::Optional memory = allocator.template malloc<ConnectionResponseInfo>(
         // TODO: Remove `.c()`.
         x_connection.header.message_length.c() * 4);
     if (!memory.has_value()) {
@@ -474,7 +474,7 @@ auto handshake(meta::Allocator auto& allocator,
 // Attempt to connect to an X server over local sockets.
 auto initiate_connection(meta::Allocator auto& allocator)
     -> Result<xwin::Connection> {
-    SocketUnix<SocketType::stream> socket;
+    cat::SocketUnix<cat::SocketType::stream> socket;
     socket.path_name = xwin::socket_path;
 
     auto result_1 = socket.create();

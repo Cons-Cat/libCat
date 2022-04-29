@@ -10,6 +10,8 @@
 #include <memory>
 #include <type_traits>
 
+namespace cat {
+
 template <typename T>
 class Span {
   protected:
@@ -97,7 +99,7 @@ class Span {
         return this->length > 0;
     }
 
-    struct Iterator : IteratorFacade<Iterator> {
+    struct Iterator : cat::IteratorFacade<Iterator> {
         ssize current_index;
         T const* const p_array;
 
@@ -137,3 +139,5 @@ class Span {
 
 template <typename T>
 Span(T) -> Span<T>;
+
+}  // namespace cat

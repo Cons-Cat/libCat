@@ -5,11 +5,11 @@
 #include <string>
 
 void meow() {
-    SocketUnix<SocketType::stream> listening_socket;
+    cat::SocketUnix<cat::SocketType::stream> listening_socket;
     listening_socket.path_name = "/tmp/temp.sock";
-    SocketUnix<SocketType::stream> recieving_socket;
+    cat::SocketUnix<cat::SocketType::stream> recieving_socket;
 
-    Array<char, 12> message_buffer;
+    cat::Array<char, 12> message_buffer;
 
     nix::unlink(listening_socket.path_name.p_data()).or_panic();
 
@@ -26,7 +26,7 @@ void meow() {
             recieving_socket.recieve(&message_buffer, message_buffer.size())
                 .or_panic();
 
-            String input = message_buffer.to_string();
+			cat::String input = message_buffer.to_string();
 
             if (cat::compare_strings(input, "exit")) {
                 cat::print_line("Exiting.").or_panic();
