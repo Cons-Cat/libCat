@@ -11,15 +11,14 @@ auto result_factory(MyErrors error) -> Result<> {
 }
 
 auto make_false() -> Result<bool1> {
-    // TODO: Find a way to simplify this.
-    return bool1(false);
+    return false;
 }
 
 void meow() {
     // Do not panic when taking in a non-Failure.
     result_factory(MyErrors::OK).or_panic();
 
-    // Construct on a `bool` r-value.
+    // Construct on a `bool1` r-value.
     Result(true).assert();
     // TODO: This line does not compile:
     // Result(true).assert("Text");

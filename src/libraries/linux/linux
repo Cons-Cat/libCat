@@ -5,6 +5,7 @@
 #include <any>
 #include <bit>
 #include <concepts>
+#include <span>
 #include <string>
 #include <utility>
 
@@ -426,8 +427,9 @@ struct FileStatus {
     int4 unused[3];  // NOLINT
   public:
     auto is_regular() const -> bool1 {
-        return (this->protections_mode & 0170000u) == 0100000u;
+        return (this->protections_mode & uint4{0170000u}) == 0100000u;
     }
+    static_assert(!meta::EnumFlagTrait<uint4>::value);
 
     auto is_directory() const -> bool1 {
         return (this->protections_mode & 0170000u) == 0040000u;

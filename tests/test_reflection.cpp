@@ -13,9 +13,9 @@ void meow() {
     int foo_int = variant.value<int>();
     Result(foo_int == 1).or_panic();
 
-    static_assert(variant.type_index<int>() == 0);
-    static_assert(variant.type_index<char>() == 1);
-    static_assert(variant.type_index<uint4>() == 2);
+    static_assert(variant.type_index<int>() == 0u);
+    static_assert(variant.type_index<char>() == 1u);
+    static_assert(variant.type_index<uint4>() == 2u);
 
     variant = 'o';
     Result(variant.holds_alternative<char>()).or_panic();

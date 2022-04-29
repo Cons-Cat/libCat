@@ -1,3 +1,5 @@
+#include <simd>
+
 void meow() {
     // Test that vector arithmetic does not segfault.
     int4x4 vec1 = {0, 1, 2, 3};

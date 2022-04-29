@@ -183,33 +183,31 @@ enum class KeyCode : unsigned char {
 };
 
 struct [[gnu::packed]] EventMask {
-    // These are `bool` instead of `bool1` because they cannot be packed in C++
-    // otherwise.
-    bool key_press = false;
-    bool key_release = false;
-    bool button_press = false;
-    bool button_release = false;
-    bool enter_window = false;
-    bool leave_window = false;
-    bool pointer_motion = false;
-    bool pointer_motion_hint = false;
-    bool button1_motion = false;
-    bool button2_motion = false;
-    bool button3_motion = false;
-    bool button4_motion = false;
-    bool button5_motion = false;
-    bool button_motion = false;
-    bool keymap_state = false;
-    bool exposure = false;
-    bool visibility_change = false;
-    bool structure_notify = false;
-    bool resize_redirect = false;
-    bool substructure_notify = false;
-    bool substructure_redirect = false;
-    bool focus_change = false;
-    bool property_change = false;
-    bool colormap_change = false;
-    bool owner_grab_button = false;
+    bool1 key_press = false;
+    bool1 key_release = false;
+    bool1 button_press = false;
+    bool1 button_release = false;
+    bool1 enter_window = false;
+    bool1 leave_window = false;
+    bool1 pointer_motion = false;
+    bool1 pointer_motion_hint = false;
+    bool1 button1_motion = false;
+    bool1 button2_motion = false;
+    bool1 button3_motion = false;
+    bool1 button4_motion = false;
+    bool1 button5_motion = false;
+    bool1 button_motion = false;
+    bool1 keymap_state = false;
+    bool1 exposure = false;
+    bool1 visibility_change = false;
+    bool1 structure_notify = false;
+    bool1 resize_redirect = false;
+    bool1 substructure_notify = false;
+    bool1 substructure_redirect = false;
+    bool1 focus_change = false;
+    bool1 property_change = false;
+    bool1 colormap_change = false;
+    bool1 owner_grab_button = false;
     unsigned padding : 7 = 0u;
 };
 

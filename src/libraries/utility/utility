@@ -7,7 +7,7 @@ namespace meta {
 template <typename T>
 constexpr auto bit_cast(auto& from_value) -> T;
 
-constexpr auto is_constant_evaluated() -> bool;
+constexpr auto is_constant_evaluated() -> cat::bool1;
 
 constexpr auto ssizeof(auto const& anything) -> ssize;
 
