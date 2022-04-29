@@ -9,11 +9,89 @@
 #include <string>
 #include <utility>
 
+namespace cat {
 struct Socket;
+}
 
 constexpr ssize page_size = 4096_ki;
 
 namespace nix {
+
+// TODO: Finish filling out `LinuxError`.
+// https://www.thegeekstuff.com/2010/10/linux-error-codes/
+enum class LinuxError {
+    // Operation is not permitted.
+    not_permitted = -1,
+    // No such file or directory.
+    no_entry = -2,
+    // No such process.
+    search = -3,
+    // Interrupted system call.
+    interrupt = -4,
+    // Input/Output error.
+    io = -5,
+    nxio = -6,
+    too_big = -7,
+    no_exec = -8,
+    // Bad file number.
+    bad_file = -9,
+    // No child processes.
+    child = -10,
+    // Try again.
+    again = -11,
+    // Out of memory.
+    no_memory = -12,
+    // Access is denied.
+    access = -13,
+    // Bad memory address.
+    segfault = -14,
+    // Invaild block address.
+    not_block = -15,
+    // Device or resource is busy.
+    busy = -16,
+    // File already exists.
+    file_exists = -17,
+    xdev = -18,
+    // No such device exists.
+    no_device = -19,
+    // Is not a directory.
+    not_directory = -20,
+    // Is a directory instead of a file.
+    is_directory = -21,
+    // Mysteriously invalid argument.
+    invalid = -22,
+    // Too many file descriptors exist across the system.
+    file_table_overflow = -23,
+    // Too many files are open in this process.
+    too_many_files = -24,
+};
+
+// `LinuxResult` is a wrapper for values produced by syscalls.
+template <typename T = cat::detail::Monostate>
+// Monostate represents `void`.
+requires(
+    // A Linux syscall never produces a value larger than a register.
+    sizeof(T) <= 8) struct LinuxResult {
+    T storage;
+
+    // Linux errors are represented as a negative integer.
+    constexpr auto has_value() const -> bool1 {
+        return meta::bit_cast<ssize>(storage) >= 0;
+    }
+
+    constexpr auto value() & -> T& {
+        return storage;
+    }
+    constexpr auto value() const& -> T& {
+        return storage;
+    }
+    constexpr auto value() && -> T&& {
+        return cat::move(storage);
+    }
+    constexpr auto value() const&& -> T&& {
+        return cat::move(storage);
+    }
+};
 
 enum class MemoryProtectionFlags : unsigned int {
     none = 0b000,     // Data cannot be accessed at all.
@@ -196,7 +274,7 @@ auto read(FileDescriptor const file_descriptor, char const* p_string_buffer,
 auto write(FileDescriptor const file_descriptor, char const* p_string_buffer,
            ssize const length) -> Result<ssize>;
 
-auto write(FileDescriptor const file_descriptor, String const& string)
+auto write(FileDescriptor const file_descriptor, cat::String const& string)
     -> Result<ssize>;
 
 auto open_file(char const* p_file_path, OpenMode file_mode,
@@ -219,10 +297,11 @@ auto unmap_memory(void const* const p_memory, ssize const length) -> Result<>;
 struct Thread;
 
 auto wait(ProcessId waiting_on_id, int4* p_status_output,
-          WaitOptionsFlags options, void* p_resource_usage) -> Result<Any>;
+          WaitOptionsFlags options, void* p_resource_usage) -> Result<cat::Any>;
 
 // TODO: Separate this into separate functions for waiting on pid, gid, etc.
-auto waitid(WaitId type, ProcessId id, WaitOptionsFlags options) -> Result<Any>;
+auto waitid(WaitId type, ProcessId id, WaitOptionsFlags options)
+    -> Result<cat::Any>;
 
 struct CloneArguments;
 
@@ -231,36 +310,38 @@ struct CloneArguments;
  * at the path of this file. They are split into individual files, because
  * GCC cannot exclude compiling unused functions individually from within
  * one .s file. */
-auto syscall0(int8 const) -> Result<Any>;
-auto syscall1(int8 const, Any const) -> Result<Any>;
-auto syscall2(int8 const, Any const, Any const) -> Result<Any>;
-auto syscall3(int8 const, Any const, Any const, Any const) -> Result<Any>;
-auto syscall4(int8 const, Any const, Any const, Any const, Any const)
-    -> Result<Any>;
-auto syscall5(int8 const, Any const, Any const, Any const, Any const, Any const)
-    -> Result<Any>;
-auto syscall6(int8 const, Any const, Any const, Any const, Any const, Any const,
-              Any const) -> Result<Any>;
+auto syscall0(int8 const) -> Result<cat::Any>;
+auto syscall1(int8 const, cat::Any const) -> Result<cat::Any>;
+auto syscall2(int8 const, cat::Any const, cat::Any const) -> Result<cat::Any>;
+auto syscall3(int8 const, cat::Any const, cat::Any const, cat::Any const)
+    -> Result<cat::Any>;
+auto syscall4(int8 const, cat::Any const, cat::Any const, cat::Any const,
+              cat::Any const) -> Result<cat::Any>;
+auto syscall5(int8 const, cat::Any const, cat::Any const, cat::Any const,
+              cat::Any const, cat::Any const) -> Result<cat::Any>;
+auto syscall6(int8 const, cat::Any const, cat::Any const, cat::Any const,
+              cat::Any const, cat::Any const, cat::Any const)
+    -> Result<cat::Any>;
 
 template <typename... Args>
-auto syscall(int8 const call, Args const... parameters) -> Result<Any>
+auto syscall(int8 const call, Args const... parameters) -> Result<cat::Any>
 requires(sizeof...(Args) < 7);
 
-// Create and return a `Socket`.
+// Create and return a `cat::Socket`.
 auto create_socket(int8 const protocol_family, int8 const type,
                    int8 const protocol) -> Result<FileDescriptor>;
 
-// Create and return a `SocketLocal` (also known as Unix socket).
+// Create and return a `cat::SocketLocal` (also known as Unix socket).
 auto create_socket_local(int8 const type, int8 const protocol)
     -> Result<FileDescriptor>;
 
-// Connect a `Socket` to an address.
+// Connect a `cat::Socket` to an address.
 auto connect_socket(FileDescriptor const socket_descriptor,
                     void const* p_socket, ssize socket_size) -> Result<>;
 
-// Make a connection over a `Socket`. This returns a new socket which has
-// been connected to. This new `Socket` is not in a listening state.
-// TODO: Add flags for Linux syscall `288u`.
+// Make a connection over a `cat::Socket`. This returns a new socket which has
+// been connected to. This new `cat::Socket` is not in a listening state.
+// TODO: Add flags for Linux syscall `288`.
 auto accept_socket(FileDescriptor const socket_descriptor,
                    void const* __restrict p_socket = nullptr,
                    ssize const* __restrict p_addr_len = nullptr)
@@ -268,7 +349,7 @@ auto accept_socket(FileDescriptor const socket_descriptor,
 
 auto recieve_buffer(FileDescriptor const socket_descriptor,
                     void const* p_message_buffer, ssize const buffer_length,
-                    Socket const* __restrict p_addr = nullptr,
+                    cat::Socket const* __restrict p_addr = nullptr,
                     ssize const* __restrict p_addr_length = nullptr)
     -> Result<ssize>;
 
@@ -282,7 +363,8 @@ auto listen_to_socket(FileDescriptor const socket_descriptor,
 // Returns the number of characters sent to `destination_socket`.
 auto send_buffer(FileDescriptor const socket_descriptor,
                  void const* p_message_buffer, ssize const buffer_length,
-                 int8 const flags, Socket const* p_destination_socket = nullptr,
+                 int8 const flags,
+                 cat::Socket const* p_destination_socket = nullptr,
                  ssize const addr_length = 0) -> Result<ssize>;
 
 struct Process {
@@ -318,7 +400,7 @@ struct Process {
         volatile void* p_stack_top =
             static_cast<char*>(this->p_stack) + this->stack_size;
 
-        Any result;
+        cat::Any result;
         asm goto volatile(
             R"(sub $8, %%rsi
                     mov %[p_callback], 0(%%rsi)
@@ -359,7 +441,7 @@ parent_thread:
     }
 };
 
-struct IoVector : Span<cat::Byte> {
+struct IoVector : cat::Span<cat::Byte> {
     static constexpr ssize max_size = 1_ki;
 
     constexpr IoVector() = default;
@@ -368,14 +450,14 @@ struct IoVector : Span<cat::Byte> {
     // Construct from any reasonable pointer type.
     template <typename T>
     constexpr IoVector(T* p_in_data, ssize in_length)
-        : Span<cat::Byte>(static_cast<cat::Byte*>(p_in_data), in_length){};
+        : cat::Span<cat::Byte>(static_cast<cat::Byte*>(p_in_data), in_length){};
 
     // Construct from any reasonable pointer type.
     template <typename T>
     constexpr IoVector(T* p_start, T* p_end)
-        : Span<cat::Byte>(static_cast<cat::Byte*>(p_start),
-                          static_cast<cat::Byte*>(p_end) -
-                              static_cast<cat::Byte*>(p_start)){};
+        : cat::Span<cat::Byte>(static_cast<cat::Byte*>(p_start),
+                               static_cast<cat::Byte*>(p_end) -
+                                   static_cast<cat::Byte*>(p_start)){};
 
     constexpr auto operator=(IoVector const& io_vector) {
         this->p_storage = io_vector.p_storage;
@@ -389,10 +471,10 @@ struct IoVector : Span<cat::Byte> {
 };
 
 auto write_vector(FileDescriptor const file_descriptor,
-                  Span<IoVector> const& vectors) -> Result<ssize>;
+                  cat::Span<IoVector> const& vectors) -> Result<ssize>;
 
 auto read_vector(FileDescriptor const file_descriptor,
-                 Span<IoVector> const& vectors) -> Result<ssize>;
+                 cat::Span<IoVector> const& vectors) -> Result<ssize>;
 
 struct File {
     char x;
@@ -456,7 +538,7 @@ struct FileStatus {
     }
 };
 
-auto file_path_status(String const& file_path) -> Result<FileStatus>;
+auto file_path_status(cat::String const& file_path) -> Result<FileStatus>;
 
 auto file_descriptor_status(FileDescriptor const file_descriptor)
     -> Result<FileStatus>;

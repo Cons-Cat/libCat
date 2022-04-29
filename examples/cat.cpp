@@ -6,7 +6,8 @@
 
 constexpr ssize block_size = 4_ki;
 
-auto get_file_size(nix::FileDescriptor file_descriptor) -> Optional<ssize> {
+auto get_file_size(nix::FileDescriptor file_descriptor)
+    -> cat::Optional<ssize> {
     nix::FileStatus status =
         nix::file_descriptor_status(file_descriptor).or_panic();
     if (status.is_regular()) {
@@ -21,8 +22,8 @@ auto get_file_size(nix::FileDescriptor file_descriptor) -> Optional<ssize> {
 void output_to_console(nix::IoVector const& io_vector) {
     // TODO: Create a mutable string type to prevent this undefined behavior.
     // TODO: Make this buffered output to reduce syscalls.
-    char* buffer = static_cast<char*>(static_cast<void*>(io_vector.p_data()));
-    _ = nix::write(nix::FileDescriptor{1}, buffer++, io_vector.size());
+    char* p_buffer = static_cast<char*>(static_cast<void*>(io_vector.p_data()));
+    _ = nix::write(nix::FileDescriptor{1}, p_buffer++, io_vector.size());
 }
 
 void read_and_print_file(char* p_file_name) {
@@ -38,14 +39,14 @@ void read_and_print_file(char* p_file_name) {
     }
 
     cat::PageAllocator allocator;
-    Span<nix::IoVector> io_vectors;
+	cat::Span<nix::IoVector> io_vectors;
 
     auto io_buffer =
         allocator.malloc<nix::IoVector>(meta::ssizeof(io_vectors) * blocks);
     if (!io_buffer.has_value()) {
         cat::exit(1);
     }
-    io_vectors = Span<nix::IoVector>{&allocator.get(io_buffer.value()), blocks};
+    io_vectors = cat::Span<nix::IoVector>{&allocator.get(io_buffer.value()), blocks};
 
     while (bytes_remaining > 0) {
         ssize current_block_size = cat::min(bytes_remaining, block_size);
@@ -53,7 +54,7 @@ void read_and_print_file(char* p_file_name) {
         // `buffer` should be 4_ki-aligned.
         // TODO: Create an `AnyPtr` to make `Iovector` take in a `void**`.
         // TODO: Handle allocation failure.
-        Optional buffer = allocator.malloc<cat::Byte>(block_size);
+        cat::Optional buffer = allocator.malloc<cat::Byte>(block_size);
         if (!buffer.has_value()) {
             _ = allocator.free(io_buffer.value());
             cat::exit(1);

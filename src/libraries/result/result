@@ -71,11 +71,13 @@ inline constexpr cat::detail::Okay okay{};
 // These forward declarations are necessary for `Result`.
 template <typename T>
 class Result;
+namespace cat {
 class String;
+}
 
 // Forward-declare a print function for panics.
 namespace cat {
-auto print_line(String const&) -> Result<>;
+auto print_line(cat::String const&) -> Result<>;
 }
 
 // TODO: Space optimized `Result`s like the `Optional`.
@@ -100,7 +102,7 @@ class [[nodiscard]] Result {
 
     constexpr Result(ValueType const value) requires(
         !meta::is_void<T> && meta::is_constructible<ValueType> &&
-        !meta::is_same<ValueType, Any>)
+        !meta::is_same<ValueType, cat::Any>)
         : storage(value), is_okay(true){};
 
     // If this holds `void`, any specialization of `Result<>` or an `okay` can
@@ -151,14 +153,14 @@ class [[nodiscard]] Result {
     // constexpr Result(ValueType&& value) requires(
     //     !meta::is_void<T> &&
     //     meta::is_trivially_move_constructible_v<ValueType> &&
-    //     !meta::is_same_v<ValueType, Any>)
+    //     !meta::is_same_v<ValueType, cat::Any>)
     //     : storage(value), is_okay(true){};
 
     // Implicity cast an inputted compatible `Result` to this.
     template <typename U>
     constexpr Result(Result<U> const result) requires(
         !meta::is_void<T> && meta::IsDefaultConstructibleTrait<U>::value &&
-        meta::is_convertible<T, U> && !meta::is_same<U, Any>)
+        meta::is_convertible<T, U> && !meta::is_same<U, cat::Any>)
         : storage(static_cast<T>(result.value())),
           is_okay(result.has_value()){};
 
@@ -166,7 +168,7 @@ class [[nodiscard]] Result {
     template <typename U>
     constexpr Result(Result<U> const& result) requires(
         !meta::is_void<T> && meta::is_trivially_copy_constructible<U> &&
-        meta::is_convertible<T, U> && !meta::is_same<U, Any>)
+        meta::is_convertible<T, U> && !meta::is_same<U, cat::Any>)
         : storage(static_cast<T>(result.value())),
           is_okay(result.has_value()){};
 
@@ -174,14 +176,14 @@ class [[nodiscard]] Result {
     template <typename U>
     constexpr Result(Result<U>&& result) requires(
         !meta::is_void<T> && meta::is_trivially_move_constructible<U> &&
-        meta::is_convertible<T, U> && !meta::is_same<U, Any>)
+        meta::is_convertible<T, U> && !meta::is_same<U, cat::Any>)
         : storage(static_cast<T>(result.value())),
           is_okay(result.has_value()){};
 
     template <typename U>
     constexpr Result(Result<U> const&& result) requires(
         !meta::is_void<T> && meta::is_trivially_move_constructible<U> &&
-        meta::is_convertible<T, U> && !meta::is_same<U, Any>)
+        meta::is_convertible<T, U> && !meta::is_same<U, cat::Any>)
         : storage(static_cast<T>(result.value())),
           is_okay(result.has_value()){};
 
@@ -189,13 +191,13 @@ class [[nodiscard]] Result {
     constexpr Result(Result<void> const& result) requires(!meta::is_void<T>)
         : is_okay(result.has_value()){};
 
-    // Special-case consuming a `Result<Any>`.
-    constexpr Result(Result<Any> const& result) requires(!meta::is_void<T>)
+    // Special-case consuming a `Result<cat::Any>`.
+    constexpr Result(Result<cat::Any> const& result) requires(!meta::is_void<T>)
         : storage(static_cast<T>(result.value())),
           is_okay(result.has_value()){};
 
-    // Special-case consuming an `Any>`.
-    constexpr Result(Any const result) requires(!meta::is_void<T>)
+    // Special-case consuming an `cat::Any>`.
+    constexpr Result(cat::Any const result) requires(!meta::is_void<T>)
         : storage(static_cast<T>(result)), is_okay(true){};
 
     // TODO: `concept` for `bool1`, `bool2`, and `bool4` as well.
@@ -302,7 +304,7 @@ class [[nodiscard]] Result {
     // TODO: Make this work.
     // Because the error code is 8-bytes, it could contain a non-null
     // pointer to an error string. This prints that error message.
-    auto or_panic(String const& error_message) -> T {
+    auto or_panic(cat::String const& error_message) -> T {
         if (is_okay) [[likely]] {
             if constexpr (!meta::is_void<T>) {
                 return this->storage;
@@ -329,7 +331,7 @@ class [[nodiscard]] Result {
 
     // When building `-O0`, this function panics if a value is not
     // held. When optimizations are enabled, that safety check is elided.
-    constexpr void assert(String const& error_message) {
+    constexpr void assert(cat::String const& error_message) {
         if (!meta::is_constant_evaluated()) {
 #ifndef __OPTIMIZE__
             if (!this->has_value()) [[unlikely]] {

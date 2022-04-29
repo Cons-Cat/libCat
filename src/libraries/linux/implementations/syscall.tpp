@@ -5,10 +5,10 @@
 #include <linux>
 
 template <typename... Args>
-auto nix::syscall(int8 const call, Args const... parameters) -> Result<Any>
+auto nix::syscall(int8 const call, Args const... parameters) -> Result<cat::Any>
 requires(sizeof...(Args) < 7) {
     static constexpr unsigned length = sizeof...(Args);
-    Any arguments[length] = {parameters...};
+    cat::Any arguments[length] = {parameters...};
 
     if constexpr (length == 0) {
         return nix::syscall0(call);

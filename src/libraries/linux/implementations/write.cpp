@@ -4,7 +4,7 @@
 
 // `write()` forwards its arguments to a failable catout syscall. It returns
 // the number of bytes that it wrote.
-auto nix::write(FileDescriptor const file_descriptor,
+auto nix::write(nix::FileDescriptor const file_descriptor,
                 char const* p_string_buffer, ssize const length)
     -> Result<ssize> {
     // TODO: Handle partial writes somehow.
@@ -13,8 +13,8 @@ auto nix::write(FileDescriptor const file_descriptor,
 
 // `write()` forwards its arguments to a failable catout syscall. It returns
 // the number of bytes that it wrote.
-auto nix::write(FileDescriptor const file_descriptor, String const& string)
-    -> Result<ssize> {
+auto nix::write(nix::FileDescriptor const file_descriptor,
+                cat::String const& string) -> Result<ssize> {
     // TODO: Handle partial writes somehow.
     return nix::syscall3(1, file_descriptor, string.p_data(), string.size());
 }

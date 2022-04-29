@@ -5,11 +5,11 @@
 int4 global = 0;
 
 struct Foo {
-    String data;
+    cat::String data;
 
     Foo() = default;
 
-    Foo(String string) : data(std::move(string)) {
+    Foo(cat::String string) : data(std::move(string)) {
         _ = cat::print(data);
         _ = cat::print_line(" constructor");
     }
@@ -19,7 +19,7 @@ struct Foo {
         _ = cat::print_line(this->data);
     }
 
-    auto operator=(String string) {
+    auto operator=(cat::String string) {
         this->data = std::move(string);
         return *this;
     }
@@ -31,17 +31,17 @@ struct Foo {
     }
 };
 
-void func(UniqueWeak<Foo>){};
+void func(cat::UniqueWeak<Foo>){};
 
 void meow() {
     _ = cat::print_line("Construct objects.");
     // Test constructor.
-    UniqueWeak<Foo> foo(String("foo"));
+    cat::UniqueWeak<Foo> foo(cat::String("foo"));
     // Test assignment.
     foo = "foo";
     Result(foo.has_ownership()).or_panic();
 
-    UniqueWeak<Foo> moo(String("moo"));
+    cat::UniqueWeak<Foo> moo(cat::String("moo"));
     Result(moo.has_ownership()).or_panic();
 
     // Test move-assignment.
@@ -59,8 +59,8 @@ void meow() {
 
     _ = cat::print_line("Everything falls out of scope.");
 
-    // Default construct `Unique<Foo>`.
-    UniqueWeak<Foo> goo;
+    // Default construct `	cat::Unique<Foo>`.
+    cat::UniqueWeak<Foo> goo;
     Result(goo.has_ownership()).or_panic();
     // Extract goo.
     _ = goo.borrow();
@@ -70,24 +70,25 @@ void meow() {
     Result(global == 2).or_panic();
 
     // Deduction guides should work.
-    UniqueWeak weak = 1;
-    Unique unique = weak.borrow();
+    cat::UniqueWeak weak = 1;
+    cat::Unique unique = weak.borrow();
 
     // Borrowing `weak`'s data makes it lose ownership.
     Result(!weak.has_ownership()).or_panic();
     weak = 2;
     Result(weak.has_ownership()).or_panic();
 
-    // Permanately transferring ownership a `Unique's storage is unsafe, but
-    // possible:
+    // Permanately transferring ownership a `	cat::Unique's storage is unsafe,
+    // but possible:
     weak = unique.borrow();
     Result(weak.has_ownership()).or_panic();
 
-    // Unique can be assigned over, which will call its old data's destructor.
+    // 	cat::Unique can be assigned over, which will call its old data's
+    // destructor.
     unique = 2;
 
-    Unique<int> original = 0;
-    Unique<int8> into = cat::move(original);
+    cat::Unique<int> original = 0;
+    cat::Unique<int8> into = cat::move(original);
 
     cat::exit();
 }

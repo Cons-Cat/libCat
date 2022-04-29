@@ -8,7 +8,7 @@ void meow() {
     static_assert(meta::is_same<Type_0, int>);
     static_assert(meta::is_same<Type_1, char>);
 
-    Variant<int, char, uint4> variant(int{1});
+	cat::Variant<int, char, uint4> variant(int{1});
     Result(variant.holds_alternative<int>()).or_panic();
     int foo_int = variant.value<int>();
     Result(foo_int == 1).or_panic();

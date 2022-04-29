@@ -1,9 +1,8 @@
+#include <allocators>
 #include <array>
 #include <math>
 #include <numerals>
 #include <utility>
-//
-#include <allocators>
 
 int4 global_int_1 = 0;
 int4 global_int_2 = 0;
@@ -21,7 +20,7 @@ void meow() {
     // Initialize an allocator.
     cat::PageAllocator allocator;
     // Allocate a page.
-    Optional maybe_memory = allocator.malloc<int4>(1_ki);
+    cat::Optional maybe_memory = allocator.malloc<int4>(1_ki);
     if (!maybe_memory.has_value()) {
         _ = cat::print_line("Failed to allocate memory!");
         cat::exit(1);
@@ -71,7 +70,7 @@ void meow() {
     Result(allocator.get(small_memory_4) == 3).or_panic();
 
     // Test constructor being called.
-    Optional testtype = allocator.malloc<TestType>();
+    cat::Optional testtype = allocator.malloc<TestType>();
     _ = allocator.free(testtype.value());
 
     // That constructor increments `global_int_1`.

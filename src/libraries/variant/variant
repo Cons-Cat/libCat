@@ -8,6 +8,8 @@
 #include <type_list>
 #include <type_traits>
 
+namespace cat {
+
 template <typename... Ts>
 class Variant {
     static constexpr ssize size = cat::max(ssizeof<Ts>()...);
@@ -19,8 +21,8 @@ class Variant {
 
     template <typename T, ssize index>
     constexpr auto find_index_of_type() -> uint1 {
-        using IndexType = typename meta::TypeList<Ts...>::template Get<index>;
-        if constexpr (meta::is_same<T, IndexType>) {
+        using IndexType = typename ::meta::TypeList<Ts...>::template Get<index>;
+        if constexpr (::meta::is_same<T, IndexType>) {
             return static_cast<uint1>(index);
         } else {
             static_assert(index >= 1, "No type in this list was found!");
@@ -42,7 +44,7 @@ class Variant {
     template <typename T>
     constexpr auto operator=(T const& operand) -> Variant<Ts...>& {
         if (!this->holds_alternative<T>()) {
-            if constexpr (!meta::is_trivially_destructible<T>) {
+            if constexpr (!::meta::is_trivially_destructible<T>) {
                 this->value<T>().~T();
             }
             this->value<T>() = operand;
@@ -54,10 +56,10 @@ class Variant {
     template <typename T>
     constexpr auto operator=(T&& operand) -> Variant<Ts...>& {
         if (!this->holds_alternative<T>()) {
-            if constexpr (!meta::is_trivially_destructible<T>) {
+            if constexpr (!::meta::is_trivially_destructible<T>) {
                 this->value<T>().~T();
             }
-            this->value<T>() = meta::forward<T>(operand);
+            this->value<T>() = ::meta::forward<T>(operand);
             this->discriminant = this->type_index<T>();
         }
         return *this;
@@ -86,3 +88,5 @@ class Variant {
         return this->discriminant;
     }
 };
+
+}  // namespace cat

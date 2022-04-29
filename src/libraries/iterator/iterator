@@ -109,6 +109,8 @@ concept DifferenceTypeArg = meta::ConvertibleTo<Arg, InferDifferenceType<Iter>>;
 template <typename T>
 using InferValueType_t = typename cat::detail::InferValueType<T>::type::type;
 
+namespace cat {
+
 // https://vector-of-bool.github.io/2020/06/13/cpp20-iter-facade.html
 // Every `IteratorFacade` is `indirectly_readable` and is a `forward_iterator`.
 template <typename Derived>
@@ -232,8 +234,6 @@ struct IteratorFacade {
 
     // TODO: Support `<=>` operator.
 };
-
-namespace cat {
 
 struct RandomAccessIteratorTag {};
 struct BidirectionalIteratorTag {};

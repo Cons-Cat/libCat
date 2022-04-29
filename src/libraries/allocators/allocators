@@ -105,9 +105,9 @@ struct AllocatorFacade {
             decltype(this->self().template allocate<T>(allocation_size));
 
         // Produce an appropriate handle type for this allocation.
-        using Handle = meta::Conditional<
+        using Handle = ::meta::Conditional<
             is_aligned,
-            meta::Conditional<
+            ::meta::Conditional<
                 is_small_optimized,
                 // If this is aligned and it is small-optimized:
                 cat::detail::AlignedMemoryHandle<
@@ -115,18 +115,19 @@ struct AllocatorFacade {
                 // If this is aligned but it is not
                 // small-optimized:
                 cat::detail::AlignedMemoryHandle<UnderlyingHandle>>,
-            meta::Conditional<is_small_optimized,
-                              // If this is not aligned but it is
-                              // small-optimized:
-                              cat::detail::SmallMemoryHandle<UnderlyingHandle>,
-                              // If this is not aligned and it is not
-                              // small-optimized:
-                              UnderlyingHandle>>;
+            ::meta::Conditional<
+                is_small_optimized,
+                // If this is not aligned but it is
+                // small-optimized:
+                cat::detail::SmallMemoryHandle<UnderlyingHandle>,
+                // If this is not aligned and it is not
+                // small-optimized:
+                UnderlyingHandle>>;
 
         // Initialize either an `Optional` or a `Result` with an empty value.
         // TODO: This can be simplified when `Result` accepts `in_place`.
-        Allocation maybe_memory = meta::Conditional<
-            meta::IsSpecializationTrait<Allocation, Optional>::value,
+        Allocation maybe_memory = ::meta::Conditional<
+            ::meta::IsSpecializationTrait<Allocation, Optional>::value,
             cat::detail::NullOpt, Failure>{};
 
         if constexpr (!is_aligned) {
@@ -229,7 +230,7 @@ struct AllocatorFacade {
         using Type = typename Handle::Type;
 
         // If this is a small-size optimized handle:
-        if constexpr (meta::IsSpecializationTrait<
+        if constexpr (::meta::IsSpecializationTrait<
                           Handle, cat::detail::SmallMemoryHandle>::value) {
             if (memory.is_on_stack) {
                 if constexpr (requires { this->get(memory).~Type(); }) {
@@ -265,7 +266,7 @@ struct AllocatorFacade {
 
     // Get a reference to the data in any memory handle.
     auto get(auto& memory) -> auto& {
-        using Handle = typename meta::RemoveCvref<decltype(memory)>;
+        using Handle = typename ::meta::RemoveCvref<decltype(memory)>;
         using Type = typename Handle::Type;
         if constexpr (requires { memory.is_on_stack; }) {
             // Get small-size optimized data:
@@ -288,7 +289,7 @@ struct AllocatorFacade {
 
     // Get a `const` reference to the data in any memory handle.
     auto get(auto const& memory) -> auto const& {
-        using Handle = typename meta::RemoveCvref<decltype(memory)>;
+        using Handle = typename ::meta::RemoveCvref<decltype(memory)>;
         using Type = typename Handle::Type;
         if constexpr (requires { memory.is_on_stack; }) {
             // Get small-size optimized data:

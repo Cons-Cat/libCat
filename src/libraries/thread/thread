@@ -6,7 +6,7 @@
 #include <linux>
 
 struct Thread {
-    Any id;
+    cat::Any id;
     void* p_stack;
     ssize stack_size;
 
