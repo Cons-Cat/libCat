@@ -21,7 +21,8 @@ class Array {
     }
 
     template <typename... U>
-    constexpr Array(U&&... arguments) requires(sizeof...(arguments) == length) {
+    constexpr Array(U&&... arguments) requires(
+        static_cast<ssize>(sizeof...(arguments)) == length) {
         T unpacked_data[length.c()] = {arguments...};
         for (int i = 0; i < length; i++) {
             this->storage[i] = unpacked_data[i];

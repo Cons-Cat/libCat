@@ -36,22 +36,26 @@ using std::move;
 }  // namespace cat
 
 // Forward declare numeric types.
-namespace cat::detail {
-template <typename T>
-struct Numeral;
+namespace cat {
+namespace detail {
+    template <typename T>
+    struct Numeral;
 }
+
 using int1 = cat::detail::Numeral<__INT8_TYPE__>;
-using uint1 = cat::detail::Numeral<__UINT8_TYPE__>;
 using int2 = cat::detail::Numeral<__INT16_TYPE__>;
-using uint2 = cat::detail::Numeral<__UINT16_TYPE__>;
 using int4 = cat::detail::Numeral<__INT32_TYPE__>;
-using uint4 = cat::detail::Numeral<__UINT32_TYPE__>;
 using int8 = cat::detail::Numeral<__INT64_TYPE__>;
+using uint1 = cat::detail::Numeral<__UINT8_TYPE__>;
+using uint2 = cat::detail::Numeral<__UINT16_TYPE__>;
+using uint4 = cat::detail::Numeral<__UINT32_TYPE__>;
 using uint8 = cat::detail::Numeral<__UINT64_TYPE__>;
 using float4 = cat::detail::Numeral<float>;
 using float8 = cat::detail::Numeral<double>;
 
 struct intptr;
+
+}  // namespace cat
 
 namespace meta {
 using std::forward;
@@ -283,27 +287,27 @@ constexpr bool is_reference = IsReferenceTrait<T>::value;
 template <typename>
 struct IsCatNumeral : FalseTypeTrait {};
 template <>
-struct IsCatNumeral<int1> : TrueTypeTrait {};
+struct IsCatNumeral<cat::int1> : TrueTypeTrait {};
 template <>
-struct IsCatNumeral<int2> : TrueTypeTrait {};
+struct IsCatNumeral<cat::int2> : TrueTypeTrait {};
 template <>
-struct IsCatNumeral<int4> : TrueTypeTrait {};
+struct IsCatNumeral<cat::int4> : TrueTypeTrait {};
 template <>
-struct IsCatNumeral<int8> : TrueTypeTrait {};
+struct IsCatNumeral<cat::int8> : TrueTypeTrait {};
 template <>
-struct IsCatNumeral<uint1> : TrueTypeTrait {};
+struct IsCatNumeral<cat::uint1> : TrueTypeTrait {};
 template <>
-struct IsCatNumeral<uint2> : TrueTypeTrait {};
+struct IsCatNumeral<cat::uint2> : TrueTypeTrait {};
 template <>
-struct IsCatNumeral<uint4> : TrueTypeTrait {};
+struct IsCatNumeral<cat::uint4> : TrueTypeTrait {};
 template <>
-struct IsCatNumeral<uint8> : TrueTypeTrait {};
+struct IsCatNumeral<cat::uint8> : TrueTypeTrait {};
 template <>
-struct IsCatNumeral<float4> : TrueTypeTrait {};
+struct IsCatNumeral<cat::float4> : TrueTypeTrait {};
 template <>
-struct IsCatNumeral<float8> : TrueTypeTrait {};
+struct IsCatNumeral<cat::float8> : TrueTypeTrait {};
 template <>
-struct IsCatNumeral<intptr> : TrueTypeTrait {};
+struct IsCatNumeral<cat::intptr> : TrueTypeTrait {};
 
 template <typename T>
 constexpr bool is_cat_numeral = IsCatNumeral<T>::value;
@@ -334,24 +338,24 @@ namespace detail {
     struct IsIntegralTraitDetail<unsigned long long> : TrueTypeTrait {};
 
     template <>
-    struct IsIntegralTraitDetail<int1> : TrueTypeTrait {};
+    struct IsIntegralTraitDetail<cat::int1> : TrueTypeTrait {};
     template <>
-    struct IsIntegralTraitDetail<uint1> : TrueTypeTrait {};
+    struct IsIntegralTraitDetail<cat::uint1> : TrueTypeTrait {};
     template <>
-    struct IsIntegralTraitDetail<int2> : TrueTypeTrait {};
+    struct IsIntegralTraitDetail<cat::int2> : TrueTypeTrait {};
     template <>
-    struct IsIntegralTraitDetail<uint2> : TrueTypeTrait {};
+    struct IsIntegralTraitDetail<cat::uint2> : TrueTypeTrait {};
     template <>
-    struct IsIntegralTraitDetail<int4> : TrueTypeTrait {};
+    struct IsIntegralTraitDetail<cat::int4> : TrueTypeTrait {};
     template <>
-    struct IsIntegralTraitDetail<uint4> : TrueTypeTrait {};
+    struct IsIntegralTraitDetail<cat::uint4> : TrueTypeTrait {};
     template <>
-    struct IsIntegralTraitDetail<int8> : TrueTypeTrait {};
+    struct IsIntegralTraitDetail<cat::int8> : TrueTypeTrait {};
     template <>
-    struct IsIntegralTraitDetail<uint8> : TrueTypeTrait {};
+    struct IsIntegralTraitDetail<cat::uint8> : TrueTypeTrait {};
 
     template <>
-    struct IsIntegralTraitDetail<intptr> : TrueTypeTrait {};
+    struct IsIntegralTraitDetail<cat::intptr> : TrueTypeTrait {};
     template <>
     struct IsIntegralTraitDetail<bool> : TrueTypeTrait {};
 }  // namespace detail
@@ -363,10 +367,11 @@ constexpr bool is_integral = IsIntegralTrait<T>::value;
 
 template <typename T>
 struct IsFloatingPointTrait
-    : BoolConstantTrait<
-          is_same<float, RemoveCv<T>> || is_same<double, RemoveCv<T>> ||
-          is_same<float4, RemoveCv<T>> || is_same<float8, RemoveCv<T>> ||
-          is_same<long double, RemoveCv<T>>> {};
+    : BoolConstantTrait<is_same<float, RemoveCv<T>> ||
+                        is_same<double, RemoveCv<T>> ||
+                        is_same<cat::float4, RemoveCv<T>> ||
+                        is_same<cat::float8, RemoveCv<T>> ||
+                        is_same<long double, RemoveCv<T>>> {};
 template <typename T>
 constexpr bool is_floating_point = IsFloatingPointTrait<T>::value;
 
@@ -391,7 +396,7 @@ namespace detail {
     struct IsSignedTraitDetail : BoolConstantTrait<T(-1) < T(0)> {};
 
     template <>
-    struct IsSignedTraitDetail<int1, true> : TrueTypeTrait {};
+    struct IsSignedTraitDetail<cat::int1, true> : TrueTypeTrait {};
 
     template <typename T>
     struct IsSignedTraitDetail<T, false> : FalseTypeTrait {};

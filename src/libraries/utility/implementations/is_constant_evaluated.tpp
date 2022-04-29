@@ -2,9 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <numerals>
 #include <utility>
 
-constexpr auto meta::is_constant_evaluated() -> bool {
+constexpr auto meta::is_constant_evaluated() -> cat::bool1 {
     return __builtin_is_constant_evaluated();
 }

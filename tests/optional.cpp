@@ -95,7 +95,7 @@ void meow() {
 
     // Optional with a predicate.
     Optional<Predicate<int4,
-                       [](int4 input) -> bool {
+                       [](int4 input) -> bool1 {
                            return input >= 0;
                        },
                        -1>>
@@ -137,7 +137,7 @@ void meow() {
     Result(moo.transform([](int4 input) -> uint8 {
                   return static_cast<uint8>(input * 2);
               })
-               .value() == 4)
+               .value() == 4u)
         .or_panic();
 
     moo.or_else([] {

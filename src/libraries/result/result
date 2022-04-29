@@ -199,12 +199,7 @@ class [[nodiscard]] Result {
         : storage(static_cast<T>(result)), is_okay(true){};
 
     // TODO: `concept` for `bool1`, `bool2`, and `bool4` as well.
-    // Consume a `bool` temporary. This is useful for debugging with asserts.
-    constexpr Result(bool const& expression) requires(meta::is_void<T>)
-        : storage(), is_okay(expression){};
-    constexpr Result(bool&& expression) requires(meta::is_void<T>)
-        : storage(), is_okay(expression){};
-
+    // Consume a `bool1` temporary. This is useful for debugging with asserts.
     constexpr Result(bool1 const& expression) requires(meta::is_void<T>)
         : storage(), is_okay(expression){};
     constexpr Result(bool1&& expression) requires(meta::is_void<T>)

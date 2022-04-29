@@ -71,13 +71,6 @@ constexpr auto bit_cast(auto& from_value) -> T;
 // `Result` is used throughout the library.
 #include <result>
 
-// <stdint.h> is required for libC compatibility.
-#include <stdint.h>
-
-/* libCat includes `<simd>` globally, because vectors are considered primitive
- * types. */
-#include <simd>
-
 // Placement `new`.
 [[nodiscard]] inline auto operator new(unsigned long, void* p_address)
     -> void* {

@@ -3,7 +3,6 @@
 #pragma once
 
 #include <concepts>
-#include <cstdint>
 #include <type_traits>
 
 // i386 and x86-64 are little endian.
@@ -13,6 +12,7 @@ constexpr bool1 is_big_endian = !is_little_endian;
 namespace cat {
 
 auto invert_endianess(meta::Integral auto value) {
+    // TODO: Handle `cat::Numeral`.
     if constexpr (sizeof(value) == 1) {
         return __builtin_bswap8(value);
     }
@@ -109,9 +109,7 @@ template <typename>
 struct EnumFlagTrait : meta::FalseTypeTrait {};
 
 template <typename T>
-concept EnumFlag = requires(T) {
-    meta::EnumFlagTrait<T>::value;
-};
+concept EnumFlag = meta::EnumFlagTrait<T>::value;
 
 }  // namespace meta
 
@@ -121,9 +119,10 @@ constexpr auto operator|(T flag_1, T flag_2) -> T {
     return static_cast<T>(static_cast<U>(flag_1) | static_cast<U>(flag_2));
 }
 
-template <meta::EnumFlag T, typename U = meta::UnderlyingType<T>>
-constexpr auto operator|(T flag_1, U flag_2) -> T {
-    return static_cast<T>(static_cast<U>(flag_1) | static_cast<U>(flag_2));
+template <meta::EnumFlag T>
+constexpr auto operator|(T flag_1, meta::UnderlyingType<T> flag_2) -> T {
+    using U = meta::UnderlyingType<T>;
+    return static_cast<T>(static_cast<U>(flag_1) | flag_2);
 }
 
 template <meta::EnumFlag T>
@@ -132,10 +131,12 @@ constexpr auto operator&(T flag_1, T flag_2) -> T {
     return static_cast<T>(static_cast<U>(flag_1) & static_cast<U>(flag_2));
 }
 
-template <meta::EnumFlag T, typename U = meta::UnderlyingType<T>>
-constexpr auto operator&(T flag_1, U flag_2) -> T {
-    return static_cast<T>(static_cast<U>(flag_1) & static_cast<U>(flag_2));
-}
+// TODO: Fix bit flag operators.
+// template <meta::EnumFlag T>
+// constexpr auto operator&(T flag_1, meta::UnderlyingType<T> flag_2) -> T {
+//     using U = meta::UnderlyingType<T>;
+//     return static_cast<T>(static_cast<U>(flag_1) & flag_2);
+// }
 
 namespace cat::detail {
 

@@ -1,8 +1,9 @@
-#include <allocators>
 #include <array>
 #include <math>
 #include <numerals>
 #include <utility>
+//
+#include <allocators>
 
 int4 global_int_1 = 0;
 int4 global_int_2 = 0;

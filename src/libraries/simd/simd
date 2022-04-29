@@ -167,11 +167,11 @@ using float8x4 = cat::detail::Simd<float8::Type, 4, 32>;
 using float8x_ = float8x4;
 
 // Vectors of up to 32 1-byte bools are supported by AVX2.
-using bool1x2 = cat::detail::Simd<bool1::Type, 2, 32>;
-using bool1x4 = cat::detail::Simd<bool1::Type, 4, 32>;
-using bool1x8 = cat::detail::Simd<bool1::Type, 8, 32>;
-using bool1x16 = cat::detail::Simd<bool1::Type, 16, 32>;
-using bool1x32 = cat::detail::Simd<bool1::Type, 32, 32>;
+using bool1x2 = cat::detail::Simd<bool1, 2, 32>;
+using bool1x4 = cat::detail::Simd<bool1, 4, 32>;
+using bool1x8 = cat::detail::Simd<bool1, 8, 32>;
+using bool1x16 = cat::detail::Simd<bool1, 16, 32>;
+using bool1x32 = cat::detail::Simd<bool1, 32, 32>;
 using bool1x_ = bool1x32;
 
 // Vectors of up to 16 2-byte bools are supported by AVX2.
