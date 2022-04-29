@@ -9,7 +9,7 @@ void meow() {
     static_assert(meta::is_same<Type_1, char>);
 
     Variant<int, char, uint4> variant(int{1});
-    Result(variant.is_type<int>()).or_panic();
+    Result(variant.holds_alternative<int>()).or_panic();
     int foo_int = variant.value<int>();
     Result(foo_int == 1).or_panic();
 
@@ -18,7 +18,7 @@ void meow() {
     static_assert(variant.type_index<uint4>() == 2);
 
     variant = 'o';
-    Result(variant.is_type<char>()).or_panic();
+    Result(variant.holds_alternative<char>()).or_panic();
     char foo_char = variant.value<char>();
     Result(foo_char == 'o').or_panic();
 

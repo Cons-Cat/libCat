@@ -8,31 +8,13 @@
 #include <type_list>
 #include <type_traits>
 
-// Given an index, selects a data type from a list of types.
-template <ssize i, typename... items>
-struct VariantAlternative;
-
-template <typename HeadItem, typename... TailItems>
-struct VariantAlternative<0, HeadItem, TailItems...> {
-    using Type = HeadItem;
-};
-
-template <ssize i, typename HeadItem, typename... TailItems>
-struct VariantAlternative<i, HeadItem, TailItems...> {
-    using Type = typename VariantAlternative<i - 1, TailItems...>::Type;
-};
-
 template <typename... Ts>
 class Variant {
     static constexpr ssize size = cat::max(ssizeof<Ts>()...);
     static constexpr usize alignment = cat::max(alignof(Ts)...);
 
-    // using helper_t = variant_helper<Ts...>;
     using Storage = cat::AlignedStorage<size, alignment>;
     Storage storage;
-
-    template <ssize index>
-    using Alternative = typename VariantAlternative<index, Ts...>::Type;
     uint1 discriminant;
 
     template <typename T, ssize index>
@@ -46,6 +28,8 @@ class Variant {
         }
     }
   public:
+    static constexpr ssize variant_size = static_cast<ssize>(sizeof...(Ts));
+
     constexpr Variant() = default;
 
     // Consume anything that is a valid type.
@@ -73,12 +57,15 @@ class Variant {
 
     template <typename T>
     constexpr auto type_index() -> uint1 {
-        return this
-            ->find_index_of_type<T, static_cast<ssize>(sizeof...(Ts)) - 1>();
+        return this->find_index_of_type<T, this->variant_size - 1>();
     }
 
     template <typename T>
-    constexpr auto is_type() -> bool1 {
+    constexpr auto holds_alternative() -> bool1 {
         return this->discriminant == this->type_index<T>();
+    }
+
+    constexpr auto get_index() const -> uint1 {
+        return this->discriminant;
     }
 };
