@@ -7,6 +7,7 @@
 #include <concepts>
 #include <span>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 namespace cat {
@@ -64,33 +65,6 @@ enum class LinuxError {
     file_table_overflow = -23,
     // Too many files are open in this process.
     too_many_files = -24,
-};
-
-// `LinuxResult` is a wrapper for values produced by syscalls.
-template <typename T = cat::detail::Monostate>
-// Monostate represents `void`.
-requires(
-    // A Linux syscall never produces a value larger than a register.
-    sizeof(T) <= 8) struct LinuxResult {
-    T storage;
-
-    // Linux errors are represented as a negative integer.
-    constexpr auto has_value() const -> bool1 {
-        return meta::bit_cast<ssize>(storage) >= 0;
-    }
-
-    constexpr auto value() & -> T& {
-        return storage;
-    }
-    constexpr auto value() const& -> T& {
-        return storage;
-    }
-    constexpr auto value() && -> T&& {
-        return cat::move(storage);
-    }
-    constexpr auto value() const&& -> T&& {
-        return cat::move(storage);
-    }
 };
 
 enum class MemoryProtectionFlags : unsigned int {
