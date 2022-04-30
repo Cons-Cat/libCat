@@ -68,7 +68,13 @@ set(
   ${CAT_SRC}/libraries/string/implementations/string_length.tpp
   ${CAT_SRC}/libraries/string/implementations/print.cpp
   ${CAT_SRC}/libraries/string/implementations/print_line.cpp
-  ${CAT_SRC}/libraries/linux/implementations/syscall.cpp
+  ${CAT_SRC}/libraries/linux/implementations/syscall0.cpp
+  ${CAT_SRC}/libraries/linux/implementations/syscall1.cpp
+  ${CAT_SRC}/libraries/linux/implementations/syscall2.cpp
+  ${CAT_SRC}/libraries/linux/implementations/syscall3.cpp
+  ${CAT_SRC}/libraries/linux/implementations/syscall4.cpp
+  ${CAT_SRC}/libraries/linux/implementations/syscall5.cpp
+  ${CAT_SRC}/libraries/linux/implementations/syscall6.cpp
   ${CAT_SRC}/libraries/linux/implementations/syscall.tpp
   ${CAT_SRC}/libraries/linux/implementations/read.cpp
   ${CAT_SRC}/libraries/linux/implementations/write.cpp
