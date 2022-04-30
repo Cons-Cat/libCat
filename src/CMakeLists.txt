@@ -10,6 +10,7 @@ set(
   ${CAT_SRC}/libraries/numerals/
   ${CAT_SRC}/libraries/simd/
   ${CAT_SRC}/libraries/result/
+  ${CAT_SRC}/libraries/scaredy/
   ${CAT_SRC}/libraries/optional/
   ${CAT_SRC}/libraries/any/
   ${CAT_SRC}/libraries/unique/

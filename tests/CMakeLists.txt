@@ -40,67 +40,73 @@ target_link_options(test_result_fail PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME TestResultFail COMMAND test_result_fail)
 set_tests_properties(TestResultFail PROPERTIES WILL_FAIL TRUE)
 
-# This tests if `<array>` works.
+# This tests that `cat::Scaredy` works.
+add_executable(test_scaredy test_scaredy.cpp)
+target_compile_options(test_scaredy PRIVATE ${CAT_CXX_FLAGS_TEST})
+target_link_options(test_scaredy PRIVATE ${CAT_LINK_FLAGS})
+add_test(NAME TestScaredy COMMAND test_scaredy)
+
+# This tests that `cat::Array` works.
 add_executable(test_arrays arrays.cpp)
 target_compile_options(test_arrays PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_arrays PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME TestArray COMMAND test_arrays)
 
-# This tests if `cat::string_length()` works.
+# This tests that `cat::string_length()` works.
 add_executable(test_strlen string_length.cpp)
 target_compile_options(test_strlen PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_strlen PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME TestStrlen COMMAND test_strlen)
 
-# This tests if `cat::compare_strings()` works.
+# This tests that `cat::compare_strings()` works.
 add_executable(test_strcmp compare_strings.cpp)
 target_compile_options(test_strcmp PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_strcmp PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME TestStrCmp COMMAND test_strcmp)
 
-# This tests if `cat::copy_memory()` works.
+# This tests that `cat::copy_memory()` works.
 add_executable(test_copymem copy_memory.cpp)
 target_compile_options(test_copymem PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_copymem PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME CopyMem COMMAND test_copymem)
 
-# This tests if `PageAllocator` works.
+# This tests that `cat::PageAllocator` works.
 add_executable(test_paging paging_memory.cpp)
 target_compile_options(test_paging PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_paging PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME PagingMemory COMMAND test_paging)
 
-# This tests if `LinearAllocator` works.
+# This tests that `LinearAllocator` works.
 add_executable(test_linear linear_allocator.cpp)
 target_compile_options(test_linear PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_linear PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME LinearAllocator COMMAND test_linear)
 
-# This tests if `Thread`s basically work.
+# This tests that `Thread`s works.
 add_executable(test_threads thread.cpp)
 target_compile_options(test_threads PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_threads PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME MultiThreading COMMAND test_threads)
 
-# This tests if `Raii<>` basically works.
+# This tests that `Raii<>` works.
 add_executable(test_raii test_raii.cpp)
 target_compile_options(test_raii PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_raii PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME Raii COMMAND test_raii)
 
-# This tests if `Optional<>` basically works.
+# This tests that `Optional<>` works.
 add_executable(test_optional optional.cpp)
 target_compile_options(test_optional PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_optional PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME Optional COMMAND test_optional)
 
-# This tests if SIMD basically works.
+# This tests that SIMD works.
 add_executable(test_simd simd.cpp)
 target_compile_options(test_simd PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_simd PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME Simd COMMAND test_simd)
 
-# This tests if type reflection basically works.
+# This tests that type reflection works.
 add_executable(test_reflection test_reflection.cpp)
 target_compile_options(test_reflection PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_reflection PRIVATE ${CAT_LINK_FLAGS})

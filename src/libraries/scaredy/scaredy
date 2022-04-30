@@ -1,0 +1,160 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <type_traits>
+#include <utility>
+#include <variant>
+
+namespace cat {
+
+namespace detail {
+    template <typename T, typename... Errors>
+    struct ScaredyVariantStorage {
+        cat::Variant<T, Errors...> storage;
+
+        constexpr ScaredyVariantStorage() = default;
+
+        // Consume a value.
+        template <typename U>
+        constexpr ScaredyVariantStorage(U const& input) requires(
+            ::meta::is_convertible<U, T>)
+            : storage(static_cast<T>(input)){};
+
+        // Consume an error.
+        template <typename U>
+        constexpr ScaredyVariantStorage(U const& input) : storage(input){};
+
+        template <typename U>
+        constexpr auto operator=(U const& operand)
+            -> ScaredyVariantStorage<T, Errors...>& {
+            if constexpr (::meta::is_convertible<U, T>) {
+                this->storage = static_cast<T>(operand);
+            } else {
+                this->storage = operand;
+            }
+            return *this;
+        }
+
+        template <typename U>
+        constexpr auto operator=(U const& operand) const
+            -> ScaredyVariantStorage<T, Errors...> const& {
+            if constexpr (::meta::is_convertible<U, T>) {
+                this->storage = static_cast<T>(operand);
+            } else {
+                this->storage = operand;
+            }
+            return *this;
+        }
+
+        constexpr auto has_value() const -> bool1 {
+            return this->storage.template holds_alternative<T>();
+        }
+
+        template <typename TopError, typename... ErrorList>
+        constexpr auto value() & -> T& {
+            return this->storage.template value<T>();
+        }
+
+        template <typename TopError, typename... ErrorList>
+        constexpr auto value() const& -> T& {
+            return this->storage.template value<T>();
+        }
+
+        template <typename TopError, typename... ErrorList>
+        constexpr auto value() && -> T&& {
+            return cat::move(this->storage.template value<T>());
+        }
+
+        template <typename TopError, typename... ErrorList>
+        constexpr auto value() const&& -> T&& {
+            return cat::move(this->storage.template value<T>());
+        }
+
+        template <typename TopError, typename... ErrorList>
+        constexpr auto error() {
+            // If this error type is currently held by the `cat::Variant`.
+            if (this->storage.template holds_alternative<TopError>()) {
+                return this->storage.template value<TopError>().error();
+            }
+            // Otherwise, recurse with the next type.
+            return this->error<ErrorList...>();
+        }
+
+        template <typename TopError, typename... ErrorList>
+        constexpr auto error() const {
+            // If this error type is currently held by the `cat::Variant`.
+            if (this->storage.template holds_alternative<TopError>()) {
+                return this->storage.template value<TopError>().error();
+            }
+            // Otherwise, recurse with the next type.
+            return this->error<ErrorList...>();
+        }
+
+        template <typename U>
+        constexpr auto holds_alternative() const -> bool1 {
+            return this->storage.template holds_alternative<U>();
+        }
+    };
+}  // namespace detail
+
+template <typename T, typename... Errors>
+requires(
+    // `cat::Scaredy` cannot hold C arrays.
+    // (!::meta::is_array<Errors...>) &&
+    // `cat::Scaredy` should have at least one error type.
+    sizeof...(Errors) > 0) class Scaredy {
+    using Storage = cat::detail::ScaredyVariantStorage<T, Errors...>;
+    Storage storage;
+  public:
+    constexpr Scaredy() = default;
+
+    constexpr Scaredy(auto const& input) : storage(input){};
+
+    template <typename U>
+    constexpr auto operator=(U const& operand) -> Scaredy<T, Errors...>& {
+        this->storage = operand;
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto operator=(U const& operand) const -> Scaredy<T, Errors...>& {
+        this->storage = operand;
+        return *this;
+    }
+
+    constexpr auto has_value() const -> bool1 {
+        return this->storage.has_value();
+    }
+
+    constexpr auto value() & {
+        return this->storage.template value<T>();
+    }
+
+    constexpr auto value() const& {
+        return this->storage.template value<T>();
+    }
+
+    constexpr auto value() && {
+        return cat::move(this->storage.template value<T>());
+    }
+
+    constexpr auto value() const&& {
+        return cat::move(this->storage.template value<T>());
+    }
+
+    constexpr auto error() {
+        return this->storage.template error<Errors...>();
+    }
+
+    constexpr auto error() const {
+        return this->storage.template error<Errors...>();
+    }
+
+    template <typename U>
+    constexpr auto holds_alternative() const -> bool1 {
+        return this->storage.template holds_alternative<U>();
+    }
+};
+
+}  // namespace cat

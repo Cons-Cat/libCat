@@ -15,17 +15,26 @@ class Variant {
     static constexpr ssize size = cat::max(ssizeof<Ts>()...);
     static constexpr usize alignment = cat::max(alignof(Ts)...);
 
-    using Storage = cat::AlignedStorage<size, alignment>;
-    Storage storage;
+    using Storage = cat::Array<char, size>;
+    alignas(alignment.c()) Storage storage;
     uint1 discriminant;
 
     template <typename T, ssize index>
-    constexpr auto find_index_of_type() -> uint1 {
+    constexpr auto find_index_of_type() -> uint1 requires(index >= 0) {
         using IndexType = typename ::meta::TypeList<Ts...>::template Get<index>;
         if constexpr (::meta::is_same<T, IndexType>) {
             return static_cast<uint1>(index);
         } else {
-            static_assert(index >= 1, "No type in this list was found!");
+            return find_index_of_type<T, index - 1>();
+        }
+    }
+
+    template <typename T, ssize index>
+    constexpr auto find_index_of_type() const -> uint1 requires(index >= 0) {
+        using IndexType = typename ::meta::TypeList<Ts...>::template Get<index>;
+        if constexpr (::meta::is_same<T, IndexType>) {
+            return static_cast<uint1>(index);
+        } else {
             return find_index_of_type<T, index - 1>();
         }
     }
@@ -75,12 +84,31 @@ class Variant {
     }
 
     template <typename T>
+    constexpr auto value() const -> T const& {
+        // TODO: Make this assert work.
+        // Result(this->is_type<T>).assert();
+
+        // This cast is safe when the precondition holds true.
+        return *reinterpret_cast<T const* const>(&this->storage);
+    }
+
+    template <typename T>
     constexpr auto type_index() -> uint1 {
         return this->find_index_of_type<T, this->variant_size - 1>();
     }
 
     template <typename T>
+    constexpr auto type_index() const -> uint1 {
+        return this->find_index_of_type<T, this->variant_size - 1>();
+    }
+
+    template <typename T>
     constexpr auto holds_alternative() -> bool1 {
+        return this->discriminant == this->type_index<T>();
+    }
+
+    template <typename T>
+    constexpr auto holds_alternative() const -> bool1 {
         return this->discriminant == this->type_index<T>();
     }
 
