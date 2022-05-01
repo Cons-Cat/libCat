@@ -87,7 +87,7 @@ IncludeCategories:
     SortPriority:    0
     CaseSensitive:   true
 IndentCaseLabels: true
-IndentCaseBlocks: false
+IndentCaseBlocks: true
 IndentGotoLabels: false
 #PPIndentWidth: 0
 IndentPPDirectives: None
