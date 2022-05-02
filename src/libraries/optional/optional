@@ -52,15 +52,27 @@ template <typename T>
 struct OptionalValueStorage {
     // A `union` member will not be default-constructed.
     union {
-        // `dummy` is required so that `OptionalValueStorage` can be initialized
-        // in a `constexpr` context, because a member `union` must have at least
-        // one initialized field in a `constexpr` context. `char` can be
-        // default-initialized, so this is well-formed.
-        char dummy;
+        // `Monostate` is required so that `OptionalValueStorage` can be
+        // initialized in a `constexpr` context, because a member `union` must
+        // have at least one initialized field in a `constexpr` context.
+        // `Monostate` can be default-initialized, so this is well-formed.
+        cat::detail::Monostate dummy;
         T storage;
     };
     using Value = T;
     bool1 has_some = false;
+
+    // If `T` is default-constructible, use the default constructor.
+    constexpr OptionalValueStorage() {
+        this->construct();
+    };
+
+    // If `T` is forwarded arguments by the `in_place` `cat::Optional`
+    // constructor, then construct it in-place with those arguments.
+    template <typename... Ts>
+    constexpr OptionalValueStorage(Ts... args) {
+        this->construct(args...);
+    }
 
     // If `T` is trivially copy-constructible, use this simple copy constructor.
     constexpr OptionalValueStorage(T const& in_value) requires(
@@ -237,13 +249,6 @@ struct OptionalReferenceStorage {
         this->p_storage = cat::addressof(option);
         return *this;
     }
-
-    template <typename U>
-    constexpr auto operator=(U const& option)
-        -> OptionalReferenceStorage const& {
-        this->p_storage = cat::addressof(option);
-        return *this;
-    };
 
     // The following methods are homogenous to all `Optional...Storage` types.
     constexpr auto value() & -> Value& {
@@ -493,11 +498,14 @@ class Optional {
     // All `Optional`s are default-constructed as empty.
     constexpr Optional() : storage(nullopt){};
 
-    // TODO: Forward variadic constructor arguments.
     // `Optional`s can be constructed with `in_place` to have their storage
-    // default-constructed, unless they are reference types.
-    constexpr Optional(cat::detail::InPlace) requires(!::meta::is_reference<T>)
-        : storage(Value{}){};
+    // constructed, unless they are reference types. Without this tag, the
+    // storage would be uninitialized.
+    template <typename... Ts>
+    constexpr Optional(cat::detail::InPlace,
+                       Ts... args) requires(!::meta::is_reference<T>) {
+        this->storage.construct(args...);
+    }
 
     // Forward all constructors to the `storage` member.
 
@@ -556,15 +564,17 @@ class Optional {
     // `nullopt`.
     template <typename U>
     constexpr auto operator=(U const& value)
-        -> Optional& requires(::meta::is_convertible<U, Value>) {
-        this->storage = value;
+        -> Optional& requires(::meta::is_convertible<U, Value> &&
+                              !::meta::is_reference<T>) {
+        this->storage = static_cast<Value>(value);
         return *this;
     }
 
     template <typename U>
     auto operator=(U&& value)
-        -> Optional& requires(::meta::is_convertible<U, Value>) {
-        this->storage = ::meta::forward<U>(value);
+        -> Optional& requires(::meta::is_convertible<U, Value> &&
+                              !::meta::is_reference<T>) {
+        this->storage = static_cast<Value>(::meta::forward<U>(value));
         return *this;
     }
 

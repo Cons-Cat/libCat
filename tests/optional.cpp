@@ -27,6 +27,9 @@ struct NonTrivial {
         this->data = 0;
         global_int++;
     }
+    NonTrivial(int, int, char) {
+        this->data = 2;
+    }
 };
 
 void meow() {
@@ -262,14 +265,17 @@ void meow() {
 
     // TODO: Test non-trivial reference.
 
-    // `	cat::Optional const`
+    // `cat::Optional const`
     cat::Optional<int4> const constant_val = 1;
     [[maybe_unused]] cat::Optional<int4> const constant_null = nullopt;
     [[maybe_unused]] auto con = constant_val.value();
 
-    int4 const constant_int = 0;
-    [[maybe_unused]] cat::Optional<int4 const&> const constant_ref =
-        constant_int;
+    // TODO: I think this can't work, because it would take the address of a
+    // const r-value?
+
+    // int4 const constant_int = 0;
+    // [[maybe_unused]] cat::Optional<int4 const&> const constant_ref =
+    //     constant_int;
 
     Movable mov;
     cat::Optional<Movable> maybe_movs(cat::move(mov));
@@ -280,7 +286,7 @@ void meow() {
     // Result(global_int == 3).or_panic();
     // Result(nontrivial.value().data == 3).or_panic();
 
-    // `	cat::Optional<void>` default-initializes empty:
+    // `cat::Optional<void>` default-initializes empty:
     cat::Optional<void> optvoid;
     Result(!optvoid.has_value()).or_panic();
     // `monostate` initializes a value:
@@ -293,6 +299,14 @@ void meow() {
     // `nullopt` initializes empty:
     cat::Optional<void> optvoid_5{nullopt};
     Result(!optvoid_5.has_value()).or_panic();
+
+    cat::Optional<NonTrivial> in_place_nontrivial_1{in_place};
+    Result(in_place_nontrivial_1.has_value()).or_panic();
+    Result(in_place_nontrivial_1.value().data == 1).or_panic();
+
+    cat::Optional<NonTrivial> in_place_nontrivial_2{in_place, 1, 2, 'a'};
+    Result(in_place_nontrivial_2.has_value()).or_panic();
+    Result(in_place_nontrivial_2.value().data == 2).or_panic();
 
     // Assign value:
     optvoid = monostate;
