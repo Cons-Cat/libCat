@@ -114,42 +114,42 @@ requires(
         return *this;
     }
 
-    constexpr auto has_value() const -> bool1 {
+    [[nodiscard]] constexpr auto has_value() const -> bool1 {
         return this->storage.has_value();
     }
 
-    constexpr auto value() & requires(!::meta::is_void<T>) {
+    [[nodiscard]] constexpr auto value() & requires(!::meta::is_void<T>) {
         return this->storage.template value();
     }
 
-    constexpr auto value() const& requires(!::meta::is_void<T>) {
+    [[nodiscard]] constexpr auto value() const& requires(!::meta::is_void<T>) {
         return this->storage.value();
     }
 
-    constexpr auto value() && requires(!::meta::is_void<T>) {
+    [[nodiscard]] constexpr auto value() && requires(!::meta::is_void<T>) {
         return cat::move(this->storage.value());
     }
 
-    constexpr auto value() const&& requires(!::meta::is_void<T>) {
+    [[nodiscard]] constexpr auto value() const&& requires(!::meta::is_void<T>) {
         return cat::move(this->storage.value());
     }
 
     template <typename Error>
-    constexpr auto error() {
+    [[nodiscard]] constexpr auto error() {
         return this->storage.template error<Error>();
     }
 
     template <typename Error>
-    constexpr auto error() const {
+    [[nodiscard]] constexpr auto error() const {
         return this->storage.template error<Error>();
     }
 
     template <typename U>
-    constexpr auto holds_alternative() const -> bool1 {
+    [[nodiscard]] constexpr auto holds_alternative() const -> bool1 {
         return this->storage.template holds_alternative<U>();
     }
 
-    auto or_panic() {
+    [[nodiscard]] constexpr auto or_panic() {
         if (this->has_value()) [[likely]] {
             if constexpr (!::meta::is_void<T>) {
                 return this->value();
@@ -161,7 +161,7 @@ requires(
         __builtin_unreachable();
     }
 
-    auto or_panic() const {
+    [[nodiscard]] constexpr auto or_panic() const {
         if (this->has_value()) [[likely]] {
             if constexpr (!::meta::is_void<T>) {
                 return this->value();

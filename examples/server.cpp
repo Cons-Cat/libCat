@@ -23,20 +23,20 @@ void meow() {
         recieving_socket.accept(listening_socket).or_panic();
 
         while (true) {
-            recieving_socket.recieve(&message_buffer, message_buffer.size())
-                .or_panic();
+            _ = recieving_socket.recieve(&message_buffer, message_buffer.size())
+                    .or_panic();
 
-			cat::String input = message_buffer.to_string();
+            cat::String input = message_buffer.to_string();
 
             if (cat::compare_strings(input, "exit")) {
-                cat::print_line("Exiting.").or_panic();
+                _ = cat::print_line("Exiting.").or_panic();
                 exit = true;
                 break;
             }
 
             if (!cat::compare_strings(input, "")) {
-                cat::print("Recieved: ").or_panic();
-                cat::print_line(input).or_panic();
+                _ = cat::print("Recieved: ").or_panic();
+                _ = cat::print_line(input).or_panic();
                 // TODO: `cat::set_memory()` or something is needed to zero-out
                 // `message_buffer` here.
                 break;

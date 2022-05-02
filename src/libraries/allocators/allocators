@@ -183,7 +183,7 @@ struct AllocatorFacade {
   public:
     // Try to allocate some memory with arbitrary alignment.
     template <typename T = cat::Byte>
-    auto malloc(ssize const allocation_size = ssizeof<T>()) {
+    [[nodiscard]] auto malloc(ssize const allocation_size = ssizeof<T>()) {
         if constexpr (alignof(T) > 8) {
             // If the alignment of `T` is greater than 8, it should have implied
             // strong alignment guarantees.
@@ -195,15 +195,15 @@ struct AllocatorFacade {
     // Try to allocate some memory guaranteed to be aligned to some
     // boundary.
     template <typename T = cat::Byte>
-    auto aligned_alloc(ssize const alignment,
-                       ssize const allocation_size = ssizeof<T>()) {
+    [[nodiscard]] auto aligned_alloc(
+        ssize const alignment, ssize const allocation_size = ssizeof<T>()) {
         return this->meta_allocate<T, false, true, true>(alignment,
                                                          allocation_size);
     }
 
     // Try to allocate small-size optimized memory.
     template <typename T = void*>
-    auto malloca(ssize const allocation_size = ssizeof<T>()) {
+    [[nodiscard]] auto malloca(ssize const allocation_size = ssizeof<T>()) {
         if constexpr (alignof(T) > 8) {
             // If the alignment of `T` is greater than 8, it should have implied
             // strong alignment guarantees.
@@ -215,15 +215,14 @@ struct AllocatorFacade {
     // Try to allocate small-size optimized memory guaranteed to be aligned
     // to a boundary. TODO: Work on this after improving `malloca()`.
     template <typename T = void*>
-    auto aligned_malloca(ssize const alignment,
-                         ssize const allocation_size = ssizeof<T>()) {
+    [[nodiscard]] auto aligned_malloca(
+        ssize const alignment, ssize const allocation_size = ssizeof<T>()) {
         return this->meta_allocate<T, true, true, true>(alignment,
                                                         allocation_size);
     }
 
     // Invalidate any memory handle, invoking its data's destructor.
     template <typename Handle>
-    auto free(Handle const& memory) -> Result<> {
     [[nodiscard]] auto free(Handle const& memory) -> cat::Optional<void> {
         using Type = typename Handle::Type;
 
@@ -263,7 +262,7 @@ struct AllocatorFacade {
     };
 
     // Get a reference to the data in any memory handle.
-    auto get(auto& memory) -> auto& {
+    [[nodiscard]] auto get(auto& memory) -> auto& {
         using Handle = typename ::meta::RemoveCvref<decltype(memory)>;
         using Type = typename Handle::Type;
         if constexpr (requires { memory.is_on_stack; }) {
@@ -286,7 +285,7 @@ struct AllocatorFacade {
     }
 
     // Get a `const` reference to the data in any memory handle.
-    auto get(auto const& memory) -> auto const& {
+    [[nodiscard]] auto get(auto const& memory) -> auto const& {
         using Handle = typename ::meta::RemoveCvref<decltype(memory)>;
         using Type = typename Handle::Type;
         if constexpr (requires { memory.is_on_stack; }) {

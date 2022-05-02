@@ -209,7 +209,9 @@ void meow() {
 
     foo.transform(return_int).and_then(return_opt_void).or_else(nothing);
 
-    foo.transform(return_int).and_then(return_opt_void).or_else(maybe_nothing);
+    _ = foo.transform(return_int)
+            .and_then(return_opt_void)
+            .or_else(maybe_nothing);
 
     cat::Optional<int4> monadic;
     monadic = return_none(0).and_then(return_opt);
