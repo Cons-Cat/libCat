@@ -493,6 +493,7 @@ class Optional {
     // All `Optional`s are default-constructed as empty.
     constexpr Optional() : storage(nullopt){};
 
+    // TODO: Forward variadic constructor arguments.
     // `Optional`s can be constructed with `in_place` to have their storage
     // default-constructed, unless they are reference types.
     constexpr Optional(cat::detail::InPlace) requires(!::meta::is_reference<T>)
@@ -592,7 +593,7 @@ class Optional {
     }
 
     // Get the `storage` unconditionally.
-    constexpr auto value() & -> Value& {
+    [[nodiscard]] constexpr auto value() & -> Value& {
         Result(this->has_value())
             .assert(
                 // "`.value()` was illegally called on an `Optional` which "
@@ -602,7 +603,7 @@ class Optional {
     }
 
     // Get the const-qualified `storage` unconditionally.
-    constexpr auto value() const& -> Value const& {
+    [[nodiscard]] constexpr auto value() const& -> Value const& {
         Result(this->has_value())
             .assert(
                 // "`.value()` was illegally called on an `Optional` which "
@@ -612,7 +613,8 @@ class Optional {
     }
 
     // Move the `storage` unconditionally. Reference types cannot be moved.
-    constexpr auto value() && -> Value&& requires(!::meta::is_reference<T>) {
+    [[nodiscard]] constexpr auto value() && -> Value&& requires(
+        !::meta::is_reference<T>) {
         Result(this->has_value())
             .assert(
                 // "`.value()` was illegally called on an `Optional` which "
@@ -623,7 +625,7 @@ class Optional {
 
     // Move the const-qualified `storage` unconditionally. Reference types
     // cannot be moved.
-    constexpr auto value() const&& -> Value const&& requires(
+    [[nodiscard]] constexpr auto value() const&& -> Value const&& requires(
         !::meta::is_reference<T>) {
         Result(this->has_value())
             .assert(
@@ -635,7 +637,7 @@ class Optional {
 
     // Get the value held by a non-`const`-qualified `Optional`, or a fallback
     // value if it does not hold a value.
-    constexpr auto value_or(Value const fallback) & -> Value {
+    [[nodiscard]] constexpr auto value_or(Value const fallback) & -> Value {
         if (this->storage.has_value()) {
             return this->storage.value();
         }
@@ -653,7 +655,7 @@ class Optional {
 
     // Get the value held by a non-`const`-qualified `Optional`, or a fallback
     // value if it does not hold a value.
-    constexpr auto value_or(Value&& fallback) && -> Value&& {
+    [[nodiscard]] constexpr auto value_or(Value&& fallback) && -> Value&& {
         if (this->storage.has_value()) {
             return cat::move(this->storage.value());
         }
@@ -662,7 +664,7 @@ class Optional {
 
     // Get the value held by a `const`-qualified `Optional`, or a fallback
     // value if it does not hold a value.
-    constexpr auto value_or(Value&& fallback) const&& -> Value&& {
+    [[nodiscard]] constexpr auto value_or(Value&& fallback) const&& -> Value&& {
         if (this->storage.has_value()) {
             return cat::move(this->storage.value());
         }
@@ -672,7 +674,7 @@ class Optional {
     // Get a pointer to the data owned by this `Optional`. If `Optional` holds a
     // raw pointer, this is equivalent to `.value()`, otherwise this is
     // equivalent to `addressof(optional.value())`.
-    constexpr auto p_value() {
+    [[nodiscard]] constexpr auto p_value() {
         if (!::meta::is_constant_evaluated()) {
             Result(this->has_value())
                 .assert(
@@ -690,7 +692,7 @@ class Optional {
     // Get a pointer to the data owned by this `Optional`. If `Optional` holds a
     // raw pointer, this is equivalent to `.value()`, otherwise this is
     // equivalent to `addressof(optional.value())`.
-    constexpr auto p_value() const {
+    [[nodiscard]] constexpr auto p_value() const {
         if (!::meta::is_constant_evaluated()) {
             Result(this->has_value())
                 .assert(
@@ -711,7 +713,7 @@ class Optional {
     // If this non-`const`-qualified `Optional` holds a value, transform it by a
     // function. Otherwise, propagate an empty `Optional`.
     template <typename Function>
-    constexpr auto transform(Function&& callback) & {
+    [[nodiscard]] constexpr auto transform(Function&& callback) & {
         using U = decltype(callback(this->value()));
         static_assert(!::meta::IsSpecializationTrait<U, Optional>::value);
 
@@ -730,7 +732,7 @@ class Optional {
     // If this `const`-qualified `Optional` holds a value, transform it by a
     // function without side-effects. Otherwise, propagate an empty `Optional`.
     template <typename Function>
-    constexpr auto transform(Function&& callback) const& {
+    [[nodiscard]] constexpr auto transform(Function&& callback) const& {
         using U = decltype(callback(this->value()));
         static_assert(!::meta::IsSpecializationTrait<U, Optional>::value);
 
@@ -749,7 +751,7 @@ class Optional {
     // If this non-`const`-qualified `Optional` holds a value, transform it by
     // function. Otherwise, propagate an empty `Optional`.
     template <typename Function>
-    constexpr auto transform(Function&& callback) && {
+    [[nodiscard]] constexpr auto transform(Function&& callback) && {
         using U = decltype(callback(this->value()));
         static_assert(!::meta::IsSpecializationTrait<U, Optional>::value);
 
@@ -768,7 +770,7 @@ class Optional {
     // If this `const`-qualified `Optional` holds a value, transform it by a
     // function without side-effects. Otherwise, propagate an empty `Optional`.
     template <typename Function>
-    constexpr auto transform(Function&& callback) const&& {
+    [[nodiscard]] constexpr auto transform(Function&& callback) const&& {
         using U = decltype(callback(this->value()));
         static_assert(!::meta::IsSpecializationTrait<U, Optional>::value);
 
@@ -788,7 +790,7 @@ class Optional {
     // `const`-qualified `Optional` and propagate the result, if it holds a
     // value.
     template <typename Function>
-    constexpr auto and_then(Function&& callback) & {
+    [[nodiscard]] constexpr auto and_then(Function&& callback) & {
         using U = decltype(callback(this->value()));
         static_assert(::meta::IsSpecializationTrait<U, Optional>::value);
 
@@ -802,7 +804,7 @@ class Optional {
     // `const`-qualified `Optional` and propagate the result, if it holds a
     // value.
     template <typename Function>
-    constexpr auto and_then(Function&& callback) const& {
+    [[nodiscard]] constexpr auto and_then(Function&& callback) const& {
         using U = decltype(callback(this->value()));
         static_assert(::meta::IsSpecializationTrait<U, Optional>::value);
 
@@ -816,7 +818,7 @@ class Optional {
     // non-`const`-qualified `Optional` and propagate the result, if it holds a
     // value.
     template <typename Function>
-    constexpr auto and_then(Function&& callback) && {
+    [[nodiscard]] constexpr auto and_then(Function&& callback) && {
         using U = decltype(callback(this->value()));
         static_assert(::meta::IsSpecializationTrait<U, Optional>::value);
 
@@ -831,7 +833,7 @@ class Optional {
     // `const`-qualified `Optional` and propagate the result, if it holds a
     // value.
     template <typename Function>
-    constexpr auto and_then(Function&& callback) const&& {
+    [[nodiscard]] constexpr auto and_then(Function&& callback) const&& {
         using U = decltype(callback(this->value()));
         static_assert(::meta::IsSpecializationTrait<U, Optional>::value);
 
@@ -845,7 +847,7 @@ class Optional {
     // Invoke a callback iff a non-`const`-qualified `Optional` holds no value.
     // This callback can return `void` or an `Optional`.
     template <typename Function>
-    constexpr auto or_else(Function&& callback) & {
+    [[nodiscard]] constexpr auto or_else(Function&& callback) & {
         using U = decltype(callback());
         static_assert(::meta::is_void<U> ||
                       ::meta::IsSpecializationTrait<U, Optional>::value);
@@ -868,7 +870,7 @@ class Optional {
     // Invoke a callback iff a `const`-qualified `Optional` holds no value. This
     // callback can return `void` or an `Optional`.
     template <typename Function>
-    constexpr auto or_else(Function&& callback) const& {
+    [[nodiscard]] constexpr auto or_else(Function&& callback) const& {
         using U = decltype(callback());
         static_assert(::meta::is_void<U> ||
                       ::meta::IsSpecializationTrait<U, Optional>::value);
@@ -891,7 +893,7 @@ class Optional {
     // Invoke a callback iff a non-`const`-qualified move-only `Optional` holds
     // no value. This callback can return `void` or an `Optional`.
     template <typename Function>
-    constexpr auto or_else(Function&& callback) && {
+    [[nodiscard]] constexpr auto or_else(Function&& callback) && {
         using U = decltype(callback());
         static_assert(::meta::is_void<U> ||
                       ::meta::IsSpecializationTrait<U, Optional>::value);
@@ -914,7 +916,7 @@ class Optional {
     // Invoke a callback iff a `const`-qualified move-only `Optional` holds no
     // value.  This callback can return `void` or an `Optional`.
     template <typename Function>
-    constexpr auto or_else(Function&& callback) const&& {
+    [[nodiscard]] constexpr auto or_else(Function&& callback) const&& {
         using U = decltype(callback());
         static_assert(::meta::is_void<U> ||
                       ::meta::IsSpecializationTrait<U, Optional>::value);
@@ -936,7 +938,7 @@ class Optional {
 
     // If this `Optional` is empty, terminate the running process immediately.
     // Otherwise, return its value.
-    auto or_panic() {
+    [[nodiscard]] constexpr auto or_panic() {
         if (this->has_value()) [[likely]] {
             if constexpr (!::meta::is_void<T>) {
                 return this->value();
@@ -950,8 +952,8 @@ class Optional {
 
     // If this `Optional` is empty, print an error message and terminate the
     // running process immediately. Otherwise, return its value.
-    auto or_panic(String const&
-                  // error_message
+    [[nodiscard]] constexpr auto or_panic(String const&
+                                          // error_message
     ) {
         if (this->has_value()) [[likely]] {
             if constexpr (!::meta::is_void<T>) {

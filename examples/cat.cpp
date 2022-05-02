@@ -69,7 +69,7 @@ void read_and_print_file(char* p_file_name) {
         bytes_remaining -= current_block_size;
     }
 
-    nix::read_vector(file_descriptor, io_vectors).or_panic();
+    _ = nix::read_vector(file_descriptor, io_vectors).or_panic();
 
     for (nix::IoVector const& iov : io_vectors) {
         output_to_console(iov);

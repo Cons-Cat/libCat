@@ -56,19 +56,19 @@ class Span {
         this->length = cat::move(span).length;
     }
 
-    constexpr auto slice(ssize const start_index, ssize const end_index)
-        -> Span<T> {
+    [[nodiscard]] constexpr auto slice(ssize const start_index,
+                                       ssize const end_index) -> Span<T> {
         Result{start_index >= 0}.assert();
         Result{end_index <= length}.assert();
         return Span<T>(this->p_storage + start_index.c(),
                        end_index - start_index);
     }
 
-    constexpr auto first(ssize const count) -> Span<T> {
+    [[nodiscard]] constexpr auto first(ssize const count) -> Span<T> {
         return this->slice(0, count);
     }
 
-    constexpr auto last(ssize const count) -> Span<T> {
+    [[nodiscard]] constexpr auto last(ssize const count) -> Span<T> {
         return this->slice(length - count, length);
     }
 
@@ -79,23 +79,23 @@ class Span {
 
     // TODO: Add an `at()` method.
 
-    constexpr auto p_data() const -> T* {
+    [[nodiscard]] constexpr auto p_data() const -> T* {
         return this->p_storage;
     }
 
-    constexpr auto size() const -> ssize {
+    [[nodiscard]] constexpr auto size() const -> ssize {
         return this->length;
     }
 
-    constexpr auto front() const -> T& {
+    [[nodiscard]] constexpr auto front() const -> T& {
         return this->p_storage[0];
     }
 
-    constexpr auto back() const -> T& {
+    [[nodiscard]] constexpr auto back() const -> T& {
         return this->p_storage[this->length - 1];
     }
 
-    constexpr auto is_empty() const -> bool1 {
+    [[nodiscard]] constexpr auto is_empty() const -> bool1 {
         return this->length > 0;
     }
 
@@ -120,24 +120,21 @@ class Span {
         }
     };
 
-    constexpr auto begin() const {
+    [[nodiscard]] constexpr auto begin() const {
         return Iterator(0, this->p_storage);
     }
 
-    constexpr auto end() const {
+    [[nodiscard]] constexpr auto end() const {
         return Iterator(length, this->p_storage);
     }
 
-    constexpr auto rbegin() const {
+    [[nodiscard]] constexpr auto rbegin() const {
         return cat::ReversedIterator<Iterator>(length - 1, this->p_storage);
     }
 
-    constexpr auto rend() const {
+    [[nodiscard]] constexpr auto rend() const {
         return cat::ReversedIterator<Iterator>(-1, this->p_storage);
     }
 };
-
-template <typename T>
-Span(T) -> Span<T>;
 
 }  // namespace cat

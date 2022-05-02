@@ -68,5 +68,8 @@ void meow() {
 
     // TODO: Test `constexpr`.
 
+    // Slicing.
+    [[maybe_unused]] cat::Span span = array_1.first(1);
+
     cat::exit();
 };
