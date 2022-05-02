@@ -17,9 +17,7 @@ constexpr auto addressof(T& value) -> T* {
 }
 
 template <typename T>
-constexpr auto addressof(T const& value) -> T const* {
-    return __builtin_addressof(value);
-}
+constexpr auto addressof(T const&& value) -> T const* = delete;
 
 }  // namespace cat
 
