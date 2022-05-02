@@ -66,7 +66,7 @@ template <typename T, typename U, typename... Remaining>
 constexpr auto max(T&& value_1, U&& value_2, Remaining&&... remaining) {
     // Recurse through the list of variadic arguments, discarding the larger
     // element each time.
-    return (value_1 < value_2)
+    return (value_1 > value_2)
                ? cat::max(value_1, ::meta::forward<Remaining>(remaining)...)
                : cat::max(value_2, ::meta::forward<Remaining>(remaining)...);
 }
@@ -75,7 +75,7 @@ constexpr auto max(T&& value_1, U&& value_2, Remaining&&... remaining) {
 template <typename Out, typename T, typename U, typename... Remaining>
 constexpr auto max(T&& value_1, U&& value_2, Remaining&&... remaining) -> Out {
     return static_cast<Out>(
-        (value_1 < value_2)
+        (value_1 > value_2)
             // Invoke the implicit output `max()`.
             ? cat::max(value_1, ::meta::forward<Remaining>(remaining)...)
             : cat::max(value_2, ::meta::forward<Remaining>(remaining)...));
