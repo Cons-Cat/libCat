@@ -1,7 +1,7 @@
 #include <scaredy>
 
 // Minimal result types usable for `cat::Scaredy`.
-struct ResultOne {
+struct ErrorOne {
     int8 code;
 
     constexpr auto error() const -> int8 {
@@ -9,7 +9,7 @@ struct ResultOne {
     }
 };
 
-struct ResultTwo {
+struct ErrorTwo {
     int8 code;
 
     constexpr auto error() const -> int8 {
@@ -17,17 +17,17 @@ struct ResultTwo {
     }
 };
 
-auto one() -> ResultOne {
-    ResultOne one{1};
+auto one() -> ErrorOne {
+    ErrorOne one{1};
     return one;
 }
 
-auto two() -> ResultTwo {
-    ResultTwo two{2};
+auto two() -> ErrorTwo {
+    ErrorTwo two{2};
     return two;
 }
 
-auto union_errors(int4 error) -> cat::Scaredy<int8, ResultOne, ResultTwo> {
+auto union_errors(int4 error) -> cat::Scaredy<int8, ErrorOne, ErrorTwo> {
     switch (error.c()) {
         case 0:
             return one();
@@ -45,12 +45,12 @@ auto union_errors(int4 error) -> cat::Scaredy<int8, ResultOne, ResultTwo> {
 void meow() {
     cat::Scaredy result = union_errors(0);
     Result(!result.has_value()).or_panic();
-    Result(result.holds_alternative<ResultOne>()).or_panic();
+    Result(result.holds_alternative<ErrorOne>()).or_panic();
     Result(!result.holds_alternative<int8>()).or_panic();
 
     result = union_errors(1);
     Result(!result.has_value()).or_panic();
-    Result(result.holds_alternative<ResultTwo>()).or_panic();
+    Result(result.holds_alternative<ErrorTwo>()).or_panic();
     Result(!result.holds_alternative<int8>()).or_panic();
 
     result = union_errors(2);

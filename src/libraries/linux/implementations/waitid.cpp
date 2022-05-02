@@ -1,6 +1,8 @@
 #include <linux>
 
-auto nix::waitid(WaitId type, ProcessId id, WaitOptionsFlags options)
-    -> Result<cat::Any> {
-    return nix::syscall5(247, type, id, nullptr, options, nullptr);
+auto nix::waitid(nix::WaitId type, nix::ProcessId id,
+                 nix::WaitOptionsFlags options)
+    -> nix::ScaredyLinux<nix::ProcessId> {
+    return nix::syscall<nix::ProcessId>(247, type, id, nullptr, options,
+                                        nullptr);
 }

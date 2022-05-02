@@ -11,7 +11,9 @@ namespace cat {
 namespace detail {
     template <typename T, typename... Errors>
     struct ScaredyVariantStorage {
-        cat::Variant<T, Errors...> storage;
+        using Type =
+            ::meta::Conditional<::meta::is_void<T>, cat::detail::Monostate, T>;
+        cat::Variant<Type, Errors...> storage;
 
         constexpr ScaredyVariantStorage() = default;
 
@@ -48,47 +50,33 @@ namespace detail {
         }
 
         constexpr auto has_value() const -> bool1 {
-            return this->storage.template holds_alternative<T>();
+            return this->storage.template holds_alternative<Type>();
         }
 
-        template <typename TopError, typename... ErrorList>
-        constexpr auto value() & -> T& {
+        constexpr auto value() & -> Type& requires(!::meta::is_void<T>) {
             return this->storage.template value<T>();
         }
 
-        template <typename TopError, typename... ErrorList>
-        constexpr auto value() const& -> T& {
+        constexpr auto value() const& -> Type& requires(!::meta::is_void<T>) {
             return this->storage.template value<T>();
         }
 
-        template <typename TopError, typename... ErrorList>
-        constexpr auto value() && -> T&& {
+        constexpr auto value() && -> Type&& requires(!::meta::is_void<T>) {
             return cat::move(this->storage.template value<T>());
         }
 
-        template <typename TopError, typename... ErrorList>
-        constexpr auto value() const&& -> T&& {
+        constexpr auto value() const&& -> Type&& requires(!::meta::is_void<T>) {
             return cat::move(this->storage.template value<T>());
         }
 
-        template <typename TopError, typename... ErrorList>
+        template <typename Error>
         constexpr auto error() {
-            // If this error type is currently held by the `cat::Variant`.
-            if (this->storage.template holds_alternative<TopError>()) {
-                return this->storage.template value<TopError>().error();
-            }
-            // Otherwise, recurse with the next type.
-            return this->error<ErrorList...>();
+            return this->storage.template value<Error>();
         }
 
-        template <typename TopError, typename... ErrorList>
+        template <typename Error>
         constexpr auto error() const {
-            // If this error type is currently held by the `cat::Variant`.
-            if (this->storage.template holds_alternative<TopError>()) {
-                return this->storage.template value<TopError>().error();
-            }
-            // Otherwise, recurse with the next type.
-            return this->error<ErrorList...>();
+            return this->storage.template value<Error>();
         }
 
         template <typename U>
@@ -107,6 +95,9 @@ requires(
     using Storage = cat::detail::ScaredyVariantStorage<T, Errors...>;
     Storage storage;
   public:
+    using Type =
+        ::meta::Conditional<::meta::is_void<T>, cat::detail::Monostate, T>;
+
     constexpr Scaredy() = default;
 
     constexpr Scaredy(auto const& input) : storage(input){};
@@ -127,33 +118,59 @@ requires(
         return this->storage.has_value();
     }
 
-    constexpr auto value() & {
-        return this->storage.template value<T>();
+    constexpr auto value() & requires(!::meta::is_void<T>) {
+        return this->storage.template value();
     }
 
-    constexpr auto value() const& {
-        return this->storage.template value<T>();
+    constexpr auto value() const& requires(!::meta::is_void<T>) {
+        return this->storage.value();
     }
 
-    constexpr auto value() && {
-        return cat::move(this->storage.template value<T>());
+    constexpr auto value() && requires(!::meta::is_void<T>) {
+        return cat::move(this->storage.value());
     }
 
-    constexpr auto value() const&& {
-        return cat::move(this->storage.template value<T>());
+    constexpr auto value() const&& requires(!::meta::is_void<T>) {
+        return cat::move(this->storage.value());
     }
 
+    template <typename Error>
     constexpr auto error() {
-        return this->storage.template error<Errors...>();
+        return this->storage.template error<Error>();
     }
 
+    template <typename Error>
     constexpr auto error() const {
-        return this->storage.template error<Errors...>();
+        return this->storage.template error<Error>();
     }
 
     template <typename U>
     constexpr auto holds_alternative() const -> bool1 {
         return this->storage.template holds_alternative<U>();
+    }
+
+    auto or_panic() {
+        if (this->has_value()) [[likely]] {
+            if constexpr (!::meta::is_void<T>) {
+                return this->value();
+            } else {
+                return;
+            }
+        }
+        cat::exit(1);
+        __builtin_unreachable();
+    }
+
+    auto or_panic() const {
+        if (this->has_value()) [[likely]] {
+            if constexpr (!::meta::is_void<T>) {
+                return this->value();
+            } else {
+                return;
+            }
+        }
+        cat::exit(1);
+        __builtin_unreachable();
     }
 };
 

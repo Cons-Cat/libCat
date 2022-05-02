@@ -5,6 +5,7 @@
 #include <any>
 #include <bit>
 #include <concepts>
+#include <scaredy>
 #include <span>
 #include <string>
 #include <type_traits>
@@ -18,54 +19,269 @@ constexpr ssize page_size = 4096_ki;
 
 namespace nix {
 
-// TODO: Finish filling out `LinuxError`.
-// https://www.thegeekstuff.com/2010/10/linux-error-codes/
 enum class LinuxError {
     // Operation is not permitted.
-    not_permitted = -1,
+    perm = -1,
     // No such file or directory.
-    no_entry = -2,
+    noent = -2,
     // No such process.
-    search = -3,
+    srch = -3,
     // Interrupted system call.
-    interrupt = -4,
+    intr = -4,
     // Input/Output error.
     io = -5,
+    // No such device or address.
     nxio = -6,
-    too_big = -7,
-    no_exec = -8,
+    // Argument list is too long.
+    toobig = -7,
+    // Exec format error.
+    noexec = -8,
     // Bad file number.
-    bad_file = -9,
+    badf = -9,
     // No child processes.
     child = -10,
-    // Try again.
+    // Try this operation again.
     again = -11,
     // Out of memory.
-    no_memory = -12,
+    nomem = -12,
     // Access is denied.
-    access = -13,
+    acces = -13,
     // Bad memory address.
-    segfault = -14,
+    fault = -14,
     // Invaild block address.
-    not_block = -15,
+    notblk = -15,
     // Device or resource is busy.
     busy = -16,
     // File already exists.
-    file_exists = -17,
+    exist = -17,
+    // Cross device link.
     xdev = -18,
     // No such device exists.
-    no_device = -19,
+    nodev = -19,
     // Is not a directory.
-    not_directory = -20,
+    notdir = -20,
     // Is a directory instead of a file.
-    is_directory = -21,
+    isdir = -21,
     // Mysteriously invalid argument.
-    invalid = -22,
+    inval = -22,
     // Too many file descriptors exist across the system.
-    file_table_overflow = -23,
+    nfile = -23,
     // Too many files are open in this process.
-    too_many_files = -24,
+    mfile = -24,
+    // Not a tty.
+    notty = -25,
+    // Text file busy.
+    txtbsy = -26,
+    // File too large.
+    fbig = -27,
+    // No space left on device.
+    nospc = -28,
+    // Illegal seek.
+    spipe = -29,
+    // Read-only file system.
+    rofs = -30,
+    // Too many links.
+    mlink = -31,
+    // Broken pipe.
+    pipe = -32,
+    // Math argument out of domain of func.
+    dom = -33,
+    // Math result not representable.
+    range = -34,
+    // Resource deadlock would occur.
+    deadlk = -35,
+    // File name too long.
+    nametoolong = -36,
+    // No record locks available.
+    nolck = -37,
+    // Function not implemented.
+    nosys = -38,
+    // Directory not empty.
+    notempty = -39,
+    // Too many symbolic links encountered.
+    loop = -40,
+    // No message of desired type.
+    nomsg = -42,
+    // Identifier removed.
+    idrm = -43,
+    // Channel number out of range.
+    chrng = -44,
+    // Level 2 not synchronized.
+    l2_nsync = -45,
+    // Level 3 halted.
+    l3_hlt = -46,
+    // Level 3 reset.
+    l3_rst = -47,
+    // Link number out of range.
+    lnrng = -48,
+    // Protocol driver not attached.
+    unatch = -49,
+    // No CSI structure available.
+    nocsi = -50,
+    // Level 2 halted.
+    l2_hlt = -51,
+    // Invalid exchange.
+    bade = -52,
+    // Invalid request descriptor.
+    badr = 53,
+    // Exchange full.
+    xfull = -54,
+    // No anode.
+    noano = -55,
+    // Invalid request code.
+    badrqc = -56,
+    // Invalid slot.
+    badslt = -57,
+    // Bad font file format.
+    bfont = -59,
+    // Device not a stream.
+    nostr = 60,
+    // No data available.
+    nodata = -61,
+    // Timer expired.
+    time = -62,
+    // Out of streams resources.
+    nosr = 63,
+    // Machine is not on the network.
+    nonet = -64,
+    // Package not installed.
+    nopkg = -65,
+    // Object is remote.
+    remote = -66,
+    // Link has been severed.
+    nolink = -67,
+    // Advertise error.
+    adv = -68,
+    // Srmount error.
+    srmnt = -69,
+    // Communication error on send.
+    comm = -70,
+    // Protocol error.
+    proto = -71,
+    // Multihop attempted.
+    multihop = -72,
+    // RFS specific error.
+    dotdot = -73,
+    // Not a data message.
+    badmsg = -74,
+    // Value too large for defined data type.
+    overflow = -75,
+    // Name not unique on network.
+    notuniq = -76,
+    // File descriptor in bad state.
+    badfd = -77,
+    // Remote address changed.
+    remchg = -78,
+    // Can not access a needed shared library.
+    libacc = -79,
+    // Accessing a corrupted shared library.
+    libbad = -80,
+    // .lib section in a.out corrupted.
+    libscn = -81,
+    // Attempting to link in too many shared libraries.
+    libmax = -82,
+    // Cannot exec a shared library directly.
+    libexec = -83,
+    // Illegal byte sequence.
+    ilseq = -84,
+    // Interrupted system call should be restarted.
+    restart = -85,
+    // Streams pipe error.
+    strpipe = -86,
+    // Too many users.
+    users = -87,
+    // Socket operation on non-socket.
+    notsock = -88,
+    // Destination address required.
+    destaddrreq = -89,
+    // Message too long.
+    msgsize = -90,
+    // Protocol wrong type for socket.
+    prototype = -91,
+    // Protocol not available.
+    noprotoopt = -92,
+    // Protocol not supported.
+    protonosupport = -93,
+    // Socket type not supported.
+    socktnosupport = -94,
+    // Operation not supported on transport endpoint.
+    opnotsupp = -95,
+    // Protocol family not supported.
+    pfnosupport = -96,
+    // Address family not supported by protocol.
+    afnosupport = -97,
+    // Address already in use.
+    addrinuse = -98,
+    // Cannot assign requested address.
+    addrnotavail = -99,
+    // Network is down.
+    netdown = -100,
+    // Network is unreachable.
+    netunreach = -101,
+    // Network dropped connection because of reset.
+    netreset = -102,
+    // Software caused connection abort.
+    connaborted = -103,
+    // Connection reset by peer.
+    connreset = -104,
+    // No buffer space available.
+    nobufs = -105,
+    // Transport endpoint is already connected.
+    isconn = -106,
+    // Transport endpoint is not connected.
+    notconn = -107,
+    // Cannot send after transport endpoint shutdown.
+    shutdown = -108,
+    // Too many references: cannot splice.
+    toomanyrefs = -109,
+    // Connection timed out.
+    timedout = -110,
+    // Connection refused.
+    connrefused = -111,
+    // Host is down.
+    hostdown = -112,
+    // No route to host.
+    hostunreach = -113,
+    // Operation already in progress.
+    already = -114,
+    // Operation now in progress.
+    inprogress = -115,
+    // Stale NFS file handle.
+    stale = -116,
+    // Structure needs cleaning.
+    uclean = -117,
+    // Not a XENIX named type file.
+    notnam = -118,
+    // No XENIX semaphores available.
+    navail = -119,
+    // Is a named type file.
+    isnam = -120,
+    // Remote I/O error.
+    remoteio = -121,
+    // Quota exceeded.
+    dquot = -122,
+    // No medium found.
+    nomedium = -123,
+    // Wrong medium type.
+    mediumtype = -124,
+    // Operation Canceled.
+    canceled = -125,
+    // Required key not available.
+    nokey = -126,
+    // Key has expired.
+    keyexpired = -127,
+    // Key has been revoked.
+    keyrevoked = -128,
+    // Key was rejected by service.
+    keyrejected = -129,
+    // Owner died.
+    ownerdead = -130,
+    // State not recoverable.
+    notrecoverable = -131,
 };
+
+template <typename T>
+using ScaredyLinux = cat::Scaredy<T, LinuxError>;
 
 enum class MemoryProtectionFlags : unsigned int {
     none = 0b000,     // Data cannot be accessed at all.
@@ -243,75 +459,73 @@ struct meta::EnumFlagTrait<nix::WaitOptionsFlags> : meta::TrueTypeTrait {};
 namespace nix {
 
 auto read(FileDescriptor const file_descriptor, char const* p_string_buffer,
-          ssize const length) -> Result<ssize>;
+          ssize const length) -> ScaredyLinux<ssize>;
 
 auto write(FileDescriptor const file_descriptor, char const* p_string_buffer,
-           ssize const length) -> Result<ssize>;
+           ssize const length) -> ScaredyLinux<ssize>;
 
 auto write(FileDescriptor const file_descriptor, cat::String const& string)
-    -> Result<ssize>;
+    -> ScaredyLinux<ssize>;
 
 auto open_file(char const* p_file_path, OpenMode file_mode,
-               OpenFlags flags = OpenFlags{0}) -> Result<FileDescriptor>;
+               OpenFlags flags = OpenFlags{0}) -> ScaredyLinux<FileDescriptor>;
 
-auto create_file(char const* p_file_path, nix::OpenMode file_mode)
-    -> Result<FileDescriptor>;
+auto create_file(char const* p_file_path, OpenMode file_mode)
+    -> ScaredyLinux<FileDescriptor>;
 
-auto close(FileDescriptor const file_descriptor) -> Result<>;
+auto close(FileDescriptor const file_descriptor) -> ScaredyLinux<void>;
 
-auto unlink(char const* p_path_name) -> Result<>;
+auto unlink(char const* p_path_name) -> ScaredyLinux<void>;
 
 auto map_memory(usize const beginning_address, ssize const bytes_size,
                 MemoryProtectionFlags const protections,
                 MemoryFlags const flags, FileDescriptor const file_descriptor,
-                ssize const pages_offset) -> Result<void*>;
+                ssize const pages_offset) -> ScaredyLinux<void*>;
 
-auto unmap_memory(void const* const p_memory, ssize const length) -> Result<>;
+auto unmap_memory(void const* const p_memory, ssize const length)
+    -> ScaredyLinux<void>;
 
 struct Thread;
 
 auto wait(ProcessId waiting_on_id, int4* p_status_output,
-          WaitOptionsFlags options, void* p_resource_usage) -> Result<cat::Any>;
+          WaitOptionsFlags options, void* p_resource_usage)
+    -> ScaredyLinux<ProcessId>;
 
 // TODO: Separate this into separate functions for waiting on pid, gid, etc.
 auto waitid(WaitId type, ProcessId id, WaitOptionsFlags options)
-    -> Result<cat::Any>;
+    -> ScaredyLinux<ProcessId>;
 
 struct CloneArguments;
 
-// TODO: Make all syscalls inline assembly. It did not work, last I tried.
-/* The source to these functions is contained in the ./detail/ subdirectory
- * at the path of this file. They are split into individual files, because
- * GCC cannot exclude compiling unused functions individually from within
- * one .s file. */
-auto syscall0(int8 const) -> Result<cat::Any>;
-auto syscall1(int8 const, cat::Any const) -> Result<cat::Any>;
-auto syscall2(int8 const, cat::Any const, cat::Any const) -> Result<cat::Any>;
-auto syscall3(int8 const, cat::Any const, cat::Any const, cat::Any const)
-    -> Result<cat::Any>;
-auto syscall4(int8 const, cat::Any const, cat::Any const, cat::Any const,
-              cat::Any const) -> Result<cat::Any>;
-auto syscall5(int8 const, cat::Any const, cat::Any const, cat::Any const,
-              cat::Any const, cat::Any const) -> Result<cat::Any>;
-auto syscall6(int8 const, cat::Any const, cat::Any const, cat::Any const,
-              cat::Any const, cat::Any const, cat::Any const)
-    -> Result<cat::Any>;
+auto syscall0(ssize const) -> ssize;
+auto syscall1(ssize const, cat::Any const) -> ssize;
+auto syscall2(ssize const, cat::Any const, cat::Any const) -> ssize;
+auto syscall3(ssize const, cat::Any const, cat::Any const, cat::Any const)
+    -> ssize;
+auto syscall4(ssize const, cat::Any const, cat::Any const, cat::Any const,
+              cat::Any const) -> ssize;
+auto syscall5(ssize const, cat::Any const, cat::Any const, cat::Any const,
+              cat::Any const, cat::Any const) -> ssize;
+auto syscall6(ssize const, cat::Any const, cat::Any const, cat::Any const,
+              cat::Any const, cat::Any const, cat::Any const) -> ssize;
 
-template <typename... Args>
-auto syscall(int8 const call, Args const... parameters) -> Result<cat::Any>
+template <typename T, typename... Args>
+auto syscall(ssize const call, Args const... parameters)
+    -> cat::Scaredy<T, LinuxError>
 requires(sizeof...(Args) < 7);
 
 // Create and return a `cat::Socket`.
 auto create_socket(int8 const protocol_family, int8 const type,
-                   int8 const protocol) -> Result<FileDescriptor>;
+                   int8 const protocol) -> ScaredyLinux<FileDescriptor>;
 
 // Create and return a `cat::SocketLocal` (also known as Unix socket).
 auto create_socket_local(int8 const type, int8 const protocol)
-    -> Result<FileDescriptor>;
+    -> ScaredyLinux<FileDescriptor>;
 
 // Connect a `cat::Socket` to an address.
 auto connect_socket(FileDescriptor const socket_descriptor,
-                    void const* p_socket, ssize socket_size) -> Result<>;
+                    void const* p_socket, ssize socket_size)
+    -> ScaredyLinux<void>;
 
 // Make a connection over a `cat::Socket`. This returns a new socket which has
 // been connected to. This new `cat::Socket` is not in a listening state.
@@ -319,27 +533,27 @@ auto connect_socket(FileDescriptor const socket_descriptor,
 auto accept_socket(FileDescriptor const socket_descriptor,
                    void const* __restrict p_socket = nullptr,
                    ssize const* __restrict p_addr_len = nullptr)
-    -> Result<FileDescriptor>;
+    -> ScaredyLinux<FileDescriptor>;
 
 auto recieve_buffer(FileDescriptor const socket_descriptor,
                     void const* p_message_buffer, ssize const buffer_length,
                     cat::Socket const* __restrict p_addr = nullptr,
                     ssize const* __restrict p_addr_length = nullptr)
-    -> Result<ssize>;
+    -> ScaredyLinux<ssize>;
 
 auto bind_socket(FileDescriptor const socket_descriptor, void const* p_socket,
-                 ssize const p_addr_len) -> Result<>;
+                 ssize const p_addr_len) -> ScaredyLinux<void>;
 
 // Mark a socket as available to make connections with `accept()`.
 auto listen_to_socket(FileDescriptor const socket_descriptor,
-                      int8 const backlog) -> Result<>;
+                      int8 const backlog) -> ScaredyLinux<void>;
 
 // Returns the number of characters sent to `destination_socket`.
 auto send_buffer(FileDescriptor const socket_descriptor,
                  void const* p_message_buffer, ssize const buffer_length,
                  int8 const flags,
                  cat::Socket const* p_destination_socket = nullptr,
-                 ssize const addr_length = 0) -> Result<ssize>;
+                 ssize const addr_length = 0) -> ScaredyLinux<ssize>;
 
 struct Process {
     ProcessId id;
@@ -358,15 +572,17 @@ struct Process {
     // TODO: Use `meta::Allocator` concept.
     auto create(auto& allocator, ssize const initial_stack_size,
                 auto const& function, void* p_arguments_struct,
-                CloneFlags const flags = default_flags) -> Result<> {
+                CloneFlags const flags = default_flags) -> ScaredyLinux<void> {
         this->stack_size = initial_stack_size;
         // Allocate a stack for this thread, and get an address to the top of
         // it.
-        auto memory = allocator.malloc(initial_stack_size);
-        if (!memory.has_value()) {
-            return Failure(1);
+        cat::Optional maybe_memory = allocator.malloc(initial_stack_size);
+        if (!maybe_memory.has_value()) {
+            // TODO: This is an arbitrary error. Allocation shouldn't happen in
+            // this function.
+            return nix::LinuxError::inval;
         }
-        this->p_stack = &allocator.get(memory.value());
+        this->p_stack = &allocator.get(maybe_memory.value());
 
         // TODO: Use `intptr`.
         // We need the top because memory will be pushed to it downwards on
@@ -374,6 +590,7 @@ struct Process {
         volatile void* p_stack_top =
             static_cast<char*>(this->p_stack) + this->stack_size;
 
+        // ScaredyLinux<void> result;
         cat::Any result;
         asm goto volatile(
             R"(sub $8, %%rsi
@@ -398,18 +615,18 @@ struct Process {
             : parent_thread);
 
 parent_thread:
-        if (static_cast<int4>(result) < 0) {
-            return Failure{result};
+        if (static_cast<ssize>(result) < 0) {
+            return static_cast<nix::LinuxError>(result);
         }
         // `this->process_id` was initialized by the syscall.
-        return okay;
+        return monostate;
     }
 
-    auto wait() const -> Result<ProcessId> {
-        Result<ProcessId> result =
-            nix::waitid(WaitId::process_id, this->id,
-                        WaitOptionsFlags::exited | WaitOptionsFlags::clone |
-                            WaitOptionsFlags::no_wait);
+    auto wait() const -> ScaredyLinux<ProcessId> {
+        ScaredyLinux<ProcessId> result =
+            waitid(WaitId::process_id, this->id,
+                   WaitOptionsFlags::exited | WaitOptionsFlags::clone |
+                       WaitOptionsFlags::no_wait);
         return result;
         // TODO: Free the stack memory.
     }
@@ -445,10 +662,10 @@ struct IoVector : cat::Span<cat::Byte> {
 };
 
 auto write_vector(FileDescriptor const file_descriptor,
-                  cat::Span<IoVector> const& vectors) -> Result<ssize>;
+                  cat::Span<IoVector> const& vectors) -> ScaredyLinux<ssize>;
 
 auto read_vector(FileDescriptor const file_descriptor,
-                 cat::Span<IoVector> const& vectors) -> Result<ssize>;
+                 cat::Span<IoVector> const& vectors) -> ScaredyLinux<ssize>;
 
 struct File {
     char x;
@@ -512,10 +729,10 @@ struct FileStatus {
     }
 };
 
-auto file_path_status(cat::String const& file_path) -> Result<FileStatus>;
+auto file_path_status(cat::String const& file_path) -> ScaredyLinux<FileStatus>;
 
 auto file_descriptor_status(FileDescriptor const file_descriptor)
-    -> Result<FileStatus>;
+    -> ScaredyLinux<FileStatus>;
 
 }  // namespace nix
 

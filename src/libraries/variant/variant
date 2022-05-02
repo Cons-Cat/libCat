@@ -13,10 +13,10 @@ namespace cat {
 template <typename... Ts>
 class Variant {
     static constexpr ssize size = cat::max(ssizeof<Ts>()...);
-    static constexpr usize alignment = cat::max(alignof(Ts)...);
+    static constexpr unsigned alignment = cat::max(alignof(Ts)...);
 
     using Storage = cat::Array<char, size>;
-    alignas(alignment.c()) Storage storage;
+    alignas(alignment) Storage storage;
     uint1 discriminant;
 
     template <typename T, ssize index>
@@ -46,8 +46,8 @@ class Variant {
     // Consume anything that is a valid type.
     template <typename T>
     constexpr Variant(T input) {
-        this->discriminant = this->type_index<T>();
         new (cat::addressof(storage)) T{input};
+        this->discriminant = this->type_index<T>();
     };
 
     template <typename T>

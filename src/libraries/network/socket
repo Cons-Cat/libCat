@@ -55,66 +55,109 @@ struct SocketUnix {
     }
 
     // Create and return a `Socket`.
-    auto create() -> Result<> {
-        return nix::create_socket(this->attributes.family,
-                                  static_cast<int>(Type), Protocol);
+    auto create() -> Optional<void> {
+        Scaredy result = nix::create_socket(this->attributes.family,
+                                            static_cast<int>(Type), Protocol);
+        if (result.has_value()) {
+            return monostate;
+        }
+        return nullopt;
     }
 
     // Connect a `Socket`.
-    auto connect() -> Result<> {
-        return nix::connect_socket(
+    auto connect() -> Optional<void> {
+        Scaredy result = nix::connect_socket(
             this->descriptor, this,
             ssizeof(attributes) + cat::string_length(static_cast<char const*>(
                                       static_cast<void*>(&this->path_name))));
+        if (result.has_value()) {
+            return monostate;
+        }
+        return nullopt;
     }
 
     auto send_string(String const& message, int8 flags = 0,
                      cat::Socket const* p_destination_socket = nullptr,
-                     ssize const addr_length = 0) -> Result<> {
-        return nix::send_buffer(this->descriptor, message.p_data(),
-                                message.size(), flags, p_destination_socket,
-                                addr_length);
+                     ssize const addr_length = 0) -> Optional<void> {
+        Scaredy result =
+            nix::send_buffer(this->descriptor, message.p_data(), message.size(),
+                             flags, p_destination_socket, addr_length);
+        if (result.has_value()) {
+            return monostate;
+        }
+        return nullopt;
     }
 
     auto send_struct(auto const& message_struct, int8 flags = 0,
                      cat::Socket const* p_destination_socket = nullptr,
-                     ssize const addr_length = 0) -> Result<> {
-        return nix::send_buffer(this->descriptor, &message_struct,
-                                ssizeof(message_struct), flags,
-                                p_destination_socket, addr_length);
+                     ssize const addr_length = 0) -> Optional<void> {
+        Scaredy result = nix::send_buffer(this->descriptor, &message_struct,
+                                          ssizeof(message_struct), flags,
+                                          p_destination_socket, addr_length);
+        if (result.has_value()) {
+            return monostate;
+        }
+        return nullopt;
     }
 
-    auto bind() -> Result<> {
-        return nix::bind_socket(this->descriptor, this, this->get_size());
+    auto bind() -> Optional<void> {
+        Scaredy result =
+            nix::bind_socket(this->descriptor, this, this->get_size());
+        if (result.has_value()) {
+            return monostate;
+        }
+        return nullopt;
     }
 
-    auto listen(int8 const backlog) -> Result<> {
-        return nix::listen_to_socket(this->descriptor, backlog);
+    auto listen(int8 const backlog) -> Optional<void> {
+        Scaredy result = nix::listen_to_socket(this->descriptor, backlog);
+        if (result.has_value()) {
+            return monostate;
+        }
+        return nullopt;
     }
 
     auto accept(nix::FileDescriptor listening_socket,
                 void const* p_socket = nullptr,
-                ssize const* p_addr_len = nullptr) -> Result<> {
-        return nix::accept_socket(listening_socket, p_socket, p_addr_len);
+                ssize const* p_addr_len = nullptr) -> Optional<void> {
+        Scaredy result =
+            nix::accept_socket(listening_socket, p_socket, p_addr_len);
+        if (result.has_value()) {
+            return monostate;
+        }
+        return nullopt;
     }
 
     auto accept(SocketUnix<Type, Protocol> const& listening_socket,
                 void const* p_socket = nullptr,
-                ssize const* p_addr_len = nullptr) -> Result<> {
-        return nix::accept_socket(listening_socket.descriptor, p_socket,
-                                  p_addr_len);
+                ssize const* p_addr_len = nullptr) -> Optional<void> {
+        Scaredy result = nix::accept_socket(listening_socket.descriptor,
+                                            p_socket, p_addr_len);
+        if (result.has_value()) {
+            return monostate;
+        }
+        return nullopt;
     }
 
     auto recieve(void const* p_message_buffer, ssize const buffer_length,
                  Socket const* __restrict p_addr = nullptr,
                  ssize const* __restrict p_addr_length = nullptr)
-        -> Result<ssize> {
-        return nix::recieve_buffer(this->descriptor, p_message_buffer,
-                                   buffer_length, p_addr, p_addr_length);
+        -> Optional<ssize> {
+        Scaredy result =
+            nix::recieve_buffer(this->descriptor, p_message_buffer,
+                                buffer_length, p_addr, p_addr_length);
+        if (result.has_value()) {
+            return result.value();
+        }
+        return nullopt;
     }
 
-    auto close() -> Result<> {
-        return nix::close(this->descriptor);
+    auto close() -> Optional<void> {
+        Scaredy result = nix::close(this->descriptor);
+        if (result.has_value()) {
+            return monostate;
+        }
+        return nullopt;
     }
 };
 

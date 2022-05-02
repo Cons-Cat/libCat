@@ -49,7 +49,7 @@ concept HasDistanceTo = requires(T const t) {
 
 template <typename T>
 concept HasEqualTo = requires(T const it) {
-    { it.equal_to(it) } -> meta::ConvertibleTo<bool>;  // -> boolean;
+    { it.equal_to(it) } -> ::meta::ConvertibleTo<bool>;  // -> boolean;
 };
 
 template <typename>
@@ -70,7 +70,7 @@ struct InferValueType {};
 template <typename T>
 struct InferValueType<T> {
     static const T& it;
-    using type = meta::RemoveCvref<decltype(*it)>;
+    using type = ::meta::RemoveCvref<decltype(*it)>;
 };
 
 template <typename T>
@@ -96,7 +96,7 @@ template <typename T>
 concept HasSinglePass = bool(T::single_pass_iterator);
 
 template <typename Iter, typename T>
-concept HasSentinel = meta::SameAs<T, typename T::sentinel_type>;
+concept HasSentinel = ::meta::SameAs<T, typename T::sentinel_type>;
 
 }  // namespace cat::detail
 
@@ -104,7 +104,8 @@ template <typename T>
 using InferDifferenceType = typename cat::detail::InferDifferenceType<T>::type;
 
 template <typename Arg, typename Iter>
-concept DifferenceTypeArg = meta::ConvertibleTo<Arg, InferDifferenceType<Iter>>;
+concept DifferenceTypeArg =
+    ::meta::ConvertibleTo<Arg, InferDifferenceType<Iter>>;
 
 template <typename T>
 using InferValueType_t = typename cat::detail::InferValueType<T>::type::type;
@@ -132,7 +133,7 @@ struct IteratorFacade {
 
     constexpr auto operator->() const {
         decltype(auto) reference = **this;
-        if constexpr (meta::is_reference<decltype(reference)>) {
+        if constexpr (::meta::is_reference<decltype(reference)>) {
             // If `reference` is actually a reference type, return its address.
             return cat::addressof(reference);
         } else {
@@ -241,26 +242,26 @@ struct InputIteratorTag {};
 struct ForwardIteratorTag {};
 
 template <typename T>
-requires meta::is_base_of<IteratorFacade<T>, T>
+requires ::meta::is_base_of<IteratorFacade<T>, T>
 struct IteratorTraits {
     static T const& it;
     using Value = typename InferValueType_t<T>::type;
     using Reference = decltype(*it);
     using Pointer = decltype(it.operator->());
     using Difference = InferDifferenceType<T>;
-    using Category = meta::Conditional<
+    using Category = ::meta::Conditional<
         // If this can be a random access iterator, it always will be.
         cat::detail::HasRandomAccess<T>, RandomAccessIteratorTag,
-        meta::Conditional<
+        ::meta::Conditional<
             // If this has a `++` and a `--` operator, this is a bidirectional
             // iterator.
             cat::detail::HasBidirectional<T>, BidirectionalIteratorTag,
-            meta::Conditional<cat::detail::HasSinglePass<T>,
-                              // If it is single-pass, this is a forward
-                              // iterator.
-                              InputIteratorTag,
-                              // Default to a forward iterator.
-                              ForwardIteratorTag>>>;
+            ::meta::Conditional<cat::detail::HasSinglePass<T>,
+                                // If it is single-pass, this is a forward
+                                // iterator.
+                                InputIteratorTag,
+                                // Default to a forward iterator.
+                                ForwardIteratorTag>>>;
     // using IteratorConcept = Category;
 };
 
@@ -270,7 +271,8 @@ struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
 
     // Forward any constructor to `iterator`.
     template <typename... Args>
-    ReversedIterator(Args&&... args) : iterator(meta::forward<Args>(args)...){};
+    ReversedIterator(Args&&... args)
+        : iterator(::meta::forward<Args>(args)...){};
 
     auto dereference() const {
         return this->iterator.dereference();
@@ -286,7 +288,7 @@ struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
     }
 };
 
-template <meta::Iterable T>
+template <::meta::Iterable T>
 class Reverse {
   private:
     T& iterable;
