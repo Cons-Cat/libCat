@@ -224,6 +224,7 @@ struct AllocatorFacade {
     // Invalidate any memory handle, invoking its data's destructor.
     template <typename Handle>
     auto free(Handle const& memory) -> Result<> {
+    [[nodiscard]] auto free(Handle const& memory) -> cat::Optional<void> {
         using Type = typename Handle::Type;
 
         // If this is a small-size optimized handle:
@@ -233,7 +234,7 @@ struct AllocatorFacade {
                 if constexpr (requires { this->get(memory).~Type(); }) {
                     this->get(memory).~Type();
                 }
-                return okay;
+                return monostate;
             }
             // Recurse with the underlying memory handle.
             return this->free(memory.allocator_storage);
@@ -247,15 +248,15 @@ struct AllocatorFacade {
             if constexpr (requires { memory.alignment; }) {
                 auto result = this->self().aligned_deallocate(memory.storage);
                 if (result.has_value()) {
-                    return okay;
+                    return monostate;
                 }
-                return Failure(1);
+                return nullopt;
             } else {
                 auto result = this->self().deallocate(memory);
                 if (result.has_value()) {
-                    return okay;
+                    return monostate;
                 }
-                return Failure(1);
+                return nullopt;
             }
         }
         __builtin_unreachable();
