@@ -48,7 +48,7 @@ class Simd {
     }
 
     constexpr Simd(Intrinsic&& values) {
-        this->value = meta::forward<Intrinsic>(values);
+        this->value = ::meta::forward<Intrinsic>(values);
     }
 
     template <typename... U>

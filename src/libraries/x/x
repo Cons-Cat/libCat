@@ -8,8 +8,6 @@
 #include <socket>
 #include <type_traits>
 
-#include "result"
-
 // https://www.x.org/releases/X11R7.7/doc/xproto/x11protocol.pdf
 
 namespace xwin {
@@ -408,7 +406,7 @@ struct Connection {
 // TODO: Propagate errors instead of panicking.
 auto handshake(meta::Allocator auto& allocator,
                cat::SocketUnix<cat::SocketType::stream>& socket)
-    -> Result<xwin::Connection> {
+    -> cat::Optional<xwin::Connection> {
     xwin::Connection x_connection;
 
     // Send a request with default-initialized fields.
@@ -421,7 +419,8 @@ auto handshake(meta::Allocator auto& allocator,
     // TODO: This will fail if Xauth is enabled. This must handle X11 cookies.
     if (x_connection.header.success_code ==
         xwin::ServerReplyHeader::SuccessCode::failure) {
-        return Failure(x_connection.header.success_code);
+        // return Failure(x_connection.header.success_code);
+        return nullopt;
     }
 
     // A dynamic allocation must be made because the total size of all
@@ -431,7 +430,8 @@ auto handshake(meta::Allocator auto& allocator,
         // TODO: Remove `.c()`.
         x_connection.header.message_length.c() * 4);
     if (!memory.has_value()) {
-        return Failure(1);
+        // return Failure(1);
+        return nullopt;
     }
 
     x_connection.p_setup = &allocator.get(memory.value());
@@ -471,20 +471,21 @@ auto handshake(meta::Allocator auto& allocator,
     return x_connection;
 }
 
+// TODO: Improve error handling. Union X11 errors and Linux errors.
 // Attempt to connect to an X server over local sockets.
 auto initiate_connection(meta::Allocator auto& allocator)
-    -> Result<xwin::Connection> {
+    -> cat::Optional<xwin::Connection> {
     cat::SocketUnix<cat::SocketType::stream> socket;
     socket.path_name = xwin::socket_path;
 
-    auto result_1 = socket.create();
+    cat::Optional result_1 = socket.create();
     if (!result_1.has_value()) {
-        return result_1;
+        return nullopt;
     }
 
-    auto result_2 = socket.connect();
+    cat::Optional result_2 = socket.connect();
     if (!result_2.has_value()) {
-        return result_2;
+        return nullopt;
     }
 
     return xwin::handshake(allocator, socket);

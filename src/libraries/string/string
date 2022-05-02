@@ -4,6 +4,7 @@
 
 #include <concepts>
 #include <memory>
+#include <optional>
 #include <span>
 #include <type_traits>
 #include <utility>
@@ -39,7 +40,7 @@ class String : public cat::Span<char const> {
 
     // This is `auto` to deduce lower than the array-literal constructor.
     template <typename T>
-    constexpr String(T p_string) requires(meta::is_pointer<T>)
+    constexpr String(T p_string) requires(::meta::is_pointer<T>)
         : cat::Span<char const>(p_string, cat::string_length(p_string)){};
 
     template <unsigned int long other_length>
@@ -133,10 +134,9 @@ consteval auto operator+(StaticString<length_1> const& string_1,
 
 auto compare_strings(String const& string_1, String const& string_2) -> bool1;
 
-auto print(String const& string) -> Result<>;
+auto print(String const& string) -> cat::Optional<ssize>;
 
-// NOLINTNEXTLINE This is forward declared in `<result>`.
-auto print_line(String const& string) -> Result<>;
+auto print_line(String const& string) -> cat::Optional<ssize>;
 
 // TODO: Make a comparison function for null-terminated string pointers.
 

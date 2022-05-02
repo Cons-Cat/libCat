@@ -124,11 +124,8 @@ struct AllocatorFacade {
                 // small-optimized:
                 UnderlyingHandle>>;
 
-        // Initialize either an `Optional` or a `Result` with an empty value.
-        // TODO: This can be simplified when `Result` accepts `in_place`.
-        Allocation maybe_memory = ::meta::Conditional<
-            ::meta::IsSpecializationTrait<Allocation, Optional>::value,
-            cat::detail::NullOpt, Failure>{};
+        // Initialize an empty `Optional`.
+        Allocation maybe_memory;
 
         if constexpr (!is_aligned) {
             if constexpr (is_small_optimized) {
@@ -325,8 +322,8 @@ struct PageAllocator : AllocatorFacade<PageAllocator> {
     // on x86-64. If fewer that `4096` bytes are allocated, that amount will
     // be rounded up to `4096`.
     template <typename T>
-    auto allocate(ssize const allocation_size) -> Result<void*> {
-        return nix::map_memory(
+    auto allocate(ssize const allocation_size) -> Optional<void*> {
+        Scaredy result = nix::map_memory(
             0u, allocation_size,
             // TODO: Fix bit flags operators.
             static_cast<nix::MemoryProtectionFlags>(
@@ -340,27 +337,41 @@ struct PageAllocator : AllocatorFacade<PageAllocator> {
             nix::FileDescriptor{-1},
             // Anonymous pages must have `0`.
             0);
+        if (result.has_value()) {
+            return result.value();
+        }
+        return nullopt;
     }
 
     // Unmap a handle to page(s) of virtual memory.
-    auto deallocate(auto const& memory) -> Result<> {
-        return nix::unmap_memory(memory.p_storage, memory.allocation_size);
+    auto deallocate(auto const& memory) -> Optional<void> {
+        Scaredy result =
+            nix::unmap_memory(memory.p_storage, memory.allocation_size);
+        if (result.has_value()) {
+            return monostate;
+        }
+        return nullopt;
     };
 
     // Allocate a page(s) of virtual memory that is guaranteed to align to
     // any power of two, less than `4_ki`.
     template <typename T>
     auto aligned_allocate(ssize const alignment, ssize const allocation_size)
-        -> Result<void*> {
+        -> Optional<void*> {
         Result(alignment <= 4_ki).assert();
         // A normal page allocation already has these semantics.
         return this->allocate<T>(allocation_size);
     }
 
     // Unmap a handle to page(s) of aligned virtual memory.
-    auto aligned_deallocate(auto const& memory) -> Result<> {
+    auto aligned_deallocate(auto const& memory) -> Optional<void> {
         // There are no special semantics for deallocation aligned memory.
-        return nix::unmap_memory(memory.p_storage, memory.allocation_size);
+        Scaredy result =
+            nix::unmap_memory(memory.p_storage, memory.allocation_size);
+        if (result.has_value()) {
+            return monostate;
+        }
+        return nullopt;
     };
 
     // Produce a handle to allocated memory.
@@ -390,38 +401,38 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
 
     // Try to allocate memory and bump the pointer down.
     template <typename T>
-    auto allocate(ssize const allocation_size) -> Result<void*> {
+    auto allocate(ssize const allocation_size) -> Optional<void*> {
         this->p_arena_current -= allocation_size;
         if (this->p_arena_current >= p_arena_end) {
             return static_cast<void*>(this->p_arena_current);
         }
-        return Failure(1);
+        return nullopt;
     }
 
     // In general, memory cannot be deallocated in a linear allocator, so this
     // function is no-op.
-    auto deallocate(auto const&) -> Result<> {
-        return okay;
+    auto deallocate(auto const&) -> Optional<void> {
+        return monostate;
     };
 
     // Try to allocate memory aligned to some boundary and bump the pointer
     // down.
     template <typename T>
     auto aligned_allocate(ssize const alignment, ssize const allocation_size)
-        -> Result<void*> {
+        -> Optional<void*> {
         intptr p_allocation =
             cat::align_down(this->p_arena_current - allocation_size, alignment);
         if (p_allocation >= p_arena_end) {
             this->p_arena_current = p_allocation;
             return static_cast<void*>(this->p_arena_current);
         }
-        return Failure(1);
+        return nullopt;
     }
 
     // In general, memory cannot be deallocated in a linear allocator, so this
     // function is no-op.
-    auto aligned_deallocate(auto const&) -> Result<> {
-        return okay;
+    auto aligned_deallocate(auto const&) -> Optional<void> {
+        return monostate;
     };
 
     // Produce a handle to allocated memory.

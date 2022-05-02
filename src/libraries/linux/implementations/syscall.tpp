@@ -4,29 +4,40 @@
 
 #include <linux>
 
-template <typename... Args>
-auto nix::syscall(int8 const call, Args const... parameters) -> Result<cat::Any>
+template <typename T, typename... Args>
+auto nix::syscall(ssize const call, Args const... parameters)
+    -> nix::ScaredyLinux<T>
 requires(sizeof...(Args) < 7) {
     static constexpr unsigned length = sizeof...(Args);
     cat::Any arguments[length] = {parameters...};
+    ssize result;
 
     if constexpr (length == 0) {
-        return nix::syscall0(call);
+        result = nix::syscall0(call);
     } else if constexpr (length == 1) {
-        return nix::syscall1(call, arguments[0]);
+        result = nix::syscall1(call, arguments[0]);
     } else if constexpr (length == 2) {
-        return nix::syscall2(call, arguments[0], arguments[1]);
+        result = nix::syscall2(call, arguments[0], arguments[1]);
     } else if constexpr (length == 3) {
-        return nix::syscall3(call, arguments[0], arguments[1], arguments[2]);
+        result = nix::syscall3(call, arguments[0], arguments[1], arguments[2]);
     } else if constexpr (length == 4) {
-        return nix::syscall4(call, arguments[0], arguments[1], arguments[2],
-                             arguments[3]);
+        result = nix::syscall4(call, arguments[0], arguments[1], arguments[2],
+                               arguments[3]);
     } else if constexpr (length == 5) {
-        return nix::syscall5(call, arguments[0], arguments[1], arguments[2],
-                             arguments[3], arguments[4]);
+        result = nix::syscall5(call, arguments[0], arguments[1], arguments[2],
+                               arguments[3], arguments[4]);
     } else if constexpr (length == 6) {
-        return nix::syscall6(call, arguments[0], arguments[1], arguments[2],
-                             arguments[3], arguments[4], arguments[5]);
+        result = nix::syscall6(call, arguments[0], arguments[1], arguments[2],
+                               arguments[3], arguments[4], arguments[5]);
     }
-    __builtin_unreachable();
+
+    if (result < 0) {
+        return static_cast<LinuxError>(result.c());
+    }
+	
+    if constexpr (!::meta::is_void<T>) {
+        return meta::bit_cast<T>(result);
+    } else {
+        return monostate;
+    }
 }

@@ -29,7 +29,9 @@ void output_to_console(nix::IoVector const& io_vector) {
 void read_and_print_file(char* p_file_name) {
     nix::FileDescriptor file_descriptor =
         nix::open_file(p_file_name, nix::OpenMode::read_only)
-            .or_panic("No such file or directory!");
+            .or_panic(
+                // "No such file or directory!"
+            );
     ssize file_size = get_file_size(file_descriptor).value();
     ssize bytes_remaining = file_size;
     ssize blocks = file_size / block_size;
@@ -39,14 +41,15 @@ void read_and_print_file(char* p_file_name) {
     }
 
     cat::PageAllocator allocator;
-	cat::Span<nix::IoVector> io_vectors;
+    cat::Span<nix::IoVector> io_vectors;
 
     auto io_buffer =
         allocator.malloc<nix::IoVector>(meta::ssizeof(io_vectors) * blocks);
     if (!io_buffer.has_value()) {
         cat::exit(1);
     }
-    io_vectors = cat::Span<nix::IoVector>{&allocator.get(io_buffer.value()), blocks};
+    io_vectors =
+        cat::Span<nix::IoVector>{&allocator.get(io_buffer.value()), blocks};
 
     while (bytes_remaining > 0) {
         ssize current_block_size = cat::min(bytes_remaining, block_size);

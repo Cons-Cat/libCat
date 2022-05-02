@@ -77,7 +77,7 @@ class String;
 
 // Forward-declare a print function for panics.
 namespace cat {
-auto print_line(cat::String const&) -> Result<>;
+// auto print_line(cat::String const&) -> Result<>;
 }
 
 // TODO: Space optimized `Result`s like the `Optional`.
@@ -312,7 +312,7 @@ class [[nodiscard]] Result {
                 return;
             }
         }
-        _ = cat::print_line(error_message);
+        // _ = cat::print_line(error_message);
         cat::exit(1);
         __builtin_unreachable();  // This prevents a build warning.
     }
@@ -335,7 +335,7 @@ class [[nodiscard]] Result {
         if (!meta::is_constant_evaluated()) {
 #ifndef __OPTIMIZE__
             if (!this->has_value()) [[unlikely]] {
-                _ = cat::print_line(error_message);
+                // _ = cat::print_line(error_message);
                 cat::exit(1);
             }
 #endif

@@ -4,7 +4,7 @@
 
 #include <concepts>
 #include <memory>
-#include <string>
+// #include <string>
 #include <type_traits>
 #include <utility>
 
@@ -595,8 +595,9 @@ class Optional {
     constexpr auto value() & -> Value& {
         Result(this->has_value())
             .assert(
-                "`.value()` was illegally called on an `Optional` which "
-                "did not hold a value!\n");
+                // "`.value()` was illegally called on an `Optional` which "
+                // "did not hold a value!\n"
+            );
         return this->storage.value();
     }
 
@@ -604,8 +605,9 @@ class Optional {
     constexpr auto value() const& -> Value const& {
         Result(this->has_value())
             .assert(
-                "`.value()` was illegally called on an `Optional` which "
-                "did not hold a value!\n");
+                // "`.value()` was illegally called on an `Optional` which "
+                // "did not hold a value!\n"
+            );
         return this->storage.value();
     }
 
@@ -613,8 +615,9 @@ class Optional {
     constexpr auto value() && -> Value&& requires(!::meta::is_reference<T>) {
         Result(this->has_value())
             .assert(
-                "`.value()` was illegally called on an `Optional` which "
-                "did not hold a value!\n");
+                // "`.value()` was illegally called on an `Optional` which "
+                // "did not hold a value!\n"
+            );
         return cat::move(this->storage.value());
     }
 
@@ -624,8 +627,9 @@ class Optional {
         !::meta::is_reference<T>) {
         Result(this->has_value())
             .assert(
-                "`.value()` was illegally called on an `Optional` which "
-                "did not hold a value!\n");
+                // "`.value()` was illegally called on an `Optional` which "
+                // "did not hold a value!\n"
+            );
         return cat::move(this->storage.value());
     }
 
@@ -672,8 +676,9 @@ class Optional {
         if (!::meta::is_constant_evaluated()) {
             Result(this->has_value())
                 .assert(
-                    "`.value()` was illegally called on an `Optional` which "
-                    "did not hold a value!\n");
+                    // "`.value()` was illegally called on an `Optional` which "
+                    // "did not hold a value!\n"
+                );
         }
         if constexpr (::meta::is_pointer<Value>) {
             return this->storage.value();
@@ -945,7 +950,9 @@ class Optional {
 
     // If this `Optional` is empty, print an error message and terminate the
     // running process immediately. Otherwise, return its value.
-    auto or_panic(String const& error_message) {
+    auto or_panic(String const&
+                  // error_message
+    ) {
         if (this->has_value()) [[likely]] {
             if constexpr (!::meta::is_void<T>) {
                 return this->value();
@@ -953,7 +960,8 @@ class Optional {
                 return;
             }
         }
-        _ = cat::print_line(error_message);
+        // TODO: Print an error message.
+        // _ = cat::print_line(error_message);
         cat::exit(1);
         __builtin_unreachable();  // This prevents a build warning.
     }
