@@ -71,7 +71,7 @@ void meow() {
                                 [](int4 input) {
                                     return input >= 0;
                                 },
-                                0>,
+                                -1>,
                  ErrorOne>
         predicate = -1;
     // The `Scaredy` here adds no storage bloat to an `int4`.
