@@ -2,7 +2,7 @@
 
 // Minimal result types usable for `cat::Scaredy`.
 struct ErrorOne {
-    int8 code;
+    int4 code;
 
     constexpr auto error() const -> int8 {
         return this->code;
@@ -10,7 +10,7 @@ struct ErrorOne {
 };
 
 struct ErrorTwo {
-    int8 code;
+    int4 code;
 
     constexpr auto error() const -> int8 {
         return this->code;
@@ -44,6 +44,10 @@ auto union_errors(int4 error) -> cat::Scaredy<int8, ErrorOne, ErrorTwo> {
 
 void meow() {
     cat::Scaredy result = union_errors(0);
+    // The `Scaredy` here adds a flag to the `int8`, which is padded out to 16
+    // bytes. No storage cost exists for the error types.
+    static_assert(sizeof(result) == 16);
+
     Result(!result.has_value()).or_panic();
     Result(result.holds_alternative<ErrorOne>()).or_panic();
     Result(!result.holds_alternative<int8>()).or_panic();
@@ -62,6 +66,22 @@ void meow() {
     Result(result.has_value()).or_panic();
     Result(result.value() == 3).or_panic();
     Result(result.holds_alternative<int8>()).or_panic();
+
+    cat::Scaredy<cat::Predicate<int4,
+                                [](int4 input) {
+                                    return input >= 0;
+                                },
+                                0>,
+                 ErrorOne>
+        predicate = -1;
+    // The `Scaredy` here adds no storage bloat to an `int4`.
+    static_assert(sizeof(predicate) == sizeof(int4));
+
+    Result(!predicate.has_value()).or_panic();
+    predicate = 0;
+    Result(predicate.has_value()).or_panic();
+    predicate = 10;
+    Result(predicate.has_value()).or_panic();
 
     cat::exit();
 }
