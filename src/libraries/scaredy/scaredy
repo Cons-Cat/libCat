@@ -6,6 +6,8 @@
 #include <utility>
 #include <variant>
 
+// TODO: The `cat::Scaredy` is far less robust than `cat::Optional`.
+
 namespace cat {
 
 namespace detail {
@@ -30,22 +32,14 @@ namespace detail {
         template <typename U>
         constexpr auto operator=(U const& operand)
             -> ScaredyVariantStorage<T, Errors...>& {
-            if constexpr (::meta::is_convertible<U, T>) {
-                this->storage = static_cast<T>(operand);
-            } else {
-                this->storage = operand;
-            }
+            this->storage = operand;
             return *this;
         }
 
         template <typename U>
         constexpr auto operator=(U const& operand) const
             -> ScaredyVariantStorage<T, Errors...> const& {
-            if constexpr (::meta::is_convertible<U, T>) {
-                this->storage = static_cast<T>(operand);
-            } else {
-                this->storage = operand;
-            }
+            this->storage = operand;
             return *this;
         }
 
@@ -84,6 +78,74 @@ namespace detail {
             return this->storage.template holds_alternative<U>();
         }
     };
+
+    // `T` is a `Predicate<Type, function, sentinel>`.
+    template <typename T, typename... Errors>
+    struct ScaredyPredicateStorage {
+        using Value = typename T::PredicateType;
+        // `Errors` must only hold one error. It is variadic merely to simplify
+        // overload resolution in `cat::Scaredy`. `decltype` adds a reference to
+        // it, so that is removed by `meta::RemoveReference`.
+        using Error = ::meta::RemoveReference<decltype(Array{Errors{}...}[0])>;
+
+        // TODO: Test alignment.
+        union {
+            Value storage;
+            Error error_code;
+        };
+
+        constexpr ScaredyPredicateStorage() = default;
+
+        constexpr ScaredyPredicateStorage(Value const& input)
+            : storage(input){};
+
+        constexpr auto operator=(T const& operand)
+            -> ScaredyPredicateStorage<T, Error>& {
+            this->storage = static_cast<T>(operand);
+            return *this;
+        }
+
+        constexpr auto operator=(T const& operand) const
+            -> ScaredyPredicateStorage<T, Error>& {
+            this->storage = static_cast<T>(operand);
+            return *this;
+        }
+
+        constexpr auto value() & -> Value& {
+            return this->storage;
+        }
+
+        constexpr auto value() const& -> Value const& {
+            return this->storage;
+        }
+
+        constexpr auto value() && -> Value&& {
+            return cat::move(this->storage);
+        }
+
+        constexpr auto value() const&& -> Value&& {
+            return cat::move(this->storage);
+        }
+
+        // This is variadic to give it a homogenous interface with other
+        // `Scaredy`'s.
+        template <typename...>
+        constexpr auto error() -> Error {
+            return this->error_code;
+        }
+
+        // This is variadic to give it a homogenous interface with other
+        // `Scaredy`'s.
+        template <typename...>
+        constexpr auto error() const -> Error {
+            return this->error_code;
+        }
+
+        constexpr auto has_value() const -> bool1 {
+            return T::predicate_function(this->storage);
+        }
+    };
+
 }  // namespace detail
 
 template <typename T, typename... Errors>
@@ -92,7 +154,13 @@ requires(
     // (!::meta::is_array<Errors...>) &&
     // `cat::Scaredy` should have at least one error type.
     sizeof...(Errors) > 0) class Scaredy {
-    using Storage = cat::detail::ScaredyVariantStorage<T, Errors...>;
+    // clang-format off
+    using Storage = ::meta::Conditional <requires {
+        T::sentinel_value;
+    }, cat::detail::ScaredyPredicateStorage<T, Errors...>,
+        cat::detail::ScaredyVariantStorage <T, Errors...>>;
+    // clang-format on
+
     Storage storage;
   public:
     using Type =
@@ -103,14 +171,16 @@ requires(
     constexpr Scaredy(auto const& input) : storage(input){};
 
     template <typename U>
-    constexpr auto operator=(U const& operand) -> Scaredy<T, Errors...>& {
-        this->storage = operand;
+    constexpr auto operator=(U const& operand)
+        -> Scaredy<T, Errors...>& requires(::meta::is_convertible<U, T>) {
+        this->storage = static_cast<T>(operand);
         return *this;
     }
 
     template <typename U>
-    constexpr auto operator=(U const& operand) const -> Scaredy<T, Errors...>& {
-        this->storage = operand;
+    constexpr auto operator=(U const& operand) const
+        -> Scaredy<T, Errors...>& requires(::meta::is_convertible<U, T>) {
+        this->storage = static_cast<T>(operand);
         return *this;
     }
 

@@ -48,6 +48,25 @@ inline constexpr cat::detail::InPlace in_place;
 // `monostate` can be consumed by wrapper classes to represent no storage.
 inline constexpr cat::detail::Monostate monostate;
 
+namespace cat {
+
+template <typename T, auto predicate, T sentinel>
+struct Predicate {
+    using PredicateType = T;
+    static constexpr auto predicate_function = predicate;
+    static constexpr T sentinel_value = sentinel;
+    consteval Predicate() requires(predicate(sentinel)) = default;
+};
+
+template <typename T, T sentinel>
+using Sentinel = Predicate<T,
+                           [](T const value) {
+                               return value != sentinel;
+                           },
+                           sentinel>;
+
+}  // namespace cat
+
 template <typename T>
 class Result;
 
