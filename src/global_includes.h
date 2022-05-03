@@ -51,11 +51,12 @@ inline constexpr cat::detail::Monostate monostate;
 namespace cat {
 
 template <typename T, auto predicate, T sentinel>
-struct Predicate {
+requires(!predicate(sentinel)) struct Predicate {
     using PredicateType = T;
     static constexpr auto predicate_function = predicate;
     static constexpr T sentinel_value = sentinel;
-    consteval Predicate() requires(predicate(sentinel)) = default;
+    // `Predicate`s can only be instantiated at compile-time.
+    consteval Predicate() = default;
 };
 
 template <typename T, T sentinel>
