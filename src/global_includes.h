@@ -36,6 +36,43 @@ struct Monostate {
     constexpr operator auto(){};
 };
 
+template <typename T, T state>
+struct MonostateStorage {
+    constexpr MonostateStorage() = default;
+
+    constexpr MonostateStorage(Monostate){};
+
+    constexpr operator auto(){};
+
+    constexpr operator T() {
+        return state;
+    }
+
+    constexpr auto operator=(cat::Monostate) -> MonostateStorage<T, state>& {
+        return *this;
+    }
+
+    // TODO: Support all non-assignment operators that `T` has.
+    constexpr auto operator==(auto operand) -> bool {
+        return state == operand;
+    }
+    constexpr auto operator!=(auto operand) -> bool {
+        return state != operand;
+    }
+    constexpr auto operator<(auto operand) -> bool {
+        return state < operand;
+    }
+    constexpr auto operator<=(auto operand) -> bool {
+        return state <= operand;
+    }
+    constexpr auto operator>(auto operand) -> bool {
+        return state > operand;
+    }
+    constexpr auto operator>=(auto operand) -> bool {
+        return state >= operand;
+    }
+};
+
 template <typename T, auto predicate, T sentinel>
 requires(!predicate(sentinel)) struct Predicate {
     using PredicateType = T;
