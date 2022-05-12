@@ -14,7 +14,7 @@ namespace detail {
     template <typename T, typename... Errors>
     struct ScaredyVariantStorage {
         using Type =
-            ::meta::Conditional<::meta::is_void<T>, cat::detail::Monostate, T>;
+            ::meta::Conditional<::meta::is_void<T>, cat::Monostate, T>;
         cat::Variant<Type, Errors...> storage;
 
         constexpr ScaredyVariantStorage() = default;
@@ -164,7 +164,7 @@ requires(
     Storage storage;
   public:
     using Type =
-        ::meta::Conditional<::meta::is_void<T>, cat::detail::Monostate, T>;
+        ::meta::Conditional<::meta::is_void<T>, cat::Monostate, T>;
 
     constexpr Scaredy() = default;
 

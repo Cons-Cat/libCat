@@ -42,7 +42,7 @@ struct OptionalValueStorage {
         // initialized in a `constexpr` context, because a member `union` must
         // have at least one initialized field in a `constexpr` context.
         // `Monostate` can be default-initialized, so this is well-formed.
-        cat::detail::Monostate dummy;
+        cat::Monostate dummy;
         T storage;
     };
     using Value = T;
@@ -464,7 +464,7 @@ class Optional {
     using Storage =
         ::meta::Conditional<::meta::is_void<T>,
             // If `T` is `void`:
-            OptionalValueStorage<cat::detail::Monostate>,
+            OptionalValueStorage<cat::Monostate>,
 		::meta::Conditional<requires {
                    // T::predicate_function(T::Type());
                     T::sentinel_value;
@@ -529,7 +529,7 @@ class Optional {
     constexpr Optional(cat::detail::NullOpt) : storage(nullopt){};
 
     // Consuming `monostate` default-initializes the `Optional`.
-    constexpr Optional(cat::detail::Monostate) : storage(Value{}){};
+    constexpr Optional(cat::Monostate) : storage(Value{}){};
 
     // Any `Optional` can convert into another.
     template <typename U>
