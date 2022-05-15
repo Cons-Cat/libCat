@@ -28,11 +28,8 @@ template <typename T, ssize lanes, ssize alignment>
 class Simd {
     using Vector = Simd<T, lanes, alignment>;
   public:
-    // TODO: Use the underlying type of safe numerals.
     using Scalar = T;
-    /* `vector_size` is a GCC attribute that represents SIMD data-types.
-     * `using` and `alignas` do not work on a builtin vector type. Generalized
-     * attribute syntax also does not appear to work. */
+    // `vector_size` is a GCC attribute that represents SIMD data-types.
     using Intrinsic [[gnu::vector_size(sizeof(T) * lanes.c()),
                       gnu::aligned(alignment.c())]] = T;
     Intrinsic value;
