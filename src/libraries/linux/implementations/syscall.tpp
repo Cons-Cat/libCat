@@ -10,6 +10,8 @@ auto nix::syscall(ssize const call, Args const... parameters)
 requires(sizeof...(Args) < 7) {
     static constexpr unsigned length = sizeof...(Args);
     cat::Any arguments[length] = {parameters...};
+
+	// TODO: Make this a `union` of reasonable types.
     ssize result;
 
     if constexpr (length == 0) {
