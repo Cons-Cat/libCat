@@ -40,35 +40,36 @@ template <typename T, T state>
 struct MonostateStorage {
     constexpr MonostateStorage() = default;
 
-    constexpr MonostateStorage(Monostate){};
+    constexpr MonostateStorage(Monostate const){};
 
-    constexpr operator auto(){};
+    constexpr MonostateStorage(T const){};
 
-    constexpr operator T() {
+    constexpr operator auto() const {
         return state;
-    }
+    };
 
-    constexpr auto operator=(cat::Monostate) -> MonostateStorage<T, state>& {
+    constexpr auto operator=(cat::Monostate const)
+        -> MonostateStorage<T, state>& {
         return *this;
     }
 
     // TODO: Support all non-assignment operators that `T` has.
-    constexpr auto operator==(auto operand) -> bool {
+    constexpr auto operator==(auto const operand) -> bool {
         return state == operand;
     }
-    constexpr auto operator!=(auto operand) -> bool {
+    constexpr auto operator!=(auto const operand) -> bool {
         return state != operand;
     }
-    constexpr auto operator<(auto operand) -> bool {
+    constexpr auto operator<(auto const operand) -> bool {
         return state < operand;
     }
-    constexpr auto operator<=(auto operand) -> bool {
+    constexpr auto operator<=(auto const operand) -> bool {
         return state <= operand;
     }
-    constexpr auto operator>(auto operand) -> bool {
+    constexpr auto operator>(auto const operand) -> bool {
         return state > operand;
     }
-    constexpr auto operator>=(auto operand) -> bool {
+    constexpr auto operator>=(auto const operand) -> bool {
         return state >= operand;
     }
 };

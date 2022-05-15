@@ -80,7 +80,7 @@ namespace detail {
 
         template <typename U>
         constexpr explicit(!is_safe_conversion<T, U>()) Numeral(U const from)
-            : storage(static_cast<T>(from)){};
+            : storage(static_cast<T const>(from)){};
 
         template <typename U>
         constexpr explicit operator U() {
