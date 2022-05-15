@@ -2,7 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include<array>
+#include <array>
 #include <concepts>
 #include <math>
 #include <memory>
@@ -12,31 +12,23 @@
 namespace cat {
 
 template <typename... Ts>
-class Variant {
+requires(::meta::TypeList<Ts...>::is_unique_list) class Variant {
     static constexpr ssize size = cat::max(ssizeof<Ts>()...);
     static constexpr unsigned alignment = cat::max(alignof(Ts)...);
+
+    using Types = ::meta::TypeList<Ts...>;
 
     using Storage = cat::Array<char, size>;
     alignas(alignment) Storage storage;
     uint1 discriminant;
 
     template <typename T, ssize index>
-    constexpr auto find_index_of_type() -> uint1 requires(index >= 0) {
-        using IndexType = typename ::meta::TypeList<Ts...>::template Get<index>;
+    static consteval auto get_index_of_type() -> uint1 requires(index >= 0) {
+        using IndexType = typename Types::template Get<index>;
         if constexpr (::meta::is_same<T, IndexType>) {
             return static_cast<uint1>(index);
         } else {
-            return find_index_of_type<T, index - 1>();
-        }
-    }
-
-    template <typename T, ssize index>
-    constexpr auto find_index_of_type() const -> uint1 requires(index >= 0) {
-        using IndexType = typename ::meta::TypeList<Ts...>::template Get<index>;
-        if constexpr (::meta::is_same<T, IndexType>) {
-            return static_cast<uint1>(index);
-        } else {
-            return find_index_of_type<T, index - 1>();
+            return get_index_of_type<T, index - 1>();
         }
     }
   public:
@@ -46,9 +38,9 @@ class Variant {
 
     // Consume anything that is a valid type.
     template <typename T>
-    constexpr Variant(T input) {
+    constexpr Variant(T input) requires(Types::template has_type<T>) {
         new (cat::addressof(storage)) T{input};
-        this->discriminant = this->type_index<T>();
+        this->discriminant = this->index<T>();
     };
 
     template <typename T>
@@ -58,7 +50,7 @@ class Variant {
                 this->value<T>().~T();
             }
             this->value<T>() = operand;
-            this->discriminant = this->type_index<T>();
+            this->discriminant = this->index<T>();
         }
         return *this;
     }
@@ -70,13 +62,13 @@ class Variant {
                 this->value<T>().~T();
             }
             this->value<T>() = ::meta::forward<T>(operand);
-            this->discriminant = this->type_index<T>();
+            this->discriminant = this->index<T>();
         }
         return *this;
     }
 
     template <typename T>
-    constexpr auto value() -> T& {
+    constexpr auto value() -> T& requires(Types::template has_type<T>) {
         // TODO: Make this assert work.
         // Result(this->is_type<T>).assert();
 
@@ -85,7 +77,8 @@ class Variant {
     }
 
     template <typename T>
-    constexpr auto value() const -> T const& {
+    constexpr auto value() const
+        -> T const& requires(Types::template has_type<T>) {
         // TODO: Make this assert work.
         // Result(this->is_type<T>).assert();
 
@@ -94,23 +87,21 @@ class Variant {
     }
 
     template <typename T>
-    constexpr auto type_index() -> uint1 {
-        return this->find_index_of_type<T, this->variant_size - 1>();
+    static consteval auto index() -> uint1
+        requires(Types::template has_type<T>) {
+        return get_index_of_type<T, variant_size - 1>();
     }
 
     template <typename T>
-    constexpr auto type_index() const -> uint1 {
-        return this->find_index_of_type<T, this->variant_size - 1>();
+    constexpr auto holds_alternative() -> bool1
+        requires(Types::template has_type<T>) {
+        return this->discriminant == this->index<T>();
     }
 
     template <typename T>
-    constexpr auto holds_alternative() -> bool1 {
-        return this->discriminant == this->type_index<T>();
-    }
-
-    template <typename T>
-    constexpr auto holds_alternative() const -> bool1 {
-        return this->discriminant == this->type_index<T>();
+    constexpr auto holds_alternative() const -> bool1
+        requires(Types::template has_type<T>) {
+        return this->discriminant == this->index<T>();
     }
 
     constexpr auto get_index() const -> uint1 {

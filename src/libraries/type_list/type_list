@@ -74,6 +74,17 @@ class TypeList {
             return recurse_for_count<T, count, Us...>();
         }
     }
+
+    template <typename U>
+    static consteval auto recurse_for_unique() -> bool {
+        return true;
+    }
+
+    template <typename U, typename... Us>
+    static consteval auto recurse_for_unique()
+        -> bool requires(sizeof...(Us) > 0) {
+        return is_unique<U> ? recurse_for_unique<Us...>() : false;
+    }
   public:
     // `TypeList` should never be instantiated.
     TypeList() = delete;
@@ -91,9 +102,13 @@ class TypeList {
     template <typename T>
     static constexpr ssize count_type = recurse_for_count<T, 0, Ts...>();
 
-    // If the type `T` only appears exactly once in this type list.
+    // Evaluate `true` iff the type `T` only appears exactly once in this type
+    // list.
     template <typename T>
     static constexpr bool is_unique = (count_type<T> == 1);
+
+    // Evaluate `true` if every type in this type list is unique.
+    static constexpr bool is_unique_list = recurse_for_unique<Ts...>();
 };
 
 }  // namespace meta
