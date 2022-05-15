@@ -36,22 +36,15 @@ class Simd {
 
     constexpr Simd() = default;
 
-    constexpr Simd(Vector const& operand) {
-        this->value = operand.value;
-    }
+    constexpr Simd(Vector const& operand) : value(operand.value){};
 
-    constexpr Simd(Intrinsic const& values) {
-        this->value = values;
-    }
+    constexpr Simd(Intrinsic const& values) : value(values){};
 
-    constexpr Simd(Intrinsic&& values) {
-        this->value = ::meta::forward<Intrinsic>(values);
-    }
+    constexpr Simd(Intrinsic&& values)
+        : value(::meta::forward<Intrinsic>(values)){};
 
     template <typename... U>
-    constexpr Simd(U... values) {
-        this->value = Intrinsic{values...};
-    }
+    constexpr Simd(U... values) : value(Intrinsic{values...}){};
 
     // TODO: `__builtin_convertvector()` wrapped by conversion operators.
 
@@ -228,7 +221,7 @@ constexpr auto operator|(StringControl flag_1, StringControl flag_2)
 }
 
 template <typename T>
-consteval auto set_zeros() -> typename T::Intrinsic;
+consteval auto set_zeros() -> T;
 
 // TODO: Use a vector concept.
 auto shuffle(auto in_vector, auto mask);
