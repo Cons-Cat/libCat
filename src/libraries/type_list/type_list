@@ -18,9 +18,6 @@ struct HigherType {
     }
 };
 
-template <typename T>
-HigherType(T) -> HigherType<T>;
-
 template <typename... Ts>
 class TypeList {
     template <typename>
@@ -47,13 +44,56 @@ class TypeList {
         using Result = typename RecurseForTypeAtIndex<TypeList<Tail...>,
                                                       index - 1>::Result;
     };
+
+    template <typename T, typename U>
+    static consteval auto recurse_for_type() -> bool {
+        return meta::is_same<T, U>;
+    }
+
+    template <typename T, typename U, typename... Us>
+    static consteval auto recurse_for_type()
+        -> bool requires(sizeof...(Us) > 0) {
+        if constexpr (meta::is_same<T, U>) {
+            return true;
+        } else {
+            return recurse_for_type<T, Us...>();
+        }
+    }
+
+    template <typename T, ssize count>
+    static consteval auto recurse_for_count() -> ssize {
+        return count;
+    }
+
+    template <typename T, ssize count, typename U, typename... Us>
+    static consteval auto recurse_for_count() -> ssize
+        requires(sizeof...(Us) >= 0) {
+        if constexpr (meta::is_same<T, U>) {
+            return recurse_for_count<T, count + 1, Us...>();
+        } else {
+            return recurse_for_count<T, count, Us...>();
+        }
+    }
   public:
     // `TypeList` should never be instantiated.
-    consteval TypeList() = delete;
+    TypeList() = delete;
 
+    // Produce an alias to the type stored at an index in this type list.
     template <ssize index>
     using Get =
         typename RecurseForTypeAtIndex<meta::TypeList<Ts...>, index>::Result;
+
+    // Evaluate `true` iff this type list holds a type `T`.
+    template <typename T>
+    static constexpr bool has_type = recurse_for_type<T, Ts...>();
+
+    // Sum the number of times that a type is in this type list.
+    template <typename T>
+    static constexpr ssize count_type = recurse_for_count<T, 0, Ts...>();
+
+    // If the type `T` only appears exactly once in this type list.
+    template <typename T>
+    static constexpr bool is_unique = (count_type<T> == 1);
 };
 
 }  // namespace meta

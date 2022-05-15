@@ -5,7 +5,7 @@
 #include <simd>
 #include <string>
 
-/* This function requires SSE4.2, unless it is used in a `constexpr` context. */
+// This function requires SSE4.2, unless it is used in a `constexpr` context.
 constexpr auto cat::string_length(char const* p_string) -> ssize {
     if (::meta::is_constant_evaluated()) {
         ssize result = 0;
