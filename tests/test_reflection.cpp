@@ -23,14 +23,19 @@ void meow() {
     static_assert(Types::is_unique<char>);
     static_assert(!Types::is_unique<bool>);
 
+    using Types2 = meta::TypeList<int, int, char>;
+    static_assert(Types::is_unique_list);
+    static_assert(!Types2::is_unique_list);
+    static_assert(Types2::count_type<int> == 2);
+
     cat::Variant<int, char, uint4> variant(int{1});
     Result(variant.holds_alternative<int>()).or_panic();
     int foo_int = variant.value<int>();
     Result(foo_int == 1).or_panic();
 
-    static_assert(variant.type_index<int>() == 0u);
-    static_assert(variant.type_index<char>() == 1u);
-    static_assert(variant.type_index<uint4>() == 2u);
+    static_assert(variant.index<int>() == 0u);
+    static_assert(variant.index<char>() == 1u);
+    static_assert(variant.index<uint4>() == 2u);
 
     variant = 'o';
     Result(variant.holds_alternative<char>()).or_panic();
