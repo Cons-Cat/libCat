@@ -126,6 +126,17 @@ requires(::meta::TypeList<Ts...>::is_unique_list) class Variant {
         return *this;
     }
 
+    constexpr auto operator=(Variant<Ts...> const& operand) -> Variant<Ts...>& {
+        this->assign_other_variant<Ts...>(operand);
+        return *this;
+    }
+
+    // constexpr auto operator=(Variant<Ts...>&& operand) -> Variant<Ts...>& {
+    //     this->assign_other_variant<Ts...>(
+    //         ::meta::forward<Variant<Ts...>>(operand));
+    //     return *this;
+    // }
+
     template <typename... Us>
     constexpr auto operator=(Variant<Us...> const& operand) -> Variant<Ts...>& {
         this->assign_other_variant<Us...>(operand);

@@ -36,9 +36,13 @@ requires(sizeof...(Args) < 7) {
     if (result < 0) {
         return static_cast<LinuxError>(result.c());
     }
-	
+
     if constexpr (!::meta::is_void<T>) {
-        return meta::bit_cast<T>(result);
+        if constexpr (!::meta::is_pointer<T>) {
+            return nix::ScaredyLinux<T>{T{result.c()}};
+        } else {
+            return nix::ScaredyLinux<T>{reinterpret_cast<T>(result.c())};
+        }
     } else {
         return monostate;
     }

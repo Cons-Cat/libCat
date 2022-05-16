@@ -38,14 +38,16 @@ struct Monostate {
 
 template <typename T, T state>
 struct MonostateStorage {
+    T storage;
+
     constexpr MonostateStorage() = default;
 
-    constexpr MonostateStorage(Monostate const){};
+    constexpr MonostateStorage(Monostate const) : storage(state){};
 
-    constexpr MonostateStorage(T const){};
+    constexpr MonostateStorage(T const input) : storage(input){};
 
     constexpr operator auto() const {
-        return state;
+        return this->storage;
     };
 
     constexpr auto operator=(cat::Monostate const)

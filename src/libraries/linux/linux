@@ -280,8 +280,51 @@ enum class LinuxError {
     notrecoverable = -131,
 };
 
+// template <typename T>
+// using ScaredyLinux = cat::Scaredy<T, LinuxError>;
+
+namespace detail {
+    // Map `void` to `cat::MonostateStorage` and map `T*` to `intptr` so that
+    // these types can both hold `-1`.
+    template <typename T>
+    using MapSyscallType =
+        meta::Conditional<meta::is_void<T>, cat::MonostateStorage<int, 1>,
+                          meta::Conditional<meta::is_pointer<T>, intptr, T>>;
+
+    template <typename T>
+    constexpr auto is_positive(T const input) -> bool1 {
+        return static_cast<ssize const>(input) >= 0;
+    }
+}  // namespace detail
+
+// template <typename T>
+// using ScaredyLinuxTest = cat::Scaredy<T, LinuxError>;
+
 template <typename T>
-using ScaredyLinux = cat::Scaredy<T, LinuxError>;
+requires(sizeof(detail::MapSyscallType<T>) <=
+         sizeof(ssize)) using ScaredyLinux =
+    cat::Scaredy<cat::Predicate<detail::MapSyscallType<T>,
+                                // This is a value iff it is a positive integer.
+                                detail::is_positive<detail::MapSyscallType<T>>,
+                                // This defaults to `-1`.
+                                detail::MapSyscallType<T>{-1}>,
+                 // Iff the value is negative, this is some `LinuxError`.
+                 LinuxError>;
+
+// template <typename T>
+// requires(sizeof(detail::MapSyscallType<T>) <=
+//          sizeof(ssize)) using ScaredyLinuxTest =
+//     cat::Scaredy<
+//         cat::Predicate<detail::MapSyscallType<T>,
+//                        // This is a value iff it is a positive integer.
+//                        [](detail::MapSyscallType<T> const input) -> bool1 {
+//                            return static_cast<ssize const>(input) >= 0;
+//                        },
+//                        // This defaults to `-1`.
+//                        meta::Conditional<meta::is_pointer<T>, intptr,
+//                                          detail::MapSyscallType<T>>{-1}>,
+//         // Iff the value is negative, this is some `LinuxError`.
+//         LinuxError>;
 
 enum class MemoryProtectionFlags : unsigned int {
     none = 0b000,     // Data cannot be accessed at all.
@@ -318,38 +361,61 @@ struct Process;
 struct FileDescriptor {
     int4 value;
 
-    FileDescriptor() = default;
-    FileDescriptor(int4 const input) {
-        this->value = input;
+    constexpr FileDescriptor() = default;
+
+    // This is generic to simplify type-punning.
+    constexpr FileDescriptor(meta::Integral auto const input) {
+        this->value = static_cast<int>(input);
+    }
+
+    constexpr operator auto() const {
+        return this->value.c();
     }
 };
 
+static_assert(sizeof(ScaredyLinux<nix::FileDescriptor>) == 4);
+
 struct ProcessId {
-    // Linux supports the better part of `8` cat::Byte process IDs on 64-bit
-    // systems, but only up to `4` cat::Byte process IDs on 32-bit systems.
+    // Linux supports the better part of `8` `cat::Byte` process IDs on 64-bit
+    // systems, but only up to `4` `cat::Byte` process IDs on 32-bit systems.
     ssize value;
 
-    ProcessId() = default;
-    ProcessId(int8 const input) {
+    constexpr ProcessId() = default;
+
+    constexpr ProcessId(int8 const input) {
         this->value = input;
+    }
+
+    constexpr operator auto() const {
+        return this->value.c();
     }
 };
 
 struct UserId {
     int4 value;
 
-    UserId() = default;
-    UserId(int4 const input) {
+    constexpr UserId() = default;
+    constexpr UserId(int4 const input) {
         this->value = input;
+    }
+
+    constexpr operator auto() const {
+        return this->value;
     }
 };
 
 struct GroupId {
     int4 value;
 
-    GroupId() = default;
-    GroupId(int4 const input) {
-        this->value = input;
+    constexpr GroupId() = default;
+
+    // This is generic to simplify type-punning.
+    constexpr GroupId(meta::Integral auto const input) {
+        this->value = static_cast<int>(input);
+    }
+
+    constexpr operator auto() const {
+        return this->value;
     }
 };
 
@@ -510,8 +576,7 @@ auto syscall6(ssize const, cat::Any const, cat::Any const, cat::Any const,
               cat::Any const, cat::Any const, cat::Any const) -> ssize;
 
 template <typename T, typename... Args>
-auto syscall(ssize const call, Args const... parameters)
-    -> cat::Scaredy<T, LinuxError>
+auto syscall(ssize const call, Args const... parameters) -> nix::ScaredyLinux<T>
 requires(sizeof...(Args) < 7);
 
 // Create and return a `cat::Socket`.
@@ -729,10 +794,11 @@ struct FileStatus {
     }
 };
 
-auto file_path_status(cat::String const& file_path) -> ScaredyLinux<FileStatus>;
+auto file_path_status(cat::String const& file_path)
+    -> cat::Scaredy<FileStatus, LinuxError>;
 
 auto file_descriptor_status(FileDescriptor const file_descriptor)
-    -> ScaredyLinux<FileStatus>;
+    -> cat::Scaredy<FileStatus, LinuxError>;
 
 }  // namespace nix
 
