@@ -42,5 +42,10 @@ void meow() {
     char foo_char = variant.value<char>();
     Result(foo_char == 'o').or_panic();
 
+    cat::Optional opt1 = variant.safe_value<char>();
+	Result(opt1.has_value()).or_panic();
+	cat::Optional opt2 = variant.safe_value<int>();
+	Result(!opt2.has_value()).or_panic();
+
     cat::exit();
 }

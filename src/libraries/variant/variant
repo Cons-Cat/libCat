@@ -23,7 +23,8 @@ requires(::meta::TypeList<Ts...>::is_unique_list) class Variant {
     uint1 discriminant;
 
     template <typename T, ssize index>
-    static consteval auto get_index_of_type() -> uint1 requires(index >= 0) {
+    static consteval auto get_index_of_type() -> uint1
+        requires(index >= 0 && Types::template has_type<T>) {
         using IndexType = typename Types::template Get<index>;
         if constexpr (::meta::is_same<T, IndexType>) {
             return static_cast<uint1>(index);
@@ -84,6 +85,24 @@ requires(::meta::TypeList<Ts...>::is_unique_list) class Variant {
 
         // This cast is safe when the precondition holds true.
         return *reinterpret_cast<T const* const>(&this->storage);
+    }
+
+    template <typename T>
+    constexpr auto safe_value() -> cat::Optional<T&>
+    requires(Types::template has_type<T>) {
+        if (this->holds_alternative<T>()) {
+            return this->value<T>();
+        }
+        return nullopt;
+    }
+
+    template <typename T>
+    constexpr auto safe_value() const -> cat::Optional<T&>
+    requires(Types::template has_type<T>) {
+        if (this->holds_alternative<T>()) {
+            return this->value<T>();
+        }
+        return nullopt;
     }
 
     template <typename T>
