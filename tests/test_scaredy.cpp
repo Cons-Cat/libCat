@@ -59,7 +59,6 @@ void meow() {
 
     result = union_errors(2);
     Result(result.has_value()).or_panic();
-    Result(result.value() == 3).or_panic();
     Result(result.holds_alternative<int8>()).or_panic();
 
     result = union_errors(3);
