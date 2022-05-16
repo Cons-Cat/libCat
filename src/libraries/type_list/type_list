@@ -45,34 +45,31 @@ class TypeList {
                                                       index - 1>::Result;
     };
 
+    // If the last element in this type list is `T`.
     template <typename T, typename U>
     static consteval auto recurse_for_type() -> bool {
         return meta::is_same<T, U>;
     }
 
+    // If the any element in this type list is `T`.
     template <typename T, typename U, typename... Us>
     static consteval auto recurse_for_type()
         -> bool requires(sizeof...(Us) > 0) {
-        if constexpr (meta::is_same<T, U>) {
-            return true;
-        } else {
-            return recurse_for_type<T, Us...>();
-        }
+        return meta::is_same<T, U> ? true : recurse_for_type<T, Us...>();
     }
 
+    // Propagate the final count of occurences of `T` in this type list.
     template <typename T, ssize count>
     static consteval auto recurse_for_count() -> ssize {
         return count;
     }
 
+    // Sum the number of occurences of `T` in this type list.
     template <typename T, ssize count, typename U, typename... Us>
     static consteval auto recurse_for_count() -> ssize
         requires(sizeof...(Us) >= 0) {
-        if constexpr (meta::is_same<T, U>) {
-            return recurse_for_count<T, count + 1, Us...>();
-        } else {
-            return recurse_for_count<T, count, Us...>();
-        }
+        return meta::is_same<T, U> ? recurse_for_count<T, count + 1, Us...>()
+                                   : recurse_for_count<T, count, Us...>();
     }
 
     template <typename U>
@@ -102,8 +99,8 @@ class TypeList {
     template <typename T>
     static constexpr ssize count_type = recurse_for_count<T, 0, Ts...>();
 
-    // Evaluate `true` iff the type `T` only appears exactly once in this type
-    // list.
+    // Evaluate `true` iff the type `T` only appears exactly once in this
+    // type list.
     template <typename T>
     static constexpr bool is_unique = (count_type<T> == 1);
 
