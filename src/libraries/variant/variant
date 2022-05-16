@@ -15,13 +15,12 @@ template <typename... Ts>
 requires(::meta::TypeList<Ts...>::is_unique_list) class Variant {
     static constexpr ssize size = cat::max(ssizeof<Ts>()...);
     static constexpr unsigned alignment = cat::max(alignof(Ts)...);
-
-    using Types = ::meta::TypeList<Ts...>;
-
     using Storage = cat::Array<char, size>;
     alignas(alignment) Storage storage;
     uint1 discriminant;
-
+  public:
+    using Types = ::meta::TypeList<Ts...>;
+  private:
     template <typename T, ssize index>
     static consteval auto get_index_of_type() -> uint1
         requires(index >= 0 && Types::template has_type<T>) {
@@ -30,6 +29,56 @@ requires(::meta::TypeList<Ts...>::is_unique_list) class Variant {
             return static_cast<uint1>(index);
         } else {
             return get_index_of_type<T, index - 1>();
+        }
+    }
+
+    template <typename U, typename... Us>
+    constexpr void hard_reset() requires(sizeof...(Us) >= 0) {
+        if (this->holds_alternative<U>()) {
+            this->value<U>().~U();
+        } else {
+            if constexpr (sizeof...(Us) > 0) {
+                this->hard_reset<Us...>();
+            }
+        }
+    }
+
+    // constexpr void hard_reset() {
+    //     this->hard_reset<Ts...>();
+    // }
+
+    template <typename U, typename... Us>
+    constexpr void construct_from_other_variant(auto const& variant) requires(
+        sizeof...(Us) >= 0) {
+        if constexpr (::meta::RemoveReference<
+                          decltype(variant)>::Types::template has_type<U>) {
+            if (variant.template holds_alternative<U>()) {
+                this->discriminant = this->index<U>;
+                this->value<U>() = variant.template value<U>();
+                return;
+            }
+        }
+        if constexpr (sizeof...(Us) > 0) {
+            return this->construct_from_other_variant<Us...>(variant);
+        }
+    }
+
+    template <typename U, typename... Us>
+    constexpr void assign_other_variant(auto const& variant) requires(
+        sizeof...(Us) >= 0) {
+        if constexpr (::meta::RemoveReference<
+                          decltype(variant)>::Types::template has_type<U>) {
+            if (variant.template holds_alternative<U>()) {
+                if (!this->holds_alternative<U>()) {
+                    this->hard_reset<Ts...>();
+                    this->discriminant = this->index<U>;
+                    return;
+                }
+                this->value<U>() = variant.template value<U>();
+            }
+        }
+        if constexpr (sizeof...(Us) > 0) {
+            return this->assign_other_variant<Us...>(variant);
         }
     }
   public:
@@ -44,8 +93,16 @@ requires(::meta::TypeList<Ts...>::is_unique_list) class Variant {
         this->discriminant = this->index<T>;
     };
 
+    // Subsume a `Variant` that holds a subset of this one's alternatives.
+    template <typename... Us>
+    constexpr Variant(Variant<Us...> variant) {
+        this->construct_from_other_variant<Us...>(variant);
+    };
+
     template <typename T>
-    constexpr auto operator=(T const& operand) -> Variant<Ts...>& {
+    constexpr auto operator=(T const& operand)
+        -> Variant<Ts...>& requires(Types::template has_type<T>) {
+        // TODO: Is this totally wrong?
         if (!this->holds_alternative<T>()) {
             if constexpr (!::meta::is_trivially_destructible<T>) {
                 this->value<T>().~T();
@@ -57,7 +114,8 @@ requires(::meta::TypeList<Ts...>::is_unique_list) class Variant {
     }
 
     template <typename T>
-    constexpr auto operator=(T&& operand) -> Variant<Ts...>& {
+    constexpr auto operator=(T&& operand)
+        -> Variant<Ts...>& requires(Types::template has_type<T>) {
         if (!this->holds_alternative<T>()) {
             if constexpr (!::meta::is_trivially_destructible<T>) {
                 this->value<T>().~T();
@@ -65,6 +123,19 @@ requires(::meta::TypeList<Ts...>::is_unique_list) class Variant {
             this->value<T>() = ::meta::forward<T>(operand);
             this->discriminant = this->index<T>;
         }
+        return *this;
+    }
+
+    template <typename... Us>
+    constexpr auto operator=(Variant<Us...> const& operand) -> Variant<Ts...>& {
+        this->assign_other_variant<Us...>(operand);
+        return *this;
+    }
+
+    template <typename... Us>
+    constexpr auto operator=(Variant<Us...>&& operand) -> Variant<Ts...>& {
+        this->assign_other_variant<Us...>(
+            ::meta::forward<Variant<Us...>>(operand));
         return *this;
     }
 

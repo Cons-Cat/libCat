@@ -43,9 +43,25 @@ void meow() {
     Result(foo_char == 'o').or_panic();
 
     cat::Optional opt1 = variant.safe_value<char>();
-	Result(opt1.has_value()).or_panic();
-	cat::Optional opt2 = variant.safe_value<int>();
-	Result(!opt2.has_value()).or_panic();
+    Result(opt1.has_value()).or_panic();
+    cat::Optional opt2 = variant.safe_value<int>();
+    Result(!opt2.has_value()).or_panic();
+
+    // Test variant subtype constructor and assignment operator.
+    cat::Variant<int, char, uint4, int2> variant2 = variant;
+    Result(variant2.holds_alternative<char>()).or_panic();
+    variant2 = 1;
+    Result(variant2.holds_alternative<int>()).or_panic();
+    variant2 = variant;
+    Result(variant2.holds_alternative<char>()).or_panic();
+
+    variant = 1;
+    cat::Variant<int, char, uint4, int2> variant3 = variant;
+    Result(variant3.holds_alternative<int>()).or_panic();
+    variant3 = int2{10};
+    Result(variant3.holds_alternative<int2>()).or_panic();
+    variant3 = variant;
+    Result(variant3.holds_alternative<int>()).or_panic();
 
     cat::exit();
 }
