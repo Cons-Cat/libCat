@@ -280,9 +280,6 @@ enum class LinuxError {
     notrecoverable = -131,
 };
 
-// template <typename T>
-// using ScaredyLinux = cat::Scaredy<T, LinuxError>;
-
 namespace detail {
     // Map `void` to `cat::MonostateStorage` and map `T*` to `intptr` so that
     // these types can both hold `-1`.
@@ -297,9 +294,6 @@ namespace detail {
     }
 }  // namespace detail
 
-// template <typename T>
-// using ScaredyLinuxTest = cat::Scaredy<T, LinuxError>;
-
 template <typename T>
 requires(sizeof(detail::MapSyscallType<T>) <=
          sizeof(ssize)) using ScaredyLinux =
@@ -310,21 +304,6 @@ requires(sizeof(detail::MapSyscallType<T>) <=
                                 detail::MapSyscallType<T>{-1}>,
                  // Iff the value is negative, this is some `LinuxError`.
                  LinuxError>;
-
-// template <typename T>
-// requires(sizeof(detail::MapSyscallType<T>) <=
-//          sizeof(ssize)) using ScaredyLinuxTest =
-//     cat::Scaredy<
-//         cat::Predicate<detail::MapSyscallType<T>,
-//                        // This is a value iff it is a positive integer.
-//                        [](detail::MapSyscallType<T> const input) -> bool1 {
-//                            return static_cast<ssize const>(input) >= 0;
-//                        },
-//                        // This defaults to `-1`.
-//                        meta::Conditional<meta::is_pointer<T>, intptr,
-//                                          detail::MapSyscallType<T>>{-1}>,
-//         // Iff the value is negative, this is some `LinuxError`.
-//         LinuxError>;
 
 enum class MemoryProtectionFlags : unsigned int {
     none = 0b000,     // Data cannot be accessed at all.
