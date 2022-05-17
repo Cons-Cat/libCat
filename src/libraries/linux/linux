@@ -286,7 +286,8 @@ namespace detail {
     template <typename T>
     using MapSyscallType =
         meta::Conditional<meta::is_void<T>, cat::MonostateStorage<int, 0>,
-                          meta::Conditional<meta::is_pointer<T>, intptr, T>>;
+                          meta::Conditional<meta::is_pointer<T>,
+                                            intptr<meta::RemovePointer<T>>, T>>;
 
     template <typename T>
     constexpr auto is_positive(T const input) -> bool1 {

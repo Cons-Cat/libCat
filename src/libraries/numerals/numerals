@@ -474,7 +474,10 @@ struct bool4 {  // NOLINT
     }
 };
 
-struct intptr {  // NOLINT
+template <typename T>
+// NOLINTNEXTLINE
+struct intptr {
+    // `Type` is needed to convert into `cat::detail::Numeral`s.
     // This macro is a GCC builtin.
     using Type = __INTPTR_TYPE__;
     Type storage;
@@ -483,41 +486,39 @@ struct intptr {  // NOLINT
 
     constexpr intptr() = default;
 
-    constexpr intptr(intptr const& input) = default;
+    constexpr intptr(intptr<T> const&) = default;
 
-    constexpr intptr(intptr&& input) : storage(cat::move(input).storage){};
+    constexpr intptr(intptr<T>&& input) : storage(cat::move(input).storage){};
 
     constexpr intptr(meta::Integral auto const& input) : storage(input){};
 
-    template <typename T>
-    constexpr intptr(T* const p_input) {
+    constexpr intptr(T* const& p_input) {
         this->storage = reinterpret_cast<Type>(p_input);
     }
 
-    template <meta::Integral T>
-    constexpr operator T() {
-        return static_cast<T>(this->storage);
+    template <meta::Integral U>
+    constexpr operator U() {
+        return static_cast<U>(this->storage);
     }
 
-    template <meta::Integral T>
-    constexpr operator T() const {
-        return static_cast<T>(this->storage);
+    template <meta::Integral U>
+    constexpr operator U() const {
+        return static_cast<U>(this->storage);
     }
 
-    template <typename T>
     constexpr operator T*() {
         return reinterpret_cast<T*>(this->storage);
     }
 
-    template <typename T>
     constexpr operator T*() const {
+        // TODO: `this->storage`?
         return static_cast<T const*>(static_cast<void const*>(this));
     }
 
-    constexpr auto operator=(intptr const& from) -> intptr& = default;
-    constexpr auto operator=(intptr&& from) -> intptr& = default;
+    constexpr auto operator=(intptr<T> const&) -> intptr<T>& = default;
+    constexpr auto operator=(intptr<T>&&) -> intptr<T>& = default;
 
-    constexpr auto operator=(meta::Integral auto const from) -> intptr& {
+    constexpr auto operator=(meta::Integral auto const from) -> intptr<T>& {
         this->storage = from;
         return *this;
     }
@@ -625,66 +626,76 @@ struct intptr {  // NOLINT
     }
 };
 
+// Consume a pointer implicitly like `intptr p_foo = (int*)(0);`
+// template <typename T>
+// intptr(T*) -> intptr<T>;
+
 // Order-independant operators between an `intptr` and a pointer.
 template <typename T>
-constexpr auto operator==(intptr const lhs, T* const p_rhs) -> bool {
-    return lhs.storage == intptr{p_rhs}.storage;
+constexpr auto operator==(intptr<T> const lhs, T* const p_rhs) -> bool {
+    return lhs.storage == intptr<T>{p_rhs}.storage;
+	intptr p_foo = (int*)(0);
 }
 
 template <typename T>
-constexpr auto operator+(intptr const lhs, T* const p_rhs) -> intptr {
-    return lhs.storage + intptr{p_rhs}.storage;
+constexpr auto operator+(intptr<T> const lhs, T* const p_rhs) -> intptr<T> {
+    return lhs.storage + intptr<T>{p_rhs}.storage;
 }
 
 template <typename T>
-constexpr auto operator-(intptr const lhs, T* const p_rhs) -> intptr {
-    return lhs.storage - intptr{p_rhs}.storage;
+constexpr auto operator-(intptr<T> const lhs, T* const p_rhs) -> intptr<T> {
+    return lhs.storage - intptr<T>{p_rhs}.storage;
 }
 
 template <typename T>
-constexpr auto operator*(intptr const lhs, T* const p_rhs) -> intptr {
-    return lhs.storage * intptr{p_rhs}.storage;
+constexpr auto operator*(intptr<T> const lhs, T* const p_rhs) -> intptr<T> {
+    return lhs.storage * intptr<T>{p_rhs}.storage;
 }
 
 template <typename T>
-constexpr auto operator&(intptr const lhs, T* const p_rhs) -> intptr {
-    return lhs.storage & intptr{p_rhs}.storage;
+constexpr auto operator&(intptr<T> const lhs, T* const p_rhs) -> intptr<T> {
+    return lhs.storage & intptr<T>{p_rhs}.storage;
 }
 
 template <typename T>
-constexpr auto operator|(intptr const lhs, T* const p_rhs) -> intptr {
-    return lhs.storage | intptr{p_rhs}.storage;
+constexpr auto operator|(intptr<T> const lhs, T* const p_rhs) -> intptr<T> {
+    return lhs.storage | intptr<T>{p_rhs}.storage;
 }
 
-// Order-independant operators between an `intptr` and an integer.
+// Order-independant operators between an `intptr<T>` and an integer.
 template <meta::Integral T>
-constexpr auto operator==(intptr const lhs, T const rhs) -> bool {
-    return lhs.storage == intptr{rhs}.storage;
+constexpr auto operator==(intptr<T> const lhs, T const rhs) -> bool {
+    return lhs.storage == intptr<T>{rhs}.storage;
 }
 
-constexpr auto operator+(intptr const lhs, meta::Integral auto const rhs)
-    -> intptr {
-    return lhs.storage + intptr{rhs}.storage;
+template <typename T>
+constexpr auto operator+(intptr<T> const lhs, meta::Integral auto const rhs)
+    -> intptr<T> {
+    return lhs.storage + intptr<T>{rhs}.storage;
 }
 
-constexpr auto operator-(intptr const lhs, meta::Integral auto const rhs)
-    -> intptr {
-    return lhs.storage - intptr{rhs}.storage;
+template <typename T>
+constexpr auto operator-(intptr<T> const lhs, meta::Integral auto const rhs)
+    -> intptr<T> {
+    return lhs.storage - intptr<T>{rhs}.storage;
 }
 
-constexpr auto operator*(intptr const lhs, meta::Integral auto const rhs)
-    -> intptr {
-    return lhs.storage * intptr{rhs}.storage;
+template <typename T>
+constexpr auto operator*(intptr<T> const lhs, meta::Integral auto const rhs)
+    -> intptr<T> {
+    return lhs.storage * intptr<T>{rhs}.storage;
 }
 
-constexpr auto operator&(intptr const lhs, meta::Integral auto const rhs)
-    -> intptr {
-    return lhs.storage & intptr{rhs}.storage;
+template <typename T>
+constexpr auto operator&(intptr<T> const lhs, meta::Integral auto const rhs)
+    -> intptr<T> {
+    return lhs.storage & intptr<T>{rhs}.storage;
 }
 
-constexpr auto operator|(intptr const lhs, meta::Integral auto const rhs)
-    -> intptr {
-    return lhs.storage | intptr{rhs}.storage;
+template <typename T>
+constexpr auto operator|(intptr<T> const lhs, meta::Integral auto const rhs)
+    -> intptr<T> {
+    return lhs.storage | intptr<T>{rhs}.storage;
 }
 
 }  // namespace cat
@@ -698,10 +709,11 @@ using cat::int1;
 using cat::int2;
 using cat::int4;
 using cat::int8;
-using cat::intptr;
 using cat::ssize;
 using cat::uint1;
 using cat::uint2;
 using cat::uint4;
 using cat::uint8;
 using cat::usize;
+template <typename T>
+using intptr = cat::intptr<T>;
