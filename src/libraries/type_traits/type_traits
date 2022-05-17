@@ -53,6 +53,7 @@ using uint8 = cat::detail::Numeral<__UINT64_TYPE__>;
 using float4 = cat::detail::Numeral<float>;
 using float8 = cat::detail::Numeral<double>;
 
+template <typename T>
 struct intptr;
 
 }  // namespace cat
@@ -306,8 +307,8 @@ template <>
 struct IsCatNumeral<cat::float4> : TrueTypeTrait {};
 template <>
 struct IsCatNumeral<cat::float8> : TrueTypeTrait {};
-template <>
-struct IsCatNumeral<cat::intptr> : TrueTypeTrait {};
+template <typename U>
+struct IsCatNumeral<cat::intptr<U>> : TrueTypeTrait {};
 
 template <typename T>
 constexpr bool is_cat_numeral = IsCatNumeral<T>::value;
@@ -354,8 +355,8 @@ namespace detail {
     template <>
     struct IsIntegralTraitDetail<cat::uint8> : TrueTypeTrait {};
 
-    template <>
-    struct IsIntegralTraitDetail<cat::intptr> : TrueTypeTrait {};
+    template <typename U>
+    struct IsIntegralTraitDetail<cat::intptr<U>> : TrueTypeTrait {};
     template <>
     struct IsIntegralTraitDetail<bool> : TrueTypeTrait {};
 }  // namespace detail

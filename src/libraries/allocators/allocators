@@ -392,11 +392,13 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
     struct LinearMemoryHandle : BaseMemoryHandle<T> {
         ssize allocation_size;
     };
-    intptr const p_arena_begin;
-    intptr const p_arena_end;
-    intptr p_arena_current = p_arena_begin;
 
-    LinearAllocator(intptr const p_address, ssize const arena_size)
+    // TODO: Use `AnyPtr`.
+    intptr<void> const p_arena_begin;
+    intptr<void> const p_arena_end;
+    intptr<void> p_arena_current = p_arena_begin;
+
+    LinearAllocator(intptr<void> const p_address, ssize const arena_size)
         : p_arena_begin(p_address + arena_size), p_arena_end(p_address){};
 
     // Try to allocate memory and bump the pointer down.
@@ -420,7 +422,7 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
     template <typename T>
     auto aligned_allocate(ssize const alignment, ssize const allocation_size)
         -> Optional<void*> {
-        intptr p_allocation =
+        intptr<void> p_allocation =
             cat::align_down(this->p_arena_current - allocation_size, alignment);
         if (p_allocation >= p_arena_end) {
             this->p_arena_current = p_allocation;

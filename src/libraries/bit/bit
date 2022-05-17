@@ -91,15 +91,25 @@ struct Byte {  // NOLINT
 // TODO: Aligned pointer types and alignment casts.
 // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4201.html
 
-// Returns `true` if `value` is aligned to the `alignment` boundary.
-constexpr auto is_aligned(intptr const& value, ssize const alignment) -> bool;
+template <typename U>
+constexpr auto is_aligned(U* const p_value, ssize const alignment) -> bool;
 
-// Returns a value rounded up from `value` to the nearest `alignment` boundary.
-constexpr auto align_up(intptr const& value, ssize const alignment) -> intptr;
+template <typename U>
+constexpr auto is_aligned(intptr<U> const p_value, ssize const alignment)
+    -> bool;
 
-// Returns a value rounded down from `value` to the nearest `alignment`
-// boundary.
-constexpr auto align_down(intptr const& value, ssize const alignment) -> intptr;
+template <typename U>
+constexpr auto align_up(U* const p_value, ssize const alignment) -> U*;
+template <typename U>
+constexpr auto align_up(intptr<U> const p_value, ssize const alignment)
+    -> intptr<U>;
+
+template <typename U>
+constexpr auto align_down(U* const p_value, ssize const alignment) -> U*;
+
+template <typename U>
+constexpr auto align_down(intptr<U> const p_value, ssize const alignment)
+    -> intptr<U>;
 
 }  // namespace cat
 

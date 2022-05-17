@@ -36,8 +36,8 @@ auto cat::compare_strings(String const& string_1, String const& string_2)
                 results[i] = simd::move_mask(mask[i]);
             }
 
-            for (int i = 0; i < size; i++) {
-                if (results[i] != cat::numeric_limits<uint4>::max()) {
+            for (int4 i = 0; i < size; i++) {
+                if (results[i] != cat::numeric_limits<int4>::max()) {
                     return false;
                 }
             }
