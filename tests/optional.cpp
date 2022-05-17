@@ -96,7 +96,7 @@ void meow() {
     Result(ref_2.has_value()).or_panic();
     Result(ref_2.value() == goo).or_panic();
 
-    // 	cat::Optional with a predicate.
+    // `cat::Optional` with a predicate.
     cat::Optional<cat::Predicate<int4,
                                  [](int4 input) -> bool1 {
                                      return input >= 0;
@@ -110,12 +110,25 @@ void meow() {
 
     positive = 0;
     Result(positive.has_value()).or_panic();
+    _ = positive.or_panic();
 
     positive = 10;
     Result(positive.has_value()).or_panic();
 
     positive = nullopt;
     Result(!positive.has_value()).or_panic();
+
+    // `cat::Optional<void>` with a predicate.
+    cat::Optional<cat::Predicate<cat::MonostateStorage<int, 0>,
+                                 [](int input) -> bool1 {
+                                     return input >= 0;
+                                 },
+                                 -1>>
+        predicate_void(nullopt);
+    Result(!predicate_void.has_value()).or_panic();
+    predicate_void = monostate;
+    Result(predicate_void.has_value()).or_panic();
+    _ = predicate_void.or_panic();
 
     // This crashes clangd, but it passes tests, last I checked.
     /*

@@ -285,7 +285,7 @@ namespace detail {
     // these types can both hold `-1`.
     template <typename T>
     using MapSyscallType =
-        meta::Conditional<meta::is_void<T>, cat::MonostateStorage<int, 1>,
+        meta::Conditional<meta::is_void<T>, cat::MonostateStorage<int, 0>,
                           meta::Conditional<meta::is_pointer<T>, intptr, T>>;
 
     template <typename T>
