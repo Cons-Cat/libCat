@@ -19,6 +19,19 @@ constexpr auto addressof(T& value) -> T* {
 template <typename T>
 constexpr auto addressof(T const&& value) -> T const* = delete;
 
+// Call an in-place constructor at any address.
+template <typename T, typename... Args>
+constexpr auto construct_at(T* p_place, Args&&... arguments) {
+    // TODO: Assert that alignment constraints are satisfied.
+    return new (p_place) T{std::forward<Args>(arguments)...};
+}
+
+// Call an in-place destructor at any place.
+template <typename T>
+constexpr void destroy_at(T* p_place) {
+    p_place->~T();
+}
+
 }  // namespace cat
 
 using cat::addressof;
