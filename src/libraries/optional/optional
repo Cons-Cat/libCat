@@ -974,6 +974,7 @@ class Optional {
     // }
 };
 
+// This deduction guide is required for deducing references.
 template <typename T>
 Optional(T) -> Optional<T>;
 
