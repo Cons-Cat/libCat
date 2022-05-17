@@ -216,25 +216,24 @@ void meow() {
             .and_then(return_opt_void)
             .or_else(maybe_nothing);
 
-    cat::Optional<int4> monadic;
-    monadic = return_none(0).and_then(return_opt);
-    Result(!monadic.has_value()).or_panic();
+    cat::Optional<int4> monadic_int;
+    monadic_int = return_none(0).and_then(return_opt);
+    Result(!monadic_int.has_value()).or_panic();
 
-    monadic = return_opt(1).transform(return_int);
-    Result(monadic.has_value()).or_panic();
-    Result(monadic.value() == 2).or_panic();
+    monadic_int = return_opt(1).transform(return_int);
+    Result(monadic_int.has_value()).or_panic();
+    Result(monadic_int.value() == 2).or_panic();
 
     cat::Optional<void> monadic_void =
         return_opt(1).transform(return_int).transform(return_void);
     Result(monadic_void.has_value()).or_panic();
 
     // Test monadic methods on reference types.
-    cat::Optional<int4&> monadic_ref;
-    int4 mon_ref = 1;
-    cat::Optional<void> mon_void_ref =
-        cat::Optional{mon_ref}.and_then(return_opt_void);
+    int4 monadic_int_ref = 1;
+    cat::Optional<void> monadic_void_ref =
+        cat::Optional{monadic_int_ref}.and_then(return_opt_void);
     // Be sure that this did not assign through.
-    Result(mon_void_ref.has_value()).or_panic();
+    Result(monadic_void_ref.has_value()).or_panic();
 
     // The default value of `int4` is `0`.
     decltype(positive) default_predicate_2{in_place};
