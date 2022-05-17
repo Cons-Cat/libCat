@@ -80,7 +80,7 @@ template <typename T, auto predicate, T sentinel>
 requires(!predicate(sentinel)) struct Predicate {
     using PredicateType = T;
     static constexpr auto predicate_function = predicate;
-    static constexpr T sentinel_value = sentinel;
+    static constexpr PredicateType sentinel_value = PredicateType{sentinel};
     // `Predicate`s can only be instantiated at compile-time.
     consteval Predicate() = default;
 };

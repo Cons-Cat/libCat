@@ -11,7 +11,7 @@ void meow() {
 
     cat::Array<char, 12> message_buffer;
 
-    nix::unlink(listening_socket.path_name.p_data()).or_panic();
+    _ = nix::unlink(listening_socket.path_name.p_data()).or_panic();
 
     listening_socket.create().or_panic();
 
@@ -46,6 +46,6 @@ void meow() {
 
     recieving_socket.close().or_panic();
     listening_socket.close().or_panic();
-    nix::unlink(listening_socket.path_name.p_data()).or_panic();
+    _ = nix::unlink(listening_socket.path_name.p_data()).or_panic();
     cat::exit();
 }

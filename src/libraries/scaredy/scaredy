@@ -104,13 +104,13 @@ namespace detail {
         constexpr ScaredyPredicateStorage(Error const& error)
             : error_code(error){};
 
-        constexpr auto operator=(T const& operand)
+        constexpr auto operator=(Value const& operand)
             -> ScaredyPredicateStorage<T, Error>& {
             this->storage = static_cast<T>(operand);
             return *this;
         }
 
-        constexpr auto operator=(T const& operand) const
+        constexpr auto operator=(Value const& operand) const
             -> ScaredyPredicateStorage<T, Error>& {
             this->storage = static_cast<T>(operand);
             return *this;
@@ -204,7 +204,7 @@ requires(
     }
 
     [[nodiscard]] constexpr auto value() & requires(!::meta::is_void<T>) {
-        return this->storage.template value();
+        return this->storage.value();
     }
 
     [[nodiscard]] constexpr auto value() const& requires(!::meta::is_void<T>) {

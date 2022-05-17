@@ -162,12 +162,15 @@ struct OptionalValueStorage {
     constexpr auto value() & -> T& {
         return this->storage;
     }
+
     constexpr auto value() const& -> T const& {
         return this->storage;
     }
+
     constexpr auto value() && -> T&& {
         return cat::move(this->storage);
     }
+
     constexpr auto value() const&& -> T&& {
         return cat::move(this->storage);
     }
@@ -240,12 +243,15 @@ struct OptionalReferenceStorage {
     constexpr auto value() & -> Value& {
         return *(this->p_storage);
     }
+
     constexpr auto value() const& -> Value& {
         return *(this->p_storage);
     }
+
     constexpr auto value() && -> Value&& {
         return *(cat::move(this->p_storage));
     }
+
     constexpr auto value() const&& -> Value&& {
         return *(cat::move(this->p_storage));
     }
@@ -406,12 +412,15 @@ struct OptionalPredicateStorage {
     constexpr auto value() & -> Value& {
         return this->storage;
     }
+
     constexpr auto value() const& -> Value const& {
         return this->storage;
     }
+
     constexpr auto value() && -> Value&& {
         return cat::move(this->storage);
     }
+
     constexpr auto value() const&& -> Value&& {
         return cat::move(this->storage);
     }
@@ -946,6 +955,20 @@ class Optional {
         __builtin_unreachable();  // This prevents a build warning.
     }
 
+    // If this `Optional` is empty, terminate the running process immediately.
+    // Otherwise, return its value.
+    [[nodiscard]] constexpr auto or_panic() const {
+        if (this->has_value()) [[likely]] {
+            if constexpr (!::meta::is_void<T>) {
+                return this->value();
+            } else {
+                return;
+            }
+        }
+        cat::exit(1);
+        __builtin_unreachable();  // This prevents a build warning.
+    }
+
     // If this `Optional` is empty, print an error message and terminate the
     // running process immediately. Otherwise, return its value.
     [[nodiscard]] constexpr auto or_panic(String const&
@@ -965,13 +988,13 @@ class Optional {
     }
 
     // Construct the value in-place and destroy the held value iff it exists.
-    // template <typename... Args>
-    // constexpr auto emplace(Args&&... args) -> T& requires(!meta::is_void<T>)
-    // {
-    //     *this = nullopt;
-    //     this->storage.construct(meta::forward<Args>(args)...);
-    //     return this->storage.value();
-    // }
+    template <typename... Args>
+    constexpr auto emplace(Args&&... args)
+        -> Value& requires(!::meta::is_void<T>) {
+        *this = nullopt;
+        this->storage.construct(::meta::forward<Args>(args)...);
+        return this->storage.value();
+    }
 };
 
 // This deduction guide is required for deducing references.
