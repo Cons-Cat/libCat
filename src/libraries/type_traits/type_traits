@@ -37,21 +37,19 @@ using std::move;
 
 // Forward declare numeric types.
 namespace cat {
-namespace detail {
-    template <typename T>
-    struct Numeral;
-}
+template <typename T>
+struct Numeral;
 
-using int1 = cat::detail::Numeral<__INT8_TYPE__>;
-using int2 = cat::detail::Numeral<__INT16_TYPE__>;
-using int4 = cat::detail::Numeral<__INT32_TYPE__>;
-using int8 = cat::detail::Numeral<__INT64_TYPE__>;
-using uint1 = cat::detail::Numeral<__UINT8_TYPE__>;
-using uint2 = cat::detail::Numeral<__UINT16_TYPE__>;
-using uint4 = cat::detail::Numeral<__UINT32_TYPE__>;
-using uint8 = cat::detail::Numeral<__UINT64_TYPE__>;
-using float4 = cat::detail::Numeral<float>;
-using float8 = cat::detail::Numeral<double>;
+using int1 = cat::Numeral<__INT8_TYPE__>;
+using int2 = cat::Numeral<__INT16_TYPE__>;
+using int4 = cat::Numeral<__INT32_TYPE__>;
+using int8 = cat::Numeral<__INT64_TYPE__>;
+using uint1 = cat::Numeral<__UINT8_TYPE__>;
+using uint2 = cat::Numeral<__UINT16_TYPE__>;
+using uint4 = cat::Numeral<__UINT32_TYPE__>;
+using uint8 = cat::Numeral<__UINT64_TYPE__>;
+using float4 = cat::Numeral<float>;
+using float8 = cat::Numeral<double>;
 
 template <typename T>
 struct intptr;
