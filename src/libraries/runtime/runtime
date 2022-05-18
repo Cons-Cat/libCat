@@ -2,8 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <concepts>
-#include <type_traits>
+#include <meta>
 
 // `meow()` is the user's entry point in a libCat program, rather than `main()`.
 //  But hear meowt! This allows libCat to explore interesting ideas, such as

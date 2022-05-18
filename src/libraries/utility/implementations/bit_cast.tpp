@@ -2,7 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <type_traits>
+#include <meta>
 #include <utility>
 
 /* As far as I can prove, `bit_cast` is a zero-overhead abstraction on `-O3`.
@@ -13,6 +13,8 @@
  * resolve to different overloads. These are optimized and inlined because it is
  * sometimes semantically necessary that these have zero-overhead, and those
  * attributes guarantee this even in -O0. */
+
+// TODO: Add an overload for C++20 bit casting.
 
 // clangd emits diagnistic false positives in this file.
 

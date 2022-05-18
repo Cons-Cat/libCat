@@ -4,8 +4,8 @@
 
 #include <bit>
 #include <linux>
+#include <meta>
 #include <optional>
-#include <type_traits>
 
 namespace cat {
 
@@ -19,7 +19,7 @@ struct BaseMemoryHandle {
 };
 
 namespace detail {
-    constexpr ssize small_size_threshold = 256;
+    constexpr int small_size_threshold = 256;
 
     template <typename Handle>
     struct SmallMemoryHandle {
@@ -29,7 +29,7 @@ namespace detail {
             Type stack_storage;
             // Reserve `small_size_threshold` bytes to make the size
             // of this handle predictible.
-            cat::Byte empty[cat::detail::small_size_threshold.c()];
+            cat::Byte empty[cat::detail::small_size_threshold];
         };
         bool1 is_on_stack;
 

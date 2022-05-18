@@ -4,11 +4,10 @@
 
 #include <any>
 #include <bit>
-#include <concepts>
+#include <meta>
 #include <scaredy>
 #include <span>
 #include <string>
-#include <type_traits>
 #include <utility>
 
 namespace cat {
@@ -619,7 +618,7 @@ struct Process {
 
     Process() = default;
     Process(Process const&) = delete;
-    // TODO: Add `meta::invocable` concept.
+    // TODO: Add `meta::Invocable` concept.
     // TODO: Use `meta::Allocator` concept.
     auto create(auto& allocator, ssize const initial_stack_size,
                 auto const& function, void* p_arguments_struct,
@@ -635,12 +634,12 @@ struct Process {
         }
         this->p_stack = &allocator.get(maybe_memory.value());
 
-        // TODO: Use `intptr`.
         // We need the top because memory will be pushed to it downwards on
         //  x86-64.
         volatile void* p_stack_top =
-            static_cast<char*>(this->p_stack) + this->stack_size;
+            intptr<void>{this->p_stack} + this->stack_size;
 
+        // TODO: Use the `cat::Scaredy`.
         // ScaredyLinux<void> result;
         cat::Any result;
         asm goto volatile(
@@ -732,7 +731,7 @@ struct FileStatus {
     UserId user_id;
     GroupId groud_id;
   private:
-    uint4 padding;  // NOLINT
+    [[maybe_unused]] uint4 padding;
   public:
     uint8 rdev;
     int8 file_size;
@@ -748,7 +747,7 @@ struct FileStatus {
     Timespec last_modification_time;
     Timespec creation_time;
   private:
-    int4 unused[3];  // NOLINT
+    [[maybe_unused]] int4 unused[3];
   public:
     auto is_regular() const -> bool1 {
         return (this->protections_mode & uint4{0170000u}) == 0100000u;

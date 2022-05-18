@@ -14,7 +14,7 @@
  * To streamline this, libCat uses the intrinsics which GNU already provides,
  * and wraps it in one thin layer of technology. */
 
-#include <type_traits>
+#include <meta>
 
 namespace cat::detail {
 

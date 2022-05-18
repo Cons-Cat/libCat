@@ -8,7 +8,7 @@
 // TODO: Add many comments.
 
 #include <memory>
-#include <type_traits>
+#include <meta>
 
 namespace cat {
 
@@ -28,9 +28,9 @@ class Span {
     constexpr Span(U* p_in_data, ssize in_length)
         : p_storage(static_cast<T*>(p_in_data)), length(in_length){};
 
-    template <::meta::Pointer U>
-    constexpr Span(U const p_start,
-                   U const p_end) requires(::meta::is_convertible<U, T*>)
+    template <typename U>
+    constexpr Span(U* const p_start,
+                   U* const p_end) requires(::meta::is_convertible<U*, T*>)
         : p_storage(p_start), length(static_cast<ssize>(p_end - p_start)){};
 
     // TODO: Make a `ContiguousContainer` `concept`.
