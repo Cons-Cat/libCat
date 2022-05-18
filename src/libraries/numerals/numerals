@@ -474,6 +474,15 @@ struct bool4 {  // NOLINT
     }
 };
 
+namespace detail {
+    template <typename T>
+    concept NonPtrIntegral =
+        meta::is_integral<T> && !meta::IsSpecializationTrait<T, intptr>::value;
+}
+
+// `intptr` can be constructed from any integer type or any pointer. It can only
+// convert into `T*`, but it is otherwise interchangeable with integers. It
+// satisfies the `meta::is_integral` type trait and `meta::Integral` concept.
 template <typename T>
 // NOLINTNEXTLINE
 struct intptr {
@@ -482,28 +491,17 @@ struct intptr {
     using Type = __INTPTR_TYPE__;
     Type storage;
 
-    // TODO: Make constructors `explicit`.
-
     constexpr intptr() = default;
 
     constexpr intptr(intptr<T> const&) = default;
 
     constexpr intptr(intptr<T>&& input) : storage(cat::move(input).storage){};
 
-    constexpr intptr(meta::Integral auto const& input) : storage(input){};
+    constexpr intptr(detail::NonPtrIntegral auto const input)
+        : storage(static_cast<Type>(input)){};
 
     constexpr intptr(T* const& p_input) {
         this->storage = reinterpret_cast<Type>(p_input);
-    }
-
-    template <meta::Integral U>
-    constexpr operator U() {
-        return static_cast<U>(this->storage);
-    }
-
-    template <meta::Integral U>
-    constexpr operator U() const {
-        return static_cast<U>(this->storage);
     }
 
     constexpr operator T*() {
@@ -511,130 +509,231 @@ struct intptr {
     }
 
     constexpr operator T*() const {
-        // TODO: `this->storage`?
-        return static_cast<T const*>(static_cast<void const*>(this));
+        return reinterpret_cast<T* const>(this->storage);
     }
 
-    constexpr auto operator=(intptr<T> const&) -> intptr<T>& = default;
-    constexpr auto operator=(intptr<T>&&) -> intptr<T>& = default;
-
-    constexpr auto operator=(meta::Integral auto const from) -> intptr<T>& {
-        this->storage = from;
+    constexpr auto operator=(intptr<T> const from) -> intptr<T>& {
+        this->storage = from.storage;
         return *this;
     }
 
-    constexpr auto operator>(meta::Integral auto const from) const -> bool1 {
+    constexpr auto operator=(intptr<T>&& from) -> intptr<T>& {
+        this->storage = cat::move(from).storage;
+        return *this;
+    }
+
+    constexpr auto operator=(detail::NonPtrIntegral auto const from)
+        -> intptr<T>& {
+        this->storage = static_cast<Type>(from);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto operator>(intptr<U> const from) const -> bool1 {
+        return this->storage > from.storage;
+    }
+    constexpr auto operator>(detail::NonPtrIntegral auto const from) const
+        -> bool1 {
         return this->storage > static_cast<Type>(from);
     }
 
-    constexpr auto operator>=(meta::Integral auto const from) -> bool1 {
+    template <typename U>
+    constexpr auto operator>=(intptr<U> const from) const -> bool1 {
+        return this->storage >= from.storage;
+    }
+    constexpr auto operator>=(detail::NonPtrIntegral auto const from) const
+        -> bool1 {
         return this->storage >= static_cast<Type>(from);
     }
 
-    constexpr auto operator<(meta::Integral auto const from) const -> bool1 {
+    template <typename U>
+    constexpr auto operator<(intptr<U> const from) const -> bool1 {
+        return this->storage < from.storage;
+    }
+    constexpr auto operator<(detail::NonPtrIntegral auto const from) const
+        -> bool1 {
         return this->storage < static_cast<Type>(from);
     }
 
-    constexpr auto operator<=(meta::Integral auto const from) -> bool1 {
+    template <typename U>
+    constexpr auto operator<=(intptr<U> const from) const -> bool1 {
+        return this->storage <= from.storage;
+    }
+    constexpr auto operator<=(detail::NonPtrIntegral auto const from) const
+        -> bool1 {
         return this->storage <= static_cast<Type>(from);
     }
 
-    constexpr auto operator+=(meta::Integral auto const from) -> intptr& {
+    template <typename U>
+    constexpr auto operator+=(intptr<U> const from) -> intptr<T>& {
+        this->storage += from.storage;
+        return *this;
+    }
+    constexpr auto operator+=(detail::NonPtrIntegral auto const from)
+        -> intptr<T>& {
         this->storage += static_cast<Type>(from);
         return *this;
     }
 
-    constexpr auto operator++() -> intptr {
+    constexpr auto operator++() -> intptr<T> {
         return ++(this->storage);
     }
 
-    constexpr auto operator++(int) -> intptr {
+    constexpr auto operator++(int) -> intptr<T> {
         return (this->storage)++;
     }
 
-    constexpr auto operator-=(meta::Integral auto const from) -> intptr& {
+    template <typename U>
+    constexpr auto operator-=(intptr<U> const from) -> intptr<T>& {
+        this->storage = this->storage - static_cast<Type>(from);
+        return *this;
+    }
+    constexpr auto operator-=(detail::NonPtrIntegral auto const from)
+        -> intptr<T>& {
         this->storage = this->storage - static_cast<Type>(from);
         return *this;
     }
 
-    constexpr auto operator--() -> intptr {
+    constexpr auto operator--() -> intptr<T> {
         return --(this->storage);
     }
 
-    constexpr auto operator--(int) -> intptr {
+    constexpr auto operator--(int) -> intptr<T> {
         return (this->storage)--;
     }
 
-    constexpr auto operator*=(meta::Integral auto const from) -> intptr& {
+    template <typename U>
+    constexpr auto operator*=(intptr<U> const from) -> intptr<T>& {
+        this->storage = this->storage * static_cast<Type>(from);
+        return *this;
+    }
+    constexpr auto operator*=(detail::NonPtrIntegral auto const from)
+        -> intptr<T>& {
         this->storage = this->storage * static_cast<Type>(from);
         return *this;
     }
 
-    constexpr auto operator/(meta::Integral auto const from) const -> intptr {
+    template <typename U>
+    constexpr auto operator/(intptr<U> const from) const -> intptr<T> {
+        return this->storage / from.storage;
+    }
+    constexpr auto operator/(detail::NonPtrIntegral auto const from) const
+        -> intptr<T> {
         return this->storage / static_cast<Type>(from);
     }
 
-    constexpr auto operator/=(meta::Integral auto const from) -> intptr& {
+    template <typename U>
+    constexpr auto operator/=(intptr<U> const from) -> intptr<T>& {
+        this->storage = this->storage / from.storage;
+        return *this;
+    }
+    constexpr auto operator/=(detail::NonPtrIntegral auto const from)
+        -> intptr<T>& {
         this->storage = this->storage / static_cast<Type>(from);
         return *this;
     }
 
-    constexpr auto operator%(meta::Integral auto const from) const -> intptr {
+    template <typename U>
+    constexpr auto operator%(intptr<U> const from) const -> intptr<T> {
+        return this->storage % from.storage;
+    }
+    constexpr auto operator%(detail::NonPtrIntegral auto const from) const
+        -> intptr<T> {
         return this->storage % static_cast<Type>(from);
     }
 
-    constexpr auto operator%=(meta::Integral auto const from) -> intptr& {
+    template <typename U>
+    constexpr auto operator%=(intptr<U> const from) -> intptr<T>& {
+        this->storage = this->storage % from.storage;
+        return *this;
+    }
+    constexpr auto operator%=(detail::NonPtrIntegral auto const from)
+        -> intptr<T>& {
         this->storage = this->storage % static_cast<Type>(from);
         return *this;
     }
 
-    constexpr auto operator&=(meta::Integral auto const from) -> intptr& {
+    template <typename U>
+    constexpr auto operator&=(intptr<U> const from) -> intptr<T>& {
+        this->storage = this->storage & from.storage;
+        return *this;
+    }
+    constexpr auto operator&=(detail::NonPtrIntegral auto const from)
+        -> intptr<T>& {
         this->storage = this->storage & static_cast<Type>(from);
         return *this;
     }
 
-    constexpr auto operator|(meta::Integral auto const from) const -> intptr {
+    template <typename U>
+    constexpr auto operator|(intptr<U> const from) const -> intptr<T> {
+        return this->storage | from.storage;
+    }
+    constexpr auto operator|(detail::NonPtrIntegral auto const from) const
+        -> intptr<T> {
         return this->storage | static_cast<Type>(from);
     }
 
-    constexpr auto operator|=(meta::Integral auto const from) -> intptr& {
+    template <typename U>
+    constexpr auto operator|=(intptr<U> const from) -> intptr<T>& {
+        this->storage = this->storage | from.storage;
+        return *this;
+    }
+    constexpr auto operator|=(detail::NonPtrIntegral auto const from)
+        -> intptr<T>& {
         this->storage = this->storage | static_cast<Type>(from);
         return *this;
     }
 
-    constexpr auto operator<<(meta::Integral auto const from) const -> intptr {
+    template <typename U>
+    constexpr auto operator<<(intptr<U> const from) const -> intptr<T> {
+        return this->storage << from.storage;
+    }
+    constexpr auto operator<<(detail::NonPtrIntegral auto const from) const
+        -> intptr<T> {
         return this->storage << static_cast<Type>(from);
     }
 
-    constexpr auto operator<<=(meta::Integral auto const from) -> intptr& {
+    template <typename U>
+    constexpr auto operator<<=(intptr<U> const from) -> intptr<T>& {
+        this->storage = this->storage << from.storage;
+        return *this;
+    }
+    constexpr auto operator<<=(detail::NonPtrIntegral auto const from)
+        -> intptr<T>& {
         this->storage = this->storage << static_cast<Type>(from);
         return *this;
     }
 
-    constexpr auto operator>>(meta::Integral auto const from) const -> intptr {
+    template <typename U>
+    constexpr auto operator>>(intptr<U> const from) const -> intptr<T> {
+        return this->storage >> from.storage;
+    }
+    constexpr auto operator>>(detail::NonPtrIntegral auto const from) const
+        -> intptr<T> {
         return this->storage >> static_cast<Type>(from);
     }
 
-    constexpr auto operator>>=(meta::Integral auto const from) -> intptr& {
+    template <typename U>
+    constexpr auto operator>>=(intptr<U> const from) -> intptr<T>& {
+        this->storage = this->storage >> from.storage;
+        return *this;
+    }
+    constexpr auto operator>>=(detail::NonPtrIntegral auto const from)
+        -> intptr<T>& {
         this->storage = this->storage >> static_cast<Type>(from);
         return *this;
     }
 
-    constexpr auto operator~() -> intptr& {
+    constexpr auto operator~() -> intptr<T>& {
         this->storage = ~(this->storage);
         return *this;
     }
 };
 
-// Consume a pointer implicitly like `intptr p_foo = (int*)(0);`
-// template <typename T>
-// intptr(T*) -> intptr<T>;
-
 // Order-independant operators between an `intptr` and a pointer.
 template <typename T>
 constexpr auto operator==(intptr<T> const lhs, T* const p_rhs) -> bool {
     return lhs.storage == intptr<T>{p_rhs}.storage;
-	intptr p_foo = (int*)(0);
 }
 
 template <typename T>
@@ -663,38 +762,45 @@ constexpr auto operator|(intptr<T> const lhs, T* const p_rhs) -> intptr<T> {
 }
 
 // Order-independant operators between an `intptr<T>` and an integer.
-template <meta::Integral T>
-constexpr auto operator==(intptr<T> const lhs, T const rhs) -> bool {
-    return lhs.storage == intptr<T>{rhs}.storage;
+template <typename T>
+constexpr auto operator==(intptr<T> const lhs,
+                          detail::NonPtrIntegral auto const rhs) -> bool {
+    return lhs.storage == rhs;
 }
 
 template <typename T>
-constexpr auto operator+(intptr<T> const lhs, meta::Integral auto const rhs)
-    -> intptr<T> {
+constexpr auto operator+(intptr<T> const lhs,
+                         detail::NonPtrIntegral auto const rhs) -> intptr<T> {
     return lhs.storage + intptr<T>{rhs}.storage;
 }
 
 template <typename T>
-constexpr auto operator-(intptr<T> const lhs, meta::Integral auto const rhs)
+constexpr auto operator-(intptr<T> const lhs,
+                         detail::NonPtrIntegral auto const rhs) -> intptr<T> {
+    return lhs.storage - static_cast<typename intptr<T>::Type>(rhs);
+}
+
+template <typename T, typename U>
+constexpr auto operator-(intptr<T> const lhs, intptr<U> const rhs)
     -> intptr<T> {
-    return lhs.storage - intptr<T>{rhs}.storage;
+    return lhs.storage - rhs.storage;
 }
 
 template <typename T>
-constexpr auto operator*(intptr<T> const lhs, meta::Integral auto const rhs)
-    -> intptr<T> {
+constexpr auto operator*(intptr<T> const lhs,
+                         detail::NonPtrIntegral auto const rhs) -> intptr<T> {
     return lhs.storage * intptr<T>{rhs}.storage;
 }
 
 template <typename T>
-constexpr auto operator&(intptr<T> const lhs, meta::Integral auto const rhs)
-    -> intptr<T> {
+constexpr auto operator&(intptr<T> const lhs,
+                         detail::NonPtrIntegral auto const rhs) -> intptr<T> {
     return lhs.storage & intptr<T>{rhs}.storage;
 }
 
 template <typename T>
-constexpr auto operator|(intptr<T> const lhs, meta::Integral auto const rhs)
-    -> intptr<T> {
+constexpr auto operator|(intptr<T> const lhs,
+                         detail::NonPtrIntegral auto const rhs) -> intptr<T> {
     return lhs.storage | intptr<T>{rhs}.storage;
 }
 

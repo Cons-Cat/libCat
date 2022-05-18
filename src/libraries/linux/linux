@@ -281,7 +281,7 @@ enum class LinuxError {
 };
 
 namespace detail {
-    // Map `void` to `cat::MonostateStorage` and map `T*` to `intptr` so that
+    // Map `void` to `cat::MonostateStorage` and map `T*` to `intptr<T>` so that
     // these types can both hold `-1`.
     template <typename T>
     using MapSyscallType =
@@ -291,7 +291,13 @@ namespace detail {
 
     template <typename T>
     constexpr auto is_positive(T const input) -> bool1 {
-        return static_cast<ssize const>(input) >= 0;
+        if constexpr (requires { input >= 0; }) {
+            return input >= 0;
+        } else {
+            // Some types, such as `nix::FileDescriptor`, must be converted to
+            // `ssize` to have a comparison operator.
+            return static_cast<ssize const>(input) >= 0;
+        }
     }
 }  // namespace detail
 
