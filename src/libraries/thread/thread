@@ -14,7 +14,7 @@ struct Thread {
 
     // This is platform-specific hidden code.
   private:
-    nix::Process process;
+    [[maybe_unused]] nix::Process process;
   public:
     Thread() = default;
     Thread(Thread const&) = delete;
