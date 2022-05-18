@@ -37,6 +37,7 @@ using std::move;
 
 // Forward declare numeric types.
 namespace cat {
+
 template <typename T>
 struct Numeral;
 
@@ -51,8 +52,8 @@ using uint8 = cat::Numeral<__UINT64_TYPE__>;
 using float4 = cat::Numeral<float>;
 using float8 = cat::Numeral<double>;
 
-template <typename T>
-struct intptr;
+template <typename T, typename Storage>
+struct ArithmeticPtr;
 
 }  // namespace cat
 
@@ -305,8 +306,8 @@ template <>
 struct IsCatNumeral<cat::float4> : TrueTypeTrait {};
 template <>
 struct IsCatNumeral<cat::float8> : TrueTypeTrait {};
-template <typename U>
-struct IsCatNumeral<cat::intptr<U>> : TrueTypeTrait {};
+template <typename U, typename Storage>
+struct IsCatNumeral<cat::ArithmeticPtr<U, Storage>> : TrueTypeTrait {};
 
 template <typename T>
 constexpr bool is_cat_numeral = IsCatNumeral<T>::value;
@@ -353,8 +354,9 @@ namespace detail {
     template <>
     struct IsIntegralTraitDetail<cat::uint8> : TrueTypeTrait {};
 
-    template <typename U>
-    struct IsIntegralTraitDetail<cat::intptr<U>> : TrueTypeTrait {};
+    template <typename U, typename Storage>
+    struct IsIntegralTraitDetail<cat::ArithmeticPtr<U, Storage>>
+        : TrueTypeTrait {};
     template <>
     struct IsIntegralTraitDetail<bool> : TrueTypeTrait {};
 }  // namespace detail
