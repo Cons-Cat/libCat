@@ -1058,9 +1058,9 @@ concept CopyConstructible =
     ConstructibleFrom<T, T const&> && ConvertibleTo<T const&, T> &&
     ConstructibleFrom<T, T const> && ConvertibleTo<T const, T>;
 
-/* boolean_testable is adapted from the exposition-only concept
-   boolean-testable. This converts a type into `bool` rather than `bool1`
-   because that simplifies compilation. */
+// boolean_testable is adapted from the exposition-only concept
+// boolean-testable. This converts a type into `bool` rather than `bool1`
+// because that simplifies compilation.
 namespace detail {
     template <typename T>
     concept BooleanTestableDetail = ConvertibleTo<T, bool>;
@@ -1071,8 +1071,8 @@ concept BooleanTestable = detail::BooleanTestableDetail<T> && requires(T&& b) {
     { !forward<T>(b) } -> detail::BooleanTestableDetail;
 };
 
-/* boolean_testable is adapted from the exposition-only concept
-   __WeaklyEqualityComparableWith. */
+// boolean_testable is adapted from the exposition-only concept
+// `__WeaklyEqualityComparableWith`.
 namespace detail {
     template <typename T, typename U>
     concept WeaklyEqualityComparableWithDetail = requires(
