@@ -4,6 +4,7 @@ set(
   cat-include
   ${CMAKE_SOURCE_DIR}/src/
   ${CMAKE_SOURCE_DIR}/src/compatibility/
+  ${CMAKE_SOURCE_DIR}/src/libraries/meta/
   ${CMAKE_SOURCE_DIR}/src/libraries/runtime/
   ${CMAKE_SOURCE_DIR}/src/libraries/numerals/
   ${CMAKE_SOURCE_DIR}/src/libraries/simd/
@@ -17,8 +18,6 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/string/
   ${CMAKE_SOURCE_DIR}/src/libraries/memory/
   ${CMAKE_SOURCE_DIR}/src/libraries/allocators/
-  ${CMAKE_SOURCE_DIR}/src/libraries/type_traits/
-  ${CMAKE_SOURCE_DIR}/src/libraries/concepts/
   ${CMAKE_SOURCE_DIR}/src/libraries/utility/
   ${CMAKE_SOURCE_DIR}/src/libraries/stdlib/
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/
@@ -40,6 +39,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/exit.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/__stack_chk_fail.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/load_base_stack_pointer.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/meta/implementations/constant_evaluate.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/simd/implementations/is_avx2_supported.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/simd/implementations/is_avx512f_supported.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/simd/implementations/is_avx_supported.cpp
@@ -97,7 +97,6 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/utility/implementations/move.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/utility/implementations/forward.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/utility/implementations/is_constant_evaluated.tpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/utility/implementations/constant_evaluate.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/utility/implementations/ssizeof.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/utility/implementations/bit_cast.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/bit/implementations/is_aligned.tpp

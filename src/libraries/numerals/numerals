@@ -2,8 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <concepts>
-#include <type_traits>
+#include <meta>
 
 namespace cat {
 
@@ -867,7 +866,7 @@ struct NumericLimits<Numeral<T>> {
 
     // Forward the underlying storage type to `.max`.
     constexpr static auto max = NumericLimits<T>::max;
-	
+
     // Forward the underlying storage type to `.min`.
     constexpr static auto min = NumericLimits<T>::min;
 };

@@ -24,7 +24,7 @@ using meta::ssizeof;
 namespace std {
 
 // NOLINTBEGIN(readability-redundant-declaration)
-// The following functions are forward-declared in `<type_traits>`, but they
+// The following functions are forward-declared in `<meta>`, but they
 // belong to the `<utility>` library.
 
 template <typename T>
@@ -51,7 +51,6 @@ using std::move;
 }  // namespace cat
 
 #include "./implementations/bit_cast.tpp"
-#include "./implementations/constant_evaluate.tpp"
 #include "./implementations/forward.tpp"
 #include "./implementations/is_constant_evaluated.tpp"
 #include "./implementations/move.tpp"

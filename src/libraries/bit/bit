@@ -2,8 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <concepts>
-#include <type_traits>
+#include <meta>
 
 // i386 and x86-64 are little endian.
 constexpr bool1 is_little_endian = true;

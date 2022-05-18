@@ -2,11 +2,10 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <concepts>
 #include <memory>
+#include <meta>
 #include <optional>
 #include <span>
-#include <type_traits>
 #include <utility>
 
 // Deprecated call to `memcpy()`. Consider using `cat::copy_buffer()` instead.

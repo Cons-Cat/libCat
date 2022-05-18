@@ -2,7 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <type_traits>
+#include <meta>
 
 // TODO: add a `meta::invocable` concept.
 template <typename Function>
