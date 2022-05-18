@@ -2,6 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/simd>
+
 // `control_mask` must be constant-evaluated for the intrinsic to work
 // correctly.
 template <simd::StringControl control_mask>

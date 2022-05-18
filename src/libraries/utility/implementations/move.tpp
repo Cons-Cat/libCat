@@ -2,7 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <utility>
+#include <cat/utility>
 
 // This is in the `std::` namespace to enable some GCC optimizations and
 // warnings.

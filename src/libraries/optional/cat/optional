@@ -1,0 +1,1005 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/memory>
+#include <cat/meta>
+// #include <cat/string>
+#include <cat/utility>
+
+namespace cat {
+namespace detail {
+    // A `NullOpt` is consumed by an `Optional` constructor to prevent
+    // initializing its `value` member.
+    struct NullOpt {};
+}  // namespace detail
+
+// `nullopt` is consumed by `Optional` to represent an empty value.
+inline constexpr cat::detail::NullOpt nullopt;
+
+template <typename T>
+class Optional;
+
+namespace meta {
+
+    // TODO: I forgot what the point to this `concept` was.
+    template <typename T>
+    concept Option = requires(T optional) {
+        static_cast<bool>(optional.has_value());
+        _ = optional.value();
+    };
+
+}  // namespace meta
+
+// `OptionalValueStorage` holds a non-reference, non-pointer, non-`void` type
+// `T` and a `bool1` flag to represent holding a value or not.
+template <typename T>
+struct OptionalValueStorage {
+    // A `union` member will not be default-constructed.
+    union {
+        // `Monostate` is required so that `OptionalValueStorage` can be
+        // initialized in a `constexpr` context, because a member `union` must
+        // have at least one initialized field in a `constexpr` context.
+        // `Monostate` can be default-initialized, so this is well-formed.
+        cat::Monostate dummy;
+        T storage;
+    };
+    using Value = T;
+    bool1 has_some = false;
+
+    // If `T` is default-constructible, use the default constructor.
+    constexpr OptionalValueStorage() {
+        this->construct();
+    };
+
+    // If `T` is forwarded arguments by the `in_place` `cat::Optional`
+    // constructor, then construct it in-place with those arguments.
+    template <typename... Ts>
+    constexpr OptionalValueStorage(Ts... args) {
+        this->construct(args...);
+    }
+
+    // If `T` is trivially copy-constructible, use this simple copy constructor.
+    constexpr OptionalValueStorage(T const& in_value) requires(
+        ::meta::is_trivially_copy_constructible<T>)
+        : storage(in_value), has_some(true){};
+
+    // If `T` is not trivially copy-constructible, then manually construct it
+    // in-place.
+    constexpr OptionalValueStorage(T const& in_value) requires(
+        ::meta::is_copy_constructible<T> &&
+        !::meta::is_trivially_copy_constructible<T>) {
+        this->construct(in_value);
+    }
+
+    // If `T` is not copy-constructible, delete this copy constructor.
+    constexpr OptionalValueStorage(T const& in_value) requires(
+        !::meta::is_copy_constructible<T>) = delete;
+
+    // If `T` is trivially move-constructible, use this simple move constructor.
+    constexpr OptionalValueStorage(T&& in_value) requires(
+        ::meta::is_trivially_move_constructible<T>)
+        : storage(::meta::forward<T>(in_value)), has_some(true){};
+
+    // If `T` is not trivially move-constructible, then manually invoke
+    // `cat::move` on it.
+    OptionalValueStorage(T&& in_value) requires(
+        ::meta::is_move_constructible<T> &&
+        !::meta::is_trivially_move_constructible<T>) {
+        this->construct(::meta::forward<T>(in_value));
+        this->has_some = true;
+    }
+
+    // If `T` is not move-constructible, delete this move constructor.
+    constexpr OptionalValueStorage(T&& in_value) requires(
+        !::meta::is_move_constructible<T>) = delete;
+
+    // `nullopt` initializes this without a value.
+    constexpr OptionalValueStorage(cat::detail::NullOpt) : has_some(false){};
+
+    // If other destructors are not conditionally specialized by their
+    // `requires`, they should be `default` or deleted.
+    constexpr ~OptionalValueStorage() = default;
+
+    // If `T` is not trivially destructible, then manually invoke its
+    // destructor.
+    constexpr ~OptionalValueStorage() requires(
+        !::meta::is_trivially_destructible<T>) {
+        if constexpr (requires { this->storage.~T(); }) {
+            if (this->has_some) {
+                this->storage.~T();
+                this->has_some = false;
+            }
+        }
+    }
+
+    // If `T` is trivially copy-assignable, then forward this value.
+    auto operator=(T const& in_value) -> OptionalValueStorage& requires(
+        ::meta::is_trivially_copy_assignable<T>) {
+        this->storage = in_value;
+        this->has_some = true;
+        return *this;
+    }
+
+    // If `T` is non-trivially copy-assignable, then manually construct it
+    // in-place.
+    auto operator=(T const& in_value) -> OptionalValueStorage& requires(
+        ::meta::is_copy_assignable<T> &&
+        !::meta::is_trivially_copy_assignable<T>) {
+        this->assign(in_value);
+        return *this;
+    }
+
+    // If `T` is not copy-assignable, delete this assignment operator to prevent
+    // ambiguous overload resolution.
+    auto operator=(T const& in_value) -> OptionalValueStorage& requires(
+        !::meta::is_copy_assignable<T>) = delete;
+
+    // If `T` is trivially move-assignable, then forward this value.
+    auto operator=(T&& in_value) -> OptionalValueStorage& requires(
+        ::meta::is_trivially_move_assignable<T>) {
+        this->storage = ::meta::forward<T>(in_value);
+        this->has_some = true;
+        return *this;
+    }
+
+    // If `T` is non-trivially move-assignable, then manually invoke
+    // `cat::move()` on it.
+    constexpr auto operator=(T&& in_value) -> OptionalValueStorage& requires(
+        ::meta::is_move_assignable<T> &&
+        !::meta::is_trivially_move_assignable<T>) {
+        this->assign(::meta::forward<T>(in_value));
+        return *this;
+    }
+
+    // If `T` is not move-assignable, delete this assignment operator to prevent
+    // ambiguous overload resolution.
+    auto operator=(T&& in_value) -> OptionalValueStorage& requires(
+        !::meta::is_move_assignable<T>) = delete;
+
+    // The following methods are homogenous to all `Optional...Storage` types.
+    constexpr auto value() & -> T& {
+        return this->storage;
+    }
+
+    constexpr auto value() const& -> T const& {
+        return this->storage;
+    }
+
+    constexpr auto value() && -> T&& {
+        return cat::move(this->storage);
+    }
+
+    constexpr auto value() const&& -> T&& {
+        return cat::move(this->storage);
+    }
+
+    constexpr auto has_value() const -> bool1 {
+        return has_some;
+    }
+
+    // Destroy the storage unconditionally.
+    void hard_reset() {
+        this->storage.~T();
+        this->has_some = false;
+    }
+
+    // Construct an object at the address of the held `storage`.
+    template <typename... Args>
+    constexpr void construct(Args&&... args) {
+        new (cat::addressof(this->storage)) T(::meta::forward<Args>(args)...);
+        this->has_some = true;
+    }
+
+    // If this is assigned an `Optional` which wraps a type that can be
+    // converted to `T` , then convert that storage to this type implicitly.
+    template <typename OtherOptional>
+    constexpr void assign(OtherOptional&& optional) requires(
+        ::meta::IsSpecializationTrait<OtherOptional, Optional>::value&& ::meta::
+            is_convertible<typename OtherOptional::Value, T>) {
+        if (this->has_value()) {
+            if (optional.has_value()) {
+                this->storage =
+                    ::meta::forward<OtherOptional>(optional).value();
+            } else {
+                // If the incoming `Optional` is empty, then empty this one.
+                this->hard_reset();
+            }
+        } else {
+            if (optional.has_value()) {
+                this->construct(optional.value());
+            }
+            // If both `Optional`s are empty, nothing happens.
+        }
+    }
+};
+
+template <typename T>
+struct OptionalReferenceStorage {
+    using Value = ::meta::RemoveReference<T>;
+    Value* p_storage = nullptr;
+
+    template <typename U>
+    constexpr OptionalReferenceStorage(U const& in_value)
+        : p_storage(cat::addressof(in_value)){};
+
+    template <typename U>
+    constexpr OptionalReferenceStorage(U&& in_value) requires(
+        ::meta::is_convertible<U, T>)
+        : p_storage(cat::addressof(::meta::forward<U>(in_value))){};
+
+    constexpr OptionalReferenceStorage(cat::detail::NullOpt)
+        : p_storage(nullptr){};
+
+    // Rebind the reference if this is assigned a new value.
+    template <typename U>
+    constexpr auto operator=(U& option) -> OptionalReferenceStorage& {
+        this->p_storage = cat::addressof(option);
+        return *this;
+    }
+
+    // The following methods are homogenous to all `Optional...Storage` types.
+    constexpr auto value() & -> Value& {
+        return *(this->p_storage);
+    }
+
+    constexpr auto value() const& -> Value& {
+        return *(this->p_storage);
+    }
+
+    constexpr auto value() && -> Value&& {
+        return *(cat::move(this->p_storage));
+    }
+
+    constexpr auto value() const&& -> Value&& {
+        return *(cat::move(this->p_storage));
+    }
+
+    constexpr auto has_value() const -> bool1 {
+        return this->p_storage != nullptr;
+    }
+
+    // Destroy the storage unconditionally.
+    void hard_reset() {
+        this->p_storage->~Value();
+        this->p_storage = nullptr;
+    }
+
+    // Construct an object at the address of the held `storage`.
+    template <typename... Args>
+    constexpr void construct(Args&&... args) {
+        Result(this->has_value()).assert();
+        new (this->p_storage) T(::meta::forward<Args>(args)...);
+    }
+
+    // If this is assigned an `Optional` which wraps a type that can be
+    // converted to `T` , then convert that storage to this type implicitly.
+    template <typename OtherOptional>
+    constexpr void assign(OtherOptional&& optional) requires(
+        ::meta::IsSpecializationTrait<OtherOptional, Optional>::value&& ::meta::
+            is_convertible<typename OtherOptional::Value, T>) {
+        if (this->has_value()) {
+            if (optional.has_value()) {
+                this->p_storage =
+                    ::meta::forward<OtherOptional>(optional).value();
+            } else {
+                // If the incoming `Optional` is empty, then empty this one.
+                this->hard_reset();
+            }
+        } else {
+            if (optional.has_value()) {
+                this->construct(optional.value());
+            }
+            // If both `Optional`s are empty, nothing happens.
+        }
+    }
+};
+
+// `T` is a `Predicate<Type, function, sentinel>`.
+template <typename T>
+struct OptionalPredicateStorage {
+    using Value = typename T::PredicateType;
+    Value storage;
+
+    constexpr OptionalPredicateStorage() = default;
+    // TODO: Handle non-trivial constructors and assignment operators.
+
+    // Enable copy and move constructors iff `OptionalPredicateStorage`
+    // supports them.
+
+    // If `Value` is trivially copy-constructible, use this simple copy
+    // constructor.
+    constexpr OptionalPredicateStorage(Value const& in_value) requires(
+        ::meta::is_trivially_copy_constructible<Value>)
+        : storage(in_value){};
+
+    // If `Value` is not trivially copy-constructible, then manually
+    // construct it in-place.
+    constexpr OptionalPredicateStorage(Value const& in_value) requires(
+        ::meta::is_copy_constructible<Value> &&
+        !::meta::is_trivially_copy_constructible<Value>) {
+        this->construct(in_value);
+    }
+
+    // If `Value` is not copy-constructible, delete this copy constructor.
+    constexpr OptionalPredicateStorage(Value const& in_value) requires(
+        !::meta::is_copy_constructible<Value>) = delete;
+
+    // If `Value` is trivially move-constructible, use this simple move
+    // constructor.
+    constexpr OptionalPredicateStorage(Value&& in_value) requires(
+        ::meta::is_trivially_move_constructible<Value>)
+        : storage(::meta::forward<Value>(in_value)){};
+
+    // If `Value` is not trivially move-constructible, then manually invoke
+    // `cat::move` on it.
+    OptionalPredicateStorage(Value&& in_value) requires(
+        ::meta::is_move_constructible<Value> &&
+        !::meta::is_trivially_move_constructible<Value>) {
+        this->construct(::meta::forward<Value>(in_value));
+    }
+
+    // If `Value` is not move-constructible, delete this move constructor.
+    constexpr OptionalPredicateStorage(Value&& in_value) requires(
+        !::meta::is_move_constructible<Value>) = delete;
+
+    // If other destructors are not conditionally specialized by their
+    // `requires`, they should be `default` or deleted.
+    constexpr ~OptionalPredicateStorage() = default;
+
+    // If `Value` is not trivially destructible, then manually invoke its
+    // destructor.
+    constexpr ~OptionalPredicateStorage() requires(
+        !::meta::is_trivially_destructible<Value>) {
+        if constexpr (requires { this->storage.~Value(); }) {
+            if (this->has_value()) {
+                this->storage.~Value();
+            }
+        }
+    }
+
+    constexpr OptionalPredicateStorage(cat::detail::NullOpt)
+        : storage(T::sentinel_value){};
+
+    // If other assignment operators are not conditionally specialized by their
+    // `requires`, they should be `default` or deleted.
+
+    // If `Value` is trivially copy-assignable, then forward this value.
+    auto operator=(Value const& in_value) -> OptionalPredicateStorage& requires(
+        ::meta::is_trivially_copy_assignable<Value>) {
+        this->storage = in_value;
+        return *this;
+    }
+
+    // If `Value` is non-trivially copy-assignable, then manually construct it
+    // in-place.
+    auto operator=(Value const& in_value) -> OptionalPredicateStorage& requires(
+        ::meta::is_copy_assignable<Value> &&
+        !::meta::is_trivially_copy_assignable<Value>) {
+        this->assign(in_value);
+        return *this;
+    }
+
+    // If `Value` is not copy-assignable, delete this assignment operator to
+    // prevent ambiguous overload resolution.
+    auto operator=(Value const& in_value) -> OptionalPredicateStorage& requires(
+        !::meta::is_copy_assignable<Value>) = delete;
+
+    // If `Value` is trivially move-assignable, then forward this value.
+    auto operator=(Value&& in_value) -> OptionalPredicateStorage& requires(
+        ::meta::is_trivially_move_assignable<Value>) {
+        this->storage = ::meta::forward<Value>(in_value);
+        return *this;
+    }
+
+    // If `Value` is non-trivially move-assignable, then manually invoke
+    // `cat::move()` on it.
+    constexpr auto operator=(Value&& in_value)
+        -> OptionalPredicateStorage& requires(
+            ::meta::is_move_assignable<Value> &&
+            !::meta::is_trivially_move_assignable<Value>) {
+        this->assign(::meta::forward<Value>(in_value));
+        return *this;
+    }
+
+    // If `Value` is not move-assignable, delete this assignment operator to
+    // prevent ambiguous overload resolution.
+    auto operator=(Value&& in_value) -> OptionalPredicateStorage& requires(
+        !::meta::is_move_assignable<Value>) = delete;
+
+    // The following methods are homogenous to all `Optional...Storage` types.
+    constexpr auto value() & -> Value& {
+        return this->storage;
+    }
+
+    constexpr auto value() const& -> Value const& {
+        return this->storage;
+    }
+
+    constexpr auto value() && -> Value&& {
+        return cat::move(this->storage);
+    }
+
+    constexpr auto value() const&& -> Value&& {
+        return cat::move(this->storage);
+    }
+
+    constexpr auto has_value() const -> bool1 {
+        return T::predicate_function(this->storage);
+    }
+
+    // Destroy the storage unconditionally.
+    void hard_reset() {
+        this->storage.~Value();
+        this->storage = T::sentinel_value;
+    }
+
+    // Construct an object at the address of the held `storage`.
+    template <typename... Args>
+    constexpr void construct(Args&&... args) {
+        new (cat::addressof(this->storage))
+            Value(::meta::forward<Args>(args)...);
+    }
+
+    // If this is assigned an `Optional` which wraps a type that can be
+    // converted to `T` , then convert that storage to this type implicitly.
+    template <typename OtherOptional>
+    constexpr void assign(OtherOptional&& optional) requires(
+        ::meta::IsSpecializationTrait<OtherOptional, Optional>::value&& ::meta::
+            is_convertible<typename OtherOptional::Value, T>) {
+        if (this->has_value()) {
+            if (optional.has_value()) {
+                this->storage =
+                    ::meta::forward<OtherOptional>(optional).value();
+            } else {
+                // If the incoming `Optional` is empty, then empty this one.
+                this->hard_reset();
+            }
+        } else {
+            if (optional.has_value()) {
+                this->construct(optional.value());
+            }
+            // If both `Optional`s are empty, nothing happens.
+        }
+    }
+};
+
+template <typename T>
+class Optional {
+  public:
+    // clang-format off
+    // Clang Format 12 does not understand how to format this well:
+    using Storage =
+        ::meta::Conditional<::meta::is_void<T>,
+            // If `T` is `void`:
+            OptionalValueStorage<cat::Monostate>,
+		::meta::Conditional<requires {
+                   // T::predicate_function(T::Type());
+                    T::sentinel_value;
+                },
+                // If `T` is a `Predicate`:
+                OptionalPredicateStorage<T>,
+		::meta::Conditional<::meta::is_reference<T>,
+                    // If `T` is a reference type:
+                    OptionalReferenceStorage<T>,
+                    // If `T` is a value type:
+                    OptionalValueStorage<T>>>>;
+    // clang-format on
+
+    using Value = typename Storage::Value;
+    Storage storage;
+  public:
+    // All `Optional`s are default-constructed as empty.
+    constexpr Optional() : storage(nullopt){};
+
+    // `Optional`s can be constructed with `in_place` to have their storage
+    // constructed, unless they are reference types. Without this tag, the
+    // storage would be uninitialized.
+    template <typename... Ts>
+    constexpr Optional(cat::detail::InPlace,
+                       Ts... args) requires(!::meta::is_reference<T>) {
+        this->storage.construct(args...);
+    }
+
+    // Forward all constructors to the `storage` member.
+
+    // A reference type cannot be copy-constructed, but other types can.
+    template <typename U>
+    constexpr Optional(U const& input) requires(
+        !::meta::is_reference<T> && ::meta::is_convertible<U, Value> &&
+        ::meta::is_copy_constructible<Value>)
+        : storage(static_cast<Value>(input)){};
+
+    template <typename U>
+    constexpr Optional(U const& input) requires(
+        ::meta::is_reference<T>&& ::meta::is_convertible<U, Value>)
+        : storage(static_cast<Value>(input)){};
+
+    template <typename U>
+    constexpr Optional(U&& input) requires(::meta::is_convertible<U, T>)
+        : storage(::meta::forward<U>(input)){};
+
+    // `Optional` can be constructed by another `Optional`.
+    template <typename U>
+    constexpr Optional(Optional<U> const& input) requires(
+        ::meta::is_convertible<U, Value>) {
+        this->storage.assign(input);
+    }
+
+    // TODO: This causes ambiguities with the `Optional<U>` constructor.
+    // template <typename U>
+    // constexpr Optional(Optional<U>&& input) requires(
+    //     meta::is_convertible<U, Value>) {
+    //     this->storage.assign(meta::forward<Optional<U>>(input));
+    // }
+
+    // Consuming `nullopt` is forwarded to `storage`.
+    constexpr Optional(cat::detail::NullOpt) : storage(nullopt){};
+
+    // Consuming `monostate` default-initializes the `Optional`.
+    constexpr Optional(cat::Monostate) : storage(Value{}){};
+
+    // Any `Optional` can convert into another.
+    template <typename U>
+    constexpr operator Optional<U>() requires(
+        !::meta::is_same<U, T> && ::meta::is_convertible<Value, U>) {
+        if (this->has_value()) {
+            if constexpr (::meta::is_same<U, void>) {
+                return monostate;
+            } else {
+                return Optional<U>{
+                    static_cast<typename Optional<U>::Value>(this->value())};
+            }
+        }
+        return Optional<U>{nullopt};
+    }
+
+    // Forward all assignment operators to `storage`, except when assigning
+    // `nullopt`.
+    template <typename U>
+    constexpr auto operator=(U const& value)
+        -> Optional& requires(::meta::is_convertible<U, Value> &&
+                              !::meta::is_reference<T>) {
+        this->storage = static_cast<Value>(value);
+        return *this;
+    }
+
+    template <typename U>
+    auto operator=(U&& value)
+        -> Optional& requires(::meta::is_convertible<U, Value> &&
+                              !::meta::is_reference<T>) {
+        this->storage = static_cast<Value>(::meta::forward<U>(value));
+        return *this;
+    }
+
+    template <typename U>
+    auto operator=(Optional<U> const& optional)
+        -> Optional& requires(::meta::is_convertible<U, Value>) {
+        this->storage.assign(optional);
+        return *this;
+    }
+
+    template <typename U>
+    auto operator=(Optional<U>&& optional)
+        -> Optional& requires(::meta::is_convertible<U, Value>) {
+        this->storage.assign(::meta::forward<Optional<U>>(optional));
+        return *this;
+    }
+
+    // Assigning `nullopt` destroys any value.
+    auto operator=(cat::detail::NullOpt) -> Optional& {
+        this->storage.hard_reset();
+        return *this;
+    }
+
+    constexpr auto has_value() const -> bool1 {
+        return this->storage.has_value();
+    }
+
+    // Get the `storage` unconditionally.
+    [[nodiscard]] constexpr auto value() & -> Value& {
+        Result(this->has_value())
+            .assert(
+                // "`.value()` was illegally called on an `Optional` which "
+                // "did not hold a value!\n"
+            );
+        return this->storage.value();
+    }
+
+    // Get the const-qualified `storage` unconditionally.
+    [[nodiscard]] constexpr auto value() const& -> Value const& {
+        Result(this->has_value())
+            .assert(
+                // "`.value()` was illegally called on an `Optional` which "
+                // "did not hold a value!\n"
+            );
+        return this->storage.value();
+    }
+
+    // Move the `storage` unconditionally. Reference types cannot be moved.
+    [[nodiscard]] constexpr auto value() && -> Value&& requires(
+        !::meta::is_reference<T>) {
+        Result(this->has_value())
+            .assert(
+                // "`.value()` was illegally called on an `Optional` which "
+                // "did not hold a value!\n"
+            );
+        return cat::move(this->storage.value());
+    }
+
+    // Move the const-qualified `storage` unconditionally. Reference types
+    // cannot be moved.
+    [[nodiscard]] constexpr auto value() const&& -> Value const&& requires(
+        !::meta::is_reference<T>) {
+        Result(this->has_value())
+            .assert(
+                // "`.value()` was illegally called on an `Optional` which "
+                // "did not hold a value!\n"
+            );
+        return cat::move(this->storage.value());
+    }
+
+    // Get the value held by a non-`const`-qualified `Optional`, or a fallback
+    // value if it does not hold a value.
+    [[nodiscard]] constexpr auto value_or(Value const fallback) & -> Value {
+        if (this->storage.has_value()) {
+            return this->storage.value();
+        }
+        return fallback;
+    }
+
+    // Get the value held by a `const`-qualified `Optional`, or a fallback
+    // value if it does not hold a value.
+    constexpr auto value_or(Value const fallback) const& -> Value {
+        if (this->storage.has_value()) {
+            return this->storage.value();
+        }
+        return fallback;
+    }
+
+    // Get the value held by a non-`const`-qualified `Optional`, or a fallback
+    // value if it does not hold a value.
+    [[nodiscard]] constexpr auto value_or(Value&& fallback) && -> Value&& {
+        if (this->storage.has_value()) {
+            return cat::move(this->storage.value());
+        }
+        return cat::move(fallback);
+    }
+
+    // Get the value held by a `const`-qualified `Optional`, or a fallback
+    // value if it does not hold a value.
+    [[nodiscard]] constexpr auto value_or(Value&& fallback) const&& -> Value&& {
+        if (this->storage.has_value()) {
+            return cat::move(this->storage.value());
+        }
+        return cat::move(fallback);
+    }
+
+    // Get a pointer to the data owned by this `Optional`. If `Optional` holds a
+    // raw pointer, this is equivalent to `.value()`, otherwise this is
+    // equivalent to `addressof(optional.value())`.
+    [[nodiscard]] constexpr auto p_value() {
+        if (!::meta::is_constant_evaluated()) {
+            Result(this->has_value())
+                .assert(
+                    // "`.value()` was illegally called on an `Optional` which "
+                    // "did not hold a value!\n"
+                );
+        }
+        if constexpr (::meta::is_pointer<Value>) {
+            return this->storage.value();
+        } else {
+            return addressof(this->storage.value());
+        }
+    }
+
+    // Get a pointer to the data owned by this `Optional`. If `Optional` holds a
+    // raw pointer, this is equivalent to `.value()`, otherwise this is
+    // equivalent to `addressof(optional.value())`.
+    [[nodiscard]] constexpr auto p_value() const {
+        if (!::meta::is_constant_evaluated()) {
+            Result(this->has_value())
+                .assert(
+                    "`.value()` was illegally called on an `Optional` which "
+                    "did not hold a value!\n");
+        }
+        if constexpr (::meta::is_pointer<Value>) {
+            return this->storage.value();
+        } else {
+            return addressof(this->storage.value());
+        }
+    }
+
+    // Monadic methods:
+
+    // TODO: Use a `meta::invocable` `concept`.
+
+    // If this non-`const`-qualified `Optional` holds a value, transform it by a
+    // function. Otherwise, propagate an empty `Optional`.
+    template <typename Function>
+    [[nodiscard]] constexpr auto transform(Function&& callback) & {
+        using U = decltype(callback(this->value()));
+        static_assert(!::meta::IsSpecializationTrait<U, Optional>::value);
+
+        if constexpr (::meta::is_void<U>) {
+            return this->has_value() ? Optional<void>{monostate}
+                                     : Optional<void>{nullopt};
+        } else {
+            if (this->has_value()) {
+                return Optional<U>{
+                    ::meta::forward<Function>(callback)(this->value())};
+            }
+            return Optional<U>{nullopt};
+        }
+    }
+
+    // If this `const`-qualified `Optional` holds a value, transform it by a
+    // function without side-effects. Otherwise, propagate an empty `Optional`.
+    template <typename Function>
+    [[nodiscard]] constexpr auto transform(Function&& callback) const& {
+        using U = decltype(callback(this->value()));
+        static_assert(!::meta::IsSpecializationTrait<U, Optional>::value);
+
+        if constexpr (::meta::is_void<U>) {
+            return this->has_value() ? Optional<void>{monostate}
+                                     : Optional<void>{nullopt};
+        } else {
+            if (this->storage.has_value()) {
+                return Optional<U>{
+                    ::meta::forward<Function>(callback)(this->value())};
+            }
+            return Optional<U>{nullopt};
+        }
+    }
+
+    // If this non-`const`-qualified `Optional` holds a value, transform it by
+    // function. Otherwise, propagate an empty `Optional`.
+    template <typename Function>
+    [[nodiscard]] constexpr auto transform(Function&& callback) && {
+        using U = decltype(callback(this->value()));
+        static_assert(!::meta::IsSpecializationTrait<U, Optional>::value);
+
+        if constexpr (::meta::is_void<U>) {
+            return this->has_value() ? Optional<void>{monostate}
+                                     : Optional<void>{nullopt};
+        } else {
+            if (this->has_value()) {
+                return Optional<U>{::meta::forward<Function>(callback)(
+                    cat::move(this->value()))};
+            }
+            return Optional<U>{nullopt};
+        }
+    }
+
+    // If this `const`-qualified `Optional` holds a value, transform it by a
+    // function without side-effects. Otherwise, propagate an empty `Optional`.
+    template <typename Function>
+    [[nodiscard]] constexpr auto transform(Function&& callback) const&& {
+        using U = decltype(callback(this->value()));
+        static_assert(!::meta::IsSpecializationTrait<U, Optional>::value);
+
+        if constexpr (::meta::is_void<U>) {
+            return this->has_value() ? Optional<void>{monostate}
+                                     : Optional<void>{nullopt};
+        } else {
+            if (this->has_value()) {
+                return Optional<U>{::meta::forward<Function>(callback)(
+                    cat::move(this->value()))};
+            }
+            return Optional<U>{nullopt};
+        }
+    }
+
+    // Invoke a callback returning an `Optional` on the value of a
+    // `const`-qualified `Optional` and propagate the result, if it holds a
+    // value.
+    template <typename Function>
+    [[nodiscard]] constexpr auto and_then(Function&& callback) & {
+        using U = decltype(callback(this->value()));
+        static_assert(::meta::IsSpecializationTrait<U, Optional>::value);
+
+        if (this->has_value()) {
+            return ::meta::forward<Function>(callback)(this->value());
+        }
+        return U{nullopt};
+    }
+
+    // Invoke a callback returning an `Optional` on the value of a
+    // `const`-qualified `Optional` and propagate the result, if it holds a
+    // value.
+    template <typename Function>
+    [[nodiscard]] constexpr auto and_then(Function&& callback) const& {
+        using U = decltype(callback(this->value()));
+        static_assert(::meta::IsSpecializationTrait<U, Optional>::value);
+
+        if (this->has_value()) {
+            return ::meta::forward<Function>(callback)(this->value());
+        }
+        return U{nullopt};
+    }
+
+    // Invoke a callback returning an `Optional` on the value of a
+    // non-`const`-qualified `Optional` and propagate the result, if it holds a
+    // value.
+    template <typename Function>
+    [[nodiscard]] constexpr auto and_then(Function&& callback) && {
+        using U = decltype(callback(this->value()));
+        static_assert(::meta::IsSpecializationTrait<U, Optional>::value);
+
+        if (this->has_value()) {
+            return ::meta::forward<Function>(callback)(
+                cat::move(this->value()));
+        }
+        return U{nullopt};
+    }
+
+    // Invoke a callback returning an `Optional` on the value of a
+    // `const`-qualified `Optional` and propagate the result, if it holds a
+    // value.
+    template <typename Function>
+    [[nodiscard]] constexpr auto and_then(Function&& callback) const&& {
+        using U = decltype(callback(this->value()));
+        static_assert(::meta::IsSpecializationTrait<U, Optional>::value);
+
+        if (this->has_value()) {
+            return ::meta::forward<Function>(callback)(
+                cat::move(this->value()));
+        }
+        return U{nullopt};
+    }
+
+    // Invoke a callback iff a non-`const`-qualified `Optional` holds no value.
+    // This callback can return `void` or an `Optional`.
+    template <typename Function>
+    [[nodiscard]] constexpr auto or_else(Function&& callback) & {
+        using U = decltype(callback());
+        static_assert(::meta::is_void<U> ||
+                      ::meta::IsSpecializationTrait<U, Optional>::value);
+
+        if (!this->storage.has_value()) {
+            if constexpr (::meta::is_void<U>) {
+                ::meta::forward<Function>(callback)();
+            } else {
+                return ::meta::forward<Function>(callback)();
+            }
+        }
+
+        if constexpr (::meta::is_void<U>) {
+            return;
+        } else {
+            return U{nullopt};
+        }
+    }
+
+    // Invoke a callback iff a `const`-qualified `Optional` holds no value. This
+    // callback can return `void` or an `Optional`.
+    template <typename Function>
+    [[nodiscard]] constexpr auto or_else(Function&& callback) const& {
+        using U = decltype(callback());
+        static_assert(::meta::is_void<U> ||
+                      ::meta::IsSpecializationTrait<U, Optional>::value);
+
+        if (!this->storage.has_value()) {
+            if constexpr (::meta::is_void<U>) {
+                ::meta::forward<Function>(callback)();
+            } else {
+                return ::meta::forward<Function>(callback)();
+            }
+        }
+
+        if constexpr (::meta::is_void<U>) {
+            return;
+        } else {
+            return U{nullopt};
+        }
+    }
+
+    // Invoke a callback iff a non-`const`-qualified move-only `Optional` holds
+    // no value. This callback can return `void` or an `Optional`.
+    template <typename Function>
+    [[nodiscard]] constexpr auto or_else(Function&& callback) && {
+        using U = decltype(callback());
+        static_assert(::meta::is_void<U> ||
+                      ::meta::IsSpecializationTrait<U, Optional>::value);
+
+        if (!this->storage.has_value()) {
+            if constexpr (::meta::is_void<U>) {
+                ::meta::forward<Function>(callback)();
+            } else {
+                return cat::move(::meta::forward<Function>(callback)());
+            }
+        }
+
+        if constexpr (::meta::is_void<U>) {
+            return;
+        } else {
+            return U{nullopt};
+        }
+    }
+
+    // Invoke a callback iff a `const`-qualified move-only `Optional` holds no
+    // value.  This callback can return `void` or an `Optional`.
+    template <typename Function>
+    [[nodiscard]] constexpr auto or_else(Function&& callback) const&& {
+        using U = decltype(callback());
+        static_assert(::meta::is_void<U> ||
+                      ::meta::IsSpecializationTrait<U, Optional>::value);
+
+        if (!this->storage.has_value()) {
+            if constexpr (::meta::is_void<U>) {
+                ::meta::forward<Function>(callback)();
+            } else {
+                return cat::move(::meta::forward<Function>(callback)());
+            }
+        }
+
+        if constexpr (::meta::is_void<U>) {
+            return;
+        } else {
+            return U{nullopt};
+        }
+    }
+
+    // If this `Optional` is empty, terminate the running process immediately.
+    // Otherwise, return its value.
+    [[nodiscard]] constexpr auto or_panic() {
+        if (this->has_value()) [[likely]] {
+            if constexpr (!::meta::is_void<T>) {
+                return this->value();
+            } else {
+                return;
+            }
+        }
+        cat::exit(1);
+        __builtin_unreachable();  // This prevents a build warning.
+    }
+
+    // If this `Optional` is empty, terminate the running process immediately.
+    // Otherwise, return its value.
+    [[nodiscard]] constexpr auto or_panic() const {
+        if (this->has_value()) [[likely]] {
+            if constexpr (!::meta::is_void<T>) {
+                return this->value();
+            } else {
+                return;
+            }
+        }
+        cat::exit(1);
+        __builtin_unreachable();  // This prevents a build warning.
+    }
+
+    // If this `Optional` is empty, print an error message and terminate the
+    // running process immediately. Otherwise, return its value.
+    [[nodiscard]] constexpr auto or_panic(String const&
+                                          // error_message
+    ) {
+        if (this->has_value()) [[likely]] {
+            if constexpr (!::meta::is_void<T>) {
+                return this->value();
+            } else {
+                return;
+            }
+        }
+        // TODO: Print an error message.
+        // _ = cat::print_line(error_message);
+        cat::exit(1);
+        __builtin_unreachable();  // This prevents a build warning.
+    }
+
+    // Construct the value in-place and destroy the held value iff it exists.
+    template <typename... Args>
+    constexpr auto emplace(Args&&... args)
+        -> Value& requires(!::meta::is_void<T>) {
+        *this = nullopt;
+        this->storage.construct(::meta::forward<Args>(args)...);
+        return this->storage.value();
+    }
+};
+
+// This deduction guide is required for deducing references.
+template <typename T>
+Optional(T) -> Optional<T>;
+
+}  // namespace cat
+
+using cat::nullopt;

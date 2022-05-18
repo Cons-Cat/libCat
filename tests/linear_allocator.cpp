@@ -1,8 +1,8 @@
-#include <allocators>
-#include <array>
-#include <math>
-#include <numerals>
-#include <utility>
+#include <cat/allocators>
+#include <cat/array>
+#include <cat/numerals>
+#include <cat/math>
+#include <cat/utility>
 
 void meow() {
     // Initialize an allocator.

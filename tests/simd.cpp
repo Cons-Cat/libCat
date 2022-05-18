@@ -1,4 +1,4 @@
-#include <simd>
+#include <cat/simd>
 
 void meow() {
     // Test that vector arithmetic does not segfault.

@@ -1,8 +1,8 @@
-#include <allocators>
-#include <bit>
-#include <linux>
-#include <string>
-#include <thread>
+#include <cat/allocators>
+#include <cat/bit>
+#include <cat/linux>
+#include <cat/string>
+#include <cat/thread>
 
 void function(void*) {
     for (int4 i = 0; i < 15; i++) {

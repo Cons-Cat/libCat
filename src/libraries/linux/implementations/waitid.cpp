@@ -1,4 +1,4 @@
-#include <linux>
+#include <cat/linux>
 
 auto nix::waitid(nix::WaitId type, nix::ProcessId id,
                  nix::WaitOptionsFlags options)

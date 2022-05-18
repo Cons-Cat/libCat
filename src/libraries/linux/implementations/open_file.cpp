@@ -1,6 +1,4 @@
-// -*- mode: c++ -*-
-// vim: set ft=cpp:
-#include <linux>
+#include <cat/linux>
 
 auto nix::open_file(char const* p_file_path, nix::OpenMode file_mode,
                     nix::OpenFlags flags)

@@ -2,8 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <simd>
-#include <string>
+#include <cat/simd>
+#include <cat/string>
 
 // This function requires SSE4.2, unless it is used in a `constexpr` context.
 constexpr auto cat::string_length(char const* p_string) -> ssize {

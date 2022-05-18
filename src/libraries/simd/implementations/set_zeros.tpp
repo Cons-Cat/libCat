@@ -2,7 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <simd>
+#include <cat/simd>
 
 template <typename T>
 consteval auto simd::set_zeros() -> T {

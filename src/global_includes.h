@@ -119,12 +119,8 @@ template <typename T>
 constexpr auto bit_cast(auto& from_value) -> T;
 }
 
-// `<numerals>` should make basic data types global, similarly to `<stdint.h>`
-// being globally available.
-#include <numerals>
-
-// Including the `<runtime>` library is required to link a libCat program.
-#include <runtime>
+// Including the `<cat/runtime>` library is required to link a libCat program.
+#include <cat/runtime>
 
 // `Result` is used throughout the library.
 #include <result>

@@ -1,5 +1,6 @@
-// -*- mode: c++ -*-
-// vim: set ft=cpp:
+#pragma once
+
+#include <cat/simd>
 
 // TODO: Use a SIMD vector concept.
 auto simd::shuffle(auto in_vector, auto mask) {

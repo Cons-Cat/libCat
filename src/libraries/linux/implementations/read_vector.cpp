@@ -1,6 +1,4 @@
-// -*- mode: c++ -*-
-// vim: set ft=cpp:
-#include <linux>
+#include <cat/linux>
 
 auto nix::read_vector(nix::FileDescriptor const file_descriptor,
                       cat::Span<nix::IoVector> const& vectors)

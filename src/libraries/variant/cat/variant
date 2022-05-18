@@ -1,0 +1,216 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/array>
+#include <cat/math>
+#include <cat/memory>
+#include <cat/meta>
+#include <cat/type_list>
+
+namespace cat {
+
+template <typename... Ts>
+requires(::meta::TypeList<Ts...>::is_unique_list) class Variant {
+    static constexpr ssize size = cat::max(ssizeof<Ts>()...);
+    static constexpr unsigned alignment = cat::max(alignof(Ts)...);
+    using Storage = cat::Array<char, size>;
+    alignas(alignment) Storage storage;
+    uint1 discriminant;
+  public:
+    using Types = ::meta::TypeList<Ts...>;
+  private:
+    template <typename T, ssize index>
+    static consteval auto get_index_of_type() -> uint1
+        requires(index >= 0 && Types::template has_type<T>) {
+        using IndexType = typename Types::template Get<index>;
+        if constexpr (::meta::is_same<T, IndexType>) {
+            return static_cast<uint1>(index);
+        } else {
+            return get_index_of_type<T, index - 1>();
+        }
+    }
+
+    template <typename U, typename... Us>
+    constexpr void hard_reset() requires(sizeof...(Us) >= 0) {
+        if (this->holds_alternative<U>()) {
+            this->value<U>().~U();
+        } else {
+            if constexpr (sizeof...(Us) > 0) {
+                this->hard_reset<Us...>();
+            }
+        }
+    }
+
+    // constexpr void hard_reset() {
+    //     this->hard_reset<Ts...>();
+    // }
+
+    template <typename U, typename... Us>
+    constexpr void construct_from_other_variant(auto const& variant) requires(
+        sizeof...(Us) >= 0) {
+        if constexpr (::meta::RemoveReference<
+                          decltype(variant)>::Types::template has_type<U>) {
+            if (variant.template holds_alternative<U>()) {
+                this->discriminant = this->index<U>;
+                this->value<U>() = variant.template value<U>();
+                return;
+            }
+        }
+        if constexpr (sizeof...(Us) > 0) {
+            return this->construct_from_other_variant<Us...>(variant);
+        }
+    }
+
+    template <typename U, typename... Us>
+    constexpr void assign_other_variant(auto const& variant) requires(
+        sizeof...(Us) >= 0) {
+        if constexpr (::meta::RemoveReference<
+                          decltype(variant)>::Types::template has_type<U>) {
+            if (variant.template holds_alternative<U>()) {
+                if (!this->holds_alternative<U>()) {
+                    this->hard_reset<Ts...>();
+                    this->discriminant = this->index<U>;
+                    return;
+                }
+                this->value<U>() = variant.template value<U>();
+            }
+        }
+        if constexpr (sizeof...(Us) > 0) {
+            return this->assign_other_variant<Us...>(variant);
+        }
+    }
+  public:
+    static constexpr ssize variant_size = static_cast<ssize>(sizeof...(Ts));
+
+    constexpr Variant() = default;
+
+    constexpr Variant(Variant<Ts...> const& variant) {
+        this->construct_from_other_variant<Ts...>(variant);
+    };
+
+    constexpr Variant(Variant<Ts...>&& variant) {
+        this->construct_from_other_variant<Ts...>(cat::move(variant));
+    };
+
+    // Consume anything that is a valid type.
+    template <typename T>
+    constexpr Variant(T input) requires(Types::template has_type<T>) {
+        new (cat::addressof(storage)) T{input};
+        this->discriminant = this->index<T>;
+    };
+
+    // Subsume a `Variant` that holds a subset of this one's alternatives.
+    template <typename... Us>
+    constexpr Variant(Variant<Us...> variant) {
+        this->construct_from_other_variant<Us...>(variant);
+    };
+
+    template <typename T>
+    constexpr auto operator=(T const& operand)
+        -> Variant<Ts...>& requires(Types::template has_type<T>) {
+        if (!this->holds_alternative<T>()) {
+            if constexpr (!::meta::is_trivially_destructible<T>) {
+                this->value<T>().~T();
+            }
+            this->value<T>() = operand;
+            this->discriminant = this->index<T>;
+        }
+        return *this;
+    }
+
+    template <typename T>
+    constexpr auto operator=(T&& operand)
+        -> Variant<Ts...>& requires(Types::template has_type<T>) {
+        if (!this->holds_alternative<T>()) {
+            if constexpr (!::meta::is_trivially_destructible<T>) {
+                this->value<T>().~T();
+            }
+            this->value<T>() = ::meta::forward<T>(operand);
+            this->discriminant = this->index<T>;
+        }
+        return *this;
+    }
+
+    constexpr auto operator=(Variant<Ts...> const& operand) -> Variant<Ts...>& {
+        this->assign_other_variant<Ts...>(operand);
+        return *this;
+    }
+
+    // constexpr auto operator=(Variant<Ts...>&& operand) -> Variant<Ts...>& {
+    //     this->assign_other_variant<Ts...>(
+    //         ::meta::forward<Variant<Ts...>>(operand));
+    //     return *this;
+    // }
+
+    template <typename... Us>
+    constexpr auto operator=(Variant<Us...> const& operand) -> Variant<Ts...>& {
+        this->assign_other_variant<Us...>(operand);
+        return *this;
+    }
+
+    template <typename... Us>
+    constexpr auto operator=(Variant<Us...>&& operand) -> Variant<Ts...>& {
+        this->assign_other_variant<Us...>(
+            ::meta::forward<Variant<Us...>>(operand));
+        return *this;
+    }
+
+    template <typename T>
+    constexpr auto value() -> T& requires(Types::template has_type<T>) {
+        // TODO: Make this assert work.
+        // Result(this->is_type<T>).assert();
+
+        // This cast is safe when the precondition holds true.
+        return *reinterpret_cast<T*>(&this->storage);
+    }
+
+    template <typename T>
+    constexpr auto value() const
+        -> T const& requires(Types::template has_type<T>) {
+        // TODO: Make this assert work.
+        // Result(this->is_type<T>).assert();
+
+        // This cast is safe when the precondition holds true.
+        return *reinterpret_cast<T const* const>(&this->storage);
+    }
+
+    template <typename T>
+    constexpr auto safe_value() -> cat::Optional<T&>
+    requires(Types::template has_type<T>) {
+        if (this->holds_alternative<T>()) {
+            return this->value<T>();
+        }
+        return nullopt;
+    }
+
+    template <typename T>
+    constexpr auto safe_value() const -> cat::Optional<T&>
+    requires(Types::template has_type<T>) {
+        if (this->holds_alternative<T>()) {
+            return this->value<T>();
+        }
+        return nullopt;
+    }
+
+    template <typename T>
+    static constexpr uint1 index = get_index_of_type<T, variant_size - 1>();
+
+    template <typename T>
+    constexpr auto holds_alternative() -> bool1
+        requires(Types::template has_type<T>) {
+        return this->discriminant == this->index<T>;
+    }
+
+    template <typename T>
+    constexpr auto holds_alternative() const -> bool1
+        requires(Types::template has_type<T>) {
+        return this->discriminant == this->index<T>;
+    }
+
+    constexpr auto get_index() const -> uint1 {
+        return this->discriminant;
+    }
+};
+
+}  // namespace cat

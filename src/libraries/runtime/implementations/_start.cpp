@@ -1,6 +1,4 @@
-// -*- mode: c++ -*-
-// vim: set ft=cpp:
-#include <runtime>
+#include <cat/runtime>
 
 extern "C" [[gnu::used]] void _start() {
 #ifdef load_argc_argv

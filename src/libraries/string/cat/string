@@ -1,0 +1,144 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/memory>
+#include <cat/meta>
+#include <cat/optional>
+#include <cat/span>
+#include <cat/utility>
+
+// Deprecated call to `memcpy()`. Consider using `cat::copy_buffer()` instead.
+// `memcpy()` exists to enable some GCC optimizations.
+extern "C" auto memcpy(void* p_destination, void const* p_source, usize bytes)
+    -> void*;
+
+namespace cat {
+
+constexpr auto string_length(char const* p_string) -> ssize;
+
+template <ssize length>
+struct StaticString;
+
+class String : public cat::Span<char const> {
+    // `String` inherits:
+    //
+    // `char const* p_storage;`
+    // `ssize length;`
+  public:
+    constexpr String() : cat::Span<char const>(){};
+
+    constexpr String(char const* p_string, ssize in_length)
+        : cat::Span<char const>(p_string, in_length){};
+
+    constexpr String(String const& string)
+        : cat::Span<char const>(string.p_storage, string.length){};
+
+    constexpr String(String&& string)
+        : cat::Span<char const>(string.p_storage, string.length){};
+
+    // This is `auto` to deduce lower than the array-literal constructor.
+    template <typename T>
+    constexpr String(T p_string) requires(::meta::is_pointer<T>)
+        : cat::Span<char const>(p_string, cat::string_length(p_string)){};
+
+    template <unsigned int long other_length>
+    consteval String(char const (&string)[other_length]) {
+        this->p_storage = string;
+        this->length = static_cast<signed int long>(other_length);
+    }
+
+    // TODO: Make this `consteval`.
+    template <unsigned int long other_length>
+    constexpr String(
+        StaticString<static_cast<signed int long>(other_length)> const&
+            string) {
+        this->p_storage = &(string.storage[0]);
+        this->length = static_cast<signed int long>(other_length);
+    }
+
+    // A `String` consuming `nullptr` would cause undefined behavior.
+    constexpr String(decltype(nullptr)) = delete;
+
+    constexpr auto operator=(String const& string) {
+        this->p_storage = string.p_storage;
+        this->length = string.length;
+    }
+
+    constexpr auto operator=(String&& string) {
+        this->p_storage = string.p_storage;
+        this->length = cat::move(string).length;
+    }
+};
+
+// This could be `unsigned long` because the compiler cannot deduce a string
+// literal's length as `ssize`.
+// TODO: Try a deduction guide.
+template <ssize length>
+struct StaticString {
+    // TODO: Use an `Array`.
+    char storage[length.c() + 1];
+
+    constexpr StaticString(char const (&in)[length.c()]) : storage{} {
+        for (int i = 0; i < length - 1; i++) {
+            storage[i] = in[i];
+        }
+        storage[length] = '\0';
+    }
+
+    consteval StaticString(String const& in) : storage{} {
+        for (int i = 0; i < in.size() - 1; i++) {
+            storage[i] = in.p_data()[i];
+        }
+        storage[length] = '\0';
+    }
+
+    constexpr auto get_string() const {
+        return this->storage;
+    }
+
+    static consteval auto size() -> ssize {
+        return length;
+    }
+};
+
+// template <unsigned long length>
+// StaticString(length) -> StaticString<ssize{length}>;
+
+// Concatenate constant-evaluated strings.
+
+// This could be `unsigned long` because the compiler cannot deduce a string
+// literal's length as `ssize`.
+// TODO: Try a deduction guide.
+template <ssize length_1, ssize length_2>
+consteval auto operator+(StaticString<length_1> const& string_1,
+                         StaticString<length_2> const& string_2)
+    -> StaticString<length_1 - 1 + length_2> {
+    // TODO: Use an `Array`.
+    char array[length_1.c() - 1 + length_2.c()];
+
+    for (int i = 0; i < length_1 - 1; i++) {
+        array[i] = string_1.storage[i];
+    }
+
+    for (int i = length_1.c() - 1; i < length_1 - 1 + length_2 - 1; i++) {
+        array[i] = string_2.storage[i - length_1.c() + 1];
+    }
+
+    // Make this string null-terminated.
+    array[(length_1.c() - 1 + length_2.c() - 1)] = '\0';
+    StaticString static_string = array;
+    return static_string;
+}
+
+auto compare_strings(String const& string_1, String const& string_2) -> bool1;
+
+auto print(String const& string) -> cat::Optional<ssize>;
+
+auto print_line(String const& string) -> cat::Optional<ssize>;
+
+// TODO: Make a comparison function for null-terminated string pointers.
+
+}  // namespace cat
+
+#include "./implementations/string_length.tpp"

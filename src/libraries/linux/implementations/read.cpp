@@ -1,6 +1,4 @@
-// -*- mode: c++ -*-
-// vim: set ft=cpp:
-#include <linux>
+#include <cat/linux>
 
 // `read()` transmits a number of bytes into a file descriptor.
 auto nix::read(FileDescriptor const file_descriptor,

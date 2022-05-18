@@ -1,0 +1,46 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/allocators>
+#include <cat/linux>
+
+namespace cat {
+
+struct Thread {
+    cat::Any id;
+    void* p_stack;
+    ssize stack_size;
+
+    // This is platform-specific hidden code.
+  private:
+    [[maybe_unused]] nix::Process process;
+  public:
+    Thread() = default;
+    Thread(Thread const&) = delete;
+
+    auto create(::meta::Allocator auto& allocator,
+                ssize const initial_stack_size, auto const& function,
+                void* p_arguments_struct) -> Optional<void> {
+        Scaredy result = this->process.create(allocator, initial_stack_size,
+                                              function, p_arguments_struct);
+        if (result.has_value()) {
+            return monostate;
+        }
+        return nullopt;
+    }
+
+    auto join() const -> Optional<void> {
+        Scaredy result = this->process.wait();
+        if (result.has_value()) {
+            return monostate;
+        }
+        return nullopt;
+    }
+};
+
+void relax_cpu() {
+    asm volatile("pause" ::: "memory");
+}
+
+}  // namespace cat

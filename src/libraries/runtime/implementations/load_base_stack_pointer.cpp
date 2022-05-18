@@ -1,6 +1,4 @@
-// -*- mode: c++ -*-
-// vim: set ft=cpp:
-#include <runtime>
+#include <cat/runtime>
 
 auto cat::load_base_stack_pointer() -> void* {
     void* rbp;

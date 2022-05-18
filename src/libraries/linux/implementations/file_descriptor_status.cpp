@@ -1,6 +1,4 @@
-// -*- mode: c++ -*-
-// vim: set ft=cpp:
-#include <linux>
+#include <cat/linux>
 
 auto nix::file_descriptor_status(nix::FileDescriptor const file_descriptor)
     -> cat::Scaredy<nix::FileStatus, nix::LinuxError> {
