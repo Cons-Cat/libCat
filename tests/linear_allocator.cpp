@@ -31,14 +31,14 @@ didnt_overallocate:
     // This allocated 16 bytes, which is 8-byte-aligned. Another int allocation
     // would make it 4-byte-aligned. However, 8 bytes should be allocated here
     // to keep it 8-byte-aligned.
-    auto handle = allocator.aligned_alloc<int4>(8).value();
-    Result(cat::is_aligned(&allocator.get(handle), 8)).or_panic();
+    auto handle = allocator.aligned_alloc<int4>(8u).value();
+    Result(cat::is_aligned(&allocator.get(handle), 8u)).or_panic();
 
     // Allocate another int.
     auto handle_2 = allocator.malloc<int4>().value();
-    Result(cat::is_aligned(&allocator.get(handle_2), 4)).or_panic();
+    Result(cat::is_aligned(&allocator.get(handle_2), 4u)).or_panic();
     // This is now 4-byte-aligned.
-    Result(!cat::is_aligned(&allocator.get(handle_2), 8)).or_panic();
+    Result(!cat::is_aligned(&allocator.get(handle_2), 8u)).or_panic();
 
     // Small size allocations shouldn't bump the allocator.
     for (int4 i = 0; i < 20; i++) {

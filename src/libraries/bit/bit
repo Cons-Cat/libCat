@@ -92,24 +92,24 @@ struct Byte {  // NOLINT
 // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4201.html
 
 template <typename U>
-constexpr auto is_aligned(U* const p_value, ssize const alignment) -> bool;
+constexpr auto is_aligned(U* const p_value, usize const alignment) -> bool;
 
 template <typename U>
-constexpr auto is_aligned(intptr<U> const p_value, ssize const alignment)
+constexpr auto is_aligned(uintptr<U> const p_value, usize const alignment)
     -> bool;
 
 template <typename U>
-constexpr auto align_up(U* const p_value, ssize const alignment) -> U*;
+constexpr auto align_up(U* const p_value, usize const alignment) -> U*;
 template <typename U>
-constexpr auto align_up(intptr<U> const p_value, ssize const alignment)
-    -> intptr<U>;
+constexpr auto align_up(uintptr<U> const p_value, usize const alignment)
+    -> uintptr<U>;
 
 template <typename U>
-constexpr auto align_down(U* const p_value, ssize const alignment) -> U*;
+constexpr auto align_down(U* const p_value, usize const alignment) -> U*;
 
 template <typename U>
-constexpr auto align_down(intptr<U> const p_value, ssize const alignment)
-    -> intptr<U>;
+constexpr auto align_down(uintptr<U> const p_value, usize const alignment)
+    -> uintptr<U>;
 
 }  // namespace cat
 
@@ -230,6 +230,10 @@ constexpr auto operator""_ki(unsigned long long const input) -> ssize {
     return 1024 * static_cast<signed long long>(input);
 }
 
+constexpr auto operator""_uki(unsigned long long const input) -> usize {
+    return 1024u * input;
+}
+
 constexpr auto operator""_ki(long double const input) -> ssize {
     return static_cast<signed long long>(1024.f * input);
 }
@@ -238,8 +242,16 @@ constexpr auto operator""_mi(unsigned long long const input) -> ssize {
     return 1024 * 1024 * static_cast<signed long long>(input);
 }
 
+constexpr auto operator""_umi(unsigned long long const input) -> usize {
+    return 1024u * 1024u * input;
+}
+
 constexpr auto operator""_mi(long double const input) -> ssize {
     return static_cast<signed long long>(1024.f * 1024.f * input);
+}
+
+constexpr auto operator""_ugi(unsigned long long const input) -> usize {
+    return 1024u * 1024u * 1024u * input;
 }
 
 constexpr auto operator""_gi(unsigned long long const input) -> ssize {

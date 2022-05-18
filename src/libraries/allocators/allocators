@@ -50,9 +50,9 @@ namespace detail {
     struct AlignedMemoryHandle {
         using Type = typename Handle::Type;
         Handle storage;
-        ssize alignment;
+        usize alignment;
 
-        AlignedMemoryHandle(Handle const& handle, ssize in_alignment)
+        AlignedMemoryHandle(Handle const& handle, usize in_alignment)
             : storage(handle), alignment(in_alignment){};
 
         ~AlignedMemoryHandle() {
@@ -92,7 +92,7 @@ struct AllocatorFacade {
     // TODO: Forward `T` constructor arguments.
     template <typename T, bool1 is_small_optimized, bool1 is_fail_safe,
               bool1 is_aligned>
-    auto meta_allocate(ssize const alignment,
+    auto meta_allocate(usize const alignment,
                        ssize const allocation_size = ssizeof<T>()) {
         // Produce a basic handle for this memory type.
         using UnderlyingHandle = decltype(this->self().template make_handle<T>(
@@ -189,14 +189,14 @@ struct AllocatorFacade {
             // strong alignment guarantees.
             return this->aligned_alloc(alignof(T), allocation_size);
         }
-        return this->meta_allocate<T, false, true, false>(1, allocation_size);
+        return this->meta_allocate<T, false, true, false>(1u, allocation_size);
     }
 
     // Try to allocate some memory guaranteed to be aligned to some
     // boundary.
     template <typename T = cat::Byte>
     [[nodiscard]] auto aligned_alloc(
-        ssize const alignment, ssize const allocation_size = ssizeof<T>()) {
+        usize const alignment, ssize const allocation_size = ssizeof<T>()) {
         return this->meta_allocate<T, false, true, true>(alignment,
                                                          allocation_size);
     }
@@ -209,14 +209,14 @@ struct AllocatorFacade {
             // strong alignment guarantees.
             return this->aligned_alloca(alignof(T), allocation_size);
         }
-        return this->meta_allocate<T, true, true, false>(1, allocation_size);
+        return this->meta_allocate<T, true, true, false>(1u, allocation_size);
     }
 
     // Try to allocate small-size optimized memory guaranteed to be aligned
     // to a boundary. TODO: Work on this after improving `malloca()`.
     template <typename T = void*>
     [[nodiscard]] auto aligned_malloca(
-        ssize const alignment, ssize const allocation_size = ssizeof<T>()) {
+        usize const alignment, ssize const allocation_size = ssizeof<T>()) {
         return this->meta_allocate<T, true, true, true>(alignment,
                                                         allocation_size);
     }
@@ -356,9 +356,9 @@ struct PageAllocator : AllocatorFacade<PageAllocator> {
     // Allocate a page(s) of virtual memory that is guaranteed to align to
     // any power of two, less than `4_ki`.
     template <typename T>
-    auto aligned_allocate(ssize const alignment, ssize const allocation_size)
+    auto aligned_allocate(usize const alignment, ssize const allocation_size)
         -> Optional<void*> {
-        Result(alignment <= 4_ki).assert();
+        Result(alignment <= 4_uki).assert();
         // A normal page allocation already has these semantics.
         return this->allocate<T>(allocation_size);
     }
@@ -394,17 +394,17 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
     };
 
     // TODO: Use `AnyPtr`.
-    intptr<void> const p_arena_begin;
-    intptr<void> const p_arena_end;
-    intptr<void> p_arena_current = p_arena_begin;
+    uintptr<void> const p_arena_begin;
+    uintptr<void> const p_arena_end;
+    uintptr<void> p_arena_current = p_arena_begin;
 
-    LinearAllocator(intptr<void> const p_address, ssize const arena_size)
-        : p_arena_begin(p_address + arena_size), p_arena_end(p_address){};
+    LinearAllocator(uintptr<void> const p_address, ssize const arena_size)
+        : p_arena_begin(p_address + arena_size.c()), p_arena_end(p_address){};
 
     // Try to allocate memory and bump the pointer down.
     template <typename T>
     auto allocate(ssize const allocation_size) -> Optional<void*> {
-        this->p_arena_current -= allocation_size;
+        this->p_arena_current -= allocation_size.c();
         if (this->p_arena_current >= p_arena_end) {
             return static_cast<void*>(this->p_arena_current);
         }
@@ -420,10 +420,10 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
     // Try to allocate memory aligned to some boundary and bump the pointer
     // down.
     template <typename T>
-    auto aligned_allocate(ssize const alignment, ssize const allocation_size)
+    auto aligned_allocate(usize const alignment, ssize const allocation_size)
         -> Optional<void*> {
-        intptr<void> p_allocation =
-            cat::align_down(this->p_arena_current - allocation_size, alignment);
+        uintptr<void> p_allocation = cat::align_down(
+            this->p_arena_current - allocation_size.c(), alignment);
         if (p_allocation >= p_arena_end) {
             this->p_arena_current = p_allocation;
             return static_cast<void*>(this->p_arena_current);
