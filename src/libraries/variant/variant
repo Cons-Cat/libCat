@@ -85,6 +85,14 @@ requires(::meta::TypeList<Ts...>::is_unique_list) class Variant {
 
     constexpr Variant() = default;
 
+    constexpr Variant(Variant<Ts...> const& variant) {
+        this->construct_from_other_variant<Ts...>(variant);
+    };
+
+    constexpr Variant(Variant<Ts...>&& variant) {
+        this->construct_from_other_variant<Ts...>(cat::move(variant));
+    };
+
     // Consume anything that is a valid type.
     template <typename T>
     constexpr Variant(T input) requires(Types::template has_type<T>) {
@@ -101,7 +109,6 @@ requires(::meta::TypeList<Ts...>::is_unique_list) class Variant {
     template <typename T>
     constexpr auto operator=(T const& operand)
         -> Variant<Ts...>& requires(Types::template has_type<T>) {
-        // TODO: Is this totally wrong?
         if (!this->holds_alternative<T>()) {
             if constexpr (!::meta::is_trivially_destructible<T>) {
                 this->value<T>().~T();
