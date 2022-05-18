@@ -54,397 +54,394 @@ namespace detail {
                == meta::is_floating_point<UnderlyingU>);
         // clang-format on
     }
-
-    // `Numeral` is a container for numeric data types which prevents unsafe or
-    // pessimizing implicit casts, such as loss of precision, change in
-    // signed-ness, or `float4` to `float8` conversion.
-    //
-    // All of its conversion operators, arithmetic operators and constructors
-    // are generic with constraints. Because these methods are constrained, it
-    // is possible that the compiler will fail to resolve any satisfying
-    // overloads for an invocation of an arithmetic operator, constructor, or
-    // conversion operator, and thus prevent compilation.
-    //
-    // Constraints such as "the operand's size must be less than or equal to my
-    // own size" guarantee that the an unwanted overload cannot be resolved.
-    // This solution is concise, because any constraint broadly applies to all
-    // possible type conversions.
-    template <typename T>
-    struct Numeral {
-        // `Type` allows SIMD specializations to easily get the underlying
-        // numeric data type of a `Numeral`.
-        using Type = T;
-        T storage;
-
-        constexpr Numeral() = default;
-
-        template <typename U>
-        constexpr explicit(!is_safe_conversion<T, U>()) Numeral(U const from)
-            : storage(static_cast<T const>(from)){};
-
-        template <typename U>
-        constexpr explicit operator U() {
-            if constexpr (meta::IsSpecializationTrait<U, Numeral>::value) {
-                // If `U` is a `Numeral`, cast into `U`'s underlying type.
-                return static_cast<typename U::Type>(this->storage);
-            } else {
-                // If `U` is not a `Numeral`, cast into `U`.
-                return static_cast<U>(this->storage);
-            }
-        }
-
-        template <typename U>
-        constexpr explicit operator U() const {
-            if constexpr (meta::IsSpecializationTrait<U, Numeral>::value) {
-                // If `U` is a `Numeral`, cast into `U`'s underlying type.
-                return static_cast<typename U::Type>(this->storage);
-            } else {
-                // If `U` is not a `Numeral`, cast into `U`.
-                return static_cast<U>(this->storage);
-            }
-        }
-
-        // Get the underlying C API type.
-        constexpr auto c() const -> T {
-            return this->storage;
-        }
-
-        template <typename U>
-        constexpr auto operator=(U const from)
-            -> Numeral& requires(is_safe_conversion<T, U>()) {
-            this->storage = static_cast<T const>(from);
-            return *this;
-        }
-
-        template <typename U>
-        constexpr auto operator>(U const from) const
-            -> bool requires(is_safe_conversion<T, U>()) {
-            return this->storage > static_cast<T const>(from);
-        }
-
-        template <typename U>
-        constexpr auto operator>=(U const from) const
-            -> bool requires(is_safe_conversion<T, U>()) {
-            return this->storage >= static_cast<T const>(from);
-        }
-
-        template <typename U>
-        constexpr auto operator<(U const from) const
-            -> bool requires(is_safe_conversion<T, U>()) {
-            return this->storage < static_cast<T const>(from);
-        }
-
-        template <typename U>
-        constexpr auto operator<=(U const from) const
-            -> bool requires(is_safe_conversion<T, U>()) {
-            return this->storage <= static_cast<T const>(from);
-        }
-
-        template <typename U>
-        constexpr auto operator+=(U const from)
-            -> Numeral& requires(is_safe_conversion<T, U>()) {
-            this->storage = this->storage + static_cast<T const>(from);
-            return *this;
-        }
-
-        constexpr auto operator++() -> Numeral& {
-            ++storage;
-            return *this;
-        }
-
-        constexpr auto operator++(int) -> Numeral& {
-            storage++;
-            return *this;
-        }
-
-        template <typename U>
-        constexpr auto operator-=(U const from)
-            -> Numeral& requires(is_safe_conversion<T, U>()) {
-            this->storage = this->storage - static_cast<T const>(from);
-            return *this;
-        }
-
-        constexpr auto operator--() -> Numeral<T> {
-            return --storage;
-        }
-
-        constexpr auto operator--(int) -> Numeral<T> {
-            return storage--;
-        }
-
-        template <typename U>
-        constexpr auto operator*=(U const from)
-            -> Numeral& requires(is_safe_conversion<T, U>()) {
-            this->storage = this->storage * static_cast<T const>(from);
-            return *this;
-        }
-
-        template <typename U>
-        constexpr auto operator/(U const from) const -> Numeral<T>
-        requires(is_safe_conversion<T, U>()) {
-            return static_cast<T const>(this->storage /
-                                        static_cast<T const>(from));
-        }
-
-        template <typename U>
-        constexpr auto operator/=(U const from)
-            -> Numeral& requires(is_safe_conversion<T, U>()) {
-            this->storage = this->storage / static_cast<T const>(from);
-            return *this;
-        }
-
-        template <typename U>
-        constexpr auto operator%(U const from) const -> Numeral<T>
-        requires(is_safe_conversion<T, U>()) {
-            return static_cast<T const>(this->storage %
-                                        static_cast<T const>(from));
-        }
-
-        template <typename U>
-        constexpr auto operator%=(U const from)
-            -> Numeral& requires(is_safe_conversion<T, U>()) {
-            this->storage = this->storage % static_cast<T const>(from);
-            return *this;
-        }
-
-        template <typename U>
-        constexpr auto operator&=(U const from)
-            -> Numeral& requires(is_safe_conversion<T, U>()) {
-            this->storage = this->storage & static_cast<T const>(from);
-            return *this;
-        }
-
-        template <typename U>
-        constexpr auto operator|=(U const from)
-            -> Numeral& requires(is_safe_conversion<T, U>()) {
-            this->storage = this->storage | static_cast<T const>(from);
-            return *this;
-        }
-
-        template <typename U>
-        constexpr auto operator<<(U const from) const -> Numeral<T>
-        requires(is_safe_conversion<T, U>()) {
-            return static_cast<T const>(this->storage << static_cast<T>(from));
-        }
-
-        template <typename U>
-        constexpr auto operator<<=(U const from)
-            -> Numeral& requires(is_safe_conversion<T, U>()) {
-            this->storage = this->storage << static_cast<T const>(from);
-            return *this;
-        }
-
-        template <typename U>
-        constexpr auto operator>>(U const from) const -> Numeral<T>
-        requires(is_safe_conversion<T, U>()) {
-            return static_cast<T const>(this->storage >> static_cast<T>(from));
-        }
-
-        template <typename U>
-        constexpr auto operator>>=(U const from)
-            -> Numeral& requires(is_safe_conversion<T, U>()) {
-            this->storage = this->storage >> static_cast<T const>(from);
-            return *this;
-        }
-
-        constexpr auto operator~() -> Numeral& {
-            this->storage = ~(this->storage);
-            return *this;
-        }
-    };
-
-    template <typename T>
-    Numeral(T) -> Numeral<T>;
-
-    // Compare primitive numerals to `Numeral`s.
-    // TODO: Return a `Numeral` that is the larger size of either operand.
-    template <typename T, typename U>
-    constexpr auto operator>(T const lhs, Numeral<U> const rhs)
-        -> bool requires(meta::is_convertible<U, T> &&
-                         !meta::IsSpecializationTrait<T, Numeral>::value) {
-        return lhs > rhs.storage;
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator>=(T const lhs, Numeral<U> const rhs)
-        -> bool requires(meta::is_convertible<U, T> &&
-                         !meta::IsSpecializationTrait<T, Numeral>::value) {
-        return lhs >= rhs.storage;
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator<(T const lhs, Numeral<U> const rhs)
-        -> bool requires(meta::is_convertible<U, T> &&
-                         !meta::IsSpecializationTrait<T, Numeral>::value) {
-        return lhs < rhs.storage;
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator<=(T const lhs, Numeral<U> const rhs)
-        -> bool requires(meta::is_convertible<U, T> &&
-                         !meta::IsSpecializationTrait<T, Numeral>::value) {
-        return lhs <= rhs.storage;
-    }
-
-    // Order-independant operators for `Numeral` and primitive numerals.
-    template <typename T, typename U>
-    constexpr auto operator==(Numeral<T> const lhs, U const rhs)
-        -> bool requires(meta::is_signed<T> == meta::is_signed<U> &&
-                         meta::is_floating_point<T> ==
-                             meta::is_floating_point<U>) {
-        return lhs.storage == static_cast<T const>(rhs);
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator+(Numeral<T> const lhs, U const rhs) requires(
-        meta::is_signed<T> == meta::is_signed<U> &&
-        meta::is_floating_point<T> == meta::is_floating_point<U>) {
-        return Numeral{lhs.storage + static_cast<T const>(rhs)};
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator-(Numeral<T> const lhs, U const rhs) requires(
-        meta::is_signed<T> == meta::is_signed<U> &&
-        meta::is_floating_point<T> == meta::is_floating_point<U>) {
-        return Numeral{lhs.storage - static_cast<T const>(rhs)};
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator*(Numeral<T> const lhs, U const rhs) requires(
-        meta::is_signed<T> == meta::is_signed<U> &&
-        meta::is_floating_point<T> == meta::is_floating_point<U>) {
-        return Numeral{lhs.storage * static_cast<T const>(rhs)};
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator&(Numeral<T> const lhs, U const rhs) requires(
-        meta::is_signed<T> == meta::is_signed<U> &&
-        meta::is_floating_point<T> == meta::is_floating_point<U>) {
-        return Numeral{lhs.storage & static_cast<T const>(rhs)};
-    }
-
-    template <typename T, meta::Integral U>
-    constexpr auto operator|(Numeral<T> const lhs, U const rhs) requires(
-        meta::is_signed<T> == meta::is_signed<U> &&
-        meta::is_floating_point<T> == meta::is_floating_point<U>) {
-        return Numeral{lhs.storage | static_cast<T>(rhs)};
-    }
-
-    // Pointer arithmetic operators for `Numeral`s.
-    template <typename T, typename U>
-    constexpr auto operator+(T* const p_lhs, Numeral<U> const rhs) -> T* {
-        return p_lhs + rhs.storage;
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator+=(T*& p_lhs, Numeral<U> const rhs) -> T*& {
-        p_lhs += rhs.storage;
-        return p_lhs;
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator-(T* const p_lhs, Numeral<U> const rhs) -> T* {
-        return p_lhs - rhs.storage;
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator-=(T*& p_lhs, Numeral<U> const rhs) -> T*& {
-        p_lhs -= rhs.storage;
-        return p_lhs;
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator*(T* const p_lhs, Numeral<U> const rhs) -> T* {
-        return p_lhs * rhs.storage;
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator*=(T*& p_lhs, Numeral<U> const rhs) -> T*& {
-        p_lhs *= rhs.storage;
-        return p_lhs;
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator/(T* const p_lhs, Numeral<U> const rhs) -> T* {
-        return p_lhs / rhs.storage;
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator/=(T*& p_lhs, Numeral<U> const rhs) -> T*& {
-        p_lhs /= rhs.storage;
-        return p_lhs;
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator<<(T* const p_lhs, Numeral<U> const rhs) -> T* {
-        return p_lhs << rhs.storage;
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator<<=(T*& p_lhs, Numeral<U> const rhs) -> T*& {
-        p_lhs <<= rhs.storage;
-        return p_lhs;
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator>>(T* const p_lhs, Numeral<U> const rhs) -> T* {
-        return p_lhs >> rhs.storage;
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator>>=(T*& p_lhs, Numeral<U> const rhs) -> T*& {
-        p_lhs >>= rhs.storage;
-        return p_lhs;
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator%(T* const p_lhs, Numeral<U> const rhs) -> T* {
-        return p_lhs % rhs.storage;
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator%=(T*& p_lhs, Numeral<U> const rhs) -> T*& {
-        p_lhs %= rhs.storage;
-        return p_lhs;
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator&(T* const p_lhs, Numeral<U> const rhs) -> T* {
-        return p_lhs & rhs.storage;
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator&=(T*& p_lhs, Numeral<U> const rhs) -> T*& {
-        p_lhs &= rhs.storage;
-        return p_lhs;
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator|(T* const p_lhs, Numeral<U> const rhs) -> T* {
-        return p_lhs | rhs.storage;
-    }
-
-    template <typename T, typename U>
-    constexpr auto operator|=(T*& p_lhs, Numeral<U> const rhs) -> T*& {
-        p_lhs |= rhs.storage;
-        return p_lhs;
-    }
 }  // namespace detail
 
-// These macros are defined by the GCC compiler.
-using int1 = cat::detail::Numeral<__INT8_TYPE__>;
-using uint1 = cat::detail::Numeral<__UINT8_TYPE__>;
-using int2 = cat::detail::Numeral<__INT16_TYPE__>;
-using uint2 = cat::detail::Numeral<__UINT16_TYPE__>;
-using int4 = cat::detail::Numeral<__INT32_TYPE__>;
-using uint4 = cat::detail::Numeral<__UINT32_TYPE__>;
-using int8 = cat::detail::Numeral<__INT64_TYPE__>;
-using uint8 = cat::detail::Numeral<__UINT64_TYPE__>;
-// using i128 = cat::detail::Numeral<int128_t>;
-// using u128 = cat::detail::Numeral<uint128_t>;
+// `Numeral` is a container for numeric data types which prevents unsafe or
+// pessimizing implicit casts, such as loss of precision or signed-ness.
+//
+// All of its conversion operators, arithmetic operators and constructors
+// are generic with constraints. Because these methods are constrained, it
+// is possible that the compiler will fail to resolve any satisfying
+// overloads for an invocation of an arithmetic operator, constructor, or
+// conversion operator, and thus prevent compilation.
+//
+// Constraints such as "the operand's size must be less than or equal to my
+// own size" guarantee that the an unwanted overload cannot be resolved.
+// This solution is concise, because any constraint broadly applies to all
+// possible type conversions.
+template <typename T>
+struct Numeral {
+    // `Type` allows SIMD specializations to easily get the underlying
+    // numeric data type of a `Numeral`.
+    using Type = T;
+    T storage;
 
-using float4 = cat::detail::Numeral<float>;
-using float8 = cat::detail::Numeral<double>;
+    constexpr Numeral() = default;
+
+    template <typename U>
+    constexpr explicit(!detail::is_safe_conversion<T, U>())
+        Numeral(U const from)
+        : storage(static_cast<T const>(from)){};
+
+    template <typename U>
+    constexpr explicit operator U() {
+        if constexpr (meta::IsSpecializationTrait<U, Numeral>::value) {
+            // If `U` is a `Numeral`, cast into `U`'s underlying type.
+            return static_cast<typename U::Type>(this->storage);
+        } else {
+            // If `U` is not a `Numeral`, cast into `U`.
+            return static_cast<U>(this->storage);
+        }
+    }
+
+    template <typename U>
+    constexpr explicit operator U() const {
+        if constexpr (meta::IsSpecializationTrait<U, Numeral>::value) {
+            // If `U` is a `Numeral`, cast into `U`'s underlying type.
+            return static_cast<typename U::Type>(this->storage);
+        } else {
+            // If `U` is not a `Numeral`, cast into `U`.
+            return static_cast<U>(this->storage);
+        }
+    }
+
+    // Get the underlying C API type.
+    constexpr auto c() const -> T {
+        return this->storage;
+    }
+
+    template <typename U>
+    constexpr auto operator=(U const from)
+        -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
+        this->storage = static_cast<T const>(from);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto operator>(U const from) const
+        -> bool requires(detail::is_safe_conversion<T, U>()) {
+        return this->storage > static_cast<T const>(from);
+    }
+
+    template <typename U>
+    constexpr auto operator>=(U const from) const
+        -> bool requires(detail::is_safe_conversion<T, U>()) {
+        return this->storage >= static_cast<T const>(from);
+    }
+
+    template <typename U>
+    constexpr auto operator<(U const from) const
+        -> bool requires(detail::is_safe_conversion<T, U>()) {
+        return this->storage < static_cast<T const>(from);
+    }
+
+    template <typename U>
+    constexpr auto operator<=(U const from) const
+        -> bool requires(detail::is_safe_conversion<T, U>()) {
+        return this->storage <= static_cast<T const>(from);
+    }
+
+    template <typename U>
+    constexpr auto operator+=(U const from)
+        -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
+        this->storage = this->storage + static_cast<T const>(from);
+        return *this;
+    }
+
+    constexpr auto operator++() -> Numeral& {
+        ++storage;
+        return *this;
+    }
+
+    constexpr auto operator++(int) -> Numeral& {
+        storage++;
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto operator-=(U const from)
+        -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
+        this->storage = this->storage - static_cast<T const>(from);
+        return *this;
+    }
+
+    constexpr auto operator--() -> Numeral<T> {
+        return --storage;
+    }
+
+    constexpr auto operator--(int) -> Numeral<T> {
+        return storage--;
+    }
+
+    template <typename U>
+    constexpr auto operator*=(U const from)
+        -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
+        this->storage = this->storage * static_cast<T const>(from);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto operator/(U const from) const -> Numeral<T>
+    requires(detail::is_safe_conversion<T, U>()) {
+        return static_cast<T const>(this->storage / static_cast<T const>(from));
+    }
+
+    template <typename U>
+    constexpr auto operator/=(U const from)
+        -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
+        this->storage = this->storage / static_cast<T const>(from);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto operator%(U const from) const -> Numeral<T>
+    requires(detail::is_safe_conversion<T, U>()) {
+        return static_cast<T const>(this->storage % static_cast<T const>(from));
+    }
+
+    template <typename U>
+    constexpr auto operator%=(U const from)
+        -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
+        this->storage = this->storage % static_cast<T const>(from);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto operator&=(U const from)
+        -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
+        this->storage = this->storage & static_cast<T const>(from);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto operator|=(U const from)
+        -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
+        this->storage = this->storage | static_cast<T const>(from);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto operator<<(U const from) const -> Numeral<T>
+    requires(detail::is_safe_conversion<T, U>()) {
+        return static_cast<T const>(this->storage << static_cast<T>(from));
+    }
+
+    template <typename U>
+    constexpr auto operator<<=(U const from)
+        -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
+        this->storage = this->storage << static_cast<T const>(from);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto operator>>(U const from) const -> Numeral<T>
+    requires(detail::is_safe_conversion<T, U>()) {
+        return static_cast<T const>(this->storage >> static_cast<T>(from));
+    }
+
+    template <typename U>
+    constexpr auto operator>>=(U const from)
+        -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
+        this->storage = this->storage >> static_cast<T const>(from);
+        return *this;
+    }
+
+    constexpr auto operator~() -> Numeral& {
+        this->storage = ~(this->storage);
+        return *this;
+    }
+};
+
+template <typename T>
+Numeral(T) -> Numeral<T>;
+
+// Compare primitive numerals to `Numeral`s.
+// TODO: Return a `Numeral` that is the larger size of either operand.
+template <typename T, typename U>
+constexpr auto operator>(T const lhs, Numeral<U> const rhs)
+    -> bool requires(meta::is_convertible<U, T> &&
+                     !meta::IsSpecializationTrait<T, Numeral>::value) {
+    return lhs > rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator>=(T const lhs, Numeral<U> const rhs)
+    -> bool requires(meta::is_convertible<U, T> &&
+                     !meta::IsSpecializationTrait<T, Numeral>::value) {
+    return lhs >= rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator<(T const lhs, Numeral<U> const rhs)
+    -> bool requires(meta::is_convertible<U, T> &&
+                     !meta::IsSpecializationTrait<T, Numeral>::value) {
+    return lhs < rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator<=(T const lhs, Numeral<U> const rhs)
+    -> bool requires(meta::is_convertible<U, T> &&
+                     !meta::IsSpecializationTrait<T, Numeral>::value) {
+    return lhs <= rhs.storage;
+}
+
+// Order-independant operators for `Numeral` and primitive numerals.
+template <typename T, typename U>
+constexpr auto operator==(Numeral<T> const lhs, U const rhs)
+    -> bool requires(meta::is_signed<T> == meta::is_signed<U> &&
+                     meta::is_floating_point<T> == meta::is_floating_point<U>) {
+    return lhs.storage == static_cast<T const>(rhs);
+}
+
+template <typename T, typename U>
+constexpr auto operator+(Numeral<T> const lhs, U const rhs) requires(
+    meta::is_signed<T> == meta::is_signed<U> &&
+    meta::is_floating_point<T> == meta::is_floating_point<U>) {
+    return Numeral{lhs.storage + static_cast<T const>(rhs)};
+}
+
+template <typename T, typename U>
+constexpr auto operator-(Numeral<T> const lhs, U const rhs) requires(
+    meta::is_signed<T> == meta::is_signed<U> &&
+    meta::is_floating_point<T> == meta::is_floating_point<U>) {
+    return Numeral{lhs.storage - static_cast<T const>(rhs)};
+}
+
+template <typename T, typename U>
+constexpr auto operator*(Numeral<T> const lhs, U const rhs) requires(
+    meta::is_signed<T> == meta::is_signed<U> &&
+    meta::is_floating_point<T> == meta::is_floating_point<U>) {
+    return Numeral{lhs.storage * static_cast<T const>(rhs)};
+}
+
+template <typename T, typename U>
+constexpr auto operator&(Numeral<T> const lhs, U const rhs) requires(
+    meta::is_signed<T> == meta::is_signed<U> &&
+    meta::is_floating_point<T> == meta::is_floating_point<U>) {
+    return Numeral{lhs.storage & static_cast<T const>(rhs)};
+}
+
+template <typename T, meta::Integral U>
+constexpr auto operator|(Numeral<T> const lhs, U const rhs) requires(
+    meta::is_signed<T> == meta::is_signed<U> &&
+    meta::is_floating_point<T> == meta::is_floating_point<U>) {
+    return Numeral{lhs.storage | static_cast<T>(rhs)};
+}
+
+// Pointer arithmetic operators for `Numeral`s.
+template <typename T, typename U>
+constexpr auto operator+(T* const p_lhs, Numeral<U> const rhs) -> T* {
+    return p_lhs + rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator+=(T*& p_lhs, Numeral<U> const rhs) -> T*& {
+    p_lhs += rhs.storage;
+    return p_lhs;
+}
+
+template <typename T, typename U>
+constexpr auto operator-(T* const p_lhs, Numeral<U> const rhs) -> T* {
+    return p_lhs - rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator-=(T*& p_lhs, Numeral<U> const rhs) -> T*& {
+    p_lhs -= rhs.storage;
+    return p_lhs;
+}
+
+template <typename T, typename U>
+constexpr auto operator*(T* const p_lhs, Numeral<U> const rhs) -> T* {
+    return p_lhs * rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator*=(T*& p_lhs, Numeral<U> const rhs) -> T*& {
+    p_lhs *= rhs.storage;
+    return p_lhs;
+}
+
+template <typename T, typename U>
+constexpr auto operator/(T* const p_lhs, Numeral<U> const rhs) -> T* {
+    return p_lhs / rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator/=(T*& p_lhs, Numeral<U> const rhs) -> T*& {
+    p_lhs /= rhs.storage;
+    return p_lhs;
+}
+
+template <typename T, typename U>
+constexpr auto operator<<(T* const p_lhs, Numeral<U> const rhs) -> T* {
+    return p_lhs << rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator<<=(T*& p_lhs, Numeral<U> const rhs) -> T*& {
+    p_lhs <<= rhs.storage;
+    return p_lhs;
+}
+
+template <typename T, typename U>
+constexpr auto operator>>(T* const p_lhs, Numeral<U> const rhs) -> T* {
+    return p_lhs >> rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator>>=(T*& p_lhs, Numeral<U> const rhs) -> T*& {
+    p_lhs >>= rhs.storage;
+    return p_lhs;
+}
+
+template <typename T, typename U>
+constexpr auto operator%(T* const p_lhs, Numeral<U> const rhs) -> T* {
+    return p_lhs % rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator%=(T*& p_lhs, Numeral<U> const rhs) -> T*& {
+    p_lhs %= rhs.storage;
+    return p_lhs;
+}
+
+template <typename T, typename U>
+constexpr auto operator&(T* const p_lhs, Numeral<U> const rhs) -> T* {
+    return p_lhs & rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator&=(T*& p_lhs, Numeral<U> const rhs) -> T*& {
+    p_lhs &= rhs.storage;
+    return p_lhs;
+}
+
+template <typename T, typename U>
+constexpr auto operator|(T* const p_lhs, Numeral<U> const rhs) -> T* {
+    return p_lhs | rhs.storage;
+}
+
+template <typename T, typename U>
+constexpr auto operator|=(T*& p_lhs, Numeral<U> const rhs) -> T*& {
+    p_lhs |= rhs.storage;
+    return p_lhs;
+}
+
+// These macros are defined by the GCC compiler.
+using int1 = cat::Numeral<__INT8_TYPE__>;
+using uint1 = cat::Numeral<__UINT8_TYPE__>;
+using int2 = cat::Numeral<__INT16_TYPE__>;
+using uint2 = cat::Numeral<__UINT16_TYPE__>;
+using int4 = cat::Numeral<__INT32_TYPE__>;
+using uint4 = cat::Numeral<__UINT32_TYPE__>;
+using int8 = cat::Numeral<__INT64_TYPE__>;
+using uint8 = cat::Numeral<__UINT64_TYPE__>;
+// using i128 = cat::Numeral<int128_t>;
+// using u128 = cat::Numeral<uint128_t>;
+
+using float4 = cat::Numeral<float>;
+using float8 = cat::Numeral<double>;
 
 // TODO: `__SIZE_TYPE__`.
 using usize = uint8;
@@ -486,7 +483,6 @@ namespace detail {
 template <typename T>
 // NOLINTNEXTLINE
 struct intptr {
-    // `Type` is needed to convert into `cat::detail::Numeral`s.
     // This macro is a GCC builtin.
     using Type = __INTPTR_TYPE__;
     Type storage;
