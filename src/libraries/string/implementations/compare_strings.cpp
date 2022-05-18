@@ -1,5 +1,4 @@
 #include <array>
-#include <limits>
 #include <string>
 
 auto cat::compare_strings(String const& string_1, String const& string_2)
@@ -37,7 +36,7 @@ auto cat::compare_strings(String const& string_1, String const& string_2)
             }
 
             for (int4 i = 0; i < size; i++) {
-                if (results[i] != cat::numeric_limits<int4>::max()) {
+                if (results[i] != int4::max) {
                     return false;
                 }
             }
