@@ -29,7 +29,6 @@ set(
   ${CAT_SRC}/libraries/network/
   ${CAT_SRC}/libraries/x/
   ${CAT_SRC}/libraries/bit/
-  ${CAT_SRC}/libraries/numeric_limits/
   ${CAT_SRC}/libraries/iterator/
   ${CAT_SRC}/libraries/math/
   ${CAT_SRC}/libraries/type_list/
