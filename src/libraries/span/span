@@ -29,13 +29,11 @@ class Span {
         : p_storage(static_cast<T*>(p_in_data)), length(in_length){};
 
     template <::meta::Pointer U>
-    constexpr Span(U p_start, U p_end) requires(::meta::is_convertible<U, T*>)
+    constexpr Span(U const p_start,
+                   U const p_end) requires(::meta::is_convertible<U, T*>)
         : p_storage(p_start), length(static_cast<ssize>(p_end - p_start)){};
 
-    // TODO: Make a `Container` `concept`.
-    constexpr Span(auto& container)
-        : p_storage(container.p_data()), length(container.size()){};
-
+    // TODO: Make a `ContiguousContainer` `concept`.
     constexpr Span(auto const& container)
         : p_storage(container.p_data()), length(container.size()){};
 
@@ -60,8 +58,7 @@ class Span {
                                        ssize const end_index) -> Span<T> {
         Result{start_index >= 0}.assert();
         Result{end_index <= length}.assert();
-        return Span<T>(this->p_storage + start_index.c(),
-                       end_index - start_index);
+        return Span<T>(this->p_storage + start_index, end_index - start_index);
     }
 
     [[nodiscard]] constexpr auto first(ssize const count) -> Span<T> {
