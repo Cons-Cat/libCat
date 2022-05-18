@@ -2,7 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <bit>
+#include <cat/bit>
 
 // Returns a value rounded down from `p_value` to the nearest `alignment`
 // boundary.

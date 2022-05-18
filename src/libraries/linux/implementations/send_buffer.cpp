@@ -1,6 +1,4 @@
-// -*- mode: c++ -*-
-// vim: set ft=cpp:
-#include <linux>
+#include <cat/linux>
 
 auto nix::send_buffer(nix::FileDescriptor const socket_descriptor,
                       void const* p_message_buffer, ssize const buffer_length,

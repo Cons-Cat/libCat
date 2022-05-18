@@ -1,0 +1,790 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/any>
+#include <cat/bit>
+#include <cat/meta>
+#include <cat/scaredy>
+#include <cat/span>
+#include <cat/string>
+#include <cat/utility>
+
+namespace cat {
+struct Socket;
+}
+
+constexpr ssize page_size = 4096_ki;
+
+namespace nix {
+
+enum class LinuxError {
+    // Operation is not permitted.
+    perm = -1,
+    // No such file or directory.
+    noent = -2,
+    // No such process.
+    srch = -3,
+    // Interrupted system call.
+    intr = -4,
+    // Input/Output error.
+    io = -5,
+    // No such device or address.
+    nxio = -6,
+    // Argument list is too long.
+    toobig = -7,
+    // Exec format error.
+    noexec = -8,
+    // Bad file number.
+    badf = -9,
+    // No child processes.
+    child = -10,
+    // Try this operation again.
+    again = -11,
+    // Out of memory.
+    nomem = -12,
+    // Access is denied.
+    acces = -13,
+    // Bad memory address.
+    fault = -14,
+    // Invaild block address.
+    notblk = -15,
+    // Device or resource is busy.
+    busy = -16,
+    // File already exists.
+    exist = -17,
+    // Cross device link.
+    xdev = -18,
+    // No such device exists.
+    nodev = -19,
+    // Is not a directory.
+    notdir = -20,
+    // Is a directory instead of a file.
+    isdir = -21,
+    // Mysteriously invalid argument.
+    inval = -22,
+    // Too many file descriptors exist across the system.
+    nfile = -23,
+    // Too many files are open in this process.
+    mfile = -24,
+    // Not a tty.
+    notty = -25,
+    // Text file busy.
+    txtbsy = -26,
+    // File too large.
+    fbig = -27,
+    // No space left on device.
+    nospc = -28,
+    // Illegal seek.
+    spipe = -29,
+    // Read-only file system.
+    rofs = -30,
+    // Too many links.
+    mlink = -31,
+    // Broken pipe.
+    pipe = -32,
+    // Math argument out of domain of func.
+    dom = -33,
+    // Math result not representable.
+    range = -34,
+    // Resource deadlock would occur.
+    deadlk = -35,
+    // File name too long.
+    nametoolong = -36,
+    // No record locks available.
+    nolck = -37,
+    // Function not implemented.
+    nosys = -38,
+    // Directory not empty.
+    notempty = -39,
+    // Too many symbolic links encountered.
+    loop = -40,
+    // No message of desired type.
+    nomsg = -42,
+    // Identifier removed.
+    idrm = -43,
+    // Channel number out of range.
+    chrng = -44,
+    // Level 2 not synchronized.
+    l2_nsync = -45,
+    // Level 3 halted.
+    l3_hlt = -46,
+    // Level 3 reset.
+    l3_rst = -47,
+    // Link number out of range.
+    lnrng = -48,
+    // Protocol driver not attached.
+    unatch = -49,
+    // No CSI structure available.
+    nocsi = -50,
+    // Level 2 halted.
+    l2_hlt = -51,
+    // Invalid exchange.
+    bade = -52,
+    // Invalid request descriptor.
+    badr = 53,
+    // Exchange full.
+    xfull = -54,
+    // No anode.
+    noano = -55,
+    // Invalid request code.
+    badrqc = -56,
+    // Invalid slot.
+    badslt = -57,
+    // Bad font file format.
+    bfont = -59,
+    // Device not a stream.
+    nostr = 60,
+    // No data available.
+    nodata = -61,
+    // Timer expired.
+    time = -62,
+    // Out of streams resources.
+    nosr = 63,
+    // Machine is not on the network.
+    nonet = -64,
+    // Package not installed.
+    nopkg = -65,
+    // Object is remote.
+    remote = -66,
+    // Link has been severed.
+    nolink = -67,
+    // Advertise error.
+    adv = -68,
+    // Srmount error.
+    srmnt = -69,
+    // Communication error on send.
+    comm = -70,
+    // Protocol error.
+    proto = -71,
+    // Multihop attempted.
+    multihop = -72,
+    // RFS specific error.
+    dotdot = -73,
+    // Not a data message.
+    badmsg = -74,
+    // Value too large for defined data type.
+    overflow = -75,
+    // Name not unique on network.
+    notuniq = -76,
+    // File descriptor in bad state.
+    badfd = -77,
+    // Remote address changed.
+    remchg = -78,
+    // Can not access a needed shared library.
+    libacc = -79,
+    // Accessing a corrupted shared library.
+    libbad = -80,
+    // .lib section in a.out corrupted.
+    libscn = -81,
+    // Attempting to link in too many shared libraries.
+    libmax = -82,
+    // Cannot exec a shared library directly.
+    libexec = -83,
+    // Illegal byte sequence.
+    ilseq = -84,
+    // Interrupted system call should be restarted.
+    restart = -85,
+    // Streams pipe error.
+    strpipe = -86,
+    // Too many users.
+    users = -87,
+    // Socket operation on non-socket.
+    notsock = -88,
+    // Destination address required.
+    destaddrreq = -89,
+    // Message too long.
+    msgsize = -90,
+    // Protocol wrong type for socket.
+    prototype = -91,
+    // Protocol not available.
+    noprotoopt = -92,
+    // Protocol not supported.
+    protonosupport = -93,
+    // Socket type not supported.
+    socktnosupport = -94,
+    // Operation not supported on transport endpoint.
+    opnotsupp = -95,
+    // Protocol family not supported.
+    pfnosupport = -96,
+    // Address family not supported by protocol.
+    afnosupport = -97,
+    // Address already in use.
+    addrinuse = -98,
+    // Cannot assign requested address.
+    addrnotavail = -99,
+    // Network is down.
+    netdown = -100,
+    // Network is unreachable.
+    netunreach = -101,
+    // Network dropped connection because of reset.
+    netreset = -102,
+    // Software caused connection abort.
+    connaborted = -103,
+    // Connection reset by peer.
+    connreset = -104,
+    // No buffer space available.
+    nobufs = -105,
+    // Transport endpoint is already connected.
+    isconn = -106,
+    // Transport endpoint is not connected.
+    notconn = -107,
+    // Cannot send after transport endpoint shutdown.
+    shutdown = -108,
+    // Too many references: cannot splice.
+    toomanyrefs = -109,
+    // Connection timed out.
+    timedout = -110,
+    // Connection refused.
+    connrefused = -111,
+    // Host is down.
+    hostdown = -112,
+    // No route to host.
+    hostunreach = -113,
+    // Operation already in progress.
+    already = -114,
+    // Operation now in progress.
+    inprogress = -115,
+    // Stale NFS file handle.
+    stale = -116,
+    // Structure needs cleaning.
+    uclean = -117,
+    // Not a XENIX named type file.
+    notnam = -118,
+    // No XENIX semaphores available.
+    navail = -119,
+    // Is a named type file.
+    isnam = -120,
+    // Remote I/O error.
+    remoteio = -121,
+    // Quota exceeded.
+    dquot = -122,
+    // No medium found.
+    nomedium = -123,
+    // Wrong medium type.
+    mediumtype = -124,
+    // Operation Canceled.
+    canceled = -125,
+    // Required key not available.
+    nokey = -126,
+    // Key has expired.
+    keyexpired = -127,
+    // Key has been revoked.
+    keyrevoked = -128,
+    // Key was rejected by service.
+    keyrejected = -129,
+    // Owner died.
+    ownerdead = -130,
+    // State not recoverable.
+    notrecoverable = -131,
+};
+
+namespace detail {
+    // Map `void` to `cat::MonostateStorage` and map `T*` to `intptr<T>` so that
+    // these types can both hold `-1`.
+    template <typename T>
+    using MapSyscallType =
+        meta::Conditional<meta::is_void<T>, cat::MonostateStorage<int, 0>,
+                          meta::Conditional<meta::is_pointer<T>,
+                                            intptr<meta::RemovePointer<T>>, T>>;
+
+    template <typename T>
+    constexpr auto is_positive(T const input) -> bool1 {
+        if constexpr (requires { input >= 0; }) {
+            return input >= 0;
+        } else {
+            // Some types, such as `nix::FileDescriptor`, must be converted to
+            // `ssize` to have a comparison operator.
+            return static_cast<ssize const>(input) >= 0;
+        }
+    }
+}  // namespace detail
+
+template <typename T>
+requires(sizeof(detail::MapSyscallType<T>) <=
+         sizeof(ssize)) using ScaredyLinux =
+    cat::Scaredy<cat::Predicate<detail::MapSyscallType<T>,
+                                // This is a value iff it is a positive integer.
+                                detail::is_positive<detail::MapSyscallType<T>>,
+                                // This defaults to `-1`.
+                                detail::MapSyscallType<T>{-1}>,
+                 // Iff the value is negative, this is some `LinuxError`.
+                 LinuxError>;
+
+enum class MemoryProtectionFlags : unsigned int {
+    none = 0b000,     // Data cannot be accessed at all.
+    read = 0b001,     // Data is readable.
+    write = 0b010,    // Data is writable.
+    execute = 0b100,  // Data can be executed.
+};
+
+enum class MemoryFlags : unsigned int {
+    shared = 0b1,          // Writes change the underlying object.
+    privately = 0b10,      // Writes only change the calling process.
+    fixed = 0b10000,       // Map to precisely this address, rather than virtual
+                           // memory. This may fail.
+    anonymous = 0b100000,  // Not backed by a file descriptor.
+    // TODO: Make binary/hexa format consistent.
+    grows_down = 0x00100,    // Stack-like segment.
+    denywrite = 0x00800,     // ETXTBSY.
+    executable = 0x01000,    // Mark it as an executable.
+    locked = 0x02000,        // Lock the mapping.
+    no_reserve = 0x04000,    // Don't check for reservations.
+    populate = 0x08000,      // Populate (prefault) pagetables.
+    non_blocking = 0x10000,  // Do not block on IO.
+    stack = 0x20000,         // Allocation is for a stack.
+    hugetlb = 0x40000,       // Create huge page mapping.
+    sync = 0x80000,          // Perform synchronous page faults for the mapping.
+    fixed_noreplace = 0x100000,  // `MmapMemoryFlags::fixed` but do not unmap
+                                 // underlying mapping.
+};
+
+struct Process;
+
+// TODO: Enforce that `FileDescriptor` cannot be constructed with a negative
+// value. This is an index into the kernel's file descriptor table.
+struct FileDescriptor {
+    int4 value;
+
+    constexpr FileDescriptor() = default;
+
+    // This is generic to simplify type-punning.
+    constexpr FileDescriptor(meta::Integral auto const input) {
+        this->value = static_cast<int>(input);
+    }
+
+    constexpr operator auto() const {
+        return this->value.c();
+    }
+};
+
+static_assert(sizeof(ScaredyLinux<nix::FileDescriptor>) == 4);
+
+struct ProcessId {
+    // Linux supports the better part of `8` `cat::Byte` process IDs on 64-bit
+    // systems, but only up to `4` `cat::Byte` process IDs on 32-bit systems.
+    ssize value;
+
+    constexpr ProcessId() = default;
+
+    constexpr ProcessId(int8 const input) {
+        this->value = input;
+    }
+
+    constexpr operator auto() const {
+        return this->value.c();
+    }
+};
+
+struct UserId {
+    int4 value;
+
+    constexpr UserId() = default;
+    constexpr UserId(int4 const input) {
+        this->value = input;
+    }
+
+    constexpr operator auto() const {
+        return this->value;
+    }
+};
+
+struct GroupId {
+    int4 value;
+
+    constexpr GroupId() = default;
+
+    // This is generic to simplify type-punning.
+    constexpr GroupId(meta::Integral auto const input) {
+        this->value = static_cast<int>(input);
+    }
+
+    constexpr operator auto() const {
+        return this->value;
+    }
+};
+
+enum class WaitId {
+    all = 0,
+    process_id = 1,
+    process_group = 2,
+    file_descriptor = 3
+};
+
+// TODO: Write comments for these, and simplifiy names.
+// https://linux.die.net/man/2/clone
+enum class CloneFlags : unsigned int {
+    csignal = 0x000000ff,
+    newtime = 0x00000080,
+    virtual_memory = 0x00000100,
+    file_system = 0x00000200,
+    file_descriptor_table = 0x00000400,
+    sighand = 0x00000800 | CloneFlags::virtual_memory,
+    pid_fd = 0x00001000,
+    ptrace = 0x00002000,
+    vfork = 0x00004000,
+    parent = 0x00008000,
+    thread = 0x00010000 | CloneFlags::sighand,
+    newns = 0x00020000,
+    sysv_semaphore = 0x00040000,
+    set_tls = 0x00080000,
+    parent_set_tid = 0x00100000,
+    child_clear_tid = 0x00200000,
+    untraced = 0x00800000,
+    child_set_tid = 0x01000000,
+    newcgroup = 0x02000000,
+    newuts = 0x04000000,
+    newipc = 0x08000000,
+    newuser = 0x10000000,
+    newpid = 0x20000000,
+    newnet = 0x40000000,
+    io = 0x80000000,
+};
+
+enum class WaitOptionsFlags : long int {
+    no_hang = 1,
+    untraced = 2,
+    stopped = 2,
+    exited = 4,
+    continued = 8,
+    no_wait = 0x1000000,
+    no_thread = 0x20000000,
+    wait_all = 0x40000000,
+    clone = 0x80000000,
+};
+
+enum class OpenMode {
+    read_only = 00,
+    write_only = 01,
+    // This flag cannot be use on a FIFO.
+    read_write = 02
+};
+
+enum class OpenFlags {
+    // This will create a new file. If that file already exists, it is no-op
+    // unless combined with `OpenFlags::exclusive`.
+    create = 0100,
+    // This flag can only be used in combination with `OpenFlags::create`. This
+    // will make a syscall fail if the file already exists.
+    exclusive = 0200,
+    no_control_tty = 0400,
+    truncate = 01000,
+    append_file = 02000,
+    nonblocking = 04000,
+    // Write I/O operations on the `FileDescriptor` shall complete as defined by
+    // synchronized I/O data integrity completion.
+    dsync = 010000,
+    sync = 04010000,
+    read_sync = 04010000,
+    directory = 0200000,
+    nofollow = 0400000,
+    // Close the `FileDescriptor` automatically when finished with this
+    // operation.
+    close_exec = 02000000,
+
+    async = 020000,
+    direct = 040000,
+    largefile = 0100000,
+    noatime = 01000000,
+    path = 010000000,
+    temporary_file = 020200000,
+    // This flag is used by `open_file()` implicitly. It specifies that the
+    // offset value is 8-bytes.
+    large_file = 0100000,
+};
+
+}  // namespace nix
+
+// Enable using these `enum class`es as bit-flags.
+template <>
+struct meta::EnumFlagTrait<nix::MemoryProtectionFlags> : meta::TrueTypeTrait {};
+template <>
+struct meta::EnumFlagTrait<nix::MemoryFlags> : meta::TrueTypeTrait {};
+template <>
+struct meta::EnumFlagTrait<nix::OpenFlags> : meta::TrueTypeTrait {};
+template <>
+struct meta::EnumFlagTrait<nix::CloneFlags> : meta::TrueTypeTrait {};
+template <>
+struct meta::EnumFlagTrait<nix::WaitOptionsFlags> : meta::TrueTypeTrait {};
+
+namespace nix {
+
+auto read(FileDescriptor const file_descriptor, char const* p_string_buffer,
+          ssize const length) -> ScaredyLinux<ssize>;
+
+auto write(FileDescriptor const file_descriptor, char const* p_string_buffer,
+           ssize const length) -> ScaredyLinux<ssize>;
+
+auto write(FileDescriptor const file_descriptor, cat::String const& string)
+    -> ScaredyLinux<ssize>;
+
+auto open_file(char const* p_file_path, OpenMode file_mode,
+               OpenFlags flags = OpenFlags{0}) -> ScaredyLinux<FileDescriptor>;
+
+auto create_file(char const* p_file_path, OpenMode file_mode)
+    -> ScaredyLinux<FileDescriptor>;
+
+auto close(FileDescriptor const file_descriptor) -> ScaredyLinux<void>;
+
+auto unlink(char const* p_path_name) -> ScaredyLinux<void>;
+
+auto map_memory(usize const beginning_address, ssize const bytes_size,
+                MemoryProtectionFlags const protections,
+                MemoryFlags const flags, FileDescriptor const file_descriptor,
+                ssize const pages_offset) -> ScaredyLinux<void*>;
+
+auto unmap_memory(void const* const p_memory, ssize const length)
+    -> ScaredyLinux<void>;
+
+struct Thread;
+
+auto wait(ProcessId waiting_on_id, int4* p_status_output,
+          WaitOptionsFlags options, void* p_resource_usage)
+    -> ScaredyLinux<ProcessId>;
+
+// TODO: Separate this into separate functions for waiting on pid, gid, etc.
+auto waitid(WaitId type, ProcessId id, WaitOptionsFlags options)
+    -> ScaredyLinux<ProcessId>;
+
+struct CloneArguments;
+
+auto syscall0(ssize const) -> ssize;
+auto syscall1(ssize const, cat::Any const) -> ssize;
+auto syscall2(ssize const, cat::Any const, cat::Any const) -> ssize;
+auto syscall3(ssize const, cat::Any const, cat::Any const, cat::Any const)
+    -> ssize;
+auto syscall4(ssize const, cat::Any const, cat::Any const, cat::Any const,
+              cat::Any const) -> ssize;
+auto syscall5(ssize const, cat::Any const, cat::Any const, cat::Any const,
+              cat::Any const, cat::Any const) -> ssize;
+auto syscall6(ssize const, cat::Any const, cat::Any const, cat::Any const,
+              cat::Any const, cat::Any const, cat::Any const) -> ssize;
+
+template <typename T, typename... Args>
+auto syscall(ssize const call, Args const... parameters) -> nix::ScaredyLinux<T>
+requires(sizeof...(Args) < 7);
+
+// Create and return a `cat::Socket`.
+auto create_socket(int8 const protocol_family, int8 const type,
+                   int8 const protocol) -> ScaredyLinux<FileDescriptor>;
+
+// Create and return a `cat::SocketLocal` (also known as Unix socket).
+auto create_socket_local(int8 const type, int8 const protocol)
+    -> ScaredyLinux<FileDescriptor>;
+
+// Connect a `cat::Socket` to an address.
+auto connect_socket(FileDescriptor const socket_descriptor,
+                    void const* p_socket, ssize socket_size)
+    -> ScaredyLinux<void>;
+
+// Make a connection over a `cat::Socket`. This returns a new socket which has
+// been connected to. This new `cat::Socket` is not in a listening state.
+// TODO: Add flags for Linux syscall `288`.
+auto accept_socket(FileDescriptor const socket_descriptor,
+                   void const* __restrict p_socket = nullptr,
+                   ssize const* __restrict p_addr_len = nullptr)
+    -> ScaredyLinux<FileDescriptor>;
+
+auto recieve_buffer(FileDescriptor const socket_descriptor,
+                    void const* p_message_buffer, ssize const buffer_length,
+                    cat::Socket const* __restrict p_addr = nullptr,
+                    ssize const* __restrict p_addr_length = nullptr)
+    -> ScaredyLinux<ssize>;
+
+auto bind_socket(FileDescriptor const socket_descriptor, void const* p_socket,
+                 ssize const p_addr_len) -> ScaredyLinux<void>;
+
+// Mark a socket as available to make connections with `accept()`.
+auto listen_to_socket(FileDescriptor const socket_descriptor,
+                      int8 const backlog) -> ScaredyLinux<void>;
+
+// Returns the number of characters sent to `destination_socket`.
+auto send_buffer(FileDescriptor const socket_descriptor,
+                 void const* p_message_buffer, ssize const buffer_length,
+                 int8 const flags,
+                 cat::Socket const* p_destination_socket = nullptr,
+                 ssize const addr_length = 0) -> ScaredyLinux<ssize>;
+
+struct Process {
+    ProcessId id;
+    void* p_stack;
+    ssize stack_size;
+
+    // TODO: Why tls not work?
+    static constexpr CloneFlags default_flags =
+        CloneFlags::virtual_memory | CloneFlags::file_system |
+        CloneFlags::file_descriptor_table | CloneFlags::io |
+        CloneFlags::parent_set_tid;
+
+    Process() = default;
+    Process(Process const&) = delete;
+    // TODO: Add `meta::Invocable` concept.
+    // TODO: Use `meta::Allocator` concept.
+    auto create(auto& allocator, ssize const initial_stack_size,
+                auto const& function, void* p_arguments_struct,
+                CloneFlags const flags = default_flags) -> ScaredyLinux<void> {
+        this->stack_size = initial_stack_size;
+        // Allocate a stack for this thread, and get an address to the top of
+        // it.
+        cat::Optional maybe_memory = allocator.malloc(initial_stack_size);
+        if (!maybe_memory.has_value()) {
+            // TODO: This is an arbitrary error. Allocation shouldn't happen in
+            // this function.
+            return nix::LinuxError::inval;
+        }
+        this->p_stack = &allocator.get(maybe_memory.value());
+
+        // We need the top because memory will be pushed to it downwards on
+        //  x86-64.
+        volatile void* p_stack_top =
+            intptr<void>{this->p_stack} + this->stack_size;
+
+        // TODO: Use the `cat::Scaredy`.
+        // ScaredyLinux<void> result;
+        cat::Any result;
+        asm goto volatile(
+            R"(sub $8, %%rsi
+                    mov %[p_callback], 0(%%rsi)
+                    mov %[p_args], 8(%%rsi)
+                    syscall
+
+                    # Branch if this is the parent process.
+                    mov %%rax, %[result]
+                    test %%rax, %%rax
+                    jnz %l[parent_thread]
+
+                    # Call the function pointer if this is the child process.
+                    pop %%rax
+                    pop %%rdi
+                    call *%%rax)"
+            : /* There are no outputs. */
+            : "a"(56), "D"(flags), "S"(p_stack_top),
+              "d"(&(this->id)), [p_callback] "r"(&function),
+              [p_args] "r"(p_arguments_struct), [result] "r"(result)
+            : "rcx", "r8", "r9", "r10", "r11", "memory", "cc"
+            : parent_thread);
+
+parent_thread:
+        if (static_cast<ssize>(result) < 0) {
+            return static_cast<nix::LinuxError>(result);
+        }
+        // `this->process_id` was initialized by the syscall.
+        return monostate;
+    }
+
+    auto wait() const -> ScaredyLinux<ProcessId> {
+        ScaredyLinux<ProcessId> result =
+            waitid(WaitId::process_id, this->id,
+                   WaitOptionsFlags::exited | WaitOptionsFlags::clone |
+                       WaitOptionsFlags::no_wait);
+        return result;
+        // TODO: Free the stack memory.
+    }
+};
+
+struct IoVector : cat::Span<cat::Byte> {
+    static constexpr ssize max_size = 1_ki;
+
+    constexpr IoVector() = default;
+    constexpr IoVector(IoVector&&) = default;
+
+    // Construct from any reasonable pointer type.
+    template <typename T>
+    constexpr IoVector(T* p_in_data, ssize in_length)
+        : cat::Span<cat::Byte>(static_cast<cat::Byte*>(p_in_data), in_length){};
+
+    // Construct from any reasonable pointer type.
+    template <typename T>
+    constexpr IoVector(T* p_start, T* p_end)
+        : cat::Span<cat::Byte>(static_cast<cat::Byte*>(p_start),
+                               static_cast<cat::Byte*>(p_end) -
+                                   static_cast<cat::Byte*>(p_start)){};
+
+    constexpr auto operator=(IoVector const& io_vector) {
+        this->p_storage = io_vector.p_storage;
+        this->length = io_vector.length;
+    }
+
+    constexpr auto operator=(IoVector&& io_vector) {
+        this->p_storage = io_vector.p_storage;
+        this->length = cat::move(io_vector).length;
+    }
+};
+
+auto write_vector(FileDescriptor const file_descriptor,
+                  cat::Span<IoVector> const& vectors) -> ScaredyLinux<ssize>;
+
+auto read_vector(FileDescriptor const file_descriptor,
+                 cat::Span<IoVector> const& vectors) -> ScaredyLinux<ssize>;
+
+struct File {
+    char x;
+};
+
+struct FileStatus {
+    uint8 device_id;
+    // The index node for this file.
+    uint8 inode;
+    usize hard_links_count;
+
+    uint4 protections_mode;
+    UserId user_id;
+    GroupId groud_id;
+  private:
+    [[maybe_unused]] uint4 padding;
+  public:
+    uint8 rdev;
+    int8 file_size;
+    ssize block_size;
+    int8 blocks_count;
+
+    using Timespec = struct {
+        ssize seconds;
+        ssize nanoseconds;
+    };
+
+    Timespec last_access_time;
+    Timespec last_modification_time;
+    Timespec creation_time;
+  private:
+    [[maybe_unused]] int4 unused[3];
+  public:
+    auto is_regular() const -> bool1 {
+        return (this->protections_mode & uint4{0170000u}) == 0100000u;
+    }
+    static_assert(!meta::EnumFlagTrait<uint4>::value);
+
+    auto is_directory() const -> bool1 {
+        return (this->protections_mode & 0170000u) == 0040000u;
+    }
+
+    auto is_character_device() const -> bool1 {
+        return (this->protections_mode & 0170000u) == 0020000u;
+    }
+
+    auto is_block_device() const -> bool1 {
+        return (this->protections_mode & 0170000u) == 0060000u;
+    }
+
+    auto is_fifo() const -> bool1 {
+        return (this->protections_mode & 0170000u) == 0010000u;
+    }
+
+    auto is_symbolic_link() const -> bool1 {
+        return (this->protections_mode & 0170000u) == 0120000u;
+    }
+
+    auto is_socket() const -> bool1 {
+        return (this->protections_mode & 0170000u) == 0140000u;
+    }
+};
+
+auto file_path_status(cat::String const& file_path)
+    -> cat::Scaredy<FileStatus, LinuxError>;
+
+auto file_descriptor_status(FileDescriptor const file_descriptor)
+    -> cat::Scaredy<FileStatus, LinuxError>;
+
+}  // namespace nix
+
+#include "./implementations/syscall.tpp"

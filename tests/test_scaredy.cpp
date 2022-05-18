@@ -1,4 +1,4 @@
-#include <scaredy>
+#include <cat/scaredy>
 
 // Minimal result types usable for `cat::Scaredy`.
 struct ErrorOne {

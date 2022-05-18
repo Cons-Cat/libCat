@@ -1,6 +1,4 @@
-// -*- mode: c++ -*-
-// vim: set ft=cpp:
-#include <linux>
+#include <cat/linux>
 
 // `write()` forwards its arguments to a failable stdout syscall. It returns
 // the number of bytes that it wrote.

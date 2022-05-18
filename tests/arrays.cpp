@@ -1,6 +1,6 @@
-#include <array>
-#include <math>
-#include <string>
+#include <cat/array>
+#include <cat/math>
+#include <cat/string>
 
 void meow() {
     // Initializing a array:

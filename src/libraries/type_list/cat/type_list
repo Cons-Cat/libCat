@@ -1,0 +1,111 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/meta>
+
+namespace meta {
+
+template <typename T>
+struct HigherType {
+    using Type = T;
+
+    consteval HigherType() = default;
+
+    template <typename U>
+    consteval auto operator==(HigherType<U> const) -> bool {
+        return meta::is_same<U, T>;
+    }
+};
+
+template <typename... Ts>
+class TypeList {
+    template <typename>
+    struct GetFirstElement;
+
+    template <typename Head, typename... Tail>
+    struct GetFirstElement<TypeList<Head, Tail...>> {
+        using Result = Head;
+    };
+
+    // Overload for the end of the type list.
+    template <typename, ssize>
+    struct RecurseForTypeAtIndex;
+
+    // Shortcut for accessing the 0th element.
+    template <typename Head, typename... Tail>
+    struct RecurseForTypeAtIndex<TypeList<Head, Tail...>, 0> {
+        using Result = Head;
+    };
+
+    // Recurse from the tail down to the index in this list.
+    template <typename Head, typename... Tail, ssize index>
+    struct RecurseForTypeAtIndex<TypeList<Head, Tail...>, index> {
+        using Result = typename RecurseForTypeAtIndex<TypeList<Tail...>,
+                                                      index - 1>::Result;
+    };
+
+    // If the last element in this type list is `T`.
+    template <typename T, typename U>
+    static consteval auto recurse_for_type() -> bool {
+        return meta::is_same<T, U>;
+    }
+
+    // If the any element in this type list is `T`.
+    template <typename T, typename U, typename... Us>
+    static consteval auto recurse_for_type()
+        -> bool requires(sizeof...(Us) > 0) {
+        return meta::is_same<T, U> ? true : recurse_for_type<T, Us...>();
+    }
+
+    // Propagate the final count of occurences of `T` in this type list.
+    template <typename T, ssize count>
+    static consteval auto recurse_for_count() -> ssize {
+        return count;
+    }
+
+    // Sum the number of occurences of `T` in this type list.
+    template <typename T, ssize count, typename U, typename... Us>
+    static consteval auto recurse_for_count() -> ssize
+        requires(sizeof...(Us) >= 0) {
+        return meta::is_same<T, U> ? recurse_for_count<T, count + 1, Us...>()
+                                   : recurse_for_count<T, count, Us...>();
+    }
+
+    template <typename U>
+    static consteval auto recurse_for_unique() -> bool {
+        return true;
+    }
+
+    template <typename U, typename... Us>
+    static consteval auto recurse_for_unique()
+        -> bool requires(sizeof...(Us) > 0) {
+        return is_unique<U> ? recurse_for_unique<Us...>() : false;
+    }
+  public:
+    // `TypeList` should never be instantiated.
+    TypeList() = delete;
+
+    // Produce an alias to the type stored at an index in this type list.
+    template <ssize index>
+    using Get =
+        typename RecurseForTypeAtIndex<meta::TypeList<Ts...>, index>::Result;
+
+    // Evaluate `true` iff this type list holds a type `T`.
+    template <typename T>
+    static constexpr bool has_type = recurse_for_type<T, Ts...>();
+
+    // Sum the number of times that a type is in this type list.
+    template <typename T>
+    static constexpr ssize count_type = recurse_for_count<T, 0, Ts...>();
+
+    // Evaluate `true` iff the type `T` only appears exactly once in this
+    // type list.
+    template <typename T>
+    static constexpr bool is_unique = (count_type<T> == 1);
+
+    // Evaluate `true` if every type in this type list is unique.
+    static constexpr bool is_unique_list = recurse_for_unique<Ts...>();
+};
+
+}  // namespace meta

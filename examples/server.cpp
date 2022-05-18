@@ -1,8 +1,8 @@
-#include <array>
-#include <linux>
-#include <memory>
-#include <socket>
-#include <string>
+#include <cat/array>
+#include <cat/linux>
+#include <cat/memory>
+#include <cat/socket>
+#include <cat/string>
 
 void meow() {
     cat::SocketUnix<cat::SocketType::stream> listening_socket;

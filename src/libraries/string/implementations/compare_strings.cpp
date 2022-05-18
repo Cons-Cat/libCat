@@ -1,5 +1,5 @@
-#include <array>
-#include <string>
+#include <cat/array>
+#include <cat/string>
 
 auto cat::compare_strings(String const& string_1, String const& string_2)
     -> bool1 {

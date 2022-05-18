@@ -1,8 +1,6 @@
-// -*- mode: c++ -*-
-// vim: set ft=cpp:
-#include <array>
-#include <bit>
-#include <memory>
+#include <cat/array>
+#include <cat/bit>
+#include <cat/memory>
 
 // Copy some bytes from one address to another address.
 void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {

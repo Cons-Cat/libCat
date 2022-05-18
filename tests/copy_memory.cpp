@@ -1,6 +1,6 @@
-#include <array>
-#include <memory>
-#include <string>
+#include <cat/array>
+#include <cat/memory>
+#include <cat/string>
 
 void meow() {
     cat::Array<int4, 200> source_200;

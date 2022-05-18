@@ -1,6 +1,4 @@
-// -*- mode: c++ -*-
-// vim: set ft=cpp:
-#include <linux>
+#include <cat/linux>
 
 // TODO: Make distinct wrappers for `wait` syscall variants.
 auto nix::wait(nix::ProcessId waiting_on_id, int4* p_status_output,

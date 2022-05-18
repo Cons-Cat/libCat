@@ -1,5 +1,5 @@
-#include <allocators>
-#include <x>
+#include <cat/allocators>
+#include <cat/x>
 
 void meow() {
     cat::PageAllocator allocator;

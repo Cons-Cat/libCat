@@ -2,7 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <utility>
+#include <cat/utility>
 
 constexpr auto meta::ssizeof(auto const& anything) -> ssize {
     return static_cast<signed int long>(sizeof(anything));

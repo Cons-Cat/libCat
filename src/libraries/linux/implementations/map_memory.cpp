@@ -1,6 +1,4 @@
-// -*- mode: c++ -*-
-// vim: set ft=cpp:
-#include <linux>
+#include <cat/linux>
 
 // `map_memory()` wraps the `mmap` Linux syscall. This returns the virtual
 // memory address which it has allocated a page at.

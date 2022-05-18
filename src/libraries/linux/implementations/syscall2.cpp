@@ -1,6 +1,4 @@
-// -*- mode: c++ -*-
-// vim: set ft=cpp:
-#include <linux>
+#include <cat/linux>
 
 auto nix::syscall2(ssize const call, cat::Any const arg1, cat::Any const arg2)
     -> ssize {

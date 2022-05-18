@@ -2,6 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/simd>
+
 // TODO: Improve this function's name.
 // TODO: Perfect forwarding the function parameters.
 // TODO: Handle the type of `char` automatically to make this type-safe.

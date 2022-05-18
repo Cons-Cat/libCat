@@ -1,6 +1,4 @@
-// -*- mode: c++ -*-
-// vim: set ft=cpp:
-#include <runtime>
+#include <cat/runtime>
 
 /* `__stack_chk_fail()` is called when stack overflow occurs in programs
  * compiled without `-fno-stack-protector`. This will terminate the program with

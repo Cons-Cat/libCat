@@ -1,0 +1,307 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/memory>
+#include <cat/meta>
+
+// TODO: Support `single_pass` iterators.
+//
+// Many of the ideas in this file are explained here:
+// https://vector-of-bool.github.io/2020/06/13/cpp20-iter-facade.html
+
+namespace meta {
+// TODO: More iterable related concepts.
+template <typename T>
+concept Iterable = requires(T t) {
+    t.begin();
+    t.end();
+};
+
+// https://quuxplusone.github.io/blog/2019/02/06/arrow-proxy/
+// TODO: Move this into somewhere generally useful.
+template <class Reference>
+struct ArrowProxy {
+    Reference r;
+    auto operator->() -> Reference* {
+        return &r;
+    }
+};
+
+}  // namespace meta
+
+namespace cat::detail {
+
+template <typename T>
+concept HasIncrement = requires(T it) {
+    it.increment();
+};
+
+template <typename T>
+concept HasDecrement = requires(T it) {
+    it.decrement();
+};
+
+template <typename T>
+concept HasDistanceTo = requires(T const t) {
+    t.distance_to(t);
+};
+
+template <typename T>
+concept HasEqualTo = requires(T const it) {
+    { it.equal_to(it) } -> ::meta::ConvertibleTo<bool>;  // -> boolean;
+};
+
+template <typename>
+struct InferDifferenceType {
+    using type = ssize;
+};
+
+// Case when `T` provides a `distance_to`
+template <detail::HasDistanceTo T>
+struct InferDifferenceType<T> {
+    static T const& it;
+    using type = decltype(it.distance_to(it));
+};
+
+template <typename...>
+struct InferValueType {};
+
+template <typename T>
+struct InferValueType<T> {
+    static const T& it;
+    using type = ::meta::RemoveCvref<decltype(*it)>;
+};
+
+template <typename T>
+requires requires {
+    typename T::value_type;
+}
+struct InferValueType<T> {
+    using type = typename T::value_type;
+};
+
+template <typename T>
+concept HasAdvance = requires(T it, InferDifferenceType<T> const offset) {
+    it.advance(offset);
+};
+
+template <typename T>
+concept HasRandomAccess = HasAdvance<T> && HasDistanceTo<T>;
+
+template <typename T>
+concept HasBidirectional = HasRandomAccess<T> || HasDecrement<T>;
+
+template <typename T>
+concept HasSinglePass = bool(T::single_pass_iterator);
+
+template <typename Iter, typename T>
+concept HasSentinel = ::meta::SameAs<T, typename T::sentinel_type>;
+
+}  // namespace cat::detail
+
+template <typename T>
+using InferDifferenceType = typename cat::detail::InferDifferenceType<T>::type;
+
+template <typename Arg, typename Iter>
+concept DifferenceTypeArg =
+    ::meta::ConvertibleTo<Arg, InferDifferenceType<Iter>>;
+
+template <typename T>
+using InferValueType_t = typename cat::detail::InferValueType<T>::type::type;
+
+namespace cat {
+
+// https://vector-of-bool.github.io/2020/06/13/cpp20-iter-facade.html
+// Every `IteratorFacade` is `indirectly_readable` and is a `forward_iterator`.
+template <typename Derived>
+struct IteratorFacade {
+    // `Type` is needed for reversing.
+    using Type = Derived;
+
+    constexpr auto self() -> Derived& {
+        return static_cast<Derived&>(*this);
+    }
+
+    constexpr auto self() const -> Derived const& {
+        return static_cast<Derived const&>(*this);
+    }
+
+    constexpr auto operator*() const -> decltype(auto) {
+        return this->self().dereference();
+    }
+
+    constexpr auto operator->() const {
+        decltype(auto) reference = **this;
+        if constexpr (::meta::is_reference<decltype(reference)>) {
+            // If `reference` is actually a reference type, return its address.
+            return cat::addressof(reference);
+        } else {
+            return ArrowProxy(cat::move(reference));
+        }
+    }
+
+    constexpr friend auto operator==(Derived const& left, Derived const& right)
+        -> bool {
+        if constexpr (cat::detail::HasEqualTo<Derived>) {
+            return left.equal_to(right);
+        } else {
+            return left.distance_to(right) == 0;
+        }
+    }
+
+    constexpr friend auto operator==(Derived const& self,
+                                     cat::detail::HasSentinel<Derived> auto)
+        -> bool {
+        return self.at_end();
+    }
+
+    constexpr friend auto operator+(Derived left,
+                                    DifferenceTypeArg<Derived> auto offset)
+        -> Derived requires cat::detail::HasAdvance<Derived> {
+        return left += offset;
+    }
+
+    constexpr friend auto operator+(DifferenceTypeArg<Derived> auto offset,
+                                    Derived right)
+        -> Derived requires cat::detail::HasAdvance<Derived> {
+        return right += offset;
+    }
+
+    constexpr friend auto operator+=(Derived& self,
+                                     DifferenceTypeArg<Derived> auto offset)
+        -> Derived& requires cat::detail::HasAdvance<Derived> {
+        self.advance(static_cast<int>(offset));
+        return self;
+    }
+
+    // Increment or advance forwards with prefix notation.
+    constexpr auto operator++() -> Derived& {
+        if constexpr (cat::detail::HasIncrement<Derived>) {
+            this->self().increment();
+        } else {
+            this->self().advance(1);
+        }
+        return this->self();
+    }
+
+    // Increment or advance forwards with postfix notation.
+    constexpr auto operator++(int) -> Derived {
+        auto copy = this->self();
+        ++(*this);
+        return copy;
+    }
+
+    constexpr friend auto operator-(const Derived& left, const Derived& right)
+        -> Derived& requires cat::detail::HasAdvance<Derived> {
+        return right.distance_to(left);
+    }
+
+    constexpr friend auto operator-(Derived left,
+                                    DifferenceTypeArg<Derived> auto offset)
+        -> Derived requires cat::detail::HasAdvance<Derived> {
+        return left - offset;
+    }
+
+    constexpr friend auto operator-=(Derived& left,
+                                     DifferenceTypeArg<Derived> auto offset)
+        -> Derived& requires cat::detail::HasAdvance<Derived> {
+        return left -= offset;
+    }
+
+    // Decrement or advance backwards with prefix notation.
+    constexpr auto operator--() -> Derived& {
+        if constexpr (cat::detail::HasDecrement<Derived>) {
+            this->self().decrement();
+        } else {
+            this->self().advance(-1);
+        }
+        return this->self();
+    }
+
+    // Decrement or advance backwards with postfix notation.
+    constexpr auto operator--(int)
+        -> Derived& requires cat::detail::HasDecrement<Derived> {
+        auto copy = *this;
+        --(*this);
+        return copy;
+    }
+
+    // Random-access.
+    constexpr auto operator[](DifferenceTypeArg<Derived> auto offset)
+        -> decltype(auto) requires cat::detail::HasAdvance<Derived> {
+        return *(this->self() + offset);
+    }
+
+    // TODO: Support `<=>` operator.
+};
+
+struct RandomAccessIteratorTag {};
+struct BidirectionalIteratorTag {};
+struct InputIteratorTag {};
+struct ForwardIteratorTag {};
+
+template <typename T>
+requires ::meta::is_base_of<IteratorFacade<T>, T>
+struct IteratorTraits {
+    static T const& it;
+    using Value = typename InferValueType_t<T>::type;
+    using Reference = decltype(*it);
+    using Pointer = decltype(it.operator->());
+    using Difference = InferDifferenceType<T>;
+    using Category = ::meta::Conditional<
+        // If this can be a random access iterator, it always will be.
+        cat::detail::HasRandomAccess<T>, RandomAccessIteratorTag,
+        ::meta::Conditional<
+            // If this has a `++` and a `--` operator, this is a bidirectional
+            // iterator.
+            cat::detail::HasBidirectional<T>, BidirectionalIteratorTag,
+            ::meta::Conditional<cat::detail::HasSinglePass<T>,
+                                // If it is single-pass, this is a forward
+                                // iterator.
+                                InputIteratorTag,
+                                // Default to a forward iterator.
+                                ForwardIteratorTag>>>;
+    // using IteratorConcept = Category;
+};
+
+template <typename T>
+struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
+    T iterator;
+
+    // Forward any constructor to `iterator`.
+    template <typename... Args>
+    ReversedIterator(Args&&... args)
+        : iterator(::meta::forward<Args>(args)...){};
+
+    auto dereference() const {
+        return this->iterator.dereference();
+    }
+
+    void advance(int offset) {
+        this->iterator.advance(-offset);
+    }
+
+    // TODO: Use safe arithmetic here.
+    auto distance_to(ReversedIterator<T> other) const -> int {
+        return this->iterator.distance_to(other.iterator).c();
+    }
+};
+
+template <::meta::Iterable T>
+class Reverse {
+  private:
+    T& iterable;
+  public:
+    explicit Reverse(T& iterable) : iterable{iterable} {};
+
+    auto begin() const {
+        return iterable.rbegin();
+    }
+
+    auto end() const {
+        return iterable.rend();
+    }
+};
+
+}  // namespace cat

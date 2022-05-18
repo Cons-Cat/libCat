@@ -2,7 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <bit>
+#include <cat/bit>
 
 // Returns `true` if `p_value` is aligned to the `alignment` boundary.
 template <typename U>

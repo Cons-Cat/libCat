@@ -1,6 +1,4 @@
-// -*- mode: c++ -*-
-// vim: set ft=cpp:
-#include <runtime>
+#include <cat/runtime>
 
 // Terminate the program. Without arguments, this exits with a success code for
 // the target operating system.
