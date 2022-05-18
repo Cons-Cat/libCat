@@ -843,6 +843,13 @@ constexpr auto operator|(ArithmeticPtr<T, Storage> const lhs,
     return lhs.storage | ArithmeticPtr<T, Storage>{rhs}.storage;
 }
 
+// `__INTPTR_TYPE__` is defined by the GCC compiler.
+template <typename T>
+using intptr = cat::ArithmeticPtr<T, __INTPTR_TYPE__>;
+// `__UINTPTR_TYPE__` is defined by the GCC compiler.
+template <typename T>
+using uintptr = cat::ArithmeticPtr<T, __UINTPTR_TYPE__>;
+
 }  // namespace cat
 
 using cat::bool1;
@@ -862,6 +869,6 @@ using cat::uint8;
 using cat::usize;
 
 template <typename T>
-using intptr = cat::ArithmeticPtr<T, __INTPTR_TYPE__>;
+using intptr = cat::intptr<T>;
 template <typename T>
-using uintptr = cat::ArithmeticPtr<T, __UINTPTR_TYPE__>;
+using uintptr = cat::uintptr<T>;
