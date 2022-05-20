@@ -1,0 +1,195 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/math>
+#include <cat/meta>
+#include <cat/optional>
+
+namespace cat {
+template <typename T>
+class Span;
+}
+
+namespace meta {
+
+template <typename Derived, typename T>
+class ContainerFacade {
+    // If a `p_data()` and `size()` method are provided, then this collection is
+    // assumed to be contiguous in memory.
+    constexpr static bool is_contiguous = requires {
+        Derived::p_data();
+        Derived::size();
+    };
+
+    // If `.size()` or `.capacity()` are provided and either can be
+    // constant-evaluated, then the length of this collection is assumed to be
+    // constant.
+    constexpr static bool has_const_length = true;
+    // constexpr static bool has_const_length = requires {
+    //     meta::constant_evaluate(Derived::size());
+    // }
+    // || requires {
+    //     meta::constant_evaluate(Derived::capacity());
+    // };
+
+    // If this collection has a constant-evaluated length, then this is
+    // non-negative. TODO: Support constexpr `.size()` without `.capacity()`.
+    // constexpr static ssize const_length =
+    //     has_const_length ? Derived::capacity() : -1;
+
+    constexpr auto self() -> Derived& {
+        return static_cast<Derived&>(*this);
+    }
+
+    constexpr auto self() const -> Derived const& {
+        return static_cast<Derived const&>(*this);
+    }
+
+    // If the collection does not define an iterator, then one should be
+    // generated. This function only exists for the purpose of deducing the type
+    // of an iterator as `decltype(make_iterator())`.
+    static constexpr auto make_iterator()
+    // requires(!Derived::begin() &&
+    // !Derived::end())
+    {
+        struct Iterator : cat::IteratorFacade<Iterator> {
+            ssize current_index;
+            T const* const p_array;
+
+            constexpr Iterator(
+                ssize const index,
+                T const* const p_in_array)  // requires(is_contiguous)
+                : current_index(index), p_array(p_in_array){};
+
+            constexpr auto dereference() const
+                -> T const&  // requires(is_contiguous)
+            {
+                return this->p_array[current_index.c()];
+            }
+
+            constexpr void advance(
+                ssize const offset)  // requires(is_contiguous)
+            {
+                this->current_index += offset;
+            }
+
+            constexpr auto distance_to(Iterator const& other) const -> ssize
+            // requires(is_contiguous)
+            {
+                return other.current_index - current_index;
+            }
+        };
+
+        // Produce an arbitrary iterator.
+        return Iterator{0, nullptr};
+    }
+
+    // If `Derived` provides `Iterator`, use that. Otherwise, generate an
+    // iterator.
+    // clang-format off
+	
+    // using Iterator = meta::Conditional<requires { Derived::Iterator; }, 
+    //     typename Derived::Iterator,
+	// 	decltype(make_iterator())>;
+
+    // clang-format on
+  public:
+    // This evaluates true if there are one or more elements currently in this
+    // collection.
+    [[nodiscard]] constexpr auto is_empty() -> bool requires(Derived::size()) {
+        return this->self().size() > 0;
+    }
+
+    // Index into this collection with bounds-checking.
+    [[nodiscard]] constexpr auto at(ssize const index) -> cat::Optional<T&> {
+        Result{index >= 0}.assert();
+        // if constexpr (is_contiguous) {
+        if (index < this->self().capacity()) {
+            return const_cast<T*>(this->self().p_data())[index.c()];
+        }
+        return nullopt;
+        // }
+    }
+
+    [[nodiscard]] constexpr auto front() -> T& {
+        // if constexpr (is_contiguous) {
+        return const_cast<T*>(this->self().p_data())[0];
+        // }
+    }
+
+    [[nodiscard]] constexpr auto back() -> T& {
+        // if constexpr (is_contiguous) {
+        return const_cast<T*>(
+            this->self().p_data())[this->self().size().c() - 1];
+        // }
+    }
+
+    [[nodiscard]] constexpr auto slice(ssize const start_index,
+                                       ssize const end_index) -> cat::Span<T> {
+        Result{start_index >= 0}.assert();
+        Result{end_index <= this->self().capacity()}.assert();
+        return cat::Span<T>(const_cast<T*>(this->self().p_data()) + start_index,
+                            end_index - start_index);
+    }
+
+    [[nodiscard]] constexpr auto first(ssize const count) -> cat::Span<T> {
+        return this->slice(0, count);
+    }
+
+    [[nodiscard]] constexpr auto last(ssize const count) -> cat::Span<T> {
+        return this->slice(this->self().capacity() - count,
+                           this->self().capacity());
+    }
+
+    [[nodiscard]] constexpr auto operator[](ssize const index) -> T& {
+        // Result{index >= 0}.assert();
+        // Result{index < this->self().capacity()}.assert();
+
+        // if constexpr (is_contiguous) {
+        return const_cast<T*>(this->self().p_data())[index.c()];
+        // }
+    }
+
+    // [[nodiscard]] constexpr auto operator[](ssize const index) const
+    //     -> T const& {
+    //     // Result{index >= 0}.assert();
+    //     // Result{index < this->self().capacity()}.assert();
+
+    //     // if constexpr (is_contiguous) {
+    //     return this->self().p_data()[index.c()];
+    //     // }
+    // }
+
+    [[nodiscard]] constexpr auto begin() const
+    // requires(!requires { decltype(self())::begin(); })
+    {
+        return decltype(make_iterator()){0, this->self().p_data()};
+    }
+
+    [[nodiscard]] constexpr auto end() const
+    // requires(!requires { decltype(self())::end(); })
+    {
+        return decltype(make_iterator()){this->self().size(),
+                                         this->self().p_data()};
+    }
+
+    [[nodiscard]] constexpr auto rbegin() const
+    // requires(!requires {decltype(self())::rbegin();})
+    {
+        return cat::ReversedIterator<decltype(make_iterator())>{
+            this->self().size() - 1, this->self().p_data()};
+    }
+
+    [[nodiscard]] constexpr auto rend() const
+    // requires(!requires { decltype(self())::rend(); })
+    {
+        return cat::ReversedIterator<decltype(make_iterator())>(
+            -1, this->self().p_data());
+    }
+
+    constexpr auto min() requires(true) {
+    }
+};
+
+}  // namespace meta

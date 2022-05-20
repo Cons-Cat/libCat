@@ -13,6 +13,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/optional/
   ${CMAKE_SOURCE_DIR}/src/libraries/any/
   ${CMAKE_SOURCE_DIR}/src/libraries/unique/
+  ${CMAKE_SOURCE_DIR}/src/libraries/collection/
   ${CMAKE_SOURCE_DIR}/src/libraries/array/
   ${CMAKE_SOURCE_DIR}/src/libraries/span/
   ${CMAKE_SOURCE_DIR}/src/libraries/string/
