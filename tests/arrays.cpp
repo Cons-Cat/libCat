@@ -1,8 +1,12 @@
 #include <cat/array>
 #include <cat/math>
+#include <cat/runtime>
 #include <cat/string>
 
 void meow() {
+    // GCC 12 compiles vector instructions, so aligning the stack is required.
+    cat::align_stack_pointer_32();
+
     // Initializing a array:
     cat::Array<int4, 5> array_1 = {0, 1, 2, 3, 4};
     // Assigning a array:

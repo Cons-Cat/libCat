@@ -1,5 +1,8 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
 #pragma once
 
+#include <cat/collection>
 #include <cat/iterator>
 #include <cat/meta>
 #include <cat/optional>
@@ -9,7 +12,7 @@
 namespace cat {
 
 template <typename T, ssize length>
-class Array {
+class Array : public ::meta::ContainerFacade<Array<T, length>, T> {
     T storage[length.c()];
   public:
     constexpr Array() = default;
@@ -17,74 +20,33 @@ class Array {
     constexpr Array(Array<T, length> const& in_array) = default;
     constexpr Array(String const& string) requires(
         ::meta::is_same<::meta::RemoveConst<T>, char>) {
-        cat::copy_memory(string.p_data(), &(this->storage), string.size());
+        cat::copy_memory(string.p_data(), this->storage, string.size());
     }
 
     template <typename... U>
-    constexpr Array(U&&... arguments) requires(
-        static_cast<ssize>(sizeof...(arguments)) == length) {
-        T unpacked_data[length.c()] = {arguments...};
-        for (int i = 0; i < length; i++) {
-            this->storage[i] = unpacked_data[i];
-        }
-    }
+    constexpr Array(U&&... arguments) requires(sizeof...(arguments) ==
+                                               length.c())
+        : storage(arguments...){};
 
     constexpr auto operator=(Array<T, length>&&) -> Array<T, length>& = default;
 
     constexpr auto operator=(String const&& string) -> Array<T, length>
     requires(::meta::is_same<T, char>) {
         Array<T, length> array;
-        cat::copy_memory(string.p_data(), &(this->storage), string.size());
+        cat::copy_memory(string.p_data(), this->storage, string.size());
         return array;
     }
 
-    [[nodiscard]] constexpr auto operator[](ssize const index) -> T& {
-        Result{index >= 0}.assert();
-        Result{index < length}.assert();
-        return this->storage[index.c()];
+    [[nodiscard]] constexpr auto p_data() const -> T const* {
+        return this->storage;
     }
 
-    [[nodiscard]] constexpr auto at(ssize const index) -> cat::Optional<T&> {
-        Result{index >= 0}.assert();
-        if (index < length) {
-            return cat::Optional<T&>(this->storage[index.c()]);
-        }
-        return nullopt;
-    }
-
-    [[nodiscard]] constexpr auto p_data() -> T const* {
-        return &(this->storage[0]);
-    }
-
-    [[nodiscard]] consteval auto size() -> ssize {
+    [[nodiscard]] constexpr auto size() const -> ssize {
         return length;
     }
 
-    [[nodiscard]] constexpr auto front() -> T& {
-        return this->storage[0];
-    }
-
-    [[nodiscard]] constexpr auto back() -> T& {
-        return this->storage[length.c() - 1];
-    }
-
-    [[nodiscard]] constexpr auto is_empty() -> bool1 {
-        return length > 0;
-    }
-
-    [[nodiscard]] constexpr auto slice(ssize const start_index,
-                                       ssize const end_index) -> Span<T> {
-        Result{start_index >= 0}.assert();
-        Result{end_index <= length}.assert();
-        return Span<T>(this->storage + start_index, end_index - start_index);
-    }
-
-    [[nodiscard]] constexpr auto first(ssize const count) -> Span<T> {
-        return this->slice(0, count);
-    }
-
-    [[nodiscard]] constexpr auto last(ssize const count) -> Span<T> {
-        return this->slice(length - count, length);
+    [[nodiscard]] constexpr auto capacity() const -> ssize {
+        return length;
     }
 
     [[nodiscard]] constexpr auto to_string() -> String
@@ -92,43 +54,6 @@ class Array {
         return String(
             static_cast<char const*>(static_cast<void*>(&this->storage)),
             length);
-    }
-
-    struct Iterator : IteratorFacade<Iterator> {
-        ssize current_index;
-        T const* const p_array;
-
-        constexpr Iterator() = default;
-        constexpr explicit Iterator(ssize index, T const* const p_in_array)
-            : current_index(index), p_array(p_in_array){};
-
-        constexpr auto dereference() const -> T const& {
-            return this->p_array[current_index.c()];
-        }
-
-        constexpr void advance(ssize offset) {
-            current_index += offset;
-        }
-
-        constexpr auto distance_to(Iterator other) const -> ssize {
-            return other.current_index - current_index;
-        }
-    };
-
-    [[nodiscard]] constexpr auto begin() const {
-        return Iterator(0, this->storage);
-    }
-
-    [[nodiscard]] constexpr auto end() const {
-        return Iterator(length, this->storage);
-    }
-
-    [[nodiscard]] constexpr auto rbegin() const {
-        return cat::ReversedIterator<Iterator>(length - 1, this->storage);
-    }
-
-    [[nodiscard]] constexpr auto rend() const {
-        return cat::ReversedIterator<Iterator>(-1, this->storage);
     }
 };
 
