@@ -1,10 +1,12 @@
 #include <cat/allocators>
 #include <cat/bit>
 #include <cat/linux>
+#include <cat/runtime>
 #include <cat/string>
 #include <cat/thread>
 
 void function(void*) {
+    cat::align_stack_pointer_32();
     for (int4 i = 0; i < 15; i++) {
         _ = cat::print_line("Moo?");
     }
