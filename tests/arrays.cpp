@@ -4,7 +4,6 @@
 #include <cat/string>
 
 void meow() {
-    // GCC 12 compiles vector instructions, so aligning the stack is required.
     cat::align_stack_pointer_32();
 
     // Initializing a array:
@@ -32,7 +31,7 @@ void meow() {
 
     // Test iterable.
     ssize count = 0;
-    for (int4 const& a : array_1) {
+    for (int4& a : array_1) {
         Result(a == array_1[count]).or_panic();
         count++;
     }

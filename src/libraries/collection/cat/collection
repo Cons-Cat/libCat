@@ -14,7 +14,7 @@ class Span;
 namespace meta {
 
 template <typename Derived, typename T>
-class ContainerFacade {
+class CollectionFacade {
     // If a `.p_data()` and either a `.size()` or `.capacity()` method are
     // provided, then this collection is assumed to be contiguous in memory.
     // clang-format off
@@ -46,23 +46,45 @@ class ContainerFacade {
     // generated. This function only exists for the purpose of deducing the type
     // of an iterator as `decltype(make_iterator())`.
 
-    // Contiguous collections can produce bidirectional iterators.
-    static constexpr auto make_iterator() requires(is_contiguous) {
+    // Contiguous collections can produce non-`const` bidirectional iterators.
+    constexpr auto make_iterator() requires(is_contiguous) {
         struct Iterator : cat::IteratorFacade<Iterator> {
             ssize current_index;
-            T const* const p_array;
+            T* const p_array;
 
-            constexpr Iterator(ssize const index, T const* const p_in_array)
+            constexpr Iterator(ssize const index, T* const p_in_array)
                 : current_index(index), p_array(p_in_array){};
-
+            constexpr auto dereference() -> T& {
+                return unconst(this->p_array[current_index.c()]);
+            }
             constexpr auto dereference() const -> T const& {
                 return this->p_array[current_index.c()];
             }
-
             constexpr void advance(ssize const offset) {
                 this->current_index += offset;
             }
+            constexpr auto distance(Iterator const& other) const -> ssize {
+                return other.current_index - current_index;
+            }
+        };
 
+        // Produce an iterator to have its type deduced later.
+        return Iterator{0, nullptr};
+    }
+
+    // Contiguous collections can produce `const` bidirectional iterators.
+    constexpr auto make_iterator() const requires(is_contiguous) {
+        struct Iterator : cat::IteratorFacade<Iterator> {
+            ssize current_index;
+            T const* const p_array;
+            constexpr Iterator(ssize const index, T const* const p_in_array)
+                : current_index(index), p_array(p_in_array){};
+            constexpr auto dereference() const -> T const& {
+                return this->p_array[current_index.c()];
+            }
+            constexpr void advance(ssize const offset) {
+                this->current_index += offset;
+            }
             constexpr auto distance(Iterator const& other) const -> ssize {
                 return other.current_index - current_index;
             }
@@ -94,25 +116,24 @@ class ContainerFacade {
     [[nodiscard]] constexpr auto at(ssize const index) -> cat::Optional<T&> {
         Result{index >= 0}.assert();
         if (index < this->self().capacity()) {
-            return const_cast<T*>(this->self().p_data())[index.c()];
+            return unconst(this->self()).p_data()[index.c()];
         }
         return nullopt;
     }
 
     [[nodiscard]] constexpr auto front() -> T& {
-        return const_cast<T*>(this->self().p_data())[0];
+        return unconst(this->self()).p_data()[0];
     }
 
     [[nodiscard]] constexpr auto back() -> T& {
-        return const_cast<T*>(
-            this->self().p_data())[this->self().size().c() - 1];
+        return unconst(this->self()).p_data()[this->self().size().c() - 1];
     }
 
     [[nodiscard]] constexpr auto slice(ssize const start_index,
                                        ssize const end_index) -> cat::Span<T> {
         Result{start_index >= 0}.assert();
         Result{end_index <= this->self().capacity()}.assert();
-        return cat::Span<T>(const_cast<T*>(this->self().p_data()) + start_index,
+        return cat::Span<T>(unconst(this->self()).p_data() + start_index,
                             end_index - start_index);
     }
 
@@ -130,7 +151,7 @@ class ContainerFacade {
         Result{index < this->self().capacity()}.assert();
 
         if constexpr (is_contiguous) {
-            return const_cast<T*>(this->self().p_data())[index.c()];
+            return unconst(this->self()).p_data()[index.c()];
         }
     }
 
@@ -144,20 +165,21 @@ class ContainerFacade {
         }
     }
 
-    [[nodiscard]] constexpr auto begin() {
+    [[nodiscard]] constexpr auto begin() requires(is_contiguous) {
+        return meta::RemoveConst<decltype(unconst(this)->make_iterator())>{
+            0, this->self().p_data()};
+    }
+
+    [[nodiscard]] constexpr auto end() requires(is_contiguous) {
+        return meta::RemoveConst<decltype(unconst(this)->make_iterator())>{
+            this->self().size(), this->self().p_data()};
+    }
+
+    [[nodiscard]] constexpr auto begin() const requires(is_contiguous) {
         return decltype(make_iterator()){0, this->self().p_data()};
     }
 
-    [[nodiscard]] constexpr auto end() {
-        return decltype(make_iterator()){this->self().size(),
-                                         this->self().p_data()};
-    }
-
-    [[nodiscard]] constexpr auto begin() const {
-        return decltype(make_iterator()){0, this->self().p_data()};
-    }
-
-    [[nodiscard]] constexpr auto end() const {
+    [[nodiscard]] constexpr auto end() const requires(is_contiguous) {
         return decltype(make_iterator()){this->self().size(),
                                          this->self().p_data()};
     }

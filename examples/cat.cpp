@@ -1,7 +1,7 @@
+#include <cat/allocators>
 #include <cat/linux>
 #include <cat/math>
 #include <cat/optional>
-#include <cat/allocators>
 
 constexpr ssize block_size = 4_ki;
 
@@ -21,8 +21,10 @@ auto get_file_size(nix::FileDescriptor file_descriptor)
 void output_to_console(nix::IoVector const& io_vector) {
     // TODO: Create a mutable string type to prevent this undefined behavior.
     // TODO: Make this buffered output to reduce syscalls.
-    char* p_buffer = static_cast<char*>(static_cast<void*>(io_vector.p_data()));
-    _ = nix::write(nix::FileDescriptor{1}, p_buffer++, io_vector.size());
+    cat::Byte const* p_buffer = io_vector.p_data();
+    p_buffer++;
+    _ = nix::write(nix::FileDescriptor{1},
+                   meta::bit_cast<char const*>(p_buffer), io_vector.size());
 }
 
 void read_and_print_file(char* p_file_name) {

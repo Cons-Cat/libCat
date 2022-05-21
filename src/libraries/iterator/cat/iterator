@@ -127,6 +127,10 @@ struct IteratorFacade {
         return static_cast<Derived const&>(*this);
     }
 
+    constexpr auto operator*() -> decltype(auto) {
+        return this->self().dereference();
+    }
+
     constexpr auto operator*() const -> decltype(auto) {
         return this->self().dereference();
     }
