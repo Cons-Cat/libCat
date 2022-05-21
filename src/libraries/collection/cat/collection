@@ -12,12 +12,6 @@ class Span;
 }
 
 namespace meta {
-namespace detail {
-    template <typename T>
-    concept HasBegin = requires(T it) {
-        it.begin();
-    };
-}  // namespace detail
 
 template <typename Derived, typename T>
 class ContainerFacade {
@@ -51,7 +45,9 @@ class ContainerFacade {
     // If the collection does not define an iterator, then one should be
     // generated. This function only exists for the purpose of deducing the type
     // of an iterator as `decltype(make_iterator())`.
-    static constexpr auto make_iterator() {
+
+    // Contiguous collections can produce bidirectional iterators.
+    static constexpr auto make_iterator() requires(is_contiguous) {
         struct Iterator : cat::IteratorFacade<Iterator> {
             ssize current_index;
             T const* const p_array;
@@ -74,6 +70,12 @@ class ContainerFacade {
 
         // Produce an iterator to have its type deduced later.
         return Iterator{0, nullptr};
+    }
+
+    // If `Derived` provides a type `Iterator`, use that.
+    static constexpr auto make_iterator() {
+        // Produce an iterator to have its type deduced later.
+        return typename Derived::Iterator{};
     }
   public:
     // If `.size()` is provided and `.capacity()` is not, generate
@@ -142,6 +144,15 @@ class ContainerFacade {
         }
     }
 
+    [[nodiscard]] constexpr auto begin() {
+        return decltype(make_iterator()){0, this->self().p_data()};
+    }
+
+    [[nodiscard]] constexpr auto end() {
+        return decltype(make_iterator()){this->self().size(),
+                                         this->self().p_data()};
+    }
+
     [[nodiscard]] constexpr auto begin() const {
         return decltype(make_iterator()){0, this->self().p_data()};
     }
@@ -151,12 +162,41 @@ class ContainerFacade {
                                          this->self().p_data()};
     }
 
+    [[nodiscard]] constexpr auto cbegin() const {
+        return decltype(make_iterator()){0, this->self().p_data()};
+    }
+
+    [[nodiscard]] constexpr auto cend() const {
+        return decltype(make_iterator()){this->self().size(),
+                                         this->self().p_data()};
+    }
+
+    [[nodiscard]] constexpr auto rbegin() {
+        return cat::ReversedIterator<decltype(make_iterator())>{
+            this->self().size() - 1, this->self().p_data()};
+    }
+
+    [[nodiscard]] constexpr auto rend() {
+        return cat::ReversedIterator<decltype(make_iterator())>(
+            -1, this->self().p_data());
+    }
+
     [[nodiscard]] constexpr auto rbegin() const {
         return cat::ReversedIterator<decltype(make_iterator())>{
             this->self().size() - 1, this->self().p_data()};
     }
 
     [[nodiscard]] constexpr auto rend() const {
+        return cat::ReversedIterator<decltype(make_iterator())>(
+            -1, this->self().p_data());
+    }
+
+    [[nodiscard]] constexpr auto crbegin() const {
+        return cat::ReversedIterator<decltype(make_iterator())>{
+            this->self().size() - 1, this->self().p_data()};
+    }
+
+    [[nodiscard]] constexpr auto crend() const {
         return cat::ReversedIterator<decltype(make_iterator())>(
             -1, this->self().p_data());
     }

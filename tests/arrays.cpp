@@ -45,6 +45,17 @@ void meow() {
     Result(array_1.front() == 5).or_panic();
     Result(array_1.back() == 9).or_panic();
 
+    count = 0;
+    for (int4 const& a : cat::AsConst(array_1)) {
+        Result(a == array_1[count]).or_panic();
+        count++;
+    }
+
+    for (int4 const& a : cat::AsConstReverse(array_1)) {
+        count--;
+        Result(a == array_1[count]).or_panic();
+    }
+
     // Index in and out of bounds.
     Result(array_1.at(0).value() == 5).or_panic();
     Result(!array_1.at(6).has_value()).or_panic();
