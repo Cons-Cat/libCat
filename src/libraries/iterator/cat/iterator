@@ -289,10 +289,10 @@ struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
 };
 
 template <::meta::Iterable T>
-class Reverse {
+class AsReverse {
     T& iterable;
   public:
-    explicit Reverse(T& iterable) : iterable{iterable} {};
+    explicit AsReverse(T& iterable) : iterable{iterable} {};
 
     auto begin() {
         return iterable.rbegin();
