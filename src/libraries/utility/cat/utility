@@ -14,6 +14,11 @@ constexpr auto unconst(T const& value) -> T& {
     return const_cast<T&>(value);
 }
 
+template <typename T>
+constexpr auto unconst(T const* p_value) -> T* {
+    return const_cast<T*>(p_value);
+}
+
 constexpr auto is_constant_evaluated() -> cat::bool1;
 
 constexpr auto ssizeof(auto const& anything) -> ssize;

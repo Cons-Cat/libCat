@@ -18,6 +18,10 @@ void meow() {
     // Move constructing a array:
     _ = cat::move(array_1);  // NOLINT
 
+    // `const` array.
+    cat::Array<int4, 3> const array_const = {0, 1, 2};
+    [[maybe_unused]] int4 const_val = array_const.at(1).value();
+
     // Repeat those tests in a constexpr context.
     auto constant = []() constexpr {
         cat::Array<int4, 1> const_array_1;
@@ -59,7 +63,7 @@ void meow() {
     Result(array_1.at(0).value() == 5).or_panic();
     Result(!array_1.at(6).has_value()).or_panic();
 
-    // Deduced type.
+    // Deducing type.
     cat::Array implicit_array_1 = {0, 1, 2, 3, 4};
     cat::Array implicit_array_2{0, 1, 2, 3, 4};
     cat::Array implicit_array_3(0, 1, 2, 3, 4);
@@ -67,7 +71,7 @@ void meow() {
     static_assert(implicit_array_2.size() == 5);
     static_assert(implicit_array_3.size() == 5);
 
-    // Max
+    // Max elements.
     constexpr cat::Array array_4 = {0, 2, 8, 5};
     constexpr int4 max_1 = cat::max(array_4);
     Result(max_1 == 8).or_panic();
@@ -82,8 +86,14 @@ void meow() {
 
     // TODO: Test `constexpr`.
 
-    // Slicing.
+    // Slicing array.
     [[maybe_unused]] cat::Span span = array_1.first(1);
+    _ = array_1.slice(0, 2);
+    _ = array_1.last(2);
+
+    [[maybe_unused]] cat::Span const span_const = array_1.first(1);
+    _ = array_const.slice(0, 2);
+    _ = array_const.last(2);
 
     cat::exit();
 };

@@ -28,7 +28,8 @@ class Span : public ::meta::CollectionFacade<Span<T>, T> {
 
     // Construct a `Span` as `{address, length}`.
     template <typename U>
-    constexpr Span(U* const p_in_data, ssize const in_length)
+    constexpr Span(U* const p_in_data,
+                   ssize const in_length) requires(::meta::is_convertible<U, T>)
         : p_storage(static_cast<T*>(p_in_data)), length(in_length){};
 
     // Construct a `Span` between two addresses.
