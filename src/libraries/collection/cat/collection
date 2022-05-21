@@ -15,23 +15,23 @@ namespace meta {
 
 template <typename Derived, typename T>
 class CollectionFacade {
+    // clang-format off
+	
     // If a `.p_data()` and either a `.size()` or `.capacity()` method are
     // provided, then this collection is assumed to be contiguous in memory.
-    // clang-format off
     constexpr static bool is_contiguous = requires {
         Derived{}.p_data();
     } && (requires { Derived{}.size(); } || requires { Derived{}.capacity(); });
-    // clang-format on
 
-    // If `.size()` is provided and can be
-    // constant-evaluated, and `.capacity()` is not provided, then the length of
-    // this collection is assumed to be constant.
-    // clang-format off
+    // If `.size()` is provided and can be constant-evaluated, and `.capacity()`
+    // is not provided, then the length of this collection is assumed to be
+    // constant.
     constexpr static bool has_const_length = requires {
 		meta::constant_evaluate(Derived{}.size());
     } && !requires {
         Derived{}.capacity();
     };
+
     // clang-format on
 
     constexpr auto self() -> Derived& {

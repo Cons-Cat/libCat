@@ -8,10 +8,11 @@
 #include <cat/meta>
 
 // TODO: Add tests.
-// TODO: Add many comments.
 
 namespace cat {
 
+// A `Span` is represents an array of `T` with runtime-known length. It stores
+// an address and a length. It is random-access iterable.
 template <typename T>
 class Span : public ::meta::CollectionFacade<Span<T>, T> {
   protected:
@@ -25,18 +26,23 @@ class Span : public ::meta::CollectionFacade<Span<T>, T> {
     constexpr Span(Span<T> const&) = default;
     constexpr Span(Span<T>&&) = default;
 
+    // Construct a `Span` as `{address, length}`.
     template <typename U>
-    constexpr Span(U* p_in_data, ssize in_length)
+    constexpr Span(U* const p_in_data, ssize const in_length)
         : p_storage(static_cast<T*>(p_in_data)), length(in_length){};
 
-    template <typename U>
-    constexpr Span(U* const p_start,
-                   U* const p_end) requires(::meta::is_convertible<U*, T*>)
-        : p_storage(p_start), length(static_cast<ssize>(p_end - p_start)){};
+    // Construct a `Span` between two addresses.
+    template <typename U, typename V>
+    constexpr Span(U* const p_start, V* const p_end) requires(
+        ::meta::is_convertible<U*, T*>&& ::meta::is_convertible<V, T>)
+        : p_storage(p_start), length(ssize{p_end - p_start}){};
 
     // TODO: Make a `ContiguousContainer` `concept`.
     constexpr Span(auto const& container)
         : p_storage(container.p_data()), length(container.size()){};
+
+    constexpr Span(auto&& container)
+        : p_storage(container.p_data()), length(cat::move(container).size()){};
 
     // NOLINTNEXTLINE Copying the pointer is reasonable here.
     constexpr auto operator=(Span<T> const& span) {
@@ -50,14 +56,17 @@ class Span : public ::meta::CollectionFacade<Span<T>, T> {
         this->length = cat::move(span).length;
     }
 
-    [[nodiscard]] constexpr auto p_data()  -> T* {
+    // Get the non-`const` address that this `Span` starts at.
+    [[nodiscard]] constexpr auto p_data() -> T* {
         return this->p_storage;
     }
 
+    // Get the `const` address that this `Span` starts at.
     [[nodiscard]] constexpr auto p_data() const -> T const* {
         return this->p_storage;
     }
 
+    // Get the number of elements owned by this `Span`.
     [[nodiscard]] constexpr auto size() const -> ssize {
         return this->length;
     }

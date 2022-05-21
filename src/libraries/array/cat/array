@@ -11,44 +11,57 @@
 
 namespace cat {
 
+// An `Array` represents an array of `T` with an immutable length. It stores its
+// data points within itself, so this array can be constructed on the stack. It
+// is random-access iterable.
 template <typename T, ssize length>
 class Array : public ::meta::CollectionFacade<Array<T, length>, T> {
     T storage[length.c()];
   public:
     constexpr Array() = default;
-    constexpr Array(Array<T, length>&& in_array) = default;
     constexpr Array(Array<T, length> const& in_array) = default;
+    constexpr Array(Array<T, length>&& in_array) = default;
+
+    // If this is an `Array<char>`, it can be constructed from a string.
     constexpr Array(String const& string) requires(
         ::meta::is_same<::meta::RemoveConst<T>, char>) {
         cat::copy_memory(string.p_data(), this->storage, string.size());
     }
 
+    constexpr auto operator=(Array<T, length> const&)
+        -> Array<T, length>& = default;
+
+    constexpr auto operator=(Array<T, length>&&) -> Array<T, length>& = default;
+
+    // Construct an `Array` from a variadic argument list.
     template <typename... U>
     constexpr Array(U&&... arguments) requires(sizeof...(arguments) ==
                                                length.c())
         : storage(arguments...){};
-
-    constexpr auto operator=(Array<T, length>&&) -> Array<T, length>& = default;
-
+    // If this is an `Array<char>`, it can be assigned a string.
     constexpr auto operator=(String const&& string) -> Array<T, length>
-    requires(::meta::is_same<T, char>) {
+    requires(::meta::is_same<::meta::RemoveConst<T>, char>) {
         Array<T, length> array;
         cat::copy_memory(string.p_data(), this->storage, string.size());
         return array;
     }
 
+    // Get the non-`const` address of this `Array`'s internal array.
     [[nodiscard]] constexpr auto p_data() -> T* {
         return this->storage;
     }
 
+    // Get the `const` address of this `Array`'s internal array.
     [[nodiscard]] constexpr auto p_data() const -> T const* {
         return this->storage;
     }
 
+    // Get the number of elements contained in this `Array`.
     [[nodiscard]] constexpr auto size() const -> ssize {
         return length;
     }
 
+    // If this is an `Array<char>`, it can be converted to a `String`.
     [[nodiscard]] constexpr auto to_string() -> String
         requires(::meta::is_same<::meta::RemoveConst<T>, char>) {
         return String(
@@ -57,6 +70,7 @@ class Array : public ::meta::CollectionFacade<Array<T, length>, T> {
     }
 };
 
+// Construct an `Array` as: `cat::Array array = {0, 1, 2};`
 template <typename T, typename... Args>
 Array(T, Args...)
     -> Array<T, static_cast<signed int long>(sizeof...(Args)) + 1>;
