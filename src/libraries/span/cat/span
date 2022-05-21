@@ -112,7 +112,7 @@ class Span {
             current_index += offset;
         }
 
-        constexpr auto distance_to(Iterator other) const -> ssize {
+        constexpr auto distance(Iterator other) const -> ssize {
             return other.current_index - current_index;
         }
     };
