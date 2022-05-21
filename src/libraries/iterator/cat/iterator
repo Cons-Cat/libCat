@@ -43,13 +43,13 @@ concept HasDecrement = requires(T it) {
 };
 
 template <typename T>
-concept HasDistanceTo = requires(T const t) {
-    t.distance_to(t);
+concept HasDistance = requires(T const t) {
+    t.distance(t);
 };
 
 template <typename T>
 concept HasEqualTo = requires(T const it) {
-    { it.equal_to(it) } -> ::meta::ConvertibleTo<bool>;  // -> boolean;
+    { it.equal_to(it) } -> ::meta::ConvertibleTo<bool>;
 };
 
 template <typename>
@@ -57,11 +57,11 @@ struct InferDifferenceType {
     using type = ssize;
 };
 
-// Case when `T` provides a `distance_to`
-template <detail::HasDistanceTo T>
+// Case when `T` provides `.distance()`
+template <detail::HasDistance T>
 struct InferDifferenceType<T> {
     static T const& it;
-    using type = decltype(it.distance_to(it));
+    using type = decltype(it.distance(it));
 };
 
 template <typename...>
@@ -87,7 +87,7 @@ concept HasAdvance = requires(T it, InferDifferenceType<T> const offset) {
 };
 
 template <typename T>
-concept HasRandomAccess = HasAdvance<T> && HasDistanceTo<T>;
+concept HasRandomAccess = HasAdvance<T> && HasDistance<T>;
 
 template <typename T>
 concept HasBidirectional = HasRandomAccess<T> || HasDecrement<T>;
@@ -146,7 +146,7 @@ struct IteratorFacade {
         if constexpr (cat::detail::HasEqualTo<Derived>) {
             return left.equal_to(right);
         } else {
-            return left.distance_to(right) == 0;
+            return left.distance(right) == 0;
         }
     }
 
@@ -194,7 +194,7 @@ struct IteratorFacade {
 
     constexpr friend auto operator-(const Derived& left, const Derived& right)
         -> Derived& requires cat::detail::HasAdvance<Derived> {
-        return right.distance_to(left);
+        return right.distance(left);
     }
 
     constexpr friend auto operator-(Derived left,
@@ -238,8 +238,10 @@ struct IteratorFacade {
 
 struct RandomAccessIteratorTag {};
 struct BidirectionalIteratorTag {};
-struct InputIteratorTag {};
 struct ForwardIteratorTag {};
+struct InputIteratorTag {};
+struct OutputIteratorTag {};
+struct ContiguousIteratorTag {};
 
 template <typename T>
 requires ::meta::is_base_of<IteratorFacade<T>, T>
@@ -283,8 +285,8 @@ struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
     }
 
     // TODO: Use safe arithmetic here.
-    auto distance_to(ReversedIterator<T> other) const -> int {
-        return this->iterator.distance_to(other.iterator).c();
+    auto distance(ReversedIterator<T> other) const -> int {
+        return this->iterator.distance(other.iterator).c();
     }
 };
 
@@ -342,3 +344,22 @@ class AsConstReverse {
 };
 
 }  // namespace cat
+
+namespace meta {
+
+template <typename T>
+concept RandomAccessIterator =
+    meta::is_same<typename cat::IteratorTraits<T>::Category,
+                  cat::RandomAccessIteratorTag>;
+
+template <typename T>
+concept BidirectionalIterator =
+    meta::is_same<typename cat::IteratorTraits<T>::Category,
+                  cat::BidirectionalIteratorTag>;
+
+template <typename T>
+concept ForwardIterator =
+    meta::is_same<typename cat::IteratorTraits<T>::Category,
+                  cat::ForwardIteratorTag>;
+
+}  // namespace meta

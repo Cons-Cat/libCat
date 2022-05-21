@@ -63,7 +63,7 @@ class ContainerFacade {
                 this->current_index += offset;
             }
 
-            constexpr auto distance_to(Iterator const& other) const -> ssize {
+            constexpr auto distance(Iterator const& other) const -> ssize {
                 return other.current_index - current_index;
             }
         };
@@ -163,20 +163,19 @@ class ContainerFacade {
     }
 
     [[nodiscard]] constexpr auto cbegin() const {
-        return decltype(make_iterator()){0, this->self().p_data()};
+        return this->begin();
     }
 
     [[nodiscard]] constexpr auto cend() const {
-        return decltype(make_iterator()){this->self().size(),
-                                         this->self().p_data()};
+        return this->end();
     }
 
-    [[nodiscard]] constexpr auto rbegin() {
+    [[nodiscard]] constexpr auto rbegin() requires(is_contiguous) {
         return cat::ReversedIterator<decltype(make_iterator())>{
             this->self().size() - 1, this->self().p_data()};
     }
 
-    [[nodiscard]] constexpr auto rend() {
+    [[nodiscard]] constexpr auto rend() requires(is_contiguous) {
         return cat::ReversedIterator<decltype(make_iterator())>(
             -1, this->self().p_data());
     }
@@ -192,13 +191,11 @@ class ContainerFacade {
     }
 
     [[nodiscard]] constexpr auto crbegin() const {
-        return cat::ReversedIterator<decltype(make_iterator())>{
-            this->self().size() - 1, this->self().p_data()};
+        return this->rbegin();
     }
 
     [[nodiscard]] constexpr auto crend() const {
-        return cat::ReversedIterator<decltype(make_iterator())>(
-            -1, this->self().p_data());
+        return this->rend();
     }
 };
 
