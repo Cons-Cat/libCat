@@ -250,23 +250,23 @@ constexpr auto operator""_ki(long double const input) -> ssize {
 }
 
 constexpr auto operator""_mi(unsigned long long const input) -> ssize {
-    return 1024 * 1024 * static_cast<signed long long>(input);
+    return 1024ll * 1024ll * static_cast<signed long long>(input);
 }
 
 constexpr auto operator""_umi(unsigned long long const input) -> usize {
-    return 1024u * 1024u * input;
+    return 1024ull * 1024ull * input;
 }
 
 constexpr auto operator""_mi(long double const input) -> ssize {
     return static_cast<signed long long>(1024.f * 1024.f * input);
 }
 
-constexpr auto operator""_ugi(unsigned long long const input) -> usize {
-    return 1024u * 1024u * 1024u * input;
+constexpr auto operator""_gi(unsigned long long const input) -> ssize {
+    return 1024ll * 1024ll * 1024ll * static_cast<signed long long>(input);
 }
 
-constexpr auto operator""_gi(unsigned long long const input) -> ssize {
-    return 1024 * 1024 * 1024 * static_cast<signed long long>(input);
+constexpr auto operator""_ugi(unsigned long long const input) -> usize {
+    return 1024ull * 1024ull * 1024ull * input;
 }
 
 constexpr auto operator""_gi(long double const input) -> ssize {
