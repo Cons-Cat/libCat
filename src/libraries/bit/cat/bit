@@ -48,6 +48,18 @@ struct Byte {  // NOLINT
         this->value = ::meta::forward<T>(input);
     }
 
+    constexpr operator char() const {
+        return static_cast<char>(this->value);
+    }
+
+    constexpr operator unsigned char() const {
+        return static_cast<unsigned char>(this->value);
+    }
+
+    constexpr operator signed char() const {
+        return static_cast<signed char>(this->value);
+    }
+
     template <typename T>
     constexpr explicit operator T() requires(sizeof(T) == 1) {
         return ::meta::bit_cast<T>(value);
