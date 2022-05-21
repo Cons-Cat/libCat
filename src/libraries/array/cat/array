@@ -12,7 +12,7 @@
 namespace cat {
 
 template <typename T, ssize length>
-class Array : public ::meta::ContainerFacade<Array<T, length>, T> {
+class Array : public ::meta::CollectionFacade<Array<T, length>, T> {
     T storage[length.c()];
   public:
     constexpr Array() = default;
@@ -37,15 +37,15 @@ class Array : public ::meta::ContainerFacade<Array<T, length>, T> {
         return array;
     }
 
+    [[nodiscard]] constexpr auto p_data() -> T* {
+        return this->storage;
+    }
+
     [[nodiscard]] constexpr auto p_data() const -> T const* {
         return this->storage;
     }
 
     [[nodiscard]] constexpr auto size() const -> ssize {
-        return length;
-    }
-
-    [[nodiscard]] constexpr auto capacity() const -> ssize {
         return length;
     }
 

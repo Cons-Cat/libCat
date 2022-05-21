@@ -34,6 +34,7 @@ struct Foo {
 void func(cat::UniqueWeak<Foo>){};
 
 void meow() {
+    cat::align_stack_pointer_32();
     _ = cat::print_line("Construct objects.");
     // Test constructor.
     cat::UniqueWeak<Foo> foo(cat::String("foo"));

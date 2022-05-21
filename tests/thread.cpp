@@ -14,6 +14,7 @@ void function(void*) {
 }
 
 void meow() {
+    cat::align_stack_pointer_32();
     cat::Thread thread;
     cat::PageAllocator allocator;
     thread.create(allocator, 4_ki, function, nullptr)

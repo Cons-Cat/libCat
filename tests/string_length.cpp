@@ -1,6 +1,8 @@
 #include <cat/string>
+#include <utility>
 
 void meow() {
+    cat::align_stack_pointer_32();
     char const* p_string_1 = "Hello!";
     char const* const p_string_2 = "Hello!";
 
@@ -33,6 +35,16 @@ void meow() {
     Result(string_1.first(4).size() == 4).or_panic();
     Result(string_1.last(3).size() == 3).or_panic();
     Result(cat::String("Hello!").size() == len_1).or_panic();
+
+    // TODO: Remove this and put it in another string unit test.
+    char chars[5] = "foo\0";
+    cat::Span<char> span = {chars, 4};
+    span[0] = 'a';
+    auto foo = meta::unconst(span).begin();
+    *foo = 'a';
+    for (char& c : span) {
+        c = 'a';
+    }
 
     cat::exit();
 }
