@@ -10,7 +10,7 @@ constexpr bool1 is_big_endian = !is_little_endian;
 
 namespace cat {
 
-auto invert_endianess(::meta::Integral auto value) {
+[[gnu::const]] constexpr auto invert_endianess(::meta::Integral auto value) {
     // TODO: Handle `cat::Numeral`.
     if constexpr (sizeof(value) == 1) {
         return __builtin_bswap8(value);
@@ -48,24 +48,24 @@ struct Byte {  // NOLINT
         this->value = ::meta::forward<T>(input);
     }
 
-    constexpr operator char() const {
+    [[nodiscard]] constexpr operator char() const {
         return static_cast<char>(this->value);
     }
 
-    constexpr operator unsigned char() const {
+    [[nodiscard]] constexpr operator unsigned char() const {
         return static_cast<unsigned char>(this->value);
     }
 
-    constexpr operator signed char() const {
+    [[nodiscard]] constexpr operator signed char() const {
         return static_cast<signed char>(this->value);
     }
 
     template <typename T>
-    constexpr explicit operator T() requires(sizeof(T) == 1) {
+    [[nodiscard]] constexpr explicit operator T() requires(sizeof(T) == 1) {
         return ::meta::bit_cast<T>(value);
     }
 
-    constexpr auto operator&(::meta::Integral auto from) -> Byte {
+    [[nodiscard]] constexpr auto operator&(::meta::Integral auto from) -> Byte {
         return this->value & from;
     }
     constexpr auto operator&=(::meta::Integral auto from) -> Byte& {
@@ -73,7 +73,7 @@ struct Byte {  // NOLINT
         return *this;
     }
 
-    constexpr auto operator|(::meta::Integral auto from) -> Byte {
+    [[nodiscard]] constexpr auto operator|(::meta::Integral auto from) -> Byte {
         return this->value | from;
     }
     constexpr auto operator|=(::meta::Integral auto from) -> Byte& {
@@ -81,7 +81,8 @@ struct Byte {  // NOLINT
         return *this;
     }
 
-    constexpr auto operator<<(::meta::Integral auto from) -> Byte {
+    [[nodiscard]] constexpr auto operator<<(::meta::Integral auto from)
+        -> Byte {
         return this->value << from;
     }
     constexpr auto operator<<=(::meta::Integral auto from) -> Byte& {
@@ -89,7 +90,8 @@ struct Byte {  // NOLINT
         return *this;
     }
 
-    constexpr auto operator>>(::meta::Integral auto from) -> Byte {
+    [[nodiscard]] constexpr auto operator>>(::meta::Integral auto from)
+        -> Byte {
         return this->value >> from;
     }
     constexpr auto operator>>=(::meta::Integral auto from) -> Byte& {
@@ -103,24 +105,27 @@ struct Byte {  // NOLINT
 // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4201.html
 
 template <typename U>
-constexpr auto is_aligned(U* const p_value, usize const alignment) -> bool;
-
-template <typename U>
-constexpr auto is_aligned(uintptr<U> const p_value, usize const alignment)
+[[nodiscard]] constexpr auto is_aligned(U* const p_value, usize const alignment)
     -> bool;
 
 template <typename U>
-constexpr auto align_up(U* const p_value, usize const alignment) -> U*;
+[[nodiscard]] constexpr auto is_aligned(uintptr<U> const p_value,
+                                        usize const alignment) -> bool;
+
+template <typename U>
+[[nodiscard]] constexpr auto align_up(U* const p_value, usize const alignment)
+    -> U*;
 template <typename U>
 constexpr auto align_up(uintptr<U> const p_value, usize const alignment)
     -> uintptr<U>;
 
 template <typename U>
-constexpr auto align_down(U* const p_value, usize const alignment) -> U*;
+[[nodiscard]] constexpr auto align_down(U* const p_value, usize const alignment)
+    -> U*;
 
 template <typename U>
-constexpr auto align_down(uintptr<U> const p_value, usize const alignment)
-    -> uintptr<U>;
+[[nodiscard]] constexpr auto align_down(uintptr<U> const p_value,
+                                        usize const alignment) -> uintptr<U>;
 
 }  // namespace cat
 
@@ -135,26 +140,28 @@ concept EnumFlag = ::meta::EnumFlagTrait<T>::value;
 }  // namespace meta
 
 template <meta::EnumFlag T>
-constexpr auto operator|(T flag_1, T flag_2) -> T {
+[[nodiscard]] constexpr auto operator|(T flag_1, T flag_2) -> T {
     using U = ::meta::UnderlyingType<T>;
     return static_cast<T>(static_cast<U>(flag_1) | static_cast<U>(flag_2));
 }
 
 template <meta::EnumFlag T>
-constexpr auto operator|(T flag_1, ::meta::UnderlyingType<T> flag_2) -> T {
+[[nodiscard]] constexpr auto operator|(T flag_1,
+                                       ::meta::UnderlyingType<T> flag_2) -> T {
     using U = ::meta::UnderlyingType<T>;
     return static_cast<T>(static_cast<U>(flag_1) | flag_2);
 }
 
 template <meta::EnumFlag T>
-constexpr auto operator&(T flag_1, T flag_2) -> T {
+[[nodiscard]] constexpr auto operator&(T flag_1, T flag_2) -> T {
     using U = ::meta::UnderlyingType<T>;
     return static_cast<T>(static_cast<U>(flag_1) & static_cast<U>(flag_2));
 }
 
 // TODO: Fix bit flag operators.
 // template <meta::EnumFlag T>
-// constexpr auto operator&(T flag_1,::meta::UnderlyingType<T> flag_2) -> T {
+//[[nodiscard]] constexpr auto operator&(T flag_1,::meta::UnderlyingType<T>
+// flag_2) -> T {
 //     using U =::meta::UnderlyingType<T>;
 //     return static_cast<T>(static_cast<U>(flag_1) & flag_2);
 // }
@@ -182,52 +189,57 @@ struct BinarySize {
     constexpr BinarySize(long double value)
         : storage(static_cast<Type>(value)){};
 
-    constexpr operator ssize() const {
+    [[nodiscard]] constexpr operator ssize() const {
         // This macro is provided by GCC.
         return static_cast<__INT64_TYPE__>(this->storage);
     }
 
-    constexpr operator usize() const {
+    [[nodiscard]] constexpr operator usize() const {
         return storage;
     }
 
-    constexpr auto operator==(BinarySize const operand) const -> bool {
+    [[nodiscard]] constexpr auto operator==(BinarySize const operand) const
+        -> bool {
         return this->storage == operand.storage;
     }
 
-    constexpr auto operator<(BinarySize const operand) const -> bool {
+    [[nodiscard]] constexpr auto operator<(BinarySize const operand) const
+        -> bool {
         return this->storage < operand.storage;
     }
 
-    constexpr auto operator<=(BinarySize const operand) const -> bool {
+    [[nodiscard]] constexpr auto operator<=(BinarySize const operand) const
+        -> bool {
         return this->storage <= operand.storage;
     }
 
-    constexpr auto operator>(BinarySize const operand) const -> bool {
+    [[nodiscard]] constexpr auto operator>(BinarySize const operand) const
+        -> bool {
         return this->storage > operand.storage;
     }
 
-    constexpr auto operator>=(BinarySize const operand) const -> bool {
+    [[nodiscard]] constexpr auto operator>=(BinarySize const operand) const
+        -> bool {
         return this->storage >= operand.storage;
     }
 
-    constexpr auto operator+(BinarySize const operand) const {
+    [[nodiscard]] constexpr auto operator+(BinarySize const operand) const {
         return this->storage + operand.storage;
     }
 
-    constexpr auto operator-(BinarySize const operand) const {
+    [[nodiscard]] constexpr auto operator-(BinarySize const operand) const {
         return this->storage - operand.storage;
     }
 
-    constexpr auto operator*(BinarySize const operand) const {
+    [[nodiscard]] constexpr auto operator*(BinarySize const operand) const {
         return this->storage * operand.storage;
     }
 
-    constexpr auto operator&(BinarySize const operand) const {
+    [[nodiscard]] constexpr auto operator&(BinarySize const operand) const {
         return this->storage & operand.storage;
     }
 
-    constexpr auto operator|(BinarySize const operand) const {
+    [[nodiscard]] constexpr auto operator|(BinarySize const operand) const {
         return this->storage | operand.storage;
     }
 };

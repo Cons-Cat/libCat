@@ -103,7 +103,9 @@ constexpr auto max(::meta::Iterable auto&& iterable) -> T {
     return static_cast<T>(maximum);
 }
 
-constexpr auto abs(auto value) {
+// TODO: Add a `meta::Numeral` `concept`.
+constexpr auto abs(auto&& value) {
+    // TODO: Check if the builtin `abs()` function family is optimized better.
     return value < 0 ? value * -1 : value;
 }
 
