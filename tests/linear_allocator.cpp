@@ -48,6 +48,18 @@ didnt_overallocate:
     cat::Optional handle_3 = allocator.malloc<int4>();
     Result(handle_3.has_value()).or_panic();
 
+    // Test that allocations are reusable.
+    decltype(allocator.malloc<int1>()) handles[4];
+    allocator.reset();
+    for (signed char i = 0; i < 4; i++) {
+        handles[i] = allocator.malloc<int1>();
+        Result(handles[i].has_value()).or_panic();
+        allocator.get(handles[i].value()) = i;
+    }
+    for (signed char i = 0; i < 4; i++) {
+        Result(allocator.get(handles[i].value()) == i).or_panic();
+    }
+
     paging_allocator.free(page).or_panic();
 
     cat::exit();
