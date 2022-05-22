@@ -3,9 +3,7 @@
 #pragma once
 
 #include <cat/collection>
-#include <cat/iterator>
 #include <cat/meta>
-#include <cat/optional>
 #include <cat/string>
 #include <cat/utility>
 
