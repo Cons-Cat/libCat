@@ -1088,6 +1088,16 @@ template <typename T>
 concept EqualityComparable = detail::WeaklyEqualityComparableWithDetail<T, T>;
 
 template <typename T>
+concept Enumerable = requires(T it) {
+    it[0];
+};
+
+template <typename T>
+concept SafelyEnumerable = requires(T it) {
+    it.at(0).value();
+};
+
+template <typename T>
 concept EnumClass = meta::is_scoped_enum<T>;
 
 template <typename T, typename U>

@@ -1,7 +1,7 @@
 #include <cat/allocators>
 #include <cat/array>
-#include <cat/numerals>
 #include <cat/math>
+#include <cat/numerals>
 #include <cat/utility>
 
 void meow() {
