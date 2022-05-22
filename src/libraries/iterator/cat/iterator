@@ -162,20 +162,39 @@ struct IteratorFacade {
 
     constexpr friend auto operator+(Derived left,
                                     DifferenceTypeArg<Derived> auto offset)
-        -> Derived requires cat::detail::HasAdvance<Derived> {
-        return left += offset;
+        -> Derived {
+        if constexpr (detail::HasAdvance<Derived>) {
+            return left += offset;
+        } else {
+            for (ssize i = 0; i < offset; i++) {
+                ++left;
+            }
+            return left;
+        }
     }
 
     constexpr friend auto operator+(DifferenceTypeArg<Derived> auto offset,
-                                    Derived right)
-        -> Derived requires cat::detail::HasAdvance<Derived> {
-        return right += offset;
+                                    Derived right) -> Derived {
+        if constexpr (detail::HasAdvance<Derived>) {
+            return right += offset;
+        } else {
+            for (ssize i = 0; i < offset; i++) {
+                ++right;
+            }
+            return right;
+        }
     }
 
     constexpr friend auto operator+=(Derived& self,
                                      DifferenceTypeArg<Derived> auto offset)
-        -> Derived& requires cat::detail::HasAdvance<Derived> {
-        self.advance(static_cast<int>(offset));
+        -> Derived& {
+        if constexpr (detail::HasAdvance<Derived>) {
+            self.advance(static_cast<int>(offset));
+        } else {
+            for (ssize i = 0; i < offset; i++) {
+                self.increment();
+            }
+        }
         return self;
     }
 
@@ -197,20 +216,34 @@ struct IteratorFacade {
     }
 
     constexpr friend auto operator-(const Derived& left, const Derived& right)
-        -> Derived& requires cat::detail::HasAdvance<Derived> {
+        -> Derived& {
         return right.distance(left);
     }
 
     constexpr friend auto operator-(Derived left,
                                     DifferenceTypeArg<Derived> auto offset)
-        -> Derived requires cat::detail::HasAdvance<Derived> {
-        return left - offset;
+        -> Derived {
+        if constexpr (detail::HasAdvance<Derived>) {
+            return left - offset;
+        } else {
+            for (ssize i = 0; i < offset; i++) {
+                --left;
+            }
+            return left;
+        }
     }
 
     constexpr friend auto operator-=(Derived& left,
                                      DifferenceTypeArg<Derived> auto offset)
-        -> Derived& requires cat::detail::HasAdvance<Derived> {
-        return left -= offset;
+        -> Derived& {
+        if constexpr (detail::HasAdvance<Derived>) {
+            return left -= offset;
+        } else {
+            for (ssize i = 0; i < offset; i++) {
+                --left;
+            }
+            return left;
+        }
     }
 
     // Decrement or advance backwards with prefix notation.
