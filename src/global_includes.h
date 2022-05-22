@@ -85,12 +85,17 @@ requires(!predicate(sentinel)) struct Predicate {
     consteval Predicate() = default;
 };
 
+namespace detail {
+    // This is a function instead of a lambda to fix clangd crashes.
+    template <typename T, T sentinel>
+    constexpr auto sentinel_predicate(T const value) -> bool {
+        return value != sentinel;
+    }
+}  // namespace detail
+
 template <typename T, T sentinel>
-using Sentinel = Predicate<T,
-                           [](T const value) {
-                               return value != sentinel;
-                           },
-                           sentinel>;
+using Sentinel =
+    Predicate<T, detail::sentinel_predicate<T, sentinel>, sentinel>;
 
 namespace detail {
     template <typename T>
