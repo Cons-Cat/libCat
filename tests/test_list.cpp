@@ -17,7 +17,7 @@ void meow() {
 
     for (auto& node : list_1) {
         // Iterate.
-        node = node;
+        node = node;  // NOLINT
     }
 
     list_1.pop_front(allocator);
@@ -37,7 +37,7 @@ void meow() {
 
     for (auto& node : list_2) {
         // Iterate.
-        node = node;
+        node = node;  // NOLINT
     }
 
     // Test emplace.
@@ -52,7 +52,7 @@ void meow() {
 
     for (auto& node : list_3) {
         // Iterate.
-        node = node;
+        node = node;  // NOLINT
     }
 
     // Test special iterators.
