@@ -9,6 +9,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/numerals/
   ${CMAKE_SOURCE_DIR}/src/libraries/simd/
   ${CMAKE_SOURCE_DIR}/src/libraries/result/
+  ${CMAKE_SOURCE_DIR}/src/libraries/variant/
   ${CMAKE_SOURCE_DIR}/src/libraries/scaredy/
   ${CMAKE_SOURCE_DIR}/src/libraries/optional/
   ${CMAKE_SOURCE_DIR}/src/libraries/any/
@@ -16,6 +17,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/collection/
   ${CMAKE_SOURCE_DIR}/src/libraries/array/
   ${CMAKE_SOURCE_DIR}/src/libraries/span/
+  ${CMAKE_SOURCE_DIR}/src/libraries/list/
   ${CMAKE_SOURCE_DIR}/src/libraries/string/
   ${CMAKE_SOURCE_DIR}/src/libraries/memory/
   ${CMAKE_SOURCE_DIR}/src/libraries/allocators/
@@ -30,7 +32,6 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/iterator/
   ${CMAKE_SOURCE_DIR}/src/libraries/math/
   ${CMAKE_SOURCE_DIR}/src/libraries/type_list/
-  ${CMAKE_SOURCE_DIR}/src/libraries/variant/
   PARENT_SCOPE
 )
 

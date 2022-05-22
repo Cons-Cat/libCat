@@ -140,17 +140,16 @@ class CollectionFacade {
         return this->self_mut().p_data()[0];
     }
 
-    [[nodiscard]] constexpr auto front() const
-        -> T const& requires(is_contiguous) {
-        return this->self().p_data()[0];
+    [[nodiscard]] constexpr auto front() const -> T const& {
+        return unconst(this)->front();
     }
 
     [[nodiscard]] constexpr auto back() -> T& requires(is_contiguous) {
         return this->self_mut().p_data()[this->self().size().c() - 1];
     }
 
-    [[nodiscard]] constexpr auto back() const -> T& requires(is_contiguous) {
-        return this->self_mut().p_data()[this->self().size().c() - 1];
+    [[nodiscard]] constexpr auto back() const -> T const& {
+        return unconst(this)->back();
     }
 
     [[nodiscard]] constexpr auto slice(ssize const start_index,
@@ -220,10 +219,14 @@ class CollectionFacade {
             this->self_mut().size(), this->self().p_data()};
     }
 
+    // If this collection is not contiguous, get a non-`const` `.begin()` method
+    // from `Derived`.
     [[nodiscard]] constexpr auto begin() {
         return this->self_mut().begin();
     }
 
+    // If this collection is not contiguous, get a non-`const` `.end()` method
+    // from `Derived`.
     [[nodiscard]] constexpr auto end() {
         return this->self_mut().end();
     }
@@ -252,6 +255,18 @@ class CollectionFacade {
     [[nodiscard]] constexpr auto rend() requires(is_contiguous) {
         return cat::ReversedIterator<decltype(this->end())>(
             -1, this->self().p_data());
+    }
+
+    // If this collection is not contiguous, get a non-`const` `.rbegin()`
+    // method from `Derived`.
+    [[nodiscard]] constexpr auto rbegin() requires(!is_contiguous) {
+        return this->self_mut().rbegin();
+    }
+
+    // If this collection is not contiguous, get a non-`const` `.rend()` method
+    // from `Derived`.
+    [[nodiscard]] constexpr auto rend() requires(!is_contiguous) {
+        return this->self_mut().rbegin();
     }
 
     [[nodiscard]] constexpr auto rbegin() const {

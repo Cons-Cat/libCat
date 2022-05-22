@@ -52,6 +52,12 @@ target_compile_options(test_arrays PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_arrays PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME TestArray COMMAND test_arrays)
 
+# This tests that `cat::List` works.
+add_executable(test_list test_list.cpp)
+target_compile_options(test_list PRIVATE ${CAT_CXX_FLAGS_TEST})
+target_link_options(test_list PRIVATE ${CAT_LINK_FLAGS})
+add_test(NAME TestList COMMAND test_list)
+
 # This tests that `cat::string_length()` works.
 add_executable(test_strlen string_length.cpp)
 target_compile_options(test_strlen PRIVATE ${CAT_CXX_FLAGS_TEST})

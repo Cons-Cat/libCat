@@ -1,0 +1,151 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/allocators>
+#include <cat/collection>
+#include <cat/iterator>
+#include <cat/meta>
+#include <cat/optional>
+
+namespace cat {
+namespace detail {
+    template <typename T>
+    struct ListNode {
+        ListNode<T>* p_next_node;
+        ListNode<T>* p_previous_node;
+        T storage;
+
+        ListNode() = default;
+        ListNode(ListNode const&) = default;
+        ListNode(ListNode&&) = default;
+        ListNode(T value) : storage(value){};
+        auto operator=(ListNode<T> const&) -> ListNode<T>& = default;
+        auto operator=(ListNode<T>&&) -> ListNode<T>& = default;
+        auto operator=(T value) -> ListNode<T>& {
+            this->storage = value;
+        }
+    };
+}  // namespace detail
+
+template <typename T>
+class List : public ::meta::CollectionFacade<List<T>, T> {
+    using Node = detail::ListNode<T>;
+    Node* p_head;
+    Node* p_tail;
+    ssize length;
+
+    struct Iterator : IteratorFacade<Iterator> {
+        Node* p_node;
+        Iterator(Iterator const&) = default;
+        Iterator(Node* const p_input) : p_node(p_input){};
+
+        auto increment() -> Iterator& {
+            this->p_node = this->p_node->p_next_node;
+            return *this;
+        }
+        auto decrement() -> Iterator& {
+            this->p_node = this->p_node->p_previous_node;
+            return *this;
+        }
+        auto dereference() -> Node& {
+            return *this->p_node;
+        }
+        auto dereference() const -> Node const& {
+            return *this->p_node;
+        }
+        auto equal_to(Iterator const& it) const -> bool {
+            return it.p_node == this->p_node;
+        }
+    };
+  public:
+    List() : p_head(nullptr), p_tail(nullptr), length(0){};
+    List(List<T> const& list) {
+        for (T const& node : list) {
+            //
+        }
+    };
+
+    // Get the count of elements stored in this `List`.
+    [[nodiscard]] auto size() const -> ssize {
+        return this->length;
+    }
+
+    // Get the maximum possible count of elements stored in a `List`.
+    [[nodiscard]] auto capacity() const -> ssize {
+        return this->length.max();
+    }
+
+    [[nodiscard]] auto front() -> T& {
+        return this->p_head->storage;
+    }
+
+    [[nodiscard]] auto back() -> T& {
+        return this->p_tail->storage;
+    }
+
+    // Allocate a node and insert it into this list before the position of
+    // `where`.
+    [[nodiscard]] auto insert(::meta::Allocator auto& allocator, Iterator where,
+                              T const& value) -> Optional<Iterator> {
+        cat::Optional memory = allocator.template malloc<Node>();
+        if (!memory.has_value()) {
+            return nullopt;
+        }
+
+        Node& node = allocator.get(memory.value());
+        node.storage = value;
+
+        // If this list has nothing in it, `.insert()` must be special-cased.
+        if (this->length == 0) [[unlikely]] {
+            node.p_next_node = nullptr;
+            node.p_previous_node = nullptr;
+            this->p_head = &node;
+            this->p_tail = &node;
+            this->length++;
+            return Iterator{&node};
+        }
+
+        // `.insert()` should almost always be used for insertions in the
+        // middle.
+        if (where != this->begin() && where != this->end()) [[likely]] {
+            // Insert a node in the middle of this list.
+            node.p_next_node = &where.dereference();
+            node.p_previous_node = &where.decrement().dereference();
+
+            node.p_next_node->p_previous_node = &node;
+            node.p_previous_node->p_next_node = &node;
+        } else if (where == this->begin()) {
+            // Insert a node at the front of this list.
+            node.p_next_node = this->p_head;
+            node.p_previous_node = nullptr;
+            this->p_head = &node;
+        } else {
+            // Insert a node at the back of this list.
+            node.p_previous_node = &where.decrement().dereference();
+            node.p_next_node = this->p_tail;
+            node.p_previous_node->p_next_node = &node;
+        }
+
+        this->length++;
+        return Iterator{&node};
+    }
+
+    [[nodiscard]] auto begin() -> Iterator {
+        return Iterator{this->p_head};
+    }
+
+    [[nodiscard]] auto end() -> Iterator {
+        return Iterator{this->p_tail};
+    }
+
+    [[nodiscard]] auto rbegin() {
+        return cat::ReversedIterator<Iterator>{this->p_tail};
+    }
+
+    [[nodiscard]] auto rend() {
+        return cat::ReversedIterator<Iterator>{this->p_tail};
+    }
+};
+
+}  // namespace cat
