@@ -1001,6 +1001,10 @@ class Optional {
 template <typename T>
 Optional(T) -> Optional<T>;
 
+// Simplify nullable pointers.
+template <typename T>
+using OptionalPtr = Optional<cat::Sentinel<T*, nullptr>>;
+
 }  // namespace cat
 
 using cat::nullopt;
