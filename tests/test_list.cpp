@@ -20,9 +20,9 @@ void meow() {
         node = node;
     }
 
-    list_1.pop_front();
+    list_1.pop_front(allocator);
     Result(list_1.front() == 2).or_panic();
-    list_1.pop_back();
+    list_1.pop_back(allocator);
     Result(list_1.back() == 2).or_panic();
 
     // Test push.
@@ -66,6 +66,12 @@ void meow() {
     Result(*iter == 3);
     ++iter;
     Result(*iter == 2);
+
+    // Test freeing nodes.
+    list_1.erase(allocator, list_1.begin());
+    for (int i = 0; i < 10; i++) {
+        list_1.pop_front(allocator);
+    }
 
     _ = page_allocator.free(page);
     cat::exit();

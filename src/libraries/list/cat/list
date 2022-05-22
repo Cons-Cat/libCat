@@ -28,20 +28,19 @@ namespace detail {
     };
 }  // namespace detail
 
-template <typename T>
-class List : public ::meta::CollectionFacade<List<T>, T> {
+template <typename T  // , ::meta::StableAllocator NodeAllocator
+          >
+class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
+                                                  >,
+                                             T> {
     using Node = detail::ListNode<T>;
+    // NodeAllocator* p_allocator;
     Node* p_head;
     Node* p_tail;
     ssize length;
 
   public:
     List() : p_head(nullptr), p_tail(nullptr), length(0){};
-    List(List<T> const& list) {
-        for (T const& node : list) {
-            //
-        }
-    };
 
     // Get the count of elements stored in this `List`.
     [[nodiscard]] auto size() const -> ssize {
@@ -141,15 +140,17 @@ class List : public ::meta::CollectionFacade<List<T>, T> {
   public:
     // Allocate a node and insert it into this list before the position of
     // `where`.
-    [[nodiscard]] auto insert(::meta::Allocator auto& allocator, Iterator where,
-                              T const& value) -> Optional<Iterator> {
-        cat::Optional memory = allocator.template malloc<Node>();
+    [[nodiscard]] auto insert(::meta::StableAllocator auto& allocator,
+                              Iterator where, T const& value)
+        -> Optional<Iterator> {
+        // `cat::OptionalPtr` produces an internal compiler error in GCC 12.
+        cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
         }
 
-        Node& node = allocator.get(memory.value());
+        Node& node = *memory.value();
         node.storage = value;
 
         // If this list has nothing in it, `.insert()` must be special-cased.
@@ -165,16 +166,16 @@ class List : public ::meta::CollectionFacade<List<T>, T> {
     // Allocate a node and insert it into this list before the position of
     // `where`, then construct it with arguments.
     template <typename... Args>
-    [[nodiscard]] auto emplace(::meta::Allocator auto& allocator,
+    [[nodiscard]] auto emplace(::meta::StableAllocator auto& allocator,
                                Iterator where, Args&&... arguments)
         -> Optional<Iterator> {
-        cat::Optional memory = allocator.template malloc<Node>();
+        cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
         }
 
-        Node& node = allocator.get(memory.value());
+        Node& node = *memory.value();
         new (&node.storage) T{::meta::forward<Args>(arguments)...};
 
         // If this list has nothing in it, `.emplace()` must be special-cased.
@@ -188,7 +189,12 @@ class List : public ::meta::CollectionFacade<List<T>, T> {
     }
 
     // Remove an element from this list.
-    void erase(Iterator where) {
+    void erase(::meta::StableAllocator auto& allocator, Iterator where) {
+        if (this->length == 0) [[unlikely]] {
+            // Prevent a segfault when the list is empty.
+            return;
+        }
+
         Node& node = *where.p_node;
         if (&node != p_head && &node != p_tail) [[likely]] {
             // Remove a node from the middle of this list.
@@ -204,18 +210,20 @@ class List : public ::meta::CollectionFacade<List<T>, T> {
             this->p_tail = node.p_previous_node;
         }
         this->length--;
+        Optional result = allocator.free(&node);
+        Result(result.has_value()).assert();
     }
 
     // Allocate a node and insert it at the beginning of this list.
-    [[nodiscard]] auto push_front(::meta::Allocator auto& allocator,
+    [[nodiscard]] auto push_front(::meta::StableAllocator auto& allocator,
                                   T const& value) -> Optional<Iterator> {
-        cat::Optional memory = allocator.template malloc<Node>();
+        cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
         }
 
-        Node& node = allocator.get(memory.value());
+        Node& node = *memory.value();
         node.storage = value;
 
         // If this list has nothing in it, `.push_front()` must be
@@ -231,16 +239,16 @@ class List : public ::meta::CollectionFacade<List<T>, T> {
 
     // Allocate a node and insert it at the beginning of this list.
     template <typename... Args>
-    [[nodiscard]] auto emplace_front(::meta::Allocator auto& allocator,
+    [[nodiscard]] auto emplace_front(::meta::StableAllocator auto& allocator,
                                      Args&&... arguments)
         -> Optional<Iterator> {
-        cat::Optional memory = allocator.template malloc<Node>();
+        cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
         }
 
-        Node& node = allocator.get(memory.value());
+        Node& node = *memory.value();
         new (&node.storage) T{::meta::forward<Args>(arguments)...};
 
         // If this list has nothing in it, `.emplace_front()` must be
@@ -255,25 +263,32 @@ class List : public ::meta::CollectionFacade<List<T>, T> {
     }
 
     // Remove an element from the front of this list.
-    void pop_front() {
+    void pop_front(::meta::StableAllocator auto& allocator) {
+        if (this->length == 0) [[unlikely]] {
+            // Prevent a segfault when the list is empty.
+            return;
+        }
+
         Node& node = *(this->begin().p_node);
         if (node.p_next_node != nullptr) [[likely]] {
             node.p_next_node->p_previous_node = nullptr;
         }
         this->p_head = node.p_next_node;
         this->length--;
+        Optional result = allocator.free(&node);
+        Result(result.has_value()).assert();
     }
 
     // Allocate a node and insert it at the end of this list.
-    [[nodiscard]] auto push_back(::meta::Allocator auto& allocator,
+    [[nodiscard]] auto push_back(::meta::StableAllocator auto& allocator,
                                  T const& value) -> Optional<Iterator> {
-        cat::Optional memory = allocator.template malloc<Node>();
+        cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
         }
 
-        Node& node = allocator.get(memory.value());
+        Node& node = *memory.value();
         node.storage = value;
 
         // If this list has nothing in it, `.push_back()` must be special-cased.
@@ -288,15 +303,15 @@ class List : public ::meta::CollectionFacade<List<T>, T> {
 
     // Allocate a node and insert it at the end of this list.
     template <typename... Args>
-    [[nodiscard]] auto emplace_back(::meta::Allocator auto& allocator,
+    [[nodiscard]] auto emplace_back(::meta::StableAllocator auto& allocator,
                                     Args&&... arguments) -> Optional<Iterator> {
-        cat::Optional memory = allocator.template malloc<Node>();
+        cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
         }
 
-        Node& node = allocator.get(memory.value());
+        Node& node = *memory.value();
         new (&node.storage) T{::meta::forward<Args>(arguments)...};
 
         // If this list has nothing in it, `.emplace_back()` must be
@@ -311,13 +326,20 @@ class List : public ::meta::CollectionFacade<List<T>, T> {
     }
 
     // Remove an element from the back of this list.
-    void pop_back() {
+    void pop_back(::meta::StableAllocator auto& allocator) {
+        if (this->length == 0) [[unlikely]] {
+            // Prevent a segfault when the list is empty.
+            return;
+        }
+
         Node& node = *(this->end().p_node);
         if (node.p_previous_node != nullptr) [[likely]] {
             node.p_previous_node->p_next_node = nullptr;
         }
         this->p_tail = node.p_previous_node;
         this->length--;
+        Optional result = allocator.free(&node);
+        Result(result.has_value()).assert();
     }
 
     // Providing these four iterator getters generates the remaining 8 through
