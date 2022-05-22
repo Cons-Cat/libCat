@@ -61,7 +61,7 @@ ConstructorInitializerAllOnOneLineOrOnePerLine: true
 Cpp11BracedListStyle: true
 DeriveLineEnding: false
 DerivePointerAlignment: false
-EmptyLineBeforeAccessModifier: Never
+EmptyLineBeforeAccessModifier: Leave
 ExperimentalAutoDetectBinPacking: false
 FixNamespaceComments: true
 IncludeBlocks:   Regroup

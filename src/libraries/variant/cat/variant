@@ -17,8 +17,10 @@ requires(::meta::TypeList<Ts...>::is_unique_list) class Variant {
     using Storage = cat::Array<char, size>;
     alignas(alignment) Storage storage;
     uint1 discriminant;
+
   public:
     using Types = ::meta::TypeList<Ts...>;
+
   private:
     template <typename T, ssize index>
     static consteval auto get_index_of_type() -> uint1
@@ -80,6 +82,7 @@ requires(::meta::TypeList<Ts...>::is_unique_list) class Variant {
             return this->assign_other_variant<Us...>(variant);
         }
     }
+
   public:
     static constexpr ssize variant_size = static_cast<ssize>(sizeof...(Ts));
 

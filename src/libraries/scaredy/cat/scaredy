@@ -167,6 +167,7 @@ requires(
     // clang-format on
 
     Storage storage;
+
   public:
     using Type = ::meta::Conditional<::meta::is_void<T>, cat::Monostate, T>;
 

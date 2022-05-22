@@ -20,6 +20,7 @@ class Span : public ::meta::CollectionFacade<Span<T>, T> {
     // `WSABUF`.
     T* p_storage;
     ssize length;
+
   public:
     constexpr Span() = default;
     constexpr Span(Span<T> const&) = default;

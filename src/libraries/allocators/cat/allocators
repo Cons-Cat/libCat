@@ -180,6 +180,7 @@ struct AllocatorFacade {
             }
         }
     }
+
   public:
     // Try to allocate some memory with arbitrary alignment.
     template <typename T = cat::Byte>

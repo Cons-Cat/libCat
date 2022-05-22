@@ -28,6 +28,7 @@ namespace cat::detail {
 template <typename T, ssize lanes, ssize alignment>
 class Simd {
     using Vector = Simd<T, lanes, alignment>;
+
   public:
     using Scalar = T;
     // `vector_size` is a GCC attribute that represents SIMD data-types.

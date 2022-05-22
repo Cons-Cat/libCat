@@ -12,9 +12,10 @@ struct Thread {
     void* p_stack;
     ssize stack_size;
 
-    // This is platform-specific hidden code.
   private:
+    // This is platform-specific hidden code.
     [[maybe_unused]] nix::Process process;
+
   public:
     Thread() = default;
     Thread(Thread const&) = delete;

@@ -45,6 +45,7 @@ class CollectionFacade {
     constexpr auto self() const -> Derived const& {
         return static_cast<Derived const&>(*this);
     }
+
   protected:
     // If the collection does not define an iterator, then one should be
     // generated. This function only exists for the purpose of deducing the type
@@ -105,6 +106,7 @@ class CollectionFacade {
         // Produce an iterator to have its type deduced later.
         return typename Derived::Iterator{};
     }
+
   public:
     // If `.size()` is provided and `.capacity()` is not, generate
     // `.capacity()`.

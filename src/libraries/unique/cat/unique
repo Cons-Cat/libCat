@@ -23,20 +23,20 @@ template <typename T>
 class UniqueWeak;
 
 namespace detail {
-
     template <typename T>
     concept NonUniqueWeak = requires {
         ::meta::IsSpecializationTrait<T, UniqueWeak>::value;
     };
-
 }  // namespace detail
 
 template <typename T>
 class Unique {
     T storage;
+
   public:
     // Delete non-moving constructors.
     // constexpr Unique(T const&) = delete;
+
     constexpr Unique(Unique<T> const&) = delete;
 
     // Allow default-construction and move-construction.
@@ -90,6 +90,7 @@ class Unique {
     constexpr auto borrow() -> T&& {
         return ::meta::forward<T>(this->storage);
     }
+
   protected:
     void storage_destructor() {
         // If `T` holds a `.raii()` method, it will be called before `T`'s
@@ -103,6 +104,7 @@ class Unique {
     }
 };
 
+// TODO: Why is this needed?
 template <detail::NonUniqueWeak T>
 Unique(T) -> Unique<T>;
 
@@ -110,6 +112,7 @@ template <typename T>
 class UniqueWeak {
     T storage;
     bool1 owns_data = true;
+
   public:
     // Delete non-moving constructors.
     constexpr UniqueWeak(UniqueWeak<T> const&) = delete;
