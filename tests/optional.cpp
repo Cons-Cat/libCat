@@ -130,9 +130,8 @@ void meow() {
     Result(predicate_void.has_value()).or_panic();
     _ = predicate_void.or_panic();
 
-    // This crashes clangd, but it passes tests, last I checked.
-    /*
-        cat::Optional<Sentinel<int4, 0>> nonzero = nullopt;
+    // Test the sentinel predicate.
+    cat::Optional<cat::Sentinel<int4, 0>> nonzero = nullopt;
     Result(!nonzero.has_value()).or_panic();
 
     nonzero = 1;
@@ -140,7 +139,6 @@ void meow() {
 
     nonzero = 0;
     Result(!nonzero.has_value()).or_panic();
-    */
 
     // Converting assignments. `foo` is `int4`.
     foo = int{1};
