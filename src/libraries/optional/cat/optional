@@ -21,14 +21,12 @@ template <typename T>
 class Optional;
 
 namespace meta {
-
     // TODO: I forgot what the point to this `concept` was.
     template <typename T>
     concept Option = requires(T optional) {
         static_cast<bool>(optional.has_value());
         _ = optional.value();
     };
-
 }  // namespace meta
 
 // `OptionalValueStorage` holds a non-reference, non-pointer, non-`void` type
@@ -486,9 +484,12 @@ class Optional {
                     OptionalValueStorage<T>>>>;
     // clang-format on
 
-    using Value = typename Storage::Value;
+  private:
     Storage storage;
+
   public:
+    using Value = typename Storage::Value;
+
     // All `Optional`s are default-constructed as empty.
     constexpr Optional() : storage(nullopt){};
 

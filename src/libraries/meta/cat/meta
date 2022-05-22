@@ -598,6 +598,7 @@ template <typename T>
 struct DecayTrait {
   private:
     using U = typename RemoveReferenceTrait<T>::type;
+
   public:
     using type = typename ConditionalTrait<
         IsArrayTrait<U>::value, typename RemoveExtentTrait<U>::type*,
@@ -982,6 +983,7 @@ namespace detail {
 
         template <typename T>
         static auto test(...) -> FalseTypeTrait;
+
       public:
         using type = decltype(test<UReturn>(1));
     };

@@ -313,6 +313,7 @@ struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
 template <::meta::Iterable T>
 class AsReverse {
     T& iterable;
+
   public:
     constexpr explicit AsReverse(T& iterable) : iterable{iterable} {};
 
@@ -336,6 +337,7 @@ class AsReverse {
 template <::meta::Iterable T>
 class AsConst {
     T& iterable;
+
   public:
     constexpr explicit AsConst(T& iterable) : iterable{iterable} {};
 
@@ -351,6 +353,7 @@ class AsConst {
 template <::meta::Iterable T>
 class AsConstReverse {
     T& iterable;
+
   public:
     constexpr explicit AsConstReverse(T& iterable) : iterable{iterable} {};
 

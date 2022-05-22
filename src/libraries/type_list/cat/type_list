@@ -82,6 +82,7 @@ class TypeList {
         -> bool requires(sizeof...(Us) > 0) {
         return is_unique<U> ? recurse_for_unique<Us...>() : false;
     }
+
   public:
     // `TypeList` should never be instantiated.
     TypeList() = delete;

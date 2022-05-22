@@ -58,6 +58,7 @@ class List : public ::meta::CollectionFacade<List<T>, T> {
             return it.p_node == this->p_node;
         }
     };
+
   public:
     List() : p_head(nullptr), p_tail(nullptr), length(0){};
     List(List<T> const& list) {

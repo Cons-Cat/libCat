@@ -15,6 +15,7 @@ namespace cat {
 template <typename T, ssize length>
 class Array : public ::meta::CollectionFacade<Array<T, length>, T> {
     T storage[length.c()];
+
   public:
     constexpr Array() = default;
     constexpr Array(Array<T, length> const& in_array) = default;

@@ -94,9 +94,11 @@ class [[nodiscard]] Result {
     // which would be a better solution.
     // TODO: Solve this with a partial template specialization.
     using ValueType = meta::Conditional<meta::is_void<T>, char, T>;
+
   protected:
     ValueType storage;
     bool1 is_okay;
+
   public:
     constexpr Result(Failure const& failure)
         : failure(failure), is_okay(false){};
