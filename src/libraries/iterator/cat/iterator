@@ -277,19 +277,35 @@ struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
 
     // Forward any constructor to `iterator`.
     template <typename... Args>
-    ReversedIterator(Args&&... args)
+    constexpr ReversedIterator(Args&&... args)
         : iterator(::meta::forward<Args>(args)...){};
 
-    auto dereference() const {
+    constexpr auto dereference() const {
         return this->iterator.dereference();
     }
 
-    void advance(int offset) {
+    constexpr void advance(int const offset) requires(detail::HasAdvance<T>) {
         this->iterator.advance(-offset);
     }
 
+    constexpr void increment() {
+        if constexpr (cat::detail::HasDecrement<T>) {
+            this->iterator.decrement();
+        } else {
+            this->iterator.advance(-1);
+        }
+    }
+
+    constexpr void decrement() {
+        if constexpr (cat::detail::HasIncrement<T>) {
+            this->iterator.increment();
+        } else {
+            this->iterator.advance(1);
+        }
+    }
+
     // TODO: Use safe arithmetic here.
-    auto distance(ReversedIterator<T> other) const -> int {
+    constexpr auto distance(ReversedIterator<T> const other) const -> int {
         return this->iterator.distance(other.iterator).c();
     }
 };
@@ -298,21 +314,21 @@ template <::meta::Iterable T>
 class AsReverse {
     T& iterable;
   public:
-    explicit AsReverse(T& iterable) : iterable{iterable} {};
+    constexpr explicit AsReverse(T& iterable) : iterable{iterable} {};
 
-    auto begin() {
+    constexpr auto begin() {
         return iterable.rbegin();
     }
 
-    auto end() {
+    constexpr auto end() {
         return iterable.rend();
     }
 
-    auto begin() const {
+    constexpr auto begin() const {
         return iterable.rbegin();
     }
 
-    auto end() const {
+    constexpr auto end() const {
         return iterable.rend();
     }
 };
@@ -321,13 +337,13 @@ template <::meta::Iterable T>
 class AsConst {
     T& iterable;
   public:
-    explicit AsConst(T& iterable) : iterable{iterable} {};
+    constexpr explicit AsConst(T& iterable) : iterable{iterable} {};
 
-    auto begin() const {
+    constexpr auto begin() const {
         return iterable.cbegin();
     }
 
-    auto end() const {
+    constexpr auto end() const {
         return iterable.cend();
     }
 };
@@ -336,13 +352,13 @@ template <::meta::Iterable T>
 class AsConstReverse {
     T& iterable;
   public:
-    explicit AsConstReverse(T& iterable) : iterable{iterable} {};
+    constexpr explicit AsConstReverse(T& iterable) : iterable{iterable} {};
 
-    auto begin() const {
+    constexpr auto begin() const {
         return iterable.crbegin();
     }
 
-    auto end() const {
+    constexpr auto end() const {
         return iterable.crend();
     }
 };
