@@ -140,6 +140,19 @@ void meow() {
     nonzero = 0;
     Result(!nonzero.has_value()).or_panic();
 
+    // Test `OptionalPtr`.
+    int4 get_addr = 0;
+    cat::OptionalPtr<int4> opt_ptr = &get_addr;
+    Result(opt_ptr.has_value()).or_panic();
+    Result(opt_ptr.value() == &get_addr).or_panic();
+    Result(*opt_ptr.value() == 0).or_panic();
+    Result(opt_ptr.p_value() == &get_addr).or_panic();
+
+    opt_ptr = nullopt;
+    Result(!opt_ptr.has_value()).or_panic();
+    opt_ptr = nullptr;
+    Result(!opt_ptr.has_value()).or_panic();
+
     // Converting assignments. `foo` is `int4`.
     foo = int{1};
     foo = short{2};
