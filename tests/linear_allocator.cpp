@@ -7,9 +7,9 @@
 void meow() {
     // Initialize an allocator.
     cat::PageAllocator paging_allocator;
-    auto page = paging_allocator.malloc<int4>(1_ki).value();
+    int4* p_page = paging_allocator.p_malloc<int4>(1_ki).or_panic();
 
-    cat::LinearAllocator allocator(&paging_allocator.get(page), 24);
+    cat::LinearAllocator allocator(p_page, 24);
     // It should not be possible to allocate 7 times here, because 24 bytes can
     // only hold 6 `int4`s.
     for (int i = 0; i < 7; i++) {
@@ -49,8 +49,8 @@ didnt_overallocate:
     Result(handle_3.has_value()).or_panic();
 
     // Test that allocations are reusable.
-    decltype(allocator.malloc<int1>()) handles[4];
     allocator.reset();
+    decltype(allocator.malloc<int1>()) handles[4];
     for (signed char i = 0; i < 4; i++) {
         handles[i] = allocator.malloc<int1>();
         Result(handles[i].has_value()).or_panic();
@@ -60,7 +60,20 @@ didnt_overallocate:
         Result(allocator.get(handles[i].value()) == i).or_panic();
     }
 
-    paging_allocator.free(page).or_panic();
+    // Test that allocations have pointer stability.
+    allocator.reset();
+    int4* p_handles[4];
+    for (int i = 0; i < 4; i++) {
+        int4* p_handle = allocator.p_malloc<int4>().or_panic();
+        *p_handle = i;
+        p_handles[i] = p_handle;
+    }
+    for (int i = 0; i < 4; i++) {
+        Result(*(p_handles[i]) == i).or_panic();
+        allocator.free(p_handles[i]).or_panic();
+    }
+
+    paging_allocator.free(p_page).or_panic();
 
     cat::exit();
 }
