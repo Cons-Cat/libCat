@@ -53,6 +53,7 @@ void meow() {
         Result(a == array_1[count]).or_panic();
         count++;
     }
+    _ = array_1.cbegin();
 
     for (int4 const& a : cat::AsConstReverse(array_1)) {
         count--;
