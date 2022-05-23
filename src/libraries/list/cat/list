@@ -153,8 +153,8 @@ class List : public CollectionFacade<List<T>, T> {
   public:
     // Allocate a node and insert it into this list before the position of
     // `where`.
-    [[nodiscard]] auto insert(StableAllocator auto& allocator, Iterator where,
-                              T const& value) -> Optional<void> {
+    auto insert(StableAllocator auto& allocator, Iterator where, T const& value)
+        -> Optional<Iterator> {
         // `cat::OptionalPtr` produces an internal compiler error in GCC 12.
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
@@ -165,21 +165,21 @@ class List : public CollectionFacade<List<T>, T> {
         Node& node = *memory.value();
         node.storage = value;
 
-        // If this list has nothing in it, `.insert()` must be special-cased.
         if (this->length == 0) [[unlikely]] {
+            // If this list has nothing in it, `.insert()` must be
+            // special-cased.
             this->place_initial_node(node);
-            return monostate;
+        } else {
+            this->place_node(where, node);
         }
-
-        this->place_node(where, node);
-        return monostate;
+        return Iterator{&node};
     }
 
     // Allocate a node and insert it into this list before the position of
     // `where`, then construct it with arguments.
     template <typename... Args>
-    [[nodiscard]] auto emplace(StableAllocator auto& allocator, Iterator where,
-                               Args&&... arguments) -> Optional<Iterator> {
+    auto emplace(StableAllocator auto& allocator, Iterator where,
+                 Args&&... arguments) -> Optional<Iterator> {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -192,22 +192,22 @@ class List : public CollectionFacade<List<T>, T> {
         // If this list has nothing in it, `.emplace()` must be special-cased.
         if (this->length == 0) [[unlikely]] {
             this->place_initial_node(node);
-            return Iterator{&node};
+        } else {
+            this->place_node(where, node);
         }
-
-        this->place_node(where, node);
         return Iterator{&node};
     }
 
     // Remove and deallocate an element from this list.
     auto erase(StableAllocator auto& allocator, Iterator where)
-        -> Optional<void> {
+        -> Optional<Iterator> {
         if (this->length == 0) [[unlikely]] {
             // Prevent a segfault when the list is empty.
-            return monostate;
+            return Iterator{this->p_head};
         }
 
         Node& node = *where.p_node;
+        Iterator next = node.p_next_node;
         if (&node != p_head && &node != p_tail) [[likely]] {
             // Remove a node from the middle of this list.
             node.p_next_node->p_previous_node = node.p_previous_node;
@@ -224,12 +224,12 @@ class List : public CollectionFacade<List<T>, T> {
         this->length--;
         Optional result = allocator.free(&node);
         Result(result.has_value()).assert();
-        return monostate;
+        return Iterator{next};
     }
 
     // Allocate a node and insert it at the beginning of this list.
-    [[nodiscard]] auto push_front(StableAllocator auto& allocator,
-                                  T const& value) -> Optional<Iterator> {
+    auto push_front(StableAllocator auto& allocator, T const& value)
+        -> Optional<Iterator> {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -243,17 +243,15 @@ class List : public CollectionFacade<List<T>, T> {
         // special-cased.
         if (this->length == 0) [[unlikely]] {
             this->place_initial_node(node);
-            return Iterator{&node};
+        } else {
+            this->place_node_front(node);
         }
-
-        this->place_node_front(node);
         return Iterator{&node};
     }
 
     // Allocate a node and insert it at the beginning of this list.
     template <typename... Args>
-    [[nodiscard]] auto emplace_front(StableAllocator auto& allocator,
-                                     Args&&... arguments)
+    auto emplace_front(StableAllocator auto& allocator, Args&&... arguments)
         -> Optional<Iterator> {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
@@ -268,18 +266,17 @@ class List : public CollectionFacade<List<T>, T> {
         // special-cased.
         if (this->length == 0) [[unlikely]] {
             this->place_initial_node(node);
-            return Iterator{&node};
+        } else {
+            this->place_node_front(node);
         }
-
-        this->place_node_front(node);
         return Iterator{&node};
     }
 
     // Remove an element from the front of this list.
-    void pop_front(StableAllocator auto& allocator) {
+    auto pop_front(StableAllocator auto& allocator) -> Optional<void> {
         if (this->length == 0) [[unlikely]] {
             // Prevent a segfault when the list is empty.
-            return;
+            return monostate;
         }
 
         Node& node = *(this->begin().p_node);
@@ -288,13 +285,12 @@ class List : public CollectionFacade<List<T>, T> {
         }
         this->p_head = node.p_next_node;
         this->length--;
-        Optional result = allocator.free(&node);
-        Result(result.has_value()).assert();
+        return allocator.free(&node);
     }
 
     // Allocate a node and insert it at the end of this list.
-    [[nodiscard]] auto push_back(StableAllocator auto& allocator,
-                                 T const& value) -> Optional<Iterator> {
+    auto push_back(StableAllocator auto& allocator, T const& value)
+        -> Optional<Iterator> {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -307,17 +303,16 @@ class List : public CollectionFacade<List<T>, T> {
         // If this list has nothing in it, `.push_back()` must be special-cased.
         if (this->length == 0) [[unlikely]] {
             this->place_initial_node(node);
-            return Iterator{&node};
+        } else {
+            this->place_node_back(node);
         }
-
-        this->place_node_back(node);
         return Iterator{&node};
     }
 
     // Allocate a node and insert it at the end of this list.
     template <typename... Args>
-    [[nodiscard]] auto emplace_back(StableAllocator auto& allocator,
-                                    Args&&... arguments) -> Optional<Iterator> {
+    auto emplace_back(StableAllocator auto& allocator, Args&&... arguments)
+        -> Optional<Iterator> {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -331,18 +326,17 @@ class List : public CollectionFacade<List<T>, T> {
         // special-cased.
         if (this->length == 0) [[unlikely]] {
             this->place_initial_node(node);
-            return Iterator{&node};
+        } else {
+            this->place_node_back(node);
         }
-
-        this->place_node_back(node);
         return Iterator{&node};
     }
 
     // Remove and deallocate an element from the back of this list.
-    void pop_back(StableAllocator auto& allocator) {
+    auto pop_back(StableAllocator auto& allocator) -> Optional<void> {
         if (this->length == 0) [[unlikely]] {
             // Prevent a segfault when the list is empty.
-            return;
+            return monostate;
         }
 
         Node& node = *(this->end().p_node);
@@ -351,17 +345,23 @@ class List : public CollectionFacade<List<T>, T> {
         }
         this->p_tail = node.p_previous_node;
         this->length--;
-        Optional result = allocator.free(&node);
-        Result(result.has_value()).assert();
+        return allocator.free(&node);
     }
 
-    // Remove and deallocate all elements from this list.
-    void clear(StableAllocator auto& allocator) {
+    // Remove and deallocate all elements from this list. All nodes must have
+    // been allocated by the same arena for this function to succeed.
+    auto clear(StableAllocator auto& allocator) -> Optional<void> {
         for (Iterator iterator = this->begin(); iterator != this->end();
              ++iterator) {
             Optional result = allocator.free(iterator.p_node);
-            Result(result.has_value()).assert();
+            // `.clear` should never be given an allocator that can fail here.
+            // Failures might happen if some nodes were allocated by a different
+            // arena than this passed-in `allocator`.
+            if (!result.has_value()) [[unlikely]] {
+                return result;
+            }
         }
+        return monostate;
     }
 
     // Providing these four iterator getters generates the remaining 8 through
@@ -464,9 +464,8 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     }
 
   public:
-    [[nodiscard]] auto insert_after(StableAllocator auto& allocator,
-                                    Iterator where, T const& value)
-        -> Optional<void> {
+    auto insert_after(StableAllocator auto& allocator, Iterator where,
+                      T const& value) -> Optional<Iterator> {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -480,17 +479,15 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         // special-cased.
         if (this->length == 0) [[unlikely]] {
             this->place_initial_node(node);
-            return monostate;
+        } else {
+            this->place_node_after(where, node);
         }
-
-        this->place_node_after(where, node);
-        return monostate;
+        return Iterator{&node};
     }
 
     template <typename... Args>
-    [[nodiscard]] auto emplace_after(StableAllocator auto& allocator,
-                                     Iterator where, Args&&... arguments)
-        -> Optional<void> {
+    auto emplace_after(StableAllocator auto& allocator, Iterator where,
+                       Args&&... arguments) -> Optional<Iterator> {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -504,11 +501,10 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         // special-cased.
         if (this->length == 0) [[unlikely]] {
             this->place_initial_node(node);
-            return monostate;
+        } else {
+            this->place_node_after(where, node);
         }
-
-        this->place_node_after(where, node);
-        return monostate;
+        return Iterator{&node};
     }
 
     auto erase_after(Allocator auto& allocator, Iterator where)
@@ -520,8 +516,8 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     }
 
     // Allocate a node and insert it at the beginning of this list.
-    [[nodiscard]] auto push_front(StableAllocator auto& allocator,
-                                  T const& value) -> Optional<Iterator> {
+    auto push_front(StableAllocator auto& allocator, T const& value)
+        -> Optional<Iterator> {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -535,17 +531,15 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         // special-cased.
         if (this->length == 0) [[unlikely]] {
             this->place_initial_node(node);
-            return Iterator{&node};
+        } else {
+            this->place_node_front(node);
         }
-
-        this->place_node_front(node);
         return Iterator{&node};
     }
 
     // Allocate a node and insert it at the beginning of this list.
     template <typename... Args>
-    [[nodiscard]] auto emplace_front(StableAllocator auto& allocator,
-                                     Args&&... arguments)
+    auto emplace_front(StableAllocator auto& allocator, Args&&... arguments)
         -> Optional<Iterator> {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
@@ -560,34 +554,39 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         // special-cased.
         if (this->length == 0) [[unlikely]] {
             this->place_initial_node(node);
-            return Iterator{&node};
+        } else {
+            this->place_node_front(node);
         }
-
-        this->place_node_front(node);
         return Iterator{&node};
     }
 
     // Remove an element from the front of this list.
-    void pop_front(StableAllocator auto& allocator) {
+    auto pop_front(StableAllocator auto& allocator) -> Optional<void> {
         if (this->length == 0) [[unlikely]] {
             // Prevent a segfault when the list is empty.
-            return;
+            return monostate;
         }
 
         Node& node = *this->p_head;
         this->p_head = node.p_next_node;
         this->length--;
-        Optional result = allocator.free(&node);
-        Result(result.has_value()).assert();
+        return allocator.free(&node);
     }
 
-    // Remove and deallocate all elements from this list.
-    void clear(StableAllocator auto& allocator) {
+    // Remove and deallocate all elements from this list. All nodes must have
+    // been allocated by the same arena for this function to succeed.
+    auto clear(StableAllocator auto& allocator) -> Optional<void> {
         for (Iterator iterator = this->begin(); iterator != this->end();
              ++iterator) {
             Optional result = allocator.free(iterator.p_node);
-            Result(result.has_value()).assert();
+            // `.clear` should never be given an allocator that can fail here.
+            // Failures might happen if some nodes were allocated by a different
+            // arena than this passed-in `allocator`.
+            if (!result.has_value()) [[unlikely]] {
+                return result;
+            }
         }
+        return monostate;
     }
 
     // Providing these four iterator getters generates the remaining 4 through
