@@ -97,7 +97,6 @@ class Array : public CollectionFacade<Array<T, length>, T> {
 
 // Construct an `Array` as: `cat::Array array = {0, 1, 2};`
 template <typename T, typename... Args>
-Array(T, Args...)
-    -> Array<T, static_cast<signed int long>(sizeof...(Args)) + 1>;
+Array(T, Args...) -> Array<T, ssize{sizeof...(Args)} + 1>;
 
 }  // namespace cat
