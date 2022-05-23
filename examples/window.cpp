@@ -1,11 +1,11 @@
 #include <cat/allocators>
-#include <cat/x>
+#include <cat/x11>
 
 void meow() {
     cat::PageAllocator allocator;
     // TODO: Work on this more.
-    [[maybe_unused]] xwin::Connection connection =
-        xwin::initiate_connection(allocator).or_panic(
+    [[maybe_unused]] x11::Connection connection =
+        x11::initiate_connection(allocator).or_panic(
             "Failed to create an X context!");
     cat::exit();
 }
