@@ -73,6 +73,8 @@ void meow() {
         list_1.pop_front(allocator);
     }
 
+    list_2.clear(allocator);
+
     _ = page_allocator.free(page);
     cat::exit();
 }
