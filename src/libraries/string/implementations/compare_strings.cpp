@@ -23,14 +23,8 @@ auto cat::compare_strings(String const& string_1, String const& string_2)
         while (length_iterator >= vector_size * size) {
             for (int i = 0; i < size; i++) {
                 // TODO: Use `String::data()` getter methods.
-                vector_1[i] =
-                    *(static_cast<VectorType const*>(
-                          static_cast<void const*>(string_1.p_data())) +
-                      (i * size));
-                vector_2[i] =
-                    *(static_cast<VectorType const*>(
-                          static_cast<void const*>(string_2.p_data())) +
-                      (i * size));
+                vector_1[i].load(string_1.p_data() + (i * size));
+                vector_2[i].load(string_2.p_data() + (i * size));
                 mask[i] = vector_1[i] + vector_2[i];
                 results[i] = cat::move_mask(mask[i]);
             }
