@@ -48,7 +48,7 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
     }
 
     // Get the maximum possible count of elements stored in a `List`.
-    [[nodiscard]] auto capacity() const -> ssize {
+    [[nodiscard]] constexpr auto capacity() const -> ssize {
         return this->length.max();
     }
 
@@ -142,7 +142,7 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
     // `where`.
     [[nodiscard]] auto insert(::meta::StableAllocator auto& allocator,
                               Iterator where, T const& value)
-        -> Optional<Iterator> {
+        -> Optional<void> {
         // `cat::OptionalPtr` produces an internal compiler error in GCC 12.
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
@@ -156,11 +156,11 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
         // If this list has nothing in it, `.insert()` must be special-cased.
         if (this->length == 0) [[unlikely]] {
             this->place_only_node(node);
-            return Iterator{&node};
+            return monostate;
         }
 
         this->place_node(where, node);
-        return Iterator{&node};
+        return monostate;
     }
 
     // Allocate a node and insert it into this list before the position of
@@ -188,11 +188,12 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
         return Iterator{&node};
     }
 
-    // Remove an element from this list.
-    void erase(::meta::StableAllocator auto& allocator, Iterator where) {
+    // Remove and deallocate an element from this list.
+    auto erase(::meta::StableAllocator auto& allocator, Iterator where)
+        -> Optional<void> {
         if (this->length == 0) [[unlikely]] {
             // Prevent a segfault when the list is empty.
-            return;
+            return monostate;
         }
 
         Node& node = *where.p_node;
@@ -212,6 +213,7 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
         this->length--;
         Optional result = allocator.free(&node);
         Result(result.has_value()).assert();
+        return monostate;
     }
 
     // Allocate a node and insert it at the beginning of this list.
@@ -325,7 +327,7 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
         return Iterator{&node};
     }
 
-    // Remove an element from the back of this list.
+    // Remove and deallocate an element from the back of this list.
     void pop_back(::meta::StableAllocator auto& allocator) {
         if (this->length == 0) [[unlikely]] {
             // Prevent a segfault when the list is empty.
@@ -340,6 +342,15 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
         this->length--;
         Optional result = allocator.free(&node);
         Result(result.has_value()).assert();
+    }
+
+    // Remove and deallocate all elements from this list.
+    void clear(::meta::StableAllocator auto& allocator) {
+        for (Iterator iterator = this->begin(); iterator != this->end();
+             ++iterator) {
+            Optional result = allocator.free(iterator.p_node);
+            Result(result.has_value()).assert();
+        }
     }
 
     // Providing these four iterator getters generates the remaining 8 through
