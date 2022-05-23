@@ -5,11 +5,6 @@
 #include <cat/memory>
 #include <cat/meta>
 
-// TODO: Support `single_pass` iterators.
-//
-// Many of the ideas in this file are explained here:
-// https://vector-of-bool.github.io/2020/06/13/cpp20-iter-facade.html
-
 namespace cat {
 
 // TODO: More iterable related concepts.
@@ -17,16 +12,6 @@ template <typename T>
 concept Iterable = requires(T t) {
     t.begin();
     t.end();
-};
-
-// https://quuxplusone.github.io/blog/2019/02/06/arrow-proxy/
-// TODO: Move this into somewhere generally useful.
-template <class Reference>
-struct ArrowProxy {
-    Reference r;
-    auto operator->() -> Reference* {
-        return &r;
-    }
 };
 
 namespace detail {
@@ -106,9 +91,7 @@ concept DifferenceTypeArg = ConvertibleTo<Arg, InferDifferenceType<Iter>>;
 template <typename T>
 using InferValueType_t = typename detail::InferValueType<T>::type::type;
 
-// https://vector-of-bool.github.io/2020/06/13/cpp20-iter-facade.html
-// Every `IteratorFacade` is `indirectly_readable` and is a
-// `forward_iterator`.
+// Every `IteratorFacade` is `indirectly_readable`.
 template <typename Derived>
 struct IteratorFacade {
     // `Type` is needed for reversing.
