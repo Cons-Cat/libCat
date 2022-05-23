@@ -27,10 +27,10 @@ class Array : public CollectionFacade<Array<T, length>, T> {
                                                length.c())
         : storage(arguments...){};
 
-    template <Integral U, U... Is>
-    constexpr Array(IntegerList<U, Is...> const values) requires(
+    template <Integral U, U... Us>
+    constexpr Array(IntegerList<U, Us...> const values) requires(
         is_convertible<U, T>&& values.size == length)
-        : storage(static_cast<T>(Is)...){};
+        : storage(static_cast<T>(Us)...){};
 
     // If this is an `Array<char>`, it can be constructed from a string.
     constexpr Array(String const& string) requires(
