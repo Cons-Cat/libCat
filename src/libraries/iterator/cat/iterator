@@ -10,7 +10,8 @@
 // Many of the ideas in this file are explained here:
 // https://vector-of-bool.github.io/2020/06/13/cpp20-iter-facade.html
 
-namespace meta {
+namespace cat {
+
 // TODO: More iterable related concepts.
 template <typename T>
 concept Iterable = requires(T t) {
@@ -28,92 +29,86 @@ struct ArrowProxy {
     }
 };
 
-}  // namespace meta
+namespace detail {
+    template <typename T>
+    concept HasIncrement = requires(T it) {
+        it.increment();
+    };
 
-namespace cat::detail {
+    template <typename T>
+    concept HasDecrement = requires(T it) {
+        it.decrement();
+    };
 
-template <typename T>
-concept HasIncrement = requires(T it) {
-    it.increment();
-};
+    template <typename T>
+    concept HasDistance = requires(T const t) {
+        t.distance(t);
+    };
 
-template <typename T>
-concept HasDecrement = requires(T it) {
-    it.decrement();
-};
+    template <typename T>
+    concept HasEqualTo = requires(T const it) {
+        { it.equal_to(it) } -> ConvertibleTo<bool>;
+    };
 
-template <typename T>
-concept HasDistance = requires(T const t) {
-    t.distance(t);
-};
+    template <typename>
+    struct InferDifferenceType {
+        using type = ssize;
+    };
 
-template <typename T>
-concept HasEqualTo = requires(T const it) {
-    { it.equal_to(it) } -> ::meta::ConvertibleTo<bool>;
-};
+    // Case when `T` provides `.distance()`
+    template <detail::HasDistance T>
+    struct InferDifferenceType<T> {
+        static T const& it;
+        using type = decltype(it.distance(it));
+    };
 
-template <typename>
-struct InferDifferenceType {
-    using type = ssize;
-};
+    template <typename...>
+    struct InferValueType {};
 
-// Case when `T` provides `.distance()`
-template <detail::HasDistance T>
-struct InferDifferenceType<T> {
-    static T const& it;
-    using type = decltype(it.distance(it));
-};
+    template <typename T>
+    struct InferValueType<T> {
+        static const T& it;
+        using type = RemoveCvref<decltype(*it)>;
+    };
 
-template <typename...>
-struct InferValueType {};
+    template <typename T>
+    requires requires {
+        typename T::value_type;
+    }
+    struct InferValueType<T> {
+        using type = typename T::value_type;
+    };
 
-template <typename T>
-struct InferValueType<T> {
-    static const T& it;
-    using type = ::meta::RemoveCvref<decltype(*it)>;
-};
+    template <typename T>
+    concept HasAdvance = requires(T it, InferDifferenceType<T> const offset) {
+        it.advance(offset);
+    };
 
-template <typename T>
-requires requires {
-    typename T::value_type;
-}
-struct InferValueType<T> {
-    using type = typename T::value_type;
-};
+    template <typename T>
+    concept HasRandomAccess = HasAdvance<T> && HasDistance<T>;
 
-template <typename T>
-concept HasAdvance = requires(T it, InferDifferenceType<T> const offset) {
-    it.advance(offset);
-};
+    template <typename T>
+    concept HasBidirectional = HasRandomAccess<T> || HasDecrement<T>;
 
-template <typename T>
-concept HasRandomAccess = HasAdvance<T> && HasDistance<T>;
+    template <typename T>
+    concept HasSinglePass = bool(T::single_pass_iterator);
 
-template <typename T>
-concept HasBidirectional = HasRandomAccess<T> || HasDecrement<T>;
-
-template <typename T>
-concept HasSinglePass = bool(T::single_pass_iterator);
-
-template <typename Iter, typename T>
-concept HasSentinel = ::meta::SameAs<T, typename T::sentinel_type>;
-
-}  // namespace cat::detail
+    template <typename Iter, typename T>
+    concept HasSentinel = SameAs<T, typename T::sentinel_type>;
+}  // namespace detail
 
 template <typename T>
-using InferDifferenceType = typename cat::detail::InferDifferenceType<T>::type;
+using InferDifferenceType = typename detail::InferDifferenceType<T>::type;
 
 template <typename Arg, typename Iter>
-concept DifferenceTypeArg =
-    ::meta::ConvertibleTo<Arg, InferDifferenceType<Iter>>;
+concept DifferenceTypeArg = ConvertibleTo<Arg, InferDifferenceType<Iter>>;
 
 template <typename T>
-using InferValueType_t = typename cat::detail::InferValueType<T>::type::type;
-
-namespace cat {
+using InferValueType_t = typename detail::InferValueType<T>::type::type;
 
 // https://vector-of-bool.github.io/2020/06/13/cpp20-iter-facade.html
-// Every `IteratorFacade` is `indirectly_readable` and is a `forward_iterator`.
+// Every `IteratorFacade` is `indirectly_readable` and is a
+// `forward_iterator`.
 template <typename Derived>
 struct IteratorFacade {
     // `Type` is needed for reversing.
@@ -137,17 +132,18 @@ struct IteratorFacade {
 
     constexpr auto operator->() const {
         decltype(auto) reference = **this;
-        if constexpr (::meta::is_reference<decltype(reference)>) {
-            // If `reference` is actually a reference type, return its address.
-            return cat::addressof(reference);
+        if constexpr (is_reference<decltype(reference)>) {
+            // If `reference` is actually a reference type, return its
+            // address.
+            return addressof(reference);
         } else {
-            return ArrowProxy(cat::move(reference));
+            return ArrowProxy(move(reference));
         }
     }
 
     constexpr friend auto operator==(Derived const& left, Derived const& right)
         -> bool {
-        if constexpr (cat::detail::HasEqualTo<Derived>) {
+        if constexpr (detail::HasEqualTo<Derived>) {
             return left.equal_to(right);
         } else {
             return left.distance(right) == 0;
@@ -155,7 +151,7 @@ struct IteratorFacade {
     }
 
     constexpr friend auto operator==(Derived const& self,
-                                     cat::detail::HasSentinel<Derived> auto)
+                                     detail::HasSentinel<Derived> auto)
         -> bool {
         return self.at_end();
     }
@@ -200,7 +196,7 @@ struct IteratorFacade {
 
     // Increment or advance forwards with prefix notation.
     constexpr auto operator++() -> Derived& {
-        if constexpr (cat::detail::HasIncrement<Derived>) {
+        if constexpr (detail::HasIncrement<Derived>) {
             this->self().increment();
         } else {
             this->self().advance(1);
@@ -248,7 +244,7 @@ struct IteratorFacade {
 
     // Decrement or advance backwards with prefix notation.
     constexpr auto operator--() -> Derived& {
-        if constexpr (cat::detail::HasDecrement<Derived>) {
+        if constexpr (detail::HasDecrement<Derived>) {
             this->self().decrement();
         } else {
             this->self().advance(-1);
@@ -266,7 +262,7 @@ struct IteratorFacade {
     // TODO: This seems incorrect.
     // Random-access.
     constexpr auto operator[](DifferenceTypeArg<Derived> auto offset)
-        -> decltype(auto) requires cat::detail::HasAdvance<Derived> {
+        -> decltype(auto) requires detail::HasAdvance<Derived> {
         return *(this->self() + offset);
     }
 
@@ -281,26 +277,26 @@ struct OutputIteratorTag {};
 struct ContiguousIteratorTag {};
 
 template <typename T>
-requires ::meta::is_base_of<IteratorFacade<T>, T>
+requires is_base_of<IteratorFacade<T>, T>
 struct IteratorTraits {
     static T const& it;
     using Value = typename InferValueType_t<T>::type;
     using Reference = decltype(*it);
     using Pointer = decltype(it.operator->());
     using Difference = InferDifferenceType<T>;
-    using Category = ::meta::Conditional<
+    using Category = Conditional<
         // If this can be a random access iterator, it always will be.
-        cat::detail::HasRandomAccess<T>, RandomAccessIteratorTag,
-        ::meta::Conditional<
-            // If this has a `++` and a `--` operator, this is a bidirectional
-            // iterator.
-            cat::detail::HasBidirectional<T>, BidirectionalIteratorTag,
-            ::meta::Conditional<cat::detail::HasSinglePass<T>,
-                                // If it is single-pass, this is a forward
-                                // iterator.
-                                InputIteratorTag,
-                                // Default to a forward iterator.
-                                ForwardIteratorTag>>>;
+        detail::HasRandomAccess<T>, RandomAccessIteratorTag,
+        Conditional<
+            // If this has a `++` and a `--` operator, this is a
+            // bidirectional iterator.
+            detail::HasBidirectional<T>, BidirectionalIteratorTag,
+            Conditional<detail::HasSinglePass<T>,
+                        // If it is single-pass, this is a forward
+                        // iterator.
+                        InputIteratorTag,
+                        // Default to a forward iterator.
+                        ForwardIteratorTag>>>;
     // using IteratorConcept = Category;
 };
 
@@ -311,7 +307,7 @@ struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
     // Forward any constructor to `iterator`.
     template <typename... Args>
     constexpr ReversedIterator(Args&&... args)
-        : iterator(::meta::forward<Args>(args)...){};
+        : iterator(forward<Args>(args)...){};
 
     constexpr auto dereference() {
         return this->iterator.dereference();
@@ -339,7 +335,7 @@ struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
     }
 };
 
-template <::meta::Iterable T>
+template <Iterable T>
 class AsReverse {
     T& iterable;
 
@@ -363,7 +359,7 @@ class AsReverse {
     }
 };
 
-template <::meta::Iterable T>
+template <Iterable T>
 class AsConst {
     T& iterable;
 
@@ -379,7 +375,7 @@ class AsConst {
     }
 };
 
-template <::meta::Iterable T>
+template <Iterable T>
 class AsConstReverse {
     T& iterable;
 
@@ -395,23 +391,16 @@ class AsConstReverse {
     }
 };
 
-}  // namespace cat
-
-namespace meta {
-
 template <typename T>
 concept RandomAccessIterator =
-    meta::is_same<typename cat::IteratorTraits<T>::Category,
-                  cat::RandomAccessIteratorTag>;
+    is_same<typename IteratorTraits<T>::Category, RandomAccessIteratorTag>;
 
 template <typename T>
 concept BidirectionalIterator =
-    meta::is_same<typename cat::IteratorTraits<T>::Category,
-                  cat::BidirectionalIteratorTag>;
+    is_same<typename IteratorTraits<T>::Category, BidirectionalIteratorTag>;
 
 template <typename T>
 concept ForwardIterator =
-    meta::is_same<typename cat::IteratorTraits<T>::Category,
-                  cat::ForwardIteratorTag>;
+    is_same<typename IteratorTraits<T>::Category, ForwardIteratorTag>;
 
-}  // namespace meta
+}  // namespace cat

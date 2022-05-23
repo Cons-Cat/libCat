@@ -404,7 +404,7 @@ struct Connection {
 };
 
 // TODO: Propagate errors instead of panicking.
-auto handshake(meta::Allocator auto& allocator,
+auto handshake(cat::Allocator auto& allocator,
                cat::SocketUnix<cat::SocketType::stream>& socket)
     -> cat::Optional<xwin::Connection> {
     xwin::Connection x_connection;
@@ -475,7 +475,7 @@ auto handshake(meta::Allocator auto& allocator,
 
 // TODO: Improve error handling. Union X11 errors and Linux errors.
 // Attempt to connect to an X server over local sockets.
-auto initiate_connection(meta::Allocator auto& allocator)
+auto initiate_connection(cat::Allocator auto& allocator)
     -> cat::Optional<xwin::Connection> {
     cat::SocketUnix<cat::SocketType::stream> socket;
     socket.path_name = xwin::socket_path;

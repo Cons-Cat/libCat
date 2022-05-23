@@ -40,7 +40,7 @@ void meow() {
     char chars[5] = "foo\0";
     cat::Span<char> span = {chars, 4};
     span[0] = 'a';
-    auto foo = meta::unconst(span).begin();
+    auto foo = cat::unconst(span).begin();
     *foo = 'a';
     for (char& c : span) {
         c = 'a';

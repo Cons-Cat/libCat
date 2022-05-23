@@ -4,13 +4,13 @@
 
 #include <cat/meta>
 
-// TODO: add a `meta::invocable` concept.
+// TODO: add a `cat::invocable` concept.
 template <typename Function>
-consteval auto meta::constant_evaluate(auto value) requires(
-    meta::is_invocable<Function>) {
+consteval auto cat::constant_evaluate(auto value) requires(
+    cat::is_invocable<Function>) {
     return value();
 }
 
-consteval auto meta::constant_evaluate(auto value) {
+consteval auto cat::constant_evaluate(auto value) {
     return value;
 }

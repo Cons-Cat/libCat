@@ -11,14 +11,14 @@ struct NumericLimits;
 
 namespace detail {
     template <typename T>
-    concept CatNumeral = meta::is_cat_numeral<T>;
+    concept CatNumeral = is_cat_numeral<T>;
 
     template <typename T, typename U>
     consteval auto is_safe_conversion() -> bool {
         // clang-format off
     return (sizeof(T) >= sizeof(U))
-		   && (meta::is_signed<T> == meta::is_signed<U>)
-	       && (meta::is_floating_point<T> == meta::is_floating_point<U>);
+		   && (is_signed<T> == is_signed<U>)
+	       && (is_floating_point<T> == is_floating_point<U>);
         // clang-format on
     }
 
@@ -27,9 +27,9 @@ namespace detail {
         using UnderlyingT = typename T::Type;
         // clang-format off
     return (sizeof(UnderlyingT) >= sizeof(U))
-		   && (meta::is_signed<UnderlyingT> == meta::is_signed<U>)
-	       && (meta::is_floating_point<UnderlyingT>
-               == meta::is_floating_point<U>);
+		   && (is_signed<UnderlyingT> == is_signed<U>)
+	       && (is_floating_point<UnderlyingT>
+               == is_floating_point<U>);
         // clang-format on
     }
 
@@ -38,9 +38,9 @@ namespace detail {
         using UnderlyingU = typename U::Type;
         // clang-format off
     return (sizeof(T) >= sizeof(UnderlyingU))
-		   && (meta::is_signed<T> == meta::is_signed<UnderlyingU>)
-	       && (meta::is_floating_point<T>
-               == meta::is_floating_point<UnderlyingU>);
+		   && (is_signed<T> == is_signed<UnderlyingU>)
+	       && (is_floating_point<T>
+               == is_floating_point<UnderlyingU>);
         // clang-format on
     }
 
@@ -50,10 +50,10 @@ namespace detail {
         using UnderlyingU = typename U::Type;
         // clang-format off
     return (sizeof(UnderlyingT) >= sizeof(UnderlyingU))
-		   && (meta::is_signed<UnderlyingT>
-               == meta::is_signed<UnderlyingU>)
-	       && (meta::is_floating_point<UnderlyingT>
-               == meta::is_floating_point<UnderlyingU>);
+		   && (is_signed<UnderlyingT>
+               == is_signed<UnderlyingU>)
+	       && (is_floating_point<UnderlyingT>
+               == is_floating_point<UnderlyingU>);
         // clang-format on
     }
 }  // namespace detail
@@ -90,7 +90,7 @@ struct Numeral {
 
     template <typename U>
     constexpr explicit operator U() {
-        if constexpr (meta::IsSpecializationTrait<U, Numeral>::value) {
+        if constexpr (IsSpecializationTrait<U, Numeral>::value) {
             // If `U` is a `Numeral`, cast into `U`'s underlying type.
             return static_cast<typename U::Type>(this->storage);
         } else {
@@ -101,7 +101,7 @@ struct Numeral {
 
     template <typename U>
     constexpr explicit operator U() const {
-        if constexpr (meta::IsSpecializationTrait<U, Numeral>::value) {
+        if constexpr (IsSpecializationTrait<U, Numeral>::value) {
             // If `U` is a `Numeral`, cast into `U`'s underlying type.
             return static_cast<typename U::Type>(this->storage);
         } else {
@@ -264,72 +264,77 @@ Numeral(T) -> Numeral<T>;
 // TODO: Return a `Numeral` that is the larger size of either operand.
 template <typename T, typename U>
 constexpr auto operator>(T const lhs, Numeral<U> const rhs)
-    -> bool requires(meta::is_convertible<U, T> &&
-                     !meta::IsSpecializationTrait<T, Numeral>::value) {
+    -> bool requires(is_convertible<U, T> &&
+                     !IsSpecializationTrait<T, Numeral>::value) {
     return lhs > rhs.storage;
 }
 
 template <typename T, typename U>
 constexpr auto operator>=(T const lhs, Numeral<U> const rhs)
-    -> bool requires(meta::is_convertible<U, T> &&
-                     !meta::IsSpecializationTrait<T, Numeral>::value) {
+    -> bool requires(is_convertible<U, T> &&
+                     !IsSpecializationTrait<T, Numeral>::value) {
     return lhs >= rhs.storage;
 }
 
 template <typename T, typename U>
 constexpr auto operator<(T const lhs, Numeral<U> const rhs)
-    -> bool requires(meta::is_convertible<U, T> &&
-                     !meta::IsSpecializationTrait<T, Numeral>::value) {
+    -> bool requires(is_convertible<U, T> &&
+                     !IsSpecializationTrait<T, Numeral>::value) {
     return lhs < rhs.storage;
 }
 
 template <typename T, typename U>
 constexpr auto operator<=(T const lhs, Numeral<U> const rhs)
-    -> bool requires(meta::is_convertible<U, T> &&
-                     !meta::IsSpecializationTrait<T, Numeral>::value) {
+    -> bool requires(is_convertible<U, T> &&
+                     !IsSpecializationTrait<T, Numeral>::value) {
     return lhs <= rhs.storage;
 }
 
 // Order-independant operators for `Numeral` and primitive numerals.
 template <typename T, typename U>
 constexpr auto operator==(Numeral<T> const lhs, U const rhs)
-    -> bool requires(meta::is_signed<T> == meta::is_signed<U> &&
-                     meta::is_floating_point<T> == meta::is_floating_point<U>) {
+    -> bool requires(is_signed<T> == is_signed<U> &&
+                     is_floating_point<T> == is_floating_point<U>) {
     return lhs.storage == static_cast<T const>(rhs);
 }
 
 template <typename T, typename U>
-constexpr auto operator+(Numeral<T> const lhs, U const rhs) requires(
-    meta::is_signed<T> == meta::is_signed<U> &&
-    meta::is_floating_point<T> == meta::is_floating_point<U>) {
+constexpr auto operator+(Numeral<T> const lhs,
+                         U const rhs) requires(is_signed<T> == is_signed<U> &&
+                                               is_floating_point<T> ==
+                                                   is_floating_point<U>) {
     return Numeral{lhs.storage + static_cast<T const>(rhs)};
 }
 
 template <typename T, typename U>
-constexpr auto operator-(Numeral<T> const lhs, U const rhs) requires(
-    meta::is_signed<T> == meta::is_signed<U> &&
-    meta::is_floating_point<T> == meta::is_floating_point<U>) {
+constexpr auto operator-(Numeral<T> const lhs,
+                         U const rhs) requires(is_signed<T> == is_signed<U> &&
+                                               is_floating_point<T> ==
+                                                   is_floating_point<U>) {
     return Numeral{lhs.storage - static_cast<T const>(rhs)};
 }
 
 template <typename T, typename U>
-constexpr auto operator*(Numeral<T> const lhs, U const rhs) requires(
-    meta::is_signed<T> == meta::is_signed<U> &&
-    meta::is_floating_point<T> == meta::is_floating_point<U>) {
+constexpr auto operator*(Numeral<T> const lhs,
+                         U const rhs) requires(is_signed<T> == is_signed<U> &&
+                                               is_floating_point<T> ==
+                                                   is_floating_point<U>) {
     return Numeral{lhs.storage * static_cast<T const>(rhs)};
 }
 
 template <typename T, typename U>
-constexpr auto operator&(Numeral<T> const lhs, U const rhs) requires(
-    meta::is_signed<T> == meta::is_signed<U> &&
-    meta::is_floating_point<T> == meta::is_floating_point<U>) {
+constexpr auto operator&(Numeral<T> const lhs,
+                         U const rhs) requires(is_signed<T> == is_signed<U> &&
+                                               is_floating_point<T> ==
+                                                   is_floating_point<U>) {
     return Numeral{lhs.storage & static_cast<T const>(rhs)};
 }
 
-template <typename T, meta::Integral U>
-constexpr auto operator|(Numeral<T> const lhs, U const rhs) requires(
-    meta::is_signed<T> == meta::is_signed<U> &&
-    meta::is_floating_point<T> == meta::is_floating_point<U>) {
+template <typename T, Integral U>
+constexpr auto operator|(Numeral<T> const lhs,
+                         U const rhs) requires(is_signed<T> == is_signed<U> &&
+                                               is_floating_point<T> ==
+                                                   is_floating_point<U>) {
     return Numeral{lhs.storage | static_cast<T>(rhs)};
 }
 
@@ -479,14 +484,14 @@ struct bool4 {  // NOLINT
 namespace detail {
     // Satisfies any type that is an integer and is not `intptr` or `uintptr`.
     template <typename T>
-    concept NonPtrIntegral = meta::is_integral<T> &&
-        !meta::IsSpecializationTrait<T, ArithmeticPtr>::value;
+    concept NonPtrIntegral =
+        is_integral<T> && !IsSpecializationTrait<T, ArithmeticPtr>::value;
 }  // namespace detail
 
 // `ArithmeticPtr` can be constructed from any integer type or any pointer. It
 // can only convert into `T*`, but it is otherwise interchangeable with
-// integers. It satisfies the `meta::is_integral` type trait and
-// `meta::Integral` concept.
+// integers. It satisfies the `is_integral` type trait and
+// `Integral` concept.
 template <typename T, typename Storage>
 struct ArithmeticPtr {
     Storage storage;

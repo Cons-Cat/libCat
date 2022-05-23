@@ -4,7 +4,7 @@
 
 #include <cat/meta>
 
-namespace meta {
+namespace cat {
 
 template <typename T>
 struct HigherType {
@@ -14,7 +14,7 @@ struct HigherType {
 
     template <typename U>
     consteval auto operator==(HigherType<U> const) -> bool {
-        return meta::is_same<U, T>;
+        return is_same<U, T>;
     }
 };
 
@@ -48,14 +48,14 @@ class TypeList {
     // If the last element in this type list is `T`.
     template <typename T, typename U>
     static consteval auto recurse_for_type() -> bool {
-        return meta::is_same<T, U>;
+        return is_same<T, U>;
     }
 
     // If the any element in this type list is `T`.
     template <typename T, typename U, typename... Us>
     static consteval auto recurse_for_type()
         -> bool requires(sizeof...(Us) > 0) {
-        return meta::is_same<T, U> ? true : recurse_for_type<T, Us...>();
+        return is_same<T, U> ? true : recurse_for_type<T, Us...>();
     }
 
     // Propagate the final count of occurences of `T` in this type list.
@@ -68,8 +68,8 @@ class TypeList {
     template <typename T, ssize count, typename U, typename... Us>
     static consteval auto recurse_for_count() -> ssize
         requires(sizeof...(Us) >= 0) {
-        return meta::is_same<T, U> ? recurse_for_count<T, count + 1, Us...>()
-                                   : recurse_for_count<T, count, Us...>();
+        return is_same<T, U> ? recurse_for_count<T, count + 1, Us...>()
+                             : recurse_for_count<T, count, Us...>();
     }
 
     template <typename U>
@@ -89,8 +89,7 @@ class TypeList {
 
     // Produce an alias to the type stored at an index in this type list.
     template <ssize index>
-    using Get =
-        typename RecurseForTypeAtIndex<meta::TypeList<Ts...>, index>::Result;
+    using Get = typename RecurseForTypeAtIndex<TypeList<Ts...>, index>::Result;
 
     // Evaluate `true` iff this type list holds a type `T`.
     template <typename T>
@@ -109,4 +108,4 @@ class TypeList {
     static constexpr bool is_unique_list = recurse_for_unique<Ts...>();
 };
 
-}  // namespace meta
+}  // namespace cat

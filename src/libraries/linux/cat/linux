@@ -283,10 +283,9 @@ namespace detail {
     // Map `void` to `cat::MonostateStorage` and map `T*` to `intptr<T>` so that
     // these types can both hold `-1`.
     template <typename T>
-    using MapSyscallType =
-        meta::Conditional<meta::is_void<T>, cat::MonostateStorage<int, 0>,
-                          meta::Conditional<meta::is_pointer<T>,
-                                            intptr<meta::RemovePointer<T>>, T>>;
+    using MapSyscallType = cat::Conditional<
+        cat::is_void<T>, cat::MonostateStorage<int, 0>,
+        cat::Conditional<cat::is_pointer<T>, intptr<cat::RemovePointer<T>>, T>>;
 
     template <typename T>
     constexpr auto is_positive(T const input) -> bool1 {
@@ -349,7 +348,7 @@ struct FileDescriptor {
     constexpr FileDescriptor() = default;
 
     // This is generic to simplify type-punning.
-    constexpr FileDescriptor(meta::Integral auto const input) {
+    constexpr FileDescriptor(cat::Integral auto const input) {
         this->value = static_cast<int>(input);
     }
 
@@ -395,7 +394,7 @@ struct GroupId {
     constexpr GroupId() = default;
 
     // This is generic to simplify type-punning.
-    constexpr GroupId(meta::Integral auto const input) {
+    constexpr GroupId(cat::Integral auto const input) {
         this->value = static_cast<int>(input);
     }
 
@@ -497,15 +496,15 @@ enum class OpenFlags {
 
 // Enable using these `enum class`es as bit-flags.
 template <>
-struct meta::EnumFlagTrait<nix::MemoryProtectionFlags> : meta::TrueTypeTrait {};
+struct cat::EnumFlagTrait<nix::MemoryProtectionFlags> : cat::TrueTypeTrait {};
 template <>
-struct meta::EnumFlagTrait<nix::MemoryFlags> : meta::TrueTypeTrait {};
+struct cat::EnumFlagTrait<nix::MemoryFlags> : cat::TrueTypeTrait {};
 template <>
-struct meta::EnumFlagTrait<nix::OpenFlags> : meta::TrueTypeTrait {};
+struct cat::EnumFlagTrait<nix::OpenFlags> : cat::TrueTypeTrait {};
 template <>
-struct meta::EnumFlagTrait<nix::CloneFlags> : meta::TrueTypeTrait {};
+struct cat::EnumFlagTrait<nix::CloneFlags> : cat::TrueTypeTrait {};
 template <>
-struct meta::EnumFlagTrait<nix::WaitOptionsFlags> : meta::TrueTypeTrait {};
+struct cat::EnumFlagTrait<nix::WaitOptionsFlags> : cat::TrueTypeTrait {};
 
 namespace nix {
 
@@ -618,8 +617,8 @@ struct Process {
 
     Process() = default;
     Process(Process const&) = delete;
-    // TODO: Add `meta::Invocable` concept.
-    // TODO: Use `meta::Allocator` concept.
+    // TODO: Add `cat::Invocable` concept.
+    // TODO: Use `cat::Allocator` concept.
     auto create(auto& allocator, ssize const initial_stack_size,
                 auto const& function, void* p_arguments_struct,
                 CloneFlags const flags = default_flags) -> ScaredyLinux<void> {
@@ -752,7 +751,7 @@ struct FileStatus {
     auto is_regular() const -> bool1 {
         return (this->protections_mode & uint4{0170000u}) == 0100000u;
     }
-    static_assert(!meta::EnumFlagTrait<uint4>::value);
+    static_assert(!cat::EnumFlagTrait<uint4>::value);
 
     auto is_directory() const -> bool1 {
         return (this->protections_mode & 0170000u) == 0040000u;

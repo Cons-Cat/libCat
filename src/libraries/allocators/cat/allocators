@@ -29,7 +29,7 @@ namespace detail {
             Type stack_storage;
             // Reserve `small_size_threshold` bytes to make the size
             // of this handle predictible.
-            cat::Byte empty[cat::detail::small_size_threshold];
+            Byte empty[detail::small_size_threshold];
         };
         bool1 is_on_stack;
 
@@ -61,10 +61,6 @@ namespace detail {
     };
 }  // namespace detail
 
-}  // namespace cat
-
-namespace meta {
-
 template <typename AllocatorT, typename AllocationU = void*>
 concept Allocator = requires(AllocatorT allocator) {
     // Every allocator has a `.malloc()` method.
@@ -81,11 +77,11 @@ concept Allocator = requires(AllocatorT allocator) {
 namespace detail {
     template <typename AllocatorT, typename AllocationU = void*>
     concept StableDerivedAllocator = requires(AllocatorT it) {
-        // If an allocator allocates a `cat::OptionalPtr<T>` or
-        // `cat::Optional<T*>`, it is assumed to have pointer-stability.
-        meta::is_pointer<decltype(it.template allocate<AllocationU>(
-                                        ssizeof<AllocationU>())
-                                      .value())>;
+        // If an allocator allocates a `OptionalPtr<T>` or
+        // `Optional<T*>`, it is assumed to have pointer-stability.
+        is_pointer<decltype(it.template allocate<AllocationU>(
+                                  ssizeof<AllocationU>())
+                                .value())>;
     };
 }  // namespace detail
 
@@ -93,10 +89,6 @@ template <typename AllocatorT, typename AllocationU = void*>
 concept StableAllocator = requires(AllocatorT it) {
     it.template p_malloc<AllocationU>();
 };
-
-}  // namespace meta
-
-namespace cat {
 
 template <typename Derived>
 struct AllocatorFacade {
@@ -121,34 +113,32 @@ struct AllocatorFacade {
             decltype(this->self().template allocate<T>(allocation_size));
 
         // Produce an appropriate handle type for this allocation.
-        using Handle = ::meta::Conditional<
+        using Handle = Conditional<
             is_aligned,
-            ::meta::Conditional<
-                is_small_optimized,
-                // If this is aligned and it is small-optimized:
-                cat::detail::AlignedMemoryHandle<
-                    cat::detail::SmallMemoryHandle<UnderlyingHandle>>,
-                // If this is aligned but it is not
-                // small-optimized:
-                cat::detail::AlignedMemoryHandle<UnderlyingHandle>>,
-            ::meta::Conditional<
-                is_small_optimized,
-                // If this is not aligned but it is
-                // small-optimized:
-                cat::detail::SmallMemoryHandle<UnderlyingHandle>,
-                // If this is not aligned and it is not
-                // small-optimized:
-                UnderlyingHandle>>;
+            Conditional<is_small_optimized,
+                        // If this is aligned and it is small-optimized:
+                        detail::AlignedMemoryHandle<
+                            detail::SmallMemoryHandle<UnderlyingHandle>>,
+                        // If this is aligned but it is not
+                        // small-optimized:
+                        detail::AlignedMemoryHandle<UnderlyingHandle>>,
+            Conditional<is_small_optimized,
+                        // If this is not aligned but it is
+                        // small-optimized:
+                        detail::SmallMemoryHandle<UnderlyingHandle>,
+                        // If this is not aligned and it is not
+                        // small-optimized:
+                        UnderlyingHandle>>;
 
         // Initialize an empty `Optional`.
         Allocation maybe_memory;
 
         if constexpr (!is_aligned) {
             if constexpr (is_small_optimized) {
-                if (allocation_size < cat::detail::small_size_threshold) {
+                if (allocation_size < detail::small_size_threshold) {
                     // Allocate memory on this stack frame and return it, iff
                     // that would be smaller than
-                    // `cat::detail::small_size_threshold`.
+                    // `detail::small_size_threshold`.
                     T stack_memory;
                     Handle stack_handle = stack_memory;
                     return Optional<Handle>(stack_handle);
@@ -199,7 +189,7 @@ struct AllocatorFacade {
 
   public:
     // Try to allocate some memory with arbitrary alignment.
-    template <typename T = cat::Byte>
+    template <typename T = Byte>
     [[nodiscard]] auto malloc(ssize const allocation_size = ssizeof<T>()) {
         if constexpr (alignof(T) > 8) {
             // If the alignment of `T` is greater than 8, it should have implied
@@ -211,10 +201,10 @@ struct AllocatorFacade {
 
     // If this allocator has pointer stability, allocate some memory with
     // arbitrary alignment and provide a pointer handle.
-    template <typename T = cat::Byte>
+    template <typename T = Byte>
     [[nodiscard]] auto p_malloc(ssize const allocation_size = ssizeof<T>())
         -> OptionalPtr<T>
-    requires(::meta::detail::StableDerivedAllocator<Derived, T>) {
+    requires(detail::StableDerivedAllocator<Derived, T>) {
         if constexpr (alignof(T) > 8) {
             // If the alignment of `T` is greater than 8, it should have implied
             // strong alignment guarantees.
@@ -234,7 +224,7 @@ struct AllocatorFacade {
 
     // Try to allocate some memory guaranteed to be aligned to some
     // boundary.
-    template <typename T = cat::Byte>
+    template <typename T = Byte>
     [[nodiscard]] auto aligned_alloc(
         usize const alignment, ssize const allocation_size = ssizeof<T>()) {
         return this->meta_allocate<T, false, true, true>(alignment,
@@ -243,11 +233,11 @@ struct AllocatorFacade {
 
     // If this allocator has pointer stability, allocate some memory with
     // arbitrary alignment and provide a pointer handle.
-    template <typename T = cat::Byte>
+    template <typename T = Byte>
     [[nodiscard]] auto p_aligned_alloc(
         usize const alignment, ssize const allocation_size = ssizeof<T>())
         -> OptionalPtr<T>
-    requires(::meta::detail::StableDerivedAllocator<Derived, T>) {
+    requires(detail::StableDerivedAllocator<Derived, T>) {
         auto memory = this->meta_allocate<T, false, true, true>(
             alignment, allocation_size);
         if (memory.has_value()) {
@@ -278,12 +268,12 @@ struct AllocatorFacade {
 
     // Invalidate any memory handle, invoking its data's destructor.
     template <typename Handle>
-    [[nodiscard]] auto free(Handle const& memory) -> cat::Optional<void> {
+    [[nodiscard]] auto free(Handle const& memory) -> Optional<void> {
         using Type = typename Handle::Type;
 
         // If this is a small-size optimized handle:
-        if constexpr (::meta::IsSpecializationTrait<
-                          Handle, cat::detail::SmallMemoryHandle>::value) {
+        if constexpr (IsSpecializationTrait<Handle,
+                                            detail::SmallMemoryHandle>::value) {
             if (memory.is_on_stack) {
                 if constexpr (requires { this->get(memory).~Type(); }) {
                     this->get(memory).~Type();
@@ -318,14 +308,14 @@ struct AllocatorFacade {
 
     // Invalidate any stable memory handle, invoking its data's destructor.
     template <typename T>
-    [[nodiscard]] auto free(T* const p_memory) -> cat::Optional<void>
-    requires(::meta::detail::StableDerivedAllocator<Derived, T>) {
+    [[nodiscard]] auto free(T* const p_memory) -> Optional<void>
+    requires(detail::StableDerivedAllocator<Derived, T>) {
         return this->self().deallocate(p_memory);
     }
 
     // Get a reference to the data in any memory handle.
     [[nodiscard]] auto get(auto& memory) -> auto& {
-        using Handle = typename ::meta::RemoveCvref<decltype(memory)>;
+        using Handle = RemoveCvref<decltype(memory)>;
         using Type = typename Handle::Type;
         if constexpr (requires { memory.is_on_stack; }) {
             // Get small-size optimized data:
@@ -348,7 +338,7 @@ struct AllocatorFacade {
 
     // Get a `const` reference to the data in any memory handle.
     [[nodiscard]] auto get(auto const& memory) -> auto const& {
-        using Handle = typename ::meta::RemoveCvref<decltype(memory)>;
+        using Handle = RemoveCvref<decltype(memory)>;
         using Type = typename Handle::Type;
         if constexpr (requires { memory.is_on_stack; }) {
             // Get small-size optimized data:
@@ -466,9 +456,9 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
     };
 
     // These cannot hold `void` because that is not a regular type.
-    uintptr<cat::Byte> const p_arena_begin;
-    uintptr<cat::Byte> const p_arena_end;
-    uintptr<cat::Byte> p_arena_current = p_arena_begin;
+    uintptr<Byte> const p_arena_begin;
+    uintptr<Byte> const p_arena_end;
+    uintptr<Byte> p_arena_current = p_arena_begin;
 
     LinearAllocator(uintptr<void> const p_address, ssize const arena_size)
         : p_arena_begin(p_address.c() + arena_size.c()),
@@ -476,10 +466,10 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
 
     // Try to allocate memory and bump the pointer down.
     template <typename T>
-    auto allocate(ssize const allocation_size) -> OptionalPtr<cat::Byte> {
+    auto allocate(ssize const allocation_size) -> OptionalPtr<Byte> {
         this->p_arena_current -= allocation_size.c();
         if (this->p_arena_current >= p_arena_end) {
-            return static_cast<cat::Byte*>(this->p_arena_current);
+            return static_cast<Byte*>(this->p_arena_current);
         }
         return nullptr;
     }
@@ -494,12 +484,12 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
     // down.
     template <typename T>
     auto aligned_allocate(usize const alignment, ssize const allocation_size)
-        -> OptionalPtr<cat::Byte> {
-        uintptr<cat::Byte> p_allocation = cat::align_down(
-            this->p_arena_current - allocation_size.c(), alignment);
+        -> OptionalPtr<Byte> {
+        uintptr<Byte> p_allocation =
+            align_down(this->p_arena_current - allocation_size.c(), alignment);
         if (p_allocation >= p_arena_end) {
             this->p_arena_current = p_allocation;
-            return static_cast<cat::Byte*>(this->p_arena_current);
+            return static_cast<Byte*>(this->p_arena_current);
         }
         return nullptr;
     }

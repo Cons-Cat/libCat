@@ -24,7 +24,7 @@ void output_to_console(nix::IoVector const& io_vector) {
     cat::Byte const* p_buffer = io_vector.p_data();
     p_buffer++;
     _ = nix::write(nix::FileDescriptor{1},
-                   meta::bit_cast<char const*>(p_buffer), io_vector.size());
+                   cat::bit_cast<char const*>(p_buffer), io_vector.size());
 }
 
 void read_and_print_file(char* p_file_name) {
@@ -45,7 +45,7 @@ void read_and_print_file(char* p_file_name) {
     cat::Span<nix::IoVector> io_vectors;
 
     auto io_buffer =
-        allocator.malloc<nix::IoVector>(meta::ssizeof(io_vectors) * blocks);
+        allocator.malloc<nix::IoVector>(cat::ssizeof(io_vectors) * blocks);
     if (!io_buffer.has_value()) {
         cat::exit(1);
     }

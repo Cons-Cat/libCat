@@ -13,7 +13,7 @@ namespace cat {
 // A `Span` is represents an array of `T` with runtime-known length. It stores
 // an address and a length. It is random-access iterable.
 template <typename T>
-class Span : public ::meta::CollectionFacade<Span<T>, T> {
+class Span : public CollectionFacade<Span<T>, T> {
   protected:
     // This is arranged as pointer, then size, to follow the ABI of Linux
     // standard `iovec`s. Unfortunately, that is opposite of Windws' standard
@@ -29,13 +29,13 @@ class Span : public ::meta::CollectionFacade<Span<T>, T> {
     // Construct a `Span` as `{address, length}`.
     template <typename U>
     constexpr Span(U* const p_in_data,
-                   ssize const in_length) requires(::meta::is_convertible<U, T>)
+                   ssize const in_length) requires(is_convertible<U, T>)
         : p_storage(static_cast<T*>(p_in_data)), length(in_length){};
 
     // Construct a `Span` between two addresses.
     template <typename U, typename V>
     constexpr Span(U* const p_start, V* const p_end) requires(
-        ::meta::is_convertible<U*, T*>&& ::meta::is_convertible<V, T>)
+        is_convertible<U*, T*>&& is_convertible<V, T>)
         : p_storage(p_start), length(ssize{p_end - p_start}){};
 
     // TODO: Make a `ContiguousContainer` `concept`.

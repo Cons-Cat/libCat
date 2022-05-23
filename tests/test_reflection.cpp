@@ -2,12 +2,12 @@
 #include <cat/variant>
 
 void meow() {
-    using Types = meta::TypeList<int, char>;
+    using Types = cat::TypeList<int, char>;
     using Type_0 = typename Types::Get<0>;
     using Type_1 = typename Types::Get<1>;
 
-    static_assert(meta::is_same<Type_0, int>);
-    static_assert(meta::is_same<Type_1, char>);
+    static_assert(cat::is_same<Type_0, int>);
+    static_assert(cat::is_same<Type_1, char>);
 
     static_assert(Types::has_type<int>);
     static_assert(Types::has_type<Type_0>);
@@ -23,7 +23,7 @@ void meow() {
     static_assert(Types::is_unique<char>);
     static_assert(!Types::is_unique<bool>);
 
-    using Types2 = meta::TypeList<int, int, char>;
+    using Types2 = cat::TypeList<int, int, char>;
     static_assert(Types::is_unique_list);
     static_assert(!Types2::is_unique_list);
     static_assert(Types2::count_type<int> == 2);

@@ -4,11 +4,11 @@
 
 #include <cat/utility>
 
-constexpr auto meta::ssizeof(auto const& anything) -> ssize {
+constexpr auto cat::ssizeof(auto const& anything) -> ssize {
     return static_cast<signed int long>(sizeof(anything));
 }
 
 template <typename T>
-constexpr auto meta::ssizeof() -> ssize {
+constexpr auto cat::ssizeof() -> ssize {
     return static_cast<signed int long>(sizeof(T));
 }
