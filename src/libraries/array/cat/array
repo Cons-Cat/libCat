@@ -21,6 +21,17 @@ class Array : public CollectionFacade<Array<T, length>, T> {
     constexpr Array(Array<T, length> const& in_array) = default;
     constexpr Array(Array<T, length>&& in_array) = default;
 
+    // Construct an `Array` from a variadic argument list.
+    template <typename... U>
+    constexpr Array(U&&... arguments) requires(sizeof...(arguments) ==
+                                               length.c())
+        : storage(arguments...){};
+
+    template <Integral U, U... Is>
+    constexpr Array(IntegerSequence<U, Is...> const values) requires(
+        is_convertible<U, T>&& values.size == length)
+        : storage(static_cast<T>(Is)...){};
+
     // If this is an `Array<char>`, it can be constructed from a string.
     constexpr Array(String const& string) requires(
         is_same<RemoveConst<T>, char>) {
@@ -32,11 +43,26 @@ class Array : public CollectionFacade<Array<T, length>, T> {
 
     constexpr auto operator=(Array<T, length>&&) -> Array<T, length>& = default;
 
-    // Construct an `Array` from a variadic argument list.
-    template <typename... U>
-    constexpr Array(U&&... arguments) requires(sizeof...(arguments) ==
-                                               length.c())
-        : storage(arguments...){};
+  private:
+    template <ssize index, typename U, U value, U... Us>
+    constexpr void copy_sequence(IntegerSequence<U, value, Us...> const) {
+        this->storage[index.c()] = value;
+
+        if constexpr (index + 1 == length) {
+            return;
+        } else {
+            // Recurse with one fewer elements in the `IntegerSequence`.
+            this->copy_sequence<index + 1>(IntegerSequence<U, Us...>{});
+        }
+    }
+
+  public:
+    template <Integral U, U... Us>
+    constexpr auto operator=(IntegerSequence<U, Us...> const values) requires(
+        is_convertible<U, T>&& values.size == length) {
+        this->copy_sequence<0, U, Us...>(values);
+    };
+
     // If this is an `Array<char>`, it can be assigned a string.
     constexpr auto operator=(String const&& string) -> Array<T, length>
     requires(is_same<RemoveConst<T>, char>) {
