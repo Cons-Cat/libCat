@@ -26,12 +26,28 @@ namespace detail {
             this->storage = value;
         }
     };
+
+    template <typename T>
+    struct ForwardListNode {
+        ForwardListNode<T>* p_next_node;
+        T storage;
+
+        ForwardListNode() = default;
+        ForwardListNode(ForwardListNode const&) = default;
+        ForwardListNode(ForwardListNode&&) = default;
+        ForwardListNode(T value) : storage(value){};
+        auto operator=(ForwardListNode<T> const&)
+            -> ForwardListNode<T>& = default;
+        auto operator=(ForwardListNode<T>&&) -> ForwardListNode<T>& = default;
+        auto operator=(T value) -> ForwardListNode<T>& {
+            this->storage = value;
+        }
+    };
 }  // namespace detail
 
 template <typename T>
 class List : public CollectionFacade<List<T>, T> {
     using Node = detail::ListNode<T>;
-    // NodeAllocator* p_allocator;
     Node* p_head;
     Node* p_tail;
     ssize length;
@@ -88,7 +104,7 @@ class List : public CollectionFacade<List<T>, T> {
         node.p_previous_node = nullptr;
         this->p_head = &node;
         this->p_tail = &node;
-        this->length++;
+        this->length = 1;
     }
 
     void place_node(Iterator where, Node& node) {
@@ -364,6 +380,224 @@ class List : public CollectionFacade<List<T>, T> {
 
     [[nodiscard]] auto rend() {
         return cat::ReversedIterator<Iterator>{this->p_head};
+    }
+};
+
+template <typename T>
+class ForwardList : public CollectionFacade<ForwardList<T>, T> {
+    using Node = detail::ForwardListNode<T>;
+    Node* p_head;
+    Node* p_tail;
+    ssize length;
+
+  public:
+    ForwardList() : p_head(nullptr), p_tail(nullptr), length(0){};
+
+    // Get the count of elements stored in this `ForwardList`.
+    [[nodiscard]] auto size() const -> ssize {
+        return this->length;
+    }
+
+    // Get the maximum possible count of elements stored in a `ForwardList`.
+    [[nodiscard]] constexpr auto capacity() const -> ssize {
+        return this->length.max();
+    }
+
+    [[nodiscard]] auto front() -> T& {
+        return this->p_head->storage;
+    }
+
+    [[nodiscard]] auto back() -> T& {
+        return this->p_tail->storage;
+    }
+
+    struct Iterator : IteratorFacade<Iterator> {
+        Node* p_node;
+
+        Iterator(Iterator const&) = default;
+        Iterator(Node* const p_input) : p_node(p_input){};
+
+        auto increment() -> Iterator& {
+            this->p_node = this->p_node->p_next_node;
+            return *this;
+        }
+        auto dereference() -> T& {
+            return this->p_node->storage;
+        }
+        auto dereference() const -> T const& {
+            return this->p_node->storage;
+        }
+        auto equal_to(Iterator const& it) const -> bool {
+            return it.p_node == this->p_node;
+        }
+    };
+
+  private:
+    void place_initial_node(Node& node) {
+        node.p_next_node = nullptr;
+        this->p_head = &node;
+        this->p_tail = &node;
+        this->length = 1;
+    }
+
+    void place_node_after(Iterator where, Node& node) {
+        // `.place_node_after()` should almost always be used for insertions in
+        // the middle.
+        if (where != this->end()) [[likely]] {
+            // Place a node in the middle of this list.
+            node.p_next_node = where.p_node->p_next_node;
+            where.p_node->p_next_node = &node;
+        } else {
+            // Place a node at the back of this list.
+            node.p_next_node = nullptr;
+            this->p_tail->p_next_node = &node;
+            this->p_tail = &node;
+        }
+        this->length++;
+    }
+
+    // Place a node at the front of this list.
+    void place_node_front(Node& node) {
+        node.p_next_node = this->p_head;
+        this->p_head = &node;
+        this->length++;
+    }
+
+  public:
+    [[nodiscard]] auto insert_after(StableAllocator auto& allocator,
+                                    Iterator where, T const& value)
+        -> Optional<void> {
+        cat::Optional memory = allocator.template p_malloc<Node>();
+        if (!memory.has_value()) {
+            // Propagate memory allocation failure.
+            return nullopt;
+        }
+
+        Node& node = *memory.value();
+        node.storage = value;
+
+        // If this list has nothing in it, `.insert_after()` must be
+        // special-cased.
+        if (this->length == 0) [[unlikely]] {
+            this->place_initial_node(node);
+            return monostate;
+        }
+
+        this->place_node_after(where, node);
+        return monostate;
+    }
+
+    template <typename... Args>
+    [[nodiscard]] auto emplace_after(StableAllocator auto& allocator,
+                                     Iterator where, Args&&... arguments)
+        -> Optional<void> {
+        cat::Optional memory = allocator.template p_malloc<Node>();
+        if (!memory.has_value()) {
+            // Propagate memory allocation failure.
+            return nullopt;
+        }
+
+        Node& node = *memory.value();
+        new (&node.storage) T{forward<Args>(arguments)...};
+
+        // If this list has nothing in it, `.insert_after()` must be
+        // special-cased.
+        if (this->length == 0) [[unlikely]] {
+            this->place_initial_node(node);
+            return monostate;
+        }
+
+        this->place_node_after(where, node);
+        return monostate;
+    }
+
+    auto erase_after(Allocator auto& allocator, Iterator where)
+        -> Optional<void> {
+        Node& node = *where.p_node;
+        Node* p_remove = node.p_next_node;
+        node.p_next_node = p_remove->p_next_node;
+        return allocator.free(p_remove);
+    }
+
+    // Allocate a node and insert it at the beginning of this list.
+    [[nodiscard]] auto push_front(StableAllocator auto& allocator,
+                                  T const& value) -> Optional<Iterator> {
+        cat::Optional memory = allocator.template p_malloc<Node>();
+        if (!memory.has_value()) {
+            // Propagate memory allocation failure.
+            return nullopt;
+        }
+
+        Node& node = *memory.value();
+        node.storage = value;
+
+        // If this list has nothing in it, `.push_front()` must be
+        // special-cased.
+        if (this->length == 0) [[unlikely]] {
+            this->place_initial_node(node);
+            return Iterator{&node};
+        }
+
+        this->place_node_front(node);
+        return Iterator{&node};
+    }
+
+    // Allocate a node and insert it at the beginning of this list.
+    template <typename... Args>
+    [[nodiscard]] auto emplace_front(StableAllocator auto& allocator,
+                                     Args&&... arguments)
+        -> Optional<Iterator> {
+        cat::Optional memory = allocator.template p_malloc<Node>();
+        if (!memory.has_value()) {
+            // Propagate memory allocation failure.
+            return nullopt;
+        }
+
+        Node& node = *memory.value();
+        new (&node.storage) T{forward<Args>(arguments)...};
+
+        // If this list has nothing in it, `.emplace_front()` must be
+        // special-cased.
+        if (this->length == 0) [[unlikely]] {
+            this->place_initial_node(node);
+            return Iterator{&node};
+        }
+
+        this->place_node_front(node);
+        return Iterator{&node};
+    }
+
+    // Remove an element from the front of this list.
+    void pop_front(StableAllocator auto& allocator) {
+        if (this->length == 0) [[unlikely]] {
+            // Prevent a segfault when the list is empty.
+            return;
+        }
+
+        Node& node = *this->p_head;
+        this->p_head = node.p_next_node;
+        this->length--;
+        Optional result = allocator.free(&node);
+        Result(result.has_value()).assert();
+    }
+
+    // Remove and deallocate all elements from this list.
+    void clear(StableAllocator auto& allocator) {
+        for (Iterator iterator = this->begin(); iterator != this->end();
+             ++iterator) {
+            Optional result = allocator.free(iterator.p_node);
+            Result(result.has_value()).assert();
+        }
+    }
+
+    // Providing these four iterator getters generates the remaining 4 through
+    // the `CollectionFacade`.
+    [[nodiscard]] auto begin() -> Iterator {
+        return Iterator{this->p_head};
+    }
+
+    [[nodiscard]] auto end() -> Iterator {
+        return Iterator{this->p_tail};
     }
 };
 
