@@ -13,7 +13,7 @@ auto nix::syscall6(ssize const call, cat::Any const arg1, cat::Any const arg2,
                  : "a"(call), "D"(arg1), "S"(arg2), "d"(arg3), "r"(r10),
                    "r"(r8), "r"(r9),
                    // TODO: Fix this segfaulting with static_cast<void*>():
-                   [a6] "re"(meta::bit_cast<void*>(arg6))
+                   [a6] "re"(cat::bit_cast<void*>(arg6))
                  : "rcx", "r11", "memory", "cc");
     return result;
 }

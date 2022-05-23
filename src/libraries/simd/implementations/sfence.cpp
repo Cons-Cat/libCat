@@ -1,5 +1,5 @@
 #include <cat/simd>
 
-void simd::sfence() {
+void cat::sfence() {
     __builtin_ia32_sfence();
 }

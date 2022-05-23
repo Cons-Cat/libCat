@@ -11,7 +11,7 @@ template <typename T>
 class Span;
 }
 
-namespace meta {
+namespace cat {
 
 template <typename Derived, typename T>
 class CollectionFacade {
@@ -27,7 +27,7 @@ class CollectionFacade {
     // is not provided, then the length of this collection is assumed to be
     // constant.
     constexpr static bool has_const_length = requires {
-		meta::constant_evaluate(Derived{}.size());
+		constant_evaluate(Derived{}.size());
     } && !requires {
         Derived{}.capacity();
     };
@@ -53,7 +53,7 @@ class CollectionFacade {
 
     // Contiguous collections can produce non-`const` bidirectional iterators.
     constexpr auto make_iterator() requires(is_contiguous) {
-        struct Iterator : cat::IteratorFacade<Iterator> {
+        struct Iterator : IteratorFacade<Iterator> {
             ssize current_index;
             T* const p_array;
 
@@ -80,7 +80,7 @@ class CollectionFacade {
 
     // Contiguous collections can produce `const` bidirectional iterators.
     constexpr auto make_iterator() const requires(is_contiguous) {
-        struct Iterator : cat::IteratorFacade<Iterator> {
+        struct Iterator : IteratorFacade<Iterator> {
             ssize current_index;
             T const* const p_array;
             constexpr Iterator(Iterator const&) = default;
@@ -122,7 +122,7 @@ class CollectionFacade {
     }
 
     // Index into this collection with bounds-checking.
-    [[nodiscard]] constexpr auto at(ssize const index) -> cat::Optional<T&>
+    [[nodiscard]] constexpr auto at(ssize const index) -> Optional<T&>
     requires(is_contiguous) {
         Result{index >= 0}.assert();
         if (index < this->self().capacity()) {
@@ -132,8 +132,7 @@ class CollectionFacade {
     }
 
     // Index into this collection with bounds-checking.
-    [[nodiscard]] constexpr auto at(ssize const index) const
-        -> cat::Optional<T&> {
+    [[nodiscard]] constexpr auto at(ssize const index) const -> Optional<T&> {
         // `unconst()` allows `.at()` to be safely called in a `const` context.
         return unconst(this)->at(index);
     }
@@ -155,42 +154,40 @@ class CollectionFacade {
     }
 
     [[nodiscard]] constexpr auto slice(ssize const start_index,
-                                       ssize const end_index) -> cat::Span<T>
+                                       ssize const end_index) -> Span<T>
     requires(is_contiguous) {
         Result{start_index >= 0}.assert();
         Result{end_index <= this->self().capacity()}.assert();
-        return cat::Span<T>(this->self().p_data() + start_index,
-                            end_index - start_index);
+        return Span<T>(this->self().p_data() + start_index,
+                       end_index - start_index);
     }
 
     [[nodiscard]] constexpr auto slice(ssize const start_index,
                                        ssize const end_index) const
-        -> cat::Span<T const>
+        -> Span<T const>
     requires(is_contiguous) {
         Result{start_index >= 0}.assert();
         Result{end_index <= this->self().capacity()}.assert();
-        return cat::Span<T const>(this->self().p_data() + start_index,
-                                  end_index - start_index);
+        return Span<T const>(this->self().p_data() + start_index,
+                             end_index - start_index);
     }
 
-    [[nodiscard]] constexpr auto first(ssize const count) -> cat::Span<T>
+    [[nodiscard]] constexpr auto first(ssize const count) -> Span<T>
     requires(is_contiguous) {
         return this->slice(0, count);
     }
 
-    [[nodiscard]] constexpr auto first(ssize const count) const
-        -> cat::Span<T const>
+    [[nodiscard]] constexpr auto first(ssize const count) const -> Span<T const>
     requires(is_contiguous) {
         return this->slice(0, count);
     }
 
-    [[nodiscard]] constexpr auto last(ssize const count) -> cat::Span<T>
+    [[nodiscard]] constexpr auto last(ssize const count) -> Span<T>
     requires(is_contiguous) {
         return this->slice(this->self().size() - count, this->self().size());
     }
 
-    [[nodiscard]] constexpr auto last(ssize const count) const
-        -> cat::Span<T const>
+    [[nodiscard]] constexpr auto last(ssize const count) const -> Span<T const>
     requires(is_contiguous) {
         return this->slice(this->self().size() - count, this->self().size());
     }
@@ -212,12 +209,12 @@ class CollectionFacade {
     }
 
     [[nodiscard]] constexpr auto begin() requires(is_contiguous) {
-        return meta::RemoveConst<decltype(unconst(this)->make_iterator())>{
+        return RemoveConst<decltype(unconst(this)->make_iterator())>{
             0, this->self_mut().p_data()};
     }
 
     [[nodiscard]] constexpr auto end() requires(is_contiguous) {
-        return meta::RemoveConst<decltype(unconst(this)->make_iterator())>{
+        return RemoveConst<decltype(unconst(this)->make_iterator())>{
             this->self_mut().size(), this->self().p_data()};
     }
 
@@ -250,13 +247,13 @@ class CollectionFacade {
     }
 
     [[nodiscard]] constexpr auto rbegin() requires(is_contiguous) {
-        return cat::ReversedIterator<decltype(this->begin())>{
+        return ReversedIterator<decltype(this->begin())>{
             this->self().size() - 1, this->self().p_data()};
     }
 
     [[nodiscard]] constexpr auto rend() requires(is_contiguous) {
-        return cat::ReversedIterator<decltype(this->end())>(
-            -1, this->self().p_data());
+        return ReversedIterator<decltype(this->end())>(-1,
+                                                       this->self().p_data());
     }
 
     // If this collection is not contiguous, get a non-`const` `.rbegin()`
@@ -288,4 +285,4 @@ class CollectionFacade {
     }
 };
 
-}  // namespace meta
+}  // namespace cat

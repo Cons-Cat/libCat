@@ -37,8 +37,8 @@ requires(sizeof...(Args) < 7) {
         return static_cast<LinuxError>(result.c());
     }
 
-    if constexpr (!::meta::is_void<T>) {
-        if constexpr (!::meta::is_pointer<T>) {
+    if constexpr (!::cat::is_void<T>) {
+        if constexpr (!::cat::is_pointer<T>) {
             return nix::ScaredyLinux<T>{T{result.c()}};
         } else {
             return nix::ScaredyLinux<T>{reinterpret_cast<T>(result.c())};

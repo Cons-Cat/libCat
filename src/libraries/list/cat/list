@@ -28,11 +28,8 @@ namespace detail {
     };
 }  // namespace detail
 
-template <typename T  // , ::meta::StableAllocator NodeAllocator
-          >
-class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
-                                                  >,
-                                             T> {
+template <typename T>
+class List : public CollectionFacade<List<T>, T> {
     using Node = detail::ListNode<T>;
     // NodeAllocator* p_allocator;
     Node* p_head;
@@ -86,7 +83,7 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
     };
 
   private:
-    void place_only_node(Node& node) {
+    void place_initial_node(Node& node) {
         node.p_next_node = nullptr;
         node.p_previous_node = nullptr;
         this->p_head = &node;
@@ -140,9 +137,8 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
   public:
     // Allocate a node and insert it into this list before the position of
     // `where`.
-    [[nodiscard]] auto insert(::meta::StableAllocator auto& allocator,
-                              Iterator where, T const& value)
-        -> Optional<void> {
+    [[nodiscard]] auto insert(StableAllocator auto& allocator, Iterator where,
+                              T const& value) -> Optional<void> {
         // `cat::OptionalPtr` produces an internal compiler error in GCC 12.
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
@@ -155,7 +151,7 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
 
         // If this list has nothing in it, `.insert()` must be special-cased.
         if (this->length == 0) [[unlikely]] {
-            this->place_only_node(node);
+            this->place_initial_node(node);
             return monostate;
         }
 
@@ -166,9 +162,8 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
     // Allocate a node and insert it into this list before the position of
     // `where`, then construct it with arguments.
     template <typename... Args>
-    [[nodiscard]] auto emplace(::meta::StableAllocator auto& allocator,
-                               Iterator where, Args&&... arguments)
-        -> Optional<Iterator> {
+    [[nodiscard]] auto emplace(StableAllocator auto& allocator, Iterator where,
+                               Args&&... arguments) -> Optional<Iterator> {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -176,11 +171,11 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
         }
 
         Node& node = *memory.value();
-        new (&node.storage) T{::meta::forward<Args>(arguments)...};
+        new (&node.storage) T{forward<Args>(arguments)...};
 
         // If this list has nothing in it, `.emplace()` must be special-cased.
         if (this->length == 0) [[unlikely]] {
-            this->place_only_node(node);
+            this->place_initial_node(node);
             return Iterator{&node};
         }
 
@@ -189,7 +184,7 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
     }
 
     // Remove and deallocate an element from this list.
-    auto erase(::meta::StableAllocator auto& allocator, Iterator where)
+    auto erase(StableAllocator auto& allocator, Iterator where)
         -> Optional<void> {
         if (this->length == 0) [[unlikely]] {
             // Prevent a segfault when the list is empty.
@@ -217,7 +212,7 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
     }
 
     // Allocate a node and insert it at the beginning of this list.
-    [[nodiscard]] auto push_front(::meta::StableAllocator auto& allocator,
+    [[nodiscard]] auto push_front(StableAllocator auto& allocator,
                                   T const& value) -> Optional<Iterator> {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
@@ -231,7 +226,7 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
         // If this list has nothing in it, `.push_front()` must be
         // special-cased.
         if (this->length == 0) [[unlikely]] {
-            this->place_only_node(node);
+            this->place_initial_node(node);
             return Iterator{&node};
         }
 
@@ -241,7 +236,7 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
 
     // Allocate a node and insert it at the beginning of this list.
     template <typename... Args>
-    [[nodiscard]] auto emplace_front(::meta::StableAllocator auto& allocator,
+    [[nodiscard]] auto emplace_front(StableAllocator auto& allocator,
                                      Args&&... arguments)
         -> Optional<Iterator> {
         cat::Optional memory = allocator.template p_malloc<Node>();
@@ -251,12 +246,12 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
         }
 
         Node& node = *memory.value();
-        new (&node.storage) T{::meta::forward<Args>(arguments)...};
+        new (&node.storage) T{forward<Args>(arguments)...};
 
         // If this list has nothing in it, `.emplace_front()` must be
         // special-cased.
         if (this->length == 0) [[unlikely]] {
-            this->place_only_node(node);
+            this->place_initial_node(node);
             return Iterator{&node};
         }
 
@@ -265,7 +260,7 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
     }
 
     // Remove an element from the front of this list.
-    void pop_front(::meta::StableAllocator auto& allocator) {
+    void pop_front(StableAllocator auto& allocator) {
         if (this->length == 0) [[unlikely]] {
             // Prevent a segfault when the list is empty.
             return;
@@ -282,7 +277,7 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
     }
 
     // Allocate a node and insert it at the end of this list.
-    [[nodiscard]] auto push_back(::meta::StableAllocator auto& allocator,
+    [[nodiscard]] auto push_back(StableAllocator auto& allocator,
                                  T const& value) -> Optional<Iterator> {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
@@ -295,7 +290,7 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
 
         // If this list has nothing in it, `.push_back()` must be special-cased.
         if (this->length == 0) [[unlikely]] {
-            this->place_only_node(node);
+            this->place_initial_node(node);
             return Iterator{&node};
         }
 
@@ -305,7 +300,7 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
 
     // Allocate a node and insert it at the end of this list.
     template <typename... Args>
-    [[nodiscard]] auto emplace_back(::meta::StableAllocator auto& allocator,
+    [[nodiscard]] auto emplace_back(StableAllocator auto& allocator,
                                     Args&&... arguments) -> Optional<Iterator> {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
@@ -314,12 +309,12 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
         }
 
         Node& node = *memory.value();
-        new (&node.storage) T{::meta::forward<Args>(arguments)...};
+        new (&node.storage) T{forward<Args>(arguments)...};
 
         // If this list has nothing in it, `.emplace_back()` must be
         // special-cased.
         if (this->length == 0) [[unlikely]] {
-            this->place_only_node(node);
+            this->place_initial_node(node);
             return Iterator{&node};
         }
 
@@ -328,7 +323,7 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
     }
 
     // Remove and deallocate an element from the back of this list.
-    void pop_back(::meta::StableAllocator auto& allocator) {
+    void pop_back(StableAllocator auto& allocator) {
         if (this->length == 0) [[unlikely]] {
             // Prevent a segfault when the list is empty.
             return;
@@ -345,7 +340,7 @@ class List : public ::meta::CollectionFacade<List<T  // , NodeAllocator
     }
 
     // Remove and deallocate all elements from this list.
-    void clear(::meta::StableAllocator auto& allocator) {
+    void clear(StableAllocator auto& allocator) {
         for (Iterator iterator = this->begin(); iterator != this->end();
              ++iterator) {
             Optional result = allocator.free(iterator.p_node);

@@ -8,7 +8,7 @@
 #include <cat/span>
 #include <cat/utility>
 
-// Deprecated call to `memcpy()`. Consider using `cat::copy_buffer()` instead.
+// Deprecated call to `memcpy()`. Consider using `copy_buffer()` instead.
 // `memcpy()` exists to enable some GCC optimizations.
 extern "C" auto memcpy(void* p_destination, void const* p_source, usize bytes)
     -> void*;
@@ -20,27 +20,27 @@ constexpr auto string_length(char const* p_string) -> ssize;
 template <ssize length>
 struct StaticString;
 
-class String : public cat::Span<char const> {
+class String : public Span<char const> {
     // `String` inherits:
     //
     // `char const* p_storage;`
     // `ssize length;`
   public:
-    constexpr String() : cat::Span<char const>(){};
+    constexpr String() : Span<char const>(){};
 
     constexpr String(char const* p_string, ssize in_length)
-        : cat::Span<char const>(p_string, in_length){};
+        : Span<char const>(p_string, in_length){};
 
     constexpr String(String const& string)
-        : cat::Span<char const>(string.p_storage, string.length){};
+        : Span<char const>(string.p_storage, string.length){};
 
     constexpr String(String&& string)
-        : cat::Span<char const>(string.p_storage, string.length){};
+        : Span<char const>(string.p_storage, string.length){};
 
     // This is `auto` to deduce lower than the array-literal constructor.
     template <typename T>
-    constexpr String(T p_string) requires(::meta::is_pointer<T>)
-        : cat::Span<char const>(p_string, cat::string_length(p_string)){};
+    constexpr String(T p_string) requires(is_pointer<T>)
+        : Span<char const>(p_string, string_length(p_string)){};
 
     template <unsigned int long other_length>
     consteval String(char const (&string)[other_length]) {
@@ -67,7 +67,7 @@ class String : public cat::Span<char const> {
 
     constexpr auto operator=(String&& string) {
         this->p_storage = string.p_storage;
-        this->length = cat::move(string).length;
+        this->length = move(string).length;
     }
 };
 
@@ -133,9 +133,9 @@ consteval auto operator+(StaticString<length_1> const& string_1,
 
 auto compare_strings(String const& string_1, String const& string_2) -> bool1;
 
-auto print(String const& string) -> cat::Optional<ssize>;
+auto print(String const& string) -> Optional<ssize>;
 
-auto print_line(String const& string) -> cat::Optional<ssize>;
+auto print_line(String const& string) -> Optional<ssize>;
 
 // TODO: Make a comparison function for null-terminated string pointers.
 

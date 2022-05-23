@@ -30,12 +30,12 @@ struct Any {
     };
 
     constexpr Any(auto const& input) requires(sizeof(input) <= sizeof(value)) {
-        this->value = meta::bit_cast<void*>(input);
+        this->value = bit_cast<void*>(input);
     };
 
     template <typename T>
-    [[nodiscard]] constexpr operator T() const requires(!meta::is_void<T>) {
-        return meta::bit_cast<T>(this->value);
+    [[nodiscard]] constexpr operator T() const requires(!is_void<T>) {
+        return bit_cast<T>(this->value);
     }
 };
 

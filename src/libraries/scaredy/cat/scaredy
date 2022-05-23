@@ -5,28 +5,28 @@
 #include <cat/meta>
 #include <cat/variant>
 
-// TODO: The `cat::Scaredy` is far less robust than `cat::Optional`.
+// TODO: The `Scaredy` is far less robust than `Optional`.
 
 namespace cat {
 
 namespace detail {
     template <typename T, typename... Errors>
     struct ScaredyVariantStorage {
-        using Type = ::meta::Conditional<::meta::is_void<T>, cat::Monostate, T>;
-        cat::Variant<Type, Errors...> storage;
+        using Type = Conditional<is_void<T>, Monostate, T>;
+        Variant<Type, Errors...> storage;
 
         constexpr ScaredyVariantStorage() = default;
 
         // Consume a value.
         template <typename U>
         constexpr ScaredyVariantStorage(U const& input) requires(
-            ::meta::is_convertible<U, T>)
+            is_convertible<U, T>)
             : storage(static_cast<T>(input)){};
 
         // Consume an error.
         template <typename U>
         constexpr ScaredyVariantStorage(U const& input) requires(
-            !::meta::is_convertible<U, T>)
+            !is_convertible<U, T>)
             : storage(input){};
 
         template <typename U>
@@ -47,20 +47,20 @@ namespace detail {
             return this->storage.template holds_alternative<Type>();
         }
 
-        constexpr auto value() & -> Type& requires(!::meta::is_void<T>) {
+        constexpr auto value() & -> Type& requires(!is_void<T>) {
             return this->storage.template value<T>();
         }
 
-        constexpr auto value() const& -> Type& requires(!::meta::is_void<T>) {
+        constexpr auto value() const& -> Type& requires(!is_void<T>) {
             return this->storage.template value<T>();
         }
 
-        constexpr auto value() && -> Type&& requires(!::meta::is_void<T>) {
-            return cat::move(this->storage.template value<T>());
+        constexpr auto value() && -> Type&& requires(!is_void<T>) {
+            return move(this->storage.template value<T>());
         }
 
-        constexpr auto value() const&& -> Type&& requires(!::meta::is_void<T>) {
-            return cat::move(this->storage.template value<T>());
+        constexpr auto value() const&& -> Type&& requires(!is_void<T>) {
+            return move(this->storage.template value<T>());
         }
 
         template <typename Error>
@@ -85,10 +85,10 @@ namespace detail {
     struct ScaredyPredicateStorage {
         using Value = typename T::PredicateType;
         // `Errors` can only hold one error. It is variadic merely to simplify
-        // overload resolution in `cat::Scaredy`. `decltype` adds a reference to
-        // it, so that is removed by `meta::RemoveReference`.
+        // overload resolution in `Scaredy`. `decltype` adds a reference to
+        // it, so that is removed by `RemoveReference`.
         // TODO: Consider `typeof()` instead?
-        using Error = ::meta::RemoveReference<decltype(Array{Errors{}...}[0])>;
+        using Error = RemoveReference<decltype(Array{Errors{}...}[0])>;
 
         // TODO: Test alignment.
         union {
@@ -125,11 +125,11 @@ namespace detail {
         }
 
         constexpr auto value() && -> Value&& {
-            return cat::move(this->storage);
+            return move(this->storage);
         }
 
         constexpr auto value() const&& -> Value&& {
-            return cat::move(this->storage);
+            return move(this->storage);
         }
 
         // This is variadic to give it a homogenous interface with other
@@ -155,21 +155,21 @@ namespace detail {
 
 template <typename T, typename... Errors>
 requires(
-    // `cat::Scaredy` cannot hold C arrays.
-    // (!::meta::is_array<Errors...>) &&
-    // `cat::Scaredy` should have at least one error type.
+    // `Scaredy` cannot hold C arrays.
+    // (!is_array<Errors...>) &&
+    // `Scaredy` should have at least one error type.
     sizeof...(Errors) > 0) class Scaredy {
     // clang-format off
-    using Storage = ::meta::Conditional <requires {
+    using Storage = Conditional <requires {
         T::sentinel_value;
-    }, cat::detail::ScaredyPredicateStorage<T, Errors...>,
-        cat::detail::ScaredyVariantStorage <T, Errors...>>;
+    }, detail::ScaredyPredicateStorage<T, Errors...>,
+        detail::ScaredyVariantStorage <T, Errors...>>;
     // clang-format on
 
     Storage storage;
 
   public:
-    using Type = ::meta::Conditional<::meta::is_void<T>, cat::Monostate, T>;
+    using Type = Conditional<is_void<T>, Monostate, T>;
 
     constexpr Scaredy() = default;
 
@@ -188,14 +188,14 @@ requires(
 
     template <typename U>
     constexpr auto operator=(U const& operand)
-        -> Scaredy<T, Errors...>& requires(::meta::is_convertible<U, T>) {
+        -> Scaredy<T, Errors...>& requires(is_convertible<U, T>) {
         this->storage = static_cast<T>(operand);
         return *this;
     }
 
     template <typename U>
     constexpr auto operator=(U const& operand) const
-        -> Scaredy<T, Errors...>& requires(::meta::is_convertible<U, T>) {
+        -> Scaredy<T, Errors...>& requires(is_convertible<U, T>) {
         this->storage = static_cast<T>(operand);
         return *this;
     }
@@ -204,20 +204,20 @@ requires(
         return this->storage.has_value();
     }
 
-    [[nodiscard]] constexpr auto value() & requires(!::meta::is_void<T>) {
+    [[nodiscard]] constexpr auto value() & requires(!is_void<T>) {
         return this->storage.value();
     }
 
-    [[nodiscard]] constexpr auto value() const& requires(!::meta::is_void<T>) {
+    [[nodiscard]] constexpr auto value() const& requires(!is_void<T>) {
         return this->storage.value();
     }
 
-    [[nodiscard]] constexpr auto value() && requires(!::meta::is_void<T>) {
-        return cat::move(this->storage.value());
+    [[nodiscard]] constexpr auto value() && requires(!is_void<T>) {
+        return move(this->storage.value());
     }
 
-    [[nodiscard]] constexpr auto value() const&& requires(!::meta::is_void<T>) {
-        return cat::move(this->storage.value());
+    [[nodiscard]] constexpr auto value() const&& requires(!is_void<T>) {
+        return move(this->storage.value());
     }
 
     template <typename Error>
@@ -237,25 +237,25 @@ requires(
 
     [[nodiscard]] constexpr auto or_panic() {
         if (this->has_value()) [[likely]] {
-            if constexpr (!::meta::is_void<T>) {
+            if constexpr (!is_void<T>) {
                 return this->value();
             } else {
                 return;
             }
         }
-        cat::exit(1);
+        exit(1);
         __builtin_unreachable();
     }
 
     [[nodiscard]] constexpr auto or_panic() const {
         if (this->has_value()) [[likely]] {
-            if constexpr (!::meta::is_void<T>) {
+            if constexpr (!is_void<T>) {
                 return this->value();
             } else {
                 return;
             }
         }
-        cat::exit(1);
+        exit(1);
         __builtin_unreachable();
     }
 };

@@ -32,7 +32,7 @@ auto cat::compare_strings(String const& string_1, String const& string_2)
                           static_cast<void const*>(string_2.p_data())) +
                       (i * size));
                 mask[i] = vector_1[i] + vector_2[i];
-                results[i] = simd::move_mask(mask[i]);
+                results[i] = cat::move_mask(mask[i]);
             }
 
             for (int4 i = 0; i < size; i++) {

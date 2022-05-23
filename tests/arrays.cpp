@@ -31,7 +31,7 @@ void meow() {
         // NOLINTNEXTLINE Just be explicit about the move here.
         _ = cat::move(const_array_2);
     };
-    _ = meta::constant_evaluate(constant);
+    _ = cat::constant_evaluate(constant);
 
     // Test iterable.
     ssize count = 0;

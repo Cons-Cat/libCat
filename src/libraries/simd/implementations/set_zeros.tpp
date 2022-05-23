@@ -5,7 +5,7 @@
 #include <cat/simd>
 
 template <typename T>
-consteval auto simd::set_zeros() -> T {
+consteval auto cat::set_zeros() -> T {
     // TODO: Is there a cleverer way to do this? Variadic templates?
     // Probably an integer_sequence.
     using Intrinsic = typename T::Intrinsic;
