@@ -9,9 +9,9 @@ void meow() {
 
     // Test insert.
     cat::List<int4> list_1;
-    list_1.insert(allocator, list_1.begin(), 3).or_panic();
-    list_1.insert(allocator, list_1.begin(), 2).or_panic();
-    list_1.insert(allocator, list_1.begin(), 1).or_panic();
+    _ = list_1.insert(allocator, list_1.begin(), 3).or_panic();
+    _ = list_1.insert(allocator, list_1.begin(), 2).or_panic();
+    _ = list_1.insert(allocator, list_1.begin(), 1).or_panic();
     Result(list_1.front() == 1).or_panic();
     Result(list_1.back() == 3).or_panic();
 
@@ -80,9 +80,10 @@ void meow() {
     cat::ForwardList<int4> forward_list_1;
     _ = forward_list_1.push_front(allocator, 0).or_panic();
     _ = forward_list_1.emplace_front(allocator, 1).or_panic();
-    forward_list_1.insert_after(allocator, forward_list_1.begin() + 1, 2)
-        .or_panic();
-    forward_list_1.emplace_after(allocator, forward_list_1.end(), 3).or_panic();
+    _ = forward_list_1.insert_after(allocator, forward_list_1.begin() + 1, 2)
+            .or_panic();
+    _ = forward_list_1.emplace_after(allocator, forward_list_1.end(), 3)
+            .or_panic();
 
     Result(*forward_list_1.begin() == 1).or_panic();
     Result(*(forward_list_1.begin() + 1) == 0).or_panic();
