@@ -1005,6 +1005,15 @@ constexpr auto invoke(Function&& callback, Args&&... args)
     return cat::forward<Function>(callback)(cat::forward<Args>(args)...);
 }
 
+// https://quuxplusone.github.io/blog/2019/02/06/arrow-proxy/
+template <class Reference>
+struct ArrowProxy {
+    Reference reference;
+    auto operator->() -> Reference* {
+        return &reference;
+    }
+};
+
 template <typename Function>
 consteval auto constant_evaluate(auto value) requires(
     cat::is_invocable<Function>);
