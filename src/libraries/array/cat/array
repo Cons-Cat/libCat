@@ -27,15 +27,15 @@ class Array : public CollectionFacade<Array<T, length>, T> {
                                                length.c())
         : storage(arguments...){};
 
-    template <Integral U, U... Us>
-    constexpr Array(IntegerList<U, Us...> const values) requires(
-        is_convertible<U, T>&& values.size == length)
-        : storage(static_cast<T>(Us)...){};
+    template <Integral U, U... values>
+    constexpr Array(IntegerList<U, values...> const list) requires(
+        is_convertible<U, T>&& list.size == length)
+        : storage(static_cast<T>(values)...){};
 
     // If this is an `Array<char>`, it can be constructed from a string.
     constexpr Array(String const& string) requires(
         is_same<RemoveConst<T>, char>) {
-        cat::copy_memory(string.p_data(), this->storage, string.size());
+        copy_memory(string.p_data(), this->storage, string.size());
     }
 
     constexpr auto operator=(Array<T, length> const&)
@@ -44,30 +44,30 @@ class Array : public CollectionFacade<Array<T, length>, T> {
     constexpr auto operator=(Array<T, length>&&) -> Array<T, length>& = default;
 
   private:
-    template <ssize index, typename U, U value, U... Us>
-    constexpr void copy_list(IntegerList<U, value, Us...> const) {
+    template <ssize index, typename U, U value, U... values>
+    constexpr void copy_list(IntegerList<U, value, values...> const) {
         this->storage[index.c()] = value;
 
         if constexpr (index + 1 == length) {
             return;
         } else {
             // Recurse withn one fewer elements in the `IntegerList`.
-            this->copy_list<index + 1>(IntegerList<U, Us...>{});
+            this->copy_list<index + 1>(IntegerList<U, values...>{});
         }
     }
 
   public:
-    template <Integral U, U... Us>
-    constexpr auto operator=(IntegerList<U, Us...> const values) requires(
-        is_convertible<U, T>&& values.size == length) {
-        this->copy_list<0, U, Us...>(values);
+    template <Integral U, U... values>
+    constexpr auto operator=(IntegerList<U, values...> const list) requires(
+        is_convertible<U, T>&& list.size == length) {
+        this->copy_list<0, U, values...>(list);
     };
 
     // If this is an `Array<char>`, it can be assigned a string.
     constexpr auto operator=(String const&& string) -> Array<T, length>
     requires(is_same<RemoveConst<T>, char>) {
         Array<T, length> array;
-        cat::copy_memory(string.p_data(), this->storage, string.size());
+        copy_memory(string.p_data(), this->storage, string.size());
         return array;
     }
 
@@ -95,7 +95,7 @@ class Array : public CollectionFacade<Array<T, length>, T> {
     }
 };
 
-// Construct an `Array` as: `cat::Array array = {0, 1, 2};`
+// Construct an `Array` as: `Array array = {0, 1, 2};`
 template <typename T, typename... Args>
 Array(T, Args...) -> Array<T, ssize{sizeof...(Args)} + 1>;
 
