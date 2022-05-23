@@ -47,8 +47,8 @@ class alignas(alignment.c()) Simd {
     constexpr Simd(T values...) : value(Intrinsic{values}){};
 
     template <T... Is>
-    constexpr Simd(IntegerSequence<T, Is...> const values) requires(
-        values.size == lanes)
+    constexpr Simd(IntegerList<T, Is...> const values) requires(values.size ==
+                                                                lanes)
         : value(Intrinsic{Is...}){};
 
     // TODO: `__builtin_convertvector()` wrapped by conversion operators.
