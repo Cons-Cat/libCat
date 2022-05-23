@@ -26,11 +26,28 @@ constexpr auto ssizeof(auto const& anything) -> ssize;
 template <typename T>
 constexpr auto ssizeof() -> ssize;
 
+namespace detail {
+    template <typename T, ssize index, ssize current, T value, T... integers>
+    constexpr auto get_integer_sequence_at() -> T {
+        if constexpr (current == index) {
+            return value;
+        } else {
+            return get_integer_sequence_at<T, index, current + 1,
+                                           integers...>();
+        }
+    }
+}  // namespace detail
+
 template <typename T, T... integers>
 requires(is_integral<T>) struct IntegerSequence {
     using value_type = T;
 
     static constexpr ssize size = ssize{sizeof...(integers)};
+
+    template <ssize index>
+    static constexpr auto get() -> T {
+        return detail::get_integer_sequence_at<T, index, 0, integers...>();
+    }
 };
 
 namespace detail {

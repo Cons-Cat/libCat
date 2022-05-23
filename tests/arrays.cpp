@@ -2,6 +2,7 @@
 #include <cat/math>
 #include <cat/runtime>
 #include <cat/string>
+#include <utility>
 
 void meow() {
     cat::align_stack_pointer_32();
@@ -95,6 +96,17 @@ void meow() {
     [[maybe_unused]] cat::Span const span_const = array_1.first(1);
     _ = array_const.slice(0, 2);
     _ = array_const.last(2);
+
+    // Test `IntegerSequence`.
+    [[maybe_unused]] cat::Array<int4, 5> meta_array =
+        cat::integer_sequence<int4, 0, 5>;
+    for (int4& i : meta_array) {
+        Result(i == 0).or_panic();
+    }
+    meta_array = cat::integer_sequence<int4, 1, 5>;
+    for (int4& i : meta_array) {
+        Result(i == 1).or_panic();
+    }
 
     cat::exit();
 };
