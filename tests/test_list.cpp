@@ -75,6 +75,30 @@ void meow() {
 
     list_2.clear(allocator);
 
+    // Deep copy a `List`.
+    _ = list_1.push_front(allocator, 3).or_panic();
+    _ = list_1.push_front(allocator, 2).or_panic();
+    _ = list_1.push_front(allocator, 1).or_panic();
+    _ = list_1.push_front(allocator, 0).or_panic();
+    cat::List<int4> list_5;
+    list_5.clone(allocator, list_1).or_panic();
+
+    // Test that the copy was deep.
+    list_1.clear(allocator).or_panic();
+    Result(*list_5.begin() == 0).or_panic();
+    Result(*(list_5.begin() + 1) == 1).or_panic();
+    Result(*(list_5.begin() + 2) == 2).or_panic();
+    Result(*(list_5.begin() + 3) == 3).or_panic();
+
+    // Test moving `List`.
+    list_1.push_front(allocator, 2);
+    list_1.push_front(allocator, 1);
+    list_1.push_front(allocator, 0);
+    cat::List<int4> list_4 = cat::move(list_1);
+    Result(list_4.front() == 0).or_panic();
+    Result(*(list_4.begin() + 1) == 1).or_panic();
+    Result(*(list_4.begin() + 2) == 2).or_panic();
+
     // Test `ForwardList`.
     allocator.reset();
     cat::ForwardList<int4> forward_list_1;
@@ -90,11 +114,22 @@ void meow() {
     Result(*(forward_list_1.begin() + 2) == 2).or_panic();
     Result(*(forward_list_1.begin() + 3) == 3).or_panic();
 
+    // Deep copy a `ForwardList`.
+    cat::ForwardList<int4> forward_list_2;
+    forward_list_2.clone(allocator, forward_list_1).or_panic();
+
+    // Remove elements from `ForwardList`.
     forward_list_1.erase_after(allocator, forward_list_1.begin());
     Result(*(forward_list_1.begin() + 1) == 2).or_panic();
 
     forward_list_1.pop_front(allocator);
     Result(*forward_list_1.begin() == 2).or_panic();
+
+    // Test that the copy was deep.
+    Result(*forward_list_2.begin() == 1).or_panic();
+    Result(*(forward_list_2.begin() + 1) == 0).or_panic();
+    Result(*(forward_list_2.begin() + 2) == 2).or_panic();
+    Result(*(forward_list_2.begin() + 3) == 3).or_panic();
 
     _ = page_allocator.free(page);
     cat::exit();
