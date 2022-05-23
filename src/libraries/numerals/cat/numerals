@@ -453,9 +453,9 @@ using uint8 = cat::Numeral<__UINT64_TYPE__>;
 using float4 = cat::Numeral<float>;
 using float8 = cat::Numeral<double>;
 
-// TODO: `__SIZE_TYPE__`.
-using usize = uint8;
-using ssize = int8;
+using usize = cat::Numeral<__SIZE_TYPE__>;
+// TODO: Support word size of `4`:
+using ssize = cat::Numeral<long int>;
 
 using bool1 = bool;
 static_assert(sizeof(bool1) == 1);
