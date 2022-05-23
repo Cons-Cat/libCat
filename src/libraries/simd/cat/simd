@@ -47,7 +47,9 @@ class alignas(alignment.c()) Simd {
     constexpr Simd(T values...) : value(Intrinsic{values}){};
 
     template <T... Is>
-    constexpr Simd(IntegerSequence<T, Is...> const) : value(Intrinsic{Is...}){};
+    constexpr Simd(IntegerSequence<T, Is...> const values) requires(
+        values.size == lanes)
+        : value(Intrinsic{Is...}){};
 
     // TODO: `__builtin_convertvector()` wrapped by conversion operators.
 
@@ -74,6 +76,11 @@ class alignas(alignment.c()) Simd {
     constexpr auto operator-=(Vector const& operand) -> Vector& {
         this->value = this->value - operand.value;
         return *this;
+    }
+
+    void load(T const* const p_data) {
+        this->value = *static_cast<Intrinsic const* const>(
+            static_cast<void const* const>(p_data));
     }
 
     static consteval auto size() -> ssize {
