@@ -18,7 +18,7 @@ constexpr auto cat::string_length(char const* p_string) -> ssize {
     } else {
         ssize result = 0;
         char1x16* p_memory = cat::p_string_to_p_vector<char1x16>(p_string);
-        alignas(32) constexpr char1x16 zeros = cat::set_zeros<char1x16>();
+        constexpr char1x16 zeros = integer_sequence<char, 0, 16>;
 
         while (true) {
             char1x16 data = *p_memory;
