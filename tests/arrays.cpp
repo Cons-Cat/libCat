@@ -97,15 +97,20 @@ void meow() {
     _ = array_const.slice(0, 2);
     _ = array_const.last(2);
 
-    // Test `IntegerSequence`.
-    [[maybe_unused]] cat::Array<int4, 5> meta_array =
-        cat::integer_sequence<int4, 0, 5>;
+    // Test `IntegerList`.
+    cat::Array<int4, 5> meta_array = cat::integer_list<int4, 0, 5>;
     for (int4& i : meta_array) {
         Result(i == 0).or_panic();
     }
-    meta_array = cat::integer_sequence<int4, 1, 5>;
+
+    meta_array = cat::integer_list<int4, 1, 5>;
     for (int4& i : meta_array) {
         Result(i == 1).or_panic();
+    }
+
+    meta_array = cat::integer_sequence<int4, 5>;
+    for (int i = 0; i < meta_array.size(); i++) {
+        Result(meta_array[i] == i).or_panic();
     }
 
     cat::exit();

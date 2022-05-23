@@ -28,7 +28,7 @@ class Array : public CollectionFacade<Array<T, length>, T> {
         : storage(arguments...){};
 
     template <Integral U, U... Is>
-    constexpr Array(IntegerSequence<U, Is...> const values) requires(
+    constexpr Array(IntegerList<U, Is...> const values) requires(
         is_convertible<U, T>&& values.size == length)
         : storage(static_cast<T>(Is)...){};
 
@@ -45,22 +45,22 @@ class Array : public CollectionFacade<Array<T, length>, T> {
 
   private:
     template <ssize index, typename U, U value, U... Us>
-    constexpr void copy_sequence(IntegerSequence<U, value, Us...> const) {
+    constexpr void copy_list(IntegerList<U, value, Us...> const) {
         this->storage[index.c()] = value;
 
         if constexpr (index + 1 == length) {
             return;
         } else {
-            // Recurse with one fewer elements in the `IntegerSequence`.
-            this->copy_sequence<index + 1>(IntegerSequence<U, Us...>{});
+            // Recurse withn one fewer elements in the `IntegerList`.
+            this->copy_list<index + 1>(IntegerList<U, Us...>{});
         }
     }
 
   public:
     template <Integral U, U... Us>
-    constexpr auto operator=(IntegerSequence<U, Us...> const values) requires(
+    constexpr auto operator=(IntegerList<U, Us...> const values) requires(
         is_convertible<U, T>&& values.size == length) {
-        this->copy_sequence<0, U, Us...>(values);
+        this->copy_list<0, U, Us...>(values);
     };
 
     // If this is an `Array<char>`, it can be assigned a string.
