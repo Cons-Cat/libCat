@@ -27,7 +27,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/thread/
   ${CMAKE_SOURCE_DIR}/src/libraries/atomic/
   ${CMAKE_SOURCE_DIR}/src/libraries/socket/
-  ${CMAKE_SOURCE_DIR}/src/libraries/x/
+  ${CMAKE_SOURCE_DIR}/src/libraries/x11/
   ${CMAKE_SOURCE_DIR}/src/libraries/bit/
   ${CMAKE_SOURCE_DIR}/src/libraries/iterator/
   ${CMAKE_SOURCE_DIR}/src/libraries/math/

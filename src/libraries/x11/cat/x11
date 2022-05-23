@@ -10,7 +10,7 @@
 
 // https://www.x.org/releases/X11R7.7/doc/xproto/x11protocol.pdf
 
-namespace xwin {
+namespace x11 {
 
 // TODO: Handle `$DISPLAY`.
 constexpr cat::String socket_path = "/tmp/.X11-unix/X0";
@@ -270,14 +270,14 @@ struct IoVirtualization {
     ssize length;
 };
 
-// Every X client request begins with an `xwin::ClientRequestHeader`.
+// Every X client request begins with an `x11::ClientRequestHeader`.
 struct ClientRequestHeader {
     OperationCode operation;
     // `message_length` represents a multiple of four bytes.
     uint2 message_length;
 };
 
-// Every X server reply begins with an `xwin::ServerReplyHeader`.
+// Every X server reply begins with an `x11::ServerReplyHeader`.
 struct ServerReplyHeader {
     enum class SuccessCode : unsigned char {
         failure = 0,
@@ -394,23 +394,23 @@ struct VisualPacket {
 
 struct Connection {
     nix::FileDescriptor socket_descriptor;
-    xwin::ServerReplyHeader header;
-    xwin::ConnectionResponseInfo* p_setup;
+    x11::ServerReplyHeader header;
+    x11::ConnectionResponseInfo* p_setup;
     // TODO: A `p_vendor_name` could go here. Consider it?
-    xwin::PixelMapFormatPacket* p_pixel_map_formats;
-    xwin::RootWindowPacket* p_root_windows;
-    xwin::DepthPacket* p_depths;
-    xwin::VisualPacket* p_visuals;
+    x11::PixelMapFormatPacket* p_pixel_map_formats;
+    x11::RootWindowPacket* p_root_windows;
+    x11::DepthPacket* p_depths;
+    x11::VisualPacket* p_visuals;
 };
 
 // TODO: Propagate errors instead of panicking.
 auto handshake(cat::Allocator auto& allocator,
                cat::SocketUnix<cat::SocketType::stream>& socket)
-    -> cat::Optional<xwin::Connection> {
-    xwin::Connection x_connection;
+    -> cat::Optional<x11::Connection> {
+    x11::Connection x_connection;
 
     // Send a request with default-initialized fields.
-    socket.send_struct(xwin::ConnectionRequestInfo()).or_panic();
+    socket.send_struct(x11::ConnectionRequestInfo()).or_panic();
 
     x_connection.socket_descriptor = socket.descriptor;
     // TODO: Is the return of `.recieve` important here?
@@ -419,7 +419,7 @@ auto handshake(cat::Allocator auto& allocator,
 
     // TODO: This will fail if Xauth is enabled. This must handle X11 cookies.
     if (x_connection.header.success_code ==
-        xwin::ServerReplyHeader::SuccessCode::failure) {
+        x11::ServerReplyHeader::SuccessCode::failure) {
         // return Failure(x_connection.header.success_code);
         return nullopt;
     }
@@ -449,26 +449,26 @@ auto handshake(cat::Allocator auto& allocator,
     // TODO: Use `intptr`.
     char* p_iterator = static_cast<char*>(
         static_cast<void*>(x_connection.p_setup +
-                           sizeof(xwin::ConnectionResponseInfo)
+                           sizeof(x11::ConnectionResponseInfo)
                            // For now, skip past the vendor name string.
                            + x_connection.p_setup->vendor_string_length));
 
-    x_connection.p_pixel_map_formats = static_cast<xwin::PixelMapFormatPacket*>(
-        static_cast<void*>(p_iterator));
-    p_iterator += sizeof(xwin::PixelMapFormatPacket) *
+    x_connection.p_pixel_map_formats =
+        static_cast<x11::PixelMapFormatPacket*>(static_cast<void*>(p_iterator));
+    p_iterator += sizeof(x11::PixelMapFormatPacket) *
                   x_connection.p_setup->pixel_map_formats_count.c();
 
     x_connection.p_root_windows =
-        static_cast<xwin::RootWindowPacket*>(static_cast<void*>(p_iterator));
-    p_iterator += sizeof(xwin::RootWindowPacket) *
+        static_cast<x11::RootWindowPacket*>(static_cast<void*>(p_iterator));
+    p_iterator += sizeof(x11::RootWindowPacket) *
                   x_connection.p_setup->root_windows_count.c();
 
     x_connection.p_depths =
-        static_cast<xwin::DepthPacket*>(static_cast<void*>(p_iterator));
-    p_iterator += sizeof(xwin::DepthPacket);
+        static_cast<x11::DepthPacket*>(static_cast<void*>(p_iterator));
+    p_iterator += sizeof(x11::DepthPacket);
 
     x_connection.p_visuals =
-        static_cast<xwin::VisualPacket*>(static_cast<void*>(p_iterator));
+        static_cast<x11::VisualPacket*>(static_cast<void*>(p_iterator));
 
     return x_connection;
 }
@@ -476,9 +476,9 @@ auto handshake(cat::Allocator auto& allocator,
 // TODO: Improve error handling. Union X11 errors and Linux errors.
 // Attempt to connect to an X server over local sockets.
 auto initiate_connection(cat::Allocator auto& allocator)
-    -> cat::Optional<xwin::Connection> {
+    -> cat::Optional<x11::Connection> {
     cat::SocketUnix<cat::SocketType::stream> socket;
-    socket.path_name = xwin::socket_path;
+    socket.path_name = x11::socket_path;
 
     cat::Optional result_1 = socket.create();
     if (!result_1.has_value()) {
@@ -490,7 +490,7 @@ auto initiate_connection(cat::Allocator auto& allocator)
         return nullopt;
     }
 
-    return xwin::handshake(allocator, socket);
+    return x11::handshake(allocator, socket);
 }
 
 struct CreateWindowRequestInfo {
@@ -512,4 +512,4 @@ struct CreateWindowRequestInfo {
     uint4 const* p_values;
 };
 
-}  // namespace xwin
+}  // namespace x11
