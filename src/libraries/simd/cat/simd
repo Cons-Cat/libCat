@@ -44,8 +44,10 @@ class alignas(alignment.c()) Simd {
 
     constexpr Simd(Intrinsic&& values) : value(forward<Intrinsic>(values)){};
 
-    template <typename... U>
-    constexpr Simd(U... values) : value(Intrinsic{values...}){};
+    constexpr Simd(T values...) : value(Intrinsic{values}){};
+
+    template <T... Is>
+    constexpr Simd(IntegerSequence<T, Is...> const) : value(Intrinsic{Is...}){};
 
     // TODO: `__builtin_convertvector()` wrapped by conversion operators.
 
@@ -221,9 +223,6 @@ constexpr auto operator|(StringControl flag_1, StringControl flag_2)
                                       static_cast<unsigned char>(flag_2));
 }
 
-template <typename T>
-consteval auto set_zeros() -> T;
-
 // TODO: Use a vector concept.
 auto shuffle(auto in_vector, auto mask);
 
@@ -321,10 +320,7 @@ auto is_avx512vl_supported() -> bool1;
 
 }  // namespace cat
 
-// clang-format off
 #include "./implementations/compare_implicit_length_strings.tpp"
 #include "./implementations/compare_implicit_length_strings_return_index.tpp"
-#include "./implementations/set_zeros.tpp"
 #include "./implementations/shuffle.tpp"
 #include "./implementations/stream_in.tpp"
-// clang-format on

@@ -26,6 +26,35 @@ constexpr auto ssizeof(auto const& anything) -> ssize;
 template <typename T>
 constexpr auto ssizeof() -> ssize;
 
+template <typename T, T... integers>
+requires(is_integral<T>) struct IntegerSequence {
+    using value_type = T;
+
+    static constexpr ssize size = ssize{sizeof...(integers)};
+};
+
+namespace detail {
+    template <ssize count, typename T, T value, T... integers>
+    constexpr auto make_integer_sequence() {
+        if constexpr (count > 0) {
+            return make_integer_sequence<count - 1, T, value, value,
+                                         integers...>();
+        } else {
+            return IntegerSequence<T, integers...>();
+        }
+    }
+}  // namespace detail
+
+template <typename T, T value, ssize count>
+constexpr auto integer_sequence =
+    detail::make_integer_sequence<count, T, value>();
+
+template <ssize... indices>
+using IndexSequence = IntegerSequence<ssize, indices...>;
+
+template <ssize value, ssize count>
+constexpr auto index_sequence = integer_sequence<ssize, value, count>;
+
 }  // namespace cat
 
 using cat::ssizeof;
