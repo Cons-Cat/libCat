@@ -49,6 +49,10 @@ using uint8 = cat::Numeral<__UINT64_TYPE__>;
 using float4 = cat::Numeral<float>;
 using float8 = cat::Numeral<double>;
 
+using usize = cat::Numeral<__SIZE_TYPE__>;
+// TODO: Support word size of `4`:
+using ssize = cat::Numeral<long int>;
+
 template <typename T, typename Storage>
 struct ArithmeticPtr;
 
@@ -308,6 +312,16 @@ namespace detail {
     template <typename>
     struct IsIntegralTraitDetail : FalseTypeTrait {};
 
+    template <>
+    struct IsIntegralTraitDetail<char> : TrueTypeTrait {};
+    template <>
+    struct IsIntegralTraitDetail<char8_t> : TrueTypeTrait {};
+    template <>
+    struct IsIntegralTraitDetail<char16_t> : TrueTypeTrait {};
+    template <>
+    struct IsIntegralTraitDetail<char32_t> : TrueTypeTrait {};
+    template <>
+    struct IsIntegralTraitDetail<wchar_t> : TrueTypeTrait {};
     template <>
     struct IsIntegralTraitDetail<signed char> : TrueTypeTrait {};
     template <>
