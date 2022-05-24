@@ -6,6 +6,8 @@
 
 namespace cat {
 
+// TODO: See if moving this into `std::` improves debuggability without breaking
+// anything.
 template <typename T>
 constexpr auto bit_cast(auto& from_value) -> T;
 
