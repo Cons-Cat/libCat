@@ -91,6 +91,10 @@ class TypeList {
     template <ssize index>
     using Get = typename RecurseForTypeAtIndex<TypeList<Ts...>, index>::Result;
 
+    // Concatenate one `TypeList` to another `TypeList`.
+    template <typename... Us>
+    using Merge = TypeList<Ts..., Us...>;
+
     // Evaluate `true` iff this type list holds a type `T`.
     template <typename T>
     static constexpr bool has_type = recurse_for_type<T, Ts...>();
