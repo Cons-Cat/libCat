@@ -21,12 +21,12 @@ struct IsLvalueReferenceTrait;
 
 namespace std {
 template <typename T>
-constexpr auto move(T&& input) -> typename cat::RemoveReferenceTrait<T>::type&&;
+constexpr auto move(T&& input) -> typename cat::RemoveReferenceTrait<T>::Type&&;
 template <typename T>
-constexpr auto forward(typename cat::RemoveReferenceTrait<T>::type& input)
+constexpr auto forward(typename cat::RemoveReferenceTrait<T>::Type& input)
     -> T&&;
 template <typename T>
-constexpr auto forward(typename cat::RemoveReferenceTrait<T>::type&& input)
+constexpr auto forward(typename cat::RemoveReferenceTrait<T>::Type&& input)
     -> T&& requires(!cat::IsLvalueReferenceTrait<T>::value);
 }  // namespace std
 
@@ -69,10 +69,10 @@ auto declval() -> decltype(detail::declval_detail<T>(0));
 
 template <typename T>
 struct TypeIdentityTrait {
-    using type = T;
+    using Type = T;
 };
 template <typename T>
-using TypeIdentity = typename TypeIdentityTrait<T>::type;
+using TypeIdentity = typename TypeIdentityTrait<T>::Type;
 
 namespace detail {
     template <typename...>
@@ -81,124 +81,124 @@ namespace detail {
 
 template <typename T>
 struct AddCvTrait {
-    using type = T const volatile;
+    using Type = T const volatile;
 };
 
 template <typename T>
-using AddCv = typename AddCvTrait<T>::type;
+using AddCv = typename AddCvTrait<T>::Type;
 
 template <typename T>
 struct AddConstTrait {
-    using type = T const;
+    using Type = T const;
 };
 
 template <typename T>
-using AddConst = typename AddConstTrait<T>::type;
+using AddConst = typename AddConstTrait<T>::Type;
 
 template <typename T>
 struct AddVolatileTrait {
-    using type = T volatile;
+    using Type = T volatile;
 };
 
 template <typename T>
-using AddVolatile = typename AddVolatileTrait<T>::type;
+using AddVolatile = typename AddVolatileTrait<T>::Type;
 
 template <typename T>
 struct RemoveConstTrait {
-    using type = T;
+    using Type = T;
 };
 template <typename T>
 struct RemoveConstTrait<T const> {
-    using type = T;
+    using Type = T;
 };
 template <typename T>
-using RemoveConst = typename RemoveConstTrait<T>::type;
+using RemoveConst = typename RemoveConstTrait<T>::Type;
 
 template <typename T>
 struct RemoveVolatileTrait {
-    using type = T;
+    using Type = T;
 };
 template <typename T>
 struct RemoveVolatileTrait<T volatile> {
-    using type = T;
+    using Type = T;
 };
 template <typename T>
-using RemoveVolatile = typename RemoveVolatileTrait<T>::type;
+using RemoveVolatile = typename RemoveVolatileTrait<T>::Type;
 
 template <typename T>
 struct RemoveCvTrait {
-    using type = T;
+    using Type = T;
 };
 template <typename T>
 struct RemoveCvTrait<T const> {
-    using type = T;
+    using Type = T;
 };
 template <typename T>
 struct RemoveCvTrait<T volatile> {
-    using type = T;
+    using Type = T;
 };
 template <typename T>
 struct RemoveCvTrait<T const volatile> {
-    using type = T;
+    using Type = T;
 };
 template <typename T>
-using RemoveCv = typename RemoveCvTrait<T>::type;
+using RemoveCv = typename RemoveCvTrait<T>::Type;
 
 template <typename T>
 struct RemoveReferenceTrait {
-    using type = T;
+    using Type = T;
 };
 template <typename T>
 struct RemoveReferenceTrait<T&> {
-    using type = T;
+    using Type = T;
 };
 template <typename T>
 struct RemoveReferenceTrait<T&&> {
-    using type = T;
+    using Type = T;
 };
 template <typename T>
-using RemoveReference = typename RemoveReferenceTrait<T>::type;
+using RemoveReference = typename RemoveReferenceTrait<T>::Type;
 
 // TODO: Rename to `CvRef`.
 template <typename T>
 struct RemoveCvrefTrait {
-    using type = RemoveCvTrait<RemoveReferenceTrait<T>>;
+    using Type = RemoveCvTrait<RemoveReferenceTrait<T>>;
 };
 template <typename T>
-using RemoveCvref = typename RemoveCvrefTrait<T>::type::type::type;
+using RemoveCvref = typename RemoveCvrefTrait<T>::Type::Type::Type;
 
 namespace detail {
     template <typename T>
     struct RemovePointerTraitDetail {
-        using type = T;
+        using Type = T;
     };
     template <typename T>
     struct RemovePointerTraitDetail<T*> {
-        using type = T;
+        using Type = T;
     };
     template <typename T>
     struct RemovePointerTraitDetail<T* const> {
-        using type = T;
+        using Type = T;
     };
     template <typename T>
     struct RemovePointerTraitDetail<T* volatile> {
-        using type = T;
+        using Type = T;
     };
     template <typename T>
     struct RemovePointerTraitDetail<T* const volatile> {
-        using type = T;
+        using Type = T;
     };
 }  // namespace detail
 
 template <typename T>
 struct RemovePointerTrait : detail::RemovePointerTraitDetail<T> {};
 template <typename T>
-using RemovePointer = typename RemovePointerTrait<T>::type;
+using RemovePointer = typename RemovePointerTrait<T>::Type;
 
 template <typename T, T constant_value>
 struct IntegralConstantTrait {
     static constexpr T value = constant_value;
-    using type = IntegralConstantTrait<T, constant_value>;
+    using Type = IntegralConstantTrait<T, constant_value>;
 };
 template <typename T, T constant_value>
 constexpr auto integral_constant =
@@ -217,14 +217,14 @@ constexpr bool false_type = FalseTypeTrait::value;
 
 template <bool Condition, typename T, typename U>
 struct ConditionalTrait {
-    using type = T;
+    using Type = T;
 };
 template <typename T, typename U>
 struct ConditionalTrait<false, T, U> {
-    using type = U;
+    using Type = U;
 };
 template <bool B, typename T, typename U>
-using Conditional = typename ConditionalTrait<B, T, U>::type;
+using Conditional = typename ConditionalTrait<B, T, U>::Type;
 
 // `__is_enum()` is a GNU builtin.
 template <typename T>
@@ -232,7 +232,7 @@ struct IsEnumTrait : BoolConstantTrait<__is_enum(T)> {};
 template <typename T>
 constexpr bool is_enum = IsEnumTrait<T>::value;
 template <typename T>
-using IsEnum = typename IsEnumTrait<T>::type;
+using IsEnum = typename IsEnumTrait<T>::Type;
 
 // `__is_same()` is a GNU builtin.
 template <typename T, typename U>
@@ -240,7 +240,7 @@ struct IsSameTrait : BoolConstantTrait<__is_same(T, U)> {};
 template <typename T, typename U>
 constexpr bool is_same = IsSameTrait<T, U>::value;
 template <typename T, typename U>
-using IsSame = typename IsSameTrait<T, U>::type;
+using IsSame = typename IsSameTrait<T, U>::Type;
 
 // `__is_base_of()` is a GNU builtin.
 template <typename T, typename U>
@@ -248,7 +248,7 @@ struct IsBaseOfTrait : BoolConstantTrait<__is_base_of(T, U)> {};
 template <typename T, typename U>
 constexpr bool is_base_of = IsBaseOfTrait<T, U>::value;
 template <typename T, typename U>
-using IsBaseOf = typename IsBaseOfTrait<T, U>::type;
+using IsBaseOf = typename IsBaseOfTrait<T, U>::Type;
 
 // `__is_union()` is a GNU builtin.
 template <typename T>
@@ -268,7 +268,7 @@ struct IsLiteralTrait : BoolConstantTrait<__is_literal_type(T)> {};
 template <typename T>
 constexpr bool is_literal = IsLiteralTrait<T>::value;
 template <typename T>
-using IsLiteral = typename IsLiteralTrait<T>::type;
+using IsLiteral = typename IsLiteralTrait<T>::Type;
 
 template <typename T>
 struct IsReferenceTrait : FalseTypeTrait {};
@@ -394,7 +394,7 @@ constexpr bool is_bool = IsBoolTrait<T>::value;
 
 template <typename T>
 struct IsArithmeticTrait : ConditionalTrait<is_integral<T>, IsIntegralTrait<T>,
-                                            IsFloatingPointTrait<T>>::type {};
+                                            IsFloatingPointTrait<T>>::Type {};
 
 namespace detail {
     template <typename T, bool = IsArithmeticTrait<T>::value>
@@ -408,11 +408,11 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-struct IsSignedTrait : detail::IsSignedTraitDetail<T>::type {};
+struct IsSignedTrait : detail::IsSignedTraitDetail<T>::Type {};
 template <typename T>
 constexpr bool is_signed = IsSignedTrait<T>::value;
 template <typename T>
-using IsSigned = typename IsSignedTrait<T>::type;
+using IsSigned = typename IsSignedTrait<T>::Type;
 
 namespace detail {
     template <typename T, bool = IsArithmeticTrait<T>::value>
@@ -422,16 +422,16 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-struct IsUnsignedTrait : detail::IsUnsignedTraitDetail<T>::type {};
+struct IsUnsignedTrait : detail::IsUnsignedTraitDetail<T>::Type {};
 template <typename T>
 constexpr bool is_unsigned = IsUnsignedTrait<T>::value;
 template <typename T>
-using IsUnsigned = typename IsUnsignedTrait<T>::type;
+using IsUnsigned = typename IsUnsignedTrait<T>::Type;
 
 template <typename T>
 struct IsVoidTrait : IsSameTrait<void, RemoveCv<T>> {};
 template <typename T>
-using IsVoid = typename IsVoidTrait<T>::type;
+using IsVoid = typename IsVoidTrait<T>::Type;
 template <typename T>
 constexpr bool is_void = IsVoidTrait<T>::value;
 
@@ -440,7 +440,7 @@ struct IsConstTrait : FalseTypeTrait {};
 template <typename T>
 struct IsConstTrait<T const> : TrueTypeTrait {};
 template <typename T>
-using IsConst = typename IsConstTrait<T>::type;
+using IsConst = typename IsConstTrait<T>::Type;
 template <typename T>
 constexpr bool is_const = IsConstTrait<T>::value;
 
@@ -463,7 +463,7 @@ struct IsPointerTrait : detail::IsPointerTraitDetail<T> {};
 template <typename T>
 constexpr bool is_pointer = IsPointerTrait<T>::value;
 template <typename T>
-using IsPointer = typename IsPointerTrait<T>::type;
+using IsPointer = typename IsPointerTrait<T>::Type;
 
 template <typename>
 struct IsArrayTrait : FalseTypeTrait {};
@@ -474,21 +474,21 @@ struct IsArrayTrait<T[]> : TrueTypeTrait {};
 template <typename T>
 constexpr bool is_array = IsArrayTrait<T>::value;
 template <typename T>
-using IsArray = typename IsArrayTrait<T>::type;
+using IsArray = typename IsArrayTrait<T>::Type;
 
 template <typename T>
 struct RemoveExtentTrait {
-    using type = T;
+    using Type = T;
 };
 
 template <typename T, int Size>
 struct RemoveExtentTrait<T[Size]> {
-    using type = T;
+    using Type = T;
 };
 
 template <typename T>
 struct RemoveExtentTrait<T[]> {
-    using type = T;
+    using Type = T;
 };
 
 template <typename T>
@@ -539,19 +539,19 @@ namespace detail {
                               IsReferenceableTrait<T>::value,
                               IsReferenceableTrait<T>, IsVoidTrait<T>>::value>
     struct AddPointerTraitDetail {
-        using type = T;
+        using Type = T;
     };
 
     template <typename T>
     struct AddPointerTraitDetail<T, true> {
-        using type = RemoveReference<T>*;
+        using Type = RemoveReference<T>*;
     };
 }  // namespace detail
 
 template <typename T>
 struct AddPointerTrait : detail::AddPointerTraitDetail<T> {};
 template <typename T>
-using AddPointer = typename AddPointerTrait<T>::type;
+using AddPointer = typename AddPointerTrait<T>::Type;
 
 namespace detail {
     template <typename T>
@@ -564,7 +564,7 @@ template <typename T>
 struct AddLvalueReferenceTrait
     : decltype(detail::add_lvalue_reference_trait_detail<T>(0)) {};
 template <typename T>
-using AddLvalueReference = typename AddLvalueReferenceTrait<T>::type;
+using AddLvalueReference = typename AddLvalueReferenceTrait<T>::Type;
 
 template <typename>
 struct IsLvalueReferenceTrait : FalseTypeTrait {};
@@ -573,7 +573,7 @@ struct IsLvalueReferenceTrait<T&> : TrueTypeTrait {};
 template <typename T>
 constexpr bool is_lvalue_reference = IsLvalueReferenceTrait<T>::value;
 template <typename T>
-using IsLvalueReference = typename IsLvalueReferenceTrait<T>::type;
+using IsLvalueReference = typename IsLvalueReferenceTrait<T>::Type;
 
 namespace detail {
     template <typename T>
@@ -586,7 +586,7 @@ template <typename T>
 struct AddRvalueReferenceTrait
     : decltype(detail::add_rvalue_reference_trait_detail<T>(0)) {};
 template <typename T>
-using AddRvalueReference = typename AddRvalueReferenceTrait<T>::type;
+using AddRvalueReference = typename AddRvalueReferenceTrait<T>::Type;
 
 template <typename>
 struct IsRvalueReferenceTrait : FalseTypeTrait {};
@@ -595,30 +595,30 @@ struct IsRvalueReferenceTrait<T&&> : TrueTypeTrait {};
 template <typename T>
 constexpr bool is_rvalue_reference = IsRvalueReferenceTrait<T>::value;
 template <typename T>
-using IsRvalueReference = typename IsRvalueReferenceTrait<T>::type;
+using IsRvalueReference = typename IsRvalueReferenceTrait<T>::Type;
 
 template <typename T>
 struct DecayTrait {
   private:
-    using U = typename RemoveReferenceTrait<T>::type;
+    using U = typename RemoveReferenceTrait<T>::Type;
 
   public:
-    using type = typename ConditionalTrait<
-        IsArrayTrait<U>::value, typename RemoveExtentTrait<U>::type*,
+    using Type = typename ConditionalTrait<
+        IsArrayTrait<U>::value, typename RemoveExtentTrait<U>::Type*,
         typename ConditionalTrait<IsFunctionTrait<U>::value,
-                                  typename AddPointerTrait<U>::type,
-                                  typename RemoveCvTrait<U>::type>::type>::type;
+                                  typename AddPointerTrait<U>::Type,
+                                  typename RemoveCvTrait<U>::Type>::Type>::Type;
 };
 template <typename T>
-using Decay = typename DecayTrait<T>::type;
+using Decay = typename DecayTrait<T>::Type;
 
 // `__underlying_type` is a GNU builtin.
 template <typename T>
 struct UnderlyingTypeTrait {
-    using type = __underlying_type(T);
+    using Type = __underlying_type(T);
 };
 template <typename T>
-using UnderlyingType = typename UnderlyingTypeTrait<T>::type;
+using UnderlyingType = typename UnderlyingTypeTrait<T>::Type;
 
 namespace detail {
     template <typename T>
@@ -657,7 +657,7 @@ struct ConjunctionTrait<B1, Bn...>
     : Conditional<bool(B1::value), ConjunctionTrait<Bn...>, B1> {};
 
 template <typename B1, typename... Bn>
-using Conjunction = typename ConjunctionTrait<B1, Bn...>::type;
+using Conjunction = typename ConjunctionTrait<B1, Bn...>::Type;
 template <typename B1, typename... Bn>
 constexpr bool conjunction = ConjunctionTrait<B1, Bn...>::value;
 
@@ -689,7 +689,7 @@ requires(is_enum<T> && !is_integral<T>) struct IsScopedEnumTrait<T>
 };
 
 template <typename T>
-using IsScopedEnum = typename IsScopedEnumTrait<T>::type;
+using IsScopedEnum = typename IsScopedEnumTrait<T>::Type;
 template <typename T>
 constexpr bool is_scoped_enum = IsScopedEnumTrait<T>::value;
 
@@ -713,17 +713,17 @@ struct RemoveAllExtentsTrait;
 
 template <typename T>
 struct RemoveAllExtentsTrait {
-    using type = T;
+    using Type = T;
 };
 
 template <typename T>
 struct RemoveAllExtentsTrait<T[]> {
-    using type = typename RemoveAllExtentsTrait<T>::type;
+    using Type = typename RemoveAllExtentsTrait<T>::Type;
 };
 
 template <typename T, unsigned long long N>
 struct RemoveAllExtentsTrait<T[N]> {
-    using type = typename RemoveAllExtentsTrait<T>::type;
+    using Type = typename RemoveAllExtentsTrait<T>::Type;
 };
 
 template <typename T>
@@ -750,7 +750,7 @@ struct IsConstructibleTrait : detail::IsConstructibleTraitDetail<T, Args...> {};
 template <typename T, typename... Args>
 constexpr bool is_constructible = IsConstructibleTrait<T, Args...>::value;
 template <typename T, typename... Args>
-using IsConstructible = typename IsConstructibleTrait<T, Args...>::type;
+using IsConstructible = typename IsConstructibleTrait<T, Args...>::Type;
 
 // `__is_trivially_constructible` is a GNU builtin.
 template <typename T, typename... Args>
@@ -762,7 +762,7 @@ constexpr bool is_trivially_constructible =
 
 template <typename T>
 struct IsDefaultConstructibleTrait
-    : detail::IsConstructibleTraitDetail<T>::type {};
+    : detail::IsConstructibleTraitDetail<T>::Type {};
 template <typename T>
 constexpr bool is_default_constructible = IsDefaultConstructibleTrait<T>::value;
 
@@ -810,7 +810,7 @@ namespace detail {
 
     template <typename T>
     struct IsDestructibleBaseDetail : TryDestructorTraitDetail {
-        using type = decltype(truth_value<T>(0));
+        using Type = decltype(truth_value<T>(0));
     };
 
     template <typename T,
@@ -823,7 +823,7 @@ namespace detail {
     template <typename T>
     struct IsDestructibleTraitDetail<T, false, false>
         : IsDestructibleBaseDetail<
-              typename RemoveAllExtentsTrait<T>::type>::type {};
+              typename RemoveAllExtentsTrait<T>::Type>::Type {};
 
     template <typename T>
     struct IsDestructibleTraitDetail<T, true, false> : FalseTypeTrait {};
@@ -833,7 +833,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-struct IsDestructibleTrait : detail::IsDestructibleTraitDetail<T>::type {};
+struct IsDestructibleTrait : detail::IsDestructibleTraitDetail<T>::Type {};
 template <typename T>
 constexpr bool is_destructible = IsDestructibleTrait<T>::value;
 
@@ -940,7 +940,7 @@ namespace detail {
     };
 
     template <typename Function, typename... Args,
-              typename Fd = typename DecayTrait<Function>::type>
+              typename Fd = typename DecayTrait<Function>::Type>
     auto try_invoke_detail(Function&& callback, Args&&... args)
         -> decltype(InvokeTraitDetail<Fd>::call(forward<Function>(callback),
                                                 forward<Args>(args)...));
@@ -952,7 +952,7 @@ namespace detail {
                                        declval<Function>(),
                                        declval<Args>()...))),
                                    Function, Args...> {
-        using type = decltype(detail::try_invoke_detail(declval<Function>(),
+        using Type = decltype(detail::try_invoke_detail(declval<Function>(),
                                                         declval<Args>()...));
     };
 }  // namespace detail
@@ -962,7 +962,7 @@ struct InvokeResultTrait
     : detail::InvokeResultTraitDetail<void, Function, ArgTypes...> {};
 
 template <typename Function, typename... ArgTypes>
-using InvokeResult = typename InvokeResultTrait<Function, ArgTypes...>::type;
+using InvokeResult = typename InvokeResultTrait<Function, ArgTypes...>::Type;
 
 namespace detail {
     template <typename T, typename U, bool = IsVoidTrait<U>::value,
@@ -970,14 +970,14 @@ namespace detail {
     struct IsInvocableTraitDetail : FalseTypeTrait {};
 
     template <typename T, typename U>
-    struct IsInvocableTraitDetail<T, U, true, Void<typename T::type>>
+    struct IsInvocableTraitDetail<T, U, true, Void<typename T::Type>>
         : TrueTypeTrait {};
 
     template <typename TResult, typename UReturn>
     struct IsInvocableTraitDetail<TResult, UReturn, false,
-                                  Void<typename TResult::type>> {
+                                  Void<typename TResult::Type>> {
       private:
-        static auto get() -> typename TResult::type;
+        static auto get() -> typename TResult::Type;
 
         template <typename T>
         static void try_conversion(T);
@@ -989,14 +989,14 @@ namespace detail {
         static auto test(...) -> FalseTypeTrait;
 
       public:
-        using type = decltype(test<UReturn>(1));
+        using Type = decltype(test<UReturn>(1));
     };
 }  // namespace detail
 
 template <typename Function, typename... ArgTypes>
 struct IsInvocableTrait
     : detail::IsInvocableTraitDetail<InvokeResultTrait<Function, ArgTypes...>,
-                                     void>::type {};
+                                     void>::Type {};
 template <typename Function, typename... Args>
 constexpr bool is_invocable = IsInvocableTrait<Function, Args...>::value;
 
@@ -1073,7 +1073,7 @@ concept CopyConstructible =
     ConstructibleFrom<T, T const> && ConvertibleTo<T const, T>;
 
 // boolean_testable is adapted from the exposition-only concept
-// boolean-testable. This converts a type into `bool` rather than `bool1`
+// boolean-testable. This converts a Type into `bool` rather than `bool1`
 // because that simplifies compilation.
 namespace detail {
     template <typename T>

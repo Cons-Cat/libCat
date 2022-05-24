@@ -85,7 +85,7 @@ constexpr auto integer_sequence =
     detail::make_integer_sequence<count, T, T{count.c()}>();
 
 template <typename T, ssize count>
-using MakeIntegerSequence = decltype(integer_sequence<ssize, count>);
+using MakeIntegerSequence = RemoveCv<decltype(integer_sequence<ssize, count>)>;
 
 template <ssize... indices>
 using IndexList = IntegerList<ssize, indices...>;
