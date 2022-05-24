@@ -7,9 +7,9 @@
 // Black magic befouls the lines between yon
 // copse, so lest your eyes be lead astray,
 // know that the incantations written yonder
-// hath driven many a pony to insanity.
-
-// Enter at your peril!
+// hath driven many ponies mad.
+//
+// Gallop forward at ye own peril!
 
 // These forward declarations are required.
 namespace cat {
@@ -38,20 +38,20 @@ using std::move;
 template <typename T>
 struct Numeral;
 
-using int1 = cat::Numeral<__INT8_TYPE__>;
-using int2 = cat::Numeral<__INT16_TYPE__>;
-using int4 = cat::Numeral<__INT32_TYPE__>;
-using int8 = cat::Numeral<__INT64_TYPE__>;
-using uint1 = cat::Numeral<__UINT8_TYPE__>;
-using uint2 = cat::Numeral<__UINT16_TYPE__>;
-using uint4 = cat::Numeral<__UINT32_TYPE__>;
-using uint8 = cat::Numeral<__UINT64_TYPE__>;
-using float4 = cat::Numeral<float>;
-using float8 = cat::Numeral<double>;
+using int1 = Numeral<__INT8_TYPE__>;
+using int2 = Numeral<__INT16_TYPE__>;
+using int4 = Numeral<__INT32_TYPE__>;
+using int8 = Numeral<__INT64_TYPE__>;
+using uint1 = Numeral<__UINT8_TYPE__>;
+using uint2 = Numeral<__UINT16_TYPE__>;
+using uint4 = Numeral<__UINT32_TYPE__>;
+using uint8 = Numeral<__UINT64_TYPE__>;
+using float4 = Numeral<float>;
+using float8 = Numeral<double>;
 
-using usize = cat::Numeral<__SIZE_TYPE__>;
+using usize = Numeral<__SIZE_TYPE__>;
 // TODO: Support word size of `4`:
-using ssize = cat::Numeral<long int>;
+using ssize = Numeral<long int>;
 
 template <typename T, typename Storage>
 struct ArithmeticPtr;
@@ -191,7 +191,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-struct RemovePointerTrait : cat::detail::RemovePointerTraitDetail<T> {};
+struct RemovePointerTrait : detail::RemovePointerTraitDetail<T> {};
 template <typename T>
 using RemovePointer = typename RemovePointerTrait<T>::type;
 
@@ -228,7 +228,7 @@ using Conditional = typename ConditionalTrait<B, T, U>::type;
 
 // `__is_enum()` is a GNU builtin.
 template <typename T>
-struct IsEnumTrait : IntegralConstantTrait<bool, __is_enum(T)> {};
+struct IsEnumTrait : BoolConstantTrait<__is_enum(T)> {};
 template <typename T>
 constexpr bool is_enum = IsEnumTrait<T>::value;
 template <typename T>
@@ -252,19 +252,19 @@ using IsBaseOf = typename IsBaseOfTrait<T, U>::type;
 
 // `__is_union()` is a GNU builtin.
 template <typename T>
-struct IsUnionTrait : IntegralConstantTrait<bool, __is_union(T)> {};
+struct IsUnionTrait : BoolConstantTrait<__is_union(T)> {};
 template <typename T>
 constexpr bool is_union = IsUnionTrait<T>::value;
 
 // `__is_class()` is a GNU builtin.
 template <typename T>
-struct IsClassTrait : IntegralConstantTrait<bool, __is_class(T)> {};
+struct IsClassTrait : BoolConstantTrait<__is_class(T)> {};
 template <typename T>
 constexpr bool is_class = IsClassTrait<T>::value;
 
 // `__is_literal_type()` is a GNU builtin.
 template <typename T>
-struct IsLiteralTrait : IntegralConstantTrait<bool, __is_literal_type(T)> {};
+struct IsLiteralTrait : BoolConstantTrait<__is_literal_type(T)> {};
 template <typename T>
 constexpr bool is_literal = IsLiteralTrait<T>::value;
 template <typename T>
@@ -283,27 +283,27 @@ constexpr bool is_reference = IsReferenceTrait<T>::value;
 template <typename>
 struct IsCatNumeral : FalseTypeTrait {};
 template <>
-struct IsCatNumeral<cat::int1> : TrueTypeTrait {};
+struct IsCatNumeral<int1> : TrueTypeTrait {};
 template <>
-struct IsCatNumeral<cat::int2> : TrueTypeTrait {};
+struct IsCatNumeral<int2> : TrueTypeTrait {};
 template <>
-struct IsCatNumeral<cat::int4> : TrueTypeTrait {};
+struct IsCatNumeral<int4> : TrueTypeTrait {};
 template <>
-struct IsCatNumeral<cat::int8> : TrueTypeTrait {};
+struct IsCatNumeral<int8> : TrueTypeTrait {};
 template <>
-struct IsCatNumeral<cat::uint1> : TrueTypeTrait {};
+struct IsCatNumeral<uint1> : TrueTypeTrait {};
 template <>
-struct IsCatNumeral<cat::uint2> : TrueTypeTrait {};
+struct IsCatNumeral<uint2> : TrueTypeTrait {};
 template <>
-struct IsCatNumeral<cat::uint4> : TrueTypeTrait {};
+struct IsCatNumeral<uint4> : TrueTypeTrait {};
 template <>
-struct IsCatNumeral<cat::uint8> : TrueTypeTrait {};
+struct IsCatNumeral<uint8> : TrueTypeTrait {};
 template <>
-struct IsCatNumeral<cat::float4> : TrueTypeTrait {};
+struct IsCatNumeral<float4> : TrueTypeTrait {};
 template <>
-struct IsCatNumeral<cat::float8> : TrueTypeTrait {};
+struct IsCatNumeral<float8> : TrueTypeTrait {};
 template <typename U, typename Storage>
-struct IsCatNumeral<cat::ArithmeticPtr<U, Storage>> : TrueTypeTrait {};
+struct IsCatNumeral<ArithmeticPtr<U, Storage>> : TrueTypeTrait {};
 
 template <typename T>
 constexpr bool is_cat_numeral = IsCatNumeral<T>::value;
@@ -344,41 +344,39 @@ namespace detail {
     struct IsIntegralTraitDetail<unsigned long long> : TrueTypeTrait {};
 
     template <>
-    struct IsIntegralTraitDetail<cat::int1> : TrueTypeTrait {};
+    struct IsIntegralTraitDetail<int1> : TrueTypeTrait {};
     template <>
-    struct IsIntegralTraitDetail<cat::uint1> : TrueTypeTrait {};
+    struct IsIntegralTraitDetail<uint1> : TrueTypeTrait {};
     template <>
-    struct IsIntegralTraitDetail<cat::int2> : TrueTypeTrait {};
+    struct IsIntegralTraitDetail<int2> : TrueTypeTrait {};
     template <>
-    struct IsIntegralTraitDetail<cat::uint2> : TrueTypeTrait {};
+    struct IsIntegralTraitDetail<uint2> : TrueTypeTrait {};
     template <>
-    struct IsIntegralTraitDetail<cat::int4> : TrueTypeTrait {};
+    struct IsIntegralTraitDetail<int4> : TrueTypeTrait {};
     template <>
-    struct IsIntegralTraitDetail<cat::uint4> : TrueTypeTrait {};
+    struct IsIntegralTraitDetail<uint4> : TrueTypeTrait {};
     template <>
-    struct IsIntegralTraitDetail<cat::int8> : TrueTypeTrait {};
+    struct IsIntegralTraitDetail<int8> : TrueTypeTrait {};
     template <>
-    struct IsIntegralTraitDetail<cat::uint8> : TrueTypeTrait {};
+    struct IsIntegralTraitDetail<uint8> : TrueTypeTrait {};
 
     template <typename U, typename Storage>
-    struct IsIntegralTraitDetail<cat::ArithmeticPtr<U, Storage>>
-        : TrueTypeTrait {};
+    struct IsIntegralTraitDetail<ArithmeticPtr<U, Storage>> : TrueTypeTrait {};
     template <>
     struct IsIntegralTraitDetail<bool> : TrueTypeTrait {};
 }  // namespace detail
 
 template <typename T>
-struct IsIntegralTrait : cat::detail::IsIntegralTraitDetail<RemoveCv<T>> {};
+struct IsIntegralTrait : detail::IsIntegralTraitDetail<RemoveCv<T>> {};
 template <typename T>
 constexpr bool is_integral = IsIntegralTrait<T>::value;
 
 template <typename T>
 struct IsFloatingPointTrait
-    : BoolConstantTrait<is_same<float, RemoveCv<T>> ||
-                        is_same<double, RemoveCv<T>> ||
-                        is_same<cat::float4, RemoveCv<T>> ||
-                        is_same<cat::float8, RemoveCv<T>> ||
-                        is_same<long double, RemoveCv<T>>> {};
+    : BoolConstantTrait<
+          is_same<float, RemoveCv<T>> || is_same<double, RemoveCv<T>> ||
+          is_same<float4, RemoveCv<T>> || is_same<float8, RemoveCv<T>> ||
+          is_same<long double, RemoveCv<T>>> {};
 template <typename T>
 constexpr bool is_floating_point = IsFloatingPointTrait<T>::value;
 
@@ -403,14 +401,14 @@ namespace detail {
     struct IsSignedTraitDetail : BoolConstantTrait<T(-1) < T(0)> {};
 
     template <>
-    struct IsSignedTraitDetail<cat::int1, true> : TrueTypeTrait {};
+    struct IsSignedTraitDetail<int1, true> : TrueTypeTrait {};
 
     template <typename T>
     struct IsSignedTraitDetail<T, false> : FalseTypeTrait {};
 }  // namespace detail
 
 template <typename T>
-struct IsSignedTrait : cat::detail::IsSignedTraitDetail<T>::type {};
+struct IsSignedTrait : detail::IsSignedTraitDetail<T>::type {};
 template <typename T>
 constexpr bool is_signed = IsSignedTrait<T>::value;
 template <typename T>
@@ -424,7 +422,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-struct IsUnsignedTrait : cat::detail::IsUnsignedTraitDetail<T>::type {};
+struct IsUnsignedTrait : detail::IsUnsignedTraitDetail<T>::type {};
 template <typename T>
 constexpr bool is_unsigned = IsUnsignedTrait<T>::value;
 template <typename T>
@@ -505,7 +503,7 @@ constexpr bool is_function = IsFunctionTrait<T>::value;
 template <typename T, typename = void>
 struct IsReferenceableTrait : FalseTypeTrait {};
 template <typename T>
-struct IsReferenceableTrait<T, cat::detail::Void<T&>> : TrueTypeTrait {};
+struct IsReferenceableTrait<T, detail::Void<T&>> : TrueTypeTrait {};
 
 namespace detail {
     template <typename T>
@@ -515,8 +513,8 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-struct IsMemberPointerTrait
-    : cat::detail::IsMemberPointerTraitDetail<RemoveCv<T>> {};
+struct IsMemberPointerTrait : detail::IsMemberPointerTraitDetail<RemoveCv<T>> {
+};
 template <typename T>
 constexpr bool is_member_pointer = IsMemberPointerTrait<T>::value;
 
@@ -528,11 +526,10 @@ constexpr bool is_null_pointer = IsNullPointerTrait<T>::value;
 
 template <typename T>
 struct IsScalarTrait
-    : IntegralConstantTrait<bool, IsArithmeticTrait<T>::value ||
-                                      IsEnumTrait<T>::value ||
-                                      IsPointerTrait<T>::value ||
-                                      IsMemberPointerTrait<T>::value ||
-                                      IsNullPointerTrait<T>::value> {};
+    : BoolConstantTrait<IsArithmeticTrait<T>::value || IsEnumTrait<T>::value ||
+                        IsPointerTrait<T>::value ||
+                        IsMemberPointerTrait<T>::value ||
+                        IsNullPointerTrait<T>::value> {};
 
 template <typename T>
 constexpr bool is_scalar = IsScalarTrait<T>::value;
@@ -565,7 +562,7 @@ namespace detail {
 
 template <typename T>
 struct AddLvalueReferenceTrait
-    : decltype(cat::detail::add_lvalue_reference_trait_detail<T>(0)) {};
+    : decltype(detail::add_lvalue_reference_trait_detail<T>(0)) {};
 template <typename T>
 using AddLvalueReference = typename AddLvalueReferenceTrait<T>::type;
 
@@ -626,24 +623,24 @@ using UnderlyingType = typename UnderlyingTypeTrait<T>::type;
 namespace detail {
     template <typename T>
     auto returnable_detail(int)
-        -> decltype(void(static_cast<T (*)()>(nullptr)), cat::TrueTypeTrait{});
+        -> decltype(void(static_cast<T (*)()>(nullptr)), TrueTypeTrait{});
     template <typename>
-    auto returnable_detail(...) -> cat::FalseTypeTrait;
+    auto returnable_detail(...) -> FalseTypeTrait;
 
     template <typename From, typename To>
     auto implicitly_convertible_detail(int)
-        -> decltype(void(cat::declval<void (&)(To)>()(cat::declval<From>())),
-                    cat::TrueTypeTrait{});
+        -> decltype(void(declval<void (&)(To)>()(declval<From>())),
+                    TrueTypeTrait{});
     template <typename, typename>
-    auto implicitly_convertible_detail(...) -> cat::FalseTypeTrait;
+    auto implicitly_convertible_detail(...) -> FalseTypeTrait;
 
     template <typename From, typename To>
     struct IsConvertibleTraitDetail
-        : cat::IntegralConstantTrait<
-              bool, (decltype(detail::returnable_detail<To>(0))::value &&
-                     decltype(detail::implicitly_convertible_detail<From, To>(
-                         0))::value) ||
-                        (cat::is_void<From> && cat::is_void<To>)> {};
+        : BoolConstantTrait<
+              (decltype(detail::returnable_detail<To>(0))::value &&
+               decltype(detail::implicitly_convertible_detail<From, To>(
+                   0))::value) ||
+              (is_void<From> && is_void<To>)> {};
 }  // namespace detail
 
 template <typename From, typename To>
@@ -652,12 +649,12 @@ template <typename From, typename To>
 constexpr bool is_convertible = IsConvertibleTrait<From, To>::value;
 
 template <typename...>
-struct ConjunctionTrait : cat::TrueTypeTrait {};
+struct ConjunctionTrait : TrueTypeTrait {};
 template <typename B1>
 struct ConjunctionTrait<B1> : B1 {};
 template <typename B1, typename... Bn>
 struct ConjunctionTrait<B1, Bn...>
-    : cat::Conditional<bool(B1::value), ConjunctionTrait<Bn...>, B1> {};
+    : Conditional<bool(B1::value), ConjunctionTrait<Bn...>, B1> {};
 
 template <typename B1, typename... Bn>
 using Conjunction = typename ConjunctionTrait<B1, Bn...>::type;
@@ -666,29 +663,29 @@ constexpr bool conjunction = ConjunctionTrait<B1, Bn...>::value;
 
 namespace detail {
     template <typename T>
-    auto sizable_trait_detail(int) -> decltype(sizeof(T), cat::TrueTypeTrait{});
+    auto sizable_trait_detail(int) -> decltype(sizeof(T), TrueTypeTrait{});
     template <typename>
-    auto sizable_trait_detail(...) -> cat::FalseTypeTrait;
+    auto sizable_trait_detail(...) -> FalseTypeTrait;
 
     template <typename T>
     auto nonconvertible_to_int(int)
-        -> decltype(static_cast<cat::FalseTypeTrait (*)(int)>(nullptr)(
-            cat::declval<T>()));
+        -> decltype(static_cast<FalseTypeTrait (*)(int)>(nullptr)(
+            declval<T>()));
     template <typename>
-    auto nonconvertible_to_int(...) -> cat::TrueTypeTrait;
+    auto nonconvertible_to_int(...) -> TrueTypeTrait;
 
     template <typename T>
     constexpr bool is_scoped_enum =
-        cat::conjunction<decltype(sizable_trait_detail<T>(0)),
-                         decltype(nonconvertible_to_int<T>(0))>;
+        conjunction<decltype(sizable_trait_detail<T>(0)),
+                    decltype(nonconvertible_to_int<T>(0))>;
 }  // namespace detail
 
 template <typename>
-struct IsScopedEnumTrait : cat::FalseTypeTrait {};
+struct IsScopedEnumTrait : FalseTypeTrait {};
 
 template <typename T>
-requires(cat::is_enum<T> && !cat::is_integral<T>) struct IsScopedEnumTrait<T>
-    : cat::BoolConstantTrait<detail::is_scoped_enum<T>> {
+requires(is_enum<T> && !is_integral<T>) struct IsScopedEnumTrait<T>
+    : BoolConstantTrait<detail::is_scoped_enum<T>> {
 };
 
 template <typename T>
@@ -697,10 +694,8 @@ template <typename T>
 constexpr bool is_scoped_enum = IsScopedEnumTrait<T>::value;
 
 template <typename T>
-struct IsObjectTrait
-    : cat::IntegralConstantTrait<bool, cat::is_scalar<T> || cat::is_array<T> ||
-                                           cat::is_union<T> ||
-                                           cat::is_class<T>> {};
+struct IsObjectTrait : BoolConstantTrait<is_scalar<T> || is_array<T> ||
+                                         is_union<T> || is_class<T>> {};
 template <typename T>
 constexpr bool is_object = IsObjectTrait<T>::value;
 
@@ -751,8 +746,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T, typename... Args>
-struct IsConstructibleTrait
-    : cat::detail::IsConstructibleTraitDetail<T, Args...> {};
+struct IsConstructibleTrait : detail::IsConstructibleTraitDetail<T, Args...> {};
 template <typename T, typename... Args>
 constexpr bool is_constructible = IsConstructibleTrait<T, Args...>::value;
 template <typename T, typename... Args>
@@ -768,7 +762,7 @@ constexpr bool is_trivially_constructible =
 
 template <typename T>
 struct IsDefaultConstructibleTrait
-    : cat::detail::IsConstructibleTraitDetail<T>::type {};
+    : detail::IsConstructibleTraitDetail<T>::type {};
 template <typename T>
 constexpr bool is_default_constructible = IsDefaultConstructibleTrait<T>::value;
 
@@ -781,39 +775,37 @@ constexpr bool is_trivially_default_constructible =
 
 template <typename T>
 struct IsCopyConstructibleTrait
-    : cat::IsConstructibleTrait<T, cat::AddLvalueReference<cat::AddConst<T>>> {
-};
+    : IsConstructibleTrait<T, AddLvalueReference<AddConst<T>>> {};
 template <typename T>
 constexpr bool is_copy_constructible = IsCopyConstructibleTrait<T>::value;
 
 template <typename T>
 struct IsTriviallyCopyConstructibleTrait
-    : cat::IsTriviallyConstructibleTrait<
-          T, cat::AddLvalueReference<cat::AddConst<T>>> {};
+    : IsTriviallyConstructibleTrait<T, AddLvalueReference<AddConst<T>>> {};
 template <typename T>
 constexpr bool is_trivially_copy_constructible =
-    cat::IsTriviallyCopyConstructibleTrait<T>::value;
+    IsTriviallyCopyConstructibleTrait<T>::value;
 
 template <typename T>
 struct IsMoveConstructibleTrait
-    : cat::IsConstructibleTrait<T, cat::AddRvalueReference<T>> {};
+    : IsConstructibleTrait<T, AddRvalueReference<T>> {};
 template <typename T>
-constexpr bool is_move_constructible = cat::IsMoveConstructibleTrait<T>::value;
+constexpr bool is_move_constructible = IsMoveConstructibleTrait<T>::value;
 
 template <typename T>
 struct IsTriviallyMoveConstructibleTrait
-    : cat::IsTriviallyConstructibleTrait<T, cat::AddRvalueReference<T>> {};
+    : IsTriviallyConstructibleTrait<T, AddRvalueReference<T>> {};
 template <typename T>
 constexpr bool is_trivially_move_constructible =
-    cat::IsTriviallyMoveConstructibleTrait<T>::value;
+    IsTriviallyMoveConstructibleTrait<T>::value;
 
 namespace detail {
     struct TryDestructorTraitDetail {
         template <typename T, typename = decltype(declval<T&>().~T())>
-        static auto truth_value(int) -> cat::TrueTypeTrait;
+        static auto truth_value(int) -> TrueTypeTrait;
 
         template <typename T>
-        static auto truth_value(...) -> cat::FalseTypeTrait;
+        static auto truth_value(...) -> FalseTypeTrait;
     };
 
     template <typename T>
@@ -841,7 +833,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-struct IsDestructibleTrait : cat::detail::IsDestructibleTraitDetail<T>::type {};
+struct IsDestructibleTrait : detail::IsDestructibleTraitDetail<T>::type {};
 template <typename T>
 constexpr bool is_destructible = IsDestructibleTrait<T>::value;
 
@@ -872,30 +864,28 @@ constexpr bool is_trivially_assignable =
 
 template <typename T>
 struct IsCopyAssignableTrait
-    : cat::IsAssignableTrait<cat::AddLvalueReference<T>,
-                             cat::AddLvalueReference<T const>> {};
+    : IsAssignableTrait<AddLvalueReference<T>, AddLvalueReference<T const>> {};
 template <typename T>
 constexpr bool is_copy_assignable = IsCopyAssignableTrait<T>::value;
 
 template <typename T>
 struct IsTriviallyCopyAssignableTrait
-    : cat::IsTriviallyAssignableTrait<cat::AddLvalueReference<T>,
-                                      cat::AddLvalueReference<T const>> {};
+    : IsTriviallyAssignableTrait<AddLvalueReference<T>,
+                                 AddLvalueReference<T const>> {};
 template <typename T>
 constexpr bool is_trivially_copy_assignable =
     IsTriviallyCopyAssignableTrait<T>::value;
 
 template <typename T>
 struct IsMoveAssignableTrait
-    : cat::IsAssignableTrait<cat::AddLvalueReference<T>,
-                             cat::AddRvalueReference<T>> {};
+    : IsAssignableTrait<AddLvalueReference<T>, AddRvalueReference<T>> {};
 template <typename T>
 constexpr bool is_move_assignable = IsMoveAssignableTrait<T>::value;
 
 template <typename T>
 struct IsTriviallyMoveAssignableTrait
-    : cat::IsTriviallyAssignableTrait<cat::AddLvalueReference<T>,
-                                      cat::AddRvalueReference<T>> {};
+    : IsTriviallyAssignableTrait<AddLvalueReference<T>, AddRvalueReference<T>> {
+};
 template <typename T>
 constexpr bool is_trivially_move_assignable =
     IsTriviallyMoveAssignableTrait<T>::value;
@@ -913,45 +903,43 @@ namespace detail {
     struct InvokeTraitDetail {
         template <typename Function, typename... Args>
         static auto call(Function&& callback, Args&&... args)
-            -> decltype(cat::forward<Function>(callback)(
-                cat::forward<Args>(args)...));
+            -> decltype(forward<Function>(callback)(forward<Args>(args)...));
     };
 
     template <typename B, typename MyType>
     struct InvokeTraitDetail<MyType B::*> {
         template <typename T>
-        static auto get(T&& t)
-            -> T&& requires(cat::is_base_of<B, cat::Decay<T>>);
+        static auto get(T&& t) -> T&& requires(is_base_of<B, Decay<T>>);
 
         template <typename T>
-        static auto get_detail(T&& t) -> decltype(*cat::forward<T>(t)) requires(
-            !cat::is_base_of<B, cat::Decay<T>>);
+        static auto get_detail(T&& t)
+            -> decltype(*forward<T>(t)) requires(!is_base_of<B, Decay<T>>);
 
         template <typename T, typename... Args, typename U>
-        static auto call(U B::*p_function, T&& t, Args&&... args) -> decltype((
-            *(InvokeTraitDetail::get(cat::forward<T>(t)).p_function))(
-            cat::forward<Args>(args)...)) requires(cat::is_function<U>);
+        static auto call(U B::*p_function, T&& t, Args&&... args)
+            -> decltype((*(InvokeTraitDetail::get(forward<T>(t)).p_function))(
+                forward<Args>(args)...)) requires(is_function<U>);
 
         template <typename T>
-        static auto call(MyType B::*p_function, T&& t) -> decltype(*(
-            InvokeTraitDetail::get(cat::forward<T>(t)).p_function));
+        static auto call(MyType B::*p_function, T&& t)
+            -> decltype(*(InvokeTraitDetail::get(forward<T>(t)).p_function));
     };
 
     template <typename Function, typename... Args,
-              typename Fd = typename cat::DecayTrait<Function>::type>
+              typename Fd = typename DecayTrait<Function>::type>
     auto try_invoke_detail(Function&& callback, Args&&... args)
-        -> decltype(InvokeTraitDetail<Fd>::call(
-            cat::forward<Function>(callback), cat::forward<Args>(args)...));
+        -> decltype(InvokeTraitDetail<Fd>::call(forward<Function>(callback),
+                                                forward<Args>(args)...));
 
     template <typename AlwaysVoid, typename, typename...>
     struct InvokeResultTraitDetail {};
     template <typename Function, typename... Args>
     struct InvokeResultTraitDetail<decltype(void(detail::try_invoke_detail(
-                                       cat::declval<Function>(),
-                                       cat::declval<Args>()...))),
+                                       declval<Function>(),
+                                       declval<Args>()...))),
                                    Function, Args...> {
-        using type = decltype(detail::try_invoke_detail(
-            cat::declval<Function>(), cat::declval<Args>()...));
+        using type = decltype(detail::try_invoke_detail(declval<Function>(),
+                                                        declval<Args>()...));
     };
 }  // namespace detail
 
@@ -996,13 +984,13 @@ struct IsInvocableTrait
     : detail::IsInvocableTraitDetail<InvokeResultTrait<Function, ArgTypes...>,
                                      void>::type {};
 template <typename Function, typename... Args>
-constexpr bool is_invocable = cat::IsInvocableTrait<Function, Args...>::value;
+constexpr bool is_invocable = IsInvocableTrait<Function, Args...>::value;
 
 template <typename Function, typename... Args>
 constexpr auto invoke(Function&& callback, Args&&... args)
     -> InvokeResult<Function, Args...> {
     // TODO: Handle member functions.
-    return cat::forward<Function>(callback)(cat::forward<Args>(args)...);
+    return forward<Function>(callback)(forward<Args>(args)...);
 }
 
 // https://quuxplusone.github.io/blog/2019/02/06/arrow-proxy/
@@ -1015,52 +1003,51 @@ struct ArrowProxy {
 };
 
 template <typename Function>
-consteval auto constant_evaluate(auto value) requires(
-    cat::is_invocable<Function>);
+consteval auto constant_evaluate(auto value) requires(is_invocable<Function>);
 
 consteval auto constant_evaluate(auto value);
 
 template <typename T, typename U>
-concept SameAs = cat::is_same<T, U>;
+concept SameAs = is_same<T, U>;
 
 template <typename T>
-concept Integral = cat::is_integral<T>;
+concept Integral = is_integral<T>;
 
 template <typename T>
-concept SignedIntegral = Integral<T> && cat::is_signed<T>;
+concept SignedIntegral = Integral<T> && is_signed<T>;
 
 template <typename T>
-concept UnsignedIntegral = Integral<T> && cat::is_unsigned<T>;
+concept UnsignedIntegral = Integral<T> && is_unsigned<T>;
 
 template <typename T>
-concept FloatingPoint = !Integral<T> && cat::is_floating_point<T>;
+concept FloatingPoint = !Integral<T> && is_floating_point<T>;
 
-// TODO: cat::is_safe_integral<T> does not work.
+// TODO: is_safe_integral<T> does not work.
 template <typename T>
-concept SafeIntegral = (!cat::is_integral<T>)&&(!cat::is_floating_point<T>);
+concept SafeIntegral = (!is_integral<T>)&&(!is_floating_point<T>);
 
 // TODO: Support more string types.
 // template <typename T>
 // concept string =
-//     (cat::is_same<cat::RemoveConst<cat::RemoveReference<T>>,
+//     (is_same<RemoveConst<RemoveReference<T>>,
 //                    char8_t const*> ||
-//      cat::is_same<cat::RemoveConst<cat::RemoveReference<T>>, char
+//      is_same<RemoveConst<RemoveReference<T>>, char
 //      const*>);
 
 template <typename T>
-concept Bool = cat::is_bool<T>;
+concept Bool = is_bool<T>;
 
 template <typename Derived, typename Base>
-concept DerivedFrom = cat::is_base_of<Base, Derived> &&
-    cat::is_convertible<const volatile Derived*, const volatile Base*>;
+concept DerivedFrom = is_base_of<Base, Derived> &&
+    is_convertible<const volatile Derived*, const volatile Base*>;
 
 template <typename From, typename To>
-concept ConvertibleTo = cat::is_convertible<From, To> && requires {
-    static_cast<To>(cat::declval<From>());
+concept ConvertibleTo = is_convertible<From, To> && requires {
+    static_cast<To>(declval<From>());
 };
 
 template <typename T, typename... Args>
-concept ConstructibleFrom = cat::is_constructible<T, Args...>;
+concept ConstructibleFrom = is_constructible<T, Args...>;
 
 template <typename T>
 concept MoveConstructible = ConstructibleFrom<T, T> && ConvertibleTo<T, T>;
@@ -1088,8 +1075,8 @@ concept BooleanTestable = detail::BooleanTestableDetail<T> && requires(T&& b) {
 // `__WeaklyEqualityComparableWith`.
 namespace detail {
     template <typename T, typename U>
-    concept WeaklyEqualityComparableWithDetail = requires(
-        cat::RemoveReference<T> const& t, cat::RemoveReference<U> const& u) {
+    concept WeaklyEqualityComparableWithDetail =
+        requires(RemoveReference<T> const& t, RemoveReference<U> const& u) {
         { t == u } -> BooleanTestableDetail;
         { t != u } -> BooleanTestableDetail;
         { u == t } -> BooleanTestableDetail;
@@ -1111,15 +1098,15 @@ concept SafelyEnumerable = requires(T it) {
 };
 
 template <typename T>
-concept EnumClass = cat::is_scoped_enum<T>;
+concept EnumClass = is_scoped_enum<T>;
 
 template <typename T, typename U>
 concept NarrowConvertible = requires() {
-    U({cat::declval<T>()});
+    U({declval<T>()});
 };
 
 template <typename Function, typename... Args>
-concept Invocable = cat::is_invocable<Function, Args...>;
+concept Invocable = is_invocable<Function, Args...>;
 
 }  // namespace cat
 
