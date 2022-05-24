@@ -32,6 +32,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/iterator/
   ${CMAKE_SOURCE_DIR}/src/libraries/math/
   ${CMAKE_SOURCE_DIR}/src/libraries/type_list/
+  ${CMAKE_SOURCE_DIR}/src/libraries/tuple/
   PARENT_SCOPE
 )
 
@@ -57,7 +58,6 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/simd/implementations/zero_upper_avx_registers.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/simd/implementations/compare_implicit_length_strings.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/simd/implementations/compare_implicit_length_strings_return_index.tpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/simd/implementations/set_zeros.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/simd/implementations/shuffle.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/simd/implementations/stream_in.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/memory/implementations/copy_memory.cpp

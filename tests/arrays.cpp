@@ -113,7 +113,7 @@ void meow() {
         Result(int_array[i] == i).or_panic();
     }
 
-    cat::Array int_array_2 = cat::integer_list<int4, 0, 5>;
+    [[maybe_unused]] cat::Array int_array_2 = cat::integer_list<int4, 0, 5>;
 
     cat::exit();
 };
