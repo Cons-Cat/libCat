@@ -890,6 +890,20 @@ template <typename T>
 constexpr bool is_trivially_move_assignable =
     IsTriviallyMoveAssignableTrait<T>::value;
 
+// `__is_trivially_copyable()` is a GNU builtin.
+template <typename T>
+struct IsTriviallyCopyableTrait
+    : BoolConstantTrait<__is_trivially_copyable(T)> {};
+template <typename T>
+constexpr bool is_trivially_copyable = IsTriviallyCopyableTrait<T>::value;
+
+template <typename T>
+struct IsTrivialTrait
+    : BoolConstantTrait<cat::is_trivially_copyable<T> &&
+                        cat::is_trivially_default_constructible<T>> {};
+template <typename T>
+constexpr bool is_trivial = IsTrivialTrait<T>::value;
+
 // https://stackoverflow.com/a/31763111
 template <typename T, template <typename...> typename Template>
 struct IsSpecializationTrait : FalseTypeTrait {};

@@ -77,9 +77,15 @@ namespace detail {
 template <typename T, T value, ssize count>
 constexpr auto integer_list = detail::make_integer_list<count, T, value>();
 
+template <typename T, T value, ssize count>
+using MakeIntegerList = decltype(integer_list<T, value, count>);
+
 template <typename T, ssize count>
 constexpr auto integer_sequence =
     detail::make_integer_sequence<count, T, T{count.c()}>();
+
+template <typename T, ssize count>
+using MakeIntegerSequence = decltype(integer_sequence<ssize, count>);
 
 template <ssize... indices>
 using IndexList = IntegerList<ssize, indices...>;
@@ -87,8 +93,17 @@ using IndexList = IntegerList<ssize, indices...>;
 template <ssize value, ssize count>
 constexpr auto index_list = integer_list<ssize, value, count>;
 
+template <ssize value, ssize count>
+using MakeIndexList = MakeIntegerList<ssize, value, count>;
+
 template <ssize count>
 constexpr auto index_sequence = integer_sequence<ssize, count>;
+
+template <ssize count>
+using MakeIndexSequence = MakeIntegerSequence<ssize, count>;
+
+template <typename... Ts>
+using IndexSequenceFor = MakeIndexSequence<ssize{sizeof...(Ts)}>;
 
 }  // namespace cat
 
