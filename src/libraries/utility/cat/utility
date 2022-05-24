@@ -100,7 +100,7 @@ using cat::ssizeof;
 namespace std {
 
 // NOLINTBEGIN(readability-redundant-declaration)
-// The following functions are forward-declared in `<cat/cat>`, but they
+// The following functions are forward-declared in `<cat/meta>`, but they
 // belong to the `<cat/utility>` library.
 
 template <typename T>
