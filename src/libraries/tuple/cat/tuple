@@ -13,7 +13,6 @@ namespace detail {
     template <ssize index, typename T>
     struct TupleElement {
         T storage;
-        static auto get_type(IntegralConstantTrait<ssize, index>) -> T;
 
         // For some reason, this produces ambiguous overload errors if it is
         // implemented as a normal function instead of an operator.
@@ -41,7 +40,6 @@ namespace detail {
     // type.
     template <typename... Ts>
     struct TypeMap : Ts... {
-        using Ts::get_type...;
         using Ts::operator[]...;
     };
 
@@ -207,8 +205,7 @@ struct tuple_size<cat::Tuple<Ts...>>
 
 template <usize::Type index, typename... Ts>
 struct tuple_element<index, cat::Tuple<Ts...>> {
-    using type = decltype(cat::Tuple<Ts...>::get_type(
-        cat::IntegralConstantTrait<ssize, ssize{index}>{}));
+    using type = decltype(cat::Tuple<Ts...>{}.template get<ssize{index}>());
 };
 
 }  // namespace std
