@@ -42,7 +42,7 @@ void meow() {
     Result(cat::move(intchar_move.first()) == 100).or_panic();
     Result(cat::move(intchar_move.second()) == 'a').or_panic();
 
-    cat::Tuple<int, char>&& intchar_move_const = {100, 'a'};
+    cat::Tuple<int, char> const intchar_move_const = {100, 'a'};
     Result(cat::move(intchar_move_const.first()) == 100).or_panic();
     Result(cat::move(intchar_move_const.second()) == 'a').or_panic();
 
