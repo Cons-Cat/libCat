@@ -60,6 +60,14 @@ void meow() {
     static_assert(cat::is_same<decltype(five_tuple.fourth()), void*&>);
     static_assert(cat::is_same<decltype(five_tuple.fifth()), uint8&>);
 
+    // Test structured bindings.
+    auto [one, two, three, four, five] = five_tuple;
+    one = 'a';
+    two = 2;
+    three = true;
+    four = nullptr;
+    five = 1u;
+
     // Test that `Tuple` size is zero-overhead.
     static_assert(sizeof(intint) == sizeof(int) * 2);
     // This type is 32 bytes due to padding for member alignment.
