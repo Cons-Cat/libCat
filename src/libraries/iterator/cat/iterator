@@ -37,14 +37,14 @@ namespace detail {
 
     template <typename>
     struct InferDifferenceType {
-        using type = ssize;
+        using Type = ssize;
     };
 
     // Case when `T` provides `.distance()`
     template <detail::HasDistance T>
     struct InferDifferenceType<T> {
         static T const& it;
-        using type = decltype(it.distance(it));
+        using Type = decltype(it.distance(it));
     };
 
     template <typename...>
@@ -53,15 +53,15 @@ namespace detail {
     template <typename T>
     struct InferValueType<T> {
         static const T& it;
-        using type = RemoveCvref<decltype(*it)>;
+        using Type = RemoveCvRef<decltype(*it)>;
     };
 
     template <typename T>
     requires requires {
-        typename T::value_type;
+        typename T::Value;
     }
     struct InferValueType<T> {
-        using type = typename T::value_type;
+        using Type = typename T::Value;
     };
 
     template <typename T>
@@ -75,26 +75,28 @@ namespace detail {
     template <typename T>
     concept HasBidirectional = HasRandomAccess<T> || HasDecrement<T>;
 
+    // TODO: Do these two `concept`s make sense in libCat?
     template <typename T>
-    concept HasSinglePass = bool(T::single_pass_iterator);
+    concept HasSinglePass = bool(T::SinglePassIterator);
 
     template <typename Iter, typename T>
-    concept HasSentinel = SameAs<T, typename T::sentinel_type>;
+    concept HasSentinel = SameAs<T, typename T::Sentinel>;
 }  // namespace detail
 
 template <typename T>
-using InferDifferenceType = typename detail::InferDifferenceType<T>::type;
+using InferDifferenceType = typename detail::InferDifferenceType<T>::Type;
 
-template <typename Arg, typename Iter>
-concept DifferenceTypeArg = ConvertibleTo<Arg, InferDifferenceType<Iter>>;
+template <typename Argument, typename Iterator>
+concept DifferenceTypeArg =
+    ConvertibleTo<Argument, InferDifferenceType<Iterator>>;
 
 template <typename T>
-using InferValueType_t = typename detail::InferValueType<T>::type::type;
+using InferValueType = typename detail::InferValueType<T>::Type::Type;
 
 // Every `IteratorFacade` is `indirectly_readable`.
 template <typename Derived>
 struct IteratorFacade {
-    // `Type` is needed for reversing.
+    // `Type` is needed for reversing this iterator.
     using Type = Derived;
 
     constexpr auto self() -> Derived& {
@@ -116,7 +118,7 @@ struct IteratorFacade {
     constexpr auto operator->() const {
         decltype(auto) reference = **this;
         if constexpr (is_reference<decltype(reference)>) {
-            // If `reference` is actually a reference type, return its
+            // If `reference` is actually a reference Type, return its
             // address.
             return addressof(reference);
         } else {
@@ -263,7 +265,7 @@ template <typename T>
 requires is_base_of<IteratorFacade<T>, T>
 struct IteratorTraits {
     static T const& it;
-    using Value = typename InferValueType_t<T>::type;
+    using Value = typename InferValueType<T>::Type;
     using Reference = decltype(*it);
     using Pointer = decltype(it.operator->());
     using Difference = InferDifferenceType<T>;

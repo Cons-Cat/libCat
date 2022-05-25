@@ -315,7 +315,7 @@ struct AllocatorFacade {
 
     // Get a reference to the data in any memory handle.
     [[nodiscard]] auto get(auto& memory) -> auto& {
-        using Handle = RemoveCvref<decltype(memory)>;
+        using Handle = RemoveCvRef<decltype(memory)>;
         using Type = typename Handle::Type;
         if constexpr (requires { memory.is_on_stack; }) {
             // Get small-size optimized data:
@@ -338,7 +338,7 @@ struct AllocatorFacade {
 
     // Get a `const` reference to the data in any memory handle.
     [[nodiscard]] auto get(auto const& memory) -> auto const& {
-        using Handle = RemoveCvref<decltype(memory)>;
+        using Handle = RemoveCvRef<decltype(memory)>;
         using Type = typename Handle::Type;
         if constexpr (requires { memory.is_on_stack; }) {
             // Get small-size optimized data:
