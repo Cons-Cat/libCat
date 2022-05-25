@@ -141,20 +141,28 @@ class List : public CollectionFacade<List<T>, T> {
 
     // Place a node at the front of this list.
     void place_node_front(Node& node) {
-        node.p_next_node = this->p_head;
-        node.p_previous_node = nullptr;
-        node.p_next_node->p_previous_node = &node;
-        this->p_head = &node;
-        this->length++;
+        if (this->length > 0) [[likely]] {
+            node.p_next_node = this->p_head;
+            node.p_previous_node = nullptr;
+            node.p_next_node->p_previous_node = &node;
+            this->p_head = &node;
+            this->length++;
+        } else {
+            this->place_initial_node(node);
+        }
     }
 
     // Place a node at the back of this list.
     void place_node_back(Node& node) {
-        node.p_next_node = nullptr;
-        node.p_previous_node = this->p_tail;
-        node.p_previous_node->p_next_node = &node;
-        this->p_tail = &node;
-        this->length++;
+        if (this->length == 0) [[unlikely]] {
+            this->place_initial_node(node);
+        } else {
+            node.p_next_node = nullptr;
+            node.p_previous_node = this->p_tail;
+            node.p_previous_node->p_next_node = &node;
+            this->p_tail = &node;
+            this->length++;
+        }
     }
 
   public:
@@ -246,14 +254,8 @@ class List : public CollectionFacade<List<T>, T> {
 
         Node& node = *memory.value();
         node.storage = value;
+        this->place_node_front(node);
 
-        if (this->length == 0) [[unlikely]] {
-            // If this list has nothing in it, `.push_front()` must be
-            // special-cased.
-            this->place_initial_node(node);
-        } else {
-            this->place_node_front(node);
-        }
         return Iterator{&node};
     }
 
@@ -269,14 +271,8 @@ class List : public CollectionFacade<List<T>, T> {
 
         Node& node = *memory.value();
         new (&node.storage) T{forward<Args>(arguments)...};
+        this->place_node_front(node);
 
-        if (this->length == 0) [[unlikely]] {
-            // If this list has nothing in it, `.emplace_front()` must be
-            // special-cased.
-            this->place_initial_node(node);
-        } else {
-            this->place_node_front(node);
-        }
         return Iterator{&node};
     }
 
@@ -307,14 +303,8 @@ class List : public CollectionFacade<List<T>, T> {
 
         Node& node = *memory.value();
         node.storage = value;
+        this->place_node_back(node);
 
-        if (this->length == 0) [[unlikely]] {
-            // If this list has nothing in it, `.push_back()` must be
-            // special-cased.
-            this->place_initial_node(node);
-        } else {
-            this->place_node_back(node);
-        }
         return Iterator{&node};
     }
 
@@ -330,14 +320,8 @@ class List : public CollectionFacade<List<T>, T> {
 
         Node& node = *memory.value();
         new (&node.storage) T{forward<Args>(arguments)...};
+        this->place_node_back(node);
 
-        if (this->length == 0) [[unlikely]] {
-            // If this list has nothing in it, `.emplace_back()` must be
-            // special-cased.
-            this->place_initial_node(node);
-        } else {
-            this->place_node_back(node);
-        }
         return Iterator{&node};
     }
 
@@ -494,9 +478,13 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
 
     // Place a node at the front of this list.
     void place_node_front(Node& node) {
-        node.p_next_node = this->p_head;
-        this->p_head = &node;
-        this->length++;
+        if (this->length > 0) [[likely]] {
+            node.p_next_node = this->p_head;
+            this->p_head = &node;
+            this->length++;
+        } else {
+            this->place_initial_node(node);
+        }
     }
 
   public:
@@ -562,14 +550,8 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
 
         Node& node = *memory.value();
         node.storage = value;
+        this->place_node_front(node);
 
-        if (this->length == 0) [[unlikely]] {
-            // If this list has nothing in it, `.push_front()` must be
-            // special-cased.
-            this->place_initial_node(node);
-        } else {
-            this->place_node_front(node);
-        }
         return Iterator{&node};
     }
 
@@ -585,14 +567,8 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
 
         Node& node = *memory.value();
         new (&node.storage) T{forward<Args>(arguments)...};
+        this->place_node_front(node);
 
-        if (this->length == 0) [[unlikely]] {
-            // If this list has nothing in it, `.emplace_front()` must be
-            // special-cased.
-            this->place_initial_node(node);
-        } else {
-            this->place_node_front(node);
-        }
         return Iterator{&node};
     }
 
@@ -650,7 +626,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         return monostate;
     }
 
-    // Providing these four iterator getters generates the remaining four
+    // Providing these two iterator getters generates the remaining four
     // through the `CollectionFacade`.
     [[nodiscard]] auto begin() -> Iterator {
         return Iterator{this->p_head};
