@@ -30,6 +30,11 @@ namespace detail {
             IntegralConstantTrait<ssize, index>) && -> T&& {
             return cat::move(this->storage);
         }
+
+        constexpr auto operator[](
+            IntegralConstantTrait<ssize, index>) const&& -> T const&& {
+            return cat::move(this->storage);
+        }
     };
 
     // Deriving from a variadic list of types allows `Tuple` to be an aggregate
@@ -75,6 +80,12 @@ struct Tuple : detail::TupleStorage<IndexSequenceFor<Ts...>, Ts...>::Type {
         return move((*(this))[IntegralConstantTrait<ssize, index>{}]);
     }
 
+    // Move the N'th stored variable.
+    template <ssize index>
+    constexpr auto get() const&& -> auto const&& requires(index <= size) {
+        return move((*(this))[IntegralConstantTrait<ssize, index>{}]);
+    }
+
     // Get a non-`const` reference to the first stored variable.
     constexpr auto first() & -> auto& requires(size >= 1) {
         return this->get<0>();
@@ -87,6 +98,11 @@ struct Tuple : detail::TupleStorage<IndexSequenceFor<Ts...>, Ts...>::Type {
 
     // Move the first stored variable.
     constexpr auto first() && -> auto&& requires(size >= 1) {
+        return move(this->get<0>());
+    }
+
+    // Move the first stored variable.
+    constexpr auto first() const&& -> auto const&& requires(size >= 1) {
         return move(this->get<0>());
     }
 
@@ -105,6 +121,11 @@ struct Tuple : detail::TupleStorage<IndexSequenceFor<Ts...>, Ts...>::Type {
         return move(this->get<1>());
     }
 
+    // Move the second stored variable.
+    constexpr auto second() const&& -> auto const&& requires(size >= 2) {
+        return move(this->get<1>());
+    }
+
     // Get a non-`const` reference to the third stored variable.
     constexpr auto third() & -> auto& requires(size >= 3) {
         return this->get<2>();
@@ -117,6 +138,11 @@ struct Tuple : detail::TupleStorage<IndexSequenceFor<Ts...>, Ts...>::Type {
 
     // Move the third stored variable.
     constexpr auto third() && -> auto&& requires(size >= 3) {
+        return move(this->get<2>());
+    }
+
+    // Move the third stored variable.
+    constexpr auto third() const&& -> auto const&& requires(size >= 3) {
         return move(this->get<2>());
     }
 
@@ -135,6 +161,11 @@ struct Tuple : detail::TupleStorage<IndexSequenceFor<Ts...>, Ts...>::Type {
         return move(this->get<3>());
     }
 
+    // Move the fourth stored variable.
+    constexpr auto fourth() const&& -> auto const&& requires(size >= 4) {
+        return move(this->get<3>());
+    }
+
     // Get a non-`const` reference to the fifth stored variable.
     constexpr auto fifth() & -> auto& requires(size >= 5) {
         return this->get<4>();
@@ -147,6 +178,11 @@ struct Tuple : detail::TupleStorage<IndexSequenceFor<Ts...>, Ts...>::Type {
 
     // Move the fifth stored variable.
     constexpr auto fifth() && -> auto&& requires(size >= 5) {
+        return move(this->get<4>());
+    }
+
+    // Move the fifth stored variable.
+    constexpr auto fifth() const&& -> auto const&& requires(size >= 5) {
         return move(this->get<4>());
     }
 };
