@@ -117,3 +117,9 @@ add_executable(test_reflection test_reflection.cpp)
 target_compile_options(test_reflection PRIVATE ${CAT_CXX_FLAGS_TEST})
 target_link_options(test_reflection PRIVATE ${CAT_LINK_FLAGS})
 add_test(NAME TypeReflection COMMAND test_reflection)
+
+# This tests that tuples work.
+add_executable(test_tuple test_tuple.cpp)
+target_compile_options(test_tuple PRIVATE ${CAT_CXX_FLAGS_TEST})
+target_link_options(test_tuple PRIVATE ${CAT_LINK_FLAGS})
+add_test(NAME Tuples COMMAND test_tuple)

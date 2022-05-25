@@ -1,0 +1,178 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/type_list>
+#include <cat/utility>
+
+namespace cat {
+namespace detail {
+    // Because one type can only be derived from once, types must be binded to
+    // their position in a paremeter pack to guarantee their uniqueness. This is
+    // required to support `Tuple`s with non-uniquely-typed elements.
+    template <ssize index, typename T>
+    struct TupleElement {
+        T storage;
+        static auto get_type(IntegralConstantTrait<ssize, index>) -> T;
+
+        // For some reason, this produces ambiguous overload errors if it is
+        // implemented as a normal function instead of an operator.
+        constexpr auto operator[](IntegralConstantTrait<ssize, index>) & -> T& {
+            return this->storage;
+        }
+
+        constexpr auto operator[](
+            IntegralConstantTrait<ssize, index>) const& -> T const& {
+            return this->storage;
+        }
+
+        constexpr auto operator[](
+            IntegralConstantTrait<ssize, index>) && -> T&& {
+            return cat::move(this->storage);
+        }
+    };
+
+    // Deriving from a variadic list of types allows `Tuple` to be an aggregate
+    // type.
+    template <typename... Ts>
+    struct TypeMap : Ts... {
+        using Ts::get_type...;
+        using Ts::operator[]...;
+    };
+
+    // This partial specialization is required in order to support two parameter
+    // packs in the following `TupleStorage` declaration.
+    template <typename...>
+    struct TupleStorage {};
+
+    // Map a list of indices to a list of types.
+    template <ssize... indices, typename... Ts>
+    struct TupleStorage<IndexList<indices...>, Ts...> {
+        using Type = TypeMap<TupleElement<indices, Ts>...>;
+    };
+}  // namespace detail
+
+template <typename... Ts>
+struct Tuple : detail::TupleStorage<IndexSequenceFor<Ts...>, Ts...>::Type {
+    using Types = TypeList<Ts...>;
+    static constexpr ssize size = ssize{sizeof...(Ts)};
+
+    // Get a non-`const` reference to the N'th stored variable.
+    template <ssize index>
+    constexpr auto get() & -> auto& requires(index <= size) {
+        return (*(this))[IntegralConstantTrait<ssize, index>{}];
+    }
+
+    // Get a `const` reference to the N'th stored variable.
+    template <ssize index>
+    constexpr auto get() const& -> auto const& requires(index <= size) {
+        return (*(this))[IntegralConstantTrait<ssize, index>{}];
+    }
+
+    // Move the N'th stored variable.
+    template <ssize index>
+    constexpr auto get() && -> auto&& requires(index <= size) {
+        return move((*(this))[IntegralConstantTrait<ssize, index>{}]);
+    }
+
+    // Get a non-`const` reference to the first stored variable.
+    constexpr auto first() & -> auto& requires(size >= 1) {
+        return this->get<0>();
+    }
+
+    // Get a `const` reference to the first stored variable.
+    constexpr auto first() const& -> auto const& requires(size >= 1) {
+        return this->get<0>();
+    }
+
+    // Move the first stored variable.
+    constexpr auto first() && -> auto&& requires(size >= 1) {
+        return move(this->get<0>());
+    }
+
+    // Get a non-`const` reference to the second stored variable.
+    constexpr auto second() & -> auto& requires(size >= 2) {
+        return this->get<1>();
+    }
+
+    // Get a `const` reference to the second stored variable.
+    constexpr auto second() const& -> auto const& requires(size >= 2) {
+        return this->get<1>();
+    }
+
+    // Move the second stored variable.
+    constexpr auto second() && -> auto&& requires(size >= 2) {
+        return move(this->get<1>());
+    }
+
+    // Get a non-`const` reference to the third stored variable.
+    constexpr auto third() & -> auto& requires(size >= 3) {
+        return this->get<2>();
+    }
+
+    // Get a `const` reference to the third stored variable.
+    constexpr auto third() const& -> auto const& requires(size >= 3) {
+        return this->get<2>();
+    }
+
+    // Move the third stored variable.
+    constexpr auto third() && -> auto&& requires(size >= 3) {
+        return move(this->get<2>());
+    }
+
+    // Get a non-`const` reference to the fourth stored variable.
+    constexpr auto fourth() & -> auto& requires(size >= 4) {
+        return this->get<3>();
+    }
+
+    // Get a `const` reference to the fourth stored variable.
+    constexpr auto fourth() const& -> auto const& requires(size >= 4) {
+        return this->get<3>();
+    }
+
+    // Move the fourth stored variable.
+    constexpr auto fourth() && -> auto&& requires(size >= 4) {
+        return move(this->get<3>());
+    }
+
+    // Get a non-`const` reference to the fifth stored variable.
+    constexpr auto fifth() & -> auto& requires(size >= 5) {
+        return this->get<4>();
+    }
+
+    // Get a `const` reference to the fifth stored variable.
+    constexpr auto fifth() const& -> auto const& requires(size >= 5) {
+        return this->get<4>();
+    }
+
+    // Move the fifth stored variable.
+    constexpr auto fifth() && -> auto&& requires(size >= 5) {
+        return move(this->get<4>());
+    }
+};
+
+// This deduction guide is required for variadic type deduction.
+template <typename... Ts>
+Tuple(Ts...) -> Tuple<Ts...>;
+
+}  // namespace cat
+
+namespace std {
+
+template <typename...>
+struct tuple_size {};  // NOLINT
+
+template <usize::Type, typename...>
+struct tuple_element {};  // NOLINT
+
+template <typename... Ts>
+struct tuple_size<cat::Tuple<Ts...>>
+    : cat::IntegralConstantTrait<usize::Type, sizeof...(Ts)> {};
+
+template <usize::Type index, typename... Ts>
+struct tuple_element<index, cat::Tuple<Ts...>> {
+    using type = decltype(cat::Tuple<Ts...>::get_type(
+        cat::IntegralConstantTrait<ssize, ssize{index}>{}));
+};
+
+}  // namespace std
