@@ -34,14 +34,14 @@ requires(sizeof...(Args) < 7) {
     }
 
     if (result < 0) {
-        return static_cast<LinuxError>(result.c());
+        return static_cast<LinuxError>(result.raw);
     }
 
     if constexpr (!::cat::is_void<T>) {
         if constexpr (!::cat::is_pointer<T>) {
-            return nix::ScaredyLinux<T>{T{result.c()}};
+            return nix::ScaredyLinux<T>{T{result.raw}};
         } else {
-            return nix::ScaredyLinux<T>{reinterpret_cast<T>(result.c())};
+            return nix::ScaredyLinux<T>{reinterpret_cast<T>(result.raw)};
         }
     } else {
         return monostate;

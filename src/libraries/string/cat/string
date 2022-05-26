@@ -77,9 +77,9 @@ class String : public Span<char const> {
 template <ssize length>
 struct StaticString {
     // TODO: Use an `Array`.
-    char storage[length.c() + 1];
+    char storage[length.raw + 1];
 
-    constexpr StaticString(char const (&in)[length.c()]) : storage{} {
+    constexpr StaticString(char const (&in)[length.raw]) : storage{} {
         for (int i = 0; i < length - 1; i++) {
             storage[i] = in[i];
         }
@@ -115,18 +115,18 @@ consteval auto operator+(StaticString<length_1> const& string_1,
                          StaticString<length_2> const& string_2)
     -> StaticString<length_1 - 1 + length_2> {
     // TODO: Use an `Array`.
-    char array[length_1.c() - 1 + length_2.c()];
+    char array[length_1.raw - 1 + length_2.raw];
 
     for (int i = 0; i < length_1 - 1; i++) {
         array[i] = string_1.storage[i];
     }
 
-    for (int i = length_1.c() - 1; i < length_1 - 1 + length_2 - 1; i++) {
-        array[i] = string_2.storage[i - length_1.c() + 1];
+    for (int i = length_1.raw - 1; i < length_1 - 1 + length_2 - 1; i++) {
+        array[i] = string_2.storage[i - length_1.raw + 1];
     }
 
     // Make this string null-terminated.
-    array[(length_1.c() - 1 + length_2.c() - 1)] = '\0';
+    array[(length_1.raw - 1 + length_2.raw - 1)] = '\0';
     StaticString static_string = array;
     return static_string;
 }
