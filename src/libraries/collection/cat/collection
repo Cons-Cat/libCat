@@ -2,16 +2,15 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/iterator>
 #include <cat/math>
 #include <cat/meta>
 #include <cat/optional>
 
 namespace cat {
+
 template <typename T>
 class Span;
-}
-
-namespace cat {
 
 template <typename Derived, typename T>
 class CollectionFacade {
@@ -208,6 +207,8 @@ class CollectionFacade {
         return this->self().p_data()[index.raw];
     }
 
+    // `.begin()` and `.end()` can be automatically generated for contiguous
+    // collections.
     [[nodiscard]] constexpr auto begin() requires(is_contiguous) {
         return RemoveConst<decltype(unconst(this)->make_iterator())>{
             0, this->self_mut().p_data()};
@@ -283,6 +284,14 @@ class CollectionFacade {
     [[nodiscard]] constexpr auto crend() const {
         return this->rend();
     }
+};
+
+template <typename T>
+struct CollectionTraits {
+    using Iterator = decltype(T{}.begin());
+    using ConstIterator = AddConst<Iterator>;
+    using ReversedIterator = cat::ReversedIterator<Iterator>;
+    using ConstReversedIterator = cat::ReversedIterator<ConstIterator>;
 };
 
 }  // namespace cat
