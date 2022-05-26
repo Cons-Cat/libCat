@@ -7,13 +7,6 @@
 
 namespace cat {
 
-// TODO: More iterable related concepts.
-template <typename T>
-concept Iterable = requires(T t) {
-    t.begin();
-    t.end();
-};
-
 namespace detail {
     template <typename T>
     concept HasIncrement = requires(T it) {
@@ -264,10 +257,10 @@ struct ContiguousIteratorTag {};
 template <typename T>
 requires is_base_of<IteratorFacade<T>, T>
 struct IteratorTraits {
-    static T const& it;
+    static T const& iterator;
     using Value = typename InferValueType<T>::Type;
-    using Reference = decltype(*it);
-    using Pointer = decltype(it.operator->());
+    using Reference = decltype(*iterator);
+    using Pointer = decltype(iterator.operator->());
     using Difference = InferDifferenceType<T>;
     using Category = Conditional<
         // If this can be a random access iterator, it always will be.
@@ -314,11 +307,43 @@ struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
         ++iterator;
     }
 
-    // TODO: Use safe arithmetic here.
-    constexpr auto distance(ReversedIterator<T> const other) const -> int {
-        return this->iterator.distance(other.iterator).raw;
+    constexpr auto distance(ReversedIterator<T> const other) const -> ssize {
+        return this->iterator.distance(other.iterator);
     }
 };
+
+// TODO: More iterable related concepts.
+template <typename T>
+concept Iterable = requires(T t) {
+    t.begin();
+    t.end();
+};
+
+template <typename T>
+concept WeaklyIncrementable = requires(T it) {
+    // TODO: Make this `Movable`.
+    { ++it } -> SameAs<T&>;
+    it++;
+};
+
+template <typename T>
+concept Incrementable = requires(T it) {
+    // TODO: Make this `Regular` and `Movable`.
+    { ++it } -> SameAs<T&>;
+    { it++ } -> SameAs<T&>;
+};
+
+template <typename T>
+concept RandomAccessIterator =
+    is_same<typename IteratorTraits<T>::Category, RandomAccessIteratorTag>;
+
+template <typename T>
+concept BidirectionalIterator =
+    is_same<typename IteratorTraits<T>::Category, BidirectionalIteratorTag>;
+
+template <typename T>
+concept ForwardIterator =
+    is_same<typename IteratorTraits<T>::Category, ForwardIteratorTag>;
 
 template <Iterable T>
 class AsReverse {
@@ -375,17 +400,5 @@ class AsConstReverse {
         return iterable.crend();
     }
 };
-
-template <typename T>
-concept RandomAccessIterator =
-    is_same<typename IteratorTraits<T>::Category, RandomAccessIteratorTag>;
-
-template <typename T>
-concept BidirectionalIterator =
-    is_same<typename IteratorTraits<T>::Category, BidirectionalIteratorTag>;
-
-template <typename T>
-concept ForwardIterator =
-    is_same<typename IteratorTraits<T>::Category, ForwardIteratorTag>;
 
 }  // namespace cat
