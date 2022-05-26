@@ -316,7 +316,7 @@ struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
 
     // TODO: Use safe arithmetic here.
     constexpr auto distance(ReversedIterator<T> const other) const -> int {
-        return this->iterator.distance(other.iterator).c();
+        return this->iterator.distance(other.iterator).raw;
     }
 };
 

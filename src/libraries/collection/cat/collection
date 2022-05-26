@@ -61,10 +61,10 @@ class CollectionFacade {
             constexpr Iterator(ssize const index, T* const p_in_array)
                 : current_index(index), p_array(p_in_array){};
             constexpr auto dereference() -> T& {
-                return unconst(this->p_array[current_index.c()]);
+                return unconst(this->p_array[current_index.raw]);
             }
             constexpr auto dereference() const -> T const& {
-                return this->p_array[current_index.c()];
+                return this->p_array[current_index.raw];
             }
             constexpr void advance(ssize const offset) {
                 this->current_index += offset;
@@ -87,7 +87,7 @@ class CollectionFacade {
             constexpr Iterator(ssize const index, T const* const p_in_array)
                 : current_index(index), p_array(p_in_array){};
             constexpr auto dereference() const -> T const& {
-                return this->p_array[current_index.c()];
+                return this->p_array[current_index.raw];
             }
             constexpr void advance(ssize const offset) {
                 this->current_index += offset;
@@ -126,7 +126,7 @@ class CollectionFacade {
     requires(is_contiguous) {
         Result{index >= 0}.assert();
         if (index < this->self().capacity()) {
-            return this->self_mut().p_data()[index.c()];
+            return this->self_mut().p_data()[index.raw];
         }
         return nullopt;
     }
@@ -146,7 +146,7 @@ class CollectionFacade {
     }
 
     [[nodiscard]] constexpr auto back() -> T& requires(is_contiguous) {
-        return this->self_mut().p_data()[this->self().size().c() - 1];
+        return this->self_mut().p_data()[this->self().size().raw - 1];
     }
 
     [[nodiscard]] constexpr auto back() const -> T const& {
@@ -197,7 +197,7 @@ class CollectionFacade {
         Result{index >= 0}.assert();
         Result{index < this->self().size()}.assert();
 
-        return this->self_mut().p_data()[index.c()];
+        return this->self_mut().p_data()[index.raw];
     }
 
     [[nodiscard]] constexpr auto operator[](ssize const index) const
@@ -205,7 +205,7 @@ class CollectionFacade {
         Result{index >= 0}.assert();
         Result{index < this->self().size()}.assert();
 
-        return this->self().p_data()[index.c()];
+        return this->self().p_data()[index.raw];
     }
 
     [[nodiscard]] constexpr auto begin() requires(is_contiguous) {

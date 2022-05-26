@@ -461,8 +461,8 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
     uintptr<Byte> p_arena_current = p_arena_begin;
 
     LinearAllocator(uintptr<void> const p_address, ssize const arena_size)
-        : p_arena_begin(p_address.c() + arena_size.c()),
-          p_arena_end(p_address.c()){};
+        : p_arena_begin(p_address.raw + arena_size.raw),
+          p_arena_end(p_address.raw){};
 
     // `LinearAllocator` makes allocations in precisely the size requested.
     template <typename T>
@@ -473,7 +473,7 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
     // Try to allocate memory and bump the pointer down.
     template <typename T>
     auto allocate(ssize const allocation_size) -> OptionalPtr<Byte> {
-        this->p_arena_current -= allocation_size.c();
+        this->p_arena_current -= allocation_size.raw;
         if (this->p_arena_current >= p_arena_end) {
             return static_cast<Byte*>(this->p_arena_current);
         }
@@ -492,7 +492,7 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
     auto aligned_allocate(usize const alignment, ssize const allocation_size)
         -> OptionalPtr<Byte> {
         uintptr<Byte> p_allocation =
-            align_down(this->p_arena_current - allocation_size.c(), alignment);
+            align_down(this->p_arena_current - allocation_size.raw, alignment);
         if (p_allocation >= p_arena_end) {
             this->p_arena_current = p_allocation;
             return static_cast<Byte*>(this->p_arena_current);

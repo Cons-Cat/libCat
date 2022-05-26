@@ -14,7 +14,7 @@ namespace cat {
 // is random-access iterable.
 template <typename T, ssize length>
 class Array : public CollectionFacade<Array<T, length>, T> {
-    T storage[length.c()];
+    T storage[length.raw];
 
   public:
     constexpr Array() = default;
@@ -24,7 +24,7 @@ class Array : public CollectionFacade<Array<T, length>, T> {
     // Construct an `Array` from a variadic argument list.
     template <typename... U>
     constexpr Array(U&&... arguments) requires(sizeof...(arguments) ==
-                                               length.c())
+                                               length.raw)
         : storage(arguments...){};
 
     template <Integral U, U... values>
@@ -46,7 +46,7 @@ class Array : public CollectionFacade<Array<T, length>, T> {
   private:
     template <ssize index, typename U, U value, U... values>
     constexpr void copy_list(IntegerList<U, value, values...> const) {
-        this->storage[index.c()] = value;
+        this->storage[index.raw] = value;
 
         if constexpr (index + 1 == length) {
             return;

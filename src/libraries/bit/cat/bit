@@ -165,75 +165,71 @@ namespace cat::detail {
 // into either a signed or unsigned size type
 struct BinarySize {
     // This macro is provided by GCC.
-    using Type = __UINT64_TYPE__;
-    Type storage;
+    using Raw = __UINT64_TYPE__;
+    Raw raw;
 
     constexpr BinarySize() = default;
 
-    constexpr BinarySize(Integral auto value)
-        : storage(static_cast<Type>(value)){};
+    constexpr BinarySize(Integral auto value) : raw(static_cast<Raw>(value)){};
 
-    constexpr BinarySize(ssize value)
-        : storage(static_cast<Type>(value.storage)){};
+    constexpr BinarySize(ssize value) : raw(static_cast<Raw>(value.raw)){};
 
-    constexpr BinarySize(usize value)
-        : storage(static_cast<Type>(value.storage)){};
+    constexpr BinarySize(usize value) : raw(static_cast<Raw>(value.raw)){};
 
-    constexpr BinarySize(long double value)
-        : storage(static_cast<Type>(value)){};
+    constexpr BinarySize(long double value) : raw(static_cast<Raw>(value)){};
 
     [[nodiscard]] constexpr operator ssize() const {
         // This macro is provided by GCC.
-        return static_cast<__INT64_TYPE__>(this->storage);
+        return static_cast<__INT64_TYPE__>(this->raw);
     }
 
     [[nodiscard]] constexpr operator usize() const {
-        return storage;
+        return raw;
     }
 
     [[nodiscard]] constexpr auto operator==(BinarySize const operand) const
         -> bool {
-        return this->storage == operand.storage;
+        return this->raw == operand.raw;
     }
 
     [[nodiscard]] constexpr auto operator<(BinarySize const operand) const
         -> bool {
-        return this->storage < operand.storage;
+        return this->raw < operand.raw;
     }
 
     [[nodiscard]] constexpr auto operator<=(BinarySize const operand) const
         -> bool {
-        return this->storage <= operand.storage;
+        return this->raw <= operand.raw;
     }
 
     [[nodiscard]] constexpr auto operator>(BinarySize const operand) const
         -> bool {
-        return this->storage > operand.storage;
+        return this->raw > operand.raw;
     }
 
     [[nodiscard]] constexpr auto operator>=(BinarySize const operand) const
         -> bool {
-        return this->storage >= operand.storage;
+        return this->raw >= operand.raw;
     }
 
     [[nodiscard]] constexpr auto operator+(BinarySize const operand) const {
-        return this->storage + operand.storage;
+        return this->raw + operand.raw;
     }
 
     [[nodiscard]] constexpr auto operator-(BinarySize const operand) const {
-        return this->storage - operand.storage;
+        return this->raw - operand.raw;
     }
 
     [[nodiscard]] constexpr auto operator*(BinarySize const operand) const {
-        return this->storage * operand.storage;
+        return this->raw * operand.raw;
     }
 
     [[nodiscard]] constexpr auto operator&(BinarySize const operand) const {
-        return this->storage & operand.storage;
+        return this->raw & operand.raw;
     }
 
     [[nodiscard]] constexpr auto operator|(BinarySize const operand) const {
-        return this->storage | operand.storage;
+        return this->raw | operand.raw;
     }
 };
 

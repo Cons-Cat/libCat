@@ -26,14 +26,14 @@ namespace cat {
  * vectors in modern implementations of SSE, AVX, and NEON architectures. */
 
 template <typename T, ssize lanes, ssize alignment>
-class alignas(alignment.c()) Simd {
+class alignas(alignment.raw) Simd {
     using Vector = Simd<T, lanes, alignment>;
 
   public:
     using Scalar = T;
     // `vector_size` is a GCC attribute that represents SIMD data-types.
-    using Intrinsic [[gnu::vector_size(sizeof(T) * lanes.c()),
-                      gnu::aligned(alignment.c())]] = T;
+    using Intrinsic [[gnu::vector_size(sizeof(T) * lanes.raw),
+                      gnu::aligned(alignment.raw)]] = T;
     Intrinsic value;
 
     constexpr Simd() = default;
@@ -46,10 +46,10 @@ class alignas(alignment.c()) Simd {
 
     constexpr Simd(T values...) : value(Intrinsic{values}){};
 
-    template <T... Is>
-    constexpr Simd(IntegerList<T, Is...> const values) requires(values.size ==
+    template <T... Ts>
+    constexpr Simd(IntegerList<T, Ts...> const values) requires(values.size ==
                                                                 lanes)
-        : value(Intrinsic{Is...}){};
+        : value(Intrinsic{Ts...}){};
 
     // TODO: `__builtin_convertvector()` wrapped by conversion operators.
 
@@ -91,18 +91,18 @@ class alignas(alignment.c()) Simd {
 }  // namespace cat
 
 // Vectors of up to 32 1-byte integers are supported by AVX2.
-using int1x2 = cat::Simd<int1::Type, 2, 32>;
-using int1x4 = cat::Simd<int1::Type, 4, 32>;
-using int1x8 = cat::Simd<int1::Type, 8, 32>;
-using int1x16 = cat::Simd<int1::Type, 16, 32>;
-using int1x32 = cat::Simd<int1::Type, 32, 32>;
+using int1x2 = cat::Simd<int1::Raw, 2, 32>;
+using int1x4 = cat::Simd<int1::Raw, 4, 32>;
+using int1x8 = cat::Simd<int1::Raw, 8, 32>;
+using int1x16 = cat::Simd<int1::Raw, 16, 32>;
+using int1x32 = cat::Simd<int1::Raw, 32, 32>;
 using int1x_ = int1x32;
 
-using uint1x2 = cat::Simd<uint1::Type, 2, 32>;
-using uint1x4 = cat::Simd<uint1::Type, 4, 32>;
-using uint1x8 = cat::Simd<uint1::Type, 8, 32>;
-using uint1x16 = cat::Simd<uint1::Type, 16, 32>;
-using uint1x32 = cat::Simd<uint1::Type, 32, 32>;
+using uint1x2 = cat::Simd<uint1::Raw, 2, 32>;
+using uint1x4 = cat::Simd<uint1::Raw, 4, 32>;
+using uint1x8 = cat::Simd<uint1::Raw, 8, 32>;
+using uint1x16 = cat::Simd<uint1::Raw, 16, 32>;
+using uint1x32 = cat::Simd<uint1::Raw, 32, 32>;
 using uint1x_ = uint1x32;
 
 // Strings need their own vectors.
@@ -114,16 +114,16 @@ using char1x32 = cat::Simd<char, 32, 1>;
 using char1x_ = char1x32;
 
 // Vectors of up to 16 2-byte integers are supported by AVX2.
-using int2x2 = cat::Simd<int2::Type, 2, 32>;
-using int2x4 = cat::Simd<int2::Type, 4, 32>;
-using int2x8 = cat::Simd<int2::Type, 8, 32>;
-using int2x16 = cat::Simd<int2::Type, 16, 32>;
+using int2x2 = cat::Simd<int2::Raw, 2, 32>;
+using int2x4 = cat::Simd<int2::Raw, 4, 32>;
+using int2x8 = cat::Simd<int2::Raw, 8, 32>;
+using int2x16 = cat::Simd<int2::Raw, 16, 32>;
 using int2x_ = int2x16;
 
-using uint2x2 = cat::Simd<uint2::Type, 2, 32>;
-using uint2x4 = cat::Simd<uint2::Type, 4, 32>;
-using uint2x8 = cat::Simd<uint2::Type, 8, 32>;
-using uint2x16 = cat::Simd<uint2::Type, 16, 32>;
+using uint2x2 = cat::Simd<uint2::Raw, 2, 32>;
+using uint2x4 = cat::Simd<uint2::Raw, 4, 32>;
+using uint2x8 = cat::Simd<uint2::Raw, 8, 32>;
+using uint2x16 = cat::Simd<uint2::Raw, 16, 32>;
 using uint2x_ = uint2x16;
 
 // TODO: Support 2-byte chars in string algorithms.
@@ -134,36 +134,36 @@ using char2x16 = cat::Simd<char16_t, 16, 2>;
 using char2x_ = char2x16;
 
 // Vectors of up to 8 4-byte integers are supported by AVX2.
-using int4x2 = cat::Simd<int4::Type, 2, 32>;
-using int4x4 = cat::Simd<int4::Type, 4, 32>;
-using int4x8 = cat::Simd<int4::Type, 8, 32>;
+using int4x2 = cat::Simd<int4::Raw, 2, 32>;
+using int4x4 = cat::Simd<int4::Raw, 4, 32>;
+using int4x8 = cat::Simd<int4::Raw, 8, 32>;
 using int4x_ = int4x8;
 
-using uint4x2 = cat::Simd<uint4::Type, 2, 32>;
-using uint4x4 = cat::Simd<uint4::Type, 4, 32>;
-using uint4x8 = cat::Simd<uint4::Type, 8, 32>;
+using uint4x2 = cat::Simd<uint4::Raw, 2, 32>;
+using uint4x4 = cat::Simd<uint4::Raw, 4, 32>;
+using uint4x8 = cat::Simd<uint4::Raw, 8, 32>;
 using uint4x_ = uint4x8;
 
 // Vectors of up to 4 8-byte integers are supported by AVX2.
-using int8x2 = cat::Simd<int8::Type, 2, 32>;
-using int8x4 = cat::Simd<int8::Type, 4, 32>;
+using int8x2 = cat::Simd<int8::Raw, 2, 32>;
+using int8x4 = cat::Simd<int8::Raw, 4, 32>;
 using int8x_ = int8x4;
 
-using uint8x2 = cat::Simd<uint8::Type, 2, 32>;
-using uint8x4 = cat::Simd<uint8::Type, 4, 32>;
+using uint8x2 = cat::Simd<uint8::Raw, 2, 32>;
+using uint8x4 = cat::Simd<uint8::Raw, 4, 32>;
 using uint8x_ = uint8x4;
 
 // Vectors of up to 8 4-byte floats are supported by AVX2.
-using float4x2 = cat::Simd<float4::Type, 2, 32>;
-using float4x4 = cat::Simd<float4::Type, 4, 32>;
-using float4x8 = cat::Simd<float4::Type, 8, 32>;
+using float4x2 = cat::Simd<float4::Raw, 2, 32>;
+using float4x4 = cat::Simd<float4::Raw, 4, 32>;
+using float4x8 = cat::Simd<float4::Raw, 8, 32>;
 using float4x_ = float4x8;
 
 // TODO: Evaluate what support for 8-byte `int`s exists in x86-64.
 
 // Vectors of up to 4 8-byte floats are supported by AVX2.
-using float8x2 = cat::Simd<float8::Type, 2, 32>;
-using float8x4 = cat::Simd<float8::Type, 4, 32>;
+using float8x2 = cat::Simd<float8::Raw, 2, 32>;
+using float8x4 = cat::Simd<float8::Raw, 4, 32>;
 using float8x_ = float8x4;
 
 // Vectors of up to 32 1-byte bools are supported by AVX2.
@@ -175,16 +175,16 @@ using bool1x32 = cat::Simd<bool1, 32, 32>;
 using bool1x_ = bool1x32;
 
 // Vectors of up to 16 2-byte bools are supported by AVX2.
-using bool2x2 = cat::Simd<bool2::Type, 2, 32>;
-using bool2x4 = cat::Simd<bool2::Type, 4, 32>;
-using bool2x8 = cat::Simd<bool2::Type, 8, 32>;
-using bool2x16 = cat::Simd<bool2::Type, 16, 32>;
+using bool2x2 = cat::Simd<bool2::Raw, 2, 32>;
+using bool2x4 = cat::Simd<bool2::Raw, 4, 32>;
+using bool2x8 = cat::Simd<bool2::Raw, 8, 32>;
+using bool2x16 = cat::Simd<bool2::Raw, 16, 32>;
 using bool2x_ = bool2x16;
 
 // Vectors of up to 8 4-byte bools are supported by AVX2.
-using bool4x2 = cat::Simd<bool4::Type, 2, 32>;
-using bool4x4 = cat::Simd<bool4::Type, 4, 32>;
-using bool4x8 = cat::Simd<bool4::Type, 8, 32>;
+using bool4x2 = cat::Simd<bool4::Raw, 2, 32>;
+using bool4x4 = cat::Simd<bool4::Raw, 4, 32>;
+using bool4x8 = cat::Simd<bool4::Raw, 8, 32>;
 using bool4x_ = bool4x8;
 
 namespace cat {

@@ -28,7 +28,7 @@ auto two() -> ErrorTwo {
 }
 
 auto union_errors(int4 error) -> cat::Scaredy<int8, ErrorOne, ErrorTwo> {
-    switch (error.c()) {
+    switch (error.raw) {
         case 0:
             return one();
         case 1:

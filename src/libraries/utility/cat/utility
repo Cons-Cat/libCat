@@ -66,8 +66,8 @@ namespace detail {
     constexpr auto make_integer_sequence() {
         if constexpr (count > 0) {
             // Recurse, appending `count - 1` to `integers`.
-            return make_integer_sequence<count - 1, T, T{count.c() - 1},
-                                         T{count.c() - 1}, integers...>();
+            return make_integer_sequence<count - 1, T, T{count.raw - 1},
+                                         T{count.raw - 1}, integers...>();
         } else {
             return IntegerList<T, integers...>();
         }
@@ -82,7 +82,7 @@ using MakeIntegerList = decltype(integer_list<T, value, count>);
 
 template <typename T, ssize count>
 constexpr auto integer_sequence =
-    detail::make_integer_sequence<count, T, T{count.c()}>();
+    detail::make_integer_sequence<count, T, T{count.raw}>();
 
 template <typename T, ssize count>
 using MakeIntegerSequence = RemoveCv<decltype(integer_sequence<ssize, count>)>;

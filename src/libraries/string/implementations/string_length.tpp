@@ -10,7 +10,7 @@ constexpr auto cat::string_length(char const* p_string) -> ssize {
     if (::cat::is_constant_evaluated()) {
         ssize result = 0;
         while (true) {
-            if (p_string[result.c()] == '\0') {
+            if (p_string[result.raw] == '\0') {
                 return result;
             }
             result++;

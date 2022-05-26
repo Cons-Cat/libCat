@@ -196,14 +196,14 @@ namespace std {
 template <typename...>
 struct tuple_size {};  // NOLINT
 
-template <usize::Type, typename...>
+template <usize::Raw, typename...>
 struct tuple_element {};  // NOLINT
 
 template <typename... Ts>
 struct tuple_size<cat::Tuple<Ts...>>
-    : cat::IntegralConstantTrait<usize::Type, sizeof...(Ts)> {};
+    : cat::IntegralConstantTrait<usize::Raw, sizeof...(Ts)> {};
 
-template <usize::Type index, typename... Ts>
+template <usize::Raw index, typename... Ts>
 struct tuple_element<index, cat::Tuple<Ts...>> {
     using type = decltype(cat::Tuple<Ts...>{}.template get<ssize{index}>());
 };

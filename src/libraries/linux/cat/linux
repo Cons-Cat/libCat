@@ -353,7 +353,7 @@ struct FileDescriptor {
     }
 
     constexpr operator auto() const {
-        return this->value.c();
+        return this->value.raw;
     }
 };
 
@@ -371,7 +371,7 @@ struct ProcessId {
     }
 
     constexpr operator auto() const {
-        return this->value.c();
+        return this->value.raw;
     }
 };
 
