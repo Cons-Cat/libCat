@@ -168,8 +168,10 @@ class List : public CollectionFacade<List<T>, T> {
   public:
     // Allocate a node and insert it into this list before the position of
     // `where`.
-    auto insert(StableAllocator auto& allocator, Iterator where, T const& value)
-        -> Optional<Iterator> {
+    template <typename U>
+    auto insert(StableAllocator auto& allocator, Iterator where, U const& value)
+        -> Optional<Iterator>
+    requires(is_convertible<U, T>) {
         // `cat::OptionalPtr` produces an internal compiler error in GCC 12.
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
@@ -244,8 +246,10 @@ class List : public CollectionFacade<List<T>, T> {
     }
 
     // Allocate a node and insert it at the beginning of this list.
-    auto push_front(StableAllocator auto& allocator, T const& value)
-        -> Optional<Iterator> {
+    template <typename U>
+    auto push_front(StableAllocator auto& allocator, U const& value)
+        -> Optional<Iterator>
+    requires(is_convertible<U, T>) {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -293,8 +297,10 @@ class List : public CollectionFacade<List<T>, T> {
     }
 
     // Allocate a node and insert it at the end of this list.
-    auto push_back(StableAllocator auto& allocator, T const& value)
-        -> Optional<Iterator> {
+    template <typename U>
+    auto push_back(StableAllocator auto& allocator, U const& value)
+        -> Optional<Iterator>
+    requires(is_convertible<U, T>) {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -354,6 +360,7 @@ class List : public CollectionFacade<List<T>, T> {
                 return result;
             }
         }
+        this->length = 0;
         return monostate;
     }
 
@@ -408,9 +415,9 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
   public:
     ForwardList() : p_head(nullptr), p_tail(nullptr), length(0){};
 
-    // A copy-constructor is not possible, because it would potentially incur
-    // failable memory allocations. There is no way for constructors to
-    // propagate failures. `.clone()` serves this purpose.
+    // A copy-constructor is not possible, because it would potentially
+    // incur failable memory allocations. There is no way for constructors
+    // to propagate failures. `.clone()` serves this purpose.
     ForwardList(ForwardList<T> const&) = delete;
 
     ForwardList(ForwardList<T>&& list) = default;
@@ -488,8 +495,10 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     }
 
   public:
+    template <typename U>
     auto insert_after(StableAllocator auto& allocator, Iterator where,
-                      T const& value) -> Optional<Iterator> {
+                      U const& value) -> Optional<Iterator>
+    requires(is_convertible<U, T>) {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -540,8 +549,10 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     }
 
     // Allocate a node and insert it at the beginning of this list.
-    auto push_front(StableAllocator auto& allocator, T const& value)
-        -> Optional<Iterator> {
+    template <typename U>
+    auto push_front(StableAllocator auto& allocator, U const& value)
+        -> Optional<Iterator>
+    requires(is_convertible<U, T>) {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -585,20 +596,21 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         return allocator.free(&node);
     }
 
-    // Remove and deallocate all elements from this list. All nodes must have
-    // been allocated by the same arena for this function to succeed.
+    // Remove and deallocate all elements from this list. All nodes must
+    // have been allocated by the same arena for this function to succeed.
     [[nodiscard]] auto clear(StableAllocator auto& allocator)
         -> Optional<void> {
         for (Iterator iterator = this->begin(); iterator != this->end();
              ++iterator) {
             Optional result = allocator.free(iterator.p_node);
-            // `.clear` should never be given an allocator that can fail here.
-            // Failures might happen if some nodes were allocated by a different
-            // arena than this passed-in `allocator`.
+            // `.clear` should never be given an allocator that can fail
+            // here. Failures might happen if some nodes were allocated by a
+            // different arena than this passed-in `allocator`.
             if (!result.has_value()) [[unlikely]] {
                 return result;
             }
         }
+        this->length = 0;
         return monostate;
     }
 
