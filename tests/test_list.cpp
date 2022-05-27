@@ -1,4 +1,5 @@
 #include <cat/allocators>
+#include <cat/iterator>
 #include <cat/list>
 
 void meow() {
@@ -130,6 +131,17 @@ void meow() {
     Result(*(forward_list_2.begin() + 1) == 0).or_panic();
     Result(*(forward_list_2.begin() + 2) == 2).or_panic();
     Result(*(forward_list_2.begin() + 3) == 3).or_panic();
+
+    // Test `BackInsertIterator`.
+    list_1.clear(allocator);
+    cat::BackInsertIterator back_insert_iterator(list_1);
+    cat::FrontInsertIterator front_insert_iterator(list_1);
+    back_insert_iterator.assign(allocator, 10);
+    Result(list_1.front() == 10).or_panic();
+
+    front_insert_iterator.assign(allocator, 2);
+    Result(list_1.front() == 2).or_panic();
+    Result(list_1.back() == 10).or_panic();
 
     _ = page_allocator.free(page);
     cat::exit();

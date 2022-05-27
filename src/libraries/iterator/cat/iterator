@@ -4,6 +4,7 @@
 
 #include <cat/memory>
 #include <cat/meta>
+#include <cat/optional>
 
 namespace cat {
 
@@ -350,7 +351,8 @@ class AsReverse {
     T& iterable;
 
   public:
-    constexpr explicit AsReverse(T& iterable) : iterable{iterable} {};
+    constexpr explicit AsReverse(T& input_iterable)
+        : iterable{input_iterable} {};
 
     constexpr auto begin() {
         return iterable.rbegin();
@@ -374,7 +376,7 @@ class AsConst {
     T& iterable;
 
   public:
-    constexpr explicit AsConst(T& iterable) : iterable{iterable} {};
+    constexpr explicit AsConst(T& input_iterable) : iterable{input_iterable} {};
 
     constexpr auto begin() const {
         return iterable.cbegin();
@@ -390,7 +392,8 @@ class AsConstReverse {
     T& iterable;
 
   public:
-    constexpr explicit AsConstReverse(T& iterable) : iterable{iterable} {};
+    constexpr explicit AsConstReverse(T& input_iterable)
+        : iterable{input_iterable} {};
 
     constexpr auto begin() const {
         return iterable.crbegin();
@@ -398,6 +401,195 @@ class AsConstReverse {
 
     constexpr auto end() const {
         return iterable.crend();
+    }
+};
+
+namespace detail {
+    // `#include <cat/allocators>` introduces a circular dependency, so a
+    // redundant allocator `concept` is specified here.
+    template <typename AllocatorT, typename AllocationU = void*>
+    concept IteratorAllocator = requires(AllocatorT allocator) {
+        // Every allocator has a `.malloc()` method.
+        allocator.malloc(ssizeof<AllocationU>());
+        allocator.template malloc<AllocationU>();
+    };
+}  // namespace detail
+
+template <Iterable T>
+class BackInsertIterator : IteratorFacade<BackInsertIterator<T>> {
+    T& iterable;
+
+  public:
+    constexpr explicit BackInsertIterator(T& input_iterable)
+        : iterable(input_iterable){};
+
+    // `.assign()` is used instead of an overloaded `=` because it might
+    // need to take an allocator parameter.
+
+    template <typename U>
+    constexpr auto assign(detail::IteratorAllocator auto& allocator, U& value)
+        -> Optional<BackInsertIterator<T>&> {
+        Optional result = this->iterable.push_back(allocator, value);
+        if (!result.has_value()) {
+            return nullopt;
+        }
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto assign(U& value) -> BackInsertIterator<T>& {
+        this->iterable.push_back(value);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto operator=(U& value) -> BackInsertIterator<T>& {
+        this->iterable.push_back(value);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto assign(detail::IteratorAllocator auto& allocator,
+                          U const& value) -> Optional<BackInsertIterator<T>&> {
+        Optional result = this->iterable.push_back(allocator, value);
+        if (!result.has_value()) {
+            return nullopt;
+        }
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto assign(U const& value) -> BackInsertIterator<T>& {
+        this->iterable.push_back(value);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto operator=(U const& value) -> BackInsertIterator<T>& {
+        this->iterable.push_back(value);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto assign(detail::IteratorAllocator auto& allocator, U&& value)
+        -> Optional<BackInsertIterator<T>&> {
+        Optional result =
+            this->iterable.push_back(allocator, forward<U>(value));
+        if (!result.has_value()) {
+            return nullopt;
+        }
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto assign(U&& value) -> BackInsertIterator<T>& {
+        this->iterable.push_back(forward<U>(value));
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto operator=(U&& value) -> BackInsertIterator<T>& {
+        this->iterable.push_back(forward<U>(value));
+        return *this;
+    }
+
+    // Dereference operator is no-op.
+    constexpr auto dereference() -> BackInsertIterator<T>& {
+        return *this;
+    }
+
+    // Increment operators are no-op.
+    constexpr auto increment() -> BackInsertIterator<T>& {
+        return *this;
+    }
+};
+
+template <Iterable T>
+class FrontInsertIterator : IteratorFacade<FrontInsertIterator<T>> {
+    T& iterable;
+
+  public:
+    constexpr explicit FrontInsertIterator(T& input_iterable)
+        : iterable(input_iterable){};
+
+    // `.assign()` is used instead of an overloaded `=` because it might
+    // need to take an allocator parameter.
+
+    template <typename U>
+    constexpr auto assign(detail::IteratorAllocator auto& allocator, U& value)
+        -> Optional<FrontInsertIterator<T>&> {
+        Optional result = this->iterable.push_front(allocator, value);
+        if (!result.has_value()) {
+            return nullopt;
+        }
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto assign(U& value) -> FrontInsertIterator<T>& {
+        this->iterable.push_front(value);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto operator=(U& value) -> FrontInsertIterator<T>& {
+        this->iterable.push_front(value);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto assign(detail::IteratorAllocator auto& allocator,
+                          U const& value) -> Optional<FrontInsertIterator<T>&> {
+        Optional result = this->iterable.push_front(allocator, value);
+        if (!result.has_value()) {
+            return nullopt;
+        }
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto assign(U const& value) -> FrontInsertIterator<T>& {
+        this->iterable.push_front(value);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto operator=(U const& value) -> FrontInsertIterator<T>& {
+        this->iterable.push_front(value);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto assign(detail::IteratorAllocator auto& allocator, U&& value)
+        -> Optional<FrontInsertIterator<T>&> {
+        Optional result =
+            this->iterable.push_front(allocator, forward<U>(value));
+        if (!result.has_value()) {
+            return nullopt;
+        }
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto assign(U&& value) -> FrontInsertIterator<T>& {
+        this->iterable.push_front(forward<U>(value));
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto operator=(U&& value) -> FrontInsertIterator<T>& {
+        this->iterable.push_front(forward<U>(value));
+        return *this;
+    }
+
+    // Dereference operator is no-op.
+    constexpr auto dereference() -> FrontInsertIterator<T>& {
+        return *this;
+    }
+
+    // Increment operators are no-op.
+    constexpr auto increment() -> FrontInsertIterator<T>& {
+        return *this;
     }
 };
 

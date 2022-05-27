@@ -35,6 +35,11 @@ void meow() {
     _ = cat::constant_evaluate(constant);
 
     // Test iterable.
+    using It = cat::CollectionTraits<cat::Array<int, 4>>::Iterator;
+    static_assert(
+        cat::is_same<It,
+                     cat::RemoveCvRef<decltype(cat::Array<int, 4>{}.begin())>>);
+
     ssize count = 0;
     for (int4& a : array_1) {
         Result(a == array_1[count]).or_panic();
