@@ -27,8 +27,8 @@ class Array : public CollectionFacade<Array<T, length>, T> {
                                                length.raw)
         : storage(arguments...){};
 
-    template <Integral U, U... values>
-    constexpr Array(IntegerList<U, values...> const list) requires(
+    template <typename U, U... values>
+    constexpr Array(ValueList<U, values...> const list) requires(
         is_convertible<U, T>&& list.size == length)
         : storage(static_cast<T>(values)...){};
 
@@ -45,20 +45,20 @@ class Array : public CollectionFacade<Array<T, length>, T> {
 
   private:
     template <ssize index, typename U, U value, U... values>
-    constexpr void copy_list(IntegerList<U, value, values...> const) {
+    constexpr void copy_list(ValueList<U, value, values...> const) {
         this->storage[index.raw] = value;
 
         if constexpr (index + 1 == length) {
             return;
         } else {
-            // Recurse withn one fewer elements in the `IntegerList`.
-            this->copy_list<index + 1>(IntegerList<U, values...>{});
+            // Recurse withn one fewer elements in the `ValueList`.
+            this->copy_list<index + 1>(ValueList<U, values...>{});
         }
     }
 
   public:
     template <Integral U, U... values>
-    constexpr auto operator=(IntegerList<U, values...> const list) requires(
+    constexpr auto operator=(ValueList<U, values...> const list) requires(
         is_convertible<U, T>&& list.size == length) {
         this->copy_list<0, U, values...>(list);
     };

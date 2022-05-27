@@ -29,36 +29,36 @@ template <typename T>
 constexpr auto ssizeof() -> ssize;
 
 namespace detail {
-    template <typename T, ssize index, ssize current, T value, T... integers>
-    constexpr auto get_integer_list_at() -> T {
+    template <typename T, ssize index, ssize current, T value, T... values>
+    constexpr auto get_value_list_at() -> T {
         if constexpr (current == index) {
             return value;
         } else {
-            return get_integer_list_at<T, index, current + 1, integers...>();
+            return get_value_list_at<T, index, current + 1, values...>();
         }
     }
 }  // namespace detail
 
-template <typename T, T... integers>
-requires(is_integral<T>) struct IntegerList {
+template <typename T, T... values>
+requires(is_integral<T>) struct ValueList {
     using value_type = T;
 
-    static constexpr ssize size = ssize{sizeof...(integers)};
+    static constexpr ssize size = ssize{sizeof...(values)};
 
     template <ssize index>
     static constexpr auto get() -> T {
-        return detail::get_integer_list_at<T, index, 0, integers...>();
+        return detail::get_value_list_at<T, index, 0, values...>();
     }
 };
 
 namespace detail {
     template <ssize count, typename T, T value, T... integers>
-    constexpr auto make_integer_list() {
+    constexpr auto make_value_list() {
         if constexpr (count > 0) {
             // Recurse, appending `value` to `integers`.
-            return make_integer_list<count - 1, T, value, value, integers...>();
+            return make_value_list<count - 1, T, value, value, integers...>();
         } else {
-            return IntegerList<T, integers...>();
+            return ValueList<T, integers...>();
         }
     }
 
@@ -69,32 +69,32 @@ namespace detail {
             return make_integer_sequence<count - 1, T, T{count.raw - 1},
                                          T{count.raw - 1}, integers...>();
         } else {
-            return IntegerList<T, integers...>();
+            return ValueList<T, integers...>();
         }
     }
 }  // namespace detail
 
 template <typename T, T value, ssize count>
-constexpr auto integer_list = detail::make_integer_list<count, T, value>();
+constexpr auto value_list = detail::make_value_list<count, T, value>();
 
 template <typename T, T value, ssize count>
-using MakeIntegerList = decltype(integer_list<T, value, count>);
+using MakeValueList = decltype(value_list<T, value, count>);
 
-template <typename T, ssize count>
+template <Integral T, ssize count>
 constexpr auto integer_sequence =
     detail::make_integer_sequence<count, T, T{count.raw}>();
 
-template <typename T, ssize count>
+template <Integral T, ssize count>
 using MakeIntegerSequence = RemoveCv<decltype(integer_sequence<ssize, count>)>;
 
 template <ssize... indices>
-using IndexList = IntegerList<ssize, indices...>;
+using IndexList = ValueList<ssize, indices...>;
 
 template <ssize value, ssize count>
-constexpr auto index_list = integer_list<ssize, value, count>;
+constexpr auto index_list = value_list<ssize, value, count>;
 
 template <ssize value, ssize count>
-using MakeIndexList = MakeIntegerList<ssize, value, count>;
+using MakeIndexList = MakeValueList<ssize, value, count>;
 
 template <ssize count>
 constexpr auto index_sequence = integer_sequence<ssize, count>;
