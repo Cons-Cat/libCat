@@ -346,6 +346,28 @@ template <typename T>
 concept ForwardIterator =
     is_same<typename IteratorTraits<T>::Category, ForwardIteratorTag>;
 
+// clang-format off
+template <typename T>
+concept InputOrOutputIterator = requires(T it) {
+    *it;
+} && WeaklyIncrementable<T>;
+// clang-format on
+
+template <typename Outputter, typename T>
+concept IndirectlyWritable = requires(Outputter&& output, T&& it) {
+    *output = forward<T>(it);
+    *forward<Outputter>(output) = forward<T>(it);
+    const_cast<IsReferenceTrait<Outputter> const&&>(*output) = forward<T>(it);
+    const_cast<IsReferenceTrait<Outputter> const&&>(
+        *forward<Outputter>(output)) = forward<T>(it);
+};
+
+template <typename Outputter, typename T>
+concept OutputIterator = InputOrOutputIterator<Outputter> &&
+    IndirectlyWritable<Outputter, T> && requires(Outputter it, T&& value) {
+    *it++ = forward<T>(it);
+};
+
 template <Iterable T>
 class AsReverse {
     T& iterable;
@@ -420,6 +442,8 @@ class BackInsertIterator : IteratorFacade<BackInsertIterator<T>> {
     T& iterable;
 
   public:
+    using Container = T;
+
     constexpr explicit BackInsertIterator(T& input_iterable)
         : iterable(input_iterable){};
 
@@ -509,6 +533,8 @@ class FrontInsertIterator : IteratorFacade<FrontInsertIterator<T>> {
     T& iterable;
 
   public:
+    using Container = T;
+
     constexpr explicit FrontInsertIterator(T& input_iterable)
         : iterable(input_iterable){};
 
