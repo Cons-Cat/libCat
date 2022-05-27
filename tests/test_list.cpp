@@ -136,10 +136,10 @@ void meow() {
     list_1.clear(allocator);
     cat::BackInsertIterator back_insert_iterator(list_1);
     cat::FrontInsertIterator front_insert_iterator(list_1);
-    back_insert_iterator.assign(allocator, 10);
+    back_insert_iterator.insert(allocator, 10);
     Result(list_1.front() == 10).or_panic();
 
-    front_insert_iterator.assign(allocator, 2);
+    front_insert_iterator.insert(allocator, 2);
     Result(list_1.front() == 2).or_panic();
     Result(list_1.back() == 10).or_panic();
 

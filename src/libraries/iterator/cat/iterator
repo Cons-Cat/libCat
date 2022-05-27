@@ -423,11 +423,11 @@ class BackInsertIterator : IteratorFacade<BackInsertIterator<T>> {
     constexpr explicit BackInsertIterator(T& input_iterable)
         : iterable(input_iterable){};
 
-    // `.assign()` is used instead of an overloaded `=` because it might
+    // `.insert()` is used instead of an overloaded `=` because it might
     // need to take an allocator parameter.
 
     template <typename U>
-    constexpr auto assign(detail::IteratorAllocator auto& allocator, U& value)
+    constexpr auto insert(detail::IteratorAllocator auto& allocator, U& value)
         -> Optional<BackInsertIterator<T>&> {
         Optional result = this->iterable.push_back(allocator, value);
         if (!result.has_value()) {
@@ -437,7 +437,7 @@ class BackInsertIterator : IteratorFacade<BackInsertIterator<T>> {
     }
 
     template <typename U>
-    constexpr auto assign(U& value) -> BackInsertIterator<T>& {
+    constexpr auto insert(U& value) -> BackInsertIterator<T>& {
         this->iterable.push_back(value);
         return *this;
     }
@@ -449,7 +449,7 @@ class BackInsertIterator : IteratorFacade<BackInsertIterator<T>> {
     }
 
     template <typename U>
-    constexpr auto assign(detail::IteratorAllocator auto& allocator,
+    constexpr auto insert(detail::IteratorAllocator auto& allocator,
                           U const& value) -> Optional<BackInsertIterator<T>&> {
         Optional result = this->iterable.push_back(allocator, value);
         if (!result.has_value()) {
@@ -459,7 +459,7 @@ class BackInsertIterator : IteratorFacade<BackInsertIterator<T>> {
     }
 
     template <typename U>
-    constexpr auto assign(U const& value) -> BackInsertIterator<T>& {
+    constexpr auto insert(U const& value) -> BackInsertIterator<T>& {
         this->iterable.push_back(value);
         return *this;
     }
@@ -471,7 +471,7 @@ class BackInsertIterator : IteratorFacade<BackInsertIterator<T>> {
     }
 
     template <typename U>
-    constexpr auto assign(detail::IteratorAllocator auto& allocator, U&& value)
+    constexpr auto insert(detail::IteratorAllocator auto& allocator, U&& value)
         -> Optional<BackInsertIterator<T>&> {
         Optional result =
             this->iterable.push_back(allocator, forward<U>(value));
@@ -482,7 +482,7 @@ class BackInsertIterator : IteratorFacade<BackInsertIterator<T>> {
     }
 
     template <typename U>
-    constexpr auto assign(U&& value) -> BackInsertIterator<T>& {
+    constexpr auto insert(U&& value) -> BackInsertIterator<T>& {
         this->iterable.push_back(forward<U>(value));
         return *this;
     }
@@ -512,11 +512,11 @@ class FrontInsertIterator : IteratorFacade<FrontInsertIterator<T>> {
     constexpr explicit FrontInsertIterator(T& input_iterable)
         : iterable(input_iterable){};
 
-    // `.assign()` is used instead of an overloaded `=` because it might
+    // `.insert()` is used instead of an overloaded `=` because it might
     // need to take an allocator parameter.
 
     template <typename U>
-    constexpr auto assign(detail::IteratorAllocator auto& allocator, U& value)
+    constexpr auto insert(detail::IteratorAllocator auto& allocator, U& value)
         -> Optional<FrontInsertIterator<T>&> {
         Optional result = this->iterable.push_front(allocator, value);
         if (!result.has_value()) {
@@ -526,7 +526,7 @@ class FrontInsertIterator : IteratorFacade<FrontInsertIterator<T>> {
     }
 
     template <typename U>
-    constexpr auto assign(U& value) -> FrontInsertIterator<T>& {
+    constexpr auto insert(U& value) -> FrontInsertIterator<T>& {
         this->iterable.push_front(value);
         return *this;
     }
@@ -538,7 +538,7 @@ class FrontInsertIterator : IteratorFacade<FrontInsertIterator<T>> {
     }
 
     template <typename U>
-    constexpr auto assign(detail::IteratorAllocator auto& allocator,
+    constexpr auto insert(detail::IteratorAllocator auto& allocator,
                           U const& value) -> Optional<FrontInsertIterator<T>&> {
         Optional result = this->iterable.push_front(allocator, value);
         if (!result.has_value()) {
@@ -548,7 +548,7 @@ class FrontInsertIterator : IteratorFacade<FrontInsertIterator<T>> {
     }
 
     template <typename U>
-    constexpr auto assign(U const& value) -> FrontInsertIterator<T>& {
+    constexpr auto insert(U const& value) -> FrontInsertIterator<T>& {
         this->iterable.push_front(value);
         return *this;
     }
@@ -560,7 +560,7 @@ class FrontInsertIterator : IteratorFacade<FrontInsertIterator<T>> {
     }
 
     template <typename U>
-    constexpr auto assign(detail::IteratorAllocator auto& allocator, U&& value)
+    constexpr auto insert(detail::IteratorAllocator auto& allocator, U&& value)
         -> Optional<FrontInsertIterator<T>&> {
         Optional result =
             this->iterable.push_front(allocator, forward<U>(value));
@@ -571,7 +571,7 @@ class FrontInsertIterator : IteratorFacade<FrontInsertIterator<T>> {
     }
 
     template <typename U>
-    constexpr auto assign(U&& value) -> FrontInsertIterator<T>& {
+    constexpr auto insert(U&& value) -> FrontInsertIterator<T>& {
         this->iterable.push_front(forward<U>(value));
         return *this;
     }
