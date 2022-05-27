@@ -34,57 +34,57 @@ class alignas(alignment.raw) Simd {
     // `vector_size` is a GCC attribute that represents SIMD data-types.
     using Intrinsic [[gnu::vector_size(sizeof(T) * lanes.raw),
                       gnu::aligned(alignment.raw)]] = T;
-    Intrinsic value;
+    Intrinsic raw;
 
     constexpr Simd() = default;
 
-    constexpr Simd(Vector const& operand) : value(operand.value){};
+    constexpr Simd(Vector const& operand) : raw(operand.raw){};
 
-    constexpr Simd(Intrinsic const& values) : value(values){};
+    constexpr Simd(Intrinsic const& values) : raw(values){};
 
-    constexpr Simd(Intrinsic&& values) : value(forward<Intrinsic>(values)){};
+    constexpr Simd(Intrinsic&& values) : raw(forward<Intrinsic>(values)){};
 
-    constexpr Simd(T values...) : value(Intrinsic{values}){};
+    constexpr Simd(T values...) : raw(Intrinsic{values}){};
 
     template <T... Ts>
     constexpr Simd(ValueList<T, Ts...> const values) requires(values.size ==
                                                               lanes)
-        : value(Intrinsic{Ts...}){};
+        : raw(Intrinsic{Ts...}){};
 
     // TODO: `__builtin_convertvector()` wrapped by conversion operators.
 
     constexpr auto operator=(Vector operand) -> Vector& {
-        this->value = operand.value;
+        this->raw = operand.raw;
         return *this;
     }
 
     constexpr auto operator==(Vector const& operand) -> Vector {
-        return Vector{.value = this->value == operand.value};
+        return Vector{.raw = this->raw == operand.raw};
     }
 
     constexpr auto operator+(Vector operand) -> Vector {
-        return Vector{this->value + operand.value};
+        return Vector{this->raw + operand.raw};
     }
     constexpr auto operator+=(Vector const& operand) -> Vector& {
-        this->value = this->value + operand.value;
+        this->raw = this->raw + operand.raw;
         return *this;
     }
 
     constexpr auto operator-(Vector operand) -> Vector {
-        return Vector{this->value - operand.value};
+        return Vector{this->raw - operand.raw};
     }
     constexpr auto operator-=(Vector const& operand) -> Vector& {
-        this->value = this->value - operand.value;
+        this->raw = this->raw - operand.raw;
         return *this;
-    }
-
-    void load(T const* const p_data) {
-        this->value = *static_cast<Intrinsic const* const>(
-            static_cast<void const* const>(p_data));
     }
 
     static consteval auto size() -> ssize {
         return lanes;
+    }
+
+    constexpr void load(T const* const p_data) {
+        this->raw = *static_cast<Intrinsic const* const>(
+            static_cast<void const* const>(p_data));
     }
 };
 
@@ -303,7 +303,7 @@ auto move_mask(T vector) {
                                // TODO: Make an `salignof()`.
                                static_cast<signed int long>(alignof(T))>>(
                 vector)
-                .value);
+                .raw);
     } else {
         // TODO: Support additional vector sizes.
         static_assert("BAD!");

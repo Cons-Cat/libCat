@@ -22,10 +22,9 @@ constexpr auto cat::string_length(char const* p_string) -> ssize {
 
         while (true) {
             char1x16 data = *p_memory;
-            constexpr cat::StringControl mask =
-                cat::StringControl::unsigned_byte |
-                cat::StringControl::compare_equal_each |
-                cat::StringControl::least_significant;
+            constexpr StringControl mask = StringControl::unsigned_byte |
+                                           StringControl::compare_equal_each |
+                                           StringControl::least_significant;
 
             // If there are one or more `0` bytes in `data`:
             if (cat::compare_implicit_length_strings<mask>(data, zeros)) {
