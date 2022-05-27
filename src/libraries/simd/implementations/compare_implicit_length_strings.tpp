@@ -15,6 +15,5 @@ constexpr auto cat::compare_implicit_length_strings(auto const& vector_1,
     -> bool1 {
     static_assert(cat::is_same<decltype(vector_1), decltype(vector_2)>);
     return __builtin_ia32_pcmpistric128(
-        vector_1.value, vector_2.value,
-        static_cast<unsigned char>(control_mask));
+        vector_1.raw, vector_2.raw, static_cast<unsigned char>(control_mask));
 }
