@@ -103,12 +103,12 @@ void meow() {
     _ = array_const.last(2);
 
     // Test `IntegerList`.
-    cat::Array<int4, 5> int_array = cat::integer_list<int4, 0, 5>;
+    cat::Array<int4, 5> int_array = cat::value_list<int4, 0, 5>;
     for (int4& i : int_array) {
         Result(i == 0).or_panic();
     }
 
-    int_array = cat::integer_list<int4, 1, 5>;
+    int_array = cat::value_list<int4, 1, 5>;
     for (int4& i : int_array) {
         Result(i == 1).or_panic();
     }
@@ -118,7 +118,7 @@ void meow() {
         Result(int_array[i] == i).or_panic();
     }
 
-    [[maybe_unused]] cat::Array int_array_2 = cat::integer_list<int4, 0, 5>;
+    [[maybe_unused]] cat::Array int_array_2 = cat::value_list<int4, 0, 5>;
 
     cat::exit();
 };
