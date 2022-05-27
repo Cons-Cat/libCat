@@ -12,25 +12,37 @@ namespace cat {
 template <typename T>
 class Span;
 
+namespace detail {
+    template <typename T>
+    concept IsContiguousCollection = requires(T collection) {
+        collection.p_data();
+    };
+
+    // clang-format off
+    template <typename T>
+    concept IsBoundedCollection = requires(T collection) {
+        collection.size();
+    } || requires(T collection) {
+        collection.capacity();
+    };
+    // clang-format on
+}  // namespace detail
+
 template <typename Derived, typename T>
 class CollectionFacade {
-    // clang-format off
-	
-    // If a `.p_data()` and either a `.size()` or `.capacity()` method are
-    // provided, then this collection is assumed to be contiguous in memory.
-    constexpr static bool is_contiguous = requires {
-        Derived{}.p_data();
-    } && (requires { Derived{}.size(); } || requires { Derived{}.capacity(); });
+    constexpr static bool is_array_like =
+        detail::IsContiguousCollection<Derived> &&
+        detail::IsBoundedCollection<Derived>;
 
+    // clang-format off
     // If `.size()` is provided and can be constant-evaluated, and `.capacity()`
     // is not provided, then the length of this collection is assumed to be
     // constant.
     constexpr static bool has_const_length = requires {
-		constant_evaluate(Derived{}.size());
+        constant_evaluate(Derived{}.size());
     } && !requires {
         Derived{}.capacity();
     };
-
     // clang-format on
 
     constexpr auto self_mut() -> Derived& {
@@ -51,7 +63,7 @@ class CollectionFacade {
     // of an iterator as `decltype(make_iterator())`.
 
     // Contiguous collections can produce non-`const` bidirectional iterators.
-    constexpr auto make_iterator() requires(is_contiguous) {
+    constexpr auto make_iterator() requires(is_array_like) {
         struct Iterator : IteratorFacade<Iterator> {
             ssize current_index;
             T* const p_array;
@@ -78,7 +90,7 @@ class CollectionFacade {
     }
 
     // Contiguous collections can produce `const` bidirectional iterators.
-    constexpr auto make_iterator() const requires(is_contiguous) {
+    constexpr auto make_iterator() const requires(is_array_like) {
         struct Iterator : IteratorFacade<Iterator> {
             ssize current_index;
             T const* const p_array;
@@ -122,7 +134,7 @@ class CollectionFacade {
 
     // Index into this collection with bounds-checking.
     [[nodiscard]] constexpr auto at(ssize const index) -> Optional<T&>
-    requires(is_contiguous) {
+    requires(is_array_like) {
         Result{index >= 0}.assert();
         if (index < this->self().capacity()) {
             return this->self_mut().p_data()[index.raw];
@@ -136,7 +148,7 @@ class CollectionFacade {
         return unconst(this)->at(index);
     }
 
-    [[nodiscard]] constexpr auto front() -> T& requires(is_contiguous) {
+    [[nodiscard]] constexpr auto front() -> T& requires(is_array_like) {
         return this->self_mut().p_data()[0];
     }
 
@@ -144,7 +156,7 @@ class CollectionFacade {
         return unconst(this)->front();
     }
 
-    [[nodiscard]] constexpr auto back() -> T& requires(is_contiguous) {
+    [[nodiscard]] constexpr auto back() -> T& requires(is_array_like) {
         return this->self_mut().p_data()[this->self().size().raw - 1];
     }
 
@@ -154,7 +166,7 @@ class CollectionFacade {
 
     [[nodiscard]] constexpr auto slice(ssize const start_index,
                                        ssize const end_index) -> Span<T>
-    requires(is_contiguous) {
+    requires(is_array_like) {
         Result{start_index >= 0}.assert();
         Result{end_index <= this->self().capacity()}.assert();
         return Span<T>(this->self().p_data() + start_index,
@@ -164,7 +176,7 @@ class CollectionFacade {
     [[nodiscard]] constexpr auto slice(ssize const start_index,
                                        ssize const end_index) const
         -> Span<T const>
-    requires(is_contiguous) {
+    requires(is_array_like) {
         Result{start_index >= 0}.assert();
         Result{end_index <= this->self().capacity()}.assert();
         return Span<T const>(this->self().p_data() + start_index,
@@ -172,27 +184,27 @@ class CollectionFacade {
     }
 
     [[nodiscard]] constexpr auto first(ssize const count) -> Span<T>
-    requires(is_contiguous) {
+    requires(is_array_like) {
         return this->slice(0, count);
     }
 
     [[nodiscard]] constexpr auto first(ssize const count) const -> Span<T const>
-    requires(is_contiguous) {
+    requires(is_array_like) {
         return this->slice(0, count);
     }
 
     [[nodiscard]] constexpr auto last(ssize const count) -> Span<T>
-    requires(is_contiguous) {
+    requires(is_array_like) {
         return this->slice(this->self().size() - count, this->self().size());
     }
 
     [[nodiscard]] constexpr auto last(ssize const count) const -> Span<T const>
-    requires(is_contiguous) {
+    requires(is_array_like) {
         return this->slice(this->self().size() - count, this->self().size());
     }
 
     [[nodiscard]] constexpr auto operator[](ssize const index)
-        -> T& requires(is_contiguous) {
+        -> T& requires(is_array_like) {
         Result{index >= 0}.assert();
         Result{index < this->self().size()}.assert();
 
@@ -200,7 +212,7 @@ class CollectionFacade {
     }
 
     [[nodiscard]] constexpr auto operator[](ssize const index) const
-        -> T const& requires(is_contiguous) {
+        -> T const& requires(is_array_like) {
         Result{index >= 0}.assert();
         Result{index < this->self().size()}.assert();
 
@@ -209,12 +221,12 @@ class CollectionFacade {
 
     // `.begin()` and `.end()` can be automatically generated for contiguous
     // collections.
-    [[nodiscard]] constexpr auto begin() requires(is_contiguous) {
+    [[nodiscard]] constexpr auto begin() requires(is_array_like) {
         return RemoveConst<decltype(unconst(this)->make_iterator())>{
             0, this->self_mut().p_data()};
     }
 
-    [[nodiscard]] constexpr auto end() requires(is_contiguous) {
+    [[nodiscard]] constexpr auto end() requires(is_array_like) {
         return RemoveConst<decltype(unconst(this)->make_iterator())>{
             this->self_mut().size(), this->self().p_data()};
     }
@@ -247,25 +259,25 @@ class CollectionFacade {
         return this->end();
     }
 
-    [[nodiscard]] constexpr auto rbegin() requires(is_contiguous) {
+    [[nodiscard]] constexpr auto rbegin() requires(is_array_like) {
         return ReversedIterator<decltype(this->begin())>{
             this->self().size() - 1, this->self().p_data()};
     }
 
-    [[nodiscard]] constexpr auto rend() requires(is_contiguous) {
+    [[nodiscard]] constexpr auto rend() requires(is_array_like) {
         return ReversedIterator<decltype(this->end())>(-1,
                                                        this->self().p_data());
     }
 
     // If this collection is not contiguous, get a non-`const` `.rbegin()`
     // method from `Derived`.
-    [[nodiscard]] constexpr auto rbegin() requires(!is_contiguous) {
+    [[nodiscard]] constexpr auto rbegin() requires(!is_array_like) {
         return this->self_mut().rbegin();
     }
 
     // If this collection is not contiguous, get a non-`const` `.rend()` method
     // from `Derived`.
-    [[nodiscard]] constexpr auto rend() requires(!is_contiguous) {
+    [[nodiscard]] constexpr auto rend() requires(!is_array_like) {
         return this->self_mut().rbegin();
     }
 
@@ -292,6 +304,8 @@ struct CollectionTraits {
     using ConstIterator = AddConst<Iterator>;
     using ReversedIterator = cat::ReversedIterator<Iterator>;
     using ConstReversedIterator = cat::ReversedIterator<ConstIterator>;
+    constexpr static bool is_array_like =
+        detail::IsContiguousCollection<T> && detail::IsBoundedCollection<T>;
 };
 
 }  // namespace cat

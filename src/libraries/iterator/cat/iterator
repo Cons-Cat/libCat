@@ -20,8 +20,8 @@ namespace detail {
     };
 
     template <typename T>
-    concept HasDistance = requires(T const t) {
-        t.distance(t);
+    concept HasDistance = requires(T const it) {
+        it.distance(it);
     };
 
     template <typename T>
@@ -315,9 +315,9 @@ struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
 
 // TODO: More iterable related concepts.
 template <typename T>
-concept Iterable = requires(T t) {
-    t.begin();
-    t.end();
+concept Iterable = requires(T it) {
+    it.begin();
+    it.end();
 };
 
 template <typename T>
