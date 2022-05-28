@@ -17,8 +17,8 @@ constexpr auto cat::string_length(char const* p_string) -> ssize {
         }
     } else {
         ssize result = 0;
-        char1x16* p_memory = cat::p_string_to_p_vector<char1x16>(p_string);
-        constexpr char1x16 zeros = value_list<char, 0, 16>;
+        char1x16 const* p_memory = p_string_to_p_vector<char1x16>(p_string);
+        constexpr char1x16 zeros = zeros_list<char, 16>;
 
         while (true) {
             char1x16 data = *p_memory;
@@ -27,10 +27,10 @@ constexpr auto cat::string_length(char const* p_string) -> ssize {
                                            StringControl::least_significant;
 
             // If there are one or more `0` bytes in `data`:
-            if (cat::compare_implicit_length_strings<mask>(data, zeros)) {
+            if (compare_implicit_length_strings<mask>(data, zeros)) {
                 int4 const index =
-                    cat::compare_implicit_length_strings_return_index<mask>(
-                        data, zeros);
+                    compare_implicit_length_strings_return_index<mask>(data,
+                                                                       zeros);
                 // Adding `1` is required to count the null terminator.
                 return result + index + 1;
             }

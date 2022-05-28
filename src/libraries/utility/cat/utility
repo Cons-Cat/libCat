@@ -85,6 +85,12 @@ constexpr auto integer_sequence =
     detail::make_integer_sequence<count, T, T{count.raw}>();
 
 template <Integral T, ssize count>
+constexpr auto zeros_list = value_list<T, T{0}, count>;
+
+template <Integral T, ssize count>
+constexpr auto ones_list = value_list<T, T{1}, count>;
+
+template <Integral T, ssize count>
 using MakeIntegerSequence = RemoveCv<decltype(integer_sequence<ssize, count>)>;
 
 template <ssize... indices>

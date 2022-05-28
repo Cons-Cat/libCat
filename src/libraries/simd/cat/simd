@@ -32,24 +32,24 @@ class alignas(alignment.raw) Simd {
   public:
     using Scalar = T;
     // `vector_size` is a GCC attribute that represents SIMD data-types.
-    using Intrinsic [[gnu::vector_size(sizeof(T) * lanes.raw),
-                      gnu::aligned(alignment.raw)]] = T;
-    Intrinsic raw;
+    using Raw [[gnu::vector_size(sizeof(T) * lanes.raw),
+                gnu::aligned(alignment.raw)]] = T;
+    Raw raw;
 
     constexpr Simd() = default;
 
     constexpr Simd(Vector const& operand) : raw(operand.raw){};
 
-    constexpr Simd(Intrinsic const& values) : raw(values){};
+    constexpr Simd(Raw const& values) : raw(values){};
 
-    constexpr Simd(Intrinsic&& values) : raw(forward<Intrinsic>(values)){};
+    constexpr Simd(Raw&& values) : raw(forward<Raw>(values)){};
 
-    constexpr Simd(T values...) : raw(Intrinsic{values}){};
+    constexpr Simd(T values...) : raw(Raw{values}){};
 
     template <T... Ts>
     constexpr Simd(ValueList<T, Ts...> const values) requires(values.size ==
                                                               lanes)
-        : raw(Intrinsic{Ts...}){};
+        : raw(Raw{Ts...}){};
 
     // TODO: `__builtin_convertvector()` wrapped by conversion operators.
 
@@ -82,9 +82,40 @@ class alignas(alignment.raw) Simd {
         return lanes;
     }
 
-    constexpr void load(T const* const p_data) {
-        this->raw = *static_cast<Intrinsic const* const>(
+    constexpr auto fill(T const value) -> Simd<T, lanes, alignment>& {
+        if constexpr (lanes == 2) {
+            this->raw =
+                Raw{value, value, value, value, value, value, value, value};
+        } else if constexpr (lanes == 4) {
+            this->raw =
+                Raw{value, value, value, value, value, value, value, value};
+        } else if constexpr (lanes == 8) {
+            this->raw =
+                Raw{value, value, value, value, value, value, value, value};
+        } else if constexpr (lanes == 16) {
+            this->raw =
+                Raw{value, value, value, value, value, value, value, value,
+                    value, value, value, value, value, value, value, value};
+        } else if constexpr (lanes == 32) {
+            this->raw =
+                Raw{value, value, value, value, value, value, value, value,
+                    value, value, value, value, value, value, value, value,
+                    value, value, value, value, value, value, value, value,
+                    value, value, value, value, value, value, value, value};
+        }
+        return *this;
+    }
+
+    static constexpr auto filled(T const value) -> Simd<T, lanes, alignment> {
+        Simd<T, lanes, alignment> vector;
+        vector.fill(value);
+        return vector;
+    }
+
+    constexpr auto load(T const* const p_data) -> Simd<T, lanes, alignment>& {
+        this->raw = *static_cast<Raw const* const>(
             static_cast<void const* const>(p_data));
+        return *this;
     }
 };
 
@@ -233,10 +264,14 @@ constexpr auto operator|(StringControl flag_1, StringControl flag_2)
 // TODO: Use a vector concept.
 auto shuffle(auto in_vector, auto mask);
 
-// TODO: Make this const-correct.
+template <typename T>
+constexpr auto p_string_to_p_vector(char* p_string) {
+    return bit_cast<T*>(p_string);
+}
+
 template <typename T>
 constexpr auto p_string_to_p_vector(char const* p_string) {
-    return bit_cast<T*>(p_string);
+    return bit_cast<T const*>(p_string);
 }
 
 template <StringControl control_mask>
