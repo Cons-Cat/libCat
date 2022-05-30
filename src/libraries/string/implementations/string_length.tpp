@@ -19,7 +19,7 @@ constexpr auto cat::string_length(char const* p_string) -> ssize {
         constexpr char1x16 zeros = char1x16::filled(0);
 
         for (ssize i = 0;; i += 16) {
-            char1x16 data = char1x16::loaded(p_string + i);
+            char1x16 const data = char1x16::loaded(p_string + i);
             constexpr StringControl mask = StringControl::unsigned_byte |
                                            StringControl::compare_equal_each |
                                            StringControl::least_significant;
