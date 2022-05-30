@@ -7,7 +7,7 @@
 
 // This function requires SSE4.2, unless it is used in a `constexpr` context.
 constexpr auto cat::string_length(char const* p_string) -> ssize {
-    if (::cat::is_constant_evaluated()) {
+    if (is_constant_evaluated()) {
         ssize result = 0;
         while (true) {
             if (p_string[result.raw] == '\0') {
@@ -16,12 +16,10 @@ constexpr auto cat::string_length(char const* p_string) -> ssize {
             result++;
         }
     } else {
-        ssize result = 0;
-        char1x16 const* p_memory = p_string_to_p_vector<char1x16>(p_string);
-        constexpr char1x16 zeros = zeros_list<char, 16>;
+        constexpr char1x16 zeros = char1x16::filled(0);
 
-        while (true) {
-            char1x16 data = *p_memory;
+        for (ssize i = 0;; i += 16) {
+            char1x16 data = char1x16::loaded(p_string + i);
             constexpr StringControl mask = StringControl::unsigned_byte |
                                            StringControl::compare_equal_each |
                                            StringControl::least_significant;
@@ -32,11 +30,8 @@ constexpr auto cat::string_length(char const* p_string) -> ssize {
                     compare_implicit_length_strings_return_index<mask>(data,
                                                                        zeros);
                 // Adding `1` is required to count the null terminator.
-                return result + index + 1;
+                return i + index + 1;
             }
-
-            p_memory++;
-            result += ssizeof<char1x16>();
         }
 
         __builtin_unreachable();

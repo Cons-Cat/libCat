@@ -19,18 +19,72 @@
 
 namespace cat {
 
+// ABI tags for `Simd`. These are used for providing an extensible API by
+// overloading functions for `Simd` objects with different ABI tags, as well as
+// providing a type-safe API by requiring compatible ABI tags between `Simd`
+// operands.
+inline namespace simd_abi {
+    // `FixedSizeAbi` is a portable ABI that can be expected to work across any
+    // supported build target, so long as `in_lanes` does not exceed that
+    // target's maximum vector size.
+    template <typename T, ssize in_lanes>
+    struct FixedSizeAbi {
+        FixedSizeAbi() = delete;
+        static constexpr ssize lanes = in_lanes;
+        static constexpr ssize size = lanes * ssizeof<T>();
+        // TODO: Make the alignment generally correct and efficient.
+        static constexpr ssize alignment = 32;
+    };
+
+    // `Avx2Abi` is an ABI that can be expected to work on any x86-64 build
+    // target.
+    template <typename T>
+    struct Avx2Abi {
+        Avx2Abi() = delete;
+        static constexpr ssize size = 32;
+        static constexpr ssize lanes = size / ssizeof<T>();
+        static constexpr ssize alignment = 32;
+    };
+
+    // `Sse42Abi` is an ABI that is useful for implicit-length string
+    // processing on most reasonable x86-64 build targets.
+    template <typename T>
+    struct Sse42Abi {
+        Sse42Abi() = delete;
+        static constexpr ssize size = 16;
+        static constexpr ssize lanes = size / ssizeof<T>();
+        static constexpr ssize alignment = 16;
+    };
+
+    // `NativeAbi` is a portable ABI that can be expected to work on any
+    // supported build target.
+    template <typename T>
+    struct NativeAbi {
+        NativeAbi() = delete;
+        // TODO: Select ABI portably.
+        using Abi = Avx2Abi<T>;
+        static constexpr ssize size = Abi::size;
+        static constexpr ssize lanes = Abi::lanes;
+        static constexpr ssize alignment = Abi::alignment;
+    };
+}  // namespace simd_abi
+
 // TODO: This comment is not currently accurate:
 /* Vectors have weak alignment by default. It is up to users at call-site to
  * determine what alignment is appropriate for their use-case. All SIMD
  * functions are unaligned, which pays little, if any, penalty to aligned
  * vectors in modern implementations of SSE, AVX, and NEON architectures. */
 
-template <typename T, ssize lanes, ssize alignment>
-class alignas(alignment.raw) Simd {
-    using Vector = Simd<T, lanes, alignment>;
+template <typename InAbi, typename T>
+class alignas(InAbi::alignment.raw) Simd {
+    using Vector = Simd<InAbi, T>;
 
   public:
+    static constexpr ssize lanes = InAbi::lanes;
+    static constexpr ssize alignment = InAbi::alignment;
+
     using Scalar = T;
+    using Abi = InAbi;
     // `vector_size` is a GCC attribute that represents SIMD data-types.
     using Raw [[gnu::vector_size(sizeof(T) * lanes.raw),
                 gnu::aligned(alignment.raw)]] = T;
@@ -82,7 +136,7 @@ class alignas(alignment.raw) Simd {
         return lanes;
     }
 
-    constexpr auto fill(T const value) -> Simd<T, lanes, alignment>& {
+    constexpr auto fill(T const value) -> Vector& {
         if constexpr (lanes == 2) {
             this->raw =
                 Raw{value, value, value, value, value, value, value, value};
@@ -106,119 +160,114 @@ class alignas(alignment.raw) Simd {
         return *this;
     }
 
-    static constexpr auto filled(T const value) -> Simd<T, lanes, alignment> {
-        Simd<T, lanes, alignment> vector;
+    // Construct a `Simd` with every lane initialized to `value`.
+    static constexpr auto filled(T const value) -> Vector {
+        Vector vector;
         vector.fill(value);
         return vector;
     }
 
-    constexpr auto load(T const* const p_data) -> Simd<T, lanes, alignment>& {
+    constexpr auto load(T const* const p_data) -> Vector& {
         this->raw = *static_cast<Raw const* const>(
             static_cast<void const* const>(p_data));
         return *this;
     }
+
+    // Construct a `Simd` loaded from the address `p_data`.
+    static constexpr auto loaded(T* const p_data) -> Vector {
+        Vector vector = *bit_cast<Vector*>(p_data);
+        return vector;
+    }
+
+    // Construct a `Simd` loaded from the address `p_data`.
+    static constexpr auto loaded(T const* const p_data) -> Vector {
+        Vector vector = *bit_cast<Vector const*>(p_data);
+        return vector;
+    }
 };
 
-}  // namespace cat
+template <typename Abi, typename T>
+class alignas(Abi::alignment.raw) SimdMask {
+    Simd<Abi, T> vector;
 
-// Vectors of up to 32 1-byte integers are supported by AVX2.
-using int1x2 = cat::Simd<int1::Raw, 2, 32>;
-using int1x4 = cat::Simd<int1::Raw, 4, 32>;
-using int1x8 = cat::Simd<int1::Raw, 8, 32>;
-using int1x16 = cat::Simd<int1::Raw, 16, 32>;
-using int1x32 = cat::Simd<int1::Raw, 32, 32>;
-using int1x_ = int1x32;
+    // Forward any constructor to `Simd`.
+    template <typename... Us>
+    constexpr SimdMask(Us... arguments) : vector(forward<Us>(arguments)...){};
+};
 
-using uint1x2 = cat::Simd<uint1::Raw, 2, 32>;
-using uint1x4 = cat::Simd<uint1::Raw, 4, 32>;
-using uint1x8 = cat::Simd<uint1::Raw, 8, 32>;
-using uint1x16 = cat::Simd<uint1::Raw, 16, 32>;
-using uint1x32 = cat::Simd<uint1::Raw, 32, 32>;
-using uint1x_ = uint1x32;
+template <typename T, ssize lanes>
+using FixedSizeSimd = Simd<FixedSizeAbi<T, lanes>, T>;
 
+template <typename T>
+using NativeSimd = Simd<NativeAbi<T>, T>;
+
+template <typename T>
+using Sse42Simd = Simd<Sse42Abi<T>, T>;
+
+template <typename T>
+using Avx2Simd = Simd<Avx2Abi<T>, T>;
+
+using int1x2 = FixedSizeSimd<int1::Raw, 2>;
+using int1x4 = FixedSizeSimd<int1::Raw, 4>;
+using int1x8 = FixedSizeSimd<int1::Raw, 8>;
+using int1x16 = FixedSizeSimd<int1::Raw, 16>;
+using int1x32 = FixedSizeSimd<int1::Raw, 32>;
+using int1x_ = NativeSimd<int1::Raw>;
+
+using uint1x2 = FixedSizeSimd<uint1::Raw, 2>;
+using uint1x4 = FixedSizeSimd<uint1::Raw, 4>;
+using uint1x8 = FixedSizeSimd<uint1::Raw, 8>;
+using uint1x16 = FixedSizeSimd<uint1::Raw, 16>;
+using uint1x32 = FixedSizeSimd<uint1::Raw, 32>;
+using uint1x_ = NativeSimd<uint1::Raw>;
+
+// TODO: Think over the string vectorization API.
+// TODO: Support `char2x_` vector family.
 // Strings need their own vectors.
-using char1x2 = cat::Simd<char, 2, 1>;
-using char1x4 = cat::Simd<char, 4, 1>;
-using char1x8 = cat::Simd<char, 8, 1>;
-using char1x16 = cat::Simd<char, 16, 1>;
-using char1x32 = cat::Simd<char, 32, 1>;
-using char1x_ = char1x32;
+using char1x16 = Sse42Simd<char>;
+using char1x32 = Avx2Simd<char>;
+using char1x_ = Sse42Simd<char>;
 
-// Vectors of up to 16 2-byte integers are supported by AVX2.
-using int2x2 = cat::Simd<int2::Raw, 2, 32>;
-using int2x4 = cat::Simd<int2::Raw, 4, 32>;
-using int2x8 = cat::Simd<int2::Raw, 8, 32>;
-using int2x16 = cat::Simd<int2::Raw, 16, 32>;
-using int2x_ = int2x16;
+using int2x2 = FixedSizeSimd<int2::Raw, 2>;
+using int2x4 = FixedSizeSimd<int2::Raw, 4>;
+using int2x8 = FixedSizeSimd<int2::Raw, 8>;
+using int2x16 = FixedSizeSimd<int2::Raw, 16>;
+using int2x_ = NativeSimd<int2::Raw>;
 
-using uint2x2 = cat::Simd<uint2::Raw, 2, 32>;
-using uint2x4 = cat::Simd<uint2::Raw, 4, 32>;
-using uint2x8 = cat::Simd<uint2::Raw, 8, 32>;
-using uint2x16 = cat::Simd<uint2::Raw, 16, 32>;
-using uint2x_ = uint2x16;
+using uint2x2 = FixedSizeSimd<uint2::Raw, 2>;
+using uint2x4 = FixedSizeSimd<uint2::Raw, 4>;
+using uint2x8 = FixedSizeSimd<uint2::Raw, 8>;
+using uint2x16 = FixedSizeSimd<uint2::Raw, 16>;
+using uint2x_ = NativeSimd<uint2::Raw>;
 
-// TODO: Support 2-byte chars in string algorithms.
-using char2x2 = cat::Simd<char16_t, 2, 2>;
-using char2x4 = cat::Simd<char16_t, 4, 2>;
-using char2x8 = cat::Simd<char16_t, 8, 2>;
-using char2x16 = cat::Simd<char16_t, 16, 2>;
-using char2x_ = char2x16;
+using int4x2 = FixedSizeSimd<int4::Raw, 2>;
+using int4x4 = FixedSizeSimd<int4::Raw, 4>;
+using int4x8 = FixedSizeSimd<int4::Raw, 8>;
+using int4x_ = NativeSimd<int4::Raw>;
 
-// Vectors of up to 8 4-byte integers are supported by AVX2.
-using int4x2 = cat::Simd<int4::Raw, 2, 32>;
-using int4x4 = cat::Simd<int4::Raw, 4, 32>;
-using int4x8 = cat::Simd<int4::Raw, 8, 32>;
-using int4x_ = int4x8;
+using uint4x2 = FixedSizeSimd<uint4::Raw, 2>;
+using uint4x4 = FixedSizeSimd<uint4::Raw, 4>;
+using uint4x8 = FixedSizeSimd<uint4::Raw, 8>;
+using uint4x_ = NativeSimd<uint4::Raw>;
 
-using uint4x2 = cat::Simd<uint4::Raw, 2, 32>;
-using uint4x4 = cat::Simd<uint4::Raw, 4, 32>;
-using uint4x8 = cat::Simd<uint4::Raw, 8, 32>;
-using uint4x_ = uint4x8;
+using int8x2 = FixedSizeSimd<int8::Raw, 2>;
+using int8x4 = FixedSizeSimd<int8::Raw, 4>;
+using int8x_ = NativeSimd<int8::Raw>;
 
-// Vectors of up to 4 8-byte integers are supported by AVX2.
-using int8x2 = cat::Simd<int8::Raw, 2, 32>;
-using int8x4 = cat::Simd<int8::Raw, 4, 32>;
-using int8x_ = int8x4;
+using uint8x2 = FixedSizeSimd<uint8::Raw, 2>;
+using uint8x4 = FixedSizeSimd<uint8::Raw, 4>;
+using uint8x_ = NativeSimd<uint8::Raw>;
 
-using uint8x2 = cat::Simd<uint8::Raw, 2, 32>;
-using uint8x4 = cat::Simd<uint8::Raw, 4, 32>;
-using uint8x_ = uint8x4;
+using float4x2 = FixedSizeSimd<float4::Raw, 2>;
+using float4x4 = FixedSizeSimd<float4::Raw, 4>;
+using float4x8 = FixedSizeSimd<float4::Raw, 8>;
+using float4x_ = NativeSimd<float4::Raw>;
 
-// Vectors of up to 8 4-byte floats are supported by AVX2.
-using float4x2 = cat::Simd<float4::Raw, 2, 32>;
-using float4x4 = cat::Simd<float4::Raw, 4, 32>;
-using float4x8 = cat::Simd<float4::Raw, 8, 32>;
-using float4x_ = float4x8;
+using float8x2 = FixedSizeSimd<float8::Raw, 2>;
+using float8x4 = FixedSizeSimd<float8::Raw, 4>;
+using float8x_ = NativeSimd<float8::Raw>;
 
-// TODO: Evaluate what support for 8-byte `int`s exists in x86-64.
-
-// Vectors of up to 4 8-byte floats are supported by AVX2.
-using float8x2 = cat::Simd<float8::Raw, 2, 32>;
-using float8x4 = cat::Simd<float8::Raw, 4, 32>;
-using float8x_ = float8x4;
-
-// Vectors of up to 32 1-byte bools are supported by AVX2.
-using bool1x2 = cat::Simd<bool1, 2, 32>;
-using bool1x4 = cat::Simd<bool1, 4, 32>;
-using bool1x8 = cat::Simd<bool1, 8, 32>;
-using bool1x16 = cat::Simd<bool1, 16, 32>;
-using bool1x32 = cat::Simd<bool1, 32, 32>;
-using bool1x_ = bool1x32;
-
-// Vectors of up to 16 2-byte bools are supported by AVX2.
-using bool2x2 = cat::Simd<bool2::Raw, 2, 32>;
-using bool2x4 = cat::Simd<bool2::Raw, 4, 32>;
-using bool2x8 = cat::Simd<bool2::Raw, 8, 32>;
-using bool2x16 = cat::Simd<bool2::Raw, 16, 32>;
-using bool2x_ = bool2x16;
-
-// Vectors of up to 8 4-byte bools are supported by AVX2.
-using bool4x2 = cat::Simd<bool4::Raw, 2, 32>;
-using bool4x4 = cat::Simd<bool4::Raw, 4, 32>;
-using bool4x8 = cat::Simd<bool4::Raw, 8, 32>;
-using bool4x_ = bool4x8;
-
-namespace cat {
+// TODO: Support `bool` family vectors.
 
 enum class StringControl : unsigned char {
     // Unsigned 1-byte characters.
@@ -263,16 +312,6 @@ constexpr auto operator|(StringControl flag_1, StringControl flag_2)
 
 // TODO: Use a vector concept.
 auto shuffle(auto in_vector, auto mask);
-
-template <typename T>
-constexpr auto p_string_to_p_vector(char* p_string) {
-    return bit_cast<T*>(p_string);
-}
-
-template <typename T>
-constexpr auto p_string_to_p_vector(char const* p_string) {
-    return bit_cast<T const*>(p_string);
-}
 
 template <StringControl control_mask>
 constexpr auto compare_implicit_length_strings(auto const& vector_1,
@@ -334,11 +373,7 @@ template <typename T>
 auto move_mask(T vector) {
     if constexpr (sizeof(typename T::Scalar) == 1) {
         return __builtin_ia32_pmovmskb256(
-            bit_cast<cat::Simd<char, T::size(),
-                               // TODO: Make an `salignof()`.
-                               static_cast<signed int long>(alignof(T))>>(
-                vector)
-                .raw);
+            bit_cast<cat::Simd<typename T::Abi, char>>(vector).raw);
     } else {
         // TODO: Support additional vector sizes.
         static_assert("BAD!");
@@ -361,6 +396,53 @@ auto is_avx512f_supported() -> bool1;
 auto is_avx512vl_supported() -> bool1;
 
 }  // namespace cat
+
+using int1x2 = cat::int1x2;
+using int1x4 = cat::int1x4;
+using int1x8 = cat::int1x8;
+using int1x16 = cat::int1x16;
+using int1x32 = cat::int1x32;
+using int1x_ = cat::int1x_;
+using uint1x2 = cat::uint1x2;
+using uint1x4 = cat::uint1x4;
+using uint1x8 = cat::uint1x8;
+using uint1x16 = cat::uint1x16;
+using uint1x32 = cat::uint1x32;
+using uint1x_ = cat::uint1x_;
+using char1x16 = cat::char1x16;
+using char1x32 = cat::char1x32;
+using char1x_ = cat::char1x_;
+using int2x2 = cat::int2x2;
+using int2x4 = cat::int2x4;
+using int2x8 = cat::int2x8;
+using int2x16 = cat::int2x16;
+using int2x_ = cat::int2x_;
+using uint2x2 = cat::uint2x2;
+using uint2x4 = cat::uint2x4;
+using uint2x8 = cat::uint2x8;
+using uint2x16 = cat::uint2x16;
+using uint2x_ = cat::uint2x_;
+using int4x2 = cat::int4x2;
+using int4x4 = cat::int4x4;
+using int4x8 = cat::int4x8;
+using int4x_ = cat::int4x_;
+using uint4x2 = cat::uint4x2;
+using uint4x4 = cat::uint4x4;
+using uint4x8 = cat::uint4x8;
+using uint4x_ = cat::uint4x_;
+using int8x2 = cat::int8x2;
+using int8x4 = cat::int8x4;
+using int8x_ = cat::int8x_;
+using uint8x2 = cat::uint8x2;
+using uint8x4 = cat::uint8x4;
+using uint8x_ = cat::uint8x_;
+using float4x2 = cat::float4x2;
+using float4x4 = cat::float4x4;
+using float4x8 = cat::float4x8;
+using float4x_ = cat::float4x_;
+using float8x2 = cat::float8x2;
+using float8x4 = cat::float8x4;
+using float8x_ = cat::float8x_;
 
 #include "./implementations/compare_implicit_length_strings.tpp"
 #include "./implementations/compare_implicit_length_strings_return_index.tpp"
