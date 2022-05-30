@@ -4,6 +4,7 @@
 
 #include <cat/simd>
 #include <cat/string>
+#include <cat/utility>
 
 // This function requires SSE4.2, unless it is used in a `constexpr` context.
 constexpr auto cat::string_length(char const* p_string) -> ssize {
@@ -16,7 +17,7 @@ constexpr auto cat::string_length(char const* p_string) -> ssize {
             result++;
         }
     } else {
-        constexpr char1x16 zeros = char1x16::filled(0);
+        constexpr char1x16 zeros = zeros_list<char, 16>;
 
         for (ssize i = 0;; i += 16) {
             char1x16 const data = char1x16::loaded(p_string + i);
