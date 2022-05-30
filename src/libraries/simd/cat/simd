@@ -81,6 +81,9 @@ class alignas(InAbi::alignment.raw) Simd {
     struct UnalignedAbi {
         static constexpr ssize size = InAbi::size;
         static constexpr ssize lanes = InAbi::lanes;
+        // By setting `alignment` to 1 here, and by extension in the definition
+        // of `Raw` produced by this ABI, GCC produces unaligned SIMD
+        // instructions for operations on this ABI.
         static constexpr ssize alignment = 1;
     };
     using UnalignedVector = Simd<UnalignedAbi, T>;
@@ -102,22 +105,39 @@ class alignas(InAbi::alignment.raw) Simd {
 
     constexpr Simd(Vector const& operand) = default;
 
+    constexpr Simd(Vector&& operand) = default;
+
     constexpr Simd(UnalignedVector const& operand) : raw(operand.raw){};
+
+    constexpr Simd(UnalignedVector&& operand)
+        : raw(forward<UnalignedVector>(operand).raw){};
 
     constexpr Simd(Raw const& values) : raw(values){};
 
     constexpr Simd(Raw&& values) : raw(forward<Raw>(values)){};
 
-    constexpr Simd(T values...) : raw(Raw{values}){};
+    // Construct all lanes as `value`.
+    template <typename U>
+    constexpr Simd(U value) requires(is_convertible<U, T>) {
+        this->fill(value);
+    }
 
-    template <T... Ts>
-    constexpr Simd(ValueList<T, Ts...> const values) requires(values.size ==
+    // Construct from a variadic argument list.
+    template <typename... Us>
+    constexpr Simd(Us&&... values) requires(sizeof...(values) > 1 &&
+                                            sizeof...(values) == lanes.raw)
+        : raw(Raw{static_cast<T>(forward<Us>(values))...}){};
+
+    // Construct from a constant list, such as `value_list` or
+    // `integer_sequence`.
+    template <typename U, U... Us>
+    constexpr Simd(ValueList<U, Us...> const values) requires(values.size ==
                                                               lanes)
-        : raw(Raw{Ts...}){};
+        : raw(Raw{static_cast<T>(Us)...}){};
 
     // TODO: `__builtin_convertvector()` wrapped by conversion operators.
 
-    constexpr auto operator=(Vector operand) -> Vector& {
+    constexpr auto operator=(Vector const& operand) -> Vector& {
         this->raw = operand.raw;
         return *this;
     }
@@ -146,7 +166,9 @@ class alignas(InAbi::alignment.raw) Simd {
         return lanes;
     }
 
-    constexpr auto fill(T const value) -> Vector& {
+    template <typename U>
+    constexpr auto fill(U const value)
+        -> Vector& requires(is_convertible<U, T>) {
         if constexpr (lanes == 2) {
             this->raw =
                 Raw{value, value, value, value, value, value, value, value};
@@ -171,13 +193,15 @@ class alignas(InAbi::alignment.raw) Simd {
     }
 
     // Construct a `Simd` with every lane initialized to `value`.
-    static constexpr auto filled(T const value) -> Vector {
+    template <typename U>
+    static constexpr auto filled(U const value) -> Vector
+        requires(is_convertible<U, T>) {
         Vector vector;
         vector.fill(value);
         return vector;
     }
 
-    // Load a vector from `p_data`, aligned to `InAbi::alignment`.
+    // Load a vector from `p_data`, aligned to `Abi::alignment`.
     constexpr auto load_aligned(T const* const p_data) -> Vector& {
         this->raw =
             static_cast<Vector const*>(static_cast<void const*>(p_data))->raw;
@@ -203,7 +227,7 @@ class alignas(InAbi::alignment.raw) Simd {
     }
 
     // Construct a `Simd` loaded from the address `p_data`, aligned to
-    // `InAbi::alignment`.
+    // `Abi::alignment`.
     static constexpr auto loaded_aligned(T const* const p_data)
         -> Vector const {
         return *bit_cast<Vector const*>(p_data);
