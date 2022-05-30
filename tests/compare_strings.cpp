@@ -48,5 +48,14 @@ void meow() {
     // TODO: Make this `constexpr`.
     //     cat::String foo = (const_string_3 + const_string_4);
 
+    // ssize const h = const_string_1.find('h').value();
+    // ssize const e = const_string_1.find('e').value();
+    // ssize const l = const_string_1.find('l').value();
+    // ssize const o = const_string_1.find('o').value();
+    // // Result(h == 0).or_panic();
+    // Result(e == 1).or_panic();
+    // Result(l == 2).or_panic();
+    // Result(o == 4).or_panic();
+
     cat::exit();
 }
