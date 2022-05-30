@@ -28,6 +28,15 @@ constexpr auto ssizeof(auto const& anything) -> ssize;
 template <typename T>
 constexpr auto ssizeof() -> ssize;
 
+constexpr auto salignof(auto const& anything) -> ssize {
+    return ssize{alignof(anything)};
+}
+
+template <typename T>
+constexpr auto salignof() -> ssize {
+    return ssize{alignof(T)};
+}
+
 namespace detail {
     template <typename T, ssize index, ssize current, T value, T... values>
     constexpr auto get_value_list_at() -> T {
