@@ -24,8 +24,8 @@ namespace cat {
 // providing a type-safe API by requiring compatible ABI tags between `Simd`
 // operands.
 inline namespace simd_abi {
-    // `FixedSizeAbi` is a portable ABI that can be expected to work across any
-    // supported build target, so long as `in_lanes` does not exceed that
+    // `FixedSizeAbi` is a portable SIMD ABI that can be expected to work across
+    // any supported build target, so long as `in_lanes` does not exceed that
     // target's maximum vector size.
     template <typename T, ssize in_lanes>
     struct FixedSizeAbi {
@@ -36,18 +36,8 @@ inline namespace simd_abi {
         static constexpr ssize alignment = 32;
     };
 
-    // `Avx2Abi` is an ABI that can be expected to work on any x86-64 build
+    // `Sse2Abi` is a SIMD ABI that can be expected to work on any x86-64 build
     // target.
-    template <typename T>
-    struct Avx2Abi {
-        Avx2Abi() = delete;
-        static constexpr ssize size = 32;
-        static constexpr ssize lanes = size / ssizeof<T>();
-        static constexpr ssize alignment = 32;
-    };
-
-    // `Sse42Abi` is an ABI that is useful for implicit-length string
-    // processing on most reasonable x86-64 build targets.
     template <typename T>
     struct Sse42Abi {
         Sse42Abi() = delete;
@@ -56,7 +46,17 @@ inline namespace simd_abi {
         static constexpr ssize alignment = 16;
     };
 
-    // `NativeAbi` is a portable ABI that can be expected to work on any
+    // `Avx2Abi` is a SIMD ABI that can be expected to work on most reasonable
+    // x86-64 build target.
+    template <typename T>
+    struct Avx2Abi {
+        Avx2Abi() = delete;
+        static constexpr ssize size = 32;
+        static constexpr ssize lanes = size / ssizeof<T>();
+        static constexpr ssize alignment = 32;
+    };
+
+    // `NativeAbi` is a portable SIMD ABI that can be expected to work on any
     // supported build target.
     template <typename T>
     struct NativeAbi {
@@ -78,6 +78,12 @@ inline namespace simd_abi {
 template <typename InAbi, typename T>
 class alignas(InAbi::alignment.raw) Simd {
     using Vector = Simd<InAbi, T>;
+    struct UnalignedAbi {
+        static constexpr ssize size = InAbi::size;
+        static constexpr ssize lanes = InAbi::lanes;
+        static constexpr ssize alignment = 1;
+    };
+    using UnalignedVector = Simd<UnalignedAbi, T>;
 
   public:
     static constexpr ssize lanes = InAbi::lanes;
@@ -85,14 +91,18 @@ class alignas(InAbi::alignment.raw) Simd {
 
     using Scalar = T;
     using Abi = InAbi;
-    // `vector_size` is a GCC attribute that represents SIMD data-types.
+    // `gnu::vector_size` is a GCC attribute that represents SIMD data-types.
+    // `gnu::aligned` is a GCC attribute that guarantees alignment for all
+    // instances of a type.
     using Raw [[gnu::vector_size(sizeof(T) * lanes.raw),
                 gnu::aligned(alignment.raw)]] = T;
     Raw raw;
 
     constexpr Simd() = default;
 
-    constexpr Simd(Vector const& operand) : raw(operand.raw){};
+    constexpr Simd(Vector const& operand) = default;
+
+    constexpr Simd(UnalignedVector const& operand) : raw(operand.raw){};
 
     constexpr Simd(Raw const& values) : raw(values){};
 
@@ -167,22 +177,52 @@ class alignas(InAbi::alignment.raw) Simd {
         return vector;
     }
 
-    constexpr auto load(T const* const p_data) -> Vector& {
-        this->raw = *static_cast<Raw const* const>(
-            static_cast<void const* const>(p_data));
+    // Load a vector from `p_data`, aligned to `InAbi::alignment`.
+    constexpr auto load_aligned(T const* const p_data) -> Vector& {
+        this->raw =
+            static_cast<Vector const*>(static_cast<void const*>(p_data))->raw;
         return *this;
     }
 
-    // Construct a `Simd` loaded from the address `p_data`.
-    static constexpr auto loaded(T* const p_data) -> Vector {
-        Vector vector = *bit_cast<Vector*>(p_data);
-        return vector;
+    // Load a vector from `p_data` with any alignment. This may be slower than
+    // `.loaded_aligned()`.
+    constexpr auto load_unaligned(T const* const p_data) -> Vector& {
+        this->raw = static_cast<UnalignedVector const*>(
+                        static_cast<void const*>(p_data))
+                        ->raw;
+        return *this;
+    }
+
+    // Load a vector from `p_data`.
+    constexpr auto load(T const* const p_data) -> Vector& {
+        if constexpr (Abi::alignment == salignof<T>()) {
+            return this->load_aligned(p_data);
+        } else {
+            return this->load_unaligned(p_data);
+        }
+    }
+
+    // Construct a `Simd` loaded from the address `p_data`, aligned to
+    // `InAbi::alignment`.
+    static constexpr auto loaded_aligned(T const* const p_data)
+        -> Vector const {
+        return *bit_cast<Vector const*>(p_data);
+    }
+
+    // Construct a `Simd` loaded from the address `p_data` with any alignment.
+    // This may be slower than `.loaded_aligned()`.
+    static constexpr auto loaded_unaligned(T const* const p_data)
+        -> Vector const {
+        return *bit_cast<UnalignedVector const*>(p_data);
     }
 
     // Construct a `Simd` loaded from the address `p_data`.
-    static constexpr auto loaded(T const* const p_data) -> Vector {
-        Vector vector = *bit_cast<Vector const*>(p_data);
-        return vector;
+    static constexpr auto loaded(T const* const p_data) {
+        if constexpr (Abi::alignment == salignof<T>()) {
+            return loaded_aligned(p_data);
+        } else {
+            return loaded_unaligned(p_data);
+        }
     }
 };
 
