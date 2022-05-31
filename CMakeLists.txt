@@ -9,11 +9,14 @@ set(CMAKE_CONFIGURATION_TYPES Debug;Release;RelWithDebInfo;RelSmall)
 list(
   APPEND
   CAT_CXX_FLAGS_COMMON
+  -nostdlib
   -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
   -fomit-frame-pointer # This is required for the stack frame to work.
   -fno-stack-protector # This is required for threads to work.
-  -msse4.2 # -march=native does not compile on some computers, apparently.
+  # `-march=native` does not compile on some computers, apparently.
+  -msse4.2
   -mavx2
+  -mfma
   -mfsgsbase
   -fdiagnostics-color
   -include global_includes.h
@@ -28,10 +31,10 @@ list(
   # -fsanitize=undefined
   # -fsanitize=address
   # -fsanitize=leak
-  -Wall -Wextra -Wno-unused-function
+  -fconcepts-diagnostics-depth=2
+  -Wall -Wextra
   # The following warnings are counter-productive for a basic-level library:
   -Wno-unused-function
-  -fconcepts-diagnostics-depth=2
 )
 
 # Set aggressive space optimizations. -Os is not favorable, however.
@@ -42,7 +45,7 @@ list(
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto -fwhole-file -fno-plt
-  -Wl,-z,norelro,-z,noseparate-code,--gc-sections
+  -Wl,-z,noseparate-code,--gc-sections
 )
 
 list(
@@ -63,7 +66,7 @@ list(
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto -fwhole-file -fno-plt
-  -Wl,-z,norelro,-z,noseparate-code,--gc-sections
+  -Wl,-z,noseparate-code,--gc-sections
 )
 
 list(
@@ -99,7 +102,7 @@ list(
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto -fwhole-file -fno-plt
-  -Wl,-z,norelro,-z,noseparate-code,--gc-sections
+  -Wl,-z,noseparate-code,--gc-sections
 )
 
 list(
@@ -140,7 +143,9 @@ target_link_options(cat PUBLIC ${CAT_LINK_FLAGS})
 add_custom_target(
   cat-debug ALL
   COMMAND ${CMAKE_COMMAND} -E create_symlink
-  ${PROJECT_SOURCE_DIR}/.gdbinit $<OUTPUT_CONFIG:$<CONFIG>>/.gdbinit
+  # This requires CMake 3.20:
+  ${PROJECT_SOURCE_DIR}/.gdbinit ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/.gdbinit
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}
 )
 add_dependencies(cat cat-debug)
 
@@ -149,81 +154,4 @@ enable_testing()
 add_subdirectory(tests/)
 
 # Build the examples.
-add_executable(hello examples/hello.cpp)
-target_compile_options(hello PRIVATE ${CAT_CXX_FLAGS})
-target_link_libraries(hello PRIVATE cat)
-target_link_options(hello PRIVATE ${CAT_LINK_FLAGS})
-
-add_executable(error examples/error.cpp)
-target_compile_options(error PRIVATE ${CAT_CXX_FLAGS})
-target_link_libraries(error PRIVATE cat)
-target_link_options(error PRIVATE ${CAT_LINK_FLAGS})
-
-add_executable(echo examples/echo.cpp)
-target_compile_options(echo PRIVATE ${CAT_CXX_FLAGS})
-target_compile_definitions(echo PRIVATE "load_argc_argv")
-target_link_libraries(echo PRIVATE cat)
-target_link_options(echo PRIVATE ${CAT_LINK_FLAGS})
-
-add_executable(client examples/client.cpp)
-target_compile_options(client PRIVATE ${CAT_CXX_FLAGS})
-target_compile_definitions(client PRIVATE "load_argc_argv")
-target_link_libraries(client PRIVATE cat)
-target_link_options(client PRIVATE ${CAT_LINK_FLAGS})
-
-add_executable(server examples/server.cpp)
-target_compile_options(server PRIVATE ${CAT_CXX_FLAGS})
-target_link_libraries(server PRIVATE cat)
-target_link_options(server PRIVATE ${CAT_LINK_FLAGS})
-
-add_executable(window examples/window.cpp)
-target_compile_options(window PRIVATE ${CAT_CXX_FLAGS})
-target_link_libraries(window PRIVATE cat)
-target_link_options(window PRIVATE ${CAT_LINK_FLAGS})
-
-add_executable(unixcat examples/cat.cpp)
-target_compile_options(unixcat PRIVATE ${CAT_CXX_FLAGS})
-target_compile_definitions(unixcat PRIVATE "load_argc_argv")
-target_link_libraries(unixcat PRIVATE cat)
-target_link_options(unixcat PRIVATE ${CAT_LINK_FLAGS})
-set_target_properties(unixcat PROPERTIES OUTPUT_NAME cat)
-
-# libC executables are only configured for Release.
-list(
-  APPEND
-  LIBC_RELEASE_FLAGS
-  -fno-exceptions -fno-rtti -fno-unwind-tables
-  -fno-asynchronous-unwind-tables
-  -no-pie
-  -ffunction-sections -fdata-sections
-  -fvisibility=hidden -fvisibility-inlines-hidden
-  -flto -fwhole-file -fno-plt
-  -Wl,-z,norelro,-z,noseparate-code,--gc-sections
-  $<$<CONFIG:Release>:-O3>
-  $<$<CONFIG:RelSmall>:-Os>
-)
-
-# Do not build libC examples by default.
-option(BUILD_LIBC_EXAMPLES "Enable libC examples to compare against libCat." OFF)
-
-if(BUILD_LIBC_EXAMPLES)
-  add_executable(hello_libc examples/hello_libc.cpp)
-  target_compile_options(
-    hello_libc PRIVATE
-    ${LIBC_RELEASE_FLAGS}
-  )
-  target_link_options(
-    hello_libc PRIVATE
-    ${LIBC_RELEASE_FLAGS}
-  )
-
-  add_executable(memcpy_libc examples/memory_copy_libc.cpp)
-  target_compile_options(
-    memcpy_libc PRIVATE
-    ${LIBC_RELEASE_FLAGS}
-  )
-  target_link_options(
-    memcpy_libc PRIVATE
-    ${LIBC_RELEASE_FLAGS}
-  )
-endif()
+add_subdirectory(examples/)
