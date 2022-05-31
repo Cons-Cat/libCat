@@ -200,7 +200,7 @@ class alignas(InAbi::alignment.raw) Simd {
 
     // Construct a `Simd` with every lane initialized to `value`.
     template <typename U>
-    static constexpr auto filled(U const value) -> Vector
+    [[nodiscard]] static constexpr auto filled(U const value) -> Vector
         requires(is_convertible<U, T>) {
         Vector vector;
         vector.fill(value);
@@ -234,20 +234,20 @@ class alignas(InAbi::alignment.raw) Simd {
 
     // Construct a `Simd` loaded from the address `p_data`, aligned to
     // `Abi::alignment`.
-    static constexpr auto loaded_aligned(T const* const p_data)
+    [[nodiscard]] static constexpr auto loaded_aligned(T const* const p_data)
         -> Vector const {
         return *bit_cast<Vector const*>(p_data);
     }
 
     // Construct a `Simd` loaded from the address `p_data` with any alignment.
     // This may be slower than `.loaded_aligned()`.
-    static constexpr auto loaded_unaligned(T const* const p_data)
+    [[nodiscard]] static constexpr auto loaded_unaligned(T const* const p_data)
         -> Vector const {
         return *bit_cast<UnalignedVector const*>(p_data);
     }
 
     // Construct a `Simd` loaded from the address `p_data`.
-    static constexpr auto loaded(T const* const p_data) {
+    [[nodiscard]] static constexpr auto loaded(T const* const p_data) {
         if constexpr (Abi::alignment == salignof<T>()) {
             return loaded_aligned(p_data);
         } else {
