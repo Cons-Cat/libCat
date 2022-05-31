@@ -125,6 +125,11 @@ template <typename U>
 [[nodiscard]] constexpr auto align_down(uintptr<U> const p_value,
                                         usize const alignment) -> uintptr<U>;
 
+template <typename T>
+[[nodiscard]] constexpr auto is_power_of_two(T const value) -> bool {
+    return (value & (value - 1)) == 0;
+}
+
 template <typename>
 struct EnumFlagTrait : FalseTypeTrait {};
 
