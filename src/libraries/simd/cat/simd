@@ -141,7 +141,24 @@ class alignas(InAbi::alignment.raw) Simd {
                                                               lanes)
         : raw(Raw{static_cast<T>(Us)...}){};
 
-    // TODO: `__builtin_convertvector()` wrapped by conversion operators.
+    // Any ABI for which this `Simd` is equal to in size and overaligned can
+    // be explicitly converted to.
+    template <typename OtherAbi>
+    explicit constexpr operator Simd<OtherAbi, T>() requires(
+        OtherAbi::size == Abi::Size && OtherAbi::alignment <= Abi::alignment) {
+        return this->raw;
+    }
+
+    // Any ABI for which this `Simd` is equal to in size and overaligned can
+    // be explicitly converted to, and any underlying type for which this
+    // `Simd`'s is compatible with, can be converted to.
+    template <typename OtherAbi, typename U>
+    explicit constexpr operator Simd<OtherAbi, U>() requires(
+        is_convertible<U, T>&& OtherAbi::size == Abi::Size &&
+        OtherAbi::alignment <= Abi::alignment) {
+        return __builtin_convertvector(this->raw,
+                                       typename Simd<OtherAbi, U>::Raw);
+    }
 
     constexpr auto operator=(Vector const& operand) -> Vector& {
         this->raw = operand.raw;
