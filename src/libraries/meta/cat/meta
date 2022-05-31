@@ -642,6 +642,8 @@ namespace detail {
               (is_void<From> && is_void<To>)> {};
 }  // namespace detail
 
+// TODO: Add an `IsImplicitlyConvertibleTrait`.
+
 template <typename From, typename To>
 struct IsConvertibleTrait : detail::IsConvertibleTraitDetail<From, To> {};
 template <typename From, typename To>
@@ -1120,6 +1122,10 @@ concept NarrowConvertible = requires() {
 
 template <typename Function, typename... Args>
 concept Invocable = is_invocable<Function, Args...>;
+
+// TODO: Support any integral.
+template <int value>
+concept PowerOfTwo = ((value & (value - 1)) == 0);
 
 }  // namespace cat
 

@@ -252,6 +252,10 @@ struct Numeral {
 template <typename T>
 Numeral(T) -> Numeral<T>;
 
+template <typename T>
+requires(is_integral<T> || is_floating_point<T>) using RawNumeral =
+    Conditional<IsSpecializationTrait<T, Numeral>::value, typename T::Raw, T>;
+
 // Compare primitive numerals to `Numeral`s.
 // TODO: Return a `Numeral` that is the larger size of either operand.
 template <typename T, typename U>
@@ -283,6 +287,7 @@ constexpr auto operator<=(T const lhs, Numeral<U> const rhs)
 }
 
 // Order-independant operators for `Numeral` and primitive numerals.
+
 template <typename T, typename U>
 constexpr auto operator==(Numeral<T> const lhs, U const rhs)
     -> bool requires(is_signed<T> == is_signed<U> &&
