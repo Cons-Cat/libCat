@@ -148,27 +148,85 @@ class alignas(InAbi::alignment.raw) Simd {
         return *this;
     }
 
-    constexpr auto operator==(Vector const& operand) -> Vector {
-        return Vector{.raw = this->raw == operand.raw};
+    [[nodiscard]] constexpr auto operator==(Vector const& operand) -> Vector {
+        return this->raw == operand.raw;
     }
 
-    constexpr auto operator+(Vector operand) -> Vector {
-        return Vector{this->raw + operand.raw};
+    [[nodiscard]] constexpr auto operator!=(Vector const& operand) -> Vector {
+        return this->raw != operand.raw;
+    }
+
+    [[nodiscard]] constexpr auto operator>(Vector operand) -> Vector {
+        return this->raw > operand.raw;
+    }
+    constexpr auto operator>=(Vector const& operand) -> Vector& {
+        return this->raw >= operand.raw;
+    }
+
+    [[nodiscard]] constexpr auto operator<(Vector operand) -> Vector {
+        return this->raw < operand.raw;
+    }
+    constexpr auto operator<=(Vector const& operand) -> Vector& {
+        return this->raw <= operand.raw;
+    }
+
+    [[nodiscard]] constexpr auto operator+(Vector operand) -> Vector {
+        return this->raw + operand.raw;
     }
     constexpr auto operator+=(Vector const& operand) -> Vector& {
-        this->raw = this->raw + operand.raw;
+        this->raw + operand.raw;
         return *this;
     }
 
-    constexpr auto operator-(Vector operand) -> Vector {
-        return Vector{this->raw - operand.raw};
+    [[nodiscard]] constexpr auto operator-(Vector operand) -> Vector {
+        return this->raw - operand.raw;
     }
     constexpr auto operator-=(Vector const& operand) -> Vector& {
         this->raw = this->raw - operand.raw;
         return *this;
     }
 
-    static consteval auto size() -> ssize {
+    [[nodiscard]] constexpr auto operator*(Vector operand) -> Vector {
+        return this->raw * operand.raw;
+    }
+    constexpr auto operator*=(Vector const& operand) -> Vector& {
+        this->raw = this->raw * operand.raw;
+        return *this;
+    }
+
+    [[nodiscard]] constexpr auto operator/(Vector operand) -> Vector {
+        return this->raw * operand.raw;
+    }
+    constexpr auto operator/=(Vector const& operand) -> Vector& {
+        this->raw = this->raw / operand.raw;
+        return *this;
+    }
+
+    [[nodiscard]] constexpr auto operator&(Vector operand) -> Vector {
+        return this->raw & operand.raw;
+    }
+    constexpr auto operator&=(Vector const& operand) -> Vector& {
+        this->raw = this->raw & operand.raw;
+        return *this;
+    }
+
+    [[nodiscard]] constexpr auto operator|(Vector operand) -> Vector {
+        return this->raw | operand.raw;
+    }
+    constexpr auto operator|=(Vector const& operand) -> Vector& {
+        this->raw = this->raw | operand.raw;
+        return *this;
+    }
+
+    [[nodiscard]] constexpr auto operator%(Vector operand) -> Vector {
+        return this->raw % operand.raw;
+    }
+    constexpr auto operator%=(Vector const& operand) -> Vector& {
+        this->raw = this->raw % operand.raw;
+        return *this;
+    }
+
+    [[nodiscard]] static consteval auto size() -> ssize {
         return lanes;
     }
 
