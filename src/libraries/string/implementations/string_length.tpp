@@ -17,7 +17,7 @@ constexpr auto cat::string_length(char const* p_string) -> ssize {
             result++;
         }
     } else {
-        constexpr char1x16 zeros = zeros_list<char, 16>;
+        constexpr char1x16 zeros = '\0';
 
         for (ssize i = 0;; i += 16) {
             char1x16 const data = char1x16::loaded(p_string + i);

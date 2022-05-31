@@ -118,8 +118,14 @@ class alignas(InAbi::alignment.raw) Simd {
 
     // Construct all lanes as `value`.
     template <typename U>
-    constexpr Simd(U value) requires(is_convertible<U, T>) {
-        this->fill(value);
+    constexpr Simd(U const& value) requires(is_convertible<U, T>) {
+        this->fill(static_cast<T>(value));
+    }
+
+    // Construct all lanes as `value`.
+    template <typename U>
+    constexpr Simd(U&& value) requires(is_convertible<U, T>) {
+        this->fill(static_cast<T>(value));
     }
 
     // Construct from a variadic argument list.
