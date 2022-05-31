@@ -1,4 +1,4 @@
-# Create collect all of the files needed to build the `cat` library
+# Collect all of the files needed to build the `cat` library
 # in `../CMakeLists.txt`.
 set(
   cat-include
