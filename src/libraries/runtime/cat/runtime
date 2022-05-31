@@ -47,7 +47,7 @@ extern "C" [[gnu::used]] void _start();  // NOLINT
 // existence of `_exit()`.
 namespace cat {
 
-extern "C" [[gnu::used]] void exit(ssize exit_code = 0);
+[[gnu::used, noreturn]] void exit(ssize exit_code = 0);
 
 auto load_base_stack_pointer() -> void*;
 

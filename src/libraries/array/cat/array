@@ -27,6 +27,8 @@ class Array : public CollectionFacade<Array<T, length>, T> {
                                                length.raw)
         : storage(arguments...){};
 
+    // Construct from a constant list, such as `value_list` or
+    // `integer_sequence`.
     template <typename U, U... values>
     constexpr Array(ValueList<U, values...> const list) requires(
         is_convertible<U, T>&& list.size == length)
