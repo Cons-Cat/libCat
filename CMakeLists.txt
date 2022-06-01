@@ -9,6 +9,7 @@ set(CMAKE_CONFIGURATION_TYPES Debug;Release;RelWithDebInfo;RelSmall)
 list(
   APPEND
   CAT_CXX_FLAGS_COMMON
+  -fmax-errors=4
   -nostdlib
   -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
   -fomit-frame-pointer # This is required for the stack frame to work.
