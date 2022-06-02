@@ -99,8 +99,8 @@ struct NativeAbi {
 
 // Forward declarations.
 template <typename Abi, typename T>
-// requires(is_same<typename Abi::Scalar, T>)
-class alignas(Abi::alignment.raw) Simd;
+requires(is_same<typename Abi::Scalar, T>) class alignas(
+    Abi::alignment.raw) Simd;
 
 namespace detail {
     // Cast a `NativeAbi` vector into its underlying representation.
@@ -128,16 +128,18 @@ template <typename T>
 [[nodiscard]] auto all_of(SimdMask<Avx2Abi<T>, T> const) -> bool;
 
 template <typename InAbi, typename T>
-// requires(is_same<typename InAbi::Scalar, T>)
-class alignas(InAbi::alignment.raw) Simd {
+requires(is_same<typename InAbi::Scalar, T>) class alignas(
+    InAbi::alignment.raw) Simd {
     using Vector = Simd<InAbi, T>;
+    // GCC does not support `bool` vectors, so it is mapped to `unsigned char`.
+    using MappedT = Conditional<is_same<T, bool>, unsigned char, T>;
 
     struct UnalignedAbi {
         using Scalar = T;
         static constexpr ssize size = InAbi::size;
         static constexpr ssize lanes = InAbi::lanes;
         // By setting `alignment` to 1 here, and by extension in the definition
-        // of `Raw` produced by this ABI, GCC produces unaligned SIMD
+        // of `Simd::Raw` produced by this ABI, GCC produces unaligned SIMD
         // instructions for operations on this ABI.
         static constexpr ssize alignment = 1;
     };
@@ -148,16 +150,15 @@ class alignas(InAbi::alignment.raw) Simd {
     static constexpr ssize lanes = InAbi::lanes;
     static constexpr ssize alignment = InAbi::alignment;
 
-    using Abi = InAbi;
+    using Scalar = T;
 
-    // GCC does not support `bool` vectors, so it is mapped to `unsigned char`.
-    using Scalar = Conditional<is_same<T, bool>, unsigned char, T>;
+    using Abi = InAbi;
 
     // `gnu::vector_size` is a GCC attribute that represents SIMD data-types.
     // `gnu::aligned` is a GCC attribute that guarantees alignment for all
     // instances of a type.
     using Raw [[gnu::vector_size(InAbi::size.raw),
-                gnu::aligned(InAbi::alignment.raw)]] = Scalar;
+                gnu::aligned(InAbi::alignment.raw)]] = MappedT;
     Raw raw;
 
     constexpr Simd() = default;
@@ -236,21 +237,21 @@ class alignas(InAbi::alignment.raw) Simd {
     // Compare equality for each lane to another `Simd`'s lanes, and store the
     // results in a new `Simd`.
     [[nodiscard]] constexpr auto operator==(Vector const& operand) const
-        -> SimdMask<Abi, Scalar> {
+        -> SimdMask<Abi, T> {
         return this->raw == operand.raw;
     }
 
     // Compare non-equality for each lane to another `Simd`'s lanes, and store
     // the results in a new `Simd`.
     [[nodiscard]] constexpr auto operator!=(Vector const& operand) const
-        -> SimdMask<Abi, Scalar> {
+        -> SimdMask<Abi, T> {
         return this->raw != operand.raw;
     }
 
     // Compare greater-than for each lane to another `Simd`'s lanes, and store
     // the results in a new `Simd`.
     [[nodiscard]] constexpr auto operator>(Vector const& operand) const
-        -> SimdMask<Abi, Scalar> {
+        -> SimdMask<Abi, T> {
         return this->raw > operand.raw;
     }
 
@@ -263,7 +264,7 @@ class alignas(InAbi::alignment.raw) Simd {
     // Compare less-than for each lane to another `Simd`'s lanes, and store the
     // results in a new `Simd`.
     [[nodiscard]] constexpr auto operator<(Vector const& operand) const
-        -> SimdMask<Abi, Scalar> {
+        -> SimdMask<Abi, T> {
         return this->raw < operand.raw;
     }
 
@@ -385,9 +386,7 @@ class alignas(InAbi::alignment.raw) Simd {
     template <typename U>
     [[nodiscard]] static constexpr auto filled(U const value) -> Vector
         requires(is_convertible<U, Scalar>) {
-        Vector vector;
-        vector.fill(value);
-        return vector;
+        return Vector{}.fill(value);
     }
 
     // Load a vector from `p_data`, aligned to `Abi::alignment`.
@@ -448,22 +447,19 @@ class alignas(InAbi::alignment.raw) Simd {
 template <typename InAbi, typename T>
 class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
   public:
-    // GCC vectors cannot hold a `bool`, so they must hold `unsigned char`.
     using Abi = InAbi;
     using Scalar = bool;
-    using Raw =
-        typename Simd<typename Abi::template MakeAbi<bool>, unsigned char>::Raw;
 
-    // private:
+    // GCC vectors cannot hold a `bool`, so they must hold `char`.
+    using Vector = Simd<typename Abi::template MakeAbi<char>, char>;
+    using Raw = typename Vector::Raw;
+
+  private:
     using Mask = SimdMask<Abi, T>;
-    // friend Mask;
-    // TODO: Streamline out `vector`.
-    union {
-        Simd<Abi, unsigned char> vector;
-        Raw raw;
-    };
 
   public:
+    Raw raw;
+
     static constexpr ssize lanes = Abi::lanes;
     static constexpr ssize alignment = Abi::alignment;
 
@@ -473,9 +469,9 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
 
     constexpr SimdMask(SimdMask<InAbi, T>&& operand) = default;
 
-    constexpr SimdMask(Raw const& value) : vector(value){};
+    constexpr SimdMask(Raw const& value) : raw(value){};
 
-    constexpr SimdMask(Raw&& value) : vector(forward<Raw>(value)){};
+    constexpr SimdMask(Raw&& value) : raw(move(value)){};
 
     // Construct all lanes as `value`.
     constexpr SimdMask(bool const& value) {
@@ -492,14 +488,14 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
     constexpr SimdMask(bools&&... values) requires(sizeof...(values) > 1 &&
                                                    sizeof...(values) ==
                                                        lanes.raw)
-        : vector(static_cast<unsigned char>(forward<bool>(values))...){};
+        : raw(static_cast<unsigned char>(forward<bool>(values))...){};
 
     // Construct from a constant list, such as `value_list` or
     // `integer_sequence`.
     template <bool... bools>
     constexpr SimdMask(ValueList<bool, bools...> const values) requires(
         values.size == lanes)
-        : vector(static_cast<unsigned char>(bools)...){};
+        : raw(static_cast<unsigned char>(bools)...){};
 
     // Any ABI for which this `Simd` is equal to in size and overaligned can
     // be explicitly converted to.
@@ -524,65 +520,65 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
 
     // Copy-assign the raw value of a `Simd` to this.
     constexpr auto operator=(Mask const& operand) -> Mask& {
-        this->vector.raw = operand.vector.raw;
+        this->raw = operand.raw;
         return *this;
     }
 
     // Move-assign the raw value of another `Simd` into this.
     constexpr auto operator=(Mask&& operand) -> Mask& {
-        this->vector.raw = move(operand).vector.raw;
+        this->raw = move(operand).raw;
         return *this;
     }
 
     // Compare equality for each lane to another `Simd`'s lanes, and store the
     // results in a new `Simd`.
     [[nodiscard]] constexpr auto operator==(Mask const& operand) const -> Mask {
-        return this->vector.raw == operand.vector.raw;
+        return this->raw == operand.raw;
     }
 
     // Compare non-equality for each lane to another `Simd`'s lanes, and store
     // the results in a new `Simd`.
     [[nodiscard]] constexpr auto operator!=(Mask const& operand) const -> Mask {
-        return this->vector.raw != operand.vector.raw;
+        return this->raw != operand.raw;
     }
 
     [[nodiscard]] constexpr auto operator&(Mask const& operand) const -> Mask {
-        return this->vector.raw & operand.vector.raw;
+        return this->raw & operand.raw;
     }
     constexpr auto operator&=(Mask const& operand) -> Mask& {
-        this->vector.raw = this->vector.raw & operand.vector.raw;
+        this->raw = this->raw & operand.raw;
         return *this;
     }
 
     [[nodiscard]] constexpr auto operator|(Mask const& operand) const -> Mask {
-        return this->vector.raw | operand.vector.raw;
+        return this->raw | operand.raw;
     }
     constexpr auto operator|=(Mask const& operand) -> Mask& {
-        this->vector.raw = this->vector.raw | operand.vector.raw;
+        this->raw = this->raw | operand.raw;
         return *this;
     }
 
     [[nodiscard]] constexpr auto operator%(Mask const& operand) const -> Mask {
-        return this->vector.raw % operand.vector.raw;
+        return this->raw % operand.raw;
     }
     constexpr auto operator%=(Mask const& operand) -> Mask& {
-        this->vector.raw = this->vector.raw % operand.vector.raw;
+        this->raw = this->raw % operand.raw;
         return *this;
     }
 
     [[nodiscard]] constexpr auto operator<<(Mask const& operand) const -> Mask {
-        return this->vector.raw << operand.vector.raw;
+        return this->raw << operand.raw;
     }
     constexpr auto operator<<=(Mask const& operand) -> Mask& {
-        this->vector.raw = this->vector.raw << operand.vector.raw;
+        this->raw = this->raw << operand.raw;
         return *this;
     }
 
     [[nodiscard]] constexpr auto operator>>(Mask const& operand) const -> Mask {
-        return this->vector.raw >> operand.vector.raw;
+        return this->raw >> operand.raw;
     }
     constexpr auto operator>>=(Mask const& operand) -> Mask& {
-        this->vector.raw = this->vector.raw << operand.vector.raw;
+        this->raw = this->raw << operand.raw;
         return *this;
     }
 
@@ -590,8 +586,27 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
         return cat::all_of(*this);
     }
 
-    constexpr auto fill(bool const value) -> Mask& {
-        this->vector.fill(static_cast<unsigned char>(value));
+    constexpr auto fill(bool const value) -> Mask {
+        if constexpr (lanes == 2) {
+            this->raw =
+                Raw{value, value, value, value, value, value, value, value};
+        } else if constexpr (lanes == 4) {
+            this->raw =
+                Raw{value, value, value, value, value, value, value, value};
+        } else if constexpr (lanes == 8) {
+            this->raw =
+                Raw{value, value, value, value, value, value, value, value};
+        } else if constexpr (lanes == 16) {
+            this->raw =
+                Raw{value, value, value, value, value, value, value, value,
+                    value, value, value, value, value, value, value, value};
+        } else if constexpr (lanes == 32) {
+            this->raw =
+                Raw{value, value, value, value, value, value, value, value,
+                    value, value, value, value, value, value, value, value,
+                    value, value, value, value, value, value, value, value,
+                    value, value, value, value, value, value, value, value};
+        }
         return *this;
     }
 
@@ -602,7 +617,7 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
 
     // Load a vector from `p_data`, aligned to `Abi<bool>::alignment`.
     constexpr auto load(bool const* const p_data) -> Mask& {
-        this->vector.raw =
+        this->raw =
             static_cast<Mask const*>(static_cast<void const*>(p_data))->raw;
         return *this;
     }
@@ -787,6 +802,7 @@ void prefetch_for_modify(auto const* p_vector) {
 template <typename T>
 void stream_in(void* p_destination, T const* p_source);
 
+// TODO: Return a `Bitset`.
 // Dispatch `move_mask` to the native SIMD ABI.
 template <typename T>
 [[nodiscard]] auto move_mask(NativeSimd<T> const vector)
@@ -794,20 +810,46 @@ template <typename T>
     return move_mask(detail::native_cast(vector));
 }
 
+// TODO: Return a `Bitset`.
+// Dispatch `move_mask` to the native SIMD ABI.
+template <typename T>
+[[nodiscard]] auto move_mask(SimdMask<NativeAbi<T>, T> const vector)
+    -> SimdMask<NativeAbi<T>, T> {
+    return move_mask(detail::native_cast(vector));
+}
+
+// TODO: Return a `Bitset`.
 // TODO: Support all ABIs.
 // TODO: Support all Ts.
 // Implementation of `move_mask` for AVX2.
 template <typename T>
 [[nodiscard]] auto move_mask(Avx2Simd<T> const vector)
     -> SimdMask<Avx2Abi<T>, T> {
-    return SimdMask<Avx2Abi<T>, T>{};
     if constexpr (is_same<T, float>) {
-        // Create a bitmask from the most significant bit of every 4 `float`s in
+        // Create a bitmask from the most significant bit of every `float` in
         // this vector.
         return __builtin_ia32_movmskps256(vector.raw);
     } else if constexpr (is_same<T, double>) {
-        // Create a bitmask from the most significant bit of every 8 `double`s
-        // in this vector.
+        // Create a bitmask from the most significant bit of every `double` in
+        // this vector.
+        return __builtin_ia32_movmskpd256(vector.raw);
+    } else {
+        // Create a bitmask from the most significant bit of every byte in this
+        // vector.
+        return __builtin_ia32_pmovmskb256(vector.raw);
+    }
+}
+// Implementation of `move_mask` for AVX2.
+template <typename T>
+[[nodiscard]] auto move_mask(SimdMask<Avx2Abi<T>, T> const vector)
+    -> SimdMask<Avx2Abi<T>, T> {
+    if constexpr (is_same<T, float>) {
+        // Create a bitmask from the most significant bit of every `float` in
+        // this vector.
+        return __builtin_ia32_movmskps256(vector.raw);
+    } else if constexpr (is_same<T, double>) {
+        // Create a bitmask from the most significant bit of every `double` in
+        // this vector.
         return __builtin_ia32_movmskpd256(vector.raw);
     } else {
         // Create a bitmask from the most significant bit of every byte in this
@@ -818,22 +860,49 @@ template <typename T>
 
 // Dispatch `all_of()` to the native SIMD ABI.
 template <typename T>
-[[nodiscard]] auto all_of(SimdMask<NativeAbi<T>, T> const vector) -> bool {
-    return move_mask(detail::native_cast(vector));
+[[nodiscard]] auto all_of(SimdMask<NativeAbi<T>, T> const mask) -> bool {
+    return move_mask(detail::native_cast(mask));
 }
 
 // Implementation of `all_of()` for AVX2.
 template <typename T>
-[[nodiscard]] auto all_of(SimdMask<Avx2Abi<T>, T> const vector) -> bool {
-    // TODO: Extract this to `testc()`?
+[[nodiscard]] auto all_of(SimdMask<Avx2Abi<T>, T> const mask) -> bool {
+    return testc(mask, mask == mask) != 0;
+}
+
+template <typename T>
+[[nodiscard]] auto testc(SimdMask<Avx2Abi<T>, T> const left,
+                         SimdMask<Avx2Abi<T>, T> const right) -> int4 {
     if constexpr (is_same<T, float>) {
-        return 0 != __builtin_ia32_vtestcps256(vector.raw, vector.raw);
+        return __builtin_ia32_vtestcps256(left.raw, right.raw);
     } else if constexpr (is_same<T, double>) {
-        return 0 != __builtin_ia32_vtestcpd256(vector.raw, vector.raw);
+        return __builtin_ia32_vtestcpd256(left.raw, right.raw);
     } else {
-        auto const int_vector = reinterpret_cast<
-            Simd<Avx2Abi<long long int>, long long int>::Raw const>(vector.raw);
-        return 0 != __builtin_ia32_ptestc256(int_vector, int_vector);
+        auto left_raw =
+            reinterpret_cast<Simd<Avx2Abi<long long int>, long long int>::Raw>(
+                left.raw);
+        auto right_raw =
+            reinterpret_cast<Simd<Avx2Abi<long long int>, long long int>::Raw>(
+                right.raw);
+        return __builtin_ia32_ptestc256(left_raw, right_raw);
+    }
+}
+
+template <typename T>
+[[nodiscard]] auto testz(SimdMask<Avx2Abi<T>, T> const left,
+                         SimdMask<Avx2Abi<T>, T> const right) -> int4 {
+    if constexpr (is_same<T, float>) {
+        return __builtin_ia32_vtestzps256(left.raw, right.raw);
+    } else if constexpr (is_same<T, double>) {
+        return __builtin_ia32_vtestzpd256(left.raw, right.raw);
+    } else {
+        auto left_raw =
+            reinterpret_cast<Simd<Avx2Abi<long long int>, long long int>::Raw>(
+                left.raw);
+        auto right_raw =
+            reinterpret_cast<Simd<Avx2Abi<long long int>, long long int>::Raw>(
+                right.raw);
+        return __builtin_ia32_ptestz256(left_raw, right_raw);
     }
 }
 

@@ -31,7 +31,7 @@ void meow() {
     // Test a succesful large string case.
     if (!cat::compare_strings(long_string_1, long_string_2)) {
         // TODO: Fix this failing test!
-        // cat::exit(1);
+        cat::exit(1);
     }
 
     // Test a failure case.
