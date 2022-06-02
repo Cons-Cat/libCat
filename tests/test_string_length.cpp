@@ -46,5 +46,9 @@ void meow() {
         c = 'a';
     }
 
+    // TODO: Put this in another string unit test.
+    cat::String find_string = "abcdefabcdefabcdefabcdefabcdefabcdef";
+    Result(find_string.find('c').value() == 3).or_panic();
+
     cat::exit();
 }

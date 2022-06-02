@@ -32,21 +32,21 @@ link_libraries(cat-test)
 option(BUILD_ALL_TESTS "Compile all unit tests unconditionally." ON)
 
 # This tests that `cat::Scaredy` works.
-option(BUILD_TEST_SCAREDY "Compile TestResultOk." OFF)
+option(BUILD_TEST_SCAREDY "Compile Scaredy tests." OFF)
 if(BUILD_TEST_SCAREDY OR BUILD_ALL_TESTS)
   add_executable(test_scaredy test_scaredy.cpp)
   target_compile_options(test_scaredy PRIVATE ${CAT_CXX_FLAGS_TEST})
   target_link_options(test_scaredy PRIVATE ${CAT_LINK_FLAGS})
-  add_test(NAME TestScaredy COMMAND test_scaredy)
+  add_test(NAME Scaredy COMMAND test_scaredy)
 endif()
 
 # This tests that `cat::Array` works.
 option(BUILD_TEST_ARRAY "Compile Array tests." OFF)
 if(BUILD_TEST_ARRAY OR BUILD_ALL_TESTS)
-  add_executable(test_arrays arrays.cpp)
+  add_executable(test_arrays test_arrays.cpp)
   target_compile_options(test_arrays PRIVATE ${CAT_CXX_FLAGS_TEST})
   target_link_options(test_arrays PRIVATE ${CAT_LINK_FLAGS})
-  add_test(NAME TestArray COMMAND test_arrays)
+  add_test(NAME Array COMMAND test_arrays)
 endif()
 
 # This tests that `cat::List` works.
@@ -55,40 +55,40 @@ if(BUILD_TEST_LIST OR BUILD_ALL_TESTS)
   add_executable(test_list test_list.cpp)
   target_compile_options(test_list PRIVATE ${CAT_CXX_FLAGS_TEST})
   target_link_options(test_list PRIVATE ${CAT_LINK_FLAGS})
-  add_test(NAME TestList COMMAND test_list)
+  add_test(NAME List COMMAND test_list)
 endif()
 
 # This tests that `cat::string_length()` works.
 option(BUILD_TEST_STRING_LENGTH "Compile string_length() tests." OFF)
 if(BUILD_TEST_STRING_LENGTH OR BUILD_ALL_TESTS)
-  add_executable(test_string_length string_length.cpp)
+  add_executable(test_string_length test_string_length.cpp)
   target_compile_options(test_string_length PRIVATE ${CAT_CXX_FLAGS_TEST})
   target_link_options(test_string_length PRIVATE ${CAT_LINK_FLAGS})
-  add_test(NAME TestStrlen COMMAND test_string_length)
+  add_test(NAME StringLength COMMAND test_string_length)
 endif()
 
 # This tests that `cat::compare_strings()` works.
 option(BUILD_TEST_COMPARE_STRINGS "Compile compare_strings() tests." OFF)
 if(BUILD_TEST_COMPARE_STRINGS OR BUILD_ALL_TESTS)
-  add_executable(test_compare_strings compare_strings.cpp)
+  add_executable(test_compare_strings test_compare_strings.cpp)
   target_compile_options(test_compare_strings PRIVATE ${CAT_CXX_FLAGS_TEST})
   target_link_options(test_compare_strings PRIVATE ${CAT_LINK_FLAGS})
-  add_test(NAME TestStrCmp COMMAND test_compare_strings)
+  add_test(NAME CompareStrings COMMAND test_compare_strings)
 endif()
 
 # This tests that `cat::copy_memory()` works.
 option(BUILD_TEST_COPY_MEMORY "Compile copy_memory() tests." OFF)
 if(BUILD_TEST_COPY_MEMORY OR BUILD_ALL_TESTS)
-  add_executable(test_copymem copy_memory.cpp)
+  add_executable(test_copymem test_copy_memory.cpp)
   target_compile_options(test_copymem PRIVATE ${CAT_CXX_FLAGS_TEST})
   target_link_options(test_copymem PRIVATE ${CAT_LINK_FLAGS})
-  add_test(NAME CopyMem COMMAND test_copymem)
+  add_test(NAME CopyMemory COMMAND test_copymem)
 endif()
 
 # This tests that `cat::PageAllocator` works.
 option(BUILD_TEST_PAGE_ALLOCATOR "Compile PageAllocator tests." OFF)
 if(BUILD_TEST_PAGE_ALLOCATOR OR BUILD_ALL_TESTS)
-  add_executable(test_paging paging_memory.cpp)
+  add_executable(test_paging test_paging_memory.cpp)
   target_compile_options(test_paging PRIVATE ${CAT_CXX_FLAGS_TEST})
   target_link_options(test_paging PRIVATE ${CAT_LINK_FLAGS})
   add_test(NAME PagingMemory COMMAND test_paging)
@@ -97,7 +97,7 @@ endif()
 # This tests that `LinearAllocator` works.
 option(BUILD_TEST_LINEAR_ALLOCATOR "Compile LinearAllocator tests." OFF)
 if(BUILD_TEST_LINEAR_ALLOCATOR OR BUILD_ALL_TESTS)
-  add_executable(test_linear linear_allocator.cpp)
+  add_executable(test_linear test_linear_allocator.cpp)
   target_compile_options(test_linear PRIVATE ${CAT_CXX_FLAGS_TEST})
   target_link_options(test_linear PRIVATE ${CAT_LINK_FLAGS})
   add_test(NAME LinearAllocator COMMAND test_linear)
@@ -106,15 +106,15 @@ endif()
 # This tests that `Thread`s works.
 option(BUILD_TEST_THREAD "Compile Thread tests." OFF)
 if(BUILD_TEST_THREAD OR BUILD_ALL_TESTS)
-  add_executable(test_threads thread.cpp)
+  add_executable(test_threads test_thread.cpp)
   target_compile_options(test_threads PRIVATE ${CAT_CXX_FLAGS_TEST})
   target_link_options(test_threads PRIVATE ${CAT_LINK_FLAGS})
   add_test(NAME MultiThreading COMMAND test_threads)
 endif()
 
 # This tests that `Raii<>` works.
-option(BUILD_TEST_OPTIONAL "Compile TestResultOk." OFF)
-if(BUILD_TEST_OPTIONAL OR BUILD_ALL_TESTS)
+option(BUILD_TEST_RAII "Compile ResultOk." OFF)
+if(BUILD_TEST_RAII OR BUILD_ALL_TESTS)
   add_executable(test_raii test_raii.cpp)
   target_compile_options(test_raii PRIVATE ${CAT_CXX_FLAGS_TEST})
   target_link_options(test_raii PRIVATE ${CAT_LINK_FLAGS})
@@ -122,9 +122,9 @@ if(BUILD_TEST_OPTIONAL OR BUILD_ALL_TESTS)
 endif()
 
 # This tests that `Optional<>` works.
-option(BUILD_TEST_SCAREDY "Compile Optional tests." OFF)
-if(BUILD_TEST_SCAREDY OR BUILD_ALL_TESTS)
-  add_executable(test_optional optional.cpp)
+option(BUILD_TEST_OPTIONAL "Compile Optional tests." OFF)
+if(BUILD_TEST_OPTIONAL OR BUILD_ALL_TESTS)
+  add_executable(test_optional test_optional.cpp)
   target_compile_options(test_optional PRIVATE ${CAT_CXX_FLAGS_TEST})
   target_link_options(test_optional PRIVATE ${CAT_LINK_FLAGS})
   add_test(NAME Optional COMMAND test_optional)
@@ -133,7 +133,7 @@ endif()
 # This tests that SIMD works.
 option(BUILD_TEST_SIMD "Compile SIMD tests." OFF)
 if(BUILD_TEST_SIMD OR BUILD_ALL_TESTS)
-  add_executable(test_simd simd.cpp)
+  add_executable(test_simd test_simd.cpp)
   target_compile_options(test_simd PRIVATE ${CAT_CXX_FLAGS_TEST})
   target_link_options(test_simd PRIVATE ${CAT_LINK_FLAGS})
   add_test(NAME Simd COMMAND test_simd)
@@ -161,8 +161,6 @@ endif()
 # The directories must be generated for symlinking `.gdbinit` to succeed.
 # This can be skipped if one or more other tests are built.
 if(NOT (BUILD_ALL_TESTS
-	  OR BUILD_TEST_RESULT_OK
-	  OR BUILD_TEST_RESULT_FAIL
 	  OR BUILD_TEST_SCAREDY
 	  OR BUILD_TEST_ARRAY
 	  OR BUILD_TEST_ARRAY
