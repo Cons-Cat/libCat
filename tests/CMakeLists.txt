@@ -31,25 +31,6 @@ link_libraries(cat-test)
 # Enable all unit tests to compile regardless of their individual settings.
 option(BUILD_ALL_TESTS "Compile all unit tests unconditionally." ON)
 
-# This tests that `Result<void>` does not panic if it holds `okay`.
-option(BUILD_TEST_RESULT_OK "Compile TestResultOk." OFF)
-if(BUILD_TEST_RESULT_OK OR BUILD_ALL_TESTS)
-  add_executable(test_result_ok result_success.cpp)
-  target_compile_options(test_result_ok PRIVATE ${CAT_CXX_FLAGS_TEST})
-  target_link_options(test_result_ok PRIVATE ${CAT_LINK_FLAGS})
-  add_test(NAME TestResultOk COMMAND test_result_ok)
-endif()
-
-# This tests that `Result<void>` will panic if it holds a `Failure`.
-option(BUILD_TEST_RESULT_FAIL "Compile TestResultOk." OFF)
-if(BUILD_TEST_RESULT_FAIL OR BUILD_ALL_TESTS)
-  add_executable(test_result_fail result_failure.cpp)
-  target_compile_options(test_result_fail PRIVATE ${CAT_CXX_FLAGS_TEST})
-  target_link_options(test_result_fail PRIVATE ${CAT_LINK_FLAGS})
-  add_test(NAME TestResultFail COMMAND test_result_fail)
-  set_tests_properties(TestResultFail PROPERTIES WILL_FAIL TRUE)
-endif()
-
 # This tests that `cat::Scaredy` works.
 option(BUILD_TEST_SCAREDY "Compile TestResultOk." OFF)
 if(BUILD_TEST_SCAREDY OR BUILD_ALL_TESTS)
