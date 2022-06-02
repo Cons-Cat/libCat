@@ -30,11 +30,6 @@ link_libraries(cat-test)
 # Enable all unit tests to compile regardless of their individual settings.
 option(BUILD_ALL_TESTS "Compile all unit tests unconditionally." ON)
 
-# A dummy project is required to guarantee that the directories are generated.
-# The directories must be generated for symlinking `.gdbinit` to succeed.
-add_executable(dummy result_success.cpp)
-add_test(NAME dummy COMMAND echo)
-
 # This tests that `Result<void>` does not panic if it holds `okay`.
 option(BUILD_TEST_RESULT_OK "Compile TestResultOk." OFF)
 if(BUILD_TEST_RESULT_OK OR BUILD_ALL_TESTS)
@@ -178,4 +173,26 @@ if(BUILD_TEST_TUPLE OR BUILD_ALL_TESTS)
   target_compile_options(test_tuple PRIVATE ${CAT_CXX_FLAGS_TEST})
   target_link_options(test_tuple PRIVATE ${CAT_LINK_FLAGS})
   add_test(NAME Tuples COMMAND test_tuple)
+endif()
+
+# A dummy project is required to guarantee that the directories are generated.
+# The directories must be generated for symlinking `.gdbinit` to succeed.
+# This can be skipped if one or more other tests are built.
+if(NOT (BUILD_ALL_TESTS
+	  OR BUILD_TEST_RESULT_OK
+	  OR BUILD_TEST_RESULT_FAIL
+	  OR BUILD_TEST_SCAREDY
+	  OR BUILD_TEST_ARRAY
+	  OR BUILD_TEST_ARRAY
+	  OR BUILD_TEST_LIST
+	  OR BUILD_TEST_STRING_LENGTH
+	  OR BUILD_TEST_COMPARE_STRINGS
+	  OR BUILD_TEST_COPY_MEMORY
+	  OR BUILD_TEST_PAGE_ALLOCATOR
+	  OR BUILD_TEST_LINEAR_ALLOCATOR
+	  OR BUILD_TEST_THREAD
+	  OR BUILD_TEST_OPTIONAL
+	  OR BUILD_TEST_TUPLE))
+  add_executable(dummy result_success.cpp)
+  add_test(NAME dummy COMMAND echo)
 endif()
