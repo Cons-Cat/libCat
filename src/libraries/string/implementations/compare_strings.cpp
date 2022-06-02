@@ -1,4 +1,5 @@
 #include <cat/array>
+#include <cat/simd>
 #include <cat/string>
 
 auto cat::compare_strings(String const& string_1, String const& string_2)
@@ -8,29 +9,29 @@ auto cat::compare_strings(String const& string_1, String const& string_2)
     }
 
     // TODO: Use a type for an ISA-specific widest vector.
-    using VectorType = char1x32;
+    using Vector = char1x32;
+    using Mask = SimdMask<Vector::Abi, char>;
 
-    Array<VectorType, 4> vector_1;
-    Array<VectorType, 4> vector_2;
-    Array<VectorType, 4> mask;
-    Array<int4, 4> results;
+    Array<Vector, 4> vector_1;
+    Array<Vector, 4> vector_2;
+    Array<Vector, 4> additions;
+    Array<Mask, 4> masks;
     ssize length_iterator = string_1.size();
-    ssize vector_size = ssizeof<VectorType>();
+    ssize vector_size = ssizeof<Vector>();
     char const* p_string_1_iterator = string_1.p_data();
     char const* p_string_2_iterator = string_2.p_data();
 
     auto loop = [&](int const size) -> bool1 {
         while (length_iterator >= vector_size * size) {
             for (int i = 0; i < size; i++) {
-                // TODO: Use `String::data()` getter methods.
                 vector_1[i].load(string_1.p_data() + (i * size));
                 vector_2[i].load(string_2.p_data() + (i * size));
-                mask[i] = vector_1[i] + vector_2[i];
-                results[i] = cat::move_mask(mask[i]);
+                additions[i] = vector_1[i] + vector_2[i];
+                masks[i] = additions[i].move_mask();
             }
 
-            for (int4 i = 0; i < size; i++) {
-                if (results[i] != int4::max) {
+            for (int i = 0; i < size; i++) {
+                if ((masks[i] != Mask::filled(true)).all_of()) {
                     return false;
                 }
             }
@@ -54,6 +55,7 @@ auto cat::compare_strings(String const& string_1, String const& string_2)
         return false;
     }
 
+    // TODO: Extract this to a scalar function.
     // Compare remaining characters individually.
     for (ssize i = 0; i < length_iterator;
          i++, p_string_1_iterator++, p_string_2_iterator++) {
