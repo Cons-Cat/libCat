@@ -127,6 +127,12 @@ template <typename T>
 template <typename T>
 [[nodiscard]] auto all_of(SimdMask<Avx2Abi<T>, T> const) -> bool;
 
+template <typename T>
+[[nodiscard]] auto any_of(SimdMask<NativeAbi<T>, T> const) -> bool;
+
+template <typename T>
+[[nodiscard]] auto any_of(SimdMask<Avx2Abi<T>, T> const) -> bool;
+
 template <typename InAbi, typename T>
 requires(is_same<typename InAbi::Scalar, T>) class alignas(
     InAbi::alignment.raw) Simd {
@@ -586,6 +592,10 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
         return cat::all_of(*this);
     }
 
+    constexpr auto any_of() const -> bool {
+        return cat::any_of(*this);
+    }
+
     constexpr auto fill(bool const value) -> Mask {
         if constexpr (lanes == 2) {
             this->raw =
@@ -868,6 +878,18 @@ template <typename T>
 template <typename T>
 [[nodiscard]] auto all_of(SimdMask<Avx2Abi<T>, T> const mask) -> bool {
     return testc(mask, mask == mask) != 0;
+}
+
+// Dispatch `any_of()` to the native SIMD ABI.
+template <typename T>
+[[nodiscard]] auto any_of(SimdMask<NativeAbi<T>, T> const mask) -> bool {
+    return move_mask(detail::native_cast(mask));
+}
+
+// Implementation of `any_of()` for AVX2.
+template <typename T>
+[[nodiscard]] auto any_of(SimdMask<Avx2Abi<T>, T> const mask) -> bool {
+    return testz(mask, mask == mask) == 0;
 }
 
 template <typename T>
