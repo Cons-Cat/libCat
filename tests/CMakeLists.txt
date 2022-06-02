@@ -6,6 +6,7 @@ add_custom_target(
   ${PROJECT_SOURCE_DIR}/.gdbinit ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/.gdbinit
   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>
 )
+add_dependencies(cat cat-unit-tests)
 
 add_library(cat-test INTERFACE)
 target_link_libraries(cat-test INTERFACE cat)

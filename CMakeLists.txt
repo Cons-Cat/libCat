@@ -115,7 +115,7 @@ list(
   $<$<CONFIG:RelSmall>:${CAT_RELEASE_LINK_FLAGS}>
 )
 
-add_library(cat)
+add_library(cat INTERFACE)
 set_target_properties(
   cat
   PROPERTIES
@@ -125,10 +125,10 @@ set_target_properties(
 # `src/CMakeLists.txt` holds the recipes for `cat-cpp` and `cat-include`.
 add_subdirectory(src/)
 
-target_sources(cat PUBLIC ${cat-cpp})
-target_include_directories(cat PUBLIC ${cat-include})
+target_sources(cat INTERFACE ${cat-cpp})
+target_include_directories(cat INTERFACE ${cat-include})
 
-target_link_libraries(cat PUBLIC gcc)
+target_link_libraries(cat INTERFACE gcc)
 # target_link_libraries(
 #   cat INTERFACE
 #   # $<$<CONFIG:RelWithDebInfo>:asan>
@@ -137,16 +137,16 @@ target_link_libraries(cat PUBLIC gcc)
 #   # $<$<CONFIG:Debug>:ubsan>
 # )
 
-target_compile_options(cat PUBLIC ${CAT_CXX_FLAGS})
-target_link_options(cat PUBLIC ${CAT_LINK_FLAGS})
+target_compile_options(cat INTERFACE ${CAT_CXX_FLAGS})
+target_link_options(cat INTERFACE ${CAT_LINK_FLAGS})
 
 # Link .gdbinit to build directories.
 add_custom_target(
   cat-debug ALL
   COMMAND ${CMAKE_COMMAND} -E create_symlink
+  # TODO: Does this still require CMake 3.20?
   # This requires CMake 3.20:
-  ${PROJECT_SOURCE_DIR}/.gdbinit ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/.gdbinit
-  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}
+  ${PROJECT_SOURCE_DIR}/.gdbinit ${CMAKE_CURRENT_BINARY_DIR}/.gdbinit
 )
 add_dependencies(cat cat-debug)
 
