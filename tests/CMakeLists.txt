@@ -82,7 +82,7 @@ if(BUILD_TEST_LIST OR BUILD_ALL_TESTS)
 endif()
 
 # This tests that `cat::string_length()` works.
-option(BUILD_TEST_SCAREDY "Compile string_length() tests." OFF)
+option(BUILD_TEST_STRING_LENGTH "Compile string_length() tests." OFF)
 if(BUILD_TEST_STRING_LENGTH OR BUILD_ALL_TESTS)
   add_executable(test_string_length string_length.cpp)
   target_compile_options(test_string_length PRIVATE ${CAT_CXX_FLAGS_TEST})
