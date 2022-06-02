@@ -164,8 +164,8 @@ class CollectionFacade {
         return unconst(this)->back();
     }
 
-    [[nodiscard]] constexpr auto slice(ssize const start_index,
-                                       ssize const end_index) -> Span<T>
+    [[nodiscard]] constexpr auto subspan(ssize const start_index,
+                                         ssize const end_index) -> Span<T>
     requires(is_array_like) {
         Result{start_index >= 0}.assert();
         Result{end_index <= this->self().capacity()}.assert();
@@ -173,8 +173,8 @@ class CollectionFacade {
                        end_index - start_index);
     }
 
-    [[nodiscard]] constexpr auto slice(ssize const start_index,
-                                       ssize const end_index) const
+    [[nodiscard]] constexpr auto subspan(ssize const start_index,
+                                         ssize const end_index) const
         -> Span<T const>
     requires(is_array_like) {
         Result{start_index >= 0}.assert();
@@ -185,22 +185,22 @@ class CollectionFacade {
 
     [[nodiscard]] constexpr auto first(ssize const count) -> Span<T>
     requires(is_array_like) {
-        return this->slice(0, count);
+        return this->subspan(0, count);
     }
 
     [[nodiscard]] constexpr auto first(ssize const count) const -> Span<T const>
     requires(is_array_like) {
-        return this->slice(0, count);
+        return this->subspan(0, count);
     }
 
     [[nodiscard]] constexpr auto last(ssize const count) -> Span<T>
     requires(is_array_like) {
-        return this->slice(this->self().size() - count, this->self().size());
+        return this->subspan(this->self().size() - count, this->self().size());
     }
 
     [[nodiscard]] constexpr auto last(ssize const count) const -> Span<T const>
     requires(is_array_like) {
-        return this->slice(this->self().size() - count, this->self().size());
+        return this->subspan(this->self().size() - count, this->self().size());
     }
 
     [[nodiscard]] constexpr auto operator[](ssize const index)

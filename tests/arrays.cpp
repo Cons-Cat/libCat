@@ -95,11 +95,11 @@ void meow() {
 
     // Slicing array.
     [[maybe_unused]] cat::Span span = array_1.first(1);
-    _ = array_1.slice(0, 2);
+    _ = array_1.subspan(0, 2);
     _ = array_1.last(2);
 
     [[maybe_unused]] cat::Span const span_const = array_1.first(1);
-    _ = array_const.slice(0, 2);
+    _ = array_const.subspan(0, 2);
     _ = array_const.last(2);
 
     // Test `IntegerList`.
