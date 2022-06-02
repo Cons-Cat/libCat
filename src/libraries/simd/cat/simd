@@ -235,46 +235,47 @@ class alignas(InAbi::alignment.raw) Simd {
 
     // Compare equality for each lane to another `Simd`'s lanes, and store the
     // results in a new `Simd`.
-    [[nodiscard]] constexpr auto operator==(Vector const& operand)
+    [[nodiscard]] constexpr auto operator==(Vector const& operand) const
         -> SimdMask<Abi, Scalar> {
         return this->raw == operand.raw;
     }
 
     // Compare non-equality for each lane to another `Simd`'s lanes, and store
     // the results in a new `Simd`.
-    [[nodiscard]] constexpr auto operator!=(Vector const& operand)
+    [[nodiscard]] constexpr auto operator!=(Vector const& operand) const
         -> SimdMask<Abi, Scalar> {
         return this->raw != operand.raw;
     }
 
     // Compare greater-than for each lane to another `Simd`'s lanes, and store
     // the results in a new `Simd`.
-    [[nodiscard]] constexpr auto operator>(Vector const& operand)
+    [[nodiscard]] constexpr auto operator>(Vector const& operand) const
         -> SimdMask<Abi, Scalar> {
         return this->raw > operand.raw;
     }
 
     // Compare greater-than-or-equal for each lane to another `Simd`'s lanes,
     // and store the results in a new `Simd`.
-    constexpr auto operator>=(Vector const& operand) -> Vector& {
+    constexpr auto operator>=(Vector const& operand) const -> Vector& {
         return this->raw >= operand.raw;
     }
 
     // Compare less-than for each lane to another `Simd`'s lanes, and store the
     // results in a new `Simd`.
-    [[nodiscard]] constexpr auto operator<(Vector const& operand)
+    [[nodiscard]] constexpr auto operator<(Vector const& operand) const
         -> SimdMask<Abi, Scalar> {
         return this->raw < operand.raw;
     }
 
     // Compare less-than-or-equal for each lane to another `Simd`'s lanes,
     // and store the results in a new `Simd`.
-    constexpr auto operator<=(Vector const& operand) -> Vector& {
+    constexpr auto operator<=(Vector const& operand) const -> Vector& {
         return this->raw <= operand.raw;
     }
 
     // TODO: Add more comments to these operators.
-    [[nodiscard]] constexpr auto operator+(Vector const& operand) -> Vector {
+    [[nodiscard]] constexpr auto operator+(Vector const& operand) const
+        -> Vector {
         return this->raw + operand.raw;
     }
     constexpr auto operator+=(Vector const& operand) -> Vector& {
@@ -282,7 +283,8 @@ class alignas(InAbi::alignment.raw) Simd {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator-(Vector const& operand) -> Vector {
+    [[nodiscard]] constexpr auto operator-(Vector const& operand) const
+        -> Vector {
         return this->raw - operand.raw;
     }
     constexpr auto operator-=(Vector const& operand) -> Vector& {
@@ -290,7 +292,8 @@ class alignas(InAbi::alignment.raw) Simd {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator*(Vector const& operand) -> Vector {
+    [[nodiscard]] constexpr auto operator*(Vector const& operand) const
+        -> Vector {
         return this->raw * operand.raw;
     }
     constexpr auto operator*=(Vector const& operand) -> Vector& {
@@ -298,7 +301,8 @@ class alignas(InAbi::alignment.raw) Simd {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator/(Vector const& operand) -> Vector {
+    [[nodiscard]] constexpr auto operator/(Vector const& operand) const
+        -> Vector {
         return this->raw * operand.raw;
     }
     constexpr auto operator/=(Vector const& operand) -> Vector& {
@@ -306,7 +310,8 @@ class alignas(InAbi::alignment.raw) Simd {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator&(Vector const& operand) -> Vector {
+    [[nodiscard]] constexpr auto operator&(Vector const& operand) const
+        -> Vector {
         return this->raw & operand.raw;
     }
     constexpr auto operator&=(Vector const& operand) -> Vector& {
@@ -314,7 +319,8 @@ class alignas(InAbi::alignment.raw) Simd {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator|(Vector const& operand) -> Vector {
+    [[nodiscard]] constexpr auto operator|(Vector const& operand) const
+        -> Vector {
         return this->raw | operand.raw;
     }
     constexpr auto operator|=(Vector const& operand) -> Vector& {
@@ -322,7 +328,8 @@ class alignas(InAbi::alignment.raw) Simd {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator%(Vector const& operand) -> Vector {
+    [[nodiscard]] constexpr auto operator%(Vector const& operand) const
+        -> Vector {
         return this->raw % operand.raw;
     }
     constexpr auto operator%=(Vector const& operand) -> Vector& {
@@ -330,7 +337,8 @@ class alignas(InAbi::alignment.raw) Simd {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator<<(Vector const& operand) -> Vector {
+    [[nodiscard]] constexpr auto operator<<(Vector const& operand) const
+        -> Vector {
         return this->raw << operand.raw;
     }
     constexpr auto operator<<=(Vector const& operand) -> Vector& {
@@ -338,7 +346,8 @@ class alignas(InAbi::alignment.raw) Simd {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator>>(Vector const& operand) -> Vector {
+    [[nodiscard]] constexpr auto operator>>(Vector const& operand) const
+        -> Vector {
         return this->raw >> operand.raw;
     }
     constexpr auto operator>>=(Vector const& operand) -> Vector& {
@@ -527,17 +536,17 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
 
     // Compare equality for each lane to another `Simd`'s lanes, and store the
     // results in a new `Simd`.
-    [[nodiscard]] constexpr auto operator==(Mask const& operand) -> Mask {
+    [[nodiscard]] constexpr auto operator==(Mask const& operand) const -> Mask {
         return this->vector.raw == operand.vector.raw;
     }
 
     // Compare non-equality for each lane to another `Simd`'s lanes, and store
     // the results in a new `Simd`.
-    [[nodiscard]] constexpr auto operator!=(Mask const& operand) -> Mask {
+    [[nodiscard]] constexpr auto operator!=(Mask const& operand) const -> Mask {
         return this->vector.raw != operand.vector.raw;
     }
 
-    [[nodiscard]] constexpr auto operator&(Mask const& operand) -> Mask {
+    [[nodiscard]] constexpr auto operator&(Mask const& operand) const -> Mask {
         return this->vector.raw & operand.vector.raw;
     }
     constexpr auto operator&=(Mask const& operand) -> Mask& {
@@ -545,7 +554,7 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator|(Mask const& operand) -> Mask {
+    [[nodiscard]] constexpr auto operator|(Mask const& operand) const -> Mask {
         return this->vector.raw | operand.vector.raw;
     }
     constexpr auto operator|=(Mask const& operand) -> Mask& {
@@ -553,7 +562,7 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator%(Mask const& operand) -> Mask {
+    [[nodiscard]] constexpr auto operator%(Mask const& operand) const -> Mask {
         return this->vector.raw % operand.vector.raw;
     }
     constexpr auto operator%=(Mask const& operand) -> Mask& {
@@ -561,7 +570,7 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator<<(Mask const& operand) -> Mask {
+    [[nodiscard]] constexpr auto operator<<(Mask const& operand) const -> Mask {
         return this->vector.raw << operand.vector.raw;
     }
     constexpr auto operator<<=(Mask const& operand) -> Mask& {
@@ -569,7 +578,7 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator>>(Mask const& operand) -> Mask {
+    [[nodiscard]] constexpr auto operator>>(Mask const& operand) const -> Mask {
         return this->vector.raw >> operand.vector.raw;
     }
     constexpr auto operator>>=(Mask const& operand) -> Mask& {
@@ -577,7 +586,7 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
         return *this;
     }
 
-    constexpr auto all_of() -> bool {
+    constexpr auto all_of() const -> bool {
         return cat::all_of(*this);
     }
 
@@ -635,7 +644,7 @@ using uint1x_ = NativeSimd<uint1::Raw>;
 // Strings need their own vectors.
 using char1x16 = Sse42Simd<char>;
 using char1x32 = Avx2Simd<char>;
-using char1x_ = Sse42Simd<char>;
+using char1x_ = Avx2Simd<char>;
 
 using int2x2 = FixedSizeSimd<int2::Raw, 2>;
 using int2x4 = FixedSizeSimd<int2::Raw, 4>;
