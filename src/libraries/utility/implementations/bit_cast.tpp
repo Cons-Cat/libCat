@@ -53,7 +53,8 @@ cat::bit_cast(auto& from_value) -> T
     T* p_to = static_cast<T*>(static_cast<void*>(p_from));
     // GCC optimizes this pattern into a bit-cast:
     for (unsigned i = 0; i < sizeof(T); i++) {
-        static_cast<char*>(static_cast<void*>(p_to))[i] = p_from[i];
+        static_cast<char*>(
+            const_cast<void*>(static_cast<void const*>(p_to)))[i] = p_from[i];
     }
     return *p_to;
 }
