@@ -10,12 +10,11 @@ auto cat::compare_strings(String const& string_1, String const& string_2)
 
     // TODO: Use a type for an ISA-specific widest vector.
     using Vector = char1x32;
-    using Mask = SimdMask<Vector::Abi, char>;
 
     Array<Vector, 4> vector_1;
     Array<Vector, 4> vector_2;
     Array<Vector, 4> additions;
-    Array<Mask, 4> masks;
+    Array<int4, 4> masks;
     ssize length_iterator = string_1.size();
     ssize vector_size = ssizeof<Vector>();
     char const* p_string_1_iterator = string_1.p_data();
@@ -27,11 +26,11 @@ auto cat::compare_strings(String const& string_1, String const& string_2)
                 vector_1[i].load(string_1.p_data() + (i * size));
                 vector_2[i].load(string_2.p_data() + (i * size));
                 additions[i] = vector_1[i] + vector_2[i];
-                masks[i] = additions[i].move_mask();
+                masks[i] = move_mask(additions[i]);
             }
 
             for (int i = 0; i < size; i++) {
-                if ((masks[i] != Mask::filled(true)).all_of()) {
+                if (masks[i] == 0) {
                     return false;
                 }
             }

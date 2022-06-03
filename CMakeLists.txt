@@ -18,6 +18,7 @@ list(
   -msse4.2
   -mavx2
   -mfma
+  -mlzcnt
   -mfsgsbase
   -fdiagnostics-color
   -include global_includes.h

@@ -5,6 +5,7 @@
 #include <cat/memory>
 #include <cat/meta>
 #include <cat/optional>
+#include <cat/simd>
 #include <cat/span>
 #include <cat/utility>
 
@@ -68,6 +69,23 @@ class String : public Span<char const> {
     constexpr auto operator=(String&& string) {
         this->p_storage = string.p_storage;
         this->length = move(string).length;
+    }
+
+    constexpr auto find(char const character) const
+        -> Optional<Sentinel<ssize, -1>> {
+        // TODO: Optimize different length strings.
+        // TODO: Tile this loop four or eight times.
+        // TODO: Handle strings that are not evenly divisible by lanes.
+        for (ssize i = 0; i < this->length; i += char1x_::lanes) {
+            char1x_ const storage = char1x_::loaded(this->p_storage + i);
+            SimdMask<Avx2Abi<char>, char> const compare =
+                (storage == character);
+            int4 const mask = move_mask(compare);
+            if (mask != 0) {
+                return i + mask.count_trailing_zeros();
+            }
+        }
+        return nullopt;
     }
 };
 
