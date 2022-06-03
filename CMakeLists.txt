@@ -9,7 +9,6 @@ set(CMAKE_CONFIGURATION_TYPES Debug;Release;RelWithDebInfo;RelSmall)
 list(
   APPEND
   CAT_CXX_FLAGS_COMMON
-  -fmax-errors=4
   -nostdlib
   -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
   -fomit-frame-pointer # This is required for the stack frame to work.
@@ -22,8 +21,11 @@ list(
   -mfsgsbase
   -fdiagnostics-color
   -include global_includes.h
-  # This is enabled by default, but it's counter-productive to libCat's vision.
+  # This is enabled by default, but it's counter-productive to libCat's vision:
   -Wno-builtin-declaration-mismatch
+  # These flags cause clang-tidy 12 to crash:
+  # -fconcepts-diagnostics-depth=2
+  -fmax-errors=4
 )
 
 list(
@@ -33,7 +35,6 @@ list(
   # -fsanitize=undefined
   # -fsanitize=address
   # -fsanitize=leak
-  -fconcepts-diagnostics-depth=2
   -Wall -Wextra
   # The following warnings are counter-productive for a basic-level library:
   -Wno-unused-function

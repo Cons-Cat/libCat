@@ -42,8 +42,10 @@ class Span : public CollectionFacade<Span<T>, T> {
     constexpr Span(auto const& container)
         : p_storage(container.p_data()), length(container.size()){};
 
-    constexpr Span(auto&& container)
-        : p_storage(container.p_data()), length(cat::move(container).size()){};
+    template <typename U>
+    // NOLINTNEXTLINE
+    constexpr Span(U&& container) requires(is_convertible<U, T>)
+        : p_storage(container.p_data()), length(forward<U>(container).size()){};
 
     // NOLINTNEXTLINE Copying the pointer is reasonable here.
     constexpr auto operator=(Span<T> const& span) {
@@ -63,7 +65,7 @@ class Span : public CollectionFacade<Span<T>, T> {
     }
 
     // Get the `const` address that this `Span` starts at.
-    [[nodiscard]] constexpr auto p_data() const -> T const* {
+    [[nodiscard]] constexpr auto p_data() const -> T* {
         return this->p_storage;
     }
 

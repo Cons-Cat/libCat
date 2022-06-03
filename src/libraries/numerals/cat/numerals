@@ -4,60 +4,6 @@
 
 #include <cat/meta>
 
-namespace cat {
-
-template <typename T>
-struct NumericLimits;
-
-namespace detail {
-    template <typename T>
-    concept CatNumeral = is_cat_numeral<T>;
-
-    template <typename T, typename U>
-    consteval auto is_safe_conversion() -> bool {
-        // clang-format off
-    return (sizeof(T) >= sizeof(U))
-		   && (is_signed<T> == is_signed<U>)
-	       && (is_floating_point<T> == is_floating_point<U>);
-        // clang-format on
-    }
-
-    template <CatNumeral T, typename U>
-    consteval auto is_safe_conversion() -> bool {
-        using UnderlyingT = typename T::Raw;
-        // clang-format off
-    return (sizeof(UnderlyingT) >= sizeof(U))
-		   && (is_signed<UnderlyingT> == is_signed<U>)
-	       && (is_floating_point<UnderlyingT>
-               == is_floating_point<U>);
-        // clang-format on
-    }
-
-    template <typename T, CatNumeral U>
-    consteval auto is_safe_conversion() -> bool {
-        using UnderlyingU = typename U::Raw;
-        // clang-format off
-    return (sizeof(T) >= sizeof(UnderlyingU))
-		   && (is_signed<T> == is_signed<UnderlyingU>)
-	       && (is_floating_point<T>
-               == is_floating_point<UnderlyingU>);
-        // clang-format on
-    }
-
-    template <CatNumeral T, CatNumeral U>
-    consteval auto is_safe_conversion() -> bool {
-        using UnderlyingT = typename T::Raw;
-        using UnderlyingU = typename U::Raw;
-        // clang-format off
-    return (sizeof(UnderlyingT) >= sizeof(UnderlyingU))
-		   && (is_signed<UnderlyingT>
-               == is_signed<UnderlyingU>)
-	       && (is_floating_point<UnderlyingT>
-               == is_floating_point<UnderlyingU>);
-        // clang-format on
-    }
-}  // namespace detail
-
 // `Numeral` is a container for numeric data types which prevents unsafe or
 // pessimizing implicit casts, such as loss of precision or signed-ness.
 //
@@ -71,13 +17,152 @@ namespace detail {
 // own size" guarantee that the an unwanted overload cannot be resolved.
 // This solution is concise, because any constraint broadly applies to all
 // possible type conversions.
+
+namespace cat {
+
+template <typename>
+struct NumericLimits {};
+
+template <typename T>
+struct NumericLimits<Numeral<T>> {
+    NumericLimits() = delete;
+
+    // Forward the underlying storage type to `.max`.
+    constexpr static auto max = NumericLimits<T>::max;
+
+    // Forward the underlying storage type to `.min`.
+    constexpr static auto min = NumericLimits<T>::min;
+};
+
+template <>
+struct NumericLimits<__INT8_TYPE__> {
+    NumericLimits() = delete;
+    constexpr static __INT8_TYPE__ max = 127;
+    constexpr static __INT8_TYPE__ min = -128;
+};
+
+template <>
+struct NumericLimits<__UINT8_TYPE__> {
+    NumericLimits() = delete;
+    constexpr static __UINT8_TYPE__ max = 255u;
+    constexpr static __UINT8_TYPE__ min = 0u;
+};
+
+template <>
+struct NumericLimits<__INT16_TYPE__> {
+    NumericLimits() = delete;
+    constexpr static __INT16_TYPE__ max = 32'767;
+    constexpr static __INT16_TYPE__ min = -32'768;
+};
+
+template <>
+struct NumericLimits<__UINT16_TYPE__> {
+    NumericLimits() = delete;
+    constexpr static __UINT16_TYPE__ max = 65535u;
+    constexpr static __UINT16_TYPE__ min = 0u;
+};
+
+template <>
+struct NumericLimits<__INT32_TYPE__> {
+    NumericLimits() = delete;
+    constexpr static __INT32_TYPE__ max = 2'147'483'647;
+    constexpr static __INT32_TYPE__ min = -2'147'483'648;
+};
+
+template <>
+struct NumericLimits<__UINT32_TYPE__> {
+    NumericLimits() = delete;
+    constexpr static __UINT32_TYPE__ max = 4'294'967'295;
+    constexpr static __UINT32_TYPE__ min = 0u;
+};
+
+template <>
+struct NumericLimits<__INT64_TYPE__> {
+    NumericLimits() = delete;
+    constexpr static __INT64_TYPE__ max = 9'223'372'036'854'775'807;
+    constexpr static __INT64_TYPE__ min = -9'223'372'036'854'775'807;
+};
+
+template <>
+struct NumericLimits<__UINT64_TYPE__> {
+    NumericLimits() = delete;
+    constexpr static __UINT64_TYPE__ max = 18'446'744'073'709'551'615u;
+    constexpr static __UINT64_TYPE__ min = 0u;
+};
+
+// TODO: `float` and `double` limits.
+template <>
+struct NumericLimits<float> {
+    NumericLimits() = delete;
+    constexpr static float max = 0.f;
+    constexpr static float min = 0.f;
+};
+
+template <>
+struct NumericLimits<double> {
+    NumericLimits() = delete;
+    constexpr static double max = 0.f;
+    constexpr static double min = 0.f;
+};
+
+namespace detail {
+    template <typename T>
+    concept CatNumeral = is_cat_numeral<T>;
+
+    template <typename T, typename U>
+    constexpr auto is_safe_conversion() -> bool {
+        // clang-format off
+    return (sizeof(T) >= sizeof(U))
+		   && (is_signed<T> == is_signed<U>)
+	       && (is_floating_point<T> == is_floating_point<U>);
+        // clang-format on
+    }
+
+    template <CatNumeral T, typename U>
+    constexpr auto is_safe_conversion() -> bool {
+        using UnderlyingT = typename T::Raw;
+        // clang-format off
+    return (sizeof(UnderlyingT) >= sizeof(U))
+		   && (is_signed<UnderlyingT> == is_signed<U>)
+	       && (is_floating_point<UnderlyingT>
+               == is_floating_point<U>);
+        // clang-format on
+    }
+
+    template <typename T, CatNumeral U>
+    constexpr auto is_safe_conversion() -> bool {
+        using UnderlyingU = typename U::Raw;
+        // clang-format off
+    return (sizeof(T) >= sizeof(UnderlyingU))
+		   && (is_signed<T> == is_signed<UnderlyingU>)
+	       && (is_floating_point<T>
+               == is_floating_point<UnderlyingU>);
+        // clang-format on
+    }
+
+    template <CatNumeral T, CatNumeral U>
+    constexpr auto is_safe_conversion() -> bool {
+        using UnderlyingT = typename T::Raw;
+        using UnderlyingU = typename U::Raw;
+        // clang-format off
+    return (sizeof(UnderlyingT) >= sizeof(UnderlyingU))
+		   && (is_signed<UnderlyingT>
+               == is_signed<UnderlyingU>)
+	       && (is_floating_point<UnderlyingT>
+               == is_floating_point<UnderlyingU>);
+        // clang-format on
+    }
+}  // namespace detail
+
 template <typename T>
 struct Numeral {
     using Raw = T;
     T raw;
 
-    static constexpr Numeral<T> min = NumericLimits<Raw>::min;
-    static constexpr Numeral<T> max = NumericLimits<Raw>::max;
+    // Making these `auto` solves a clang-tidy false diagnostic.
+    // TODO: These should be type `Numeral<T>`.
+    static constexpr auto min = NumericLimits<Raw>::min;
+    static constexpr auto max = NumericLimits<Raw>::max;
 
     constexpr Numeral() = default;
 
@@ -896,91 +981,6 @@ using intptr = cat::ArithmeticPtr<T, __INTPTR_TYPE__>;
 // `__UINTPTR_TYPE__` is defined by the GCC compiler.
 template <typename T>
 using uintptr = cat::ArithmeticPtr<T, __UINTPTR_TYPE__>;
-
-template <typename>
-struct NumericLimits {};
-
-template <typename T>
-struct NumericLimits<Numeral<T>> {
-    consteval NumericLimits() = delete;
-
-    // Forward the underlying storage type to `.max`.
-    constexpr static auto max = NumericLimits<T>::max;
-
-    // Forward the underlying storage type to `.min`.
-    constexpr static auto min = NumericLimits<T>::min;
-};
-
-template <>
-struct NumericLimits<__INT8_TYPE__> {
-    consteval NumericLimits() = delete;
-    constexpr static __INT8_TYPE__ max = 127;
-    constexpr static __INT8_TYPE__ min = -128;
-};
-
-template <>
-struct NumericLimits<__UINT8_TYPE__> {
-    consteval NumericLimits() = delete;
-    constexpr static __UINT8_TYPE__ max = 255u;
-    constexpr static __UINT8_TYPE__ min = 0u;
-};
-
-template <>
-struct NumericLimits<__INT16_TYPE__> {
-    consteval NumericLimits() = delete;
-    constexpr static __INT16_TYPE__ max = 32'767;
-    constexpr static __INT16_TYPE__ min = -32'768;
-};
-
-template <>
-struct NumericLimits<__UINT16_TYPE__> {
-    consteval NumericLimits() = delete;
-    constexpr static __UINT16_TYPE__ max = 65535u;
-    constexpr static __UINT16_TYPE__ min = 0u;
-};
-
-template <>
-struct NumericLimits<__INT32_TYPE__> {
-    consteval NumericLimits() = delete;
-    constexpr static __INT32_TYPE__ max = 2'147'483'647;
-    constexpr static __INT32_TYPE__ min = -2'147'483'648;
-};
-
-template <>
-struct NumericLimits<__UINT32_TYPE__> {
-    consteval NumericLimits() = delete;
-    constexpr static __UINT32_TYPE__ max = 4'294'967'295;
-    constexpr static __UINT32_TYPE__ min = 0u;
-};
-
-template <>
-struct NumericLimits<__INT64_TYPE__> {
-    consteval NumericLimits() = delete;
-    constexpr static __INT64_TYPE__ max = 9'223'372'036'854'775'807;
-    constexpr static __INT64_TYPE__ min = -9'223'372'036'854'775'807;
-};
-
-template <>
-struct NumericLimits<__UINT64_TYPE__> {
-    consteval NumericLimits() = delete;
-    constexpr static __UINT64_TYPE__ max = 18'446'744'073'709'551'615u;
-    constexpr static __UINT64_TYPE__ min = 0u;
-};
-
-// TODO: `float` and `double` limits.
-template <>
-struct NumericLimits<float> {
-    consteval NumericLimits() = delete;
-    constexpr static float max = 0.f;
-    constexpr static float min = 0.f;
-};
-
-template <>
-struct NumericLimits<double> {
-    consteval NumericLimits() = delete;
-    constexpr static double max = 0.f;
-    constexpr static double min = 0.f;
-};
 
 }  // namespace cat
 

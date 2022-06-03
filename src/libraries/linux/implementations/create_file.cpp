@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-#include <linux>
+#include <cat/linux>
 
 auto nix::create_file(char const* p_file_path, nix::OpenMode file_mode)
     -> nix::ScaredyLinux<nix::FileDescriptor> {

@@ -1,4 +1,4 @@
-#include <cat/cat>
+#include <cat/meta>
 
 // https://stackoverflow.com/a/31763111
 template <typename T, template <typename...> typename Template>
