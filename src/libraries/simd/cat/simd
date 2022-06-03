@@ -247,11 +247,25 @@ requires(is_same<typename InAbi::Scalar, T>) class alignas(
         return this->raw == operand.raw;
     }
 
+    // Compare equality for each lane to `value`, and store the results in a new
+    // `Simd`.
+    [[nodiscard]] constexpr auto operator==(T const& operand) const
+        -> SimdMask<Abi, T> {
+        return *this == Vector::filled(operand);
+    }
+
     // Compare non-equality for each lane to another `Simd`'s lanes, and store
     // the results in a new `Simd`.
     [[nodiscard]] constexpr auto operator!=(Vector const& operand) const
         -> SimdMask<Abi, T> {
         return this->raw != operand.raw;
+    }
+
+    // Compare non-equality for each lane to `value`, and store the results in a
+    // new `Simd`.
+    [[nodiscard]] constexpr auto operator!=(T const& operand) const
+        -> SimdMask<Abi, T> {
+        return *this != Vector::filled(operand);
     }
 
     // Compare greater-than for each lane to another `Simd`'s lanes, and store
@@ -261,10 +275,24 @@ requires(is_same<typename InAbi::Scalar, T>) class alignas(
         return this->raw > operand.raw;
     }
 
+    // Compare greater-than for each lane to `value`, and store the results in a
+    // new `Simd`.
+    [[nodiscard]] constexpr auto operator>(T const& operand) const
+        -> SimdMask<Abi, T> {
+        return *this > Vector::filled(operand);
+    }
+
     // Compare greater-than-or-equal for each lane to another `Simd`'s lanes,
     // and store the results in a new `Simd`.
     constexpr auto operator>=(Vector const& operand) const -> Vector& {
         return this->raw >= operand.raw;
+    }
+
+    // Compare greater-than-or-equal for each lane to `value`, and store the
+    // results in a new `Simd`.
+    [[nodiscard]] constexpr auto operator>=(T const& operand) const
+        -> SimdMask<Abi, T> {
+        return *this >= Vector::filled(operand);
     }
 
     // Compare less-than for each lane to another `Simd`'s lanes, and store the
@@ -274,10 +302,24 @@ requires(is_same<typename InAbi::Scalar, T>) class alignas(
         return this->raw < operand.raw;
     }
 
+    // Compare less-than for each lane to `value`, and store the results in a
+    // new `Simd`.
+    [[nodiscard]] constexpr auto operator<(T const& operand) const
+        -> SimdMask<Abi, T> {
+        return *this < Vector::filled(operand);
+    }
+
     // Compare less-than-or-equal for each lane to another `Simd`'s lanes,
     // and store the results in a new `Simd`.
     constexpr auto operator<=(Vector const& operand) const -> Vector& {
         return this->raw <= operand.raw;
+    }
+
+    // Compare less-than-or-equal for each lane to `value`, and store the
+    // results in a new `Simd`.
+    [[nodiscard]] constexpr auto operator<=(T const& operand) const
+        -> SimdMask<Abi, T> {
+        return *this <= Vector::filled(operand);
     }
 
     // TODO: Add more comments to these operators.
