@@ -14,7 +14,6 @@ CheckOptions:
   - { key: readability-identifier-naming.StructCase,                      value: CamelCase }
   - { key: readability-identifier-naming.ClassCase,                       value: CamelCase }
 
-
 WarningsAsErrors: ''
 HeaderFilterRegex: ^src
 AnalyzeTemporaryDtors: false

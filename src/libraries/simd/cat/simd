@@ -184,34 +184,28 @@ requires(is_same<typename InAbi::Scalar, T>) class alignas(
 
     // Construct all lanes as `value`.
     template <typename U>
-    constexpr Simd(U const& value) requires(is_convertible<U, Scalar>) {
-        this->fill(static_cast<Scalar>(value));
-    }
-
-    // Construct all lanes as `value`.
-    template <typename U>
-    constexpr Simd(U&& value) requires(is_convertible<U, Scalar>) {
-        this->fill(static_cast<Scalar>(value));
+    constexpr Simd(U const value) requires(is_convertible<U, T>) {
+        this->fill(static_cast<T>(value));
     }
 
     // Construct from a variadic argument list.
     template <typename... Us>
     constexpr Simd(Us&&... values) requires(sizeof...(values) > 1 &&
                                             sizeof...(values) == lanes.raw)
-        : raw(Raw{static_cast<Scalar>(forward<Us>(values))...}){};
+        : raw(Raw{static_cast<T>(forward<Us>(values))...}){};
 
     // Construct from a constant list, such as `value_list` or
     // `integer_sequence`.
     template <typename U, U... Us>
     constexpr Simd(ValueList<U, Us...> const values) requires(values.size ==
                                                               lanes)
-        : raw(Raw{static_cast<Scalar>(Us)...}){};
+        : raw(Raw{static_cast<T>(Us)...}){};
 
     // Any ABI for which this `Simd` is equal to in size and overaligned can
     // be explicitly converted to.
     template <typename OtherAbi>
-    explicit constexpr operator Simd<OtherAbi, Scalar>() requires(
-        OtherAbi::size == Abi::Size && OtherAbi::alignment <= Abi::alignment &&
+    explicit constexpr operator Simd<OtherAbi, T>() requires(
+        OtherAbi::size == Abi::size && OtherAbi::alignment <= Abi::alignment &&
         OtherAbi::lanes == Abi::lanes) {
         return this->raw;
     }
@@ -221,7 +215,7 @@ requires(is_same<typename InAbi::Scalar, T>) class alignas(
     // `Simd`'s is compatible with, can be converted to.
     template <typename OtherAbi, typename U>
     explicit constexpr operator Simd<OtherAbi, U>() requires(
-        is_convertible<U, Scalar>&& OtherAbi::size == Abi::Size &&
+        is_convertible<U, T>&& OtherAbi::size == Abi::size &&
         OtherAbi::alignment <= Abi::alignment &&
         OtherAbi::lanes == Abi::lanes) {
         return __builtin_convertvector(this->raw,
@@ -408,11 +402,9 @@ requires(is_same<typename InAbi::Scalar, T>) class alignas(
     constexpr auto fill(U const value)
         -> Vector& requires(is_convertible<U, Scalar>) {
         if constexpr (lanes == 2) {
-            this->raw =
-                Raw{value, value, value, value, value, value, value, value};
+            this->raw = Raw{value, value};
         } else if constexpr (lanes == 4) {
-            this->raw =
-                Raw{value, value, value, value, value, value, value, value};
+            this->raw = Raw{value, value, value, value};
         } else if constexpr (lanes == 8) {
             this->raw =
                 Raw{value, value, value, value, value, value, value, value};
@@ -433,12 +425,12 @@ requires(is_same<typename InAbi::Scalar, T>) class alignas(
     // Construct a `Simd` with every lane initialized to `value`.
     template <typename U>
     [[nodiscard]] static constexpr auto filled(U const value) -> Vector
-        requires(is_convertible<U, Scalar>) {
+        requires(is_convertible<U, T>) {
         return Vector{}.fill(value);
     }
 
     // Load a vector from `p_data`, aligned to `Abi::alignment`.
-    constexpr auto load_aligned(Scalar const* const p_data) -> Vector& {
+    constexpr auto load_aligned(T const* const p_data) -> Vector& {
         this->raw =
             static_cast<Vector const*>(static_cast<void const*>(p_data))->raw;
         return *this;
@@ -446,7 +438,7 @@ requires(is_same<typename InAbi::Scalar, T>) class alignas(
 
     // Load a vector from `p_data` with any alignment. This may be slower than
     // `.loaded_aligned()`.
-    constexpr auto load_unaligned(Scalar const* const p_data) -> Vector& {
+    constexpr auto load_unaligned(T const* const p_data) -> Vector& {
         this->raw = static_cast<UnalignedVector const*>(
                         static_cast<void const*>(p_data))
                         ->raw;
@@ -454,8 +446,8 @@ requires(is_same<typename InAbi::Scalar, T>) class alignas(
     }
 
     // Load a vector from `p_data`.
-    constexpr auto load(Scalar const* const p_data) -> Vector& {
-        if constexpr (Abi::alignment == salignof<Scalar>()) {
+    constexpr auto load(T const* const p_data) -> Vector& {
+        if constexpr (Abi::alignment == salignof<T>()) {
             return this->load_aligned(p_data);
         } else {
             return this->load_unaligned(p_data);
@@ -464,21 +456,21 @@ requires(is_same<typename InAbi::Scalar, T>) class alignas(
 
     // Construct a `Simd` loaded from the address `p_data`, aligned to
     // `Abi::alignment`.
-    [[nodiscard]] static constexpr auto loaded_aligned(
-        Scalar const* const p_data) -> Vector const {
+    [[nodiscard]] static constexpr auto loaded_aligned(T const* const p_data)
+        -> Vector {
         return *bit_cast<Vector const*>(p_data);
     }
 
     // Construct a `Simd` loaded from the address `p_data` with any alignment.
     // This may be slower than `.loaded_aligned()`.
-    [[nodiscard]] static constexpr auto loaded_unaligned(
-        Scalar const* const p_data) -> Vector const {
+    [[nodiscard]] static constexpr auto loaded_unaligned(T const* const p_data)
+        -> Vector {
         return *bit_cast<UnalignedVector const*>(p_data);
     }
 
     // Construct a `Simd` loaded from the address `p_data`.
-    [[nodiscard]] static constexpr auto loaded(Scalar const* const p_data) {
-        if constexpr (Abi::alignment == salignof<Scalar>()) {
+    [[nodiscard]] static constexpr auto loaded(T const* const p_data) {
+        if constexpr (Abi::alignment == salignof<T>()) {
             return loaded_aligned(p_data);
         } else {
             return loaded_unaligned(p_data);
@@ -487,7 +479,7 @@ requires(is_same<typename InAbi::Scalar, T>) class alignas(
 
     // Pack the most significant bit of each lane into the lower bytes of a
     // `SimdMask`.
-    // [[nodiscard]] auto move_mask() -> SimdMask<Abi, Scalar> {
+    // [[nodiscard]] auto move_mask() -> SimdMask<Abi, T> {
     //     return cat::move_mask(*this);
     // }
 };
@@ -522,13 +514,8 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
     constexpr SimdMask(Raw&& value) : raw(move(value)){};
 
     // Construct all lanes as `value`.
-    constexpr SimdMask(bool const& value) {
+    constexpr SimdMask(bool const value) {
         this->fill(value);
-    }
-
-    // Construct all lanes as `value`.
-    constexpr SimdMask(bool&& value) {
-        this->fill(move(value));
     }
 
     // Construct from a variadic argument list.
@@ -549,7 +536,7 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
     // be explicitly converted to.
     template <typename OtherAbi>
     explicit constexpr operator SimdMask<OtherAbi, T>() requires(
-        OtherAbi::size == Abi::Size && OtherAbi::alignment <= Abi::alignment &&
+        OtherAbi::size == Abi::size && OtherAbi::alignment <= Abi::alignment &&
         OtherAbi::lanes == Abi::lanes) {
         return this->raw;
     }
@@ -559,7 +546,7 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
     // `Simd`'s is compatible with, can be converted to.
     template <typename OtherAbi, typename U>
     explicit constexpr operator SimdMask<OtherAbi, U>() requires(
-        is_convertible<U, T>&& OtherAbi::size == Abi::Size &&
+        is_convertible<U, T>&& OtherAbi::size == Abi::size &&
         OtherAbi::alignment <= Abi::alignment &&
         OtherAbi::lanes == Abi::lanes) {
         return __builtin_convertvector(this->raw,
@@ -640,11 +627,9 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
 
     constexpr auto fill(bool const value) -> Mask {
         if constexpr (lanes == 2) {
-            this->raw =
-                Raw{value, value, value, value, value, value, value, value};
+            this->raw = Raw{value, value};
         } else if constexpr (lanes == 4) {
-            this->raw =
-                Raw{value, value, value, value, value, value, value, value};
+            this->raw = Raw{value, value, value, value};
         } else if constexpr (lanes == 8) {
             this->raw =
                 Raw{value, value, value, value, value, value, value, value};

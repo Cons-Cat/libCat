@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
-#include <linux>
+#include <cat/linux>
 
 struct CloneArguments {
     uint8 flags;
