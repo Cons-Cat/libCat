@@ -12,7 +12,7 @@ namespace detail {
     // required to support `Tuple`s with non-uniquely-typed elements.
     template <ssize index, typename T>
     struct TupleElement {
-        T storage;
+        [[no_unique_address]] T storage;
 
         // For some reason, this produces ambiguous overload errors if it is
         // implemented as a normal function instead of an operator.
