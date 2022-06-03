@@ -48,7 +48,14 @@ void meow() {
 
     // TODO: Put this in another string unit test.
     cat::String find_string = "abcdefabcdefabcdefabcdefabcdefabcdef";
-    Result(find_string.find('c').value() == 3).or_panic();
+    ssize c = find_string.find('c').or_panic();
+    Result(c == 2).or_panic();
+
+    ssize a = find_string.find('a').or_panic();
+    Result(a == 0).or_panic();
+
+    ssize f = find_string.find('f').or_panic();
+    Result(f == 5).or_panic();
 
     cat::exit();
 }

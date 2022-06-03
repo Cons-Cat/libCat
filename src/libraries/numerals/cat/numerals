@@ -247,6 +247,27 @@ struct Numeral {
         this->raw = ~(this->raw);
         return *this;
     }
+
+    [[nodiscard]] auto count_leading_zeros() const -> ssize
+        requires(is_integral<T>) {
+        if constexpr (sizeof(T) == 2) {
+            return ssize{
+                __builtin_ia32_lzcnt_u16(static_cast<uint2::Raw>(this->raw))};
+        } else if constexpr (sizeof(T) == 4) {
+            return ssize{__builtin_clz(static_cast<uint4::Raw>(this->raw))};
+        } else if constexpr (sizeof(T) == 8) {
+            return ssize{__builtin_clzll(static_cast<uint8::Raw>(this->raw))};
+        }
+    }
+
+    [[nodiscard]] auto count_trailing_zeros() const -> ssize
+        requires(is_integral<T>) {
+        if constexpr (sizeof(T) == 4) {
+            return ssize{__builtin_ctz(static_cast<uint4::Raw>(this->raw))};
+        } else if constexpr (sizeof(T) == 8) {
+            return ssize{__builtin_ctzll(static_cast<uint8::Raw>(this->raw))};
+        }
+    }
 };
 
 template <typename T>

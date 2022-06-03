@@ -113,13 +113,13 @@ namespace detail {
 template <typename Abi, typename T>
 class alignas(Abi::alignment.raw) SimdMask;
 
-template <typename T>
-[[nodiscard]] auto move_mask(Simd<NativeAbi<T>, T> const)
-    -> SimdMask<NativeAbi<T>, T>;
+// template <typename T>
+// [[nodiscard]] auto move_mask(Simd<NativeAbi<T>, T> const)
+//     -> SimdMask<NativeAbi<T>, T>;
 
-template <typename T>
-[[nodiscard]] auto move_mask(Simd<Avx2Abi<T>, T> const)
-    -> SimdMask<Avx2Abi<T>, T>;
+// template <typename T>
+// [[nodiscard]] auto move_mask(Simd<Avx2Abi<T>, T> const)
+//     -> SimdMask<Avx2Abi<T>, T>;
 
 template <typename T>
 [[nodiscard]] auto all_of(SimdMask<NativeAbi<T>, T> const) -> bool;
@@ -487,9 +487,9 @@ requires(is_same<typename InAbi::Scalar, T>) class alignas(
 
     // Pack the most significant bit of each lane into the lower bytes of a
     // `SimdMask`.
-    [[nodiscard]] auto move_mask() -> SimdMask<Abi, Scalar> {
-        return cat::move_mask(*this);
-    }
+    // [[nodiscard]] auto move_mask() -> SimdMask<Abi, Scalar> {
+    //     return cat::move_mask(*this);
+    // }
 };
 
 template <typename InAbi, typename T>
@@ -857,17 +857,15 @@ void stream_in(void* p_destination, T const* p_source);
 // TODO: Return a `Bitset`.
 // Dispatch `move_mask` to the native SIMD ABI.
 template <typename T>
-[[nodiscard]] auto move_mask(NativeSimd<T> const vector)
-    -> SimdMask<NativeAbi<T>, T> {
+[[nodiscard]] auto move_mask(NativeSimd<T> const vector) -> int {
     return move_mask(detail::native_cast(vector));
 }
 
 // TODO: Return a `Bitset`.
 // Dispatch `move_mask` to the native SIMD ABI.
 template <typename T>
-[[nodiscard]] auto move_mask(SimdMask<NativeAbi<T>, T> const vector)
-    -> SimdMask<NativeAbi<T>, T> {
-    return move_mask(detail::native_cast(vector));
+[[nodiscard]] auto move_mask(SimdMask<NativeAbi<T>, T> const mask) -> int4 {
+    return move_mask(detail::native_cast(mask));
 }
 
 // TODO: Return a `Bitset`.
@@ -875,8 +873,7 @@ template <typename T>
 // TODO: Support all Ts.
 // Implementation of `move_mask` for AVX2.
 template <typename T>
-[[nodiscard]] auto move_mask(Avx2Simd<T> const vector)
-    -> SimdMask<Avx2Abi<T>, T> {
+[[nodiscard]] auto move_mask(Avx2Simd<T> const vector) -> int4 {
     if constexpr (is_same<T, float>) {
         // Create a bitmask from the most significant bit of every `float` in
         // this vector.
@@ -891,22 +888,22 @@ template <typename T>
         return __builtin_ia32_pmovmskb256(vector.raw);
     }
 }
+
 // Implementation of `move_mask` for AVX2.
 template <typename T>
-[[nodiscard]] auto move_mask(SimdMask<Avx2Abi<T>, T> const vector)
-    -> SimdMask<Avx2Abi<T>, T> {
+[[nodiscard]] auto move_mask(SimdMask<Avx2Abi<T>, T> const mask) -> int4 {
     if constexpr (is_same<T, float>) {
         // Create a bitmask from the most significant bit of every `float` in
         // this vector.
-        return __builtin_ia32_movmskps256(vector.raw);
+        return __builtin_ia32_movmskps256(mask.raw);
     } else if constexpr (is_same<T, double>) {
         // Create a bitmask from the most significant bit of every `double` in
         // this vector.
-        return __builtin_ia32_movmskpd256(vector.raw);
+        return __builtin_ia32_movmskpd256(mask.raw);
     } else {
         // Create a bitmask from the most significant bit of every byte in this
         // vector.
-        return __builtin_ia32_pmovmskb256(vector.raw);
+        return __builtin_ia32_pmovmskb256(mask.raw);
     }
 }
 
