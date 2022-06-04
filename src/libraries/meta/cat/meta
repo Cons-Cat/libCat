@@ -466,8 +466,8 @@ using IsPointer = typename IsPointerTrait<T>::Type;
 
 template <typename>
 struct IsArrayTrait : FalseTypeTrait {};
-template <typename T, int Size>
-struct IsArrayTrait<T[Size]> : TrueTypeTrait {};
+template <typename T, int size>
+struct IsArrayTrait<T[size]> : TrueTypeTrait {};
 template <typename T>
 struct IsArrayTrait<T[]> : TrueTypeTrait {};
 template <typename T>
@@ -480,8 +480,8 @@ struct RemoveExtentTrait {
     using Type = T;
 };
 
-template <typename T, int Size>
-struct RemoveExtentTrait<T[Size]> {
+template <typename T, int size>
+struct RemoveExtentTrait<T[size]> {
     using Type = T;
 };
 
