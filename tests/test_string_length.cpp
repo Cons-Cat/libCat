@@ -2,7 +2,6 @@
 #include <cat/utility>
 
 void meow() {
-    cat::align_stack_pointer_32();
     char const* p_string_1 = "Hello!";
     char const* const p_string_2 = "Hello!";
 
@@ -57,9 +56,11 @@ void meow() {
     ssize f = find_string.find('f').or_panic();
     Result(f == 5).or_panic();
 
-	// `z` is not inside of a 32-byte chunk.
-	    cat::String find_string_2 = "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefz";
-		ssize z = find_string_2.find('z').or_panic();
+    // `z` is not inside of a 32-byte chunk.
+    cat::String find_string_2 =
+        "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd"
+        "efz";
+    ssize z = find_string_2.find('z').or_panic();
     Result(z == 72).or_panic();
 
     cat::exit();

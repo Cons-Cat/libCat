@@ -1,8 +1,6 @@
 #include <cat/tuple>
 
 void meow() {
-    cat::align_stack_pointer_32();
-
     using intint = cat::Tuple<int, int>;
     static_assert(cat::is_trivial<intint>);
     static_assert(sizeof(intint) == 8);

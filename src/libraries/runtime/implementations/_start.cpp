@@ -7,6 +7,9 @@ extern "C" [[gnu::used]] void _start() {
            and $-16, %rsp
            call meow)");
 #else
+    // The stack pointer must be aligned to prevent segfaults even in "Hello
+    // World".
+    cat::align_stack_pointer_32();
     meow();
 #endif
     __builtin_unreachable();  // This elides a `ret` instruction.
