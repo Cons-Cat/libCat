@@ -71,12 +71,24 @@ class String : public Span<char const> {
         this->length = move(string).length;
     }
 
-    constexpr auto find(char const character) const
+    constexpr auto find_small(char const character,
+                              ssize const position = 0) const
         -> Optional<Sentinel<ssize, -1>> {
-        // TODO: Optimize different length strings.
-        // TODO: Tile this loop four or eight times.
-        // TODO: Handle strings that are not evenly divisible by lanes.
-        for (ssize i = 0; i < this->length; i += char1x_::lanes) {
+        for (ssize i = position; i < this->length; i++) {
+            if (this->p_storage[i.raw] == character) {
+                return i;
+            }
+        }
+        return nullopt;
+    }
+
+    // TODO: Optimize different length strings.
+    // TODO: Tile this loop four or eight times.
+    constexpr auto find(char const character, ssize const position = 0) const
+        -> Optional<Sentinel<ssize, -1>> {
+        ssize i = position;
+        for (; i < this->length - char1x_::lanes; i += char1x_::lanes) {
+            // TODO: Consider aligning this load?
             char1x_ const storage = char1x_::loaded(this->p_storage + i);
             SimdMask<Avx2Abi<char>, char> const compare =
                 (storage == character);
@@ -85,7 +97,9 @@ class String : public Span<char const> {
                 return i + mask.count_trailing_zeros();
             }
         }
-        return nullopt;
+        // The last chunk of this string, smaller than `char1x_::lanes`, is
+        // stepped through one character at a time.
+        return this->find_small(character, i);
     }
 };
 
