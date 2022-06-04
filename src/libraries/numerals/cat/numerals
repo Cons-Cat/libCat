@@ -155,6 +155,24 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
+constexpr auto raw_cast(Numeral<T> const& value) -> T {
+    return value.raw;
+}
+
+template <typename T>
+constexpr auto raw_cast(T const& value) -> T {
+    return value;
+}
+
+template <typename T>
+[[nodiscard]] constexpr auto count_leading_zeros(T const value) -> ssize
+    requires(is_integral<T>);
+
+template <typename T>
+[[nodiscard]] constexpr auto count_trailing_zeros(T const value) -> ssize
+    requires(is_integral<T>);
+
+template <typename T>
 struct Numeral {
     using Raw = T;
     T raw;
@@ -333,34 +351,19 @@ struct Numeral {
         return *this;
     }
 
-    [[nodiscard]] auto count_leading_zeros() const -> ssize
+    [[nodiscard]] constexpr auto count_leading_zeros() const -> ssize
         requires(is_integral<T>) {
-        if constexpr (sizeof(T) == 2) {
-            return ssize{
-                __builtin_ia32_lzcnt_u16(static_cast<uint2::Raw>(this->raw))};
-        } else if constexpr (sizeof(T) == 4) {
-            return ssize{__builtin_clz(static_cast<uint4::Raw>(this->raw))};
-        } else if constexpr (sizeof(T) == 8) {
-            return ssize{__builtin_clzll(static_cast<uint8::Raw>(this->raw))};
-        }
+        return cat::count_leading_zeros(this->raw);
     }
 
-    [[nodiscard]] auto count_trailing_zeros() const -> ssize
+    [[nodiscard]] constexpr auto count_trailing_zeros() const -> ssize
         requires(is_integral<T>) {
-        if constexpr (sizeof(T) == 4) {
-            return ssize{__builtin_ctz(static_cast<uint4::Raw>(this->raw))};
-        } else if constexpr (sizeof(T) == 8) {
-            return ssize{__builtin_ctzll(static_cast<uint8::Raw>(this->raw))};
-        }
+        return cat::count_trailing_zeros(this->raw);
     }
 };
 
 template <typename T>
 Numeral(T) -> Numeral<T>;
-
-template <typename T>
-requires(is_integral<T> || is_floating_point<T>) using RawNumeral =
-    Conditional<IsSpecializationTrait<T, Numeral>::value, typename T::Raw, T>;
 
 // Compare primitive numerals to `Numeral`s.
 // TODO: Return a `Numeral` that is the larger size of either operand.
@@ -548,6 +551,32 @@ template <typename T, typename U>
 constexpr auto operator|=(T*& p_lhs, Numeral<U> const rhs) -> T*& {
     p_lhs |= rhs.raw;
     return p_lhs;
+}
+
+// TODO: Make this `constexpr`.
+template <typename T>
+[[nodiscard]] constexpr auto count_leading_zeros(T const value) -> ssize
+    requires(is_integral<T>) {
+    auto raw_value = raw_cast(value);
+    if constexpr (sizeof(T) == 2) {
+        return ssize{__builtin_ia32_lzcnt_u16(raw_value)};
+    } else if constexpr (sizeof(T) == 4) {
+        return ssize{__builtin_clz(raw_value)};
+    } else if constexpr (sizeof(T) == 8) {
+        return ssize{__builtin_clzll(raw_value)};
+    }
+}
+
+// TODO: Make this `constexpr`.
+template <typename T>
+[[nodiscard]] constexpr auto count_trailing_zeros(T const value) -> ssize
+    requires(is_integral<T>) {
+    auto raw_value = raw_cast(value);
+    if constexpr (sizeof(T) == 4) {
+        return ssize{__builtin_ctz(raw_value)};
+    } else if constexpr (sizeof(T) == 8) {
+        return ssize{__builtin_ctzll(raw_value)};
+    }
 }
 
 // These macros are defined by the GCC compiler.
