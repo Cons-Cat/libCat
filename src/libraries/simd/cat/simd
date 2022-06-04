@@ -14,6 +14,9 @@
 // To streamline this, libCat uses the intrinsics which GNU already provides,
 // and wraps it in one thin layer of technology.
 
+#include <cat/detail/simd_avx2_fwd.hpp>
+#include <cat/detail/simd_sse42.hpp>
+
 #include <cat/meta>
 #include <cat/numerals>
 
@@ -33,48 +36,15 @@ struct FixedSizeAbi {
 
     // Produce a similar `FixedSizeAbi` for type `U`.
     template <typename U>
-    using MakeAbi =
-        cat::FixedSizeAbi<U, in_lanes * ssizeof<T>() / ssizeof<U>()>;
+    using MakeAbi = FixedSizeAbi<U, in_lanes * ssizeof<T>() / ssizeof<U>()>;
 
     FixedSizeAbi() = delete;
 
+    // TODO: Select `TargetAbi` portably.
+    using TargetAbi = Avx2Abi<T>;
     static constexpr ssize lanes = in_lanes;
     static constexpr ssize size = lanes * ssizeof<T>();
     // TODO: Make the alignment generally correct and efficient.
-    static constexpr ssize alignment = 32;
-};
-
-// `Sse2Abi` is a SIMD ABI that can be expected to work on any x86-64 build
-// target.
-template <typename T>
-struct Sse42Abi {
-    using Scalar = T;
-
-    // Produce a similar `Sse42Abi` for type `U`.
-    template <typename U>
-    using MakeAbi = cat::Sse42Abi<U>;
-
-    Sse42Abi() = delete;
-
-    static constexpr ssize size = 16;
-    static constexpr ssize lanes = size / ssizeof<T>();
-    static constexpr ssize alignment = 16;
-};
-
-// `Avx2Abi` is a SIMD ABI that can be expected to work on most reasonable
-// x86-64 build target.
-template <typename T>
-struct Avx2Abi {
-    using Scalar = T;
-
-    // Produce a similar `Avx2Abi` for type `U`.
-    template <typename U>
-    using MakeAbi = cat::Avx2Abi<U>;
-
-    Avx2Abi() = delete;
-
-    static constexpr ssize size = 32;
-    static constexpr ssize lanes = size / ssizeof<T>();
     static constexpr ssize alignment = 32;
 };
 
@@ -86,7 +56,7 @@ struct NativeAbi {
 
     // Produce a similar `NativeAbi` for type `U`.
     template <typename U>
-    using MakeAbi = cat::NativeAbi<U>;
+    using MakeAbi = NativeAbi<U>;
 
     NativeAbi() = delete;
 
@@ -97,41 +67,20 @@ struct NativeAbi {
     static constexpr ssize alignment = TargetAbi::alignment;
 };
 
-// Forward declarations.
-template <typename Abi, typename T>
-requires(is_same<typename Abi::Scalar, T>) class alignas(
-    Abi::alignment.raw) Simd;
-
 namespace detail {
-    // Cast a `NativeAbi` vector into its underlying representation.
+    // Cast a `NativeAbi` or `FixedSizeAbi` vector into its underlying
+    // representation.
     template <typename Abi, typename T>
     constexpr auto native_cast(Simd<Abi, T> const vector) {
         return static_cast<Simd<typename NativeAbi<T>::TargetAbi, T>>(vector);
     }
 }  // namespace detail
 
-template <typename Abi, typename T>
-class alignas(Abi::alignment.raw) SimdMask;
-
-// template <typename T>
-// [[nodiscard]] auto move_mask(Simd<NativeAbi<T>, T> const)
-//     -> SimdMask<NativeAbi<T>, T>;
-
-// template <typename T>
-// [[nodiscard]] auto move_mask(Simd<Avx2Abi<T>, T> const)
-//     -> SimdMask<Avx2Abi<T>, T>;
-
 template <typename T>
 [[nodiscard]] auto all_of(SimdMask<NativeAbi<T>, T> const) -> bool;
 
 template <typename T>
-[[nodiscard]] auto all_of(SimdMask<Avx2Abi<T>, T> const) -> bool;
-
-template <typename T>
 [[nodiscard]] auto any_of(SimdMask<NativeAbi<T>, T> const) -> bool;
-
-template <typename T>
-[[nodiscard]] auto any_of(SimdMask<Avx2Abi<T>, T> const) -> bool;
 
 template <typename InAbi, typename T>
 requires(is_same<typename InAbi::Scalar, T>) class alignas(
@@ -665,17 +614,27 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
     }
 };
 
+template <typename Abi, typename T>
+constexpr auto raw_cast(Simd<Abi, T> const& value) -> T {
+    return value.raw;
+}
+
+template <typename Abi, typename T>
+constexpr auto raw_cast(SimdMask<Abi, T> const& value) -> T {
+    return value.raw;
+}
+
 template <typename T, ssize lanes>
 using FixedSizeSimd = Simd<FixedSizeAbi<T, lanes>, T>;
+
+template <typename T, ssize lanes>
+using FixedSizeSimdMask = SimdMask<FixedSizeAbi<T, lanes>, T>;
 
 template <typename T>
 using NativeSimd = Simd<NativeAbi<T>, T>;
 
 template <typename T>
-using Sse42Simd = Simd<Sse42Abi<T>, T>;
-
-template <typename T>
-using Avx2Simd = Simd<Avx2Abi<T>, T>;
+using NativeSimdMask = SimdMask<NativeAbi<T>, T>;
 
 using int1x2 = FixedSizeSimd<int1::Raw, 2>;
 using int1x4 = FixedSizeSimd<int1::Raw, 4>;
@@ -839,69 +798,10 @@ void prefetch_for_modify(auto const* p_vector) {
 template <typename T>
 void stream_in(void* p_destination, T const* p_source);
 
-// TODO: Return a `Bitset`.
-// Dispatch `move_mask` to the native SIMD ABI.
-template <typename T>
-[[nodiscard]] auto move_mask(NativeSimd<T> const vector) -> int {
-    return move_mask(detail::native_cast(vector));
-}
-
-// TODO: Return a `Bitset`.
-// Dispatch `move_mask` to the native SIMD ABI.
-template <typename T>
-[[nodiscard]] auto move_mask(SimdMask<NativeAbi<T>, T> const mask) -> int4 {
-    return move_mask(detail::native_cast(mask));
-}
-
-// TODO: Return a `Bitset`.
-// TODO: Support all ABIs.
-// TODO: Support all Ts.
-// Implementation of `move_mask` for AVX2.
-template <typename T>
-[[nodiscard]] auto move_mask(Avx2Simd<T> const vector) -> int4 {
-    if constexpr (is_same<T, float>) {
-        // Create a bitmask from the most significant bit of every `float` in
-        // this vector.
-        return __builtin_ia32_movmskps256(vector.raw);
-    } else if constexpr (is_same<T, double>) {
-        // Create a bitmask from the most significant bit of every `double` in
-        // this vector.
-        return __builtin_ia32_movmskpd256(vector.raw);
-    } else {
-        // Create a bitmask from the most significant bit of every byte in this
-        // vector.
-        return __builtin_ia32_pmovmskb256(vector.raw);
-    }
-}
-
-// Implementation of `move_mask` for AVX2.
-template <typename T>
-[[nodiscard]] auto move_mask(SimdMask<Avx2Abi<T>, T> const mask) -> int4 {
-    if constexpr (is_same<T, float>) {
-        // Create a bitmask from the most significant bit of every `float` in
-        // this vector.
-        return __builtin_ia32_movmskps256(mask.raw);
-    } else if constexpr (is_same<T, double>) {
-        // Create a bitmask from the most significant bit of every `double` in
-        // this vector.
-        return __builtin_ia32_movmskpd256(mask.raw);
-    } else {
-        // Create a bitmask from the most significant bit of every byte in this
-        // vector.
-        return __builtin_ia32_pmovmskb256(mask.raw);
-    }
-}
-
 // Dispatch `all_of()` to the native SIMD ABI.
 template <typename T>
 [[nodiscard]] auto all_of(SimdMask<NativeAbi<T>, T> const mask) -> bool {
     return move_mask(detail::native_cast(mask));
-}
-
-// Implementation of `all_of()` for AVX2.
-template <typename T>
-[[nodiscard]] auto all_of(SimdMask<Avx2Abi<T>, T> const mask) -> bool {
-    return testc(mask, mask == mask) != 0;
 }
 
 // Dispatch `any_of()` to the native SIMD ABI.
@@ -910,46 +810,19 @@ template <typename T>
     return move_mask(detail::native_cast(mask));
 }
 
-// Implementation of `any_of()` for AVX2.
+// TODO: Return a `Bitset`.
+// Dispatch `move_mask` to the native SIMD ABI.
 template <typename T>
-[[nodiscard]] auto any_of(SimdMask<Avx2Abi<T>, T> const mask) -> bool {
-    return testz(mask, mask == mask) == 0;
+[[nodiscard]] auto move_mask(NativeSimd<T> const vector) -> int {
+    return move_mask(detail::native_cast(vector));
 }
 
+// TODO: Return a `Bitset`.
+// TODO: Support all ABIs.
+// Dispatch `move_mask` to the native SIMD ABI.
 template <typename T>
-[[nodiscard]] auto testc(SimdMask<Avx2Abi<T>, T> const left,
-                         SimdMask<Avx2Abi<T>, T> const right) -> int4 {
-    if constexpr (is_same<T, float>) {
-        return __builtin_ia32_vtestcps256(left.raw, right.raw);
-    } else if constexpr (is_same<T, double>) {
-        return __builtin_ia32_vtestcpd256(left.raw, right.raw);
-    } else {
-        auto left_raw =
-            reinterpret_cast<Simd<Avx2Abi<long long int>, long long int>::Raw>(
-                left.raw);
-        auto right_raw =
-            reinterpret_cast<Simd<Avx2Abi<long long int>, long long int>::Raw>(
-                right.raw);
-        return __builtin_ia32_ptestc256(left_raw, right_raw);
-    }
-}
-
-template <typename T>
-[[nodiscard]] auto testz(SimdMask<Avx2Abi<T>, T> const left,
-                         SimdMask<Avx2Abi<T>, T> const right) -> int4 {
-    if constexpr (is_same<T, float>) {
-        return __builtin_ia32_vtestzps256(left.raw, right.raw);
-    } else if constexpr (is_same<T, double>) {
-        return __builtin_ia32_vtestzpd256(left.raw, right.raw);
-    } else {
-        auto left_raw =
-            reinterpret_cast<Simd<Avx2Abi<long long int>, long long int>::Raw>(
-                left.raw);
-        auto right_raw =
-            reinterpret_cast<Simd<Avx2Abi<long long int>, long long int>::Raw>(
-                right.raw);
-        return __builtin_ia32_ptestz256(left_raw, right_raw);
-    }
+[[nodiscard]] auto move_mask(SimdMask<NativeAbi<T>, T> const mask) -> int4 {
+    return move_mask(detail::native_cast(mask));
 }
 
 // TODO: __builtin_cpu_init()
@@ -1015,6 +888,9 @@ using float4x_ = cat::float4x_;
 using float8x2 = cat::float8x2;
 using float8x4 = cat::float8x4;
 using float8x_ = cat::float8x_;
+
+#include <cat/detail/simd_avx2.hpp>
+#include <cat/detail/simd_sse42.hpp>
 
 #include "./implementations/compare_implicit_length_strings.tpp"
 #include "./implementations/compare_implicit_length_strings_return_index.tpp"
