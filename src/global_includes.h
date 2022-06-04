@@ -6,7 +6,7 @@
  * done using the `--include` flag, as in `--include global_includes.h`. The
  * `CMakeLists.txt` in this repository's top level directory does this. */
 extern "C" [[gnu::used, noreturn]] void meow(
-#ifdef load_argc_argv
+#ifdef LOAD_ARGC_ARGV
     int argc, char* argv[]
 #endif
 );

@@ -11,7 +11,7 @@ list(
   CAT_CXX_FLAGS_COMMON
   -nostdlib
   -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
-  -fomit-frame-pointer # This is required for the stack frame to work.
+  #-fomit-frame-pointer # This is required for the stack frame to work.
   -fno-stack-protector # This is required for threads to work.
   # `-march=native` does not compile on some computers, apparently.
   -msse4.2
@@ -32,9 +32,13 @@ list(
   APPEND
   CAT_CXX_FLAGS_DEBUG
   -ggdb3 -pipe
-  # -fsanitize=undefined
-  # -fsanitize=address
-  # -fsanitize=leak
+  -fno-omit-frame-pointer # Required for UBsan.
+  -fsanitize=undefined
+  -fsanitize=float-divide-by-zero # This is not enabled by default.
+  -fsanitize=address
+  # Stack overflow checking is broken in libCat.
+  --param asan-stack=0
+  -fsanitize-recover=all
   -Wall -Wextra
   # The following warnings are counter-productive for a basic-level library:
   -Wno-unused-function
@@ -45,6 +49,7 @@ list(
   APPEND
   CAT_CXX_FLAGS_RELEASE
   -no-pie
+  -fomit-frame-pointer
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto -fwhole-file -fno-plt
@@ -64,6 +69,15 @@ list(
   -O3 -ggdb3 -pipe
   -Wall -Wextra -Wno-unused-function
   -Wno-unused-function
+  
+  -fno-omit-frame-pointer # Required for UBsan.
+  -fsanitize=undefined
+  -fsanitize=float-divide-by-zero # This is not enabled by default.
+  -fsanitize=address
+  # Stack overflow checking is broken in libCat.
+  --param asan-stack=0
+  -fsanitize-recover=all
+  
   
   -no-pie
   -ffunction-sections -fdata-sections
@@ -129,14 +143,17 @@ add_subdirectory(src/)
 target_sources(cat INTERFACE ${cat-cpp})
 target_include_directories(cat INTERFACE ${cat-include})
 
+# Linking gcc is required for SIMD intrinsics.
 target_link_libraries(cat INTERFACE gcc)
-# target_link_libraries(
-#   cat INTERFACE
-#   # $<$<CONFIG:RelWithDebInfo>:asan>
-#   # $<$<CONFIG:RelWithDebInfo>:ubsan>
-#   # $<$<CONFIG:Debug>:asan>
-#   # $<$<CONFIG:Debug>:ubsan>
-# )
+
+# Link the address and undefined behavior sanitizers in debug builds.
+target_link_libraries(
+  cat INTERFACE
+  $<$<CONFIG:RelWithDebInfo>:asan>
+  $<$<CONFIG:RelWithDebInfo>:ubsan>
+  $<$<CONFIG:Debug>:asan>
+  $<$<CONFIG:Debug>:ubsan>
+)
 
 target_compile_options(cat INTERFACE ${CAT_CXX_FLAGS})
 target_link_options(cat INTERFACE ${CAT_LINK_FLAGS})

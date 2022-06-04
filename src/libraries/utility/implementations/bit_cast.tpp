@@ -16,13 +16,14 @@
 // `cat::bit_cast<>()` should always be optimized. Otherwise, the compiler will
 // not streamline it out, which sometimes causes undefined behavior due to
 // pointer-misalignment.
+#pragma GCC optimize("O3")
+
 template <typename T>
-[[gnu::optimize("-O3"), gnu::always_inline]] constexpr inline auto
-cat::bit_cast(auto& from_value) -> T {
-    /* Cast the address of `from_value` into a pointer of its type (with a
-     * possible reference removed), then remove its possible `const` qualifier.
-     * Cast that to `void*`, then cast that to `char*`, which represents bytes.
-     */
+[[gnu::always_inline]] constexpr inline auto cat::bit_cast(auto& from_value)
+    -> T {
+    // Cast the address of `from_value` into a pointer of its type (with a
+    // possible reference removed), then remove its possible `const` qualifier.
+    // Cast that to `void*`, then cast that to `char*`, which represents bytes.
     char* p_from = static_cast<char*>(static_cast<void*>(
         const_cast<
             cat::RemoveConst<cat::RemoveReference<decltype(from_value)>>*>(
