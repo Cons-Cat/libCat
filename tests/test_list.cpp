@@ -3,7 +3,6 @@
 #include <cat/list>
 
 void meow() {
-    cat::align_stack_pointer_32();
     cat::PageAllocator page_allocator;
     auto page = page_allocator.malloc(4_ki).or_panic();
     cat::LinearAllocator allocator = {&page_allocator.get(page), 4_ki};

@@ -1,7 +1,6 @@
 #include <cat/string>
 
 void meow() {
-    cat::align_stack_pointer_32();
     char const* p_string_1 = "Hello!";
     char const* const p_string_2 = "Hello!";
 

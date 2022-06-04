@@ -5,8 +5,6 @@
 #include <cat/utility>
 
 void meow() {
-    cat::align_stack_pointer_32();
-
     // Initializing a array:
     cat::Array<int4, 5> array_1 = {0, 1, 2, 3, 4};
     // Assigning a array:

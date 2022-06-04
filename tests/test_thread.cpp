@@ -6,7 +6,6 @@
 #include <cat/thread>
 
 void function(void*) {
-    cat::align_stack_pointer_32();
     for (int4 i = 0; i < 15; i++) {
         _ = cat::print_line("Moo?");
     }
@@ -14,7 +13,6 @@ void function(void*) {
 }
 
 void meow() {
-    cat::align_stack_pointer_32();
     cat::Thread thread;
     cat::PageAllocator allocator;
     thread.create(allocator, 4_ki, function, nullptr)
