@@ -119,11 +119,6 @@ inline constexpr cat::Monostate monostate;
 template <typename T>
 class Result;
 
-namespace cat {
-template <typename T>
-constexpr auto bit_cast(auto& from_value) -> T;
-}
-
 // Including the `<cat/runtime>` library is required to link a libCat program.
 #include <cat/runtime>
 

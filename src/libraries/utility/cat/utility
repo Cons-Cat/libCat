@@ -6,21 +6,14 @@
 
 namespace cat {
 
-// TODO: See if moving this into `std::` improves debuggability without breaking
-// anything.
-template <typename T>
-[[gnu::warning("This function is intended to be inlined and constant-folded \
-out."),
-  gnu::optimize("-O3"), gnu::always_inline]] constexpr inline auto
-bit_cast(auto& from_value) -> T
-    requires(!cat::is_const<cat::RemoveReference<decltype(from_value)>>);
+// TODO: See if moving this into `std::` improves debuggability without
+// breaking anything.
 
 template <typename T>
 [[gnu::warning("This function is intended to be inlined and constant-folded \
 out."),
-  gnu::optimize("-O3"), gnu::always_inline]] constexpr inline auto
-bit_cast(auto& from_value) -> T
-    requires(cat::is_const<cat::RemoveReference<decltype(from_value)>>);
+  gnu::always_inline]] constexpr inline auto
+bit_cast(auto& from_value) -> T;
 
 template <typename T>
 constexpr auto unconst(T const& value) -> T& {
