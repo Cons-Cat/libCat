@@ -60,7 +60,7 @@ void meow() {
 	// `z` is not inside of a 32-byte chunk.
 	    cat::String find_string_2 = "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefz";
 		ssize z = find_string_2.find('z').or_panic();
-    Result(z == 37).or_panic();
+    Result(z == 72).or_panic();
 
     cat::exit();
 }
