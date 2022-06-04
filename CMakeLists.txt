@@ -26,6 +26,10 @@ list(
   # These flags cause clang-tidy 12 to crash:
   # -fconcepts-diagnostics-depth=2
   -fmax-errors=4
+  
+  -Wall -Wextra
+  # The following warnings are counter-productive for a basic-level library:
+  -Wno-unused-function
 )
 
 list(
@@ -39,9 +43,6 @@ list(
   # Stack overflow checking is broken in libCat.
   --param asan-stack=0
   -fsanitize-recover=all
-  -Wall -Wextra
-  # The following warnings are counter-productive for a basic-level library:
-  -Wno-unused-function
 )
 
 # Set aggressive space optimizations. -Os is not favorable, however.
@@ -67,8 +68,6 @@ list(
   APPEND
   CAT_CXX_FLAGS_RELWITHDEBINFO
   -O3 -ggdb3 -pipe
-  -Wall -Wextra -Wno-unused-function
-  -Wno-unused-function
   
   -fno-omit-frame-pointer # Required for UBsan.
   -fsanitize=undefined
@@ -77,7 +76,6 @@ list(
   # Stack overflow checking is broken in libCat.
   --param asan-stack=0
   -fsanitize-recover=all
-  
   
   -no-pie
   -ffunction-sections -fdata-sections
