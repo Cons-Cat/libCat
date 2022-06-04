@@ -12,7 +12,7 @@ void meow() {
     // Default initializing a array:
     cat::Array<int4, 1> array_2;
     // Move assigning a array:
-    cat::Array<int4, 1> array_3;
+    cat::Array<int4, 1> array_3 = {0};
     array_2 = cat::move(array_3);  // NOLINT
     // Move constructing a array:
     _ = cat::move(array_1);  // NOLINT
