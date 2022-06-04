@@ -61,7 +61,7 @@ void meow() {
     static_assert(cat::is_same<decltype(five_tuple.fifth()), uint8&>);
 
     // Test structured bindings.
-    auto [one, two, three, four, five] = five_tuple;
+    auto& [one, two, three, four, five] = five_tuple;
     one = 'a';
     two = 2;
     three = true;
