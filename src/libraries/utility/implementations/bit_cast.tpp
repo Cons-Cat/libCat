@@ -19,9 +19,7 @@
 // clangd emits diagnistic false positives in this file.
 
 template <typename T>
-[[gnu::warning("This function is intended to be inlined and constant-folded \
-out."),
-  gnu::optimize("-O3"), gnu::always_inline]] constexpr inline auto
+[[gnu::optimize("-O3"), gnu::always_inline]] constexpr inline auto
 cat::bit_cast(auto& from_value) -> T
     // If the value is not `const`:
     requires(!cat::is_const<cat::RemoveReference<decltype(from_value)>>) {
@@ -36,9 +34,7 @@ cat::bit_cast(auto& from_value) -> T
 }
 
 template <typename T>
-[[gnu::warning("This function is intended to be inlined and constant-folded \
-out."),
-  gnu::optimize("-O3"), gnu::always_inline]] constexpr inline auto
+[[gnu::optimize("-O3"), gnu::always_inline]] constexpr inline auto
 cat::bit_cast(auto& from_value) -> T
     // If the value is `const`:
     requires(cat::is_const<cat::RemoveReference<decltype(from_value)>>) {
