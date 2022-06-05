@@ -144,6 +144,7 @@ target_include_directories(cat INTERFACE ${cat-include})
 # Linking gcc is required for SIMD intrinsics.
 target_link_libraries(cat INTERFACE gcc)
 
+# TODO: Make these be automated optional dependencies.
 # Link the address and undefined behavior sanitizers in debug builds.
 target_link_libraries(
   cat INTERFACE
