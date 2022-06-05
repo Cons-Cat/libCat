@@ -23,7 +23,7 @@ list(
   # This is enabled by default, but it's counter-productive to libCat's vision:
   -Wno-builtin-declaration-mismatch
   # These flags cause clang-tidy 12 to crash:
-  # -fconcepts-diagnostics-depth=2
+  -fconcepts-diagnostics-depth=2
   -fmax-errors=4
   
   -Wall -Wextra
@@ -33,8 +33,7 @@ list(
 
 list(
   APPEND
-  CAT_CXX_FLAGS_DEBUG
-  -ggdb3 -pipe
+  CAT_SANITIZER_FLAGS
   -fno-omit-frame-pointer # Required for UBsan.
   -fsanitize=undefined
   -fsanitize=float-divide-by-zero # This is not enabled by default.
@@ -42,6 +41,13 @@ list(
   # Stack overflow checking is broken in libCat.
   --param asan-stack=0
   -fsanitize-recover=all
+)
+
+list(
+  APPEND
+  CAT_CXX_FLAGS_DEBUG
+  ${CAT_SANITIZER_FLAGS}
+  -ggdb3 -pipe
 )
 
 # Set aggressive space optimizations. -Os is not favorable, however.
@@ -58,29 +64,21 @@ list(
 
 list(
   APPEND
-  CAT_CXX_FLAGS_RELFAST
-  ${CAT_CXX_FLAGS_RELEASE}
-  -O3
-)
-
-list(
-  APPEND
   CAT_CXX_FLAGS_RELWITHDEBINFO
+  ${CAT_SANITIZER_FLAGS}
   -O3 -ggdb3 -pipe
-  
-  -fno-omit-frame-pointer # Required for UBsan.
-  -fsanitize=undefined
-  -fsanitize=float-divide-by-zero # This is not enabled by default.
-  -fsanitize=address
-  # Stack overflow checking is broken in libCat.
-  --param asan-stack=0
-  -fsanitize-recover=all
-  
   -no-pie
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto -fwhole-file -fno-plt
   -Wl,-z,noseparate-code,--gc-sections
+)
+
+list(
+  APPEND
+  CAT_CXX_FLAGS_RELFAST
+  ${CAT_CXX_FLAGS_RELEASE}
+  -O3
 )
 
 list(
@@ -156,15 +154,15 @@ target_link_libraries(
 target_compile_options(cat INTERFACE ${CAT_CXX_FLAGS})
 target_link_options(cat INTERFACE ${CAT_LINK_FLAGS})
 
-# Link .gdbinit to build directories.
+# Link `.gdbinit` to build directories.
 add_custom_target(
-  cat-debug ALL
+  cat-gdb ALL
   COMMAND ${CMAKE_COMMAND} -E create_symlink
   # TODO: Does this still require CMake 3.20?
   # This requires CMake 3.20:
   ${PROJECT_SOURCE_DIR}/.gdbinit ${CMAKE_CURRENT_BINARY_DIR}/.gdbinit
 )
-add_dependencies(cat cat-debug)
+add_dependencies(cat cat-gdb)
 
 # Build the tests.
 enable_testing()
