@@ -11,7 +11,6 @@ list(
   CAT_CXX_FLAGS_COMMON
   -nostdlib
   -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
-  #-fomit-frame-pointer # This is required for the stack frame to work.
   -fno-stack-protector # This is required for threads to work.
   # `-march=native` does not compile on some computers, apparently.
   -msse4.2
