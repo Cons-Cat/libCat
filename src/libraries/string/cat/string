@@ -74,7 +74,7 @@ class String : public Span<char const> {
     constexpr auto find_small(char const character,
                               ssize const position = 0) const
         -> Optional<Sentinel<ssize, -1>> {
-        for (ssize i = position; i < this->length; i++) {
+        for (ssize i = position; i < this->length; ++i) {
             if (this->p_storage[i.raw] == character) {
                 return i;
             }
@@ -112,14 +112,14 @@ struct StaticString {
     char storage[length.raw + 1];
 
     constexpr StaticString(char const (&in)[length.raw]) : storage{} {
-        for (int i = 0; i < length - 1; i++) {
+        for (int i = 0; i < length - 1; ++i) {
             storage[i] = in[i];
         }
         storage[length] = '\0';
     }
 
     consteval StaticString(String const& in) : storage{} {
-        for (int i = 0; i < in.size() - 1; i++) {
+        for (int i = 0; i < in.size() - 1; ++i) {
             storage[i] = in.p_data()[i];
         }
         storage[length] = '\0';
@@ -149,11 +149,11 @@ consteval auto operator+(StaticString<length_1> const& string_1,
     // TODO: Use an `Array`.
     char array[length_1.raw - 1 + length_2.raw];
 
-    for (int i = 0; i < length_1 - 1; i++) {
+    for (int i = 0; i < length_1 - 1; ++i) {
         array[i] = string_1.storage[i];
     }
 
-    for (int i = length_1.raw - 1; i < length_1 - 1 + length_2 - 1; i++) {
+    for (int i = length_1.raw - 1; i < length_1 - 1 + length_2 - 1; ++i) {
         array[i] = string_2.storage[i - length_1.raw + 1];
     }
 

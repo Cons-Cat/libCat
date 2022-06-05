@@ -3,11 +3,11 @@
 // TODO: Simplify with `cat::Span`.
 // TODO: Make this cross-platform.
 void meow(int argc, char* p_argv[]) {
-    for (ssize i = 1; i < argc; i++) {
+    for (ssize i = 1; i < argc; ++i) {
         ssize length = 0;
         // TODO: Use a `string_length_scalar()`.
         while (p_argv[i.raw][length.raw] != 0) {
-            length++;
+            ++length;
         }
 
         p_argv[i.raw][length.raw] = ' ';

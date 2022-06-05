@@ -14,18 +14,18 @@ struct NonTrivial {
     int4 data;
     NonTrivial() {
         this->data = 1;
-        global_int++;
+        ++global_int;
     }
     NonTrivial(NonTrivial const& in) : data(in.data + 2) {
-        global_int++;
+        ++global_int++;
     }
     // This gets called once, making `data` == 2.
     NonTrivial(NonTrivial&& in) : data(in.data + 1) {
-        global_int++;
+        ++global_int++;
     }
     ~NonTrivial() {
         this->data = 0;
-        global_int++;
+        ++global_int++;
     }
     NonTrivial(int, int, char) {
         this->data = 2;

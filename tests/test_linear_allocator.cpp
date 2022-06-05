@@ -12,7 +12,7 @@ void meow() {
     cat::LinearAllocator allocator(p_page, 24);
     // It should not be possible to allocate 7 times here, because 24 bytes can
     // only hold 6 `int4`s.
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i < 7; ++i) {
         cat::Optional handle = allocator.malloc<int4>();
         if (!handle.has_value()) {
             Result(i == 6).or_panic();
@@ -24,7 +24,7 @@ void meow() {
 didnt_overallocate:
     // Invalidate all memory handles, and allocate again.
     allocator.reset();
-    for (int4 i = 0; i < 4; i++) {
+    for (int4 i = 0; i < 4; ++i) {
         cat::Optional handle = allocator.malloc();
         Result(handle.has_value()).or_panic();
     }
@@ -41,7 +41,7 @@ didnt_overallocate:
     Result(!cat::is_aligned(&allocator.get(handle_2), 8u)).or_panic();
 
     // Small size allocations shouldn't bump the allocator.
-    for (int4 i = 0; i < 20; i++) {
+    for (int4 i = 0; i < 20; ++i) {
         auto memory = allocator.malloca<int4>();
         Result(memory.has_value()).or_panic();
     }
@@ -51,24 +51,24 @@ didnt_overallocate:
     // Test that allocations are reusable.
     allocator.reset();
     decltype(allocator.malloc<int1>()) handles[4];
-    for (signed char i = 0; i < 4; i++) {
+    for (signed char i = 0; i < 4; ++i) {
         handles[i] = allocator.malloc<int1>();
         Result(handles[i].has_value()).or_panic();
         allocator.get(handles[i].value()) = i;
     }
-    for (signed char i = 0; i < 4; i++) {
+    for (signed char i = 0; i < 4; ++i) {
         Result(allocator.get(handles[i].value()) == i).or_panic();
     }
 
     // Test that allocations have pointer stability.
     allocator.reset();
     int4* p_handles[4];
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; ++i) {
         int4* p_handle = allocator.p_malloc<int4>().or_panic();
         *p_handle = i;
         p_handles[i] = p_handle;
     }
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; ++i) {
         Result(*(p_handles[i]) == i).or_panic();
         allocator.free(p_handles[i]).or_panic();
     }

@@ -69,7 +69,7 @@ void meow() {
 
     // Test freeing nodes.
     list_1.erase(allocator, list_1.begin());
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 10; ++i) {
         list_1.pop_front(allocator);
     }
 

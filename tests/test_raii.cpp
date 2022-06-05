@@ -27,7 +27,7 @@ struct Foo {
     void raii() const {
         _ = cat::print(this->data);
         _ = cat::print_line(" calls raii()!");
-        global++;
+        ++global;
     }
 };
 

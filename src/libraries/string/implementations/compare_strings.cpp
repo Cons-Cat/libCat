@@ -22,14 +22,14 @@ auto cat::compare_strings(String const& string_1, String const& string_2)
 
     auto loop = [&](int const size) -> bool1 {
         while (length_iterator >= vector_size * size) {
-            for (int i = 0; i < size; i++) {
+            for (int i = 0; i < size; ++i) {
                 vector_1[i].load(string_1.p_data() + (i * size));
                 vector_2[i].load(string_2.p_data() + (i * size));
                 additions[i] = vector_1[i] + vector_2[i];
                 masks[i] = move_mask(additions[i]);
             }
 
-            for (int i = 0; i < size; i++) {
+            for (int i = 0; i < size; ++i) {
                 if (masks[i] == 0) {
                     return false;
                 }
@@ -57,7 +57,7 @@ auto cat::compare_strings(String const& string_1, String const& string_2)
     // TODO: Extract this to a scalar function.
     // Compare remaining characters individually.
     for (ssize i = 0; i < length_iterator;
-         i++, p_string_1_iterator++, p_string_2_iterator++) {
+         ++i, ++p_string_1_iterator, ++p_string_2_iterator) {
         if (*p_string_1_iterator != *p_string_2_iterator) {
             return false;
         }

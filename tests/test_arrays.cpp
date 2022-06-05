@@ -41,11 +41,11 @@ void meow() {
     ssize count = 0;
     for (int4& a : array_1) {
         Result(a == array_1[count]).or_panic();
-        count++;
+        ++count;
     }
 
     for (int4 const& a : cat::AsReverse(array_1)) {
-        count--;
+        --count;
         Result(a == array_1[count]).or_panic();
     }
 
@@ -55,12 +55,12 @@ void meow() {
     count = 0;
     for (int4 const& a : cat::AsConst(array_1)) {
         Result(a == array_1[count]).or_panic();
-        count++;
+        ++count;
     }
     _ = array_1.cbegin();
 
     for (int4 const& a : cat::AsConstReverse(array_1)) {
-        count--;
+        --count;
         Result(a == array_1[count]).or_panic();
     }
 
@@ -112,7 +112,7 @@ void meow() {
     }
 
     int_array = cat::integer_sequence<int4, 5>;
-    for (int i = 0; i < int_array.size(); i++) {
+    for (int i = 0; i < int_array.size(); ++i) {
         Result(int_array[i] == i).or_panic();
     }
 

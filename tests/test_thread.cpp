@@ -6,7 +6,7 @@
 #include <cat/thread>
 
 void function(void*) {
-    for (int4 i = 0; i < 15; i++) {
+    for (int4 i = 0; i < 15; ++i) {
         _ = cat::print_line("Moo?");
     }
     cat::exit();
@@ -19,7 +19,7 @@ void meow() {
         .or_panic(
             // "Failed to make thread!"
         );
-    for (int4 i = 0; i < 10; i++) {
+    for (int4 i = 0; i < 10; ++i) {
         _ = cat::print_line("Boo!");
     }
     thread.join().or_panic(

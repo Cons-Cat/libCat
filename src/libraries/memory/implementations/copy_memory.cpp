@@ -41,13 +41,13 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
             // Load 8 vectors, then increment the source pointer by that
             // size.
 #pragma GCC unroll 8
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < 8; ++i) {
                 vectors[i] = cat::bit_cast<Vector const*>(p_source_handle)[i];
             }
             cat::prefetch_for_one_read(p_source_handle + (step_size * 2));
 
 #pragma GCC unroll 8
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < 8; ++i) {
                 cat::bit_cast<Vector*>(p_destination_handle)[i] = vectors[i];
             }
             p_source_handle += step_size;
@@ -64,13 +64,13 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
         // possible.
         while (bytes >= 256) {
 #pragma GCC unroll 8
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < 8; ++i) {
                 vectors[i] = cat::bit_cast<Vector*>(p_source_handle)[i];
             }
             cat::prefetch_for_one_read(p_source_handle + 512);
             p_source_handle += 256;
 #pragma GCC unroll 8
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < 8; ++i) {
                 stream_in(p_destination_handle, &vectors[i]);
             }
             p_destination_handle += 256;
@@ -122,14 +122,14 @@ alignment.
             // Load 8 vectors, then increment the source pointer by that
             // size.
 #pragma GCC unroll 8
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < 8; ++i) {
                 vectors[i] = static_cast<Vector const*>(p_source_handle)[i];
             }
             prefetch_for_one_read(
                 static_cast<void*>(p_source_handle + (step_size * 2)));
 
 #pragma GCC unroll 8
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < 8; ++i) {
                 static_cast<Vector*>(p_destination_handle)[i] = vectors[i];
             }
             p_source_handle += step_size;
@@ -147,14 +147,14 @@ alignment.
         // possible.
         while (bytes >= 256) {
 #pragma GCC unroll 8
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < 8; ++i) {
                 vectors[i] = static_cast<Vector*>((p_source_handle))[i];
             }
             prefetch_for_one_read(
                 static_cast<void*>(p_source_handle + 512));
             p_source_handle += 256;
 #pragma GCC unroll 8
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < 8; ++i) {
                 stream_in(p_destination_handle, &vectors[i]);
             }
             p_destination_handle += 256;

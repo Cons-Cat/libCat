@@ -1,7 +1,7 @@
 #include <cat/allocators>
 #include <cat/array>
-#include <cat/numerals>
 #include <cat/math>
+#include <cat/numerals>
 #include <cat/utility>
 
 int4 global_int_1 = 0;
@@ -9,10 +9,10 @@ int4 global_int_2 = 0;
 
 struct TestType {
     TestType() {
-        global_int_1++;
+        ++global_int_1;
     }
     ~TestType() {
-        global_int_2++;
+        ++global_int_2;
     }
 };
 
