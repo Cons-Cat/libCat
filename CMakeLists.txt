@@ -50,7 +50,7 @@ list(
   -ggdb3 -pipe
 )
 
-# Set aggressive space optimizations. -Os is not favorable, however.
+# Set aggressive space optimizations without `-Os`.
 list(
   APPEND
   CAT_CXX_FLAGS_RELEASE
@@ -71,6 +71,7 @@ list(
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto -fwhole-file -fno-plt
+  -Wl,--gdb-index
   -Wl,-z,noseparate-code,--gc-sections
 )
 
@@ -103,6 +104,12 @@ list(
   -nostdlib
 )
 
+list(
+  APPEND
+  CAT_DEBUG_LINK_FLAGS
+  -Wl,--gdb-index
+)
+
 # I can't figure out which flags are for the linker and which
 # are for the compiler, so I just send them all to both.
 # TODO: Improve this.
@@ -117,10 +124,20 @@ list(
   -Wl,-z,noseparate-code,--gc-sections
 )
 
+# I can't figure out which flags are for the linker and which
+# are for the compiler, so I just send them all to both.
+# TODO: Improve this.
+list(
+  APPEND
+  CAT_RELEASE_DEBUG_LINK_FLAGS
+  ${CAT_RELEASE_LINK_FLAGS}
+  ${CAT_DEBUG_LINK_FLAGS}
+)
+
 list(
   APPEND CAT_LINK_FLAGS
   $<$<CONFIG:Debug>:${CAT_COMMON_LINK_FLAGS}>
-  $<$<CONFIG:RelWithDebInfo>:${CAT_RELEASE_LINK_FLAGS}>
+  $<$<CONFIG:RelWithDebInfo>:${CAT_RELEASE_DEBUG_LINK_FLAGS}>
   $<$<CONFIG:Release>:${CAT_RELEASE_LINK_FLAGS}>
   $<$<CONFIG:RelSmall>:${CAT_RELEASE_LINK_FLAGS}>
 )
