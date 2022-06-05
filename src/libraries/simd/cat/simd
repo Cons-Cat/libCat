@@ -347,6 +347,14 @@ requires(is_same<typename InAbi::Scalar, T>) class alignas(
         return *this;
     }
 
+    [[nodiscard]] constexpr auto operator[](ssize const index) -> T& {
+        return this[index];
+    }
+
+    [[nodiscard]] constexpr auto operator[](ssize const index) const -> T& {
+        return this[index];
+    }
+
     template <typename U>
     constexpr auto fill(U const value)
         -> Vector& requires(is_convertible<U, Scalar>) {
@@ -564,6 +572,14 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
     constexpr auto operator>>=(Mask const& operand) -> Mask& {
         this->raw = this->raw << operand.raw;
         return *this;
+    }
+
+    [[nodiscard]] constexpr auto operator[](ssize const index) -> bool& {
+        return static_cast<bool&>(this[index]);
+    }
+
+    [[nodiscard]] constexpr auto operator[](ssize const index) const -> T& {
+        return static_cast<bool&>(this[index]);
     }
 
     constexpr auto all_of() const -> bool {
