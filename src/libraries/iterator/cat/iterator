@@ -141,7 +141,7 @@ struct IteratorFacade {
         if constexpr (detail::HasAdvance<Derived>) {
             return left += offset;
         } else {
-            for (ssize i = 0; i < offset; i++) {
+            for (ssize i = 0; i < offset; ++i) {
                 ++left;
             }
             return left;
@@ -153,7 +153,7 @@ struct IteratorFacade {
         if constexpr (detail::HasAdvance<Derived>) {
             return right += offset;
         } else {
-            for (ssize i = 0; i < offset; i++) {
+            for (ssize i = 0; i < offset; ++i) {
                 ++right;
             }
             return right;
@@ -166,7 +166,7 @@ struct IteratorFacade {
         if constexpr (detail::HasAdvance<Derived>) {
             self.advance(static_cast<int>(offset));
         } else {
-            for (ssize i = 0; i < offset; i++) {
+            for (ssize i = 0; i < offset; ++i) {
                 self.increment();
             }
         }
@@ -201,7 +201,7 @@ struct IteratorFacade {
         if constexpr (detail::HasAdvance<Derived>) {
             return left - offset;
         } else {
-            for (ssize i = 0; i < offset; i++) {
+            for (ssize i = 0; i < offset; ++i) {
                 --left;
             }
             return left;
@@ -214,7 +214,7 @@ struct IteratorFacade {
         if constexpr (detail::HasAdvance<Derived>) {
             return left -= offset;
         } else {
-            for (ssize i = 0; i < offset; i++) {
+            for (ssize i = 0; i < offset; ++i) {
                 --left;
             }
             return left;
