@@ -171,16 +171,6 @@ target_link_libraries(
 target_compile_options(cat INTERFACE ${CAT_CXX_FLAGS})
 target_link_options(cat INTERFACE ${CAT_LINK_FLAGS})
 
-# Link `.gdbinit` to build directories.
-add_custom_target(
-  cat-gdb ALL
-  COMMAND ${CMAKE_COMMAND} -E create_symlink
-  # TODO: Does this still require CMake 3.20?
-  # This requires CMake 3.20:
-  ${PROJECT_SOURCE_DIR}/.gdbinit ${CMAKE_CURRENT_BINARY_DIR}/.gdbinit
-)
-add_dependencies(cat cat-gdb)
-
 # Build the tests.
 enable_testing()
 add_subdirectory(tests/)

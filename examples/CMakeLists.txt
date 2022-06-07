@@ -1,3 +1,13 @@
+# Link `.gdbinit` to build directories.
+add_custom_target(
+  cat-gdb ALL
+  COMMAND ${CMAKE_COMMAND} -E create_symlink
+  # This requires CMake 3.20:
+  ${PROJECT_SOURCE_DIR}/.gdbinit ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/.gdbinit
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>
+)
+add_dependencies(cat cat-gdb)
+
 option(BUILD_ALL_EXAMPLES "Compile all examples unconditionally." ON)
 
 option(BUILD_EXAMPLE_HELLO "Compile hello.cpp." OFF)
