@@ -55,7 +55,6 @@ list(
   APPEND
   CAT_CXX_FLAGS_RELEASE
   -no-pie
-  -fomit-frame-pointer
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto -fwhole-file -fno-plt

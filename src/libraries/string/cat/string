@@ -9,10 +9,14 @@
 #include <cat/span>
 #include <cat/utility>
 
+// `__SIZE_TYPE__` is a GCC macro.
 // Deprecated call to `memcpy()`. Consider using `copy_buffer()` instead.
 // `memcpy()` exists to enable some GCC optimizations.
-extern "C" auto memcpy(void* p_destination, void const* p_source, usize bytes)
-    -> void*;
+namespace std {
+extern "C" auto memcpy(void* p_destination, void const* p_source,
+                       __SIZE_TYPE__ bytes) -> void*;
+}
+using std::memcpy;
 
 namespace cat {
 

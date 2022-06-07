@@ -25,13 +25,8 @@ struct Any {
 
     constexpr Any() = default;
 
-    constexpr Any(void* const p_input) {
-        this->value = p_input;
-    };
-
-    constexpr Any(auto const& input) requires(sizeof(input) <= sizeof(value)) {
-        this->value = bit_cast<void*>(input);
-    };
+    constexpr Any(auto& input) requires(sizeof(input) <= 8)
+        : value(bit_cast<void*>(input)){};
 
     template <typename T>
     [[nodiscard]] constexpr operator T() const requires(!is_void<T>) {
