@@ -3,7 +3,7 @@
 #pragma once
 
 // Optimizing this function counter-intuitively seems to compile faster. It also
-// inlines this function, resulting is a smaller debug binary.
+// inlines this function, resulting in a smaller debug binary.
 #pragma GCC push_options
 #pragma GCC optimize("O1")
 

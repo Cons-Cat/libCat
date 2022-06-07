@@ -73,6 +73,8 @@ class Span : public CollectionFacade<Span<T>, T> {
     [[nodiscard]] constexpr auto size() const -> ssize {
         return this->length;
     }
+
+    // The capacity is simply the number of elements owned.
 };
 
 }  // namespace cat
