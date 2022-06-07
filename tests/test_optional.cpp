@@ -17,18 +17,28 @@ struct NonTrivial {
         ++global_int;
     }
     NonTrivial(NonTrivial const& in) : data(in.data + 2) {
-        ++global_int++;
+        ++global_int;
     }
     // This gets called once, making `data` == 2.
     NonTrivial(NonTrivial&& in) : data(in.data + 1) {
-        ++global_int++;
+        ++global_int;
     }
     ~NonTrivial() {
         this->data = 0;
-        ++global_int++;
+        ++global_int;
     }
     NonTrivial(int, int, char) {
         this->data = 2;
+    }
+};
+
+struct ConstNonTrivial {
+    int4 const data;
+    constexpr ConstNonTrivial() : data(1) {
+    }
+    constexpr ConstNonTrivial(ConstNonTrivial const& in) : data(in.data + 2) {
+    }
+    constexpr ConstNonTrivial(ConstNonTrivial&& in) : data(in.data + 1) {
     }
 };
 
@@ -330,6 +340,23 @@ void meow() {
     cat::Optional<NonTrivial> in_place_nontrivial_2{in_place, 1, 2, 'a'};
     Result(in_place_nontrivial_2.has_value()).or_panic();
     Result(in_place_nontrivial_2.value().data == 2).or_panic();
+
+    // Test `Optional` in a `constexpr` context.
+    auto constant = []() constexpr {
+        constexpr cat::Optional<int> const_int_default;
+
+        constexpr cat::Optional<ConstNonTrivial> const_nontrivial_default;
+        Result(!const_nontrivial_default.has_value()).or_panic();
+
+        constexpr cat::Optional<ConstNonTrivial> const_nontrivial =
+            ConstNonTrivial{};
+        Result(const_nontrivial.has_value()).or_panic();
+
+        constexpr cat::Optional<ConstNonTrivial> const_nontrivial_in_place = {
+            in_place, ConstNonTrivial{}};
+        Result(const_nontrivial_in_place.has_value()).or_panic();
+    };
+    _ = cat::constant_evaluate(constant);
 
     // Assign value:
     optvoid = monostate;
