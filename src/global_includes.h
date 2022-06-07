@@ -126,7 +126,7 @@ class Result;
 #include <result>
 
 // Placement `new`.
-[[nodiscard]] inline auto operator new(unsigned long, void* p_address)
+[[nodiscard]] inline constexpr auto operator new(unsigned long, void* p_address)
     -> void* {
     return p_address;
 }

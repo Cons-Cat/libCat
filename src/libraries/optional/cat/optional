@@ -20,40 +20,30 @@ inline constexpr detail::NullOpt nullopt;
 template <typename T>
 class Optional;
 
-// namespace meta {
-//     // TODO: I forgot what the point to this `concept` was.
-//     template <typename T>
-//     concept Option = requires(T optional) {
-//         static_cast<bool>(optional.has_value());
-//         _ = optional.value();
-//     };
-// }  // namespace meta
-
 // `OptionalValueStorage` holds a non-reference, non-pointer, non-`void` type
 // `T` and a `bool1` flag to represent holding a value or not.
 template <typename T>
 struct OptionalValueStorage {
     // A `union` member will not be default-constructed.
     union {
-        // `Monostate` is required so that `OptionalValueStorage` can be
-        // initialized in a `constexpr` context, because a member `union` must
-        // have at least one initialized field in a `constexpr` context.
-        // `Monostate` can be default-initialized, so this is well-formed.
-        cat::Monostate dummy;
+        // `dummy` is initialized in a `constexpr` context by both the default
+        // and the `nullopt` constructors. This prevents `T`'s default
+        // constructor from being called there. One member must be initialized
+        // in a `constexpr` context.
+        // TODO: `dummy` is supposed to be not required in C++20, but for some
+        // reason this won't compile without it yet.
+        Monostate dummy;
         T storage;
     };
     using Value = T;
     bool1 has_some = false;
 
-    // If `T` is default-constructible, use the default constructor.
-    constexpr OptionalValueStorage() {
-        this->construct();
-    };
+    constexpr OptionalValueStorage() : dummy{}, has_some(false){};
 
     // If `T` is forwarded arguments by the `in_place` `cat::Optional`
     // constructor, then construct it in-place with those arguments.
-    template <typename... Ts>
-    constexpr OptionalValueStorage(Ts... args) {
+    template <typename... Args>
+    constexpr OptionalValueStorage(Args... args) {
         this->construct(args...);
     }
 
@@ -76,12 +66,14 @@ struct OptionalValueStorage {
     // If `T` is trivially move-constructible, use this simple move constructor.
     constexpr OptionalValueStorage(T&& in_value) requires(
         is_trivially_move_constructible<T>)
+        // TODO: Should this be a `move`?
         : storage(forward<T>(in_value)), has_some(true){};
 
     // If `T` is not trivially move-constructible, then manually invoke
     // `cat::move` on it.
-    OptionalValueStorage(T&& in_value) requires(
+    constexpr OptionalValueStorage(T&& in_value) requires(
         is_move_constructible<T> && !is_trivially_move_constructible<T>) {
+        // TODO: Should this be a `move`?
         this->construct(forward<T>(in_value));
         this->has_some = true;
     }
@@ -91,7 +83,8 @@ struct OptionalValueStorage {
         !is_move_constructible<T>) = delete;
 
     // `nullopt` initializes this without a value.
-    constexpr OptionalValueStorage(cat::detail::NullOpt) : has_some(false){};
+    constexpr OptionalValueStorage(detail::NullOpt)
+        : dummy{}, has_some(false){};
 
     // If other destructors are not conditionally specialized by their
     // `requires`, they should be `default` or deleted.
@@ -182,7 +175,7 @@ struct OptionalValueStorage {
     // Construct an object at the address of the held `storage`.
     template <typename... Args>
     constexpr void construct(Args&&... args) {
-        new (cat::addressof(this->storage)) T(forward<Args>(args)...);
+        construct_at(addressof(this->storage), forward<Args>(args)...);
         this->has_some = true;
     }
 
@@ -222,8 +215,7 @@ struct OptionalReferenceStorage {
         is_convertible<U, T>)
         : p_storage(cat::addressof(forward<U>(in_value))){};
 
-    constexpr OptionalReferenceStorage(cat::detail::NullOpt)
-        : p_storage(nullptr){};
+    constexpr OptionalReferenceStorage(detail::NullOpt) : p_storage(nullptr){};
 
     // Rebind the reference if this is assigned a new value.
     template <typename U>
@@ -292,6 +284,7 @@ struct OptionalReferenceStorage {
 template <typename T>
 struct OptionalPredicateStorage {
     using Value = typename T::PredicateType;
+    // TODO: Make this a `union` like `OptionalValueStorage`.
     Value storage;
 
     constexpr OptionalPredicateStorage() = default;
@@ -351,7 +344,7 @@ struct OptionalPredicateStorage {
         }
     }
 
-    constexpr OptionalPredicateStorage(cat::detail::NullOpt)
+    constexpr OptionalPredicateStorage(detail::NullOpt)
         : storage(T::sentinel_value){};
 
     // If other assignment operators are not conditionally specialized by their
@@ -461,7 +454,7 @@ class Optional {
     using Storage =
         Conditional<is_void<T>,
             // If `T` is `void`:
-            OptionalValueStorage<cat::Monostate>,
+            OptionalValueStorage<Monostate>,
 		Conditional<requires {
                    // T::predicate_function(T::Type());
                     T::sentinel_value;
@@ -487,9 +480,9 @@ class Optional {
     // `Optional`s can be constructed with `in_place` to have their storage
     // constructed, unless they are reference types. Without this tag, the
     // storage would be uninitialized.
-    template <typename... Ts>
-    constexpr Optional(cat::detail::InPlace,
-                       Ts... args) requires(!is_reference<T>) {
+    template <typename... Args>
+    constexpr Optional(detail::InPlace,
+                       Args... args) requires(!is_reference<T>) {
         this->storage.construct(args...);
     }
 
@@ -518,18 +511,16 @@ class Optional {
         this->storage.assign(input);
     }
 
-    // TODO: This causes ambiguities with the `Optional<U>` constructor.
-    // template <typename U>
-    // constexpr Optional(Optional<U>&& input) requires(
-    //     is_convertible<U, Value>) {
-    //     this->storage.assign(forward<Optional<U>>(input));
-    // }
+    template <typename U>
+    constexpr Optional(Optional<U>&& input) requires(is_convertible<U, Value>) {
+        this->storage.assign(forward<Optional<U>>(input));
+    }
 
     // Consuming `nullopt` is forwarded to `storage`.
-    constexpr Optional(cat::detail::NullOpt) : storage(nullopt){};
+    constexpr Optional(detail::NullOpt) : storage(nullopt){};
 
     // Consuming `monostate` default-initializes the `Optional`.
-    constexpr Optional(cat::Monostate) : storage(Value{}){};
+    constexpr Optional(Monostate) : storage(Value{}){};
 
     // Any `Optional` can convert into another.
     template <typename U>
@@ -577,7 +568,7 @@ class Optional {
     }
 
     // Assigning `nullopt` destroys any value.
-    auto operator=(cat::detail::NullOpt) -> Optional& {
+    auto operator=(detail::NullOpt) -> Optional& {
         this->storage.hard_reset();
         return *this;
     }

@@ -2,15 +2,12 @@
 // vim: set ft=cpp:
 #pragma once
 
-namespace cat {
+namespace std {
 
-void copy_memory(void const* p_source, void* p_destination, ssize bytes);
-
-void copy_memory_small(void const* p_source, void* p_destination, ssize bytes);
-
-// `cat::address_of()` should be used instead of a `&` for containers that might
+// `address_of()` should be used instead of a `&` for containers that might
 // hold a generic object, because this will produce correct results even if a
 // `&` prefix operator has been overloaded.
+// When this is defined in `std::`, GCC 12 can inline it for GDB.
 template <typename T>
 constexpr auto addressof(T& value) -> T* {
     return __builtin_addressof(value);
@@ -19,11 +16,13 @@ constexpr auto addressof(T& value) -> T* {
 template <typename T>
 constexpr auto addressof(T const&& value) -> T const* = delete;
 
+// When this is defined in `std::`, GCC can constant-evaluate it.
 // Call an in-place constructor at any address.
 template <typename T, typename... Args>
-constexpr auto construct_at(T* p_place, Args&&... arguments) {
+constexpr auto construct_at(T* p_place, Args&&... arguments) -> decltype(auto) {
     // TODO: Assert that alignment constraints are satisfied.
-    return new (p_place) T{std::forward<Args>(arguments)...};
+    return new (const_cast<void*>(static_cast<void const volatile*>(p_place)))
+        T{forward<Args>(arguments)...};
 }
 
 // Call an in-place destructor at any place.
@@ -32,6 +31,18 @@ constexpr void destroy_at(T* p_place) {
     p_place->~T();
 }
 
+}  // namespace std
+
+namespace cat {
+
+void copy_memory(void const* p_source, void* p_destination, ssize bytes);
+
+void copy_memory_small(void const* p_source, void* p_destination, ssize bytes);
+
+using std::addressof;
+using std::construct_at;
+using std::destroy_at;
+
 }  // namespace cat
 
-using cat::addressof;
+using std::addressof;
