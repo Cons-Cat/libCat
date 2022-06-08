@@ -60,6 +60,6 @@ auto load_base_stack_pointer() -> void*;
 }
 
 // NOLINTNEXTLINE `_stack_chk_fail()` must begin with an underscore.
-extern "C" void __stack_chk_fail();
+extern "C" [[noreturn]] void __stack_chk_fail();
 
 }  // namespace cat

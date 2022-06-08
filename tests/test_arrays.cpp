@@ -73,6 +73,8 @@ void meow() {
     cat::Array implicit_array_2{0, 1, 2, 3, 4};
     cat::Array implicit_array_3(0, 1, 2, 3, 4);
     static_assert(implicit_array_1.size() == 5);
+    static_assert(implicit_array_1.capacity() == 5);
+    _ = implicit_array_1.capacity();
     static_assert(implicit_array_2.size() == 5);
     static_assert(implicit_array_3.size() == 5);
 
