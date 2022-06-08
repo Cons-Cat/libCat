@@ -227,7 +227,7 @@ requires(is_same<typename InAbi::Scalar, T>) class alignas(
 
     // Compare greater-than-or-equal for each lane to another `Simd`'s lanes,
     // and store the results in a new `Simd`.
-    constexpr auto operator>=(Vector const& operand) const -> Vector& {
+    constexpr auto operator>=(Vector const& operand) const -> Vector {
         return this->raw >= operand.raw;
     }
 
@@ -254,7 +254,7 @@ requires(is_same<typename InAbi::Scalar, T>) class alignas(
 
     // Compare less-than-or-equal for each lane to another `Simd`'s lanes,
     // and store the results in a new `Simd`.
-    constexpr auto operator<=(Vector const& operand) const -> Vector& {
+    constexpr auto operator<=(Vector const& operand) const -> Vector {
         return this->raw <= operand.raw;
     }
 

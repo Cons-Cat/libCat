@@ -20,11 +20,26 @@ namespace detail {
 
     // clang-format off
     template <typename T>
-    concept IsBoundedCollection = requires(T collection) {
+    // Parentheses are required here to make cppcheck work.
+    concept IsBoundedCollection = (requires(T collection) {
         collection.size();
-    } || requires(T collection) {
+    }) || (requires(T collection) {
         collection.capacity();
-    };
+    });
+    // clang-format on
+
+    // If `.size()` is provided and can be constant-evaluated, and `.capacity()`
+    // is not provided, then the length of this collection is assumed to be
+    // constant.
+    // clang-format off
+    template <typename T>
+    concept HasConstLength = (requires {
+        // If it has a `constexpr` `.size()` member.
+        constant_evaluate(T{}.size());
+    }) && (!requires {
+        // And if it does not have a `.capacity()` member.
+        T{}.capacity();
+    });
     // clang-format on
 }  // namespace detail
 
@@ -33,17 +48,6 @@ class CollectionFacade {
     constexpr static bool is_array_like =
         detail::IsContiguousCollection<Derived> &&
         detail::IsBoundedCollection<Derived>;
-
-    // clang-format off
-    // If `.size()` is provided and can be constant-evaluated, and `.capacity()`
-    // is not provided, then the length of this collection is assumed to be
-    // constant.
-    constexpr static bool has_const_length = requires {
-        constant_evaluate(Derived{}.size());
-    } && !requires {
-        Derived{}.capacity();
-    };
-    // clang-format on
 
     constexpr auto self_mut() -> Derived& {
         return static_cast<Derived&>(*this);
@@ -135,7 +139,7 @@ class CollectionFacade {
     // Index into this collection with bounds-checking.
     [[nodiscard]] constexpr auto at(ssize const index) -> Optional<T&>
     requires(is_array_like) {
-        Result{index >= 0}.assert();
+        Result(index >= 0).assert();
         if (index < this->self().capacity()) {
             return this->self_mut().p_data()[index.raw];
         }

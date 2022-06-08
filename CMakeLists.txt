@@ -12,7 +12,6 @@ list(
   -nostdlib
   -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
   -fno-stack-protector # This is required for threads to work.
-  # `-march=native` does not compile on some computers, apparently.
   -msse4.2
   -mavx2
   -mfma
@@ -25,7 +24,7 @@ list(
   # These flags cause clang-tidy 12 to crash:
   -fconcepts-diagnostics-depth=2
   -fmax-errors=4
-  
+
   -Wall -Wextra
   # The following warnings are counter-productive for a basic-level library:
   -Wno-unused-function

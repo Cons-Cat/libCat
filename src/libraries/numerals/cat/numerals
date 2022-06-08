@@ -565,6 +565,7 @@ template <typename T>
     } else if constexpr (sizeof(T) == 8) {
         return ssize{__builtin_clzll(raw_value)};
     }
+    __builtin_unreachable();
 }
 
 // TODO: Make this `constexpr`.
@@ -577,6 +578,7 @@ template <typename T>
     } else if constexpr (sizeof(T) == 8) {
         return ssize{__builtin_ctzll(raw_value)};
     }
+    __builtin_unreachable();
 }
 
 // These macros are defined by the GCC compiler.

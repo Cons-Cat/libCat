@@ -28,7 +28,7 @@ requires(sizeof...(Args) < 7) {
     } else if constexpr (length == 5) {
         result = nix::syscall5(call, arguments[0], arguments[1], arguments[2],
                                arguments[3], arguments[4]);
-    } else if constexpr (length == 6) {
+    } else {
         result = nix::syscall6(call, arguments[0], arguments[1], arguments[2],
                                arguments[3], arguments[4], arguments[5]);
     }
