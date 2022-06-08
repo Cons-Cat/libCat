@@ -2,15 +2,13 @@
 // vim: set ft=cpp:
 #pragma once
 
+template <typename T, typename U>
 // Optimizing this function counter-intuitively seems to compile faster. It also
 // inlines this function, resulting in a smaller debug binary.
-#pragma GCC push_options
-#pragma GCC optimize("O1")
-
-// Bit-casting a type can violate alignment assumptions, so that UBSan check is
-// disabled here.
-template <typename T, typename U>
-[[gnu::always_inline, gnu::no_sanitize("alignment")]] constexpr inline auto
+[[gnu::always_inline, gnu::optimize("O1"),
+  // Bit-casting a type can violate alignment assumptions, so that UBSan check
+  // is disabled here.
+  gnu::no_sanitize("alignment")]] constexpr inline auto
 cat::bit_cast(U& from_value) -> T {
     if (__builtin_is_constant_evaluated()) {
         if constexpr (sizeof(from_value) == sizeof(T)) {
@@ -25,5 +23,3 @@ cat::bit_cast(U& from_value) -> T {
         return *p_to;
     }
 }
-
-#pragma GCC pop_options
