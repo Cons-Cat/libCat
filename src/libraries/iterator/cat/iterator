@@ -21,7 +21,7 @@ namespace detail {
 
     template <typename T>
     concept HasDistance = requires(T const it) {
-        it.distance(it);
+        it.distance_to(it);
     };
 
     template <typename T>
@@ -34,11 +34,11 @@ namespace detail {
         using Type = ssize;
     };
 
-    // Case when `T` provides `.distance()`
+    // Case when `T` provides `.distance_to()`
     template <detail::HasDistance T>
     struct InferDifferenceType<T> {
         static T const& it;
-        using Type = decltype(it.distance(it));
+        using Type = decltype(it.distance_to(it));
     };
 
     template <typename...>
@@ -146,18 +146,18 @@ struct IteratorFacade {
         if constexpr (detail::HasEqualTo<Derived>) {
             return left.equal_to(right);
         } else {
-            return left.distance(right) == 0;
+            return left.distance_to(right) == 0;
         }
     }
 
     constexpr friend auto operator==(Derived const& self,
-                                     detail::HasSentinel<Derived> auto)
+                                     detail::HasSentinel<Derived> auto const)
         -> bool {
         return self.at_end();
     }
 
-    constexpr friend auto operator+(Derived left,
-                                    DifferenceTypeArg<Derived> auto offset)
+    constexpr friend auto operator+(
+        Derived const& left, DifferenceTypeArg<Derived> auto const offset)
         -> Derived {
         if constexpr (detail::HasAdvance<Derived>) {
             return left += offset;
@@ -169,8 +169,9 @@ struct IteratorFacade {
         }
     }
 
-    constexpr friend auto operator+(DifferenceTypeArg<Derived> auto offset,
-                                    Derived right) -> Derived {
+    constexpr friend auto operator+(
+        DifferenceTypeArg<Derived> auto const offset, Derived const& right)
+        -> Derived {
         if constexpr (detail::HasAdvance<Derived>) {
             return right += offset;
         } else {
@@ -181,8 +182,8 @@ struct IteratorFacade {
         }
     }
 
-    constexpr friend auto operator+=(Derived& self,
-                                     DifferenceTypeArg<Derived> auto offset)
+    constexpr friend auto operator+=(
+        Derived const& self, DifferenceTypeArg<Derived> auto const offset)
         -> Derived& {
         if constexpr (detail::HasAdvance<Derived>) {
             self.advance(static_cast<int>(offset));
@@ -211,13 +212,8 @@ struct IteratorFacade {
         return copy;
     }
 
-    constexpr friend auto operator-(const Derived& left, const Derived& right)
-        -> Derived& {
-        return right.distance(left);
-    }
-
-    constexpr friend auto operator-(Derived left,
-                                    DifferenceTypeArg<Derived> auto offset)
+    constexpr friend auto operator-(
+        Derived const& left, DifferenceTypeArg<Derived> auto const offset)
         -> Derived {
         if constexpr (detail::HasAdvance<Derived>) {
             return left - offset;
@@ -229,8 +225,8 @@ struct IteratorFacade {
         }
     }
 
-    constexpr friend auto operator-=(Derived& left,
-                                     DifferenceTypeArg<Derived> auto offset)
+    constexpr friend auto operator-=(
+        Derived const& left, DifferenceTypeArg<Derived> auto const offset)
         -> Derived& {
         if constexpr (detail::HasAdvance<Derived>) {
             return left -= offset;
@@ -240,6 +236,12 @@ struct IteratorFacade {
             }
             return left;
         }
+    }
+
+    // Get the distance between two iterators.
+    constexpr friend auto operator-(Derived const& left, Derived const& right)
+        -> ssize {
+        return right.distance_to(left);
     }
 
     // Decrement or advance backwards with prefix notation.
@@ -261,7 +263,7 @@ struct IteratorFacade {
 
     // TODO: This seems incorrect.
     // Random-access.
-    constexpr auto operator[](DifferenceTypeArg<Derived> auto offset)
+    constexpr auto operator[](DifferenceTypeArg<Derived> auto const offset)
         -> decltype(auto) requires(detail::HasAdvance<Derived>) {
         return *(this->self() + offset);
     }
@@ -329,8 +331,8 @@ struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
         ++iterator;
     }
 
-    constexpr auto distance(ReversedIterator<T> const other) const -> ssize {
-        return this->iterator.distance(other.iterator);
+    constexpr auto distance_to(ReversedIterator<T> const other) const -> ssize {
+        return this->iterator.distance_to(other.iterator);
     }
 };
 
