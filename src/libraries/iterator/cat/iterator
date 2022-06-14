@@ -64,6 +64,11 @@ namespace detail {
     };
 
     template <typename T>
+    concept HasAdvanceTo = requires(T it) {
+        it.advance_to(T{});
+    };
+
+    template <typename T>
     concept HasRandomAccess = HasAdvance<T> && HasDistance<T>;
 
     template <typename T>
@@ -99,6 +104,22 @@ struct IteratorFacade {
 
     constexpr auto self() const -> Derived const& {
         return static_cast<Derived const&>(*this);
+    }
+
+    // TODO: Does this work with the reverse iterator adapter?
+    // If `Derived` does not have `.advance_to()`, generate it.
+    constexpr auto advance_to(Derived const& other_iterator)
+        -> Derived const& requires(!detail::HasAdvanceTo<Derived>) {
+        if (other_iterator > this->self()) {
+            while (other_iterator > this->self()) {
+                ++(*this);
+            }
+        } else if (other_iterator < (this->self())) {
+            while (other_iterator < this->self()) {
+                --(*this);
+            }
+        }
+        return this->self();
     }
 
     constexpr auto operator*() -> decltype(auto) {
@@ -241,7 +262,7 @@ struct IteratorFacade {
     // TODO: This seems incorrect.
     // Random-access.
     constexpr auto operator[](DifferenceTypeArg<Derived> auto offset)
-        -> decltype(auto) requires detail::HasAdvance<Derived> {
+        -> decltype(auto) requires(detail::HasAdvance<Derived>) {
         return *(this->self() + offset);
     }
 
@@ -447,6 +468,9 @@ class BackInsertIterator : IteratorFacade<BackInsertIterator<T>> {
     constexpr explicit BackInsertIterator(T& input_iterable)
         : iterable(input_iterable){};
 
+    template <typename U>
+    constexpr auto operator=(U& value) = delete;
+
     // `.insert()` is used instead of an overloaded `=` because it might
     // need to take an allocator parameter.
 
@@ -462,12 +486,6 @@ class BackInsertIterator : IteratorFacade<BackInsertIterator<T>> {
 
     template <typename U>
     constexpr auto insert(U& value) -> BackInsertIterator<T>& {
-        this->iterable.push_back(value);
-        return *this;
-    }
-
-    template <typename U>
-    constexpr auto operator=(U& value) -> BackInsertIterator<T>& {
         this->iterable.push_back(value);
         return *this;
     }
@@ -538,6 +556,9 @@ class FrontInsertIterator : IteratorFacade<FrontInsertIterator<T>> {
     constexpr explicit FrontInsertIterator(T& input_iterable)
         : iterable(input_iterable){};
 
+    template <typename U>
+    constexpr auto operator=(U& value) = delete;
+
     // `.insert()` is used instead of an overloaded `=` because it might
     // need to take an allocator parameter.
 
@@ -553,12 +574,6 @@ class FrontInsertIterator : IteratorFacade<FrontInsertIterator<T>> {
 
     template <typename U>
     constexpr auto insert(U& value) -> FrontInsertIterator<T>& {
-        this->iterable.push_front(value);
-        return *this;
-    }
-
-    template <typename U>
-    constexpr auto operator=(U& value) -> FrontInsertIterator<T>& {
         this->iterable.push_front(value);
         return *this;
     }
