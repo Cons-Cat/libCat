@@ -160,9 +160,6 @@ requires(TypeList<Ts...>::is_unique_list) class Variant {
 
     template <typename T>
     constexpr auto value() -> T& requires(Types::template has_type<T>) {
-        // TODO: Make this assert work.
-        // Result(this->is_type<T>).assert();
-
         // This cast is safe when the precondition holds true.
         return *reinterpret_cast<T*>(&this->storage);
     }
@@ -170,9 +167,6 @@ requires(TypeList<Ts...>::is_unique_list) class Variant {
     template <typename T>
     constexpr auto value() const
         -> T const& requires(Types::template has_type<T>) {
-        // TODO: Make this assert work.
-        // Result(this->is_type<T>).assert();
-
         // This cast is safe when the precondition holds true.
         return *reinterpret_cast<T const* const>(&this->storage);
     }

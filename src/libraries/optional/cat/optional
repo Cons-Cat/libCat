@@ -579,32 +579,17 @@ class Optional {
 
     // Get the `storage` unconditionally.
     [[nodiscard]] constexpr auto value() & -> Value& {
-        Result(this->has_value())
-            .assert(
-                // "`.value()` was illegally called on an `Optional` which "
-                // "did not hold a value!\n"
-            );
         return this->storage.value();
     }
 
     // Get the const-qualified `storage` unconditionally.
     [[nodiscard]] constexpr auto value() const& -> Value const& {
-        Result(this->has_value())
-            .assert(
-                // "`.value()` was illegally called on an `Optional` which "
-                // "did not hold a value!\n"
-            );
         return this->storage.value();
     }
 
     // Move the `storage` unconditionally. Reference types cannot be moved.
     [[nodiscard]] constexpr auto value() && -> Value&& requires(
         !is_reference<T>) {
-        Result(this->has_value())
-            .assert(
-                // "`.value()` was illegally called on an `Optional` which "
-                // "did not hold a value!\n"
-            );
         return cat::move(this->storage.value());
     }
 
@@ -612,11 +597,6 @@ class Optional {
     // cannot be moved.
     [[nodiscard]] constexpr auto value() const&& -> Value const&& requires(
         !is_reference<T>) {
-        Result(this->has_value())
-            .assert(
-                // "`.value()` was illegally called on an `Optional` which "
-                // "did not hold a value!\n"
-            );
         return cat::move(this->storage.value());
     }
 
@@ -660,13 +640,6 @@ class Optional {
     // raw pointer, this is equivalent to `.value()`, otherwise this is
     // equivalent to `addressof(optional.value())`.
     [[nodiscard]] constexpr auto p_value() {
-        if (!is_constant_evaluated()) {
-            Result(this->has_value())
-                .assert(
-                    // "`.value()` was illegally called on an `Optional` which "
-                    // "did not hold a value!\n"
-                );
-        }
         if constexpr (is_pointer<Value>) {
             return this->storage.value();
         } else {
@@ -678,12 +651,6 @@ class Optional {
     // raw pointer, this is equivalent to `.value()`, otherwise this is
     // equivalent to `addressof(optional.value())`.
     [[nodiscard]] constexpr auto p_value() const {
-        if (!is_constant_evaluated()) {
-            Result(this->has_value())
-                .assert(
-                    "`.value()` was illegally called on an `Optional` which "
-                    "did not hold a value!\n");
-        }
         if constexpr (is_pointer<Value>) {
             return this->storage.value();
         } else {
@@ -892,7 +859,7 @@ class Optional {
     }
 
     // Invoke a callback iff a `const`-qualified move-only `Optional` holds no
-    // value.  This callback can return `void` or an `Optional`.
+    // value. This callback can return `void` or an `Optional`.
     template <typename Function>
     [[nodiscard]] constexpr auto or_else(Function&& callback) const&& {
         using U = decltype(callback());
