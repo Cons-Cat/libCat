@@ -84,7 +84,7 @@ class CollectionFacade {
             constexpr void advance(ssize const offset) {
                 this->current_index += offset;
             }
-            constexpr auto distance(Iterator const& other) const -> ssize {
+            constexpr auto distance_to(Iterator const& other) const -> ssize {
                 return other.current_index - current_index;
             }
 
