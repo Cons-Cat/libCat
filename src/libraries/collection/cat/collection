@@ -33,13 +33,10 @@ namespace detail {
     // constant.
     // clang-format off
     template <typename T>
-    concept HasConstLength = (requires {
+    concept HasConstLength = requires(T t) {
         // If it has a `constexpr` `.size()` member.
-        constant_evaluate(T{}.size());
-    }) && (!requires {
-        // And if it does not have a `.capacity()` member.
-        T{}.capacity();
-    });
+        constant_evaluate(t.size());
+    };
     // clang-format on
 }  // namespace detail
 
@@ -143,7 +140,8 @@ class CollectionFacade {
   public:
     // If `.size()` is provided and `.capacity()` is not, generate
     // `.capacity()`.
-    [[nodiscard]] constexpr auto capacity() const -> ssize {
+    [[nodiscard]] constexpr auto capacity() const -> ssize
+        requires(detail::HasConstLength<Derived>) {
         return this->self().size();
     }
 
