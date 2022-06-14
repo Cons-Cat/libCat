@@ -64,6 +64,9 @@ void meow() {
         Result(a == array_1[count]).or_panic();
     }
 
+    int4 array_to = *(array_1.begin().advance_to(--array_1.end()));
+    Result(array_to == array_1.back()).or_panic();
+
     // Index in and out of bounds.
     Result(array_1.at(0).value() == 5).or_panic();
     Result(!array_1.at(6).has_value()).or_panic();

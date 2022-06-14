@@ -87,6 +87,24 @@ class CollectionFacade {
             constexpr auto distance(Iterator const& other) const -> ssize {
                 return other.current_index - current_index;
             }
+
+            // TODO: Implement these in terms of `<=>`.
+            constexpr auto operator<(Iterator const& other_iterator) const
+                -> bool {
+                return this->current_index < other_iterator.current_index;
+            }
+            constexpr auto operator<=(Iterator const& other_iterator) const
+                -> bool {
+                return this->current_index <= other_iterator.current_index;
+            }
+            constexpr auto operator>(Iterator const& other_iterator) const
+                -> bool {
+                return this->current_index > other_iterator.current_index;
+            }
+            constexpr auto operator>=(Iterator const& other_iterator) const
+                -> bool {
+                return this->current_index >= other_iterator.current_index;
+            }
         };
 
         // Produce an iterator to have its type deduced later.
