@@ -78,9 +78,17 @@ class String : public Span<char const> {
         this->length = move(string).length;
     }
 
-    constexpr auto substring(ssize const position, ssize const count)
-        -> String {
+    [[nodiscard]] constexpr auto substring(ssize const position,
+                                           ssize const count) -> String {
         return String{this->p_storage + position, count};
+    }
+
+    [[nodiscard]] constexpr auto remove_prefix(ssize const offset) -> String {
+        return this->substring(offset, this->length - offset);
+    }
+
+    [[nodiscard]] constexpr auto remove_suffix(ssize const offset) -> String {
+        return this->substring(0, this->length - offset);
     }
 
     constexpr auto find_small(char const character,
@@ -520,23 +528,23 @@ struct FormatHandler {
 };
 
 template <detail::FormatAllocator Allocator>
-constexpr void parse_format_string(
-    String const& format,
-    detail::FormatOutputIterator<Allocator> output_iterator) {
+constexpr void parse_format_string(String const format,
+                                   FormatHandler<Allocator>&& handler) {
     char const* p_first = format.p_data();
     char const* p_last = format.p_data() + format.size();
-    constexpr char1x_ open_braces = value_list<char, '{', char1x_::lanes>;
-    constexpr char1x_ close_braces = value_list<char, '}', char1x_::lanes>;
+    constexpr char1x_ open_braces = char1x_::filled('{');
+    constexpr char1x_ close_braces = char1x_::filled('}');
+    String remainder = format;
 
     // Parse the entire string:
     while (p_first != p_last) {
         if (*p_first != '{') {
             // TODO: Handle no value.
             char const* p_open_curly =
-                format.p_data() + format[format.find('{').value()];
+                remainder.p_data() + remainder[remainder.find('{').value()];
             // TODO: Make this begin the search from NOT position `0`:
             char const* p_close_curly =
-                format.p_data() + format[format.find('}').value()];
+                remainder.p_data() + remainder[remainder.find('}').value()];
 
             // Parse an argument:
             while (true) {
