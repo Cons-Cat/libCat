@@ -50,8 +50,7 @@ struct MonostateStorage {
         return this->storage;
     };
 
-    constexpr auto operator=(cat::Monostate const)
-        -> MonostateStorage<T, state>& {
+    constexpr auto operator=(Monostate const) -> MonostateStorage<T, state>& {
         return *this;
     }
 

@@ -192,7 +192,7 @@ namespace detail {
     // This represents precisely 16 alternatives to fill 4 bits in
     // `FormatArgumentCompactIndex`.
     enum class FormatDiscriminant : unsigned char {
-        none_type = 0,
+        automatic_type = 0,  // This type is deduced from a variadic argument.
         // These types are sorted for fast alternative checking.
         int1_type,
         uint1_type,
@@ -220,7 +220,7 @@ namespace detail {
 
         // Get the discriminant value that represents `T`.
         template <typename T>
-        static constexpr auto alternative() -> FormatDiscriminant {
+        static consteval auto alternative() -> FormatDiscriminant {
             FormatTypeConstant type;
             type.template set_alternative<T>();
             return type.discriminant;
@@ -508,21 +508,17 @@ class FormatParseContext {
     }
 };
 
-template <typename Iterator>
-struct FormatContext {
-    //
-};
-
 // Stores callbacks for the default `Formatter`.
 template <detail::FormatAllocator Allocator>
 struct FormatHandler {
+    detail::FormatOutputIterator<Allocator> output_iterator;
     String const string;
+    // TODO: A more complex contex object will be needed to support locale and
+    // wide chars:
     FormatArguments const arguments;
-    BackInsertIterator<detail::FormatOutputIterator<Allocator>> output_iterator;
 
-    FormatHandler(
-        BackInsertIterator<detail::FormatOutputIterator<Allocator>> iterator,
-        String const& in_string, FormatArguments& in_arguments)
+    FormatHandler(detail::FormatOutputIterator<Allocator> iterator,
+                  String const& in_string, FormatArguments& in_arguments)
         : output_iterator(iterator),
           string(in_string),
           arguments(in_arguments){};
@@ -542,8 +538,6 @@ constexpr void parse_format_string(String const format,
                                    FormatHandler<Allocator>&& handler) {
     char const* p_first = format.p_data();
     char const* p_last = format.p_data() + format.size();
-    constexpr char1x_ open_braces = char1x_::filled('{');
-    constexpr char1x_ close_braces = char1x_::filled('}');
     String remainder = format;
 
     // Parse the entire string:
