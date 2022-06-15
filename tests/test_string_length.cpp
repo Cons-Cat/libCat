@@ -1,3 +1,4 @@
+#include <cat/allocators>
 #include <cat/string>
 #include <cat/utility>
 
@@ -62,6 +63,19 @@ void meow() {
         "efz";
     ssize z = find_string_2.find('z').or_panic();
     Result(z == 72).or_panic();
+
+    // Make allocator for string formatting.
+    cat::PageAllocator pager;
+    void* p_page = pager.p_malloc(4_ki).value();
+    cat::LinearAllocator allocator{p_page, 4_ki};
+
+    // Test `int4` conversion.
+    cat::String int_string = cat::to_chars(allocator, 10);
+    Result(cat::compare_strings(int_string, "10")).or_panic();
+    Result(int_string.size() == 3).or_panic();
+
+    // TODO: Make this work.
+    // constexpr cat::String const_int_string = cat::to_chars(10);
 
     cat::exit();
 }

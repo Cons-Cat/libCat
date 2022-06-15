@@ -12,6 +12,8 @@
 #include <cat/span>
 #include <cat/utility>
 
+#include "detail/itoa_jeaiii.hpp"
+
 // `__SIZE_TYPE__` is a GCC macro.
 // Deprecated call to `memcpy()`. Consider using `copy_buffer()` instead.
 // `memcpy()` exists to enable some GCC optimizations.
@@ -382,6 +384,14 @@ namespace detail {
         allocator.template malloc<AllocationU>();
     };
 }  // namespace detail
+
+// TODO: Should these be moved elsewhere?
+auto to_chars(auto& allocator, int4 const value) -> String {
+    char* p_string = allocator.template p_malloc<char>(11).value();
+    detail::i32toa_jeaiii(value.raw, p_string);
+    // TODO: Get the length of this integer faster.
+    return String{p_string};
+}
 
 template <typename...>
 struct FormatBuffer {};
