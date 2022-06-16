@@ -77,5 +77,13 @@ void meow() {
     // TODO: Make this work.
     // constexpr cat::String const_int_string = cat::to_chars(10);
 
+    // static_assert(requires {
+    //     // cat::Iterable<cat::FormatBufferBase<cat::LinearAllocator>>;
+    //     cat::Iterable<cat::Optional<int>>;
+    // });
+
+    allocator.reset();
+    cat::format(allocator, "{}", 10);
+
     cat::exit();
 }
