@@ -376,19 +376,24 @@ concept InputOrOutputIterator = requires(T it) {
 } && WeaklyIncrementable<T>;
 // clang-format on
 
+template <typename T>
+using IteratorReference = decltype(*declval<T&>());
+
 template <typename Outputter, typename T>
-concept IndirectlyWritable = requires(Outputter&& output, T&& it) {
-    *output = forward<T>(it);
-    *forward<Outputter>(output) = forward<T>(it);
-    const_cast<IsReferenceTrait<Outputter> const&&>(*output) = forward<T>(it);
-    const_cast<IsReferenceTrait<Outputter> const&&>(
-        *forward<Outputter>(output)) = forward<T>(it);
+concept IndirectlyWritable = requires(Outputter&& outputter, T&& value) {
+    *outputter = forward<T>(value);
+    *forward<Outputter>(outputter) = forward<T>(value);
+    const_cast<IteratorReference<Outputter> const&&>(*outputter) =
+        forward<T>(value);
+    const_cast<IteratorReference<Outputter> const&&>(
+        *forward<Outputter>(outputter)) = forward<T>(value);
 };
 
 template <typename Outputter, typename T>
 concept OutputIterator = InputOrOutputIterator<Outputter> &&
-    IndirectlyWritable<Outputter, T> && requires(Outputter it, T&& value) {
-    *it++ = forward<T>(it);
+    IndirectlyWritable<Outputter, T> &&
+    requires(Outputter outputter, T&& value) {
+    *outputter++ = forward<T>(value);
 };
 
 template <Iterable T>
