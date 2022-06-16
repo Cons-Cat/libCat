@@ -189,6 +189,16 @@ auto compare_strings(String const& string_1, String const& string_2) -> bool1;
 
 // Formatting
 namespace detail {
+    // TODO: Extract a `cat/allocators/detail/allocators_fwd.hpp` header.
+    // `#include <cat/allocators>` introduces a circular dependency, so a
+    // redundant allocator `concept` is specified here.
+    template <typename AllocatorT, typename AllocationU = void*>
+    concept FormatAllocator = requires(AllocatorT allocator) {
+        // Every allocator has a `.malloc()` method.
+        allocator.malloc(ssizeof<AllocationU>());
+        allocator.template malloc<AllocationU>();
+    };
+
     // This represents precisely 16 alternatives to fill 4 bits in
     // `FormatArgumentCompactIndex`.
     enum class FormatDiscriminant : unsigned char {
@@ -275,11 +285,11 @@ struct FormatArgumentCompactIndex {
 template <typename... Ts>
 struct FormatArgumentsCompactStorage {
     static constexpr ssize::Raw argument_count = sizeof...(Ts);
-    FormatArgumentCompactIndex indices[argument_count];
+    FormatArgumentCompactIndex arguments_indices[argument_count];
 
-    // TODO: This array length might need to be larger if the type is
-    // `FormatDiscriminant::other_type`.
-    Byte raw_storage[argument_count];
+    // TODO: This array length might need to be larger if the any arguments'
+    // type is `FormatDiscriminant::other_type`.
+    Byte arguments_storage[argument_count];
 
   private:
     // For every type passed into the constructor, pack it into the arrays
@@ -288,12 +298,12 @@ struct FormatArgumentsCompactStorage {
     void store_argument(ssize const argument_index, T&& value) {
         // Place `value` into `raw_storage`.
         ssize const storage_index =
-            this->indices[argument_index.raw].byte_index;
-        copy_memory(this->raw_storage + storage_index, addressof(value),
-                    sizeof(T));
+            this->arguments_indices[argument_index.raw].byte_index;
+        copy_memory(this->arguments_storage + storage_index, addressof(value),
+                    ssizeof<T>());
 
         // Assign `T` to that storage.
-        this->indices[argument_index.raw].discriminant =
+        this->arguments_indices[argument_index.raw].discriminant =
             detail::FormatTypeConstant::alternative<T>();
 
         // Set the `raw_storage` byte offset for the next value, iff there
@@ -301,14 +311,14 @@ struct FormatArgumentsCompactStorage {
         if (argument_index.raw + 1 <
             sizeof...(Ts)) {  // TODO: Explore whether `[[likely]]` improves
                               // performance here.
-            this->indices[argument_index.raw + 1].byte_index =
-                indices[storage_index.raw + sizeof(T)];
+            this->arguments_indices[argument_index.raw + 1].byte_index =
+                storage_index.raw + sizeof(T);
         }
     }
 
   public:
     FormatArgumentsCompactStorage(Ts&&... types) {
-        raw_storage[0] = {};
+        arguments_storage[0] = {};
         ssize argument_index = 0;
         // `argument_index` increments per call to `.store()`.
         (this->store_argument(argument_index++, forward<Ts>(types)), ...);
@@ -318,25 +328,39 @@ struct FormatArgumentsCompactStorage {
 // Formatting arguments are packed into a small type-erased array to
 // conserve storage.
 struct FormatArguments {
-    FormatArgumentCompactIndex* p_packed_types;
-    ssize argument_count;
+    FormatArgumentCompactIndex const* p_arguments_indices;
+    ssize const argument_count;
 
     template <typename... Ts>
     explicit constexpr FormatArguments(
-        FormatArgumentsCompactStorage<Ts...> const storage)
-        : p_packed_types(storage.indices),
+        FormatArgumentsCompactStorage<Ts...> const& storage)
+        : p_arguments_indices(&(storage.arguments_indices[0])),
           argument_count(storage.argument_count){};
 
-    constexpr auto operator[](ssize const index) -> detail::FormatTypeConstant {
-        return detail::FormatTypeConstant{
-            p_packed_types[index.raw].discriminant};
+    // Unpack a formatting argument from the type-erased storage.
+    template <typename T>
+    auto get(ssize const argument_index) const -> T {
+        // Get the storage index out from the indices array.
+        ssize const storage_index =
+            (this->p_arguments_indices + argument_index)->byte_index;
+
+        // Offset the pointer to the array of indices by the length of that
+        // array. That produces a pointer to the next struct member, which
+        // happens to be the raw storage array.
+        Byte const* const p_storage = reinterpret_cast<Byte const* const>(
+            this->p_arguments_indices + argument_count);
+
+        Byte const* p_data = p_storage + storage_index;
+        return *bit_cast<T const*>(p_data);
     }
 };
 
 // To prevent redundant template specializations for a container's
 // `BackInsertIterator`, it is wrapped by virtual function dispatch in this
 // container.
-struct FormatBufferWrapper : CollectionFacade<FormatBufferWrapper, char> {
+template <detail::FormatAllocator Allocator>
+struct FormatBufferBase
+    : public CollectionFacade<FormatBufferBase<Allocator>, char> {
     char* p_string;
     ssize length;
     ssize max_length;
@@ -373,18 +397,6 @@ struct FormatBufferWrapper : CollectionFacade<FormatBufferWrapper, char> {
     }
 };
 
-// TODO: Extract a `cat/allocators/detail/allocators_fwd.hpp` header.
-namespace detail {
-    // `#include <cat/allocators>` introduces a circular dependency, so a
-    // redundant allocator `concept` is specified here.
-    template <typename AllocatorT, typename AllocationU = void*>
-    concept FormatAllocator = requires(AllocatorT allocator) {
-        // Every allocator has a `.malloc()` method.
-        allocator.malloc(ssizeof<AllocationU>());
-        allocator.template malloc<AllocationU>();
-    };
-}  // namespace detail
-
 // TODO: Should these be moved elsewhere?
 auto to_chars(auto& allocator, int4 const value) -> String {
     char* p_string = allocator.template p_malloc<char>(11).value();
@@ -394,24 +406,25 @@ auto to_chars(auto& allocator, int4 const value) -> String {
 }
 
 template <typename...>
-struct FormatBuffer {};
+struct FormatBufferIterator {};
 
 template <detail::FormatAllocator Allocator, typename Outputter>
-struct FormatBuffer<Allocator, Outputter> : FormatBufferWrapper {
+struct FormatBufferIterator<Allocator, Outputter>
+    : FormatBufferBase<Allocator> {
     using Container = typename Outputter::Container;
     Allocator& allocator;
     Outputter& output_iterator;
 
     // To optimize common usage, `256` bytes of storage is reserved on
     // stack.
-    char p_storage[256];
+    char storage[256];
 
-    FormatBuffer(Allocator& in_allocator, Outputter& iterator)
+    FormatBufferIterator(Allocator& in_allocator, Outputter& iterator)
         : allocator(in_allocator), output_iterator(iterator){};
 
     auto flush() -> Optional<void> {
         ssize size = this->size();
-        char const* p_end = p_storage + size;
+        char const* p_end = storage + size;
         this->clear();
 
         if constexpr (CollectionTraits<Container>::is_array_like) {
@@ -436,8 +449,8 @@ struct FormatBuffer<Allocator, Outputter> : FormatBufferWrapper {
     }
 };
 
-template <typename T>
-struct FormatBuffer<T*> : FormatBufferWrapper {
+template <detail::FormatAllocator Allocator, typename T>
+struct FormatBufferIterator<Allocator, T*> : FormatBufferBase<Allocator> {
     // `.grow()` for a `T[]` is no-op.
     auto grow() -> Optional<void> {
         return monostate;
@@ -446,9 +459,9 @@ struct FormatBuffer<T*> : FormatBufferWrapper {
 
 namespace detail {
     // One back-insert iterator type should be used, to ensure type-erasure.
-    template <FormatAllocator Allocator>
-    using FormatOutputIterator =
-        BackInsertIterator<FormatBuffer<Allocator, char>>;
+    // template <FormatAllocator Allocator>
+    // using FormatContiguousOutputIterator =
+    //     typename BackInsertIterator<FormatBufferBase<Allocator>>;
 }  // namespace detail
 
 // Holds the format string parsing state consisting of the string's range and a
@@ -511,20 +524,25 @@ class FormatParseContext {
 // Stores callbacks for the default `Formatter`.
 template <detail::FormatAllocator Allocator>
 struct FormatHandler {
-    detail::FormatOutputIterator<Allocator> output_iterator;
+    Allocator& allocator;
+    // detail::FormatContiguousOutputIterator<Allocator> output_iterator;
+    BackInsertIterator<String> output_iterator;
     String const string;
     // TODO: A more complex contex object will be needed to support locale and
     // wide chars:
     FormatArguments const arguments;
 
-    FormatHandler(detail::FormatOutputIterator<Allocator> iterator,
-                  String const& in_string, FormatArguments& in_arguments)
-        : output_iterator(iterator),
+    FormatHandler(Allocator& in_allocator,
+                  // detail::FormatContiguousOutputIterator<Allocator> iterator,
+                  BackInsertIterator<String> iterator, String const& in_string,
+                  FormatArguments const& in_arguments)
+        : allocator(in_allocator),
+          output_iterator(iterator),
           string(in_string),
           arguments(in_arguments){};
 
-    void on_text(char const* p_start, char const* p_end) {
-    }
+    // void on_text(char const* p_start, char const* p_end) {
+    // }
 
     void on_replacement_field() {
     }
@@ -536,54 +554,89 @@ struct FormatHandler {
 template <detail::FormatAllocator Allocator>
 constexpr void parse_format_string(String const format,
                                    FormatHandler<Allocator>&& handler) {
-    char const* p_first = format.p_data();
-    char const* p_last = format.p_data() + format.size();
+    // char const* p_first = format.p_data();
+    // char const* p_last = format.p_data() + format.size();
     String remainder = format;
+    ssize current_argument = 0;
 
     // Parse the entire string:
-    while (p_first != p_last) {
-        if (*p_first != '{') {
-            // TODO: Handle no value.
-            char const* p_open_curly =
-                remainder.p_data() + remainder[remainder.find('{').value()];
-            // TODO: Make this begin the search from NOT position `0`:
-            char const* p_close_curly =
-                remainder.p_data() + remainder[remainder.find('}').value()];
+    while (true) {
+        ssize const to_open_brace = remainder.find('{').value();
+        // char const* p_open_curly = remainder.p_data() + to_open_brace;
 
-            // Parse an argument:
-            while (true) {
-            }
+        ssize const to_close_brace = remainder.find('}').value();
+        // char const* p_close_curly = remainder.p_data() + to_close_brace;
+
+        // This is true if both are `-1`, or in other words, neither braces
+        // were found. This is the escape condition.
+        if (to_open_brace == to_close_brace) {
+            // Copy over the rest of the string.
+            break;
         }
+
+        // Parse an argument:
+        while (true) {
+            switch (handler.arguments.p_arguments_indices[current_argument.raw]
+                        .discriminant) {
+                case detail::FormatDiscriminant::int4_type:
+                    print(to_chars(handler.allocator,
+                                   handler.arguments.template get<int4>(
+                                       current_argument)));
+                    break;
+                default:
+                    __builtin_unreachable();
+            };
+        }
+
+        // Slice the string past the text that's just been parsed.
+        remainder = remainder.remove_prefix(to_close_brace + 1);
     }
 }
 
 namespace detail {
     // Format a collection of `char` and push it into some container.
-    template <OutputIterator<char const&> Outputter,
+    template <OutputIterator<String> Outputter,
               detail::FormatAllocator Allocator>
     auto vformat_to(Allocator& allocator, Outputter output_iterator,
                     String const format, FormatArguments const arguments)
         -> Outputter {
-        if constexpr (is_same<Outputter, FormatOutputIterator<Allocator>>) {
+        // if constexpr (is_same<Outputter,
+        //                       FormatContiguousOutputIterator<Allocator>>) {
+        if constexpr (is_same<Outputter, BackInsertIterator<String>>) {
             // If the type-erased contiguous format buffer is used.
-            FormatHandler handler = {output_iterator, format, arguments};
-            parse_format_string(format, handler);
+            FormatHandler<Allocator> handler = {allocator, output_iterator,
+                                                format, arguments};
+            parse_format_string(format, move(handler));
             return output_iterator;
         } else {
             // Otherwise, create a type-erased contiguous format buffer.
-            FormatBuffer<Outputter> buffer = {allocator, output_iterator};
-            FormatHandler handler = {FormatOutputIterator<Allocator>{buffer},
-                                     format, arguments};
+            FormatBufferIterator<Allocator, Outputter> buffer = {
+                allocator, output_iterator};
+            FormatHandler<Allocator> handler = {
+                // FormatContiguousOutputIterator<Allocator>{buffer},
+                BackInsertIterator<String>{buffer}, format, arguments};
             parse_format_string(format, handler);
             return buffer.output_iterator;
         }
+    }
+
+    template <detail::FormatAllocator Allocator>
+    auto vformat(Allocator& allocator, String const format,
+                 FormatArguments const arguments) -> String {
+        // TODO: Estimate the size of the final formatted string, and allocate
+        // that much up-front for `output`.
+        char* const p_storage = allocator.template p_malloc<char>(11).value();
+        String output{p_storage, 11};
+        _ = vformat_to(allocator, BackInsertIterator{output}, format,
+                       arguments);
+        return output;
     }
 }  // namespace detail
 
 // Store `arguments` in a compacted variant object. Then format a collection of
 // `char` with those arguments, and push the result into some container.
-template <detail::FormatAllocator Allocator,
-          OutputIterator<char const&> Outputter, typename... Args>
+template <detail::FormatAllocator Allocator, OutputIterator<String> Outputter,
+          typename... Args>
 auto format_to(Allocator& allocator, Outputter output_iterator,
                String const format, Args&&... arguments) -> Outputter {
     return detail::vformat_to(allocator, output_iterator, format,
@@ -594,9 +647,9 @@ auto format_to(Allocator& allocator, Outputter output_iterator,
 template <detail::FormatAllocator Allocator, typename... Args>
 auto format(Allocator& allocator, String const format, Args&&... arguments)
     -> String {
-    return detail::vformat_to(allocator, BackInsertIterator{format}, format,
-                              FormatArguments{FormatArgumentsCompactStorage{
-                                  forward<Args...>(arguments)...}});
+    return detail::vformat(allocator, format,
+                           FormatArguments{FormatArgumentsCompactStorage{
+                               forward<Args...>(arguments)...}});
 }
 
 auto print(String const& string) -> Optional<ssize>;
@@ -607,4 +660,5 @@ auto print_line(String const& string) -> Optional<ssize>;
 
 }  // namespace cat
 
-#include "./implementations/string_length.tpp"
+// #include "../implementations/jeaiii_to_chars.tpp"
+#include "../implementations/string_length.tpp"
