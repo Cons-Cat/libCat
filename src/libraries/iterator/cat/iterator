@@ -461,7 +461,7 @@ namespace detail {
 }  // namespace detail
 
 template <Iterable T>
-class BackInsertIterator : IteratorFacade<BackInsertIterator<T>> {
+class BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
     T& iterable;
 
   public:
@@ -549,7 +549,7 @@ class BackInsertIterator : IteratorFacade<BackInsertIterator<T>> {
 };
 
 template <Iterable T>
-class FrontInsertIterator : IteratorFacade<FrontInsertIterator<T>> {
+class FrontInsertIterator : public IteratorFacade<FrontInsertIterator<T>> {
     T& iterable;
 
   public:
