@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+// TODO: This doesn't work with a `X* const` type.
 template <typename T, typename U>
 // Optimizing this function counter-intuitively seems to compile faster. It also
 // inlines this function, resulting in a smaller debug binary.
