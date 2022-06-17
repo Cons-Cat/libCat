@@ -246,6 +246,8 @@ namespace detail {
                 this->discriminant = FormatDiscriminant::int2_type;
             } else if constexpr (is_same<U, int4>) {
                 this->discriminant = FormatDiscriminant::int4_type;
+            } else if constexpr (is_same<U, int>) {
+                this->discriminant = FormatDiscriminant::int4_type;
             } else if constexpr (is_same<U, int8>) {
                 this->discriminant = FormatDiscriminant::int8_type;
             } else if constexpr (is_same<U, uint1>) {
@@ -289,17 +291,19 @@ struct FormatArgumentsCompactStorage {
 
     // TODO: This array length might need to be larger if the any arguments'
     // type is `FormatDiscriminant::other_type`.
-    Byte arguments_storage[argument_count];
+    // Byte packed_arguments_storage[argument_count];
+    Byte packed_arguments_storage[3];
 
   private:
     // For every type passed into the constructor, pack it into the arrays
     // in-order.
     template <typename T>
     void store_argument(ssize const argument_index, T&& value) {
-        // Place `value` into `raw_storage`.
+        // Pack `value` into `packed_arguments_storage`.
         ssize const storage_index =
             this->arguments_indices[argument_index.raw].byte_index;
-        copy_memory(this->arguments_storage + storage_index, addressof(value),
+        copy_memory(addressof(value),
+                    &(this->packed_arguments_storage) + storage_index,
                     ssizeof<T>());
 
         // Assign `T` to that storage.
@@ -318,8 +322,10 @@ struct FormatArgumentsCompactStorage {
 
   public:
     FormatArgumentsCompactStorage(Ts&&... types) {
-        arguments_storage[0] = {};
-        ssize argument_index = 0;
+        this->packed_arguments_storage[0] = {};
+        this->arguments_indices[0] = {};
+        ssize argument_index = -1;
+        // TODO: Erase the type of `Ts`.
         // `argument_index` increments per call to `.store()`.
         (this->store_argument(argument_index++, forward<Ts>(types)), ...);
     }
@@ -344,6 +350,8 @@ struct FormatArguments {
         ssize const storage_index =
             (this->p_arguments_indices + argument_index)->byte_index;
 
+        // TODO: Make this type punning with `bit_cast`, because this
+        // `reinterpret_cast` is undefined behavior.
         // Offset the pointer to the array of indices by the length of that
         // array. That produces a pointer to the next struct member, which
         // happens to be the raw storage array.
@@ -575,7 +583,7 @@ constexpr void parse_format_string(String const format,
         }
 
         // Parse an argument:
-        while (true) {
+        for (ssize i = 0; i < handler.arguments.argument_count; ++i) {
             switch (handler.arguments.p_arguments_indices[current_argument.raw]
                         .discriminant) {
                 case detail::FormatDiscriminant::int4_type:
@@ -649,7 +657,7 @@ auto format(Allocator& allocator, String const format, Args&&... arguments)
     -> String {
     return detail::vformat(allocator, format,
                            FormatArguments{FormatArgumentsCompactStorage{
-                               forward<Args...>(arguments)...}});
+                               forward<Args>(arguments)...}});
 }
 
 auto print(String const& string) -> Optional<ssize>;
