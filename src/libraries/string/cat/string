@@ -242,21 +242,35 @@ namespace detail {
             using U = RemoveCvRef<T>;
             if constexpr (is_same<U, int1>) {
                 this->discriminant = FormatDiscriminant::int1_type;
+            } else if constexpr (is_same<U, int1::Raw>) {
+                this->discriminant = FormatDiscriminant::int1_type;
             } else if constexpr (is_same<U, int2>) {
+                this->discriminant = FormatDiscriminant::int2_type;
+            } else if constexpr (is_same<U, int2::Raw>) {
                 this->discriminant = FormatDiscriminant::int2_type;
             } else if constexpr (is_same<U, int4>) {
                 this->discriminant = FormatDiscriminant::int4_type;
-            } else if constexpr (is_same<U, int>) {
+            } else if constexpr (is_same<U, int4::Raw>) {
                 this->discriminant = FormatDiscriminant::int4_type;
             } else if constexpr (is_same<U, int8>) {
                 this->discriminant = FormatDiscriminant::int8_type;
+            } else if constexpr (is_same<U, int8::Raw>) {
+                this->discriminant = FormatDiscriminant::int8_type;
             } else if constexpr (is_same<U, uint1>) {
+                this->discriminant = FormatDiscriminant::uint1_type;
+            } else if constexpr (is_same<U, uint1::Raw>) {
                 this->discriminant = FormatDiscriminant::uint1_type;
             } else if constexpr (is_same<U, uint2>) {
                 this->discriminant = FormatDiscriminant::uint2_type;
+            } else if constexpr (is_same<U, uint2::Raw>) {
+                this->discriminant = FormatDiscriminant::uint2_type;
             } else if constexpr (is_same<U, uint4>) {
                 this->discriminant = FormatDiscriminant::uint4_type;
+            } else if constexpr (is_same<U, uint4::Raw>) {
+                this->discriminant = FormatDiscriminant::uint4_type;
             } else if constexpr (is_same<U, uint8>) {
+                this->discriminant = FormatDiscriminant::uint8_type;
+            } else if constexpr (is_same<U, uint8::Raw>) {
                 this->discriminant = FormatDiscriminant::uint8_type;
             } else if constexpr (is_same<U, bool1>) {
                 this->discriminant = FormatDiscriminant::bool1_type;
