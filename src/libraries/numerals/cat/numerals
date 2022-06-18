@@ -282,9 +282,8 @@ struct Numeral {
 
     template <typename U>
     constexpr auto operator/(U const from) const -> Numeral<T>
-    requires(detail::is_safe_conversion<T, U>()) {
-        return static_cast<T const>(this->raw / static_cast<T const>(from));
-    }
+        requires(detail::is_safe_conversion<T, U>())
+    { return static_cast<T const>(this->raw / static_cast<T const>(from)); }
 
     template <typename U>
     constexpr auto operator/=(U const from)
@@ -295,9 +294,8 @@ struct Numeral {
 
     template <typename U>
     constexpr auto operator%(U const from) const -> Numeral<T>
-    requires(detail::is_safe_conversion<T, U>()) {
-        return static_cast<T const>(this->raw % static_cast<T const>(from));
-    }
+        requires(detail::is_safe_conversion<T, U>())
+    { return static_cast<T const>(this->raw % static_cast<T const>(from)); }
 
     template <typename U>
     constexpr auto operator%=(U const from)
@@ -322,9 +320,8 @@ struct Numeral {
 
     template <typename U>
     [[nodiscard]] constexpr auto operator<<(U const from) const -> Numeral<T>
-    requires(detail::is_safe_conversion<T, U>()) {
-        return static_cast<T const>(this->raw << static_cast<T>(from));
-    }
+        requires(detail::is_safe_conversion<T, U>())
+    { return static_cast<T const>(this->raw << static_cast<T>(from)); }
 
     template <typename U>
     constexpr auto operator<<=(U const from)
@@ -335,9 +332,8 @@ struct Numeral {
 
     template <typename U>
     [[nodiscard]] constexpr auto operator>>(U const from) const -> Numeral<T>
-    requires(detail::is_safe_conversion<T, U>()) {
-        return static_cast<T const>(this->raw >> static_cast<T>(from));
-    }
+        requires(detail::is_safe_conversion<T, U>())
+    { return static_cast<T const>(this->raw >> static_cast<T>(from)); }
 
     template <typename U>
     constexpr auto operator>>=(U const from)

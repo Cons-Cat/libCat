@@ -83,8 +83,8 @@ template <typename T>
 [[nodiscard]] auto any_of(SimdMask<NativeAbi<T>, T> const) -> bool;
 
 template <typename InAbi, typename T>
-requires(is_same<typename InAbi::Scalar, T>) class alignas(
-    InAbi::alignment.raw) Simd {
+    requires(is_same<typename InAbi::Scalar, T>)
+class alignas(InAbi::alignment.raw) Simd {
     using Vector = Simd<InAbi, T>;
     // GCC does not support `bool` vectors, so it is mapped to `unsigned char`.
     using MappedT = Conditional<is_same<T, bool>, unsigned char, T>;

@@ -51,9 +51,9 @@ namespace detail {
     };
 
     template <typename T>
-    requires requires {
-        typename T::Value;
-    }
+        requires requires {
+            typename T::Value;
+        }
     struct InferValueType<T> {
         using Type = typename T::Value;
     };
@@ -279,7 +279,7 @@ struct OutputIteratorTag {};
 struct ContiguousIteratorTag {};
 
 template <typename T>
-requires is_base_of<IteratorFacade<T>, T>
+    requires is_base_of<IteratorFacade<T>, T>
 struct IteratorTraits {
     static T const& iterator;
     using Value = typename InferValueType<T>::Type;

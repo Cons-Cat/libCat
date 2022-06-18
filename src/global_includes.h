@@ -76,7 +76,8 @@ struct MonostateStorage {
 };
 
 template <typename T, auto predicate, T sentinel>
-requires(!predicate(sentinel)) struct Predicate {
+    requires(!predicate(sentinel))
+struct Predicate {
     using PredicateType = T;
     static constexpr auto predicate_function = predicate;
     static constexpr PredicateType sentinel_value = PredicateType{sentinel};

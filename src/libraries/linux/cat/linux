@@ -301,8 +301,8 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-requires(sizeof(detail::MapSyscallType<T>) <=
-         sizeof(ssize)) using ScaredyLinux =
+    requires(sizeof(detail::MapSyscallType<T>) <= sizeof(ssize))
+using ScaredyLinux =
     cat::Scaredy<cat::Predicate<detail::MapSyscallType<T>,
                                 // This is a value iff it is a positive integer.
                                 detail::is_positive<detail::MapSyscallType<T>>,
@@ -562,7 +562,8 @@ auto syscall6(ssize const, cat::Any const, cat::Any const, cat::Any const,
 
 template <typename T, typename... Args>
 auto syscall(ssize const call, Args const... parameters) -> nix::ScaredyLinux<T>
-requires(sizeof...(Args) < 7);
+    requires(sizeof...(Args) < 7)
+;
 
 // Create and return a `cat::Socket`.
 auto create_socket(int8 const protocol_family, int8 const type,

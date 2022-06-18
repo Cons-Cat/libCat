@@ -1,7 +1,7 @@
 #include <cat/linux>
 #include <cat/optional>
-#include <result>
 #include <cat/string>
+#include <result>
 
 // TODO: Improve this performance with format strings when they are implemented.
 

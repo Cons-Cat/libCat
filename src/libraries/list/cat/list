@@ -171,7 +171,8 @@ class List : public CollectionFacade<List<T>, T> {
     template <typename U>
     auto insert(StableAllocator auto& allocator, Iterator where, U const& value)
         -> Optional<Iterator>
-    requires(is_convertible<U, T>) {
+        requires(is_convertible<U, T>)
+    {
         // `cat::OptionalPtr` produces an internal compiler error in GCC 12.
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
@@ -249,7 +250,8 @@ class List : public CollectionFacade<List<T>, T> {
     template <typename U>
     auto push_front(StableAllocator auto& allocator, U const& value)
         -> Optional<Iterator>
-    requires(is_convertible<U, T>) {
+        requires(is_convertible<U, T>)
+    {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -300,7 +302,8 @@ class List : public CollectionFacade<List<T>, T> {
     template <typename U>
     auto push_back(StableAllocator auto& allocator, U const& value)
         -> Optional<Iterator>
-    requires(is_convertible<U, T>) {
+        requires(is_convertible<U, T>)
+    {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -498,7 +501,8 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     template <typename U>
     auto insert_after(StableAllocator auto& allocator, Iterator where,
                       U const& value) -> Optional<Iterator>
-    requires(is_convertible<U, T>) {
+        requires(is_convertible<U, T>)
+    {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -552,7 +556,8 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     template <typename U>
     auto push_front(StableAllocator auto& allocator, U const& value)
         -> Optional<Iterator>
-    requires(is_convertible<U, T>) {
+        requires(is_convertible<U, T>)
+    {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.

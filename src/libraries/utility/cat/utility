@@ -53,7 +53,8 @@ namespace detail {
 }  // namespace detail
 
 template <typename T, T... values>
-requires(is_integral<T>) struct ValueList {
+    requires(is_integral<T>)
+struct ValueList {
     using value_type = T;
 
     static constexpr ssize size = ssize{sizeof...(values)};
