@@ -33,6 +33,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/math/
   ${CMAKE_SOURCE_DIR}/src/libraries/type_list/
   ${CMAKE_SOURCE_DIR}/src/libraries/tuple/
+  ${CMAKE_SOURCE_DIR}/src/libraries/cast/
   PARENT_SCOPE
 )
 
