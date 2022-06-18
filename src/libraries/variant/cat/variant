@@ -11,7 +11,8 @@
 namespace cat {
 
 template <typename... Ts>
-requires(TypeList<Ts...>::is_unique_list) class Variant {
+    requires(TypeList<Ts...>::is_unique_list)
+class Variant {
     static constexpr ssize size = max(ssizeof<Ts>()...);
     static constexpr unsigned alignment = max(alignof(Ts)...);
     using Storage = Array<char, size>;
@@ -173,7 +174,8 @@ requires(TypeList<Ts...>::is_unique_list) class Variant {
 
     template <typename T>
     constexpr auto safe_value() -> Optional<T&>
-    requires(Types::template has_type<T>) {
+        requires(Types::template has_type<T>)
+    {
         if (this->holds_alternative<T>()) {
             return this->value<T>();
         }
@@ -182,7 +184,8 @@ requires(TypeList<Ts...>::is_unique_list) class Variant {
 
     template <typename T>
     constexpr auto safe_value() const -> Optional<T&>
-    requires(Types::template has_type<T>) {
+        requires(Types::template has_type<T>)
+    {
         if (this->holds_alternative<T>()) {
             return this->value<T>();
         }

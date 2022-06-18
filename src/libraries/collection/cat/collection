@@ -154,7 +154,8 @@ class CollectionFacade {
 
     // Index into this collection with bounds-checking.
     [[nodiscard]] constexpr auto at(ssize const index) -> Optional<T&>
-    requires(is_array_like) {
+        requires(is_array_like)
+    {
         Result(index >= 0).assert();
         if (index < this->self().capacity()) {
             return this->self_mut().p_data()[index.raw];
@@ -186,7 +187,8 @@ class CollectionFacade {
 
     [[nodiscard]] constexpr auto subspan(ssize const start_index,
                                          ssize const end_index) -> Span<T>
-    requires(is_array_like) {
+        requires(is_array_like)
+    {
         Result{start_index >= 0}.assert();
         Result{end_index <= this->self().capacity()}.assert();
         return Span<T>(this->self().p_data() + start_index,
@@ -196,7 +198,8 @@ class CollectionFacade {
     [[nodiscard]] constexpr auto subspan(ssize const start_index,
                                          ssize const end_index) const
         -> Span<T const>
-    requires(is_array_like) {
+        requires(is_array_like)
+    {
         Result{start_index >= 0}.assert();
         Result{end_index <= this->self().capacity()}.assert();
         return Span<T const>(this->self().p_data() + start_index,
@@ -204,24 +207,20 @@ class CollectionFacade {
     }
 
     [[nodiscard]] constexpr auto first(ssize const count) -> Span<T>
-    requires(is_array_like) {
-        return this->subspan(0, count);
-    }
+        requires(is_array_like)
+    { return this->subspan(0, count); }
 
     [[nodiscard]] constexpr auto first(ssize const count) const -> Span<T const>
-    requires(is_array_like) {
-        return this->subspan(0, count);
-    }
+        requires(is_array_like)
+    { return this->subspan(0, count); }
 
     [[nodiscard]] constexpr auto last(ssize const count) -> Span<T>
-    requires(is_array_like) {
-        return this->subspan(this->self().size() - count, this->self().size());
-    }
+        requires(is_array_like)
+    { return this->subspan(this->self().size() - count, this->self().size()); }
 
     [[nodiscard]] constexpr auto last(ssize const count) const -> Span<T const>
-    requires(is_array_like) {
-        return this->subspan(this->self().size() - count, this->self().size());
-    }
+        requires(is_array_like)
+    { return this->subspan(this->self().size() - count, this->self().size()); }
 
     [[nodiscard]] constexpr auto operator[](ssize const index)
         -> T& requires(is_array_like) {

@@ -291,7 +291,8 @@ namespace detail {
     };
 
     // A buffer that can grow through `.push_back()` and reallocate when its
-    // storage is exceeded.
+    // storage is exceeded. This container is used in `vformat()` calls as the
+    // default container for `vformat_to()`.
     struct FormatStringVector : CollectionFacade<FormatStringVector, char> {
         char* p_storage;
         ssize length;

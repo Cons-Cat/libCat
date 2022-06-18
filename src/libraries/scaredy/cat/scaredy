@@ -154,11 +154,12 @@ namespace detail {
 }  // namespace detail
 
 template <typename T, typename... Errors>
-requires(
-    // `Scaredy` cannot hold C arrays.
-    // (!is_array<Errors...>) &&
-    // `Scaredy` should have at least one error type.
-    sizeof...(Errors) > 0) class Scaredy {
+    requires(
+        // `Scaredy` cannot hold C arrays.
+        // (!is_array<Errors...>) &&
+        // `Scaredy` should have at least one error type.
+        sizeof...(Errors) > 0)
+class Scaredy {
     // clang-format off
     using Storage = Conditional <requires {
         T::sentinel_value;

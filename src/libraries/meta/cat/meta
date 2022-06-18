@@ -685,9 +685,8 @@ template <typename>
 struct IsScopedEnumTrait : FalseTypeTrait {};
 
 template <typename T>
-requires(is_enum<T> && !is_integral<T>) struct IsScopedEnumTrait<T>
-    : BoolConstantTrait<detail::is_scoped_enum<T>> {
-};
+    requires(is_enum<T> && !is_integral<T>)
+struct IsScopedEnumTrait<T> : BoolConstantTrait<detail::is_scoped_enum<T>> {};
 
 template <typename T>
 using IsScopedEnum = typename IsScopedEnumTrait<T>::Type;

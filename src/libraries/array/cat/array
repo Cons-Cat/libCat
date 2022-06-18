@@ -67,7 +67,8 @@ class Array : public CollectionFacade<Array<T, length>, T> {
 
     // If this is an `Array<char>`, it can be assigned a string.
     constexpr auto operator=(String const&& string) -> Array<T, length>
-    requires(is_same<RemoveConst<T>, char>) {
+        requires(is_same<RemoveConst<T>, char>)
+    {
         Array<T, length> array;
         copy_memory(string.p_data(), this->storage, string.size());
         return array;
