@@ -362,8 +362,7 @@ struct FormatArgumentsCompactStorage {
 
     // TODO: This array length might need to be larger if the any arguments'
     // type is `FormatDiscriminant::other_type`.
-    // Byte packed_arguments_storage[argument_count];
-    Byte packed_arguments_storage[3];
+    Byte packed_arguments_storage[argument_count * 8];  // Needs work.
 
   private:
     // For every type passed into the constructor, pack it into the arrays
@@ -374,7 +373,7 @@ struct FormatArgumentsCompactStorage {
         ssize const storage_index =
             this->arguments_indices[argument_index.raw].byte_index;
         copy_memory(addressof(value),
-                    &(this->packed_arguments_storage) + storage_index,
+                    &(this->packed_arguments_storage[0]) + storage_index,
                     ssizeof<T>());
 
         // Assign `T` to that storage.
@@ -670,27 +669,27 @@ constexpr void parse_format_string(String const format,
 
         // Parse an argument:
         auto const& arguments = handler.arguments;
-        for (ssize::Raw i = 0; i < arguments.argument_count; ++i) {
-            switch (handler.arguments.p_arguments_indices[current_argument.raw]
-                        .discriminant) {
-                case detail::FormatDiscriminant::int4_type:
-                    {
-                        String const int_string = to_chars(
-                            handler.allocator,
-                            arguments.template get<int4>(current_argument));
+        switch (handler.arguments.p_arguments_indices[current_argument.raw]
+                    .discriminant) {
+            case detail::FormatDiscriminant::int4_type:
+                {
+                    String const int_string = to_chars(
+                        handler.allocator,
+                        arguments.template get<int4>(current_argument));
 
-                        // TODO: Optimize this with a multiple-insert
-                        // overload.
-                        for (int j = 0; j < int_string.size(); ++j) {
-                            _ = handler.output_iterator.insert(
-                                handler.allocator, int_string[j]);
-                        }
+                    // TODO: Optimize this with a multiple-insert
+                    // overload.
+                    for (int i = 0; i < int_string.size(); ++i) {
+                        _ = handler.output_iterator.insert(handler.allocator,
+                                                           int_string[i]);
                     }
-                    break;
-                default:
-                    __builtin_unreachable();
-            };
-        }
+                }
+                break;
+            default:
+                __builtin_unreachable();
+        };
+
+        ++current_argument;
 
         // Slice the string past the text that's just been parsed.
         remainder = remainder.remove_prefix(to_close_brace + 1);

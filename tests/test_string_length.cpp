@@ -83,7 +83,7 @@ void meow() {
     // });
 
     allocator.reset();
-    cat::print(cat::format(allocator, "bb{}aa", 10));
+    cat::print(cat::format(allocator, "bb{}aa{}cc\n", 52, 130));
 
     cat::exit();
 }
