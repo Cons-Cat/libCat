@@ -500,9 +500,17 @@ struct FormatBufferIterator<Allocator, Outputter>
     char storage[256];
 
     FormatBufferIterator(Allocator& in_allocator, Outputter iterator)
-        : allocator(in_allocator),
-          output_iterator(iterator),
-          FormatBufferBase<Allocator>(storage, 0, 256){};
+        : FormatBufferBase<Allocator>(storage, 0, 256),
+          allocator(in_allocator),
+          output_iterator(iterator){};
+
+    // Flush `storage` when formatting is completed.
+    ~FormatBufferIterator() {
+        // `.size()` is derived.
+        if (this->size() > 0) {
+            this->flush();
+        }
+    }
 
     // Overload the pure virtual `FormatBufferBase::grow()` function.
     auto grow(ssize const) -> Optional<void> {
@@ -645,24 +653,39 @@ constexpr void parse_format_string(String const format,
         // This is true if both are `-1`, or in other words, neither braces
         // were found. This is the escape condition.
         if (to_open_brace == to_close_brace) {
-            // Copy over the rest of the string.
+            for (char const& character : remainder) {
+                // TODO: Optimize this with a multiple-insert overload.
+                handler.output_iterator.insert(handler.allocator, character);
+            }
+
             break;
+        } else {
+            // If there is an argument, then copy over all text leading up to
+            // the next argument.
+            for (ssize::Raw i = 0; i < to_open_brace; ++i) {
+                // TODO: Optimize this with a multiple-insert overload.
+                handler.output_iterator.insert(handler.allocator, remainder[i]);
+            }
         }
 
         // Parse an argument:
-        for (ssize i = 0; i < handler.arguments.argument_count; ++i) {
+        auto const& arguments = handler.arguments;
+        for (ssize::Raw i = 0; i < arguments.argument_count; ++i) {
             switch (handler.arguments.p_arguments_indices[current_argument.raw]
                         .discriminant) {
                 case detail::FormatDiscriminant::int4_type:
-                    _ = handler.output_iterator.insert(handler.allocator, '0');
+                    {
+                        String const int_string = to_chars(
+                            handler.allocator,
+                            arguments.template get<int4>(current_argument));
 
-                    // _ = handler.output_iterator.insert(
-                    //     handler.allocator,
-                    //     to_chars(handler.allocator,
-                    //              handler.arguments.template get<int4>(
-                    //                  current_argument))
-                    //         .p_data()[0]);
-
+                        // TODO: Optimize this with a multiple-insert
+                        // overload.
+                        for (int j = 0; j < int_string.size(); ++j) {
+                            _ = handler.output_iterator.insert(
+                                handler.allocator, int_string[j]);
+                        }
+                    }
                     break;
                 default:
                     __builtin_unreachable();
