@@ -466,10 +466,9 @@ namespace detail {
 }  // namespace detail
 
 template <Iterable T>
-class BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
+struct BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
     T& iterable;
 
-  public:
     using Container = T;
 
     constexpr explicit BackInsertIterator(T& input_iterable)

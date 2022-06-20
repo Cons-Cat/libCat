@@ -83,7 +83,7 @@ void meow() {
     // });
 
     allocator.reset();
-    cat::format(allocator, "{}", 10);
+    cat::print(cat::format(allocator, "{}", 10));
 
     cat::exit();
 }
