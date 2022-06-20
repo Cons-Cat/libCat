@@ -1,5 +1,5 @@
 #pragma once
-#include <cat/string>
+#include <cat/format>
 
 // This header forward-declares Jeaiii's int-to-string conversion functions for
 // use by my string formatting. The implementations, and their copyright notice,

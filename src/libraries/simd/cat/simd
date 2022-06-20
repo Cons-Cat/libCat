@@ -14,11 +14,11 @@
 // To streamline this, libCat uses the intrinsics which GNU already provides,
 // and wraps it in one thin layer of technology.
 
-#include <cat/detail/simd_avx2_fwd.hpp>
-#include <cat/detail/simd_sse42.hpp>
-
 #include <cat/meta>
 #include <cat/numerals>
+
+#include "cat/detail/simd_avx2_fwd.hpp"
+#include "cat/detail/simd_sse42.hpp"
 
 namespace cat {
 

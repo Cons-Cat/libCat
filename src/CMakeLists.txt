@@ -19,6 +19,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/span/
   ${CMAKE_SOURCE_DIR}/src/libraries/list/
   ${CMAKE_SOURCE_DIR}/src/libraries/string/
+  ${CMAKE_SOURCE_DIR}/src/libraries/format/
   ${CMAKE_SOURCE_DIR}/src/libraries/memory/
   ${CMAKE_SOURCE_DIR}/src/libraries/allocators/
   ${CMAKE_SOURCE_DIR}/src/libraries/utility/
@@ -68,7 +69,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/string/implementations/string_length.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/string/implementations/print.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/string/implementations/print_line.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/string/implementations/itoa_jeaiii.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/format/implementations/itoa_jeaiii.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/syscall0.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/syscall1.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/syscall2.cpp

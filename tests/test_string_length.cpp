@@ -1,6 +1,7 @@
 #include <cat/allocators>
 #include <cat/string>
 #include <cat/utility>
+#include <format>
 
 void meow() {
     char const* p_string_1 = "Hello!";
