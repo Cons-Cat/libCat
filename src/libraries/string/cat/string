@@ -319,6 +319,7 @@ namespace detail {
         auto push_back(FormatAllocator auto& allocator, char const character)
             -> Optional<void> {
             Optional<void> result_1;
+            // TODO: Use a `.p_realloc()` call.
             if (this->length + 1 < this->max_length) {
                 result_1 = allocator.free(this->p_storage);
                 if (!result_1.has_value()) {
@@ -444,6 +445,10 @@ struct FormatBufferBase
     ssize length;
     ssize max_length;
 
+    FormatBufferBase(char* const p_in_string, ssize const in_length,
+                     ssize const in_max_length)
+        : p_string(p_in_string), length(in_length), max_length(in_max_length){};
+
     auto p_data() const -> char* {
         return this->p_string;
     }
@@ -462,7 +467,7 @@ struct FormatBufferBase
         this->length = 0;
     }
 
-    auto push_back(char const character) -> Optional<void> {
+    auto push_back(Allocator&, char const character) -> Optional<void> {
         // If the new length would exceed the current capacity, call `.grow()`
         // to extend the capacity, first.
         if (this->length + 1 > max_length) {
@@ -481,19 +486,23 @@ struct FormatBufferBase
 template <typename...>
 struct FormatBufferIterator {};
 
+// Temporarily store formatted string data on the stack before pushing it to an
+// output-iterator it `.flush()`.
 template <detail::FormatAllocator Allocator, typename Outputter>
 struct FormatBufferIterator<Allocator, Outputter>
     : FormatBufferBase<Allocator> {
     using Container = typename Outputter::Container;
     Allocator& allocator;
-    Outputter& output_iterator;
+    Outputter output_iterator;
 
     // To optimize common usage, `256` bytes of storage is reserved on
     // stack.
     char storage[256];
 
-    FormatBufferIterator(Allocator& in_allocator, Outputter& iterator)
-        : allocator(in_allocator), output_iterator(iterator){};
+    FormatBufferIterator(Allocator& in_allocator, Outputter iterator)
+        : allocator(in_allocator),
+          output_iterator(iterator),
+          FormatBufferBase<Allocator>(storage, 0, 256){};
 
     // Overload the pure virtual `FormatBufferBase::grow()` function.
     auto grow(ssize const) -> Optional<void> {
@@ -595,32 +604,26 @@ class FormatParseContext {
     }
 };
 
-// Stores callbacks for the default `Formatter`.
+// TODO: Store callback functions for different kind of arguments.
 template <detail::FormatAllocator Allocator>
 struct FormatHandler {
     Allocator& allocator;
+    // This holds a reference to a `FormatBufferIterator`.
     detail::FormatContiguousOutputIterator<Allocator> output_iterator;
-    String const string;
+    String const format;
+    // char* const p_tempory_buffer;
     // TODO: A more complex contex object will be needed to support locale and
     // wide chars:
     FormatArguments const arguments;
 
     FormatHandler(Allocator& in_allocator,
                   detail::FormatContiguousOutputIterator<Allocator> iterator,
-                  String const in_string, FormatArguments const in_arguments)
+                  String const in_format, FormatArguments const in_arguments)
         : allocator(in_allocator),
           output_iterator(iterator),
-          string(in_string),
+          format(in_format),
+          // p_tempory_buffer(iterator.iterable.p_data()),
           arguments(in_arguments){};
-
-    // void on_text(char const* p_start, char const* p_end) {
-    // }
-
-    void on_replacement_field() {
-    }
-
-    void on_format_specs() {
-    }
 };
 
 template <detail::FormatAllocator Allocator>
@@ -651,9 +654,15 @@ constexpr void parse_format_string(String const format,
             switch (handler.arguments.p_arguments_indices[current_argument.raw]
                         .discriminant) {
                 case detail::FormatDiscriminant::int4_type:
-                    print(to_chars(handler.allocator,
-                                   handler.arguments.template get<int4>(
-                                       current_argument)));
+                    _ = handler.output_iterator.insert(handler.allocator, '0');
+
+                    // _ = handler.output_iterator.insert(
+                    //     handler.allocator,
+                    //     to_chars(handler.allocator,
+                    //              handler.arguments.template get<int4>(
+                    //                  current_argument))
+                    //         .p_data()[0]);
+
                     break;
                 default:
                     __builtin_unreachable();
@@ -673,8 +682,8 @@ namespace detail {
         -> Outputter {
         if constexpr (is_same<Outputter,
                               FormatContiguousOutputIterator<Allocator>>) {
-            // If the type-erased contiguous format buffer is used, then this
-            // routine can be slightly streamlined.
+            // If the type-erased contiguous format buffer is used, then
+            // this routine can be slightly streamlined.
             FormatHandler<Allocator> handler = {allocator, output_iterator,
                                                 format, arguments};
             parse_format_string(format, move(handler));
@@ -695,26 +704,28 @@ namespace detail {
     template <detail::FormatAllocator Allocator>
     auto vformat(Allocator& allocator, String const format,
                  FormatArguments const arguments) -> String {
-        // TODO: Estimate the size of the final formatted string, and allocate
-        // that much up-front for `output`.
-        ssize const size = format.size() + 10;
+        // TODO: Estimate the size of the final formatted string, and
+        // allocate that much up-front for `output`.
+        ssize const initial_size = format.size() + 10;
         // TODO: Propogate errors.
-        char* p_memory = allocator.template p_malloc<char>(size).value();
-        String output{p_memory, size};
+        char* p_memory =
+            allocator.template p_malloc<char>(initial_size).value();
+        String output{p_memory, initial_size};
 
-        // `FormatStringVector` is a container with `.push_back()` to satisfy
-        // the `Iterable` `concept`. It is used to store the format string and
-        // reallocates if the string exceeds `size`.
-        FormatStringVector storage_buffer = {p_memory, 0, size};
+        // `FormatStringVector` is a container that satisfies the `Iterable`
+        // `concept` and has a `.push_back()` method for a
+        // `BackInsertIterator`. It is used to store the formatted string
+        // and reallocates when that string grows beyond `initial_size`.
+        FormatStringVector into_buffer = {p_memory, 0, initial_size};
         _ = vformat_to(allocator,
-                       BackInsertIterator<FormatStringVector>{storage_buffer},
+                       BackInsertIterator<FormatStringVector>{into_buffer},
                        format, arguments);
-        return output;
+        return {into_buffer.p_storage, into_buffer.length};
     }
 }  // namespace detail
 
-// Store `arguments` in a compacted variant object. Then format a collection of
-// `char` with those arguments, and push the result into some container.
+// Store `arguments` in a compacted variant object. Then format a collection
+// of `char` with those arguments, and push the result into some container.
 template <detail::FormatAllocator Allocator, OutputIterator<String> Outputter,
           typename... Args>
 auto format_to(Allocator& allocator, Outputter output_iterator,
