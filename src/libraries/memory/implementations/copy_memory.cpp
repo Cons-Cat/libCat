@@ -1,6 +1,7 @@
 #include <cat/array>
 #include <cat/bit>
 #include <cat/memory>
+#include <cat/simd>
 
 // Copy some bytes from one address to another address.
 void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {

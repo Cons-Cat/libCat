@@ -4,7 +4,6 @@
 
 #include <cat/collection>
 #include <cat/meta>
-#include <cat/string>
 #include <cat/utility>
 
 namespace cat {
@@ -34,12 +33,6 @@ class Array : public CollectionFacade<Array<T, length>, T> {
         is_convertible<U, T>&& list.size == length)
         : storage(static_cast<T>(values)...){};
 
-    // If this is an `Array<char>`, it can be constructed from a string.
-    constexpr Array(String const& string) requires(
-        is_same<RemoveConst<T>, char>) {
-        copy_memory(string.p_data(), this->storage, string.size());
-    }
-
     constexpr auto operator=(Array<T, length> const&)
         -> Array<T, length>& = default;
 
@@ -65,15 +58,6 @@ class Array : public CollectionFacade<Array<T, length>, T> {
         this->copy_list<0, U, values...>(list);
     };
 
-    // If this is an `Array<char>`, it can be assigned a string.
-    constexpr auto operator=(String const&& string) -> Array<T, length>
-        requires(is_same<RemoveConst<T>, char>)
-    {
-        Array<T, length> array;
-        copy_memory(string.p_data(), this->storage, string.size());
-        return array;
-    }
-
     // Get the non-`const` address of this `Array`'s internal array.
     [[nodiscard]] constexpr auto p_data() -> T* {
         return this->storage;
@@ -87,14 +71,6 @@ class Array : public CollectionFacade<Array<T, length>, T> {
     // Get the number of elements contained in this `Array`.
     [[nodiscard]] constexpr auto size() const -> ssize {
         return length;
-    }
-
-    // If this is an `Array<char>`, it can be converted to a `String`.
-    [[nodiscard]] constexpr auto to_string() -> String
-        requires(is_same<RemoveConst<T>, char>) {
-        return String(
-            static_cast<char const*>(static_cast<void*>(&this->storage)),
-            length);
     }
 };
 
