@@ -6,16 +6,17 @@
 
 void meow(int argc, char* p_argv[]) {
     cat::SocketUnix<cat::SocketType::stream> socket;
-    socket.path_name = "/tmp/temp.sock";
+    socket.path_name = "\0/tmp/temp.sock";
 
     socket.create().or_panic();
     socket.connect().or_panic();
 
     // Send all command line arguments to the server.
     for (int i = 1; i < argc; ++i) {
-        socket.send_string(p_argv[i], 0).or_panic();
+        socket.send_string(p_argv[i]).or_panic();
         if (i < argc - 1) {
-            socket.send_string(" ", 1).or_panic();
+            // TODO: What does this flag `0b1` mean?
+            socket.send_string(" ", 0b1).or_panic();
         }
     }
 
