@@ -127,30 +127,51 @@ class String : public Span<char const> {
 // literal's length as `ssize`.
 // TODO: Try a deduction guide.
 template <ssize length>
-struct StaticString {
+struct StaticString : CollectionFacade<StaticString<length>, char> {
     // TODO: Use an `Array`.
-    char storage[length.raw + 1];
+    char storage[length.raw];
 
-    constexpr StaticString(char const (&in)[length.raw]) : storage{} {
-        for (int i = 0; i < length - 1; ++i) {
-            storage[i] = in[i];
-        }
-        storage[length] = '\0';
+    constexpr auto p_data() -> char* {
+        return &(this->storage[0]);
     }
 
-    consteval StaticString(String const& in) : storage{} {
-        for (int i = 0; i < in.size() - 1; ++i) {
-            storage[i] = in.p_data()[i];
-        }
-        storage[length] = '\0';
+    constexpr auto p_data() const -> char const* {
+        return &(this->storage[0]);
     }
 
-    constexpr auto get_string() const {
-        return this->storage;
-    }
-
-    static consteval auto size() -> ssize {
+    constexpr auto size() const -> ssize {
         return length;
+    }
+
+    constexpr StaticString() = default;
+
+    constexpr StaticString(StaticString<length> const&) = default;
+
+    constexpr StaticString(char const (&in)[length.raw]) {
+        for (int i = 0; i < length.raw - 1; ++i) {
+            this->storage[i] = in[i];
+        }
+        for (signed long long i = length.raw; i < length; ++i) {
+            this->storage[i] = '\0';
+        }
+    }
+
+    auto operator=(StaticString<length> const& string)
+        -> StaticString<length>& {
+        copy_memory(string.p_data(), this->p_data(), length);
+        return *this;
+    }
+
+    template <signed long long in_length>
+        requires(in_length <= length)
+    auto operator=(char const (&in)[in_length]) -> StaticString<length>& {
+        copy_memory(&in, &(this->storage[0]), in_length - 1);
+        // TODO: Should remaining bytes in `storage` be nulled out?
+        for (signed long long i = in_length - 1; i < length; ++i) {
+            this->storage[i] = '\0';
+        }
+
+        return *this;
     }
 };
 
