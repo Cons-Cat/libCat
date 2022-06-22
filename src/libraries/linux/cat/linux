@@ -573,25 +573,26 @@ auto create_socket_local(int8 const type, int8 const protocol)
 
 // Connect a `cat::Socket` to an address.
 auto connect_socket(FileDescriptor const socket_descriptor,
-                    void const* p_socket, ssize socket_size)
+                    void const* const p_socket, ssize const socket_size)
     -> ScaredyLinux<void>;
 
 // Make a connection over a `cat::Socket`. This returns a new socket which has
 // been connected to. This new `cat::Socket` is not in a listening state.
 // TODO: Add flags for Linux syscall `288`.
 auto accept_socket(FileDescriptor const socket_descriptor,
-                   void const* __restrict p_socket = nullptr,
-                   ssize const* __restrict p_addr_len = nullptr)
+                   void const* const __restrict p_socket = nullptr,
+                   ssize const* const __restrict p_addr_len = nullptr)
     -> ScaredyLinux<FileDescriptor>;
 
 auto recieve_buffer(FileDescriptor const socket_descriptor,
-                    void const* p_message_buffer, ssize const buffer_length,
-                    cat::Socket const* __restrict p_addr = nullptr,
-                    ssize const* __restrict p_addr_length = nullptr)
+                    void* const p_message_buffer, ssize const buffer_length,
+                    cat::Socket const* const __restrict p_addr = nullptr,
+                    ssize const* const __restrict p_addr_length = nullptr)
     -> ScaredyLinux<ssize>;
 
-auto bind_socket(FileDescriptor const socket_descriptor, void const* p_socket,
-                 ssize const p_addr_len) -> ScaredyLinux<void>;
+auto bind_socket(FileDescriptor const socket_descriptor,
+                 void const* const p_socket, ssize const p_addr_len)
+    -> ScaredyLinux<void>;
 
 // Mark a socket as available to make connections with `accept()`.
 auto listen_to_socket(FileDescriptor const socket_descriptor,
@@ -599,9 +600,9 @@ auto listen_to_socket(FileDescriptor const socket_descriptor,
 
 // Returns the number of characters sent to `destination_socket`.
 auto send_buffer(FileDescriptor const socket_descriptor,
-                 void const* p_message_buffer, ssize const buffer_length,
+                 void const* const p_message_buffer, ssize const buffer_length,
                  int8 const flags,
-                 cat::Socket const* p_destination_socket = nullptr,
+                 cat::Socket const* const p_destination_socket = nullptr,
                  ssize const addr_length = 0) -> ScaredyLinux<ssize>;
 
 struct Process {

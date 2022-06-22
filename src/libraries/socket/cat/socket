@@ -36,7 +36,7 @@ struct SocketAttributes {
 template <SocketType Type, int4 Protocol = 0>
 struct SocketUnix {
     SocketAttributes<static_cast<short>(1), Type, Protocol> const attributes;
-    cat::Array<char, 108> path_name;
+    cat::StaticString<108> path_name;
     nix::FileDescriptor descriptor;
 
     // TODO: Create flags that corresponds to the value of `Protocol`.
@@ -59,6 +59,7 @@ struct SocketUnix {
         Scaredy result = nix::create_socket(this->attributes.family,
                                             static_cast<int>(Type), Protocol);
         if (result.has_value()) {
+            this->descriptor = result.value();
             return monostate;
         }
         return nullopt;
@@ -66,10 +67,8 @@ struct SocketUnix {
 
     // Connect a `Socket`.
     auto connect() -> Optional<void> {
-        Scaredy result = nix::connect_socket(
-            this->descriptor, this,
-            ssizeof(attributes) + cat::string_length(static_cast<char const*>(
-                                      static_cast<void*>(&this->path_name))));
+        Scaredy result =
+            nix::connect_socket(this->descriptor, this, this->get_size());
         if (result.has_value()) {
             return monostate;
         }
@@ -134,18 +133,21 @@ struct SocketUnix {
         Scaredy result = nix::accept_socket(listening_socket.descriptor,
                                             p_socket, p_addr_len);
         if (result.has_value()) {
+            this->descriptor = result.value();
             return monostate;
         }
         return nullopt;
     }
 
-    auto recieve(void const* p_message_buffer, ssize const buffer_length,
-                 Socket const* __restrict p_addr = nullptr,
-                 ssize const* __restrict p_addr_length = nullptr)
+    // TODO: Factor into `.recieve()` and `.recieve_from()`.
+    auto recieve(void* const p_message_buffer, ssize const buffer_length,
+                 Socket const* const __restrict p_socket = nullptr,
+                 ssize const* const __restrict p_socket_size = nullptr)
         -> Optional<ssize> {
-        Scaredy result =
+        // Scaredy const result =
+        nix::ScaredyLinux<ssize> const result =
             nix::recieve_buffer(this->descriptor, p_message_buffer,
-                                buffer_length, p_addr, p_addr_length);
+                                buffer_length, p_socket, p_socket_size);
         if (result.has_value()) {
             return result.value();
         }
