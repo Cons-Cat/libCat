@@ -2,7 +2,7 @@
 #include <cat/simd>
 #include <cat/string>
 
-auto cat::compare_strings(String const& string_1, String const& string_2)
+auto cat::compare_strings(String const string_1, String const string_2)
     -> bool1 {
     if (string_1.size() != string_2.size()) {
         return false;
