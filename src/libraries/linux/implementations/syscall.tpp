@@ -5,8 +5,7 @@
 #include <cat/linux>
 
 template <typename T, typename... Args>
-auto nix::syscall(ssize const call, Args const... parameters)
-    -> nix::ScaredyLinux<T>
+auto nix::syscall(ssize const call, Args... parameters) -> nix::ScaredyLinux<T>
     requires(sizeof...(Args) < 7)
 {
     static constexpr unsigned length = sizeof...(Args);
@@ -34,10 +33,6 @@ auto nix::syscall(ssize const call, Args const... parameters)
                                arguments[3], arguments[4], arguments[5]);
     }
 
-    if (result < 0) {
-        return static_cast<LinuxError>(result.raw);
-    }
-
     if constexpr (!::cat::is_void<T>) {
         if constexpr (!::cat::is_pointer<T>) {
             return nix::ScaredyLinux<T>{T{result.raw}};
@@ -45,6 +40,10 @@ auto nix::syscall(ssize const call, Args const... parameters)
             return nix::ScaredyLinux<T>{reinterpret_cast<T>(result.raw)};
         }
     } else {
-        return monostate;
+        if (result < 0) {
+            return static_cast<LinuxError>(result.raw);
+        } else {
+            return monostate;
+        }
     }
 }

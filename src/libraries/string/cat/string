@@ -183,12 +183,12 @@ consteval auto operator+(StaticString<length_1> const& string_1,
     return static_string;
 }
 
-[[nodiscard]] auto compare_strings(String const& string_1,
-                                   String const& string_2) -> bool1;
+[[nodiscard]] auto compare_strings(String const string_1, String const string_2)
+    -> bool1;
 
-[[nodiscard]] auto print(String const& string) -> Optional<ssize>;
+[[nodiscard]] auto print(String const string) -> Optional<ssize>;
 
-[[nodiscard]] auto print_line(String const& string) -> Optional<ssize>;
+[[nodiscard]] auto print_line(String const string) -> Optional<ssize>;
 
 // TODO: Make a comparison function for null-terminated string pointers.
 

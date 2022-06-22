@@ -211,40 +211,40 @@ struct Numeral {
     }
 
     template <typename U>
-    constexpr auto operator=(U const from)
+    constexpr auto operator=(U const operand)
         -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
-        this->raw = static_cast<T const>(from);
+        this->raw = static_cast<T const>(operand);
         return *this;
     }
 
     template <typename U>
-    constexpr auto operator>(U const from) const
+    constexpr auto operator>(U const operand) const
         -> bool requires(detail::is_safe_conversion<T, U>()) {
-        return this->raw > static_cast<T const>(from);
+        return this->raw > static_cast<T const>(operand);
     }
 
     template <typename U>
-    constexpr auto operator>=(U const from) const
+    constexpr auto operator>=(U const operand) const
         -> bool requires(detail::is_safe_conversion<T, U>()) {
-        return this->raw >= static_cast<T const>(from);
+        return this->raw >= static_cast<T const>(operand);
     }
 
     template <typename U>
-    constexpr auto operator<(U const from) const
+    constexpr auto operator<(U const operand) const
         -> bool requires(detail::is_safe_conversion<T, U>()) {
-        return this->raw < static_cast<T const>(from);
+        return this->raw < static_cast<T const>(operand);
     }
 
     template <typename U>
-    constexpr auto operator<=(U const from) const
+    constexpr auto operator<=(U const operand) const
         -> bool requires(detail::is_safe_conversion<T, U>()) {
-        return this->raw <= static_cast<T const>(from);
+        return this->raw <= static_cast<T const>(operand);
     }
 
     template <typename U>
-    constexpr auto operator+=(U const from)
+    constexpr auto operator+=(U const operand)
         -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
-        this->raw = this->raw + static_cast<T const>(from);
+        this->raw = this->raw + static_cast<T const>(operand);
         return *this;
     }
 
@@ -259,9 +259,9 @@ struct Numeral {
     }
 
     template <typename U>
-    constexpr auto operator-=(U const from)
+    constexpr auto operator-=(U const operand)
         -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
-        this->raw = this->raw - static_cast<T const>(from);
+        this->raw = this->raw - static_cast<T const>(operand);
         return *this;
     }
 
@@ -274,71 +274,71 @@ struct Numeral {
     }
 
     template <typename U>
-    constexpr auto operator*=(U const from)
+    constexpr auto operator*=(U const operand)
         -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
-        this->raw = this->raw * static_cast<T const>(from);
+        this->raw = this->raw * static_cast<T const>(operand);
         return *this;
     }
 
     template <typename U>
-    constexpr auto operator/(U const from) const -> Numeral<T>
+    constexpr auto operator/(U const operand) const -> Numeral<T>
         requires(detail::is_safe_conversion<T, U>())
-    { return static_cast<T const>(this->raw / static_cast<T const>(from)); }
+    { return static_cast<T const>(this->raw / static_cast<T const>(operand)); }
 
     template <typename U>
-    constexpr auto operator/=(U const from)
+    constexpr auto operator/=(U const operand)
         -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
-        this->raw = this->raw / static_cast<T const>(from);
+        this->raw = this->raw / static_cast<T const>(operand);
         return *this;
     }
 
     template <typename U>
-    constexpr auto operator%(U const from) const -> Numeral<T>
+    constexpr auto operator%(U const operand) const -> Numeral<T>
         requires(detail::is_safe_conversion<T, U>())
-    { return static_cast<T const>(this->raw % static_cast<T const>(from)); }
+    { return static_cast<T const>(this->raw % static_cast<T const>(operand)); }
 
     template <typename U>
-    constexpr auto operator%=(U const from)
+    constexpr auto operator%=(U const operand)
         -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
-        this->raw = this->raw % static_cast<T const>(from);
+        this->raw = this->raw % static_cast<T const>(operand);
         return *this;
     }
 
     template <typename U>
-    constexpr auto operator&=(U const from)
+    constexpr auto operator&=(U const operand)
         -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
-        this->raw = this->raw & static_cast<T const>(from);
+        this->raw = this->raw & static_cast<T const>(operand);
         return *this;
     }
 
     template <typename U>
-    constexpr auto operator|=(U const from)
+    constexpr auto operator|=(U const operand)
         -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
-        this->raw = this->raw | static_cast<T const>(from);
+        this->raw = this->raw | static_cast<T const>(operand);
         return *this;
     }
 
     template <typename U>
-    [[nodiscard]] constexpr auto operator<<(U const from) const -> Numeral<T>
+    [[nodiscard]] constexpr auto operator<<(U const operand) const -> Numeral<T>
         requires(detail::is_safe_conversion<T, U>())
-    { return static_cast<T const>(this->raw << static_cast<T>(from)); }
+    { return static_cast<T const>(this->raw << static_cast<T>(operand)); }
 
     template <typename U>
-    constexpr auto operator<<=(U const from)
+    constexpr auto operator<<=(U const operand)
         -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
-        this->raw = this->raw << static_cast<T const>(from);
+        this->raw = this->raw << static_cast<T const>(operand);
         return *this;
     }
 
     template <typename U>
-    [[nodiscard]] constexpr auto operator>>(U const from) const -> Numeral<T>
+    [[nodiscard]] constexpr auto operator>>(U const operand) const -> Numeral<T>
         requires(detail::is_safe_conversion<T, U>())
-    { return static_cast<T const>(this->raw >> static_cast<T>(from)); }
+    { return static_cast<T const>(this->raw >> static_cast<T>(operand)); }
 
     template <typename U>
-    constexpr auto operator>>=(U const from)
+    constexpr auto operator>>=(U const operand)
         -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
-        this->raw = this->raw >> static_cast<T const>(from);
+        this->raw = this->raw >> static_cast<T const>(operand);
         return *this;
     }
 

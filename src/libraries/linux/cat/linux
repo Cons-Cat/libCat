@@ -549,19 +549,17 @@ auto waitid(WaitId type, ProcessId id, WaitOptionsFlags options)
 struct CloneArguments;
 
 auto syscall0(ssize const) -> ssize;
-auto syscall1(ssize const, cat::Any const) -> ssize;
-auto syscall2(ssize const, cat::Any const, cat::Any const) -> ssize;
-auto syscall3(ssize const, cat::Any const, cat::Any const, cat::Any const)
+auto syscall1(ssize const, cat::Any) -> ssize;
+auto syscall2(ssize const, cat::Any, cat::Any) -> ssize;
+auto syscall3(ssize const, cat::Any, cat::Any, cat::Any) -> ssize;
+auto syscall4(ssize const, cat::Any, cat::Any, cat::Any, cat::Any) -> ssize;
+auto syscall5(ssize const, cat::Any, cat::Any, cat::Any, cat::Any, cat::Any)
     -> ssize;
-auto syscall4(ssize const, cat::Any const, cat::Any const, cat::Any const,
-              cat::Any const) -> ssize;
-auto syscall5(ssize const, cat::Any const, cat::Any const, cat::Any const,
-              cat::Any const, cat::Any const) -> ssize;
-auto syscall6(ssize const, cat::Any const, cat::Any const, cat::Any const,
-              cat::Any const, cat::Any const, cat::Any const) -> ssize;
+auto syscall6(ssize const, cat::Any, cat::Any, cat::Any, cat::Any, cat::Any,
+              cat::Any) -> ssize;
 
 template <typename T, typename... Args>
-auto syscall(ssize const call, Args const... parameters) -> nix::ScaredyLinux<T>
+auto syscall(ssize const call, Args... parameters) -> nix::ScaredyLinux<T>
     requires(sizeof...(Args) < 7)
 ;
 
