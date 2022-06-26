@@ -24,8 +24,6 @@ extern "C" [[gnu::used, gnu::always_inline]] inline void _start() {
     // stack space is reserved before they can be loaded. Genius GNU developers
     // refuse to support a `__SANITIZE_UNDEFINED__` macro to fix this.
     __builtin_unreachable();
-#elif __OPTIMIZE__
-    __builtin_unreachable();
 #endif
 }
 
