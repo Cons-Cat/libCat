@@ -2,15 +2,6 @@
 // vim: set ft=cpp:
 #pragma once
 
-// Be warned, ye who trot here!
-// Here be arcane remnants of the dark arts.
-// Black magic befouls the lines between yon
-// copse, so lest your eyes be lead astray,
-// know that the incantations written yonder
-// hath driven many ponies mad.
-//
-// Gallop forward at ye own peril!
-
 // These forward declarations are required.
 namespace cat {
 template <typename T>
