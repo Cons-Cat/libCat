@@ -7,15 +7,14 @@
 #include <cat/linux>
 #include <cat/meta>
 #include <cat/socket>
+#include <string>
 
 // https://www.x.org/releases/X11R7.7/doc/xproto/x11protocol.pdf
 
 namespace x11 {
 
 // TODO: Handle `$DISPLAY`.
-constexpr cat::String socket_path = "/tmp/.X11-unix/X0";
-// This is in the abstract namespace:
-// constexpr StringView socket_path = "\0/tmp/.X11-unix/X0";
+constexpr auto socket_path = cat::StaticString<18>("/tmp/.X11-unix/X0");
 
 enum class OperationCode : unsigned char {
     error = 0,

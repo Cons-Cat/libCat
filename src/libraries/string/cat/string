@@ -25,7 +25,7 @@ namespace cat {
 
 constexpr auto string_length(char const* p_string) -> ssize;
 
-template <ssize length>
+template <signed long long length>
 struct StaticString;
 
 class String : public Span<char const> {
@@ -50,19 +50,16 @@ class String : public Span<char const> {
     constexpr String(T p_string) requires(is_pointer<T>)
         : Span<char const>(p_string, string_length(p_string)){};
 
-    template <unsigned int long other_length>
+    template <signed long long other_length>
     consteval String(char const (&string)[other_length]) {
         this->p_storage = string;
-        this->length = static_cast<signed int long>(other_length);
+        this->length = static_cast<signed long long>(other_length);
     }
 
-    // TODO: Make this `consteval`.
-    template <unsigned int long other_length>
-    constexpr String(
-        StaticString<static_cast<signed int long>(other_length)> const&
-            string) {
+    template <signed long long other_length>
+    constexpr String(StaticString<other_length> const& string) {
         this->p_storage = &(string.storage[0]);
-        this->length = static_cast<signed int long>(other_length);
+        this->length = other_length;
     }
 
     // A `String` consuming `nullptr` would cause undefined behavior.
@@ -123,13 +120,12 @@ class String : public Span<char const> {
     }
 };
 
-// This could be `unsigned long` because the compiler cannot deduce a string
-// literal's length as `ssize`.
-// TODO: Try a deduction guide.
-template <ssize length>
+// This is `signed long long` because GCC cannot deduce a string literal's
+// length from an `ssize`.
+template <signed long long length>
 struct StaticString : CollectionFacade<StaticString<length>, char> {
     // TODO: Use an `Array`.
-    char storage[length.raw];
+    char storage[length];
 
     constexpr auto p_data() -> char* {
         return &(this->storage[0]);
@@ -145,61 +141,73 @@ struct StaticString : CollectionFacade<StaticString<length>, char> {
 
     constexpr StaticString() = default;
 
-    constexpr StaticString(StaticString<length> const&) = default;
-
-    constexpr StaticString(char const (&in)[length.raw]) {
-        for (int i = 0; i < length.raw - 1; ++i) {
-            this->storage[i] = in[i];
+    template <signed long long in_length>
+        requires(in_length <= length)
+    constexpr StaticString(StaticString<length> const& string) {
+        // TODO: `copy_memory` should be `constexpr`.
+        // copy_memory(this->p_data(), this->p_data(), length);
+        for (signed long long i = 0; i < length; ++i) {
+            storage[i] = string[i];
         }
-        for (signed long long i = length.raw; i < length; ++i) {
-            this->storage[i] = '\0';
+        for (signed long long i = length; i < length; ++i) {
+            storage[i] = '\0';
         }
     }
 
-    auto operator=(StaticString<length> const& string)
+    constexpr StaticString(char const (&in)[length]) {
+        // TODO: `copy_memory` should be `constexpr`.
+        // copy_memory(this->p_data(), this->p_data(), length);
+        for (signed long long i = 0; i < length; ++i) {
+            storage[i] = in[i];
+        }
+        for (signed long long i = length; i < length; ++i) {
+            storage[i] = '\0';
+        }
+    }
+
+    template <signed long long in_length>
+        requires(in_length <= length)
+    auto operator=(StaticString<in_length> const& string)
         -> StaticString<length>& {
-        copy_memory(string.p_data(), this->p_data(), length);
+        copy_memory(string.p_data(), this->p_data(), in_length);
+        for (signed long long i = in_length; i < length; ++i) {
+            this->storage[i] = '\0';
+        }
         return *this;
     }
 
     template <signed long long in_length>
         requires(in_length <= length)
     auto operator=(char const (&in)[in_length]) -> StaticString<length>& {
-        copy_memory(&in, &(this->storage[0]), in_length - 1);
-        // TODO: Should remaining bytes in `storage` be nulled out?
-        for (signed long long i = in_length - 1; i < length; ++i) {
+        copy_memory(&in, this->p_data(), in_length);
+        for (signed long long i = in_length; i < length; ++i) {
             this->storage[i] = '\0';
         }
-
         return *this;
     }
 };
 
-// template <unsigned long length>
-// StaticString(length) -> StaticString<ssize{length}>;
-
 // Concatenate constant-evaluated strings.
 
-// This could be `unsigned long` because the compiler cannot deduce a string
-// literal's length as `ssize`.
-// TODO: Try a deduction guide.
-template <ssize length_1, ssize length_2>
-consteval auto operator+(StaticString<length_1> const& string_1,
+// This is `signed long long` because GCC cannot deduce a string literal's
+// length from an `ssize`.
+template <signed long long length_1, signed long long length_2>
+constexpr auto operator+(StaticString<length_1> const& string_1,
                          StaticString<length_2> const& string_2)
     -> StaticString<length_1 - 1 + length_2> {
     // TODO: Use an `Array`.
-    char array[length_1.raw - 1 + length_2.raw];
+    char array[length_1 - 1 + length_2];
 
     for (int i = 0; i < length_1 - 1; ++i) {
         array[i] = string_1.storage[i];
     }
 
-    for (int i = length_1.raw - 1; i < length_1 - 1 + length_2 - 1; ++i) {
-        array[i] = string_2.storage[i - length_1.raw + 1];
+    for (int i = length_1 - 1; i < length_1 - 1 + length_2 - 1; ++i) {
+        array[i] = string_2.storage[i - length_1 + 1];
     }
 
     // Make this string null-terminated.
-    array[(length_1.raw - 1 + length_2.raw - 1)] = '\0';
+    array[(length_1 - 1 + length_2 - 1)] = '\0';
     StaticString static_string = array;
     return static_string;
 }

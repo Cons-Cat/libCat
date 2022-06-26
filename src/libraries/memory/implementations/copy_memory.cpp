@@ -4,6 +4,7 @@
 #include <cat/simd>
 
 // Copy some bytes from one address to another address.
+// TODO: Make this `constexpr`.
 void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
     using Vector = int8x_;
 
