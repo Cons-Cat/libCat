@@ -162,10 +162,11 @@ struct IteratorFacade {
         if constexpr (detail::HasAdvance<Derived>) {
             return left += offset;
         } else {
+            Derived left_copy = left;
             for (ssize i = 0; i < offset; ++i) {
-                ++left;
+                ++left_copy;
             }
-            return left;
+            return left_copy;
         }
     }
 
@@ -175,10 +176,11 @@ struct IteratorFacade {
         if constexpr (detail::HasAdvance<Derived>) {
             return right += offset;
         } else {
+            Derived right_copy = right;
             for (ssize i = 0; i < offset; ++i) {
-                ++right;
+                ++right_copy;
             }
-            return right;
+            return right_copy;
         }
     }
 

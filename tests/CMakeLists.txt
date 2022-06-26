@@ -173,6 +173,6 @@ if(NOT (BUILD_ALL_TESTS
 	  OR BUILD_TEST_THREAD
 	  OR BUILD_TEST_OPTIONAL
 	  OR BUILD_TEST_TUPLE))
-  add_executable(dummy result_success.cpp)
+#  add_executable(dummy result_success.cpp)
   add_test(NAME dummy COMMAND echo)
 endif()
