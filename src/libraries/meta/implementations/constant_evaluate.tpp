@@ -4,14 +4,10 @@
 
 #include <cat/meta>
 
-// TODO: add a `cat::invocable` concept.
-/*
-template <typename Function>
-consteval auto cat::constant_evaluate(auto value) requires(
-    cat::is_invocable<Function>) {
+template <cat::Invocable Function>
+consteval auto cat::constant_evaluate(auto value) {
     return value();
 }
-*/
 
 consteval auto cat::constant_evaluate(auto value) {
     return value;

@@ -567,106 +567,13 @@ template <typename T>
 constexpr bool is_trivial =
     is_trivially_copyable<T>&& is_trivially_default_constructible<T>;
 
-// TODO: Implement a working `invoke()`.
-/*
-namespace detail {
-    template <typename T>
-    struct InvokeTraitDetail {
-        template <typename Function, typename... Args>
-        static auto call(Function&& callback, Args&&... args)
-            -> decltype(forward<Function>(callback)(forward<Args>(args)...));
-    };
-
-    template <typename B, typename MyType>
-    struct InvokeTraitDetail<MyType B::*> {
-        template <typename T>
-        static auto get(T&& t) -> T&& requires(is_base_of<B, Decay<T>>);
-
-        template <typename T>
-        static auto get_detail(T&& t)
-            -> decltype(*forward<T>(t)) requires(!is_base_of<B, Decay<T>>);
-
-        template <typename T, typename... Args, typename U>
-        static auto call(U B::*p_function, T&& t, Args&&... args)
-            -> decltype((*(InvokeTraitDetail::get(forward<T>(t)).p_function))(
-                forward<Args>(args)...)) requires(is_function<U>);
-
-        template <typename T>
-        static auto call(MyType B::*p_function, T&& t)
-            -> decltype(*(InvokeTraitDetail::get(forward<T>(t)).p_function));
-    };
-
-    template <typename Function, typename... Args,
-              typename Fd = typename DecayTrait<Function>::Type>
-    auto try_invoke_detail(Function&& callback, Args&&... args)
-        -> decltype(InvokeTraitDetail<Fd>::call(forward<Function>(callback),
-                                                forward<Args>(args)...));
-
-    template <typename AlwaysVoid, typename, typename...>
-    struct InvokeResultTraitDetail {};
-    template <typename Function, typename... Args>
-    struct InvokeResultTraitDetail<decltype(void(detail::try_invoke_detail(
-                                       declval<Function>(),
-                                       declval<Args>()...))),
-                                   Function, Args...> {
-        using Type = decltype(detail::try_invoke_detail(declval<Function>(),
-                                                        declval<Args>()...));
-    };
-}  // namespace detail
-
-template <typename Function, typename... ArgTypes>
-struct InvokeResultTrait
-    : detail::InvokeResultTraitDetail<void, Function, ArgTypes...> {};
-
-template <typename Function, typename... ArgTypes>
-using InvokeResult = typename InvokeResultTrait<Function, ArgTypes...>::Type;
-
-namespace detail {
-    template <typename T, typename U, bool = IsVoidTrait<U>::value,
-              typename = void>
-    struct IsInvocableTraitDetail : FalseTypeTrait {};
-
-    template <typename T, typename U>
-    struct IsInvocableTraitDetail<T, U, true, Void<typename T::Type>>
-        : TrueTypeTrait {};
-
-    template <typename TResult, typename UReturn>
-    struct IsInvocableTraitDetail<TResult, UReturn, false,
-                                  Void<typename TResult::Type>> {
-      private:
-        static auto get() -> typename TResult::Type;
-
-        template <typename T>
-        static void try_conversion(T);
-
-        template <typename T, typename = decltype(try_conversion<T>(get()))>
-        static auto test(int) -> TrueTypeTrait;
-
-        template <typename T>
-        static auto test(...) -> FalseTypeTrait;
-
-      public:
-        using Type = decltype(test<UReturn>(1));
-    };
-}  // namespace detail
-
-template <typename Function, typename... ArgTypes>
-struct IsInvocableTrait
-    : detail::IsInvocableTraitDetail<InvokeResultTrait<Function, ArgTypes...>,
-                                     void>::Type {};
 template <typename Function, typename... Args>
-constexpr bool is_invocable = IsInvocableTrait<Function, Args...>::value;
+concept Invocable = requires(Function func, Args&&... args) {
+    func(forward<Args>(args)...);
+};
 
 template <typename Function, typename... Args>
-constexpr auto invoke(Function&& callback, Args&&... args)
-    -> InvokeResult<Function, Args...> {
-    // TODO: Handle member functions.
-    return forward<Function>(callback)(forward<Args>(args)...);
-}
-
-template <typename Function, typename... Args>
-concept Invocable = is_invocable<Function, Args...>;
-*/
+constexpr bool is_invocable = Invocable<Function, Args...>;
 
 // https://quuxplusone.github.io/blog/2019/02/06/arrow-proxy/
 template <class Reference>
@@ -677,10 +584,8 @@ struct ArrowProxy {
     }
 };
 
-/*
-template <typename Function>
-consteval auto constant_evaluate(auto value) requires(is_invocable<Function>);
-*/
+template <Invocable Function>
+consteval auto constant_evaluate(auto value);
 
 consteval auto constant_evaluate(auto value);
 
@@ -719,11 +624,12 @@ concept BooleanTestable = detail::BooleanTestableDetail<T> && requires(T&& b) {
     { !forward<T>(b) } -> detail::BooleanTestableDetail;
 };
 
-// boolean_testable is adapted from the exposition-only concept
+// `WeaklyEqualityComparableWith` is adapted from the exposition-only
+// concept
 // `__WeaklyEqualityComparableWith`.
 namespace detail {
     template <typename T, typename U>
-    concept WeaklyEqualityComparableWithDetail =
+    concept WeaklyEqualityComparableWith =
         requires(RemoveReference<T> const& t, RemoveReference<U> const& u) {
         { t == u } -> BooleanTestableDetail;
         { t != u } -> BooleanTestableDetail;
@@ -733,7 +639,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-concept EqualityComparable = detail::WeaklyEqualityComparableWithDetail<T, T>;
+concept EqualityComparable = detail::WeaklyEqualityComparableWith<T, T>;
 
 template <typename T>
 concept EnumClass = is_scoped_enum<T>;
