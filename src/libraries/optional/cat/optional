@@ -184,7 +184,7 @@ struct OptionalValueStorage {
     template <typename OtherOptional>
     constexpr void assign(OtherOptional&& optional) requires(
         IsSpecializationTrait<OtherOptional, Optional>::value&&
-            is_convertible<typename OtherOptional::Value, T>) {
+            is_implicitly_convertible<typename OtherOptional::Value, T>) {
         if (this->has_value()) {
             if (optional.has_value()) {
                 this->storage = forward<OtherOptional>(optional).value();
@@ -212,7 +212,7 @@ struct OptionalReferenceStorage {
 
     template <typename U>
     constexpr OptionalReferenceStorage(U&& in_value) requires(
-        is_convertible<U, T>)
+        is_implicitly_convertible<U, T>)
         : p_storage(cat::addressof(forward<U>(in_value))){};
 
     constexpr OptionalReferenceStorage(detail::NullOpt) : p_storage(nullptr){};
@@ -263,7 +263,7 @@ struct OptionalReferenceStorage {
     template <typename OtherOptional>
     constexpr void assign(OtherOptional&& optional) requires(
         IsSpecializationTrait<OtherOptional, Optional>::value&&
-            is_convertible<typename OtherOptional::Value, T>) {
+            is_implicitly_convertible<typename OtherOptional::Value, T>) {
         if (this->has_value()) {
             if (optional.has_value()) {
                 this->p_storage = forward<OtherOptional>(optional).value();
@@ -429,7 +429,7 @@ struct OptionalPredicateStorage {
     template <typename OtherOptional>
     constexpr void assign(OtherOptional&& optional) requires(
         IsSpecializationTrait<OtherOptional, Optional>::value&&
-            is_convertible<typename OtherOptional::Value, T>) {
+            is_implicitly_convertible<typename OtherOptional::Value, T>) {
         if (this->has_value()) {
             if (optional.has_value()) {
                 this->storage = forward<OtherOptional>(optional).value();
@@ -490,42 +490,42 @@ class Optional {
 
     // A reference type cannot be copy-constructed, but other types can.
     template <typename U>
-    constexpr Optional(U const& input) requires(!is_reference<T> &&
-                                                is_convertible<U, Value> &&
-                                                is_copy_constructible<Value>)
-        : storage(static_cast<Value>(input)){};
-
-    template <typename U>
     constexpr Optional(U const& input) requires(
-        is_reference<T>&& is_convertible<U, Value>)
+        !is_reference<T> && is_implicitly_convertible<U, Value> &&
+        is_copy_constructible<Value>)
         : storage(static_cast<Value>(input)){};
 
     template <typename U>
-    constexpr Optional(U&& input) requires(is_convertible<U, T>)
-        : storage(forward<U>(input)){};
+        requires(is_reference<T>&& is_implicitly_convertible<U, Value>)
+    constexpr Optional(U const& input) : storage(static_cast<Value>(input)){};
+
+    template <typename U>
+        requires(is_convertible<U, T>)
+    constexpr Optional(U&& input) : storage(forward<U>(input)){};
 
     // `Optional` can be constructed by another `Optional`.
     template <typename U>
-    constexpr Optional(Optional<U> const& input) requires(
-        is_convertible<U, Value>) {
+        requires(is_implicitly_convertible<U, Value>)
+    constexpr Optional(Optional<U> const& input) {
         this->storage.assign(input);
     }
 
     template <typename U>
-    constexpr Optional(Optional<U>&& input) requires(is_convertible<U, Value>) {
-        this->storage.assign(forward<Optional<U>>(input));
+        requires(is_implicitly_convertible<U, Value>)
+    constexpr Optional(Optional<U>&& input) {
+        this->storage.assign(move(input));
     }
 
     // Consuming `nullopt` is forwarded to `storage`.
     constexpr Optional(detail::NullOpt) : storage(nullopt){};
 
     // Consuming `monostate` default-initializes the `Optional`.
-    constexpr Optional(Monostate) : storage(Value{}){};
+    constexpr Optional(Monostate) : storage(Value()){};
 
     // Any `Optional` can convert into another.
     template <typename U>
-    constexpr operator Optional<U>() requires(!is_same<U, T> &&
-                                              is_convertible<Value, U>) {
+        requires(!is_same<U, T> && is_implicitly_convertible<Value, U>)
+    constexpr operator Optional<U>() {
         if (this->has_value()) {
             if constexpr (is_same<U, void>) {
                 return monostate;
@@ -540,29 +540,31 @@ class Optional {
     // Forward all assignment operators to `storage`, except when assigning
     // `nullopt`.
     template <typename U>
-    constexpr auto operator=(U const& value)
-        -> Optional& requires(is_convertible<U, Value> && !is_reference<T>) {
+        requires(is_implicitly_convertible<U, Value> && !is_reference<T> &&
+                 is_copy_assignable<Value>)
+    constexpr auto operator=(U const& value) -> Optional& {
         this->storage = static_cast<Value>(value);
         return *this;
     }
 
     template <typename U>
-    auto operator=(U&& value)
-        -> Optional& requires(is_convertible<U, Value> && !is_reference<T>) {
+        requires(is_implicitly_convertible<U, Value> && !is_reference<T> &&
+                 is_move_assignable<Value>)
+    auto operator=(U&& value) -> Optional& {
         this->storage = static_cast<Value>(forward<U>(value));
         return *this;
     }
 
     template <typename U>
-    auto operator=(Optional<U> const& optional)
-        -> Optional& requires(is_convertible<U, Value>) {
+        requires(is_implicitly_convertible<U, Value>)
+    auto operator=(Optional<U> const& optional) -> Optional& {
         this->storage.assign(optional);
         return *this;
     }
 
     template <typename U>
-    auto operator=(Optional<U>&& optional)
-        -> Optional& requires(is_convertible<U, Value>) {
+        requires(is_implicitly_convertible<U, Value>)
+    auto operator=(Optional<U>&& optional) -> Optional& {
         this->storage.assign(forward<Optional<U>>(optional));
         return *this;
     }
