@@ -38,23 +38,32 @@ void meow() {
         cat::exit(1);
     }
 
-    [[maybe_unused]] constexpr cat::String const_string_1 = "Hello, ";
+    [[maybe_unused]] cat::String const_string_1 = "Hello, ";
     [[maybe_unused]] constexpr cat::String const_string_2 = "world!";
-    // TODO: Fix these:
-    // constexpr StaticString const_string_3 = "Hello, ";
-    // constexpr StaticString const_string_4 = "world!";
+
+    // Fixed length strings.
+    constexpr cat::StaticString const_string_3 = "Hello, ";
+    constexpr cat::StaticString const_string_4 = "world!";
+
+    // Test collection operations.
+    _ = const_string_1[1];
+    Result(!const_string_3.at(10).has_value()).or_panic();
 
     // TODO: Make this `constexpr`.
-    //     cat::String foo = (const_string_3 + const_string_4);
+    cat::StaticString hello_world = (const_string_3 + const_string_4);
+    constexpr cat::StaticString const_hello_world =
+        (const_string_3 + const_string_4);
+    Result(cat::compare_strings(hello_world, "Hello, world!")).or_panic();
+    Result(cat::compare_strings(const_hello_world, "Hello, world!")).or_panic();
 
-    // ssize const h = const_string_1.find('h').value();
-    // ssize const e = const_string_1.find('e').value();
-    // ssize const l = const_string_1.find('l').value();
-    // ssize const o = const_string_1.find('o').value();
-    // // Result(h == 0).or_panic();
-    // Result(e == 1).or_panic();
-    // Result(l == 2).or_panic();
-    // Result(o == 4).or_panic();
+    ssize const h = const_string_1.find('H').value();
+    ssize const e = const_string_1.find('e').value();
+    ssize const l = const_string_1.find('l').value();
+    ssize const o = const_string_1.find('o').value();
+    Result(h == 0).or_panic();
+    Result(e == 1).or_panic();
+    Result(l == 2).or_panic();
+    Result(o == 4).or_panic();
 
     cat::exit();
 }

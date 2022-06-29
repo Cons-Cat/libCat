@@ -107,6 +107,7 @@ class String : public Span<char const> {
         for (; i < this->length - char1x_::lanes; i += char1x_::lanes) {
             // TODO: Consider aligning this load?
             char1x_ const storage = char1x_::loaded(this->p_storage + i);
+            // TODO: Support a native ABI mask here.
             SimdMask<Avx2Abi<char>, char> const compare =
                 (storage == character);
             int4 const mask = move_mask(compare);
@@ -124,7 +125,6 @@ class String : public Span<char const> {
 // length from an `ssize`.
 template <signed long long length>
 struct StaticString : CollectionFacade<StaticString<length>, char> {
-    // TODO: Use an `Array`.
     char storage[length];
 
     constexpr auto p_data() -> char* {
@@ -141,6 +141,7 @@ struct StaticString : CollectionFacade<StaticString<length>, char> {
 
     constexpr StaticString() = default;
 
+    // Construct from another `StaticString` of lesser or equal length.
     template <signed long long in_length>
         requires(in_length <= length)
     constexpr StaticString(StaticString<length> const& string) {
@@ -149,39 +150,45 @@ struct StaticString : CollectionFacade<StaticString<length>, char> {
         for (signed long long i = 0; i < length; ++i) {
             storage[i] = string[i];
         }
-        for (signed long long i = length; i < length; ++i) {
-            storage[i] = '\0';
+        if constexpr (in_length < length) {
+            for (signed long long i = length; i < length; ++i) {
+                storage[i] = '\0';
+            }
         }
     }
 
+    // Construct and deduce length from a string literal.
     constexpr StaticString(char const (&in)[length]) {
         // TODO: `copy_memory` should be `constexpr`.
         // copy_memory(this->p_data(), this->p_data(), length);
         for (signed long long i = 0; i < length; ++i) {
             storage[i] = in[i];
         }
-        for (signed long long i = length; i < length; ++i) {
-            storage[i] = '\0';
-        }
     }
 
+    // Assign a `StaticString` of lesser or equal length.
     template <signed long long in_length>
         requires(in_length <= length)
     auto operator=(StaticString<in_length> const& string)
         -> StaticString<length>& {
         copy_memory(string.p_data(), this->p_data(), in_length);
-        for (signed long long i = in_length; i < length; ++i) {
-            this->storage[i] = '\0';
+        if constexpr (in_length < length) {
+            for (signed long long i = in_length; i < length; ++i) {
+                this->storage[i] = '\0';
+            }
         }
         return *this;
     }
 
+    // Assign a string literal of lesser or equal length.
     template <signed long long in_length>
         requires(in_length <= length)
     auto operator=(char const (&in)[in_length]) -> StaticString<length>& {
         copy_memory(&in, this->p_data(), in_length);
-        for (signed long long i = in_length; i < length; ++i) {
-            this->storage[i] = '\0';
+        if constexpr (in_length < length) {
+            for (signed long long i = in_length; i < length; ++i) {
+                this->storage[i] = '\0';
+            }
         }
         return *this;
     }
