@@ -106,50 +106,46 @@ struct NumericLimits<double> {
 };
 
 namespace detail {
-    template <typename T>
-    concept CatNumeral = is_cat_numeral<T>;
+    // These four overloads are required so that a `Numeral` does not put itself
+    // into `is_signed` in its own contructor, which would be ill-formed.
 
     template <typename T, typename U>
     constexpr auto is_safe_conversion() -> bool {
         // clang-format off
-    return (sizeof(T) >= sizeof(U))
-		   && (is_signed<T> == is_signed<U>)
-	       && (is_floating_point<T> == is_floating_point<U>);
+        return (sizeof(T) >= sizeof(U))
+            && (is_signed<T> == is_signed<U>)
+            && (is_floating_point<T> == is_floating_point<U>);
         // clang-format on
     }
 
-    template <CatNumeral T, typename U>
+    template <SafeNumeral T, typename U>
     constexpr auto is_safe_conversion() -> bool {
-        using UnderlyingT = typename T::Raw;
+        using TRaw = typename T::Raw;
         // clang-format off
-    return (sizeof(UnderlyingT) >= sizeof(U))
-		   && (is_signed<UnderlyingT> == is_signed<U>)
-	       && (is_floating_point<UnderlyingT>
-               == is_floating_point<U>);
+        return (sizeof(TRaw) >= sizeof(U))
+            && (is_signed<TRaw> == is_signed<U>)
+            && (is_floating_point<TRaw> == is_floating_point<U>);
         // clang-format on
     }
 
-    template <typename T, CatNumeral U>
+    template <typename T, SafeNumeral U>
     constexpr auto is_safe_conversion() -> bool {
-        using UnderlyingU = typename U::Raw;
+        using URaw = typename U::Raw;
         // clang-format off
-    return (sizeof(T) >= sizeof(UnderlyingU))
-		   && (is_signed<T> == is_signed<UnderlyingU>)
-	       && (is_floating_point<T>
-               == is_floating_point<UnderlyingU>);
+        return (sizeof(T) >= sizeof(URaw))
+            && (is_signed<T> == is_signed<URaw>)
+            && (is_floating_point<T> == is_floating_point<URaw>);
         // clang-format on
     }
 
-    template <CatNumeral T, CatNumeral U>
+    template <SafeNumeral T, SafeNumeral U>
     constexpr auto is_safe_conversion() -> bool {
-        using UnderlyingT = typename T::Raw;
-        using UnderlyingU = typename U::Raw;
+        using TRaw = typename T::Raw;
+        using URaw = typename U::Raw;
         // clang-format off
-    return (sizeof(UnderlyingT) >= sizeof(UnderlyingU))
-		   && (is_signed<UnderlyingT>
-               == is_signed<UnderlyingU>)
-	       && (is_floating_point<UnderlyingT>
-               == is_floating_point<UnderlyingU>);
+        return (sizeof(TRaw) >= sizeof(URaw))
+            && (is_signed<TRaw> == is_signed<URaw>)
+            && (is_floating_point<TRaw> == is_floating_point<URaw>);
         // clang-format on
     }
 }  // namespace detail
@@ -184,9 +180,13 @@ struct Numeral {
 
     constexpr Numeral() = default;
 
-    template <typename U>
+    template <Arithmetic U>
     constexpr explicit(!detail::is_safe_conversion<T, U>()) Numeral(U from)
         : raw(static_cast<T>(from)){};
+
+    // template <Bool U>
+    // constexpr explicit(!detail::is_safe_conversion<T, U>()) Numeral(U from)
+    //     : raw(static_cast<T>(from)){};
 
     template <typename U>
     constexpr explicit operator U() {
@@ -601,22 +601,24 @@ static_assert(sizeof(bool1) == 1);
 
 struct bool2 {  // NOLINT
     using Raw = uint2;
-    uint2 value;
+    uint2 raw;
     constexpr bool2() = default;
-    constexpr bool2(bool1 const input) : value(input){};
+    constexpr bool2(bool1 const input)
+        : raw(static_cast<unsigned char>(input)){};
     constexpr operator bool() const {
-        return this->value != 0u;
+        return this->raw != 0u;
     }
 };
 
 struct bool4 {  // NOLINT
     using Raw = uint4;
-    uint4 value;
+    uint4 raw;
     constexpr bool4() = default;
-    constexpr bool4(bool1 const input) : value(input){};
-    constexpr bool4(bool2 const input) : value(input){};
+    constexpr bool4(bool1 const input)
+        : raw(static_cast<unsigned char>(input)){};
+    constexpr bool4(bool2 const input) : raw(input){};
     constexpr operator bool() const {
-        return this->value != 0u;
+        return this->raw != 0u;
     }
 };
 
