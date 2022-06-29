@@ -28,8 +28,8 @@ class Span : public CollectionFacade<Span<T>, T> {
 
     // Construct a `Span` as `{address, length}`.
     template <typename U>
-    constexpr Span(U* const p_in_data,
-                   ssize const in_length) requires(is_convertible<U, T>)
+        requires(is_implicitly_convertible<U*, T*>)
+    constexpr Span(U* const p_in_data, ssize const in_length)
         : p_storage(static_cast<T*>(p_in_data)), length(in_length){};
 
     // Construct a `Span` between two addresses.
@@ -39,14 +39,18 @@ class Span : public CollectionFacade<Span<T>, T> {
         : p_storage(p_start), length(ssize{p_end - p_start}){};
 
     // TODO: Make a `ContiguousContainer` `concept`.
-    constexpr Span(auto const& container)
-        : p_storage(container.p_data()), length(container.size()){};
+    /*
+constexpr Span(auto const& container)
+    : p_storage(container.p_data()), length(container.size()){};
 
-    template <typename U>
-    // NOLINTNEXTLINE
-    constexpr Span(U&& container) requires(is_convertible<U, T>)
-        : p_storage(container.p_data()), length(forward<U>(container).size()){};
+template <typename U>
+    requires(is_convertible<U, T>)
+constexpr Span(U&& container)
+    : p_storage(static_cast<T>(container).p_data()),
+      length(forward<U>(container).size()){};
+    */
 
+    // TODO: Template this.
     // NOLINTNEXTLINE Copying the pointer is reasonable here.
     constexpr auto operator=(Span<T> const& span) {
         this->p_storage = span.p_storage;
@@ -54,9 +58,11 @@ class Span : public CollectionFacade<Span<T>, T> {
         return *this;
     }
 
+    // TODO: Template this.
     auto operator=(Span<T>&& span) {
         this->p_storage = span.p_storage;
         this->length = cat::move(span).length;
+        return *this;
     }
 
     // Get the non-`const` address that this `Span` starts at.

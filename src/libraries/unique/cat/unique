@@ -35,56 +35,61 @@ class Unique {
 
   public:
     // Delete non-moving constructors.
-    // constexpr Unique(T const&) = delete;
-
-    constexpr Unique(Unique<T> const&) = delete;
+    template <typename U>
+    constexpr Unique(Unique<U> const&) = delete;
 
     // Allow default-construction and move-construction.
     constexpr Unique() = default;
 
     template <typename U>
-    constexpr Unique(Unique<U>&& raii) requires(is_convertible<U, T>)
+        requires(is_implicitly_convertible<U, T>)
+    constexpr Unique(Unique<U>&& raii)
         : storage(static_cast<T>(raii.borrow())){};
 
-    // Consume any type convertible into `T`.
+    // Copy-construct from any type convertible into `T`.
     template <typename U>
-    constexpr Unique(U const& value) requires(is_convertible<U, T>)
-        : storage(static_cast<T>(value)){};
+        requires(is_implicitly_convertible<U, T>)
+    constexpr Unique(U const& value) : storage(static_cast<T>(value)){};
 
+    // Move-construct from any type convertible into `T`.
     template <typename U>
-    constexpr Unique(U&& value) requires(is_convertible<U, T>)
-        : storage(forward<U>(value)){};
+        requires(is_implicitly_convertible<U, T>)
+    constexpr Unique(U&& value) : storage(forward<U>(value)){};
 
     // Forward any possible constructor into `storage`.
     template <typename... Args>
-    Unique(Args&&... args) requires(sizeof...(Args) > 1)
-        : storage(forward<Args>(args)...){};
+        requires(sizeof...(Args) > 1)
+    Unique(Args&&... args) : storage(forward<Args>(args)...){};
 
     // Allow move-assignment.
-    auto operator=(T&& t) -> Unique& {
+    template <typename U>
+        requires(is_implicitly_convertible<U, T>)
+    auto operator=(U&& value) -> Unique& {
         this->storage_destructor();
-        this->storage = forward<T>(t);
+        this->storage = static_cast<T>(forward<U>(value));
         return *this;
     }
 
-    auto operator=(Unique<T>&& raii) -> Unique& {
+    template <typename U>
+        requires(is_implicitly_convertible<U, T>)
+    auto operator=(Unique<U>&& raii) -> Unique& {
         this->storage_destructor();
-        this->storage = cat::move(raii).borrow();
+        this->storage = static_cast<T>(move(raii).borrow());
         return *this;
     }
 
-    auto operator=(UniqueWeak<T>&& raii) -> Unique& {
+    template <typename U>
+        requires(is_implicitly_convertible<U, T>)
+    auto operator=(UniqueWeak<U>&& raii) -> Unique& {
         this->storage_destructor();
-        this->storage = cat::move(raii).borrow();
+        this->storage = static_cast<T>(move(raii).borrow());
         return *this;
-    }
-
-    auto operator=(auto anything) {
-        this->storage = anything;
     }
 
     ~Unique() {
-        this->storage_destructor();
+        if constexpr (HasRaii<T>) {
+            this->storage.raii();
+        }
     }
 
     constexpr auto borrow() -> T&& {
@@ -115,50 +120,50 @@ class UniqueWeak {
 
   public:
     // Delete non-moving constructors.
-    constexpr UniqueWeak(UniqueWeak<T> const&) = delete;
+    template <typename U>
+    constexpr UniqueWeak(UniqueWeak<U> const&) = delete;
 
     // Allow default-construction and move-construction.
     constexpr UniqueWeak() = default;
 
+    // Consume any type convertible into `T`.
     template <typename U>
-    constexpr UniqueWeak(UniqueWeak<U>&& raii) requires(is_convertible<U, T>)
+        requires(is_implicitly_convertible<U, T>)
+    constexpr UniqueWeak(U const& value) : storage(static_cast<T>(value)){};
+
+    template <typename U>
+        requires(is_implicitly_convertible<U, T>)
+    constexpr UniqueWeak(U&& value)
+        : storage(static_cast<T>(forward<U>(value))){};
+
+    template <typename U>
+        requires(is_implicitly_convertible<U, T>)
+    constexpr UniqueWeak(UniqueWeak<U>&& raii)
         : storage(static_cast<T>(raii.borrow())) {
         raii.owns_data = false;
     };
-
-    // Consume any type convertible into `T`.
-    template <typename U>
-    constexpr UniqueWeak(U const& value) requires(is_convertible<U, T>)
-        : storage(static_cast<T>(value)){};
-
-    template <typename U>
-    constexpr UniqueWeak(U&& value) requires(is_convertible<U, T>)
-        : storage(forward<U>(value)){};
-
-    // Forward any possible constructor into `storage`.
-    constexpr UniqueWeak(T&& t) : storage(forward<T>(t)){};
 
     template <typename... Args>
     UniqueWeak(Args&&... args) : storage(forward<Args>(args)...){};
 
     // Allow move-assignment.
-    auto operator=(T&& t) -> UniqueWeak<T>& {
-        this->owns_data = true;
+    template <typename U>
+        requires(is_implicitly_convertible<U, T>)
+    auto operator=(U&& value) -> UniqueWeak<T>& {
         this->storage_destructor();
-        this->storage = forward<T>(t);
+        this->storage = forward<U>(value);
+        this->owns_data = true;
         return *this;
     }
 
-    auto operator=(UniqueWeak<T>&& raii) -> UniqueWeak<T>& {
+    template <typename U>
+        requires(is_implicitly_convertible<U, T>)
+    auto operator=(UniqueWeak<U>&& raii) -> UniqueWeak<T>& {
         raii.owns_data = false;
-        this->owns_data = true;
         this->storage_destructor();
-        this->storage = cat::move(raii).borrow();
+        this->storage = static_cast<T>(move(raii).borrow());
+        this->owns_data = true;
         return *this;
-    }
-
-    auto operator=(auto anything) {
-        this->storage = anything;
     }
 
     constexpr auto has_ownership() -> bool1 {
@@ -171,8 +176,11 @@ class UniqueWeak {
     }
 
     ~UniqueWeak() {
-        this->storage_destructor();
+        if constexpr (HasRaii<T>) {
+            this->storage.raii();
+        }
     }
+
   protected:
     // If this `UniqueWeak` owns the data it stores, it will be destroyed.
     void storage_destructor() {

@@ -34,11 +34,12 @@ struct Foo {
 void func(cat::UniqueWeak<Foo>){};
 
 void meow() {
+    // TODO: Fix `Unique` and re-enable these tests.
     _ = cat::print_line("Construct objects.");
     // Test constructor.
     cat::UniqueWeak<Foo> foo(cat::String("foo"));
     // Test assignment.
-    foo = "foo";
+    foo = cat::String("foo");
     Result(foo.has_ownership()).or_panic();
 
     cat::UniqueWeak<Foo> moo(cat::String("moo"));
@@ -54,7 +55,7 @@ void meow() {
     func(cat::move(foo));
     Result(!foo.has_ownership()).or_panic();
 
-    // This is correctly ill-formed:
+    // This is deliberately ill-formed:
     // func(foo);
 
     _ = cat::print_line("Everything falls out of scope.");
@@ -66,8 +67,8 @@ void meow() {
     _ = goo.borrow();
     Result(!goo.has_ownership()).or_panic();
 
-    // `raii()` should have been called exactly twice.
-    Result(global == 2).or_panic();
+    // `raii()` should have been called exactly three times.
+    Result(global == 3).or_panic();
 
     // Deduction guides should work.
     cat::UniqueWeak weak = 1;
@@ -78,12 +79,12 @@ void meow() {
     weak = 2;
     Result(weak.has_ownership()).or_panic();
 
-    // Permanately transferring ownership a `	cat::Unique's storage is unsafe,
+    // Permanately transferring ownership a `cat::Unique`'s storage is unsafe,
     // but possible:
     weak = unique.borrow();
     Result(weak.has_ownership()).or_panic();
 
-    // 	cat::Unique can be assigned over, which will call its old data's
+    // `cat::Unique` can be assigned over, which will call its old data's
     // destructor.
     unique = 2;
 

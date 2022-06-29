@@ -12,22 +12,23 @@ namespace cat {
 namespace detail {
     template <typename T, typename... Errors>
     struct ScaredyVariantStorage {
-        using Type = Conditional<is_void<T>, Monostate, T>;
-        Variant<Type, Errors...> storage;
+        using Value = Conditional<is_void<T>, Monostate, T>;
+        Variant<Value, Errors...> storage;
 
         constexpr ScaredyVariantStorage() = default;
 
         // Consume a value.
         template <typename U>
-        constexpr ScaredyVariantStorage(U const& input) requires(
-            is_convertible<U, T>)
-            : storage(static_cast<T>(input)){};
+            requires(is_implicitly_convertible<U, Value>)
+        constexpr ScaredyVariantStorage(U const& input)
+            // This `static_cast` is needed here, because `Variant` does not
+            // support implicit conversions in its constructors.
+            : storage(static_cast<Value>(input)){};
 
-        // Consume an error.
+        // Consume an error value.
         template <typename U>
-        constexpr ScaredyVariantStorage(U const& input) requires(
-            !is_convertible<U, T>)
-            : storage(input){};
+            requires(TypeList<Errors...>::template has_type<U>)
+        constexpr ScaredyVariantStorage(U const& input) : storage(input){};
 
         template <typename U>
         constexpr auto operator=(U const& operand)
@@ -44,22 +45,22 @@ namespace detail {
         }
 
         constexpr auto has_value() const -> bool1 {
-            return this->storage.template holds_alternative<Type>();
+            return this->storage.template holds_alternative<Value>();
         }
 
-        constexpr auto value() & -> Type& requires(!is_void<T>) {
+        constexpr auto value() & -> Value& requires(!is_void<T>) {
             return this->storage.template value<T>();
         }
 
-        constexpr auto value() const& -> Type& requires(!is_void<T>) {
+        constexpr auto value() const& -> Value& requires(!is_void<T>) {
             return this->storage.template value<T>();
         }
 
-        constexpr auto value() && -> Type&& requires(!is_void<T>) {
+        constexpr auto value() && -> Value&& requires(!is_void<T>) {
             return move(this->storage.template value<T>());
         }
 
-        constexpr auto value() const&& -> Type&& requires(!is_void<T>) {
+        constexpr auto value() const&& -> Value&& requires(!is_void<T>) {
             return move(this->storage.template value<T>());
         }
 
@@ -106,13 +107,13 @@ namespace detail {
 
         constexpr auto operator=(Value const& operand)
             -> ScaredyPredicateStorage<T, Error>& {
-            this->storage = static_cast<T>(operand);
+            this->storage = operand;
             return *this;
         }
 
         constexpr auto operator=(Value const& operand) const
             -> ScaredyPredicateStorage<T, Error>& {
-            this->storage = static_cast<T>(operand);
+            this->storage = operand;
             return *this;
         }
 
@@ -168,19 +169,27 @@ class Scaredy {
     // clang-format on
 
     Storage storage;
+    using Value = typename Storage::Value;
 
   public:
-    using Type = Conditional<is_void<T>, Monostate, T>;
-
     constexpr Scaredy() = default;
 
     // Copy the storage of an equivalent `Scaredy` type.
     constexpr Scaredy(Scaredy<T, Errors...> const& scaredy)
         : storage(scaredy.storage){};
 
-    // Forward a non-`Scaredy` value or error into the storage.
+    // Forward a value into the storage.
     template <typename U>
-    constexpr Scaredy(U const& input) : storage(input){};
+        requires(is_implicitly_convertible<U, Value>)
+    constexpr Scaredy(U input)
+        // This `static_cast` is needed here, because `Variant` does not
+        // support implicit conversions in its constructors.
+        : storage(static_cast<Value>(input)){};
+
+    // Forward an error into the storage.
+    template <typename U>
+        requires(TypeList<Errors...>::template has_type<U>)
+    constexpr Scaredy(U input) : storage(input){};
 
     // Copy the storage of an equivalent `Scaredy` type.
     constexpr auto operator=(Scaredy<T, Errors...> const& scaredy) {
@@ -188,16 +197,16 @@ class Scaredy {
     }
 
     template <typename U>
-    constexpr auto operator=(U const& operand)
-        -> Scaredy<T, Errors...>& requires(is_convertible<U, T>) {
-        this->storage = static_cast<T>(operand);
+        requires(is_convertible<U, Value>)
+    constexpr auto operator=(U const& operand) -> Scaredy<T, Errors...>& {
+        this->storage = static_cast<Value>(operand);
         return *this;
     }
 
     template <typename U>
-    constexpr auto operator=(U const& operand) const
-        -> Scaredy<T, Errors...>& requires(is_convertible<U, T>) {
-        this->storage = static_cast<T>(operand);
+        requires(is_convertible<U, Value>)
+    constexpr auto operator=(U const& operand) const -> Scaredy<T, Errors...>& {
+        this->storage = static_cast<Value>(operand);
         return *this;
     }
 
