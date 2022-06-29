@@ -76,6 +76,7 @@ namespace detail {
         }
     }
 
+    // TODO: Look into `__integer_pack()`.
     template <ssize count, typename T, T value, T... integers>
     constexpr auto make_integer_sequence() {
         if constexpr (count > 0) {
@@ -124,6 +125,8 @@ using MakeIndexSequence = MakeIntegerSequence<ssize, count>;
 
 template <typename... Ts>
 using IndexSequenceFor = MakeIndexSequence<ssize{sizeof...(Ts)}>;
+
+// TODO: `cat::to_underlying<>()`.
 
 }  // namespace cat
 
