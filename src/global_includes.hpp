@@ -11,8 +11,8 @@ extern "C" [[gnu::used, noreturn]] void meow(
 #endif
 );
 
-/* libCat provides a `_` variable that consumes a function's output, but cannot
- * be assigned to any variable. */
+// libCat provides a `_` variable that consumes a function's output, but cannot
+// be assigned to any variable.
 namespace cat {
 namespace detail {
     struct [[maybe_unused]] Unused {
@@ -119,14 +119,16 @@ inline constexpr cat::Monostate monostate;
 template <typename T>
 class Result;
 
-// Including the `<cat/runtime>` library is required to link a libCat program.
+// Including the `<cat/runtime>` library is required to link a libCat program,
+// because it contains the `_start` symbol.
 #include <cat/runtime>
 
+// TODO: Remove this.
 // `Result` is used throughout the library.
 #include <result>
 
 // Placement `new`.
-[[nodiscard]] inline constexpr auto operator new(unsigned long, void* p_address)
+[[nodiscard]] constexpr auto operator new(unsigned long, void* p_address)
     -> void* {
     return p_address;
 }
