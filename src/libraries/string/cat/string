@@ -3,17 +3,11 @@
 #pragma once
 
 #include <cat/bit>
-#include <cat/collection>
-#include <cat/iterator>
-#include <cat/memory>
-#include <cat/meta>
-#include <cat/optional>
 #include <cat/simd>
 #include <cat/span>
-#include <cat/utility>
 
 // `__SIZE_TYPE__` is a GCC macro.
-// Deprecated call to `memcpy()`. Consider using `copy_buffer()` instead.
+// Deprecated call to `memcpy()`. Consider using `cat::copy_buffer()` instead.
 // `memcpy()` exists to enable some GCC optimizations.
 namespace std {
 extern "C" auto memcpy(void* p_destination, void const* p_source,
@@ -148,6 +142,8 @@ struct StaticString : CollectionFacade<StaticString<length>, char> {
 
     // Construct and deduce length from a string literal.
     constexpr StaticString(char const (&in)[length]) {
+        // This must be copied instead of initialized in-place to guarantee
+        // const-correctness.
         this->copy_string_data(in);
     }
 

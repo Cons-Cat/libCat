@@ -17,6 +17,57 @@ auto to_chars(auto& allocator, int4 const value) -> String {
     return String{p_string};
 }
 
+namespace detail {
+    template <signed long long length, auto value>
+    consteval auto make_const_string(StaticString<length> const& string) {
+        // Copy over the string into new, larger, storage.
+        StaticString<length + 1> new_string;
+        for (signed long long i = 0; i < length; ++i) {
+            new_string[i + 1] = string[i];
+        }
+
+        // Add a null terminator to the end of the new string.
+        new_string[length] = '\0';
+
+        // Fill in the next digit.
+        constexpr auto remainder = value % 10;
+        new_string[0] =
+            (remainder > 9) ? (remainder - 10) + 'a' : remainder + '0';
+        constexpr auto new_value = value / 10;
+
+        // Recurse through the rest of this integer.
+        if constexpr (new_value == 0) {
+            return new_string;
+        } else {
+            return make_const_string<length + 1, new_value>(new_string);
+        }
+    }
+}  // namespace detail
+
+// Convert a `constexpr` `int4` to `StaticString`.
+template <auto value>
+    requires(is_integral<decltype(value)>)
+consteval auto to_chars() {
+    if constexpr (value == 0) {
+        return StaticString{"0"};
+    } else {
+        constexpr StaticString string =
+            detail::make_const_string<1, abs(value)>(StaticString{""});
+
+        // Handle a negative sign.
+        if constexpr (is_signed<decltype(value)> && value < 0) {
+            StaticString<string.size().raw + 1> new_string;
+            for (signed long long i = 0; i < string.size(); ++i) {
+                new_string[i + 1] = string[i];
+            }
+            new_string[0] = '-';
+            return new_string;
+        } else {
+            return string;
+        }
+    }
+}
+
 // Formatting
 enum class FormatErrors {
     out_of_memory,
