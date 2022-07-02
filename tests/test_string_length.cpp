@@ -89,5 +89,22 @@ void meow() {
 	// correct.
 	// Result(cat::compare_strings(formatted_string, "bb52aa130cc")).or_panic();
 
+	// Test `cat::to_chars_at()`.
+    cat::Array<char,100> array;
+    cat::Span<char> array_span{array.p_data(), array.size()};
+    cat::String string_int_13 = cat::to_chars_at(int4{13}, array_span).value();
+    Result(cat::compare_strings(string_int_13.p_data(), "13")).or_panic();
+    cat::String string_neg_13 = cat::to_chars_at(int4{-13}, array_span).value();
+    Result(cat::compare_strings(string_neg_13.p_data(), "-13")).or_panic();
+
+	// Test `cat::to_chars_at()` in a `constexpr` context.
+	auto make_hi_in_const = [](int4 value) constexpr -> cat::String {
+		 cat::Array<char,100> array{};
+		 cat::Span<char> array_span{array.p_data(), array.size()};
+		 _ = cat::to_chars_at(value, array_span).value();
+		 return "Hi";
+	};
+    [[maybe_unused]] constexpr auto hi = make_hi_in_const(1);
+	
     cat::exit();
 }

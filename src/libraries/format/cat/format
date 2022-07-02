@@ -6,11 +6,13 @@
 
 #include <cat/scaredy>
 #include <cat/string>
+#include <memory>
+#include <utility>
 
 namespace cat {
 
 // Dynamically allocate an `int4` converted to `String`.
-auto to_chars(auto& allocator, int4 const value) -> String {
+[[nodiscard]] auto to_chars(auto& allocator, int4 const value) -> String {
     char* p_string = allocator.template p_malloc<char>(11).value();
     detail::i32toa_jeaiii(value.raw, p_string);
     // TODO: Get the length of this integer faster.
@@ -47,7 +49,7 @@ namespace detail {
 // Convert a `constexpr` `int4` to `StaticString`.
 template <auto value>
     requires(is_integral<decltype(value)>)
-consteval auto to_chars() {
+[[nodiscard]] consteval auto to_chars() {
     if constexpr (value == 0) {
         return StaticString{"0"};
     } else {
@@ -66,6 +68,47 @@ consteval auto to_chars() {
             return string;
         }
     }
+}
+
+template <Integral T>
+[[nodiscard]] constexpr auto to_chars_at(Numeral<T> value,
+                                         Span<char> string_buffer)
+    -> Optional<String> {
+    // Add `1` to consider a negative sign.
+    constexpr ssize max_length = to_chars<Numeral<T>::max>().size() + 1;
+    char buffer[max_length.raw];
+    if (is_constant_evaluated()) {
+        ssize i = 0;
+        if (is_signed<T> && value < 0) {
+            buffer[0] = '-';
+            i = 1;
+        }
+        for (; i < max_length; ++i) {
+            if (value > 0) {
+                auto const remainder = value % 10;
+                buffer[i.raw] = remainder.raw + '0';
+                value /= 10;
+            } else {
+                buffer[i.raw] = '\0';
+            }
+        }
+    } else {
+        detail::i32toa_jeaiii(value.raw, buffer);
+    }
+    // TODO: Get the length of this integer faster.
+    ssize length = string_length(buffer);
+    if (length > string_buffer.size()) {
+        return nullopt;
+    }
+
+    if (is_constant_evaluated()) {
+        for (ssize i = 0; i < length; ++i) {
+            string_buffer[i] = buffer[i.raw];
+        }
+    } else {
+        copy_memory(buffer, string_buffer.p_data(), length);
+    }
+    return String{string_buffer.p_data(), length};
 }
 
 // Formatting
