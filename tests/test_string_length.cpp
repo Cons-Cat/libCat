@@ -71,12 +71,12 @@ void meow() {
     cat::LinearAllocator allocator{p_page, 4_ki};
 
     // Test `int4` conversion.
-    cat::String int_string = cat::to_chars(allocator, 10);
+    cat::String int_string = cat::to_string(allocator, 10);
     Result(cat::compare_strings(int_string, "10")).or_panic();
     Result(int_string.size() == 3).or_panic();
 
-    constexpr auto const_int = cat::to_chars<136>();
-    constexpr auto const_negative = cat::to_chars<-1650>();
+    constexpr auto const_int = cat::to_string<136>();
+    constexpr auto const_negative = cat::to_string<-1650>();
 	// TODO: `constexpr` string comparison.
     Result(cat::compare_strings(const_int.p_data(), "136")).or_panic();
     Result(cat::compare_strings(const_negative.p_data(), "-1650")).or_panic();
@@ -89,19 +89,19 @@ void meow() {
 	// correct.
 	// Result(cat::compare_strings(formatted_string, "bb52aa130cc")).or_panic();
 
-	// Test `cat::to_chars_at()`.
+	// Test `cat::to_string_at()`.
     cat::Array<char,100> array;
     cat::Span<char> array_span{array.p_data(), array.size()};
-    cat::String string_int_13 = cat::to_chars_at(int4{13}, array_span).value();
+    cat::String string_int_13 = cat::to_string_at(int4{13}, array_span).value();
     Result(cat::compare_strings(string_int_13.p_data(), "13")).or_panic();
-    cat::String string_neg_13 = cat::to_chars_at(int4{-13}, array_span).value();
+    cat::String string_neg_13 = cat::to_string_at(int4{-13}, array_span).value();
     Result(cat::compare_strings(string_neg_13.p_data(), "-13")).or_panic();
 
-	// Test `cat::to_chars_at()` in a `constexpr` context.
+	// Test `cat::to_string_at()` in a `constexpr` context.
 	auto make_hi_in_const = [](int4 value) constexpr -> cat::String {
 		 cat::Array<char,100> array{};
 		 cat::Span<char> array_span{array.p_data(), array.size()};
-		 _ = cat::to_chars_at(value, array_span).value();
+		 _ = cat::to_string_at(value, array_span).value();
 		 return "Hi";
 	};
     [[maybe_unused]] constexpr auto hi = make_hi_in_const(1);

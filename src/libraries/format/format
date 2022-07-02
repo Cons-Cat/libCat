@@ -12,7 +12,7 @@
 namespace cat {
 
 // Dynamically allocate an `int4` converted to `String`.
-[[nodiscard]] auto to_chars(auto& allocator, int4 const value) -> String {
+[[nodiscard]] auto to_string(auto& allocator, int4 const value) -> String {
     char* p_string = allocator.template p_malloc<char>(11).value();
     detail::i32toa_jeaiii(value.raw, p_string);
     // TODO: Get the length of this integer faster.
@@ -49,7 +49,7 @@ namespace detail {
 // Convert a `constexpr` `int4` to `StaticString`.
 template <auto value>
     requires(is_integral<decltype(value)>)
-[[nodiscard]] consteval auto to_chars() {
+[[nodiscard]] consteval auto to_string() {
     if constexpr (value == 0) {
         return StaticString{"0"};
     } else {
@@ -71,11 +71,11 @@ template <auto value>
 }
 
 template <Integral T>
-[[nodiscard]] constexpr auto to_chars_at(Numeral<T> value,
-                                         Span<char> string_buffer)
+[[nodiscard]] constexpr auto to_string_at(Numeral<T> value,
+                                          Span<char> string_buffer)
     -> Optional<String> {
     // Add `1` to consider a negative sign.
-    constexpr ssize max_length = to_chars<Numeral<T>::max>().size() + 1;
+    constexpr ssize max_length = to_string<Numeral<T>::max>().size() + 1;
     char buffer[max_length.raw];
     if (is_constant_evaluated()) {
         ssize i = 0;
@@ -613,7 +613,7 @@ namespace detail {
                         .discriminant) {
                 case FormatDiscriminant::int4_type:
                     {
-                        String const int_string = to_chars(
+                        String const int_string = to_string(
                             handler.allocator,
                             arguments.template get<int4>(current_argument));
 
