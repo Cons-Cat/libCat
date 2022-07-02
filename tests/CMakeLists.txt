@@ -166,6 +166,15 @@ if(BUILD_TEST_TUPLE OR BUILD_ALL_TESTS)
   add_test(NAME Tuples COMMAND test_tuple)
 endif()
 
+# This tests that `cat::Vector` works.
+option(BUILD_TEST_VECTOR "Compile Tuple tests." OFF)
+if(BUILD_TEST_VECTOR OR BUILD_ALL_TESTS)
+  add_executable(test_vector test_vector.cpp)
+  #target_compile_options(test_vector PRIVATE ${CAT_CXX_FLAGS_TEST})
+  target_link_options(test_vector PRIVATE ${CAT_LINK_FLAGS})
+  add_test(NAME Vector COMMAND test_vector)
+endif()
+
 # A dummy project is required to guarantee that the directories are generated.
 # The directories must be generated for symlinking `.gdbinit` to succeed.
 # This can be skipped if one or more other tests are built.
