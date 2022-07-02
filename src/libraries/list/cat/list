@@ -4,9 +4,6 @@
 
 #include <cat/allocators>
 #include <cat/collection>
-#include <cat/iterator>
-#include <cat/meta>
-#include <cat/optional>
 
 namespace cat {
 namespace detail {
@@ -169,10 +166,9 @@ class List : public CollectionFacade<List<T>, T> {
     // Allocate a node and insert it into this list before the position of
     // `where`.
     template <typename U>
+        requires(is_implicitly_convertible<U, T>)
     auto insert(StableAllocator auto& allocator, Iterator where, U const& value)
-        -> Optional<Iterator>
-        requires(is_convertible<U, T>)
-    {
+        -> Optional<Iterator> {
         // `cat::OptionalPtr` produces an internal compiler error in GCC 12.
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
@@ -181,7 +177,7 @@ class List : public CollectionFacade<List<T>, T> {
         }
 
         Node& node = *memory.value();
-        node.storage = value;
+        node.storage = static_cast<T>(value);
 
         if (this->length == 0) [[unlikely]] {
             // If this list has nothing in it, `.insert()` must be
@@ -248,10 +244,9 @@ class List : public CollectionFacade<List<T>, T> {
 
     // Allocate a node and insert it at the beginning of this list.
     template <typename U>
+        requires(is_implicitly_convertible<U, T>)
     auto push_front(StableAllocator auto& allocator, U const& value)
-        -> Optional<Iterator>
-        requires(is_convertible<U, T>)
-    {
+        -> Optional<Iterator> {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -259,7 +254,7 @@ class List : public CollectionFacade<List<T>, T> {
         }
 
         Node& node = *memory.value();
-        node.storage = value;
+        node.storage = static_cast<T>(value);
         this->place_node_front(node);
 
         return Iterator{&node};
@@ -300,10 +295,9 @@ class List : public CollectionFacade<List<T>, T> {
 
     // Allocate a node and insert it at the end of this list.
     template <typename U>
+        requires(is_implicitly_convertible<U, T>)
     auto push_back(StableAllocator auto& allocator, U const& value)
-        -> Optional<Iterator>
-        requires(is_convertible<U, T>)
-    {
+        -> Optional<Iterator> {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -311,7 +305,7 @@ class List : public CollectionFacade<List<T>, T> {
         }
 
         Node& node = *memory.value();
-        node.storage = value;
+        node.storage = static_cast<T>(value);
         this->place_node_back(node);
 
         return Iterator{&node};
@@ -501,7 +495,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     template <typename U>
     auto insert_after(StableAllocator auto& allocator, Iterator where,
                       U const& value) -> Optional<Iterator>
-        requires(is_convertible<U, T>)
+        requires(is_implicitly_convertible<U, T>)
     {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
@@ -510,7 +504,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         }
 
         Node& node = *memory.value();
-        node.storage = value;
+        node.storage = static_cast<T>(value);
 
         if (this->length == 0) [[unlikely]] {
             // If this list has nothing in it, `.insert_after()` must be
@@ -554,10 +548,9 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
 
     // Allocate a node and insert it at the beginning of this list.
     template <typename U>
+        requires(is_implicitly_convertible<U, T>)
     auto push_front(StableAllocator auto& allocator, U const& value)
-        -> Optional<Iterator>
-        requires(is_convertible<U, T>)
-    {
+        -> Optional<Iterator> {
         cat::Optional memory = allocator.template p_malloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -565,7 +558,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         }
 
         Node& node = *memory.value();
-        node.storage = value;
+        node.storage = static_cast<T>(value);
         this->place_node_front(node);
 
         return Iterator{&node};
