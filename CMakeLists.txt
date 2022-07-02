@@ -9,22 +9,25 @@ set(CMAKE_CONFIGURATION_TYPES Debug;Release;RelWithDebInfo;RelSmall)
 list(
   APPEND
   CAT_CXX_FLAGS_COMMON
+  # Disable linking libC symbols.
   -nostdlib
+  -Wno-builtin-declaration-mismatch
+  # These are pessimizations to libCat:
   -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
   -fno-stack-protector # This is required for threads to work.
+  # `global_includes.hpp` must be available everywhere.
+  -include global_includes.hpp
+  # Enable CPU intrinsics:
   -msse4.2
   -mavx2
   -mfma
   -mlzcnt
   -mfsgsbase
-  -fdiagnostics-color
-  -include global_includes.h
-  # This is enabled by default, but it's counter-productive to libCat's vision:
-  -Wno-builtin-declaration-mismatch
   # These flags cause clang-tidy 12 to crash:
   -fconcepts-diagnostics-depth=2
   -fmax-errors=4
-
+  -fdiagnostics-color
+  # Enable most warnings.
   -Wall -Wextra
   # The following warnings are counter-productive for a basic-level library:
   -Wno-unused-function
