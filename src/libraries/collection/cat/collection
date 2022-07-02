@@ -28,16 +28,17 @@ namespace detail {
     });
     // clang-format on
 
-    // If `.size()` is provided and can be constant-evaluated, and `.capacity()`
-    // is not provided, then the length of this collection is assumed to be
-    // constant.
-    // clang-format off
+    // If `.size()` is provided.
     template <typename T>
-    concept HasConstLength = requires(T t) {
-        // If it has a `constexpr` `.size()` member.
-        constant_evaluate(t.size());
+    concept HasSize = requires(T t) {
+        t.size();
     };
-    // clang-format on
+
+    // If `.capacity()` is provided.
+    template <typename T>
+    concept HasCapacity = requires(T t) {
+        t.capacity();
+    };
 }  // namespace detail
 
 template <typename Derived, typename T>
@@ -141,14 +142,21 @@ class CollectionFacade {
     // If `.size()` is provided and `.capacity()` is not, generate
     // `.capacity()`.
     [[nodiscard]] constexpr auto capacity() const -> ssize
-        requires(detail::HasConstLength<Derived>) {
+        requires(detail::HasSize<Derived>) {
         return this->self().size();
+    }
+
+    // If `.size()` is not, provided and `.capacity()` is, generate
+    // `.size()`.
+    [[nodiscard]] constexpr auto size() const -> ssize
+        requires(detail::HasCapacity<Derived>) {
+        return this->self().capacity();
     }
 
     // This evaluates true if there are one or more elements currently in this
     // collection.
     [[nodiscard]] constexpr auto is_empty() const
-        -> bool requires(Derived::size()) {
+        -> bool requires(detail::HasSize<Derived>) {
         return this->self().size() > 0;
     }
 
