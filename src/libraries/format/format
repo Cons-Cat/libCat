@@ -455,7 +455,6 @@ namespace detail {
             // char const* p_end = storage + size;
 
             // TODO: Use a multiple `.insert()` overload.
-            // TODO: This loop would be easier with a `cat::Array`.
             for (ssize::Raw i = 0; i < size; ++i) {
                 Optional result = output_iterator.insert(allocator, storage[i]);
                 if (!result.has_value()) {
@@ -619,7 +618,7 @@ namespace detail {
 
                         // TODO: Optimize this with a multiple-insert
                         // overload.
-                        for (int i = 0; i < int_string.size(); ++i) {
+                        for (int i = 0; i < int_string.size() - 1; ++i) {
                             _ = handler.output_iterator.insert(
                                 handler.allocator, int_string[i]);
                         }
@@ -692,7 +691,8 @@ namespace detail {
             return result.template error<FormatErrors>();
         }
 
-        return String{into_buffer.p_storage, into_buffer.length};
+        ssize const length = string_length(into_buffer.p_data());
+        return String{into_buffer.p_storage, length};
     }
 }  // namespace detail
 
