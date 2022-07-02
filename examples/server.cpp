@@ -7,7 +7,8 @@
 void meow() {
     cat::SocketUnix<cat::SocketType::stream> listening_socket;
     // A leading null byte puts this path in the abstract namespace.
-    listening_socket.path_name = "\0/tmp/temp.sock";
+    listening_socket.path_name =
+        cat::StaticString<108>::padded("\0/tmp/temp.sock");
     listening_socket.create().or_panic();
     listening_socket.bind().or_panic();
     listening_socket.listen(20).or_panic();

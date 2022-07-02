@@ -6,7 +6,7 @@
 
 void meow(int argc, char* p_argv[]) {
     cat::SocketUnix<cat::SocketType::stream> socket;
-    socket.path_name = "\0/tmp/temp.sock";
+    socket.path_name = cat::StaticString<108>::padded("\0/tmp/temp.sock");
 
     socket.create().or_panic();
     socket.connect().or_panic();
