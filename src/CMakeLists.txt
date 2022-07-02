@@ -35,6 +35,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/type_list/
   ${CMAKE_SOURCE_DIR}/src/libraries/tuple/
   ${CMAKE_SOURCE_DIR}/src/libraries/cast/
+  ${CMAKE_SOURCE_DIR}/src/libraries/vector/
   PARENT_SCOPE
 )
 

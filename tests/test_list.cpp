@@ -4,8 +4,8 @@
 
 void meow() {
     cat::PageAllocator page_allocator;
-    auto page = page_allocator.malloc(4_ki).or_panic();
-    cat::LinearAllocator allocator = {&page_allocator.get(page), 4_ki};
+    cat::Byte* p_page = page_allocator.p_malloc(4_ki).or_panic();
+    cat::LinearAllocator allocator = {p_page, 4_ki};
 
     // Test insert.
     cat::List<int4> list_1;
@@ -142,6 +142,6 @@ void meow() {
     Result(list_1.front() == 2).or_panic();
     Result(list_1.back() == 10).or_panic();
 
-    _ = page_allocator.free(page);
+    _ = page_allocator.free(p_page);
     cat::exit();
 }
