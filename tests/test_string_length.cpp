@@ -75,16 +75,19 @@ void meow() {
     Result(cat::compare_strings(int_string, "10")).or_panic();
     Result(int_string.size() == 3).or_panic();
 
-    // TODO: Make this work.
-    // constexpr cat::String const_int_string = cat::to_chars(10);
-
-    // static_assert(requires {
-    //     // cat::Iterable<cat::FormatBufferBase<cat::LinearAllocator>>;
-    //     cat::Iterable<cat::Optional<int>>;
-    // });
+    constexpr auto const_int = cat::to_chars<136>();
+    constexpr auto const_negative = cat::to_chars<-1650>();
+	// TODO: `constexpr` string comparison.
+    Result(cat::compare_strings(const_int.p_data(), "136")).or_panic();
+    Result(cat::compare_strings(const_negative.p_data(), "-1650")).or_panic();
 
     allocator.reset();
-    _ = cat::print(cat::format(allocator, "bb{}aa{}cc\n", 52, 130).value());
+	cat::String formatted_string = cat::format(allocator, "bb{}aa{}cc", 52,
+											   130).or_panic();
+	_ = cat::print_line(formatted_string);
+	// TODO: `formatted_string` has an incorrect `.size()`, but the content is
+	// correct.
+	// Result(cat::compare_strings(formatted_string, "bb52aa130cc")).or_panic();
 
     cat::exit();
 }
