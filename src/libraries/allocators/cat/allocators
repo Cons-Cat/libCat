@@ -76,12 +76,18 @@ concept Allocator = requires(AllocatorT allocator) {
 
 namespace detail {
     template <typename AllocatorT, typename AllocationU = void*>
-    concept StableDerivedAllocator = requires(AllocatorT it) {
+    concept StableDerivedAllocator = requires(AllocatorT allocator) {
         // If an allocator allocates a `OptionalPtr<T>` or
-        // `Optional<T*>`, it is assumed to have pointer-stability.
-        is_pointer<decltype(it.template allocate<AllocationU>(
-                                  ssizeof<AllocationU>())
+        // `Optional<T*>`, allocator is assumed to have pointer-stability.
+        is_pointer<decltype(allocator
+                                .template allocate<AllocationU>(
+                                    ssizeof<AllocationU>())
                                 .value())>;
+    };
+
+    template <typename T>
+    concept HasReset = requires(T allocator) {
+        allocator.reset();
     };
 }  // namespace detail
 
@@ -106,8 +112,8 @@ struct AllocatorFacade {
         using UnderlyingHandle = decltype(this->self().template make_handle<T>(
             T{}, allocation_size));
 
-        // Get the return value of a user-supplied `.allocate()`. This must be
-        // a container that holds `T*`.
+        // Get the return value of a user-supplied `.allocate()`. This must
+        // be a container that holds `T*`.
         // TODO: Support `ssize`.
         using Allocation =
             decltype(this->self().template allocate<T>(allocation_size));
@@ -136,8 +142,8 @@ struct AllocatorFacade {
         if constexpr (!is_aligned) {
             if constexpr (is_small_optimized) {
                 if (allocation_size < detail::small_size_threshold) {
-                    // Allocate memory on this stack frame and return it, iff
-                    // that would be smaller than
+                    // Allocate memory on this stack frame and return it,
+                    // iff that would be smaller than
                     // `detail::small_size_threshold`.
                     T stack_memory;
                     Handle stack_handle = stack_memory;
@@ -151,8 +157,8 @@ struct AllocatorFacade {
         }
 
         if constexpr (is_fail_safe) {
-            // `allocate()` returns either an `Optional` or a `Result`, both of
-            // which have `.has_value()`.
+            // `allocate()` returns either an `Optional` or a `Result`, both
+            // of which have `.has_value()`.
             if (!maybe_memory.has_value()) {
                 // Return an empty optional if this failed to allocate.
                 return Optional<Handle>(nullopt);
@@ -165,8 +171,8 @@ struct AllocatorFacade {
         // TODO: It should be possible to streamline this:
         if constexpr (is_aligned) {
             Handle aligned_handle = Handle{handle, alignment};
-            // `.access()` produces a pointer to the data, which is constructed
-            // in-place.
+            // `.access()` produces a pointer to the data, which is
+            // constructed in-place.
             new (this->self().access(handle)) T();
 
             if constexpr (is_fail_safe) {
@@ -175,8 +181,8 @@ struct AllocatorFacade {
                 return aligned_handle;
             }
         } else {
-            // `.access()` produces a pointer to the data, which is constructed
-            // in-place.
+            // `.access()` produces a pointer to the data, which is
+            // constructed in-place.
             new (this->self().access(handle)) T();
 
             if constexpr (is_fail_safe) {
@@ -192,8 +198,8 @@ struct AllocatorFacade {
     template <typename T = Byte>
     [[nodiscard]] auto malloc(ssize const allocation_size = ssizeof<T>()) {
         if constexpr (alignof(T) > 8) {
-            // If the alignment of `T` is greater than 8, it should have implied
-            // strong alignment guarantees.
+            // If the alignment of `T` is greater than 8, it should have
+            // implied strong alignment guarantees.
             return this->aligned_alloc(alignof(T), allocation_size);
         }
         return this->meta_allocate<T, false, true, false>(1u, allocation_size);
@@ -207,8 +213,8 @@ struct AllocatorFacade {
         requires(detail::StableDerivedAllocator<Derived, T>)
     {
         if constexpr (alignof(T) > 8) {
-            // If the alignment of `T` is greater than 8, it should have implied
-            // strong alignment guarantees.
+            // If the alignment of `T` is greater than 8, it should have
+            // implied strong alignment guarantees.
             auto memory = this->aligned_alloc(alignof(T), allocation_size);
             if (memory.has_value()) {
                 return &this->get(memory.value());
@@ -252,8 +258,8 @@ struct AllocatorFacade {
     template <typename T = void*>
     [[nodiscard]] auto malloca(ssize const allocation_size = ssizeof<T>()) {
         if constexpr (alignof(T) > 8) {
-            // If the alignment of `T` is greater than 8, it should have implied
-            // strong alignment guarantees.
+            // If the alignment of `T` is greater than 8, it should have
+            // implied strong alignment guarantees.
             return this->aligned_alloca(alignof(T), allocation_size);
         }
         return this->meta_allocate<T, true, true, false>(1u, allocation_size);
@@ -360,8 +366,9 @@ struct AllocatorFacade {
         }
     }
 
-    // If the allocator does not provide a `.reset()` method, produce a no-op.
-    void reset() requires(!Derived::reset()) {
+    // If the allocator does not provide a `.reset()` method, produce a
+    // no-op.
+    void reset() requires(!detail::HasReset<Derived>) {
     }
 };
 
@@ -501,8 +508,8 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
         return nullptr;
     }
 
-    // In general, memory cannot be deallocated in a linear allocator, so this
-    // function is no-op.
+    // In general, memory cannot be deallocated in a linear allocator, so
+    // this function is no-op.
     auto aligned_deallocate(auto const&) -> Optional<void> {
         return monostate;
     };
