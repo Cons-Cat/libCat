@@ -76,6 +76,15 @@ if(BUILD_TEST_COMPARE_STRINGS OR BUILD_ALL_TESTS)
   add_test(NAME CompareStrings COMMAND test_compare_strings)
 endif()
 
+# This tests that string formatting works.
+option(BUILD_TEST_FORMAT_STRINGS "Compile string formatting tests." OFF)
+if(BUILD_TEST_COMPARE_STRINGS OR BUILD_ALL_TESTS)
+  add_executable(test_format_strings test_format_strings.cpp)
+  # target_compile_options(test_format_strings PRIVATE ${CAT_CXX_FLAGS_TEST})
+  target_link_options(test_format_strings PRIVATE ${CAT_LINK_FLAGS})
+  add_test(NAME FormatStrings COMMAND test_format_strings)
+endif()
+
 # This tests that `cat::copy_memory()` works.
 option(BUILD_TEST_COPY_MEMORY "Compile copy_memory() tests." OFF)
 if(BUILD_TEST_COPY_MEMORY OR BUILD_ALL_TESTS)
@@ -94,7 +103,7 @@ if(BUILD_TEST_PAGE_ALLOCATOR OR BUILD_ALL_TESTS)
   add_test(NAME PagingMemory COMMAND test_paging)
 endif()
 
-# This tests that `LinearAllocator` works.
+# This tests that `cat::LinearAllocator` works.
 option(BUILD_TEST_LINEAR_ALLOCATOR "Compile LinearAllocator tests." OFF)
 if(BUILD_TEST_LINEAR_ALLOCATOR OR BUILD_ALL_TESTS)
   add_executable(test_linear test_linear_allocator.cpp)
@@ -103,7 +112,7 @@ if(BUILD_TEST_LINEAR_ALLOCATOR OR BUILD_ALL_TESTS)
   add_test(NAME LinearAllocator COMMAND test_linear)
 endif()
 
-# This tests that `Thread`s works.
+# This tests that `cat::Thread`s works.
 option(BUILD_TEST_THREAD "Compile Thread tests." OFF)
 if(BUILD_TEST_THREAD OR BUILD_ALL_TESTS)
   add_executable(test_threads test_thread.cpp)
@@ -112,7 +121,7 @@ if(BUILD_TEST_THREAD OR BUILD_ALL_TESTS)
   add_test(NAME MultiThreading COMMAND test_threads)
 endif()
 
-# This tests that `Raii<>` works.
+# This tests that `cat::Unique` works.
 option(BUILD_TEST_RAII "Compile ResultOk." OFF)
 if(BUILD_TEST_RAII OR BUILD_ALL_TESTS)
   add_executable(test_raii test_raii.cpp)
@@ -121,7 +130,7 @@ if(BUILD_TEST_RAII OR BUILD_ALL_TESTS)
   add_test(NAME Raii COMMAND test_raii)
 endif()
 
-# This tests that `Optional<>` works.
+# This tests that `cat::Optional<>` works.
 option(BUILD_TEST_OPTIONAL "Compile Optional tests." OFF)
 if(BUILD_TEST_OPTIONAL OR BUILD_ALL_TESTS)
   add_executable(test_optional test_optional.cpp)
@@ -130,7 +139,7 @@ if(BUILD_TEST_OPTIONAL OR BUILD_ALL_TESTS)
   add_test(NAME Optional COMMAND test_optional)
 endif()
 
-# This tests that SIMD works.
+# This tests that `cat::Simd` works.
 option(BUILD_TEST_SIMD "Compile SIMD tests." OFF)
 if(BUILD_TEST_SIMD OR BUILD_ALL_TESTS)
   add_executable(test_simd test_simd.cpp)
@@ -148,7 +157,7 @@ if(BUILD_TEST_REFLECTION OR BUILD_ALL_TESTS)
   add_test(NAME TypeReflection COMMAND test_reflection)
 endif()
 
-# This tests that tuples work.
+# This tests that `cat::Tuple` works.
 option(BUILD_TEST_TUPLE "Compile Tuple tests." OFF)
 if(BUILD_TEST_TUPLE OR BUILD_ALL_TESTS)
   add_executable(test_tuple test_tuple.cpp)
@@ -173,6 +182,5 @@ if(NOT (BUILD_ALL_TESTS
 	  OR BUILD_TEST_THREAD
 	  OR BUILD_TEST_OPTIONAL
 	  OR BUILD_TEST_TUPLE))
-#  add_executable(dummy result_success.cpp)
   add_test(NAME dummy COMMAND echo)
 endif()
