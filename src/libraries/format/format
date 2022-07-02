@@ -2,22 +2,14 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/bit>
-#include <cat/collection>
-#include <cat/iterator>
-#include <cat/memory>
-#include <cat/meta>
-#include <cat/optional>
-#include <cat/scaredy>
-#include <cat/simd>
-#include <cat/span>
-#include <cat/string>
-#include <cat/utility>
+#include <cat/detail/itoa_jeaiii.hpp>
 
-#include "cat/detail/itoa_jeaiii.hpp"
+#include <cat/scaredy>
+#include <cat/string>
 
 namespace cat {
 
+// Dynamically allocate an `int4` converted to `String`.
 auto to_chars(auto& allocator, int4 const value) -> String {
     char* p_string = allocator.template p_malloc<char>(11).value();
     detail::i32toa_jeaiii(value.raw, p_string);
