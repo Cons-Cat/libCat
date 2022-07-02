@@ -147,6 +147,22 @@ struct StaticString : CollectionFacade<StaticString<length>, char> {
         this->copy_string_data(in);
     }
 
+    // Create a `StaticString` from a smaller string, and null out the unfilled
+    // bytes.
+    template <signed long long in_length>
+        requires(in_length < length)
+    static consteval auto padded(char const (&in)[in_length])
+        -> StaticString<length> {
+        StaticString<length> string;
+        for (signed long long i = 0; i < in_length; ++i) {
+            string[i] = in[i];
+        }
+        for (signed long long i = in_length; i < length; ++i) {
+            string[i] = '\0';
+        }
+        return string;
+    }
+
     // Assign a `StaticString` of lesser or equal length.
     constexpr auto operator=(StaticString<length> const& string)
         -> StaticString<length>& {
@@ -181,7 +197,6 @@ template <signed long long length_1, signed long long length_2>
 constexpr auto operator+(StaticString<length_1> const& string_1,
                          StaticString<length_2> const& string_2)
     -> StaticString<length_1 - 1 + length_2> {
-    // TODO: Use an `Array`.
     char array[length_1 - 1 + length_2];
 
     for (int i = 0; i < length_1 - 1; ++i) {
