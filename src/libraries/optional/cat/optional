@@ -607,8 +607,9 @@ class Optional {
     [[nodiscard]] constexpr auto value_or(Value const fallback) & -> Value {
         if (this->storage.has_value()) {
             return this->storage.value();
+        } else {
+            return fallback;
         }
-        return fallback;
     }
 
     // Get the value held by a `const`-qualified `Optional`, or a fallback
@@ -616,8 +617,9 @@ class Optional {
     constexpr auto value_or(Value const fallback) const& -> Value {
         if (this->storage.has_value()) {
             return this->storage.value();
+        } else {
+            return fallback;
         }
-        return fallback;
     }
 
     // Get the value held by a non-`const`-qualified `Optional`, or a fallback
@@ -625,8 +627,9 @@ class Optional {
     [[nodiscard]] constexpr auto value_or(Value&& fallback) && -> Value&& {
         if (this->storage.has_value()) {
             return cat::move(this->storage.value());
+        } else {
+            return cat::move(fallback);
         }
-        return cat::move(fallback);
     }
 
     // Get the value held by a `const`-qualified `Optional`, or a fallback
@@ -634,8 +637,9 @@ class Optional {
     [[nodiscard]] constexpr auto value_or(Value&& fallback) const&& -> Value&& {
         if (this->storage.has_value()) {
             return cat::move(this->storage.value());
+        } else {
+            return cat::move(fallback);
         }
-        return cat::move(fallback);
     }
 
     // Get a pointer to the data owned by this `Optional`. If `Optional` holds a
@@ -677,8 +681,9 @@ class Optional {
         } else {
             if (this->has_value()) {
                 return Optional<U>{forward<Function>(callback)(this->value())};
+            } else {
+                return Optional<U>{nullopt};
             }
-            return Optional<U>{nullopt};
         }
     }
 
@@ -695,8 +700,9 @@ class Optional {
         } else {
             if (this->storage.has_value()) {
                 return Optional<U>{forward<Function>(callback)(this->value())};
+            } else {
+                return Optional<U>{nullopt};
             }
-            return Optional<U>{nullopt};
         }
     }
 
@@ -714,8 +720,9 @@ class Optional {
             if (this->has_value()) {
                 return Optional<U>{
                     forward<Function>(callback)(cat::move(this->value()))};
+            } else {
+                return Optional<U>{nullopt};
             }
-            return Optional<U>{nullopt};
         }
     }
 
@@ -733,8 +740,9 @@ class Optional {
             if (this->has_value()) {
                 return Optional<U>{
                     forward<Function>(callback)(cat::move(this->value()))};
+            } else {
+                return Optional<U>{nullopt};
             }
-            return Optional<U>{nullopt};
         }
     }
 
@@ -748,8 +756,9 @@ class Optional {
 
         if (this->has_value()) {
             return forward<Function>(callback)(this->value());
+        } else {
+            return U{nullopt};
         }
-        return U{nullopt};
     }
 
     // Invoke a callback returning an `Optional` on the value of a
@@ -762,8 +771,9 @@ class Optional {
 
         if (this->has_value()) {
             return forward<Function>(callback)(this->value());
+        } else {
+            return U{nullopt};
         }
-        return U{nullopt};
     }
 
     // Invoke a callback returning an `Optional` on the value of a
@@ -776,8 +786,9 @@ class Optional {
 
         if (this->has_value()) {
             return forward<Function>(callback)(cat::move(this->value()));
+        } else {
+            return U{nullopt};
         }
-        return U{nullopt};
     }
 
     // Invoke a callback returning an `Optional` on the value of a
@@ -790,8 +801,9 @@ class Optional {
 
         if (this->has_value()) {
             return forward<Function>(callback)(cat::move(this->value()));
+        } else {
+            return U{nullopt};
         }
-        return U{nullopt};
     }
 
     // Invoke a callback iff a non-`const`-qualified `Optional` holds no value.
@@ -891,8 +903,9 @@ class Optional {
             } else {
                 return;
             }
+        } else {
+            cat::exit(1);
         }
-        cat::exit(1);
         __builtin_unreachable();  // This prevents a build warning.
     }
 
@@ -905,8 +918,9 @@ class Optional {
             } else {
                 return;
             }
+        } else {
+            cat::exit(1);
         }
-        cat::exit(1);
         __builtin_unreachable();  // This prevents a build warning.
     }
 
@@ -921,10 +935,11 @@ class Optional {
             } else {
                 return;
             }
+        } else {
+            // TODO: Print an error message.
+            // _ = cat::print_line(error_message);
+            cat::exit(1);
         }
-        // TODO: Print an error message.
-        // _ = cat::print_line(error_message);
-        cat::exit(1);
         __builtin_unreachable();  // This prevents a build warning.
     }
 
