@@ -10,3 +10,9 @@ define meow
   c
 end
 
+# Skip stepping into uninteresting code.
+skip file meta
+skip file numerals
+skip file utility
+skip file any
+skip file bit
