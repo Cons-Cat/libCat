@@ -34,11 +34,13 @@ void meow() {
     Result(int_vec.capacity() == 128).or_panic();
 
     // Test reserve constructor.
-    auto reserved_vec = cat::Vector<int4>::reserved(allocator, 6).or_panic();
+    cat::Vector reserved_vec =
+        cat::Vector<int4>::reserved(allocator, 6).or_panic();
     Result(reserved_vec.capacity() == 6).or_panic();
 
     // Test filled constructor.
-    auto filled_vec = cat::Vector<int4>::filled(allocator, 8, 1).or_panic();
+    cat::Vector filled_vec =
+        cat::Vector<int4>::filled(allocator, 8, 1).or_panic();
     Result(filled_vec.size() == 8).or_panic();
     Result(filled_vec.capacity() == 8).or_panic();
     for (int4 integer : filled_vec) {
