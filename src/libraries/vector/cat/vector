@@ -44,8 +44,12 @@ class Vector : public CollectionFacade<Vector<T>, T> {
 
     constexpr Vector(Vector<T>&& vector) = default;
 
+  private:
+    // Only allow the shallow copy constructor to be used by these static
+    // factory member functions.
     constexpr Vector(Vector<T> const& vector) = default;
 
+  public:
     [[nodiscard]] static constexpr auto reserved(
         StableAllocator auto& allocator, ssize count) -> Optional<Vector<T>> {
         Vector<T> vector;
@@ -72,6 +76,17 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         return vector;
     }
 
+    [[nodiscard]] static constexpr auto cloned(StableAllocator auto& allocator,
+                                               Vector<T>& vector)
+        -> Optional<Vector<T>> {
+        Vector<T> new_vector;
+        Optional result = new_vector.clone(allocator, vector);
+        if (!result.has_value()) {
+            return nullopt;
+        }
+        return new_vector;
+    }
+
     // Get the non-`const` address of this `Vector`'s internal array.
     constexpr auto p_data() -> T* {
         return &(this->p_storage[0]);
@@ -96,9 +111,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         if (new_capacity > this->current_capacity) {
             // TODO: `.p_srealloc()`.
             Optional result = allocator.template p_malloc<T>(new_capacity);
-            if (!result.has_value()) {
-                return nullopt;
-            } else {
+            if (result.has_value()) {
                 T* p_new = result.value();
                 // TODO: If `T` is relocatable, use `copy_memory()`.
                 for (ssize::Raw i = 0; i < this->current_size.raw; ++i) {
@@ -106,10 +119,11 @@ class Vector : public CollectionFacade<Vector<T>, T> {
                 }
 
                 this->p_storage = p_new;
+                this->current_capacity = new_capacity;
+                return monostate;
             }
         }
-        this->current_capacity = new_capacity;
-        return monostate;
+        return nullopt;
     }
 
     // Try to change the size of this `Vector`.
@@ -134,6 +148,21 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         }
         this->p_storage[this->current_size.raw] = static_cast<T>(value);
         this->current_size += 1;
+        return monostate;
+    }
+
+    [[nodiscard]] auto clone(StableAllocator auto& allocator, Vector<T>& vector)
+        -> Optional<void> {
+        Optional result = this->reserve(allocator, vector.capacity());
+        if (!result.has_value()) {
+            return nullopt;
+        }
+        // This cannot fail if `reserve()` succeeded.
+        _ = this->resize(allocator, vector.size());
+        // TODO: Use `copy_memory()` if `T` is relocatable.
+        for (ssize i = 0; i < vector.size(); ++i) {
+            this->p_storage[i.raw] = vector[i];
+        }
         return monostate;
     }
 };

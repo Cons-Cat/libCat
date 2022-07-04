@@ -50,6 +50,9 @@ class List : public CollectionFacade<List<T>, T> {
     ssize length;
 
   public:
+    // TODO: Make constructors `constexpr` and add static factory member
+    // functions.
+
     List() : p_head(nullptr), p_tail(nullptr), length(0){};
 
     // A copy-constructor is not possible, because it would potentially incur
