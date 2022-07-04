@@ -63,9 +63,9 @@ void meow() {
     _ = list_1.rend();
     auto iter = list_1.crbegin();
     _ = list_1.crend();
-    Result(*iter == 3);
+    Result(*iter == 2).or_panic();
     ++iter;
-    Result(*iter == 2);
+    Result(*iter == 0).or_panic();
 
     // Test freeing nodes.
     list_1.erase(allocator, list_1.begin());
