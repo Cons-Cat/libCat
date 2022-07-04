@@ -56,8 +56,8 @@ struct SocketUnix {
 
     // Create and return a `Socket`.
     auto create() -> Optional<void> {
-        Scaredy result = nix::create_socket(this->attributes.family,
-                                            static_cast<int>(Type), Protocol);
+        Scaredy result = nix::sys_socket(this->attributes.family,
+                                         static_cast<int>(Type), Protocol);
         if (result.has_value()) {
             this->descriptor = result.value();
             return monostate;
@@ -68,7 +68,7 @@ struct SocketUnix {
     // Connect a `Socket`.
     auto connect() -> Optional<void> {
         Scaredy result =
-            nix::connect_socket(this->descriptor, this, this->get_size());
+            nix::sys_connect(this->descriptor, this, this->get_size());
         if (result.has_value()) {
             return monostate;
         }
@@ -79,8 +79,8 @@ struct SocketUnix {
                      cat::Socket const* p_destination_socket = nullptr,
                      ssize const addr_length = 0) -> Optional<void> {
         Scaredy result =
-            nix::send_buffer(this->descriptor, message.p_data(), message.size(),
-                             flags, p_destination_socket, addr_length);
+            nix::sys_send(this->descriptor, message.p_data(), message.size(),
+                          flags, p_destination_socket, addr_length);
         if (result.has_value()) {
             return monostate;
         }
@@ -90,9 +90,9 @@ struct SocketUnix {
     auto send_struct(auto const& message_struct, int8 flags = 0,
                      cat::Socket const* p_destination_socket = nullptr,
                      ssize const addr_length = 0) -> Optional<void> {
-        Scaredy result = nix::send_buffer(this->descriptor, &message_struct,
-                                          ssizeof(message_struct), flags,
-                                          p_destination_socket, addr_length);
+        Scaredy result = nix::sys_send(this->descriptor, &message_struct,
+                                       ssizeof(message_struct), flags,
+                                       p_destination_socket, addr_length);
         if (result.has_value()) {
             return monostate;
         }
@@ -101,7 +101,7 @@ struct SocketUnix {
 
     auto bind() -> Optional<void> {
         Scaredy result =
-            nix::bind_socket(this->descriptor, this, this->get_size());
+            nix::sys_bind(this->descriptor, this, this->get_size());
         if (result.has_value()) {
             return monostate;
         }
@@ -109,7 +109,7 @@ struct SocketUnix {
     }
 
     auto listen(int8 const backlog) -> Optional<void> {
-        Scaredy result = nix::listen_to_socket(this->descriptor, backlog);
+        Scaredy result = nix::sys_listen(this->descriptor, backlog);
         if (result.has_value()) {
             return monostate;
         }
@@ -120,7 +120,7 @@ struct SocketUnix {
                 void const* p_socket = nullptr,
                 ssize const* p_addr_len = nullptr) -> Optional<void> {
         Scaredy result =
-            nix::accept_socket(listening_socket, p_socket, p_addr_len);
+            nix::sys_accept(listening_socket, p_socket, p_addr_len);
         if (result.has_value()) {
             return monostate;
         }
@@ -130,8 +130,8 @@ struct SocketUnix {
     auto accept(SocketUnix<Type, Protocol> const& listening_socket,
                 void const* p_socket = nullptr,
                 ssize const* p_addr_len = nullptr) -> Optional<void> {
-        Scaredy result = nix::accept_socket(listening_socket.descriptor,
-                                            p_socket, p_addr_len);
+        Scaredy result =
+            nix::sys_accept(listening_socket.descriptor, p_socket, p_addr_len);
         if (result.has_value()) {
             this->descriptor = result.value();
             return monostate;
@@ -146,8 +146,8 @@ struct SocketUnix {
         -> Optional<ssize> {
         // Scaredy const result =
         nix::ScaredyLinux<ssize> const result =
-            nix::recieve_buffer(this->descriptor, p_message_buffer,
-                                buffer_length, p_socket, p_socket_size);
+            nix::sys_recv(this->descriptor, p_message_buffer, buffer_length,
+                          p_socket, p_socket_size);
         if (result.has_value()) {
             return result.value();
         }
@@ -155,7 +155,7 @@ struct SocketUnix {
     }
 
     auto close() -> Optional<void> {
-        Scaredy result = nix::close(this->descriptor);
+        Scaredy result = nix::sys_close(this->descriptor);
         if (result.has_value()) {
             return monostate;
         }

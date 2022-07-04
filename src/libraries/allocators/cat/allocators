@@ -383,7 +383,7 @@ struct PageAllocator : AllocatorFacade<PageAllocator> {
     // be rounded up to `4096`.
     template <typename T>
     auto allocate(ssize const allocation_size) -> OptionalPtr<T> {
-        Scaredy result = nix::map_memory(
+        Scaredy result = nix::sys_mmap(
             0u, allocation_size,
             // TODO: Fix bit flags operators.
             static_cast<nix::MemoryProtectionFlags>(
@@ -406,7 +406,7 @@ struct PageAllocator : AllocatorFacade<PageAllocator> {
     // Unmap an opaque handle to page(s) of virtual memory.
     auto deallocate(auto const& memory) -> Optional<void> {
         Scaredy result =
-            nix::unmap_memory(memory.p_storage, memory.allocation_size);
+            nix::sys_munmap(memory.p_storage, memory.allocation_size);
         if (result.has_value()) {
             return monostate;
         }
@@ -416,7 +416,7 @@ struct PageAllocator : AllocatorFacade<PageAllocator> {
     // Unmap a pointer handle to page(s) of virtual memory.
     template <typename T>
     auto deallocate(T* const p_memory) -> Optional<void> {
-        Scaredy result = nix::unmap_memory(p_memory, ssizeof<T>());
+        Scaredy result = nix::sys_munmap(p_memory, ssizeof<T>());
         if (result.has_value()) {
             return monostate;
         }
@@ -437,7 +437,7 @@ struct PageAllocator : AllocatorFacade<PageAllocator> {
     auto aligned_deallocate(auto const& memory) -> Optional<void> {
         // There are no special semantics for deallocation aligned memory.
         Scaredy result =
-            nix::unmap_memory(memory.p_storage, memory.allocation_size);
+            nix::sys_munmap(memory.p_storage, memory.allocation_size);
         if (result.has_value()) {
             return monostate;
         }

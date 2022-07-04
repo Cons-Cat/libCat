@@ -11,9 +11,9 @@ void meow(int argc, char* p_argv[]) {
         }
 
         p_argv[i.raw][length.raw] = ' ';
-        _ = nix::write(nix::FileDescriptor{1}, p_argv[i.raw], length + 1);
+        _ = nix::sys_write(nix::FileDescriptor{1}, p_argv[i.raw], length + 1);
     }
 
-    _ = nix::write(nix::FileDescriptor{1}, "\n");
+    _ = nix::sys_write(nix::FileDescriptor{1}, "\n");
     cat::exit();
 }

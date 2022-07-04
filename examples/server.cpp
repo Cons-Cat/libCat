@@ -51,6 +51,6 @@ void meow() {
 
     recieving_socket.close().or_panic();
     listening_socket.close().or_panic();
-    _ = nix::unlink(listening_socket.path_name.p_data()).or_panic();
+    _ = nix::sys_unlink(listening_socket.path_name.p_data()).or_panic();
     cat::exit();
 }
