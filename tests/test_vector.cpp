@@ -45,5 +45,14 @@ void meow() {
         Result(integer == 1).or_panic();
     }
 
+    // Test cloned constructor.
+    cat::Vector cloned_vec =
+        cat::Vector<int4>::cloned(allocator, filled_vec).or_panic();
+    Result(cloned_vec.size() == 8).or_panic();
+    Result(cloned_vec.capacity() == 8).or_panic();
+    for (int4 integer : cloned_vec) {
+        Result(integer == 1).or_panic();
+    }
+
     cat::exit();
 }
