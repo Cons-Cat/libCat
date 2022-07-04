@@ -18,6 +18,7 @@ constexpr ssize page_size = 4096_ki;
 
 namespace nix {
 
+// TODO: Consider using the names from `std::errc`.
 // TODO: See if making this a `signed char` pessimizes performance.
 enum class LinuxError {
     // Operation is not permitted.
@@ -509,41 +510,44 @@ struct cat::EnumFlagTrait<nix::WaitOptionsFlags> : cat::TrueTypeTrait {};
 
 namespace nix {
 
-auto read(FileDescriptor const file_descriptor, char const* p_string_buffer,
-          ssize const length) -> ScaredyLinux<ssize>;
+auto sys_read(FileDescriptor const file_descriptor, char const* p_string_buffer,
+              ssize const length) -> ScaredyLinux<ssize>;
 
-auto write(FileDescriptor const file_descriptor, char const* p_string_buffer,
-           ssize const length) -> ScaredyLinux<ssize>;
-
-auto write(FileDescriptor const file_descriptor, cat::String const& string)
+auto sys_write(FileDescriptor const file_descriptor,
+               char const* p_string_buffer, ssize const length)
     -> ScaredyLinux<ssize>;
 
-auto open_file(char const* p_file_path, OpenMode file_mode,
-               OpenFlags flags = OpenFlags{0}) -> ScaredyLinux<FileDescriptor>;
+auto sys_write(FileDescriptor const file_descriptor, cat::String const& string)
+    -> ScaredyLinux<ssize>;
 
-auto create_file(char const* p_file_path, OpenMode file_mode)
+auto sys_open(char const* p_file_path, OpenMode file_mode,
+              OpenFlags flags = OpenFlags{0}) -> ScaredyLinux<FileDescriptor>;
+
+auto sys_creat(char const* p_file_path, OpenMode file_mode)
     -> ScaredyLinux<FileDescriptor>;
 
-auto close(FileDescriptor const file_descriptor) -> ScaredyLinux<void>;
+auto sys_close(FileDescriptor const file_descriptor) -> ScaredyLinux<void>;
 
-auto unlink(char const* p_path_name) -> ScaredyLinux<void>;
+// TODO: `sys_link()`.
 
-auto map_memory(usize const beginning_address, ssize const bytes_size,
-                MemoryProtectionFlags const protections,
-                MemoryFlags const flags, FileDescriptor const file_descriptor,
-                ssize const pages_offset) -> ScaredyLinux<void*>;
+auto sys_unlink(char const* p_path_name) -> ScaredyLinux<void>;
 
-auto unmap_memory(void const* const p_memory, ssize const length)
+auto sys_mmap(usize const beginning_address, ssize const bytes_size,
+              MemoryProtectionFlags const protections, MemoryFlags const flags,
+              FileDescriptor const file_descriptor, ssize const pages_offset)
+    -> ScaredyLinux<void*>;
+
+auto sys_munmap(void const* const p_memory, ssize const length)
     -> ScaredyLinux<void>;
 
 struct Thread;
 
-auto wait(ProcessId waiting_on_id, int4* p_status_output,
-          WaitOptionsFlags options, void* p_resource_usage)
+auto sys_wait4(ProcessId waiting_on_id, int4* p_status_output,
+               WaitOptionsFlags options, void* p_resource_usage)
     -> ScaredyLinux<ProcessId>;
 
 // TODO: Separate this into separate functions for waiting on pid, gid, etc.
-auto waitid(WaitId type, ProcessId id, WaitOptionsFlags options)
+auto sys_waitid(WaitId type, ProcessId id, WaitOptionsFlags options)
     -> ScaredyLinux<ProcessId>;
 
 struct CloneArguments;
@@ -564,46 +568,46 @@ auto syscall(ssize const call, Args... parameters) -> nix::ScaredyLinux<T>
 ;
 
 // Create and return a `cat::Socket`.
-auto create_socket(int8 const protocol_family, int8 const type,
-                   int8 const protocol) -> ScaredyLinux<FileDescriptor>;
+auto sys_socket(int8 const protocol_family, int8 const type,
+                int8 const protocol) -> ScaredyLinux<FileDescriptor>;
 
 // Create and return a `cat::SocketLocal` (also known as Unix socket).
 auto create_socket_local(int8 const type, int8 const protocol)
     -> ScaredyLinux<FileDescriptor>;
 
 // Connect a `cat::Socket` to an address.
-auto connect_socket(FileDescriptor const socket_descriptor,
-                    void const* const p_socket, ssize const socket_size)
+auto sys_connect(FileDescriptor const socket_descriptor,
+                 void const* const p_socket, ssize const socket_size)
     -> ScaredyLinux<void>;
 
 // Make a connection over a `cat::Socket`. This returns a new socket which has
 // been connected to. This new `cat::Socket` is not in a listening state.
 // TODO: Add flags for Linux syscall `288`.
-auto accept_socket(FileDescriptor const socket_descriptor,
-                   void const* const __restrict p_socket = nullptr,
-                   ssize const* const __restrict p_addr_len = nullptr)
+auto sys_accept(FileDescriptor const socket_descriptor,
+                void const* const __restrict p_socket = nullptr,
+                ssize const* const __restrict p_addr_len = nullptr)
     -> ScaredyLinux<FileDescriptor>;
 
-auto recieve_buffer(FileDescriptor const socket_descriptor,
-                    void* const p_message_buffer, ssize const buffer_length,
-                    cat::Socket const* const __restrict p_addr = nullptr,
-                    ssize const* const __restrict p_addr_length = nullptr)
+auto sys_recv(FileDescriptor const socket_descriptor,
+              void* const p_message_buffer, ssize const buffer_length,
+              cat::Socket const* const __restrict p_addr = nullptr,
+              ssize const* const __restrict p_addr_length = nullptr)
     -> ScaredyLinux<ssize>;
 
-auto bind_socket(FileDescriptor const socket_descriptor,
-                 void const* const p_socket, ssize const p_addr_len)
+auto sys_bind(FileDescriptor const socket_descriptor,
+              void const* const p_socket, ssize const p_addr_len)
     -> ScaredyLinux<void>;
 
 // Mark a socket as available to make connections with `accept()`.
-auto listen_to_socket(FileDescriptor const socket_descriptor,
-                      int8 const backlog) -> ScaredyLinux<void>;
+auto sys_listen(FileDescriptor const socket_descriptor, int8 const backlog)
+    -> ScaredyLinux<void>;
 
 // Returns the number of characters sent to `destination_socket`.
-auto send_buffer(FileDescriptor const socket_descriptor,
-                 void const* const p_message_buffer, ssize const buffer_length,
-                 int8 const flags,
-                 cat::Socket const* const p_destination_socket = nullptr,
-                 ssize const addr_length = 0) -> ScaredyLinux<ssize>;
+auto sys_send(FileDescriptor const socket_descriptor,
+              void const* const p_message_buffer, ssize const buffer_length,
+              int8 const flags,
+              cat::Socket const* const p_destination_socket = nullptr,
+              ssize const addr_length = 0) -> ScaredyLinux<ssize>;
 
 struct Process {
     ProcessId id;
@@ -674,9 +678,9 @@ parent_thread:
 
     auto wait() const -> ScaredyLinux<ProcessId> {
         ScaredyLinux<ProcessId> result =
-            waitid(WaitId::process_id, this->id,
-                   WaitOptionsFlags::exited | WaitOptionsFlags::clone |
-                       WaitOptionsFlags::no_wait);
+            sys_waitid(WaitId::process_id, this->id,
+                       WaitOptionsFlags::exited | WaitOptionsFlags::clone |
+                           WaitOptionsFlags::no_wait);
         return result;
         // TODO: Free the stack memory.
     }
@@ -711,11 +715,11 @@ struct IoVector : cat::Span<cat::Byte> {
     }
 };
 
-auto write_vector(FileDescriptor const file_descriptor,
-                  cat::Span<IoVector> const& vectors) -> ScaredyLinux<ssize>;
+auto sys_writev(FileDescriptor const file_descriptor,
+                cat::Span<IoVector> const& vectors) -> ScaredyLinux<ssize>;
 
-auto read_vector(FileDescriptor const file_descriptor,
-                 cat::Span<IoVector> const& vectors) -> ScaredyLinux<ssize>;
+auto sys_readv(FileDescriptor const file_descriptor,
+               cat::Span<IoVector> const& vectors) -> ScaredyLinux<ssize>;
 
 struct File {
     char x;
@@ -779,10 +783,10 @@ struct FileStatus {
     }
 };
 
-auto file_path_status(cat::String const& file_path)
+auto sys_stat(cat::String const& file_path)
     -> cat::Scaredy<FileStatus, LinuxError>;
 
-auto file_descriptor_status(FileDescriptor const file_descriptor)
+auto sys_fstat(FileDescriptor const file_descriptor)
     -> cat::Scaredy<FileStatus, LinuxError>;
 
 }  // namespace nix

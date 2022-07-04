@@ -4,7 +4,7 @@
 
 auto cat::print(String const string) -> cat::Optional<ssize> {
     cat::Scaredy result =
-        nix::write(nix::FileDescriptor{1}, string.p_data(), string.size());
+        nix::sys_write(nix::FileDescriptor{1}, string.p_data(), string.size());
     if (result.has_value()) {
         return result.value();
     }

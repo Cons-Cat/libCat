@@ -39,6 +39,7 @@ set(
   PARENT_SCOPE
 )
 
+# TODO: Group and annotate these lines by their corresponding header.
 set(
   cat-cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/_start.cpp
@@ -79,27 +80,27 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/syscall5.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/syscall6.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/syscall.tpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/read.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/write.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/close.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/open_file.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/unlink.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/map_memory.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/unmap_memory.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/wait4.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/waitid.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/create_socket.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_read.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_write.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_close.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_open.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_unlink.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_mmap.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_munmap.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_wait4.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_waitid.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_socket.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/create_socket_local.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/accept_socket.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/bind_socket.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/connect_socket.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/listen_to_socket.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/recieve_buffer.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/send_buffer.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/write_vector.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/read_vector.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/file_path_status.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/file_descriptor_status.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_accept.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_bind.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_connect.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_listen.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_recv.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_send.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_writev.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_readv.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_stat.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_fstat.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/utility/implementations/move.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/utility/implementations/forward.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/utility/implementations/is_constant_evaluated.tpp

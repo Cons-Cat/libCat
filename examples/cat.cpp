@@ -7,8 +7,7 @@ constexpr ssize block_size = 4_ki;
 
 auto get_file_size(nix::FileDescriptor file_descriptor)
     -> cat::Optional<ssize> {
-    nix::FileStatus status =
-        nix::file_descriptor_status(file_descriptor).or_panic();
+    nix::FileStatus status = nix::sys_fstat(file_descriptor).or_panic();
     if (status.is_regular()) {
         return status.file_size;
     }
@@ -23,13 +22,13 @@ void output_to_console(nix::IoVector const& io_vector) {
     // TODO: Make this buffered output to reduce syscalls.
     cat::Byte const* p_buffer = io_vector.p_data();
     ++p_buffer;
-    _ = nix::write(nix::FileDescriptor{1}, cat::bit_cast<char const*>(p_buffer),
-                   io_vector.size());
+    _ = nix::sys_write(nix::FileDescriptor{1},
+                       cat::bit_cast<char const*>(p_buffer), io_vector.size());
 }
 
 void read_and_print_file(char* p_file_name) {
     nix::FileDescriptor file_descriptor =
-        nix::open_file(p_file_name, nix::OpenMode::read_only)
+        nix::sys_open(p_file_name, nix::OpenMode::read_only)
             .or_panic(
                 // "No such file or directory!"
             );
@@ -70,7 +69,7 @@ void read_and_print_file(char* p_file_name) {
         bytes_remaining -= current_block_size;
     }
 
-    _ = nix::read_vector(file_descriptor, io_vectors).or_panic();
+    _ = nix::sys_readv(file_descriptor, io_vectors).or_panic();
 
     for (nix::IoVector const& iov : io_vectors) {
         output_to_console(iov);

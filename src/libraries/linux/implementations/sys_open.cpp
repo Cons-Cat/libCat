@@ -1,7 +1,7 @@
 #include <cat/linux>
 
-auto nix::open_file(char const* p_file_path, nix::OpenMode file_mode,
-                    nix::OpenFlags flags)
+auto nix::sys_open(char const* p_file_path, nix::OpenMode file_mode,
+                   nix::OpenFlags flags)
     -> nix::ScaredyLinux<nix::FileDescriptor> {
     // TODO: Figure out how to best support `close_exec`.
     // TODO: `large_file` should only be enabled on 64-bit targets.
