@@ -55,12 +55,20 @@ class List : public CollectionFacade<List<T>, T> {
 
     List() : p_head(nullptr), p_tail(nullptr), length(0){};
 
-    // A copy-constructor is not possible, because it would potentially incur
-    // failable memory allocations. There is no way for constructors to
-    // propagate failures. `.clone()` serves this purpose.
-    List(List<T> const&) = delete;
-
     List(List<T>&& list) = default;
+
+  private:
+    // Only allow the shallow copy constructor to be used by these static
+    // factory member functions.
+    List(List<T> const&) = default;
+
+  public:
+    [[nodiscard]] static auto cloned(StableAllocator auto& allocator,
+                                     List<T>& other_list) -> List<T> {
+        List<T> new_list;
+        new_list.clone(allocator, other_list);
+        return new_list;
+    }
 
     // Get the count of elements stored in this `List`.
     [[nodiscard]] auto size() const -> ssize {
@@ -365,17 +373,17 @@ class List : public CollectionFacade<List<T>, T> {
     }
 
     // Deep-copy the contents of another `List`.
-    [[nodiscard]] auto clone(StableAllocator auto& allocator, List<T>& other)
-        -> Optional<void> {
+    [[nodiscard]] auto clone(StableAllocator auto& allocator,
+                             List<T>& other_list) -> Optional<void> {
         Optional<Iterator> maybe_current =
-            this->push_back(allocator, other.front());
+            this->push_back(allocator, other_list.front());
         if (!maybe_current.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
         }
         Iterator& current = maybe_current.value();
 
-        for (Iterator it = ++other.begin(); it.p_node != nullptr; ++it) {
+        for (Iterator it = ++other_list.begin(); it.p_node != nullptr; ++it) {
             Optional<Iterator> result = this->push_back(allocator, *it);
             if (!result.has_value()) {
                 // Propagate memory allocation failure.
