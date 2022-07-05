@@ -32,11 +32,11 @@ class Array : public CollectionFacade<Array<T, length>, T> {
 
     // Construct from a constant list, such as `value_list` or
     // `integer_sequence`.
-    template <typename U, U... values>
-        requires(ssizeof_pack(values...) == length &&
+    template <typename U, U... initializers>
+        requires(ssizeof_pack(initializers...) == length &&
                  is_implicitly_convertible<U, T>)
-    constexpr Array(ValueList<U, values...>)
-        : storage(static_cast<T>(values)...){};
+    constexpr Array(ValueList<U, initializers...>)
+        : storage(static_cast<T>(initializers)...){};
 
     constexpr auto operator=(Array<T, length> const& other_array)
         -> Array& = default;
