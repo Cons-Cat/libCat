@@ -1,5 +1,5 @@
+#include <cat/utility>
 #include <cat/vector>
-#include <utility>
 
 // Test that `Vector` works in a `constexpr` context.
 consteval auto const_func() -> int4 {
