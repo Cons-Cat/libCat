@@ -99,6 +99,22 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         return vector;
     }
 
+    [[nodiscard]] static auto resized(StableAllocator auto& allocator,
+                                      ssize size) -> Optional<Vector<T>> {
+        Vector<T> vector;
+        Optional result = vector.resize(allocator, size);
+        if (!result.has_value()) {
+            return nullopt;
+        }
+        return vector;
+    }
+
+    [[nodiscard]] consteval static auto resized(ssize size) -> Vector<T> {
+        Vector<T> vector;
+        vector.resize(size);
+        return vector;
+    }
+
     [[nodiscard]] static auto filled(StableAllocator auto& allocator,
                                      ssize count, T const& value)
         -> Optional<Vector<T>> {
