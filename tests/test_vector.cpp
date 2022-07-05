@@ -1,5 +1,16 @@
 #include <cat/vector>
 
+// Test that `Vector` works in a `constexpr` context.
+consteval auto const_func()->int4{
+    cat::Vector<int4> vector;
+    vector.resize(8);
+    vector[0] = 1;
+    vector[1] = 2;
+    vector[7] = 2;
+    vector.push_back(10);
+	return vector[8];
+}
+
 void meow() {
     cat::PageAllocator page_allocator;
     cat::Byte* page = page_allocator.p_malloc(4_ki).or_panic();
@@ -55,6 +66,9 @@ void meow() {
     for (int4 integer : cloned_vec) {
         Result(integer == 1).or_panic();
     }
+
+    // Test `Vector` in a `constexpr` context.
+    static_assert(const_func() == 10);
 
     cat::exit();
 }

@@ -7,6 +7,8 @@
 
 namespace cat {
 
+// TODO: Put type conversion constraints on these functions.
+
 template <typename T>
 constexpr auto min(T&& value) -> T&& {
     return forward<T>(value);
