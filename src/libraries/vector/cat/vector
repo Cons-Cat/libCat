@@ -83,52 +83,124 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     constexpr Vector(Vector<T> const& vector) = default;
 
   public:
-    [[nodiscard]] static auto reserved(StableAllocator auto& allocator,
-                                       ssize count) -> Optional<Vector<T>> {
-        Vector<T> vector;
-        Optional result = vector.reserve(allocator, count);
+    // Construct from a constant list, such as `value_list` or
+    // `integer_sequence`.
+    template <typename U, U... values>
+        requires(is_implicitly_convertible<U, T>)
+    [[nodiscard]] static auto from(StableAllocator auto& allocator,
+                                   ValueList<U, values...>)
+        -> Optional<Vector<T>> {
+        Optional result =
+            Vector<T>::resized(allocator, ssizeof_pack(values...));
         if (!result.has_value()) {
             return nullopt;
         }
-        return vector;
+        Vector<T> new_vector = result.value();
+        Array array = {static_cast<T>(values)...};
+        // TODO: `push_back()` multiple overload.
+        for (ssize i = 0; i < ssizeof_pack(values...); ++i) {
+            new_vector[i] = array[i];
+        }
+        return new_vector;
+    }
+
+    // Construct from a variadic argument list.
+    template <typename... Args>
+        requires(is_implicitly_convertible<Args, T>&&...)
+    [[nodiscard]] static auto from(StableAllocator auto& allocator,
+                                   Args... arguments) -> Optional<Vector<T>> {
+        Optional result =
+            Vector<T>::resized(allocator, ssizeof_pack(arguments...));
+        if (!result.has_value()) {
+            return nullopt;
+        }
+        Vector<T> new_vector = result.value();
+        Array values = {static_cast<T>(arguments)...};
+        // TODO: `push_back()` multiple overload.
+        for (ssize i = 0; i < ssizeof_pack(arguments...); ++i) {
+            new_vector[i] = values[i];
+        }
+        return new_vector;
+    }
+
+    // Construct from a constant list, such as `value_list` or
+    // `integer_sequence`.
+    template <typename U, U... values>
+        requires(is_implicitly_convertible<U, T>)
+    [[nodiscard]] consteval static auto from(ValueList<U, values...>)
+        -> Vector<T> {
+        Vector<T> new_vector = Vector<T>::resized(ssizeof_pack(values...));
+        Array array = {static_cast<T>(values)...};
+        for (ssize i = 0; i < ssizeof_pack(values...); ++i) {
+            new_vector[i] = array[i];
+        }
+        return new_vector;
+    }
+
+    // Construct from a variadic argument list.
+    template <typename... Args>
+        requires(is_implicitly_convertible<Args, T>&&...)
+    [[nodiscard]] consteval static auto from(Args... arguments) -> Vector<T> {
+        Vector<T> new_vector;
+        delete[] new_vector.p_data();
+        // = Vector<T>::resized(ssizeof_pack(arguments...));
+        new_vector.current_size = ssizeof_pack(arguments...);
+        new_vector.current_capacity = ssizeof_pack(arguments...);
+        new_vector.p_storage = new T[sizeof...(arguments)];
+
+        Array values = {static_cast<T>(arguments)...};
+        for (ssize i = 0; i < ssizeof_pack(arguments...); ++i) {
+            new_vector[i] = values[i];
+        }
+        return Vector<T>::cloned(new_vector);
+    }
+
+    [[nodiscard]] static auto reserved(StableAllocator auto& allocator,
+                                       ssize count) -> Optional<Vector<T>> {
+        Vector<T> new_vector;
+        Optional result = new_vector.reserve(allocator, count);
+        if (!result.has_value()) {
+            return nullopt;
+        }
+        return new_vector;
     }
 
     [[nodiscard]] consteval static auto reserved(ssize count) -> Vector<T> {
-        Vector<T> vector;
-        vector.reserve(count);
-        return vector;
+        Vector<T> new_vector;
+        new_vector.reserve(count);
+        return new_vector;
     }
 
     [[nodiscard]] static auto resized(StableAllocator auto& allocator,
                                       ssize size) -> Optional<Vector<T>> {
-        Vector<T> vector;
-        Optional result = vector.resize(allocator, size);
+        Vector<T> new_vector;
+        Optional result = new_vector.resize(allocator, size);
         if (!result.has_value()) {
             return nullopt;
         }
-        return vector;
+        return new_vector;
     }
 
     [[nodiscard]] consteval static auto resized(ssize size) -> Vector<T> {
-        Vector<T> vector;
-        vector.resize(size);
-        return vector;
+        Vector<T> new_vector;
+        new_vector.resize(size);
+        return new_vector;
     }
 
     [[nodiscard]] static auto filled(StableAllocator auto& allocator,
                                      ssize count, T const& value)
         -> Optional<Vector<T>> {
-        Vector<T> vector;
-        Optional result = vector.reserve(allocator, count);
+        Vector<T> new_vector;
+        Optional result = new_vector.reserve(allocator, count);
         if (!result.has_value()) {
             return nullopt;
         }
-        vector.current_size = count;
+        new_vector.current_size = count;
         // TODO: Call a vectorized fill memory function.
-        for (T& element : vector) {
+        for (T& element : new_vector) {
             element = value;
         }
-        return vector;
+        return new_vector;
     }
 
     [[nodiscard]] static auto cloned(StableAllocator auto& allocator,
@@ -139,6 +211,13 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         if (!result.has_value()) {
             return nullopt;
         }
+        return new_vector;
+    }
+
+    [[nodiscard]] consteval static auto cloned(Vector<T> const& vector)
+        -> Vector<T> {
+        Vector<T> new_vector;
+        new_vector.clone(vector);
         return new_vector;
     }
 
@@ -214,6 +293,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
                 }
 
                 this->p_storage = p_new;
+                this->current_size = new_size;
                 this->current_capacity = new_size;
                 return monostate;
             }
@@ -282,6 +362,14 @@ class Vector : public CollectionFacade<Vector<T>, T> {
             this->p_storage[i.raw] = vector[i];
         }
         return monostate;
+    }
+
+    consteval void clone(Vector<T> const& vector) {
+        this->reserve(vector.capacity());
+        this->resize(vector.size());
+        for (ssize i = 0; i < vector.size(); ++i) {
+            this->p_storage[i.raw] = vector[i];
+        }
     }
 };
 
