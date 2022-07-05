@@ -5,6 +5,8 @@
 #include <cat/allocators>
 #include <cat/collection>
 
+// TODO: Add an `IntrusiveList`.
+
 namespace cat {
 namespace detail {
     template <typename T>
@@ -63,10 +65,51 @@ class List : public CollectionFacade<List<T>, T> {
     List(List<T> const&) = default;
 
   public:
-    [[nodiscard]] static auto cloned(StableAllocator auto& allocator,
-                                     List<T>& other_list) -> List<T> {
+    template <typename U, U... initializers>
+        requires(is_implicitly_convertible<U, T>)
+    [[nodiscard]] static auto from(StableAllocator auto& allocator,
+                                   ValueList<U, initializers...>)
+        -> Optional<List<T>> {
         List<T> new_list;
-        new_list.clone(allocator, other_list);
+        // TODO: Check if a recursive function is more efficient here.
+        Array values = {static_cast<T>(initializers)...};
+        // TODO: Optimize memory allocations with a multiple `.push_back()`
+        // overload.
+        for (ssize i = 0; i < ssizeof_pack(initializers...); ++i) {
+            Optional result = new_list.push_back(allocator, values[i]);
+            if (!result.has_value()) {
+                return nullopt;
+            }
+        }
+        return new_list;
+    }
+
+    template <typename... Args>
+        requires(is_implicitly_convertible<Args, T>&&...)
+    [[nodiscard]] static auto from(StableAllocator auto& allocator,
+                                   Args&&... initializers)
+        -> Optional<List<T>> {
+        List<T> new_list;
+        // TODO: Check if a recursive function is more efficient here.
+        Array array = {forward<Args>(initializers)...};
+        // TODO: Optimize memory allocations with a multiple `.push_back()`
+        // overload.
+        for (ssize i = 0; i < ssizeof_pack<Args...>(); ++i) {
+            Optional result = new_list.push_back(allocator, array[i]);
+            if (!result.has_value()) {
+                return nullopt;
+            }
+        }
+        return new_list;
+    }
+
+    [[nodiscard]] static auto cloned(StableAllocator auto& allocator,
+                                     List<T>& other_list) -> Optional<List<T>> {
+        List<T> new_list;
+        Optional result = new_list.clone(allocator, other_list);
+        if (!result.has_value()) {
+            return nullopt;
+        }
         return new_list;
     }
 
@@ -423,12 +466,61 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
   public:
     ForwardList() : p_head(nullptr), p_tail(nullptr), length(0){};
 
-    // A copy-constructor is not possible, because it would potentially
-    // incur failable memory allocations. There is no way for constructors
-    // to propagate failures. `.clone()` serves this purpose.
-    ForwardList(ForwardList<T> const&) = delete;
+  private:
+    // Only allow the shallow copy constructor to be used by these static
+    // factory member functions.
+    ForwardList(ForwardList<T> const&) = default;
 
+  public:
     ForwardList(ForwardList<T>&& list) = default;
+    template <typename U, U... values>
+        requires(is_implicitly_convertible<U, T>)
+    [[nodiscard]] static auto from(StableAllocator auto& allocator,
+                                   ValueList<U, values...> initializers)
+        -> Optional<ForwardList<T>> {
+        ForwardList<T> new_list;
+        // TODO: Check if a recursive function is more efficient here.
+        Array array = initializers;
+        // TODO: Optimize memory allocations with a multiple `.push_back()`
+        // overload.
+        for (ssize i = 0; i < ssizeof_pack(values...); ++i) {
+            Optional result = new_list.push_back(allocator, array[i]);
+            if (!result.has_value()) {
+                return nullopt;
+            }
+        }
+        return new_list;
+    }
+
+    template <typename... Args>
+        requires(is_implicitly_convertible<Args, T>&&...)
+    [[nodiscard]] static auto from(StableAllocator auto& allocator,
+                                   Args&&... initializers)
+        -> Optional<ForwardList<T>> {
+        ForwardList<T> new_list;
+        // TODO: Check if a recursive function is more efficient here.
+        Array array = {forward<Args>(initializers)...};
+        // TODO: Optimize memory allocations with a multiple `.push_back()`
+        // overload.
+        for (ssize i = 0; i < ssizeof_pack<Args...>(); ++i) {
+            Optional result = new_list.push_back(allocator, array[i]);
+            if (!result.has_value()) {
+                return nullopt;
+            }
+        }
+        return new_list;
+    }
+
+    [[nodiscard]] static auto cloned(StableAllocator auto& allocator,
+                                     ForwardList<T>& other_list)
+        -> Optional<List<T>> {
+        ForwardList<T> new_list;
+        Optional result = new_list.clone(allocator, other_list);
+        if (!result.has_value()) {
+            return nullopt;
+        }
+        return new_list;
+    }
 
     // Get the count of elements stored in this `ForwardList`.
     [[nodiscard]] auto size() const -> ssize {

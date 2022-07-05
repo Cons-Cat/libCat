@@ -1,6 +1,7 @@
 #include <cat/allocators>
 #include <cat/iterator>
 #include <cat/list>
+#include <cat/utility>
 
 void meow() {
     cat::PageAllocator page_allocator;
@@ -31,7 +32,7 @@ void meow() {
     _ = list_2.push_back(allocator, 4).or_panic();
     Result(list_2.front() == 0).or_panic();
     Result(list_2.back() == 4).or_panic();
-    _ = list_2.insert(allocator, ++list_2.begin(), 1);
+    _ = list_2.insert(allocator, ++list_2.begin(), 1).or_panic();
     Result(list_2.front() == 0).or_panic();
     Result(*++list_2.begin() == 1).or_panic();
 
@@ -79,8 +80,7 @@ void meow() {
     _ = list_1.push_front(allocator, 2).or_panic();
     _ = list_1.push_front(allocator, 1).or_panic();
     _ = list_1.push_front(allocator, 0).or_panic();
-    cat::List<int4> list_5;
-    list_5.clone(allocator, list_1).or_panic();
+    cat::List list_5 = cat::List<int4>::cloned(allocator, list_1).or_panic();
 
     // Test that the copy was deep.
     list_1.clear(allocator).or_panic();
@@ -97,6 +97,16 @@ void meow() {
     Result(list_4.front() == 0).or_panic();
     Result(*(list_4.begin() + 1) == 1).or_panic();
     Result(*(list_4.begin() + 2) == 2).or_panic();
+
+    // Test initialized `List`.
+    [[maybe_unused]] cat::List list_init_1 =
+        cat::List<int4>::from(allocator, 1, 2, 3).or_panic();
+    cat::List list_init_2 =
+        cat::List<int4>::from(allocator, cat::value_list<int4, 0, 4>)
+            .or_panic();
+    for (int4 i : list_init_2) {
+        Result(i == 0).or_panic();
+    }
 
     // Test `ForwardList`.
     allocator.reset();
