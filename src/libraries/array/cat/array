@@ -77,6 +77,6 @@ class Array : public CollectionFacade<Array<T, length>, T> {
 
 // Construct an `Array` as: `Array array = {0, 1, 2};`
 template <typename T, typename... Args>
-Array(T, Args...) -> Array<T, ssize{sizeof...(Args)} + 1>;
+Array(T, Args...) -> Array<T, ssizeof_pack<Args...>() + 1>;
 
 }  // namespace cat

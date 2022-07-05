@@ -312,9 +312,8 @@ namespace detail {
             // Set the `raw_storage` byte offset for the next value, iff there
             // is another one.
             if (argument_index.raw + 1 <
-                static_cast<ssize>(
-                    sizeof...(Ts))) {  // TODO: Explore whether `[[likely]]`
-                                       // improves performance here.
+                ssizeof_pack<Ts...>()) {  // TODO: Explore whether `[[likely]]`
+                                          // improves performance here.
                 this->arguments_indices[argument_index.raw + 1].byte_index =
                     storage_index.raw + sizeof(T);
             }
