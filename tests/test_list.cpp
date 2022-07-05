@@ -35,9 +35,8 @@ void meow() {
     Result(list_2.front() == 0).or_panic();
     Result(*++list_2.begin() == 1).or_panic();
 
-    for (auto& node : list_2) {
-        // Iterate.
-        node = node;  // NOLINT
+    // Test iteration.
+    for ([[maybe_unused]] int4 _ : list_2) {
     }
 
     // Test emplace.

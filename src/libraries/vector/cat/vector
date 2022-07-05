@@ -7,17 +7,23 @@
 
 namespace cat {
 
+// TODO: Support `__sanitizer_annotate_contiguous_container`.
+
 template <typename T>
 class Vector : public CollectionFacade<Vector<T>, T> {
     T* p_storage;
     ssize current_size;
     ssize current_capacity;
 
-    auto reallocate_storage(StableAllocator auto& allocator) -> Optional<void> {
+    // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
+    // context.
+    auto double_storage(StableAllocator auto& allocator) -> Optional<void> {
         ssize new_capacity;
         if (this->current_capacity > 0) [[likely]] {
-            new_capacity = current_capacity * 2;
+            new_capacity = this->current_capacity * 2;
         } else {
+            // If this storage has not been allocated yet, then greedily
+            // allocate its capacity as 4.
             new_capacity = 4;
         }
 
@@ -26,6 +32,8 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         if (!result.has_value()) {
             return nullopt;
         } else {
+            // TODO: Should this propagate an error instead of panicking?
+            allocator.free(this->p_storage).or_panic();
             T* p_new = result.value();
             // TODO: If `T` is relocatable, use `copy_memory()`.
             for (ssize::Raw i = 0; i < this->current_size.raw; ++i) {
@@ -38,11 +46,36 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         }
     }
 
+    // Reallocate this vector's memory if it is exceeded, in a `constexpr`
+    // context.
+    consteval void double_storage() {
+        ssize const new_capacity = max(4, this->current_capacity * 2);
+        T* p_new = new T[new_capacity.raw];
+        for (ssize::Raw i = 0; i < this->current_size.raw; ++i) {
+            p_new[i] = move(this->p_storage[i]);
+        }
+
+        delete[] this->p_storage;
+        this->p_storage = p_new;
+        this->current_capacity = new_capacity;
+    }
+
   public:
     constexpr Vector()
-        : p_storage(nullptr), current_size(0), current_capacity(0){};
+        : p_storage(nullptr), current_size(0), current_capacity(0) {
+        if (is_constant_evaluated()) {
+            this->p_storage = new T[1];
+            this->p_storage[0] = 0;
+        }
+    };
 
     constexpr Vector(Vector<T>&& vector) = default;
+
+    constexpr ~Vector() {
+        if (is_constant_evaluated()) {
+            delete[] this->p_storage;
+        }
+    }
 
   private:
     // Only allow the shallow copy constructor to be used by these static
@@ -50,8 +83,8 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     constexpr Vector(Vector<T> const& vector) = default;
 
   public:
-    [[nodiscard]] static constexpr auto reserved(
-        StableAllocator auto& allocator, ssize count) -> Optional<Vector<T>> {
+    [[nodiscard]] static auto reserved(StableAllocator auto& allocator,
+                                       ssize count) -> Optional<Vector<T>> {
         Vector<T> vector;
         Optional result = vector.reserve(allocator, count);
         if (!result.has_value()) {
@@ -60,8 +93,14 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         return vector;
     }
 
-    [[nodiscard]] static constexpr auto filled(StableAllocator auto& allocator,
-                                               ssize count, T const& value)
+    [[nodiscard]] consteval static auto reserved(ssize count) -> Vector<T> {
+        Vector<T> vector;
+        vector.reserve(count);
+        return vector;
+    }
+
+    [[nodiscard]] static auto filled(StableAllocator auto& allocator,
+                                     ssize count, T const& value)
         -> Optional<Vector<T>> {
         Vector<T> vector;
         Optional result = vector.reserve(allocator, count);
@@ -76,8 +115,8 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         return vector;
     }
 
-    [[nodiscard]] static constexpr auto cloned(StableAllocator auto& allocator,
-                                               Vector<T> const& vector)
+    [[nodiscard]] static auto cloned(StableAllocator auto& allocator,
+                                     Vector<T> const& vector)
         -> Optional<Vector<T>> {
         Vector<T> new_vector;
         Optional result = new_vector.clone(allocator, vector);
@@ -88,7 +127,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     }
 
     // Get the non-`const` address of this `Vector`'s internal array.
-    constexpr auto p_data() -> T* {
+    [[nodiscard]] constexpr auto p_data() -> T* {
         return &(this->p_storage[0]);
     }
 
@@ -105,7 +144,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         return this->current_capacity;
     }
 
-    // Try to change the capacity of this `Vector`.
+    // Try to change the capacity of this `Vector` in a non-`constexpr` context.
     [[nodiscard]] auto reserve(StableAllocator auto& allocator,
                                ssize new_capacity) -> Optional<void> {
         if (new_capacity > this->current_capacity) {
@@ -126,14 +165,67 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         return nullopt;
     }
 
-    // Try to change the size of this `Vector`.
+    // Change the capacity of this `Vector` in a `constexpr` context.
+    consteval void reserve(ssize new_capacity) {
+        if (new_capacity > this->current_capacity) {
+            // TODO: `.p_srealloc()`.
+            T* p_new = new T[new_capacity.raw];
+            for (ssize::Raw i = 0; i < this->current_size.raw; ++i) {
+                p_new[i] = move(this->p_storage[i]);
+            }
+
+            delete[] this->p_storage;
+            this->p_storage = p_new;
+            this->current_capacity = new_capacity;
+        }
+    }
+
+    // Try to change the size of this `Vector` in a non-`constexpr` context.
     [[nodiscard]] auto resize(StableAllocator auto& allocator, ssize new_size)
         -> Optional<void> {
         if (new_size > this->current_capacity) {
-            return this->reallocate_storage(allocator);
+            // TODO: `.srealloc()`.
+            Optional result = allocator.template p_malloc<T>(new_size);
+            if (!result.has_value()) {
+                return nullopt;
+            } else {
+                // TODO: Consider propagating this error.
+                allocator.free(this->p_storage).or_panic();
+                T* p_new = result.value();
+                // TODO: If `T` is relocatable, use `copy_memory()`.
+                for (ssize::Raw i = 0; i < this->current_size.raw; ++i) {
+                    p_new[i] = move(this->p_storage[i]);
+                }
+
+                this->p_storage = p_new;
+                this->current_capacity = new_size;
+                return monostate;
+            }
+        } else {
+            this->current_size = new_size;
+            return monostate;
         }
-        this->current_size = new_size;
-        return monostate;
+    }
+
+    // Try to change the size of this `Vector` in a `constexpr` context.
+    consteval void resize(ssize new_size) {
+        if (new_size > this->current_capacity) {
+            T* p_new = new T[new_size.raw];
+            for (ssize::Raw i = 0; i < this->current_size.raw; ++i) {
+                p_new[i] = move(this->p_storage[i]);
+            }
+            for (ssize::Raw i = this->current_size.raw; i < new_size.raw; i++) {
+                p_new[i] = T{};
+            }
+
+            delete[] this->p_storage;
+            this->p_storage = p_new;
+            this->current_size = new_size;
+            this->current_capacity = new_size;
+        } else {
+            // Shrink the size.
+            this->current_size = new_size;
+        }
     }
 
     template <typename U>
@@ -141,7 +233,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     [[nodiscard]] auto push_back(StableAllocator auto& allocator,
                                  U const& value) -> Optional<void> {
         if (this->current_size + 1 > this->current_capacity) {
-            Optional result = this->reallocate_storage(allocator);
+            Optional result = this->double_storage(allocator);
             if (!result.has_value()) {
                 return nullopt;
             }
@@ -149,6 +241,16 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         this->p_storage[this->current_size.raw] = static_cast<T>(value);
         this->current_size += 1;
         return monostate;
+    }
+
+    template <typename U>
+        requires(is_implicitly_convertible<U, T>)
+    consteval auto push_back(U const& value) -> void {
+        if (this->current_size + 1 > this->current_capacity) {
+            this->double_storage();
+        }
+        this->p_storage[this->current_size.raw] = static_cast<T>(value);
+        this->current_size += 1;
     }
 
     [[nodiscard]] auto clone(StableAllocator auto& allocator,
