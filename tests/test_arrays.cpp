@@ -123,5 +123,16 @@ void meow() {
 
     [[maybe_unused]] cat::Array int_array_2 = cat::value_list<int4, 0, 5>;
 
+    // Test array copy-assignment.
+    cat::Array base_array = {0, 0, 0, 0};
+    cat::Array copy_array = {1, 2, 3, 4};
+    cat::Array copy_converting_array = {int2{1}, 2, 3, 4};
+    cat::Array move_array = {5, 6, 7, 8};
+    cat::Array move_converting_array = {int2{5}, 6, 7, 8};
+    base_array = copy_array;
+    base_array = copy_converting_array;
+    base_array = move(move_array);
+    base_array = move(move_converting_array);
+
     cat::exit();
 };

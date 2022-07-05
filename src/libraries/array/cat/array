@@ -17,26 +17,54 @@ class Array : public CollectionFacade<Array<T, length>, T> {
 
   public:
     constexpr Array() = default;
-    constexpr Array(Array<T, length> const& in_array) = default;
-    constexpr Array(Array<T, length>&& in_array) = default;
+    constexpr Array(Array<T, length> const& other_array) = default;
+    constexpr Array(Array<T, length>&& other_array) = default;
 
     // Construct an `Array` from a variadic argument list.
-    template <typename... U>
-    constexpr Array(U&&... arguments) requires(sizeof...(arguments) ==
-                                               length.raw)
-        : storage(arguments...){};
+    template <typename... Args>
+        requires(ssizeof_pack<Args...>() == length &&
+                 (is_convertible<Args, T> && ...))
+    constexpr Array(Args&&... arguments)
+        // Explicitly converting this type allows the first argument to coerce
+        // the type for following arguments.
+        // i.e. `cat::Array shorts = {int2{0}, 1, 2};`
+        : storage(static_cast<T>(forward<Args>(arguments))...){};
 
     // Construct from a constant list, such as `value_list` or
     // `integer_sequence`.
     template <typename U, U... values>
-    constexpr Array(ValueList<U, values...> const list) requires(
-        is_implicitly_convertible<U, T>&& list.size == length)
+        requires(ssizeof_pack(values...) == length &&
+                 is_implicitly_convertible<U, T>)
+    constexpr Array(ValueList<U, values...>)
         : storage(static_cast<T>(values)...){};
 
-    constexpr auto operator=(Array<T, length> const&)
-        -> Array<T, length>& = default;
+    constexpr auto operator=(Array<T, length> const& other_array)
+        -> Array& = default;
 
-    constexpr auto operator=(Array<T, length>&&) -> Array<T, length>& = default;
+    // Converting copy assignment operator.
+    template <typename U>
+        requires(is_implicitly_convertible<U, T>)
+    constexpr auto operator=(Array<U, length> const& other_array) -> Array& {
+        // TODO: Optimize with `copy_memory()` if T and U are relocatable.
+        for (ssize i = 0; i < length; ++i) {
+            this->storage[i.raw] = static_cast<T>(other_array[i]);
+        }
+        return *this;
+    }
+
+    constexpr auto operator=(Array<T, length>&& other_array)
+        -> Array& = default;
+
+    // Converting move assignment operator.
+    template <typename U>
+        requires(is_implicitly_convertible<U, T>)
+    constexpr auto operator=(Array<U, length>&& other_array) -> Array& {
+        // TODO: Optimize with `copy_memory()` if T and U are relocatable.
+        for (ssize i = 0; i < length; ++i) {
+            this->storage[i.raw] = static_cast<T>(move(other_array[i]));
+        }
+        return *this;
+    }
 
   private:
     template <ssize index, typename U, U value, U... values>
@@ -53,12 +81,12 @@ class Array : public CollectionFacade<Array<T, length>, T> {
 
   public:
     template <Integral U, U... values>
-    constexpr auto operator=(ValueList<U, values...> const list) requires(
-        is_implicitly_convertible<U, T>&& list.size == length) {
+        requires(is_implicitly_convertible<U, T>&& ssizeof_pack(values...) ==
+                 length)
+    constexpr auto operator=(ValueList<U, values...> const list) {
         this->copy_list<0, U, values...>(list);
     };
 
-    // TODO: Should this exist?
     // Get the non-`const` address of this `Array`'s internal array.
     [[nodiscard]] constexpr auto p_data() -> T* {
         return this->storage;
