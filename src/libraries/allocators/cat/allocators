@@ -208,19 +208,19 @@ struct AllocatorFacade {
     // If this allocator has pointer stability, allocate some memory with
     // arbitrary alignment and provide a pointer handle.
     template <typename T = Byte>
-    [[nodiscard]] auto p_malloc(ssize const allocation_size = ssizeof<T>())
-        -> OptionalPtr<T>
         requires(detail::StableDerivedAllocator<Derived, T>)
-    {
-        if constexpr (alignof(T) > 8) {
-            // If the alignment of `T` is greater than 8, it should have
+    [[nodiscard]] auto p_malloc(ssize const allocation_size = ssizeof<T>())
+        -> OptionalPtr<T> {
+        if constexpr (alignof(T) > 1) {
+            // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            auto memory = this->aligned_alloc(alignof(T), allocation_size);
+            Optional memory =
+                this->aligned_alloc<T>(alignof(T), allocation_size);
             if (memory.has_value()) {
                 return &this->get(memory.value());
             }
         } else {
-            auto memory =
+            Optional memory =
                 this->meta_allocate<T, false, true, false>(1u, allocation_size);
             if (memory.has_value()) {
                 return &this->get(memory.value());
@@ -241,11 +241,10 @@ struct AllocatorFacade {
     // If this allocator has pointer stability, allocate some memory with
     // arbitrary alignment and provide a pointer handle.
     template <typename T = Byte>
+        requires(detail::StableDerivedAllocator<Derived, T>)
     [[nodiscard]] auto p_aligned_alloc(
         usize const alignment, ssize const allocation_size = ssizeof<T>())
-        -> OptionalPtr<T>
-        requires(detail::StableDerivedAllocator<Derived, T>)
-    {
+        -> OptionalPtr<T> {
         auto memory = this->meta_allocate<T, false, true, true>(
             alignment, allocation_size);
         if (memory.has_value()) {
@@ -257,8 +256,8 @@ struct AllocatorFacade {
     // Try to allocate small-size optimized memory.
     template <typename T = void*>
     [[nodiscard]] auto malloca(ssize const allocation_size = ssizeof<T>()) {
-        if constexpr (alignof(T) > 8) {
-            // If the alignment of `T` is greater than 8, it should have
+        if constexpr (alignof(T) > 1) {
+            // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
             return this->aligned_alloca(alignof(T), allocation_size);
         }
@@ -316,9 +315,10 @@ struct AllocatorFacade {
 
     // Invalidate any stable memory handle, invoking its data's destructor.
     template <typename T>
-    [[nodiscard]] auto free(T* const p_memory) -> Optional<void>
         requires(detail::StableDerivedAllocator<Derived, T>)
-    { return this->self().deallocate(p_memory); }
+    [[nodiscard]] auto free(T* const p_memory) -> Optional<void> {
+        return this->self().deallocate(p_memory);
+    }
 
     // Get a reference to the data in any memory handle.
     [[nodiscard]] auto get(auto& memory) -> auto& {
