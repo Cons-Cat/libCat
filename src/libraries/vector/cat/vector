@@ -64,12 +64,14 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     constexpr Vector()
         : p_storage(nullptr), current_size(0), current_capacity(0) {
         if (is_constant_evaluated()) {
+            // This array cannot be length 0 or `nullptr` in a `constexpr`
+            // context.
             this->p_storage = new T[1];
             this->p_storage[0] = 0;
         }
     };
 
-    constexpr Vector(Vector<T>&& vector) = default;
+    constexpr Vector(Vector<T>&& other_vector) = default;
 
     constexpr ~Vector() {
         if (is_constant_evaluated()) {
@@ -80,26 +82,26 @@ class Vector : public CollectionFacade<Vector<T>, T> {
   private:
     // Only allow the shallow copy constructor to be used by these static
     // factory member functions.
-    constexpr Vector(Vector<T> const& vector) = default;
+    constexpr Vector(Vector<T> const& other_vector) = default;
 
   public:
     // Construct from a constant list, such as `value_list` or
     // `integer_sequence`.
-    template <typename U, U... values>
+    template <typename U, U... initializers>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]] static auto from(StableAllocator auto& allocator,
-                                   ValueList<U, values...>)
+                                   ValueList<U, initializers...>)
         -> Optional<Vector<T>> {
         Optional result =
-            Vector<T>::resized(allocator, ssizeof_pack(values...));
+            Vector<T>::resized(allocator, ssizeof_pack(initializers...));
         if (!result.has_value()) {
             return nullopt;
         }
         Vector<T> new_vector = result.value();
-        Array array = {static_cast<T>(values)...};
+        Array values = {static_cast<T>(initializers)...};
         // TODO: `push_back()` multiple overload.
-        for (ssize i = 0; i < ssizeof_pack(values...); ++i) {
-            new_vector[i] = array[i];
+        for (ssize i = 0; i < ssizeof_pack(initializers...); ++i) {
+            new_vector[i] = values[i];
         }
         return new_vector;
     }
@@ -108,16 +110,18 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     template <typename... Args>
         requires(is_implicitly_convertible<Args, T>&&...)
     [[nodiscard]] static auto from(StableAllocator auto& allocator,
-                                   Args... arguments) -> Optional<Vector<T>> {
+                                   Args&&... initializers)
+        -> Optional<Vector<T>> {
         Optional result =
-            Vector<T>::resized(allocator, ssizeof_pack(arguments...));
+            Vector<T>::resized(allocator, ssizeof_pack(initializers...));
         if (!result.has_value()) {
             return nullopt;
         }
         Vector<T> new_vector = result.value();
-        Array values = {static_cast<T>(arguments)...};
+        // TODO: Check if a recursive function is more efficient here.
+        Array values = {static_cast<T>(forward<Args>(initializers))...};
         // TODO: `push_back()` multiple overload.
-        for (ssize i = 0; i < ssizeof_pack(arguments...); ++i) {
+        for (ssize i = 0; i < ssizeof_pack(initializers...); ++i) {
             new_vector[i] = values[i];
         }
         return new_vector;
@@ -125,13 +129,14 @@ class Vector : public CollectionFacade<Vector<T>, T> {
 
     // Construct from a constant list, such as `value_list` or
     // `integer_sequence`.
-    template <typename U, U... values>
+    template <typename U, U... initializers>
         requires(is_implicitly_convertible<U, T>)
-    [[nodiscard]] consteval static auto from(ValueList<U, values...>)
+    [[nodiscard]] consteval static auto from(ValueList<U, initializers...>)
         -> Vector<T> {
-        Vector<T> new_vector = Vector<T>::resized(ssizeof_pack(values...));
-        Array array = {static_cast<T>(values)...};
-        for (ssize i = 0; i < ssizeof_pack(values...); ++i) {
+        Vector<T> new_vector =
+            Vector<T>::resized(ssizeof_pack(initializers...));
+        Array array = {static_cast<T>(initializers)...};
+        for (ssize i = 0; i < ssizeof_pack(initializers...); ++i) {
             new_vector[i] = array[i];
         }
         return new_vector;
@@ -140,16 +145,17 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     // Construct from a variadic argument list.
     template <typename... Args>
         requires(is_implicitly_convertible<Args, T>&&...)
-    [[nodiscard]] consteval static auto from(Args... arguments) -> Vector<T> {
+    [[nodiscard]] consteval static auto from(Args... initializers)
+        -> Vector<T> {
         Vector<T> new_vector;
         delete[] new_vector.p_data();
         // = Vector<T>::resized(ssizeof_pack(arguments...));
-        new_vector.current_size = ssizeof_pack(arguments...);
-        new_vector.current_capacity = ssizeof_pack(arguments...);
-        new_vector.p_storage = new T[sizeof...(arguments)];
+        new_vector.current_size = ssizeof_pack(initializers...);
+        new_vector.current_capacity = ssizeof_pack(initializers...);
+        new_vector.p_storage = new T[sizeof...(initializers)];
 
-        Array values = {static_cast<T>(arguments)...};
-        for (ssize i = 0; i < ssizeof_pack(arguments...); ++i) {
+        Array values = {static_cast<T>(initializers)...};
+        for (ssize i = 0; i < ssizeof_pack(initializers...); ++i) {
             new_vector[i] = values[i];
         }
         return Vector<T>::cloned(new_vector);
@@ -204,20 +210,20 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     }
 
     [[nodiscard]] static auto cloned(StableAllocator auto& allocator,
-                                     Vector<T> const& vector)
+                                     Vector<T> const& other_vector)
         -> Optional<Vector<T>> {
         Vector<T> new_vector;
-        Optional result = new_vector.clone(allocator, vector);
+        Optional result = new_vector.clone(allocator, other_vector);
         if (!result.has_value()) {
             return nullopt;
         }
         return new_vector;
     }
 
-    [[nodiscard]] consteval static auto cloned(Vector<T> const& vector)
+    [[nodiscard]] consteval static auto cloned(Vector<T> const& other_vector)
         -> Vector<T> {
         Vector<T> new_vector;
-        new_vector.clone(vector);
+        new_vector.clone(other_vector);
         return new_vector;
     }
 
@@ -350,25 +356,25 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     }
 
     [[nodiscard]] auto clone(StableAllocator auto& allocator,
-                             Vector<T> const& vector) -> Optional<void> {
-        Optional result = this->reserve(allocator, vector.capacity());
+                             Vector<T> const& other_vector) -> Optional<void> {
+        Optional result = this->reserve(allocator, other_vector.capacity());
         if (!result.has_value()) {
             return nullopt;
         }
         // This cannot fail if `reserve()` succeeded.
-        _ = this->resize(allocator, vector.size());
+        _ = this->resize(allocator, other_vector.size());
         // TODO: Use `copy_memory()` if `T` is relocatable.
-        for (ssize i = 0; i < vector.size(); ++i) {
-            this->p_storage[i.raw] = vector[i];
+        for (ssize i = 0; i < other_vector.size(); ++i) {
+            this->p_storage[i.raw] = other_vector[i];
         }
         return monostate;
     }
 
-    consteval void clone(Vector<T> const& vector) {
-        this->reserve(vector.capacity());
-        this->resize(vector.size());
-        for (ssize i = 0; i < vector.size(); ++i) {
-            this->p_storage[i.raw] = vector[i];
+    consteval void clone(Vector<T> const& other_vector) {
+        this->reserve(other_vector.capacity());
+        this->resize(other_vector.size());
+        for (ssize i = 0; i < other_vector.size(); ++i) {
+            this->p_storage[i.raw] = other_vector[i];
         }
     }
 };
