@@ -38,7 +38,6 @@ list(
   CAT_SANITIZER_FLAGS
   -fno-omit-frame-pointer # Required for UBsan.
   -fsanitize=undefined
-  -fsanitize=float-divide-by-zero # This is not enabled by default.
   -fsanitize=address
   # Stack overflow checking is broken in libCat.
   --param asan-stack=0
