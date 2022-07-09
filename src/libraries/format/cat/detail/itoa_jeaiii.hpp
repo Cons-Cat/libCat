@@ -1,5 +1,4 @@
 #pragma once
-#include <cat/format>
 
 // This header forward-declares Jeaiii's int-to-string conversion functions for
 // use by my string formatting. The implementations, and their copyright notice,
@@ -11,7 +10,6 @@ struct PairJeaiii {
     char t, o;
 };
 
-	
 #define P(T)                                                                   \
     T, '0', T, '1', T, '2', T, '3', T, '4', T, '5', T, '6', T, '7', T, '8', T, \
         '9'
@@ -51,7 +49,6 @@ static const cat::detail::PairJeaiii s_pairs[] = {
               : u < 100000000 ? u < 10000000 ? F(6) : F(7)          \
               : u < 1000000000 ? F(8)                               \
                       : F(9))
-
 
 char* u32toa_jeaiii(uint4::Raw i, char* b);
 char* i32toa_jeaiii(int4::Raw i, char* b);

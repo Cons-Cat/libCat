@@ -256,10 +256,11 @@ struct AllocatorFacade {
     // Try to allocate small-size optimized memory.
     template <typename T = void*>
     [[nodiscard]] auto malloca(ssize const allocation_size = ssizeof<T>()) {
-        if constexpr (alignof(T) > 1) {
+        // TODO: Fix this alignment:
+        if constexpr (alignof(T) > 8) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            return this->aligned_alloca(alignof(T), allocation_size);
+            return this->aligned_malloca(alignof(T), allocation_size);
         }
         return this->meta_allocate<T, true, true, false>(1u, allocation_size);
     }

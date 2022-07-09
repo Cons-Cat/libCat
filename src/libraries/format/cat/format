@@ -6,7 +6,6 @@
 
 #include <cat/scaredy>
 #include <cat/string>
-#include <memory>
 #include <utility>
 
 namespace cat {
@@ -20,11 +19,11 @@ namespace cat {
 }
 
 namespace detail {
-    template <signed long long length, auto value>
+    template <ssize::Raw length, auto value>
     consteval auto make_const_string(StaticString<length> const& string) {
         // Copy over the string into new, larger, storage.
         StaticString<length + 1> new_string;
-        for (signed long long i = 0; i < length; ++i) {
+        for (ssize::Raw i = 0; i < length; ++i) {
             new_string[i + 1] = string[i];
         }
 
@@ -59,7 +58,7 @@ template <auto value>
         // Handle a negative sign.
         if constexpr (is_signed<decltype(value)> && value < 0) {
             StaticString<string.size().raw + 1> new_string;
-            for (signed long long i = 0; i < string.size(); ++i) {
+            for (ssize::Raw i = 0; i < string.size(); ++i) {
                 new_string[i + 1] = string[i];
             }
             new_string[0] = '-';
@@ -574,12 +573,9 @@ namespace detail {
         // Parse the entire string:
         while (true) {
             ssize const to_open_brace = remainder.find('{').value();
-            // char const* p_open_curly = remainder.p_data() + to_open_brace;
-
             ssize const to_close_brace = remainder.find('}').value();
-            // char const* p_close_curly = remainder.p_data() + to_close_brace;
 
-            // This is true if both are `-1`, or in other words, neither braces
+            // This is true iff both are `-1`, or in other words, neither braces
             // were found. This is the escape condition.
             if (to_open_brace == to_close_brace) {
                 for (char const& character : remainder) {
