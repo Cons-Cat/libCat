@@ -1001,6 +1001,19 @@ Optional(T) -> Optional<T>;
 template <typename T>
 using OptionalPtr = Optional<Sentinel<T*, nullptr>>;
 
+namespace detail {
+    template <Integral T>
+    constexpr bool is_non_negative(T value) {
+        return value >= 0;
+    }
+}  // namespace detail
+
+// Simplify non-negative signed integers.
+template <Integral T>
+using OptionalNonNegative =
+    // A lambda here causes clangd 14 to crash.
+    Optional<Predicate<T, detail::is_non_negative<T>, -1>>;
+
 }  // namespace cat
 
 using cat::nullopt;

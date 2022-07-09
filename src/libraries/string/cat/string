@@ -19,7 +19,7 @@ namespace cat {
 
 constexpr auto string_length(char const* p_string) -> ssize;
 
-template <signed long long length>
+template <ssize::Raw length>
 struct StaticString;
 
 class String : public Span<char const> {
@@ -44,13 +44,13 @@ class String : public Span<char const> {
     constexpr String(T p_string) requires(is_pointer<T>)
         : Span<char const>(p_string, string_length(p_string)){};
 
-    template <signed long long other_length>
+    template <ssize::Raw other_length>
     consteval String(char const (&string)[other_length]) {
         this->p_storage = string;
-        this->length = static_cast<signed long long>(other_length);
+        this->length = static_cast<ssize::Raw>(other_length);
     }
 
-    template <signed long long other_length>
+    template <ssize::Raw other_length>
     constexpr String(StaticString<other_length> const& string) {
         this->p_storage = &(string.storage[0]);
         this->length = other_length;
@@ -115,9 +115,9 @@ class String : public Span<char const> {
     }
 };
 
-// This is `signed long long` because GCC cannot deduce a string literal's
+// This is `ssize::Raw` because GCC cannot deduce a string literal's
 // length from an `ssize`.
-template <signed long long length>
+template <ssize::Raw length>
 struct StaticString : CollectionFacade<StaticString<length>, char> {
     char storage[length];
 
@@ -149,15 +149,15 @@ struct StaticString : CollectionFacade<StaticString<length>, char> {
 
     // Create a `StaticString` from a smaller string, and null out the unfilled
     // bytes.
-    template <signed long long in_length>
+    template <ssize::Raw in_length>
         requires(in_length < length)
     static consteval auto padded(char const (&in)[in_length])
         -> StaticString<length> {
         StaticString<length> string;
-        for (signed long long i = 0; i < in_length; ++i) {
+        for (ssize::Raw i = 0; i < in_length; ++i) {
             string[i] = in[i];
         }
-        for (signed long long i = in_length; i < length; ++i) {
+        for (ssize::Raw i = in_length; i < length; ++i) {
             string[i] = '\0';
         }
         return string;
@@ -180,7 +180,7 @@ struct StaticString : CollectionFacade<StaticString<length>, char> {
   private:
     constexpr void copy_string_data(char const* p_source) {
         if (is_constant_evaluated()) {
-            for (signed long long i = 0; i < length; ++i) {
+            for (ssize::Raw i = 0; i < length; ++i) {
                 this->storage[i] = p_source[i];
             }
         } else {
@@ -191,9 +191,9 @@ struct StaticString : CollectionFacade<StaticString<length>, char> {
 
 // Concatenate constant-evaluated strings.
 
-// This is `signed long long` because GCC cannot deduce a string literal's
+// This is `ssize::Raw` because GCC cannot deduce a string literal's
 // length from an `ssize`.
-template <signed long long length_1, signed long long length_2>
+template <ssize::Raw length_1, ssize::Raw length_2>
 constexpr auto operator+(StaticString<length_1> const& string_1,
                          StaticString<length_2> const& string_2)
     -> StaticString<length_1 - 1 + length_2> {
@@ -216,9 +216,12 @@ constexpr auto operator+(StaticString<length_1> const& string_1,
 [[nodiscard]] auto compare_strings(String const string_1, String const string_2)
     -> bool1;
 
-[[nodiscard]] auto print(String const string) -> Optional<ssize>;
+[[nodiscard]] auto print(String const string) -> OptionalNonNegative<ssize>;
 
-[[nodiscard]] auto print_line(String const string) -> Optional<ssize>;
+[[nodiscard]] auto print_line(String const string)
+    -> OptionalNonNegative<ssize>;
+
+// TODO: Investigate zero-overhead `print_line` of literals again.
 
 // TODO: Make a comparison function for null-terminated string pointers.
 

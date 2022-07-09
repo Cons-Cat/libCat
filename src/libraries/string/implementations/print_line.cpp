@@ -1,11 +1,9 @@
 #include <cat/linux>
-#include <cat/optional>
 #include <cat/string>
-#include <result>
 
 // TODO: Improve this performance with format strings when they are implemented.
 
-auto cat::print_line(String const string) -> cat::Optional<ssize> {
+auto cat::print_line(String const string) -> cat::OptionalNonNegative<ssize> {
     cat::Scaredy result_1 =
         nix::sys_write(nix::FileDescriptor{1}, string.p_data(), string.size());
     if (!result_1.has_value()) {

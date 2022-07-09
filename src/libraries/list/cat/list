@@ -91,11 +91,11 @@ class List : public CollectionFacade<List<T>, T> {
         -> Optional<List<T>> {
         List<T> new_list;
         // TODO: Check if a recursive function is more efficient here.
-        Array array = {forward<Args>(initializers)...};
+        Array values = {forward<Args>(initializers)...};
         // TODO: Optimize memory allocations with a multiple `.push_back()`
         // overload.
         for (ssize i = 0; i < ssizeof_pack<Args...>(); ++i) {
-            Optional result = new_list.push_back(allocator, array[i]);
+            Optional result = new_list.push_back(allocator, values[i]);
             if (!result.has_value()) {
                 return nullopt;
             }
