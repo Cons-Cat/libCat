@@ -31,6 +31,8 @@ list(
   -Wall -Wextra
   # The following warnings are counter-productive for a basic-level library:
   -Wno-unused-function
+  # `main()` is variadic in libCat, which triggers this warning.
+  -Wno-main
 )
 
 list(
@@ -71,7 +73,6 @@ list(
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto -fwhole-file -fno-plt
-  -Wl,--gdb-index
   -Wl,-z,noseparate-code,--gc-sections
 )
 
@@ -101,13 +102,14 @@ list(
 list(
   APPEND
   CAT_COMMON_LINK_FLAGS
+  # This is required to prevent linking 4 kibibytes of unnecessary symbols.
   -nostdlib
 )
 
 list(
   APPEND
   CAT_DEBUG_LINK_FLAGS
-  -Wl,--gdb-index
+  # -Wl,--gdb-index
 )
 
 # I can't figure out which flags are for the linker and which

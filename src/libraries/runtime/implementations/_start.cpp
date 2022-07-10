@@ -1,11 +1,31 @@
 #include <cat/runtime>
 
+// Attributes on this prototype would have no effect.
+[[noreturn]] int main(...);
+
+[[noreturn
+  // `main()` cannot be inlined if arguments are loaded.
+#ifdef LOAD_ARGC_ARGV
+  , gnu::noinline
+#endif
+  ]] void call_main() {
+    register int argc asm("rdi");
+    register char** p_argv asm("rsi");
+    main(argc, p_argv);
+    __builtin_unreachable();
+}
+
 // A frame pointer here prevents arguments from being loaded.
 #pragma GCC push_options
 #pragma GCC optimize("omit-frame-pointer")
 
-extern "C" [[gnu::used, gnu::always_inline]] inline void _start() {
+void _start() {
 #ifdef LOAD_ARGC_ARGV
+#ifdef __SANITIZE_ADDRESS__
+	// The sanitizers are inserting a `sub` instruction here, which breaks
+	// argument loading. Compensate by inserting an `add`.
+    asm("add $8,%rsp");
+#endif
     asm(R"(pop %rdi        # Load `int4 argc`.
            mov %rsp, %rsi  # Load `char* argv[]`.
        )");
@@ -15,16 +35,8 @@ extern "C" [[gnu::used, gnu::always_inline]] inline void _start() {
     // World".
     cat::align_stack_pointer_32();
 
-    // Calling `meow()` via `asm` allows it to have optional stack arguments.
-    asm("call meow");
-
-    // Elide a `ret` instruction.
-#ifndef LOAD_ARGC_ARGV
-    // This causes argc and argv to fail loading when UBsan is used, because
-    // stack space is reserved before they can be loaded. Genius GNU developers
-    // refuse to support a `__SANITIZE_UNDEFINED__` macro to fix this.
-    __builtin_unreachable();
-#endif
+	// `main()` must be wrapped by a function to conditionally prevent inlining.
+	call_main();
 }
 
 #pragma GCC pop_options

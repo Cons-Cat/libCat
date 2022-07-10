@@ -1,6 +1,6 @@
 #include <cat/string>
 
-void meow() {
+int main() {
     char const* p_string_1 = "Hello!";
     char const* const p_string_2 = "Hello!";
 

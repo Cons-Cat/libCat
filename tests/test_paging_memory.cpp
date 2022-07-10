@@ -16,7 +16,7 @@ struct TestType {
     }
 };
 
-void meow() {
+int main() {
     // Initialize an allocator.
     cat::PageAllocator allocator;
     // Allocate a page.

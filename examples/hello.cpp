@@ -1,6 +1,6 @@
 #include <cat/string>
 
-void meow() {
+int main() {
     _ = cat::print("Hello, world!\n");
     cat::exit();
 }

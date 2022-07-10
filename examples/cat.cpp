@@ -77,7 +77,7 @@ void read_and_print_file(char* p_file_name) {
     _ = allocator.free(io_buffer.value());
 }
 
-void meow(int argc, char* p_argv[]) {
+int main(int argc, char* p_argv[]) {
     for (int i = 1; i < argc; ++i) {
         read_and_print_file(p_argv[i]);
     }
