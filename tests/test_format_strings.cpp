@@ -1,7 +1,7 @@
 #include <cat/allocators>
 #include <cat/format>
 
-void meow() {
+int main() {
     // Make allocator for string formatting.
     cat::PageAllocator pager;
     void* p_page = pager.p_malloc(4_ki).value();

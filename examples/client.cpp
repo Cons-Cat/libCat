@@ -4,7 +4,7 @@
 #include <cat/socket>
 #include <cat/string>
 
-void meow(int argc, char* p_argv[]) {
+int main(int argc, char* p_argv[]) {
     cat::SocketUnix<cat::SocketType::stream> socket;
     socket.path_name = cat::StaticString<108>::padded("\0/tmp/temp.sock");
 

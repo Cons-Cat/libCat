@@ -33,7 +33,7 @@ struct Foo {
 
 void func(cat::UniqueWeak<Foo>){};
 
-void meow() {
+int main() {
     // TODO: Fix `Unique` and re-enable these tests.
     _ = cat::print_line("Construct objects.");
     // Test constructor.

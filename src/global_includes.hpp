@@ -2,17 +2,12 @@
 // vim: set ft=cpp:
 #pragma once
 
-/* This file should be implicitly included in all other files. With GCC, this is
- * done using the `--include` flag, as in `--include global_includes.h`. The
- * `CMakeLists.txt` in this repository's top level directory does this. */
-extern "C" [[gnu::used, noreturn]] void meow(
-#ifdef LOAD_ARGC_ARGV
-    int argc, char* argv[]
-#endif
-);
+// This file should be implicitly included in all other files. With GCC, this is
+// done using the `--include` flag, as in `--include global_includes.h`. The
+// `CMakeLists.txt` in this repository's top level directory does this.
 
-// libCat provides a `_` variable that consumes a function's output, but cannot
-// be assigned to any variable.
+// libCat provides a `_` variable that consumes a function's output, but
+// cannot be assigned to any variable.
 namespace cat {
 namespace detail {
     struct [[maybe_unused]] Unused {
@@ -28,8 +23,8 @@ namespace detail {
     struct InPlace {};
 }  // namespace detail
 
-// A `Monostate` is an object that can hold anything, and convert into anything
-// or from anything. It has no storage or behavior.
+// A `Monostate` is an object that can hold anything, and convert into
+// anything or from anything. It has no storage or behavior.
 struct Monostate {
     constexpr Monostate() = default;
     // constexpr Monostate(auto){};

@@ -4,7 +4,7 @@
 #include <cat/numerals>
 #include <cat/utility>
 
-void meow() {
+int main() {
     // Initialize an allocator.
     cat::PageAllocator paging_allocator;
     int4* p_page = paging_allocator.p_malloc<int4>(1_ki).or_panic();

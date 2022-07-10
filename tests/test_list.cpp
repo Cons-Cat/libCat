@@ -3,7 +3,7 @@
 #include <cat/list>
 #include <cat/utility>
 
-void meow() {
+int main() {
     cat::PageAllocator page_allocator;
     cat::Byte* p_page = page_allocator.p_malloc(4_ki).or_panic();
     cat::LinearAllocator allocator = {p_page, 4_ki};

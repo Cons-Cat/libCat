@@ -42,7 +42,7 @@ struct ConstNonTrivial {
     }
 };
 
-void meow() {
+int main() {
     // Initialize empty.
     cat::Optional<int4> foo(nullopt);
     Result(!foo.has_value()).or_panic();

@@ -2,7 +2,7 @@
 #include <cat/memory>
 #include <cat/string>
 
-void meow() {
+int main() {
     cat::Array<int4, 200> source_200;
     for (int4 i = 0; i < 200; ++i) {
         source_200[i] = i;
