@@ -12,7 +12,9 @@ void function(void*) {
     cat::exit();
 }
 
-void meow() {
+// ASan causes this program to hang with a mysterious call to
+// `AsanOnDeadlySignal()`.
+[[gnu::no_sanitize_address]] void meow() {
     cat::Thread thread;
     cat::PageAllocator allocator;
     thread.create(allocator, 4_ki, function, nullptr)
