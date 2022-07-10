@@ -622,24 +622,24 @@ struct Process {
 
     Process() = default;
     Process(Process const&) = delete;
+
     // TODO: Add `cat::Invocable` concept.
     // TODO: Use `cat::Allocator` concept.
     auto create(auto& allocator, ssize const initial_stack_size,
                 auto const& function, void* p_arguments_struct,
+                // TODO: These flags should largely be encoded into the type.
                 CloneFlags const flags = default_flags) -> ScaredyLinux<void> {
         this->stack_size = initial_stack_size;
         // Allocate a stack for this thread, and get an address to the top of
         // it.
-        cat::Optional maybe_memory = allocator.malloc(initial_stack_size);
+        cat::Optional maybe_memory = allocator.p_malloc(initial_stack_size);
         if (!maybe_memory.has_value()) {
-            // TODO: This is an arbitrary error. Allocation shouldn't happen in
-            // this function.
             return nix::LinuxError::inval;
         }
-        this->p_stack = &allocator.get(maybe_memory.value());
+        this->p_stack = maybe_memory.value();
 
         // We need the top because memory will be pushed to it downwards on
-        //  x86-64.
+        // x86-64.
         volatile void* p_stack_top =
             intptr<void>{this->p_stack} + this->stack_size;
 
@@ -648,19 +648,19 @@ struct Process {
         cat::Any result;
         asm goto volatile(
             R"(sub $8, %%rsi
-                    mov %[p_callback], 0(%%rsi)
-                    mov %[p_args], 8(%%rsi)
-                    syscall
+               mov %[p_callback], 0(%%rsi)
+               mov %[p_args], 8(%%rsi)
+               syscall
 
-                    # Branch if this is the parent process.
-                    mov %%rax, %[result]
-                    test %%rax, %%rax
-                    jnz %l[parent_thread]
+               # Branch if this is the parent process.
+               mov %%rax, %[result]
+               test %%rax, %%rax
+               jnz %l[parent_thread]
 
-                    # Call the function pointer if this is the child process.
-                    pop %%rax
-                    pop %%rdi
-                    call *%%rax)"
+               # Call the function pointer if this is the child process.
+               pop %%rax
+               pop %%rdi
+               call *%%rax)"
             : /* There are no outputs. */
             : "a"(56), "D"(flags), "S"(p_stack_top),
               "d"(&(this->id)), [p_callback] "r"(&function),

@@ -319,6 +319,7 @@ struct AllocatorFacade {
         requires(detail::StableDerivedAllocator<Derived, T>)
     [[nodiscard]] auto free(T* const p_memory) -> Optional<void> {
         return this->self().deallocate(p_memory);
+        // TODO: Call destructor.
     }
 
     // Get a reference to the data in any memory handle.
