@@ -216,12 +216,11 @@ constexpr auto operator+(StaticString<length_1> const& string_1,
 [[nodiscard]] auto compare_strings(String const string_1, String const string_2)
     -> bool1;
 
-[[nodiscard]] auto print(String const string) -> OptionalNonNegative<ssize>;
+[[nodiscard]] auto print(String const string) -> ssize;
 
-[[nodiscard]] auto print_line(String const string)
-    -> OptionalNonNegative<ssize>;
+[[nodiscard]] auto println(String const string) -> ssize;
 
-// TODO: Investigate zero-overhead `print_line` of literals again.
+// TODO: Investigate zero-overhead `println` of literals again.
 
 // TODO: Make a comparison function for null-terminated string pointers.
 

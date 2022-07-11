@@ -31,7 +31,7 @@ int main() {
 
             // TODO: This comparison is always false.
             if (cat::compare_strings(input, "exit")) {
-                _ = cat::print_line("Exiting.");
+                _ = cat::println("Exiting.");
                 exit = true;
                 break;
             }
@@ -43,7 +43,7 @@ int main() {
                 }
 
                 _ = cat::print("Recieved: ");
-                _ = cat::print_line(message_buffer.p_data());
+                _ = cat::println(message_buffer.p_data());
                 break;
             }
         }

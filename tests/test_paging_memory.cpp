@@ -22,7 +22,7 @@ int main() {
     // Allocate a page.
     cat::Optional maybe_memory = allocator.malloc<int4>(1_ki);
     if (!maybe_memory.has_value()) {
-        _ = cat::print_line("Failed to allocate memory!");
+        _ = cat::println("Failed to allocate memory!");
         cat::exit(1);
     }
     auto memory = maybe_memory.value();

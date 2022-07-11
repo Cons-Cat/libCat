@@ -359,6 +359,10 @@ struct FileDescriptor {
     }
 };
 
+constexpr nix::FileDescriptor stdin = {0};
+constexpr nix::FileDescriptor stdout = {1};
+constexpr nix::FileDescriptor stderr = {2};
+
 static_assert(sizeof(ScaredyLinux<nix::FileDescriptor>) == 4);
 
 struct ProcessId {
