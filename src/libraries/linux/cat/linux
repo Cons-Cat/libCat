@@ -296,7 +296,7 @@ namespace detail {
         } else {
             // Some types, such as `nix::FileDescriptor`, must be converted to
             // `ssize` to have a comparison operator.
-            return static_cast<ssize const>(input) >= 0;
+            return static_cast<ssize>(input) >= 0;
         }
     }
 }  // namespace detail
@@ -350,7 +350,7 @@ struct FileDescriptor {
     constexpr FileDescriptor() = default;
 
     // This is generic to simplify type-punning.
-    constexpr FileDescriptor(cat::Integral auto const input) {
+    constexpr FileDescriptor(cat::Integral auto input) {
         this->value = static_cast<int>(input);
     }
 
@@ -372,7 +372,7 @@ struct ProcessId {
 
     constexpr ProcessId() = default;
 
-    constexpr ProcessId(int8 const input) {
+    constexpr ProcessId(int8 input) {
         this->value = input;
     }
 
@@ -385,7 +385,7 @@ struct UserId {
     int4 value;
 
     constexpr UserId() = default;
-    constexpr UserId(int4 const input) {
+    constexpr UserId(int4 input) {
         this->value = input;
     }
 
@@ -400,7 +400,7 @@ struct GroupId {
     constexpr GroupId() = default;
 
     // This is generic to simplify type-punning.
-    constexpr GroupId(cat::Integral auto const input) {
+    constexpr GroupId(cat::Integral auto input) {
         this->value = static_cast<int>(input);
     }
 
@@ -514,14 +514,13 @@ struct cat::EnumFlagTrait<nix::WaitOptionsFlags> : cat::TrueTypeTrait {};
 
 namespace nix {
 
-auto sys_read(FileDescriptor const file_descriptor, char const* p_string_buffer,
-              ssize const length) -> ScaredyLinux<ssize>;
+auto sys_read(FileDescriptor file_descriptor, char const* p_string_buffer,
+              ssize length) -> ScaredyLinux<ssize>;
 
-auto sys_write(FileDescriptor const file_descriptor,
-               char const* p_string_buffer, ssize const length)
-    -> ScaredyLinux<ssize>;
+auto sys_write(FileDescriptor file_descriptor, char const* p_string_buffer,
+               ssize length) -> ScaredyLinux<ssize>;
 
-auto sys_write(FileDescriptor const file_descriptor, cat::String const& string)
+auto sys_write(FileDescriptor file_descriptor, cat::String const string)
     -> ScaredyLinux<ssize>;
 
 auto sys_open(char const* p_file_path, OpenMode file_mode,
@@ -530,19 +529,18 @@ auto sys_open(char const* p_file_path, OpenMode file_mode,
 auto sys_creat(char const* p_file_path, OpenMode file_mode)
     -> ScaredyLinux<FileDescriptor>;
 
-auto sys_close(FileDescriptor const file_descriptor) -> ScaredyLinux<void>;
+auto sys_close(FileDescriptor file_descriptor) -> ScaredyLinux<void>;
 
 // TODO: `sys_link()`.
 
 auto sys_unlink(char const* p_path_name) -> ScaredyLinux<void>;
 
-auto sys_mmap(usize const beginning_address, ssize const bytes_size,
-              MemoryProtectionFlags const protections, MemoryFlags const flags,
-              FileDescriptor const file_descriptor, ssize const pages_offset)
+auto sys_mmap(usize beginning_address, ssize bytes_size,
+              MemoryProtectionFlags protections, MemoryFlags flags,
+              FileDescriptor file_descriptor, ssize pages_offset)
     -> ScaredyLinux<void*>;
 
-auto sys_munmap(void const* const p_memory, ssize const length)
-    -> ScaredyLinux<void>;
+auto sys_munmap(void const* p_memory, ssize length) -> ScaredyLinux<void>;
 
 struct Thread;
 
@@ -556,62 +554,58 @@ auto sys_waitid(WaitId type, ProcessId id, WaitOptionsFlags options)
 
 struct CloneArguments;
 
-auto syscall0(ssize const) -> ssize;
-auto syscall1(ssize const, cat::Any) -> ssize;
-auto syscall2(ssize const, cat::Any, cat::Any) -> ssize;
-auto syscall3(ssize const, cat::Any, cat::Any, cat::Any) -> ssize;
-auto syscall4(ssize const, cat::Any, cat::Any, cat::Any, cat::Any) -> ssize;
-auto syscall5(ssize const, cat::Any, cat::Any, cat::Any, cat::Any, cat::Any)
+auto syscall0(ssize) -> ssize;
+auto syscall1(ssize, cat::Any) -> ssize;
+auto syscall2(ssize, cat::Any, cat::Any) -> ssize;
+auto syscall3(ssize, cat::Any, cat::Any, cat::Any) -> ssize;
+auto syscall4(ssize, cat::Any, cat::Any, cat::Any, cat::Any) -> ssize;
+auto syscall5(ssize, cat::Any, cat::Any, cat::Any, cat::Any, cat::Any) -> ssize;
+auto syscall6(ssize, cat::Any, cat::Any, cat::Any, cat::Any, cat::Any, cat::Any)
     -> ssize;
-auto syscall6(ssize const, cat::Any, cat::Any, cat::Any, cat::Any, cat::Any,
-              cat::Any) -> ssize;
 
 template <typename T, typename... Args>
-auto syscall(ssize const call, Args... parameters) -> nix::ScaredyLinux<T>
+auto syscall(ssize call, Args... parameters) -> nix::ScaredyLinux<T>
     requires(sizeof...(Args) < 7)
 ;
 
 // Create and return a `cat::Socket`.
-auto sys_socket(int8 const protocol_family, int8 const type,
-                int8 const protocol) -> ScaredyLinux<FileDescriptor>;
+auto sys_socket(int8 protocol_family, int8 type, int8 protocol)
+    -> ScaredyLinux<FileDescriptor>;
 
 // Create and return a `cat::SocketLocal` (also known as Unix socket).
-auto create_socket_local(int8 const type, int8 const protocol)
+auto create_socket_local(int8 type, int8 protocol)
     -> ScaredyLinux<FileDescriptor>;
 
 // Connect a `cat::Socket` to an address.
-auto sys_connect(FileDescriptor const socket_descriptor,
-                 void const* const p_socket, ssize const socket_size)
-    -> ScaredyLinux<void>;
+auto sys_connect(FileDescriptor socket_descriptor, void const* p_socket,
+                 ssize socket_size) -> ScaredyLinux<void>;
 
 // Make a connection over a `cat::Socket`. This returns a new socket which has
 // been connected to. This new `cat::Socket` is not in a listening state.
 // TODO: Add flags for Linux syscall `288`.
-auto sys_accept(FileDescriptor const socket_descriptor,
-                void const* const __restrict p_socket = nullptr,
-                ssize const* const __restrict p_addr_len = nullptr)
+auto sys_accept(FileDescriptor socket_descriptor,
+                void const* __restrict p_socket = nullptr,
+                ssize const* __restrict p_addr_len = nullptr)
     -> ScaredyLinux<FileDescriptor>;
 
-auto sys_recv(FileDescriptor const socket_descriptor,
-              void* const p_message_buffer, ssize const buffer_length,
-              cat::Socket const* const __restrict p_addr = nullptr,
-              ssize const* const __restrict p_addr_length = nullptr)
+auto sys_recv(FileDescriptor socket_descriptor, void* p_message_buffer,
+              ssize buffer_length,
+              cat::Socket const* __restrict p_addr = nullptr,
+              ssize const* __restrict p_addr_length = nullptr)
     -> ScaredyLinux<ssize>;
 
-auto sys_bind(FileDescriptor const socket_descriptor,
-              void const* const p_socket, ssize const p_addr_len)
-    -> ScaredyLinux<void>;
+auto sys_bind(FileDescriptor socket_descriptor, void const* p_socket,
+              ssize p_addr_len) -> ScaredyLinux<void>;
 
 // Mark a socket as available to make connections with `accept()`.
-auto sys_listen(FileDescriptor const socket_descriptor, int8 const backlog)
+auto sys_listen(FileDescriptor socket_descriptor, int8 backlog)
     -> ScaredyLinux<void>;
 
 // Returns the number of characters sent to `destination_socket`.
-auto sys_send(FileDescriptor const socket_descriptor,
-              void const* const p_message_buffer, ssize const buffer_length,
-              int8 const flags,
-              cat::Socket const* const p_destination_socket = nullptr,
-              ssize const addr_length = 0) -> ScaredyLinux<ssize>;
+auto sys_send(FileDescriptor socket_descriptor, void const* p_message_buffer,
+              ssize buffer_length, int8 flags,
+              cat::Socket const* p_destination_socket = nullptr,
+              ssize addr_length = 0) -> ScaredyLinux<ssize>;
 
 struct Process {
     ProcessId id;
@@ -719,10 +713,10 @@ struct IoVector : cat::Span<cat::Byte> {
     }
 };
 
-auto sys_writev(FileDescriptor const file_descriptor,
+auto sys_writev(FileDescriptor file_descriptor,
                 cat::Span<IoVector> const& vectors) -> ScaredyLinux<ssize>;
 
-auto sys_readv(FileDescriptor const file_descriptor,
+auto sys_readv(FileDescriptor file_descriptor,
                cat::Span<IoVector> const& vectors) -> ScaredyLinux<ssize>;
 
 struct File {
@@ -790,7 +784,7 @@ struct FileStatus {
 auto sys_stat(cat::String const& file_path)
     -> cat::Scaredy<FileStatus, LinuxError>;
 
-auto sys_fstat(FileDescriptor const file_descriptor)
+auto sys_fstat(FileDescriptor file_descriptor)
     -> cat::Scaredy<FileStatus, LinuxError>;
 
 }  // namespace nix

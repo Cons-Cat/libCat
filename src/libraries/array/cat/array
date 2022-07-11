@@ -83,7 +83,7 @@ class Array : public CollectionFacade<Array<T, length>, T> {
     template <Integral U, U... values>
         requires(is_implicitly_convertible<U, T>&& ssizeof_pack(values...) ==
                  length)
-    constexpr auto operator=(ValueList<U, values...> const list) {
+    constexpr auto operator=(ValueList<U, values...> list) {
         this->copy_list<0, U, values...>(list);
     };
 

@@ -97,7 +97,7 @@ char* cat::detail::i64toa_jeaiii(int8::Raw i, char* b) {
 
 // TODO: This code is ill-formed.
 /*
-consteval auto cat::to_string(int4 const value) -> String {
+consteval auto cat::to_string(int4 value) -> String {
     if (value == 0) {
         return "0";
     }

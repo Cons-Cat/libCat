@@ -1,6 +1,6 @@
 #include <cat/linux>
 
-auto nix::syscall0(ssize const call) -> ssize {
+auto nix::syscall0(ssize call) -> ssize {
     ssize result;
     asm volatile("syscall"
                  : "=a"(result)

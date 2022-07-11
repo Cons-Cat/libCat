@@ -44,7 +44,7 @@ struct SocketUnix {
     // Using `SocketUnix(){};` instead of `SockeUnix() = default;` prevents a
     // false-positive clangd diagnostic here.
     SocketUnix(){};  // NOLINT
-    SocketUnix(nix::FileDescriptor const in_descriptor) {
+    SocketUnix(nix::FileDescriptor in_descriptor) {
         this->descriptor = in_descriptor;
     }
 
@@ -108,7 +108,7 @@ struct SocketUnix {
         return nullopt;
     }
 
-    auto listen(int8 const backlog) -> Optional<void> {
+    auto listen(int8 backlog) -> Optional<void> {
         Scaredy result = nix::sys_listen(this->descriptor, backlog);
         if (result.has_value()) {
             return monostate;

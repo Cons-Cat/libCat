@@ -71,7 +71,7 @@ namespace detail {
     // Cast a `NativeAbi` or `FixedSizeAbi` vector into its underlying
     // representation.
     template <typename Abi, typename T>
-    constexpr auto native_cast(Simd<Abi, T> const vector) {
+    constexpr auto native_cast(Simd<Abi, T> vector) {
         return static_cast<Simd<typename NativeAbi<T>::TargetAbi, T>>(vector);
     }
 }  // namespace detail
@@ -133,7 +133,7 @@ class alignas(InAbi::alignment.raw) Simd {
 
     // Construct all lanes as `value`.
     template <typename U>
-    constexpr Simd(U const value) requires(is_convertible<U, T>) {
+    constexpr Simd(U value) requires(is_convertible<U, T>) {
         this->fill(static_cast<T>(value));
     }
 
@@ -146,8 +146,7 @@ class alignas(InAbi::alignment.raw) Simd {
     // Construct from a constant list, such as `value_list` or
     // `integer_sequence`.
     template <typename U, U... Us>
-    constexpr Simd(ValueList<U, Us...> const values) requires(values.size ==
-                                                              lanes)
+    constexpr Simd(ValueList<U, Us...> values) requires(values.size == lanes)
         : raw(Raw{static_cast<T>(Us)...}){};
 
     // Any ABI for which this `Simd` is equal to in size and overaligned can
@@ -347,16 +346,16 @@ class alignas(InAbi::alignment.raw) Simd {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator[](ssize const index) -> T& {
+    [[nodiscard]] constexpr auto operator[](ssize index) -> T& {
         return this[index];
     }
 
-    [[nodiscard]] constexpr auto operator[](ssize const index) const -> T& {
+    [[nodiscard]] constexpr auto operator[](ssize index) const -> T& {
         return this[index];
     }
 
     template <typename U>
-    constexpr auto fill(U const value)
+    constexpr auto fill(U value)
         -> Vector& requires(is_convertible<U, Scalar>) {
         if constexpr (lanes == 2) {
             this->raw = Raw{value, value};
@@ -381,13 +380,13 @@ class alignas(InAbi::alignment.raw) Simd {
 
     // Construct a `Simd` with every lane initialized to `value`.
     template <typename U>
-    [[nodiscard]] static constexpr auto filled(U const value) -> Vector
+    [[nodiscard]] static constexpr auto filled(U value) -> Vector
         requires(is_convertible<U, T>) {
         return Vector{}.fill(value);
     }
 
     // Load a vector from `p_data`, aligned to `Abi::alignment`.
-    constexpr auto load_aligned(T const* const p_data) -> Vector& {
+    constexpr auto load_aligned(T const* p_data) -> Vector& {
         this->raw =
             static_cast<Vector const*>(static_cast<void const*>(p_data))->raw;
         return *this;
@@ -395,7 +394,7 @@ class alignas(InAbi::alignment.raw) Simd {
 
     // Load a vector from `p_data` with any alignment. This may be slower than
     // `.loaded_aligned()`.
-    constexpr auto load_unaligned(T const* const p_data) -> Vector& {
+    constexpr auto load_unaligned(T const* p_data) -> Vector& {
         this->raw = static_cast<UnalignedVector const*>(
                         static_cast<void const*>(p_data))
                         ->raw;
@@ -403,7 +402,7 @@ class alignas(InAbi::alignment.raw) Simd {
     }
 
     // Load a vector from `p_data`.
-    constexpr auto load(T const* const p_data) -> Vector& {
+    constexpr auto load(T const* p_data) -> Vector& {
         if constexpr (Abi::alignment == salignof<T>()) {
             return this->load_aligned(p_data);
         } else {
@@ -413,20 +412,20 @@ class alignas(InAbi::alignment.raw) Simd {
 
     // Construct a `Simd` loaded from the address `p_data`, aligned to
     // `Abi::alignment`.
-    [[nodiscard]] static constexpr auto loaded_aligned(T const* const p_data)
+    [[nodiscard]] static constexpr auto loaded_aligned(T const* p_data)
         -> Vector {
         return *bit_cast<Vector const*>(p_data);
     }
 
     // Construct a `Simd` loaded from the address `p_data` with any alignment.
     // This may be slower than `.loaded_aligned()`.
-    [[nodiscard]] static constexpr auto loaded_unaligned(T const* const p_data)
+    [[nodiscard]] static constexpr auto loaded_unaligned(T const* p_data)
         -> Vector {
         return *bit_cast<UnalignedVector const*>(p_data);
     }
 
     // Construct a `Simd` loaded from the address `p_data`.
-    [[nodiscard]] static constexpr auto loaded(T const* const p_data) {
+    [[nodiscard]] static constexpr auto loaded(T const* p_data) {
         if constexpr (Abi::alignment == salignof<T>()) {
             return loaded_aligned(p_data);
         } else {
@@ -471,7 +470,7 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
     constexpr SimdMask(Raw&& value) : raw(move(value)){};
 
     // Construct all lanes as `value`.
-    constexpr SimdMask(bool const value) {
+    constexpr SimdMask(bool value) {
         this->fill(value);
     }
 
@@ -574,11 +573,11 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator[](ssize const index) -> bool& {
+    [[nodiscard]] constexpr auto operator[](ssize index) -> bool& {
         return static_cast<bool&>(this[index]);
     }
 
-    [[nodiscard]] constexpr auto operator[](ssize const index) const -> T& {
+    [[nodiscard]] constexpr auto operator[](ssize index) const -> T& {
         return static_cast<bool&>(this[index]);
     }
 
@@ -590,7 +589,7 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
         return cat::any_of(*this);
     }
 
-    constexpr auto fill(bool const value) -> Mask {
+    constexpr auto fill(bool value) -> Mask {
         if constexpr (lanes == 2) {
             this->raw = Raw{value, value};
         } else if constexpr (lanes == 4) {
@@ -618,14 +617,14 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
     }
 
     // Load a vector from `p_data`, aligned to `Abi<bool>::alignment`.
-    constexpr auto load(bool const* const p_data) -> Mask& {
+    constexpr auto load(bool const* p_data) -> Mask& {
         this->raw =
             static_cast<Mask const*>(static_cast<void const*>(p_data))->raw;
         return *this;
     }
 
     // Construct a `Simd` loaded from the address `p_data`.
-    [[nodiscard]] static constexpr auto loaded(bool const* const p_data) {
+    [[nodiscard]] static constexpr auto loaded(bool const* p_data) {
         return Mask{}.load(p_data);
     }
 };
@@ -816,20 +815,20 @@ void stream_in(void* p_destination, T const* p_source);
 
 // Dispatch `all_of()` to the native SIMD ABI.
 template <typename T>
-[[nodiscard]] auto all_of(SimdMask<NativeAbi<T>, T> const mask) -> bool {
+[[nodiscard]] auto all_of(SimdMask<NativeAbi<T>, T> mask) -> bool {
     return move_mask(detail::native_cast(mask));
 }
 
 // Dispatch `any_of()` to the native SIMD ABI.
 template <typename T>
-[[nodiscard]] auto any_of(SimdMask<NativeAbi<T>, T> const mask) -> bool {
+[[nodiscard]] auto any_of(SimdMask<NativeAbi<T>, T> mask) -> bool {
     return move_mask(detail::native_cast(mask));
 }
 
 // TODO: Return a `Bitset`.
 // Dispatch `move_mask` to the native SIMD ABI.
 template <typename T>
-[[nodiscard]] auto move_mask(NativeSimd<T> const vector) -> int {
+[[nodiscard]] auto move_mask(NativeSimd<T> vector) -> int {
     return move_mask(detail::native_cast(vector));
 }
 
@@ -837,7 +836,7 @@ template <typename T>
 // TODO: Support all ABIs.
 // Dispatch `move_mask` to the native SIMD ABI.
 template <typename T>
-[[nodiscard]] auto move_mask(SimdMask<NativeAbi<T>, T> const mask) -> int4 {
+[[nodiscard]] auto move_mask(SimdMask<NativeAbi<T>, T> mask) -> int4 {
     return move_mask(detail::native_cast(mask));
 }
 

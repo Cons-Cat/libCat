@@ -611,7 +611,7 @@ class Optional {
 
     // Get the value held by a non-`const`-qualified `Optional`, or a
     // fallback value if it does not hold a value.
-    [[nodiscard]] constexpr auto value_or(Value const fallback) & -> Value {
+    [[nodiscard]] constexpr auto value_or(Value fallback) & -> Value {
         if (this->storage.has_value()) {
             return this->storage.value();
         } else {
@@ -621,7 +621,7 @@ class Optional {
 
     // Get the value held by a `const`-qualified `Optional`, or a fallback
     // value if it does not hold a value.
-    constexpr auto value_or(Value const fallback) const& -> Value {
+    constexpr auto value_or(Value fallback) const& -> Value {
         if (this->storage.has_value()) {
             return this->storage.value();
         } else {

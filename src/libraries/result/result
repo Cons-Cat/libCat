@@ -43,7 +43,7 @@ struct [[nodiscard]] Failure {
     Failure() = default;
 
     // This must be explicit to disambiguate returning an integer to a Result.
-    explicit Failure(signed long long const in_code) : code(in_code){};
+    explicit Failure(signed long long in_code) : code(in_code){};
 
     // `Failure` can consume any `enum class`.
     template <cat::EnumClass T>
@@ -103,7 +103,7 @@ class [[nodiscard]] Result {
     constexpr Result(Failure const& failure)
         : failure(failure), is_okay(false){};
 
-    constexpr Result(ValueType const value) requires(
+    constexpr Result(ValueType value) requires(
         !cat::is_void<T> && cat::is_constructible<ValueType> &&
         !cat::is_same<ValueType, cat::Any>)
         : storage(value), is_okay(true){};
@@ -161,7 +161,7 @@ class [[nodiscard]] Result {
 
     // Implicity cast an inputted compatible `Result` to this.
     template <typename U>
-    constexpr Result(Result<U> const result) requires(
+    constexpr Result(Result<U> result) requires(
         !cat::is_void<T> && cat::is_default_constructible<U> &&
         cat::is_convertible<T, U> && !cat::is_same<U, cat::Any>)
         : storage(static_cast<T>(result.value())),
@@ -200,7 +200,7 @@ class [[nodiscard]] Result {
           is_okay(result.has_value()){};
 
     // Special-case consuming an `cat::Any>`.
-    constexpr Result(cat::Any const result) requires(!cat::is_void<T>)
+    constexpr Result(cat::Any result) requires(!cat::is_void<T>)
         : storage(static_cast<T>(result)), is_okay(true){};
 
     // TODO: `concept` for `bool`, `bool2`, and `bool4` as well.

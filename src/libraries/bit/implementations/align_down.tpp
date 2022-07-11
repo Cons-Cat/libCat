@@ -7,16 +7,15 @@
 // Returns a value rounded down from `p_value` to the nearest `alignment`
 // boundary.
 template <typename U>
-[[nodiscard]] constexpr auto cat::align_down(U* const p_value,
-                                             usize const alignment) -> U* {
+[[nodiscard]] constexpr auto cat::align_down(U* p_value, usize alignment)
+    -> U* {
     return uintptr<U>{p_value} & (~(alignment - 1u));
 }
 
 // Returns a value rounded down from `p_value` to the nearest `alignment`
 // boundary.
 template <typename U>
-[[nodiscard]] constexpr auto cat::align_down(uintptr<U> const p_value,
-                                             usize const alignment)
-    -> uintptr<U> {
+[[nodiscard]] constexpr auto cat::align_down(uintptr<U> p_value,
+                                             usize alignment) -> uintptr<U> {
     return p_value & (~(alignment - 1u));
 }

@@ -37,35 +37,35 @@ struct MonostateStorage {
 
     constexpr MonostateStorage() = default;
 
-    constexpr MonostateStorage(Monostate const) : storage(state){};
+    constexpr MonostateStorage(Monostate) : storage(state){};
 
-    constexpr MonostateStorage(T const input) : storage(input){};
+    constexpr MonostateStorage(T input) : storage(input){};
 
     constexpr operator auto() const {
         return this->storage;
     };
 
-    constexpr auto operator=(Monostate const) -> MonostateStorage<T, state>& {
+    constexpr auto operator=(Monostate) -> MonostateStorage<T, state>& {
         return *this;
     }
 
     // TODO: Support all non-assignment operators that `T` has.
-    constexpr auto operator==(auto const operand) -> bool {
+    constexpr auto operator==(auto operand) -> bool {
         return state == operand;
     }
-    constexpr auto operator!=(auto const operand) -> bool {
+    constexpr auto operator!=(auto operand) -> bool {
         return state != operand;
     }
-    constexpr auto operator<(auto const operand) -> bool {
+    constexpr auto operator<(auto operand) -> bool {
         return state < operand;
     }
-    constexpr auto operator<=(auto const operand) -> bool {
+    constexpr auto operator<=(auto operand) -> bool {
         return state <= operand;
     }
-    constexpr auto operator>(auto const operand) -> bool {
+    constexpr auto operator>(auto operand) -> bool {
         return state > operand;
     }
-    constexpr auto operator>=(auto const operand) -> bool {
+    constexpr auto operator>=(auto operand) -> bool {
         return state >= operand;
     }
 };
@@ -83,7 +83,7 @@ struct Predicate {
 namespace detail {
     // This is a function instead of a lambda to fix clangd crashes.
     template <typename T, T sentinel>
-    constexpr auto sentinel_predicate(T const value) -> bool {
+    constexpr auto sentinel_predicate(T value) -> bool {
         return value != sentinel;
     }
 }  // namespace detail

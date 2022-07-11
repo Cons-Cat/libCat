@@ -135,7 +135,7 @@ class List : public CollectionFacade<List<T>, T> {
         Node* p_node;
 
         Iterator(Iterator const&) = default;
-        Iterator(Node* const p_input) : p_node(p_input){};
+        Iterator(Node* p_input) : p_node(p_input){};
 
         auto increment() -> Iterator& {
             this->p_node = this->p_node->p_next_node;
@@ -544,7 +544,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         Node* p_node;
 
         Iterator(Iterator const&) = default;
-        Iterator(Node* const p_input) : p_node(p_input){};
+        Iterator(Node* p_input) : p_node(p_input){};
 
         auto increment() -> Iterator& {
             this->p_node = this->p_node->p_next_node;

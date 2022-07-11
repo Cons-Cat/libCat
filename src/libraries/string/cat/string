@@ -69,21 +69,20 @@ class String : public Span<char const> {
         this->length = move(string).length;
     }
 
-    [[nodiscard]] constexpr auto substring(ssize const position,
-                                           ssize const count) -> String {
+    [[nodiscard]] constexpr auto substring(ssize position, ssize count)
+        -> String {
         return String{this->p_storage + position, count};
     }
 
-    [[nodiscard]] constexpr auto remove_prefix(ssize const offset) -> String {
+    [[nodiscard]] constexpr auto remove_prefix(ssize offset) -> String {
         return this->substring(offset, this->length - offset);
     }
 
-    [[nodiscard]] constexpr auto remove_suffix(ssize const offset) -> String {
+    [[nodiscard]] constexpr auto remove_suffix(ssize offset) -> String {
         return this->substring(0, this->length - offset);
     }
 
-    constexpr auto find_small(char const character,
-                              ssize const position = 0) const
+    constexpr auto find_small(char character, ssize position = 0) const
         -> Optional<Sentinel<ssize, -1>> {
         for (ssize i = position; i < this->length; ++i) {
             if (this->p_storage[i.raw] == character) {
@@ -95,7 +94,7 @@ class String : public Span<char const> {
 
     // TODO: Optimize different length strings.
     // TODO: Tile this loop four or eight times.
-    constexpr auto find(char const character, ssize const position = 0) const
+    constexpr auto find(char character, ssize position = 0) const
         -> Optional<Sentinel<ssize, -1>> {
         ssize i = position;
         for (; i < this->length - char1x_::lanes; i += char1x_::lanes) {
