@@ -7,7 +7,7 @@ constexpr ssize block_size = 4_ki;
 
 auto get_file_size(nix::FileDescriptor file_descriptor)
     -> cat::Optional<ssize> {
-    nix::FileStatus status = nix::sys_fstat(file_descriptor).or_panic();
+    nix::FileStatus status = nix::sys_fstat(file_descriptor).or_exit();
     if (status.is_regular()) {
         return status.file_size;
     }
@@ -29,7 +29,7 @@ void output_to_console(nix::IoVector const& io_vector) {
 void read_and_print_file(char* p_file_name) {
     nix::FileDescriptor file_descriptor =
         nix::sys_open(p_file_name, nix::OpenMode::read_only)
-            .or_panic(
+            .or_exit(
                 // "No such file or directory!"
             );
     ssize file_size = get_file_size(file_descriptor).value();
@@ -69,7 +69,7 @@ void read_and_print_file(char* p_file_name) {
         bytes_remaining -= current_block_size;
     }
 
-    _ = nix::sys_readv(file_descriptor, io_vectors).or_panic();
+    _ = nix::sys_readv(file_descriptor, io_vectors).or_exit();
 
     for (nix::IoVector const& iov : io_vectors) {
         output_to_console(iov);

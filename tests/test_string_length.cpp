@@ -23,19 +23,19 @@ int main() {
     ssize len_6 = cat::string_length(p_string_6);
     ssize len_7 = cat::string_length(p_string_7);
 
-    Result(len_1 == len_2).or_panic();
-    Result(len_1 == 7).or_panic();
-    Result(len_3 == len_4).or_panic();
-    Result(len_5 == len_6).or_panic();
-    Result(len_7 == 15).or_panic();
+    Result(len_1 == len_2).or_exit();
+    Result(len_1 == 7).or_exit();
+    Result(len_3 == len_4).or_exit();
+    Result(len_5 == len_6).or_exit();
+    Result(len_7 == 15).or_exit();
 
     // Test `String`s.
     cat::String string_1 = p_string_1;
-    Result(string_1.size() == len_1).or_panic();
-    Result(string_1.subspan(1, 4).size() == 3).or_panic();
-    Result(string_1.first(4).size() == 4).or_panic();
-    Result(string_1.last(3).size() == 3).or_panic();
-    Result(cat::String("Hello!").size() == len_1).or_panic();
+    Result(string_1.size() == len_1).or_exit();
+    Result(string_1.subspan(1, 4).size() == 3).or_exit();
+    Result(string_1.first(4).size() == 4).or_exit();
+    Result(string_1.last(3).size() == 3).or_exit();
+    Result(cat::String("Hello!").size() == len_1).or_exit();
 
     // TODO: Remove this and put it in another string unit test.
     char chars[5] = "foo\0";
@@ -49,21 +49,21 @@ int main() {
 
     // TODO: Put this in another string unit test.
     cat::String find_string = "abcdefabcdefabcdefabcdefabcdefabcdef";
-    ssize c = find_string.find('c').or_panic();
-    Result(c == 2).or_panic();
+    ssize c = find_string.find('c').or_exit();
+    Result(c == 2).or_exit();
 
-    ssize a = find_string.find('a').or_panic();
-    Result(a == 0).or_panic();
+    ssize a = find_string.find('a').or_exit();
+    Result(a == 0).or_exit();
 
-    ssize f = find_string.find('f').or_panic();
-    Result(f == 5).or_panic();
+    ssize f = find_string.find('f').or_exit();
+    Result(f == 5).or_exit();
 
     // `z` is not inside of a 32-byte chunk.
     cat::String find_string_2 =
         "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd"
         "efz";
-    ssize z = find_string_2.find('z').or_panic();
-    Result(z == 72).or_panic();
+    ssize z = find_string_2.find('z').or_exit();
+    Result(z == 72).or_exit();
 
     cat::exit();
 }

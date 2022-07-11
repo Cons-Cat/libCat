@@ -4,10 +4,10 @@
 
 #include <cat/memory>
 #include <cat/meta>
-// #include <cat/string>
 #include <cat/utility>
 
 namespace cat {
+
 namespace detail {
     // A `NullOpt` is consumed by an `Optional` constructor to prevent
     // initializing its `value` member.
@@ -905,7 +905,7 @@ class Optional {
 
     // If this `Optional` is empty, terminate the running process
     // immediately. Otherwise, return its value.
-    [[nodiscard]] constexpr auto or_panic() & {
+    [[nodiscard]] auto or_exit() & {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return this->value();
@@ -920,7 +920,7 @@ class Optional {
 
     // If this `Optional` is empty, terminate the running process
     // immediately. Otherwise, return its value.
-    [[nodiscard]] constexpr auto or_panic() const& {
+    [[nodiscard]] auto or_exit() const& {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return this->value();
@@ -935,7 +935,7 @@ class Optional {
 
     // If this `Optional` is empty, terminate the running process
     // immediately. Otherwise, move its value.
-    [[nodiscard]] constexpr auto or_panic() && {
+    [[nodiscard]] auto or_exit() && {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return move(this->value());
@@ -950,7 +950,7 @@ class Optional {
 
     // If this `Optional` is empty, terminate the running process
     // immediately. Otherwise, move its value.
-    [[nodiscard]] constexpr auto or_panic() const&& {
+    [[nodiscard]] auto or_exit() const&& {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return move(this->value());
@@ -965,22 +965,8 @@ class Optional {
 
     // If this `Optional` is empty, print an error message and terminate the
     // running process immediately. Otherwise, return its value.
-    [[nodiscard]] constexpr auto or_panic(String const&
-                                          // error_message
-    ) {
-        if (this->has_value()) [[likely]] {
-            if constexpr (!is_void<T>) {
-                return this->value();
-            } else {
-                return;
-            }
-        } else {
-            // TODO: Print an error message.
-            // _ = print_line(error_message);
-            exit(1);
-        }
-        __builtin_unreachable();  // This prevents a build warning.
-    }
+    [[nodiscard]] auto or_exit(String const error_message);
+    [[nodiscard]] auto or_exit(String const error_message) const;
 
     // Construct the value in-place and destroy the held value iff it
     // exists.

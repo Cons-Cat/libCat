@@ -33,7 +33,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
             return nullopt;
         } else {
             // TODO: Should this propagate an error instead of panicking?
-            allocator.free(this->p_storage).or_panic();
+            allocator.free(this->p_storage).or_exit();
             T* p_new = result.value();
             // TODO: If `T` is relocatable, use `copy_memory()`.
             for (ssize::Raw i = 0; i < this->current_size.raw; ++i) {
@@ -291,7 +291,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
                 return nullopt;
             } else {
                 // TODO: Consider propagating this error.
-                allocator.free(this->p_storage).or_panic();
+                allocator.free(this->p_storage).or_exit();
                 T* p_new = result.value();
                 // TODO: If `T` is relocatable, use `copy_memory()`.
                 for (ssize::Raw i = 0; i < this->current_size.raw; ++i) {

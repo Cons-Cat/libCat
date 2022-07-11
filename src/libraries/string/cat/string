@@ -229,4 +229,35 @@ constexpr auto operator+(StaticString<length_1> const& string_1,
 
 }  // namespace cat
 
+// These must be implemented after both `Optional` and `String`:
+
+template <typename T>
+[[nodiscard]] auto cat::Optional<T>::or_exit(cat::String const error_message) {
+    if (this->has_value()) [[likely]] {
+        if constexpr (!is_void<T>) {
+            return this->value();
+        } else {
+            return;
+        }
+    } else {
+        _ = println(error_message);
+        exit(1);
+    }
+}
+
+template <typename T>
+[[nodiscard]] auto cat::Optional<T>::or_exit(
+    cat::String const error_message) const {
+    if (this->has_value()) [[likely]] {
+        if constexpr (!is_void<T>) {
+            return this->value();
+        } else {
+            return;
+        }
+    } else {
+        _ = println(error_message);
+        exit(1);
+    }
+}
+
 #include "../implementations/string_length.tpp"

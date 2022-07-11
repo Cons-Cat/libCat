@@ -40,36 +40,36 @@ int main() {
 
     ssize count = 0;
     for (int4& a : array_1) {
-        Result(a == array_1[count]).or_panic();
+        Result(a == array_1[count]).or_exit();
         ++count;
     }
 
     for (int4 const& a : cat::AsReverse(array_1)) {
         --count;
-        Result(a == array_1[count]).or_panic();
+        Result(a == array_1[count]).or_exit();
     }
 
-    Result(array_1.front() == 5).or_panic();
-    Result(array_1.back() == 9).or_panic();
+    Result(array_1.front() == 5).or_exit();
+    Result(array_1.back() == 9).or_exit();
 
     count = 0;
     for (int4 const& a : cat::AsConst(array_1)) {
-        Result(a == array_1[count]).or_panic();
+        Result(a == array_1[count]).or_exit();
         ++count;
     }
     _ = array_1.cbegin();
 
     for (int4 const& a : cat::AsConstReverse(array_1)) {
         --count;
-        Result(a == array_1[count]).or_panic();
+        Result(a == array_1[count]).or_exit();
     }
 
     int4 array_to = *(array_1.begin().advance_to(--array_1.end()));
-    Result(array_to == array_1.back()).or_panic();
+    Result(array_to == array_1.back()).or_exit();
 
     // Index in and out of bounds.
-    Result(array_1.at(0).value() == 5).or_panic();
-    Result(!array_1.at(6).has_value()).or_panic();
+    Result(array_1.at(0).value() == 5).or_exit();
+    Result(!array_1.at(6).has_value()).or_exit();
 
     // Deducing type.
     cat::Array implicit_array_1 = {0, 1, 2, 3, 4};
@@ -84,10 +84,10 @@ int main() {
     // Max elements.
     constexpr cat::Array array_4 = {0, 2, 8, 5};
     constexpr int4 max_1 = cat::max(array_4);
-    Result(max_1 == 8).or_panic();
+    Result(max_1 == 8).or_exit();
 
     int4 min_1 = cat::min(array_4);
-    Result(min_1 == 0).or_panic();
+    Result(min_1 == 0).or_exit();
 
     // TODO: String deduction:
     //     cat::Array implicit_string = "Hi, Conscat!";
@@ -108,17 +108,17 @@ int main() {
     // Test `IntegerList`.
     cat::Array<int4, 5> int_array = cat::value_list<int4, 0, 5>;
     for (int4& i : int_array) {
-        Result(i == 0).or_panic();
+        Result(i == 0).or_exit();
     }
 
     int_array = cat::value_list<int4, 1, 5>;
     for (int4& i : int_array) {
-        Result(i == 1).or_panic();
+        Result(i == 1).or_exit();
     }
 
     int_array = cat::integer_sequence<int4, 5>;
     for (int i = 0; i < int_array.size(); ++i) {
-        Result(int_array[i] == i).or_panic();
+        Result(int_array[i] == i).or_exit();
     }
 
     [[maybe_unused]] cat::Array int_array_2 = cat::value_list<int4, 0, 5>;

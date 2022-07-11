@@ -19,74 +19,74 @@ consteval auto const_func() -> int4 {
 
 int main() {
     cat::PageAllocator page_allocator;
-    cat::Byte* page = page_allocator.p_malloc(4_ki).or_panic();
+    cat::Byte* page = page_allocator.p_malloc(4_ki).or_exit();
     cat::LinearAllocator allocator = {page, 4_ki};
 
     // Test default constructing a `Vector`.
     cat::Vector<int4> int_vec;
-    Result(int_vec.size() == 0).or_panic();
-    Result(int_vec.capacity() == 0).or_panic();
+    Result(int_vec.size() == 0).or_exit();
+    Result(int_vec.capacity() == 0).or_exit();
 
     // Test pushing back to a `Vector`.
-    int_vec.push_back(allocator, 1).or_panic();
-    int_vec.push_back(allocator, 2).or_panic();
-    int_vec.push_back(allocator, 3).or_panic();
-    Result(int_vec.size() == 3).or_panic();
-    Result(int_vec.capacity() == 4).or_panic();
+    int_vec.push_back(allocator, 1).or_exit();
+    int_vec.push_back(allocator, 2).or_exit();
+    int_vec.push_back(allocator, 3).or_exit();
+    Result(int_vec.size() == 3).or_exit();
+    Result(int_vec.capacity() == 4).or_exit();
 
-    int_vec.push_back(allocator, 6).or_panic();
-    int_vec.push_back(allocator, 12).or_panic();
-    int_vec.push_back(allocator, 24).or_panic();
-    Result(int_vec.size() == 6).or_panic();
-    Result(int_vec.capacity() == 8).or_panic();
+    int_vec.push_back(allocator, 6).or_exit();
+    int_vec.push_back(allocator, 12).or_exit();
+    int_vec.push_back(allocator, 24).or_exit();
+    Result(int_vec.size() == 6).or_exit();
+    Result(int_vec.capacity() == 8).or_exit();
 
     // Test resizing a `Vector`.
-    int_vec.resize(allocator, 0).or_panic();
-    Result(int_vec.size() == 0).or_panic();
-    Result(int_vec.capacity() == 8).or_panic();
+    int_vec.resize(allocator, 0).or_exit();
+    Result(int_vec.size() == 0).or_exit();
+    Result(int_vec.capacity() == 8).or_exit();
 
-    int_vec.resize(allocator, 4).or_panic();
-    Result(int_vec.size() == 4).or_panic();
-    Result(int_vec.capacity() == 8).or_panic();
+    int_vec.resize(allocator, 4).or_exit();
+    Result(int_vec.size() == 4).or_exit();
+    Result(int_vec.capacity() == 8).or_exit();
 
     // Test reserving storage for a `Vector`.
-    int_vec.reserve(allocator, 128).or_panic();
-    Result(int_vec.size() == 4).or_panic();
-    Result(int_vec.capacity() == 128).or_panic();
+    int_vec.reserve(allocator, 128).or_exit();
+    Result(int_vec.size() == 4).or_exit();
+    Result(int_vec.capacity() == 128).or_exit();
 
     // Test reserve constructor.
     cat::Vector reserved_vec =
-        cat::Vector<int4>::reserved(allocator, 6).or_panic();
-    Result(reserved_vec.capacity() == 6).or_panic();
+        cat::Vector<int4>::reserved(allocator, 6).or_exit();
+    Result(reserved_vec.capacity() == 6).or_exit();
 
     // Test filled constructor.
     cat::Vector filled_vec =
-        cat::Vector<int4>::filled(allocator, 8, 1).or_panic();
-    Result(filled_vec.size() == 8).or_panic();
-    Result(filled_vec.capacity() == 8).or_panic();
+        cat::Vector<int4>::filled(allocator, 8, 1).or_exit();
+    Result(filled_vec.size() == 8).or_exit();
+    Result(filled_vec.capacity() == 8).or_exit();
     for (int4 integer : filled_vec) {
-        Result(integer == 1).or_panic();
+        Result(integer == 1).or_exit();
     }
 
     // Test cloned constructor.
     cat::Vector cloned_vec =
-        cat::Vector<int4>::cloned(allocator, filled_vec).or_panic();
-    Result(cloned_vec.size() == 8).or_panic();
-    Result(cloned_vec.capacity() == 8).or_panic();
+        cat::Vector<int4>::cloned(allocator, filled_vec).or_exit();
+    Result(cloned_vec.size() == 8).or_exit();
+    Result(cloned_vec.capacity() == 8).or_exit();
     for (int4 integer : cloned_vec) {
-        Result(integer == 1).or_panic();
+        Result(integer == 1).or_exit();
     }
 
     // Test from constructor.
     cat::Vector from_vec_1 =
         cat::Vector<int4>::from(allocator, cat::value_list<int4, 5, 10>)
             .value();
-    Result(from_vec_1.capacity() == 10).or_panic();
-    Result(from_vec_1.size() == 10).or_panic();
+    Result(from_vec_1.capacity() == 10).or_exit();
+    Result(from_vec_1.size() == 10).or_exit();
     cat::Vector from_vec_2 =
         cat::Vector<int4>::from(allocator, 1, 2, 3, 4).value();
-    Result(from_vec_2.capacity() == 4).or_panic();
-    Result(from_vec_2.size() == 4).or_panic();
+    Result(from_vec_2.capacity() == 4).or_exit();
+    Result(from_vec_2.size() == 4).or_exit();
 
     // Test `Vector` in a `constexpr` context.
     static_assert(const_func() == 10);

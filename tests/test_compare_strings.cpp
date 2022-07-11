@@ -47,23 +47,23 @@ int main() {
 
     // Test collection operations.
     _ = const_string_1[1];
-    Result(!const_string_3.at(10).has_value()).or_panic();
+    Result(!const_string_3.at(10).has_value()).or_exit();
 
     // TODO: Make this `constexpr`.
     cat::StaticString hello_world = (const_string_3 + const_string_4);
     constexpr cat::StaticString const_hello_world =
         (const_string_3 + const_string_4);
-    Result(cat::compare_strings(hello_world, "Hello, world!")).or_panic();
-    Result(cat::compare_strings(const_hello_world, "Hello, world!")).or_panic();
+    Result(cat::compare_strings(hello_world, "Hello, world!")).or_exit();
+    Result(cat::compare_strings(const_hello_world, "Hello, world!")).or_exit();
 
     ssize const h = const_string_1.find('H').value();
     ssize const e = const_string_1.find('e').value();
     ssize const l = const_string_1.find('l').value();
     ssize const o = const_string_1.find('o').value();
-    Result(h == 0).or_panic();
-    Result(e == 1).or_panic();
-    Result(l == 2).or_panic();
-    Result(o == 4).or_panic();
+    Result(h == 0).or_exit();
+    Result(e == 1).or_exit();
+    Result(l == 2).or_exit();
+    Result(o == 4).or_exit();
 
     cat::exit();
 }

@@ -10,39 +10,39 @@ int main() {
     int& left_1 = tuple.get<0>();
     left_1 = 10;
     int left_2 = tuple.get<0>();
-    Result(left_2 == 10).or_panic();
-    Result(left_2 == left_1).or_panic();
-    Result(left_2 == tuple.first()).or_panic();
+    Result(left_2 == 10).or_exit();
+    Result(left_2 == left_1).or_exit();
+    Result(left_2 == tuple.first()).or_exit();
     tuple.second() = 20;
 
     // Test destructuring.
     auto& [int_1, int_2] = tuple;
-    Result(int_1 == 10).or_panic();
-    Result(int_2 == 20).or_panic();
+    Result(int_1 == 10).or_exit();
+    Result(int_2 == 20).or_exit();
 
     // Test aggregate construction.
     cat::Tuple<int, char> intchar = {100, 'a'};
-    Result(intchar.first() == 100).or_panic();
-    Result(intchar.second() == 'a').or_panic();
+    Result(intchar.first() == 100).or_exit();
+    Result(intchar.second() == 'a').or_exit();
 
     // Test aggregate assignment.
     intchar = {200, 'b'};
-    Result(intchar.first() == 200).or_panic();
-    Result(intchar.second() == 'b').or_panic();
+    Result(intchar.first() == 200).or_exit();
+    Result(intchar.second() == 'b').or_exit();
 
     // Test `const`.
     cat::Tuple<int, char> const intchar_const = {100, 'a'};
-    Result(intchar_const.first() == 100).or_panic();
-    Result(intchar_const.second() == 'a').or_panic();
+    Result(intchar_const.first() == 100).or_exit();
+    Result(intchar_const.second() == 'a').or_exit();
 
     // Test move semantics.
     cat::Tuple<int, char>&& intchar_move = {100, 'a'};
-    Result(cat::move(intchar_move.first()) == 100).or_panic();
-    Result(cat::move(intchar_move.second()) == 'a').or_panic();
+    Result(cat::move(intchar_move.first()) == 100).or_exit();
+    Result(cat::move(intchar_move.second()) == 'a').or_exit();
 
     cat::Tuple<int, char> const intchar_move_const = {100, 'a'};
-    Result(cat::move(intchar_move_const.first()) == 100).or_panic();
-    Result(cat::move(intchar_move_const.second()) == 'a').or_panic();
+    Result(cat::move(intchar_move_const.first()) == 100).or_exit();
+    Result(cat::move(intchar_move_const.second()) == 'a').or_exit();
 
     // Test type deduction.
     cat::Tuple deduced = {0, 'b', 10.f};

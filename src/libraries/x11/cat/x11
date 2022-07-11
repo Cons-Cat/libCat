@@ -410,12 +410,12 @@ auto handshake(cat::Allocator auto& allocator,
     x11::Connection x_connection;
 
     // Send a request with default-initialized fields.
-    socket.send_struct(x11::ConnectionRequestInfo()).or_panic();
+    socket.send_struct(x11::ConnectionRequestInfo()).or_exit();
 
     x_connection.socket_descriptor = socket.descriptor;
     // TODO: Is the return of `.recieve` important here?
     _ = socket.recieve(&x_connection.header, ssizeof(x_connection.header))
-            .or_panic();
+            .or_exit();
 
     // TODO: This will fail if Xauth is enabled. This must handle X11 cookies.
     if (x_connection.header.success_code ==
@@ -442,7 +442,7 @@ auto handshake(cat::Allocator auto& allocator,
     _ = socket
             .recieve(x_connection.p_setup,
                      x_connection.header.message_length.raw * 4)
-            .or_panic();
+            .or_exit();
 
     // Copy pointers to that recieved data from the allocated buffer into
     // `connection`.

@@ -292,7 +292,7 @@ class [[nodiscard]] Result {
     }
 
     // TODO: Pass in the exit code and error message with overloads.
-    auto or_panic() -> T {
+    auto or_exit() -> T {
         if (is_okay) [[likely]] {
             if constexpr (!cat::is_void<T>) {
                 return this->storage;
@@ -307,7 +307,7 @@ class [[nodiscard]] Result {
     // TODO: Make this work.
     // Because the error code is 8-bytes, it could contain a non-null
     // pointer to an error string. This prints that error message.
-    auto or_panic(cat::String const& error_message) -> T {
+    auto or_exit(cat::String const& error_message) -> T {
         if (is_okay) [[likely]] {
             if constexpr (!cat::is_void<T>) {
                 return this->storage;

@@ -48,23 +48,23 @@ int main() {
     // bytes. No storage cost exists for the error types.
     static_assert(sizeof(result) == 16);
 
-    Result(!result.has_value()).or_panic();
-    Result(result.holds_alternative<ErrorOne>()).or_panic();
-    Result(!result.holds_alternative<int8>()).or_panic();
+    Result(!result.has_value()).or_exit();
+    Result(result.holds_alternative<ErrorOne>()).or_exit();
+    Result(!result.holds_alternative<int8>()).or_exit();
 
     result = union_errors(1);
-    Result(!result.has_value()).or_panic();
-    Result(result.holds_alternative<ErrorTwo>()).or_panic();
-    Result(!result.holds_alternative<int8>()).or_panic();
+    Result(!result.has_value()).or_exit();
+    Result(result.holds_alternative<ErrorTwo>()).or_exit();
+    Result(!result.holds_alternative<int8>()).or_exit();
 
     result = union_errors(2);
-    Result(result.has_value()).or_panic();
-    Result(result.holds_alternative<int8>()).or_panic();
+    Result(result.has_value()).or_exit();
+    Result(result.holds_alternative<int8>()).or_exit();
 
     result = union_errors(3);
-    Result(result.has_value()).or_panic();
-    Result(result.value() == 3).or_panic();
-    Result(result.holds_alternative<int8>()).or_panic();
+    Result(result.has_value()).or_exit();
+    Result(result.value() == 3).or_exit();
+    Result(result.holds_alternative<int8>()).or_exit();
 
     cat::Scaredy<cat::Predicate<int4,
                                 [](int4 input) {
@@ -76,11 +76,11 @@ int main() {
     // The `Scaredy` here adds no storage bloat to an `int4`.
     static_assert(sizeof(predicate) == sizeof(int4));
 
-    Result(!predicate.has_value()).or_panic();
+    Result(!predicate.has_value()).or_exit();
     predicate = 0;
-    Result(predicate.has_value()).or_panic();
+    Result(predicate.has_value()).or_exit();
     predicate = 10;
-    Result(predicate.has_value()).or_panic();
+    Result(predicate.has_value()).or_exit();
 
     cat::exit();
 }
