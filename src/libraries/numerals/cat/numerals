@@ -596,9 +596,6 @@ using usize = cat::Numeral<__SIZE_TYPE__>;
 // TODO: Support word size of `4`:
 using ssize = cat::Numeral<long int>;
 
-using bool1 = bool;
-static_assert(sizeof(bool1) == 1);
-
 struct bool2 {  // NOLINT
     using Raw = uint2;
     uint2 raw;
@@ -1013,7 +1010,6 @@ using uintptr = cat::ArithmeticPtr<T, __UINTPTR_TYPE__>;
 
 }  // namespace cat
 
-using cat::bool1;
 using cat::bool2;
 using cat::bool4;
 using cat::float4;

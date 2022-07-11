@@ -97,7 +97,7 @@ class [[nodiscard]] Result {
 
   protected:
     ValueType storage;
-    bool1 is_okay;
+    bool is_okay;
 
   public:
     constexpr Result(Failure const& failure)
@@ -119,11 +119,11 @@ class [[nodiscard]] Result {
     // TODO: Trivially and non-trivially Copy and move construct `ValueType`.
 
     // `.has_value()` and `.value()` are needed here for constructors.
-    constexpr auto has_value() -> bool1 {
+    constexpr auto has_value() -> bool {
         return this->is_okay;
     }
 
-    constexpr auto has_value() const -> bool1 {
+    constexpr auto has_value() const -> bool {
         return this->is_okay;
     }
 
@@ -203,11 +203,11 @@ class [[nodiscard]] Result {
     constexpr Result(cat::Any const result) requires(!cat::is_void<T>)
         : storage(static_cast<T>(result)), is_okay(true){};
 
-    // TODO: `concept` for `bool1`, `bool2`, and `bool4` as well.
-    // Consume a `bool1` temporary. This is useful for debugging with asserts.
-    constexpr Result(bool1 const& expression) requires(cat::is_void<T>)
+    // TODO: `concept` for `bool`, `bool2`, and `bool4` as well.
+    // Consume a `bool` temporary. This is useful for debugging with asserts.
+    constexpr Result(bool const& expression) requires(cat::is_void<T>)
         : storage(), is_okay(expression){};
-    constexpr Result(bool1&& expression) requires(cat::is_void<T>)
+    constexpr Result(bool&& expression) requires(cat::is_void<T>)
         : storage(), is_okay(expression){};
 
     // Return a specified value when `is_okay` is `false`.

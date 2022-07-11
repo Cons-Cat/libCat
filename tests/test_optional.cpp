@@ -108,7 +108,7 @@ int main() {
 
     // `cat::Optional` with a predicate.
     cat::Optional<cat::Predicate<int4,
-                                 [](int4 input) -> bool1 {
+                                 [](int4 input) -> bool {
                                      return input >= 0;
                                  },
                                  -1>>
@@ -130,7 +130,7 @@ int main() {
 
     // `cat::Optional<void>` with a predicate.
     cat::Optional<cat::Predicate<cat::MonostateStorage<int, 0>,
-                                 [](int input) -> bool1 {
+                                 [](int input) -> bool {
                                      return input >= 0;
                                  },
                                  -1>>

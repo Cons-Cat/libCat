@@ -612,8 +612,7 @@ concept CopyConstructible =
     ConstructibleFrom<T, T const> && ConvertibleTo<T const, T>;
 
 // boolean_testable is adapted from the exposition-only concept
-// boolean-testable. This converts a Type into `bool` rather than `bool1`
-// because that simplifies compilation.
+// boolean-testable.
 namespace detail {
     template <typename T>
     concept BooleanTestableDetail = ConvertibleTo<T, bool>;

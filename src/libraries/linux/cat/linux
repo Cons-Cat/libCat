@@ -290,7 +290,7 @@ namespace detail {
         cat::Conditional<cat::is_pointer<T>, intptr<cat::RemovePointer<T>>, T>>;
 
     template <typename T>
-    constexpr auto is_positive(T const input) -> bool1 {
+    constexpr auto is_positive(T const input) -> bool {
         if constexpr (requires { input >= 0; }) {
             return input >= 0;
         } else {
@@ -753,32 +753,32 @@ struct FileStatus {
   private:
     [[maybe_unused]] int4 unused[3];
   public:
-    auto is_regular() const -> bool1 {
+    auto is_regular() const -> bool {
         return (this->protections_mode & uint4{0170000u}) == 0100000u;
     }
     static_assert(!cat::EnumFlagTrait<uint4>::value);
 
-    auto is_directory() const -> bool1 {
+    auto is_directory() const -> bool {
         return (this->protections_mode & 0170000u) == 0040000u;
     }
 
-    auto is_character_device() const -> bool1 {
+    auto is_character_device() const -> bool {
         return (this->protections_mode & 0170000u) == 0020000u;
     }
 
-    auto is_block_device() const -> bool1 {
+    auto is_block_device() const -> bool {
         return (this->protections_mode & 0170000u) == 0060000u;
     }
 
-    auto is_fifo() const -> bool1 {
+    auto is_fifo() const -> bool {
         return (this->protections_mode & 0170000u) == 0010000u;
     }
 
-    auto is_symbolic_link() const -> bool1 {
+    auto is_symbolic_link() const -> bool {
         return (this->protections_mode & 0170000u) == 0120000u;
     }
 
-    auto is_socket() const -> bool1 {
+    auto is_socket() const -> bool {
         return (this->protections_mode & 0170000u) == 0140000u;
     }
 };
