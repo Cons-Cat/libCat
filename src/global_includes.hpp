@@ -11,11 +11,12 @@
 namespace cat {
 namespace detail {
     struct [[maybe_unused]] Unused {
-        // Any type can be converted into an `Unused`, except for `Result`.
         template <typename T>
         constexpr void operator=(T const&){};
-        // `unused` cannot be assigned to any variable.
+        // `Unused` cannot be assigned to any variable.
         operator auto() = delete;
+        // `Unused` cannot be assigned to itself, i.e. `_ = _`.
+        auto operator=(Unused) = delete;
     };
 
     // `InPlace` is consumed by wrapper classes to default-initialize their
