@@ -5,8 +5,8 @@
 #include <cat/meta>
 
 // `__BYTE_ORDER__` and `__ORDER_LITTLE_ENDIAN__` are macros defined by GCC.
-constexpr bool1 is_little_endian = (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
-constexpr bool1 is_big_endian = !is_little_endian;
+constexpr bool is_little_endian = (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
+constexpr bool is_big_endian = !is_little_endian;
 
 namespace cat {
 

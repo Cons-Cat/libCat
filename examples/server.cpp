@@ -16,7 +16,7 @@ int main() {
     cat::SocketUnix<cat::SocketType::stream> recieving_socket;
     cat::StaticString<12> message_buffer;
 
-    bool1 exit = false;
+    bool exit = false;
     while (!exit) {
         recieving_socket.accept(listening_socket).or_panic();
 

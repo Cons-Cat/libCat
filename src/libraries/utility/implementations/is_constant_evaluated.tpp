@@ -4,6 +4,6 @@
 
 #include <cat/utility>
 
-constexpr auto cat::is_constant_evaluated() -> cat::bool1 {
+constexpr auto cat::is_constant_evaluated() -> bool {
     return __builtin_is_constant_evaluated();
 }
