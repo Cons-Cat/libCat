@@ -106,8 +106,7 @@ struct AllocatorFacade {
     // TODO: Forward `T` constructor arguments.
     template <typename T, bool1 is_small_optimized, bool1 is_fail_safe,
               bool1 is_aligned>
-    auto meta_allocate(usize const alignment,
-                       ssize const allocation_size = ssizeof<T>()) {
+    auto meta_allocate(usize alignment, ssize allocation_size = ssizeof<T>()) {
         // Produce a basic handle for this memory type.
         using UnderlyingHandle = decltype(this->self().template make_handle<T>(
             T{}, allocation_size));
@@ -196,7 +195,7 @@ struct AllocatorFacade {
   public:
     // Try to allocate some memory with arbitrary alignment.
     template <typename T = Byte>
-    [[nodiscard]] auto malloc(ssize const allocation_size = ssizeof<T>()) {
+    [[nodiscard]] auto malloc(ssize allocation_size = ssizeof<T>()) {
         if constexpr (alignof(T) > 8) {
             // If the alignment of `T` is greater than 8, it should have
             // implied strong alignment guarantees.
@@ -209,7 +208,7 @@ struct AllocatorFacade {
     // arbitrary alignment and provide a pointer handle.
     template <typename T = Byte>
         requires(detail::StableDerivedAllocator<Derived, T>)
-    [[nodiscard]] auto p_malloc(ssize const allocation_size = ssizeof<T>())
+    [[nodiscard]] auto p_malloc(ssize allocation_size = ssizeof<T>())
         -> OptionalPtr<T> {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
@@ -232,8 +231,8 @@ struct AllocatorFacade {
     // Try to allocate some memory guaranteed to be aligned to some
     // boundary.
     template <typename T = Byte>
-    [[nodiscard]] auto aligned_alloc(
-        usize const alignment, ssize const allocation_size = ssizeof<T>()) {
+    [[nodiscard]] auto aligned_alloc(usize alignment,
+                                     ssize allocation_size = ssizeof<T>()) {
         return this->meta_allocate<T, false, true, true>(alignment,
                                                          allocation_size);
     }
@@ -242,8 +241,8 @@ struct AllocatorFacade {
     // arbitrary alignment and provide a pointer handle.
     template <typename T = Byte>
         requires(detail::StableDerivedAllocator<Derived, T>)
-    [[nodiscard]] auto p_aligned_alloc(
-        usize const alignment, ssize const allocation_size = ssizeof<T>())
+    [[nodiscard]] auto p_aligned_alloc(usize alignment,
+                                       ssize allocation_size = ssizeof<T>())
         -> OptionalPtr<T> {
         auto memory = this->meta_allocate<T, false, true, true>(
             alignment, allocation_size);
@@ -255,7 +254,7 @@ struct AllocatorFacade {
 
     // Try to allocate small-size optimized memory.
     template <typename T = void*>
-    [[nodiscard]] auto malloca(ssize const allocation_size = ssizeof<T>()) {
+    [[nodiscard]] auto malloca(ssize allocation_size = ssizeof<T>()) {
         // TODO: Fix this alignment:
         if constexpr (alignof(T) > 8) {
             // If the alignment of `T` is greater than 1, it should have
@@ -268,8 +267,8 @@ struct AllocatorFacade {
     // Try to allocate small-size optimized memory guaranteed to be aligned
     // to a boundary. TODO: Work on this after improving `malloca()`.
     template <typename T = void*>
-    [[nodiscard]] auto aligned_malloca(
-        usize const alignment, ssize const allocation_size = ssizeof<T>()) {
+    [[nodiscard]] auto aligned_malloca(usize alignment,
+                                       ssize allocation_size = ssizeof<T>()) {
         return this->meta_allocate<T, true, true, true>(alignment,
                                                         allocation_size);
     }
@@ -317,7 +316,7 @@ struct AllocatorFacade {
     // Invalidate any stable memory handle, invoking its data's destructor.
     template <typename T>
         requires(detail::StableDerivedAllocator<Derived, T>)
-    [[nodiscard]] auto free(T* const p_memory) -> Optional<void> {
+    [[nodiscard]] auto free(T* p_memory) -> Optional<void> {
         return this->self().deallocate(p_memory);
         // TODO: Call destructor.
     }
@@ -384,7 +383,7 @@ struct PageAllocator : AllocatorFacade<PageAllocator> {
     // on x86-64. If fewer that `4096` bytes are allocated, that amount will
     // be rounded up to `4096`.
     template <typename T>
-    auto allocate(ssize const allocation_size) -> OptionalPtr<T> {
+    auto allocate(ssize allocation_size) -> OptionalPtr<T> {
         Scaredy result = nix::sys_mmap(
             0u, allocation_size,
             // TODO: Fix bit flags operators.
@@ -417,7 +416,7 @@ struct PageAllocator : AllocatorFacade<PageAllocator> {
 
     // Unmap a pointer handle to page(s) of virtual memory.
     template <typename T>
-    auto deallocate(T* const p_memory) -> Optional<void> {
+    auto deallocate(T* p_memory) -> Optional<void> {
         Scaredy result = nix::sys_munmap(p_memory, ssizeof<T>());
         if (result.has_value()) {
             return monostate;
@@ -428,7 +427,7 @@ struct PageAllocator : AllocatorFacade<PageAllocator> {
     // Allocate a page(s) of virtual memory that is guaranteed to align to
     // any power of two, less than `4_ki`.
     template <typename T>
-    auto aligned_allocate(usize const alignment, ssize const allocation_size)
+    auto aligned_allocate(usize alignment, ssize allocation_size)
         -> OptionalPtr<T> {
         Result(alignment <= 4_uki).assert();
         // A normal page allocation already has these semantics.
@@ -470,19 +469,19 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
     uintptr<Byte> const p_arena_end;
     uintptr<Byte> p_arena_current = p_arena_begin;
 
-    LinearAllocator(uintptr<void> const p_address, ssize const arena_size)
+    LinearAllocator(uintptr<void> p_address, ssize arena_size)
         : p_arena_begin(p_address.raw + arena_size.raw),
           p_arena_end(p_address.raw){};
 
     // `LinearAllocator` makes allocations in precisely the size requested.
     template <typename T>
-    auto allocation_size(ssize const allocation_size) -> ssize {
+    auto allocation_size(ssize allocation_size) -> ssize {
         return allocation_size;
     }
 
     // Try to allocate memory and bump the pointer down.
     template <typename T>
-    auto allocate(ssize const allocation_size) -> OptionalPtr<Byte> {
+    auto allocate(ssize allocation_size) -> OptionalPtr<Byte> {
         this->p_arena_current -= allocation_size.raw;
         if (this->p_arena_current >= p_arena_end) {
             return static_cast<Byte*>(this->p_arena_current);
@@ -499,7 +498,7 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
     // Try to allocate memory aligned to some boundary and bump the pointer
     // down.
     template <typename T>
-    auto aligned_allocate(usize const alignment, ssize const allocation_size)
+    auto aligned_allocate(usize alignment, ssize allocation_size)
         -> OptionalPtr<Byte> {
         uintptr<Byte> p_allocation =
             align_down(this->p_arena_current - allocation_size.raw, alignment);

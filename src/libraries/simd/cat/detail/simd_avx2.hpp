@@ -9,8 +9,8 @@
 namespace cat {
 
 template <typename T>
-[[nodiscard]] auto testc(SimdMask<Avx2Abi<T>, T> const left,
-                         SimdMask<Avx2Abi<T>, T> const right) -> int4 {
+[[nodiscard]] auto testc(SimdMask<Avx2Abi<T>, T> left,
+                         SimdMask<Avx2Abi<T>, T> right) -> int4 {
     if constexpr (is_same<T, float>) {
         return __builtin_ia32_vtestcps256(left.raw, right.raw);
     } else if constexpr (is_same<T, double>) {
@@ -25,8 +25,8 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] auto testz(SimdMask<Avx2Abi<T>, T> const left,
-                         SimdMask<Avx2Abi<T>, T> const right) -> int4 {
+[[nodiscard]] auto testz(SimdMask<Avx2Abi<T>, T> left,
+                         SimdMask<Avx2Abi<T>, T> right) -> int4 {
     if constexpr (is_same<T, float>) {
         return __builtin_ia32_vtestzps256(left.raw, right.raw);
     } else if constexpr (is_same<T, double>) {
@@ -42,20 +42,20 @@ template <typename T>
 
 // Implementation of `all_of()` for AVX2.
 template <typename T>
-[[nodiscard]] auto all_of(SimdMask<Avx2Abi<T>, T> const mask) -> bool {
+[[nodiscard]] auto all_of(SimdMask<Avx2Abi<T>, T> mask) -> bool {
     return testc(mask, mask == mask) != 0;
 }
 
 // Implementation of `any_of()` for AVX2.
 template <typename T>
-[[nodiscard]] auto any_of(SimdMask<Avx2Abi<T>, T> const mask) -> bool {
+[[nodiscard]] auto any_of(SimdMask<Avx2Abi<T>, T> mask) -> bool {
     return testz(mask, mask == mask) == 0;
 }
 
 // TODO: Return a `Bitset`.
 // Implementation of `move_mask` for AVX2.
 template <typename T>
-[[nodiscard]] auto move_mask(Avx2Simd<T> const vector) -> int4 {
+[[nodiscard]] auto move_mask(Avx2Simd<T> vector) -> int4 {
     if constexpr (is_same<T, float>) {
         // Create a bitmask from the most significant bit of every `float` in
         // this vector.
@@ -74,7 +74,7 @@ template <typename T>
 // TODO: Return a `Bitset`.
 // Implementation of `move_mask` for AVX2.
 template <typename T>
-[[nodiscard]] auto move_mask(SimdMask<Avx2Abi<T>, T> const mask) -> int4 {
+[[nodiscard]] auto move_mask(SimdMask<Avx2Abi<T>, T> mask) -> int4 {
     if constexpr (is_same<T, float>) {
         // Create a bitmask from the most significant bit of every `float` in
         // this vector.

@@ -1,6 +1,6 @@
 #include <cat/linux>
 
-auto nix::sys_fstat(nix::FileDescriptor const file_descriptor)
+auto nix::sys_fstat(nix::FileDescriptor file_descriptor)
     -> cat::Scaredy<nix::FileStatus, nix::LinuxError> {
     nix::FileStatus status;
     nix::ScaredyLinux<void> result =

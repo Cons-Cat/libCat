@@ -71,7 +71,7 @@ class CollectionFacade {
             T* const p_array;
 
             constexpr Iterator(Iterator const&) = default;
-            constexpr Iterator(ssize const index, T* const p_in_array)
+            constexpr Iterator(ssize index, T* p_in_array)
                 : current_index(index), p_array(p_in_array){};
             constexpr auto dereference() -> T& {
                 return unconst(this->p_array[current_index.raw]);
@@ -79,7 +79,7 @@ class CollectionFacade {
             constexpr auto dereference() const -> T const& {
                 return this->p_array[current_index.raw];
             }
-            constexpr void advance(ssize const offset) {
+            constexpr void advance(ssize offset) {
                 this->current_index += offset;
             }
             constexpr auto distance_to(Iterator const& other) const -> ssize {
@@ -115,12 +115,12 @@ class CollectionFacade {
             ssize current_index;
             T const* const p_array;
             constexpr Iterator(Iterator const&) = default;
-            constexpr Iterator(ssize const index, T const* const p_in_array)
+            constexpr Iterator(ssize const index, T const* p_in_array)
                 : current_index(index), p_array(p_in_array){};
             constexpr auto dereference() const -> T const& {
                 return this->p_array[current_index.raw];
             }
-            constexpr void advance(ssize const offset) {
+            constexpr void advance(ssize offset) {
                 this->current_index += offset;
             }
             constexpr auto distance(Iterator const& other) const -> ssize {
@@ -161,7 +161,7 @@ class CollectionFacade {
     }
 
     // Index into this collection with bounds-checking.
-    [[nodiscard]] constexpr auto at(ssize const index) -> Optional<T&>
+    [[nodiscard]] constexpr auto at(ssize index) -> Optional<T&>
         requires(is_array_like)
     {
         Result(index >= 0).assert();
@@ -172,7 +172,7 @@ class CollectionFacade {
     }
 
     // Index into this collection with bounds-checking.
-    [[nodiscard]] constexpr auto at(ssize const index) const -> Optional<T&> {
+    [[nodiscard]] constexpr auto at(ssize index) const -> Optional<T&> {
         // `unconst()` allows `.at()` to be safely called in a `const` context.
         return unconst(this)->at(index);
     }
@@ -193,8 +193,8 @@ class CollectionFacade {
         return unconst(this)->back();
     }
 
-    [[nodiscard]] constexpr auto subspan(ssize const start_index,
-                                         ssize const end_index) -> Span<T>
+    [[nodiscard]] constexpr auto subspan(ssize start_index, ssize end_index)
+        -> Span<T>
         requires(is_array_like)
     {
         Result{start_index >= 0}.assert();
@@ -203,9 +203,8 @@ class CollectionFacade {
                        end_index - start_index);
     }
 
-    [[nodiscard]] constexpr auto subspan(ssize const start_index,
-                                         ssize const end_index) const
-        -> Span<T const>
+    [[nodiscard]] constexpr auto subspan(ssize start_index,
+                                         ssize end_index) const -> Span<T const>
         requires(is_array_like)
     {
         Result{start_index >= 0}.assert();
@@ -214,23 +213,23 @@ class CollectionFacade {
                              end_index - start_index);
     }
 
-    [[nodiscard]] constexpr auto first(ssize const count) -> Span<T>
+    [[nodiscard]] constexpr auto first(ssize count) -> Span<T>
         requires(is_array_like)
     { return this->subspan(0, count); }
 
-    [[nodiscard]] constexpr auto first(ssize const count) const -> Span<T const>
+    [[nodiscard]] constexpr auto first(ssize count) const -> Span<T const>
         requires(is_array_like)
     { return this->subspan(0, count); }
 
-    [[nodiscard]] constexpr auto last(ssize const count) -> Span<T>
+    [[nodiscard]] constexpr auto last(ssize count) -> Span<T>
         requires(is_array_like)
     { return this->subspan(this->self().size() - count, this->self().size()); }
 
-    [[nodiscard]] constexpr auto last(ssize const count) const -> Span<T const>
+    [[nodiscard]] constexpr auto last(ssize count) const -> Span<T const>
         requires(is_array_like)
     { return this->subspan(this->self().size() - count, this->self().size()); }
 
-    [[nodiscard]] constexpr auto operator[](ssize const index)
+    [[nodiscard]] constexpr auto operator[](ssize index)
         -> T& requires(is_array_like) {
         Result{index >= 0}.assert();
         Result{index < this->self().size()}.assert();
@@ -238,7 +237,7 @@ class CollectionFacade {
         return this->self_mut().p_data()[index.raw];
     }
 
-    [[nodiscard]] constexpr auto operator[](ssize const index) const
+    [[nodiscard]] constexpr auto operator[](ssize index) const
         -> T const& requires(is_array_like) {
         Result{index >= 0}.assert();
         Result{index < this->self().size()}.assert();

@@ -20,7 +20,7 @@ auto cat::compare_strings(String const string_1, String const string_2)
     char const* p_string_1_iterator = string_1.p_data();
     char const* p_string_2_iterator = string_2.p_data();
 
-    auto loop = [&](int const size) -> bool {
+    auto loop = [&](int size) -> bool {
         while (length_iterator >= vector_size * size) {
             for (int i = 0; i < size; ++i) {
                 vector_1[i].load(string_1.p_data() + (i * size));

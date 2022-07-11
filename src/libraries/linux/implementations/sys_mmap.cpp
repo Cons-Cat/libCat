@@ -2,11 +2,10 @@
 
 // `map_memory()` wraps the `mmap` Linux syscall. This returns the virtual
 // memory address which it has allocated a page at.
-auto nix::sys_mmap(usize const beginning_address, ssize const bytes_size,
-                   nix::MemoryProtectionFlags const protections,
-                   nix::MemoryFlags const flags,
-                   nix::FileDescriptor const file_descriptor,
-                   ssize const pages_offset) -> nix::ScaredyLinux<void*> {
+auto nix::sys_mmap(usize beginning_address, ssize bytes_size,
+                   nix::MemoryProtectionFlags protections,
+                   nix::MemoryFlags flags, nix::FileDescriptor file_descriptor,
+                   ssize pages_offset) -> nix::ScaredyLinux<void*> {
     // TODO: Consider `__builtin_assume_aligned()`.
     // TODO: Simplify this.
     nix::ScaredyLinux<void*> result =

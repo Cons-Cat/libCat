@@ -103,30 +103,26 @@ struct Byte {  // NOLINT
 // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4201.html
 
 template <typename U>
-[[nodiscard]] constexpr auto is_aligned(U* const p_value, usize const alignment)
+[[nodiscard]] constexpr auto is_aligned(U* p_value, usize alignment) -> bool;
+
+template <typename U>
+[[nodiscard]] constexpr auto is_aligned(uintptr<U> p_value, usize alignment)
     -> bool;
 
 template <typename U>
-[[nodiscard]] constexpr auto is_aligned(uintptr<U> const p_value,
-                                        usize const alignment) -> bool;
+[[nodiscard]] constexpr auto align_up(U* p_value, usize alignment) -> U*;
+template <typename U>
+constexpr auto align_up(uintptr<U> p_value, usize alignment) -> uintptr<U>;
 
 template <typename U>
-[[nodiscard]] constexpr auto align_up(U* const p_value, usize const alignment)
-    -> U*;
+[[nodiscard]] constexpr auto align_down(U* p_value, usize alignment) -> U*;
+
 template <typename U>
-constexpr auto align_up(uintptr<U> const p_value, usize const alignment)
+[[nodiscard]] constexpr auto align_down(uintptr<U> p_value, usize alignment)
     -> uintptr<U>;
 
-template <typename U>
-[[nodiscard]] constexpr auto align_down(U* const p_value, usize const alignment)
-    -> U*;
-
-template <typename U>
-[[nodiscard]] constexpr auto align_down(uintptr<U> const p_value,
-                                        usize const alignment) -> uintptr<U>;
-
 template <typename T>
-[[nodiscard]] constexpr auto is_power_of_two(T const value) -> bool {
+[[nodiscard]] constexpr auto is_power_of_two(T value) -> bool {
     return (value & (value - 1)) == 0;
 }
 
@@ -169,8 +165,7 @@ namespace cat::detail {
 // `BinaryStorage` is a strongly type integer that can implicitly convert
 // into either a signed or unsigned size type
 struct BinarySize {
-    // This macro is provided by GCC.
-    using Raw = __UINT64_TYPE__;
+    using Raw = uint8::Raw;
     Raw raw;
 
     constexpr BinarySize() = default;
@@ -192,48 +187,43 @@ struct BinarySize {
         return raw;
     }
 
-    [[nodiscard]] constexpr auto operator==(BinarySize const operand) const
-        -> bool {
+    [[nodiscard]] constexpr auto operator==(BinarySize operand) const -> bool {
         return this->raw == operand.raw;
     }
 
-    [[nodiscard]] constexpr auto operator<(BinarySize const operand) const
-        -> bool {
+    [[nodiscard]] constexpr auto operator<(BinarySize operand) const -> bool {
         return this->raw < operand.raw;
     }
 
-    [[nodiscard]] constexpr auto operator<=(BinarySize const operand) const
-        -> bool {
+    [[nodiscard]] constexpr auto operator<=(BinarySize operand) const -> bool {
         return this->raw <= operand.raw;
     }
 
-    [[nodiscard]] constexpr auto operator>(BinarySize const operand) const
-        -> bool {
+    [[nodiscard]] constexpr auto operator>(BinarySize operand) const -> bool {
         return this->raw > operand.raw;
     }
 
-    [[nodiscard]] constexpr auto operator>=(BinarySize const operand) const
-        -> bool {
+    [[nodiscard]] constexpr auto operator>=(BinarySize operand) const -> bool {
         return this->raw >= operand.raw;
     }
 
-    [[nodiscard]] constexpr auto operator+(BinarySize const operand) const {
+    [[nodiscard]] constexpr auto operator+(BinarySize operand) const {
         return this->raw + operand.raw;
     }
 
-    [[nodiscard]] constexpr auto operator-(BinarySize const operand) const {
+    [[nodiscard]] constexpr auto operator-(BinarySize operand) const {
         return this->raw - operand.raw;
     }
 
-    [[nodiscard]] constexpr auto operator*(BinarySize const operand) const {
+    [[nodiscard]] constexpr auto operator*(BinarySize operand) const {
         return this->raw * operand.raw;
     }
 
-    [[nodiscard]] constexpr auto operator&(BinarySize const operand) const {
+    [[nodiscard]] constexpr auto operator&(BinarySize operand) const {
         return this->raw & operand.raw;
     }
 
-    [[nodiscard]] constexpr auto operator|(BinarySize const operand) const {
+    [[nodiscard]] constexpr auto operator|(BinarySize operand) const {
         return this->raw | operand.raw;
     }
 };
@@ -246,35 +236,35 @@ constexpr auto operator""_ki(unsigned long long const input) -> ssize {
     return 1024 * static_cast<signed long long>(input);
 }
 
-constexpr auto operator""_uki(unsigned long long const input) -> usize {
+constexpr auto operator""_uki(unsigned long long input) -> usize {
     return 1024u * input;
 }
 
-constexpr auto operator""_ki(long double const input) -> ssize {
+constexpr auto operator""_ki(long double input) -> ssize {
     return static_cast<signed long long>(1024.f * input);
 }
 
-constexpr auto operator""_mi(unsigned long long const input) -> ssize {
+constexpr auto operator""_mi(unsigned long long input) -> ssize {
     return 1024ll * 1024ll * static_cast<signed long long>(input);
 }
 
-constexpr auto operator""_umi(unsigned long long const input) -> usize {
+constexpr auto operator""_umi(unsigned long long input) -> usize {
     return 1024ull * 1024ull * input;
 }
 
-constexpr auto operator""_mi(long double const input) -> ssize {
+constexpr auto operator""_mi(long double input) -> ssize {
     return static_cast<signed long long>(1024.f * 1024.f * input);
 }
 
-constexpr auto operator""_gi(unsigned long long const input) -> ssize {
+constexpr auto operator""_gi(unsigned long long input) -> ssize {
     return 1024ll * 1024ll * 1024ll * static_cast<signed long long>(input);
 }
 
-constexpr auto operator""_ugi(unsigned long long const input) -> usize {
+constexpr auto operator""_ugi(unsigned long long input) -> usize {
     return 1024ull * 1024ull * 1024ull * input;
 }
 
-constexpr auto operator""_gi(long double const input) -> ssize {
+constexpr auto operator""_gi(long double input) -> ssize {
     return static_cast<signed long long>(1024.f * 1024.f * 1024.f * 1024.f *
                                          input);
 }

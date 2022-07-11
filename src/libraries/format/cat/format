@@ -11,7 +11,7 @@
 namespace cat {
 
 // Dynamically allocate an `int4` converted to `String`.
-[[nodiscard]] auto to_string(auto& allocator, int4 const value) -> String {
+[[nodiscard]] auto to_string(auto& allocator, int4 value) -> String {
     char* p_string = allocator.template p_malloc<char>(11).value();
     detail::i32toa_jeaiii(value.raw, p_string);
     // TODO: Get the length of this integer faster.
@@ -235,8 +235,8 @@ namespace detail {
         ssize length;
         ssize max_length;
 
-        FormatStringVector(char* p_in_storage, ssize const in_length,
-                           ssize const in_max_length)
+        FormatStringVector(char* p_in_storage, ssize in_length,
+                           ssize in_max_length)
             : p_storage(p_in_storage),
               length(in_length),
               max_length(in_max_length){};
@@ -253,7 +253,7 @@ namespace detail {
             return this->max_length;
         }
 
-        auto push_back(FormatAllocator auto& allocator, char const character)
+        auto push_back(FormatAllocator auto& allocator, char character)
             -> Optional<void> {
             Optional<void> result_1;
             // TODO: Use a `.p_realloc()` call.
@@ -296,7 +296,7 @@ namespace detail {
         // For every type passed into the constructor, pack it into the arrays
         // in-order.
         template <typename T>
-        void store_argument(ssize const argument_index, T&& value) {
+        void store_argument(ssize argument_index, T&& value) {
             // Pack `value` into `packed_arguments_storage`.
             ssize const storage_index =
                 this->arguments_indices[argument_index.raw].byte_index;
@@ -343,7 +343,7 @@ namespace detail {
 
         // Unpack a formatting argument from the type-erased storage.
         template <typename T>
-        auto get(ssize const argument_index) const -> T {
+        auto get(ssize argument_index) const -> T {
             // Get the storage index out from the indices array.
             ssize const storage_index =
                 (this->p_arguments_indices + argument_index)->byte_index;
@@ -371,8 +371,8 @@ namespace detail {
         ssize length;
         ssize max_length;
 
-        FormatBufferBase(char* const p_in_string, ssize const in_length,
-                         ssize const in_max_length)
+        FormatBufferBase(char* p_in_string, ssize in_length,
+                         ssize in_max_length)
             : p_string(p_in_string),
               length(in_length),
               max_length(in_max_length){};
@@ -389,13 +389,13 @@ namespace detail {
             return this->max_length;
         }
 
-        virtual auto grow(ssize const new_size) -> Optional<void> = 0;
+        virtual auto grow(ssize new_size) -> Optional<void> = 0;
 
         void clear() {
             this->length = 0;
         }
 
-        auto push_back(Allocator&, char const character) -> Optional<void> {
+        auto push_back(Allocator&, char character) -> Optional<void> {
             // If the new length would exceed the current capacity, call
             // `.grow()` to extend the capacity, first.
             if (this->length + 1 > max_length) {
@@ -441,7 +441,7 @@ namespace detail {
         }
 
         // Overload the pure virtual `FormatBufferBase::grow()` function.
-        auto grow(ssize const) -> Optional<void> {
+        auto grow(ssize) -> Optional<void> {
             if (this->size() == 256) {
                 this->flush();
             }
@@ -497,7 +497,7 @@ namespace detail {
         using ConstIterator = decltype(format.cbegin());
 
         constexpr FormatParseContext(String const in_format,
-                                     ssize const in_arguments_count = 0)
+                                     ssize in_arguments_count = 0)
             : format(in_format), arguments_count(in_arguments_count){};
 
         constexpr auto begin() const -> Iterator {
@@ -508,7 +508,7 @@ namespace detail {
             return this->format.cend();
         }
 
-        constexpr void advance_to(Iterator const position) {
+        constexpr void advance_to(Iterator position) {
             this->format.begin().advance(position - this->format.begin());
         }
 
@@ -518,8 +518,7 @@ namespace detail {
 
         // Check if a manually indexed argument is within reasonable bounds, and
         // check that this context is not using automatic indexing.
-        constexpr auto check_argument_index(ssize const index)
-            -> Optional<void> {
+        constexpr auto check_argument_index(ssize index) -> Optional<void> {
             if (is_constant_evaluated()) {
                 if (index >= this->arguments_count) {
                     // This index is of range.
@@ -553,7 +552,7 @@ namespace detail {
         FormatHandler(
             Allocator& in_allocator,
             detail::FormatContiguousOutputIterator<Allocator> iterator,
-            String const in_format, FormatArguments const in_arguments)
+            String const in_format, FormatArguments in_arguments)
             : allocator(in_allocator),
               output_iterator(iterator),
               format(in_format),
@@ -636,7 +635,7 @@ namespace detail {
     // Format a collection of `char` and push it into some container.
     template <FormatAllocator Allocator, typename Outputter>
     auto vformat_to(Allocator& allocator, Outputter output_iterator,
-                    String const format, FormatArguments const arguments)
+                    String const format, FormatArguments arguments)
         -> ScaredyFormat<Outputter> {
         if constexpr (is_same<Outputter,
                               FormatContiguousOutputIterator<Allocator>>) {
@@ -664,7 +663,7 @@ namespace detail {
 
     template <FormatAllocator Allocator>
     auto vformat(Allocator& allocator, String const format,
-                 FormatArguments const arguments) -> ScaredyFormat<String> {
+                 FormatArguments arguments) -> ScaredyFormat<String> {
         // TODO: Estimate the size of the final formatted string, and
         // allocate that much up-front for `output`.
         ssize const initial_size = format.size() + 10;

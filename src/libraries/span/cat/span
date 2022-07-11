@@ -29,12 +29,12 @@ class Span : public CollectionFacade<Span<T>, T> {
     // Construct a `Span` as `{address, length}`.
     template <typename U>
         requires(is_implicitly_convertible<U*, T*>)
-    constexpr Span(U* const p_in_data, ssize const in_length)
+    constexpr Span(U* p_in_data, ssize in_length)
         : p_storage(static_cast<T*>(p_in_data)), length(in_length){};
 
     // Construct a `Span` between two addresses.
     template <typename U, typename V>
-    constexpr Span(U* const p_start, V* const p_end) requires(
+    constexpr Span(U* p_start, V* p_end) requires(
         is_convertible<U*, T*>&& is_convertible<V, T>)
         : p_storage(p_start), length(ssize{p_end - p_start}){};
 
