@@ -527,7 +527,7 @@ class Optional {
     constexpr Optional(detail::NullOpt) : storage(nullopt){};
 
     // Consuming `monostate` default-initializes the `Optional`.
-    constexpr Optional(Monostate) : storage(Value()){};
+    constexpr Optional(Monostate) requires(is_void<Value>) : storage(Value()){};
 
     // Any `Optional` can convert into another.
     template <typename U>
