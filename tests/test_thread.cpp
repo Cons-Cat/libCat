@@ -7,7 +7,7 @@
 
 void function(void*) {
     for (int4 i = 0; i < 15; ++i) {
-        _ = cat::print_line("Moo?");
+        _ = cat::println("Moo?");
     }
     cat::exit();
 }
@@ -22,11 +22,11 @@ void function(void*) {
             // "Failed to make thread!"
         );
     for (int4 i = 0; i < 10; ++i) {
-        _ = cat::print_line("Boo!");
+        _ = cat::println("Boo!");
     }
     thread.join().or_panic(
         // "Failed to join thread!"
     );
-    _ = cat::print_line("Finished!");
+    _ = cat::println("Finished!");
     cat::exit();
 }

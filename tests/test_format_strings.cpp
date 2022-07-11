@@ -21,7 +21,7 @@ int main() {
     allocator.reset();
     cat::String formatted_string =
         cat::format(allocator, "bb{}aa{}cc", 52, 130).or_panic();
-    _ = cat::print_line(formatted_string);
+    _ = cat::println(formatted_string);
     // TODO: `formatted_string` has an incorrect `.size()`, but the content is
     // correct.
     Result(cat::compare_strings(formatted_string, "bb52aa130cc")).or_panic();
