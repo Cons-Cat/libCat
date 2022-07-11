@@ -71,6 +71,8 @@ class String : public Span<char const> {
         this->length = move(string).length;
     }
 
+    // TODO: Make these member functions `const`.
+
     [[nodiscard]] constexpr auto substring(ssize position, ssize count)
         -> String {
         return String{this->p_storage + position, count};

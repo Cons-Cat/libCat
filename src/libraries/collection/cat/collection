@@ -5,7 +5,6 @@
 #include <cat/iterator>
 #include <cat/math>
 #include <cat/meta>
-#include <cat/optional>
 
 namespace cat {
 
