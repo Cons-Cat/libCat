@@ -29,9 +29,9 @@ int main() {
 
     // Write to the page.
     allocator.get(memory) = 10;
-    Result(allocator.get(memory) == 10).or_panic();
+    Result(allocator.get(memory) == 10).or_exit();
     // Free the page.
-    allocator.free(memory).or_panic();
+    allocator.free(memory).or_exit();
 
     // Allocation with small-size optimization.
     int stack_variable;
@@ -41,12 +41,12 @@ int main() {
     // together.
     Result(cat::abs(intptr{&stack_variable} -
                     intptr{&allocator.get(small_memory_1)}) < 512)
-        .or_panic();
+        .or_exit();
     // The handle's address should be the same as the data's if it was
     // allocated on the stack.
     int4& intref = *static_cast<int4*>(static_cast<void*>(&small_memory_1));
     intref = 10;
-    Result(allocator.get(small_memory_1) == 10).or_panic();
+    Result(allocator.get(small_memory_1) == 10).or_exit();
 
     _ = allocator.free(small_memory_1);
 
@@ -55,7 +55,7 @@ int main() {
     // apart.
     Result(cat::abs(intptr{&stack_variable} -
                     intptr{&allocator.get(small_memory_1)}) > 512)
-        .or_panic();
+        .or_exit();
     _ = allocator.free(small_memory_1);
 
     // Small-size handles have unique storage.
@@ -65,18 +65,18 @@ int main() {
     allocator.get(small_memory_3) = 2;
     auto small_memory_4 = allocator.malloca<int4>().value();
     allocator.get(small_memory_4) = 3;
-    Result(allocator.get(small_memory_2) == 1).or_panic();
-    Result(allocator.get(small_memory_3) == 2).or_panic();
-    Result(allocator.get(small_memory_4) == 3).or_panic();
+    Result(allocator.get(small_memory_2) == 1).or_exit();
+    Result(allocator.get(small_memory_3) == 2).or_exit();
+    Result(allocator.get(small_memory_4) == 3).or_exit();
 
     // Test constructor being called.
     cat::Optional testtype = allocator.malloc<TestType>();
     _ = allocator.free(testtype.value());
 
     // That constructor increments `global_int_1`.
-    Result(global_int_1 == 1).or_panic();
+    Result(global_int_1 == 1).or_exit();
     // That destructor increments `global_int_2`.
-    Result(global_int_2 == 1).or_panic();
+    Result(global_int_2 == 1).or_exit();
 
     auto smalltesttype = allocator.malloca<TestType>().value();
     allocator.get(smalltesttype) = TestType{};
@@ -85,7 +85,7 @@ int main() {
     // Aligned memory allocations.
     auto aligned_mem = allocator.aligned_alloc<int4>(32u, 4).value();
     allocator.get(aligned_mem) = 10;
-    Result(allocator.get(aligned_mem) == 10).or_panic();
+    Result(allocator.get(aligned_mem) == 10).or_exit();
     _ = allocator.free(aligned_mem);
 
     cat::exit();

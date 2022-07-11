@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/meta>
+#include <cat/string>
 #include <cat/variant>
 
 // TODO: The `Scaredy` is far less robust than `Optional`.
@@ -245,7 +246,7 @@ class Scaredy {
         return this->storage.template holds_alternative<U>();
     }
 
-    [[nodiscard]] constexpr auto or_panic() {
+    [[nodiscard]] auto or_exit() & {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return this->value();
@@ -257,7 +258,7 @@ class Scaredy {
         __builtin_unreachable();
     }
 
-    [[nodiscard]] constexpr auto or_panic() const {
+    [[nodiscard]] auto or_exit() const& {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return this->value();
@@ -267,6 +268,56 @@ class Scaredy {
         }
         exit(1);
         __builtin_unreachable();
+    }
+
+    [[nodiscard]] auto or_exit() && {
+        if (this->has_value()) [[likely]] {
+            if constexpr (!is_void<T>) {
+                return move(this->value());
+            } else {
+                return;
+            }
+        }
+        exit(1);
+        __builtin_unreachable();
+    }
+
+    [[nodiscard]] auto or_exit() const&& {
+        if (this->has_value()) [[likely]] {
+            if constexpr (!is_void<T>) {
+                return move(this->value());
+            } else {
+                return;
+            }
+        }
+        exit(1);
+        __builtin_unreachable();
+    }
+
+    [[nodiscard]] auto or_exit(String const error_message) {
+        if (this->has_value()) [[likely]] {
+            if constexpr (!is_void<T>) {
+                return move(this->value());
+            } else {
+                return;
+            }
+        } else {
+            _ = println(error_message);
+            exit(1);
+        }
+    }
+
+    [[nodiscard]] auto or_exit(String const error_message) const {
+        if (this->has_value()) [[likely]] {
+            if constexpr (!is_void<T>) {
+                return move(this->value());
+            } else {
+                return;
+            }
+        } else {
+            _ = println(error_message);
+            exit(1);
+        }
     }
 };
 
