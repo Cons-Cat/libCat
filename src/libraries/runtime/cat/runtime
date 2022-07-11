@@ -15,7 +15,7 @@ extern "C"
 namespace cat {
 // The `cat::exit()` function is provided globally. This streamlines out the
 // existence of `_exit()`.
-[[gnu::used, noreturn]] void exit(ssize exit_code = 0);
+[[noreturn]] void exit(ssize exit_code = 0);
 
 auto load_base_stack_pointer() -> void*;
 
