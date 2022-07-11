@@ -6,13 +6,15 @@
 #include <cat/simd>
 #include <cat/span>
 
+namespace std {
 // `__SIZE_TYPE__` is a GCC macro.
 // Deprecated call to `memcpy()`. Consider using `cat::copy_buffer()` instead.
 // `memcpy()` exists to enable some GCC optimizations.
-namespace std {
-extern "C" auto memcpy(void* p_destination, void const* p_source,
-                       __SIZE_TYPE__ bytes) -> void*;
-}
+extern "C" [[deprecated(
+    "std::memcpy() is deprecated! Use cat::copy_memory() instead!")]] auto
+memcpy(void* p_destination, void const* p_source, __SIZE_TYPE__ bytes) -> void*;
+}  // namespace std
+
 using std::memcpy;
 
 namespace cat {
