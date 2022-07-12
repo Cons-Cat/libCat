@@ -9,7 +9,10 @@
 extern "C"
     // GCC wants to insert a `__asan_handle_no_return()` call, which breaks
     // argument loading.
-    [[gnu::no_sanitize_address]] void
+    [[noreturn, gnu::no_sanitize_address,
+      // A `naked` function does not reserve stack space, which otherwise breaks
+      // argument loading on low optimization levels.
+      gnu::naked]] void
     _start();
 
 namespace cat {
