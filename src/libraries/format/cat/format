@@ -10,8 +10,12 @@
 namespace cat {
 
 // Dynamically allocate an `int4` converted to `String`.
-[[nodiscard]] auto to_string(auto& allocator, int4 value) -> String {
-    char* p_string = allocator.template p_malloc<char>(11).value();
+[[nodiscard]] auto to_string(auto& allocator, int4 value) -> Optional<String> {
+    Optional result = allocator.template p_malloc<char>(11);
+    if (!result.has_value()) {
+        return nullopt;
+    }
+    char* p_string = result.value();
     detail::i32toa_jeaiii(value.raw, p_string);
     // TODO: Get the length of this integer faster.
     return String{p_string};
@@ -605,9 +609,13 @@ namespace detail {
                         .discriminant) {
                 case FormatDiscriminant::int4_type:
                     {
-                        String const int_string = to_string(
+                        Optional const result = to_string(
                             handler.allocator,
                             arguments.template get<int4>(current_argument));
+                        if (!result.has_value()) {
+                            return FormatErrors::out_of_memory;
+                        }
+                        String const int_string = result.value();
 
                         // TODO: Optimize this with a multiple-insert
                         // overload.
