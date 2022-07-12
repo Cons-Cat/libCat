@@ -23,6 +23,7 @@ option(BUILD_EXAMPLE_ECHO "Compile echo.cpp." OFF)
 if(BUILD_EXAMPLE_ECHO OR BUILD_ALL_EXAMPLES)
   add_executable(echo echo.cpp)
   target_compile_options(echo PRIVATE ${CAT_CXX_FLAGS})
+  target_compile_definitions(echo PRIVATE "INLINE_MAIN")
   target_link_libraries(echo PRIVATE cat)
   target_link_options(echo PRIVATE ${CAT_LINK_FLAGS})
 endif()
@@ -55,6 +56,23 @@ if(BUILD_EXAMPLE_CAT OR BUILD_ALL_EXAMPLES)
   target_link_libraries(unixcat PRIVATE cat)
   target_link_options(unixcat PRIVATE ${CAT_LINK_FLAGS})
   set_target_properties(unixcat PROPERTIES OUTPUT_NAME cat)
+endif()
+
+# A dummy project is required to guarantee that the directories are generated.
+# The directories must be generated for symlinking `.gdbinit` to succeed.
+# This can be skipped if one or more other examples are built.
+if(
+  NOT (BUILD_ALL_EXAMPLES
+  OR BUILD_LIBC_EXAMPLES
+  OR BUILD_EXAMPLE_CAT
+  OR BUILD_EXAMPLE_CLIENT_SERVER
+  OR BUILD_EXAMPLE_ECHO
+  OR BUILD_EXAMPLE_HELLO
+  OR BUILD_EXAMPLE_WINDOW)
+)
+  add_executable(dummy echo.cpp)
+  target_link_libraries(dummy PRIVATE cat)
+  target_link_options(dummy PRIVATE ${CAT_LINK_FLAGS})
 endif()
 
 # libC executables are only configured for Release.
