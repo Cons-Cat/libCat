@@ -1,6 +1,8 @@
 #include <cat/memory>
 
-// NOLINTNEXTLINE clangd doesn't recognize the `gnu::optimize()` attribute.
+// `tree-loop-distribute-patterns` is an optimization that replaces this code
+// with a call to `memcpy`. As this function is called within `memcpy`, that
+// produces an infinite loop.
 [[gnu::optimize("-fno-tree-loop-distribute-patterns")]] void
 cat::copy_memory_small(void const* p_source, void* p_destination, ssize bytes) {
     unsigned char const* p_source_handle =
