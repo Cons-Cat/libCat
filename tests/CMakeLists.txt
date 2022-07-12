@@ -15,11 +15,10 @@ target_include_directories(cat-test INTERFACE)
 list(
   APPEND
   CAT_CXX_FLAGS_TEST
-  ${CAT_CXX_FLAGS_COMMON}
-  $<$<CONFIG:Debug>:${CAT_CXX_FLAGS_DEBUG}>
-  $<$<CONFIG:RelWithDebInfo>:${CAT_CXX_FLAGS_RELWITHDEBINFO}>
-  $<$<CONFIG:Release>:${CAT_CXX_FLAGS_RELFAST}>
-  $<$<CONFIG:RelSmall>:${CAT_CXX_FLAGS_RELSMALL}>
+  $<$<CONFIG:CatDebug>:${CAT_CXX_FLAGS_DEBUG}>
+  $<$<CONFIG:CatRelWithDebInfo>:${CAT_CXX_FLAGS_RELWITHDEBINFO}>
+  $<$<CONFIG:CatRelease>:${CAT_CXX_FLAGS_RELFAST}>
+  $<$<CONFIG:CatRelSmall>:${CAT_CXX_FLAGS_RELSMALL}>
   # Tests should fail if they produce sanitizer warnings.
   -fno-sanitize-recover=all
   # Tests should be allowed to have unused variables.

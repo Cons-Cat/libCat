@@ -1,10 +1,15 @@
 cmake_minimum_required(VERSION 3.20)
+
+# TODO: Make these apply to specific targets, not globally.
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
+
 project(cat LANGUAGES CXX)
 
-set(CMAKE_CONFIGURATION_TYPES Debug;Release;RelWithDebInfo;RelSmall)
+# Using these names, instead of the default ones provided by CMake, gives
+# me complete control over their flags.
+set(CMAKE_CONFIGURATION_TYPES CatDebug;CatRelease;CatRelWithDebInfo;CatRelSmall)
 
 list(
   APPEND
@@ -31,8 +36,6 @@ list(
   -Wall -Wextra
   # The following warnings are counter-productive for a basic-level library:
   -Wno-unused-function
-  # `main()` is variadic in libCat, which triggers this warning.
-  -Wno-main
 )
 
 list(
@@ -68,13 +71,9 @@ list(
 list(
   APPEND
   CAT_CXX_FLAGS_RELWITHDEBINFO
-  ${CAT_SANITIZER_FLAGS}
-  -O3 -ggdb3 -pipe
-  -no-pie
-  -ffunction-sections -fdata-sections
-  -fvisibility=hidden -fvisibility-inlines-hidden
-  -flto -fwhole-file -fno-plt
-  -Wl,-z,noseparate-code,--gc-sections
+  ${CAT_CXX_FLAGS_RELEASE}
+  ${CAT_CXX_FLAGS_DEBUG}
+  -O3
 )
 
 list(
@@ -94,10 +93,10 @@ list(
 list(
   APPEND CAT_CXX_FLAGS
   ${CAT_CXX_FLAGS_COMMON}
-  $<$<CONFIG:Debug>:${CAT_CXX_FLAGS_DEBUG}>
-  $<$<CONFIG:RelWithDebInfo>:${CAT_CXX_FLAGS_RELWITHDEBINFO}>
-  $<$<CONFIG:Release>:${CAT_CXX_FLAGS_RELFAST}>
-  $<$<CONFIG:RelSmall>:${CAT_CXX_FLAGS_RELSMALL}>
+  $<$<CONFIG:CatDebug>:${CAT_CXX_FLAGS_DEBUG}>
+  $<$<CONFIG:CatRelWithDebInfo>:${CAT_CXX_FLAGS_RELWITHDEBINFO}>
+  $<$<CONFIG:CatRelease>:${CAT_CXX_FLAGS_RELFAST}>
+  $<$<CONFIG:CatRelSmall>:${CAT_CXX_FLAGS_RELSMALL}>
 )
 
 list(
@@ -107,13 +106,7 @@ list(
   -nostdlib
 )
 
-list(
-  APPEND
-  CAT_DEBUG_LINK_FLAGS
-  # -Wl,--gdb-index
-)
-
-# I can't figure out which flags are for the linker and which
+# I haven't figured out which flags are for the linker and which
 # are for the compiler, so I just send them all to both.
 # TODO: Improve this.
 list(
@@ -127,22 +120,12 @@ list(
   -Wl,-z,noseparate-code,--gc-sections
 )
 
-# I can't figure out which flags are for the linker and which
-# are for the compiler, so I just send them all to both.
-# TODO: Improve this.
-list(
-  APPEND
-  CAT_RELEASE_DEBUG_LINK_FLAGS
-  ${CAT_RELEASE_LINK_FLAGS}
-  ${CAT_DEBUG_LINK_FLAGS}
-)
-
 list(
   APPEND CAT_LINK_FLAGS
-  $<$<CONFIG:Debug>:${CAT_COMMON_LINK_FLAGS}>
-  $<$<CONFIG:RelWithDebInfo>:${CAT_RELEASE_DEBUG_LINK_FLAGS}>
-  $<$<CONFIG:Release>:${CAT_RELEASE_LINK_FLAGS}>
-  $<$<CONFIG:RelSmall>:${CAT_RELEASE_LINK_FLAGS}>
+  $<$<CONFIG:CatDebug>:${CAT_COMMON_LINK_FLAGS}>
+  $<$<CONFIG:CatRelWithDebInfo>:${CAT_RELEASE_LINK_FLAGS}>
+  $<$<CONFIG:CatRelease>:${CAT_RELEASE_LINK_FLAGS}>
+  $<$<CONFIG:CatRelSmall>:${CAT_RELEASE_LINK_FLAGS}>
 )
 
 add_library(cat INTERFACE)
@@ -165,10 +148,10 @@ target_link_libraries(cat INTERFACE gcc)
 # Link the address and undefined behavior sanitizers in debug builds.
 target_link_libraries(
   cat INTERFACE
-  $<$<CONFIG:RelWithDebInfo>:asan>
-  $<$<CONFIG:RelWithDebInfo>:ubsan>
-  $<$<CONFIG:Debug>:asan>
-  $<$<CONFIG:Debug>:ubsan>
+  $<$<CONFIG:CatRelWithDebInfo>:asan>
+  $<$<CONFIG:CatRelWithDebInfo>:ubsan>
+  $<$<CONFIG:CatDebug>:asan>
+  $<$<CONFIG:CatDebug>:ubsan>
 )
 
 target_compile_options(cat INTERFACE ${CAT_CXX_FLAGS})
