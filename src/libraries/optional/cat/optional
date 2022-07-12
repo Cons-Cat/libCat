@@ -905,7 +905,7 @@ class Optional {
 
     // If this `Optional` is empty, terminate the running process
     // immediately. Otherwise, return its value.
-    [[nodiscard]] auto or_exit() & {
+    [[nodiscard]] auto or_exit(ssize exit_code = 1) & {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return this->value();
@@ -913,14 +913,14 @@ class Optional {
                 return;
             }
         } else {
-            exit(1);
+            exit(exit_code);
         }
         __builtin_unreachable();  // This prevents a build warning.
     }
 
     // If this `Optional` is empty, terminate the running process
     // immediately. Otherwise, return its value.
-    [[nodiscard]] auto or_exit() const& {
+    [[nodiscard]] auto or_exit(ssize exit_code = 1) const& {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return this->value();
@@ -928,14 +928,14 @@ class Optional {
                 return;
             }
         } else {
-            exit(1);
+            exit(exit_code);
         }
         __builtin_unreachable();  // This prevents a build warning.
     }
 
     // If this `Optional` is empty, terminate the running process
     // immediately. Otherwise, move its value.
-    [[nodiscard]] auto or_exit() && {
+    [[nodiscard]] auto or_exit(ssize exit_code = 1) && {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return move(this->value());
@@ -943,14 +943,14 @@ class Optional {
                 return;
             }
         } else {
-            exit(1);
+            exit(exit_code);
         }
         __builtin_unreachable();  // This prevents a build warning.
     }
 
     // If this `Optional` is empty, terminate the running process
     // immediately. Otherwise, move its value.
-    [[nodiscard]] auto or_exit() const&& {
+    [[nodiscard]] auto or_exit(ssize exit_code = 1) const&& {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return move(this->value());
@@ -958,17 +958,21 @@ class Optional {
                 return;
             }
         } else {
-            exit(1);
+            exit(exit_code);
         }
         __builtin_unreachable();  // This prevents a build warning.
     }
 
     // If this `Optional` is empty, print an error message and terminate the
     // running process immediately. Otherwise, return its value.
-    [[nodiscard]] auto or_exit(String const error_message) &;
-    [[nodiscard]] auto or_exit(String const error_message) const&;
-    [[nodiscard]] auto or_exit(String const error_message) &&;
-    [[nodiscard]] auto or_exit(String const error_message) const&&;
+    [[nodiscard]] auto or_exit(String const error_message,
+                               ssize exit_code = 1) &;
+    [[nodiscard]] auto or_exit(String const error_message,
+                               ssize exit_code = 1) const&;
+    [[nodiscard]] auto or_exit(String const error_message,
+                               ssize exit_code = 1) &&;
+    [[nodiscard]] auto or_exit(String const error_message,
+                               ssize exit_code = 1) const&&;
 
     // Construct the value in-place and destroy the held value iff it
     // exists.

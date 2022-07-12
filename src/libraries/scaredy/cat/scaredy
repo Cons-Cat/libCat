@@ -246,7 +246,7 @@ class Scaredy {
         return this->storage.template holds_alternative<U>();
     }
 
-    [[nodiscard]] auto or_exit() & {
+    [[nodiscard]] auto or_exit(ssize exit_code = 1) & {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return this->value();
@@ -254,11 +254,11 @@ class Scaredy {
                 return;
             }
         }
-        exit(1);
+        exit(exit_code);
         __builtin_unreachable();
     }
 
-    [[nodiscard]] auto or_exit() const& {
+    [[nodiscard]] auto or_exit(ssize exit_code = 1) const& {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return this->value();
@@ -266,11 +266,11 @@ class Scaredy {
                 return;
             }
         }
-        exit(1);
+        exit(exit_code);
         __builtin_unreachable();
     }
 
-    [[nodiscard]] auto or_exit() && {
+    [[nodiscard]] auto or_exit(ssize exit_code = 1) && {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return move(this->value());
@@ -278,11 +278,11 @@ class Scaredy {
                 return;
             }
         }
-        exit(1);
+        exit(exit_code);
         __builtin_unreachable();
     }
 
-    [[nodiscard]] auto or_exit() const&& {
+    [[nodiscard]] auto or_exit(ssize exit_code = 1) const&& {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return move(this->value());
@@ -290,24 +290,12 @@ class Scaredy {
                 return;
             }
         }
-        exit(1);
+        exit(exit_code);
         __builtin_unreachable();
     }
 
-    [[nodiscard]] auto or_exit(String const error_message) & {
-        if (this->has_value()) [[likely]] {
-            if constexpr (!is_void<T>) {
-                return this->value();
-            } else {
-                return;
-            }
-        } else {
-            _ = eprintln(error_message);
-            exit(1);
-        }
-    }
-
-    [[nodiscard]] auto or_exit(String const error_message) const& {
+    [[nodiscard]] auto or_exit(String const error_message,
+                               ssize exit_code = 1) & {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return this->value();
@@ -316,11 +304,26 @@ class Scaredy {
             }
         } else {
             _ = eprintln(error_message);
-            exit(1);
+            exit(exit_code);
         }
     }
 
-    [[nodiscard]] auto or_exit(String const error_message) && {
+    [[nodiscard]] auto or_exit(String const error_message,
+                               ssize exit_code = 1) const& {
+        if (this->has_value()) [[likely]] {
+            if constexpr (!is_void<T>) {
+                return this->value();
+            } else {
+                return;
+            }
+        } else {
+            _ = eprintln(error_message);
+            exit(exit_code);
+        }
+    }
+
+    [[nodiscard]] auto or_exit(String const error_message,
+                               ssize exit_code = 1) && {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return move(this->value());
@@ -329,11 +332,12 @@ class Scaredy {
             }
         } else {
             _ = eprintln(error_message);
-            exit(1);
+            exit(exit_code);
         }
     }
 
-    [[nodiscard]] auto or_exit(String const error_message) const&& {
+    [[nodiscard]] auto or_exit(String const error_message,
+                               ssize exit_code = 1) const&& {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return move(this->value());
@@ -342,7 +346,7 @@ class Scaredy {
             }
         } else {
             _ = eprintln(error_message);
-            exit(1);
+            exit(exit_code);
         }
     }
 };
