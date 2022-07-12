@@ -71,6 +71,8 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/string/implementations/string_length.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/string/implementations/print.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/string/implementations/println.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/string/implementations/eprint.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/string/implementations/eprintln.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/format/implementations/itoa_jeaiii.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/syscall0.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/syscall1.cpp

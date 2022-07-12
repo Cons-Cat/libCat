@@ -965,8 +965,10 @@ class Optional {
 
     // If this `Optional` is empty, print an error message and terminate the
     // running process immediately. Otherwise, return its value.
-    [[nodiscard]] auto or_exit(String const error_message);
-    [[nodiscard]] auto or_exit(String const error_message) const;
+    [[nodiscard]] auto or_exit(String const error_message) &;
+    [[nodiscard]] auto or_exit(String const error_message) const&;
+    [[nodiscard]] auto or_exit(String const error_message) &&;
+    [[nodiscard]] auto or_exit(String const error_message) const&&;
 
     // Construct the value in-place and destroy the held value iff it
     // exists.
