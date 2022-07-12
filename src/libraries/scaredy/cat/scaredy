@@ -294,20 +294,33 @@ class Scaredy {
         __builtin_unreachable();
     }
 
-    [[nodiscard]] auto or_exit(String const error_message) {
+    [[nodiscard]] auto or_exit(String const error_message) & {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
-                return move(this->value());
+                return this->value();
             } else {
                 return;
             }
         } else {
-            _ = println(error_message);
+            _ = eprintln(error_message);
             exit(1);
         }
     }
 
-    [[nodiscard]] auto or_exit(String const error_message) const {
+    [[nodiscard]] auto or_exit(String const error_message) const& {
+        if (this->has_value()) [[likely]] {
+            if constexpr (!is_void<T>) {
+                return this->value();
+            } else {
+                return;
+            }
+        } else {
+            _ = eprintln(error_message);
+            exit(1);
+        }
+    }
+
+    [[nodiscard]] auto or_exit(String const error_message) && {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return move(this->value());
@@ -315,7 +328,20 @@ class Scaredy {
                 return;
             }
         } else {
-            _ = println(error_message);
+            _ = eprintln(error_message);
+            exit(1);
+        }
+    }
+
+    [[nodiscard]] auto or_exit(String const error_message) const&& {
+        if (this->has_value()) [[likely]] {
+            if constexpr (!is_void<T>) {
+                return move(this->value());
+            } else {
+                return;
+            }
+        } else {
+            _ = eprintln(error_message);
             exit(1);
         }
     }
