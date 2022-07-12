@@ -17,7 +17,7 @@ list(
   CAT_CXX_FLAGS_TEST
   $<$<CONFIG:CatDebug>:${CAT_CXX_FLAGS_DEBUG}>
   $<$<CONFIG:CatRelWithDebInfo>:${CAT_CXX_FLAGS_RELWITHDEBINFO}>
-  $<$<CONFIG:CatRelease>:${CAT_CXX_FLAGS_RELFAST}>
+  $<$<CONFIG:CatRelease>:${CAT_CXX_FLAGS_RELEASE}>
   $<$<CONFIG:CatRelSmall>:${CAT_CXX_FLAGS_RELSMALL}>
   # Tests should fail if they produce sanitizer warnings.
   -fno-sanitize-recover=all

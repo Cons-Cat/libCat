@@ -12,14 +12,12 @@ project(cat LANGUAGES CXX)
 set(CMAKE_CONFIGURATION_TYPES CatDebug;CatRelease;CatRelWithDebInfo;CatRelSmall)
 
 list(
-  APPEND
-  CAT_CXX_FLAGS_COMMON
+  APPEND CAT_CXX_FLAGS_COMMON
   # Disable linking libC symbols.
   -nostdlib
   -Wno-builtin-declaration-mismatch
   # These are pessimizations to libCat:
   -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
-  -fno-stack-protector # This is required for threads to work.
   # `global_includes.hpp` must be available everywhere.
   -include global_includes.hpp
   # Enable CPU intrinsics:
@@ -34,59 +32,44 @@ list(
   -fdiagnostics-color
   # Enable most warnings.
   -Wall -Wextra
-  # The following warnings are counter-productive for a basic-level library:
   -Wno-unused-function
 )
 
 list(
-  APPEND
-  CAT_SANITIZER_FLAGS
+  APPEND CAT_SANITIZER_FLAGS
   -fno-omit-frame-pointer # Required for UBsan.
   -fsanitize=undefined
   -fsanitize=address
-  # Stack overflow checking is broken in libCat.
-  # TODO: Is that still true? Why?
+  # Asan stack overflow checking does not work in libCat.
+  # TODO: Explain why.
   --param asan-stack=0
-  -fsanitize-recover=all
 )
 
 list(
-  APPEND
-  CAT_CXX_FLAGS_DEBUG
+  APPEND CAT_CXX_FLAGS_DEBUG
   ${CAT_SANITIZER_FLAGS}
   -ggdb3 -pipe
 )
 
-# Set aggressive space optimizations without `-Os`.
 list(
-  APPEND
-  CAT_CXX_FLAGS_RELEASE
-  -no-pie
+  APPEND CAT_CXX_FLAGS_RELEASE
+  -O3  
+  # Remove unused symbols.
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto -fwhole-file -fno-plt
-  -Wl,-z,noseparate-code,--gc-sections
 )
 
 list(
-  APPEND
-  CAT_CXX_FLAGS_RELWITHDEBINFO
-  ${CAT_CXX_FLAGS_RELEASE}
+  APPEND CAT_CXX_FLAGS_RELWITHDEBINFO
   ${CAT_CXX_FLAGS_DEBUG}
-  -O3
+  ${CAT_CXX_FLAGS_RELEASE}
 )
 
 list(
-  APPEND
-  CAT_CXX_FLAGS_RELFAST
+  APPEND CAT_CXX_FLAGS_RELSMALL
   ${CAT_CXX_FLAGS_RELEASE}
-  -O3
-)
-
-list(
-  APPEND
-  CAT_CXX_FLAGS_RELSMAL
-  ${CAT_CXX_FLAGS_RELEASE}
+  # Override `-O3`.
   -Os
 )
 
@@ -95,28 +78,20 @@ list(
   ${CAT_CXX_FLAGS_COMMON}
   $<$<CONFIG:CatDebug>:${CAT_CXX_FLAGS_DEBUG}>
   $<$<CONFIG:CatRelWithDebInfo>:${CAT_CXX_FLAGS_RELWITHDEBINFO}>
-  $<$<CONFIG:CatRelease>:${CAT_CXX_FLAGS_RELFAST}>
+  $<$<CONFIG:CatRelease>:${CAT_CXX_FLAGS_RELEASE}>
   $<$<CONFIG:CatRelSmall>:${CAT_CXX_FLAGS_RELSMALL}>
 )
 
 list(
-  APPEND
-  CAT_COMMON_LINK_FLAGS
+  APPEND CAT_COMMON_LINK_FLAGS
   # This is required to prevent linking 4 kibibytes of unnecessary symbols.
   -nostdlib
 )
 
-# I haven't figured out which flags are for the linker and which
-# are for the compiler, so I just send them all to both.
-# TODO: Improve this.
 list(
-  APPEND
-  CAT_RELEASE_LINK_FLAGS
+  APPEND CAT_RELEASE_LINK_FLAGS
   ${CAT_COMMON_LINK_FLAGS}
-  -no-pie
-  -ffunction-sections -fdata-sections
-  -fvisibility=hidden -fvisibility-inlines-hidden
-  -flto -fwhole-file -fno-plt
+  # Remove unused symbols.
   -Wl,-z,noseparate-code,--gc-sections
 )
 
