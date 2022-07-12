@@ -1,6 +1,6 @@
 #include <cat/tuple>
 
-int main() {
+auto main() -> int {
     using intint = cat::Tuple<int, int>;
     static_assert(cat::is_trivial<intint>);
     static_assert(sizeof(intint) == 8);

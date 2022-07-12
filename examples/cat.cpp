@@ -77,7 +77,7 @@ void read_and_print_file(char* p_file_name) {
     _ = allocator.free(io_buffer.value());
 }
 
-int main(int argc, char* p_argv[]) {
+auto main(int argc, char* p_argv[]) -> int {
     for (int i = 1; i < argc; ++i) {
         read_and_print_file(p_argv[i]);
     }

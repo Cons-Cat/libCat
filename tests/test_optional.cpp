@@ -42,7 +42,7 @@ struct ConstNonTrivial {
     }
 };
 
-int main() {
+auto main() -> int {
     // Initialize empty.
     cat::Optional<int4> foo(nullopt);
     Result(!foo.has_value()).or_exit();

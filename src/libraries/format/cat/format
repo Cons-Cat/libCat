@@ -6,7 +6,6 @@
 
 #include <cat/scaredy>
 #include <cat/string>
-#include <utility>
 
 namespace cat {
 

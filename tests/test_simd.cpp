@@ -1,6 +1,6 @@
 #include <cat/simd>
 
-int main() {
+auto main() -> int {
     // Test that vector arithmetic does not segfault.
     int4x4 vec1 = {0, 1, 2, 3};
     int4x4 vec2{0, 1, 2, 3};

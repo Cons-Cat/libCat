@@ -4,7 +4,7 @@
 #include <cat/string>
 #include <cat/utility>
 
-int main() {
+auto main() -> int {
     // Initializing a array:
     cat::Array<int4, 5> array_1 = {0, 1, 2, 3, 4};
     // Assigning a array:

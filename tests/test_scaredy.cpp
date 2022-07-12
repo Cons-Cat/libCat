@@ -42,7 +42,7 @@ auto union_errors(int4 error) -> cat::Scaredy<int8, ErrorOne, ErrorTwo> {
     }
 }
 
-int main() {
+auto main() -> int {
     cat::Scaredy result = union_errors(0);
     // The `Scaredy` here adds a flag to the `int8`, which is padded out to 16
     // bytes. No storage cost exists for the error types.

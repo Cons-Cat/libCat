@@ -17,7 +17,7 @@ consteval auto const_func() -> int4 {
     return vector[8];
 }
 
-int main() {
+auto main() -> int {
     cat::PageAllocator page_allocator;
     cat::Byte* page = page_allocator.p_malloc(4_ki).or_exit();
     cat::LinearAllocator allocator = {page, 4_ki};
