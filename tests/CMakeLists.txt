@@ -17,6 +17,7 @@ list(
   CAT_CXX_FLAGS_TEST
   $<$<CONFIG:CatDebug>:${CAT_CXX_FLAGS_DEBUG}>
   $<$<CONFIG:CatRelWithDebInfo>:${CAT_CXX_FLAGS_RELWITHDEBINFO}>
+  $<$<CONFIG:CatRelWithDebInfoNoSan>:${CAT_CXX_FLAGS_RELWITHDEBINFO_NOSAN}>
   $<$<CONFIG:CatRelease>:${CAT_CXX_FLAGS_RELEASE}>
   $<$<CONFIG:CatRelSmall>:${CAT_CXX_FLAGS_RELSMALL}>
   # Tests should fail if they produce sanitizer warnings.
@@ -79,7 +80,8 @@ endif()
 option(BUILD_TEST_FORMAT_STRINGS "Compile string formatting tests." OFF)
 if(BUILD_TEST_COMPARE_STRINGS OR BUILD_ALL_TESTS)
   add_executable(test_format_strings test_format_strings.cpp)
-  # target_compile_options(test_format_strings PRIVATE ${CAT_CXX_FLAGS_TEST})
+  #target_compile_options(test_format_strings PRIVATE ${CAT_CXX_FLAGS_TEST})
+  target_compile_definitions(test_format_strings PRIVATE "NO_ARGC_ARGV" "INLINE_MAIN")
   target_link_options(test_format_strings PRIVATE ${CAT_LINK_FLAGS})
   add_test(NAME FormatStrings COMMAND test_format_strings)
 endif()

@@ -53,7 +53,7 @@ list(
 
 list(
   APPEND CAT_CXX_FLAGS_RELEASE
-  -O3  
+  -O3
   # Remove unused symbols.
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
@@ -131,6 +131,13 @@ target_link_libraries(
 
 target_compile_options(cat INTERFACE ${CAT_CXX_FLAGS})
 target_link_options(cat INTERFACE ${CAT_LINK_FLAGS})
+
+# Build the tests.
+enable_testing()
+add_subdirectory(tests/)
+
+# Build the examples.
+add_subdirectory(examples/)
 
 # Build the tests.
 enable_testing()
