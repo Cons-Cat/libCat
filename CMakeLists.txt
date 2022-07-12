@@ -42,6 +42,7 @@ list(
   -fsanitize=undefined
   -fsanitize=address
   # Stack overflow checking is broken in libCat.
+  # TODO: Is that still true? Why?
   --param asan-stack=0
   -fsanitize-recover=all
 )
