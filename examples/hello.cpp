@@ -1,6 +1,6 @@
 #include <cat/string>
 
-int main() {
+auto main() -> int {
     _ = cat::print("Hello, world!\n");
     cat::exit();
 }

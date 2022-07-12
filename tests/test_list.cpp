@@ -3,7 +3,7 @@
 #include <cat/list>
 #include <cat/utility>
 
-int main() {
+auto main() -> int {
     cat::PageAllocator page_allocator;
     cat::Byte* p_page = page_allocator.p_malloc(4_ki).or_exit();
     cat::LinearAllocator allocator = {p_page, 4_ki};
@@ -102,8 +102,7 @@ int main() {
     [[maybe_unused]] cat::List list_init_1 =
         cat::List<int4>::from(allocator, 1, 2, 3).or_exit();
     cat::List list_init_2 =
-        cat::List<int4>::from(allocator, cat::value_list<int4, 0, 4>)
-            .or_exit();
+        cat::List<int4>::from(allocator, cat::value_list<int4, 0, 4>).or_exit();
     for (int4 i : list_init_2) {
         Result(i == 0).or_exit();
     }

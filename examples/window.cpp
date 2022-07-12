@@ -1,7 +1,7 @@
 #include <cat/allocators>
 #include <cat/x11>
 
-int main() {
+auto main() -> int {
     cat::PageAllocator allocator;
     // TODO: Work on this more.
     [[maybe_unused]] x11::Connection connection =

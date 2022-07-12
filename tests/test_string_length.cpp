@@ -3,7 +3,7 @@
 #include <cat/utility>
 #include <format>
 
-int main() {
+auto main() -> int {
     char const* p_string_1 = "Hello!";
     char const* const p_string_2 = "Hello!";
 

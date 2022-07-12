@@ -1,7 +1,7 @@
 #include <cat/allocators>
 #include <cat/format>
 
-int main() {
+auto main() -> int {
     // Make allocator for string formatting.
     cat::PageAllocator pager;
     void* p_page = pager.p_malloc(4_ki).value();

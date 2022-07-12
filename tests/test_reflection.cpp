@@ -1,7 +1,7 @@
 #include <cat/type_list>
 #include <cat/variant>
 
-int main() {
+auto main() -> int {
     using Types = cat::TypeList<int, char>;
     using Type_0 = typename Types::Get<0>;
     using Type_1 = typename Types::Get<1>;

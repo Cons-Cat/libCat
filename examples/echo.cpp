@@ -2,7 +2,7 @@
 
 // TODO: Simplify with `cat::Span`.
 // TODO: Make this cross-platform.
-int main(int argc, char* p_argv[]) {
+auto main(int argc, char* p_argv[]) -> int {
     for (ssize i = 1; i < argc; ++i) {
         ssize length = 0;
         // TODO: Use a `string_length_scalar()`.

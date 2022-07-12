@@ -16,7 +16,7 @@ struct TestType {
     }
 };
 
-int main() {
+auto main() -> int {
     // Initialize an allocator.
     cat::PageAllocator allocator;
     // Allocate a page.
