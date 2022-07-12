@@ -238,8 +238,8 @@ constexpr auto operator+(StaticString<length_1> const& string_1,
 // These must be implemented after both `Optional` and `String`:
 
 template <typename T>
-[[nodiscard]] auto cat::Optional<T>::or_exit(
-    cat::String const error_message) & {
+[[nodiscard]] auto cat::Optional<T>::or_exit(cat::String const error_message,
+                                             ssize exit_code) & {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
             return this->value();
@@ -248,13 +248,13 @@ template <typename T>
         }
     } else {
         _ = eprintln(error_message);
-        exit(1);
+        exit(exit_code);
     }
 }
 
 template <typename T>
-[[nodiscard]] auto cat::Optional<T>::or_exit(
-    cat::String const error_message) const& {
+[[nodiscard]] auto cat::Optional<T>::or_exit(cat::String const error_message,
+                                             ssize exit_code) const& {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
             return this->value();
@@ -263,13 +263,13 @@ template <typename T>
         }
     } else {
         _ = eprintln(error_message);
-        exit(1);
+        exit(exit_code);
     }
 }
 
 template <typename T>
-[[nodiscard]] auto cat::Optional<T>::or_exit(
-    cat::String const error_message) && {
+[[nodiscard]] auto cat::Optional<T>::or_exit(cat::String const error_message,
+                                             ssize exit_code) && {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
             return move(this->value());
@@ -278,13 +278,13 @@ template <typename T>
         }
     } else {
         _ = eprintln(error_message);
-        exit(1);
+        exit(exit_code);
     }
 }
 
 template <typename T>
-[[nodiscard]] auto cat::Optional<T>::or_exit(
-    cat::String const error_message) const&& {
+[[nodiscard]] auto cat::Optional<T>::or_exit(cat::String const error_message,
+                                             ssize exit_code) const&& {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
             return move(this->value());
@@ -293,7 +293,7 @@ template <typename T>
         }
     } else {
         _ = eprintln(error_message);
-        exit(1);
+        exit(exit_code);
     }
 }
 

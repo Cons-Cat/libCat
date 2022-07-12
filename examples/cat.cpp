@@ -29,7 +29,7 @@ void output_to_console(nix::IoVector const& io_vector) {
 void read_and_print_file(char* p_file_name) {
     nix::FileDescriptor file_descriptor =
         nix::sys_open(p_file_name, nix::OpenMode::read_only)
-            .or_exit("No such file or directory!");
+            .or_exit("No such file or directory!", 2);
     ssize file_size = get_file_size(file_descriptor).value();
     ssize bytes_remaining = file_size;
     ssize blocks = file_size / block_size;
@@ -44,7 +44,7 @@ void read_and_print_file(char* p_file_name) {
     // TODO: Use `p_malloc()`.
     auto io_buffer =
         allocator.malloc<nix::IoVector>(cat::ssizeof(io_vectors) * blocks)
-            .or_exit();
+            .or_exit("Failed to allocate memory!", 3);
     io_vectors = cat::Span<nix::IoVector>{&allocator.get(io_buffer), blocks};
 
     while (bytes_remaining > 0) {
@@ -56,7 +56,7 @@ void read_and_print_file(char* p_file_name) {
         cat::Optional buffer = allocator.malloc<cat::Byte>(block_size);
         if (!buffer.has_value()) {
             _ = allocator.free(io_buffer);
-            cat::exit(1);
+            cat::exit(4);
         }
 
         io_vectors[current_block] =
@@ -65,7 +65,7 @@ void read_and_print_file(char* p_file_name) {
         bytes_remaining -= current_block_size;
     }
 
-    _ = nix::sys_readv(file_descriptor, io_vectors).or_exit();
+    _ = nix::sys_readv(file_descriptor, io_vectors).or_exit(5);
 
     for (nix::IoVector const& iov : io_vectors) {
         output_to_console(iov);
@@ -76,6 +76,7 @@ void read_and_print_file(char* p_file_name) {
 auto main(int argc, char* p_argv[]) -> int {
     if (argc == 1) {
         _ = cat::eprint("At least one file path must be provided!");
+        cat::exit(1);
     }
     for (int i = 1; i < argc; ++i) {
         read_and_print_file(p_argv[i]);
