@@ -469,6 +469,7 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
     uintptr<Byte> const p_arena_end;
     uintptr<Byte> p_arena_current = p_arena_begin;
 
+    // TODO: Should this be `usize`?
     LinearAllocator(uintptr<void> p_address, ssize arena_size)
         : p_arena_begin(p_address.raw + arena_size.raw),
           p_arena_end(p_address.raw){};
