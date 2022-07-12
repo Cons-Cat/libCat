@@ -9,7 +9,7 @@ project(cat LANGUAGES CXX)
 
 # Using these names, instead of the default ones provided by CMake, gives
 # me complete control over their flags.
-set(CMAKE_CONFIGURATION_TYPES CatDebug;CatRelease;CatRelWithDebInfo;CatRelSmall)
+set(CMAKE_CONFIGURATION_TYPES CatDebug;CatRelease;CatRelWithDebInfo;CatRelWithDebInfoNoSan;CatRelSmall)
 
 list(
   APPEND CAT_CXX_FLAGS_COMMON
@@ -67,6 +67,12 @@ list(
 )
 
 list(
+  APPEND CAT_CXX_FLAGS_RELWITHDEBINFO_NOSAN
+  ${CAT_CXX_FLAGS_RELEASE}
+  -ggdb3 -pipe
+)
+
+list(
   APPEND CAT_CXX_FLAGS_RELSMALL
   ${CAT_CXX_FLAGS_RELEASE}
   # Override `-O3`.
@@ -78,6 +84,7 @@ list(
   ${CAT_CXX_FLAGS_COMMON}
   $<$<CONFIG:CatDebug>:${CAT_CXX_FLAGS_DEBUG}>
   $<$<CONFIG:CatRelWithDebInfo>:${CAT_CXX_FLAGS_RELWITHDEBINFO}>
+  $<$<CONFIG:CatRelWithDebInfoNoSan>:${CAT_CXX_FLAGS_RELWITHDEBINFO_NOSAN}>
   $<$<CONFIG:CatRelease>:${CAT_CXX_FLAGS_RELEASE}>
   $<$<CONFIG:CatRelSmall>:${CAT_CXX_FLAGS_RELSMALL}>
 )
@@ -99,6 +106,7 @@ list(
   APPEND CAT_LINK_FLAGS
   $<$<CONFIG:CatDebug>:${CAT_COMMON_LINK_FLAGS}>
   $<$<CONFIG:CatRelWithDebInfo>:${CAT_RELEASE_LINK_FLAGS}>
+  $<$<CONFIG:CatRelWithDebInfoNoSan>:${CAT_RELEASE_LINK_FLAGS}>
   $<$<CONFIG:CatRelease>:${CAT_RELEASE_LINK_FLAGS}>
   $<$<CONFIG:CatRelSmall>:${CAT_RELEASE_LINK_FLAGS}>
 )
@@ -131,13 +139,6 @@ target_link_libraries(
 
 target_compile_options(cat INTERFACE ${CAT_CXX_FLAGS})
 target_link_options(cat INTERFACE ${CAT_LINK_FLAGS})
-
-# Build the tests.
-enable_testing()
-add_subdirectory(tests/)
-
-# Build the examples.
-add_subdirectory(examples/)
 
 # Build the tests.
 enable_testing()

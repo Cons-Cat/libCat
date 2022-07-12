@@ -78,7 +78,7 @@ endif()
 
 # This tests that string formatting works.
 option(BUILD_TEST_FORMAT_STRINGS "Compile string formatting tests." OFF)
-if(BUILD_TEST_COMPARE_STRINGS OR BUILD_ALL_TESTS)
+if(BUILD_TEST_FORMAT_STRINGS OR BUILD_ALL_TESTS)
   add_executable(test_format_strings test_format_strings.cpp)
   #target_compile_options(test_format_strings PRIVATE ${CAT_CXX_FLAGS_TEST})
   target_compile_definitions(test_format_strings PRIVATE "NO_ARGC_ARGV" "INLINE_MAIN")

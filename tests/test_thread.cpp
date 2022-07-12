@@ -17,7 +17,7 @@ void function(void*) {
 [[gnu::no_sanitize_address]] auto main() -> int {
     cat::Thread thread;
     cat::PageAllocator allocator;
-    thread.create(allocator, 4_ki, function, nullptr)
+    thread.create(allocator, 4_ki - 32, function, nullptr)
         .or_exit(
             // "Failed to make thread!"
         );
