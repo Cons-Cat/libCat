@@ -4,16 +4,18 @@
 auto main() -> int {
     // Make allocator for string formatting.
     cat::PageAllocator pager;
-    void* p_page = pager.p_malloc(4_ki).value();
+    void* p_page = pager.p_malloc(4_ki).or_exit();
     cat::LinearAllocator allocator{p_page, 4_ki};
 
     // Test `int4` conversion.
-    cat::String int_string = cat::to_string(allocator, 10);
+    cat::String int_string = cat::to_string(allocator, 10).or_exit();
     Result(cat::compare_strings(int_string, "10")).or_exit();
     Result(int_string.size() == 3).or_exit();
 
-    constexpr auto const_int = cat::to_string<136>();
-    constexpr auto const_negative = cat::to_string<-1650>();
+    // TODO: Test out of memory error handling.
+
+    constexpr cat::StaticString const_int = cat::to_string<136>();
+    constexpr cat::StaticString const_negative = cat::to_string<-1650>();
     // TODO: `constexpr` string comparison.
     Result(cat::compare_strings(const_int.p_data(), "136")).or_exit();
     Result(cat::compare_strings(const_negative.p_data(), "-1650")).or_exit();
