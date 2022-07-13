@@ -85,16 +85,16 @@ concept StableAllocator = requires(AllocatorT it) {
 };
 
 template <typename Derived>
-struct AllocatorFacade {
-  protected:
+class AllocatorFacade {
     constexpr auto self() -> Derived& {
         return static_cast<Derived&>(*this);
     }
 
+  public:
     // TODO: Forward `T` constructor arguments.
     template <typename T, bool is_small_optimized, bool is_fail_safe,
               bool is_aligned>
-    auto meta_allocate(usize alignment, ssize allocation_size = ssizeof<T>()) {
+    auto meta_allocate(usize alignment, ssize allocation_size) {
         // Produce a basic handle for this memory type.
         using UnderlyingHandle = decltype(this->self().template make_handle<T>(
             T{}, allocation_size));
@@ -115,26 +115,27 @@ struct AllocatorFacade {
         // Initialize an empty `Optional`.
         Allocation maybe_memory;
 
-        if constexpr (!is_aligned) {
-            if constexpr (is_small_optimized) {
-                if (allocation_size < detail::small_size_threshold) {
-                    // Allocate memory on this stack frame and return it,
-                    // iff that would be smaller than
-                    // `detail::small_size_threshold`.
-                    T stack_memory;
-                    Handle stack_handle = stack_memory;
-                    return Optional<Handle>(stack_handle);
-                }
+        if constexpr (is_small_optimized) {
+            if (allocation_size < detail::small_size_threshold) {
+                // Allocate memory on this stack frame.
+                T stack_memory;
+                Handle stack_handle = stack_memory;
+                // Return here to skip error handling, because an on-stack
+                // allocation cannot fail.
+                return Optional<Handle>(stack_handle);
             }
-            maybe_memory = this->self().template allocate<T>(allocation_size);
-        } else {
+        }
+
+        // If this is not small size optimized, or is larger than
+        // `small_size_threshold`:
+        if constexpr (is_aligned) {
             maybe_memory = this->self().template aligned_allocate<T>(
                 alignment, allocation_size);
+        } else {
+            maybe_memory = this->self().template allocate<T>(allocation_size);
         }
 
         if constexpr (is_fail_safe) {
-            // `allocate()` returns either an `Optional` or a `Result`, both
-            // of which have `.has_value()`.
             if (!maybe_memory.has_value()) {
                 // Return an empty optional if this failed to allocate.
                 return Optional<Handle>(nullopt);
@@ -144,28 +145,15 @@ struct AllocatorFacade {
         UnderlyingHandle handle = this->self().template make_handle<T>(
             maybe_memory.value(), allocation_size);
 
-        // TODO: It should be possible to streamline this:
-        if constexpr (is_aligned) {
-            Handle aligned_handle = Handle{handle};
-            // `.access()` produces a pointer to the data, which is
-            // constructed in-place.
-            new (this->self().access(handle)) T();
+        Handle aligned_handle = Handle{handle};
+        // `.access()` produces a pointer to the data, which is
+        // constructed in-place.
+        new (this->self().access(handle)) T();
 
-            if constexpr (is_fail_safe) {
-                return Optional<Handle>(aligned_handle);
-            } else {
-                return aligned_handle;
-            }
+        if constexpr (is_fail_safe) {
+            return Optional<Handle>(aligned_handle);
         } else {
-            // `.access()` produces a pointer to the data, which is
-            // constructed in-place.
-            new (this->self().access(handle)) T();
-
-            if constexpr (is_fail_safe) {
-                return Optional<Handle>(Handle{handle});
-            } else {
-                return Handle{handle};
-            }
+            return aligned_handle;
         }
     }
 
@@ -173,13 +161,14 @@ struct AllocatorFacade {
     // Try to allocate some memory with arbitrary alignment.
     template <typename T = Byte>
     [[nodiscard]] auto malloc(ssize allocation_size = ssizeof<T>()) {
-        // TODO: Alignment should be 1.
-        if constexpr (alignof(T) > 8) {
-            // If the alignment of `T` is greater than 8, it should have
+        if constexpr (alignof(T) > 1) {
+            // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            return this->aligned_alloc(alignof(T), allocation_size);
+            return this->aligned_alloc<T>(alignof(T), allocation_size);
+        } else {
+            return this->meta_allocate<T, false, true, false>(1u,
+                                                              allocation_size);
         }
-        return this->meta_allocate<T, false, true, false>(1u, allocation_size);
     }
 
     // If this allocator has pointer stability, allocate some memory with
@@ -231,20 +220,21 @@ struct AllocatorFacade {
     }
 
     // Try to allocate small-size optimized memory.
-    template <typename T = void*>
+    template <typename T = Byte>
     [[nodiscard]] auto malloca(ssize allocation_size = ssizeof<T>()) {
-        // TODO: Fix this alignment:
-        if constexpr (alignof(T) > 8) {
+        if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            return this->aligned_malloca(alignof(T), allocation_size);
+            return this->aligned_malloca<T>(alignof(T), allocation_size);
+        } else {
+            return this->meta_allocate<T, true, true, false>(1u,
+                                                             allocation_size);
         }
-        return this->meta_allocate<T, true, true, false>(1u, allocation_size);
     }
 
     // Try to allocate small-size optimized memory guaranteed to be aligned
     // to a boundary. TODO: Work on this after improving `malloca()`.
-    template <typename T = void*>
+    template <typename T = Byte>
     [[nodiscard]] auto aligned_malloca(usize alignment,
                                        ssize allocation_size = ssizeof<T>()) {
         return this->meta_allocate<T, true, true, true>(alignment,
