@@ -83,7 +83,7 @@ auto main() -> int {
     cat::List list_5 = cat::List<int4>::cloned(allocator, list_1).or_exit();
 
     // Test that the copy was deep.
-    list_1.clear(allocator).or_exit();
+    list_1.clear(allocator);
     Result(*list_5.begin() == 0).or_exit();
     Result(*(list_5.begin() + 1) == 1).or_exit();
     Result(*(list_5.begin() + 2) == 2).or_exit();
@@ -150,6 +150,6 @@ auto main() -> int {
     Result(list_1.front() == 2).or_exit();
     Result(list_1.back() == 10).or_exit();
 
-    _ = page_allocator.free(p_page);
+    page_allocator.free(p_page);
     cat::exit();
 }

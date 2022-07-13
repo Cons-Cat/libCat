@@ -965,6 +965,7 @@ class Optional {
 
     // If this `Optional` is empty, print an error message and terminate the
     // running process immediately. Otherwise, return its value.
+    // These are implemented in `<cat/string>`.
     [[nodiscard]] auto or_exit(String const error_message,
                                ssize exit_code = 1) &;
     [[nodiscard]] auto or_exit(String const error_message,

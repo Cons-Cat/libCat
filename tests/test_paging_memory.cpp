@@ -31,7 +31,7 @@ auto main() -> int {
     allocator.get(memory) = 10;
     Result(allocator.get(memory) == 10).or_exit();
     // Free the page.
-    allocator.free(memory).or_exit();
+    allocator.free(memory);
 
     // Allocation with small-size optimization.
     int stack_variable;
@@ -48,7 +48,7 @@ auto main() -> int {
     intref = 10;
     Result(allocator.get(small_memory_1) == 10).or_exit();
 
-    _ = allocator.free(small_memory_1);
+    allocator.free(small_memory_1);
 
     small_memory_1 = allocator.malloca<int4>(1_ki).value();
     // `small_memory_1` should be in a page, so these addresses are far
@@ -56,7 +56,7 @@ auto main() -> int {
     Result(cat::abs(intptr{&stack_variable} -
                     intptr{&allocator.get(small_memory_1)}) > 512)
         .or_exit();
-    _ = allocator.free(small_memory_1);
+    allocator.free(small_memory_1);
 
     // Small-size handles have unique storage.
     auto small_memory_2 = allocator.malloca<int4>().value();
@@ -71,7 +71,7 @@ auto main() -> int {
 
     // Test constructor being called.
     cat::Optional testtype = allocator.malloc<TestType>();
-    _ = allocator.free(testtype.value());
+    allocator.free(testtype.value());
 
     // That constructor increments `global_int_1`.
     Result(global_int_1 == 1).or_exit();
@@ -80,13 +80,13 @@ auto main() -> int {
 
     auto smalltesttype = allocator.malloca<TestType>().value();
     allocator.get(smalltesttype) = TestType{};
-    _ = allocator.free(smalltesttype);
+    allocator.free(smalltesttype);
 
     // Aligned memory allocations.
     auto aligned_mem = allocator.aligned_alloc<int4>(32u, 4).value();
     allocator.get(aligned_mem) = 10;
     Result(allocator.get(aligned_mem) == 10).or_exit();
-    _ = allocator.free(aligned_mem);
+    allocator.free(aligned_mem);
 
     cat::exit();
 };

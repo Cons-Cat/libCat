@@ -291,8 +291,7 @@ class List : public CollectionFacade<List<T>, T> {
             this->p_tail = node.p_previous_node;
         }
         this->length--;
-        Optional result = allocator.free(&node);
-        Result(result.has_value()).assert();
+        allocator.free(&node);
         return Iterator{next};
     }
 
@@ -332,19 +331,16 @@ class List : public CollectionFacade<List<T>, T> {
     }
 
     // Remove an element from the front of this list.
-    auto pop_front(StableAllocator auto& allocator) -> Optional<void> {
-        if (this->length == 0) [[unlikely]] {
-            // Prevent a segfault when the list is empty.
-            return monostate;
+    void pop_front(StableAllocator auto& allocator) {
+        if (this->length > 0) [[likely]] {
+            Node& node = *(this->begin().p_node);
+            if (node.p_next_node != nullptr) [[likely]] {
+                node.p_next_node->p_previous_node = nullptr;
+            }
+            this->p_head = node.p_next_node;
+            this->length--;
+            allocator.free(&node);
         }
-
-        Node& node = *(this->begin().p_node);
-        if (node.p_next_node != nullptr) [[likely]] {
-            node.p_next_node->p_previous_node = nullptr;
-        }
-        this->p_head = node.p_next_node;
-        this->length--;
-        return allocator.free(&node);
     }
 
     // Allocate a node and insert it at the end of this list.
@@ -383,36 +379,26 @@ class List : public CollectionFacade<List<T>, T> {
     }
 
     // Remove and deallocate an element from the back of this list.
-    auto pop_back(StableAllocator auto& allocator) -> Optional<void> {
-        if (this->length == 0) [[unlikely]] {
-            // Prevent a segfault when the list is empty.
-            return monostate;
+    void pop_back(StableAllocator auto& allocator) {
+        if (this->length > 0) [[likely]] {
+            Node& node = *(this->end().p_node);
+            if (node.p_previous_node != nullptr) [[likely]] {
+                node.p_previous_node->p_next_node = nullptr;
+            }
+            this->p_tail = node.p_previous_node;
+            this->length--;
+            allocator.free(&node);
         }
-
-        Node& node = *(this->end().p_node);
-        if (node.p_previous_node != nullptr) [[likely]] {
-            node.p_previous_node->p_next_node = nullptr;
-        }
-        this->p_tail = node.p_previous_node;
-        this->length--;
-        return allocator.free(&node);
     }
 
     // Remove and deallocate all elements from this list. All nodes must have
     // been allocated by the same arena for this function to succeed.
-    auto clear(StableAllocator auto& allocator) -> Optional<void> {
+    void clear(StableAllocator auto& allocator) {
         for (Iterator iterator = this->begin(); iterator != this->end();
              ++iterator) {
-            Optional result = allocator.free(iterator.p_node);
-            // `.clear` should never be given an allocator that can fail here.
-            // Failures might happen if some nodes were allocated by a different
-            // arena than this passed-in `allocator`.
-            if (!result.has_value()) [[unlikely]] {
-                return result;
-            }
+            allocator.free(iterator.p_node);
         }
         this->length = 0;
-        return monostate;
     }
 
     // Deep-copy the contents of another `List`.
@@ -641,12 +627,11 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         return Iterator{&node};
     }
 
-    auto erase_after(Allocator auto& allocator, Iterator where)
-        -> Optional<void> {
+    void erase_after(Allocator auto& allocator, Iterator where) {
         Node& node = *where.p_node;
         Node* p_remove = node.p_next_node;
         node.p_next_node = p_remove->p_next_node;
-        return allocator.free(p_remove);
+        allocator.free(p_remove);
     }
 
     // Allocate a node and insert it at the beginning of this list.
@@ -685,34 +670,25 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     }
 
     // Remove an element from the front of this list.
-    auto pop_front(StableAllocator auto& allocator) -> Optional<void> {
-        if (this->length == 0) [[unlikely]] {
-            // Prevent a segfault when the list is empty.
-            return monostate;
+    void pop_front(StableAllocator auto& allocator) {
+        if (this->length > 0) [[likely]] {
+            Node& node = *this->p_head;
+            this->p_head = node.p_next_node;
+            this->length--;
+            allocator.free(&node);
         }
-
-        Node& node = *this->p_head;
-        this->p_head = node.p_next_node;
-        this->length--;
-        return allocator.free(&node);
     }
 
+    // TODO: Add a `.reset()` to remove elements without deallocating them.
+    //
     // Remove and deallocate all elements from this list. All nodes must
     // have been allocated by the same arena for this function to succeed.
-    [[nodiscard]] auto clear(StableAllocator auto& allocator)
-        -> Optional<void> {
+    void clear(StableAllocator auto& allocator) {
         for (Iterator iterator = this->begin(); iterator != this->end();
              ++iterator) {
-            Optional result = allocator.free(iterator.p_node);
-            // `.clear` should never be given an allocator that can fail
-            // here. Failures might happen if some nodes were allocated by a
-            // different arena than this passed-in `allocator`.
-            if (!result.has_value()) [[unlikely]] {
-                return result;
-            }
+            allocator.free(iterator.p_node);
         }
         this->length = 0;
-        return monostate;
     }
 
     // Deep-copy the contents of another `ForwardList`.

@@ -55,7 +55,7 @@ void read_and_print_file(char* p_file_name) {
         // TODO: Handle allocation failure.
         cat::Optional buffer = allocator.malloc<cat::Byte>(block_size);
         if (!buffer.has_value()) {
-            _ = allocator.free(io_buffer);
+            allocator.free(io_buffer);
             cat::exit(4);
         }
 
@@ -70,7 +70,7 @@ void read_and_print_file(char* p_file_name) {
     for (nix::IoVector const& iov : io_vectors) {
         output_to_console(iov);
     }
-    _ = allocator.free(io_buffer);
+    allocator.free(io_buffer);
 }
 
 auto main(int argc, char* p_argv[]) -> int {

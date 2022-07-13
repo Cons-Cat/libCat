@@ -610,6 +610,7 @@ namespace detail {
         is_integral<T> && !IsSpecializationTrait<T, ArithmeticPtr>::value;
 }  // namespace detail
 
+// TODO: Support `ArithmeticPtr<void>`.
 // `ArithmeticPtr` can be constructed from any integer type or any pointer. It
 // can only convert into `T*`, but it is otherwise interchangeable with
 // integers. It satisfies the `is_integral` type trait and
