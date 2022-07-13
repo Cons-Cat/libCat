@@ -258,18 +258,14 @@ namespace detail {
 
         auto push_back(FormatAllocator auto& allocator, char character)
             -> Optional<void> {
-            Optional<void> result_1;
             // TODO: Use a `.p_realloc()` call.
             if (this->length + 1 < this->max_length) {
-                result_1 = allocator.free(this->p_storage);
-                if (!result_1.has_value()) {
-                    return nullopt;
-                }
+                allocator.free(this->p_storage);
             }
 
-            Optional result_2 =
+            Optional result =
                 allocator.template p_malloc<char>(this->max_length * 2);
-            if (!result_2.has_value()) {
+            if (!result.has_value()) {
                 return nullopt;
             }
 

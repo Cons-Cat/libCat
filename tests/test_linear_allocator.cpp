@@ -70,10 +70,10 @@ didnt_overallocate:
     }
     for (int i = 0; i < 4; ++i) {
         Result(*(p_handles[i]) == i).or_exit();
-        allocator.free(p_handles[i]).or_exit();
+        allocator.free(p_handles[i]);
     }
 
-    paging_allocator.free(p_page).or_exit();
+    paging_allocator.free(p_page);
 
     cat::exit();
 }
