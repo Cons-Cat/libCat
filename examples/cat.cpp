@@ -41,9 +41,9 @@ void read_and_print_file(char* p_file_name) {
     cat::PageAllocator allocator;
     cat::Span<nix::IoVector> io_vectors;
 
-    // TODO: Use `p_malloc()`.
+    // TODO: Use `p_alloc()`.
     auto io_buffer =
-        allocator.malloc<nix::IoVector>(cat::ssizeof(io_vectors) * blocks)
+        allocator.alloc<nix::IoVector>(cat::ssizeof(io_vectors) * blocks)
             .or_exit("Failed to allocate memory!", 3);
     io_vectors = cat::Span<nix::IoVector>{&allocator.get(io_buffer), blocks};
 
@@ -53,7 +53,7 @@ void read_and_print_file(char* p_file_name) {
         // `buffer` should be 4_ki-aligned.
         // TODO: Create an `AnyPtr` to make `Iovector` take in a `void**`.
         // TODO: Handle allocation failure.
-        cat::Optional buffer = allocator.malloc<cat::Byte>(block_size);
+        cat::Optional buffer = allocator.alloc<cat::Byte>(block_size);
         if (!buffer.has_value()) {
             allocator.free(io_buffer);
             cat::exit(4);

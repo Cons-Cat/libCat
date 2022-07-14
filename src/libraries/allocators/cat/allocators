@@ -51,9 +51,9 @@ namespace detail {
 
 template <typename AllocatorT, typename AllocationU = void*>
 concept Allocator = requires(AllocatorT allocator) {
-    // Every allocator has a `.malloc()` method.
-    allocator.malloc(ssizeof<AllocationU>());
-    allocator.template malloc<AllocationU>();
+    // Every allocator has a `.alloc()` method.
+    allocator.alloc(ssizeof<AllocationU>());
+    allocator.template alloc<AllocationU>();
 
     // TODO: It would be nice if these could make the concept more precise:
     // allocator.free(decltype(allocator.template make_handle<AllocationU>(
@@ -81,7 +81,7 @@ namespace detail {
 
 template <typename AllocatorT, typename AllocationU = void*>
 concept StableAllocator = requires(AllocatorT it) {
-    it.template p_malloc<AllocationU>();
+    it.template p_alloc<AllocationU>();
 };
 
 template <typename Derived>
@@ -94,7 +94,7 @@ class AllocatorFacade {
     // TODO: Forward `T` constructor arguments.
     template <typename T, bool is_small_optimized, bool is_fail_safe,
               bool is_aligned>
-    auto meta_allocate(usize alignment, ssize allocation_size) {
+    auto meta_alloc(usize alignment, ssize allocation_size) {
         // Produce a basic handle for this memory type.
         using UnderlyingHandle = decltype(this->self().template make_handle<T>(
             T{}, allocation_size));
@@ -160,14 +160,13 @@ class AllocatorFacade {
   public:
     // Try to allocate some memory with arbitrary alignment.
     template <typename T = Byte>
-    [[nodiscard]] auto malloc(ssize allocation_size = ssizeof<T>()) {
+    [[nodiscard]] auto alloc(ssize allocation_size = ssizeof<T>()) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            return this->aligned_alloc<T>(alignof(T), allocation_size);
+            return this->align_alloc<T>(alignof(T), allocation_size);
         } else {
-            return this->meta_allocate<T, false, true, false>(1u,
-                                                              allocation_size);
+            return this->meta_alloc<T, false, true, false>(1u, allocation_size);
         }
     }
 
@@ -175,19 +174,18 @@ class AllocatorFacade {
     // arbitrary alignment and provide a pointer handle.
     template <typename T = Byte>
         requires(detail::StableDerivedAllocator<Derived, T>)
-    [[nodiscard]] auto p_malloc(ssize allocation_size = ssizeof<T>())
+    [[nodiscard]] auto p_alloc(ssize allocation_size = ssizeof<T>())
         -> OptionalPtr<T> {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            Optional memory =
-                this->aligned_alloc<T>(alignof(T), allocation_size);
+            Optional memory = this->align_alloc<T>(alignof(T), allocation_size);
             if (memory.has_value()) {
                 return &this->get(memory.value());
             }
         } else {
             Optional memory =
-                this->meta_allocate<T, false, true, false>(1u, allocation_size);
+                this->meta_alloc<T, false, true, false>(1u, allocation_size);
             if (memory.has_value()) {
                 return &this->get(memory.value());
             }
@@ -198,21 +196,21 @@ class AllocatorFacade {
     // Try to allocate some memory guaranteed to be aligned to some
     // boundary.
     template <typename T = Byte>
-    [[nodiscard]] auto aligned_alloc(usize alignment,
-                                     ssize allocation_size = ssizeof<T>()) {
-        return this->meta_allocate<T, false, true, true>(alignment,
-                                                         allocation_size);
+    [[nodiscard]] auto align_alloc(usize alignment,
+                                   ssize allocation_size = ssizeof<T>()) {
+        return this->meta_alloc<T, false, true, true>(alignment,
+                                                      allocation_size);
     }
 
     // If this allocator has pointer stability, allocate some memory with
     // arbitrary alignment and provide a pointer handle.
     template <typename T = Byte>
         requires(detail::StableDerivedAllocator<Derived, T>)
-    [[nodiscard]] auto p_aligned_alloc(usize alignment,
-                                       ssize allocation_size = ssizeof<T>())
+    [[nodiscard]] auto p_align_alloc(usize alignment,
+                                     ssize allocation_size = ssizeof<T>())
         -> OptionalPtr<T> {
-        auto memory = this->meta_allocate<T, false, true, true>(
-            alignment, allocation_size);
+        auto memory =
+            this->meta_alloc<T, false, true, true>(alignment, allocation_size);
         if (memory.has_value()) {
             return &this->get(memory.value());
         }
@@ -221,24 +219,23 @@ class AllocatorFacade {
 
     // Try to allocate small-size optimized memory.
     template <typename T = Byte>
-    [[nodiscard]] auto malloca(ssize allocation_size = ssizeof<T>()) {
+    [[nodiscard]] auto inline_alloc(ssize allocation_size = ssizeof<T>()) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            return this->aligned_malloca<T>(alignof(T), allocation_size);
+            return this->inline_align_alloc<T>(alignof(T), allocation_size);
         } else {
-            return this->meta_allocate<T, true, true, false>(1u,
-                                                             allocation_size);
+            return this->meta_alloc<T, true, true, false>(1u, allocation_size);
         }
     }
 
     // Try to allocate small-size optimized memory guaranteed to be aligned
-    // to a boundary. TODO: Work on this after improving `malloca()`.
+    // to a boundary.
     template <typename T = Byte>
-    [[nodiscard]] auto aligned_malloca(usize alignment,
-                                       ssize allocation_size = ssizeof<T>()) {
-        return this->meta_allocate<T, true, true, true>(alignment,
-                                                        allocation_size);
+    [[nodiscard]] auto inline_align_alloc(
+        usize alignment, ssize allocation_size = ssizeof<T>()) {
+        return this->meta_alloc<T, true, true, true>(alignment,
+                                                     allocation_size);
     }
 
     // Invalidate any memory handle, invoking its data's destructor.

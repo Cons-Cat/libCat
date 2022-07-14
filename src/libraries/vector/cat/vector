@@ -28,7 +28,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         }
 
         // TODO: `.p_srealloc()`.
-        Optional result = allocator.template p_malloc<T>(new_capacity);
+        Optional result = allocator.template p_alloc<T>(new_capacity);
         if (!result.has_value()) {
             return nullopt;
         } else {
@@ -250,7 +250,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
                                ssize new_capacity) -> Optional<void> {
         if (new_capacity > this->current_capacity) {
             // TODO: `.p_srealloc()`.
-            Optional result = allocator.template p_malloc<T>(new_capacity);
+            Optional result = allocator.template p_alloc<T>(new_capacity);
             if (result.has_value()) {
                 T* p_new = result.value();
                 // TODO: If `T` is relocatable, use `copy_memory()`.
@@ -286,7 +286,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         -> Optional<void> {
         if (new_size > this->current_capacity) {
             // TODO: `.srealloc()`.
-            Optional result = allocator.template p_malloc<T>(new_size);
+            Optional result = allocator.template p_alloc<T>(new_size);
             if (!result.has_value()) {
                 return nullopt;
             } else {

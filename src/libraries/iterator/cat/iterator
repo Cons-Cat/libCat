@@ -460,9 +460,9 @@ namespace detail {
     // redundant allocator `concept` is specified here.
     template <typename AllocatorT, typename AllocationU = void*>
     concept IteratorAllocator = requires(AllocatorT allocator) {
-        // Every allocator has a `.malloc()` method.
-        allocator.malloc(ssizeof<AllocationU>());
-        allocator.template malloc<AllocationU>();
+        // Every allocator has a `.alloc()` method.
+        allocator.alloc(ssizeof<AllocationU>());
+        allocator.template alloc<AllocationU>();
     };
 }  // namespace detail
 

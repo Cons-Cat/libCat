@@ -5,7 +5,7 @@
 
 auto main() -> int {
     cat::PageAllocator page_allocator;
-    cat::Byte* p_page = page_allocator.p_malloc(4_ki).or_exit();
+    cat::Byte* p_page = page_allocator.p_alloc(4_ki).or_exit();
     cat::LinearAllocator allocator = {p_page, 4_ki};
 
     // Test insert.
