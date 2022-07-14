@@ -63,15 +63,10 @@ concept Allocator = requires(AllocatorT allocator) {
 };
 
 namespace detail {
-    template <typename AllocatorT, typename AllocationU = void*>
-    concept StableDerivedAllocator = requires(AllocatorT allocator) {
-        // If an allocator allocates a `OptionalPtr<T>` or
-        // `Optional<T*>`, allocator is assumed to have pointer-stability.
-        is_pointer<decltype(allocator
-                                .template allocate<AllocationU>(
-                                    ssizeof<AllocationU>())
-                                .value())>;
-    };
+    // `clangd` emits false-positive diagnostics if this constraint is used
+    // anonymously without a `concept`.
+    template <typename AllocatorT>
+    concept StableDerivedAllocator = AllocatorT::has_pointer_stability == true;
 
     template <typename T>
     concept HasReset = requires(T allocator) {
@@ -111,10 +106,10 @@ class AllocatorFacade {
         using UnderlyingHandle = decltype(this->self().template make_handle<T>(
             T{}, allocation_size));
 
-        // Get the return value of a user-supplied `.allocate()`. This must
-        // be a container that holds `T*`.
-        // TODO: Support `ssize`.
-        using Allocation =
+        // Get the return value of a user-supplied `.allocate()`. This must be
+        // some kind of `Optional`. It holds some data that can pass into a
+        // `Handle`'s constructor.
+        using MaybeAllocation =
             decltype(this->self().template allocate<T>(allocation_size));
 
         // Produce an appropriate handle type for this allocation.
@@ -136,7 +131,7 @@ class AllocatorFacade {
         }
 
         // Initialize an empty `Optional`.
-        Allocation maybe_memory;
+        MaybeAllocation maybe_memory;
 
         // If this is not small size optimized, or is larger than
         // `small_size_threshold`:
@@ -184,7 +179,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, allocate some memory with
     // arbitrary alignment and provide a pointer handle.
     template <typename T = Byte>
-        requires(detail::StableDerivedAllocator<Derived, T>)
+        requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_alloc(ssize allocation_size = ssizeof<T>())
         -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(&AllocatorFacade<Derived>::alloc<T>,
@@ -203,7 +198,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, allocate some memory with
     // arbitrary alignment and provide a pointer handle.
     template <typename T = Byte>
-        requires(detail::StableDerivedAllocator<Derived, T>)
+        requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_alloc(usize alignment,
                                      ssize allocation_size = ssizeof<T>())
         -> OptionalPtr<T> {
@@ -225,6 +220,7 @@ class AllocatorFacade {
     }
 
     template <typename T = Byte>
+        requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_inline_alloc(ssize allocation_size = ssizeof<T>()) {
         return this->p_wrap_allocation<T>(
             &AllocatorFacade<Derived>::align_alloc<T>, allocation_size);
@@ -240,6 +236,7 @@ class AllocatorFacade {
     }
 
     template <typename T = Byte>
+        requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_inline_align_alloc(
         ssize allocation_size = ssizeof<T>()) {
         return this->p_wrap_allocation<T>(
@@ -271,13 +268,13 @@ class AllocatorFacade {
                 this->get(memory).~Type();
             }
 
-            auto result = this->self().deallocate(memory);
+            this->self().deallocate(memory);
         }
     };
 
     // Invalidate any stable memory handle, invoking its data's destructor.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived, T>)
+        requires(detail::StableDerivedAllocator<Derived>)
     void free(T* p_memory) {
         this->self().deallocate(p_memory);
         // TODO: Call destructor.
@@ -325,15 +322,19 @@ class AllocatorFacade {
 };
 
 struct PageAllocator : public AllocatorFacade<PageAllocator> {
+    static constexpr bool has_pointer_stability = true;
+
     friend AllocatorFacade<PageAllocator>;
   private:
     template <typename T>
     struct PageMemoryHandle : BaseMemoryHandle<T> {
+        // This inherits:
+        // `T* p_storage;`
         ssize allocation_size;
     };
 
     // Allocate memory in multiples of a page-size. A page is `4_ki` large
-    // on x86-64. If fewer that 4096 bytes are allocated, that amount will
+    // on x86-64. If fewer than 4096 bytes are allocated, that amount will
     // be rounded up to 4096.
     template <typename T>
     auto allocate(ssize allocation_size) -> OptionalPtr<T> {
@@ -352,7 +353,7 @@ struct PageAllocator : public AllocatorFacade<PageAllocator> {
             // Anonymous pages (non-files) must have `0`.
             0);
         if (result.has_value()) {
-            return static_cast<T*>(static_cast<void*>(result.value()));
+            return static_cast<void*>(result.value());
         }
         return nullptr;
     }
@@ -403,6 +404,8 @@ struct PageAllocator : public AllocatorFacade<PageAllocator> {
 };
 
 struct LinearAllocator : AllocatorFacade<LinearAllocator> {
+    static constexpr bool has_pointer_stability = true;
+
     // TODO: Should this be `usize`?
     LinearAllocator(uintptr<void> p_address, ssize arena_size)
         : p_arena_begin(p_address.raw + arena_size.raw),
@@ -437,10 +440,12 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
 
     // Try to allocate memory and bump the pointer down.
     template <typename T>
-    auto allocate(ssize allocation_size) -> OptionalPtr<Byte> {
+    auto allocate(ssize allocation_size) -> OptionalPtr<T> {
         this->p_arena_current -= allocation_size.raw;
         if (this->p_arena_current >= p_arena_end) {
-            return static_cast<Byte*>(this->p_arena_current);
+            // Return a pointer that is then used to in-place construct a `T`.
+            return reinterpret_cast<T*>(
+                static_cast<Byte*>(this->p_arena_current));
         }
         return nullptr;
     }
@@ -457,12 +462,14 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
     // down.
     template <typename T>
     auto aligned_allocate(usize alignment, ssize allocation_size)
-        -> OptionalPtr<Byte> {
+        -> OptionalPtr<T> {
         uintptr<Byte> p_allocation =
             align_down(this->p_arena_current - allocation_size.raw, alignment);
         if (p_allocation >= p_arena_end) {
             this->p_arena_current = p_allocation;
-            return static_cast<Byte*>(this->p_arena_current);
+            // Return a pointer that is then used to in-place construct a `T`.
+            return reinterpret_cast<T*>(
+                static_cast<Byte*>(this->p_arena_current));
         }
         return nullptr;
     }
@@ -471,7 +478,7 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
     // Produce a handle to allocated memory.
     template <typename T>
     auto make_handle(auto data, ssize /* unused */) -> LinearMemoryHandle<T> {
-        return LinearMemoryHandle<T>{static_cast<T*>(static_cast<void*>(data))};
+        return LinearMemoryHandle<T>{data};
     }
 
     // Access some memory.
