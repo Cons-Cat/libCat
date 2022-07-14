@@ -322,11 +322,10 @@ class AllocatorFacade {
     }
 };
 
-struct PageAllocator : public AllocatorFacade<PageAllocator> {
+class PageAllocator : public AllocatorFacade<PageAllocator> {
+    friend AllocatorFacade<PageAllocator>;
     static constexpr bool has_pointer_stability = true;
 
-    friend AllocatorFacade<PageAllocator>;
-  private:
     template <typename T>
     struct PageMemoryHandle : BaseMemoryHandle<T> {
         // This inherits:
@@ -401,21 +400,10 @@ struct PageAllocator : public AllocatorFacade<PageAllocator> {
     }
 };
 
-struct LinearAllocator : AllocatorFacade<LinearAllocator> {
+class LinearAllocator : public AllocatorFacade<LinearAllocator> {
+    friend AllocatorFacade<LinearAllocator>;
     static constexpr bool has_pointer_stability = true;
 
-    // TODO: Should this be `usize`?
-    LinearAllocator(uintptr<void> p_address, ssize arena_size)
-        : p_arena_begin(p_address.raw + arena_size.raw),
-          p_arena_end(p_address.raw){};
-
-    // Reset the bumped pointer to the beginning of this arena.
-    void reset() {
-        this->p_arena_current = p_arena_begin;
-    }
-
-    friend AllocatorFacade<LinearAllocator>;
-  private:
     template <typename T>
     struct LinearMemoryHandle : BaseMemoryHandle<T> {
         // This inherits:
@@ -428,6 +416,18 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
     uintptr<Byte> const p_arena_end;
     uintptr<Byte> p_arena_current = p_arena_begin;
 
+  public:
+    // TODO: Should this be `usize`?
+    LinearAllocator(uintptr<void> p_address, ssize arena_size)
+        : p_arena_begin(p_address.raw + arena_size.raw),
+          p_arena_end(p_address.raw){};
+
+    // Reset the bumped pointer to the beginning of this arena.
+    void reset() {
+        this->p_arena_current = p_arena_begin;
+    }
+
+  private:
     // `LinearAllocator` makes allocations in precisely the size requested.
     // TODO: Due to alignment discrepencies when bumping down, this actually
     // could be larger.
