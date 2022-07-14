@@ -8,6 +8,7 @@ auto main() -> int {
     // Initialize an allocator.
     cat::PageAllocator paging_allocator;
     int4* p_page = paging_allocator.p_alloc<int4>(1_ki).or_exit();
+    defer(paging_allocator.free(p_page);)
 
     cat::LinearAllocator allocator(p_page, 24);
     // It should not be possible to allocate 7 times here, because 24 bytes can
@@ -72,8 +73,6 @@ overallocated:
         Result(*(p_handles[i]) == i).or_exit();
         allocator.free(p_handles[i]);
     }
-
-    paging_allocator.free(p_page);
 
     cat::exit();
 }
