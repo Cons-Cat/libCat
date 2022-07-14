@@ -267,7 +267,6 @@ class AllocatorFacade {
             if constexpr (requires { this->get(memory).~Type(); }) {
                 this->get(memory).~Type();
             }
-
             this->self().deallocate(memory);
         }
     };
@@ -276,8 +275,10 @@ class AllocatorFacade {
     template <typename T>
         requires(detail::StableDerivedAllocator<Derived>)
     void free(T* p_memory) {
+        if constexpr (requires { p_memory->~T(); }) {
+            // p_memory->~T();
+        }
         this->self().deallocate(p_memory);
-        // TODO: Call destructor.
     }
 
     // TODO: Use a `MemoryHandle` `concept`.
@@ -353,30 +354,27 @@ struct PageAllocator : public AllocatorFacade<PageAllocator> {
             // Anonymous pages (non-files) must have `0`.
             0);
         if (result.has_value()) {
-            return static_cast<void*>(result.value());
+            return reinterpret_cast<T*>(static_cast<void*>(result.value()));
         }
         return nullptr;
     }
 
     // TODO: Use a `MemoryHandle` `concept`.
     // Unmap an opaque handle to page(s) of virtual memory.
-    auto deallocate(auto const& memory) -> Optional<void> {
-        Scaredy result =
-            nix::sys_munmap(memory.p_storage, memory.allocation_size);
-        if (result.has_value()) {
-            return monostate;
-        }
-        return nullopt;
+    void deallocate(auto const& memory) {
+        // There are some cases where `munmap` might fail even with private
+        // anonymous pages. These currently cannot be handled, because `.free()`
+        // does not propagate errors.
+        _ = nix::sys_munmap(memory.p_storage, memory.allocation_size);
     };
 
     // Unmap a pointer handle to page(s) of virtual memory.
     template <typename T>
-    auto deallocate(T* p_memory) -> Optional<void> {
-        Scaredy result = nix::sys_munmap(p_memory, ssizeof<T>());
-        if (result.has_value()) {
-            return monostate;
-        }
-        return nullopt;
+    void deallocate(T* p_memory) {
+        // There are some cases where `munmap` might fail even with private
+        // anonymous pages. These currently cannot be handled, because `.free()`
+        // does not propagate errors.
+        _ = nix::sys_munmap(p_memory, ssizeof<T>());
     };
 
     // Allocate a page(s) of virtual memory that is guaranteed to align to
@@ -454,9 +452,7 @@ struct LinearAllocator : AllocatorFacade<LinearAllocator> {
     // this function is no-op.
     // The parameter is `auto` because it might be
     // either an opaque handle or a pointer.
-    auto deallocate(auto const&) -> Optional<void> {
-        return monostate;
-    };
+    void deallocate(auto const&){};
 
     // Try to allocate memory aligned to some boundary and bump the pointer
     // down.

@@ -630,6 +630,8 @@ struct Process {
         this->stack_size = initial_stack_size;
         // Allocate a stack for this thread, and get an address to the top of
         // it.
+        // TODO: This stack memory should not be owned by the `Process`, to
+        // enable simpler memory management patterns.
         cat::Optional maybe_memory = allocator.p_alloc(initial_stack_size);
         if (!maybe_memory.has_value()) {
             return nix::LinuxError::inval;
@@ -680,7 +682,6 @@ parent_thread:
                        WaitOptionsFlags::exited | WaitOptionsFlags::clone |
                            WaitOptionsFlags::no_wait);
         return result;
-        // TODO: Free the stack memory.
     }
 };
 
