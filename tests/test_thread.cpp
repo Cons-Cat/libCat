@@ -18,15 +18,11 @@ void function(void*) {
     cat::Thread thread;
     cat::PageAllocator allocator;
     thread.create(allocator, 4_ki - 32, function, nullptr)
-        .or_exit(
-            // "Failed to make thread!"
-        );
+        .or_exit("Failed to make thread!");
     for (int4 i = 0; i < 10; ++i) {
         _ = cat::println("Boo!");
     }
-    thread.join().or_exit(
-        // "Failed to join thread!"
-    );
+    thread.join().or_exit("Failed to join thread!");
     _ = cat::println("Finished!");
     cat::exit();
 }
