@@ -16,11 +16,9 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
         // `T* p_storage;`
     };
 
-    // These cannot hold `void` because that is not a regular type.
-    // TODO: Support `uintptr<void>`.
-    uintptr<Byte> const p_arena_begin;
-    uintptr<Byte> const p_arena_end;
-    uintptr<Byte> p_arena_current = p_arena_begin;
+    uintptr<void> const p_arena_begin;
+    uintptr<void> const p_arena_end;
+    uintptr<void> p_arena_current = p_arena_begin;
 
   public:
     // TODO: Should this be `usize`? `.raw` could then be removed.
@@ -42,13 +40,25 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
     }
 
     // Try to allocate memory and bump the pointer down.
-    template <typename T>
-    auto allocate(ssize allocation_size) -> OptionalPtr<T> {
+    auto allocate(ssize allocation_size) -> OptionalPtr<void> {
         if (this->p_arena_current - allocation_size >= p_arena_end) {
             this->p_arena_current -= allocation_size;
             // Return a pointer that is then used to in-place construct a `T`.
-            return reinterpret_cast<T*>(
-                static_cast<Byte*>(this->p_arena_current));
+            return this->p_arena_current;
+        }
+        return nullptr;
+    }
+
+    // Try to allocate memory aligned to some boundary and bump the pointer
+    // down.
+    auto aligned_allocate(usize alignment, ssize allocation_size)
+        -> OptionalPtr<void> {
+        uintptr<void> p_allocation =
+            align_down(this->p_arena_current - allocation_size, alignment);
+        if (p_allocation >= p_arena_end) {
+            this->p_arena_current = p_allocation;
+            // Return a pointer that is then used to in-place construct a `T`.
+            return static_cast<void*>(p_allocation);
         }
         return nullptr;
     }
@@ -59,26 +69,10 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
     // either an opaque handle or a pointer.
     void deallocate(auto const&){};
 
-    // Try to allocate memory aligned to some boundary and bump the pointer
-    // down.
-    template <typename T>
-    auto aligned_allocate(usize alignment, ssize allocation_size)
-        -> OptionalPtr<T> {
-        uintptr<Byte> p_allocation =
-            align_down(this->p_arena_current - allocation_size, alignment);
-        if (p_allocation >= p_arena_end) {
-            this->p_arena_current = p_allocation;
-            // Return a pointer that is then used to in-place construct a `T`.
-            return reinterpret_cast<T*>(static_cast<Byte*>(p_allocation));
-        }
-        return nullptr;
-    }
-
-    // TODO: Why `auto`?
-    // Produce a handle to allocated memory.
+    // Produce a handle to allocated memory for any type of data.
     template <typename T>
     auto make_handle(auto data, ssize /* unused */) -> LinearMemoryHandle<T> {
-        return LinearMemoryHandle<T>{data};
+        return LinearMemoryHandle<T>{static_cast<T*>(data)};
     }
 
     // Access some memory.
