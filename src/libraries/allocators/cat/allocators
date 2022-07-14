@@ -90,6 +90,18 @@ class AllocatorFacade {
         return static_cast<Derived&>(*this);
     }
 
+    // Take a pointer to another member function, then invoke it, and propagate
+    // the address of memory that it allocated.
+    template <typename T, typename... Args>
+    auto p_wrap_allocation(auto function, Args&&... arguments)
+        -> OptionalPtr<T> {
+        Optional memory = (this->*function)(forward<Args>(arguments)...);
+        if (memory.has_value()) {
+            return &this->get(memory.value());
+        }
+        return nullptr;
+    }
+
   public:
     // TODO: Forward `T` constructor arguments.
     template <typename T, bool is_small_optimized, bool is_fail_safe,
@@ -112,9 +124,6 @@ class AllocatorFacade {
                                    // If this is not small-size optimized:
                                    UnderlyingHandle>;
 
-        // Initialize an empty `Optional`.
-        Allocation maybe_memory;
-
         if constexpr (is_small_optimized) {
             if (allocation_size < detail::small_size_threshold) {
                 // Allocate memory on this stack frame.
@@ -125,6 +134,9 @@ class AllocatorFacade {
                 return Optional<Handle>(stack_handle);
             }
         }
+
+        // Initialize an empty `Optional`.
+        Allocation maybe_memory;
 
         // If this is not small size optimized, or is larger than
         // `small_size_threshold`:
@@ -157,7 +169,6 @@ class AllocatorFacade {
         }
     }
 
-  public:
     // Try to allocate some memory with arbitrary alignment.
     template <typename T = Byte>
     [[nodiscard]] auto alloc(ssize allocation_size = ssizeof<T>()) {
@@ -176,21 +187,8 @@ class AllocatorFacade {
         requires(detail::StableDerivedAllocator<Derived, T>)
     [[nodiscard]] auto p_alloc(ssize allocation_size = ssizeof<T>())
         -> OptionalPtr<T> {
-        if constexpr (alignof(T) > 1) {
-            // If the alignment of `T` is greater than 1, it should have
-            // implied strong alignment guarantees.
-            Optional memory = this->align_alloc<T>(alignof(T), allocation_size);
-            if (memory.has_value()) {
-                return &this->get(memory.value());
-            }
-        } else {
-            Optional memory =
-                this->meta_alloc<T, false, true, false>(1u, allocation_size);
-            if (memory.has_value()) {
-                return &this->get(memory.value());
-            }
-        }
-        return nullptr;
+        return this->p_wrap_allocation<T>(&AllocatorFacade<Derived>::alloc<T>,
+                                          allocation_size);
     }
 
     // Try to allocate some memory guaranteed to be aligned to some
@@ -209,12 +207,9 @@ class AllocatorFacade {
     [[nodiscard]] auto p_align_alloc(usize alignment,
                                      ssize allocation_size = ssizeof<T>())
         -> OptionalPtr<T> {
-        auto memory =
-            this->meta_alloc<T, false, true, true>(alignment, allocation_size);
-        if (memory.has_value()) {
-            return &this->get(memory.value());
-        }
-        return nullopt;
+        return this->p_wrap_allocation<T>(
+            &AllocatorFacade<Derived>::align_alloc<T>, alignment,
+            allocation_size);
     }
 
     // Try to allocate small-size optimized memory.
@@ -229,6 +224,12 @@ class AllocatorFacade {
         }
     }
 
+    template <typename T = Byte>
+    [[nodiscard]] auto p_inline_alloc(ssize allocation_size = ssizeof<T>()) {
+        return this->p_wrap_allocation<T>(
+            &AllocatorFacade<Derived>::align_alloc<T>, allocation_size);
+    }
+
     // Try to allocate small-size optimized memory guaranteed to be aligned
     // to a boundary.
     template <typename T = Byte>
@@ -236,6 +237,13 @@ class AllocatorFacade {
         usize alignment, ssize allocation_size = ssizeof<T>()) {
         return this->meta_alloc<T, true, true, true>(alignment,
                                                      allocation_size);
+    }
+
+    template <typename T = Byte>
+    [[nodiscard]] auto p_inline_align_alloc(
+        ssize allocation_size = ssizeof<T>()) {
+        return this->p_wrap_allocation<T>(
+            &AllocatorFacade<Derived>::inline_align_alloc<T>, allocation_size);
     }
 
     // Invalidate any memory handle, invoking its data's destructor.
@@ -266,7 +274,7 @@ class AllocatorFacade {
 
     // Invalidate any stable memory handle, invoking its data's destructor.
     template <typename T>
-    // requires(detail::StableDerivedAllocator<Derived, T>)
+        requires(detail::StableDerivedAllocator<Derived, T>)
     void free(T* p_memory) {
         this->self().deallocate(p_memory);
         // TODO: Call destructor.
