@@ -8,7 +8,7 @@
 // be copy-constructed. They must be moved to pass into functions. Their
 // destructor will call an `raii()` method on the type they wrap iff that type
 // has an `raii()` method.
-//
+
 // `UniqueWeak` is a similar wrapper that can release ownership of its data, and
 // will only invoke that data's destructor if it currently holds ownership.
 
