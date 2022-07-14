@@ -1,5 +1,6 @@
-#include <cat/allocators>
 #include <cat/format>
+#include <cat/linear_allocator>
+#include <cat/page_allocator>
 
 auto main() -> int {
     // Make allocator for string formatting.

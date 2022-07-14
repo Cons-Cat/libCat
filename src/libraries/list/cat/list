@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/allocators>
+#include <cat/array>
 #include <cat/collection>
 
 // TODO: Add an `IntrusiveList`.
