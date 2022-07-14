@@ -659,37 +659,37 @@ struct ArithmeticPtr {
 
     template <typename U>
     [[nodiscard]] constexpr auto operator>(ArithmeticPtr<U, Storage> from) const
-        -> bool1 {
+        -> bool {
         return this->raw > from.raw;
     }
     [[nodiscard]] constexpr auto operator>(
-        detail::NonPtrIntegral auto from) const -> bool1 {
+        detail::NonPtrIntegral auto from) const -> bool {
         return this->raw > static_cast<Storage>(from);
     }
 
     template <typename U>
-    constexpr auto operator>=(ArithmeticPtr<U, Storage> from) const -> bool1 {
+    constexpr auto operator>=(ArithmeticPtr<U, Storage> from) const -> bool {
         return this->raw >= from.raw;
     }
-    constexpr auto operator>=(detail::NonPtrIntegral auto from) const -> bool1 {
+    constexpr auto operator>=(detail::NonPtrIntegral auto from) const -> bool {
         return this->raw >= static_cast<Storage>(from);
     }
 
     template <typename U>
     [[nodiscard]] constexpr auto operator<(ArithmeticPtr<U, Storage> from) const
-        -> bool1 {
+        -> bool {
         return this->raw < from.raw;
     }
     [[nodiscard]] constexpr auto operator<(
-        detail::NonPtrIntegral auto from) const -> bool1 {
+        detail::NonPtrIntegral auto from) const -> bool {
         return this->raw < static_cast<Storage>(from);
     }
 
     template <typename U>
-    constexpr auto operator<=(ArithmeticPtr<U, Storage> from) const -> bool1 {
+    constexpr auto operator<=(ArithmeticPtr<U, Storage> from) const -> bool {
         return this->raw <= from.raw;
     }
-    constexpr auto operator<=(detail::NonPtrIntegral auto from) const -> bool1 {
+    constexpr auto operator<=(detail::NonPtrIntegral auto from) const -> bool {
         return this->raw <= static_cast<Storage>(from);
     }
 

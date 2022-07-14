@@ -116,7 +116,7 @@ Unique(T) -> Unique<T>;
 template <typename T>
 class UniqueWeak {
     T storage;
-    bool1 owns_data = true;
+    bool owns_data = true;
 
   public:
     // Delete non-moving constructors.
@@ -166,7 +166,7 @@ class UniqueWeak {
         return *this;
     }
 
-    constexpr auto has_ownership() -> bool1 {
+    constexpr auto has_ownership() -> bool {
         return this->owns_data;
     }
 

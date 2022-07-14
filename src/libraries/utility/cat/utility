@@ -25,7 +25,7 @@ constexpr auto unconst(T const* p_value) -> T* {
     return const_cast<T*>(p_value);
 }
 
-constexpr auto is_constant_evaluated() -> cat::bool1;
+constexpr auto is_constant_evaluated() -> bool;
 
 constexpr auto ssizeof(auto const& anything) -> ssize;
 

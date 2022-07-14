@@ -45,7 +45,7 @@ namespace detail {
             return *this;
         }
 
-        constexpr auto has_value() const -> bool1 {
+        constexpr auto has_value() const -> bool {
             return this->storage.template holds_alternative<Value>();
         }
 
@@ -76,7 +76,7 @@ namespace detail {
         }
 
         template <typename U>
-        constexpr auto holds_alternative() const -> bool1 {
+        constexpr auto holds_alternative() const -> bool {
             return this->storage.template holds_alternative<U>();
         }
     };
@@ -148,7 +148,7 @@ namespace detail {
             return this->error_code;
         }
 
-        constexpr auto has_value() const -> bool1 {
+        constexpr auto has_value() const -> bool {
             return T::predicate_function(this->storage);
         }
     };
@@ -211,7 +211,7 @@ class Scaredy {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto has_value() const -> bool1 {
+    [[nodiscard]] constexpr auto has_value() const -> bool {
         return this->storage.has_value();
     }
 
@@ -242,7 +242,7 @@ class Scaredy {
     }
 
     template <typename U>
-    [[nodiscard]] constexpr auto holds_alternative() const -> bool1 {
+    [[nodiscard]] constexpr auto holds_alternative() const -> bool {
         return this->storage.template holds_alternative<U>();
     }
 

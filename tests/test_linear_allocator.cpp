@@ -16,12 +16,12 @@ auto main() -> int {
         cat::Optional handle = allocator.alloc<int4>();
         if (!handle.has_value()) {
             Result(i == 6).or_exit();
-            goto didnt_overallocate;
+            goto overallocated;
         }
     }
     cat::exit(1);
 
-didnt_overallocate:
+overallocated:
     // Invalidate all memory handles, and allocate again.
     allocator.reset();
     for (int4 i = 0; i < 4; ++i) {

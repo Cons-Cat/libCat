@@ -21,7 +21,7 @@ template <typename T>
 class Optional;
 
 // `OptionalValueStorage` holds a non-reference, non-pointer, non-`void` type
-// `T` and a `bool1` flag to represent holding a value or not.
+// `T` and a `bool` flag to represent holding a value or not.
 template <typename T>
 struct OptionalValueStorage {
     // A `union` member will not be default-constructed.
@@ -36,7 +36,7 @@ struct OptionalValueStorage {
         T storage;
     };
     using Value = T;
-    bool1 has_some = false;
+    bool has_some = false;
 
     constexpr OptionalValueStorage() : dummy{}, has_some(false){};
 
@@ -162,7 +162,7 @@ struct OptionalValueStorage {
         return move(this->storage);
     }
 
-    constexpr auto has_value() const -> bool1 {
+    constexpr auto has_value() const -> bool {
         return has_some;
     }
 
@@ -240,7 +240,7 @@ struct OptionalReferenceStorage {
         return *(move(this->p_storage));
     }
 
-    constexpr auto has_value() const -> bool1 {
+    constexpr auto has_value() const -> bool {
         return this->p_storage != nullptr;
     }
 
@@ -408,7 +408,7 @@ struct OptionalPredicateStorage {
         return move(this->storage);
     }
 
-    constexpr auto has_value() const -> bool1 {
+    constexpr auto has_value() const -> bool {
         return T::predicate_function(this->storage);
     }
 
@@ -582,7 +582,7 @@ class Optional {
         return *this;
     }
 
-    constexpr auto has_value() const -> bool1 {
+    constexpr auto has_value() const -> bool {
         return this->storage.has_value();
     }
 
