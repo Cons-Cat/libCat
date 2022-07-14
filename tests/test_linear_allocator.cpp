@@ -8,7 +8,7 @@
 auto main() -> int {
     // Initialize an allocator.
     cat::PageAllocator paging_allocator;
-    int4* p_page = paging_allocator.p_alloc<int4>(1_ki).or_exit();
+    int4* p_page = paging_allocator.p_alloc<int4>(4_ki).or_exit();
     defer(paging_allocator.free(p_page);)
 
     cat::LinearAllocator allocator(p_page, 24);

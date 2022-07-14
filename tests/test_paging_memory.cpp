@@ -20,7 +20,7 @@ auto main() -> int {
     // Initialize an allocator.
     cat::PageAllocator allocator;
     // Allocate a page.
-    auto memory = allocator.alloc<int4>(1_ki).or_exit("Failed to page memory!");
+    auto memory = allocator.alloc<int4>(4_ki).or_exit("Failed to page memory!");
     // Free the page.
     defer(allocator.free(memory);)
 

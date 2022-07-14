@@ -148,18 +148,18 @@ class AllocatorFacade {
             }
         }
 
-        UnderlyingHandle handle = this->self().template make_handle<T>(
+        UnderlyingHandle raw_handle = this->self().template make_handle<T>(
             maybe_memory.value(), allocation_size);
 
-        Handle aligned_handle = Handle{handle};
-        // `.access()` produces a pointer to the data, which is
+        Handle handle = Handle{raw_handle};
+        // `.access()` produces a pointer to the allocation, which is
         // constructed in-place.
-        new (this->self().access(handle)) T();
+        new (this->self().access(raw_handle)) T();
 
         if constexpr (is_fail_safe) {
-            return Optional<Handle>(aligned_handle);
+            return Optional<Handle>(handle);
         } else {
-            return aligned_handle;
+            return handle;
         }
     }
 
