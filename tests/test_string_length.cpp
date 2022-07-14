@@ -1,7 +1,7 @@
 #include <cat/allocators>
+#include <cat/format>
 #include <cat/string>
 #include <cat/utility>
-#include <format>
 
 auto main() -> int {
     char const* p_string_1 = "Hello!";

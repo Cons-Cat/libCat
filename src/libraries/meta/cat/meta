@@ -44,8 +44,6 @@ using usize = Numeral<__SIZE_TYPE__>;
 // TODO: Support word size of `4`:
 using ssize = Numeral<long int>;
 
-// TODO: Not sure that this should be an alias.
-using bool1 = bool;
 struct bool2;
 struct bool4;
 
@@ -300,7 +298,6 @@ constexpr bool is_integral = Integral<T>;
 
 template <typename T>
 concept Bool = __is_same(T, RemoveCvRef<bool>) ||
-               __is_same(T, RemoveCvRef<bool1>) ||
                __is_same(T, RemoveCvRef<bool2>) ||
                __is_same(T, RemoveCvRef<bool4>);
 template <typename T>

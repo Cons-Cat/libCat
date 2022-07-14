@@ -196,14 +196,14 @@ class Variant {
     static constexpr uint1 index = get_index_of_type<T, variant_size - 1>();
 
     template <typename T>
-    constexpr auto holds_alternative() -> bool1
-        requires(Types::template has_type<T>) {
+    constexpr auto holds_alternative()
+        -> bool requires(Types::template has_type<T>) {
         return this->discriminant == this->index<T>;
     }
 
     template <typename T>
-    constexpr auto holds_alternative() const -> bool1
-        requires(Types::template has_type<T>) {
+    constexpr auto holds_alternative() const
+        -> bool requires(Types::template has_type<T>) {
         return this->discriminant == this->index<T>;
     }
 
