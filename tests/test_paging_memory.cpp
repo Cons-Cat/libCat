@@ -26,12 +26,12 @@ auto main() -> int {
         cat::exit(1);
     }
     auto memory = maybe_memory.value();
+    // Free the page.
+    defer(allocator.free(memory);)
 
     // Write to the page.
     allocator.get(memory) = 10;
     Result(allocator.get(memory) == 10).or_exit();
-    // Free the page.
-    allocator.free(memory);
 
     // Allocation with small-size optimization.
     int stack_variable;
