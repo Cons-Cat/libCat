@@ -20,12 +20,7 @@ auto main() -> int {
     // Initialize an allocator.
     cat::PageAllocator allocator;
     // Allocate a page.
-    cat::Optional maybe_memory = allocator.alloc<int4>(1_ki);
-    if (!maybe_memory.has_value()) {
-        _ = cat::println("Failed to allocate memory!");
-        cat::exit(1);
-    }
-    auto memory = maybe_memory.value();
+    auto memory = allocator.alloc<int4>(1_ki).or_exit("Failed to page memory!");
     // Free the page.
     defer(allocator.free(memory);)
 
