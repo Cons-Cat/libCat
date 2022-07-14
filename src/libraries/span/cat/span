@@ -34,11 +34,14 @@ class Span : public CollectionFacade<Span<T>, T> {
 
     // Construct a `Span` between two addresses.
     template <typename U, typename V>
-    constexpr Span(U* p_start, V* p_end) requires(
-        is_convertible<U*, T*>&& is_convertible<V, T>)
-        : p_storage(p_start), length(ssize{p_end - p_start}){};
+        requires(
+            is_implicitly_convertible<U, T>&& is_implicitly_convertible<V, T>)
+    static constexpr auto between(U* p_start, V* p_end) {
+        return Span<T>{static_cast<T*>(p_start), ssize{p_end - p_start}};
+    }
 
-    // TODO: Make a `ContiguousContainer` `concept`.
+    // TODO: Make a `ContiguousContainer` `concept`. It can use the
+    // `CollectionFacade` traits.
     /*
 constexpr Span(auto const& container)
     : p_storage(container.p_data()), length(container.size()){};
