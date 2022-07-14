@@ -246,6 +246,7 @@ class AllocatorFacade {
             &AllocatorFacade<Derived>::inline_align_alloc<T>, allocation_size);
     }
 
+    // TODO: Use a `Handle` `concept`.
     // Invalidate any memory handle, invoking its data's destructor.
     template <typename Handle>
     void free(Handle const& memory) {
@@ -258,9 +259,11 @@ class AllocatorFacade {
                 if constexpr (requires { this->get(memory).~Type(); }) {
                     this->get(memory).~Type();
                 }
+            } else {
+                // If this was on stack, recurse with the underlying memory
+                // handle to remove it from the allocator.
+                this->free(memory.handle);
             }
-            // Recurse with the underlying memory handle.
-            this->free(memory.handle);
         }
         // If this is not a small-size optimized handle:
         else {
@@ -292,7 +295,7 @@ class AllocatorFacade {
             }
             return *this->self().template access<Type>(memory.handle);
         } else {
-            // Get non small-size optimized da
+            // Get non-small-size optimized data:
             return *this->self().template access<Type>(memory);
         }
     }
@@ -311,13 +314,7 @@ class AllocatorFacade {
             return *this->self().template access<Type>(memory.handle);
         } else {
             // Get non-small-size optimized data:
-            if constexpr (requires { memory.alignment; }) {
-                // Get aligned data:
-                return *this->self().template access<Type>(memory.storage);
-            } else {
-                // Get not aligned data:
-                return *this->self().template access<Type>(memory);
-            }
+            return *this->self().template access<Type>(memory);
         }
     }
 
