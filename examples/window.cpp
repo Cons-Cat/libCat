@@ -1,4 +1,4 @@
-#include <cat/allocators>
+#include <cat/page_allocator>
 #include <cat/x11>
 
 auto main() -> int {

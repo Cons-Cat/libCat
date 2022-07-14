@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/allocators>
 #include <cat/memory>
 #include <cat/meta>
 #include <cat/optional>
@@ -455,17 +456,6 @@ class AsConstReverse {
     }
 };
 
-namespace detail {
-    // `#include <cat/allocators>` introduces a circular dependency, so a
-    // redundant allocator `concept` is specified here.
-    template <typename AllocatorT, typename AllocationU = void*>
-    concept IteratorAllocator = requires(AllocatorT allocator) {
-        // Every allocator has a `.alloc()` method.
-        allocator.alloc(ssizeof<AllocationU>());
-        allocator.template alloc<AllocationU>();
-    };
-}  // namespace detail
-
 template <Iterable T>
 struct BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
     T& iterable;
@@ -482,7 +472,7 @@ struct BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
     // need to take an allocator parameter.
 
     template <typename U>
-    constexpr auto insert(detail::IteratorAllocator auto& allocator, U& value)
+    constexpr auto insert(Allocator auto& allocator, U& value)
         -> Optional<BackInsertIterator<T>&> {
         Optional result = this->iterable.push_back(allocator, value);
         if (!result.has_value()) {
@@ -498,8 +488,8 @@ struct BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
     }
 
     template <typename U>
-    constexpr auto insert(detail::IteratorAllocator auto& allocator,
-                          U const& value) -> Optional<BackInsertIterator<T>&> {
+    constexpr auto insert(Allocator auto& allocator, U const& value)
+        -> Optional<BackInsertIterator<T>&> {
         Optional result = this->iterable.push_back(allocator, value);
         if (!result.has_value()) {
             return nullopt;
@@ -520,7 +510,7 @@ struct BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
     }
 
     template <typename U>
-    constexpr auto insert(detail::IteratorAllocator auto& allocator, U&& value)
+    constexpr auto insert(Allocator auto& allocator, U&& value)
         -> Optional<BackInsertIterator<T>&> {
         Optional result =
             this->iterable.push_back(allocator, forward<U>(value));
@@ -570,7 +560,7 @@ class FrontInsertIterator : public IteratorFacade<FrontInsertIterator<T>> {
     // need to take an allocator parameter.
 
     template <typename U>
-    constexpr auto insert(detail::IteratorAllocator auto& allocator, U& value)
+    constexpr auto insert(Allocator auto& allocator, U& value)
         -> Optional<FrontInsertIterator<T>&> {
         Optional result = this->iterable.push_front(allocator, value);
         if (!result.has_value()) {
@@ -586,8 +576,8 @@ class FrontInsertIterator : public IteratorFacade<FrontInsertIterator<T>> {
     }
 
     template <typename U>
-    constexpr auto insert(detail::IteratorAllocator auto& allocator,
-                          U const& value) -> Optional<FrontInsertIterator<T>&> {
+    constexpr auto insert(Allocator auto& allocator, U const& value)
+        -> Optional<FrontInsertIterator<T>&> {
         Optional result = this->iterable.push_front(allocator, value);
         if (!result.has_value()) {
             return nullopt;
@@ -608,7 +598,7 @@ class FrontInsertIterator : public IteratorFacade<FrontInsertIterator<T>> {
     }
 
     template <typename U>
-    constexpr auto insert(detail::IteratorAllocator auto& allocator, U&& value)
+    constexpr auto insert(Allocator auto& allocator, U&& value)
         -> Optional<FrontInsertIterator<T>&> {
         Optional result =
             this->iterable.push_front(allocator, forward<U>(value));

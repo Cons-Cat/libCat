@@ -1,3 +1,5 @@
+#include <cat/linear_allocator>
+#include <cat/page_allocator>
 #include <cat/utility>
 #include <cat/vector>
 
