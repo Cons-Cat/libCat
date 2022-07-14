@@ -224,7 +224,7 @@ class List : public CollectionFacade<List<T>, T> {
     auto insert(StableAllocator auto& allocator, Iterator where, U const& value)
         -> Optional<Iterator> {
         // `cat::OptionalPtr` produces an internal compiler error in GCC 12.
-        cat::Optional memory = allocator.template p_malloc<Node>();
+        cat::Optional memory = allocator.template p_alloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -248,7 +248,7 @@ class List : public CollectionFacade<List<T>, T> {
     template <typename... Args>
     auto emplace(StableAllocator auto& allocator, Iterator where,
                  Args&&... arguments) -> Optional<Iterator> {
-        cat::Optional memory = allocator.template p_malloc<Node>();
+        cat::Optional memory = allocator.template p_alloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -300,7 +300,7 @@ class List : public CollectionFacade<List<T>, T> {
         requires(is_implicitly_convertible<U, T>)
     auto push_front(StableAllocator auto& allocator, U const& value)
         -> Optional<Iterator> {
-        cat::Optional memory = allocator.template p_malloc<Node>();
+        cat::Optional memory = allocator.template p_alloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -317,7 +317,7 @@ class List : public CollectionFacade<List<T>, T> {
     template <typename... Args>
     auto emplace_front(StableAllocator auto& allocator, Args&&... arguments)
         -> Optional<Iterator> {
-        cat::Optional memory = allocator.template p_malloc<Node>();
+        cat::Optional memory = allocator.template p_alloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -348,7 +348,7 @@ class List : public CollectionFacade<List<T>, T> {
         requires(is_implicitly_convertible<U, T>)
     auto push_back(StableAllocator auto& allocator, U const& value)
         -> Optional<Iterator> {
-        cat::Optional memory = allocator.template p_malloc<Node>();
+        cat::Optional memory = allocator.template p_alloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -365,7 +365,7 @@ class List : public CollectionFacade<List<T>, T> {
     template <typename... Args>
     auto emplace_back(StableAllocator auto& allocator, Args&&... arguments)
         -> Optional<Iterator> {
-        cat::Optional memory = allocator.template p_malloc<Node>();
+        cat::Optional memory = allocator.template p_alloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -586,7 +586,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
                       U const& value) -> Optional<Iterator>
         requires(is_implicitly_convertible<U, T>)
     {
-        cat::Optional memory = allocator.template p_malloc<Node>();
+        cat::Optional memory = allocator.template p_alloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -608,7 +608,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     template <typename... Args>
     auto emplace_after(StableAllocator auto& allocator, Iterator where,
                        Args&&... arguments) -> Optional<Iterator> {
-        cat::Optional memory = allocator.template p_malloc<Node>();
+        cat::Optional memory = allocator.template p_alloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -639,7 +639,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         requires(is_implicitly_convertible<U, T>)
     auto push_front(StableAllocator auto& allocator, U const& value)
         -> Optional<Iterator> {
-        cat::Optional memory = allocator.template p_malloc<Node>();
+        cat::Optional memory = allocator.template p_alloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -656,7 +656,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     template <typename... Args>
     auto emplace_front(StableAllocator auto& allocator, Args&&... arguments)
         -> Optional<Iterator> {
-        cat::Optional memory = allocator.template p_malloc<Node>();
+        cat::Optional memory = allocator.template p_alloc<Node>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;

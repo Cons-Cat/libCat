@@ -630,7 +630,7 @@ struct Process {
         this->stack_size = initial_stack_size;
         // Allocate a stack for this thread, and get an address to the top of
         // it.
-        cat::Optional maybe_memory = allocator.p_malloc(initial_stack_size);
+        cat::Optional maybe_memory = allocator.p_alloc(initial_stack_size);
         if (!maybe_memory.has_value()) {
             return nix::LinuxError::inval;
         }
