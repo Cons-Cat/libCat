@@ -621,16 +621,13 @@ struct ArithmeticPtr {
     Raw raw;
 
     constexpr ArithmeticPtr() = default;
-
     constexpr ArithmeticPtr(ArithmeticPtr<T, Storage> const&) = default;
-
-    constexpr ArithmeticPtr(ArithmeticPtr<T, Storage>&& input)
-        : raw(cat::move(input).raw){};
+    constexpr ArithmeticPtr(ArithmeticPtr<T, Storage>&& input) = default;
 
     constexpr ArithmeticPtr(detail::NonPtrIntegral auto input)
         : raw(static_cast<Storage>(input)){};
 
-    constexpr ArithmeticPtr(T* const& p_input) {
+    constexpr ArithmeticPtr(T* p_input) {
         this->raw = reinterpret_cast<Storage>(p_input);
     }
 
@@ -639,7 +636,7 @@ struct ArithmeticPtr {
     }
 
     constexpr operator T*() const {
-        return reinterpret_cast<T* const>(this->raw);
+        return reinterpret_cast<T const*>(this->raw);
     }
 
     constexpr auto operator=(ArithmeticPtr<T, Storage> from)
