@@ -21,8 +21,7 @@ class PageAllocator : public AllocatorFacade<PageAllocator> {
     // Allocate memory in multiples of a page-size. A page is `4_ki` large
     // on x86-64. If fewer than 4096 bytes are allocated, that amount will
     // be rounded up to 4096.
-    template <typename T>
-    auto allocate(ssize allocation_size) -> OptionalPtr<T> {
+    auto allocate(ssize allocation_size) -> OptionalPtr<void> {
         Scaredy result = nix::sys_mmap(
             0u, allocation_size,
             // TODO: Fix bit flags operators.
@@ -38,9 +37,18 @@ class PageAllocator : public AllocatorFacade<PageAllocator> {
             // Anonymous pages (non-files) must have `0`.
             0);
         if (result.has_value()) {
-            return reinterpret_cast<T*>(static_cast<void*>(result.value()));
+            return result.value();
         }
         return nullptr;
+    }
+
+    // Allocate a page(s) of virtual memory that is guaranteed to align to
+    // any power of two, less than `4_ki`.
+    auto aligned_allocate(usize alignment, ssize allocation_size)
+        -> OptionalPtr<void> {
+        Result(alignment <= 4_uki).assert();
+        // A normal page allocation already has these semantics.
+        return this->allocate(allocation_size);
     }
 
     // TODO: Use a `MemoryHandle` `concept`.
@@ -61,21 +69,10 @@ class PageAllocator : public AllocatorFacade<PageAllocator> {
         _ = nix::sys_munmap(p_memory, ssizeof<T>());
     };
 
-    // Allocate a page(s) of virtual memory that is guaranteed to align to
-    // any power of two, less than `4_ki`.
-    template <typename T>
-    auto aligned_allocate(usize alignment, ssize allocation_size)
-        -> OptionalPtr<T> {
-        Result(alignment <= 4_uki).assert();
-        // A normal page allocation already has these semantics.
-        return this->allocate<T>(allocation_size);
-    }
-
-    // TODO: Why `auto`?
-    // Produce a handle to allocated memory.
+    // Produce a handle to allocated memory for type of data.
     template <typename T>
     auto make_handle(auto data, ssize size) -> PageMemoryHandle<T> {
-        return PageMemoryHandle<T>{{data}, size};
+        return PageMemoryHandle<T>{{static_cast<T*>(data)}, size};
     }
 
     // Access a page(s) of virtual memory.
