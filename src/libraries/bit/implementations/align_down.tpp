@@ -9,13 +9,15 @@
 template <typename U>
 [[nodiscard]] constexpr auto cat::align_down(U* p_value, usize alignment)
     -> U* {
-    return uintptr<U>{p_value} & (~(alignment - 1u));
+    // TODO: Add unary `-` operator to remove `.raw`.
+    return uintptr<U>{p_value} & (-alignment.raw);
 }
 
 // Returns a value rounded down from `p_value` to the nearest `alignment`
-// boundary.
+// boundary. This only works for two's complement arithmetic.
 template <typename U>
 [[nodiscard]] constexpr auto cat::align_down(uintptr<U> p_value,
                                              usize alignment) -> uintptr<U> {
-    return p_value & (~(alignment - 1u));
+    // TODO: Add unary `-` operator to remove `.raw`.
+    return p_value & (-alignment.raw);
 }
