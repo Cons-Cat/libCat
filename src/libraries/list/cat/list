@@ -15,41 +15,19 @@ namespace detail {
         ListNode<T>* p_next_node;
         ListNode<T>* p_previous_node;
         T storage;
-
-        ListNode() = default;
-        ListNode(ListNode const&) = default;
-        ListNode(ListNode&&) = default;
-        ListNode(T value) : storage(value){};
-        auto operator=(ListNode<T> const&) -> ListNode<T>& = default;
-        auto operator=(ListNode<T>&&) -> ListNode<T>& = default;
-        auto operator=(T value) -> ListNode<T>& {
-            this->storage = value;
-        }
     };
 
     template <typename T>
     struct ForwardListNode {
         ForwardListNode<T>* p_next_node;
         T storage;
-
-        ForwardListNode() = default;
-        ForwardListNode(ForwardListNode const&) = default;
-        ForwardListNode(ForwardListNode&&) = default;
-        ForwardListNode(T value) : storage(value){};
-        auto operator=(ForwardListNode<T> const&)
-            -> ForwardListNode<T>& = default;
-        auto operator=(ForwardListNode<T>&&) -> ForwardListNode<T>& = default;
-        auto operator=(T value) -> ForwardListNode<T>& {
-            this->storage = value;
-        }
     };
 }  // namespace detail
 
 template <typename T>
 class List : public CollectionFacade<List<T>, T> {
-    using Node = detail::ListNode<T>;
-    Node* p_head;
-    Node* p_tail;
+    detail::ListNode<T>* p_head;
+    detail::ListNode<T>* p_tail;
     ssize length;
 
   public:
@@ -133,10 +111,10 @@ class List : public CollectionFacade<List<T>, T> {
     }
 
     struct Iterator : IteratorFacade<Iterator> {
-        Node* p_node;
+        detail::ListNode<T>* p_node;
 
         Iterator(Iterator const&) = default;
-        Iterator(Node* p_input) : p_node(p_input){};
+        Iterator(detail::ListNode<T>* p_input) : p_node(p_input){};
 
         auto increment() -> Iterator& {
             this->p_node = this->p_node->p_next_node;
@@ -158,7 +136,7 @@ class List : public CollectionFacade<List<T>, T> {
     };
 
   private:
-    void place_initial_node(Node& node) {
+    void place_initial_node(detail::ListNode<T>& node) {
         node.p_next_node = nullptr;
         node.p_previous_node = nullptr;
         this->p_head = &node;
@@ -166,7 +144,7 @@ class List : public CollectionFacade<List<T>, T> {
         this->length = 1;
     }
 
-    void place_node(Iterator where, Node& node) {
+    void place_node(Iterator where, detail::ListNode<T>& node) {
         // `.place_node()` should almost always be used for insertions in the
         // middle.
         if (where != this->begin() && where != this->end()) [[likely]] {
@@ -180,7 +158,7 @@ class List : public CollectionFacade<List<T>, T> {
             // Place a node at the front of this list.
             node.p_next_node = this->p_head;
             node.p_previous_node = nullptr;
-            node.p_next_node->p_previous_node = &node;
+            this->p_head->p_previous_node = &node;
             this->p_head = &node;
         } else {
             // Place a node at the back of this list.
@@ -192,7 +170,7 @@ class List : public CollectionFacade<List<T>, T> {
     }
 
     // Place a node at the front of this list.
-    void place_node_front(Node& node) {
+    void place_node_front(detail::ListNode<T>& node) {
         if (this->length > 0) [[likely]] {
             node.p_next_node = this->p_head;
             node.p_previous_node = nullptr;
@@ -205,7 +183,7 @@ class List : public CollectionFacade<List<T>, T> {
     }
 
     // Place a node at the back of this list.
-    void place_node_back(Node& node) {
+    void place_node_back(detail::ListNode<T>& node) {
         if (this->length == 0) [[unlikely]] {
             this->place_initial_node(node);
         } else {
@@ -224,14 +202,16 @@ class List : public CollectionFacade<List<T>, T> {
         requires(is_implicitly_convertible<U, T>)
     auto insert(StableAllocator auto& allocator, Iterator where, U const& value)
         -> Optional<Iterator> {
-        // `cat::OptionalPtr` produces an internal compiler error in GCC 12.
-        cat::Optional memory = allocator.template p_alloc<Node>();
+        // `cat::OptionalPtr` at here produces an internal compiler error in
+        // GCC 12.
+        cat::Optional memory =
+            allocator.template p_alloc<detail::ListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
         }
 
-        Node& node = *memory.value();
+        detail::ListNode<T>& node = *memory.value();
         node.storage = static_cast<T>(value);
 
         if (this->length == 0) [[unlikely]] {
@@ -249,13 +229,14 @@ class List : public CollectionFacade<List<T>, T> {
     template <typename... Args>
     auto emplace(StableAllocator auto& allocator, Iterator where,
                  Args&&... arguments) -> Optional<Iterator> {
-        cat::Optional memory = allocator.template p_alloc<Node>();
+        cat::Optional memory =
+            allocator.template p_alloc<detail::ListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
         }
 
-        Node& node = *memory.value();
+        detail::ListNode<T>& node = *memory.value();
         new (&node.storage) T{forward<Args>(arguments)...};
 
         if (this->length == 0) [[unlikely]] {
@@ -276,7 +257,7 @@ class List : public CollectionFacade<List<T>, T> {
             return Iterator{this->p_head};
         }
 
-        Node& node = *where.p_node;
+        detail::ListNode<T>& node = *where.p_node;
         Iterator next = node.p_next_node;
         if (&node != p_head && &node != p_tail) [[likely]] {
             // Remove a node from the middle of this list.
@@ -301,13 +282,14 @@ class List : public CollectionFacade<List<T>, T> {
         requires(is_implicitly_convertible<U, T>)
     auto push_front(StableAllocator auto& allocator, U const& value)
         -> Optional<Iterator> {
-        cat::Optional memory = allocator.template p_alloc<Node>();
+        cat::Optional memory =
+            allocator.template p_alloc<detail::ListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
         }
 
-        Node& node = *memory.value();
+        detail::ListNode<T>& node = *memory.value();
         node.storage = static_cast<T>(value);
         this->place_node_front(node);
 
@@ -318,13 +300,14 @@ class List : public CollectionFacade<List<T>, T> {
     template <typename... Args>
     auto emplace_front(StableAllocator auto& allocator, Args&&... arguments)
         -> Optional<Iterator> {
-        cat::Optional memory = allocator.template p_alloc<Node>();
+        cat::Optional memory =
+            allocator.template p_alloc<detail::ListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
         }
 
-        Node& node = *memory.value();
+        detail::ListNode<T>& node = *memory.value();
         new (&node.storage) T{forward<Args>(arguments)...};
         this->place_node_front(node);
 
@@ -334,7 +317,7 @@ class List : public CollectionFacade<List<T>, T> {
     // Remove an element from the front of this list.
     void pop_front(StableAllocator auto& allocator) {
         if (this->length > 0) [[likely]] {
-            Node& node = *(this->begin().p_node);
+            detail::ListNode<T>& node = *(this->begin().p_node);
             if (node.p_next_node != nullptr) [[likely]] {
                 node.p_next_node->p_previous_node = nullptr;
             }
@@ -349,13 +332,14 @@ class List : public CollectionFacade<List<T>, T> {
         requires(is_implicitly_convertible<U, T>)
     auto push_back(StableAllocator auto& allocator, U const& value)
         -> Optional<Iterator> {
-        cat::Optional memory = allocator.template p_alloc<Node>();
+        cat::Optional memory =
+            allocator.template p_alloc<detail::ListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
         }
 
-        Node& node = *memory.value();
+        detail::ListNode<T>& node = *memory.value();
         node.storage = static_cast<T>(value);
         this->place_node_back(node);
 
@@ -366,13 +350,14 @@ class List : public CollectionFacade<List<T>, T> {
     template <typename... Args>
     auto emplace_back(StableAllocator auto& allocator, Args&&... arguments)
         -> Optional<Iterator> {
-        cat::Optional memory = allocator.template p_alloc<Node>();
+        cat::Optional memory =
+            allocator.template p_alloc<detail::ListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
         }
 
-        Node& node = *memory.value();
+        detail::ListNode<T>& node = *memory.value();
         new (&node.storage) T{forward<Args>(arguments)...};
         this->place_node_back(node);
 
@@ -382,7 +367,7 @@ class List : public CollectionFacade<List<T>, T> {
     // Remove and deallocate an element from the back of this list.
     void pop_back(StableAllocator auto& allocator) {
         if (this->length > 0) [[likely]] {
-            Node& node = *(this->end().p_node);
+            detail::ListNode<T>& node = *(this->end().p_node);
             if (node.p_previous_node != nullptr) [[likely]] {
                 node.p_previous_node->p_next_node = nullptr;
             }
@@ -445,9 +430,8 @@ class List : public CollectionFacade<List<T>, T> {
 
 template <typename T>
 class ForwardList : public CollectionFacade<ForwardList<T>, T> {
-    using Node = detail::ForwardListNode<T>;
-    Node* p_head;
-    Node* p_tail;
+    detail::ForwardListNode<T>* p_head;
+    detail::ForwardListNode<T>* p_tail;
     ssize length;
 
   public:
@@ -528,10 +512,10 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     }
 
     struct Iterator : IteratorFacade<Iterator> {
-        Node* p_node;
+        detail::ForwardListNode<T>* p_node;
 
         Iterator(Iterator const&) = default;
-        Iterator(Node* p_input) : p_node(p_input){};
+        Iterator(detail::ForwardListNode<T>* p_input) : p_node(p_input){};
 
         auto increment() -> Iterator& {
             this->p_node = this->p_node->p_next_node;
@@ -549,14 +533,14 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     };
 
   private:
-    void place_initial_node(Node& node) {
+    void place_initial_node(detail::ForwardListNode<T>& node) {
         node.p_next_node = nullptr;
         this->p_head = &node;
         this->p_tail = &node;
         this->length = 1;
     }
 
-    void place_node_after(Iterator where, Node& node) {
+    void place_node_after(Iterator where, detail::ForwardListNode<T>& node) {
         if (where != this->end()) {
             // Place a node in the middle of this list.
             node.p_next_node = where.p_node->p_next_node;
@@ -571,7 +555,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     }
 
     // Place a node at the front of this list.
-    void place_node_front(Node& node) {
+    void place_node_front(detail::ForwardListNode<T>& node) {
         if (this->length > 0) [[likely]] {
             node.p_next_node = this->p_head;
             this->p_head = &node;
@@ -587,13 +571,14 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
                       U const& value) -> Optional<Iterator>
         requires(is_implicitly_convertible<U, T>)
     {
-        cat::Optional memory = allocator.template p_alloc<Node>();
+        cat::Optional memory =
+            allocator.template p_alloc<detail::ForwardListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
         }
 
-        Node& node = *memory.value();
+        detail::ForwardListNode<T>& node = *memory.value();
         node.storage = static_cast<T>(value);
 
         if (this->length == 0) [[unlikely]] {
@@ -609,13 +594,14 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     template <typename... Args>
     auto emplace_after(StableAllocator auto& allocator, Iterator where,
                        Args&&... arguments) -> Optional<Iterator> {
-        cat::Optional memory = allocator.template p_alloc<Node>();
+        cat::Optional memory =
+            allocator.template p_alloc<detail::ForwardListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
         }
 
-        Node& node = *memory.value();
+        detail::ForwardListNode<T>& node = *memory.value();
         new (&node.storage) T{forward<Args>(arguments)...};
 
         if (this->length == 0) [[unlikely]] {
@@ -628,9 +614,9 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         return Iterator{&node};
     }
 
-    void erase_after(Allocator auto& allocator, Iterator where) {
-        Node& node = *where.p_node;
-        Node* p_remove = node.p_next_node;
+    void erase_after(StableAllocator auto& allocator, Iterator where) {
+        detail::ForwardListNode<T>& node = *where.p_node;
+        detail::ForwardListNode<T>* p_remove = node.p_next_node;
         node.p_next_node = p_remove->p_next_node;
         allocator.free(p_remove);
     }
@@ -640,13 +626,14 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         requires(is_implicitly_convertible<U, T>)
     auto push_front(StableAllocator auto& allocator, U const& value)
         -> Optional<Iterator> {
-        cat::Optional memory = allocator.template p_alloc<Node>();
+        cat::Optional memory =
+            allocator.template p_alloc<detail::ForwardListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
         }
 
-        Node& node = *memory.value();
+        detail::ForwardListNode<T>& node = *memory.value();
         node.storage = static_cast<T>(value);
         this->place_node_front(node);
 
@@ -657,13 +644,14 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     template <typename... Args>
     auto emplace_front(StableAllocator auto& allocator, Args&&... arguments)
         -> Optional<Iterator> {
-        cat::Optional memory = allocator.template p_alloc<Node>();
+        cat::Optional memory =
+            allocator.template p_alloc<detail::ForwardListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
         }
 
-        Node& node = *memory.value();
+        detail::ForwardListNode<T>& node = *memory.value();
         new (&node.storage) T{forward<Args>(arguments)...};
         this->place_node_front(node);
 
@@ -673,7 +661,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     // Remove an element from the front of this list.
     void pop_front(StableAllocator auto& allocator) {
         if (this->length > 0) [[likely]] {
-            Node& node = *this->p_head;
+            detail::ForwardListNode<T>& node = *this->p_head;
             this->p_head = node.p_next_node;
             this->length--;
             allocator.free(&node);

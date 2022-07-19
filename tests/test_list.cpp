@@ -1,12 +1,11 @@
-#include <cat/iterator>
 #include <cat/linear_allocator>
 #include <cat/list>
 #include <cat/page_allocator>
-#include <cat/utility>
 
 auto main() -> int {
     cat::PageAllocator page_allocator;
-    cat::Byte* p_page = page_allocator.p_alloc(4_ki).or_exit();
+    cat::Byte* p_page = page_allocator.p_alloc_multi(4_ki).or_exit();
+    defer(page_allocator.free_multi(p_page, 4_ki);)
     cat::LinearAllocator allocator = {p_page, 4_ki};
 
     // Test insert.
@@ -17,9 +16,11 @@ auto main() -> int {
     Result(list_1.front() == 1).or_exit();
     Result(list_1.back() == 3).or_exit();
 
+    // Test iteration.
+    int i = 1;
     for (auto& node : list_1) {
-        // Iterate.
-        node = node;  // NOLINT
+        Result(node == i).or_exit();
+        ++i;
     }
 
     list_1.pop_front(allocator);
@@ -151,6 +152,5 @@ auto main() -> int {
     Result(list_1.front() == 2).or_exit();
     Result(list_1.back() == 10).or_exit();
 
-    page_allocator.free(p_page);
     cat::exit();
 }
