@@ -509,7 +509,9 @@ class AllocatorFacade {
         if (!handle.is_inline()) {
             Type const* const p_memory = &this->get(handle);
             // if constexpr (is_destructible<Type>) {
-            p_memory->~Type();
+            for (ssize i = 0; i < handle.size(); ++i) {
+                p_memory[i.raw].~Type();
+            }
             // }
             this->self().deallocate(static_cast<void const*>(p_memory),
                                     handle.raw_size());
