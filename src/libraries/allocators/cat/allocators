@@ -9,41 +9,191 @@
 namespace cat {
 
 template <typename T>
-struct BaseMemoryHandle {
-    using Type = T;
-    // Memory handles can represent either a pointer to stable data, or an
-    // address offset to unstable data.
-    union {
-        T* p_storage;
-        ssize storage;
-    };
+concept MemoryHandle = requires(T handle) {
+    handle.is_inline_handle;
+    handle.is_multi_handle;
+    handle.size();
+    handle.raw_size();
+    handle.is_inline();
 };
 
 namespace detail {
+    // `BaseMemoryHandle` is an opaque memory handle. Allocators are to define
+    // and produce a memory handle type which derives from this. These handles
+    // contain absolutely arbitrary storage (such as a `T*`, or an `ssize`
+    // address offset). Handles must provide a `.get()` method to return
+    // whatever that storage is.
+    template <typename T>
+    struct BaseMemoryHandle {
+        static constexpr bool is_inline_handle = false;
+        static constexpr bool is_multi_handle = false;
+        using Type = T;
+
+        // Number of `T`s allocated. This is always 1 if the call is not
+        // intercepted by a `MultiMemoryHandle`.
+        constexpr auto size() const -> ssize {
+            return 1;
+        }
+
+        // Number of bytes allocated. This is always the size of `T` if the call
+        // is not intercepted by a `MultiMemoryHandle`.
+        constexpr auto raw_size() const -> ssize {
+            return ssizeof<T>();
+        }
+
+        // `is_inline()` always holds false if the call is not intercepted by an
+        // `InlineMemoryHandle`.
+        constexpr auto is_inline() const -> bool {
+            return false;
+        }
+    };
+
+    // A `MultiMemoryHandle` wraps another memory handle for `*_multi`
+    // allocations. It effectively overrides `Handle`'s `.size()` and
+    // `.raw_size()` methods with the length of an allocated array.
+    template <typename Handle>
+    struct MultiMemoryHandle {
+        static constexpr bool is_inline_handle = Handle::is_inline_handle;
+        static constexpr bool is_multi_handle = true;
+        using Type = typename Handle::Type;
+        Handle handle;
+
+        // How large this allocation was, in terms of `Type`.
+        ssize array_length;
+
+        MultiMemoryHandle() = default;
+
+        MultiMemoryHandle(Handle input_handle) : handle(input_handle){};
+
+        // TODO: Variadic emplace.
+        void set_inline_storage(Type value) {
+            this->handle.set_inline_storage(value);
+        }
+
+        void set_on_stack(bool inlined) {
+            this->handle.set_on_stack(inlined);
+        }
+
+        // Intercept a propagating call to `.set_count()`.
+        void set_count(ssize count) {
+            this->array_length = count;
+        }
+
+        auto size() const -> ssize {
+            return this->array_length;
+        }
+
+        auto raw_size() const -> ssize {
+            return this->array_length * ssizeof<Type>();
+        }
+
+        constexpr auto is_inline() const -> bool {
+            return this->handle.is_inline();
+        }
+
+        // Get the allocator-specific handle type.
+        auto get() & -> decltype(auto) {
+            return this->handle.get();
+        }
+
+        // Get the allocator-specific handle type.
+        auto get() const& -> decltype(auto) {
+            return this->handle.get();
+        }
+
+        auto get_inline() & -> Type& {
+            return this->handle.get_inline();
+        }
+
+        auto get_inline() const& -> Type& {
+            return this->handle.get_inline();
+        }
+    };
+
     constexpr int small_size_threshold = 256;
 
+    // An `InlineMemoryHandle` wraps another memory handle for `inline_*`
+    // allocations. It extends the storage of this handle to at least 256 bytes,
+    // and if the memory allocated is smaller than that, it is stored inside the
+    // handle instead of inside an allocator. It effectively overrides the
+    // `.is_inline()` method of the handle that it wraps.
     template <typename Handle>
     struct InlineMemoryHandle {
+        static constexpr bool is_inline_handle = true;
+        static constexpr bool is_multi_handle = Handle::is_multi_handle;
         using Type = typename Handle::Type;
+
         union {
             Handle handle;
             Type inline_storage;
             // Reserve `small_size_threshold` bytes to make the size
             // of this handle predictible.
-            Byte empty[detail::small_size_threshold];
+            Byte empty[small_size_threshold];
         };
         bool is_on_stack;
 
-        InlineMemoryHandle(Handle const& handle)
-            : handle(handle), is_on_stack(false){};
+        // The default constructor must not initialize data.
+        InlineMemoryHandle(){};
 
-        InlineMemoryHandle(Type const& value)
-            : inline_storage(value), is_on_stack(true){};
+        InlineMemoryHandle(Handle input_handle) : handle(input_handle){};
 
         ~InlineMemoryHandle() {
             if (this->is_on_stack) {
                 this->inline_storage.~Type();
             }
+        }
+
+        // Intercept a propagating call to `.set_inline_storage()`.
+        // TODO: Variadic emplace.
+        void set_inline_storage(Type value) {
+            this->inline_storage = value;
+        }
+
+        // Intercept a propagating call to `.set_on_stack()`.
+        void set_on_stack(bool inlined) {
+            this->is_on_stack = inlined;
+        }
+
+        void set_count(ssize count) {
+            this->handle.set_count(count);
+        }
+
+        auto size() const -> ssize {
+            if (this->is_on_stack) {
+                return small_size_threshold / ssizeof<Type>();
+            }
+            return handle.size();
+        }
+
+        auto raw_size() const -> ssize {
+            if (this->is_on_stack) {
+                return small_size_threshold;
+            }
+            return handle.raw_size();
+        }
+
+        constexpr auto is_inline() const -> bool {
+            return this->is_on_stack;
+        }
+
+        // Get the allocator-specific handle type.
+        auto get() & -> decltype(auto) {
+            return this->handle.get();
+        }
+
+        // Get the allocator-specific handle type.
+        auto get() const& -> decltype(auto) {
+            return this->handle.get();
+        }
+
+        // Intercept calls to `.get_inline()`.
+        auto get_inline() & -> Type& {
+            return this->inline_storage;
+        }
+
+        // Intercept calls to `.get_inline()`.
+        auto get_inline() const& -> Type const& {
+            return this->inline_storage;
         }
     };
 }  // namespace detail
@@ -51,7 +201,7 @@ namespace detail {
 template <typename AllocatorT, typename AllocationU = void*>
 concept Allocator = requires(AllocatorT allocator) {
     // Every allocator has a `.alloc()` method.
-    allocator.alloc(ssizeof<AllocationU>());
+    allocator.alloc();
     allocator.template alloc<AllocationU>();
 
     // TODO: It would be nice if these could make the concept more precise:
@@ -91,19 +241,23 @@ class AllocatorFacade {
         -> OptionalPtr<T> {
         Optional memory = (this->*function)(forward<Args>(arguments)...);
         if (memory.has_value()) {
-            return &this->get(memory.value());
+            // TODO: Instead of getting the address from a handle, allocations
+            // should be able to propagate an address instead of a handle.
+            return &(this->get(memory.value()));
         }
         return nullptr;
     }
 
   public:
     // TODO: Forward `T` constructor arguments.
-    template <typename T, bool is_small_optimized, bool is_fail_safe,
-              bool is_aligned>
-    auto meta_alloc(usize alignment, ssize allocation_size) {
+    template <typename T, bool is_inline, bool is_fail_safe, bool is_aligned,
+              bool is_multiple>
+    auto meta_alloc(usize allocation_alignment, ssize allocation_count) {
+        ssize const allocation_size = allocation_count * ssizeof<T>();
+
         // Produce a basic handle for this memory type.
-        using UnderlyingHandle = decltype(this->self().template make_handle<T>(
-            T{}, allocation_size));
+        using UnderlyingHandle =
+            decltype(this->self().template make_handle<T>(declval<T*>()));
 
         // Get the return value of a user-supplied `.allocate()`. This must be
         // some kind of `Optional`. It holds some data that can pass into a
@@ -112,17 +266,30 @@ class AllocatorFacade {
             decltype(this->self().template allocate(allocation_size));
 
         // Produce an appropriate handle type for this allocation.
-        using Handle = Conditional<is_small_optimized,
-                                   // If this small-size-optimized:
-                                   detail::InlineMemoryHandle<UnderlyingHandle>,
-                                   // If this is not small-size optimized:
-                                   UnderlyingHandle>;
+        using Handle = Conditional<
+            is_multiple,
+            detail::MultiMemoryHandle<Conditional<
+                is_inline,
+                // If this an array of small-size optimized `T`:
+                detail::InlineMemoryHandle<UnderlyingHandle>,
+                // If this is an array of not small-size optimized `T`:
+                UnderlyingHandle>>,
+            Conditional<is_inline,
+                        // If this a small-size optimized `T`:
+                        detail::InlineMemoryHandle<UnderlyingHandle>,
+                        // If this is not a small-size optimized `T`:
+                        UnderlyingHandle>>;
 
-        if constexpr (is_small_optimized) {
+        if constexpr (is_inline) {
             if (allocation_size < detail::small_size_threshold) {
                 // Allocate memory on this stack frame.
+                // TODO: Variadic constructor
                 T stack_memory;
-                Handle stack_handle = stack_memory;
+
+                Handle stack_handle;
+                stack_handle.set_on_stack(true);
+                stack_handle.set_inline_storage(stack_memory);
+
                 // Return here to skip error handling, because an on-stack
                 // allocation cannot fail.
                 return Optional<Handle>(stack_handle);
@@ -136,7 +303,7 @@ class AllocatorFacade {
         // `small_size_threshold`:
         if constexpr (is_aligned) {
             maybe_memory = this->self().template aligned_allocate(
-                alignment, allocation_size);
+                allocation_alignment, allocation_size);
         } else {
             maybe_memory = this->self().template allocate(allocation_size);
         }
@@ -148,13 +315,23 @@ class AllocatorFacade {
             }
         }
 
-        UnderlyingHandle raw_handle = this->self().template make_handle<T>(
-            maybe_memory.value(), allocation_size);
+        void* const p_allocation = maybe_memory.value();
 
-        Handle handle = Handle{raw_handle};
-        // `.access()` produces a pointer to the allocation, which is
-        // constructed in-place.
-        new (this->self().access(raw_handle)) T();
+        // TODO: Variadic constructor.
+        // Construct the `T` inside the allocator.
+        new (p_allocation) T();
+
+        UnderlyingHandle const raw_handle =
+            this->self().template make_handle<T>(p_allocation);
+
+        Handle handle{raw_handle};
+        if constexpr (is_inline) {
+            handle.set_on_stack(false);
+        }
+
+        if constexpr (is_multiple) {
+            handle.set_count(allocation_count);
+        }
 
         if constexpr (is_fail_safe) {
             return Optional<Handle>(handle);
@@ -163,156 +340,231 @@ class AllocatorFacade {
         }
     }
 
-    // Try to allocate some memory with arbitrary alignment.
+    // Try to allocate a `T`.
     template <typename T = Byte>
-    [[nodiscard]] auto alloc(ssize allocation_size = ssizeof<T>()) {
+    [[nodiscard]] auto alloc() {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            return this->align_alloc<T>(alignof(T), allocation_size);
+            return this->align_alloc<T>(alignof(T));
         } else {
-            return this->meta_alloc<T, false, true, false>(1u, allocation_size);
+            return this->meta_alloc<T, false, true, false, false>(1u,
+                                                                  ssizeof<T>());
         }
     }
 
-    // If this allocator has pointer stability, allocate some memory with
-    // arbitrary alignment and provide a pointer handle.
+    // Try to allocate an array of `T`.
     template <typename T = Byte>
-        requires(detail::StableDerivedAllocator<Derived>)
-    [[nodiscard]] auto p_alloc(ssize allocation_size = ssizeof<T>())
-        -> OptionalPtr<T> {
-        return this->p_wrap_allocation<T>(&AllocatorFacade<Derived>::alloc<T>,
-                                          allocation_size);
-    }
-
-    // Try to allocate some memory guaranteed to be aligned to some
-    // boundary.
-    template <typename T = Byte>
-    [[nodiscard]] auto align_alloc(usize alignment,
-                                   ssize allocation_size = ssizeof<T>()) {
-        return this->meta_alloc<T, false, true, true>(alignment,
-                                                      allocation_size);
-    }
-
-    // If this allocator has pointer stability, allocate some memory with
-    // arbitrary alignment and provide a pointer handle.
-    template <typename T = Byte>
-        requires(detail::StableDerivedAllocator<Derived>)
-    [[nodiscard]] auto p_align_alloc(usize alignment,
-                                     ssize allocation_size = ssizeof<T>())
-        -> OptionalPtr<T> {
-        return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::align_alloc<T>, alignment,
-            allocation_size);
-    }
-
-    // Try to allocate small-size optimized memory.
-    template <typename T = Byte>
-    [[nodiscard]] auto inline_alloc(ssize allocation_size = ssizeof<T>()) {
+    [[nodiscard]] auto alloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            return this->inline_align_alloc<T>(alignof(T), allocation_size);
+            return this->align_alloc_multi<T>(alignof(T), count);
         } else {
-            return this->meta_alloc<T, true, true, false>(1u, allocation_size);
+            return this->meta_alloc<T, false, true, false, true>(
+                1u, ssizeof<T>() * count);
         }
     }
 
+    // If this allocator has pointer stability, try to allocate a `T`, and
+    // provide a pointer handle.
     template <typename T = Byte>
         requires(detail::StableDerivedAllocator<Derived>)
-    [[nodiscard]] auto p_inline_alloc(ssize allocation_size = ssizeof<T>()) {
-        return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::align_alloc<T>, allocation_size);
+    [[nodiscard]] auto p_alloc() -> OptionalPtr<T> {
+        return this->p_wrap_allocation<T>(&AllocatorFacade<Derived>::alloc<T>);
     }
 
-    // Try to allocate small-size optimized memory guaranteed to be aligned
-    // to a boundary.
-    template <typename T = Byte>
-    [[nodiscard]] auto inline_align_alloc(
-        usize alignment, ssize allocation_size = ssizeof<T>()) {
-        return this->meta_alloc<T, true, true, true>(alignment,
-                                                     allocation_size);
-    }
-
+    // If this allocator has pointer stability, try to allocate an array of `T`,
+    // and provide a pointer handle.
     template <typename T = Byte>
         requires(detail::StableDerivedAllocator<Derived>)
-    [[nodiscard]] auto p_inline_align_alloc(
-        ssize allocation_size = ssizeof<T>()) {
+    [[nodiscard]] auto p_alloc_multi(ssize count) -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::inline_align_alloc<T>, allocation_size);
+            &AllocatorFacade<Derived>::alloc_multi<T>, count);
     }
 
-    // TODO: Use a `Handle` `concept`.
+    // Try to allocate a `T` with an alignment guarantee.
+    template <typename T = Byte>
+    [[nodiscard]] auto align_alloc(usize alignment) {
+        return this->meta_alloc<T, false, true, true, false>(alignment, 1);
+        // TODO: `assert` the alignment is correct.
+    }
+
+    // Try to allocate an array of `T` with an alignment guarantee.
+    template <typename T = Byte>
+    [[nodiscard]] auto align_alloc_multi(usize alignment, ssize count) {
+        return this->meta_alloc<T, false, true, true, true>(alignment, count);
+        // TODO: `assert` the alignment is correct.
+    }
+
+    // If this allocator has pointer stability, try to allocate a `T` with an
+    // alignment guarantee, and provide a pointer handle.
+    template <typename T = Byte>
+        requires(detail::StableDerivedAllocator<Derived>)
+    [[nodiscard]] auto p_align_alloc(usize alignment) -> OptionalPtr<T> {
+        return this->p_wrap_allocation<T>(
+            &AllocatorFacade<Derived>::align_alloc<T>, alignment);
+        // TODO: `assert` the alignment is correct.
+    }
+
+    // If this allocator has pointer stability, try to allocate an array of `T`
+    // with an alignment guarantee, and provide a pointer handle.
+    template <typename T = Byte>
+        requires(detail::StableDerivedAllocator<Derived>)
+    [[nodiscard]] auto p_align_alloc_multi(usize alignment, ssize count)
+        -> OptionalPtr<T> {
+        return this->p_wrap_allocation<T>(
+            &AllocatorFacade<Derived>::align_alloc_multi<T>, alignment, count);
+        // TODO: `assert` the alignment is correct.
+    }
+
+    // Try to allocate a small-size optimized `T`.
+    template <typename T = Byte>
+    [[nodiscard]] auto inline_alloc() {
+        if constexpr (alignof(T) > 1) {
+            // If the alignment of `T` is greater than 1, it should have
+            // implied strong alignment guarantees.
+            return this->inline_align_alloc<T>(alignof(T));
+        } else {
+            return this->meta_alloc<T, true, true, false, false>(1u, 1);
+        }
+    }
+
+    // Try to allocate a small-size optimized array of `T`.
+    template <typename T = Byte>
+    [[nodiscard]] auto inline_alloc_multi(ssize count) {
+        if constexpr (alignof(T) > 1) {
+            // If the alignment of `T` is greater than 1, it should have
+            // implied strong alignment guarantees.
+            return this->inline_align_alloc_multi<T>(alignof(T), count);
+        } else {
+            return this->meta_alloc<T, true, true, false, true>(1u, count);
+        }
+    }
+
+    // If this allocator has pointer stability, try to allocate a small-size
+    // optimized `T`, and provide a pointer handle.
+    template <typename T = Byte>
+        requires(detail::StableDerivedAllocator<Derived>)
+    [[nodiscard]] auto p_inline_alloc() {
+        return this->p_wrap_allocation<T>(
+            &AllocatorFacade<Derived>::inline_alloc<T>);
+    }
+
+    // If this allocator has pointer stability, try to allocate a small-size
+    // optimized array of `T`, and provide a pointer handle.
+    template <typename T = Byte>
+        requires(detail::StableDerivedAllocator<Derived>)
+    [[nodiscard]] auto p_inline_alloc_multi(ssize count) {
+        return this->p_wrap_allocation<T>(
+            &AllocatorFacade<Derived>::inline_alloc_multi<T>, count);
+    }
+
+    // Try to allocate a small-size optimized `T` with an alignment guarantee.
+    template <typename T = Byte>
+    [[nodiscard]] auto inline_align_alloc(usize alignment) {
+        return this->meta_alloc<T, true, true, true, false>(alignment, 1);
+    }
+
+    // If this allocator has pointer stability, try to allocate a small-size
+    // optimized `T` with an alignment guarantee, and provide a pointer handle.
+    template <typename T = Byte>
+        requires(detail::StableDerivedAllocator<Derived>)
+    [[nodiscard]] auto p_inline_align_alloc() {
+        return this->p_wrap_allocation<T>(
+            &AllocatorFacade<Derived>::inline_align_alloc<T>);
+    }
+
+    // Try to allocate a small-size optimized array of `T` with an alignment
+    // guarantee.
+    template <typename T = Byte>
+    [[nodiscard]] auto inline_align_alloc_multi(usize alignment, ssize count) {
+        return this->meta_alloc<T, true, true, true, true>(alignment, count);
+    }
+
+    // If this allocator has pointer stability, try to allocate a small-size
+    // optimized array of `T` with an alignment guarantee, and provide a pointer
+    // handle.
+    template <typename T = Byte>
+        requires(detail::StableDerivedAllocator<Derived>)
+    [[nodiscard]] auto p_inline_align_alloc_multi(ssize count) {
+        return this->p_wrap_allocation<T>(
+            &AllocatorFacade<Derived>::inline_align_alloc_multi<T>, count);
+    }
+
     // Invalidate any memory handle, invoking its data's destructor.
-    template <typename Handle>
-    void free(Handle const& memory) {
-        using Type = typename Handle::Type;
+    template <MemoryHandle T>
+    void free(T const& handle) {
+        using Type = typename T::Type;
 
-        // If this is a small-size optimized handle:
-        if constexpr (IsSpecializationTrait<
-                          Handle, detail::InlineMemoryHandle>::value) {
-            if (memory.is_on_stack) {
-                if constexpr (requires { this->get(memory).~Type(); }) {
-                    this->get(memory).~Type();
-                }
-            } else {
-                // If this was on stack, recurse with the underlying memory
-                // handle to remove it from the allocator.
-                this->free(memory.handle);
-            }
-        }
         // If this is not a small-size optimized handle:
-        else {
-            if constexpr (requires { this->get(memory).~Type(); }) {
-                this->get(memory).~Type();
-            }
-            this->self().deallocate(memory);
+        if (!handle.is_inline()) {
+            Type const* const p_memory = &this->get(handle);
+            // if constexpr (is_destructible<Type>) {
+            p_memory->~Type();
+            // }
+            this->self().deallocate(static_cast<void const*>(p_memory),
+                                    handle.raw_size());
         }
+        // If this is not small-size optimized, it will be freed at the end of
+        // the stack frame, so this function call is no-op.
     };
 
-    // Invalidate any stable memory handle, invoking its data's destructor.
+    // TODO: This needs unit tests.
+    // Invalidate a pointer handle to a `T`, and call its destructor.
     template <typename T>
         requires(detail::StableDerivedAllocator<Derived>)
     void free(T* p_memory) {
-        if constexpr (requires { p_memory->~T(); }) {
-            // p_memory->~T();
-        }
-        this->self().deallocate(p_memory);
+        // if constexpr (is_destructible<T>) {
+        p_memory->~T();
+        // }
+        this->self().deallocate(static_cast<void const*>(p_memory),
+                                ssizeof<T>());
     }
 
-    // TODO: Use a `MemoryHandle` `concept`.
+    // Invalidate a pointer handle to an array of `T`, and call its destructors.
+    template <typename T>
+        requires(detail::StableDerivedAllocator<Derived>)
+    void free_multi(T* p_memory, ssize count) {
+        // if constexpr (is_destructible<T>) {
+        for (ssize i = 0; i < count; ++i) {
+            p_memory[i.raw].~T();
+        }
+        // }
+        this->self().deallocate(static_cast<void const*>(p_memory),
+                                ssizeof<T>() * count);
+    }
+
     // Get a non-`const` reference to the data in any memory handle.
-    [[nodiscard]] auto get(auto& memory) -> auto& {
-        using Handle = RemoveCvRef<decltype(memory)>;
-        using Type = typename Handle::Type;
-        if constexpr (requires { memory.is_on_stack; }) {
-            // Get small-size optimized data:
-            if (memory.is_on_stack) {
-                return memory.inline_storage;
+    template <MemoryHandle T>
+    [[nodiscard]] auto get(T& handle) & -> decltype(auto) {
+        using Type = typename T::Type;
+        if constexpr (handle.is_inline_handle) {
+            if (handle.is_inline()) {
+                // Get small-size optimized data:
+                return handle.get_inline();
             }
-            return *this->self().template access<Type>(memory.handle);
-        } else {
-            // Get non-small-size optimized data:
-            return *this->self().template access<Type>(memory);
         }
+        // TODO: Return a span if this is multiple data.
+        // Get non-small-size optimized data:
+        return *(this->self().template access<Type>(handle.get()));
     }
 
-    // TODO: Can I use `cat::unconst()` here?
-    // TODO: Use a `MemoryHandle` `concept`.
     // Get a `const` reference to the data in any memory handle.
-    [[nodiscard]] auto get(auto const& memory) -> auto const& {
-        using Handle = RemoveCvRef<decltype(memory)>;
-        using Type = typename Handle::Type;
-        if constexpr (requires { memory.is_on_stack; }) {
-            // Get small-size optimized data:
-            if (memory.is_on_stack) {
-                return memory.inline_storage;
+    template <MemoryHandle T>
+    [[nodiscard]] auto get(T const& memory) const& -> decltype(auto) {
+        // TODO: Can I use `cat::unconst()` here?
+        // unconst(this)->get(unconst(memory));
+        using Type = typename T::Type;
+        if constexpr (memory.is_inline_handle) {
+            if (memory.is_inline()) {
+                // Get small-size optimized data:
+                return memory.get_inline();
             }
-            return *this->self().template access<Type>(memory.handle);
-        } else {
-            // Get non-small-size optimized data:
-            return *this->self().template access<Type>(memory);
         }
+        // TODO: Return a span if this is multiple data.
+        // Get non-small-size optimized data:
+        return *(this->self().template access<Type>(memory.get()));
     }
 
     // If the allocator does not provide a `.reset()` method, produce a

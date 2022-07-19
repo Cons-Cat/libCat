@@ -162,8 +162,8 @@ namespace detail {
 // `defer()` is a macro that instantiates a scoped object which executes some
 // arbitrary closure in its destructor.
 // For example:
-// void* p_mem = malloc(16);
-// defer(free (p_mem);)
+//     void* p_mem = allocator.alloc();
+//     defer(allocator.free(p_mem);)
 
 // `__COUNTER__` is defined by GCC, and it expands to a monotonically increasing
 // digit every time it is expanded. This guarantees that every instance of

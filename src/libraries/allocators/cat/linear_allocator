@@ -11,9 +11,17 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
     static constexpr bool has_pointer_stability = true;
 
     template <typename T>
-    struct LinearMemoryHandle : BaseMemoryHandle<T> {
-        // This inherits:
-        // `T* p_storage;`
+    struct LinearMemoryHandle : detail::BaseMemoryHandle<T> {
+        T* p_storage;
+
+        // TODO: Simplify with CRTP or deducing-this.
+        auto get() -> decltype(auto) {
+            return *this;
+        }
+
+        auto get() const -> decltype(auto) {
+            return *this;
+        }
     };
 
     uintptr<void> const p_arena_begin;
@@ -57,7 +65,7 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
             align_down(this->p_arena_current - allocation_size, alignment);
         if (p_allocation >= p_arena_end) {
             this->p_arena_current = p_allocation;
-            // Return a pointer that is then used to in-place construct a `T`.
+            // Return a pointer that is then used for in-place construction.
             return static_cast<void*>(p_allocation);
         }
         return nullptr;
@@ -65,19 +73,22 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
 
     // In general, memory cannot be deallocated in a linear allocator, so
     // this function is no-op.
-    // The parameter is `auto` because it might be
-    // either an opaque handle or a pointer.
-    void deallocate(auto const&){};
+    void deallocate(void const*, ssize){};
 
-    // Produce a handle to allocated memory for any type of data.
+    // Produce a handle to allocated memory.
     template <typename T>
-    auto make_handle(auto data, ssize /* unused */) -> LinearMemoryHandle<T> {
-        return LinearMemoryHandle<T>{static_cast<T*>(data)};
+    auto make_handle(void* p_handle_storage) -> LinearMemoryHandle<T> {
+        return LinearMemoryHandle<T>{{}, static_cast<T*>(p_handle_storage)};
     }
 
     // Access some memory.
     template <typename T>
-    auto access(LinearMemoryHandle<T> const& memory) -> T* {
+    auto access(LinearMemoryHandle<T>& memory) -> T* {
+        return memory.p_storage;
+    }
+
+    template <typename T>
+    auto access(LinearMemoryHandle<T> const& memory) const -> T const* {
         return memory.p_storage;
     }
 };

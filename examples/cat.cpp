@@ -41,11 +41,10 @@ void read_and_print_file(char* p_file_name) {
     cat::PageAllocator allocator;
     cat::Span<nix::IoVector> io_vectors;
 
-    // TODO: Use `p_alloc()`.
-    auto io_buffer =
-        allocator.alloc<nix::IoVector>(cat::ssizeof(io_vectors) * blocks)
-            .or_exit("Failed to allocate memory!", 3);
-    io_vectors = cat::Span<nix::IoVector>{&allocator.get(io_buffer), blocks};
+    nix::IoVector* p_io_buffer =
+        allocator.p_alloc_multi<nix::IoVector>(blocks).or_exit(
+            "Failed to allocate memory!", 3);
+    io_vectors = cat::Span<nix::IoVector>{p_io_buffer, blocks};
 
     while (bytes_remaining > 0) {
         ssize current_block_size = cat::min(bytes_remaining, block_size);
@@ -53,9 +52,9 @@ void read_and_print_file(char* p_file_name) {
         // `buffer` should be 4_ki-aligned.
         // TODO: Create an `AnyPtr` to make `Iovector` take in a `void**`.
         // TODO: Handle allocation failure.
-        cat::Optional buffer = allocator.alloc<cat::Byte>(block_size);
+        cat::Optional buffer = allocator.alloc_multi(block_size);
         if (!buffer.has_value()) {
-            allocator.free(io_buffer);
+            allocator.free_multi(p_io_buffer, block_size);
             cat::exit(4);
         }
 
@@ -70,7 +69,7 @@ void read_and_print_file(char* p_file_name) {
     for (nix::IoVector const& iov : io_vectors) {
         output_to_console(iov);
     }
-    allocator.free(io_buffer);
+    allocator.free_multi(p_io_buffer, block_size);
 }
 
 auto main(int argc, char* p_argv[]) -> int {
