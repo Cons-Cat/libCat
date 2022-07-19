@@ -5,7 +5,7 @@
 auto main() -> int {
     // Make allocator for string formatting.
     cat::PageAllocator pager;
-    void* p_page = pager.p_alloc(4_ki).or_exit();
+    void* p_page = pager.p_alloc_multi(4_ki).or_exit();
     cat::LinearAllocator allocator{p_page, 4_ki - 32};
 
     // Test `int4` conversion.

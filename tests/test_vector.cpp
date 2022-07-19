@@ -21,7 +21,7 @@ consteval auto const_func() -> int4 {
 
 auto main() -> int {
     cat::PageAllocator page_allocator;
-    cat::Byte* page = page_allocator.p_alloc(4_ki).or_exit();
+    cat::Byte* page = page_allocator.p_alloc_multi(4_ki).or_exit();
     cat::LinearAllocator allocator = {page, 4_ki - 32};
 
     // Test default constructing a `Vector`.

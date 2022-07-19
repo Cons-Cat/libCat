@@ -633,7 +633,8 @@ struct Process {
         // it.
         // TODO: This stack memory should not be owned by the `Process`, to
         // enable simpler memory management patterns.
-        cat::Optional maybe_memory = allocator.p_alloc(initial_stack_size);
+        cat::Optional maybe_memory =
+            allocator.p_alloc_multi(initial_stack_size);
         if (!maybe_memory.has_value()) {
             return nix::LinuxError::inval;
         }

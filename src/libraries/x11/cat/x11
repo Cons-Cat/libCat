@@ -427,9 +427,10 @@ auto handshake(cat::Allocator auto& allocator,
     // A dynamic allocation must be made because the total size of all
     // recieved packets is unknown and potentially a very large amount.
     // TODO: Deallocate this somehow.
-    cat::Optional memory = allocator.template alloc<ConnectionResponseInfo>(
-        // TODO: Remove `.raw`.
-        x_connection.header.message_length.raw * 4);
+    cat::Optional memory =
+        allocator.template alloc_multi<ConnectionResponseInfo>(
+            // TODO: Remove `.raw`.
+            x_connection.header.message_length.raw * 4);
     if (!memory.has_value()) {
         // return Failure(1);
         return nullopt;
