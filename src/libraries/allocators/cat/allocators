@@ -80,10 +80,17 @@ namespace detail {
         }
 
         auto size() const -> ssize {
+            if (this->is_inline()) {
+                return this->handle.size();
+            }
             return this->array_length;
         }
 
+        // Intercept a propagating call to `.raw_size()`.
         auto raw_size() const -> ssize {
+            if (this->is_inline()) {
+                return this->handle.raw_size();
+            }
             return this->array_length * ssizeof<Type>();
         }
 
@@ -110,7 +117,7 @@ namespace detail {
         }
     };
 
-    constexpr int small_size_threshold = 256;
+    constexpr ssize small_size_threshold = 256;
 
     // An `InlineMemoryHandle` wraps another memory handle for `inline_*`
     // allocations. It extends the storage of this handle to at least 256 bytes,
@@ -128,14 +135,15 @@ namespace detail {
             Type inline_storage;
             // Reserve `small_size_threshold` bytes to make the size
             // of this handle predictible.
-            Byte empty[small_size_threshold];
+            Byte empty[small_size_threshold.raw];
         };
         bool is_on_stack;
 
         // The default constructor must not initialize data.
         InlineMemoryHandle(){};
 
-        InlineMemoryHandle(Handle input_handle) : handle(input_handle){};
+        InlineMemoryHandle(Handle input_handle)
+            : handle(input_handle), is_on_stack(false){};
 
         ~InlineMemoryHandle() {
             if (this->is_on_stack) {
