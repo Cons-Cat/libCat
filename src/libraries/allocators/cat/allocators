@@ -209,7 +209,6 @@ namespace detail {
 template <typename AllocatorT, typename AllocationU = void*>
 concept Allocator = requires(AllocatorT allocator) {
     // Every allocator has a `.alloc()` method.
-    allocator.alloc();
     allocator.template alloc<AllocationU>();
 
     // TODO: It would be nice if these could make the concept more precise:
@@ -353,7 +352,7 @@ class AllocatorFacade {
     }
 
     // Try to allocate a `T`.
-    template <typename T = Byte, bool is_pointer = false>
+    template <typename T, bool is_pointer = false>
     [[nodiscard]] auto alloc() {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
@@ -366,7 +365,7 @@ class AllocatorFacade {
     }
 
     // Try to allocate an array of `T`.
-    template <typename T = Byte, bool is_pointer = false>
+    template <typename T, bool is_pointer = false>
     [[nodiscard]] auto alloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
@@ -380,7 +379,7 @@ class AllocatorFacade {
 
     // If this allocator has pointer stability, try to allocate a `T`, and
     // provide a pointer handle.
-    template <typename T = Byte>
+    template <typename T>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_alloc() -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
@@ -389,7 +388,7 @@ class AllocatorFacade {
 
     // If this allocator has pointer stability, try to allocate an array of `T`,
     // and provide a pointer handle.
-    template <typename T = Byte>
+    template <typename T>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_alloc_multi(ssize count) -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
@@ -397,7 +396,7 @@ class AllocatorFacade {
     }
 
     // Try to allocate a `T` with an alignment guarantee.
-    template <typename T = Byte, bool is_pointer = false>
+    template <typename T, bool is_pointer = false>
     [[nodiscard]] auto align_alloc(usize alignment) {
         return this->meta_alloc<T, false, true, true, false, is_pointer>(
             alignment, 1);
@@ -405,7 +404,7 @@ class AllocatorFacade {
     }
 
     // Try to allocate an array of `T` with an alignment guarantee.
-    template <typename T = Byte, bool is_pointer = false>
+    template <typename T, bool is_pointer = false>
     [[nodiscard]] auto align_alloc_multi(usize alignment, ssize count) {
         return this->meta_alloc<T, false, true, true, true, is_pointer>(
             alignment, count);
@@ -414,7 +413,7 @@ class AllocatorFacade {
 
     // If this allocator has pointer stability, try to allocate a `T` with an
     // alignment guarantee, and provide a pointer handle.
-    template <typename T = Byte>
+    template <typename T>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_alloc(usize alignment) -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
@@ -424,7 +423,7 @@ class AllocatorFacade {
 
     // If this allocator has pointer stability, try to allocate an array of `T`
     // with an alignment guarantee, and provide a pointer handle.
-    template <typename T = Byte>
+    template <typename T>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_alloc_multi(usize alignment, ssize count)
         -> OptionalPtr<T> {
@@ -435,7 +434,7 @@ class AllocatorFacade {
     }
 
     // Try to allocate a small-size optimized `T`.
-    template <typename T = Byte>
+    template <typename T>
     [[nodiscard]] auto inline_alloc() {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
@@ -447,7 +446,7 @@ class AllocatorFacade {
     }
 
     // Try to allocate a small-size optimized array of `T`.
-    template <typename T = Byte>
+    template <typename T>
     [[nodiscard]] auto inline_alloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
@@ -460,7 +459,7 @@ class AllocatorFacade {
     }
 
     // Try to allocate a small-size optimized `T` with an alignment guarantee.
-    template <typename T = Byte>
+    template <typename T>
     [[nodiscard]] auto inline_align_alloc(usize alignment) {
         return this->meta_alloc<T, true, true, true, false, false>(alignment,
                                                                    1);
@@ -468,7 +467,7 @@ class AllocatorFacade {
 
     // Try to allocate a small-size optimized array of `T` with an alignment
     // guarantee.
-    template <typename T = Byte>
+    template <typename T>
     [[nodiscard]] auto inline_align_alloc_multi(usize alignment, ssize count) {
         return this->meta_alloc<T, true, true, true, true, false>(alignment,
                                                                   count);

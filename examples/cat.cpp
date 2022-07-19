@@ -49,17 +49,15 @@ void read_and_print_file(char* p_file_name) {
     while (bytes_remaining > 0) {
         ssize current_block_size = cat::min(bytes_remaining, block_size);
 
-        // `buffer` should be 4_ki-aligned.
-        // TODO: Create an `AnyPtr` to make `Iovector` take in a `void**`.
-        // TODO: Handle allocation failure.
-        cat::Optional buffer = allocator.alloc_multi(block_size);
+        // `OptionalPtr` produces an internal compiler error in GCC 12 here.
+        cat::Optional buffer = allocator.p_alloc_multi<cat::Byte>(block_size);
         if (!buffer.has_value()) {
-            allocator.free_multi(p_io_buffer, block_size);
+            allocator.free_multi(p_io_buffer, io_vectors.size());
             cat::exit(4);
         }
 
         io_vectors[current_block] =
-            nix::IoVector{&allocator.get(buffer.value()), current_block_size};
+            nix::IoVector{buffer.p_value(), current_block_size};
         ++current_block;
         bytes_remaining -= current_block_size;
     }
@@ -69,7 +67,7 @@ void read_and_print_file(char* p_file_name) {
     for (nix::IoVector const& iov : io_vectors) {
         output_to_console(iov);
     }
-    allocator.free_multi(p_io_buffer, block_size);
+    allocator.free_multi(p_io_buffer, io_vectors.size());
 }
 
 auto main(int argc, char* p_argv[]) -> int {

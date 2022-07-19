@@ -27,7 +27,7 @@ overallocated:
     // Invalidate all memory handles, and allocate again.
     allocator.reset();
     for (int4 i = 0; i < 4; ++i) {
-        cat::Optional handle = allocator.alloc();
+        cat::Optional handle = allocator.alloc<cat::Byte>();
         Result(handle.has_value()).or_exit();
     }
     // This allocated 16 bytes, which is 8-byte-aligned. Another int allocation
