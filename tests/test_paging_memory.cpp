@@ -81,6 +81,11 @@ auto main() -> int {
     // That destructor increments `global_int_2`.
     Result(global_int_2 == 1).or_exit();
 
+    auto array_memory = allocator.alloc_multi<TestType>(9).or_exit();
+    allocator.free(array_memory);
+    // Those 9 destructors increment `global_int_2`.
+    Result(global_int_2 == 10).or_exit();
+
     auto smalltesttype = allocator.inline_alloc<TestType>().or_exit();
     allocator.get(smalltesttype) = TestType{};
     allocator.free(smalltesttype);
