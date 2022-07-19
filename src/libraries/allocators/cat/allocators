@@ -247,19 +247,15 @@ class AllocatorFacade {
     template <typename T, typename... Args>
     auto p_wrap_allocation(auto function, Args&&... arguments)
         -> OptionalPtr<T> {
-        Optional memory = (this->*function)(forward<Args>(arguments)...);
-        if (memory.has_value()) {
-            // TODO: Instead of getting the address from a handle, allocations
-            // should be able to propagate an address instead of a handle.
-            return &(this->get(memory.value()));
-        }
-        return nullptr;
+        return (this->*function)(forward<Args>(arguments)...);
     }
 
   public:
     // TODO: Forward `T` constructor arguments.
     template <typename T, bool is_inline, bool is_fail_safe, bool is_aligned,
-              bool is_multiple>
+              bool is_multiple, bool is_pointer>
+        // Inline allocations cannot produce pointers.
+        requires(!(is_inline && is_pointer))
     auto meta_alloc(usize allocation_alignment, ssize allocation_count) {
         ssize const allocation_size = allocation_count * ssizeof<T>();
 
@@ -319,7 +315,11 @@ class AllocatorFacade {
         if constexpr (is_fail_safe) {
             if (!maybe_memory.has_value()) {
                 // Return an empty optional if this failed to allocate.
-                return Optional<Handle>(nullopt);
+                if constexpr (is_pointer) {
+                    return OptionalPtr<T>{nullptr};
+                } else {
+                    return Optional<Handle>(nullopt);
+                }
             }
         }
 
@@ -329,48 +329,52 @@ class AllocatorFacade {
         // Construct the `T` inside the allocator.
         new (p_allocation) T();
 
-        UnderlyingHandle const raw_handle =
-            this->self().template make_handle<T>(p_allocation);
-
-        Handle handle{raw_handle};
-        if constexpr (is_inline) {
-            handle.set_on_stack(false);
-        }
-
-        if constexpr (is_multiple) {
-            handle.set_count(allocation_count);
-        }
-
-        if constexpr (is_fail_safe) {
-            return Optional<Handle>(handle);
+        if constexpr (is_pointer) {
+            return OptionalPtr<T>{static_cast<T*>(p_allocation)};
         } else {
-            return handle;
+            UnderlyingHandle const raw_handle =
+                this->self().template make_handle<T>(p_allocation);
+
+            Handle handle{raw_handle};
+            if constexpr (is_inline) {
+                handle.set_on_stack(false);
+            }
+
+            if constexpr (is_multiple) {
+                handle.set_count(allocation_count);
+            }
+
+            if constexpr (is_fail_safe) {
+                return Optional<Handle>(handle);
+            } else {
+                return handle;
+            }
         }
     }
 
     // Try to allocate a `T`.
-    template <typename T = Byte>
+    template <typename T = Byte, bool is_pointer = false>
     [[nodiscard]] auto alloc() {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            return this->align_alloc<T>(alignof(T));
+            return this->align_alloc<T, is_pointer>(alignof(T));
         } else {
-            return this->meta_alloc<T, false, true, false, false>(1u,
-                                                                  ssizeof<T>());
+            return this->meta_alloc<T, false, true, false, false, is_pointer>(
+                1u, 1);
         }
     }
 
     // Try to allocate an array of `T`.
-    template <typename T = Byte>
+    template <typename T = Byte, bool is_pointer = false>
     [[nodiscard]] auto alloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            return this->align_alloc_multi<T>(alignof(T), count);
+            return this->align_alloc_multi<T, is_pointer>(alignof(T), count);
         } else {
-            return this->meta_alloc<T, false, true, false, true>(
-                1u, ssizeof<T>() * count);
+            return this->meta_alloc<T, false, true, false, true, is_pointer>(
+                1u, count);
         }
     }
 
@@ -379,7 +383,8 @@ class AllocatorFacade {
     template <typename T = Byte>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_alloc() -> OptionalPtr<T> {
-        return this->p_wrap_allocation<T>(&AllocatorFacade<Derived>::alloc<T>);
+        return this->p_wrap_allocation<T>(
+            &AllocatorFacade<Derived>::alloc<T, true>);
     }
 
     // If this allocator has pointer stability, try to allocate an array of `T`,
@@ -388,20 +393,22 @@ class AllocatorFacade {
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_alloc_multi(ssize count) -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::alloc_multi<T>, count);
+            &AllocatorFacade<Derived>::alloc_multi<T, true>, count);
     }
 
     // Try to allocate a `T` with an alignment guarantee.
-    template <typename T = Byte>
+    template <typename T = Byte, bool is_pointer = false>
     [[nodiscard]] auto align_alloc(usize alignment) {
-        return this->meta_alloc<T, false, true, true, false>(alignment, 1);
+        return this->meta_alloc<T, false, true, true, false, is_pointer>(
+            alignment, 1);
         // TODO: `assert` the alignment is correct.
     }
 
     // Try to allocate an array of `T` with an alignment guarantee.
-    template <typename T = Byte>
+    template <typename T = Byte, bool is_pointer = false>
     [[nodiscard]] auto align_alloc_multi(usize alignment, ssize count) {
-        return this->meta_alloc<T, false, true, true, true>(alignment, count);
+        return this->meta_alloc<T, false, true, true, true, is_pointer>(
+            alignment, count);
         // TODO: `assert` the alignment is correct.
     }
 
@@ -411,7 +418,7 @@ class AllocatorFacade {
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_alloc(usize alignment) -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::align_alloc<T>, alignment);
+            &AllocatorFacade<Derived>::align_alloc<T, true>, alignment);
         // TODO: `assert` the alignment is correct.
     }
 
@@ -422,7 +429,8 @@ class AllocatorFacade {
     [[nodiscard]] auto p_align_alloc_multi(usize alignment, ssize count)
         -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::align_alloc_multi<T>, alignment, count);
+            &AllocatorFacade<Derived>::align_alloc_multi<T, true>, alignment,
+            count);
         // TODO: `assert` the alignment is correct.
     }
 
@@ -434,7 +442,7 @@ class AllocatorFacade {
             // implied strong alignment guarantees.
             return this->inline_align_alloc<T>(alignof(T));
         } else {
-            return this->meta_alloc<T, true, true, false, false>(1u, 1);
+            return this->meta_alloc<T, true, true, false, false, false>(1u, 1);
         }
     }
 
@@ -446,58 +454,24 @@ class AllocatorFacade {
             // implied strong alignment guarantees.
             return this->inline_align_alloc_multi<T>(alignof(T), count);
         } else {
-            return this->meta_alloc<T, true, true, false, true>(1u, count);
+            return this->meta_alloc<T, true, true, false, true, false>(1u,
+                                                                       count);
         }
-    }
-
-    // If this allocator has pointer stability, try to allocate a small-size
-    // optimized `T`, and provide a pointer handle.
-    template <typename T = Byte>
-        requires(detail::StableDerivedAllocator<Derived>)
-    [[nodiscard]] auto p_inline_alloc() {
-        return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::inline_alloc<T>);
-    }
-
-    // If this allocator has pointer stability, try to allocate a small-size
-    // optimized array of `T`, and provide a pointer handle.
-    template <typename T = Byte>
-        requires(detail::StableDerivedAllocator<Derived>)
-    [[nodiscard]] auto p_inline_alloc_multi(ssize count) {
-        return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::inline_alloc_multi<T>, count);
     }
 
     // Try to allocate a small-size optimized `T` with an alignment guarantee.
     template <typename T = Byte>
     [[nodiscard]] auto inline_align_alloc(usize alignment) {
-        return this->meta_alloc<T, true, true, true, false>(alignment, 1);
-    }
-
-    // If this allocator has pointer stability, try to allocate a small-size
-    // optimized `T` with an alignment guarantee, and provide a pointer handle.
-    template <typename T = Byte>
-        requires(detail::StableDerivedAllocator<Derived>)
-    [[nodiscard]] auto p_inline_align_alloc() {
-        return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::inline_align_alloc<T>);
+        return this->meta_alloc<T, true, true, true, false, false>(alignment,
+                                                                   1);
     }
 
     // Try to allocate a small-size optimized array of `T` with an alignment
     // guarantee.
     template <typename T = Byte>
     [[nodiscard]] auto inline_align_alloc_multi(usize alignment, ssize count) {
-        return this->meta_alloc<T, true, true, true, true>(alignment, count);
-    }
-
-    // If this allocator has pointer stability, try to allocate a small-size
-    // optimized array of `T` with an alignment guarantee, and provide a pointer
-    // handle.
-    template <typename T = Byte>
-        requires(detail::StableDerivedAllocator<Derived>)
-    [[nodiscard]] auto p_inline_align_alloc_multi(ssize count) {
-        return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::inline_align_alloc_multi<T>, count);
+        return this->meta_alloc<T, true, true, true, true, false>(alignment,
+                                                                  count);
     }
 
     // Invalidate any memory handle, invoking its data's destructor.
