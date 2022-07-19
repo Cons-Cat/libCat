@@ -22,7 +22,7 @@ auto main() -> int {
 
     // Allocate and free a `const` page.
     cat::MemoryHandle auto const const_memory =
-        allocator.alloc().or_exit("Failed to page memory!");
+        allocator.alloc<cat::Byte>().or_exit("Failed to page memory!");
     _ = allocator.get(const_memory);
     allocator.free(const_memory);
 
