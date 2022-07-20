@@ -1007,6 +1007,10 @@ using OptionalNonNegative =
     // A lambda here causes clangd 14 to crash.
     Optional<Predicate<T, detail::is_non_negative<T>, -1>>;
 
+// Simplify non-zero numbers.
+template <typename T>
+using OptionalNonZero = Optional<Sentinel<T, 0>>;
+
 }  // namespace cat
 
 using cat::nullopt;
