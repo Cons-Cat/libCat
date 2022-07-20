@@ -75,6 +75,11 @@ overallocated:
         allocator.free(p_handles[i]);
     }
 
+    allocator.reset();
+    // Test allocation constructors.
+    int4* p_initialized = allocator.p_alloc<int4>(100).or_exit();
+    Result(*p_initialized == 100).or_exit();
+
     // TODO: Test multi allocations.
 
     cat::exit();
