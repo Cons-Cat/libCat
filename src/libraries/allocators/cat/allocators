@@ -5,6 +5,7 @@
 #include <cat/bit>
 #include <cat/meta>
 #include <cat/optional>
+#include <cat/span>
 
 namespace cat {
 
@@ -79,18 +80,13 @@ namespace detail {
             this->array_length = count;
         }
 
+        // Intercept a propagating call to `.size()`.
         auto size() const -> ssize {
-            if (this->is_inline()) {
-                return this->handle.size();
-            }
             return this->array_length;
         }
 
         // Intercept a propagating call to `.raw_size()`.
         auto raw_size() const -> ssize {
-            if (this->is_inline()) {
-                return this->handle.raw_size();
-            }
             return this->array_length * ssizeof<Type>();
         }
 
@@ -112,7 +108,7 @@ namespace detail {
             return this->handle.get_inline();
         }
 
-        auto get_inline() const& -> Type& {
+        auto get_inline() const& -> Type const& {
             return this->handle.get_inline();
         }
     };
@@ -167,16 +163,10 @@ namespace detail {
         }
 
         auto size() const -> ssize {
-            if (this->is_on_stack) {
-                return small_size_threshold / ssizeof<Type>();
-            }
             return handle.size();
         }
 
         auto raw_size() const -> ssize {
-            if (this->is_on_stack) {
-                return small_size_threshold;
-            }
             return handle.raw_size();
         }
 
@@ -476,11 +466,19 @@ class AllocatorFacade {
     // Invalidate any memory handle, invoking its data's destructor.
     template <MemoryHandle T>
     void free(T const& handle) {
-        using Type = typename T::Type;
+        using Type = typename T::Type const;
 
         // If this is not a small-size optimized handle:
         if (!handle.is_inline()) {
-            Type const* const p_memory = &this->get(handle);
+            Type const* p_memory;
+            if constexpr (T::is_multi_handle) {
+                // Get the pointer from a span produced by the allocator.
+                p_memory = this->get(handle).p_data();
+            } else {
+                // Get the pointer from the allocator.
+                p_memory = addressof(this->get(handle));
+            }
+
             // if constexpr (is_destructible<Type>) {
             for (ssize i = 0; i < handle.size(); ++i) {
                 p_memory[i.raw].~Type();
@@ -522,32 +520,31 @@ class AllocatorFacade {
     template <MemoryHandle T>
     [[nodiscard]] auto get(T& handle) & -> decltype(auto) {
         using Type = typename T::Type;
-        if constexpr (handle.is_inline_handle) {
+        if constexpr (T::is_inline_handle) {
+            // Get small-size optimized data:
             if (handle.is_inline()) {
-                // Get small-size optimized data:
-                return handle.get_inline();
+                if constexpr (T::is_multi_handle) {
+                    return Span<Type>{addressof(handle.get_inline()),
+                                      handle.size()};
+                } else {
+                    return handle.get_inline();
+                }
             }
         }
-        // TODO: Return a span if this is multiple data.
+
         // Get non-small-size optimized data:
-        return *(this->self().template access<Type>(handle.get()));
+        if constexpr (T::is_multi_handle) {
+            return Span<Type>(this->self().template access<Type>(handle.get()),
+                              handle.size());
+        } else {
+            return *(this->self().template access<Type>(handle.get()));
+        }
     }
 
     // Get a `const` reference to the data in any memory handle.
     template <MemoryHandle T>
-    [[nodiscard]] auto get(T const& memory) const& -> decltype(auto) {
-        // TODO: Can I use `cat::unconst()` here?
-        // unconst(this)->get(unconst(memory));
-        using Type = typename T::Type;
-        if constexpr (memory.is_inline_handle) {
-            if (memory.is_inline()) {
-                // Get small-size optimized data:
-                return memory.get_inline();
-            }
-        }
-        // TODO: Return a span if this is multiple data.
-        // Get non-small-size optimized data:
-        return *(this->self().template access<Type>(memory.get()));
+    [[nodiscard]] auto get(T const& memory) & -> decltype(auto) {
+        return unconst(this)->get(unconst(memory));
     }
 
     // If the allocator does not provide a `.reset()` method, produce a

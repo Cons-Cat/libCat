@@ -28,13 +28,14 @@ auto main() -> int {
 
     // Allocate a page.
     cat::MemoryHandle auto memory =
-        allocator.alloc_multi<int4>(4_ki).or_exit("Failed to page memory!");
+        allocator.alloc_multi<int4>(1'000).or_exit("Failed to page memory!");
     // Free the page at the end of this program.
     defer(allocator.free(memory);)
 
     // Write to the page.
-    allocator.get(memory) = 10;
-    Result(allocator.get(memory) == 10).or_exit();
+    cat::Span page_span = allocator.get(memory);
+    page_span[0] = 10;
+    Result(allocator.get(memory)[0] == 10).or_exit();
 
     // Allocation with small-size optimization.
     int stack_variable;
@@ -57,7 +58,7 @@ auto main() -> int {
     // `small_memory_1` should be in a page, so these addresses are far
     // apart.
     Result(cat::abs(intptr{&stack_variable} -
-                    intptr{&allocator.get(small_memory_5)}) > 512)
+                    intptr{allocator.get(small_memory_5).p_data()}) > 512)
         .or_exit();
     allocator.free(small_memory_1);
 
@@ -92,8 +93,8 @@ auto main() -> int {
 
     // Aligned memory allocations.
     auto aligned_mem = allocator.align_alloc_multi<int4>(32u, 4).or_exit();
-    allocator.get(aligned_mem) = 10;
-    Result(allocator.get(aligned_mem) == 10).or_exit();
+    allocator.get(aligned_mem)[0] = 10;
+    Result(allocator.get(aligned_mem)[0] == 10).or_exit();
     allocator.free(aligned_mem);
 
     cat::exit();
