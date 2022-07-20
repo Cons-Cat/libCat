@@ -14,6 +14,16 @@ namespace detail {
     struct TupleElement {
         [[no_unique_address]] T storage;
 
+        TupleElement() = default;
+
+        template <typename U>
+            requires(is_implicitly_convertible<U, T>)
+        TupleElement(U const& input) : storage(static_cast<T>(input)){};
+
+        template <typename U>
+            requires(is_implicitly_convertible<U, T>)
+        TupleElement(U&& input) : storage(static_cast<T>(input)){};
+
         // For some reason, this produces ambiguous overload errors if it is
         // implemented as a normal function instead of an operator.
         constexpr auto operator[](IntegralConstant<ssize, index>) & -> T& {
@@ -52,12 +62,13 @@ namespace detail {
     struct TupleStorage<IndexList<indices...>, Ts...> {
         using Type = TypeMap<TupleElement<indices, Ts>...>;
     };
+
 }  // namespace detail
 
 template <typename... Ts>
 struct Tuple : detail::TupleStorage<IndexSequenceFor<Ts...>, Ts...>::Type {
     using Types = TypeList<Ts...>;
-    static constexpr ssize size = ssize{sizeof...(Ts)};
+    static constexpr ssize size = Types::size;
 
     // Get a non-`const` reference to the N'th stored variable.
     template <ssize index>

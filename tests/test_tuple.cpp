@@ -1,9 +1,18 @@
 #include <cat/tuple>
 
+struct NonTrivial {
+    NonTrivial(int){};
+};
+
 auto main() -> int {
     using intint = cat::Tuple<int, int>;
     static_assert(cat::is_trivial<intint>);
     static_assert(sizeof(intint) == 8);
+
+    using non_and_int4 = cat::Tuple<NonTrivial, int4>;
+    non_and_int4 test_intint4{1, int4{0}};
+    static_assert(!cat::is_trivial<non_and_int4>);
+    static_assert(sizeof(non_and_int4) == 4);
 
     // Test `Tuple` storage.
     intint tuple;
