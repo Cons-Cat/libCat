@@ -4,6 +4,7 @@
 
 #include <cat/detail/itoa_jeaiii.hpp>
 
+#include <cat/insert_iterators>
 #include <cat/scaredy>
 #include <cat/string>
 

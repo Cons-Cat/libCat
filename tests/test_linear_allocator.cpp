@@ -75,5 +75,7 @@ overallocated:
         allocator.free(p_handles[i]);
     }
 
+    // TODO: Test multi allocations.
+
     cat::exit();
 }

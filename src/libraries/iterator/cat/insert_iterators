@@ -1,0 +1,185 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/allocators>
+#include <cat/iterator>
+
+namespace cat {
+
+template <Iterable T>
+struct BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
+    T& iterable;
+
+    using Container = T;
+
+    constexpr explicit BackInsertIterator(T& input_iterable)
+        : iterable(input_iterable){};
+
+    template <typename U>
+    constexpr auto operator=(U& value) = delete;
+
+    // `.insert()` is used instead of an overloaded `=` because it might
+    // need to take an allocator parameter.
+
+    template <typename U>
+    constexpr auto insert(/* Allocator */ auto& allocator, U& value)
+        -> Optional<BackInsertIterator<T>&> {
+        Optional result = this->iterable.push_back(allocator, value);
+        if (!result.has_value()) {
+            return nullopt;
+        }
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto insert(U& value) -> BackInsertIterator<T>& {
+        this->iterable.push_back(value);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto insert(/* Allocator */ auto& allocator, U const& value)
+        -> Optional<BackInsertIterator<T>&> {
+        Optional result = this->iterable.push_back(allocator, value);
+        if (!result.has_value()) {
+            return nullopt;
+        }
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto insert(U const& value) -> BackInsertIterator<T>& {
+        this->iterable.push_back(value);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto operator=(U const& value) -> BackInsertIterator<T>& {
+        this->iterable.push_back(value);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto insert(/* Allocator */ auto& allocator, U&& value)
+        -> Optional<BackInsertIterator<T>&> {
+        Optional result =
+            this->iterable.push_back(allocator, forward<U>(value));
+        if (!result.has_value()) {
+            return nullopt;
+        }
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto insert(U&& value) -> BackInsertIterator<T>& {
+        this->iterable.push_back(forward<U>(value));
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto operator=(U&& value) -> BackInsertIterator<T>& {
+        this->iterable.push_back(forward<U>(value));
+        return *this;
+    }
+
+    // Dereference operator is no-op.
+    constexpr auto dereference() -> BackInsertIterator<T>& {
+        return *this;
+    }
+
+    // Increment operators are no-op.
+    constexpr auto increment() -> BackInsertIterator<T>& {
+        return *this;
+    }
+};
+
+template <Iterable T>
+class FrontInsertIterator : public IteratorFacade<FrontInsertIterator<T>> {
+    T& iterable;
+
+  public:
+    using Container = T;
+
+    constexpr explicit FrontInsertIterator(T& input_iterable)
+        : iterable(input_iterable){};
+
+    template <typename U>
+    constexpr auto operator=(U& value) = delete;
+
+    // `.insert()` is used instead of an overloaded `=` because it might
+    // need to take an allocator parameter.
+
+    template <typename U>
+    constexpr auto insert(/* Allocator */ auto& allocator, U& value)
+        -> Optional<FrontInsertIterator<T>&> {
+        Optional result = this->iterable.push_front(allocator, value);
+        if (!result.has_value()) {
+            return nullopt;
+        }
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto insert(U& value) -> FrontInsertIterator<T>& {
+        this->iterable.push_front(value);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto insert(/* Allocator */ auto& allocator, U const& value)
+        -> Optional<FrontInsertIterator<T>&> {
+        Optional result = this->iterable.push_front(allocator, value);
+        if (!result.has_value()) {
+            return nullopt;
+        }
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto insert(U const& value) -> FrontInsertIterator<T>& {
+        this->iterable.push_front(value);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto operator=(U const& value) -> FrontInsertIterator<T>& {
+        this->iterable.push_front(value);
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto insert(/* Allocator */ auto& allocator, U&& value)
+        -> Optional<FrontInsertIterator<T>&> {
+        Optional result =
+            this->iterable.push_front(allocator, forward<U>(value));
+        if (!result.has_value()) {
+            return nullopt;
+        }
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto insert(U&& value) -> FrontInsertIterator<T>& {
+        this->iterable.push_front(forward<U>(value));
+        return *this;
+    }
+
+    template <typename U>
+    constexpr auto operator=(U&& value) -> FrontInsertIterator<T>& {
+        this->iterable.push_front(forward<U>(value));
+        return *this;
+    }
+
+    // Dereference operator is no-op.
+    constexpr auto dereference() -> FrontInsertIterator<T>& {
+        return *this;
+    }
+
+    // Increment operators are no-op.
+    constexpr auto increment() -> FrontInsertIterator<T>& {
+        return *this;
+    }
+};
+
+}  // namespace cat
