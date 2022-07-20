@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/math>
 #include <cat/meta>
 
 namespace cat {
@@ -98,6 +99,21 @@ class TypeList {
     // Evaluate `true` iff this type list holds a type `T`.
     template <typename T>
     static constexpr bool has_type = recurse_for_type<T, Ts...>();
+
+    // The number of types in this list.
+    static constexpr ssize size = ssize{sizeof...(Ts)};
+
+    // The size of the largest type in this list.
+    static constexpr ssize largest_size = max(ssizeof<Ts>()...);
+
+    // The size of the smallest type in this list.
+    static constexpr ssize smallest_size = min(ssizeof<Ts>()...);
+
+    // The smallest alignment of a type in this list.
+    static constexpr usize smallest_alignment = min(alignof(Ts)...);
+
+    // The largest alignment of a type in this list.
+    static constexpr usize largest_alignment = max(alignof(Ts)...);
 
     // Sum the number of times that a type is in this type list.
     template <typename T>

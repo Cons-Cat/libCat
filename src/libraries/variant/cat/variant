@@ -3,7 +3,6 @@
 #pragma once
 
 #include <cat/array>
-#include <cat/math>
 #include <cat/memory>
 #include <cat/meta>
 #include <cat/type_list>
@@ -13,16 +12,16 @@ namespace cat {
 template <typename... Ts>
     requires(TypeList<Ts...>::is_unique_list)
 class Variant {
-    static constexpr ssize size = max(ssizeof<Ts>()...);
-    static constexpr unsigned alignment = max(alignof(Ts)...);
-    using Storage = Array<char, size>;
-    alignas(alignment) Storage storage;
-    uint1 discriminant;
-
   public:
     using Types = TypeList<Ts...>;
 
   private:
+    static constexpr ssize raw_size = Types::largest_size;
+    static constexpr usize::Raw alignment = Types::largest_alignment.raw;
+    using Storage = Array<char, raw_size>;
+    alignas(alignment) Storage storage;
+    uint1 discriminant;
+
     template <typename T, ssize index>
     static consteval auto get_index_of_type() -> uint1
         requires(index >= 0 && Types::template has_type<T>) {
