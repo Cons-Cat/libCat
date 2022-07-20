@@ -242,10 +242,12 @@ class AllocatorFacade {
   public:
     // TODO: Forward `T` constructor arguments.
     template <typename T, bool is_inline, bool is_fail_safe, bool is_aligned,
-              bool is_multiple, bool is_pointer>
+              bool is_multiple, bool is_pointer, typename... Args>
         // Inline allocations cannot produce pointers.
-        requires(!(is_inline && is_pointer))
-    auto meta_alloc(usize allocation_alignment, ssize allocation_count) {
+        requires(!(is_inline && is_pointer) &&
+                 (!is_multiple || (sizeof...(Args) == 0)))
+    auto meta_alloc(usize allocation_alignment, ssize allocation_count,
+                    Args&&... constructor_arguments) {
         ssize const allocation_size = allocation_count * ssizeof<T>();
 
         // Produce a basic handle for this memory type.
@@ -276,8 +278,7 @@ class AllocatorFacade {
         if constexpr (is_inline) {
             if (allocation_size < detail::small_size_threshold) {
                 // Allocate memory on this stack frame.
-                // TODO: Variadic constructor
-                T stack_memory;
+                T stack_memory = {forward<Args>(constructor_arguments)...};
 
                 Handle stack_handle;
                 stack_handle.set_on_stack(true);
@@ -316,7 +317,7 @@ class AllocatorFacade {
 
         // TODO: Variadic constructor.
         // Construct the `T` inside the allocator.
-        new (p_allocation) T();
+        new (p_allocation) T(forward<Args>(constructor_arguments)...);
 
         if constexpr (is_pointer) {
             return OptionalPtr<T>{static_cast<T*>(p_allocation)};
@@ -342,15 +343,16 @@ class AllocatorFacade {
     }
 
     // Try to allocate a `T`.
-    template <typename T, bool is_pointer = false>
-    [[nodiscard]] auto alloc() {
+    template <typename T, bool is_pointer = false, typename... Args>
+    [[nodiscard]] auto alloc(Args&&... constructor_arguments) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            return this->align_alloc<T, is_pointer>(alignof(T));
+            return this->align_alloc<T, is_pointer>(
+                alignof(T), forward<Args>(constructor_arguments)...);
         } else {
             return this->meta_alloc<T, false, true, false, false, is_pointer>(
-                1u, 1);
+                1u, 1, forward<Args>(constructor_arguments)...);
         }
     }
 
@@ -369,11 +371,13 @@ class AllocatorFacade {
 
     // If this allocator has pointer stability, try to allocate a `T`, and
     // provide a pointer handle.
-    template <typename T>
+    template <typename T, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
-    [[nodiscard]] auto p_alloc() -> OptionalPtr<T> {
+    [[nodiscard]] auto p_alloc(Args&&... constructor_arguments)
+        -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::alloc<T, true>);
+            &AllocatorFacade<Derived>::alloc<T, true, Args...>,
+            forward<Args>(constructor_arguments)...);
     }
 
     // If this allocator has pointer stability, try to allocate an array of `T`,
@@ -386,10 +390,11 @@ class AllocatorFacade {
     }
 
     // Try to allocate a `T` with an alignment guarantee.
-    template <typename T, bool is_pointer = false>
-    [[nodiscard]] auto align_alloc(usize alignment) {
+    template <typename T, bool is_pointer = false, typename... Args>
+    [[nodiscard]] auto align_alloc(usize alignment,
+                                   Args&&... constructor_arguments) {
         return this->meta_alloc<T, false, true, true, false, is_pointer>(
-            alignment, 1);
+            alignment, 1, forward<Args>(constructor_arguments)...);
         // TODO: `assert` the alignment is correct.
     }
 
@@ -403,17 +408,20 @@ class AllocatorFacade {
 
     // If this allocator has pointer stability, try to allocate a `T` with an
     // alignment guarantee, and provide a pointer handle.
-    template <typename T>
+    template <typename T, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
-    [[nodiscard]] auto p_align_alloc(usize alignment) -> OptionalPtr<T> {
+    [[nodiscard]] auto p_align_alloc(usize alignment,
+                                     Args&&... constructor_arguments)
+        -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::align_alloc<T, true>, alignment);
+            &AllocatorFacade<Derived>::align_alloc<T, true, Args...>, alignment,
+            forward<Args>(constructor_arguments)...);
         // TODO: `assert` the alignment is correct.
     }
 
     // If this allocator has pointer stability, try to allocate an array of `T`
     // with an alignment guarantee, and provide a pointer handle.
-    template <typename T>
+    template <typename T, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_alloc_multi(usize alignment, ssize count)
         -> OptionalPtr<T> {
@@ -424,19 +432,21 @@ class AllocatorFacade {
     }
 
     // Try to allocate a small-size optimized `T`.
-    template <typename T>
-    [[nodiscard]] auto inline_alloc() {
+    template <typename T, typename... Args>
+    [[nodiscard]] auto inline_alloc(Args&&... constructor_arguments) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            return this->inline_align_alloc<T>(alignof(T));
+            return this->inline_align_alloc<T>(
+                alignof(T), forward<Args>(constructor_arguments)...);
         } else {
-            return this->meta_alloc<T, true, true, false, false, false>(1u, 1);
+            return this->meta_alloc<T, true, true, false, false, false>(
+                1u, 1, forward<Args>(constructor_arguments)...);
         }
     }
 
     // Try to allocate a small-size optimized array of `T`.
-    template <typename T>
+    template <typename T, typename... Args>
     [[nodiscard]] auto inline_alloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
@@ -449,15 +459,16 @@ class AllocatorFacade {
     }
 
     // Try to allocate a small-size optimized `T` with an alignment guarantee.
-    template <typename T>
-    [[nodiscard]] auto inline_align_alloc(usize alignment) {
-        return this->meta_alloc<T, true, true, true, false, false>(alignment,
-                                                                   1);
+    template <typename T, typename... Args>
+    [[nodiscard]] auto inline_align_alloc(usize alignment,
+                                          Args&&... constructor_arguments) {
+        return this->meta_alloc<T, true, true, true, false, false>(
+            alignment, 1, forward<Args>(constructor_arguments)...);
     }
 
     // Try to allocate a small-size optimized array of `T` with an alignment
     // guarantee.
-    template <typename T>
+    template <typename T, typename... Args>
     [[nodiscard]] auto inline_align_alloc_multi(usize alignment, ssize count) {
         return this->meta_alloc<T, true, true, true, true, false>(alignment,
                                                                   count);
