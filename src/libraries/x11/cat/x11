@@ -436,7 +436,7 @@ auto handshake(cat::Allocator auto& allocator,
         return nullopt;
     }
 
-    x_connection.p_setup = &allocator.get(memory.value());
+    x_connection.p_setup = allocator.get(memory.value()).p_data();
 
     // TODO: Remove `raw`.
     // TODO: Is the return of `.recieve` important here?
