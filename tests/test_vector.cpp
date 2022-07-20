@@ -1,6 +1,5 @@
 #include <cat/linear_allocator>
 #include <cat/page_allocator>
-#include <cat/utility>
 #include <cat/vector>
 
 // Test that `Vector` works in a `constexpr` context.
@@ -92,6 +91,8 @@ auto main() -> int {
 
     // Test `Vector` in a `constexpr` context.
     static_assert(const_func() == 10);
+
+    // TODO: Test insert iterators.
 
     cat::exit();
 }

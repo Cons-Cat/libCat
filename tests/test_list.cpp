@@ -1,3 +1,4 @@
+#include <cat/insert_iterators>
 #include <cat/linear_allocator>
 #include <cat/list>
 #include <cat/page_allocator>
