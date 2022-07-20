@@ -7,9 +7,7 @@ set(CMAKE_CXX_EXTENSIONS ON)
 
 project(cat LANGUAGES CXX)
 
-# Using these names, instead of the default ones provided by CMake, gives
-# me complete control over their flags.
-set(CMAKE_CONFIGURATION_TYPES CatDebug;CatRelease;CatRelWithDebInfo;CatRelWithDebInfoNoSan;CatRelSmall)
+option(USE_SANITIZERS "Link ASan and UBSan" ON)
 
 list(
   APPEND CAT_CXX_FLAGS_COMMON
@@ -47,9 +45,14 @@ list(
 
 list(
   APPEND CAT_CXX_FLAGS_DEBUG
-  ${CAT_SANITIZER_FLAGS}
   -ggdb3 -pipe
 )
+if(USE_SANITIZERS)
+  list(
+    APPEND CAT_CXX_FLAGS_DEBUG
+    ${CAT_SANITIZER_FLAGS}
+  )
+endif()
 
 list(
   APPEND CAT_CXX_FLAGS_RELEASE
@@ -73,20 +76,11 @@ list(
 )
 
 list(
-  APPEND CAT_CXX_FLAGS_RELSMALL
-  ${CAT_CXX_FLAGS_RELEASE}
-  # Override `-O3`.
-  -Os
-)
-
-list(
   APPEND CAT_CXX_FLAGS
   ${CAT_CXX_FLAGS_COMMON}
-  $<$<CONFIG:CatDebug>:${CAT_CXX_FLAGS_DEBUG}>
-  $<$<CONFIG:CatRelWithDebInfo>:${CAT_CXX_FLAGS_RELWITHDEBINFO}>
-  $<$<CONFIG:CatRelWithDebInfoNoSan>:${CAT_CXX_FLAGS_RELWITHDEBINFO_NOSAN}>
-  $<$<CONFIG:CatRelease>:${CAT_CXX_FLAGS_RELEASE}>
-  $<$<CONFIG:CatRelSmall>:${CAT_CXX_FLAGS_RELSMALL}>
+  $<$<CONFIG:Debug>:${CAT_CXX_FLAGS_DEBUG}>
+  $<$<CONFIG:RelWithDebInfo>:${CAT_CXX_FLAGS_RELWITHDEBINFO}>
+  $<$<CONFIG:Release>:${CAT_CXX_FLAGS_RELEASE}>
 )
 
 list(
@@ -104,11 +98,10 @@ list(
 
 list(
   APPEND CAT_LINK_FLAGS
-  $<$<CONFIG:CatDebug>:${CAT_COMMON_LINK_FLAGS}>
-  $<$<CONFIG:CatRelWithDebInfo>:${CAT_RELEASE_LINK_FLAGS}>
-  $<$<CONFIG:CatRelWithDebInfoNoSan>:${CAT_RELEASE_LINK_FLAGS}>
-  $<$<CONFIG:CatRelease>:${CAT_RELEASE_LINK_FLAGS}>
-  $<$<CONFIG:CatRelSmall>:${CAT_RELEASE_LINK_FLAGS}>
+  $<$<CONFIG:Debug>:${CAT_COMMON_LINK_FLAGS}>
+  $<$<CONFIG:RelWithDebInfo>:${CAT_RELEASE_LINK_FLAGS}>
+  $<$<CONFIG:RelWithDebInfoNoSan>:${CAT_RELEASE_LINK_FLAGS}>
+  $<$<CONFIG:Release>:${CAT_RELEASE_LINK_FLAGS}>
 )
 
 add_library(cat INTERFACE)
@@ -127,15 +120,16 @@ target_include_directories(cat INTERFACE ${cat-include})
 # Linking gcc is required for SIMD intrinsics.
 target_link_libraries(cat INTERFACE gcc)
 
-# TODO: Make these be automated optional dependencies.
 # Link the address and undefined behavior sanitizers in debug builds.
+if (USE_SANITIZERS)
 target_link_libraries(
   cat INTERFACE
-  $<$<CONFIG:CatRelWithDebInfo>:asan>
-  $<$<CONFIG:CatRelWithDebInfo>:ubsan>
-  $<$<CONFIG:CatDebug>:asan>
-  $<$<CONFIG:CatDebug>:ubsan>
+  $<$<CONFIG:RelWithDebInfo>:asan>
+  $<$<CONFIG:RelWithDebInfo>:ubsan>
+  $<$<CONFIG:Debug>:asan>
+  $<$<CONFIG:Debug>:ubsan>
 )
+endif()
 
 target_compile_options(cat INTERFACE ${CAT_CXX_FLAGS})
 target_link_options(cat INTERFACE ${CAT_LINK_FLAGS})
