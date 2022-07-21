@@ -256,14 +256,11 @@ constexpr bool is_reference = false;
 template <Referenceable T>
 constexpr bool is_reference<T> = __is_same(T, T&) || __is_same(T, T&&);
 
-// TODO: Can this be simplified by `requires`?
-// https://stackoverflow.com/a/31763111
-template <typename T, template <typename...> typename Template>
-struct IsSpecializationTrait : FalseTypeTrait {};
+template <typename, template <typename...> typename Template>
+constexpr bool is_specialization = false;
 
-// TODO: Support template with multiple parameters.
 template <template <typename...> typename Template, typename... Args>
-struct IsSpecializationTrait<Template<Args...>, Template> : TrueTypeTrait {};
+constexpr bool is_specialization<Template<Args...>, Template> = true;
 
 template <typename T>
 concept SafeNumeral = requires {

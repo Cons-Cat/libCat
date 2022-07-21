@@ -111,9 +111,9 @@ class [[nodiscard]] Result {
     // If this holds `void`, any specialization of `Result<>` or an `okay` can
     // convert into this.
     template <typename U>
-    constexpr Result(U const) requires(
-        cat::is_void<T> && (cat::IsSpecializationTrait<U, Result>::value ||
-                            cat::is_same<U, cat::detail::Okay>))
+    constexpr Result(U const) requires(cat::is_void<T> &&
+                                       (cat::is_specialization<U, Result> ||
+                                        cat::is_same<U, cat::detail::Okay>))
         : is_okay(true){};
 
     // TODO: Trivially and non-trivially Copy and move construct `ValueType`.
