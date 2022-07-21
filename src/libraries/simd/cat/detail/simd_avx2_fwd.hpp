@@ -24,7 +24,7 @@ struct Avx2Abi {
 
     static constexpr ssize size = 32;
     static constexpr ssize lanes = size / ssizeof<T>();
-    static constexpr ssize alignment = 32;
+    static constexpr usize alignment = 32u;
 };
 
 template <typename T>
