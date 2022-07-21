@@ -6,10 +6,9 @@
 #include <cat/string>
 #include <cat/variant>
 
-// TODO: The `Scaredy` is far less robust than `Optional`.
+// TODO: The `Scaredy` is far less featureful than `Optional`.
 
 namespace cat {
-
 namespace detail {
     template <typename T, typename... Errors>
     struct ScaredyVariantStorage {
@@ -81,11 +80,11 @@ namespace detail {
         }
     };
 
-    // `T` is a `Predicate<Type, function, sentinel>`.
+    // `T` is a `Compact<Type, predicate, sentinel>`.
     template <typename T, typename... Errors>
     // requires(sizeof...(Errors) == 1)
-    struct ScaredyPredicateStorage {
-        using Value = typename T::PredicateType;
+    struct ScaredyCompactStorage {
+        using Value = typename T::Type;
         // `Errors` can only hold one error. It is variadic merely to simplify
         // overload resolution in `Scaredy`. `decltype` adds a reference to
         // it, so that is removed by `RemoveReference`.
@@ -98,22 +97,21 @@ namespace detail {
             Error error_code;
         };
 
-        constexpr ScaredyPredicateStorage() = default;
+        constexpr ScaredyCompactStorage() = default;
 
-        constexpr ScaredyPredicateStorage(Value const& input)
-            : storage(input){};
+        constexpr ScaredyCompactStorage(Value const& input) : storage(input){};
 
-        constexpr ScaredyPredicateStorage(Error const& error)
+        constexpr ScaredyCompactStorage(Error const& error)
             : error_code(error){};
 
         constexpr auto operator=(Value const& operand)
-            -> ScaredyPredicateStorage<T, Error>& {
+            -> ScaredyCompactStorage<T, Error>& {
             this->storage = operand;
             return *this;
         }
 
         constexpr auto operator=(Value const& operand) const
-            -> ScaredyPredicateStorage<T, Error>& {
+            -> ScaredyCompactStorage<T, Error>& {
             this->storage = operand;
             return *this;
         }
@@ -165,7 +163,7 @@ class Scaredy {
     // clang-format off
     using Storage = Conditional <requires {
         T::sentinel_value;
-    }, detail::ScaredyPredicateStorage<T, Errors...>,
+    }, detail::ScaredyCompactStorage<T, Errors...>,
         detail::ScaredyVariantStorage <T, Errors...>>;
     // clang-format on
 

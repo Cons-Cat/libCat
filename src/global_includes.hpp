@@ -73,12 +73,12 @@ struct MonostateStorage {
 
 template <typename T, auto predicate, T sentinel>
     requires(!predicate(sentinel))
-struct Predicate {
-    using PredicateType = T;
+struct Compact {
+    using Type = T;
     static constexpr auto predicate_function = predicate;
-    static constexpr PredicateType sentinel_value = PredicateType{sentinel};
-    // `Predicate`s can only be instantiated at compile-time.
-    consteval Predicate() = default;
+    static constexpr Type sentinel_value = Type{sentinel};
+    // `Compact`s can only be instantiated at compile-time.
+    consteval Compact() = default;
 };
 
 namespace detail {
@@ -90,8 +90,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T, T sentinel>
-using Sentinel =
-    Predicate<T, detail::sentinel_predicate<T, sentinel>, sentinel>;
+using Sentinel = Compact<T, detail::sentinel_predicate<T, sentinel>, sentinel>;
 
 namespace detail {
     template <typename T>

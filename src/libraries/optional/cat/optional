@@ -281,60 +281,60 @@ struct OptionalReferenceStorage {
 
 // `T` is a `Predicate<Type, function, sentinel>`.
 template <typename T>
-struct OptionalPredicateStorage {
-    using Value = typename T::PredicateType;
+struct OptionalCompactStorage {
+    using Value = typename T::Type;
     // TODO: Make this a `union` like `OptionalValueStorage`.
     Value storage;
 
-    constexpr OptionalPredicateStorage() = default;
+    constexpr OptionalCompactStorage() = default;
     // TODO: Handle non-trivial constructors and assignment operators.
 
-    // Enable copy and move constructors iff `OptionalPredicateStorage`
+    // Enable copy and move constructors iff `OptionalCompactStorage`
     // supports them.
 
     // If `Value` is trivially copy-constructible, use this simple copy
     // constructor.
-    constexpr OptionalPredicateStorage(Value const& in_value) requires(
+    constexpr OptionalCompactStorage(Value const& in_value) requires(
         is_trivially_copy_constructible<Value>)
         : storage(in_value){};
 
     // If `Value` is not trivially copy-constructible, then manually
     // construct it in-place.
-    constexpr OptionalPredicateStorage(Value const& in_value) requires(
+    constexpr OptionalCompactStorage(Value const& in_value) requires(
         is_copy_constructible<Value> &&
         !is_trivially_copy_constructible<Value>) {
         this->construct(in_value);
     }
 
     // If `Value` is not copy-constructible, delete this copy constructor.
-    constexpr OptionalPredicateStorage(Value const& in_value) requires(
+    constexpr OptionalCompactStorage(Value const& in_value) requires(
         !is_copy_constructible<Value>) = delete;
 
     // If `Value` is trivially move-constructible, use this simple move
     // constructor.
-    constexpr OptionalPredicateStorage(Value&& in_value) requires(
+    constexpr OptionalCompactStorage(Value&& in_value) requires(
         is_trivially_move_constructible<Value>)
         : storage(forward<Value>(in_value)){};
 
     // If `Value` is not trivially move-constructible, then manually invoke
     // `move` on it.
-    OptionalPredicateStorage(Value&& in_value) requires(
+    OptionalCompactStorage(Value&& in_value) requires(
         is_move_constructible<Value> &&
         !is_trivially_move_constructible<Value>) {
         this->construct(forward<Value>(in_value));
     }
 
     // If `Value` is not move-constructible, delete this move constructor.
-    constexpr OptionalPredicateStorage(Value&& in_value) requires(
+    constexpr OptionalCompactStorage(Value&& in_value) requires(
         !is_move_constructible<Value>) = delete;
 
     // If other destructors are not conditionally specialized by their
     // `requires`, they should be `default` or deleted.
-    constexpr ~OptionalPredicateStorage() = default;
+    constexpr ~OptionalCompactStorage() = default;
 
     // If `Value` is not trivially destructible, then manually invoke its
     // destructor.
-    constexpr ~OptionalPredicateStorage() requires(
+    constexpr ~OptionalCompactStorage() requires(
         !is_trivially_destructible<Value>) {
         if constexpr (requires { this->storage.~Value(); }) {
             if (this->has_value()) {
@@ -343,14 +343,14 @@ struct OptionalPredicateStorage {
         }
     }
 
-    constexpr OptionalPredicateStorage(detail::NullOpt)
+    constexpr OptionalCompactStorage(detail::NullOpt)
         : storage(T::sentinel_value){};
 
     // If other assignment operators are not conditionally specialized by
     // their `requires`, they should be `default` or deleted.
 
     // If `Value` is trivially copy-assignable, then forward this value.
-    auto operator=(Value const& in_value) -> OptionalPredicateStorage& requires(
+    auto operator=(Value const& in_value) -> OptionalCompactStorage& requires(
         is_trivially_copy_assignable<Value>) {
         this->storage = in_value;
         return *this;
@@ -358,7 +358,7 @@ struct OptionalPredicateStorage {
 
     // If `Value` is non-trivially copy-assignable, then manually construct
     // it in-place.
-    auto operator=(Value const& in_value) -> OptionalPredicateStorage& requires(
+    auto operator=(Value const& in_value) -> OptionalCompactStorage& requires(
         is_copy_assignable<Value> && !is_trivially_copy_assignable<Value>) {
         this->assign(in_value);
         return *this;
@@ -366,11 +366,11 @@ struct OptionalPredicateStorage {
 
     // If `Value` is not copy-assignable, delete this assignment operator to
     // prevent ambiguous overload resolution.
-    auto operator=(Value const& in_value) -> OptionalPredicateStorage& requires(
+    auto operator=(Value const& in_value) -> OptionalCompactStorage& requires(
         !is_copy_assignable<Value>) = delete;
 
     // If `Value` is trivially move-assignable, then forward this value.
-    auto operator=(Value&& in_value) -> OptionalPredicateStorage& requires(
+    auto operator=(Value&& in_value) -> OptionalCompactStorage& requires(
         is_trivially_move_assignable<Value>) {
         this->storage = forward<Value>(in_value);
         return *this;
@@ -379,7 +379,7 @@ struct OptionalPredicateStorage {
     // If `Value` is non-trivially move-assignable, then manually invoke
     // `move()` on it.
     constexpr auto operator=(Value&& in_value)
-        -> OptionalPredicateStorage& requires(
+        -> OptionalCompactStorage& requires(
             is_move_assignable<Value> && !is_trivially_move_assignable<Value>) {
         this->assign(forward<Value>(in_value));
         return *this;
@@ -387,7 +387,7 @@ struct OptionalPredicateStorage {
 
     // If `Value` is not move-assignable, delete this assignment operator to
     // prevent ambiguous overload resolution.
-    auto operator=(Value&& in_value) -> OptionalPredicateStorage& requires(
+    auto operator=(Value&& in_value) -> OptionalCompactStorage& requires(
         !is_move_assignable<Value>) = delete;
 
     // The following methods are homogenous to all `Optional...Storage`
@@ -461,7 +461,7 @@ class Optional {
                     T::sentinel_value;
                 },
                 // If `T` is a `Predicate`:
-                OptionalPredicateStorage<T>,
+                OptionalCompactStorage<T>,
 		Conditional<is_reference<T>,
                     // If `T` is a reference type:
                     OptionalReferenceStorage<T>,
@@ -1005,7 +1005,7 @@ namespace detail {
 template <Integral T>
 using OptionalNonNegative =
     // A lambda here causes clangd 14 to crash.
-    Optional<Predicate<T, detail::is_non_negative<T>, -1>>;
+    Optional<Compact<T, detail::is_non_negative<T>, -1>>;
 
 // Simplify non-zero numbers.
 template <typename T>

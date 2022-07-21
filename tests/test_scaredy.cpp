@@ -66,11 +66,11 @@ auto main() -> int {
     Result(result.value() == 3).or_exit();
     Result(result.holds_alternative<int8>()).or_exit();
 
-    cat::Scaredy<cat::Predicate<int4,
-                                [](int4 input) {
-                                    return input >= 0;
-                                },
-                                -1>,
+    cat::Scaredy<cat::Compact<int4,
+                              [](int4 input) {
+                                  return input >= 0;
+                              },
+                              -1>,
                  ErrorOne>
         predicate = -1;
     // The `Scaredy` here adds no storage bloat to an `int4`.
