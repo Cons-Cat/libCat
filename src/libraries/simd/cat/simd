@@ -45,7 +45,7 @@ struct FixedSizeAbi {
     static constexpr ssize lanes = in_lanes;
     static constexpr ssize size = lanes * ssizeof<T>();
     // TODO: Make the alignment generally correct and efficient.
-    static constexpr ssize alignment = 32;
+    static constexpr usize alignment = 32u;
 };
 
 // `NativeAbi` is a portable SIMD ABI that can be expected to work on any
@@ -64,7 +64,7 @@ struct NativeAbi {
     using TargetAbi = Avx2Abi<T>;
     static constexpr ssize size = TargetAbi::size;
     static constexpr ssize lanes = TargetAbi::lanes;
-    static constexpr ssize alignment = TargetAbi::alignment;
+    static constexpr usize alignment = TargetAbi::alignment;
 };
 
 namespace detail {
@@ -96,14 +96,14 @@ class alignas(InAbi::alignment.raw) Simd {
         // By setting `alignment` to 1 here, and by extension in the definition
         // of `Simd::Raw` produced by this ABI, GCC produces unaligned SIMD
         // instructions for operations on this ABI.
-        static constexpr ssize alignment = 1;
+        static constexpr usize alignment = 1u;
     };
     using UnalignedVector = Simd<UnalignedAbi, T>;
 
   public:
     static constexpr ssize size = InAbi::size;
     static constexpr ssize lanes = InAbi::lanes;
-    static constexpr ssize alignment = InAbi::alignment;
+    static constexpr usize alignment = InAbi::alignment;
 
     using Scalar = T;
 
@@ -408,7 +408,7 @@ class alignas(InAbi::alignment.raw) Simd {
 
     // Load a vector from `p_data`.
     constexpr auto load(T const* p_data) -> Vector& {
-        if constexpr (Abi::alignment == salignof<T>()) {
+        if constexpr (Abi::alignment == alignof(T)) {
             return this->load_aligned(p_data);
         } else {
             return this->load_unaligned(p_data);
@@ -431,7 +431,7 @@ class alignas(InAbi::alignment.raw) Simd {
 
     // Construct a `Simd` loaded from the address `p_data`.
     [[nodiscard]] static constexpr auto loaded(T const* p_data) {
-        if constexpr (Abi::alignment == salignof<T>()) {
+        if constexpr (Abi::alignment == alignof(T)) {
             return loaded_aligned(p_data);
         } else {
             return loaded_unaligned(p_data);
@@ -462,7 +462,7 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
     Raw raw;
 
     static constexpr ssize lanes = Abi::lanes;
-    static constexpr ssize alignment = Abi::alignment;
+    static constexpr usize alignment = Abi::alignment;
 
     constexpr SimdMask() = default;
 

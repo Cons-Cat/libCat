@@ -230,9 +230,7 @@ struct BinarySize {
 
 }  // namespace cat::detail
 
-// template <>
-// structIsIntegralTrait<cat::detail::BinarySize> : TrueTypeTrait {};
-constexpr auto operator""_ki(unsigned long long const input) -> ssize {
+constexpr auto operator""_ki(unsigned long long input) -> ssize {
     return 1024 * static_cast<signed long long>(input);
 }
 

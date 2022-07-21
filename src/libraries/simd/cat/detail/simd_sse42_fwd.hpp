@@ -4,8 +4,8 @@ namespace cat {
 
 // Forward declarations.
 template <typename Abi, typename T>
-requires(is_same<typename Abi::Scalar, T>) class alignas(
-    Abi::alignment.raw) Simd;
+    requires(is_same<typename Abi::Scalar, T>)
+class alignas(Abi::alignment.raw) Simd;
 
 template <typename Abi, typename T>
 class alignas(Abi::alignment.raw) SimdMask;
@@ -24,7 +24,7 @@ struct Sse42Abi {
 
     static constexpr ssize size = 16;
     static constexpr ssize lanes = size / ssizeof<T>();
-    static constexpr ssize alignment = 16;
+    static constexpr usize alignment = 16u;
 };
 
 template <typename T>
