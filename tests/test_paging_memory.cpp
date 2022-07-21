@@ -82,7 +82,11 @@ auto main() -> int {
     // That destructor increments `global_int_2`.
     Result(global_int_2 == 1).or_exit();
 
+    // Test multi-allocations.
     auto array_memory = allocator.alloc_multi<TestType>(9).or_exit();
+    // Those 9 constructors increment `global_int_2`.
+    Result(global_int_1 == 10).or_exit();
+
     allocator.free(array_memory);
     // Those 9 destructors increment `global_int_2`.
     Result(global_int_2 == 10).or_exit();
