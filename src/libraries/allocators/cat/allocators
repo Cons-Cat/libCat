@@ -314,14 +314,15 @@ class AllocatorFacade {
             }
         }
 
-        void* const p_allocation = maybe_memory.value();
+        T* const p_allocation = static_cast<T*>(maybe_memory.value());
 
-        // TODO: Variadic constructor.
-        // Construct the `T` inside the allocator.
-        new (p_allocation) T(forward<Args>(constructor_arguments)...);
+        // Construct the `T`s inside the allocator.
+        for (ssize i = 0; i < allocation_count; ++i) {
+            new (p_allocation + i) T(forward<Args>(constructor_arguments)...);
+        }
 
         if constexpr (is_pointer) {
-            return OptionalPtr<T>{static_cast<T*>(p_allocation)};
+            return OptionalPtr<T>{p_allocation};
         } else {
             UnderlyingHandle const raw_handle =
                 this->self().template make_handle<T>(p_allocation);

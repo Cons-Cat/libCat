@@ -77,8 +77,8 @@ class PageAllocator : public AllocatorFacade<PageAllocator> {
 
     // Produce a handle to allocated memory.
     template <typename T>
-    auto make_handle(void* p_handle_storage) -> PageMemoryHandle<T> {
-        return PageMemoryHandle<T>{{}, static_cast<T*>(p_handle_storage)};
+    auto make_handle(T* p_handle_storage) -> PageMemoryHandle<T> {
+        return PageMemoryHandle<T>{{}, p_handle_storage};
     }
 
     // Access a page(s) of virtual memory.
