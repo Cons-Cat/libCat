@@ -80,6 +80,15 @@ overallocated:
     int4* p_initialized = allocator.p_alloc<int4>(100).or_exit();
     Result(*p_initialized == 100).or_exit();
 
+    // Test sized allocations.
+    allocator.reset();
+    _ = allocator.alloc<int2>().or_exit();
+    // Because the allocator is now 2 byte aligned, an extra 2 bytes have to be
+    // reserved to allocate a 4-byte aligned value:
+    Result(allocator.nalloc<int4>().or_exit() == 6).or_exit();
+    cat::Tuple alloc_int_size = allocator.salloc<int4>();
+    Result(alloc_int_size.second() == 6).or_exit();
+
     // TODO: Test multi allocations.
 
     cat::exit();
