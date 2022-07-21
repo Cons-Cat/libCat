@@ -182,9 +182,7 @@ struct OptionalValueStorage {
     // If this is assigned an `Optional` which wraps a type that can be
     // converted to `T` , then convert that storage to this type implicitly.
     template <typename OtherOptional>
-    constexpr void assign(OtherOptional&& optional) requires(
-        is_specialization<OtherOptional, Optional>&&
-            is_implicitly_convertible<typename OtherOptional::Value, T>) {
+    constexpr void assign(OtherOptional&& optional) {
         if (this->has_value()) {
             if (optional.has_value()) {
                 this->storage = forward<OtherOptional>(optional).value();
@@ -203,16 +201,16 @@ struct OptionalValueStorage {
 
 template <typename T>
 struct OptionalReferenceStorage {
-    using Value = RemoveReference<T>;
-    Value* p_storage = nullptr;
+    using Value = T;
+    RemoveReference<T>* p_storage = nullptr;
 
     template <typename U>
-    constexpr OptionalReferenceStorage(U const& in_value)
+    constexpr OptionalReferenceStorage(U& in_value)
         : p_storage(addressof(in_value)){};
 
-    template <typename U>
-    constexpr OptionalReferenceStorage(U&& in_value)
-        : p_storage(addressof(forward<U>(in_value))){};
+    // template <typename U>
+    // constexpr OptionalReferenceStorage(U const& in_value)
+    //     : p_storage(addressof(in_value)){};
 
     constexpr OptionalReferenceStorage(detail::NullOpt) : p_storage(nullptr){};
 
@@ -224,11 +222,11 @@ struct OptionalReferenceStorage {
     }
 
     // The following methods are homogenous to all `Optional...Storage` types.
-    constexpr auto value() & -> Value& {
+    constexpr auto value() & -> Value {
         return *(this->p_storage);
     }
 
-    constexpr auto value() const& -> Value& {
+    constexpr auto value() const& -> Value {
         return *(this->p_storage);
     }
 
@@ -246,7 +244,7 @@ struct OptionalReferenceStorage {
 
     // Destroy the storage unconditionally.
     void hard_reset() {
-        this->p_storage->~Value();
+        this->p_storage->~RemoveReference<Value>();
         this->p_storage = nullptr;
     }
 
@@ -260,20 +258,15 @@ struct OptionalReferenceStorage {
     // If this is assigned an `Optional` which wraps a type that can be
     // converted to `T` , then convert that storage to this type implicitly.
     template <typename OtherOptional>
-    constexpr void assign(OtherOptional&& optional) requires(
-        is_specialization<OtherOptional, Optional>&&
-            is_implicitly_convertible<typename OtherOptional::Value, T>) {
+    constexpr void assign(OtherOptional&& optional) {
         if (this->has_value()) {
-            if (optional.has_value()) {
-                this->p_storage = forward<OtherOptional>(optional).value();
-            } else {
-                // If the incoming `Optional` is empty, then empty this one.
-                this->hard_reset();
-            }
+            // If this `Optional` has a value, then empty it.
+            this->hard_reset();
+        }
+
+        if (optional.has_value()) {
+            this->p_storage = forward<OtherOptional>(optional).p_value();
         } else {
-            if (optional.has_value()) {
-                this->construct(optional.value());
-            }
             // If both `Optional`s are empty, nothing happens.
         }
     }
@@ -449,7 +442,6 @@ struct OptionalCompactStorage {
 
 template <typename T>
 class Optional {
-  public:
     // clang-format off
     // Clang Format 12 does not understand how to format this well:
     using Storage =
@@ -482,7 +474,7 @@ class Optional {
     // constructed, unless they are reference types. Without this tag, the
     // storage would be uninitialized.
     template <typename... Args>
-        requires(!is_reference<T>)
+        requires(!is_reference<Value>)
     constexpr Optional(detail::InPlace, Args... args) {
         this->storage.construct(args...);
     }
@@ -491,28 +483,34 @@ class Optional {
 
     // A reference type cannot be copy-constructed, but other types can.
     template <typename U>
-        requires(!is_reference<T> && is_implicitly_convertible<U, Value> &&
+        requires(!is_reference<Value> && is_implicitly_convertible<U, Value> &&
                  is_copy_constructible<Value>)
     constexpr Optional(U const& input) : storage(static_cast<Value>(input)){};
 
     // Produce an error message if `Value` is not copy-constructible.
     template <typename U>
-        requires(!is_reference<T> && is_implicitly_convertible<U, Value> &&
+        requires(!is_reference<Value> && is_implicitly_convertible<U, Value> &&
                  !is_copy_constructible<Value>)
     constexpr Optional(U const& input) = delete;
 
     // Copy references.
     template <typename U>
-        requires(is_reference<T>&& is_implicitly_convertible<U, Value>)
-    constexpr Optional(U const& input) : storage(static_cast<Value>(input)){};
+        requires(is_reference<Value>&& is_implicitly_convertible<U, Value>)
+    constexpr Optional(U& input) : storage(static_cast<Value>(input)){};
 
     template <typename U>
-        requires(is_implicitly_convertible<U, Value>)
+        requires(!is_reference<Value> && is_implicitly_convertible<U, Value>)
     constexpr Optional(U&& input) : storage(forward<U>(input)){};
 
     // `Optional` can be constructed by another `Optional`.
     template <typename U>
         requires(is_implicitly_convertible<U, Value>)
+    constexpr Optional(Optional<U>& input) {
+        this->storage.assign(input);
+    }
+
+    template <typename U>
+        requires(is_implicitly_convertible<U, Value> && !is_reference<Value>)
     constexpr Optional(Optional<U> const& input) {
         this->storage.assign(input);
     }
@@ -547,23 +545,38 @@ class Optional {
     // Forward all assignment operators to `storage`, except when assigning
     // `nullopt`.
     template <typename U>
-        requires(is_implicitly_convertible<U, Value> && !is_reference<T> &&
+        requires(is_implicitly_convertible<U, Value> && !is_reference<Value> &&
                  is_copy_assignable<Value>)
-    constexpr auto operator=(U const& value) -> Optional& {
+    constexpr auto operator=(U& value) -> Optional& {
+        this->storage = static_cast<Value const&>(value);
+        return *this;
+    }
+
+    template <typename U>
+        requires(is_implicitly_convertible<U, Value> && !is_reference<Value> &&
+                 is_move_assignable<Value>)
+    auto operator=(U&& value) -> Optional& {
+        this->storage = static_cast<Value&&>(forward<U>(value));
+        return *this;
+    }
+
+    template <typename U>
+        requires(is_implicitly_convertible<U, Value>&& is_reference<Value>)
+    constexpr auto operator=(U& value) -> Optional& {
         this->storage = static_cast<Value>(value);
         return *this;
     }
 
     template <typename U>
-        requires(is_implicitly_convertible<U, Value> && !is_reference<T> &&
-                 is_move_assignable<Value>)
-    auto operator=(U&& value) -> Optional& {
-        this->storage = static_cast<Value>(forward<U>(value));
+        requires(is_implicitly_convertible<U, Value>)
+    auto operator=(Optional<U>& optional) -> Optional& {
+        this->storage.assign(optional);
         return *this;
     }
 
     template <typename U>
-        requires(is_implicitly_convertible<U, Value>)
+        requires(is_implicitly_convertible<U, Value> && !is_reference<Value> &&
+                 !is_reference<U>)
     auto operator=(Optional<U> const& optional) -> Optional& {
         this->storage.assign(optional);
         return *this;
@@ -598,14 +611,14 @@ class Optional {
 
     // Move the `storage` unconditionally. Reference types cannot be moved.
     [[nodiscard]] constexpr auto value() && -> Value&& requires(
-        !is_reference<T>) {
+        !is_reference<Value>) {
         return move(this->storage.value());
     }
 
     // Move the const-qualified `storage` unconditionally. Reference types
     // cannot be moved.
     [[nodiscard]] constexpr auto value() const&& -> Value const&& requires(
-        !is_reference<T>) {
+        !is_reference<Value>) {
         return move(this->storage.value());
     }
 

@@ -1,6 +1,6 @@
 #include <cat/memory>
 #include <cat/optional>
-// #include <cat/unique>
+#include <cat/unique>
 #include <cat/utility>
 
 struct Movable {
@@ -274,15 +274,13 @@ auto main() -> int {
     Result(default_predicate_2.value() == 0).or_exit();
 
     // Test monadic methods on move-only types.
-    /*
-cat::Optional<cat::Unique<int4>> monadic_move = 1;
-monadic_move = return_none(0).and_then(return_opt);
-Result(!monadic_move.has_value()).or_exit();
+    cat::Optional<cat::Unique<int4>> monadic_move = 1;
+    monadic_move = return_none(0).and_then(return_opt);
+    Result(!monadic_move.has_value()).or_exit();
 
-monadic_move = return_opt(1).transform(return_int);
-Result(monadic_move.has_value()).or_exit();
-Result(monadic_move.value().borrow() == 2).or_exit();
-    */
+    monadic_move = return_opt(1).transform(return_int);
+    Result(monadic_move.has_value()).or_exit();
+    Result(monadic_move.value().borrow() == 2).or_exit();
 
     // Test copying `	cat::Optional`s into other `	cat::Optional`s.
     cat::Optional<int4> opt_original = 10;
@@ -305,16 +303,17 @@ Result(monadic_move.value().borrow() == 2).or_exit();
     [[maybe_unused]] cat::Optional<int4> const constant_null = nullopt;
     [[maybe_unused]] auto con = constant_val.value();
 
-    // TODO: I think this can't work, because it would take the address of a
-    // const r-value?
+    // Test constant references.
+    int4 nonconstant_int = 10;
+    int4 const constant_int = 9;
+    cat::Optional<int4 const&> constant_ref = constant_int;
+    Result(constant_ref.value() == 9).or_exit();
+    constant_ref = nonconstant_int;
+    Result(constant_ref.value() == 10).or_exit();
 
-    // int4 const constant_int = 0;
-    // [[maybe_unused]] cat::Optional<int4 const&> const constant_ref =
-    //     constant_int;
-
-    // TODO: Get this working again:
-    // Movable mov;
-    // cat::Optional<Movable> maybe_movs(cat::move(mov));
+    // Test move-only types.
+    Movable mov;
+    cat::Optional<Movable> maybe_movs(cat::move(mov));
 
     // Non-trivial constructor and destructor.
     cat::Optional<NonTrivial> nontrivial = NonTrivial();
