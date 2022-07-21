@@ -107,11 +107,11 @@ auto main() -> int {
     Result(ref_2.value() == goo).or_exit();
 
     // `cat::Optional` with a predicate.
-    cat::Optional<cat::Predicate<int4,
-                                 [](int4 input) -> bool {
-                                     return input >= 0;
-                                 },
-                                 -1>>
+    cat::Optional<cat::Compact<int4,
+                               [](int4 input) -> bool {
+                                   return input >= 0;
+                               },
+                               -1>>
         positive(nullopt);
     Result(!positive.has_value()).or_exit();
 
@@ -129,11 +129,11 @@ auto main() -> int {
     Result(!positive.has_value()).or_exit();
 
     // `cat::Optional<void>` with a predicate.
-    cat::Optional<cat::Predicate<cat::MonostateStorage<int, 0>,
-                                 [](int input) -> bool {
-                                     return input >= 0;
-                                 },
-                                 -1>>
+    cat::Optional<cat::Compact<cat::MonostateStorage<int, 0>,
+                               [](int input) -> bool {
+                                   return input >= 0;
+                               },
+                               -1>>
         predicate_void(nullopt);
     Result(!predicate_void.has_value()).or_exit();
     predicate_void = monostate;

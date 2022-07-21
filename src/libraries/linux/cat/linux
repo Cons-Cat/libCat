@@ -305,11 +305,11 @@ namespace detail {
 template <typename T>
     requires(sizeof(detail::MapSyscallType<T>) <= sizeof(ssize))
 using ScaredyLinux =
-    cat::Scaredy<cat::Predicate<detail::MapSyscallType<T>,
-                                // This is a value iff it is a positive integer.
-                                detail::is_positive<detail::MapSyscallType<T>>,
-                                // This defaults to `-1`.
-                                detail::MapSyscallType<T>{-1}>,
+    cat::Scaredy<cat::Compact<detail::MapSyscallType<T>,
+                              // This is a value iff it is a positive integer.
+                              detail::is_positive<detail::MapSyscallType<T>>,
+                              // This defaults to `-1`.
+                              detail::MapSyscallType<T>{-1}>,
                  // Iff the value is negative, this is some `LinuxError`.
                  LinuxError>;
 
