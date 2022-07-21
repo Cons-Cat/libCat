@@ -29,10 +29,10 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
     uintptr<void> p_arena_current = p_arena_begin;
 
   public:
-    // TODO: Should this be `usize`? `.raw` could then be removed.
+    // TODO: Should `arena_size` be `usize`?
     LinearAllocator(uintptr<void> p_address, ssize arena_size)
-        : p_arena_begin(p_address.raw + arena_size.raw),
-          p_arena_end(p_address.raw){};
+        : p_arena_begin(p_address + static_cast<usize>(arena_size)),
+          p_arena_end(p_address){};
 
     // Reset the bumped pointer to the beginning of this arena.
     void reset() {
@@ -40,18 +40,26 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
     }
 
   private:
-    // TODO: Due to alignment discrepencies when bumping down, this actually
-    // could be larger.
-    template <typename T>
-    auto allocation_size(ssize allocation_size) -> ssize {
-        return allocation_size;
+    auto allocation_size(usize alignment, ssize allocation_size)
+        -> OptionalNonZero<ssize> {
+        uintptr<void> p_allocation =
+            align_down(this->p_arena_current - allocation_size, alignment);
+
+        // The allocation size is the difference between the current pointer
+        // and the new pointer.
+        if (p_allocation >= p_arena_end) {
+            return static_cast<ssize>(
+                (this->p_arena_current - p_allocation).raw);
+        }
+        return 0;
     }
 
     // Try to allocate memory and bump the pointer down.
     auto allocate(ssize allocation_size) -> OptionalPtr<void> {
         if (this->p_arena_current - allocation_size >= p_arena_end) {
             this->p_arena_current -= allocation_size;
-            // Return a pointer that is then used to in-place construct a `T`.
+            // Return a pointer that is then used to in-place construct a
+            // `T`.
             return this->p_arena_current;
         }
         return nullptr;
