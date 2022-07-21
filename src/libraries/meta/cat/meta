@@ -254,7 +254,8 @@ constexpr bool is_referenceable = Referenceable<T>;
 template <typename...>
 constexpr bool is_reference = false;
 template <Referenceable T>
-constexpr bool is_reference<T> = __is_same(T, T&) || __is_same(T, T&&);
+constexpr bool is_reference<T> = __is_same(T, RemoveReference<T>&) ||
+                                 __is_same(T, RemoveReference<T>&&);
 
 template <typename, template <typename...> typename Template>
 constexpr bool is_specialization = false;

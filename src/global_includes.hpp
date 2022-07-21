@@ -37,9 +37,8 @@ struct MonostateStorage {
     T storage;
 
     constexpr MonostateStorage() = default;
-
-    constexpr MonostateStorage(Monostate) : storage(state){};
-
+    constexpr MonostateStorage(Monostate&) : storage(state){};
+    constexpr MonostateStorage(Monostate const&) : storage(state){};
     constexpr MonostateStorage(T input) : storage(input){};
 
     constexpr operator auto() const {
