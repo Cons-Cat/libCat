@@ -241,12 +241,13 @@ class AllocatorFacade {
     }
 
   public:
-    // TODO: Forward `T` constructor arguments.
     template <typename T, bool is_inline, bool is_fail_safe, bool is_aligned,
               bool is_multiple, bool is_pointer, typename... Args>
-        // Inline allocations cannot produce pointers.
-        requires(!(is_inline && is_pointer) &&
-                 (!is_multiple || (sizeof...(Args) == 0)))
+        requires(
+            // Inline allocations cannot produce pointers.
+            !(is_inline && is_pointer) &&
+            // Multi-allocations cannot construct with arguments.
+            (!is_multiple || (sizeof...(Args) == 0)))
     auto meta_alloc(usize allocation_alignment, ssize allocation_count,
                     Args&&... constructor_arguments) {
         ssize const allocation_size = allocation_count * ssizeof<T>();
@@ -259,7 +260,7 @@ class AllocatorFacade {
         // some kind of `Optional`. It holds some data that can pass into a
         // `Handle`'s constructor.
         using MaybeAllocation =
-            decltype(this->self().template allocate(allocation_size));
+            decltype(this->self().allocate(allocation_size));
 
         // Produce an appropriate handle type for this allocation.
         using Handle = Conditional<
@@ -278,6 +279,7 @@ class AllocatorFacade {
 
         if constexpr (is_inline) {
             if (allocation_size < detail::inline_buffer_size) {
+                // TODO: Test `inline_alloc_multi` constructors.
                 // Allocate memory on this stack frame.
                 T stack_memory = {forward<Args>(constructor_arguments)...};
 
@@ -287,7 +289,11 @@ class AllocatorFacade {
 
                 // Return here to skip error handling, because an on-stack
                 // allocation cannot fail.
-                return Optional<Handle>(stack_handle);
+                if constexpr (is_fail_safe) {
+                    return Optional<Handle>{stack_handle};
+                } else {
+                    return stack_handle;
+                }
             }
         }
 
@@ -297,10 +303,10 @@ class AllocatorFacade {
         // If this is not small-size optimized, or is larger than
         // `inline_buffer_size`:
         if constexpr (is_aligned) {
-            maybe_memory = this->self().template aligned_allocate(
-                allocation_alignment, allocation_size);
+            maybe_memory = this->self().aligned_allocate(allocation_alignment,
+                                                         allocation_size);
         } else {
-            maybe_memory = this->self().template allocate(allocation_size);
+            maybe_memory = this->self().allocate(allocation_size);
         }
 
         if constexpr (is_fail_safe) {
@@ -309,7 +315,7 @@ class AllocatorFacade {
                 if constexpr (is_pointer) {
                     return OptionalPtr<T>{nullptr};
                 } else {
-                    return Optional<Handle>(nullopt);
+                    return Optional<Handle>{nullopt};
                 }
             }
         }
@@ -337,7 +343,7 @@ class AllocatorFacade {
             }
 
             if constexpr (is_fail_safe) {
-                return Optional<Handle>(handle);
+                return Optional<Handle>{handle};
             } else {
                 return handle;
             }
