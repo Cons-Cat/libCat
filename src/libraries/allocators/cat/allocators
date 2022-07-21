@@ -964,7 +964,7 @@ class AllocatorFacade {
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_salloc(Args&&... constructor_arguments) {
         ssize size = this->nalloc<T>().value();
-        T* p_allocation =
+        Optional p_allocation =
             this->p_alloc<T>(forward<Args>(constructor_arguments)...);
         return Tuple{p_allocation, size.raw};
     }
@@ -1009,7 +1009,7 @@ class AllocatorFacade {
     [[nodiscard]] auto p_salloc_multi(ssize count,
                                       Args&&... constructor_arguments) {
         ssize size = this->nalloc_multi<T>(count).value();
-        T* p_allocation = this->p_alloc_multi<T>(
+        Optional p_allocation = this->p_alloc_multi<T>(
             forward<Args>(count, constructor_arguments)...);
         return Tuple{p_allocation, size.raw};
     }
@@ -1055,7 +1055,7 @@ class AllocatorFacade {
     [[nodiscard]] auto p_align_salloc(usize alignment,
                                       Args&&... constructor_arguments) {
         ssize size = this->align_nalloc<T>(alignment).value();
-        T* p_allocation = this->p_align_alloc<T>(
+        Optional p_allocation = this->p_align_alloc<T>(
             alignment, forward<Args>(constructor_arguments)...);
         return Tuple{p_allocation, size.raw};
     }
@@ -1098,7 +1098,7 @@ class AllocatorFacade {
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_unalign_salloc(Args&&... constructor_arguments) {
         ssize size = this->unalign_nalloc<T>().value();
-        T* p_allocation =
+        Optional p_allocation =
             this->p_unalign_alloc<T>(forward<Args>(constructor_arguments)...);
         return Tuple{p_allocation, size.raw};
     }
@@ -1144,7 +1144,7 @@ class AllocatorFacade {
     [[nodiscard]] auto p_align_salloc_multi(usize alignment, ssize count,
                                             Args&&... constructor_arguments) {
         ssize size = this->align_nalloc_multi<T>(alignment, count).value();
-        T* p_allocation = this->p_align_alloc_multi<T>(
+        Optional p_allocation = this->p_align_alloc_multi<T>(
             alignment, count, forward<Args>(constructor_arguments)...);
         return Tuple{p_allocation, size.raw};
     }
@@ -1191,7 +1191,7 @@ class AllocatorFacade {
     [[nodiscard]] auto p_unalign_salloc_multi(ssize count,
                                               Args&&... constructor_arguments) {
         ssize size = this->unalign_nalloc_multi<T>(count).value();
-        T* p_allocation = this->p_unalign_alloc_multi<T>(
+        Optional p_allocation = this->p_unalign_alloc_multi<T>(
             count, forward<Args>(constructor_arguments)...);
         return Tuple{p_allocation, size.raw};
     }

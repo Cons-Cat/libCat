@@ -90,6 +90,7 @@ overallocated:
     Result(alloc_int_size.second() == 6).or_exit();
 
     // TODO: Test multi allocations.
+    // TODO: Test inline multi allocations.
 
     cat::exit();
 }
