@@ -356,24 +356,29 @@ class alignas(InAbi::alignment.raw) Simd {
 
     template <typename U>
     constexpr auto fill(U value)
-        -> Vector& requires(is_convertible<U, Scalar>) {
+        -> Vector& requires(is_implicitly_convertible<U, Scalar>) {
+        Scalar fill_value = static_cast<Scalar>(value);
         if constexpr (lanes == 2) {
-            this->raw = Raw{value, value};
+            this->raw = Raw{fill_value, fill_value};
         } else if constexpr (lanes == 4) {
-            this->raw = Raw{value, value, value, value};
+            this->raw = Raw{fill_value, fill_value, fill_value, fill_value};
         } else if constexpr (lanes == 8) {
-            this->raw =
-                Raw{value, value, value, value, value, value, value, value};
+            this->raw = Raw{fill_value, fill_value, fill_value, fill_value,
+                            fill_value, fill_value, fill_value, fill_value};
         } else if constexpr (lanes == 16) {
-            this->raw =
-                Raw{value, value, value, value, value, value, value, value,
-                    value, value, value, value, value, value, value, value};
+            this->raw = Raw{fill_value, fill_value, fill_value, fill_value,
+                            fill_value, fill_value, fill_value, fill_value,
+                            fill_value, fill_value, fill_value, fill_value,
+                            fill_value, fill_value, fill_value, fill_value};
         } else if constexpr (lanes == 32) {
             this->raw =
-                Raw{value, value, value, value, value, value, value, value,
-                    value, value, value, value, value, value, value, value,
-                    value, value, value, value, value, value, value, value,
-                    value, value, value, value, value, value, value, value};
+                Raw{fill_value, fill_value, fill_value, fill_value, fill_value,
+                    fill_value, fill_value, fill_value, fill_value, fill_value,
+                    fill_value, fill_value, fill_value, fill_value, fill_value,
+                    fill_value, fill_value, fill_value, fill_value, fill_value,
+                    fill_value, fill_value, fill_value, fill_value, fill_value,
+                    fill_value, fill_value, fill_value, fill_value, fill_value,
+                    fill_value, fill_value};
         }
         return *this;
     }
