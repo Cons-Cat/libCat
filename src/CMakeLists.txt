@@ -67,6 +67,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/memory/implementations/copy_memory.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/memory/implementations/copy_memory_small.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/string/implementations/memcpy.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/string/implementations/memset.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/string/implementations/compare_strings.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/string/implementations/string_length.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/string/implementations/print.cpp
