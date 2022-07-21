@@ -190,7 +190,7 @@ struct Numeral {
 
     template <typename U>
     constexpr explicit operator U() {
-        if constexpr (IsSpecializationTrait<U, Numeral>::value) {
+        if constexpr (is_specialization<U, Numeral>) {
             // If `U` is a `Numeral`, cast into `U`'s underlying type.
             return static_cast<typename U::Raw>(this->raw);
         } else {
@@ -201,7 +201,7 @@ struct Numeral {
 
     template <typename U>
     constexpr explicit operator U() const {
-        if constexpr (IsSpecializationTrait<U, Numeral>::value) {
+        if constexpr (is_specialization<U, Numeral>) {
             // If `U` is a `Numeral`, cast into `U`'s underlying type.
             return static_cast<typename U::Raw>(this->raw);
         } else {
@@ -365,29 +365,25 @@ Numeral(T) -> Numeral<T>;
 // TODO: Return a `Numeral` that is the larger size of either operand.
 template <typename T, typename U>
 constexpr auto operator>(T lhs, Numeral<U> rhs)
-    -> bool requires(is_convertible<U, T> &&
-                     !IsSpecializationTrait<T, Numeral>::value) {
+    -> bool requires(is_convertible<U, T> && !is_specialization<T, Numeral>) {
     return lhs > rhs.raw;
 }
 
 template <typename T, typename U>
 constexpr auto operator>=(T lhs, Numeral<U> rhs)
-    -> bool requires(is_convertible<U, T> &&
-                     !IsSpecializationTrait<T, Numeral>::value) {
+    -> bool requires(is_convertible<U, T> && !is_specialization<T, Numeral>) {
     return lhs >= rhs.raw;
 }
 
 template <typename T, typename U>
 [[nodiscard]] constexpr auto operator<(T lhs, Numeral<U> rhs)
-    -> bool requires(is_convertible<U, T> &&
-                     !IsSpecializationTrait<T, Numeral>::value) {
+    -> bool requires(is_convertible<U, T> && !is_specialization<T, Numeral>) {
     return lhs < rhs.raw;
 }
 
 template <typename T, typename U>
 [[nodiscard]] constexpr auto operator<=(T lhs, Numeral<U> rhs)
-    -> bool requires(is_convertible<U, T> &&
-                     !IsSpecializationTrait<T, Numeral>::value) {
+    -> bool requires(is_convertible<U, T> && !is_specialization<T, Numeral>) {
     return lhs <= rhs.raw;
 }
 
@@ -607,7 +603,7 @@ namespace detail {
     // Satisfies any type that is an integer and is not `intptr` or `uintptr`.
     template <typename T>
     concept NonPtrIntegral =
-        is_integral<T> && !IsSpecializationTrait<T, ArithmeticPtr>::value;
+        is_integral<T> && !is_specialization<T, ArithmeticPtr>;
 }  // namespace detail
 
 // `ArithmeticPtr` can be constructed from any integer type or any pointer. It
