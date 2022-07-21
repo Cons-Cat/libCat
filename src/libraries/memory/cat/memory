@@ -2,6 +2,10 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/simd>
+
+#include "cat/bit"
+
 namespace std {
 
 // `address_of()` should be used instead of a `&` for containers that might
@@ -38,6 +42,88 @@ namespace cat {
 void copy_memory(void const* p_source, void* p_destination, ssize bytes);
 
 void copy_memory_small(void const* p_source, void* p_destination, ssize bytes);
+
+namespace detail {
+    // Type-erased `set_memory` function.
+    constexpr void set_memory_detail(void* p_source, unsigned char byte_value,
+                                     ssize bytes) {
+        unsigned char* p_current_byte = static_cast<unsigned char*>(p_source);
+
+        if (is_constant_evaluated()) {
+            // Set this memory through scalar code, because `__builtin_memset()`
+            // is not `constexpr` in GCC 12.
+            for (ssize i = 0; i < bytes; ++i) {
+                *p_current_byte = static_cast<unsigned char>(byte_value);
+                ++p_current_byte;
+            }
+        } else {
+            // Fill until `p_current_byte` has proper SIMD alignment.
+            while (!is_aligned(p_current_byte,
+                               NativeAbi<unsigned char>::alignment)) {
+                *p_current_byte = byte_value;
+                ++p_current_byte;
+                --bytes;
+            }
+
+            // Non-type template parameters are not allowed in a lambda's
+            // template parameter list, so the lanes are passed through an
+            // `IntegralConstant`.
+            auto vectorized_fill = [&]<typename LanesConstant>(LanesConstant) {
+                // TODO: Consider optimizing with multiple vector loads to
+                // leverage instruction-level parallelism.
+                constexpr ssize lanes = LanesConstant::value;
+                using Vector = FixedSizeSimd<unsigned char, lanes>;
+                Vector* vector = bit_cast<Vector*>(p_current_byte);
+                vector->fill(byte_value);
+                p_current_byte += lanes;
+                bytes -= lanes;
+            };
+
+            // Fill out 32-byte portion.
+            if constexpr (NativeAbi<unsigned char>::size >= 32) {
+                vectorized_fill(IntegralConstant<ssize, 32>{});
+            }
+
+            // Fill out 16-byte portion.
+            if constexpr (NativeAbi<unsigned char>::size >= 16) {
+                vectorized_fill(IntegralConstant<ssize, 16>{});
+            }
+
+            // Fill out remaining portion one byte at a time.
+            while (bytes > 0) {
+                *p_current_byte = byte_value;
+                ++p_current_byte;
+                --bytes;
+            }
+        }
+    }
+}  // namespace detail
+
+template <typename T = unsigned char>
+    requires(sizeof(T) == 1)
+constexpr void set_memory(void* p_source, T byte_value, ssize bytes) {
+    detail::set_memory_detail(p_source, bit_cast<unsigned char>(byte_value),
+                              bytes);
+}
+
+// `[[gnu::noinline]]` prevents GCC from constant-folding this function out.
+template <typename T = unsigned char>
+    requires(sizeof(T) == 1)
+[[gnu::noinline]] constexpr void set_memory_explicit(void* p_source,
+                                                     T byte_value,
+                                                     ssize bytes) {
+    set_memory(p_source, byte_value, bytes);
+}
+
+constexpr void zero_memory(void* p_source, ssize bytes) {
+    detail::set_memory_detail(p_source, static_cast<unsigned char>(0u), bytes);
+}
+
+// `[[gnu::noinline]]` prevents GCC from constant-folding this function out.
+[[gnu::noinline]] constexpr void set_memory_explicit(void* p_source,
+                                                     ssize bytes) {
+    zero_memory(p_source, bytes);
+}
 
 using std::addressof;
 using std::construct_at;

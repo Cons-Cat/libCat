@@ -8,11 +8,21 @@
 
 namespace std {
 // `__SIZE_TYPE__` is a GCC macro.
+
 // Deprecated call to `memcpy()`. Consider using `cat::copy_buffer()` instead.
 // `memcpy()` exists to enable some GCC optimizations.
 extern "C" [[deprecated(
     "std::memcpy() is deprecated! Use cat::copy_memory() instead!")]] auto
 memcpy(void* p_destination, void const* p_source, __SIZE_TYPE__ bytes) -> void*;
+
+// Deprecated call to `memset()`. Consider using `cat::set_memory() or
+// cat::zero_memory()` instead. `memset()` exists to enable some GCC
+// optimizations.
+extern "C"
+    [[deprecated("std::memset() is deprecated! Use cat::set_memory() or \
+cat::zero_memory() instead!")]] auto
+    memset(void* p_source, int byte_value, __SIZE_TYPE__ bytes) -> void*;
+
 }  // namespace std
 
 using std::memcpy;

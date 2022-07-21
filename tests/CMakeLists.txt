@@ -174,6 +174,15 @@ if(BUILD_TEST_VECTOR OR BUILD_ALL_TESTS)
   add_test(NAME Vector COMMAND test_vector)
 endif()
 
+# This tests that `cat::set_memory()` etc. work.
+option(BUILD_TEST_MEMORY "Compile Tuple tests." OFF)
+if(BUILD_TEST_MEMORY OR BUILD_ALL_TESTS)
+  add_executable(test_set_memory test_set_memory.cpp)
+  #target_compile_options(test_set_memory PRIVATE ${CAT_CXX_FLAGS_TEST})
+  target_link_options(test_set_memory PRIVATE ${CAT_LINK_FLAGS})
+  add_test(NAME SetMemory COMMAND test_set_memory)
+endif()
+
 # A dummy project is required to guarantee that the directories are generated.
 # The directories must be generated for symlinking `.gdbinit` to succeed.
 # This can be skipped if one or more other tests are built.
@@ -190,7 +199,8 @@ if(
   OR BUILD_TEST_LINEAR_ALLOCATOR
   OR BUILD_TEST_THREAD
   OR BUILD_TEST_OPTIONAL
-  OR BUILD_TEST_TUPLE)
+  OR BUILD_TEST_TUPLE
+  OR BUILD_TEST_SET_MEMORY)
 )
   add_test(NAME dummy COMMAND echo)
 endif()
