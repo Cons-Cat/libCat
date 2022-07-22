@@ -2,9 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/bit>
 #include <cat/simd>
-
-#include "cat/bit"
 
 namespace std {
 
@@ -99,6 +98,7 @@ namespace detail {
     }
 }  // namespace detail
 
+// Set all bytes at this address to `byte_value`.
 template <typename T = unsigned char>
     requires(sizeof(T) == 1)
 constexpr void set_memory(void* p_source, T byte_value, ssize bytes) {
@@ -107,6 +107,8 @@ constexpr void set_memory(void* p_source, T byte_value, ssize bytes) {
 }
 
 // `[[gnu::noinline]]` prevents GCC from constant-folding this function out.
+// Set all bytes at this address to `byte_value`. This function cannot be
+// constant-folded out.
 template <typename T = unsigned char>
     requires(sizeof(T) == 1)
 [[gnu::noinline]] constexpr void set_memory_explicit(void* p_source,
@@ -115,16 +117,52 @@ template <typename T = unsigned char>
     set_memory(p_source, byte_value, bytes);
 }
 
+// Set all bytes at this address to zero.
 constexpr void zero_memory(void* p_source, ssize bytes) {
     detail::set_memory_detail(p_source, static_cast<unsigned char>(0u), bytes);
 }
 
 // `[[gnu::noinline]]` prevents GCC from constant-folding this function out.
-[[gnu::noinline]] constexpr void set_memory_explicit(void* p_source,
-                                                     ssize bytes) {
+// Set all bytes at this address to zero. This function cannot be
+// constant-folded out.
+[[gnu::noinline]] constexpr void zero_memory_explicit(void* p_source,
+                                                      ssize bytes) {
     zero_memory(p_source, bytes);
 }
 
+// Set all bytes in a trivial object to `byte_value`.
+template <typename T, typename U = unsigned char>
+    requires(is_trivial<T> && sizeof(U) == 1)
+constexpr void set_object(T& object, U byte_value) {
+    set_memory(addressof(object), byte_value, ssizeof<T>(object));
+}
+
+// Zero out all bytes in a trivial object. This function cannot be
+// constant-folded out.
+template <typename T, typename U = unsigned char>
+    requires(is_trivial<T> && sizeof(U) == 1)
+constexpr void set_object_explicit(T& object, U byte_value) {
+    set_memory_explicit(addressof(object), byte_value, ssizeof<T>(object));
+}
+
+// Zero out all bytes in a trivial object.
+template <typename T>
+    requires(is_trivial<T>)
+constexpr void zero_object(T& object) {
+    zero_memory(addressof(object), ssizeof<T>(object));
+}
+
+// Zero out all bytes in a trivial object. This function cannot be
+// constant-folded out.
+template <typename T>
+    requires(is_trivial<T>)
+constexpr void zero_object_explicit(T& object) {
+    zero_memory_explicit(addressof(object), ssizeof<T>(object));
+}
+
+// Prevent a compiler from constant-folding the non-`const`-qualified `p_object`
+// when it shares its location in memory with, but has distinct lifetime from, a
+// separate `const`-qualified object.
 template <typename T>
 [[nodiscard]] constexpr auto launder(T* p_object) -> T* {
     return __builtin_launder(p_object);
@@ -150,7 +188,7 @@ using std::destroy_at;
 template <typename T>
 auto relocate_at(T const* p_source, T* p_destination) -> T* {
     if constexpr (is_trivially_relocatable<T>) {
-        copy_memory(p_source, p_destination, sizeof(T));
+        copy_memory(p_source, p_destination, ssizeof<T>());
         return launder(p_destination);
     } else {
         T* p_new = construct_at(p_destination, move(*p_source));
