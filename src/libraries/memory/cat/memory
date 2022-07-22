@@ -142,10 +142,27 @@ void launder(void*) = delete;
 void launder(void const*) = delete;
 void launder(void volatile*) = delete;
 void launder(void const volatile*) = delete;
-}
+
 using std::addressof;
 using std::construct_at;
 using std::destroy_at;
+
+template <typename T>
+auto relocate_at(T const* p_source, T* p_destination) -> T* {
+    if constexpr (is_trivially_relocatable<T>) {
+        copy_memory(p_source, p_destination, sizeof(T));
+        return launder(p_destination);
+    } else {
+        T* p_new = construct_at(p_destination, move(*p_source));
+        p_source->~T();
+        return p_new;
+    }
+}
+
+template <typename T>
+auto relocate(T& source, T* p_destination) -> T* {
+    return relocate_at(addressof(source), p_destination);
+}
 
 }  // namespace cat
 
