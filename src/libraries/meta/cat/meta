@@ -647,6 +647,23 @@ concept NarrowConvertible = requires() {
 template <int value>
 concept PowerOfTwo = ((value & (value - 1)) == 0);
 
+// `is_trivially_relocatable` can be overrided by partial template
+// specializations, such as:
+//
+// template <>
+// constexpr bool is_trivially_relocatable<MyClass> = true;
+//
+// Trivially relocatable types can enable algorithms to make optimizations, such
+// as relocating objects with `cat::copy_memory()` instead of `cat::move()`.
+// By default, trivial types are trivially relocatable.
+template <typename T>
+constexpr bool is_trivially_relocatable = is_trivial<T>;
+
+// Remove `const` qualifier from types for the purposes of querying
+// relocatability.
+template <typename T>
+constexpr bool is_trivially_relocatable<T const> = is_trivially_relocatable<T>;
+
 }  // namespace cat
 
 #include "./implementations/constant_evaluate.tpp"
