@@ -188,7 +188,8 @@ struct RemovePointerTrait : detail::RemovePointerTraitDetail<T> {};
 template <typename T>
 using RemovePointer = typename RemovePointerTrait<T>::Type;
 
-// TODO: Remove this trait.
+// TODO: Generalize constant wrappers.
+
 template <typename T, T constant_value>
 struct IntegralConstant {
     static constexpr T value = constant_value;
@@ -197,17 +198,16 @@ struct IntegralConstant {
 template <typename T, T constant_value>
 constexpr auto integral_constant = constant_value;
 
-// TODO: Remove this trait.
 template <bool constant_value>
-using BoolConstantTrait = IntegralConstant<bool, constant_value>;
+using BoolConstant = IntegralConstant<bool, constant_value>;
 template <bool constant_value>
 constexpr auto bool_constant = constant_value;
 
 // TODO: Streamline these out entirely.
-using TrueTypeTrait = BoolConstantTrait<true>;
+using TrueTypeTrait = BoolConstant<true>;
 constexpr bool true_type = TrueTypeTrait::value;
 
-using FalseTypeTrait = BoolConstantTrait<false>;
+using FalseTypeTrait = BoolConstant<false>;
 constexpr bool false_type = FalseTypeTrait::value;
 
 template <bool Condition, typename T, typename U>
