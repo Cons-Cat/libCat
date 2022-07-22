@@ -3,8 +3,6 @@
 #pragma once
 
 #include <cat/bit>
-#include <cat/meta>
-#include <cat/optional>
 #include <cat/span>
 #include <cat/tuple>
 
@@ -242,12 +240,17 @@ class AllocatorFacade {
 
   public:
     template <typename T, bool is_inline, bool is_fail_safe, bool is_aligned,
-              bool is_multiple, bool is_pointer, typename... Args>
+              bool is_multiple, bool is_pointer, bool is_zeroed = false,
+              typename... Args>
         requires(
             // Inline allocations cannot produce pointers.
             !(is_inline && is_pointer) &&
             // Multi-allocations cannot construct with arguments.
-            (!is_multiple || (sizeof...(Args) == 0)))
+            (!is_multiple || (sizeof...(Args) == 0)) &&
+            // Allocations can only be zeroed if `T` is trivial.
+            (!is_trivial<T> || !is_zeroed) &&
+            // Allocations can only be zeroed if they are default-constructed.
+            !(is_zeroed && sizeof...(Args) > 0))
     auto meta_alloc(usize allocation_alignment, ssize allocation_count,
                     Args&&... constructor_arguments) {
         ssize const allocation_size = allocation_count * ssizeof<T>();
@@ -259,6 +262,7 @@ class AllocatorFacade {
         // Get the return value of a user-supplied `.allocate()`. This must be
         // some kind of `Optional`. It holds some data that can pass into a
         // `Handle`'s constructor.
+        // TODO: Call `allocate_aligned(1)` if `.allocate()` is not supplied.
         using MaybeAllocation =
             decltype(this->self().allocate(allocation_size));
 
@@ -279,9 +283,13 @@ class AllocatorFacade {
 
         if constexpr (is_inline) {
             if (allocation_size < detail::inline_buffer_size) {
-                // TODO: Test `inline_alloc_multi` constructors.
+                // TODO: Support and test `inline_alloc_multi` constructors.
                 // Allocate memory on this stack frame.
                 T stack_memory = {forward<Args>(constructor_arguments)...};
+
+                if constexpr (is_zeroed) {
+                    zero_memory(addressof(stack_memory), allocation_size);
+                }
 
                 Handle stack_handle;
                 stack_handle.set_on_stack(true);
@@ -297,11 +305,11 @@ class AllocatorFacade {
             }
         }
 
-        // Initialize an empty `Optional`.
-        MaybeAllocation maybe_memory;
-
-        // If this is not small-size optimized, or is larger than
+        // If this allocation is not small-size optimized, or is larger than
         // `inline_buffer_size`:
+
+        // Make an allocation.
+        MaybeAllocation maybe_memory;
         if constexpr (is_aligned) {
             maybe_memory = this->self().aligned_allocate(allocation_alignment,
                                                          allocation_size);
@@ -322,9 +330,14 @@ class AllocatorFacade {
 
         T* const p_allocation = static_cast<T*>(maybe_memory.value());
 
-        // Construct the `T`s inside the allocator.
-        for (ssize i = 0; i < allocation_count; ++i) {
-            new (p_allocation + i) T(forward<Args>(constructor_arguments)...);
+        if constexpr (is_zeroed) {
+            zero_memory(p_allocation, allocation_size);
+        } else {
+            // Construct the `T`s inside the allocator.
+            for (ssize i = 0; i < allocation_count; ++i) {
+                new (p_allocation + i)
+                    T(forward<Args>(constructor_arguments)...);
+            }
         }
 
         if constexpr (is_pointer) {
@@ -351,361 +364,390 @@ class AllocatorFacade {
     }
 
     // Try to allocate a `T`.
-    template <typename T, bool is_pointer = false, typename... Args>
+    template <typename T, bool is_pointer = false, bool is_zeroed = false,
+              typename... Args>
     [[nodiscard]] auto alloc(Args&&... constructor_arguments) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            return this->align_alloc<T, is_pointer>(
+            return this->align_alloc<T, is_pointer, is_zeroed>(
                 alignof(T), forward<Args>(constructor_arguments)...);
         } else {
-            return this->unalign_alloc<T, is_pointer>(
+            return this->unalign_alloc<T, is_pointer, is_zeroed>(
                 forward<Args>(constructor_arguments)...);
         }
     }
 
     // Allocate a `T`.
-    template <typename T, bool is_pointer = false, typename... Args>
+    template <typename T, bool is_pointer = false, bool is_zeroed = false,
+              typename... Args>
     [[nodiscard]] auto xalloc(Args&&... constructor_arguments) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            return this->align_xalloc<T, is_pointer>(
+            return this->align_xalloc<T, is_pointer, is_zeroed>(
                 alignof(T), forward<Args>(constructor_arguments)...);
         } else {
-            return this->unalign_xalloc<T, is_pointer>(
+            return this->unalign_xalloc<T, is_pointer, is_zeroed>(
                 forward<Args>(constructor_arguments)...);
         }
     }
 
     // If this allocator has pointer stability, try to allocate a `T`, and
     // provide a pointer handle.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_alloc(Args&&... constructor_arguments)
         -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::alloc<T, true, Args...>,
+            &AllocatorFacade<Derived>::alloc<T, true, is_zeroed, Args...>,
             forward<Args>(constructor_arguments)...);
     }
 
     // If this allocator has pointer stability, allocate a `T`, and
     // provide a pointer handle.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_xalloc(Args&&... constructor_arguments)
         -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::xalloc<T, true, Args...>,
+            &AllocatorFacade<Derived>::xalloc<T, true, is_zeroed, Args...>,
             forward<Args>(constructor_arguments)...);
     }
 
     // Try to allocate an array of `T`.
-    template <typename T, bool is_pointer = false>
+    template <typename T, bool is_pointer = false, bool is_zeroed = false>
     [[nodiscard]] auto alloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            return this->align_alloc_multi<T, is_pointer>(alignof(T), count);
+            return this->align_alloc_multi<T, is_pointer, is_zeroed>(alignof(T),
+                                                                     count);
         } else {
-            return this->unalign_alloc_multi<T, is_pointer>(count);
+            return this->unalign_alloc_multi<T, is_pointer, is_zeroed>(count);
         }
     }
 
     // Allocate an array of `T`.
-    template <typename T, bool is_pointer = false>
+    template <typename T, bool is_pointer = false, bool is_zeroed = false>
     [[nodiscard]] auto xalloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            return this->align_xalloc_multi<T, is_pointer>(alignof(T), count);
+            return this->align_xalloc_multi<T, is_pointer, is_zeroed>(
+                alignof(T), count);
         } else {
-            return this->unalign_xalloc_multi<T, is_pointer>(count);
+            return this->unalign_xalloc_multi<T, is_pointer, is_zeroed>(count);
         }
     }
 
     // If this allocator has pointer stability, try to allocate an array of `T`,
     // and provide a pointer handle.
-    template <typename T>
+    template <typename T, bool is_zeroed = false>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_alloc_multi(ssize count) -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::alloc_multi<T, true>, count);
+            &AllocatorFacade<Derived>::alloc_multi<T, true, is_zeroed>, count);
     }
 
     // If this allocator has pointer stability, allocate an array of `T`, and
     // provide a pointer handle.
-    template <typename T>
+    template <typename T, bool is_zeroed = false>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_xalloc_multi(ssize count) -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::xalloc_multi<T, true>, count);
+            &AllocatorFacade<Derived>::xalloc_multi<T, true, is_zeroed>, count);
     }
 
     // Try to allocate a `T` with an alignment guarantee.
-    template <typename T, bool is_pointer = false, typename... Args>
+    template <typename T, bool is_pointer = false, bool is_zeroed = false,
+              typename... Args>
     [[nodiscard]] auto align_alloc(usize alignment,
                                    Args&&... constructor_arguments) {
-        return this->meta_alloc<T, false, true, true, false, is_pointer>(
-            alignment, 1, forward<Args>(constructor_arguments)...);
+        return this
+            ->meta_alloc<T, false, true, true, false, is_pointer, is_zeroed>(
+                alignment, 1, forward<Args>(constructor_arguments)...);
         // TODO: `assert` the alignment is correct.
     }
 
     // Allocate a `T` with an alignment guarantee.
-    template <typename T, bool is_pointer = false, typename... Args>
+    template <typename T, bool is_pointer = false, bool is_zeroed = false,
+              typename... Args>
     [[nodiscard]] auto align_xalloc(usize alignment,
                                     Args&&... constructor_arguments) {
-        return this->meta_alloc<T, false, false, true, false, is_pointer>(
-            alignment, 1, forward<Args>(constructor_arguments)...);
+        return this
+            ->meta_alloc<T, false, false, true, false, is_pointer, is_zeroed>(
+                alignment, 1, forward<Args>(constructor_arguments)...);
         // TODO: `assert` the alignment is correct.
     }
 
     // If this allocator has pointer stability, try to allocate a `T` with an
     // alignment guarantee, and provide a pointer handle.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_alloc(usize alignment,
                                      Args&&... constructor_arguments)
         -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::align_alloc<T, true, Args...>, alignment,
-            forward<Args>(constructor_arguments)...);
+            &AllocatorFacade<Derived>::align_alloc<T, true, is_zeroed, Args...>,
+            alignment, forward<Args>(constructor_arguments)...);
         // TODO: `assert` the alignment is correct.
     }
 
     // If this allocator has pointer stability, allocate a `T` with an
     // alignment guarantee, and provide a pointer handle.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_xalloc(usize alignment,
                                       Args&&... constructor_arguments)
         -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::align_xalloc<T, true, Args...>,
+            &AllocatorFacade<Derived>::align_xalloc<T, true, is_zeroed,
+                                                    Args...>,
             alignment, forward<Args>(constructor_arguments)...);
         // TODO: `assert` the alignment is correct.
     }
 
     // Try to allocate a `T` with no alignment guarantee.
-    template <typename T, bool is_pointer = false, typename... Args>
+    template <typename T, bool is_pointer = false, bool is_zeroed = false,
+              typename... Args>
     [[nodiscard]] auto unalign_alloc(Args&&... constructor_arguments) {
-        return this->meta_alloc<T, false, true, false, false, is_pointer>(
-            1u, 1, forward<Args>(constructor_arguments)...);
+        return this
+            ->meta_alloc<T, false, true, false, false, is_pointer, is_zeroed>(
+                1u, 1, forward<Args>(constructor_arguments)...);
     }
 
     // Allocate a `T` with no alignment guarantee.
-    template <typename T, bool is_pointer = false, typename... Args>
+    template <typename T, bool is_pointer = false, bool is_zeroed = false,
+              typename... Args>
     [[nodiscard]] auto unalign_xalloc(Args&&... constructor_arguments) {
-        return this->meta_alloc<T, false, false, false, false, is_pointer>(
-            1u, 1, forward<Args>(constructor_arguments)...);
+        return this
+            ->meta_alloc<T, false, false, false, false, is_pointer, is_zeroed>(
+                1u, 1, forward<Args>(constructor_arguments)...);
     }
 
     // If this allocator has pointer stability, try to allocate a `T` with no
     // alignment guarantee, and provide a pointer handle.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_unalign_alloc(Args&&... constructor_arguments)
         -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::unalign_alloc<T, true, Args...>,
+            &AllocatorFacade<Derived>::unalign_alloc<T, true, is_zeroed,
+                                                     Args...>,
             forward<Args>(constructor_arguments)...);
     }
 
     // If this allocator has pointer stability, allocate a `T` with no
     // alignment guarantee, and provide a pointer handle.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_unalign_xalloc(Args&&... constructor_arguments)
         -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::unalign_xalloc<T, true, Args...>,
+            &AllocatorFacade<Derived>::unalign_xalloc<T, true, is_zeroed,
+                                                      Args...>,
             forward<Args>(constructor_arguments)...);
     }
 
     // Try to allocate an array of `T` with alignment guarantee.
-    template <typename T, bool is_pointer = false>
+    template <typename T, bool is_pointer = false, bool is_zeroed = false>
     [[nodiscard]] auto align_alloc_multi(usize alignment, ssize count) {
-        return this->meta_alloc<T, false, true, true, true, is_pointer>(
-            alignment, count);
+        return this
+            ->meta_alloc<T, false, true, true, true, is_pointer, is_zeroed>(
+                alignment, count);
         // TODO: `assert` the alignment is correct.
     }
 
     // Allocate an array of `T` with an alignment guarantee.
-    template <typename T, bool is_pointer = false>
+    template <typename T, bool is_pointer = false, bool is_zeroed = false>
     [[nodiscard]] auto align_xalloc_multi(usize alignment, ssize count) {
-        return this->meta_alloc<T, false, false, true, true, is_pointer>(
-            alignment, count);
+        return this
+            ->meta_alloc<T, false, false, true, true, is_pointer, is_zeroed>(
+                alignment, count);
         // TODO: `assert` the alignment is correct.
     }
 
     // If this allocator has pointer stability, try to allocate an array of `T`
     // with an alignment guarantee, and provide a pointer handle.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_alloc_multi(usize alignment, ssize count)
         -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::align_alloc_multi<T, true>, alignment,
-            count);
+            &AllocatorFacade<Derived>::align_alloc_multi<T, true, is_zeroed>,
+            alignment, count);
         // TODO: `assert` the alignment is correct.
     }
 
     // If this allocator has pointer stability, allocate an array of `T`
     // with an alignment guarantee, and provide a pointer handle.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_xalloc_multi(usize alignment, ssize count)
         -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::align_xalloc_multi<T, true>, alignment,
-            count);
+            &AllocatorFacade<Derived>::align_xalloc_multi<T, true, is_zeroed>,
+            alignment, count);
         // TODO: `assert` the alignment is correct.
     }
 
     // Try to allocate an array of `T` with no alignment guarantee.
-    template <typename T, bool is_pointer = false>
+    template <typename T, bool is_pointer = false, bool is_zeroed = false>
     [[nodiscard]] auto unalign_alloc_multi(ssize count) {
-        return this->meta_alloc<T, false, true, false, true, is_pointer>(1u,
-                                                                         count);
+        return this
+            ->meta_alloc<T, false, true, false, true, is_pointer, is_zeroed>(
+                1u, count);
     }
 
     // Allocate an array of `T` with no alignment guarantee.
-    template <typename T, bool is_pointer = false>
+    template <typename T, bool is_pointer = false, bool is_zeroed = false>
     [[nodiscard]] auto unalign_xalloc_multi(ssize count) {
-        return this->meta_alloc<T, false, false, false, true, is_pointer>(
-            1u, count);
+        return this
+            ->meta_alloc<T, false, false, false, true, is_pointer, is_zeroed>(
+                1u, count);
     }
 
     // If this allocator has pointer stability, try to allocate an array of `T`
     // with no alignment guarantee, and provide a pointer handle.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_unalign_alloc_multi(ssize count) -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::unalign_alloc_multi<T, true>, count);
+            &AllocatorFacade<Derived>::unalign_alloc_multi<T, true, is_zeroed>,
+            count);
     }
 
     // If this allocator has pointer stability, allocate an array of `T`
     // with no alignment guarantee, and provide a pointer handle.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_unalign_xalloc_multi(ssize count) -> OptionalPtr<T> {
         return this->p_wrap_allocation<T>(
-            &AllocatorFacade<Derived>::unalign_xalloc_multi<T, true>, count);
+            &AllocatorFacade<Derived>::unalign_xalloc_multi<T, true, is_zeroed>,
+            count);
     }
 
     // Try to allocate a small-size optimized `T`.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto inline_alloc(Args&&... constructor_arguments) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            return this->inline_align_alloc<T>(
+            return this->inline_align_alloc<T, is_zeroed>(
                 alignof(T), forward<Args>(constructor_arguments)...);
         } else {
-            return this->meta_alloc<T, true, true, false, false, false>(
-                1u, 1, forward<Args>(constructor_arguments)...);
+            return this
+                ->meta_alloc<T, true, true, false, false, false, is_zeroed>(
+                    1u, 1, forward<Args>(constructor_arguments)...);
         }
     }
 
     // Allocate a small-size optimized `T`.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto inline_xalloc(Args&&... constructor_arguments) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            return this->inline_align_xalloc<T>(
+            return this->inline_align_xalloc<T, is_zeroed>(
                 alignof(T), forward<Args>(constructor_arguments)...);
         } else {
-            return this->meta_alloc<T, true, false, false, false, false>(
-                1u, 1, forward<Args>(constructor_arguments)...);
+            return this
+                ->meta_alloc<T, true, false, false, false, false, is_zeroed>(
+                    1u, 1, forward<Args>(constructor_arguments)...);
         }
     }
 
     // Try to allocate a small-size optimized array of `T`.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto inline_alloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            return this->inline_align_alloc_multi<T>(alignof(T), count);
+            return this->inline_align_alloc_multi<T, is_zeroed>(alignof(T),
+                                                                count);
         } else {
-            return this->meta_alloc<T, true, true, false, true, false>(1u,
-                                                                       count);
+            return this
+                ->meta_alloc<T, true, true, false, true, false, is_zeroed>(
+                    1u, count);
         }
     }
 
     // Allocate a small-size optimized array of `T`.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto inline_xalloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
-            return this->inline_align_xalloc_multi<T>(alignof(T), count);
+            return this->inline_align_xalloc_multi<T, is_zeroed>(alignof(T),
+                                                                 count);
         } else {
-            return this->meta_alloc<T, true, false, false, true, false>(1u,
-                                                                        count);
+            return this
+                ->meta_alloc<T, true, false, false, true, false, is_zeroed>(
+                    1u, count);
         }
     }
 
     // Try to allocate a small-size optimized `T` with an alignment guarantee.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto inline_align_alloc(usize alignment,
                                           Args&&... constructor_arguments) {
-        return this->meta_alloc<T, true, true, true, false, false>(
+        return this->meta_alloc<T, true, true, true, false, false, is_zeroed>(
             alignment, 1, forward<Args>(constructor_arguments)...);
     }
 
     // Allocate a small-size optimized `T` with an alignment guarantee.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto inline_align_xalloc(usize alignment,
                                            Args&&... constructor_arguments) {
-        return this->meta_alloc<T, true, false, true, false, false>(
+        return this->meta_alloc<T, true, false, true, false, false, is_zeroed>(
             alignment, 1, forward<Args>(constructor_arguments)...);
     }
 
     // Try to allocate a small-size optimized `T` with no alignment guarantee.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto inline_unalign_alloc(Args&&... constructor_arguments) {
-        return this->meta_alloc<T, true, true, false, false, false>(
+        return this->meta_alloc<T, true, true, false, false, false, is_zeroed>(
             1u, 1, forward<Args>(constructor_arguments)...);
     }
 
     // Allocate a small-size optimized `T` with no alignment guarantee.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto inline_unalign_xalloc(Args&&... constructor_arguments) {
-        return this->meta_alloc<T, true, false, false, false, false>(
+        return this->meta_alloc<T, true, false, false, false, false, is_zeroed>(
             1u, 1, forward<Args>(constructor_arguments)...);
     }
 
     // Try to allocate a small-size optimized array of `T` with an alignment
     // guarantee.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto inline_align_alloc_multi(usize alignment, ssize count) {
-        return this->meta_alloc<T, true, true, true, true, false>(alignment,
-                                                                  count);
+        return this->meta_alloc<T, true, true, true, true, false, is_zeroed>(
+            alignment, count);
     }
 
     // Allocate a small-size optimized array of `T` with an alignment
     // guarantee.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto inline_align_xalloc_multi(usize alignment, ssize count) {
-        return this->meta_alloc<T, true, false, true, true, false>(alignment,
-                                                                   count);
+        return this->meta_alloc<T, true, false, true, true, false, is_zeroed>(
+            alignment, count);
     }
 
     // Try to allocate a small-size optimized array of `T` with no alignment
     // guarantee.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto inline_unalign_alloc_multi(ssize count) {
-        return this->meta_alloc<T, true, true, false, true, false>(1u, count);
+        return this->meta_alloc<T, true, true, false, true, false, is_zeroed>(
+            1u, count);
     }
 
     // Allocate a small-size optimized array of `T` with no alignment
     // guarantee.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto inline_unalign_xalloc_multi(ssize count) {
-        return this->meta_alloc<T, true, false, false, true, false>(1u, count);
+        return this->meta_alloc<T, true, false, false, true, false, is_zeroed>(
+            1u, count);
     }
 
     // Try to get the number of bytes that allocating a `T` would reserve.
@@ -941,399 +983,384 @@ class AllocatorFacade {
     }
 
     // Try to allocate a `T`, and return the number of bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto salloc(Args&&... constructor_arguments) {
         ssize size = this->nalloc<T>().value();
         auto allocation =
-            this->alloc<T>(forward<Args>(constructor_arguments)...);
+            this->alloc<T, is_zeroed>(forward<Args>(constructor_arguments)...);
         return Tuple{allocation, size};
     }
 
     // Allocate a `T`, and return the number of bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto xsalloc(Args&&... constructor_arguments) {
         ssize size = this->xnalloc<T>();
         auto allocation =
-            this->xalloc<T>(forward<Args>(constructor_arguments)...);
+            this->xalloc<T, is_zeroed>(forward<Args>(constructor_arguments)...);
         return Tuple{allocation, size};
     }
 
     // If this allocator has pointer stability, try to allocate a `T`, and
     // return the number of bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_salloc(Args&&... constructor_arguments) {
         ssize size = this->nalloc<T>().value();
-        Optional p_allocation =
-            this->p_alloc<T>(forward<Args>(constructor_arguments)...);
+        Optional p_allocation = this->p_alloc<T, is_zeroed>(
+            forward<Args>(constructor_arguments)...);
         return Tuple{p_allocation, size.raw};
     }
 
     // If this allocator has pointer stability, allocate a `T`, and
     // return the number of bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_xsalloc(Args&&... constructor_arguments) {
         ssize size = this->xnalloc<T>();
-        T* p_allocation =
-            this->p_xalloc<T>(forward<Args>(constructor_arguments)...);
+        T* p_allocation = this->p_xalloc<T, is_zeroed>(
+            forward<Args>(constructor_arguments)...);
         return Tuple{p_allocation, size.raw};
     }
 
     // Try to allocate an array of `T`, and return the number of bytes that was
     // allocated.
-    template <typename T, typename... Args>
-    [[nodiscard]] auto salloc_multi(ssize count,
-                                    Args&&... constructor_arguments) {
+    template <typename T, bool is_pointer, bool is_zeroed = false>
+    [[nodiscard]] auto salloc_multi(ssize count) {
         ssize size = this->nalloc_multi<T>(count).value();
-        auto allocation = this->alloc_multi<T>(
-            count, forward<Args>(constructor_arguments)...);
+        auto allocation = this->alloc_multi<T, is_pointer, is_zeroed>(count);
         return Tuple{allocation, size};
     }
 
     // Allocate an array of `T`, and return the number of bytes that was
     // allocated.
-    template <typename T, typename... Args>
-    [[nodiscard]] auto xsalloc_multi(ssize count,
-                                     Args&&... constructor_arguments) {
+    template <typename T, bool is_pointer, bool is_zeroed>
+    [[nodiscard]] auto xsalloc_multi(ssize count) {
         ssize size = this->xnalloc_multi<T>(count);
-        auto allocation = this->xalloc_multi<T>(
-            count, forward<Args>(constructor_arguments)...);
+        auto allocation = this->xalloc_multi<T, is_pointer, is_zeroed>(count);
         return Tuple{allocation, size};
     }
 
     // If this allocator has pointer stability, try to allocate an array of `T`,
     // and return the number of bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_salloc_multi(ssize count,
                                       Args&&... constructor_arguments) {
         ssize size = this->nalloc_multi<T>(count).value();
-        Optional p_allocation = this->p_alloc_multi<T>(
+        Optional p_allocation = this->p_alloc_multi<T, is_zeroed>(
             forward<Args>(count, constructor_arguments)...);
         return Tuple{p_allocation, size.raw};
     }
 
     // If this allocator has pointer stability, allocate an array of `T`,
     // and return the number of bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_xsalloc_multi(ssize count,
                                        Args&&... constructor_arguments) {
         ssize size = this->xnalloc_multi<T>(count);
-        T* p_allocation =
-            p_xalloc_multi<T>(forward<Args>(count, constructor_arguments)...);
+        T* p_allocation = p_xalloc_multi<T, is_zeroed>(
+            forward<Args>(count, constructor_arguments)...);
         return Tuple{p_allocation, size.raw};
     }
 
     // Try to allocate a `T` with an alignment guarantee, and return the number
     // of bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_pointer, bool is_zeroed = false,
+              typename... Args>
     [[nodiscard]] auto align_salloc(usize alignment,
                                     Args&&... constructor_arguments) {
         ssize size = this->align_nalloc<T>(alignment).value();
-        auto allocation = this->align_alloc<T>(
+        auto allocation = this->align_alloc<T, is_pointer, is_zeroed>(
             alignment, forward<Args>(constructor_arguments)...);
         return Tuple{allocation, size};
     }
 
     // Allocate a `T` with an alignment guarantee, and return the number of
     // bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_pointer, bool is_zeroed = false,
+              typename... Args>
     [[nodiscard]] auto align_xsalloc(usize alignment,
                                      Args&&... constructor_arguments) {
         ssize size = this->align_xnalloc<T>(alignment);
-        auto allocation = this->align_xalloc<T>(
+        auto allocation = this->align_xalloc<T, is_pointer, is_zeroed>(
             alignment, forward<Args>(constructor_arguments)...);
         return Tuple{allocation, size};
     }
 
     // If this allocator has pointer stability, try to allocate a `T` with an
     // alignment guarantee, and return the number of bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_salloc(usize alignment,
                                       Args&&... constructor_arguments) {
         ssize size = this->align_nalloc<T>(alignment).value();
-        Optional p_allocation = this->p_align_alloc<T>(
+        Optional p_allocation = this->p_align_alloc<T, is_zeroed>(
             alignment, forward<Args>(constructor_arguments)...);
         return Tuple{p_allocation, size.raw};
     }
 
     // If this allocator has pointer stability, allocate a `T` with an
     // alignment guarantee, and return the number of bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_xsalloc(usize alignment,
                                        Args&&... constructor_arguments) {
         ssize size = this->align_xnalloc<T>(alignment);
-        T* p_allocation = this->p_align_xalloc<T>(
+        T* p_allocation = this->p_align_xalloc<T, is_zeroed>(
             alignment, forward<Args>(constructor_arguments)...);
         return Tuple{p_allocation, size.raw};
     }
 
     // Try to allocate a `T` with no alignment guarantee, and return the number
     // of bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_pointer, bool is_zeroed = false,
+              typename... Args>
     [[nodiscard]] auto unalign_salloc(Args&&... constructor_arguments) {
         ssize size = this->unalign_nalloc<T>().value();
-        auto allocation =
-            this->unalign_alloc<T>(forward<Args>(constructor_arguments)...);
+        auto allocation = this->unalign_alloc<T, is_pointer, is_zeroed>(
+            forward<Args>(constructor_arguments)...);
         return Tuple{allocation, size};
     }
 
     // Allocate a `T` with no alignment guarantee, and return the number of
     // bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_pointer, bool is_zeroed = false,
+              typename... Args>
     [[nodiscard]] auto unalign_xsalloc(Args&&... constructor_arguments) {
         ssize size = this->unalign_xnalloc<T>();
-        auto allocation =
-            this->unalign_xalloc<T>(forward<Args>(constructor_arguments)...);
+        auto allocation = this->unalign_xalloc<T, is_pointer, is_zeroed>(
+            forward<Args>(constructor_arguments)...);
         return Tuple{allocation, size};
     }
 
     // If this allocator has pointer stability, try to allocate a `T` with no
     // alignment guarantee, and return the number of bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_unalign_salloc(Args&&... constructor_arguments) {
         ssize size = this->unalign_nalloc<T>().value();
-        Optional p_allocation =
-            this->p_unalign_alloc<T>(forward<Args>(constructor_arguments)...);
+        Optional p_allocation = this->p_unalign_alloc<T, is_zeroed>(
+            forward<Args>(constructor_arguments)...);
         return Tuple{p_allocation, size.raw};
     }
 
     // If this allocator has pointer stability, allocate a `T` with no
     // alignment guarantee, and return the number of bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_unalign_xsalloc(Args&&... constructor_arguments) {
         ssize size = this->unalign_xnalloc<T>();
-        T* p_allocation =
-            this->p_unalign_xalloc<T>(forward<Args>(constructor_arguments)...);
+        T* p_allocation = this->p_unalign_xalloc<T, is_zeroed>(
+            forward<Args>(constructor_arguments)...);
         return Tuple{p_allocation, size.raw};
     }
 
     // Try to allocate an array of `T` with an alignment guarantee, and return
     // the number of bytes that was allocated.
-    template <typename T, typename... Args>
-    [[nodiscard]] auto align_salloc_multi(usize alignment, ssize count,
-                                          Args&&... constructor_arguments) {
+    template <typename T, bool is_pointer, bool is_zeroed>
+    [[nodiscard]] auto align_salloc_multi(usize alignment, ssize count) {
         ssize size = this->align_nalloc_multi<T>(alignment, count).value();
-        auto allocation = this->align_alloc_multi<T>(
-            alignment, count, forward<Args>(constructor_arguments)...);
+        auto allocation =
+            this->align_alloc_multi<T, is_pointer, is_zeroed>(alignment, count);
         return Tuple{allocation, size};
     }
 
     // Allocate an array of `T` with an alignment guarantee, and return
     // the number of bytes that was allocated.
-    template <typename T, typename... Args>
-    [[nodiscard]] auto align_xsalloc_multi(usize alignment, ssize count,
-                                           Args&&... constructor_arguments) {
+    template <typename T, bool is_pointer, bool is_zeroed>
+    [[nodiscard]] auto align_xsalloc_multi(usize alignment, ssize count) {
         ssize size = this->align_xnalloc_multi<T>(alignment, count);
-        auto allocation = this->align_xalloc_multi<T>(
-            alignment, count, forward<Args>(constructor_arguments)...);
+        auto allocation = this->align_xalloc_multi<T, is_pointer, is_zeroed>(
+            alignment, count);
         return Tuple{allocation, size};
     }
 
     // If this allocator has pointer stability, try to allocate an array of `T`
     // with an alignment guarantee, and return the number of bytes that was
     // allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed>
         requires(detail::StableDerivedAllocator<Derived>)
-    [[nodiscard]] auto p_align_salloc_multi(usize alignment, ssize count,
-                                            Args&&... constructor_arguments) {
+    [[nodiscard]] auto p_align_salloc_multi(usize alignment, ssize count) {
         ssize size = this->align_nalloc_multi<T>(alignment, count).value();
-        Optional p_allocation = this->p_align_alloc_multi<T>(
-            alignment, count, forward<Args>(constructor_arguments)...);
+        Optional p_allocation =
+            this->p_align_alloc_multi<T, is_zeroed>(alignment, count);
         return Tuple{p_allocation, size.raw};
     }
 
     // If this allocator has pointer stability, allocate an array of `T` with an
     // alignment guarantee, and return the number of bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed>
         requires(detail::StableDerivedAllocator<Derived>)
-    [[nodiscard]] auto p_align_xsalloc_multi(usize alignment, ssize count,
-                                             Args&&... constructor_arguments) {
+    [[nodiscard]] auto p_align_xsalloc_multi(usize alignment, ssize count) {
         ssize size = this->align_xnalloc_multi<T>(alignment, count);
-        T* p_allocation = this->p_align_xalloc_multi<T>(
-            alignment, count, forward<Args>(constructor_arguments)...);
+        T* p_allocation =
+            this->p_align_xalloc_multi<T, is_zeroed>(alignment, count);
         return Tuple{p_allocation, size.raw};
     }
 
     // Try to allocate an array of `T` with no alignment guarantee, and return
     // the number of bytes that was allocated.
-    template <typename T, typename... Args>
-    [[nodiscard]] auto unalign_salloc_multi(ssize count,
-                                            Args&&... constructor_arguments) {
+    template <typename T, bool is_pointer, bool is_zeroed>
+    [[nodiscard]] auto unalign_salloc_multi(ssize count) {
         ssize size = this->unalign_nalloc_multi<T>(count).value();
-        auto allocation = this->align_alloc_multi<T>(
-            count, forward<Args>(constructor_arguments)...);
+        auto allocation =
+            this->align_alloc_multi<T, is_pointer, is_zeroed>(count);
         return Tuple{allocation, size};
     }
 
     // Allocate an array of `T` with no alignment guarantee, and return
     // the number of bytes that was allocated.
-    template <typename T, typename... Args>
-    [[nodiscard]] auto unalign_xsalloc_multi(ssize count,
-                                             Args&&... constructor_arguments) {
+    template <typename T, bool is_pointer, bool is_zeroed>
+    [[nodiscard]] auto unalign_xsalloc_multi(ssize count) {
         ssize size = this->unalign_xnalloc_multi<T>(count);
-        auto allocation = this->unalign_xalloc_multi<T>(
-            count, forward<Args>(constructor_arguments)...);
+        auto allocation =
+            this->unalign_xalloc_multi<T, is_pointer, is_zeroed>(count);
         return Tuple{allocation, size};
     }
 
     // If this allocator has pointer stability, try to allocate an array of `T`
     // with no alignment guarantee, and return the number of bytes that was
     // allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed>
         requires(detail::StableDerivedAllocator<Derived>)
-    [[nodiscard]] auto p_unalign_salloc_multi(ssize count,
-                                              Args&&... constructor_arguments) {
+    [[nodiscard]] auto p_unalign_salloc_multi(ssize count) {
         ssize size = this->unalign_nalloc_multi<T>(count).value();
-        Optional p_allocation = this->p_unalign_alloc_multi<T>(
-            count, forward<Args>(constructor_arguments)...);
+        Optional p_allocation =
+            this->p_unalign_alloc_multi<T, is_zeroed>(count);
         return Tuple{p_allocation, size.raw};
     }
 
     // If this allocator has pointer stability, allocate an array of `T` with no
     // alignment guarantee, and return the number of bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_unalign_xsalloc_multi(
         ssize count, Args&&... constructor_arguments) {
         ssize size = this->unalign_xnalloc_multi<T>(count);
-        T* p_allocation = this->p_unalign_xalloc_multi<T>(
+        T* p_allocation = this->p_unalign_xalloc_multi<T, is_zeroed>(
             count, forward<Args>(constructor_arguments)...);
         return Tuple{p_allocation, size.raw};
     }
 
     // Try to allocate a small-size optimized `T`, and return the number of
     // bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto inline_salloc(Args&&... constructor_arguments) {
         ssize size = this->inline_nalloc<T>().value();
-        auto allocation =
-            this->inline_alloc<T>(forward<Args>(constructor_arguments)...);
+        auto allocation = this->inline_alloc<T, is_zeroed>(
+            forward<Args>(constructor_arguments)...);
         return Tuple{allocation, size};
     }
 
     // Allocate a small-size optimized `T`, and return the number of bytes that
     // was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto inline_xsalloc(Args&&... constructor_arguments) {
         ssize size = this->inline_xnalloc<T>();
-        auto allocation =
-            this->inline_xalloc<T>(forward<Args>(constructor_arguments)...);
+        auto allocation = this->inline_xalloc<T, is_zeroed>(
+            forward<Args>(constructor_arguments)...);
         return Tuple{allocation, size};
     }
 
     // Try to allocate a small-size optimized array of `T`, and return the
     // number of bytes that was allocated.
-    template <typename T, typename... Args>
-    [[nodiscard]] auto inline_salloc_multi(ssize count,
-                                           Args&&... constructor_arguments) {
+    template <typename T, bool is_zeroed = false, typename... Args>
+    [[nodiscard]] auto inline_salloc_multi(ssize count) {
         ssize size = this->inline_nalloc_multi<T>(count).value();
-        auto allocation = this->inline_alloc_multi<T>(
-            count, forward<Args>(constructor_arguments)...);
+        auto allocation = this->inline_alloc_multi<T, is_zeroed>(count);
         return Tuple{allocation, size};
     }
 
     // Allocate a small-size optimized array of `T`, and return the number of
     // bytes that was allocated.
-    template <typename T, typename... Args>
-    [[nodiscard]] auto inline_xsalloc_multi(ssize count,
-                                            Args&&... constructor_arguments) {
+    template <typename T, bool is_zeroed = false, typename... Args>
+    [[nodiscard]] auto inline_xsalloc_multi(ssize count) {
         ssize size = this->inline_xnalloc_multi<T>(count);
-        auto allocation = this->inline_xalloc_multi<T>(
-            count, forward<Args>(constructor_arguments)...);
+        auto allocation = this->inline_xalloc_multi<T, is_zeroed>(count);
         return Tuple{allocation, size};
     }
 
     // Try to allocate a small-size optimized `T` with an alignment guarantee,
     // and return the number of bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto inline_align_salloc(usize alignment,
                                            Args&&... constructor_arguments) {
         ssize size = this->inline_align_nalloc<T>(alignment).value();
-        auto allocation = this->inline_align_alloc<T>(
+        auto allocation = this->inline_align_alloc<T, is_zeroed>(
             alignment, forward<Args>(constructor_arguments)...);
         return Tuple{allocation, size};
     }
 
     // Allocate a small-size optimized `T` with an alignment guarantee, and
     // return the number of bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto inline_align_xsalloc(usize alignment,
                                             Args&&... constructor_arguments) {
         ssize size = this->inline_align_xnalloc<T>(alignment);
-        auto allocation = this->inline_align_xalloc<T>(
+        auto allocation = this->inline_align_xalloc<T, is_zeroed>(
             alignment, forward<Args>(constructor_arguments)...);
         return Tuple{allocation, size};
     }
 
     // Try to allocate a small-size optimized `T` with no alignment guarantee,
     // and return the number of bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto inline_unalign_salloc(Args&&... constructor_arguments) {
         ssize size = this->inline_unalign_nalloc<T>().value();
-        auto allocation = this->inline_unalign_alloc<T>(
+        auto allocation = this->inline_unalign_alloc<T, is_zeroed>(
             forward<Args>(constructor_arguments)...);
         return Tuple{allocation, size};
     }
 
     // Allocate a small-size optimized `T` with no alignment guarantee, and
     // return the number of bytes that was allocated.
-    template <typename T, typename... Args>
+    template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto inline_unalign_xsalloc(Args&&... constructor_arguments) {
         ssize size = this->inline_unalign_xnalloc<T>();
-        auto allocation = this->inline_unalign_xalloc<T>(
+        auto allocation = this->inline_unalign_xalloc<T, is_zeroed>(
             forward<Args>(constructor_arguments)...);
         return Tuple{allocation, size};
     }
 
     // Try to allocate a small-size optimized array of `T` with an alignment
     // guarantee, and return the number of bytes that was allocated.
-    template <typename T, typename... Args>
-    [[nodiscard]] auto inline_align_salloc_multi(
-        usize alignment, ssize count, Args&&... constructor_arguments) {
+    template <typename T, bool is_zeroed>
+    [[nodiscard]] auto inline_align_salloc_multi(usize alignment, ssize count) {
         ssize size =
             this->inline_align_nalloc_multi<T>(alignment, count).value();
-        auto allocation = this->inline_align_alloc_multi<T>(
-            alignment, count, forward<Args>(constructor_arguments)...);
+        auto allocation =
+            this->inline_align_alloc_multi<T, is_zeroed>(alignment, count);
         return Tuple{allocation, size};
     }
 
     // Allocate a small-size optimized array of `T` with an alignment
     // guarantee, and return the number of bytes that was allocated.
-    template <typename T, typename... Args>
-    [[nodiscard]] auto inline_align_xsalloc_multi(
-        usize alignment, ssize count, Args&&... constructor_arguments) {
+    template <typename T, bool is_zeroed>
+    [[nodiscard]] auto inline_align_xsalloc_multi(usize alignment,
+                                                  ssize count) {
         ssize size = this->inline_align_xnalloc_multi<T>(alignment, count);
-        auto allocation = this->inline_align_xalloc_multi<T>(
-            alignment, count, forward<Args>(constructor_arguments)...);
+        auto allocation =
+            this->inline_align_xalloc_multi<T, is_zeroed>(alignment, count);
         return Tuple{allocation, size};
     }
 
     // Try to allocate a small-size optimized array of `T` with no alignment
     // guarantee, and return the number of bytes that was allocated.
-    template <typename T, typename... Args>
-    [[nodiscard]] auto inline_unalign_salloc_multi(
-        ssize count, Args&&... constructor_arguments) {
+    template <typename T, bool is_zeroed>
+    [[nodiscard]] auto inline_unalign_salloc_multi(ssize count) {
         ssize size = this->inline_unalign_nalloc_multi<T>(count).value();
-        auto allocation = this->inline_unalign_alloc_multi<T>(
-            count, forward<Args>(constructor_arguments)...);
+        auto allocation = this->inline_unalign_alloc_multi<T, is_zeroed>(count);
         return Tuple{allocation, size};
     }
 
     // Allocate a small-size optimized array of `T` with no alignment
     // guarantee, and return the number of bytes that was allocated.
-    template <typename T, typename... Args>
-    [[nodiscard]] auto inline_unalign_xsalloc_multi(
-        ssize count, Args&&... constructor_arguments) {
+    template <typename T, bool is_zeroed>
+    [[nodiscard]] auto inline_unalign_xsalloc_multi(ssize count) {
         ssize size = this->inline_unalign_xnalloc_multi<T>(count);
-        auto allocation = this->inline_unalign_xalloc_multi<T>(
-            count, forward<Args>(constructor_arguments)...);
+        auto allocation =
+            this->inline_unalign_xalloc_multi<T, is_zeroed>(count);
         return Tuple{allocation, size};
     }
 
