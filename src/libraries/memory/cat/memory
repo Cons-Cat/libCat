@@ -125,6 +125,24 @@ constexpr void zero_memory(void* p_source, ssize bytes) {
     zero_memory(p_source, bytes);
 }
 
+template <typename T>
+[[nodiscard]] constexpr auto launder(T* p_object) -> T* {
+    return __builtin_launder(p_object);
+}
+
+// `launder` cannot be used on functions.
+template <typename FunctionPtrReturn, typename... Args>
+void launder(FunctionPtrReturn (*)(Args...)) = delete;
+
+template <typename FunctionPtrReturn, typename... Args>
+void launder(FunctionPtrReturn (*)(Args..., ...)) = delete;
+
+// `launder` cannot be used on `void*`
+void launder(void*) = delete;
+void launder(void const*) = delete;
+void launder(void volatile*) = delete;
+void launder(void const volatile*) = delete;
+}
 using std::addressof;
 using std::construct_at;
 using std::destroy_at;
