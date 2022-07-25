@@ -20,6 +20,8 @@ class Variant {
     static constexpr usize::Raw alignment = Types::largest_alignment.raw;
     using Storage = Array<char, raw_size>;
     alignas(alignment) Storage storage;
+    // TODO: Use the smallest `Numeral` that can hold at least `sizeof...(Ts)`
+    // values.
     uint1 discriminant;
 
     template <typename T, ssize index>
