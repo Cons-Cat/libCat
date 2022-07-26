@@ -93,6 +93,15 @@ if(BUILD_TEST_COPY_MEMORY OR BUILD_ALL_TESTS)
   add_test(NAME CopyMemory COMMAND test_copymem)
 endif()
 
+# This tests that allocation member functions all compile.
+option(BUILD_TEST_ALLOCATOR "Compile PageAllocator tests." OFF)
+if(BUILD_TEST_ALLOCATOR OR BUILD_ALL_TESTS)
+  add_executable(test_alloc test_alloc.cpp)
+  #target_compile_options(test_paging PRIVATE ${CAT_CXX_FLAGS_TEST})
+  target_link_options(test_alloc PRIVATE ${CAT_LINK_FLAGS})
+  add_test(NAME Allocators COMMAND test_alloc)
+endif()
+
 # This tests that `cat::PageAllocator` works.
 option(BUILD_TEST_PAGE_ALLOCATOR "Compile PageAllocator tests." OFF)
 if(BUILD_TEST_PAGE_ALLOCATOR OR BUILD_ALL_TESTS)
@@ -195,6 +204,7 @@ if(
   OR BUILD_TEST_STRING_LENGTH
   OR BUILD_TEST_COMPARE_STRINGS
   OR BUILD_TEST_COPY_MEMORY
+  OR BUILD_TEST_ALLOCATOR
   OR BUILD_TEST_PAGE_ALLOCATOR
   OR BUILD_TEST_LINEAR_ALLOCATOR
   OR BUILD_TEST_THREAD

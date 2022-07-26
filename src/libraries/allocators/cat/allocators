@@ -17,6 +17,7 @@ concept MemoryHandle = requires(T handle) {
     handle.is_inline();
 };
 
+// TODO: Handles' `.get()` should be only visible to allocators.
 namespace detail {
     // `BaseMemoryHandle` is an opaque memory handle. Allocators are to define
     // and produce a memory handle type which derives from this. These handles
@@ -33,6 +34,11 @@ namespace detail {
         // intercepted by a `MultiMemoryHandle`.
         constexpr auto size() const -> ssize {
             return 1;
+        }
+
+        // If `.set_count()` is no-op if it is not intercepted by a
+        // `MultiMemoryHandle`.
+        void set_count(ssize) {
         }
 
         // Number of bytes allocated. This is always the size of `T` if the call
@@ -233,7 +239,7 @@ class AllocatorFacade {
     // Take a pointer to another member function, then invoke it, and propagate
     // the memory that it allocated.
     template <typename... Args>
-    auto wrap_allocation(auto function, Args&&... arguments) -> decltype(auto) {
+    auto wrap_allocation(auto function, Args&&... arguments) {
         return (this->*function)(forward<Args>(arguments)...);
     }
 
@@ -282,17 +288,26 @@ class AllocatorFacade {
 
         if constexpr (is_inline) {
             if (allocation_size < detail::inline_buffer_size) {
-                // TODO: Support and test `inline_alloc_multi` constructors.
                 // Allocate memory on this stack frame.
-                T stack_memory = {forward<Args>(constructor_arguments)...};
-
-                if constexpr (is_zeroed) {
-                    zero_memory(addressof(stack_memory), allocation_size);
-                }
-
                 Handle stack_handle;
                 stack_handle.set_on_stack(true);
-                stack_handle.set_inline_storage(stack_memory);
+                stack_handle.set_count(allocation_count);
+
+                if constexpr (is_zeroed) {
+                    zero_memory(addressof(stack_handle),
+                                detail::inline_buffer_size);
+                }
+
+                if constexpr (is_multiple) {
+                    for (ssize i = 0; i < allocation_count; ++i) {
+                        new (
+                            static_cast<T*>(static_cast<void*>(&stack_handle)) +
+                            i.raw) T;
+                    }
+                } else {
+                    stack_handle.set_inline_storage(
+                        T{forward<Args>(constructor_arguments)...});
+                }
 
                 // Return here to skip error handling, because an on-stack
                 // allocation cannot fail.
@@ -340,7 +355,11 @@ class AllocatorFacade {
         }
 
         if constexpr (is_pointer) {
-            return OptionalPtr<T>{p_allocation};
+            if constexpr (is_fail_safe) {
+                return OptionalPtr<T>{p_allocation};
+            } else {
+                return p_allocation;
+            }
         } else {
             UnderlyingHandle const raw_handle =
                 this->self().template make_handle<T>(p_allocation);
@@ -407,8 +426,7 @@ class AllocatorFacade {
     // provide a pointer handle.
     template <typename T, bool is_zeroed = false, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
-    [[nodiscard]] auto p_xalloc(Args&&... constructor_arguments)
-        -> OptionalPtr<T> {
+    [[nodiscard]] auto p_xalloc(Args&&... constructor_arguments) -> T* {
         return this->wrap_allocation(
             &AllocatorFacade<Derived>::xalloc<T, true, is_zeroed, Args...>,
             forward<Args>(constructor_arguments)...);
@@ -498,8 +516,7 @@ class AllocatorFacade {
     template <typename T, bool is_zeroed = false, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_xalloc(usize alignment,
-                                      Args&&... constructor_arguments)
-        -> OptionalPtr<T> {
+                                      Args&&... constructor_arguments) -> T* {
         return this->wrap_allocation(
             &AllocatorFacade<Derived>::align_xalloc<T, true, is_zeroed,
                                                     Args...>,
@@ -541,8 +558,7 @@ class AllocatorFacade {
     // alignment guarantee, and provide a pointer handle.
     template <typename T, bool is_zeroed = false, typename... Args>
         requires(detail::StableDerivedAllocator<Derived>)
-    [[nodiscard]] auto p_unalign_xalloc(Args&&... constructor_arguments)
-        -> OptionalPtr<T> {
+    [[nodiscard]] auto p_unalign_xalloc(Args&&... constructor_arguments) -> T* {
         return this->wrap_allocation(
             &AllocatorFacade<Derived>::unalign_xalloc<T, true, is_zeroed,
                                                       Args...>,
@@ -584,7 +600,7 @@ class AllocatorFacade {
     template <typename T, bool is_zeroed = false>
         requires(detail::StableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_xalloc_multi(usize alignment, ssize count)
-        -> OptionalPtr<T> {
+        -> T* {
         return this->wrap_allocation(
             &AllocatorFacade<Derived>::align_xalloc_multi<T, true, is_zeroed>,
             alignment, count);
