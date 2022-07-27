@@ -76,8 +76,8 @@ namespace detail {
             this->handle.set_inline_storage(value);
         }
 
-        void set_on_stack(bool inlined) {
-            this->handle.set_on_stack(inlined);
+        void set_inlined(bool inlined) {
+            this->handle.set_inlined(inlined);
         }
 
         // Intercept a propagating call to `.set_count()`.
@@ -144,7 +144,7 @@ namespace detail {
         InlineMemoryHandle(){};
 
         InlineMemoryHandle(Handle input_handle)
-            : handle(input_handle), is_on_stack(false){};
+            : handle(input_handle), is_on_stack(handle.is_inline()){};
 
         ~InlineMemoryHandle() {
             if (this->is_on_stack) {
@@ -158,8 +158,8 @@ namespace detail {
             this->inline_storage = value;
         }
 
-        // Intercept a propagating call to `.set_on_stack()`.
-        void set_on_stack(bool inlined) {
+        // Intercept a propagating call to `.set_inlined()`.
+        void set_inlined(bool inlined) {
             this->is_on_stack = inlined;
         }
 
@@ -290,7 +290,7 @@ class AllocatorFacade {
             if (allocation_size < detail::inline_buffer_size) {
                 // Allocate memory on this stack frame.
                 Handle stack_handle;
-                stack_handle.set_on_stack(true);
+                stack_handle.set_inlined(true);
                 stack_handle.set_count(allocation_count);
 
                 if constexpr (is_zeroed) {
@@ -363,10 +363,10 @@ class AllocatorFacade {
         } else {
             UnderlyingHandle const raw_handle =
                 this->self().template make_handle<T>(p_allocation);
+            Handle handle{move(raw_handle)};
 
-            Handle handle{raw_handle};
             if constexpr (is_inline) {
-                handle.set_on_stack(false);
+                handle.set_inlined(false);
             }
 
             if constexpr (is_multiple) {
@@ -374,7 +374,7 @@ class AllocatorFacade {
             }
 
             if constexpr (is_fail_safe) {
-                return Optional<Handle>{handle};
+                return Optional<Handle>{move(handle)};
             } else {
                 return handle;
             }
@@ -774,7 +774,7 @@ class AllocatorFacade {
     // Get the number of bytes that allocating a `T` would reserve.
     template <typename T>
     [[nodiscard]] auto xnalloc() -> ssize {
-        return this->align_xnalloc<T>(alignof(T)).value();
+        return this->align_xnalloc<T>(alignof(T));
     }
 
     // Try to get the number of bytes that allocating an array of `T` would

@@ -26,6 +26,7 @@ cat::zero_memory() instead!")]] auto
 }  // namespace std
 
 using std::memcpy;
+using std::memset;
 
 namespace cat {
 
