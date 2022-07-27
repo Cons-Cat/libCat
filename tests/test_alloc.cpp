@@ -25,8 +25,8 @@ struct NonTrivialHugeObject {
 auto main() -> int {
     // Initialize an allocator.
     cat::PageAllocator paging_allocator;
-    int4* p_page = paging_allocator.p_alloc_multi<int4>(4_ki).or_exit();
-    defer(paging_allocator.free_multi(p_page, 4_ki);)
+    int4* p_page = paging_allocator.p_alloc_multi<int4>(1_ki).or_exit();
+    defer(paging_allocator.free_multi(p_page, 1_ki);)
     cat::LinearAllocator allocator(p_page, 4_ki);
 
     // Test `alloc()`.
@@ -158,21 +158,22 @@ auto main() -> int {
     Result(global == 5).or_exit();
 
     // Test `unalign_xalloc_multi()`.
-    auto unalign_xalloc_multi = allocator.unalign_xalloc_multi<int4>(5);
+    auto unalign_xalloc_multi = allocator.unalign_xalloc_multi<int1>(5);
     Result(unalign_xalloc_multi.size() == 5).or_exit();
-    Result(unalign_xalloc_multi.raw_size() == 20).or_exit();
+    Result(unalign_xalloc_multi.raw_size() == 5).or_exit();
     global = 0;
     _ = allocator.unalign_xalloc_multi<NonTrivial>(5);
     Result(global == 5).or_exit();
 
     // Test `p_unalign_alloc_multi()`.
-    _ = allocator.p_unalign_alloc_multi<int4>(5).value();
+    _ = allocator.p_unalign_alloc_multi<int1>(5)
+            .value();  // `int4` is 4-byte aligned.
     global = 0;
     _ = allocator.p_unalign_alloc_multi<NonTrivial>(5);
     Result(global == 5).or_exit();
 
     // Test `p_unalign_xalloc_multi()`.
-    _ = allocator.p_unalign_xalloc_multi<int4>(5);
+    _ = allocator.p_unalign_xalloc_multi<int1>(5);  // `int4` is 4-byte aligned.
     global = 0;
     _ = allocator.p_unalign_xalloc_multi<NonTrivial>(5);
     Result(global == 5).or_exit();
@@ -225,6 +226,66 @@ auto main() -> int {
     auto inline_unalign_alloc = allocator.inline_unalign_alloc<int4>(1).value();
     Result(allocator.get(inline_unalign_alloc) == 1).or_exit();
     Result(inline_unalign_alloc.is_inline()).or_exit();
+
+    // Test `inline_unalign_xalloc()`.
+    _ = allocator.inline_unalign_xalloc<int4>(8u);
+    auto inline_unalign_xalloc = allocator.inline_unalign_xalloc<int4>(1);
+    Result(allocator.get(inline_unalign_xalloc) == 1).or_exit();
+    Result(inline_unalign_xalloc.is_inline()).or_exit();
+
+    allocator.reset();
+
+    // Test `inline_align_alloc_multi()`.
+    auto inline_align_alloc_multi =
+        allocator.inline_align_alloc_multi<int4>(8u, 5).value();
+    Result(
+        cat::is_aligned(allocator.get(inline_align_alloc_multi).p_data(), 8u))
+        .or_exit();
+    Result(inline_align_alloc_multi.is_inline()).or_exit();
+
+    auto inline_align_alloc_multi_big =
+        allocator.inline_align_alloc_multi<int4>(8u, 64).value();
+    Result(!inline_align_alloc_multi_big.is_inline()).or_exit();
+
+    // Test `inline_align_xalloc_multi()`.
+    auto inline_align_xalloc_multi =
+        allocator.inline_align_xalloc_multi<int4>(8u, 5);
+    Result(
+        cat::is_aligned(allocator.get(inline_align_xalloc_multi).p_data(), 8u))
+        .or_exit();
+    Result(inline_align_xalloc_multi.is_inline()).or_exit();
+
+    // Test `inline_unalign_alloc_multi()`.
+    auto inline_unalign_alloc_multi =
+        allocator.inline_unalign_alloc_multi<int4>(5).value();
+    Result(inline_unalign_alloc_multi.is_inline()).or_exit();
+
+    auto inline_unalign_alloc_multi_big =
+        allocator.inline_unalign_alloc_multi<int4>(64).value();
+    Result(!inline_unalign_alloc_multi_big.is_inline()).or_exit();
+
+    // Test `inline_unalign_xalloc_multi()`.
+    auto inline_unalign_xalloc_multi =
+        allocator.inline_unalign_xalloc_multi<int4>(5);
+    Result(inline_unalign_xalloc_multi.is_inline()).or_exit();
+
+    auto inline_unalign_xalloc_multi_big =
+        allocator.inline_unalign_xalloc_multi<int4>(64);
+    Result(!inline_unalign_xalloc_multi_big.is_inline()).or_exit();
+
+    // Always reset the allocator so that there are no alignment requirements
+    // interfering with `nalloc()` tests. Specific allocator tests such as
+    // `test_linear_allocator.cpp` check that in greater detail.
+
+    // Test `nalloc()`.
+    allocator.reset();
+    ssize nalloc = allocator.nalloc<int4>().value();
+    Result(nalloc == ssizeof<int4>()).value();
+
+    // Test `xnalloc()`.
+    allocator.reset();
+    ssize xnalloc = allocator.xnalloc<int4>();
+    Result(xnalloc == ssizeof<int4>()).value();
 
     cat::exit();
 };
