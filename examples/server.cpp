@@ -52,5 +52,4 @@ auto main() -> int {
     recieving_socket.close().or_exit();
     listening_socket.close().or_exit();
     _ = nix::sys_unlink(listening_socket.path_name.p_data()).or_exit();
-    cat::exit();
 }

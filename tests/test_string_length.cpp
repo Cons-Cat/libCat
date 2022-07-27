@@ -64,6 +64,4 @@ auto main() -> int {
         "efz";
     ssize z = find_string_2.find('z').or_exit();
     Result(z == 72).or_exit();
-
-    cat::exit();
 }

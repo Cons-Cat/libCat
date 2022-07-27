@@ -21,5 +21,4 @@ auto main(int argc, char* p_argv[]) -> int {
     }
 
     socket.close().or_exit();
-    cat::exit();
 }

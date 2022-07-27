@@ -91,6 +91,4 @@ overallocated:
 
     // TODO: Test multi allocations.
     // TODO: Test inline multi allocations.
-
-    cat::exit();
 }

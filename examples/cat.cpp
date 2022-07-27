@@ -78,6 +78,4 @@ auto main(int argc, char* p_argv[]) -> int {
     for (int i = 1; i < argc; ++i) {
         read_and_print_file(p_argv[i]);
     }
-
-    cat::exit();
 }

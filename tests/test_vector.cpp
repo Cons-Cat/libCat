@@ -93,6 +93,4 @@ auto main() -> int {
     static_assert(const_func() == 10);
 
     // TODO: Test insert iterators.
-
-    cat::exit();
 }

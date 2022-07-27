@@ -46,6 +46,4 @@ auto main() -> int {
         return "Hi";
     };
     [[maybe_unused]] constexpr auto hi = make_hi_in_const(1);
-
-    cat::exit();
 }

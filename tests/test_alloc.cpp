@@ -447,6 +447,4 @@ auto main() -> int {
     global = 0;
     _ = allocator.salloc<NonTrivial>();
     Result(global == 1).or_exit();
-
-    cat::exit();
 };

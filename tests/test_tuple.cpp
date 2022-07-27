@@ -89,6 +89,4 @@ auto main() -> int {
         uint8 u;
     };
     static_assert(sizeof(five_tuple) == sizeof(Five));
-
-    cat::exit();
 }

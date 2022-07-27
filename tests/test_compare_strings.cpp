@@ -64,6 +64,4 @@ auto main() -> int {
     Result(e == 1).or_exit();
     Result(l == 2).or_exit();
     Result(o == 4).or_exit();
-
-    cat::exit();
 }

@@ -81,6 +81,4 @@ auto main() -> int {
     Result(predicate.has_value()).or_exit();
     predicate = 10;
     Result(predicate.has_value()).or_exit();
-
-    cat::exit();
 }

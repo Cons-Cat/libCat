@@ -21,6 +21,4 @@ auto main() -> int {
     cat::zero_memory(p_page, 4_ki);
     Result(p_page[0] == 0_u1).or_exit();
     Result(p_page[(4_ki).raw - 1] == 0_u1).or_exit();
-
-    cat::exit();
 };

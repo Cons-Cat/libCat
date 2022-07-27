@@ -152,6 +152,4 @@ auto main() -> int {
     front_insert_iterator.insert(allocator, 2);
     Result(list_1.front() == 2).or_exit();
     Result(list_1.back() == 10).or_exit();
-
-    cat::exit();
 }

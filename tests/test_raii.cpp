@@ -90,6 +90,4 @@ auto main() -> int {
 
     cat::Unique<int> original = 0;
     cat::Unique<int8> into = cat::move(original);
-
-    cat::exit();
 }

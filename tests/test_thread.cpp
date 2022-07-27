@@ -17,12 +17,13 @@ void function(void*) {
 [[gnu::no_sanitize_address]] auto main() -> int {
     cat::Thread thread;
     cat::PageAllocator allocator;
-    thread.create(allocator, 4_ki - 32, function, nullptr)
+    thread.create(allocator, 2_ki, function, nullptr)
         .or_exit("Failed to make thread!");
     for (int4 i = 0; i < 10; ++i) {
         _ = cat::println("Boo!");
     }
     thread.join().or_exit("Failed to join thread!");
     _ = cat::println("Finished!");
+    // TODO: ASan prints `AddressSanitizer:DEADLYSIGNAL` without this call:
     cat::exit();
 }
