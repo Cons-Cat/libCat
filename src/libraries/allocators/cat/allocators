@@ -17,6 +17,8 @@ concept MemoryHandle = requires(T handle) {
     handle.is_inline();
 };
 
+constexpr ssize inline_buffer_size = 256;
+
 // TODO: Handles' `.get()` should be only visible to allocators.
 namespace detail {
     // `BaseMemoryHandle` is an opaque memory handle. Allocators are to define
@@ -117,8 +119,6 @@ namespace detail {
             return this->handle.get_inline();
         }
     };
-
-    constexpr ssize inline_buffer_size = 256;
 
     // An `InlineMemoryHandle` wraps another memory handle for `inline_*`
     // allocations. It extends the storage of this handle to at least 256 bytes,
@@ -287,15 +287,14 @@ class AllocatorFacade {
                         UnderlyingHandle>>;
 
         if constexpr (is_inline) {
-            if (allocation_size < detail::inline_buffer_size) {
+            if (allocation_size < inline_buffer_size) {
                 // Allocate memory on this stack frame.
                 Handle stack_handle;
                 stack_handle.set_inlined(true);
                 stack_handle.set_count(allocation_count);
 
                 if constexpr (is_zeroed) {
-                    zero_memory(addressof(stack_handle),
-                                detail::inline_buffer_size);
+                    zero_memory(addressof(stack_handle), inline_buffer_size);
                 }
 
                 if constexpr (is_multiple) {
@@ -856,10 +855,10 @@ class AllocatorFacade {
     // would reserve.
     template <typename T>
     [[nodiscard]] auto inline_nalloc() -> OptionalNonZero<ssize> {
-        if constexpr (ssizeof<T>() > detail::inline_buffer_size) {
+        if constexpr (ssizeof<T>() > inline_buffer_size) {
             return this->inline_align_nalloc<T>(alignof(T));
         } else {
-            return detail::inline_buffer_size;
+            return inline_buffer_size;
         }
     }
 
@@ -867,10 +866,10 @@ class AllocatorFacade {
     // would reserve.
     template <typename T>
     [[nodiscard]] auto inline_xnalloc() -> ssize {
-        if constexpr (ssizeof<T>() > detail::inline_buffer_size) {
+        if constexpr (ssizeof<T>() > inline_buffer_size) {
             return this->inline_align_xnalloc<T>(alignof(T)).value();
         } else {
-            return detail::inline_buffer_size;
+            return inline_buffer_size;
         }
     }
 
@@ -879,10 +878,10 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] auto inline_nalloc_multi(ssize count)
         -> OptionalNonZero<ssize> {
-        if (ssizeof<T>() * count > detail::inline_buffer_size) {
+        if (ssizeof<T>() * count > inline_buffer_size) {
             return this->inline_align_nalloc_multi<T>(alignof(T), count);
         } else {
-            return detail::inline_buffer_size;
+            return inline_buffer_size;
         }
     }
 
@@ -890,11 +889,11 @@ class AllocatorFacade {
     // `T` would reserve.
     template <typename T>
     [[nodiscard]] auto inline_xnalloc_multi(ssize count) -> ssize {
-        if (ssizeof<T>() * count > detail::inline_buffer_size) {
+        if (ssizeof<T>() * count > inline_buffer_size) {
             return this->inline_align_xnalloc_multi<T>(alignof(T), count)
                 .value();
         } else {
-            return detail::inline_buffer_size;
+            return inline_buffer_size;
         }
     }
 
@@ -903,10 +902,10 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] auto inline_align_nalloc(usize alignment)
         -> OptionalNonZero<ssize> {
-        if constexpr (ssizeof<T>() > detail::inline_buffer_size) {
+        if constexpr (ssizeof<T>() > inline_buffer_size) {
             return this->self().allocation_size(alignment, ssizeof<T>());
         } else {
-            return detail::inline_buffer_size;
+            return inline_buffer_size;
         }
     }
 
@@ -914,12 +913,12 @@ class AllocatorFacade {
     // an alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]] auto inline_align_xnalloc(usize alignment) -> ssize {
-        if constexpr (ssizeof<T>() > detail::inline_buffer_size) {
+        if constexpr (ssizeof<T>() > inline_buffer_size) {
             return this->self()
                 .allocation_size(alignment, ssizeof<T>())
                 .value();
         } else {
-            return detail::inline_buffer_size;
+            return inline_buffer_size;
         }
     }
 
@@ -927,10 +926,10 @@ class AllocatorFacade {
     // with no alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]] auto inline_unalign_nalloc() -> OptionalNonZero<ssize> {
-        if constexpr (ssizeof<T>() > detail::inline_buffer_size) {
+        if constexpr (ssizeof<T>() > inline_buffer_size) {
             return this->self().allocation_size(1u, ssizeof<T>());
         } else {
-            return detail::inline_buffer_size;
+            return inline_buffer_size;
         }
     }
 
@@ -938,10 +937,10 @@ class AllocatorFacade {
     // no alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]] auto inline_unalign_xnalloc() -> ssize {
-        if constexpr (ssizeof<T>() > detail::inline_buffer_size) {
+        if constexpr (ssizeof<T>() > inline_buffer_size) {
             return this->self().allocation_size(1u, ssizeof<T>()).value();
         } else {
-            return detail::inline_buffer_size;
+            return inline_buffer_size;
         }
     }
 
@@ -950,11 +949,11 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] auto inline_align_nalloc_multi(usize alignment, ssize count)
         -> OptionalNonZero<ssize> {
-        if (ssizeof<T>() * count > detail::inline_buffer_size) {
+        if (ssizeof<T>() * count > inline_buffer_size) {
             return this->self().allocation_size(alignment,
                                                 ssizeof<T>() * count);
         } else {
-            return detail::inline_buffer_size;
+            return inline_buffer_size;
         }
     }
 
@@ -963,12 +962,12 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] auto inline_align_xnalloc_multi(usize alignment, ssize count)
         -> ssize {
-        if (ssizeof<T>() * count > detail::inline_buffer_size) {
+        if (ssizeof<T>() * count > inline_buffer_size) {
             return this->self()
                 .allocation_size(alignment, ssizeof<T>() * count)
                 .value();
         } else {
-            return detail::inline_buffer_size;
+            return inline_buffer_size;
         }
     }
 
@@ -977,10 +976,10 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] auto inline_unalign_nalloc_multi(ssize count)
         -> OptionalNonZero<ssize> {
-        if (ssizeof<T>() * count > detail::inline_buffer_size) {
+        if (ssizeof<T>() * count > inline_buffer_size) {
             return this->self().allocation_size(1u, ssizeof<T>() * count);
         } else {
-            return detail::inline_buffer_size;
+            return inline_buffer_size;
         }
     }
 
@@ -988,12 +987,12 @@ class AllocatorFacade {
     // array of `T` with no alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]] auto inline_unalign_xnalloc_multi(ssize count) -> ssize {
-        if (ssizeof<T>() * count > detail::inline_buffer_size) {
+        if (ssizeof<T>() * count > inline_buffer_size) {
             return this->self()
                 .allocation_size(1u, ssizeof<T>() * count)
                 .value();
         } else {
-            return detail::inline_buffer_size;
+            return inline_buffer_size;
         }
     }
 
