@@ -44,8 +44,13 @@ void copy_memory_small(void const* p_source, void* p_destination, ssize bytes);
 
 namespace detail {
     // Type-erased `set_memory` function.
-    constexpr void set_memory_detail(void* p_source, unsigned char byte_value,
-                                     ssize bytes) {
+    [[gnu::optimize("-fno-tree-loop-distribute-patterns")]]
+    // `tree-loop-distribute-patterns` is an optimization that replaces this
+    // code with a call to `memset`. `memset` itself calls this function, which
+    // makes a circular reference that ld is unable to link. Mold can link
+    // this, but that optimization is useless here.
+    constexpr void
+    set_memory_detail(void* p_source, unsigned char byte_value, ssize bytes) {
         unsigned char* p_current_byte = static_cast<unsigned char*>(p_source);
 
         if (is_constant_evaluated()) {

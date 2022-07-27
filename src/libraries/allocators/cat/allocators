@@ -299,8 +299,9 @@ class AllocatorFacade {
             !(is_zeroed && (sizeof...(Args) > 0)) &&
             // Zeroed-out allocations must be trivial.
             !(is_trivial<T> && is_zeroed))
-    auto meta_alloc(usize allocation_alignment, ssize allocation_count,
-                    Args&&... constructor_arguments) {
+    [[gnu::optimize("-fno-tree-loop-distribute-patterns")]] auto meta_alloc(
+        usize allocation_alignment, ssize allocation_count,
+        Args&&... constructor_arguments) {
         ssize const allocation_size = allocation_count * ssizeof<T>();
 
         // Produce a basic handle for this memory type.
