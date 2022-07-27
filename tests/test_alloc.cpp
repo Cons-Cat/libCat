@@ -438,5 +438,15 @@ auto main() -> int {
         allocator.inline_unalign_xnalloc_multi<HugeObject>(2);
     Result(inline_unalign_xnalloc_multi_big == (257 * 2)).or_exit();
 
+    // Test `salloc()`.
+    _ = allocator.alloc<int4>().value();
+    allocator.reset();
+    auto [salloc, salloc_size] = allocator.salloc<int4>(1).value();
+    Result(allocator.get(salloc) == 1).or_exit();
+    Result(salloc_size == 4).or_exit();
+    global = 0;
+    _ = allocator.salloc<NonTrivial>();
+    Result(global == 1).or_exit();
+
     cat::exit();
 };

@@ -86,7 +86,7 @@ overallocated:
     // Because the allocator is now 2 byte aligned, an extra 2 bytes have to be
     // reserved to allocate a 4-byte aligned value:
     Result(allocator.nalloc<int4>().or_exit() == 6).or_exit();
-    cat::Tuple alloc_int_size = allocator.salloc<int4>();
+    cat::Tuple alloc_int_size = allocator.salloc<int4>().value();
     Result(alloc_int_size.second() == 6).or_exit();
 
     // TODO: Test multi allocations.

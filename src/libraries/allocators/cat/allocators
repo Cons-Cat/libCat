@@ -230,6 +230,49 @@ concept StableAllocator = requires(AllocatorT it) {
     it.template p_alloc<AllocationU>();
 };
 
+template <typename T>
+using SizedAllocation = Tuple<T, ssize>;
+
+template <typename T>
+using OptionalSizedAllocation =
+    Optional<Compact<SizedAllocation<T>,
+                     [](SizedAllocation<T> tuple) -> bool {
+                         return (tuple.second() != 0_sz);
+                     },
+                     SizedAllocation<T>{T{}, 0_sz}>>;
+
+// TODO: For some reason, this implementation of `salloc()`, this returns an
+// `int` in GCC 12. That must be some kind of bug. For now, a less efficient
+// implementation is being used.
+/*
+    template <typename T, bool is_zeroed = false, typename... Args>
+[[nodiscard]] auto salloc(Args&&... constructor_arguments) {
+Optional size = this->nalloc<T>().value();
+
+// GCC 12 fails to deduce the type of template aliases with a lambda in
+// an unevaluted context, such as compact optionals, so it must be
+// stored in a temporary value `return_val` first.
+//
+// `[[maybe_unused]]` is required because GCC 12 can mistakenly think
+// this is uninitialized.
+using Alloc = SizedAllocation<decltype(this->xalloc<T, is_zeroed>())>;
+
+if (size.has_value()) {
+    [[maybe_unused]] OptionalSizedAllocation<Alloc> return_val =
+        OptionalSizedAllocation<Alloc>{nullopt};
+    return return_val;
+}
+
+// If `nalloc()` did not fail, this cannot fail.
+auto allocation =
+    this->xalloc<T, is_zeroed>(forward<Args>(constructor_arguments)...);
+
+[[maybe_unused]] OptionalSizedAllocation<Alloc> return_val =
+    OptionalSizedAllocation<Alloc>{Alloc{allocation, 0_sz}};
+return return_val;
+}
+*/
+
 template <typename Derived>
 class AllocatorFacade {
     constexpr auto self() -> Derived& {
@@ -949,13 +992,22 @@ class AllocatorFacade {
         return this->inline_align_xnalloc_multi<T>(1u, count);
     }
 
-    // Try to allocate a `T`, and return the number of bytes that was allocated.
+    // Try to allocate a `T`, and return the number of bytes that was
+    // allocated.
     template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto salloc(Args&&... constructor_arguments) {
-        ssize size = this->nalloc<T>().value();
+        Optional size = this->nalloc<T>().value();
+        using Alloc = SizedAllocation<decltype(this->xalloc<T, is_zeroed>())>;
+
+        if (!size.has_value()) {
+            return Optional<Alloc>{nullopt};
+        }
+
+        // If `nalloc()` did not fail, this cannot fail.
         auto allocation =
-            this->alloc<T, is_zeroed>(forward<Args>(constructor_arguments)...);
-        return Tuple{allocation, size};
+            this->xalloc<T, is_zeroed>(forward<Args>(constructor_arguments)...);
+
+        return Optional<Alloc>{Alloc{allocation, size.value()}};
     }
 
     // Allocate a `T`, and return the number of bytes that was allocated.
