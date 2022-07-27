@@ -896,21 +896,21 @@ class AllocatorFacade {
     // an alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]] auto inline_align_xnalloc(usize alignment) -> ssize {
-		return this->inline_align_nalloc<T>(alignment).value();
+        return this->inline_align_nalloc<T>(alignment).value();
     }
 
     // Try to get the number of bytes that allocating a small-size optimized `T`
     // with no alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]] auto inline_unalign_nalloc() -> OptionalNonZero<ssize> {
-		return this->inline_align_nalloc<T>(1u);
+        return this->inline_align_nalloc<T>(1u);
     }
 
     // Get the number of bytes that allocating a small-size optimized `T` with
     // no alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]] auto inline_unalign_xnalloc() -> ssize {
-		return this->inline_align_xnalloc<T>(1u);
+        return this->inline_align_xnalloc<T>(1u);
     }
 
     // Try to get the number of bytes that allocating a small-size optimized
@@ -931,7 +931,7 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] auto inline_align_xnalloc_multi(usize alignment, ssize count)
         -> ssize {
-		return this->inline_align_nalloc_multi<T>(alignment, count).value();
+        return this->inline_align_nalloc_multi<T>(alignment, count).value();
     }
 
     // Try to get the number of bytes that allocating a small-size optimized
@@ -939,14 +939,14 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] auto inline_unalign_nalloc_multi(ssize count)
         -> OptionalNonZero<ssize> {
-		return this->inline_align_nalloc_multi<T>(1u, count);
+        return this->inline_align_nalloc_multi<T>(1u, count);
     }
 
     // Get the number of bytes that allocating a small-size optimized
     // array of `T` with no alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]] auto inline_unalign_xnalloc_multi(ssize count) -> ssize {
-		return this->inline_align_xnalloc_multi<T>(1u, count);
+        return this->inline_align_xnalloc_multi<T>(1u, count);
     }
 
     // Try to allocate a `T`, and return the number of bytes that was allocated.
