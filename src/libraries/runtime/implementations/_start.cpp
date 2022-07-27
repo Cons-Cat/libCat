@@ -1,7 +1,7 @@
 #include <cat/runtime>
 
 // Attributes on this prototype would have no effect.
-auto main(...) -> int;
+auto main(...) -> int;  // NOLINT Without K&R, `...` is the only way to do this.
 
 [[noreturn,
 // `INLINE_MAIN` can be defined in the build system to allow inlining `main()`
@@ -14,7 +14,7 @@ auto main(...) -> int;
 call_main() {
     register int argc asm("rdi");
     register char** p_argv asm("rsi");
-    main(argc, p_argv);
+    cat::exit(main(argc, p_argv));
     __builtin_unreachable();
 }
 

@@ -366,6 +366,4 @@ auto main() -> int {
     // Remove value:
     optvoid = nullopt;
     Result(!optvoid.has_value()).or_exit();
-
-    cat::exit();
 }

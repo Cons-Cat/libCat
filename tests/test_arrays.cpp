@@ -133,6 +133,4 @@ auto main() -> int {
     base_array = copy_converting_array;
     base_array = move(move_array);
     base_array = move(move_converting_array);
-
-    cat::exit();
 };

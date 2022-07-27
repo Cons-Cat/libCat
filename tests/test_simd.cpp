@@ -8,6 +8,4 @@ auto main() -> int {
     _ = vec1 + vec2;
 
     // TODO: Test correctness of vector operations.
-
-    cat::exit();
 }

@@ -62,6 +62,4 @@ auto main() -> int {
     Result(variant3.holds_alternative<int2>()).or_exit();
     variant3 = variant;
     Result(variant3.holds_alternative<int>()).or_exit();
-
-    cat::exit();
 }

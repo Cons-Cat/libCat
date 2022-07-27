@@ -43,9 +43,7 @@ auto main() -> int {
     allocator.get(small_memory_1) = 2;
     // Both values should be on stack, so these addresses are close
     // together.
-    Result(cat::abs(intptr{&stack_variable} -
-                    intptr{&allocator.get(small_memory_1)}) < 512)
-        .or_exit();
+    Result(small_memory_1.is_inline()).or_exit();
     // The handle's address should be the same as the data's if it was
     // allocated on the stack.
     int4& intref = *static_cast<int4*>(static_cast<void*>(&small_memory_1));
@@ -100,6 +98,4 @@ auto main() -> int {
     allocator.get(aligned_mem)[0] = 10;
     Result(allocator.get(aligned_mem)[0] == 10).or_exit();
     allocator.free(aligned_mem);
-
-    cat::exit();
 };

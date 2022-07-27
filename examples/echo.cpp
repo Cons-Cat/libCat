@@ -15,5 +15,4 @@ auto main(int argc, char* p_argv[]) -> int {
     }
 
     _ = nix::sys_write(nix::FileDescriptor{1}, "\n");
-    cat::exit();
 }
