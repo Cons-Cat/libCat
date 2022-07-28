@@ -78,6 +78,24 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
         return nullptr;
     }
 
+    // Try to allocate memory and bump the pointer down, and return the memory
+    // with size allocated.
+    auto aligned_allocate_feedback(usize alignment, ssize allocation_size)
+        -> OptionalSizedAllocation<void*> {
+        uintptr<void> p_allocation =
+            align_down(this->p_arena_current - allocation_size, alignment);
+        if (p_allocation >= p_arena_end) {
+            ssize actual_size =
+                static_cast<ssize>((this->p_arena_current - p_allocation).raw);
+            this->p_arena_current = p_allocation;
+
+            return OptionalSizedAllocation<void*>(Tuple{
+                // Return a pointer that is then used for in-place construction.
+                static_cast<void*>(this->p_arena_current), actual_size});
+        }
+        return nullopt;
+    }
+
     // In general, memory cannot be deallocated in a linear allocator, so
     // this function is no-op.
     void deallocate(void const*, ssize){};

@@ -218,6 +218,31 @@ namespace detail {
     // anonymously without a `concept`.
     template <typename AllocatorT>
     concept StableDerivedAllocator = AllocatorT::has_pointer_stability == true;
+
+    template <typename AllocatorT>
+    concept HasAllocate = requires(AllocatorT allocator) {
+        allocator.allocate(1_sz);
+    };
+
+    template <typename AllocatorT>
+    concept HasAlignedAllocate = requires(AllocatorT allocator) {
+        allocator.aligned_allocate(1_uz, 1_sz);
+    };
+
+    template <typename AllocatorT>
+    concept HasAllocationSize = requires(AllocatorT allocator) {
+        allocator.allocation_size(1_uz, 1_sz);
+    };
+
+    template <typename AllocatorT>
+    concept HasAllocateFeedback = requires(AllocatorT allocator) {
+        allocator.allocate_feedback(1_sz);
+    };
+
+    template <typename AllocatorT>
+    concept HasAlignedAllocateFeedback = requires(AllocatorT allocator) {
+        allocator.aligned_allocate_feedback(1_uz, 1_sz);
+    };
 }  // namespace detail
 
 template <typename AllocatorT, typename AllocationU = void*>
@@ -229,12 +254,13 @@ template <typename T>
 using SizedAllocation = Tuple<T, ssize>;
 
 template <typename T>
-using OptionalSizedAllocation =
-    Optional<Compact<SizedAllocation<T>,
+using OptionalSizedAllocation = Optional<SizedAllocation<T>>;
+/* Optional<Compact<SizedAllocation<T>,
                      [](SizedAllocation<T> tuple) -> bool {
                          return (tuple.second() != 0_sz);
                      },
                      SizedAllocation<T>{T{}, 0_sz}>>;
+*/
 
 // TODO: For some reason, this implementation of `salloc()`, this returns an
 // `int` in GCC 12. That must be some kind of bug. For now, a less efficient
@@ -283,17 +309,17 @@ class AllocatorFacade {
 
   public:
     template <typename T, bool is_inline, bool is_fail_safe, bool is_aligned,
-              bool is_multiple, bool is_pointer, bool is_zeroed = false,
-              typename... Args>
+              bool is_multiple, bool is_pointer, bool is_zeroed,
+              bool has_feedback = false, typename... Args>
         requires(
             // Inline allocations cannot produce pointers.
-            !(is_inline && is_pointer) &&
+            !(is_inline && is_pointer)
             // Multi-allocations must be default-constructed.
-            !(is_multiple && (sizeof...(Args) > 0)) &&
+            && !(is_multiple && (sizeof...(Args) > 0))
             // Zeroed-out allocations must be default-constructed.
-            !(is_zeroed && (sizeof...(Args) > 0)) &&
+            && !(is_zeroed && (sizeof...(Args) > 0))
             // Zeroed-out allocations must be trivial.
-            !(is_trivial<T> && is_zeroed))
+            && !(is_trivial<T> && is_zeroed))
     [[gnu::optimize("-fno-tree-loop-distribute-patterns")]] auto meta_alloc(
         usize allocation_alignment, ssize allocation_count,
         Args&&... constructor_arguments) {
@@ -306,9 +332,9 @@ class AllocatorFacade {
         // Get the return value of a user-supplied `.allocate()`. This must be
         // some kind of `Optional`. It holds some data that can pass into a
         // `Handle`'s constructor.
-        // TODO: Call `allocate_aligned(1)` if `.allocate()` is not supplied.
         using MaybeAllocation =
-            decltype(this->self().allocate(allocation_size));
+            Conditional<has_feedback, OptionalSizedAllocation<void*>,
+                        OptionalPtr<void>>;
 
         // Produce an appropriate handle type for this allocation.
         using Handle = Conditional<
@@ -328,15 +354,33 @@ class AllocatorFacade {
         using ReturnHandle =
             Conditional<is_fail_safe,
                         Conditional<is_pointer,
-                                    // Failsafe pointer.
-                                    OptionalPtr<T>,
-                                    // Failsafe opaque memory handle.
-                                    Optional<Handle>>,
+                                    Conditional<has_feedback,
+                                                // Failsafe pointer with size.
+                                                OptionalSizedAllocation<T*>,
+                                                // Failsafe pointer w/out size.
+                                                OptionalPtr<T>>,
+                                    // Not a pointer:
+                                    Conditional<has_feedback,
+                                                // Failsafe opaque handle with
+                                                // size.
+                                                OptionalSizedAllocation<Handle>,
+                                                // Failsafe opaque handle w/out
+                                                // size.
+                                                Optional<Handle>>>,
+                        // Not fail-safe:
                         Conditional<is_pointer,
-                                    // Unsafe pointer.
-                                    T*,
-                                    // Unsafe opaque memory handle.
-                                    Handle>>;
+                                    Conditional<has_feedback,
+                                                // Unsafe pointer with size.
+                                                SizedAllocation<T*>,
+                                                // Unsafe pointer w/out size.
+                                                T*>,
+                                    Conditional<has_feedback,
+                                                // Unsafe opaque handle with
+                                                // size.
+                                                SizedAllocation<Handle>,
+                                                // Unsafe opaque memory handle
+                                                // w/out size.
+                                                Handle>>>;
 
         if constexpr (is_inline) {
             if (allocation_size < inline_buffer_size) {
@@ -371,11 +415,102 @@ class AllocatorFacade {
 
         // Make an allocation.
         MaybeAllocation maybe_memory;
+
         if constexpr (is_aligned) {
-            maybe_memory = this->self().aligned_allocate(allocation_alignment,
-                                                         allocation_size);
+            if constexpr (has_feedback) {
+                if constexpr (detail::HasAlignedAllocateFeedback<Derived>) {
+                    // Call `.aligned_allocate_feedback()` function for
+                    // optimized size-feedback.
+                    maybe_memory = this->self().aligned_allocate_feedback(
+                        allocation_alignment, allocation_size);
+                } else {
+                    if constexpr (detail::HasAllocationSize<Derived>) {
+                        // If a `.aligned_allocate_feedback()` is not provided,
+                        // use `.allocation_size`().
+                        Optional size = this->self().allocation_size(
+                            allocation_alignment, allocation_size);
+                        if (size.has_value()) {
+                            maybe_memory = OptionalSizedAllocation<void*>{
+                                this->self()
+                                    .aligned_allocate(allocation_alignment,
+                                                      allocation_size)
+                                    // If `.allocation_size()` succeeded, this
+                                    // will not fail.
+                                    .value(),
+                                size.value()};
+                        } else {
+                            maybe_memory = nullopt;
+                        }
+                    } else {
+                        // If a `.allocation_size()` is not provided, simply
+                        // assume that it allocates `allocation_size`.
+                        Optional temp_memory = this->self().aligned_allocate(
+                            allocation_alignment, allocation_size);
+                        if (temp_memory.has_value()) {
+                            maybe_memory = OptionalSizedAllocation<void*>{
+                                temp_memory.value(), allocation_size};
+                        } else {
+                            maybe_memory = nullopt;
+                        }
+                    };
+                }
+            } else {
+                maybe_memory = this->self().aligned_allocate(
+                    allocation_alignment, allocation_size);
+            }
         } else {
-            maybe_memory = this->self().allocate(allocation_size);
+            if constexpr (has_feedback) {
+                if constexpr (detail::HasAllocateFeedback<Derived>) {
+                    // Call `.allocate_feedback()` function for optimized
+                    // size-feedback.
+                    maybe_memory =
+                        this->self().allocate_feedback(allocation_size);
+                } else {
+                    if constexpr (detail::HasAlignedAllocateFeedback<Derived>) {
+                        // If `.allocate_feedback()` is not provided, but
+                        // `.aligned_allocate_feedback()` is, fall back to that
+                        // with alignment of `1u`.
+                        maybe_memory = this->self().aligned_allocate_feedback(
+                            1u, allocation_size);
+                    } else if constexpr (detail::HasAllocationSize<Derived>) {
+                        // If a `.aligned_allocate_feedback()` is not provided,
+                        // use `.allocation_size`().
+                        Optional size =
+                            this->self().allocation_size(1u, allocation_size);
+
+                        if (size.has_value()) {
+                            maybe_memory = OptionalSizedAllocation<void*>{
+                                // If `.allocation_size()` succeeded, this will
+                                // not fail.
+                                this->self().allocate(allocation_size).value(),
+                                size.value()};
+                        } else {
+                            maybe_memory = nullopt;
+                        }
+                    } else {
+                        // If a `.allocation_size()` is also not provided,
+                        // simply assume that it allocates `allocation_size`.
+                        auto temp_memory = this->self().aligned_allocate(
+                            allocation_alignment, allocation_size);
+                        if (temp_memory.has_value()) {
+                            maybe_memory = OptionalSizedAllocation<void*>{
+                                temp_memory.value(), allocation_size};
+                        } else {
+                            maybe_memory = nullopt;
+                        }
+                    };
+                }
+            } else {
+                // Otherwise, make an allocation without size feedback.
+                if constexpr (detail::HasAllocate<Derived>) {
+                    maybe_memory = this->self().allocate(allocation_size);
+                } else {
+                    // If `.allocate` is not provided, implement it in terms of
+                    // `.aligned_allocate()`.
+                    maybe_memory =
+                        this->self().allocate_aligned(1u, allocation_size);
+                }
+            }
         }
 
         if constexpr (is_fail_safe) {
@@ -385,7 +520,14 @@ class AllocatorFacade {
             }
         }
 
-        T* const p_allocation = static_cast<T*>(maybe_memory.value());
+        T* p_allocation;
+        if constexpr (has_feedback) {
+            // The `.first()` element of the `SizedAllocation` tuple is a
+            // `void*`.
+            p_allocation = static_cast<T*>(maybe_memory.value().first());
+        } else {
+            p_allocation = static_cast<T*>(maybe_memory.value());
+        }
 
         if constexpr (is_zeroed) {
             zero_memory(p_allocation, allocation_size);
@@ -398,7 +540,12 @@ class AllocatorFacade {
         }
 
         if constexpr (is_pointer) {
-            return ReturnHandle(p_allocation);
+            if constexpr (has_feedback) {
+                return ReturnHandle{SizedAllocation<T*>{
+                    p_allocation, maybe_memory.value().second()}};
+            } else {
+                return ReturnHandle{p_allocation};
+            }
         } else {
             UnderlyingHandle const raw_handle =
                 this->self().template make_handle<T>(p_allocation);
@@ -412,7 +559,12 @@ class AllocatorFacade {
                 handle.set_count(allocation_count);
             }
 
-            return ReturnHandle{move(handle)};
+            if constexpr (has_feedback) {
+                return ReturnHandle(SizedAllocation<Handle>{
+                    move(handle), maybe_memory.value().second()});
+            } else {
+                return ReturnHandle{move(handle)};
+            }
         }
     }
 
@@ -989,18 +1141,9 @@ class AllocatorFacade {
     // allocated.
     template <typename T, bool is_zeroed = false, typename... Args>
     [[nodiscard]] auto salloc(Args&&... constructor_arguments) {
-        Optional size = this->nalloc<T>().value();
-        using Alloc = SizedAllocation<decltype(this->xalloc<T, is_zeroed>())>;
-
-        if (!size.has_value()) {
-            return Optional<Alloc>{nullopt};
-        }
-
-        // If `nalloc()` did not fail, this cannot fail.
-        auto allocation =
-            this->xalloc<T, is_zeroed>(forward<Args>(constructor_arguments)...);
-
-        return Optional<Alloc>{Alloc{allocation, size.value()}};
+        return this
+            ->meta_alloc<T, false, true, false, false, false, is_zeroed, true>(
+                1u, 1, forward<Args>(constructor_arguments)...);
     }
 
     // Allocate a `T`, and return the number of bytes that was allocated.

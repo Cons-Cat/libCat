@@ -440,7 +440,7 @@ auto main() -> int {
     Result(inline_unalign_xnalloc_multi_big == (257 * 2)).or_exit();
 
     // Test `salloc()`.
-    _ = allocator.alloc<int4>().value();
+    _ = allocator.salloc<int4>().value();
     allocator.reset();
     auto [salloc, salloc_size] = allocator.salloc<int4>(1).value();
     Result(allocator.get(salloc) == 1).or_exit();
