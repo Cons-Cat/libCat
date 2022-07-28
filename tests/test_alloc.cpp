@@ -25,6 +25,7 @@ struct NonTrivialHugeObject {
 auto main() -> int {
     // Initialize an allocator.
     cat::PageAllocator paging_allocator;
+    paging_allocator.reset();
     int4* p_page = paging_allocator.p_alloc_multi<int4>(1_ki).or_exit();
     defer(paging_allocator.free_multi(p_page, 1_ki);)
     cat::LinearAllocator allocator(p_page, 4_ki);
