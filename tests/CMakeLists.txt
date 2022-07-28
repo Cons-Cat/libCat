@@ -192,14 +192,14 @@ if(BUILD_TEST_MEMORY OR BUILD_ALL_TESTS)
   add_test(NAME SetMemory COMMAND test_set_memory)
 endif()
 
-# A dummy project is required to guarantee that the directories are generated.
+# A `dummy` project is required to guarantee that the directories are generated.
 # The directories must be generated for symlinking `.gdbinit` to succeed.
 # This can be skipped if one or more other tests are built.
 if(
   NOT (BUILD_ALL_TESTS
   OR BUILD_TEST_SCAREDY
   OR BUILD_TEST_ARRAY
-  OR BUILD_TEST_ARRAY
+  OR BUILD_TEST_VECTOR
   OR BUILD_TEST_LIST
   OR BUILD_TEST_STRING_LENGTH
   OR BUILD_TEST_COMPARE_STRINGS
@@ -212,5 +212,8 @@ if(
   OR BUILD_TEST_TUPLE
   OR BUILD_TEST_SET_MEMORY)
 )
-  add_test(NAME dummy COMMAND echo)
+  add_executable(test_dummy test_dummy.cpp)
+  target_compile_options(test_dummy PRIVATE ${CAT_CXX_FLAGS_TEST})
+  target_link_options(test_dummy PRIVATE ${CAT_LINK_FLAGS})
+  add_test(NAME dummy COMMAND test_dummy)
 endif()
