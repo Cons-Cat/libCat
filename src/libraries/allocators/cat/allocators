@@ -325,6 +325,19 @@ class AllocatorFacade {
                         // If this is not a small-size optimized `T`:
                         UnderlyingHandle>>;
 
+        using ReturnHandle =
+            Conditional<is_fail_safe,
+                        Conditional<is_pointer,
+                                    // Failsafe pointer.
+                                    OptionalPtr<T>,
+                                    // Failsafe opaque memory handle.
+                                    Optional<Handle>>,
+                        Conditional<is_pointer,
+                                    // Unsafe pointer.
+                                    T*,
+                                    // Unsafe opaque memory handle.
+                                    Handle>>;
+
         if constexpr (is_inline) {
             if (allocation_size < inline_buffer_size) {
                 // Allocate memory on this stack frame.
@@ -337,10 +350,10 @@ class AllocatorFacade {
                 }
 
                 if constexpr (is_multiple) {
-                    for (ssize i = 0; i < allocation_count; ++i) {
-                        new (
+                    for (ssize::Raw i = 0; i < allocation_count; ++i) {
+                        construct_at(
                             static_cast<T*>(static_cast<void*>(&stack_handle)) +
-                            i.raw) T;
+                            i);
                     }
                 } else {
                     stack_handle.set_inline_storage(
@@ -349,11 +362,7 @@ class AllocatorFacade {
 
                 // Return here to skip error handling, because an on-stack
                 // allocation cannot fail.
-                if constexpr (is_fail_safe) {
-                    return Optional<Handle>{stack_handle};
-                } else {
-                    return stack_handle;
-                }
+                return ReturnHandle{move(stack_handle)};
             }
         }
 
@@ -372,11 +381,7 @@ class AllocatorFacade {
         if constexpr (is_fail_safe) {
             if (!maybe_memory.has_value()) {
                 // Return an empty optional if this failed to allocate.
-                if constexpr (is_pointer) {
-                    return OptionalPtr<T>{nullptr};
-                } else {
-                    return Optional<Handle>{nullopt};
-                }
+                return ReturnHandle{nullopt};
             }
         }
 
@@ -387,17 +392,13 @@ class AllocatorFacade {
         } else {
             // Construct the `T`s inside the allocator.
             for (ssize i = 0; i < allocation_count; ++i) {
-                new (p_allocation + i)
-                    T(forward<Args>(constructor_arguments)...);
+                construct_at(p_allocation + i,
+                             forward<Args>(constructor_arguments)...);
             }
         }
 
         if constexpr (is_pointer) {
-            if constexpr (is_fail_safe) {
-                return OptionalPtr<T>{p_allocation};
-            } else {
-                return p_allocation;
-            }
+            return ReturnHandle(p_allocation);
         } else {
             UnderlyingHandle const raw_handle =
                 this->self().template make_handle<T>(p_allocation);
@@ -411,11 +412,7 @@ class AllocatorFacade {
                 handle.set_count(allocation_count);
             }
 
-            if constexpr (is_fail_safe) {
-                return Optional<Handle>{move(handle)};
-            } else {
-                return handle;
-            }
+            return ReturnHandle{move(handle)};
         }
     }
 

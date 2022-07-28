@@ -16,13 +16,16 @@ namespace detail {
 
         TupleElement() = default;
 
+        // Conditionally trivial special member functions in C++20 allows these
+        // to remain trivial:
+
         template <typename U>
             requires(is_implicitly_convertible<U, T>)
         TupleElement(U const& input) : storage(static_cast<T>(input)){};
 
         template <typename U>
             requires(is_implicitly_convertible<U, T>)
-        TupleElement(U&& input) : storage(static_cast<T>(input)){};
+        TupleElement(U&& input) : storage(static_cast<T>(forward<U>(input))){};
 
         // For some reason, this produces ambiguous overload errors if it is
         // implemented as a normal function instead of an operator.
