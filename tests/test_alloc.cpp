@@ -134,6 +134,7 @@ auto main() -> int {
         .or_exit();
     global = 0;
     _ = allocator.align_xalloc_multi<NonTrivial>(8u, 5);
+
     Result(global == 5).or_exit();
 
     // Test `p_align_alloc_multi()`.
@@ -442,10 +443,275 @@ auto main() -> int {
     // Test `salloc()`.
     _ = allocator.salloc<int4>().value();
     allocator.reset();
+    _ = allocator.alloc<cat::Byte>();  // Offset linear allocator by 1 byte.
     auto [salloc, salloc_size] = allocator.salloc<int4>(1).value();
     Result(allocator.get(salloc) == 1).or_exit();
-    Result(salloc_size == 4).or_exit();
+    Result(salloc_size == 7).or_exit();
     global = 0;
     _ = allocator.salloc<NonTrivial>();
     Result(global == 1).or_exit();
+
+    // Test `xsalloc()`.
+    _ = allocator.xsalloc<int4>();
+    allocator.reset();
+    _ = allocator.alloc<cat::Byte>();  // Offset linear allocator by 1 byte.
+    auto [xsalloc, xsalloc_size] = allocator.xsalloc<int4>(1);
+    Result(allocator.get(xsalloc) == 1).or_exit();
+    Result(xsalloc_size == 7).or_exit();
+    global = 0;
+    _ = allocator.xsalloc<NonTrivial>();
+    Result(global == 1).or_exit();
+
+    // Test `p_salloc()`.
+    _ = allocator.p_salloc<int4>().value();
+    allocator.reset();
+    _ = allocator.alloc<cat::Byte>();  // Offset linear allocator by 1 byte.
+    auto [p_salloc, p_salloc_size] = allocator.p_salloc<int4>(1).value();
+    Result(*p_salloc == 1).or_exit();
+    Result(p_salloc_size == 7).or_exit();
+    global = 0;
+    _ = allocator.p_salloc<NonTrivial>();
+    Result(global == 1).or_exit();
+
+    // Test `p_xsalloc()`.
+    _ = allocator.p_xsalloc<int4>();
+    allocator.reset();
+    _ = allocator.alloc<cat::Byte>();  // Offset linear allocator by 1 byte.
+    auto [p_xsalloc, p_xsalloc_size] = allocator.p_xsalloc<int4>(1);
+    Result(*p_xsalloc == 1).or_exit();
+    Result(p_xsalloc_size == 7).or_exit();
+    global = 0;
+    _ = allocator.p_xsalloc<NonTrivial>();
+    Result(global == 1).or_exit();
+
+    // Test `salloc_multi()`.
+    allocator.reset();
+    _ = allocator.alloc<cat::Byte>();  // Offset linear allocator by 1 byte.
+    auto [salloc_multi, salloc_multi_size] =
+        allocator.salloc_multi<int4>(5).value();
+    Result(salloc_multi.size() == 5).or_exit();
+    Result(salloc_multi_size == 23).or_exit();
+    Result(salloc_multi.raw_size() == 20).or_exit();
+
+    global = 0;
+    _ = allocator.salloc_multi<NonTrivial>(5);
+    Result(global == 5).or_exit();
+
+    // Test `xsalloc_multi()`.
+    allocator.reset();
+    _ = allocator.alloc<cat::Byte>();  // Offset linear allocator by 1 byte.
+    auto [xsalloc_multi, xsalloc_multi_size] = allocator.xsalloc_multi<int4>(5);
+    Result(xsalloc_multi.size() == 5).or_exit();
+    Result(xsalloc_multi_size == 23).or_exit();
+    Result(xsalloc_multi.raw_size() == 20).or_exit();
+
+    global = 0;
+    _ = allocator.xsalloc_multi<NonTrivial>(5);
+    Result(global == 5).or_exit();
+
+    // Test `p_salloc_multi()`.
+    allocator.reset();
+    _ = allocator.alloc<cat::Byte>();  // Offset linear allocator by 1 byte.
+    auto [p_salloc_multi, p_salloc_multi_size] =
+        allocator.p_salloc_multi<int4>(5).value();
+    Result(p_salloc_multi_size == 23).or_exit();
+
+    global = 0;
+    _ = allocator.p_salloc_multi<NonTrivial>(5);
+    Result(global == 5).or_exit();
+
+    // Test `p_xsalloc_multi()`.
+    allocator.reset();
+    _ = allocator.alloc<cat::Byte>();  // Offset linear allocator by 1 byte.
+    auto [p_xsalloc_multi, p_xsalloc_multi_size] =
+        allocator.p_xsalloc_multi<int4>(5);
+    Result(p_xsalloc_multi_size == 23).or_exit();
+
+    global = 0;
+    _ = allocator.p_xsalloc_multi<NonTrivial>(5);
+    Result(global == 5).or_exit();
+
+    // Test `align_salloc()`.
+    _ = allocator.align_salloc<int4>(8u);
+    allocator.reset();
+    auto [align_salloc, align_salloc_size] =
+        allocator.align_salloc<int4>(8u, 1).value();
+    Result(allocator.get(align_salloc) == 1).or_exit();
+    Result(align_salloc_size == 8).or_exit();
+    Result(cat::is_aligned(&allocator.get(align_salloc), 8u)).or_exit();
+
+    global = 0;
+    _ = allocator.align_salloc<NonTrivial>(8u);
+    Result(global == 1).or_exit();
+
+    // Test `align_xsalloc()`.
+    _ = allocator.align_xsalloc<int4>(8u);
+    allocator.reset();
+    auto [align_xsalloc, align_xsalloc_size] =
+        allocator.align_xsalloc<int4>(8u, 1);
+    Result(allocator.get(align_xsalloc) == 1).or_exit();
+    Result(align_xsalloc_size == 8).or_exit();
+    Result(cat::is_aligned(&allocator.get(align_xsalloc), 8u)).or_exit();
+
+    global = 0;
+    _ = allocator.align_xsalloc<NonTrivial>(8u);
+    Result(global == 1).or_exit();
+
+    // Test `p_align_salloc()`.
+    _ = allocator.p_align_salloc<int4>(8u);
+    allocator.reset();
+    auto [p_align_salloc, p_align_salloc_size] =
+        allocator.p_align_salloc<int4>(8u, 1).value();
+    Result(*p_align_salloc == 1).or_exit();
+    Result(p_align_salloc_size == 8).or_exit();
+    Result(cat::is_aligned(p_align_salloc, 8u)).or_exit();
+
+    global = 0;
+    _ = allocator.p_align_salloc<NonTrivial>(8u);
+    Result(global == 1).or_exit();
+
+    // Test `p_align_xsalloc()`.
+    _ = allocator.p_align_xsalloc<int4>(8u);
+    allocator.reset();
+    auto [p_align_xsalloc, p_align_xsalloc_size] =
+        allocator.p_align_xsalloc<int4>(8u, 1);
+    Result(*p_align_xsalloc == 1).or_exit();
+    Result(p_align_xsalloc_size == 8).or_exit();
+    Result(cat::is_aligned(p_align_xsalloc, 8u)).or_exit();
+
+    global = 0;
+    _ = allocator.p_align_xsalloc<NonTrivial>(8u);
+    Result(global == 1).or_exit();
+
+    // Test `unalign_salloc()`.
+    _ = allocator.unalign_salloc<int1>();
+    allocator.reset();
+    auto [unalign_salloc, unalign_salloc_size] =
+        allocator.unalign_salloc<int1>(1).value();
+    Result(allocator.get(unalign_salloc) == 1).or_exit();
+    Result(unalign_salloc_size == 1).or_exit();
+
+    global = 0;
+    _ = allocator.unalign_salloc<NonTrivial>();
+    Result(global == 1).or_exit();
+    // Test `unalign_xsalloc()`.
+    _ = allocator.unalign_xsalloc<int1>();
+    allocator.reset();
+    auto [unalign_xsalloc, unalign_xsalloc_size] =
+        allocator.unalign_xsalloc<int1>(1);
+    Result(allocator.get(unalign_xsalloc) == 1).or_exit();
+    Result(unalign_xsalloc_size == 1).or_exit();
+
+    global = 0;
+    _ = allocator.unalign_xsalloc<NonTrivial>();
+    Result(global == 1).or_exit();
+
+    // Test `p_unalign_salloc()`.
+    _ = allocator.p_unalign_salloc<int1>();
+    allocator.reset();
+    auto [p_unalign_salloc, p_unalign_salloc_size] =
+        allocator.p_unalign_salloc<int1>(1).value();
+    Result(*p_unalign_salloc == 1).or_exit();
+    Result(p_unalign_salloc_size == 1).or_exit();
+
+    global = 0;
+    _ = allocator.p_unalign_salloc<NonTrivial>();
+    Result(global == 1).or_exit();
+
+    // Test `p_unalign_xsalloc()`.
+    _ = allocator.p_unalign_xsalloc<int1>();
+    allocator.reset();
+    auto [p_unalign_xsalloc, p_unalign_xsalloc_size] =
+        allocator.p_unalign_xsalloc<int1>(1);
+    Result(*p_unalign_xsalloc == 1).or_exit();
+    Result(p_unalign_xsalloc_size == 1).or_exit();
+
+    global = 0;
+    _ = allocator.p_unalign_xsalloc<NonTrivial>();
+    Result(global == 1).or_exit();
+
+    // Test `align_salloc_multi()`.
+    allocator.reset();
+    auto [align_salloc_multi, align_salloc_multi_size] =
+        allocator.align_salloc_multi<int4>(8u, 5).value();
+    Result(align_salloc_multi_size == 24).or_exit();
+    Result(cat::is_aligned(allocator.get(align_salloc_multi).p_data(), 8u))
+        .or_exit();
+
+    global = 0;
+    _ = allocator.align_salloc_multi<NonTrivial>(8u, 5);
+    Result(global == 5).or_exit();
+
+    // Test `align_xsalloc_multi()`.
+    allocator.reset();
+    auto [align_xsalloc_multi, align_xsalloc_multi_size] =
+        allocator.align_xsalloc_multi<int4>(8u, 5);
+    Result(align_xsalloc_multi_size == 24).or_exit();
+    Result(cat::is_aligned(allocator.get(align_xsalloc_multi).p_data(), 8u))
+        .or_exit();
+
+    global = 0;
+    _ = allocator.align_xsalloc_multi<NonTrivial>(8u, 5);
+    Result(global == 5).or_exit();
+    // Test `p_align_salloc_multi()`.
+    allocator.reset();
+    auto [p_align_salloc_multi, p_align_salloc_multi_size] =
+        allocator.p_align_salloc_multi<int4>(8u, 5).value();
+    Result(p_align_salloc_multi_size == 24).or_exit();
+    Result(cat::is_aligned(p_align_salloc_multi, 8u)).or_exit();
+
+    global = 0;
+    _ = allocator.p_align_salloc_multi<NonTrivial>(8u, 5);
+    Result(global == 5).or_exit();
+
+    // Test `p_align_xsalloc_multi()`.
+    allocator.reset();
+    auto [p_align_xsalloc_multi, p_align_xsalloc_multi_size] =
+        allocator.p_align_xsalloc_multi<int4>(8u, 5);
+    Result(p_align_xsalloc_multi_size == 24).or_exit();
+    Result(cat::is_aligned(p_align_xsalloc_multi, 8u)).or_exit();
+
+    global = 0;
+    _ = allocator.p_align_xsalloc_multi<NonTrivial>(8u, 5);
+    Result(global == 5).or_exit();
+
+    // Test `unalign_salloc_multi()`.
+    allocator.reset();
+    auto [unalign_salloc_multi, unalign_salloc_multi_size] =
+        allocator.unalign_salloc_multi<int1>(5).value();
+    Result(unalign_salloc_multi_size == 5).or_exit();
+
+    global = 0;
+    _ = allocator.unalign_salloc_multi<NonTrivial>(5);
+    Result(global == 5).or_exit();
+
+    // Test `unalign_xsalloc_multi()`.
+    allocator.reset();
+    auto [unalign_xsalloc_multi, unalign_xsalloc_multi_size] =
+        allocator.unalign_xsalloc_multi<int1>(5);
+    Result(unalign_xsalloc_multi_size == 5).or_exit();
+
+    global = 0;
+    _ = allocator.unalign_xsalloc_multi<NonTrivial>(5);
+    Result(global == 5).or_exit();
+
+    // Test `p_unalign_salloc_multi()`.
+    allocator.reset();
+    auto [p_unalign_salloc_multi, p_unalign_salloc_multi_size] =
+        allocator.p_unalign_salloc_multi<int1>(5).value();
+    Result(p_unalign_salloc_multi_size == 5).or_exit();
+
+    global = 0;
+    _ = allocator.p_unalign_salloc_multi<NonTrivial>(5);
+    Result(global == 5).or_exit();
+
+    // Test `p_unalign_xsalloc_multi()`.
+    allocator.reset();
+    auto [p_unalign_xsalloc_multi, p_unalign_xsalloc_multi_size] =
+        allocator.p_unalign_xsalloc_multi<int1>(5);
+    Result(p_unalign_xsalloc_multi_size == 5).or_exit();
+
+    global = 0;
+    _ = allocator.p_unalign_xsalloc_multi<NonTrivial>(5);
+    Result(global == 5).or_exit();
 };
