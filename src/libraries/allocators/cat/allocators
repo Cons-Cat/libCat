@@ -218,11 +218,6 @@ namespace detail {
     // anonymously without a `concept`.
     template <typename AllocatorT>
     concept StableDerivedAllocator = AllocatorT::has_pointer_stability == true;
-
-    template <typename T>
-    concept HasReset = requires(T allocator) {
-        allocator.reset();
-    };
 }  // namespace detail
 
 template <typename AllocatorT, typename AllocationU = void*>
@@ -2190,9 +2185,8 @@ class AllocatorFacade {
         return unconst(this)->get(unconst(memory));
     }
 
-    // If the allocator does not provide a `.reset()` method, produce a
-    // no-op.
-    void reset() requires(!detail::HasReset<Derived>) {
+    // If the allocator does not over-ride a `.reset()` method, produce a no-op.
+    void reset() {
     }
 };
 
