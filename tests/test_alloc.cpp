@@ -866,4 +866,49 @@ auto main() -> int {
         allocator.inline_unalign_xsalloc_multi<HugeObject>(5);
     Result(inline_unalign_xsalloc_multi_size == ssizeof<HugeObject>());
     Result(!inline_unalign_xsalloc_multi_big.is_inline()).or_exit();
+
+    // TODO: Test `calloc()` family.
+
+    // TODO: Test `realloc()` family more comprehensively.
+
+    // Test `realloc()`.
+    auto realloc_1 = allocator.alloc<int4>(1).value();
+    auto realloc_2 = allocator.alloc<int4>(2).value();
+    Result(allocator.get(realloc_1) == 1).or_exit();
+    Result(allocator.get(realloc_2) == 2).or_exit();
+    realloc_1 = allocator.realloc(realloc_2).value();
+    Result(allocator.get(realloc_1) == 2).or_exit();
+
+    // Test `realloc_to()`.
+    _ = allocator.realloc_to(allocator, alloc).value();
+
+    // Test `xrealloc()`.
+    _ = allocator.xrealloc(alloc);
+
+    // Test `xrealloc_to()`.
+    _ = allocator.xrealloc_to(allocator, alloc);
+
+    // Test `align_realloc()`.
+    _ = allocator.align_realloc(alloc, 8u).value();
+
+    // Test `align_realloc_to()`.
+    _ = allocator.align_realloc_to(allocator, alloc, 8u).value();
+
+    // Test `align_xrealloc()`.
+    _ = allocator.align_xrealloc(alloc, 8u);
+
+    // Test `align_xrealloc_to()`.
+    _ = allocator.align_xrealloc_to(allocator, alloc, 8u);
+
+    // Test `unalign_realloc()`.
+    _ = allocator.unalign_realloc(alloc).value();
+
+    // Test `unalign_realloc_to()`.
+    _ = allocator.unalign_realloc_to(allocator, alloc).value();
+
+    // Test `unalign_xrealloc()`.
+    _ = allocator.unalign_xrealloc(alloc);
+
+    // Test `unalign_xrealloc_to()`.
+    _ = allocator.unalign_xrealloc_to(allocator, alloc);
 };

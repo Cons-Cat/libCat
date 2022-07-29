@@ -2332,6 +2332,109 @@ class AllocatorFacade {
             1u, count);
     }
 
+  private:
+    // Take a generic allocation method, invoke it on an allocator with a
+    // generic memory handle, and free the original handle if that allocation
+    // suceeded.
+    template <typename... Args>
+    auto meta_realloc(auto function, Allocator auto& allocator,
+                      MemoryHandle auto& handle, Args&&... arguments) {
+        auto allocation = (&allocator->*function)(
+            // Optional alignment and count argument.
+            forward<Args>(arguments)...,
+            // Move the data from this handle.
+            move(this->get(handle)));
+        if constexpr (is_specialization<typeof(allocation), Optional>) {
+            if (!allocation.has_value()) {
+                return allocation;
+            }
+        }
+        this->free(handle);
+        return allocation;
+    }
+
+  public:
+    // Try to move a memory handle from this allocator into another.
+    [[nodiscard]] auto realloc_to(Allocator auto& allocator,
+                                  MemoryHandle auto& handle) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(&AllocatorFacade<Derived>::alloc<T, T>,
+                                  allocator, handle);
+    }
+
+    // Try to move a memory handle from this allocator into itself.
+    [[nodiscard]] auto realloc(MemoryHandle auto& handle) {
+        return this->realloc_to(*this, handle);
+    }
+
+    // Move a memory handle from this allocator into another.
+    [[nodiscard]] auto xrealloc_to(Allocator auto& allocator,
+                                   MemoryHandle auto& handle) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(&AllocatorFacade<Derived>::xalloc<T, T>,
+                                  allocator, handle);
+    }
+
+    // Try to move a memory handle from this allocator into itself.
+    [[nodiscard]] auto xrealloc(MemoryHandle auto& handle) {
+        return this->xrealloc_to(*this, handle);
+    }
+
+    // Try to move a memory handle from this allocator into another.
+    [[nodiscard]] auto align_realloc_to(Allocator auto& allocator,
+                                        MemoryHandle auto& handle,
+                                        usize alignment) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(&AllocatorFacade<Derived>::align_alloc<T, T>,
+                                  allocator, handle, alignment);
+    }
+
+    // Try to move a memory handle from this allocator into itself.
+    [[nodiscard]] auto align_realloc(MemoryHandle auto& handle,
+                                     usize alignment) {
+        return this->align_realloc_to(*this, handle, alignment);
+    }
+
+    // Move a memory handle from this allocator into another.
+    [[nodiscard]] auto align_xrealloc_to(Allocator auto& allocator,
+                                         MemoryHandle auto& handle,
+                                         usize alignment) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(&AllocatorFacade<Derived>::align_xalloc<T, T>,
+                                  allocator, handle, alignment);
+    }
+
+    // Move a memory handle from this allocator into itself.
+    auto align_xrealloc(MemoryHandle auto& handle, usize alignment) {
+        return this->align_xrealloc_to(*this, handle, alignment);
+    }
+
+    // Try to move a memory handle from this allocator into another.
+    [[nodiscard]] auto unalign_realloc_to(Allocator auto& allocator,
+                                          MemoryHandle auto& handle) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(
+            &AllocatorFacade<Derived>::unalign_alloc<T, T>, allocator, handle);
+    }
+
+    // Try to move a memory handle from this allocator into itself.
+    [[nodiscard]] auto unalign_realloc(MemoryHandle auto& handle) {
+        return this->unalign_realloc_to(*this, handle);
+    }
+
+    // Move a memory handle from this allocator into another.
+    [[nodiscard]] auto unalign_xrealloc_to(Allocator auto& allocator,
+                                           MemoryHandle auto& handle) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(
+            &AllocatorFacade<Derived>::unalign_xalloc<T, T>, allocator, handle);
+    }
+
+    // Move a memory handle from this allocator into itself.
+    auto unalign_xrealloc(MemoryHandle auto& handle) {
+        return this->unalign_xrealloc_to(*this, handle);
+    }
+
     // Invalidate any memory handle, invoking its data's destructor.
     template <MemoryHandle T>
     void free(T const& handle) {
