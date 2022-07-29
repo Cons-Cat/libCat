@@ -1,7 +1,7 @@
 
 # LibCat 🐈‍⬛   [![Badge License]][License]
 
-*A **C++20 Runtime** w/out libC or POSIX.*
+*A **C++20 Runtime** with/out libC or POSIX.*
 
 <br>
 
