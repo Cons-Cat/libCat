@@ -882,11 +882,28 @@ auto main() -> int {
     // Test `realloc_to()`.
     _ = allocator.realloc_to(allocator, alloc).value();
 
+    // Test `p_realloc()`.
+    auto p_realloc_1 = allocator.p_alloc<int4>(1).value();
+    auto p_realloc_2 = allocator.p_alloc<int4>(2).value();
+    Result(*p_realloc_1 == 1).or_exit();
+    Result(*p_realloc_2 == 2).or_exit();
+    p_realloc_1 = allocator.p_realloc(p_realloc_2).value();
+    Result(*p_realloc_1 == 2).or_exit();
+
+    // Test `p_realloc_to()`
+    _ = allocator.p_realloc_to(allocator, p_alloc);
+
     // Test `xrealloc()`.
     _ = allocator.xrealloc(alloc);
 
     // Test `xrealloc_to()`.
     _ = allocator.xrealloc_to(allocator, alloc);
+
+    // Test `p_xrealloc()`
+    _ = allocator.p_xrealloc(p_alloc);
+
+    // Test `p_xrealloc_to()`
+    _ = allocator.p_xrealloc_to(allocator, p_alloc);
 
     // Test `align_realloc()`.
     _ = allocator.align_realloc(alloc, 8u).value();
@@ -911,4 +928,52 @@ auto main() -> int {
 
     // Test `unalign_xrealloc_to()`.
     _ = allocator.unalign_xrealloc_to(allocator, alloc);
+
+    // Test `align_realloc()`.
+    _ = allocator.align_realloc(alloc, 8u).value();
+
+    // Test `align_realloc_to()`.
+    _ = allocator.align_realloc_to(allocator, alloc, 8u).value();
+
+    // Test `align_xrealloc()`.
+    _ = allocator.align_xrealloc(alloc, 8u);
+
+    // Test `align_xrealloc_to()`.
+    _ = allocator.align_xrealloc_to(allocator, alloc, 8u);
+
+    // Test `unalign_realloc()`.
+    _ = allocator.unalign_realloc(alloc).value();
+
+    // Test `unalign_realloc_to()`.
+    _ = allocator.unalign_realloc_to(allocator, alloc).value();
+
+    // Test `unalign_xrealloc()`.
+    _ = allocator.unalign_xrealloc(alloc);
+
+    // Test `unalign_xrealloc_to()`.
+    _ = allocator.unalign_xrealloc_to(allocator, alloc);
+
+    // Test `p_align_realloc()`.
+    _ = allocator.p_align_realloc(p_alloc, 8u).value();
+
+    // Test `p_align_realloc_to()`.
+    _ = allocator.p_align_realloc_to(allocator, p_alloc, 8u).value();
+
+    // Test `p_align_xrealloc()`.
+    _ = allocator.p_align_xrealloc(p_alloc, 8u);
+
+    // Test `p_align_xrealloc_to()`.
+    _ = allocator.p_align_xrealloc_to(allocator, p_alloc, 8u);
+
+    // Test `p_unalign_realloc()`.
+    _ = allocator.p_unalign_realloc(p_alloc).value();
+
+    // Test `p_unalign_realloc_to()`.
+    _ = allocator.p_unalign_realloc_to(allocator, p_alloc).value();
+
+    // Test `p_unalign_xrealloc()`.
+    _ = allocator.p_unalign_xrealloc(p_alloc);
+
+    // Test `p_unalign_xrealloc_to()`.
+    _ = allocator.p_unalign_xrealloc_to(allocator, p_alloc);
 };
