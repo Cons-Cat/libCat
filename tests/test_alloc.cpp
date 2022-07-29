@@ -714,4 +714,156 @@ auto main() -> int {
     global = 0;
     _ = allocator.p_unalign_xsalloc_multi<NonTrivial>(5);
     Result(global == 5).or_exit();
+
+    // Test `inline_salloc()`.
+    allocator.reset();
+    auto [inline_salloc, inline_salloc_size] =
+        allocator.inline_salloc<int4>(1).value();
+    Result(allocator.get(inline_salloc) == 1).or_exit();
+    Result(inline_salloc_size == cat::inline_buffer_size);
+    Result(inline_salloc.is_inline()).or_exit();
+
+    auto [inline_salloc_big, inline_salloc_size_big] =
+        allocator.inline_salloc<HugeObject>().value();
+    Result(inline_salloc_size == ssizeof<HugeObject>());
+    Result(!inline_salloc_big.is_inline()).or_exit();
+
+    // Test `inline_xsalloc()`.
+    allocator.reset();
+    auto [inline_xsalloc, inline_xsalloc_size] =
+        allocator.inline_xsalloc<int4>(1);
+    Result(allocator.get(inline_xsalloc) == 1).or_exit();
+    Result(inline_xsalloc_size == cat::inline_buffer_size);
+    Result(inline_xsalloc.is_inline()).or_exit();
+
+    auto [inline_xsalloc_big, inline_xsalloc_size_big] =
+        allocator.inline_xsalloc<HugeObject>();
+    Result(inline_xsalloc_size == ssizeof<HugeObject>());
+    Result(!inline_xsalloc_big.is_inline()).or_exit();
+
+    // Test `inline_salloc_multi()`.
+    allocator.reset();
+    auto [inline_salloc_multi, inline_salloc_multi_size] =
+        allocator.inline_salloc_multi<int4>(5).value();
+    Result(inline_salloc_multi_size == cat::inline_buffer_size);
+    Result(inline_salloc_multi.is_inline()).or_exit();
+
+    auto [inline_salloc_multi_big, inline_salloc_multi_size_big] =
+        allocator.inline_salloc_multi<HugeObject>(5).value();
+    Result(inline_salloc_multi_size == ssizeof<HugeObject>() * 5);
+    Result(!inline_salloc_multi_big.is_inline()).or_exit();
+
+    // Test `inline_xsalloc_multi()`.
+    allocator.reset();
+    auto [inline_xsalloc_multi, inline_xsalloc_multi_size] =
+        allocator.inline_xsalloc_multi<int4>(5);
+    Result(inline_xsalloc_multi_size == cat::inline_buffer_size);
+    Result(inline_xsalloc_multi.is_inline()).or_exit();
+
+    auto [inline_xsalloc_multi_big, inline_xsalloc_multi_size_big] =
+        allocator.inline_xsalloc_multi<HugeObject>(5);
+    Result(inline_xsalloc_multi_size == ssizeof<HugeObject>() * 5);
+    Result(!inline_xsalloc_multi_big.is_inline()).or_exit();
+
+    // Test `inline_align_salloc()`.
+    allocator.reset();
+    auto [inline_align_salloc, inline_align_salloc_size] =
+        allocator.inline_align_salloc<int4>(8u, 1).value();
+    Result(allocator.get(inline_align_salloc) == 1).or_exit();
+    Result(inline_align_salloc_size == cat::inline_buffer_size);
+    Result(inline_align_salloc.is_inline()).or_exit();
+
+    auto [inline_align_salloc_big, inline_align_salloc_size_big] =
+        allocator.inline_align_salloc<HugeObject>(8u).value();
+    Result(inline_align_salloc_size == ssizeof<HugeObject>());
+    Result(!inline_align_salloc_big.is_inline()).or_exit();
+
+    // Test `inline_align_xsalloc()`.
+    allocator.reset();
+    auto [inline_align_xsalloc, inline_align_xsalloc_size] =
+        allocator.inline_align_xsalloc<int4>(8u, 1);
+    Result(allocator.get(inline_align_xsalloc) == 1).or_exit();
+    Result(inline_align_xsalloc_size == cat::inline_buffer_size);
+    Result(inline_align_xsalloc.is_inline()).or_exit();
+
+    auto [inline_align_xsalloc_big, inline_align_xsalloc_size_big] =
+        allocator.inline_align_xsalloc<HugeObject>(8u);
+    Result(inline_align_xsalloc_size == ssizeof<HugeObject>());
+    Result(!inline_align_xsalloc_big.is_inline()).or_exit();
+
+    // Test `inline_unalign_salloc()`.
+    allocator.reset();
+    auto [inline_unalign_salloc, inline_unalign_salloc_size] =
+        allocator.inline_unalign_salloc<int4>(1).value();
+    Result(allocator.get(inline_unalign_salloc) == 1).or_exit();
+    Result(inline_unalign_salloc_size == cat::inline_buffer_size);
+    Result(inline_unalign_salloc.is_inline()).or_exit();
+
+    auto [inline_unalign_salloc_big, inline_unalign_salloc_size_big] =
+        allocator.inline_unalign_salloc<HugeObject>().value();
+    Result(inline_unalign_salloc_size == ssizeof<HugeObject>());
+    Result(!inline_unalign_salloc_big.is_inline()).or_exit();
+
+    // Test `inline_unalign_xsalloc()`.
+    allocator.reset();
+    auto [inline_unalign_xsalloc, inline_unalign_xsalloc_size] =
+        allocator.inline_unalign_xsalloc<int4>(1);
+    Result(allocator.get(inline_unalign_xsalloc) == 1).or_exit();
+    Result(inline_unalign_xsalloc_size == cat::inline_buffer_size);
+    Result(inline_unalign_xsalloc.is_inline()).or_exit();
+
+    auto [inline_unalign_xsalloc_big, inline_unalign_xsalloc_size_big] =
+        allocator.inline_unalign_xsalloc<HugeObject>();
+    Result(inline_unalign_xsalloc_size == ssizeof<HugeObject>());
+    Result(!inline_unalign_xsalloc_big.is_inline()).or_exit();
+
+    // Test `inline_align_salloc_multi()`.
+    allocator.reset();
+    auto [inline_align_salloc_multi, inline_align_salloc_multi_size] =
+        allocator.inline_align_salloc_multi<int4>(8u, 5).value();
+    Result(inline_align_salloc_multi_size == cat::inline_buffer_size);
+    Result(inline_align_salloc_multi.is_inline()).or_exit();
+
+    auto [inline_align_salloc_multi_big, inline_align_salloc_multi_size_big] =
+        allocator.inline_align_salloc_multi<HugeObject>(8u, 5).value();
+    Result(inline_align_salloc_multi_size == ssizeof<HugeObject>());
+    Result(!inline_align_salloc_multi_big.is_inline()).or_exit();
+
+    // Test `inline_align_xsalloc_multi()`.
+    allocator.reset();
+    auto [inline_align_xsalloc_multi, inline_align_xsalloc_multi_size] =
+        allocator.inline_align_xsalloc_multi<int4>(8u, 5);
+    Result(inline_align_xsalloc_multi_size == cat::inline_buffer_size);
+    Result(inline_align_xsalloc_multi.is_inline()).or_exit();
+
+    auto [inline_align_xsalloc_multi_big, inline_align_xsalloc_multi_size_big] =
+        allocator.inline_align_xsalloc_multi<HugeObject>(8u, 5);
+    Result(inline_align_xsalloc_multi_size == ssizeof<HugeObject>());
+    Result(!inline_align_xsalloc_multi_big.is_inline()).or_exit();
+
+    // Test `inline_unalign_salloc_multi()`.
+    allocator.reset();
+    auto [inline_unalign_salloc_multi, inline_unalign_salloc_multi_size] =
+        allocator.inline_unalign_salloc_multi<int4>(5).value();
+    Result(inline_unalign_salloc_multi_size == cat::inline_buffer_size);
+    Result(inline_unalign_salloc_multi.is_inline()).or_exit();
+
+    auto [inline_unalign_salloc_multi_big,
+          inline_unalign_salloc_multi_size_big] =
+        allocator.inline_unalign_salloc_multi<HugeObject>(5).value();
+    Result(inline_unalign_salloc_multi_size == ssizeof<HugeObject>());
+    Result(!inline_unalign_salloc_multi_big.is_inline()).or_exit();
+
+    // Test `inline_unalign_xsalloc_multi()`.
+    allocator.reset();
+    auto [inline_unalign_xsalloc_multi, inline_unalign_xsalloc_multi_size] =
+        allocator.inline_unalign_xsalloc_multi<int4>(5);
+    Result(inline_unalign_xsalloc_multi_size == cat::inline_buffer_size);
+    Result(inline_unalign_xsalloc_multi.is_inline()).or_exit();
+
+    auto [inline_unalign_xsalloc_multi_big,
+          inline_unalign_xsalloc_multi_size_big] =
+        allocator.inline_unalign_xsalloc_multi<HugeObject>(5);
+    Result(inline_unalign_xsalloc_multi_size == ssizeof<HugeObject>());
+    Result(!inline_unalign_xsalloc_multi_big.is_inline()).or_exit();
 };

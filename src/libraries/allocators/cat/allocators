@@ -406,7 +406,12 @@ class AllocatorFacade {
 
                 // Return here to skip error handling, because an on-stack
                 // allocation cannot fail.
-                return ReturnHandle{move(stack_handle)};
+                if constexpr (has_feedback) {
+                    return ReturnHandle{SizedAllocation<Handle>{
+                        move(stack_handle), inline_buffer_size}};
+                } else {
+                    return ReturnHandle{move(stack_handle)};
+                }
             }
         }
 
@@ -1407,7 +1412,7 @@ class AllocatorFacade {
     // Try to allocate a small-size optimized `T`, and return the number of
     // bytes that was allocated.
     template <typename T, bool is_zeroed = false, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(ConstructibleFrom<T, Args...>)
     [[nodiscard]] auto inline_salloc(Args&&... constructor_arguments) {
         if constexpr (alignof(T) > 1) {
             return this->inline_align_salloc<T>(
@@ -1421,7 +1426,7 @@ class AllocatorFacade {
     // Allocate a small-size optimized `T`, and return the number of bytes that
     // was allocated.
     template <typename T, bool is_zeroed = false, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(ConstructibleFrom<T, Args...>)
     [[nodiscard]] auto inline_xsalloc(Args&&... constructor_arguments) {
         if constexpr (alignof(T) > 1) {
             return this->inline_align_xsalloc<T>(
@@ -1457,7 +1462,7 @@ class AllocatorFacade {
     // Try to allocate a small-size optimized `T` with an alignment guarantee,
     // and return the number of bytes that was allocated.
     template <typename T, bool is_zeroed = false, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(ConstructibleFrom<T, Args...>)
     [[nodiscard]] auto inline_align_salloc(usize alignment,
                                            Args&&... constructor_arguments) {
         return this
@@ -1468,7 +1473,7 @@ class AllocatorFacade {
     // Allocate a small-size optimized `T` with an alignment guarantee, and
     // return the number of bytes that was allocated.
     template <typename T, bool is_zeroed = false, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(ConstructibleFrom<T, Args...>)
     [[nodiscard]] auto inline_align_xsalloc(usize alignment,
                                             Args&&... constructor_arguments) {
         return this
@@ -1479,7 +1484,7 @@ class AllocatorFacade {
     // Try to allocate a small-size optimized `T` with no alignment guarantee,
     // and return the number of bytes that was allocated.
     template <typename T, bool is_zeroed = false, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(ConstructibleFrom<T, Args...>)
     [[nodiscard]] auto inline_unalign_salloc(Args&&... constructor_arguments) {
         return this
             ->meta_alloc<T, true, true, false, false, false, is_zeroed, true>(
@@ -1489,7 +1494,7 @@ class AllocatorFacade {
     // Allocate a small-size optimized `T` with no alignment guarantee, and
     // return the number of bytes that was allocated.
     template <typename T, bool is_zeroed = false, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(ConstructibleFrom<T, Args...>)
     [[nodiscard]] auto inline_unalign_xsalloc(Args&&... constructor_arguments) {
         return this
             ->meta_alloc<T, true, false, false, false, false, is_zeroed, true>(
