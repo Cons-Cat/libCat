@@ -1,4 +1,31 @@
 
-# LibCat
+# LibCat 🐈‍⬛   [![Badge License]][License]
 
-🐈‍⬛ A runtime for C++20 w/out libC or POSIX. Smaller binaries, only arena allocators, SIMD, stronger type safety than STL, and no exceptions!
+*A **C++20 Runtime** w/out libC or POSIX.*
+
+<br>
+
+## Features
+
+-   ***Only Arena Allocators***
+
+-   ***Stronger Type Safety***
+
+    *Compared to the **STL**.*
+
+-   ***Smaller Binaries***
+
+-   ***No Exceptions***
+    
+-   ***SIMD***
+
+<br>
+
+<!----------------------------------------------------------------------------->
+
+[License]: LICENSE
+
+
+<!----------------------------------[ Badges ]--------------------------------->
+
+[Badge License]: https://img.shields.io/badge/License-AGPL3-015d93.svg?style=for-the-badge&labelColor=blue
