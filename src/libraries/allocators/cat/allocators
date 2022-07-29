@@ -2337,14 +2337,17 @@ class AllocatorFacade {
     // generic memory handle, and free the original handle if that allocation
     // suceeded.
     template <typename... Args>
-    auto meta_realloc(auto function, Allocator auto& allocator,
-                      MemoryHandle auto& handle, Args&&... arguments) {
-        auto allocation = (&allocator->*function)(
+    auto meta_realloc(auto function, Allocator auto& allocator, auto& handle,
+                      Args&&... arguments) {
+        using Allocation = decltype((&allocator->*function)(
+            forward<Args>(arguments)..., move(this->get(handle))));
+        Allocation allocation;
+        allocation = (&allocator->*function)(
             // Optional alignment and count argument.
             forward<Args>(arguments)...,
             // Move the data from this handle.
             move(this->get(handle)));
-        if constexpr (is_specialization<typeof(allocation), Optional>) {
+        if constexpr (is_specialization<Allocation, Optional>) {
             if (!allocation.has_value()) {
                 return allocation;
             }
@@ -2367,6 +2370,19 @@ class AllocatorFacade {
         return this->realloc_to(*this, handle);
     }
 
+    // Try to move a memory handle from this allocator into another.
+    template <typename T>
+    [[nodiscard]] auto p_realloc_to(Allocator auto& allocator, T* p_handle) {
+        return this->meta_realloc(&AllocatorFacade<Derived>::p_alloc<T, T>,
+                                  allocator, p_handle);
+    }
+
+    // Try to move a memory handle from this allocator into itself.
+    template <typename T>
+    [[nodiscard]] auto p_realloc(T* p_handle) {
+        return this->p_realloc_to(*this, p_handle);
+    }
+
     // Move a memory handle from this allocator into another.
     [[nodiscard]] auto xrealloc_to(Allocator auto& allocator,
                                    MemoryHandle auto& handle) {
@@ -2378,6 +2394,19 @@ class AllocatorFacade {
     // Try to move a memory handle from this allocator into itself.
     [[nodiscard]] auto xrealloc(MemoryHandle auto& handle) {
         return this->xrealloc_to(*this, handle);
+    }
+
+    // Try to move a memory handle from this allocator into another.
+    template <typename T>
+    [[nodiscard]] auto p_xrealloc_to(Allocator auto& allocator, T* p_handle) {
+        return this->meta_realloc(&AllocatorFacade<Derived>::p_xalloc<T, T>,
+                                  allocator, p_handle);
+    }
+
+    // Try to move a memory handle from this allocator into itself.
+    template <typename T>
+    [[nodiscard]] auto p_xrealloc(T* p_handle) {
+        return this->p_xrealloc_to(*this, p_handle);
     }
 
     // Try to move a memory handle from this allocator into another.
@@ -2433,6 +2462,62 @@ class AllocatorFacade {
     // Move a memory handle from this allocator into itself.
     auto unalign_xrealloc(MemoryHandle auto& handle) {
         return this->unalign_xrealloc_to(*this, handle);
+    }
+
+    // Try to move a memory handle from this allocator into another.
+    [[nodiscard]] auto p_align_realloc_to(Allocator auto& allocator,
+                                          auto* p_handle, usize alignment) {
+        using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(
+            &AllocatorFacade<Derived>::p_align_alloc<T, T>, allocator, p_handle,
+            alignment);
+    }
+
+    // Try to move a memory handle from this allocator into itself.
+    [[nodiscard]] auto p_align_realloc(auto* p_handle, usize alignment) {
+        return this->p_align_realloc_to(*this, p_handle, alignment);
+    }
+
+    // Move a memory handle from this allocator into another.
+    [[nodiscard]] auto p_align_xrealloc_to(Allocator auto& allocator,
+                                           auto* p_handle, usize alignment) {
+        using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(
+            &AllocatorFacade<Derived>::p_align_xalloc<T, T>, allocator,
+            p_handle, alignment);
+    }
+
+    // Move a memory handle from this allocator into itself.
+    auto p_align_xrealloc(auto* p_handle, usize alignment) {
+        return this->p_align_xrealloc_to(*this, p_handle, alignment);
+    }
+
+    // Try to move a memory handle from this allocator into another.
+    [[nodiscard]] auto p_unalign_realloc_to(Allocator auto& allocator,
+                                            auto* p_handle) {
+        using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(
+            &AllocatorFacade<Derived>::p_unalign_alloc<T, T>, allocator,
+            p_handle);
+    }
+
+    // Try to move a memory handle from this allocator into itself.
+    [[nodiscard]] auto p_unalign_realloc(auto* p_handle) {
+        return this->p_unalign_realloc_to(*this, p_handle);
+    }
+
+    // Move a memory handle from this allocator into another.
+    [[nodiscard]] auto p_unalign_xrealloc_to(Allocator auto& allocator,
+                                             auto* p_handle) {
+        using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(
+            &AllocatorFacade<Derived>::p_unalign_xalloc<T, T>, allocator,
+            p_handle);
+    }
+
+    // Move a memory handle from this allocator into itself.
+    auto p_unalign_xrealloc(auto* p_handle) {
+        return this->p_unalign_xrealloc_to(*this, p_handle);
     }
 
     // Invalidate any memory handle, invoking its data's destructor.
@@ -2522,7 +2607,20 @@ class AllocatorFacade {
         return unconst(this)->get(unconst(memory));
     }
 
-    // If the allocator does not over-ride a `.reset()` method, produce a no-op.
+    // Get a non-`const` reference to the data in any pointer handle.
+    template <typename T>
+    [[nodiscard]] auto get(T* p_handle) & -> T& {
+        return *p_handle;
+    }
+
+    // Get a `const` reference to the data in any pointer handle.
+    template <typename T>
+    [[nodiscard]] auto get(T const* p_handle) & -> T& {
+        return *p_handle;
+    }
+
+    // If the allocator does not over-ride a `.reset()` method, produce a
+    // no-op.
     void reset() {
     }
 };
