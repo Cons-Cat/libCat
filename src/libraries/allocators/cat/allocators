@@ -6,8 +6,6 @@
 #include <cat/span>
 #include <cat/tuple>
 
-#include "cat/meta"
-
 namespace cat {
 
 template <typename T>
@@ -2358,18 +2356,20 @@ class AllocatorFacade {
         return allocation;
     }
 
+    // Copy data from `handle` into `allocation`.
     void relocate_handle(MemoryHandle auto& handle, auto allocation) {
         if constexpr (is_trivially_relocatable<int>) {
             copy_memory(addressof(this->get(handle)), addressof(allocation),
-                        allocation.raw_size());
+                        handle.raw_size());
         } else {
-            for (ssize i = 0; i < allocation.size(); ++i) {
+            for (ssize i = 0; i < handle.size(); ++i) {
                 *(addressof(this->get(allocation)) + i) =
                     move(addressof(this->get(handle)) + i);
             }
         }
     }
 
+    // Copy data from `p_handle` into `p_allocation`.
     void relocate_pointer_handle(auto* p_handle, auto* p_allocation,
                                  ssize count) {
         if constexpr (is_trivially_relocatable<decltype(*p_allocation)>) {
@@ -2394,20 +2394,32 @@ class AllocatorFacade {
             if (!allocation.has_value()) {
                 return allocation;
             }
-            if constexpr (is_pointer<typeof(allocation.value())>) {
-                // TODO: Get count correctly.
-                this->relocate_pointer_handle(handle, allocation.value(),
-                                              count);
-            } else {
-                this->relocate_handle(handle, allocation.value());
-            }
+            this->relocate_handle(handle, allocation.value());
         } else {
-            if constexpr (is_pointer<Allocation>) {
-                // TODO: Get count correctly.
-                this->relocate_pointer_handle(handle, allocation, count);
-            } else {
-                this->relocate_handle(handle, allocation);
+            this->relocate_handle(handle, allocation);
+        }
+        this->free(handle);
+        return allocation;
+    }
+
+    template <typename... Args>
+    auto meta_p_realloc_multi(auto function, Allocator auto& allocator,
+                              auto& handle, ssize old_count, ssize new_count,
+                              Args&&... maybe_alignment) {
+        using Allocation = decltype((&allocator->*function)(
+            forward<Args>(maybe_alignment)..., new_count));
+        Allocation allocation;
+        allocation = (&allocator->*function)(forward<Args>(maybe_alignment)...,
+                                             new_count);
+        if constexpr (is_specialization<Allocation, Optional>) {
+            if (!allocation.has_value()) {
+                return allocation;
             }
+            this->relocate_pointer_handle(handle, allocation.value(),
+                                          old_count);
+        } else {
+            // TODO: Get count correctly.
+            this->relocate_pointer_handle(handle, allocation, old_count);
         }
         this->free(handle);
         return allocation;
@@ -2580,186 +2592,209 @@ class AllocatorFacade {
     // Move a memory handle from this allocator into another.
     [[nodiscard]] auto realloc_multi_to(Allocator auto& allocator,
                                         MemoryHandle auto& handle,
-                                        ssize count) {
+                                        ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi(
             &AllocatorFacade<Derived>::alloc_multi<T>, allocator, handle,
-            count);
+            new_count);
     }
 
     // Try to move a memory handle from this allocator into itself.
-    [[nodiscard]] auto realloc_multi(MemoryHandle auto& handle, ssize count) {
-        return this->realloc_multi_to(*this, handle, count);
+    [[nodiscard]] auto realloc_multi(MemoryHandle auto& handle,
+                                     ssize new_count) {
+        return this->realloc_multi_to(*this, handle, new_count);
     }
 
     // Try to move a memory handle from this allocator into another.
     template <typename T>
     [[nodiscard]] auto p_realloc_multi_to(Allocator auto& allocator,
-                                          T* p_handle, ssize count) {
-        return this->meta_realloc_multi(
+                                          T* p_handle, ssize old_count,
+                                          ssize new_count) {
+        return this->meta_p_realloc_multi(
             &AllocatorFacade<Derived>::p_alloc_multi<T>, allocator, p_handle,
-            count);
+            old_count, new_count);
     }
 
     // Try to move a memory handle from this allocator into itself.
     template <typename T>
-    [[nodiscard]] auto p_realloc_multi(T* p_handle, ssize count) {
-        return this->p_realloc_multi_to(*this, p_handle, count);
+    [[nodiscard]] auto p_realloc_multi(T* p_handle, ssize old_count,
+                                       ssize new_count) {
+        return this->p_realloc_multi_to(*this, p_handle, old_count, new_count);
     }
 
     // Move a memory handle from this allocator into another.
     [[nodiscard]] auto xrealloc_multi_to(Allocator auto& allocator,
                                          MemoryHandle auto& handle,
-                                         ssize count) {
+                                         ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi(
             &AllocatorFacade<Derived>::xalloc_multi<T>, allocator, handle,
-            count);
+            new_count);
     }
 
     // Try to move a memory handle from this allocator into itself.
-    [[nodiscard]] auto xrealloc_multi(MemoryHandle auto& handle, ssize count) {
-        return this->xrealloc_multi_to(*this, handle, count);
+    [[nodiscard]] auto xrealloc_multi(MemoryHandle auto& handle,
+                                      ssize new_count) {
+        return this->xrealloc_multi_to(*this, handle, new_count);
     }
 
     // Try to move a memory handle from this allocator into another.
     template <typename T>
     [[nodiscard]] auto p_xrealloc_multi_to(Allocator auto& allocator,
-                                           T* p_handle, ssize count) {
-        return this->meta_realloc_multi(
+                                           T* p_handle, ssize old_count,
+                                           ssize new_count) {
+        return this->meta_p_realloc_multi(
             &AllocatorFacade<Derived>::p_xalloc_multi<T>, allocator, p_handle,
-            count);
+            old_count, new_count);
     }
 
     // Try to move a memory handle from this allocator into itself.
     template <typename T>
-    [[nodiscard]] auto p_xrealloc_multi(T* p_handle, ssize count) {
-        return this->p_xrealloc_multi_to(*this, p_handle, count);
+    [[nodiscard]] auto p_xrealloc_multi(T* p_handle, ssize old_count,
+                                        ssize new_count) {
+        return this->p_xrealloc_multi_to(*this, p_handle, old_count, new_count);
     }
 
     // Try to move a memory handle from this allocator into another.
     [[nodiscard]] auto align_realloc_multi_to(Allocator auto& allocator,
                                               MemoryHandle auto& handle,
-                                              usize alignment, ssize count) {
+                                              usize alignment,
+                                              ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi(
             &AllocatorFacade<Derived>::align_alloc_multi<T>, allocator, handle,
-            count, alignment);
+            new_count, alignment);
     }
 
     // Try to move a memory handle from this allocator into itself.
     [[nodiscard]] auto align_realloc_multi(MemoryHandle auto& handle,
-                                           usize alignment, ssize count) {
-        return this->align_realloc_multi_to(*this, handle, alignment, count);
+                                           usize alignment, ssize new_count) {
+        return this->align_realloc_multi_to(*this, handle, alignment,
+                                            new_count);
     }
 
     // Move a memory handle from this allocator into another.
     [[nodiscard]] auto align_xrealloc_multi_to(Allocator auto& allocator,
                                                MemoryHandle auto& handle,
-                                               usize alignment, ssize count) {
+                                               usize alignment,
+                                               ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi(
             &AllocatorFacade<Derived>::align_xalloc_multi<T>, allocator, handle,
-            count, alignment);
+            new_count, alignment);
     }
 
     // Move a memory handle from this allocator into itself.
     auto align_xrealloc_multi(MemoryHandle auto& handle, usize alignment,
-                              ssize count) {
-        return this->align_xrealloc_multi_to(*this, handle, alignment, count);
+                              ssize new_count) {
+        return this->align_xrealloc_multi_to(*this, handle, alignment,
+                                             new_count);
     }
 
     // Try to move a memory handle from this allocator into another.
     [[nodiscard]] auto unalign_realloc_multi_to(Allocator auto& allocator,
                                                 MemoryHandle auto& handle,
-                                                ssize count) {
+
+                                                ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi(
             &AllocatorFacade<Derived>::unalign_alloc_multi<T>, allocator,
-            handle, count);
+            handle, new_count);
     }
 
     // Try to move a memory handle from this allocator into itself.
     [[nodiscard]] auto unalign_realloc_multi(MemoryHandle auto& handle,
-                                             ssize count) {
-        return this->unalign_realloc_multi_to(*this, handle, count);
+                                             ssize new_count) {
+        return this->unalign_realloc_multi_to(*this, handle, new_count);
     }
 
     // Move a memory handle from this allocator into another.
     [[nodiscard]] auto unalign_xrealloc_multi_to(Allocator auto& allocator,
                                                  MemoryHandle auto& handle,
-                                                 ssize count) {
+
+                                                 ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi(
             &AllocatorFacade<Derived>::unalign_xalloc_multi<T>, allocator,
-            handle, count);
+            handle, new_count);
     }
 
     // Move a memory handle from this allocator into itself.
-    auto unalign_xrealloc_multi(MemoryHandle auto& handle, ssize count) {
-        return this->unalign_xrealloc_multi_to(*this, handle, count);
+    auto unalign_xrealloc_multi(MemoryHandle auto& handle, ssize new_count) {
+        return this->unalign_xrealloc_multi_to(*this, handle, new_count);
     }
 
     // Try to move a memory handle from this allocator into another.
     [[nodiscard]] auto p_align_realloc_multi_to(Allocator auto& allocator,
                                                 auto* p_handle, usize alignment,
-                                                ssize count) {
+                                                ssize old_count,
+                                                ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
-        return this->meta_realloc_multi(
+        return this->meta_p_realloc_multi(
             &AllocatorFacade<Derived>::p_align_alloc_multi<T>, allocator,
-            p_handle, count, alignment);
+            p_handle, old_count, new_count, alignment);
     }
 
     // Try to move a memory handle from this allocator into itself.
     [[nodiscard]] auto p_align_realloc_multi(auto* p_handle, usize alignment,
-                                             ssize count) {
+                                             ssize old_count, ssize new_count) {
         return this->p_align_realloc_multi_to(*this, p_handle, alignment,
-                                              count);
+                                              old_count, new_count);
     }
 
     // Move a memory handle from this allocator into another.
     [[nodiscard]] auto p_align_xrealloc_multi_to(Allocator auto& allocator,
                                                  auto* p_handle,
-                                                 usize alignment, ssize count) {
+                                                 usize alignment,
+                                                 ssize old_count,
+                                                 ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
-        return this->meta_realloc_multi(
+        return this->meta_p_realloc_multi(
             &AllocatorFacade<Derived>::p_align_xalloc_multi<T>, allocator,
-            p_handle, count, alignment);
+            p_handle, old_count, new_count, alignment);
     }
 
     // Move a memory handle from this allocator into itself.
-    auto p_align_xrealloc_multi(auto* p_handle, usize alignment, ssize count) {
+    auto p_align_xrealloc_multi(auto* p_handle, usize alignment,
+                                ssize old_count, ssize new_count) {
         return this->p_align_xrealloc_multi_to(*this, p_handle, alignment,
-                                               count);
+                                               old_count, new_count);
     }
 
     // Try to move a memory handle from this allocator into another.
     [[nodiscard]] auto p_unalign_realloc_multi_to(Allocator auto& allocator,
-                                                  auto* p_handle, ssize count) {
+                                                  auto* p_handle,
+                                                  ssize old_count,
+                                                  ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
-        return this->meta_realloc_multi(
+        return this->meta_p_realloc_multi(
             &AllocatorFacade<Derived>::p_unalign_alloc_multi<T>, allocator,
-            p_handle, count);
+            p_handle, old_count, new_count);
     }
 
     // Try to move a memory handle from this allocator into itself.
-    [[nodiscard]] auto p_unalign_realloc_multi(auto* p_handle, ssize count) {
-        return this->p_unalign_realloc_multi_to(*this, p_handle, count);
+    [[nodiscard]] auto p_unalign_realloc_multi(auto* p_handle, ssize old_count,
+                                               ssize new_count) {
+        return this->p_unalign_realloc_multi_to(*this, p_handle, old_count,
+                                                new_count);
     }
 
     // Move a memory handle from this allocator into another.
     [[nodiscard]] auto p_unalign_xrealloc_multi_to(Allocator auto& allocator,
                                                    auto* p_handle,
-                                                   ssize count) {
+                                                   ssize old_count,
+                                                   ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
-        return this->meta_realloc_multi(
+        return this->meta_p_realloc_multi(
             &AllocatorFacade<Derived>::p_unalign_xalloc_multi<T>, allocator,
-            p_handle, count);
+            p_handle, old_count, new_count);
     }
 
     // Move a memory handle from this allocator into itself.
-    auto p_unalign_xrealloc_multi(auto* p_handle, ssize count) {
-        return this->p_unalign_xrealloc_multi_to(*this, p_handle, count);
+    auto p_unalign_xrealloc_multi(auto* p_handle, ssize old_count,
+                                  ssize new_count) {
+        return this->p_unalign_xrealloc_multi_to(*this, p_handle, old_count,
+                                                 new_count);
     }
 
     // Invalidate any memory handle, invoking its data's destructor.
