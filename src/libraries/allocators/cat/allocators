@@ -3247,6 +3247,427 @@ class AllocatorFacade {
                                                   new_count);
     }
 
+    // Try to move a small-size optimized handle from this allocator into
+    // another.
+    [[nodiscard]] auto inline_realloc_to(Allocator auto& allocator,
+                                         MemoryHandle auto& handle) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(&AllocatorFacade<Derived>::inline_alloc<T, T>,
+                                  allocator, handle);
+    }
+
+    // Try to move a small-size optimized handle from this allocator into
+    // itself.
+    [[nodiscard]] auto inline_realloc(MemoryHandle auto& handle) {
+        return this->inline_realloc_to(*this, handle);
+    }
+
+    // Move a small-size optimized handle from this allocator into another.
+    [[nodiscard]] auto inline_xrealloc_to(Allocator auto& allocator,
+                                          MemoryHandle auto& handle) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(
+            &AllocatorFacade<Derived>::inline_xalloc<T, T>, allocator, handle);
+    }
+
+    // Move a small-size optimized handle from this allocator into itself.
+    [[nodiscard]] auto inline_xrealloc(MemoryHandle auto& handle) {
+        return this->inline_xrealloc_to(*this, handle);
+    }
+
+    // Try to move a small-size optimized handle from this allocator into
+    // another with an alignment guarantee.
+    [[nodiscard]] auto inline_align_realloc_to(Allocator auto& allocator,
+                                               MemoryHandle auto& handle,
+                                               usize alignment) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(
+            &AllocatorFacade<Derived>::inline_align_alloc<T, T>, allocator,
+            handle, alignment);
+    }
+
+    // Try to move a small-size optimized handle from this allocator into itself
+    // with an alignment guarantee.
+    [[nodiscard]] auto inline_align_realloc(MemoryHandle auto& handle,
+                                            usize alignment) {
+        return this->inline_align_realloc_to(*this, handle, alignment);
+    }
+
+    // Move a small-size optimized handle from this allocator into another with
+    // an alignment guarantee.
+    [[nodiscard]] auto inline_align_xrealloc_to(Allocator auto& allocator,
+                                                MemoryHandle auto& handle,
+                                                usize alignment) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(
+            &AllocatorFacade<Derived>::inline_align_xalloc<T, T>, allocator,
+            handle, alignment);
+    }
+
+    // Move a small-size optimized handle from this allocator into itself with
+    // an alignment guarantee.
+    auto inline_align_xrealloc(MemoryHandle auto& handle, usize alignment) {
+        return this->inline_align_xrealloc_to(*this, handle, alignment);
+    }
+
+    // Try to move a small-size optimized handle from this allocator into
+    // another with no alignment guarantee.
+    [[nodiscard]] auto inline_unalign_realloc_to(Allocator auto& allocator,
+                                                 MemoryHandle auto& handle) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(
+            &AllocatorFacade<Derived>::inline_unalign_alloc<T, T>, allocator,
+            handle);
+    }
+
+    // Try to move a small-size optimized handle from this allocator into itself
+    // with no alignment guarantee.
+    [[nodiscard]] auto inline_unalign_realloc(MemoryHandle auto& handle) {
+        return this->inline_unalign_realloc_to(*this, handle);
+    }
+
+    // Move a small-size optimized handle from this allocator into another with
+    // no alignment guarantee.
+    [[nodiscard]] auto inline_unalign_xrealloc_to(Allocator auto& allocator,
+                                                  MemoryHandle auto& handle) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(
+            &AllocatorFacade<Derived>::inline_unalign_xalloc<T, T>, allocator,
+            handle);
+    }
+
+    // Move a small-size optimized handle from this allocator into itself with
+    // no alignment guarantee.
+    auto inline_unalign_xrealloc(MemoryHandle auto& handle) {
+        return this->inline_unalign_xrealloc_to(*this, handle);
+    }
+
+    // Move a small-size optimized array memory handle from this allocator into
+    // another.
+    [[nodiscard]] auto inline_realloc_multi_to(Allocator auto& allocator,
+                                               MemoryHandle auto& handle,
+                                               ssize new_count) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc_multi(
+            &AllocatorFacade<Derived>::inline_alloc_multi<T>, allocator, handle,
+            new_count);
+    }
+
+    // Try to move a small-size optimized array memory handle from this
+    // allocator into itself.
+    [[nodiscard]] auto inline_realloc_multi(MemoryHandle auto& handle,
+                                            ssize new_count) {
+        return this->realloc_multi_to(*this, handle, new_count);
+    }
+
+    // Move and resize a small-size optimized array memory handle from this
+    // allocator into another.
+    [[nodiscard]] auto inline_xrealloc_multi_to(Allocator auto& allocator,
+                                                MemoryHandle auto& handle,
+                                                ssize new_count) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc_multi(
+            &AllocatorFacade<Derived>::inline_xalloc_multi<T>, allocator,
+            handle, new_count);
+    }
+
+    // Move and resize a small-size optimized array memory handle from this
+    // allocator into itself.
+    [[nodiscard]] auto inline_xrealloc_multi(MemoryHandle auto& handle,
+                                             ssize new_count) {
+        return this->inline_xrealloc_multi_to(*this, handle, new_count);
+    }
+
+    // Move and resize a small-size optimized array memory handle from this
+    // allocator into another.
+    [[nodiscard]] auto inline_align_realloc_multi_to(Allocator auto& allocator,
+                                                     MemoryHandle auto& handle,
+                                                     usize alignment,
+                                                     ssize new_count) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc_multi(
+            &AllocatorFacade<Derived>::inline_align_alloc_multi<T>, allocator,
+            handle, new_count, alignment);
+    }
+
+    // Try to move and resize a small-size optimized array memory handle from
+    // this allocator into itself with an alignment guarantee.
+    [[nodiscard]] auto inline_align_realloc_multi(MemoryHandle auto& handle,
+                                                  usize alignment,
+                                                  ssize new_count) {
+        return this->inline_align_realloc_multi_to(*this, handle, alignment,
+                                                   new_count);
+    }
+
+    // Move and resize a small-size optimized array memory handle from this
+    // allocator into another with an alignment guarantee.
+    [[nodiscard]] auto inline_align_xrealloc_multi_to(Allocator auto& allocator,
+                                                      MemoryHandle auto& handle,
+                                                      usize alignment,
+                                                      ssize new_count) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc_multi(
+            &AllocatorFacade<Derived>::inline_align_xalloc_multi<T>, allocator,
+            handle, new_count, alignment);
+    }
+
+    // Move and resize a small-size optimized array memory handle from this
+    // allocator into itself with an alignment guarantee.
+    auto inline_align_xrealloc_multi(MemoryHandle auto& handle, usize alignment,
+                                     ssize new_count) {
+        return this->inline_align_xrealloc_multi_to(*this, handle, alignment,
+                                                    new_count);
+    }
+
+    // Try to move and resize a small-size optimized array memory handle from
+    // this allocator into another with no alignment guarantee.
+    [[nodiscard]] auto inline_unalign_realloc_multi_to(
+        Allocator auto& allocator, MemoryHandle auto& handle, ssize new_count) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc_multi(
+            &AllocatorFacade<Derived>::inline_unalign_alloc_multi<T>, allocator,
+            handle, new_count);
+    }
+
+    // Try to move and resize a small-size optimized array memory handle from
+    // this allocator into itself with no alignment guarantee.
+    [[nodiscard]] auto inline_unalign_realloc_multi(MemoryHandle auto& handle,
+                                                    ssize new_count) {
+        return this->inline_unalign_realloc_multi_to(*this, handle, new_count);
+    }
+
+    // Move and resize a small-size optimized array memory handle from this
+    // allocator into another with no alignment guarantee.
+    [[nodiscard]] auto inline_unalign_xrealloc_multi_to(
+        Allocator auto& allocator, MemoryHandle auto& handle, ssize new_count) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc_multi(
+            &AllocatorFacade<Derived>::inline_unalign_xalloc_multi<T>,
+            allocator, handle, new_count);
+    }
+
+    // Move and resize a small-size optimized array memory handle from this
+    // allocator into itself with no alignment guarantee.
+    auto inline_unalign_xrealloc_multi(MemoryHandle auto& handle,
+                                       ssize new_count) {
+        return this->inline_unalign_xrealloc_multi_to(*this, handle, new_count);
+    }
+
+    // Try to move a small-size optimized handle from this allocator into
+    // another, and zero-out the allocated memory.
+    [[nodiscard]] auto inline_recalloc_to(Allocator auto& allocator,
+                                          MemoryHandle auto& handle) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(&AllocatorFacade<Derived>::calloc<T, T>,
+                                  allocator, handle);
+    }
+
+    // Try to move a small-size optimized handle from this allocator into
+    // itself, and zero-out the allocated memory.
+    [[nodiscard]] auto inline_recalloc(MemoryHandle auto& handle) {
+        return this->inline_recalloc_to(*this, handle);
+    }
+
+    // Move a small-size optimized handle from this allocator into another, and
+    // zero-out the allocated memory.
+    [[nodiscard]] auto inline_xrecalloc_to(Allocator auto& allocator,
+                                           MemoryHandle auto& handle) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(
+            &AllocatorFacade<Derived>::inline_xcalloc<T, T>, allocator, handle);
+    }
+
+    // Move a small-size optimized handle from this allocator into itself, and
+    // zero-out the allocated memory.
+    [[nodiscard]] auto inline_xrecalloc(MemoryHandle auto& handle) {
+        return this->inline_xrecalloc_to(*this, handle);
+    }
+
+    // Try to move a small-size optimized handle from this allocator into
+    // another with an alignment guarantee, and zero-out the allocated memory.
+    [[nodiscard]] auto inline_align_recalloc_to(Allocator auto& allocator,
+                                                MemoryHandle auto& handle,
+                                                usize alignment) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(
+            &AllocatorFacade<Derived>::inline_align_calloc<T, T>, allocator,
+            handle, alignment);
+    }
+
+    // Try to move a small-size optimized handle from this allocator into itself
+    // with an alignment guarantee, and zero-out the allocated memory.
+    [[nodiscard]] auto inline_align_recalloc(MemoryHandle auto& handle,
+                                             usize alignment) {
+        return this->inline_align_recalloc_to(*this, handle, alignment);
+    }
+
+    // Move a small-size optimized handle from this allocator into another with
+    // an alignment guarantee, and zero-out the allocated memory.
+    [[nodiscard]] auto inline_align_xrecalloc_to(Allocator auto& allocator,
+                                                 MemoryHandle auto& handle,
+                                                 usize alignment) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(
+            &AllocatorFacade<Derived>::inline_align_xcalloc<T, T>, allocator,
+            handle, alignment);
+    }
+
+    // Move a small-size optimized handle from this allocator into itself with
+    // an alignment guarantee, and zero-out the allocated memory.
+    auto inline_align_xrecalloc(MemoryHandle auto& handle, usize alignment) {
+        return this->inline_align_xrecalloc_to(*this, handle, alignment);
+    }
+
+    // Try to move a small-size optimized handle from this allocator into
+    // another with no alignment guarantee, and zero-out the allocated memory.
+    [[nodiscard]] auto inline_unalign_recalloc_to(Allocator auto& allocator,
+                                                  MemoryHandle auto& handle) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(
+            &AllocatorFacade<Derived>::inline_unalign_calloc<T, T>, allocator,
+            handle);
+    }
+
+    // Try to move a small-size optimized handle from this allocator into itself
+    // with no alignment guarantee, and zero-out the allocated memory.
+    [[nodiscard]] auto inline_unalign_recalloc(MemoryHandle auto& handle) {
+        return this->inline_unalign_recalloc_to(*this, handle);
+    }
+
+    // Move a small-size optimized handle from this allocator into another with
+    // no alignment guarantee, and zero-out the allocated memory.
+    [[nodiscard]] auto inline_unalign_xrecalloc_to(Allocator auto& allocator,
+                                                   MemoryHandle auto& handle) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc(
+            &AllocatorFacade<Derived>::inline_unalign_xcalloc<T, T>, allocator,
+            handle);
+    }
+
+    // Move a small-size optimized handle from this allocator into itself with
+    // no alignment guarantee, and zero-out the allocated memory.
+    auto inline_unalign_xrecalloc(MemoryHandle auto& handle) {
+        return this->inline_unalign_xrecalloc_to(*this, handle);
+    }
+
+    // Move a small-size optimized array memory handle from this allocator into
+    // another, and zero-out the allocated memory.
+    [[nodiscard]] auto inline_recalloc_multi_to(Allocator auto& allocator,
+                                                MemoryHandle auto& handle,
+                                                ssize new_count) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc_multi(
+            &AllocatorFacade<Derived>::inline_calloc_multi<T>, allocator,
+            handle, new_count);
+    }
+
+    // Try to move a small-size optimized array memory handle from this
+    // allocator into itself, and zero-out the allocated memory.
+    [[nodiscard]] auto inline_recalloc_multi(MemoryHandle auto& handle,
+                                             ssize new_count) {
+        return this->inline_recalloc_multi_to(*this, handle, new_count);
+    }
+
+    // Move and resize a small-size optimized array memory handle from this
+    // allocator into another, and zero-out the allocated memory.
+    [[nodiscard]] auto inline_xrecalloc_multi_to(Allocator auto& allocator,
+                                                 MemoryHandle auto& handle,
+                                                 ssize new_count) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc_multi(
+            &AllocatorFacade<Derived>::inline_xcalloc_multi<T>, allocator,
+            handle, new_count);
+    }
+
+    // Move and resize a small-size optimized array memory handle from this
+    // allocator into itself, and zero-out the allocated memory.
+    [[nodiscard]] auto inline_xrecalloc_multi(MemoryHandle auto& handle,
+                                              ssize new_count) {
+        return this->inline_xrecalloc_multi_to(*this, handle, new_count);
+    }
+
+    // Move and resize a small-size optimized array memory handle from this
+    // allocator into another, and zero-out the allocated memory.
+    [[nodiscard]] auto inline_align_recalloc_multi_to(Allocator auto& allocator,
+                                                      MemoryHandle auto& handle,
+                                                      usize alignment,
+                                                      ssize new_count) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc_multi(
+            &AllocatorFacade<Derived>::inline_align_calloc_multi<T>, allocator,
+            handle, new_count, alignment);
+    }
+
+    // Try to move and resize a small-size optimized array memory handle from
+    // this allocator into itself with an alignment guarantee, and zero-out the
+    // allocated memory.
+    [[nodiscard]] auto inline_align_recalloc_multi(MemoryHandle auto& handle,
+                                                   usize alignment,
+                                                   ssize new_count) {
+        return this->inline_align_recalloc_multi_to(*this, handle, alignment,
+                                                    new_count);
+    }
+
+    // Move and resize a small-size optimized array memory handle from this
+    // allocator into another with an alignment guarantee, and zero-out the
+    // allocated memory.
+    [[nodiscard]] auto inline_align_xrecalloc_multi_to(
+        Allocator auto& allocator, MemoryHandle auto& handle, usize alignment,
+        ssize new_count) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc_multi(
+            &AllocatorFacade<Derived>::inline_align_xcalloc_multi<T>, allocator,
+            handle, new_count, alignment);
+    }
+
+    // Move and resize a small-size optimized array memory handle from this
+    // allocator into itself with an alignment guarantee, and zero-out the
+    // allocated memory.
+    auto inline_align_xrecalloc_multi(MemoryHandle auto& handle,
+                                      usize alignment, ssize new_count) {
+        return this->inline_align_xrecalloc_multi_to(*this, handle, alignment,
+                                                     new_count);
+    }
+
+    // Try to move and resize a small-size optimized array memory handle from
+    // this allocator into another with no alignment guarantee, and zero-out the
+    // allocated memory.
+    [[nodiscard]] auto inline_unalign_recalloc_multi_to(
+        Allocator auto& allocator, MemoryHandle auto& handle, ssize new_count) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc_multi(
+            &AllocatorFacade<Derived>::inline_unalign_calloc_multi<T>,
+            allocator, handle, new_count);
+    }
+
+    // Try to move and resize a small-size optimized array memory handle from
+    // this allocator into itself with no alignment guarantee, and zero-out the
+    // allocated memory.
+    [[nodiscard]] auto inline_unalign_recalloc_multi(MemoryHandle auto& handle,
+                                                     ssize new_count) {
+        return this->inline_unalign_recalloc_multi_to(*this, handle, new_count);
+    }
+
+    // Move and resize a small-size optimized array memory handle from this
+    // allocator into another with no alignment guarantee, and zero-out the
+    // allocated memory.
+    [[nodiscard]] auto inline_unalign_xrecalloc_multi_to(
+        Allocator auto& allocator, MemoryHandle auto& handle, ssize new_count) {
+        using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
+        return this->meta_realloc_multi(
+            &AllocatorFacade<Derived>::inline_unalign_xcalloc_multi<T>,
+            allocator, handle, new_count);
+    }
+
+    // Move and resize a small-size optimized array memory handle from this
+    // allocator into itself with no alignment guarantee, and zero-out the
+    // allocated memory.
+    auto inline_unalign_xrecalloc_multi(MemoryHandle auto& handle,
+                                        ssize new_count) {
+        return this->inline_unalign_xrecalloc_multi_to(*this, handle,
+                                                       new_count);
+    }
+
     // Invalidate any memory handle, invoking its data's destructor.
     template <MemoryHandle T>
     void free(T const& handle) {
