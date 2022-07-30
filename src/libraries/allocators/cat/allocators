@@ -2418,7 +2418,6 @@ class AllocatorFacade {
             this->relocate_pointer_handle(handle, allocation.value(),
                                           old_count);
         } else {
-            // TODO: Get count correctly.
             this->relocate_pointer_handle(handle, allocation, old_count);
         }
         this->free(handle);
@@ -2439,14 +2438,14 @@ class AllocatorFacade {
         return this->realloc_to(*this, handle);
     }
 
-    // Try to move a memory handle from this allocator into another.
+    // Try to move a pointer handle from this allocator into another.
     template <typename T>
     [[nodiscard]] auto p_realloc_to(Allocator auto& allocator, T* p_handle) {
         return this->meta_realloc(&AllocatorFacade<Derived>::p_alloc<T, T>,
                                   allocator, p_handle);
     }
 
-    // Try to move a memory handle from this allocator into itself.
+    // Try to move a pointer handle from this allocator into itself.
     template <typename T>
     [[nodiscard]] auto p_realloc(T* p_handle) {
         return this->p_realloc_to(*this, p_handle);
@@ -2460,25 +2459,26 @@ class AllocatorFacade {
                                   allocator, handle);
     }
 
-    // Try to move a memory handle from this allocator into itself.
+    // Move a memory handle from this allocator into itself.
     [[nodiscard]] auto xrealloc(MemoryHandle auto& handle) {
         return this->xrealloc_to(*this, handle);
     }
 
-    // Try to move a memory handle from this allocator into another.
+    // Move a pointer handle from this allocator into another.
     template <typename T>
     [[nodiscard]] auto p_xrealloc_to(Allocator auto& allocator, T* p_handle) {
         return this->meta_realloc(&AllocatorFacade<Derived>::p_xalloc<T, T>,
                                   allocator, p_handle);
     }
 
-    // Try to move a memory handle from this allocator into itself.
+    // Move a pointer handle from this allocator into itself.
     template <typename T>
     [[nodiscard]] auto p_xrealloc(T* p_handle) {
         return this->p_xrealloc_to(*this, p_handle);
     }
 
-    // Try to move a memory handle from this allocator into another.
+    // Try to move a memory handle from this allocator into another with an
+    // alignment guarantee.
     [[nodiscard]] auto align_realloc_to(Allocator auto& allocator,
                                         MemoryHandle auto& handle,
                                         usize alignment) {
@@ -2487,13 +2487,15 @@ class AllocatorFacade {
                                   allocator, handle, alignment);
     }
 
-    // Try to move a memory handle from this allocator into itself.
+    // Try to move a memory handle from this allocator into itself with an
+    // alignment guarantee.
     [[nodiscard]] auto align_realloc(MemoryHandle auto& handle,
                                      usize alignment) {
         return this->align_realloc_to(*this, handle, alignment);
     }
 
-    // Move a memory handle from this allocator into another.
+    // Move a memory handle from this allocator into another with an alignment
+    // guarantee.
     [[nodiscard]] auto align_xrealloc_to(Allocator auto& allocator,
                                          MemoryHandle auto& handle,
                                          usize alignment) {
@@ -2502,12 +2504,14 @@ class AllocatorFacade {
                                   allocator, handle, alignment);
     }
 
-    // Move a memory handle from this allocator into itself.
+    // Move a memory handle from this allocator into itself with an alignment
+    // guarantee.
     auto align_xrealloc(MemoryHandle auto& handle, usize alignment) {
         return this->align_xrealloc_to(*this, handle, alignment);
     }
 
-    // Try to move a memory handle from this allocator into another.
+    // Try to move a memory handle from this allocator into another with no
+    // alignment guarantee.
     [[nodiscard]] auto unalign_realloc_to(Allocator auto& allocator,
                                           MemoryHandle auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
@@ -2515,12 +2519,14 @@ class AllocatorFacade {
             &AllocatorFacade<Derived>::unalign_alloc<T, T>, allocator, handle);
     }
 
-    // Try to move a memory handle from this allocator into itself.
+    // Try to move a memory handle from this allocator into itself with no
+    // alignment guarantee.
     [[nodiscard]] auto unalign_realloc(MemoryHandle auto& handle) {
         return this->unalign_realloc_to(*this, handle);
     }
 
-    // Move a memory handle from this allocator into another.
+    // Move a memory handle from this allocator into another with no alignment
+    // guarantee.
     [[nodiscard]] auto unalign_xrealloc_to(Allocator auto& allocator,
                                            MemoryHandle auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
@@ -2528,12 +2534,14 @@ class AllocatorFacade {
             &AllocatorFacade<Derived>::unalign_xalloc<T, T>, allocator, handle);
     }
 
-    // Move a memory handle from this allocator into itself.
+    // Move a memory handle from this allocator into itself with no alignment
+    // guarantee.
     auto unalign_xrealloc(MemoryHandle auto& handle) {
         return this->unalign_xrealloc_to(*this, handle);
     }
 
-    // Try to move a memory handle from this allocator into another.
+    // Try to move a pointer handle from this allocator into another with an
+    // alignment guarantee.
     [[nodiscard]] auto p_align_realloc_to(Allocator auto& allocator,
                                           auto* p_handle, usize alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
@@ -2542,12 +2550,14 @@ class AllocatorFacade {
             alignment);
     }
 
-    // Try to move a memory handle from this allocator into itself.
+    // Try to move a pointer handle from this allocator into itself with an
+    // alignment guarantee.
     [[nodiscard]] auto p_align_realloc(auto* p_handle, usize alignment) {
         return this->p_align_realloc_to(*this, p_handle, alignment);
     }
 
-    // Move a memory handle from this allocator into another.
+    // Move a pointer handle from this allocator into another with an alignment
+    // guarantee.
     [[nodiscard]] auto p_align_xrealloc_to(Allocator auto& allocator,
                                            auto* p_handle, usize alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
@@ -2556,12 +2566,14 @@ class AllocatorFacade {
             p_handle, alignment);
     }
 
-    // Move a memory handle from this allocator into itself.
+    // Move a pointer handle from this allocator into itself with an alignment
+    // guarantee.
     auto p_align_xrealloc(auto* p_handle, usize alignment) {
         return this->p_align_xrealloc_to(*this, p_handle, alignment);
     }
 
-    // Try to move a memory handle from this allocator into another.
+    // Try to move a pointer handle from this allocator into another with no
+    // alignment guarantee.
     [[nodiscard]] auto p_unalign_realloc_to(Allocator auto& allocator,
                                             auto* p_handle) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
@@ -2570,12 +2582,14 @@ class AllocatorFacade {
             p_handle);
     }
 
-    // Try to move a memory handle from this allocator into itself.
+    // Try to move a pointer handle from this allocator into itself with no
+    // alignment guarantee.
     [[nodiscard]] auto p_unalign_realloc(auto* p_handle) {
         return this->p_unalign_realloc_to(*this, p_handle);
     }
 
-    // Move a memory handle from this allocator into another.
+    // Move a pointer handle from this allocator into another with no alignment
+    // guarantee.
     [[nodiscard]] auto p_unalign_xrealloc_to(Allocator auto& allocator,
                                              auto* p_handle) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
@@ -2584,12 +2598,13 @@ class AllocatorFacade {
             p_handle);
     }
 
-    // Move a memory handle from this allocator into itself.
+    // Move a pointer handle from this allocator into itself with no alignment
+    // guarantee.
     auto p_unalign_xrealloc(auto* p_handle) {
         return this->p_unalign_xrealloc_to(*this, p_handle);
     }
 
-    // Move a memory handle from this allocator into another.
+    // Move an array memory handle from this allocator into another.
     [[nodiscard]] auto realloc_multi_to(Allocator auto& allocator,
                                         MemoryHandle auto& handle,
                                         ssize new_count) {
@@ -2599,13 +2614,14 @@ class AllocatorFacade {
             new_count);
     }
 
-    // Try to move a memory handle from this allocator into itself.
+    // Try to move an array memory handle from this allocator into itself.
     [[nodiscard]] auto realloc_multi(MemoryHandle auto& handle,
                                      ssize new_count) {
         return this->realloc_multi_to(*this, handle, new_count);
     }
 
-    // Try to move a memory handle from this allocator into another.
+    // Try to move and resize an array pointer handle from this allocator into
+    // another.
     template <typename T>
     [[nodiscard]] auto p_realloc_multi_to(Allocator auto& allocator,
                                           T* p_handle, ssize old_count,
@@ -2615,14 +2631,15 @@ class AllocatorFacade {
             old_count, new_count);
     }
 
-    // Try to move a memory handle from this allocator into itself.
+    // Try to move and resize array pointer handle from this allocator into
+    // itself.
     template <typename T>
     [[nodiscard]] auto p_realloc_multi(T* p_handle, ssize old_count,
                                        ssize new_count) {
         return this->p_realloc_multi_to(*this, p_handle, old_count, new_count);
     }
 
-    // Move a memory handle from this allocator into another.
+    // Move and resize an array memory handle from this allocator into another.
     [[nodiscard]] auto xrealloc_multi_to(Allocator auto& allocator,
                                          MemoryHandle auto& handle,
                                          ssize new_count) {
@@ -2632,13 +2649,13 @@ class AllocatorFacade {
             new_count);
     }
 
-    // Try to move a memory handle from this allocator into itself.
+    // Move and resize an array memory handle from this allocator into itself.
     [[nodiscard]] auto xrealloc_multi(MemoryHandle auto& handle,
                                       ssize new_count) {
         return this->xrealloc_multi_to(*this, handle, new_count);
     }
 
-    // Try to move a memory handle from this allocator into another.
+    // Move and resize an array pointer handle from this allocator into another.
     template <typename T>
     [[nodiscard]] auto p_xrealloc_multi_to(Allocator auto& allocator,
                                            T* p_handle, ssize old_count,
@@ -2648,14 +2665,14 @@ class AllocatorFacade {
             old_count, new_count);
     }
 
-    // Try to move a memory handle from this allocator into itself.
+    // Move and resize an array pointer handle from this allocator into itself.
     template <typename T>
     [[nodiscard]] auto p_xrealloc_multi(T* p_handle, ssize old_count,
                                         ssize new_count) {
         return this->p_xrealloc_multi_to(*this, p_handle, old_count, new_count);
     }
 
-    // Try to move a memory handle from this allocator into another.
+    // Move and resize an array memory handle from this allocator into another.
     [[nodiscard]] auto align_realloc_multi_to(Allocator auto& allocator,
                                               MemoryHandle auto& handle,
                                               usize alignment,
@@ -2666,14 +2683,16 @@ class AllocatorFacade {
             new_count, alignment);
     }
 
-    // Try to move a memory handle from this allocator into itself.
+    // Try to move and resize an array memory handle from this allocator into
+    // itself with an alignment guarantee.
     [[nodiscard]] auto align_realloc_multi(MemoryHandle auto& handle,
                                            usize alignment, ssize new_count) {
         return this->align_realloc_multi_to(*this, handle, alignment,
                                             new_count);
     }
 
-    // Move a memory handle from this allocator into another.
+    // Move and resize an array memory handle from this allocator into another
+    // with an alignment guarantee.
     [[nodiscard]] auto align_xrealloc_multi_to(Allocator auto& allocator,
                                                MemoryHandle auto& handle,
                                                usize alignment,
@@ -2684,17 +2703,18 @@ class AllocatorFacade {
             new_count, alignment);
     }
 
-    // Move a memory handle from this allocator into itself.
+    // Move and resize an array memory handle from this allocator into itself
+    // with an alignment guarantee.
     auto align_xrealloc_multi(MemoryHandle auto& handle, usize alignment,
                               ssize new_count) {
         return this->align_xrealloc_multi_to(*this, handle, alignment,
                                              new_count);
     }
 
-    // Try to move a memory handle from this allocator into another.
+    // Try to move and resize an array memory handle from this allocator into
+    // another with no alignment guarantee.
     [[nodiscard]] auto unalign_realloc_multi_to(Allocator auto& allocator,
                                                 MemoryHandle auto& handle,
-
                                                 ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi(
@@ -2702,16 +2722,17 @@ class AllocatorFacade {
             handle, new_count);
     }
 
-    // Try to move a memory handle from this allocator into itself.
+    // Try to move and resize an array memory handle from this allocator into
+    // itself with no alignment guarantee.
     [[nodiscard]] auto unalign_realloc_multi(MemoryHandle auto& handle,
                                              ssize new_count) {
         return this->unalign_realloc_multi_to(*this, handle, new_count);
     }
 
-    // Move a memory handle from this allocator into another.
+    // Move and resize an array memory handle from this allocator into another
+    // with no alignment guarantee.
     [[nodiscard]] auto unalign_xrealloc_multi_to(Allocator auto& allocator,
                                                  MemoryHandle auto& handle,
-
                                                  ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi(
@@ -2719,12 +2740,14 @@ class AllocatorFacade {
             handle, new_count);
     }
 
-    // Move a memory handle from this allocator into itself.
+    // Move and resize an array memory handle from this allocator into itself
+    // with no alignment guarantee.
     auto unalign_xrealloc_multi(MemoryHandle auto& handle, ssize new_count) {
         return this->unalign_xrealloc_multi_to(*this, handle, new_count);
     }
 
-    // Try to move a memory handle from this allocator into another.
+    // Try to move and resize an array pointer handle from this allocator into
+    // another with an alignment guarantee.
     [[nodiscard]] auto p_align_realloc_multi_to(Allocator auto& allocator,
                                                 auto* p_handle, usize alignment,
                                                 ssize old_count,
@@ -2735,14 +2758,16 @@ class AllocatorFacade {
             p_handle, old_count, new_count, alignment);
     }
 
-    // Try to move a memory handle from this allocator into itself.
+    // Try to move and resize an array pointer handle from this allocator into
+    // itself with an alignment guarantee.
     [[nodiscard]] auto p_align_realloc_multi(auto* p_handle, usize alignment,
                                              ssize old_count, ssize new_count) {
         return this->p_align_realloc_multi_to(*this, p_handle, alignment,
                                               old_count, new_count);
     }
 
-    // Move a memory handle from this allocator into another.
+    // Move and resize an array pointer handle from this allocator into another
+    // with an alignment guarantee.
     [[nodiscard]] auto p_align_xrealloc_multi_to(Allocator auto& allocator,
                                                  auto* p_handle,
                                                  usize alignment,
@@ -2754,14 +2779,16 @@ class AllocatorFacade {
             p_handle, old_count, new_count, alignment);
     }
 
-    // Move a memory handle from this allocator into itself.
+    // Move and resize an array pointer handle from this allocator into itself
+    // with an alignment guarantee.
     auto p_align_xrealloc_multi(auto* p_handle, usize alignment,
                                 ssize old_count, ssize new_count) {
         return this->p_align_xrealloc_multi_to(*this, p_handle, alignment,
                                                old_count, new_count);
     }
 
-    // Try to move a memory handle from this allocator into another.
+    // Try to move and resize an array pointer handle from this allocator into
+    // another with no alignment guarantee.
     [[nodiscard]] auto p_unalign_realloc_multi_to(Allocator auto& allocator,
                                                   auto* p_handle,
                                                   ssize old_count,
@@ -2772,14 +2799,16 @@ class AllocatorFacade {
             p_handle, old_count, new_count);
     }
 
-    // Try to move a memory handle from this allocator into itself.
+    // Try to move and resize an array pointer handle from this allocator into
+    // itself with no alignment guarantee.
     [[nodiscard]] auto p_unalign_realloc_multi(auto* p_handle, ssize old_count,
                                                ssize new_count) {
         return this->p_unalign_realloc_multi_to(*this, p_handle, old_count,
                                                 new_count);
     }
 
-    // Move a memory handle from this allocator into another.
+    // Move and resize an array pointer handle from this allocator into another
+    // with no alignment guarantee.
     [[nodiscard]] auto p_unalign_xrealloc_multi_to(Allocator auto& allocator,
                                                    auto* p_handle,
                                                    ssize old_count,
@@ -2790,7 +2819,8 @@ class AllocatorFacade {
             p_handle, old_count, new_count);
     }
 
-    // Move a memory handle from this allocator into itself.
+    // Move and resize an array pointer handle from this allocator into itself
+    // with no alignment guarantee.
     auto p_unalign_xrealloc_multi(auto* p_handle, ssize old_count,
                                   ssize new_count) {
         return this->p_unalign_xrealloc_multi_to(*this, p_handle, old_count,
