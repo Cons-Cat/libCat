@@ -1073,4 +1073,201 @@ auto main() -> int {
 
     // Test `p_unalign_xrealloc_multi_to()`.
     _ = allocator.p_unalign_xrealloc_multi_to(allocator, p_alloc, 5, 10);
+
+    // The allocator runs out of memory around here.
+    allocator.reset();
+
+    // Test `recalloc()`.
+    _ = allocator.recalloc(alloc).value();
+
+    // Test `recalloc_to()`.
+    _ = allocator.recalloc_to(allocator, alloc).value();
+
+    // Test `p_recalloc()`.
+    _ = allocator.p_recalloc(p_alloc).value();
+
+    // Test `p_recalloc_to()`
+    _ = allocator.p_recalloc_to(allocator, p_alloc);
+
+    // Test `xrecalloc()`.
+    _ = allocator.xrecalloc(alloc);
+
+    // Test `xrecalloc_to()`.
+    _ = allocator.xrecalloc_to(allocator, alloc);
+
+    // Test `p_xrecalloc()`
+    _ = allocator.p_xrecalloc(p_alloc);
+
+    // Test `p_xrecalloc_to()`
+    _ = allocator.p_xrecalloc_to(allocator, p_alloc);
+
+    // Test `align_recalloc()`.
+    _ = allocator.align_recalloc(alloc, 8u).value();
+
+    // Test `align_recalloc_to()`.
+    _ = allocator.align_recalloc_to(allocator, alloc, 8u).value();
+
+    // Test `align_xrecalloc()`.
+    _ = allocator.align_xrecalloc(alloc, 8u);
+
+    // Test `align_xrecalloc_to()`.
+    _ = allocator.align_xrecalloc_to(allocator, alloc, 8u);
+
+    // Test `unalign_recalloc()`.
+    _ = allocator.unalign_recalloc(alloc).value();
+
+    // Test `unalign_recalloc_to()`.
+    _ = allocator.unalign_recalloc_to(allocator, alloc).value();
+
+    // Test `unalign_xrecalloc()`.
+    _ = allocator.unalign_xrecalloc(alloc);
+
+    // Test `unalign_xrecalloc_to()`.
+    _ = allocator.unalign_xrecalloc_to(allocator, alloc);
+
+    // Test `align_recalloc()`.
+    _ = allocator.align_recalloc(alloc, 8u).value();
+
+    // Test `align_recalloc_to()`.
+    _ = allocator.align_recalloc_to(allocator, alloc, 8u).value();
+
+    // Test `align_xrecalloc()`.
+    _ = allocator.align_xrecalloc(alloc, 8u);
+
+    // Test `align_xrecalloc_to()`.
+    _ = allocator.align_xrecalloc_to(allocator, alloc, 8u);
+
+    // Test `unalign_recalloc()`.
+    _ = allocator.unalign_recalloc(alloc).value();
+
+    // Test `unalign_recalloc_to()`.
+    _ = allocator.unalign_recalloc_to(allocator, alloc).value();
+
+    // Test `unalign_xrecalloc()`.
+    _ = allocator.unalign_xrecalloc(alloc);
+
+    // Test `unalign_xrecalloc_to()`.
+    _ = allocator.unalign_xrecalloc_to(allocator, alloc);
+
+    // Test `p_align_recalloc()`.
+    _ = allocator.p_align_recalloc(p_alloc, 8u).value();
+
+    // Test `p_align_recalloc_to()`.
+    _ = allocator.p_align_recalloc_to(allocator, p_alloc, 8u).value();
+
+    // Test `p_align_xrecalloc()`.
+    _ = allocator.p_align_xrecalloc(p_alloc, 8u);
+
+    // Test `p_align_xrecalloc_to()`.
+    _ = allocator.p_align_xrecalloc_to(allocator, p_alloc, 8u);
+
+    // Test `p_unalign_recalloc()`.
+    _ = allocator.p_unalign_recalloc(p_alloc).value();
+
+    // Test `p_unalign_recalloc_to()`.
+    _ = allocator.p_unalign_recalloc_to(allocator, p_alloc).value();
+
+    // Test `p_unalign_xrecalloc()`.
+    _ = allocator.p_unalign_xrecalloc(p_alloc);
+
+    // Test `p_unalign_xrecalloc_to()`.
+    _ = allocator.p_unalign_xrecalloc_to(allocator, p_alloc);
+
+    // Test `recalloc_multi()`.
+    _ = allocator.recalloc_multi(alloc, 10).value();
+
+    // Test `recalloc_multi_to()`.
+    _ = allocator.recalloc_multi_to(allocator, alloc, 10).value();
+
+    // Test `p_recalloc_multi()`.
+    _ = allocator.p_recalloc_multi(p_alloc, 5, 10).value();
+
+    // Test `p_recalloc_multi_to()`
+    _ = allocator.p_recalloc_multi_to(allocator, p_alloc, 5, 10).value();
+
+    // Test `xrecalloc_multi()`.
+    _ = allocator.xrecalloc_multi(alloc, 10);
+
+    // Test `xrecalloc_multi_to()`.
+    _ = allocator.xrecalloc_multi_to(allocator, alloc, 10);
+
+    // Test `p_xrecalloc_multi()`
+    _ = allocator.p_xrecalloc_multi(p_alloc, 5, 10);
+
+    // Test `p_xrecalloc_multi_to()`
+    _ = allocator.p_xrecalloc_multi_to(allocator, p_alloc, 5, 10);
+
+    // Test `align_recalloc_multi()`.
+    _ = allocator.align_recalloc_multi(alloc, 8u, 10).value();
+
+    // Test `align_recalloc_multi_to()`.
+    _ = allocator.align_recalloc_multi_to(allocator, alloc, 8u, 10).value();
+
+    // Test `align_xrecalloc_multi()`.
+    _ = allocator.align_xrecalloc_multi(alloc, 8u, 10);
+
+    // Test `align_xrecalloc_multi_to()`.
+    _ = allocator.align_xrecalloc_multi_to(allocator, alloc, 8u, 10);
+
+    // Test `unalign_recalloc_multi()`.
+    _ = allocator.unalign_recalloc_multi(alloc, 10).value();
+
+    // Test `unalign_recalloc_multi_to()`.
+    _ = allocator.unalign_recalloc_multi_to(allocator, alloc, 10).value();
+
+    // Test `unalign_xrecalloc_multi()`.
+    _ = allocator.unalign_xrecalloc_multi(alloc, 10);
+
+    // Test `unalign_xrecalloc_multi_to()`.
+    _ = allocator.unalign_xrecalloc_multi_to(allocator, alloc, 10);
+
+    // Test `align_recalloc_multi()`.
+    _ = allocator.align_recalloc_multi(alloc, 8u, 10).value();
+
+    // Test `align_recalloc_multi_to()`.
+    _ = allocator.align_recalloc_multi_to(allocator, alloc, 8u, 10).value();
+
+    // Test `align_xrecalloc_multi()`.
+    _ = allocator.align_xrecalloc_multi(alloc, 8u, 10);
+
+    // Test `align_xrecalloc_multi_to()`.
+    _ = allocator.align_xrecalloc_multi_to(allocator, alloc, 8u, 10);
+
+    // Test `unalign_recalloc_multi()`.
+    _ = allocator.unalign_recalloc_multi(alloc, 10).value();
+
+    // Test `unalign_recalloc_multi_to()`.
+    _ = allocator.unalign_recalloc_multi_to(allocator, alloc, 10).value();
+
+    // Test `unalign_xrecalloc_multi()`.
+    _ = allocator.unalign_xrecalloc_multi(alloc, 10);
+
+    // Test `unalign_xrecalloc_multi_to()`.
+    _ = allocator.unalign_xrecalloc_multi_to(allocator, alloc, 10);
+
+    // Test `p_align_recalloc_multi()`.
+    _ = allocator.p_align_recalloc_multi(p_alloc, 8u, 5, 10).value();
+
+    // Test `p_align_recalloc_multi_to()`.
+    _ = allocator.p_align_recalloc_multi_to(allocator, p_alloc, 8u, 5, 10)
+            .value();
+
+    // Test `p_align_xrecalloc_multi()`.
+    _ = allocator.p_align_xrecalloc_multi(p_alloc, 8u, 5, 10);
+
+    // Test `p_align_xrecalloc_multi_to()`.
+    _ = allocator.p_align_xrecalloc_multi_to(allocator, p_alloc, 8u, 5, 10);
+
+    // Test `p_unalign_recalloc_multi()`.
+    _ = allocator.p_unalign_recalloc_multi(p_alloc, 5, 10).value();
+
+    // Test `p_unalign_recalloc_multi_to()`.
+    _ = allocator.p_unalign_recalloc_multi_to(allocator, p_alloc, 5, 10)
+            .value();
+
+    // Test `p_unalign_xrecalloc_multi()`.
+    _ = allocator.p_unalign_xrecalloc_multi(p_alloc, 5, 10);
+
+    // Test `p_unalign_xrecalloc_multi_to()`.
+    _ = allocator.p_unalign_xrecalloc_multi_to(allocator, p_alloc, 5, 10);
 };
