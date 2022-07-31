@@ -29,6 +29,15 @@ link_libraries(cat-test)
 # Enable all unit tests to compile regardless of their individual settings.
 option(BUILD_ALL_TESTS "Compile all unit tests unconditionally." ON)
 
+# This tests that `cat::Numeral` works.
+option(BUILD_TEST_NUMERALS "Compile Numerals tests." OFF)
+if(BUILD_TEST_NUMERALS OR BUILD_ALL_TESTS)
+  add_executable(test_numerals test_numerals.cpp)
+  target_compile_options(test_numerals PRIVATE ${CAT_CXX_FLAGS_TEST})
+  target_link_options(test_numerals PRIVATE ${CAT_LINK_FLAGS})
+  add_test(NAME Numerals COMMAND test_numerals)
+endif()
+
 # This tests that `cat::Scaredy` works.
 option(BUILD_TEST_SCAREDY "Compile Scaredy tests." OFF)
 if(BUILD_TEST_SCAREDY OR BUILD_ALL_TESTS)
@@ -197,6 +206,7 @@ endif()
 # This can be skipped if one or more other tests are built.
 if(
   NOT (BUILD_ALL_TESTS
+  OR BUILD_TEST_NUMERALS
   OR BUILD_TEST_SCAREDY
   OR BUILD_TEST_ARRAY
   OR BUILD_TEST_VECTOR

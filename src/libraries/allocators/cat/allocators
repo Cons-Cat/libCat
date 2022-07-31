@@ -2370,7 +2370,7 @@ class AllocatorFacade {
         } else {
             for (ssize i = 0; i < handle.size(); ++i) {
                 *(addressof(this->get(allocation)) + i) =
-                    move(addressof(this->get(handle)) + i);
+                    move(*(addressof(this->get(handle)) + i));
             }
         }
     }
@@ -2382,7 +2382,7 @@ class AllocatorFacade {
             copy_memory(p_handle, p_allocation, count);
         } else {
             for (ssize i = 0; i < count; ++i) {
-                *(p_allocation + i) = move(*p_handle + i);
+                *(p_allocation + i) = move(*(p_handle + i));
             }
         }
     }
