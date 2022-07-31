@@ -5122,6 +5122,24 @@ class AllocatorFacade {
                                 ssizeof<T>() * count);
     }
 
+    template <MemoryHandle T>
+    void cfree(T& handle) {
+        free(handle);
+        zero_memory_explicit(addressof(this->get(handle)), handle.raw_size());
+    }
+
+    template <typename T>
+    void cfree(T* p_handle) {
+        free(p_handle);
+        zero_memory_explicit(p_handle, ssizeof<T>());
+    }
+
+    template <typename T>
+    void cfree_multi(T* p_handle, ssize count) {
+        free(p_handle, count);
+        zero_memory_explicit(p_handle, count * ssizeof<T>());
+    }
+
     // Get a non-`const` reference to the data in any memory handle.
     template <MemoryHandle T>
     [[nodiscard]] auto get(T& handle) & -> decltype(auto) {
