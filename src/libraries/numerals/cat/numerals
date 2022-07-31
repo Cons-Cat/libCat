@@ -148,6 +148,26 @@ namespace detail {
             && (is_floating_point<TRaw> == is_floating_point<URaw>);
         // clang-format on
     }
+
+    // Satisfies any type that is an integer and is not `intptr` or `uintptr`.
+    template <typename T>
+    concept NonPtrIntegral =
+        is_integral<T> && !is_specialization<T, ArithmeticPtr>;
+
+    // Satisfies any arithmetic type that is not `intptr` or `uintptr`.
+    template <typename T>
+    concept NonPtrArithmetic =
+        is_arithmetic<T> && !is_specialization<T, ArithmeticPtr>;
+
+    template <typename T, typename U>
+        requires(is_signed<T> == is_signed<U> &&
+                 is_floating_point<T> == is_floating_point<U>)
+    using PromotedNumeral =
+        // `ArithmeticPtr` takes precedence above everything else.
+        Conditional<is_specialization<T, ArithmeticPtr>, T,
+                    Conditional<is_specialization<U, ArithmeticPtr>, U,
+                                // Pick the largest type.
+                                Conditional<(sizeof(T) > sizeof(U)), T, U>>>;
 }  // namespace detail
 
 template <typename T>
@@ -239,6 +259,12 @@ struct Numeral {
     constexpr auto operator<=(U operand) const
         -> bool requires(detail::is_safe_conversion<T, U>()) {
         return this->raw <= static_cast<T>(operand);
+    }
+
+    template <detail::NonPtrArithmetic U>
+    constexpr auto operator+(U operand) const -> Numeral {
+        Numeral<T> numeral = this->raw + static_cast<T>(operand);
+        return numeral;
     }
 
     template <typename U>
@@ -397,10 +423,11 @@ template <typename T, typename U>
 }
 
 template <typename T, typename U>
-[[nodiscard]] constexpr auto operator+(Numeral<T> lhs, U rhs) requires(
-    is_signed<T> == is_signed<U> &&
-    is_floating_point<T> == is_floating_point<U>) {
-    return Numeral{lhs.raw + static_cast<T>(rhs)};
+    requires(is_signed<T> == is_signed<U> &&
+             is_floating_point<T> == is_floating_point<U>)
+[[nodiscard]] constexpr auto operator+(T lhs, Numeral<U> rhs)
+    -> detail::PromotedNumeral<T, U> {
+    return static_cast<U>(lhs) + static_cast<U>(rhs);
 }
 
 template <typename T, typename U>
@@ -424,7 +451,7 @@ template <typename T, typename U>
     return Numeral{lhs.raw & static_cast<T>(rhs)};
 }
 
-template <typename T, Integral U>
+template <typename T, typename U>
 [[nodiscard]] constexpr auto operator|(Numeral<T> lhs, U rhs) requires(
     is_signed<T> == is_signed<U> &&
     is_floating_point<T> == is_floating_point<U>) {
@@ -433,100 +460,100 @@ template <typename T, Integral U>
 
 // Pointer arithmetic operators for `Numeral`s.
 template <typename T, typename U>
-[[nodiscard]] constexpr auto operator+(T* const p_lhs, Numeral<U> rhs) -> T* {
+[[nodiscard]] constexpr auto operator+(T* p_lhs, Numeral<U> rhs) -> T* {
     return p_lhs + rhs.raw;
 }
 
 template <typename T, typename U>
-constexpr auto operator+=(T*& p_lhs, Numeral<U> rhs) -> T*& {
+constexpr auto operator+=(T* p_lhs, Numeral<U> rhs) -> T* {
     p_lhs += rhs.raw;
     return p_lhs;
 }
 
 template <typename T, typename U>
-[[nodiscard]] constexpr auto operator-(T* const p_lhs, Numeral<U> rhs) -> T* {
+[[nodiscard]] constexpr auto operator-(T* p_lhs, Numeral<U> rhs) -> T* {
     return p_lhs - rhs.raw;
 }
 
 template <typename T, typename U>
-constexpr auto operator-=(T*& p_lhs, Numeral<U> rhs) -> T*& {
+constexpr auto operator-=(T* p_lhs, Numeral<U> rhs) -> T* {
     p_lhs -= rhs.raw;
     return p_lhs;
 }
 
 template <typename T, typename U>
-[[nodiscard]] constexpr auto operator*(T* const p_lhs, Numeral<U> rhs) -> T* {
+[[nodiscard]] constexpr auto operator*(T* p_lhs, Numeral<U> rhs) -> T* {
     return p_lhs * rhs.raw;
 }
 
 template <typename T, typename U>
-constexpr auto operator*=(T*& p_lhs, Numeral<U> rhs) -> T*& {
+constexpr auto operator*=(T* p_lhs, Numeral<U> rhs) -> T* {
     p_lhs *= rhs.raw;
     return p_lhs;
 }
 
 template <typename T, typename U>
-[[nodiscard]] constexpr auto operator/(T* const p_lhs, Numeral<U> rhs) -> T* {
+[[nodiscard]] constexpr auto operator/(T* p_lhs, Numeral<U> rhs) -> T* {
     return p_lhs / rhs.raw;
 }
 
 template <typename T, typename U>
-constexpr auto operator/=(T*& p_lhs, Numeral<U> rhs) -> T*& {
+constexpr auto operator/=(T* p_lhs, Numeral<U> rhs) -> T* {
     p_lhs /= rhs.raw;
     return p_lhs;
 }
 
 template <typename T, typename U>
-[[nodiscard]] constexpr auto operator<<(T* const p_lhs, Numeral<U> rhs) -> T* {
+[[nodiscard]] constexpr auto operator<<(T* p_lhs, Numeral<U> rhs) -> T* {
     return p_lhs << rhs.raw;
 }
 
 template <typename T, typename U>
-constexpr auto operator<<=(T*& p_lhs, Numeral<U> rhs) -> T*& {
+constexpr auto operator<<=(T* p_lhs, Numeral<U> rhs) -> T* {
     p_lhs <<= rhs.raw;
     return p_lhs;
 }
 
 template <typename T, typename U>
-[[nodiscard]] constexpr auto operator>>(T* const p_lhs, Numeral<U> rhs) -> T* {
+[[nodiscard]] constexpr auto operator>>(T* p_lhs, Numeral<U> rhs) -> T* {
     return p_lhs >> rhs.raw;
 }
 
 template <typename T, typename U>
-constexpr auto operator>>=(T*& p_lhs, Numeral<U> rhs) -> T*& {
+constexpr auto operator>>=(T* p_lhs, Numeral<U> rhs) -> T* {
     p_lhs >>= rhs.raw;
     return p_lhs;
 }
 
 template <typename T, typename U>
-[[nodiscard]] constexpr auto operator%(T* const p_lhs, Numeral<U> rhs) -> T* {
+[[nodiscard]] constexpr auto operator%(T* p_lhs, Numeral<U> rhs) -> T* {
     return p_lhs % rhs.raw;
 }
 
 template <typename T, typename U>
-constexpr auto operator%=(T*& p_lhs, Numeral<U> rhs) -> T*& {
+constexpr auto operator%=(T* p_lhs, Numeral<U> rhs) -> T* {
     p_lhs %= rhs.raw;
     return p_lhs;
 }
 
 template <typename T, typename U>
-[[nodiscard]] constexpr auto operator&(T* const p_lhs, Numeral<U> rhs) -> T* {
+[[nodiscard]] constexpr auto operator&(T* p_lhs, Numeral<U> rhs) -> T* {
     return p_lhs & rhs.raw;
 }
 
 template <typename T, typename U>
-constexpr auto operator&=(T*& p_lhs, Numeral<U> rhs) -> T*& {
+constexpr auto operator&=(T* p_lhs, Numeral<U> rhs) -> T* {
     p_lhs &= rhs.raw;
     return p_lhs;
 }
 
 template <typename T, typename U>
-[[nodiscard]] constexpr auto operator|(T* const p_lhs, Numeral<U> rhs) -> T* {
+[[nodiscard]] constexpr auto operator|(T* p_lhs, Numeral<U> rhs) -> T* {
     return p_lhs | rhs.raw;
 }
 
 template <typename T, typename U>
-constexpr auto operator|=(T*& p_lhs, Numeral<U> rhs) -> T*& {
+constexpr auto operator|=(T* p_lhs, Numeral<U> rhs) -> T* {
     p_lhs |= rhs.raw;
     return p_lhs;
 }
@@ -599,13 +626,6 @@ struct bool4 {  // NOLINT
     }
 };
 
-namespace detail {
-    // Satisfies any type that is an integer and is not `intptr` or `uintptr`.
-    template <typename T>
-    concept NonPtrIntegral =
-        is_integral<T> && !is_specialization<T, ArithmeticPtr>;
-}  // namespace detail
-
 // `ArithmeticPtr` can be constructed from any integer type or any pointer. It
 // can only convert into `T*`, but it is otherwise interchangeable with
 // integers. It satisfies the `is_integral` type trait and
@@ -634,7 +654,11 @@ struct ArithmeticPtr {
         return reinterpret_cast<T const*>(this->raw);
     }
 
-    constexpr auto operator=(ArithmeticPtr<T, Storage> from)
+    constexpr explicit operator Storage() const {
+        return this->raw;
+    }
+
+    constexpr auto operator=(ArithmeticPtr<T, Storage> const& from)
         -> ArithmeticPtr<T, Storage>& {
         this->raw = from.raw;
         return *this;
@@ -686,6 +710,11 @@ struct ArithmeticPtr {
     }
     constexpr auto operator<=(detail::NonPtrIntegral auto from) const -> bool {
         return this->raw <= static_cast<Storage>(from);
+    }
+
+    [[nodiscard]] constexpr auto operator+(ArithmeticPtr<T, Storage> rhs)
+        -> ArithmeticPtr {
+        return this->raw + rhs.raw;
     }
 
     template <typename U>
@@ -876,12 +905,6 @@ template <typename T, typename Storage>
 }
 
 template <typename T, typename Storage>
-[[nodiscard]] constexpr auto operator+(ArithmeticPtr<T, Storage> lhs, T* p_rhs)
-    -> ArithmeticPtr<T, Storage> {
-    return lhs.raw + ArithmeticPtr<T, Storage>{p_rhs}.raw;
-}
-
-template <typename T, typename Storage>
 [[nodiscard]] constexpr auto operator-(ArithmeticPtr<T, Storage> lhs, T* p_rhs)
     -> ArithmeticPtr<T, Storage> {
     return lhs.raw - ArithmeticPtr<T, Storage>{p_rhs}.raw;
@@ -911,20 +934,6 @@ template <typename T, typename Storage>
                                         detail::NonPtrIntegral auto rhs)
     -> bool {
     return lhs.raw == rhs;
-}
-
-template <typename T, typename Storage>
-[[nodiscard]] constexpr auto operator+(ArithmeticPtr<T, Storage> lhs,
-                                       detail::NonPtrIntegral auto rhs)
-    -> ArithmeticPtr<T, Storage> {
-    return lhs.raw + ArithmeticPtr<T, Storage>{rhs}.raw;
-}
-
-template <typename T, typename U, typename Storage>
-[[nodiscard]] constexpr auto operator+(ArithmeticPtr<T, Storage> lhs,
-                                       ArithmeticPtr<U, Storage> rhs)
-    -> ArithmeticPtr<T, Storage> {
-    return lhs.raw + rhs.raw;
 }
 
 template <typename T, typename Storage>
