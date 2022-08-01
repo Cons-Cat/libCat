@@ -3,7 +3,7 @@
 #pragma once
 
 // This file should be implicitly included in all other files. With GCC, this is
-// done using the `--include` flag, as in `--include global_includes.h`. The
+// done using the `--include` flag, as in `--include global_includes.hpp`. The
 // `CMakeLists.txt` in this repository's top level directory does this.
 
 // libCat provides a `_` variable that consumes a function's output, but
@@ -90,11 +90,6 @@ namespace detail {
 
 template <typename T, T sentinel>
 using Sentinel = Compact<T, detail::sentinel_predicate<T, sentinel>, sentinel>;
-
-namespace detail {
-    template <typename T>
-    struct Numeral;
-}
 
 }  // namespace cat
 

@@ -4,8 +4,8 @@
 
 #include <cat/meta>
 
-// `Numeral` is a container for numeric data types which prevents unsafe or
-// pessimizing implicit casts, such as loss of precision or signed-ness.
+// `Numeral` is a container for numeric data types which prevents unsafe
+// implicit type casts.
 //
 // All of its conversion operators, arithmetic operators and constructors
 // are generic with constraints. Because these methods are constrained, it
@@ -14,7 +14,7 @@
 // conversion operator, and thus prevent compilation.
 //
 // Constraints such as "the operand's size must be less than or equal to my
-// own size" guarantee that the an unwanted overload cannot be resolved.
+// own size" guarantee that an unwanted overload cannot be resolved.
 // This solution is concise, because any constraint broadly applies to all
 // possible type conversions.
 

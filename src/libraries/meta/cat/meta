@@ -266,20 +266,24 @@ constexpr bool is_specialization<Template<Args...>, Template> = true;
 template <typename T>
 concept SafeNumeral = requires {
     Numeral<typename T::Raw>();
+    // is_specialization<T, Numeral>;
 };
-
 template <typename T>
 constexpr bool is_safe_numeral = SafeNumeral<T>;
 
+template <typename T>
+concept UnsafeNumeral = !SafeNumeral<T>;
+template <typename T>
+constexpr bool is_unsafe_numeral = UnsafeNumeral<T>;
+
 // TODO: Include half
 template <typename T>
-concept FloatingPoint = __is_same(T, RemoveCvRef<float>) ||
-                        __is_same(T, RemoveCvRef<double>) ||
-                        __is_same(T, RemoveCvRef<long double>) ||
-                        __is_same(T, RemoveCvRef<float8>) ||
-                        __is_same(T, RemoveCvRef<float4>) ||
-                        // __is_same(T, RemoveCvRef<_Float16>) ||
-                        __is_same(T, RemoveCvRef<__float128>);
+concept FloatingPoint = __is_same(RemoveCvRef<T>, float) ||
+                        __is_same(RemoveCvRef<T>, double) ||
+                        __is_same(RemoveCvRef<T>, long double) ||
+                        __is_same(RemoveCvRef<T>, float8) ||
+                        __is_same(RemoveCvRef<T>, float4) ||
+                        __is_same(RemoveCvRef<T>, __float128);
 template <typename T>
 constexpr bool is_floating_point = FloatingPoint<T>;
 

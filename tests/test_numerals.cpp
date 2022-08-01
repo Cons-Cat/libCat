@@ -1,4 +1,8 @@
 auto main() -> int {
+    // Test `concept`s.
+    static_assert(cat::detail::ArithmeticNonPtr<int4>);
+    static_assert(!cat::detail::ArithmeticNonPtr<intptr<void>>);
+
     // Test `int4` constructors and assignment.
     int4 test_int4_1 = 1;
     int4 test_int4_2;
