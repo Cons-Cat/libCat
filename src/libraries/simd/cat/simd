@@ -635,12 +635,12 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
 };
 
 template <typename Abi, typename T>
-constexpr auto raw_cast(Simd<Abi, T> const& value) -> T {
+constexpr auto raw_simd_cast(Simd<Abi, T> const& value) -> T {
     return value.raw;
 }
 
 template <typename Abi, typename T>
-constexpr auto raw_cast(SimdMask<Abi, T> const& value) -> T {
+constexpr auto raw_simd_cast(SimdMask<Abi, T> const& value) -> T {
     return value.raw;
 }
 

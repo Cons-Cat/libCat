@@ -156,9 +156,11 @@ namespace detail {
 
     // Satisfies any arithmetic type that is not `intptr` or `uintptr`.
     template <typename T>
-    concept NonPtrArithmetic =
+    concept ArithmeticNonPtr =
         is_arithmetic<T> && !is_specialization<T, ArithmeticPtr>;
 
+    // Take two types, and produce the type that should be produced by their
+    // arithmetic operations.
     template <typename T, typename U>
         requires(is_signed<T> == is_signed<U> &&
                  is_floating_point<T> == is_floating_point<U>)
@@ -170,15 +172,21 @@ namespace detail {
                                 Conditional<(sizeof(T) > sizeof(U)), T, U>>>;
 }  // namespace detail
 
-template <typename T>
-constexpr auto raw_cast(Numeral<T> const& value) -> T {
+template <SafeNumeral T>
+constexpr auto raw_numeral_cast(T value) -> T {
     return value.raw;
 }
 
-template <typename T>
-constexpr auto raw_cast(T const& value) -> T {
+template <UnsafeNumeral T>
+constexpr auto raw_numeral_cast(T value) -> T {
     return value;
 }
+
+template <Arithmetic T>
+using ToSafeNumeral = Numeral<decltype(raw_numeral_cast<T>({}))>;
+
+template <Arithmetic T>
+using ToUnsafeNumeral = decltype(raw_numeral_cast<T>({}));
 
 template <typename T>
 [[nodiscard]] constexpr auto count_leading_zeros(T value) -> ssize
@@ -200,7 +208,7 @@ struct Numeral {
 
     constexpr Numeral() = default;
 
-    template <Arithmetic U>
+    template <typename U>
     constexpr explicit(!detail::is_safe_conversion<T, U>()) Numeral(U from)
         : raw(static_cast<T>(from)){};
 
@@ -237,6 +245,7 @@ struct Numeral {
         return *this;
     }
 
+    // TODO: Replace with three-way comparison operator.
     template <typename U>
     constexpr auto operator>(U operand) const
         -> bool requires(detail::is_safe_conversion<T, U>()) {
@@ -261,7 +270,7 @@ struct Numeral {
         return this->raw <= static_cast<T>(operand);
     }
 
-    template <detail::NonPtrArithmetic U>
+    template <detail::ArithmeticNonPtr U>
     constexpr auto operator+(U operand) const -> Numeral {
         Numeral<T> numeral = this->raw + static_cast<T>(operand);
         return numeral;
@@ -562,7 +571,7 @@ constexpr auto operator|=(T* p_lhs, Numeral<U> rhs) -> T* {
 template <typename T>
 [[nodiscard]] constexpr auto count_leading_zeros(T value) -> ssize
     requires(is_integral<T>) {
-    auto raw_value = raw_cast(value);
+    auto raw_value = raw_numeral_cast(value);
     if constexpr (sizeof(T) == 2) {
         return ssize{__builtin_ia32_lzcnt_u16(raw_value)};
     } else if constexpr (sizeof(T) == 4) {
@@ -577,7 +586,7 @@ template <typename T>
 template <typename T>
 [[nodiscard]] constexpr auto count_trailing_zeros(T value) -> ssize
     requires(is_integral<T>) {
-    auto raw_value = raw_cast(value);
+    auto raw_value = raw_numeral_cast(value);
     if constexpr (sizeof(T) == 4) {
         return ssize{__builtin_ctz(raw_value)};
     } else if constexpr (sizeof(T) == 8) {

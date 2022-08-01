@@ -3,6 +3,9 @@ auto main() -> int {
     static_assert(cat::detail::ArithmeticNonPtr<int4>);
     static_assert(!cat::detail::ArithmeticNonPtr<intptr<void>>);
 
+    static_assert(cat::is_same<cat::ToUnsafeNumeral<int>, int>);
+    // static_assert(cat::is_same<cat::ToUnsafeNumeral<int4>, int>);
+
     // Test `int4` constructors and assignment.
     int4 test_int4_1 = 1;
     int4 test_int4_2;

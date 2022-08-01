@@ -265,6 +265,7 @@ constexpr bool is_specialization<Template<Args...>, Template> = true;
 
 template <typename T>
 concept SafeNumeral = requires {
+    T::Raw;
     Numeral<typename T::Raw>();
     // is_specialization<T, Numeral>;
 };
