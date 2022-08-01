@@ -11,7 +11,7 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
     unsigned char const* p_source_handle =
         static_cast<unsigned char const*>(p_source);
     unsigned char* p_destination_handle =
-        cat::bit_cast<unsigned char*>(p_destination);
+        bit_cast<unsigned char*>(p_destination);
     constexpr ssize l3_cache_size = 2_mi;
     ssize padding;
 
@@ -24,9 +24,9 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
 
     // Align source, destination, and bytes to the vector's optimal alignment.
     padding = static_cast<signed int long>(
-        (alignof(Vector) -
-         ((cat::bit_cast<__UINTPTR_TYPE__>(p_destination_handle)) &
-          (alignof(Vector) - 1))) &
+        // TODO: Use a `uintptr<unsigned char>` here.
+        (alignof(Vector) - ((bit_cast<__UINTPTR_TYPE__>(p_destination_handle)) &
+                            (alignof(Vector) - 1))) &
         (alignof(Vector) - 1));
 
     copy_memory_small(p_source, p_destination, padding);
@@ -44,13 +44,13 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
             // size.
 #pragma GCC unroll 8
             for (int i = 0; i < 8; ++i) {
-                vectors[i] = cat::bit_cast<Vector const*>(p_source_handle)[i];
+                vectors[i] = bit_cast<Vector const*>(p_source_handle)[i];
             }
-            cat::prefetch_for_one_read(p_source_handle + (step_size * 2));
+            prefetch_for_one_read(p_source_handle + (step_size * 2));
 
 #pragma GCC unroll 8
             for (int i = 0; i < 8; ++i) {
-                cat::bit_cast<Vector*>(p_destination_handle)[i] = vectors[i];
+                bit_cast<Vector*>(p_destination_handle)[i] = vectors[i];
             }
             p_source_handle += step_size;
             p_destination_handle += step_size;
@@ -60,16 +60,16 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
 
     // This routine is run when the memory source cannot fit in cache.
     else {
-        cat::prefetch_for_one_read(p_source_handle + 512);
+        prefetch_for_one_read(p_source_handle + 512);
         // TODO: This code block has fallen far out of date.
         // TODO: This could be improved by using aligned-streaming when
         // possible.
         while (bytes >= 256) {
 #pragma GCC unroll 8
             for (int i = 0; i < 8; ++i) {
-                vectors[i] = cat::bit_cast<Vector*>(p_source_handle)[i];
+                vectors[i] = bit_cast<Vector*>(p_source_handle)[i];
             }
-            cat::prefetch_for_one_read(p_source_handle + 512);
+            prefetch_for_one_read(p_source_handle + 512);
             p_source_handle += 256;
 #pragma GCC unroll 8
             for (int i = 0; i < 8; ++i) {
@@ -79,11 +79,11 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
             bytes -= 256;
         }
 
-        cat::sfence();
+        sfence();
     }
 
     copy_memory_small(p_source_handle, p_destination_handle, bytes);
-    cat::zero_upper_avx_registers();
+    zero_upper_avx_registers();
 }
 
 /*
