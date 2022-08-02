@@ -105,46 +105,29 @@ struct NumericLimits<double> {
     constexpr static double min = 0.;
 };
 
+template <Arithmetic T>
+constexpr auto raw_numeral_cast(T value) {
+    if constexpr (SafeNumeral<T>) {
+        return value.raw;
+    } else {
+        return value;
+    }
+}
+
+template <Arithmetic T>
+using ToUnsafeNumeral = decltype(raw_numeral_cast(declval<T>()));
+
+template <Arithmetic T>
+using ToSafeNumeral = Numeral<ToUnsafeNumeral<T>>;
+
 namespace detail {
-    // These four overloads are required so that a `Numeral` does not put itself
-    // into `is_signed` in its own contructor, which would be ill-formed.
-
-    template <typename T, typename U>
+    template <Arithmetic T, Arithmetic U>
     constexpr auto is_safe_conversion() -> bool {
-        // clang-format off
-        return (sizeof(T) >= sizeof(U))
-            && (is_signed<T> == is_signed<U>)
-            && (is_floating_point<T> == is_floating_point<U>);
-        // clang-format on
-    }
-
-    template <SafeNumeral T, typename U>
-    constexpr auto is_safe_conversion() -> bool {
-        using TRaw = typename T::Raw;
-        // clang-format off
-        return (sizeof(TRaw) >= sizeof(U))
-            && (is_signed<TRaw> == is_signed<U>)
-            && (is_floating_point<TRaw> == is_floating_point<U>);
-        // clang-format on
-    }
-
-    template <typename T, SafeNumeral U>
-    constexpr auto is_safe_conversion() -> bool {
-        using URaw = typename U::Raw;
-        // clang-format off
-        return (sizeof(T) >= sizeof(URaw))
-            && (is_signed<T> == is_signed<URaw>)
-            && (is_floating_point<T> == is_floating_point<URaw>);
-        // clang-format on
-    }
-
-    template <SafeNumeral T, SafeNumeral U>
-    constexpr auto is_safe_conversion() -> bool {
-        using TRaw = typename T::Raw;
-        using URaw = typename U::Raw;
+        using TRaw = ToUnsafeNumeral<T>;
+        using URaw = ToUnsafeNumeral<U>;
         // clang-format off
         return (sizeof(TRaw) >= sizeof(URaw))
-            && (is_signed<TRaw> == is_signed<URaw>)
+            // && (is_signed<TRaw> == is_signed<URaw>)
             && (is_floating_point<TRaw> == is_floating_point<URaw>);
         // clang-format on
     }
@@ -162,8 +145,9 @@ namespace detail {
     // Take two types, and produce the type that should be produced by their
     // arithmetic operations.
     template <typename T, typename U>
-        requires(is_signed<T> == is_signed<U> &&
-                 is_floating_point<T> == is_floating_point<U>)
+        requires(
+            // is_signed<T> == is_signed<U> &&
+            is_floating_point<T> == is_floating_point<U>)
     using PromotedNumeral =
         // `ArithmeticPtr` takes precedence above everything else.
         Conditional<is_specialization<T, ArithmeticPtr>, T,
@@ -171,22 +155,6 @@ namespace detail {
                                 // Pick the largest type.
                                 Conditional<(sizeof(T) > sizeof(U)), T, U>>>;
 }  // namespace detail
-
-template <SafeNumeral T>
-constexpr auto raw_numeral_cast(T value) -> T {
-    return value.raw;
-}
-
-template <UnsafeNumeral T>
-constexpr auto raw_numeral_cast(T value) -> T {
-    return value;
-}
-
-template <Arithmetic T>
-using ToSafeNumeral = Numeral<decltype(raw_numeral_cast<T>({}))>;
-
-template <Arithmetic T>
-using ToUnsafeNumeral = decltype(raw_numeral_cast<T>({}));
 
 template <typename T>
 [[nodiscard]] constexpr auto count_leading_zeros(T value) -> ssize
@@ -208,34 +176,13 @@ struct Numeral {
 
     constexpr Numeral() = default;
 
-    template <typename U>
+    template <Arithmetic U>
     constexpr explicit(!detail::is_safe_conversion<T, U>()) Numeral(U from)
-        : raw(static_cast<T>(from)){};
-
-    // template <Bool U>
-    // constexpr explicit(!detail::is_safe_conversion<T, U>()) Numeral(U from)
-    //     : raw(static_cast<T>(from)){};
-
-    template <typename U>
-    constexpr explicit operator U() {
-        if constexpr (is_specialization<U, Numeral>) {
-            // If `U` is a `Numeral`, cast into `U`'s underlying type.
-            return static_cast<typename U::Raw>(this->raw);
-        } else {
-            // If `U` is not a `Numeral`, cast into `U`.
-            return static_cast<U>(this->raw);
-        }
-    }
+        : raw(raw_numeral_cast(from)){};
 
     template <typename U>
     constexpr explicit operator U() const {
-        if constexpr (is_specialization<U, Numeral>) {
-            // If `U` is a `Numeral`, cast into `U`'s underlying type.
-            return static_cast<typename U::Raw>(this->raw);
-        } else {
-            // If `U` is not a `Numeral`, cast into `U`.
-            return static_cast<U>(this->raw);
-        }
+        return static_cast<U>(this->raw);
     }
 
     template <typename U>
@@ -247,50 +194,77 @@ struct Numeral {
 
     // TODO: Replace with three-way comparison operator.
     template <typename U>
-    constexpr auto operator>(U operand) const
-        -> bool requires(detail::is_safe_conversion<T, U>()) {
-        return this->raw > static_cast<T>(operand);
+    friend constexpr auto operator==(Numeral<T> self, U operand) -> bool {
+        return self.raw == raw_numeral_cast(operand);
     }
 
     template <typename U>
-    constexpr auto operator>=(U operand) const
-        -> bool requires(detail::is_safe_conversion<T, U>()) {
-        return this->raw >= static_cast<T>(operand);
+    friend constexpr auto operator<(Numeral<T> self, U operand) -> bool {
+        return self.raw < raw_numeral_cast(operand);
     }
 
     template <typename U>
-    constexpr auto operator<(U operand) const
-        -> bool requires(detail::is_safe_conversion<T, U>()) {
-        return this->raw < static_cast<T>(operand);
+    friend constexpr auto operator<=(Numeral<T> self, U operand) -> bool {
+        return self.raw <= raw_numeral_cast(operand);
     }
 
     template <typename U>
-    constexpr auto operator<=(U operand) const
-        -> bool requires(detail::is_safe_conversion<T, U>()) {
-        return this->raw <= static_cast<T>(operand);
-    }
-
-    template <detail::ArithmeticNonPtr U>
-    constexpr auto operator+(U operand) const -> Numeral {
-        Numeral<T> numeral = this->raw + static_cast<T>(operand);
-        return numeral;
+    friend constexpr auto operator>(Numeral<T> self, U operand) -> bool {
+        return self.raw > raw_numeral_cast(operand);
     }
 
     template <typename U>
-    constexpr auto operator+=(U operand)
-        -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
-        this->raw = this->raw + static_cast<T>(operand);
+    friend constexpr auto operator>=(Numeral<T> self, U operand) -> bool {
+        return self.raw >= raw_numeral_cast(operand);
+    }
+
+    // Declare arithmetic operators as hidden friends to prevent them from
+    // pessimizing argument-dependant-lookup times.
+
+    template <Arithmetic U>
+    friend constexpr auto operator+(Numeral<T> self, U operand)
+        -> Numeral<detail::PromotedNumeral<T, U>> {
+        return self.raw + raw_numeral_cast(operand);
+    }
+
+    template <typename U>
+    friend constexpr auto operator+(U* p_operand, Numeral<T> numeral) -> U* {
+        return p_operand + numeral.raw;
+    }
+    template <typename U>
+    friend constexpr auto operator+(Numeral<T> numeral, U* p_operand) -> U* {
+        return p_operand + numeral.raw;
+    }
+
+    template <Arithmetic U>
+    constexpr auto operator+=(U operand) {
+        this->raw += raw_numeral_cast(operand);
         return *this;
     }
 
     constexpr auto operator++() -> Numeral& {
-        ++raw;
+        ++(this->raw);
         return *this;
     }
 
     constexpr auto operator++(int) -> Numeral& {
-        raw++;
+        (this->raw)++;
         return *this;
+    }
+
+    template <detail::ArithmeticNonPtr U>
+    friend constexpr auto operator-(Numeral<T> self, U operand)
+        -> Numeral<detail::PromotedNumeral<T, U>> {
+        return self.raw - raw_numeral_cast(operand);
+    }
+
+    template <typename U>
+    friend constexpr auto operator-(U* p_operand, Numeral<T> self) -> U* {
+        return p_operand - self.raw;
+    }
+    template <typename U>
+    friend constexpr auto operator-(Numeral<T> self, U* p_operand) -> U* {
+        return p_operand - self.raw;
     }
 
     template <typename U>
@@ -300,12 +274,29 @@ struct Numeral {
         return *this;
     }
 
+    // TODO: Unary `-` operator.
+
     constexpr auto operator--() -> Numeral<T> {
-        return --raw;
+        return --(this->raw);
     }
 
     constexpr auto operator--(int) -> Numeral<T> {
-        return raw--;
+        return (this->raw)--;
+    }
+
+    template <detail::ArithmeticNonPtr U>
+    friend constexpr auto operator*(Numeral<T> self, U operand)
+        -> Numeral<detail::PromotedNumeral<T, U>> {
+        return self.raw * raw_numeral_cast(operand);
+    }
+
+    template <typename U>
+    friend constexpr auto operator*(U* p_operand, Numeral<T> self) -> U* {
+        return p_operand * self.raw;
+    }
+    template <typename U>
+    friend constexpr auto operator*(Numeral<T> self, U* p_operand) -> U* {
+        return p_operand * self.raw;
     }
 
     template <typename U>
@@ -315,10 +306,20 @@ struct Numeral {
         return *this;
     }
 
+    template <detail::ArithmeticNonPtr U>
+    friend constexpr auto operator/(Numeral<T> self, U operand)
+        -> Numeral<detail::PromotedNumeral<T, U>> {
+        return self.raw / raw_numeral_cast(operand);
+    }
+
     template <typename U>
-    constexpr auto operator/(U operand) const -> Numeral<T>
-        requires(detail::is_safe_conversion<T, U>())
-    { return static_cast<T>(this->raw / static_cast<T>(operand)); }
+    friend constexpr auto operator/(U* p_operand, Numeral<T> self) -> U* {
+        return p_operand / self.raw;
+    }
+    template <typename U>
+    friend constexpr auto operator/(Numeral<T> self, U* p_operand) -> U* {
+        return p_operand / self.raw;
+    }
 
     template <typename U>
     constexpr auto operator/=(U operand)
@@ -327,10 +328,20 @@ struct Numeral {
         return *this;
     }
 
+    template <detail::ArithmeticNonPtr U>
+    friend constexpr auto operator%(Numeral<T> self, U operand)
+        -> Numeral<detail::PromotedNumeral<T, U>> {
+        return self.raw % raw_numeral_cast(operand);
+    }
+
     template <typename U>
-    constexpr auto operator%(U operand) const -> Numeral<T>
-        requires(detail::is_safe_conversion<T, U>())
-    { return static_cast<T>(this->raw % static_cast<T>(operand)); }
+    friend constexpr auto operator%(U* p_operand, Numeral<T> self) -> U* {
+        return p_operand % self.raw;
+    }
+    template <typename U>
+    friend constexpr auto operator%(Numeral<T> self, U* p_operand) -> U* {
+        return p_operand % self.raw;
+    }
 
     template <typename U>
     constexpr auto operator%=(U operand)
@@ -339,11 +350,41 @@ struct Numeral {
         return *this;
     }
 
+    template <detail::ArithmeticNonPtr U>
+    friend constexpr auto operator&(Numeral<T> self, U operand)
+        -> Numeral<detail::PromotedNumeral<T, U>> {
+        return self.raw & raw_numeral_cast(operand);
+    }
+
+    template <typename U>
+    friend constexpr auto operator&(U* p_operand, Numeral<T> self) -> U* {
+        return p_operand & self.raw;
+    }
+    template <typename U>
+    friend constexpr auto operator&(Numeral<T> self, U* p_operand) -> U* {
+        return p_operand & self.raw;
+    }
+
     template <typename U>
     constexpr auto operator&=(U operand)
         -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
         this->raw = this->raw & static_cast<T>(operand);
         return *this;
+    }
+
+    template <detail::ArithmeticNonPtr U>
+    friend constexpr auto operator|(Numeral<T> self, U operand)
+        -> Numeral<detail::PromotedNumeral<T, U>> {
+        return self.raw | raw_numeral_cast(operand);
+    }
+
+    template <typename U>
+    friend constexpr auto operator|(U* p_operand, Numeral<T> self) -> U* {
+        return p_operand | self.raw;
+    }
+    template <typename U>
+    friend constexpr auto operator|(Numeral<T> self, U* p_operand) -> U* {
+        return p_operand | self.raw;
     }
 
     template <typename U>
@@ -359,6 +400,15 @@ struct Numeral {
     { return static_cast<T>(this->raw << static_cast<T>(operand)); }
 
     template <typename U>
+    friend constexpr auto operator<<(U* p_operand, Numeral<T> self) -> U* {
+        return p_operand << self.raw;
+    }
+    template <typename U>
+    friend constexpr auto operator<<(Numeral<T> self, U* p_operand) -> U* {
+        return p_operand << self.raw;
+    }
+
+    template <typename U>
     constexpr auto operator<<=(U operand)
         -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
         this->raw = this->raw << static_cast<T>(operand);
@@ -369,6 +419,15 @@ struct Numeral {
     [[nodiscard]] constexpr auto operator>>(U operand) const -> Numeral<T>
         requires(detail::is_safe_conversion<T, U>())
     { return static_cast<T>(this->raw >> static_cast<T>(operand)); }
+
+    template <typename U>
+    friend constexpr auto operator>>(U* p_operand, Numeral<T> self) -> U* {
+        return p_operand >> self.raw;
+    }
+    template <typename U>
+    friend constexpr auto operator>>(Numeral<T> self, U* p_operand) -> U* {
+        return p_operand >> self.raw;
+    }
 
     template <typename U>
     constexpr auto operator>>=(U operand)
@@ -396,178 +455,69 @@ struct Numeral {
 template <typename T>
 Numeral(T) -> Numeral<T>;
 
-// Compare primitive numerals to `Numeral`s.
-// TODO: Return a `Numeral` that is the larger size of either operand.
+// Add and assign a `Numeral` to a pointer.
 template <typename T, typename U>
-constexpr auto operator>(T lhs, Numeral<U> rhs)
-    -> bool requires(is_convertible<U, T> && !is_specialization<T, Numeral>) {
-    return lhs > rhs.raw;
-}
-
-template <typename T, typename U>
-constexpr auto operator>=(T lhs, Numeral<U> rhs)
-    -> bool requires(is_convertible<U, T> && !is_specialization<T, Numeral>) {
-    return lhs >= rhs.raw;
-}
-
-template <typename T, typename U>
-[[nodiscard]] constexpr auto operator<(T lhs, Numeral<U> rhs)
-    -> bool requires(is_convertible<U, T> && !is_specialization<T, Numeral>) {
-    return lhs < rhs.raw;
-}
-
-template <typename T, typename U>
-[[nodiscard]] constexpr auto operator<=(T lhs, Numeral<U> rhs)
-    -> bool requires(is_convertible<U, T> && !is_specialization<T, Numeral>) {
-    return lhs <= rhs.raw;
-}
-
-// Order-independant operators for `Numeral` and primitive numerals.
-
-template <typename T, typename U>
-[[nodiscard]] constexpr auto operator==(Numeral<T> lhs, U rhs)
-    -> bool requires(is_signed<T> == is_signed<U> &&
-                     is_floating_point<T> == is_floating_point<U>) {
-    return lhs.raw == static_cast<T>(rhs);
-}
-
-template <typename T, typename U>
-    requires(is_signed<T> == is_signed<U> &&
-             is_floating_point<T> == is_floating_point<U>)
-[[nodiscard]] constexpr auto operator+(T lhs, Numeral<U> rhs)
-    -> detail::PromotedNumeral<T, U> {
-    return static_cast<U>(lhs) + static_cast<U>(rhs);
-}
-
-template <typename T, typename U>
-[[nodiscard]] constexpr auto operator-(Numeral<T> lhs, U rhs) requires(
-    is_signed<T> == is_signed<U> &&
-    is_floating_point<T> == is_floating_point<U>) {
-    return Numeral{lhs.raw - static_cast<T>(rhs)};
-}
-
-template <typename T, typename U>
-[[nodiscard]] constexpr auto operator*(Numeral<T> lhs, U rhs) requires(
-    is_signed<T> == is_signed<U> &&
-    is_floating_point<T> == is_floating_point<U>) {
-    return Numeral{lhs.raw * static_cast<T>(rhs)};
-}
-
-template <typename T, typename U>
-[[nodiscard]] constexpr auto operator&(Numeral<T> lhs, U rhs) requires(
-    is_signed<T> == is_signed<U> &&
-    is_floating_point<T> == is_floating_point<U>) {
-    return Numeral{lhs.raw & static_cast<T>(rhs)};
-}
-
-template <typename T, typename U>
-[[nodiscard]] constexpr auto operator|(Numeral<T> lhs, U rhs) requires(
-    is_signed<T> == is_signed<U> &&
-    is_floating_point<T> == is_floating_point<U>) {
-    return Numeral{lhs.raw | static_cast<T>(rhs)};
-}
-
-// Pointer arithmetic operators for `Numeral`s.
-template <typename T, typename U>
-[[nodiscard]] constexpr auto operator+(T* p_lhs, Numeral<U> rhs) -> T* {
-    return p_lhs + rhs.raw;
-}
-
-template <typename T, typename U>
-constexpr auto operator+=(T* p_lhs, Numeral<U> rhs) -> T* {
+constexpr auto operator+=(T*& p_lhs, Numeral<U> rhs) -> T* {
     p_lhs += rhs.raw;
     return p_lhs;
 }
 
+// Subtract and assign a `Numeral` to a pointer.
 template <typename T, typename U>
-[[nodiscard]] constexpr auto operator-(T* p_lhs, Numeral<U> rhs) -> T* {
-    return p_lhs - rhs.raw;
-}
-
-template <typename T, typename U>
-constexpr auto operator-=(T* p_lhs, Numeral<U> rhs) -> T* {
+constexpr auto operator-=(T*& p_lhs, Numeral<U> rhs) -> T* {
     p_lhs -= rhs.raw;
     return p_lhs;
 }
 
+// Multiply and assign a `Numeral` to a pointer.
 template <typename T, typename U>
-[[nodiscard]] constexpr auto operator*(T* p_lhs, Numeral<U> rhs) -> T* {
-    return p_lhs * rhs.raw;
-}
-
-template <typename T, typename U>
-constexpr auto operator*=(T* p_lhs, Numeral<U> rhs) -> T* {
+constexpr auto operator*=(T*& p_lhs, Numeral<U> rhs) -> T* {
     p_lhs *= rhs.raw;
     return p_lhs;
 }
 
+// Divide and assign a `Numeral` to a pointer.
 template <typename T, typename U>
-[[nodiscard]] constexpr auto operator/(T* p_lhs, Numeral<U> rhs) -> T* {
-    return p_lhs / rhs.raw;
-}
-
-template <typename T, typename U>
-constexpr auto operator/=(T* p_lhs, Numeral<U> rhs) -> T* {
+constexpr auto operator/=(T*& p_lhs, Numeral<U> rhs) -> T* {
     p_lhs /= rhs.raw;
     return p_lhs;
 }
 
+// Bitwise shift left and assign a `Numeral` to a pointer.
 template <typename T, typename U>
-[[nodiscard]] constexpr auto operator<<(T* p_lhs, Numeral<U> rhs) -> T* {
-    return p_lhs << rhs.raw;
-}
-
-template <typename T, typename U>
-constexpr auto operator<<=(T* p_lhs, Numeral<U> rhs) -> T* {
+constexpr auto operator<<=(T*& p_lhs, Numeral<U> rhs) -> T* {
     p_lhs <<= rhs.raw;
     return p_lhs;
 }
 
+// Bitwise shift right and assign a `Numeral` to a pointer.
 template <typename T, typename U>
-[[nodiscard]] constexpr auto operator>>(T* p_lhs, Numeral<U> rhs) -> T* {
-    return p_lhs >> rhs.raw;
-}
-
-template <typename T, typename U>
-constexpr auto operator>>=(T* p_lhs, Numeral<U> rhs) -> T* {
+constexpr auto operator>>=(T*& p_lhs, Numeral<U> rhs) -> T* {
     p_lhs >>= rhs.raw;
     return p_lhs;
 }
 
+// Bitwise modulo and assign a `Numeral` to a pointer.
 template <typename T, typename U>
-[[nodiscard]] constexpr auto operator%(T* p_lhs, Numeral<U> rhs) -> T* {
-    return p_lhs % rhs.raw;
-}
-
-template <typename T, typename U>
-constexpr auto operator%=(T* p_lhs, Numeral<U> rhs) -> T* {
+constexpr auto operator%=(T*& p_lhs, Numeral<U> rhs) -> T* {
     p_lhs %= rhs.raw;
     return p_lhs;
 }
 
+// Bitwise and and assign a `Numeral` to a pointer.
 template <typename T, typename U>
-[[nodiscard]] constexpr auto operator&(T* p_lhs, Numeral<U> rhs) -> T* {
-    return p_lhs & rhs.raw;
-}
-
-template <typename T, typename U>
-constexpr auto operator&=(T* p_lhs, Numeral<U> rhs) -> T* {
+constexpr auto operator&=(T*& p_lhs, Numeral<U> rhs) -> T* {
     p_lhs &= rhs.raw;
     return p_lhs;
 }
 
+// Bitwise or and assign a `Numeral` to a pointer.
 template <typename T, typename U>
-[[nodiscard]] constexpr auto operator|(T* p_lhs, Numeral<U> rhs) -> T* {
-    return p_lhs | rhs.raw;
-}
-
-template <typename T, typename U>
-constexpr auto operator|=(T* p_lhs, Numeral<U> rhs) -> T* {
+constexpr auto operator|=(T*& p_lhs, Numeral<U> rhs) -> T* {
     p_lhs |= rhs.raw;
     return p_lhs;
 }
 
-// TODO: Make this `constexpr`.
 template <typename T>
 [[nodiscard]] constexpr auto count_leading_zeros(T value) -> ssize
     requires(is_integral<T>) {
@@ -578,8 +528,9 @@ template <typename T>
         return ssize{__builtin_clz(raw_value)};
     } else if constexpr (sizeof(T) == 8) {
         return ssize{__builtin_clzll(raw_value)};
+    } else {
+        __builtin_unreachable();
     }
-    __builtin_unreachable();
 }
 
 // TODO: Make this `constexpr`.
@@ -629,7 +580,7 @@ struct bool4 {  // NOLINT
     uint4 raw;
     constexpr bool4() = default;
     constexpr bool4(bool input) : raw(static_cast<unsigned char>(input)){};
-    constexpr bool4(bool2 input) : raw(input){};
+    constexpr bool4(bool2 input) : raw(static_cast<unsigned char>(input)){};
     constexpr operator bool() const {
         return this->raw != 0u;
     }

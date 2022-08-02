@@ -17,18 +17,22 @@ namespace detail {
 
         constexpr ScaredyVariantStorage() = default;
 
+        // TODO: Copy constructor and forwarding constructor.
         // Consume a value.
         template <typename U>
-            requires(is_implicitly_convertible<U, Value>)
-        constexpr ScaredyVariantStorage(U const& input)
+            requires(is_implicitly_convertible<U, Value> &&
+                     !TypeList<Errors...>::template has_type<U>)
+        constexpr ScaredyVariantStorage(U input)
             // This `static_cast` is needed here, because `Variant` does not
             // support implicit conversions in its constructors.
             : storage(static_cast<Value>(input)){};
 
+        // TODO: Copy constructor and forwarding constructor.
         // Consume an error value.
         template <typename U>
-            requires(TypeList<Errors...>::template has_type<U>)
-        constexpr ScaredyVariantStorage(U const& input) : storage(input){};
+        // requires(!is_implicitly_convertible<U, Value> &&
+        //          TypeList<Errors...>::template has_type<U>)
+        constexpr ScaredyVariantStorage(U input) : storage(input){};
 
         template <typename U>
         constexpr auto operator=(U const& operand)
@@ -177,18 +181,21 @@ class Scaredy {
     constexpr Scaredy(Scaredy<T, Errors...> const& scaredy)
         : storage(scaredy.storage){};
 
+    // TODO: Make copy and forwarding constructors.
     // Forward a value into the storage.
     template <typename U>
-        requires(is_implicitly_convertible<U, Value>)
-    constexpr Scaredy(U input)
-        // This `static_cast` is needed here, because `Variant` does not
-        // support implicit conversions in its constructors.
-        : storage(static_cast<Value>(input)){};
+        requires(is_implicitly_convertible<U, Value> && !is_void<Value> &&
+                 !TypeList<Errors...>::template has_type<U>)
+    constexpr Scaredy(U input) : storage(input){};
 
+    // TODO: Make copy and forwarding constructors.
     // Forward an error into the storage.
     template <typename U>
         requires(TypeList<Errors...>::template has_type<U>)
     constexpr Scaredy(U input) : storage(input){};
+
+    constexpr Scaredy(Monostate) requires(is_void<Value>) {
+    }
 
     // Copy the storage of an equivalent `Scaredy` type.
     constexpr auto operator=(Scaredy<T, Errors...> const& scaredy) {

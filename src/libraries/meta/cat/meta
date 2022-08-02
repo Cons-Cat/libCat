@@ -264,16 +264,12 @@ template <template <typename...> typename Template, typename... Args>
 constexpr bool is_specialization<Template<Args...>, Template> = true;
 
 template <typename T>
-concept SafeNumeral = requires {
-    T::Raw;
-    Numeral<typename T::Raw>();
-    // is_specialization<T, Numeral>;
-};
+concept SafeNumeral = is_specialization<T, Numeral>;
 template <typename T>
 constexpr bool is_safe_numeral = SafeNumeral<T>;
 
 template <typename T>
-concept UnsafeNumeral = !SafeNumeral<T>;
+concept UnsafeNumeral = !is_specialization<T, Numeral>;
 template <typename T>
 constexpr bool is_unsafe_numeral = UnsafeNumeral<T>;
 
@@ -420,13 +416,9 @@ template <typename T>
 using UnderlyingType = typename UnderlyingTypeTrait<T>::Type;
 
 template <typename From, typename To>
-// clang-format off
-constexpr bool is_implicitly_convertible = requires(To to, From from) {
-    to = from;
-} || requires(From from) {
-    To(from);
-} || is_same<From, To>;
-// clang-format on
+constexpr bool is_implicitly_convertible = __is_assignable(To, From) ||
+                                           __is_constructible(To, From) ||
+                                           __is_same(To, From);
 
 template <typename From, typename To>
 constexpr bool is_convertible = requires(From from) {
