@@ -77,8 +77,8 @@ namespace detail {
                 // leverage instruction-level parallelism.
                 constexpr ssize lanes = LanesConstant::value;
                 using Vector = FixedSizeSimd<unsigned char, lanes>;
-                Vector* vector = bit_cast<Vector*>(p_current_byte);
-                vector->fill(byte_value);
+                Vector* p_vector = bit_cast<Vector*>(p_current_byte);
+                p_vector->fill(byte_value);
                 p_current_byte += lanes;
                 bytes -= lanes;
             };

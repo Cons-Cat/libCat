@@ -755,7 +755,7 @@ struct FileStatus {
     [[maybe_unused]] int4 unused[3];
   public:
     auto is_regular() const -> bool {
-        return (this->protections_mode & uint4{0170000u}) == 0100000u;
+        return (this->protections_mode & 0170000u) == 0100000u;
     }
     static_assert(!cat::EnumFlagTrait<uint4>::value);
 

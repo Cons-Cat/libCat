@@ -101,8 +101,8 @@ struct NumericLimits<float> {
 template <>
 struct NumericLimits<double> {
     NumericLimits() = delete;
-    constexpr static double max = 0.f;
-    constexpr static double min = 0.f;
+    constexpr static double max = 0.;
+    constexpr static double min = 0.;
 };
 
 namespace detail {
