@@ -74,28 +74,13 @@ namespace detail {
 }
 
 template <typename T>
-struct AddCvTrait {
-    using Type = T const volatile;
-};
+using AddConst = T const;
 
 template <typename T>
-using AddCv = typename AddCvTrait<T>::Type;
+using AddVolatile = T volatile;
 
 template <typename T>
-struct AddConstTrait {
-    using Type = T const;
-};
-
-template <typename T>
-using AddConst = typename AddConstTrait<T>::Type;
-
-template <typename T>
-struct AddVolatileTrait {
-    using Type = T volatile;
-};
-
-template <typename T>
-using AddVolatile = typename AddVolatileTrait<T>::Type;
+using AddCv = T const volatile;
 
 template <typename T>
 struct RemoveConstTrait {
@@ -285,13 +270,15 @@ template <typename T>
 constexpr bool is_floating_point = FloatingPoint<T>;
 
 template <typename T>
-concept Integral = (is_safe_numeral<T> && !is_floating_point<T>) ||
-                   __is_same(T, signed char) || __is_same(T, unsigned char) ||
-                   __is_same(T, char) || __is_same(T, short) ||
-                   __is_same(T, unsigned short) || __is_same(T, int) ||
-                   __is_same(T, unsigned int) || __is_same(T, long) ||
-                   __is_same(T, unsigned long) || __is_same(T, long long) ||
-                   __is_same(T, unsigned long long);
+concept Integral =
+    (is_safe_numeral<RemoveCv<T>> && !is_floating_point<RemoveCv<T>>) ||
+    __is_same(RemoveCv<T>, signed char) ||
+    __is_same(RemoveCv<T>, unsigned char) || __is_same(RemoveCv<T>, char) ||
+    __is_same(RemoveCv<T>, short) || __is_same(RemoveCv<T>, unsigned short) ||
+    __is_same(RemoveCv<T>, int) || __is_same(RemoveCv<T>, unsigned int) ||
+    __is_same(RemoveCv<T>, long) || __is_same(RemoveCv<T>, unsigned long) ||
+    __is_same(RemoveCv<T>, long long) ||
+    __is_same(RemoveCv<T>, unsigned long long);
 template <typename T>
 constexpr bool is_integral = Integral<T>;
 
@@ -317,8 +304,9 @@ namespace detail {
 template <typename...>
 constexpr bool is_signed = false;
 
+// This expression only holds true if `T` can be constant-evaluated.
 template <detail::HasLessThanOperator T>
-constexpr bool is_signed<T> = bool_constant<T(-1) < T(0)>;
+constexpr bool is_signed<T> = bool_constant<(T(-1) < T(0))>;
 
 template <typename T>
 constexpr bool is_unsigned = !is_signed<T>;
@@ -340,6 +328,33 @@ constexpr bool is_array = !is_pointer<T> && requires(T t) {
     t[0];
 };
 
+template <typename T, typename U>
+using AddConstFrom = Conditional<is_const<U>,
+                                 // U is const.
+                                 T const,
+                                 // U is not const.
+                                 T>;
+
+template <typename T, typename U>
+using AddVolatileFrom = Conditional<is_volatile<U>,
+                                    // U is volatile.
+                                    T volatile,
+                                    // U is not volatile.
+                                    T>;
+
+template <typename T, typename U>
+using AddCvFrom = Conditional<is_const<U>,
+                              Conditional<is_volatile<U>,
+                                          // U is const and volatile.
+                                          T const volatile,
+                                          // U is const.
+                                          T const>,
+                              Conditional<is_volatile<U>,
+                                          // U is volatile.
+                                          T volatile,
+                                          // U is neither const nor volatile.
+                                          T>>;
+
 template <typename T>
 struct RemoveExtentTrait {
     using Type = T;
@@ -354,9 +369,6 @@ struct RemoveExtentTrait<T[]> {
 };
 template <typename T>
 using RemoveExtent = typename RemoveExtentTrait<T>::Type;
-
-template <typename T>
-constexpr bool is_function = is_const<T> && !is_reference<T>;
 
 // TODO: Figure this out with concepts.
 /*
@@ -389,21 +401,13 @@ template <typename T>
 using AddLvalueReference = T&;
 
 template <typename T>
+using AddRvalueReference = T&&;
+
+template <typename T>
 constexpr bool is_lvalue_reference = __is_same(T, RemoveReference<T>&);
 
 template <typename T>
 constexpr bool is_rvalue_reference = __is_same(T, RemoveReference<T>&&);
-
-// Remove `const`/`volatile`-qualifiers, references, and pointers from a type.
-template <typename T>
-using Decay = Conditional<
-    // Decay arrays to pointers.
-    is_array<RemoveReference<T>>, RemoveExtent<RemoveReference<T>>*,
-    Conditional<
-        // Decay functions into function pointers.
-        is_function<RemoveReference<T>>, AddPointer<RemoveReference<T>>,
-        // Otherwise, remove cv-qualifiers.
-        RemoveCv<RemoveReference<T>>>>;
 
 // `__underlying_type` is a GNU builtin.
 template <typename T>
@@ -433,6 +437,8 @@ constexpr bool is_sizable = requires {
 template <typename T>
 concept Enum = __is_enum(T);
 
+// This requires a partial template specialization, because `__underlying_type`
+// is not well-formed in any expression that involves a non-enum type.
 template <typename...>
 constexpr bool is_scoped_enum = false;
 
@@ -440,11 +446,25 @@ constexpr bool is_scoped_enum = false;
 // classes that make this hold false.
 template <Enum T>
 constexpr bool is_scoped_enum<T> =
-    !is_implicitly_convertible<T, UnderlyingType<T>>;
+    !is_implicitly_convertible<T, __underlying_type(T)>;
 
 template <typename T>
 constexpr bool is_object =
     is_scalar<T> || is_array<T> || is_union<T> || is_class<T>;
+
+template <typename T>
+constexpr bool is_function = !is_object<T>;
+
+// Remove `const`/`volatile`-qualifiers, references, and pointers from a type.
+template <typename T>
+using Decay = Conditional<
+    // Decay arrays to pointers.
+    is_array<RemoveReference<T>>, RemoveExtent<RemoveReference<T>>*,
+    Conditional<
+        // Decay functions into function pointers.
+        is_function<RemoveReference<T>>, AddPointer<RemoveReference<T>>,
+        // Otherwise, remove cv-qualifiers.
+        RemoveCv<RemoveReference<T>>>>;
 
 template <typename, unsigned = 0>
 struct ExtentTrait;
@@ -569,7 +589,7 @@ template <typename Function, typename... Args>
 constexpr bool is_invocable = Invocable<Function, Args...>;
 
 // https://quuxplusone.github.io/blog/2019/02/06/arrow-proxy/
-template <class Reference>
+template <typename Reference>
 struct ArrowProxy {
     Reference reference;
     auto operator->() -> Reference* {
@@ -664,4 +684,9 @@ constexpr bool is_trivially_relocatable<T const> = is_trivially_relocatable<T>;
 
 }  // namespace cat
 
-#include "./implementations/constant_evaluate.tpp"
+// clang-format 12 sorts `CommonReference` before `CommonType` for some reason.
+// clang-format off
+#include "../implementations/CommonType.tpp"
+#include "../implementations/CommonReference.tpp"
+#include "../implementations/constant_evaluate.tpp"
+// clang-format on

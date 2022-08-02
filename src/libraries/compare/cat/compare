@@ -1,0 +1,7 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+namespace cat {
+//
+}

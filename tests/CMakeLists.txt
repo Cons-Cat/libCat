@@ -29,6 +29,15 @@ link_libraries(cat-test)
 # Enable all unit tests to compile regardless of their individual settings.
 option(BUILD_ALL_TESTS "Compile all unit tests unconditionally." ON)
 
+# This tests that `<cat/meta>` works.
+option(BUILD_TEST_META "Compile metaprogramming tests." OFF)
+if(BUILD_TEST_META OR BUILD_ALL_TESTS)
+  add_executable(test_meta test_meta.cpp)
+  target_compile_options(test_meta PRIVATE ${CAT_CXX_FLAGS_TEST})
+  target_link_options(test_meta PRIVATE ${CAT_LINK_FLAGS})
+  add_test(NAME Metaprogramming COMMAND test_meta)
+endif()
+
 # This tests that `cat::Numeral` works.
 option(BUILD_TEST_NUMERALS "Compile Numerals tests." OFF)
 if(BUILD_TEST_NUMERALS OR BUILD_ALL_TESTS)
