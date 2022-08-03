@@ -158,4 +158,12 @@ auto main() -> int {
 
     static_assert(is_sizable<int>);
     static_assert(!is_sizable<void>);
+
+    static_assert(is_same<CommonType<int, long int>, long int>);
+    static_assert(is_same<CommonType<long int>, long int>);
+    static_assert(is_same<CommonType<int, int>, int>);
+    static_assert(is_same<CommonType<int const, int>, int>);
+    static_assert(is_same<CommonType<int, long int, unsigned long int>,
+                          unsigned long int>);
+
 };
