@@ -9,7 +9,7 @@ CheckOptions:
   - { key: readability-identifier-naming.PointerParameterPrefix,          value: p_ }
   - { key: readability-identifier-naming.LocalPointerPrefix,              value: p_ }
   - { key: readability-identifier-naming.LocalConstantPointerPrefix,      value: p_ }
-  - { key: performance-unnecessary-value-param.AllowedTypes,              value: cat::String;cat::Span;nix::IoVector }
+  - { key: performance-unnecessary-value-param.AllowedTypes,              value: String;Span;IoVector }
 
 # Some structs do not conform to PascalCase, but these are generally favored.
   - { key: readability-identifier-naming.StructCase,                      value: CamelCase }
