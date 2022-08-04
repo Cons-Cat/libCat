@@ -20,7 +20,6 @@ constexpr ssize page_size = 4096_ki;
 namespace nix {
 
 // TODO: Consider using the names from `std::errc`.
-// TODO: See if making this a `signed char` pessimizes performance.
 enum class LinuxError {
     // Operation is not permitted.
     perm = -1,
@@ -549,8 +548,12 @@ auto sys_wait4(ProcessId waiting_on_id, int4* p_status_output,
                WaitOptionsFlags options, void* p_resource_usage)
     -> ScaredyLinux<ProcessId>;
 
-// TODO: Separate this into separate functions for waiting on pid, gid, etc.
 auto sys_waitid(WaitId type, ProcessId id, WaitOptionsFlags options)
+    -> ScaredyLinux<ProcessId>;
+
+struct FileStatus;
+
+auto sys_waitpid(ProcessId pid, FileStatus* p_status, WaitOptionsFlags options)
     -> ScaredyLinux<ProcessId>;
 
 struct CloneArguments;

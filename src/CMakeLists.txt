@@ -93,6 +93,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_munmap.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_wait4.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_waitid.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_waitpid.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_socket.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/create_socket_local.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_accept.cpp
