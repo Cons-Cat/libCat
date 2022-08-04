@@ -48,6 +48,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/load_base_stack_pointer.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/meta/implementations/constant_evaluate.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/meta/implementations/CommonType.tpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/meta/implementations/CommonReference.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/simd/implementations/is_avx2_supported.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/simd/implementations/is_avx512f_supported.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/simd/implementations/is_avx_supported.cpp

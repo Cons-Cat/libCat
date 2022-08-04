@@ -309,6 +309,7 @@ class AllocatorFacade {
             !(is_inline && is_pointer)
             // Multi-allocations must be default-constructed.
             && !(is_multiple && (sizeof...(Args) > 0))
+            // TODO: Zeroed-out allocations should not have arguments.
             // Zeroed-out allocations must be trivial.
             && !(is_zeroed && !is_trivial<T>))
     [[gnu::optimize("-fno-tree-loop-distribute-patterns")]] auto meta_alloc(
