@@ -89,4 +89,16 @@ auto main() -> int {
         uint8 u;
     };
     static_assert(sizeof(five_tuple) == sizeof(Five));
+
+    // Test `Tuple` concatenation.
+    cat::Tuple<int> concat_lhs = cat::Tuple<int>{10};
+    cat::Tuple<float> concat_rhs = cat::Tuple<float>{1.f};
+    cat::Tuple<int, float> concat_tuple = concat_lhs.concat(concat_rhs);
+    Result(concat_tuple.first() == 10).or_exit();
+    Result(concat_tuple.second() == 1.f).or_exit();
+
+    // Test `Tuple` conversions.
+    cat::Tuple<float, float> floatfloat = cat::Tuple<int, int>{10, 20};
+    Result(floatfloat.first() == 10.f).or_exit();
+    Result(floatfloat.second() == 20.f).or_exit();
 }

@@ -85,9 +85,6 @@ class TypeList {
     }
 
   public:
-    // `TypeList` should never be instantiated.
-    TypeList() = delete;
-
     // Produce an alias to the type stored at an index in this type list.
     template <ssize index>
     using Get = typename RecurseForTypeAtIndex<TypeList<Ts...>, index>::Result;
