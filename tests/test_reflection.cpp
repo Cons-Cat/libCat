@@ -28,6 +28,17 @@ auto main() -> int {
     static_assert(!Types2::is_unique_list);
     static_assert(Types2::count_type<int> == 2);
 
+    using ConcatTypes = Types::Concat<Types2>;
+    static_assert(
+        cat::is_same<ConcatTypes, cat::TypeList<int, char, int, int, char>>);
+
+    using MergeTypes = Types::Merge<float, double>;
+    static_assert(
+        cat::is_same<MergeTypes, cat::TypeList<int, char, float, double>>);
+
+    using FillTypes = cat::TypeListFilled<int, 3>;
+    static_assert(cat::is_same<FillTypes, cat::TypeList<int, int, int>>);
+
     cat::Variant<int, char, uint4> variant(int{1});
     Result(variant.holds_alternative<int>()).or_exit();
     int foo_int = variant.value<int>();

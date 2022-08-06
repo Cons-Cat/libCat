@@ -89,9 +89,18 @@ class TypeList {
     template <ssize index>
     using Get = typename RecurseForTypeAtIndex<TypeList<Ts...>, index>::Result;
 
-    // Concatenate one `TypeList` to another `TypeList`.
+    // Append one parameter pack to this `TypeList`.
     template <typename... Us>
     using Merge = TypeList<Ts..., Us...>;
+
+    template <typename... Us>
+    static consteval auto concat(TypeList<Us...>) {
+        return TypeList<Ts..., Us...>{};
+    }
+
+    // Concatenate one `TypeList` to this `TypeList`.
+    template <typename OtherTypeList>
+    using Concat = decltype(concat(OtherTypeList{}));
 
     // Evaluate `true` iff this type list holds a type `T`.
     template <typename T>
@@ -124,5 +133,21 @@ class TypeList {
     // Evaluate `true` if every type in this type list is unique.
     static constexpr bool is_unique_list = recurse_for_unique<Ts...>();
 };
+
+namespace detail {
+    template <typename T, ssize count, ssize index, typename... Ts>
+    consteval auto type_list_fill(TypeList<Ts...> type_list) {
+        if constexpr (index == count) {
+            return type_list;
+        } else {
+            return type_list_fill<T, count, index + 1>(
+                typename decltype(type_list)::template Merge<T>());
+        }
+    }
+}  // namespace detail
+
+// Produce a TypeList filled with `count` of `T`.
+template <typename T, ssize count>
+using TypeListFilled = decltype(detail::type_list_fill<T, count, 0>({}));
 
 }  // namespace cat
