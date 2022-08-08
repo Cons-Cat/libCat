@@ -2,12 +2,9 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/memory>
-#include <cat/meta>
 #include <cat/optional>
 
 namespace cat {
-
 namespace detail {
     template <typename T>
     concept HasIncrement = requires(T it) {

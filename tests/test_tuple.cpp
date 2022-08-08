@@ -9,6 +9,10 @@ auto main() -> int {
     static_assert(cat::is_trivial<intint>);
     static_assert(sizeof(intint) == 8);
 
+    using floatfloat = cat::Tuple<float, float>;
+    static_assert(cat::is_trivial<floatfloat>);
+    static_assert(sizeof(floatfloat) == 8);
+
     using non_and_int4 = cat::Tuple<NonTrivial, int4>;
     [[maybe_unused]] non_and_int4 test_intint4{1, int4{0}};
     static_assert(!cat::is_trivial<non_and_int4>);
@@ -90,15 +94,38 @@ auto main() -> int {
     };
     static_assert(sizeof(five_tuple) == sizeof(Five));
 
-    // Test `Tuple` concatenation.
-    cat::Tuple<int> concat_lhs = cat::Tuple<int>{10};
-    cat::Tuple<float> concat_rhs = cat::Tuple<float>{1.f};
-    cat::Tuple<int, float> concat_tuple = concat_lhs.concat(concat_rhs);
-    Result(concat_tuple.first() == 10).or_exit();
-    Result(concat_tuple.second() == 1.f).or_exit();
+    // Test empty tuple.
+    [[maybe_unused]] cat::Tuple<> empty_tuple;
+    [[maybe_unused]] cat::Tuple<> empty_tuple_2{};
 
-    // Test `Tuple` conversions.
-    cat::Tuple<float, float> floatfloat = cat::Tuple<int, int>{10, 20};
-    Result(floatfloat.first() == 10.f).or_exit();
-    Result(floatfloat.second() == 20.f).or_exit();
+    // Tuple of tuples.
+    cat::Tuple<cat::Tuple<int, int>, cat::Tuple<int, char>> tuple_of_tuple = {
+        tuple, intchar};
+    cat::Tuple tuple_of_tuple_ctad = {tuple, intchar};
+    static_assert(
+        cat::is_same<decltype(tuple_of_tuple_ctad), decltype(tuple_of_tuple)>);
+
+    cat::tuple_cat();
+    // cat::tuple_cat(empty_tuple);
+    // cat::tuple_cat(intint{0, 1}, floatfloat{2.f, 3.f});
+
+    // // Test `Tuple` concatenation.
+    // cat::Tuple<int> concat_lhs = cat::Tuple<int>{10};
+    // cat::Tuple<float> concat_rhs = cat::Tuple<float>{1.f};
+    // cat::Tuple<int, float> concat_tuple = concat_lhs.concat(concat_rhs);
+    // Result(concat_tuple.first() == 10).or_exit();
+    // Result(concat_tuple.second() == 1.f).or_exit();
+
+    /*
+        // Test `Tuple` conversions.
+        cat::Tuple<float, float> floatfloat = cat::Tuple<int, int>{10, 20};
+        Result(floatfloat.first() == 10.f).or_exit();
+        Result(floatfloat.second() == 20.f).or_exit();
+
+        int l_int = 1;
+        int r_int = 2;
+        cat::Tuple<int&, int&> tuple_ref_conv{l_int, r_int};
+        cat::Tuple<int, int> tuple_val = tuple_ref_conv;
+        // cat::Tuple<int const&, int const&> tuple_ref = tuple_val;
+            */
 }

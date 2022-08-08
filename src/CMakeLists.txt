@@ -115,5 +115,6 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/bit/implementations/is_aligned.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/bit/implementations/align_up.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/bit/implementations/align_down.tpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/tuple/implementations/tuple_cat.tpp
   PARENT_SCOPE
 )

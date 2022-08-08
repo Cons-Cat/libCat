@@ -1,3 +1,5 @@
+#include <cat/tuple>
+
 auto main() -> int {
     using namespace cat;
     static_assert(is_same<int, int>);
@@ -59,11 +61,14 @@ auto main() -> int {
     static_assert(is_arithmetic<float>);
     static_assert(!is_arithmetic<void>);
 
+    // TODO: Use `is_same`:
     static_assert(!is_reference<RemoveReference<int>>);
     static_assert(!is_reference<RemoveReference<int&>>);
     static_assert(!is_reference<RemoveReference<int&&>>);
     static_assert(!is_reference<RemoveReference<int const&>>);
     static_assert(!is_reference<RemoveReference<int const&&>>);
+
+    // TODO: Test `Decay`.
 
     static_assert(is_reference<AddLvalueReference<int>>);
     static_assert(is_reference<AddLvalueReference<int&>>);
@@ -100,8 +105,8 @@ auto main() -> int {
     static_assert(is_rvalue_reference<AddRvalueReference<int&&>>);
 
     static_assert(is_const<int const>);
-    static_assert(is_const<int const&>);
     static_assert(!is_const<int>);
+    static_assert(!is_const<int const&>);  // This is correct.
     static_assert(!is_const<int const*>);
 
     static_assert(is_const<AddConst<int>>);
@@ -112,7 +117,7 @@ auto main() -> int {
     struct Signed {
         int data;
         constexpr Signed(int value) : data(value){};
-        constexpr bool operator<(Signed other) {
+        constexpr auto operator<(Signed other) const -> bool {
             return data < other.data;
         }
     };
@@ -127,21 +132,39 @@ auto main() -> int {
     static_assert(!is_unsigned<int>);
     static_assert(!is_unsigned<Signed>);
 
-    static_assert(is_const<AddConstFrom<int, int const>>);
-    static_assert(is_const<AddConstFrom<int, int const&>>);
-    static_assert(is_const<AddConstFrom<int, int const&&>>);
-    static_assert(is_const<AddConstFrom<int const, int>>);
-    static_assert(is_const<AddConstFrom<int const, int&>>);
-    static_assert(is_const<AddConstFrom<int const, int&&>>);
-    static_assert(!is_const<AddConstFrom<int, int>>);
+    static_assert(is_same<CopyConstFrom<int, int>, int>);
+    static_assert(is_same<CopyConstFrom<int, int const>, int const>);
+    static_assert(is_same<CopyConstFrom<int const, int>, int>);
+    static_assert(is_same<CopyConstFrom<int, int const&>, int const>);
+    static_assert(is_same<CopyConstFrom<int, int const&&>, int const>);
+    static_assert(is_same<CopyConstFrom<int const, int&>, int>);
+    static_assert(is_same<CopyConstFrom<int const, int&&>, int>);
 
-    static_assert(is_const<AddCvFrom<int, int const>>);
-    static_assert(is_const<AddCvFrom<int, int const&>>);
-    static_assert(is_const<AddCvFrom<int, int const&&>>);
-    static_assert(is_const<AddCvFrom<int const, int>>);
-    static_assert(is_const<AddCvFrom<int const, int&>>);
-    static_assert(is_const<AddCvFrom<int const, int&&>>);
-    static_assert(!is_const<AddCvFrom<int, int>>);
+    static_assert(is_same<CopyCvFrom<int, int>, int>);
+    static_assert(is_same<CopyCvFrom<int const, int>, int>);
+    static_assert(is_same<CopyCvFrom<int, int const>, int const>);
+    static_assert(is_same<CopyCvFrom<int, int const&>, int const>);
+    static_assert(is_same<CopyCvFrom<int, int const&&>, int const>);
+    static_assert(is_same<CopyCvFrom<int const, int&>, int>);
+    static_assert(is_same<CopyCvFrom<int const, int&&>, int>);
+
+    static_assert(is_same<CopyRefFrom<int, int>, int>);
+    static_assert(is_same<CopyRefFrom<int, int const>, int>);
+    static_assert(is_same<CopyRefFrom<int, int const&>, int&>);
+    static_assert(is_same<CopyRefFrom<int, int const&&>, int&&>);
+    static_assert(is_same<CopyRefFrom<int const, int>, int const>);
+    static_assert(is_same<CopyRefFrom<int const, int&>, int const&>);
+    static_assert(is_same<CopyRefFrom<int const, int&&>, int const&&>);
+
+    static_assert(is_same<CopyCvRefFrom<int, int>, int>);
+    static_assert(is_same<CopyCvRefFrom<int, int const>, int const>);
+    static_assert(is_same<CopyCvRefFrom<int, int const&>, int const&>);
+    static_assert(is_same<CopyCvRefFrom<int, int const&&>, int const&&>);
+    static_assert(is_same<CopyCvRefFrom<int const, int>, int>);
+    static_assert(is_same<CopyCvRefFrom<int const, int&>, int&>);
+    static_assert(is_same<CopyCvRefFrom<int const, int&&>, int&&>);
+    // TODO:
+    // static_assert(is_same<CopyCvRefFrom<int&, int const>, int const>);
 
     auto lambda = []() {
         return 0;

@@ -3,7 +3,7 @@
 #pragma once
 
 #include <cat/type_list>
-#include <cat/utility>
+#include <utility>
 
 namespace cat {
 namespace detail {
@@ -12,20 +12,22 @@ namespace detail {
     // required to support `Tuple`s with non-uniquely-typed elements.
     template <ssize index, typename T>
     struct TupleElement {
+        using Element = T;
         [[no_unique_address]] T storage;
 
-        TupleElement() = default;
+        constexpr TupleElement() = default;
 
         // Conditionally trivial special member functions in C++20 allows these
-        // to remain trivial:
+        // to remain trivial in some cases:
 
         template <typename U>
             requires(is_implicitly_convertible<U, T>)
-        TupleElement(U const& input) : storage(static_cast<T>(input)){};
+        constexpr TupleElement(U const& input)
+            : storage(static_cast<T>(input)){};
 
         template <typename U>
             requires(is_implicitly_convertible<U, T>)
-        TupleElement(U&& input) : storage(static_cast<T>(forward<U>(input))){};
+        constexpr TupleElement(U&& input) : storage(forward<U>(input)){};
 
         // For some reason, this produces ambiguous overload errors if it is
         // implemented as a normal function instead of an operator.
@@ -71,71 +73,86 @@ namespace detail {
 template <typename... Ts>
 struct Tuple : detail::TupleStorage<IndexSequenceFor<Ts...>, Ts...>::Type {
     using Types = TypeList<Ts...>;
+    using Map =
+        typename detail::TupleStorage<IndexSequenceFor<Ts...>, Ts...>::Type;
     static constexpr ssize size = Types::size;
 
-    // Convert each element of this `Tuple` into those of another `Tuple`.
-    template <typename T>
-    constexpr operator T() const {
-        using OtherTypes = typename Decay<T>::Types;
-        // Pass in a `TypeList` for its types to be deduced out of.
-        return this->template convert_elements(OtherTypes{});
-    }
+    /*
+// Convert each element of this `Tuple` into those of another `Tuple`.
+template <typename T>
+constexpr operator T() const {
+    using OtherTypes = typename Decay<T>::Types;
+    // Pass in a `TypeList` for its types to be deduced out of.
+    return this->template convert_elements(OtherTypes{});
+}
 
-  private:
-    template <ssize index, typename U>
-    auto convert_next_element(auto const& new_tuple) const {
-        U converted_value = static_cast<U>(this->get<index>());
-        return new_tuple.template concat(cat::Tuple<U>{converted_value});
-    }
+private:
+template <ssize index, typename U>
+constexpr auto convert_next_element(auto const& new_tuple) const {
+    U converted_value = static_cast<U>(this->get<index>());
+    return new_tuple.template concat(cat::Tuple<U>{converted_value});
+}
 
-    template <ssize index, typename U, typename... Us>
-        requires(sizeof...(Us) > 0)
-    auto convert_next_element(auto const& new_tuple) const {
-        U converted_value = static_cast<U>(this->get<index>());
-        return this->convert_next_element<index + 1, Us...>(
-            new_tuple.template concat(cat::Tuple<U>{converted_value}));
-    }
+template <ssize index, typename U, typename... Us>
+    requires(sizeof...(Us) > 0)
+constexpr auto convert_next_element(auto const& new_tuple) const {
+    U converted_value = static_cast<U>(this->get<index>());
+    return this->convert_next_element<index + 1, Us...>(
+        new_tuple.template concat(cat::Tuple<U>{converted_value}));
+}
 
-    template <typename... Us>
-    auto convert_elements(TypeList<Us...>) const {
-        return this->convert_next_element<0, Us...>(Tuple<>{});
-    }
+template <typename... Us>
+constexpr auto convert_elements(TypeList<Us...>) const {
+    return this->convert_next_element<0, Us...>(Tuple<>{});
+}
 
-    template <ssize index>
-    constexpr auto concat_lhs(auto& other_tuple) const {
-        return other_tuple;
-    }
+template <ssize index>
+constexpr auto concat_lhs(auto& other_tuple) const {
+    return other_tuple;
+}
 
-    template <ssize index>
-        requires(index < size)
-    constexpr auto concat_lhs(auto& other_tuple) const {
-        other_tuple.template get<index>() = this->get<index>();
-        return concat_lhs<index + 1>(other_tuple);
-    }
+template <ssize index>
+    requires(index < size)
+constexpr auto concat_lhs(auto& other_tuple) const {
+    other_tuple.template get<index>() = this->get<index>();
+    return concat_lhs<index + 1>(other_tuple);
+}
 
-    template <ssize index>
-    constexpr auto concat_rhs(auto& other_tuple, auto&) const {
-        return other_tuple;
-    }
+template <ssize index>
+constexpr auto concat_rhs(auto const& other_tuple, auto&) const {
+    return other_tuple;
+}
 
-    template <ssize index>
-    constexpr auto concat_rhs(auto& other_tuple, auto& rhs_tuple) const
-        requires(index < rhs_tuple.size) {
-        other_tuple.template get<index + static_cast<ssize>(sizeof...(Ts))>() =
-            rhs_tuple.template get<index>();
-        return concat_rhs<index + 1>(other_tuple, rhs_tuple);
-    }
+template <ssize index>
+constexpr auto concat_rhs(auto const& other_tuple, auto& rhs_tuple) const
+    requires(index < rhs_tuple.size) {
+    other_tuple.template get<index + static_cast<ssize>(sizeof...(Ts))>() =
+        rhs_tuple.template get<index>();
+    return concat_rhs<index + 1>(other_tuple, rhs_tuple);
+}
 
-  public:
-    // Concatenate this tuple with another tuple.
-    template <typename... Us>
-    auto concat(Tuple<Us...> const& other_tuple) const -> Tuple<Ts..., Us...> {
-        // TODO: If these tuples are trivially relocatable, optimize this.
-        Tuple<Ts..., Us...> new_tuple;
-        this->concat_lhs<0>(new_tuple);
-        this->concat_rhs<0>(new_tuple, other_tuple);
-        return new_tuple;
+template <ssize index>
+constexpr auto concat_recurse(Tuple<Ts...> const& this_tuple,
+                              auto const& other_tuple,
+                              auto const& new_tuple) const {
+    if constexpr (index < size) {
+        return concat_recurse<index + 1>(this_tuple, other_tuple,
+                                         new_tuple);
     }
+}
+
+public:
+// Concatenate this tuple with another tuple.
+template <typename... Us>
+constexpr auto concat(Tuple<Us...> const& other_tuple) const
+    -> Tuple<Ts..., Us...> {
+    // TODO: If these tuples are trivially relocatable, optimize this.
+    Tuple<Ts..., Us...> new_tuple =
+        this->concat_recurse<0>(*this, other_tuple, Tuple<>{});
+    // this->concat_lhs<0>(new_tuple);
+    return new_tuple;
+}
+    */
 
     // Get a non-`const` reference to the N'th stored variable.
     template <ssize index>
@@ -268,6 +285,9 @@ Tuple(Ts...) -> Tuple<Ts...>;
 
 }  // namespace cat
 
+template <typename... Tuples>
+constexpr auto tuple_cat(Tuples&&... tuples);
+
 namespace std {
 
 template <typename...>
@@ -286,3 +306,5 @@ struct tuple_element<index, cat::Tuple<Ts...>> {
 };
 
 }  // namespace std
+
+#include "implementations/tuple_cat.tpp"

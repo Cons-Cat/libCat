@@ -3,11 +3,9 @@
 #pragma once
 
 #include <cat/memory>
-#include <cat/meta>
 #include <cat/utility>
 
 namespace cat {
-
 namespace detail {
     // A `NullOpt` is consumed by an `Optional` constructor to prevent
     // initializing its `value` member.

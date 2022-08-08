@@ -3,7 +3,6 @@
 #pragma once
 
 #include <cat/math>
-#include <cat/meta>
 
 namespace cat {
 
@@ -101,6 +100,13 @@ class TypeList {
     // Concatenate one `TypeList` to this `TypeList`.
     template <typename OtherTypeList>
     using Concat = decltype(concat(OtherTypeList{}));
+
+    // A `+` is required instead of `Concat` to use this inside of fold
+    // expressions.
+    template <typename... Us>
+    friend constexpr auto operator+(TypeList<Ts...>, TypeList<Us...>) {
+        return TypeList<Ts..., Us...>{};
+    }
 
     // Evaluate `true` iff this type list holds a type `T`.
     template <typename T>
