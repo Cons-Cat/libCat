@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/allocators>
+#include <cat/array>
 #include <cat/collection>
 
 namespace cat {
@@ -31,18 +32,17 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         Optional result = allocator.template p_alloc_multi<T>(new_capacity);
         if (!result.has_value()) {
             return nullopt;
-        } else {
-            allocator.free_multi(this->p_storage, this->current_size);
-            T* p_new = result.value();
-            // TODO: If `T` is relocatable, use `copy_memory()`.
-            for (ssize::Raw i = 0; i < this->current_size.raw; ++i) {
-                p_new[i] = move(this->p_storage[i]);
-            }
-
-            this->p_storage = p_new;
-            this->current_capacity = new_capacity;
-            return monostate;
         }
+        allocator.free_multi(this->p_storage, this->current_size);
+        T* p_new = result.value();
+        // TODO: If `T` is relocatable, use `copy_memory()`.
+        for (ssize::Raw i = 0; i < this->current_size.raw; ++i) {
+            p_new[i] = move(this->p_storage[i]);
+        }
+
+        this->p_storage = p_new;
+        this->current_capacity = new_capacity;
+        return monostate;
     }
 
     // Reallocate this vector's memory if it is exceeded, in a `constexpr`
@@ -288,23 +288,21 @@ class Vector : public CollectionFacade<Vector<T>, T> {
             Optional result = allocator.template p_alloc_multi<T>(new_size);
             if (!result.has_value()) {
                 return nullopt;
-            } else {
-                allocator.free_multi(this->p_storage, this->current_size);
-                T* p_new = result.value();
-                // TODO: If `T` is relocatable, use `copy_memory()`.
-                for (ssize::Raw i = 0; i < this->current_size.raw; ++i) {
-                    p_new[i] = move(this->p_storage[i]);
-                }
-
-                this->p_storage = p_new;
-                this->current_size = new_size;
-                this->current_capacity = new_size;
-                return monostate;
             }
-        } else {
+            allocator.free_multi(this->p_storage, this->current_size);
+            T* p_new = result.value();
+            // TODO: If `T` is relocatable, use `copy_memory()`.
+            for (ssize::Raw i = 0; i < this->current_size.raw; ++i) {
+                p_new[i] = move(this->p_storage[i]);
+            }
+
+            this->p_storage = p_new;
             this->current_size = new_size;
+            this->current_capacity = new_size;
             return monostate;
         }
+        this->current_size = new_size;
+        return monostate;
     }
 
     // Try to change the size of this `Vector` in a `constexpr` context.

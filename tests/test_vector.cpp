@@ -20,8 +20,8 @@ consteval auto const_func() -> int4 {
 
 auto main() -> int {
     cat::PageAllocator page_allocator;
-    cat::Byte* page = page_allocator.p_alloc_multi<cat::Byte>(4_ki).or_exit();
-    cat::LinearAllocator allocator = {page, 4_ki - 32};
+    cat::Byte* p_page = page_allocator.p_alloc_multi<cat::Byte>(4_ki).or_exit();
+    cat::LinearAllocator allocator = {p_page, 4_ki - 32};
 
     // Test default constructing a `Vector`.
     cat::Vector<int4> int_vec;
