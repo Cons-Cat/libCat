@@ -14,6 +14,7 @@ CheckOptions:
 # Some structs do not conform to PascalCase, but these are generally favored.
   - { key: readability-identifier-naming.StructCase,                      value: CamelCase }
   - { key: readability-identifier-naming.ClassCase,                       value: CamelCase }
+  - { key: readability-identifier-naming.TypeAliasCase,                   value: CamelCase }
 
 WarningsAsErrors: ''
 HeaderFilterRegex: ^src
