@@ -2,5 +2,4 @@
 
 auto main() -> int {
     _ = cat::print("Hello, world!\n");
-    cat::exit();
 }

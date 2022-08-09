@@ -7,5 +7,4 @@ auto main() -> int {
     [[maybe_unused]] x11::Connection connection =
         x11::initiate_connection(allocator).or_exit(
             "Failed to create an X context!");
-    cat::exit();
 }
