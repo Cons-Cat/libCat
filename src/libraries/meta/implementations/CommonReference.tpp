@@ -7,178 +7,136 @@
 namespace cat {
 namespace detail {
     template <typename T, typename U>
-    using ConditionalResolve =
+    using ConditionallyResolveCommonReference =
         decltype(true ? declval<T (&)()>()() : declval<U (&)()>()());
 
-    template <typename T, typename U>
-    struct CommonReferenceDetailTrait {};
+    template <typename T, typename U, typename TQual = RemoveReference<T>,
+              typename UQual = RemoveReference<U>>
+    struct CommonReferenceDetailTrait;
 
     template <typename T, typename U>
     using CommonReferenceDetail =
         typename CommonReferenceDetailTrait<T, U>::Type;
 
     template <typename T, typename U>
-    using ConditionalResolveCvRef =
-        ConditionalResolve<AddConstFrom<T, U>&, AddConstFrom<U, T>&>;
+    using CvCondRes = ConditionallyResolveCommonReference<CopyCvFrom<T, U>&,
+                                                          CopyCvFrom<U, T>&>;
+
+    template <typename T, typename U, typename TQual, typename UQual>
+        requires(requires { typename CvCondRes<TQual, UQual>; } &&
+                 is_reference<CvCondRes<TQual, UQual>>)
+    struct CommonReferenceDetailTrait<T&, U&, TQual, UQual> {
+        using Type = CvCondRes<TQual, UQual>;
+    };
 
     template <typename T, typename U>
     using CommonReferenceDetailC =
         RemoveReference<CommonReferenceDetail<T&, U&>>&&;
 
-    // If `T` and U are both rvalue-reference types:
-    template <typename T, typename U>
-        requires(is_rvalue_reference<T>, is_rvalue_reference<U>)
-    struct CommonReferenceDetailTrait<T&&, U&&> {
-        using Type = CommonReferenceDetailC<T, U>;
+    template <typename T, typename U, typename TQual, typename UQual>
+        requires(requires { typename CommonReferenceDetailC<TQual, UQual>; } &&
+                 is_convertible<T&&, CommonReferenceDetailC<TQual, UQual>> &&
+                 is_convertible<U&&, CommonReferenceDetailC<TQual, UQual>>)
+    struct CommonReferenceDetailTrait<T&&, U&&, TQual, UQual> {
+        using Type = CommonReferenceDetailC<TQual, UQual>;
     };
 
-    // (T const&, Y&)
     template <typename T, typename U>
     using CommonReferenceDetailD = CommonReferenceDetail<T const&, U&>;
 
-    // If `T` is an rvalue-reference and `U` is an lvalue-reference:
-    template <typename T, typename U>
-        requires(is_rvalue_reference<T>&& is_lvalue_reference<U>)
-    struct CommonReferenceDetailTrait<T&&, U&> {
-        using Type = CommonReferenceDetailD<T, U>;
+    template <typename T, typename U, typename TQual, typename UQual>
+        requires(requires { typename CommonReferenceDetailD<TQual, UQual>; } &&
+                 is_convertible<T&&, CommonReferenceDetailD<TQual, UQual>>)
+    struct CommonReferenceDetailTrait<T&&, U&, TQual, UQual> {
+        using Type = CommonReferenceDetailD<TQual, UQual>;
     };
 
-    // If `T` is an lvalue-reference and `U` is an rvalue-reference:
-    template <typename T, typename U>
-        requires(is_lvalue_reference<T>&& is_rvalue_reference<U>)
-    struct CommonReferenceDetailTrait<T&, U&&>
+    template <typename T, typename U, typename TQual, typename UQual>
+    struct CommonReferenceDetailTrait<T&, U&&, TQual, UQual>
         : CommonReferenceDetailTrait<U&&, T&> {};
 
-    template <typename T, typename U, template <typename> typename TQual,
-              template <typename> typename UQual>
-    struct BasicCommonReference {};
+    template <typename T, typename U, typename TQual, typename UQual>
+    struct CommonReferenceDetailTrait {};
 
+    template <typename T, typename U>
+    struct CommonReferenceSubBullet3;
+    template <typename T, typename U>
+    struct CommonReferenceSubBullet2 : CommonReferenceSubBullet3<T, U> {};
+    template <typename T, typename U>
+    struct CommonReferenceSubBullet1 : CommonReferenceSubBullet2<T, U> {};
+
+    // Attempt to resolve the common reference of `T` and `U` here, otherwise
+    // fall back to `CommonReferenceSubBullet2`.
+    template <typename T, typename U>
+        requires(is_reference<T>&& is_reference<U>&& requires {
+            typename CommonReferenceDetail<T, U>;
+        })
+    struct CommonReferenceSubBullet1<T, U> {
+        using Type = CommonReferenceDetail<T, U>;
+    };
+
+    template <typename, typename, template <typename> typename,
+              template <typename> typename>
+    struct BasicCommonReferenceTrait {};
+
+    // TODO: Can this be streamlined out?
     template <typename T>
-    struct AddConstRefQualifiers {
+    struct XRef {
         template <typename U>
-        using Type = AddConstFrom<T, U>;
-    };
-
-    template <typename T>
-    struct AddConstRefQualifiers<T&> {
-        template <typename U>
-        using Type = AddConstFrom<T, U>&;
-    };
-
-    template <typename T>
-    struct AddConstRefQualifiers<T&&> {
-        template <typename U>
-        using Type = AddConstFrom<T, U>&&;
+        using Apply = CopyCvRefFrom<T, U>;
     };
 
     template <typename T, typename U>
-    using BasicCommonReferenceDetail = typename BasicCommonReference<
-        RemoveCvRef<T>, RemoveCvRef<U>, AddConstRefQualifiers<T>::template Type,
-        AddConstRefQualifiers<U>::template Type>::Type;
+    using BasicCommonReference =
+        typename BasicCommonReferenceTrait<RemoveCvRef<T>, RemoveCvRef<U>,
+                                           XRef<T>::template Apply,
+                                           XRef<U>::template Apply>::Type;
 
-    // Recurse through template instantiations until one is well-formed.
-    template <typename T, typename U, int recursion, typename = void>
-    struct CommonReferenceRecursionTrait
-        : CommonReferenceRecursionTrait<T, U, recursion + 1> {};
-
-    // Both arguments are l-value references.
+    // Attempt to resolve the common reference of `T` and `U` here, otherwise
+    // fall back to `CommonReferenceSubBullet3`.
     template <typename T, typename U>
-        requires(is_lvalue_reference<T>&& is_lvalue_reference<U>)
-    struct CommonReferenceRecursionTrait<T&, U&, 0> {
-        using Type = CommonReferenceDetail<T&, U&>;
+        requires(requires { typename BasicCommonReference<T, U>; })
+    struct CommonReferenceSubBullet2<T, U> {
+        using Type = BasicCommonReference<T, U>;
     };
 
-    // Both arguments are r-value references.
+    // Attempt to resolve the common reference of `T` and `U` here, otherwise
+    // fall back to `CommonType`.
     template <typename T, typename U>
-        requires(is_rvalue_reference<T>&& is_rvalue_reference<U>)
-    struct CommonReferenceRecursionTrait<T&&, U&&, 0> {
-        using Type = CommonReferenceDetail<T&&, U&&>;
+        requires(requires {
+            typename ConditionallyResolveCommonReference<T, U>;
+        })
+    struct CommonReferenceSubBullet3<T, U> {
+        using Type = ConditionallyResolveCommonReference<T, U>;
     };
 
-    // `T` is an l-value reference, and `U` is an r-value reference.
+    // If no other templates satisfy `T` and `U`, then `CommonReference<T, U>`
+    // is equivalent to `CommonType<T, U>`.
     template <typename T, typename U>
-        requires(is_lvalue_reference<T>&& is_rvalue_reference<U>)
-    struct CommonReferenceRecursionTrait<T&, U&&, 0> {
-        using Type = CommonReferenceDetail<T&, U&&>;
-    };
+    struct CommonReferenceSubBullet3 : CommonType<T, U> {};
 
-    // `T` is an r-value reference, and `U` is an l-value reference.
-    template <typename T, typename U>
-        requires(is_rvalue_reference<T>&& is_lvalue_reference<U>)
-    struct CommonReferenceRecursionTrait<T&&, U&, 0> {
-        using Type = CommonReferenceDetail<T&&, U&>;
-    };
-
-    // Neither `T` nor `U` are l-value or r-value references.
-    template <typename T, typename U>
-        requires(requires { detail::Void<BasicCommonReferenceDetail<T, U>>(); })
-    struct CommonReferenceRecursionTrait<T, U, 1> {
-        using Type = BasicCommonReferenceDetail<T, U>;
-    };
-
-    // Fall back to `ConditionalResolve`.
-    template <typename T, typename U>
-        requires(requires { detail::Void<ConditionalResolve<T, U>>(); })
-    struct CommonReferenceRecursionTrait<
-        T, U, 2, detail::Void<ConditionalResolve<T, U>>> {
-        using Type = ConditionalResolve<T, U>;
-    };
-
-    // Fall back to `CommonType`.
-    template <typename T, typename U>
-        requires(requires { CommonType<T, U>(); })
-    struct CommonReferenceRecursionTrait<T, U, 3> {
-        using Type = CommonType<T, U>;
-    };
-
-    // Failing base-case.
-    template <typename T, typename U>
-    struct CommonReferenceRecursionTrait<T, U, 4> {};
-
-    // template <typename...>
-    // struct CommonTypePack {};
-
-    // template <typename, typename, typename = void>
-    // struct CommonTypeFold;
-
-    // template <typename T, typename... Us>
-    // struct CommonTypeFold<T, CommonTypePack<Us...>,
-    //                       detail::Void<typename T::Type>>
-    //     : CommonType<typename T::type, Us...> {};
-
-    template <typename... T>
+    template <typename...>
     struct CommonReferenceTrait;
 
     template <>
     struct CommonReferenceTrait<> {};
 
-    // Single argument base-case.
     template <typename T>
     struct CommonReferenceTrait<T> {
         using Type = T;
     };
 
-    // Multiple arguments base-case.
     template <typename T, typename U>
-    struct CommonReferenceTrait<T, U> : CommonReferenceRecursionTrait<T, U, 0> {
-    };
+    struct CommonReferenceTrait<T, U> : CommonReferenceSubBullet1<T, U> {};
 
-    // template <typename T, typename U, typename... Remaining>
-    //     requires(sizeof...(Remaining) > 0)
-    // struct CommonReferenceTrait<T, U, Remaining...>
-    //     : CommonTypeFold<CommonReferenceTrait<T, U>,
-    //                      CommonTypePack<Remaining...>> {};
-
-    // template <typename T, typename U, typename... Remaining>
-    //     requires(sizeof...(Remaining) > 0)
-    // struct CommonTypeFold<CommonReferenceTrait<T, U>,
-    //                       CommonTypePack<Remaining...>,
-    //                       detail::Void<CommonReferenceTrait<T, U>>>
-    //     : CommonReferenceTrait<CommonReferenceTrait<T, U>, Remaining...> {};
+    template <typename T, typename U, typename V, typename... Remaining>
+        requires(requires { typename CommonReferenceTrait<T, U>; })
+    struct CommonReferenceTrait<T, U, V, Remaining...>
+        : CommonReferenceTrait<typename CommonReferenceTrait<T, U>::Type, V,
+                               Remaining...> {};
 }  // namespace detail
 
 template <typename... Ts>
-    requires(sizeof...(Ts) > 0)
 using CommonReference = typename detail::CommonReferenceTrait<Ts...>::Type;
 
 }  // namespace cat

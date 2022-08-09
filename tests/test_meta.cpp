@@ -204,9 +204,17 @@ auto main() -> int {
     static_assert(is_same<CommonReference<int&, int const&>, int const&>);
     static_assert(is_same<CommonReference<int&&, int const&&>, int const&&>);
 
-    // TODO: Make these work:
-    // static_assert(is_same<CommonReference<int&, int&&>, int const&>);
-    // static_assert(is_same<CommonReference<int&&, int&>, int const&>);
-    // static_assert(is_same<CommonReference<int const&, int&&>, int const&>);
-    // static_assert(is_same<CommonReference<int, int, int&>, int>);
+    static_assert(is_same<CommonReference<int&, int&&>, int const&>);
+    static_assert(is_same<CommonReference<int const&&, int&>, int const&>);
+    static_assert(is_same<CommonReference<int&, int const&&>, int const&>);
+    static_assert(is_same<CommonReference<int const&, int&&>, int const&>);
+    static_assert(is_same<CommonReference<int, int, int&>, int>);
+
+    // TODO: This is supposed to work. It is blocked by the `Tuple` conversion
+    // operator.
+    // static_assert(
+    //     is_same<CommonReference<Tuple<int, double>, Tuple<int&, double&>>,
+    //             Tuple<int, double>>);
+    // using TestTupleCommonRef = CommonReference<Tuple<int, double>,
+    //     Tuple<int&, double&>>;
 };
