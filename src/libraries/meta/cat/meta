@@ -640,8 +640,7 @@ concept BooleanTestable = detail::BooleanTestableDetail<T> && requires(T&& b) {
 };
 
 // `WeaklyEqualityComparableWith` is adapted from the exposition-only
-// concept
-// `__WeaklyEqualityComparableWith`.
+// concept `__WeaklyEqualityComparableWith`.
 namespace detail {
     template <typename T, typename U>
     concept WeaklyEqualityComparableWith =
@@ -655,6 +654,21 @@ namespace detail {
 
 template <typename T>
 concept EqualityComparable = detail::WeaklyEqualityComparableWith<T, T>;
+
+namespace detail {
+    template <typename T, typename U>
+    concept PartiallyOrderedWith = requires(RemoveReference<T> const& t,
+                                            RemoveReference<U> const& u) {
+        { t < u } -> BooleanTestable;
+        { t > u } -> BooleanTestable;
+        { t <= u } -> BooleanTestable;
+        { t >= u } -> BooleanTestable;
+        { u < t } -> BooleanTestable;
+        { u > t } -> BooleanTestable;
+        { u <= t } -> BooleanTestable;
+        { u >= t } -> BooleanTestable;
+    };
+}  // namespace detail
 
 template <typename T>
 concept EnumClass = is_scoped_enum<T>;
@@ -693,3 +707,23 @@ constexpr bool is_trivially_relocatable<T const> = is_trivially_relocatable<T>;
 #include "implementations/CommonReference.tpp"
 #include "implementations/constant_evaluate.tpp"
 // clang-format on
+
+namespace cat {
+
+template <typename T, typename U>
+concept CommonReferenceWith =
+    SameAs<CommonReference<T, U>, CommonReference<U, T>> &&
+    ConvertibleTo<T, CommonReference<T, U>> &&
+    ConvertibleTo<U, CommonReference<T, U>>;
+
+template <typename T, typename U>
+concept common_with = SameAs<CommonType<T, U>, CommonType<U, T>> && requires {
+    static_cast<CommonType<T, U>>(declval<T>());
+    static_cast<CommonType<T, U>>(declval<U>());
+} && CommonReferenceWith<AddLvalueReference<T const>,
+                         AddLvalueReference<const U>> &&
+    CommonReferenceWith<AddLvalueReference<CommonType<T, U>>,
+                        CommonReference<AddLvalueReference<const T>,
+                                        AddLvalueReference<const U>>>;
+
+}  // namespace cat
