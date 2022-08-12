@@ -28,7 +28,7 @@ auto main() -> int {
     paging_allocator.reset();
     int4* p_page = paging_allocator.p_alloc_multi<int4>(1_ki).or_exit();
     defer(paging_allocator.free_multi(p_page, 1_ki);)
-    cat::LinearAllocator allocator(p_page, 4_ki);
+    cat::LinearAllocator allocator(p_page, 4_ki - 64);
 
     // Test `alloc()`.
     _ = allocator.alloc<int4>().value();

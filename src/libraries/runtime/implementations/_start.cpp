@@ -18,6 +18,7 @@ call_main() {
     __builtin_unreachable();
 }
 
+// TODO: Linking with Mold segfaults now.
 void _start() {
     // `NO_ARGC_ARGV` can be defined in a build system to skip argument loading.
 #ifndef NO_ARGC_ARGV

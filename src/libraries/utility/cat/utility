@@ -69,7 +69,7 @@ namespace detail {
 template <typename T, T... values>
     requires(is_integral<T>)
 struct ValueList {
-    using value_type = T;
+    using Value = T;
 
     static constexpr ssize size = ssizeof_pack(values...);
 
@@ -109,17 +109,17 @@ constexpr auto value_list = detail::make_value_list<count, T, value>();
 template <typename T, T value, ssize count>
 using MakeValueList = decltype(value_list<T, value, count>);
 
-template <Integral T, ssize count>
+template <integral T, ssize count>
 constexpr auto integer_sequence =
     detail::make_integer_sequence<count, T, T{count.raw}>();
 
-template <Integral T, ssize count>
+template <integral T, ssize count>
 constexpr auto zeros_list = value_list<T, T{0}, count>;
 
-template <Integral T, ssize count>
+template <integral T, ssize count>
 constexpr auto ones_list = value_list<T, T{1}, count>;
 
-template <Integral T, ssize count>
+template <integral T, ssize count>
 using MakeIntegerSequence = RemoveCv<decltype(integer_sequence<ssize, count>)>;
 
 template <ssize... indices>

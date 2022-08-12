@@ -46,7 +46,7 @@ class List : public CollectionFacade<List<T>, T> {
   public:
     template <typename U, U... initializers>
         requires(is_implicitly_convertible<U, T>)
-    [[nodiscard]] static auto from(StableAllocator auto& allocator,
+    [[nodiscard]] static auto from(stableAllocator auto& allocator,
                                    ValueList<U, initializers...>)
         -> Optional<List<T>> {
         List<T> new_list;
@@ -65,7 +65,7 @@ class List : public CollectionFacade<List<T>, T> {
 
     template <typename... Args>
         requires(is_implicitly_convertible<Args, T>&&...)
-    [[nodiscard]] static auto from(StableAllocator auto& allocator,
+    [[nodiscard]] static auto from(stableAllocator auto& allocator,
                                    Args&&... initializers)
         -> Optional<List<T>> {
         List<T> new_list;
@@ -82,7 +82,7 @@ class List : public CollectionFacade<List<T>, T> {
         return new_list;
     }
 
-    [[nodiscard]] static auto cloned(StableAllocator auto& allocator,
+    [[nodiscard]] static auto cloned(stableAllocator auto& allocator,
                                      List<T>& other_list) -> Optional<List<T>> {
         List<T> new_list;
         Optional result = new_list.clone(allocator, other_list);
@@ -200,7 +200,7 @@ class List : public CollectionFacade<List<T>, T> {
     // `where`.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto insert(StableAllocator auto& allocator, Iterator where, U const& value)
+    auto insert(stableAllocator auto& allocator, Iterator where, U const& value)
         -> Optional<Iterator> {
         // `cat::OptionalPtr` at here produces an internal compiler error in
         // GCC 12.
@@ -227,7 +227,7 @@ class List : public CollectionFacade<List<T>, T> {
     // Allocate a node and insert it into this list before the position of
     // `where`, then construct it with arguments.
     template <typename... Args>
-    auto emplace(StableAllocator auto& allocator, Iterator where,
+    auto emplace(stableAllocator auto& allocator, Iterator where,
                  Args&&... arguments) -> Optional<Iterator> {
         cat::Optional memory =
             allocator.template p_alloc<detail::ListNode<T>>();
@@ -250,7 +250,7 @@ class List : public CollectionFacade<List<T>, T> {
     }
 
     // Remove and deallocate an element from this list.
-    auto erase(StableAllocator auto& allocator, Iterator where)
+    auto erase(stableAllocator auto& allocator, Iterator where)
         -> Optional<Iterator> {
         if (this->length == 0) [[unlikely]] {
             // Prevent a segfault when the list is empty.
@@ -280,7 +280,7 @@ class List : public CollectionFacade<List<T>, T> {
     // Allocate a node and insert it at the beginning of this list.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto push_front(StableAllocator auto& allocator, U const& value)
+    auto push_front(stableAllocator auto& allocator, U const& value)
         -> Optional<Iterator> {
         cat::Optional memory =
             allocator.template p_alloc<detail::ListNode<T>>();
@@ -298,7 +298,7 @@ class List : public CollectionFacade<List<T>, T> {
 
     // Allocate a node and insert it at the beginning of this list.
     template <typename... Args>
-    auto emplace_front(StableAllocator auto& allocator, Args&&... arguments)
+    auto emplace_front(stableAllocator auto& allocator, Args&&... arguments)
         -> Optional<Iterator> {
         cat::Optional memory =
             allocator.template p_alloc<detail::ListNode<T>>();
@@ -315,7 +315,7 @@ class List : public CollectionFacade<List<T>, T> {
     }
 
     // Remove an element from the front of this list.
-    void pop_front(StableAllocator auto& allocator) {
+    void pop_front(stableAllocator auto& allocator) {
         if (this->length > 0) [[likely]] {
             detail::ListNode<T>& node = *(this->begin().p_node);
             if (node.p_next_node != nullptr) [[likely]] {
@@ -330,7 +330,7 @@ class List : public CollectionFacade<List<T>, T> {
     // Allocate a node and insert it at the end of this list.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto push_back(StableAllocator auto& allocator, U const& value)
+    auto push_back(stableAllocator auto& allocator, U const& value)
         -> Optional<Iterator> {
         cat::Optional memory =
             allocator.template p_alloc<detail::ListNode<T>>();
@@ -348,7 +348,7 @@ class List : public CollectionFacade<List<T>, T> {
 
     // Allocate a node and insert it at the end of this list.
     template <typename... Args>
-    auto emplace_back(StableAllocator auto& allocator, Args&&... arguments)
+    auto emplace_back(stableAllocator auto& allocator, Args&&... arguments)
         -> Optional<Iterator> {
         cat::Optional memory =
             allocator.template p_alloc<detail::ListNode<T>>();
@@ -365,7 +365,7 @@ class List : public CollectionFacade<List<T>, T> {
     }
 
     // Remove and deallocate an element from the back of this list.
-    void pop_back(StableAllocator auto& allocator) {
+    void pop_back(stableAllocator auto& allocator) {
         if (this->length > 0) [[likely]] {
             detail::ListNode<T>& node = *(this->end().p_node);
             if (node.p_previous_node != nullptr) [[likely]] {
@@ -379,7 +379,7 @@ class List : public CollectionFacade<List<T>, T> {
 
     // Remove and deallocate all elements from this list. All nodes must have
     // been allocated by the same arena for this function to succeed.
-    void clear(StableAllocator auto& allocator) {
+    void clear(stableAllocator auto& allocator) {
         for (Iterator iterator = this->begin(); iterator != this->end();
              ++iterator) {
             allocator.free(iterator.p_node);
@@ -388,7 +388,7 @@ class List : public CollectionFacade<List<T>, T> {
     }
 
     // Deep-copy the contents of another `List`.
-    [[nodiscard]] auto clone(StableAllocator auto& allocator,
+    [[nodiscard]] auto clone(stableAllocator auto& allocator,
                              List<T>& other_list) -> Optional<void> {
         Optional<Iterator> maybe_current =
             this->push_back(allocator, other_list.front());
@@ -446,7 +446,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     ForwardList(ForwardList<T>&& list) = default;
     template <typename U, U... values>
         requires(is_implicitly_convertible<U, T>)
-    [[nodiscard]] static auto from(StableAllocator auto& allocator,
+    [[nodiscard]] static auto from(stableAllocator auto& allocator,
                                    ValueList<U, values...> initializers)
         -> Optional<ForwardList<T>> {
         ForwardList<T> new_list;
@@ -465,7 +465,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
 
     template <typename... Args>
         requires(is_implicitly_convertible<Args, T>&&...)
-    [[nodiscard]] static auto from(StableAllocator auto& allocator,
+    [[nodiscard]] static auto from(stableAllocator auto& allocator,
                                    Args&&... initializers)
         -> Optional<ForwardList<T>> {
         ForwardList<T> new_list;
@@ -482,7 +482,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         return new_list;
     }
 
-    [[nodiscard]] static auto cloned(StableAllocator auto& allocator,
+    [[nodiscard]] static auto cloned(stableAllocator auto& allocator,
                                      ForwardList<T>& other_list)
         -> Optional<List<T>> {
         ForwardList<T> new_list;
@@ -567,7 +567,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
 
   public:
     template <typename U>
-    auto insert_after(StableAllocator auto& allocator, Iterator where,
+    auto insert_after(stableAllocator auto& allocator, Iterator where,
                       U const& value) -> Optional<Iterator>
         requires(is_implicitly_convertible<U, T>)
     {
@@ -592,7 +592,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     }
 
     template <typename... Args>
-    auto emplace_after(StableAllocator auto& allocator, Iterator where,
+    auto emplace_after(stableAllocator auto& allocator, Iterator where,
                        Args&&... arguments) -> Optional<Iterator> {
         cat::Optional memory =
             allocator.template p_alloc<detail::ForwardListNode<T>>();
@@ -614,7 +614,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         return Iterator{&node};
     }
 
-    void erase_after(StableAllocator auto& allocator, Iterator where) {
+    void erase_after(stableAllocator auto& allocator, Iterator where) {
         detail::ForwardListNode<T>& node = *where.p_node;
         detail::ForwardListNode<T>* p_remove = node.p_next_node;
         node.p_next_node = p_remove->p_next_node;
@@ -624,7 +624,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     // Allocate a node and insert it at the beginning of this list.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto push_front(StableAllocator auto& allocator, U const& value)
+    auto push_front(stableAllocator auto& allocator, U const& value)
         -> Optional<Iterator> {
         cat::Optional memory =
             allocator.template p_alloc<detail::ForwardListNode<T>>();
@@ -642,7 +642,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
 
     // Allocate a node and insert it at the beginning of this list.
     template <typename... Args>
-    auto emplace_front(StableAllocator auto& allocator, Args&&... arguments)
+    auto emplace_front(stableAllocator auto& allocator, Args&&... arguments)
         -> Optional<Iterator> {
         cat::Optional memory =
             allocator.template p_alloc<detail::ForwardListNode<T>>();
@@ -659,7 +659,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     }
 
     // Remove an element from the front of this list.
-    void pop_front(StableAllocator auto& allocator) {
+    void pop_front(stableAllocator auto& allocator) {
         if (this->length > 0) [[likely]] {
             detail::ForwardListNode<T>& node = *this->p_head;
             this->p_head = node.p_next_node;
@@ -672,7 +672,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     //
     // Remove and deallocate all elements from this list. All nodes must
     // have been allocated by the same arena for this function to succeed.
-    void clear(StableAllocator auto& allocator) {
+    void clear(stableAllocator auto& allocator) {
         for (Iterator iterator = this->begin(); iterator != this->end();
              ++iterator) {
             allocator.free(iterator.p_node);
@@ -681,7 +681,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     }
 
     // Deep-copy the contents of another `ForwardList`.
-    [[nodiscard]] auto clone(StableAllocator auto& allocator,
+    [[nodiscard]] auto clone(stableAllocator auto& allocator,
                              ForwardList<T>& other) -> Optional<void> {
         // `.emplace_front()` is faster than `.emplace_after()`.
         Optional<Iterator> maybe_current =

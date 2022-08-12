@@ -80,7 +80,7 @@ class Array : public CollectionFacade<Array<T, length>, T> {
     }
 
   public:
-    template <Integral U, U... values>
+    template <integral U, U... values>
         requires(is_implicitly_convertible<U, T>&& ssizeof_pack(values...) ==
                  length)
     constexpr auto operator=(ValueList<U, values...> list) {

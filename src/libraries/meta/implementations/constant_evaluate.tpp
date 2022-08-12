@@ -6,7 +6,7 @@
 
 // TODO: Support a function returning `void`.
 
-template <cat::Invocable Function>
+template <cat::invocable Function>
 consteval auto cat::constant_evaluate(auto value) {
     return value();
 }

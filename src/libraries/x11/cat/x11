@@ -404,7 +404,7 @@ struct Connection {
 };
 
 // TODO: Propagate errors instead of panicking.
-auto handshake(cat::Allocator auto& allocator,
+auto handshake(cat::allocator auto& allocator,
                cat::SocketUnix<cat::SocketType::stream>& socket)
     -> cat::Optional<x11::Connection> {
     x11::Connection x_connection;
@@ -476,7 +476,7 @@ auto handshake(cat::Allocator auto& allocator,
 
 // TODO: Improve error handling. Union X11 errors and Linux errors.
 // Attempt to connect to an X server over local sockets.
-auto initiate_connection(cat::Allocator auto& allocator)
+auto initiate_connection(cat::allocator auto& allocator)
     -> cat::Optional<x11::Connection> {
     cat::SocketUnix<cat::SocketType::stream> socket;
     socket.path_name = x11::socket_path;

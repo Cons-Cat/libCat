@@ -10,7 +10,7 @@ constexpr bool is_big_endian = !is_little_endian;
 
 namespace cat {
 
-[[gnu::const]] constexpr auto invert_endianess(Integral auto value) {
+[[gnu::const]] constexpr auto invert_endianess(integral auto value) {
     // TODO: Handle `cat::Numeral`.
     if constexpr (sizeof(value) == 1) {
         return __builtin_bswap8(value);
@@ -65,34 +65,34 @@ struct Byte {  // NOLINT
         return bit_cast<T>(value);
     }
 
-    [[nodiscard]] constexpr auto operator&(Integral auto from) -> Byte {
+    [[nodiscard]] constexpr auto operator&(integral auto from) -> Byte {
         return this->value & from;
     }
-    constexpr auto operator&=(Integral auto from) -> Byte& {
+    constexpr auto operator&=(integral auto from) -> Byte& {
         this->value = this->value & from;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator|(Integral auto from) -> Byte {
+    [[nodiscard]] constexpr auto operator|(integral auto from) -> Byte {
         return this->value | from;
     }
-    constexpr auto operator|=(Integral auto from) -> Byte& {
+    constexpr auto operator|=(integral auto from) -> Byte& {
         this->value = this->value | from;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator<<(Integral auto from) -> Byte {
+    [[nodiscard]] constexpr auto operator<<(integral auto from) -> Byte {
         return this->value << from;
     }
-    constexpr auto operator<<=(Integral auto from) -> Byte& {
+    constexpr auto operator<<=(integral auto from) -> Byte& {
         this->value = this->value << from;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator>>(Integral auto from) -> Byte {
+    [[nodiscard]] constexpr auto operator>>(integral auto from) -> Byte {
         return this->value >> from;
     }
-    constexpr auto operator>>=(Integral auto from) -> Byte& {
+    constexpr auto operator>>=(integral auto from) -> Byte& {
         this->value = this->value >> from;
         return *this;
     }
@@ -170,7 +170,7 @@ struct BinarySize {
 
     constexpr BinarySize() = default;
 
-    constexpr BinarySize(Integral auto value) : raw(static_cast<Raw>(value)){};
+    constexpr BinarySize(integral auto value) : raw(static_cast<Raw>(value)){};
 
     constexpr BinarySize(ssize value) : raw(static_cast<Raw>(value.raw)){};
 

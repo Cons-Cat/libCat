@@ -46,7 +46,7 @@ struct [[nodiscard]] Failure {
     explicit Failure(signed long long in_code) : code(in_code){};
 
     // `Failure` can consume any `enum class`.
-    template <cat::EnumClass T>
+    template <cat::scopedEnum T>
     constexpr Failure(T in_code)
         : code(static_cast<cat::UnderlyingType<T>>(in_code)){};
 

@@ -19,8 +19,10 @@ struct Thread {
   public:
     Thread() = default;
     Thread(Thread const&) = delete;
+    // TODO: Default or delete a move constructor?
 
-    auto create(Allocator auto& allocator, ssize initial_stack_size,
+    // TODO: Use an `invocable` `concept`.
+    auto create(allocator auto& allocator, ssize initial_stack_size,
                 auto const& function, void* p_arguments_struct)
         -> Optional<void> {
         Scaredy result = this->process.create(allocator, initial_stack_size,

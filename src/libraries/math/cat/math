@@ -33,7 +33,7 @@ constexpr auto min(T&& value_1, U&& value_2, Remaining&&... remaining) -> Out {
             : cat::min(value_2, forward<Remaining>(remaining)...));
 }
 
-constexpr auto min(Iterable auto&& iterable) {
+constexpr auto min(iterable auto&& iterable) {
     auto iterator = iterable.begin();
     auto maximum = *iterator;
     ++iterator;
@@ -45,7 +45,7 @@ constexpr auto min(Iterable auto&& iterable) {
 }
 
 template <typename T>
-constexpr auto min(Iterable auto&& iterable) -> T {
+constexpr auto min(iterable auto&& iterable) -> T {
     auto iterator = iterable.begin();
     auto maximum = *iterator;
     ++iterator;
@@ -81,7 +81,7 @@ constexpr auto max(T&& value_1, U&& value_2, Remaining&&... remaining) -> Out {
             : cat::max(value_2, forward<Remaining>(remaining)...));
 }
 
-constexpr auto max(Iterable auto&& iterable) {
+constexpr auto max(iterable auto&& iterable) {
     auto iterator = iterable.begin();
     auto maximum = *iterator;
     ++iterator;
@@ -93,7 +93,7 @@ constexpr auto max(Iterable auto&& iterable) {
 }
 
 template <typename T>
-constexpr auto max(Iterable auto&& iterable) -> T {
+constexpr auto max(iterable auto&& iterable) -> T {
     auto iterator = iterable.begin();
     auto maximum = *iterator;
     ++iterator;

@@ -625,9 +625,8 @@ class Optional {
     [[nodiscard]] constexpr auto value_or(Value fallback) & -> Value {
         if (this->storage.has_value()) {
             return this->storage.value();
-        } else {
-            return fallback;
         }
+        return fallback;
     }
 
     // Get the value held by a `const`-qualified `Optional`, or a fallback
@@ -635,9 +634,8 @@ class Optional {
     constexpr auto value_or(Value fallback) const& -> Value {
         if (this->storage.has_value()) {
             return this->storage.value();
-        } else {
-            return fallback;
         }
+        return fallback;
     }
 
     // Get the value held by a non-`const`-qualified `Optional`, or a
@@ -645,9 +643,8 @@ class Optional {
     [[nodiscard]] constexpr auto value_or(Value&& fallback) && -> Value&& {
         if (this->storage.has_value()) {
             return move(this->storage.value());
-        } else {
-            return move(fallback);
         }
+        return move(fallback);
     }
 
     // Get the value held by a `const`-qualified `Optional`, or a fallback
@@ -655,9 +652,8 @@ class Optional {
     [[nodiscard]] constexpr auto value_or(Value&& fallback) const&& -> Value&& {
         if (this->storage.has_value()) {
             return move(this->storage.value());
-        } else {
-            return move(fallback);
         }
+        return move(fallback);
     }
 
     // Get a pointer to the data owned by this `Optional`. If `Optional`
@@ -699,9 +695,8 @@ class Optional {
         } else {
             if (this->has_value()) {
                 return Optional<U>{forward<Function>(callback)(this->value())};
-            } else {
-                return Optional<U>{nullopt};
             }
+            return Optional<U>{nullopt};
         }
     }
 
@@ -719,9 +714,8 @@ class Optional {
         } else {
             if (this->storage.has_value()) {
                 return Optional<U>{forward<Function>(callback)(this->value())};
-            } else {
-                return Optional<U>{nullopt};
             }
+            return Optional<U>{nullopt};
         }
     }
 
@@ -739,9 +733,8 @@ class Optional {
             if (this->has_value()) {
                 return Optional<U>{
                     forward<Function>(callback)(move(this->value()))};
-            } else {
-                return Optional<U>{nullopt};
             }
+            return Optional<U>{nullopt};
         }
     }
 
@@ -760,9 +753,8 @@ class Optional {
             if (this->has_value()) {
                 return Optional<U>{
                     forward<Function>(callback)(move(this->value()))};
-            } else {
-                return Optional<U>{nullopt};
             }
+            return Optional<U>{nullopt};
         }
     }
 
@@ -776,9 +768,8 @@ class Optional {
 
         if (this->has_value()) {
             return forward<Function>(callback)(this->value());
-        } else {
-            return U{nullopt};
         }
+        return U{nullopt};
     }
 
     // Invoke a callback returning an `Optional` on the value of a
@@ -791,9 +782,8 @@ class Optional {
 
         if (this->has_value()) {
             return forward<Function>(callback)(this->value());
-        } else {
-            return U{nullopt};
         }
+        return U{nullopt};
     }
 
     // Invoke a callback returning an `Optional` on the value of a
@@ -806,9 +796,8 @@ class Optional {
 
         if (this->has_value()) {
             return forward<Function>(callback)(move(this->value()));
-        } else {
-            return U{nullopt};
         }
+        return U{nullopt};
     }
 
     // Invoke a callback returning an `Optional` on the value of a
@@ -821,9 +810,8 @@ class Optional {
 
         if (this->has_value()) {
             return forward<Function>(callback)(move(this->value()));
-        } else {
-            return U{nullopt};
         }
+        return U{nullopt};
     }
 
     // Invoke a callback iff a non-`const`-qualified `Optional` holds no
@@ -1006,14 +994,14 @@ template <typename T>
 using OptionalPtr = Optional<Sentinel<T*, nullptr>>;
 
 namespace detail {
-    template <Integral T>
-    constexpr bool is_non_negative(T value) {
+    template <integral T>
+    constexpr auto is_non_negative(T value) -> bool {
         return value >= 0;
     }
 }  // namespace detail
 
 // Simplify non-negative signed integers.
-template <Integral T>
+template <integral T>
 using OptionalNonNegative =
     // A lambda here causes clangd 14 to crash.
     Optional<Compact<T, detail::is_non_negative<T>, -1>>;

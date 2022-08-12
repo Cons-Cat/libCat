@@ -18,7 +18,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
 
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
     // context.
-    auto double_storage(StableAllocator auto& allocator) -> Optional<void> {
+    auto double_storage(stableAllocator auto& allocator) -> Optional<void> {
         ssize new_capacity;
         if (this->current_capacity > 0) [[likely]] {
             new_capacity = this->current_capacity * 2;
@@ -88,7 +88,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     // `integer_sequence`.
     template <typename U, U... initializers>
         requires(is_implicitly_convertible<U, T>)
-    [[nodiscard]] static auto from(StableAllocator auto& allocator,
+    [[nodiscard]] static auto from(stableAllocator auto& allocator,
                                    ValueList<U, initializers...>)
         -> Optional<Vector<T>> {
         Optional result =
@@ -108,7 +108,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     // Construct from a variadic argument list.
     template <typename... Args>
         requires(is_implicitly_convertible<Args, T>&&...)
-    [[nodiscard]] static auto from(StableAllocator auto& allocator,
+    [[nodiscard]] static auto from(stableAllocator auto& allocator,
                                    Args&&... initializers)
         -> Optional<Vector<T>> {
         Optional result =
@@ -160,7 +160,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         return Vector<T>::cloned(new_vector);
     }
 
-    [[nodiscard]] static auto reserved(StableAllocator auto& allocator,
+    [[nodiscard]] static auto reserved(stableAllocator auto& allocator,
                                        ssize count) -> Optional<Vector<T>> {
         Vector<T> new_vector;
         Optional result = new_vector.reserve(allocator, count);
@@ -176,7 +176,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         return new_vector;
     }
 
-    [[nodiscard]] static auto resized(StableAllocator auto& allocator,
+    [[nodiscard]] static auto resized(stableAllocator auto& allocator,
                                       ssize size) -> Optional<Vector<T>> {
         Vector<T> new_vector;
         Optional result = new_vector.resize(allocator, size);
@@ -192,7 +192,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         return new_vector;
     }
 
-    [[nodiscard]] static auto filled(StableAllocator auto& allocator,
+    [[nodiscard]] static auto filled(stableAllocator auto& allocator,
                                      ssize count, T const& value)
         -> Optional<Vector<T>> {
         Vector<T> new_vector;
@@ -208,7 +208,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         return new_vector;
     }
 
-    [[nodiscard]] static auto cloned(StableAllocator auto& allocator,
+    [[nodiscard]] static auto cloned(stableAllocator auto& allocator,
                                      Vector<T> const& other_vector)
         -> Optional<Vector<T>> {
         Vector<T> new_vector;
@@ -245,7 +245,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     }
 
     // Try to change the capacity of this `Vector` in a non-`constexpr` context.
-    [[nodiscard]] auto reserve(StableAllocator auto& allocator,
+    [[nodiscard]] auto reserve(stableAllocator auto& allocator,
                                ssize new_capacity) -> Optional<void> {
         if (new_capacity > this->current_capacity) {
             // TODO: `.p_srealloc_multi()`.
@@ -281,7 +281,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     }
 
     // Try to change the size of this `Vector` in a non-`constexpr` context.
-    [[nodiscard]] auto resize(StableAllocator auto& allocator, ssize new_size)
+    [[nodiscard]] auto resize(stableAllocator auto& allocator, ssize new_size)
         -> Optional<void> {
         if (new_size > this->current_capacity) {
             // TODO: `.srealloc_multi()`.
@@ -328,7 +328,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    [[nodiscard]] auto push_back(StableAllocator auto& allocator,
+    [[nodiscard]] auto push_back(stableAllocator auto& allocator,
                                  U const& value) -> Optional<void> {
         if (this->current_size + 1 > this->current_capacity) {
             Optional result = this->double_storage(allocator);
@@ -351,7 +351,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         this->current_size += 1;
     }
 
-    [[nodiscard]] auto clone(StableAllocator auto& allocator,
+    [[nodiscard]] auto clone(stableAllocator auto& allocator,
                              Vector<T> const& other_vector) -> Optional<void> {
         Optional result = this->reserve(allocator, other_vector.capacity());
         if (!result.has_value()) {

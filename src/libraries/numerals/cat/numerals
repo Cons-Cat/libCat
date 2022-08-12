@@ -105,23 +105,23 @@ struct NumericLimits<double> {
     constexpr static double min = 0.;
 };
 
-template <Arithmetic T>
+template <arithmetic T>
 constexpr auto raw_numeral_cast(T value) {
-    if constexpr (SafeNumeral<T>) {
+    if constexpr (safeNumeral<T>) {
         return value.raw;
     } else {
         return value;
     }
 }
 
-template <Arithmetic T>
+template <arithmetic T>
 using ToUnsafeNumeral = decltype(raw_numeral_cast(declval<T>()));
 
-template <Arithmetic T>
+template <arithmetic T>
 using ToSafeNumeral = Numeral<ToUnsafeNumeral<T>>;
 
 namespace detail {
-    template <Arithmetic T, Arithmetic U>
+    template <arithmetic T, arithmetic U>
     constexpr auto is_safe_conversion() -> bool {
         using TRaw = ToUnsafeNumeral<T>;
         using URaw = ToUnsafeNumeral<U>;
@@ -176,7 +176,7 @@ struct Numeral {
 
     constexpr Numeral() = default;
 
-    template <Arithmetic U>
+    template <arithmetic U>
     constexpr explicit(!detail::is_safe_conversion<T, U>()) Numeral(U from)
         : raw(raw_numeral_cast(from)){};
 
@@ -221,7 +221,7 @@ struct Numeral {
     // Declare arithmetic operators as hidden friends to prevent them from
     // pessimizing argument-dependant-lookup times.
 
-    template <Arithmetic U>
+    template <arithmetic U>
     friend constexpr auto operator+(Numeral<T> self, U operand)
         -> Numeral<detail::PromotedNumeral<T, U>> {
         return self.raw + raw_numeral_cast(operand);
@@ -236,7 +236,7 @@ struct Numeral {
         return p_operand + numeral.raw;
     }
 
-    template <Arithmetic U>
+    template <arithmetic U>
     constexpr auto operator+=(U operand) {
         this->raw += raw_numeral_cast(operand);
         return *this;
@@ -933,10 +933,10 @@ template <typename T, typename Storage>
 
 // `__INTPTR_TYPE__` is defined by the GCC compiler.
 template <typename T>
-using intptr = cat::ArithmeticPtr<T, __INTPTR_TYPE__>;
+using intptr = cat::ArithmeticPtr<T, __INTPTR_TYPE__>;  // NOLINT
 // `__UINTPTR_TYPE__` is defined by the GCC compiler.
 template <typename T>
-using uintptr = cat::ArithmeticPtr<T, __UINTPTR_TYPE__>;
+using uintptr = cat::ArithmeticPtr<T, __UINTPTR_TYPE__>;  // NOLINT
 
 }  // namespace cat
 
@@ -996,6 +996,6 @@ using cat::uint8;
 using cat::usize;
 
 template <typename T>
-using intptr = cat::intptr<T>;
+using intptr = cat::intptr<T>;  // NOLINT
 template <typename T>
-using uintptr = cat::uintptr<T>;
+using uintptr = cat::uintptr<T>;  // NOLINT

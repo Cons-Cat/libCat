@@ -208,7 +208,7 @@ constexpr bool is_enum = __is_enum(T);
 
 // `__is_same()` is a GNU builtin.
 template <typename T, typename U>
-concept SameAs = __is_same(T, U);
+concept sameAs = __is_same(T, U);
 template <typename T, typename U>
 constexpr bool is_same = __is_same(T, U);
 
@@ -225,16 +225,16 @@ template <typename T>
 constexpr bool is_class = __is_class(T);
 
 template <typename T>
-concept Referenceable = requires {
+concept referenceable = requires {
     // Try to substitute a `T&`. If that is well-formed, this always holds true.
     __is_same(T&, T&);
 };
 template <typename T>
-constexpr bool is_referenceable = Referenceable<T>;
+constexpr bool is_referenceable = referenceable<T>;
 
 template <typename...>
 constexpr bool is_reference = false;
-template <Referenceable T>
+template <referenceable T>
 constexpr bool is_reference<T> = __is_same(T, RemoveReference<T>&) ||
                                  __is_same(T, RemoveReference<T>&&);
 
@@ -245,28 +245,28 @@ template <template <typename...> typename Template, typename... Args>
 constexpr bool is_specialization<Template<Args...>, Template> = true;
 
 template <typename T>
-concept SafeNumeral = is_specialization<T, Numeral>;
+concept safeNumeral = is_specialization<T, Numeral>;
 template <typename T>
-constexpr bool is_safe_numeral = SafeNumeral<T>;
+constexpr bool is_safe_numeral = safeNumeral<T>;
 
 template <typename T>
-concept UnsafeNumeral = !is_specialization<T, Numeral>;
+concept unsafeNumeral = !is_specialization<T, Numeral>;
 template <typename T>
-constexpr bool is_unsafe_numeral = UnsafeNumeral<T>;
+constexpr bool is_unsafe_numeral = unsafeNumeral<T>;
 
 // TODO: Include half
 template <typename T>
-concept FloatingPoint = __is_same(RemoveCvRef<T>, float) ||
+concept floatingPoint = __is_same(RemoveCvRef<T>, float) ||
                         __is_same(RemoveCvRef<T>, double) ||
                         __is_same(RemoveCvRef<T>, long double) ||
                         __is_same(RemoveCvRef<T>, float8) ||
                         __is_same(RemoveCvRef<T>, float4) ||
                         __is_same(RemoveCvRef<T>, __float128);
 template <typename T>
-constexpr bool is_floating_point = FloatingPoint<T>;
+constexpr bool is_floating_point = floatingPoint<T>;
 
 template <typename T>
-concept Integral =
+concept integral =
     (is_safe_numeral<RemoveCv<T>> && !is_floating_point<RemoveCv<T>>) ||
     __is_same(RemoveCv<T>, signed char) ||
     __is_same(RemoveCv<T>, unsigned char) || __is_same(RemoveCv<T>, char) ||
@@ -276,23 +276,23 @@ concept Integral =
     __is_same(RemoveCv<T>, long long) ||
     __is_same(RemoveCv<T>, unsigned long long);
 template <typename T>
-constexpr bool is_integral = Integral<T>;
+constexpr bool is_integral = integral<T>;
 
 template <typename T>
-concept Bool = __is_same(T, RemoveCvRef<bool>) ||
-               __is_same(T, RemoveCvRef<bool2>) ||
-               __is_same(T, RemoveCvRef<bool4>);
+concept boolean = __is_same(T, RemoveCvRef<bool>) ||
+                  __is_same(T, RemoveCvRef<bool2>) ||
+                  __is_same(T, RemoveCvRef<bool4>);
 template <typename T>
-constexpr bool is_bool = Bool<T>;
+constexpr bool is_bool = boolean<T>;
 
 template <typename T>
-concept Arithmetic = Integral<T> || FloatingPoint<T>;
+concept arithmetic = integral<T> || floatingPoint<T>;
 template <typename T>
-constexpr bool is_arithmetic = Arithmetic<T>;
+constexpr bool is_arithmetic = arithmetic<T>;
 
 namespace detail {
     template <typename T>
-    concept HasLessThanOperator = requires(T t) {
+    concept hasLessThanOperator = requires(T t) {
         t < 0;
     };
 }  // namespace detail
@@ -301,7 +301,7 @@ template <typename...>
 constexpr bool is_signed = false;
 
 // This expression only holds true if `T` can be constant-evaluated.
-template <detail::HasLessThanOperator T>
+template <detail::hasLessThanOperator T>
 constexpr bool is_signed<T> = bool_constant<(T(-1) < T(0))>;
 
 template <typename T>
@@ -438,7 +438,7 @@ constexpr bool is_sizable = requires {
 };
 
 template <typename T>
-concept Enum = __is_enum(T);
+concept enumerator = __is_enum(T);
 
 // This requires a partial template specialization, because `__underlying_type`
 // is not well-formed in any expression that involves a non-enum type.
@@ -447,7 +447,7 @@ constexpr bool is_scoped_enum = false;
 
 // TODO: Technically, an implicit conversion operator can be defined for enum
 // classes that make this hold false.
-template <Enum T>
+template <enumerator T>
 constexpr bool is_scoped_enum<T> =
     !is_implicitly_convertible<T, __underlying_type(T)>;
 
@@ -584,12 +584,12 @@ constexpr bool is_trivial =
     is_trivially_copyable<T>&& is_trivially_default_constructible<T>;
 
 template <typename Function, typename... Args>
-concept Invocable = requires(Function func, Args&&... args) {
+concept invocable = requires(Function func, Args&&... args) {
     func(forward<Args>(args)...);
 };
 
 template <typename Function, typename... Args>
-constexpr bool is_invocable = Invocable<Function, Args...>;
+constexpr bool is_invocable = invocable<Function, Args...>;
 
 // https://quuxplusone.github.io/blog/2019/02/06/arrow-proxy/
 template <typename Reference>
@@ -600,87 +600,87 @@ struct ArrowProxy {
     }
 };
 
-template <Invocable Function>
+template <invocable Function>
 consteval auto constant_evaluate(auto value);
 
 consteval auto constant_evaluate(auto value);
 
 template <typename Derived, typename Base>
-concept DerivedFrom =
+concept derivedFrom =
     __is_base_of(Base, Derived) &&
     is_convertible<Derived const volatile*, Base const volatile*>;
 
 template <typename From, typename To>
-concept ConvertibleTo = is_convertible<From, To> && requires {
+concept convertibleTo = is_convertible<From, To> && requires {
     static_cast<To>(declval<From>());
 };
 
 template <typename T, typename... Args>
-concept ConstructibleFrom = __is_constructible(T, Args...);
+concept constructibleFrom = __is_constructible(T, Args...);
 
 template <typename T>
-concept MoveConstructible = ConstructibleFrom<T, T> && ConvertibleTo<T, T>;
+concept moveConstructible = constructibleFrom<T, T> && convertibleTo<T, T>;
 
 template <typename T>
-concept CopyConstructible =
-    MoveConstructible<T> && ConstructibleFrom<T, T&> && ConvertibleTo<T&, T> &&
-    ConstructibleFrom<T, T const&> && ConvertibleTo<T const&, T> &&
-    ConstructibleFrom<T, T const> && ConvertibleTo<T const, T>;
+concept copyConstructible =
+    moveConstructible<T> && constructibleFrom<T, T&> && convertibleTo<T&, T> &&
+    constructibleFrom<T, T const&> && convertibleTo<T const&, T> &&
+    constructibleFrom<T, T const> && convertibleTo<T const, T>;
 
 // boolean_testable is adapted from the exposition-only concept
 // boolean-testable.
 namespace detail {
     template <typename T>
-    concept BooleanTestableDetail = ConvertibleTo<T, bool>;
+    concept booleanTestableDetail = convertibleTo<T, bool>;
 }
 
 template <typename T>
-concept BooleanTestable = detail::BooleanTestableDetail<T> && requires(T&& b) {
-    { !forward<T>(b) } -> detail::BooleanTestableDetail;
+concept booleanTestable = detail::booleanTestableDetail<T> && requires(T&& b) {
+    { !forward<T>(b) } -> detail::booleanTestableDetail;
 };
 
 // `WeaklyEqualityComparableWith` is adapted from the exposition-only
 // concept `__WeaklyEqualityComparableWith`.
 namespace detail {
     template <typename T, typename U>
-    concept WeaklyEqualityComparableWith =
+    concept weaklyEqualityComparableWith =
         requires(RemoveReference<T> const& t, RemoveReference<U> const& u) {
-        { t == u } -> BooleanTestableDetail;
-        { t != u } -> BooleanTestableDetail;
-        { u == t } -> BooleanTestableDetail;
-        { u != t } -> BooleanTestableDetail;
+        { t == u } -> booleanTestableDetail;
+        { t != u } -> booleanTestableDetail;
+        { u == t } -> booleanTestableDetail;
+        { u != t } -> booleanTestableDetail;
     };
 }  // namespace detail
 
 template <typename T>
-concept EqualityComparable = detail::WeaklyEqualityComparableWith<T, T>;
+concept equalityComparable = detail::weaklyEqualityComparableWith<T, T>;
 
 namespace detail {
     template <typename T, typename U>
-    concept PartiallyOrderedWith = requires(RemoveReference<T> const& t,
+    concept partiallyOrderedWith = requires(RemoveReference<T> const& t,
                                             RemoveReference<U> const& u) {
-        { t < u } -> BooleanTestable;
-        { t > u } -> BooleanTestable;
-        { t <= u } -> BooleanTestable;
-        { t >= u } -> BooleanTestable;
-        { u < t } -> BooleanTestable;
-        { u > t } -> BooleanTestable;
-        { u <= t } -> BooleanTestable;
-        { u >= t } -> BooleanTestable;
+        { t < u } -> booleanTestable;
+        { t > u } -> booleanTestable;
+        { t <= u } -> booleanTestable;
+        { t >= u } -> booleanTestable;
+        { u < t } -> booleanTestable;
+        { u > t } -> booleanTestable;
+        { u <= t } -> booleanTestable;
+        { u >= t } -> booleanTestable;
     };
 }  // namespace detail
 
 template <typename T>
-concept EnumClass = is_scoped_enum<T>;
+concept scopedEnum = is_scoped_enum<T>;
 
 template <typename T, typename U>
-concept NarrowConvertible = requires() {
+concept narrowConvertible = requires() {
     U({declval<T>()});
 };
 
 // TODO: Support any integral.
 template <int value>
-concept PowerOfTwo = ((value & (value - 1)) == 0);
+concept powerOfTwo = ((value & (value - 1)) == 0);
 
 // `is_trivially_relocatable` can be overrided by partial template
 // specializations, such as:
@@ -711,18 +711,18 @@ constexpr bool is_trivially_relocatable<T const> = is_trivially_relocatable<T>;
 namespace cat {
 
 template <typename T, typename U>
-concept CommonReferenceWith =
-    SameAs<CommonReference<T, U>, CommonReference<U, T>> &&
-    ConvertibleTo<T, CommonReference<T, U>> &&
-    ConvertibleTo<U, CommonReference<T, U>>;
+concept commonReferenceWith =
+    sameAs<CommonReference<T, U>, CommonReference<U, T>> &&
+    convertibleTo<T, CommonReference<T, U>> &&
+    convertibleTo<U, CommonReference<T, U>>;
 
 template <typename T, typename U>
-concept common_with = SameAs<CommonType<T, U>, CommonType<U, T>> && requires {
+concept common_with = sameAs<CommonType<T, U>, CommonType<U, T>> && requires {
     static_cast<CommonType<T, U>>(declval<T>());
     static_cast<CommonType<T, U>>(declval<U>());
-} && CommonReferenceWith<AddLvalueReference<T const>,
+} && commonReferenceWith<AddLvalueReference<T const>,
                          AddLvalueReference<const U>> &&
-    CommonReferenceWith<AddLvalueReference<CommonType<T, U>>,
+    commonReferenceWith<AddLvalueReference<CommonType<T, U>>,
                         CommonReference<AddLvalueReference<const T>,
                                         AddLvalueReference<const U>>>;
 

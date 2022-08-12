@@ -350,7 +350,7 @@ struct FileDescriptor {
     constexpr FileDescriptor() = default;
 
     // This is generic to simplify type-punning.
-    constexpr FileDescriptor(cat::Integral auto input) {
+    constexpr FileDescriptor(cat::integral auto input) {
         this->value = static_cast<int>(input);
     }
 
@@ -400,7 +400,7 @@ struct GroupId {
     constexpr GroupId() = default;
 
     // This is generic to simplify type-punning.
-    constexpr GroupId(cat::Integral auto input) {
+    constexpr GroupId(cat::integral auto input) {
         this->value = static_cast<int>(input);
     }
 
@@ -625,9 +625,9 @@ struct Process {
     Process() = default;
     Process(Process const&) = delete;
 
-    // TODO: Add `cat::Invocable` concept.
-    // TODO: Use `cat::Allocator` concept.
-    auto create(cat::Allocator auto& allocator, ssize const initial_stack_size,
+    // TODO: Add `cat::invocable` concept.
+    // TODO: Use `cat::allocator` concept.
+    auto create(cat::allocator auto& allocator, ssize const initial_stack_size,
                 auto const& function, void* p_arguments_struct,
                 // TODO: These flags should largely be encoded into the type.
                 CloneFlags const flags = default_flags) -> ScaredyLinux<void> {

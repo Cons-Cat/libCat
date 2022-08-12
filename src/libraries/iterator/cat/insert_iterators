@@ -7,7 +7,7 @@
 
 namespace cat {
 
-template <Iterable T>
+template <iterable T>
 struct BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
     T& iterable;
 
@@ -94,7 +94,7 @@ struct BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
     }
 };
 
-template <Iterable T>
+template <iterable T>
 class FrontInsertIterator : public IteratorFacade<FrontInsertIterator<T>> {
     T& iterable;
 

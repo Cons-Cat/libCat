@@ -7,23 +7,23 @@
 namespace cat {
 namespace detail {
     template <typename T>
-    concept HasIncrement = requires(T it) {
+    concept hasIncrement = requires(T it) {
         it.increment();
     };
 
     template <typename T>
-    concept HasDecrement = requires(T it) {
+    concept hasDecrement = requires(T it) {
         it.decrement();
     };
 
     template <typename T>
-    concept HasDistance = requires(T it) {
+    concept hasDistance = requires(T it) {
         it.distance_to(it);
     };
 
     template <typename T>
-    concept HasEqualTo = requires(T it) {
-        { it.equal_to(it) } -> ConvertibleTo<bool>;
+    concept hasEqualTo = requires(T it) {
+        { it.equal_to(it) } -> convertibleTo<bool>;
     };
 
     template <typename>
@@ -32,7 +32,7 @@ namespace detail {
     };
 
     // Case when `T` provides `.distance_to()`
-    template <detail::HasDistance T>
+    template <detail::hasDistance T>
     struct InferDifferenceType<T> {
         static T const& it;
         using Type = decltype(it.distance_to(it));
@@ -56,35 +56,35 @@ namespace detail {
     };
 
     template <typename T>
-    concept HasAdvance = requires(T it, InferDifferenceType<T> offset) {
+    concept hasAdvance = requires(T it, InferDifferenceType<T> offset) {
         it.advance(offset);
     };
 
     template <typename T>
-    concept HasAdvanceTo = requires(T it) {
+    concept hasAdvanceTo = requires(T it) {
         it.advance_to(T{});
     };
 
     template <typename T>
-    concept HasRandomAccess = HasAdvance<T> && HasDistance<T>;
+    concept hasRandomAccess = hasAdvance<T> && hasDistance<T>;
 
     template <typename T>
-    concept HasBidirectional = HasRandomAccess<T> || HasDecrement<T>;
+    concept hasBidirectional = hasRandomAccess<T> || hasDecrement<T>;
 
     // TODO: Do these two `concept`s make sense in libCat?
     template <typename T>
-    concept HasSinglePass = bool(T::SinglePassIterator);
+    concept hasSinglePass = bool(T::SinglePassIterator);
 
     template <typename Iter, typename T>
-    concept HasSentinel = SameAs<T, typename T::Sentinel>;
+    concept hasSentinel = sameAs<T, typename T::Sentinel>;
 }  // namespace detail
 
 template <typename T>
 using InferDifferenceType = typename detail::InferDifferenceType<T>::Type;
 
 template <typename Argument, typename Iterator>
-concept DifferenceTypeArg =
-    ConvertibleTo<Argument, InferDifferenceType<Iterator>>;
+concept differenceTypeArg =
+    convertibleTo<Argument, InferDifferenceType<Iterator>>;
 
 template <typename T>
 using InferValueType = typename detail::InferValueType<T>::Type::Type;
@@ -106,7 +106,7 @@ struct IteratorFacade {
     // TODO: Does this work with the reverse iterator adapter?
     // If `Derived` does not have `.advance_to()`, generate it.
     constexpr auto advance_to(Derived const& other_iterator)
-        -> Derived const& requires(!detail::HasAdvanceTo<Derived>) {
+        -> Derived const& requires(!detail::hasAdvanceTo<Derived>) {
         if (other_iterator > this->self()) {
             while (other_iterator > this->self()) {
                 ++(*this);
@@ -140,7 +140,7 @@ struct IteratorFacade {
 
     constexpr friend auto operator==(Derived const& left, Derived const& right)
         -> bool {
-        if constexpr (detail::HasEqualTo<Derived>) {
+        if constexpr (detail::hasEqualTo<Derived>) {
             return left.equal_to(right);
         } else {
             return left.distance_to(right) == 0;
@@ -148,15 +148,15 @@ struct IteratorFacade {
     }
 
     constexpr friend auto operator==(Derived const& self,
-                                     detail::HasSentinel<Derived> auto const)
+                                     detail::hasSentinel<Derived> auto const)
         -> bool {
         return self.at_end();
     }
 
     constexpr friend auto operator+(Derived const& left,
-                                    DifferenceTypeArg<Derived> auto offset)
+                                    differenceTypeArg<Derived> auto offset)
         -> Derived {
-        if constexpr (detail::HasAdvance<Derived>) {
+        if constexpr (detail::hasAdvance<Derived>) {
             return left += offset;
         } else {
             Derived left_copy = left;
@@ -167,9 +167,9 @@ struct IteratorFacade {
         }
     }
 
-    constexpr friend auto operator+(DifferenceTypeArg<Derived> auto offset,
+    constexpr friend auto operator+(differenceTypeArg<Derived> auto offset,
                                     Derived const& right) -> Derived {
-        if constexpr (detail::HasAdvance<Derived>) {
+        if constexpr (detail::hasAdvance<Derived>) {
             return right += offset;
         } else {
             Derived right_copy = right;
@@ -181,9 +181,9 @@ struct IteratorFacade {
     }
 
     constexpr friend auto operator+=(Derived const& self,
-                                     DifferenceTypeArg<Derived> auto offset)
+                                     differenceTypeArg<Derived> auto offset)
         -> Derived& {
-        if constexpr (detail::HasAdvance<Derived>) {
+        if constexpr (detail::hasAdvance<Derived>) {
             self.advance(static_cast<int>(offset));
         } else {
             for (ssize i = 0; i < offset; ++i) {
@@ -195,7 +195,7 @@ struct IteratorFacade {
 
     // Increment or advance forwards with prefix notation.
     constexpr auto operator++() -> Derived& {
-        if constexpr (detail::HasIncrement<Derived>) {
+        if constexpr (detail::hasIncrement<Derived>) {
             this->self().increment();
         } else {
             this->self().advance(1);
@@ -211,9 +211,9 @@ struct IteratorFacade {
     }
 
     constexpr friend auto operator-(Derived const& left,
-                                    DifferenceTypeArg<Derived> auto offset)
+                                    differenceTypeArg<Derived> auto offset)
         -> Derived {
-        if constexpr (detail::HasAdvance<Derived>) {
+        if constexpr (detail::hasAdvance<Derived>) {
             return left - offset;
         } else {
             for (ssize i = 0; i < offset; ++i) {
@@ -224,9 +224,9 @@ struct IteratorFacade {
     }
 
     constexpr friend auto operator-=(Derived const& left,
-                                     DifferenceTypeArg<Derived> auto offset)
+                                     differenceTypeArg<Derived> auto offset)
         -> Derived& {
-        if constexpr (detail::HasAdvance<Derived>) {
+        if constexpr (detail::hasAdvance<Derived>) {
             return left -= offset;
         } else {
             for (ssize i = 0; i < offset; ++i) {
@@ -244,7 +244,7 @@ struct IteratorFacade {
 
     // Decrement or advance backwards with prefix notation.
     constexpr auto operator--() -> Derived& {
-        if constexpr (detail::HasDecrement<Derived>) {
+        if constexpr (detail::hasDecrement<Derived>) {
             this->self().decrement();
         } else {
             this->self().advance(-1);
@@ -261,8 +261,8 @@ struct IteratorFacade {
 
     // TODO: This seems incorrect.
     // Random-access.
-    constexpr auto operator[](DifferenceTypeArg<Derived> auto offset)
-        -> decltype(auto) requires(detail::HasAdvance<Derived>) {
+    constexpr auto operator[](differenceTypeArg<Derived> auto offset)
+        -> decltype(auto) requires(detail::hasAdvance<Derived>) {
         return *(this->self() + offset);
     }
 
@@ -286,12 +286,12 @@ struct IteratorTraits {
     using Difference = InferDifferenceType<T>;
     using Category = Conditional<
         // If this can be a random access iterator, it always will be.
-        detail::HasRandomAccess<T>, RandomAccessIteratorTag,
+        detail::hasRandomAccess<T>, RandomAccessIteratorTag,
         Conditional<
             // If this has a `++` and a `--` operator, this is a
             // bidirectional iterator.
-            detail::HasBidirectional<T>, BidirectionalIteratorTag,
-            Conditional<detail::HasSinglePass<T>,
+            detail::hasBidirectional<T>, BidirectionalIteratorTag,
+            Conditional<detail::hasSinglePass<T>,
                         // If it is single-pass, this is a forward
                         // iterator.
                         InputIteratorTag,
@@ -317,7 +317,7 @@ struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
         return this->iterator.dereference();
     }
 
-    constexpr void advance(int offset) requires(detail::HasAdvance<T>) {
+    constexpr void advance(int offset) requires(detail::hasAdvance<T>) {
         this->iterator.advance(-offset);
     }
 
@@ -334,51 +334,51 @@ struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
     }
 };
 
-// TODO: More iterable related concepts.
+// TODO: More iterable related `concept`s.
 template <typename T>
-concept Iterable = requires(T it) {
+concept iterable = requires(T it) {
     it.begin();
     it.end();
 };
 
 template <typename T>
-concept WeaklyIncrementable = requires(T it) {
+concept weaklyIncrementable = requires(T it) {
     // TODO: Make this `Movable`.
-    { ++it } -> SameAs<T&>;
+    { ++it } -> sameAs<T&>;
     it++;
 };
 
 template <typename T>
-concept Incrementable = requires(T it) {
+concept incrementable = requires(T it) {
     // TODO: Make this `Regular` and `Movable`.
-    { ++it } -> SameAs<T&>;
-    { it++ } -> SameAs<T&>;
+    { ++it } -> sameAs<T&>;
+    { it++ } -> sameAs<T&>;
 };
 
 template <typename T>
-concept RandomAccessIterator =
+concept randomAccessIterator =
     is_same<typename IteratorTraits<T>::Category, RandomAccessIteratorTag>;
 
 template <typename T>
-concept BidirectionalIterator =
+concept bidirectionalIterator =
     is_same<typename IteratorTraits<T>::Category, BidirectionalIteratorTag>;
 
 template <typename T>
-concept ForwardIterator =
+concept forwardIterator =
     is_same<typename IteratorTraits<T>::Category, ForwardIteratorTag>;
 
 // clang-format off
 template <typename T>
-concept InputOrOutputIterator = requires(T it) {
+concept inputOrOutputIterator = requires(T it) {
     *it;
-} && WeaklyIncrementable<T>;
+} && weaklyIncrementable<T>;
 // clang-format on
 
 template <typename T>
 using IteratorReference = decltype(*declval<T&>());
 
 template <typename Outputter, typename T>
-concept IndirectlyWritable = requires(Outputter&& outputter, T&& value) {
+concept indirectlyWritable = requires(Outputter&& outputter, T&& value) {
     *outputter = forward<T>(value);
     *forward<Outputter>(outputter) = forward<T>(value);
     const_cast<IteratorReference<Outputter> const&&>(*outputter) =
@@ -388,13 +388,13 @@ concept IndirectlyWritable = requires(Outputter&& outputter, T&& value) {
 };
 
 template <typename Outputter, typename T>
-concept OutputIterator = InputOrOutputIterator<Outputter> &&
-    IndirectlyWritable<Outputter, T> &&
+concept outputIterator = inputOrOutputIterator<Outputter> &&
+    indirectlyWritable<Outputter, T> &&
     requires(Outputter outputter, T&& value) {
     *outputter++ = forward<T>(value);
 };
 
-template <Iterable T>
+template <iterable T>
 class AsReverse {
     T& iterable;
 
@@ -419,7 +419,7 @@ class AsReverse {
     }
 };
 
-template <Iterable T>
+template <iterable T>
 class AsConst {
     T& iterable;
 
@@ -435,7 +435,7 @@ class AsConst {
     }
 };
 
-template <Iterable T>
+template <iterable T>
 class AsConstReverse {
     T& iterable;
 
