@@ -1,3 +1,4 @@
+#include <cat/compare>
 #include <cat/tuple>
 
 auto main() -> int {
@@ -217,4 +218,34 @@ auto main() -> int {
     //             Tuple<int, double>>);
     // using TestTupleCommonRef = CommonReference<Tuple<int, double>,
     //     Tuple<int&, double&>>;
+
+    static_assert(
+        cat::is_same<std::common_comparison_category_t<std::strong_ordering,
+                                                       std::weak_ordering>,
+                     std::weak_ordering>);
+
+    static_assert(
+        cat::is_same<std::common_comparison_category_t<std::weak_ordering,
+                                                       std::strong_ordering>,
+                     std::weak_ordering>);
+
+    static_assert(
+        cat::is_same<std::common_comparison_category_t<std::partial_ordering,
+                                                       std::weak_ordering>,
+                     std::partial_ordering>);
+
+    static_assert(
+        cat::is_same<std::common_comparison_category_t<std::weak_ordering,
+                                                       std::partial_ordering>,
+                     std::partial_ordering>);
+
+    static_assert(
+        cat::is_same<std::common_comparison_category_t<std::partial_ordering,
+                                                       std::strong_ordering>,
+                     std::partial_ordering>);
+
+    static_assert(
+        cat::is_same<std::common_comparison_category_t<std::strong_ordering,
+                                                       std::partial_ordering>,
+                     std::partial_ordering>);
 };

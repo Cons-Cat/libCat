@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/compare>
 #include <cat/meta>
 
 // `Numeral` is a container for numeric data types which prevents unsafe
@@ -106,7 +107,7 @@ struct NumericLimits<double> {
 };
 
 template <arithmetic T>
-constexpr auto raw_numeral_cast(T value) {
+constexpr auto to_raw_numeral(T value) {
     if constexpr (safeNumeral<T>) {
         return value.raw;
     } else {
@@ -115,7 +116,7 @@ constexpr auto raw_numeral_cast(T value) {
 }
 
 template <arithmetic T>
-using ToUnsafeNumeral = decltype(raw_numeral_cast(declval<T>()));
+using ToUnsafeNumeral = decltype(to_raw_numeral(declval<T>()));
 
 template <arithmetic T>
 using ToSafeNumeral = Numeral<ToUnsafeNumeral<T>>;
@@ -178,7 +179,7 @@ struct Numeral {
 
     template <arithmetic U>
     constexpr explicit(!detail::is_safe_conversion<T, U>()) Numeral(U from)
-        : raw(raw_numeral_cast(from)){};
+        : raw(to_raw_numeral(from)){};
 
     template <typename U>
     constexpr explicit operator U() const {
@@ -186,36 +187,25 @@ struct Numeral {
     }
 
     template <typename U>
-    constexpr auto operator=(U operand)
-        -> Numeral& requires(detail::is_safe_conversion<T, U>()) {
+        requires(detail::is_safe_conversion<T, U>())
+    constexpr auto operator=(U operand) -> Numeral& {
         this->raw = static_cast<T>(operand);
         return *this;
     }
 
-    // TODO: Replace with three-way comparison operator.
-    template <typename U>
-    friend constexpr auto operator==(Numeral<T> self, U operand) -> bool {
-        return self.raw == raw_numeral_cast(operand);
+    template <arithmetic U>
+    friend constexpr auto operator<=>(Numeral<T> lhs, U rhs) {
+        return lhs.raw <=> to_raw_numeral(rhs);
     }
 
-    template <typename U>
-    friend constexpr auto operator<(Numeral<T> self, U operand) -> bool {
-        return self.raw < raw_numeral_cast(operand);
+    template <arithmetic U>
+    friend constexpr auto operator==(Numeral<T> lhs, U rhs) {
+        return lhs.raw == to_raw_numeral(rhs);
     }
 
-    template <typename U>
-    friend constexpr auto operator<=(Numeral<T> self, U operand) -> bool {
-        return self.raw <= raw_numeral_cast(operand);
-    }
-
-    template <typename U>
-    friend constexpr auto operator>(Numeral<T> self, U operand) -> bool {
-        return self.raw > raw_numeral_cast(operand);
-    }
-
-    template <typename U>
-    friend constexpr auto operator>=(Numeral<T> self, U operand) -> bool {
-        return self.raw >= raw_numeral_cast(operand);
+    template <arithmetic U>
+    friend constexpr auto operator!=(Numeral<T> self, U operand) -> bool {
+        return self.raw != to_raw_numeral(operand);
     }
 
     // Declare arithmetic operators as hidden friends to prevent them from
@@ -224,7 +214,7 @@ struct Numeral {
     template <arithmetic U>
     friend constexpr auto operator+(Numeral<T> self, U operand)
         -> Numeral<detail::PromotedNumeral<T, U>> {
-        return self.raw + raw_numeral_cast(operand);
+        return self.raw + to_raw_numeral(operand);
     }
 
     template <typename U>
@@ -238,7 +228,7 @@ struct Numeral {
 
     template <arithmetic U>
     constexpr auto operator+=(U operand) {
-        this->raw += raw_numeral_cast(operand);
+        this->raw += to_raw_numeral(operand);
         return *this;
     }
 
@@ -255,7 +245,7 @@ struct Numeral {
     template <detail::ArithmeticNonPtr U>
     friend constexpr auto operator-(Numeral<T> self, U operand)
         -> Numeral<detail::PromotedNumeral<T, U>> {
-        return self.raw - raw_numeral_cast(operand);
+        return self.raw - to_raw_numeral(operand);
     }
 
     template <typename U>
@@ -287,7 +277,7 @@ struct Numeral {
     template <detail::ArithmeticNonPtr U>
     friend constexpr auto operator*(Numeral<T> self, U operand)
         -> Numeral<detail::PromotedNumeral<T, U>> {
-        return self.raw * raw_numeral_cast(operand);
+        return self.raw * to_raw_numeral(operand);
     }
 
     template <typename U>
@@ -309,7 +299,7 @@ struct Numeral {
     template <detail::ArithmeticNonPtr U>
     friend constexpr auto operator/(Numeral<T> self, U operand)
         -> Numeral<detail::PromotedNumeral<T, U>> {
-        return self.raw / raw_numeral_cast(operand);
+        return self.raw / to_raw_numeral(operand);
     }
 
     template <typename U>
@@ -331,7 +321,7 @@ struct Numeral {
     template <detail::ArithmeticNonPtr U>
     friend constexpr auto operator%(Numeral<T> self, U operand)
         -> Numeral<detail::PromotedNumeral<T, U>> {
-        return self.raw % raw_numeral_cast(operand);
+        return self.raw % to_raw_numeral(operand);
     }
 
     template <typename U>
@@ -353,7 +343,7 @@ struct Numeral {
     template <detail::ArithmeticNonPtr U>
     friend constexpr auto operator&(Numeral<T> self, U operand)
         -> Numeral<detail::PromotedNumeral<T, U>> {
-        return self.raw & raw_numeral_cast(operand);
+        return self.raw & to_raw_numeral(operand);
     }
 
     template <typename U>
@@ -375,7 +365,7 @@ struct Numeral {
     template <detail::ArithmeticNonPtr U>
     friend constexpr auto operator|(Numeral<T> self, U operand)
         -> Numeral<detail::PromotedNumeral<T, U>> {
-        return self.raw | raw_numeral_cast(operand);
+        return self.raw | to_raw_numeral(operand);
     }
 
     template <typename U>
@@ -521,7 +511,7 @@ constexpr auto operator|=(T*& p_lhs, Numeral<U> rhs) -> T* {
 template <typename T>
 [[nodiscard]] constexpr auto count_leading_zeros(T value) -> ssize
     requires(is_integral<T>) {
-    auto raw_value = raw_numeral_cast(value);
+    auto raw_value = to_raw_numeral(value);
     if constexpr (sizeof(T) == 2) {
         return ssize{__builtin_ia32_lzcnt_u16(raw_value)};
     } else if constexpr (sizeof(T) == 4) {
@@ -537,7 +527,7 @@ template <typename T>
 template <typename T>
 [[nodiscard]] constexpr auto count_trailing_zeros(T value) -> ssize
     requires(is_integral<T>) {
-    auto raw_value = raw_numeral_cast(value);
+    auto raw_value = to_raw_numeral(value);
     if constexpr (sizeof(T) == 4) {
         return ssize{__builtin_ctz(raw_value)};
     } else if constexpr (sizeof(T) == 8) {

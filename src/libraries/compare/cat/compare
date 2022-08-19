@@ -2,6 +2,506 @@
 // vim: set ft=cpp:
 #pragma once
 
-namespace cat {
-//
-}
+#include <cat/meta>
+
+namespace std {
+
+namespace detail {
+    enum class Order : signed char {
+        less = -1,
+        equivalent = 0,
+        equal = 0,
+        greater = 1,
+        nonequivalent = 1,
+        nonequal = 1
+    };
+
+    enum class Unordered : signed char {
+        // Any value other than -1, 0, or 1 would be valid here.
+        unordered = 2
+    };
+}  // namespace detail
+
+// NOLINTNEXTLINE This must be snake_case.
+class partial_ordering {
+    signed int order;
+
+    constexpr explicit partial_ordering(detail::Order in_order)
+        : order(static_cast<signed int>(in_order)){};
+
+    constexpr explicit partial_ordering(detail::Unordered in_order)
+        : order(static_cast<signed int>(in_order)){};
+
+    friend class weak_ordering;
+    friend class strong_ordering;
+
+  public:
+    static const partial_ordering less;
+    static const partial_ordering equivalent;
+    static const partial_ordering greater;
+    static const partial_ordering unordered;
+
+    friend constexpr auto operator==(partial_ordering, partial_ordering)
+        -> bool = default;
+
+    friend constexpr auto operator<(partial_ordering lhs, partial_ordering rhs)
+        -> bool {
+        return lhs.order < rhs.order;
+    }
+
+    friend constexpr auto operator<=(partial_ordering lhs, partial_ordering rhs)
+        -> bool {
+        return lhs.order <= rhs.order;
+    }
+
+    friend constexpr auto operator>(partial_ordering lhs, partial_ordering rhs)
+        -> bool {
+        return lhs.order > rhs.order;
+    }
+
+    friend constexpr auto operator>=(partial_ordering lhs, partial_ordering rhs)
+        -> bool {
+        return lhs.order >= rhs.order;
+    }
+
+    // `0` is the only integer literal which can implicitly convert to
+    // `nullptr`.
+
+    // Check equality with a `0` literal.
+    friend constexpr auto operator==(partial_ordering partial,
+                                     decltype(nullptr)) -> bool {
+        return partial.order == 0;
+    }
+    friend constexpr auto operator==(decltype(nullptr),
+                                     partial_ordering partial) -> bool {
+        return partial.order == 0;
+    }
+
+    // Check inequality with a `0` literal.
+    friend constexpr auto operator!=(partial_ordering partial,
+                                     decltype(nullptr)) -> bool {
+        return partial.order != 0;
+    }
+    friend constexpr auto operator!=(decltype(nullptr),
+                                     partial_ordering partial) -> bool {
+        return partial.order != 0;
+    }
+
+    // Check less-than with a `0` literal.
+    friend constexpr auto operator<(partial_ordering partial, decltype(nullptr))
+        -> bool {
+        return partial.order < 0;
+    }
+    friend constexpr auto operator<(decltype(nullptr), partial_ordering partial)
+        -> bool {
+        return 0 < partial.order;
+    }
+
+    // Check less-than-or-equal with a `0` literal.
+    friend constexpr auto operator<=(partial_ordering partial,
+                                     decltype(nullptr)) -> bool {
+        return partial.order <= 0;
+    }
+    friend constexpr auto operator<=(decltype(nullptr),
+                                     partial_ordering partial) -> bool {
+        return 0 <= partial.order;
+    }
+
+    // Check greater-than with a `0` literal.
+    friend constexpr auto operator>(partial_ordering partial, decltype(nullptr))
+        -> bool {
+        return partial.order > 0;
+    }
+    friend constexpr auto operator>(decltype(nullptr), partial_ordering partial)
+        -> bool {
+        return 0 > partial.order;
+    }
+
+    // Check greater-than with a `0` literal.
+    friend constexpr auto operator>=(partial_ordering partial,
+                                     decltype(nullptr)) -> bool {
+        return partial.order >= 0;
+    }
+    friend constexpr auto operator>=(decltype(nullptr),
+                                     partial_ordering partial) -> bool {
+        return 0 >= partial.order;
+    }
+
+    // Check threeway-comparison with a `0` literal.
+    friend constexpr auto operator<=>(partial_ordering lhs, decltype(nullptr))
+        -> partial_ordering {
+        // If the `partial_ordering` is a left-hand operand, this always returns
+        // itself.
+        return lhs;
+    }
+
+    // Check threeway-comparison with a `0` literal.
+    // If the `partial_ordering` is `less`, then this should return
+    // `greater`. But if `partial_ordering` is `greater`, then this should
+    // return `less`.
+    friend constexpr auto operator<=>(decltype(nullptr), partial_ordering rhs)
+        -> partial_ordering {
+        return partial_ordering{static_cast<detail::Order>(-rhs.order)};
+    }
+};
+
+// Initializing these values inside of `partial_ordering` is not possible, since
+// it would be an incomplete type in that context. They are initialized
+// afterwards, here, instead.
+inline constexpr partial_ordering partial_ordering::less(detail::Order::less);
+inline constexpr partial_ordering partial_ordering::equivalent(
+    detail::Order::equivalent);
+inline constexpr partial_ordering partial_ordering::greater(
+    detail::Order::greater);
+inline constexpr partial_ordering partial_ordering::unordered(
+    detail::Unordered::unordered);
+
+// NOLINTNEXTLINE This must be snake_case.
+class weak_ordering {
+    signed int order;
+
+    constexpr explicit weak_ordering(detail::Order in_order)
+        : order(static_cast<signed int>(in_order)){};
+
+    friend class strong_ordering;
+
+  public:
+    static const weak_ordering less;
+    static const weak_ordering equivalent;
+    static const weak_ordering greater;
+
+    // `weak_ordering` must implicitly cast into `partial_ordering`.
+    constexpr operator partial_ordering() const {
+        return partial_ordering{static_cast<detail::Order>(this->order)};
+    }
+
+    friend constexpr auto operator==(weak_ordering, weak_ordering)
+        -> bool = default;
+
+    friend constexpr auto operator<(weak_ordering lhs, weak_ordering rhs)
+        -> bool {
+        return lhs.order < rhs.order;
+    }
+
+    friend constexpr auto operator<=(weak_ordering lhs, weak_ordering rhs)
+        -> bool {
+        return lhs.order <= rhs.order;
+    }
+
+    friend constexpr auto operator>(weak_ordering lhs, weak_ordering rhs)
+        -> bool {
+        return lhs.order > rhs.order;
+    }
+
+    friend constexpr auto operator>=(weak_ordering lhs, weak_ordering rhs)
+        -> bool {
+        return lhs.order >= rhs.order;
+    }
+
+    // `0` is the only integer literal which can implicitly convert to
+    // `nullptr`.
+
+    // Check equality with a `0` literal.
+    friend constexpr auto operator==(weak_ordering partial, decltype(nullptr))
+        -> bool {
+        return partial.order == 0;
+    }
+    friend constexpr auto operator==(decltype(nullptr), weak_ordering partial)
+        -> bool {
+        return partial.order == 0;
+    }
+
+    // Check inequality with a `0` literal.
+    friend constexpr auto operator!=(weak_ordering partial, decltype(nullptr))
+        -> bool {
+        return partial.order != 0;
+    }
+    friend constexpr auto operator!=(decltype(nullptr), weak_ordering partial)
+        -> bool {
+        return partial.order != 0;
+    }
+
+    // Check less-than with a `0` literal.
+    friend constexpr auto operator<(weak_ordering partial, decltype(nullptr))
+        -> bool {
+        return partial.order < 0;
+    }
+    friend constexpr auto operator<(decltype(nullptr), weak_ordering partial)
+        -> bool {
+        return 0 < partial.order;
+    }
+
+    // Check less-than-or-equal with a `0` literal.
+    friend constexpr auto operator<=(weak_ordering partial, decltype(nullptr))
+        -> bool {
+        return partial.order <= 0;
+    }
+    friend constexpr auto operator<=(decltype(nullptr), weak_ordering partial)
+        -> bool {
+        return 0 <= partial.order;
+    }
+
+    // Check greater-than with a `0` literal.
+    friend constexpr auto operator>(weak_ordering partial, decltype(nullptr))
+        -> bool {
+        return partial.order > 0;
+    }
+    friend constexpr auto operator>(decltype(nullptr), weak_ordering partial)
+        -> bool {
+        return 0 > partial.order;
+    }
+
+    // Check greater-than with a `0` literal.
+    friend constexpr auto operator>=(weak_ordering partial, decltype(nullptr))
+        -> bool {
+        return partial.order >= 0;
+    }
+    friend constexpr auto operator>=(decltype(nullptr), weak_ordering partial)
+        -> bool {
+        return 0 >= partial.order;
+    }
+
+    // Check threeway-comparison with a `0` literal.
+    friend constexpr auto operator<=>(weak_ordering lhs, decltype(nullptr))
+        -> weak_ordering {
+        // If the `weak_ordering` is a left-hand operand, this always returns
+        // itself.
+        return lhs;
+    }
+
+    // Check threeway-comparison with a `0` literal.
+    // If the `weak_ordering` is `less`, then this should return
+    // `greater`. But if `weak_ordering` is `greater`, then this should
+    // return `less`.
+    friend constexpr auto operator<=>(decltype(nullptr), weak_ordering rhs)
+        -> weak_ordering {
+        return weak_ordering{static_cast<detail::Order>(-rhs.order)};
+    }
+};
+
+// Initializing these values inside of `weak_ordering` is not possible, since
+// it would be an incomplete type in that context. They are initialized
+// afterwards, here, instead.
+inline constexpr weak_ordering weak_ordering::less(detail::Order::less);
+inline constexpr weak_ordering weak_ordering::equivalent(
+    detail::Order::equivalent);
+inline constexpr weak_ordering weak_ordering::greater(detail::Order::greater);
+
+// NOLINTNEXTLINE This must be snake_case.
+class strong_ordering {
+    signed int order;
+
+    constexpr explicit strong_ordering(detail::Order in_order)
+        : order(static_cast<signed int>(in_order)){};
+
+  public:
+    static const strong_ordering less;
+    static const strong_ordering equal;
+    static const strong_ordering equivalent;
+    static const strong_ordering greater;
+
+    // `strong_ordering` must implicitly cast into `partial_ordering`.
+    constexpr operator partial_ordering() const {
+        return partial_ordering{static_cast<detail::Order>(this->order)};
+    }
+
+    // `strong_ordering` must implicitly cast into `weak_ordering`.
+    constexpr operator weak_ordering() const {
+        return weak_ordering{static_cast<detail::Order>(this->order)};
+    }
+
+    friend constexpr auto operator==(strong_ordering, strong_ordering)
+        -> bool = default;
+
+    friend constexpr auto operator<(strong_ordering lhs, strong_ordering rhs)
+        -> bool {
+        return lhs.order < rhs.order;
+    }
+
+    friend constexpr auto operator<=(strong_ordering lhs, strong_ordering rhs)
+        -> bool {
+        return lhs.order <= rhs.order;
+    }
+
+    friend constexpr auto operator>(strong_ordering lhs, strong_ordering rhs)
+        -> bool {
+        return lhs.order > rhs.order;
+    }
+
+    friend constexpr auto operator>=(strong_ordering lhs, strong_ordering rhs)
+        -> bool {
+        return lhs.order >= rhs.order;
+    }
+
+    // `0` is the only integer literal which can implicitly convert to
+    // `nullptr`.
+
+    // Check equality with a `0` literal.
+    friend constexpr auto operator==(strong_ordering partial, decltype(nullptr))
+        -> bool {
+        return partial.order == 0;
+    }
+    friend constexpr auto operator==(decltype(nullptr), strong_ordering partial)
+        -> bool {
+        return partial.order == 0;
+    }
+
+    // Check inequality with a `0` literal.
+    friend constexpr auto operator!=(strong_ordering partial, decltype(nullptr))
+        -> bool {
+        return partial.order != 0;
+    }
+    friend constexpr auto operator!=(decltype(nullptr), strong_ordering partial)
+        -> bool {
+        return partial.order != 0;
+    }
+
+    // Check less-than with a `0` literal.
+    friend constexpr auto operator<(strong_ordering partial, decltype(nullptr))
+        -> bool {
+        return partial.order < 0;
+    }
+    friend constexpr auto operator<(decltype(nullptr), strong_ordering partial)
+        -> bool {
+        return 0 < partial.order;
+    }
+
+    // Check less-than-or-equal with a `0` literal.
+    friend constexpr auto operator<=(strong_ordering partial, decltype(nullptr))
+        -> bool {
+        return partial.order <= 0;
+    }
+    friend constexpr auto operator<=(decltype(nullptr), strong_ordering partial)
+        -> bool {
+        return 0 <= partial.order;
+    }
+
+    // Check greater-than with a `0` literal.
+    friend constexpr auto operator>(strong_ordering partial, decltype(nullptr))
+        -> bool {
+        return partial.order > 0;
+    }
+    friend constexpr auto operator>(decltype(nullptr), strong_ordering partial)
+        -> bool {
+        return 0 > partial.order;
+    }
+
+    // Check greater-than with a `0` literal.
+    friend constexpr auto operator>=(strong_ordering partial, decltype(nullptr))
+        -> bool {
+        return partial.order >= 0;
+    }
+    friend constexpr auto operator>=(decltype(nullptr), strong_ordering partial)
+        -> bool {
+        return 0 >= partial.order;
+    }
+
+    // Check threeway-comparison with a `0` literal.
+    friend constexpr auto operator<=>(strong_ordering lhs, decltype(nullptr))
+        -> strong_ordering {
+        // If the `strong_ordering` is a left-hand operand, this always returns
+        // itself.
+        return lhs;
+    }
+
+    // Check threeway-comparison with a `0` literal.
+    // If the `strong_ordering` is `less`, then this should return
+    // `greater`. But if `strong_ordering` is `greater`, then this should
+    // return `less`.
+    friend constexpr auto operator<=>(decltype(nullptr), strong_ordering rhs)
+        -> strong_ordering {
+        return strong_ordering{static_cast<detail::Order>(-rhs.order)};
+    }
+};
+
+// Initializing these values inside of `strong_ordering` is not possible, since
+// it would be an incomplete type in that context. They are initialized
+// afterwards, here, instead.
+inline constexpr strong_ordering strong_ordering::less(detail::Order::less);
+inline constexpr strong_ordering strong_ordering::equivalent(
+    detail::Order::equivalent);
+inline constexpr strong_ordering strong_ordering::equal(detail::Order::equal);
+inline constexpr strong_ordering strong_ordering::greater(
+    detail::Order::greater);
+
+namespace detail {
+    template <typename T>
+    inline constexpr int comparison_category_strength = 0;
+    template <>
+    inline constexpr int comparison_category_strength<partial_ordering> = 1;
+    template <>
+    inline constexpr int comparison_category_strength<weak_ordering> = 2;
+    template <>
+    inline constexpr int comparison_category_strength<strong_ordering> = 3;
+
+    template <typename T, typename U, typename... Remaining>
+    struct WeakestComparisonCategory {
+        using Weaker = cat::Conditional<(comparison_category_strength<T> <=
+                                         comparison_category_strength<U>),
+                                        T, U>;
+
+        using Type =
+            cat::Conditional<(sizeof...(Remaining) > 0) && (!cat::is_void<U>),
+                             // Recurse through `StrongestComparisonCategory` to
+                             // find the strongest type in this list.
+                             WeakestComparisonCategory<
+                                 // Set the next recursion's `T` to the weaker
+                                 // of `T` and `U`.
+                                 Weaker,
+                                 // Recurse with the remaining types. Appending
+                                 // `void` is required, because this branch is
+                                 // not short-circuited by `Conditional`, and
+                                 // there must be at least two template
+                                 // arguments.
+                                 Remaining..., void>,
+                             // The base case, when there are no types left in
+                             // `Remaining`, is the weaker of `T` and `U`.
+                             Weaker>;
+    };
+}  // namespace detail
+
+template <typename... Ts>
+    // Every type in `Ts` must be a comparison category.
+    requires((cat::is_same<Ts, partial_ordering> ||
+              cat::is_same<Ts, weak_ordering> ||
+              cat::is_same<Ts, strong_ordering>)&&...)
+// NOLINTNEXTLINE This must be snake_case.
+struct common_comparison_category {
+    // NOLINTNEXTLINE
+    using type = typename detail::WeakestComparisonCategory<Ts...>::Type;
+};
+
+template <typename T>
+struct common_comparison_category<T> {
+    using type = void;  // NOLINT
+};
+
+// These partial-specializations short-circuit single-argument specializations
+// for faster compilation:
+
+template <>
+struct common_comparison_category<partial_ordering> {
+    using type = partial_ordering;  // NOLINT
+};
+
+template <>
+struct common_comparison_category<weak_ordering> {
+    using type = weak_ordering;  // NOLINT
+};
+
+template <>
+struct common_comparison_category<strong_ordering> {
+    using type = strong_ordering;  // NOLINT
+};
+
+template <>
+struct common_comparison_category<> {
+    using type = strong_ordering;  // NOLINT
+};
+
+template <typename... Ts>
+// NOLINTNEXTLINE This must be snake_case.
+using common_comparison_category_t =
+    typename common_comparison_category<Ts...>::type;
+
+}  // namespace std

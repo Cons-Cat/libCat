@@ -37,4 +37,24 @@ auto main() -> int {
     intptr<void> intptr_1 = nullptr;
     intptr<void> intptr_2 = nullptr;
     intptr_1 = intptr_1 + intptr_2;
+
+    // Test `<=>`.
+    int4 int_less = 0;
+    int4 int_more = 2;
+
+    [[maybe_unused]] bool is_less = (int_less < int_more);
+    is_less = ((0 <=> int_more) < 0);
+    Result(is_less).or_exit();
+    is_less = (0 < int_more);
+    Result(is_less).or_exit();
+    is_less = (int_less < 2);
+    Result(is_less).or_exit();
+
+    [[maybe_unused]] bool is_more = (int_more > int_less);
+    is_more = ((0 <=> int_less) == 0);
+    Result(is_more).or_exit();
+    is_more = (0 < int_more);
+    Result(is_more).or_exit();
+    is_more = (int_less < 2);
+    Result(is_more).or_exit();
 };

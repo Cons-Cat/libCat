@@ -5,6 +5,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/
   ${CMAKE_SOURCE_DIR}/src/compatibility/
   ${CMAKE_SOURCE_DIR}/src/libraries/meta/
+  ${CMAKE_SOURCE_DIR}/src/libraries/compare/
   ${CMAKE_SOURCE_DIR}/src/libraries/runtime/
   ${CMAKE_SOURCE_DIR}/src/libraries/numerals/
   ${CMAKE_SOURCE_DIR}/src/libraries/simd/
