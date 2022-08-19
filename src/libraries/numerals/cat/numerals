@@ -642,40 +642,18 @@ struct ArithmeticPtr {
         return *this;
     }
 
+    // TODO: Make more of these `friend`.
+
     template <typename U>
-    [[nodiscard]] constexpr auto operator>(ArithmeticPtr<U, Storage> from) const
-        -> bool {
-        return this->raw > from.raw;
-    }
-    [[nodiscard]] constexpr auto operator>(
-        detail::NonPtrIntegral auto from) const -> bool {
-        return this->raw > static_cast<Storage>(from);
+    [[nodiscard]] constexpr auto operator<=>(
+        ArithmeticPtr<U, Storage> from) const {
+        return this->raw <=> from.raw;
     }
 
     template <typename U>
-    constexpr auto operator>=(ArithmeticPtr<U, Storage> from) const -> bool {
-        return this->raw >= from.raw;
-    }
-    constexpr auto operator>=(detail::NonPtrIntegral auto from) const -> bool {
-        return this->raw >= static_cast<Storage>(from);
-    }
-
-    template <typename U>
-    [[nodiscard]] constexpr auto operator<(ArithmeticPtr<U, Storage> from) const
-        -> bool {
-        return this->raw < from.raw;
-    }
-    [[nodiscard]] constexpr auto operator<(
-        detail::NonPtrIntegral auto from) const -> bool {
-        return this->raw < static_cast<Storage>(from);
-    }
-
-    template <typename U>
-    constexpr auto operator<=(ArithmeticPtr<U, Storage> from) const -> bool {
-        return this->raw <= from.raw;
-    }
-    constexpr auto operator<=(detail::NonPtrIntegral auto from) const -> bool {
-        return this->raw <= static_cast<Storage>(from);
+    [[nodiscard]] constexpr auto operator!=(
+        ArithmeticPtr<U, Storage> from) const {
+        return this->raw != from.raw;
     }
 
     [[nodiscard]] constexpr auto operator+(ArithmeticPtr<T, Storage> rhs)
@@ -865,9 +843,15 @@ struct ArithmeticPtr {
 
 // Order-independant operators between an `ArithmeticPtr` and a pointer.
 template <typename T, typename Storage>
-[[nodiscard]] constexpr auto operator==(ArithmeticPtr<T, Storage> lhs, T* p_rhs)
+[[nodiscard]] constexpr auto operator<=>(ArithmeticPtr<T, Storage> lhs,
+                                         T* p_rhs) {
+    return lhs.raw <=> ArithmeticPtr<T, Storage>{p_rhs}.raw;
+}
+
+template <typename T, typename Storage>
+[[nodiscard]] constexpr auto operator!=(ArithmeticPtr<T, Storage> lhs, T* p_rhs)
     -> bool {
-    return lhs.raw == ArithmeticPtr<T, Storage>{p_rhs}.raw;
+    return lhs.raw != ArithmeticPtr<T, Storage>{p_rhs}.raw;
 }
 
 template <typename T, typename Storage>
@@ -896,10 +880,16 @@ template <typename T, typename Storage>
 
 // Order-independant operators between an `ArithmeticPtr<T>` and an integer.
 template <typename T, typename Storage>
-[[nodiscard]] constexpr auto operator==(ArithmeticPtr<T, Storage> lhs,
+[[nodiscard]] constexpr auto operator<=>(ArithmeticPtr<T, Storage> lhs,
+                                         detail::NonPtrIntegral auto rhs) {
+    return lhs.raw <=> rhs;
+}
+
+template <typename T, typename Storage>
+[[nodiscard]] constexpr auto operator!=(ArithmeticPtr<T, Storage> lhs,
                                         detail::NonPtrIntegral auto rhs)
     -> bool {
-    return lhs.raw == rhs;
+    return lhs.raw != rhs;
 }
 
 template <typename T, typename Storage>
