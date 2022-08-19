@@ -626,7 +626,6 @@ struct Process {
     Process(Process const&) = delete;
 
     // TODO: Add `cat::invocable` concept.
-    // TODO: Use `cat::allocator` concept.
     auto create(cat::allocator auto& allocator, ssize const initial_stack_size,
                 auto const& function, void* p_arguments_struct,
                 // TODO: These flags should largely be encoded into the type.

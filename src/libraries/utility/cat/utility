@@ -192,8 +192,9 @@ template <typename T>
 constexpr auto forward(cat::RemoveReference<T>& input) -> T&&;
 
 template <typename T>
+    requires(!cat::is_lvalue_reference<T>)
 constexpr auto forward(typename cat::RemoveReferenceTrait<T>::type&& input)
-    -> T&& requires(!cat::is_lvalue_reference<T>);
+    -> T&&;
 
 template <typename T>
 constexpr auto move(T&& input) -> cat::RemoveReference<T>&&;

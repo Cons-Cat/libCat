@@ -6,18 +6,6 @@
 
 namespace cat {
 
-template <typename T>
-struct HigherType {
-    using Type = T;
-
-    consteval HigherType() = default;
-
-    template <typename U>
-    consteval auto operator==(HigherType<U> const) -> bool {
-        return is_same<U, T>;
-    }
-};
-
 template <typename... Ts>
 class TypeList {
     template <typename>
