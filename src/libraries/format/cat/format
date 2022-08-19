@@ -235,15 +235,15 @@ namespace detail {
               length(in_length),
               max_length(in_max_length){};
 
-        auto p_data() -> char* {
+        auto p_data() const -> char* {
             return this->p_storage;
         }
 
-        auto size() -> ssize {
+        auto size() const -> ssize {
             return this->length;
         }
 
-        auto capacity() -> ssize {
+        auto capacity() const -> ssize {
             return this->max_length;
         }
 
@@ -424,7 +424,7 @@ namespace detail {
 
         // Flush `storage` when formatting is completed.
         ~FormatBufferIterator() {
-            // `.size()` is derived.
+            // `size()` is derived from `FormatBufferBase`.
             if (this->size() > 0) {
                 this->flush();
             }
@@ -432,6 +432,7 @@ namespace detail {
 
         // Overload the pure virtual `FormatBufferBase::grow()` function.
         auto grow(ssize) -> Optional<void> {
+            // `size()` is derived from `FormatBufferBase`.
             if (this->size() == 256) {
                 this->flush();
             }
@@ -439,6 +440,7 @@ namespace detail {
         }
 
         auto flush() -> Optional<void> {
+            // `size()` is derived from `FormatBufferBase`.
             ssize size = this->size();
             // char const* p_end = storage + size;
 
@@ -547,7 +549,7 @@ namespace detail {
               output_iterator(iterator),
               format(in_format),
               // p_tempory_buffer(iterator.iterable.p_data()),
-              arguments(in_arguments){};
+              arguments(std::move(in_arguments)){};
     };
 
     template <stableAllocator Allocator>
