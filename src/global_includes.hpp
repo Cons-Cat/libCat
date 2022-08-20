@@ -75,7 +75,7 @@ template <typename T, auto predicate, T sentinel>
 struct Compact {
     using Type = T;
     static constexpr auto predicate_function = predicate;
-    static constexpr Type sentinel_value = Type{sentinel};
+    static constexpr T sentinel_value = sentinel;
     // `Compact`s can only be instantiated at compile-time.
     consteval Compact() = default;
 };
@@ -93,7 +93,7 @@ using Sentinel = Compact<T, detail::sentinel_predicate<T, sentinel>, sentinel>;
 
 }  // namespace cat
 
-// `_` can consume any value to explicitly disregard a ``[[nodiscard]]``
+// `_` can consume any value to explicitly disregard a `[[nodiscard]]`
 // attribute from a function with side effects. Consuming a `Result` value is
 // not possible.
 [[maybe_unused]] inline cat::detail::Unused _;
