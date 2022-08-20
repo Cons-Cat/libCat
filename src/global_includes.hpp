@@ -6,6 +6,8 @@
 // done using the `--include` flag, as in `--include global_includes.hpp`. The
 // `CMakeLists.txt` in this repository's top level directory does this.
 
+#include <cat/compare>
+
 // libCat provides a `_` variable that consumes a function's output, but
 // cannot be assigned to any variable.
 namespace cat {
@@ -49,24 +51,14 @@ struct MonostateStorage {
         return *this;
     }
 
-    // TODO: Support all non-assignment operators that `T` has.
-    constexpr auto operator==(auto operand) -> bool {
-        return state == operand;
+    constexpr friend auto operator<=>(MonostateStorage<T, state> const& self,
+                                      auto const& rhs) {
+        return self.storage <=> rhs;
     }
-    constexpr auto operator!=(auto operand) -> bool {
-        return state != operand;
-    }
-    constexpr auto operator<(auto operand) -> bool {
-        return state < operand;
-    }
-    constexpr auto operator<=(auto operand) -> bool {
-        return state <= operand;
-    }
-    constexpr auto operator>(auto operand) -> bool {
-        return state > operand;
-    }
-    constexpr auto operator>=(auto operand) -> bool {
-        return state >= operand;
+
+    constexpr friend auto operator==(MonostateStorage<T, state> const& self,
+                                     auto const& rhs) -> bool {
+        return self.storage == rhs;
     }
 };
 
@@ -112,7 +104,7 @@ class Result;
 // because it contains the `_start` symbol.
 #include <cat/runtime>
 
-// TODO: Remove this.
+// TODO: Remove this once a new assert system is created.
 // `Result` is used throughout the library.
 #include <result>
 

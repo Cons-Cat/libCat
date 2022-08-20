@@ -199,7 +199,8 @@ struct Numeral {
     }
 
     template <arithmetic U>
-    [[nodiscard]] friend constexpr auto operator==(Numeral<T> lhs, U rhs) {
+    [[nodiscard]] friend constexpr auto operator==(Numeral<T> lhs, U rhs)
+        -> bool {
         return lhs.raw == to_raw_numeral(rhs);
     }
 
