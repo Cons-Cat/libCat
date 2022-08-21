@@ -17,7 +17,7 @@ namespace detail {
     };
 
     template <typename T>
-    concept hasDistance = requires(T it) {
+    concept hasDistanceTo = requires(T it) {
         it.distance_to(it);
     };
 
@@ -32,7 +32,7 @@ namespace detail {
     };
 
     // Case when `T` provides `.distance_to()`
-    template <detail::hasDistance T>
+    template <detail::hasDistanceTo T>
     struct InferDifferenceType<T> {
         static T const& it;
         using Type = decltype(it.distance_to(it));
@@ -66,7 +66,7 @@ namespace detail {
     };
 
     template <typename T>
-    concept hasRandomAccess = hasAdvance<T> && hasDistance<T>;
+    concept hasRandomAccess = hasAdvance<T> && hasDistanceTo<T>;
 
     template <typename T>
     concept hasBidirectional = hasRandomAccess<T> || hasDecrement<T>;
@@ -138,6 +138,12 @@ struct IteratorFacade {
         }
     }
 
+    constexpr friend auto operator<=>(
+        Derived const& left,
+        Derived const& right) requires(detail::hasDistanceTo<Derived>) {
+        return (left - right) <=> 0;
+    }
+
     constexpr friend auto operator==(Derived const& left, Derived const& right)
         -> bool {
         if constexpr (detail::hasEqualTo<Derived>) {
@@ -148,7 +154,7 @@ struct IteratorFacade {
     }
 
     constexpr friend auto operator==(Derived const& self,
-                                     detail::hasSentinel<Derived> auto const)
+                                     detail::hasSentinel<Derived> auto)
         -> bool {
         return self.at_end();
     }
@@ -265,8 +271,6 @@ struct IteratorFacade {
         -> decltype(auto) requires(detail::hasAdvance<Derived>) {
         return *(this->self() + offset);
     }
-
-    // TODO: Support `<=>` operator.
 };
 
 struct RandomAccessIteratorTag {};
