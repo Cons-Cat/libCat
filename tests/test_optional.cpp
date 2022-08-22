@@ -50,7 +50,7 @@ auto main() -> int {
     cat::Optional<int4> inplace_1{};
     Result(!inplace_1.has_value()).or_exit();
 
-    // `int4` default-initializes to `0`.
+    // `int4` default-initializes to 0.
     cat::Optional<int4> inplace_2{in_place};
     Result(inplace_2.value() == 0).or_exit();
 
@@ -70,7 +70,7 @@ auto main() -> int {
     moo = nullopt;
     Result(moo.value_or(100) == 100).or_exit();
 
-    // 	cat::Optional reference.
+    // `Optional` reference.
     cat::Optional<int4&> ref(nullopt);
     cat::Optional<int4&> ref_2 = nullopt;
 
@@ -106,7 +106,7 @@ auto main() -> int {
     Result(ref_2.has_value()).or_exit();
     Result(ref_2.value() == goo).or_exit();
 
-    // `cat::Optional` with a predicate.
+    // `Optional` with a predicate.
     cat::Optional<cat::Compact<int4,
                                [](int4 input) -> bool {
                                    return input >= 0;
@@ -128,7 +128,7 @@ auto main() -> int {
     positive = nullopt;
     Result(!positive.has_value()).or_exit();
 
-    // `cat::Optional<void>` with a predicate.
+    // `Optional<void>` with a predicate.
     cat::Optional<cat::Compact<cat::MonostateStorage<int, 0>,
                                [](int input) -> bool {
                                    return input >= 0;
@@ -282,7 +282,7 @@ auto main() -> int {
     Result(monadic_move.has_value()).or_exit();
     Result(monadic_move.value().borrow() == 2).or_exit();
 
-    // Test copying `	cat::Optional`s into other `	cat::Optional`s.
+    // Test copying `Optional`s into other `Optional`s.
     cat::Optional<int4> opt_original = 10;
     cat::Optional<int4> opt_copy_1 = cat::Optional{opt_original};
     cat::Optional<int4> opt_copy_2 = opt_original;
@@ -298,7 +298,7 @@ auto main() -> int {
 
     // TODO: Test non-trivial reference.
 
-    // `cat::Optional const`
+    // `Optional const`
     cat::Optional<int4> const constant_val = 1;
     [[maybe_unused]] cat::Optional<int4> const constant_null = nullopt;
     [[maybe_unused]] auto con = constant_val.value();
@@ -321,7 +321,7 @@ auto main() -> int {
     // Result(global_int == 3).or_exit();
     // Result(nontrivial.value().data == 3).or_exit();
 
-    // `cat::Optional<void>` default-initializes empty:
+    // `Optional<void>` default-initializes empty:
     cat::Optional<void> optvoid;
     Result(!optvoid.has_value()).or_exit();
     // `monostate` initializes a value:
@@ -345,7 +345,7 @@ auto main() -> int {
 
     // Test `Optional` in a `constexpr` context.
     auto constant = []() constexpr {
-        constexpr cat::Optional<int> const_int_default;
+        [[maybe_unused]] constexpr cat::Optional<int> const_int_default;
 
         constexpr cat::Optional<ConstNonTrivial> const_nontrivial_default;
         Result(!const_nontrivial_default.has_value()).or_exit();
@@ -357,6 +357,23 @@ auto main() -> int {
         constexpr cat::Optional<ConstNonTrivial> const_nontrivial_in_place = {
             in_place, ConstNonTrivial{}};
         Result(const_nontrivial_in_place.has_value()).or_exit();
+
+        // Test `Optional<Compact<T>>`.
+        constexpr cat::OptionalPtr<void> const_optptr = nullptr;
+        cat::OptionalPtr<void> optptr = nullptr;
+        optptr = nullptr;
+        optptr = const_optptr;
+        [[maybe_unused]] cat::OptionalPtr<void> optptr2 = optptr;
+        [[maybe_unused]] cat::OptionalPtr<void> optptr3 = const_optptr;
+        [[maybe_unused]] cat::OptionalPtr<void> optptr4;
+
+        [[maybe_unused]] constexpr cat::OptionalPtr<NonTrivial>
+            const_nontrivial_optptr = nullptr;
+        [[maybe_unused]] constexpr cat::OptionalPtr<NonTrivial>
+            const_nontrivial_default_optptr;
+        [[maybe_unused]] cat::OptionalPtr<NonTrivial> nontrivial_optptr =
+            nullptr;
+        [[maybe_unused]] cat::OptionalPtr<NonTrivial> nontrivial_default_optptr;
     };
     _ = cat::constant_evaluate(constant);
 
