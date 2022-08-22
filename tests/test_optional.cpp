@@ -343,8 +343,6 @@ auto main() -> int {
     // Non-trivial constructor and destructor.
     cat::Optional<NonTrivial> nontrivial = NonTrivial();
     Result(nontrivial.value().data == 2).or_exit();
-    // Result(global_int == 3).or_exit();
-    // Result(nontrivial.value().data == 3).or_exit();
 
     // `Optional<void>` default-initializes empty:
     cat::Optional<void> optvoid;
