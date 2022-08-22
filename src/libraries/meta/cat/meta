@@ -583,6 +583,12 @@ template <typename T>
 constexpr bool is_trivial =
     is_trivially_copyable<T>&& is_trivially_default_constructible<T>;
 
+// `rvalue` binds r-value references and excludes any other references. This is
+// useful for perfect-forwarding parameter functions which could otherwise hide
+// `const&` or `&&` overloads.
+template <typename T>
+concept rvalue = is_rvalue_reference<T&&> && !is_const<T>;
+
 template <typename Function, typename... Args>
 concept invocable = requires(Function func, Args&&... args) {
     func(forward<Args>(args)...);

@@ -65,7 +65,6 @@ struct OptionalValueStorage {
     // If `T` is trivially move-constructible, use this simple move constructor.
     constexpr OptionalValueStorage(T&& in_value) requires(
         is_trivially_move_constructible<T>)
-        // TODO: Should this be a `move`?
         : storage(forward<T>(in_value)), has_some(true){};
 
     // If `T` is not trivially move-constructible, then manually invoke
@@ -82,8 +81,7 @@ struct OptionalValueStorage {
         !is_move_constructible<T>) = delete;
 
     // `nullopt` initializes this without a value.
-    constexpr OptionalValueStorage(detail::NullOpt)
-        : dummy{}, has_some(false){};
+    constexpr OptionalValueStorage(detail::NullOpt) : dummy{} {};
 
     // If other destructors are not conditionally specialized by their
     // `requires`, they should be `default` or deleted.
@@ -206,10 +204,6 @@ struct OptionalReferenceStorage {
     template <typename U>
     constexpr OptionalReferenceStorage(U& in_value)
         : p_storage(addressof(in_value)){};
-
-    // template <typename U>
-    // constexpr OptionalReferenceStorage(U const& in_value)
-    //     : p_storage(addressof(in_value)){};
 
     constexpr OptionalReferenceStorage(detail::NullOpt) : p_storage(nullptr){};
 
@@ -486,6 +480,11 @@ class Optional {
     template <typename U>
         requires(!is_reference<Value> && is_implicitly_convertible<U, Value> &&
                  is_copy_constructible<Value>)
+    constexpr Optional(U& input) : storage(static_cast<Value>(input)){};
+
+    template <typename U>
+        requires(!is_reference<Value> && is_implicitly_convertible<U, Value> &&
+                 is_copy_constructible<Value>)
     constexpr Optional(U const& input) : storage(static_cast<Value>(input)){};
 
     // Produce an error message if `Value` is not copy-constructible.
@@ -494,14 +493,16 @@ class Optional {
                  !is_copy_constructible<Value>)
     constexpr Optional(U const& input) = delete;
 
-    // Copy references.
+    // Rebinding converting reference constructor.
     template <typename U>
         requires(is_reference<Value>&&
                      is_implicitly_convertible<AddLvalueReference<U>, Value>)
     constexpr Optional(U& input) : storage(static_cast<Value>(input)){};
 
-    template <typename U>
+    // Perfect forwarding constructor.
+    template <rvalue U>
         requires(!is_reference<Value> && is_implicitly_convertible<U, Value>)
+    // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
     constexpr Optional(U&& input) : storage(forward<U>(input)){};
 
     // `Optional` can be constructed by another `Optional`.

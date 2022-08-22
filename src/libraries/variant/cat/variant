@@ -99,12 +99,21 @@ class Variant {
         this->construct_from_other_variant<Ts...>(move(variant));
     };
 
-    // Consume anything that is a valid type.
+    // Consume any type within the alternatives list.
     template <typename T>
         requires(Types::template has_type<T>)
-    constexpr Variant(T input) {
+    constexpr Variant(T const& input) {
         // Construct a new `T` at the address where it will be gotten from.
         construct_at(addressof(this->value<T>()), input);
+        this->discriminant = this->index<T>;
+    };
+
+    template <rvalue T>
+        requires(Types::template has_type<T>)
+    // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
+    constexpr Variant(T&& input) {
+        // Construct a new `T` at the address where it will be gotten from.
+        construct_at(addressof(this->value<T>()), forward<T>(input));
         this->discriminant = this->index<T>;
     };
 
@@ -127,7 +136,7 @@ class Variant {
         return *this;
     }
 
-    template <typename T>
+    template <rvalue T>
         requires(Types::template has_type<T>)
     constexpr auto operator=(T&& operand) -> Variant<Ts...>& {
         if (!this->holds_alternative<T>()) {
@@ -145,7 +154,8 @@ class Variant {
         return *this;
     }
 
-    // constexpr auto operator=(Variant<Ts...>&& operand) -> Variant<Ts...>& {
+    // constexpr auto operator=(Variant<Ts...>&& operand) -> Variant<Ts...>&
+    // {
     //     this->assign_other_variant<Ts...>(
     //         forward<Variant<Ts...>>(operand));
     //     return *this;

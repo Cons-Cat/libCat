@@ -53,16 +53,17 @@ constexpr Span(U&& container)
       length(forward<U>(container).size()){};
     */
 
-    // TODO: Template this.
-    // NOLINTNEXTLINE Copying the pointer is reasonable here.
-    constexpr auto operator=(Span<T> const& span) {
+    template <typename U>
+        requires(is_implicitly_convertible<U*, T*>)
+    constexpr auto operator=(Span<U> const& span) {
         this->p_storage = span.p_storage;
         this->length = span.length;
         return *this;
     }
 
-    // TODO: Template this.
-    auto operator=(Span<T>&& span) {
+    template <typename U>
+        requires(is_implicitly_convertible<U*, T*>)
+    auto operator=(Span<U>&& span) {
         this->p_storage = span.p_storage;
         this->length = cat::move(span).length;
         return *this;

@@ -50,13 +50,15 @@ class String : public Span<char const> {
         : Span<char const>(string.p_storage, string.length){};
 
     constexpr String(String&& string)
-        : Span<char const>(string.p_storage, string.length){};
+        : Span<char const>(string.p_storage, move(string).length){};
 
-    // This is `auto` to deduce lower than the array-literal constructor.
+    // This weird template deduces lower than the string literal constructor.
     template <typename T>
-    constexpr String(T p_string) requires(is_pointer<T>)
+        requires(is_pointer<T>)
+    constexpr String(T p_string)
         : Span<char const>(p_string, string_length(p_string)){};
 
+    // Zero-overhead string literal constructor.
     template <ssize::Raw other_length>
     consteval String(char const (&string)[other_length]) {
         this->p_storage = string;
