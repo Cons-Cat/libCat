@@ -496,7 +496,8 @@ class Optional {
 
     // Copy references.
     template <typename U>
-        requires(is_reference<Value>&& is_implicitly_convertible<U, Value>)
+        requires(is_reference<Value>&&
+                     is_implicitly_convertible<AddLvalueReference<U>, Value>)
     constexpr Optional(U& input) : storage(static_cast<Value>(input)){};
 
     template <typename U>
@@ -511,7 +512,7 @@ class Optional {
     }
 
     template <typename U>
-        requires(is_implicitly_convertible<U, Value> && !is_reference<Value>)
+        requires(is_implicitly_convertible<U, Value>)
     constexpr Optional(Optional<U> const& input) {
         this->storage.assign(input);
     }
@@ -544,15 +545,19 @@ class Optional {
     }
 
     // Forward all assignment operators to `storage`, except when assigning
-    // `nullopt`.
+    // `nullopt`. They should convert any implicitly convertible type into
+    // `Value`.
+
+    // Non-reference converting copy assignment operator.
     template <typename U>
         requires(is_implicitly_convertible<U, Value> && !is_reference<Value> &&
                  is_copy_assignable<Value>)
-    constexpr auto operator=(U& value) -> Optional& {
+    constexpr auto operator=(U const& value) -> Optional& {
         this->storage = static_cast<Value const&>(value);
         return *this;
     }
 
+    // Non-reference converting move assignment operator.
     template <typename U>
         requires(is_implicitly_convertible<U, Value> && !is_reference<Value> &&
                  is_move_assignable<Value>)
@@ -561,20 +566,16 @@ class Optional {
         return *this;
     }
 
+    // Rebinding converting reference assignment operator.
     template <typename U>
-        requires(is_implicitly_convertible<U, Value>&& is_reference<Value>)
+        requires((is_implicitly_convertible<AddLvalueReference<U>,
+                                            Value>)&&is_reference<Value>)
     constexpr auto operator=(U& value) -> Optional& {
-        this->storage = static_cast<Value>(value);
+        this->storage = static_cast<Value&>(value);
         return *this;
     }
 
-    template <typename U>
-        requires(is_implicitly_convertible<U, Value>)
-    auto operator=(Optional<U>& optional) -> Optional& {
-        this->storage.assign(optional);
-        return *this;
-    }
-
+    // Rebinding converting `Optional` copy assignment operator.
     template <typename U>
         requires(is_implicitly_convertible<U, Value> && !is_reference<Value> &&
                  !is_reference<U>)
@@ -583,10 +584,20 @@ class Optional {
         return *this;
     }
 
+    // Rebinding converting `Optional` move assignment operator.
     template <typename U>
-        requires(is_implicitly_convertible<U, Value>)
+        requires(
+            is_implicitly_convertible<U, Value>&& is_move_assignable<Value>)
     auto operator=(Optional<U>&& optional) -> Optional& {
         this->storage.assign(move(optional));
+        return *this;
+    }
+
+    // Rebinding converting `Optional` reference assignment operator.
+    template <typename U>
+        requires(is_implicitly_convertible<U, Value>)
+    auto operator=(Optional<U>& optional) -> Optional& {
+        this->storage.assign(optional);
         return *this;
     }
 

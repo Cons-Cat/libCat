@@ -296,7 +296,32 @@ auto main() -> int {
     Result(foo.p_value() == &foo.value()).or_exit();
     Result(foo.p_value() == addressof(foo.value())).or_exit();
 
-    // TODO: Test non-trivial reference.
+    // Test non-trivial reference.
+    NonTrivial nontrivial_val;
+    cat::Optional<NonTrivial&> nontrivial_ref_default;
+    nontrivial_ref_default = nontrivial_val;
+    [[maybe_unused]] cat::Optional<NonTrivial&> nontrivial_ref = nontrivial_val;
+
+    NonTrivial const const_nontrivial_val;
+    [[maybe_unused]] cat::Optional<NonTrivial&> const
+        mut_const_nontrivial_ref_default;
+    [[maybe_unused]] cat::Optional<NonTrivial&> const mut_const_nontrivial_ref =
+        nontrivial_val;
+
+    [[maybe_unused]] cat::Optional<NonTrivial const&>
+        const_mut_nontrivial_ref_default;
+    [[maybe_unused]] cat::Optional<NonTrivial const&> const_mut_nontrivial_ref =
+        nontrivial_val;
+    [[maybe_unused]] cat::Optional<NonTrivial const&>
+        const_mut_nontrivial_ref_2 = const_nontrivial_val;
+    const_mut_nontrivial_ref = const_nontrivial_val;
+
+    [[maybe_unused]] cat::Optional<NonTrivial const&> const
+        const_const_nontrivial_ref_default;
+    [[maybe_unused]] cat::Optional<NonTrivial const&> const
+        const_const_nontrivial_ref = nontrivial_val;
+    [[maybe_unused]] cat::Optional<NonTrivial const&> const
+        const_const_nontrivial_ref_2 = const_nontrivial_val;
 
     // `Optional const`
     cat::Optional<int4> const constant_val = 1;
