@@ -73,4 +73,10 @@ auto main() -> int {
     Result(variant3.holds_alternative<int2>()).or_exit();
     variant3 = variant;
     Result(variant3.holds_alternative<int>()).or_exit();
+
+    // Test getting variant type by index.
+    static_assert(cat::is_same<decltype(variant3.get<0>()), int>);
+    static_assert(cat::is_same<decltype(variant3.get<1>()), char>);
+    static_assert(cat::is_same<decltype(variant3.get<2>()), uint4>);
+    static_assert(cat::is_same<decltype(variant3.get<3>()), int2>);
 }

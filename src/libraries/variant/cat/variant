@@ -6,6 +6,7 @@
 #include <cat/memory>
 #include <cat/meta>
 #include <cat/type_list>
+#include <utility>
 
 namespace cat {
 
@@ -187,6 +188,20 @@ class Variant {
         return *reinterpret_cast<T const* const>(&this->storage);
     }
 
+    template <ssize index>
+        requires(index >= 0 && index < ssizeof_pack<Ts...>())
+    constexpr auto get() {
+        using T = typename Types::template Get<index>;
+        return *reinterpret_cast<T*>(addressof(this->storage));
+    }
+
+    template <ssize index>
+        requires(index >= 0 && index < ssizeof_pack<Ts...>())
+    constexpr auto get() const {
+        using T = typename Types::template Get<index>;
+        return *reinterpret_cast<T const* const>(&this->storage);
+    }
+
     template <typename T>
         requires(Types::template has_type<T>)
     constexpr auto get_if() -> Optional<T&> {
@@ -203,6 +218,26 @@ class Variant {
             return this->get<T>();
         }
         return nullopt;
+    }
+
+    template <ssize index>
+        requires(index >= 0 && index < ssizeof_pack<Ts...>())
+    constexpr auto get_if() {
+        using T = typename Types::template Get<index>;
+        if (this->holds_alternative<T>()) {
+            return Optional<T>{this->get<T>()};
+        }
+        return Optional<T>{nullopt};
+    }
+
+    template <ssize index>
+        requires(index >= 0 && index < ssizeof_pack<Ts...>())
+    constexpr auto get_if() const {
+        using T = typename Types::template Get<index>;
+        if (this->holds_alternative<T>()) {
+            return Optional<T>{this->get<T>()};
+        }
+        return Optional<T>{nullopt};
     }
 
     template <typename T>
