@@ -160,7 +160,7 @@ namespace detail {
 template <typename T, typename... Errors>
     requires(
         // `Scaredy` cannot hold C arrays.
-        // (!is_array<Errors...>) &&
+        (!is_array<Errors> && ...) &&
         // `Scaredy` should have at least one error type.
         sizeof...(Errors) > 0)
 class Scaredy {
