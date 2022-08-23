@@ -53,29 +53,29 @@ namespace detail {
         }
 
         constexpr auto value() & -> Value& requires(!is_void<T>) {
-            return this->storage.template value<T>();
+            return this->storage.template get<T>();
         }
 
         constexpr auto value() const& -> Value& requires(!is_void<T>) {
-            return this->storage.template value<T>();
+            return this->storage.template get<T>();
         }
 
         constexpr auto value() && -> Value&& requires(!is_void<T>) {
-            return move(this->storage.template value<T>());
+            return move(this->storage.template get<T>());
         }
 
         constexpr auto value() const&& -> Value&& requires(!is_void<T>) {
-            return move(this->storage.template value<T>());
+            return move(this->storage.template get<T>());
         }
 
         template <typename Error>
         constexpr auto error() {
-            return this->storage.template value<Error>();
+            return this->storage.template get<Error>();
         }
 
         template <typename Error>
         constexpr auto error() const {
-            return this->storage.template value<Error>();
+            return this->storage.template get<Error>();
         }
 
         template <typename U>

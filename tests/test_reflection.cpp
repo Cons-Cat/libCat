@@ -41,7 +41,7 @@ auto main() -> int {
 
     cat::Variant<int, char, uint4> variant(int{1});
     Result(variant.holds_alternative<int>()).or_exit();
-    int foo_int = variant.value<int>();
+    int foo_int = variant.get<int>();
     Result(foo_int == 1).or_exit();
 
     static_assert(variant.index<int> == 0u);
@@ -50,12 +50,12 @@ auto main() -> int {
 
     variant = 'o';
     Result(variant.holds_alternative<char>()).or_exit();
-    char foo_char = variant.value<char>();
+    char foo_char = variant.get<char>();
     Result(foo_char == 'o').or_exit();
 
-    cat::Optional opt1 = variant.safe_value<char>();
+    cat::Optional opt1 = variant.get_if<char>();
     Result(opt1.has_value()).or_exit();
-    cat::Optional opt2 = variant.safe_value<int>();
+    cat::Optional opt2 = variant.get_if<int>();
     Result(!opt2.has_value()).or_exit();
 
     // Test variant subtype constructor and assignment operator.

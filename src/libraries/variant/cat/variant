@@ -39,7 +39,7 @@ class Variant {
         requires(sizeof...(Us) >= 0)
     constexpr void hard_reset() {
         if (this->holds_alternative<U>()) {
-            this->value<U>().~U();
+            this->get<U>().~U();
         } else {
             if constexpr (sizeof...(Us) > 0) {
                 this->hard_reset<Us...>();
@@ -58,7 +58,7 @@ class Variant {
                           decltype(variant)>::Types::template has_type<U>) {
             if (variant.template holds_alternative<U>()) {
                 this->discriminant = this->index<U>;
-                this->value<U>() = variant.template value<U>();
+                this->get<U>() = variant.template get<U>();
                 return;
             }
         }
@@ -78,7 +78,7 @@ class Variant {
                     this->discriminant = this->index<U>;
                     return;
                 }
-                this->value<U>() = variant.template value<U>();
+                this->get<U>() = variant.template get<U>();
             }
         }
         if constexpr (sizeof...(Us) > 0) {
@@ -104,7 +104,7 @@ class Variant {
         requires(Types::template has_type<T>)
     constexpr Variant(T const& input) {
         // Construct a new `T` at the address where it will be gotten from.
-        construct_at(addressof(this->value<T>()), input);
+        construct_at(addressof(this->get<T>()), input);
         this->discriminant = this->index<T>;
     };
 
@@ -113,7 +113,7 @@ class Variant {
     // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
     constexpr Variant(T&& input) {
         // Construct a new `T` at the address where it will be gotten from.
-        construct_at(addressof(this->value<T>()), forward<T>(input));
+        construct_at(addressof(this->get<T>()), forward<T>(input));
         this->discriminant = this->index<T>;
     };
 
@@ -128,9 +128,9 @@ class Variant {
     constexpr auto operator=(T const& operand) -> Variant<Ts...>& {
         if (!this->holds_alternative<T>()) {
             if constexpr (!is_trivially_destructible<T>) {
-                this->value<T>().~T();
+                this->get<T>().~T();
             }
-            this->value<T>() = operand;
+            this->get<T>() = operand;
             this->discriminant = this->index<T>;
         }
         return *this;
@@ -141,9 +141,9 @@ class Variant {
     constexpr auto operator=(T&& operand) -> Variant<Ts...>& {
         if (!this->holds_alternative<T>()) {
             if constexpr (!is_trivially_destructible<T>) {
-                this->value<T>().~T();
+                this->get<T>().~T();
             }
-            this->value<T>() = forward<T>(operand);
+            this->get<T>() = forward<T>(operand);
             this->discriminant = this->index<T>;
         }
         return *this;
@@ -175,32 +175,32 @@ class Variant {
 
     template <typename T>
         requires(Types::template has_type<T>)
-    constexpr auto value() -> T& {
-        // This cast is safe when the precondition holds true.
-        return *reinterpret_cast<T*>(&this->storage);
+    constexpr auto get() -> T& {
+        // This cast is safe when this variant holds `T`.
+        return *reinterpret_cast<T*>(addressof(this->storage));
     }
 
     template <typename T>
         requires(Types::template has_type<T>)
-    constexpr auto value() const -> T const& {
-        // This cast is safe when the precondition holds true.
+    constexpr auto get() const -> T const& {
+        // This cast is safe when this variant holds `T`.
         return *reinterpret_cast<T const* const>(&this->storage);
     }
 
     template <typename T>
         requires(Types::template has_type<T>)
-    constexpr auto safe_value() -> Optional<T&> {
+    constexpr auto get_if() -> Optional<T&> {
         if (this->holds_alternative<T>()) {
-            return this->value<T>();
+            return this->get<T>();
         }
         return nullopt;
     }
 
     template <typename T>
         requires(Types::template has_type<T>)
-    constexpr auto safe_value() const -> Optional<T&> {
+    constexpr auto get_if() const -> Optional<T&> {
         if (this->holds_alternative<T>()) {
-            return this->value<T>();
+            return this->get<T>();
         }
         return nullopt;
     }
