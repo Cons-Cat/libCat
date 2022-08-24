@@ -10,6 +10,8 @@
 
 namespace cat {
 
+// TODO: Support reference types in a `Variant`.
+
 template <typename... Ts>
     requires(TypeList<Ts...>::is_unique_list)
 class Variant {

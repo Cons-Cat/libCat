@@ -175,6 +175,9 @@ namespace detail {
             deferred_code                       \
         });
 
+// TODO: Support `cat::ref`, to enable `Variant` and `Tuple` to hold references
+// more easily.
+
 }  // namespace cat
 
 using cat::ssizeof;

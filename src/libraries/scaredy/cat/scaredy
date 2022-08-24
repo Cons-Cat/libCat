@@ -276,6 +276,8 @@ namespace detail {
     };
 }  // namespace detail
 
+// TODO: Support reference types in a `Scaredy`.
+
 template <typename T, typename... Errors>
     requires(
         // `Scaredy` cannot hold C arrays.

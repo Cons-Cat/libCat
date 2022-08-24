@@ -15,7 +15,7 @@ auto main() -> int {
     char foo_char = variant.get<char>();
     Result(foo_char == 'o').or_exit();
 
-    cat::Optional opt1 = variant.get_if<char>();
+    cat::Optional<char&> opt1 = variant.get_if<char>();
     Result(opt1.has_value()).or_exit();
     cat::Optional opt2 = variant.get_if<int>();
     Result(!opt2.has_value()).or_exit();
