@@ -74,6 +74,15 @@ if(BUILD_TEST_LIST OR BUILD_ALL_TESTS)
   add_test(NAME List COMMAND test_list)
 endif()
 
+# This tests that `cat::Vector` works.
+option(BUILD_TEST_VECTOR "Compile Tuple tests." OFF)
+if(BUILD_TEST_VECTOR OR BUILD_ALL_TESTS)
+  add_executable(test_vector test_vector.cpp)
+  #target_compile_options(test_vector PRIVATE ${CAT_CXX_FLAGS_TEST})
+  target_link_options(test_vector PRIVATE ${CAT_LINK_FLAGS})
+  add_test(NAME Vector COMMAND test_vector)
+endif()
+
 # This tests that `cat::string_length()` works.
 option(BUILD_TEST_STRING_LENGTH "Compile string_length() tests." OFF)
 if(BUILD_TEST_STRING_LENGTH OR BUILD_ALL_TESTS)
@@ -183,6 +192,15 @@ if(BUILD_TEST_REFLECTION OR BUILD_ALL_TESTS)
   add_test(NAME TypeReflection COMMAND test_reflection)
 endif()
 
+# This tests that `cat::Variant` works.
+option(BUILD_TEST_VARIANT "Compile type variant tests." OFF)
+if(BUILD_TEST_VARIANT OR BUILD_ALL_TESTS)
+  add_executable(test_variant test_variant.cpp)
+  #target_compile_options(test_variant PRIVATE ${CAT_CXX_FLAGS_TEST})
+  target_link_options(test_variant PRIVATE ${CAT_LINK_FLAGS})
+  add_test(NAME TypeVariant COMMAND test_variant)
+endif()
+
 # This tests that `cat::Tuple` works.
 option(BUILD_TEST_TUPLE "Compile Tuple tests." OFF)
 if(BUILD_TEST_TUPLE OR BUILD_ALL_TESTS)
@@ -190,15 +208,6 @@ if(BUILD_TEST_TUPLE OR BUILD_ALL_TESTS)
   #target_compile_options(test_tuple PRIVATE ${CAT_CXX_FLAGS_TEST})
   target_link_options(test_tuple PRIVATE ${CAT_LINK_FLAGS})
   add_test(NAME Tuples COMMAND test_tuple)
-endif()
-
-# This tests that `cat::Vector` works.
-option(BUILD_TEST_VECTOR "Compile Tuple tests." OFF)
-if(BUILD_TEST_VECTOR OR BUILD_ALL_TESTS)
-  add_executable(test_vector test_vector.cpp)
-  #target_compile_options(test_vector PRIVATE ${CAT_CXX_FLAGS_TEST})
-  target_link_options(test_vector PRIVATE ${CAT_LINK_FLAGS})
-  add_test(NAME Vector COMMAND test_vector)
 endif()
 
 # This tests that `cat::set_memory()` etc. work.
@@ -215,21 +224,27 @@ endif()
 # This can be skipped if one or more other tests are built.
 if(
   NOT (BUILD_ALL_TESTS
+  OR BUILD_TEST_META
   OR BUILD_TEST_NUMERALS
   OR BUILD_TEST_SCAREDY
   OR BUILD_TEST_ARRAY
-  OR BUILD_TEST_VECTOR
   OR BUILD_TEST_LIST
+  OR BUILD_TEST_VECTOR
   OR BUILD_TEST_STRING_LENGTH
   OR BUILD_TEST_COMPARE_STRINGS
+  OR BUILD_TEST_FORMAT_STRINGS
   OR BUILD_TEST_COPY_MEMORY
   OR BUILD_TEST_ALLOCATOR
   OR BUILD_TEST_PAGE_ALLOCATOR
   OR BUILD_TEST_LINEAR_ALLOCATOR
   OR BUILD_TEST_THREAD
+  OR BUILD_TEST_TEST_RAII
   OR BUILD_TEST_OPTIONAL
+  OR BUILD_TEST_SIMD
+  OR BUILD_TEST_REFLECTION
+  OR BUILD_TEST_VARIANT
   OR BUILD_TEST_TUPLE
-  OR BUILD_TEST_SET_MEMORY)
+  OR BUILD_TEST_MEMORY)
 )
   add_executable(test_dummy test_dummy.cpp)
   target_compile_options(test_dummy PRIVATE ${CAT_CXX_FLAGS_TEST})
