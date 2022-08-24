@@ -184,6 +184,14 @@ using cat::ssizeof;
 // into the functions.
 namespace std {
 
+template <typename T>
+[[nodiscard]] constexpr auto as_const(T& value) -> cat::AddConst<T>& {
+    return value;
+}
+
+template <typename T>
+void as_const(const T&&) = delete;
+
 // NOLINTBEGIN(readability-redundant-declaration)
 // The following functions are forward-declared in `<cat/meta>`, but they
 // belong to the `<cat/utility>` library.
@@ -206,9 +214,8 @@ constexpr auto move(T&& input) -> cat::RemoveReference<T>&&;
 // `forward()` and `move()` should be usable from within a libCat namespace.
 // This apparently does not prevent the aformentioned GCC features from working.
 namespace cat {
+using std::as_const;
 using std::forward;
-}  // namespace cat
-namespace cat {
 using std::move;
 }  // namespace cat
 
