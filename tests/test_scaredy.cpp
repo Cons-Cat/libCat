@@ -81,4 +81,45 @@ auto main() -> int {
     Result(predicate.has_value()).or_exit();
     predicate = 10;
     Result(predicate.has_value()).or_exit();
+
+    // Test `.value_or()`.
+    cat::Scaredy<int4, ErrorOne> is_error = ErrorOne{};
+    cat::Scaredy<int4, ErrorOne> is_value = 2;
+    cat::Scaredy<int4, ErrorOne> const const_is_error = ErrorOne{};
+    cat::Scaredy<int4, ErrorOne> const const_is_value = 2;
+
+    int4 fallback = is_error.value_or(1);
+    Result(fallback == 1).or_exit();
+
+    int4 no_fallback = is_value.value_or(1);
+    Result(no_fallback == 2).or_exit();
+
+    int4 const_fallback = const_is_error.value_or(1);
+    Result(const_fallback == 1).or_exit();
+
+    int4 no_const_fallback = const_is_value.value_or(1);
+    Result(no_const_fallback == 2).or_exit();
+
+    // Test monadic member functions on a mutable `Scaredy`.
+    auto increment = [](auto input) {
+        return input + 1;
+    };
+
+    cat::Scaredy<int4, ErrorOne> mut_scaredy = 1;
+    _ = mut_scaredy.transform(increment).and_then(increment).or_exit();
+
+    // `.transform()` returning `void`.
+    mut_scaredy.transform(increment).or_else([]() {
+        return;
+    });
+
+    _ = mut_scaredy.transform(increment)
+            .or_else([]() {
+                return typeof(mut_scaredy){};
+            })
+            .or_exit();
+
+    // Test monadic member functions on a `const`-qualified `Scaredy`.
+    cat::Scaredy<int4, ErrorOne> const const_scaredy = 1;
+    _ = const_scaredy.transform(increment).and_then(increment).or_exit();
 }

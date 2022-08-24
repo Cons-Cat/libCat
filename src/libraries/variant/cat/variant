@@ -176,35 +176,35 @@ class Variant {
 
     template <typename T>
         requires(Types::template has_type<T>)
-    constexpr auto get() -> T& {
+    constexpr auto get() & -> T& {
         // This cast is safe when this variant holds `T`.
         return *reinterpret_cast<T*>(addressof(this->storage));
     }
 
     template <typename T>
         requires(Types::template has_type<T>)
-    constexpr auto get() const -> T const& {
+    constexpr auto get() const& -> T const& {
         // This cast is safe when this variant holds `T`.
         return *reinterpret_cast<T const* const>(&this->storage);
     }
 
     template <ssize index>
         requires(index >= 0 && index < ssizeof_pack<Ts...>())
-    constexpr auto get() {
+    constexpr auto get() & {
         using T = typename Types::template Get<index>;
         return *reinterpret_cast<T*>(addressof(this->storage));
     }
 
     template <ssize index>
         requires(index >= 0 && index < ssizeof_pack<Ts...>())
-    constexpr auto get() const {
+    constexpr auto get() const& -> decltype(auto) {
         using T = typename Types::template Get<index>;
         return *reinterpret_cast<T const* const>(&this->storage);
     }
 
     template <typename T>
         requires(Types::template has_type<T>)
-    constexpr auto get_if() -> Optional<T&> {
+    constexpr auto get_if() & -> Optional<T&> {
         if (this->holds_alternative<T>()) {
             return this->get<T>();
         }
@@ -213,7 +213,7 @@ class Variant {
 
     template <typename T>
         requires(Types::template has_type<T>)
-    constexpr auto get_if() const -> Optional<T&> {
+    constexpr auto get_if() const& -> Optional<T&> {
         if (this->holds_alternative<T>()) {
             return this->get<T>();
         }
@@ -222,7 +222,7 @@ class Variant {
 
     template <ssize index>
         requires(index >= 0 && index < ssizeof_pack<Ts...>())
-    constexpr auto get_if() {
+    constexpr auto get_if() & {
         using T = typename Types::template Get<index>;
         if (this->holds_alternative<T>()) {
             return Optional<T>{this->get<T>()};
@@ -232,7 +232,7 @@ class Variant {
 
     template <ssize index>
         requires(index >= 0 && index < ssizeof_pack<Ts...>())
-    constexpr auto get_if() const {
+    constexpr auto get_if() const& {
         using T = typename Types::template Get<index>;
         if (this->holds_alternative<T>()) {
             return Optional<T>{this->get<T>()};
@@ -254,6 +254,10 @@ class Variant {
         requires(Types::template has_type<T>)
     constexpr auto holds_alternative() const -> bool {
         return this->discriminant == this->index<T>;
+    }
+
+    constexpr auto holds_alternative(ssize alternative_index) const -> bool {
+        return this->discriminant == alternative_index;
     }
 
     constexpr auto get_index() const -> uint1 {

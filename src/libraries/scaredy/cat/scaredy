@@ -6,8 +6,6 @@
 #include <cat/string>
 #include <cat/variant>
 
-// TODO: The `Scaredy` is far less featureful than `Optional`.
-
 namespace cat {
 namespace detail {
     template <typename T, typename... Errors>
@@ -106,19 +104,19 @@ namespace detail {
         }
 
         constexpr auto value() & -> Value& requires(!is_void<T>) {
-            return this->storage.template get<T>();
+            return this->storage.template get<Value>();
         }
 
-        constexpr auto value() const& -> Value& requires(!is_void<T>) {
-            return this->storage.template get<T>();
+        constexpr auto value() const& -> Value const& requires(!is_void<T>) {
+            return as_const(this->storage.template get<Value>());
         }
 
         constexpr auto value() && -> Value&& requires(!is_void<T>) {
-            return move(this->storage.template get<T>());
+            return move(this)->storage.template get<Value>();
         }
 
-        constexpr auto value() const&& -> Value&& requires(!is_void<T>) {
-            return move(this->storage.template get<T>());
+        constexpr auto value() const&& -> Value const&& requires(!is_void<T>) {
+            return move(this)->storage.template get<Value>();
         }
 
         template <typename Error>
@@ -249,8 +247,33 @@ namespace detail {
         constexpr auto has_value() const -> bool {
             return T::predicate_function(this->storage);
         }
-    };
 
+        template <typename U>
+        constexpr auto holds_alternative() const -> bool {
+            // Since this storage can only hold either `Value` or `Error`, this
+            // can be expressed in terms of `.has_value()`.
+            if constexpr (is_same<U, Value>) {
+                return this->has_value();
+            } else {
+                return !this->has_value();
+            }
+        }
+
+        [[nodiscard]] constexpr auto holds_alternative(
+            ssize alternative_index) const -> bool {
+            if (alternative_index == 0) {
+                return this->holds_alternative<Value>();
+            }
+            return this->holds_alternative<Error>();
+        }
+
+        constexpr auto get_index() const {
+            if (this->has_value()) {
+                return 0;
+            }
+            return 1;
+        }
+    };
 }  // namespace detail
 
 template <typename T, typename... Errors>
@@ -270,6 +293,11 @@ class Scaredy {
     Storage storage;
     using Value = typename Storage::Value;
     using ErrorsList = TypeList<Errors...>;
+
+    // `Storage` constructors are used by the monadic member functions to
+    // propagate errors.
+    constexpr Scaredy(Storage const& in_storage) : storage(in_storage){};
+    constexpr Scaredy(Storage&& in_storage) : storage(move(in_storage)){};
 
   public:
     constexpr Scaredy() = default;
@@ -316,22 +344,20 @@ class Scaredy {
                                           is_same<Value, Monostate>)
         : storage(monostate){};
 
+    // TODO: Improve these assignment operators.
     // Copy the storage of an equivalent `Scaredy` type.
-    constexpr auto operator=(Scaredy<T, Errors...> const& scaredy) {
-        this->storage = scaredy.storage;
-    }
-
     template <typename U>
-        requires(is_convertible<U, Value>)
-    constexpr auto operator=(U const& operand) -> Scaredy<T, Errors...>& {
+        requires(is_implicitly_convertible<U, Value>)
+    constexpr auto operator=(U const& operand) -> Scaredy& {
         this->storage = static_cast<Value>(operand);
         return *this;
     }
 
-    template <typename U>
-        requires(is_convertible<U, Value>)
-    constexpr auto operator=(U const& operand) const -> Scaredy<T, Errors...>& {
-        this->storage = static_cast<Value>(operand);
+    template <typename Error>
+        requires(!is_same<Error, Value> &&
+                 TypeList<Errors...>::template has_type<Error>)
+    constexpr auto operator=(Error const& operand) -> Scaredy& {
+        this->storage = operand;
         return *this;
     }
 
@@ -365,9 +391,150 @@ class Scaredy {
         return this->storage.template error<Error>();
     }
 
+    [[nodiscard]] constexpr auto value_or(Value fallback) & {
+        if (this->storage.has_value()) {
+            return this->storage.value();
+        }
+        return fallback;
+    }
+
+    [[nodiscard]] constexpr auto value_or(Value fallback) && {
+        if (this->storage.has_value()) {
+            return move(*this)->storage.value();
+        }
+        return fallback;
+    }
+
+    [[nodiscard]] constexpr auto value_or(Value fallback) const& {
+        if (this->storage.has_value()) {
+            return this->storage.value();
+        }
+        return fallback;
+    }
+
+    [[nodiscard]] constexpr auto value_or(Value fallback) const&& {
+        if (this->storage.has_value()) {
+            return move(this)->storage.value();
+        }
+        return fallback;
+    }
+
     template <typename U>
     [[nodiscard]] constexpr auto holds_alternative() const -> bool {
         return this->storage.template holds_alternative<U>();
+    }
+
+    [[nodiscard]] constexpr auto holds_alternative(
+        ssize alternative_index) const -> bool {
+        return this->storage.template holds_alternative(alternative_index);
+    }
+
+    // If this non-`const`-qualified `Scaredy` holds a value, transform it
+    // by a function. Otherwise, propagate the error value.
+    template <typename Function>
+    [[nodiscard]] constexpr auto transform(Function&& callback) & {
+        using This = Scaredy<T, Errors...>;
+        if (this->has_value()) {
+            return This{forward<Function>(callback)(this->value())};
+        }
+        return This{this->storage};
+    }
+
+    template <typename Function>
+    [[nodiscard]] constexpr auto transform(Function&& callback) const& {
+        using This = Scaredy<T, Errors...>;
+        if (this->has_value()) {
+            return This{forward<Function>(callback)(this->value())};
+        }
+        return This{this->storage};
+    }
+
+    template <typename Function>
+    [[nodiscard]] constexpr auto transform(Function&& callback) && {
+        using This = Scaredy<T, Errors...>;
+        if (this->has_value()) {
+            return This{forward<Function>(callback)(move(this)->value())};
+        }
+        return This{move(this)->storage};
+    }
+
+    template <typename Function>
+    [[nodiscard]] constexpr auto transform(Function&& callback) const&& {
+        using This = Scaredy<T, Errors...>;
+        if (this->has_value()) {
+            return This{forward<Function>(callback)(move(this)->value())};
+        }
+        return This{move(this)->storage};
+    }
+
+    template <typename Function>
+    [[nodiscard]] constexpr auto and_then(Function&& callback) & {
+        using This = Scaredy<T, Errors...>;
+        return this->has_value() ? forward<Function>(callback)(this->value())
+                                 : This{this->storage};
+    }
+
+    template <typename Function>
+    [[nodiscard]] constexpr auto and_then(Function&& callback) const& {
+        using This = Scaredy<T, Errors...>;
+        return this->has_value() ? forward<Function>(callback)(this->value())
+                                 : This{this->storage};
+    }
+
+    template <typename Function>
+    [[nodiscard]] constexpr auto and_then(Function&& callback) && {
+        using This = Scaredy<T, Errors...>;
+        return this->has_value()
+                   ? forward<Function>(callback)(move(this)->value())
+                   : This{move(this)->storage};
+    }
+
+    template <typename Function>
+    [[nodiscard]] constexpr auto and_then(Function&& callback) const&& {
+        using This = Scaredy<T, Errors...>;
+        return this->has_value()
+                   ? forward<Function>(callback)(move(this)->value())
+                   : This{move(this)->storage};
+    }
+
+    template <typename Function>
+    [[nodiscard]] constexpr auto or_else(Function&& callback) & {
+        using U = decltype(callback());
+        static_assert(is_void<U> || is_specialization<U, Scaredy>);
+
+        if (!this->has_value()) {
+            if constexpr (is_void<U>) {
+                forward<Function>(callback)();
+            } else {
+                return forward<Function>(callback)();
+            }
+        }
+
+        if constexpr (is_void<U>) {
+            return;
+        } else {
+            return *this;
+        }
+    }
+
+    template <typename Function>
+    [[nodiscard]] constexpr auto or_else(Function&& callback) const& {
+        using U = decltype(callback());
+        static_assert(is_void<U> || is_specialization<U, Scaredy>);
+
+        if (!this->storage.has_value()) {
+            if constexpr (is_void<U>) {
+                forward<Function>(callback)();
+            } else {
+                return forward<Function>(callback)();
+            }
+        }
+
+        if constexpr (is_void<U>) {
+            return;
+        } else {
+            return *this;
+        }
     }
 
     [[nodiscard]] auto or_exit(ssize exit_code = 1) & {
