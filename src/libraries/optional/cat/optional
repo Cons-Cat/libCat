@@ -778,13 +778,8 @@ class Optional {
     // value.
     template <typename Function>
     [[nodiscard]] constexpr auto and_then(Function&& callback) & {
-        using U = decltype(callback(this->value()));
-        static_assert(is_specialization<U, Optional>);
-
-        if (this->has_value()) {
-            return forward<Function>(callback)(this->value());
-        }
-        return U{nullopt};
+        return this->has_value() ? forward<Function>(callback)(this->value())
+                                 : nullopt;
     }
 
     // Invoke a callback returning an `Optional` on the value of a
@@ -792,13 +787,8 @@ class Optional {
     // value.
     template <typename Function>
     [[nodiscard]] constexpr auto and_then(Function&& callback) const& {
-        using U = decltype(callback(this->value()));
-        static_assert(is_specialization<U, Optional>);
-
-        if (this->has_value()) {
-            return forward<Function>(callback)(this->value());
-        }
-        return U{nullopt};
+        return this->has_value() ? forward<Function>(callback)(this->value())
+                                 : nullopt;
     }
 
     // Invoke a callback returning an `Optional` on the value of a
@@ -806,13 +796,9 @@ class Optional {
     // holds a value.
     template <typename Function>
     [[nodiscard]] constexpr auto and_then(Function&& callback) && {
-        using U = decltype(callback(this->value()));
-        static_assert(is_specialization<U, Optional>);
-
-        if (this->has_value()) {
-            return forward<Function>(callback)(move(this->value()));
-        }
-        return U{nullopt};
+        return this->has_value()
+                   ? forward<Function>(callback)(move(this)->value())
+                   : nullopt;
     }
 
     // Invoke a callback returning an `Optional` on the value of a
@@ -820,13 +806,9 @@ class Optional {
     // value.
     template <typename Function>
     [[nodiscard]] constexpr auto and_then(Function&& callback) const&& {
-        using U = decltype(callback(this->value()));
-        static_assert(is_specialization<U, Optional>);
-
-        if (this->has_value()) {
-            return forward<Function>(callback)(move(this->value()));
-        }
-        return U{nullopt};
+        return this->has_value()
+                   ? forward<Function>(callback)(move(this)->value())
+                   : nullopt;
     }
 
     // Invoke a callback iff a non-`const`-qualified `Optional` holds no
