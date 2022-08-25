@@ -1,4 +1,5 @@
 #include <cat/match>
+#include <cat/variant>
 
 auto main() -> int {
     cat::Variant<int, char, uint4> variant(int{1});
@@ -50,7 +51,10 @@ auto main() -> int {
     static_assert(cat::is_same<decltype(variant3.get<2>()), uint4>);
     static_assert(cat::is_same<decltype(variant3.get<3>()), int2>);
 
-    // Test pattern matching.
+    // Test constant-evaluating `Variant`.
+    constexpr cat::Variant<int, uint4> const_variant = 1;
+    static_assert(const_variant.get<int>() == 1);
+
     variant3 = int{1};
     bool matched = false;
     cat::match(variant3)(  //

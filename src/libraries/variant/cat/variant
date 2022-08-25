@@ -2,46 +2,95 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/array>
 #include <cat/memory>
 #include <cat/meta>
 #include <cat/type_list>
 
 namespace cat {
+namespace detail {
+    template <typename...>
+    struct VariantNode {};
+
+    template <typename T>
+    struct VariantNode<T> {
+        T storage;
+
+        template <ssize>
+        constexpr auto get() & -> T& {
+            return this->storage;
+        }
+
+        template <ssize>
+        constexpr auto get() const& -> T const& {
+            return this->storage;
+        }
+    };
+
+    template <typename T, typename... Remaining>
+    struct VariantNode<T, Remaining...> {
+        union {
+            T storage;
+            VariantNode<Remaining...> remaining;
+            // A dummy member is required to constant-evaluate this union
+            // without initializing it if `T` is a non-trivial class.
+            Monostate dummy;
+        };
+
+        // `.get()` is provided an alternative type's index. It then recurses
+        // through the alternative types that many times. Then it returns a
+        // reference to the storage of this node it has reached.
+
+        template <ssize remaining_recursions>
+        constexpr auto get() & -> auto& {
+            if constexpr (remaining_recursions == 0) {
+                return this->storage;
+            } else {
+                return this->remaining.template get<remaining_recursions - 1>();
+            }
+        }
+
+        template <ssize remaining_recursions>
+        constexpr auto get() const& -> auto& {
+            if constexpr (remaining_recursions == 0) {
+                return this->storage;
+            } else {
+                return this->remaining.template get<remaining_recursions - 1>();
+            }
+        }
+    };
+}  // namespace detail
 
 // TODO: Support reference types in a `Variant`.
 
 template <typename... Ts>
     requires(TypeList<Ts...>::is_unique_list)
 class Variant {
+    detail::VariantNode<Ts...> storage;
+
   public:
     using Types = TypeList<Ts...>;
-
-  private:
-    static constexpr ssize raw_size = Types::largest_size;
-    static constexpr ssize::Raw alignment = Types::largest_alignment.raw;
-
-    // TODO: This solution cannot work in a constexpr context because it
-    // requires unsafe casts in `.get()` and `.get_if()`.
-    using Storage = Array<char, raw_size>;
-    alignas(alignment) Storage storage;
-
     // TODO: Use the smallest `Numeral` that can hold at least `sizeof...(Ts)`
     // values.
     using AlternativeIndex = ssize;
     AlternativeIndex discriminant;
 
+    // The number of alternatives in this `Variant`.
+    static constexpr AlternativeIndex variant_size = ssizeof_pack<Ts...>();
+
+
+  private:
     template <typename T, AlternativeIndex index>
-        requires(index >= 0)
-    static consteval auto get_index_of_type() -> AlternativeIndex {
-        using IndexType = typename Types::template Get<index>;
-        if constexpr (is_same<T, IndexType>) {
-            return static_cast<AlternativeIndex>(index);
+        requires(index < variant_size)
+    static consteval auto recurse_for_index_of_type() -> AlternativeIndex {
+        using ThisAlternative = typename Types::template Get<index>;
+        if constexpr (is_same<T, ThisAlternative>) {
+            return index;
         } else {
-            return get_index_of_type<T, index - 1>();
+            return recurse_for_index_of_type<T, index + 1>();
         }
     }
 
+  public:
     template <typename U, typename... Us>
         requires(sizeof...(Us) >= 0)
     constexpr void hard_reset() {
@@ -94,15 +143,10 @@ class Variant {
     }
 
   public:
-    // The number of alternatives in this `Variant`.
-    static constexpr AlternativeIndex variant_size =
-        static_cast<AlternativeIndex>(sizeof...(Ts));
-
     // Get the index of an alternative from its type.
     template <typename T>
         requires(Types::template has_type<T>)
-    static constexpr auto alternative_index =
-        get_index_of_type<T, variant_size - 1>();
+    static constexpr auto alternative_index = recurse_for_index_of_type<T, 0>();
 
     // Get the type of an alternative from its index.
     template <AlternativeIndex index>
@@ -195,29 +239,25 @@ class Variant {
     template <typename T>
         requires(Types::template has_type<T>)
     [[nodiscard]] constexpr auto get() & -> T& {
-        // This cast is safe when this variant holds `T`.
-        return *reinterpret_cast<T*>(addressof(this->storage));
+        return this->storage.template get<alternative_index<T>>();
     }
 
     template <typename T>
         requires(Types::template has_type<T>)
     [[nodiscard]] constexpr auto get() const& -> T const& {
-        // This cast is safe when this variant holds `T`.
-        return *reinterpret_cast<T const* const>(&this->storage);
+        return this->storage.template get<alternative_index<T>>();
     }
 
     template <AlternativeIndex index>
         requires(index >= 0 && index < ssizeof_pack<Ts...>())
     [[nodiscard]] constexpr auto get() & {
-        using T = typename Types::template Get<index>;
-        return *reinterpret_cast<T*>(addressof(this->storage));
+        return this->storage.template get<index>();
     }
 
     template <AlternativeIndex index>
         requires(index >= 0 && index < ssizeof_pack<Ts...>())
     [[nodiscard]] constexpr auto get() const& -> decltype(auto) {
-        using T = typename Types::template Get<index>;
-        return *reinterpret_cast<T const* const>(&this->storage);
+        return this->storage.template get<index>();
     }
 
     template <typename T>
@@ -262,8 +302,8 @@ class Variant {
         return this->discriminant;
     }
 
-    // Holds true if this `Variant` currently has some value of the type `T`.
-    // This method allows `Variant` to be used in `match` statements.
+    // Holds true if this `Variant` currently has some value of the type
+    // `T`. This method allows `Variant` to be used in `match` statements.
     template <typename T>
     [[nodiscard]] constexpr auto is() const -> bool {
         if constexpr (Types::template has_type<T>) {
@@ -275,9 +315,6 @@ class Variant {
 
     }
 
-    // Holds true if this `Variant` currently has some value of the type `T`.
-    // Unlike `.is()`, this only accepts types that are potentially valid
-    // alternatives.
     template <typename T>
         requires(Types::template has_type<T>)
     [[nodiscard]] constexpr auto holds_alternative() const -> bool {

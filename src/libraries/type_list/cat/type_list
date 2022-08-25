@@ -76,6 +76,8 @@ class TypeList {
     template <ssize index>
     using Get = typename RecurseForTypeAtIndex<TypeList<Ts...>, index>::Result;
 
+    // TODO: Get index of first, last, and N'th occurence of `T`.
+
     // Append one parameter pack to this `TypeList`.
     template <typename... Us>
     using Merge = TypeList<Ts..., Us...>;
