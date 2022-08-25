@@ -195,6 +195,8 @@ class Variant {
             }
             this->get<T>() = operand;
             this->discriminant = this->alternative_index<T>;
+        } else {
+            this->get<T>() = operand;
         }
         return *this;
     }
@@ -208,6 +210,8 @@ class Variant {
             }
             this->get<T>() = forward<T>(operand);
             this->discriminant = this->alternative_index<T>;
+        } else {
+            this->get<T>() = forward<T>(operand);
         }
         return *this;
     }
@@ -313,8 +317,43 @@ class Variant {
         }
     }
 
+  private:
+    // Base case.
+    template <AlternativeIndex index, typename T>
+    constexpr auto recurse_converting_equality(auto const& in_value) const
+        -> bool {
+        if (this->holds_alternative(index)) {
+            return static_cast<T>(in_value) == this->get<T>();
+        }
+        return false;
     }
 
+    // Recurse through every alternative type, and if it is currently the
+    // active alternative, convert `in_value` to that type, then check if it
+    // is equal to this `Variant`'s value.
+    template <AlternativeIndex index, typename T, typename... Remaining>
+        requires(sizeof...(Remaining) > 0)
+    constexpr auto recurse_converting_equality(auto const& in_value) const
+        -> bool {
+        if (this->holds_alternative(index)) {
+            return static_cast<T>(in_value) == this->get<T>();
+        }
+        return recurse_converting_equality<index + 1, Remaining...>(in_value);
+    }
+
+  public:
+    // Holds true if this `Variant` currently has some value convertible to
+    // `in_value`. This method allows `Variant` to be used in `match`
+    // statements.
+    template <typename T>
+        requires(is_convertible<T, Ts>&&...)
+    [[nodiscard]] constexpr auto is(T const& in_value) const -> bool {
+        return this->recurse_converting_equality<0, Ts...>(in_value);
+    }
+
+    // Holds true if this `Variant` currently has some value of the type
+    // `T`. Unlike `.is()`, this only accepts types that are potentially
+    // valid alternatives.
     template <typename T>
         requires(Types::template has_type<T>)
     [[nodiscard]] constexpr auto holds_alternative() const -> bool {

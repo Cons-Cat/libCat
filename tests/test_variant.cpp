@@ -55,6 +55,20 @@ auto main() -> int {
     constexpr cat::Variant<int, uint4> const_variant = 1;
     static_assert(const_variant.get<int>() == 1);
 
+    // Test `.is()`.
+    variant3 = int{1};
+    Result(variant3.is<int>()).or_exit();
+    Result(variant3.is(1)).or_exit();
+
+    variant3 = 'b';
+    Result(variant3.is<char>()).or_exit();
+    Result(variant3.is('b')).or_exit();
+
+    // `.is()` accepts unconditionally invalid types, unlike
+    // `.holds_alternative()`.
+    Result(!variant3.is<unsigned long long>()).or_exit();
+
+    // Test pattern matching.
     variant3 = int{1};
     bool matched = false;
     cat::match(variant3)(  //
