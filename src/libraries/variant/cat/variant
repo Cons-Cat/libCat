@@ -19,19 +19,24 @@ class Variant {
 
   private:
     static constexpr ssize raw_size = Types::largest_size;
-    static constexpr usize::Raw alignment = Types::largest_alignment.raw;
+    static constexpr ssize::Raw alignment = Types::largest_alignment.raw;
+
+    // TODO: This solution cannot work in a constexpr context because it
+    // requires unsafe casts in `.get()` and `.get_if()`.
     using Storage = Array<char, raw_size>;
     alignas(alignment) Storage storage;
+
     // TODO: Use the smallest `Numeral` that can hold at least `sizeof...(Ts)`
     // values.
-    uint1 discriminant;
+    using AlternativeIndex = ssize;
+    AlternativeIndex discriminant;
 
-    template <typename T, ssize index>
+    template <typename T, AlternativeIndex index>
         requires(index >= 0)
-    static consteval auto get_index_of_type() -> uint1 {
+    static consteval auto get_index_of_type() -> AlternativeIndex {
         using IndexType = typename Types::template Get<index>;
         if constexpr (is_same<T, IndexType>) {
-            return static_cast<uint1>(index);
+            return static_cast<AlternativeIndex>(index);
         } else {
             return get_index_of_type<T, index - 1>();
         }
@@ -89,7 +94,19 @@ class Variant {
     }
 
   public:
-    static constexpr ssize variant_size = static_cast<ssize>(sizeof...(Ts));
+    // The number of alternatives in this `Variant`.
+    static constexpr AlternativeIndex variant_size =
+        static_cast<AlternativeIndex>(sizeof...(Ts));
+
+    // Get the index of an alternative from its type.
+    template <typename T>
+        requires(Types::template has_type<T>)
+    static constexpr auto alternative_index =
+        get_index_of_type<T, variant_size - 1>();
+
+    // Get the type of an alternative from its index.
+    template <AlternativeIndex index>
+    using Alternative = typename Types::template Get<index>;
 
     constexpr Variant() = default;
 
@@ -189,14 +206,14 @@ class Variant {
         return *reinterpret_cast<T const* const>(&this->storage);
     }
 
-    template <ssize index>
+    template <AlternativeIndex index>
         requires(index >= 0 && index < ssizeof_pack<Ts...>())
     [[nodiscard]] constexpr auto get() & {
         using T = typename Types::template Get<index>;
         return *reinterpret_cast<T*>(addressof(this->storage));
     }
 
-    template <ssize index>
+    template <AlternativeIndex index>
         requires(index >= 0 && index < ssizeof_pack<Ts...>())
     [[nodiscard]] constexpr auto get() const& -> decltype(auto) {
         using T = typename Types::template Get<index>;
@@ -221,7 +238,7 @@ class Variant {
         return nullopt;
     }
 
-    template <ssize index>
+    template <AlternativeIndex index>
         requires(index >= 0 && index < ssizeof_pack<Ts...>())
     [[nodiscard]] constexpr auto get_if() & {
         using T = typename Types::template Get<index>;
@@ -231,7 +248,7 @@ class Variant {
         return Optional<T>{nullopt};
     }
 
-    template <ssize index>
+    template <AlternativeIndex index>
         requires(index >= 0 && index < ssizeof_pack<Ts...>())
     [[nodiscard]] constexpr auto get_if() const& {
         using T = typename Types::template Get<index>;
@@ -241,26 +258,38 @@ class Variant {
         return Optional<T>{nullopt};
     }
 
-    template <typename T>
-        requires(Types::template has_type<T>)
-    static constexpr auto alternative_index =
-        get_index_of_type<T, variant_size - 1>();
-
-    [[nodiscard]] constexpr auto alternative() const -> uint1 {
+    [[nodiscard]] constexpr auto alternative() const -> AlternativeIndex {
         return this->discriminant;
     }
 
     // Holds true if this `Variant` currently has some value of the type `T`.
-    // This method allows `Variant` to be used in `cat::match` statements.
+    // This method allows `Variant` to be used in `match` statements.
+    template <typename T>
+    [[nodiscard]] constexpr auto is() const -> bool {
+        if constexpr (Types::template has_type<T>) {
+            return this->discriminant == this->alternative_index<T>;
+        } else {
+            return false;
+        }
+    }
+
+    }
+
+    // Holds true if this `Variant` currently has some value of the type `T`.
+    // Unlike `.is()`, this only accepts types that are potentially valid
+    // alternatives.
     template <typename T>
         requires(Types::template has_type<T>)
-    [[nodiscard]] constexpr auto is() const -> bool {
+    [[nodiscard]] constexpr auto holds_alternative() const -> bool {
         return this->discriminant == this->alternative_index<T>;
     }
 
+    // Holds true if this `Variant` currently holds the type of index
+    // `alternative_index`, which can be retrieved from `.alternative()` or
+    // `.alternative_index<T>`.
     [[nodiscard]] constexpr auto holds_alternative(
-        uint1 alternative_index) const -> bool {
-        return this->discriminant == alternative_index;
+        AlternativeIndex alternative_index) const -> bool {
+        return this->discriminant.raw == alternative_index;
     }
 };
 

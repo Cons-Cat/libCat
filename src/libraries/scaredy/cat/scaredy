@@ -441,7 +441,7 @@ class Scaredy {
     }
 
     // Holds true if this `Scaredy` currently has some value of the type `U`.
-    // This method allows `Scaredy` to be used in `cat::match` statements.
+    // This method allows `Scaredy` to be used in `match` statements.
     template <typename U>
     [[nodiscard]] constexpr auto is() const -> bool {
         return this->storage.template is<U>();
