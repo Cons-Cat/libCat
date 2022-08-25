@@ -8,7 +8,7 @@
 namespace cat {
 
 struct Thread {
-    cat::Any id;
+    cat::NoType id;
     void* p_stack;
     ssize stack_size;
 

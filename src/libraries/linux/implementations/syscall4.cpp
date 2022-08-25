@@ -1,9 +1,9 @@
 #include <cat/linux>
 
-auto nix::syscall4(ssize call, cat::Any arg1, cat::Any arg2, cat::Any arg3,
-                   cat::Any const arg4) -> ssize {
+auto nix::syscall4(ssize call, cat::NoType arg1, cat::NoType arg2,
+                   cat::NoType arg3, cat::NoType const arg4) -> ssize {
     // `arg4` must be `const-qualified` for GCC to compile.
-    register cat::Any const r10 asm("r10") = arg4;
+    register cat::NoType const r10 asm("r10") = arg4;
 
     ssize result;
     asm volatile("syscall"

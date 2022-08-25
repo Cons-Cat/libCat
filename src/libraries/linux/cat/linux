@@ -3,13 +3,9 @@
 #pragma once
 
 #include <cat/allocators>
-#include <cat/any>
 #include <cat/bit>
-#include <cat/meta>
+#include <cat/notype>
 #include <cat/scaredy>
-#include <cat/span>
-#include <cat/string>
-#include <cat/utility>
 
 namespace cat {
 struct Socket;
@@ -559,12 +555,12 @@ auto sys_waitpid(ProcessId pid, FileStatus* p_status, WaitOptionsFlags options)
 struct CloneArguments;
 
 auto syscall0(ssize) -> ssize;
-auto syscall1(ssize, cat::Any) -> ssize;
-auto syscall2(ssize, cat::Any, cat::Any) -> ssize;
-auto syscall3(ssize, cat::Any, cat::Any, cat::Any) -> ssize;
-auto syscall4(ssize, cat::Any, cat::Any, cat::Any, cat::Any) -> ssize;
-auto syscall5(ssize, cat::Any, cat::Any, cat::Any, cat::Any, cat::Any) -> ssize;
-auto syscall6(ssize, cat::Any, cat::Any, cat::Any, cat::Any, cat::Any, cat::Any)
+auto syscall1(ssize, cat::NoType) -> ssize;
+auto syscall2(ssize, cat::NoType, cat::NoType) -> ssize;
+auto syscall3(ssize, cat::NoType, cat::NoType, cat::NoType) -> ssize;
+auto syscall4(ssize, cat::NoType, cat::NoType, cat::NoType, cat::NoType) -> ssize;
+auto syscall5(ssize, cat::NoType, cat::NoType, cat::NoType, cat::NoType, cat::NoType) -> ssize;
+auto syscall6(ssize, cat::NoType, cat::NoType, cat::NoType, cat::NoType, cat::NoType, cat::NoType)
     -> ssize;
 
 template <typename T, typename... Args>
@@ -649,7 +645,7 @@ struct Process {
 
         // TODO: Use the `cat::Scaredy`.
         // ScaredyLinux<void> result;
-        cat::Any result;
+        cat::NoType result;
         asm goto volatile(
             R"(sub $8, %%rsi
                mov %[p_callback], 0(%%rsi)

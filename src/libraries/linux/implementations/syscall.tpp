@@ -9,7 +9,7 @@ auto nix::syscall(ssize call, Args... parameters) -> nix::ScaredyLinux<T>
     requires(sizeof...(Args) < 7)
 {
     static constexpr unsigned long length = sizeof...(Args);
-    cat::Any arguments[length] = {parameters...};
+    cat::NoType arguments[length] = {parameters...};
 
     // TODO: Make this a `union` of reasonable types.
     ssize result;

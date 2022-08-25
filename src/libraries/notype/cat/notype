@@ -1,0 +1,27 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/utility>
+
+namespace cat {
+
+// `NoType`'s purpose is to implicitly cast from any type into `void*`. This is
+// useful for low-level type erasure in some cases, such as passing syscall
+// arguments.
+struct NoType {
+    void* storage;
+
+    constexpr NoType() = default;
+
+    constexpr NoType(auto& input) requires(sizeof(input) <= 8)
+        : storage(bit_cast<void*>(input)){};
+
+    template <typename T>
+        requires(!is_void<T>)
+    [[nodiscard]] constexpr operator T() const {
+        return bit_cast<T>(this->storage);
+    }
+};
+
+}  // namespace cat

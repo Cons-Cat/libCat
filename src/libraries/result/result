@@ -4,9 +4,7 @@
 
 // TODO: Delete this container.
 
-#include <cat/any>
-#include <cat/meta>
-#include <cat/utility>
+#include <cat/notype>
 
 /* This file contains a general-purpose error-handling tool. `Result<>` is a
  * templated struct that either contains some data (unless it holds `void`) or
@@ -105,7 +103,7 @@ class [[nodiscard]] Result {
 
     constexpr Result(ValueType value) requires(
         !cat::is_void<T> && cat::is_constructible<ValueType> &&
-        !cat::is_same<ValueType, cat::Any>)
+        !cat::is_same<ValueType, cat::NoType>)
         : storage(value), is_okay(true){};
 
     // If this holds `void`, any specialization of `Result<>` or an `okay` can
@@ -156,14 +154,14 @@ class [[nodiscard]] Result {
     // constexpr Result(ValueType&& value) requires(
     //     !cat::is_void<T> &&
     //     cat::is_trivially_move_constructible_v<ValueType> &&
-    //     !cat::is_same_v<ValueType, cat::Any>)
+    //     !cat::is_same_v<ValueType, cat::NoType>)
     //     : storage(value), is_okay(true){};
 
     // Implicity cast an inputted compatible `Result` to this.
     template <typename U>
     constexpr Result(Result<U> result) requires(
         !cat::is_void<T> && cat::is_default_constructible<U> &&
-        cat::is_convertible<T, U> && !cat::is_same<U, cat::Any>)
+        cat::is_convertible<T, U> && !cat::is_same<U, cat::NoType>)
         : storage(static_cast<T>(result.value())),
           is_okay(result.has_value()){};
 
@@ -171,7 +169,7 @@ class [[nodiscard]] Result {
     template <typename U>
     constexpr Result(Result<U> const& result) requires(
         !cat::is_void<T> && cat::is_trivially_copy_constructible<U> &&
-        cat::is_convertible<T, U> && !cat::is_same<U, cat::Any>)
+        cat::is_convertible<T, U> && !cat::is_same<U, cat::NoType>)
         : storage(static_cast<T>(result.value())),
           is_okay(result.has_value()){};
 
@@ -179,14 +177,14 @@ class [[nodiscard]] Result {
     template <typename U>
     constexpr Result(Result<U>&& result) requires(
         !cat::is_void<T> && cat::is_trivially_move_constructible<U> &&
-        cat::is_convertible<T, U> && !cat::is_same<U, cat::Any>)
+        cat::is_convertible<T, U> && !cat::is_same<U, cat::NoType>)
         : storage(static_cast<T>(result.value())),
           is_okay(result.has_value()){};
 
     template <typename U>
     constexpr Result(Result<U> const&& result) requires(
         !cat::is_void<T> && cat::is_trivially_move_constructible<U> &&
-        cat::is_convertible<T, U> && !cat::is_same<U, cat::Any>)
+        cat::is_convertible<T, U> && !cat::is_same<U, cat::NoType>)
         : storage(static_cast<T>(result.value())),
           is_okay(result.has_value()){};
 
@@ -194,13 +192,14 @@ class [[nodiscard]] Result {
     constexpr Result(Result<void> const& result) requires(!cat::is_void<T>)
         : is_okay(result.has_value()){};
 
-    // Special-case consuming a `Result<cat::Any>`.
-    constexpr Result(Result<cat::Any> const& result) requires(!cat::is_void<T>)
+    // Special-case consuming a `Result<cat::NoType>`.
+    constexpr Result(Result<cat::NoType> const& result) requires(
+        !cat::is_void<T>)
         : storage(static_cast<T>(result.value())),
           is_okay(result.has_value()){};
 
-    // Special-case consuming an `cat::Any>`.
-    constexpr Result(cat::Any result) requires(!cat::is_void<T>)
+    // Special-case consuming an `cat::NoType>`.
+    constexpr Result(cat::NoType result) requires(!cat::is_void<T>)
         : storage(static_cast<T>(result)), is_okay(true){};
 
     // TODO: `concept` for `bool`, `bool2`, and `bool4` as well.

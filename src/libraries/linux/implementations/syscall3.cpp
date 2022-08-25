@@ -1,7 +1,7 @@
 #include <cat/linux>
 
-auto nix::syscall3(ssize call, cat::Any arg1, cat::Any arg2, cat::Any arg3)
-    -> ssize {
+auto nix::syscall3(ssize call, cat::NoType arg1, cat::NoType arg2,
+                   cat::NoType arg3) -> ssize {
     ssize result;
     asm volatile("syscall"
                  : "=a"(result)

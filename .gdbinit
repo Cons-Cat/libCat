@@ -6,5 +6,5 @@ break exit
 skip file meta
 skip file numerals
 skip file utility
-skip file any
+skip file notype
 skip file bit
