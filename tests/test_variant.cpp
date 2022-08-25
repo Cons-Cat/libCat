@@ -6,9 +6,9 @@ auto main() -> int {
     int foo_int = variant.get<int>();
     Result(foo_int == 1).or_exit();
 
-    static_assert(variant.index<int> == 0u);
-    static_assert(variant.index<char> == 1u);
-    static_assert(variant.index<uint4> == 2u);
+    static_assert(variant.alternative_index<int> == 0u);
+    static_assert(variant.alternative_index<char> == 1u);
+    static_assert(variant.alternative_index<uint4> == 2u);
 
     variant = 'o';
     Result(variant.holds_alternative<char>()).or_exit();

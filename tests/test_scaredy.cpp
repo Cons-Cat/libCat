@@ -115,7 +115,7 @@ auto main() -> int {
 
     _ = mut_scaredy.transform(increment)
             .or_else([]() {
-                return typeof(mut_scaredy){};
+                return decltype(mut_scaredy){};
             })
             .or_exit();
 

@@ -5,8 +5,6 @@
 #include <cat/memory>
 #include <cat/utility>
 
-#include "cat/meta"
-
 namespace cat {
 namespace detail {
     // A `NullOpt` is consumed by an `Optional` constructor to prevent

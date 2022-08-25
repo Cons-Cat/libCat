@@ -59,7 +59,7 @@ class Variant {
         if constexpr (RemoveReference<
                           decltype(variant)>::Types::template has_type<U>) {
             if (variant.template holds_alternative<U>()) {
-                this->discriminant = this->index<U>;
+                this->discriminant = this->alternative_index<U>;
                 this->get<U>() = variant.template get<U>();
                 return;
             }
@@ -77,7 +77,7 @@ class Variant {
             if (variant.template holds_alternative<U>()) {
                 if (!this->holds_alternative<U>()) {
                     this->hard_reset<Ts...>();
-                    this->discriminant = this->index<U>;
+                    this->discriminant = this->alternative_index<U>;
                     return;
                 }
                 this->get<U>() = variant.template get<U>();
@@ -107,7 +107,7 @@ class Variant {
     constexpr Variant(T const& input) {
         // Construct a new `T` at the address where it will be gotten from.
         construct_at(addressof(this->get<T>()), input);
-        this->discriminant = this->index<T>;
+        this->discriminant = this->alternative_index<T>;
     };
 
     template <rvalue T>
@@ -116,7 +116,7 @@ class Variant {
     constexpr Variant(T&& input) {
         // Construct a new `T` at the address where it will be gotten from.
         construct_at(addressof(this->get<T>()), forward<T>(input));
-        this->discriminant = this->index<T>;
+        this->discriminant = this->alternative_index<T>;
     };
 
     // Subsume a `Variant` that holds a subset of this one's alternatives.
@@ -133,7 +133,7 @@ class Variant {
                 this->get<T>().~T();
             }
             this->get<T>() = operand;
-            this->discriminant = this->index<T>;
+            this->discriminant = this->alternative_index<T>;
         }
         return *this;
     }
@@ -146,7 +146,7 @@ class Variant {
                 this->get<T>().~T();
             }
             this->get<T>() = forward<T>(operand);
-            this->discriminant = this->index<T>;
+            this->discriminant = this->alternative_index<T>;
         }
         return *this;
     }
@@ -177,36 +177,36 @@ class Variant {
 
     template <typename T>
         requires(Types::template has_type<T>)
-    constexpr auto get() & -> T& {
+    [[nodiscard]] constexpr auto get() & -> T& {
         // This cast is safe when this variant holds `T`.
         return *reinterpret_cast<T*>(addressof(this->storage));
     }
 
     template <typename T>
         requires(Types::template has_type<T>)
-    constexpr auto get() const& -> T const& {
+    [[nodiscard]] constexpr auto get() const& -> T const& {
         // This cast is safe when this variant holds `T`.
         return *reinterpret_cast<T const* const>(&this->storage);
     }
 
     template <ssize index>
         requires(index >= 0 && index < ssizeof_pack<Ts...>())
-    constexpr auto get() & {
+    [[nodiscard]] constexpr auto get() & {
         using T = typename Types::template Get<index>;
         return *reinterpret_cast<T*>(addressof(this->storage));
     }
 
     template <ssize index>
         requires(index >= 0 && index < ssizeof_pack<Ts...>())
-    constexpr auto get() const& -> decltype(auto) {
+    [[nodiscard]] constexpr auto get() const& -> decltype(auto) {
         using T = typename Types::template Get<index>;
         return *reinterpret_cast<T const* const>(&this->storage);
     }
 
     template <typename T>
         requires(Types::template has_type<T>)
-    constexpr auto get_if() & -> Optional<T&> {
         if (this->holds_alternative<T>()) {
+    [[nodiscard]] constexpr auto get_if() & -> Optional<T&> {
             return this->get<T>();
         }
         return nullopt;
@@ -214,8 +214,8 @@ class Variant {
 
     template <typename T>
         requires(Types::template has_type<T>)
-    constexpr auto get_if() const& -> Optional<T&> {
         if (this->holds_alternative<T>()) {
+    [[nodiscard]] constexpr auto get_if() const& -> Optional<T&> {
             return this->get<T>();
         }
         return nullopt;
@@ -223,7 +223,7 @@ class Variant {
 
     template <ssize index>
         requires(index >= 0 && index < ssizeof_pack<Ts...>())
-    constexpr auto get_if() & {
+    [[nodiscard]] constexpr auto get_if() & {
         using T = typename Types::template Get<index>;
         if (this->holds_alternative<T>()) {
             return Optional<T>{this->get<T>()};
@@ -233,7 +233,7 @@ class Variant {
 
     template <ssize index>
         requires(index >= 0 && index < ssizeof_pack<Ts...>())
-    constexpr auto get_if() const& {
+    [[nodiscard]] constexpr auto get_if() const& {
         using T = typename Types::template Get<index>;
         if (this->holds_alternative<T>()) {
             return Optional<T>{this->get<T>()};
@@ -243,26 +243,22 @@ class Variant {
 
     template <typename T>
         requires(Types::template has_type<T>)
-    static constexpr uint1 index = get_index_of_type<T, variant_size - 1>();
+    static constexpr auto alternative_index =
+        get_index_of_type<T, variant_size - 1>();
 
-    template <typename T>
-        requires(Types::template has_type<T>)
-    constexpr auto holds_alternative() -> bool {
-        return this->discriminant == this->index<T>;
+    [[nodiscard]] constexpr auto alternative() const -> uint1 {
+        return this->discriminant;
     }
 
     template <typename T>
         requires(Types::template has_type<T>)
     constexpr auto holds_alternative() const -> bool {
-        return this->discriminant == this->index<T>;
+        return this->discriminant == this->alternative_index<T>;
     }
 
-    constexpr auto holds_alternative(ssize alternative_index) const -> bool {
+    [[nodiscard]] constexpr auto holds_alternative(
+        uint1 alternative_index) const -> bool {
         return this->discriminant == alternative_index;
-    }
-
-    constexpr auto get_index() const -> uint1 {
-        return this->discriminant;
     }
 };
 
