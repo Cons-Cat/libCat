@@ -406,4 +406,13 @@ auto main() -> int {
     // Remove value:
     optvoid = nullopt;
     Result(!optvoid.has_value()).or_exit();
+
+    // Test `.is()`;
+    cat::Optional<int4> opt_is = 1;
+    Result(opt_is.is<int4>()).or_exit();
+    Result(!opt_is.is<uint8>()).or_exit();
+
+    opt_is = nullopt;
+    Result(!opt_is.is<int4>()).or_exit();
+    Result(!opt_is.is<uint8>()).or_exit();
 }

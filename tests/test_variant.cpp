@@ -2,7 +2,7 @@
 
 auto main() -> int {
     cat::Variant<int, char, uint4> variant(int{1});
-    Result(variant.holds_alternative<int>()).or_exit();
+    Result(variant.is<int>()).or_exit();
     int foo_int = variant.get<int>();
     Result(foo_int == 1).or_exit();
 
@@ -11,7 +11,7 @@ auto main() -> int {
     static_assert(variant.alternative_index<uint4> == 2u);
 
     variant = 'o';
-    Result(variant.holds_alternative<char>()).or_exit();
+    Result(variant.is<char>()).or_exit();
     char foo_char = variant.get<char>();
     Result(foo_char == 'o').or_exit();
 
@@ -22,19 +22,19 @@ auto main() -> int {
 
     // Test variant subtype constructor and assignment operator.
     cat::Variant<int, char, uint4, int2> variant2 = variant;
-    Result(variant2.holds_alternative<char>()).or_exit();
+    Result(variant2.is<char>()).or_exit();
     variant2 = 1;
-    Result(variant2.holds_alternative<int>()).or_exit();
+    Result(variant2.is<int>()).or_exit();
     variant2 = variant;
-    Result(variant2.holds_alternative<char>()).or_exit();
+    Result(variant2.is<char>()).or_exit();
 
     variant = 1;
     cat::Variant<int, char, uint4, int2> variant3 = variant;
-    Result(variant3.holds_alternative<int>()).or_exit();
+    Result(variant3.is<int>()).or_exit();
     variant3 = int2{10};
-    Result(variant3.holds_alternative<int2>()).or_exit();
+    Result(variant3.is<int2>()).or_exit();
     variant3 = variant;
-    Result(variant3.holds_alternative<int>()).or_exit();
+    Result(variant3.is<int>()).or_exit();
 
     // Test getting variant type by index.
     static_assert(cat::is_same<decltype(variant3.get<0>()), int>);

@@ -49,22 +49,22 @@ auto main() -> int {
     static_assert(sizeof(result) == 16);
 
     Result(!result.has_value()).or_exit();
-    Result(result.holds_alternative<ErrorOne>()).or_exit();
-    Result(!result.holds_alternative<int8>()).or_exit();
+    Result(result.is<ErrorOne>()).or_exit();
+    Result(!result.is<int8>()).or_exit();
 
     result = union_errors(1);
     Result(!result.has_value()).or_exit();
-    Result(result.holds_alternative<ErrorTwo>()).or_exit();
-    Result(!result.holds_alternative<int8>()).or_exit();
+    Result(result.is<ErrorTwo>()).or_exit();
+    Result(!result.is<int8>()).or_exit();
 
     result = union_errors(2);
     Result(result.has_value()).or_exit();
-    Result(result.holds_alternative<int8>()).or_exit();
+    Result(result.is<int8>()).or_exit();
 
     result = union_errors(3);
     Result(result.has_value()).or_exit();
     Result(result.value() == 3).or_exit();
-    Result(result.holds_alternative<int8>()).or_exit();
+    Result(result.is<int8>()).or_exit();
 
     cat::Scaredy<cat::Compact<int4,
                               [](int4 input) {

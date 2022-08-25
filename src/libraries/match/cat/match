@@ -65,7 +65,7 @@ struct OneOfTypes : detail::Pattern {
     template <typename U>
     constexpr auto find_type(auto variant) {
         if constexpr (decltype(variant)::Types::template has_type<U>) {
-            if (variant.template holds_alternative<U>()) {
+            if (variant.template is<U>()) {
                 return true;
             }
         }
@@ -77,7 +77,7 @@ struct OneOfTypes : detail::Pattern {
     constexpr auto find_type(auto variant) -> bool {
         // If `U` is in `variant`'s alternatives.
         if constexpr (decltype(variant)::Types::template has_type<U>) {
-            if (variant.template holds_alternative<U>()) {
+            if (variant.template is<U>()) {
                 return true;
             }
         }

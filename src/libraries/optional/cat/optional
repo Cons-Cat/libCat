@@ -610,6 +610,19 @@ class Optional {
         return this->storage.has_value();
     }
 
+    // Holds true if this `Optional` currently has some value of the type `T`.
+    // This method allows `Optional` to be used in `cat::match` statements.
+    template <typename U>
+    constexpr auto is() const -> bool {
+        // Since this storage can only hold either `Value` or `nullopt`, this
+        // can be expressed in terms of `.has_value()`.
+        if constexpr (is_same<U, Value>) {
+            return this->has_value();
+        } else {
+            return !this->has_value();
+        }
+    }
+
     // Get the `storage` unconditionally.
     [[nodiscard]] constexpr auto value() & -> Value& {
         return this->storage.value();

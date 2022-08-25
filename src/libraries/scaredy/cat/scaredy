@@ -100,7 +100,7 @@ namespace detail {
         }
 
         constexpr auto has_value() const -> bool {
-            return this->storage.template holds_alternative<Value>();
+            return this->storage.template is<Value>();
         }
 
         constexpr auto value() & -> Value& requires(!is_void<T>) {
@@ -130,8 +130,8 @@ namespace detail {
         }
 
         template <typename U>
-        constexpr auto holds_alternative() const -> bool {
-            return this->storage.template holds_alternative<U>();
+        constexpr auto is() const -> bool {
+            return this->storage.template is<U>();
         }
     };
 
@@ -249,7 +249,7 @@ namespace detail {
         }
 
         template <typename U>
-        constexpr auto holds_alternative() const -> bool {
+        constexpr auto is() const -> bool {
             // Since this storage can only hold either `Value` or `Error`, this
             // can be expressed in terms of `.has_value()`.
             if constexpr (is_same<U, Value>) {
@@ -257,14 +257,6 @@ namespace detail {
             } else {
                 return !this->has_value();
             }
-        }
-
-        [[nodiscard]] constexpr auto holds_alternative(
-            ssize alternative_index) const -> bool {
-            if (alternative_index == 0) {
-                return this->holds_alternative<Value>();
-            }
-            return this->holds_alternative<Error>();
         }
 
         constexpr auto get_index() const {
@@ -448,14 +440,11 @@ class Scaredy {
         return fallback;
     }
 
+    // Holds true if this `Scaredy` currently has some value of the type `U`.
+    // This method allows `Scaredy` to be used in `cat::match` statements.
     template <typename U>
-    [[nodiscard]] constexpr auto holds_alternative() const -> bool {
-        return this->storage.template holds_alternative<U>();
-    }
-
-    [[nodiscard]] constexpr auto holds_alternative(
-        ssize alternative_index) const -> bool {
-        return this->storage.template holds_alternative(alternative_index);
+    [[nodiscard]] constexpr auto is() const -> bool {
+        return this->storage.template is<U>();
     }
 
     // If this non-`const`-qualified `Scaredy` holds a value, transform it
