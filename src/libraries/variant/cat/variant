@@ -6,7 +6,6 @@
 #include <cat/memory>
 #include <cat/meta>
 #include <cat/type_list>
-#include <utility>
 
 namespace cat {
 

@@ -1,0 +1,159 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/scaredy>
+#include <cat/tuple>
+#include <cat/type_list>
+
+// match(v)(is_a<int>().then([](){
+//              print("int");
+//          }),
+//          is_a(1.f).then([](){
+//              print("1.f");
+//          }),
+//          one_of<int, double>().then([](){
+//              print("int or double");
+//          }),
+//          one_of(2.f, 3).then([](){
+//              print("2.f or 3");
+//          }),
+//          otherwise([](){
+//              print("No match.");
+//          }));
+
+namespace cat {
+namespace detail {
+    struct Pattern {};
+}  // namespace detail
+
+// TODO: Can this callback be type erased?
+template <typename Function>
+struct PatternCallback {
+    Function callback;
+
+    template <typename T>
+    constexpr auto operator()(T&& variant) -> decltype(auto) {
+        return this->callback(forward<T>(variant));
+    }
+};
+
+template <typename... Ts>
+// NOLINTNEXTLINE Let this be snake_case.
+struct is_a : detail::Pattern {
+    constexpr is_a() = default;
+    constexpr is_a(Ts&&...){};
+};
+
+template <typename... Ts>
+struct OneOfValues : detail::Pattern {
+    constexpr OneOfValues(Ts&&...){};
+
+    template <typename Function>
+    constexpr auto then(Function&& callback) -> PatternCallback<Function> {
+        return PatternCallback{[](auto variant) {
+            if constexpr (sizeof...(Ts) > 0) {
+            }
+        }};
+    }
+};
+
+template <typename... Ts>
+struct OneOfTypes : detail::Pattern {
+    constexpr OneOfTypes() = default;
+
+    template <typename U>
+    constexpr auto find_type(auto variant) {
+        if constexpr (decltype(variant)::Types::template has_type<U>) {
+            if (variant.template holds_alternative<U>()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    template <typename U, typename... Remaining>
+        requires(sizeof...(Remaining) > 0)
+    constexpr auto find_type(auto variant) -> bool {
+        // If `U` is in `variant`'s alternatives.
+        if constexpr (decltype(variant)::Types::template has_type<U>) {
+            if (variant.template holds_alternative<U>()) {
+                return true;
+            }
+        }
+        return find_type<Remaining...>(variant);
+    }
+
+    template <typename Function>
+    constexpr auto then(Function&& callback) {
+        return PatternCallback{[&](auto variant) -> bool {
+            // If `variant` currently holds one of `Ts`, then invoke `callback`.
+            if (this->find_type<Ts...>(variant)) {
+                forward<Function>(callback)();
+                return true;
+            }
+            return false;
+        }};
+    }
+};
+
+template <typename... Ts>
+constexpr auto one_of() -> OneOfTypes<Ts...> {
+    return OneOfTypes<Ts...>{};
+}
+
+template <typename... Ts>
+constexpr auto one_of(Ts&&... values) -> OneOfValues<Ts...> {
+    return OneOfValues{forward<Ts>(values)...};
+}
+
+template <typename Function>
+// NOLINTNEXTLINE Let this be snake_case.
+struct otherwise : detail::Pattern {};
+
+template <typename T>
+struct MatchPatterns {
+    T variant;
+
+    // Base case.
+    template <typename U>
+    constexpr void call_pattern(U pattern) {
+        !pattern(this->variant);
+    }
+
+    // Call every pattern in order.
+    template <typename U, typename... Remaining>
+        requires(sizeof...(Remaining) > 0)
+    constexpr void call_pattern(U pattern, Remaining&&... remaining) {
+        if (pattern(this->variant)) {
+            // Short circuit the remaining patterns if this one returns true.
+            return;
+        }
+        return call_pattern(forward<Remaining>(remaining)...);
+    }
+
+    // Every pattern must be either an `is_a`, `one_of`, or `otherwise`.
+    template <typename... Patterns>
+        requires(is_specialization<Patterns, PatternCallback>&&...)
+    constexpr void operator()(Patterns&&... patterns) {
+        // Recurse through `patterns` in order. Invoke the call operator on each
+        // of them with `this->variant` as an argument. When one pattern holds
+        // true, invoke its callback and stop recursing.
+        this->call_pattern(forward<Patterns>(patterns)...);
+    }
+};
+
+// These lambdas can return void or non-void. The return value of `match` is
+// then the `CommonType` of those lambdas' return types, and they are casted to
+// that common type.
+
+template <typename T>
+constexpr auto match(T variant) -> MatchPatterns<T> {
+    return MatchPatterns{variant};
+}
+
+}  // namespace cat
+
+using cat::is_a;
+using cat::one_of;
+using cat::otherwise;

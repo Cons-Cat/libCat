@@ -198,7 +198,7 @@ if(BUILD_TEST_VARIANT OR BUILD_ALL_TESTS)
   add_executable(test_variant test_variant.cpp)
   #target_compile_options(test_variant PRIVATE ${CAT_CXX_FLAGS_TEST})
   target_link_options(test_variant PRIVATE ${CAT_LINK_FLAGS})
-  add_test(NAME TypeVariant COMMAND test_variant)
+  add_test(NAME Variant COMMAND test_variant)
 endif()
 
 # This tests that `cat::Tuple` works.

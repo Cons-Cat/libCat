@@ -13,6 +13,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/variant/
   ${CMAKE_SOURCE_DIR}/src/libraries/scaredy/
   ${CMAKE_SOURCE_DIR}/src/libraries/optional/
+  ${CMAKE_SOURCE_DIR}/src/libraries/match/
   ${CMAKE_SOURCE_DIR}/src/libraries/any/
   ${CMAKE_SOURCE_DIR}/src/libraries/unique/
   ${CMAKE_SOURCE_DIR}/src/libraries/collection/
