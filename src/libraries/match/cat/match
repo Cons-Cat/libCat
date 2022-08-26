@@ -32,8 +32,8 @@ namespace detail {
         Function callback;
 
         template <typename T>
-        constexpr auto operator()(T&& variant) -> decltype(auto) {
-            return this->callback(forward<T>(variant));
+        constexpr auto operator()(T&& matching) -> decltype(auto) {
+            return this->callback(forward<T>(matching));
         }
     };
 
@@ -43,10 +43,10 @@ namespace detail {
 
         template <typename Function>
         constexpr auto then(Function&& callback) {
-            return PatternCallback{[&](auto& variant) -> bool {
-                // If `variant` currently holds one of `Ts`, then invoke
+            return PatternCallback{[&](auto& matching) -> bool {
+                // If `matching` currently holds one of `Ts`, then invoke
                 // `callback`.
-                if (((variant.template is<Ts>()) || ...)) {
+                if (((matching.template is<Ts>()) || ...)) {
                     forward<Function>(callback)();
                     return true;
                 }
@@ -63,10 +63,10 @@ namespace detail {
 
         template <typename Function>
         constexpr auto then(Function&& callback) {
-            return PatternCallback{[&](auto& variant) -> bool {
-                // If `variant` currently holds a value equivalent to
+            return PatternCallback{[&](auto& matching) -> bool {
+                // If `matching` currently holds a value equivalent to
                 // `this->value`, then invoke `callback`.
-                if (variant.template is(this->value)) {
+                if (matching.template is(this->value)) {
                     forward<Function>(callback)();
                     return true;
                 }
@@ -99,19 +99,19 @@ struct otherwise : detail::Pattern {};
 
 template <typename T>
 struct MatchPatterns {
-    T& variant;
+    T& matching;
 
     // Base case.
     template <typename U>
     constexpr void call_pattern(U pattern) {
-        !pattern(this->variant);
+        !pattern(this->matching);
     }
 
     // Call every pattern in order.
     template <typename U, typename... Remaining>
         requires(sizeof...(Remaining) > 0)
     constexpr void call_pattern(U pattern, Remaining&&... remaining) {
-        if (pattern(this->variant)) {
+        if (pattern(this->matching)) {
             // Short circuit the remaining patterns if this one returns true.
             return;
         }
@@ -123,8 +123,8 @@ struct MatchPatterns {
         requires(is_specialization<Patterns, detail::PatternCallback>&&...)
     constexpr void operator()(Patterns&&... patterns) {
         // Recurse through `patterns` in order. Invoke the call operator on each
-        // of them with `this->variant` as an argument. When one pattern holds
-        // true, invoke its callback and stop recursing.
+        // of them with `this->matching` as an argument. When one pattern
+        // holds true, invoke its callback and stop recursing.
         this->call_pattern(forward<Patterns>(patterns)...);
     }
 };
@@ -134,8 +134,8 @@ struct MatchPatterns {
 // that common type.
 
 template <typename T>
-constexpr auto match(T& variant) -> MatchPatterns<T> {
-    return MatchPatterns{variant};
+constexpr auto match(T& matching) -> MatchPatterns<T> {
+    return MatchPatterns{matching};
 }
 
 }  // namespace cat

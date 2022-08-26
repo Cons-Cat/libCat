@@ -5,6 +5,8 @@
 #include <cat/memory>
 #include <cat/utility>
 
+#include "cat/meta"
+
 namespace cat {
 namespace detail {
     // A `NullOpt` is consumed by an `Optional` constructor to prevent
@@ -614,8 +616,8 @@ class Optional {
     // This method allows `Optional` to be used in `match` statements.
     template <typename U>
     constexpr auto is() const -> bool {
-        // Since this storage can only hold either `Value` or `nullopt`, this
-        // can be expressed in terms of `.has_value()`.
+        // Since this storage can only hold either `Value` or `nullopt`,
+        // this can be expressed in terms of `.has_value()`.
         if constexpr (is_same<U, Value>) {
             return this->has_value();
         } else {
@@ -623,21 +625,23 @@ class Optional {
         }
     }
 
-    /*
     // Holds true if this `Optional` currently has some value convertible to
     // `in_value`. This method allows `Optional` to be used in `match`
     // statements.
     template <typename U>
-    constexpr auto is() const -> bool {
-        // Since this storage can only hold either `Value` or `nullopt`, this
-        // can be expressed in terms of `.has_value()`.
-        if constexpr (is_same<U, Value>) {
-            return this->has_value();
-        } else {
-            return !this->has_value();
+        requires(is_convertible<U, Value>)
+    constexpr auto is(U&& in_value) const -> bool {
+        if (this->has_value()) {
+            return static_cast<Value>(forward<U>(in_value)) == this->value();
         }
+        return false;
     }
-        */
+
+    // Special overload for `nullopt`.
+    constexpr auto is(detail::NullOpt) const -> bool {
+        return !this->has_value();
+    }
+
     // Get the `storage` unconditionally.
     [[nodiscard]] constexpr auto value() & -> Value& {
         return this->storage.value();

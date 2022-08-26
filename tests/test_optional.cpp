@@ -1,3 +1,4 @@
+#include <cat/match>
 #include <cat/memory>
 #include <cat/optional>
 #include <cat/unique>
@@ -415,4 +416,40 @@ auto main() -> int {
     opt_is = nullopt;
     Result(!opt_is.is<int4>()).or_exit();
     Result(!opt_is.is<uint8>()).or_exit();
+
+    // Test `match()`.
+    cat::Optional<int4> opt_match = 1;
+
+    bool matched = false;
+    cat::match(opt_match)(is_a(1).then([&]() {
+        matched = true;
+    }));
+    cat::match(opt_match)(is_a(2).then([&]() {
+        matched = false;
+    }));
+    Result(matched).or_exit();
+
+    matched = false;
+    cat::match(opt_match)(is_a<int4>().then([&]() {
+        matched = true;
+    }));
+    cat::match(opt_match)(is_a<uint8>().then([&]() {
+        matched = false;
+    }));
+    Result(matched).or_exit();
+
+    // Test matching against `nullopt` when this holds a value.
+    matched = true;
+    cat::match(opt_match)(is_a(nullopt).then([&]() {
+        matched = false;
+    }));
+    Result(matched).or_exit();
+
+    // Test matching against `nullopt` when this does not hold a value.
+    matched = false;
+    opt_match = nullopt;
+    cat::match(opt_match)(is_a(nullopt).then([&]() {
+        matched = true;
+    }));
+    Result(matched).or_exit();
 }
