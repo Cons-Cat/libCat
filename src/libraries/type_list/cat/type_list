@@ -2,9 +2,32 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/math>
-
 namespace cat {
+
+// Forward declaring `min()` and `max()` is required here to prevent circular
+// inclusion errors.
+
+template <typename T>
+constexpr auto min(T&& value) -> T&&;
+
+// Implicit output type `min()`.
+template <typename T, typename U, typename... Remaining>
+constexpr auto min(T&& value_1, U&& value_2, Remaining&&... remaining);
+
+// Explicit output type `min()`.
+template <typename Out, typename T, typename U, typename... Remaining>
+constexpr auto min(T&& value_1, U&& value_2, Remaining&&... remaining) -> Out;
+
+template <typename T>
+constexpr auto max(T&& value) -> T&&;
+
+// Implicit output type `max()`.
+template <typename T, typename U, typename... Remaining>
+constexpr auto max(T&& value_1, U&& value_2, Remaining&&... remaining);
+
+// Explicit output type `max()`.
+template <typename Out, typename T, typename U, typename... Remaining>
+constexpr auto max(T&& value_1, U&& value_2, Remaining&&... remaining);
 
 template <typename... Ts>
 class TypeList {

@@ -3,7 +3,7 @@
 #pragma once
 
 #include <cat/memory>
-#include <cat/meta>
+#include <cat/optional>
 #include <cat/type_list>
 
 namespace cat {

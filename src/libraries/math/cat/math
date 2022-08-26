@@ -63,6 +63,7 @@ constexpr auto max(T&& value) -> T&& {
 
 // Implicit output type `max()`.
 template <typename T, typename U, typename... Remaining>
+    requires(sizeof...(Remaining) > 0)
 constexpr auto max(T&& value_1, U&& value_2, Remaining&&... remaining) {
     // Recurse through the list of variadic arguments, discarding the larger
     // element each time.
@@ -73,6 +74,7 @@ constexpr auto max(T&& value_1, U&& value_2, Remaining&&... remaining) {
 
 // Explicit output type `max()`.
 template <typename Out, typename T, typename U, typename... Remaining>
+    requires(sizeof...(Remaining) > 0)
 constexpr auto max(T&& value_1, U&& value_2, Remaining&&... remaining) -> Out {
     return static_cast<Out>(
         (value_1 > value_2)
