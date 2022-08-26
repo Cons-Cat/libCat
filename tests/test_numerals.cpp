@@ -1,3 +1,5 @@
+#include <cat/match>
+
 auto main() -> int {
     // Test `concept`s.
     static_assert(cat::detail::ArithmeticNonPtr<int4>);
@@ -57,4 +59,29 @@ auto main() -> int {
     Result(is_more).or_exit();
     is_more = (int_less < 2);
     Result(is_more).or_exit();
+
+    // Test matching numerals.
+    int4 match_int = 1;
+    bool matched = false;
+
+    // Match type.
+    cat::match(match_int)(  //
+        is_a<uint4>().then([]() {
+            cat::exit(1);
+        }),
+        is_a<int4>().then([&]() {
+            matched = true;
+        }));
+    Result(matched).or_exit();
+
+    // Match value.
+    matched = false;
+    cat::match(match_int)(  //
+        is_a(0).then([]() {
+            cat::exit(1);
+        }),
+        is_a(1).then([&]() {
+            matched = true;
+        }));
+    Result(matched).or_exit();
 };

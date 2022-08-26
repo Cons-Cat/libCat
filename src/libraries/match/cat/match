@@ -23,6 +23,13 @@
 //          }));
 
 namespace cat {
+
+template <typename T>
+concept hasIs = requires(T t) {
+    t.template is<int>();
+    t.template is(0);
+};
+
 namespace detail {
     struct Pattern {};
 
@@ -49,11 +56,21 @@ namespace detail {
         template <typename Function>
         constexpr auto then(Function&& callback) {
             return PatternCallback{[&](auto& matching) -> bool {
-                // If `matching` currently holds one of `Ts`, then invoke
-                // `callback`.
-                if (((matching.template is<Ts>()) || ...)) {
-                    forward<Function>(callback)();
-                    return true;
+                using U = RemoveConst<RemoveReference<decltype(matching)>>;
+                if constexpr (hasIs<U>) {
+                    // If `matching` currently holds one of `Ts`, then invoke
+                    // `callback`.
+                    if (((matching.template is<Ts>()) || ...)) {
+                        forward<Function>(callback)();
+                        return true;
+                    }
+                } else {
+                    // If there is no `.is()` method for `matching`, fall back
+                    // to a trivial `is_same` check.
+                    if ((is_same<U, Ts> || ...)) {
+                        forward<Function>(callback)();
+                        return true;
+                    }
                 }
                 return false;
             }};
@@ -69,11 +86,21 @@ namespace detail {
         template <typename Function>
         constexpr auto then(Function&& callback) {
             return PatternCallback{[&](auto& matching) -> bool {
-                // If `matching` currently holds a value equivalent to
-                // `this->value`, then invoke `callback`.
-                if (matching.template is(this->value)) {
-                    forward<Function>(callback)();
-                    return true;
+                using U = RemoveConst<RemoveReference<decltype(matching)>>;
+                if constexpr (hasIs<U>) {
+                    // If `matching` currently holds a value equivalent to
+                    // `this->value`, then invoke `callback`.
+                    if (matching.template is(this->value)) {
+                        forward<Function>(callback)();
+                        return true;
+                    }
+                } else {
+                    // If there is no `.is()` method for `matching`, fall back
+                    // to a trivial `==` check.
+                    if (static_cast<U>(matching) == value) {
+                        forward<Function>(callback)();
+                        return true;
+                    }
                 }
                 return false;
             }};
@@ -111,15 +138,15 @@ struct MatchPatterns {
 
     // Base case.
     template <typename U>
-    constexpr void call_pattern(U pattern) {
-        !pattern(this->matching);
+    constexpr void call_pattern(U&& pattern) {
+        !forward<U>(pattern)(this->matching);
     }
 
     // Call every pattern in order.
     template <typename U, typename... Remaining>
         requires(sizeof...(Remaining) > 0)
-    constexpr void call_pattern(U pattern, Remaining&&... remaining) {
-        if (pattern(this->matching)) {
+    constexpr void call_pattern(U&& pattern, Remaining&&... remaining) {
+        if (forward<U>(pattern)(this->matching)) {
             // Short circuit the remaining patterns if this one returns true.
             return;
         }
