@@ -1,4 +1,3 @@
-#include <cat/match>
 #include <cat/variant>
 
 auto main() -> int {
@@ -95,6 +94,17 @@ auto main() -> int {
     // `variant3` holds an integer, but floats are convertible to integers.
     matched = false;
     cat::match(variant3)(  //
+        is_a(2.f).then([&]() {
+            cat::exit(1);
+        }),
+        is_a(1.f).then([&]() {
+            matched = true;
+        }));
+    Result(matched).or_exit();
+
+    // Test member access pattern matching syntax.
+    matched = false;
+    variant3.match(  //
         is_a(2.f).then([&]() {
             cat::exit(1);
         }),

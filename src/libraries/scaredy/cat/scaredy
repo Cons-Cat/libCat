@@ -474,6 +474,13 @@ class Scaredy {
         return this->storage.template is(forward<U>(in_value));
     }
 
+    // Member access syntax pattern matching for `cat::match()`.
+    template <typename... Patterns>
+        requires(is_specialization<Patterns, detail::PatternCallback>&&...)
+    constexpr void match(Patterns&&... patterns) {
+        detail::MatchPatterns{*this}(forward<Patterns>(patterns)...);
+    }
+
     // If this non-`const`-qualified `Scaredy` holds a value, transform it
     // by a function. Otherwise, propagate the error value.
     template <typename Function>

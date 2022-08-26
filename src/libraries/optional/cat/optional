@@ -2,10 +2,9 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/match>
 #include <cat/memory>
 #include <cat/utility>
-
-#include "cat/meta"
 
 namespace cat {
 namespace detail {
@@ -623,6 +622,13 @@ class Optional {
         } else {
             return false;
         }
+    }
+
+    // Member access syntax pattern matching for `cat::match()`.
+    template <typename... Patterns>
+        requires(is_specialization<Patterns, detail::PatternCallback>&&...)
+    constexpr void match(Patterns&&... patterns) {
+        detail::MatchPatterns{*this}(forward<Patterns>(patterns)...);
     }
 
     // Holds true if this `Optional` currently has some value convertible and

@@ -1,4 +1,3 @@
-#include <cat/match>
 #include <cat/scaredy>
 
 // Minimal result types usable for `cat::Scaredy`.
@@ -168,5 +167,12 @@ auto main() -> int {
         is_a<ErrorTwo>().then([&]() {
             matched = false;
         }));
+    Result(matched).or_exit();
+
+    // Test member access pattern matching syntax.
+    matched = false;
+    is_variant_scaredy.match(is_a<ErrorOne>().then([&]() {
+        matched = true;
+    }));
     Result(matched).or_exit();
 }

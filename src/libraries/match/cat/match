@@ -2,8 +2,6 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/scaredy>
-#include <cat/tuple>
 #include <cat/type_list>
 
 // match(v)(is_a<int>().then([](){
@@ -129,48 +127,52 @@ template <typename Function>
 // NOLINTNEXTLINE Let this be snake_case.
 struct otherwise : detail::Pattern {};
 
-template <typename T>
-struct MatchPatterns {
-    T& matching;
+namespace detail {
+    template <typename T>
+    struct MatchPatterns {
+        T& matching;
 
-    // This isn't needed in C++20, but it prevents a clangd false diagnostic.
-    MatchPatterns(T& input) : matching(input){};
+        // This isn't needed in C++20, but it prevents a clangd false
+        // diagnostic.
+        MatchPatterns(T& input) : matching(input){};
 
-    // Base case.
-    template <typename U>
-    constexpr void call_pattern(U&& pattern) {
-        !forward<U>(pattern)(this->matching);
-    }
-
-    // Call every pattern in order.
-    template <typename U, typename... Remaining>
-        requires(sizeof...(Remaining) > 0)
-    constexpr void call_pattern(U&& pattern, Remaining&&... remaining) {
-        if (forward<U>(pattern)(this->matching)) {
-            // Short circuit the remaining patterns if this one returns true.
-            return;
+        // Base case.
+        template <typename U>
+        constexpr void call_pattern(U&& pattern) {
+            !forward<U>(pattern)(this->matching);
         }
-        return call_pattern(forward<Remaining>(remaining)...);
-    }
 
-    // Every pattern must be either an `is_a`, `one_of`, or `otherwise`.
-    template <typename... Patterns>
-        requires(is_specialization<Patterns, detail::PatternCallback>&&...)
-    constexpr void operator()(Patterns&&... patterns) {
-        // Recurse through `patterns` in order. Invoke the call operator on each
-        // of them with `this->matching` as an argument. When one pattern
-        // holds true, invoke its callback and stop recursing.
-        this->call_pattern(forward<Patterns>(patterns)...);
-    }
-};
+        // Call every pattern in order.
+        template <typename U, typename... Remaining>
+            requires(sizeof...(Remaining) > 0)
+        constexpr void call_pattern(U&& pattern, Remaining&&... remaining) {
+            if (forward<U>(pattern)(this->matching)) {
+                // Short circuit the remaining patterns if this one returns
+                // true.
+                return;
+            }
+            return call_pattern(forward<Remaining>(remaining)...);
+        }
+
+        // Every pattern must be either an `is_a`, `one_of`, or `otherwise`.
+        template <typename... Patterns>
+            requires(is_specialization<Patterns, detail::PatternCallback>&&...)
+        constexpr void operator()(Patterns&&... patterns) {
+            // Recurse through `patterns` in order. Invoke the call operator on
+            // each of them with `this->matching` as an argument. When one
+            // pattern holds true, invoke its callback and stop recursing.
+            this->call_pattern(forward<Patterns>(patterns)...);
+        }
+    };
+}  // namespace detail
 
 // These lambdas can return void or non-void. The return value of `match` is
 // then the `CommonType` of those lambdas' return types, and they are casted to
 // that common type.
 
 template <typename T>
-constexpr auto match(T& matching) -> MatchPatterns<T> {
-    return MatchPatterns{matching};
+constexpr auto match(T& matching) -> detail::MatchPatterns<T> {
+    return detail::MatchPatterns{matching};
 }
 
 }  // namespace cat

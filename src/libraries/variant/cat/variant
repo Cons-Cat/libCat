@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/match>
 #include <cat/memory>
 #include <cat/optional>
 #include <cat/type_list>
@@ -349,6 +350,13 @@ class Variant {
         requires(is_convertible<T, Ts>&&...)
     [[nodiscard]] constexpr auto is(T const& in_value) const -> bool {
         return this->recurse_converting_equality<0, Ts...>(in_value);
+    }
+
+    // Member access syntax pattern matching for `cat::match()`.
+    template <typename... Patterns>
+        requires(is_specialization<Patterns, detail::PatternCallback>&&...)
+    constexpr void match(Patterns&&... patterns) {
+        detail::MatchPatterns{*this}(forward<Patterns>(patterns)...);
     }
 
     // Holds true if this `Variant` currently has some value of the type

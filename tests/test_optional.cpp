@@ -1,4 +1,3 @@
-#include <cat/match>
 #include <cat/memory>
 #include <cat/optional>
 #include <cat/unique>
@@ -449,6 +448,13 @@ auto main() -> int {
     matched = false;
     opt_match = nullopt;
     cat::match(opt_match)(is_a(nullopt).then([&]() {
+        matched = true;
+    }));
+    Result(matched).or_exit();
+
+    // Test member access pattern matching syntax.
+    matched = false;
+    opt_match.match(is_a(nullopt).then([&]() {
         matched = true;
     }));
     Result(matched).or_exit();
