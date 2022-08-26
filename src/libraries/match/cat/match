@@ -31,6 +31,11 @@ namespace detail {
     struct PatternCallback {
         Function callback;
 
+        // This isn't needed in C++20, but it prevents a clangd false
+        // diagnostic.
+        PatternCallback(Function&& input)
+            : callback(forward<Function>(input)){};
+
         template <typename T>
         constexpr auto operator()(T&& matching) -> decltype(auto) {
             return this->callback(forward<T>(matching));
@@ -100,6 +105,9 @@ struct otherwise : detail::Pattern {};
 template <typename T>
 struct MatchPatterns {
     T& matching;
+
+    // This isn't needed in C++20, but it prevents a clangd false diagnostic.
+    MatchPatterns(T& input) : matching(input){};
 
     // Base case.
     template <typename U>
