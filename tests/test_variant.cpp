@@ -81,4 +81,15 @@ auto main() -> int {
             matched = true;
         }));
     Result(matched).or_exit();
+
+    // `variant3` holds an integer, but floats are convertible to integers.
+    matched = false;
+    cat::match(variant3)(  //
+        is_a(2.f).then([&]() {
+            cat::exit(1);
+        }),
+        is_a(1.f).then([&]() {
+            matched = true;
+        }));
+    Result(matched).or_exit();
 };

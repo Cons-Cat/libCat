@@ -25,88 +25,72 @@
 namespace cat {
 namespace detail {
     struct Pattern {};
-}  // namespace detail
 
-// TODO: Can this callback be type erased?
-template <typename Function>
-struct PatternCallback {
-    Function callback;
+    // TODO: Can this callback be type erased?
+    template <typename Function>
+    struct PatternCallback {
+        Function callback;
+
+        template <typename T>
+        constexpr auto operator()(T&& variant) -> decltype(auto) {
+            return this->callback(forward<T>(variant));
+        }
+    };
+
+    template <typename... Ts>
+    struct OneOfTypes : Pattern {
+        constexpr OneOfTypes() = default;
+
+        template <typename Function>
+        constexpr auto then(Function&& callback) {
+            return PatternCallback{[&](auto& variant) -> bool {
+                // If `variant` currently holds one of `Ts`, then invoke
+                // `callback`.
+                if (((variant.template is<Ts>()) || ...)) {
+                    forward<Function>(callback)();
+                    return true;
+                }
+                return false;
+            }};
+        }
+    };
 
     template <typename T>
-    constexpr auto operator()(T&& variant) -> decltype(auto) {
-        return this->callback(forward<T>(variant));
-    }
-};
+    struct IsAValue : Pattern {
+        T value;
 
-template <typename... Ts>
-// NOLINTNEXTLINE Let this be snake_case.
-struct is_a : detail::Pattern {
-    constexpr is_a() = default;
-    constexpr is_a(Ts&&...){};
-};
+        constexpr IsAValue(T&& in_value) : value(forward<T>(in_value)){};
 
-template <typename... Ts>
-struct OneOfValues : detail::Pattern {
-    constexpr OneOfValues(Ts&&...){};
-
-    template <typename Function>
-    constexpr auto then(Function&& callback) -> PatternCallback<Function> {
-        return PatternCallback{[](auto& variant) {
-            if constexpr (sizeof...(Ts) > 0) {
-            }
-        }};
-    }
-};
-
-template <typename... Ts>
-struct OneOfTypes : detail::Pattern {
-    constexpr OneOfTypes() = default;
-
-    template <typename U>
-    constexpr auto find_type(auto& variant) {
-        if constexpr (RemoveReference<
-                          decltype(variant)>::Types::template has_type<U>) {
-            if (variant.template is<U>()) {
-                return true;
-            }
+        template <typename Function>
+        constexpr auto then(Function&& callback) {
+            return PatternCallback{[&](auto& variant) -> bool {
+                // If `variant` currently holds a value equivalent to
+                // `this->value`, then invoke `callback`.
+                if (variant.template is(this->value)) {
+                    forward<Function>(callback)();
+                    return true;
+                }
+                return false;
+            }};
         }
-        return false;
-    }
-
-    template <typename U, typename... Remaining>
-        requires(sizeof...(Remaining) > 0)
-    constexpr auto find_type(auto& variant) -> bool {
-        // If `U` is in `variant`'s alternatives.
-        if constexpr (RemoveReference<
-                          decltype(variant)>::Types::template has_type<U>) {
-            if (variant.template is<U>()) {
-                return true;
-            }
-        }
-        return find_type<Remaining...>(variant);
-    }
-
-    template <typename Function>
-    constexpr auto then(Function&& callback) {
-        return PatternCallback{[&](auto& variant) -> bool {
-            // If `variant` currently holds one of `Ts`, then invoke `callback`.
-            if (this->find_type<Ts...>(variant)) {
-                forward<Function>(callback)();
-                return true;
-            }
-            return false;
-        }};
-    }
-};
+    };
+}  // namespace detail
 
 template <typename... Ts>
-constexpr auto one_of() -> OneOfTypes<Ts...> {
-    return OneOfTypes<Ts...>{};
+constexpr auto one_of() -> detail::OneOfTypes<Ts...> {
+    return detail::OneOfTypes<Ts...>{};
 }
 
-template <typename... Ts>
-constexpr auto one_of(Ts&&... values) -> OneOfValues<Ts...> {
-    return OneOfValues{forward<Ts>(values)...};
+// TODO: `one_of()` overload taking values instead of types.
+
+template <typename T>
+constexpr auto is_a() -> detail::OneOfTypes<T> {
+    return detail::OneOfTypes<T>{};
+}
+
+template <typename T>
+constexpr auto is_a(T&& value) -> detail::IsAValue<T> {
+    return detail::IsAValue<T>{forward<T>(value)};
 }
 
 template <typename Function>
@@ -136,7 +120,7 @@ struct MatchPatterns {
 
     // Every pattern must be either an `is_a`, `one_of`, or `otherwise`.
     template <typename... Patterns>
-        requires(is_specialization<Patterns, PatternCallback>&&...)
+        requires(is_specialization<Patterns, detail::PatternCallback>&&...)
     constexpr void operator()(Patterns&&... patterns) {
         // Recurse through `patterns` in order. Invoke the call operator on each
         // of them with `this->variant` as an argument. When one pattern holds
