@@ -82,6 +82,16 @@ auto main() -> int {
         }));
     Result(matched).or_exit();
 
+    matched = false;
+    cat::match(variant3)(  //
+        is_a<float>().then([&]() {
+            cat::exit(1);
+        }),
+        is_a<int>().then([&]() {
+            matched = true;
+        }));
+    Result(matched).or_exit();
+
     // `variant3` holds an integer, but floats are convertible to integers.
     matched = false;
     cat::match(variant3)(  //
