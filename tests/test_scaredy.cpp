@@ -1,3 +1,4 @@
+#include <cat/match>
 #include <cat/scaredy>
 
 // Minimal result types usable for `cat::Scaredy`.
@@ -122,4 +123,50 @@ auto main() -> int {
     // Test monadic member functions on a `const`-qualified `Scaredy`.
     cat::Scaredy<int4, ErrorOne> const const_scaredy = 1;
     _ = const_scaredy.transform(increment).and_then(increment).or_exit();
+
+    bool matched = false;
+    // TODO: Test `.is()` on compact `Scaredy`.
+
+    // Test `.is()` on variant `Scaredy`.
+    cat::Scaredy<int4, ErrorOne, ErrorTwo> is_variant_scaredy;
+    is_variant_scaredy = 1;
+
+    matched = false;
+
+    // Match it against `int4`.
+    cat::match(is_variant_scaredy)(  //
+        is_a<int4>().then([&]() {
+            matched = true;
+        }));
+    cat::match(is_variant_scaredy)(  //
+        is_a<ErrorOne>().then([&]() {
+            matched = false;
+        }));
+    cat::match(is_variant_scaredy)(  //
+        is_a<ErrorTwo>().then([&]() {
+            matched = false;
+        }));
+    // `float` can never hold true here, but it should compile.
+    cat::match(is_variant_scaredy)(  //
+        is_a<float>().then([&]() {
+            matched = false;
+        }));
+    Result(matched).or_exit();
+
+    // Match it against `ErrorOne`.
+    matched = false;
+    is_variant_scaredy = ErrorOne{};
+    cat::match(is_variant_scaredy)(  //
+        is_a<ErrorOne>().then([&]() {
+            matched = true;
+        }));
+    cat::match(is_variant_scaredy)(  //
+        is_a<int4>().then([&]() {
+            matched = false;
+        }));
+    cat::match(is_variant_scaredy)(  //
+        is_a<ErrorTwo>().then([&]() {
+            matched = false;
+        }));
+    Result(matched).or_exit();
 }

@@ -625,9 +625,9 @@ class Optional {
         }
     }
 
-    // Holds true if this `Optional` currently has some value convertible to
-    // `in_value`. This method allows `Optional` to be used in `match`
-    // statements.
+    // Holds true if this `Optional` currently has some value convertible and
+    // equivalent to `in_value`. This method allows `Optional` to be used in
+    // `match` statements.
     template <typename U>
         requires(is_convertible<U, Value>)
     constexpr auto is(U&& in_value) const -> bool {

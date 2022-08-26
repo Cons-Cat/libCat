@@ -134,6 +134,11 @@ namespace detail {
         constexpr auto is() const -> bool {
             return this->storage.template is<U>();
         }
+
+        template <typename U>
+        constexpr auto is(U&& in_value) const -> bool {
+            return this->storage.template is<U>(forward<U>(in_value));
+        }
     };
 
     // `T` is a `Compact<Type, predicate, sentinel>`.
@@ -249,15 +254,28 @@ namespace detail {
             return T::predicate_function(this->storage);
         }
 
+        // Compare the type `U` against `Value` or `Error`.
         template <typename U>
         constexpr auto is() const -> bool {
-            // Since this storage can only hold either `Value` or `Error`, this
-            // can be expressed in terms of `.has_value()`.
             if constexpr (is_same<U, Value>) {
                 return this->has_value();
-            } else {
+            } else if constexpr (is_same<U, Error>) {
                 return !this->has_value();
+            } else {
+                // Any type besides `Value` and `Error` can never hold true.
+                return false;
             }
+        }
+
+        // Value comparison against either `this->storage` or
+        // `this->error_code`.
+        template <typename U>
+        constexpr auto is(U&& in_value) const -> bool {
+            if (this->has_value()) {
+                return static_cast<Value>(forward<U>(in_value)) ==
+                       this->storage;
+            }
+            return static_cast<Error>(forward<U>(in_value)) == this->error_code;
         }
 
         constexpr auto get_index() const {
@@ -446,6 +464,14 @@ class Scaredy {
     template <typename U>
     [[nodiscard]] constexpr auto is() const -> bool {
         return this->storage.template is<U>();
+    }
+
+    // Holds true if this `Scaredy` currently has some value convertible and
+    // equivalent to `in_value`. This method allows `Scaredy` to be used in
+    // `match` statements.
+    template <typename U>
+    [[nodiscard]] constexpr auto is(U&& in_value) const -> bool {
+        return this->storage.template is(forward<U>(in_value));
     }
 
     // If this non-`const`-qualified `Scaredy` holds a value, transform it
