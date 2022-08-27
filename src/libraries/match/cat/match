@@ -4,6 +4,41 @@
 
 #include <cat/type_list>
 
+// libCat provides userland pattern matching to simplify variant visitation in
+// some cases. `cat::match()` takes a generic argument, then produces a callable
+// `cat::detail::MatchPatterns` that holds a non-`const` reference to the
+// argument.
+
+// This `MatchPatterns` object can be called with a variadic list of pattern
+// objects. They are constructed with either function or template arguments,
+// depending on what kind of pattern they represent. Calling `.then()` on them
+// constructs a callable `cat::detail::Pattern` object with a predicate that
+// represents the pattern. For instance, `one_of<Ts...>()` generates a predicate
+// that checks if the reference provided to `match()` represents any of the
+// types in `Ts`.
+
+// The constructed `Pattern` object is called with an invocable argument, such
+// as a lambda, which itself takes no arguments.
+
+// This variadic list of `Pattern` objects are recursed through, and their
+// predicate is called with that reference provided to `cat::match()`. If the
+// predicate holds true, then the invocable argument to `.then()` on that
+// pattern is invoked.
+
+// When a pattern is matched in this way, it short circuits
+// the remaining patterns, and they are called in the order they are written
+// top-to-bottom.
+
+// The `Pattern` predicates will call `.is()` on the reference provided to
+// `match`, if such a method exists. `.is()` can be given either a single
+// template type argument, or a single value function argument. If no such
+// method exists in this case, instead a `cat::is_same<>()` or `==` will be
+// called, respectively. Generally, the value equality checks will explicitly
+// convert the pattern's argument type to the underlying type of the reference
+// provided to `cat::match()`.
+
+// The resulting syntax looks like:
+
 // match(v)(is_a<int>().then([](){
 //              print("int");
 //          }),
@@ -13,9 +48,11 @@
 //          one_of<int, double>().then([](){
 //              print("int or double");
 //          }),
+//          TODO:
 //          one_of(2.f, 3).then([](){
 //              print("2.f or 3");
 //          }),
+//          TODO:
 //          otherwise([](){
 //              print("No match.");
 //          }));
@@ -41,6 +78,8 @@ namespace detail {
         PatternCallback(Function&& input)
             : callback(forward<Function>(input)){};
 
+        // TODO: Add a `.when()` predicate.
+
         template <typename T>
         constexpr auto operator()(T&& matching) -> decltype(auto) {
             return this->callback(forward<T>(matching));
@@ -50,6 +89,8 @@ namespace detail {
     template <typename... Ts>
     struct OneOfTypes : Pattern {
         constexpr OneOfTypes() = default;
+
+        // TODO: Add a `.when()` predicate.
 
         template <typename Function>
         constexpr auto then(Function&& callback) {
@@ -80,6 +121,8 @@ namespace detail {
         T value;
 
         constexpr IsAValue(T&& in_value) : value(forward<T>(in_value)){};
+
+        // TODO: Add a `.when()` predicate.
 
         template <typename Function>
         constexpr auto then(Function&& callback) {
@@ -122,10 +165,6 @@ template <typename T>
 constexpr auto is_a(T&& value) -> detail::IsAValue<T> {
     return detail::IsAValue<T>{forward<T>(value)};
 }
-
-template <typename Function>
-// NOLINTNEXTLINE Let this be snake_case.
-struct otherwise : detail::Pattern {};
 
 namespace detail {
     template <typename T>
@@ -179,4 +218,3 @@ constexpr auto match(T& matching) -> detail::MatchPatterns<T> {
 
 using cat::is_a;
 using cat::one_of;
-using cat::otherwise;
