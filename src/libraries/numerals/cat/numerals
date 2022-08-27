@@ -44,8 +44,12 @@ struct NumericLimits<Numeral<T>> {
 template <>
 struct NumericLimits<char> {
     NumericLimits() = delete;
-    constexpr static __INT8_TYPE__ max = 127;
-    constexpr static __INT8_TYPE__ min = -128;
+    constexpr static auto min() -> __INT8_TYPE__ {
+        return -128;
+    }
+    constexpr static auto max() -> __INT8_TYPE__ {
+        return 127;
+    }
 
     constexpr static __INT8_TYPE__ digits = 7;
 };
@@ -53,8 +57,12 @@ struct NumericLimits<char> {
 template <>
 struct NumericLimits<__INT8_TYPE__> {
     NumericLimits() = delete;
-    constexpr static __INT8_TYPE__ max = 127;
-    constexpr static __INT8_TYPE__ min = -128;
+    constexpr static auto min() -> __INT8_TYPE__ {
+        return -128;
+    }
+    constexpr static auto max() -> __INT8_TYPE__ {
+        return 127;
+    }
 
     constexpr static __INT8_TYPE__ digits = 7;
 };
@@ -62,8 +70,12 @@ struct NumericLimits<__INT8_TYPE__> {
 template <>
 struct NumericLimits<__UINT8_TYPE__> {
     NumericLimits() = delete;
-    constexpr static __UINT8_TYPE__ max = 255u;
-    constexpr static __UINT8_TYPE__ min = 0u;
+    constexpr static auto min() -> __UINT8_TYPE__ {
+        return 0u;
+    }
+    constexpr static auto max() -> __UINT8_TYPE__ {
+        return 255u;
+    }
 
     constexpr static __INT8_TYPE__ digits = 8;
 };
@@ -71,8 +83,12 @@ struct NumericLimits<__UINT8_TYPE__> {
 template <>
 struct NumericLimits<__INT16_TYPE__> {
     NumericLimits() = delete;
-    constexpr static __INT16_TYPE__ max = 32'767;
-    constexpr static __INT16_TYPE__ min = -32'768;
+    constexpr static auto min() -> __INT16_TYPE__ {
+        return -32'768;
+    }
+    constexpr static auto max() -> __INT16_TYPE__ {
+        return 32'767;
+    }
 
     constexpr static __INT8_TYPE__ digits = 15;
 };
@@ -80,8 +96,12 @@ struct NumericLimits<__INT16_TYPE__> {
 template <>
 struct NumericLimits<__UINT16_TYPE__> {
     NumericLimits() = delete;
-    constexpr static __UINT16_TYPE__ max = 65535u;
-    constexpr static __UINT16_TYPE__ min = 0u;
+    constexpr static auto min() -> __UINT16_TYPE__ {
+        return 0u;
+    }
+    constexpr static auto max() -> __UINT16_TYPE__ {
+        return 65535u;
+    }
 
     constexpr static __INT8_TYPE__ digits = 16;
 };
@@ -89,8 +109,12 @@ struct NumericLimits<__UINT16_TYPE__> {
 template <>
 struct NumericLimits<__INT32_TYPE__> {
     NumericLimits() = delete;
-    constexpr static __INT32_TYPE__ max = 2'147'483'647;
-    constexpr static __INT32_TYPE__ min = -2'147'483'648;
+    constexpr static auto min() -> __INT32_TYPE__ {
+        return -2'147'483'648;
+    }
+    constexpr static auto max() -> __INT32_TYPE__ {
+        return 2'147'483'647;
+    }
 
     constexpr static __INT8_TYPE__ digits = 31;
 };
@@ -98,8 +122,12 @@ struct NumericLimits<__INT32_TYPE__> {
 template <>
 struct NumericLimits<__UINT32_TYPE__> {
     NumericLimits() = delete;
-    constexpr static __UINT32_TYPE__ max = 4'294'967'295;
-    constexpr static __UINT32_TYPE__ min = 0u;
+    constexpr static auto min() -> __UINT32_TYPE__ {
+        return 0u;
+    }
+    constexpr static auto max() -> __UINT32_TYPE__ {
+        return 4'294'967'295;
+    }
 
     constexpr static __INT8_TYPE__ digits = 32;
 };
@@ -107,8 +135,12 @@ struct NumericLimits<__UINT32_TYPE__> {
 template <>
 struct NumericLimits<__INT64_TYPE__> {
     NumericLimits() = delete;
-    constexpr static __INT64_TYPE__ max = 9'223'372'036'854'775'807;
-    constexpr static __INT64_TYPE__ min = -9'223'372'036'854'775'807;
+    constexpr static auto min() -> __INT64_TYPE__ {
+        return -9'223'372'036'854'775'807;
+    }
+    constexpr static auto max() -> __INT64_TYPE__ {
+        return 9'223'372'036'854'775'807;
+    }
 
     constexpr static __INT8_TYPE__ digits = 63;
 };
@@ -116,8 +148,12 @@ struct NumericLimits<__INT64_TYPE__> {
 template <>
 struct NumericLimits<__UINT64_TYPE__> {
     NumericLimits() = delete;
-    constexpr static __UINT64_TYPE__ max = 18'446'744'073'709'551'615u;
-    constexpr static __UINT64_TYPE__ min = 0u;
+    constexpr static auto min() -> __UINT64_TYPE__ {
+        return 0u;
+    }
+    constexpr static auto max() -> __UINT64_TYPE__ {
+        return 18'446'744'073'709'551'615u;
+    }
 
     constexpr static __INT8_TYPE__ digits = 64;
 };
@@ -139,8 +175,12 @@ enum class FloatRound {
 template <>
 struct NumericLimits<float> {
     NumericLimits() = delete;
-    constexpr static float max = __FLT_MAX__;
-    constexpr static float min = __FLT_MIN__;
+    constexpr static auto min() -> float {
+        return __FLT_MIN__;
+    }
+    constexpr static auto max() -> float {
+        return __FLT_MAX__;
+    }
 
     constexpr static __INT32_TYPE__ radix = __FLT_RADIX__;
     constexpr static __INT32_TYPE__ digits = __FLT_MANT_DIG__;
@@ -189,8 +229,12 @@ struct NumericLimits<float> {
 template <>
 struct NumericLimits<double> {
     NumericLimits() = delete;
-    constexpr static float max = __DBL_MAX__;
-    constexpr static float min = __DBL_MIN__;
+    constexpr static auto min() -> float {
+        return __DBL_MIN__;
+    }
+    constexpr static auto max() -> float {
+        return __DBL_MAX__;
+    }
 
     constexpr static __INT32_TYPE__ radix = __FLT_RADIX__;
     constexpr static __INT32_TYPE__ digits = __DBL_MANT_DIG__;
