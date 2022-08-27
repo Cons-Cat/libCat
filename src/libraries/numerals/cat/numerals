@@ -24,6 +24,9 @@ namespace cat {
 template <typename>
 struct NumericLimits {};
 
+// TODO: Determine whether libCat should use `static constexpr` or
+// `constexpr static` consistently.
+
 template <typename T>
 struct NumericLimits<Numeral<T>> {
     NumericLimits() = delete;
@@ -35,11 +38,25 @@ struct NumericLimits<Numeral<T>> {
     constexpr static auto min = NumericLimits<T>::min;
 };
 
+// TODO: Implement `min` and `max` limits in terms of GCC macros, like
+// `__LONG_LONG_MAX__`.
+
+template <>
+struct NumericLimits<char> {
+    NumericLimits() = delete;
+    constexpr static __INT8_TYPE__ max = 127;
+    constexpr static __INT8_TYPE__ min = -128;
+
+    constexpr static __INT8_TYPE__ digits = 7;
+};
+
 template <>
 struct NumericLimits<__INT8_TYPE__> {
     NumericLimits() = delete;
     constexpr static __INT8_TYPE__ max = 127;
     constexpr static __INT8_TYPE__ min = -128;
+
+    constexpr static __INT8_TYPE__ digits = 7;
 };
 
 template <>
@@ -47,6 +64,8 @@ struct NumericLimits<__UINT8_TYPE__> {
     NumericLimits() = delete;
     constexpr static __UINT8_TYPE__ max = 255u;
     constexpr static __UINT8_TYPE__ min = 0u;
+
+    constexpr static __INT8_TYPE__ digits = 8;
 };
 
 template <>
@@ -54,6 +73,8 @@ struct NumericLimits<__INT16_TYPE__> {
     NumericLimits() = delete;
     constexpr static __INT16_TYPE__ max = 32'767;
     constexpr static __INT16_TYPE__ min = -32'768;
+
+    constexpr static __INT8_TYPE__ digits = 15;
 };
 
 template <>
@@ -61,6 +82,8 @@ struct NumericLimits<__UINT16_TYPE__> {
     NumericLimits() = delete;
     constexpr static __UINT16_TYPE__ max = 65535u;
     constexpr static __UINT16_TYPE__ min = 0u;
+
+    constexpr static __INT8_TYPE__ digits = 16;
 };
 
 template <>
@@ -68,6 +91,8 @@ struct NumericLimits<__INT32_TYPE__> {
     NumericLimits() = delete;
     constexpr static __INT32_TYPE__ max = 2'147'483'647;
     constexpr static __INT32_TYPE__ min = -2'147'483'648;
+
+    constexpr static __INT8_TYPE__ digits = 31;
 };
 
 template <>
@@ -75,6 +100,8 @@ struct NumericLimits<__UINT32_TYPE__> {
     NumericLimits() = delete;
     constexpr static __UINT32_TYPE__ max = 4'294'967'295;
     constexpr static __UINT32_TYPE__ min = 0u;
+
+    constexpr static __INT8_TYPE__ digits = 32;
 };
 
 template <>
@@ -82,6 +109,8 @@ struct NumericLimits<__INT64_TYPE__> {
     NumericLimits() = delete;
     constexpr static __INT64_TYPE__ max = 9'223'372'036'854'775'807;
     constexpr static __INT64_TYPE__ min = -9'223'372'036'854'775'807;
+
+    constexpr static __INT8_TYPE__ digits = 63;
 };
 
 template <>
@@ -89,22 +118,125 @@ struct NumericLimits<__UINT64_TYPE__> {
     NumericLimits() = delete;
     constexpr static __UINT64_TYPE__ max = 18'446'744'073'709'551'615u;
     constexpr static __UINT64_TYPE__ min = 0u;
+
+    constexpr static __INT8_TYPE__ digits = 64;
 };
 
-// TODO: `float` and `double` limits.
+enum class FloatDenorm {
+    indeterminate = -1,
+    absent = 0,
+    present = 1
+};
+
+enum class FloatRound {
+    indeterminate = -1,
+    toward_zero = 0,
+    to_nearest = 1,
+    toward_infinity = 2,
+    toward_neg_infinity = 3
+};
+
 template <>
 struct NumericLimits<float> {
     NumericLimits() = delete;
-    constexpr static float max = 0.f;
-    constexpr static float min = 0.f;
+    constexpr static float max = __FLT_MAX__;
+    constexpr static float min = __FLT_MIN__;
+
+    constexpr static __INT32_TYPE__ radix = __FLT_RADIX__;
+    constexpr static __INT32_TYPE__ digits = __FLT_MANT_DIG__;
+    constexpr static __INT32_TYPE__ digits10 = __FLT_DIG__;
+    constexpr static __INT32_TYPE__ max_digits10 =
+        2 + __FLT_MANT_DIG__ * 643L / 2136;
+
+    constexpr static auto epsilon() -> float {
+        return __FLT_EPSILON__;
+    }
+
+    static constexpr __INT32_TYPE__ min_exponent = __FLT_MIN_EXP__;
+    static constexpr __INT32_TYPE__ min_exponent10 = __FLT_MIN_10_EXP__;
+    static constexpr __INT32_TYPE__ max_exponent = __FLT_MAX_EXP__;
+    static constexpr __INT32_TYPE__ max_exponent10 = __FLT_MAX_10_EXP__;
+
+    static constexpr bool has_infinity = __FLT_HAS_INFINITY__;
+    // NOLINTNEXTLINE Let this weird lettercase be used.
+    static constexpr bool has_quiet_NaN = __FLT_HAS_QUIET_NAN__;
+    // NOLINTNEXTLINE Let this weird lettercase be used.
+    static constexpr bool has_signaling_NaN = has_quiet_NaN;
+    static constexpr FloatDenorm has_denorm =
+        static_cast<FloatDenorm>(__FLT_HAS_DENORM__);
+
+    static constexpr auto infinity() -> float {
+        return __builtin_huge_valf();
+    }
+
+    // NOLINTNEXTLINE Let this weird lettercase be used.
+    static constexpr auto quiet_NaN() -> float {
+        return __builtin_nanf("");
+    }
+
+    // NOLINTNEXTLINE Let this weird lettercase be used.
+    static constexpr auto signaling_NaN() -> float {
+        return __builtin_nansf("");
+    }
+
+    static constexpr auto denorm_min() -> float {
+        return __FLT_DENORM_MIN__;
+    }
+
+    static constexpr FloatRound round_style = FloatRound::to_nearest;
 };
 
 template <>
 struct NumericLimits<double> {
     NumericLimits() = delete;
-    constexpr static double max = 0.;
-    constexpr static double min = 0.;
+    constexpr static float max = __DBL_MAX__;
+    constexpr static float min = __DBL_MIN__;
+
+    constexpr static __INT32_TYPE__ radix = __FLT_RADIX__;
+    constexpr static __INT32_TYPE__ digits = __DBL_MANT_DIG__;
+    constexpr static __INT32_TYPE__ digits10 = __DBL_DIG__;
+    constexpr static __INT32_TYPE__ max_digits10 =
+        2 + __DBL_MANT_DIG__ * 643L / 2136;
+
+    constexpr static auto epsilon() -> float {
+        return __DBL_EPSILON__;
+    }
+
+    static constexpr __INT32_TYPE__ min_exponent = __DBL_MIN_EXP__;
+    static constexpr __INT32_TYPE__ min_exponent10 = __DBL_MIN_10_EXP__;
+    static constexpr __INT32_TYPE__ max_exponent = __DBL_MAX_EXP__;
+    static constexpr __INT32_TYPE__ max_exponent10 = __DBL_MAX_10_EXP__;
+
+    static constexpr bool has_infinity = __DBL_HAS_INFINITY__;
+    // NOLINTNEXTLINE Let this weird lettercase be used.
+    static constexpr bool has_quiet_NaN = __DBL_HAS_QUIET_NAN__;
+    // NOLINTNEXTLINE Let this weird lettercase be used.
+    static constexpr bool has_signaling_NaN = has_quiet_NaN;
+    static constexpr FloatDenorm has_denorm =
+        static_cast<FloatDenorm>(__DBL_HAS_DENORM__);
+
+    static constexpr auto infinity() -> double {
+        return __builtin_huge_val();
+    }
+
+    // NOLINTNEXTLINE Let this weird lettercase be used.
+    static constexpr auto quiet_NaN() -> double {
+        return __builtin_nan("");
+    }
+
+    // NOLINTNEXTLINE Let this weird lettercase be used.
+    static constexpr auto signaling_NaN() -> double {
+        return __builtin_nans("");
+    }
+
+    static constexpr auto denorm_min() -> double {
+        return __DBL_DENORM_MIN__;
+    }
+
+    static constexpr FloatRound round_style = FloatRound::to_nearest;
 };
+
+// TODO: `NumericLimits<long double>`.
 
 template <arithmetic T>
 constexpr auto to_raw_numeral(T value) {
