@@ -210,13 +210,13 @@ namespace detail {
 
         constexpr auto operator=(Error const& operand)
             -> ScaredyCompactStorage<T, Error>& {
-            this->storage = operand;
+            this->error_code = operand;
             return *this;
         }
 
         constexpr auto operator=(Error&& operand)
             -> ScaredyCompactStorage<T, Error>& {
-            this->storage = move(operand);
+            this->error_code = move(operand);
             return *this;
         }
 

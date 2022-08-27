@@ -75,12 +75,19 @@ auto main() -> int {
         predicate = -1;
     // The `Scaredy` here adds no storage bloat to an `int4`.
     static_assert(sizeof(predicate) == sizeof(int4));
-
     Result(!predicate.has_value()).or_exit();
+
+    predicate = -1;
+    Result(!predicate.has_value()).or_exit();
+
     predicate = 0;
     Result(predicate.has_value()).or_exit();
+
     predicate = 10;
     Result(predicate.has_value()).or_exit();
+
+    predicate = ErrorOne{-1};
+    Result(!predicate.has_value()).or_exit();
 
     // Test `.value_or()`.
     cat::Scaredy<int4, ErrorOne> is_error = ErrorOne{};
@@ -123,14 +130,11 @@ auto main() -> int {
     cat::Scaredy<int4, ErrorOne> const const_scaredy = 1;
     _ = const_scaredy.transform(increment).and_then(increment).or_exit();
 
-    bool matched = false;
-    // TODO: Test `.is()` on compact `Scaredy`.
-
     // Test `.is()` on variant `Scaredy`.
+    bool matched = false;
+
     cat::Scaredy<int4, ErrorOne, ErrorTwo> is_variant_scaredy;
     is_variant_scaredy = 1;
-
-    matched = false;
 
     // Match it against `int4`.
     cat::match(is_variant_scaredy)(  //
@@ -174,5 +178,30 @@ auto main() -> int {
     is_variant_scaredy.match(is_a<ErrorOne>().then([&]() {
         matched = true;
     }));
+    Result(matched).or_exit();
+
+    // Test `.is()` on `Compact` `Scaredy`.
+    predicate = 1;
+
+    // Test type comparison.
+    matched = false;
+    cat::match(predicate)(  //
+        is_a<ErrorOne>().then([&]() {
+            cat::exit(1);
+        }),
+        is_a<int4>().then([&]() {
+            matched = true;
+        }));
+    Result(matched).or_exit();
+
+    matched = false;
+    predicate = ErrorOne{-1};
+    cat::match(predicate)(  //
+        is_a<int4>().then([&]() {
+            cat::exit(1);
+        }),
+        is_a<ErrorOne>().then([&]() {
+            matched = true;
+        }));
     Result(matched).or_exit();
 }
