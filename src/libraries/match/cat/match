@@ -23,9 +23,9 @@
 // predicate holds true, then the invocable argument to `.then()` on that
 // pattern is invoked.
 
-// When a pattern is matched in this way, it short circuits
-// the remaining patterns, and they are called in the order they are written
-// top-to-bottom.
+// `Pattern` objects are called top-to bottom, in the order provided to the
+// `MatchPatterns`. When a pattern is matched in this way, it short circuits the
+// remaining patterns, so they are never called.
 
 // The `Pattern` predicates will call `.is()` on the reference provided to
 // `match`, if such a method exists. `.is()` can be given either a single
@@ -191,7 +191,7 @@ namespace detail {
             return call_pattern(forward<Remaining>(remaining)...);
         }
 
-        // Every pattern must be either an `is_a`, `one_of`, or `otherwise`.
+        // Every pattern must be either an `is_a` or `one_of`.
         template <typename... Patterns>
             requires(is_specialization<Patterns, detail::PatternCallback>&&...)
         constexpr void operator()(Patterns&&... patterns) {
@@ -202,10 +202,6 @@ namespace detail {
         }
     };
 }  // namespace detail
-
-// These lambdas can return void or non-void. The return value of `match` is
-// then the `CommonType` of those lambdas' return types, and they are casted to
-// that common type.
 
 template <typename T>
 constexpr auto match(T& matching) -> detail::MatchPatterns<T> {
