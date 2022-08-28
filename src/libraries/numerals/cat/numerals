@@ -52,6 +52,7 @@ struct NumericLimits<char> {
     }
 
     constexpr static __INT8_TYPE__ digits = 7;
+    constexpr static bool is_iec559 = false;
 };
 
 template <>
@@ -65,6 +66,7 @@ struct NumericLimits<__INT8_TYPE__> {
     }
 
     constexpr static __INT8_TYPE__ digits = 7;
+    constexpr static bool is_iec559 = false;
 };
 
 template <>
@@ -78,6 +80,7 @@ struct NumericLimits<__UINT8_TYPE__> {
     }
 
     constexpr static __INT8_TYPE__ digits = 8;
+    constexpr static bool is_iec559 = false;
 };
 
 template <>
@@ -91,6 +94,7 @@ struct NumericLimits<__INT16_TYPE__> {
     }
 
     constexpr static __INT8_TYPE__ digits = 15;
+    constexpr static bool is_iec559 = false;
 };
 
 template <>
@@ -104,6 +108,7 @@ struct NumericLimits<__UINT16_TYPE__> {
     }
 
     constexpr static __INT8_TYPE__ digits = 16;
+    constexpr static bool is_iec559 = false;
 };
 
 template <>
@@ -117,6 +122,7 @@ struct NumericLimits<__INT32_TYPE__> {
     }
 
     constexpr static __INT8_TYPE__ digits = 31;
+    constexpr static bool is_iec559 = false;
 };
 
 template <>
@@ -130,6 +136,7 @@ struct NumericLimits<__UINT32_TYPE__> {
     }
 
     constexpr static __INT8_TYPE__ digits = 32;
+    constexpr static bool is_iec559 = false;
 };
 
 template <>
@@ -143,6 +150,7 @@ struct NumericLimits<__INT64_TYPE__> {
     }
 
     constexpr static __INT8_TYPE__ digits = 63;
+    constexpr static bool is_iec559 = false;
 };
 
 template <>
@@ -156,6 +164,7 @@ struct NumericLimits<__UINT64_TYPE__> {
     }
 
     constexpr static __INT8_TYPE__ digits = 64;
+    constexpr static bool is_iec559 = false;
 };
 
 enum class FloatDenorm {
@@ -182,6 +191,7 @@ struct NumericLimits<float> {
         return __FLT_MAX__;
     }
 
+    constexpr static bool is_iec559 = true;
     constexpr static __INT32_TYPE__ radix = __FLT_RADIX__;
     constexpr static __INT32_TYPE__ digits = __FLT_MANT_DIG__;
     constexpr static __INT32_TYPE__ digits10 = __FLT_DIG__;
@@ -236,6 +246,7 @@ struct NumericLimits<double> {
         return __DBL_MAX__;
     }
 
+    constexpr static bool is_iec559 = true;
     constexpr static __INT32_TYPE__ radix = __FLT_RADIX__;
     constexpr static __INT32_TYPE__ digits = __DBL_MANT_DIG__;
     constexpr static __INT32_TYPE__ digits10 = __DBL_DIG__;
