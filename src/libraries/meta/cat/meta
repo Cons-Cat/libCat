@@ -2,6 +2,10 @@
 // vim: set ft=cpp:
 #pragma once
 
+// TODO: Down with `typename`! clangd 14 emits false positive diagnostics if
+// `typename` is not used for these type aliases. When that is solved, they
+// should be streamlined out.
+
 // These forward declarations are required.
 namespace cat {
 template <typename T>
