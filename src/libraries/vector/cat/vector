@@ -5,6 +5,7 @@
 #include <cat/allocators>
 #include <cat/array>
 #include <cat/collection>
+#include <cat/math>
 
 namespace cat {
 
@@ -47,8 +48,8 @@ class Vector : public CollectionFacade<Vector<T>, T> {
 
     // Reallocate this vector's memory if it is exceeded, in a `constexpr`
     // context.
-    consteval void double_storage() {
-        ssize const new_capacity = max(4, this->current_capacity * 2);
+    consteval void const_double_storage() {
+        ssize const new_capacity = max(4_sz, this->current_capacity * 2);
         T* p_new = new T[new_capacity.raw];
         for (ssize::Raw i = 0; i < this->current_size.raw; ++i) {
             p_new[i] = move(this->p_storage[i]);
@@ -347,7 +348,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         requires(is_implicitly_convertible<U, T>)
     consteval auto push_back(U const& value) -> void {
         if (this->current_size + 1 > this->current_capacity) {
-            this->double_storage();
+            this->const_double_storage();
         }
         this->p_storage[this->current_size.raw] = static_cast<T>(value);
         this->current_size += 1;

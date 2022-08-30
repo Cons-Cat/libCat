@@ -6,31 +6,21 @@
 
 namespace cat {
 
-// TODO: Put type conversion constraints on these functions.
+// TODO: Explicit output type is ambiguous when given 2 function arguments.
 
 template <typename T>
-constexpr auto min(T&& value) -> T&& {
-    return forward<T>(value);
+constexpr auto min(T const& value) -> T const& {
+    return value;
 }
 
 // Implicit output type `min()`.
-template <typename T, typename U, typename... Remaining>
-constexpr auto min(T&& value_1, U&& value_2, Remaining&&... remaining) {
+template <typename T, typename... Remaining>
+constexpr auto min(T const& value_1, T const& value_2, Remaining&&... remaining)
+    -> T const& {
     // Recurse through the list of variadic arguments, discarding the larger
     // element each time.
-    return (value_1 < value_2)
-               ? cat::min(value_1, forward<Remaining>(remaining)...)
-               : cat::min(value_2, forward<Remaining>(remaining)...);
-}
-
-// Explicit output type `min()`.
-template <typename Out, typename T, typename U, typename... Remaining>
-constexpr auto min(T&& value_1, U&& value_2, Remaining&&... remaining) -> Out {
-    return static_cast<Out>(
-        (value_1 < value_2)
-            // Invoke the implicit output `min()`.
-            ? cat::min(value_1, forward<Remaining>(remaining)...)
-            : cat::min(value_2, forward<Remaining>(remaining)...));
+    return (value_1 < value_2) ? min(value_1, forward<Remaining>(remaining)...)
+                               : min(value_2, forward<Remaining>(remaining)...);
 }
 
 constexpr auto min(iterable auto&& iterable) {
@@ -45,7 +35,7 @@ constexpr auto min(iterable auto&& iterable) {
 }
 
 template <typename T>
-constexpr auto min(iterable auto&& iterable) -> T {
+constexpr auto min(iterable auto&& iterable) {
     auto iterator = iterable.begin();
     auto maximum = *iterator;
     ++iterator;
@@ -57,31 +47,21 @@ constexpr auto min(iterable auto&& iterable) -> T {
 }
 
 template <typename T>
-constexpr auto max(T&& value) -> T&& {
-    return forward<T>(value);
+constexpr auto max(T const& value) -> T const& {
+    return value;
 }
 
 // Implicit output type `max()`.
-template <typename T, typename U, typename... Remaining>
-    requires(sizeof...(Remaining) > 0)
-constexpr auto max(T&& value_1, U&& value_2, Remaining&&... remaining) {
+template <typename T, typename... Remaining>
+constexpr auto max(T const& value_1, T const& value_2, Remaining&&... remaining)
+    -> T const& {
     // Recurse through the list of variadic arguments, discarding the larger
     // element each time.
-    return (value_1 > value_2)
-               ? cat::max(value_1, forward<Remaining>(remaining)...)
-               : cat::max(value_2, forward<Remaining>(remaining)...);
+    return (value_1 > value_2) ? max(value_1, forward<Remaining>(remaining)...)
+                               : max(value_2, forward<Remaining>(remaining)...);
 }
 
-// Explicit output type `max()`.
-template <typename Out, typename T, typename U, typename... Remaining>
-    requires(sizeof...(Remaining) > 0)
-constexpr auto max(T&& value_1, U&& value_2, Remaining&&... remaining) -> Out {
-    return static_cast<Out>(
-        (value_1 > value_2)
-            // Invoke the implicit output `max()`.
-            ? cat::max(value_1, forward<Remaining>(remaining)...)
-            : cat::max(value_2, forward<Remaining>(remaining)...));
-}
+// TODO: If an `iterable` has `<` and `>` operators, this has unclear intent.
 
 constexpr auto max(iterable auto&& iterable) {
     auto iterator = iterable.begin();
@@ -95,7 +75,7 @@ constexpr auto max(iterable auto&& iterable) {
 }
 
 template <typename T>
-constexpr auto max(iterable auto&& iterable) -> T {
+constexpr auto max(iterable auto&& iterable) {
     auto iterator = iterable.begin();
     auto maximum = *iterator;
     ++iterator;
@@ -106,8 +86,8 @@ constexpr auto max(iterable auto&& iterable) -> T {
     return static_cast<T>(maximum);
 }
 
-// TODO: Add a `cat::Numeral` `concept`.
-constexpr auto abs(auto&& value) {
+// TODO: Use an `arithmetic` concept or something, but support safe numerals.
+constexpr auto abs(auto const& value) {
     // TODO: Check if the builtin `abs()` function family is optimized better.
     return value < 0 ? value * -1 : value;
 }

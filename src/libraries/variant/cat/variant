@@ -37,6 +37,8 @@ namespace detail {
             Monostate dummy;
         };
 
+        constexpr VariantNode() : dummy(){};
+
         // `.get()` is provided an alternative type's index. It then recurses
         // through the alternative types that many times. Then it returns a
         // reference to the storage of this node it has reached.

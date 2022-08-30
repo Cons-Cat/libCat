@@ -82,12 +82,12 @@ auto main() -> int {
     static_assert(implicit_array_3.size() == 5);
 
     // Max elements.
-    constexpr cat::Array array_4 = {0, 2, 8, 5};
-    constexpr int4 max_1 = cat::max(array_4);
-    Result(max_1 == 8).or_exit();
+    // constexpr cat::Array array_4 = {0, 2, 8, 5};
+    // constexpr int4 max_1 = cat::max(array_4);
+    // Result(max_1 == 8).or_exit();
 
-    int4 min_1 = cat::min(array_4);
-    Result(min_1 == 0).or_exit();
+    // int4 min_1 = cat::min(array_4);
+    // Result(min_1 == 0).or_exit();
 
     // TODO: String deduction:
     //     cat::Array implicit_string = "Hi, Conscat!";
