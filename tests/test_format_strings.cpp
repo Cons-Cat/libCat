@@ -34,10 +34,19 @@ auto main() -> int {
 
     // Test formatting `float`.
     allocator.reset();
+    cat::String string_float = cat::to_string(allocator, 1.234f).or_exit();
+    _ = cat::println(string_float);
+
     cat::String formatted_string_float =
-        cat::format(allocator, "a{}b", 2.f).or_exit();
+        cat::format(allocator, "a{}b", 1.234f).or_exit();
     _ = cat::println(formatted_string_float);
-    // Result(cat::compare_strings(formatted_string_float, "2.0")).or_exit();
+    Result(cat::compare_strings(formatted_string_float, "a1.234E0b")).or_exit();
+
+    cat::String formatted_string_double =
+        cat::format(allocator, "a{}b", 1.234).or_exit();
+    _ = cat::println(formatted_string_double);
+    Result(cat::compare_strings(formatted_string_double, "a1.234E0b"))
+        .or_exit();
 
     // Test `cat::to_string_at()`.
     cat::Array<char, 100> array;

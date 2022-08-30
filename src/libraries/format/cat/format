@@ -67,7 +67,7 @@ namespace detail {
     consteval auto make_const_string(StaticString<length> const& string) {
         // Copy over the string into new, larger, storage.
         StaticString<length + 1> new_string;
-        for (ssize::Raw i = 0; i < length; ++i) {
+        for (ssize i = 0; i < length; ++i) {
             new_string[i + 1] = string[i];
         }
 
@@ -102,7 +102,7 @@ template <auto value>
         // Handle a negative sign.
         if constexpr (is_signed<decltype(value)> && value < 0) {
             StaticString<string.size().raw + 1> new_string;
-            for (ssize::Raw i = 0; i < string.size(); ++i) {
+            for (ssize i = 0; i < string.size(); ++i) {
                 new_string[i + 1] = string[i];
             }
             new_string[0] = '-';
@@ -247,7 +247,11 @@ namespace detail {
                 this->discriminant = FormatDiscriminant::bool_type;
             } else if constexpr (is_same<U, float4>) {
                 this->discriminant = FormatDiscriminant::float_type;
+            } else if constexpr (is_same<U, float4::Raw>) {
+                this->discriminant = FormatDiscriminant::float_type;
             } else if constexpr (is_same<U, float8>) {
+                this->discriminant = FormatDiscriminant::double_type;
+            } else if constexpr (is_same<U, float8::Raw>) {
                 this->discriminant = FormatDiscriminant::double_type;
             } else if constexpr (is_same<U, char const*>) {
                 this->discriminant = FormatDiscriminant::raw_string_type;
@@ -617,12 +621,12 @@ namespace detail {
                         return FormatErrors::out_of_memory;
                     }
                 }
-
                 break;
             }
+
             // If there is an argument, then copy over all text leading up to
             // the next argument.
-            for (ssize::Raw i = 0; i < to_open_brace; ++i) {
+            for (ssize i = 0; i < to_open_brace; ++i) {
                 // TODO: Optimize this with a multiple-insert overload.
                 Optional result = handler.output_iterator.insert(
                     handler.allocator, remainder[i]);
@@ -632,27 +636,55 @@ namespace detail {
             }
 
             // Parse an argument:
-            auto const& arguments = handler.arguments;
+            FormatArguments const& arguments = handler.arguments;
+
+            auto parse = [&]<typename ArgType>(ArgType) -> ScaredyFormat<void> {
+                Optional const result = to_string(
+                    handler.allocator,
+                    arguments.template get<ArgType>(current_argument));
+                if (!result.has_value()) {
+                    return FormatErrors::out_of_memory;
+                }
+                String const int_string = result.value();
+
+                // TODO: Optimize this with a multiple-insert
+                // overload.
+                for (ssize i = 0; i < int_string.size() - 1; ++i) {
+                    _ = handler.output_iterator.insert(handler.allocator,
+                                                       int_string[i]);
+                }
+                return monostate;
+            };
+
+            // TODO: Parse all argument types:
             switch (handler.arguments.p_arguments_indices[current_argument.raw]
                         .discriminant) {
                 case FormatDiscriminant::int4_type:
                     {
-                        Optional const result = to_string(
-                            handler.allocator,
-                            arguments.template get<int4>(current_argument));
+                        // CTAD causes an internal compiler error here with
+                        // GCC 12.
+                        ScaredyFormat<void> const result = parse(int4{});
                         if (!result.has_value()) {
                             return FormatErrors::out_of_memory;
                         }
-                        String const int_string = result.value();
-
-                        // TODO: Optimize this with a multiple-insert
-                        // overload.
-                        for (int i = 0; i < int_string.size() - 1; ++i) {
-                            _ = handler.output_iterator.insert(
-                                handler.allocator, int_string[i]);
-                        }
+                        break;
                     }
-                    break;
+                case FormatDiscriminant::float_type:
+                    {
+                        ScaredyFormat<void> const result = parse(float{});
+                        if (!result.has_value()) {
+                            return FormatErrors::out_of_memory;
+                        }
+                        break;
+                    }
+                case FormatDiscriminant::double_type:
+                    {
+                        ScaredyFormat<void> const result = parse(double{});
+                        if (!result.has_value()) {
+                            return FormatErrors::out_of_memory;
+                        }
+                        break;
+                    }
                 default:
                     __builtin_unreachable();
             };
