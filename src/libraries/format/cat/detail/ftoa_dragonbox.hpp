@@ -50,10 +50,8 @@ namespace detail {
         sizeof(T) * NumericLimits<unsigned char>::digits;
 
     template <class T>
-    constexpr usize::Raw value_bits =
-        // NumericLimits<std::enable_if_t<std::is_unsigned_v<T>,
-        // T>>::digits;
-        NumericLimits<T>::digits;
+        requires(is_unsigned<T>)
+    constexpr usize::Raw value_bits = NumericLimits<T>::digits;
 }  // namespace detail
 
 // These classes expose encoding specs of IEEE-754-like floating-point formats.

@@ -14,6 +14,8 @@ auto main() -> int {
     Result(int_string.size() == 3).or_exit();
 
     // TODO: Test out of memory error handling.
+    // TODO: Test formatting maximum value of ints.
+    // TODO: Test all of `int4`, `uint4`, `int8`, and `uint8`.
 
     constexpr cat::StaticString const_int = cat::to_string<136>();
     constexpr cat::StaticString const_negative = cat::to_string<-1650>();
@@ -21,13 +23,21 @@ auto main() -> int {
     Result(cat::compare_strings(const_int.p_data(), "136")).or_exit();
     Result(cat::compare_strings(const_negative.p_data(), "-1650")).or_exit();
 
+    // Test formatting `int`.
     allocator.reset();
-    cat::String formatted_string =
+    cat::String formatted_string_int =
         cat::format(allocator, "bb{}aa{}cc", 52, 130).or_exit();
-    _ = cat::println(formatted_string);
-    // TODO: `formatted_string` has an incorrect `.size()`, but the content is
-    // correct.
-    Result(cat::compare_strings(formatted_string, "bb52aa130cc")).or_exit();
+    _ = cat::println(formatted_string_int);
+    // TODO: `formatted_string_int` has an incorrect `.size()`, but the content
+    // is correct.
+    Result(cat::compare_strings(formatted_string_int, "bb52aa130cc")).or_exit();
+
+    // Test formatting `float`.
+    allocator.reset();
+    cat::String formatted_string_float =
+        cat::format(allocator, "a{}b", 2.f).or_exit();
+    _ = cat::println(formatted_string_float);
+    // Result(cat::compare_strings(formatted_string_float, "2.0")).or_exit();
 
     // Test `cat::to_string_at()`.
     cat::Array<char, 100> array;

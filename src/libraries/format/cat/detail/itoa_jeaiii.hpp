@@ -50,9 +50,9 @@ static const cat::detail::PairJeaiii s_pairs[] = {
               : u < 1000000000 ? F(8)                               \
                       : F(9))
 
-char* u32toa_jeaiii(uint4::Raw i, char* b);
-char* i32toa_jeaiii(int4::Raw i, char* b);
-char* u64toa_jeaiii(uint8::Raw i, char* b);
-char* i64toa_jeaiii(int8::Raw i, char* b);
+auto u32toa_jeaiii(uint4::Raw i, char* b) -> char*;
+auto i32toa_jeaiii(int4::Raw i, char* b) -> char*;
+auto u64toa_jeaiii(uint8::Raw i, char* b) -> char*;
+auto i64toa_jeaiii(int8::Raw i, char* b) -> char*;
 
 }  // namespace cat::detail

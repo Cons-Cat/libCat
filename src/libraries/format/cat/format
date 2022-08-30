@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/detail/ftoa_dragonbox.hpp>
 #include <cat/detail/itoa_jeaiii.hpp>
 
 #include <cat/insert_iterators>
@@ -10,15 +11,54 @@
 
 namespace cat {
 
-// Dynamically allocate an `int4` converted to `String`.
-[[nodiscard]] auto to_string(auto& allocator, int4 value) -> Optional<String> {
-    Optional result = allocator.template p_alloc_multi<char>(11);
+// TODO: Support formatting 1 and 2 byte integers.
+
+// Erase the type of `cat::Numeral` for redundant template instantiations.
+template <typename T>
+    requires(is_safe_numeral<T>)
+[[nodiscard]] auto to_string(allocator auto& allocator, T numeral)
+    -> Optional<String> {
+    return to_string(allocator, to_raw_numeral(numeral));
+}
+
+// Dynamically allocate an integral value converted to `String`.
+template <integral T>
+    requires(!is_safe_numeral<T>)
+[[nodiscard]] auto to_string(allocator auto& alloc, T integer)
+    -> Optional<String> {
+    Optional result =
+        alloc.template p_alloc_multi<char>(NumericLimits<T>::digits10);
     if (!result.has_value()) {
         return nullopt;
     }
     char* p_string = result.value();
-    detail::i32toa_jeaiii(value.raw, p_string);
-    // TODO: Get the length of this integer faster.
+    if constexpr (is_same<T, __INT32_TYPE__>) {
+        detail::i32toa_jeaiii(integer, p_string);
+    } else if constexpr (is_same<T, __UINT32_TYPE__>) {
+        detail::u32toa_jeaiii(integer, p_string);
+    } else if constexpr (is_same<T, __INT64_TYPE__>) {
+        detail::i64toa_jeaiii(integer, p_string);
+    } else if constexpr (is_same<T, __UINT64_TYPE__>) {
+        detail::u64toa_jeaiii(integer, p_string);
+    } else {
+        // TODO: Format 1 and 2 byte integers.
+        __builtin_unreachable();
+    }
+    return String{p_string};
+}
+
+// Dynamically allocate a floating point value converted to `String`.
+template <typename T>
+    requires(is_floating_point<T>)
+[[nodiscard]] auto to_string(allocator auto& alloc, T value)
+    -> Optional<String> {
+    Optional result =
+        alloc.template p_alloc_multi<char>(NumericLimits<T>::digits10);
+    if (!result.has_value()) {
+        return nullopt;
+    }
+    char* p_string = result.value();
+    detail::dragonbox::to_chars(value, p_string);
     return String{p_string};
 }
 
@@ -77,8 +117,8 @@ template <integral T>
 [[nodiscard]] constexpr auto to_string_at(Numeral<T> value,
                                           Span<char> string_buffer)
     -> Optional<String> {
-    // Add `1` to consider a negative sign.
-    constexpr ssize max_length = to_string<Numeral<T>::max>().size() + 1;
+    // Add 1 for a negative sign `-` character.
+    constexpr ssize max_length = to_string<Numeral<T>::max()>().size() + 1;
     char buffer[max_length.raw];
     if (is_constant_evaluated()) {
         ssize i = 0;
