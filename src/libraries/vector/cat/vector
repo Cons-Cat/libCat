@@ -13,9 +13,29 @@ namespace cat {
 
 template <typename T>
 class Vector : public CollectionFacade<Vector<T>, T> {
-    T* p_storage;
-    ssize current_size;
-    ssize current_capacity;
+  public:
+    constexpr Vector()
+        : p_storage(nullptr), current_size(0), current_capacity(0) {
+        if (is_constant_evaluated()) {
+            // This array cannot be length 0 or `nullptr` in a `constexpr`
+            // context.
+            this->p_storage = new T[1];
+            this->p_storage[0] = 0;
+        }
+    };
+
+    constexpr Vector(Vector<T>&& other_vector) = default;
+
+    constexpr ~Vector() {
+        if (is_constant_evaluated()) {
+            delete[] this->p_storage;
+        }
+    }
+
+  private:
+    // Only allow the shallow copy constructor to be used by these static
+    // factory member functions.
+    constexpr Vector(Vector<T> const& other_vector) = default;
 
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
     // context.
@@ -59,30 +79,6 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         this->p_storage = p_new;
         this->current_capacity = new_capacity;
     }
-
-  public:
-    constexpr Vector()
-        : p_storage(nullptr), current_size(0), current_capacity(0) {
-        if (is_constant_evaluated()) {
-            // This array cannot be length 0 or `nullptr` in a `constexpr`
-            // context.
-            this->p_storage = new T[1];
-            this->p_storage[0] = 0;
-        }
-    };
-
-    constexpr Vector(Vector<T>&& other_vector) = default;
-
-    constexpr ~Vector() {
-        if (is_constant_evaluated()) {
-            delete[] this->p_storage;
-        }
-    }
-
-  private:
-    // Only allow the shallow copy constructor to be used by these static
-    // factory member functions.
-    constexpr Vector(Vector<T> const& other_vector) = default;
 
   public:
     // Construct from a constant list, such as `value_list` or
@@ -376,6 +372,11 @@ class Vector : public CollectionFacade<Vector<T>, T> {
             this->p_storage[i.raw] = other_vector[i];
         }
     }
+
+  private:
+    T* p_storage;
+    ssize current_size;
+    ssize current_capacity;
 };
 
 }  // namespace cat

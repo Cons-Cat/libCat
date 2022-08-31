@@ -24,18 +24,15 @@ namespace cat {
 template <typename>
 struct NumericLimits {};
 
-// TODO: Determine whether libCat should use `static constexpr` or
-// `constexpr static` consistently.
-
 template <typename T>
 struct NumericLimits<Numeral<T>> {
     NumericLimits() = delete;
 
     // Forward the underlying storage type to `.max`.
-    constexpr static auto max = NumericLimits<T>::max;
+    static constexpr auto max = NumericLimits<T>::max;
 
     // Forward the underlying storage type to `.min`.
-    constexpr static auto min = NumericLimits<T>::min;
+    static constexpr auto min = NumericLimits<T>::min;
 };
 
 // TODO: Implement `min` and `max` limits in terms of GCC macros, like
@@ -44,136 +41,136 @@ struct NumericLimits<Numeral<T>> {
 template <>
 struct NumericLimits<char> {
     NumericLimits() = delete;
-    constexpr static auto min() -> __INT8_TYPE__ {
+    static constexpr auto min() -> __INT8_TYPE__ {
         return -128;
     }
-    constexpr static auto max() -> __INT8_TYPE__ {
+    static constexpr auto max() -> __INT8_TYPE__ {
         return 127;
     }
 
-    constexpr static __INT8_TYPE__ digits = 7;
-    constexpr static __INT8_TYPE__ digits10 = 2;
-    constexpr static bool is_iec559 = false;
+    static constexpr __INT8_TYPE__ digits = 7;
+    static constexpr __INT8_TYPE__ digits10 = 2;
+    static constexpr bool is_iec559 = false;
 };
 
 template <>
 struct NumericLimits<__INT8_TYPE__> {
     NumericLimits() = delete;
-    constexpr static auto min() -> __INT8_TYPE__ {
+    static constexpr auto min() -> __INT8_TYPE__ {
         return -128;
     }
-    constexpr static auto max() -> __INT8_TYPE__ {
+    static constexpr auto max() -> __INT8_TYPE__ {
         return 127;
     }
 
-    constexpr static __INT8_TYPE__ digits = 7;
-    constexpr static __INT8_TYPE__ digits10 = 2;
-    constexpr static bool is_iec559 = false;
+    static constexpr __INT8_TYPE__ digits = 7;
+    static constexpr __INT8_TYPE__ digits10 = 2;
+    static constexpr bool is_iec559 = false;
 };
 
 template <>
 struct NumericLimits<__UINT8_TYPE__> {
     NumericLimits() = delete;
-    constexpr static auto min() -> __UINT8_TYPE__ {
+    static constexpr auto min() -> __UINT8_TYPE__ {
         return 0u;
     }
-    constexpr static auto max() -> __UINT8_TYPE__ {
+    static constexpr auto max() -> __UINT8_TYPE__ {
         return 255u;
     }
 
-    constexpr static __INT8_TYPE__ digits = 8;
-    constexpr static __INT8_TYPE__ digits10 = 2;
-    constexpr static bool is_iec559 = false;
+    static constexpr __INT8_TYPE__ digits = 8;
+    static constexpr __INT8_TYPE__ digits10 = 2;
+    static constexpr bool is_iec559 = false;
 };
 
 template <>
 struct NumericLimits<__INT16_TYPE__> {
     NumericLimits() = delete;
-    constexpr static auto min() -> __INT16_TYPE__ {
+    static constexpr auto min() -> __INT16_TYPE__ {
         return -32'768;
     }
-    constexpr static auto max() -> __INT16_TYPE__ {
+    static constexpr auto max() -> __INT16_TYPE__ {
         return 32'767;
     }
 
-    constexpr static __INT8_TYPE__ digits = 15;
-    constexpr static __INT8_TYPE__ digits10 = 4;
-    constexpr static bool is_iec559 = false;
+    static constexpr __INT8_TYPE__ digits = 15;
+    static constexpr __INT8_TYPE__ digits10 = 4;
+    static constexpr bool is_iec559 = false;
 };
 
 template <>
 struct NumericLimits<__UINT16_TYPE__> {
     NumericLimits() = delete;
-    constexpr static auto min() -> __UINT16_TYPE__ {
+    static constexpr auto min() -> __UINT16_TYPE__ {
         return 0u;
     }
-    constexpr static auto max() -> __UINT16_TYPE__ {
+    static constexpr auto max() -> __UINT16_TYPE__ {
         return 65535u;
     }
 
-    constexpr static __INT8_TYPE__ digits = 16;
-    constexpr static __INT8_TYPE__ digits10 = 4;
-    constexpr static bool is_iec559 = false;
+    static constexpr __INT8_TYPE__ digits = 16;
+    static constexpr __INT8_TYPE__ digits10 = 4;
+    static constexpr bool is_iec559 = false;
 };
 
 template <>
 struct NumericLimits<__INT32_TYPE__> {
     NumericLimits() = delete;
-    constexpr static auto min() -> __INT32_TYPE__ {
+    static constexpr auto min() -> __INT32_TYPE__ {
         return -2'147'483'648;
     }
-    constexpr static auto max() -> __INT32_TYPE__ {
+    static constexpr auto max() -> __INT32_TYPE__ {
         return 2'147'483'647;
     }
 
-    constexpr static __INT8_TYPE__ digits = 31;
-    constexpr static __INT8_TYPE__ digits10 = 9;
-    constexpr static bool is_iec559 = false;
+    static constexpr __INT8_TYPE__ digits = 31;
+    static constexpr __INT8_TYPE__ digits10 = 9;
+    static constexpr bool is_iec559 = false;
 };
 
 template <>
 struct NumericLimits<__UINT32_TYPE__> {
     NumericLimits() = delete;
-    constexpr static auto min() -> __UINT32_TYPE__ {
+    static constexpr auto min() -> __UINT32_TYPE__ {
         return 0u;
     }
-    constexpr static auto max() -> __UINT32_TYPE__ {
+    static constexpr auto max() -> __UINT32_TYPE__ {
         return 4'294'967'295;
     }
 
-    constexpr static __INT8_TYPE__ digits = 32;
-    constexpr static __INT8_TYPE__ digits10 = 9;
-    constexpr static bool is_iec559 = false;
+    static constexpr __INT8_TYPE__ digits = 32;
+    static constexpr __INT8_TYPE__ digits10 = 9;
+    static constexpr bool is_iec559 = false;
 };
 
 template <>
 struct NumericLimits<__INT64_TYPE__> {
     NumericLimits() = delete;
-    constexpr static auto min() -> __INT64_TYPE__ {
+    static constexpr auto min() -> __INT64_TYPE__ {
         return -9'223'372'036'854'775'807;
     }
-    constexpr static auto max() -> __INT64_TYPE__ {
+    static constexpr auto max() -> __INT64_TYPE__ {
         return 9'223'372'036'854'775'807;
     }
 
-    constexpr static __INT8_TYPE__ digits = 63;
-    constexpr static __INT8_TYPE__ digits10 = 18;
-    constexpr static bool is_iec559 = false;
+    static constexpr __INT8_TYPE__ digits = 63;
+    static constexpr __INT8_TYPE__ digits10 = 18;
+    static constexpr bool is_iec559 = false;
 };
 
 template <>
 struct NumericLimits<__UINT64_TYPE__> {
     NumericLimits() = delete;
-    constexpr static auto min() -> __UINT64_TYPE__ {
+    static constexpr auto min() -> __UINT64_TYPE__ {
         return 0u;
     }
-    constexpr static auto max() -> __UINT64_TYPE__ {
+    static constexpr auto max() -> __UINT64_TYPE__ {
         return 18'446'744'073'709'551'615u;
     }
 
-    constexpr static __INT8_TYPE__ digits = 64;
-    constexpr static __INT8_TYPE__ digits10 = 19;
-    constexpr static bool is_iec559 = false;
+    static constexpr __INT8_TYPE__ digits = 64;
+    static constexpr __INT8_TYPE__ digits10 = 19;
+    static constexpr bool is_iec559 = false;
 };
 
 enum class FloatDenorm {
@@ -193,21 +190,21 @@ enum class FloatRound {
 template <>
 struct NumericLimits<float> {
     NumericLimits() = delete;
-    constexpr static auto min() -> float {
+    static constexpr auto min() -> float {
         return __FLT_MIN__;
     }
-    constexpr static auto max() -> float {
+    static constexpr auto max() -> float {
         return __FLT_MAX__;
     }
 
-    constexpr static bool is_iec559 = true;
-    constexpr static __INT32_TYPE__ radix = __FLT_RADIX__;
-    constexpr static __INT32_TYPE__ digits = __FLT_MANT_DIG__;
-    constexpr static __INT32_TYPE__ digits10 = __FLT_DIG__;
-    constexpr static __INT32_TYPE__ max_digits10 =
+    static constexpr bool is_iec559 = true;
+    static constexpr __INT32_TYPE__ radix = __FLT_RADIX__;
+    static constexpr __INT32_TYPE__ digits = __FLT_MANT_DIG__;
+    static constexpr __INT32_TYPE__ digits10 = __FLT_DIG__;
+    static constexpr __INT32_TYPE__ max_digits10 =
         2 + __FLT_MANT_DIG__ * 643L / 2136;
 
-    constexpr static auto epsilon() -> float {
+    static constexpr auto epsilon() -> float {
         return __FLT_EPSILON__;
     }
 
@@ -248,21 +245,21 @@ struct NumericLimits<float> {
 template <>
 struct NumericLimits<double> {
     NumericLimits() = delete;
-    constexpr static auto min() -> float {
+    static constexpr auto min() -> float {
         return __DBL_MIN__;
     }
-    constexpr static auto max() -> float {
+    static constexpr auto max() -> float {
         return __DBL_MAX__;
     }
 
-    constexpr static bool is_iec559 = true;
-    constexpr static __INT32_TYPE__ radix = __FLT_RADIX__;
-    constexpr static __INT32_TYPE__ digits = __DBL_MANT_DIG__;
-    constexpr static __INT32_TYPE__ digits10 = __DBL_DIG__;
-    constexpr static __INT32_TYPE__ max_digits10 =
+    static constexpr bool is_iec559 = true;
+    static constexpr __INT32_TYPE__ radix = __FLT_RADIX__;
+    static constexpr __INT32_TYPE__ digits = __DBL_MANT_DIG__;
+    static constexpr __INT32_TYPE__ digits10 = __DBL_DIG__;
+    static constexpr __INT32_TYPE__ max_digits10 =
         2 + __DBL_MANT_DIG__ * 643L / 2136;
 
-    constexpr static auto epsilon() -> float {
+    static constexpr auto epsilon() -> float {
         return __DBL_EPSILON__;
     }
 
@@ -364,12 +361,6 @@ template <typename T>
 template <typename T>
 struct Numeral {
     using Raw = T;
-    T raw;
-
-    // Making these `auto` solves a clang-tidy false diagnostic.
-    // TODO: These should be type `Numeral<T>`.
-    static constexpr auto min = NumericLimits<Raw>::min;
-    static constexpr auto max = NumericLimits<Raw>::max;
 
     constexpr Numeral() = default;
 
@@ -653,6 +644,15 @@ struct Numeral {
         requires(is_integral<T>) {
         return cat::count_trailing_zeros(this->raw);
     }
+
+    // `raw` is `public` for convenient access and to allow `cat::Numeral` to be
+    // used as a non-type template parameter.
+    T raw;
+
+    // Making these `auto` solves a clang-tidy false diagnostic.
+    // TODO: These should be type `Numeral<T>`.
+    static constexpr auto min = NumericLimits<Raw>::min;
+    static constexpr auto max = NumericLimits<Raw>::max;
 };
 
 template <typename T>
@@ -796,7 +796,6 @@ struct bool4 {  // NOLINT
 template <typename T, typename Storage>
 struct ArithmeticPtr {
     using Raw = Storage;
-    Raw raw;
 
     constexpr ArithmeticPtr() = default;
     constexpr ArithmeticPtr(ArithmeticPtr<T, Storage> const&) = default;
@@ -1036,6 +1035,12 @@ struct ArithmeticPtr {
         this->raw = ~(this->raw);
         return *this;
     }
+
+    // TODO: `min` and `max` members.
+
+    // `raw` is `public` for convenient access and to allow `cat::Numeral` to be
+    // used as a non-type template parameter.
+    Raw raw;
 };
 
 // Order-independant operators between an `ArithmeticPtr` and a pointer.

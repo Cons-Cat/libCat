@@ -101,12 +101,7 @@ class alignas(InAbi::alignment.raw) Simd {
     using UnalignedVector = Simd<UnalignedAbi, T>;
 
   public:
-    static constexpr ssize size = InAbi::size;
-    static constexpr ssize lanes = InAbi::lanes;
-    static constexpr usize alignment = InAbi::alignment;
-
     using Scalar = T;
-
     using Abi = InAbi;
 
     // `gnu::vector_size` is a GCC attribute that represents SIMD data-types.
@@ -114,7 +109,6 @@ class alignas(InAbi::alignment.raw) Simd {
     // instances of a type.
     using Raw [[gnu::vector_size(InAbi::size.raw),
                 gnu::aligned(InAbi::alignment.raw)]] = MappedT;
-    Raw raw;
 
     constexpr Simd() = default;
 
@@ -140,13 +134,14 @@ class alignas(InAbi::alignment.raw) Simd {
     // Construct from a variadic argument list.
     template <typename... Us>
     constexpr Simd(Us&&... values) requires(sizeof...(values) > 1 &&
-                                            sizeof...(values) == lanes.raw)
+                                            sizeof...(values) == InAbi::lanes)
         : raw(Raw{static_cast<T>(forward<Us>(values))...}){};
 
     // Construct from a constant list, such as `value_list` or
     // `integer_sequence`.
     template <typename U, U... Us>
-    constexpr Simd(ValueList<U, Us...> values) requires(values.size == lanes)
+    constexpr Simd(ValueList<U, Us...> values) requires(values.size ==
+                                                        InAbi::lanes)
         : raw(Raw{static_cast<T>(Us)...}){};
 
     // Any ABI for which this `Simd` is equal to in size and overaligned can
@@ -443,6 +438,11 @@ class alignas(InAbi::alignment.raw) Simd {
     // [[nodiscard]] auto move_mask() -> SimdMask<Abi, T> {
     //     return cat::move_mask(*this);
     // }
+
+    static constexpr ssize size = InAbi::size;
+    static constexpr ssize lanes = InAbi::lanes;
+    static constexpr usize alignment = InAbi::alignment;
+    Raw raw;
 };
 
 template <typename InAbi, typename T>
@@ -459,11 +459,6 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
     using Mask = SimdMask<Abi, T>;
 
   public:
-    Raw raw;
-
-    static constexpr ssize lanes = Abi::lanes;
-    static constexpr usize alignment = Abi::alignment;
-
     constexpr SimdMask() = default;
 
     constexpr SimdMask(SimdMask<InAbi, T> const& operand) = default;
@@ -483,14 +478,14 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
     template <typename... bools>
     constexpr SimdMask(bools&&... values) requires(sizeof...(values) > 1 &&
                                                    sizeof...(values) ==
-                                                       lanes.raw)
+                                                       this->lanes.raw)
         : raw(static_cast<unsigned char>(forward<bool>(values))...){};
 
     // Construct from a constant list, such as `value_list` or
     // `integer_sequence`.
     template <bool... bools>
     constexpr SimdMask(ValueList<bool, bools...> const values) requires(
-        values.size == lanes)
+        values.size == this->lanes)
         : raw(static_cast<unsigned char>(bools)...){};
 
     // Any ABI for which this `Simd` is equal to in size and overaligned can
@@ -632,6 +627,11 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
     [[nodiscard]] static constexpr auto loaded(bool const* p_data) {
         return Mask{}.load(p_data);
     }
+
+    Raw raw;
+
+    static constexpr ssize lanes = Abi::lanes;
+    static constexpr usize alignment = Abi::alignment;
 };
 
 template <typename Abi, typename T>

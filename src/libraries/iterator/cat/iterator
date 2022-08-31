@@ -91,17 +91,10 @@ using InferValueType = typename detail::InferValueType<T>::Type::Type;
 
 // Every `IteratorFacade` is `indirectly_readable`.
 template <typename Derived>
-struct IteratorFacade {
+class IteratorFacade {
+  public:
     // `Type` is needed for reversing this iterator.
     using Type = Derived;
-
-    constexpr auto self() -> Derived& {
-        return static_cast<Derived&>(*this);
-    }
-
-    constexpr auto self() const -> Derived const& {
-        return static_cast<Derived const&>(*this);
-    }
 
     // TODO: Does this work with the reverse iterator adapter?
     // If `Derived` does not have `.advance_to()`, generate it.
@@ -271,6 +264,15 @@ struct IteratorFacade {
         -> decltype(auto) requires(detail::hasAdvance<Derived>) {
         return *(this->self() + offset);
     }
+
+  private:
+    constexpr auto self() -> Derived& {
+        return static_cast<Derived&>(*this);
+    }
+
+    constexpr auto self() const -> Derived const& {
+        return static_cast<Derived const&>(*this);
+    }
 };
 
 struct RandomAccessIteratorTag {};
@@ -425,8 +427,6 @@ class AsReverse {
 
 template <iterable T>
 class AsConst {
-    T& iterable;
-
   public:
     constexpr explicit AsConst(T& input_iterable) : iterable{input_iterable} {};
 
@@ -437,12 +437,13 @@ class AsConst {
     constexpr auto end() const {
         return iterable.cend();
     }
+
+  private:
+    T& iterable;
 };
 
 template <iterable T>
 class AsConstReverse {
-    T& iterable;
-
   public:
     constexpr explicit AsConstReverse(T& input_iterable)
         : iterable{input_iterable} {};
@@ -454,6 +455,9 @@ class AsConstReverse {
     constexpr auto end() const {
         return iterable.crend();
     }
+
+  private:
+    T& iterable;
 };
 
 }  // namespace cat

@@ -297,275 +297,7 @@ return return_val;
 
 template <typename Derived>
 class AllocatorFacade {
-    constexpr auto self() -> Derived& {
-        return static_cast<Derived&>(*this);
-    }
-
   public:
-    template <typename T, bool is_inline, bool is_fail_safe, bool is_aligned,
-              bool is_multiple, bool is_pointer, bool is_zeroed,
-              bool has_feedback, typename... Args>
-        requires(
-            // Inline allocations cannot produce pointers.
-            !(is_inline && is_pointer)
-            // Multi-allocations must be default-constructed.
-            && !(is_multiple && (sizeof...(Args) > 0))
-            // TODO: Zeroed-out allocations should not have arguments.
-            // Zeroed-out allocations must be trivial.
-            && !(is_zeroed && !is_trivial<T>))
-    [[gnu::optimize("-fno-tree-loop-distribute-patterns")]] auto meta_alloc(
-        usize allocation_alignment, ssize allocation_count,
-        Args&&... constructor_arguments) {
-        ssize const allocation_size = allocation_count * ssizeof<T>();
-
-        // Produce a basic handle for this memory type.
-        using UnderlyingHandle =
-            decltype(this->self().template make_handle<T>(declval<T*>()));
-
-        // Get the return value of a user-supplied `.allocate()`. This must be
-        // some kind of `Optional`. It holds some data that can pass into a
-        // `Handle`'s constructor.
-        using MaybeAllocation =
-            Conditional<has_feedback, OptionalSizedAllocation<void*>,
-                        OptionalPtr<void>>;
-
-        // Produce an appropriate handle type for this allocation.
-        using Handle = Conditional<
-            is_multiple,
-            detail::MultiMemoryHandle<Conditional<
-                is_inline,
-                // If this an array of small-size optimized `T`:
-                detail::InlineMemoryHandle<UnderlyingHandle>,
-                // If this is an array of not small-size optimized `T`:
-                UnderlyingHandle>>,
-            Conditional<is_inline,
-                        // If this a small-size optimized `T`:
-                        detail::InlineMemoryHandle<UnderlyingHandle>,
-                        // If this is not a small-size optimized `T`:
-                        UnderlyingHandle>>;
-
-        using ReturnHandle =
-            Conditional<is_fail_safe,
-                        Conditional<is_pointer,
-                                    Conditional<has_feedback,
-                                                // Failsafe pointer with size.
-                                                OptionalSizedAllocation<T*>,
-                                                // Failsafe pointer w/out size.
-                                                OptionalPtr<T>>,
-                                    // Not a pointer:
-                                    Conditional<has_feedback,
-                                                // Failsafe opaque handle with
-                                                // size.
-                                                OptionalSizedAllocation<Handle>,
-                                                // Failsafe opaque handle w/out
-                                                // size.
-                                                Optional<Handle>>>,
-                        // Not fail-safe:
-                        Conditional<is_pointer,
-                                    Conditional<has_feedback,
-                                                // Unsafe pointer with size.
-                                                SizedAllocation<T*>,
-                                                // Unsafe pointer w/out size.
-                                                T*>,
-                                    Conditional<has_feedback,
-                                                // Unsafe opaque handle with
-                                                // size.
-                                                SizedAllocation<Handle>,
-                                                // Unsafe opaque memory handle
-                                                // w/out size.
-                                                Handle>>>;
-
-        if constexpr (is_inline) {
-            if (allocation_size < inline_buffer_size) {
-                // Allocate memory on this stack frame.
-                Handle stack_handle;
-                stack_handle.set_inlined(true);
-                stack_handle.set_count(allocation_count);
-
-                if constexpr (is_zeroed) {
-                    zero_memory(addressof(stack_handle), inline_buffer_size);
-                }
-
-                if constexpr (is_multiple) {
-                    for (ssize i = 0; i < allocation_count; ++i) {
-                        construct_at(
-                            static_cast<T*>(static_cast<void*>(&stack_handle)) +
-                            i);
-                    }
-                } else {
-                    stack_handle.set_inline_storage(
-                        T{forward<Args>(constructor_arguments)...});
-                }
-
-                // Return here to skip error handling, because an on-stack
-                // allocation cannot fail.
-                if constexpr (has_feedback) {
-                    return ReturnHandle{SizedAllocation<Handle>{
-                        move(stack_handle), inline_buffer_size}};
-                } else {
-                    return ReturnHandle{move(stack_handle)};
-                }
-            }
-        }
-
-        // If this allocation is not small-size optimized, or is larger than
-        // `inline_buffer_size`:
-
-        // Make an allocation.
-        MaybeAllocation maybe_memory;
-
-        if constexpr (is_aligned) {
-            if constexpr (has_feedback) {
-                if constexpr (detail::HasAlignedAllocateFeedback<Derived>) {
-                    // Call `.aligned_allocate_feedback()` function for
-                    // optimized size-feedback.
-                    maybe_memory = this->self().aligned_allocate_feedback(
-                        allocation_alignment, allocation_size);
-                } else {
-                    if constexpr (detail::HasAllocationSize<Derived>) {
-                        // If a `.aligned_allocate_feedback()` is not provided,
-                        // use `.allocation_size`().
-                        Optional size = this->self().allocation_size(
-                            allocation_alignment, allocation_size);
-                        if (size.has_value()) {
-                            maybe_memory = OptionalSizedAllocation<void*>{
-                                this->self()
-                                    .aligned_allocate(allocation_alignment,
-                                                      allocation_size)
-                                    // If `.allocation_size()` succeeded, this
-                                    // will not fail.
-                                    .value(),
-                                size.value()};
-                        } else {
-                            maybe_memory = nullopt;
-                        }
-                    } else {
-                        // If a `.allocation_size()` is not provided, simply
-                        // assume that it allocates `allocation_size`.
-                        Optional temp_memory = this->self().aligned_allocate(
-                            allocation_alignment, allocation_size);
-                        if (temp_memory.has_value()) {
-                            maybe_memory = OptionalSizedAllocation<void*>{
-                                temp_memory.value(), allocation_size};
-                        } else {
-                            maybe_memory = nullopt;
-                        }
-                    };
-                }
-            } else {
-                maybe_memory = this->self().aligned_allocate(
-                    allocation_alignment, allocation_size);
-            }
-        } else {
-            if constexpr (has_feedback) {
-                if constexpr (detail::HasAllocateFeedback<Derived>) {
-                    // Call `.allocate_feedback()` function for optimized
-                    // size-feedback.
-                    maybe_memory =
-                        this->self().allocate_feedback(allocation_size);
-                } else {
-                    if constexpr (detail::HasAlignedAllocateFeedback<Derived>) {
-                        // If `.allocate_feedback()` is not provided, but
-                        // `.aligned_allocate_feedback()` is, fall back to that
-                        // with alignment of `1u`.
-                        maybe_memory = this->self().aligned_allocate_feedback(
-                            1u, allocation_size);
-                    } else if constexpr (detail::HasAllocationSize<Derived>) {
-                        // If a `.aligned_allocate_feedback()` is not provided,
-                        // use `.allocation_size`().
-                        Optional size =
-                            this->self().allocation_size(1u, allocation_size);
-
-                        if (size.has_value()) {
-                            maybe_memory = OptionalSizedAllocation<void*>{
-                                // If `.allocation_size()` succeeded, this will
-                                // not fail.
-                                this->self().allocate(allocation_size).value(),
-                                size.value()};
-                        } else {
-                            maybe_memory = nullopt;
-                        }
-                    } else {
-                        // If a `.allocation_size()` is also not provided,
-                        // simply assume that it allocates `allocation_size`.
-                        auto temp_memory = this->self().aligned_allocate(
-                            allocation_alignment, allocation_size);
-                        if (temp_memory.has_value()) {
-                            maybe_memory = OptionalSizedAllocation<void*>{
-                                temp_memory.value(), allocation_size};
-                        } else {
-                            maybe_memory = nullopt;
-                        }
-                    };
-                }
-            } else {
-                // Otherwise, make an allocation without size feedback.
-                if constexpr (detail::HasAllocate<Derived>) {
-                    maybe_memory = this->self().allocate(allocation_size);
-                } else {
-                    // If `.allocate` is not provided, implement it in terms of
-                    // `.aligned_allocate()`.
-                    maybe_memory =
-                        this->self().allocate_aligned(1u, allocation_size);
-                }
-            }
-        }
-
-        if constexpr (is_fail_safe) {
-            if (!maybe_memory.has_value()) {
-                // Return an empty optional if this failed to allocate.
-                return ReturnHandle{nullopt};
-            }
-        }
-
-        T* p_allocation;
-        if constexpr (has_feedback) {
-            // The `.first()` element of the `SizedAllocation` tuple is a
-            // `void*`.
-            p_allocation = static_cast<T*>(maybe_memory.value().first());
-        } else {
-            p_allocation = static_cast<T*>(maybe_memory.value());
-        }
-
-        if constexpr (is_zeroed) {
-            zero_memory(p_allocation, allocation_size);
-        }
-
-        // Construct the `T`s inside the allocator.
-        for (ssize i = 0; i < allocation_count; ++i) {
-            construct_at(p_allocation + i,
-                         forward<Args>(constructor_arguments)...);
-        }
-
-        if constexpr (is_pointer) {
-            if constexpr (has_feedback) {
-                return ReturnHandle{SizedAllocation<T*>{
-                    p_allocation, maybe_memory.value().second()}};
-            } else {
-                return ReturnHandle{p_allocation};
-            }
-        } else {
-            UnderlyingHandle const raw_handle =
-                this->self().template make_handle<T>(p_allocation);
-            Handle handle{move(raw_handle)};
-
-            if constexpr (is_inline) {
-                handle.set_inlined(false);
-            }
-
-            if constexpr (is_multiple) {
-                handle.set_count(allocation_count);
-            }
-
-            if constexpr (has_feedback) {
-                return ReturnHandle(SizedAllocation<Handle>{
-                    move(handle), maybe_memory.value().second()});
-            } else {
-                return ReturnHandle{move(handle)};
-            }
-        }
-    }
-
     // Try to allocate a `T`.
     template <typename T, typename... Args>
         requires(constructibleFrom<T, Args...>)
@@ -2331,127 +2063,6 @@ class AllocatorFacade {
             1u, count);
     }
 
-  private:
-    // Take a generic allocation method, invoke it on an allocator with a
-    // generic memory handle, and free the original handle if that allocation
-    // suceeded.
-    template <bool is_fail_safe, bool has_feedback, typename... Args>
-    auto meta_realloc(auto function, allocator auto& allocator, auto& handle,
-                      Args&&... arguments) {
-        using Allocation = decltype((&allocator->*function)(
-            forward<Args>(arguments)..., move(this->get(handle))));
-        Allocation allocation;
-        allocation = (&allocator->*function)(
-            // Possible alignment and/or count arguments.
-            forward<Args>(arguments)...,
-            // Move the data from this handle.
-            move(this->get(handle)));
-
-        if constexpr (is_fail_safe) {
-            if (!allocation.has_value()) {
-                return allocation;
-            }
-        }
-
-        this->free(handle);
-        return allocation;
-    }
-
-    // Copy data from `handle` into `allocation`.
-    void relocate_handle(memoryHandle auto& handle, auto allocation) {
-        if constexpr (is_trivially_relocatable<int>) {
-            copy_memory(addressof(this->get(handle)), addressof(allocation),
-                        handle.raw_size());
-        } else {
-            for (ssize i = 0; i < handle.size(); ++i) {
-                *(addressof(this->get(allocation)) + i) =
-                    move(*(addressof(this->get(handle)) + i));
-            }
-        }
-    }
-
-    // Copy data from `p_handle` into `p_allocation`.
-    void relocate_pointer_handle(auto* p_handle, auto* p_allocation,
-                                 ssize count) {
-        if constexpr (is_trivially_relocatable<decltype(*p_allocation)>) {
-            copy_memory(p_handle, p_allocation, count);
-        } else {
-            for (ssize i = 0; i < count; ++i) {
-                *(p_allocation + i) = move(*(p_handle + i));
-            }
-        }
-    }
-
-    template <bool is_fail_safe, bool has_feedback, typename... Args>
-    auto meta_realloc_multi(auto function, allocator auto& allocator,
-                            auto& handle, ssize count,
-                            Args&&... maybe_alignment) {
-        using Allocation = decltype((&allocator->*function)(
-            forward<Args>(maybe_alignment)..., count));
-        Allocation allocation;
-        allocation =
-            (&allocator->*function)(forward<Args>(maybe_alignment)..., count);
-        if constexpr (is_fail_safe) {
-            if constexpr (has_feedback) {
-                if (!allocation.has_value()) {
-                    return allocation;
-                }
-                this->relocate_handle(handle, allocation.value().first());
-            } else {
-                if (!allocation.has_value()) {
-                    return allocation;
-                }
-                this->relocate_handle(handle, allocation.value());
-            }
-        } else {
-            if constexpr (has_feedback) {
-                this->relocate_handle(handle, allocation.first());
-            } else {
-                this->relocate_handle(handle, allocation);
-            }
-        }
-
-        this->free(handle);
-        return allocation;
-    }
-
-    template <bool is_fail_safe, bool has_feedback, typename... Args>
-    auto meta_p_realloc_multi(auto function, allocator auto& allocator,
-                              auto& handle, ssize old_count, ssize new_count,
-                              Args&&... maybe_alignment) {
-        using Allocation = decltype((&allocator->*function)(
-            forward<Args>(maybe_alignment)..., new_count));
-        Allocation allocation;
-        allocation = (&allocator->*function)(forward<Args>(maybe_alignment)...,
-                                             new_count);
-        if constexpr (is_fail_safe) {
-            if constexpr (has_feedback) {
-                if (!allocation.has_value()) {
-                    return allocation;
-                }
-                this->relocate_pointer_handle(
-                    handle, allocation.value().first(), old_count);
-            } else {
-                if (!allocation.has_value()) {
-                    return allocation;
-                }
-                this->relocate_pointer_handle(handle, allocation.value(),
-                                              old_count);
-            }
-        } else {
-            if constexpr (has_feedback) {
-                this->relocate_pointer_handle(handle, allocation.first(),
-                                              old_count);
-            } else {
-                this->relocate_pointer_handle(handle, allocation, old_count);
-            }
-        }
-
-        this->free(handle);
-        return allocation;
-    }
-
-  public:
     // Try to move a memory handle from this allocator into another.
     [[nodiscard]] auto realloc_to(allocator auto& allocator,
                                   memoryHandle auto& handle) {
@@ -5182,6 +4793,394 @@ class AllocatorFacade {
     // If the allocator does not over-ride a `.reset()` method, produce a
     // no-op.
     void reset() {
+    }
+
+  private:
+    constexpr auto self() -> Derived& {
+        return static_cast<Derived&>(*this);
+    }
+
+    template <typename T, bool is_inline, bool is_fail_safe, bool is_aligned,
+              bool is_multiple, bool is_pointer, bool is_zeroed,
+              bool has_feedback, typename... Args>
+        requires(
+            // Inline allocations cannot produce pointers.
+            !(is_inline && is_pointer)
+            // Multi-allocations must be default-constructed.
+            && !(is_multiple && (sizeof...(Args) > 0))
+            // TODO: Zeroed-out allocations should not have arguments.
+            // Zeroed-out allocations must be trivial.
+            && !(is_zeroed && !is_trivial<T>))
+    [[gnu::optimize("-fno-tree-loop-distribute-patterns")]] auto meta_alloc(
+        usize allocation_alignment, ssize allocation_count,
+        Args&&... constructor_arguments) {
+        ssize const allocation_size = allocation_count * ssizeof<T>();
+
+        // Produce a basic handle for this memory type.
+        using UnderlyingHandle =
+            decltype(this->self().template make_handle<T>(declval<T*>()));
+
+        // Get the return value of a user-supplied `.allocate()`. This must be
+        // some kind of `Optional`. It holds some data that can pass into a
+        // `Handle`'s constructor.
+        using MaybeAllocation =
+            Conditional<has_feedback, OptionalSizedAllocation<void*>,
+                        OptionalPtr<void>>;
+
+        // Produce an appropriate handle type for this allocation.
+        using Handle = Conditional<
+            is_multiple,
+            detail::MultiMemoryHandle<Conditional<
+                is_inline,
+                // If this an array of small-size optimized `T`:
+                detail::InlineMemoryHandle<UnderlyingHandle>,
+                // If this is an array of not small-size optimized `T`:
+                UnderlyingHandle>>,
+            Conditional<is_inline,
+                        // If this a small-size optimized `T`:
+                        detail::InlineMemoryHandle<UnderlyingHandle>,
+                        // If this is not a small-size optimized `T`:
+                        UnderlyingHandle>>;
+
+        using ReturnHandle =
+            Conditional<is_fail_safe,
+                        Conditional<is_pointer,
+                                    Conditional<has_feedback,
+                                                // Failsafe pointer with size.
+                                                OptionalSizedAllocation<T*>,
+                                                // Failsafe pointer w/out size.
+                                                OptionalPtr<T>>,
+                                    // Not a pointer:
+                                    Conditional<has_feedback,
+                                                // Failsafe opaque handle with
+                                                // size.
+                                                OptionalSizedAllocation<Handle>,
+                                                // Failsafe opaque handle w/out
+                                                // size.
+                                                Optional<Handle>>>,
+                        // Not fail-safe:
+                        Conditional<is_pointer,
+                                    Conditional<has_feedback,
+                                                // Unsafe pointer with size.
+                                                SizedAllocation<T*>,
+                                                // Unsafe pointer w/out size.
+                                                T*>,
+                                    Conditional<has_feedback,
+                                                // Unsafe opaque handle with
+                                                // size.
+                                                SizedAllocation<Handle>,
+                                                // Unsafe opaque memory handle
+                                                // w/out size.
+                                                Handle>>>;
+
+        if constexpr (is_inline) {
+            if (allocation_size < inline_buffer_size) {
+                // Allocate memory on this stack frame.
+                Handle stack_handle;
+                stack_handle.set_inlined(true);
+                stack_handle.set_count(allocation_count);
+
+                if constexpr (is_zeroed) {
+                    zero_memory(addressof(stack_handle), inline_buffer_size);
+                }
+
+                if constexpr (is_multiple) {
+                    for (ssize i = 0; i < allocation_count; ++i) {
+                        construct_at(
+                            static_cast<T*>(static_cast<void*>(&stack_handle)) +
+                            i);
+                    }
+                } else {
+                    stack_handle.set_inline_storage(
+                        T{forward<Args>(constructor_arguments)...});
+                }
+
+                // Return here to skip error handling, because an on-stack
+                // allocation cannot fail.
+                if constexpr (has_feedback) {
+                    return ReturnHandle{SizedAllocation<Handle>{
+                        move(stack_handle), inline_buffer_size}};
+                } else {
+                    return ReturnHandle{move(stack_handle)};
+                }
+            }
+        }
+
+        // If this allocation is not small-size optimized, or is larger than
+        // `inline_buffer_size`:
+
+        // Make an allocation.
+        MaybeAllocation maybe_memory;
+
+        if constexpr (is_aligned) {
+            if constexpr (has_feedback) {
+                if constexpr (detail::HasAlignedAllocateFeedback<Derived>) {
+                    // Call `.aligned_allocate_feedback()` function for
+                    // optimized size-feedback.
+                    maybe_memory = this->self().aligned_allocate_feedback(
+                        allocation_alignment, allocation_size);
+                } else {
+                    if constexpr (detail::HasAllocationSize<Derived>) {
+                        // If a `.aligned_allocate_feedback()` is not provided,
+                        // use `.allocation_size`().
+                        Optional size = this->self().allocation_size(
+                            allocation_alignment, allocation_size);
+                        if (size.has_value()) {
+                            maybe_memory = OptionalSizedAllocation<void*>{
+                                this->self()
+                                    .aligned_allocate(allocation_alignment,
+                                                      allocation_size)
+                                    // If `.allocation_size()` succeeded, this
+                                    // will not fail.
+                                    .value(),
+                                size.value()};
+                        } else {
+                            maybe_memory = nullopt;
+                        }
+                    } else {
+                        // If a `.allocation_size()` is not provided, simply
+                        // assume that it allocates `allocation_size`.
+                        Optional temp_memory = this->self().aligned_allocate(
+                            allocation_alignment, allocation_size);
+                        if (temp_memory.has_value()) {
+                            maybe_memory = OptionalSizedAllocation<void*>{
+                                temp_memory.value(), allocation_size};
+                        } else {
+                            maybe_memory = nullopt;
+                        }
+                    };
+                }
+            } else {
+                maybe_memory = this->self().aligned_allocate(
+                    allocation_alignment, allocation_size);
+            }
+        } else {
+            if constexpr (has_feedback) {
+                if constexpr (detail::HasAllocateFeedback<Derived>) {
+                    // Call `.allocate_feedback()` function for optimized
+                    // size-feedback.
+                    maybe_memory =
+                        this->self().allocate_feedback(allocation_size);
+                } else {
+                    if constexpr (detail::HasAlignedAllocateFeedback<Derived>) {
+                        // If `.allocate_feedback()` is not provided, but
+                        // `.aligned_allocate_feedback()` is, fall back to that
+                        // with alignment of `1u`.
+                        maybe_memory = this->self().aligned_allocate_feedback(
+                            1u, allocation_size);
+                    } else if constexpr (detail::HasAllocationSize<Derived>) {
+                        // If a `.aligned_allocate_feedback()` is not provided,
+                        // use `.allocation_size`().
+                        Optional size =
+                            this->self().allocation_size(1u, allocation_size);
+
+                        if (size.has_value()) {
+                            maybe_memory = OptionalSizedAllocation<void*>{
+                                // If `.allocation_size()` succeeded, this will
+                                // not fail.
+                                this->self().allocate(allocation_size).value(),
+                                size.value()};
+                        } else {
+                            maybe_memory = nullopt;
+                        }
+                    } else {
+                        // If a `.allocation_size()` is also not provided,
+                        // simply assume that it allocates `allocation_size`.
+                        auto temp_memory = this->self().aligned_allocate(
+                            allocation_alignment, allocation_size);
+                        if (temp_memory.has_value()) {
+                            maybe_memory = OptionalSizedAllocation<void*>{
+                                temp_memory.value(), allocation_size};
+                        } else {
+                            maybe_memory = nullopt;
+                        }
+                    };
+                }
+            } else {
+                // Otherwise, make an allocation without size feedback.
+                if constexpr (detail::HasAllocate<Derived>) {
+                    maybe_memory = this->self().allocate(allocation_size);
+                } else {
+                    // If `.allocate` is not provided, implement it in terms of
+                    // `.aligned_allocate()`.
+                    maybe_memory =
+                        this->self().allocate_aligned(1u, allocation_size);
+                }
+            }
+        }
+
+        if constexpr (is_fail_safe) {
+            if (!maybe_memory.has_value()) {
+                // Return an empty optional if this failed to allocate.
+                return ReturnHandle{nullopt};
+            }
+        }
+
+        T* p_allocation;
+        if constexpr (has_feedback) {
+            // The `.first()` element of the `SizedAllocation` tuple is a
+            // `void*`.
+            p_allocation = static_cast<T*>(maybe_memory.value().first());
+        } else {
+            p_allocation = static_cast<T*>(maybe_memory.value());
+        }
+
+        if constexpr (is_zeroed) {
+            zero_memory(p_allocation, allocation_size);
+        }
+
+        // Construct the `T`s inside the allocator.
+        for (ssize i = 0; i < allocation_count; ++i) {
+            construct_at(p_allocation + i,
+                         forward<Args>(constructor_arguments)...);
+        }
+
+        if constexpr (is_pointer) {
+            if constexpr (has_feedback) {
+                return ReturnHandle{SizedAllocation<T*>{
+                    p_allocation, maybe_memory.value().second()}};
+            } else {
+                return ReturnHandle{p_allocation};
+            }
+        } else {
+            UnderlyingHandle const raw_handle =
+                this->self().template make_handle<T>(p_allocation);
+            Handle handle{move(raw_handle)};
+
+            if constexpr (is_inline) {
+                handle.set_inlined(false);
+            }
+
+            if constexpr (is_multiple) {
+                handle.set_count(allocation_count);
+            }
+
+            if constexpr (has_feedback) {
+                return ReturnHandle(SizedAllocation<Handle>{
+                    move(handle), maybe_memory.value().second()});
+            } else {
+                return ReturnHandle{move(handle)};
+            }
+        }
+    }
+
+    // Take a generic allocation method, invoke it on an allocator with a
+    // generic memory handle, and free the original handle if that allocation
+    // suceeded.
+    template <bool is_fail_safe, bool has_feedback, typename... Args>
+    auto meta_realloc(auto function, allocator auto& allocator, auto& handle,
+                      Args&&... arguments) {
+        using Allocation = decltype((&allocator->*function)(
+            forward<Args>(arguments)..., move(this->get(handle))));
+        Allocation allocation;
+        allocation = (&allocator->*function)(
+            // Possible alignment and/or count arguments.
+            forward<Args>(arguments)...,
+            // Move the data from this handle.
+            move(this->get(handle)));
+
+        if constexpr (is_fail_safe) {
+            if (!allocation.has_value()) {
+                return allocation;
+            }
+        }
+
+        this->free(handle);
+        return allocation;
+    }
+
+    // Copy data from `handle` into `allocation`.
+    void relocate_handle(memoryHandle auto& handle, auto allocation) {
+        if constexpr (is_trivially_relocatable<int>) {
+            copy_memory(addressof(this->get(handle)), addressof(allocation),
+                        handle.raw_size());
+        } else {
+            for (ssize i = 0; i < handle.size(); ++i) {
+                *(addressof(this->get(allocation)) + i) =
+                    move(*(addressof(this->get(handle)) + i));
+            }
+        }
+    }
+
+    // Copy data from `p_handle` into `p_allocation`.
+    void relocate_pointer_handle(auto* p_handle, auto* p_allocation,
+                                 ssize count) {
+        if constexpr (is_trivially_relocatable<decltype(*p_allocation)>) {
+            copy_memory(p_handle, p_allocation, count);
+        } else {
+            for (ssize i = 0; i < count; ++i) {
+                *(p_allocation + i) = move(*(p_handle + i));
+            }
+        }
+    }
+
+    template <bool is_fail_safe, bool has_feedback, typename... Args>
+    auto meta_realloc_multi(auto function, allocator auto& allocator,
+                            auto& handle, ssize count,
+                            Args&&... maybe_alignment) {
+        using Allocation = decltype((&allocator->*function)(
+            forward<Args>(maybe_alignment)..., count));
+        Allocation allocation;
+        allocation =
+            (&allocator->*function)(forward<Args>(maybe_alignment)..., count);
+        if constexpr (is_fail_safe) {
+            if constexpr (has_feedback) {
+                if (!allocation.has_value()) {
+                    return allocation;
+                }
+                this->relocate_handle(handle, allocation.value().first());
+            } else {
+                if (!allocation.has_value()) {
+                    return allocation;
+                }
+                this->relocate_handle(handle, allocation.value());
+            }
+        } else {
+            if constexpr (has_feedback) {
+                this->relocate_handle(handle, allocation.first());
+            } else {
+                this->relocate_handle(handle, allocation);
+            }
+        }
+
+        this->free(handle);
+        return allocation;
+    }
+
+    template <bool is_fail_safe, bool has_feedback, typename... Args>
+    auto meta_p_realloc_multi(auto function, allocator auto& allocator,
+                              auto& handle, ssize old_count, ssize new_count,
+                              Args&&... maybe_alignment) {
+        using Allocation = decltype((&allocator->*function)(
+            forward<Args>(maybe_alignment)..., new_count));
+        Allocation allocation;
+        allocation = (&allocator->*function)(forward<Args>(maybe_alignment)...,
+                                             new_count);
+        if constexpr (is_fail_safe) {
+            if constexpr (has_feedback) {
+                if (!allocation.has_value()) {
+                    return allocation;
+                }
+                this->relocate_pointer_handle(
+                    handle, allocation.value().first(), old_count);
+            } else {
+                if (!allocation.has_value()) {
+                    return allocation;
+                }
+                this->relocate_pointer_handle(handle, allocation.value(),
+                                              old_count);
+            }
+        } else {
+            if constexpr (has_feedback) {
+                this->relocate_pointer_handle(handle, allocation.first(),
+                                              old_count);
+            } else {
+                this->relocate_pointer_handle(handle, allocation, old_count);
+            }
+        }
+
+        this->free(handle);
+        return allocation;
     }
 };
 

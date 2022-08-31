@@ -13,7 +13,6 @@ namespace detail {
     template <ssize index, typename T>
     struct TupleElement {
         using Element = T;
-        [[no_unique_address]] T storage;
 
         constexpr TupleElement() = default;
 
@@ -48,6 +47,8 @@ namespace detail {
             IntegralConstant<ssize, index>) const&& -> T const&& {
             return cat::move(this->storage);
         }
+
+        [[no_unique_address]] T storage;
     };
 
     // Deriving from a variadic list of types allows `Tuple` to be an aggregate
@@ -75,7 +76,6 @@ struct Tuple : detail::TupleStorage<IndexSequenceFor<Ts...>, Ts...>::Type {
     using Types = TypeList<Ts...>;
     using Map =
         typename detail::TupleStorage<IndexSequenceFor<Ts...>, Ts...>::Type;
-    static constexpr ssize size = Types::size;
 
     /*
 // Convert each element of this `Tuple` into those of another `Tuple`.
@@ -112,7 +112,7 @@ constexpr auto concat_lhs(auto& other_tuple) const {
 }
 
 template <ssize index>
-    requires(index < size)
+    requires(index < this->size)
 constexpr auto concat_lhs(auto& other_tuple) const {
     other_tuple.template get<index>() = this->get<index>();
     return concat_lhs<index + 1>(other_tuple);
@@ -125,7 +125,7 @@ constexpr auto concat_rhs(auto const& other_tuple, auto&) const {
 
 template <ssize index>
 constexpr auto concat_rhs(auto const& other_tuple, auto& rhs_tuple) const
-    requires(index < rhs_tuple.size) {
+    requires(index < rhs_tuple.this->size) {
     other_tuple.template get<index + static_cast<ssize>(sizeof...(Ts))>() =
         rhs_tuple.template get<index>();
     return concat_rhs<index + 1>(other_tuple, rhs_tuple);
@@ -135,7 +135,7 @@ template <ssize index>
 constexpr auto concat_recurse(Tuple<Ts...> const& this_tuple,
                               auto const& other_tuple,
                               auto const& new_tuple) const {
-    if constexpr (index < size) {
+    if constexpr (index < this->size) {
         return concat_recurse<index + 1>(this_tuple, other_tuple,
                                          new_tuple);
     }
@@ -156,127 +156,129 @@ constexpr auto concat(Tuple<Us...> const& other_tuple) const
 
     // Get a non-`const` reference to the N'th stored variable.
     template <ssize index>
-    constexpr auto get() & -> auto& requires(index <= size) {
+    constexpr auto get() & -> auto& requires(index <= this->size) {
         return (*this)[IntegralConstant<ssize, index>{}];
     }
 
     // Get a `const` reference to the N'th stored variable.
     template <ssize index>
-    constexpr auto get() const& -> auto const& requires(index <= size) {
+    constexpr auto get() const& -> auto const& requires(index <= this->size) {
         return (*this)[IntegralConstant<ssize, index>{}];
     }
 
     // Move the N'th stored variable.
     template <ssize index>
-    constexpr auto get() && -> auto&& requires(index <= size) {
+    constexpr auto get() && -> auto&& requires(index <= this->size) {
         return move((*this)[IntegralConstant<ssize, index>{}]);
     }
 
     // Move the N'th stored variable.
     template <ssize index>
-    constexpr auto get() const&& -> auto const&& requires(index <= size) {
+    constexpr auto get() const&& -> auto const&& requires(index <= this->size) {
         return move((*this)[IntegralConstant<ssize, index>{}]);
     }
 
     // Get a non-`const` reference to the first stored variable.
-    constexpr auto first() & -> auto& requires(size >= 1) {
+    constexpr auto first() & -> auto& requires(this->size >= 1) {
         return this->get<0>();
     }
 
     // Get a `const` reference to the first stored variable.
-    constexpr auto first() const& -> auto const& requires(size >= 1) {
+    constexpr auto first() const& -> auto const& requires(this->size >= 1) {
         return this->get<0>();
     }
 
     // Move the first stored variable.
-    constexpr auto first() && -> auto&& requires(size >= 1) {
+    constexpr auto first() && -> auto&& requires(this->size >= 1) {
         return move(this->get<0>());
     }
 
     // Move the first stored variable.
-    constexpr auto first() const&& -> auto const&& requires(size >= 1) {
+    constexpr auto first() const&& -> auto const&& requires(this->size >= 1) {
         return move(this->get<0>());
     }
 
     // Get a non-`const` reference to the second stored variable.
-    constexpr auto second() & -> auto& requires(size >= 2) {
+    constexpr auto second() & -> auto& requires(this->size >= 2) {
         return this->get<1>();
     }
 
     // Get a `const` reference to the second stored variable.
-    constexpr auto second() const& -> auto const& requires(size >= 2) {
+    constexpr auto second() const& -> auto const& requires(this->size >= 2) {
         return this->get<1>();
     }
 
     // Move the second stored variable.
-    constexpr auto second() && -> auto&& requires(size >= 2) {
+    constexpr auto second() && -> auto&& requires(this->size >= 2) {
         return move(this->get<1>());
     }
 
     // Move the second stored variable.
-    constexpr auto second() const&& -> auto const&& requires(size >= 2) {
+    constexpr auto second() const&& -> auto const&& requires(this->size >= 2) {
         return move(this->get<1>());
     }
 
     // Get a non-`const` reference to the third stored variable.
-    constexpr auto third() & -> auto& requires(size >= 3) {
+    constexpr auto third() & -> auto& requires(this->size >= 3) {
         return this->get<2>();
     }
 
     // Get a `const` reference to the third stored variable.
-    constexpr auto third() const& -> auto const& requires(size >= 3) {
+    constexpr auto third() const& -> auto const& requires(this->size >= 3) {
         return this->get<2>();
     }
 
     // Move the third stored variable.
-    constexpr auto third() && -> auto&& requires(size >= 3) {
+    constexpr auto third() && -> auto&& requires(this->size >= 3) {
         return move(this->get<2>());
     }
 
     // Move the third stored variable.
-    constexpr auto third() const&& -> auto const&& requires(size >= 3) {
+    constexpr auto third() const&& -> auto const&& requires(this->size >= 3) {
         return move(this->get<2>());
     }
 
     // Get a non-`const` reference to the fourth stored variable.
-    constexpr auto fourth() & -> auto& requires(size >= 4) {
+    constexpr auto fourth() & -> auto& requires(this->size >= 4) {
         return this->get<3>();
     }
 
     // Get a `const` reference to the fourth stored variable.
-    constexpr auto fourth() const& -> auto const& requires(size >= 4) {
+    constexpr auto fourth() const& -> auto const& requires(this->size >= 4) {
         return this->get<3>();
     }
 
     // Move the fourth stored variable.
-    constexpr auto fourth() && -> auto&& requires(size >= 4) {
+    constexpr auto fourth() && -> auto&& requires(this->size >= 4) {
         return move(this->get<3>());
     }
 
     // Move the fourth stored variable.
-    constexpr auto fourth() const&& -> auto const&& requires(size >= 4) {
+    constexpr auto fourth() const&& -> auto const&& requires(this->size >= 4) {
         return move(this->get<3>());
     }
 
     // Get a non-`const` reference to the fifth stored variable.
-    constexpr auto fifth() & -> auto& requires(size >= 5) {
+    constexpr auto fifth() & -> auto& requires(this->size >= 5) {
         return this->get<4>();
     }
 
     // Get a `const` reference to the fifth stored variable.
-    constexpr auto fifth() const& -> auto const& requires(size >= 5) {
+    constexpr auto fifth() const& -> auto const& requires(this->size >= 5) {
         return this->get<4>();
     }
 
     // Move the fifth stored variable.
-    constexpr auto fifth() && -> auto&& requires(size >= 5) {
+    constexpr auto fifth() && -> auto&& requires(this->size >= 5) {
         return move(this->get<4>());
     }
 
     // Move the fifth stored variable.
-    constexpr auto fifth() const&& -> auto const&& requires(size >= 5) {
+    constexpr auto fifth() const&& -> auto const&& requires(this->size >= 5) {
         return move(this->get<4>());
     }
+
+    static constexpr ssize size = Types::size;
 };
 
 // This deduction guide is required for variadic type deduction.

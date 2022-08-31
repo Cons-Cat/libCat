@@ -14,13 +14,6 @@ namespace cat {
 // an address and a length. It is random-access iterable.
 template <typename T>
 class Span : public CollectionFacade<Span<T>, T> {
-  protected:
-    // This is arranged as pointer, then size, to follow the ABI of Linux
-    // standard `iovec`s. Unfortunately, that is opposite of Windws' standard
-    // `WSABUF`.
-    T* p_storage;
-    ssize length;
-
   public:
     constexpr Span() = default;
     constexpr Span(Span<T> const&) = default;
@@ -85,6 +78,15 @@ constexpr Span(U&& container)
     }
 
     // The capacity is simply the number of elements owned.
+
+    // These are `protected` instead of `private` so that `cat::String` can
+    // access them.
+  protected:
+    // This is arranged as pointer, then size, to follow the ABI of Linux
+    // standard `iovec`s. Unfortunately, that is opposite of Windws' standard
+    // `WSABUF`.
+    T* p_storage;
+    ssize length;
 };
 
 }  // namespace cat

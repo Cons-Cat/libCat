@@ -362,10 +362,6 @@ constexpr nix::FileDescriptor stderr = {2};
 static_assert(sizeof(ScaredyLinux<nix::FileDescriptor>) == 4);
 
 struct ProcessId {
-    // Linux supports the better part of `8` `cat::Byte` process IDs on 64-bit
-    // systems, but only up to `4` `cat::Byte` process IDs on 32-bit systems.
-    ssize value;
-
     constexpr ProcessId() = default;
 
     constexpr ProcessId(int8 input) {
@@ -375,11 +371,13 @@ struct ProcessId {
     constexpr operator auto() const {
         return this->value.raw;
     }
+
+    // Linux supports the better part of `8` `cat::Byte` process IDs on 64-bit
+    // systems, but only up to `4` `cat::Byte` process IDs on 32-bit systems.
+    ssize value;
 };
 
 struct UserId {
-    int4 value;
-
     constexpr UserId() = default;
     constexpr UserId(int4 input) {
         this->value = input;
@@ -388,11 +386,11 @@ struct UserId {
     constexpr operator auto() const {
         return this->value;
     }
+
+    int4 value;
 };
 
 struct GroupId {
-    int4 value;
-
     constexpr GroupId() = default;
 
     // This is generic to simplify type-punning.
@@ -403,6 +401,8 @@ struct GroupId {
     constexpr operator auto() const {
         return this->value;
     }
+
+    int4 value;
 };
 
 enum class WaitId {
@@ -558,10 +558,12 @@ auto syscall0(ssize) -> ssize;
 auto syscall1(ssize, cat::NoType) -> ssize;
 auto syscall2(ssize, cat::NoType, cat::NoType) -> ssize;
 auto syscall3(ssize, cat::NoType, cat::NoType, cat::NoType) -> ssize;
-auto syscall4(ssize, cat::NoType, cat::NoType, cat::NoType, cat::NoType) -> ssize;
-auto syscall5(ssize, cat::NoType, cat::NoType, cat::NoType, cat::NoType, cat::NoType) -> ssize;
-auto syscall6(ssize, cat::NoType, cat::NoType, cat::NoType, cat::NoType, cat::NoType, cat::NoType)
+auto syscall4(ssize, cat::NoType, cat::NoType, cat::NoType, cat::NoType)
     -> ssize;
+auto syscall5(ssize, cat::NoType, cat::NoType, cat::NoType, cat::NoType,
+              cat::NoType) -> ssize;
+auto syscall6(ssize, cat::NoType, cat::NoType, cat::NoType, cat::NoType,
+              cat::NoType, cat::NoType) -> ssize;
 
 template <typename T, typename... Args>
 auto syscall(ssize call, Args... parameters) -> nix::ScaredyLinux<T>
@@ -608,10 +610,6 @@ auto sys_send(FileDescriptor socket_descriptor, void const* p_message_buffer,
               ssize addr_length = 0) -> ScaredyLinux<ssize>;
 
 struct Process {
-    ProcessId id;
-    void* p_stack;
-    ssize stack_size;
-
     // TODO: Why tls not work?
     static constexpr CloneFlags default_flags =
         CloneFlags::virtual_memory | CloneFlags::file_system |
@@ -619,6 +617,7 @@ struct Process {
         CloneFlags::parent_set_tid;
 
     Process() = default;
+    // TODO: Add a move constructor and assignment operator.
     Process(Process const&) = delete;
 
     // TODO: Add `cat::invocable` concept.
@@ -683,11 +682,13 @@ parent_thread:
                            WaitOptionsFlags::no_wait);
         return result;
     }
+
+    ProcessId id;
+    void* p_stack;
+    ssize stack_size;
 };
 
 struct IoVector : cat::Span<cat::Byte> {
-    static constexpr ssize max_size = 1_ki;
-
     constexpr IoVector() = default;
     constexpr IoVector(IoVector&&) = default;
 
@@ -703,14 +704,16 @@ struct IoVector : cat::Span<cat::Byte> {
                                static_cast<cat::Byte*>(p_end) -
                                    static_cast<cat::Byte*>(p_start)){};
 
-    constexpr auto operator=(IoVector const& io_vector) {
+    constexpr auto operator=(IoVector const& io_vector) -> IoVector& {
         this->p_storage = io_vector.p_storage;
         this->length = io_vector.length;
+        return *this;
     }
 
-    constexpr auto operator=(IoVector&& io_vector) {
+    constexpr auto operator=(IoVector&& io_vector) -> IoVector& {
         this->p_storage = io_vector.p_storage;
         this->length = cat::move(io_vector).length;
+        return *this;
     }
 };
 
@@ -725,32 +728,6 @@ struct File {
 };
 
 struct FileStatus {
-    uint8 device_id;
-    // The index node for this file.
-    uint8 inode;
-    usize hard_links_count;
-
-    uint4 protections_mode;
-    UserId user_id;
-    GroupId groud_id;
-  private:
-    [[maybe_unused]] uint4 padding;
-  public:
-    uint8 rdev;
-    int8 file_size;
-    ssize block_size;
-    int8 blocks_count;
-
-    using Timespec = struct {
-        ssize seconds;
-        ssize nanoseconds;
-    };
-
-    Timespec last_access_time;
-    Timespec last_modification_time;
-    Timespec creation_time;
-  private:
-    [[maybe_unused]] int4 unused[3];
   public:
     auto is_regular() const -> bool {
         return (this->protections_mode & 0170000u) == 0100000u;
@@ -780,6 +757,33 @@ struct FileStatus {
     auto is_socket() const -> bool {
         return (this->protections_mode & 0170000u) == 0140000u;
     }
+
+    uint8 device_id;
+    // The index node for this file.
+    uint8 inode;
+    usize hard_links_count;
+
+    uint4 protections_mode;
+    UserId user_id;
+    GroupId groud_id;
+  private:
+    [[maybe_unused]] uint4 padding;
+  public:
+    uint8 rdev;
+    int8 file_size;
+    ssize block_size;
+    int8 blocks_count;
+
+    using Timespec = struct {
+        ssize seconds;
+        ssize nanoseconds;
+    };
+
+    Timespec last_access_time;
+    Timespec last_modification_time;
+    Timespec creation_time;
+  private:
+    [[maybe_unused]] int4 unused[3];
 };
 
 auto sys_stat(cat::String const& file_path)

@@ -72,12 +72,6 @@ auto kill_dependency(T expression) -> T {
 template <typename T>
 struct Atomic {
     // using Value = T;
-    static constexpr int4 alignment = sizeof(T) > alignof(T) ? sizeof(T)
-                                                             : alignof(T);
-
-    // `value` is not intended to be mutated directly. Doing so may be
-    // bug-prone.
-    alignas(alignment) T value = 0;
 
     Atomic() = default;
     ~Atomic() = default;
@@ -393,6 +387,13 @@ struct Atomic {
     }
 
     // TODO: Add C++20 atomic wait operations.
+
+    static constexpr int4 alignment = sizeof(T) > alignof(T) ? sizeof(T)
+                                                             : alignof(T);
+
+    // `value` is not intended to be mutated directly. Doing so may be
+    // bug-prone.
+    alignas(alignment) T value = 0;
 };
 
 // TODO: Add atomic flags

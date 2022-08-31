@@ -3,18 +3,15 @@
 #pragma once
 
 #include <cat/collection>
-#include <cat/meta>
 #include <cat/utility>
 
 namespace cat {
 
-// An `Array` represents an array of `T` with an immutable length. It stores its
-// data points within itself, so this array can be constructed on the stack. It
-// is random-access iterable.
+// An `Array` represents an array of `T` with a `constexpr` length. It stores
+// its elements within itself, so this array can be constructed on the stack.
+// It is random-access iterable.
 template <typename T, ssize length>
 class Array : public CollectionFacade<Array<T, length>, T> {
-    T storage[length.raw];
-
   public:
     constexpr Array() = default;
     constexpr Array(Array<T, length> const& other_array) = default;
@@ -101,6 +98,9 @@ class Array : public CollectionFacade<Array<T, length>, T> {
     [[nodiscard]] constexpr auto size() const -> ssize {
         return length;
     }
+
+  private:
+    T storage[length.raw];
 };
 
 // Construct an `Array` as: `Array array = {0, 1, 2};`

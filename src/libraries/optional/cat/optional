@@ -23,18 +23,7 @@ class Optional;
 // `T` and a `bool` flag to represent holding a value or not.
 template <typename T>
 struct OptionalValueStorage {
-    // A `union` member will not be default-constructed.
-    union {
-        // `dummy` is initialized in a `constexpr` context by both the default
-        // and the `nullopt` constructors. This prevents `T`'s default
-        // constructor from being called there. One member must be initialized
-        // in a `constexpr` context. If `T` is trivial, a dummy member is not
-        // required.
-        Monostate dummy;
-        T storage;
-    };
     using Value = T;
-    bool has_some = false;
 
     constexpr OptionalValueStorage() : dummy{} {};
 
@@ -193,12 +182,23 @@ struct OptionalValueStorage {
             // If both `Optional`s are empty, nothing happens.
         }
     }
+
+    // A `union` member will not be default-constructed.
+    union {
+        // `dummy` is initialized in a `constexpr` context by both the default
+        // and the `nullopt` constructors. This prevents `T`'s default
+        // constructor from being called there. One member must be initialized
+        // in a `constexpr` context. If `T` is trivial, a dummy member is not
+        // required.
+        Monostate dummy;
+        T storage;
+    };
+    bool has_some = false;
 };
 
 template <typename T>
 struct OptionalReferenceStorage {
     using Value = T;
-    RemoveReference<T>* p_storage = nullptr;
 
     template <typename U>
     constexpr OptionalReferenceStorage(U& in_value)
@@ -261,18 +261,14 @@ struct OptionalReferenceStorage {
             // If both `Optional`s are empty, nothing happens.
         }
     }
+
+    RemoveReference<T>* p_storage = nullptr;
 };
 
 // `T` is a `Predicate<Type, function, sentinel>`.
 template <typename T>
 struct OptionalCompactStorage {
     using Value = typename T::Type;
-
-    // A `union` member will not be default-constructed.
-    union {
-        Monostate dummy;
-        Value storage;
-    };
 
     constexpr OptionalCompactStorage() = default;
 
@@ -432,10 +428,17 @@ struct OptionalCompactStorage {
             // If both `Optional`s are empty, nothing happens.
         }
     }
+
+    // A `union` member will not be default-constructed.
+    union {
+        Monostate dummy;
+        Value storage;
+    };
 };
 
 template <typename T>
 class Optional {
+  private:
     // clang-format off
     // Clang Format 12 does not understand how to format this well:
     using Storage =
@@ -454,9 +457,6 @@ class Optional {
                     // If `T` is a value type:
                     OptionalValueStorage<T>>>>;
     // clang-format on
-
-  private:
-    Storage storage;
 
   public:
     using Value = typename Storage::Value;
@@ -1015,6 +1015,9 @@ class Optional {
         this->storage.construct(forward<Args>(args)...);
         return this->storage.value();
     }
+
+  private:
+    Storage storage;
 };
 
 // This deduction guide is required for deducing references.

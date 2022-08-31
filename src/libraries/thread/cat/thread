@@ -8,18 +8,10 @@
 namespace cat {
 
 struct Thread {
-    cat::NoType id;
-    void* p_stack;
-    ssize stack_size;
-
-  private:
-    // This is platform-specific hidden code.
-    [[maybe_unused]] nix::Process process;
-
   public:
     Thread() = default;
     Thread(Thread const&) = delete;
-    // TODO: Default or delete a move constructor?
+    // TODO: Default or delete a move constructor and assignment operator?
 
     // TODO: Use an `invocable` `concept`.
     auto create(allocator auto& allocator, ssize initial_stack_size,
@@ -40,6 +32,10 @@ struct Thread {
         }
         return nullopt;
     }
+
+  private:
+    // This is platform-specific hidden code.
+    [[maybe_unused]] nix::Process process;
 };
 
 void relax_cpu() {

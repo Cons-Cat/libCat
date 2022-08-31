@@ -69,8 +69,6 @@ namespace detail {
     // TODO: Can this callback be type erased?
     template <typename Function>
     struct PatternCallback {
-        Function callback;
-
         // This isn't needed in C++20, but it prevents a clangd false
         // diagnostic.
         PatternCallback(Function&& input)
@@ -82,6 +80,8 @@ namespace detail {
         constexpr auto operator()(T&& matching) -> decltype(auto) {
             return this->callback(forward<T>(matching));
         }
+
+        Function callback;
     };
 
     template <typename... Ts>
@@ -116,8 +116,6 @@ namespace detail {
 
     template <typename T>
     struct IsAValue : Pattern {
-        T value;
-
         constexpr IsAValue(T&& in_value) : value(forward<T>(in_value)){};
 
         // TODO: Add a `.when()` predicate.
@@ -144,6 +142,8 @@ namespace detail {
                 return false;
             }};
         }
+
+        T value;
     };
 }  // namespace detail
 
@@ -167,8 +167,6 @@ constexpr auto is_a(T&& value) -> detail::IsAValue<T> {
 namespace detail {
     template <typename T>
     struct MatchPatterns {
-        T& matching;
-
         // This isn't needed in C++20, but it prevents a clangd false
         // diagnostic.
         MatchPatterns(T& input) : matching(input){};
@@ -200,6 +198,8 @@ namespace detail {
             // pattern holds true, invoke its callback and stop recursing.
             this->call_pattern(forward<Patterns>(patterns)...);
         }
+
+        T& matching;
     };
 }  // namespace detail
 

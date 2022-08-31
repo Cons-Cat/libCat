@@ -3,7 +3,6 @@
 #pragma once
 
 #include <cat/array>
-#include <cat/meta>
 #include <cat/string>
 #include <cat/variant>
 
@@ -12,7 +11,6 @@ namespace detail {
     template <typename T, typename... Errors>
     struct ScaredyVariantStorage {
         using Value = Conditional<is_void<T>, Monostate, T>;
-        Variant<Value, Errors...> storage;
 
         constexpr ScaredyVariantStorage() = default;
 
@@ -139,6 +137,8 @@ namespace detail {
         constexpr auto is(U&& in_value) const -> bool {
             return this->storage.template is<U>(forward<U>(in_value));
         }
+
+        Variant<Value, Errors...> storage;
     };
 
     // `T` is a `Compact<Type, predicate, sentinel>`.
@@ -151,11 +151,6 @@ namespace detail {
         // `RemoveReference`.
         // TODO: Consider `typeof()` instead?
         using Error = RemoveReference<decltype(Array{Errors{}...}[0])>;
-
-        union {
-            Value storage;
-            Error error_code;
-        };
 
         constexpr ScaredyCompactStorage() = default;
 
@@ -284,6 +279,11 @@ namespace detail {
             }
             return 1;
         }
+
+        union {
+            Value storage;
+            Error error_code;
+        };
     };
 }  // namespace detail
 
@@ -296,6 +296,7 @@ template <typename T, typename... Errors>
         // `Scaredy` should have at least one error type.
         sizeof...(Errors) > 0)
 class Scaredy {
+  private:
     // clang-format off
     using Storage = Conditional <requires {
         T::sentinel_value;
@@ -303,14 +304,11 @@ class Scaredy {
         detail::ScaredyVariantStorage <T, Errors...>>;
     // clang-format on
 
-    Storage storage;
     using Value = typename Storage::Value;
     using ErrorsList = TypeList<Errors...>;
 
-    // `Storage` constructors are used by the monadic member functions to
-    // propagate errors.
-    constexpr Scaredy(Storage const& in_storage) : storage(in_storage){};
-    constexpr Scaredy(Storage&& in_storage) : storage(move(in_storage)){};
+    // These two templates must be declared here to be used in the below atomic
+    // constraints.
 
     template <typename U>
     static constexpr bool is_value =
@@ -325,6 +323,11 @@ class Scaredy {
         !is_same<U, Value> &&
         // `U` must be one of the errors.
         TypeList<Errors...>::template has_type<U>;
+
+    // `Storage` constructors are used by the monadic member functions to
+    // propagate errors.
+    constexpr Scaredy(Storage const& in_storage) : storage(in_storage){};
+    constexpr Scaredy(Storage&& in_storage) : storage(move(in_storage)){};
 
   public:
     constexpr Scaredy() = default;
@@ -692,6 +695,9 @@ class Scaredy {
             exit(exit_code);
         }
     }
+
+  private:
+    Storage storage;
 };
 
 }  // namespace cat

@@ -31,8 +31,6 @@ namespace detail {
 
 template <typename T>
 class Unique {
-    T storage;
-
   public:
     // Delete non-moving constructors.
     template <typename U>
@@ -96,7 +94,7 @@ class Unique {
         return forward<T>(this->storage);
     }
 
-  protected:
+  private:
     void storage_destructor() {
         // If `T` holds a `.raii()` method, it will be called before `T`'s
         // destructor.
@@ -107,6 +105,8 @@ class Unique {
             this->storage.~T();
         }
     }
+
+    T storage;
 };
 
 // TODO: Why is this needed?
@@ -115,9 +115,6 @@ Unique(T) -> Unique<T>;
 
 template <typename T>
 class UniqueWeak {
-    T storage;
-    bool owns_data = true;
-
   public:
     // Delete non-moving constructors.
     template <typename U>
@@ -181,7 +178,7 @@ class UniqueWeak {
         }
     }
 
-  protected:
+  private:
     // If this `UniqueWeak` owns the data it stores, it will be destroyed.
     void storage_destructor() {
         if (this->owns_data) {
@@ -196,6 +193,9 @@ class UniqueWeak {
             }
         }
     }
+
+    T storage;
+    bool owns_data = true;
 };
 
 template <typename T>

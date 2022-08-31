@@ -8,9 +8,8 @@
 namespace cat {
 
 template <iterable T>
-struct BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
-    T& iterable;
-
+class BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
+  public:
     using Container = T;
 
     constexpr explicit BackInsertIterator(T& input_iterable)
@@ -92,12 +91,13 @@ struct BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
     constexpr auto increment() -> BackInsertIterator<T>& {
         return *this;
     }
+
+  private:
+    T& iterable;
 };
 
 template <iterable T>
 class FrontInsertIterator : public IteratorFacade<FrontInsertIterator<T>> {
-    T& iterable;
-
   public:
     using Container = T;
 
@@ -180,6 +180,9 @@ class FrontInsertIterator : public IteratorFacade<FrontInsertIterator<T>> {
     constexpr auto increment() -> FrontInsertIterator<T>& {
         return *this;
     }
+
+  private:
+    T& iterable;
 };
 
 }  // namespace cat

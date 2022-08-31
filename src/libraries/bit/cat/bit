@@ -166,7 +166,6 @@ namespace cat::detail {
 // into either a signed or unsigned size type
 struct BinarySize {
     using Raw = uint8::Raw;
-    Raw raw;
 
     constexpr BinarySize() = default;
 
@@ -184,7 +183,7 @@ struct BinarySize {
     }
 
     [[nodiscard]] constexpr operator usize() const {
-        return raw;
+        return this->raw;
     }
 
     [[nodiscard]] constexpr auto operator==(BinarySize operand) const -> bool {
@@ -226,6 +225,8 @@ struct BinarySize {
     [[nodiscard]] constexpr auto operator|(BinarySize operand) const {
         return this->raw | operand.raw;
     }
+
+    Raw raw;
 };
 
 }  // namespace cat::detail

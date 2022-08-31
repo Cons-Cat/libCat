@@ -7,7 +7,7 @@
 #include <cat/linux>
 #include <cat/meta>
 #include <cat/socket>
-#include <string>
+#include <cat/string>
 
 // https://www.x.org/releases/X11R7.7/doc/xproto/x11protocol.pdf
 
@@ -241,12 +241,12 @@ struct Error {
 };
 
 struct WindowResource {
-    uint4 value;
-
     WindowResource() = default;
     WindowResource(uint4 input) {
         this->value = input;
     }
+
+    uint4 value;
 };
 
 struct Cookie {

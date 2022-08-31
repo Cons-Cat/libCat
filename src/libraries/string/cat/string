@@ -33,13 +33,9 @@ namespace cat {
 constexpr auto string_length(char const* p_string) -> ssize;
 
 template <ssize::Raw length>
-struct StaticString;
+class StaticString;
 
 class String : public Span<char const> {
-    // `String` inherits:
-    //
-    // `char const* p_storage;`
-    // `ssize length;`
   public:
     constexpr String() : Span<char const>(){};
 
@@ -50,7 +46,7 @@ class String : public Span<char const> {
         : Span<char const>(string.p_storage, string.length){};
 
     constexpr String(String&& string)
-        : Span<char const>(string.p_storage, move(string).length){};
+        : Span<char const>(string.p_storage, move(string).size()){};
 
     // This weird template deduces lower than the string literal constructor.
     template <typename T>
@@ -66,22 +62,24 @@ class String : public Span<char const> {
     }
 
     template <ssize::Raw other_length>
-    constexpr String(StaticString<other_length> const& string) {
-        this->p_storage = &(string.storage[0]);
+    constexpr String(StaticString<other_length> const& other_string) {
+        this->p_storage = other_string.p_data();
         this->length = other_length;
     }
 
     // A `String` consuming `nullptr` would cause undefined behavior.
     constexpr String(decltype(nullptr)) = delete;
 
-    constexpr auto operator=(String const& string) {
-        this->p_storage = string.p_storage;
-        this->length = string.length;
+    constexpr auto operator=(String const& string) -> String& {
+        this->p_storage = string.p_data();
+        this->length = string.size();
+        return *this;
     }
 
-    constexpr auto operator=(String&& string) {
-        this->p_storage = string.p_storage;
-        this->length = move(string).length;
+    constexpr auto operator=(String&& string) -> String& {
+        this->p_storage = string.p_data();
+        this->length = move(string).size();
+        return *this;
     }
 
     // TODO: Make these member functions `const`.
@@ -129,14 +127,19 @@ class String : public Span<char const> {
         // stepped through one character at a time.
         return this->find_small(character, i);
     }
+
+  private:
+    // `String` inherits:
+    //
+    // `char const* p_storage;`
+    // `ssize length;`
 };
 
 // This is `ssize::Raw` because GCC cannot deduce a string literal's
 // length from an `ssize`.
 template <ssize::Raw length>
-struct StaticString : CollectionFacade<StaticString<length>, char> {
-    char storage[length];
-
+class StaticString : public CollectionFacade<StaticString<length>, char> {
+  public:
     constexpr auto p_data() -> char* {
         return &(this->storage[0]);
     }
@@ -193,6 +196,32 @@ struct StaticString : CollectionFacade<StaticString<length>, char> {
         return *this;
     }
 
+    // Concatenate constant-evaluated strings.
+    // This is `ssize::Raw` because GCC cannot deduce a string literal's
+    // length from an `ssize`.
+    template <ssize::Raw other_length>
+    constexpr friend auto operator+(
+        StaticString<length> const& self,
+        StaticString<other_length> const& other_string)
+        -> StaticString<length - 1 + other_length> {
+        // Add the lengths of two null-terminated strings together:
+        constexpr ssize::Raw new_length = length - 1 + other_length;
+        char array[new_length];
+
+        for (ssize::Raw i = 0; i < length - 1; ++i) {
+            array[i] = self.storage[i];
+        }
+
+        for (ssize::Raw i = length - 1; i < new_length - 1; ++i) {
+            array[i] = other_string.p_data()[i - length + 1];
+        }
+
+        // Make this new string null-terminated.
+        array[new_length - 1] = '\0';
+        StaticString<new_length> new_string = array;
+        return new_string;
+    }
+
   private:
     constexpr void copy_string_data(char const* p_source) {
         if (is_constant_evaluated()) {
@@ -203,31 +232,9 @@ struct StaticString : CollectionFacade<StaticString<length>, char> {
             copy_memory(p_source, this->p_data(), length);
         }
     }
+
+    char storage[length];
 };
-
-// Concatenate constant-evaluated strings.
-
-// This is `ssize::Raw` because GCC cannot deduce a string literal's
-// length from an `ssize`.
-template <ssize::Raw length_1, ssize::Raw length_2>
-constexpr auto operator+(StaticString<length_1> const& string_1,
-                         StaticString<length_2> const& string_2)
-    -> StaticString<length_1 - 1 + length_2> {
-    char array[length_1 - 1 + length_2];
-
-    for (int i = 0; i < length_1 - 1; ++i) {
-        array[i] = string_1.storage[i];
-    }
-
-    for (int i = length_1 - 1; i < length_1 - 1 + length_2 - 1; ++i) {
-        array[i] = string_2.storage[i - length_1 + 1];
-    }
-
-    // Make this string null-terminated.
-    array[(length_1 - 1 + length_2 - 1)] = '\0';
-    StaticString static_string = array;
-    return static_string;
-}
 
 [[nodiscard]] auto compare_strings(String const string_1, String const string_2)
     -> bool;

@@ -14,8 +14,6 @@ namespace detail {
 
     template <typename T>
     struct VariantNode<T> {
-        T storage;
-
         template <ssize>
         constexpr auto get() & -> T& {
             return this->storage;
@@ -25,18 +23,12 @@ namespace detail {
         constexpr auto get() const& -> T const& {
             return this->storage;
         }
+
+        T storage;
     };
 
     template <typename T, typename... Remaining>
     struct VariantNode<T, Remaining...> {
-        union {
-            T storage;
-            VariantNode<Remaining...> remaining;
-            // A dummy member is required to constant-evaluate this union
-            // without initializing it if `T` is a non-trivial class.
-            Monostate dummy;
-        };
-
         constexpr VariantNode() : dummy(){};
 
         // `.get()` is provided an alternative type's index. It then recurses
@@ -60,6 +52,14 @@ namespace detail {
                 return this->remaining.template get<remaining_recursions - 1>();
             }
         }
+
+        union {
+            T storage;
+            VariantNode<Remaining...> remaining;
+            // A dummy member is required to constant-evaluate this union
+            // without initializing it if `T` is a non-trivial class.
+            Monostate dummy;
+        };
     };
 }  // namespace detail
 
@@ -68,8 +68,6 @@ namespace detail {
 template <typename... Ts>
     requires(TypeList<Ts...>::is_unique_list)
 class Variant {
-    detail::VariantNode<Ts...> storage;
-
   public:
     using Types = TypeList<Ts...>;
     // TODO: Use the smallest `Numeral` that can hold at least `sizeof...(Ts)`
@@ -377,6 +375,9 @@ class Variant {
         AlternativeIndex alternative_index) const -> bool {
         return this->discriminant.raw == alternative_index;
     }
+
+  private:
+    detail::VariantNode<Ts...> storage;
 };
 
 }  // namespace cat

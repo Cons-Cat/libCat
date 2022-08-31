@@ -9,9 +9,8 @@ namespace cat {
 // `NoType`'s purpose is to implicitly cast from any type into `void*`. This is
 // useful for low-level type erasure in some cases, such as passing syscall
 // arguments.
-struct NoType {
-    void* storage;
-
+class NoType {
+  public:
     constexpr NoType() = default;
 
     constexpr NoType(auto& input) requires(sizeof(input) <= 8)
@@ -22,6 +21,9 @@ struct NoType {
     [[nodiscard]] constexpr operator T() const {
         return bit_cast<T>(this->storage);
     }
+
+  private:
+    void* storage;
 };
 
 }  // namespace cat

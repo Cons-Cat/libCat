@@ -26,11 +26,32 @@ namespace detail {
 
 template <typename T>
 class List : public CollectionFacade<List<T>, T> {
-    detail::ListNode<T>* p_head;
-    detail::ListNode<T>* p_tail;
-    ssize length;
-
   public:
+    struct Iterator : IteratorFacade<Iterator> {
+        Iterator(Iterator const&) = default;
+        Iterator(detail::ListNode<T>* p_input) : p_node(p_input){};
+
+        auto increment() -> Iterator& {
+            this->p_node = this->p_node->p_next_node;
+            return *this;
+        }
+        auto decrement() -> Iterator& {
+            this->p_node = this->p_node->p_previous_node;
+            return *this;
+        }
+        auto dereference() -> T& {
+            return this->p_node->storage;
+        }
+        auto dereference() const -> T const& {
+            return this->p_node->storage;
+        }
+        auto equal_to(Iterator const& it) const -> bool {
+            return it.p_node == this->p_node;
+        }
+
+        detail::ListNode<T>* p_node;
+    };
+
     // TODO: Make constructors `constexpr` and add static factory member
     // functions.
 
@@ -40,7 +61,7 @@ class List : public CollectionFacade<List<T>, T> {
 
   private:
     // Only allow the shallow copy constructor to be used by these static
-    // factory member functions.
+    // factory member functions. They need it to construct an `Optional<List>`.
     List(List<T> const&) = default;
 
   public:
@@ -109,31 +130,6 @@ class List : public CollectionFacade<List<T>, T> {
     [[nodiscard]] auto back() -> T& {
         return this->p_tail->storage;
     }
-
-    struct Iterator : IteratorFacade<Iterator> {
-        detail::ListNode<T>* p_node;
-
-        Iterator(Iterator const&) = default;
-        Iterator(detail::ListNode<T>* p_input) : p_node(p_input){};
-
-        auto increment() -> Iterator& {
-            this->p_node = this->p_node->p_next_node;
-            return *this;
-        }
-        auto decrement() -> Iterator& {
-            this->p_node = this->p_node->p_previous_node;
-            return *this;
-        }
-        auto dereference() -> T& {
-            return this->p_node->storage;
-        }
-        auto dereference() const -> T const& {
-            return this->p_node->storage;
-        }
-        auto equal_to(Iterator const& it) const -> bool {
-            return it.p_node == this->p_node;
-        }
-    };
 
   private:
     void place_initial_node(detail::ListNode<T>& node) {
@@ -428,20 +424,43 @@ class List : public CollectionFacade<List<T>, T> {
     [[nodiscard]] auto rend() {
         return cat::ReversedIterator<Iterator>{this->p_head};
     }
+
+  private:
+    detail::ListNode<T>* p_head;
+    detail::ListNode<T>* p_tail;
+    ssize length;
 };
 
 template <typename T>
 class ForwardList : public CollectionFacade<ForwardList<T>, T> {
-    detail::ForwardListNode<T>* p_head;
-    detail::ForwardListNode<T>* p_tail;
-    ssize length;
-
   public:
+    struct Iterator : IteratorFacade<Iterator> {
+        Iterator(Iterator const&) = default;
+        Iterator(detail::ForwardListNode<T>* p_input) : p_node(p_input){};
+
+        auto increment() -> Iterator& {
+            this->p_node = this->p_node->p_next_node;
+            return *this;
+        }
+        auto dereference() -> T& {
+            return this->p_node->storage;
+        }
+        auto dereference() const -> T const& {
+            return this->p_node->storage;
+        }
+        auto equal_to(Iterator const& it) const -> bool {
+            return it.p_node == this->p_node;
+        }
+
+        detail::ForwardListNode<T>* p_node;
+    };
+
     ForwardList() : p_head(nullptr), p_tail(nullptr), length(0){};
 
   private:
     // Only allow the shallow copy constructor to be used by these static
-    // factory member functions.
+    // factory member functions. They need it to construct an
+    // `Optional<ForwardList>`.
     ForwardList(ForwardList<T> const&) = default;
 
   public:
@@ -512,27 +531,6 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     [[nodiscard]] auto back() -> T& {
         return this->p_tail->storage;
     }
-
-    struct Iterator : IteratorFacade<Iterator> {
-        detail::ForwardListNode<T>* p_node;
-
-        Iterator(Iterator const&) = default;
-        Iterator(detail::ForwardListNode<T>* p_input) : p_node(p_input){};
-
-        auto increment() -> Iterator& {
-            this->p_node = this->p_node->p_next_node;
-            return *this;
-        }
-        auto dereference() -> T& {
-            return this->p_node->storage;
-        }
-        auto dereference() const -> T const& {
-            return this->p_node->storage;
-        }
-        auto equal_to(Iterator const& it) const -> bool {
-            return it.p_node == this->p_node;
-        }
-    };
 
   private:
     void place_initial_node(detail::ForwardListNode<T>& node) {
@@ -715,6 +713,11 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     [[nodiscard]] auto end() -> Iterator {
         return Iterator{this->p_tail};
     }
+
+  private:
+    detail::ForwardListNode<T>* p_head;
+    detail::ForwardListNode<T>* p_tail;
+    ssize length;
 };
 
 }  // namespace cat

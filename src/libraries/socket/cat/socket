@@ -35,10 +35,6 @@ struct SocketAttributes {
 
 template <SocketType Type, int4 Protocol = 0>
 struct SocketUnix {
-    SocketAttributes<static_cast<short>(1), Type, Protocol> const attributes;
-    cat::StaticString<108> path_name;
-    nix::FileDescriptor descriptor;
-
     // TODO: Create flags that corresponds to the value of `Protocol`.
 
     // Using `SocketUnix(){};` instead of `SockeUnix() = default;` prevents a
@@ -161,6 +157,10 @@ struct SocketUnix {
         }
         return nullopt;
     }
+
+    SocketAttributes<static_cast<short>(1), Type, Protocol> const attributes;
+    cat::StaticString<108> path_name;
+    nix::FileDescriptor descriptor;
 };
 
 }  // namespace cat
