@@ -427,6 +427,10 @@ struct Numeral {
         return *this;
     }
 
+    constexpr auto operator+() -> Numeral<T> {
+        return +(this->raw);
+    }
+
     template <detail::ArithmeticNonPtr U>
     [[nodiscard]] friend constexpr auto operator-(Numeral<T> self, U operand)
         -> Numeral<detail::PromotedNumeral<T, U>> {
@@ -451,7 +455,9 @@ struct Numeral {
         return *this;
     }
 
-    // TODO: Unary `-` operator.
+    constexpr auto operator-() -> Numeral<T> {
+        return -(this->raw);
+    }
 
     constexpr auto operator--() -> Numeral<T> {
         return --(this->raw);
@@ -630,9 +636,9 @@ struct Numeral {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator~() -> Numeral& {
-        this->raw = ~(this->raw);
-        return *this;
+    [[nodiscard]] constexpr auto operator~() -> Numeral
+        requires(is_integral<T>) {
+        return ~(this->raw);
     }
 
     [[nodiscard]] constexpr auto count_leading_zeros() const -> ssize
@@ -1176,6 +1182,14 @@ constexpr auto operator""_u8(unsigned long long input) -> cat::uint8 {
 
 constexpr auto operator""_uz(unsigned long long input) -> cat::usize {
     return cat::usize{input};
+}
+
+constexpr auto operator""_f4(unsigned long long input) -> cat::float4 {
+    return cat::float4{input};
+}
+
+constexpr auto operator""_f8(unsigned long long input) -> cat::float8 {
+    return cat::float8{input};
 }
 
 using cat::bool2;

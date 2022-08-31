@@ -1,5 +1,10 @@
 #include <cat/match>
 
+template <auto value>
+struct Nttp {
+    static constexpr auto member = value;
+};
+
 auto main() -> int {
     // Test `concept`s.
     static_assert(cat::detail::ArithmeticNonPtr<int4>);
@@ -84,4 +89,23 @@ auto main() -> int {
             matched = true;
         }));
     Result(matched).or_exit();
+
+    // Test unary operators.
+    [[maybe_unused]] int4 negative_int4 = -1_i4;
+    [[maybe_unused]] float4 negative_float4 = -1_f4;
+    [[maybe_unused]] int4 positive_int4 = +1_i4;
+    [[maybe_unused]] float4 positive_float4 = +1_f4;
+    [[maybe_unused]] int4 negated_int4 = ~1_i4;
+
+    // Test using numerals non-type template parameters.
+    [[maybe_unused]] Nttp<1_i1> nttp_int1{};
+    [[maybe_unused]] Nttp<1_u1> nttp_uint1{};
+    [[maybe_unused]] Nttp<1_i2> nttp_int2{};
+    [[maybe_unused]] Nttp<1_u2> nttp_uint2{};
+    [[maybe_unused]] Nttp<1_i4> nttp_int4{};
+    [[maybe_unused]] Nttp<1_u4> nttp_uint4{};
+    [[maybe_unused]] Nttp<1_i8> nttp_int8{};
+    [[maybe_unused]] Nttp<1_u8> nttp_uint8{};
+    [[maybe_unused]] Nttp<1_f4> nttp_float4{};
+    [[maybe_unused]] Nttp<1_f8> nttp_float8{};
 };
