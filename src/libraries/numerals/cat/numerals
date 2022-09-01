@@ -5,14 +5,14 @@
 #include <cat/compare>
 #include <cat/meta>
 
-// `Numeral` is a container for numeric data types which prevents unsafe
-// implicit type casts.
+// `Numeral` and `ArithmeticPtr` are containers for numeric data types which
+// prevents unsafe implicit type casts.
 //
-// All of its conversion operators, arithmetic operators and constructors
+// All of their conversion operators, arithmetic operators and constructors
 // are generic with constraints. Because these methods are constrained, it
 // is possible that the compiler will fail to resolve any satisfying
-// overloads for an invocation of an arithmetic operator, constructor, or
-// conversion operator, and thus prevent compilation.
+// overloads for an invocation of an operator or constructor, and thus prevent
+// compilation.
 //
 // Constraints such as "the operand's size must be less than or equal to my
 // own size" guarantee that an unwanted overload cannot be resolved.
@@ -358,6 +358,9 @@ template <typename T>
 [[nodiscard]] constexpr auto count_trailing_zeros(T value) -> ssize
     requires(is_integral<T>);
 
+// `Numeral` can represent an integer or floating point value. It prevents
+// unsafe casts or operations. It is a trivial class, and can be used as a
+// non-type template parameter.
 template <typename T>
 struct Numeral {
     using Raw = T;
@@ -799,6 +802,8 @@ struct bool4 {  // NOLINT
 // can only convert into `T*`, but it is otherwise interchangeable with
 // integers. It satisfies the `is_integral` type trait and
 // `Integral` concept.
+//
+// Unfortunately, this is not trivial like a raw pointer is.
 template <typename T, typename Storage>
 struct ArithmeticPtr {
     using Raw = Storage;
@@ -844,7 +849,7 @@ struct ArithmeticPtr {
         return *this;
     }
 
-    // TODO: Make more of these `friend`.
+    // TODO: Make more of these hidden `friend`s.
 
     template <typename U>
     [[nodiscard]] constexpr auto operator<=>(
@@ -1211,3 +1216,12 @@ template <typename T>
 using intptr = cat::intptr<T>;  // NOLINT
 template <typename T>
 using uintptr = cat::uintptr<T>;  // NOLINT
+
+// `intptr` and `uintptr` are not trivial, but they can be trivially
+// relocatable.
+template <typename T>
+    requires(cat::is_trivial<T> || cat::is_void<T>)
+constexpr bool cat::is_trivially_relocatable<cat::intptr<T>> = true;
+template <typename T>
+    requires(cat::is_trivial<T> || cat::is_void<T>)
+constexpr bool cat::is_trivially_relocatable<cat::uintptr<T>> = true;

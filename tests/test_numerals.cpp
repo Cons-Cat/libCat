@@ -1,5 +1,7 @@
 #include <cat/match>
 
+#include "cat/meta"
+
 template <auto value>
 struct Nttp {
     static constexpr auto member = value;
@@ -26,6 +28,33 @@ auto main() -> int {
     static_assert(sizeof(int8) == 8);
     static_assert(sizeof(float4) == 4);
     static_assert(sizeof(float8) == 8);
+
+    // Test that numerals are trivial.
+    static_assert(cat::is_trivial<int1>);
+    static_assert(cat::is_trivial<uint1>);
+    static_assert(cat::is_trivial<int2>);
+    static_assert(cat::is_trivial<uint2>);
+    static_assert(cat::is_trivial<int4>);
+    static_assert(cat::is_trivial<uint4>);
+    static_assert(cat::is_trivial<int8>);
+    static_assert(cat::is_trivial<uint8>);
+    static_assert(cat::is_trivial<float4>);
+    static_assert(cat::is_trivial<float8>);
+
+    static_assert(cat::is_trivially_relocatable<int1>);
+    static_assert(cat::is_trivially_relocatable<uint1>);
+    static_assert(cat::is_trivially_relocatable<int2>);
+    static_assert(cat::is_trivially_relocatable<uint2>);
+    static_assert(cat::is_trivially_relocatable<int4>);
+    static_assert(cat::is_trivially_relocatable<uint4>);
+    static_assert(cat::is_trivially_relocatable<int8>);
+    static_assert(cat::is_trivially_relocatable<uint8>);
+    static_assert(cat::is_trivially_relocatable<float4>);
+    static_assert(cat::is_trivially_relocatable<float8>);
+    static_assert(cat::is_trivially_relocatable<intptr<void>>);
+    static_assert(cat::is_trivially_relocatable<intptr<int>>);
+    static_assert(cat::is_trivially_relocatable<uintptr<void>>);
+    static_assert(cat::is_trivially_relocatable<uintptr<int>>);
 
     // Test `int4` constructors and assignment.
     int4 test_int4_1 = 1;
