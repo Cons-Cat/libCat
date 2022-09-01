@@ -71,7 +71,7 @@ namespace detail {
 
             // Non-type template parameters are not allowed in a lambda's
             // template parameter list, so the lanes are passed through an
-            // `IntegralConstant`.
+            // `Constant`.
             auto vectorized_fill = [&]<typename LanesConstant>(LanesConstant) {
                 // TODO: Consider optimizing with multiple vector loads to
                 // leverage instruction-level parallelism.
@@ -85,12 +85,12 @@ namespace detail {
 
             // Fill out 32-byte portion.
             if constexpr (NativeAbi<unsigned char>::size >= 32) {
-                vectorized_fill(IntegralConstant<ssize, 32>{});
+                vectorized_fill(Constant<ssize, 32>{});
             }
 
             // Fill out 16-byte portion.
             if constexpr (NativeAbi<unsigned char>::size >= 16) {
-                vectorized_fill(IntegralConstant<ssize, 16>{});
+                vectorized_fill(Constant<ssize, 16>{});
             }
 
             // Fill out remaining portion one byte at a time.

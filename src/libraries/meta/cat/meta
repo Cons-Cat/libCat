@@ -173,18 +173,14 @@ struct RemovePointerTrait : detail::RemovePointerTraitDetail<T> {};
 template <typename T>
 using RemovePointer = typename RemovePointerTrait<T>::Type;
 
-// TODO: Generalize constant wrappers.
-
 template <typename T, T constant_value>
-struct IntegralConstant {
+struct Constant {
     static constexpr T value = constant_value;
-    using Type = IntegralConstant<T, constant_value>;
+    using Type = Constant<T, constant_value>;
 };
-template <typename T, T constant_value>
-constexpr auto integral_constant = constant_value;
 
 template <bool constant_value>
-using BoolConstant = IntegralConstant<bool, constant_value>;
+using BoolConstant = Constant<bool, constant_value>;
 template <bool constant_value>
 constexpr auto bool_constant = constant_value;
 
