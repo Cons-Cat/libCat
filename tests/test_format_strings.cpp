@@ -9,7 +9,7 @@ auto main() -> int {
     cat::LinearAllocator allocator{p_page, 4_ki - 32};
 
     // Test `int4` conversion.
-    cat::String int_string = cat::to_string(allocator, 10).or_exit();
+    cat::String int_string = cat::to_chars(allocator, 10).or_exit();
     Result(cat::compare_strings(int_string, "10")).or_exit();
     Result(int_string.size() == 3).or_exit();
 
@@ -17,8 +17,8 @@ auto main() -> int {
     // TODO: Test formatting maximum value of ints.
     // TODO: Test all of `int4`, `uint4`, `int8`, and `uint8`.
 
-    constexpr cat::StaticString const_int = cat::to_string<136>();
-    constexpr cat::StaticString const_negative = cat::to_string<-1650>();
+    constexpr cat::StaticString const_int = cat::to_chars<136>();
+    constexpr cat::StaticString const_negative = cat::to_chars<-1650>();
     // TODO: `constexpr` string comparison.
     Result(cat::compare_strings(const_int.p_data(), "136")).or_exit();
     Result(cat::compare_strings(const_negative.p_data(), "-1650")).or_exit();
@@ -34,7 +34,7 @@ auto main() -> int {
 
     // Test formatting `float`.
     allocator.reset();
-    cat::String string_float = cat::to_string(allocator, 1.234f).or_exit();
+    cat::String string_float = cat::to_chars(allocator, 1.234f).or_exit();
     _ = cat::println(string_float);
 
     cat::String formatted_string_float =
