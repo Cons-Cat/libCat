@@ -54,9 +54,11 @@ class String : public Span<char const> {
     constexpr String(T p_string)
         : Span<char const>(p_string, string_length(p_string)){};
 
+    // clangd emits a false diagnistic if this is `consteval` instead of
+    // `constexpr`.
     // Zero-overhead string literal constructor.
     template <ssize::Raw other_length>
-    consteval String(char const (&string)[other_length]) {
+    constexpr String(char const (&string)[other_length]) {
         this->p_storage = string;
         this->length = static_cast<ssize::Raw>(other_length);
     }
