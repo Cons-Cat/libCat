@@ -14,8 +14,9 @@ auto main() -> int {
     Result(int_string.size() == 3).or_exit();
 
     // TODO: Test out of memory error handling.
-    // TODO: Test formatting maximum value of ints.
-    // TODO: Test all of `int4`, `uint4`, `int8`, and `uint8`.
+    // TODO: Test formatting maximum value of integers.
+    // TODO: Test `int1`, `uint1`, `int2`, `uint2`, `uint4`, `int8`, and
+    // `uint8`.
 
     constexpr cat::StaticString const_int = cat::to_chars<136>();
     constexpr cat::StaticString const_negative = cat::to_chars<-1650>();

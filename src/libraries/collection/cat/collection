@@ -41,6 +41,13 @@ namespace detail {
 
 template <typename Derived, typename T>
 class CollectionFacade {
+  private:
+    // `is_array_like` at the top of this class instead of the bottom prevents
+    // clangd false diagnostics.
+    static constexpr bool is_array_like =
+        detail::IsContiguousCollection<Derived> &&
+        detail::IsBoundedCollection<Derived>;
+
   public:
     // If `.size()` is provided and `.capacity()` is not, generate
     // `.capacity()`.
@@ -316,11 +323,6 @@ class CollectionFacade {
         // Produce an iterator to have its type deduced later.
         return typename Derived::Iterator{};
     }
-
-  private:
-    static constexpr bool is_array_like =
-        detail::IsContiguousCollection<Derived> &&
-        detail::IsBoundedCollection<Derived>;
 };
 
 template <typename T>

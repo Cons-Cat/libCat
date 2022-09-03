@@ -32,6 +32,7 @@ template <integral T>
         return nullopt;
     }
     char* p_string = result.value();
+
     if constexpr (is_same<T, __INT32_TYPE__>) {
         detail::i32toa_jeaiii(integer, p_string);
     } else if constexpr (is_same<T, __UINT32_TYPE__>) {
@@ -269,10 +270,6 @@ namespace detail {
     // storage is exceeded. This container is used in `vformat()` calls as the
     // default container for `vformat_to()`.
     struct FormatStringVector : CollectionFacade<FormatStringVector, char> {
-        char* p_storage;
-        ssize length;
-        ssize max_length;
-
         FormatStringVector(char* p_in_storage, ssize in_length,
                            ssize in_max_length)
             : p_storage(p_in_storage),
@@ -293,21 +290,24 @@ namespace detail {
 
         auto push_back(stableAllocator auto& allocator, char character)
             -> Optional<void> {
-            // TODO: Use a `.p_realloc()` call.
-            if (this->length + 1 < this->max_length) {
-                allocator.free_multi(this->p_storage, this->max_length);
-            }
-
-            Optional result =
-                allocator.template p_alloc_multi<char>(this->max_length * 2);
-            if (!result.has_value()) {
-                return nullopt;
+            if (this->length + 1 > this->max_length) {
+                // Reallocate double the memory if its capacity is exceeded.
+                Optional result = allocator.template p_realloc_multi<char>(
+                    this->p_storage, this->max_length, this->max_length * 2);
+                if (!result.has_value()) {
+                    return nullopt;
+                }
+                this->p_storage = result.value();
             }
 
             this->p_storage[this->length.raw] = character;
-            this->length += 1;
+            ++(this->length);
             return monostate;
         }
+
+        char* p_storage;
+        ssize length;
+        ssize max_length;
     };
 
     // An index into the packed `FormatArgumentstorage`.
@@ -319,13 +319,6 @@ namespace detail {
     // This only exists to be passed into the constructor of `FormatArguments`.
     template <typename... Ts>
     struct FormatArgumentsCompactStorage {
-        static constexpr ssize::Raw argument_count = sizeof...(Ts);
-        FormatArgumentCompactIndex arguments_indices[argument_count];
-
-        // TODO: This array length might need to be larger if the any arguments'
-        // type is `FormatDiscriminant::other_type`.
-        Byte packed_arguments_storage[argument_count * 8];  // Needs work.
-
       private:
         // For every type passed into the constructor, pack it into the arrays
         // in-order.
@@ -361,14 +354,18 @@ namespace detail {
             // `argument_index` increments per call to `.store()`.
             (this->store_argument(argument_index++, forward<Ts>(types)), ...);
         }
+
+        static constexpr ssize::Raw argument_count = sizeof...(Ts);
+        FormatArgumentCompactIndex arguments_indices[argument_count];
+
+        // TODO: This array length might need to be larger if the argument's
+        // type is `FormatDiscriminant::other_type`.
+        Byte packed_arguments_storage[argument_count * 8];  // Needs work.
     };
 
     // Formatting arguments are packed into a small type-erased array to
     // conserve storage.
     struct FormatArguments {
-        FormatArgumentCompactIndex const* p_arguments_indices;
-        ssize const argument_count;
-
         template <typename... Ts>
         explicit constexpr FormatArguments(
             FormatArgumentsCompactStorage<Ts...> const& storage)
@@ -393,6 +390,9 @@ namespace detail {
             Byte const* p_data = p_storage + storage_index;
             return *bit_cast<T const*>(p_data);
         }
+
+        FormatArgumentCompactIndex const* p_arguments_indices;
+        ssize const argument_count;
     };
 
     // To prevent redundant template specializations for a contiguous
@@ -401,10 +401,6 @@ namespace detail {
     template <stableAllocator Allocator>
     struct FormatBufferBase
         : public CollectionFacade<FormatBufferBase<Allocator>, char> {
-        char* p_string;
-        ssize length;
-        ssize max_length;
-
         FormatBufferBase(char* p_in_string, ssize in_length,
                          ssize in_max_length)
             : p_string(p_in_string),
@@ -432,7 +428,7 @@ namespace detail {
         auto push_back(Allocator&, char character) -> Optional<void> {
             // If the new length would exceed the current capacity, call
             // `.grow()` to extend the capacity, first.
-            if (this->length + 1 > max_length) {
+            if (this->length + 1 > this->max_length) {
                 Optional<void> result = this->grow(this->length + 1);
                 if (!result.has_value()) {
                     return nullopt;
@@ -440,9 +436,13 @@ namespace detail {
             }
 
             this->p_string[this->length.raw] = character;
-            this->length += 1;
+            ++(this->length);
             return monostate;
         }
+
+        char* p_string;
+        ssize length;
+        ssize max_length;
     };
 
     template <typename...>
@@ -475,6 +475,8 @@ namespace detail {
         }
 
         // Overload the pure virtual `FormatBufferBase::grow()` function.
+        // Instead of expanding its own memory, this buffer is flushed itself to
+        // make more room.
         auto grow(ssize) -> Optional<void> {
             // `size()` is derived from `FormatBufferBase`.
             if (this->size() == 256) {
@@ -496,7 +498,7 @@ namespace detail {
                 }
             }
 
-            this->clear();
+            this->length = 0;
             return monostate;
         }
     };
@@ -656,38 +658,36 @@ namespace detail {
                 return monostate;
             };
 
+            ScaredyFormat<void> parse_result;
+
             // TODO: Parse all argument types:
             switch (handler.arguments.p_arguments_indices[current_argument.raw]
                         .discriminant) {
                 case FormatDiscriminant::int4_type:
-                    {
-                        // CTAD causes an internal compiler error here with
-                        // GCC 12.
-                        ScaredyFormat<void> const result = parse(int4{});
-                        if (!result.has_value()) {
-                            return FormatErrors::out_of_memory;
-                        }
-                        break;
-                    }
+                    parse_result = parse(int4{});
+                    break;
+                case FormatDiscriminant::int8_type:
+                    parse_result = parse(int8{});
+                    break;
+                case FormatDiscriminant::uint4_type:
+                    parse_result = parse(uint4{});
+                    break;
+                case FormatDiscriminant::uint8_type:
+                    parse_result = parse(uint8{});
+                    break;
                 case FormatDiscriminant::float_type:
-                    {
-                        ScaredyFormat<void> const result = parse(float{});
-                        if (!result.has_value()) {
-                            return FormatErrors::out_of_memory;
-                        }
-                        break;
-                    }
+                    parse_result = parse(float{});
+                    break;
                 case FormatDiscriminant::double_type:
-                    {
-                        ScaredyFormat<void> const result = parse(double{});
-                        if (!result.has_value()) {
-                            return FormatErrors::out_of_memory;
-                        }
-                        break;
-                    }
+                    parse_result = parse(double{});
+                    break;
                 default:
                     __builtin_unreachable();
             };
+
+            if (!parse_result.has_value()) {
+                return FormatErrors::out_of_memory;
+            }
 
             ++current_argument;
 
@@ -734,8 +734,14 @@ namespace detail {
         // TODO: Estimate the size of the final formatted string, and
         // allocate that much up-front for `output`.
         ssize const initial_size = format.size() + 10;
-        char* p_memory =
-            allocator.template p_alloc_multi<char>(initial_size).value();
+
+        Optional maybe_memory =
+            allocator.template p_alloc_multi<char>(initial_size);
+        if (!maybe_memory.has_value()) {
+            return FormatErrors::out_of_memory;
+        }
+
+        char* p_memory = maybe_memory.value();
         String output{p_memory, initial_size};
 
         // `FormatStringVector` is a container that satisfies the `Iterable`
@@ -744,7 +750,7 @@ namespace detail {
         // and reallocates when that string grows beyond `initial_size`.
         FormatStringVector into_buffer = {p_memory, 0, initial_size};
 
-        // TODO: Specifiy which kind of `ScaredyFormat` this is.
+        // TODO: Specify which kind of `ScaredyFormat` this is.
         auto result = vformat_to(
             allocator, BackInsertIterator<FormatStringVector>{into_buffer},
             format, arguments);
