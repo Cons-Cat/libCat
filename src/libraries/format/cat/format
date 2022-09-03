@@ -128,7 +128,7 @@ template <integral T>
         }
         for (; i < max_length; ++i) {
             if (value > 0) {
-                auto const remainder = value % 10;
+                Numeral<T> const remainder = value % 10;
                 buffer[i.raw] = remainder.raw + '0';
                 value /= 10;
             } else {

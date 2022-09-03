@@ -342,12 +342,12 @@ namespace detail {
         requires(
             // is_signed<T> == is_signed<U> &&
             is_floating_point<T> == is_floating_point<U>)
-    using PromotedNumeral =
+    using PromotedNumeral = Conditional<
         // `ArithmeticPtr` takes precedence above everything else.
-        Conditional<is_specialization<T, ArithmeticPtr>, T,
-                    Conditional<is_specialization<U, ArithmeticPtr>, U,
-                                // Pick the largest type.
-                                Conditional<(sizeof(T) > sizeof(U)), T, U>>>;
+        is_specialization<T, ArithmeticPtr>, T,
+        // Otherwise, pick the largest raw type, and make it a `Numeral`.
+        Numeral<Conditional<(sizeof(T) > sizeof(U)), ToUnsafeNumeral<T>,
+                            ToUnsafeNumeral<U>>>>;
 }  // namespace detail
 
 template <typename T>
@@ -399,8 +399,9 @@ struct Numeral {
 
     template <arithmetic U>
     [[nodiscard]] friend constexpr auto operator+(Numeral<T> self, U operand)
-        -> Numeral<detail::PromotedNumeral<T, U>> {
-        return self.raw + to_raw_numeral(operand);
+        -> detail::PromotedNumeral<T, U> {
+        return detail::PromotedNumeral<T, U>{self.raw +
+                                             to_raw_numeral(operand)};
     }
 
     template <typename U>
@@ -436,8 +437,9 @@ struct Numeral {
 
     template <detail::ArithmeticNonPtr U>
     [[nodiscard]] friend constexpr auto operator-(Numeral<T> self, U operand)
-        -> Numeral<detail::PromotedNumeral<T, U>> {
-        return self.raw - to_raw_numeral(operand);
+        -> detail::PromotedNumeral<T, U> {
+        return detail::PromotedNumeral<T, U>{self.raw -
+                                             to_raw_numeral(operand)};
     }
 
     template <typename U>
@@ -472,7 +474,7 @@ struct Numeral {
 
     template <detail::ArithmeticNonPtr U>
     [[nodiscard]] friend constexpr auto operator*(Numeral<T> self, U operand)
-        -> Numeral<detail::PromotedNumeral<T, U>> {
+        -> detail::PromotedNumeral<T, U> {
         return self.raw * to_raw_numeral(operand);
     }
 
@@ -496,7 +498,7 @@ struct Numeral {
 
     template <detail::ArithmeticNonPtr U>
     [[nodiscard]] friend constexpr auto operator/(Numeral<T> self, U operand)
-        -> Numeral<detail::PromotedNumeral<T, U>> {
+        -> detail::PromotedNumeral<T, U> {
         return self.raw / to_raw_numeral(operand);
     }
 
@@ -520,7 +522,7 @@ struct Numeral {
 
     template <detail::ArithmeticNonPtr U>
     [[nodiscard]] friend constexpr auto operator%(Numeral<T> self, U operand)
-        -> Numeral<detail::PromotedNumeral<T, U>> {
+        -> detail::PromotedNumeral<T, U> {
         return self.raw % to_raw_numeral(operand);
     }
 
@@ -544,7 +546,7 @@ struct Numeral {
 
     template <detail::ArithmeticNonPtr U>
     [[nodiscard]] friend constexpr auto operator&(Numeral<T> self, U operand)
-        -> Numeral<detail::PromotedNumeral<T, U>> {
+        -> detail::PromotedNumeral<T, U> {
         return self.raw & to_raw_numeral(operand);
     }
 
@@ -568,7 +570,7 @@ struct Numeral {
 
     template <detail::ArithmeticNonPtr U>
     [[nodiscard]] friend constexpr auto operator|(Numeral<T> self, U operand)
-        -> Numeral<detail::PromotedNumeral<T, U>> {
+        -> detail::PromotedNumeral<T, U> {
         return self.raw | to_raw_numeral(operand);
     }
 
