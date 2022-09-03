@@ -2,6 +2,10 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/format>
+#include <cat/linear_allocator>
+#include <cat/linux>
+
 namespace std {
 
 // NOLINTNEXTLINE This must be snake_case.
@@ -25,9 +29,8 @@ class source_location {
     }
 
     constexpr auto file_name() const -> char const* {
-        return this->p_location->_M_file_name;
-        // return (this->p_location != nullptr) ? this->p_location->_M_file_name
-        //                                      : "";
+        return (this->p_location != nullptr) ? this->p_location->_M_file_name
+                                             : "";
     }
 
     constexpr auto function_name() const -> char const* {
@@ -51,5 +54,70 @@ class source_location {
 }  // namespace std
 
 namespace cat {
+
 using SourceLocation = std::source_location;
+
+void handle_assert() {
+    // TODO: Colorize this input prompt.
+    _ = print("Press: 1 (Continue), 2 (Debug), 3 (Abort)\n");
+
+    char input;
+    while (nix::sys_read(nix::stdin, &input, 1).or_exit() > 0) {
+        if (input >= '1' && input <= '3') {
+            // ASCII trick that converts an inputted char to a digit.
+            uint1 digit = input - 49_u1;
+
+            // The value of `digit` is one less than what was inputted.
+            switch (digit.raw) {
+                case 0:
+                    return;
+                case 1:
+                    // Enter debugger.
+                    break;
+                case 2:
+                    exit(1);
+                default:
+                    __builtin_unreachable();
+            }
+
+            return;
+        }
+        _ = eprint("Invalid input!\n");
+    }
 }
+
+namespace detail {
+    void print_assert_location(
+        SourceLocation callsite = SourceLocation::current()) {
+        Array<Byte, 128> buffer;
+        LinearAllocator allocator{buffer.p_data(), buffer.size()};
+        _ = eprint(format(allocator, "assert failed on line {}, in:\n    ",
+                          callsite.line())
+                       // This `format()` call cannot possibly fail.
+                       .value());
+        // TODO: Truncate to only the last one or two directories.
+        _ = eprint(callsite.file_name());
+        _ = eprint("\nfrom:\n    ");
+        _ = eprintln(callsite.function_name());
+    }
+}  // namespace detail
+
+void assert(bool invariant_expression,
+            SourceLocation callsite = SourceLocation::current()) {
+    if (invariant_expression) [[likely]] {
+        return;
+    }
+    detail::print_assert_location(callsite);
+}
+
+void assert(bool invariant_expression, String error_string,
+            SourceLocation callsite = SourceLocation::current()) {
+    if (invariant_expression) [[likely]] {
+        return;
+    }
+    detail::print_assert_location(callsite);
+    _ = eprint("\n");
+    _ = eprintln(error_string);
+}
+
+}  // namespace cat

@@ -318,7 +318,7 @@ namespace detail {
 
     // This only exists to be passed into the constructor of `FormatArguments`.
     template <typename... Ts>
-    struct FormatArgumentsCompactStorage {
+    class FormatArgumentsCompactStorage {
       private:
         // For every type passed into the constructor, pack it into the arrays
         // in-order.
@@ -327,9 +327,10 @@ namespace detail {
             // Pack `value` into `packed_arguments_storage`.
             ssize const storage_index =
                 this->arguments_indices[argument_index.raw].byte_index;
-            copy_memory(addressof(value),
-                        &(this->packed_arguments_storage[0]) + storage_index,
-                        ssizeof<T>());
+            copy_memory_small(
+                addressof(value),
+                &(this->packed_arguments_storage[0]) + storage_index,
+                ssizeof<T>());
 
             // Assign `T` to that storage.
             this->arguments_indices[argument_index.raw].discriminant =
@@ -772,8 +773,8 @@ template <stableAllocator Allocator, outputIterator<String> Outputter,
     -> ScaredyFormat<Outputter> {
     return detail::vformat_to(
         allocator, output_iterator, format,
-        detail::FormatArguments{detail::FormatArgumentsCompactStorage{
-            forward<Args>(arguments)...}});
+        detail::FormatArguments{
+            detail::FormatArgumentsCompactStorage{move(arguments)...}});
 }
 
 template <stableAllocator Allocator, typename... Args>
@@ -781,8 +782,8 @@ template <stableAllocator Allocator, typename... Args>
                           Args&&... arguments) -> ScaredyFormat<String> {
     return detail::vformat(
         allocator, format,
-        detail::FormatArguments{detail::FormatArgumentsCompactStorage{
-            forward<Args>(arguments)...}});
+        detail::FormatArguments{
+            detail::FormatArgumentsCompactStorage{move(arguments)...}});
 }
 
 }  // namespace cat
