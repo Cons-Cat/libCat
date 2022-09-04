@@ -13,17 +13,37 @@ class NoType {
   public:
     constexpr NoType() = default;
 
-    constexpr NoType(auto& input) requires(sizeof(input) <= 8)
-        : storage(bit_cast<void*>(input)){};
+    constexpr NoType(auto& input) requires(sizeof(input) <= sizeof(void*))
+        : p_storage(bit_cast<void*>(input)){};
 
     template <typename T>
         requires(!is_void<T>)
     [[nodiscard]] constexpr operator T() const {
-        return bit_cast<T>(this->storage);
+        return bit_cast<T>(this->p_storage);
     }
 
   private:
-    void* storage;
+    void* p_storage;
+};
+
+// `NoTypePtr` is like `NoType`, but it only converts to or from pointers.
+class NoTypePtr {
+  public:
+    constexpr NoTypePtr() = default;
+
+    constexpr NoTypePtr(decltype(nullptr)) : p_storage(nullptr){};
+
+    constexpr NoTypePtr(auto* p_input)
+        : p_storage(static_cast<void*>(p_input)){};
+
+    template <typename T>
+        requires(is_pointer<T>)
+    [[nodiscard]] constexpr operator T() const {
+        return static_cast<T>(this->p_storage);
+    }
+
+  private:
+    void* p_storage;
 };
 
 }  // namespace cat

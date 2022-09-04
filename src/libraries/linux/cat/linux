@@ -6,6 +6,7 @@
 #include <cat/bit>
 #include <cat/notype>
 #include <cat/scaredy>
+#include <utility>
 
 namespace cat {
 struct Socket;
@@ -608,6 +609,146 @@ auto sys_send(FileDescriptor socket_descriptor, void const* p_message_buffer,
               ssize buffer_length, int8 flags,
               cat::Socket const* p_destination_socket = nullptr,
               ssize addr_length = 0) -> ScaredyLinux<ssize>;
+
+// TODO: Comment wtf these mean.
+enum class IoRequests : unsigned long long {
+    none = 0,
+    write = 1,
+    read = 2,
+    tcgets = 0x5401,
+    tcsets = 0x5402,
+    tcsetsw = 0x5403,
+    tcsetsf = 0x5404,
+    tcgeta = 0x5405,
+    tcseta = 0x5406,
+    tcsetaw = 0x5407,
+    tcsetaf = 0x5408,
+    tcsbrk = 0x5409,
+    tcxonc = 0x540A,
+    tcflsh = 0x540B,
+    tiocexcl = 0x540C,
+    tiocnxcl = 0x540D,
+    tiocsctty = 0x540E,
+    tiocgpgrp = 0x540F,
+    tiocspgrp = 0x5410,
+    tiocoutq = 0x5411,
+    tiocsti = 0x5412,
+    tiocgwinsz = 0x5413,
+    tiocswinsz = 0x5414,
+    tiocmget = 0x5415,
+    tiocmbis = 0x5416,
+    tiocmbic = 0x5417,
+    tiocmset = 0x5418,
+    tiocgsoftcar = 0x5419,
+    tiocssoftcar = 0x541A,
+    fionread = 0x541B,
+    tiocinq = fionread,
+    tioclinux = 0x541C,
+    tioccons = 0x541D,
+    tiocgserial = 0x541E,
+    tiocsserial = 0x541F,
+    tiocpkt = 0x5420,
+    fionbio = 0x5421,
+    tiocnotty = 0x5422,
+    tiocsetd = 0x5423,
+    tiocgetd = 0x5424,
+    tcsbrkp = 0x5425,
+    tiocsbrk = 0x5427,
+    tioccbrk = 0x5428,
+    tiocgsid = 0x5429,
+    tiocgrs485 = 0x542E,
+    tiocsrs485 = 0x542F,
+    tiocgptn = 0x80045430,
+    tiocsptlck = 0x40045431,
+    tiocgdev = 0x80045432,
+    tcgetx = 0x5432,
+    tcsetx = 0x5433,
+    tcsetxf = 0x5434,
+    tcsetxw = 0x5435,
+    tiocsig = 0x40045436,
+    tiocvhangup = 0x5437,
+    tiocgpkt = 0x80045438,
+    tiocgptlck = 0x80045439,
+    tiocgexcl = 0x80045440,
+    tiocgptpeer = 0x5441,
+    tiocgiso7816 = 0x80285442,
+    tiocsiso7816 = 0xc0285443,
+    fionclex = 0x5450,
+    fioclex = 0x5451,
+    fioasync = 0x5452,
+    tiocserconfig = 0x5453,
+    tiocsergwild = 0x5454,
+    tiocserswild = 0x5455,
+    tiocglcktrmios = 0x5456,
+    tiocslcktrmios = 0x5457,
+    tiocsergstruct = 0x5458,
+    tiocsergetlsr = 0x5459,
+    tiocsergetmulti = 0x545A,
+    tiocsersetmulti = 0x545B,
+    tiocmiwait = 0x545C,
+    tiocgicount = 0x545D,
+    fioqsize = 0x5460,
+    tiocm_le = 0x001,
+    tiocm_dtr = 0x002,
+    tiocm_rts = 0x004,
+    tiocm_st = 0x008,
+    tiocm_sr = 0x010,
+    tiocm_cts = 0x020,
+    tiocm_car = 0x040,
+    tiocm_rng = 0x080,
+    tiocm_dsr = 0x100,
+    tiocm_cd = tiocm_car,
+    tiocm_ri = tiocm_rng,
+    tiocm_out1 = 0x2000,
+    tiocm_out2 = 0x4000,
+    tiocm_loop = 0x8000,
+    fiosetown = 0x8901,
+    siocspgrp = 0x8902,
+    fiogetown = 0x8903,
+    siocgpgrp = 0x8904,
+    siocatmark = 0x8905,
+};
+
+namespace detail {
+    consteval auto compose_io_request(IoRequests a, IoRequests b, IoRequests c,
+                                      IoRequests d) -> IoRequests {
+        return IoRequests{(cat::to_underlying(a) << 30) |
+                          (cat::to_underlying(b) << 8) | cat::to_underlying(c) |
+                          (cat::to_underlying(d) << 16)};
+    }
+}  // namespace detail
+
+consteval auto io_request(IoRequests a, IoRequests b) -> IoRequests {
+    return detail::compose_io_request(IoRequests::none, a, b, IoRequests::none);
+}
+
+consteval auto io_request_write(IoRequests a, IoRequests b, IoRequests c)
+    -> IoRequests {
+    return detail::compose_io_request(IoRequests::write, a, b,
+                                      IoRequests{sizeof(c)});
+}
+
+consteval auto io_request_read(IoRequests a, IoRequests b, IoRequests c)
+    -> IoRequests {
+    return detail::compose_io_request(IoRequests::read, a, b,
+                                      IoRequests{sizeof(c)});
+}
+
+consteval auto io_request_readwrite(IoRequests a, IoRequests b, IoRequests c)
+    -> IoRequests {
+    return detail::compose_io_request(
+        IoRequests{cat::to_underlying(IoRequests::read) |
+                   cat::to_underlying(IoRequests::write)},
+        a, b, IoRequests{sizeof(c)});
+}
+
+// Control the settings of special files, such as stdin or stdout.
+auto sys_ioctl(FileDescriptor io_descriptor, int request) -> ScaredyLinux<void>;
+
+// Control the settings of special files, such as stdin or stdout, with a
+// request that requires a parameter.
+auto sys_ioctl(FileDescriptor io_descriptor, int request,
+               cat::NoTypePtr p_argument) -> ScaredyLinux<void>;
 
 struct Process {
     // TODO: Why tls not work?

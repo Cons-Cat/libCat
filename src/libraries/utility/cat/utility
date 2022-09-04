@@ -141,7 +141,11 @@ template <typename... Ts>
 // `ssizeof_pack()` here produces an internal compiler error in GCC 12.
 using IndexSequenceFor = MakeIndexSequence<ssize{sizeof...(Ts)}>;
 
-// TODO: `cat::to_underlying<>()`.
+template <typename T>
+    requires(is_enum<T>)
+constexpr auto to_underlying(T any_enum) {
+    return static_cast<UnderlyingType<T>>(any_enum);
+}
 
 namespace detail {
     template <typename Closure>
