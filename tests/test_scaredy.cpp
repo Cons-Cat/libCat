@@ -66,6 +66,15 @@ auto main() -> int {
     Result(result.value() == 3).or_exit();
     Result(result.is<int8>()).or_exit();
 
+    // Test `.error()`.
+    cat::Scaredy<int, ErrorOne> one_error = ErrorOne{1};
+    Result(one_error.error().code == 1).or_exit();
+    Result(one_error.error<ErrorOne>().code == 1).or_exit();
+
+    cat::Scaredy<int, ErrorOne, ErrorTwo> two_error = ErrorOne{1};
+    Result(two_error.error<ErrorOne>().code == 1).or_exit();
+
+    // Test compact optimization.
     cat::Scaredy<cat::Compact<int4,
                               [](int4 input) {
                                   return input >= 0;

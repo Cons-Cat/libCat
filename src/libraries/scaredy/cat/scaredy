@@ -424,14 +424,27 @@ class Scaredy {
         return move(this->storage.value());
     }
 
+    // Get the value of some error when its type is known to the caller.
     template <typename Error>
     [[nodiscard]] constexpr auto error() {
         return this->storage.template error<Error>();
     }
 
+    // Get the value of some error when its type is known to the caller.
     template <typename Error>
     [[nodiscard]] constexpr auto error() const {
         return this->storage.template error<Error>();
+    }
+
+    // If there is only one error type, a template argument is not required.
+    [[nodiscard]] constexpr auto error() requires(sizeof...(Errors) == 1) {
+        return this->storage.template error<Errors...>();
+    }
+
+    // If there is only one error type, a template argument is not required.
+    [[nodiscard]] constexpr auto error() const
+        requires(sizeof...(Errors) == 1) {
+        return this->storage.template error<Errors...>();
     }
 
     [[nodiscard]] constexpr auto value_or(Value fallback) & {
