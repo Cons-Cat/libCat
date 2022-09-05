@@ -22,6 +22,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/span/
   ${CMAKE_SOURCE_DIR}/src/libraries/list/
   ${CMAKE_SOURCE_DIR}/src/libraries/string/
+  ${CMAKE_SOURCE_DIR}/src/libraries/tui/
   ${CMAKE_SOURCE_DIR}/src/libraries/format/
   ${CMAKE_SOURCE_DIR}/src/libraries/memory/
   ${CMAKE_SOURCE_DIR}/src/libraries/allocators/

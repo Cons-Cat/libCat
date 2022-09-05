@@ -69,6 +69,12 @@ class String : public Span<char const> {
         this->length = other_length;
     }
 
+    constexpr String(Span<char> const& span)
+        : Span<char const>(span.p_data(), span.size()){};
+
+    constexpr String(Span<char>&& span)
+        : Span<char const>(span.p_data(), span.size()){};
+
     // A `String` consuming `nullptr` would cause undefined behavior.
     constexpr String(decltype(nullptr)) = delete;
 
