@@ -12,7 +12,7 @@ namespace cat {
 struct Socket;
 }
 
-constexpr ssize page_size = 4096_ki;
+inline constexpr ssize page_size = 4096_ki;
 
 namespace nix {
 

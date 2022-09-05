@@ -17,7 +17,7 @@ concept memoryHandle = requires(T handle) {
     handle.is_inline();
 };
 
-constexpr ssize inline_buffer_size = 256;
+inline constexpr ssize inline_buffer_size = 256;
 
 // TODO: Handles' `.get()` should be only visible to allocators.
 namespace detail {
