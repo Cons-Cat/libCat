@@ -101,9 +101,9 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_waitpid.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_socket.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/create_socket_local.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/is_a_terminal.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/terminal_get_attributes.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/terminal_set_attributes.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/is_a_tty.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/tty_get_attributes.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/tty_set_attributes.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_ioctl.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/read_char.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_accept.cpp

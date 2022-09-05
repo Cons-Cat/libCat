@@ -364,8 +364,8 @@ constexpr nix::FileDescriptor stderr = {2};
 static_assert(sizeof(ScaredyLinux<nix::FileDescriptor>) ==
               sizeof(nix::FileDescriptor));
 
-// A `FileDescriptor` that represents a terminal file.
-struct TerminalDescriptor : FileDescriptor {};
+// A `FileDescriptor` that represents a tty file.
+struct TtyDescriptor : FileDescriptor {};
 
 struct ProcessId {
     constexpr ProcessId() = default;
@@ -633,7 +633,7 @@ consteval auto io_request_readwrite(IoRequests a, IoRequests b, IoRequests c)
 }
 
 // TODO: Comment wtf these mean.
-enum class TerminalConfigurationFlags : unsigned int {
+enum class TtyConfigurationFlags : unsigned int {
     vintr = 0,
     vquit = 1,
     verase = 2,
@@ -775,8 +775,7 @@ struct cat::EnumFlagTrait<nix::WaitOptionsFlags> : cat::TrueTypeTrait {};
 template <>
 struct cat::EnumFlagTrait<nix::IoRequests> : cat::TrueTypeTrait {};
 template <>
-struct cat::EnumFlagTrait<nix::TerminalConfigurationFlags>
-    : cat::TrueTypeTrait {};
+struct cat::EnumFlagTrait<nix::TtyConfigurationFlags> : cat::TrueTypeTrait {};
 
 namespace nix {
 
@@ -888,13 +887,13 @@ auto sys_ioctl(FileDescriptor io_descriptor, IoRequests request)
 auto sys_ioctl(FileDescriptor io_descriptor, IoRequests request,
                cat::NoTypePtr p_argument) -> ScaredyLinux<void>;
 
-// `TerminalIoSerial` handles a configuration of terminal IO, often referred to
+// `TtyIoSerial` handles a configuration of tty IO, often referred to
 // as termios.
-struct TerminalIoSerial {
-    TerminalConfigurationFlags input_flags;
-    TerminalConfigurationFlags output_flags;
-    TerminalConfigurationFlags control_flags;
-    TerminalConfigurationFlags local_flags;
+struct TtyIoSerial {
+    TtyConfigurationFlags input_flags;
+    TtyConfigurationFlags output_flags;
+    TtyConfigurationFlags control_flags;
+    TtyConfigurationFlags local_flags;
   private:
     // This is for backwards compatibilty with non-serial termio syscalls.
     [[maybe_unused]] char line_characters;
@@ -906,31 +905,29 @@ struct TerminalIoSerial {
     [[maybe_unused]] unsigned int output_speed;
 };
 
-struct TerminalSize {
+struct TtySize {
     uint2 rows, columns, width_pixels, height_pixels;
 };
 
-auto is_a_terminal(FileDescriptor file_descriptor) -> ScaredyLinux<void>;
+auto is_a_tty(FileDescriptor file_descriptor) -> ScaredyLinux<void>;
 
-auto is_a_terminal(TerminalDescriptor) -> ScaredyLinux<void>;
+auto is_a_tty(TtyDescriptor) -> ScaredyLinux<void>;
 
-auto terminal_get_attributes(FileDescriptor terminal)
-    -> cat::Scaredy<TerminalIoSerial, LinuxError>;
+auto tty_get_attributes(FileDescriptor tty)
+    -> cat::Scaredy<TtyIoSerial, LinuxError>;
 
-enum class TerminalSetMode {
-    // Update the terminal immediately.
+enum class TtySetMode {
+    // Update the tty immediately.
     now = 0x5402,
-    // Update the terminal once all currently written data has been transmitted.
+    // Update the tty once all currently written data has been transmitted.
     wait_write = 0x5403,
-    // Update the terminal once all currently written data has been transmitted,
+    // Update the tty once all currently written data has been transmitted,
     // and all recieved data has been read.
     wait_recieve = 0x5404,
 };
 
-auto terminal_set_attributes(FileDescriptor terminal,
-                             TerminalSetMode terminal_mode,
-                             TerminalIoSerial const& configuration)
-    -> ScaredyLinux<void>;
+auto tty_set_attributes(FileDescriptor tty, TtySetMode tty_mode,
+                        TtyIoSerial const& configuration) -> ScaredyLinux<void>;
 
 auto read_char() -> ScaredyLinux<char>;
 
