@@ -864,8 +864,44 @@ auto sys_writev(FileDescriptor file_descriptor,
 auto sys_readv(FileDescriptor file_descriptor,
                cat::Span<IoVector> const& vectors) -> ScaredyLinux<ssize>;
 
+// TODO: Flesh this out more.
 struct File {
-    char x;
+    int4 flags;  // TODO: Make this strongly typed.
+    char* p_read_position;
+    char* p_read_end;
+
+    int4 (*close)(File*);
+
+    char* p_write_end;
+    char* p_write_position;
+    unsigned char* mustbezero_1;
+    char* p_write_base;
+
+    usize (*read)(File*, char*, usize);
+    usize (*write)(File*, const char*, usize);
+    usize (*seek)(File*, usize, int4);
+    char* buf;
+
+    usize buf_size;
+    File *prev, *next;
+    int4 file_descriptor;
+    int4 pipe_pid;
+    long lockcount;
+    int4 mode;
+    int4 volatile lock;
+    int4 lbf;
+    void* cookie;
+    usize off;
+    char* getln_buf;
+    void* mustbezero_2;
+    char* shend;
+    usize shlim, shcnt;
+    File* p_prev_locked;
+    File* p_next_locked;
+    // TODO: Implement locale.
+  private:
+    [[maybe_unused]] void* locale;
+    // Locale* locale;
 };
 
 struct FileStatus {
