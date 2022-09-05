@@ -360,7 +360,12 @@ constexpr nix::FileDescriptor stdin = {0};
 constexpr nix::FileDescriptor stdout = {1};
 constexpr nix::FileDescriptor stderr = {2};
 
-static_assert(sizeof(ScaredyLinux<nix::FileDescriptor>) == 4);
+// Confirm that `ScaredyLinux` has no size overhead.
+static_assert(sizeof(ScaredyLinux<nix::FileDescriptor>) ==
+              sizeof(nix::FileDescriptor));
+
+// A `FileDescriptor` that represents a terminal file.
+struct TerminalDescriptor : FileDescriptor {};
 
 struct ProcessId {
     constexpr ProcessId() = default;
@@ -495,121 +500,6 @@ enum class OpenFlags {
     large_file = 0100000,
 };
 
-}  // namespace nix
-
-// Enable using these `enum class`es as bit-flags.
-template <>
-struct cat::EnumFlagTrait<nix::MemoryProtectionFlags> : cat::TrueTypeTrait {};
-template <>
-struct cat::EnumFlagTrait<nix::MemoryFlags> : cat::TrueTypeTrait {};
-template <>
-struct cat::EnumFlagTrait<nix::OpenFlags> : cat::TrueTypeTrait {};
-template <>
-struct cat::EnumFlagTrait<nix::CloneFlags> : cat::TrueTypeTrait {};
-template <>
-struct cat::EnumFlagTrait<nix::WaitOptionsFlags> : cat::TrueTypeTrait {};
-
-namespace nix {
-
-auto sys_read(FileDescriptor file_descriptor, char const* p_string_buffer,
-              ssize length) -> ScaredyLinux<ssize>;
-
-auto sys_write(FileDescriptor file_descriptor, char const* p_string_buffer,
-               ssize length) -> ScaredyLinux<ssize>;
-
-auto sys_write(FileDescriptor file_descriptor, cat::String const string)
-    -> ScaredyLinux<ssize>;
-
-auto sys_open(char const* p_file_path, OpenMode file_mode,
-              OpenFlags flags = OpenFlags{0}) -> ScaredyLinux<FileDescriptor>;
-
-auto sys_creat(char const* p_file_path, OpenMode file_mode)
-    -> ScaredyLinux<FileDescriptor>;
-
-auto sys_close(FileDescriptor file_descriptor) -> ScaredyLinux<void>;
-
-// TODO: `sys_link()`.
-
-auto sys_unlink(char const* p_path_name) -> ScaredyLinux<void>;
-
-auto sys_mmap(usize beginning_address, ssize bytes_size,
-              MemoryProtectionFlags protections, MemoryFlags flags,
-              FileDescriptor file_descriptor, ssize pages_offset)
-    -> ScaredyLinux<void*>;
-
-auto sys_munmap(void const* p_memory, ssize length) -> ScaredyLinux<void>;
-
-struct Thread;
-
-auto sys_wait4(ProcessId waiting_on_id, int4* p_status_output,
-               WaitOptionsFlags options, void* p_resource_usage)
-    -> ScaredyLinux<ProcessId>;
-
-auto sys_waitid(WaitId type, ProcessId id, WaitOptionsFlags options)
-    -> ScaredyLinux<ProcessId>;
-
-struct FileStatus;
-
-auto sys_waitpid(ProcessId pid, FileStatus* p_status, WaitOptionsFlags options)
-    -> ScaredyLinux<ProcessId>;
-
-struct CloneArguments;
-
-auto syscall0(ssize) -> ssize;
-auto syscall1(ssize, cat::NoType) -> ssize;
-auto syscall2(ssize, cat::NoType, cat::NoType) -> ssize;
-auto syscall3(ssize, cat::NoType, cat::NoType, cat::NoType) -> ssize;
-auto syscall4(ssize, cat::NoType, cat::NoType, cat::NoType, cat::NoType)
-    -> ssize;
-auto syscall5(ssize, cat::NoType, cat::NoType, cat::NoType, cat::NoType,
-              cat::NoType) -> ssize;
-auto syscall6(ssize, cat::NoType, cat::NoType, cat::NoType, cat::NoType,
-              cat::NoType, cat::NoType) -> ssize;
-
-template <typename T, typename... Args>
-auto syscall(ssize call, Args... parameters) -> nix::ScaredyLinux<T>
-    requires(sizeof...(Args) < 7)
-;
-
-// Create and return a `cat::Socket`.
-auto sys_socket(int8 protocol_family, int8 type, int8 protocol)
-    -> ScaredyLinux<FileDescriptor>;
-
-// Create and return a `cat::SocketLocal` (also known as Unix socket).
-auto create_socket_local(int8 type, int8 protocol)
-    -> ScaredyLinux<FileDescriptor>;
-
-// Connect a `cat::Socket` to an address.
-auto sys_connect(FileDescriptor socket_descriptor, void const* p_socket,
-                 ssize socket_size) -> ScaredyLinux<void>;
-
-// Make a connection over a `cat::Socket`. This returns a new socket which has
-// been connected to. This new `cat::Socket` is not in a listening state.
-// TODO: Add flags for Linux syscall `288`.
-auto sys_accept(FileDescriptor socket_descriptor,
-                void const* __restrict p_socket = nullptr,
-                ssize const* __restrict p_addr_len = nullptr)
-    -> ScaredyLinux<FileDescriptor>;
-
-auto sys_recv(FileDescriptor socket_descriptor, void* p_message_buffer,
-              ssize buffer_length,
-              cat::Socket const* __restrict p_addr = nullptr,
-              ssize const* __restrict p_addr_length = nullptr)
-    -> ScaredyLinux<ssize>;
-
-auto sys_bind(FileDescriptor socket_descriptor, void const* p_socket,
-              ssize p_addr_len) -> ScaredyLinux<void>;
-
-// Mark a socket as available to make connections with `accept()`.
-auto sys_listen(FileDescriptor socket_descriptor, int8 backlog)
-    -> ScaredyLinux<void>;
-
-// Returns the number of characters sent to `destination_socket`.
-auto sys_send(FileDescriptor socket_descriptor, void const* p_message_buffer,
-              ssize buffer_length, int8 flags,
-              cat::Socket const* p_destination_socket = nullptr,
-              ssize addr_length = 0) -> ScaredyLinux<ssize>;
-
 // TODO: Comment wtf these mean.
 enum class IoRequests : unsigned long long {
     none = 0,
@@ -742,14 +632,309 @@ consteval auto io_request_readwrite(IoRequests a, IoRequests b, IoRequests c)
         a, b, IoRequests{sizeof(c)});
 }
 
+// TODO: Comment wtf these mean.
+enum class TerminalConfigurationFlags : unsigned int {
+    vintr = 0,
+    vquit = 1,
+    verase = 2,
+    vkill = 3,
+    veof = 4,
+    vtime = 5,
+    vmin = 6,
+    vswtc = 7,
+    vstart = 8,
+    vstop = 9,
+    vsusp = 10,
+    veol = 11,
+    vreprint = 12,
+    vdiscard = 13,
+    vwerase = 14,
+    vlnext = 15,
+    veol2 = 16,
+    ignbrk = 0000001,
+    brkint = 0000002,
+    ignpar = 0000004,
+    parmrk = 0000010,
+    inpck = 0000020,
+    istrip = 0000040,
+    inlcr = 0000100,
+    igncr = 0000200,
+    icrnl = 0000400,
+    iuclc = 0001000,
+    ixon = 0002000,
+    ixany = 0004000,
+    ixoff = 0010000,
+    imaxbel = 0020000,
+    iutf8 = 0040000,
+    opost = 0000001,
+    olcuc = 0000002,
+    onlcr = 0000004,
+    ocrnl = 0000010,
+    onocr = 0000020,
+    onlret = 0000040,
+    ofill = 0000100,
+    ofdel = 0000200,
+    nldly = 0000400,
+    nl0 = 0000000,
+    nl1 = 0000400,
+    crdly = 0003000,
+    cr0 = 0000000,
+    cr1 = 0001000,
+    cr2 = 0002000,
+    cr3 = 0003000,
+    tabdly = 0014000,
+    tab0 = 0000000,
+    tab1 = 0004000,
+    tab2 = 0010000,
+    tab3 = 0014000,
+    bsdly = 0020000,
+    bs0 = 0000000,
+    bs1 = 0020000,
+    ffdly = 0100000,
+    ff0 = 0000000,
+    ff1 = 0100000,
+    vtdly = 0040000,
+    vt0 = 0000000,
+    vt1 = 0040000,
+    b0 = 0000000,
+    b50 = 0000001,
+    b75 = 0000002,
+    b110 = 0000003,
+    b134 = 0000004,
+    b150 = 0000005,
+    b200 = 0000006,
+    b300 = 0000007,
+    b600 = 0000010,
+    b1200 = 0000011,
+    b1800 = 0000012,
+    b2400 = 0000013,
+    b4800 = 0000014,
+    b9600 = 0000015,
+    b19200 = 0000016,
+    b38400 = 0000017,
+    b57600 = 0010001,
+    b115200 = 0010002,
+    b230400 = 0010003,
+    b460800 = 0010004,
+    b500000 = 0010005,
+    b576000 = 0010006,
+    b921600 = 0010007,
+    b1000000 = 0010010,
+    b1152000 = 0010011,
+    b1500000 = 0010012,
+    b2000000 = 0010013,
+    b2500000 = 0010014,
+    b3000000 = 0010015,
+    b3500000 = 0010016,
+    b4000000 = 0010017,
+    csize = 0000060,
+    cs5 = 0000000,
+    cs6 = 0000020,
+    cs7 = 0000040,
+    cs8 = 0000060,
+    cstopb = 0000100,
+    cread = 0000200,
+    parenb = 0000400,
+    parodd = 0001000,
+    hupcl = 0002000,
+    clocal = 0004000,
+    isig = 0000001,
+    icanon = 0000002,
+    echo = 0000010,
+    echoe = 0000020,
+    echok = 0000040,
+    echonl = 0000100,
+    noflsh = 0000200,
+    tostop = 0000400,
+    iexten = 0100000,
+    ooff = 0,
+    oon = 1,
+    ioff = 2,
+    ion = 3,
+    iflush = 0,
+    oflush = 1,
+    ioflush = 2,
+    sanow = 0,
+    sadrain = 1,
+    saflush = 2,
+};
+
+}  // namespace nix
+
+// Enable using these `enum class`es as bit-flags.
+template <>
+struct cat::EnumFlagTrait<nix::MemoryProtectionFlags> : cat::TrueTypeTrait {};
+template <>
+struct cat::EnumFlagTrait<nix::MemoryFlags> : cat::TrueTypeTrait {};
+template <>
+struct cat::EnumFlagTrait<nix::OpenFlags> : cat::TrueTypeTrait {};
+template <>
+struct cat::EnumFlagTrait<nix::CloneFlags> : cat::TrueTypeTrait {};
+template <>
+struct cat::EnumFlagTrait<nix::WaitOptionsFlags> : cat::TrueTypeTrait {};
+template <>
+struct cat::EnumFlagTrait<nix::IoRequests> : cat::TrueTypeTrait {};
+template <>
+struct cat::EnumFlagTrait<nix::TerminalConfigurationFlags>
+    : cat::TrueTypeTrait {};
+
+namespace nix {
+
+auto sys_read(FileDescriptor file_descriptor, char const* p_string_buffer,
+              ssize length) -> ScaredyLinux<ssize>;
+
+auto sys_write(FileDescriptor file_descriptor, char const* p_string_buffer,
+               ssize length) -> ScaredyLinux<ssize>;
+
+auto sys_write(FileDescriptor file_descriptor, cat::String const string)
+    -> ScaredyLinux<ssize>;
+
+auto sys_open(char const* p_file_path, OpenMode file_mode,
+              OpenFlags flags = OpenFlags{0}) -> ScaredyLinux<FileDescriptor>;
+
+auto sys_creat(char const* p_file_path, OpenMode file_mode)
+    -> ScaredyLinux<FileDescriptor>;
+
+auto sys_close(FileDescriptor file_descriptor) -> ScaredyLinux<void>;
+
+// TODO: `sys_link()`.
+
+auto sys_unlink(char const* p_path_name) -> ScaredyLinux<void>;
+
+auto sys_mmap(usize beginning_address, ssize bytes_size,
+              MemoryProtectionFlags protections, MemoryFlags flags,
+              FileDescriptor file_descriptor, ssize pages_offset)
+    -> ScaredyLinux<void*>;
+
+auto sys_munmap(void const* p_memory, ssize length) -> ScaredyLinux<void>;
+
+struct Thread;
+
+auto sys_wait4(ProcessId waiting_on_id, int4* p_status_output,
+               WaitOptionsFlags options, void* p_resource_usage)
+    -> ScaredyLinux<ProcessId>;
+
+auto sys_waitid(WaitId type, ProcessId id, WaitOptionsFlags options)
+    -> ScaredyLinux<ProcessId>;
+
+struct FileStatus;
+
+auto sys_waitpid(ProcessId pid, FileStatus* p_status, WaitOptionsFlags options)
+    -> ScaredyLinux<ProcessId>;
+
+struct CloneArguments;
+
+auto syscall0(ssize) -> ssize;
+auto syscall1(ssize, cat::NoType) -> ssize;
+auto syscall2(ssize, cat::NoType, cat::NoType) -> ssize;
+auto syscall3(ssize, cat::NoType, cat::NoType, cat::NoType) -> ssize;
+auto syscall4(ssize, cat::NoType, cat::NoType, cat::NoType, cat::NoType)
+    -> ssize;
+auto syscall5(ssize, cat::NoType, cat::NoType, cat::NoType, cat::NoType,
+              cat::NoType) -> ssize;
+auto syscall6(ssize, cat::NoType, cat::NoType, cat::NoType, cat::NoType,
+              cat::NoType, cat::NoType) -> ssize;
+
+template <typename T, typename... Args>
+auto syscall(ssize call, Args... parameters) -> nix::ScaredyLinux<T>
+    requires(sizeof...(Args) < 7)
+;
+
+// Create and return a `cat::Socket`.
+auto sys_socket(int8 protocol_family, int8 type, int8 protocol)
+    -> ScaredyLinux<FileDescriptor>;
+
+// Create and return a `cat::SocketLocal` (also known as Unix socket).
+auto create_socket_local(int8 type, int8 protocol)
+    -> ScaredyLinux<FileDescriptor>;
+
+// Connect a `cat::Socket` to an address.
+auto sys_connect(FileDescriptor socket_descriptor, void const* p_socket,
+                 ssize socket_size) -> ScaredyLinux<void>;
+
+// Make a connection over a `cat::Socket`. This returns a new socket which has
+// been connected to. This new `cat::Socket` is not in a listening state.
+// TODO: Add flags for Linux syscall `288`.
+auto sys_accept(FileDescriptor socket_descriptor,
+                void const* __restrict p_socket = nullptr,
+                ssize const* __restrict p_addr_len = nullptr)
+    -> ScaredyLinux<FileDescriptor>;
+
+auto sys_recv(FileDescriptor socket_descriptor, void* p_message_buffer,
+              ssize buffer_length,
+              cat::Socket const* __restrict p_addr = nullptr,
+              ssize const* __restrict p_addr_length = nullptr)
+    -> ScaredyLinux<ssize>;
+
+auto sys_bind(FileDescriptor socket_descriptor, void const* p_socket,
+              ssize p_addr_len) -> ScaredyLinux<void>;
+
+// Mark a socket as available to make connections with `accept()`.
+auto sys_listen(FileDescriptor socket_descriptor, int8 backlog)
+    -> ScaredyLinux<void>;
+
+// Returns the number of characters sent to `destination_socket`.
+auto sys_send(FileDescriptor socket_descriptor, void const* p_message_buffer,
+              ssize buffer_length, int8 flags,
+              cat::Socket const* p_destination_socket = nullptr,
+              ssize addr_length = 0) -> ScaredyLinux<ssize>;
+
 // Control the settings of special files, such as stdin or stdout.
-auto sys_ioctl(FileDescriptor io_descriptor, int request) -> ScaredyLinux<void>;
+auto sys_ioctl(FileDescriptor io_descriptor, IoRequests request)
+    -> ScaredyLinux<void>;
 
 // Control the settings of special files, such as stdin or stdout, with a
 // request that requires a parameter.
-auto sys_ioctl(FileDescriptor io_descriptor, int request,
+auto sys_ioctl(FileDescriptor io_descriptor, IoRequests request,
                cat::NoTypePtr p_argument) -> ScaredyLinux<void>;
 
+// `TerminalIoSerial` handles a configuration of terminal IO, often referred to
+// as termios.
+struct TerminalIoSerial {
+    TerminalConfigurationFlags input_flags;
+    TerminalConfigurationFlags output_flags;
+    TerminalConfigurationFlags control_flags;
+    TerminalConfigurationFlags local_flags;
+  private:
+    // This is for backwards compatibilty with non-serial termio syscalls.
+    [[maybe_unused]] char line_characters;
+  public:
+    char special_characters[32];
+  private:
+    // This are for backwards compatibilty with non-serial termio syscalls.
+    [[maybe_unused]] unsigned int input_speed;
+    [[maybe_unused]] unsigned int output_speed;
+};
+
+struct TerminalSize {
+    uint2 rows, columns, width_pixels, height_pixels;
+};
+
+auto is_a_terminal(FileDescriptor file_descriptor) -> ScaredyLinux<void>;
+
+auto is_a_terminal(TerminalDescriptor) -> ScaredyLinux<void>;
+
+auto terminal_get_attributes(FileDescriptor terminal)
+    -> cat::Scaredy<TerminalIoSerial, LinuxError>;
+
+enum class TerminalSetMode {
+    // Update the terminal immediately.
+    now = 0x5402,
+    // Update the terminal once all currently written data has been transmitted.
+    wait_write = 0x5403,
+    // Update the terminal once all currently written data has been transmitted,
+    // and all recieved data has been read.
+    wait_recieve = 0x5404,
+};
+
+auto terminal_set_attributes(FileDescriptor terminal,
+                             TerminalSetMode terminal_mode,
+                             TerminalIoSerial const& configuration)
+    -> ScaredyLinux<void>;
+
+auto read_char() -> ScaredyLinux<char>;
+
+// `Process` handles an asynchronous task multitasked by the Linux kernel.
 struct Process {
     // TODO: Why tls not work?
     static constexpr CloneFlags default_flags =

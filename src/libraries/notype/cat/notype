@@ -34,7 +34,7 @@ class NoTypePtr {
     constexpr NoTypePtr(decltype(nullptr)) : p_storage(nullptr){};
 
     constexpr NoTypePtr(auto* p_input)
-        : p_storage(static_cast<void*>(p_input)){};
+        : p_storage(const_cast<void*>(static_cast<void const*>(p_input))){};
 
     template <typename T>
         requires(is_pointer<T>)
