@@ -173,23 +173,17 @@ struct RemovePointerTrait : detail::RemovePointerTraitDetail<T> {};
 template <typename T>
 using RemovePointer = typename RemovePointerTrait<T>::Type;
 
-template <typename T, T constant_value>
+template <auto constant_value>
 struct Constant {
-    static constexpr T value = constant_value;
-    using Type = Constant<T, constant_value>;
+    static constexpr auto value = constant_value;
+    using Type = decltype(constant_value);
 };
 
-template <bool constant_value>
-using BoolConstant = Constant<bool, constant_value>;
-template <bool constant_value>
-constexpr auto bool_constant = constant_value;
+template <auto value>
+constexpr auto constval = value;
 
-// TODO: Streamline these out entirely.
-using TrueTypeTrait = BoolConstant<true>;
-constexpr bool true_type = TrueTypeTrait::value;
-
-using FalseTypeTrait = BoolConstant<false>;
-constexpr bool false_type = FalseTypeTrait::value;
+using TrueTypeTrait = Constant<true>;
+using FalseTypeTrait = Constant<false>;
 
 template <bool, typename T, typename U>
 struct ConditionalTrait {
@@ -302,7 +296,7 @@ constexpr bool is_signed = false;
 
 // This expression only holds true if `T` can be constant-evaluated.
 template <detail::hasLessThanOperator T>
-constexpr bool is_signed<T> = bool_constant<(T(-1) < T(0))>;
+constexpr bool is_signed<T> = constval<(T(-1) < T(0))>;
 
 template <typename T>
 constexpr bool is_unsigned = !is_signed<T>;

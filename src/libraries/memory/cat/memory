@@ -85,12 +85,12 @@ namespace detail {
 
             // Fill out 32-byte portion.
             if constexpr (NativeAbi<unsigned char>::size >= 32) {
-                vectorized_fill(Constant<ssize, 32>{});
+                vectorized_fill(Constant<32_sz>{});
             }
 
             // Fill out 16-byte portion.
             if constexpr (NativeAbi<unsigned char>::size >= 16) {
-                vectorized_fill(Constant<ssize, 16>{});
+                vectorized_fill(Constant<16_sz>{});
             }
 
             // Fill out remaining portion one byte at a time.

@@ -30,19 +30,19 @@ namespace detail {
 
         // For some reason, this produces ambiguous overload errors if it is
         // implemented as a normal function instead of an operator.
-        constexpr auto operator[](Constant<ssize, index>) & -> T& {
+        constexpr auto operator[](Constant<index>) & -> T& {
             return this->storage;
         }
 
-        constexpr auto operator[](Constant<ssize, index>) const& -> T const& {
+        constexpr auto operator[](Constant<index>) const& -> T const& {
             return this->storage;
         }
 
-        constexpr auto operator[](Constant<ssize, index>) && -> T&& {
+        constexpr auto operator[](Constant<index>) && -> T&& {
             return cat::move(this->storage);
         }
 
-        constexpr auto operator[](Constant<ssize, index>) const&& -> T const&& {
+        constexpr auto operator[](Constant<index>) const&& -> T const&& {
             return cat::move(this->storage);
         }
 
@@ -155,25 +155,25 @@ constexpr auto concat(Tuple<Us...> const& other_tuple) const
     // Get a non-`const` reference to the N'th stored variable.
     template <ssize index>
     constexpr auto get() & -> auto& requires(index <= this->size) {
-        return (*this)[Constant<ssize, index>{}];
+        return (*this)[Constant<index>{}];
     }
 
     // Get a `const` reference to the N'th stored variable.
     template <ssize index>
     constexpr auto get() const& -> auto const& requires(index <= this->size) {
-        return (*this)[Constant<ssize, index>{}];
+        return (*this)[Constant<index>{}];
     }
 
     // Move the N'th stored variable.
     template <ssize index>
     constexpr auto get() && -> auto&& requires(index <= this->size) {
-        return move((*this)[Constant<ssize, index>{}]);
+        return move((*this)[Constant<index>{}]);
     }
 
     // Move the N'th stored variable.
     template <ssize index>
     constexpr auto get() const&& -> auto const&& requires(index <= this->size) {
-        return move((*this)[Constant<ssize, index>{}]);
+        return move((*this)[Constant<index>{}]);
     }
 
     // Get a non-`const` reference to the first stored variable.
@@ -297,8 +297,7 @@ template <typename>
 struct tuple_size;  // NOLINT
 
 template <typename... Ts>
-struct tuple_size<cat::Tuple<Ts...>>
-    : cat::Constant<usize::Raw, sizeof...(Ts)> {};
+struct tuple_size<cat::Tuple<Ts...>> : cat::Constant<sizeof...(Ts)> {};
 
 template <typename T>
 inline constexpr usize::Raw tuple_size_v = tuple_size<T>::value;
