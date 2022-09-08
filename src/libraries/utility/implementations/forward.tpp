@@ -10,6 +10,7 @@ constexpr auto std::forward(::cat::RemoveReference<T>& input) -> T&& {
 }
 
 template <typename T>
+    requires(!cat::is_lvalue_reference<T>)
 constexpr auto std::forward(::cat::RemoveReference<T>&& input)
     -> T&& requires(!::cat::is_lvalue_reference<T>) {
     return static_cast<T&&>(input);
