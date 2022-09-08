@@ -2,8 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/allocator>
 #include <cat/format>
-#include <cat/linear_allocator>
 #include <cat/linux>
 
 namespace std {
