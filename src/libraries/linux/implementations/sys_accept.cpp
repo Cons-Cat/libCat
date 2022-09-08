@@ -1,5 +1,7 @@
 #include <cat/linux>
 
+// Make a connection over a `cat::Socket`. This returns a new socket which has
+// been connected to. This new `cat::Socket` is not in a listening state.
 auto nix::sys_accept(nix::FileDescriptor socket_descriptor,
                      void const* __restrict p_socket,
                      ssize const* __restrict p_addr_len)

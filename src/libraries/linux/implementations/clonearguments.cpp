@@ -1,5 +1,3 @@
-// -*- mode: c++ -*-
-// vim: set ft=cpp:
 #include <cat/linux>
 
 struct CloneArguments {

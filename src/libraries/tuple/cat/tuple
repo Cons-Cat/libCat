@@ -3,7 +3,6 @@
 #pragma once
 
 #include <cat/type_list>
-#include <utility>
 
 namespace cat {
 namespace detail {

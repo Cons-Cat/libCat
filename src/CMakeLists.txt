@@ -93,13 +93,14 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_read.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_write.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_close.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/clonearguments.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_open.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_unlink.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_mmap.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_munmap.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_wait4.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/wait_pid.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_waitid.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_waitpid.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_socket.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/create_socket_local.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/is_a_tty.cpp
@@ -112,7 +113,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_connect.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_listen.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_recv.cpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_send.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_sendto.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_writev.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_readv.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_stat.cpp
