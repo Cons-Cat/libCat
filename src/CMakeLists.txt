@@ -95,6 +95,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_close.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/clonearguments.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_open.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_rt_sigprocmask.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_unlink.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_mmap.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_munmap.cpp

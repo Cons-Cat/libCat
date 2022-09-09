@@ -18,6 +18,7 @@ namespace nix {
 struct FileStatus;
 struct Process;
 struct CloneArguments;
+struct SignalsMaskSet;
 }  // namespace nix
 
 namespace nix {
@@ -864,8 +865,25 @@ auto sys_mmap(usize beginning_address, ssize bytes_size,
 auto sys_munmap(void const* p_memory, ssize length) -> ScaredyLinux<void>;
 
 // TODO: `sys_brk()`
+
+enum class SignalAction {
+    // The set of blocked signals is the union of the `p_other_set` and
+    // `p_current_set`.
+    block = 0,
+    // The signals in `p_other_set` are removed from `p_current_set`. Signals in
+    // `p_other_set` which are not in `p_current_set` are silently ignored.
+    unblock = 1,
+    // `p_current_set` is set to `p_other_set`.
+    setmask = 2
+};
+
+// Syscall 14
+auto sys_rt_sigprocmask(SignalAction action,
+                        SignalsMaskSet const* __restrict p_other_set,
+                        SignalsMaskSet* __restrict p_current_set)
+    -> ScaredyLinux<void>;
+
 // TODO: `sys_rt_sigaction()`
-// TODO: `sys_rt_sigprocmask()`
 // TODO: `sys_rt_sigreturn()`
 
 // Syscall 16
@@ -1178,6 +1196,10 @@ parent_thread:
     ProcessId id;
     void* p_stack;
     ssize stack_size;
+};
+
+struct SignalsMaskSet {
+    unsigned long bits[128 / sizeof(long)];
 };
 
 }  // namespace nix
