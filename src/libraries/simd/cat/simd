@@ -458,6 +458,11 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
   private:
     using Mask = SimdMask<Abi, T>;
 
+    // clangd 15 produces a false diagnostic if these are declared at the bottom
+    // of this struct.
+    static constexpr ssize lanes = Abi::lanes;
+    static constexpr usize alignment = Abi::alignment;
+
   public:
     constexpr SimdMask() = default;
 
@@ -629,9 +634,6 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
     }
 
     Raw raw;
-
-    static constexpr ssize lanes = Abi::lanes;
-    static constexpr usize alignment = Abi::alignment;
 };
 
 template <typename Abi, typename T>

@@ -36,8 +36,6 @@ struct Monostate {
 
 template <typename T, T state>
 struct MonostateStorage {
-    T storage;
-
     constexpr MonostateStorage() = default;
     constexpr MonostateStorage(Monostate&) : storage(state){};
     constexpr MonostateStorage(Monostate const&) : storage(state){};
@@ -60,6 +58,8 @@ struct MonostateStorage {
                                      auto const& rhs) -> bool {
         return self.storage == rhs;
     }
+
+    T storage;
 };
 
 template <typename T, auto predicate, T sentinel>

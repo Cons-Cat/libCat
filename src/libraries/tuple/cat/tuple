@@ -74,6 +74,10 @@ struct Tuple : detail::TupleStorage<IndexSequenceFor<Ts...>, Ts...>::Type {
     using Map =
         typename detail::TupleStorage<IndexSequenceFor<Ts...>, Ts...>::Type;
 
+    // clangd 15 produces a false diagnostic if this is declared at the bottom
+    // of this struct.
+    static constexpr ssize size = Types::size;
+
     /*
 // Convert each element of this `Tuple` into those of another `Tuple`.
 template <typename T>
@@ -274,8 +278,6 @@ constexpr auto concat(Tuple<Us...> const& other_tuple) const
     constexpr auto fifth() const&& -> auto const&& requires(this->size >= 5) {
         return move(this->get<4>());
     }
-
-    static constexpr ssize size = Types::size;
 };
 
 // This deduction guide is required for variadic type deduction.

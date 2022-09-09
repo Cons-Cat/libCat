@@ -13,7 +13,7 @@ class NoType {
   public:
     constexpr NoType() = default;
 
-    constexpr NoType(auto& input) requires(sizeof(input) <= sizeof(void*))
+    constexpr NoType(auto input) requires(sizeof(input) <= sizeof(void*))
         : p_storage(bit_cast<void*>(input)){};
 
     template <typename T>

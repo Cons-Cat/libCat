@@ -33,9 +33,8 @@ auto nix::syscall(ssize call, Args... parameters) -> nix::ScaredyLinux<T>
                                arguments[3], arguments[4], arguments[5]);
     }
 
-    // TODO: Remove these `::`?
-    if constexpr (!::cat::is_void<T>) {
-        if constexpr (!::cat::is_pointer<T>) {
+    if constexpr (!cat::is_void<T>) {
+        if constexpr (!cat::is_pointer<T>) {
             return nix::ScaredyLinux<T>{T{result.raw}};
         } else {
             return nix::ScaredyLinux<T>{reinterpret_cast<T>(result.raw)};
@@ -43,8 +42,7 @@ auto nix::syscall(ssize call, Args... parameters) -> nix::ScaredyLinux<T>
     } else {
         if (result < 0) {
             return static_cast<LinuxError>(result.raw);
-        } else {
-            return monostate;
         }
+        return monostate;
     }
 }

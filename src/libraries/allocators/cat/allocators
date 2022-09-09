@@ -218,7 +218,7 @@ namespace detail {
     // `clangd` emits false-positive diagnostics if this constraint is used
     // anonymously without a `concept`.
     template <typename AllocatorT>
-    concept StableDerivedAllocator = AllocatorT::has_pointer_stability == true;
+    concept StableDerivedAllocator = AllocatorT::has_pointer_stability;
 
     template <typename AllocatorT>
     concept HasAllocate = requires(AllocatorT allocator) {
