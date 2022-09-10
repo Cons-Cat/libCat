@@ -38,4 +38,12 @@ auto main() -> int {
     cat::set_memory(p_page, 1_i8, 0.5_ki);
     Result(static_cast<int4*>(static_cast<void*>(p_page))[10] == 1_i4)
         .or_exit();
+
+    // Test scalar `set_memory()`.
+    cat::set_memory_scalar(p_page, 1_u1, 4_ki);
+    Result(p_page[1001] == 1_u1).or_exit();
+
+    // Test scalar `zero_memory()`.
+    cat::zero_memory_scalar(p_page, 4_ki);
+    Result(p_page[1001] == 0_u1).or_exit();
 };

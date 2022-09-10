@@ -140,6 +140,31 @@ constexpr void zero_memory(void* p_source, ssize size) {
     zero_memory(p_source, bytes);
 }
 
+template <typename T = unsigned char>
+    requires(sizeof(T) <= 8)
+constexpr void set_memory_scalar(void* p_source, T value, ssize size) {
+    for (ssize i = 0; i < size; ++i) {
+        *(static_cast<T*>(p_source) + i) = value;
+    }
+}
+
+template <typename T = unsigned char>
+    requires(sizeof(T) <= 8)
+[[gnu::noinline]] constexpr void set_memory_scalar_explicit(void* p_source,
+                                                            T value,
+                                                            ssize size) {
+    set_memory_scalar(p_source, value, size);
+}
+
+constexpr void zero_memory_scalar(void* p_source, ssize bytes) {
+    set_memory_scalar(p_source, 0_u1, bytes);
+}
+
+[[gnu::noinline]] constexpr void zero_memory_scalar_explicit(void* p_source,
+                                                             ssize bytes) {
+    set_memory_scalar(p_source, 0_u1, bytes);
+}
+
 // Set all bytes in a trivial object to `value`.
 template <typename T, typename U = unsigned char>
     requires(is_trivial<T> && sizeof(U) == 1)
@@ -170,9 +195,9 @@ constexpr void zero_object_explicit(T& object) {
     zero_memory_explicit(addressof(object), ssizeof<T>(object));
 }
 
-// Prevent a compiler from constant-folding the non-`const`-qualified `p_object`
-// when it shares its location in memory with, but has distinct lifetime from, a
-// separate `const`-qualified object.
+// Prevent a compiler from constant-folding the non-`const`-qualified
+// `p_object` when it shares its location in memory with, but has distinct
+// lifetime from, a separate `const`-qualified object.
 template <typename T>
 [[nodiscard]] constexpr auto launder(T* p_object) -> T* {
     return __builtin_launder(p_object);
