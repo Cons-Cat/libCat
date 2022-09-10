@@ -1031,7 +1031,7 @@ struct TtyIoSerial {
     [[maybe_unused]] unsigned int output_speed;
 };
 
-struct TtySize {
+struct TtyWindowSize {
     uint2 rows, columns, width_pixels, height_pixels;
 };
 
