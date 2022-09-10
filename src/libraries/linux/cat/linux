@@ -866,6 +866,44 @@ auto sys_munmap(void const* p_memory, ssize length) -> ScaredyLinux<void>;
 
 // TODO: `sys_brk()`
 
+enum class Signal {
+    hang_up = 1,                    // sighng
+    interrupt = 2,                  // sigint
+    sigint = interrupt,             // sigquit
+    quit = 3,                       // sigquit
+    illegal_instruction = 4,        // sigill
+    trap = 5,                       // sigtrap
+    abort = 6,                      // sigabrt
+    io_trap = abort,                // sigiot
+    bus = 7,                        // sigbus
+    floating_point_error = 8,       // sigfpe
+    kill = 9,                       // sigkill
+    usr1 = 10,                      // sigusr1
+    segmentation_violation = 11,    // sigsegv
+    usr2 = 12,                      // sigusr2
+    broken_pipe = 13,               // sigpipe
+    alarm = 14,                     // sigalrm
+    graceful_termination = 15,      // sigterm
+    stack_fault = 16,               // sigstkflt
+    child_stopped = 17,             // sigchld
+    now_continue = 18,              // sigcont
+    stop = 19,                      // sigstop
+    interactive_stop = 20,          // sigtstp
+    tty_input = 21,                 // sigttin
+    tty_output = 22,                // sigttou
+    urgent = 23,                    // sigurg
+    cpu_time_exceeded = 24,         // sigxcpu
+    file_size_limit_exceeded = 25,  // sigxfsz
+    virtual_alarm_clock = 26,       // sigvtalrm
+    profiling_timer_exceeded = 27,  // sigprof
+    window_resize = 28,             // sigwinch
+    io = 29,                        // sigio
+    pollable_event = io,            // sigpoll
+    power_failure = 30,             // sigpwr
+    bad_syscall = 31,               // sigsys
+    unused = bad_syscall
+};
+
 enum class SignalAction {
     // The set of blocked signals is the union of the `p_other_set` and
     // `p_current_set`.
@@ -1201,6 +1239,9 @@ parent_thread:
 struct SignalsMaskSet {
     unsigned long bits[128 / sizeof(long)];
 };
+
+inline constexpr SignalsMaskSet app_mask{.bits = {0xfffffffc7fffffff}};
+inline constexpr usize all_mask = -1ul;
 
 }  // namespace nix
 
