@@ -972,7 +972,7 @@ auto sys_writev(FileDescriptor file_descriptor,
                 cat::Span<IoVector> const& vectors) -> ScaredyLinux<ssize>;
 
 // Syscall 39
-void sys_getpid();
+auto sys_getpid() -> ProcessId;
 
 // Syscall 41
 auto sys_socket(int8 protocol_family, int8 type, int8 protocol)
@@ -1254,6 +1254,8 @@ inline constexpr SignalsMaskSet all_signals_mask = {
 auto block_all_signals() -> SignalsMaskSet;
 
 auto raise(Signal signal, ProcessId pid) -> ScaredyLinux<void>;
+
+auto raise_here(Signal signal) -> ScaredyLinux<void>;
 
 }  // namespace nix
 

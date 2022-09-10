@@ -123,6 +123,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_tkill.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/block_all_signals.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/raise.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/raise_here.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/utility/implementations/move.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/utility/implementations/forward.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/utility/implementations/is_constant_evaluated.tpp

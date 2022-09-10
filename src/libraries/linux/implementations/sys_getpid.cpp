@@ -1,5 +1,5 @@
 #include <cat/linux>
 
-void nix::sys_getpid() {
-    _ = syscall0(39);
+auto nix::sys_getpid() -> ProcessId {
+    return syscall<ProcessId>(39).value();
 }
