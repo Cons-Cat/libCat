@@ -139,20 +139,22 @@ class CollectionFacade {
         requires(this->is_array_like)
     { return this->subspan(this->self().size() - count, this->self().size()); }
 
-    [[nodiscard]] constexpr auto operator[](ssize index)
-        -> T& requires(this->is_array_like) {
+    template <integral U>
+        requires(is_array_like)
+    [[nodiscard]] constexpr auto operator[](U index) -> T& {
         Result{index >= 0}.assert();
         Result{index < this->self().size()}.assert();
 
-        return this->self_mut().p_data()[index.raw];
+        return this->self_mut().p_data()[to_raw_numeral(index)];
     }
 
-    [[nodiscard]] constexpr auto operator[](ssize index) const
-        -> T const& requires(this->is_array_like) {
+    template <integral U>
+        requires(is_array_like)
+    [[nodiscard]] constexpr auto operator[](U index) const -> T const& {
         Result{index >= 0}.assert();
         Result{index < this->self().size()}.assert();
 
-        return this->self().p_data()[index.raw];
+        return this->self().p_data()[to_raw_numeral(index)];
     }
 
     // `.begin()` and `.end()` can be automatically generated for contiguous

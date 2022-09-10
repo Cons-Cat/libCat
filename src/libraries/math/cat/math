@@ -118,7 +118,7 @@ namespace detail {
 }  // namespace detail
 
 template <arithmetic T>
-constexpr auto pow(T base, T exponent) {
+constexpr auto pow(T base, T exponent) -> T {
     // Level `Numeral` into primitive types.
     auto raw_base = to_raw_numeral(base);
     using Raw = decltype(raw_base);
