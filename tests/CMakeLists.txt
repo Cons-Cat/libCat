@@ -211,8 +211,8 @@ if(BUILD_TEST_TUPLE OR BUILD_ALL_TESTS)
 endif()
 
 # This tests that `cat::set_memory()` etc. work.
-option(BUILD_TEST_MEMORY "Compile Tuple tests." OFF)
-if(BUILD_TEST_MEMORY OR BUILD_ALL_TESTS)
+option(BUILD_TEST_SET_MEMORY "Compile set_memory() tests." OFF)
+if(BUILD_TEST_SET_MEMORY OR BUILD_ALL_TESTS)
   add_executable(test_set_memory test_set_memory.cpp)
   #target_compile_options(test_set_memory PRIVATE ${CAT_CXX_FLAGS_TEST})
   target_link_options(test_set_memory PRIVATE ${CAT_LINK_FLAGS})
@@ -244,7 +244,7 @@ if(
   OR BUILD_TEST_REFLECTION
   OR BUILD_TEST_VARIANT
   OR BUILD_TEST_TUPLE
-  OR BUILD_TEST_MEMORY)
+  OR BUILD_TEST_SET_MEMORY)
 )
   add_executable(test_dummy test_dummy.cpp)
   target_compile_options(test_dummy PRIVATE ${CAT_CXX_FLAGS_TEST})

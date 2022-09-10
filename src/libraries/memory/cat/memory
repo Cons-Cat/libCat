@@ -44,29 +44,29 @@ void copy_memory_small(void const* p_source, void* p_destination, ssize bytes);
 
 namespace detail {
     // Type-erased `set_memory` function.
+    template <typename T>
     [[gnu::optimize("-fno-tree-loop-distribute-patterns")]]
     // `tree-loop-distribute-patterns` is an optimization that replaces this
     // code with a call to `memset`. `memset` itself calls this function, which
     // makes a circular reference that ld is unable to link. Mold can link
     // this, but that optimization is useless here.
     constexpr void
-    set_memory_detail(void* p_source, unsigned char byte_value, ssize bytes) {
-        unsigned char* p_current_byte = static_cast<unsigned char*>(p_source);
+    set_memory_detail(void* p_source, T value, ssize size) {
+        T* p_current_byte = static_cast<T*>(p_source);
 
         if (is_constant_evaluated()) {
             // Set this memory through scalar code, because `__builtin_memset()`
             // is not `constexpr` in GCC 12.
-            for (ssize i = 0; i < bytes; ++i) {
-                *p_current_byte = static_cast<unsigned char>(byte_value);
+            for (ssize i = 0; i < size; ++i) {
+                *p_current_byte = static_cast<T>(value);
                 ++p_current_byte;
             }
         } else {
             // Fill until `p_current_byte` has proper SIMD alignment.
-            while (!is_aligned(p_current_byte,
-                               NativeAbi<unsigned char>::alignment)) {
-                *p_current_byte = byte_value;
+            while (!is_aligned(p_current_byte, NativeAbi<T>::alignment)) {
+                *p_current_byte = value;
                 ++p_current_byte;
-                --bytes;
+                --size;
             }
 
             // Non-type template parameters are not allowed in a lambda's
@@ -76,55 +76,60 @@ namespace detail {
                 // TODO: Consider optimizing with multiple vector loads to
                 // leverage instruction-level parallelism.
                 constexpr ssize lanes = LanesConstant::value;
-                using Vector = FixedSizeSimd<unsigned char, lanes>;
+                using Vector = FixedSizeSimd<T, lanes>;
                 Vector* p_vector = bit_cast<Vector*>(p_current_byte);
-                p_vector->fill(byte_value);
+                p_vector->fill(value);
                 p_current_byte += lanes;
-                bytes -= lanes;
+                size -= lanes;
             };
 
             // Fill out 32-byte portion.
-            if constexpr (NativeAbi<unsigned char>::size >= 32) {
+            if constexpr (NativeAbi<T>::size >= 32) {
                 vectorized_fill(Constant<32_sz>{});
             }
 
             // Fill out 16-byte portion.
-            if constexpr (NativeAbi<unsigned char>::size >= 16) {
+            if constexpr (NativeAbi<T>::size >= 16) {
                 vectorized_fill(Constant<16_sz>{});
             }
 
             // Fill out remaining portion one byte at a time.
-            while (bytes > 0) {
-                *p_current_byte = byte_value;
+            while (size > 0) {
+                *p_current_byte = value;
                 ++p_current_byte;
-                --bytes;
+                --size;
             }
         }
     }
 }  // namespace detail
 
-// Set all bytes at this address to `byte_value`.
+// Set all bytes at this address to `value`.
 template <typename T = unsigned char>
-    requires(sizeof(T) == 1)
-constexpr void set_memory(void* p_source, T byte_value, ssize bytes) {
-    detail::set_memory_detail(p_source, bit_cast<unsigned char>(byte_value),
-                              bytes);
+    requires(sizeof(T) <= 8)
+constexpr void set_memory(void* p_source, T value, ssize size) {
+    // Make a type that `value` can bitcast to, and can be used in a `Simd`.
+    // TODO: A size-argument numeral type could simplify this.
+    using Raw = Conditional<
+        sizeof(T) == 1, uint1::Raw,
+        Conditional<sizeof(T) == 2, uint2::Raw,
+                    Conditional<sizeof(T) == 4, uint4::Raw, uint8::Raw>>>;
+
+    detail::set_memory_detail(p_source, bit_cast<Raw>(value), size);
 }
 
 // `[[gnu::noinline]]` prevents GCC from constant-folding this function out.
-// Set all bytes at this address to `byte_value`. This function cannot be
+// Set all bytes at this address to `value`. This function cannot be
 // constant-folded out.
 template <typename T = unsigned char>
-    requires(sizeof(T) == 1)
-[[gnu::noinline]] constexpr void set_memory_explicit(void* p_source,
-                                                     T byte_value,
-                                                     ssize bytes) {
-    set_memory(p_source, byte_value, bytes);
+    requires(sizeof(T) <= 8)
+[[gnu::noinline]] constexpr void set_memory_explicit(void* p_source, T value,
+                                                     ssize size) {
+    set_memory(p_source, value, size);
 }
 
 // Set all bytes at this address to zero.
-constexpr void zero_memory(void* p_source, ssize bytes) {
-    detail::set_memory_detail(p_source, static_cast<unsigned char>(0u), bytes);
+constexpr void zero_memory(void* p_source, ssize size) {
+    detail::set_memory_detail(p_source, static_cast<unsigned char>(0u), size);
 }
 
 // `[[gnu::noinline]]` prevents GCC from constant-folding this function out.
@@ -135,19 +140,19 @@ constexpr void zero_memory(void* p_source, ssize bytes) {
     zero_memory(p_source, bytes);
 }
 
-// Set all bytes in a trivial object to `byte_value`.
+// Set all bytes in a trivial object to `value`.
 template <typename T, typename U = unsigned char>
     requires(is_trivial<T> && sizeof(U) == 1)
-constexpr void set_object(T& object, U byte_value) {
-    set_memory(addressof(object), byte_value, ssizeof<T>(object));
+constexpr void set_object(T& object, U value) {
+    set_memory(addressof(object), value, ssizeof<T>(object));
 }
 
 // Zero out all bytes in a trivial object. This function cannot be
 // constant-folded out.
 template <typename T, typename U = unsigned char>
     requires(is_trivial<T> && sizeof(U) == 1)
-constexpr void set_object_explicit(T& object, U byte_value) {
-    set_memory_explicit(addressof(object), byte_value, ssizeof<T>(object));
+constexpr void set_object_explicit(T& object, U value) {
+    set_memory_explicit(addressof(object), value, ssizeof<T>(object));
 }
 
 // Zero out all bytes in a trivial object.
