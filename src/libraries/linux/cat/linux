@@ -912,7 +912,7 @@ enum class SignalAction {
     // `p_other_set` which are not in `p_current_set` are silently ignored.
     unblock = 1,
     // `p_current_set` is set to `p_other_set`.
-    setmask = 2
+    set_mask = 2
 };
 
 // Syscall 14
@@ -971,6 +971,9 @@ auto sys_readv(FileDescriptor file_descriptor,
 auto sys_writev(FileDescriptor file_descriptor,
                 cat::Span<IoVector> const& vectors) -> ScaredyLinux<ssize>;
 
+// Syscall 39
+void sys_getpid();
+
 // Syscall 41
 auto sys_socket(int8 protocol_family, int8 type, int8 protocol)
     -> ScaredyLinux<FileDescriptor>;
@@ -1023,6 +1026,9 @@ auto sys_creat(char const* p_file_path, OpenMode file_mode)
 
 // Syscall 87
 auto sys_unlink(char const* p_path_name) -> ScaredyLinux<void>;
+
+// Syscall 200
+auto sys_tkill(ProcessId pid, Signal signal) -> ScaredyLinux<void>;
 
 // Syscall 247
 auto sys_waitid(WaitId type, ProcessId id, WaitOptionsFlags options)
@@ -1237,11 +1243,17 @@ parent_thread:
 };
 
 struct SignalsMaskSet {
-    unsigned long bits[128 / sizeof(long)];
+    // TODO: A `cat::Bitset` could simplify this.
+    cat::Array<unsigned char, 8> bytes;
 };
 
-inline constexpr SignalsMaskSet app_mask{.bits = {0xfffffffc7fffffff}};
-inline constexpr usize all_mask = -1ul;
+inline constexpr SignalsMaskSet all_signals_mask = {
+    .bytes = cat::Array<unsigned char, 8>::filled(-1),
+};
+
+auto block_all_signals() -> SignalsMaskSet;
+
+auto raise(Signal signal, ProcessId pid) -> ScaredyLinux<void>;
 
 }  // namespace nix
 

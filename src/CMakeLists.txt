@@ -108,6 +108,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/tty_get_attributes.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/tty_set_attributes.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_ioctl.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_getpid.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/read_char.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_accept.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_bind.cpp
@@ -119,6 +120,9 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_readv.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_stat.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_fstat.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/sys_tkill.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/block_all_signals.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/raise.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/utility/implementations/move.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/utility/implementations/forward.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/utility/implementations/is_constant_evaluated.tpp
