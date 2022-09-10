@@ -133,4 +133,14 @@ auto main() -> int {
     base_array = copy_converting_array;
     base_array = move(move_array);
     base_array = move(move_converting_array);
+
+    // Test array fill.
+    cat::Array filled_array = cat::Array<int4, 8>::filled(6);
+    for (ssize i = 0; i < 8; ++i) {
+        Result(filled_array[i] == 6).or_exit();
+    }
+    filled_array.fill(9);
+    for (ssize i = 0; i < 8; ++i) {
+        Result(filled_array[i] == 9).or_exit();
+    }
 };

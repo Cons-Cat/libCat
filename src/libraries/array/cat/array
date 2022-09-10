@@ -4,6 +4,8 @@
 
 #include <cat/collection>
 #include <cat/utility>
+#include <memory>
+#include <utility>
 
 namespace cat {
 
@@ -83,6 +85,23 @@ class Array : public CollectionFacade<Array<T, length>, T> {
     constexpr auto operator=(ValueList<U, values...> list) {
         this->copy_list<0, U, values...>(list);
     };
+
+    constexpr auto fill(T value) -> Array& {
+        if (!is_constant_evaluated() && sizeof(T) <= 8) {
+            set_memory(this->storage, value, length);
+        } else {
+            for (ssize i = 0; i < length; ++i) {
+                this->storage[i.raw] = value;
+            }
+        }
+        return *this;
+    }
+
+    static constexpr auto filled(T value) -> Array {
+        Array<T, length> array;
+        array.fill(value);
+        return array;
+    }
 
     // Get the non-`const` address of this `Array`'s internal array.
     [[nodiscard]] constexpr auto p_data() -> T* {
