@@ -4,6 +4,8 @@
 
 #include <cat/iterator>
 
+#include "cat/numerals"
+
 namespace cat {
 
 // TODO: Explicit output type is ambiguous when given 2 function arguments.
@@ -90,6 +92,46 @@ constexpr auto max(iterable auto&& iterable) {
 constexpr auto abs(auto const& value) {
     // TODO: Check if the builtin `abs()` function family is optimized better.
     return value < 0 ? value * -1 : value;
+}
+
+namespace detail {
+    // TODO: Use an optimized algorithm instead.
+    template <integral T, typename U>
+    constexpr auto pow_integral(T base, U exponent) -> T {
+        if (0 == exponent) {
+            return 1;
+        }
+        T z = base;
+        T y = 1;
+        while (true) {
+            if (exponent & 1) {
+                y *= z;
+            }
+            exponent /= 2;
+            if (exponent == 0) {
+                break;
+            }
+            z *= z;
+        }
+        return y;
+    }
+}  // namespace detail
+
+template <arithmetic T>
+constexpr auto pow(T base, T exponent) {
+    // Level `Numeral` into primitive types.
+    auto raw_base = to_raw_numeral(base);
+    using Raw = decltype(raw_base);
+
+    if constexpr (integral<Raw>) {
+        return detail::pow_integral(raw_base, exponent);
+    } else if constexpr (is_same<Raw, float>) {
+        return __builtin_powf(raw_base, exponent);
+    } else if constexpr (is_same<Raw, double>) {
+        return __builtin_pow(raw_base, exponent);
+    } else if constexpr (is_same<Raw, long double>) {
+        return __builtin_powl(raw_base, exponent);
+    }
 }
 
 }  // namespace cat
