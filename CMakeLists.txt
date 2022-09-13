@@ -70,12 +70,6 @@ list(
 )
 
 list(
-  APPEND CAT_CXX_FLAGS_RELWITHDEBINFO_NOSAN
-  ${CAT_CXX_FLAGS_RELEASE}
-  -ggdb3 -pipe
-)
-
-list(
   APPEND CAT_CXX_FLAGS
   ${CAT_CXX_FLAGS_COMMON}
   $<$<CONFIG:Debug>:${CAT_CXX_FLAGS_DEBUG}>
@@ -117,8 +111,9 @@ add_subdirectory(src/)
 target_sources(cat INTERFACE ${cat-cpp})
 target_include_directories(cat INTERFACE ${cat-include})
 
+# TODO: This adds in code to Hello World.
 # Linking gcc is required for SIMD intrinsics.
-target_link_libraries(cat INTERFACE gcc_s)
+# target_link_libraries(cat INTERFACE gcc_s)
 
 # Link the address and undefined behavior sanitizers in debug builds.
 if (USE_SANITIZERS)
