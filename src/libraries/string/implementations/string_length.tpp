@@ -17,6 +17,7 @@ constexpr auto cat::string_length(char const* p_string) -> ssize {
             result++;
         }
     } else {
+        // TODO: Implement with portable SIMD, and tune performance.
         constexpr char1x16 zeros = '\0';
 
         for (ssize i = 0;; i += 16) {
