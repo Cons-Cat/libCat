@@ -372,6 +372,22 @@ class Scaredy {
                                           is_same<Value, Monostate>)
         : storage(monostate){};
 
+    // Copy-assign and convert a `Scaredy`.
+    template <typename U, typename... OtherErrors>
+        requires(is_value<U> && (is_error<OtherErrors> && ...))
+    constexpr auto operator=(Scaredy<U, Errors...> const& operand) -> Scaredy& {
+        this->storage = operand.storage;
+        return *this;
+    }
+
+    // Move-assign and convert a `Scaredy`.
+    template <typename U, typename... OtherErrors>
+        requires(is_value<U> && (is_error<OtherErrors> && ...))
+    constexpr auto operator=(Scaredy<U, Errors...>&& operand) -> Scaredy& {
+        this->storage = operand.storage;
+        return *this;
+    }
+
     // Copy-assign and convert a value to `storage`.
     template <typename U>
         requires(is_value<U>)

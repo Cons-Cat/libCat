@@ -1,0 +1,80 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/linux>
+
+// TODO: Get this basically working.
+
+namespace cat {
+
+enum class FileOpenMode {
+    read,
+    write,
+    append
+};
+
+enum class FileSeekMode {
+    set,
+    current,
+    end
+};
+
+class RawFile {
+  public:
+    constexpr RawFile() = default;
+    constexpr RawFile(RawFile const&) = default;
+    constexpr RawFile(RawFile&&) = default;
+
+    auto open(String const path, FileOpenMode mode = FileOpenMode::read)
+        -> Scaredy<void, nix::LinuxError> {
+        nix::OpenMode open_mode = nix::OpenMode::read_write;
+        nix::OpenFlags open_flags = nix::OpenFlags::path;
+
+        // Try to open a file from a path.
+        Scaredy open_result =
+            nix::sys_open(path.p_data(), open_flags, open_mode);
+        if (!open_result.has_value()) {
+            return open_result.error();
+        }
+
+        this->file_descriptor = open_result.value();
+
+        // TODO: Is this failable?
+        // Get the status of that opened file.
+        Scaredy fstat_result = nix::sys_fstat(file_descriptor);
+        nix::FileStatus status = fstat_result.value();
+        this->file_size = status.file_size;
+        this->block_size = status.block_size;
+    }
+
+    void close() {
+    }
+
+    constexpr auto is_closed() const -> bool {
+        // When closed, `file_descriptor` is set to -1.
+        return this->file_descriptor != -1;
+    }
+
+    constexpr auto is_readable() -> bool {
+        // If `open_mode` has either read bitflags set:
+        return (to_underlying(this->open_mode) &
+                (to_underlying(nix::OpenMode::read_only) |
+                 to_underlying(nix::OpenMode::read_write))) != 0;
+    }
+
+    constexpr auto is_writeable() -> bool {
+        // If `open_mode` has either write bitflags set:
+        return (to_underlying(this->open_mode) &
+                (to_underlying(nix::OpenMode::write_only) |
+                 to_underlying(nix::OpenMode::read_write))) != 0;
+    }
+
+  private:
+    nix::FileDescriptor file_descriptor = -1;
+    nix::OpenMode open_mode;
+    int8 file_size;
+    int8 block_size;
+};
+
+}  // namespace cat
