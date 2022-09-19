@@ -83,7 +83,7 @@ namespace detail {
         _ = eprintln(callsite.function_name());
     }
 
-    void handle_assert(SourceLocation callsite) {
+    void default_assert_handler(SourceLocation callsite) {
         detail::print_assert_location(callsite);
 
         // TODO: Colorize this input prompt.
@@ -119,23 +119,56 @@ namespace detail {
     }
 }  // namespace detail
 
-void assert(bool invariant_expression,
-            SourceLocation callsite = SourceLocation::current()) {
+// Check that an expression holds true in all builds. If it holds false, invoke
+// an assert handler.
+void verify(
+    bool invariant_expression,
+    void (*p_assert_handler)(SourceLocation) = detail::default_assert_handler,
+    SourceLocation callsite = SourceLocation::current()) {
     if (invariant_expression) [[likely]] {
         return;
     }
-    detail::handle_assert(callsite);
+
+    p_assert_handler(callsite);
+    __builtin_unreachable();
 }
 
-void assert(bool invariant_expression, String error_string,
-            SourceLocation callsite = SourceLocation::current()) {
+// Check that an expression holds true in all builds. If it holds false, print
+// `error_string` and invoke an assert handler.
+void verify(
+    bool invariant_expression, String const error_string,
+    void (*p_assert_handler)(SourceLocation) = detail::default_assert_handler,
+    SourceLocation callsite = SourceLocation::current()) {
     if (invariant_expression) [[likely]] {
         return;
     }
     _ = eprint("\n");
     _ = eprintln(error_string);
 
-    detail::handle_assert(callsite);
+    assert_handler(callsite);
+    __builtin_unreachable();
+}
+
+// Check that an expression holds true when `NDEBUG` is not defined. If it holds
+// false, invoke an assert handler.
+void assert(
+    bool invariant_expression,
+    void (*p_assert_handler)(SourceLocation) = detail::default_assert_handler,
+    SourceLocation callsite = SourceLocation::current()) {
+#ifndef NDEBUG
+    verify(invariant_expression, p_assert_handler, callsite);
+#endif
+}
+
+// Check that an expression holds true when `NDEBUG` is not defined. If it
+// holds false, print `error_string` and invoke an assert handler.
+void assert(
+    bool invariant_expression, String const error_string,
+    void (*p_assert_handler)(SourceLocation) = detail::default_assert_handler,
+    SourceLocation callsite = SourceLocation::current()) {
+#ifndef NDEBUG
+    verify(invariant_expression, error_string, p_assert_handler, callsite);
+#endif
 }
 
 }  // namespace cat
