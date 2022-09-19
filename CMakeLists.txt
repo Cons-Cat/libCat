@@ -94,7 +94,6 @@ list(
   APPEND CAT_LINK_FLAGS
   $<$<CONFIG:Debug>:${CAT_COMMON_LINK_FLAGS}>
   $<$<CONFIG:RelWithDebInfo>:${CAT_RELEASE_LINK_FLAGS}>
-  $<$<CONFIG:RelWithDebInfoNoSan>:${CAT_RELEASE_LINK_FLAGS}>
   $<$<CONFIG:Release>:${CAT_RELEASE_LINK_FLAGS}>
 )
 
@@ -117,13 +116,13 @@ target_include_directories(cat INTERFACE ${cat-include})
 
 # Link the address and undefined behavior sanitizers in debug builds.
 if (USE_SANITIZERS)
-target_link_libraries(
-  cat INTERFACE
-  $<$<CONFIG:RelWithDebInfo>:asan>
-  $<$<CONFIG:RelWithDebInfo>:ubsan>
-  $<$<CONFIG:Debug>:asan>
-  $<$<CONFIG:Debug>:ubsan>
-)
+  target_link_libraries(
+	cat INTERFACE
+	$<$<CONFIG:RelWithDebInfo>:asan>
+	$<$<CONFIG:RelWithDebInfo>:ubsan>
+	$<$<CONFIG:Debug>:asan>
+	$<$<CONFIG:Debug>:ubsan>
+  )
 endif()
 
 target_compile_options(cat INTERFACE ${CAT_CXX_FLAGS})

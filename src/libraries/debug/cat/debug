@@ -70,7 +70,7 @@ void breakpoint() {
 
 namespace detail {
     void print_assert_location(
-        SourceLocation callsite = SourceLocation::current()) {
+        SourceLocation const& callsite = SourceLocation::current()) {
         Array<Byte, 128> buffer;
         LinearAllocator allocator{buffer.p_data(), buffer.size()};
         _ = eprint(format(allocator, "assert failed on line {}, in:\n    ",
@@ -83,7 +83,7 @@ namespace detail {
         _ = eprintln(callsite.function_name());
     }
 
-    void default_assert_handler(SourceLocation callsite) {
+    void default_assert_handler(SourceLocation const& callsite) {
         detail::print_assert_location(callsite);
 
         // TODO: Colorize this input prompt.
@@ -121,10 +121,10 @@ namespace detail {
 
 // Check that an expression holds true in all builds. If it holds false, invoke
 // an assert handler.
-void verify(
-    bool invariant_expression,
-    void (*p_assert_handler)(SourceLocation) = detail::default_assert_handler,
-    SourceLocation callsite = SourceLocation::current()) {
+void verify(bool invariant_expression,
+            void (*p_assert_handler)(SourceLocation const&) =
+                detail::default_assert_handler,
+            SourceLocation const& callsite = SourceLocation::current()) {
     if (invariant_expression) [[likely]] {
         return;
     }
@@ -135,26 +135,31 @@ void verify(
 
 // Check that an expression holds true in all builds. If it holds false, print
 // `error_string` and invoke an assert handler.
-void verify(
-    bool invariant_expression, String const error_string,
-    void (*p_assert_handler)(SourceLocation) = detail::default_assert_handler,
-    SourceLocation callsite = SourceLocation::current()) {
+void verify(bool invariant_expression, String const error_string,
+            void (*p_assert_handler)(SourceLocation const&) =
+                detail::default_assert_handler,
+            SourceLocation const& callsite = SourceLocation::current()) {
     if (invariant_expression) [[likely]] {
         return;
     }
     _ = eprint("\n");
     _ = eprintln(error_string);
 
-    assert_handler(callsite);
+    p_assert_handler(callsite);
     __builtin_unreachable();
 }
 
+// Because `assert()`'s arguments are not passed into `verify()` when `NDEBUG`
+// is defined, the compiler should not warn when they are unused.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+
 // Check that an expression holds true when `NDEBUG` is not defined. If it holds
 // false, invoke an assert handler.
-void assert(
-    bool invariant_expression,
-    void (*p_assert_handler)(SourceLocation) = detail::default_assert_handler,
-    SourceLocation callsite = SourceLocation::current()) {
+void assert(bool invariant_expression,
+            void (*p_assert_handler)(SourceLocation const&) =
+                detail::default_assert_handler,
+            SourceLocation const& callsite = SourceLocation::current()) {
 #ifndef NDEBUG
     verify(invariant_expression, p_assert_handler, callsite);
 #endif
@@ -162,13 +167,15 @@ void assert(
 
 // Check that an expression holds true when `NDEBUG` is not defined. If it
 // holds false, print `error_string` and invoke an assert handler.
-void assert(
-    bool invariant_expression, String const error_string,
-    void (*p_assert_handler)(SourceLocation) = detail::default_assert_handler,
-    SourceLocation callsite = SourceLocation::current()) {
+void assert(bool invariant_expression, String const error_string,
+            void (*p_assert_handler)(SourceLocation const&) =
+                detail::default_assert_handler,
+            SourceLocation const& callsite = SourceLocation::current()) {
 #ifndef NDEBUG
     verify(invariant_expression, error_string, p_assert_handler, callsite);
 #endif
 }
+
+#pragma GCC diagnostic pop
 
 }  // namespace cat
