@@ -2,7 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/allocators>
+#include <cat/allocator>
 #include <cat/bit>
 #include <cat/linux>
 #include <cat/meta>

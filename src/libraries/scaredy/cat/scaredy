@@ -701,7 +701,7 @@ class Scaredy {
                                ssize exit_code = 1) && {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
-                return move(this->value());
+                return this->value();
             } else {
                 return;
             }

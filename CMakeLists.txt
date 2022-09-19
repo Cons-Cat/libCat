@@ -106,9 +106,10 @@ add_subdirectory(src/)
 target_sources(cat INTERFACE ${cat-cpp})
 target_include_directories(cat INTERFACE ${cat-include})
 
-# TODO: This adds in code to Hello World.
-# Linking `libgcc` or `libgcc_s` is required for SIMD intrinsics.
-# target_link_libraries(cat INTERFACE gcc_s)
+# This is required to link `hello` with lld or mold, but not ld.
+# This is also required to use SIMD intrinsics, even with ld.
+# This adds superfluous code to Hello World.
+target_link_libraries(cat INTERFACE gcc_s)
 
 # Link the address and undefined behavior sanitizers in debug builds.
 if(CAT_USE_SANITIZERS)

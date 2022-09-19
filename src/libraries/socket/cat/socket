@@ -75,8 +75,8 @@ struct SocketUnix {
                      cat::Socket const* p_destination_socket = nullptr,
                      ssize const addr_length = 0) -> Optional<void> {
         Scaredy result =
-            nix::sys_send(this->descriptor, message.p_data(), message.size(),
-                          flags, p_destination_socket, addr_length);
+            nix::sys_sendto(this->descriptor, message.p_data(), message.size(),
+                            flags, p_destination_socket, addr_length);
         if (result.has_value()) {
             return monostate;
         }
@@ -86,9 +86,9 @@ struct SocketUnix {
     auto send_struct(auto const& message_struct, int8 flags = 0,
                      cat::Socket const* p_destination_socket = nullptr,
                      ssize const addr_length = 0) -> Optional<void> {
-        Scaredy result = nix::sys_send(this->descriptor, &message_struct,
-                                       ssizeof(message_struct), flags,
-                                       p_destination_socket, addr_length);
+        Scaredy result = nix::sys_sendto(this->descriptor, &message_struct,
+                                         ssizeof(message_struct), flags,
+                                         p_destination_socket, addr_length);
         if (result.has_value()) {
             return monostate;
         }
