@@ -1,4 +1,4 @@
-#include <cat/allocators>
+#include <cat/allocator>
 #include <cat/format>
 #include <cat/string>
 #include <cat/utility>

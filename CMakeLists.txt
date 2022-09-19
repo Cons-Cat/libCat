@@ -7,10 +7,10 @@ set(CMAKE_CXX_EXTENSIONS ON)
 
 project(cat LANGUAGES CXX)
 
-option(USE_SANITIZERS "Link ASan and UBSan" ON)
+option(CAT_USE_SANITIZERS "Link ASan and UBSan" ON)
 
 list(
-  APPEND CAT_CXX_FLAGS_COMMON
+  APPEND CAT_FLAGS_COMMON
   # Disable linking libC symbols.
   -nostdlib
   -Wno-builtin-declaration-mismatch
@@ -33,29 +33,25 @@ list(
   -Wno-unused-function
 )
 
-list(
-  APPEND CAT_SANITIZER_FLAGS
-  -fno-omit-frame-pointer # Required for UBsan.
-  -fsanitize=undefined
-  -fsanitize=address
-  # Asan stack overflow checking does not work in libCat.
-  # TODO: Explain why.
-  --param asan-stack=0
-)
-
-list(
-  APPEND CAT_CXX_FLAGS_DEBUG
-  -ggdb3 -pipe
-)
-if(USE_SANITIZERS)
+if(CAT_USE_SANITIZERS)
   list(
-    APPEND CAT_CXX_FLAGS_DEBUG
-    ${CAT_SANITIZER_FLAGS}
+    APPEND CAT_FLAGS_COMMON
+    -fno-omit-frame-pointer # Required for UBsan.
+    -fsanitize=undefined
+    -fsanitize=address
+    # Asan stack overflow checking does not work in libCat.
+    # TODO: Explain why.
+    --param asan-stack=0
   )
 endif()
 
 list(
-  APPEND CAT_CXX_FLAGS_RELEASE
+  APPEND CAT_FLAGS_DEBUG
+  -ggdb3 -pipe
+)
+
+list(
+  APPEND CAT_FLAGS_RELEASE
   -O3
   # Remove unused symbols.
   -ffunction-sections -fdata-sections
@@ -64,17 +60,17 @@ list(
 )
 
 list(
-  APPEND CAT_CXX_FLAGS_RELWITHDEBINFO
-  ${CAT_CXX_FLAGS_DEBUG}
-  ${CAT_CXX_FLAGS_RELEASE}
+  APPEND CAT_FLAGS_RELWITHDEBINFO
+  ${CAT_FLAGS_DEBUG}
+  ${CAT_FLAGS_RELEASE}
 )
 
 list(
-  APPEND CAT_CXX_FLAGS
-  ${CAT_CXX_FLAGS_COMMON}
-  $<$<CONFIG:Debug>:${CAT_CXX_FLAGS_DEBUG}>
-  $<$<CONFIG:RelWithDebInfo>:${CAT_CXX_FLAGS_RELWITHDEBINFO}>
-  $<$<CONFIG:Release>:${CAT_CXX_FLAGS_RELEASE}>
+  APPEND CAT_COMPILE_FLAGS
+  ${CAT_FLAGS_COMMON}
+  $<$<CONFIG:Debug>:${CAT_FLAGS_DEBUG}>
+  $<$<CONFIG:Release>:${CAT_FLAGS_RELEASE}>
+  $<$<CONFIG:RelWithDebInfo>:${CAT_FLAGS_RELWITHDEBINFO}>
 )
 
 list(
@@ -93,8 +89,8 @@ list(
 list(
   APPEND CAT_LINK_FLAGS
   $<$<CONFIG:Debug>:${CAT_COMMON_LINK_FLAGS}>
-  $<$<CONFIG:RelWithDebInfo>:${CAT_RELEASE_LINK_FLAGS}>
   $<$<CONFIG:Release>:${CAT_RELEASE_LINK_FLAGS}>
+  $<$<CONFIG:RelWithDebInfo>:${CAT_RELEASE_LINK_FLAGS}>
 )
 
 add_library(cat INTERFACE)
@@ -111,21 +107,23 @@ target_sources(cat INTERFACE ${cat-cpp})
 target_include_directories(cat INTERFACE ${cat-include})
 
 # TODO: This adds in code to Hello World.
-# Linking gcc is required for SIMD intrinsics.
+# Linking `libgcc` or `libgcc_s` is required for SIMD intrinsics.
 # target_link_libraries(cat INTERFACE gcc_s)
 
 # Link the address and undefined behavior sanitizers in debug builds.
-if (USE_SANITIZERS)
+if(CAT_USE_SANITIZERS)
   target_link_libraries(
-	cat INTERFACE
-	$<$<CONFIG:RelWithDebInfo>:asan>
-	$<$<CONFIG:RelWithDebInfo>:ubsan>
-	$<$<CONFIG:Debug>:asan>
-	$<$<CONFIG:Debug>:ubsan>
+    cat INTERFACE
+    $<$<CONFIG:Debug>:asan>
+    $<$<CONFIG:Debug>:ubsan>
+    $<$<CONFIG:Release>:asan>
+    $<$<CONFIG:Release>:ubsan>
+    $<$<CONFIG:RelWithDebInfo>:asan>
+    $<$<CONFIG:RelWithDebInfo>:ubsan>
   )
 endif()
 
-target_compile_options(cat INTERFACE ${CAT_CXX_FLAGS})
+target_compile_options(cat INTERFACE ${CAT_COMPILE_FLAGS})
 target_link_options(cat INTERFACE ${CAT_LINK_FLAGS})
 
 # Build the tests.

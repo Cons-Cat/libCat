@@ -9,14 +9,14 @@
 extern "C"
     // GCC wants to insert a `__asan_handle_no_return()` call, which breaks
     // argument loading.
-    [[noreturn, gnu::no_sanitize_address,
+    [[noreturn, gnu::used, gnu::no_sanitize_address,
 // A `naked` function does not reserve stack space, which otherwise breaks
 // argument loading on low optimization levels.
 #ifndef NO_ARGC_ARGV
       gnu::naked
 #endif
 ]] void
-    _start();
+    _start();  // NOLINT
 
 namespace cat {
 // The `cat::exit()` function is provided globally. This streamlines out the

@@ -19,7 +19,7 @@ call_main() {
 }
 
 // TODO: Linking with Mold segfaults now.
-[[gnu::used]] void _start() {
+void _start() {
     // `NO_ARGC_ARGV` can be defined in a build system to skip argument loading.
 #ifndef NO_ARGC_ARGV
     asm(R"(pop %rdi        # Load `int4 argc`.

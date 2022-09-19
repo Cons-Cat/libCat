@@ -8,10 +8,10 @@ add_custom_target(
 )
 add_dependencies(cat cat-gdb)
 
-option(BUILD_ALL_EXAMPLES "Compile all examples unconditionally." ON)
+option(CAT_BUILD_ALL_EXAMPLES "Compile all examples unconditionally." ON)
 
-option(BUILD_EXAMPLE_HELLO "Compile hello.cpp." OFF)
-if(BUILD_EXAMPLE_HELLO OR BUILD_ALL_EXAMPLES)
+option(CAT_BUILD_EXAMPLE_HELLO "Compile hello.cpp." OFF)
+if(CAT_BUILD_EXAMPLE_HELLO OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(hello hello.cpp)
   target_compile_options(hello PRIVATE ${CAT_CXX_FLAGS})
   target_compile_definitions(hello PRIVATE "NO_ARGC_ARGV" "INLINE_MAIN")
@@ -19,8 +19,8 @@ if(BUILD_EXAMPLE_HELLO OR BUILD_ALL_EXAMPLES)
   target_link_options(hello PRIVATE ${CAT_LINK_FLAGS})
 endif()
 
-option(BUILD_EXAMPLE_ECHO "Compile echo.cpp." OFF)
-if(BUILD_EXAMPLE_ECHO OR BUILD_ALL_EXAMPLES)
+option(CAT_BUILD_EXAMPLE_ECHO "Compile echo.cpp." OFF)
+if(CAT_BUILD_EXAMPLE_ECHO OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(echo echo.cpp)
   target_compile_options(echo PRIVATE ${CAT_CXX_FLAGS})
   target_compile_definitions(echo PRIVATE "INLINE_MAIN")
@@ -28,8 +28,8 @@ if(BUILD_EXAMPLE_ECHO OR BUILD_ALL_EXAMPLES)
   target_link_options(echo PRIVATE ${CAT_LINK_FLAGS})
 endif()
 
-option(BUILD_EXAMPLE_CLIENT_SERVER "Compile client.cpp and server.cpp." OFF)
-if(BUILD_EXAMPLE_CLIENT_SERVER OR BUILD_ALL_EXAMPLES)
+option(CAT_BUILD_EXAMPLE_CLIENT_SERVER "Compile client.cpp and server.cpp." OFF)
+if(CAT_BUILD_EXAMPLE_CLIENT_SERVER OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(client client.cpp)
   target_compile_options(client PRIVATE ${CAT_CXX_FLAGS})
   target_link_libraries(client PRIVATE cat)
@@ -41,16 +41,16 @@ if(BUILD_EXAMPLE_CLIENT_SERVER OR BUILD_ALL_EXAMPLES)
   target_link_options(server PRIVATE ${CAT_LINK_FLAGS})
 endif()
 
-option(BUILD_EXAMPLE_WINDOW "Compile window.cpp." OFF)
-if(BUILD_EXAMPLE_WINDOW OR BUILD_ALL_EXAMPLES)
+option(CAT_BUILD_EXAMPLE_WINDOW "Compile window.cpp." OFF)
+if(CAT_BUILD_EXAMPLE_WINDOW OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(window window.cpp)
   target_compile_options(window PRIVATE ${CAT_CXX_FLAGS})
   target_link_libraries(window PRIVATE cat)
   target_link_options(window PRIVATE ${CAT_LINK_FLAGS})
 endif()
 
-option(BUILD_EXAMPLE_CAT "Compile cat.cpp." OFF)
-if(BUILD_EXAMPLE_CAT OR BUILD_ALL_EXAMPLES)
+option(CAT_BUILD_EXAMPLE_CAT "Compile cat.cpp." OFF)
+if(CAT_BUILD_EXAMPLE_CAT OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(unixcat cat.cpp)
   target_compile_options(unixcat PRIVATE ${CAT_CXX_FLAGS})
   target_link_libraries(unixcat PRIVATE cat)
@@ -62,13 +62,13 @@ endif()
 # The directories must be generated for symlinking `.gdbinit` to succeed.
 # This can be skipped if one or more other examples are built.
 if(
-  NOT (BUILD_ALL_EXAMPLES
-  OR BUILD_LIBC_EXAMPLES
-  OR BUILD_EXAMPLE_CAT
-  OR BUILD_EXAMPLE_CLIENT_SERVER
-  OR BUILD_EXAMPLE_ECHO
-  OR BUILD_EXAMPLE_HELLO
-  OR BUILD_EXAMPLE_WINDOW)
+  NOT (CAT_BUILD_ALL_EXAMPLES
+  OR CAT_BUILD_LIBC_EXAMPLES
+  OR CAT_BUILD_EXAMPLE_CAT
+  OR CAT_BUILD_EXAMPLE_CLIENT_SERVER
+  OR CAT_BUILD_EXAMPLE_ECHO
+  OR CAT_BUILD_EXAMPLE_HELLO
+  OR CAT_BUILD_EXAMPLE_WINDOW)
 )
   add_executable(dummy echo.cpp)
   target_link_libraries(dummy PRIVATE cat)
@@ -91,9 +91,9 @@ list(
 )
 
 # Do not build libC examples by default.
-option(BUILD_LIBC_EXAMPLES "Enable libC examples to compare against libCat." OFF)
+option(CAT_BUILD_LIBC_EXAMPLES "Enable libC examples to compare against libCat." OFF)
 
-if(BUILD_LIBC_EXAMPLES)
+if(CAT_BUILD_LIBC_EXAMPLES)
   add_executable(hello_libc hello_libc.cpp)
   target_compile_options(
     hello_libc PRIVATE
