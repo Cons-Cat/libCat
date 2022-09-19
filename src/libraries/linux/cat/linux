@@ -843,7 +843,7 @@ struct File {
 };
 
 // Syscall 4
-auto sys_stat(cat::String const& file_path)
+auto sys_stat(cat::String const file_path)
     -> cat::Scaredy<FileStatus, LinuxError>;
 
 // Syscall 5

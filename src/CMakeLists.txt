@@ -27,7 +27,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/memory/
   ${CMAKE_SOURCE_DIR}/src/libraries/allocator/
   ${CMAKE_SOURCE_DIR}/src/libraries/utility/
-  ${CMAKE_SOURCE_DIR}/src/libraries/stdlib/
+  ${CMAKE_SOURCE_DIR}/src/libraries/file/
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/
   ${CMAKE_SOURCE_DIR}/src/libraries/thread/
   ${CMAKE_SOURCE_DIR}/src/libraries/atomic/

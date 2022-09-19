@@ -1,12 +1,11 @@
 #include <cat/linux>
 
-auto nix::sys_fstat(nix::FileDescriptor file_descriptor)
-    -> cat::Scaredy<nix::FileStatus, nix::LinuxError> {
-    nix::FileStatus status;
-    nix::ScaredyLinux<void> result =
-        nix::syscall<void>(5, file_descriptor, &status);
+auto nix::sys_fstat(FileDescriptor file_descriptor)
+    -> cat::Scaredy<FileStatus, LinuxError> {
+    FileStatus status;
+    ScaredyLinux<void> result = syscall<void>(5, file_descriptor, &status);
     if (result.has_value()) {
         return status;
     }
-    return result.error<nix::LinuxError>();
+    return result.error<LinuxError>();
 }

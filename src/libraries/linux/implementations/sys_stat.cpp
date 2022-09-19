@@ -1,12 +1,11 @@
 #include <cat/linux>
 
-auto nix::sys_stat(cat::String const& file_path)
-    -> cat::Scaredy<nix::FileStatus, nix::LinuxError> {
-    nix::FileStatus status;
-    nix::ScaredyLinux<void> result =
-        nix::syscall<void>(4, file_path.p_data(), &status);
+auto nix::sys_stat(cat::String const file_path)
+    -> cat::Scaredy<FileStatus, LinuxError> {
+    FileStatus status;
+    ScaredyLinux<void> result = syscall<void>(4, file_path.p_data(), &status);
     if (result.has_value()) {
         return status;
     }
-    return result.error<nix::LinuxError>();
+    return result.error<LinuxError>();
 }
