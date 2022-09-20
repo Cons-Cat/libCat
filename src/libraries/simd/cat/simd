@@ -15,7 +15,7 @@
 // and wraps it in one thin layer of technology.
 
 #include <cat/meta>
-#include <cat/numerals>
+#include <utility>
 
 #include "cat/detail/simd_avx2_fwd.hpp"
 #include "cat/detail/simd_sse42.hpp"
@@ -127,29 +127,31 @@ class alignas(InAbi::alignment.raw) Simd {
 
     // Construct all lanes as `value`.
     template <typename U>
-    constexpr Simd(U value) requires(is_convertible<U, T>) {
+        requires(is_convertible<U, T>)
+    constexpr Simd(U value) {
         this->fill(static_cast<T>(value));
     }
 
     // Construct from a variadic argument list.
     template <typename... Us>
-    constexpr Simd(Us&&... values) requires(sizeof...(values) > 1 &&
-                                            sizeof...(values) == InAbi::lanes)
+        requires(ssizeof_pack<Us...>() > 1 &&
+                 ssizeof_pack<Us...>() == InAbi::lanes)
+    constexpr Simd(Us&&... values)
         : raw(Raw{static_cast<T>(forward<Us>(values))...}){};
 
     // Construct from a constant list, such as `value_list` or
     // `integer_sequence`.
     template <typename U, U... Us>
-    constexpr Simd(ValueList<U, Us...> values) requires(values.size ==
-                                                        InAbi::lanes)
-        : raw(Raw{static_cast<T>(Us)...}){};
+        requires(ssizeof_pack<U, Us...> == InAbi::lanes)
+    constexpr Simd(ValueList<U, Us...>) : raw(Raw{static_cast<T>(Us)...}){};
 
     // Any ABI for which this `Simd` is equal to in size and overaligned can
     // be explicitly converted to.
     template <typename OtherAbi>
-    explicit constexpr operator Simd<OtherAbi, T>() requires(
-        OtherAbi::size == Abi::size && OtherAbi::alignment <= Abi::alignment &&
-        OtherAbi::lanes == Abi::lanes) {
+        requires(OtherAbi::size == Abi::size &&
+                 OtherAbi::alignment <= Abi::alignment &&
+                 OtherAbi::lanes == Abi::lanes)
+    explicit constexpr operator Simd<OtherAbi, T>() {
         return this->raw;
     }
 
@@ -157,10 +159,10 @@ class alignas(InAbi::alignment.raw) Simd {
     // be explicitly converted to, and any underlying type for which this
     // `Simd`'s is compatible with, can be converted to.
     template <typename OtherAbi, typename U>
-    explicit constexpr operator Simd<OtherAbi, U>() requires(
-        is_convertible<U, T>&& OtherAbi::size == Abi::size &&
-        OtherAbi::alignment <= Abi::alignment &&
-        OtherAbi::lanes == Abi::lanes) {
+        requires(is_convertible<U, T>&& OtherAbi::size == Abi::size &&
+                 OtherAbi::alignment <= Abi::alignment &&
+                 OtherAbi::lanes == Abi::lanes)
+    explicit constexpr operator Simd<OtherAbi, U>() {
         return __builtin_convertvector(this->raw,
                                        typename Simd<OtherAbi, U>::Raw);
     }
