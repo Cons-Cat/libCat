@@ -25,12 +25,14 @@ namespace cat {
 
 auto load_base_stack_pointer() -> void*;
 
-// This must be inlined, or its semantics are incorrect.
+// This must be inlined to align the stack pointer on the stack frame it is
+// called from.
 [[gnu::always_inline]] inline void align_stack_pointer_16() {
     asm("and $-16, %rsp");
 }
 
-// This must be inlined, or its semantics are incorrect.
+// This must be inlined to align the stack pointer on the stack frame it is
+// called from.
 [[gnu::always_inline]] inline void align_stack_pointer_32() {
     asm("and $-32, %rsp");
 }
