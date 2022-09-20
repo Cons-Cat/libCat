@@ -16,7 +16,7 @@ namespace detail {
 // `nullopt` is consumed by `Optional` to represent an empty value.
 inline constexpr detail::NullOpt nullopt;
 
-	// Forward declarations.
+// Forward declarations.
 template <typename T>
 class Optional;
 
@@ -664,14 +664,14 @@ class Optional {
     // Move the `storage` unconditionally. Reference types cannot be moved.
     [[nodiscard]] constexpr auto value() && -> Value&& requires(
         !is_reference<Value>) {
-        return move(this->storage.value());
+        return move(this->storage).value();
     }
 
     // Move the const-qualified `storage` unconditionally. Reference types
     // cannot be moved.
     [[nodiscard]] constexpr auto value() const&& -> Value const&& requires(
         !is_reference<Value>) {
-        return move(this->storage.value());
+        return move(this->storage).value();
     }
 
     // Get the value held by a non-`const`-qualified `Optional`, or a
@@ -696,7 +696,7 @@ class Optional {
     // fallback value if it does not hold a value.
     [[nodiscard]] constexpr auto value_or(Value&& fallback) && -> Value&& {
         if (this->storage.has_value()) {
-            return move(this->storage.value());
+            return move(this->storage).value();
         }
         return move(fallback);
     }
@@ -705,7 +705,7 @@ class Optional {
     // value if it does not hold a value.
     [[nodiscard]] constexpr auto value_or(Value&& fallback) const&& -> Value&& {
         if (this->storage.has_value()) {
-            return move(this->storage.value());
+            return move(this->storage).value();
         }
         return move(fallback);
     }
@@ -786,7 +786,7 @@ class Optional {
         } else {
             if (this->has_value()) {
                 return Optional<U>{
-                    forward<Function>(callback)(move(this->value()))};
+                    forward<Function>(callback)(move(this)->value())};
             }
             return Optional<U>{nullopt};
         }
@@ -806,7 +806,7 @@ class Optional {
         } else {
             if (this->has_value()) {
                 return Optional<U>{
-                    forward<Function>(callback)(move(this->value()))};
+                    forward<Function>(callback)(move(this)->value())};
             }
             return Optional<U>{nullopt};
         }
@@ -905,7 +905,7 @@ class Optional {
             if constexpr (is_void<U>) {
                 forward<Function>(callback)();
             } else {
-                return move(forward<Function>(callback)());
+                return move(forward<Function>(callback))();
             }
         }
 
@@ -927,7 +927,7 @@ class Optional {
             if constexpr (is_void<U>) {
                 forward<Function>(callback)();
             } else {
-                return move(forward<Function>(callback)());
+                return move(forward<Function>(callback))();
             }
         }
 
@@ -988,7 +988,7 @@ class Optional {
     [[nodiscard]] auto or_exit(ssize exit_code = 1) const&& {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
-                return move(this->value());
+                return move(this)->value();
             } else {
                 return;
             }
@@ -1013,7 +1013,8 @@ class Optional {
     // Construct the value in-place and destroy the held value iff it
     // exists.
     template <typename... Args>
-    constexpr auto emplace(Args&&... args) -> Value& requires(!is_void<T>) {
+        requires(!is_void<T>)
+    constexpr auto emplace(Args&&... args) -> Value& {
         *this = nullopt;
         this->storage.construct(forward<Args>(args)...);
         return this->storage.value();

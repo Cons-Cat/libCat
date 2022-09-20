@@ -472,7 +472,7 @@ class Scaredy {
 
     [[nodiscard]] constexpr auto value_or(Value fallback) && {
         if (this->storage.has_value()) {
-            return move(*this)->storage.value();
+            return move(this->storage).value();
         }
         return fallback;
     }
@@ -486,7 +486,7 @@ class Scaredy {
 
     [[nodiscard]] constexpr auto value_or(Value fallback) const&& {
         if (this->storage.has_value()) {
-            return move(this)->storage.value();
+            return move(this->storage).value();
         }
         return fallback;
     }
@@ -539,7 +539,7 @@ class Scaredy {
         if (this->has_value()) {
             return This{forward<Function>(callback)(move(this)->value())};
         }
-        return This{move(this)->storage};
+        return This{move(this->storage)};
     }
 
     template <typename Function>
@@ -548,7 +548,7 @@ class Scaredy {
         if (this->has_value()) {
             return This{forward<Function>(callback)(move(this)->value())};
         }
-        return This{move(this)->storage};
+        return This{move(this->storage)};
     }
 
     template <typename Function>
@@ -570,7 +570,7 @@ class Scaredy {
         using This = Scaredy<T, Errors...>;
         return this->has_value()
                    ? forward<Function>(callback)(move(this)->value())
-                   : This{move(this)->storage};
+                   : This{move(this->storage)};
     }
 
     template <typename Function>
@@ -578,7 +578,7 @@ class Scaredy {
         using This = Scaredy<T, Errors...>;
         return this->has_value()
                    ? forward<Function>(callback)(move(this)->value())
-                   : This{move(this)->storage};
+                   : This{move(this->storage)};
     }
 
     template <typename Function>
@@ -648,7 +648,7 @@ class Scaredy {
     [[nodiscard]] auto or_exit(ssize exit_code = 1) && {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
-                return move(this->value());
+                return move(this)->value();
             } else {
                 return;
             }
@@ -660,7 +660,7 @@ class Scaredy {
     [[nodiscard]] auto or_exit(ssize exit_code = 1) const&& {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
-                return move(this->value());
+                return move(this)->value();
             } else {
                 return;
             }
@@ -701,7 +701,7 @@ class Scaredy {
                                ssize exit_code = 1) && {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
-                return this->value();
+                return move(this)->value();
             } else {
                 return;
             }
@@ -715,7 +715,7 @@ class Scaredy {
                                ssize exit_code = 1) const&& {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
-                return move(this->value());
+                return move(this)->value();
             } else {
                 return;
             }

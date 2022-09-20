@@ -300,7 +300,7 @@ template <typename T>
                                              ssize exit_code) && {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
-            return move(this->value());
+            return move(this)->value();
         } else {
             return;
         }
@@ -315,7 +315,7 @@ template <typename T>
                                              ssize exit_code) const&& {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
-            return move(this->value());
+            return move(this)->value();
         } else {
             return;
         }
