@@ -9,7 +9,6 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/runtime/
   ${CMAKE_SOURCE_DIR}/src/libraries/numerals/
   ${CMAKE_SOURCE_DIR}/src/libraries/simd/
-  ${CMAKE_SOURCE_DIR}/src/libraries/result/
   ${CMAKE_SOURCE_DIR}/src/libraries/debug/
   ${CMAKE_SOURCE_DIR}/src/libraries/variant/
   ${CMAKE_SOURCE_DIR}/src/libraries/scaredy/
