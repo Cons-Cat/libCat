@@ -2,47 +2,47 @@
 
 auto main() -> int {
     cat::Variant<int, char, uint4> variant(int{1});
-    Result(variant.is<int>()).or_exit();
-    Result(variant.holds_alternative<int>()).or_exit();
+    verify(variant.is<int>());
+    verify(variant.holds_alternative<int>());
     int foo_int = variant.get<int>();
-    Result(foo_int == 1).or_exit();
+    verify(foo_int == 1);
 
-    static_assert(variant.alternative_index<int> == 0u);
-    static_assert(variant.alternative_index<char> == 1u);
-    static_assert(variant.alternative_index<uint4> == 2u);
+    static_assert(variant.alternative_index<int> == 0);
+    static_assert(variant.alternative_index<char> == 1);
+    static_assert(variant.alternative_index<uint4> == 2);
 
     variant = 'o';
-    Result(variant.is<char>()).or_exit();
-    Result(variant.holds_alternative<char>()).or_exit();
+    verify(variant.is<char>());
+    verify(variant.holds_alternative<char>());
     char foo_char = variant.get<char>();
-    Result(foo_char == 'o').or_exit();
+    verify(foo_char == 'o');
 
     cat::Optional<char&> opt1 = variant.get_if<char>();
-    Result(opt1.has_value()).or_exit();
+    verify(opt1.has_value());
     cat::Optional opt2 = variant.get_if<int>();
-    Result(!opt2.has_value()).or_exit();
+    verify(!opt2.has_value());
 
     // Test variant subtype constructor and assignment operator.
     cat::Variant<int, char, uint4, int2> variant2 = variant;
-    Result(variant2.is<char>()).or_exit();
-    Result(variant2.holds_alternative<char>()).or_exit();
+    verify(variant2.is<char>());
+    verify(variant2.holds_alternative<char>());
     variant2 = 1;
-    Result(variant2.is<int>()).or_exit();
-    Result(variant2.holds_alternative<int>()).or_exit();
+    verify(variant2.is<int>());
+    verify(variant2.holds_alternative<int>());
     variant2 = variant;
-    Result(variant2.is<char>()).or_exit();
-    Result(variant2.holds_alternative<char>()).or_exit();
+    verify(variant2.is<char>());
+    verify(variant2.holds_alternative<char>());
 
     variant = 1;
     cat::Variant<int, char, uint4, int2> variant3 = variant;
-    Result(variant3.is<int>()).or_exit();
-    Result(variant3.holds_alternative<int>()).or_exit();
+    verify(variant3.is<int>());
+    verify(variant3.holds_alternative<int>());
     variant3 = int2{10};
-    Result(variant3.is<int2>()).or_exit();
-    Result(variant3.holds_alternative<int2>()).or_exit();
+    verify(variant3.is<int2>());
+    verify(variant3.holds_alternative<int2>());
     variant3 = variant;
-    Result(variant3.is<int>()).or_exit();
-    Result(variant3.holds_alternative<int>()).or_exit();
+    verify(variant3.is<int>());
+    verify(variant3.holds_alternative<int>());
 
     // Test getting variant type by index.
     static_assert(cat::is_same<decltype(variant3.get<0>()), int>);
@@ -56,16 +56,16 @@ auto main() -> int {
 
     // Test `.is()`.
     variant3 = int{1};
-    Result(variant3.is<int>()).or_exit();
-    Result(variant3.is(1)).or_exit();
+    verify(variant3.is<int>());
+    verify(variant3.is(1));
 
     variant3 = 'b';
-    Result(variant3.is<char>()).or_exit();
-    Result(variant3.is('b')).or_exit();
+    verify(variant3.is<char>());
+    verify(variant3.is('b'));
 
     // `.is()` accepts unconditionally invalid types, unlike
     // `.holds_alternative()`.
-    Result(!variant3.is<unsigned long long>()).or_exit();
+    verify(!variant3.is<unsigned long long>());
 
     // Test pattern matching.
     variant3 = int{1};
@@ -79,7 +79,7 @@ auto main() -> int {
             // This should match, because it is an `int`.
             matched = true;
         }));
-    Result(matched).or_exit();
+    verify(matched);
 
     matched = false;
     cat::match(variant3)(  //
@@ -89,7 +89,7 @@ auto main() -> int {
         is_a<int>().then([&]() {
             matched = true;
         }));
-    Result(matched).or_exit();
+    verify(matched);
 
     // `variant3` holds an integer, but floats are convertible to integers.
     matched = false;
@@ -100,7 +100,7 @@ auto main() -> int {
         is_a(1.f).then([&]() {
             matched = true;
         }));
-    Result(matched).or_exit();
+    verify(matched);
 
     // Test member access pattern matching syntax.
     matched = false;
@@ -111,5 +111,5 @@ auto main() -> int {
         is_a(1.f).then([&]() {
             matched = true;
         }));
-    Result(matched).or_exit();
+    verify(matched);
 };

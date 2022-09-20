@@ -3,7 +3,6 @@
 #pragma once
 
 #include <cat/compare>
-#include <cat/meta>
 
 // `Numeral` and `ArithmeticPtr` are containers for numeric data types which
 // prevents unsafe implicit type casts.

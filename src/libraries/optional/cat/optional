@@ -16,8 +16,11 @@ namespace detail {
 // `nullopt` is consumed by `Optional` to represent an empty value.
 inline constexpr detail::NullOpt nullopt;
 
+	// Forward declarations.
 template <typename T>
 class Optional;
+
+class String;
 
 // `OptionalValueStorage` holds a non-reference, non-pointer, non-`void` type
 // `T` and a `bool` flag to represent holding a value or not.
@@ -243,7 +246,7 @@ struct OptionalReferenceStorage {
     template <typename... Args>
     constexpr void construct(Args&&... args) {
         construct_at(this->p_storage, forward<Args>(args)...);
-        Result(this->has_value()).assert();
+        assert(this->has_value());
     }
 
     // If this is assigned an `Optional` which wraps a type that can be

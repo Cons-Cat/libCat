@@ -1,7 +1,5 @@
 #include <cat/match>
 
-#include "cat/meta"
-
 template <auto value>
 struct Nttp {
     static constexpr auto member = value;
@@ -80,19 +78,19 @@ auto main() -> int {
 
     [[maybe_unused]] bool is_less = (int_less < int_more);
     is_less = ((0 <=> int_more) < 0);
-    Result(is_less).or_exit();
+    verify(is_less);
     is_less = (0 < int_more);
-    Result(is_less).or_exit();
+    verify(is_less);
     is_less = (int_less < 2);
-    Result(is_less).or_exit();
+    verify(is_less);
 
     [[maybe_unused]] bool is_more = (int_more > int_less);
     is_more = ((0 <=> int_less) == 0);
-    Result(is_more).or_exit();
+    verify(is_more);
     is_more = (0 < int_more);
-    Result(is_more).or_exit();
+    verify(is_more);
     is_more = (int_less < 2);
-    Result(is_more).or_exit();
+    verify(is_more);
 
     // Test matching numerals.
     int4 match_int = 1;
@@ -106,7 +104,7 @@ auto main() -> int {
         is_a<int4>().then([&]() {
             matched = true;
         }));
-    Result(matched).or_exit();
+    verify(matched);
 
     // Match value.
     matched = false;
@@ -117,7 +115,7 @@ auto main() -> int {
         is_a(1).then([&]() {
             matched = true;
         }));
-    Result(matched).or_exit();
+    verify(matched);
 
     // Test unary operators.
     [[maybe_unused]] int4 negative_int4 = -1_i4;

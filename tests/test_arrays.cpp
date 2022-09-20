@@ -19,7 +19,7 @@ auto main() -> int {
 
     // `const` array.
     cat::Array<int4, 3> const array_const = {0, 1, 2};
-    [[maybe_unused]] int4 const_val = array_const.at(1).value();
+    [[maybe_unused]] int4 const_val = array_const.at(1).or_exit();
 
     // Repeat those tests in a constexpr context.
     auto constant = []() constexpr {
@@ -40,36 +40,36 @@ auto main() -> int {
 
     ssize count = 0;
     for (int4& a : array_1) {
-        Result(a == array_1[count]).or_exit();
+        verify(a == array_1[count]);
         ++count;
     }
 
     for (int4 const& a : cat::AsReverse(array_1)) {
         --count;
-        Result(a == array_1[count]).or_exit();
+        verify(a == array_1[count]);
     }
 
-    Result(array_1.front() == 5).or_exit();
-    Result(array_1.back() == 9).or_exit();
+    verify(array_1.front() == 5);
+    verify(array_1.back() == 9);
 
     count = 0;
     for (int4 const& a : cat::AsConst(array_1)) {
-        Result(a == array_1[count]).or_exit();
+        verify(a == array_1[count]);
         ++count;
     }
     _ = array_1.cbegin();
 
     for (int4 const& a : cat::AsConstReverse(array_1)) {
         --count;
-        Result(a == array_1[count]).or_exit();
+        verify(a == array_1[count]);
     }
 
     int4 array_to = *(array_1.begin().advance_to(--array_1.end()));
-    Result(array_to == array_1.back()).or_exit();
+    verify(array_to == array_1.back());
 
     // Index in and out of bounds.
-    Result(array_1.at(0).value() == 5).or_exit();
-    Result(!array_1.at(6).has_value()).or_exit();
+    verify(array_1.at(0).value() == 5);
+    verify(!array_1.at(6).has_value());
 
     // Deducing type.
     cat::Array implicit_array_1 = {0, 1, 2, 3, 4};
@@ -84,10 +84,10 @@ auto main() -> int {
     // Max elements.
     // constexpr cat::Array array_4 = {0, 2, 8, 5};
     // constexpr int4 max_1 = cat::max(array_4);
-    // Result(max_1 == 8).or_exit();
+    // verify(max_1 == 8);
 
     // int4 min_1 = cat::min(array_4);
-    // Result(min_1 == 0).or_exit();
+    // verify(min_1 == 0);
 
     // TODO: String deduction:
     //     cat::Array implicit_string = "Hi, Conscat!";
@@ -108,17 +108,17 @@ auto main() -> int {
     // Test `IntegerList`.
     cat::Array<int4, 5> int_array = cat::value_list<int4, 0, 5>;
     for (int4& i : int_array) {
-        Result(i == 0).or_exit();
+        verify(i == 0);
     }
 
     int_array = cat::value_list<int4, 1, 5>;
     for (int4& i : int_array) {
-        Result(i == 1).or_exit();
+        verify(i == 1);
     }
 
     int_array = cat::integer_sequence<int4, 5>;
     for (int i = 0; i < int_array.size(); ++i) {
-        Result(int_array[i] == i).or_exit();
+        verify(int_array[i] == i);
     }
 
     [[maybe_unused]] cat::Array int_array_2 = cat::value_list<int4, 0, 5>;
@@ -137,10 +137,10 @@ auto main() -> int {
     // Test array fill.
     cat::Array filled_array = cat::Array<int4, 8>::filled(6);
     for (ssize i = 0; i < 8; ++i) {
-        Result(filled_array[i] == 6).or_exit();
+        verify(filled_array[i] == 6);
     }
     filled_array.fill(9);
     for (ssize i = 0; i < 8; ++i) {
-        Result(filled_array[i] == 9).or_exit();
+        verify(filled_array[i] == 9);
     }
 };

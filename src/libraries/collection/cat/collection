@@ -74,7 +74,9 @@ class CollectionFacade {
     [[nodiscard]] constexpr auto at(ssize index) -> Optional<T&>
         requires(this->is_array_like)
     {
-        Result(index >= 0).assert();
+        if (!is_constant_evaluated()) {
+            assert(index >= 0);
+        }
         if (index < this->self().capacity()) {
             return this->self_mut().p_data()[index.raw];
         }
@@ -107,8 +109,11 @@ class CollectionFacade {
         -> Span<T>
         requires(this->is_array_like)
     {
-        Result{start_index >= 0}.assert();
-        Result{end_index <= this->self().capacity()}.assert();
+        if (!is_constant_evaluated()) {
+            assert(start_index >= 0);
+            assert(end_index <= this->self().capacity());
+        }
+
         return Span<T>(this->self().p_data() + start_index,
                        end_index - start_index);
     }
@@ -117,8 +122,11 @@ class CollectionFacade {
                                          ssize end_index) const -> Span<T const>
         requires(this->is_array_like)
     {
-        Result{start_index >= 0}.assert();
-        Result{end_index <= this->self().capacity()}.assert();
+        if (!is_constant_evaluated()) {
+            assert(start_index >= 0);
+            assert(end_index <= this->self().capacity());
+        }
+
         return Span<T const>(this->self().p_data() + start_index,
                              end_index - start_index);
     }
@@ -142,8 +150,10 @@ class CollectionFacade {
     template <integral U>
         requires(is_array_like)
     [[nodiscard]] constexpr auto operator[](U index) -> T& {
-        Result{index >= 0}.assert();
-        Result{index < this->self().size()}.assert();
+        if (!is_constant_evaluated()) {
+            assert(index >= 0);
+            assert(index < this->self().size());
+        }
 
         return this->self_mut().p_data()[to_raw_numeral(index)];
     }
@@ -151,8 +161,10 @@ class CollectionFacade {
     template <integral U>
         requires(is_array_like)
     [[nodiscard]] constexpr auto operator[](U index) const -> T const& {
-        Result{index >= 0}.assert();
-        Result{index < this->self().size()}.assert();
+        if (!is_constant_evaluated()) {
+            assert(index >= 0);
+            assert(index < this->self().size());
+        }
 
         return this->self().p_data()[to_raw_numeral(index)];
     }

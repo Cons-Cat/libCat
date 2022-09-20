@@ -198,9 +198,9 @@ struct Atomic {
     void store(auto storing, MemoryOrder operand = MemoryOrder::seq_cst) {
         MemoryOrder test_value [[maybe_unused]] = operand & detail::mask;
 
-        Result(test_value != MemoryOrder::acquire).assert();
-        Result(test_value != MemoryOrder::acq_rel).assert();
-        Result(test_value != MemoryOrder::consume).assert();
+        assert(test_value != MemoryOrder::acquire);
+        assert(test_value != MemoryOrder::acq_rel);
+        assert(test_value != MemoryOrder::consume);
 
         __atomic_store_n(&this->value, storing, operand);
     }
@@ -209,9 +209,9 @@ struct Atomic {
                MemoryOrder order = MemoryOrder::seq_cst) volatile {
         MemoryOrder test_value [[maybe_unused]] = order & detail::mask;
 
-        Result(test_value != MemoryOrder::acquire).assert();
-        Result(test_value != MemoryOrder::acq_rel).assert();
-        Result(test_value != MemoryOrder::consume).assert();
+        assert(test_value != MemoryOrder::acquire);
+        assert(test_value != MemoryOrder::acq_rel);
+        assert(test_value != MemoryOrder::consume);
 
         __atomic_store_n(&this->value, operand, order);
     }
@@ -219,8 +219,8 @@ struct Atomic {
     auto load(MemoryOrder order = MemoryOrder::seq_cst) const -> T {
         MemoryOrder test_value [[maybe_unused]] = order & detail::mask;
 
-        Result(test_value != MemoryOrder::release).assert();
-        Result(test_value != MemoryOrder::acq_rel).assert();
+        assert(test_value != MemoryOrder::release);
+        assert(test_value != MemoryOrder::acq_rel);
 
         return __atomic_load_n(&this->value, order);
     }
@@ -228,8 +228,8 @@ struct Atomic {
     auto load(MemoryOrder order = MemoryOrder::seq_cst) const volatile -> T {
         MemoryOrder test_value [[maybe_unused]] = order & detail::mask;
 
-        Result(test_value != MemoryOrder::release).assert();
-        Result(test_value != MemoryOrder::acq_rel).assert();
+        assert(test_value != MemoryOrder::release);
+        assert(test_value != MemoryOrder::acq_rel);
 
         return __atomic_load_n(&this->value, order);
     }
@@ -249,9 +249,9 @@ struct Atomic {
         MemoryOrder test_value1 [[maybe_unused]] = success_order & detail::mask;
         MemoryOrder test_value2 [[maybe_unused]] = failure_order & detail::mask;
 
-        Result(test_value2 != MemoryOrder::release).assert();
-        Result(test_value2 != MemoryOrder::acq_rel).assert();
-        Result(test_value2 <= test_value1).assert();
+        assert(test_value2 != MemoryOrder::release);
+        assert(test_value2 != MemoryOrder::acq_rel);
+        assert(test_value2 <= test_value1);
 
         return __atomic_compare_exchange_n(&this->value, &operand,
                                            success_value, 1, success_order,
@@ -264,9 +264,9 @@ struct Atomic {
         MemoryOrder test_value1 [[maybe_unused]] = success_order & detail::mask;
         MemoryOrder test_value2 [[maybe_unused]] = failure_order & detail::mask;
 
-        Result(test_value2 != MemoryOrder::release).assert();
-        Result(test_value2 != MemoryOrder::acq_rel).assert();
-        Result(test_value2 <= test_value1).assert();
+        assert(test_value2 != MemoryOrder::release);
+        assert(test_value2 != MemoryOrder::acq_rel);
+        assert(test_value2 <= test_value1);
 
         return __atomic_compare_exchange_n(&this->value, &operand,
                                            success_value, 1, success_order,
@@ -293,9 +293,9 @@ struct Atomic {
         MemoryOrder test_value1 [[maybe_unused]] = success_order & detail::mask;
         MemoryOrder test_value2 [[maybe_unused]] = failure_order & detail::mask;
 
-        Result(test_value2 != MemoryOrder::release).assert();
-        Result(test_value2 != MemoryOrder::acq_rel).assert();
-        Result(test_value2 <= test_value1).assert();
+        assert(test_value2 != MemoryOrder::release);
+        assert(test_value2 != MemoryOrder::acq_rel);
+        assert(test_value2 <= test_value1);
 
         return __atomic_compare_exchange_n(&this->value, &operand,
                                            success_value, 0, success_order,
@@ -308,9 +308,9 @@ struct Atomic {
         MemoryOrder test_value1 [[maybe_unused]] = success_order & detail::mask;
         MemoryOrder test_value2 [[maybe_unused]] = failure_order & detail::mask;
 
-        Result(test_value2 != MemoryOrder::release).assert();
-        Result(test_value2 != MemoryOrder::acq_rel).assert();
-        Result(test_value2 <= test_value1).assert();
+        assert(test_value2 != MemoryOrder::release);
+        assert(test_value2 != MemoryOrder::acq_rel);
+        assert(test_value2 <= test_value1);
 
         return __atomic_compare_exchange_n(&this->value, &operand,
                                            success_value, 0, success_order,

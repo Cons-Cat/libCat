@@ -2,6 +2,9 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/meta>
+#include <cat/utility>
+
 // libCat provides userland pattern matching to simplify variant visitation in
 // some cases. `cat::match()` takes a generic argument, then produces a callable
 // `cat::detail::MatchPatterns` that holds a non-`const` reference to the

@@ -40,20 +40,20 @@ auto main() -> int {
     cat::UniqueWeak<Foo> foo(cat::String("foo"));
     // Test assignment.
     foo = cat::String("foo");
-    Result(foo.has_ownership()).or_exit();
+    verify(foo.has_ownership());
 
     cat::UniqueWeak<Foo> moo(cat::String("moo"));
-    Result(moo.has_ownership()).or_exit();
+    verify(moo.has_ownership());
 
     // Test move-assignment.
     _ = cat::println("Move moo into foo.");
     foo = cat::move(moo);
-    Result(!moo.has_ownership()).or_exit();
+    verify(!moo.has_ownership());
 
     _ = cat::println("Move foo into func().");
     // `cat::move()` is required:
     func(cat::move(foo));
-    Result(!foo.has_ownership()).or_exit();
+    verify(!foo.has_ownership());
 
     // This is deliberately ill-formed:
     // func(foo);
@@ -62,27 +62,27 @@ auto main() -> int {
 
     // Default construct `	cat::Unique<Foo>`.
     cat::UniqueWeak<Foo> goo;
-    Result(goo.has_ownership()).or_exit();
+    verify(goo.has_ownership());
     // Extract goo.
     _ = goo.borrow();
-    Result(!goo.has_ownership()).or_exit();
+    verify(!goo.has_ownership());
 
     // `raii()` should have been called exactly three times.
-    Result(global == 3).or_exit();
+    verify(global == 3);
 
     // Deduction guides should work.
     cat::UniqueWeak weak = 1;
     cat::Unique unique = weak.borrow();
 
     // Borrowing `weak`'s data makes it lose ownership.
-    Result(!weak.has_ownership()).or_exit();
+    verify(!weak.has_ownership());
     weak = 2;
-    Result(weak.has_ownership()).or_exit();
+    verify(weak.has_ownership());
 
     // Permanately transferring ownership a `cat::Unique`'s storage is unsafe,
     // but possible:
     weak = unique.borrow();
-    Result(weak.has_ownership()).or_exit();
+    verify(weak.has_ownership());
 
     // `cat::Unique` can be assigned over, which will call its old data's
     // destructor.

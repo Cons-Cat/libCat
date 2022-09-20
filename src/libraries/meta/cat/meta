@@ -6,28 +6,15 @@
 // `typename` is not used for these type aliases. When that is solved, they
 // should be streamlined out.
 
-// These forward declarations are required.
-namespace cat {
-template <typename T>
-struct RemoveReferenceTrait;
-template <typename>
-struct IsLvalueReferenceTrait;
-}  // namespace cat
-
-namespace std {
-template <typename T>
-constexpr auto move(T&& input) -> typename cat::RemoveReferenceTrait<T>::Type&&;
-template <typename T>
-constexpr auto forward(typename cat::RemoveReferenceTrait<T>::Type& input)
-    -> T&&;
-template <typename T>
-constexpr auto forward(typename cat::RemoveReferenceTrait<T>::Type&& input)
-    -> T&& requires(!cat::IsLvalueReferenceTrait<T>::value);
-}  // namespace std
+// // These forward declarations are required.
+// namespace cat {
+// template <typename T>
+// struct RemoveReferenceTrait;
+// template <typename>
+// struct IsLvalueReferenceTrait;
+// }  // namespace cat
 
 namespace cat {
-using std::forward;
-using std::move;
 
 // Forward declare numeric types. These are implemented in `<numeral>`.
 template <typename T>
@@ -580,6 +567,24 @@ inline constexpr bool is_trivially_copyable = __is_trivially_copyable(T);
 template <typename T>
 inline constexpr bool is_trivial =
     is_trivially_copyable<T>&& is_trivially_default_constructible<T>;
+
+}  // namespace cat
+
+// Forward declare these from `<cat/utility>`.
+namespace std {
+template <typename T>
+constexpr auto move(T&& input) -> cat::RemoveReference<T>&&;
+template <typename T>
+constexpr auto forward(cat::RemoveReference<T>& input) -> T&&;
+template <typename T>
+    requires(!cat::is_lvalue_reference<T>)
+constexpr auto forward(cat::RemoveReference<T>&& input) -> T&&;
+}  // namespace std
+
+namespace cat {
+
+using std::forward;
+using std::move;
 
 // `rvalue` binds r-value references and excludes any other references. This is
 // useful for perfect-forwarding parameter functions which could otherwise hide

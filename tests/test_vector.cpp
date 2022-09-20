@@ -25,69 +25,69 @@ auto main() -> int {
 
     // Test default constructing a `Vector`.
     cat::Vector<int4> int_vec;
-    Result(int_vec.size() == 0).or_exit();
-    Result(int_vec.capacity() == 0).or_exit();
+    verify(int_vec.size() == 0);
+    verify(int_vec.capacity() == 0);
 
     // Test pushing back to a `Vector`.
     int_vec.push_back(allocator, 1).or_exit();
     int_vec.push_back(allocator, 2).or_exit();
     int_vec.push_back(allocator, 3).or_exit();
-    Result(int_vec.size() == 3).or_exit();
-    Result(int_vec.capacity() == 4).or_exit();
+    verify(int_vec.size() == 3);
+    verify(int_vec.capacity() == 4);
 
     int_vec.push_back(allocator, 6).or_exit();
     int_vec.push_back(allocator, 12).or_exit();
     int_vec.push_back(allocator, 24).or_exit();
-    Result(int_vec.size() == 6).or_exit();
-    Result(int_vec.capacity() == 8).or_exit();
+    verify(int_vec.size() == 6);
+    verify(int_vec.capacity() == 8);
 
     // Test resizing a `Vector`.
     int_vec.resize(allocator, 0).or_exit();
-    Result(int_vec.size() == 0).or_exit();
-    Result(int_vec.capacity() == 8).or_exit();
+    verify(int_vec.size() == 0);
+    verify(int_vec.capacity() == 8);
 
     int_vec.resize(allocator, 4).or_exit();
-    Result(int_vec.size() == 4).or_exit();
-    Result(int_vec.capacity() == 8).or_exit();
+    verify(int_vec.size() == 4);
+    verify(int_vec.capacity() == 8);
 
     // Test reserving storage for a `Vector`.
     int_vec.reserve(allocator, 128).or_exit();
-    Result(int_vec.size() == 4).or_exit();
-    Result(int_vec.capacity() == 128).or_exit();
+    verify(int_vec.size() == 4);
+    verify(int_vec.capacity() == 128);
 
     // Test reserve constructor.
     cat::Vector reserved_vec =
         cat::Vector<int4>::reserved(allocator, 6).or_exit();
-    Result(reserved_vec.capacity() == 6).or_exit();
+    verify(reserved_vec.capacity() == 6);
 
     // Test filled constructor.
     cat::Vector filled_vec =
         cat::Vector<int4>::filled(allocator, 8, 1).or_exit();
-    Result(filled_vec.size() == 8).or_exit();
-    Result(filled_vec.capacity() == 8).or_exit();
+    verify(filled_vec.size() == 8);
+    verify(filled_vec.capacity() == 8);
     for (int4 integer : filled_vec) {
-        Result(integer == 1).or_exit();
+        verify(integer == 1);
     }
 
     // Test cloned constructor.
     cat::Vector cloned_vec =
         cat::Vector<int4>::cloned(allocator, filled_vec).or_exit();
-    Result(cloned_vec.size() == 8).or_exit();
-    Result(cloned_vec.capacity() == 8).or_exit();
+    verify(cloned_vec.size() == 8);
+    verify(cloned_vec.capacity() == 8);
     for (int4 integer : cloned_vec) {
-        Result(integer == 1).or_exit();
+        verify(integer == 1);
     }
 
     // Test from constructor.
     cat::Vector from_vec_1 =
         cat::Vector<int4>::from(allocator, cat::value_list<int4, 5, 10>)
             .value();
-    Result(from_vec_1.capacity() == 10).or_exit();
-    Result(from_vec_1.size() == 10).or_exit();
+    verify(from_vec_1.capacity() == 10);
+    verify(from_vec_1.size() == 10);
     cat::Vector from_vec_2 =
         cat::Vector<int4>::from(allocator, 1, 2, 3, 4).value();
-    Result(from_vec_2.capacity() == 4).or_exit();
-    Result(from_vec_2.size() == 4).or_exit();
+    verify(from_vec_2.capacity() == 4);
+    verify(from_vec_2.size() == 4);
 
     // Test `Vector` in a `constexpr` context.
     static_assert(const_func() == 10);

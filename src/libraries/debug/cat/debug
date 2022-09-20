@@ -2,10 +2,6 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/format>
-#include <cat/linear_allocator>
-#include <cat/linux>
-
 namespace std {
 
 // NOLINTNEXTLINE This must be snake_case.
@@ -55,127 +51,41 @@ class source_location {
 
 namespace cat {
 
+class String;
 using SourceLocation = std::source_location;
 
-void breakpoint() {
-    // TODO: Arm and Windows support.
-#ifdef __x86_64__
-    // For x86-64, insert a breakpoint interrupt instruction.
-    asm volatile("int3");
-#else
-    // Without hardware support, raise SIGILL, which breaks in a debugger.
-    nix::raise_here(nix::Signal::illegal_instruction);
-#endif
-}
+void breakpoint();
 
-namespace detail {
-    void print_assert_location(
-        SourceLocation const& callsite = SourceLocation::current()) {
-        Array<Byte, 128> buffer;
-        LinearAllocator allocator{buffer.p_data(), buffer.size()};
-        _ = eprint(format(allocator, "assert failed on line {}, in:\n    ",
-                          callsite.line())
-                       // This `format()` call cannot possibly fail.
-                       .value());
-        // TODO: Truncate to only the last one or two directories.
-        _ = eprint(callsite.file_name());
-        _ = eprint("\ncalled from:\n    ");
-        _ = eprintln(callsite.function_name());
-    }
+// TODO: Allow `assert()` and `verify()` in a `constexpr` context, and make them
+// throw if their invariant holds false.
 
-    void default_assert_handler(SourceLocation const& callsite) {
-        detail::print_assert_location(callsite);
-
-        // TODO: Colorize this input prompt.
-        _ = print("Press: 1 (Continue), 2 (Debug), 3 (Abort)\n");
-
-        while (true) {
-            char input = nix::read_char().or_exit();
-            if (input >= '1' && input <= '3') {
-                // ASCII trick that converts an inputted char to a digit.
-                uint1 digit = input - 49_u1;
-
-                // The value of `digit` is one less than what was inputted.
-                switch (digit.raw) {
-                    case 0:
-                        // Ignore the assert failure.
-                        return;
-                    case 1:
-                        // Break in a debugger.
-                        breakpoint();
-                        return;
-                    case 2:
-                        // Abort the program.
-                        _ = eprint("Program aborted!\n");
-                        exit(1);
-                    default:
-                        __builtin_unreachable();
-                }
-
-                return;
-            }
-            _ = eprint("Invalid input!\n");
-        }
-    }
-}  // namespace detail
+void assert_handler(SourceLocation const& callsite);
 
 // Check that an expression holds true in all builds. If it holds false, invoke
 // an assert handler.
 void verify(bool invariant_expression,
-            void (*p_assert_handler)(SourceLocation const&) =
-                detail::default_assert_handler,
-            SourceLocation const& callsite = SourceLocation::current()) {
-    if (invariant_expression) [[likely]] {
-        return;
-    }
-
-    p_assert_handler(callsite);
-    __builtin_unreachable();
-}
+            void (*p_assert_handler)(SourceLocation const&) = assert_handler,
+            SourceLocation const& callsite = SourceLocation::current());
 
 // Check that an expression holds true in all builds. If it holds false, print
 // `error_string` and invoke an assert handler.
 void verify(bool invariant_expression, String const error_string,
-            void (*p_assert_handler)(SourceLocation const&) =
-                detail::default_assert_handler,
-            SourceLocation const& callsite = SourceLocation::current()) {
-    if (invariant_expression) [[likely]] {
-        return;
-    }
-    _ = eprint("\n");
-    _ = eprintln(error_string);
-
-    p_assert_handler(callsite);
-    __builtin_unreachable();
-}
-
-// Because `assert()`'s arguments are not passed into `verify()` when `NDEBUG`
-// is defined, the compiler should not warn when they are unused.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
+            void (*p_assert_handler)(SourceLocation const&) = assert_handler,
+            SourceLocation const& callsite = SourceLocation::current());
 
 // Check that an expression holds true when `NDEBUG` is not defined. If it holds
 // false, invoke an assert handler.
 void assert(bool invariant_expression,
-            void (*p_assert_handler)(SourceLocation const&) =
-                detail::default_assert_handler,
-            SourceLocation const& callsite = SourceLocation::current()) {
-#ifndef NDEBUG
-    verify(invariant_expression, p_assert_handler, callsite);
-#endif
-}
+            void (*p_assert_handler)(SourceLocation const&) = assert_handler,
+            SourceLocation const& callsite = SourceLocation::current());
 
 // Check that an expression holds true when `NDEBUG` is not defined. If it
 // holds false, print `error_string` and invoke an assert handler.
 void assert(bool invariant_expression, String const error_string,
-            void (*p_assert_handler)(SourceLocation const&) =
-                detail::default_assert_handler,
-            SourceLocation const& callsite = SourceLocation::current()) {
-#ifndef NDEBUG
-    verify(invariant_expression, error_string, p_assert_handler, callsite);
-#endif
-}
-
-#pragma GCC diagnostic pop
+            void (*p_assert_handler)(SourceLocation const&) = assert_handler,
+            SourceLocation const& callsite = SourceLocation::current());
 
 }  // namespace cat
+
+using cat::assert;
+using cat::verify;

@@ -45,37 +45,37 @@ struct ConstNonTrivial {
 auto main() -> int {
     // Initialize empty.
     cat::Optional<int4> foo(nullopt);
-    Result(!foo.has_value()).or_exit();
+    verify(!foo.has_value());
 
     cat::Optional<int4> inplace_1{};
-    Result(!inplace_1.has_value()).or_exit();
+    verify(!inplace_1.has_value());
 
     // `int4` default-initializes to 0.
     cat::Optional<int4> inplace_2{in_place};
-    Result(inplace_2.value() == 0).or_exit();
+    verify(inplace_2.value() == 0);
 
     // Assign a value.
     foo = 1;
-    Result(foo.has_value()).or_exit();
+    verify(foo.has_value());
 
     // Remove a value.
     foo = nullopt;
-    Result(!foo.has_value()).or_exit();
+    verify(!foo.has_value());
 
     // Unwrap a value.
     cat::Optional<int4> moo = 1;
     moo = 2;
-    Result(moo.value() == 2).or_exit();
+    verify(moo.value() == 2);
 
     moo = nullopt;
-    Result(moo.value_or(100) == 100).or_exit();
+    verify(moo.value_or(100) == 100);
 
     // `Optional` reference.
     cat::Optional<int4&> ref(nullopt);
     cat::Optional<int4&> ref_2 = nullopt;
 
-    Result(!ref.has_value()).or_exit();
-    Result(!ref_2.has_value()).or_exit();
+    verify(!ref.has_value());
+    verify(!ref_2.has_value());
 
     // Rebind.
     int4 goo = 1;
@@ -85,26 +85,26 @@ auto main() -> int {
 
     // Because `boo` was rebinded when assigned `nullopt`, `ref` should still
     // hold a value.
-    Result(ref.has_value()).or_exit();
+    verify(ref.has_value());
 
-    Result(ref.value() == 1).or_exit();
+    verify(ref.value() == 1);
     goo = 2;
-    Result(ref.value() == 2).or_exit();
+    verify(ref.value() == 2);
 
     int4 goo_2 = 3;
     // `ref` is rebinded to `goo_2`, instead of `3` assigning through into
     // `goo`.
     ref = goo_2;
-    Result(goo == 2).or_exit();
+    verify(goo == 2);
     goo = 0;
-    Result(ref.value() == 3).or_exit();
+    verify(ref.value() == 3);
 
     ref = nullopt;
-    Result(!ref.has_value()).or_exit();
+    verify(!ref.has_value());
 
     ref_2 = goo;
-    Result(ref_2.has_value()).or_exit();
-    Result(ref_2.value() == goo).or_exit();
+    verify(ref_2.has_value());
+    verify(ref_2.value() == goo);
 
     // `Optional` with a predicate.
     cat::Optional<cat::Compact<int4,
@@ -113,20 +113,20 @@ auto main() -> int {
                                },
                                -1>>
         positive(nullopt);
-    Result(!positive.has_value()).or_exit();
+    verify(!positive.has_value());
 
     positive = -10;
-    Result(!positive.has_value()).or_exit();
+    verify(!positive.has_value());
 
     positive = 0;
-    Result(positive.has_value()).or_exit();
+    verify(positive.has_value());
     _ = positive.or_exit();
 
     positive = 10;
-    Result(positive.has_value()).or_exit();
+    verify(positive.has_value());
 
     positive = nullopt;
-    Result(!positive.has_value()).or_exit();
+    verify(!positive.has_value());
 
     // `Optional<void>` with a predicate.
     cat::Optional<cat::Compact<cat::MonostateStorage<int, 0>,
@@ -135,33 +135,33 @@ auto main() -> int {
                                },
                                -1>>
         predicate_void(nullopt);
-    Result(!predicate_void.has_value()).or_exit();
+    verify(!predicate_void.has_value());
     predicate_void = monostate;
-    Result(predicate_void.has_value()).or_exit();
+    verify(predicate_void.has_value());
     _ = predicate_void.or_exit();
 
     // Test the sentinel predicate.
     cat::Optional<cat::Sentinel<int4, 0>> nonzero = nullopt;
-    Result(!nonzero.has_value()).or_exit();
+    verify(!nonzero.has_value());
 
     nonzero = 1;
-    Result(nonzero.has_value()).or_exit();
+    verify(nonzero.has_value());
 
     nonzero = 0;
-    Result(!nonzero.has_value()).or_exit();
+    verify(!nonzero.has_value());
 
     // Test `OptionalPtr`.
     int4 get_addr = 0;
     cat::OptionalPtr<int4> opt_ptr = &get_addr;
-    Result(opt_ptr.has_value()).or_exit();
-    Result(opt_ptr.value() == &get_addr).or_exit();
-    Result(*opt_ptr.value() == 0).or_exit();
-    Result(opt_ptr.p_value() == &get_addr).or_exit();
+    verify(opt_ptr.has_value());
+    verify(opt_ptr.value() == &get_addr);
+    verify(*opt_ptr.value() == 0);
+    verify(opt_ptr.p_value() == &get_addr);
 
     opt_ptr = nullopt;
-    Result(!opt_ptr.has_value()).or_exit();
+    verify(!opt_ptr.has_value());
     opt_ptr = nullptr;
-    Result(!opt_ptr.has_value()).or_exit();
+    verify(!opt_ptr.has_value());
 
     // Converting assignments. `foo` is `int4`.
     foo = int{1};
@@ -171,57 +171,52 @@ auto main() -> int {
     moo = 2;
 
     // Type converting transform.
-    Result(moo.transform([](int4 input) -> uint8 {
+    verify(moo.transform([](int4 input) -> uint8 {
                   return static_cast<uint8>(input * 2);
               })
-               .value() == 4u)
-        .or_exit();
+               .value() == 4u);
 
     moo.or_else([] {
         cat::exit(1);
     });
 
     moo = nullopt;
-    Result(!moo.transform([](int4 input) {
+    verify(!moo.transform([](int4 input) {
                    return input * 2;
                })
-                .has_value())
-        .or_exit();
+                .has_value());
 
     _ = moo.and_then([](int4 input) -> cat::Optional<int4> {
         cat::exit(1);
         return input;
     });
 
-    Result(!moo.transform([](int4 input) {
+    verify(!moo.transform([](int4 input) {
                    return input * 2;
                })
                 .and_then([](int4 input) -> cat::Optional<int4> {
                     return input;
                 })
-                .has_value())
-        .or_exit();
+                .has_value());
 
     positive = nullopt;
-    Result(!positive
+    verify(!positive
                 .transform([](int4 input) -> int4 {
                     return input * 2;
                 })
-                .has_value())
-        .or_exit();
+                .has_value());
 
-    Result(!positive
+    verify(!positive
                 .transform([](int4 input) {
                     return input * 2;
                 })
                 .and_then([](int4 input) -> cat::Optional<int4> {
                     return input;
                 })
-                .has_value())
-        .or_exit();
+                .has_value());
 
     decltype(positive) default_predicate_1{};
-    Result(!default_predicate_1.has_value()).or_exit();
+    verify(!default_predicate_1.has_value());
 
     // Test function calls.
     auto return_int = [](int4 input) -> int4 {
@@ -252,49 +247,49 @@ auto main() -> int {
 
     cat::Optional<int4> monadic_int;
     monadic_int = return_none(0).and_then(return_opt);
-    Result(!monadic_int.has_value()).or_exit();
+    verify(!monadic_int.has_value());
 
     monadic_int = return_opt(1).transform(return_int);
-    Result(monadic_int.has_value()).or_exit();
-    Result(monadic_int.value() == 2).or_exit();
+    verify(monadic_int.has_value());
+    verify(monadic_int.value() == 2);
 
     cat::Optional<void> monadic_void =
         return_opt(1).transform(return_int).transform(return_void);
-    Result(monadic_void.has_value()).or_exit();
+    verify(monadic_void.has_value());
 
     // Test monadic methods on reference types.
     int4 monadic_int_ref = 1;
     cat::Optional<void> monadic_void_ref =
         cat::Optional{monadic_int_ref}.and_then(return_opt_void);
     // Be sure that this did not assign through.
-    Result(monadic_void_ref.has_value()).or_exit();
+    verify(monadic_void_ref.has_value());
 
     // The default value of `int4` is `0`.
     decltype(positive) default_predicate_2{in_place};
-    Result(default_predicate_2.value() == 0).or_exit();
+    verify(default_predicate_2.value() == 0);
 
     // Test monadic methods on move-only types.
     cat::Optional<cat::Unique<int4>> monadic_move = 1;
     monadic_move = return_none(0).and_then(return_opt);
-    Result(!monadic_move.has_value()).or_exit();
+    verify(!monadic_move.has_value());
 
     monadic_move = return_opt(1).transform(return_int);
-    Result(monadic_move.has_value()).or_exit();
-    Result(monadic_move.value().borrow() == 2).or_exit();
+    verify(monadic_move.has_value());
+    verify(monadic_move.value().borrow() == 2);
 
     // Test copying `Optional`s into other `Optional`s.
     cat::Optional<int4> opt_original = 10;
     cat::Optional<int4> opt_copy_1 = cat::Optional{opt_original};
     cat::Optional<int4> opt_copy_2 = opt_original;
-    Result(opt_copy_1.value() = 10).or_exit();
-    Result(opt_copy_2.value() = 10).or_exit();
+    verify(opt_copy_1.value() == 10);
+    verify(opt_copy_2.value() == 10);
 
     // Getting pointers.
     foo = 1;
     int4 const& ref_foo = foo.value();
-    Result(&ref_foo == &foo.value()).or_exit();
-    Result(foo.p_value() == &foo.value()).or_exit();
-    Result(foo.p_value() == addressof(foo.value())).or_exit();
+    verify(&ref_foo == &foo.value());
+    verify(foo.p_value() == &foo.value());
+    verify(foo.p_value() == addressof(foo.value()));
 
     // Test non-trivial reference.
     NonTrivial nontrivial_val;
@@ -332,9 +327,9 @@ auto main() -> int {
     int4 nonconstant_int = 10;
     int4 const constant_int = 9;
     cat::Optional<int4 const&> constant_ref = constant_int;
-    Result(constant_ref.value() == 9).or_exit();
+    verify(constant_ref.value() == 9);
     constant_ref = nonconstant_int;
-    Result(constant_ref.value() == 10).or_exit();
+    verify(constant_ref.value() == 10);
 
     // Test move-only types.
     Movable mov;
@@ -342,44 +337,44 @@ auto main() -> int {
 
     // Non-trivial constructor and destructor.
     cat::Optional<NonTrivial> nontrivial = NonTrivial();
-    Result(nontrivial.value().data == 2).or_exit();
+    verify(nontrivial.value().data == 2);
 
     // `Optional<void>` default-initializes empty:
     cat::Optional<void> optvoid;
-    Result(!optvoid.has_value()).or_exit();
+    verify(!optvoid.has_value());
     // `monostate` initializes a value:
     cat::Optional<void> optvoid_2{monostate};
-    Result(optvoid_2.has_value()).or_exit();
+    verify(optvoid_2.has_value());
 
     // `in_place` initializes a value:
     cat::Optional<void> optvoid_4{in_place};
-    Result(optvoid_4.has_value()).or_exit();
+    verify(optvoid_4.has_value());
     // `nullopt` initializes empty:
     cat::Optional<void> optvoid_5{nullopt};
-    Result(!optvoid_5.has_value()).or_exit();
+    verify(!optvoid_5.has_value());
 
     cat::Optional<NonTrivial> in_place_nontrivial_1{in_place};
-    Result(in_place_nontrivial_1.has_value()).or_exit();
-    Result(in_place_nontrivial_1.value().data == 1).or_exit();
+    verify(in_place_nontrivial_1.has_value());
+    verify(in_place_nontrivial_1.value().data == 1);
 
     cat::Optional<NonTrivial> in_place_nontrivial_2{in_place, 1, 2, 'a'};
-    Result(in_place_nontrivial_2.has_value()).or_exit();
-    Result(in_place_nontrivial_2.value().data == 2).or_exit();
+    verify(in_place_nontrivial_2.has_value());
+    verify(in_place_nontrivial_2.value().data == 2);
 
     // Test `Optional` in a `constexpr` context.
     auto constant = []() constexpr {
         [[maybe_unused]] constexpr cat::Optional<int> const_int_default;
 
         constexpr cat::Optional<ConstNonTrivial> const_nontrivial_default;
-        Result(!const_nontrivial_default.has_value()).or_exit();
+        verify(!const_nontrivial_default.has_value());
 
         constexpr cat::Optional<ConstNonTrivial> const_nontrivial =
             ConstNonTrivial{};
-        Result(const_nontrivial.has_value()).or_exit();
+        verify(const_nontrivial.has_value());
 
         constexpr cat::Optional<ConstNonTrivial> const_nontrivial_in_place = {
             in_place, ConstNonTrivial{}};
-        Result(const_nontrivial_in_place.has_value()).or_exit();
+        verify(const_nontrivial_in_place.has_value());
 
         // Test `Optional<Compact<T>>`.
         constexpr cat::OptionalPtr<void> const_optptr = nullptr;
@@ -402,19 +397,19 @@ auto main() -> int {
 
     // Assign value:
     optvoid = monostate;
-    Result(optvoid.has_value()).or_exit();
+    verify(optvoid.has_value());
     // Remove value:
     optvoid = nullopt;
-    Result(!optvoid.has_value()).or_exit();
+    verify(!optvoid.has_value());
 
     // Test `.is()`;
     cat::Optional<int4> opt_is = 1;
-    Result(opt_is.is<int4>()).or_exit();
-    Result(!opt_is.is<uint8>()).or_exit();
+    verify(opt_is.is<int4>());
+    verify(!opt_is.is<uint8>());
 
     opt_is = nullopt;
-    Result(!opt_is.is<int4>()).or_exit();
-    Result(!opt_is.is<uint8>()).or_exit();
+    verify(!opt_is.is<int4>());
+    verify(!opt_is.is<uint8>());
 
     // Test `match()`.
     cat::Optional<int4> opt_match = 1;
@@ -426,7 +421,7 @@ auto main() -> int {
     cat::match(opt_match)(is_a(2).then([&]() {
         matched = false;
     }));
-    Result(matched).or_exit();
+    verify(matched);
 
     matched = false;
     cat::match(opt_match)(is_a<int4>().then([&]() {
@@ -435,14 +430,14 @@ auto main() -> int {
     cat::match(opt_match)(is_a<uint8>().then([&]() {
         matched = false;
     }));
-    Result(matched).or_exit();
+    verify(matched);
 
     // Test matching against `nullopt` when this holds a value.
     matched = true;
     cat::match(opt_match)(is_a(nullopt).then([&]() {
         matched = false;
     }));
-    Result(matched).or_exit();
+    verify(matched);
 
     // Test matching against `nullopt` when this does not hold a value.
     matched = false;
@@ -450,12 +445,12 @@ auto main() -> int {
     cat::match(opt_match)(is_a(nullopt).then([&]() {
         matched = true;
     }));
-    Result(matched).or_exit();
+    verify(matched);
 
     // Test member access pattern matching syntax.
     matched = false;
     opt_match.match(is_a(nullopt).then([&]() {
         matched = true;
     }));
-    Result(matched).or_exit();
+    verify(matched);
 }

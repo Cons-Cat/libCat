@@ -23,39 +23,39 @@ auto main() -> int {
     int& left_1 = tuple.get<0>();
     left_1 = 10;
     int left_2 = tuple.get<0>();
-    Result(left_2 == 10).or_exit();
-    Result(left_2 == left_1).or_exit();
-    Result(left_2 == tuple.first()).or_exit();
+    verify(left_2 == 10);
+    verify(left_2 == left_1);
+    verify(left_2 == tuple.first());
     tuple.second() = 20;
 
     // Test destructuring.
     auto& [int_1, int_2] = tuple;
-    Result(int_1 == 10).or_exit();
-    Result(int_2 == 20).or_exit();
+    verify(int_1 == 10);
+    verify(int_2 == 20);
 
     // Test aggregate construction.
     cat::Tuple<int, char> intchar = {100, 'a'};
-    Result(intchar.first() == 100).or_exit();
-    Result(intchar.second() == 'a').or_exit();
+    verify(intchar.first() == 100);
+    verify(intchar.second() == 'a');
 
     // Test aggregate assignment.
     intchar = {200, 'b'};
-    Result(intchar.first() == 200).or_exit();
-    Result(intchar.second() == 'b').or_exit();
+    verify(intchar.first() == 200);
+    verify(intchar.second() == 'b');
 
     // Test `const`.
     cat::Tuple<int, char> const intchar_const = {100, 'a'};
-    Result(intchar_const.first() == 100).or_exit();
-    Result(intchar_const.second() == 'a').or_exit();
+    verify(intchar_const.first() == 100);
+    verify(intchar_const.second() == 'a');
 
     // Test move semantics.
     cat::Tuple<int, char>&& intchar_move = {100, 'a'};
-    Result(cat::move(intchar_move.first()) == 100).or_exit();
-    Result(cat::move(intchar_move.second()) == 'a').or_exit();
+    verify(cat::move(intchar_move.first()) == 100);
+    verify(cat::move(intchar_move.second()) == 'a');
 
     cat::Tuple<int, char> const intchar_move_const = {100, 'a'};
-    Result(cat::move(intchar_move_const.first()) == 100).or_exit();
-    Result(cat::move(intchar_move_const.second()) == 'a').or_exit();
+    verify(cat::move(intchar_move_const.first()) == 100);
+    verify(cat::move(intchar_move_const.second()) == 'a');
 
     // Test type deduction.
     cat::Tuple deduced = {0, 'b', 10.f};
@@ -113,14 +113,14 @@ auto main() -> int {
     // cat::Tuple<int> concat_lhs = cat::Tuple<int>{10};
     // cat::Tuple<float> concat_rhs = cat::Tuple<float>{1.f};
     // cat::Tuple<int, float> concat_tuple = concat_lhs.concat(concat_rhs);
-    // Result(concat_tuple.first() == 10).or_exit();
-    // Result(concat_tuple.second() == 1.f).or_exit();
+    // verify(concat_tuple.first() == 10);
+    // verify(concat_tuple.second() == 1.f);
 
     /*
         // Test `Tuple` conversions.
         cat::Tuple<float, float> floatfloat = cat::Tuple<int, int>{10, 20};
-        Result(floatfloat.first() == 10.f).or_exit();
-        Result(floatfloat.second() == 20.f).or_exit();
+        verify(floatfloat.first() == 10.f);
+        verify(floatfloat.second() == 20.f);
 
         int l_int = 1;
         int r_int = 2;

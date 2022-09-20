@@ -35,7 +35,7 @@ auto main() -> int {
     // Write to the page.
     cat::Span page_span = allocator.get(memory);
     page_span[0] = 10;
-    Result(allocator.get(memory)[0] == 10).or_exit();
+    verify(allocator.get(memory)[0] == 10);
 
     // Allocation with small-size optimization.
     int stack_variable;
@@ -43,21 +43,20 @@ auto main() -> int {
     allocator.get(small_memory_1) = 2;
     // Both values should be on stack, so these addresses are close
     // together.
-    Result(small_memory_1.is_inline()).or_exit();
+    verify(small_memory_1.is_inline());
     // The handle's address should be the same as the data's if it was
     // allocated on the stack.
     int4& intref = *static_cast<int4*>(static_cast<void*>(&small_memory_1));
     intref = 10;
-    Result(allocator.get(small_memory_1) == 10).or_exit();
+    verify(allocator.get(small_memory_1) == 10);
 
     allocator.free(small_memory_1);
 
     auto small_memory_5 = allocator.inline_alloc_multi<int4>(1'000).or_exit();
     // `small_memory_1` should be in a page, so these addresses are far
     // apart.
-    Result(cat::abs(intptr{&stack_variable} -
-                    intptr{allocator.get(small_memory_5).p_data()}) > 512)
-        .or_exit();
+    verify(cat::abs(intptr{&stack_variable} -
+                    intptr{allocator.get(small_memory_5).p_data()}) > 512);
     allocator.free(small_memory_1);
 
     // Small-size handles have unique storage.
@@ -67,27 +66,27 @@ auto main() -> int {
     allocator.get(small_memory_3) = 2;
     auto small_memory_4 = allocator.inline_alloc<int4>().or_exit();
     allocator.get(small_memory_4) = 3;
-    Result(allocator.get(small_memory_2) == 1).or_exit();
-    Result(allocator.get(small_memory_3) == 2).or_exit();
-    Result(allocator.get(small_memory_4) == 3).or_exit();
+    verify(allocator.get(small_memory_2) == 1);
+    verify(allocator.get(small_memory_3) == 2);
+    verify(allocator.get(small_memory_4) == 3);
 
     // Test constructor being called.
     cat::Optional testtype = allocator.alloc<TestType>();
     allocator.free(testtype.value());
 
     // That constructor increments `global_int_1`.
-    Result(global_int_1 == 1).or_exit();
+    verify(global_int_1 == 1);
     // That destructor increments `global_int_2`.
-    Result(global_int_2 == 1).or_exit();
+    verify(global_int_2 == 1);
 
     // Test multi-allocations.
     auto array_memory = allocator.alloc_multi<TestType>(9).or_exit();
     // Those 9 constructors increment `global_int_2`.
-    Result(global_int_1 == 10).or_exit();
+    verify(global_int_1 == 10);
 
     allocator.free(array_memory);
     // Those 9 destructors increment `global_int_2`.
-    Result(global_int_2 == 10).or_exit();
+    verify(global_int_2 == 10);
 
     auto smalltesttype = allocator.inline_alloc<TestType>().or_exit();
     allocator.get(smalltesttype) = TestType{};
@@ -96,6 +95,6 @@ auto main() -> int {
     // Aligned memory allocations.
     auto aligned_mem = allocator.align_alloc_multi<int4>(32u, 4).or_exit();
     allocator.get(aligned_mem)[0] = 10;
-    Result(allocator.get(aligned_mem)[0] == 10).or_exit();
+    verify(allocator.get(aligned_mem)[0] == 10);
     allocator.free(aligned_mem);
 };

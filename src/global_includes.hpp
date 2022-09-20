@@ -97,16 +97,15 @@ inline constexpr cat::detail::InPlace in_place;
 // `monostate` can be consumed by wrapper classes to represent no storage.
 inline constexpr cat::Monostate monostate;
 
-template <typename T>
-class Result;
-
 // Including the `<cat/runtime>` library is required to link a libCat program,
 // because it contains the `_start` symbol.
 #include <cat/runtime>
 
-// TODO: Remove this once a new assert system is created.
-// `Result` is used throughout the library.
-#include <result>
+// Necessary forward declarations.
+class String;
+
+// `assert()` is used throughout the library.
+#include <cat/debug>
 
 // Placement `new`.
 [[nodiscard]] inline constexpr auto operator new(unsigned long, void* p_address)

@@ -48,31 +48,31 @@ auto main() -> int {
     // bytes. No storage cost exists for the error types.
     static_assert(sizeof(result) == 16);
 
-    Result(!result.has_value()).or_exit();
-    Result(result.is<ErrorOne>()).or_exit();
-    Result(!result.is<int8>()).or_exit();
+    verify(!result.has_value());
+    verify(result.is<ErrorOne>());
+    verify(!result.is<int8>());
 
     result = union_errors(1);
-    Result(!result.has_value()).or_exit();
-    Result(result.is<ErrorTwo>()).or_exit();
-    Result(!result.is<int8>()).or_exit();
+    verify(!result.has_value());
+    verify(result.is<ErrorTwo>());
+    verify(!result.is<int8>());
 
     result = union_errors(2);
-    Result(result.has_value()).or_exit();
-    Result(result.is<int8>()).or_exit();
+    verify(result.has_value());
+    verify(result.is<int8>());
 
     result = union_errors(3);
-    Result(result.has_value()).or_exit();
-    Result(result.value() == 3).or_exit();
-    Result(result.is<int8>()).or_exit();
+    verify(result.has_value());
+    verify(result.value() == 3);
+    verify(result.is<int8>());
 
     // Test `.error()`.
     cat::Scaredy<int, ErrorOne> one_error = ErrorOne{1};
-    Result(one_error.error().code == 1).or_exit();
-    Result(one_error.error<ErrorOne>().code == 1).or_exit();
+    verify(one_error.error().code == 1);
+    verify(one_error.error<ErrorOne>().code == 1);
 
     cat::Scaredy<int, ErrorOne, ErrorTwo> two_error = ErrorOne{1};
-    Result(two_error.error<ErrorOne>().code == 1).or_exit();
+    verify(two_error.error<ErrorOne>().code == 1);
 
     // Test compact optimization.
     cat::Scaredy<cat::Compact<int4,
@@ -84,19 +84,19 @@ auto main() -> int {
         predicate = -1;
     // The `Scaredy` here adds no storage bloat to an `int4`.
     static_assert(sizeof(predicate) == sizeof(int4));
-    Result(!predicate.has_value()).or_exit();
+    verify(!predicate.has_value());
 
     predicate = -1;
-    Result(!predicate.has_value()).or_exit();
+    verify(!predicate.has_value());
 
     predicate = 0;
-    Result(predicate.has_value()).or_exit();
+    verify(predicate.has_value());
 
     predicate = 10;
-    Result(predicate.has_value()).or_exit();
+    verify(predicate.has_value());
 
     predicate = ErrorOne{-1};
-    Result(!predicate.has_value()).or_exit();
+    verify(!predicate.has_value());
 
     // Test `.value_or()`.
     cat::Scaredy<int4, ErrorOne> is_error = ErrorOne{};
@@ -105,16 +105,16 @@ auto main() -> int {
     cat::Scaredy<int4, ErrorOne> const const_is_value = 2;
 
     int4 fallback = is_error.value_or(1);
-    Result(fallback == 1).or_exit();
+    verify(fallback == 1);
 
     int4 no_fallback = is_value.value_or(1);
-    Result(no_fallback == 2).or_exit();
+    verify(no_fallback == 2);
 
     int4 const_fallback = const_is_error.value_or(1);
-    Result(const_fallback == 1).or_exit();
+    verify(const_fallback == 1);
 
     int4 no_const_fallback = const_is_value.value_or(1);
-    Result(no_const_fallback == 2).or_exit();
+    verify(no_const_fallback == 2);
 
     // Test monadic member functions on a mutable `Scaredy`.
     auto increment = [](auto input) {
@@ -122,22 +122,20 @@ auto main() -> int {
     };
 
     cat::Scaredy<int4, ErrorOne> mut_scaredy = 1;
-    _ = mut_scaredy.transform(increment).and_then(increment).or_exit();
+    _ = mut_scaredy.transform(increment).and_then(increment);
 
     // `.transform()` returning `void`.
     mut_scaredy.transform(increment).or_else([]() {
         return;
     });
 
-    _ = mut_scaredy.transform(increment)
-            .or_else([]() {
-                return decltype(mut_scaredy){};
-            })
-            .or_exit();
+    _ = mut_scaredy.transform(increment).or_else([]() {
+        return decltype(mut_scaredy){};
+    });
 
     // Test monadic member functions on a `const`-qualified `Scaredy`.
     cat::Scaredy<int4, ErrorOne> const const_scaredy = 1;
-    _ = const_scaredy.transform(increment).and_then(increment).or_exit();
+    _ = const_scaredy.transform(increment).and_then(increment);
 
     // Test `.is()` on variant `Scaredy`.
     bool matched = false;
@@ -163,7 +161,7 @@ auto main() -> int {
         is_a<float>().then([&]() {
             matched = false;
         }));
-    Result(matched).or_exit();
+    verify(matched);
 
     // Match it against `ErrorOne`.
     matched = false;
@@ -180,14 +178,14 @@ auto main() -> int {
         is_a<ErrorTwo>().then([&]() {
             matched = false;
         }));
-    Result(matched).or_exit();
+    verify(matched);
 
     // Test member access pattern matching syntax.
     matched = false;
     is_variant_scaredy.match(is_a<ErrorOne>().then([&]() {
         matched = true;
     }));
-    Result(matched).or_exit();
+    verify(matched);
 
     // Test `.is()` on `Compact` `Scaredy`.
     predicate = 1;
@@ -201,7 +199,7 @@ auto main() -> int {
         is_a<int4>().then([&]() {
             matched = true;
         }));
-    Result(matched).or_exit();
+    verify(matched);
 
     matched = false;
     predicate = ErrorOne{-1};
@@ -212,5 +210,5 @@ auto main() -> int {
         is_a<ErrorOne>().then([&]() {
             matched = true;
         }));
-    Result(matched).or_exit();
+    verify(matched);
 }

@@ -133,5 +133,9 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/bit/implementations/align_up.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/bit/implementations/align_down.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/tuple/implementations/tuple_cat.tpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/debug/implementations/breakpoint.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/debug/implementations/assert_handler.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/debug/implementations/verify.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/debug/implementations/assert.cpp
   PARENT_SCOPE
 )

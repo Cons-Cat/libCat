@@ -157,7 +157,7 @@ if(CAT_BUILD_TEST_THREAD OR CAT_BUILD_ALL_TESTS)
 endif()
 
 # This tests that `cat::Unique` works.
-option(CAT_BUILD_TEST_RAII "Compile ResultOk." OFF)
+option(CAT_BUILD_TEST_RAII "Compile Unique tests." OFF)
 if(CAT_BUILD_TEST_RAII OR CAT_BUILD_ALL_TESTS)
   add_executable(test_raii test_raii.cpp)
   #target_compile_options(test_raii PRIVATE ${CAT_FLAGS_TEST})

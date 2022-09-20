@@ -121,7 +121,7 @@ struct default_float_traits {
     // Same as above.
     static carrier_uint float_to_carrier(T x) noexcept {
         carrier_uint u;
-        copy_memory_small(&x, &u, sizeof(carrier_uint));
+        copy_memory_small(&x, &u, ssizeof<carrier_uint>());
         return u;
     }
 
