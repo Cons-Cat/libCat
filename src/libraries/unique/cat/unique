@@ -15,7 +15,7 @@
 namespace cat {
 
 template <typename T>
-concept HasRaii = requires(T it) {
+concept hasRaii = requires(T it) {
     it.raii();
 };
 
@@ -24,7 +24,7 @@ class UniqueWeak;
 
 namespace detail {
     template <typename T>
-    concept NonUniqueWeak = requires {
+    concept nonUniqueWeak = requires {
         is_specialization<T, UniqueWeak>;
     };
 }  // namespace detail
@@ -85,7 +85,7 @@ class Unique {
     }
 
     ~Unique() {
-        if constexpr (HasRaii<T>) {
+        if constexpr (hasRaii<T>) {
             this->storage.raii();
         }
     }
@@ -98,7 +98,7 @@ class Unique {
     void storage_destructor() {
         // If `T` holds a `.raii()` method, it will be called before `T`'s
         // destructor.
-        if constexpr (HasRaii<T>) {
+        if constexpr (hasRaii<T>) {
             this->storage.raii();
         }
         if constexpr (!is_trivially_destructible<T>) {
@@ -110,7 +110,7 @@ class Unique {
 };
 
 // TODO: Why is this needed?
-template <detail::NonUniqueWeak T>
+template <detail::nonUniqueWeak T>
 Unique(T) -> Unique<T>;
 
 template <typename T>
@@ -173,7 +173,7 @@ class UniqueWeak {
     }
 
     ~UniqueWeak() {
-        if constexpr (HasRaii<T>) {
+        if constexpr (hasRaii<T>) {
             this->storage.raii();
         }
     }
@@ -184,7 +184,7 @@ class UniqueWeak {
         if (this->owns_data) {
             // If `T` holds a `.raii()` method, it will be called before `T`'s
             // destructor if this object holds ownership of the data.
-            if constexpr (HasRaii<T>) {
+            if constexpr (hasRaii<T>) {
                 this->storage.raii();
             }
             // If a destructor is non-trivial, it must be invoked manually.

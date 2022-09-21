@@ -12,14 +12,14 @@ class Span;
 
 namespace detail {
     template <typename T>
-    concept IsContiguousCollection = requires(T collection) {
+    concept isContiguousCollection = requires(T collection) {
         collection.p_data();
     };
 
     // clang-format off
     template <typename T>
     // Parentheses are required here to make cppcheck work.
-    concept IsBoundedCollection = (requires(T collection) {
+    concept isBoundedCollection = (requires(T collection) {
         collection.size();
     }) || (requires(T collection) {
         collection.capacity();
@@ -28,13 +28,13 @@ namespace detail {
 
     // If `.size()` is provided.
     template <typename T>
-    concept HasSize = requires(T t) {
+    concept hasSize = requires(T t) {
         t.size();
     };
 
     // If `.capacity()` is provided.
     template <typename T>
-    concept HasCapacity = requires(T t) {
+    concept hasCapacity = requires(T t) {
         t.capacity();
     };
 }  // namespace detail
@@ -45,28 +45,28 @@ class CollectionFacade {
     // `is_array_like` at the top of this class instead of the bottom prevents
     // clangd false diagnostics.
     static constexpr bool is_array_like =
-        detail::IsContiguousCollection<Derived> &&
-        detail::IsBoundedCollection<Derived>;
+        detail::isContiguousCollection<Derived> &&
+        detail::isBoundedCollection<Derived>;
 
   public:
     // If `.size()` is not, provided and `.capacity()` is, generate
     // `.size()`.
     [[nodiscard]] constexpr auto size() const -> ssize
-        requires(detail::HasCapacity<Derived> && !detail::HasSize<Derived>) {
+        requires(detail::hasCapacity<Derived> && !detail::hasSize<Derived>) {
         return this->self().capacity();
     }
 
     // If `.size()` is provided and `.capacity()` is not, generate
     // `.capacity()`.
     [[nodiscard]] constexpr auto capacity() const -> ssize
-        requires(detail::HasSize<Derived>) {
+        requires(detail::hasSize<Derived>) {
         return this->self().size();
     }
 
     // This evaluates true if there are one or more elements currently in this
     // collection.
     [[nodiscard]] constexpr auto is_empty() const
-        -> bool requires(detail::HasSize<Derived>) {
+        -> bool requires(detail::hasSize<Derived>) {
         return this->self().size() > 0;
     }
 
@@ -347,7 +347,7 @@ struct CollectionTraits {
     using ConstReversedIterator = cat::ReversedIterator<ConstIterator>;
 
     static constexpr bool is_array_like =
-        detail::IsContiguousCollection<T> && detail::IsBoundedCollection<T>;
+        detail::isContiguousCollection<T> && detail::isBoundedCollection<T>;
 };
 
 }  // namespace cat

@@ -218,30 +218,30 @@ namespace detail {
     // `clangd` emits false-positive diagnostics if this constraint is used
     // anonymously without a `concept`.
     template <typename AllocatorT>
-    concept StableDerivedAllocator = AllocatorT::has_pointer_stability;
+    concept stableDerivedAllocator = AllocatorT::has_pointer_stability;
 
     template <typename AllocatorT>
-    concept HasAllocate = requires(AllocatorT allocator) {
+    concept hasAllocate = requires(AllocatorT allocator) {
         allocator.allocate(1_sz);
     };
 
     template <typename AllocatorT>
-    concept HasAlignedAllocate = requires(AllocatorT allocator) {
+    concept hasAlignedAllocate = requires(AllocatorT allocator) {
         allocator.aligned_allocate(1_uz, 1_sz);
     };
 
     template <typename AllocatorT>
-    concept HasAllocationSize = requires(AllocatorT allocator) {
+    concept hasAllocationSize = requires(AllocatorT allocator) {
         allocator.allocation_size(1_uz, 1_sz);
     };
 
     template <typename AllocatorT>
-    concept HasAllocateFeedback = requires(AllocatorT allocator) {
+    concept hasAllocateFeedback = requires(AllocatorT allocator) {
         allocator.allocate_feedback(1_sz);
     };
 
     template <typename AllocatorT>
-    concept HasAlignedAllocateFeedback = requires(AllocatorT allocator) {
+    concept hasAlignedAllocateFeedback = requires(AllocatorT allocator) {
         allocator.aligned_allocate_feedback(1_uz, 1_sz);
     };
 }  // namespace detail
@@ -331,7 +331,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, try to allocate a `T`, and
     // provide a pointer handle.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>&&
+        requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_alloc(Args&&... constructor_arguments)
         -> OptionalPtr<T> {
@@ -349,7 +349,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, allocate a `T`, and
     // provide a pointer handle.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>&&
+        requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_xalloc(Args&&... constructor_arguments) -> T* {
         if constexpr (alignof(T) > 1) {
@@ -390,7 +390,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, try to allocate an array of `T`,
     // and provide a pointer handle.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_alloc_multi(ssize count) -> OptionalPtr<T> {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
@@ -404,7 +404,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, allocate an array of `T`, and
     // provide a pointer handle.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_xalloc_multi(ssize count) -> T* {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
@@ -440,7 +440,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, try to allocate a `T` with an
     // alignment guarantee, and provide a pointer handle.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>&&
+        requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_align_alloc(usize alignment,
                                      Args&&... constructor_arguments)
@@ -454,7 +454,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, allocate a `T` with an
     // alignment guarantee, and provide a pointer handle.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>&&
+        requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_align_xalloc(usize alignment,
                                       Args&&... constructor_arguments) -> T* {
@@ -485,7 +485,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, try to allocate a `T` with no
     // alignment guarantee, and provide a pointer handle.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>&&
+        requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_unalign_alloc(Args&&... constructor_arguments)
         -> OptionalPtr<T> {
@@ -497,7 +497,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, allocate a `T` with no
     // alignment guarantee, and provide a pointer handle.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>&&
+        requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_unalign_xalloc(Args&&... constructor_arguments) -> T* {
         return this
@@ -526,7 +526,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, try to allocate an array of `T`
     // with an alignment guarantee, and provide a pointer handle.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_alloc_multi(usize alignment, ssize count)
         -> OptionalPtr<T> {
         return this->meta_alloc<T, false, true, true, true, true, false, false>(
@@ -537,7 +537,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, allocate an array of `T`
     // with an alignment guarantee, and provide a pointer handle.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_xalloc_multi(usize alignment, ssize count)
         -> T* {
         return this
@@ -565,7 +565,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, try to allocate an array of `T`
     // with no alignment guarantee, and provide a pointer handle.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_unalign_alloc_multi(ssize count) -> OptionalPtr<T> {
         return this
             ->meta_alloc<T, false, true, false, true, true, false, false>(
@@ -575,7 +575,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, allocate an array of `T`
     // with no alignment guarantee, and provide a pointer handle.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_unalign_xalloc_multi(ssize count) -> T* {
         return this
             ->meta_alloc<T, false, false, false, true, true, false, false>(
@@ -919,7 +919,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, try to allocate a `T`, and
     // return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>&&
+        requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_salloc(Args&&... constructor_arguments) {
         if constexpr (alignof(T) > 1) {
@@ -934,7 +934,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, allocate a `T`, and
     // return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>&&
+        requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_xsalloc(Args&&... constructor_arguments) {
         if constexpr (alignof(T) > 1) {
@@ -971,7 +971,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, try to allocate an array of `T`,
     // and return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_salloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             return this->p_align_salloc_multi<T>(alignof(T), count);
@@ -983,7 +983,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, allocate an array of `T`,
     // and return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_xsalloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             return this->p_align_xsalloc_multi<T>(alignof(T), count);
@@ -1017,7 +1017,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, try to allocate a `T` with an
     // alignment guarantee, and return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>&&
+        requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_align_salloc(usize alignment,
                                       Args&&... constructor_arguments) {
@@ -1028,7 +1028,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, allocate a `T` with an
     // alignment guarantee, and return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>&&
+        requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_align_xsalloc(usize alignment,
                                        Args&&... constructor_arguments) {
@@ -1060,7 +1060,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, try to allocate a `T` with no
     // alignment guarantee, and return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>&&
+        requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_unalign_salloc(Args&&... constructor_arguments) {
         return this
@@ -1071,7 +1071,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, allocate a `T` with no
     // alignment guarantee, and return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>&&
+        requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_unalign_xsalloc(Args&&... constructor_arguments) {
         return this
@@ -1100,7 +1100,7 @@ class AllocatorFacade {
     // with an alignment guarantee, and return the number of bytes that were
     // allocated.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_salloc_multi(usize alignment, ssize count) {
         return this->meta_alloc<T, false, true, true, true, true, false, true>(
             alignment, count);
@@ -1109,7 +1109,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, allocate an array of `T` with an
     // alignment guarantee, and return the number of bytes that were allocated.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_xsalloc_multi(usize alignment, ssize count) {
         return this->meta_alloc<T, false, false, true, true, true, false, true>(
             alignment, count);
@@ -1136,7 +1136,7 @@ class AllocatorFacade {
     // with no alignment guarantee, and return the number of bytes that were
     // allocated.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_unalign_salloc_multi(ssize count) {
         return this->meta_alloc<T, false, true, false, true, true, false, true>(
             1u, count);
@@ -1145,7 +1145,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, allocate an array of `T` with no
     // alignment guarantee, and return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_unalign_xsalloc_multi(ssize count) {
         return this
             ->meta_alloc<T, false, false, false, true, true, false, true>(
@@ -1306,7 +1306,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, try to allocate a `T`, and
     // provide a pointer handle.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>&&
+        requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_calloc(Args&&... constructor_arguments)
         -> OptionalPtr<T> {
@@ -1322,7 +1322,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, allocate a `T`, and
     // provide a pointer handle.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>&&
+        requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_xcalloc(Args&&... constructor_arguments)
         -> OptionalPtr<T> {
@@ -1358,7 +1358,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, try to allocate an array of
     // `T`, and provide a pointer handle.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_calloc_multi(ssize count) -> OptionalPtr<T> {
         if constexpr (alignof(T) > 1) {
             return this->p_align_calloc_multi<T>(alignof(T), count);
@@ -1370,7 +1370,7 @@ class AllocatorFacade {
     // If this allocator has pointer stability, allocate an array of `T`, and
     // provide a pointer handle.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_xcalloc_multi(ssize count) -> OptionalPtr<T> {
         if constexpr (alignof(T) > 1) {
             return this->p_align_xcalloc_multi<T>(alignof(T), count);
@@ -1405,7 +1405,7 @@ class AllocatorFacade {
     // alignment guarantee, and provide a pointer handle, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>&&
+        requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_align_calloc(usize alignment,
                                       Args&&... constructor_arguments)
@@ -1418,7 +1418,7 @@ class AllocatorFacade {
     // alignment guarantee, and provide a pointer handle, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>&&
+        requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_align_xcalloc(usize alignment,
                                        Args&&... constructor_arguments)
@@ -1452,7 +1452,7 @@ class AllocatorFacade {
     // alignment guarantee, and provide a pointer handle, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>&&
+        requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_unalign_calloc(Args&&... constructor_arguments)
         -> OptionalPtr<T> {
@@ -1465,7 +1465,7 @@ class AllocatorFacade {
     // alignment guarantee, and provide a pointer handle, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>&&
+        requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_unalign_xcalloc(Args&&... constructor_arguments)
         -> OptionalPtr<T> {
@@ -1495,7 +1495,7 @@ class AllocatorFacade {
     // `T` with an alignment guarantee, and provide a pointer handle, and
     // zero-out the allocated memory.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_calloc_multi(usize alignment, ssize count)
         -> OptionalPtr<T> {
         return this->meta_alloc<T, false, true, true, true, true, true, false>(
@@ -1506,7 +1506,7 @@ class AllocatorFacade {
     // with an alignment guarantee, and provide a pointer handle, and zero-out
     // the allocated memory.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_xcalloc_multi(usize alignment, ssize count)
         -> T* {
         return this->meta_alloc<T, false, false, true, true, true, true, false>(
@@ -1534,7 +1534,7 @@ class AllocatorFacade {
     // `T` with no alignment guarantee, and provide a pointer handle, and
     // zero-out the allocated memory.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_unalign_calloc_multi(ssize count) -> OptionalPtr<T> {
         return this->meta_alloc<T, false, true, false, true, true, true, false>(
             1u, count);
@@ -1544,7 +1544,7 @@ class AllocatorFacade {
     // with no alignment guarantee, and provide a pointer handle, and zero-out
     // the allocated memory.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_unalign_xcalloc_multi(ssize count) -> T* {
         return this
             ->meta_alloc<T, false, false, false, true, true, true, false>(
@@ -1706,7 +1706,7 @@ class AllocatorFacade {
     // return the number of bytes that were allocated, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_scalloc(Args&&... constructor_arguments) {
         if constexpr (alignof(T) > 1) {
             return this->p_align_scalloc<T>(
@@ -1721,7 +1721,7 @@ class AllocatorFacade {
     // return the number of bytes that were allocated, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_xscalloc(Args&&... constructor_arguments) {
         if constexpr (alignof(T) > 1) {
             return this->p_align_xscalloc<T>(
@@ -1758,7 +1758,7 @@ class AllocatorFacade {
     // `T`, and return the number of bytes that were allocated, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_scalloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             return this->p_align_scalloc_multi<T>(alignof(T), count);
@@ -1771,7 +1771,7 @@ class AllocatorFacade {
     // and return the number of bytes that were allocated, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_xscalloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             return this->p_align_xscalloc_multi<T>(alignof(T), count);
@@ -1803,7 +1803,7 @@ class AllocatorFacade {
     // alignment guarantee, and return the number of bytes that were allocated,
     // and zero-out the allocated memory.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_scalloc(usize alignment,
                                        Args&&... constructor_arguments) {
         return this->meta_alloc<T, false, true, true, false, true, true, true>(
@@ -1814,7 +1814,7 @@ class AllocatorFacade {
     // alignment guarantee, and return the number of bytes that were allocated,
     // and zero-out the allocated memory.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_xscalloc(usize alignment,
                                         Args&&... constructor_arguments) {
         return this->meta_alloc<T, false, false, true, false, true, true, true>(
@@ -1843,7 +1843,7 @@ class AllocatorFacade {
     // alignment guarantee, and return the number of bytes that were allocated,
     // and zero-out the allocated memory.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_unalign_scalloc(Args&&... constructor_arguments) {
         return this->meta_alloc<T, false, true, false, false, true, true, true>(
             1u, 1, forward<Args>(constructor_arguments)...);
@@ -1853,7 +1853,7 @@ class AllocatorFacade {
     // alignment guarantee, and return the number of bytes that were allocated,
     // and zero-out the allocated memory.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_unalign_xscalloc(Args&&... constructor_arguments) {
         return this
             ->meta_alloc<T, false, false, false, false, true, true, true>(
@@ -1882,7 +1882,7 @@ class AllocatorFacade {
     // `T` with an alignment guarantee, and return the number of bytes that were
     // allocated, and zero-out the allocated memory.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_scalloc_multi(usize alignment, ssize count) {
         return this->meta_alloc<T, false, true, true, true, true, true, true>(
             alignment, count);
@@ -1892,7 +1892,7 @@ class AllocatorFacade {
     // an alignment guarantee, and return the number of bytes that were
     // allocated, and zero-out the allocated memory.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_xscalloc_multi(usize alignment, ssize count) {
         return this->meta_alloc<T, false, false, true, true, true, true, true>(
             alignment, count);
@@ -1921,7 +1921,7 @@ class AllocatorFacade {
     // `T` with no alignment guarantee, and return the number of bytes that were
     // allocated, and zero-out the allocated memory.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_unalign_scalloc_multi(ssize count) {
         return this->meta_alloc<T, false, true, false, true, true, true, true>(
             1u, count);
@@ -1931,7 +1931,7 @@ class AllocatorFacade {
     // no alignment guarantee, and return the number of bytes that were
     // allocated, and zero-out the allocated memory.
     template <typename T, typename... Args>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_unalign_xscalloc_multi(ssize count) {
         return this->meta_alloc<T, false, false, false, true, true, true, true>(
             1u, count);
@@ -4705,7 +4705,7 @@ class AllocatorFacade {
     // TODO: This needs unit tests.
     // Invalidate a pointer handle to a `T`, and call its destructor.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     void free(T* p_memory) {
         // if constexpr (is_destructible<T>) {
         p_memory->~T();
@@ -4717,7 +4717,7 @@ class AllocatorFacade {
     // Invalidate a pointer handle to an array of `T`, and call its
     // destructors.
     template <typename T>
-        requires(detail::StableDerivedAllocator<Derived>)
+        requires(detail::stableDerivedAllocator<Derived>)
     void free_multi(T* p_memory, ssize count) {
         // if constexpr (is_destructible<T>) {
         for (ssize i = 0; i < count; ++i) {
@@ -4914,13 +4914,13 @@ class AllocatorFacade {
 
         if constexpr (is_aligned) {
             if constexpr (has_feedback) {
-                if constexpr (detail::HasAlignedAllocateFeedback<Derived>) {
+                if constexpr (detail::hasAlignedAllocateFeedback<Derived>) {
                     // Call `.aligned_allocate_feedback()` function for
                     // optimized size-feedback.
                     maybe_memory = this->self().aligned_allocate_feedback(
                         allocation_alignment, allocation_size);
                 } else {
-                    if constexpr (detail::HasAllocationSize<Derived>) {
+                    if constexpr (detail::hasAllocationSize<Derived>) {
                         // If a `.aligned_allocate_feedback()` is not provided,
                         // use `.allocation_size`().
                         Optional size = this->self().allocation_size(
@@ -4956,19 +4956,19 @@ class AllocatorFacade {
             }
         } else {
             if constexpr (has_feedback) {
-                if constexpr (detail::HasAllocateFeedback<Derived>) {
+                if constexpr (detail::hasAllocateFeedback<Derived>) {
                     // Call `.allocate_feedback()` function for optimized
                     // size-feedback.
                     maybe_memory =
                         this->self().allocate_feedback(allocation_size);
                 } else {
-                    if constexpr (detail::HasAlignedAllocateFeedback<Derived>) {
+                    if constexpr (detail::hasAlignedAllocateFeedback<Derived>) {
                         // If `.allocate_feedback()` is not provided, but
                         // `.aligned_allocate_feedback()` is, fall back to that
                         // with alignment of `1u`.
                         maybe_memory = this->self().aligned_allocate_feedback(
                             1u, allocation_size);
-                    } else if constexpr (detail::HasAllocationSize<Derived>) {
+                    } else if constexpr (detail::hasAllocationSize<Derived>) {
                         // If a `.aligned_allocate_feedback()` is not provided,
                         // use `.allocation_size`().
                         Optional size =
@@ -4998,7 +4998,7 @@ class AllocatorFacade {
                 }
             } else {
                 // Otherwise, make an allocation without size feedback.
-                if constexpr (detail::HasAllocate<Derived>) {
+                if constexpr (detail::hasAllocate<Derived>) {
                     maybe_memory = this->self().allocate(allocation_size);
                 } else {
                     // If `.allocate` is not provided, implement it in terms of

@@ -96,7 +96,7 @@ auto main() -> int {
     list_1.push_front(allocator, 2);
     list_1.push_front(allocator, 1);
     list_1.push_front(allocator, 0);
-    cat::List<int4> list_4 = cat::move(list_1);
+    cat::List<int4> list_4 = cat::move(list_1);  // NOLINT
     cat::verify(list_4.front() == 0);
     cat::verify(*(list_4.begin() + 1) == 1);
     cat::verify(*(list_4.begin() + 2) == 2);
