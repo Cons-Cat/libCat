@@ -7,7 +7,7 @@
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
 // Check that an expression holds true when `NDEBUG` is not defined. If it holds
-// false, invoke an assert handler.
+// false, invoke `p_assert_handler`.
 void cat::assert(bool invariant_expression,
                  void (*p_assert_handler)(SourceLocation const&),
                  SourceLocation const& callsite) {
@@ -17,7 +17,7 @@ void cat::assert(bool invariant_expression,
 }
 
 // Check that an expression holds true when `NDEBUG` is not defined. If it
-// holds false, print `error_string` and invoke an assert handler.
+// holds false, print `error_string` and invoke `p_assert_handler`.
 void cat::assert(bool invariant_expression, String const error_string,
                  void (*p_assert_handler)(SourceLocation const&),
                  SourceLocation const& callsite) {

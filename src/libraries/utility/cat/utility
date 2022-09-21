@@ -203,16 +203,17 @@ void as_const(const T&&) = delete;
 // The following functions are forward-declared in `<cat/meta>`, but they
 // belong to the `<cat/utility>` library.
 
+/*
+template <typename T>
+constexpr auto move(T&& input) -> cat::RemoveReference<T>&&;
+
 template <typename T>
 constexpr auto forward(cat::RemoveReference<T>& input) -> T&&;
 
 template <typename T>
-    requires(!cat::is_lvalue_reference<T>)
-constexpr auto forward(typename cat::RemoveReferenceTrait<T>::type&& input)
-    -> T&&;
-
-template <typename T>
-constexpr auto move(T&& input) -> cat::RemoveReference<T>&&;
+requires(!cat::is_lvalue_reference<T>)
+constexpr auto std::forward(cat::RemoveReference<T>&& input) -> T&&;
+*/
 
 // NOLINTEND(readability-redundant-declaration)
 

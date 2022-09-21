@@ -2,7 +2,7 @@
 #include <cat/string>
 
 // Check that an expression holds true in all builds. If it holds false, invoke
-// an assert handler.
+// `p_assert_handler`.
 void cat::verify(bool invariant_expression,
                  void (*p_assert_handler)(SourceLocation const&),
                  SourceLocation const& callsite) {
@@ -15,7 +15,7 @@ void cat::verify(bool invariant_expression,
 }
 
 // Check that an expression holds true in all builds. If it holds false, print
-// `error_string` and invoke an assert handler.
+// `error_string` and invoke `p_assert_handler`.
 void cat::verify(bool invariant_expression, String const error_string,
                  void (*p_assert_handler)(SourceLocation const&),
                  SourceLocation const& callsite) {

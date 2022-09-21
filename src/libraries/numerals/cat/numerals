@@ -322,21 +322,22 @@ namespace detail {
              is_floating_point<ToUnsafeNumeral<To>>);
     // clang-format on
 
+    // Using `ToUnsafeNumeral` here resolves Clang errors.
     template <arithmetic From, arithmetic To>
     // clang-format off
     inline constexpr bool is_safe_conversion =
            (sizeof(ToUnsafeNumeral<From>) >= sizeof(ToUnsafeNumeral<To>))
-        && (is_safe_comparison<From, To>);
+        && (is_safe_comparison<ToUnsafeNumeral<From>, ToUnsafeNumeral<To>>);
     // clang-format on
 
     // Satisfies any type that is an integer and is not `intptr` or `uintptr`.
     template <typename T>
-    concept NonPtrIntegral =
+    concept nonPtrIntegral =
         is_integral<T> && !is_specialization<T, ArithmeticPtr>;
 
     // Satisfies any arithmetic type that is not `intptr` or `uintptr`.
     template <typename T>
-    concept ArithmeticNonPtr =
+    concept arithmeticNonPtr =
         is_arithmetic<T> && !is_specialization<T, ArithmeticPtr>;
 
     // Take two types, and produce the type that should be produced by their
@@ -440,7 +441,7 @@ struct Numeral {
         return +(this->raw);
     }
 
-    template <detail::ArithmeticNonPtr U>
+    template <detail::arithmeticNonPtr U>
     [[nodiscard]] friend constexpr auto operator-(Numeral<T> self, U operand)
         -> detail::PromotedNumeral<T, U> {
         return detail::PromotedNumeral<T, U>{self.raw -
@@ -477,7 +478,7 @@ struct Numeral {
         return (this->raw)--;
     }
 
-    template <detail::ArithmeticNonPtr U>
+    template <detail::arithmeticNonPtr U>
     [[nodiscard]] friend constexpr auto operator*(Numeral<T> self, U operand)
         -> detail::PromotedNumeral<T, U> {
         return self.raw * to_raw_numeral(operand);
@@ -501,7 +502,7 @@ struct Numeral {
         return *this;
     }
 
-    template <detail::ArithmeticNonPtr U>
+    template <detail::arithmeticNonPtr U>
     [[nodiscard]] friend constexpr auto operator/(Numeral<T> self, U operand)
         -> detail::PromotedNumeral<T, U> {
         return self.raw / to_raw_numeral(operand);
@@ -525,7 +526,7 @@ struct Numeral {
         return *this;
     }
 
-    template <detail::ArithmeticNonPtr U>
+    template <detail::arithmeticNonPtr U>
     [[nodiscard]] friend constexpr auto operator%(Numeral<T> self, U operand)
         -> detail::PromotedNumeral<T, U> {
         return self.raw % to_raw_numeral(operand);
@@ -549,7 +550,7 @@ struct Numeral {
         return *this;
     }
 
-    template <detail::ArithmeticNonPtr U>
+    template <detail::arithmeticNonPtr U>
     [[nodiscard]] friend constexpr auto operator&(Numeral<T> self, U operand)
         -> detail::PromotedNumeral<T, U> {
         return self.raw & to_raw_numeral(operand);
@@ -573,7 +574,7 @@ struct Numeral {
         return *this;
     }
 
-    template <detail::ArithmeticNonPtr U>
+    template <detail::arithmeticNonPtr U>
     [[nodiscard]] friend constexpr auto operator|(Numeral<T> self, U operand)
         -> detail::PromotedNumeral<T, U> {
         return self.raw | to_raw_numeral(operand);
@@ -819,7 +820,7 @@ struct ArithmeticPtr {
     constexpr ArithmeticPtr(ArithmeticPtr<T, Storage> const&) = default;
     constexpr ArithmeticPtr(ArithmeticPtr<T, Storage>&& input) = default;
 
-    constexpr ArithmeticPtr(detail::NonPtrIntegral auto input)
+    constexpr ArithmeticPtr(detail::nonPtrIntegral auto input)
         : raw(static_cast<Storage>(input)){};
 
     constexpr ArithmeticPtr(T* p_input) {
@@ -850,7 +851,7 @@ struct ArithmeticPtr {
         return *this;
     }
 
-    constexpr auto operator=(detail::NonPtrIntegral auto from)
+    constexpr auto operator=(detail::nonPtrIntegral auto from)
         -> ArithmeticPtr<T, Storage>& {
         this->raw = static_cast<Storage>(from);
         return *this;
@@ -881,7 +882,7 @@ struct ArithmeticPtr {
         this->raw += from.raw;
         return *this;
     }
-    constexpr auto operator+=(detail::NonPtrIntegral auto from)
+    constexpr auto operator+=(detail::nonPtrIntegral auto from)
         -> ArithmeticPtr<T, Storage>& {
         this->raw += static_cast<Storage>(from);
         return *this;
@@ -901,7 +902,7 @@ struct ArithmeticPtr {
         this->raw = this->raw - static_cast<Storage>(from);
         return *this;
     }
-    constexpr auto operator-=(detail::NonPtrIntegral auto from)
+    constexpr auto operator-=(detail::nonPtrIntegral auto from)
         -> ArithmeticPtr<T, Storage>& {
         this->raw = this->raw - static_cast<Storage>(from);
         return *this;
@@ -921,7 +922,7 @@ struct ArithmeticPtr {
         this->raw = this->raw * static_cast<Storage>(from);
         return *this;
     }
-    constexpr auto operator*=(detail::NonPtrIntegral auto from)
+    constexpr auto operator*=(detail::nonPtrIntegral auto from)
         -> ArithmeticPtr<T, Storage>& {
         this->raw = this->raw * static_cast<Storage>(from);
         return *this;
@@ -933,7 +934,7 @@ struct ArithmeticPtr {
         return this->raw / from.raw;
     }
     [[nodiscard]] constexpr auto operator/(
-        detail::NonPtrIntegral auto from) const -> ArithmeticPtr<T, Storage> {
+        detail::nonPtrIntegral auto from) const -> ArithmeticPtr<T, Storage> {
         return this->raw / static_cast<Storage>(from);
     }
 
@@ -943,7 +944,7 @@ struct ArithmeticPtr {
         this->raw = this->raw / from.raw;
         return *this;
     }
-    constexpr auto operator/=(detail::NonPtrIntegral auto from)
+    constexpr auto operator/=(detail::nonPtrIntegral auto from)
         -> ArithmeticPtr<T, Storage>& {
         this->raw = this->raw / static_cast<Storage>(from);
         return *this;
@@ -955,7 +956,7 @@ struct ArithmeticPtr {
         return this->raw % from.raw;
     }
     [[nodiscard]] constexpr auto operator%(
-        detail::NonPtrIntegral auto from) const -> ArithmeticPtr<T, Storage> {
+        detail::nonPtrIntegral auto from) const -> ArithmeticPtr<T, Storage> {
         return this->raw % static_cast<Storage>(from);
     }
 
@@ -965,7 +966,7 @@ struct ArithmeticPtr {
         this->raw = this->raw % from.raw;
         return *this;
     }
-    constexpr auto operator%=(detail::NonPtrIntegral auto from)
+    constexpr auto operator%=(detail::nonPtrIntegral auto from)
         -> ArithmeticPtr<T, Storage>& {
         this->raw = this->raw % static_cast<Storage>(from);
         return *this;
@@ -977,7 +978,7 @@ struct ArithmeticPtr {
         this->raw = this->raw & from.raw;
         return *this;
     }
-    constexpr auto operator&=(detail::NonPtrIntegral auto from)
+    constexpr auto operator&=(detail::nonPtrIntegral auto from)
         -> ArithmeticPtr<T, Storage>& {
         this->raw = this->raw & static_cast<Storage>(from);
         return *this;
@@ -989,7 +990,7 @@ struct ArithmeticPtr {
         return this->raw | from.raw;
     }
     [[nodiscard]] constexpr auto operator|(
-        detail::NonPtrIntegral auto from) const -> ArithmeticPtr<T, Storage> {
+        detail::nonPtrIntegral auto from) const -> ArithmeticPtr<T, Storage> {
         return this->raw | static_cast<Storage>(from);
     }
 
@@ -999,7 +1000,7 @@ struct ArithmeticPtr {
         this->raw = this->raw | from.raw;
         return *this;
     }
-    constexpr auto operator|=(detail::NonPtrIntegral auto from)
+    constexpr auto operator|=(detail::nonPtrIntegral auto from)
         -> ArithmeticPtr<T, Storage>& {
         this->raw = this->raw | static_cast<Storage>(from);
         return *this;
@@ -1011,7 +1012,7 @@ struct ArithmeticPtr {
         return this->raw << from.raw;
     }
     [[nodiscard]] constexpr auto operator<<(
-        detail::NonPtrIntegral auto from) const -> ArithmeticPtr<T, Storage> {
+        detail::nonPtrIntegral auto from) const -> ArithmeticPtr<T, Storage> {
         return this->raw << static_cast<Storage>(from);
     }
 
@@ -1021,7 +1022,7 @@ struct ArithmeticPtr {
         this->raw = this->raw << from.raw;
         return *this;
     }
-    constexpr auto operator<<=(detail::NonPtrIntegral auto from)
+    constexpr auto operator<<=(detail::nonPtrIntegral auto from)
         -> ArithmeticPtr<T, Storage>& {
         this->raw = this->raw << static_cast<Storage>(from);
         return *this;
@@ -1033,7 +1034,7 @@ struct ArithmeticPtr {
         return this->raw >> from.raw;
     }
     [[nodiscard]] constexpr auto operator>>(
-        detail::NonPtrIntegral auto from) const -> ArithmeticPtr<T, Storage> {
+        detail::nonPtrIntegral auto from) const -> ArithmeticPtr<T, Storage> {
         return this->raw >> static_cast<Storage>(from);
     }
 
@@ -1043,7 +1044,7 @@ struct ArithmeticPtr {
         this->raw = this->raw >> from.raw;
         return *this;
     }
-    constexpr auto operator>>=(detail::NonPtrIntegral auto from)
+    constexpr auto operator>>=(detail::nonPtrIntegral auto from)
         -> ArithmeticPtr<T, Storage>& {
         this->raw = this->raw >> static_cast<Storage>(from);
         return *this;
@@ -1101,20 +1102,20 @@ template <typename T, typename Storage>
 // Order-independant operators between an `ArithmeticPtr<T>` and an integer.
 template <typename T, typename Storage>
 [[nodiscard]] constexpr auto operator<=>(ArithmeticPtr<T, Storage> lhs,
-                                         detail::NonPtrIntegral auto rhs) {
+                                         detail::nonPtrIntegral auto rhs) {
     return lhs.raw <=> rhs;
 }
 
 template <typename T, typename Storage>
 [[nodiscard]] constexpr auto operator!=(ArithmeticPtr<T, Storage> lhs,
-                                        detail::NonPtrIntegral auto rhs)
+                                        detail::nonPtrIntegral auto rhs)
     -> bool {
     return lhs.raw != rhs;
 }
 
 template <typename T, typename Storage>
 [[nodiscard]] constexpr auto operator-(ArithmeticPtr<T, Storage> lhs,
-                                       detail::NonPtrIntegral auto rhs)
+                                       detail::nonPtrIntegral auto rhs)
     -> ArithmeticPtr<T, Storage> {
     return lhs.raw - static_cast<Storage>(rhs);
 }
@@ -1128,21 +1129,21 @@ template <typename T, typename U, typename Storage>
 
 template <typename T, typename Storage>
 [[nodiscard]] constexpr auto operator*(ArithmeticPtr<T, Storage> lhs,
-                                       detail::NonPtrIntegral auto rhs)
+                                       detail::nonPtrIntegral auto rhs)
     -> ArithmeticPtr<T, Storage> {
     return lhs.raw * ArithmeticPtr<T, Storage>{rhs}.raw;
 }
 
 template <typename T, typename Storage>
 [[nodiscard]] constexpr auto operator&(ArithmeticPtr<T, Storage> lhs,
-                                       detail::NonPtrIntegral auto rhs)
+                                       detail::nonPtrIntegral auto rhs)
     -> ArithmeticPtr<T, Storage> {
     return lhs.raw & ArithmeticPtr<T, Storage>{rhs}.raw;
 }
 
 template <typename T, typename Storage>
 [[nodiscard]] constexpr auto operator|(ArithmeticPtr<T, Storage> lhs,
-                                       detail::NonPtrIntegral auto rhs)
+                                       detail::nonPtrIntegral auto rhs)
     -> ArithmeticPtr<T, Storage> {
     return lhs.raw | ArithmeticPtr<T, Storage>{rhs}.raw;
 }

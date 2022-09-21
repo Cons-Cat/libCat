@@ -11,6 +11,7 @@ option(CAT_USE_SANITIZERS "Link ASan and UBSan" ON)
 
 list(
   APPEND CAT_FLAGS_COMMON
+  -fdiagnostics-color
   # Disable linking libC symbols.
   -nostdlib
   -Wno-builtin-declaration-mismatch
@@ -25,9 +26,8 @@ list(
   -mlzcnt
   -mfsgsbase
   # These flags cause clang-tidy 12 to crash:
-  -fconcepts-diagnostics-depth=2
+  # -fconcepts-diagnostics-depth=2
   -fmax-errors=4
-  -fdiagnostics-color
   # Enable most warnings.
   -Wall -Wextra
   -Wno-unused-function

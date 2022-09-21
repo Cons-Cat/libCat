@@ -11,11 +11,10 @@
 // features that the basic compiler intrinsics largely already had. There are
 // three layers of technology to this for no reason!
 
-// To streamline this, libCat uses the intrinsics which GNU already provides,
-// and wraps it in one thin layer of technology.
+// To streamline this, libCat uses the intrinsics and attributes which GNU
+// already provides, and wraps it in one thin layer of technology.
 
-#include <cat/meta>
-#include <utility>
+#include <cat/utility>
 
 #include "cat/detail/simd_avx2_fwd.hpp"
 #include "cat/detail/simd_sse42.hpp"
@@ -660,65 +659,65 @@ using NativeSimd = Simd<NativeAbi<T>, T>;
 template <typename T>
 using NativeSimdMask = SimdMask<NativeAbi<T>, T>;
 
-using int1x2 = FixedSizeSimd<int1::Raw, 2>;
-using int1x4 = FixedSizeSimd<int1::Raw, 4>;
-using int1x8 = FixedSizeSimd<int1::Raw, 8>;
-using int1x16 = FixedSizeSimd<int1::Raw, 16>;
-using int1x32 = FixedSizeSimd<int1::Raw, 32>;
-using int1x_ = NativeSimd<int1::Raw>;
+using int1x2 = FixedSizeSimd<int1::Raw, 2>;    // NOLINT
+using int1x4 = FixedSizeSimd<int1::Raw, 4>;    // NOLINT
+using int1x8 = FixedSizeSimd<int1::Raw, 8>;    // NOLINT
+using int1x16 = FixedSizeSimd<int1::Raw, 16>;  // NOLINT
+using int1x32 = FixedSizeSimd<int1::Raw, 32>;  // NOLINT
+using int1x_ = NativeSimd<int1::Raw>;          // NOLINT
 
-using uint1x2 = FixedSizeSimd<uint1::Raw, 2>;
-using uint1x4 = FixedSizeSimd<uint1::Raw, 4>;
-using uint1x8 = FixedSizeSimd<uint1::Raw, 8>;
-using uint1x16 = FixedSizeSimd<uint1::Raw, 16>;
-using uint1x32 = FixedSizeSimd<uint1::Raw, 32>;
-using uint1x_ = NativeSimd<uint1::Raw>;
+using uint1x2 = FixedSizeSimd<uint1::Raw, 2>;    // NOLINT
+using uint1x4 = FixedSizeSimd<uint1::Raw, 4>;    // NOLINT
+using uint1x8 = FixedSizeSimd<uint1::Raw, 8>;    // NOLINT
+using uint1x16 = FixedSizeSimd<uint1::Raw, 16>;  // NOLINT
+using uint1x32 = FixedSizeSimd<uint1::Raw, 32>;  // NOLINT
+using uint1x_ = NativeSimd<uint1::Raw>;          // NOLINT
 
 // TODO: Think over the string vectorization API.
 // TODO: Support `char2x_` vector family.
 // Strings need their own vectors.
-using char1x16 = Sse42Simd<char>;
-using char1x32 = Avx2Simd<char>;
-using char1x_ = Avx2Simd<char>;
+using char1x16 = Sse42Simd<char>;  // NOLINT
+using char1x32 = Avx2Simd<char>;   // NOLINT
+using char1x_ = Avx2Simd<char>;    // NOLINT
 
-using int2x2 = FixedSizeSimd<int2::Raw, 2>;
-using int2x4 = FixedSizeSimd<int2::Raw, 4>;
-using int2x8 = FixedSizeSimd<int2::Raw, 8>;
-using int2x16 = FixedSizeSimd<int2::Raw, 16>;
-using int2x_ = NativeSimd<int2::Raw>;
+using int2x2 = FixedSizeSimd<int2::Raw, 2>;    // NOLINT
+using int2x4 = FixedSizeSimd<int2::Raw, 4>;    // NOLINT
+using int2x8 = FixedSizeSimd<int2::Raw, 8>;    // NOLINT
+using int2x16 = FixedSizeSimd<int2::Raw, 16>;  // NOLINT
+using int2x_ = NativeSimd<int2::Raw>;          // NOLINT
 
-using uint2x2 = FixedSizeSimd<uint2::Raw, 2>;
-using uint2x4 = FixedSizeSimd<uint2::Raw, 4>;
-using uint2x8 = FixedSizeSimd<uint2::Raw, 8>;
-using uint2x16 = FixedSizeSimd<uint2::Raw, 16>;
-using uint2x_ = NativeSimd<uint2::Raw>;
+using uint2x2 = FixedSizeSimd<uint2::Raw, 2>;    // NOLINT
+using uint2x4 = FixedSizeSimd<uint2::Raw, 4>;    // NOLINT
+using uint2x8 = FixedSizeSimd<uint2::Raw, 8>;    // NOLINT
+using uint2x16 = FixedSizeSimd<uint2::Raw, 16>;  // NOLINT
+using uint2x_ = NativeSimd<uint2::Raw>;          // NOLINT
 
-using int4x2 = FixedSizeSimd<int4::Raw, 2>;
-using int4x4 = FixedSizeSimd<int4::Raw, 4>;
-using int4x8 = FixedSizeSimd<int4::Raw, 8>;
-using int4x_ = NativeSimd<int4::Raw>;
+using int4x2 = FixedSizeSimd<int4::Raw, 2>;  // NOLINT
+using int4x4 = FixedSizeSimd<int4::Raw, 4>;  // NOLINT
+using int4x8 = FixedSizeSimd<int4::Raw, 8>;  // NOLINT
+using int4x_ = NativeSimd<int4::Raw>;        // NOLINT
 
-using uint4x2 = FixedSizeSimd<uint4::Raw, 2>;
-using uint4x4 = FixedSizeSimd<uint4::Raw, 4>;
-using uint4x8 = FixedSizeSimd<uint4::Raw, 8>;
-using uint4x_ = NativeSimd<uint4::Raw>;
+using uint4x2 = FixedSizeSimd<uint4::Raw, 2>;  // NOLINT
+using uint4x4 = FixedSizeSimd<uint4::Raw, 4>;  // NOLINT
+using uint4x8 = FixedSizeSimd<uint4::Raw, 8>;  // NOLINT
+using uint4x_ = NativeSimd<uint4::Raw>;        // NOLINT
 
-using int8x2 = FixedSizeSimd<int8::Raw, 2>;
-using int8x4 = FixedSizeSimd<int8::Raw, 4>;
-using int8x_ = NativeSimd<int8::Raw>;
+using int8x2 = FixedSizeSimd<int8::Raw, 2>;  // NOLINT
+using int8x4 = FixedSizeSimd<int8::Raw, 4>;  // NOLINT
+using int8x_ = NativeSimd<int8::Raw>;        // NOLINT
 
-using uint8x2 = FixedSizeSimd<uint8::Raw, 2>;
-using uint8x4 = FixedSizeSimd<uint8::Raw, 4>;
-using uint8x_ = NativeSimd<uint8::Raw>;
+using uint8x2 = FixedSizeSimd<uint8::Raw, 2>;  // NOLINT
+using uint8x4 = FixedSizeSimd<uint8::Raw, 4>;  // NOLINT
+using uint8x_ = NativeSimd<uint8::Raw>;        // NOLINT
 
-using float4x2 = FixedSizeSimd<float4::Raw, 2>;
-using float4x4 = FixedSizeSimd<float4::Raw, 4>;
-using float4x8 = FixedSizeSimd<float4::Raw, 8>;
-using float4x_ = NativeSimd<float4::Raw>;
+using float4x2 = FixedSizeSimd<float4::Raw, 2>;  // NOLINT
+using float4x4 = FixedSizeSimd<float4::Raw, 4>;  // NOLINT
+using float4x8 = FixedSizeSimd<float4::Raw, 8>;  // NOLINT
+using float4x_ = NativeSimd<float4::Raw>;        // NOLINT
 
-using float8x2 = FixedSizeSimd<float8::Raw, 2>;
-using float8x4 = FixedSizeSimd<float8::Raw, 4>;
-using float8x_ = NativeSimd<float8::Raw>;
+using float8x2 = FixedSizeSimd<float8::Raw, 2>;  // NOLINT
+using float8x4 = FixedSizeSimd<float8::Raw, 4>;  // NOLINT
+using float8x_ = NativeSimd<float8::Raw>;        // NOLINT
 
 // TODO: Support `bool` family vectors.
 
@@ -866,52 +865,52 @@ auto is_avx512vl_supported() -> bool;
 
 }  // namespace cat
 
-using int1x2 = cat::int1x2;
-using int1x4 = cat::int1x4;
-using int1x8 = cat::int1x8;
-using int1x16 = cat::int1x16;
-using int1x32 = cat::int1x32;
-using int1x_ = cat::int1x_;
-using uint1x2 = cat::uint1x2;
-using uint1x4 = cat::uint1x4;
-using uint1x8 = cat::uint1x8;
-using uint1x16 = cat::uint1x16;
-using uint1x32 = cat::uint1x32;
-using uint1x_ = cat::uint1x_;
-using char1x16 = cat::char1x16;
-using char1x32 = cat::char1x32;
-using char1x_ = cat::char1x_;
-using int2x2 = cat::int2x2;
-using int2x4 = cat::int2x4;
-using int2x8 = cat::int2x8;
-using int2x16 = cat::int2x16;
-using int2x_ = cat::int2x_;
-using uint2x2 = cat::uint2x2;
-using uint2x4 = cat::uint2x4;
-using uint2x8 = cat::uint2x8;
-using uint2x16 = cat::uint2x16;
-using uint2x_ = cat::uint2x_;
-using int4x2 = cat::int4x2;
-using int4x4 = cat::int4x4;
-using int4x8 = cat::int4x8;
-using int4x_ = cat::int4x_;
-using uint4x2 = cat::uint4x2;
-using uint4x4 = cat::uint4x4;
-using uint4x8 = cat::uint4x8;
-using uint4x_ = cat::uint4x_;
-using int8x2 = cat::int8x2;
-using int8x4 = cat::int8x4;
-using int8x_ = cat::int8x_;
-using uint8x2 = cat::uint8x2;
-using uint8x4 = cat::uint8x4;
-using uint8x_ = cat::uint8x_;
-using float4x2 = cat::float4x2;
-using float4x4 = cat::float4x4;
-using float4x8 = cat::float4x8;
-using float4x_ = cat::float4x_;
-using float8x2 = cat::float8x2;
-using float8x4 = cat::float8x4;
-using float8x_ = cat::float8x_;
+using cat::char1x16;
+using cat::char1x32;
+using cat::char1x_;
+using cat::float4x2;
+using cat::float4x4;
+using cat::float4x8;
+using cat::float4x_;
+using cat::float8x2;
+using cat::float8x4;
+using cat::float8x_;
+using cat::int1x16;
+using cat::int1x2;
+using cat::int1x32;
+using cat::int1x4;
+using cat::int1x8;
+using cat::int1x_;
+using cat::int2x16;
+using cat::int2x2;
+using cat::int2x4;
+using cat::int2x8;
+using cat::int2x_;
+using cat::int4x2;
+using cat::int4x4;
+using cat::int4x8;
+using cat::int4x_;
+using cat::int8x2;
+using cat::int8x4;
+using cat::int8x_;
+using cat::uint1x16;
+using cat::uint1x2;
+using cat::uint1x32;
+using cat::uint1x4;
+using cat::uint1x8;
+using cat::uint1x_;
+using cat::uint2x16;
+using cat::uint2x2;
+using cat::uint2x4;
+using cat::uint2x8;
+using cat::uint2x_;
+using cat::uint4x2;
+using cat::uint4x4;
+using cat::uint4x8;
+using cat::uint4x_;
+using cat::uint8x2;
+using cat::uint8x4;
+using cat::uint8x_;
 
 #include <cat/detail/simd_avx2.hpp>
 #include <cat/detail/simd_sse42.hpp>

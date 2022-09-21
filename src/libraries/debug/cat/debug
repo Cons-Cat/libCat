@@ -59,28 +59,23 @@ void breakpoint();
 // TODO: Allow `assert()` and `verify()` in a `constexpr` context, and make them
 // throw if their invariant holds false.
 
+// TODO: Fancier `ASSERT()` macro with expression decomposition.
+// TODO: `assert_eq()`, `assert_gt()`, etc.
+
 void assert_handler(SourceLocation const& callsite);
 
-// Check that an expression holds true in all builds. If it holds false, invoke
-// an assert handler.
 void verify(bool invariant_expression,
             void (*p_assert_handler)(SourceLocation const&) = assert_handler,
             SourceLocation const& callsite = SourceLocation::current());
 
-// Check that an expression holds true in all builds. If it holds false, print
-// `error_string` and invoke an assert handler.
 void verify(bool invariant_expression, String const error_string,
             void (*p_assert_handler)(SourceLocation const&) = assert_handler,
             SourceLocation const& callsite = SourceLocation::current());
 
-// Check that an expression holds true when `NDEBUG` is not defined. If it holds
-// false, invoke an assert handler.
 void assert(bool invariant_expression,
             void (*p_assert_handler)(SourceLocation const&) = assert_handler,
             SourceLocation const& callsite = SourceLocation::current());
 
-// Check that an expression holds true when `NDEBUG` is not defined. If it
-// holds false, print `error_string` and invoke an assert handler.
 void assert(bool invariant_expression, String const error_string,
             void (*p_assert_handler)(SourceLocation const&) = assert_handler,
             SourceLocation const& callsite = SourceLocation::current());

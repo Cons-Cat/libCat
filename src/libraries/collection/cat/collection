@@ -75,7 +75,7 @@ class CollectionFacade {
         requires(this->is_array_like)
     {
         if (!is_constant_evaluated()) {
-            assert(index >= 0);
+            cat::assert(index >= 0);
         }
         if (index < this->self().capacity()) {
             return this->self_mut().p_data()[index.raw];
@@ -110,8 +110,8 @@ class CollectionFacade {
         requires(this->is_array_like)
     {
         if (!is_constant_evaluated()) {
-            assert(start_index >= 0);
-            assert(end_index <= this->self().capacity());
+            cat::assert(start_index >= 0);
+            cat::assert(end_index <= this->self().capacity());
         }
 
         return Span<T>(this->self().p_data() + start_index,
@@ -123,8 +123,8 @@ class CollectionFacade {
         requires(this->is_array_like)
     {
         if (!is_constant_evaluated()) {
-            assert(start_index >= 0);
-            assert(end_index <= this->self().capacity());
+            cat::assert(start_index >= 0);
+            cat::assert(end_index <= this->self().capacity());
         }
 
         return Span<T const>(this->self().p_data() + start_index,
