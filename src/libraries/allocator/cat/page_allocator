@@ -27,7 +27,7 @@ class PageAllocator : public AllocatorFacade<PageAllocator> {
     auto allocation_size(usize alignment, ssize allocation_size)
         -> OptionalNonZero<ssize> {
         // Pages cannot be aligned by greater than 4 kibibytes.
-        assert(alignment <= 4_uki);
+        cat::assert(alignment <= 4_uki);
         // Round `allocation_size` up to the nearest 4 kibibytes.
         return ((allocation_size / 4_ki) + 1) * 4_ki;
     }
@@ -61,7 +61,7 @@ class PageAllocator : public AllocatorFacade<PageAllocator> {
     auto aligned_allocate(usize alignment, ssize allocation_size)
         -> OptionalPtr<void> {
         // Pages cannot be aligned by greater than 4 kibibytes.
-        assert(alignment <= 4_uki);
+        cat::assert(alignment <= 4_uki);
         // A normal page allocation already has strong alignment guarantees.
         return this->allocate(allocation_size);
     }

@@ -20,7 +20,7 @@ cat::bit_cast(U& from_value) -> T {
             return __builtin_bit_cast(T, from_value);
         }
     } else {
-        // This subroutine can be optimized into a bit-cast by GCC.
+        // This can be optimized into a bit-cast by GCC.
         T* p_to = static_cast<T*>(static_cast<void*>(
             const_cast<RemoveConst<U>*>(__builtin_addressof(from_value))));
         __builtin_memcpy(p_to, __builtin_addressof(from_value), sizeof(T));

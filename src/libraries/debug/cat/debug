@@ -81,6 +81,3 @@ void assert(bool invariant_expression, String const error_string,
             SourceLocation const& callsite = SourceLocation::current());
 
 }  // namespace cat
-
-using cat::assert;
-using cat::verify;

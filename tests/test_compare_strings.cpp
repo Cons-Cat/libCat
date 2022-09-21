@@ -47,21 +47,21 @@ auto main() -> int {
 
     // Test collection operations.
     _ = const_string_1[1];
-    verify(!const_string_3.at(10).has_value());
+    cat::verify(!const_string_3.at(10).has_value());
 
     // TODO: Make this `constexpr`.
     cat::StaticString hello_world = (const_string_3 + const_string_4);
     constexpr cat::StaticString const_hello_world =
         (const_string_3 + const_string_4);
-    verify(cat::compare_strings(hello_world, "Hello, world!"));
-    verify(cat::compare_strings(const_hello_world, "Hello, world!"));
+    cat::verify(cat::compare_strings(hello_world, "Hello, world!"));
+    cat::verify(cat::compare_strings(const_hello_world, "Hello, world!"));
 
     ssize const h = const_string_1.find('H').value();
     ssize const e = const_string_1.find('e').value();
     ssize const l = const_string_1.find('l').value();
     ssize const o = const_string_1.find('o').value();
-    verify(h == 0);
-    verify(e == 1);
-    verify(l == 2);
-    verify(o == 4);
+    cat::verify(h == 0);
+    cat::verify(e == 1);
+    cat::verify(l == 2);
+    cat::verify(o == 4);
 }

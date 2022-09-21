@@ -17,7 +17,7 @@ auto main() -> int {
     for (int i = 0; i < 7; ++i) {
         cat::Optional handle = allocator.alloc<int4>();
         if (!handle.has_value()) {
-            verify(i == 6);
+            cat::verify(i == 6);
             goto overallocated;
         }
     }
@@ -28,38 +28,38 @@ overallocated:
     allocator.reset();
     for (int4 i = 0; i < 4; ++i) {
         cat::Optional handle = allocator.alloc<cat::Byte>();
-        verify(handle.has_value());
+        cat::verify(handle.has_value());
     }
     // This allocated 16 bytes, which is 8-byte-aligned. Another int allocation
     // would make it 4-byte-aligned. However, 8 bytes should be allocated here
     // to keep it 8-byte-aligned.
     auto handle = allocator.align_alloc<int4>(8u).value();
-    verify(cat::is_aligned(&allocator.get(handle), 8u));
+    cat::verify(cat::is_aligned(&allocator.get(handle), 8u));
 
     // Allocate another int.
     auto handle_2 = allocator.alloc<int4>().value();
-    verify(cat::is_aligned(&allocator.get(handle_2), 4u));
+    cat::verify(cat::is_aligned(&allocator.get(handle_2), 4u));
     // This is now 4-byte-aligned.
-    verify(!cat::is_aligned(&allocator.get(handle_2), 8u));
+    cat::verify(!cat::is_aligned(&allocator.get(handle_2), 8u));
 
     // Small size allocations shouldn't bump the allocator.
     for (int4 i = 0; i < 20; ++i) {
         auto memory = allocator.inline_alloc<int4>();
-        verify(memory.has_value());
+        cat::verify(memory.has_value());
     }
     cat::Optional handle_3 = allocator.alloc<int4>();
-    verify(handle_3.has_value());
+    cat::verify(handle_3.has_value());
 
     // Test that allocations are reusable.
     allocator.reset();
     decltype(allocator.alloc<int1>()) handles[4];
     for (signed char i = 0; i < 4; ++i) {
         handles[i] = allocator.alloc<int1>();
-        verify(handles[i].has_value());
+        cat::verify(handles[i].has_value());
         allocator.get(handles[i].value()) = i;
     }
     for (signed char i = 0; i < 4; ++i) {
-        verify(allocator.get(handles[i].value()) == i);
+        cat::verify(allocator.get(handles[i].value()) == i);
     }
 
     // Test that allocations have pointer stability.
@@ -71,23 +71,23 @@ overallocated:
         p_handles[i] = p_handle;
     }
     for (int i = 0; i < 4; ++i) {
-        verify(*(p_handles[i]) == i);
+        cat::verify(*(p_handles[i]) == i);
         allocator.free(p_handles[i]);
     }
 
     allocator.reset();
     // Test allocation constructors.
     int4* p_initialized = allocator.p_alloc<int4>(100).or_exit();
-    verify(*p_initialized == 100);
+    cat::verify(*p_initialized == 100);
 
     // Test sized allocations.
     allocator.reset();
     _ = allocator.alloc<int2>().or_exit();
     // Because the allocator is now 2 byte aligned, an extra 2 bytes have to be
     // reserved to allocate a 4-byte aligned value:
-    verify(allocator.nalloc<int4>().or_exit() == 6);
+    cat::verify(allocator.nalloc<int4>().or_exit() == 6);
     cat::Tuple alloc_int_size = allocator.salloc<int4>().value();
-    verify(alloc_int_size.second() == 6);
+    cat::verify(alloc_int_size.second() == 6);
 
     // TODO: Test multi allocations.
     // TODO: Test inline multi allocations.

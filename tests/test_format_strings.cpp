@@ -10,8 +10,8 @@ auto main() -> int {
 
     // Test `int4` conversion.
     cat::String int_string = cat::to_chars(allocator, 10).or_exit();
-    verify(cat::compare_strings(int_string, "10"));
-    verify(int_string.size() == 3);
+    cat::verify(cat::compare_strings(int_string, "10"));
+    cat::verify(int_string.size() == 3);
 
     // TODO: Test out of memory error handling.
     // TODO: Test formatting maximum value of integers.
@@ -21,8 +21,8 @@ auto main() -> int {
     constexpr cat::StaticString const_int = cat::to_chars<136>();
     constexpr cat::StaticString const_negative = cat::to_chars<-1650>();
     // TODO: `constexpr` string comparison.
-    verify(cat::compare_strings(const_int.p_data(), "136"));
-    verify(cat::compare_strings(const_negative.p_data(), "-1650"));
+    cat::verify(cat::compare_strings(const_int.p_data(), "136"));
+    cat::verify(cat::compare_strings(const_negative.p_data(), "-1650"));
 
     // Test formatting `int`.
     allocator.reset();
@@ -31,7 +31,7 @@ auto main() -> int {
     _ = cat::println(formatted_string_int);
     // TODO: `formatted_string_int` has an incorrect `.size()`, but the content
     // is correct.
-    verify(cat::compare_strings(formatted_string_int, "bb52aa130cc"));
+    cat::verify(cat::compare_strings(formatted_string_int, "bb52aa130cc"));
 
     // Test formatting `float`.
     allocator.reset();
@@ -41,21 +41,21 @@ auto main() -> int {
     cat::String formatted_string_float =
         cat::format(allocator, "a{}b", 1.234f).or_exit();
     _ = cat::println(formatted_string_float);
-    verify(cat::compare_strings(formatted_string_float, "a1.234E0b"));
+    cat::verify(cat::compare_strings(formatted_string_float, "a1.234E0b"));
 
     cat::String formatted_string_double =
         cat::format(allocator, "a{}b", 1.234).or_exit();
     _ = cat::println(formatted_string_double);
-    verify(cat::compare_strings(formatted_string_double, "a1.234E0b"));
+    cat::verify(cat::compare_strings(formatted_string_double, "a1.234E0b"));
 
     // Test `cat::to_string_at()`.
     cat::Array<char, 100> array;
     cat::Span<char> array_span{array.p_data(), array.size()};
     cat::String string_int_13 = cat::to_string_at(int4{13}, array_span).value();
-    verify(cat::compare_strings(string_int_13.p_data(), "13"));
+    cat::verify(cat::compare_strings(string_int_13.p_data(), "13"));
     cat::String string_neg_13 =
         cat::to_string_at(int4{-13}, array_span).value();
-    verify(cat::compare_strings(string_neg_13.p_data(), "-13"));
+    cat::verify(cat::compare_strings(string_neg_13.p_data(), "-13"));
 
     // Test `cat::to_string_at()` in a `constexpr` context.
     auto make_hi_in_const = [](int4 value) constexpr->cat::String {

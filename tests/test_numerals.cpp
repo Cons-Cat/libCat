@@ -7,9 +7,9 @@ struct Nttp {
 
 auto main() -> int {
     // Test `concept`s.
-    static_assert(cat::detail::ArithmeticNonPtr<int4>);
-    static_assert(cat::detail::ArithmeticNonPtr<__INTPTR_TYPE__>);
-    static_assert(!cat::detail::ArithmeticNonPtr<intptr<void>>);
+    static_assert(cat::detail::arithmeticNonPtr<int4>);
+    static_assert(cat::detail::arithmeticNonPtr<__INTPTR_TYPE__>);
+    static_assert(!cat::detail::arithmeticNonPtr<intptr<void>>);
 
     static_assert(cat::is_same<cat::ToUnsafeNumeral<int>, int>);
     static_assert(cat::is_same<cat::ToSafeNumeral<int>, int4>);
@@ -78,19 +78,19 @@ auto main() -> int {
 
     [[maybe_unused]] bool is_less = (int_less < int_more);
     is_less = ((0 <=> int_more) < 0);
-    verify(is_less);
+    cat::verify(is_less);
     is_less = (0 < int_more);
-    verify(is_less);
+    cat::verify(is_less);
     is_less = (int_less < 2);
-    verify(is_less);
+    cat::verify(is_less);
 
     [[maybe_unused]] bool is_more = (int_more > int_less);
     is_more = ((0 <=> int_less) == 0);
-    verify(is_more);
+    cat::verify(is_more);
     is_more = (0 < int_more);
-    verify(is_more);
+    cat::verify(is_more);
     is_more = (int_less < 2);
-    verify(is_more);
+    cat::verify(is_more);
 
     // Test matching numerals.
     int4 match_int = 1;
@@ -104,7 +104,7 @@ auto main() -> int {
         is_a<int4>().then([&]() {
             matched = true;
         }));
-    verify(matched);
+    cat::verify(matched);
 
     // Match value.
     matched = false;
@@ -115,7 +115,7 @@ auto main() -> int {
         is_a(1).then([&]() {
             matched = true;
         }));
-    verify(matched);
+    cat::verify(matched);
 
     // Test unary operators.
     [[maybe_unused]] int4 negative_int4 = -1_i4;

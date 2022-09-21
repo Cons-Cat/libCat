@@ -3,9 +3,7 @@
 #pragma once
 
 #include <cat/collection>
-#include <cat/utility>
-#include <memory>
-#include <utility>
+#include <cat/memory>
 
 namespace cat {
 

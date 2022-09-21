@@ -49,18 +49,18 @@ class CollectionFacade {
         detail::IsBoundedCollection<Derived>;
 
   public:
+    // If `.size()` is not, provided and `.capacity()` is, generate
+    // `.size()`.
+    [[nodiscard]] constexpr auto size() const -> ssize
+        requires(detail::HasCapacity<Derived> && !detail::HasSize<Derived>) {
+        return this->self().capacity();
+    }
+
     // If `.size()` is provided and `.capacity()` is not, generate
     // `.capacity()`.
     [[nodiscard]] constexpr auto capacity() const -> ssize
         requires(detail::HasSize<Derived>) {
         return this->self().size();
-    }
-
-    // If `.size()` is not, provided and `.capacity()` is, generate
-    // `.size()`.
-    [[nodiscard]] constexpr auto size() const -> ssize
-        requires(detail::HasCapacity<Derived>) {
-        return this->self().capacity();
     }
 
     // This evaluates true if there are one or more elements currently in this
@@ -72,7 +72,7 @@ class CollectionFacade {
 
     // Index into this collection with bounds-checking.
     [[nodiscard]] constexpr auto at(ssize index) -> Optional<T&>
-        requires(this->is_array_like)
+        requires(is_array_like)
     {
         if (!is_constant_evaluated()) {
             cat::assert(index >= 0);

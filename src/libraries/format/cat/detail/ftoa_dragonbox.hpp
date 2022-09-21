@@ -51,7 +51,7 @@ namespace detail {
 
     template <class T>
         requires(is_unsigned<T>)
-    constexpr usize::Raw value_bits = NumericLimits<T>::digits;
+    inline constexpr usize::Raw value_bits = NumericLimits<T>::digits;
 }  // namespace detail
 
 // These classes expose encoding specs of IEEE-754-like floating-point formats.

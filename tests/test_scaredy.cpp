@@ -48,31 +48,31 @@ auto main() -> int {
     // bytes. No storage cost exists for the error types.
     static_assert(sizeof(result) == 16);
 
-    verify(!result.has_value());
-    verify(result.is<ErrorOne>());
-    verify(!result.is<int8>());
+    cat::verify(!result.has_value());
+    cat::verify(result.is<ErrorOne>());
+    cat::verify(!result.is<int8>());
 
     result = union_errors(1);
-    verify(!result.has_value());
-    verify(result.is<ErrorTwo>());
-    verify(!result.is<int8>());
+    cat::verify(!result.has_value());
+    cat::verify(result.is<ErrorTwo>());
+    cat::verify(!result.is<int8>());
 
     result = union_errors(2);
-    verify(result.has_value());
-    verify(result.is<int8>());
+    cat::verify(result.has_value());
+    cat::verify(result.is<int8>());
 
     result = union_errors(3);
-    verify(result.has_value());
-    verify(result.value() == 3);
-    verify(result.is<int8>());
+    cat::verify(result.has_value());
+    cat::verify(result.value() == 3);
+    cat::verify(result.is<int8>());
 
     // Test `.error()`.
     cat::Scaredy<int, ErrorOne> one_error = ErrorOne{1};
-    verify(one_error.error().code == 1);
-    verify(one_error.error<ErrorOne>().code == 1);
+    cat::verify(one_error.error().code == 1);
+    cat::verify(one_error.error<ErrorOne>().code == 1);
 
     cat::Scaredy<int, ErrorOne, ErrorTwo> two_error = ErrorOne{1};
-    verify(two_error.error<ErrorOne>().code == 1);
+    cat::verify(two_error.error<ErrorOne>().code == 1);
 
     // Test compact optimization.
     cat::Scaredy<cat::Compact<int4,
@@ -84,19 +84,19 @@ auto main() -> int {
         predicate = -1;
     // The `Scaredy` here adds no storage bloat to an `int4`.
     static_assert(sizeof(predicate) == sizeof(int4));
-    verify(!predicate.has_value());
+    cat::verify(!predicate.has_value());
 
     predicate = -1;
-    verify(!predicate.has_value());
+    cat::verify(!predicate.has_value());
 
     predicate = 0;
-    verify(predicate.has_value());
+    cat::verify(predicate.has_value());
 
     predicate = 10;
-    verify(predicate.has_value());
+    cat::verify(predicate.has_value());
 
     predicate = ErrorOne{-1};
-    verify(!predicate.has_value());
+    cat::verify(!predicate.has_value());
 
     // Test `.value_or()`.
     cat::Scaredy<int4, ErrorOne> is_error = ErrorOne{};
@@ -105,16 +105,16 @@ auto main() -> int {
     cat::Scaredy<int4, ErrorOne> const const_is_value = 2;
 
     int4 fallback = is_error.value_or(1);
-    verify(fallback == 1);
+    cat::verify(fallback == 1);
 
     int4 no_fallback = is_value.value_or(1);
-    verify(no_fallback == 2);
+    cat::verify(no_fallback == 2);
 
     int4 const_fallback = const_is_error.value_or(1);
-    verify(const_fallback == 1);
+    cat::verify(const_fallback == 1);
 
     int4 no_const_fallback = const_is_value.value_or(1);
-    verify(no_const_fallback == 2);
+    cat::verify(no_const_fallback == 2);
 
     // Test monadic member functions on a mutable `Scaredy`.
     auto increment = [](auto input) {
@@ -161,7 +161,7 @@ auto main() -> int {
         is_a<float>().then([&]() {
             matched = false;
         }));
-    verify(matched);
+    cat::verify(matched);
 
     // Match it against `ErrorOne`.
     matched = false;
@@ -178,14 +178,14 @@ auto main() -> int {
         is_a<ErrorTwo>().then([&]() {
             matched = false;
         }));
-    verify(matched);
+    cat::verify(matched);
 
     // Test member access pattern matching syntax.
     matched = false;
     is_variant_scaredy.match(is_a<ErrorOne>().then([&]() {
         matched = true;
     }));
-    verify(matched);
+    cat::verify(matched);
 
     // Test `.is()` on `Compact` `Scaredy`.
     predicate = 1;
@@ -199,7 +199,7 @@ auto main() -> int {
         is_a<int4>().then([&]() {
             matched = true;
         }));
-    verify(matched);
+    cat::verify(matched);
 
     matched = false;
     predicate = ErrorOne{-1};
@@ -210,5 +210,5 @@ auto main() -> int {
         is_a<ErrorOne>().then([&]() {
             matched = true;
         }));
-    verify(matched);
+    cat::verify(matched);
 }
