@@ -3,10 +3,13 @@
 #include <cat/page_allocator>
 
 auto main() -> int {
-    // Make allocator for string formatting.
-    cat::PageAllocator pager;
-    cat::Byte* p_page = pager.p_alloc_multi<cat::Byte>(4_ki).or_exit();
-    cat::LinearAllocator allocator{p_page, 4_ki - 32};
+    // Initialize an allocator.
+    cat::PageAllocator paging_allocator;
+    paging_allocator.reset();
+    auto page = paging_allocator.alloc_multi<cat::Byte>(4_ki - 32).or_exit();
+    defer(paging_allocator.free(page);)
+    auto allocator =
+        cat::LinearAllocator::backed_handle(paging_allocator, page);
 
     // Test `int4` conversion.
     cat::String int_string = cat::to_chars(allocator, 10).or_exit();

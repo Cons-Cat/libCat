@@ -6,6 +6,8 @@
 #include <cat/span>
 #include <cat/tuple>
 
+#include "cat/meta"
+
 namespace cat {
 
 template <typename T>
@@ -4746,7 +4748,8 @@ class AllocatorFacade {
         zero_memory_explicit(p_handle, count * ssizeof<T>());
     }
 
-    // Get a non-`const` reference to the data in any memory handle.
+    // Get a non-`const` handle to the data in any memory handle. If that memory
+    // handle is to a multi-allocation, this returns a `Span`.
     template <memoryHandle T>
     [[nodiscard]] auto get(T& handle) & -> decltype(auto) {
         using Allocation = typename T::Allocation;
@@ -4772,7 +4775,8 @@ class AllocatorFacade {
         }
     }
 
-    // Get a `const` reference to the data in any memory handle.
+    // Get a `const` handle to the data in any memory handle. If that memory
+    // handle is to a multi-allocation, this returns a `Span`.
     template <memoryHandle T>
     [[nodiscard]] auto get(T const& memory) & -> decltype(auto) {
         return unconst(this)->get(unconst(memory));
@@ -4788,6 +4792,32 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] auto get(T const* p_handle) & -> T& {
         return *p_handle;
+    }
+
+    // Get a pointer to an allocated non-`const` `memoryHandle`.
+    template <memoryHandle T>
+        requires(Derived::has_pointer_stability)
+    [[nodiscard]] auto p_get(T& memory) -> auto{
+        decltype(auto) ref = this->get(memory);
+        using Handle = decltype(this->get(memory));
+        if constexpr (is_reference<Handle>) {
+            return addressof(ref);
+        } else {
+            return ref.p_data();
+        }
+    }
+
+    // Get a `const` pointer to an allocated `memoryHandle`.
+    template <memoryHandle T>
+        requires(Derived::has_pointer_stability)
+    [[nodiscard]] auto p_get(T const& memory) -> auto{
+        decltype(auto) ref = this->get(memory);
+        using Handle = decltype(this->get(memory));
+        if constexpr (is_reference<Handle>) {
+            return addressof(ref);
+        } else {
+            return ref.p_data();
+        }
     }
 
     // If the allocator does not over-ride a `.reset()` method, produce a

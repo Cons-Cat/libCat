@@ -8,10 +8,11 @@
 auto main() -> int {
     // Initialize an allocator.
     cat::PageAllocator paging_allocator;
+    auto page = paging_allocator.alloc_multi<cat::Byte>(4_ki).or_exit();
+    defer(paging_allocator.free(page);)
+    auto allocator =
+        cat::LinearAllocator::backed_handle_sized(paging_allocator, page, 24);
 
-    int4* p_page = paging_allocator.p_alloc_multi<int4>(4_ki).or_exit();
-    defer(paging_allocator.free_multi(p_page, 4_ki);)
-    cat::LinearAllocator allocator(p_page, 24);
     // It should not be possible to allocate 7 times here, because 24 bytes can
     // only hold 6 `int4`s.
     for (int i = 0; i < 7; ++i) {

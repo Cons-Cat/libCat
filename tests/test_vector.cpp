@@ -19,9 +19,13 @@ consteval auto const_func() -> int4 {
 }
 
 auto main() -> int {
-    cat::PageAllocator page_allocator;
-    cat::Byte* p_page = page_allocator.p_alloc_multi<cat::Byte>(4_ki).or_exit();
-    cat::LinearAllocator allocator = {p_page, 4_ki - 32};
+    // Initialize an allocator.
+    cat::PageAllocator paging_allocator;
+    paging_allocator.reset();
+    auto page = paging_allocator.alloc_multi<cat::Byte>(4_ki - 32).or_exit();
+    defer(paging_allocator.free(page);)
+    auto allocator =
+        cat::LinearAllocator::backed_handle(paging_allocator, page);
 
     // Test default constructing a `Vector`.
     cat::Vector<int4> int_vec;

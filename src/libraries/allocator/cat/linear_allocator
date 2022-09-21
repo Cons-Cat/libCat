@@ -22,11 +22,33 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
         }
     };
 
-  public:
-    // TODO: Should `arena_size` be `usize`?
     LinearAllocator(uintptr<void> p_address, ssize arena_size)
         : p_arena_begin(p_address + static_cast<usize>(arena_size)),
           p_arena_end(p_address){};
+
+  public:
+    static auto backed(stableAllocator auto& backing, ssize arena_size)
+        -> Optional<LinearAllocator> {
+        Optional maybe_memory =
+            backing.template p_alloc_multi<Byte>(arena_size);
+        if (!maybe_memory.has_value()) {
+            return nullopt;
+        }
+        return LinearAllocator(maybe_memory.value(), arena_size);
+    }
+
+    static auto backed_handle(stableAllocator auto& backing,
+                              memoryHandle auto& handle) -> LinearAllocator {
+        return LinearAllocator(backing.template p_get(handle),
+                               handle.raw_size());
+    }
+
+    static auto backed_handle_sized(stableAllocator auto& backing,
+                                    memoryHandle auto& handle, ssize arena_size)
+        -> LinearAllocator {
+        cat::assert(arena_size <= handle.raw_size());
+        return LinearAllocator(backing.template p_get(handle), arena_size);
+    }
 
     // Reset the bumped pointer to the beginning of this arena.
     void reset() {
