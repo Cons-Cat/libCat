@@ -491,6 +491,42 @@ class Scaredy {
         return fallback;
     }
 
+    // TODO: Add `.p_value()` getters, like `cat::Optional`.
+
+    // TODO: Add `&&` overloads to the `.assert()` and `.verify()` getters.
+    // TODO: Make the `.assert()` and `.verify()` getters `constexpr`.
+    // TODO: Add overloads which take a `String const` for an error message.
+
+    [[nodiscard]] auto assert(
+        void (*p_assert_handler)(SourceLocation const&) = assert_handler,
+        SourceLocation const& callsite = SourceLocation::current()) -> Value& {
+        cat::assert(this->has_value(), p_assert_handler, callsite);
+        return this->value();
+    }
+
+    [[nodiscard]] auto assert(
+        void (*p_assert_handler)(SourceLocation const&) = assert_handler,
+        SourceLocation const& callsite = SourceLocation::current()) const
+        -> Value& {
+        cat::assert(this->has_value(), p_assert_handler, callsite);
+        return this->value();
+    }
+
+    [[nodiscard]] auto verify(
+        void (*p_assert_handler)(SourceLocation const&) = assert_handler,
+        SourceLocation const& callsite = SourceLocation::current()) -> Value& {
+        cat::verify(this->has_value(), p_assert_handler, callsite);
+        return this->value();
+    }
+
+    [[nodiscard]] auto verify(
+        void (*p_assert_handler)(SourceLocation const&) = assert_handler,
+        SourceLocation const& callsite = SourceLocation::current()) const
+        -> Value& {
+        cat::verify(this->has_value(), p_assert_handler, callsite);
+        return this->value();
+    }
+
     // Holds true if this `Scaredy` currently has some value of the type `U`.
     // This method allows `Scaredy` to be used in `match` statements.
     template <typename U>
