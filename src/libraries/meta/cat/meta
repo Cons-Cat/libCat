@@ -690,9 +690,9 @@ concept narrowConvertible = requires() {
     U({declval<T>()});
 };
 
-// TODO: Support any integral.
-template <int value>
-concept powerOfTwo = ((value & (value - 1)) == 0);
+template <auto value>
+concept powerOfTwo = ((value & (value - decltype(value){1})) ==
+                      decltype(value){0});
 
 // `is_trivially_relocatable` can be overrided by partial template
 // specializations, such as:

@@ -4,7 +4,7 @@
 
 #include <cat/iterator>
 
-#include "cat/numerals"
+// TODO: Write tests for math functions.
 
 namespace cat {
 
@@ -132,6 +132,11 @@ constexpr auto pow(T base, T exponent) -> T {
     } else if constexpr (is_same<Raw, long double>) {
         return __builtin_powl(raw_base, exponent);
     }
+}
+
+template <arithmetic T>
+constexpr auto is_power_of_two(T value) -> bool {
+    return (value & (value - T{1})) == T{0};
 }
 
 }  // namespace cat
