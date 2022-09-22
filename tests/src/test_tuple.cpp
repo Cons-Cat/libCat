@@ -4,7 +4,7 @@ struct NonTrivial {
     NonTrivial(int){};
 };
 
-auto main() -> int {
+void test_tuple() {
     using intint = cat::Tuple<int, int>;
     static_assert(cat::is_trivial<intint>);
     static_assert(sizeof(intint) == 8);

@@ -56,6 +56,13 @@ using SourceLocation = std::source_location;
 
 void breakpoint();
 
+// This is exposed so that `unit_tests.hpp` can use it. Its implementation is in
+// `assert_handler.cpp`.
+namespace detail {
+    void print_assert_location(
+        SourceLocation const& callsite = SourceLocation::current());
+}
+
 // TODO: Allow `assert()` and `verify()` in a `constexpr` context, and make them
 // throw if their invariant holds false.
 

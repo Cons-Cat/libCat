@@ -2,10 +2,7 @@
 #include <cat/format>
 #include <cat/page_allocator>
 
-namespace cat::detail {
-
-void print_assert_location(
-    SourceLocation const& callsite = SourceLocation::current()) {
+void cat::detail::print_assert_location(SourceLocation const& callsite) {
     PageAllocator allocator;
     _ = eprint(format(allocator, "assert failed on line {}, in:\n    ",
                       callsite.line())
@@ -16,8 +13,6 @@ void print_assert_location(
     _ = eprint("\ncalled from:\n    ");
     _ = eprintln(callsite.function_name());
 }
-
-}  // namespace cat::detail
 
 void cat::assert_handler(SourceLocation const& callsite) {
     detail::print_assert_location(callsite);
