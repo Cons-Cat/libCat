@@ -52,19 +52,10 @@ class List : public CollectionFacade<List<T>, T> {
         detail::ListNode<T>* p_node;
     };
 
-    // TODO: Make constructors `constexpr` and add static factory member
-    // functions.
+    constexpr List() = default;
+    constexpr List(List<T>&& list) = default;
+    constexpr List(List<T> const&) = default;
 
-    List() : p_head(nullptr), p_tail(nullptr), length(0){};
-
-    List(List<T>&& list) = default;
-
-  private:
-    // Only allow the shallow copy constructor to be used by these static
-    // factory member functions. They need it to construct an `Optional<List>`.
-    List(List<T> const&) = default;
-
-  public:
     template <typename U, U... initializers>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]] static auto from(stableAllocator auto& allocator,
@@ -455,16 +446,10 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         detail::ForwardListNode<T>* p_node;
     };
 
-    ForwardList() : p_head(nullptr), p_tail(nullptr), length(0){};
+    constexpr ForwardList() = default;
+    constexpr ForwardList(ForwardList<T> const&) = default;
+    constexpr ForwardList(ForwardList<T>&& list) = default;
 
-  private:
-    // Only allow the shallow copy constructor to be used by these static
-    // factory member functions. They need it to construct an
-    // `Optional<ForwardList>`.
-    ForwardList(ForwardList<T> const&) = default;
-
-  public:
-    ForwardList(ForwardList<T>&& list) = default;
     template <typename U, U... values>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]] static auto from(stableAllocator auto& allocator,
