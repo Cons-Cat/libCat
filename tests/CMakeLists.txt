@@ -15,6 +15,7 @@ list(
   APPEND
   CAT_COMPILE_FLAGS_TEST
   ${CAT_COMPILE_FLAGS}
+  # --enable-initfini-array
   # Tests should fail if they produce sanitizer warnings.
   -fno-sanitize-recover=all
   # Tests should be allowed to have unused variables.
@@ -37,7 +38,7 @@ if(CAT_BUILD_UNIT_TESTS)
     # ${CMAKE_SOURCE_DIR}/tests/src/test_format_strings.cpp
     # ${CMAKE_SOURCE_DIR}/tests/src/test_linear_allocator.cpp
 	
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_list.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_list.cpp
 	
     # ${CMAKE_SOURCE_DIR}/tests/src/test_meta.cpp
     # ${CMAKE_SOURCE_DIR}/tests/src/test_numerals.cpp
@@ -61,6 +62,7 @@ if(CAT_BUILD_UNIT_TESTS)
     unit_tests PROPERTIES
     LINK_DEPENDS ${CMAKE_SOURCE_DIR}/tests/ctor.ld
   )
+  
   target_compile_options(unit_tests PRIVATE ${CAT_COMPILE_FLAGS})
   target_compile_definitions(unit_tests PRIVATE "NO_ARGC_ARGV" "INLINE_MAIN")
   target_link_libraries(unit_tests PRIVATE cat-tests)

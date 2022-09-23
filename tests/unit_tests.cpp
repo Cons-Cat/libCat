@@ -14,38 +14,16 @@ cat::LinearAllocator tests_linear_allocator =
 cat::Vector<TestFunction> all_tests =
     cat::Vector<TestFunction>::reserved(tests_linear_allocator, 100).or_exit();
 
-struct TestClass {
-    TestClass() {
-        _ = cat::print("MOO!\n");
-    }
-};
-
-TestClass testerT;
-
+using Constructor = void (*)();
 extern "C" {
-extern void (*__CTOR_LIST__)();  // NOLINT
-extern void (*__DTOR_LIST__)();  // NOLINT
-}
-
-void call_constructors() {
-    // Load the list of constructors.
-    void (**p_constructor)() = &__CTOR_LIST__;
-
-    // The first value in this list is the number of constructors.
-    int count_constructors = *reinterpret_cast<int*>(p_constructor);
-
-    // Advance the iterator pointer.
-    ++p_constructor;
-
-    // Loop through the constructors to call.
-    while (count_constructors != 0) {
-        _ = cat::println("Foo");
-        (*p_constructor)();
-        --count_constructors;
-        ++p_constructor;
-    }
+extern Constructor __init_array_start;  // NOLINT
+extern Constructor __init_array_end;    // NOLINT
 }
 
 auto main() -> int {
-    call_constructors();
+    Constructor* p_func = &__init_array_start;
+    for (; p_func < &__init_array_end; ++p_func) {
+        (*p_func)();
+    }
+    // static_init();
 };

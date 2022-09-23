@@ -1,3 +1,12 @@
+. = ALIGN(4);
+.init_array :
+{
+__init_array_start = .;
+KEEP (*(.init_array*))
+__init_array_end = .;
+}
+
+/*
 ENTRY(entry)
 LOAD_VIR = 0x100000;
 LOAD_PHYS = 0x100000;
@@ -37,3 +46,4 @@ SECTIONS
   }
   _linker_end = .;
 }
+*/

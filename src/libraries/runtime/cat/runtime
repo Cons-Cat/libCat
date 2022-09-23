@@ -41,8 +41,8 @@ auto load_base_stack_pointer() -> void*;
 extern "C" [[noreturn]] void __stack_chk_fail();
 
 // NOLINTNEXTLINE `__cxa_atexit()` must begin with a double underscore.
-extern "C" auto __cxa_atexit(void (*p_callback)(void*), void* p_arg,
-                             void* p_dso_handle) -> int;
+extern "C" void __cxa_atexit(void (*p_callback)(void*), void* p_arg,
+                             void* p_dso_handle);
 }  // namespace cat
 
 // NOLINTNEXTLINE `__dso_handle` must begin with a double underscore.

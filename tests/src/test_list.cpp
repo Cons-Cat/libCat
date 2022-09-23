@@ -16,7 +16,6 @@
     void test_name()
 
 TEST(test_list) {
-	cat::exit(11);
 	_ = cat::print("Hi\n");
 	
     /*
