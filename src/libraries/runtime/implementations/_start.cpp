@@ -4,10 +4,9 @@
 auto main(...) -> int;  // NOLINT Without K&R, `...` is the only way to do this.
 
 [[noreturn,
-// `INLINE_MAIN` can be defined in the build system to allow inlining `main()`
-// in `_start()`. This can reduce binary size in some cases, such as Hello
-// World, but is likely to cause various problems in non-trivial applications.
-#ifndef INLINE_MAIN
+// `NOINLINE_MAIN` can be defined in the build system to prevent inlining
+// `main()` in `_start()`.
+#ifndef NOINLINE_MAIN
   gnu::noinline
 #endif
 ]] void

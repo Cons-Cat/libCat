@@ -64,7 +64,7 @@ if(CAT_BUILD_UNIT_TESTS)
   )
   
   target_compile_options(unit_tests PRIVATE ${CAT_COMPILE_FLAGS})
-  target_compile_definitions(unit_tests PRIVATE "NO_ARGC_ARGV" "INLINE_MAIN")
+  target_compile_definitions(unit_tests PRIVATE "NO_ARGC_ARGV")
   target_link_libraries(unit_tests PRIVATE cat-tests)
   target_link_options(unit_tests PRIVATE ${CAT_LINK_FLAGS})
 
