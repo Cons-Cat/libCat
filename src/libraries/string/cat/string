@@ -230,6 +230,22 @@ class StaticString : public CollectionFacade<StaticString<length>, char> {
         return new_string;
     }
 
+    // Concatenate a string literal to a `StaticString`.
+    template <ssize::Raw other_length>
+    constexpr friend auto operator+(StaticString<length> const& self,
+                                    char const (&other_string)[other_length])
+        -> StaticString<length - 1 + other_length> {
+        return self + StaticString<other_length>{other_string};
+    }
+
+    // Concatenate a `StaticString` to a string literal.
+    template <ssize::Raw other_length>
+    constexpr friend auto operator+(char const (&other_string)[other_length],
+                                    StaticString<length> const& self)
+        -> StaticString<length - 1 + other_length> {
+        return StaticString<other_length>{other_string} + self;
+    }
+
   private:
     constexpr void copy_string_data(char const* p_source) {
         if (is_constant_evaluated()) {

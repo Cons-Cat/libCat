@@ -746,7 +746,7 @@ class Optional {
     [[nodiscard]] auto assert(
         void (*p_assert_handler)(SourceLocation const&) = assert_handler,
         SourceLocation const& callsite = SourceLocation::current()) const
-        -> Value& {
+        -> Value const& {
         cat::assert(this->has_value(), p_assert_handler, callsite);
         return this->value();
     }
@@ -761,7 +761,7 @@ class Optional {
     [[nodiscard]] auto verify(
         void (*p_assert_handler)(SourceLocation const&) = assert_handler,
         SourceLocation const& callsite = SourceLocation::current()) const
-        -> Value& {
+        -> Value const& {
         cat::verify(this->has_value(), p_assert_handler, callsite);
         return this->value();
     }

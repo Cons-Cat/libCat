@@ -4,10 +4,16 @@
 #include <cat/vector>
 
 void test_assert_handler(cat::SourceLocation const& source_location);
-extern cat::PageAllocator tests_page_allocator;
-extern cat::LinearAllocator tests_linear_allocator;
 
-// using TestFunction = void();
-using TestFunction = int;
-
-extern cat::Vector<TestFunction> all_tests;
+// This macro declares a unit test named `test_name`, which is executed
+// automatically in this program's constructor calls.
+#define TEST(test_name)                                            \
+    void test_name();                                              \
+    [[gnu::constructor]] void register_##test_name() {             \
+        using cat::StaticString;                                   \
+        StaticString string =                                      \
+            "Running test: " + StaticString{#test_name} + "...\n"; \
+        _ = cat::print(string);                                    \
+        test_name();                                               \
+    }                                                              \
+    void test_name()

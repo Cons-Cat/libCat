@@ -419,7 +419,7 @@ class List : public CollectionFacade<List<T>, T> {
   private:
     detail::ListNode<T>* p_head;
     detail::ListNode<T>* p_tail;
-    ssize length;
+    ssize length = 0;
 };
 
 template <typename T>
@@ -702,7 +702,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
   private:
     detail::ForwardListNode<T>* p_head;
     detail::ForwardListNode<T>* p_tail;
-    ssize length;
+    ssize length = 0;
 };
 
 }  // namespace cat
