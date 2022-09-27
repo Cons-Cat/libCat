@@ -4,25 +4,24 @@
 #include <cat/page_allocator>
 
 #include "../unit_tests.hpp"
-#include "cat/debug"
 
 TEST(test_list) {
     // Initialize an allocator.
     cat::PageAllocator paging_allocator;
     paging_allocator.reset();
-    auto page = paging_allocator.alloc_multi<cat::Byte>(4_ki - 64).verify(
-        test_assert_handler);
+    auto page =
+        paging_allocator.alloc_multi<cat::Byte>(4_ki - 64).verify(test_fail);
     defer(paging_allocator.free(page);)
     auto allocator =
         cat::LinearAllocator::backed_handle(paging_allocator, page);
 
     // Test insert.
     cat::List<int4> list_1;
-    _ = list_1.insert(allocator, list_1.begin(), 3).verify(test_assert_handler);
-    _ = list_1.insert(allocator, list_1.begin(), 2).verify(test_assert_handler);
-    _ = list_1.insert(allocator, list_1.begin(), 1).verify(test_assert_handler);
-    cat::verify(list_1.front() == 1);
-    cat::verify(list_1.back() == 3);
+    _ = list_1.insert(allocator, list_1.begin(), 3).verify(test_fail);
+    _ = list_1.insert(allocator, list_1.begin(), 2).verify(test_fail);
+    _ = list_1.insert(allocator, list_1.begin(), 1).verify(test_fail);
+    cat::verify(list_1.front() == 1, test_fail);
+    cat::verify(list_1.back() == 3, test_fail);
 
     // Test iteration.
     int i = 1;
@@ -32,20 +31,19 @@ TEST(test_list) {
     }
 
     list_1.pop_front(allocator);
-    cat::verify(list_1.front() == 2);
+    cat::verify(list_1.front() == 2, test_fail);
     list_1.pop_back(allocator);
-    cat::verify(list_1.back() == 2);
+    cat::verify(list_1.back() == 2, test_fail);
 
     // Test push.
     cat::List<int4> list_2;
-    _ = list_2.push_front(allocator, 0).verify(test_assert_handler);
-    _ = list_2.push_back(allocator, 4).verify(test_assert_handler);
-    cat::verify(list_2.front() == 0);
-    cat::verify(list_2.back() == 4);
-    _ = list_2.insert(allocator, ++list_2.begin(), 1)
-            .verify(test_assert_handler);
-    cat::verify(list_2.front() == 0);
-    cat::verify(*++list_2.begin() == 1);
+    _ = list_2.push_front(allocator, 0).verify(test_fail);
+    _ = list_2.push_back(allocator, 4).verify(test_fail);
+    cat::verify(list_2.front() == 0, test_fail);
+    cat::verify(list_2.back() == 4, test_fail);
+    _ = list_2.insert(allocator, ++list_2.begin(), 1).verify(test_fail);
+    cat::verify(list_2.front() == 0, test_fail);
+    cat::verify(*++list_2.begin() == 1, test_fail);
 
     // Test iteration.
     for ([[maybe_unused]] int4 _ : list_2) {
@@ -53,13 +51,13 @@ TEST(test_list) {
 
     // Test emplace.
     cat::List<int4> list_3;
-    _ = list_3.emplace_front(allocator, 1).verify(test_assert_handler);
-    _ = list_3.emplace_front(allocator, 2).verify(test_assert_handler);
-    _ = list_3.emplace_back(allocator, 3).verify(test_assert_handler);
+    _ = list_3.emplace_front(allocator, 1).verify(test_fail);
+    _ = list_3.emplace_front(allocator, 2).verify(test_fail);
+    _ = list_3.emplace_back(allocator, 3).verify(test_fail);
     _ = list_3.emplace(allocator, ++list_3.begin(), 4);
-    cat::verify(list_3.front() == 2);
-    cat::verify(list_3.back() == 3);
-    cat::verify((*(++list_3.begin())) == 4);
+    cat::verify(list_3.front() == 2, test_fail);
+    cat::verify(list_3.back() == 3, test_fail);
+    cat::verify((*(++list_3.begin())) == 4, test_fail);
 
     for (auto& node : list_3) {
         // Iterate.
@@ -74,9 +72,9 @@ TEST(test_list) {
     _ = list_1.rend();
     auto iter = list_1.crbegin();
     _ = list_1.crend();
-    cat::verify(*iter == 2);
+    cat::verify(*iter == 2, test_fail);
     ++iter;
-    cat::verify(*iter == 0);
+    cat::verify(*iter == 0, test_fail);
 
     // Test freeing nodes.
     list_1.erase(allocator, list_1.begin());
@@ -87,80 +85,79 @@ TEST(test_list) {
     list_2.clear(allocator);
 
     // Deep copy a `List`.
-    _ = list_1.push_front(allocator, 3).verify(test_assert_handler);
-    _ = list_1.push_front(allocator, 2).verify(test_assert_handler);
-    _ = list_1.push_front(allocator, 1).verify(test_assert_handler);
-    _ = list_1.push_front(allocator, 0).verify(test_assert_handler);
+    _ = list_1.push_front(allocator, 3).verify(test_fail);
+    _ = list_1.push_front(allocator, 2).verify(test_fail);
+    _ = list_1.push_front(allocator, 1).verify(test_fail);
+    _ = list_1.push_front(allocator, 0).verify(test_fail);
     cat::List list_5 =
-        cat::List<int4>::cloned(allocator, list_1).verify(test_assert_handler);
+        cat::List<int4>::cloned(allocator, list_1).verify(test_fail);
 
     // Test that the copy was deep.
     list_1.clear(allocator);
-    cat::verify(*list_5.begin() == 0);
-    cat::verify(*(list_5.begin() + 1) == 1);
-    cat::verify(*(list_5.begin() + 2) == 2);
-    cat::verify(*(list_5.begin() + 3) == 3);
+    cat::verify(*list_5.begin() == 0, test_fail);
+    cat::verify(*(list_5.begin() + 1) == 1, test_fail);
+    cat::verify(*(list_5.begin() + 2) == 2, test_fail);
+    cat::verify(*(list_5.begin() + 3) == 3, test_fail);
 
     // Test moving `List`.
     list_1.push_front(allocator, 2);
     list_1.push_front(allocator, 1);
     list_1.push_front(allocator, 0);
     cat::List<int4> list_4 = cat::move(list_1);  // NOLINT
-    cat::verify(list_4.front() == 0);
-    cat::verify(*(list_4.begin() + 1) == 1);
-    cat::verify(*(list_4.begin() + 2) == 2);
+    cat::verify(list_4.front() == 0, test_fail);
+    cat::verify(*(list_4.begin() + 1) == 1, test_fail);
+    cat::verify(*(list_4.begin() + 2) == 2, test_fail);
 
     // Test initialized `List`.
     [[maybe_unused]] cat::List list_init_1 =
-        cat::List<int4>::from(allocator, 1, 2, 3).verify(test_assert_handler);
+        cat::List<int4>::from(allocator, 1, 2, 3).verify(test_fail);
     cat::List list_init_2 =
         cat::List<int4>::from(allocator, cat::value_list<int4, 0, 4>)
-            .verify(test_assert_handler);
+            .verify(test_fail);
     for (int4 i : list_init_2) {
-        cat::verify(i == 0);
+        cat::verify(i == 0, test_fail);
     }
 
     // Test `ForwardList`.
     allocator.reset();
     cat::ForwardList<int4> forward_list_1;
-    _ = forward_list_1.push_front(allocator, 0).verify(test_assert_handler);
-    _ = forward_list_1.emplace_front(allocator, 1).verify(test_assert_handler);
+    _ = forward_list_1.push_front(allocator, 0).verify(test_fail);
+    _ = forward_list_1.emplace_front(allocator, 1).verify(test_fail);
     _ = forward_list_1.insert_after(allocator, forward_list_1.begin() + 1, 2)
-            .verify(test_assert_handler);
+            .verify(test_fail);
     _ = forward_list_1.emplace_after(allocator, forward_list_1.end(), 3)
-            .verify(test_assert_handler);
+            .verify(test_fail);
 
-    cat::verify(*forward_list_1.begin() == 1);
-    cat::verify(*(forward_list_1.begin() + 1) == 0);
-    cat::verify(*(forward_list_1.begin() + 2) == 2);
-    cat::verify(*(forward_list_1.begin() + 3) == 3);
+    cat::verify(*forward_list_1.begin() == 1, test_fail);
+    cat::verify(*(forward_list_1.begin() + 1) == 0, test_fail);
+    cat::verify(*(forward_list_1.begin() + 2) == 2, test_fail);
+    cat::verify(*(forward_list_1.begin() + 3) == 3, test_fail);
 
     // Deep copy a `ForwardList`.
     cat::ForwardList<int4> forward_list_2;
-    _ = forward_list_2.clone(allocator, forward_list_1)
-            .verify(test_assert_handler);
+    _ = forward_list_2.clone(allocator, forward_list_1).verify(test_fail);
 
     // Remove elements from `ForwardList`.
     forward_list_1.erase_after(allocator, forward_list_1.begin());
-    cat::verify(*(forward_list_1.begin() + 1) == 2);
+    cat::verify(*(forward_list_1.begin() + 1) == 2, test_fail);
 
     forward_list_1.pop_front(allocator);
-    cat::verify(*forward_list_1.begin() == 2);
+    cat::verify(*forward_list_1.begin() == 2, test_fail);
 
     // Test that the copy was deep.
-    cat::verify(*forward_list_2.begin() == 1);
-    cat::verify(*(forward_list_2.begin() + 1) == 0);
-    cat::verify(*(forward_list_2.begin() + 2) == 2);
-    cat::verify(*(forward_list_2.begin() + 3) == 3);
+    cat::verify(*forward_list_2.begin() == 1, test_fail);
+    cat::verify(*(forward_list_2.begin() + 1) == 0, test_fail);
+    cat::verify(*(forward_list_2.begin() + 2) == 2, test_fail);
+    cat::verify(*(forward_list_2.begin() + 3) == 3, test_fail);
 
     // Test `BackInsertIterator`.
     list_1.clear(allocator);
     cat::BackInsertIterator back_insert_iterator(list_1);
     cat::FrontInsertIterator front_insert_iterator(list_1);
     back_insert_iterator.insert(allocator, 10);
-    cat::verify(list_1.front() == 10);
+    cat::verify(list_1.front() == 10, test_fail);
 
     front_insert_iterator.insert(allocator, 2);
-    cat::verify(list_1.front() == 2);
-    cat::verify(list_1.back() == 10);
+    cat::verify(list_1.front() == 2, test_fail);
+    cat::verify(list_1.back() == 10, test_fail);
 }

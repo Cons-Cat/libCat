@@ -5,7 +5,7 @@
 
 inline cat::JmpBuffer test_jump_buffer;
 
-void test_assert_handler(cat::SourceLocation const& source_location) {
+void test_fail(cat::SourceLocation const& source_location) {
     cat::detail::print_assert_location(source_location);
     cat::longjmp(test_jump_buffer, 1);
 }
@@ -17,8 +17,8 @@ extern Constructor __init_array_end;    // NOLINT
 }
 
 auto main() -> int {
-    int4 tests_passed = 0;
-    int4 tests_failed = 0;
+    int8 tests_passed = 0;
+    int8 tests_failed = 0;
 
     // Load and call all functions with the attribute
     // `[[gnu::constructor]]`. The `TEST` macro declares these functions.
@@ -33,10 +33,9 @@ auto main() -> int {
             continue;
         }
 
-        // If a `cat::longjmp()` call came from `test_assert_handler()`:
+        // If a `cat::longjmp()` call came from `test_fail()`:
         ++tests_failed;
         _ = cat::print("\n");
-        _ = cat::eprintln("Test failed!");
     }
 
     cat::PageAllocator allocator;

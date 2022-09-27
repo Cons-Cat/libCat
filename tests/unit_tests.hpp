@@ -3,7 +3,7 @@
 #include <cat/page_allocator>
 #include <cat/vector>
 
-void test_assert_handler(cat::SourceLocation const& source_location);
+void test_fail(cat::SourceLocation const& source_location);
 
 // This macro declares a unit test named `test_name`, which is executed
 // automatically in this program's constructor calls.
