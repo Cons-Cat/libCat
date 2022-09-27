@@ -4,6 +4,7 @@
 #include <cat/page_allocator>
 
 #include "../unit_tests.hpp"
+#include "cat/debug"
 
 TEST(test_list) {
     // Initialize an allocator.
