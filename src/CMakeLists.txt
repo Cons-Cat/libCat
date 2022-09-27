@@ -49,6 +49,8 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/exit.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/__stack_chk_fail.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/__cxa_atexit.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/setjmp.cpp
+  ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/longjmp.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/load_base_stack_pointer.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/meta/implementations/constant_evaluate.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/meta/implementations/CommonType.tpp

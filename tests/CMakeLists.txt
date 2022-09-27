@@ -30,6 +30,7 @@ if(CAT_BUILD_UNIT_TESTS)
   target_include_directories(cat-tests INTERFACE ${CMAKE_SOURCE_DIR}/tests/)
 
   # Add unit test implementation files.
+  # TODO: Glob for `.cpp` files here.
   target_sources(
     cat-tests INTERFACE
     # ${CMAKE_SOURCE_DIR}/tests/src/test_alloc.cpp
