@@ -14,7 +14,7 @@ void cat::detail::print_assert_location(SourceLocation const& callsite) {
     _ = eprintln(callsite.function_name());
 }
 
-void cat::assert_handler(SourceLocation const& callsite) {
+void cat::default_assert_handler(SourceLocation const& callsite) {
     detail::print_assert_location(callsite);
 
     // TODO: Colorize this input prompt.

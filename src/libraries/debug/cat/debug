@@ -61,15 +61,20 @@ void breakpoint();
 namespace detail {
     void print_assert_location(
         SourceLocation const& callsite = SourceLocation::current());
-}
+
+    using AssertHandler = void (*)(SourceLocation const&);
+}  // namespace detail
+
+void default_assert_handler(SourceLocation const& callsite);
+
+// This variable can be mutated to change the default assert handler globally.
+inline detail::AssertHandler assert_handler = default_assert_handler;
 
 // TODO: Allow `assert()` and `verify()` in a `constexpr` context, and make them
 // throw if their invariant holds false.
 
 // TODO: Fancier `ASSERT()` macro with expression decomposition.
 // TODO: `assert_eq()`, `assert_gt()`, etc.
-
-void assert_handler(SourceLocation const& callsite);
 
 void verify(bool invariant_expression,
             void (*p_assert_handler)(SourceLocation const&) = assert_handler,
