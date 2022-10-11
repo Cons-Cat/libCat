@@ -18,7 +18,7 @@ extern Constructor __init_array_end;    // NOLINT
 
 auto main() -> int {
     // Change the default assert handler.
-    cat::assert_handler = test_fail;
+    cat::assert_handler = &test_fail;
 
     cat::JmpBuffer jump_buffer;
     p_test_jump_buffer = &jump_buffer;
