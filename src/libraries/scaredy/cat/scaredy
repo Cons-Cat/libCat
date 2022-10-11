@@ -499,30 +499,64 @@ class Scaredy {
 
     [[nodiscard]] auto assert(
         void (*p_assert_handler)(SourceLocation const&) = assert_handler,
-        SourceLocation const& callsite = SourceLocation::current()) -> Value& {
+        SourceLocation const& callsite =
+            SourceLocation::current()) & -> Value& {
         cat::assert(this->has_value(), p_assert_handler, callsite);
         return this->value();
     }
 
     [[nodiscard]] auto assert(
         void (*p_assert_handler)(SourceLocation const&) = assert_handler,
-        SourceLocation const& callsite = SourceLocation::current()) const
-        -> Value& {
+        SourceLocation const& callsite =
+            SourceLocation::current()) const& -> Value& {
+        cat::assert(this->has_value(), p_assert_handler, callsite);
+        return this->value();
+    }
+
+    [[nodiscard]] auto assert(
+        void (*p_assert_handler)(SourceLocation const&) = assert_handler,
+        SourceLocation const& callsite =
+            SourceLocation::current()) && -> Value&& {
+        cat::assert(this->has_value(), p_assert_handler, callsite);
+        return this->value();
+    }
+
+    [[nodiscard]] auto assert(
+        void (*p_assert_handler)(SourceLocation const&) = assert_handler,
+        SourceLocation const& callsite =
+            SourceLocation::current()) const&& -> Value&& {
         cat::assert(this->has_value(), p_assert_handler, callsite);
         return this->value();
     }
 
     [[nodiscard]] auto verify(
         void (*p_assert_handler)(SourceLocation const&) = assert_handler,
-        SourceLocation const& callsite = SourceLocation::current()) -> Value& {
+        SourceLocation const& callsite =
+            SourceLocation::current()) & -> Value& {
         cat::verify(this->has_value(), p_assert_handler, callsite);
         return this->value();
     }
 
     [[nodiscard]] auto verify(
         void (*p_assert_handler)(SourceLocation const&) = assert_handler,
-        SourceLocation const& callsite = SourceLocation::current()) const
-        -> Value& {
+        SourceLocation const& callsite =
+            SourceLocation::current()) const& -> Value& {
+        cat::verify(this->has_value(), p_assert_handler, callsite);
+        return this->value();
+    }
+
+    [[nodiscard]] auto verify(
+        void (*p_assert_handler)(SourceLocation const&) = assert_handler,
+        SourceLocation const& callsite =
+            SourceLocation::current()) && -> Value {
+        cat::verify(this->has_value(), p_assert_handler, callsite);
+        return this->value();
+    }
+
+    [[nodiscard]] auto verify(
+        void (*p_assert_handler)(SourceLocation const&) = assert_handler,
+        SourceLocation const& callsite =
+            SourceLocation::current()) const&& -> Value {
         cat::verify(this->has_value(), p_assert_handler, callsite);
         return this->value();
     }
