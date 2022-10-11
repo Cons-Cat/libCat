@@ -2,7 +2,9 @@
 #include <cat/numerals>
 #include <cat/page_allocator>
 
-auto main() -> int {
+#include "../unit_tests.hpp"
+
+TEST(test_set_memory) {
     cat::PageAllocator allocator;
     uint1* p_page = allocator.p_alloc_multi<uint1>(4_ki).or_exit();
 

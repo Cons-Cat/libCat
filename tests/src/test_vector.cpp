@@ -2,6 +2,8 @@
 #include <cat/page_allocator>
 #include <cat/vector>
 
+#include "../unit_tests.hpp"
+
 // Test that `Vector` works in a `constexpr` context.
 consteval auto const_func() -> int4 {
     cat::Vector<int4> vector;
@@ -18,7 +20,7 @@ consteval auto const_func() -> int4 {
     return vector[8];
 }
 
-auto main() -> int {
+TEST(test_vector) {
     // Initialize an allocator.
     cat::PageAllocator paging_allocator;
     paging_allocator.reset();

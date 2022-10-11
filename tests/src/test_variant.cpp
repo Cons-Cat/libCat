@@ -1,6 +1,8 @@
 #include <cat/variant>
 
-auto main() -> int {
+#include "../unit_tests.hpp"
+
+TEST(test_variant) {
     cat::Variant<int, char, uint4> variant(int{1});
     cat::verify(variant.is<int>());
     cat::verify(variant.holds_alternative<int>());

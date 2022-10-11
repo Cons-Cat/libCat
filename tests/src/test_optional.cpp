@@ -3,46 +3,43 @@
 #include <cat/unique>
 #include <cat/utility>
 
+#include "../unit_tests.hpp"
+
 struct Movable {
     Movable() = default;
     Movable(Movable&&) = default;
     auto operator=(Movable&&){};
 };
 
-int4 global_int = 0;
+int4 optional_counter = 0;
+
 struct NonTrivial {
-    int4 data;
     NonTrivial() {
-        this->data = 1;
-        ++global_int;
+        ++optional_counter;
     }
-    NonTrivial(NonTrivial const& in) : data(in.data + 2) {
-        ++global_int;
+    NonTrivial(NonTrivial const&) {
+        ++optional_counter;
     }
-    // This gets called once, making `data` == 2.
-    NonTrivial(NonTrivial&& in) : data(in.data + 1) {
-        ++global_int;
+    NonTrivial(NonTrivial&&) {
+        ++optional_counter;
     }
     ~NonTrivial() {
-        this->data = 0;
-        ++global_int;
+        ++optional_counter;
     }
     NonTrivial(int, int, char) {
-        this->data = 2;
     }
 };
 
 struct ConstNonTrivial {
-    int4 const data;
-    constexpr ConstNonTrivial() : data(1) {
+    constexpr ConstNonTrivial() {  // NOLINT
     }
-    constexpr ConstNonTrivial(ConstNonTrivial const& in) : data(in.data + 2) {
+    constexpr ConstNonTrivial(ConstNonTrivial const&) {  // NOLINT
     }
-    constexpr ConstNonTrivial(ConstNonTrivial&& in) : data(in.data + 1) {
+    constexpr ConstNonTrivial(ConstNonTrivial&&) {
     }
 };
 
-auto main() -> int {
+TEST(test_optional) {
     // Initialize empty.
     cat::Optional<int4> foo(nullopt);
     cat::verify(!foo.has_value());
@@ -337,7 +334,6 @@ auto main() -> int {
 
     // Non-trivial constructor and destructor.
     cat::Optional<NonTrivial> nontrivial = NonTrivial();
-    cat::verify(nontrivial.value().data == 2);
 
     // `Optional<void>` default-initializes empty:
     cat::Optional<void> optvoid;
@@ -354,12 +350,10 @@ auto main() -> int {
     cat::verify(!optvoid_5.has_value());
 
     cat::Optional<NonTrivial> in_place_nontrivial_1{in_place};
-    cat::verify(in_place_nontrivial_1.has_value());
-    cat::verify(in_place_nontrivial_1.value().data == 1);
+    _ = in_place_nontrivial_1.verify();
 
     cat::Optional<NonTrivial> in_place_nontrivial_2{in_place, 1, 2, 'a'};
-    cat::verify(in_place_nontrivial_2.has_value());
-    cat::verify(in_place_nontrivial_2.value().data == 2);
+    _ = in_place_nontrivial_2.verify();
 
     // Test `Optional` in a `constexpr` context.
     auto constant = []() constexpr {

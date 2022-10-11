@@ -4,19 +4,21 @@
 #include <cat/page_allocator>
 #include <cat/utility>
 
-int4 global_int_1 = 0;
-int4 global_int_2 = 0;
+#include "../unit_tests.hpp"
+
+int4 paging_counter_1 = 0;
+int4 paging_counter_2 = 0;
 
 struct TestType {
     TestType() {
-        ++global_int_1;
+        ++paging_counter_1;
     }
     ~TestType() {
-        ++global_int_2;
+        ++paging_counter_2;
     }
 };
 
-auto main() -> int {
+TEST(test_paging_memory) {
     // Initialize an allocator.
     cat::PageAllocator allocator;
 
@@ -74,19 +76,19 @@ auto main() -> int {
     cat::Optional testtype = allocator.alloc<TestType>();
     allocator.free(testtype.value());
 
-    // That constructor increments `global_int_1`.
-    cat::verify(global_int_1 == 1);
-    // That destructor increments `global_int_2`.
-    cat::verify(global_int_2 == 1);
+    // That constructor increments `paging_counter_1`.
+    cat::verify(paging_counter_1 == 1);
+    // That destructor increments `paging_counter_2`.
+    cat::verify(paging_counter_2 == 1);
 
     // Test multi-allocations.
     auto array_memory = allocator.alloc_multi<TestType>(9).or_exit();
-    // Those 9 constructors increment `global_int_2`.
-    cat::verify(global_int_1 == 10);
+    // Those 9 constructors increment `paging_counter_2`.
+    cat::verify(paging_counter_1 == 10);
 
     allocator.free(array_memory);
-    // Those 9 destructors increment `global_int_2`.
-    cat::verify(global_int_2 == 10);
+    // Those 9 destructors increment `paging_counter_2`.
+    cat::verify(paging_counter_2 == 10);
 
     auto smalltesttype = allocator.inline_alloc<TestType>().or_exit();
     allocator.get(smalltesttype) = TestType{};

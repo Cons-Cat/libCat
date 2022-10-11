@@ -1,10 +1,12 @@
 #include <cat/tuple>
 
+#include "../unit_tests.hpp"
+
 struct NonTrivial {
     NonTrivial(int){};
 };
 
-void test_tuple() {
+TEST(test_tuple) {
     using intint = cat::Tuple<int, int>;
     static_assert(cat::is_trivial<intint>);
     static_assert(sizeof(intint) == 8);

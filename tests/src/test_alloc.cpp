@@ -2,27 +2,29 @@
 #include <cat/linear_allocator>
 #include <cat/page_allocator>
 
+#include "../unit_tests.hpp"
+
 struct HugeObject {
     [[maybe_unused]] uint1 storage[cat::inline_buffer_size.raw + 1];
 };
 
-int4 global = 0;
+int4 alloc_counter = 0;
 
 struct NonTrivial {
     char storage;
     NonTrivial() {
-        ++global;
+        ++alloc_counter;
     }
 };
 
 struct NonTrivialHugeObject {
     [[maybe_unused]] uint1 storage[cat::inline_buffer_size.raw];
     NonTrivialHugeObject() {
-        ++global;
+        ++alloc_counter;
     }
 };
 
-auto main() -> int {
+TEST(test_alloc) {
     // Initialize an allocator.
     cat::PageAllocator paging_allocator;
     paging_allocator.reset();
@@ -36,9 +38,9 @@ auto main() -> int {
     _ = allocator.alloc<int4>().value();
     auto alloc = allocator.alloc<int4>(1).value();
     cat::verify(allocator.get(alloc) == 1);
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.alloc<NonTrivial>();
-    cat::verify(global == 1);
+    cat::verify(alloc_counter == 1);
 
     // Test `xalloc()`.
     _ = allocator.xalloc<int4>();
@@ -59,9 +61,9 @@ auto main() -> int {
     auto alloc_multi = allocator.alloc_multi<int4>(5).value();
     cat::verify(alloc_multi.size() == 5);
     cat::verify(alloc_multi.raw_size() == 20);
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.alloc_multi<NonTrivial>(5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `xalloc_multi()`.
     auto xalloc_multi = allocator.xalloc_multi<int4>(5);
@@ -123,9 +125,9 @@ auto main() -> int {
     cat::verify(align_alloc_multi.size() == 5);
     cat::verify(align_alloc_multi.raw_size() == 20);
     cat::verify(cat::is_aligned(allocator.get(align_alloc_multi).p_data(), 8u));
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.align_alloc_multi<NonTrivial>(8u, 5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `align_xalloc_multi()`.
     auto align_xalloc_multi = allocator.align_xalloc_multi<int4>(8u, 5);
@@ -133,70 +135,70 @@ auto main() -> int {
     cat::verify(align_xalloc_multi.raw_size() == 20);
     cat::verify(
         cat::is_aligned(allocator.get(align_xalloc_multi).p_data(), 8u));
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.align_xalloc_multi<NonTrivial>(8u, 5);
 
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `p_align_alloc_multi()`.
     auto p_align_alloc_multi =
         allocator.p_align_alloc_multi<int4>(8u, 5).value();
     cat::verify(cat::is_aligned(p_align_alloc_multi, 8u));
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.p_align_alloc_multi<NonTrivial>(8u, 5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `p_align_xalloc_multi()`.
     _ = allocator.p_align_xalloc_multi<int4>(8u, 5);
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.p_align_xalloc_multi<NonTrivial>(8u, 5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `unalign_alloc_multi()`.
     auto unalign_alloc_multi = allocator.unalign_alloc_multi<int4>(5).value();
     cat::verify(unalign_alloc_multi.size() == 5);
     cat::verify(unalign_alloc_multi.raw_size() == 20);
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.unalign_alloc_multi<NonTrivial>(5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `unalign_xalloc_multi()`.
     auto unalign_xalloc_multi = allocator.unalign_xalloc_multi<int1>(5);
     cat::verify(unalign_xalloc_multi.size() == 5);
     cat::verify(unalign_xalloc_multi.raw_size() == 5);
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.unalign_xalloc_multi<NonTrivial>(5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `p_unalign_alloc_multi()`.
     _ = allocator.p_unalign_alloc_multi<int1>(5)
             .value();  // `int4` is 4-byte aligned.
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.p_unalign_alloc_multi<NonTrivial>(5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `p_unalign_xalloc_multi()`.
     _ = allocator.p_unalign_xalloc_multi<int1>(5);  // `int4` is 4-byte aligned.
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.p_unalign_xalloc_multi<NonTrivial>(5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `inline_alloc()`.
     _ = allocator.inline_alloc<int4>().value();
     auto inline_alloc = allocator.inline_alloc<int4>(1).value();
     cat::verify(allocator.get(inline_alloc) == 1);
     cat::verify(inline_alloc.is_inline());
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.inline_alloc<NonTrivial>();
-    cat::verify(global == 1);
+    cat::verify(alloc_counter == 1);
 
     // `HugeObject` is larger than the inline buffer.
     auto inline_alloc_2 = allocator.inline_alloc<HugeObject>().value();
     cat::verify(!inline_alloc_2.is_inline());
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.inline_alloc<NonTrivialHugeObject>();
-    cat::verify(global == 1);
+    cat::verify(alloc_counter == 1);
 
     // Test `inline_xalloc()`.
     _ = allocator.inline_xalloc<int4>();
@@ -206,16 +208,16 @@ auto main() -> int {
     // Test `inline_alloc_multi()`.
     auto inline_alloc_multi = allocator.inline_alloc_multi<int4>(5).value();
     cat::verify(inline_alloc_multi.size() == 5);
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.inline_alloc_multi<NonTrivial>(5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `inline_xalloc_multi()`.
     auto inline_xalloc_multi = allocator.inline_xalloc_multi<int4>(5);
     cat::verify(inline_xalloc_multi.size() == 5);
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.inline_xalloc_multi<NonTrivial>(5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `inline_align_alloc()`.
     _ = allocator.inline_align_alloc<int4>(8u).value();
@@ -446,9 +448,9 @@ auto main() -> int {
     auto [salloc, salloc_size] = allocator.salloc<int4>(1).value();
     cat::verify(allocator.get(salloc) == 1);
     cat::verify(salloc_size == 7);
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.salloc<NonTrivial>();
-    cat::verify(global == 1);
+    cat::verify(alloc_counter == 1);
 
     // Test `xsalloc()`.
     _ = allocator.xsalloc<int4>();
@@ -457,9 +459,9 @@ auto main() -> int {
     auto [xsalloc, xsalloc_size] = allocator.xsalloc<int4>(1);
     cat::verify(allocator.get(xsalloc) == 1);
     cat::verify(xsalloc_size == 7);
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.xsalloc<NonTrivial>();
-    cat::verify(global == 1);
+    cat::verify(alloc_counter == 1);
 
     // Test `p_salloc()`.
     _ = allocator.p_salloc<int4>().value();
@@ -468,9 +470,9 @@ auto main() -> int {
     auto [p_salloc, p_salloc_size] = allocator.p_salloc<int4>(1).value();
     cat::verify(*p_salloc == 1);
     cat::verify(p_salloc_size == 7);
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.p_salloc<NonTrivial>();
-    cat::verify(global == 1);
+    cat::verify(alloc_counter == 1);
 
     // Test `p_xsalloc()`.
     _ = allocator.p_xsalloc<int4>();
@@ -479,9 +481,9 @@ auto main() -> int {
     auto [p_xsalloc, p_xsalloc_size] = allocator.p_xsalloc<int4>(1);
     cat::verify(*p_xsalloc == 1);
     cat::verify(p_xsalloc_size == 7);
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.p_xsalloc<NonTrivial>();
-    cat::verify(global == 1);
+    cat::verify(alloc_counter == 1);
 
     // Test `salloc_multi()`.
     allocator.reset();
@@ -492,9 +494,9 @@ auto main() -> int {
     cat::verify(salloc_multi_size == 23);
     cat::verify(salloc_multi.raw_size() == 20);
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.salloc_multi<NonTrivial>(5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `xsalloc_multi()`.
     allocator.reset();
@@ -504,9 +506,9 @@ auto main() -> int {
     cat::verify(xsalloc_multi_size == 23);
     cat::verify(xsalloc_multi.raw_size() == 20);
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.xsalloc_multi<NonTrivial>(5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `p_salloc_multi()`.
     allocator.reset();
@@ -515,9 +517,9 @@ auto main() -> int {
         allocator.p_salloc_multi<int4>(5).value();
     cat::verify(p_salloc_multi_size == 23);
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.p_salloc_multi<NonTrivial>(5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `p_xsalloc_multi()`.
     allocator.reset();
@@ -526,9 +528,9 @@ auto main() -> int {
         allocator.p_xsalloc_multi<int4>(5);
     cat::verify(p_xsalloc_multi_size == 23);
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.p_xsalloc_multi<NonTrivial>(5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `align_salloc()`.
     _ = allocator.align_salloc<int4>(8u);
@@ -539,9 +541,9 @@ auto main() -> int {
     cat::verify(align_salloc_size == 8);
     cat::verify(cat::is_aligned(&allocator.get(align_salloc), 8u));
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.align_salloc<NonTrivial>(8u);
-    cat::verify(global == 1);
+    cat::verify(alloc_counter == 1);
 
     // Test `align_xsalloc()`.
     _ = allocator.align_xsalloc<int4>(8u);
@@ -552,9 +554,9 @@ auto main() -> int {
     cat::verify(align_xsalloc_size == 8);
     cat::verify(cat::is_aligned(&allocator.get(align_xsalloc), 8u));
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.align_xsalloc<NonTrivial>(8u);
-    cat::verify(global == 1);
+    cat::verify(alloc_counter == 1);
 
     // Test `p_align_salloc()`.
     _ = allocator.p_align_salloc<int4>(8u);
@@ -565,9 +567,9 @@ auto main() -> int {
     cat::verify(p_align_salloc_size == 8);
     cat::verify(cat::is_aligned(p_align_salloc, 8u));
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.p_align_salloc<NonTrivial>(8u);
-    cat::verify(global == 1);
+    cat::verify(alloc_counter == 1);
 
     // Test `p_align_xsalloc()`.
     _ = allocator.p_align_xsalloc<int4>(8u);
@@ -578,9 +580,9 @@ auto main() -> int {
     cat::verify(p_align_xsalloc_size == 8);
     cat::verify(cat::is_aligned(p_align_xsalloc, 8u));
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.p_align_xsalloc<NonTrivial>(8u);
-    cat::verify(global == 1);
+    cat::verify(alloc_counter == 1);
 
     // Test `unalign_salloc()`.
     _ = allocator.unalign_salloc<int1>();
@@ -590,9 +592,9 @@ auto main() -> int {
     cat::verify(allocator.get(unalign_salloc) == 1);
     cat::verify(unalign_salloc_size == 1);
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.unalign_salloc<NonTrivial>();
-    cat::verify(global == 1);
+    cat::verify(alloc_counter == 1);
     // Test `unalign_xsalloc()`.
     _ = allocator.unalign_xsalloc<int1>();
     allocator.reset();
@@ -601,9 +603,9 @@ auto main() -> int {
     cat::verify(allocator.get(unalign_xsalloc) == 1);
     cat::verify(unalign_xsalloc_size == 1);
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.unalign_xsalloc<NonTrivial>();
-    cat::verify(global == 1);
+    cat::verify(alloc_counter == 1);
 
     // Test `p_unalign_salloc()`.
     _ = allocator.p_unalign_salloc<int1>();
@@ -613,9 +615,9 @@ auto main() -> int {
     cat::verify(*p_unalign_salloc == 1);
     cat::verify(p_unalign_salloc_size == 1);
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.p_unalign_salloc<NonTrivial>();
-    cat::verify(global == 1);
+    cat::verify(alloc_counter == 1);
 
     // Test `p_unalign_xsalloc()`.
     _ = allocator.p_unalign_xsalloc<int1>();
@@ -625,9 +627,9 @@ auto main() -> int {
     cat::verify(*p_unalign_xsalloc == 1);
     cat::verify(p_unalign_xsalloc_size == 1);
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.p_unalign_xsalloc<NonTrivial>();
-    cat::verify(global == 1);
+    cat::verify(alloc_counter == 1);
 
     // Test `align_salloc_multi()`.
     allocator.reset();
@@ -637,9 +639,9 @@ auto main() -> int {
     cat::verify(
         cat::is_aligned(allocator.get(align_salloc_multi).p_data(), 8u));
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.align_salloc_multi<NonTrivial>(8u, 5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `align_xsalloc_multi()`.
     allocator.reset();
@@ -649,9 +651,9 @@ auto main() -> int {
     cat::verify(
         cat::is_aligned(allocator.get(align_xsalloc_multi).p_data(), 8u));
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.align_xsalloc_multi<NonTrivial>(8u, 5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
     // Test `p_align_salloc_multi()`.
     allocator.reset();
     auto [p_align_salloc_multi, p_align_salloc_multi_size] =
@@ -659,9 +661,9 @@ auto main() -> int {
     cat::verify(p_align_salloc_multi_size == 24);
     cat::verify(cat::is_aligned(p_align_salloc_multi, 8u));
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.p_align_salloc_multi<NonTrivial>(8u, 5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `p_align_xsalloc_multi()`.
     allocator.reset();
@@ -670,9 +672,9 @@ auto main() -> int {
     cat::verify(p_align_xsalloc_multi_size == 24);
     cat::verify(cat::is_aligned(p_align_xsalloc_multi, 8u));
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.p_align_xsalloc_multi<NonTrivial>(8u, 5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `unalign_salloc_multi()`.
     allocator.reset();
@@ -680,9 +682,9 @@ auto main() -> int {
         allocator.unalign_salloc_multi<int1>(5).value();
     cat::verify(unalign_salloc_multi_size == 5);
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.unalign_salloc_multi<NonTrivial>(5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `unalign_xsalloc_multi()`.
     allocator.reset();
@@ -690,9 +692,9 @@ auto main() -> int {
         allocator.unalign_xsalloc_multi<int1>(5);
     cat::verify(unalign_xsalloc_multi_size == 5);
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.unalign_xsalloc_multi<NonTrivial>(5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `p_unalign_salloc_multi()`.
     allocator.reset();
@@ -700,9 +702,9 @@ auto main() -> int {
         allocator.p_unalign_salloc_multi<int1>(5).value();
     cat::verify(p_unalign_salloc_multi_size == 5);
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.p_unalign_salloc_multi<NonTrivial>(5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `p_unalign_xsalloc_multi()`.
     allocator.reset();
@@ -710,9 +712,9 @@ auto main() -> int {
         allocator.p_unalign_xsalloc_multi<int1>(5);
     cat::verify(p_unalign_xsalloc_multi_size == 5);
 
-    global = 0;
+    alloc_counter = 0;
     _ = allocator.p_unalign_xsalloc_multi<NonTrivial>(5);
-    cat::verify(global == 5);
+    cat::verify(alloc_counter == 5);
 
     // Test `inline_salloc()`.
     allocator.reset();

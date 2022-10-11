@@ -1,7 +1,12 @@
 #include <cat/compare>
 #include <cat/tuple>
 
-auto main() -> int {
+#include "../unit_tests.hpp"
+
+void test_is_function() {
+}
+
+TEST(test_meta) {
     using namespace cat;
     static_assert(is_same<int, int>);
     static_assert(!is_same<int, unsigned int>);
@@ -174,7 +179,7 @@ auto main() -> int {
     static_assert(!is_function<int>);
     static_assert(!is_function<int const>);
     static_assert(is_function<int(int)>);
-    static_assert(is_function<decltype(main)>);
+    static_assert(is_function<decltype(test_is_function)>);
     static_assert(!is_function<decltype(lambda)>);
 
     static_assert(is_same<UnderlyingType<Enum>, int>);

@@ -33,28 +33,25 @@ if(CAT_BUILD_UNIT_TESTS)
   # TODO: Glob for `.cpp` files here.
   target_sources(
     cat-tests INTERFACE
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_alloc.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_arrays.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_compare_strings.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_format_strings.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_linear_allocator.cpp
-	
+    ${CMAKE_SOURCE_DIR}/tests/src/test_alloc.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_arrays.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_compare_strings.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_format_strings.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_linear_allocator.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_list.cpp
-	
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_meta.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_numerals.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_optional.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_paging_memory.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_raii.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_reflection.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_scaredy.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_set_memory.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_simd.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_sockets.cpp
+	${CMAKE_SOURCE_DIR}/tests/src/test_meta.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_numerals.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_optional.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_paging_memory.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_raii.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_typelist.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_scaredy.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_set_memory.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_simd.cpp
     # ${CMAKE_SOURCE_DIR}/tests/src/test_thread.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_tuple.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_variant.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_vector.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_tuple.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_variant.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_vector.cpp
   )
 
   add_executable(unit_tests unit_tests.cpp)

@@ -1,6 +1,8 @@
 #include <cat/type_list>
 
-auto main() -> int {
+#include "../unit_tests.hpp"
+
+TEST(test_typelist) {
     using Types = cat::TypeList<int, char>;
     using Type0 = typename Types::Get<0>;
     using Type1 = typename Types::Get<1>;

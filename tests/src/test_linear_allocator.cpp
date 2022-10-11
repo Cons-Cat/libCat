@@ -5,7 +5,9 @@
 #include <cat/page_allocator>
 #include <cat/utility>
 
-auto main() -> int {
+#include "../unit_tests.hpp"
+
+TEST(test_linear_allocator) {
     // Initialize an allocator.
     cat::PageAllocator paging_allocator;
     auto page = paging_allocator.alloc_multi<cat::Byte>(4_ki).or_exit();

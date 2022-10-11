@@ -2,7 +2,9 @@
 #include <cat/unique>
 #include <cat/utility>
 
-int4 global = 0;
+#include "../unit_tests.hpp"
+
+int4 raii_counter = 0;
 
 struct Foo {
     cat::String data;
@@ -10,13 +12,14 @@ struct Foo {
     Foo() = default;
 
     Foo(cat::String string) : data(std::move(string)) {
-        _ = cat::print(data);
-        _ = cat::println(" constructor");
+        // _ = cat::print(data);
+        // _ = cat::println(" constructor");
     }
 
+    // NOLINTNEXTLINE This is a non-trivial destructor.
     ~Foo() {
-        _ = cat::print("~");
-        _ = cat::println(this->data);
+        // _ = cat::print("~");
+        // _ = cat::println(this->data);
     }
 
     auto operator=(cat::String string) {
@@ -25,17 +28,18 @@ struct Foo {
     }
 
     void raii() const {
-        _ = cat::print(this->data);
-        _ = cat::println(" calls raii()!");
-        ++global;
+        // _ = cat::print(this->data);
+        // _ = cat::println(" calls raii()!");
+        ++raii_counter;
     }
 };
 
-void func(cat::UniqueWeak<Foo>){};
+// NOLINTNEXTLINE
+void pass_by_value(cat::UniqueWeak<Foo>){};
 
-auto main() -> int {
+TEST(test_raii) {
     // TODO: Fix `Unique` and re-enable these tests.
-    _ = cat::println("Construct objects.");
+    // _ = cat::println("Construct objects.");
     // Test constructor.
     cat::UniqueWeak<Foo> foo(cat::String("foo"));
     // Test assignment.
@@ -46,19 +50,17 @@ auto main() -> int {
     cat::verify(moo.has_ownership());
 
     // Test move-assignment.
-    _ = cat::println("Move moo into foo.");
+    // _ = cat::println("Move moo into foo.");
     foo = cat::move(moo);
     cat::verify(!moo.has_ownership());
 
-    _ = cat::println("Move foo into func().");
+    // _ = cat::println("Move foo into func().");
     // `cat::move()` is required:
-    func(cat::move(foo));
+    pass_by_value(move(foo));
     cat::verify(!foo.has_ownership());
 
     // This is deliberately ill-formed:
     // func(foo);
-
-    _ = cat::println("Everything falls out of scope.");
 
     // Default construct `	cat::Unique<Foo>`.
     cat::UniqueWeak<Foo> goo;
@@ -68,9 +70,9 @@ auto main() -> int {
     cat::verify(!goo.has_ownership());
 
     // `raii()` should have been called exactly three times.
-    cat::verify(global == 3);
+    cat::verify(raii_counter == 3);
 
-    // Deduction guides should work.
+    // Deduction guides should work here.
     cat::UniqueWeak weak = 1;
     cat::Unique unique = weak.borrow();
 

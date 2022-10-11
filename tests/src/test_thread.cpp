@@ -5,6 +5,8 @@
 #include <cat/string>
 #include <cat/thread>
 
+#include "../unit_tests.hpp"
+
 void function(void*) {
     for (int4 i = 0; i < 15; ++i) {
         _ = cat::println("Moo?");
@@ -14,7 +16,7 @@ void function(void*) {
 
 // ASan causes this program to hang with a mysterious call to
 // `AsanOnDeadlySignal()`.
-[[gnu::no_sanitize_address]] auto main() -> int {
+[[gnu::no_sanitize_address]] TEST(test_thread) {
     cat::Thread thread;
     cat::PageAllocator allocator;
     thread.create(allocator, 2_ki, function, nullptr)

@@ -1,5 +1,7 @@
 #include <cat/scaredy>
 
+#include "../unit_tests.hpp"
+
 // Minimal result types usable for `cat::Scaredy`.
 struct ErrorOne {
     int4 code;
@@ -42,7 +44,18 @@ auto union_errors(int4 error) -> cat::Scaredy<int8, ErrorOne, ErrorTwo> {
     }
 }
 
-auto main() -> int {
+enum class Err {
+    one,
+    two
+};
+
+auto test_try() -> cat::Scaredy<int, Err> {
+    cat::Scaredy<int, Err> error{0};
+    int boo = TRY(error);
+    return boo;
+}
+
+TEST(test_scaredy) {
     cat::Scaredy result = union_errors(0);
     // The `Scaredy` here adds a flag to the `int8`, which is padded out to 16
     // bytes. No storage cost exists for the error types.

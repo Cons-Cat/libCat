@@ -1,11 +1,13 @@
 #include <cat/match>
 
+#include "../unit_tests.hpp"
+
 template <auto value>
 struct Nttp {
     static constexpr auto member = value;
 };
 
-auto main() -> int {
+TEST(test_numerals) {
     // Test `concept`s.
     static_assert(cat::detail::arithmeticNonPtr<int4>);
     static_assert(cat::detail::arithmeticNonPtr<__INTPTR_TYPE__>);

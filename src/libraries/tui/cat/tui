@@ -4,8 +4,9 @@
 
 #include <cat/allocators>
 #include <cat/memory>
-// #include <cat/scaredy>
 #include <cat/string>
+
+// TODO: Write unit tests for these.
 
 namespace cat {
 
