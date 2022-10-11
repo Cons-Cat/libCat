@@ -39,6 +39,18 @@ struct ConstNonTrivial {
     }
 };
 
+auto optional_try_success() -> cat::Optional<int> {
+    cat::Optional<int> error{0};
+    int boo = TRY(error);
+    return boo;
+}
+
+auto optional_try_fail() -> cat::Optional<int> {
+    cat::Optional<int> error{nullopt};
+    int boo = TRY(error);
+    return boo;
+}
+
 TEST(test_optional) {
     // Initialize empty.
     cat::Optional<int4> foo(nullopt);
@@ -447,4 +459,9 @@ TEST(test_optional) {
         matched = true;
     }));
     cat::verify(matched);
+
+    // Test `TRY` macro.
+    _ = optional_try_success().verify();
+    cat::Optional fail = optional_try_fail();
+    cat::verify(!fail.has_value());
 }

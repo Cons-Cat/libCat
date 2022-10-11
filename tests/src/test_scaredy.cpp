@@ -49,8 +49,14 @@ enum class Err {
     two
 };
 
-auto test_try() -> cat::Scaredy<int, Err> {
+auto scaredy_try_success() -> cat::Scaredy<int, Err> {
     cat::Scaredy<int, Err> error{0};
+    int boo = TRY(error);
+    return boo;
+}
+
+auto scaredy_try_fail() -> cat::Scaredy<int, Err> {
+    cat::Scaredy<int, Err> error{Err::one};
     int boo = TRY(error);
     return boo;
 }
@@ -224,4 +230,9 @@ TEST(test_scaredy) {
             matched = true;
         }));
     cat::verify(matched);
+
+    // Test `TRY` macro.
+    _ = scaredy_try_success().verify();
+    cat::Scaredy fail = scaredy_try_fail();
+    cat::verify(!fail.has_value());
 }

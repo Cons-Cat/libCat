@@ -101,6 +101,18 @@ inline constexpr cat::Monostate monostate;
 // because it contains the `_start` symbol.
 #include <cat/runtime>
 
+// Unwrap an error-like container such as `cat::Scaredy` or `cat::Optional` iff
+// it holds a value, otherwise propagate it up the call stack. This works due to
+// a GCC extension, statement expressions.
+#define TRY(scaredy)                            \
+    ({                                          \
+        decltype(auto) maybe_value = (scaredy); \
+        if (!maybe_value.has_value()) {         \
+            return maybe_value;                 \
+        }                                       \
+        maybe_value.value();                    \
+    })
+
 // Necessary forward declarations.
 class String;
 
