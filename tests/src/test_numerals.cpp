@@ -94,6 +94,16 @@ TEST(test_numerals) {
     is_more = (int_less < 2);
     cat::verify(is_more);
 
+    // Test generated `!=`.
+    cat::verify(4_i4 == 4_i4);
+    cat::verify(4_i4 != 2_i4);
+
+    cat::verify(4_u4 == 4_u4);
+    cat::verify(4_u4 != 2_u4);
+
+    cat::verify(4_f4 == 4_f4);
+    cat::verify(4_f4 != 2_f4);
+
     // Test matching numerals.
     int4 match_int = 1;
     bool matched = false;
