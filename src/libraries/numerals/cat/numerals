@@ -20,6 +20,9 @@
 
 namespace cat {
 
+// TODO: Implement support for GCC 13's `__bf16` type.
+// TODO: Implement support for complex floats.
+
 template <typename>
 struct NumericLimits {};
 
@@ -233,6 +236,8 @@ struct NumericLimits<float> {
     static constexpr auto signaling_NaN() -> float {
         return __builtin_nansf("");
     }
+
+    // TODO: Use GCC 13's `__builtin_issignalling()`.
 
     static constexpr auto denorm_min() -> float {
         return __FLT_DENORM_MIN__;

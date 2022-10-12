@@ -107,6 +107,8 @@ template <typename T>
 struct RemoveCvTrait<T const volatile> {
     using Type = T;
 };
+
+// TODO: Use GCC 13's `__remove_cv()`.
 template <typename T>
 using RemoveCv = typename RemoveCvTrait<T>::Type;
 
@@ -122,6 +124,8 @@ template <typename T>
 struct RemoveReferenceTrait<T&&> {
     using Type = T;
 };
+
+// TODO: Use GCC 13's `__remove_reference()`.
 template <typename T>
 using RemoveReference = typename RemoveReferenceTrait<T>::Type;
 
@@ -129,6 +133,7 @@ template <typename T>
 struct RemoveCvRefTrait {
     using Type = RemoveCvTrait<RemoveReferenceTrait<T>>;
 };
+// TODO: Use GCC 13's `__remove_cvref()`.
 template <typename T>
 using RemoveCvRef = typename RemoveCvRefTrait<T>::Type::Type::Type;
 
@@ -411,11 +416,13 @@ inline constexpr bool is_implicitly_convertible = __is_assignable(To, From) ||
                                                                      From) ||
                                                   __is_same(To, From);
 
+// TODO: Use `__is_convertible()`.
 template <typename From, typename To>
 inline constexpr bool is_convertible = requires(From from) {
     static_cast<To>(from);
 };
 
+// TODO: Add `__is_nothrow_convertible()`.
 template <typename T>
 inline constexpr bool is_sizable = requires {
     sizeof(T);
@@ -567,6 +574,9 @@ inline constexpr bool is_trivially_copyable = __is_trivially_copyable(T);
 template <typename T>
 inline constexpr bool is_trivial =
     is_trivially_copyable<T>&& is_trivially_default_constructible<T>;
+
+// TODO: Add `reference_constructs_from_temporary<>` and
+// `reference_converts_from_temporary<>`.
 
 }  // namespace cat
 

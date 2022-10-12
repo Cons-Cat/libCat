@@ -659,6 +659,8 @@ using NativeSimd = Simd<NativeAbi<T>, T>;
 template <typename T>
 using NativeSimdMask = SimdMask<NativeAbi<T>, T>;
 
+// TODO: Add GCC 13 `__bf16` vectors.
+
 using int1x2 = FixedSizeSimd<int1::Raw, 2>;    // NOLINT
 using int1x4 = FixedSizeSimd<int1::Raw, 4>;    // NOLINT
 using int1x8 = FixedSizeSimd<int1::Raw, 8>;    // NOLINT
