@@ -11,7 +11,7 @@ TEST(test_linear_allocator) {
     // Initialize an allocator.
     cat::PageAllocator paging_allocator;
     auto page = paging_allocator.alloc_multi<cat::Byte>(4_ki).or_exit();
-    defer(paging_allocator.free(page);)
+    DEFER(paging_allocator.free(page);)
     auto allocator =
         cat::LinearAllocator::backed_handle_sized(paging_allocator, page, 24);
 

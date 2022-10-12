@@ -149,7 +149,7 @@ SpacesInParentheses: false
 SpacesInSquareBrackets: false
 SpaceBeforeSquareBrackets: false
 BitFieldColonSpacing: Both
-StatementMacros: ['defer']
+StatementMacros: ['DEFER']
 Standard: Auto
 UseCRLF: false
 UseTab: Never

@@ -30,7 +30,7 @@ TEST(test_alloc) {
     paging_allocator.reset();
     // Page the kernel for a linear allocator to test with.
     auto page = paging_allocator.alloc_multi<cat::Byte>(4_ki - 64).or_exit();
-    defer(paging_allocator.free(page);)
+    DEFER(paging_allocator.free(page);)
     auto allocator =
         cat::LinearAllocator::backed_handle(paging_allocator, page);
 

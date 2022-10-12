@@ -32,7 +32,7 @@ TEST(test_paging_memory) {
     cat::memoryHandle auto memory =
         allocator.alloc_multi<int4>(1'000).or_exit("Failed to page memory!");
     // Free the page at the end of this program.
-    defer(allocator.free(memory);)
+    DEFER(allocator.free(memory);)
 
     // Write to the page.
     cat::Span page_span = allocator.get(memory);
