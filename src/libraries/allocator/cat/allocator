@@ -6,8 +6,6 @@
 #include <cat/span>
 #include <cat/tuple>
 
-#include "cat/meta"
-
 namespace cat {
 
 template <typename T>

@@ -1,7 +1,5 @@
 #include <cat/debug>
-#include <cat/linear_allocator>
-#include <cat/page_allocator>
-#include <cat/vector>
+#include <cat/string>
 
 constinit inline int4 total_tests = 0;
 
