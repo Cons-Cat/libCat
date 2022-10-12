@@ -2,6 +2,13 @@
 #include <cat/tuple>
 
 #include "../unit_tests.hpp"
+#include "cat/meta"
+
+struct Members {
+    int member_variable;
+    void member_function() {
+    }
+};
 
 void test_is_function() {
 }
@@ -253,4 +260,17 @@ TEST(test_meta) {
         cat::is_same<std::common_comparison_category_t<std::strong_ordering,
                                                        std::partial_ordering>,
                      std::partial_ordering>);
+
+    // Test member type traits.
+    static_assert(is_member_pointer<decltype(&Members::member_function)>);
+    static_assert(
+        is_member_function_pointer<decltype(&Members::member_function)>);
+    static_assert(!is_member_function_pointer<decltype(&test_is_function)>);
+
+    Members members;
+    int Members::*p_member_variable = &Members::member_variable;
+    members.*p_member_variable = 1;
+    static_assert(is_member_pointer<decltype(p_member_variable)>);
+    static_assert(is_member_object_pointer<decltype(p_member_variable)>);
+    static_assert(is_member_object_pointer<int Members::*>);
 };

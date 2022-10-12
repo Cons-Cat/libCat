@@ -174,6 +174,7 @@ struct Constant {
 template <auto value>
 inline constexpr auto constval = value;
 
+// Rename to `TrueTrait` and `FalseTrait`.
 using TrueTypeTrait = Constant<true>;
 using FalseTypeTrait = Constant<false>;
 
@@ -328,21 +329,39 @@ struct RemoveExtentTrait<T[]> {
 template <typename T>
 using RemoveExtent = typename RemoveExtentTrait<T>::Type;
 
-// TODO: Figure this out with concepts.
-/*
 namespace detail {
-template <typename T>
-struct IsMemberPointerTraitDetail : FalseTypeTrait {};
-template <typename T, typename U>
-struct IsMemberPointerTraitDetail<T U::*> : TrueTypeTrait {};
+    template <typename T>
+    struct IsMemberPointerTrait : FalseTypeTrait {};
+
+    template <typename T, typename U>
+    struct IsMemberPointerTrait<T U::*> : TrueTypeTrait {};
 }  // namespace detail
 
 template <typename T>
-struct IsMemberPointerTrait : detail::IsMemberPointerTraitDetail<RemoveCv<T>> {
-};
+inline constexpr bool is_member_pointer =
+    detail::IsMemberPointerTrait<RemoveCv<T>>::value;
+
 template <typename T>
-inline constexpr bool is_member_pointer = IsMemberPointerTrait<T>::value;
-*/
+struct IsMemberFunctionPointerHelperTrait : FalseTypeTrait {};
+
+// Forward declare this trait, so that it can be organized better later on.
+template <typename T>
+struct IsFunctionTrait;
+
+template <typename T, typename U>
+struct IsMemberFunctionPointerHelperTrait<T U::*> : IsFunctionTrait<T> {};
+
+template <typename T>
+struct IsMemberFunctionPointerTrait
+    : IsMemberFunctionPointerHelperTrait<RemoveCv<T>> {};
+
+template <typename T>
+inline constexpr bool is_member_function_pointer =
+    IsMemberFunctionPointerTrait<T>::value;
+
+template <typename T>
+inline constexpr bool is_member_object_pointer =
+    is_member_pointer<T> && !is_member_function_pointer<T>;
 
 template <typename T>
 inline constexpr bool is_null_pointer = __is_same(RemoveCv<T>,
@@ -350,8 +369,7 @@ inline constexpr bool is_null_pointer = __is_same(RemoveCv<T>,
 
 template <typename T>
 inline constexpr bool is_scalar =
-    is_arithmetic<T> || is_enum<T> || is_pointer<T> ||
-    // is_member_pointer<T> ||
+    is_arithmetic<T> || is_enum<T> || is_pointer<T> || is_member_pointer<T> ||
     is_null_pointer<T>;
 
 template <typename T>
@@ -448,6 +466,9 @@ inline constexpr bool is_object =
 
 template <typename T>
 inline constexpr bool is_function = !is_object<T>;
+
+template <typename T>
+struct IsFunctionTrait : Constant<is_function<T>> {};
 
 // Remove `const`/`volatile`-qualifiers, references, and pointers from a type.
 template <typename T>
