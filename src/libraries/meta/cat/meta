@@ -6,14 +6,6 @@
 // `typename` is not used for these type aliases. When that is solved, they
 // should be streamlined out.
 
-// // These forward declarations are required.
-// namespace cat {
-// template <typename T>
-// struct RemoveReferenceTrait;
-// template <typename>
-// struct IsLvalueReferenceTrait;
-// }  // namespace cat
-
 namespace cat {
 
 // Forward declare numeric types. These are implemented in `<numeral>`.

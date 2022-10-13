@@ -125,7 +125,7 @@ class String;
             cat::Conditional<cat::is_specialization<TRY_T, cat::Optional>,  \
                              cat::detail::NullOpt, cat::NoType>;            \
                                                                             \
-        if (!(container).has_value()) {                                     \
+        if (!((container).has_value())) {                                   \
             if constexpr (cat::is_specialization<TRY_T, cat::Optional>) {   \
                 return ReturnType{};                                        \
             } else {                                                        \
