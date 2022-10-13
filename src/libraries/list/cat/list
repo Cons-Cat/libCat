@@ -5,6 +5,7 @@
 #include <cat/allocator>
 #include <cat/array>
 #include <cat/collection>
+#include <iterator>
 
 // TODO: Add an `IntrusiveList`.
 
@@ -27,7 +28,12 @@ namespace detail {
 template <typename T>
 class List : public CollectionFacade<List<T>, T> {
   public:
-    struct Iterator : IteratorFacade<Iterator> {
+    class Iterator : public IteratorFacade<Iterator> {
+      public:
+        friend List<T>;
+        friend IteratorFacade<Iterator>;
+        using Collection [[maybe_unused]] = List<T>;
+
         Iterator(Iterator const&) = default;
         Iterator(detail::ListNode<T>* p_input) : p_node(p_input){};
 
@@ -49,6 +55,7 @@ class List : public CollectionFacade<List<T>, T> {
             return it.p_node == this->p_node;
         }
 
+      private:
         detail::ListNode<T>* p_node;
     };
 

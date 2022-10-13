@@ -8,3 +8,4 @@ skip file numerals
 skip file utility
 skip file notype
 skip file bit
+skip file compare

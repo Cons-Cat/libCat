@@ -5,6 +5,8 @@
 #include <cat/bit>
 #include <cat/simd>
 
+#include "cat/meta"
+
 namespace std {
 
 // `address_of()` should be used instead of a `&` for containers that might
@@ -221,7 +223,7 @@ using std::construct_at;
 using std::destroy_at;
 
 template <typename T>
-auto relocate_at(T const* p_source, T* p_destination) -> T* {
+auto relocate_at(T* p_source, T* p_destination) -> T* {
     if constexpr (is_trivially_relocatable<T>) {
         copy_memory(p_source, p_destination, ssizeof<T>());
         return launder(p_destination);

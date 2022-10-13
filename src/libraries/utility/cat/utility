@@ -6,7 +6,7 @@
 
 namespace cat {
 
-// TODO: See if moving this into `std::` improves debuggability without
+// TODO: See if moving `bit_cast()` into `std::` improves debuggability without
 // breaking anything.
 
 template <typename T, typename U>

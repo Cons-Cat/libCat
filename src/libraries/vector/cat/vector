@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/algorithm>
 #include <cat/allocator>
 #include <cat/array>
 #include <cat/collection>
@@ -165,6 +166,9 @@ class Vector : public CollectionFacade<Vector<T>, T> {
             return nullopt;
         }
         return new_vector;
+
+        // This produces a bizarre error with GCC 13:
+        // return TRY(new_vector.reserve(allocator, count));
     }
 
     [[nodiscard]] consteval static auto reserved(ssize count) -> Vector<T> {
@@ -208,19 +212,12 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     [[nodiscard]] static auto cloned(stableAllocator auto& allocator,
                                      Vector<T> const& other_vector)
         -> Optional<Vector<T>> {
-        Vector<T> new_vector;
-        Optional result = new_vector.clone(allocator, other_vector);
-        if (!result.has_value()) {
-            return nullopt;
-        }
-        return new_vector;
+        return other_vector.clone(allocator);
     }
 
     [[nodiscard]] consteval static auto cloned(Vector<T> const& other_vector)
         -> Vector<T> {
-        Vector<T> new_vector;
-        new_vector.clone(other_vector);
-        return new_vector;
+        return other_vector.clone();
     }
 
     // Get the non-`const` address of this `Vector`'s internal array.
@@ -248,8 +245,10 @@ class Vector : public CollectionFacade<Vector<T>, T> {
             // TODO: `.p_srealloc_multi()`.
             T* p_new = TRY(allocator.template p_alloc_multi<T>(new_capacity));
 
+            // TODO: Generalize copying from one collectian to another.
             if constexpr (is_trivially_relocatable<T>) {
-                copy_memory(this->p_storage, p_new, this->current_size);
+                copy_memory(this->p_storage, p_new,
+                            this->current_size * ssizeof<T>());
             } else {
                 for (ssize::Raw i = 0; i < this->current_size; ++i) {
                     p_new[i] = move(this->p_storage[i]);
@@ -288,8 +287,10 @@ class Vector : public CollectionFacade<Vector<T>, T> {
             // TODO: `.srealloc_multi()`.
             T* p_new = TRY(allocator.template p_alloc_multi<T>(new_size));
 
+            // TODO: Generalize copying from one collectian to another.
             if constexpr (is_trivially_relocatable<T>) {
-                copy_memory(this->p_storage, p_new, this->current_size);
+                copy_memory(this->p_storage, p_new,
+                            this->current_size * ssizeof<T>());
             } else {
                 for (ssize::Raw i = 0; i < this->current_size; ++i) {
                     p_new[i] = move(this->p_storage[i]);
@@ -350,7 +351,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    consteval auto push_back(U const& value) -> void {
+    consteval void push_back(U const& value) {
         if (this->current_size + 1 > this->current_capacity) {
             this->const_double_storage();
         }
@@ -358,22 +359,23 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         this->current_size += 1;
     }
 
-    [[nodiscard]] auto clone(stableAllocator auto& allocator,
-                             Vector<T> const& other_vector) -> Optional<void> {
-        TRY(this->resize(allocator, other_vector.size()));
-        // TODO: Use `copy_memory()` if `T` is relocatable.
-        for (ssize i = 0; i < other_vector.size(); ++i) {
-            this->p_storage[i.raw] = other_vector[i];
-        }
-        return monostate;
+    [[nodiscard]] auto clone(
+        stableAllocator auto& allocator) const& -> Optional<Vector<T>> {
+        Vector<T> new_vector =
+            TRY(Vector<T>::reserved(allocator, this->current_capacity));
+        new_vector.current_size = this->current_size;
+        relocate(this->begin(), this->end(), new_vector.begin());
+
+        return new_vector;
     }
 
-    consteval void clone(Vector<T> const& other_vector) {
-        this->reserve(other_vector.capacity());
-        this->resize(other_vector.size());
-        for (ssize i = 0; i < other_vector.size(); ++i) {
-            this->p_storage[i.raw] = other_vector[i];
+    [[nodiscard]] consteval auto clone() const& -> Vector<T> {
+        Vector<T> new_vector = Vector<T>::reserved(this->current_capacity);
+        new_vector.current_size = this->current_size;
+        for (ssize i = 0; i < this->current_size; ++i) {
+            new_vector[i] = move(this->p_storage[i]);
         }
+        return new_vector;
     }
 
   private:

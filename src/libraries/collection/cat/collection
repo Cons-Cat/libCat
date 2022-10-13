@@ -266,13 +266,15 @@ class CollectionFacade {
 
     // Contiguous collections can produce non-`const` bidirectional iterators.
     constexpr auto make_iterator() requires(this->is_array_like) {
-        struct Iterator : IteratorFacade<Iterator> {
-            ssize current_index;
-            T* const p_array;
+        class Iterator : public IteratorFacade<Iterator> {
+          public:
+            friend IteratorFacade<Iterator>;
+            using Collection [[maybe_unused]] = Derived;
 
             constexpr Iterator(Iterator const&) = default;
             constexpr Iterator(ssize index, T* p_in_array)
                 : current_index(index), p_array(p_in_array){};
+
             constexpr auto dereference() -> T& {
                 return unconst(this->p_array[current_index.raw]);
             }
@@ -303,6 +305,10 @@ class CollectionFacade {
                 -> bool {
                 return this->current_index >= other_iterator.current_index;
             }
+
+          private:
+            ssize current_index;
+            T* const p_array;
         };
 
         // Produce an iterator to have its type deduced later.
@@ -311,12 +317,15 @@ class CollectionFacade {
 
     // Contiguous collections can produce `const` bidirectional iterators.
     constexpr auto make_iterator() const requires(this->is_array_like) {
-        struct Iterator : IteratorFacade<Iterator> {
-            ssize current_index;
-            T const* const p_array;
+        class Iterator : public IteratorFacade<Iterator> {
+          public:
+            friend IteratorFacade<Iterator>;
+            using Collection [[maybe_unused]] = Derived;
+
             constexpr Iterator(Iterator const&) = default;
-            constexpr Iterator(ssize const index, T const* p_in_array)
+            constexpr Iterator(ssize index, T const* p_in_array)
                 : current_index(index), p_array(p_in_array){};
+
             constexpr auto dereference() const -> T const& {
                 return this->p_array[current_index.raw];
             }
@@ -326,6 +335,10 @@ class CollectionFacade {
             constexpr auto distance(Iterator const& other) const -> ssize {
                 return other.current_index - current_index;
             }
+
+          private:
+            ssize current_index;
+            T const* const p_array;
         };
 
         // Produce an iterator to have its type deduced later.
