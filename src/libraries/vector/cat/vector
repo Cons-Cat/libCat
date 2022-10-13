@@ -57,7 +57,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         allocator.free_multi(this->p_storage, this->current_size);
         T* p_new = result.value();
         // TODO: If `T` is relocatable, use `copy_memory()`.
-        for (ssize::Raw i = 0; i < this->current_size.raw; ++i) {
+        for (ssize::Raw i = 0; i < this->current_size; ++i) {
             p_new[i] = move(this->p_storage[i]);
         }
 
@@ -71,7 +71,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     consteval void const_double_storage() {
         ssize const new_capacity = max(4_sz, this->current_capacity * 2);
         T* p_new = new T[new_capacity.raw];
-        for (ssize::Raw i = 0; i < this->current_size.raw; ++i) {
+        for (ssize::Raw i = 0; i < this->current_size; ++i) {
             p_new[i] = move(this->p_storage[i]);
         }
 
@@ -246,19 +246,23 @@ class Vector : public CollectionFacade<Vector<T>, T> {
                                ssize new_capacity) -> Optional<void> {
         if (new_capacity > this->current_capacity) {
             // TODO: `.p_srealloc_multi()`.
-            Optional result = allocator.template p_alloc_multi<T>(new_capacity);
-            if (result.has_value()) {
-                T* p_new = result.value();
-                // TODO: If `T` is relocatable, use `copy_memory()`.
-                for (ssize::Raw i = 0; i < this->current_size.raw; ++i) {
+            T* p_new = TRY(allocator.template p_alloc_multi<T>(new_capacity));
+
+            if constexpr (is_trivially_relocatable<T>) {
+                copy_memory(this->p_storage, p_new, this->current_size);
+            } else {
+                for (ssize::Raw i = 0; i < this->current_size; ++i) {
                     p_new[i] = move(this->p_storage[i]);
                 }
-
-                this->p_storage = p_new;
-                this->current_capacity = new_capacity;
-                return monostate;
             }
+
+            allocator.free_multi(this->p_storage, this->current_size);
+
+            this->p_storage = p_new;
+            this->current_capacity = new_capacity;
+            return monostate;
         }
+
         return nullopt;
     }
 
@@ -267,7 +271,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         if (new_capacity > this->current_capacity) {
             // TODO: `.p_srealloc()`.
             T* p_new = new T[new_capacity.raw];
-            for (ssize::Raw i = 0; i < this->current_size.raw; ++i) {
+            for (ssize::Raw i = 0; i < this->current_size; ++i) {
                 p_new[i] = move(this->p_storage[i]);
             }
 
@@ -282,22 +286,26 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         -> Optional<void> {
         if (new_size > this->current_capacity) {
             // TODO: `.srealloc_multi()`.
-            Optional result = allocator.template p_alloc_multi<T>(new_size);
-            if (!result.has_value()) {
-                return nullopt;
+            T* p_new = TRY(allocator.template p_alloc_multi<T>(new_size));
+
+            if constexpr (is_trivially_relocatable<T>) {
+                copy_memory(this->p_storage, p_new, this->current_size);
+            } else {
+                for (ssize::Raw i = 0; i < this->current_size; ++i) {
+                    p_new[i] = move(this->p_storage[i]);
+                }
             }
+
             allocator.free_multi(this->p_storage, this->current_size);
-            T* p_new = result.value();
-            // TODO: If `T` is relocatable, use `copy_memory()`.
-            for (ssize::Raw i = 0; i < this->current_size.raw; ++i) {
-                p_new[i] = move(this->p_storage[i]);
-            }
 
             this->p_storage = p_new;
             this->current_size = new_size;
             this->current_capacity = new_size;
             return monostate;
         }
+
+        // If the new size is smaller than the current size, do not move
+        // anything.
         this->current_size = new_size;
         return monostate;
     }
@@ -306,10 +314,10 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     consteval void resize(ssize new_size) {
         if (new_size > this->current_capacity) {
             T* p_new = new T[new_size.raw];
-            for (ssize::Raw i = 0; i < this->current_size.raw; ++i) {
+            for (ssize::Raw i = 0; i < this->current_size; ++i) {
                 p_new[i] = move(this->p_storage[i]);
             }
-            for (ssize::Raw i = this->current_size.raw; i < new_size.raw; i++) {
+            for (ssize::Raw i = this->current_size.raw; i < new_size; i++) {
                 p_new[i] = T{};
             }
 
@@ -352,12 +360,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
 
     [[nodiscard]] auto clone(stableAllocator auto& allocator,
                              Vector<T> const& other_vector) -> Optional<void> {
-        Optional result = this->reserve(allocator, other_vector.capacity());
-        if (!result.has_value()) {
-            return nullopt;
-        }
-        // This cannot fail if `reserve()` succeeded.
-        _ = this->resize(allocator, other_vector.size());
+        TRY(this->resize(allocator, other_vector.size()));
         // TODO: Use `copy_memory()` if `T` is relocatable.
         for (ssize i = 0; i < other_vector.size(); ++i) {
             this->p_storage[i.raw] = other_vector[i];

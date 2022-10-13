@@ -6,6 +6,8 @@
 #include <cat/span>
 #include <cat/tuple>
 
+// TODO: `srealloc()` and `p_srealloc()`.
+
 namespace cat {
 
 template <typename T>
