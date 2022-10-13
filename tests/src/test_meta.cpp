@@ -2,7 +2,6 @@
 #include <cat/tuple>
 
 #include "../unit_tests.hpp"
-#include "cat/meta"
 
 struct Members {
     int member_variable;
@@ -12,6 +11,12 @@ struct Members {
 
 void test_is_function() {
 }
+
+template <typename T>
+class TemplatedOne {};
+
+template <typename T>
+class TemplatedTwo {};
 
 TEST(test_meta) {
     using namespace cat;
@@ -273,4 +278,8 @@ TEST(test_meta) {
     static_assert(is_member_pointer<decltype(p_member_variable)>);
     static_assert(is_member_object_pointer<decltype(p_member_variable)>);
     static_assert(is_member_object_pointer<int Members::*>);
+
+    // Test `is_specialization`.
+    static_assert(is_specialization<TemplatedOne<int>, TemplatedOne>);
+    static_assert(!is_specialization<TemplatedOne<int>, TemplatedTwo>);
 };

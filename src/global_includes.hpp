@@ -101,23 +101,39 @@ inline constexpr cat::Monostate monostate;
 // because it contains the `_start` symbol.
 #include <cat/runtime>
 
-// Unwrap an error-like container such as `cat::Scaredy` or `cat::Optional` iff
-// it holds a value, otherwise propagate it up the call stack. This works due to
-// a GCC extension, statement expressions.
-#define TRY(scaredy)                            \
-    ({                                          \
-        decltype(auto) maybe_value = (scaredy); \
-        if (!maybe_value.has_value()) {         \
-            return maybe_value;                 \
-        }                                       \
-        maybe_value.value();                    \
-    })
-
 // Necessary forward declarations.
 class String;
 
 // `assert()` is used throughout the library.
 #include <cat/debug>
+
+// `NoType` is required for `TRY()`.
+#include <cat/notype>
+
+// Unwrap an error-like container such as `cat::Scaredy` or `cat::Optional` iff
+// it holds a value, otherwise propagate it up the call stack. This works due to
+// a GCC extension, statement expressions.
+#define TRY(container)                                                      \
+    ({                                                                      \
+        using TRY_T = decltype(container);                                  \
+        /* `if constexpr` does not work right in a statement expression. */ \
+        /* If a `nullopt` is returned, this can fail to compile even if */  \
+        /* the constant expression is false. In that case, `NoType` is */   \
+        /* the return type instead, but of course `NoType` will never be */ \
+        /* returned.*/                                                      \
+        using ReturnType =                                                  \
+            cat::Conditional<cat::is_specialization<TRY_T, cat::Optional>,  \
+                             cat::detail::NullOpt, cat::NoType>;            \
+                                                                            \
+        if (!(container).has_value()) {                                     \
+            if constexpr (cat::is_specialization<TRY_T, cat::Optional>) {   \
+                return ReturnType{};                                        \
+            } else {                                                        \
+                return (container);                                         \
+            }                                                               \
+        }                                                                   \
+        (container).value();                                                \
+    })
 
 // Placement `new`.
 [[nodiscard]] inline constexpr auto operator new(unsigned long, void* p_address)
