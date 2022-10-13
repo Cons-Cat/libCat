@@ -1,0 +1,123 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/meta>
+#include <cat/utility>
+
+namespace cat {
+namespace detail {
+    template <typename T>
+    struct IsReferenceWrapper : FalseTypeTrait {};
+
+    // This is not needed until a reference wrapper is implemented.
+    // template <typename U>
+    // struct IsReferenceWrapper<reference_wrapper<U>> : true_type {};
+
+    template <typename T>
+    inline constexpr bool is_reference_wrapper = IsReferenceWrapper<T>::value;
+
+    template <typename C, typename Pointed, typename T1, typename... Args>
+    constexpr auto invoke_member_function(Pointed C::*f, T1&& t1,
+                                          Args&&... args) -> decltype(auto) {
+        if constexpr (is_function<Pointed>) {
+            if constexpr (is_base_of<C, Decay<T1>>) {
+                return (forward<T1>(t1).*f)(forward<Args>(args)...);
+            } else if constexpr (is_reference_wrapper<Decay<T1>>) {
+                return (t1.get().*f)(forward<Args>(args)...);
+            } else {
+                return ((*forward<T1>(t1)).*f)(forward<Args>(args)...);
+            }
+        } else {
+            static_assert(is_object<Pointed> && sizeof...(args) == 0);
+            if constexpr (is_base_of<C, Decay<T1>>) {
+                return forward<T1>(t1).*f;
+            } else if constexpr (is_reference_wrapper<Decay<T1>>) {
+                return t1.get().*f;
+            } else {
+                return (*forward<T1>(t1)).*f;
+            }
+        }
+    }
+
+    template <typename T>
+    struct InvokeImpl {
+        template <typename Callable, typename... Args>
+        static auto call(Callable&& f, Args&&... args)
+            -> decltype(forward<Callable>(f)(forward<Args>(args)...));
+    };
+
+    template <typename B, typename MT>
+    struct InvokeImpl<MT B::*> {
+        template <typename T, typename Td = Decay<T>>
+            requires(is_base_of<B, Td>)
+        static auto get(T&& t) -> T&&;
+
+        template <typename T, typename Td = Decay<T>>
+            requires(is_reference_wrapper<Td>)
+        static auto get(T&& t) -> decltype(t.get());
+
+        template <typename T, typename Td = Decay<T>>
+            requires(!is_base_of<B, Td> && !is_reference_wrapper<Td>)
+        static auto get(T&& t) -> decltype(*forward<T>(t));
+
+        template <typename T, typename... Args, typename MT1>
+            requires(is_function<MT1>)
+        static auto call(MT1 B::*pmf, T&& t, Args&&... args)
+            -> decltype((InvokeImpl::get(forward<T>(t)).*
+                         pmf)(forward<Args>(args)...));
+
+        template <typename T>
+        static auto call(MT B::*pmd, T&& t)
+            -> decltype(InvokeImpl::get(forward<T>(t)).*pmd);
+    };
+
+    template <typename Callable, typename... Args,
+              typename Fd = typename Decay<Callable>::type>
+    auto invoke_detail(Callable&& f, Args&&... args)
+        -> decltype(InvokeImpl<Fd>::call(forward<Callable>(f),
+                                         forward<Args>(args)...));
+
+    template <typename AlwaysVoid, typename, typename...>
+    struct InvokeResultTrait {};
+    template <typename Callable, typename... Args>
+    struct InvokeResultTrait<decltype(void(detail::invoke_detail(
+                                 declval<Callable>(), declval<Args>()...))),
+                             Callable, Args...> {
+        using Type = decltype(detail::invoke_detail(declval<Callable>(),
+                                                    declval<Args>()...));
+    };
+}  // namespace detail
+
+template <typename Callable, typename... Args>
+struct InvokeResult : detail::InvokeResultTrait<void, Callable, Args...> {};
+
+template <typename Callable, typename... Args>
+// requires is_invocable<Callable, Args...>
+constexpr auto invoke(Callable&& callable, Args&&... arguments)
+    -> InvokeResult<Callable, Args...>
+// noexcept(is_nothrow_invocable<Callable, Args...>)
+{
+    if constexpr (is_member_pointer<Decay<Callable>>) {
+        // Member functions must be special-cased.
+        return detail::invoke_member_function(callable,
+                                              forward<Args>(arguments)...);
+    } else {
+        // Invoke the callable with a call operator.
+        return forward<Callable>(callable)(forward<Args>(arguments)...);
+    }
+}
+
+template <typename ReturnType, typename Callable, typename... Args>
+// requires is_invocable_r<ReturnType, Callable, Args...>
+constexpr auto invoke_r(Callable&& f, Args&&... args) -> ReturnType
+// noexcept(is_nothrow_invocable_r<ReturnType, Callable, Args...>)
+{
+    if constexpr (is_void<ReturnType>) {
+        invoke(forward<Callable>(f), forward<Args>(args)...);
+    } else {
+        return invoke(forward<Callable>(f), forward<Args>(args)...);
+    }
+}
+
+}  // namespace cat
