@@ -664,14 +664,14 @@ class Optional {
     // Move the `storage` unconditionally. Reference types cannot be moved.
     [[nodiscard]] constexpr auto value() && -> Value&& requires(
         !is_reference<Value>) {
-        return move(this->storage).value();
+        return move(this->storage.value());
     }
 
     // Move the const-qualified `storage` unconditionally. Reference types
     // cannot be moved.
     [[nodiscard]] constexpr auto value() const&& -> Value const&& requires(
         !is_reference<Value>) {
-        return move(this->storage).value();
+        return move(this->storage.value());
     }
 
     // Get the value held by a non-`const`-qualified `Optional`, or a
@@ -789,7 +789,8 @@ class Optional {
         SourceLocation const& callsite =
             SourceLocation::current()) && -> Value {
         cat::verify(this->has_value(), p_assert_handler, callsite);
-        return this->value();
+        // `move()` is required when there is a deleted copy-constructor.
+        return move(this->value());
     }
 
     [[nodiscard]] auto verify(
@@ -797,7 +798,8 @@ class Optional {
         SourceLocation const& callsite =
             SourceLocation::current()) const&& -> Value {
         cat::verify(this->has_value(), p_assert_handler, callsite);
-        return this->value();
+        // `move()` is required when there is a deleted copy-constructor.
+        return move(this->value());
     }
 
     // Monadic methods:

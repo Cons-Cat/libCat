@@ -2,24 +2,36 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/algorithm>
 #include <cat/iterator>
 #include <cat/math>
 
 namespace cat {
 
+// Forward declarations for containers and algorithms needed by
+// `CollectionFacade`.
 template <typename T>
 class Span;
 
+template <typename T>
+concept collection = requires(T container) {
+    container.begin();
+    container.end();
+    container.cbegin();
+    container.cend();
+    container.size();
+};
+
 namespace detail {
     template <typename T>
-    concept isContiguousCollection = requires(T collection) {
+    concept contiguousCollection = requires(T collection) {
         collection.p_data();
     };
 
     // clang-format off
     template <typename T>
     // Parentheses are required here to make cppcheck work.
-    concept isBoundedCollection = (requires(T collection) {
+    concept boundedCollection = (requires(T collection) {
         collection.size();
     }) || (requires(T collection) {
         collection.capacity();
@@ -45,8 +57,8 @@ class CollectionFacade {
     // `is_array_like` at the top of this class instead of the bottom prevents
     // clangd false diagnostics.
     static constexpr bool is_array_like =
-        detail::isContiguousCollection<Derived> &&
-        detail::isBoundedCollection<Derived>;
+        detail::contiguousCollection<Derived> &&
+        detail::boundedCollection<Derived>;
 
   public:
     // If `.size()` is not, provided and `.capacity()` is, generate
@@ -247,6 +259,27 @@ class CollectionFacade {
         return this->rend();
     }
 
+    // Member-access syntax algorithms.
+
+    template <collection Other>
+    auto copy_to(Other const& destination) const {
+        assert(destination.capacity() >= this->capacity());
+        return cat::copy(this->begin(), this->end(), destination.begin());
+    }
+
+    template <collection Other>
+    auto move_to(Other const& destination) const {
+        assert(destination.capacity() >= this->capacity());
+        return cat::move(this->begin(), this->end(), destination.begin());
+    }
+
+    template <collection Other>
+    auto relocate_to(Other const& destination) const {
+        assert(destination.capacity() >= this->capacity());
+        return cat::relocate(this->begin(), this->end(), destination.begin());
+    }
+
+    // Implementation details for type reflection.
   private:
     constexpr auto self_mut() -> Derived& {
         return static_cast<Derived&>(*this);
@@ -360,7 +393,7 @@ struct CollectionTraits {
     using ConstReversedIterator = cat::ReversedIterator<ConstIterator>;
 
     static constexpr bool is_array_like =
-        detail::isContiguousCollection<T> && detail::isBoundedCollection<T>;
+        detail::contiguousCollection<T> && detail::boundedCollection<T>;
 };
 
 }  // namespace cat

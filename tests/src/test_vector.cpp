@@ -99,4 +99,39 @@ TEST(test_vector) {
     static_assert(const_func() == 10);
 
     // TODO: Test insert iterators.
+
+    // Test algorithms.
+    cat::Vector origin_vector =
+        cat::Vector<int>::filled(allocator, 6, 1).verify();
+    auto copy_vector = cat::Vector<int>::filled(allocator, 6, 0).verify();
+    auto move_vector = cat::Vector<int>::filled(allocator, 6, 0).verify();
+    auto relocate_vector = cat::Vector<int>::filled(allocator, 6, 0).verify();
+
+    // `copy()`.
+    cat::verify(copy_vector[5] == 0);
+    cat::copy(origin_vector.begin(), origin_vector.end(), copy_vector.begin());
+    cat::verify(copy_vector[5] == 1);
+
+    copy_vector[5] = 0;
+    origin_vector.copy_to(copy_vector);
+    cat::verify(copy_vector[5] == 1);
+
+    // `move()`.
+    cat::verify(move_vector[5] == 0);
+    cat::move(origin_vector.begin(), origin_vector.end(), move_vector.begin());
+    cat::verify(move_vector[5] == 1);
+
+    move_vector[5] = 0;
+    origin_vector.move_to(move_vector);
+    cat::verify(move_vector[5] == 1);
+
+    // `relocate()`.
+    cat::verify(relocate_vector[5] == 0);
+    cat::relocate(origin_vector.begin(), origin_vector.end(),
+                  relocate_vector.begin());
+    cat::verify(relocate_vector[5] == 1);
+
+    relocate_vector[5] = 0;
+    origin_vector.relocate_to(relocate_vector);
+    cat::verify(relocate_vector[5] == 1);
 }

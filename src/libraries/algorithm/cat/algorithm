@@ -3,30 +3,44 @@
 #pragma once
 
 #include <cat/collection>
-#include <memory>
-
-#include "cat/meta"
 
 namespace cat {
 
+template <typename T>
+struct CollectionTraits;
+
+// Copy-assign the elements of one collection into another.
 template <typename InputIterator, typename OutputIterator>
 auto copy(InputIterator source_begin, InputIterator source_end,
           OutputIterator destination_begin) -> OutputIterator {
+    using DestinationElement = decltype(*destination_begin);
+
     while (source_begin != source_end) {
-        *destination_begin = *source_begin;
+        // Copy assignment.
+        *destination_begin = static_cast<DestinationElement>(*source_begin);
         ++source_begin;
+        ++destination_begin;
     }
+    return destination_begin;
 }
 
+// Move-assign the elements of one collection into another.
 template <typename InputIterator, typename OutputIterator>
 auto move(InputIterator source_begin, InputIterator source_end,
           OutputIterator destination_begin) -> OutputIterator {
+    using DestinationElement = decltype(*destination_begin);
+
     while (source_begin != source_end) {
-        *destination_begin = move(*source_begin);
+        // Move assignment.
+        *destination_begin =
+            move(static_cast<DestinationElement>(*source_begin));
         ++source_begin;
+        ++destination_begin;
     }
+    return destination_begin;
 }
 
+// Optimally relocate the elements of one collection into another.
 template <typename InputIterator, typename OutputIterator>
 auto relocate(InputIterator source_begin, InputIterator source_end,
               OutputIterator destination_begin) -> OutputIterator {
@@ -47,23 +61,16 @@ auto relocate(InputIterator source_begin, InputIterator source_end,
         copy_memory(
             addressof(*source_begin), addressof(*destination_begin),
             (source_end - source_begin) * ssizeof<decltype(*source_begin)>);
+        return destination_begin;
     } else {
-        while (source_begin != source_end) {
-            // Otherwise, if the destination can be moved to, do so.
-            if constexpr (is_move_assignable<DestinationElement>) {
-                *destination_begin =
-                    move(static_cast<DestinationElement>(*source_begin));
-            } else {
-                // Otherwise, copy to the destination.
-                *destination_begin =
-                    static_cast<DestinationElement>(*source_begin);
-            }
-
-            ++source_begin;
-            ++destination_begin;
+        // Otherwise, if the destination can be moved to, do so.
+        if constexpr (is_move_assignable<DestinationElement>) {
+            return move(source_begin, source_end, destination_begin);
+        } else {
+            // Otherwise, copy to the destination.
+            return copy(source_begin, source_end, destination_begin);
         }
     }
-    return destination_begin;
 }
 
 }  // namespace cat
