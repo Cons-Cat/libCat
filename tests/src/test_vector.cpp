@@ -101,6 +101,16 @@ TEST(test_vector) {
     // Test getters.
     cat::Vector<int> default_vector;
     cat::verify(default_vector.is_empty());
+    cat::verify(default_vector.is_full());
+
+    _ = default_vector.reserve(allocator, 2);
+    cat::verify(default_vector.is_empty());
+    cat::verify(!default_vector.is_full());
+
+    _ = default_vector.push_back(allocator, 0);
+    _ = default_vector.push_back(allocator, 0);
+    cat::verify(!default_vector.is_empty());
+    cat::verify(default_vector.is_full());
 
     // TODO: Test insert iterators.
 

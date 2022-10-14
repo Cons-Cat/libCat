@@ -82,8 +82,11 @@ class CollectionFacade {
         return this->self().size() == 0;
     }
 
+    // This evaluates true if there are one or more elements currently in this
+    // collection.
+    [[nodiscard]] constexpr auto is_full() const
         -> bool requires(detail::hasSize<Derived>) {
-        return this->self().size() > 0;
+        return this->self().size() == this->self().capacity();
     }
 
     // Index into this collection with bounds-checking.
