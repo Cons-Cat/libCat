@@ -98,6 +98,10 @@ TEST(test_vector) {
     // Test `Vector` in a `constexpr` context.
     static_assert(const_func() == 10);
 
+    // Test getters.
+    cat::Vector<int> default_vector;
+    cat::verify(default_vector.is_empty());
+
     // TODO: Test insert iterators.
 
     // Test algorithms.

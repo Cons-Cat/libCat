@@ -79,6 +79,10 @@ class CollectionFacade {
     // collection.
     [[nodiscard]] constexpr auto is_empty() const
         -> bool requires(detail::hasSize<Derived>) {
+        return this->self().size() == 0;
+    }
+
+        -> bool requires(detail::hasSize<Derived>) {
         return this->self().size() > 0;
     }
 
