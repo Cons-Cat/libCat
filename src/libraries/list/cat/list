@@ -5,7 +5,6 @@
 #include <cat/allocator>
 #include <cat/array>
 #include <cat/collection>
-#include <iterator>
 
 // TODO: Add an `IntrusiveList`.
 

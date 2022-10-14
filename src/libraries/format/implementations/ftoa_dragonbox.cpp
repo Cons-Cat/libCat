@@ -17,7 +17,7 @@
 
 #include <cat/detail/ftoa_dragonbox.hpp>
 
-#include <memory>
+#include <cat/memory>
 
 #if defined(__GNUC__) || defined(__clang__)
 #define JKJ_FORCEINLINE inline __attribute__((always_inline))
