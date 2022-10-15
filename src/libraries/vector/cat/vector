@@ -58,16 +58,18 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         }
 
         // TODO: `.p_srealloc_multi()`.
-        Optional result = allocator.template p_alloc_multi<T>(new_capacity);
-        if (!result.has_value()) {
-            return nullopt;
+        T* p_new = TRY(allocator.template p_alloc_multi<T>(new_capacity));
+
+        if constexpr (is_trivially_relocatable<T>) {
+            copy_memory(this->p_storage, p_new,
+                        this->current_size * ssizeof<T>());
+        } else {
+            for (ssize::Raw i = 0; i < this->current_size; ++i) {
+                p_new[i] = move(this->p_storage[i]);
+            }
         }
+
         allocator.free_multi(this->p_storage, this->current_size);
-        T* p_new = result.value();
-        // TODO: If `T` is relocatable, use `copy_memory()`.
-        for (ssize::Raw i = 0; i < this->current_size; ++i) {
-            p_new[i] = move(this->p_storage[i]);
-        }
 
         this->p_storage = p_new;
         this->current_capacity = new_capacity;
@@ -79,6 +81,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     consteval void const_double_storage() {
         ssize const new_capacity = max(4_sz, this->current_capacity * 2);
         T* p_new = new T[new_capacity.raw];
+
         for (ssize::Raw i = 0; i < this->current_size; ++i) {
             p_new[i] = move(this->p_storage[i]);
         }
