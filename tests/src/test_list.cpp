@@ -88,11 +88,21 @@ TEST(test_list) {
     _ = list_1.push_front(allocator, 2).verify();
     _ = list_1.push_front(allocator, 1).verify();
     _ = list_1.push_front(allocator, 0).verify();
-    cat::List list_5 = cat::List<int4>::cloned(allocator, list_1).verify();
+    cat::List list_5 = list_1.clone(allocator).verify();
+
+    auto list_it_1 = list_1.begin();
+    auto list_it_5 = list_5.begin();
+
+    // Prove all elements copied correctly.
+    while (list_it_1 != list_1.end()) {
+        cat::verify(*list_it_1 == *list_it_5);
+        ++list_it_1;
+        ++list_it_5;
+    }
 
     // Test that the copy was deep.
     list_1.clear(allocator);
-    cat::verify(*list_5.begin() == 0);
+    cat::verify(*(list_5.begin()) == 0);
     cat::verify(*(list_5.begin() + 1) == 1);
     cat::verify(*(list_5.begin() + 2) == 2);
     cat::verify(*(list_5.begin() + 3) == 3);
@@ -131,8 +141,17 @@ TEST(test_list) {
     cat::verify(*(forward_list_1.begin() + 3) == 3);
 
     // Deep copy a `ForwardList`.
-    cat::ForwardList<int4> forward_list_2;
-    _ = forward_list_2.clone(allocator, forward_list_1).verify();
+    cat::ForwardList<int4> forward_list_2 =
+        forward_list_1.clone(allocator).verify();
+    auto forward_it_1 = forward_list_1.begin();
+    auto forward_it_2 = forward_list_2.begin();
+
+    // Prove all elements copied correctly.
+    while (forward_it_1 != forward_list_1.end()) {
+        cat::verify(*forward_it_1 == *forward_it_2);
+        ++forward_it_1;
+        ++forward_it_2;
+    }
 
     // Remove elements from `ForwardList`.
     forward_list_1.erase_after(allocator, forward_list_1.begin());
@@ -141,8 +160,8 @@ TEST(test_list) {
     forward_list_1.pop_front(allocator);
     cat::verify(*forward_list_1.begin() == 2);
 
-    // Test that the copy was deep.
-    cat::verify(*forward_list_2.begin() == 1);
+    // Test that the copy was deep, after modifying the original.
+    cat::verify(*(forward_list_2.begin()) == 1);
     cat::verify(*(forward_list_2.begin() + 1) == 0);
     cat::verify(*(forward_list_2.begin() + 2) == 2);
     cat::verify(*(forward_list_2.begin() + 3) == 3);

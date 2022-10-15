@@ -58,10 +58,13 @@ class List : public CollectionFacade<List<T>, T> {
         detail::ListNode<T>* p_node;
     };
 
-    constexpr List() = default;
+    constexpr List() : p_head(nullptr), p_tail(nullptr), length(0){};
     constexpr List(List<T>&& list) = default;
+
+  private:
     constexpr List(List<T> const&) = default;
 
+  public:
     template <typename U, U... initializers>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]] static auto from(stableAllocator auto& allocator,
@@ -96,16 +99,6 @@ class List : public CollectionFacade<List<T>, T> {
             if (!result.has_value()) {
                 return nullopt;
             }
-        }
-        return new_list;
-    }
-
-    [[nodiscard]] static auto cloned(stableAllocator auto& allocator,
-                                     List<T>& other_list) -> Optional<List<T>> {
-        List<T> new_list;
-        Optional result = new_list.clone(allocator, other_list);
-        if (!result.has_value()) {
-            return nullopt;
         }
         return new_list;
     }
@@ -382,26 +375,15 @@ class List : public CollectionFacade<List<T>, T> {
         this->length = 0;
     }
 
-    // Deep-copy the contents of another `List`.
-    [[nodiscard]] auto clone(stableAllocator auto& allocator,
-                             List<T>& other_list) -> Optional<void> {
-        Optional<Iterator> maybe_current =
-            this->push_back(allocator, other_list.front());
-        if (!maybe_current.has_value()) {
-            // Propagate memory allocation failure.
-            return nullopt;
+    // Deep-copy the contents of this `List`.
+    [[nodiscard]] auto clone(stableAllocator auto& allocator)
+        -> Optional<List<T>> {
+        List<T> new_list;
+        Iterator current = TRY(new_list.push_front(allocator, this->front()));
+        for (Iterator it = ++this->begin(); it != this->end() + 1; ++it) {
+            current = TRY(this->insert(allocator, current + 1, *it));
         }
-        Iterator& current = maybe_current.value();
-
-        for (Iterator it = ++other_list.begin(); it.p_node != nullptr; ++it) {
-            Optional<Iterator> result = this->push_back(allocator, *it);
-            if (!result.has_value()) {
-                // Propagate memory allocation failure.
-                return nullopt;
-            }
-            current = result.value();
-        }
-        return monostate;
+        return new_list;
     }
 
     // Providing these four iterator getters generates the remaining eight
@@ -452,10 +434,13 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         detail::ForwardListNode<T>* p_node;
     };
 
-    constexpr ForwardList() = default;
-    constexpr ForwardList(ForwardList<T> const&) = default;
+    constexpr ForwardList() : p_head(nullptr), p_tail(nullptr), length(0){};
     constexpr ForwardList(ForwardList<T>&& list) = default;
 
+  private:
+    constexpr ForwardList(ForwardList<T> const&) = default;
+
+  public:
     template <typename U, U... values>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]] static auto from(stableAllocator auto& allocator,
@@ -490,17 +475,6 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
             if (!result.has_value()) {
                 return nullopt;
             }
-        }
-        return new_list;
-    }
-
-    [[nodiscard]] static auto cloned(stableAllocator auto& allocator,
-                                     ForwardList<T>& other_list)
-        -> Optional<List<T>> {
-        ForwardList<T> new_list;
-        Optional result = new_list.clone(allocator, other_list);
-        if (!result.has_value()) {
-            return nullopt;
         }
         return new_list;
     }
@@ -671,28 +645,15 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         this->length = 0;
     }
 
-    // Deep-copy the contents of another `ForwardList`.
-    [[nodiscard]] auto clone(stableAllocator auto& allocator,
-                             ForwardList<T>& other) -> Optional<void> {
-        // `.emplace_front()` is faster than `.emplace_after()`.
-        Optional<Iterator> maybe_current =
-            this->push_front(allocator, other.front());
-        if (!maybe_current.has_value()) {
-            // Propagate memory allocation failure.
-            return nullopt;
+    // Deep-copy the contents of this `ForwardList`.
+    [[nodiscard]] auto clone(stableAllocator auto& allocator)
+        -> Optional<ForwardList<T>> {
+        ForwardList<T> new_list;
+        Iterator current = TRY(new_list.push_front(allocator, this->front()));
+        for (Iterator it = ++this->begin(); it != this->end() + 1; ++it) {
+            current = TRY(this->insert_after(allocator, current, *it));
         }
-        Iterator& current = maybe_current.value();
-
-        for (Iterator it = ++other.begin(); it.p_node != nullptr; ++it) {
-            Optional<Iterator> result =
-                this->insert_after(allocator, current, *it);
-            if (!result.has_value()) {
-                // Propagate memory allocation failure.
-                return nullopt;
-            }
-            current = result.value();
-        }
-        return monostate;
+        return new_list;
     }
 
     // Providing these two iterator getters generates the remaining four
