@@ -76,8 +76,7 @@ TEST(test_vector) {
     }
 
     // Test cloned constructor.
-    cat::Vector cloned_vec =
-        cat::Vector<int4>::cloned(allocator, filled_vec).or_exit();
+    cat::Vector cloned_vec = filled_vec.clone(allocator).or_exit();
     cat::verify(cloned_vec.size() == 8);
     cat::verify(cloned_vec.capacity() == 8);
     for (int4 integer : cloned_vec) {

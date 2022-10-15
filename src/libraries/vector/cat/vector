@@ -155,7 +155,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         for (ssize i = 0; i < ssizeof_pack(initializers...); ++i) {
             new_vector[i] = values[i];
         }
-        return Vector<T>::cloned(new_vector);
+        return new_vector.clone();
     }
 
     [[nodiscard]] static auto reserved(stableAllocator auto& allocator,
@@ -207,17 +207,6 @@ class Vector : public CollectionFacade<Vector<T>, T> {
             element = value;
         }
         return new_vector;
-    }
-
-    [[nodiscard]] static auto cloned(stableAllocator auto& allocator,
-                                     Vector<T> const& other_vector)
-        -> Optional<Vector<T>> {
-        return other_vector.clone(allocator);
-    }
-
-    [[nodiscard]] consteval static auto cloned(Vector<T> const& other_vector)
-        -> Vector<T> {
-        return other_vector.clone();
     }
 
     // Get the non-`const` address of this `Vector`'s internal array.
@@ -359,6 +348,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         this->current_size += 1;
     }
 
+    // Deep-copy the contents of this `Vector`.
     [[nodiscard]] auto clone(
         stableAllocator auto& allocator) const& -> Optional<Vector<T>> {
         Vector<T> new_vector =
