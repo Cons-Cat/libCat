@@ -100,7 +100,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
                                    ValueList<U, initializers...>)
         -> Optional<Vector<T>> {
         Optional result =
-            Vector<T>::resized(allocator, ssizeof_pack(initializers...));
+            Vector<T>::reserved(allocator, ssizeof_pack(initializers...));
         if (!result.has_value()) {
             return nullopt;
         }
@@ -120,7 +120,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
                                    Args&&... initializers)
         -> Optional<Vector<T>> {
         Optional result =
-            Vector<T>::resized(allocator, ssizeof_pack(initializers...));
+            Vector<T>::reserved(allocator, ssizeof_pack(initializers...));
         if (!result.has_value()) {
             return nullopt;
         }
@@ -141,7 +141,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     [[nodiscard]] consteval static auto from(ValueList<U, initializers...>)
         -> Vector<T> {
         Vector<T> new_vector =
-            Vector<T>::resized(ssizeof_pack(initializers...));
+            Vector<T>::reserved(ssizeof_pack(initializers...));
         Array array = {static_cast<T>(initializers)...};
         for (ssize i = 0; i < ssizeof_pack(initializers...); ++i) {
             new_vector[i] = array[i];
@@ -156,7 +156,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         -> Vector<T> {
         Vector<T> new_vector;
         delete[] new_vector.p_data();
-        // = Vector<T>::resized(ssizeof_pack(arguments...));
+        // = Vector<T>::reserved(ssizeof_pack(arguments...));
         new_vector.current_size = ssizeof_pack(initializers...);
         new_vector.current_capacity = ssizeof_pack(initializers...);
         new_vector.p_storage = new T[sizeof...(initializers)];
@@ -171,35 +171,13 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     [[nodiscard]] static auto reserved(stableAllocator auto& allocator,
                                        ssize capacity) -> Optional<Vector<T>> {
         Vector<T> new_vector;
-        Optional result = new_vector.reserve(allocator, capacity);
-        if (!result.has_value()) {
-            return nullopt;
-        }
+        TRY(new_vector.reserve(allocator, capacity));
         return new_vector;
-
-        // This produces a bizarre error with GCC 13:
-        // return TRY(new_vector.reserve(allocator, count));
     }
 
     [[nodiscard]] consteval static auto reserved(ssize count) -> Vector<T> {
         Vector<T> new_vector;
         new_vector.reserve(count);
-        return new_vector;
-    }
-
-    [[nodiscard]] static auto resized(stableAllocator auto& allocator,
-                                      ssize size) -> Optional<Vector<T>> {
-        Vector<T> new_vector;
-        Optional result = new_vector.resize(allocator, size);
-        if (!result.has_value()) {
-            return nullopt;
-        }
-        return new_vector;
-    }
-
-    [[nodiscard]] consteval static auto resized(ssize size) -> Vector<T> {
-        Vector<T> new_vector;
-        new_vector.resize(size);
         return new_vector;
     }
 
@@ -261,6 +239,9 @@ class Vector : public CollectionFacade<Vector<T>, T> {
             return monostate;
         }
 
+        // If the new capacity is smaller, simply shrink size and capacity.
+        this->current_size = new_capacity;
+        this->current_capacity = new_capacity;
         return nullopt;
     }
 
@@ -277,6 +258,10 @@ class Vector : public CollectionFacade<Vector<T>, T> {
             this->p_storage = p_new;
             this->current_capacity = new_capacity;
         }
+
+        // If the new capacity is smaller, simply shrink size and capacity.
+        this->current_size = new_capacity;
+        this->current_capacity = new_capacity;
     }
 
     // Try to change the size of this `Vector` in a non-`constexpr` context.
@@ -325,10 +310,12 @@ class Vector : public CollectionFacade<Vector<T>, T> {
             this->p_storage = p_new;
             this->current_size = new_size;
             this->current_capacity = new_size;
-        } else {
-            // Shrink the size.
-            this->current_size = new_size;
+            return;
         }
+
+        // If the new size is smaller, simply shrink size and capacity.
+        this->current_size = new_size;
+        this->current_capacity = new_size;
     }
 
     // Deep-copy the contents of this `Vector`.
