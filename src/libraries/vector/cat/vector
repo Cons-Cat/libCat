@@ -169,9 +169,9 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     }
 
     [[nodiscard]] static auto reserved(stableAllocator auto& allocator,
-                                       ssize count) -> Optional<Vector<T>> {
+                                       ssize capacity) -> Optional<Vector<T>> {
         Vector<T> new_vector;
-        Optional result = new_vector.reserve(allocator, count);
+        Optional result = new_vector.reserve(allocator, capacity);
         if (!result.has_value()) {
             return nullopt;
         }
@@ -331,6 +331,26 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         }
     }
 
+    // Deep-copy the contents of this `Vector`.
+    [[nodiscard]] auto clone(
+        stableAllocator auto& allocator) const& -> Optional<Vector<T>> {
+        Vector<T> new_vector =
+            TRY(Vector<T>::reserved(allocator, this->current_capacity));
+        new_vector.current_size = this->current_size;
+        relocate(this->begin(), this->end(), new_vector.begin());
+
+        return new_vector;
+    }
+
+    [[nodiscard]] consteval auto clone() const& -> Vector<T> {
+        Vector<T> new_vector = Vector<T>::reserved(this->current_capacity);
+        new_vector.current_size = this->current_size;
+        for (ssize i = 0; i < this->current_size; ++i) {
+            new_vector[i] = move(this->p_storage[i]);
+        }
+        return new_vector;
+    }
+
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]] auto push_back(stableAllocator auto& allocator,
@@ -356,26 +376,6 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         }
         this->p_storage[this->current_size.raw] = static_cast<T>(value);
         this->current_size += 1;
-    }
-
-    // Deep-copy the contents of this `Vector`.
-    [[nodiscard]] auto clone(
-        stableAllocator auto& allocator) const& -> Optional<Vector<T>> {
-        Vector<T> new_vector =
-            TRY(Vector<T>::reserved(allocator, this->current_capacity));
-        new_vector.current_size = this->current_size;
-        relocate(this->begin(), this->end(), new_vector.begin());
-
-        return new_vector;
-    }
-
-    [[nodiscard]] consteval auto clone() const& -> Vector<T> {
-        Vector<T> new_vector = Vector<T>::reserved(this->current_capacity);
-        new_vector.current_size = this->current_size;
-        for (ssize i = 0; i < this->current_size; ++i) {
-            new_vector[i] = move(this->p_storage[i]);
-        }
-        return new_vector;
     }
 
   private:

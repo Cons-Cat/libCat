@@ -189,6 +189,17 @@ class List : public CollectionFacade<List<T>, T> {
     }
 
   public:
+    // Deep-copy the contents of this `List`.
+    [[nodiscard]] auto clone(stableAllocator auto& allocator)
+        -> Optional<List<T>> {
+        List<T> new_list;
+        Iterator current = TRY(new_list.push_front(allocator, this->front()));
+        for (Iterator it = ++this->begin(); it != this->end() + 1; ++it) {
+            current = TRY(this->insert(allocator, current + 1, *it));
+        }
+        return new_list;
+    }
+
     // Allocate a node and insert it into this list before the position of
     // `where`.
     template <typename U>
@@ -382,17 +393,6 @@ class List : public CollectionFacade<List<T>, T> {
         this->length = 0;
     }
 
-    // Deep-copy the contents of this `List`.
-    [[nodiscard]] auto clone(stableAllocator auto& allocator)
-        -> Optional<List<T>> {
-        List<T> new_list;
-        Iterator current = TRY(new_list.push_front(allocator, this->front()));
-        for (Iterator it = ++this->begin(); it != this->end() + 1; ++it) {
-            current = TRY(this->insert(allocator, current + 1, *it));
-        }
-        return new_list;
-    }
-
     // Providing these four iterator getters generates the remaining eight
     // through the `CollectionFacade`.
     [[nodiscard]] auto begin() -> Iterator {
@@ -540,6 +540,17 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     }
 
   public:
+    // Deep-copy the contents of this `ForwardList`.
+    [[nodiscard]] auto clone(stableAllocator auto& allocator)
+        -> Optional<ForwardList<T>> {
+        ForwardList<T> new_list;
+        Iterator current = TRY(new_list.push_front(allocator, this->front()));
+        for (Iterator it = ++this->begin(); it != this->end() + 1; ++it) {
+            current = TRY(this->insert_after(allocator, current, *it));
+        }
+        return new_list;
+    }
+
     template <typename U>
     auto insert_after(stableAllocator auto& allocator, Iterator where,
                       U const& value) -> Optional<Iterator>
@@ -652,17 +663,6 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
             allocator.free(iterator.p_node);
         }
         this->length = 0;
-    }
-
-    // Deep-copy the contents of this `ForwardList`.
-    [[nodiscard]] auto clone(stableAllocator auto& allocator)
-        -> Optional<ForwardList<T>> {
-        ForwardList<T> new_list;
-        Iterator current = TRY(new_list.push_front(allocator, this->front()));
-        for (Iterator it = ++this->begin(); it != this->end() + 1; ++it) {
-            current = TRY(this->insert_after(allocator, current, *it));
-        }
-        return new_list;
     }
 
     // Providing these two iterator getters generates the remaining four
