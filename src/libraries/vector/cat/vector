@@ -8,6 +8,11 @@
 #include <cat/collection>
 #include <cat/math>
 
+// The deprecated copy constructor is intended must be used internally, so
+// disable deprecated warnings within this file.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 namespace cat {
 
 // TODO: Support `__sanitizer_annotate_contiguous_container`.
@@ -36,7 +41,9 @@ class Vector : public CollectionFacade<Vector<T>, T> {
   private:
     // Only allow the shallow copy constructor to be used by these static
     // factory member functions.
-    constexpr Vector(Vector<T> const& other_vector) = default;
+    [[deprecated(
+        "The copy-constructor is hidden. Use `.clone()` "
+        "instead!")]] constexpr Vector(Vector<T> const& other_vector) = default;
 
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
     // context.
@@ -375,3 +382,5 @@ class Vector : public CollectionFacade<Vector<T>, T> {
 };
 
 }  // namespace cat
+
+#pragma GCC diagnostic pop

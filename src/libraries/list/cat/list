@@ -8,6 +8,11 @@
 
 // TODO: Add an `IntrusiveList`.
 
+// The deprecated copy constructors are intended must be used internally, so
+// disable deprecated warnings within this file.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 namespace cat {
 namespace detail {
     template <typename T>
@@ -62,7 +67,9 @@ class List : public CollectionFacade<List<T>, T> {
     constexpr List(List<T>&& list) = default;
 
   private:
-    constexpr List(List<T> const&) = default;
+    [[deprecated(
+        "The copy-constructor is hidden. Use `.clone()` "
+        "instead!")]] constexpr List(List<T> const&) = default;
 
   public:
     template <typename U, U... initializers>
@@ -438,7 +445,9 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     constexpr ForwardList(ForwardList<T>&& list) = default;
 
   private:
-    constexpr ForwardList(ForwardList<T> const&) = default;
+    [[deprecated(
+        "The copy-constructor is hidden. Use `.clone()` "
+        "instead!")]] constexpr ForwardList(ForwardList<T> const&) = default;
 
   public:
     template <typename U, U... values>
@@ -673,3 +682,5 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
 };
 
 }  // namespace cat
+
+#pragma GCC diagnostic pop
