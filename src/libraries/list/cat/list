@@ -331,7 +331,7 @@ class List : public CollectionFacade<List<T>, T> {
         }
     }
 
-    // TODO: rval-ref overload of `push_back`.
+    // TODO: rval-ref overload of `.push_back()`.
 
     // Allocate a node and insert it at the end of this list.
     template <typename U>

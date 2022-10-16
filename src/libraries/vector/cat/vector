@@ -247,6 +247,9 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         return new_vector;
     }
 
+    // TODO: rval-ref overload of `.push_back()`.
+    // TODO: `.emplace_back()`.
+
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]] auto push_back(stableAllocator auto& allocator,
@@ -261,8 +264,6 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         this->current_size += 1;
         return monostate;
     }
-
-    // TODO: rval-ref overload of `push_back`.
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)

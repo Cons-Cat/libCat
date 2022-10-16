@@ -41,6 +41,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/tuple/
   ${CMAKE_SOURCE_DIR}/src/libraries/cast/
   ${CMAKE_SOURCE_DIR}/src/libraries/vector/
+  ${CMAKE_SOURCE_DIR}/src/libraries/ring/
   PARENT_SCOPE
 )
 

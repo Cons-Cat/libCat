@@ -52,6 +52,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_tuple.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_variant.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_vector.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_ring.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_invoke.cpp
   )
 
