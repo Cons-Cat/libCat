@@ -353,12 +353,12 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-[[nodiscard]] constexpr auto count_leading_zeros(T value) -> ssize
-    requires(is_integral<T>);
+    requires(is_integral<T>)
+[[nodiscard]] constexpr auto count_leading_zeros(T value) -> ssize;
 
 template <typename T>
-[[nodiscard]] constexpr auto count_trailing_zeros(T value) -> ssize
-    requires(is_integral<T>);
+    requires(is_integral<T>)
+[[nodiscard]] constexpr auto count_trailing_zeros(T value) -> ssize;
 
 // `Numeral` can represent an integer or floating point value. It prevents
 // unsafe casts or operations. It is a trivial class, and can be used as a
@@ -739,8 +739,8 @@ constexpr auto operator|=(T*& p_lhs, Numeral<U> rhs) -> T* {
 }
 
 template <typename T>
-[[nodiscard]] constexpr auto count_leading_zeros(T value) -> ssize
-    requires(is_integral<T>) {
+    requires(is_integral<T>)
+[[nodiscard]] constexpr auto count_leading_zeros(T value) -> ssize {
     auto raw_value = to_raw_numeral(value);
     if constexpr (sizeof(T) == 2) {
         return ssize{__builtin_ia32_lzcnt_u16(raw_value)};
@@ -755,15 +755,16 @@ template <typename T>
 
 // TODO: Make this `constexpr`.
 template <typename T>
-[[nodiscard]] constexpr auto count_trailing_zeros(T value) -> ssize
-    requires(is_integral<T>) {
+    requires(is_integral<T>)
+[[nodiscard]] constexpr auto count_trailing_zeros(T value) -> ssize {
     auto raw_value = to_raw_numeral(value);
     if constexpr (sizeof(T) == 4) {
         return ssize{__builtin_ctz(raw_value)};
     } else if constexpr (sizeof(T) == 8) {
         return ssize{__builtin_ctzll(raw_value)};
+    } else {
+        __builtin_unreachable();
     }
-    __builtin_unreachable();
 }
 
 // These macros are defined by the GCC compiler.
