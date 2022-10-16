@@ -11,6 +11,10 @@ namespace cat {
 // Forward declare numeric types. These are implemented in `<numeral>`.
 template <typename T>
 struct Numeral;
+template <typename T>
+struct NumeralWrap;
+template <typename T>
+struct NumeralSat;
 
 using int1 = Numeral<__INT8_TYPE__>;
 using int2 = Numeral<__INT16_TYPE__>;
@@ -32,6 +36,136 @@ struct bool4;
 
 template <typename T, typename Storage>
 struct ArithmeticPtr;
+
+// TODO: `MakeSigned` and `MakeUnsigned` must handle cvref qualifiers.
+
+template <typename T>
+struct MakeSignedTrait;
+
+template <>
+struct MakeSignedTrait<char> {
+    using Type = signed char;
+};
+template <>
+struct MakeSignedTrait<signed char> {
+    using Type = signed char;
+};
+template <>
+struct MakeSignedTrait<unsigned char> {
+    using Type = signed char;
+};
+template <>
+struct MakeSignedTrait<signed short> {
+    using Type = signed short;
+};
+template <>
+struct MakeSignedTrait<unsigned short> {
+    using Type = signed short;
+};
+template <>
+struct MakeSignedTrait<signed int> {
+    using Type = signed int;
+};
+template <>
+struct MakeSignedTrait<unsigned int> {
+    using Type = signed int;
+};
+template <>
+struct MakeSignedTrait<signed long> {
+    using Type = signed long;
+};
+template <>
+struct MakeSignedTrait<unsigned long> {
+    using Type = signed long;
+};
+template <>
+struct MakeSignedTrait<signed long long> {
+    using Type = signed long long;
+};
+template <>
+struct MakeSignedTrait<unsigned long long> {
+    using Type = signed long long;
+};
+
+template <typename T>
+struct MakeSignedTrait<Numeral<T>> {
+    using Type = Numeral<typename MakeSignedTrait<T>::Type>;
+};
+template <typename T>
+struct MakeSignedTrait<NumeralWrap<T>> {
+    using Type = NumeralWrap<typename MakeSignedTrait<T>::Type>;
+};
+template <typename T>
+struct MakeSignedTrait<NumeralSat<T>> {
+    using Type = NumeralSat<typename MakeSignedTrait<T>::Type>;
+};
+
+template <typename T>
+using MakeSigned = typename MakeSignedTrait<T>::Type;
+
+template <typename T>
+struct MakeUnsignedTrait;
+
+template <>
+struct MakeUnsignedTrait<char> {
+    using Type = unsigned char;
+};
+template <>
+struct MakeUnsignedTrait<signed char> {
+    using Type = unsigned char;
+};
+template <>
+struct MakeUnsignedTrait<unsigned char> {
+    using Type = unsigned char;
+};
+template <>
+struct MakeUnsignedTrait<signed short> {
+    using Type = unsigned short;
+};
+template <>
+struct MakeUnsignedTrait<unsigned short> {
+    using Type = unsigned short;
+};
+template <>
+struct MakeUnsignedTrait<signed int> {
+    using Type = unsigned int;
+};
+template <>
+struct MakeUnsignedTrait<unsigned int> {
+    using Type = unsigned int;
+};
+template <>
+struct MakeUnsignedTrait<signed long> {
+    using Type = unsigned long;
+};
+template <>
+struct MakeUnsignedTrait<unsigned long> {
+    using Type = unsigned long;
+};
+template <>
+struct MakeUnsignedTrait<signed long long> {
+    using Type = unsigned long long;
+};
+template <>
+struct MakeUnsignedTrait<unsigned long long> {
+    using Type = unsigned long long;
+};
+
+template <typename T>
+using MakeUnsigned = typename MakeUnsignedTrait<T>::Type;
+
+template <typename T>
+struct MakeUnsignedTrait<Numeral<T>> {
+    using Type = Numeral<typename MakeUnsignedTrait<T>::Type>;
+};
+template <typename T>
+struct MakeUnsignedTrait<NumeralWrap<T>> {
+    using Type = NumeralWrap<typename MakeUnsignedTrait<T>::Type>;
+};
+template <typename T>
+struct MakeUnsignedTrait<NumeralSat<T>> {
+    using Type = NumeralSat<typename MakeUnsignedTrait<T>::Type>;
+};
 
 namespace detail {
     template <typename T, typename U = T&&>

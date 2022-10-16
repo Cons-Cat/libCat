@@ -311,6 +311,16 @@ using ToUnsafeNumeral = decltype(to_raw_numeral(declval<T>()));
 template <arithmetic T>
 using ToSafeNumeral = Numeral<ToUnsafeNumeral<T>>;
 
+template <integral T>
+constexpr auto make_signed(T const& value) -> MakeSigned<T> {
+    return static_cast<MakeSigned<T>>(value);
+}
+
+template <integral T>
+constexpr auto make_unsigned(T const& value) -> MakeUnsigned<T> {
+    return static_cast<MakeUnsigned<T>>(value);
+}
+
 namespace detail {
     template <arithmetic From, arithmetic To>
     // clang-format off
@@ -793,8 +803,7 @@ using float4 = cat::Numeral<float>;
 using float8 = cat::Numeral<double>;
 
 using usize = cat::Numeral<__SIZE_TYPE__>;
-// TODO: Support word size of `4`:
-using ssize = cat::Numeral<long int>;
+using ssize = cat::Numeral<MakeSigned<__SIZE_TYPE__>>;  // NOLINT
 
 struct bool2 {  // NOLINT
     using Raw = uint2;
