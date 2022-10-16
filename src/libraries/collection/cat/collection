@@ -109,18 +109,22 @@ class CollectionFacade {
     }
 
     [[nodiscard]] constexpr auto front() -> T& requires(this->is_array_like) {
+        cat::assert(this->self().size() > 0);
         return this->self_mut().p_data()[0];
     }
 
     [[nodiscard]] constexpr auto front() const -> T const& {
+        cat::assert(this->self().size() > 0);
         return unconst(this)->front();
     }
 
     [[nodiscard]] constexpr auto back() -> T& requires(this->is_array_like) {
+        cat::assert(this->self().size() > 0);
         return this->self_mut().p_data()[this->self().size().raw - 1];
     }
 
     [[nodiscard]] constexpr auto back() const -> T const& {
+        cat::assert(this->self().size() > 0);
         return unconst(this)->back();
     }
 
