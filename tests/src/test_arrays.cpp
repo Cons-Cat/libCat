@@ -107,24 +107,6 @@ TEST(test_arrays) {
     _ = array_const.subspan(0, 2);
     _ = array_const.last(2);
 
-    // Test `IntegerList`.
-    cat::Array<int4, 5> int_array = cat::value_list<int4, 0, 5>;
-    for (int4& i : int_array) {
-        cat::verify(i == 0);
-    }
-
-    int_array = cat::value_list<int4, 1, 5>;
-    for (int4& i : int_array) {
-        cat::verify(i == 1);
-    }
-
-    int_array = cat::integer_sequence<int4, 5>;
-    for (int i = 0; i < int_array.size(); ++i) {
-        cat::verify(int_array[i] == i);
-    }
-
-    [[maybe_unused]] cat::Array int_array_2 = cat::value_list<int4, 0, 5>;
-
     // Test array copy-assignment.
     cat::Array base_array = {0, 0, 0, 0};
     cat::Array copy_array = {1, 2, 3, 4};

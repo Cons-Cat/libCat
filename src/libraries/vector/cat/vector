@@ -92,82 +92,6 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     }
 
   public:
-    // Construct from a constant list, such as `value_list` or
-    // `integer_sequence`.
-    template <typename U, U... initializers>
-        requires(is_implicitly_convertible<U, T>)
-    [[nodiscard]] static auto from(stableAllocator auto& allocator,
-                                   ValueList<U, initializers...>)
-        -> Optional<Vector<T>> {
-        Optional result =
-            Vector<T>::reserved(allocator, ssizeof_pack(initializers...));
-        if (!result.has_value()) {
-            return nullopt;
-        }
-        Vector<T> new_vector = result.value();
-        Array values = {static_cast<T>(initializers)...};
-        // TODO: `push_back()` multiple overload.
-        for (ssize i = 0; i < ssizeof_pack(initializers...); ++i) {
-            new_vector[i] = values[i];
-        }
-        return new_vector;
-    }
-
-    // Construct from a variadic argument list.
-    template <typename... Args>
-        requires(is_implicitly_convertible<Args, T>&&...)
-    [[nodiscard]] static auto from(stableAllocator auto& allocator,
-                                   Args&&... initializers)
-        -> Optional<Vector<T>> {
-        Optional result =
-            Vector<T>::reserved(allocator, ssizeof_pack(initializers...));
-        if (!result.has_value()) {
-            return nullopt;
-        }
-        Vector<T> new_vector = result.value();
-        // TODO: Check if a recursive function is more efficient here.
-        Array values = {static_cast<T>(forward<Args>(initializers))...};
-        // TODO: `push_back()` multiple overload.
-        for (ssize i = 0; i < ssizeof_pack(initializers...); ++i) {
-            new_vector[i] = values[i];
-        }
-        return new_vector;
-    }
-
-    // Construct from a constant list, such as `value_list` or
-    // `integer_sequence`.
-    template <typename U, U... initializers>
-        requires(is_implicitly_convertible<U, T>)
-    [[nodiscard]] consteval static auto from(ValueList<U, initializers...>)
-        -> Vector<T> {
-        Vector<T> new_vector =
-            Vector<T>::reserved(ssizeof_pack(initializers...));
-        Array array = {static_cast<T>(initializers)...};
-        for (ssize i = 0; i < ssizeof_pack(initializers...); ++i) {
-            new_vector[i] = array[i];
-        }
-        return new_vector;
-    }
-
-    // Construct from a variadic argument list.
-    template <typename... Args>
-        requires(is_implicitly_convertible<Args, T>&&...)
-    [[nodiscard]] consteval static auto from(Args... initializers)
-        -> Vector<T> {
-        Vector<T> new_vector;
-        delete[] new_vector.p_data();
-        // = Vector<T>::reserved(ssizeof_pack(arguments...));
-        new_vector.current_size = ssizeof_pack(initializers...);
-        new_vector.current_capacity = ssizeof_pack(initializers...);
-        new_vector.p_storage = new T[sizeof...(initializers)];
-
-        Array values = {static_cast<T>(initializers)...};
-        for (ssize i = 0; i < ssizeof_pack(initializers...); ++i) {
-            new_vector[i] = values[i];
-        }
-        return new_vector.clone();
-    }
-
     [[nodiscard]] static auto reserved(stableAllocator auto& allocator,
                                        ssize capacity) -> Optional<Vector<T>> {
         Vector<T> new_vector;
@@ -239,10 +163,8 @@ class Vector : public CollectionFacade<Vector<T>, T> {
             return monostate;
         }
 
-        // If the new capacity is smaller, simply shrink size and capacity.
-        this->current_size = new_capacity;
-        this->current_capacity = new_capacity;
-        return nullopt;
+        // If the new capacity is not larger, do nothing.
+        return monostate;
     }
 
     // Change the capacity of this `Vector` in a `constexpr` context.
@@ -258,39 +180,26 @@ class Vector : public CollectionFacade<Vector<T>, T> {
             this->p_storage = p_new;
             this->current_capacity = new_capacity;
         }
-
-        // If the new capacity is smaller, simply shrink size and capacity.
-        this->current_size = new_capacity;
-        this->current_capacity = new_capacity;
+        // If the new capacity is not larger, do nothing.
     }
 
     // Try to change the size of this `Vector` in a non-`constexpr` context.
     [[nodiscard]] auto resize(stableAllocator auto& allocator, ssize new_size)
         -> Optional<void> {
         if (new_size > this->current_capacity) {
-            // TODO: `.srealloc_multi()`.
-            T* p_new = TRY(allocator.template p_alloc_multi<T>(new_size));
+            TRY(this->reserve(allocator, new_size));
 
-            // TODO: Generalize copying from one collectian to another.
-            if constexpr (is_trivially_relocatable<T>) {
-                copy_memory(this->p_storage, p_new,
-                            this->current_size * ssizeof<T>());
-            } else {
-                for (ssize::Raw i = 0; i < this->current_size; ++i) {
-                    p_new[i] = move(this->p_storage[i]);
-                }
+            // Construct `T` at the newly reserved memory.
+            for (ssize i = this->current_size; i < new_size; ++i) {
+                construct_at(this->p_storage + i);
             }
 
-            allocator.free_multi(this->p_storage, this->current_size);
-
-            this->p_storage = p_new;
             this->current_size = new_size;
-            this->current_capacity = new_size;
             return monostate;
         }
 
-        // If the new size is smaller than the current size, do not move
-        // anything.
+        // If the new size is not larger, simply shrink size and maintain
+        // capacity.
         this->current_size = new_size;
         return monostate;
     }
@@ -313,9 +222,9 @@ class Vector : public CollectionFacade<Vector<T>, T> {
             return;
         }
 
-        // If the new size is smaller, simply shrink size and capacity.
+        // If the new size is not larger, simply shrink size and maintain
+        // capacity.
         this->current_size = new_size;
-        this->current_capacity = new_size;
     }
 
     // Deep-copy the contents of this `Vector`.

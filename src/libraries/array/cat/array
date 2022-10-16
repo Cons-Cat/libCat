@@ -27,14 +27,6 @@ class Array : public CollectionFacade<Array<T, length>, T> {
         // i.e. `cat::Array shorts = {int2{0}, 1, 2};`
         : storage(static_cast<T>(forward<Args>(arguments))...){};
 
-    // Construct from a constant list, such as `value_list` or
-    // `integer_sequence`.
-    template <typename U, U... initializers>
-        requires(ssizeof_pack(initializers...) == length &&
-                 is_implicitly_convertible<U, T>)
-    constexpr Array(ValueList<U, initializers...>)
-        : storage(static_cast<T>(initializers)...){};
-
     constexpr auto operator=(Array<T, length> const& other_array)
         -> Array& = default;
 
@@ -63,26 +55,11 @@ class Array : public CollectionFacade<Array<T, length>, T> {
         return *this;
     }
 
-  private:
-    template <ssize index, typename U, U value, U... values>
-    constexpr void copy_list(ValueList<U, value, values...> const) {
-        this->storage[index.raw] = value;
-
-        if constexpr (index + 1 == length) {
-            return;
-        } else {
-            // Recurse withn one fewer elements in the `ValueList`.
-            this->copy_list<index + 1>(ValueList<U, values...>{});
-        }
+    static constexpr auto filled(T value) -> Array {
+        Array<T, length> array;
+        array.fill(value);
+        return array;
     }
-
-  public:
-    template <integral U, U... values>
-        requires(is_implicitly_convertible<U, T>&& ssizeof_pack(values...) ==
-                 length)
-    constexpr auto operator=(ValueList<U, values...> list) {
-        this->copy_list<0, U, values...>(list);
-    };
 
     constexpr auto fill(T value) -> Array& {
         if (!is_constant_evaluated() && sizeof(T) <= 8) {
@@ -93,12 +70,6 @@ class Array : public CollectionFacade<Array<T, length>, T> {
             }
         }
         return *this;
-    }
-
-    static constexpr auto filled(T value) -> Array {
-        Array<T, length> array;
-        array.fill(value);
-        return array;
     }
 
     // Get the non-`const` address of this `Array`'s internal array.

@@ -13,10 +13,6 @@ consteval auto const_func() -> int4 {
     vector[7] = 2;
     vector.push_back(10);
 
-    // TODO: Make these work.
-    // cat::Vector vector_2 = cat::Vector<int4>::cloned(vector);
-    // cat::Vector vector_2 = cat::Vector<int4>::from(1, 2, 3);
-
     return vector[8];
 }
 
@@ -82,17 +78,6 @@ TEST(test_vector) {
     for (int4 integer : cloned_vec) {
         cat::verify(integer == 1);
     }
-
-    // Test from constructor.
-    cat::Vector from_vec_1 =
-        cat::Vector<int4>::from(allocator, cat::value_list<int4, 5, 10>)
-            .value();
-    cat::verify(from_vec_1.capacity() == 10);
-    cat::verify(from_vec_1.size() == 10);
-    cat::Vector from_vec_2 =
-        cat::Vector<int4>::from(allocator, 1, 2, 3, 4).value();
-    cat::verify(from_vec_2.capacity() == 4);
-    cat::verify(from_vec_2.size() == 4);
 
     // Test `Vector` in a `constexpr` context.
     static_assert(const_func() == 10);
