@@ -361,7 +361,7 @@ template <typename T>
 [[nodiscard]] constexpr auto count_trailing_zeros(T value) -> ssize;
 
 // `Numeral` can represent an integer or floating point value. It prevents
-// unsafe casts or operations. It is a trivial class, and can be used as a
+// unsafe casts or operations. This is a trivial `struct` so it can be used as a
 // non-type template parameter.
 template <typename T>
 struct Numeral {
@@ -400,10 +400,8 @@ struct Numeral {
         return lhs.raw == to_raw_numeral(rhs);
     }
 
-    // Declare arithmetic operators as hidden friends to prevent them from
-    // pessimizing argument-dependant-lookup times.
-
     template <arithmetic U>
+        requires(detail::is_safe_comparison<U, T>)
     [[nodiscard]] friend constexpr auto operator+(Numeral<T> self, U operand)
         -> detail::PromotedNumeral<T, U> {
         return detail::PromotedNumeral<T, U>{self.raw +
@@ -422,6 +420,7 @@ struct Numeral {
     }
 
     template <arithmetic U>
+        requires(detail::is_safe_comparison<U, T>)
     constexpr auto operator+=(U operand) {
         this->raw += to_raw_numeral(operand);
         return *this;
@@ -442,6 +441,7 @@ struct Numeral {
     }
 
     template <detail::arithmeticNonPtr U>
+        requires(detail::is_safe_comparison<U, T>)
     [[nodiscard]] friend constexpr auto operator-(Numeral<T> self, U operand)
         -> detail::PromotedNumeral<T, U> {
         return detail::PromotedNumeral<T, U>{self.raw -
@@ -460,6 +460,7 @@ struct Numeral {
     }
 
     template <typename U>
+        requires(detail::is_safe_comparison<U, T>)
     constexpr auto operator-=(U operand)
         -> Numeral& requires(detail::is_safe_conversion<T, U>) {
         this->raw = this->raw - static_cast<T>(operand);
@@ -479,6 +480,7 @@ struct Numeral {
     }
 
     template <detail::arithmeticNonPtr U>
+        requires(detail::is_safe_comparison<U, T>)
     [[nodiscard]] friend constexpr auto operator*(Numeral<T> self, U operand)
         -> detail::PromotedNumeral<T, U> {
         return self.raw * to_raw_numeral(operand);
@@ -496,6 +498,7 @@ struct Numeral {
     }
 
     template <typename U>
+        requires(detail::is_safe_comparison<U, T>)
     constexpr auto operator*=(U operand)
         -> Numeral& requires(detail::is_safe_conversion<T, U>) {
         this->raw = this->raw * static_cast<T>(operand);
@@ -503,6 +506,7 @@ struct Numeral {
     }
 
     template <detail::arithmeticNonPtr U>
+        requires(detail::is_safe_comparison<U, T>)
     [[nodiscard]] friend constexpr auto operator/(Numeral<T> self, U operand)
         -> detail::PromotedNumeral<T, U> {
         return self.raw / to_raw_numeral(operand);
@@ -520,6 +524,7 @@ struct Numeral {
     }
 
     template <typename U>
+        requires(detail::is_safe_comparison<U, T>)
     constexpr auto operator/=(U operand)
         -> Numeral& requires(detail::is_safe_conversion<T, U>) {
         this->raw = this->raw / static_cast<T>(operand);
@@ -527,6 +532,7 @@ struct Numeral {
     }
 
     template <detail::arithmeticNonPtr U>
+        requires(detail::is_safe_comparison<U, T>)
     [[nodiscard]] friend constexpr auto operator%(Numeral<T> self, U operand)
         -> detail::PromotedNumeral<T, U> {
         return self.raw % to_raw_numeral(operand);
@@ -544,6 +550,7 @@ struct Numeral {
     }
 
     template <typename U>
+        requires(detail::is_safe_comparison<U, T>)
     constexpr auto operator%=(U operand)
         -> Numeral& requires(detail::is_safe_conversion<T, U>) {
         this->raw = this->raw % static_cast<T>(operand);
@@ -551,6 +558,7 @@ struct Numeral {
     }
 
     template <detail::arithmeticNonPtr U>
+        requires(detail::is_safe_comparison<U, T>)
     [[nodiscard]] friend constexpr auto operator&(Numeral<T> self, U operand)
         -> detail::PromotedNumeral<T, U> {
         return self.raw & to_raw_numeral(operand);
@@ -568,6 +576,7 @@ struct Numeral {
     }
 
     template <typename U>
+        requires(detail::is_safe_comparison<U, T>)
     constexpr auto operator&=(U operand)
         -> Numeral& requires(detail::is_safe_conversion<T, U>) {
         this->raw = this->raw & static_cast<T>(operand);
@@ -575,6 +584,7 @@ struct Numeral {
     }
 
     template <detail::arithmeticNonPtr U>
+        requires(detail::is_safe_comparison<U, T>)
     [[nodiscard]] friend constexpr auto operator|(Numeral<T> self, U operand)
         -> detail::PromotedNumeral<T, U> {
         return self.raw | to_raw_numeral(operand);
@@ -618,8 +628,8 @@ struct Numeral {
     }
 
     template <typename U>
-    constexpr auto operator<<=(U operand)
-        -> Numeral& requires(detail::is_safe_conversion<T, U>) {
+        requires(detail::is_safe_comparison<U, T>)
+    constexpr auto operator<<=(U operand) -> Numeral& {
         this->raw = this->raw << static_cast<T>(operand);
         return *this;
     }
