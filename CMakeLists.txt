@@ -56,7 +56,7 @@ list(
   # Remove unused symbols.
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
-  -flto -fwhole-file -fno-plt
+  -flto=auto -fwhole-file -fno-plt
 )
 
 list(
@@ -100,6 +100,15 @@ set_target_properties(
   OUTPUT_NAME "cat"
 )
 
+# Link the address and undefined behavior sanitizers.
+if(CAT_USE_SANITIZERS)
+  target_link_libraries(
+    cat INTERFACE
+    asan
+    ubsan
+  )
+endif()
+
 # `src/CMakeLists.txt` holds the recipes for `cat-cpp` and `cat-include`.
 add_subdirectory(src/)
 
@@ -110,19 +119,6 @@ target_include_directories(cat INTERFACE ${cat-include})
 # This is also required to use SIMD intrinsics, even with ld.
 # This adds superfluous code to Hello World.
 target_link_libraries(cat INTERFACE gcc_s)
-
-# Link the address and undefined behavior sanitizers in debug builds.
-if(CAT_USE_SANITIZERS)
-  target_link_libraries(
-    cat INTERFACE
-    $<$<CONFIG:Debug>:asan>
-    $<$<CONFIG:Debug>:ubsan>
-    $<$<CONFIG:Release>:asan>
-    $<$<CONFIG:Release>:ubsan>
-    $<$<CONFIG:RelWithDebInfo>:asan>
-    $<$<CONFIG:RelWithDebInfo>:ubsan>
-  )
-endif()
 
 target_compile_options(cat INTERFACE ${CAT_COMPILE_FLAGS})
 target_link_options(cat INTERFACE ${CAT_LINK_FLAGS})
