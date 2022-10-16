@@ -1,6 +1,7 @@
 #include <cat/match>
 
 #include "../unit_tests.hpp"
+#include "cat/numerals"
 
 template <auto value>
 struct Nttp {
@@ -147,4 +148,10 @@ TEST(test_numerals) {
     [[maybe_unused]] Nttp<1_u8> nttp_uint8{};
     [[maybe_unused]] Nttp<1_f4> nttp_float4{};
     [[maybe_unused]] Nttp<1_f8> nttp_float8{};
+
+    // Test unwrapping numerals in `NumericLimits`.
+    static_assert(cat::NumericLimits<int4>::max() ==
+                  cat::NumericLimits<int>::max());
+    static_assert(cat::NumericLimits<float4>::max() ==
+                  cat::NumericLimits<float>::max());
 };

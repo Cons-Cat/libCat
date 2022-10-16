@@ -26,16 +26,9 @@ namespace cat {
 template <typename>
 struct NumericLimits {};
 
+// Unwrap all `Numeral`s inside of `NumericLimits`.
 template <typename T>
-struct NumericLimits<Numeral<T>> {
-    NumericLimits() = delete;
-
-    // Forward the underlying storage type to `.max`.
-    static constexpr auto max = NumericLimits<T>::max;
-
-    // Forward the underlying storage type to `.min`.
-    static constexpr auto min = NumericLimits<T>::min;
-};
+struct NumericLimits<Numeral<T>> : NumericLimits<T> {};
 
 // TODO: Implement `min` and `max` limits in terms of GCC macros, like
 // `__LONG_LONG_MAX__`.
