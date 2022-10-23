@@ -2,8 +2,8 @@
 
 #include "../unit_tests.hpp"
 
-struct NonTrivial {
-    NonTrivial(int){};
+struct TupNonTrivial {
+    TupNonTrivial(int){};
 };
 
 TEST(test_tuple) {
@@ -15,7 +15,7 @@ TEST(test_tuple) {
     static_assert(cat::is_trivial<floatfloat>);
     static_assert(sizeof(floatfloat) == 8);
 
-    using non_and_int4 = cat::Tuple<NonTrivial, int4>;
+    using non_and_int4 = cat::Tuple<TupNonTrivial, int4>;
     [[maybe_unused]] non_and_int4 test_intint4{1, int4{0}};
     static_assert(!cat::is_trivial<non_and_int4>);
     static_assert(sizeof(non_and_int4) == 4);

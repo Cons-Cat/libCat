@@ -115,10 +115,11 @@ class alignas(InAbi::alignment.raw) Simd {
 
     constexpr Simd(Vector&& operand) = default;
 
-    constexpr Simd(UnalignedVector const& operand) : raw(operand.raw){};
+    // This cannot be passed by reference.
+    constexpr Simd(UnalignedVector operand) : raw(operand.raw){};
 
     constexpr Simd(UnalignedVector&& operand)
-        : raw(forward<UnalignedVector>(operand).raw){};
+        : raw(forward<UnalignedVector>(operand.raw)){};
 
     constexpr Simd(Raw const& values) : raw(values){};
 

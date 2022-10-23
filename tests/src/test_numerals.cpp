@@ -149,6 +149,17 @@ TEST(test_numerals) {
     [[maybe_unused]] Nttp<1_f4> nttp_float4{};
     [[maybe_unused]] Nttp<1_f8> nttp_float8{};
 
+    // Test `make_signed()` and `make_unsigned()`.
+    static_assert(cat::is_same<decltype(cat::make_unsigned(1)), unsigned int>);
+    static_assert(cat::is_same<decltype(cat::make_signed(1u)), int>);
+    static_assert(cat::is_same<decltype(cat::make_unsigned(1_i4)), uint4>);
+    static_assert(cat::is_same<decltype(cat::make_signed(1_u4)), int4>);
+
+    // Test wrapping overflow.
+    int4 safe_int = int4::max();
+    cat::verify((safe_int.wrap + 1) == cat::NumericLimits<int4>::min());
+    // safe_int.wrap += 1;
+
     // Test unwrapping numerals in `NumericLimits`.
     static_assert(cat::NumericLimits<int4>::max() ==
                   cat::NumericLimits<int>::max());

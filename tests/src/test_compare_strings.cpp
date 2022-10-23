@@ -20,25 +20,16 @@ TEST(test_compare_strings) {
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
     // Test a succesful string pointer case.
-    if (!cat::compare_strings(p_string_1, p_string_2)) {
-        cat::exit(1);
-    }
+    cat::verify(cat::compare_strings(p_string_1, p_string_2));
 
-    // Test a succesful string view case.
-    if (!cat::compare_strings(string_1, string_2)) {
-        cat::exit(1);
-    }
+    // Test a succesful string case.
+    cat::verify(cat::compare_strings(string_1, string_2));
 
     // Test a succesful large string case.
-    if (!cat::compare_strings(long_string_1, long_string_2)) {
-        // TODO: Fix this failing test!
-        cat::exit(1);
-    }
+    cat::verify(cat::compare_strings(long_string_1, long_string_2));
 
     // Test a failure case.
-    if (cat::compare_strings(string_1, string_3)) {
-        cat::exit(1);
-    }
+    cat::verify(!cat::compare_strings(string_1, string_3));
 
     [[maybe_unused]] cat::String const_string_1 = "Hello, ";
     [[maybe_unused]] constexpr cat::String const_string_2 = "world!";

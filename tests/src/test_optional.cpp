@@ -13,29 +13,29 @@ struct Movable {
 
 int4 optional_counter = 0;
 
-struct NonTrivial {
-    NonTrivial() {
+struct OptNonTrivial {
+    OptNonTrivial() {
         ++optional_counter;
     }
-    NonTrivial(NonTrivial const&) {
+    OptNonTrivial(OptNonTrivial const&) {
         ++optional_counter;
     }
-    NonTrivial(NonTrivial&&) {
+    OptNonTrivial(OptNonTrivial&&) {
         ++optional_counter;
     }
-    ~NonTrivial() {
+    ~OptNonTrivial() {
         ++optional_counter;
     }
-    NonTrivial(int, int, char) {
+    OptNonTrivial(int, int, char) {
     }
 };
 
-struct ConstNonTrivial {
-    constexpr ConstNonTrivial() {  // NOLINT
+struct OptConstNonTrivial {
+    constexpr OptConstNonTrivial() {  // NOLINT
     }
-    constexpr ConstNonTrivial(ConstNonTrivial const&) {  // NOLINT
+    constexpr OptConstNonTrivial(OptConstNonTrivial const&) {  // NOLINT
     }
-    constexpr ConstNonTrivial(ConstNonTrivial&&) {
+    constexpr OptConstNonTrivial(OptConstNonTrivial&&) {
     }
 };
 
@@ -301,30 +301,31 @@ TEST(test_optional) {
     cat::verify(foo.p_value() == addressof(foo.value()));
 
     // Test non-trivial reference.
-    NonTrivial nontrivial_val;
-    cat::Optional<NonTrivial&> nontrivial_ref_default;
+    OptNonTrivial nontrivial_val;
+    cat::Optional<OptNonTrivial&> nontrivial_ref_default;
     nontrivial_ref_default = nontrivial_val;
-    [[maybe_unused]] cat::Optional<NonTrivial&> nontrivial_ref = nontrivial_val;
+    [[maybe_unused]] cat::Optional<OptNonTrivial&> nontrivial_ref =
+        nontrivial_val;
 
-    NonTrivial const const_nontrivial_val;
-    [[maybe_unused]] cat::Optional<NonTrivial&> const
+    OptNonTrivial const const_nontrivial_val;
+    [[maybe_unused]] cat::Optional<OptNonTrivial&> const
         mut_const_nontrivial_ref_default;
-    [[maybe_unused]] cat::Optional<NonTrivial&> const mut_const_nontrivial_ref =
-        nontrivial_val;
+    [[maybe_unused]] cat::Optional<OptNonTrivial&> const
+        mut_const_nontrivial_ref = nontrivial_val;
 
-    [[maybe_unused]] cat::Optional<NonTrivial const&>
+    [[maybe_unused]] cat::Optional<OptNonTrivial const&>
         const_mut_nontrivial_ref_default;
-    [[maybe_unused]] cat::Optional<NonTrivial const&> const_mut_nontrivial_ref =
-        nontrivial_val;
-    [[maybe_unused]] cat::Optional<NonTrivial const&>
+    [[maybe_unused]] cat::Optional<OptNonTrivial const&>
+        const_mut_nontrivial_ref = nontrivial_val;
+    [[maybe_unused]] cat::Optional<OptNonTrivial const&>
         const_mut_nontrivial_ref_2 = const_nontrivial_val;
     const_mut_nontrivial_ref = const_nontrivial_val;
 
-    [[maybe_unused]] cat::Optional<NonTrivial const&> const
+    [[maybe_unused]] cat::Optional<OptNonTrivial const&> const
         const_const_nontrivial_ref_default;
-    [[maybe_unused]] cat::Optional<NonTrivial const&> const
+    [[maybe_unused]] cat::Optional<OptNonTrivial const&> const
         const_const_nontrivial_ref = nontrivial_val;
-    [[maybe_unused]] cat::Optional<NonTrivial const&> const
+    [[maybe_unused]] cat::Optional<OptNonTrivial const&> const
         const_const_nontrivial_ref_2 = const_nontrivial_val;
 
     // `Optional const`
@@ -345,7 +346,7 @@ TEST(test_optional) {
     cat::Optional<Movable> maybe_movs(cat::move(mov));
 
     // Non-trivial constructor and destructor.
-    cat::Optional<NonTrivial> nontrivial = NonTrivial();
+    cat::Optional<OptNonTrivial> nontrivial = OptNonTrivial();
 
     // `Optional<void>` default-initializes empty:
     cat::Optional<void> optvoid;
@@ -361,25 +362,25 @@ TEST(test_optional) {
     cat::Optional<void> optvoid_5{nullopt};
     cat::verify(!optvoid_5.has_value());
 
-    cat::Optional<NonTrivial> in_place_nontrivial_1{in_place};
+    cat::Optional<OptNonTrivial> in_place_nontrivial_1{in_place};
     _ = in_place_nontrivial_1.verify();
 
-    cat::Optional<NonTrivial> in_place_nontrivial_2{in_place, 1, 2, 'a'};
+    cat::Optional<OptNonTrivial> in_place_nontrivial_2{in_place, 1, 2, 'a'};
     _ = in_place_nontrivial_2.verify();
 
     // Test `Optional` in a `constexpr` context.
     auto constant = []() constexpr {
         [[maybe_unused]] constexpr cat::Optional<int> const_int_default;
 
-        constexpr cat::Optional<ConstNonTrivial> const_nontrivial_default;
+        constexpr cat::Optional<OptConstNonTrivial> const_nontrivial_default;
         cat::verify(!const_nontrivial_default.has_value());
 
-        constexpr cat::Optional<ConstNonTrivial> const_nontrivial =
-            ConstNonTrivial{};
+        constexpr cat::Optional<OptConstNonTrivial> const_nontrivial =
+            OptConstNonTrivial{};
         cat::verify(const_nontrivial.has_value());
 
-        constexpr cat::Optional<ConstNonTrivial> const_nontrivial_in_place = {
-            in_place, ConstNonTrivial{}};
+        constexpr cat::Optional<OptConstNonTrivial> const_nontrivial_in_place =
+            {in_place, OptConstNonTrivial{}};
         cat::verify(const_nontrivial_in_place.has_value());
 
         // Test `Optional<Compact<T>>`.
@@ -391,13 +392,14 @@ TEST(test_optional) {
         [[maybe_unused]] cat::OptionalPtr<void> optptr3 = const_optptr;
         [[maybe_unused]] cat::OptionalPtr<void> optptr4;
 
-        [[maybe_unused]] constexpr cat::OptionalPtr<NonTrivial>
+        [[maybe_unused]] constexpr cat::OptionalPtr<OptNonTrivial>
             const_nontrivial_optptr = nullptr;
-        [[maybe_unused]] constexpr cat::OptionalPtr<NonTrivial>
+        [[maybe_unused]] constexpr cat::OptionalPtr<OptNonTrivial>
             const_nontrivial_default_optptr;
-        [[maybe_unused]] cat::OptionalPtr<NonTrivial> nontrivial_optptr =
+        [[maybe_unused]] cat::OptionalPtr<OptNonTrivial> nontrivial_optptr =
             nullptr;
-        [[maybe_unused]] cat::OptionalPtr<NonTrivial> nontrivial_default_optptr;
+        [[maybe_unused]] cat::OptionalPtr<OptNonTrivial>
+            nontrivial_default_optptr;
     };
     _ = cat::constant_evaluate(constant);
 

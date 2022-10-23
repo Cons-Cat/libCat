@@ -127,4 +127,4 @@ TEST(test_arrays) {
     for (ssize i = 0; i < 8; ++i) {
         cat::verify(filled_array[i] == 9);
     }
-};
+}

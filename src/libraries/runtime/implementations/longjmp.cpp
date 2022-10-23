@@ -1,5 +1,6 @@
 #include <cat/runtime>
 
+// TODO: This seems to segfault with optimizations enabled.
 // TODO: Should `__builtin_setjmp_reciever()` be used here?
 [[noreturn, gnu::naked]] void cat::longjmp(JmpBuffer& /* jump_buffer */,
                                            int8 /* return_value */) {

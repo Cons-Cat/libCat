@@ -4,10 +4,10 @@
 
 void cat::detail::print_assert_location(SourceLocation const& callsite) {
     PageAllocator allocator;
+    // TODO: This will leak. An `InlineAllocator` should be used.
     _ = eprint(format(allocator, "assert failed on line {}, in:\n    ",
                       callsite.line())
-                   // This `format()` call cannot possibly fail.
-                   .value());
+                   .or_exit());
     // TODO: Truncate to only the last one or two directories.
     _ = eprint(callsite.file_name());
     _ = eprint("\ncalled from:\n    ");
