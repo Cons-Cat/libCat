@@ -42,6 +42,9 @@ auto main() -> int {
         // If this constructor is a unit test, it sets the previous flags.
         (*p_func)();
 
+        // TODO: The following code block is never reached except on the last
+        // test with optimizations enabled.
+
         // Increment the success/fail counters.
         if (last_ctor_was_test) {
             if (cat::setjmp(jump_buffer) == 0) {
@@ -52,7 +55,6 @@ auto main() -> int {
         }
     }
 
-    // TODO: This always prints 1 test passed with optimizations.
     // TODO: This will leak. An `InlineAllocator` should be used.
     _ = cat::print(cat::format(pager, "\n{} tests passed.\n{} tests failed.\n",
                                tests_passed, tests_failed)
