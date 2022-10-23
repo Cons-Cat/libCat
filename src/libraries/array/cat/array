@@ -55,20 +55,26 @@ class Array : public CollectionFacade<Array<T, length>, T> {
         return *this;
     }
 
-    static constexpr auto filled(T value) -> Array {
+    template <typename U>
+        requires(is_implicitly_convertible<U, T>)
+    static constexpr auto filled(U value) -> Array {
         Array<T, length> array;
-        array.fill(value);
-        return array;
+        return array.fill(static_cast<T>(value));
     }
 
-    constexpr auto fill(T value) -> Array& {
-        if (!is_constant_evaluated() && sizeof(T) <= 8) {
-            set_memory(this->storage, value, length);
-        } else {
-            for (ssize i = 0; i < length; ++i) {
-                this->storage[i.raw] = value;
-            }
+    template <typename U>
+        requires(is_implicitly_convertible<U, T>)
+    constexpr auto fill(U value) -> Array& {
+        // TODO: This `set_memory()` segfaults with optimizations enabled. Is it
+        // even necessary?
+        //
+        // if (!is_constant_evaluated() && sizeof(T) <= 8) {
+        //     // set_memory(this->storage, value, length);
+        // } else {
+        for (ssize::Raw i = 0; i < length; ++i) {
+            this->storage[i] = static_cast<T>(value);
         }
+        // }
         return *this;
     }
 
