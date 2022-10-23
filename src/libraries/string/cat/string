@@ -267,9 +267,13 @@ class StaticString : public CollectionFacade<StaticString<length>, char> {
 
 [[nodiscard]] auto println(String const string) -> ssize;
 
+[[nodiscard]] auto println() -> ssize;
+
 [[nodiscard]] auto eprint(String const string) -> ssize;
 
 [[nodiscard]] auto eprintln(String const string) -> ssize;
+
+[[nodiscard]] auto eprintln() -> ssize;
 
 // TODO: Investigate zero-overhead `println` of literals again.
 

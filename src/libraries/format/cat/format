@@ -90,7 +90,7 @@ namespace detail {
     }
 }  // namespace detail
 
-// Convert a `constexpr` `int4` to `StaticString`.
+// Convert a `constexpr` integral to `StaticString`.
 template <auto value>
     requires(is_integral<decltype(value)>)
 [[nodiscard]] consteval auto to_chars() {
@@ -116,7 +116,7 @@ template <auto value>
 
 template <integral T>
 [[nodiscard]] constexpr auto to_string_at(Numeral<T> value,
-                                          Span<char> string_buffer)
+                                          Span<char> output_buffer)
     -> Optional<String> {
     // Add 1 for a negative sign `-` character.
     constexpr ssize max_length = to_chars<Numeral<T>::max()>().size() + 1;
@@ -139,20 +139,22 @@ template <integral T>
     } else {
         detail::i32toa_jeaiii(value.raw, buffer);
     }
+
     // TODO: Get the length of this integer faster.
     ssize length = string_length(buffer);
-    if (length > string_buffer.size()) {
+    if (length > output_buffer.size()) {
         return nullopt;
     }
 
     if (is_constant_evaluated()) {
         for (ssize i = 0; i < length; ++i) {
-            string_buffer[i] = buffer[i.raw];
+            output_buffer[i] = buffer[i.raw];
         }
     } else {
-        copy_memory(buffer, string_buffer.p_data(), length);
+        copy_memory(buffer, output_buffer.p_data(), length);
     }
-    return String{string_buffer.p_data(), length};
+
+    return String{output_buffer.p_data(), length};
 }
 
 // Formatting

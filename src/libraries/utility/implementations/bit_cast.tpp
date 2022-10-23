@@ -2,6 +2,11 @@
 // vim: set ft=cpp:
 #pragma once
 
+// The `__builtin_memcpy()` triggers false diagnostics on high-optimization
+// levels when link-time optimization is disabled.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+
 // TODO: This doesn't work with a `X* const` type.
 template <typename T, typename U>
 // Optimizing this function counter-intuitively seems to compile faster. It also
@@ -27,3 +32,5 @@ cat::bit_cast(U& from_value) -> T {
         return *p_to;
     }
 }
+
+#pragma GCC diagnostic pop
