@@ -1,0 +1,54 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/allocator>
+
+namespace cat {
+
+class NullAllocator : public AllocatorFacade<NullAllocator> {
+  private:
+    template <typename T>
+    struct NullMemoryHandle : detail::BaseMemoryHandle<T> {
+        // TODO: Simplify with CRTP or deducing-this.
+        auto get() -> decltype(auto) {
+            return *this;
+        }
+
+        auto get() const -> decltype(auto) {
+            return *this;
+        }
+    };
+
+  public:
+    // This allocation always fails.
+    auto allocate(ssize) -> OptionalPtr<void> {
+        return nullptr;
+    }
+
+    // Deallocation is no-op.
+    void deallocate(void const*, ssize){};
+
+    // Produce a handle to allocated memory.
+    template <typename T>
+    auto make_handle(T* p_handle_storage) -> NullMemoryHandle<T> {
+        return NullMemoryHandle<T>{{}, p_handle_storage};
+    }
+
+    // Access a page(s) of virtual memory.
+    template <typename T>
+    auto access(NullMemoryHandle<T>& memory) -> T* {
+        return memory.p_storage;
+    }
+
+    template <typename T>
+    auto access(NullMemoryHandle<T> const&) const -> T const* {
+        return nullptr;
+    }
+
+  private:
+    friend AllocatorFacade<NullAllocator>;
+    static constexpr bool has_pointer_stability = true;
+};
+
+}  // namespace cat
