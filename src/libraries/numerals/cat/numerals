@@ -312,13 +312,18 @@ template <arithmetic T>
 using ToSafeNumeral = Numeral<ToUnsafeNumeral<T>>;
 
 template <integral T>
-constexpr auto make_signed(T const& value) -> MakeSigned<T> {
+constexpr auto make_signed(T value) -> MakeSigned<T> {
     return static_cast<MakeSigned<T>>(value);
 }
 
 template <integral T>
-constexpr auto make_unsigned(T const& value) -> MakeUnsigned<T> {
+constexpr auto make_unsigned(T value) -> MakeUnsigned<T> {
     return static_cast<MakeUnsigned<T>>(value);
+}
+
+template <integral From, integral To>
+constexpr auto make_sign_from(To value) -> CopySignFrom<From, To> {
+    return static_cast<CopySignFrom<From, To>>(value);
 }
 
 namespace detail {
@@ -351,9 +356,8 @@ namespace detail {
     // Take two types, and produce the type that should be produced by their
     // arithmetic operations.
     template <typename T, typename U>
-        requires(
-            // is_signed<T> == is_signed<U> &&
-            is_floating_point<T> == is_floating_point<U>)
+        requires(is_signed<T> == is_signed<U> &&
+                 is_floating_point<T> == is_floating_point<U>)
     using PromotedNumeral = Conditional<
         // `ArithmeticPtr` takes precedence above everything else.
         is_specialization<T, ArithmeticPtr>, T,

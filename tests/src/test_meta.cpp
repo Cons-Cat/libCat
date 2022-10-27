@@ -2,6 +2,7 @@
 #include <cat/tuple>
 
 #include "../unit_tests.hpp"
+#include "cat/meta"
 
 struct Members {
     int member_variable;
@@ -282,4 +283,19 @@ TEST(test_meta) {
     // Test `is_specialization`.
     static_assert(is_specialization<TemplatedOne<int>, TemplatedOne>);
     static_assert(!is_specialization<TemplatedOne<int>, TemplatedTwo>);
+
+    // Test signedness traits.
+    static_assert(is_signed<MakeSigned<unsigned>>);
+    static_assert(is_signed<MakeSigned<uint4>>);
+
+    static_assert(!is_signed<MakeUnsigned<int>>);
+    static_assert(!is_signed<MakeUnsigned<int4>>);
+
+    static_assert(is_signed<CopySignFrom<int4, unsigned>>);
+    static_assert(is_signed<CopySignFrom<int, uint4>>);
+    static_assert(is_signed<CopySignFrom<int, unsigned>>);
+
+    static_assert(!is_signed<CopySignFrom<uint4, int>>);
+    static_assert(!is_signed<CopySignFrom<unsigned, int4>>);
+    static_assert(!is_signed<CopySignFrom<unsigned, int>>);
 };

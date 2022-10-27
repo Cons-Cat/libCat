@@ -156,8 +156,8 @@ TEST(test_numerals) {
     static_assert(cat::is_same<decltype(cat::make_signed(1_u4)), int4>);
 
     // Test wrapping overflow.
-    int4 safe_int = int4::max();
-    cat::verify((safe_int.wrap + 1) == cat::NumericLimits<int4>::min());
+    // int4 safe_int = int4::max();
+    // cat::verify((safe_int.wrap + 1) == cat::NumericLimits<int4>::min());
     // safe_int.wrap += 1;
 
     // Test unwrapping numerals in `NumericLimits`.
