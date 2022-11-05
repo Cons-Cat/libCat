@@ -50,9 +50,9 @@ class Unique {
     constexpr Unique(U const& value) : storage(static_cast<T>(value)){};
 
     // Move-construct from any type convertible into `T`.
-    template <typename U>
+    template <rvalue U>
         requires(is_implicitly_convertible<U, T>)
-    constexpr Unique(U&& value) : storage(forward<U>(value)){};
+    constexpr Unique(U&& value) : storage(forward<U>(value)){};  // NOLINT
 
     // Forward any possible constructor into `storage`.
     template <typename... Args>
@@ -60,7 +60,7 @@ class Unique {
     Unique(Args&&... args) : storage(forward<Args>(args)...){};
 
     // Allow move-assignment.
-    template <typename U>
+    template <rvalue U>
         requires(is_implicitly_convertible<U, T>)
     auto operator=(U&& value) -> Unique& {
         this->storage_destructor();
@@ -128,9 +128,9 @@ class UniqueWeak {
         requires(is_implicitly_convertible<U, T>)
     constexpr UniqueWeak(U const& value) : storage(static_cast<T>(value)){};
 
-    template <typename U>
+    template <rvalue U>
         requires(is_implicitly_convertible<U, T>)
-    constexpr UniqueWeak(U&& value)
+    constexpr UniqueWeak(U&& value)  // NOLINT
         : storage(static_cast<T>(forward<U>(value))){};
 
     template <typename U>
@@ -144,7 +144,7 @@ class UniqueWeak {
     UniqueWeak(Args&&... args) : storage(forward<Args>(args)...){};
 
     // Allow move-assignment.
-    template <typename U>
+    template <rvalue U>
         requires(is_implicitly_convertible<U, T>)
     auto operator=(U&& value) -> UniqueWeak<T>& {
         this->storage_destructor();
