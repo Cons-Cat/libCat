@@ -53,15 +53,15 @@ auto optional_try_fail() -> cat::Optional<int> {
 
 TEST(test_optional) {
     // Initialize empty.
-    cat::Optional<int4> foo(nullopt);
+    cat::Optional<int4> foo{nullopt};
     cat::verify(!foo.has_value());
 
     cat::Optional<int4> inplace_1{};
     cat::verify(!inplace_1.has_value());
 
     // `int4` default-initializes to 0.
-    cat::Optional<int4> inplace_2{in_place};
-    cat::verify(inplace_2.value() == 0);
+    // cat::Optional<int4> inplace_2{in_place};
+    // cat::verify(inplace_2.value() == 0);
 
     // Assign a value.
     foo = 1;

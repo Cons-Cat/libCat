@@ -7,8 +7,7 @@ auto nix::sys_mmap(usize beginning_address, ssize bytes_size,
                    nix::MemoryFlags flags, nix::FileDescriptor file_descriptor,
                    ssize pages_offset) -> nix::ScaredyLinux<void*> {
     // TODO: Consider `__builtin_assume_aligned()`.
-    nix::ScaredyLinux<void*> result =
-        nix::syscall<void*>(9, beginning_address, bytes_size, protections,
-                            flags, file_descriptor, pages_offset * page_size);
-    return result;
+    return nix::syscall<void*>(9, beginning_address, bytes_size, protections,
+                               flags, file_descriptor,
+                               pages_offset * page_size);
 }

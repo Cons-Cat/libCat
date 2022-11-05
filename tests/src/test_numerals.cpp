@@ -1,7 +1,6 @@
 #include <cat/match>
 
 #include "../unit_tests.hpp"
-#include "cat/numerals"
 
 template <auto value>
 struct Nttp {
@@ -10,14 +9,12 @@ struct Nttp {
 
 TEST(test_numerals) {
     // Test `concept`s.
-    static_assert(cat::detail::arithmeticNonPtr<int4>);
-    static_assert(cat::detail::arithmeticNonPtr<__INTPTR_TYPE__>);
-    static_assert(!cat::detail::arithmeticNonPtr<intptr<void>>);
+    // static_assert(cat::detail::arithmeticNonPtr<int4>);
+    // static_assert(cat::detail::arithmeticNonPtr<__INTPTR_TYPE__>);
+    // static_assert(!cat::detail::arithmeticNonPtr<intptr<void>>);
 
-    static_assert(cat::is_same<cat::ToUnsafeNumeral<int>, int>);
-    static_assert(cat::is_same<cat::ToSafeNumeral<int>, int4>);
-    static_assert(cat::is_same<cat::ToSafeNumeral<int4>, int4>);
-    static_assert(cat::is_same<cat::ToUnsafeNumeral<int4>, int4::Raw>);
+    static_assert(cat::is_same<cat::ToRawNumeral<int>, int>);
+    static_assert(cat::is_same<cat::ToRawNumeral<int4>, int4::Raw>);
 
     // Test numerals' size,
     static_assert(sizeof(int1) == 1);
@@ -57,18 +54,84 @@ TEST(test_numerals) {
     static_assert(cat::is_trivially_relocatable<uintptr<void>>);
     static_assert(cat::is_trivially_relocatable<uintptr<int>>);
 
+    static_assert(cat::is_integral<int4>);
+    static_assert(cat::is_integral<uint4>);
+    static_assert(cat::is_integral<intptr<void>>);
+    static_assert(cat::is_integral<uintptr<void>>);
+
     // Test `int4` constructors and assignment.
     int4 test_int4_1 = 1;
     int4 test_int4_2;
     test_int4_2 = 1;
 
-    // Test `int4` operators.
+    // Test `Numeral` operators.
     int4 int4_add = 1 + test_int4_1;
     int4_add = 1_i4 + test_int4_1;
+    int4 int4_sub = 1 - test_int4_1;
+    int4_sub = 1_i4 - test_int4_1;
+
+    cat::verify(int4{1} == int4{1});
+
+    // Greater than.
+    cat::verify(int4{1} > int4{0});
+    cat::verify(int4{1} >= int4{0});
+    cat::verify(int4{1} >= int4{1});
+
+    // Less than.
+    cat::verify(int4{0} < int4{1});
+    cat::verify(int4{0} <= int4{0});
+    cat::verify(int4{0} <= int4{1});
+
+    // Test `ArithmeticPtr` operators on raw numerals.
+    // TODO: This has ambiguous overload resolution:
+    // intptr<void> intptr_add_1 = 1 + intptr<void>{0};
+    intptr<void> intptr_add_2 = intptr<void>{0} + 1;
+    intptr<void> intptr_add_3 = 1_i4 + intptr<void>{0};
+    intptr<void> intptr_add_4 = intptr<void>{0} + 1_i4;
+
+    // TODO: This has ambiguous overload resolution:
+    // intptr<void> intptr_sub_1 = 1 - intptr_add_2;
+    intptr<void> intptr_sub_2 = intptr_add_2 - 1;
+    intptr<void> intptr_sub_3 = 1_i4 - intptr_add_2;
+    intptr<void> intptr_sub_4 = intptr_add_2 - 1_i4;
+
+    // Test `ArithmeticPtr` operators on safe `Numeral`s.
+    intptr_add_2 = 1_i4 + intptr_add_2;
+    intptr_add_2 = intptr_add_2 + 1_i4;
+    intptr_sub_2 = 1_i4 - intptr_add_2;
+    intptr_sub_2 = intptr_add_2 - 1_i4;
+
+    // Test `ArithmeticPtr` operators on other `ArithmeticPtr`s.
+    cat::verify((intptr<void>{0} + intptr<void>{1}) == 1);
+    cat::verify((intptr<void>{0} - intptr<void>{1}) == -1);
+
+    cat::verify(intptr<void>{1} == intptr<void>{1});
+
+    // Greater than.
+    cat::verify(intptr<void>{1} > intptr<void>{0});
+    cat::verify(intptr<void>{1} >= intptr<void>{0});
+    cat::verify(intptr<void>{1} >= intptr<void>{1});
+
+    // Less than.
+    cat::verify(intptr<void>{0} < intptr<void>{1});
+    cat::verify(intptr<void>{0} <= intptr<void>{0});
+    cat::verify(intptr<void>{0} <= intptr<void>{1});
+
+    // TODO: Test integer promotion rules.
+    static_assert(cat::is_same<decltype(intptr<void>{} + 1), intptr<void>>);
+    static_assert(cat::is_same<decltype(intptr<void>{} - 1), intptr<void>>);
 
     // `int4` pointer arithmetic.
-    [[maybe_unused]] int* p_int4 = ((int*)(0)) + 1_i4;
+    int* p_int4 = ((int*)(0)) + 1_i4;
     p_int4 = 1_i4 + ((int*)(0));
+    p_int4 += 1_i4;
+    p_int4 = p_int4 - 1_i4;
+    p_int4 -= 1_i4;
+
+    p_int4 += intptr<void>{0};
+    p_int4 -= intptr<void>{0};
+    p_int4 += uintptr<void>{0};
+    p_int4 -= uintptr<void>{0};
 
     // Test `intpr` constructors and assignment.
     intptr<void> intptr_1 = nullptr;

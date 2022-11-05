@@ -51,7 +51,8 @@ class PageAllocator : public AllocatorFacade<PageAllocator> {
             // Anonymous pages (non-files) must have `0`.
             0);
         if (result.has_value()) {
-            return result.value();
+            // TODO: Make `nix::Scaredy` return the correct value type, `void*`.
+            return static_cast<void*>(result.value());
         }
         return nullptr;
     }

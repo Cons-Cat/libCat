@@ -57,8 +57,9 @@ TEST(test_paging_memory) {
     auto small_memory_5 = allocator.inline_alloc_multi<int4>(1'000).or_exit();
     // `small_memory_1` should be in a page, so these addresses are far
     // apart.
-    cat::verify(cat::abs(intptr{&stack_variable} -
-                         intptr{allocator.get(small_memory_5).p_data()}) > 512);
+    cat::verify(cat::abs(intptr<int>{&stack_variable} -
+                         intptr<int4>{allocator.get(small_memory_5).p_data()}) >
+                512);
     allocator.free(small_memory_1);
 
     // Small-size handles have unique storage.

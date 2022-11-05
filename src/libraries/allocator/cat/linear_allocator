@@ -58,8 +58,8 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
   private:
     auto allocation_size(usize alignment, ssize allocation_size)
         -> OptionalNonZero<ssize> {
-        uintptr<void> p_allocation =
-            align_down(this->p_arena_current - allocation_size, alignment);
+        uintptr<void> p_allocation = align_down(
+            this->p_arena_current - usize{allocation_size}, alignment);
 
         // The allocation size is the difference between the current pointer
         // and the new pointer.

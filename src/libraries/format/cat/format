@@ -14,20 +14,18 @@ namespace cat {
 // TODO: Support formatting 1 and 2 byte integers.
 
 // Erase the type of `cat::Numeral` for redundant template instantiations.
-template <typename T>
-    requires(is_safe_numeral<T>)
-[[nodiscard]] auto to_chars(allocator auto& allocator, T numeral)
+template <integral T>
+[[nodiscard]] auto to_chars(allocator auto& allocator, Numeral<T> numeral)
     -> Optional<String> {
     return to_chars(allocator, to_raw_numeral(numeral));
 }
 
 // Dynamically allocate an integral value converted to `String`.
 template <integral T>
-    requires(!is_safe_numeral<T>)
-[[nodiscard]] auto to_chars(allocator auto& alloc, T integer)
+[[nodiscard]] auto to_chars(allocator auto& allocator, T integer)
     -> Optional<String> {
     Optional result =
-        alloc.template p_alloc_multi<char>(NumericLimits<T>::digits10);
+        allocator.template p_alloc_multi<char>(NumericLimits<T>::digits10);
     if (!result.has_value()) {
         return nullopt;
     }

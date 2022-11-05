@@ -118,6 +118,10 @@ template <typename U>
 [[nodiscard]] constexpr auto align_down(U* p_value, usize alignment) -> U*;
 
 template <typename U>
+[[nodiscard]] constexpr auto align_down(intptr<U> p_value, usize alignment)
+    -> intptr<U>;
+
+template <typename U>
 [[nodiscard]] constexpr auto align_down(uintptr<U> p_value, usize alignment)
     -> uintptr<U>;
 
