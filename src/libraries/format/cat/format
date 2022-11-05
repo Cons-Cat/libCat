@@ -14,9 +14,9 @@ namespace cat {
 // TODO: Support formatting 1 and 2 byte integers.
 
 // Erase the type of `cat::Numeral` for redundant template instantiations.
-template <integral T>
-[[nodiscard]] auto to_chars(allocator auto& allocator, Numeral<T> numeral)
-    -> Optional<String> {
+template <integral T, OverflowPolicies policy>
+[[nodiscard]] auto to_chars(allocator auto& allocator,
+                            Numeral<T, policy> numeral) -> Optional<String> {
     return to_chars(allocator, to_raw_numeral(numeral));
 }
 
@@ -31,13 +31,13 @@ template <integral T>
     }
     char* p_string = result.value();
 
-    if constexpr (is_same<T, __INT32_TYPE__>) {
+    if constexpr (is_same<T, int4::Raw>) {
         detail::i32toa_jeaiii(integer, p_string);
-    } else if constexpr (is_same<T, __UINT32_TYPE__>) {
+    } else if constexpr (is_same<T, uint4::Raw>) {
         detail::u32toa_jeaiii(integer, p_string);
-    } else if constexpr (is_same<T, __INT64_TYPE__>) {
+    } else if constexpr (is_same<T, int8::Raw>) {
         detail::i64toa_jeaiii(integer, p_string);
-    } else if constexpr (is_same<T, __UINT64_TYPE__>) {
+    } else if constexpr (is_same<T, uint8::Raw>) {
         detail::u64toa_jeaiii(integer, p_string);
     } else {
         // TODO: Format 1 and 2 byte integers.

@@ -438,7 +438,7 @@ struct Numeral {
     template <typename U>
         requires(detail::is_safe_conversion<U, T>)
     constexpr auto operator=(U operand) -> Numeral& {
-        this->raw = static_cast<T>(operand);
+        this->raw = to_raw_numeral(operand);
         return *this;
     }
 
@@ -458,23 +458,12 @@ struct Numeral {
     }
 
     template <arithmetic U>
-    // TODO: This constraint makes overriding the method tricky.
-    // requires(detail::is_safe_comparison<T, U>)
+        requires(detail::is_safe_comparison<T, U>)
     [[nodiscard]] friend constexpr auto operator+(Numeral<T> self, U operand)
         -> detail::PromotedNumeral<T, U> {
         return detail::PromotedNumeral<T, U>{self.raw +
                                              to_raw_numeral(operand)};
     }
-
-    // template <typename U>
-    // // requires(detail::is_safe_conversion<T, U>)
-    // [[nodiscard]] friend constexpr auto operator+(U operand, Numeral<T> self)
-    //     -> detail::PromotedNumeral<T, U> {
-    //     return detail::PromotedNumeral<T, U>{to_raw_numeral(operand) +
-    //                                          self.raw};
-    // }
-
-    // Pointer arithmetic `+` operators.
 
     template <typename U>
     [[nodiscard]] friend constexpr auto operator+(U* p_operand,
@@ -485,33 +474,32 @@ struct Numeral {
     template <typename U>
     [[nodiscard]] friend constexpr auto operator+(Numeral<T> numeral,
                                                   U* p_operand) -> U* {
-        return p_operand + numeral.raw;
+        return numeral.raw + p_operand;
     }
 
     template <arithmetic U>
         requires(detail::is_safe_comparison<U, T>)
-    constexpr auto operator+=(U operand) {
-        this->raw += to_raw_numeral(operand);
-        return *this;
+    friend constexpr auto operator+=(Numeral<T, policy>& self, U operand)
+        -> Numeral& {
+        self.raw += to_raw_numeral(operand);
+        return self;
     }
 
-    constexpr auto operator++() -> Numeral& {
-        ++(this->raw);
-        return *this;
+    [[nodiscard]] friend constexpr auto operator+(Numeral<T, policy> self)
+        -> Numeral {
+        return +(self.raw);
     }
 
-    constexpr auto operator++(int) -> Numeral& {
-        (this->raw)++;
-        return *this;
+    friend constexpr auto operator++(Numeral<T, policy> self) -> Numeral {
+        return ++(self.raw);
     }
 
-    constexpr auto operator+() -> Numeral<T> {
-        return +(this->raw);
+    friend constexpr auto operator++(Numeral<T, policy> self, int) -> Numeral {
+        return (self.raw)++;
     }
 
     template <arithmetic U>
-    // TODO: This constraint makes overriding the method tricky.
-    // requires(detail::is_safe_comparison<T, U>)
+        requires(detail::is_safe_comparison<T, U>)
     [[nodiscard]] friend constexpr auto operator-(Numeral<T> self, U operand)
         -> detail::PromotedNumeral<T, U> {
         return detail::PromotedNumeral<T, U>{self.raw -
@@ -524,37 +512,39 @@ struct Numeral {
         return p_operand - self.raw;
     }
 
-    // template <typename U>
-    // [[nodiscard]] friend constexpr auto operator-(Numeral<T> self, U*
-    // p_operand)
-    //     -> U* {
-    //     return p_operand - self.raw;
-    // }
-
     template <typename U>
+    [[nodiscard]] friend constexpr auto operator-(Numeral<T> numeral,
+                                                  U* p_operand) -> U* {
+        return numeral.raw - p_operand;
+    }
+
+    template <arithmetic U>
         requires(detail::is_safe_comparison<T, U>)
-    constexpr auto operator-=(U operand) -> Numeral& {
-        this->raw = this->raw - static_cast<T>(operand);
-        return *this;
+    friend constexpr auto operator-=(Numeral<T, policy>& self, U operand)
+        -> Numeral& {
+        self.raw -= to_raw_numeral(operand);
+        return self;
     }
 
-    constexpr auto operator-() -> Numeral<T> {
-        return -(this->raw);
+    [[nodiscard]] friend constexpr auto operator-(Numeral<T, policy> self)
+        -> Numeral {
+        return -(self.raw);
     }
 
-    constexpr auto operator--() -> Numeral<T> {
-        return --(this->raw);
+    friend constexpr auto operator--(Numeral<T, policy> self) -> Numeral {
+        return --(self.raw);
     }
 
-    constexpr auto operator--(int) -> Numeral<T> {
-        return (this->raw)--;
+    friend constexpr auto operator--(Numeral<T, policy> self, int) -> Numeral {
+        return (self.raw)--;
     }
 
     template <arithmetic U>
         requires(detail::is_safe_comparison<T, U>)
     [[nodiscard]] friend constexpr auto operator*(Numeral<T> self, U operand)
         -> detail::PromotedNumeral<T, U> {
-        return self.raw * to_raw_numeral(operand);
+        return detail::PromotedNumeral<T, U>{self.raw *
+                                             to_raw_numeral(operand)};
     }
 
     template <typename U>
@@ -568,18 +558,20 @@ struct Numeral {
         return p_operand * self.raw;
     }
 
-    template <typename U>
-        requires(detail::is_safe_comparison<T, U>)
-    constexpr auto operator*=(U operand) -> Numeral& {
-        this->raw = this->raw * static_cast<T>(operand);
-        return *this;
+    template <arithmetic U>
+        requires(detail::is_safe_comparison<U, T>)
+    friend constexpr auto operator*=(Numeral<T, policy>& self, U operand)
+        -> Numeral& {
+        self.raw *= to_raw_numeral(operand);
+        return self;
     }
 
     template <arithmetic U>
         requires(detail::is_safe_comparison<T, U>)
     [[nodiscard]] friend constexpr auto operator/(Numeral<T> self, U operand)
         -> detail::PromotedNumeral<T, U> {
-        return self.raw / to_raw_numeral(operand);
+        return detail::PromotedNumeral<T, U>{self.raw /
+                                             to_raw_numeral(operand)};
     }
 
     template <typename U>
@@ -593,18 +585,20 @@ struct Numeral {
         return p_operand / self.raw;
     }
 
-    template <typename U>
-        requires(detail::is_safe_comparison<T, U>)
-    constexpr auto operator/=(U operand) -> Numeral& {
-        this->raw = this->raw / static_cast<T>(operand);
-        return *this;
+    template <arithmetic U>
+        requires(detail::is_safe_comparison<U, T>)
+    friend constexpr auto operator/=(Numeral<T, policy>& self, U operand)
+        -> Numeral& {
+        self.raw /= to_raw_numeral(operand);
+        return self;
     }
 
     template <arithmetic U>
         requires(detail::is_safe_comparison<T, U>)
     [[nodiscard]] friend constexpr auto operator%(Numeral<T> self, U operand)
         -> detail::PromotedNumeral<T, U> {
-        return self.raw % to_raw_numeral(operand);
+        return detail::PromotedNumeral<T, U>{self.raw %
+                                             to_raw_numeral(operand)};
     }
 
     template <typename U>
@@ -618,18 +612,20 @@ struct Numeral {
         return p_operand % self.raw;
     }
 
-    template <typename U>
-        requires(detail::is_safe_comparison<T, U>)
-    constexpr auto operator%=(U operand) -> Numeral& {
-        this->raw = this->raw % static_cast<T>(operand);
-        return *this;
+    template <arithmetic U>
+        requires(detail::is_safe_comparison<U, T>)
+    friend constexpr auto operator%=(Numeral<T, policy>& self, U operand)
+        -> Numeral& {
+        self.raw %= to_raw_numeral(operand);
+        return self;
     }
 
     template <arithmetic U>
         requires(detail::is_safe_comparison<T, U>)
     [[nodiscard]] friend constexpr auto operator&(Numeral<T> self, U operand)
         -> detail::PromotedNumeral<T, U> {
-        return self.raw & to_raw_numeral(operand);
+        return detail::PromotedNumeral<T, U>{self.raw &
+                                             to_raw_numeral(operand)};
     }
 
     template <typename U>
@@ -643,18 +639,20 @@ struct Numeral {
         return p_operand & self.raw;
     }
 
-    template <typename U>
-        requires(detail::is_safe_comparison<T, U>)
-    constexpr auto operator&=(U operand) -> Numeral& {
-        this->raw = this->raw & static_cast<T>(operand);
-        return *this;
+    template <arithmetic U>
+        requires(detail::is_safe_comparison<U, T>)
+    friend constexpr auto operator&=(Numeral<T, policy>& self, U operand)
+        -> Numeral& {
+        self.raw &= to_raw_numeral(operand);
+        return self;
     }
 
     template <arithmetic U>
         requires(detail::is_safe_comparison<U, T>)
     [[nodiscard]] friend constexpr auto operator|(Numeral<T> self, U operand)
         -> detail::PromotedNumeral<T, U> {
-        return self.raw | to_raw_numeral(operand);
+        return detail::PromotedNumeral<T, U>{self.raw |
+                                             to_raw_numeral(operand)};
     }
 
     template <typename U>
@@ -668,19 +666,19 @@ struct Numeral {
         return p_operand | self.raw;
     }
 
-    // TODO: Make more of these hidden `friend`s.
-
-    template <typename U>
-        requires(detail::is_safe_comparison<T, U>)
-    constexpr auto operator|=(U operand) -> Numeral& {
-        this->raw = this->raw | static_cast<T>(operand);
-        return *this;
+    template <arithmetic U>
+        requires(detail::is_safe_comparison<U, T>)
+    friend constexpr auto operator|=(Numeral<T, policy>& self, U operand)
+        -> Numeral& {
+        self.raw |= to_raw_numeral(operand);
+        return self;
     }
 
     template <typename U>
         requires(detail::is_safe_comparison<T, U>)
-    [[nodiscard]] constexpr auto operator<<(U operand) const -> Numeral<T> {
-        return static_cast<T>(this->raw << static_cast<T>(operand));
+    [[nodiscard]] friend constexpr auto operator<<(Numeral<T, policy> self,
+                                                   U operand) -> Numeral<T> {
+        return self.raw << to_raw_numeral(operand);
     }
 
     template <typename U>
@@ -694,17 +692,19 @@ struct Numeral {
         return p_operand << self.raw;
     }
 
-    template <typename U>
+    template <arithmetic U>
         requires(detail::is_safe_comparison<U, T>)
-    constexpr auto operator<<=(U operand) -> Numeral& {
-        this->raw = this->raw << static_cast<T>(operand);
-        return *this;
+    friend constexpr auto operator<<=(Numeral<T, policy>& self, U operand)
+        -> Numeral& {
+        self.raw <<= to_raw_numeral(operand);
+        return self;
     }
 
     template <typename U>
         requires(detail::is_safe_comparison<T, U>)
-    [[nodiscard]] constexpr auto operator>>(U operand) const -> Numeral<T> {
-        return static_cast<T>(this->raw >> static_cast<T>(operand));
+    [[nodiscard]] friend constexpr auto operator>>(Numeral<T, policy> self,
+                                                   U operand) -> Numeral<T> {
+        return self.raw >> to_raw_numeral(operand);
     }
 
     template <typename U>
@@ -718,17 +718,20 @@ struct Numeral {
         return p_operand >> self.raw;
     }
 
-    template <typename U>
-        requires(detail::is_safe_comparison<T, U>)
-    constexpr auto operator>>=(U operand) -> Numeral& {
-        this->raw = this->raw >> static_cast<T>(operand);
-        return *this;
+    template <arithmetic U>
+        requires(detail::is_safe_comparison<U, T>)
+    friend constexpr auto operator>>=(Numeral<T, policy>& self, U operand)
+        -> Numeral& {
+        self.raw >>= to_raw_numeral(operand);
+        return self;
     }
 
-    [[nodiscard]] constexpr auto operator~() -> Numeral
-        requires(is_integral<T>) {
-        return ~(this->raw);
+    [[nodiscard]] friend constexpr auto operator~(Numeral<T, policy> self)
+        -> Numeral requires(is_integral<T>) {
+        return ~(self.raw);
     }
+
+    // Member functions for all numerals.
 
     [[nodiscard]] constexpr auto count_leading_zeros() const -> ssize
         requires(is_integral<T>) {
@@ -961,7 +964,6 @@ class ArithmeticPtr : public Numeral<Storage, policy> {
     template <typename U>
     // requires(detail::is_safe_comparison<Storage, U>)
     constexpr auto operator|=(U operand) -> ArithmeticPtr& {
-        this->raw = this->raw | to_raw_numeral(operand);
         return *this;
     }
 
@@ -1009,63 +1011,63 @@ using uintptr = cat::ArithmeticPtr<T, __UINTPTR_TYPE__>;
 
 // Add and assign a `Numeral` to a pointer.
 template <typename T, typename U>
-constexpr auto operator+=(T*& p_lhs, Numeral<U> rhs) -> T* {
+constexpr auto operator+=(T* p_lhs, Numeral<U> rhs) -> T* {
     p_lhs += rhs.raw;
     return p_lhs;
 }
 
 // Subtract and assign a `Numeral` to a pointer.
 template <typename T, typename U>
-constexpr auto operator-=(T*& p_lhs, Numeral<U> rhs) -> T* {
+constexpr auto operator-=(T* p_lhs, Numeral<U> rhs) -> T* {
     p_lhs -= rhs.raw;
     return p_lhs;
 }
 
 // Multiply and assign a `Numeral` to a pointer.
 template <typename T, typename U>
-constexpr auto operator*=(T*& p_lhs, Numeral<U> rhs) -> T* {
+constexpr auto operator*=(T* p_lhs, Numeral<U> rhs) -> T* {
     p_lhs *= rhs.raw;
     return p_lhs;
 }
 
 // Divide and assign a `Numeral` to a pointer.
 template <typename T, typename U>
-constexpr auto operator/=(T*& p_lhs, Numeral<U> rhs) -> T* {
+constexpr auto operator/=(T* p_lhs, Numeral<U> rhs) -> T* {
     p_lhs /= rhs.raw;
     return p_lhs;
 }
 
 // Bitwise shift left and assign a `Numeral` to a pointer.
 template <typename T, typename U>
-constexpr auto operator<<=(T*& p_lhs, Numeral<U> rhs) -> T* {
+constexpr auto operator<<=(T* p_lhs, Numeral<U> rhs) -> T* {
     p_lhs <<= rhs.raw;
     return p_lhs;
 }
 
 // Bitwise shift right and assign a `Numeral` to a pointer.
 template <typename T, typename U>
-constexpr auto operator>>=(T*& p_lhs, Numeral<U> rhs) -> T* {
+constexpr auto operator>>=(T* p_lhs, Numeral<U> rhs) -> T* {
     p_lhs >>= rhs.raw;
     return p_lhs;
 }
 
 // Bitwise modulo and assign a `Numeral` to a pointer.
 template <typename T, typename U>
-constexpr auto operator%=(T*& p_lhs, Numeral<U> rhs) -> T* {
+constexpr auto operator%=(T* p_lhs, Numeral<U> rhs) -> T* {
     p_lhs %= rhs.raw;
     return p_lhs;
 }
 
 // Bitwise and and assign a `Numeral` to a pointer.
 template <typename T, typename U>
-constexpr auto operator&=(T*& p_lhs, Numeral<U> rhs) -> T* {
+constexpr auto operator&=(T* p_lhs, Numeral<U> rhs) -> T* {
     p_lhs &= rhs.raw;
     return p_lhs;
 }
 
 // Bitwise or and assign a `Numeral` to a pointer.
 template <typename T, typename U>
-constexpr auto operator|=(T*& p_lhs, Numeral<U> rhs) -> T* {
+constexpr auto operator|=(T* p_lhs, Numeral<U> rhs) -> T* {
     p_lhs |= rhs.raw;
     return p_lhs;
 }
