@@ -386,6 +386,7 @@ inline constexpr bool is_signed = false;
 
 // This expression only holds true if `T` can be constant-evaluated.
 template <detail::hasLessThanOperator T>
+    requires(requires { T(-1); })
 inline constexpr bool is_signed<T> = constval<(T(-1) < T(0))>;
 
 template <typename T>

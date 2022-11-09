@@ -144,6 +144,11 @@ TEST(test_numerals) {
     intptr<void> intptr_2 = nullptr;
     intptr_1 = intptr_1 + intptr_2;
 
+    // Test `ArithmeticPtr` conversions.
+    uintptr<void> uintptr_1 = static_cast<uintptr<void>>(intptr_1);
+    [[maybe_unused]] intptr<void> intptr_3 =
+        static_cast<intptr<void>>(uintptr_1);
+
     // Test `<=>`.
     int4 int_less = 0;
     int4 int_more = 2;

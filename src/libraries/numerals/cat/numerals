@@ -146,21 +146,12 @@ struct Numeral {
     constexpr Numeral() = default;
 
     template <arithmetic U>
-    constexpr explicit(!detail::is_safe_conversion<U, T>) Numeral(U from)
-        : raw(to_raw_numeral(from)){};
+    constexpr explicit(!detail::is_safe_conversion<U, T>) Numeral(U other)
+        : raw(to_raw_numeral(other)){};
 
-    // TODO: Cast to `uintptr<T>`.
     template <typename U>
-    // requires(!is_pointer<U>)
     constexpr explicit operator U() const {
         return static_cast<U>(this->raw);
-    }
-
-    template <typename U>
-        requires(detail::is_safe_conversion<U, T>)
-    constexpr auto operator=(U operand) -> Numeral& {
-        this->raw = to_raw_numeral(operand);
-        return *this;
     }
 
     template <arithmetic U>
@@ -474,10 +465,6 @@ struct Numeral {
     static constexpr auto max = NumericLimits<Raw>::max;
 };
 
-// TODO: Is this needed?
-template <typename T>
-Numeral(T) -> Numeral<T>;
-
 // `ArithmeticPtr` can be constructed from any integer type or any pointer.
 // It can only convert into `T*`, but it is otherwise interchangeable with
 // integers. It satisfies the `is_integral` type trait and
@@ -489,23 +476,26 @@ class ArithmeticPtr : public Numeral<Storage, policy> {
     using Raw = Storage;
     using Ptr = T*;
 
-    // TODO: Can these be `default`?
-
     constexpr ArithmeticPtr() : Numeral<Storage, policy>(){};
 
+    // TODO: This redundant constructor is required by GCC.
     constexpr ArithmeticPtr(ArithmeticPtr<T, Storage, policy> const& other)
         : Numeral<Storage, policy>(other.raw){};
 
-    constexpr ArithmeticPtr(ArithmeticPtr<T, Storage, policy>&& other)
-        : Numeral<Storage, policy>(move(other).raw){};
-
-    // Forward other integrals to the `Numeral` class.
-    constexpr ArithmeticPtr(integral auto input)
-        : Numeral<Storage, policy>(to_raw_numeral(input)){};
+    template <integral U>
+        requires(detail::is_safe_conversion<U, Storage>)
+    constexpr ArithmeticPtr(U other)
+        : Numeral<Storage, policy>(to_raw_numeral(other)){};
 
     constexpr ArithmeticPtr(T* p_input)
         : Numeral<Storage, policy>(reinterpret_cast<Storage>(p_input)) {
     }
+
+    // Allow explicitly constructing from another `ArithmeticPtr` with the same
+    // `T`.
+    template <arithmetic U, OverflowPolicies other_policy>
+    constexpr explicit ArithmeticPtr(ArithmeticPtr<T, U, other_policy> other)
+        : Numeral<Storage, policy>(to_raw_numeral(other)){};
 
     // Only allow casting back into the original pointer type.
     explicit constexpr operator T*() {
@@ -517,23 +507,22 @@ class ArithmeticPtr : public Numeral<Storage, policy> {
         return reinterpret_cast<T const*>(this->raw);
     }
 
-    constexpr explicit operator Storage() const {
-        return this->raw;
-    }
+    // TODO: Add a dereference operator.
 
-    // TODO: Streamline out these operators by implementing `Numeral`'s with
-    // "deducing this".
+    // TODO: Streamline out all of these operators by implementing `Numeral`'s
+    // with "deducing this".
 
-    constexpr auto operator=(ArithmeticPtr<T, Storage, policy> from)
+    // TODO: This redundant assignment operator is required by GCC.
+    constexpr auto operator=(ArithmeticPtr<T, Storage, policy> operand)
         -> ArithmeticPtr& {
-        this->raw = from.raw;
+        this->raw = operand.raw;
         return *this;
     }
 
     template <integral U>
         requires(detail::is_safe_conversion<U, Storage>)
-    constexpr auto operator=(U from) -> ArithmeticPtr& {
-        this->raw = static_cast<Storage>(from);
+    constexpr auto operator=(U operand) -> ArithmeticPtr& {
+        this->raw = to_raw_numeral(operand);
         return *this;
     }
 
@@ -554,96 +543,88 @@ class ArithmeticPtr : public Numeral<Storage, policy> {
         return lhs.raw == to_raw_numeral(rhs);
     }
 
+    // TODO: `requires` constraints on these operators makes GCC 13's argument
+    // dependant lookup become ambiguous for some reason.
+
     template <integral U>
-    // TODO: This constraint causes GCC's ADL to be ambiguous.
-    // requires(detail::is_safe_comparison<Storage, U>)
     [[nodiscard]] friend constexpr auto operator+(
         ArithmeticPtr<T, Storage, policy> self, U operand) -> ArithmeticPtr {
         return self.raw + to_raw_numeral(operand);
     }
 
     template <integral U>
-        requires(detail::is_safe_comparison<U, Storage>)
     constexpr auto operator+=(U operand) {
         this->raw += to_raw_numeral(operand);
         return *this;
     }
 
-    constexpr auto operator++() -> ArithmeticPtr& {
-        ++(this->raw);
-        return *this;
+    [[nodiscard]] friend constexpr auto operator+(
+        ArithmeticPtr<T, Storage, policy> self) -> ArithmeticPtr {
+        return +(self.raw);
     }
 
-    constexpr auto operator++(int) -> ArithmeticPtr& {
-        (this->raw)++;
-        return *this;
+    friend constexpr auto operator++(ArithmeticPtr<T, Storage, policy> self)
+        -> ArithmeticPtr {
+        return ++(self.raw);
     }
 
-    constexpr auto operator+() -> ArithmeticPtr<T, Storage, policy> {
-        return +(this->raw);
+    friend constexpr auto operator++(ArithmeticPtr<T, Storage, policy> self,
+                                     int) -> ArithmeticPtr {
+        return (self.raw)++;
     }
-
-    // TODO: Should subtracting two pointers produce another pointer, or a
-    // `ssize` similar to `ptrdiff_t`?
 
     template <integral U>
-    // TODO: This constraint causes GCC's ADL to be ambiguous.
-    // requires(detail::is_safe_comparison<Storage, U>)
     [[nodiscard]] friend constexpr auto operator-(
         ArithmeticPtr<T, Storage, policy> self, U operand) -> ArithmeticPtr {
         return self.raw - to_raw_numeral(operand);
     }
 
     template <typename U>
-    // requires(detail::is_safe_comparison<Storage, U>)
     constexpr auto operator-=(U operand) -> ArithmeticPtr& {
         this->raw = this->raw - to_raw_numeral(operand);
         return *this;
     }
 
-    // TODO: Make this `friend`?
-    constexpr auto operator-() -> ArithmeticPtr<T, Storage, policy> {
-        return -(this->raw);
+    [[nodiscard]] friend constexpr auto operator-(
+        ArithmeticPtr<T, Storage, policy> self) -> ArithmeticPtr {
+        return -(self.raw);
     }
 
-    constexpr auto operator--() -> ArithmeticPtr<T, Storage, policy> {
-        return --(this->raw);
+    friend constexpr auto operator--(ArithmeticPtr<T, Storage, policy> self)
+        -> ArithmeticPtr {
+        return --(self.raw);
     }
 
-    constexpr auto operator--(int) -> ArithmeticPtr<T, Storage, policy> {
-        return (this->raw)--;
+    friend constexpr auto operator--(ArithmeticPtr<T, Storage, policy> self,
+                                     int) -> ArithmeticPtr {
+        return (self.raw)--;
     }
 
     template <integral U>
-    // requires(detail::is_safe_comparison<Storage, U>)
     [[nodiscard]] friend constexpr auto operator*(
         ArithmeticPtr<T, Storage, policy> self, U operand) -> ArithmeticPtr {
         return self.raw * to_raw_numeral(operand);
     }
 
     template <typename U>
-    // requires(detail::is_safe_comparison<Storage, U>)
     constexpr auto operator*=(U operand) -> ArithmeticPtr& {
         this->raw = this->raw * to_raw_numeral(operand);
         return *this;
     }
 
     template <integral U>
-    // requires(detail::is_safe_comparison<Storage, U>)
     [[nodiscard]] friend constexpr auto operator/(
         ArithmeticPtr<T, Storage, policy> self, U operand) -> ArithmeticPtr {
         return self.raw / to_raw_numeral(operand);
     }
 
     template <typename U>
-    // requires(detail::is_safe_comparison<Storage, U>)
     constexpr auto operator/=(U operand) -> ArithmeticPtr& {
         this->raw = this->raw / to_raw_numeral(operand);
         return *this;
     }
 
     template <integral U>
-    // requires(detail::is_safe_comparison<Storage, U>)
     [[nodiscard]] friend constexpr auto operator%(
         ArithmeticPtr<T, Storage, policy> self, U operand)
         -> ArithmeticPtr<T, Storage, policy> {
@@ -651,14 +632,12 @@ class ArithmeticPtr : public Numeral<Storage, policy> {
     }
 
     template <typename U>
-    // requires(detail::is_safe_comparison<Storage, U>)
     constexpr auto operator%=(U operand) -> ArithmeticPtr& {
         this->raw = this->raw % to_raw_numeral(operand);
         return *this;
     }
 
     template <integral U>
-    // requires(detail::is_safe_comparison<Storage, U>)
     [[nodiscard]] friend constexpr auto operator&(
         ArithmeticPtr<T, Storage, policy> self, U operand)
         -> ArithmeticPtr<T, Storage, policy> {
@@ -666,14 +645,12 @@ class ArithmeticPtr : public Numeral<Storage, policy> {
     }
 
     template <typename U>
-    // requires(detail::is_safe_comparison<Storage, U>)
     constexpr auto operator&=(U operand) -> ArithmeticPtr& {
         this->raw = this->raw & to_raw_numeral(operand);
         return *this;
     }
 
     template <integral U>
-    // requires(detail::is_safe_comparison<U, Storage>)
     [[nodiscard]] friend constexpr auto operator|(
         ArithmeticPtr<T, Storage, policy> self, U operand)
         -> ArithmeticPtr<T, Storage, policy> {
@@ -683,41 +660,35 @@ class ArithmeticPtr : public Numeral<Storage, policy> {
     // TODO: Make more of these hidden `friend`s.
 
     template <typename U>
-    // requires(detail::is_safe_comparison<Storage, U>)
     constexpr auto operator|=(U operand) -> ArithmeticPtr& {
         return *this;
     }
 
     template <typename U>
-    // requires(detail::is_safe_comparison<Storage, U>)
     [[nodiscard]] constexpr auto operator<<(U operand) const
         -> ArithmeticPtr<T, Storage, policy> {
         return static_cast<Storage>(this->raw << to_raw_numeral(operand));
     }
 
     template <typename U>
-    // requires(detail::is_safe_comparison<U, Storage>)
     constexpr auto operator<<=(U operand) -> ArithmeticPtr& {
         this->raw = this->raw << to_raw_numeral(operand);
         return *this;
     }
 
     template <typename U>
-    // requires(detail::is_safe_comparison<Storage, U>)
     [[nodiscard]] constexpr auto operator>>(U operand) const
         -> ArithmeticPtr<T, Storage, policy> {
         return static_cast<Storage>(this->raw >> to_raw_numeral(operand));
     }
 
     template <typename U>
-    // requires(detail::is_safe_comparison<Storage, U>)
     constexpr auto operator>>=(U operand) -> ArithmeticPtr& {
         this->raw = this->raw >> to_raw_numeral(operand);
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator~() -> ArithmeticPtr
-        requires(is_integral<Storage>) {
+    [[nodiscard]] constexpr auto operator~() -> ArithmeticPtr {
         return ~(this->raw);
     }
 };
@@ -808,7 +779,6 @@ template <typename T>
     }
 }
 
-// TODO: Make this `constexpr`.
 template <typename T>
     requires(is_integral<T>)
 [[nodiscard]] constexpr auto count_trailing_zeros(T value) -> ssize {
