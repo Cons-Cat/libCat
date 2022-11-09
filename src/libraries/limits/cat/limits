@@ -1,0 +1,283 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+namespace cat {
+
+// TODO: Implement support for GCC 13's `__bf16` type.
+// TODO: Implement support for complex floats.
+
+template <typename>
+struct NumericLimits {};
+
+// Unwrap all `Numeral`s inside of `NumericLimits`.
+template <typename T, OverflowPolicies policy>
+struct NumericLimits<Numeral<T, policy>> : NumericLimits<T> {};
+
+// TODO: Implement `min` and `max` limits in terms of GCC macros, like
+// `__LONG_LONG_MAX__`.
+
+template <>
+struct NumericLimits<char> {
+    NumericLimits() = delete;
+    static constexpr auto min() -> __INT8_TYPE__ {
+        return -128;
+    }
+    static constexpr auto max() -> __INT8_TYPE__ {
+        return 127;
+    }
+
+    static constexpr __INT8_TYPE__ digits = 7;
+    static constexpr __INT8_TYPE__ digits10 = 2;
+    static constexpr bool is_iec559 = false;
+};
+
+template <>
+struct NumericLimits<__INT8_TYPE__> {
+    NumericLimits() = delete;
+    static constexpr auto min() -> __INT8_TYPE__ {
+        return -128;
+    }
+    static constexpr auto max() -> __INT8_TYPE__ {
+        return 127;
+    }
+
+    static constexpr __INT8_TYPE__ digits = 7;
+    static constexpr __INT8_TYPE__ digits10 = 2;
+    static constexpr bool is_iec559 = false;
+};
+
+template <>
+struct NumericLimits<__UINT8_TYPE__> {
+    NumericLimits() = delete;
+    static constexpr auto min() -> __UINT8_TYPE__ {
+        return 0u;
+    }
+    static constexpr auto max() -> __UINT8_TYPE__ {
+        return 255u;
+    }
+
+    static constexpr __INT8_TYPE__ digits = 8;
+    static constexpr __INT8_TYPE__ digits10 = 2;
+    static constexpr bool is_iec559 = false;
+};
+
+template <>
+struct NumericLimits<__INT16_TYPE__> {
+    NumericLimits() = delete;
+    static constexpr auto min() -> __INT16_TYPE__ {
+        return -32'768;
+    }
+    static constexpr auto max() -> __INT16_TYPE__ {
+        return 32'767;
+    }
+
+    static constexpr __INT8_TYPE__ digits = 15;
+    static constexpr __INT8_TYPE__ digits10 = 4;
+    static constexpr bool is_iec559 = false;
+};
+
+template <>
+struct NumericLimits<__UINT16_TYPE__> {
+    NumericLimits() = delete;
+    static constexpr auto min() -> __UINT16_TYPE__ {
+        return 0u;
+    }
+    static constexpr auto max() -> __UINT16_TYPE__ {
+        return 65535u;
+    }
+
+    static constexpr __INT8_TYPE__ digits = 16;
+    static constexpr __INT8_TYPE__ digits10 = 4;
+    static constexpr bool is_iec559 = false;
+};
+
+template <>
+struct NumericLimits<__INT32_TYPE__> {
+    NumericLimits() = delete;
+    static constexpr auto min() -> __INT32_TYPE__ {
+        return -2'147'483'648;
+    }
+    static constexpr auto max() -> __INT32_TYPE__ {
+        return 2'147'483'647;
+    }
+
+    static constexpr __INT8_TYPE__ digits = 31;
+    static constexpr __INT8_TYPE__ digits10 = 9;
+    static constexpr bool is_iec559 = false;
+};
+
+template <>
+struct NumericLimits<__UINT32_TYPE__> {
+    NumericLimits() = delete;
+    static constexpr auto min() -> __UINT32_TYPE__ {
+        return 0u;
+    }
+    static constexpr auto max() -> __UINT32_TYPE__ {
+        return 4'294'967'295;
+    }
+
+    static constexpr __INT8_TYPE__ digits = 32;
+    static constexpr __INT8_TYPE__ digits10 = 9;
+    static constexpr bool is_iec559 = false;
+};
+
+template <>
+struct NumericLimits<__INT64_TYPE__> {
+    NumericLimits() = delete;
+    static constexpr auto min() -> __INT64_TYPE__ {
+        return -9'223'372'036'854'775'807;
+    }
+    static constexpr auto max() -> __INT64_TYPE__ {
+        return 9'223'372'036'854'775'807;
+    }
+
+    static constexpr __INT8_TYPE__ digits = 63;
+    static constexpr __INT8_TYPE__ digits10 = 18;
+    static constexpr bool is_iec559 = false;
+};
+
+template <>
+struct NumericLimits<__UINT64_TYPE__> {
+    NumericLimits() = delete;
+    static constexpr auto min() -> __UINT64_TYPE__ {
+        return 0u;
+    }
+    static constexpr auto max() -> __UINT64_TYPE__ {
+        return 18'446'744'073'709'551'615u;
+    }
+
+    static constexpr __INT8_TYPE__ digits = 64;
+    static constexpr __INT8_TYPE__ digits10 = 19;
+    static constexpr bool is_iec559 = false;
+};
+
+enum class FloatDenorm {
+    indeterminate = -1,
+    absent = 0,
+    present = 1
+};
+
+enum class FloatRound {
+    indeterminate = -1,
+    toward_zero = 0,
+    to_nearest = 1,
+    toward_infinity = 2,
+    toward_neg_infinity = 3
+};
+
+template <>
+struct NumericLimits<float> {
+    NumericLimits() = delete;
+    static constexpr auto min() -> float {
+        return __FLT_MIN__;
+    }
+    static constexpr auto max() -> float {
+        return __FLT_MAX__;
+    }
+
+    static constexpr bool is_iec559 = true;
+    static constexpr __INT32_TYPE__ radix = __FLT_RADIX__;
+    static constexpr __INT32_TYPE__ digits = __FLT_MANT_DIG__;
+    static constexpr __INT32_TYPE__ digits10 = __FLT_DIG__;
+    static constexpr __INT32_TYPE__ max_digits10 =
+        2 + __FLT_MANT_DIG__ * 643L / 2136;
+
+    static constexpr auto epsilon() -> float {
+        return __FLT_EPSILON__;
+    }
+
+    static constexpr __INT32_TYPE__ min_exponent = __FLT_MIN_EXP__;
+    static constexpr __INT32_TYPE__ min_exponent10 = __FLT_MIN_10_EXP__;
+    static constexpr __INT32_TYPE__ max_exponent = __FLT_MAX_EXP__;
+    static constexpr __INT32_TYPE__ max_exponent10 = __FLT_MAX_10_EXP__;
+
+    static constexpr bool has_infinity = __FLT_HAS_INFINITY__;
+    // NOLINTNEXTLINE Let this weird lettercase be used.
+    static constexpr bool has_quiet_NaN = __FLT_HAS_QUIET_NAN__;
+    // NOLINTNEXTLINE Let this weird lettercase be used.
+    static constexpr bool has_signaling_NaN = has_quiet_NaN;
+    static constexpr FloatDenorm has_denorm =
+        static_cast<FloatDenorm>(__FLT_HAS_DENORM__);
+
+    static constexpr auto infinity() -> float {
+        return __builtin_huge_valf();
+    }
+
+    // NOLINTNEXTLINE Let this weird lettercase be used.
+    static constexpr auto quiet_NaN() -> float {
+        return __builtin_nanf("");
+    }
+
+    // NOLINTNEXTLINE Let this weird lettercase be used.
+    static constexpr auto signaling_NaN() -> float {
+        return __builtin_nansf("");
+    }
+
+    // TODO: Use GCC 13's `__builtin_issignalling()`.
+
+    static constexpr auto denorm_min() -> float {
+        return __FLT_DENORM_MIN__;
+    }
+
+    static constexpr FloatRound round_style = FloatRound::to_nearest;
+};
+
+template <>
+struct NumericLimits<double> {
+    NumericLimits() = delete;
+    static constexpr auto min() -> float {
+        return __DBL_MIN__;
+    }
+    static constexpr auto max() -> float {
+        return __DBL_MAX__;
+    }
+
+    static constexpr bool is_iec559 = true;
+    static constexpr __INT32_TYPE__ radix = __FLT_RADIX__;
+    static constexpr __INT32_TYPE__ digits = __DBL_MANT_DIG__;
+    static constexpr __INT32_TYPE__ digits10 = __DBL_DIG__;
+    static constexpr __INT32_TYPE__ max_digits10 =
+        2 + __DBL_MANT_DIG__ * 643L / 2136;
+
+    static constexpr auto epsilon() -> float {
+        return __DBL_EPSILON__;
+    }
+
+    static constexpr __INT32_TYPE__ min_exponent = __DBL_MIN_EXP__;
+    static constexpr __INT32_TYPE__ min_exponent10 = __DBL_MIN_10_EXP__;
+    static constexpr __INT32_TYPE__ max_exponent = __DBL_MAX_EXP__;
+    static constexpr __INT32_TYPE__ max_exponent10 = __DBL_MAX_10_EXP__;
+
+    static constexpr bool has_infinity = __DBL_HAS_INFINITY__;
+    // NOLINTNEXTLINE Let this weird lettercase be used.
+    static constexpr bool has_quiet_NaN = __DBL_HAS_QUIET_NAN__;
+    // NOLINTNEXTLINE Let this weird lettercase be used.
+    static constexpr bool has_signaling_NaN = has_quiet_NaN;
+    static constexpr FloatDenorm has_denorm =
+        static_cast<FloatDenorm>(__DBL_HAS_DENORM__);
+
+    static constexpr auto infinity() -> double {
+        return __builtin_huge_val();
+    }
+
+    // NOLINTNEXTLINE Let this weird lettercase be used.
+    static constexpr auto quiet_NaN() -> double {
+        return __builtin_nan("");
+    }
+
+    // NOLINTNEXTLINE Let this weird lettercase be used.
+    static constexpr auto signaling_NaN() -> double {
+        return __builtin_nans("");
+    }
+
+    static constexpr auto denorm_min() -> double {
+        return __DBL_DENORM_MIN__;
+    }
+
+    static constexpr FloatRound round_style = FloatRound::to_nearest;
+};
+
+// TODO: `NumericLimits<long double>`.
+
+}  // namespace cat
