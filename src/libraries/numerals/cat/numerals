@@ -60,21 +60,23 @@ constexpr auto make_sign_from(To value) -> CopySignFrom<From, To> {
 }
 
 // These macros are defined by the GCC compiler.
-using int1 = Numeral<__INT8_TYPE__, OverflowPolicies::undefined>;
-using uint1 = Numeral<__UINT8_TYPE__, OverflowPolicies::undefined>;
-using int2 = Numeral<__INT16_TYPE__, OverflowPolicies::undefined>;
-using uint2 = Numeral<__UINT16_TYPE__, OverflowPolicies::undefined>;
-using int4 = Numeral<__INT32_TYPE__, OverflowPolicies::undefined>;
-using uint4 = Numeral<__UINT32_TYPE__, OverflowPolicies::undefined>;
-using int8 = Numeral<__INT64_TYPE__, OverflowPolicies::undefined>;
-using uint8 = Numeral<__UINT64_TYPE__, OverflowPolicies::undefined>;
-// using i128 = Numeral<int128_t, OverflowPolicies::undefined>;
-// using u128 = Numeral<uint128_t, OverflowPolicies::undefined>;
+using int1 = Numeral<__INT8_TYPE__, OverflowPolicies::undefined>;     // NOLINT
+using uint1 = Numeral<__UINT8_TYPE__, OverflowPolicies::undefined>;   // NOLINT
+using int2 = Numeral<__INT16_TYPE__, OverflowPolicies::undefined>;    // NOLINT
+using uint2 = Numeral<__UINT16_TYPE__, OverflowPolicies::undefined>;  // NOLINT
+using int4 = Numeral<__INT32_TYPE__, OverflowPolicies::undefined>;    // NOLINT
+using uint4 = Numeral<__UINT32_TYPE__, OverflowPolicies::undefined>;  // NOLINT
+using int8 = Numeral<__INT64_TYPE__, OverflowPolicies::undefined>;    // NOLINT
+using uint8 = Numeral<__UINT64_TYPE__, OverflowPolicies::undefined>;  // NOLINT
+// using i128 = Numeral<int128_t, OverflowPolicies::undefined>; // NOLINT
+// using u128 = Numeral<uint128_t, OverflowPolicies::undefined>; // NOLINT
 
-using float4 = Numeral<float, OverflowPolicies::undefined>;
-using float8 = Numeral<double, OverflowPolicies::undefined>;
+using float4 = Numeral<float, OverflowPolicies::undefined>;   // NOLINT
+using float8 = Numeral<double, OverflowPolicies::undefined>;  // NOLINT
 
+// NOLINTNEXTLINE
 using usize = Numeral<__SIZE_TYPE__, OverflowPolicies::undefined>;
+// NOLINTNEXTLINE
 using ssize = Numeral<MakeSigned<__SIZE_TYPE__>, OverflowPolicies::undefined>;
 
 namespace detail {
