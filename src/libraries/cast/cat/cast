@@ -31,4 +31,17 @@ constexpr auto numeric_cast(From from) -> Optional<To> {
     return to;
 }
 
+template <typename From>
+    requires(sizeof(From) <= 8 && !is_lvalue_reference<From>)
+constexpr auto bit_int_cast(From from) -> decltype(auto) {
+    // TODO: Use a template that makes some integer from a size.
+    using Integer =
+        Conditional<sizeof(from) == 1, int1,
+                    Conditional<sizeof(from) == 2, int2,
+                                Conditional<sizeof(from) == 4, int4, int8>>>;
+    using Return = CopyCvRefFrom<From, Integer>;
+
+    return bit_cast<Return>(from);
+}
+
 }  // namespace cat
