@@ -152,11 +152,77 @@ namespace detail {
     using Void = void;
 }
 
-template <typename T>
-using AddConst = T const;
+template <typename>
+struct AddConstTrait;
 
 template <typename T>
-using AddVolatile = T volatile;
+struct AddConstTrait {
+    using Type = T const;
+};
+
+template <typename T>
+struct AddConstTrait<T&> {
+    using Type = T const&;
+};
+
+template <typename T>
+struct AddConstTrait<T volatile> {
+    using Type = T const volatile;
+};
+
+template <typename T>
+struct AddConstTrait<T&&> {
+    using Type = T const&&;
+};
+
+template <typename T>
+struct AddConstTrait<T volatile&> {
+    using Type = T const volatile&;
+};
+
+template <typename T>
+struct AddConstTrait<T volatile&&> {
+    using Type = T const volatile&&;
+};
+
+template <typename T>
+using AddConst = typename AddConstTrait<T>::Type;
+
+template <typename>
+struct AddVolatileTrait;
+
+template <typename T>
+struct AddVolatileTrait {
+    using Type = T volatile;
+};
+
+template <typename T>
+struct AddVolatileTrait<T&> {
+    using Type = T volatile&;
+};
+
+template <typename T>
+struct AddVolatileTrait<T&&> {
+    using Type = T volatile&&;
+};
+
+template <typename T>
+struct AddVolatileTrait<T const> {
+    using Type = T const volatile;
+};
+
+template <typename T>
+struct AddVolatileTrait<T const&> {
+    using Type = T const volatile&;
+};
+
+template <typename T>
+struct AddVolatileTrait<T const&&> {
+    using Type = T const volatile&&;
+};
+
+template <typename T>
+using AddVolatile = typename AddVolatileTrait<T>::Type;
 
 template <typename T>
 using AddCv = T const volatile;
@@ -404,6 +470,10 @@ template <typename>
 inline constexpr bool is_const = false;
 template <typename T>
 inline constexpr bool is_const<T const> = true;
+template <typename T>
+inline constexpr bool is_const<T const&> = true;
+template <typename T>
+inline constexpr bool is_const<T const&&> = true;
 
 template <typename T>
 inline constexpr bool is_volatile = __is_same(T, T volatile);
@@ -489,36 +559,36 @@ inline constexpr bool is_lvalue_reference = __is_same(T, RemoveReference<T>&);
 template <typename T>
 inline constexpr bool is_rvalue_reference = __is_same(T, RemoveReference<T>&&);
 
-template <typename T, typename U>
-using CopyConstFrom = Conditional<is_const<RemoveReference<U>>,
-                                  // U is const.
-                                  T const,
-                                  // U is not const.
-                                  RemoveConst<T>>;
+template <typename From, typename To>
+using CopyConstFrom = Conditional<is_const<From>,
+                                  // From is const.
+                                  AddConst<To>,
+                                  // From is not const.
+                                  RemoveConst<To>>;
 
-template <typename T, typename U>
-using CopyVolatileFrom = Conditional<is_volatile<RemoveReference<U>>,
-                                     // U is volatile.
-                                     RemoveVolatile<T> volatile,
-                                     // U is not volatile.
-                                     RemoveVolatile<T>>;
+template <typename From, typename To>
+using CopyVolatileFrom = Conditional<is_volatile<RemoveReference<From>>,
+                                     // From is volatile.
+                                     AddVolatile<To>,
+                                     // From is not volatile.
+                                     RemoveVolatile<To>>;
 
-template <typename T, typename U>
+template <typename From, typename To>
 using CopyRefFrom =
-    Conditional<is_lvalue_reference<U>,
-                // U is an l-value reference.
-                AddLvalueReference<RemoveReference<T>>,
-                Conditional<is_rvalue_reference<U>,
-                            // U is an r-value reference.
-                            AddRvalueReference<RemoveReference<T>>,
-                            // U is not a reference.
-                            RemoveReference<T>>>;
+    Conditional<is_lvalue_reference<From>,
+                // From is an l-value reference.
+                AddLvalueReference<RemoveReference<To>>,
+                Conditional<is_rvalue_reference<From>,
+                            // From is an r-value reference.
+                            AddRvalueReference<RemoveReference<To>>,
+                            // From is not a reference.
+                            RemoveReference<To>>>;
 
-template <typename T, typename U>
-using CopyCvFrom = CopyVolatileFrom<CopyConstFrom<T, U>, U>;
+template <typename From, typename To>
+using CopyCvFrom = CopyVolatileFrom<From, CopyConstFrom<From, To>>;
 
-template <typename T, typename U>
-using CopyCvRefFrom = CopyRefFrom<CopyConstFrom<T, U>, U>;
+template <typename From, typename To>
+using CopyCvRefFrom = CopyRefFrom<From, CopyCvFrom<From, To>>;
 
 // `__underlying_type` is a GNU builtin.
 template <typename T>

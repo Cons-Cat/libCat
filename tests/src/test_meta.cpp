@@ -126,7 +126,7 @@ TEST(test_meta) {
 
     static_assert(is_const<int const>);
     static_assert(!is_const<int>);
-    static_assert(!is_const<int const&>);  // This is correct.
+    static_assert(is_const<int const&>);
     static_assert(!is_const<int const*>);
 
     static_assert(is_const<AddConst<int>>);
@@ -152,39 +152,69 @@ TEST(test_meta) {
     static_assert(!is_unsigned<int>);
     static_assert(!is_unsigned<Signed>);
 
+    static_assert(is_same<AddConst<int>, int const>);
+    static_assert(is_same<AddConst<int&>, int const&>);
+    static_assert(is_same<AddConst<int&&>, int const&&>);
+    static_assert(is_same<AddConst<int const>, int const>);
+    static_assert(is_same<AddConst<int const&>, int const&>);
+    static_assert(is_same<AddConst<int const&&>, int const&&>);
+
+    static_assert(is_same<AddConst<int volatile>, int const volatile>);
+    static_assert(is_same<AddConst<int volatile&>, int const volatile&>);
+    static_assert(is_same<AddConst<int volatile&&>, int const volatile&&>);
+    static_assert(is_same<AddConst<int const volatile>, int const volatile>);
+    static_assert(is_same<AddConst<int const volatile&>, int const volatile&>);
+    static_assert(
+        is_same<AddConst<int const volatile&&>, int const volatile&&>);
+
+    static_assert(is_same<AddVolatile<int>, int volatile>);
+    static_assert(is_same<AddVolatile<int&>, int volatile&>);
+    static_assert(is_same<AddVolatile<int&&>, int volatile&&>);
+    static_assert(is_same<AddVolatile<int volatile>, int volatile>);
+    static_assert(is_same<AddVolatile<int volatile&>, int volatile&>);
+    static_assert(is_same<AddVolatile<int volatile&&>, int volatile&&>);
+
+    static_assert(is_same<AddVolatile<int const>, int const volatile>);
+    static_assert(is_same<AddVolatile<int const&>, int const volatile&>);
+    static_assert(is_same<AddVolatile<int const&&>, int const volatile&&>);
+    static_assert(is_same<AddVolatile<int const volatile>, int const volatile>);
+    static_assert(
+        is_same<AddVolatile<int const volatile&>, int const volatile&>);
+    static_assert(
+        is_same<AddVolatile<int const volatile&&>, int const volatile&&>);
+
     static_assert(is_same<CopyConstFrom<int, int>, int>);
-    static_assert(is_same<CopyConstFrom<int, int const>, int const>);
-    static_assert(is_same<CopyConstFrom<int const, int>, int>);
-    static_assert(is_same<CopyConstFrom<int, int const&>, int const>);
-    static_assert(is_same<CopyConstFrom<int, int const&&>, int const>);
-    static_assert(is_same<CopyConstFrom<int const, int&>, int>);
-    static_assert(is_same<CopyConstFrom<int const, int&&>, int>);
+    static_assert(is_same<CopyConstFrom<int const, int>, int const>);
+    static_assert(is_same<CopyConstFrom<int, int const>, int>);
+    static_assert(is_same<CopyConstFrom<int const&, int>, int const>);
+    static_assert(is_same<CopyConstFrom<int const&&, int>, int const>);
+    static_assert(is_same<CopyConstFrom<int&, int const>, int>);
+    static_assert(is_same<CopyConstFrom<int&&, int const>, int>);
 
     static_assert(is_same<CopyCvFrom<int, int>, int>);
-    static_assert(is_same<CopyCvFrom<int const, int>, int>);
-    static_assert(is_same<CopyCvFrom<int, int const>, int const>);
-    static_assert(is_same<CopyCvFrom<int, int const&>, int const>);
-    static_assert(is_same<CopyCvFrom<int, int const&&>, int const>);
-    static_assert(is_same<CopyCvFrom<int const, int&>, int>);
-    static_assert(is_same<CopyCvFrom<int const, int&&>, int>);
+    static_assert(is_same<CopyCvFrom<int, int const>, int>);
+    static_assert(is_same<CopyCvFrom<int const, int>, int const>);
+    static_assert(is_same<CopyCvFrom<int const&, int>, int const>);
+    static_assert(is_same<CopyCvFrom<int const&&, int>, int const>);
+    static_assert(is_same<CopyCvFrom<int&, int const>, int>);
+    static_assert(is_same<CopyCvFrom<int&&, int const>, int>);
 
     static_assert(is_same<CopyRefFrom<int, int>, int>);
-    static_assert(is_same<CopyRefFrom<int, int const>, int>);
-    static_assert(is_same<CopyRefFrom<int, int const&>, int&>);
-    static_assert(is_same<CopyRefFrom<int, int const&&>, int&&>);
-    static_assert(is_same<CopyRefFrom<int const, int>, int const>);
-    static_assert(is_same<CopyRefFrom<int const, int&>, int const&>);
-    static_assert(is_same<CopyRefFrom<int const, int&&>, int const&&>);
+    static_assert(is_same<CopyRefFrom<int const, int>, int>);
+    static_assert(is_same<CopyRefFrom<int const&, int>, int&>);
+    static_assert(is_same<CopyRefFrom<int const&&, int>, int&&>);
+    static_assert(is_same<CopyRefFrom<int, int const>, int const>);
+    static_assert(is_same<CopyRefFrom<int&, int const>, int const&>);
+    static_assert(is_same<CopyRefFrom<int&&, int const>, int const&&>);
 
     static_assert(is_same<CopyCvRefFrom<int, int>, int>);
-    static_assert(is_same<CopyCvRefFrom<int, int const>, int const>);
-    static_assert(is_same<CopyCvRefFrom<int, int const&>, int const&>);
-    static_assert(is_same<CopyCvRefFrom<int, int const&&>, int const&&>);
-    static_assert(is_same<CopyCvRefFrom<int const, int>, int>);
-    static_assert(is_same<CopyCvRefFrom<int const, int&>, int&>);
-    static_assert(is_same<CopyCvRefFrom<int const, int&&>, int&&>);
-    // TODO:
-    // static_assert(is_same<CopyCvRefFrom<int&, int const>, int const>);
+    static_assert(is_same<CopyCvRefFrom<int const, int>, int const>);
+    static_assert(is_same<CopyCvRefFrom<int const&, int>, int const&>);
+    static_assert(is_same<CopyCvRefFrom<int const&&, int>, int const&&>);
+    static_assert(is_same<CopyCvRefFrom<int, int const>, int>);
+    static_assert(is_same<CopyCvRefFrom<int&, int const>, int&>);
+    static_assert(is_same<CopyCvRefFrom<int&&, int const>, int&&>);
+    static_assert(is_same<CopyCvRefFrom<int const, int&>, int const>);
 
     auto lambda = []() {
         return 0;
