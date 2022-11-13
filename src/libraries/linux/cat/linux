@@ -4,8 +4,10 @@
 
 #include <cat/allocator>
 #include <cat/bit>
+#include <cat/cast>
 #include <cat/notype>
 #include <cat/scaredy>
+#include <cat/utility>
 
 inline constexpr ssize page_size = 4096_ki;
 
@@ -288,32 +290,23 @@ namespace detail {
     // Map `void` to `cat::MonostateStorage` and map `T*` to `intptr<T>` so that
     // these types can both hold `-1`.
     template <typename T>
-    using MapSyscallType = cat::Conditional<
-        cat::is_void<T>, cat::MonostateStorage<int, 0>,
-        cat::Conditional<cat::is_pointer<T>, intptr<cat::RemovePointer<T>>, T>>;
+    using MapSyscallType =
+        cat::Conditional<cat::is_void<T>, cat::MonostateStorage<int, 0>, T>;
 
-    template <typename T>
-    constexpr auto is_positive(T const input) -> bool {
-        if constexpr (requires { input >= 0; }) {
-            return input >= 0;
-        } else {
-            // Some types, such as `nix::FileDescriptor`, must be converted to
-            // `ssize` to have a comparison operator.
-            return static_cast<ssize>(input) >= 0;
-        }
+    // NOLINTNEXTLINE This parameter is not always pointer.
+    auto is_positive(auto input) -> bool {
+        return cat::bit_int_cast(input) >= 0;
     }
 }  // namespace detail
 
 template <typename T>
     requires(sizeof(detail::MapSyscallType<T>) <= sizeof(ssize))
-using ScaredyLinux =
-    cat::Scaredy<cat::Compact<detail::MapSyscallType<T>,
-                              // This is a value iff it is a positive integer.
-                              detail::is_positive<detail::MapSyscallType<T>>,
-                              // This defaults to `-1`.
-                              detail::MapSyscallType<T>{-1}>,
-                 // Iff the value is negative, this is some `LinuxError`.
-                 LinuxError>;
+using ScaredyLinux = cat::Scaredy<
+    cat::CompactScaredy<detail::MapSyscallType<T>,
+                        // This is a value iff it is a positive integer.
+                        detail::is_positive<detail::MapSyscallType<T>>>,
+    // Iff the value is negative, this is some `LinuxError`.
+    LinuxError>;
 
 enum class MemoryProtectionFlags : unsigned int {
     none = 0b000,     // Data cannot be accessed at all.
@@ -349,6 +342,8 @@ struct FileDescriptor {
     int4 value;
 
     constexpr FileDescriptor() = default;
+    constexpr FileDescriptor(FileDescriptor const&) = default;
+    constexpr FileDescriptor(FileDescriptor&&) = default;
 
     // This is generic to simplify type-punning.
     constexpr FileDescriptor(cat::integral auto input) {
@@ -373,6 +368,8 @@ struct TtyDescriptor : FileDescriptor {};
 
 struct ProcessId {
     constexpr ProcessId() = default;
+    constexpr ProcessId(ProcessId const&) = default;
+    constexpr ProcessId(ProcessId&&) = default;
 
     constexpr ProcessId(int8 input) {
         this->value = input;
@@ -389,6 +386,9 @@ struct ProcessId {
 
 struct UserId {
     constexpr UserId() = default;
+    constexpr UserId(UserId const&) = default;
+    constexpr UserId(UserId&&) = default;
+
     constexpr UserId(int4 input) {
         this->value = input;
     }
@@ -402,6 +402,8 @@ struct UserId {
 
 struct GroupId {
     constexpr GroupId() = default;
+    constexpr GroupId(GroupId const&) = default;
+    constexpr GroupId(GroupId&&) = default;
 
     // This is generic to simplify type-punning.
     constexpr GroupId(cat::integral auto input) {

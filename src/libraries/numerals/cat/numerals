@@ -478,11 +478,9 @@ class ArithmeticPtr : public Numeral<Storage, policy> {
     using Raw = Storage;
     using Ptr = T*;
 
-    constexpr ArithmeticPtr() : Numeral<Storage, policy>(){};
-
-    // TODO: This redundant constructor is required by GCC.
-    constexpr ArithmeticPtr(ArithmeticPtr<T, Storage, policy> const& other)
-        : Numeral<Storage, policy>(other.raw){};
+    constexpr ArithmeticPtr() = default;
+    constexpr ArithmeticPtr(ArithmeticPtr<T, Storage, policy> const&) = default;
+    constexpr ArithmeticPtr(ArithmeticPtr<T, Storage, policy>&&) = default;
 
     template <integral U>
         requires(detail::is_safe_conversion<U, Storage>)
@@ -514,6 +512,7 @@ class ArithmeticPtr : public Numeral<Storage, policy> {
     // TODO: Streamline out all of these operators by implementing `Numeral`'s
     // with "deducing this".
 
+    // TODO: Cat assignment be `default`?
     // TODO: This redundant assignment operator is required by GCC.
     constexpr auto operator=(ArithmeticPtr<T, Storage, policy> operand)
         -> ArithmeticPtr& {

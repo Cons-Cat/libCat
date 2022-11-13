@@ -94,14 +94,14 @@ TEST(test_scaredy) {
     cat::verify(two_error.error<ErrorOne>().code == 1);
 
     // Test compact optimization.
-    cat::Scaredy<cat::Compact<int4,
-                              [](int4 input) {
-                                  return input >= 0;
-                              },
-                              -1>,
+    cat::Scaredy<cat::CompactScaredy<int4,
+                                     [](int4 input) {
+                                         return input >= 0;
+                                     }>,
                  ErrorOne>
         predicate = -1;
-    // The `Scaredy` here adds no storage bloat to an `int4`.
+
+    // This `Scaredy` adds no storage to an `int4`.
     static_assert(sizeof(predicate) == sizeof(int4));
     cat::verify(!predicate.has_value());
 

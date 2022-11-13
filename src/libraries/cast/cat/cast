@@ -42,6 +42,7 @@ constexpr auto bit_int_cast(From from) -> decltype(auto) {
     using Return = CopyCvRefFrom<From, Integer>;
 
     return bit_cast<Return>(from);
+    // return reinterpret_cast<Return>(from);
 }
 
 }  // namespace cat

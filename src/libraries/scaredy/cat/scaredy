@@ -141,7 +141,7 @@ namespace detail {
         Variant<Value, Errors...> storage;
     };
 
-    // `T` is a `Compact<Type, predicate, sentinel>`.
+    // `T` is a `CompactScaredy<Type, predicate>`.
     template <typename T, typename... Errors>
     struct ScaredyCompactStorage {
         using Value = typename T::Type;
@@ -299,7 +299,7 @@ class Scaredy {
   private:
     // clang-format off
     using Storage = Conditional <requires {
-        T::sentinel_value;
+        T::predicate_function;
     }, detail::ScaredyCompactStorage<T, Errors...>,
         detail::ScaredyVariantStorage <T, Errors...>>;
     // clang-format on

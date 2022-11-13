@@ -54,6 +54,8 @@ TEST(test_numerals) {
     static_assert(cat::is_trivially_relocatable<uintptr<void>>);
     static_assert(cat::is_trivially_relocatable<uintptr<int>>);
 
+    static_assert(cat::is_trivially_copyable<int1>);
+
     static_assert(cat::is_integral<int4>);
     static_assert(cat::is_integral<uint4>);
     static_assert(cat::is_integral<intptr<void>>);

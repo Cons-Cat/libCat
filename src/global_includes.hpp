@@ -62,14 +62,23 @@ struct MonostateStorage {
     T storage;
 };
 
-template <typename T, auto predicate, T sentinel>
-    requires(!predicate(sentinel))
+// `sentinel` should be either a `T` or an error type for `Scaredy`s.
+template <typename T, auto predicate, auto sentinel>
+    requires(!predicate(static_cast<T>(sentinel)))
 struct Compact {
     using Type = T;
     static constexpr auto predicate_function = predicate;
     static constexpr T sentinel_value = sentinel;
     // `Compact`s can only be instantiated at compile-time.
     consteval Compact() = default;
+};
+
+template <typename T, auto predicate>
+struct CompactScaredy {
+    using Type = T;
+    static constexpr auto predicate_function = predicate;
+    // `CompactScaredy`s can only be instantiated at compile-time.
+    consteval CompactScaredy() = default;
 };
 
 namespace detail {
