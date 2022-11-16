@@ -48,7 +48,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_scaredy.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_set_memory.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_simd.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_thread.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_thread.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_tuple.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_variant.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_vector.cpp

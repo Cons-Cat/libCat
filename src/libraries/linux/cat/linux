@@ -1145,8 +1145,8 @@ struct Process {
 
         // We need the top because memory will be pushed to it downwards on
         // x86-64.
-        volatile void* p_stack_top =
-            intptr<void>{this->p_stack} + this->stack_size;
+        void* p_stack_top =
+            static_cast<void*>(intptr<void>{this->p_stack} + this->stack_size);
 
         // TODO: Use the `cat::Scaredy`.
         // ScaredyLinux<void> result;
