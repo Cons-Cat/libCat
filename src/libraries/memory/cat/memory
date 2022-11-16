@@ -52,6 +52,7 @@ namespace detail {
     // this, but that optimization is useless here.
     constexpr void
     set_memory_detail(void* p_source, T value, ssize size) {
+        // TODO: Type pun this with `start_lifetime_as()` instead.
         T* p_current_byte = static_cast<T*>(p_source);
 
         if (is_constant_evaluated()) {

@@ -580,6 +580,7 @@ class ArithmeticPtr : public Numeral<Storage, policy> {
         return self.raw - to_raw_numeral(operand);
     }
 
+    // TODO: Make this `friend`.
     template <typename U>
     constexpr auto operator-=(U operand) -> ArithmeticPtr& {
         this->raw = this->raw - to_raw_numeral(operand);
