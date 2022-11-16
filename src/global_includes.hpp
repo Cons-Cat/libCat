@@ -155,10 +155,12 @@ class String;
     -> void* {
     return p_address;
 }
+
 // NOLINTNEXTLINE Let this be `inline`.
 [[nodiscard]] inline auto operator new[](unsigned long) -> void* {
     return reinterpret_cast<void*>(1ul);
 }
+
 // NOLINTNEXTLINE Let this be `inline`.
 inline void operator delete[](void*){};
 inline void operator delete[](void*, unsigned long){};

@@ -5,8 +5,6 @@
 #include <cat/bit>
 #include <cat/simd>
 
-#include "cat/meta"
-
 namespace std {
 
 // `address_of()` should be used instead of a `&` for containers that might

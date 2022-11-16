@@ -303,9 +303,9 @@ template <typename T>
     requires(sizeof(detail::MapSyscallType<T>) <= sizeof(ssize))
 using ScaredyLinux = cat::Scaredy<
     cat::CompactScaredy<detail::MapSyscallType<T>,
-                        // This is a value iff it is a positive integer.
+                        // This is a `T` when it is a positive integer.
                         detail::is_positive<detail::MapSyscallType<T>>>,
-    // Iff the value is negative, this is some `LinuxError`.
+    // When the value is negative, this is some `LinuxError`.
     LinuxError>;
 
 enum class MemoryProtectionFlags : unsigned int {
@@ -340,19 +340,6 @@ enum class MemoryFlags : unsigned int {
 // value. This is an index into the kernel's file descriptor table.
 struct FileDescriptor {
     int4 value;
-
-    constexpr FileDescriptor() = default;
-    constexpr FileDescriptor(FileDescriptor const&) = default;
-    constexpr FileDescriptor(FileDescriptor&&) = default;
-
-    // This is generic to simplify type-punning.
-    constexpr FileDescriptor(cat::integral auto input) {
-        this->value = static_cast<int>(input);
-    }
-
-    constexpr operator auto() const {
-        return this->value.raw;
-    }
 };
 
 constexpr nix::FileDescriptor stdin = {0};
@@ -367,53 +354,16 @@ static_assert(sizeof(ScaredyLinux<nix::FileDescriptor>) ==
 struct TtyDescriptor : FileDescriptor {};
 
 struct ProcessId {
-    constexpr ProcessId() = default;
-    constexpr ProcessId(ProcessId const&) = default;
-    constexpr ProcessId(ProcessId&&) = default;
-
-    constexpr ProcessId(int8 input) {
-        this->value = input;
-    }
-
-    constexpr operator auto() const {
-        return this->value.raw;
-    }
-
     // Linux supports the better part of `8` `cat::Byte` process IDs on 64-bit
     // systems, but only up to `4` `cat::Byte` process IDs on 32-bit systems.
     ssize value;
 };
 
 struct UserId {
-    constexpr UserId() = default;
-    constexpr UserId(UserId const&) = default;
-    constexpr UserId(UserId&&) = default;
-
-    constexpr UserId(int4 input) {
-        this->value = input;
-    }
-
-    constexpr operator auto() const {
-        return this->value;
-    }
-
     int4 value;
 };
 
 struct GroupId {
-    constexpr GroupId() = default;
-    constexpr GroupId(GroupId const&) = default;
-    constexpr GroupId(GroupId&&) = default;
-
-    // This is generic to simplify type-punning.
-    constexpr GroupId(cat::integral auto input) {
-        this->value = static_cast<int>(input);
-    }
-
-    constexpr operator auto() const {
-        return this->value;
-    }
-
     int4 value;
 };
 

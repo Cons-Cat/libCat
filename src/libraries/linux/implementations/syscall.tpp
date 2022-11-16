@@ -12,7 +12,7 @@ auto nix::syscall(ssize call, Args... parameters) -> nix::ScaredyLinux<T>
     cat::NoType arguments[length] = {parameters...};
 
     // TODO: Make this a `union` of reasonable types.
-    ssize result;
+    cat::NoType result;
 
     if constexpr (length == 0) {
         result = nix::syscall0(call);
@@ -33,16 +33,12 @@ auto nix::syscall(ssize call, Args... parameters) -> nix::ScaredyLinux<T>
                                arguments[3], arguments[4], arguments[5]);
     }
 
-    if constexpr (!cat::is_void<T>) {
-        if constexpr (!cat::is_pointer<T>) {
-            return nix::ScaredyLinux<T>{T{result.raw}};
-        } else {
-            return nix::ScaredyLinux<T>{reinterpret_cast<T>(result.raw)};
-        }
-    } else {
-        if (result < 0) {
-            return static_cast<LinuxError>(result.raw);
-        }
+    if (static_cast<ssize>(result) < 0) {
+        return static_cast<LinuxError>(result);
+    }
+    if constexpr (cat::is_void<T>) {
         return monostate;
+    } else {
+        return static_cast<T>(result);
     }
 }

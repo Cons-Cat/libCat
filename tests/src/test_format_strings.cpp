@@ -18,6 +18,7 @@ TEST(test_format_strings) {
     cat::verify(cat::compare_strings(int_string, "10"));
     cat::verify(int_string.size() == 3);
 
+    // TODO: `constexpr` string comparison.
     // TODO: Test out of memory error handling.
     // TODO: Test formatting maximum value of integers.
     // TODO: Test `int1`, `uint1`, `int2`, `uint2`, `uint4`, `int8`, and
@@ -27,7 +28,6 @@ TEST(test_format_strings) {
     // constexpr cat::StaticString const_int = cat::to_chars<136>();
     // constexpr cat::StaticString const_negative = cat::to_chars<-1650>();
 
-    // TODO: `constexpr` string comparison.
     // cat::verify(cat::compare_strings(const_int.p_data(), "136"));
     // cat::verify(cat::compare_strings(const_negative.p_data(), "-1650"));
 

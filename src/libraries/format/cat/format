@@ -327,6 +327,7 @@ namespace detail {
             // Pack `value` into `packed_arguments_storage`.
             ssize const storage_index =
                 this->arguments_indices[argument_index.raw].byte_index;
+
             copy_memory_small(
                 addressof(value),
                 &(this->packed_arguments_storage[0]) + storage_index,
@@ -336,9 +337,8 @@ namespace detail {
             this->arguments_indices[argument_index.raw].discriminant =
                 detail::FormatTypeConstant::alternative<T>();
 
-            // Set the `raw_storage` byte offset for the next value, iff there
-            // is another one.
-            if (argument_index.raw + 1 <
+            // Set the byte offset for the next argument if there is another.
+            if (argument_index + 1 <
                 ssizeof_pack<Ts...>()) {  // TODO: Explore whether `[[likely]]`
                                           // improves performance here.
                 this->arguments_indices[argument_index.raw + 1].byte_index =
@@ -350,7 +350,8 @@ namespace detail {
         FormatArgumentsCompactStorage(Ts&&... types) {
             this->packed_arguments_storage[0] = {};
             this->arguments_indices[0] = {};
-            ssize argument_index = -1;
+            this->arguments_indices[0].byte_index = 0;
+            ssize argument_index = 0;
             // TODO: Erase the type of `Ts`.
             // `argument_index` increments per call to `.store()`.
             (this->store_argument(argument_index++, forward<Ts>(types)), ...);
@@ -375,16 +376,18 @@ namespace detail {
 
         // Unpack a formatting argument from the type-erased storage.
         template <typename T>
-        auto get(ssize argument_index) const -> T {
+        // This function loads unaligned data.
+        [[gnu::no_sanitize("alignment")]] auto get(ssize argument_index) const
+            -> T {
             // Get the storage index out from the indices array.
             ssize const storage_index =
                 (this->p_arguments_indices + argument_index)->byte_index;
 
-            // TODO: Make this type punning with `bit_cast`, because this
-            // `reinterpret_cast` is undefined behavior.
-            // Offset the pointer to the array of indices by the length of that
-            // array. That produces a pointer to the next struct member, which
-            // happens to be the raw storage array.
+            // TODO: Make this type punning with `bit_cast`, because
+            // this `reinterpret_cast` is undefined behavior. Offset the
+            // pointer to the array of indices by the length of that
+            // array. That produces a pointer to the next struct member,
+            // which happens to be the raw storage array.
             Byte const* const p_storage = reinterpret_cast<Byte const* const>(
                 this->p_arguments_indices + argument_count);
 

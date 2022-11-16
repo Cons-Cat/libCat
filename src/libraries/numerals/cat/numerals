@@ -204,11 +204,11 @@ struct Numeral {
         return +(self.raw);
     }
 
-    friend constexpr auto operator++(Numeral<T, policy> self) -> Numeral {
+    friend constexpr auto operator++(Numeral<T, policy>& self) -> Numeral {
         return ++(self.raw);
     }
 
-    friend constexpr auto operator++(Numeral<T, policy> self, int) -> Numeral {
+    friend constexpr auto operator++(Numeral<T, policy>& self, int) -> Numeral {
         return (self.raw)++;
     }
 
@@ -245,11 +245,11 @@ struct Numeral {
         return -(self.raw);
     }
 
-    friend constexpr auto operator--(Numeral<T, policy> self) -> Numeral {
+    friend constexpr auto operator--(Numeral<T, policy>& self) -> Numeral {
         return --(self.raw);
     }
 
-    friend constexpr auto operator--(Numeral<T, policy> self, int) -> Numeral {
+    friend constexpr auto operator--(Numeral<T, policy>& self, int) -> Numeral {
         return (self.raw)--;
     }
 
@@ -564,12 +564,12 @@ class ArithmeticPtr : public Numeral<Storage, policy> {
         return +(self.raw);
     }
 
-    friend constexpr auto operator++(ArithmeticPtr<T, Storage, policy> self)
+    friend constexpr auto operator++(ArithmeticPtr<T, Storage, policy>& self)
         -> ArithmeticPtr {
         return ++(self.raw);
     }
 
-    friend constexpr auto operator++(ArithmeticPtr<T, Storage, policy> self,
+    friend constexpr auto operator++(ArithmeticPtr<T, Storage, policy>& self,
                                      int) -> ArithmeticPtr {
         return (self.raw)++;
     }
@@ -591,12 +591,12 @@ class ArithmeticPtr : public Numeral<Storage, policy> {
         return -(self.raw);
     }
 
-    friend constexpr auto operator--(ArithmeticPtr<T, Storage, policy> self)
+    friend constexpr auto operator--(ArithmeticPtr<T, Storage, policy>& self)
         -> ArithmeticPtr {
         return --(self.raw);
     }
 
-    friend constexpr auto operator--(ArithmeticPtr<T, Storage, policy> self,
+    friend constexpr auto operator--(ArithmeticPtr<T, Storage, policy>& self,
                                      int) -> ArithmeticPtr {
         return (self.raw)--;
     }
