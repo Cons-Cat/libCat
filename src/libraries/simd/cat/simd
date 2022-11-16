@@ -421,8 +421,11 @@ class alignas(InAbi::alignment.raw) Simd {
 
     // Construct a `Simd` loaded from the address `p_data` with any alignment.
     // This may be slower than `.loaded_aligned()`.
-    [[nodiscard]] static constexpr auto loaded_unaligned(T const* p_data)
-        -> Vector {
+    // Without this `no_sanitize_address` attribute, Asan reports a false
+    // positive when loading a `char const*` from the `.strings` segment,
+    // because vector loads potentially index out of bounds.
+    [[nodiscard, gnu::no_sanitize_address]] static constexpr auto
+    loaded_unaligned(T const* p_data) -> Vector {
         return *bit_cast<UnalignedVector const*>(p_data);
     }
 
