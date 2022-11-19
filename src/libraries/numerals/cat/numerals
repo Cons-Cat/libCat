@@ -114,6 +114,119 @@ namespace detail {
     using PromotedNumeral = decltype(promoted_numeral<T, U>());
 }  // namespace detail
 
+// Much of this code for saturating arithmetic is based on:
+// https://locklessinc.com/articles/sat_arithmetic/
+
+// My functions which use intrinsics instead of inline asm appear to be
+// optimized better that way.
+
+// Add two unsigned 1 byte integers with saturating overflow.
+constexpr auto sat_add(__UINT8_TYPE__ lhs, __UINT8_TYPE__ rhs)
+    -> __UINT8_TYPE__ {
+    __UINT8_TYPE__ sum;
+    sum = lhs + rhs;
+    sum |= -(sum < lhs);  // NOLINT
+    return sum;
+}
+
+// Add two signed 4 byte integers with saturating overflow.
+constexpr auto sat_add(__INT8_TYPE__ lhs, __INT8_TYPE__ rhs) -> __INT8_TYPE__ {
+    __INT8_TYPE__ sum;
+    bool overflow = __builtin_add_overflow(lhs, rhs, &sum);
+    if (overflow) {
+        return __INT8_MAX__;
+    }
+    return sum;
+}
+
+// Add two unsigned 2 byte integers with saturating overflow.
+constexpr auto sat_add(__UINT16_TYPE__ lhs, __UINT16_TYPE__ rhs)
+    -> __UINT16_TYPE__ {
+    __UINT16_TYPE__ sum;
+    sum = lhs + rhs;
+    sum |= -(sum < lhs);  // NOLINT
+    return sum;
+}
+
+// Add two signed 4 byte integers with saturating overflow.
+constexpr auto sat_add(__INT16_TYPE__ lhs, __INT16_TYPE__ rhs)
+    -> __INT16_TYPE__ {
+    __INT16_TYPE__ sum;
+    bool overflow = __builtin_add_overflow(lhs, rhs, &sum);
+    if (overflow) {
+        return __INT16_MAX__;
+    }
+    return sum;
+}
+
+// Add two signed 4 byte integers with saturating overflow.
+constexpr auto sat_add(__INT32_TYPE__ lhs, __INT32_TYPE__ rhs)
+    -> __INT32_TYPE__ {
+    __INT32_TYPE__ sum;
+    bool overflow = __builtin_add_overflow(lhs, rhs, &sum);
+    if (overflow) {
+        return __INT32_MAX__;
+    }
+    return sum;
+}
+
+// Add two unsigned 4 byte integers with saturating overflow.
+constexpr auto sat_add(__UINT32_TYPE__ lhs, __UINT32_TYPE__ rhs)
+    -> __UINT32_TYPE__ {
+    __UINT32_TYPE__ sum;
+    if (__builtin_is_constant_evaluated() /* || not x86-64 */) {
+        sum = lhs + rhs;
+        sum |= -(sum < lhs);  // NOLINT
+    } else {
+        asm(R"(
+            add  %[lhs], %[rhs]
+            sbb  %%eax,  %%eax
+            or   %[rhs],  %%eax)"
+            : "=a"(sum)
+            : [lhs] "r"(lhs), [rhs] "r"(rhs));
+    }
+    return sum;
+}
+
+// Add two unsigned 8 byte integers with saturating overflow.
+constexpr auto sat_add(__UINT64_TYPE__ lhs, __UINT64_TYPE__ rhs)
+    -> __UINT64_TYPE__ {
+    __UINT64_TYPE__ sum;
+    if (__builtin_is_constant_evaluated() /* || not x86-64 */) {
+        sum = lhs + rhs;
+        sum |= -(sum < lhs);  // NOLINT
+    } else {
+        asm(R"(
+            add  %[lhs], %[rhs]
+            sbb  %%rax,  %%rax
+            or   %[rhs],  %%rax)"
+            : "=a"(sum)
+            : [lhs] "r"(lhs), [rhs] "r"(rhs));
+    }
+    return sum;
+}
+
+// Add two signed 8 byte integers with saturating overflow.
+constexpr auto sat_add(__INT64_TYPE__ lhs, __INT64_TYPE__ rhs)
+    -> __INT64_TYPE__ {
+    __INT64_TYPE__ sum;
+    bool overflow = __builtin_saddl_overflow(lhs, rhs, &sum);
+    if (overflow) {
+        return __INT64_MAX__;
+    }
+    return sum;
+}
+
+// Unwrap `Numeral` for `sat_add`.
+template <integral T, integral U>
+    requires(detail::is_safe_comparison<T, U>)
+constexpr auto sat_add(T lhs, U rhs) -> detail::PromotedNumeral<T, U> {
+    // Saturating arithmetic inputs must be cast to the same size.
+    using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
+    return sat_add(static_cast<Type>(to_raw_numeral(lhs)),
+                   static_cast<Type>(to_raw_numeral(rhs)));
+}
+
 template <typename T>
     requires(is_integral<T>)
 [[nodiscard]] constexpr auto count_leading_zeros(T value) -> ssize;
@@ -681,11 +794,11 @@ class ArithmeticPtr : public Numeral<Storage, policy> {
 
 // `__INTPTR_TYPE__` is defined by the GCC compiler.
 template <typename T>
-using intptr = ArithmeticPtr<T, __INTPTR_TYPE__>;
+using intptr = ArithmeticPtr<T, __INTPTR_TYPE__>;  // NOLINT
 
 // `__UINTPTR_TYPE__` is defined by the GCC compiler.
 template <typename T>
-using uintptr = cat::ArithmeticPtr<T, __UINTPTR_TYPE__>;
+using uintptr = cat::ArithmeticPtr<T, __UINTPTR_TYPE__>;  // NOLINT
 
 // Add and assign a `Numeral` to a pointer.
 template <typename T, typename U>

@@ -237,9 +237,109 @@ TEST(test_numerals) {
     // cat::verify((safe_int.wrap + 1) == cat::NumericLimits<int4>::min());
     // safe_int.wrap += 1;
 
-    // Test unwrapping numerals in `NumericLimits`.
+    // Test unwrapped numerals in `NumericLimits`.
     static_assert(cat::NumericLimits<int4>::max() ==
-                  cat::NumericLimits<int>::max());
+                  cat::NumericLimits<int4::Raw>::max());
+    static_assert(cat::NumericLimits<uint8>::max() ==
+                  cat::NumericLimits<uint8::Raw>::max());
     static_assert(cat::NumericLimits<float4>::max() ==
-                  cat::NumericLimits<float>::max());
+                  cat::NumericLimits<float4::Raw>::max());
+
+    // Test unsigned saturating addition.
+    static_assert(cat::sat_add(cat::uint1_max - 3u, 1_u1) < cat::uint1_max);
+    static_assert(cat::sat_add(cat::uint1_max - 1u, 1_u1) == cat::uint1_max);
+    static_assert(cat::sat_add(cat::uint1_max - 1_u1, 1_u1) == cat::uint1_max);
+    static_assert(cat::sat_add(cat::uint1_max.raw, 1_u1) == cat::uint1_max);
+    static_assert(cat::sat_add(cat::uint1_max, 100_u1) == cat::uint1_max);
+
+    cat::verify(cat::sat_add(cat::uint1_max - 3u, 1_u1) < cat::uint1_max);
+    cat::verify(cat::sat_add(cat::uint1_max - 1u, 1_u1) == cat::uint1_max);
+    cat::verify(cat::sat_add(cat::uint1_max - 1u, 1u) == cat::uint1_max);
+    cat::verify(cat::sat_add(cat::uint1_max.raw, 1_u1) == cat::uint1_max);
+    cat::verify(cat::sat_add(cat::uint1_max, 100_u1) == cat::uint1_max);
+
+    static_assert(cat::sat_add(cat::uint2_max - 3u, 2_u2) < cat::uint2_max);
+    static_assert(cat::sat_add(cat::uint2_max - 2u, 2_u2) == cat::uint2_max);
+    static_assert(cat::sat_add(cat::uint2_max - 1_u2, 2_u2) == cat::uint2_max);
+    static_assert(cat::sat_add(cat::uint2_max.raw, 2_u2) == cat::uint2_max);
+    static_assert(cat::sat_add(cat::uint2_max, 100_u2) == cat::uint2_max);
+
+    cat::verify(cat::sat_add(cat::uint2_max - 3u, 2_u2) < cat::uint2_max);
+    cat::verify(cat::sat_add(cat::uint2_max - 2u, 2_u2) == cat::uint2_max);
+    cat::verify(cat::sat_add(cat::uint2_max - 1_u2, 2_u2) == cat::uint2_max);
+    cat::verify(cat::sat_add(cat::uint2_max.raw, 2_u2) == cat::uint2_max);
+    cat::verify(cat::sat_add(cat::uint2_max, 100_u2) == cat::uint2_max);
+
+    static_assert(cat::sat_add(cat::uint4_max - 3u, 2_u4) < cat::uint4_max);
+    static_assert(cat::sat_add(cat::uint4_max - 2u, 2_u4) == cat::uint4_max);
+    static_assert(cat::sat_add(cat::uint4_max - 1u, 2u) == cat::uint4_max);
+    static_assert(cat::sat_add(cat::uint4_max.raw, 2_u4) == cat::uint4_max);
+    static_assert(cat::sat_add(cat::uint4_max, 100u) == cat::uint4_max);
+
+    cat::verify(cat::sat_add(cat::uint4_max - 3u, 2_u4) < cat::uint4_max);
+    cat::verify(cat::sat_add(cat::uint4_max - 2u, 2_u4) == cat::uint4_max);
+    cat::verify(cat::sat_add(cat::uint4_max - 1u, 2u) == cat::uint4_max);
+    cat::verify(cat::sat_add(cat::uint4_max.raw, 2_u4) == cat::uint4_max);
+    cat::verify(cat::sat_add(cat::uint4_max, 100u) == cat::uint4_max);
+
+    static_assert(cat::sat_add(cat::uint8_max - 3u, 2_u8) < cat::uint8_max);
+    static_assert(cat::sat_add(cat::uint8_max - 2u, 2_u8) == cat::uint8_max);
+    static_assert(cat::sat_add(cat::uint8_max - 1u, 2u) == cat::uint8_max);
+    static_assert(cat::sat_add(cat::uint8_max.raw, 2_u8) == cat::uint8_max);
+    static_assert(cat::sat_add(cat::uint8_max, 100u) == cat::uint8_max);
+
+    cat::verify(cat::sat_add(cat::uint8_max - 3u, 2_u8) < cat::uint8_max);
+    cat::verify(cat::sat_add(cat::uint8_max - 2u, 2_u8) == cat::uint8_max);
+    cat::verify(cat::sat_add(cat::uint8_max - 1u, 2u) == cat::uint8_max);
+    cat::verify(cat::sat_add(cat::uint8_max.raw, 2_u8) == cat::uint8_max);
+    cat::verify(cat::sat_add(cat::uint8_max, 100u) == cat::uint8_max);
+
+    // Test signed saturating addition.
+    static_assert(cat::sat_add(cat::int1_max - 3_i1, 1_i1) < cat::int1_max);
+    static_assert(cat::sat_add(cat::int1_max - 1_i1, 1_i1) == cat::int1_max);
+    static_assert(cat::sat_add(cat::int1_max - 1_i1, 1_i1) == cat::int1_max);
+    static_assert(cat::sat_add(cat::int1_max.raw, 1_i1) == cat::int1_max);
+    static_assert(cat::sat_add(cat::int1_max, 100_i1) == cat::int1_max);
+
+    cat::verify(cat::sat_add(cat::int1_max - 3, 1_i1) < cat::int1_max);
+    cat::verify(cat::sat_add(cat::int1_max - 1_i1, 1_i1) == cat::int1_max);
+    cat::verify(cat::sat_add(cat::int1_max - 1_i1, 1_i1) == cat::int1_max);
+    cat::verify(cat::sat_add(cat::int1_max.raw, 1_i1) == cat::int1_max);
+    cat::verify(cat::sat_add(cat::int1_max, 100_i1) == cat::int1_max);
+
+    static_assert(cat::sat_add(cat::int2_max - 3_i2, 2_i2) < cat::int2_max);
+    static_assert(cat::sat_add(cat::int2_max - 2_i2, 2_i2) == cat::int2_max);
+    static_assert(cat::sat_add(cat::int2_max - 1_i2, 2_i2) == cat::int2_max);
+    static_assert(cat::sat_add(cat::int2_max.raw, 2_i2) == cat::int2_max);
+    static_assert(cat::sat_add(cat::int2_max, 100_i2) == cat::int2_max);
+
+    cat::verify(cat::sat_add(cat::int2_max - 3_i2, 2_i2) < cat::int2_max);
+    cat::verify(cat::sat_add(cat::int2_max - 2_i2, 2_i2) == cat::int2_max);
+    cat::verify(cat::sat_add(cat::int2_max - 1_i2, 2_i2) == cat::int2_max);
+    cat::verify(cat::sat_add(cat::int2_max.raw, 2_i2) == cat::int2_max);
+    cat::verify(cat::sat_add(cat::int2_max, 100_i2) == cat::int2_max);
+
+    static_assert(cat::sat_add(cat::int4_max - 3, 2_i4) < cat::int4_max);
+    static_assert(cat::sat_add(cat::int4_max - 2, 2_i4) == cat::int4_max);
+    static_assert(cat::sat_add(cat::int4_max - 1, 2) == cat::int4_max);
+    static_assert(cat::sat_add(cat::int4_max.raw, 2_i4) == cat::int4_max);
+    static_assert(cat::sat_add(cat::int4_max, 100) == cat::int4_max);
+
+    cat::verify(cat::sat_add(cat::int4_max - 3, 2_i4) < cat::int4_max);
+    cat::verify(cat::sat_add(cat::int4_max - 2, 2_i4) == cat::int4_max);
+    cat::verify(cat::sat_add(cat::int4_max - 1, 2) == cat::int4_max);
+    cat::verify(cat::sat_add(cat::int4_max.raw, 2_i4) == cat::int4_max);
+    cat::verify(cat::sat_add(cat::int4_max, 100) == cat::int4_max);
+
+    static_assert(cat::sat_add(cat::int8_max - 3, 2_i8) < cat::int8_max);
+    static_assert(cat::sat_add(cat::int8_max - 2, 2_i8) == cat::int8_max);
+    static_assert(cat::sat_add(cat::int8_max - 1, 2) == cat::int8_max);
+    static_assert(cat::sat_add(cat::int8_max.raw, 2_i8) == cat::int8_max);
+    static_assert(cat::sat_add(cat::int8_max, 100) == cat::int8_max);
+
+    cat::verify(cat::sat_add(cat::int8_max - 3, 2_i8) < cat::int8_max);
+    cat::verify(cat::sat_add(cat::int8_max - 2, 2_i8) == cat::int8_max);
+    cat::verify(cat::sat_add(cat::int8_max - 1, 2) == cat::int8_max);
+    cat::verify(cat::sat_add(cat::int8_max.raw, 2_i8) == cat::int8_max);
+    cat::verify(cat::sat_add(cat::int8_max, 100) == cat::int8_max);
 };

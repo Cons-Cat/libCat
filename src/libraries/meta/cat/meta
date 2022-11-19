@@ -347,6 +347,12 @@ struct ConditionalTrait<false, T, U> {
 template <bool condition, typename T, typename U>
 using Conditional = typename ConditionalTrait<condition, T, U>::Type;
 
+template <typename T, typename U>
+using Larger = Conditional<(sizeof(T) >= sizeof(U)), T, U>;
+
+template <typename T, typename U>
+using Smaller = Conditional<(sizeof(T) <= sizeof(U)), T, U>;
+
 // `__is_enum()` is a GNU builtin.
 template <typename T>
 inline constexpr bool is_enum = __is_enum(T);
