@@ -20,10 +20,10 @@ struct NumericLimits<Numeral<T, policy>> : NumericLimits<T> {};
 template <>
 struct NumericLimits<char> {
     NumericLimits() = delete;
-    static constexpr auto min() -> __INT8_TYPE__ {
+    static consteval auto min() -> __INT8_TYPE__ {
         return -128;
     }
-    static constexpr auto max() -> __INT8_TYPE__ {
+    static consteval auto max() -> __INT8_TYPE__ {
         return 127;
     }
 
@@ -35,10 +35,10 @@ struct NumericLimits<char> {
 template <>
 struct NumericLimits<__INT8_TYPE__> {
     NumericLimits() = delete;
-    static constexpr auto min() -> __INT8_TYPE__ {
+    static consteval auto min() -> __INT8_TYPE__ {
         return -128;
     }
-    static constexpr auto max() -> __INT8_TYPE__ {
+    static consteval auto max() -> __INT8_TYPE__ {
         return 127;
     }
 
@@ -50,10 +50,10 @@ struct NumericLimits<__INT8_TYPE__> {
 template <>
 struct NumericLimits<__UINT8_TYPE__> {
     NumericLimits() = delete;
-    static constexpr auto min() -> __UINT8_TYPE__ {
+    static consteval auto min() -> __UINT8_TYPE__ {
         return 0u;
     }
-    static constexpr auto max() -> __UINT8_TYPE__ {
+    static consteval auto max() -> __UINT8_TYPE__ {
         return 255u;
     }
 
@@ -65,10 +65,10 @@ struct NumericLimits<__UINT8_TYPE__> {
 template <>
 struct NumericLimits<__INT16_TYPE__> {
     NumericLimits() = delete;
-    static constexpr auto min() -> __INT16_TYPE__ {
+    static consteval auto min() -> __INT16_TYPE__ {
         return -32'768;
     }
-    static constexpr auto max() -> __INT16_TYPE__ {
+    static consteval auto max() -> __INT16_TYPE__ {
         return 32'767;
     }
 
@@ -80,10 +80,10 @@ struct NumericLimits<__INT16_TYPE__> {
 template <>
 struct NumericLimits<__UINT16_TYPE__> {
     NumericLimits() = delete;
-    static constexpr auto min() -> __UINT16_TYPE__ {
+    static consteval auto min() -> __UINT16_TYPE__ {
         return 0u;
     }
-    static constexpr auto max() -> __UINT16_TYPE__ {
+    static consteval auto max() -> __UINT16_TYPE__ {
         return 65535u;
     }
 
@@ -95,10 +95,10 @@ struct NumericLimits<__UINT16_TYPE__> {
 template <>
 struct NumericLimits<__INT32_TYPE__> {
     NumericLimits() = delete;
-    static constexpr auto min() -> __INT32_TYPE__ {
+    static consteval auto min() -> __INT32_TYPE__ {
         return -2'147'483'648;
     }
-    static constexpr auto max() -> __INT32_TYPE__ {
+    static consteval auto max() -> __INT32_TYPE__ {
         return 2'147'483'647;
     }
 
@@ -110,10 +110,10 @@ struct NumericLimits<__INT32_TYPE__> {
 template <>
 struct NumericLimits<__UINT32_TYPE__> {
     NumericLimits() = delete;
-    static constexpr auto min() -> __UINT32_TYPE__ {
+    static consteval auto min() -> __UINT32_TYPE__ {
         return 0u;
     }
-    static constexpr auto max() -> __UINT32_TYPE__ {
+    static consteval auto max() -> __UINT32_TYPE__ {
         return 4'294'967'295;
     }
 
@@ -125,10 +125,10 @@ struct NumericLimits<__UINT32_TYPE__> {
 template <>
 struct NumericLimits<__INT64_TYPE__> {
     NumericLimits() = delete;
-    static constexpr auto min() -> __INT64_TYPE__ {
+    static consteval auto min() -> __INT64_TYPE__ {
         return -9'223'372'036'854'775'807;
     }
-    static constexpr auto max() -> __INT64_TYPE__ {
+    static consteval auto max() -> __INT64_TYPE__ {
         return 9'223'372'036'854'775'807;
     }
 
@@ -140,10 +140,10 @@ struct NumericLimits<__INT64_TYPE__> {
 template <>
 struct NumericLimits<__UINT64_TYPE__> {
     NumericLimits() = delete;
-    static constexpr auto min() -> __UINT64_TYPE__ {
+    static consteval auto min() -> __UINT64_TYPE__ {
         return 0u;
     }
-    static constexpr auto max() -> __UINT64_TYPE__ {
+    static consteval auto max() -> __UINT64_TYPE__ {
         return 18'446'744'073'709'551'615u;
     }
 
@@ -169,10 +169,10 @@ enum class FloatRound {
 template <>
 struct NumericLimits<float> {
     NumericLimits() = delete;
-    static constexpr auto min() -> float {
+    static consteval auto min() -> float {
         return __FLT_MIN__;
     }
-    static constexpr auto max() -> float {
+    static consteval auto max() -> float {
         return __FLT_MAX__;
     }
 
@@ -226,10 +226,10 @@ struct NumericLimits<float> {
 template <>
 struct NumericLimits<double> {
     NumericLimits() = delete;
-    static constexpr auto min() -> float {
+    static consteval auto min() -> float {
         return __DBL_MIN__;
     }
-    static constexpr auto max() -> float {
+    static consteval auto max() -> float {
         return __DBL_MAX__;
     }
 

@@ -560,8 +560,8 @@ struct Numeral {
 
     // Making these `auto` solves a clang-tidy false diagnostic.
     // TODO: These should be type `Numeral<T>`.
-    static constexpr auto min = NumericLimits<Raw>::min;
-    static constexpr auto max = NumericLimits<Raw>::max;
+    static constexpr auto min = NumericLimits<Raw>::min();
+    static constexpr auto max = NumericLimits<Raw>::max();
 };
 
 // `ArithmeticPtr` can be constructed from any integer type or any pointer.
