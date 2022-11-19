@@ -130,8 +130,9 @@ TEST(test_numerals) {
     static_assert(cat::is_same<decltype(intptr<void>{} - 1), intptr<void>>);
 
     // `int4` pointer arithmetic.
-    int* p_int4 = ((int*)(0)) + 1_i4;
-    p_int4 = 1_i4 + ((int*)(0));
+    char address;
+    int* p_int4 = (reinterpret_cast<int*>(&address)) + 1_i4;
+    p_int4 = 1_i4 + (reinterpret_cast<int*>(&address));
     p_int4 += 1_i4;
     p_int4 = p_int4 - 1_i4;
     p_int4 -= 1_i4;
