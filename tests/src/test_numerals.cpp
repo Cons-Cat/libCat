@@ -1,6 +1,7 @@
 #include <cat/match>
 
 #include "../unit_tests.hpp"
+#include "cat/numerals"
 
 template <auto value>
 struct Nttp {
@@ -440,4 +441,23 @@ TEST(test_numerals) {
     cat::verify(cat::sat_sub(cat::int8_min + 1, 2) == cat::int8_min);
     cat::verify(cat::sat_sub(cat::int8_min.raw, 2_i8) == cat::int8_min);
     cat::verify(cat::sat_sub(cat::int8_min, 100) == cat::int8_min);
+
+    // Test wrapping arithmetic operations.
+    static_assert(cat::wrap_add(0, 1) == 1);
+    static_assert(cat::wrap_add(cat::int4_max - 1, 1) == cat::int4_max);
+    static_assert(cat::wrap_add(cat::int4_max, 1) == cat::int4_min);
+    static_assert(cat::wrap_add(cat::int4_max, 2) == cat::int4_min + 1);
+
+    static_assert(cat::wrap_add(0u, 1u) == 1u);
+    static_assert(cat::wrap_add(cat::uint4_max - 1u, 1u) == cat::uint4_max);
+    static_assert(cat::wrap_add(cat::uint4_max, 1u) == cat::uint4_min);
+    static_assert(cat::wrap_add(cat::uint4_max, 2u) == cat::uint4_min + 1u);
+
+    static_assert(cat::wrap_mul(0, 1) == 0);
+    static_assert(cat::wrap_mul(cat::int4_max, 1) == cat::int4_max);
+    static_assert(cat::wrap_mul(cat::int4_max, 2) == -2);
+
+    static_assert(cat::wrap_mul(0u, 1u) == 0u);
+    static_assert(cat::wrap_mul(cat::uint4_max, 1u) == cat::uint4_max);
+    static_assert(cat::wrap_mul(cat::uint4_max, 2u) == cat::uint4_max - 1u);
 };

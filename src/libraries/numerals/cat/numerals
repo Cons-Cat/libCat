@@ -57,6 +57,7 @@ constexpr auto make_signed(T value) -> MakeSigned<T> {
 
 template <integral T>
 constexpr auto make_unsigned(T value) -> MakeUnsigned<T> {
+    // Could this use `__builtin_bit_cast()`?
     return static_cast<MakeUnsigned<T>>(value);
 }
 
@@ -154,6 +155,16 @@ template <integral T, integral U>
     return sat_add(static_cast<Type>(lhs), static_cast<Type>(rhs));
 }
 
+// Add two integers with wrapping overflow.
+template <integral T, integral U>
+    requires(detail::is_safe_comparison<T, U>)
+[[nodiscard]] constexpr auto wrap_add(T lhs, U rhs)
+    -> detail::PromotedNumeral<T, U> {
+    using Type = Larger<T, U>;
+    return detail::PromotedNumeral<T, U>{make_unsigned(static_cast<Type>(lhs)) +
+                                         make_unsigned(static_cast<Type>(rhs))};
+}
+
 // Subtract two integers with saturating overflow.
 template <rawNumeral T>
 [[nodiscard, gnu::optimize(2)]] constexpr auto sat_sub(T lhs, T rhs) -> T {
@@ -173,6 +184,16 @@ template <integral T, integral U>
     // Saturating arithmetic inputs must be cast to the same size.
     using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
     return sat_sub(static_cast<Type>(lhs), static_cast<Type>(rhs));
+}
+
+// Subtract two integers with wrapping overflow.
+template <integral T, integral U>
+    requires(detail::is_safe_comparison<T, U>)
+[[nodiscard]] constexpr auto wrap_sub(T lhs, U rhs)
+    -> detail::PromotedNumeral<T, U> {
+    using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
+    return detail::PromotedNumeral<T, U>{make_unsigned(static_cast<Type>(lhs)) -
+                                         make_unsigned(static_cast<Type>(rhs))};
 }
 
 // Subtract two integers with saturating overflow.
@@ -196,6 +217,16 @@ template <integral T, integral U>
     return sat_mul(static_cast<Type>(lhs), static_cast<Type>(rhs));
 }
 
+// Multiply two integers with wrapping overflow.
+template <integral T, integral U>
+    requires(detail::is_safe_comparison<T, U>)
+[[nodiscard]] constexpr auto wrap_mul(T lhs, U rhs)
+    -> detail::PromotedNumeral<T, U> {
+    using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
+    return detail::PromotedNumeral<T, U>{make_unsigned(static_cast<Type>(lhs)) *
+                                         make_unsigned(static_cast<Type>(rhs))};
+}
+
 // Subtract two integers with saturating overflow.
 template <rawNumeral T>
 [[nodiscard, gnu::optimize(2)]] constexpr auto sat_div(T lhs, T rhs) -> T {
@@ -214,6 +245,16 @@ template <integral T, integral U>
     // Saturating arithmetic inputs must be cast to the same size.
     using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
     return sat_div(static_cast<Type>(lhs), static_cast<Type>(rhs));
+}
+
+// Divide two integers with wrapping overflow.
+template <integral T, integral U>
+    requires(detail::is_safe_comparison<T, U>)
+[[nodiscard]] constexpr auto wrap_div(T lhs, U rhs)
+    -> detail::PromotedNumeral<T, U> {
+    using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
+    return detail::PromotedNumeral<T, U>{make_unsigned(static_cast<Type>(lhs)) /
+                                         make_unsigned(static_cast<Type>(rhs))};
 }
 
 // Left bit-shifting two unsigned integers with saturating overflow.
