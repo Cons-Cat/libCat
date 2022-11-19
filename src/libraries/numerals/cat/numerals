@@ -560,8 +560,8 @@ struct Numeral {
 
     // Making these `auto` solves a clang-tidy false diagnostic.
     // TODO: These should be type `Numeral<T>`.
-    static constexpr auto min = NumericLimits<Raw>::min();
-    static constexpr auto max = NumericLimits<Raw>::max();
+    static constexpr auto min = Limits<Raw>::min();
+    static constexpr auto max = Limits<Raw>::max();
 };
 
 // `ArithmeticPtr` can be constructed from any integer type or any pointer.
@@ -912,22 +912,22 @@ struct bool4 {  // NOLINT
     }
 };
 
-inline constexpr int1 int1_min = NumericLimits<int1>::min();
-inline constexpr int1 int1_max = NumericLimits<int1>::max();
-inline constexpr uint1 uint1_min = NumericLimits<uint1>::min();
-inline constexpr uint1 uint1_max = NumericLimits<uint1>::max();
-inline constexpr int2 int2_min = NumericLimits<int2>::min();
-inline constexpr int2 int2_max = NumericLimits<int2>::max();
-inline constexpr uint2 uint2_min = NumericLimits<uint2>::min();
-inline constexpr uint2 uint2_max = NumericLimits<uint2>::max();
-inline constexpr int4 int4_min = NumericLimits<int4>::min();
-inline constexpr int4 int4_max = NumericLimits<int4>::max();
-inline constexpr uint4 uint4_min = NumericLimits<uint4>::min();
-inline constexpr uint4 uint4_max = NumericLimits<uint4>::max();
-inline constexpr int8 int8_min = NumericLimits<int8>::min();
-inline constexpr int8 int8_max = NumericLimits<int8>::max();
-inline constexpr uint8 uint8_min = NumericLimits<uint8>::min();
-inline constexpr uint8 uint8_max = NumericLimits<uint8>::max();
+inline constexpr int1 int1_min = Limits<int1>::min();
+inline constexpr int1 int1_max = Limits<int1>::max();
+inline constexpr uint1 uint1_min = Limits<uint1>::min();
+inline constexpr uint1 uint1_max = Limits<uint1>::max();
+inline constexpr int2 int2_min = Limits<int2>::min();
+inline constexpr int2 int2_max = Limits<int2>::max();
+inline constexpr uint2 uint2_min = Limits<uint2>::min();
+inline constexpr uint2 uint2_max = Limits<uint2>::max();
+inline constexpr int4 int4_min = Limits<int4>::min();
+inline constexpr int4 int4_max = Limits<int4>::max();
+inline constexpr uint4 uint4_min = Limits<uint4>::min();
+inline constexpr uint4 uint4_max = Limits<uint4>::max();
+inline constexpr int8 int8_min = Limits<int8>::min();
+inline constexpr int8 int8_max = Limits<int8>::max();
+inline constexpr uint8 uint8_min = Limits<uint8>::min();
+inline constexpr uint8 uint8_max = Limits<uint8>::max();
 
 }  // namespace cat
 

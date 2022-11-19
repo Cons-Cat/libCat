@@ -8,18 +8,18 @@ namespace cat {
 // TODO: Implement support for complex floats.
 
 template <typename>
-struct NumericLimits {};
+struct Limits {};
 
 // Unwrap all `Numeral`s inside of `NumericLimits`.
 template <typename T, OverflowPolicies policy>
-struct NumericLimits<Numeral<T, policy>> : NumericLimits<T> {};
+struct Limits<Numeral<T, policy>> : Limits<T> {};
 
 // TODO: Implement `min` and `max` limits in terms of GCC macros, like
 // `__LONG_LONG_MAX__`.
 
 template <>
-struct NumericLimits<char> {
-    NumericLimits() = delete;
+struct Limits<char> {
+    Limits() = delete;
     static consteval auto min() -> __INT8_TYPE__ {
         return -128;
     }
@@ -33,8 +33,8 @@ struct NumericLimits<char> {
 };
 
 template <>
-struct NumericLimits<__INT8_TYPE__> {
-    NumericLimits() = delete;
+struct Limits<__INT8_TYPE__> {
+    Limits() = delete;
     static consteval auto min() -> __INT8_TYPE__ {
         return -128;
     }
@@ -48,8 +48,8 @@ struct NumericLimits<__INT8_TYPE__> {
 };
 
 template <>
-struct NumericLimits<__UINT8_TYPE__> {
-    NumericLimits() = delete;
+struct Limits<__UINT8_TYPE__> {
+    Limits() = delete;
     static consteval auto min() -> __UINT8_TYPE__ {
         return 0u;
     }
@@ -63,8 +63,8 @@ struct NumericLimits<__UINT8_TYPE__> {
 };
 
 template <>
-struct NumericLimits<__INT16_TYPE__> {
-    NumericLimits() = delete;
+struct Limits<__INT16_TYPE__> {
+    Limits() = delete;
     static consteval auto min() -> __INT16_TYPE__ {
         return -32'768;
     }
@@ -78,8 +78,8 @@ struct NumericLimits<__INT16_TYPE__> {
 };
 
 template <>
-struct NumericLimits<__UINT16_TYPE__> {
-    NumericLimits() = delete;
+struct Limits<__UINT16_TYPE__> {
+    Limits() = delete;
     static consteval auto min() -> __UINT16_TYPE__ {
         return 0u;
     }
@@ -93,8 +93,8 @@ struct NumericLimits<__UINT16_TYPE__> {
 };
 
 template <>
-struct NumericLimits<__INT32_TYPE__> {
-    NumericLimits() = delete;
+struct Limits<__INT32_TYPE__> {
+    Limits() = delete;
     static consteval auto min() -> __INT32_TYPE__ {
         return -2'147'483'648;
     }
@@ -108,8 +108,8 @@ struct NumericLimits<__INT32_TYPE__> {
 };
 
 template <>
-struct NumericLimits<__UINT32_TYPE__> {
-    NumericLimits() = delete;
+struct Limits<__UINT32_TYPE__> {
+    Limits() = delete;
     static consteval auto min() -> __UINT32_TYPE__ {
         return 0u;
     }
@@ -123,8 +123,8 @@ struct NumericLimits<__UINT32_TYPE__> {
 };
 
 template <>
-struct NumericLimits<__INT64_TYPE__> {
-    NumericLimits() = delete;
+struct Limits<__INT64_TYPE__> {
+    Limits() = delete;
     static consteval auto min() -> __INT64_TYPE__ {
         return -9'223'372'036'854'775'807;
     }
@@ -138,8 +138,8 @@ struct NumericLimits<__INT64_TYPE__> {
 };
 
 template <>
-struct NumericLimits<__UINT64_TYPE__> {
-    NumericLimits() = delete;
+struct Limits<__UINT64_TYPE__> {
+    Limits() = delete;
     static consteval auto min() -> __UINT64_TYPE__ {
         return 0u;
     }
@@ -167,8 +167,8 @@ enum class FloatRound {
 };
 
 template <>
-struct NumericLimits<float> {
-    NumericLimits() = delete;
+struct Limits<float> {
+    Limits() = delete;
     static consteval auto min() -> float {
         return __FLT_MIN__;
     }
@@ -224,8 +224,8 @@ struct NumericLimits<float> {
 };
 
 template <>
-struct NumericLimits<double> {
-    NumericLimits() = delete;
+struct Limits<double> {
+    Limits() = delete;
     static consteval auto min() -> float {
         return __DBL_MIN__;
     }

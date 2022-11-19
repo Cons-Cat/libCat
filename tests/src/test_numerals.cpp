@@ -149,6 +149,8 @@ TEST(test_numerals) {
 
     // Test `ArithmeticPtr` conversions.
     uintptr<void> uintptr_1 = static_cast<uintptr<void>>(intptr_1);
+    [[maybe_unused]] uintptr<void>::Raw raw_uintptr =
+        static_cast<uintptr<void>::Raw>(uintptr_1);
     [[maybe_unused]] intptr<void> intptr_3 =
         static_cast<intptr<void>>(uintptr_1);
 
@@ -234,16 +236,14 @@ TEST(test_numerals) {
 
     // Test wrapping overflow.
     // int4 safe_int = int4::max();
-    // cat::verify((safe_int.wrap + 1) == cat::NumericLimits<int4>::min());
+    // cat::verify((safe_int.wrap + 1) == cat::Limits<int4>::min());
     // safe_int.wrap += 1;
 
-    // Test unwrapped numerals in `NumericLimits`.
-    static_assert(cat::NumericLimits<int4>::max() ==
-                  cat::NumericLimits<int4::Raw>::max());
-    static_assert(cat::NumericLimits<uint8>::max() ==
-                  cat::NumericLimits<uint8::Raw>::max());
-    static_assert(cat::NumericLimits<float4>::max() ==
-                  cat::NumericLimits<float4::Raw>::max());
+    // Test unwrapped numerals in `Limits`.
+    static_assert(cat::Limits<int4>::max() == cat::Limits<int4::Raw>::max());
+    static_assert(cat::Limits<uint8>::max() == cat::Limits<uint8::Raw>::max());
+    static_assert(cat::Limits<float4>::max() ==
+                  cat::Limits<float4::Raw>::max());
 
     // Test unsigned saturating addition.
     static_assert(cat::sat_add(cat::uint1_max - 3u, 1_u1) < cat::uint1_max);

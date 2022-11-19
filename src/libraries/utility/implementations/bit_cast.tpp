@@ -13,7 +13,7 @@ template <typename T, typename U>
 // inlines this function, resulting in a smaller debug binary.
 [[gnu::always_inline,
 #ifndef __OPTIMIZED__
-  gnu::optimize("O1"),
+  gnu::optimize(1),
 #endif
   // Bit-casting a type can violate alignment assumptions, so that UBSan check
   // is disabled here.

@@ -47,11 +47,11 @@ namespace cat::detail::dragonbox {
 namespace detail {
     template <class T>
     constexpr usize::Raw physical_bits =
-        sizeof(T) * NumericLimits<unsigned char>::digits;
+        sizeof(T) * Limits<unsigned char>::digits;
 
     template <class T>
         requires(is_unsigned<T>)
-    inline constexpr usize::Raw value_bits = NumericLimits<T>::digits;
+    inline constexpr usize::Raw value_bits = Limits<T>::digits;
 }  // namespace detail
 
 // These classes expose encoding specs of IEEE-754-like floating-point formats.
@@ -85,7 +85,7 @@ struct default_float_traits {
     // I don't know if there is a truly reliable way of detecting
     // IEEE-754 binary32/binary64 formats; I just did my best here.
     static_assert(
-        NumericLimits<T>::is_iec559 && NumericLimits<T>::radix == 2 &&
+        Limits<T>::is_iec559 && Limits<T>::radix == 2 &&
             (detail::physical_bits<T> == 32 || detail::physical_bits<T> == 64),
         "default_ieee754_traits only works for 32-bits or 64-bits types "
         "supporting binary32 or binary64 formats!");
@@ -2629,7 +2629,7 @@ small_divisor_case_label:
                 int s = 0;
                 while (true) {
                     auto q = bits::rotr(n * mod_inv_25, 2);
-                    if (q <= NumericLimits<uint4::Raw>::max() / 100) {
+                    if (q <= Limits<uint4::Raw>::max() / 100) {
                         n = q;
                         s += 2;
                     } else {
@@ -2637,7 +2637,7 @@ small_divisor_case_label:
                     }
                 }
                 auto q = bits::rotr(n * mod_inv_5, 1);
-                if (q <= NumericLimits<uint4::Raw>::max() / 10) {
+                if (q <= Limits<uint4::Raw>::max() / 10) {
                     n = q;
                     s |= 1;
                 }
@@ -2667,7 +2667,7 @@ small_divisor_case_label:
                     int s = 8;
                     while (true) {
                         auto q = bits::rotr(n32 * mod_inv_25, 2);
-                        if (q <= NumericLimits<uint4::Raw>::max() / 100) {
+                        if (q <= Limits<uint4::Raw>::max() / 100) {
                             n32 = q;
                             s += 2;
                         } else {
@@ -2675,7 +2675,7 @@ small_divisor_case_label:
                         }
                     }
                     auto q = bits::rotr(n32 * mod_inv_5, 1);
-                    if (q <= NumericLimits<uint4::Raw>::max() / 10) {
+                    if (q <= Limits<uint4::Raw>::max() / 10) {
                         n32 = q;
                         s |= 1;
                     }
@@ -2691,7 +2691,7 @@ small_divisor_case_label:
                 int s = 0;
                 while (true) {
                     auto q = bits::rotr(n * mod_inv_25, 2);
-                    if (q <= NumericLimits<uint8::Raw>::max() / 100) {
+                    if (q <= Limits<uint8::Raw>::max() / 100) {
                         n = q;
                         s += 2;
                     } else {
@@ -2699,7 +2699,7 @@ small_divisor_case_label:
                     }
                 }
                 auto q = bits::rotr(n * mod_inv_5, 1);
-                if (q <= NumericLimits<uint8::Raw>::max() / 10) {
+                if (q <= Limits<uint8::Raw>::max() / 10) {
                     n = q;
                     s |= 1;
                 }
