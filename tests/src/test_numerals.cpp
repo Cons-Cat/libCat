@@ -342,4 +342,102 @@ TEST(test_numerals) {
     cat::verify(cat::sat_add(cat::int8_max - 1, 2) == cat::int8_max);
     cat::verify(cat::sat_add(cat::int8_max.raw, 2_i8) == cat::int8_max);
     cat::verify(cat::sat_add(cat::int8_max, 100) == cat::int8_max);
+
+    // Test unsigned saturating subtraction.
+    static_assert(cat::sat_sub(cat::uint1_min + 3u, 1_u1) > cat::uint1_min);
+    static_assert(cat::sat_sub(cat::uint1_min + 1u, 1_u1) == cat::uint1_min);
+    static_assert(cat::sat_sub(cat::uint1_min + 1_u1, 1_u1) == cat::uint1_min);
+    static_assert(cat::sat_sub(cat::uint1_min.raw, 1_u1) == cat::uint1_min);
+    static_assert(cat::sat_sub(cat::uint1_min, 100_u1) == cat::uint1_min);
+
+    cat::verify(cat::sat_sub(cat::uint1_min + 3u, 1_u1) > cat::uint1_min);
+    cat::verify(cat::sat_sub(cat::uint1_min + 1u, 1_u1) == cat::uint1_min);
+    cat::verify(cat::sat_sub(cat::uint1_min + 1u, 1u) == cat::uint1_min);
+    cat::verify(cat::sat_sub(cat::uint1_min.raw, 1_u1) == cat::uint1_min);
+    cat::verify(cat::sat_sub(cat::uint1_min, 100_u1) == cat::uint1_min);
+
+    static_assert(cat::sat_sub(cat::uint2_min + 3u, 2_u2) > cat::uint2_min);
+    static_assert(cat::sat_sub(cat::uint2_min + 2u, 2_u2) == cat::uint2_min);
+    static_assert(cat::sat_sub(cat::uint2_min + 1_u2, 2_u2) == cat::uint2_min);
+    static_assert(cat::sat_sub(cat::uint2_min.raw, 2_u2) == cat::uint2_min);
+    static_assert(cat::sat_sub(cat::uint2_min, 100_u2) == cat::uint2_min);
+
+    cat::verify(cat::sat_sub(cat::uint2_min + 3u, 2_u2) > cat::uint2_min);
+    cat::verify(cat::sat_sub(cat::uint2_min + 2u, 2_u2) == cat::uint2_min);
+    cat::verify(cat::sat_sub(cat::uint2_min + 1_u2, 2_u2) == cat::uint2_min);
+    cat::verify(cat::sat_sub(cat::uint2_min.raw, 2_u2) == cat::uint2_min);
+    cat::verify(cat::sat_sub(cat::uint2_min, 100_u2) == cat::uint2_min);
+
+    static_assert(cat::sat_sub(cat::uint4_min + 3u, 2_u4) > cat::uint4_min);
+    static_assert(cat::sat_sub(cat::uint4_min + 2u, 2_u4) == cat::uint4_min);
+    static_assert(cat::sat_sub(cat::uint4_min + 1u, 2u) == cat::uint4_min);
+    static_assert(cat::sat_sub(cat::uint4_min.raw, 2_u4) == cat::uint4_min);
+    static_assert(cat::sat_sub(cat::uint4_min, 100u) == cat::uint4_min);
+
+    cat::verify(cat::sat_sub(cat::uint4_min + 3u, 2_u4) > cat::uint4_min);
+    cat::verify(cat::sat_sub(cat::uint4_min + 2u, 2_u4) == cat::uint4_min);
+    cat::verify(cat::sat_sub(cat::uint4_min + 1u, 2u) == cat::uint4_min);
+    cat::verify(cat::sat_sub(cat::uint4_min.raw, 2_u4) == cat::uint4_min);
+    cat::verify(cat::sat_sub(cat::uint4_min, 100u) == cat::uint4_min);
+
+    static_assert(cat::sat_sub(cat::uint8_min + 3u, 2_u8) > cat::uint8_min);
+    static_assert(cat::sat_sub(cat::uint8_min + 2u, 2_u8) == cat::uint8_min);
+    static_assert(cat::sat_sub(cat::uint8_min + 1u, 2u) == cat::uint8_min);
+    static_assert(cat::sat_sub(cat::uint8_min.raw, 2_u8) == cat::uint8_min);
+    static_assert(cat::sat_sub(cat::uint8_min, 100u) == cat::uint8_min);
+
+    cat::verify(cat::sat_sub(cat::uint8_min + 3u, 2_u8) > cat::uint8_min);
+    cat::verify(cat::sat_sub(cat::uint8_min + 2u, 2_u8) == cat::uint8_min);
+    cat::verify(cat::sat_sub(cat::uint8_min + 1u, 2u) == cat::uint8_min);
+    cat::verify(cat::sat_sub(cat::uint8_min.raw, 2_u8) == cat::uint8_min);
+    cat::verify(cat::sat_sub(cat::uint8_min, 100u) == cat::uint8_min);
+
+    // Test signed saturating addition.
+    static_assert(cat::sat_sub(cat::int1_min + 3_i1, 1_i1) > cat::int1_min);
+    static_assert(cat::sat_sub(cat::int1_min + 1_i1, 1_i1) == cat::int1_min);
+    static_assert(cat::sat_sub(cat::int1_min + 1_i1, 1_i1) == cat::int1_min);
+    static_assert(cat::sat_sub(cat::int1_min.raw, 1_i1) == cat::int1_min);
+    static_assert(cat::sat_sub(cat::int1_min, 100_i1) == cat::int1_min);
+
+    cat::verify(cat::sat_sub(cat::int1_min + 3, 1_i1) > cat::int1_min);
+    cat::verify(cat::sat_sub(cat::int1_min + 1_i1, 1_i1) == cat::int1_min);
+    cat::verify(cat::sat_sub(cat::int1_min + 1_i1, 1_i1) == cat::int1_min);
+    cat::verify(cat::sat_sub(cat::int1_min.raw, 1_i1) == cat::int1_min);
+    cat::verify(cat::sat_sub(cat::int1_min, 100_i1) == cat::int1_min);
+
+    static_assert(cat::sat_sub(cat::int2_min + 3_i2, 2_i2) > cat::int2_min);
+    static_assert(cat::sat_sub(cat::int2_min + 2_i2, 2_i2) == cat::int2_min);
+    static_assert(cat::sat_sub(cat::int2_min + 1_i2, 2_i2) == cat::int2_min);
+    static_assert(cat::sat_sub(cat::int2_min.raw, 2_i2) == cat::int2_min);
+    static_assert(cat::sat_sub(cat::int2_min, 100_i2) == cat::int2_min);
+
+    cat::verify(cat::sat_sub(cat::int2_min + 3_i2, 2_i2) > cat::int2_min);
+    cat::verify(cat::sat_sub(cat::int2_min + 2_i2, 2_i2) == cat::int2_min);
+    cat::verify(cat::sat_sub(cat::int2_min + 1_i2, 2_i2) == cat::int2_min);
+    cat::verify(cat::sat_sub(cat::int2_min.raw, 2_i2) == cat::int2_min);
+    cat::verify(cat::sat_sub(cat::int2_min, 100_i2) == cat::int2_min);
+
+    static_assert(cat::sat_sub(cat::int4_min + 3, 2_i4) > cat::int4_min);
+    static_assert(cat::sat_sub(cat::int4_min + 2, 2_i4) == cat::int4_min);
+    static_assert(cat::sat_sub(cat::int4_min + 1, 2) == cat::int4_min);
+    static_assert(cat::sat_sub(cat::int4_min.raw, 2_i4) == cat::int4_min);
+    static_assert(cat::sat_sub(cat::int4_min, 100) == cat::int4_min);
+
+    cat::verify(cat::sat_sub(cat::int4_min + 3, 2_i4) > cat::int4_min);
+    cat::verify(cat::sat_sub(cat::int4_min + 2, 2_i4) == cat::int4_min);
+    cat::verify(cat::sat_sub(cat::int4_min + 1, 2) == cat::int4_min);
+    cat::verify(cat::sat_sub(cat::int4_min.raw, 2_i4) == cat::int4_min);
+    cat::verify(cat::sat_sub(cat::int4_min, 100) == cat::int4_min);
+
+    static_assert(cat::sat_sub(cat::int8_min + 3, 2_i8) > cat::int8_min);
+    static_assert(cat::sat_sub(cat::int8_min + 2, 2_i8) == cat::int8_min);
+    static_assert(cat::sat_sub(cat::int8_min + 1, 2) == cat::int8_min);
+    static_assert(cat::sat_sub(cat::int8_min.raw, 2_i8) == cat::int8_min);
+    static_assert(cat::sat_sub(cat::int8_min, 100) == cat::int8_min);
+
+    cat::verify(cat::sat_sub(cat::int8_min + 3, 2_i8) > cat::int8_min);
+    cat::verify(cat::sat_sub(cat::int8_min + 2, 2_i8) == cat::int8_min);
+    cat::verify(cat::sat_sub(cat::int8_min + 1, 2) == cat::int8_min);
+    cat::verify(cat::sat_sub(cat::int8_min.raw, 2_i8) == cat::int8_min);
+    cat::verify(cat::sat_sub(cat::int8_min, 100) == cat::int8_min);
 };

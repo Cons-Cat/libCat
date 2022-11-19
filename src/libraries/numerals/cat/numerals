@@ -120,12 +120,22 @@ namespace detail {
     using PromotedNumeral = decltype(promoted_numeral<T, U>());
 }  // namespace detail
 
+template <typename T>
+    requires(is_integral<T>)
+[[nodiscard]] constexpr auto count_leading_zeros(T value) -> ssize;
+
+template <typename T>
+    requires(is_integral<T>)
+[[nodiscard]] constexpr auto count_trailing_zeros(T value) -> ssize;
+
 // Overflow intrinsics optimize fairly well in GCC.
-// `[[gnu::optimize(2)]]` is required because the codegen is awful by default.
+// `	[[nodiscard, gnu::optimize(2)]]` is required because the codegen is
+// awful by default.
+// TODO: Support saturating floats.
 
 // Add two integers with saturating overflow.
 template <rawNumeral T>
-[[gnu::optimize(2)]] constexpr auto sat_add(T lhs, T rhs) -> T {
+[[nodiscard, gnu::optimize(2)]] constexpr auto sat_add(T lhs, T rhs) -> T {
     T sum;
     bool overflow = __builtin_add_overflow(lhs, rhs, &sum);
     if (overflow) {
@@ -137,7 +147,8 @@ template <rawNumeral T>
 // Unwrap `Numeral` for `sat_add()`.
 template <integral T, integral U>
     requires(detail::is_safe_comparison<T, U>)
-constexpr auto sat_add(T lhs, U rhs) -> detail::PromotedNumeral<T, U> {
+[[nodiscard]] constexpr auto sat_add(T lhs, U rhs)
+    -> detail::PromotedNumeral<T, U> {
     // Saturating arithmetic inputs must be cast to the same size.
     using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
     return sat_add(static_cast<Type>(lhs), static_cast<Type>(rhs));
@@ -145,7 +156,7 @@ constexpr auto sat_add(T lhs, U rhs) -> detail::PromotedNumeral<T, U> {
 
 // Subtract two integers with saturating overflow.
 template <rawNumeral T>
-[[gnu::optimize(2)]] constexpr auto sat_sub(T lhs, T rhs) -> T {
+[[nodiscard, gnu::optimize(2)]] constexpr auto sat_sub(T lhs, T rhs) -> T {
     T sum;
     bool overflow = __builtin_sub_overflow(lhs, rhs, &sum);
     if (overflow) {
@@ -157,7 +168,8 @@ template <rawNumeral T>
 // Unwrap `Numeral` for `sat_sub()`.
 template <integral T, integral U>
     requires(detail::is_safe_comparison<T, U>)
-constexpr auto sat_sub(T lhs, U rhs) -> detail::PromotedNumeral<T, U> {
+[[nodiscard]] constexpr auto sat_sub(T lhs, U rhs)
+    -> detail::PromotedNumeral<T, U> {
     // Saturating arithmetic inputs must be cast to the same size.
     using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
     return sat_sub(static_cast<Type>(lhs), static_cast<Type>(rhs));
@@ -165,7 +177,7 @@ constexpr auto sat_sub(T lhs, U rhs) -> detail::PromotedNumeral<T, U> {
 
 // Subtract two integers with saturating overflow.
 template <rawNumeral T>
-[[gnu::optimize(2)]] constexpr auto sat_mul(T lhs, T rhs) -> T {
+[[nodiscard, gnu::optimize(2)]] constexpr auto sat_mul(T lhs, T rhs) -> T {
     T sum;
     bool overflow = __builtin_mul_overflow(lhs, rhs, &sum);
     if (overflow) {
@@ -174,22 +186,78 @@ template <rawNumeral T>
     return sum;
 }
 
-// Unwrap `Numeral` for `sat_sub()`.
+// Unwrap `Numeral` for `sat_mul()`.
 template <integral T, integral U>
     requires(detail::is_safe_comparison<T, U>)
-constexpr auto sat_mul(T lhs, U rhs) -> detail::PromotedNumeral<T, U> {
+[[nodiscard]] constexpr auto sat_mul(T lhs, U rhs)
+    -> detail::PromotedNumeral<T, U> {
     // Saturating arithmetic inputs must be cast to the same size.
     using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
     return sat_mul(static_cast<Type>(lhs), static_cast<Type>(rhs));
 }
 
-template <typename T>
-    requires(is_integral<T>)
-[[nodiscard]] constexpr auto count_leading_zeros(T value) -> ssize;
+// Subtract two integers with saturating overflow.
+template <rawNumeral T>
+[[nodiscard, gnu::optimize(2)]] constexpr auto sat_div(T lhs, T rhs) -> T {
+    if constexpr (is_signed<T>) {
+        lhs += !((rhs + 1) | (make_unsigned(lhs) + Limits<T>::max()));
+    }
+    // Unsigned integer division cannot overflow.
+    return lhs / rhs;
+}
 
-template <typename T>
-    requires(is_integral<T>)
-[[nodiscard]] constexpr auto count_trailing_zeros(T value) -> ssize;
+// Unwrap `Numeral` for `sat_mul()`.
+template <integral T, integral U>
+    requires(detail::is_safe_comparison<T, U>)
+[[nodiscard]] constexpr auto sat_div(T lhs, U rhs)
+    -> detail::PromotedNumeral<T, U> {
+    // Saturating arithmetic inputs must be cast to the same size.
+    using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
+    return sat_div(static_cast<Type>(lhs), static_cast<Type>(rhs));
+}
+
+// Left bit-shifting two unsigned integers with saturating overflow.
+template <rawNumeral T, rawNumeral U>
+    // TODO: Figure out signed saturating shift semantics.
+    requires(is_unsigned<T>)
+[[nodiscard, gnu::optimize(2)]] constexpr auto sat_shl(T value, U bits) {
+    // TODO: Try `cat::count_trailing_zeros()`.
+    if (bits >= Limits<T>::bits - __builtin_ctz(value)) {
+        return Limits<T>::max();
+    }
+    return value << bits;
+}
+
+// Unwrap `Numeral` for `sat_shl()`.
+template <integral T, integral U>
+    requires(detail::is_safe_comparison<T, U>)
+[[nodiscard]] constexpr auto sat_shl(T value, U bits)
+    -> detail::PromotedNumeral<T, U> {
+    // Saturating arithmetic inputs must be cast to the same size.
+    using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
+    return sat_shl(static_cast<Type>(value), static_cast<Type>(bits));
+}
+
+template <rawNumeral T, rawNumeral U>
+    // TODO: Figure out signed saturating shift semantics.
+    requires(is_unsigned<T>)
+[[nodiscard, gnu::optimize(2)]] constexpr auto sat_shr(T value, U bits) {
+    // TODO: Try `cat::count_leading_zeros()`.
+    if (bits >= Limits<T>::bits - __builtin_clz(value)) {
+        return Limits<T>::min();
+    }
+    return value >> bits;
+}
+
+// Unwrap `Numeral` for `sat_shr()`.
+template <integral T, integral U>
+    requires(detail::is_safe_comparison<T, U>)
+[[nodiscard]] constexpr auto sat_shr(T value, U bits)
+    -> detail::PromotedNumeral<T, U> {
+    // Saturating arithmetic inputs must be cast to the same size.
+    using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
+    return sat_shr(static_cast<Type>(value), static_cast<Type>(bits));
+}
 
 // `Numeral` can represent an integer or floating point value. It prevents
 // unsafe casts or operations. This is a trivial `struct` so it can be used as a
@@ -823,28 +891,30 @@ template <typename T>
     requires(is_integral<T>)
 [[nodiscard]] constexpr auto count_leading_zeros(T value) -> ssize {
     auto raw_value = to_raw_numeral(value);
-    if constexpr (sizeof(T) == 2) {
-        return ssize{__builtin_ia32_lzcnt_u16(raw_value)};
-    } else if constexpr (sizeof(T) == 4) {
-        return ssize{__builtin_clz(raw_value)};
-    } else if constexpr (sizeof(T) == 8) {
-        return ssize{__builtin_clzll(raw_value)};
-    } else {
-        __builtin_unreachable();
-    }
+    return ssize{__builtin_clz(raw_value)};
+    // if constexpr (sizeof(T) == 2) {
+    //     return ssize{__builtin_ia32_lzcnt_u16(raw_value)};
+    // } else if constexpr (sizeof(T) == 4) {
+    // return ssize{__builtin_clz(raw_value)};
+    // } else if constexpr (sizeof(T) == 8) {
+    //     return ssize{__builtin_clzll(raw_value)};
+    // } else {
+    //     __builtin_unreachable();
+    // }
 }
 
 template <typename T>
     requires(is_integral<T>)
 [[nodiscard]] constexpr auto count_trailing_zeros(T value) -> ssize {
     auto raw_value = to_raw_numeral(value);
-    if constexpr (sizeof(T) == 4) {
-        return ssize{__builtin_ctz(raw_value)};
-    } else if constexpr (sizeof(T) == 8) {
-        return ssize{__builtin_ctzll(raw_value)};
-    } else {
-        __builtin_unreachable();
-    }
+    return ssize{__builtin_ctz(raw_value)};
+    // if constexpr (sizeof(T) == 4) {
+    //     return ssize{__builtin_ctz(raw_value)};
+    // } else if constexpr (sizeof(T) == 8) {
+    //     return ssize{__builtin_ctzll(raw_value)};
+    // } else {
+    //     __builtin_unreachable();
+    // }
 }
 
 struct bool2 {  // NOLINT
