@@ -362,7 +362,7 @@ struct Numeral {
     }
 
     [[nodiscard]] friend constexpr auto operator-(Numeral<T, policy> self)
-        -> Numeral {
+        -> Numeral requires(is_signed<T>) {
         return -(self.raw);
     }
 
