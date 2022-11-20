@@ -322,7 +322,7 @@ namespace detail {
         // For every type passed into the constructor, pack it into the arrays
         // in-order.
         template <typename T>
-        void store_argument(ssize argument_index, T&& value) {
+        void store_argument(ssize& argument_index, T&& value) {
             // Pack `value` into `packed_arguments_storage`.
             ssize const storage_index =
                 this->arguments_indices[argument_index.raw].byte_index;
@@ -343,6 +343,8 @@ namespace detail {
                 this->arguments_indices[argument_index.raw + 1].byte_index =
                     storage_index.raw + sizeof(T);
             }
+
+            ++argument_index;
         }
 
       public:
@@ -352,8 +354,8 @@ namespace detail {
             this->arguments_indices[0].byte_index = 0;
             ssize argument_index = 0;
             // TODO: Erase the type of `Ts`.
-            // `argument_index` increments per call to `.store()`.
-            (this->store_argument(argument_index++, forward<Ts>(types)), ...);
+            // `store_argument()` increments `argument_index`.
+            (this->store_argument(argument_index, forward<Ts>(types)), ...);
         }
 
         static constexpr ssize::Raw argument_count = sizeof...(Ts);

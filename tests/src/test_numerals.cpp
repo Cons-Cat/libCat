@@ -235,11 +235,6 @@ TEST(test_numerals) {
     static_assert(cat::is_same<decltype(cat::make_unsigned(1_i4)), uint4>);
     static_assert(cat::is_same<decltype(cat::make_signed(1_u4)), int4>);
 
-    // Test wrapping overflow.
-    // int4 safe_int = int4::max();
-    // cat::verify((safe_int.wrap + 1) == cat::Limits<int4>::min());
-    // safe_int.wrap += 1;
-
     // Test unwrapped numerals in `Limits`.
     static_assert(cat::Limits<int4>::max() == cat::Limits<int4::Raw>::max());
     static_assert(cat::Limits<uint8>::max() == cat::Limits<uint8::Raw>::max());
@@ -460,4 +455,26 @@ TEST(test_numerals) {
     static_assert(cat::wrap_mul(0u, 1u) == 0u);
     static_assert(cat::wrap_mul(cat::uint4_max, 1u) == cat::uint4_max);
     static_assert(cat::wrap_mul(cat::uint4_max, 2u) == cat::uint4_max - 1u);
+
+    // Test wrapping overflow with member access syntax.
+    int4 safe_int = int4::max;
+    cat::verify((safe_int.wrap + 100) == cat::int4_min + 99);
+
+    safe_int.wrap += 1;
+    cat::verify(safe_int == cat::int4_min);
+    safe_int.wrap += 100;
+    cat::verify(safe_int.wrap == cat::int4_min + 100);
+    cat::verify(safe_int.sat == cat::int4_min + 100);
+    cat::verify(safe_int.raw == cat::int4_min + 100);
+
+    // Test saturating overflow with member access syntax.
+    safe_int = int4::max;
+    cat::verify((safe_int.sat + 100) == cat::int4_max);
+
+    safe_int.sat += 1;
+    cat::verify(safe_int == cat::int4_max);
+    safe_int.sat += 100;
+    cat::verify(safe_int.wrap == cat::int4_max);
+    cat::verify(safe_int.sat == cat::int4_max);
+    cat::verify(safe_int.raw == cat::int4_max);
 };
