@@ -1,7 +1,7 @@
 #include <cat/match>
 
 #include "../unit_tests.hpp"
-#include "cat/numerals"
+#include "cat/variant"
 
 template <auto value>
 struct Nttp {
@@ -456,7 +456,6 @@ TEST(test_numerals) {
     static_assert(cat::wrap_mul(cat::uint4_max, 1u) == cat::uint4_max);
     static_assert(cat::wrap_mul(cat::uint4_max, 2u) == cat::uint4_max - 1u);
 
-    // Test wrapping overflow with member access syntax.
     int4 safe_int = int4::max;
     cat::verify((safe_int.wrap + 100) == cat::int4_min + 99);
 
@@ -477,4 +476,19 @@ TEST(test_numerals) {
     cat::verify(safe_int.wrap == cat::int4_max);
     cat::verify(safe_int.sat == cat::int4_max);
     cat::verify(safe_int.raw == cat::int4_max);
+
+    // Test overflow strong types.
+    cat::wrap_int4 wrap_int4 = cat::int4_max;
+    wrap_int4 += 100;
+    cat::verify(wrap_int4 == cat::int4_min + 99);
+    wrap_int4 = cat::int4_max;
+    wrap_int4.sat += 100;
+    cat::verify(wrap_int4 == cat::int4_max);
+
+    cat::sat_int4 saturate_int4 = cat::int4_max;
+    saturate_int4 += 100;
+    cat::verify(saturate_int4 == cat::int4_max);
+    saturate_int4 = cat::int4_max;
+    saturate_int4.wrap += 100;
+    cat::verify(saturate_int4 == cat::int4_min + 99);
 };

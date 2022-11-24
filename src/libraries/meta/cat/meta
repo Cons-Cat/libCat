@@ -10,13 +10,14 @@ namespace cat {
 
 // Forward declare numeric types. These are implemented in `<numeral>`.
 enum class OverflowPolicies;
+
 template <typename T, OverflowPolicies>
 struct Numeral;
 
 struct bool2;
 struct bool4;
 
-template <typename T, typename Storage, OverflowPolicies>
+template <typename T, typename Storage, auto>
 class ArithmeticPtr;
 
 // TODO: `MakeSigned` and `MakeUnsigned` must handle cvref qualifiers.
@@ -69,7 +70,7 @@ struct MakeSignedTrait<unsigned long long> {
     using Type = signed long long;
 };
 
-template <typename T, OverflowPolicies policy>
+template <typename T, auto policy>
 struct MakeSignedTrait<Numeral<T, policy>> {
     using Type = Numeral<typename MakeSignedTrait<T>::Type, policy>;
 };
@@ -128,7 +129,7 @@ struct MakeUnsignedTrait<unsigned long long> {
 template <typename T>
 using MakeUnsigned = typename MakeUnsignedTrait<T>::Type;
 
-template <typename T, OverflowPolicies policy>
+template <typename T, auto policy>
 struct MakeUnsignedTrait<Numeral<T, policy>> {
     using Type = Numeral<typename MakeUnsignedTrait<T>::Type, policy>;
 };
@@ -403,7 +404,7 @@ inline constexpr bool is_floating_point = __is_same(RemoveCv<T>, float) ||
                                           __is_same(RemoveCv<T>, long double) ||
                                           __is_same(RemoveCv<T>, __float128);
 
-template <typename T, OverflowPolicies policy>
+template <typename T, auto policy>
 inline constexpr bool is_floating_point<Numeral<T, policy>> =
     is_floating_point<T>;
 
@@ -425,10 +426,10 @@ inline constexpr bool is_integral = __is_same(RemoveCv<T>, signed char) ||
                                     __is_same(RemoveCv<T>, long long) ||
                                     __is_same(RemoveCv<T>, unsigned long long);
 
-template <typename T, OverflowPolicies policy>
+template <typename T, auto policy>
 inline constexpr bool is_integral<Numeral<T, policy>> = is_integral<T>;
 
-template <typename T, typename Storage, OverflowPolicies policy>
+template <typename T, typename Storage, auto policy>
 inline constexpr bool is_integral<ArithmeticPtr<T, Storage, policy>> = true;
 
 template <typename T>

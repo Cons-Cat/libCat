@@ -21,11 +21,15 @@
 
 namespace cat {
 
+// These policies control the overflow semantics of `Numeral`s.
 enum class OverflowPolicies {
     undefined,
     wrap,
     saturate,
-    trap
+    trap,
+    wrap_member,
+    saturate_member,
+    trap_member,
 };
 
 template <typename T>
@@ -81,6 +85,32 @@ using uint8 = Numeral<__UINT64_TYPE__, OverflowPolicies::undefined>;  // NOLINT
 
 using float4 = Numeral<float, OverflowPolicies::undefined>;   // NOLINT
 using float8 = Numeral<double, OverflowPolicies::undefined>;  // NOLINT
+
+using wrap_int1 = Numeral<__INT8_TYPE__, OverflowPolicies::wrap>;     // NOLINT
+using wrap_uint1 = Numeral<__UINT8_TYPE__, OverflowPolicies::wrap>;   // NOLINT
+using wrap_int2 = Numeral<__INT16_TYPE__, OverflowPolicies::wrap>;    // NOLINT
+using wrap_uint2 = Numeral<__UINT16_TYPE__, OverflowPolicies::wrap>;  // NOLINT
+using wrap_int4 = Numeral<__INT32_TYPE__, OverflowPolicies::wrap>;    // NOLINT
+using wrap_uint4 = Numeral<__UINT32_TYPE__, OverflowPolicies::wrap>;  // NOLINT
+using wrap_int8 = Numeral<__INT64_TYPE__, OverflowPolicies::wrap>;    // NOLINT
+using wrap_uint8 = Numeral<__UINT64_TYPE__, OverflowPolicies::wrap>;  // NOLINT
+
+// NOLINTNEXTLINE
+using sat_int1 = Numeral<__INT8_TYPE__, OverflowPolicies::saturate>;
+// NOLINTNEXTLINE
+using sat_uint1 = Numeral<__UINT8_TYPE__, OverflowPolicies::saturate>;
+// NOLINTNEXTLINE
+using sat_int2 = Numeral<__INT16_TYPE__, OverflowPolicies::saturate>;
+// NOLINTNEXTLINE
+using sat_uint2 = Numeral<__UINT16_TYPE__, OverflowPolicies::saturate>;
+// NOLINTNEXTLINE
+using sat_int4 = Numeral<__INT32_TYPE__, OverflowPolicies::saturate>;
+// NOLINTNEXTLINE
+using sat_uint4 = Numeral<__UINT32_TYPE__, OverflowPolicies::saturate>;
+// NOLINTNEXTLINE
+using sat_int8 = Numeral<__INT64_TYPE__, OverflowPolicies::saturate>;
+// NOLINTNEXTLINE
+using sat_uint8 = Numeral<__UINT64_TYPE__, OverflowPolicies::saturate>;
 
 // NOLINTNEXTLINE
 using usize = Numeral<__SIZE_TYPE__, OverflowPolicies::undefined>;
@@ -317,24 +347,51 @@ namespace detail {
 
         union {
             T raw;
-            Numeral<T, OverflowPolicies::wrap> wrap;
-            Numeral<T, OverflowPolicies::saturate> sat;
-            Numeral<T, OverflowPolicies::trap> trap;
+            Numeral<T, OverflowPolicies::wrap_member> wrap;
+            Numeral<T, OverflowPolicies::saturate_member> sat;
+            Numeral<T, OverflowPolicies::trap_member> trap;
         };
     };
 
     template <typename T>
     struct NumeralStorage<T, OverflowPolicies::wrap> {
-        T raw;
+        union {
+            T raw;
+            Numeral<T, OverflowPolicies::saturate_member> sat;
+            Numeral<T, OverflowPolicies::trap_member> trap;
+        };
     };
 
     template <typename T>
     struct NumeralStorage<T, OverflowPolicies::saturate> {
-        T raw;
+        union {
+            T raw;
+            Numeral<T, OverflowPolicies::wrap_member> wrap;
+            Numeral<T, OverflowPolicies::trap_member> trap;
+        };
     };
 
     template <typename T>
     struct NumeralStorage<T, OverflowPolicies::trap> {
+        union {
+            T raw;
+            Numeral<T, OverflowPolicies::wrap_member> wrap;
+            Numeral<T, OverflowPolicies::saturate_member> sat;
+        };
+    };
+
+    template <typename T>
+    struct NumeralStorage<T, OverflowPolicies::wrap_member> {
+        T raw;
+    };
+
+    template <typename T>
+    struct NumeralStorage<T, OverflowPolicies::saturate_member> {
+        T raw;
+    };
+
+    template <typename T>
+    struct NumeralStorage<T, OverflowPolicies::trap_member> {
         T raw;
     };
 }  // namespace detail
@@ -385,12 +442,13 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     [[nodiscard]] friend constexpr auto operator+(Numeral<T, policy> self,
                                                   U operand)
         -> detail::PromotedNumeral<T, U> {
-        if constexpr (policy == OverflowPolicies::undefined) {
+        using enum OverflowPolicies;
+        if constexpr (policy == undefined) {
             return detail::PromotedNumeral<T, U>{self.raw +
                                                  to_raw_numeral(operand)};
-        } else if constexpr (policy == OverflowPolicies::wrap) {
+        } else if constexpr (policy == wrap || policy == wrap_member) {
             return wrap_add(to_raw_numeral(self), to_raw_numeral(operand));
-        } else if constexpr (policy == OverflowPolicies::saturate) {
+        } else if constexpr (policy == saturate || policy == saturate_member) {
             return sat_add(to_raw_numeral(self), to_raw_numeral(operand));
         }
     }
@@ -437,12 +495,13 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     [[nodiscard]] friend constexpr auto operator-(Numeral<T, policy> self,
                                                   U operand)
         -> detail::PromotedNumeral<T, U> {
-        if constexpr (policy == OverflowPolicies::undefined) {
+        using enum OverflowPolicies;
+        if constexpr (policy == undefined) {
             return detail::PromotedNumeral<T, U>{self.raw -
                                                  to_raw_numeral(operand)};
-        } else if constexpr (policy == OverflowPolicies::wrap) {
+        } else if constexpr (policy == wrap || policy == wrap_member) {
             return wrap_sub(to_raw_numeral(self), to_raw_numeral(operand));
-        } else if constexpr (policy == OverflowPolicies::saturate) {
+        } else if constexpr (policy == saturate || policy == saturate_member) {
             return sat_sub(to_raw_numeral(self), to_raw_numeral(operand));
         }
     }
@@ -489,12 +548,13 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     [[nodiscard]] friend constexpr auto operator*(Numeral<T, policy> self,
                                                   U operand)
         -> detail::PromotedNumeral<T, U> {
+        using enum OverflowPolicies;
         if constexpr (policy == OverflowPolicies::undefined) {
             return detail::PromotedNumeral<T, U>{self.raw *
                                                  to_raw_numeral(operand)};
-        } else if constexpr (policy == OverflowPolicies::wrap) {
+        } else if constexpr (policy == wrap || policy == wrap_member) {
             return wrap_mul(to_raw_numeral(self), to_raw_numeral(operand));
-        } else if constexpr (policy == OverflowPolicies::saturate) {
+        } else if constexpr (policy == saturate || policy == saturate_member) {
             return sat_mul(to_raw_numeral(self), to_raw_numeral(operand));
         }
     }
@@ -524,12 +584,13 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     [[nodiscard]] friend constexpr auto operator/(Numeral<T, policy> self,
                                                   U operand)
         -> detail::PromotedNumeral<T, U> {
-        if constexpr (policy == OverflowPolicies::undefined) {
+        using enum OverflowPolicies;
+        if constexpr (policy == undefined) {
             return detail::PromotedNumeral<T, U>{self.raw /
                                                  to_raw_numeral(operand)};
-        } else if constexpr (policy == OverflowPolicies::wrap) {
+        } else if constexpr (policy == wrap || policy == wrap_member) {
             return wrap_mul(to_raw_numeral(self), to_raw_numeral(operand));
-        } else if constexpr (policy == OverflowPolicies::saturate) {
+        } else if constexpr (policy == saturate || policy == saturate_member) {
             return sat_mul(to_raw_numeral(self), to_raw_numeral(operand));
         }
     }
@@ -733,7 +794,7 @@ struct Numeral : detail::NumeralStorage<T, policy> {
 // integers. It satisfies the `is_integral` type trait and
 // `integral` concept.
 template <typename T, typename Storage,
-          OverflowPolicies policy = OverflowPolicies::undefined>
+          auto policy = OverflowPolicies::undefined>
 class ArithmeticPtr : public Numeral<Storage, policy> {
   public:
     using Raw = Storage;
