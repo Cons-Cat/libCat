@@ -20,7 +20,7 @@ class Array : public CollectionFacade<Array<T, length>, T> {
     // Construct an `Array` from a variadic argument list.
     template <typename... Args>
         requires(ssizeof_pack<Args...>() == length &&
-                 (is_convertible<Args, T> && ...))
+                 (is_implicitly_convertible<Args, T> && ...))
     constexpr Array(Args&&... arguments)
         // Explicitly converting this type allows the first argument to coerce
         // the type for following arguments.

@@ -347,9 +347,15 @@ class Variant {
     // `in_value`. This method allows `Variant` to be used in `match`
     // statements.
     template <typename T>
-        requires(is_convertible<T, Ts>&&...)
+        requires(is_implicitly_convertible<T, Ts>&&...)
     [[nodiscard]] constexpr auto is(T const& in_value) const -> bool {
         return this->recurse_converting_equality<0, Ts...>(in_value);
+    }
+
+    template <typename T>
+    [[nodiscard]] constexpr auto friend operator==(Variant<Ts...> const& self,
+                                                   T other) -> bool {
+        return self.recurse_converting_equality<0, Ts...>(other);
     }
 
     // Member access syntax pattern matching for `cat::match()`.

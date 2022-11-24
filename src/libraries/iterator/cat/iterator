@@ -27,13 +27,13 @@ namespace detail {
     };
 
     template <typename>
-    struct InferDifferenceType {
+    struct InferDifferenceTrait {
         using Type = ssize;
     };
 
     // Case when `T` provides `.distance_to()`
     template <detail::hasDistanceTo T>
-    struct InferDifferenceType<T> {
+    struct InferDifferenceTrait<T> {
         static T const& it;
         using Type = decltype(it.distance_to(it));
     };
@@ -56,7 +56,7 @@ namespace detail {
     };
 
     template <typename T>
-    concept hasAdvance = requires(T it, InferDifferenceType<T> offset) {
+    concept hasAdvance = requires(T it, InferDifferenceTrait<T> offset) {
         it.advance(offset);
     };
 
@@ -80,7 +80,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-using InferDifferenceType = typename detail::InferDifferenceType<T>::Type;
+using InferDifferenceType = typename detail::InferDifferenceTrait<T>::Type;
 
 template <typename Argument, typename Iterator>
 concept differenceTypeArg =
@@ -133,24 +133,32 @@ class IteratorFacade {
 
     constexpr friend auto operator<=>(
         Derived const& left,
-        Derived const& right) requires(detail::hasDistanceTo<Derived>) {
+        Derived const& right) /* requires(detail::hasDistanceTo<Derived>) */ {
         return (left - right) <=> 0;
     }
 
     constexpr friend auto operator==(Derived const& left, Derived const& right)
-        -> bool {
+        -> bool /* requires(detail::hasEqualTo<Derived> ||
+                                   detail::hasDistanceTo<Derived>) */
+    {
         if constexpr (detail::hasEqualTo<Derived>) {
             return left.equal_to(right);
-        } else {
+        } else if constexpr (detail::hasDistanceTo<Derived>) {
             return left.distance_to(right) == 0;
         }
+        __builtin_unreachable();
     }
 
-    constexpr friend auto operator==(Derived const& self,
-                                     detail::hasSentinel<Derived> auto)
+    constexpr friend auto operator!=(Derived const& left, Derived const& right)
         -> bool {
-        return self.at_end();
+        return !(left == right);
     }
+
+    // constexpr friend auto operator==(Derived const& self,
+    //                                  detail::hasSentinel<Derived> auto)
+    //     -> bool {
+    //     return self.at_end();
+    // }
 
     constexpr friend auto operator+(Derived const& left,
                                     differenceTypeArg<Derived> auto offset)
@@ -237,7 +245,7 @@ class IteratorFacade {
 
     // Get the distance between two iterators.
     constexpr friend auto operator-(Derived const& left, Derived const& right)
-        -> ssize {
+        -> ssize /* requires(detail::hasDistanceTo<Derived>) */ {
         return right.distance_to(left);
     }
 
@@ -306,10 +314,8 @@ struct IteratorTraits {
     // using IteratorConcept = Category;
 };
 
-template <typename T>
-struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
-    T iterator;
-
+template <typename Iterator>
+struct ReversedIterator : IteratorFacade<ReversedIterator<Iterator>> {
     // Forward any constructor to `iterator`.
     template <typename... Args>
     constexpr ReversedIterator(Args&&... args)
@@ -323,7 +329,7 @@ struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
         return this->iterator.dereference();
     }
 
-    constexpr void advance(int offset) requires(detail::hasAdvance<T>) {
+    constexpr void advance(int offset) requires(detail::hasAdvance<Iterator>) {
         this->iterator.advance(-offset);
     }
 
@@ -335,9 +341,12 @@ struct ReversedIterator : IteratorFacade<ReversedIterator<T>> {
         ++iterator;
     }
 
-    constexpr auto distance_to(ReversedIterator<T> other) const -> ssize {
+    constexpr auto distance_to(ReversedIterator<Iterator> other) const -> ssize
+    /* requires(detail::hasDistanceTo<Iterator>) */ {
         return this->iterator.distance_to(other.iterator);
     }
+
+    Iterator iterator;
 };
 
 // TODO: More iterable related `concept`s.

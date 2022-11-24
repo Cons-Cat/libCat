@@ -552,7 +552,9 @@ namespace detail {
         }
 
         constexpr void advance_to(Iterator position) {
-            this->format.begin().advance(position - this->format.begin());
+            // this->format.begin().advance(position - this->format.begin());
+            this->format.begin().advance(
+                position.distance_to(this->format.begin()));
         }
 
         constexpr auto next_argument_index() -> ssize {

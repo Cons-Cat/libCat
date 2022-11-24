@@ -316,38 +316,26 @@ class CollectionFacade {
             using Collection [[maybe_unused]] = Derived;
 
             constexpr Iterator(Iterator const&) = default;
+
+            // private:
             constexpr Iterator(ssize index, T* p_in_array)
                 : current_index(index), p_array(p_in_array){};
 
+          public:
             constexpr auto dereference() -> T& {
                 return unconst(this->p_array[current_index.raw]);
             }
+
             constexpr auto dereference() const -> T const& {
                 return this->p_array[current_index.raw];
             }
+
             constexpr void advance(ssize offset) {
                 this->current_index += offset;
             }
+
             constexpr auto distance_to(Iterator const& other) const -> ssize {
                 return other.current_index - current_index;
-            }
-
-            // TODO: Implement these in terms of `<=>`.
-            constexpr auto operator<(Iterator const& other_iterator) const
-                -> bool {
-                return this->current_index < other_iterator.current_index;
-            }
-            constexpr auto operator<=(Iterator const& other_iterator) const
-                -> bool {
-                return this->current_index <= other_iterator.current_index;
-            }
-            constexpr auto operator>(Iterator const& other_iterator) const
-                -> bool {
-                return this->current_index > other_iterator.current_index;
-            }
-            constexpr auto operator>=(Iterator const& other_iterator) const
-                -> bool {
-                return this->current_index >= other_iterator.current_index;
             }
 
           private:
