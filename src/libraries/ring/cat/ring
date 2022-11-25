@@ -38,8 +38,8 @@ class Ring : public CollectionFacade<Ring<T>, T> {
     // context.
     auto copy_to_new_storage(stableAllocator auto& allocator,
                              ssize new_capacity) -> Maybe<void> {
-        // TODO: `.p_srealloc_multi()`.
-        T* p_new = TRY(allocator.template p_alloc_multi<T>(new_capacity));
+        // TODO: `.srealloc_multi()`.
+        T* p_new = TRY(allocator.template alloc_multi<T>(new_capacity));
 
         if constexpr (is_trivially_relocatable<T>) {
             copy_memory(this->p_storage, p_new,
@@ -77,8 +77,8 @@ class Ring : public CollectionFacade<Ring<T>, T> {
         cat::assert(is_power_of_two(new_capacity));
 
         if (new_capacity > this->current_capacity) {
-            // TODO: `.p_srealloc_multi()`.
-            T* p_new = TRY(allocator.template p_alloc_multi<T>(new_capacity));
+            // TODO: `.srealloc_multi()`.
+            T* p_new = TRY(allocator.template alloc_multi<T>(new_capacity));
 
             // TODO: Generalize copying from one collectian to another.
             if constexpr (is_trivially_relocatable<T>) {

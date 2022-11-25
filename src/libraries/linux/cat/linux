@@ -1137,7 +1137,7 @@ struct Process {
         // TODO: This stack memory should not be owned by the `Process`, to
         // enable simpler memory management patterns.
         cat::Maybe maybe_memory =
-            allocator.template p_alloc_multi<cat::Byte>(initial_stack_size);
+            allocator.template alloc_multi<cat::Byte>(initial_stack_size);
         if (!maybe_memory.has_value()) {
             return nix::LinuxError::inval;
         }

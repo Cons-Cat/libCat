@@ -57,8 +57,8 @@ class Vector : public CollectionFacade<Vector<T>, T> {
             new_capacity = 4;
         }
 
-        // TODO: `.p_srealloc_multi()`.
-        T* p_new = TRY(allocator.template p_alloc_multi<T>(new_capacity));
+        // TODO: `.srealloc_multi()`.
+        T* p_new = TRY(allocator.template alloc_multi<T>(new_capacity));
 
         if constexpr (is_trivially_relocatable<T>) {
             copy_memory(this->p_storage, p_new,
@@ -143,8 +143,8 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     [[nodiscard]] auto reserve(stableAllocator auto& allocator,
                                ssize new_capacity) -> Maybe<void> {
         if (new_capacity > this->current_capacity) {
-            // TODO: `.p_srealloc_multi()`.
-            T* p_new = TRY(allocator.template p_alloc_multi<T>(new_capacity));
+            // TODO: `.srealloc_multi()`.
+            T* p_new = TRY(allocator.template alloc_multi<T>(new_capacity));
 
             // TODO: Generalize copying from one collectian to another.
             if constexpr (is_trivially_relocatable<T>) {
@@ -170,7 +170,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     // Change the capacity of this `Vector` in a `constexpr` context.
     consteval void reserve(ssize new_capacity) {
         if (new_capacity > this->current_capacity) {
-            // TODO: `.p_srealloc()`.
+            // TODO:  opq_.srealloc)`.
             T* p_new = new T[new_capacity.raw];
             for (ssize::Raw i = 0; i < this->current_size; ++i) {
                 p_new[i] = move(this->p_storage[i]);

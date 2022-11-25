@@ -9,7 +9,7 @@ TEST(test_list) {
     // Initialize an allocator.
     cat::PageAllocator paging_allocator;
     paging_allocator.reset();
-    auto page = paging_allocator.alloc_multi<cat::Byte>(4_ki - 64).verify();
+    auto page = paging_allocator.opq_alloc_multi<cat::Byte>(4_ki - 64).verify();
     DEFER(paging_allocator.free(page);)
     auto allocator =
         cat::LinearAllocator::backed_handle(paging_allocator, page);

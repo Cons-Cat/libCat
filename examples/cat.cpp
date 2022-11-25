@@ -42,7 +42,7 @@ void read_and_print_file(char* p_file_name) {
     cat::Span<nix::IoVector> io_vectors;
 
     nix::IoVector* p_io_buffer =
-        allocator.p_alloc_multi<nix::IoVector>(blocks).or_exit(
+        allocator.alloc_multi<nix::IoVector>(blocks).or_exit(
             "Failed to allocate memory!", 3);
     io_vectors = cat::Span<nix::IoVector>{p_io_buffer, blocks};
 
@@ -50,7 +50,7 @@ void read_and_print_file(char* p_file_name) {
         ssize current_block_size = cat::min(bytes_remaining, block_size);
 
         // `MaybePtr` produces an internal compiler error in GCC 12 here.
-        cat::Maybe buffer = allocator.p_alloc_multi<cat::Byte>(block_size);
+        cat::Maybe buffer = allocator.alloc_multi<cat::Byte>(block_size);
         if (!buffer.has_value()) {
             allocator.free_multi(p_io_buffer, io_vectors.size());
             cat::exit(4);

@@ -25,7 +25,7 @@ template <integral T>
 [[nodiscard]] auto to_chars(allocator auto& allocator, T integer)
     -> Maybe<String> {
     Maybe result =
-        allocator.template p_alloc_multi<char>(Limits<T>::digits10);
+        allocator.template alloc_multi<char>(Limits<T>::digits10);
     if (!result.has_value()) {
         return nullopt;
     }
@@ -51,7 +51,7 @@ template <typename T>
     requires(is_floating_point<T>)
 [[nodiscard]] auto to_chars(allocator auto& alloc, T value)
     -> Maybe<String> {
-    Maybe result = alloc.template p_alloc_multi<char>(Limits<T>::digits10);
+    Maybe result = alloc.template alloc_multi<char>(Limits<T>::digits10);
     if (!result.has_value()) {
         return nullopt;
     }
@@ -291,7 +291,7 @@ namespace detail {
             -> Maybe<void> {
             if (this->length + 1 > this->max_length) {
                 // Reallocate double the memory if its capacity is exceeded.
-                Maybe result = allocator.template p_realloc_multi<char>(
+                Maybe result = allocator.template realloc_multi<char>(
                     this->p_storage, this->max_length, this->max_length * 2);
                 if (!result.has_value()) {
                     return nullopt;
@@ -743,7 +743,7 @@ namespace detail {
         ssize const initial_size = format.size() + 10;
 
         Maybe maybe_memory =
-            allocator.template p_alloc_multi<char>(initial_size);
+            allocator.template alloc_multi<char>(initial_size);
         if (!maybe_memory.has_value()) {
             return FormatErrors::out_of_memory;
         }

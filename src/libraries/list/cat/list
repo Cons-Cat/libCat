@@ -209,7 +209,7 @@ class List : public CollectionFacade<List<T>, T> {
         // `cat::MaybePtr` at here produces an internal compiler error in
         // GCC 12.
         cat::Maybe memory =
-            allocator.template p_alloc<detail::ListNode<T>>();
+            allocator.template alloc<detail::ListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -234,7 +234,7 @@ class List : public CollectionFacade<List<T>, T> {
     auto emplace(stableAllocator auto& allocator, Iterator where,
                  Args&&... arguments) -> Maybe<Iterator> {
         cat::Maybe memory =
-            allocator.template p_alloc<detail::ListNode<T>>();
+            allocator.template alloc<detail::ListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -287,7 +287,7 @@ class List : public CollectionFacade<List<T>, T> {
     auto push_front(stableAllocator auto& allocator, U const& value)
         -> Maybe<Iterator> {
         cat::Maybe memory =
-            allocator.template p_alloc<detail::ListNode<T>>();
+            allocator.template alloc<detail::ListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -305,7 +305,7 @@ class List : public CollectionFacade<List<T>, T> {
     auto emplace_front(stableAllocator auto& allocator, Args&&... arguments)
         -> Maybe<Iterator> {
         cat::Maybe memory =
-            allocator.template p_alloc<detail::ListNode<T>>();
+            allocator.template alloc<detail::ListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -339,7 +339,7 @@ class List : public CollectionFacade<List<T>, T> {
     auto push_back(stableAllocator auto& allocator, U const& value)
         -> Maybe<Iterator> {
         cat::Maybe memory =
-            allocator.template p_alloc<detail::ListNode<T>>();
+            allocator.template alloc<detail::ListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -357,7 +357,7 @@ class List : public CollectionFacade<List<T>, T> {
     auto emplace_back(stableAllocator auto& allocator, Args&&... arguments)
         -> Maybe<Iterator> {
         cat::Maybe memory =
-            allocator.template p_alloc<detail::ListNode<T>>();
+            allocator.template alloc<detail::ListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -557,7 +557,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         requires(is_implicitly_convertible<U, T>)
     {
         cat::Maybe memory =
-            allocator.template p_alloc<detail::ForwardListNode<T>>();
+            allocator.template alloc<detail::ForwardListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -580,7 +580,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     auto emplace_after(stableAllocator auto& allocator, Iterator where,
                        Args&&... arguments) -> Maybe<Iterator> {
         cat::Maybe memory =
-            allocator.template p_alloc<detail::ForwardListNode<T>>();
+            allocator.template alloc<detail::ForwardListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -612,7 +612,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     auto push_front(stableAllocator auto& allocator, U const& value)
         -> Maybe<Iterator> {
         cat::Maybe memory =
-            allocator.template p_alloc<detail::ForwardListNode<T>>();
+            allocator.template alloc<detail::ForwardListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -630,7 +630,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     auto emplace_front(stableAllocator auto& allocator, Args&&... arguments)
         -> Maybe<Iterator> {
         cat::Maybe memory =
-            allocator.template p_alloc<detail::ForwardListNode<T>>();
+            allocator.template alloc<detail::ForwardListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
