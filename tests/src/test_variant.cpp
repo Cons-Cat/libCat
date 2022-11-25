@@ -19,9 +19,9 @@ TEST(test_variant) {
     char foo_char = variant.get<char>();
     cat::verify(foo_char == 'o');
 
-    cat::Optional<char&> opt1 = variant.get_if<char>();
+    cat::Maybe<char&> opt1 = variant.get_if<char>();
     cat::verify(opt1.has_value());
-    cat::Optional opt2 = variant.get_if<int>();
+    cat::Maybe opt2 = variant.get_if<int>();
     cat::verify(!opt2.has_value());
 
     // Test variant subtype constructor and assignment operator.

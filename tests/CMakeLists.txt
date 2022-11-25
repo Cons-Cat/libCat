@@ -41,7 +41,7 @@ if(CAT_BUILD_UNIT_TESTS)
 	${CMAKE_SOURCE_DIR}/tests/src/test_meta.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_numerals.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_math.cpp
-    ${CMAKE_SOURCE_DIR}/tests/src/test_optional.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_maybe.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_paging_memory.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_raii.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_typelist.cpp

@@ -67,7 +67,7 @@ inline constexpr String vt_bg_bright_white = "\e[107m";
 namespace detail {
     auto style_tty_fg_fg(allocator auto& alloc, String const text,
                          String const color) {
-        Optional maybe_allocation = alloc.template alloc_multi<char>(
+        Maybe maybe_allocation = alloc.template alloc_multi<char>(
             text.size() + color.size() + vt_fg_default.size());
 
         using ReturnType = decltype(maybe_allocation);

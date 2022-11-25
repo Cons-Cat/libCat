@@ -37,7 +37,7 @@ class Ring : public CollectionFacade<Ring<T>, T> {
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
     // context.
     auto copy_to_new_storage(stableAllocator auto& allocator,
-                             ssize new_capacity) -> Optional<void> {
+                             ssize new_capacity) -> Maybe<void> {
         // TODO: `.p_srealloc_multi()`.
         T* p_new = TRY(allocator.template p_alloc_multi<T>(new_capacity));
 
@@ -61,18 +61,18 @@ class Ring : public CollectionFacade<Ring<T>, T> {
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]] static auto reserved(stableAllocator auto& allocator,
-                                       ssize capacity) -> Optional<Ring<T>> {
+                                       ssize capacity) -> Maybe<Ring<T>> {
     }
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]] static auto filled(stableAllocator auto& allocator,
                                      ssize capacity, T value)
-        -> Optional<Ring<T>> {
+        -> Maybe<Ring<T>> {
     }
 
     [[nodiscard]] auto reserve(stableAllocator auto& allocator,
-                               ssize new_capacity) -> Optional<void> {
+                               ssize new_capacity) -> Maybe<void> {
         // The capacity of a `Ring` must be a power of two.
         cat::assert(is_power_of_two(new_capacity));
 
@@ -102,7 +102,7 @@ class Ring : public CollectionFacade<Ring<T>, T> {
     }
 
     [[nodiscard]] auto resize(stableAllocator auto& allocator, ssize new_size)
-        -> Optional<void> {
+        -> Maybe<void> {
         if (new_size > this->current_capacity) {
             TRY(this->reserve(allocator, new_size));
 
@@ -122,7 +122,7 @@ class Ring : public CollectionFacade<Ring<T>, T> {
     }
 
     [[nodiscard]] auto clone(stableAllocator auto& allocator)
-        -> Optional<Ring<T>> {
+        -> Maybe<Ring<T>> {
     }
 
     // Get the non-`const` address of this `Vector`'s internal array.

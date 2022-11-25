@@ -74,7 +74,7 @@ TEST(test_paging_memory) {
     cat::verify(allocator.get(small_memory_4) == 3);
 
     // Test constructor being called.
-    cat::Optional testtype = allocator.alloc<TestType>();
+    cat::Maybe testtype = allocator.alloc<TestType>();
     allocator.free(testtype.value());
 
     // That constructor increments `paging_counter_1`.

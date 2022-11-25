@@ -4,7 +4,7 @@
 
 #include <cat/match>
 #include <cat/memory>
-#include <cat/optional>
+#include <cat/maybe>
 #include <cat/type_list>
 
 namespace cat {
@@ -267,7 +267,7 @@ class Variant {
 
     template <typename T>
         requires(Types::template has_type<T>)
-    [[nodiscard]] constexpr auto get_if() & -> Optional<T&> {
+    [[nodiscard]] constexpr auto get_if() & -> Maybe<T&> {
         if (this->is<T>()) {
             return this->get<T>();
         }
@@ -276,7 +276,7 @@ class Variant {
 
     template <typename T>
         requires(Types::template has_type<T>)
-    [[nodiscard]] constexpr auto get_if() const& -> Optional<T&> {
+    [[nodiscard]] constexpr auto get_if() const& -> Maybe<T&> {
         if (this->is<T>()) {
             return this->get<T>();
         }
@@ -288,9 +288,9 @@ class Variant {
     [[nodiscard]] constexpr auto get_if() & {
         using T = typename Types::template Get<index>;
         if (this->is<T>()) {
-            return Optional<T>{this->get<T>()};
+            return Maybe<T>{this->get<T>()};
         }
-        return Optional<T>{nullopt};
+        return Maybe<T>{nullopt};
     }
 
     template <AlternativeIndex index>
@@ -298,9 +298,9 @@ class Variant {
     [[nodiscard]] constexpr auto get_if() const& {
         using T = typename Types::template Get<index>;
         if (this->is<T>()) {
-            return Optional<T>{this->get<T>()};
+            return Maybe<T>{this->get<T>()};
         }
-        return Optional<T>{nullopt};
+        return Maybe<T>{nullopt};
     }
 
     [[nodiscard]] constexpr auto alternative() const -> AlternativeIndex {

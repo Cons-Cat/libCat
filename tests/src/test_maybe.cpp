@@ -1,5 +1,5 @@
 #include <cat/memory>
-#include <cat/optional>
+#include <cat/maybe>
 #include <cat/unique>
 #include <cat/utility>
 
@@ -11,20 +11,20 @@ struct Movable {
     auto operator=(Movable&&){};
 };
 
-int4 optional_counter = 0;
+int4 maybe_counter = 0;
 
 struct OptNonTrivial {
     OptNonTrivial() {
-        ++optional_counter;
+        ++maybe_counter;
     }
     OptNonTrivial(OptNonTrivial const&) {
-        ++optional_counter;
+        ++maybe_counter;
     }
     OptNonTrivial(OptNonTrivial&&) {
-        ++optional_counter;
+        ++maybe_counter;
     }
     ~OptNonTrivial() {
-        ++optional_counter;
+        ++maybe_counter;
     }
     OptNonTrivial(int, int, char) {
     }
@@ -39,28 +39,28 @@ struct OptConstNonTrivial {
     }
 };
 
-auto optional_try_success() -> cat::Optional<int> {
-    cat::Optional<int> error{0};
+auto maybe_try_success() -> cat::Maybe<int> {
+    cat::Maybe<int> error{0};
     int boo = TRY(error);
     return boo;
 }
 
-auto optional_try_fail() -> cat::Optional<int> {
-    cat::Optional<int> error{nullopt};
+auto maybe_try_fail() -> cat::Maybe<int> {
+    cat::Maybe<int> error{nullopt};
     int boo = TRY(error);
     return boo;
 }
 
-TEST(test_optional) {
+TEST(test_maybe) {
     // Initialize empty.
-    cat::Optional<int4> foo{nullopt};
+    cat::Maybe<int4> foo{nullopt};
     cat::verify(!foo.has_value());
 
-    cat::Optional<int4> inplace_1{};
+    cat::Maybe<int4> inplace_1{};
     cat::verify(!inplace_1.has_value());
 
     // `int4` default-initializes to 0.
-    // cat::Optional<int4> inplace_2{in_place};
+    // cat::Maybe<int4> inplace_2{in_place};
     // cat::verify(inplace_2.value() == 0);
 
     // Assign a value.
@@ -72,23 +72,23 @@ TEST(test_optional) {
     cat::verify(!foo.has_value());
 
     // Unwrap a value.
-    cat::Optional<int4> moo = 1;
+    cat::Maybe<int4> moo = 1;
     moo = 2;
     cat::verify(moo.value() == 2);
 
     moo = nullopt;
     cat::verify(moo.value_or(100) == 100);
 
-    // `Optional` reference.
-    cat::Optional<int4&> ref(nullopt);
-    cat::Optional<int4&> ref_2 = nullopt;
+    // `Maybe` reference.
+    cat::Maybe<int4&> ref(nullopt);
+    cat::Maybe<int4&> ref_2 = nullopt;
 
     cat::verify(!ref.has_value());
     cat::verify(!ref_2.has_value());
 
     // Rebind.
     int4 goo = 1;
-    cat::Optional<int4&> boo = goo;
+    cat::Maybe<int4&> boo = goo;
     ref = boo;
     boo = nullopt;
 
@@ -115,8 +115,8 @@ TEST(test_optional) {
     cat::verify(ref_2.has_value());
     cat::verify(ref_2.value() == goo);
 
-    // `Optional` with a predicate.
-    cat::Optional<cat::Compact<int4,
+    // `Maybe` with a predicate.
+    cat::Maybe<cat::Compact<int4,
                                [](int4 input) -> bool {
                                    return input >= 0;
                                },
@@ -137,8 +137,8 @@ TEST(test_optional) {
     positive = nullopt;
     cat::verify(!positive.has_value());
 
-    // `Optional<void>` with a predicate.
-    cat::Optional<cat::Compact<cat::MonostateStorage<int, 0>,
+    // `Maybe<void>` with a predicate.
+    cat::Maybe<cat::Compact<cat::MonostateStorage<int, 0>,
                                [](int input) -> bool {
                                    return input >= 0;
                                },
@@ -150,7 +150,7 @@ TEST(test_optional) {
     _ = predicate_void.or_exit();
 
     // Test the sentinel predicate.
-    cat::Optional<cat::Sentinel<int4, 0>> nonzero = nullopt;
+    cat::Maybe<cat::Sentinel<int4, 0>> nonzero = nullopt;
     cat::verify(!nonzero.has_value());
 
     nonzero = 1;
@@ -159,9 +159,9 @@ TEST(test_optional) {
     nonzero = 0;
     cat::verify(!nonzero.has_value());
 
-    // Test `OptionalPtr`.
+    // Test `MaybePtr`.
     int4 get_addr = 0;
-    cat::OptionalPtr<int4> opt_ptr = &get_addr;
+    cat::MaybePtr<int4> opt_ptr = &get_addr;
     cat::verify(opt_ptr.has_value());
     cat::verify(opt_ptr.value() == &get_addr);
     cat::verify(*opt_ptr.value() == 0);
@@ -195,7 +195,7 @@ TEST(test_optional) {
                     })
                      .has_value());
 
-    _ = moo.and_then([](int4 input) -> cat::Optional<int4> {
+    _ = moo.and_then([](int4 input) -> cat::Maybe<int4> {
         cat::exit(1);
         return input;
     });
@@ -203,7 +203,7 @@ TEST(test_optional) {
     cat::verify(!moo.transform([](int4 input) {
                         return input * 2;
                     })
-                     .and_then([](int4 input) -> cat::Optional<int4> {
+                     .and_then([](int4 input) -> cat::Maybe<int4> {
                          return input;
                      })
                      .has_value());
@@ -219,7 +219,7 @@ TEST(test_optional) {
                      .transform([](int4 input) {
                          return input * 2;
                      })
-                     .and_then([](int4 input) -> cat::Optional<int4> {
+                     .and_then([](int4 input) -> cat::Maybe<int4> {
                          return input;
                      })
                      .has_value());
@@ -231,20 +231,20 @@ TEST(test_optional) {
     auto return_int = [](int4 input) -> int4 {
         return input + 1;
     };
-    auto return_none = [](int4) -> cat::Optional<int4> {
+    auto return_none = [](int4) -> cat::Maybe<int4> {
         return nullopt;
     };
-    auto return_opt = [](int4 input) -> cat::Optional<int4> {
+    auto return_opt = [](int4 input) -> cat::Maybe<int4> {
         return input;
     };
     auto return_void = [](int4) -> void {
     };
-    auto return_opt_void = [](int4) -> cat::Optional<void> {
+    auto return_opt_void = [](int4) -> cat::Maybe<void> {
         return monostate;
     };
     auto nothing = []() -> void {
     };
-    auto maybe_nothing = []() -> cat::Optional<void> {
+    auto maybe_nothing = []() -> cat::Maybe<void> {
         return nullopt;
     };
 
@@ -254,7 +254,7 @@ TEST(test_optional) {
             .and_then(return_opt_void)
             .or_else(maybe_nothing);
 
-    cat::Optional<int4> monadic_int;
+    cat::Maybe<int4> monadic_int;
     monadic_int = return_none(0).and_then(return_opt);
     cat::verify(!monadic_int.has_value());
 
@@ -262,14 +262,14 @@ TEST(test_optional) {
     cat::verify(monadic_int.has_value());
     cat::verify(monadic_int.value() == 2);
 
-    cat::Optional<void> monadic_void =
+    cat::Maybe<void> monadic_void =
         return_opt(1).transform(return_int).transform(return_void);
     cat::verify(monadic_void.has_value());
 
     // Test monadic methods on reference types.
     int4 monadic_int_ref = 1;
-    cat::Optional<void> monadic_void_ref =
-        cat::Optional{monadic_int_ref}.and_then(return_opt_void);
+    cat::Maybe<void> monadic_void_ref =
+        cat::Maybe{monadic_int_ref}.and_then(return_opt_void);
     // Be sure that this did not assign through.
     cat::verify(monadic_void_ref.has_value());
 
@@ -278,7 +278,7 @@ TEST(test_optional) {
     cat::verify(default_predicate_2.value() == 0);
 
     // Test monadic methods on move-only types.
-    cat::Optional<cat::Unique<int4>> monadic_move = 1;
+    cat::Maybe<cat::Unique<int4>> monadic_move = 1;
     monadic_move = return_none(0).and_then(return_opt);
     cat::verify(!monadic_move.has_value());
 
@@ -286,10 +286,10 @@ TEST(test_optional) {
     cat::verify(monadic_move.has_value());
     cat::verify(monadic_move.value().borrow() == 2);
 
-    // Test copying `Optional`s into other `Optional`s.
-    cat::Optional<int4> opt_original = 10;
-    cat::Optional<int4> opt_copy_1 = cat::Optional{opt_original};
-    cat::Optional<int4> opt_copy_2 = opt_original;
+    // Test copying `Maybe`s into other `Maybe`s.
+    cat::Maybe<int4> opt_original = 10;
+    cat::Maybe<int4> opt_copy_1 = cat::Maybe{opt_original};
+    cat::Maybe<int4> opt_copy_2 = opt_original;
     cat::verify(opt_copy_1.value() == 10);
     cat::verify(opt_copy_2.value() == 10);
 
@@ -302,103 +302,103 @@ TEST(test_optional) {
 
     // Test non-trivial reference.
     OptNonTrivial nontrivial_val;
-    cat::Optional<OptNonTrivial&> nontrivial_ref_default;
+    cat::Maybe<OptNonTrivial&> nontrivial_ref_default;
     nontrivial_ref_default = nontrivial_val;
-    [[maybe_unused]] cat::Optional<OptNonTrivial&> nontrivial_ref =
+    [[maybe_unused]] cat::Maybe<OptNonTrivial&> nontrivial_ref =
         nontrivial_val;
 
     OptNonTrivial const const_nontrivial_val;
-    [[maybe_unused]] cat::Optional<OptNonTrivial&> const
+    [[maybe_unused]] cat::Maybe<OptNonTrivial&> const
         mut_const_nontrivial_ref_default;
-    [[maybe_unused]] cat::Optional<OptNonTrivial&> const
+    [[maybe_unused]] cat::Maybe<OptNonTrivial&> const
         mut_const_nontrivial_ref = nontrivial_val;
 
-    [[maybe_unused]] cat::Optional<OptNonTrivial const&>
+    [[maybe_unused]] cat::Maybe<OptNonTrivial const&>
         const_mut_nontrivial_ref_default;
-    [[maybe_unused]] cat::Optional<OptNonTrivial const&>
+    [[maybe_unused]] cat::Maybe<OptNonTrivial const&>
         const_mut_nontrivial_ref = nontrivial_val;
-    [[maybe_unused]] cat::Optional<OptNonTrivial const&>
+    [[maybe_unused]] cat::Maybe<OptNonTrivial const&>
         const_mut_nontrivial_ref_2 = const_nontrivial_val;
     const_mut_nontrivial_ref = const_nontrivial_val;
 
-    [[maybe_unused]] cat::Optional<OptNonTrivial const&> const
+    [[maybe_unused]] cat::Maybe<OptNonTrivial const&> const
         const_const_nontrivial_ref_default;
-    [[maybe_unused]] cat::Optional<OptNonTrivial const&> const
+    [[maybe_unused]] cat::Maybe<OptNonTrivial const&> const
         const_const_nontrivial_ref = nontrivial_val;
-    [[maybe_unused]] cat::Optional<OptNonTrivial const&> const
+    [[maybe_unused]] cat::Maybe<OptNonTrivial const&> const
         const_const_nontrivial_ref_2 = const_nontrivial_val;
 
-    // `Optional const`
-    cat::Optional<int4> const constant_val = 1;
-    [[maybe_unused]] cat::Optional<int4> const constant_null = nullopt;
+    // `Maybe const`
+    cat::Maybe<int4> const constant_val = 1;
+    [[maybe_unused]] cat::Maybe<int4> const constant_null = nullopt;
     [[maybe_unused]] auto con = constant_val.value();
 
     // Test constant references.
     int4 nonconstant_int = 10;
     int4 const constant_int = 9;
-    cat::Optional<int4 const&> constant_ref = constant_int;
+    cat::Maybe<int4 const&> constant_ref = constant_int;
     cat::verify(constant_ref.value() == 9);
     constant_ref = nonconstant_int;
     cat::verify(constant_ref.value() == 10);
 
     // Test move-only types.
     Movable mov;
-    cat::Optional<Movable> maybe_movs(cat::move(mov));
+    cat::Maybe<Movable> maybe_movs(cat::move(mov));
 
     // Non-trivial constructor and destructor.
-    cat::Optional<OptNonTrivial> nontrivial = OptNonTrivial();
+    cat::Maybe<OptNonTrivial> nontrivial = OptNonTrivial();
 
-    // `Optional<void>` default-initializes empty:
-    cat::Optional<void> optvoid;
+    // `Maybe<void>` default-initializes empty:
+    cat::Maybe<void> optvoid;
     cat::verify(!optvoid.has_value());
     // `monostate` initializes a value:
-    cat::Optional<void> optvoid_2{monostate};
+    cat::Maybe<void> optvoid_2{monostate};
     cat::verify(optvoid_2.has_value());
 
     // `in_place` initializes a value:
-    cat::Optional<void> optvoid_4{in_place};
+    cat::Maybe<void> optvoid_4{in_place};
     cat::verify(optvoid_4.has_value());
     // `nullopt` initializes empty:
-    cat::Optional<void> optvoid_5{nullopt};
+    cat::Maybe<void> optvoid_5{nullopt};
     cat::verify(!optvoid_5.has_value());
 
-    cat::Optional<OptNonTrivial> in_place_nontrivial_1{in_place};
+    cat::Maybe<OptNonTrivial> in_place_nontrivial_1{in_place};
     _ = in_place_nontrivial_1.verify();
 
-    cat::Optional<OptNonTrivial> in_place_nontrivial_2{in_place, 1, 2, 'a'};
+    cat::Maybe<OptNonTrivial> in_place_nontrivial_2{in_place, 1, 2, 'a'};
     _ = in_place_nontrivial_2.verify();
 
-    // Test `Optional` in a `constexpr` context.
+    // Test `Maybe` in a `constexpr` context.
     auto constant = []() constexpr {
-        [[maybe_unused]] constexpr cat::Optional<int> const_int_default;
+        [[maybe_unused]] constexpr cat::Maybe<int> const_int_default;
 
-        constexpr cat::Optional<OptConstNonTrivial> const_nontrivial_default;
+        constexpr cat::Maybe<OptConstNonTrivial> const_nontrivial_default;
         cat::verify(!const_nontrivial_default.has_value());
 
-        constexpr cat::Optional<OptConstNonTrivial> const_nontrivial =
+        constexpr cat::Maybe<OptConstNonTrivial> const_nontrivial =
             OptConstNonTrivial{};
         cat::verify(const_nontrivial.has_value());
 
-        constexpr cat::Optional<OptConstNonTrivial> const_nontrivial_in_place =
+        constexpr cat::Maybe<OptConstNonTrivial> const_nontrivial_in_place =
             {in_place, OptConstNonTrivial{}};
         cat::verify(const_nontrivial_in_place.has_value());
 
-        // Test `Optional<Compact<T>>`.
-        constexpr cat::OptionalPtr<void> const_optptr = nullptr;
-        cat::OptionalPtr<void> optptr = nullptr;
+        // Test `Maybe<Compact<T>>`.
+        constexpr cat::MaybePtr<void> const_optptr = nullptr;
+        cat::MaybePtr<void> optptr = nullptr;
         optptr = nullptr;
         optptr = const_optptr;
-        [[maybe_unused]] cat::OptionalPtr<void> optptr2 = optptr;
-        [[maybe_unused]] cat::OptionalPtr<void> optptr3 = const_optptr;
-        [[maybe_unused]] cat::OptionalPtr<void> optptr4;
+        [[maybe_unused]] cat::MaybePtr<void> optptr2 = optptr;
+        [[maybe_unused]] cat::MaybePtr<void> optptr3 = const_optptr;
+        [[maybe_unused]] cat::MaybePtr<void> optptr4;
 
-        [[maybe_unused]] constexpr cat::OptionalPtr<OptNonTrivial>
+        [[maybe_unused]] constexpr cat::MaybePtr<OptNonTrivial>
             const_nontrivial_optptr = nullptr;
-        [[maybe_unused]] constexpr cat::OptionalPtr<OptNonTrivial>
+        [[maybe_unused]] constexpr cat::MaybePtr<OptNonTrivial>
             const_nontrivial_default_optptr;
-        [[maybe_unused]] cat::OptionalPtr<OptNonTrivial> nontrivial_optptr =
+        [[maybe_unused]] cat::MaybePtr<OptNonTrivial> nontrivial_optptr =
             nullptr;
-        [[maybe_unused]] cat::OptionalPtr<OptNonTrivial>
+        [[maybe_unused]] cat::MaybePtr<OptNonTrivial>
             nontrivial_default_optptr;
     };
     _ = cat::constant_evaluate(constant);
@@ -411,7 +411,7 @@ TEST(test_optional) {
     cat::verify(!optvoid.has_value());
 
     // Test `.is()`;
-    cat::Optional<int4> opt_is = 1;
+    cat::Maybe<int4> opt_is = 1;
     cat::verify(opt_is.is<int4>());
     cat::verify(!opt_is.is<uint8>());
 
@@ -420,7 +420,7 @@ TEST(test_optional) {
     cat::verify(!opt_is.is<uint8>());
 
     // Test `match()`.
-    cat::Optional<int4> opt_match = 1;
+    cat::Maybe<int4> opt_match = 1;
 
     bool matched = false;
     cat::match(opt_match)(is_a(1).then([&]() {
@@ -463,7 +463,7 @@ TEST(test_optional) {
     cat::verify(matched);
 
     // Test `TRY` macro.
-    _ = optional_try_success().verify();
-    cat::Optional fail = optional_try_fail();
+    _ = maybe_try_success().verify();
+    cat::Maybe fail = maybe_try_fail();
     cat::verify(!fail.has_value());
 }

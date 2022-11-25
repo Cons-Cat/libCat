@@ -90,7 +90,7 @@ class CollectionFacade {
     }
 
     // Index into this collection with bounds-checking.
-    [[nodiscard]] constexpr auto at(ssize index) -> Optional<T&>
+    [[nodiscard]] constexpr auto at(ssize index) -> Maybe<T&>
         requires(is_array_like)
     {
         if (!is_constant_evaluated()) {
@@ -103,7 +103,7 @@ class CollectionFacade {
     }
 
     // Index into this collection with bounds-checking.
-    [[nodiscard]] constexpr auto at(ssize index) const -> Optional<T&> {
+    [[nodiscard]] constexpr auto at(ssize index) const -> Maybe<T&> {
         // `unconst()` allows `.at()` to be safely called in a `const` context.
         return unconst(this)->at(index);
     }

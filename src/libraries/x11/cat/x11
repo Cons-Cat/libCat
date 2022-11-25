@@ -406,7 +406,7 @@ struct Connection {
 // TODO: Propagate errors instead of panicking.
 auto handshake(cat::allocator auto& allocator,
                cat::SocketUnix<cat::SocketType::stream>& socket)
-    -> cat::Optional<x11::Connection> {
+    -> cat::Maybe<x11::Connection> {
     x11::Connection x_connection;
 
     // Send a request with default-initialized fields.
@@ -427,7 +427,7 @@ auto handshake(cat::allocator auto& allocator,
     // A dynamic allocation must be made because the total size of all
     // recieved packets is unknown and potentially a very large amount.
     // TODO: Deallocate this somehow.
-    cat::Optional memory =
+    cat::Maybe memory =
         allocator.template alloc_multi<ConnectionResponseInfo>(
             // TODO: Remove `.raw`.
             x_connection.header.message_length.raw * 4);
@@ -477,16 +477,16 @@ auto handshake(cat::allocator auto& allocator,
 // TODO: Improve error handling. Union X11 errors and Linux errors.
 // Attempt to connect to an X server over local sockets.
 auto initiate_connection(cat::allocator auto& allocator)
-    -> cat::Optional<x11::Connection> {
+    -> cat::Maybe<x11::Connection> {
     cat::SocketUnix<cat::SocketType::stream> socket;
     socket.path_name = x11::socket_path;
 
-    cat::Optional result_1 = socket.create();
+    cat::Maybe result_1 = socket.create();
     if (!result_1.has_value()) {
         return nullopt;
     }
 
-    cat::Optional result_2 = socket.connect();
+    cat::Maybe result_2 = socket.connect();
     if (!result_2.has_value()) {
         return nullopt;
     }

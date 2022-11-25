@@ -1,12 +1,12 @@
 #include <cat/linux>
 #include <cat/math>
-#include <cat/optional>
+#include <cat/maybe>
 #include <cat/page_allocator>
 
 constexpr ssize block_size = 4_ki;
 
 auto get_file_size(nix::FileDescriptor file_descriptor)
-    -> cat::Optional<ssize> {
+    -> cat::Maybe<ssize> {
     nix::FileStatus status = nix::sys_fstat(file_descriptor).or_exit();
     if (status.is_regular()) {
         return status.file_size;
@@ -49,8 +49,8 @@ void read_and_print_file(char* p_file_name) {
     while (bytes_remaining > 0) {
         ssize current_block_size = cat::min(bytes_remaining, block_size);
 
-        // `OptionalPtr` produces an internal compiler error in GCC 12 here.
-        cat::Optional buffer = allocator.p_alloc_multi<cat::Byte>(block_size);
+        // `MaybePtr` produces an internal compiler error in GCC 12 here.
+        cat::Maybe buffer = allocator.p_alloc_multi<cat::Byte>(block_size);
         if (!buffer.has_value()) {
             allocator.free_multi(p_io_buffer, io_vectors.size());
             cat::exit(4);

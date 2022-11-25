@@ -14,7 +14,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/debug/
   ${CMAKE_SOURCE_DIR}/src/libraries/variant/
   ${CMAKE_SOURCE_DIR}/src/libraries/scaredy/
-  ${CMAKE_SOURCE_DIR}/src/libraries/optional/
+  ${CMAKE_SOURCE_DIR}/src/libraries/maybe/
   ${CMAKE_SOURCE_DIR}/src/libraries/match/
   ${CMAKE_SOURCE_DIR}/src/libraries/notype/
   ${CMAKE_SOURCE_DIR}/src/libraries/unique/

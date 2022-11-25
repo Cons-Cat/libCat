@@ -22,7 +22,7 @@ class NullAllocator : public AllocatorFacade<NullAllocator> {
 
   public:
     // This allocation always fails.
-    auto allocate(ssize) -> OptionalPtr<void> {
+    auto allocate(ssize) -> MaybePtr<void> {
         return nullptr;
     }
 

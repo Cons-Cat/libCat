@@ -257,8 +257,8 @@ template <typename T>
 using SizedAllocation = Tuple<T, ssize>;
 
 template <typename T>
-using OptionalSizedAllocation = Optional<SizedAllocation<T>>;
-/* Optional<Compact<SizedAllocation<T>,
+using MaybeSizedAllocation = Maybe<SizedAllocation<T>>;
+/* Maybe<Compact<SizedAllocation<T>,
                      [](SizedAllocation<T> tuple) -> bool {
                          return (tuple.second() != 0_sz);
                      },
@@ -271,10 +271,10 @@ using OptionalSizedAllocation = Optional<SizedAllocation<T>>;
 /*
     template <typename T,  typename... Args>
 [[nodiscard]] auto salloc(Args&&... constructor_arguments) {
-Optional size = this->nalloc<T>().value();
+Maybe size = this->nalloc<T>().value();
 
 // GCC 12 fails to deduce the type of template aliases with a lambda in
-// an unevaluted context, such as compact optionals, so it must be
+// an unevaluted context, such as compact maybes, so it must be
 // stored in a temporary value `return_val` first.
 //
 // `[[maybe_unused]]` is required because GCC 12 can mistakenly think
@@ -282,8 +282,8 @@ Optional size = this->nalloc<T>().value();
 using Alloc = SizedAllocation<decltype(this->xalloc<T, is_zeroed>())>;
 
 if (size.has_value()) {
-    [[maybe_unused]] OptionalSizedAllocation<Alloc> return_val =
-        OptionalSizedAllocation<Alloc>{nullopt};
+    [[maybe_unused]] MaybeSizedAllocation<Alloc> return_val =
+        MaybeSizedAllocation<Alloc>{nullopt};
     return return_val;
 }
 
@@ -291,8 +291,8 @@ if (size.has_value()) {
 auto allocation =
     this->xalloc<T, is_zeroed>(forward<Args>(constructor_arguments)...);
 
-[[maybe_unused]] OptionalSizedAllocation<Alloc> return_val =
-    OptionalSizedAllocation<Alloc>{Alloc{allocation, 0_sz}};
+[[maybe_unused]] MaybeSizedAllocation<Alloc> return_val =
+    MaybeSizedAllocation<Alloc>{Alloc{allocation, 0_sz}};
 return return_val;
 }
 */
@@ -336,7 +336,7 @@ class AllocatorFacade {
         requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_alloc(Args&&... constructor_arguments)
-        -> OptionalPtr<T> {
+        -> MaybePtr<T> {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -393,7 +393,7 @@ class AllocatorFacade {
     // and provide a pointer handle.
     template <typename T>
         requires(detail::stableDerivedAllocator<Derived>)
-    [[nodiscard]] auto p_alloc_multi(ssize count) -> OptionalPtr<T> {
+    [[nodiscard]] auto p_alloc_multi(ssize count) -> MaybePtr<T> {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -446,7 +446,7 @@ class AllocatorFacade {
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_align_alloc(usize alignment,
                                      Args&&... constructor_arguments)
-        -> OptionalPtr<T> {
+        -> MaybePtr<T> {
         return this
             ->meta_alloc<T, false, true, true, false, true, false, false>(
                 alignment, 1, forward<Args>(constructor_arguments)...);
@@ -490,7 +490,7 @@ class AllocatorFacade {
         requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_unalign_alloc(Args&&... constructor_arguments)
-        -> OptionalPtr<T> {
+        -> MaybePtr<T> {
         return this
             ->meta_alloc<T, false, true, false, false, true, false, false>(
                 1u, 1, forward<Args>(constructor_arguments)...);
@@ -530,7 +530,7 @@ class AllocatorFacade {
     template <typename T>
         requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_alloc_multi(usize alignment, ssize count)
-        -> OptionalPtr<T> {
+        -> MaybePtr<T> {
         return this->meta_alloc<T, false, true, true, true, true, false, false>(
             alignment, count);
         // TODO: `assert` the alignment is correct.
@@ -568,7 +568,7 @@ class AllocatorFacade {
     // with no alignment guarantee, and provide a pointer handle.
     template <typename T>
         requires(detail::stableDerivedAllocator<Derived>)
-    [[nodiscard]] auto p_unalign_alloc_multi(ssize count) -> OptionalPtr<T> {
+    [[nodiscard]] auto p_unalign_alloc_multi(ssize count) -> MaybePtr<T> {
         return this
             ->meta_alloc<T, false, true, false, true, true, false, false>(
                 1u, count);
@@ -709,7 +709,7 @@ class AllocatorFacade {
 
     // Try to get the number of bytes that allocating a `T` would reserve.
     template <typename T>
-    [[nodiscard]] auto nalloc() -> OptionalNonZero<ssize> {
+    [[nodiscard]] auto nalloc() -> MaybeNonZero<ssize> {
         return this->align_nalloc<T>(alignof(T));
     }
 
@@ -722,7 +722,7 @@ class AllocatorFacade {
     // Try to get the number of bytes that allocating an array of `T` would
     // reserve.
     template <typename T>
-    [[nodiscard]] auto nalloc_multi(ssize count) -> OptionalNonZero<ssize> {
+    [[nodiscard]] auto nalloc_multi(ssize count) -> MaybeNonZero<ssize> {
         return this->align_nalloc_multi<T>(alignof(T), count);
     }
 
@@ -736,7 +736,7 @@ class AllocatorFacade {
     // Try to get the number of bytes that allocating a `T` with an alignment
     // guarantee would reserve.
     template <typename T>
-    [[nodiscard]] auto align_nalloc(usize alignment) -> OptionalNonZero<ssize> {
+    [[nodiscard]] auto align_nalloc(usize alignment) -> MaybeNonZero<ssize> {
         return this->self().allocation_size(alignment, ssizeof<T>());
     }
 
@@ -750,7 +750,7 @@ class AllocatorFacade {
     // Try to get the number of bytes that allocating a `T` with no alignment
     // guarantee would reserve.
     template <typename T>
-    [[nodiscard]] auto unalign_nalloc() -> OptionalNonZero<ssize> {
+    [[nodiscard]] auto unalign_nalloc() -> MaybeNonZero<ssize> {
         return this->self().allocation_size(1u, ssizeof<T>());
     }
 
@@ -765,7 +765,7 @@ class AllocatorFacade {
     // alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]] auto align_nalloc_multi(usize alignment, ssize count)
-        -> OptionalNonZero<ssize> {
+        -> MaybeNonZero<ssize> {
         return this->self().allocation_size(alignment, ssizeof<T>() * count);
     }
 
@@ -783,7 +783,7 @@ class AllocatorFacade {
     // alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]] auto unalign_nalloc_multi(ssize count)
-        -> OptionalNonZero<ssize> {
+        -> MaybeNonZero<ssize> {
         return this->self().allocation_size(1u, ssizeof<T>() * count);
     }
 
@@ -797,7 +797,7 @@ class AllocatorFacade {
     // Try to get the number of bytes that allocating a small-size optimized `T`
     // would reserve.
     template <typename T>
-    [[nodiscard]] auto inline_nalloc() -> OptionalNonZero<ssize> {
+    [[nodiscard]] auto inline_nalloc() -> MaybeNonZero<ssize> {
         return this->inline_align_nalloc<T>(alignof(T));
     }
 
@@ -812,7 +812,7 @@ class AllocatorFacade {
     // array of `T` would reserve.
     template <typename T>
     [[nodiscard]] auto inline_nalloc_multi(ssize count)
-        -> OptionalNonZero<ssize> {
+        -> MaybeNonZero<ssize> {
         return this->inline_align_nalloc_multi<T>(alignof(T), count);
     }
 
@@ -827,7 +827,7 @@ class AllocatorFacade {
     // with an alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]] auto inline_align_nalloc(usize alignment)
-        -> OptionalNonZero<ssize> {
+        -> MaybeNonZero<ssize> {
         if constexpr (ssizeof<T>() > inline_buffer_size) {
             return this->self().allocation_size(alignment, ssizeof<T>());
         } else {
@@ -845,7 +845,7 @@ class AllocatorFacade {
     // Try to get the number of bytes that allocating a small-size optimized `T`
     // with no alignment guarantee would reserve.
     template <typename T>
-    [[nodiscard]] auto inline_unalign_nalloc() -> OptionalNonZero<ssize> {
+    [[nodiscard]] auto inline_unalign_nalloc() -> MaybeNonZero<ssize> {
         return this->inline_align_nalloc<T>(1u);
     }
 
@@ -860,7 +860,7 @@ class AllocatorFacade {
     // array of `T` with an alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]] auto inline_align_nalloc_multi(usize alignment, ssize count)
-        -> OptionalNonZero<ssize> {
+        -> MaybeNonZero<ssize> {
         if (ssizeof<T>() * count > inline_buffer_size) {
             return this->self().allocation_size(alignment,
                                                 ssizeof<T>() * count);
@@ -880,7 +880,7 @@ class AllocatorFacade {
     // array of `T` with no alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]] auto inline_unalign_nalloc_multi(ssize count)
-        -> OptionalNonZero<ssize> {
+        -> MaybeNonZero<ssize> {
         return this->inline_align_nalloc_multi<T>(1u, count);
     }
 
@@ -1311,7 +1311,7 @@ class AllocatorFacade {
         requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_calloc(Args&&... constructor_arguments)
-        -> OptionalPtr<T> {
+        -> MaybePtr<T> {
         if constexpr (alignof(T) > 1) {
             return this->p_align_calloc<T>(
                 alignof(T), forward<Args>(constructor_arguments)...);
@@ -1327,7 +1327,7 @@ class AllocatorFacade {
         requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_xcalloc(Args&&... constructor_arguments)
-        -> OptionalPtr<T> {
+        -> MaybePtr<T> {
         if constexpr (alignof(T) > 1) {
             return this->p_align_xcalloc<T>(
                 alignof(T), forward<Args>(constructor_arguments)...);
@@ -1361,7 +1361,7 @@ class AllocatorFacade {
     // `T`, and provide a pointer handle.
     template <typename T>
         requires(detail::stableDerivedAllocator<Derived>)
-    [[nodiscard]] auto p_calloc_multi(ssize count) -> OptionalPtr<T> {
+    [[nodiscard]] auto p_calloc_multi(ssize count) -> MaybePtr<T> {
         if constexpr (alignof(T) > 1) {
             return this->p_align_calloc_multi<T>(alignof(T), count);
         } else {
@@ -1373,7 +1373,7 @@ class AllocatorFacade {
     // provide a pointer handle.
     template <typename T>
         requires(detail::stableDerivedAllocator<Derived>)
-    [[nodiscard]] auto p_xcalloc_multi(ssize count) -> OptionalPtr<T> {
+    [[nodiscard]] auto p_xcalloc_multi(ssize count) -> MaybePtr<T> {
         if constexpr (alignof(T) > 1) {
             return this->p_align_xcalloc_multi<T>(alignof(T), count);
         } else {
@@ -1411,7 +1411,7 @@ class AllocatorFacade {
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_align_calloc(usize alignment,
                                       Args&&... constructor_arguments)
-        -> OptionalPtr<T> {
+        -> MaybePtr<T> {
         return this->meta_alloc<T, false, true, true, false, true, true, false>(
             alignment, 1, forward<Args>(constructor_arguments)...);
     }
@@ -1424,7 +1424,7 @@ class AllocatorFacade {
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_align_xcalloc(usize alignment,
                                        Args&&... constructor_arguments)
-        -> OptionalPtr<T> {
+        -> MaybePtr<T> {
         return this
             ->meta_alloc<T, false, false, true, false, true, true, false>(
                 alignment, 1, forward<Args>(constructor_arguments)...);
@@ -1457,7 +1457,7 @@ class AllocatorFacade {
         requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_unalign_calloc(Args&&... constructor_arguments)
-        -> OptionalPtr<T> {
+        -> MaybePtr<T> {
         return this
             ->meta_alloc<T, false, true, false, false, true, true, false>(
                 1u, 1, forward<Args>(constructor_arguments)...);
@@ -1470,7 +1470,7 @@ class AllocatorFacade {
         requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
     [[nodiscard]] auto p_unalign_xcalloc(Args&&... constructor_arguments)
-        -> OptionalPtr<T> {
+        -> MaybePtr<T> {
         return this
             ->meta_alloc<T, false, false, false, false, true, true, false>(
                 1u, 1, forward<Args>(constructor_arguments)...);
@@ -1499,7 +1499,7 @@ class AllocatorFacade {
     template <typename T>
         requires(detail::stableDerivedAllocator<Derived>)
     [[nodiscard]] auto p_align_calloc_multi(usize alignment, ssize count)
-        -> OptionalPtr<T> {
+        -> MaybePtr<T> {
         return this->meta_alloc<T, false, true, true, true, true, true, false>(
             alignment, count);
     }
@@ -1537,7 +1537,7 @@ class AllocatorFacade {
     // zero-out the allocated memory.
     template <typename T>
         requires(detail::stableDerivedAllocator<Derived>)
-    [[nodiscard]] auto p_unalign_calloc_multi(ssize count) -> OptionalPtr<T> {
+    [[nodiscard]] auto p_unalign_calloc_multi(ssize count) -> MaybePtr<T> {
         return this->meta_alloc<T, false, true, false, true, true, true, false>(
             1u, count);
     }
@@ -4851,11 +4851,11 @@ class AllocatorFacade {
             decltype(this->self().template make_handle<T>(declval<T*>()));
 
         // Get the return value of a user-supplied `.allocate()`. This must be
-        // some kind of `Optional`. It holds some data that can pass into a
+        // some kind of `Maybe`. It holds some data that can pass into a
         // `Handle`'s constructor.
         using MaybeAllocation =
-            Conditional<has_feedback, OptionalSizedAllocation<void*>,
-                        OptionalPtr<void>>;
+            Conditional<has_feedback, MaybeSizedAllocation<void*>,
+                        MaybePtr<void>>;
 
         // Produce an appropriate handle type for this allocation.
         using Handle = Conditional<
@@ -4877,17 +4877,17 @@ class AllocatorFacade {
                         Conditional<is_pointer,
                                     Conditional<has_feedback,
                                                 // Failsafe pointer with size.
-                                                OptionalSizedAllocation<T*>,
+                                                MaybeSizedAllocation<T*>,
                                                 // Failsafe pointer w/out size.
-                                                OptionalPtr<T>>,
+                                                MaybePtr<T>>,
                                     // Not a pointer:
                                     Conditional<has_feedback,
                                                 // Failsafe opaque handle with
                                                 // size.
-                                                OptionalSizedAllocation<Handle>,
+                                                MaybeSizedAllocation<Handle>,
                                                 // Failsafe opaque handle w/out
                                                 // size.
-                                                Optional<Handle>>>,
+                                                Maybe<Handle>>>,
                         // Not fail-safe:
                         Conditional<is_pointer,
                                     Conditional<has_feedback,
@@ -4953,10 +4953,10 @@ class AllocatorFacade {
                     if constexpr (detail::hasAllocationSize<Derived>) {
                         // If a `.aligned_allocate_feedback()` is not provided,
                         // use `.allocation_size`().
-                        Optional size = this->self().allocation_size(
+                        Maybe size = this->self().allocation_size(
                             allocation_alignment, allocation_size);
                         if (size.has_value()) {
-                            maybe_memory = OptionalSizedAllocation<void*>{
+                            maybe_memory = MaybeSizedAllocation<void*>{
                                 this->self()
                                     .aligned_allocate(allocation_alignment,
                                                       allocation_size)
@@ -4970,10 +4970,10 @@ class AllocatorFacade {
                     } else {
                         // If a `.allocation_size()` is not provided, simply
                         // assume that it allocates `allocation_size`.
-                        Optional temp_memory = this->self().aligned_allocate(
+                        Maybe temp_memory = this->self().aligned_allocate(
                             allocation_alignment, allocation_size);
                         if (temp_memory.has_value()) {
-                            maybe_memory = OptionalSizedAllocation<void*>{
+                            maybe_memory = MaybeSizedAllocation<void*>{
                                 temp_memory.value(), allocation_size};
                         } else {
                             maybe_memory = nullopt;
@@ -5001,11 +5001,11 @@ class AllocatorFacade {
                     } else if constexpr (detail::hasAllocationSize<Derived>) {
                         // If a `.aligned_allocate_feedback()` is not provided,
                         // use `.allocation_size`().
-                        Optional size =
+                        Maybe size =
                             this->self().allocation_size(1u, allocation_size);
 
                         if (size.has_value()) {
-                            maybe_memory = OptionalSizedAllocation<void*>{
+                            maybe_memory = MaybeSizedAllocation<void*>{
                                 // If `.allocation_size()` succeeded, this will
                                 // not fail.
                                 this->self().allocate(allocation_size).value(),
@@ -5019,7 +5019,7 @@ class AllocatorFacade {
                         auto temp_memory = this->self().aligned_allocate(
                             allocation_alignment, allocation_size);
                         if (temp_memory.has_value()) {
-                            maybe_memory = OptionalSizedAllocation<void*>{
+                            maybe_memory = MaybeSizedAllocation<void*>{
                                 temp_memory.value(), allocation_size};
                         } else {
                             maybe_memory = nullopt;
@@ -5041,7 +5041,7 @@ class AllocatorFacade {
 
         if constexpr (is_fail_safe) {
             if (!maybe_memory.has_value()) {
-                // Return an empty optional if this failed to allocate.
+                // Return an empty maybe if this failed to allocate.
                 return ReturnHandle{nullopt};
             }
         }

@@ -491,7 +491,7 @@ class Scaredy {
         return fallback;
     }
 
-    // TODO: Add `.p_value()` getters, like `cat::Optional`.
+    // TODO: Add `.p_value()` getters, like `cat::Maybe`.
 
     // TODO: Add `&&` overloads to the `.assert()` and `.verify()` getters.
     // TODO: Make the `.assert()` and `.verify()` getters `constexpr`.

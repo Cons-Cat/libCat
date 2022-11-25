@@ -2,7 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/optional>
+#include <cat/maybe>
 
 namespace cat {
 namespace detail {

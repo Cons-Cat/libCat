@@ -51,7 +51,7 @@ struct SocketUnix {
     }
 
     // Create and return a `Socket`.
-    auto create() -> Optional<void> {
+    auto create() -> Maybe<void> {
         Scaredy result = nix::sys_socket(this->attributes.family,
                                          static_cast<int>(Type), Protocol);
         if (result.has_value()) {
@@ -62,7 +62,7 @@ struct SocketUnix {
     }
 
     // Connect a `Socket`.
-    auto connect() -> Optional<void> {
+    auto connect() -> Maybe<void> {
         Scaredy result =
             nix::sys_connect(this->descriptor, this, this->get_size());
         if (result.has_value()) {
@@ -73,7 +73,7 @@ struct SocketUnix {
 
     auto send_string(String const& message, int8 flags = 0,
                      cat::Socket const* p_destination_socket = nullptr,
-                     ssize const addr_length = 0) -> Optional<void> {
+                     ssize const addr_length = 0) -> Maybe<void> {
         Scaredy result =
             nix::sys_sendto(this->descriptor, message.p_data(), message.size(),
                             flags, p_destination_socket, addr_length);
@@ -85,7 +85,7 @@ struct SocketUnix {
 
     auto send_struct(auto const& message_struct, int8 flags = 0,
                      cat::Socket const* p_destination_socket = nullptr,
-                     ssize const addr_length = 0) -> Optional<void> {
+                     ssize const addr_length = 0) -> Maybe<void> {
         Scaredy result = nix::sys_sendto(this->descriptor, &message_struct,
                                          ssizeof(message_struct), flags,
                                          p_destination_socket, addr_length);
@@ -95,7 +95,7 @@ struct SocketUnix {
         return nullopt;
     }
 
-    auto bind() -> Optional<void> {
+    auto bind() -> Maybe<void> {
         Scaredy result =
             nix::sys_bind(this->descriptor, this, this->get_size());
         if (result.has_value()) {
@@ -104,7 +104,7 @@ struct SocketUnix {
         return nullopt;
     }
 
-    auto listen(int8 backlog) -> Optional<void> {
+    auto listen(int8 backlog) -> Maybe<void> {
         Scaredy result = nix::sys_listen(this->descriptor, backlog);
         if (result.has_value()) {
             return monostate;
@@ -114,7 +114,7 @@ struct SocketUnix {
 
     auto accept(nix::FileDescriptor listening_socket,
                 void const* p_socket = nullptr,
-                ssize const* p_addr_len = nullptr) -> Optional<void> {
+                ssize const* p_addr_len = nullptr) -> Maybe<void> {
         Scaredy result =
             nix::sys_accept(listening_socket, p_socket, p_addr_len);
         if (result.has_value()) {
@@ -125,7 +125,7 @@ struct SocketUnix {
 
     auto accept(SocketUnix<Type, Protocol> const& listening_socket,
                 void const* p_socket = nullptr,
-                ssize const* p_addr_len = nullptr) -> Optional<void> {
+                ssize const* p_addr_len = nullptr) -> Maybe<void> {
         Scaredy result =
             nix::sys_accept(listening_socket.descriptor, p_socket, p_addr_len);
         if (result.has_value()) {
@@ -139,7 +139,7 @@ struct SocketUnix {
     auto recieve(void* const p_message_buffer, ssize const buffer_length,
                  Socket const* const __restrict p_socket = nullptr,
                  ssize const* const __restrict p_socket_size = nullptr)
-        -> Optional<ssize> {
+        -> Maybe<ssize> {
         // Scaredy const result =
         nix::ScaredyLinux<ssize> const result =
             nix::sys_recv(this->descriptor, p_message_buffer, buffer_length,
@@ -150,7 +150,7 @@ struct SocketUnix {
         return nullopt;
     }
 
-    auto close() -> Optional<void> {
+    auto close() -> Maybe<void> {
         Scaredy result = nix::sys_close(this->descriptor);
         if (result.has_value()) {
             return monostate;

@@ -18,7 +18,7 @@ TEST(test_linear_allocator) {
     // It should not be possible to allocate 7 times here, because 24 bytes can
     // only hold 6 `int4`s.
     for (int i = 0; i < 7; ++i) {
-        cat::Optional handle = allocator.alloc<int4>();
+        cat::Maybe handle = allocator.alloc<int4>();
         if (!handle.has_value()) {
             cat::verify(i == 6);
             goto overallocated;
@@ -30,7 +30,7 @@ overallocated:
     // Invalidate all memory handles, and allocate again.
     allocator.reset();
     for (int4 i = 0; i < 4; ++i) {
-        cat::Optional handle = allocator.alloc<cat::Byte>();
+        cat::Maybe handle = allocator.alloc<cat::Byte>();
         cat::verify(handle.has_value());
     }
     // This allocated 16 bytes, which is 8-byte-aligned. Another int allocation
@@ -50,7 +50,7 @@ overallocated:
         auto memory = allocator.inline_alloc<int4>();
         cat::verify(memory.has_value());
     }
-    cat::Optional handle_3 = allocator.alloc<int4>();
+    cat::Maybe handle_3 = allocator.alloc<int4>();
     cat::verify(handle_3.has_value());
 
     // Test that allocations are reusable.

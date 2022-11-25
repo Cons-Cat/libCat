@@ -23,8 +23,8 @@ class BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
 
     template <typename U>
     constexpr auto insert(/* Allocator */ auto& allocator, U& value)
-        -> Optional<BackInsertIterator<T>&> {
-        Optional result = this->iterable.push_back(allocator, value);
+        -> Maybe<BackInsertIterator<T>&> {
+        Maybe result = this->iterable.push_back(allocator, value);
         if (!result.has_value()) {
             return nullopt;
         }
@@ -39,8 +39,8 @@ class BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
 
     template <typename U>
     constexpr auto insert(/* Allocator */ auto& allocator, U const& value)
-        -> Optional<BackInsertIterator<T>&> {
-        Optional result = this->iterable.push_back(allocator, value);
+        -> Maybe<BackInsertIterator<T>&> {
+        Maybe result = this->iterable.push_back(allocator, value);
         if (!result.has_value()) {
             return nullopt;
         }
@@ -61,8 +61,8 @@ class BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
 
     template <typename U>
     constexpr auto insert(/* Allocator */ auto& allocator, U&& value)
-        -> Optional<BackInsertIterator<T>&> {
-        Optional result =
+        -> Maybe<BackInsertIterator<T>&> {
+        Maybe result =
             this->iterable.push_back(allocator, forward<U>(value));
         if (!result.has_value()) {
             return nullopt;
@@ -112,8 +112,8 @@ class FrontInsertIterator : public IteratorFacade<FrontInsertIterator<T>> {
 
     template <typename U>
     constexpr auto insert(/* Allocator */ auto& allocator, U& value)
-        -> Optional<FrontInsertIterator<T>&> {
-        Optional result = this->iterable.push_front(allocator, value);
+        -> Maybe<FrontInsertIterator<T>&> {
+        Maybe result = this->iterable.push_front(allocator, value);
         if (!result.has_value()) {
             return nullopt;
         }
@@ -128,8 +128,8 @@ class FrontInsertIterator : public IteratorFacade<FrontInsertIterator<T>> {
 
     template <typename U>
     constexpr auto insert(/* Allocator */ auto& allocator, U const& value)
-        -> Optional<FrontInsertIterator<T>&> {
-        Optional result = this->iterable.push_front(allocator, value);
+        -> Maybe<FrontInsertIterator<T>&> {
+        Maybe result = this->iterable.push_front(allocator, value);
         if (!result.has_value()) {
             return nullopt;
         }
@@ -150,8 +150,8 @@ class FrontInsertIterator : public IteratorFacade<FrontInsertIterator<T>> {
 
     template <typename U>
     constexpr auto insert(/* Allocator */ auto& allocator, U&& value)
-        -> Optional<FrontInsertIterator<T>&> {
-        Optional result =
+        -> Maybe<FrontInsertIterator<T>&> {
+        Maybe result =
             this->iterable.push_front(allocator, forward<U>(value));
         if (!result.has_value()) {
             return nullopt;

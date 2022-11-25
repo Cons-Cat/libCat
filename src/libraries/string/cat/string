@@ -106,7 +106,7 @@ class String : public Span<char const> {
     }
 
     constexpr auto find_small(char character, ssize position = 0) const
-        -> Optional<Sentinel<ssize, -1>> {
+        -> Maybe<Sentinel<ssize, -1>> {
         for (ssize i = position; i < this->length; ++i) {
             if (this->p_storage[i.raw] == character) {
                 return i;
@@ -118,7 +118,7 @@ class String : public Span<char const> {
     // TODO: Optimize different length strings.
     // TODO: Tile this loop four or eight times.
     constexpr auto find(char character, ssize position = 0) const
-        -> Optional<Sentinel<ssize, -1>> {
+        -> Maybe<Sentinel<ssize, -1>> {
         ssize i = position;
         for (; i < this->length - char1x_::lanes; i += char1x_::lanes) {
             // TODO: Consider aligning this load?
@@ -283,10 +283,10 @@ class StaticString : public CollectionFacade<StaticString<length>, char> {
 
 }  // namespace cat
 
-// These must be implemented after both `Optional` and `String`:
+// These must be implemented after both `Maybe` and `String`:
 
 template <typename T>
-[[nodiscard]] auto cat::Optional<T>::or_exit(cat::String const error_message,
+[[nodiscard]] auto cat::Maybe<T>::or_exit(cat::String const error_message,
                                              ssize exit_code) & {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
@@ -301,7 +301,7 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] auto cat::Optional<T>::or_exit(cat::String const error_message,
+[[nodiscard]] auto cat::Maybe<T>::or_exit(cat::String const error_message,
                                              ssize exit_code) const& {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
@@ -316,7 +316,7 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] auto cat::Optional<T>::or_exit(cat::String const error_message,
+[[nodiscard]] auto cat::Maybe<T>::or_exit(cat::String const error_message,
                                              ssize exit_code) && {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
@@ -331,7 +331,7 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] auto cat::Optional<T>::or_exit(cat::String const error_message,
+[[nodiscard]] auto cat::Maybe<T>::or_exit(cat::String const error_message,
                                              ssize exit_code) const&& {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {

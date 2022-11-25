@@ -3,13 +3,13 @@
 #pragma once
 
 #include <cat/numerals>
-#include <cat/optional>
+#include <cat/maybe>
 #include <cat/utility>
 
 namespace cat {
 
 template <typename From, typename To>
-constexpr auto numeric_cast(From from) -> Optional<To> {
+constexpr auto numeric_cast(From from) -> Maybe<To> {
     To const to = static_cast<To>(from);
     constexpr bool has_same_signedness = is_signed<From> != is_signed<To>;
 

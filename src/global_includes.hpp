@@ -119,7 +119,7 @@ class String;
 // `NoType` is required for `TRY()`.
 #include <cat/notype>
 
-// Unwrap an error-like container such as `cat::Scaredy` or `cat::Optional` iff
+// Unwrap an error-like container such as `cat::Scaredy` or `cat::Maybe` iff
 // it holds a value, otherwise propagate it up the call stack. This works due to
 // a GCC extension, statement expressions.
 #define TRY(container)                                                      \
@@ -131,11 +131,11 @@ class String;
         /* the return type instead, but of course `NoType` will never be */ \
         /* returned.*/                                                      \
         using ReturnType =                                                  \
-            cat::Conditional<cat::is_specialization<TRY_T, cat::Optional>,  \
+            cat::Conditional<cat::is_specialization<TRY_T, cat::Maybe>,  \
                              cat::detail::NullOpt, cat::NoType>;            \
                                                                             \
         if (!((container).has_value())) {                                   \
-            if constexpr (cat::is_specialization<TRY_T, cat::Optional>) {   \
+            if constexpr (cat::is_specialization<TRY_T, cat::Maybe>) {   \
                 return ReturnType{};                                        \
             } else {                                                        \
                 return (container);                                         \

@@ -16,15 +16,15 @@ namespace cat {
 // Erase the type of `cat::Numeral` for redundant template instantiations.
 template <integral T, OverflowPolicies policy>
 [[nodiscard]] auto to_chars(allocator auto& allocator,
-                            Numeral<T, policy> numeral) -> Optional<String> {
+                            Numeral<T, policy> numeral) -> Maybe<String> {
     return to_chars(allocator, to_raw_numeral(numeral));
 }
 
 // Dynamically allocate an integral value converted to `String`.
 template <integral T>
 [[nodiscard]] auto to_chars(allocator auto& allocator, T integer)
-    -> Optional<String> {
-    Optional result =
+    -> Maybe<String> {
+    Maybe result =
         allocator.template p_alloc_multi<char>(Limits<T>::digits10);
     if (!result.has_value()) {
         return nullopt;
@@ -50,8 +50,8 @@ template <integral T>
 template <typename T>
     requires(is_floating_point<T>)
 [[nodiscard]] auto to_chars(allocator auto& alloc, T value)
-    -> Optional<String> {
-    Optional result = alloc.template p_alloc_multi<char>(Limits<T>::digits10);
+    -> Maybe<String> {
+    Maybe result = alloc.template p_alloc_multi<char>(Limits<T>::digits10);
     if (!result.has_value()) {
         return nullopt;
     }
@@ -114,7 +114,7 @@ template <auto value>
 template <integral T>
 [[nodiscard]] constexpr auto to_string_at(Numeral<T> value,
                                           Span<char> output_buffer)
-    -> Optional<String> {
+    -> Maybe<String> {
     // Add 1 for a negative sign `-` character.
     constexpr ssize max_length = to_chars<Numeral<T>::max()>().size() + 1;
     char buffer[max_length.raw];
@@ -288,10 +288,10 @@ namespace detail {
         }
 
         auto push_back(stableAllocator auto& allocator, char character)
-            -> Optional<void> {
+            -> Maybe<void> {
             if (this->length + 1 > this->max_length) {
                 // Reallocate double the memory if its capacity is exceeded.
-                Optional result = allocator.template p_realloc_multi<char>(
+                Maybe result = allocator.template p_realloc_multi<char>(
                     this->p_storage, this->max_length, this->max_length * 2);
                 if (!result.has_value()) {
                     return nullopt;
@@ -424,17 +424,17 @@ namespace detail {
             return this->max_length;
         }
 
-        virtual auto grow(ssize new_size) -> Optional<void> = 0;
+        virtual auto grow(ssize new_size) -> Maybe<void> = 0;
 
         void clear() {
             this->length = 0;
         }
 
-        auto push_back(Allocator&, char character) -> Optional<void> {
+        auto push_back(Allocator&, char character) -> Maybe<void> {
             // If the new length would exceed the current capacity, call
             // `.grow()` to extend the capacity, first.
             if (this->length + 1 > this->max_length) {
-                Optional<void> result = this->grow(this->length + 1);
+                Maybe<void> result = this->grow(this->length + 1);
                 if (!result.has_value()) {
                     return nullopt;
                 }
@@ -482,7 +482,7 @@ namespace detail {
         // Overload the pure virtual `FormatBufferBase::grow()` function.
         // Instead of expanding its own memory, this buffer is flushed itself to
         // make more room.
-        auto grow(ssize) -> Optional<void> {
+        auto grow(ssize) -> Maybe<void> {
             // `size()` is derived from `FormatBufferBase`.
             if (this->size() == 256) {
                 this->flush();
@@ -490,14 +490,14 @@ namespace detail {
             return monostate;
         }
 
-        auto flush() -> Optional<void> {
+        auto flush() -> Maybe<void> {
             // `size()` is derived from `FormatBufferBase`.
             ssize size = this->size();
             // char const* p_end = storage + size;
 
             // TODO: Use a multiple `.insert()` overload.
             for (ssize::Raw i = 0; i < size; ++i) {
-                Optional result = output_iterator.insert(allocator, storage[i]);
+                Maybe result = output_iterator.insert(allocator, storage[i]);
                 if (!result.has_value()) {
                     return nullopt;
                 }
@@ -513,7 +513,7 @@ namespace detail {
     template <stableAllocator Allocator, typename T>
     struct FormatBufferIterator<Allocator, T*> : FormatBufferBase<Allocator> {
         // `.grow()` for a `T[]` is no-op.
-        auto grow() -> Optional<void> {
+        auto grow() -> Maybe<void> {
             return monostate;
         }
     };
@@ -563,7 +563,7 @@ namespace detail {
 
         // Check if a manually indexed argument is within reasonable bounds, and
         // check that this context is not using automatic indexing.
-        constexpr auto check_argument_index(ssize index) -> Optional<void> {
+        constexpr auto check_argument_index(ssize index) -> Maybe<void> {
             if (is_constant_evaluated()) {
                 if (index >= this->arguments_count) {
                     // This index is of range.
@@ -624,7 +624,7 @@ namespace detail {
             if (to_open_brace == to_close_brace) {
                 for (char const& character : remainder) {
                     // TODO: Optimize this with a multiple-insert overload.
-                    Optional result = handler.output_iterator.insert(
+                    Maybe result = handler.output_iterator.insert(
                         handler.allocator, character);
                     if (!result.has_value()) {
                         return FormatErrors::out_of_memory;
@@ -637,7 +637,7 @@ namespace detail {
             // the next argument.
             for (ssize i = 0; i < to_open_brace; ++i) {
                 // TODO: Optimize this with a multiple-insert overload.
-                Optional result = handler.output_iterator.insert(
+                Maybe result = handler.output_iterator.insert(
                     handler.allocator, remainder[i]);
                 if (!result.has_value()) {
                     return FormatErrors::out_of_memory;
@@ -648,7 +648,7 @@ namespace detail {
             FormatArguments const& arguments = handler.arguments;
 
             auto parse = [&]<typename ArgType>(ArgType) -> ScaredyFormat<void> {
-                Optional const result =
+                Maybe const result =
                     to_chars(handler.allocator,
                              arguments.template get<ArgType>(current_argument));
                 if (!result.has_value()) {
@@ -742,7 +742,7 @@ namespace detail {
         // allocate that much up-front for `output`.
         ssize const initial_size = format.size() + 10;
 
-        Optional maybe_memory =
+        Maybe maybe_memory =
             allocator.template p_alloc_multi<char>(initial_size);
         if (!maybe_memory.has_value()) {
             return FormatErrors::out_of_memory;
