@@ -1,7 +1,6 @@
 #include <cat/match>
 
 #include "../unit_tests.hpp"
-#include "cat/variant"
 
 template <auto value>
 struct Nttp {

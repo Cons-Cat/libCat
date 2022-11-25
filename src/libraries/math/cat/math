@@ -95,48 +95,59 @@ constexpr auto abs(auto const& value) {
 }
 
 namespace detail {
-    // TODO: Use an optimized algorithm instead.
+    // TODO: Consider a jump-table implementation, or
     template <integral T, typename U>
     constexpr auto pow_integral(T base, U exponent) -> T {
-        if (0 == exponent) {
-            return 1;
+        if (exponent < 0) {
+            // A negative exponent should always make this floor to 0.
+            return 0;
         }
-        T z = base;
-        T y = 1;
-        while (true) {
+
+        if constexpr (is_signed<T>) {
+            base = abs(base);
+        }
+
+        // "Exponentation by squaring" algorithm.
+        int result = 1;
+        while (exponent) {
             if (exponent & 1) {
-                y *= z;
+                result *= base;
             }
-            exponent /= 2;
-            if (exponent == 0) {
-                break;
-            }
-            z *= z;
+            // Since this is guaranteed positive, it can bitshift.
+            exponent >>= 1;
+            base *= base;
         }
-        return y;
+
+        return result;
     }
 }  // namespace detail
 
-template <arithmetic T>
-constexpr auto pow(T base, T exponent) -> T {
-    // Level `Numeral` into primitive types.
-    auto raw_base = to_raw_numeral(base);
-    using Raw = decltype(raw_base);
+template <arithmetic T, integral U>
+constexpr auto pow(T base, U exponent) -> T {
+    // Type-erase `Numeral`s to prevent redundant code gen.
+    using Raw = ToRawNumeral<T>;
+    Raw raw_base = to_raw_numeral(base);
+    Raw raw_exponent = to_raw_numeral(exponent);
 
     if constexpr (integral<Raw>) {
-        return detail::pow_integral(raw_base, exponent);
+        return detail::pow_integral(raw_base, raw_exponent);
+        // TODO: Support float and double `pow()` functions.
     } else if constexpr (is_same<Raw, float>) {
-        return __builtin_powf(raw_base, exponent);
+        // return __builtin_powf(raw_base, raw_exponent);
     } else if constexpr (is_same<Raw, double>) {
-        return __builtin_pow(raw_base, exponent);
-    } else if constexpr (is_same<Raw, long double>) {
-        return __builtin_powl(raw_base, exponent);
+        // return __builtin_pow(raw_base, raw_exponent);
     }
 }
 
 template <arithmetic T>
 constexpr auto is_power_of_two(T value) -> bool {
     return (value & (value - T{1})) == T{0};
+}
+
+template <arithmetic T>
+auto clamp(T value, T min, T max) -> T {
+    T lower_bound = value < min ? min : value;
+    return lower_bound > max ? max : lower_bound;
 }
 
 }  // namespace cat
