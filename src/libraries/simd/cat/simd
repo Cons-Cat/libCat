@@ -387,54 +387,54 @@ class alignas(InAbi::alignment.raw) Simd {
         return Vector{}.fill(value);
     }
 
-    // Load a vector from `p_data`, aligned to `Abi::alignment`.
-    constexpr auto load_aligned(T const* p_data) -> Vector& {
+    // Load a vector from `data`, aligned to `Abi::alignment`.
+    constexpr auto load_aligned(T const* data) -> Vector& {
         this->raw =
-            static_cast<Vector const*>(static_cast<void const*>(p_data))->raw;
+            static_cast<Vector const*>(static_cast<void const*>(data))->raw;
         return *this;
     }
 
-    // Load a vector from `p_data` with any alignment. This may be slower than
+    // Load a vector from `data` with any alignment. This may be slower than
     // `.loaded_aligned()`.
-    constexpr auto load_unaligned(T const* p_data) -> Vector& {
+    constexpr auto load_unaligned(T const* data) -> Vector& {
         this->raw = static_cast<UnalignedVector const*>(
-                        static_cast<void const*>(p_data))
+                        static_cast<void const*>(data))
                         ->raw;
         return *this;
     }
 
-    // Load a vector from `p_data`.
-    constexpr auto load(T const* p_data) -> Vector& {
+    // Load a vector from `data`.
+    constexpr auto load(T const* data) -> Vector& {
         if constexpr (Abi::alignment == alignof(T)) {
-            return this->load_aligned(p_data);
+            return this->load_aligned(data);
         } else {
-            return this->load_unaligned(p_data);
+            return this->load_unaligned(data);
         }
     }
 
-    // Construct a `Simd` loaded from the address `p_data`, aligned to
+    // Construct a `Simd` loaded from the address `data`, aligned to
     // `Abi::alignment`.
-    [[nodiscard]] static constexpr auto loaded_aligned(T const* p_data)
+    [[nodiscard]] static constexpr auto loaded_aligned(T const* data)
         -> Vector {
-        return *bit_cast<Vector const*>(p_data);
+        return *bit_cast<Vector const*>(data);
     }
 
-    // Construct a `Simd` loaded from the address `p_data` with any alignment.
+    // Construct a `Simd` loaded from the address `data` with any alignment.
     // This may be slower than `.loaded_aligned()`.
     // Without this `no_sanitize_address` attribute, Asan reports a false
     // positive when loading a `char const*` from the `.strings` segment,
     // because vector loads potentially index out of bounds.
     [[nodiscard, gnu::no_sanitize_address]] static constexpr auto
-    loaded_unaligned(T const* p_data) -> Vector {
-        return *bit_cast<UnalignedVector const*>(p_data);
+    loaded_unaligned(T const* data) -> Vector {
+        return *bit_cast<UnalignedVector const*>(data);
     }
 
-    // Construct a `Simd` loaded from the address `p_data`.
-    [[nodiscard]] static constexpr auto loaded(T const* p_data) {
+    // Construct a `Simd` loaded from the address `data`.
+    [[nodiscard]] static constexpr auto loaded(T const* data) {
         if constexpr (Abi::alignment == alignof(T)) {
-            return loaded_aligned(p_data);
+            return loaded_aligned(data);
         } else {
-            return loaded_unaligned(p_data);
+            return loaded_unaligned(data);
         }
     }
 
@@ -626,16 +626,16 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
         return Mask{}.fill(value);
     }
 
-    // Load a vector from `p_data`, aligned to `Abi<bool>::alignment`.
-    constexpr auto load(bool const* p_data) -> Mask& {
+    // Load a vector from `data`, aligned to `Abi<bool>::alignment`.
+    constexpr auto load(bool const* data) -> Mask& {
         this->raw =
-            static_cast<Mask const*>(static_cast<void const*>(p_data))->raw;
+            static_cast<Mask const*>(static_cast<void const*>(data))->raw;
         return *this;
     }
 
-    // Construct a `Simd` loaded from the address `p_data`.
-    [[nodiscard]] static constexpr auto loaded(bool const* p_data) {
-        return Mask{}.load(p_data);
+    // Construct a `Simd` loaded from the address `data`.
+    [[nodiscard]] static constexpr auto loaded(bool const* data) {
+        return Mask{}.load(data);
     }
 
     Raw raw;

@@ -65,27 +65,27 @@ class String : public Span<char const> {
 
     template <ssize::Raw other_length>
     constexpr String(StaticString<other_length> const& other_string) {
-        this->p_storage = other_string.p_data();
+        this->p_storage = other_string.data();
         this->length = other_length;
     }
 
     constexpr String(Span<char> const& span)
-        : Span<char const>(span.p_data(), span.size()){};
+        : Span<char const>(span.data(), span.size()){};
 
     constexpr String(Span<char>&& span)
-        : Span<char const>(span.p_data(), span.size()){};
+        : Span<char const>(span.data(), span.size()){};
 
     // A `String` consuming `nullptr` would cause undefined behavior.
     constexpr String(decltype(nullptr)) = delete;
 
     constexpr auto operator=(String const& string) -> String& {
-        this->p_storage = string.p_data();
+        this->p_storage = string.data();
         this->length = string.size();
         return *this;
     }
 
     constexpr auto operator=(String&& string) -> String& {
-        this->p_storage = string.p_data();
+        this->p_storage = string.data();
         this->length = move(string).size();
         return *this;
     }
@@ -148,11 +148,11 @@ class String : public Span<char const> {
 template <ssize::Raw length>
 class StaticString : public CollectionFacade<StaticString<length>, char> {
   public:
-    constexpr auto p_data() -> char* {
+    constexpr auto data() -> char* {
         return &(this->storage[0]);
     }
 
-    constexpr auto p_data() const -> char const* {
+    constexpr auto data() const -> char const* {
         return &(this->storage[0]);
     }
 
@@ -164,7 +164,7 @@ class StaticString : public CollectionFacade<StaticString<length>, char> {
 
     // Construct from another `StaticString` of lesser or equal length.
     constexpr StaticString(StaticString<length> const& string) {
-        this->copy_string_data(string.p_data());
+        this->copy_string_data(string.data());
     }
 
     // Construct and deduce length from a string literal.
@@ -193,7 +193,7 @@ class StaticString : public CollectionFacade<StaticString<length>, char> {
     // Assign a `StaticString` of lesser or equal length.
     constexpr auto operator=(StaticString<length> const& string)
         -> StaticString<length>& {
-        this->copy_string_data(string.p_data());
+        this->copy_string_data(string.data());
         return *this;
     }
 
@@ -221,7 +221,7 @@ class StaticString : public CollectionFacade<StaticString<length>, char> {
         }
 
         for (ssize::Raw i = length - 1; i < new_length - 1; ++i) {
-            array[i] = other_string.p_data()[i - length + 1];
+            array[i] = other_string.data()[i - length + 1];
         }
 
         // Make this new string null-terminated.
@@ -253,7 +253,7 @@ class StaticString : public CollectionFacade<StaticString<length>, char> {
                 this->storage[i] = p_source[i];
             }
         } else {
-            copy_memory(p_source, this->p_data(), length);
+            copy_memory(p_source, this->data(), length);
         }
     }
 

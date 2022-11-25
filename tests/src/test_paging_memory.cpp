@@ -58,7 +58,7 @@ TEST(test_paging_memory) {
     // `small_memory_1` should be in a page, so these addresses are far
     // apart.
     cat::verify(cat::abs(intptr<int>{&stack_variable} -
-                         intptr<int4>{allocator.get(small_memory_5).p_data()}) >
+                         intptr<int4>{allocator.get(small_memory_5).data()}) >
                 512);
     allocator.free(small_memory_1);
 

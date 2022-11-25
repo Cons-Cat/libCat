@@ -28,8 +28,8 @@ TEST(test_format_strings) {
     // constexpr cat::StaticString const_int = cat::to_chars<136>();
     // constexpr cat::StaticString const_negative = cat::to_chars<-1650>();
 
-    // cat::verify(cat::compare_strings(const_int.p_data(), "136"));
-    // cat::verify(cat::compare_strings(const_negative.p_data(), "-1650"));
+    // cat::verify(cat::compare_strings(const_int.data(), "136"));
+    // cat::verify(cat::compare_strings(const_negative.data(), "-1650"));
 
     // Test formatting `int`.
     allocator.reset();
@@ -43,7 +43,7 @@ TEST(test_format_strings) {
     // Test formatting `float`.
     allocator.reset();
     cat::String string_float = cat::to_chars(allocator, 1.234f).or_exit();
-    cat::verify(cat::compare_strings(string_float.p_data(), "1.234E0"),
+    cat::verify(cat::compare_strings(string_float.data(), "1.234E0"),
                 string_float);
     // _ = cat::println(string_float);
 
@@ -59,25 +59,25 @@ TEST(test_format_strings) {
 
     // Test `cat::to_string_at()`.
     cat::Array<char, 100> array;
-    cat::Span<char> array_span{array.p_data(), array.size()};
+    cat::Span<char> array_span{array.data(), array.size()};
 
     // TODO: This segfaults with optimizations enabled in GCC 13.
     // cat::String string_int_13 =
     //     cat::to_string_at(int4{13}, array_span).verify();
     // cat::verify(string_int_13.size() == 4);
-    // cat::verify(cat::compare_strings(string_int_13.p_data(), "13"));
+    // cat::verify(cat::compare_strings(string_int_13.data(), "13"));
 
     // TODO: These stopped working for some reason.
 
     // cat::String string_neg_13 =
     //     cat::to_string_at(int4{-13}, array_span).verify();
     // cat::verify(string_neg_13.size() == 4);
-    // cat::verify(cat::compare_strings(string_neg_13.p_data(), "-13"));
+    // cat::verify(cat::compare_strings(string_neg_13.data(), "-13"));
 
     // Test `cat::to_string_at()` in a `constexpr` context.
     // auto make_hi_in_const = [](int4 value) constexpr->cat::String {
     //     cat::Array<char, 100> array{};
-    //     cat::Span<char> array_span{array.p_data(), array.size()};
+    //     cat::Span<char> array_span{array.data(), array.size()};
     //     _ = cat::to_string_at(value, array_span).value();
     //     return "Hi";
     // };

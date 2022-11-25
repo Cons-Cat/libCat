@@ -79,12 +79,12 @@ class Array : public CollectionFacade<Array<T, length>, T> {
     }
 
     // Get the non-`const` address of this `Array`'s internal array.
-    [[nodiscard]] constexpr auto p_data() -> T* {
+    [[nodiscard]] constexpr auto data() -> T* {
         return this->storage;
     }
 
     // Get the `const` address of this `Array`'s internal array.
-    [[nodiscard]] constexpr auto p_data() const -> T const* {
+    [[nodiscard]] constexpr auto data() const -> T const* {
         return this->storage;
     }
 

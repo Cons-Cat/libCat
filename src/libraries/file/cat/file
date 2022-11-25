@@ -33,7 +33,7 @@ class RawFile {
 
         // Try to open a file from a path.
         Scaredy open_result =
-            nix::sys_open(path.p_data(), open_flags, open_mode);
+            nix::sys_open(path.data(), open_flags, open_mode);
         if (!open_result.has_value()) {
             return open_result.error();
         }

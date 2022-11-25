@@ -124,7 +124,7 @@ TEST(test_alloc) {
     auto align_alloc_multi = allocator.align_alloc_multi<int4>(8u, 5).value();
     cat::verify(align_alloc_multi.size() == 5);
     cat::verify(align_alloc_multi.raw_size() == 20);
-    cat::verify(cat::is_aligned(allocator.get(align_alloc_multi).p_data(), 8u));
+    cat::verify(cat::is_aligned(allocator.get(align_alloc_multi).data(), 8u));
     alloc_counter = 0;
     _ = allocator.align_alloc_multi<AllocNonTrivial>(8u, 5);
     cat::verify(alloc_counter == 5);
@@ -134,7 +134,7 @@ TEST(test_alloc) {
     cat::verify(align_xalloc_multi.size() == 5);
     cat::verify(align_xalloc_multi.raw_size() == 20);
     cat::verify(
-        cat::is_aligned(allocator.get(align_xalloc_multi).p_data(), 8u));
+        cat::is_aligned(allocator.get(align_xalloc_multi).data(), 8u));
     alloc_counter = 0;
     _ = allocator.align_xalloc_multi<AllocNonTrivial>(8u, 5);
 
@@ -244,7 +244,7 @@ TEST(test_alloc) {
     auto inline_align_alloc_multi =
         allocator.inline_align_alloc_multi<int4>(8u, 5).value();
     cat::verify(
-        cat::is_aligned(allocator.get(inline_align_alloc_multi).p_data(), 8u));
+        cat::is_aligned(allocator.get(inline_align_alloc_multi).data(), 8u));
     cat::verify(inline_align_alloc_multi.is_inline());
 
     auto inline_align_alloc_multi_big =
@@ -255,7 +255,7 @@ TEST(test_alloc) {
     auto inline_align_xalloc_multi =
         allocator.inline_align_xalloc_multi<int4>(8u, 5);
     cat::verify(
-        cat::is_aligned(allocator.get(inline_align_xalloc_multi).p_data(), 8u));
+        cat::is_aligned(allocator.get(inline_align_xalloc_multi).data(), 8u));
     cat::verify(inline_align_xalloc_multi.is_inline());
 
     // Test `inline_unalign_alloc_multi()`.
@@ -638,7 +638,7 @@ TEST(test_alloc) {
         allocator.align_salloc_multi<int4>(8u, 5).value();
     cat::verify(align_salloc_multi_size == 24);
     cat::verify(
-        cat::is_aligned(allocator.get(align_salloc_multi).p_data(), 8u));
+        cat::is_aligned(allocator.get(align_salloc_multi).data(), 8u));
 
     alloc_counter = 0;
     _ = allocator.align_salloc_multi<AllocNonTrivial>(8u, 5);
@@ -650,7 +650,7 @@ TEST(test_alloc) {
         allocator.align_xsalloc_multi<int4>(8u, 5);
     cat::verify(align_xsalloc_multi_size == 24);
     cat::verify(
-        cat::is_aligned(allocator.get(align_xsalloc_multi).p_data(), 8u));
+        cat::is_aligned(allocator.get(align_xsalloc_multi).data(), 8u));
 
     alloc_counter = 0;
     _ = allocator.align_xsalloc_multi<AllocNonTrivial>(8u, 5);

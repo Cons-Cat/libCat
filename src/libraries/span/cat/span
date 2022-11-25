@@ -37,12 +37,12 @@ class Span : public CollectionFacade<Span<T>, T> {
     // `CollectionFacade` traits.
     /*
 constexpr Span(auto const& container)
-    : p_storage(container.p_data()), length(container.size()){};
+    : p_storage(container.data()), length(container.size()){};
 
 template <typename U>
     requires(is_convertible<U, T>)
 constexpr Span(U&& container)
-    : p_storage(static_cast<T>(container).p_data()),
+    : p_storage(static_cast<T>(container).data()),
       length(forward<U>(container).size()){};
     */
 
@@ -63,12 +63,12 @@ constexpr Span(U&& container)
     }
 
     // Get the non-`const` address that this `Span` starts at.
-    [[nodiscard]] constexpr auto p_data() -> T* {
+    [[nodiscard]] constexpr auto data() -> T* {
         return this->p_storage;
     }
 
     // Get the `const` address that this `Span` starts at.
-    [[nodiscard]] constexpr auto p_data() const -> T* {
+    [[nodiscard]] constexpr auto data() const -> T* {
         return this->p_storage;
     }
 

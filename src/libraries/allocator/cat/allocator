@@ -335,8 +335,7 @@ class AllocatorFacade {
     template <typename T, typename... Args>
         requires(detail::stableDerivedAllocator<Derived>&&
                      constructibleFrom<T, Args...>)
-    [[nodiscard]] auto p_alloc(Args&&... constructor_arguments)
-        -> MaybePtr<T> {
+    [[nodiscard]] auto p_alloc(Args&&... constructor_arguments) -> MaybePtr<T> {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -811,8 +810,7 @@ class AllocatorFacade {
     // Try to get the number of bytes that allocating a small-size optimized
     // array of `T` would reserve.
     template <typename T>
-    [[nodiscard]] auto inline_nalloc_multi(ssize count)
-        -> MaybeNonZero<ssize> {
+    [[nodiscard]] auto inline_nalloc_multi(ssize count) -> MaybeNonZero<ssize> {
         return this->inline_align_nalloc_multi<T>(alignof(T), count);
     }
 
@@ -4686,7 +4684,7 @@ class AllocatorFacade {
             if constexpr (T::is_multi_handle) {
                 // Get the pointer from a span produced by the
                 // allocator.
-                p_memory = this->get(handle).p_data();
+                p_memory = this->get(handle).data();
             } else {
                 // Get the pointer from the allocator.
                 p_memory = addressof(this->get(handle));
@@ -4803,7 +4801,7 @@ class AllocatorFacade {
         if constexpr (is_reference<Handle>) {
             return addressof(ref);
         } else {
-            return ref.p_data();
+            return ref.data();
         }
     }
 
@@ -4816,7 +4814,7 @@ class AllocatorFacade {
         if constexpr (is_reference<Handle>) {
             return addressof(ref);
         } else {
-            return ref.p_data();
+            return ref.data();
         }
     }
 

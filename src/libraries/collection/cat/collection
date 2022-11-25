@@ -25,7 +25,7 @@ concept collection = requires(T container) {
 namespace detail {
     template <typename T>
     concept contiguousCollection = requires(T collection) {
-        collection.p_data();
+        collection.data();
     };
 
     // clang-format off
@@ -97,7 +97,7 @@ class CollectionFacade {
             cat::assert(index >= 0);
         }
         if (index < this->self().capacity()) {
-            return this->self_mut().p_data()[index.raw];
+            return this->self_mut().data()[index.raw];
         }
         return nullopt;
     }
@@ -110,7 +110,7 @@ class CollectionFacade {
 
     [[nodiscard]] constexpr auto front() -> T& requires(this->is_array_like) {
         cat::assert(this->self().size() > 0);
-        return this->self_mut().p_data()[0];
+        return this->self_mut().data()[0];
     }
 
     [[nodiscard]] constexpr auto front() const -> T const& {
@@ -120,7 +120,7 @@ class CollectionFacade {
 
     [[nodiscard]] constexpr auto back() -> T& requires(this->is_array_like) {
         cat::assert(this->self().size() > 0);
-        return this->self_mut().p_data()[this->self().size().raw - 1];
+        return this->self_mut().data()[this->self().size().raw - 1];
     }
 
     [[nodiscard]] constexpr auto back() const -> T const& {
@@ -137,7 +137,7 @@ class CollectionFacade {
             cat::assert(end_index <= this->self().capacity());
         }
 
-        return Span<T>(this->self().p_data() + start_index,
+        return Span<T>(this->self().data() + start_index,
                        end_index - start_index);
     }
 
@@ -150,7 +150,7 @@ class CollectionFacade {
             cat::assert(end_index <= this->self().capacity());
         }
 
-        return Span<T const>(this->self().p_data() + start_index,
+        return Span<T const>(this->self().data() + start_index,
                              end_index - start_index);
     }
 
@@ -178,7 +178,7 @@ class CollectionFacade {
             assert(index < this->self().size());
         }
 
-        return this->self_mut().p_data()[to_raw_numeral(index)];
+        return this->self_mut().data()[to_raw_numeral(index)];
     }
 
     template <integral U>
@@ -189,19 +189,19 @@ class CollectionFacade {
             assert(index < this->self().size());
         }
 
-        return this->self().p_data()[to_raw_numeral(index)];
+        return this->self().data()[to_raw_numeral(index)];
     }
 
     // `.begin()` and `.end()` can be automatically generated for contiguous
     // collections.
     [[nodiscard]] constexpr auto begin() requires(this->is_array_like) {
         return RemoveConst<decltype(unconst(this)->make_iterator())>{
-            0, this->self_mut().p_data()};
+            0, this->self_mut().data()};
     }
 
     [[nodiscard]] constexpr auto end() requires(this->is_array_like) {
         return RemoveConst<decltype(unconst(this)->make_iterator())>{
-            this->self_mut().size(), this->self().p_data()};
+            this->self_mut().size(), this->self().data()};
     }
 
     // If this collection is not contiguous, get a non-`const` `.begin()` method
@@ -234,12 +234,12 @@ class CollectionFacade {
 
     [[nodiscard]] constexpr auto rbegin() requires(this->is_array_like) {
         return ReversedIterator<decltype(this->begin())>{
-            this->self().size() - 1, this->self().p_data()};
+            this->self().size() - 1, this->self().data()};
     }
 
     [[nodiscard]] constexpr auto rend() requires(this->is_array_like) {
         return ReversedIterator<decltype(this->end())>(-1,
-                                                       this->self().p_data());
+                                                       this->self().data());
     }
 
     // If this collection is not contiguous, get a non-`const` `.rbegin()`

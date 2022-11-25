@@ -76,13 +76,13 @@ namespace detail {
             return ReturnType{nullopt};
         }
 
-        char* p_memory = alloc.get(maybe_allocation.value()).p_data();
+        char* p_memory = alloc.get(maybe_allocation.value()).data();
         // Add fg color:
-        copy_memory_small(color.p_data(), p_memory, color.size());
+        copy_memory_small(color.data(), p_memory, color.size());
         // Add text to style:
-        copy_memory(text.p_data(), p_memory + color.size(), text.size());
+        copy_memory(text.data(), p_memory + color.size(), text.size());
         // Reset fg color:
-        copy_memory_small(vt_fg_default.p_data(),
+        copy_memory_small(vt_fg_default.data(),
                           p_memory + color.size() + text.size(),
                           vt_fg_default.size());
 

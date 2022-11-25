@@ -12,6 +12,6 @@ auto nix::sys_write(nix::FileDescriptor file_descriptor,
 // the number of bytes that it wrote.
 auto nix::sys_write(nix::FileDescriptor file_descriptor,
                     cat::String const string) -> nix::ScaredyLinux<ssize> {
-    return nix::syscall<ssize>(1, file_descriptor, string.p_data(),
+    return nix::syscall<ssize>(1, file_descriptor, string.data(),
                                string.size());
 }

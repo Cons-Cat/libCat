@@ -148,10 +148,10 @@ template <integral T>
             output_buffer[i] = buffer[i.raw];
         }
     } else {
-        copy_memory(buffer, output_buffer.p_data(), length);
+        copy_memory(buffer, output_buffer.data(), length);
     }
 
-    return String{output_buffer.p_data(), length};
+    return String{output_buffer.data(), length};
 }
 
 // Formatting
@@ -275,7 +275,7 @@ namespace detail {
               length(in_length),
               max_length(in_max_length){};
 
-        auto p_data() const -> char* {
+        auto data() const -> char* {
             return this->p_storage;
         }
 
@@ -392,8 +392,8 @@ namespace detail {
             Byte const* const p_storage = reinterpret_cast<Byte const* const>(
                 this->p_arguments_indices + argument_count);
 
-            Byte const* p_data = p_storage + storage_index;
-            return *bit_cast<T const*>(p_data);
+            Byte const* data = p_storage + storage_index;
+            return *bit_cast<T const*>(data);
         }
 
         FormatArgumentCompactIndex const* p_arguments_indices;
@@ -412,7 +412,7 @@ namespace detail {
               length(in_length),
               max_length(in_max_length){};
 
-        auto p_data() const -> char* {
+        auto data() const -> char* {
             return this->p_string;
         }
 
@@ -601,7 +601,7 @@ namespace detail {
             : allocator(in_allocator),
               output_iterator(iterator),
               format(in_format),
-              // p_tempory_buffer(iterator.iterable.p_data()),
+              // p_tempory_buffer(iterator.iterable.data()),
               arguments(std::move(in_arguments)){};
     };
 
@@ -609,8 +609,8 @@ namespace detail {
     constexpr auto parse_format_string(String const format,
                                        FormatHandler<Allocator>&& handler)
         -> ScaredyFormat<void> {
-        // char const* p_first = format.p_data();
-        // char const* p_last = format.p_data() + format.size();
+        // char const* p_first = format.data();
+        // char const* p_last = format.data() + format.size();
         String remainder = format;
         ssize current_argument = 0;
 
@@ -765,7 +765,7 @@ namespace detail {
             return result.template error<FormatErrors>();
         }
 
-        ssize const length = string_length(into_buffer.p_data());
+        ssize const length = string_length(into_buffer.data());
         return String{into_buffer.p_storage, length};
     }
 }  // namespace detail

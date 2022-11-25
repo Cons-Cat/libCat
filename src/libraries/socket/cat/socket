@@ -75,7 +75,7 @@ struct SocketUnix {
                      cat::Socket const* p_destination_socket = nullptr,
                      ssize const addr_length = 0) -> Maybe<void> {
         Scaredy result =
-            nix::sys_sendto(this->descriptor, message.p_data(), message.size(),
+            nix::sys_sendto(this->descriptor, message.data(), message.size(),
                             flags, p_destination_socket, addr_length);
         if (result.has_value()) {
             return monostate;

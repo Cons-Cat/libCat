@@ -23,10 +23,10 @@ auto main() -> int {
         while (true) {
             ssize message_length =
                 recieving_socket
-                    .recieve(message_buffer.p_data(), message_buffer.size())
+                    .recieve(message_buffer.data(), message_buffer.size())
                     .or_exit();
 
-            cat::String input = {message_buffer.p_data(),
+            cat::String input = {message_buffer.data(),
                                  message_buffer.size()};
 
             // TODO: This comparison is always false.
@@ -43,7 +43,7 @@ auto main() -> int {
                 }
 
                 _ = cat::print("Recieved: ");
-                _ = cat::println(message_buffer.p_data());
+                _ = cat::println(message_buffer.data());
                 break;
             }
         }
@@ -51,5 +51,5 @@ auto main() -> int {
 
     recieving_socket.close().or_exit();
     listening_socket.close().or_exit();
-    _ = nix::sys_unlink(listening_socket.path_name.p_data()).or_exit();
+    _ = nix::sys_unlink(listening_socket.path_name.data()).or_exit();
 }

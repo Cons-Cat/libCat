@@ -17,14 +17,14 @@ auto cat::compare_strings(String const string_1, String const string_2)
     Array<int4, 4> masks;
     ssize length_iterator = string_1.size();
     ssize vector_size = ssizeof<Vector>();
-    char const* p_string_1_iterator = string_1.p_data();
-    char const* p_string_2_iterator = string_2.p_data();
+    char const* p_string_1_iterator = string_1.data();
+    char const* p_string_2_iterator = string_2.data();
 
     auto loop = [&](int size) -> bool {
         while (length_iterator >= vector_size * size) {
             for (int i = 0; i < size; ++i) {
-                vector_1[i].load(string_1.p_data() + (i * size));
-                vector_2[i].load(string_2.p_data() + (i * size));
+                vector_1[i].load(string_1.data() + (i * size));
+                vector_2[i].load(string_2.data() + (i * size));
                 additions[i] = vector_1[i] + vector_2[i];
                 masks[i] = move_mask(additions[i]);
             }
