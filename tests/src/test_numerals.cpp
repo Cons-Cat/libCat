@@ -497,4 +497,7 @@ TEST(test_numerals) {
     cat::verify(safe_float == 2.f);
     safe_float.raw = 1.f;
     cat::verify(safe_float == 1.f);
+
+    // Test bit-casts.
+    cat::verify(__builtin_bit_cast(unsigned, 2_i4) == 2u);
 };

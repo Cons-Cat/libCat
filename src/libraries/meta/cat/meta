@@ -411,6 +411,11 @@ inline constexpr bool is_floating_point<Numeral<T, policy>> =
 template <typename T>
 concept floatingPoint = is_floating_point<T>;
 
+template <floatingPoint T>
+struct MakeSignedTrait<T> {
+    using Type = T;
+};
+
 // TODO: Remove references as well. That breaks some traits for some reason.
 // TODO: Support 16-byte integers.
 template <typename T>

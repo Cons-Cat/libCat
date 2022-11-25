@@ -53,16 +53,23 @@ template <typename T>
 concept rawNumeral = is_same<T, ToRawNumeral<T>>;
 
 template <typename T>
+concept rawIntegral = integral<T> && rawNumeral<T>;
+
+template <typename T>
+concept rawFloating = floatingPoint<T> && rawNumeral<T>;
+
+template <typename T>
 inline constexpr bool is_raw_numeral = is_same<T, ToRawNumeral<T>>;
 
 template <integral T>
 constexpr auto make_signed(T value) -> MakeSigned<T> {
+    // return __builtin_bit_cast(MakeSigned<T>, value);
     return static_cast<MakeSigned<T>>(value);
 }
 
 template <integral T>
 constexpr auto make_unsigned(T value) -> MakeUnsigned<T> {
-    // Could this use `__builtin_bit_cast()`?
+    // return __builtin_bit_cast(MakeUnsigned<T>, value);
     return static_cast<MakeUnsigned<T>>(value);
 }
 
@@ -161,12 +168,10 @@ template <typename T>
 [[nodiscard]] constexpr auto count_trailing_zeros(T value) -> ssize;
 
 // Overflow intrinsics optimize fairly well in GCC.
-// `	[[nodiscard, gnu::optimize(2)]]` is required because the codegen is
-// awful by default.
-// TODO: Support saturating floats.
+// `[[gnu::optimize(2)]]` is required because the codegen is awful by default.
 
 // Add two integers with saturating overflow.
-template <rawNumeral T>
+template <rawIntegral T>
 [[nodiscard, gnu::optimize(2)]] constexpr auto sat_add(T lhs, T rhs) -> T {
     T sum;
     bool overflow = __builtin_add_overflow(lhs, rhs, &sum);
@@ -176,13 +181,13 @@ template <rawNumeral T>
     return sum;
 }
 
-// Unwrap `Numeral` for `sat_add()`.
+// Erase redundant type information for `sat_add()`.
 template <integral T, integral U>
     requires(detail::is_safe_comparison<T, U>)
 [[nodiscard]] constexpr auto sat_add(T lhs, U rhs)
     -> detail::PromotedNumeral<T, U> {
-    // Saturating arithmetic inputs must be cast to the same size.
-    using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
+    // Saturating arithmetic inputs must be raw and cast to the same size.
+    using Type = ToRawNumeral<Larger<T, U>>;
     return sat_add(static_cast<Type>(lhs), static_cast<Type>(rhs));
 }
 
@@ -191,13 +196,14 @@ template <integral T, integral U>
     requires(detail::is_safe_comparison<T, U>)
 [[nodiscard]] constexpr auto wrap_add(T lhs, U rhs)
     -> detail::PromotedNumeral<T, U> {
-    using Type = Larger<T, U>;
-    return detail::PromotedNumeral<T, U>{make_unsigned(static_cast<Type>(lhs)) +
-                                         make_unsigned(static_cast<Type>(rhs))};
+    // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
+    using Type = ToRawNumeral<MakeUnsigned<Larger<T, U>>>;
+    return detail::PromotedNumeral<T, U>{static_cast<Type>(lhs) +
+                                         static_cast<Type>(rhs)};
 }
 
 // Subtract two integers with saturating overflow.
-template <rawNumeral T>
+template <rawIntegral T>
 [[nodiscard, gnu::optimize(2)]] constexpr auto sat_sub(T lhs, T rhs) -> T {
     T sum;
     bool overflow = __builtin_sub_overflow(lhs, rhs, &sum);
@@ -207,13 +213,13 @@ template <rawNumeral T>
     return sum;
 }
 
-// Unwrap `Numeral` for `sat_sub()`.
+// Erase redundant type information for `sat_sub()`.
 template <integral T, integral U>
     requires(detail::is_safe_comparison<T, U>)
 [[nodiscard]] constexpr auto sat_sub(T lhs, U rhs)
     -> detail::PromotedNumeral<T, U> {
-    // Saturating arithmetic inputs must be cast to the same size.
-    using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
+    // Saturating arithmetic inputs must be raw and cast to the same size.
+    using Type = ToRawNumeral<Larger<T, U>>;
     return sat_sub(static_cast<Type>(lhs), static_cast<Type>(rhs));
 }
 
@@ -222,13 +228,14 @@ template <integral T, integral U>
     requires(detail::is_safe_comparison<T, U>)
 [[nodiscard]] constexpr auto wrap_sub(T lhs, U rhs)
     -> detail::PromotedNumeral<T, U> {
-    using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
-    return detail::PromotedNumeral<T, U>{make_unsigned(static_cast<Type>(lhs)) -
-                                         make_unsigned(static_cast<Type>(rhs))};
+    // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
+    using Type = ToRawNumeral<MakeUnsigned<Larger<T, U>>>;
+    return detail::PromotedNumeral<T, U>{static_cast<Type>(lhs) -
+                                         static_cast<Type>(rhs)};
 }
 
 // Subtract two integers with saturating overflow.
-template <rawNumeral T>
+template <rawIntegral T>
 [[nodiscard, gnu::optimize(2)]] constexpr auto sat_mul(T lhs, T rhs) -> T {
     T sum;
     bool overflow = __builtin_mul_overflow(lhs, rhs, &sum);
@@ -238,13 +245,13 @@ template <rawNumeral T>
     return sum;
 }
 
-// Unwrap `Numeral` for `sat_mul()`.
+// Erase redundant type information for `sat_mul()`.
 template <integral T, integral U>
     requires(detail::is_safe_comparison<T, U>)
 [[nodiscard]] constexpr auto sat_mul(T lhs, U rhs)
     -> detail::PromotedNumeral<T, U> {
-    // Saturating arithmetic inputs must be cast to the same size.
-    using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
+    // Saturating arithmetic inputs must be raw and cast to the same size.
+    using Type = ToRawNumeral<Larger<T, U>>;
     return sat_mul(static_cast<Type>(lhs), static_cast<Type>(rhs));
 }
 
@@ -253,13 +260,14 @@ template <integral T, integral U>
     requires(detail::is_safe_comparison<T, U>)
 [[nodiscard]] constexpr auto wrap_mul(T lhs, U rhs)
     -> detail::PromotedNumeral<T, U> {
-    using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
-    return detail::PromotedNumeral<T, U>{make_unsigned(static_cast<Type>(lhs)) *
-                                         make_unsigned(static_cast<Type>(rhs))};
+    // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
+    using Type = ToRawNumeral<MakeUnsigned<Larger<T, U>>>;
+    return detail::PromotedNumeral<T, U>{static_cast<Type>(lhs) *
+                                         static_cast<Type>(rhs)};
 }
 
 // Subtract two integers with saturating overflow.
-template <rawNumeral T>
+template <rawIntegral T>
 [[nodiscard, gnu::optimize(2)]] constexpr auto sat_div(T lhs, T rhs) -> T {
     if constexpr (is_signed<T>) {
         lhs += !((rhs + 1) | (make_unsigned(lhs) + Limits<T>::max()));
@@ -268,13 +276,13 @@ template <rawNumeral T>
     return lhs / rhs;
 }
 
-// Unwrap `Numeral` for `sat_mul()`.
+// Erase redundant type information for `sat_mul()`.
 template <integral T, integral U>
     requires(detail::is_safe_comparison<T, U>)
 [[nodiscard]] constexpr auto sat_div(T lhs, U rhs)
     -> detail::PromotedNumeral<T, U> {
-    // Saturating arithmetic inputs must be cast to the same size.
-    using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
+    // Saturating arithmetic inputs must be raw and cast to the same size.
+    using Type = ToRawNumeral<Larger<T, U>>;
     return sat_div(static_cast<Type>(lhs), static_cast<Type>(rhs));
 }
 
@@ -283,13 +291,14 @@ template <integral T, integral U>
     requires(detail::is_safe_comparison<T, U>)
 [[nodiscard]] constexpr auto wrap_div(T lhs, U rhs)
     -> detail::PromotedNumeral<T, U> {
-    using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
-    return detail::PromotedNumeral<T, U>{make_unsigned(static_cast<Type>(lhs)) /
-                                         make_unsigned(static_cast<Type>(rhs))};
+    // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
+    using Type = ToRawNumeral<MakeUnsigned<Larger<T, U>>>;
+    return detail::PromotedNumeral<T, U>{static_cast<Type>(lhs) /
+                                         static_cast<Type>(rhs)};
 }
 
 // Left bit-shifting two unsigned integers with saturating overflow.
-template <rawNumeral T, rawNumeral U>
+template <rawIntegral T, rawIntegral U>
     // TODO: Figure out signed saturating shift semantics.
     requires(is_unsigned<T>)
 [[nodiscard, gnu::optimize(2)]] constexpr auto sat_shl(T value, U bits) {
@@ -300,17 +309,17 @@ template <rawNumeral T, rawNumeral U>
     return value << bits;
 }
 
-// Unwrap `Numeral` for `sat_shl()`.
+// Erase redundant type information for `sat_shl()`.
 template <integral T, integral U>
     requires(detail::is_safe_comparison<T, U>)
 [[nodiscard]] constexpr auto sat_shl(T value, U bits)
     -> detail::PromotedNumeral<T, U> {
-    // Saturating arithmetic inputs must be cast to the same size.
-    using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
+    // Saturating arithmetic inputs must be raw and cast to the same size.
+    using Type = ToRawNumeral<Larger<T, U>>;
     return sat_shl(static_cast<Type>(value), static_cast<Type>(bits));
 }
 
-template <rawNumeral T, rawNumeral U>
+template <rawIntegral T, rawIntegral U>
     // TODO: Figure out signed saturating shift semantics.
     requires(is_unsigned<T>)
 [[nodiscard, gnu::optimize(2)]] constexpr auto sat_shr(T value, U bits) {
@@ -321,13 +330,13 @@ template <rawNumeral T, rawNumeral U>
     return value >> bits;
 }
 
-// Unwrap `Numeral` for `sat_shr()`.
+// Erase redundant type information for `sat_shr()`.
 template <integral T, integral U>
     requires(detail::is_safe_comparison<T, U>)
 [[nodiscard]] constexpr auto sat_shr(T value, U bits)
     -> detail::PromotedNumeral<T, U> {
-    // Saturating arithmetic inputs must be cast to the same size.
-    using Type = Larger<ToRawNumeral<T>, ToRawNumeral<U>>;
+    // Saturating arithmetic inputs must be raw and cast to the same size.
+    using Type = ToRawNumeral<Larger<T, U>>;
     return sat_shr(static_cast<Type>(value), static_cast<Type>(bits));
 }
 
@@ -453,8 +462,10 @@ struct Numeral : detail::NumeralStorage<T, policy> {
         -> detail::PromotedNumeral<T, U> {
         using enum OverflowPolicies;
         if constexpr (policy == undefined) {
-            return detail::PromotedNumeral<T, U>{self.raw +
-                                                 to_raw_numeral(operand)};
+            // Make signed to guarantee undefined semantics (unless the
+            // arithmetic is floating point).
+            return detail::PromotedNumeral<T, U>{
+                make_signed(self.raw) + make_signed(to_raw_numeral(operand))};
         } else if constexpr (policy == wrap || policy == wrap_member) {
             return wrap_add(to_raw_numeral(self), to_raw_numeral(operand));
         } else if constexpr (policy == saturate || policy == saturate_member) {
@@ -506,6 +517,12 @@ struct Numeral : detail::NumeralStorage<T, policy> {
         -> detail::PromotedNumeral<T, U> {
         using enum OverflowPolicies;
         if constexpr (policy == undefined) {
+            // TODO: See if using `[[assume()]]` actually optimizes this.
+            if constexpr (is_unsigned<T>) {
+                // NOLINTNEXTLINE This is a C++23 feature.
+                [[assume(self >= operand)]];
+            }
+            // Making this signed for optimizations causes various problems.
             return detail::PromotedNumeral<T, U>{self.raw -
                                                  to_raw_numeral(operand)};
         } else if constexpr (policy == wrap || policy == wrap_member) {
@@ -559,6 +576,12 @@ struct Numeral : detail::NumeralStorage<T, policy> {
         -> detail::PromotedNumeral<T, U> {
         using enum OverflowPolicies;
         if constexpr (policy == OverflowPolicies::undefined) {
+            // TODO: See if using `[[assume()]]` actually optimizes this.
+            if constexpr (is_unsigned<T>) {
+                // NOLINTNEXTLINE This is a C++23 feature.
+                [[assume(self >= operand)]];
+            }
+            // Making this signed for optimizations causes various problems.
             return detail::PromotedNumeral<T, U>{self.raw *
                                                  to_raw_numeral(operand)};
         } else if constexpr (policy == wrap || policy == wrap_member) {
@@ -595,6 +618,12 @@ struct Numeral : detail::NumeralStorage<T, policy> {
         -> detail::PromotedNumeral<T, U> {
         using enum OverflowPolicies;
         if constexpr (policy == undefined) {
+            // TODO: See if using `[[assume()]]` actually optimizes this.
+            if constexpr (is_unsigned<T>) {
+                // NOLINTNEXTLINE This is a C++23 feature.
+                [[assume(self >= operand)]];
+            }
+            // Making this signed for optimizations causes various problems.
             return detail::PromotedNumeral<T, U>{self.raw /
                                                  to_raw_numeral(operand)};
         } else if constexpr (policy == wrap || policy == wrap_member) {

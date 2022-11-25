@@ -318,6 +318,8 @@ TEST(test_meta) {
     // Test signedness traits.
     static_assert(is_signed<MakeSigned<unsigned>>);
     static_assert(is_signed<MakeSigned<uint4>>);
+    static_assert(is_signed<MakeSigned<float>>);
+    static_assert(is_signed<MakeSigned<double>>);
 
     static_assert(!is_signed<MakeUnsigned<int>>);
     static_assert(!is_signed<MakeUnsigned<int4>>);
