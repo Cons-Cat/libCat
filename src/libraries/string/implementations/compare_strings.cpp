@@ -13,7 +13,7 @@ auto cat::compare_strings(String const string_1, String const string_2)
 
     Array<Vector, 4> vectors_1;
     Array<Vector, 4> vectors_2;
-    Array<Vector, 4> subtractions;
+    Array<Vector, 4> vector_comparison;
     Array<int4, 4> masks;
     ssize length_iterator = string_1.size();
     ssize vector_size = ssizeof<Vector>();
@@ -25,14 +25,14 @@ auto cat::compare_strings(String const string_1, String const string_2)
             for (int8::Raw i = 0; i < size; ++i) {
                 vectors_1[i].load(string_1.data() + (i * size));
                 vectors_2[i].load(string_2.data() + (i * size));
-                // Subtract the characters from each other. If they are the
-                // same, then every lane is 0.
-                subtractions[i] = vectors_1[i] - vectors_2[i];
-                masks[i] = move_mask(subtractions[i]);
+                // XOR the characters from each other. If any lanes are
+                // identical between the two, that lane is non-zero.
+                vector_comparison[i] = vectors_1[i] ^ vectors_2[i];
+                masks[i] = move_mask(vector_comparison[i]);
             }
 
             for (ssize::Raw i = 0; i < size; ++i) {
-                // If not every lane is 0.
+                // If not every lane of every vector is 0.
                 if (masks[i] != 0) {
                     return false;
                 }

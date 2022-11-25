@@ -261,6 +261,7 @@ class alignas(InAbi::alignment.raw) Simd {
         return *this <= Vector::filled(operand);
     }
 
+    // TODO: These should be `friend`.
     // TODO: Add more comments to these operators.
     [[nodiscard]] constexpr auto operator+(Vector const& operand) const
         -> Vector {
@@ -340,6 +341,15 @@ class alignas(InAbi::alignment.raw) Simd {
     }
     constexpr auto operator>>=(Vector const& operand) -> Vector& {
         this->raw = this->raw << operand.raw;
+        return *this;
+    }
+
+    [[nodiscard]] constexpr auto operator^(Vector const& operand) const
+        -> Vector {
+        return this->raw ^ operand.raw;
+    }
+    constexpr auto operator^=(Vector const& operand) -> Vector& {
+        this->raw = this->raw ^ operand.raw;
         return *this;
     }
 
