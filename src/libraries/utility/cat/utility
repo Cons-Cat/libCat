@@ -109,17 +109,17 @@ constexpr auto value_list = detail::make_value_list<count, T, value>();
 template <typename T, T value, ssize count>
 using MakeValueList = decltype(value_list<T, value, count>);
 
-template <integral T, ssize count>
+template <is_integral T, ssize count>
 constexpr auto integer_sequence =
     detail::make_integer_sequence<count, T, T{count.raw}>();
 
-template <integral T, ssize count>
+template <is_integral T, ssize count>
 constexpr auto zeros_list = value_list<T, T{0}, count>;
 
-template <integral T, ssize count>
+template <is_integral T, ssize count>
 constexpr auto ones_list = value_list<T, T{1}, count>;
 
-template <integral T, ssize count>
+template <is_integral T, ssize count>
 using MakeIntegerSequence = RemoveCv<decltype(integer_sequence<ssize, count>)>;
 
 template <ssize... indices>

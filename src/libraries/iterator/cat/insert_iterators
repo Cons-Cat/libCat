@@ -7,7 +7,7 @@
 
 namespace cat {
 
-template <iterable T>
+template <is_iterable T>
 class BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
   public:
     using Container = T;
@@ -62,8 +62,7 @@ class BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
     template <typename U>
     constexpr auto insert(/* Allocator */ auto& allocator, U&& value)
         -> Maybe<BackInsertIterator<T>&> {
-        Maybe result =
-            this->iterable.push_back(allocator, forward<U>(value));
+        Maybe result = this->iterable.push_back(allocator, forward<U>(value));
         if (!result.has_value()) {
             return nullopt;
         }
@@ -96,7 +95,7 @@ class BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
     T& iterable;
 };
 
-template <iterable T>
+template <is_iterable T>
 class FrontInsertIterator : public IteratorFacade<FrontInsertIterator<T>> {
   public:
     using Container = T;
@@ -151,8 +150,7 @@ class FrontInsertIterator : public IteratorFacade<FrontInsertIterator<T>> {
     template <typename U>
     constexpr auto insert(/* Allocator */ auto& allocator, U&& value)
         -> Maybe<FrontInsertIterator<T>&> {
-        Maybe result =
-            this->iterable.push_front(allocator, forward<U>(value));
+        Maybe result = this->iterable.push_front(allocator, forward<U>(value));
         if (!result.has_value()) {
             return nullopt;
         }

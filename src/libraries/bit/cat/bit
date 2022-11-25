@@ -10,7 +10,7 @@ constexpr bool is_big_endian = !is_little_endian;
 
 namespace cat {
 
-[[gnu::const]] constexpr auto invert_endianess(integral auto value) {
+[[gnu::const]] constexpr auto invert_endianess(is_integral auto value) {
     // TODO: Handle `cat::Numeral`.
     if constexpr (sizeof(value) == 1) {
         return __builtin_bswap8(value);
@@ -65,34 +65,34 @@ struct Byte {  // NOLINT
         return bit_cast<T>(value);
     }
 
-    [[nodiscard]] constexpr auto operator&(integral auto from) -> Byte {
+    [[nodiscard]] constexpr auto operator&(is_integral auto from) -> Byte {
         return this->value & from;
     }
-    constexpr auto operator&=(integral auto from) -> Byte& {
+    constexpr auto operator&=(is_integral auto from) -> Byte& {
         this->value = this->value & from;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator|(integral auto from) -> Byte {
+    [[nodiscard]] constexpr auto operator|(is_integral auto from) -> Byte {
         return this->value | from;
     }
-    constexpr auto operator|=(integral auto from) -> Byte& {
+    constexpr auto operator|=(is_integral auto from) -> Byte& {
         this->value = this->value | from;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator<<(integral auto from) -> Byte {
+    [[nodiscard]] constexpr auto operator<<(is_integral auto from) -> Byte {
         return this->value << from;
     }
-    constexpr auto operator<<=(integral auto from) -> Byte& {
+    constexpr auto operator<<=(is_integral auto from) -> Byte& {
         this->value = this->value << from;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator>>(integral auto from) -> Byte {
+    [[nodiscard]] constexpr auto operator>>(is_integral auto from) -> Byte {
         return this->value >> from;
     }
-    constexpr auto operator>>=(integral auto from) -> Byte& {
+    constexpr auto operator>>=(is_integral auto from) -> Byte& {
         this->value = this->value >> from;
         return *this;
     }
@@ -134,24 +134,24 @@ template <typename>
 struct EnumFlagTrait : FalseTypeTrait {};
 
 template <typename T>
-concept enumFlag = EnumFlagTrait<T>::value;
+concept is_enum_flag = EnumFlagTrait<T>::value;
 
 }  // namespace cat
 
-template <cat::enumFlag T>
+template <cat::is_enum_flag T>
 [[nodiscard]] constexpr auto operator|(T flag_1, T flag_2) -> T {
     using U = cat::UnderlyingType<T>;
     return static_cast<T>(static_cast<U>(flag_1) | static_cast<U>(flag_2));
 }
 
-template <cat::enumFlag T>
+template <cat::is_enum_flag T>
 [[nodiscard]] constexpr auto operator|(T flag_1, cat::UnderlyingType<T> flag_2)
     -> T {
     using U = cat::UnderlyingType<T>;
     return static_cast<T>(static_cast<U>(flag_1) | flag_2);
 }
 
-template <cat::enumFlag T>
+template <cat::is_enum_flag T>
 [[nodiscard]] constexpr auto operator&(T flag_1, T flag_2) -> T {
     using U = cat::UnderlyingType<T>;
     return static_cast<T>(static_cast<U>(flag_1) & static_cast<U>(flag_2));
@@ -173,7 +173,8 @@ struct BinarySize {
 
     constexpr BinarySize() = default;
 
-    constexpr BinarySize(integral auto value) : raw(static_cast<Raw>(value)){};
+    constexpr BinarySize(is_integral auto value)
+        : raw(static_cast<Raw>(value)){};
 
     constexpr BinarySize(ssize value) : raw(static_cast<Raw>(value.raw)){};
 

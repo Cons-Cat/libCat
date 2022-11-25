@@ -25,7 +25,7 @@ constexpr auto min(T const& value_1, T const& value_2, Remaining&&... remaining)
                                : min(value_2, forward<Remaining>(remaining)...);
 }
 
-constexpr auto min(iterable auto&& iterable) {
+constexpr auto min(is_iterable auto&& iterable) {
     auto iterator = iterable.begin();
     auto maximum = *iterator;
     ++iterator;
@@ -37,7 +37,7 @@ constexpr auto min(iterable auto&& iterable) {
 }
 
 template <typename T>
-constexpr auto min(iterable auto&& iterable) {
+constexpr auto min(is_iterable auto&& iterable) {
     auto iterator = iterable.begin();
     auto maximum = *iterator;
     ++iterator;
@@ -65,7 +65,7 @@ constexpr auto max(T const& value_1, T const& value_2, Remaining&&... remaining)
 
 // TODO: If an `iterable` has `<` and `>` operators, this has unclear intent.
 
-constexpr auto max(iterable auto&& iterable) {
+constexpr auto max(is_iterable auto&& iterable) {
     auto iterator = iterable.begin();
     auto maximum = *iterator;
     ++iterator;
@@ -77,7 +77,7 @@ constexpr auto max(iterable auto&& iterable) {
 }
 
 template <typename T>
-constexpr auto max(iterable auto&& iterable) {
+constexpr auto max(is_iterable auto&& iterable) {
     auto iterator = iterable.begin();
     auto maximum = *iterator;
     ++iterator;
@@ -88,7 +88,7 @@ constexpr auto max(iterable auto&& iterable) {
     return static_cast<T>(maximum);
 }
 
-// TODO: Use an `arithmetic` concept or something, but support safe numerals.
+// TODO: Use an `is_arithmetic` concept or something, but support safe numerals.
 constexpr auto abs(auto const& value) {
     // TODO: Check if the builtin `abs()` function family is optimized better.
     return value < 0 ? value * -1 : value;
@@ -96,7 +96,7 @@ constexpr auto abs(auto const& value) {
 
 namespace detail {
     // TODO: Consider a jump-table implementation, or
-    template <integral T, typename U>
+    template <is_integral T, typename U>
     constexpr auto pow_integral(T base, U exponent) -> T {
         if (exponent < 0) {
             // A negative exponent should always make this floor to 0.
@@ -122,14 +122,14 @@ namespace detail {
     }
 }  // namespace detail
 
-template <arithmetic T, integral U>
+template <is_arithmetic T, is_integral U>
 constexpr auto pow(T base, U exponent) -> T {
     // Type-erase `Numeral`s to prevent redundant code gen.
     using Raw = ToRawNumeral<T>;
     Raw raw_base = to_raw_numeral(base);
     Raw raw_exponent = to_raw_numeral(exponent);
 
-    if constexpr (integral<Raw>) {
+    if constexpr (is_integral<Raw>) {
         return detail::pow_integral(raw_base, raw_exponent);
         // TODO: Support float and double `pow()` functions.
     } else if constexpr (is_same<Raw, float>) {
@@ -139,12 +139,12 @@ constexpr auto pow(T base, U exponent) -> T {
     }
 }
 
-template <arithmetic T>
+template <is_arithmetic T>
 constexpr auto is_power_of_two(T value) -> bool {
     return (value & (value - T{1})) == T{0};
 }
 
-template <arithmetic T>
+template <is_arithmetic T>
 auto clamp(T value, T min, T max) -> T {
     T lower_bound = value < min ? min : value;
     return lower_bound > max ? max : lower_bound;

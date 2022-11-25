@@ -14,18 +14,17 @@ namespace cat {
 // TODO: Support formatting 1 and 2 byte integers.
 
 // Erase the type of `cat::Numeral` for redundant template instantiations.
-template <integral T, OverflowPolicies policy>
-[[nodiscard]] auto to_chars(allocator auto& allocator,
+template <is_integral T, OverflowPolicies policy>
+[[nodiscard]] auto to_chars(is_allocator auto& allocator,
                             Numeral<T, policy> numeral) -> Maybe<String> {
     return to_chars(allocator, to_raw_numeral(numeral));
 }
 
-// Dynamically allocate an integral value converted to `String`.
-template <integral T>
-[[nodiscard]] auto to_chars(allocator auto& allocator, T integer)
+// Dynamically allocate an is_integral value converted to `String`.
+template <is_integral T>
+[[nodiscard]] auto to_chars(is_allocator auto& allocator, T integer)
     -> Maybe<String> {
-    Maybe result =
-        allocator.template alloc_multi<char>(Limits<T>::digits10);
+    Maybe result = allocator.template alloc_multi<char>(Limits<T>::digits10);
     if (!result.has_value()) {
         return nullopt;
     }
@@ -49,8 +48,7 @@ template <integral T>
 // Dynamically allocate a floating point value converted to `String`.
 template <typename T>
     requires(is_floating_point<T>)
-[[nodiscard]] auto to_chars(allocator auto& alloc, T value)
-    -> Maybe<String> {
+[[nodiscard]] auto to_chars(is_allocator auto& alloc, T value) -> Maybe<String> {
     Maybe result = alloc.template alloc_multi<char>(Limits<T>::digits10);
     if (!result.has_value()) {
         return nullopt;
@@ -87,7 +85,7 @@ namespace detail {
     }
 }  // namespace detail
 
-// Convert a `constexpr` integral to `StaticString`.
+// Convert a `constexpr` is_integral to `StaticString`.
 template <auto value>
     requires(is_integral<decltype(value)>)
 [[nodiscard]] consteval auto to_chars() {
@@ -111,7 +109,7 @@ template <auto value>
     }
 }
 
-template <integral T>
+template <is_integral T>
 [[nodiscard]] constexpr auto to_string_at(Numeral<T> value,
                                           Span<char> output_buffer)
     -> Maybe<String> {
@@ -287,7 +285,7 @@ namespace detail {
             return this->max_length;
         }
 
-        auto push_back(stableAllocator auto& allocator, char character)
+        auto push_back(is_stable_allocator auto& allocator, char character)
             -> Maybe<void> {
             if (this->length + 1 > this->max_length) {
                 // Reallocate double the memory if its capacity is exceeded.
@@ -403,7 +401,7 @@ namespace detail {
     // To prevent redundant template specializations for a contiguous
     // container's `BackInsertIterator`, it is wrapped by virtual function
     // dispatch in this container.
-    template <stableAllocator Allocator>
+    template <is_stable_allocator Allocator>
     struct FormatBufferBase
         : public CollectionFacade<FormatBufferBase<Allocator>, char> {
         FormatBufferBase(char* p_in_string, ssize in_length,
@@ -455,7 +453,7 @@ namespace detail {
 
     // Temporarily store formatted string data on the stack before pushing it to
     // an output-iterator it `.flush()`.
-    template <stableAllocator Allocator, typename Outputter>
+    template <is_stable_allocator Allocator, typename Outputter>
     struct FormatBufferIterator<Allocator, Outputter>
         : FormatBufferBase<Allocator> {
         using Container = typename Outputter::Container;
@@ -510,7 +508,7 @@ namespace detail {
 
     // If only a pointer is provided, then assume the buffer can never overflow
     // and skip bounds-checking and buffer growing.
-    template <stableAllocator Allocator, typename T>
+    template <is_stable_allocator Allocator, typename T>
     struct FormatBufferIterator<Allocator, T*> : FormatBufferBase<Allocator> {
         // `.grow()` for a `T[]` is no-op.
         auto grow() -> Maybe<void> {
@@ -519,7 +517,7 @@ namespace detail {
     };
 
     // One back-insert iterator type should be used, to ensure type-erasure.
-    template <stableAllocator Allocator>
+    template <is_stable_allocator Allocator>
     using FormatContiguousOutputIterator =
         BackInsertIterator<FormatBufferBase<Allocator>>;
 
@@ -583,7 +581,7 @@ namespace detail {
     };
 
     // TODO: Store callback functions for different kind of arguments.
-    template <stableAllocator Allocator>
+    template <is_stable_allocator Allocator>
     struct FormatHandler {
         Allocator& allocator;
         // This holds a reference to a `FormatBufferIterator`.
@@ -605,7 +603,7 @@ namespace detail {
               arguments(std::move(in_arguments)){};
     };
 
-    template <stableAllocator Allocator>
+    template <is_stable_allocator Allocator>
     constexpr auto parse_format_string(String const format,
                                        FormatHandler<Allocator>&& handler)
         -> ScaredyFormat<void> {
@@ -637,8 +635,8 @@ namespace detail {
             // the next argument.
             for (ssize i = 0; i < to_open_brace; ++i) {
                 // TODO: Optimize this with a multiple-insert overload.
-                Maybe result = handler.output_iterator.insert(
-                    handler.allocator, remainder[i]);
+                Maybe result = handler.output_iterator.insert(handler.allocator,
+                                                              remainder[i]);
                 if (!result.has_value()) {
                     return FormatErrors::out_of_memory;
                 }
@@ -707,7 +705,7 @@ namespace detail {
     }
 
     // Format a collection of `char` and push it into some container.
-    template <stableAllocator Allocator, typename Outputter>
+    template <is_stable_allocator Allocator, typename Outputter>
     auto vformat_to(Allocator& allocator, Outputter output_iterator,
                     String const format, FormatArguments arguments)
         -> ScaredyFormat<Outputter> {
@@ -735,15 +733,14 @@ namespace detail {
         }
     }
 
-    template <stableAllocator Allocator>
+    template <is_stable_allocator Allocator>
     auto vformat(Allocator& allocator, String const format,
                  FormatArguments arguments) -> ScaredyFormat<String> {
         // TODO: Estimate the size of the final formatted string, and
         // allocate that much up-front for `output`.
         ssize const initial_size = format.size() + 10;
 
-        Maybe maybe_memory =
-            allocator.template alloc_multi<char>(initial_size);
+        Maybe maybe_memory = allocator.template alloc_multi<char>(initial_size);
         if (!maybe_memory.has_value()) {
             return FormatErrors::out_of_memory;
         }
@@ -772,7 +769,7 @@ namespace detail {
 
 // Store `arguments` in a compacted variant object. Then format a collection
 // of `char` with those arguments, and push the result into some container.
-template <stableAllocator Allocator, outputIterator<String> Outputter,
+template <is_stable_allocator Allocator, is_output_iterator<String> Outputter,
           typename... Args>
 [[nodiscard]] auto format_to(Allocator& allocator, Outputter output_iterator,
                              String const format, Args&&... arguments)
@@ -783,7 +780,7 @@ template <stableAllocator Allocator, outputIterator<String> Outputter,
             detail::FormatArgumentsCompactStorage{move(arguments)...}});
 }
 
-template <stableAllocator Allocator, typename... Args>
+template <is_stable_allocator Allocator, typename... Args>
 [[nodiscard]] auto format(Allocator& allocator, String const format,
                           Args&&... arguments) -> ScaredyFormat<String> {
     return detail::vformat(

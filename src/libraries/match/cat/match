@@ -61,7 +61,7 @@
 namespace cat {
 
 template <typename T>
-concept hasIs = requires(T t) {
+concept has_is = requires(T t) {
     t.template is<int>();
     t.template is(0);
 };
@@ -97,7 +97,7 @@ namespace detail {
         constexpr auto then(Function&& callback) {
             return PatternCallback{[&](auto& matching) -> bool {
                 using U = RemoveConst<RemoveReference<decltype(matching)>>;
-                if constexpr (hasIs<U>) {
+                if constexpr (has_is<U>) {
                     // If `matching` currently holds one of `Ts`, then invoke
                     // `callback`.
                     if (((matching.template is<Ts>()) || ...)) {
@@ -127,7 +127,7 @@ namespace detail {
         constexpr auto then(Function&& callback) {
             return PatternCallback{[&](auto& matching) -> bool {
                 using U = RemoveConst<RemoveReference<decltype(matching)>>;
-                if constexpr (hasIs<U>) {
+                if constexpr (has_is<U>) {
                     // If `matching` currently holds a value equivalent to
                     // `this->value`, then invoke `callback`.
                     if (matching.template is(this->value)) {

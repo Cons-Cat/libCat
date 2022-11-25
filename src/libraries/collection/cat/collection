@@ -24,14 +24,14 @@ concept collection = requires(T container) {
 
 namespace detail {
     template <typename T>
-    concept contiguousCollection = requires(T collection) {
+    concept is_contiguous_collection = requires(T collection) {
         collection.data();
     };
 
     // clang-format off
     template <typename T>
     // Parentheses are required here to make cppcheck work.
-    concept boundedCollection = (requires(T collection) {
+    concept is_bounded_collection = (requires(T collection) {
         collection.size();
     }) || (requires(T collection) {
         collection.capacity();
@@ -40,13 +40,13 @@ namespace detail {
 
     // If `.size()` is provided.
     template <typename T>
-    concept hasSize = requires(T t) {
+    concept has_size = requires(T t) {
         t.size();
     };
 
     // If `.capacity()` is provided.
     template <typename T>
-    concept hasCapacity = requires(T t) {
+    concept has_capacity = requires(T t) {
         t.capacity();
     };
 }  // namespace detail
@@ -57,35 +57,35 @@ class CollectionFacade {
     // `is_array_like` at the top of this class instead of the bottom prevents
     // clangd false diagnostics.
     static constexpr bool is_array_like =
-        detail::contiguousCollection<Derived> &&
-        detail::boundedCollection<Derived>;
+        detail::is_contiguous_collection<Derived> &&
+        detail::is_bounded_collection<Derived>;
 
   public:
     // If `.size()` is not, provided and `.capacity()` is, generate
     // `.size()`.
     [[nodiscard]] constexpr auto size() const -> ssize
-        requires(detail::hasCapacity<Derived> && !detail::hasSize<Derived>) {
+        requires(detail::has_capacity<Derived> && !detail::has_size<Derived>) {
         return this->self().capacity();
     }
 
     // If `.size()` is provided and `.capacity()` is not, generate
     // `.capacity()`.
     [[nodiscard]] constexpr auto capacity() const -> ssize
-        requires(detail::hasSize<Derived>) {
+        requires(detail::has_size<Derived>) {
         return this->self().size();
     }
 
     // This evaluates true if there are one or more elements currently in this
     // collection.
     [[nodiscard]] constexpr auto is_empty() const
-        -> bool requires(detail::hasSize<Derived>) {
+        -> bool requires(detail::has_size<Derived>) {
         return this->self().size() == 0;
     }
 
     // This evaluates true if there are one or more elements currently in this
     // collection.
     [[nodiscard]] constexpr auto is_full() const
-        -> bool requires(detail::hasSize<Derived>) {
+        -> bool requires(detail::has_size<Derived>) {
         return this->self().size() == this->self().capacity();
     }
 
@@ -170,7 +170,7 @@ class CollectionFacade {
         requires(this->is_array_like)
     { return this->subspan(this->self().size() - count, this->self().size()); }
 
-    template <integral U>
+    template <is_integral U>
         requires(is_array_like)
     [[nodiscard]] constexpr auto operator[](U index) -> T& {
         if (!is_constant_evaluated()) {
@@ -181,7 +181,7 @@ class CollectionFacade {
         return this->self_mut().data()[to_raw_numeral(index)];
     }
 
-    template <integral U>
+    template <is_integral U>
         requires(is_array_like)
     [[nodiscard]] constexpr auto operator[](U index) const -> T const& {
         if (!is_constant_evaluated()) {
@@ -238,8 +238,7 @@ class CollectionFacade {
     }
 
     [[nodiscard]] constexpr auto rend() requires(this->is_array_like) {
-        return ReversedIterator<decltype(this->end())>(-1,
-                                                       this->self().data());
+        return ReversedIterator<decltype(this->end())>(-1, this->self().data());
     }
 
     // If this collection is not contiguous, get a non-`const` `.rbegin()`
@@ -392,7 +391,7 @@ struct CollectionTraits {
     using ConstReversedIterator = cat::ReversedIterator<ConstIterator>;
 
     static constexpr bool is_array_like =
-        detail::contiguousCollection<T> && detail::boundedCollection<T>;
+        detail::is_contiguous_collection<T> && detail::is_bounded_collection<T>;
 };
 
 }  // namespace cat

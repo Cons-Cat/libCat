@@ -36,7 +36,7 @@ class Ring : public CollectionFacade<Ring<T>, T> {
 
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
     // context.
-    auto copy_to_new_storage(stableAllocator auto& allocator,
+    auto copy_to_new_storage(is_stable_allocator auto& allocator,
                              ssize new_capacity) -> Maybe<void> {
         // TODO: `.srealloc_multi()`.
         T* p_new = TRY(allocator.template alloc_multi<T>(new_capacity));
@@ -60,18 +60,18 @@ class Ring : public CollectionFacade<Ring<T>, T> {
   public:
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    [[nodiscard]] static auto reserved(stableAllocator auto& allocator,
+    [[nodiscard]] static auto reserved(is_stable_allocator auto& allocator,
                                        ssize capacity) -> Maybe<Ring<T>> {
     }
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    [[nodiscard]] static auto filled(stableAllocator auto& allocator,
+    [[nodiscard]] static auto filled(is_stable_allocator auto& allocator,
                                      ssize capacity, T value)
         -> Maybe<Ring<T>> {
     }
 
-    [[nodiscard]] auto reserve(stableAllocator auto& allocator,
+    [[nodiscard]] auto reserve(is_stable_allocator auto& allocator,
                                ssize new_capacity) -> Maybe<void> {
         // The capacity of a `Ring` must be a power of two.
         cat::assert(is_power_of_two(new_capacity));
@@ -101,8 +101,8 @@ class Ring : public CollectionFacade<Ring<T>, T> {
         return monostate;
     }
 
-    [[nodiscard]] auto resize(stableAllocator auto& allocator, ssize new_size)
-        -> Maybe<void> {
+    [[nodiscard]] auto resize(is_stable_allocator auto& allocator,
+                              ssize new_size) -> Maybe<void> {
         if (new_size > this->current_capacity) {
             TRY(this->reserve(allocator, new_size));
 
@@ -121,7 +121,7 @@ class Ring : public CollectionFacade<Ring<T>, T> {
         return monostate;
     }
 
-    [[nodiscard]] auto clone(stableAllocator auto& allocator)
+    [[nodiscard]] auto clone(is_stable_allocator auto& allocator)
         -> Maybe<Ring<T>> {
     }
 

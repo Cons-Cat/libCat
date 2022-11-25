@@ -14,9 +14,8 @@ struct Thread {
     // TODO: Default or delete a move constructor and assignment operator?
 
     // TODO: Use an `invocable` `concept`.
-    auto create(allocator auto& allocator, ssize initial_stack_size,
-                auto const& function, void* p_arguments_struct)
-        -> Maybe<void> {
+    auto create(is_allocator auto& allocator, ssize initial_stack_size,
+                auto const& function, void* p_arguments_struct) -> Maybe<void> {
         Scaredy result = this->process.create(allocator, initial_stack_size,
                                               function, p_arguments_struct);
         if (result.has_value()) {

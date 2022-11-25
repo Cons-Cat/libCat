@@ -74,7 +74,7 @@ class List : public CollectionFacade<List<T>, T> {
   public:
     template <typename U, U... initializers>
         requires(is_implicitly_convertible<U, T>)
-    [[nodiscard]] static auto from(stableAllocator auto& allocator,
+    [[nodiscard]] static auto from(is_stable_allocator auto& allocator,
                                    ValueList<U, initializers...>)
         -> Maybe<List<T>> {
         List<T> new_list;
@@ -93,9 +93,8 @@ class List : public CollectionFacade<List<T>, T> {
 
     template <typename... Args>
         requires(is_implicitly_convertible<Args, T>&&...)
-    [[nodiscard]] static auto from(stableAllocator auto& allocator,
-                                   Args&&... initializers)
-        -> Maybe<List<T>> {
+    [[nodiscard]] static auto from(is_stable_allocator auto& allocator,
+                                   Args&&... initializers) -> Maybe<List<T>> {
         List<T> new_list;
         // TODO: Check if a recursive function is more efficient here.
         Array values = {forward<Args>(initializers)...};
@@ -190,7 +189,7 @@ class List : public CollectionFacade<List<T>, T> {
 
   public:
     // Deep-copy the contents of this `List`.
-    [[nodiscard]] auto clone(stableAllocator auto& allocator)
+    [[nodiscard]] auto clone(is_stable_allocator auto& allocator)
         -> Maybe<List<T>> {
         List<T> new_list;
         Iterator current = TRY(new_list.push_front(allocator, this->front()));
@@ -204,12 +203,11 @@ class List : public CollectionFacade<List<T>, T> {
     // `where`.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto insert(stableAllocator auto& allocator, Iterator where, U const& value)
-        -> Maybe<Iterator> {
+    auto insert(is_stable_allocator auto& allocator, Iterator where,
+                U const& value) -> Maybe<Iterator> {
         // `cat::MaybePtr` at here produces an internal compiler error in
         // GCC 12.
-        cat::Maybe memory =
-            allocator.template alloc<detail::ListNode<T>>();
+        cat::Maybe memory = allocator.template alloc<detail::ListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -231,10 +229,9 @@ class List : public CollectionFacade<List<T>, T> {
     // Allocate a node and insert it into this list before the position of
     // `where`, then construct it with arguments.
     template <typename... Args>
-    auto emplace(stableAllocator auto& allocator, Iterator where,
+    auto emplace(is_stable_allocator auto& allocator, Iterator where,
                  Args&&... arguments) -> Maybe<Iterator> {
-        cat::Maybe memory =
-            allocator.template alloc<detail::ListNode<T>>();
+        cat::Maybe memory = allocator.template alloc<detail::ListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -254,7 +251,7 @@ class List : public CollectionFacade<List<T>, T> {
     }
 
     // Remove and deallocate an element from this list.
-    auto erase(stableAllocator auto& allocator, Iterator where)
+    auto erase(is_stable_allocator auto& allocator, Iterator where)
         -> Maybe<Iterator> {
         if (this->length == 0) [[unlikely]] {
             // Prevent a segfault when the list is empty.
@@ -284,10 +281,9 @@ class List : public CollectionFacade<List<T>, T> {
     // Allocate a node and insert it at the beginning of this list.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto push_front(stableAllocator auto& allocator, U const& value)
+    auto push_front(is_stable_allocator auto& allocator, U const& value)
         -> Maybe<Iterator> {
-        cat::Maybe memory =
-            allocator.template alloc<detail::ListNode<T>>();
+        cat::Maybe memory = allocator.template alloc<detail::ListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -302,10 +298,9 @@ class List : public CollectionFacade<List<T>, T> {
 
     // Allocate a node and insert it at the beginning of this list.
     template <typename... Args>
-    auto emplace_front(stableAllocator auto& allocator, Args&&... arguments)
+    auto emplace_front(is_stable_allocator auto& allocator, Args&&... arguments)
         -> Maybe<Iterator> {
-        cat::Maybe memory =
-            allocator.template alloc<detail::ListNode<T>>();
+        cat::Maybe memory = allocator.template alloc<detail::ListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -319,7 +314,7 @@ class List : public CollectionFacade<List<T>, T> {
     }
 
     // Remove an element from the front of this list.
-    void pop_front(stableAllocator auto& allocator) {
+    void pop_front(is_stable_allocator auto& allocator) {
         if (this->length > 0) [[likely]] {
             detail::ListNode<T>& node = *(this->begin().p_node);
             if (node.p_next_node != nullptr) [[likely]] {
@@ -336,10 +331,9 @@ class List : public CollectionFacade<List<T>, T> {
     // Allocate a node and insert it at the end of this list.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto push_back(stableAllocator auto& allocator, U const& value)
+    auto push_back(is_stable_allocator auto& allocator, U const& value)
         -> Maybe<Iterator> {
-        cat::Maybe memory =
-            allocator.template alloc<detail::ListNode<T>>();
+        cat::Maybe memory = allocator.template alloc<detail::ListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -354,10 +348,9 @@ class List : public CollectionFacade<List<T>, T> {
 
     // Allocate a node and insert it at the end of this list.
     template <typename... Args>
-    auto emplace_back(stableAllocator auto& allocator, Args&&... arguments)
+    auto emplace_back(is_stable_allocator auto& allocator, Args&&... arguments)
         -> Maybe<Iterator> {
-        cat::Maybe memory =
-            allocator.template alloc<detail::ListNode<T>>();
+        cat::Maybe memory = allocator.template alloc<detail::ListNode<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
             return nullopt;
@@ -371,7 +364,7 @@ class List : public CollectionFacade<List<T>, T> {
     }
 
     // Remove and deallocate an element from the back of this list.
-    void pop_back(stableAllocator auto& allocator) {
+    void pop_back(is_stable_allocator auto& allocator) {
         if (this->length > 0) [[likely]] {
             detail::ListNode<T>& node = *(this->end().p_node);
             if (node.p_previous_node != nullptr) [[likely]] {
@@ -385,7 +378,7 @@ class List : public CollectionFacade<List<T>, T> {
 
     // Remove and deallocate all elements from this list. All nodes must have
     // been allocated by the same arena for this function to succeed.
-    void clear(stableAllocator auto& allocator) {
+    void clear(is_stable_allocator auto& allocator) {
         for (Iterator iterator = this->begin(); iterator != this->end();
              ++iterator) {
             allocator.free(iterator.p_node);
@@ -452,7 +445,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
   public:
     template <typename U, U... values>
         requires(is_implicitly_convertible<U, T>)
-    [[nodiscard]] static auto from(stableAllocator auto& allocator,
+    [[nodiscard]] static auto from(is_stable_allocator auto& allocator,
                                    ValueList<U, values...> initializers)
         -> Maybe<ForwardList<T>> {
         ForwardList<T> new_list;
@@ -471,7 +464,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
 
     template <typename... Args>
         requires(is_implicitly_convertible<Args, T>&&...)
-    [[nodiscard]] static auto from(stableAllocator auto& allocator,
+    [[nodiscard]] static auto from(is_stable_allocator auto& allocator,
                                    Args&&... initializers)
         -> Maybe<ForwardList<T>> {
         ForwardList<T> new_list;
@@ -541,7 +534,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
 
   public:
     // Deep-copy the contents of this `ForwardList`.
-    [[nodiscard]] auto clone(stableAllocator auto& allocator)
+    [[nodiscard]] auto clone(is_stable_allocator auto& allocator)
         -> Maybe<ForwardList<T>> {
         ForwardList<T> new_list;
         Iterator current = TRY(new_list.push_front(allocator, this->front()));
@@ -552,7 +545,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     }
 
     template <typename U>
-    auto insert_after(stableAllocator auto& allocator, Iterator where,
+    auto insert_after(is_stable_allocator auto& allocator, Iterator where,
                       U const& value) -> Maybe<Iterator>
         requires(is_implicitly_convertible<U, T>)
     {
@@ -577,7 +570,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     }
 
     template <typename... Args>
-    auto emplace_after(stableAllocator auto& allocator, Iterator where,
+    auto emplace_after(is_stable_allocator auto& allocator, Iterator where,
                        Args&&... arguments) -> Maybe<Iterator> {
         cat::Maybe memory =
             allocator.template alloc<detail::ForwardListNode<T>>();
@@ -599,7 +592,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         return Iterator{&node};
     }
 
-    void erase_after(stableAllocator auto& allocator, Iterator where) {
+    void erase_after(is_stable_allocator auto& allocator, Iterator where) {
         detail::ForwardListNode<T>& node = *where.p_node;
         detail::ForwardListNode<T>* p_remove = node.p_next_node;
         node.p_next_node = p_remove->p_next_node;
@@ -609,7 +602,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     // Allocate a node and insert it at the beginning of this list.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto push_front(stableAllocator auto& allocator, U const& value)
+    auto push_front(is_stable_allocator auto& allocator, U const& value)
         -> Maybe<Iterator> {
         cat::Maybe memory =
             allocator.template alloc<detail::ForwardListNode<T>>();
@@ -627,7 +620,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
 
     // Allocate a node and insert it at the beginning of this list.
     template <typename... Args>
-    auto emplace_front(stableAllocator auto& allocator, Args&&... arguments)
+    auto emplace_front(is_stable_allocator auto& allocator, Args&&... arguments)
         -> Maybe<Iterator> {
         cat::Maybe memory =
             allocator.template alloc<detail::ForwardListNode<T>>();
@@ -644,7 +637,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     }
 
     // Remove an element from the front of this list.
-    void pop_front(stableAllocator auto& allocator) {
+    void pop_front(is_stable_allocator auto& allocator) {
         if (this->length > 0) [[likely]] {
             detail::ForwardListNode<T>& node = *this->p_head;
             this->p_head = node.p_next_node;
@@ -657,7 +650,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     //
     // Remove and deallocate all elements from this list. All nodes must
     // have been allocated by the same arena for this function to succeed.
-    void clear(stableAllocator auto& allocator) {
+    void clear(is_stable_allocator auto& allocator) {
         for (Iterator iterator = this->begin(); iterator != this->end();
              ++iterator) {
             allocator.free(iterator.p_node);

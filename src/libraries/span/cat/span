@@ -33,7 +33,7 @@ class Span : public CollectionFacade<Span<T>, T> {
         return Span<T>{static_cast<T*>(p_start), ssize{p_end - p_start}};
     }
 
-    // TODO: Make a `ContiguousContainer` `concept`. It can use the
+    // TODO: Make an `is_contiguous_container` `concept`. It can use the
     // `CollectionFacade` traits.
     /*
 constexpr Span(auto const& container)

@@ -804,7 +804,7 @@ class Maybe {
 
     // Monadic methods:
 
-    // TODO: Use a `meta::invocable` `concept`.
+    // TODO: Use an `invocable` `concept`.
 
     // If this non-`const`-qualified `Maybe` holds a value, transform it
     // by a function. Otherwise, propagate an empty `Maybe`.
@@ -1104,14 +1104,14 @@ template <typename T>
 using MaybePtr = Maybe<Sentinel<T*, nullptr>>;
 
 namespace detail {
-    template <integral T>
+    template <is_integral T>
     constexpr auto is_non_negative(T value) -> bool {
         return value >= 0;
     }
 }  // namespace detail
 
 // Simplify non-negative signed integers.
-template <integral T>
+template <is_integral T>
 using MaybeNonNegative =
     // A lambda here causes clangd 14 to crash.
     Maybe<Compact<T, detail::is_non_negative<T>, -1>>;

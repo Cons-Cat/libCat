@@ -27,24 +27,23 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
           p_arena_end(p_address){};
 
   public:
-    static auto backed(stableAllocator auto& backing, ssize arena_size)
+    static auto backed(is_stable_allocator auto& backing, ssize arena_size)
         -> Maybe<LinearAllocator> {
-        Maybe maybe_memory =
-            backing.template alloc_multi<Byte>(arena_size);
+        Maybe maybe_memory = backing.template alloc_multi<Byte>(arena_size);
         if (!maybe_memory.has_value()) {
             return nullopt;
         }
         return LinearAllocator(maybe_memory.value(), arena_size);
     }
 
-    static auto backed_handle(stableAllocator auto& backing,
-                              memoryHandle auto& handle) -> LinearAllocator {
+    static auto backed_handle(is_stable_allocator auto& backing,
+                              mem auto& handle) -> LinearAllocator {
         return LinearAllocator(backing.template p_get(handle),
                                handle.raw_size());
     }
 
-    static auto backed_handle_sized(stableAllocator auto& backing,
-                                    memoryHandle auto& handle, ssize arena_size)
+    static auto backed_handle_sized(is_stable_allocator auto& backing,
+                                    mem auto& handle, ssize arena_size)
         -> LinearAllocator {
         cat::assert(arena_size <= handle.raw_size());
         return LinearAllocator(backing.template p_get(handle), arena_size);
@@ -64,8 +63,7 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
         // The allocation size is the difference between the current pointer
         // and the new pointer.
         if (allocation >= p_arena_end) {
-            return static_cast<ssize>(
-                (this->p_arena_current - allocation).raw);
+            return static_cast<ssize>((this->p_arena_current - allocation).raw);
         }
         return 0;
     }

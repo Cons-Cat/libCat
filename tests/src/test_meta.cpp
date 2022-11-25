@@ -23,8 +23,6 @@ TEST(test_meta) {
     using namespace cat;
     static_assert(is_same<int, int>);
     static_assert(!is_same<int, unsigned int>);
-    static_assert(sameAs<int, int>);
-    static_assert(!sameAs<int, unsigned int>);
 
     enum Enum : int {
     };

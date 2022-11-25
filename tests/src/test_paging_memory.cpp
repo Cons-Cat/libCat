@@ -23,15 +23,14 @@ TEST(test_paging_memory) {
     cat::PageAllocator allocator;
 
     // Allocate and free a `const` page.
-    cat::memoryHandle auto const const_memory =
+    cat::mem auto const const_memory =
         allocator.opq_alloc<cat::Byte>().or_exit("Failed to page memory!");
     _ = allocator.get(const_memory);
     allocator.free(const_memory);
 
     // Allocate a page.
-    cat::memoryHandle auto memory =
-        allocator.opq_alloc_multi<int4>(1'000).or_exit(
-            "Failed to page memory!");
+    cat::mem auto memory = allocator.opq_alloc_multi<int4>(1'000).or_exit(
+        "Failed to page memory!");
     // Free the page at the end of this program.
     DEFER(allocator.free(memory);)
 

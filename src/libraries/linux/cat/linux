@@ -1127,8 +1127,9 @@ struct Process {
     Process(Process const&) = delete;
 
     // TODO: Add `cat::invocable` concept.
-    auto create(cat::allocator auto& allocator, ssize const initial_stack_size,
-                auto const& function, void* p_arguments_struct,
+    auto create(cat::is_allocator auto& allocator,
+                ssize const initial_stack_size, auto const& function,
+                void* p_arguments_struct,
                 // TODO: These flags should largely be encoded into the type.
                 CloneFlags const flags = default_flags) -> ScaredyLinux<void> {
         this->stack_size = initial_stack_size;

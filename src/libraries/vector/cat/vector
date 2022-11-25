@@ -47,7 +47,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
 
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
     // context.
-    auto double_storage(stableAllocator auto& allocator) -> Maybe<void> {
+    auto double_storage(is_stable_allocator auto& allocator) -> Maybe<void> {
         ssize new_capacity;
         if (this->current_capacity > 0) [[likely]] {
             new_capacity = this->current_capacity * 2;
@@ -92,7 +92,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     }
 
   public:
-    [[nodiscard]] static auto reserved(stableAllocator auto& allocator,
+    [[nodiscard]] static auto reserved(is_stable_allocator auto& allocator,
                                        ssize capacity) -> Maybe<Vector<T>> {
         Vector<T> new_vector;
         TRY(new_vector.reserve(allocator, capacity));
@@ -105,7 +105,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         return new_vector;
     }
 
-    [[nodiscard]] static auto filled(stableAllocator auto& allocator,
+    [[nodiscard]] static auto filled(is_stable_allocator auto& allocator,
                                      ssize count, T const& value)
         -> Maybe<Vector<T>> {
         Vector<T> new_vector;
@@ -140,7 +140,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     }
 
     // Try to change the capacity of this `Vector` in a non-`constexpr` context.
-    [[nodiscard]] auto reserve(stableAllocator auto& allocator,
+    [[nodiscard]] auto reserve(is_stable_allocator auto& allocator,
                                ssize new_capacity) -> Maybe<void> {
         if (new_capacity > this->current_capacity) {
             // TODO: `.srealloc_multi()`.
@@ -184,8 +184,8 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     }
 
     // Try to change the size of this `Vector` in a non-`constexpr` context.
-    [[nodiscard]] auto resize(stableAllocator auto& allocator, ssize new_size)
-        -> Maybe<void> {
+    [[nodiscard]] auto resize(is_stable_allocator auto& allocator,
+                              ssize new_size) -> Maybe<void> {
         if (new_size > this->current_capacity) {
             TRY(this->reserve(allocator, new_size));
 
@@ -229,7 +229,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
 
     // Deep-copy the contents of this `Vector`.
     [[nodiscard]] auto clone(
-        stableAllocator auto& allocator) const& -> Maybe<Vector<T>> {
+        is_stable_allocator auto& allocator) const& -> Maybe<Vector<T>> {
         Vector<T> new_vector =
             TRY(Vector<T>::reserved(allocator, this->current_capacity));
         new_vector.current_size = this->current_size;
@@ -252,7 +252,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    [[nodiscard]] auto push_back(stableAllocator auto& allocator,
+    [[nodiscard]] auto push_back(is_stable_allocator auto& allocator,
                                  U const& value) -> Maybe<void> {
         if (this->current_size + 1 > this->current_capacity) {
             Maybe result = this->double_storage(allocator);
