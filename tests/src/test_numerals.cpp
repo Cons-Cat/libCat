@@ -490,4 +490,11 @@ TEST(test_numerals) {
     saturate_int4 = cat::int4_max;
     saturate_int4.wrap += 100;
     cat::verify(saturate_int4 == cat::int4_min + 99);
+
+    // Test floats.
+    float4 safe_float = 0.f;
+    safe_float = 2.f;
+    cat::verify(safe_float == 2.f);
+    safe_float.raw = 1.f;
+    cat::verify(safe_float == 1.f);
 };

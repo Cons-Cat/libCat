@@ -333,12 +333,17 @@ template <integral T, integral U>
 
 namespace detail {
     template <typename T, OverflowPolicies>
-    struct NumeralStorage;
+    struct NumeralStorage {
+        // This is the fallback when `T` is a floating point type.
+        // Floats can't have sensible overflow semantics, except in some very
+        // special cases.
+        T raw;
+    };
 
     // To prevent `Numeral` holding a member of its own type, only undefined
     // overflow can access other overflow semantics.
 
-    template <typename T>
+    template <integral T>
     struct NumeralStorage<T, OverflowPolicies::undefined> {
         auto operator<=>(NumeralStorage<T, OverflowPolicies::undefined>) =
             delete;
@@ -353,7 +358,7 @@ namespace detail {
         };
     };
 
-    template <typename T>
+    template <integral T>
     struct NumeralStorage<T, OverflowPolicies::wrap> {
         union {
             T raw;
@@ -362,7 +367,7 @@ namespace detail {
         };
     };
 
-    template <typename T>
+    template <integral T>
     struct NumeralStorage<T, OverflowPolicies::saturate> {
         union {
             T raw;
@@ -371,7 +376,7 @@ namespace detail {
         };
     };
 
-    template <typename T>
+    template <integral T>
     struct NumeralStorage<T, OverflowPolicies::trap> {
         union {
             T raw;
@@ -380,17 +385,17 @@ namespace detail {
         };
     };
 
-    template <typename T>
+    template <integral T>
     struct NumeralStorage<T, OverflowPolicies::wrap_member> {
         T raw;
     };
 
-    template <typename T>
+    template <integral T>
     struct NumeralStorage<T, OverflowPolicies::saturate_member> {
         T raw;
     };
 
-    template <typename T>
+    template <integral T>
     struct NumeralStorage<T, OverflowPolicies::trap_member> {
         T raw;
     };
@@ -402,6 +407,10 @@ namespace detail {
 template <typename T, OverflowPolicies policy = OverflowPolicies::undefined>
 struct Numeral : detail::NumeralStorage<T, policy> {
     using Raw = T;
+
+    // This constraint doesn't need to be SFINAE friendly, and it isn't obvious
+    // how to refactor this so it is.
+    static_assert(integral<T> || (policy == OverflowPolicies::undefined));
 
     constexpr Numeral() = default;
 
