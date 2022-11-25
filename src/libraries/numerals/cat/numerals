@@ -70,9 +70,14 @@ constexpr auto make_unsigned(T value) -> MakeUnsigned<T> {
     return static_cast<MakeUnsigned<T>>(value);
 }
 
-template <is_integral From, is_integral To>
-constexpr auto make_sign_from(To value) -> CopySignFrom<From, To> {
-    return static_cast<CopySignFrom<From, To>>(value);
+template <is_integral Sign, is_integral T>
+constexpr auto make_sign_from(T value) -> CopySignFrom<Sign, T> {
+    return static_cast<CopySignFrom<Sign, T>>(value);
+}
+
+template <is_integral Sign, is_integral T>
+constexpr auto make_sign_from(Sign, T value) -> CopySignFrom<Sign, T> {
+    return static_cast<CopySignFrom<Sign, T>>(value);
 }
 
 // These macros are defined by the GCC compiler.

@@ -234,6 +234,9 @@ TEST(test_numerals) {
     static_assert(cat::is_same<decltype(cat::make_unsigned(1_i4)), uint4>);
     static_assert(cat::is_same<decltype(cat::make_signed(1_u4)), int4>);
 
+    static_assert(cat::make_sign_from<int4>(1u) == 1_i4);
+    static_assert(cat::make_sign_from(2, 1u) == 1_i4);
+
     // Test unwrapped numerals in `Limits`.
     static_assert(cat::Limits<int4>::max() == cat::Limits<int4::Raw>::max());
     static_assert(cat::Limits<uint8>::max() == cat::Limits<uint8::Raw>::max());

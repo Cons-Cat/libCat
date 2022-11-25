@@ -473,9 +473,9 @@ concept is_signed = detail::is_signed_detail<T>;
 template <typename T>
 concept is_unsigned = !is_signed<T>;
 
-template <is_integral From, is_integral To>
+template <is_integral Sign, is_integral T>
 using CopySignFrom =
-    Conditional<is_signed<From>, MakeSigned<To>, MakeUnsignedTrait<To>>;
+    Conditional<is_signed<Sign>, MakeSigned<Sign>, MakeUnsignedTrait<Sign>>;
 
 template <typename T>
 concept is_void = __is_same(T, void);
