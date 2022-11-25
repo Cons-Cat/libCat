@@ -391,8 +391,8 @@ namespace detail {
             Byte const* const p_storage = reinterpret_cast<Byte const* const>(
                 this->p_arguments_indices + argument_count);
 
-            Byte const* data = p_storage + storage_index;
-            return *bit_cast<T const*>(data);
+            Byte const* p_data = p_storage + storage_index;
+            return *bit_cast<T const*>(p_data);
         }
 
         FormatArgumentCompactIndex const* p_arguments_indices;

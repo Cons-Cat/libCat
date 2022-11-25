@@ -249,10 +249,9 @@ namespace detail {
     };
 }  // namespace detail
 
-template <typename AllocatorT, typename AllocationU = void*>
-concept is_stable_allocator = requires(AllocatorT it) {
-    it.template alloc<AllocationU>();
-};
+// TODO: Make unstable allocators.
+template <typename AllocatorT>
+concept is_stable_allocator = true;
 
 template <typename T>
 using SizedAllocation = Tuple<T, ssize>;
@@ -4841,6 +4840,7 @@ class AllocatorFacade {
                                                 // Failsafe pointer with size.
                                                 MaybeSizedAllocation<T*>>,
                                     Conditional<is_multiple,
+                                                // TODO: Use a `MaybeSpan<T>`.
                                                 // Span.
                                                 Maybe<Span<T>>,
                                                 // Failsafe pointer w/out size.

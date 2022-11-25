@@ -25,6 +25,10 @@ class Span : public CollectionFacade<Span<T>, T> {
     constexpr Span(U* p_in_data, ssize in_length)
         : p_storage(static_cast<T*>(p_in_data)), length(in_length){};
 
+    // Construct a `Span` with `nullptr`.
+    constexpr Span(decltype(nullptr), ssize in_length)
+        : p_storage(nullptr), length(in_length){};
+
     // Construct a `Span` between two addresses.
     template <typename U, typename V>
         requires(

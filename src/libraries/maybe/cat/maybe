@@ -1103,12 +1103,26 @@ Maybe(T) -> Maybe<T>;
 template <typename T>
 using MaybePtr = Maybe<Sentinel<T*, nullptr>>;
 
+// Simplify nullable spans.
+template <typename T>
+class Span;
+
 namespace detail {
     template <is_integral T>
     constexpr auto is_non_negative(T value) -> bool {
         return value >= 0;
     }
+
+    template <typename T>
+    constexpr auto span_is_non_null(Span<T> span) -> bool {
+        return span.data() != nullptr;
+    }
+
 }  // namespace detail
+
+template <typename T>
+using MaybeSpan =
+    Maybe<Compact<Span<T>, detail::span_is_non_null<T>, Span<T>{nullptr, 0}>>;
 
 // Simplify non-negative signed integers.
 template <is_integral T>
