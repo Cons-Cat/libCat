@@ -34,7 +34,7 @@ if(CAT_BUILD_UNIT_TESTS)
     cat-tests INTERFACE
     ${CMAKE_SOURCE_DIR}/tests/src/test_alloc.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_arrays.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_compare_strings.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_compare_strings.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_format_strings.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_linear_allocator.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_list.cpp
