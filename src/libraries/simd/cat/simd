@@ -388,35 +388,35 @@ class alignas(InAbi::alignment.raw) Simd {
     }
 
     // Load a vector from `data`, aligned to `Abi::alignment`.
-    constexpr auto load_aligned(T const* data) -> Vector& {
+    constexpr auto load_aligned(T const* p_data) -> Vector& {
         this->raw =
-            static_cast<Vector const*>(static_cast<void const*>(data))->raw;
+            static_cast<Vector const*>(static_cast<void const*>(p_data))->raw;
         return *this;
     }
 
     // Load a vector from `data` with any alignment. This may be slower than
     // `.loaded_aligned()`.
-    constexpr auto load_unaligned(T const* data) -> Vector& {
+    constexpr auto load_unaligned(T const* p_data) -> Vector& {
         this->raw = static_cast<UnalignedVector const*>(
-                        static_cast<void const*>(data))
+                        static_cast<void const*>(p_data))
                         ->raw;
         return *this;
     }
 
     // Load a vector from `data`.
-    constexpr auto load(T const* data) -> Vector& {
+    constexpr auto load(T const* p_data) -> Vector& {
         if constexpr (Abi::alignment == alignof(T)) {
-            return this->load_aligned(data);
+            return this->load_aligned(p_data);
         } else {
-            return this->load_unaligned(data);
+            return this->load_unaligned(p_data);
         }
     }
 
     // Construct a `Simd` loaded from the address `data`, aligned to
     // `Abi::alignment`.
-    [[nodiscard]] static constexpr auto loaded_aligned(T const* data)
+    [[nodiscard]] static constexpr auto loaded_aligned(T const* p_data)
         -> Vector {
-        return *bit_cast<Vector const*>(data);
+        return *bit_cast<Vector const*>(p_data);
     }
 
     // Construct a `Simd` loaded from the address `data` with any alignment.
@@ -425,16 +425,16 @@ class alignas(InAbi::alignment.raw) Simd {
     // positive when loading a `char const*` from the `.strings` segment,
     // because vector loads potentially index out of bounds.
     [[nodiscard, gnu::no_sanitize_address]] static constexpr auto
-    loaded_unaligned(T const* data) -> Vector {
-        return *bit_cast<UnalignedVector const*>(data);
+    loaded_unaligned(T const* p_data) -> Vector {
+        return *bit_cast<UnalignedVector const*>(p_data);
     }
 
     // Construct a `Simd` loaded from the address `data`.
-    [[nodiscard]] static constexpr auto loaded(T const* data) {
+    [[nodiscard]] static constexpr auto loaded(T const* p_data) {
         if constexpr (Abi::alignment == alignof(T)) {
-            return loaded_aligned(data);
+            return loaded_aligned(p_data);
         } else {
-            return loaded_unaligned(data);
+            return loaded_unaligned(p_data);
         }
     }
 
@@ -627,15 +627,15 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
     }
 
     // Load a vector from `data`, aligned to `Abi<bool>::alignment`.
-    constexpr auto load(bool const* data) -> Mask& {
+    constexpr auto load(bool const* p_data) -> Mask& {
         this->raw =
-            static_cast<Mask const*>(static_cast<void const*>(data))->raw;
+            static_cast<Mask const*>(static_cast<void const*>(p_data))->raw;
         return *this;
     }
 
     // Construct a `Simd` loaded from the address `data`.
-    [[nodiscard]] static constexpr auto loaded(bool const* data) {
-        return Mask{}.load(data);
+    [[nodiscard]] static constexpr auto loaded(bool const* p_data) {
+        return Mask{}.load(p_data);
     }
 
     Raw raw;
