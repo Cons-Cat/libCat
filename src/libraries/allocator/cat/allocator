@@ -336,7 +336,7 @@ class AllocatorFacade {
     template <typename T, typename... Args>
         requires(detail::is_stable_derived_allocator<Derived>&&
                      is_constructible<T, Args...>)
-    [[nodiscard]] auto alloc(Args&&... constructor_arguments) -> MaybePtr<T> {
+    [[nodiscard]] auto alloc(Args&&... constructor_arguments) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -353,7 +353,7 @@ class AllocatorFacade {
     template <typename T, typename... Args>
         requires(detail::is_stable_derived_allocator<Derived>&&
                      is_constructible<T, Args...>)
-    [[nodiscard]] auto xalloc(Args&&... constructor_arguments) -> T* {
+    [[nodiscard]] auto xalloc(Args&&... constructor_arguments) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -393,7 +393,7 @@ class AllocatorFacade {
     // and provide a pointer handle.
     template <typename T>
         requires(detail::is_stable_derived_allocator<Derived>)
-    [[nodiscard]] auto alloc_multi(ssize count) -> MaybePtr<T> {
+    [[nodiscard]] auto alloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -407,7 +407,7 @@ class AllocatorFacade {
     // provide a pointer handle.
     template <typename T>
         requires(detail::is_stable_derived_allocator<Derived>)
-    [[nodiscard]] auto xalloc_multi(ssize count) -> T* {
+    [[nodiscard]] auto xalloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -445,8 +445,7 @@ class AllocatorFacade {
         requires(detail::is_stable_derived_allocator<Derived>&&
                      is_constructible<T, Args...>)
     [[nodiscard]] auto align_alloc(usize alignment,
-                                   Args&&... constructor_arguments)
-        -> MaybePtr<T> {
+                                   Args&&... constructor_arguments) {
         return this
             ->meta_alloc<T, false, true, true, false, true, false, false>(
                 alignment, 1, forward<Args>(constructor_arguments)...);
@@ -459,7 +458,7 @@ class AllocatorFacade {
         requires(detail::is_stable_derived_allocator<Derived>&&
                      is_constructible<T, Args...>)
     [[nodiscard]] auto align_xalloc(usize alignment,
-                                    Args&&... constructor_arguments) -> T* {
+                                    Args&&... constructor_arguments) {
         return this
             ->meta_alloc<T, false, false, true, false, true, false, false>(
                 alignment, 1, forward<Args>(constructor_arguments)...);
@@ -489,8 +488,7 @@ class AllocatorFacade {
     template <typename T, typename... Args>
         requires(detail::is_stable_derived_allocator<Derived>&&
                      is_constructible<T, Args...>)
-    [[nodiscard]] auto unalign_alloc(Args&&... constructor_arguments)
-        -> MaybePtr<T> {
+    [[nodiscard]] auto unalign_alloc(Args&&... constructor_arguments) {
         return this
             ->meta_alloc<T, false, true, false, false, true, false, false>(
                 1u, 1, forward<Args>(constructor_arguments)...);
@@ -501,7 +499,7 @@ class AllocatorFacade {
     template <typename T, typename... Args>
         requires(detail::is_stable_derived_allocator<Derived>&&
                      is_constructible<T, Args...>)
-    [[nodiscard]] auto unalign_xalloc(Args&&... constructor_arguments) -> T* {
+    [[nodiscard]] auto unalign_xalloc(Args&&... constructor_arguments) {
         return this
             ->meta_alloc<T, false, false, false, false, true, false, false>(
                 1u, 1, forward<Args>(constructor_arguments)...);
@@ -529,8 +527,7 @@ class AllocatorFacade {
     // with an alignment guarantee, and provide a pointer handle.
     template <typename T>
         requires(detail::is_stable_derived_allocator<Derived>)
-    [[nodiscard]] auto align_alloc_multi(usize alignment, ssize count)
-        -> MaybePtr<T> {
+    [[nodiscard]] auto align_alloc_multi(usize alignment, ssize count) {
         return this->meta_alloc<T, false, true, true, true, true, false, false>(
             alignment, count);
         // TODO: `assert` the alignment is correct.
@@ -540,7 +537,7 @@ class AllocatorFacade {
     // with an alignment guarantee, and provide a pointer handle.
     template <typename T>
         requires(detail::is_stable_derived_allocator<Derived>)
-    [[nodiscard]] auto align_xalloc_multi(usize alignment, ssize count) -> T* {
+    [[nodiscard]] auto align_xalloc_multi(usize alignment, ssize count) {
         return this
             ->meta_alloc<T, false, false, true, true, true, false, false>(
                 alignment, count);
@@ -567,7 +564,7 @@ class AllocatorFacade {
     // with no alignment guarantee, and provide a pointer handle.
     template <typename T>
         requires(detail::is_stable_derived_allocator<Derived>)
-    [[nodiscard]] auto unalign_alloc_multi(ssize count) -> MaybePtr<T> {
+    [[nodiscard]] auto unalign_alloc_multi(ssize count) {
         return this
             ->meta_alloc<T, false, true, false, true, true, false, false>(
                 1u, count);
@@ -577,7 +574,7 @@ class AllocatorFacade {
     // with no alignment guarantee, and provide a pointer handle.
     template <typename T>
         requires(detail::is_stable_derived_allocator<Derived>)
-    [[nodiscard]] auto unalign_xalloc_multi(ssize count) -> T* {
+    [[nodiscard]] auto unalign_xalloc_multi(ssize count) {
         return this
             ->meta_alloc<T, false, false, false, true, true, false, false>(
                 1u, count);
@@ -1318,7 +1315,7 @@ class AllocatorFacade {
     template <typename T, typename... Args>
         requires(detail::is_stable_derived_allocator<Derived>&&
                      is_constructible<T, Args...>)
-    [[nodiscard]] auto calloc(Args&&... constructor_arguments) -> MaybePtr<T> {
+    [[nodiscard]] auto calloc(Args&&... constructor_arguments) {
         if constexpr (alignof(T) > 1) {
             return this->align_calloc<T>(
                 alignof(T), forward<Args>(constructor_arguments)...);
@@ -1333,7 +1330,7 @@ class AllocatorFacade {
     template <typename T, typename... Args>
         requires(detail::is_stable_derived_allocator<Derived>&&
                      is_constructible<T, Args...>)
-    [[nodiscard]] auto xcalloc(Args&&... constructor_arguments) -> MaybePtr<T> {
+    [[nodiscard]] auto xcalloc(Args&&... constructor_arguments) {
         if constexpr (alignof(T) > 1) {
             return this->align_xcalloc<T>(
                 alignof(T), forward<Args>(constructor_arguments)...);
@@ -1367,7 +1364,7 @@ class AllocatorFacade {
     // `T`, and provide a pointer handle.
     template <typename T>
         requires(detail::is_stable_derived_allocator<Derived>)
-    [[nodiscard]] auto calloc_multi(ssize count) -> MaybePtr<T> {
+    [[nodiscard]] auto calloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             return this->align_calloc_multi<T>(alignof(T), count);
         } else {
@@ -1379,7 +1376,7 @@ class AllocatorFacade {
     // provide a pointer handle.
     template <typename T>
         requires(detail::is_stable_derived_allocator<Derived>)
-    [[nodiscard]] auto xcalloc_multi(ssize count) -> MaybePtr<T> {
+    [[nodiscard]] auto xcalloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             return this->align_xcalloc_multi<T>(alignof(T), count);
         } else {
@@ -1416,8 +1413,7 @@ class AllocatorFacade {
         requires(detail::is_stable_derived_allocator<Derived>&&
                      is_constructible<T, Args...>)
     [[nodiscard]] auto align_calloc(usize alignment,
-                                    Args&&... constructor_arguments)
-        -> MaybePtr<T> {
+                                    Args&&... constructor_arguments) {
         return this->meta_alloc<T, false, true, true, false, true, true, false>(
             alignment, 1, forward<Args>(constructor_arguments)...);
     }
@@ -1429,8 +1425,7 @@ class AllocatorFacade {
         requires(detail::is_stable_derived_allocator<Derived>&&
                      is_constructible<T, Args...>)
     [[nodiscard]] auto align_xcalloc(usize alignment,
-                                     Args&&... constructor_arguments)
-        -> MaybePtr<T> {
+                                     Args&&... constructor_arguments) {
         return this
             ->meta_alloc<T, false, false, true, false, true, true, false>(
                 alignment, 1, forward<Args>(constructor_arguments)...);
@@ -1462,8 +1457,7 @@ class AllocatorFacade {
     template <typename T, typename... Args>
         requires(detail::is_stable_derived_allocator<Derived>&&
                      is_constructible<T, Args...>)
-    [[nodiscard]] auto unalign_calloc(Args&&... constructor_arguments)
-        -> MaybePtr<T> {
+    [[nodiscard]] auto unalign_calloc(Args&&... constructor_arguments) {
         return this
             ->meta_alloc<T, false, true, false, false, true, true, false>(
                 1u, 1, forward<Args>(constructor_arguments)...);
@@ -1475,8 +1469,7 @@ class AllocatorFacade {
     template <typename T, typename... Args>
         requires(detail::is_stable_derived_allocator<Derived>&&
                      is_constructible<T, Args...>)
-    [[nodiscard]] auto unalign_xcalloc(Args&&... constructor_arguments)
-        -> MaybePtr<T> {
+    [[nodiscard]] auto unalign_xcalloc(Args&&... constructor_arguments) {
         return this
             ->meta_alloc<T, false, false, false, false, true, true, false>(
                 1u, 1, forward<Args>(constructor_arguments)...);
@@ -1504,8 +1497,7 @@ class AllocatorFacade {
     // zero-out the allocated memory.
     template <typename T>
         requires(detail::is_stable_derived_allocator<Derived>)
-    [[nodiscard]] auto align_calloc_multi(usize alignment, ssize count)
-        -> MaybePtr<T> {
+    [[nodiscard]] auto align_calloc_multi(usize alignment, ssize count) {
         return this->meta_alloc<T, false, true, true, true, true, true, false>(
             alignment, count);
     }
@@ -1515,7 +1507,7 @@ class AllocatorFacade {
     // the allocated memory.
     template <typename T>
         requires(detail::is_stable_derived_allocator<Derived>)
-    [[nodiscard]] auto align_xcalloc_multi(usize alignment, ssize count) -> T* {
+    [[nodiscard]] auto align_xcalloc_multi(usize alignment, ssize count) {
         return this->meta_alloc<T, false, false, true, true, true, true, false>(
             alignment, count);
     }
@@ -1542,7 +1534,7 @@ class AllocatorFacade {
     // zero-out the allocated memory.
     template <typename T>
         requires(detail::is_stable_derived_allocator<Derived>)
-    [[nodiscard]] auto unalign_calloc_multi(ssize count) -> MaybePtr<T> {
+    [[nodiscard]] auto unalign_calloc_multi(ssize count) {
         return this->meta_alloc<T, false, true, false, true, true, true, false>(
             1u, count);
     }
@@ -1552,7 +1544,7 @@ class AllocatorFacade {
     // the allocated memory.
     template <typename T>
         requires(detail::is_stable_derived_allocator<Derived>)
-    [[nodiscard]] auto unalign_xcalloc_multi(ssize count) -> T* {
+    [[nodiscard]] auto unalign_xcalloc_multi(ssize count) {
         return this
             ->meta_alloc<T, false, false, false, true, true, true, false>(
                 1u, count);
@@ -2721,7 +2713,7 @@ class AllocatorFacade {
     [[nodiscard]] auto xrecalloc_multi_to(is_allocator auto& allocator,
                                           T* p_handle, ssize old_count,
                                           ssize new_count) {
-        return this->meta_realloc_multi<true, false>(
+        return this->meta_realloc_multi<false, false>(
             &AllocatorFacade<Derived>::xcalloc_multi<T>, allocator, p_handle,
             old_count, new_count);
     }
@@ -4797,11 +4789,11 @@ class AllocatorFacade {
     }
 
     template <typename T, bool is_inline, bool is_fail_safe, bool is_aligned,
-              bool is_multiple, bool is_pointer, bool is_zeroed,
+              bool is_multiple, bool is_stable, bool is_zeroed,
               bool has_feedback, typename... Args>
         requires(
             // Inline allocations cannot produce pointers.
-            !(is_inline && is_pointer)
+            !(is_inline && is_stable)
             // Multi-allocations must be default-constructed.
             && !(is_multiple && (sizeof...(Args) > 0))
             // TODO: Zeroed-out allocations should not have arguments.
@@ -4838,36 +4830,50 @@ class AllocatorFacade {
                         // If this is not a small-size optimized `T`:
                         UnderlyingHandle>>;
 
-        using ReturnHandle =
-            Conditional<is_fail_safe,
-                        Conditional<is_pointer,
-                                    Conditional<has_feedback,
+        using ReturnHandle = Conditional<
+            is_fail_safe,
+            Conditional<is_stable,
+                        Conditional<has_feedback,
+                                    Conditional<is_multiple,
+                                                // Tuple of a span with
+                                                // size feedback.
+                                                Maybe<Tuple<Span<T>, ssize>>,
                                                 // Failsafe pointer with size.
-                                                MaybeSizedAllocation<T*>,
+                                                MaybeSizedAllocation<T*>>,
+                                    Conditional<is_multiple,
+                                                // Span.
+                                                Maybe<Span<T>>,
                                                 // Failsafe pointer w/out size.
-                                                MaybePtr<T>>,
-                                    // Not a pointer:
-                                    Conditional<has_feedback,
-                                                // Failsafe opaque handle with
+                                                MaybePtr<T>>>,
+                        // Not a pointer:
+                        Conditional<has_feedback,
+                                    // Failsafe opaque handle with
+                                    // size.
+                                    MaybeSizedAllocation<Handle>,
+                                    // Failsafe opaque handle w/out
+                                    // size.
+                                    Maybe<Handle>>>,
+            // Not fail-safe:
+            Conditional<is_stable,
+                        Conditional<has_feedback,
+                                    Conditional<is_multiple,
+                                                // Unsafe tuple of a span with
                                                 // size.
-                                                MaybeSizedAllocation<Handle>,
-                                                // Failsafe opaque handle w/out
-                                                // size.
-                                                Maybe<Handle>>>,
-                        // Not fail-safe:
-                        Conditional<is_pointer,
-                                    Conditional<has_feedback,
+                                                Tuple<Span<T>, ssize>,
                                                 // Unsafe pointer with size.
-                                                SizedAllocation<T*>,
+                                                SizedAllocation<T*>>,
+                                    Conditional<is_multiple,
+                                                // Unsafe span.
+                                                Span<T>,
                                                 // Unsafe pointer w/out size.
-                                                T*>,
-                                    Conditional<has_feedback,
-                                                // Unsafe opaque handle with
-                                                // size.
-                                                SizedAllocation<Handle>,
-                                                // Unsafe opaque memory handle
-                                                // w/out size.
-                                                Handle>>>;
+                                                T*>>,
+                        Conditional<has_feedback,
+                                    // Unsafe opaque handle with
+                                    // size.
+                                    SizedAllocation<Handle>,
+                                    // Unsafe opaque memory handle
+                                    // w/out size.
+                                    Handle>>>;
 
         if constexpr (is_inline) {
             if (allocation_size < inline_buffer_size) {
@@ -5013,35 +5019,53 @@ class AllocatorFacade {
             }
         }
 
-        T* allocation;
+        T* p_allocation;
         if constexpr (has_feedback) {
             // The `.first()` element of the `SizedAllocation` tuple is a
             // `void*`.
-            allocation = static_cast<T*>(maybe_memory.value().first());
+            p_allocation = static_cast<T*>(maybe_memory.value().first());
         } else {
-            allocation = static_cast<T*>(maybe_memory.value());
+            p_allocation = static_cast<T*>(maybe_memory.value());
         }
 
         if constexpr (is_zeroed) {
-            zero_memory(allocation, allocation_size);
+            zero_memory(p_allocation, allocation_size);
         }
 
         // Construct the `T`s inside the allocator.
         for (ssize i = 0; i < allocation_count; ++i) {
-            construct_at(allocation + i,
+            construct_at(p_allocation + i,
                          forward<Args>(constructor_arguments)...);
         }
 
-        if constexpr (is_pointer) {
+        if constexpr (is_stable) {
             if constexpr (has_feedback) {
-                return ReturnHandle{SizedAllocation<T*>{
-                    allocation, maybe_memory.value().second()}};
+                if constexpr (is_multiple) {
+                    if constexpr (is_fail_safe) {
+                        return ReturnHandle{
+                            Tuple{Span<T>{p_allocation, allocation_count},
+                                  maybe_memory.value().second()}};
+                    } else {
+                        return ReturnHandle{
+                            Span<T>{p_allocation, allocation_count},
+                            maybe_memory.value().second()};
+                    }
+                } else {
+                    return ReturnHandle{SizedAllocation<T*>{
+                        p_allocation, maybe_memory.value().second()}};
+                }
             } else {
-                return ReturnHandle{allocation};
+                // No size feedback.
+                if constexpr (is_multiple) {
+                    return ReturnHandle{
+                        Span<T>{p_allocation, allocation_count}};
+                } else {
+                    return ReturnHandle{p_allocation};
+                }
             }
         } else {
             UnderlyingHandle const raw_handle =
-                this->self().template make_handle<T>(allocation);
+                this->self().template make_handle<T>(p_allocation);
             Handle handle{move(raw_handle)};
 
             if constexpr (is_inline) {
@@ -5062,8 +5086,8 @@ class AllocatorFacade {
     }
 
     // Take a generic allocation method, invoke it on an allocator with a
-    // generic memory handle, and free the original handle if that allocation
-    // suceeded.
+    // generic memory handle, and free the original handle if that
+    // allocation suceeded.
     template <bool is_fail_safe, bool has_feedback, typename... Args>
     auto meta_realloc(auto function, is_allocator auto& allocator, auto& handle,
                       Args&&... arguments) {
@@ -5099,14 +5123,28 @@ class AllocatorFacade {
         }
     }
 
-    // Copy data from `p_handle` into `allocation`.
-    void relocate_pointer_handle(auto* p_handle, auto* allocation,
+    // Copy data from `p_handle` into `p_allocation`.
+    void relocate_pointer_handle(auto* p_handle, auto* p_allocation,
                                  ssize count) {
-        if constexpr (is_trivially_relocatable<decltype(*allocation)>) {
-            copy_memory(p_handle, allocation, count);
+        if constexpr (is_trivially_relocatable<decltype(*p_allocation)>) {
+            copy_memory(p_handle, p_allocation, count);
         } else {
             for (ssize i = 0; i < count; ++i) {
-                *(allocation + i) = move(*(p_handle + i));
+                *(p_allocation + i) = move(*(p_handle + i));
+            }
+        }
+    }
+
+    // Copy data from `p_handle` into `allocation`.
+    template <typename T>
+    void relocate_pointer_handle(auto* p_handle, Span<T> allocation,
+                                 ssize count) {
+        if constexpr (is_trivially_relocatable<decltype(*(
+                          allocation.data()))>) {
+            copy_memory(p_handle, allocation.data(), count);
+        } else {
+            for (ssize i = 0; i < count; ++i) {
+                allocation[i] = move(*(p_handle + i));
             }
         }
     }
@@ -5150,9 +5188,10 @@ class AllocatorFacade {
                             Args&&... maybe_alignment) {
         using Allocation = decltype((&allocator->*function)(
             forward<Args>(maybe_alignment)..., new_count));
-        Allocation allocation;
-        allocation = (&allocator->*function)(forward<Args>(maybe_alignment)...,
-                                             new_count);
+
+        Allocation allocation = (&allocator->*function)(
+            forward<Args>(maybe_alignment)..., new_count);
+
         if constexpr (is_fail_safe) {
             if constexpr (has_feedback) {
                 if (!allocation.has_value()) {

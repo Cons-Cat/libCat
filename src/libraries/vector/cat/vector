@@ -57,8 +57,9 @@ class Vector : public CollectionFacade<Vector<T>, T> {
             new_capacity = 4;
         }
 
+        // TODO: Can this be simplified with iterators?
         // TODO: `.srealloc_multi()`.
-        T* p_new = TRY(allocator.template alloc_multi<T>(new_capacity));
+        T* p_new = TRY(allocator.template alloc_multi<T>(new_capacity)).data();
 
         if constexpr (is_trivially_relocatable<T>) {
             copy_memory(this->p_storage, p_new,
@@ -143,8 +144,10 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     [[nodiscard]] auto reserve(is_stable_allocator auto& allocator,
                                ssize new_capacity) -> Maybe<void> {
         if (new_capacity > this->current_capacity) {
+            // TODO: Can this be simplified with iterators?
             // TODO: `.srealloc_multi()`.
-            T* p_new = TRY(allocator.template alloc_multi<T>(new_capacity));
+            T* p_new =
+                TRY(allocator.template alloc_multi<T>(new_capacity)).data();
 
             // TODO: Generalize copying from one collectian to another.
             if constexpr (is_trivially_relocatable<T>) {

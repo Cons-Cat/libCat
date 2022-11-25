@@ -6,7 +6,7 @@
 
 TEST(test_set_memory) {
     cat::PageAllocator allocator;
-    uint1* p_page = allocator.alloc_multi<uint1>(4_ki).or_exit();
+    uint1* p_page = allocator.alloc<uint1>().or_exit();
 
     // TODO: Make a `cat::compare_memory()` or something for this.
 

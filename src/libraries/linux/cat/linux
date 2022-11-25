@@ -1142,7 +1142,7 @@ struct Process {
         if (!maybe_memory.has_value()) {
             return nix::LinuxError::inval;
         }
-        this->p_stack = maybe_memory.value();
+        this->p_stack = maybe_memory.value().data();
 
         // We need the top because memory will be pushed to it downwards on
         // x86-64.

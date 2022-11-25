@@ -28,7 +28,7 @@ template <is_integral T>
     if (!result.has_value()) {
         return nullopt;
     }
-    char* p_string = result.value();
+    char* p_string = result.value().data();
 
     if constexpr (is_same<T, int4::Raw>) {
         detail::i32toa_jeaiii(integer, p_string);
@@ -48,12 +48,13 @@ template <is_integral T>
 // Dynamically allocate a floating point value converted to `String`.
 template <typename T>
     requires(is_floating_point<T>)
-[[nodiscard]] auto to_chars(is_allocator auto& alloc, T value) -> Maybe<String> {
+[[nodiscard]] auto to_chars(is_allocator auto& alloc, T value)
+    -> Maybe<String> {
     Maybe result = alloc.template alloc_multi<char>(Limits<T>::digits10);
     if (!result.has_value()) {
         return nullopt;
     }
-    char* p_string = result.value();
+    char* p_string = result.value().data();
     detail::dragonbox::to_chars(value, p_string);
     return String{p_string};
 }
@@ -294,7 +295,7 @@ namespace detail {
                 if (!result.has_value()) {
                     return nullopt;
                 }
-                this->p_storage = result.value();
+                this->p_storage = result.value().data();
             }
 
             this->p_storage[this->length.raw] = character;
@@ -745,7 +746,7 @@ namespace detail {
             return FormatErrors::out_of_memory;
         }
 
-        char* p_memory = maybe_memory.value();
+        char* p_memory = maybe_memory.value().data();
         String output{p_memory, initial_size};
 
         // `FormatStringVector` is a container that satisfies the `Iterable`
