@@ -1120,10 +1120,6 @@ namespace detail {
 
 }  // namespace detail
 
-template <typename T>
-using MaybeSpan =
-    Maybe<Compact<Span<T>, detail::span_is_non_null<T>, Span<T>{nullptr, 0}>>;
-
 // Simplify non-negative signed integers.
 template <is_integral T>
 using MaybeNonNegative =
