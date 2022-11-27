@@ -48,21 +48,21 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
     // context.
     auto double_storage(is_stable_allocator auto& allocator) -> Maybe<void> {
-        ssize new_capacity;
+        ssize minimum_capacity;
         if (this->current_capacity > 0) [[likely]] {
-            new_capacity = this->current_capacity * 2;
+            minimum_capacity = this->current_capacity * 2;
         } else {
             // If this storage has not been allocated yet, then greedily
             // allocate its capacity as 4.
-            new_capacity = 4;
+            minimum_capacity = 4;
         }
 
-        // Make a new allocation.
-        Span allocation = TRY(allocator.template realloc_multi(
-            this->p_storage, this->current_capacity, new_capacity));
+        // Make a new allocation with size feedback.
+        auto [alloc_span, alloc_bytes] = TRY(allocator.template resalloc_multi(
+            this->p_storage, this->current_capacity, minimum_capacity));
 
-        this->p_storage = allocation.data();
-        this->current_capacity = allocation.size();
+        this->current_capacity = alloc_bytes * ssizeof<T>();
+        this->p_storage = alloc_span.data();
         return monostate;
     }
 
@@ -131,27 +131,16 @@ class Vector : public CollectionFacade<Vector<T>, T> {
 
     // Try to change the capacity of this `Vector` in a non-`constexpr` context.
     [[nodiscard]] auto reserve(is_stable_allocator auto& allocator,
-                               ssize new_capacity) -> Maybe<void> {
-        if (new_capacity > this->current_capacity) {
-            // TODO: Can this be simplified with iterators?
-            // TODO: `.resalloc_multi()`.
-            T* p_new =
-                TRY(allocator.template alloc_multi<T>(new_capacity)).data();
-
-            // TODO: Generalize copying from one collectian to another.
-            if constexpr (is_trivially_relocatable<T>) {
-                copy_memory(this->p_storage, p_new,
-                            this->current_size * ssizeof<T>());
-            } else {
-                for (ssize::Raw i = 0; i < this->current_size; ++i) {
-                    p_new[i] = move(this->p_storage[i]);
-                }
-            }
+                               ssize minimum_capacity) -> Maybe<void> {
+        if (minimum_capacity > this->current_capacity) {
+            auto [alloc_span, alloc_bytes] =
+                TRY(allocator.template resalloc_multi(
+                    this->p_storage, this->current_capacity, minimum_capacity));
 
             allocator.free_multi(this->p_storage, this->current_size);
 
-            this->p_storage = p_new;
-            this->current_capacity = new_capacity;
+            this->p_storage = alloc_span.data();
+            this->current_capacity = alloc_bytes;
             return monostate;
         }
 
@@ -177,9 +166,10 @@ class Vector : public CollectionFacade<Vector<T>, T> {
 
     // Try to change the size of this `Vector` in a non-`constexpr` context.
     [[nodiscard]] auto resize(is_stable_allocator auto& allocator,
-                              ssize new_size) -> Maybe<void> {
-        if (new_size > this->current_capacity) {
-            TRY(this->reserve(allocator, new_size));
+                              ssize minimum_size) -> Maybe<void> {
+        if (minimum_size > this->current_capacity) {
+            TRY(this->reserve(allocator, minimum_size));
+            ssize new_size = this->current_capacity;
 
             // Construct `T` at the newly reserved memory.
             for (ssize i = this->current_size; i < new_size; ++i) {
@@ -192,7 +182,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
 
         // If the new size is not larger, simply shrink size and maintain
         // capacity.
-        this->current_size = new_size;
+        this->current_size = minimum_size;
         return monostate;
     }
 
