@@ -55,10 +55,10 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
     }
 
   private:
-    auto allocation_size(usize alignment, ssize allocation_size)
+    auto allocation_bytes(usize alignment, ssize allocation_bytes)
         -> MaybeNonZero<ssize> {
         uintptr<void> allocation = align_down(
-            this->p_arena_current - usize{allocation_size}, alignment);
+            this->p_arena_current - usize{allocation_bytes}, alignment);
 
         // The allocation size is the difference between the current pointer
         // and the new pointer.
@@ -69,9 +69,9 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
     }
 
     // Try to allocate memory and bump the pointer down.
-    auto allocate(ssize allocation_size) -> MaybePtr<void> {
-        if (this->p_arena_current - allocation_size >= p_arena_end) {
-            this->p_arena_current -= allocation_size;
+    auto allocate(ssize allocation_bytes) -> MaybePtr<void> {
+        if (this->p_arena_current - allocation_bytes >= p_arena_end) {
+            this->p_arena_current -= allocation_bytes;
             // Return a pointer that is then used to in-place construct a `T`.
             return this->p_arena_current;
         }
@@ -80,10 +80,10 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
 
     // Try to allocate memory aligned to some boundary and bump the pointer
     // down.
-    auto aligned_allocate(usize alignment, ssize allocation_size)
+    auto aligned_allocate(usize alignment, ssize allocation_bytes)
         -> MaybePtr<void> {
         uintptr<void> allocation =
-            align_down(this->p_arena_current - allocation_size, alignment);
+            align_down(this->p_arena_current - allocation_bytes, alignment);
         if (allocation >= p_arena_end) {
             this->p_arena_current = allocation;
             // Return a pointer that is then used for in-place construction.
@@ -94,18 +94,18 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
 
     // Try to allocate memory and bump the pointer down, and return the memory
     // with size allocated.
-    auto aligned_allocate_feedback(usize alignment, ssize allocation_size)
+    auto aligned_allocate_feedback(usize alignment, ssize allocation_bytes)
         -> MaybeSizedAllocation<void*> {
         uintptr<void> allocation =
-            align_down(this->p_arena_current - allocation_size, alignment);
+            align_down(this->p_arena_current - allocation_bytes, alignment);
         if (allocation >= p_arena_end) {
-            ssize actual_size =
-                static_cast<ssize>((this->p_arena_current - allocation).raw);
+            ssize bytes_allocated =
+                static_cast<ssize>(this->p_arena_current - allocation);
             this->p_arena_current = allocation;
 
             return MaybeSizedAllocation<void*>(Tuple{
                 // Return a pointer that is then used for in-place construction.
-                static_cast<void*>(this->p_arena_current), actual_size});
+                static_cast<void*>(this->p_arena_current), bytes_allocated});
         }
         return nullopt;
     }

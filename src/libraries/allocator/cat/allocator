@@ -232,7 +232,7 @@ namespace detail {
 
     template <typename AllocatorT>
     concept has_allocation_size = requires(AllocatorT allocator) {
-        allocator.allocation_size(1_uz, 1_sz);
+        allocator.allocation_bytes(1_uz, 1_sz);
     };
 
     template <typename AllocatorT>
@@ -734,28 +734,28 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] auto opq_align_nalloc(usize alignment)
         -> MaybeNonZero<ssize> {
-        return this->self().allocation_size(alignment, ssizeof<T>());
+        return this->self().allocation_bytes(alignment, ssizeof<T>());
     }
 
     // Get the number of bytes that allocating a `T` with an alignment
     // guarantee would reserve.
     template <typename T>
     [[nodiscard]] auto opq_align_xnalloc(usize alignment) -> ssize {
-        return this->self().allocation_size(alignment, ssizeof<T>()).value();
+        return this->self().allocation_bytes(alignment, ssizeof<T>()).value();
     }
 
     // Try to get the number of bytes that allocating a `T` with no alignment
     // guarantee would reserve.
     template <typename T>
     [[nodiscard]] auto opq_unalign_nalloc() -> MaybeNonZero<ssize> {
-        return this->self().allocation_size(1u, ssizeof<T>());
+        return this->self().allocation_bytes(1u, ssizeof<T>());
     }
 
     // Get the number of bytes that allocating a `T` with no alignment
     // guarantee would reserve.
     template <typename T>
     [[nodiscard]] auto opq_unalign_xnalloc() -> ssize {
-        return this->self().allocation_size(1u, ssizeof<T>()).value();
+        return this->self().allocation_bytes(1u, ssizeof<T>()).value();
     }
 
     // Try to get the number of bytes that allocating an array of `T` with an
@@ -763,7 +763,7 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] auto opq_align_nalloc_multi(usize alignment, ssize count)
         -> MaybeNonZero<ssize> {
-        return this->self().allocation_size(alignment, ssizeof<T>() * count);
+        return this->self().allocation_bytes(alignment, ssizeof<T>() * count);
     }
 
     // Get the number of bytes that allocating an array of `T` with an
@@ -772,7 +772,7 @@ class AllocatorFacade {
     [[nodiscard]] auto opq_align_xnalloc_multi(usize alignment, ssize count)
         -> ssize {
         return this->self()
-            .allocation_size(alignment, ssizeof<T>() * count)
+            .allocation_bytes(alignment, ssizeof<T>() * count)
             .value();
     }
 
@@ -781,14 +781,14 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] auto opq_unalign_nalloc_multi(ssize count)
         -> MaybeNonZero<ssize> {
-        return this->self().allocation_size(1u, ssizeof<T>() * count);
+        return this->self().allocation_bytes(1u, ssizeof<T>() * count);
     }
 
     // Get the number of bytes that allocating an array of `T` with no
     // alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]] auto opq_unalign_xnalloc_multi(ssize count) -> ssize {
-        return this->self().allocation_size(1u, ssizeof<T>() * count).value();
+        return this->self().allocation_bytes(1u, ssizeof<T>() * count).value();
     }
 
     // Try to get the number of bytes that allocating a small-size optimized `T`
@@ -826,7 +826,7 @@ class AllocatorFacade {
     [[nodiscard]] auto opq_inline_align_nalloc(usize alignment)
         -> MaybeNonZero<ssize> {
         if constexpr (ssizeof<T>() > inline_buffer_size) {
-            return this->self().allocation_size(alignment, ssizeof<T>());
+            return this->self().allocation_bytes(alignment, ssizeof<T>());
         } else {
             return inline_buffer_size;
         }
@@ -860,8 +860,8 @@ class AllocatorFacade {
                                                      ssize count)
         -> MaybeNonZero<ssize> {
         if (ssizeof<T>() * count > inline_buffer_size) {
-            return this->self().allocation_size(alignment,
-                                                ssizeof<T>() * count);
+            return this->self().allocation_bytes(alignment,
+                                                 ssizeof<T>() * count);
         }
         return inline_buffer_size;
     }
@@ -4798,7 +4798,7 @@ class AllocatorFacade {
     [[gnu::optimize("-fno-tree-loop-distribute-patterns")]] auto meta_alloc(
         usize allocation_alignment, ssize allocation_count,
         Args&&... constructor_arguments) {
-        ssize const allocation_size = allocation_count * ssizeof<T>();
+        ssize const allocation_bytes = allocation_count * ssizeof<T>();
 
         // Produce a basic handle for this memory type.
         using UnderlyingHandle =
@@ -4873,7 +4873,7 @@ class AllocatorFacade {
                                     Handle>>>;
 
         if constexpr (is_inline) {
-            if (allocation_size < inline_buffer_size) {
+            if (allocation_bytes < inline_buffer_size) {
                 // Allocate memory on this stack frame.
                 Handle stack_handle;
                 stack_handle.set_inlined(true);
@@ -4917,33 +4917,34 @@ class AllocatorFacade {
                     // Call `.aligned_allocate_feedback()` function for
                     // optimized size-feedback.
                     maybe_memory = this->self().aligned_allocate_feedback(
-                        allocation_alignment, allocation_size);
+                        allocation_alignment, allocation_bytes);
                 } else {
                     if constexpr (detail::has_allocation_size<Derived>) {
                         // If a `.aligned_allocate_feedback()` is not provided,
-                        // use `.allocation_size`().
-                        Maybe size = this->self().allocation_size(
-                            allocation_alignment, allocation_size);
-                        if (size.has_value()) {
+                        // use `.allocation_bytes()`.
+                        Maybe actual_allocation_bytes =
+                            this->self().allocation_bytes(allocation_alignment,
+                                                          allocation_bytes);
+                        if (actual_allocation_bytes.has_value()) {
                             maybe_memory = MaybeSizedAllocation<void*>{
                                 this->self()
                                     .aligned_allocate(allocation_alignment,
-                                                      allocation_size)
-                                    // If `.allocation_size()` succeeded, this
+                                                      actual_allocation_bytes)
+                                    // If `.allocation_bytes()` succeeded, this
                                     // will not fail.
                                     .value(),
-                                size.value()};
+                                actual_allocation_bytes.value()};
                         } else {
                             maybe_memory = nullopt;
                         }
                     } else {
-                        // If a `.allocation_size()` is not provided, simply
-                        // assume that it allocates `allocation_size`.
+                        // If a `.allocation_bytes()` is not provided, simply
+                        // assume that it allocates `allocation_bytes`.
                         Maybe temp_memory = this->self().aligned_allocate(
-                            allocation_alignment, allocation_size);
+                            allocation_alignment, allocation_bytes);
                         if (temp_memory.has_value()) {
                             maybe_memory = MaybeSizedAllocation<void*>{
-                                temp_memory.value(), allocation_size};
+                                temp_memory.value(), allocation_bytes};
                         } else {
                             maybe_memory = nullopt;
                         }
@@ -4951,7 +4952,7 @@ class AllocatorFacade {
                 }
             } else {
                 maybe_memory = this->self().aligned_allocate(
-                    allocation_alignment, allocation_size);
+                    allocation_alignment, allocation_bytes);
             }
         } else {
             if constexpr (has_feedback) {
@@ -4959,7 +4960,7 @@ class AllocatorFacade {
                     // Call `.allocate_feedback()` function for optimized
                     // size-feedback.
                     maybe_memory =
-                        this->self().allocate_feedback(allocation_size);
+                        this->self().allocate_feedback(allocation_bytes);
                 } else {
                     if constexpr (detail::has_aligned_allocate_feedback<
                                       Derived>) {
@@ -4967,30 +4968,30 @@ class AllocatorFacade {
                         // `.aligned_allocate_feedback()` is, fall back to that
                         // with alignment of `1u`.
                         maybe_memory = this->self().aligned_allocate_feedback(
-                            1u, allocation_size);
+                            1u, allocation_bytes);
                     } else if constexpr (detail::has_allocation_size<Derived>) {
                         // If a `.aligned_allocate_feedback()` is not provided,
                         // use `.allocation_size`().
                         Maybe size =
-                            this->self().allocation_size(1u, allocation_size);
+                            this->self().allocation_bytes(1u, allocation_bytes);
 
                         if (size.has_value()) {
                             maybe_memory = MaybeSizedAllocation<void*>{
-                                // If `.allocation_size()` succeeded, this will
+                                // If `.allocation_bytes()` succeeded, this will
                                 // not fail.
-                                this->self().allocate(allocation_size).value(),
+                                this->self().allocate(allocation_bytes).value(),
                                 size.value()};
                         } else {
                             maybe_memory = nullopt;
                         }
                     } else {
-                        // If a `.allocation_size()` is also not provided,
+                        // If a `.allocation_bytes()` is also not provided,
                         // simply assume that it allocates `allocation_size`.
                         auto temp_memory = this->self().aligned_allocate(
-                            allocation_alignment, allocation_size);
+                            allocation_alignment, allocation_bytes);
                         if (temp_memory.has_value()) {
                             maybe_memory = MaybeSizedAllocation<void*>{
-                                temp_memory.value(), allocation_size};
+                                temp_memory.value(), allocation_bytes};
                         } else {
                             maybe_memory = nullopt;
                         }
@@ -4999,12 +5000,12 @@ class AllocatorFacade {
             } else {
                 // Otherwise, make an allocation without size feedback.
                 if constexpr (detail::has_allocate<Derived>) {
-                    maybe_memory = this->self().allocate(allocation_size);
+                    maybe_memory = this->self().allocate(allocation_bytes);
                 } else {
                     // If `.allocate` is not provided, implement it in terms of
                     // `.aligned_allocate()`.
                     maybe_memory =
-                        this->self().allocate_aligned(1u, allocation_size);
+                        this->self().allocate_aligned(1u, allocation_bytes);
                 }
             }
         }
@@ -5026,7 +5027,7 @@ class AllocatorFacade {
         }
 
         if constexpr (is_zeroed) {
-            zero_memory(p_allocation, allocation_size);
+            zero_memory(p_allocation, allocation_bytes);
         }
 
         // Construct the `T`s inside the allocator.
@@ -5035,21 +5036,21 @@ class AllocatorFacade {
                          forward<Args>(constructor_arguments)...);
         }
 
+        // If this allocation has size feedback, store it.
+        ssize size_feedback;
+        if constexpr (has_feedback) {
+            size_feedback = maybe_memory.value().second();
+        }
+
         if constexpr (is_stable) {
             if constexpr (has_feedback) {
                 if constexpr (is_multiple) {
-                    if constexpr (is_fail_safe) {
-                        return ReturnHandle{
-                            Tuple{Span<T>{p_allocation, allocation_count},
-                                  maybe_memory.value().second()}};
-                    } else {
-                        return ReturnHandle{
-                            Span<T>{p_allocation, allocation_count},
-                            maybe_memory.value().second()};
-                    }
+                    return ReturnHandle{
+                        Tuple{Span<T>{p_allocation, allocation_count},
+                              size_feedback}};
                 } else {
-                    return ReturnHandle{SizedAllocation<T*>{
-                        p_allocation, maybe_memory.value().second()}};
+                    return ReturnHandle{
+                        SizedAllocation<T*>{p_allocation, size_feedback}};
                 }
             } else {
                 // No size feedback.
@@ -5074,8 +5075,8 @@ class AllocatorFacade {
             }
 
             if constexpr (has_feedback) {
-                return ReturnHandle(SizedAllocation<Handle>{
-                    move(handle), maybe_memory.value().second()});
+                return ReturnHandle(
+                    SizedAllocation<Handle>{move(handle), size_feedback});
             } else {
                 return ReturnHandle{move(handle)};
             }

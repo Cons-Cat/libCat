@@ -57,23 +57,12 @@ class Vector : public CollectionFacade<Vector<T>, T> {
             new_capacity = 4;
         }
 
-        // TODO: Can this be simplified with iterators?
-        // TODO: `.resalloc_multi()`.
-        T* p_new = TRY(allocator.template alloc_multi<T>(new_capacity)).data();
+        // Make a new allocation.
+        Span allocation = TRY(allocator.template realloc_multi(
+            this->p_storage, this->current_capacity, new_capacity));
 
-        if constexpr (is_trivially_relocatable<T>) {
-            copy_memory(this->p_storage, p_new,
-                        this->current_size * ssizeof<T>());
-        } else {
-            for (ssize::Raw i = 0; i < this->current_size; ++i) {
-                p_new[i] = move(this->p_storage[i]);
-            }
-        }
-
-        allocator.free_multi(this->p_storage, this->current_size);
-
-        this->p_storage = p_new;
-        this->current_capacity = new_capacity;
+        this->p_storage = allocation.data();
+        this->current_capacity = allocation.size();
         return monostate;
     }
 
