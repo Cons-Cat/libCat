@@ -6,8 +6,6 @@
 #include <cat/span>
 #include <cat/tuple>
 
-// TODO: `opq_srealloc()` and `srealloc()`.
-
 namespace cat {
 
 template <typename T>
@@ -3343,7 +3341,7 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] auto xresalloc_to(is_allocator auto& allocator, T* p_handle) {
         return this->meta_realloc<false, true>(
-            &AllocatorFacade<Derived>::xalloc<T, T>, allocator, p_handle);
+            &AllocatorFacade<Derived>::xsalloc<T, T>, allocator, p_handle);
     }
 
     // Move a pointer handle from this allocator into itself, and return the

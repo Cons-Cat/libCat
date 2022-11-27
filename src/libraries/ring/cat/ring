@@ -38,7 +38,7 @@ class Ring : public CollectionFacade<Ring<T>, T> {
     // context.
     auto copy_to_new_storage(is_stable_allocator auto& allocator,
                              ssize new_capacity) -> Maybe<void> {
-        // TODO: `.srealloc_multi()`.
+        // TODO: `.resalloc_multi()`.
         T* p_new = TRY(allocator.template alloc_multi<T>(new_capacity));
 
         if constexpr (is_trivially_relocatable<T>) {
@@ -78,7 +78,7 @@ class Ring : public CollectionFacade<Ring<T>, T> {
 
         if (new_capacity > this->current_capacity) {
             // TODO: Can this be simplified with iterators?
-            // TODO: `.srealloc_multi()`.
+            // TODO: `.resalloc_multi()`.
             T* p_new =
                 TRY(allocator.template alloc_multi<T>(new_capacity)).data();
 

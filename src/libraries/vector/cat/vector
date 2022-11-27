@@ -58,7 +58,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         }
 
         // TODO: Can this be simplified with iterators?
-        // TODO: `.srealloc_multi()`.
+        // TODO: `.resalloc_multi()`.
         T* p_new = TRY(allocator.template alloc_multi<T>(new_capacity)).data();
 
         if constexpr (is_trivially_relocatable<T>) {
@@ -145,7 +145,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
                                ssize new_capacity) -> Maybe<void> {
         if (new_capacity > this->current_capacity) {
             // TODO: Can this be simplified with iterators?
-            // TODO: `.srealloc_multi()`.
+            // TODO: `.resalloc_multi()`.
             T* p_new =
                 TRY(allocator.template alloc_multi<T>(new_capacity)).data();
 
@@ -173,7 +173,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     // Change the capacity of this `Vector` in a `constexpr` context.
     consteval void reserve(ssize new_capacity) {
         if (new_capacity > this->current_capacity) {
-            // TODO:  opq_.srealloc)`.
+            // TODO: `.opq_resalloc()`.
             T* p_new = new T[new_capacity.raw];
             for (ssize::Raw i = 0; i < this->current_size; ++i) {
                 p_new[i] = move(this->p_storage[i]);

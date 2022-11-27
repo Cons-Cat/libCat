@@ -1708,10 +1708,10 @@ TEST(test_alloc) {
     _ = allocator.opq_resalloc_to(allocator, opq_alloc).value();
 
     // Test `resalloc`.
-    _ = allocator.resalloc(p_alloc).value();
+    _ = allocator.resalloc(p_alloc).value().first();
 
     // Test `resalloc_to`
-    _ = allocator.resalloc_to(allocator, p_alloc);
+    _ = allocator.resalloc_to(allocator, p_alloc).value().first();
 
     // Test `opq_xresalloc`.
     _ = allocator.opq_xresalloc(opq_alloc);
@@ -1720,10 +1720,10 @@ TEST(test_alloc) {
     _ = allocator.opq_xresalloc_to(allocator, opq_alloc);
 
     // Test `xresalloc`
-    _ = allocator.xresalloc(p_alloc);
+    _ = allocator.xresalloc(p_alloc).first();
 
     // Test `xresalloc_to`
-    _ = allocator.xresalloc_to(allocator, p_alloc);
+    _ = allocator.xresalloc_to(allocator, p_alloc).first();
 
     // Test `opq_align_resalloc`.
     _ = allocator.opq_align_resalloc(opq_alloc, 8u).value();
@@ -1804,10 +1804,13 @@ TEST(test_alloc) {
     _ = allocator.opq_resalloc_multi_to(allocator, opq_alloc, 10).value();
 
     // Test `resalloc_multi`.
-    _ = allocator.resalloc_multi(p_alloc, 5, 10).value();
+    _ = allocator.resalloc_multi(p_alloc, 5, 10).value().first().data();
 
     // Test `resalloc_multi_to`
-    _ = allocator.resalloc_multi_to(allocator, p_alloc, 5, 10).value();
+    _ = allocator.resalloc_multi_to(allocator, p_alloc, 5, 10)
+            .value()
+            .first()
+            .data();
 
     // Test `xresalloc_multi`.
     _ = allocator.opq_xresalloc_multi(opq_alloc, 10);
