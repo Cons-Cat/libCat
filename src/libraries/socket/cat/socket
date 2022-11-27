@@ -37,9 +37,8 @@ template <SocketType Type, int4 Protocol = 0>
 struct SocketUnix {
     // TODO: Create flags that corresponds to the value of `Protocol`.
 
-    // Using `SocketUnix(){};` instead of `SockeUnix() = default;` prevents a
-    // false-positive clangd diagnostic here.
-    SocketUnix(){};  // NOLINT
+    SocketUnix() = default;
+
     SocketUnix(nix::FileDescriptor in_descriptor) {
         this->descriptor = in_descriptor;
     }

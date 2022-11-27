@@ -10,7 +10,6 @@
 
 namespace cat {
 
-// TODO: Change name:
 template <typename T>
 concept mem = requires(T handle) {
     handle.is_inline_handle;
