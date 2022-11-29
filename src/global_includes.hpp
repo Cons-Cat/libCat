@@ -161,14 +161,15 @@ class String;
     return reinterpret_cast<void*>(1ul);
 }
 
-// NOLINTNEXTLINE Let this be `inline`.
-inline void operator delete[](void*){};
-inline void operator delete[](void*, unsigned long){};
-
 namespace std {
 enum class align_val_t : __SIZE_TYPE__ {
 };
 }  // namespace std
+
+// NOLINTNEXTLINE Let this be `inline`.
+inline void operator delete[](void*){};
+inline void operator delete[](void*, unsigned long){};
+inline void operator delete[](void*, unsigned long, std::align_val_t){};
 
 // NOLINTNEXTLINE Let this be `inline`.
 [[nodiscard]] inline auto operator new[](unsigned long, std::align_val_t align)

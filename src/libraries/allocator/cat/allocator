@@ -203,10 +203,11 @@ namespace detail {
     };
 }  // namespace detail
 
-template <typename AllocatorT, typename AllocationU = void*>
-concept is_allocator = requires(AllocatorT allocator) {
+template <typename T, typename Allocation = void*>
+concept is_allocator = requires(T allocator) {
     // Every allocator has a  `.opq_alloc()` method.
-    allocator.template opq_alloc<AllocationU>();
+    // One might not have `.alloc()`.
+    allocator.template opq_alloc<Allocation>();
 
     // TODO: It would be nice if these could make the concept more precise:
     // allocator.free(decltype(allocator.template make_handle<AllocationU>(
@@ -2113,7 +2114,7 @@ class AllocatorFacade {
     }
 
     // Try to move a memory handle from this allocator into another.
-    [[nodiscard]] constexpr auto opq_realloc_to(is_allocator auto& allocator,
+    [[nodiscard]] constexpr auto opq_realloc_to(auto& allocator,
                                                 mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
@@ -2127,8 +2128,7 @@ class AllocatorFacade {
 
     // Try to move a pointer handle from this allocator into another.
     template <typename T>
-    [[nodiscard]] constexpr auto realloc_to(is_allocator auto& allocator,
-                                            T* p_handle) {
+    [[nodiscard]] constexpr auto realloc_to(auto& allocator, T* p_handle) {
         return this->meta_realloc<true, false>(
             &AllocatorFacade<Derived>::alloc<T, T>, allocator, p_handle);
     }
@@ -2140,7 +2140,7 @@ class AllocatorFacade {
     }
 
     // Move a memory handle from this allocator into another.
-    [[nodiscard]] constexpr auto opq_xrealloc_to(is_allocator auto& allocator,
+    [[nodiscard]] constexpr auto opq_xrealloc_to(auto& allocator,
                                                  mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
@@ -2154,8 +2154,7 @@ class AllocatorFacade {
 
     // Move a pointer handle from this allocator into another.
     template <typename T>
-    [[nodiscard]] constexpr auto xrealloc_to(is_allocator auto& allocator,
-                                             T* p_handle) {
+    [[nodiscard]] constexpr auto xrealloc_to(auto& allocator, T* p_handle) {
         return this->meta_realloc<false, false>(
             &AllocatorFacade<Derived>::xalloc<T, T>, allocator, p_handle);
     }
@@ -2168,8 +2167,9 @@ class AllocatorFacade {
 
     // Try to move a memory handle from this allocator into another with an
     // alignment guarantee.
-    [[nodiscard]] constexpr auto opq_align_realloc_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment) {
+    [[nodiscard]] constexpr auto opq_align_realloc_to(auto& allocator,
+                                                      mem auto& handle,
+                                                      usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
             &AllocatorFacade<Derived>::opq_align_alloc<T, T>, allocator, handle,
@@ -2185,8 +2185,9 @@ class AllocatorFacade {
 
     // Move a memory handle from this allocator into another with an alignment
     // guarantee.
-    [[nodiscard]] constexpr auto opq_align_xrealloc_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment) {
+    [[nodiscard]] constexpr auto opq_align_xrealloc_to(auto& allocator,
+                                                       mem auto& handle,
+                                                       usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
             &AllocatorFacade<Derived>::opq_align_xalloc<T, T>, allocator,
@@ -2201,8 +2202,8 @@ class AllocatorFacade {
 
     // Try to move a memory handle from this allocator into another with no
     // alignment guarantee.
-    [[nodiscard]] constexpr auto opq_unalign_realloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+    [[nodiscard]] constexpr auto opq_unalign_realloc_to(auto& allocator,
+                                                        mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
             &AllocatorFacade<Derived>::opq_unalign_alloc<T, T>, allocator,
@@ -2217,8 +2218,8 @@ class AllocatorFacade {
 
     // Move a memory handle from this allocator into another with no alignment
     // guarantee.
-    [[nodiscard]] constexpr auto opq_unalign_xrealloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+    [[nodiscard]] constexpr auto opq_unalign_xrealloc_to(auto& allocator,
+                                                         mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
             &AllocatorFacade<Derived>::opq_unalign_xalloc<T, T>, allocator,
@@ -2233,7 +2234,7 @@ class AllocatorFacade {
 
     // Try to move a pointer handle from this allocator into another with an
     // alignment guarantee.
-    [[nodiscard]] constexpr auto align_realloc_to(is_allocator auto& allocator,
+    [[nodiscard]] constexpr auto align_realloc_to(auto& allocator,
                                                   auto* p_handle,
                                                   usize alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
@@ -2251,7 +2252,7 @@ class AllocatorFacade {
 
     // Move a pointer handle from this allocator into another with an alignment
     // guarantee.
-    [[nodiscard]] constexpr auto align_xrealloc_to(is_allocator auto& allocator,
+    [[nodiscard]] constexpr auto align_xrealloc_to(auto& allocator,
                                                    auto* p_handle,
                                                    usize alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
@@ -2268,8 +2269,8 @@ class AllocatorFacade {
 
     // Try to move a pointer handle from this allocator into another with no
     // alignment guarantee.
-    [[nodiscard]] constexpr auto unalign_realloc_to(
-        is_allocator auto& allocator, auto* p_handle) {
+    [[nodiscard]] constexpr auto unalign_realloc_to(auto& allocator,
+                                                    auto* p_handle) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
             &AllocatorFacade<Derived>::unalign_alloc<T, T>, allocator,
@@ -2284,8 +2285,8 @@ class AllocatorFacade {
 
     // Move a pointer handle from this allocator into another with no alignment
     // guarantee.
-    [[nodiscard]] constexpr auto unalign_xrealloc_to(
-        is_allocator auto& allocator, auto* p_handle) {
+    [[nodiscard]] constexpr auto unalign_xrealloc_to(auto& allocator,
+                                                     auto* p_handle) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
             &AllocatorFacade<Derived>::unalign_xalloc<T, T>, allocator,
@@ -2299,8 +2300,9 @@ class AllocatorFacade {
     }
 
     // Move an array memory handle from this allocator into another.
-    [[nodiscard]] constexpr auto opq_realloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+    [[nodiscard]] constexpr auto opq_realloc_multi_to(auto& allocator,
+                                                      mem auto& handle,
+                                                      ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
             &AllocatorFacade<Derived>::opq_alloc_multi<T>, allocator, handle,
@@ -2316,8 +2318,8 @@ class AllocatorFacade {
     // Try to move and resize an array pointer handle from this allocator into
     // another.
     template <typename T>
-    [[nodiscard]] constexpr auto realloc_multi_to(is_allocator auto& allocator,
-                                                  T* p_handle, ssize old_count,
+    [[nodiscard]] constexpr auto realloc_multi_to(auto& allocator, T* p_handle,
+                                                  ssize old_count,
                                                   ssize new_count) {
         return this->meta_realloc_multi<true, false>(
             &AllocatorFacade<Derived>::alloc_multi<T>, allocator, p_handle,
@@ -2333,8 +2335,9 @@ class AllocatorFacade {
     }
 
     // Move and resize an array memory handle from this allocator into another.
-    [[nodiscard]] constexpr auto opq_xrealloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+    [[nodiscard]] constexpr auto opq_xrealloc_multi_to(auto& allocator,
+                                                       mem auto& handle,
+                                                       ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
             &AllocatorFacade<Derived>::opq_xalloc_multi<T>, allocator, handle,
@@ -2349,8 +2352,8 @@ class AllocatorFacade {
 
     // Move and resize an array pointer handle from this allocator into another.
     template <typename T>
-    [[nodiscard]] constexpr auto xrealloc_multi_to(is_allocator auto& allocator,
-                                                   T* p_handle, ssize old_count,
+    [[nodiscard]] constexpr auto xrealloc_multi_to(auto& allocator, T* p_handle,
+                                                   ssize old_count,
                                                    ssize new_count) {
         return this->meta_realloc_multi<false, false>(
             &AllocatorFacade<Derived>::xalloc_multi<T>, allocator, p_handle,
@@ -2365,9 +2368,10 @@ class AllocatorFacade {
     }
 
     // Move and resize an array memory handle from this allocator into another.
-    [[nodiscard]] constexpr auto opq_align_realloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment,
-        ssize new_count) {
+    [[nodiscard]] constexpr auto opq_align_realloc_multi_to(auto& allocator,
+                                                            mem auto& handle,
+                                                            usize alignment,
+                                                            ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
             &AllocatorFacade<Derived>::opq_align_alloc_multi<T>, allocator,
@@ -2385,9 +2389,10 @@ class AllocatorFacade {
 
     // Move and resize an array memory handle from this allocator into another
     // with an alignment guarantee.
-    [[nodiscard]] constexpr auto opq_align_xrealloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment,
-        ssize new_count) {
+    [[nodiscard]] constexpr auto opq_align_xrealloc_multi_to(auto& allocator,
+                                                             mem auto& handle,
+                                                             usize alignment,
+                                                             ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
             &AllocatorFacade<Derived>::opq_align_xalloc_multi<T>, allocator,
@@ -2404,8 +2409,9 @@ class AllocatorFacade {
 
     // Try to move and resize an array memory handle from this allocator into
     // another with no alignment guarantee.
-    [[nodiscard]] constexpr auto opq_unalign_realloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+    [[nodiscard]] constexpr auto opq_unalign_realloc_multi_to(auto& allocator,
+                                                              mem auto& handle,
+                                                              ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
             &AllocatorFacade<Derived>::opq_unalign_alloc_multi<T>, allocator,
@@ -2422,7 +2428,7 @@ class AllocatorFacade {
     // Move and resize an array memory handle from this allocator into another
     // with no alignment guarantee.
     [[nodiscard]] constexpr auto opq_unalign_xrealloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+        auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
             &AllocatorFacade<Derived>::opq_unalign_xalloc_multi<T>, allocator,
@@ -2437,9 +2443,11 @@ class AllocatorFacade {
 
     // Try to move and resize an array pointer handle from this allocator into
     // another with an alignment guarantee.
-    [[nodiscard]] constexpr auto align_realloc_multi_to(
-        is_allocator auto& allocator, auto* p_handle, usize alignment,
-        ssize old_count, ssize new_count) {
+    [[nodiscard]] constexpr auto align_realloc_multi_to(auto& allocator,
+                                                        auto* p_handle,
+                                                        usize alignment,
+                                                        ssize old_count,
+                                                        ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
             &AllocatorFacade<Derived>::align_alloc_multi<T>, allocator,
@@ -2458,9 +2466,11 @@ class AllocatorFacade {
 
     // Move and resize an array pointer handle from this allocator into another
     // with an alignment guarantee.
-    [[nodiscard]] constexpr auto align_xrealloc_multi_to(
-        is_allocator auto& allocator, auto* p_handle, usize alignment,
-        ssize old_count, ssize new_count) {
+    [[nodiscard]] constexpr auto align_xrealloc_multi_to(auto& allocator,
+                                                         auto* p_handle,
+                                                         usize alignment,
+                                                         ssize old_count,
+                                                         ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
             &AllocatorFacade<Derived>::align_xalloc_multi<T>, allocator,
@@ -2477,9 +2487,10 @@ class AllocatorFacade {
 
     // Try to move and resize an array pointer handle from this allocator into
     // another with no alignment guarantee.
-    [[nodiscard]] constexpr auto unalign_realloc_multi_to(
-        is_allocator auto& allocator, auto* p_handle, ssize old_count,
-        ssize new_count) {
+    [[nodiscard]] constexpr auto unalign_realloc_multi_to(auto& allocator,
+                                                          auto* p_handle,
+                                                          ssize old_count,
+                                                          ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
             &AllocatorFacade<Derived>::unalign_alloc_multi<T>, allocator,
@@ -2497,9 +2508,10 @@ class AllocatorFacade {
 
     // Move and resize an array pointer handle from this allocator into another
     // with no alignment guarantee.
-    [[nodiscard]] constexpr auto unalign_xrealloc_multi_to(
-        is_allocator auto& allocator, auto* p_handle, ssize old_count,
-        ssize new_count) {
+    [[nodiscard]] constexpr auto unalign_xrealloc_multi_to(auto& allocator,
+                                                           auto* p_handle,
+                                                           ssize old_count,
+                                                           ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
             &AllocatorFacade<Derived>::unalign_xalloc_multi<T>, allocator,
@@ -2516,7 +2528,7 @@ class AllocatorFacade {
 
     // Try to move a memory handle from this allocator into another, and
     // zero-out the allocated memory.
-    [[nodiscard]] constexpr auto opq_recalloc_to(is_allocator auto& allocator,
+    [[nodiscard]] constexpr auto opq_recalloc_to(auto& allocator,
                                                  mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
@@ -2532,8 +2544,7 @@ class AllocatorFacade {
     // Try to move a pointer handle from this allocator into another, and
     // zero-out the allocated memory.
     template <typename T>
-    [[nodiscard]] constexpr auto recalloc_to(is_allocator auto& allocator,
-                                             T* p_handle) {
+    [[nodiscard]] constexpr auto recalloc_to(auto& allocator, T* p_handle) {
         return this->meta_realloc<true, false>(
             &AllocatorFacade<Derived>::calloc<T, T>, allocator, p_handle);
     }
@@ -2547,7 +2558,7 @@ class AllocatorFacade {
 
     // Move a memory handle from this allocator into another, and zero-out the
     // allocated memory.
-    [[nodiscard]] constexpr auto opq_xrecalloc_to(is_allocator auto& allocator,
+    [[nodiscard]] constexpr auto opq_xrecalloc_to(auto& allocator,
                                                   mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
@@ -2563,8 +2574,7 @@ class AllocatorFacade {
     // Move a pointer handle from this allocator into another, and zero-out the
     // allocated memory.
     template <typename T>
-    [[nodiscard]] constexpr auto xrecalloc_to(is_allocator auto& allocator,
-                                              T* p_handle) {
+    [[nodiscard]] constexpr auto xrecalloc_to(auto& allocator, T* p_handle) {
         return this->meta_realloc<false, false>(
             &AllocatorFacade<Derived>::xcalloc<T, T>, allocator, p_handle);
     }
@@ -2578,8 +2588,9 @@ class AllocatorFacade {
 
     // Try to move a memory handle from this allocator into another with an
     // alignment guarantee, and zero-out the allocated memory.
-    [[nodiscard]] constexpr auto opq_align_recalloc_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment) {
+    [[nodiscard]] constexpr auto opq_align_recalloc_to(auto& allocator,
+                                                       mem auto& handle,
+                                                       usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
             &AllocatorFacade<Derived>::opq_align_calloc<T, T>, allocator,
@@ -2595,8 +2606,9 @@ class AllocatorFacade {
 
     // Move a memory handle from this allocator into another with an alignment
     // guarantee, and zero-out the allocated memory.
-    [[nodiscard]] constexpr auto opq_align_xrecalloc_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment) {
+    [[nodiscard]] constexpr auto opq_align_xrecalloc_to(auto& allocator,
+                                                        mem auto& handle,
+                                                        usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
             &AllocatorFacade<Derived>::opq_align_xcalloc<T, T>, allocator,
@@ -2611,8 +2623,8 @@ class AllocatorFacade {
 
     // Try to move a memory handle from this allocator into another with no
     // alignment guarantee, and zero-out the allocated memory.
-    [[nodiscard]] constexpr auto opq_unalign_recalloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+    [[nodiscard]] constexpr auto opq_unalign_recalloc_to(auto& allocator,
+                                                         mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
             &AllocatorFacade<Derived>::opq_unalign_calloc<T, T>, allocator,
@@ -2627,8 +2639,8 @@ class AllocatorFacade {
 
     // Move a memory handle from this allocator into another with no alignment
     // guarantee, and zero-out the allocated memory.
-    [[nodiscard]] constexpr auto opq_unalign_xrecalloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+    [[nodiscard]] constexpr auto opq_unalign_xrecalloc_to(auto& allocator,
+                                                          mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
             &AllocatorFacade<Derived>::opq_unalign_xcalloc<T, T>, allocator,
@@ -2643,7 +2655,7 @@ class AllocatorFacade {
 
     // Try to move a pointer handle from this allocator into another with an
     // alignment guarantee, and zero-out the allocated memory.
-    [[nodiscard]] constexpr auto align_recalloc_to(is_allocator auto& allocator,
+    [[nodiscard]] constexpr auto align_recalloc_to(auto& allocator,
                                                    auto* p_handle,
                                                    usize alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
@@ -2661,8 +2673,9 @@ class AllocatorFacade {
 
     // Move a pointer handle from this allocator into another with an alignment
     // guarantee, and zero-out the allocated memory.
-    [[nodiscard]] constexpr auto align_xrecalloc_to(
-        is_allocator auto& allocator, auto* p_handle, usize alignment) {
+    [[nodiscard]] constexpr auto align_xrecalloc_to(auto& allocator,
+                                                    auto* p_handle,
+                                                    usize alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
             &AllocatorFacade<Derived>::align_xcalloc<T, T>, allocator, p_handle,
@@ -2677,8 +2690,8 @@ class AllocatorFacade {
 
     // Try to move a pointer handle from this allocator into another with no
     // alignment guarantee, and zero-out the allocated memory.
-    [[nodiscard]] constexpr auto unalign_recalloc_to(
-        is_allocator auto& allocator, auto* p_handle) {
+    [[nodiscard]] constexpr auto unalign_recalloc_to(auto& allocator,
+                                                     auto* p_handle) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
             &AllocatorFacade<Derived>::unalign_calloc<T, T>, allocator,
@@ -2693,8 +2706,8 @@ class AllocatorFacade {
 
     // Move a pointer handle from this allocator into another with no alignment
     // guarantee, and zero-out the allocated memory.
-    [[nodiscard]] constexpr auto unalign_xrecalloc_to(
-        is_allocator auto& allocator, auto* p_handle) {
+    [[nodiscard]] constexpr auto unalign_xrecalloc_to(auto& allocator,
+                                                      auto* p_handle) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
             &AllocatorFacade<Derived>::unalign_xcalloc<T, T>, allocator,
@@ -2709,8 +2722,9 @@ class AllocatorFacade {
 
     // Move an array memory handle from this allocator into another, and
     // zero-out the allocated memory.
-    [[nodiscard]] constexpr auto opq_recalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+    [[nodiscard]] constexpr auto opq_recalloc_multi_to(auto& allocator,
+                                                       mem auto& handle,
+                                                       ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
             &AllocatorFacade<Derived>::opq_calloc_multi<T>, allocator, handle,
@@ -2727,8 +2741,8 @@ class AllocatorFacade {
     // Try to move and resize an array pointer handle from this allocator into
     // another, and zero-out the allocated memory.
     template <typename T>
-    [[nodiscard]] constexpr auto recalloc_multi_to(is_allocator auto& allocator,
-                                                   T* p_handle, ssize old_count,
+    [[nodiscard]] constexpr auto recalloc_multi_to(auto& allocator, T* p_handle,
+                                                   ssize old_count,
                                                    ssize new_count) {
         return this->meta_realloc_multi<true, false>(
             &AllocatorFacade<Derived>::calloc_multi<T>, allocator, p_handle,
@@ -2745,8 +2759,9 @@ class AllocatorFacade {
 
     // Move and resize an array memory handle from this allocator into another,
     // and zero-out the allocated memory.
-    [[nodiscard]] constexpr auto opq_xrecalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+    [[nodiscard]] constexpr auto opq_xrecalloc_multi_to(auto& allocator,
+                                                        mem auto& handle,
+                                                        ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
             &AllocatorFacade<Derived>::opq_xcalloc_multi<T>, allocator, handle,
@@ -2763,9 +2778,10 @@ class AllocatorFacade {
     // Move and resize an array pointer handle from this allocator into another,
     // and zero-out the allocated memory.
     template <typename T>
-    [[nodiscard]] constexpr auto xrecalloc_multi_to(
-        is_allocator auto& allocator, T* p_handle, ssize old_count,
-        ssize new_count) {
+    [[nodiscard]] constexpr auto xrecalloc_multi_to(auto& allocator,
+                                                    T* p_handle,
+                                                    ssize old_count,
+                                                    ssize new_count) {
         return this->meta_realloc_multi<false, false>(
             &AllocatorFacade<Derived>::xcalloc_multi<T>, allocator, p_handle,
             old_count, new_count);
@@ -2781,9 +2797,10 @@ class AllocatorFacade {
 
     // Move and resize an array memory handle from this allocator into another,
     // and zero-out the allocated memory.
-    [[nodiscard]] constexpr auto opq_align_recalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment,
-        ssize new_count) {
+    [[nodiscard]] constexpr auto opq_align_recalloc_multi_to(auto& allocator,
+                                                             mem auto& handle,
+                                                             usize alignment,
+                                                             ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
             &AllocatorFacade<Derived>::opq_align_calloc_multi<T>, allocator,
@@ -2801,9 +2818,10 @@ class AllocatorFacade {
 
     // Move and resize an array memory handle from this allocator into another
     // with an alignment guarantee, and zero-out the allocated memory.
-    [[nodiscard]] constexpr auto opq_align_xrecalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment,
-        ssize new_count) {
+    [[nodiscard]] constexpr auto opq_align_xrecalloc_multi_to(auto& allocator,
+                                                              mem auto& handle,
+                                                              usize alignment,
+                                                              ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
             &AllocatorFacade<Derived>::opq_align_xcalloc_multi<T>, allocator,
@@ -2821,7 +2839,7 @@ class AllocatorFacade {
     // Try to move and resize an array memory handle from this allocator into
     // another with no alignment guarantee, and zero-out the allocated memory.
     [[nodiscard]] constexpr auto opq_unalign_recalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+        auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
             &AllocatorFacade<Derived>::opq_unalign_calloc_multi<T>, allocator,
@@ -2838,7 +2856,7 @@ class AllocatorFacade {
     // Move and resize an array memory handle from this allocator into another
     // with no alignment guarantee, and zero-out the allocated memory.
     [[nodiscard]] constexpr auto opq_unalign_xrecalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+        auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
             &AllocatorFacade<Derived>::opq_unalign_xcalloc_multi<T>, allocator,
@@ -2853,9 +2871,11 @@ class AllocatorFacade {
 
     // Try to move and resize an array pointer handle from this allocator into
     // another with an alignment guarantee, and zero-out the allocated memory.
-    [[nodiscard]] constexpr auto align_recalloc_multi_to(
-        is_allocator auto& allocator, auto* p_handle, usize alignment,
-        ssize old_count, ssize new_count) {
+    [[nodiscard]] constexpr auto align_recalloc_multi_to(auto& allocator,
+                                                         auto* p_handle,
+                                                         usize alignment,
+                                                         ssize old_count,
+                                                         ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
             &AllocatorFacade<Derived>::align_calloc_multi<T>, allocator,
@@ -2874,9 +2894,11 @@ class AllocatorFacade {
 
     // Move and resize an array pointer handle from this allocator into another
     // with an alignment guarantee, and zero-out the allocated memory.
-    [[nodiscard]] constexpr auto align_xrecalloc_multi_to(
-        is_allocator auto& allocator, auto* p_handle, usize alignment,
-        ssize old_count, ssize new_count) {
+    [[nodiscard]] constexpr auto align_xrecalloc_multi_to(auto& allocator,
+                                                          auto* p_handle,
+                                                          usize alignment,
+                                                          ssize old_count,
+                                                          ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
             &AllocatorFacade<Derived>::align_xcalloc_multi<T>, allocator,
@@ -2893,9 +2915,10 @@ class AllocatorFacade {
 
     // Try to move and resize an array pointer handle from this allocator into
     // another with no alignment guarantee, and zero-out the allocated memory.
-    [[nodiscard]] constexpr auto unalign_recalloc_multi_to(
-        is_allocator auto& allocator, auto* p_handle, ssize old_count,
-        ssize new_count) {
+    [[nodiscard]] constexpr auto unalign_recalloc_multi_to(auto& allocator,
+                                                           auto* p_handle,
+                                                           ssize old_count,
+                                                           ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
             &AllocatorFacade<Derived>::unalign_calloc_multi<T>, allocator,
@@ -2913,9 +2936,10 @@ class AllocatorFacade {
 
     // Move and resize an array pointer handle from this allocator into another
     // with no alignment guarantee, and zero-out the allocated memory.
-    [[nodiscard]] constexpr auto unalign_xrecalloc_multi_to(
-        is_allocator auto& allocator, auto* p_handle, ssize old_count,
-        ssize new_count) {
+    [[nodiscard]] constexpr auto unalign_xrecalloc_multi_to(auto& allocator,
+                                                            auto* p_handle,
+                                                            ssize old_count,
+                                                            ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
             &AllocatorFacade<Derived>::unalign_xcalloc_multi<T>, allocator,
@@ -2932,8 +2956,8 @@ class AllocatorFacade {
 
     // Try to move a small-size optimized handle from this allocator into
     // another.
-    [[nodiscard]] constexpr auto opq_inline_realloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+    [[nodiscard]] constexpr auto opq_inline_realloc_to(auto& allocator,
+                                                       mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
             &AllocatorFacade<Derived>::opq_inline_alloc<T, T>, allocator,
@@ -2947,8 +2971,8 @@ class AllocatorFacade {
     }
 
     // Move a small-size optimized handle from this allocator into another.
-    [[nodiscard]] constexpr auto opq_inline_xrealloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+    [[nodiscard]] constexpr auto opq_inline_xrealloc_to(auto& allocator,
+                                                        mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
             &AllocatorFacade<Derived>::opq_inline_xalloc<T, T>, allocator,
@@ -2962,8 +2986,9 @@ class AllocatorFacade {
 
     // Try to move a small-size optimized handle from this allocator into
     // another with an alignment guarantee.
-    [[nodiscard]] constexpr auto opq_inline_align_realloc_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment) {
+    [[nodiscard]] constexpr auto opq_inline_align_realloc_to(auto& allocator,
+                                                             mem auto& handle,
+                                                             usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
             &AllocatorFacade<Derived>::opq_inline_align_alloc<T, T>, allocator,
@@ -2979,8 +3004,9 @@ class AllocatorFacade {
 
     // Move a small-size optimized handle from this allocator into another with
     // an alignment guarantee.
-    [[nodiscard]] constexpr auto opq_inline_align_xrealloc_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment) {
+    [[nodiscard]] constexpr auto opq_inline_align_xrealloc_to(auto& allocator,
+                                                              mem auto& handle,
+                                                              usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
             &AllocatorFacade<Derived>::opq_inline_align_xalloc<T, T>, allocator,
@@ -2996,7 +3022,7 @@ class AllocatorFacade {
     // Try to move a small-size optimized handle from this allocator into
     // another with no alignment guarantee.
     [[nodiscard]] constexpr auto opq_inline_unalign_realloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+        auto& allocator, mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
             &AllocatorFacade<Derived>::opq_inline_unalign_alloc<T, T>,
@@ -3012,7 +3038,7 @@ class AllocatorFacade {
     // Move a small-size optimized handle from this allocator into another with
     // no alignment guarantee.
     [[nodiscard]] constexpr auto opq_inline_unalign_xrealloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+        auto& allocator, mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
             &AllocatorFacade<Derived>::opq_inline_unalign_xalloc<T, T>,
@@ -3027,8 +3053,9 @@ class AllocatorFacade {
 
     // Move a small-size optimized array memory handle from this allocator into
     // another.
-    [[nodiscard]] constexpr auto opq_inline_realloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+    [[nodiscard]] constexpr auto opq_inline_realloc_multi_to(auto& allocator,
+                                                             mem auto& handle,
+                                                             ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
             &AllocatorFacade<Derived>::opq_inline_alloc_multi<T>, allocator,
@@ -3044,8 +3071,9 @@ class AllocatorFacade {
 
     // Move and resize a small-size optimized array memory handle from this
     // allocator into another.
-    [[nodiscard]] constexpr auto opq_inline_xrealloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+    [[nodiscard]] constexpr auto opq_inline_xrealloc_multi_to(auto& allocator,
+                                                              mem auto& handle,
+                                                              ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
             &AllocatorFacade<Derived>::opq_inline_xalloc_multi<T>, allocator,
@@ -3062,8 +3090,7 @@ class AllocatorFacade {
     // Move and resize a small-size optimized array memory handle from this
     // allocator into another.
     [[nodiscard]] constexpr auto opq_inline_align_realloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment,
-        ssize new_count) {
+        auto& allocator, mem auto& handle, usize alignment, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
             &AllocatorFacade<Derived>::opq_inline_align_alloc_multi<T>,
@@ -3081,8 +3108,7 @@ class AllocatorFacade {
     // Move and resize a small-size optimized array memory handle from this
     // allocator into another with an alignment guarantee.
     [[nodiscard]] constexpr auto opq_inline_align_xrealloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment,
-        ssize new_count) {
+        auto& allocator, mem auto& handle, usize alignment, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
             &AllocatorFacade<Derived>::opq_inline_align_xalloc_multi<T>,
@@ -3100,7 +3126,7 @@ class AllocatorFacade {
     // Try to move and resize a small-size optimized array memory handle from
     // this allocator into another with no alignment guarantee.
     [[nodiscard]] constexpr auto opq_inline_unalign_realloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+        auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
             &AllocatorFacade<Derived>::opq_inline_unalign_alloc_multi<T>,
@@ -3118,7 +3144,7 @@ class AllocatorFacade {
     // Move and resize a small-size optimized array memory handle from this
     // allocator into another with no alignment guarantee.
     [[nodiscard]] constexpr auto opq_inline_unalign_xrealloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+        auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
             &AllocatorFacade<Derived>::opq_inline_unalign_xalloc_multi<T>,
@@ -3134,8 +3160,8 @@ class AllocatorFacade {
 
     // Try to move a small-size optimized handle from this allocator into
     // another, and zero-out the allocated memory.
-    [[nodiscard]] constexpr auto opq_inline_recalloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+    [[nodiscard]] constexpr auto opq_inline_recalloc_to(auto& allocator,
+                                                        mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
             &AllocatorFacade<Derived>::opq_calloc<T, T>, allocator, handle);
@@ -3149,8 +3175,8 @@ class AllocatorFacade {
 
     // Move a small-size optimized handle from this allocator into another, and
     // zero-out the allocated memory.
-    [[nodiscard]] constexpr auto opq_inline_xrecalloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+    [[nodiscard]] constexpr auto opq_inline_xrecalloc_to(auto& allocator,
+                                                         mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
             &AllocatorFacade<Derived>::opq_inline_xcalloc<T, T>, allocator,
@@ -3165,8 +3191,9 @@ class AllocatorFacade {
 
     // Try to move a small-size optimized handle from this allocator into
     // another with an alignment guarantee, and zero-out the allocated memory.
-    [[nodiscard]] constexpr auto opq_inline_align_recalloc_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment) {
+    [[nodiscard]] constexpr auto opq_inline_align_recalloc_to(auto& allocator,
+                                                              mem auto& handle,
+                                                              usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
             &AllocatorFacade<Derived>::opq_inline_align_calloc<T, T>, allocator,
@@ -3183,7 +3210,7 @@ class AllocatorFacade {
     // Move a small-size optimized handle from this allocator into another with
     // an alignment guarantee, and zero-out the allocated memory.
     [[nodiscard]] constexpr auto opq_inline_align_xrecalloc_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment) {
+        auto& allocator, mem auto& handle, usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
             &AllocatorFacade<Derived>::opq_inline_align_xcalloc<T, T>,
@@ -3199,7 +3226,7 @@ class AllocatorFacade {
     // Try to move a small-size optimized handle from this allocator into
     // another with no alignment guarantee, and zero-out the allocated memory.
     [[nodiscard]] constexpr auto opq_inline_unalign_recalloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+        auto& allocator, mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
             &AllocatorFacade<Derived>::opq_inline_unalign_calloc<T, T>,
@@ -3215,7 +3242,7 @@ class AllocatorFacade {
     // Move a small-size optimized handle from this allocator into another with
     // no alignment guarantee, and zero-out the allocated memory.
     [[nodiscard]] constexpr auto opq_inline_unalign_xrecalloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+        auto& allocator, mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
             &AllocatorFacade<Derived>::opq_inline_unalign_xcalloc<T, T>,
@@ -3230,8 +3257,9 @@ class AllocatorFacade {
 
     // Move a small-size optimized array memory handle from this allocator into
     // another, and zero-out the allocated memory.
-    [[nodiscard]] constexpr auto opq_inline_recalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+    [[nodiscard]] constexpr auto opq_inline_recalloc_multi_to(auto& allocator,
+                                                              mem auto& handle,
+                                                              ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
             &AllocatorFacade<Derived>::opq_inline_calloc_multi<T>, allocator,
@@ -3248,7 +3276,7 @@ class AllocatorFacade {
     // Move and resize a small-size optimized array memory handle from this
     // allocator into another, and zero-out the allocated memory.
     [[nodiscard]] constexpr auto opq_inline_xrecalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+        auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
             &AllocatorFacade<Derived>::opq_inline_xcalloc_multi<T>, allocator,
@@ -3265,8 +3293,7 @@ class AllocatorFacade {
     // Move and resize a small-size optimized array memory handle from this
     // allocator into another, and zero-out the allocated memory.
     [[nodiscard]] constexpr auto opq_inline_align_recalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment,
-        ssize new_count) {
+        auto& allocator, mem auto& handle, usize alignment, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
             &AllocatorFacade<Derived>::opq_inline_align_calloc_multi<T>,
@@ -3286,8 +3313,7 @@ class AllocatorFacade {
     // allocator into another with an alignment guarantee, and zero-out the
     // allocated memory.
     [[nodiscard]] constexpr auto opq_inline_align_xrecalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment,
-        ssize new_count) {
+        auto& allocator, mem auto& handle, usize alignment, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
             &AllocatorFacade<Derived>::opq_inline_align_xcalloc_multi<T>,
@@ -3307,7 +3333,7 @@ class AllocatorFacade {
     // this allocator into another with no alignment guarantee, and zero-out the
     // allocated memory.
     [[nodiscard]] constexpr auto opq_inline_unalign_recalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+        auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
             &AllocatorFacade<Derived>::opq_inline_unalign_calloc_multi<T>,
@@ -3327,7 +3353,7 @@ class AllocatorFacade {
     // allocator into another with no alignment guarantee, and zero-out the
     // allocated memory.
     [[nodiscard]] constexpr auto opq_inline_unalign_xrecalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+        auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
             &AllocatorFacade<Derived>::opq_inline_unalign_xcalloc_multi<T>,
@@ -3344,7 +3370,7 @@ class AllocatorFacade {
 
     // Try to move a memory handle from this allocator into another, and return
     // the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto opq_resalloc_to(is_allocator auto& allocator,
+    [[nodiscard]] constexpr auto opq_resalloc_to(auto& allocator,
                                                  mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
@@ -3360,8 +3386,7 @@ class AllocatorFacade {
     // Try to move a pointer handle from this allocator into another, and return
     // the number of bytes that were allocated.
     template <typename T>
-    [[nodiscard]] constexpr auto resalloc_to(is_allocator auto& allocator,
-                                             T* p_handle) {
+    [[nodiscard]] constexpr auto resalloc_to(auto& allocator, T* p_handle) {
         return this->meta_realloc<true, true>(
             &AllocatorFacade<Derived>::salloc<T, T>, allocator, p_handle);
     }
@@ -3375,7 +3400,7 @@ class AllocatorFacade {
 
     // Move a memory handle from this allocator into another, and return the
     // number of bytes that were allocated.
-    [[nodiscard]] constexpr auto opq_xresalloc_to(is_allocator auto& allocator,
+    [[nodiscard]] constexpr auto opq_xresalloc_to(auto& allocator,
                                                   mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
@@ -3391,8 +3416,7 @@ class AllocatorFacade {
     // Move a pointer handle from this allocator into another, and return the
     // number of bytes that were allocated.
     template <typename T>
-    [[nodiscard]] constexpr auto xresalloc_to(is_allocator auto& allocator,
-                                              T* p_handle) {
+    [[nodiscard]] constexpr auto xresalloc_to(auto& allocator, T* p_handle) {
         return this->meta_realloc<false, true>(
             &AllocatorFacade<Derived>::xsalloc<T, T>, allocator, p_handle);
     }
@@ -3406,8 +3430,9 @@ class AllocatorFacade {
 
     // Try to move a memory handle from this allocator into another with an
     // alignment guarantee, and return the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto opq_align_resalloc_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment) {
+    [[nodiscard]] constexpr auto opq_align_resalloc_to(auto& allocator,
+                                                       mem auto& handle,
+                                                       usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
             &AllocatorFacade<Derived>::opq_align_salloc<T, T>, allocator,
@@ -3423,8 +3448,9 @@ class AllocatorFacade {
 
     // Move a memory handle from this allocator into another with an alignment
     // guarantee, and return the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto opq_align_xresalloc_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment) {
+    [[nodiscard]] constexpr auto opq_align_xresalloc_to(auto& allocator,
+                                                        mem auto& handle,
+                                                        usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
             &AllocatorFacade<Derived>::opq_align_xalloc<T, T>, allocator,
@@ -3439,8 +3465,8 @@ class AllocatorFacade {
 
     // Try to move a memory handle from this allocator into another with no
     // alignment guarantee, and return the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto opq_unalign_resalloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+    [[nodiscard]] constexpr auto opq_unalign_resalloc_to(auto& allocator,
+                                                         mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
             &AllocatorFacade<Derived>::opq_unalign_salloc<T, T>, allocator,
@@ -3455,8 +3481,8 @@ class AllocatorFacade {
 
     // Move a memory handle from this allocator into another with no alignment
     // guarantee, and return the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto opq_unalign_xresalloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+    [[nodiscard]] constexpr auto opq_unalign_xresalloc_to(auto& allocator,
+                                                          mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
             &AllocatorFacade<Derived>::opq_unalign_xalloc<T, T>, allocator,
@@ -3471,7 +3497,7 @@ class AllocatorFacade {
 
     // Try to move a pointer handle from this allocator into another with an
     // alignment guarantee, and return the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto align_resalloc_to(is_allocator auto& allocator,
+    [[nodiscard]] constexpr auto align_resalloc_to(auto& allocator,
                                                    auto* p_handle,
                                                    usize alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
@@ -3489,8 +3515,9 @@ class AllocatorFacade {
 
     // Move a pointer handle from this allocator into another with an alignment
     // guarantee, and return the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto align_xresalloc_to(
-        is_allocator auto& allocator, auto* p_handle, usize alignment) {
+    [[nodiscard]] constexpr auto align_xresalloc_to(auto& allocator,
+                                                    auto* p_handle,
+                                                    usize alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
             &AllocatorFacade<Derived>::align_xalloc<T, T>, allocator, p_handle,
@@ -3505,8 +3532,8 @@ class AllocatorFacade {
 
     // Try to move a pointer handle from this allocator into another with no
     // alignment guarantee, and return the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto unalign_resalloc_to(
-        is_allocator auto& allocator, auto* p_handle) {
+    [[nodiscard]] constexpr auto unalign_resalloc_to(auto& allocator,
+                                                     auto* p_handle) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
             &AllocatorFacade<Derived>::unalign_salloc<T, T>, allocator,
@@ -3521,8 +3548,8 @@ class AllocatorFacade {
 
     // Move a pointer handle from this allocator into another with no alignment
     // guarantee, and return the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto unalign_xresalloc_to(
-        is_allocator auto& allocator, auto* p_handle) {
+    [[nodiscard]] constexpr auto unalign_xresalloc_to(auto& allocator,
+                                                      auto* p_handle) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
             &AllocatorFacade<Derived>::unalign_xalloc<T, T>, allocator,
@@ -3537,8 +3564,9 @@ class AllocatorFacade {
 
     // Move an array memory handle from this allocator into another, and return
     // the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto opq_resalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+    [[nodiscard]] constexpr auto opq_resalloc_multi_to(auto& allocator,
+                                                       mem auto& handle,
+                                                       ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
             &AllocatorFacade<Derived>::opq_salloc_multi<T>, allocator, handle,
@@ -3555,8 +3583,8 @@ class AllocatorFacade {
     // Try to move and resize an array pointer handle from this allocator into
     // another, and return the number of bytes that were allocated.
     template <typename T>
-    [[nodiscard]] constexpr auto resalloc_multi_to(is_allocator auto& allocator,
-                                                   T* p_handle, ssize old_count,
+    [[nodiscard]] constexpr auto resalloc_multi_to(auto& allocator, T* p_handle,
+                                                   ssize old_count,
                                                    ssize new_count) {
         return this->meta_realloc_multi<true, true>(
             &AllocatorFacade<Derived>::salloc_multi<T>, allocator, p_handle,
@@ -3573,8 +3601,9 @@ class AllocatorFacade {
 
     // Move and resize an array memory handle from this allocator into another,
     // and return the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto opq_xresalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+    [[nodiscard]] constexpr auto opq_xresalloc_multi_to(auto& allocator,
+                                                        mem auto& handle,
+                                                        ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
             &AllocatorFacade<Derived>::opq_xsalloc_multi<T>, allocator, handle,
@@ -3591,9 +3620,10 @@ class AllocatorFacade {
     // Move and resize an array pointer handle from this allocator into another,
     // and return the number of bytes that were allocated.
     template <typename T>
-    [[nodiscard]] constexpr auto xresalloc_multi_to(
-        is_allocator auto& allocator, T* p_handle, ssize old_count,
-        ssize new_count) {
+    [[nodiscard]] constexpr auto xresalloc_multi_to(auto& allocator,
+                                                    T* p_handle,
+                                                    ssize old_count,
+                                                    ssize new_count) {
         return this->meta_realloc_multi<false, true>(
             &AllocatorFacade<Derived>::xsalloc_multi<T>, allocator, p_handle,
             old_count, new_count);
@@ -3609,9 +3639,10 @@ class AllocatorFacade {
 
     // Move and resize an array memory handle from this allocator into another,
     // and return the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto opq_align_resalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment,
-        ssize new_count) {
+    [[nodiscard]] constexpr auto opq_align_resalloc_multi_to(auto& allocator,
+                                                             mem auto& handle,
+                                                             usize alignment,
+                                                             ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
             &AllocatorFacade<Derived>::opq_align_salloc_multi<T>, allocator,
@@ -3631,9 +3662,10 @@ class AllocatorFacade {
     // Move and resize an array memory handle from this allocator into another
     // with an alignment guarantee, and return the number of bytes that were
     // allocated.
-    [[nodiscard]] constexpr auto opq_align_xresalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment,
-        ssize new_count) {
+    [[nodiscard]] constexpr auto opq_align_xresalloc_multi_to(auto& allocator,
+                                                              mem auto& handle,
+                                                              usize alignment,
+                                                              ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
             &AllocatorFacade<Derived>::opq_align_xsalloc_multi<T>, allocator,
@@ -3653,7 +3685,7 @@ class AllocatorFacade {
     // another with no alignment guarantee, and return the number of bytes that
     // were allocated.
     [[nodiscard]] constexpr auto opq_unalign_resalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+        auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
             &AllocatorFacade<Derived>::opq_unalign_salloc_multi<T>, allocator,
@@ -3672,7 +3704,7 @@ class AllocatorFacade {
     // with no alignment guarantee, and return the number of bytes that were
     // allocated.
     [[nodiscard]] constexpr auto opq_unalign_xresalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+        auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
             &AllocatorFacade<Derived>::opq_unalign_xsalloc_multi<T>, allocator,
@@ -3689,9 +3721,11 @@ class AllocatorFacade {
     // Try to move and resize an array pointer handle from this allocator into
     // another with an alignment guarantee, and return the number of bytes that
     // were allocated.
-    [[nodiscard]] constexpr auto align_resalloc_multi_to(
-        is_allocator auto& allocator, auto* p_handle, usize alignment,
-        ssize old_count, ssize new_count) {
+    [[nodiscard]] constexpr auto align_resalloc_multi_to(auto& allocator,
+                                                         auto* p_handle,
+                                                         usize alignment,
+                                                         ssize old_count,
+                                                         ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
             &AllocatorFacade<Derived>::align_salloc_multi<T>, allocator,
@@ -3712,9 +3746,11 @@ class AllocatorFacade {
     // Move and resize an array pointer handle from this allocator into another
     // with an alignment guarantee, and return the number of bytes that were
     // allocated.
-    [[nodiscard]] constexpr auto align_xresalloc_multi_to(
-        is_allocator auto& allocator, auto* p_handle, usize alignment,
-        ssize old_count, ssize new_count) {
+    [[nodiscard]] constexpr auto align_xresalloc_multi_to(auto& allocator,
+                                                          auto* p_handle,
+                                                          usize alignment,
+                                                          ssize old_count,
+                                                          ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
             &AllocatorFacade<Derived>::align_xsalloc_multi<T>, allocator,
@@ -3733,9 +3769,10 @@ class AllocatorFacade {
     // Try to move and resize an array pointer handle from this allocator into
     // another with no alignment guarantee, and return the number of bytes that
     // were allocated.
-    [[nodiscard]] constexpr auto unalign_resalloc_multi_to(
-        is_allocator auto& allocator, auto* p_handle, ssize old_count,
-        ssize new_count) {
+    [[nodiscard]] constexpr auto unalign_resalloc_multi_to(auto& allocator,
+                                                           auto* p_handle,
+                                                           ssize old_count,
+                                                           ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
             &AllocatorFacade<Derived>::unalign_salloc_multi<T>, allocator,
@@ -3755,9 +3792,10 @@ class AllocatorFacade {
     // Move and resize an array pointer handle from this allocator into another
     // with no alignment guarantee, and return the number of bytes that were
     // allocated.
-    [[nodiscard]] constexpr auto unalign_xresalloc_multi_to(
-        is_allocator auto& allocator, auto* p_handle, ssize old_count,
-        ssize new_count) {
+    [[nodiscard]] constexpr auto unalign_xresalloc_multi_to(auto& allocator,
+                                                            auto* p_handle,
+                                                            ssize old_count,
+                                                            ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
             &AllocatorFacade<Derived>::unalign_xsalloc_multi<T>, allocator,
@@ -3775,7 +3813,7 @@ class AllocatorFacade {
 
     // Try to move a memory handle from this allocator into another, zero-out
     // the allocated memory, and return the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto opq_rescalloc_to(is_allocator auto& allocator,
+    [[nodiscard]] constexpr auto opq_rescalloc_to(auto& allocator,
                                                   mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
@@ -3791,8 +3829,7 @@ class AllocatorFacade {
     // Try to move a pointer handle from this allocator into another, zero-out
     // the allocated memory, and return the number of bytes that were allocated.
     template <typename T>
-    [[nodiscard]] constexpr auto rescalloc_to(is_allocator auto& allocator,
-                                              T* p_handle) {
+    [[nodiscard]] constexpr auto rescalloc_to(auto& allocator, T* p_handle) {
         return this->meta_realloc<true, true>(
             &AllocatorFacade<Derived>::scalloc<T, T>, allocator, p_handle);
     }
@@ -3806,7 +3843,7 @@ class AllocatorFacade {
 
     // Move a memory handle from this allocator into another, zero-out the
     // allocated memory, and return the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto opq_xrescalloc_to(is_allocator auto& allocator,
+    [[nodiscard]] constexpr auto opq_xrescalloc_to(auto& allocator,
                                                    mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
@@ -3822,8 +3859,7 @@ class AllocatorFacade {
     // Move a pointer handle from this allocator into another, zero-out the
     // allocated memory, and return the number of bytes that were allocated.
     template <typename T>
-    [[nodiscard]] constexpr auto xrescalloc_to(is_allocator auto& allocator,
-                                               T* p_handle) {
+    [[nodiscard]] constexpr auto xrescalloc_to(auto& allocator, T* p_handle) {
         return this->meta_realloc<false, true>(
             &AllocatorFacade<Derived>::xscalloc<T, T>, allocator, p_handle);
     }
@@ -3838,8 +3874,9 @@ class AllocatorFacade {
     // Try to move a memory handle from this allocator into another with an
     // alignment guarantee, zero-out the allocated memory, and return the
     // number of bytes that were allocated.
-    [[nodiscard]] constexpr auto opq_align_rescalloc_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment) {
+    [[nodiscard]] constexpr auto opq_align_rescalloc_to(auto& allocator,
+                                                        mem auto& handle,
+                                                        usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
             &AllocatorFacade<Derived>::opq_align_scalloc<T, T>, allocator,
@@ -3857,8 +3894,9 @@ class AllocatorFacade {
     // Move a memory handle from this allocator into another with an alignment
     // guarantee, zero-out the allocated memory, and return the number of
     // bytes that were allocated.
-    [[nodiscard]] constexpr auto opq_align_xrescalloc_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment) {
+    [[nodiscard]] constexpr auto opq_align_xrescalloc_to(auto& allocator,
+                                                         mem auto& handle,
+                                                         usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
             &AllocatorFacade<Derived>::opq_align_xscalloc<T, T>, allocator,
@@ -3875,8 +3913,8 @@ class AllocatorFacade {
     // Try to move a memory handle from this allocator into another with no
     // alignment guarantee, zero-out the allocated memory, and return the
     // number of bytes that were allocated.
-    [[nodiscard]] constexpr auto opq_unalign_rescalloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+    [[nodiscard]] constexpr auto opq_unalign_rescalloc_to(auto& allocator,
+                                                          mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
             &AllocatorFacade<Derived>::opq_unalign_scalloc<T, T>, allocator,
@@ -3893,8 +3931,8 @@ class AllocatorFacade {
     // Move a memory handle from this allocator into another with no alignment
     // guarantee, zero-out the allocated memory, and return the number of
     // bytes that were allocated.
-    [[nodiscard]] constexpr auto opq_unalign_xrescalloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+    [[nodiscard]] constexpr auto opq_unalign_xrescalloc_to(auto& allocator,
+                                                           mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
             &AllocatorFacade<Derived>::opq_unalign_xscalloc<T, T>, allocator,
@@ -3911,8 +3949,9 @@ class AllocatorFacade {
     // Try to move a pointer handle from this allocator into another with an
     // alignment guarantee, zero-out the allocated memory, and return the
     // number of bytes that were allocated.
-    [[nodiscard]] constexpr auto align_rescalloc_to(
-        is_allocator auto& allocator, auto* p_handle, usize alignment) {
+    [[nodiscard]] constexpr auto align_rescalloc_to(auto& allocator,
+                                                    auto* p_handle,
+                                                    usize alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
             &AllocatorFacade<Derived>::align_scalloc<T, T>, allocator, p_handle,
@@ -3930,8 +3969,9 @@ class AllocatorFacade {
     // Move a pointer handle from this allocator into another with an alignment
     // guarantee, zero-out the allocated memory, and return the number of
     // bytes that were allocated.
-    [[nodiscard]] constexpr auto align_xrescalloc_to(
-        is_allocator auto& allocator, auto* p_handle, usize alignment) {
+    [[nodiscard]] constexpr auto align_xrescalloc_to(auto& allocator,
+                                                     auto* p_handle,
+                                                     usize alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
             &AllocatorFacade<Derived>::align_xscalloc<T, T>, allocator,
@@ -3948,8 +3988,8 @@ class AllocatorFacade {
     // Try to move a pointer handle from this allocator into another with no
     // alignment guarantee, zero-out the allocated memory, and return the
     // number of bytes that were allocated.
-    [[nodiscard]] constexpr auto unalign_rescalloc_to(
-        is_allocator auto& allocator, auto* p_handle) {
+    [[nodiscard]] constexpr auto unalign_rescalloc_to(auto& allocator,
+                                                      auto* p_handle) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
             &AllocatorFacade<Derived>::unalign_scalloc<T, T>, allocator,
@@ -3966,8 +4006,8 @@ class AllocatorFacade {
     // Move a pointer handle from this allocator into another with no alignment
     // guarantee, zero-out the allocated memory, and return the number of
     // bytes that were allocated.
-    [[nodiscard]] constexpr auto unalign_xrescalloc_to(
-        is_allocator auto& allocator, auto* p_handle) {
+    [[nodiscard]] constexpr auto unalign_xrescalloc_to(auto& allocator,
+                                                       auto* p_handle) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
             &AllocatorFacade<Derived>::unalign_xscalloc<T, T>, allocator,
@@ -3983,8 +4023,9 @@ class AllocatorFacade {
 
     // Move an array memory handle from this allocator into another, zero-out
     // the allocated memory, and return the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto opq_rescalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+    [[nodiscard]] constexpr auto opq_rescalloc_multi_to(auto& allocator,
+                                                        mem auto& handle,
+                                                        ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
             &AllocatorFacade<Derived>::opq_scalloc_multi<T>, allocator, handle,
@@ -4003,9 +4044,10 @@ class AllocatorFacade {
     // another, zero-out the allocated memory, and return the number of
     // bytes that were allocated.
     template <typename T>
-    [[nodiscard]] constexpr auto rescalloc_multi_to(
-        is_allocator auto& allocator, T* p_handle, ssize old_count,
-        ssize new_count) {
+    [[nodiscard]] constexpr auto rescalloc_multi_to(auto& allocator,
+                                                    T* p_handle,
+                                                    ssize old_count,
+                                                    ssize new_count) {
         return this->meta_realloc_multi<true, true>(
             &AllocatorFacade<Derived>::scalloc_multi<T>, allocator, p_handle,
             old_count, new_count);
@@ -4023,8 +4065,9 @@ class AllocatorFacade {
     // Move and resize an array memory handle from this allocator into another,
     // zero-out the allocated memory, and return the number of bytes that
     // were allocated.
-    [[nodiscard]] constexpr auto opq_xrescalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+    [[nodiscard]] constexpr auto opq_xrescalloc_multi_to(auto& allocator,
+                                                         mem auto& handle,
+                                                         ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
             &AllocatorFacade<Derived>::opq_xscalloc_multi<T>, allocator, handle,
@@ -4043,9 +4086,10 @@ class AllocatorFacade {
     // zero-out the allocated memory, and return the number of bytes that
     // were allocated.
     template <typename T>
-    [[nodiscard]] constexpr auto xrescalloc_multi_to(
-        is_allocator auto& allocator, T* p_handle, ssize old_count,
-        ssize new_count) {
+    [[nodiscard]] constexpr auto xrescalloc_multi_to(auto& allocator,
+                                                     T* p_handle,
+                                                     ssize old_count,
+                                                     ssize new_count) {
         return this->meta_realloc_multi<false, true>(
             &AllocatorFacade<Derived>::xscalloc_multi<T>, allocator, p_handle,
             old_count, new_count);
@@ -4063,9 +4107,10 @@ class AllocatorFacade {
     // Move and resize an array memory handle from this allocator into another,
     // zero-out the allocated memory, and return the number of bytes that
     // were allocated.
-    [[nodiscard]] constexpr auto opq_align_rescalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment,
-        ssize new_count) {
+    [[nodiscard]] constexpr auto opq_align_rescalloc_multi_to(auto& allocator,
+                                                              mem auto& handle,
+                                                              usize alignment,
+                                                              ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
             &AllocatorFacade<Derived>::opq_align_scalloc_multi<T>, allocator,
@@ -4086,8 +4131,7 @@ class AllocatorFacade {
     // with an alignment guarantee, zero-out the allocated memory, and
     // return the number of bytes that were allocated.
     [[nodiscard]] constexpr auto opq_align_xrescalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment,
-        ssize new_count) {
+        auto& allocator, mem auto& handle, usize alignment, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
             &AllocatorFacade<Derived>::opq_align_xscalloc_multi<T>, allocator,
@@ -4107,7 +4151,7 @@ class AllocatorFacade {
     // another with no alignment guarantee, zero-out the allocated memory,
     // and return the number of bytes that were allocated.
     [[nodiscard]] constexpr auto opq_unalign_rescalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+        auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
             &AllocatorFacade<Derived>::opq_unalign_scalloc_multi<T>, allocator,
@@ -4126,7 +4170,7 @@ class AllocatorFacade {
     // with no alignment guarantee, zero-out the allocated memory, and
     // return the number of bytes that were allocated.
     [[nodiscard]] constexpr auto opq_unalign_xrescalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+        auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
             &AllocatorFacade<Derived>::opq_unalign_xscalloc_multi<T>, allocator,
@@ -4143,9 +4187,11 @@ class AllocatorFacade {
     // Try to move and resize an array pointer handle from this allocator into
     // another with an alignment guarantee, zero-out the allocated memory,
     // and return the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto align_rescalloc_multi_to(
-        is_allocator auto& allocator, auto* p_handle, usize alignment,
-        ssize old_count, ssize new_count) {
+    [[nodiscard]] constexpr auto align_rescalloc_multi_to(auto& allocator,
+                                                          auto* p_handle,
+                                                          usize alignment,
+                                                          ssize old_count,
+                                                          ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
             &AllocatorFacade<Derived>::align_scalloc_multi<T>, allocator,
@@ -4166,9 +4212,11 @@ class AllocatorFacade {
     // Move and resize an array pointer handle from this allocator into another
     // with an alignment guarantee, zero-out the allocated memory, and
     // return the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto align_xrescalloc_multi_to(
-        is_allocator auto& allocator, auto* p_handle, usize alignment,
-        ssize old_count, ssize new_count) {
+    [[nodiscard]] constexpr auto align_xrescalloc_multi_to(auto& allocator,
+                                                           auto* p_handle,
+                                                           usize alignment,
+                                                           ssize old_count,
+                                                           ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
             &AllocatorFacade<Derived>::align_xscalloc_multi<T>, allocator,
@@ -4187,9 +4235,10 @@ class AllocatorFacade {
     // Try to move and resize an array pointer handle from this allocator into
     // another with no alignment guarantee, zero-out the allocated memory,
     // and return the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto unalign_rescalloc_multi_to(
-        is_allocator auto& allocator, auto* p_handle, ssize old_count,
-        ssize new_count) {
+    [[nodiscard]] constexpr auto unalign_rescalloc_multi_to(auto& allocator,
+                                                            auto* p_handle,
+                                                            ssize old_count,
+                                                            ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
             &AllocatorFacade<Derived>::unalign_scalloc_multi<T>, allocator,
@@ -4209,9 +4258,10 @@ class AllocatorFacade {
     // Move and resize an array pointer handle from this allocator into another
     // with no alignment guarantee, zero-out the allocated memory, and
     // return the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto unalign_xrescalloc_multi_to(
-        is_allocator auto& allocator, auto* p_handle, ssize old_count,
-        ssize new_count) {
+    [[nodiscard]] constexpr auto unalign_xrescalloc_multi_to(auto& allocator,
+                                                             auto* p_handle,
+                                                             ssize old_count,
+                                                             ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
             &AllocatorFacade<Derived>::unalign_xscalloc_multi<T>, allocator,
@@ -4229,8 +4279,8 @@ class AllocatorFacade {
 
     // Try to move a small-size optimized handle from this allocator into
     // another, and return the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto opq_inline_resalloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+    [[nodiscard]] constexpr auto opq_inline_resalloc_to(auto& allocator,
+                                                        mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
             &AllocatorFacade<Derived>::opq_inline_salloc<T, T>, allocator,
@@ -4245,8 +4295,8 @@ class AllocatorFacade {
 
     // Move a small-size optimized handle from this allocator into another, and
     // return the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto opq_inline_xresalloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+    [[nodiscard]] constexpr auto opq_inline_xresalloc_to(auto& allocator,
+                                                         mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
             &AllocatorFacade<Derived>::opq_inline_xalloc<T, T>, allocator,
@@ -4262,8 +4312,9 @@ class AllocatorFacade {
     // Try to move a small-size optimized handle from this allocator into
     // another with an alignment guarantee, and return the number of bytes that
     // were allocated.
-    [[nodiscard]] constexpr auto opq_inline_align_resalloc_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment) {
+    [[nodiscard]] constexpr auto opq_inline_align_resalloc_to(auto& allocator,
+                                                              mem auto& handle,
+                                                              usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
             &AllocatorFacade<Derived>::opq_inline_align_salloc<T, T>, allocator,
@@ -4282,7 +4333,7 @@ class AllocatorFacade {
     // an alignment guarantee, and return the number of bytes that were
     // allocated.
     [[nodiscard]] constexpr auto opq_inline_align_xresalloc_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment) {
+        auto& allocator, mem auto& handle, usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
             &AllocatorFacade<Derived>::opq_inline_align_xalloc<T, T>, allocator,
@@ -4300,7 +4351,7 @@ class AllocatorFacade {
     // another with no alignment guarantee, and return the number of bytes that
     // were allocated.
     [[nodiscard]] constexpr auto opq_inline_unalign_resalloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+        auto& allocator, mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
             &AllocatorFacade<Derived>::opq_inline_unalign_salloc<T, T>,
@@ -4318,7 +4369,7 @@ class AllocatorFacade {
     // no alignment guarantee, and return the number of bytes that were
     // allocated.
     [[nodiscard]] constexpr auto opq_inline_unalign_xresalloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+        auto& allocator, mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
             &AllocatorFacade<Derived>::opq_inline_unalign_xalloc<T, T>,
@@ -4334,8 +4385,9 @@ class AllocatorFacade {
 
     // Move a small-size optimized array memory handle from this allocator into
     // another, and return the number of bytes that were allocated.
-    [[nodiscard]] constexpr auto opq_inline_resalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+    [[nodiscard]] constexpr auto opq_inline_resalloc_multi_to(auto& allocator,
+                                                              mem auto& handle,
+                                                              ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
             &AllocatorFacade<Derived>::opq_inline_salloc_multi<T>, allocator,
@@ -4354,7 +4406,7 @@ class AllocatorFacade {
     // allocator into another, and return the number of bytes that were
     // allocated.
     [[nodiscard]] constexpr auto opq_inline_xresalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+        auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
             &AllocatorFacade<Derived>::opq_inline_xsalloc_multi<T>, allocator,
@@ -4373,8 +4425,7 @@ class AllocatorFacade {
     // allocator into another, and return the number of bytes that were
     // allocated.
     [[nodiscard]] constexpr auto opq_inline_align_resalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment,
-        ssize new_count) {
+        auto& allocator, mem auto& handle, usize alignment, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
             &AllocatorFacade<Derived>::opq_inline_align_salloc_multi<T>,
@@ -4394,8 +4445,7 @@ class AllocatorFacade {
     // allocator into another with an alignment guarantee, and return the number
     // of bytes that were allocated.
     [[nodiscard]] constexpr auto opq_inline_align_xresalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment,
-        ssize new_count) {
+        auto& allocator, mem auto& handle, usize alignment, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
             &AllocatorFacade<Derived>::opq_inline_align_xsalloc_multi<T>,
@@ -4415,7 +4465,7 @@ class AllocatorFacade {
     // this allocator into another with no alignment guarantee, and return the
     // number of bytes that were allocated.
     [[nodiscard]] constexpr auto opq_inline_unalign_resalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+        auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
             &AllocatorFacade<Derived>::opq_inline_unalign_salloc_multi<T>,
@@ -4435,7 +4485,7 @@ class AllocatorFacade {
     // allocator into another with no alignment guarantee, and return the number
     // of bytes that were allocated.
     [[nodiscard]] constexpr auto opq_inline_unalign_xresalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+        auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
             &AllocatorFacade<Derived>::opq_inline_unalign_xsalloc_multi<T>,
@@ -4453,8 +4503,8 @@ class AllocatorFacade {
     // Try to move a small-size optimized handle from this allocator into
     // another, zero-out the allocated memory, and return the number of
     // bytes that were allocated.
-    [[nodiscard]] constexpr auto opq_inline_rescalloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+    [[nodiscard]] constexpr auto opq_inline_rescalloc_to(auto& allocator,
+                                                         mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
             &AllocatorFacade<Derived>::opq_scalloc<T, T>, allocator, handle);
@@ -4470,8 +4520,8 @@ class AllocatorFacade {
     // Move a small-size optimized handle from this allocator into another,
     // zero-out the allocated memory, and return the number of bytes that were
     // allocated.
-    [[nodiscard]] constexpr auto opq_inline_xrescalloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+    [[nodiscard]] constexpr auto opq_inline_xrescalloc_to(auto& allocator,
+                                                          mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
             &AllocatorFacade<Derived>::opq_inline_xscalloc<T, T>, allocator,
@@ -4489,7 +4539,7 @@ class AllocatorFacade {
     // another with an alignment guarantee, zero-out the allocated memory,
     // and return the number of bytes that were allocated.
     [[nodiscard]] constexpr auto opq_inline_align_rescalloc_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment) {
+        auto& allocator, mem auto& handle, usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
             &AllocatorFacade<Derived>::opq_inline_align_scalloc<T, T>,
@@ -4508,7 +4558,7 @@ class AllocatorFacade {
     // an alignment guarantee, zero-out the allocated memory, and return the
     // number of bytes that were allocated.
     [[nodiscard]] constexpr auto opq_inline_align_xrescalloc_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment) {
+        auto& allocator, mem auto& handle, usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
             &AllocatorFacade<Derived>::opq_inline_align_xscalloc<T, T>,
@@ -4526,7 +4576,7 @@ class AllocatorFacade {
     // another with no alignment guarantee, zero-out the allocated memory,
     // and return the number of bytes that were allocated.
     [[nodiscard]] constexpr auto opq_inline_unalign_rescalloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+        auto& allocator, mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
             &AllocatorFacade<Derived>::opq_inline_unalign_scalloc<T, T>,
@@ -4545,7 +4595,7 @@ class AllocatorFacade {
     // no alignment guarantee, zero-out the allocated memory, and return the
     // number of bytes that were allocated.
     [[nodiscard]] constexpr auto opq_inline_unalign_xrescalloc_to(
-        is_allocator auto& allocator, mem auto& handle) {
+        auto& allocator, mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
             &AllocatorFacade<Derived>::opq_inline_unalign_xscalloc<T, T>,
@@ -4563,7 +4613,7 @@ class AllocatorFacade {
     // another, zero-out the allocated memory, and return the number of
     // bytes that were allocated.
     [[nodiscard]] constexpr auto opq_inline_rescalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+        auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
             &AllocatorFacade<Derived>::opq_inline_scalloc_multi<T>, allocator,
@@ -4582,7 +4632,7 @@ class AllocatorFacade {
     // allocator into another, zero-out the allocated memory, and return the
     // number of bytes that were allocated.
     [[nodiscard]] constexpr auto opq_inline_xrescalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+        auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
             &AllocatorFacade<Derived>::opq_inline_xscalloc_multi<T>, allocator,
@@ -4601,8 +4651,7 @@ class AllocatorFacade {
     // allocator into another, zero-out the allocated memory, and return the
     // number of bytes that were allocated.
     [[nodiscard]] constexpr auto opq_inline_align_rescalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment,
-        ssize new_count) {
+        auto& allocator, mem auto& handle, usize alignment, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
             &AllocatorFacade<Derived>::opq_inline_align_scalloc_multi<T>,
@@ -4622,8 +4671,7 @@ class AllocatorFacade {
     // allocator into another with an alignment guarantee, zero-out the
     // allocated memory, and return the number of bytes that were allocated.
     [[nodiscard]] constexpr auto opq_inline_align_xrescalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, usize alignment,
-        ssize new_count) {
+        auto& allocator, mem auto& handle, usize alignment, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
             &AllocatorFacade<Derived>::opq_inline_align_xscalloc_multi<T>,
@@ -4643,7 +4691,7 @@ class AllocatorFacade {
     // this allocator into another with no alignment guarantee, zero-out the
     // allocated memory, and return the number of bytes that were allocated.
     [[nodiscard]] constexpr auto opq_inline_unalign_rescalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+        auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
             &AllocatorFacade<Derived>::opq_inline_unalign_scalloc_multi<T>,
@@ -4663,7 +4711,7 @@ class AllocatorFacade {
     // allocator into another with no alignment guarantee, zero-out the
     // allocated memory, and return the number of bytes that were allocated.
     [[nodiscard]] constexpr auto opq_inline_unalign_xrescalloc_multi_to(
-        is_allocator auto& allocator, mem auto& handle, ssize new_count) {
+        auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
             &AllocatorFacade<Derived>::opq_inline_unalign_xscalloc_multi<T>,
@@ -4730,7 +4778,11 @@ class AllocatorFacade {
         requires(detail::is_stable_derived_allocator<Derived>)
     constexpr void free_multi(T* p_memory, ssize count) {
         if (is_constant_evaluated()) {
-            delete[] p_memory;
+            if (p_memory) {
+                // if (count > 0) {
+                delete[] p_memory;
+                // }
+            }
         } else {
             // if constexpr (is_destructible<T>) {
             for (ssize i = 0; i < count; ++i) {
@@ -4743,25 +4795,25 @@ class AllocatorFacade {
     }
 
     template <mem T>
-    void cfree(T& handle) {
+    constexpr void cfree(T& handle) {
         free(handle);
         zero_memory_explicit(addressof(this->get(handle)), handle.raw_size());
     }
 
     template <typename T>
-    void cfree(T* p_handle) {
+    constexpr void cfree(T* p_handle) {
         free(p_handle);
         zero_memory_explicit(p_handle, ssizeof<T>());
     }
 
     template <typename T>
-    void cfree_multi(T* p_handle, ssize count) {
+    constexpr void cfree_multi(T* p_handle, ssize count) {
         free(p_handle, count);
         zero_memory_explicit(p_handle, count * ssizeof<T>());
     }
 
-    // Get a non-`const` handle to the data in any memory handle. If that memory
-    // handle is to a multi-allocation, this returns a `Span`.
+    // Get a non-`const` handle to the data in any memory handle. If that
+    // memory handle is to a multi-allocation, this returns a `Span`.
     template <mem T>
     [[nodiscard]] constexpr auto get(T& handle) & -> decltype(auto) {
         using Allocation = typename T::Allocation;
@@ -4834,7 +4886,7 @@ class AllocatorFacade {
 
     // If the allocator does not over-ride a `.reset()` method, produce a
     // no-op.
-    void reset() {
+    constexpr void reset() {
     }
 
   private:
@@ -4918,12 +4970,14 @@ class AllocatorFacade {
                                     Conditional<is_multiple,
                                                 // Unsafe span.
                                                 Span<T>,
-                                                // Unsafe pointer w/out size.
+                                                // Unsafe pointer w/out
+                                                // size.
                                                 T*>>,
                         Conditional<has_feedback,
                                     // Unsafe opaque handle with size.
                                     SizedAllocation<Handle>,
-                                    // Unsafe opaque memory handle w/out size.
+                                    // Unsafe opaque memory handle w/out
+                                    // size.
                                     Handle>>>;
 
         // In `constexpr` code, unconditionally make an allocation.
@@ -4936,13 +4990,15 @@ class AllocatorFacade {
                     p_allocation =
                         new (std::align_val_t{allocation_alignment.raw})
                             T[allocation_count.raw];
-                    for (ssize i = 0; i < allocation_count; ++i) {
-                        construct_at(p_allocation + i);
-                    }
                 } else {
                     p_allocation =
                         new (std::align_val_t{allocation_alignment.raw})
                             T{constructor_arguments...};
+                }
+
+                // Data must be default-constructed in `constexpr` code.
+                for (ssize i = 0; i < allocation_count; ++i) {
+                    construct_at(p_allocation + i);
                 }
 
                 if constexpr (has_feedback) {
@@ -4991,8 +5047,8 @@ class AllocatorFacade {
                             T{forward<Args>(constructor_arguments)...});
                     }
 
-                    // Return here to skip error handling, because an on-stack
-                    // allocation cannot fail.
+                    // Return here to skip error handling, because an
+                    // on-stack allocation cannot fail.
                     if constexpr (has_feedback) {
                         return ReturnHandle{SizedAllocation<Handle>{
                             move(stack_handle), inline_buffer_size}};
@@ -5002,8 +5058,8 @@ class AllocatorFacade {
                 }
             }
 
-            // If this allocation is not small-size optimized, or is larger than
-            // `inline_buffer_size`:
+            // If this allocation is not small-size optimized, or is larger
+            // than `inline_buffer_size`:
 
             // Make an allocation.
             MaybeAllocation maybe_memory;
@@ -5023,16 +5079,21 @@ class AllocatorFacade {
                             Maybe actual_allocation_bytes =
                                 this->self().allocation_bytes(
                                     allocation_alignment, allocation_bytes);
+
                             if (actual_allocation_bytes.has_value()) {
-                                maybe_memory = MaybeSizedAllocation<void*>{
+                                void* p_allocation =
                                     this->self()
                                         .aligned_allocate(
                                             allocation_alignment,
-                                            actual_allocation_bytes)
+                                            actual_allocation_bytes.value())
                                         // If `.allocation_bytes()` succeeded,
                                         // this will not fail.
-                                        .value(),
-                                    actual_allocation_bytes.value()};
+                                        .value();
+
+                                maybe_memory = MaybeSizedAllocation<void*>(
+                                    Tuple<void*, ssize>{
+                                        p_allocation,
+                                        actual_allocation_bytes.value()});
                             } else {
                                 maybe_memory = nullopt;
                             }
@@ -5057,16 +5118,16 @@ class AllocatorFacade {
             } else {
                 if constexpr (has_feedback) {
                     if constexpr (detail::has_allocate_feedback<Derived>) {
-                        // Call `.allocate_feedback()` function for optimized
-                        // size-feedback.
+                        // Call `.allocate_feedback()` function for
+                        // optimized size-feedback.
                         maybe_memory =
                             this->self().allocate_feedback(allocation_bytes);
                     } else {
                         if constexpr (detail::has_aligned_allocate_feedback<
                                           Derived>) {
-                            // If `.allocate_feedback()` is not provided, but
-                            // `.aligned_allocate_feedback()` is, fall back to
-                            // that with alignment of `1u`.
+                            // If `.allocate_feedback()` is not provided,
+                            // but `.aligned_allocate_feedback()` is, fall back
+                            // to that with alignment of `1u`.
                             maybe_memory =
                                 this->self().aligned_allocate_feedback(
                                     1u, allocation_bytes);
@@ -5080,8 +5141,7 @@ class AllocatorFacade {
                             if (size.has_value()) {
                                 maybe_memory = MaybeSizedAllocation<void*>{
                                     // If `.allocation_bytes()` succeeded, this
-                                    // will
-                                    // not fail.
+                                    // will not fail.
                                     this->self()
                                         .allocate(allocation_bytes)
                                         .value(),
@@ -5090,8 +5150,8 @@ class AllocatorFacade {
                                 maybe_memory = nullopt;
                             }
                         } else {
-                            // If a `.allocation_bytes()` is also not provided,
-                            // simply assume that it allocates
+                            // If a `.allocation_bytes()` is also not
+                            // provided, simply assume that it allocates
                             // `allocation_size`.
                             auto temp_memory = this->self().aligned_allocate(
                                 allocation_alignment, allocation_bytes);
@@ -5108,8 +5168,8 @@ class AllocatorFacade {
                     if constexpr (detail::has_allocate<Derived>) {
                         maybe_memory = this->self().allocate(allocation_bytes);
                     } else {
-                        // If `.allocate` is not provided, implement it in terms
-                        // of
+                        // If `.allocate` is not provided, implement it in
+                        // terms of
                         // `.aligned_allocate()`.
                         maybe_memory =
                             this->self().allocate_aligned(1u, allocation_bytes);
@@ -5126,8 +5186,8 @@ class AllocatorFacade {
 
             T* p_allocation;
             if constexpr (has_feedback) {
-                // The `.first()` element of the `SizedAllocation` tuple is a
-                // `void*`.
+                // The `.first()` element of the `SizedAllocation` tuple is
+                // a `void*`.
                 p_allocation = static_cast<T*>(maybe_memory.value().first());
             } else {
                 p_allocation = static_cast<T*>(maybe_memory.value());
@@ -5195,8 +5255,8 @@ class AllocatorFacade {
     // generic memory handle, and free the original handle if that
     // allocation suceeded.
     template <bool is_fail_safe, bool has_feedback, typename... Args>
-    auto meta_realloc(auto function, is_allocator auto& allocator, auto& handle,
-                      Args&&... arguments) {
+    constexpr auto meta_realloc(auto function, auto& allocator, auto& handle,
+                                Args&&... arguments) {
         using Allocation = decltype((&allocator->*function)(
             forward<Args>(arguments)..., move(this->get(handle))));
         Allocation allocation;
@@ -5217,7 +5277,7 @@ class AllocatorFacade {
     }
 
     // Copy data from `handle` into `allocation`.
-    void relocate_handle(mem auto& handle, auto allocation) {
+    constexpr void relocate_handle(mem auto& handle, auto allocation) {
         if constexpr (is_trivially_relocatable<int>) {
             copy_memory(addressof(this->get(handle)), addressof(allocation),
                         handle.raw_size());
@@ -5230,8 +5290,9 @@ class AllocatorFacade {
     }
 
     // Copy data from `p_handle` into `p_allocation`.
-    void relocate_pointer_handle(auto* p_handle, auto* p_allocation,
-                                 ssize count) {
+    constexpr void relocate_pointer_handle(auto* p_handle, auto* p_allocation,
+                                           ssize count) {
+        // TODO: Use a `relocate()` function to streamline this.
         if constexpr (is_trivially_relocatable<decltype(*p_allocation)>) {
             copy_memory(p_handle, p_allocation, count);
         } else {
@@ -5243,8 +5304,9 @@ class AllocatorFacade {
 
     // Copy data from `p_handle` into `allocation`.
     template <typename T>
-    void relocate_pointer_handle(auto* p_handle, Span<T> allocation,
-                                 ssize count) {
+    constexpr void relocate_pointer_handle(auto* p_handle, Span<T> allocation,
+                                           ssize count) {
+        // TODO: Use a `relocate()` function to streamline this.
         if constexpr (is_trivially_relocatable<decltype(*(
                           allocation.data()))>) {
             copy_memory(p_handle, allocation.data(), count);
@@ -5256,14 +5318,15 @@ class AllocatorFacade {
     }
 
     template <bool is_fail_safe, bool has_feedback, typename... Args>
-    auto meta_realloc_multi(auto function, is_allocator auto& allocator,
-                            auto& handle, ssize count,
-                            Args&&... maybe_alignment) {
+    constexpr auto meta_realloc_multi(auto function, auto& allocator,
+                                      mem auto& handle, ssize new_count,
+                                      Args&&... maybe_alignment) {
         using Allocation = decltype((&allocator->*function)(
-            forward<Args>(maybe_alignment)..., count));
+            forward<Args>(maybe_alignment)..., new_count));
         Allocation allocation;
-        allocation =
-            (&allocator->*function)(forward<Args>(maybe_alignment)..., count);
+        allocation = (&allocator->*function)(forward<Args>(maybe_alignment)...,
+                                             new_count);
+
         if constexpr (is_fail_safe) {
             if constexpr (has_feedback) {
                 if (!allocation.has_value()) {
@@ -5284,14 +5347,16 @@ class AllocatorFacade {
             }
         }
 
+        // This can be an opaque handle.
         this->free(handle);
         return allocation;
     }
 
     template <bool is_fail_safe, bool has_feedback, typename... Args>
-    auto meta_realloc_multi(auto function, is_allocator auto& allocator,
-                            auto& handle, ssize old_count, ssize new_count,
-                            Args&&... maybe_alignment) {
+    constexpr auto meta_realloc_multi(auto function, auto& allocator,
+                                      auto* p_handle, ssize old_count,
+                                      ssize new_count,
+                                      Args&&... maybe_alignment) {
         using Allocation = decltype((&allocator->*function)(
             forward<Args>(maybe_alignment)..., new_count));
 
@@ -5304,24 +5369,24 @@ class AllocatorFacade {
                     return allocation;
                 }
                 this->relocate_pointer_handle(
-                    handle, allocation.value().first(), old_count);
+                    p_handle, allocation.value().first(), old_count);
             } else {
                 if (!allocation.has_value()) {
                     return allocation;
                 }
-                this->relocate_pointer_handle(handle, allocation.value(),
+                this->relocate_pointer_handle(p_handle, allocation.value(),
                                               old_count);
             }
         } else {
             if constexpr (has_feedback) {
-                this->relocate_pointer_handle(handle, allocation.first(),
+                this->relocate_pointer_handle(p_handle, allocation.first(),
                                               old_count);
             } else {
-                this->relocate_pointer_handle(handle, allocation, old_count);
+                this->relocate_pointer_handle(p_handle, allocation, old_count);
             }
         }
 
-        this->free(handle);
+        this->free_multi(p_handle, old_count);
         return allocation;
     }
 };

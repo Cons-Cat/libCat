@@ -34,6 +34,11 @@ consteval void const_test() {
     allocator.free(p_xalloc);
 
     cat::Span<int4> alloc_multi = allocator.alloc_multi<int4>(5).value();
+
+    alloc_multi =
+        allocator.realloc_multi(alloc_multi.data(), alloc_multi.size(), 10)
+            .value();
+
     allocator.free_multi(alloc_multi.data(), alloc_multi.size());
 
     cat::Span<int4> xalloc_multi = allocator.xalloc_multi<int4>(5);
