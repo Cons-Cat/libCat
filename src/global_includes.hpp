@@ -131,11 +131,11 @@ class String;
         /* the return type instead, but of course `NoType` will never be */ \
         /* returned.*/                                                      \
         using ReturnType =                                                  \
-            cat::Conditional<cat::is_specialization<TRY_T, cat::Maybe>,  \
+            cat::Conditional<cat::is_specialization<TRY_T, cat::Maybe>,     \
                              cat::detail::NullOpt, cat::NoType>;            \
                                                                             \
         if (!((container).has_value())) {                                   \
-            if constexpr (cat::is_specialization<TRY_T, cat::Maybe>) {   \
+            if constexpr (cat::is_specialization<TRY_T, cat::Maybe>) {      \
                 return ReturnType{};                                        \
             } else {                                                        \
                 return (container);                                         \
@@ -164,3 +164,14 @@ class String;
 // NOLINTNEXTLINE Let this be `inline`.
 inline void operator delete[](void*){};
 inline void operator delete[](void*, unsigned long){};
+
+namespace std {
+enum class align_val_t : __SIZE_TYPE__ {
+};
+}  // namespace std
+
+// NOLINTNEXTLINE Let this be `inline`.
+[[nodiscard]] inline auto operator new[](unsigned long, std::align_val_t align)
+    -> void* {
+    return reinterpret_cast<void*>(align);
+}

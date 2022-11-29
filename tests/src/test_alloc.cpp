@@ -24,7 +24,25 @@ struct AllocNonTrivialHugeObject {
     }
 };
 
+consteval void const_test() {
+    cat::PageAllocator allocator;
+
+    int4* p_alloc = allocator.alloc<int4>(1).value();
+    allocator.free(p_alloc);
+
+    int4* p_xalloc = allocator.xalloc<int4>(1);
+    allocator.free(p_xalloc);
+
+    cat::Span<int4> alloc_multi = allocator.alloc_multi<int4>(5).value();
+    allocator.free_multi(alloc_multi.data(), alloc_multi.size());
+
+    cat::Span<int4> xalloc_multi = allocator.xalloc_multi<int4>(5);
+    allocator.free_multi(xalloc_multi.data(), xalloc_multi.size());
+}
+
 TEST(test_alloc) {
+    const_test();
+
     // Initialize an allocator.
     cat::PageAllocator paging_allocator;
     paging_allocator.reset();
