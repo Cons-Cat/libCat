@@ -7,6 +7,7 @@
 #include <cat/array>
 #include <cat/collection>
 #include <cat/math>
+#include <cat/utility>
 
 // The deprecated copy constructor is intended must be used internally, so
 // disable deprecated warnings within this file.
@@ -23,10 +24,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
     constexpr Vector()
         : p_storage(nullptr), current_size(0), current_capacity(0) {
         if (is_constant_evaluated()) {
-            // This array cannot be length 0 or `nullptr` in a `constexpr`
-            // context.
-            this->p_storage = new T[1];
-            this->p_storage[0] = 0;
+            this->p_storage = nullptr;
         }
     };
 
@@ -47,7 +45,8 @@ class Vector : public CollectionFacade<Vector<T>, T> {
 
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
     // context.
-    auto double_storage(is_stable_allocator auto& allocator) -> Maybe<void> {
+    constexpr auto increase_storage(is_stable_allocator auto& allocator)
+        -> Maybe<void> {
         ssize minimum_capacity;
         if (this->current_capacity > 0) [[likely]] {
             minimum_capacity = this->current_capacity * 2;
@@ -57,46 +56,43 @@ class Vector : public CollectionFacade<Vector<T>, T> {
             minimum_capacity = 4;
         }
 
-        // Make a new allocation with size feedback.
-        auto [alloc_span, alloc_bytes] = TRY(allocator.template resalloc_multi(
-            this->p_storage, this->current_capacity, minimum_capacity));
+        // TODO: I am fairly certain this is a bug in GCC. This works around
+        // that.
+        if (is_constant_evaluated()) {
+            T* p_new = new T[minimum_capacity.raw];
+            for (ssize::Raw i = 0; i < this->current_size; ++i) {
+                construct_at(p_new + i, move(this->p_storage[i]));
+            }
+            for (ssize i = this->current_size + 1; i < minimum_capacity; ++i) {
+                construct_at(p_new + i.raw);
+            }
+            delete[] this->p_storage;
+            this->p_storage = p_new;
+            this->current_capacity = minimum_capacity;
+        } else {
+            // Make a new allocation with size feedback.
+            auto [alloc_span, alloc_bytes] =
+                TRY(allocator.template resalloc_multi(
+                    this->p_storage, this->current_capacity, minimum_capacity));
 
-        this->current_capacity = alloc_bytes * ssizeof<T>();
-        this->p_storage = alloc_span.data();
+            this->current_capacity = alloc_bytes * ssizeof<T>();
+            this->p_storage = alloc_span.data();
+        }
+
         return monostate;
     }
 
-    // Reallocate this vector's memory if it is exceeded, in a `constexpr`
-    // context.
-    consteval void const_double_storage() {
-        ssize const new_capacity = max(4_sz, this->current_capacity * 2);
-        T* p_new = new T[new_capacity.raw];
-
-        for (ssize::Raw i = 0; i < this->current_size; ++i) {
-            p_new[i] = move(this->p_storage[i]);
-        }
-
-        delete[] this->p_storage;
-        this->p_storage = p_new;
-        this->current_capacity = new_capacity;
-    }
-
   public:
-    [[nodiscard]] static auto reserved(is_stable_allocator auto& allocator,
-                                       ssize capacity) -> Maybe<Vector<T>> {
+    [[nodiscard]] static constexpr auto reserved(
+        is_stable_allocator auto& allocator, ssize capacity)
+        -> Maybe<Vector<T>> {
         Vector<T> new_vector;
         TRY(new_vector.reserve(allocator, capacity));
         return new_vector;
     }
 
-    [[nodiscard]] consteval static auto reserved(ssize count) -> Vector<T> {
-        Vector<T> new_vector;
-        new_vector.reserve(count);
-        return new_vector;
-    }
-
-    [[nodiscard]] static auto filled(is_stable_allocator auto& allocator,
-                                     ssize count, T const& value)
+    [[nodiscard]] static constexpr auto filled(
+        is_stable_allocator auto& allocator, ssize count, T const& value)
         -> Maybe<Vector<T>> {
         Vector<T> new_vector;
         Maybe result = new_vector.reserve(allocator, count);
@@ -129,88 +125,53 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         return this->current_capacity;
     }
 
-    // Try to change the capacity of this `Vector` in a non-`constexpr` context.
-    [[nodiscard]] auto reserve(is_stable_allocator auto& allocator,
-                               ssize minimum_capacity) -> Maybe<void> {
+    // Try to allocate storage for at least `minimum_capacity` number of `T`s.
+    [[nodiscard]] constexpr auto reserve(is_stable_allocator auto& allocator,
+                                         ssize minimum_capacity)
+        -> Maybe<void> {
         if (minimum_capacity > this->current_capacity) {
-            auto [alloc_span, alloc_bytes] =
-                TRY(allocator.template resalloc_multi(
-                    this->p_storage, this->current_capacity, minimum_capacity));
+            // TODO: I am fairly certain this is a bug in GCC. This works around
+            // that.
+            if (is_constant_evaluated()) {
+                delete[] this->p_storage;
+                this->p_storage = new T[minimum_capacity.raw];
+                this->current_capacity = minimum_capacity;
 
-            allocator.free_multi(this->p_storage, this->current_size);
+                for (ssize i = this->current_size + 1;
+                     i < this->current_capacity; ++i) {
+                    construct_at(this->p_storage + i);
+                }
+            } else {
+                auto [alloc_span, alloc_bytes] =
+                    TRY(allocator.template resalloc_multi(
+                        this->p_storage, this->current_capacity,
+                        minimum_capacity));
 
-            this->p_storage = alloc_span.data();
-            this->current_capacity = alloc_bytes;
-            return monostate;
+                p_storage = alloc_span.data();
+                this->current_capacity = alloc_bytes / ssizeof<T>();
+            }
         }
 
         // If the new capacity is not larger, do nothing.
         return monostate;
     }
 
-    // Change the capacity of this `Vector` in a `constexpr` context.
-    consteval void reserve(ssize new_capacity) {
-        if (new_capacity > this->current_capacity) {
-            // TODO: `.opq_resalloc()`.
-            T* p_new = new T[new_capacity.raw];
-            for (ssize::Raw i = 0; i < this->current_size; ++i) {
-                p_new[i] = move(this->p_storage[i]);
-            }
-
-            delete[] this->p_storage;
-            this->p_storage = p_new;
-            this->current_capacity = new_capacity;
-        }
-        // If the new capacity is not larger, do nothing.
-    }
-
-    // Try to change the size of this `Vector` in a non-`constexpr` context.
-    [[nodiscard]] auto resize(is_stable_allocator auto& allocator,
-                              ssize minimum_size) -> Maybe<void> {
-        if (minimum_size > this->current_capacity) {
-            TRY(this->reserve(allocator, minimum_size));
-            ssize new_size = this->current_capacity;
-
-            // Construct `T` at the newly reserved memory.
-            for (ssize i = this->current_size; i < new_size; ++i) {
-                construct_at(this->p_storage + i);
-            }
-
-            this->current_size = new_size;
-            return monostate;
+    // Try to change the size of this `Vector`.
+    [[nodiscard]] constexpr auto resize(is_stable_allocator auto& allocator,
+                                        ssize size) -> Maybe<void> {
+        if (size > this->current_capacity) {
+            // This sets `this->current_capacity` and `this->p_storage`.
+            TRY(this->reserve(allocator, size));
         }
 
         // If the new size is not larger, simply shrink size and maintain
         // capacity.
-        this->current_size = minimum_size;
+        this->current_size = size;
         return monostate;
-    }
-
-    // Try to change the size of this `Vector` in a `constexpr` context.
-    consteval void resize(ssize new_size) {
-        if (new_size > this->current_capacity) {
-            T* p_new = new T[new_size.raw];
-            for (ssize::Raw i = 0; i < this->current_size; ++i) {
-                p_new[i] = move(this->p_storage[i]);
-            }
-            for (ssize::Raw i = this->current_size.raw; i < new_size; i++) {
-                p_new[i] = T{};
-            }
-
-            delete[] this->p_storage;
-            this->p_storage = p_new;
-            this->current_size = new_size;
-            this->current_capacity = new_size;
-            return;
-        }
-
-        // If the new size is not larger, simply shrink size and maintain
-        // capacity.
-        this->current_size = new_size;
     }
 
     // Deep-copy the contents of this `Vector`.
-    [[nodiscard]] auto clone(
+    [[nodiscard]] constexpr auto clone(
         is_stable_allocator auto& allocator) const& -> Maybe<Vector<T>> {
         Vector<T> new_vector =
             TRY(Vector<T>::reserved(allocator, this->current_capacity));
@@ -220,41 +181,20 @@ class Vector : public CollectionFacade<Vector<T>, T> {
         return new_vector;
     }
 
-    [[nodiscard]] consteval auto clone() const& -> Vector<T> {
-        Vector<T> new_vector = Vector<T>::reserved(this->current_capacity);
-        new_vector.current_size = this->current_size;
-        for (ssize i = 0; i < this->current_size; ++i) {
-            new_vector[i] = move(this->p_storage[i]);
-        }
-        return new_vector;
-    }
-
     // TODO: rval-ref overload of `.push_back()`.
     // TODO: `.emplace_back()`.
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    [[nodiscard]] auto push_back(is_stable_allocator auto& allocator,
-                                 U const& value) -> Maybe<void> {
+    [[nodiscard]] constexpr auto push_back(is_stable_allocator auto& allocator,
+                                           U const& value) -> Maybe<void> {
         if (this->current_size + 1 > this->current_capacity) {
-            Maybe result = this->double_storage(allocator);
-            if (!result.has_value()) {
-                return nullopt;
-            }
+            TRY(this->increase_storage(allocator));
         }
-        this->p_storage[this->current_size.raw] = static_cast<T>(value);
-        this->current_size += 1;
-        return monostate;
-    }
 
-    template <typename U>
-        requires(is_implicitly_convertible<U, T>)
-    consteval void push_back(U const& value) {
-        if (this->current_size + 1 > this->current_capacity) {
-            this->const_double_storage();
-        }
         this->p_storage[this->current_size.raw] = static_cast<T>(value);
-        this->current_size += 1;
+        ++(this->current_size);
+        return monostate;
     }
 
   private:

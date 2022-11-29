@@ -6,13 +6,14 @@
 
 // Test that `Vector` works in a `constexpr` context.
 consteval auto const_func() -> int4 {
+    cat::PageAllocator allocator;
     cat::Vector<int4> vector;
-    vector.resize(8);
+    _ = vector.resize(allocator, 8);
+
     vector[0] = 1;
     vector[1] = 2;
-    vector[7] = 2;
-    vector.push_back(10);
-
+    vector[7] = 10;
+    _ = vector.push_back(allocator, 10);
     return vector[8];
 }
 
