@@ -90,7 +90,7 @@ struct MaybeValueStorage {
     }
 
     // If `T` is trivially copy-assignable, then forward this value.
-    auto operator=(T const& in_value)
+    constexpr auto operator=(T const& in_value)
         -> MaybeValueStorage& requires(is_trivially_copy_assignable<T>) {
         this->storage = in_value;
         this->has_some = true;
@@ -99,7 +99,7 @@ struct MaybeValueStorage {
 
     // If `T` is non-trivially copy-assignable, then manually construct it
     // in-place.
-    auto operator=(T const& in_value)
+    constexpr auto operator=(T const& in_value)
         -> MaybeValueStorage& requires(is_copy_assignable<T> &&
                                        !is_trivially_copy_assignable<T>) {
         this->assign(in_value);
@@ -108,11 +108,11 @@ struct MaybeValueStorage {
 
     // If `T` is not copy-assignable, delete this assignment operator to prevent
     // ambiguous overload resolution.
-    auto operator=(T const& in_value)
+    constexpr auto operator=(T const& in_value)
         -> MaybeValueStorage& requires(!is_copy_assignable<T>) = delete;
 
     // If `T` is trivially move-assignable, then forward this value.
-    auto operator=(T&& in_value)
+    constexpr auto operator=(T&& in_value)
         -> MaybeValueStorage& requires(is_trivially_move_assignable<T>) {
         this->storage = forward<T>(in_value);
         this->has_some = true;
@@ -130,7 +130,7 @@ struct MaybeValueStorage {
 
     // If `T` is not move-assignable, delete this assignment operator to prevent
     // ambiguous overload resolution.
-    auto operator=(T&& in_value)
+    constexpr auto operator=(T&& in_value)
         -> MaybeValueStorage& requires(!is_move_assignable<T>) = delete;
 
     // The following methods are homogenous to all `Maybe...Storage` types.
@@ -155,7 +155,7 @@ struct MaybeValueStorage {
     }
 
     // Destroy the storage unconditionally.
-    void hard_reset() {
+    constexpr void hard_reset() {
         this->storage.~T();
         this->has_some = false;
     }
@@ -237,7 +237,7 @@ struct MaybeReferenceStorage {
     }
 
     // Destroy the storage unconditionally.
-    void hard_reset() {
+    constexpr void hard_reset() {
         this->p_storage->~RemoveReference<Value>();
         this->p_storage = nullptr;
     }
@@ -304,7 +304,7 @@ struct MaybeCompactStorage {
 
     // If `Value` is not trivially move-constructible, then manually invoke
     // `move` on it.
-    MaybeCompactStorage(Value&& in_value) requires(
+    constexpr MaybeCompactStorage(Value&& in_value) requires(
         is_move_constructible<Value> &&
         !is_trivially_move_constructible<Value>) {
         this->construct(forward<Value>(in_value));
@@ -336,7 +336,7 @@ struct MaybeCompactStorage {
     // their `requires`, they should be `default` or deleted.
 
     // If `Value` is trivially copy-assignable, then forward this value.
-    auto operator=(Value const& in_value)
+    constexpr auto operator=(Value const& in_value)
         -> MaybeCompactStorage& requires(is_trivially_copy_assignable<Value>) {
         this->storage = in_value;
         return *this;
@@ -344,7 +344,7 @@ struct MaybeCompactStorage {
 
     // If `Value` is non-trivially copy-assignable, then manually construct
     // it in-place.
-    auto operator=(Value const& in_value)
+    constexpr auto operator=(Value const& in_value)
         -> MaybeCompactStorage& requires(is_copy_assignable<Value> &&
                                          !is_trivially_copy_assignable<Value>) {
         this->assign(in_value);
@@ -353,11 +353,11 @@ struct MaybeCompactStorage {
 
     // If `Value` is not copy-assignable, delete this assignment operator to
     // prevent ambiguous overload resolution.
-    auto operator=(Value const& in_value)
+    constexpr auto operator=(Value const& in_value)
         -> MaybeCompactStorage& requires(!is_copy_assignable<Value>) = delete;
 
     // If `Value` is trivially move-assignable, then forward this value.
-    auto operator=(Value&& in_value)
+    constexpr auto operator=(Value&& in_value)
         -> MaybeCompactStorage& requires(is_trivially_move_assignable<Value>) {
         this->storage = forward<Value>(in_value);
         return *this;
@@ -374,7 +374,7 @@ struct MaybeCompactStorage {
 
     // If `Value` is not move-assignable, delete this assignment operator to
     // prevent ambiguous overload resolution.
-    auto operator=(Value&& in_value)
+    constexpr auto operator=(Value&& in_value)
         -> MaybeCompactStorage& requires(!is_move_assignable<Value>) = delete;
 
     // The following methods are homogenous to all `Maybe...Storage`
@@ -400,7 +400,7 @@ struct MaybeCompactStorage {
     }
 
     // Destroy the storage unconditionally.
-    void hard_reset() {
+    constexpr void hard_reset() {
         this->storage.~Value();
         this->storage = T::sentinel_value;
     }
@@ -414,8 +414,6 @@ struct MaybeCompactStorage {
     // If this is assigned an `Maybe` which wraps a type that can be
     // converted to `T` , then convert that storage to this type implicitly.
     template <typename OtherMaybe>
-        requires(is_specialization<OtherMaybe, Maybe>&&
-                     is_implicitly_convertible<typename OtherMaybe::Value, T>)
     constexpr void assign(OtherMaybe&& maybe) {
         if (this->has_value()) {
             if (maybe.has_value()) {
@@ -564,7 +562,7 @@ class Maybe {
     template <typename U>
         requires(is_implicitly_convertible<U, Value> && !is_reference<Value> &&
                  is_move_assignable<Value>)
-    auto operator=(U&& value) -> Maybe& {
+    constexpr auto operator=(U&& value) -> Maybe& {
         this->storage = static_cast<Value&&>(forward<U>(value));
         return *this;
     }
@@ -582,7 +580,7 @@ class Maybe {
     template <typename U>
         requires(is_implicitly_convertible<U, Value> && !is_reference<Value> &&
                  !is_reference<U>)
-    auto operator=(Maybe<U> const& maybe) -> Maybe& {
+    constexpr auto operator=(Maybe<U> const& maybe) -> Maybe& {
         this->storage.assign(maybe);
         return *this;
     }
@@ -591,7 +589,7 @@ class Maybe {
     template <typename U>
         requires(
             is_implicitly_convertible<U, Value>&& is_move_assignable<Value>)
-    auto operator=(Maybe<U>&& maybe) -> Maybe& {
+    constexpr auto operator=(Maybe<U>&& maybe) -> Maybe& {
         this->storage.assign(move(maybe));
         return *this;
     }
@@ -599,13 +597,13 @@ class Maybe {
     // Rebinding converting `Maybe` reference assignment operator.
     template <typename U>
         requires(is_implicitly_convertible<U, Value>)
-    auto operator=(Maybe<U>& maybe) -> Maybe& {
+    constexpr auto operator=(Maybe<U>& maybe) -> Maybe& {
         this->storage.assign(maybe);
         return *this;
     }
 
     // Assigning `nullopt` destroys any value.
-    auto operator=(detail::NullOpt) -> Maybe& {
+    constexpr auto operator=(detail::NullOpt) -> Maybe& {
         this->storage.hard_reset();
         return *this;
     }

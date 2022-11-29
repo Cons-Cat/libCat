@@ -60,7 +60,7 @@ constexpr Span(U&& container)
 
     template <typename U>
         requires(is_implicitly_convertible<U*, T*>)
-    auto operator=(Span<U>&& span) {
+    constexpr auto operator=(Span<U>&& span) {
         this->p_storage = span.p_storage;
         this->length = cat::move(span).length;
         return *this;
