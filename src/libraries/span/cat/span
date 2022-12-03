@@ -50,21 +50,8 @@ constexpr Span(U&& container)
       length(forward<U>(container).size()){};
     */
 
-    template <typename U>
-        requires(is_implicitly_convertible<U*, T*>)
-    constexpr auto operator=(Span<U> const& span) {
-        this->p_storage = span.p_storage;
-        this->length = span.length;
-        return *this;
-    }
-
-    template <typename U>
-        requires(is_implicitly_convertible<U*, T*>)
-    constexpr auto operator=(Span<U>&& span) {
-        this->p_storage = span.p_storage;
-        this->length = cat::move(span).length;
-        return *this;
-    }
+    constexpr auto operator=(Span<T> const&) -> Span<T>& = default;
+    constexpr auto operator=(Span<T>&&) -> Span<T>& = default;
 
     // Get the non-`const` address that this `Span` starts at.
     [[nodiscard]] constexpr auto data() -> T* {
