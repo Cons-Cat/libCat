@@ -64,6 +64,8 @@ class PoolAllocator : public AllocatorFacade<PoolAllocator<max_node_bytes>> {
     }
 
     auto allocate(ssize) -> MaybePtr<void> {
+        // If there is a next node in the free list, make that the head and
+        // allocate the current head. Otherwise, do not allocate anything.
         if (this->p_head == nullptr) {
             return nullopt;
         }
@@ -75,6 +77,7 @@ class PoolAllocator : public AllocatorFacade<PoolAllocator<max_node_bytes>> {
     }
 
     void deallocate(void const* p_allocation, ssize) {
+        // Swap the head for this newly freed allocation.
         Node* p_new_head = bit_cast<Node*>(p_allocation);
         p_new_head->p_next = this->p_head;
         this->p_head = p_new_head;
