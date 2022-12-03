@@ -217,39 +217,44 @@ concept is_allocator = requires(T allocator) {
 namespace detail {
     // `clangd` emits false-positive diagnostics if this constraint is used
     // anonymously without a `concept`.
-    template <typename AllocatorT>
-    concept is_stable_derived_allocator = AllocatorT::has_pointer_stability;
+    template <typename Allocator>
+    concept is_stable_derived_allocator = Allocator::has_pointer_stability;
 
-    template <typename AllocatorT>
-    concept has_allocate = requires(AllocatorT allocator) {
+    template <typename Allocator>
+    concept has_allocate = requires(Allocator allocator) {
         allocator.allocate(1_sz);
     };
 
-    template <typename AllocatorT>
-    concept has_aligned_allocate = requires(AllocatorT allocator) {
+    template <typename Allocator>
+    concept has_aligned_allocate = requires(Allocator allocator) {
         allocator.aligned_allocate(1_uz, 1_sz);
     };
 
-    template <typename AllocatorT>
-    concept has_allocation_size = requires(AllocatorT allocator) {
+    template <typename Allocator>
+    concept has_allocation_size = requires(Allocator allocator) {
         allocator.allocation_bytes(1_uz, 1_sz);
     };
 
-    template <typename AllocatorT>
-    concept has_allocate_feedback = requires(AllocatorT allocator) {
+    template <typename Allocator>
+    concept has_allocate_feedback = requires(Allocator allocator) {
         allocator.allocate_feedback(1_sz);
     };
 
-    template <typename AllocatorT>
-    concept has_aligned_allocate_feedback = requires(AllocatorT allocator) {
+    template <typename Allocator>
+    concept has_aligned_allocate_feedback = requires(Allocator allocator) {
         allocator.aligned_allocate_feedback(1_uz, 1_sz);
+    };
+
+    template <typename Allocator>
+    concept has_max_allocation_bytes = requires(Allocator allocator) {
+        allocator.max_allocation_bytes;
     };
 }  // namespace detail
 
 // TODO: Make unstable allocators.
-template <typename AllocatorT>
+template <typename Allocator>
 concept is_stable_allocator =
-    is_allocator<AllocatorT> && AllocatorT::has_pointer_stability;
+    is_allocator<Allocator> && Allocator::has_pointer_stability;
 
 template <typename T>
 using SizedAllocation = Tuple<T, ssize>;
@@ -4762,6 +4767,11 @@ class AllocatorFacade {
     template <typename T>
         requires(detail::is_stable_derived_allocator<Derived>)
     constexpr void free(T* p_memory) {
+        if constexpr (detail::has_max_allocation_bytes<Derived>) {
+            static_assert(ssizeof<T>() <= Derived::max_allocation_bytes,
+                          "This allocation is too large for this allocator!");
+        }
+
         if (is_constant_evaluated()) {
             delete p_memory;
         } else {
@@ -4778,6 +4788,13 @@ class AllocatorFacade {
     template <typename T>
         requires(detail::is_stable_derived_allocator<Derived>)
     constexpr void free_multi(T* p_memory, ssize count) {
+        if constexpr (detail::has_max_allocation_bytes<Derived>) {
+            static_assert(ssizeof<T>() <= Derived::max_allocation_bytes,
+                          "This allocation is too large for this allocator!");
+            cat::assert(ssizeof<T>() * count <= Derived::max_allocation_bytes,
+                        "This allocation is too large for this allocator!");
+        }
+
         if (is_constant_evaluated()) {
             if (p_memory) {
                 // if (count > 0) {
@@ -4909,6 +4926,14 @@ class AllocatorFacade {
     [[gnu::optimize("-fno-tree-loop-distribute-patterns")]] constexpr auto
     meta_alloc(usize allocation_alignment, ssize allocation_count,
                Args&&... constructor_arguments) {
+        if constexpr (detail::has_max_allocation_bytes<Derived>) {
+            static_assert(ssizeof<T>() <= Derived::max_allocation_bytes,
+                          "This allocation is too large for this allocator!");
+            cat::assert(ssizeof<T>() * allocation_count <=
+                            Derived::max_allocation_bytes,
+                        "This allocation is too larger for this allocator!");
+        }
+
         ssize const allocation_bytes = allocation_count * ssizeof<T>();
 
         // Produce a basic handle for this memory type.

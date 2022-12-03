@@ -59,17 +59,11 @@ class PoolAllocator : public AllocatorFacade<PoolAllocator<max_node_bytes>> {
     }
 
   private:
-    auto allocation_bytes(usize, ssize allocation_bytes)
-        -> MaybeNonZero<ssize> {
-        cat::assert(allocation_bytes <= max_node_bytes,
-                    "Allocation is too large for this pool!");
+    auto allocation_bytes(usize, ssize) -> MaybeNonZero<ssize> {
         return max_node_bytes;
     }
 
-    auto allocate(ssize allocation_bytes) -> MaybePtr<void> {
-        cat::assert(allocation_bytes <= max_node_bytes,
-                    "Allocation is too large for this pool!");
-
+    auto allocate(ssize) -> MaybePtr<void> {
         if (this->p_head == nullptr) {
             return nullopt;
         }
@@ -80,8 +74,7 @@ class PoolAllocator : public AllocatorFacade<PoolAllocator<max_node_bytes>> {
         return static_cast<void*>(p_alloc);
     }
 
-    void deallocate(void const* p_allocation, ssize allocation_bytes) {
-        cat::assert(allocation_bytes <= max_node_bytes);
+    void deallocate(void const* p_allocation, ssize) {
         Node* p_new_head = bit_cast<Node*>(p_allocation);
         p_new_head->p_next = this->p_head;
         this->p_head = p_new_head;
@@ -106,13 +99,16 @@ class PoolAllocator : public AllocatorFacade<PoolAllocator<max_node_bytes>> {
 
   public:
     static constexpr bool has_pointer_stability = true;
+
+    // Do not allocate larger than this size of one node.
+    static constexpr ssize max_allocation_bytes = max_node_bytes;
   private:
     friend AllocatorFacade<PoolAllocator>;
 
     union Node {
         Node* p_next = nullptr;
         Byte storage[max_node_bytes.raw];
-    } node;
+    };
 
     Span<Node> nodes;
     Node* p_head;
