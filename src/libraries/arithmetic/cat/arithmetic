@@ -81,28 +81,36 @@ constexpr auto make_sign_from(Sign, T value) -> CopySignFrom<Sign, T> {
 }
 
 // These macros are defined by the GCC compiler.
-using int1 = Arithmetic<__INT8_TYPE__, OverflowPolicies::undefined>;     // NOLINT
-using uint1 = Arithmetic<__UINT8_TYPE__, OverflowPolicies::undefined>;   // NOLINT
-using int2 = Arithmetic<__INT16_TYPE__, OverflowPolicies::undefined>;    // NOLINT
-using uint2 = Arithmetic<__UINT16_TYPE__, OverflowPolicies::undefined>;  // NOLINT
-using int4 = Arithmetic<__INT32_TYPE__, OverflowPolicies::undefined>;    // NOLINT
-using uint4 = Arithmetic<__UINT32_TYPE__, OverflowPolicies::undefined>;  // NOLINT
-using int8 = Arithmetic<__INT64_TYPE__, OverflowPolicies::undefined>;    // NOLINT
-using uint8 = Arithmetic<__UINT64_TYPE__, OverflowPolicies::undefined>;  // NOLINT
+using int1 = Arithmetic<__INT8_TYPE__, OverflowPolicies::undefined>;  // NOLINT
+using uint1 =
+    Arithmetic<__UINT8_TYPE__, OverflowPolicies::undefined>;           // NOLINT
+using int2 = Arithmetic<__INT16_TYPE__, OverflowPolicies::undefined>;  // NOLINT
+using uint2 =
+    Arithmetic<__UINT16_TYPE__, OverflowPolicies::undefined>;          // NOLINT
+using int4 = Arithmetic<__INT32_TYPE__, OverflowPolicies::undefined>;  // NOLINT
+using uint4 =
+    Arithmetic<__UINT32_TYPE__, OverflowPolicies::undefined>;          // NOLINT
+using int8 = Arithmetic<__INT64_TYPE__, OverflowPolicies::undefined>;  // NOLINT
+using uint8 =
+    Arithmetic<__UINT64_TYPE__, OverflowPolicies::undefined>;  // NOLINT
 // using i128 = Arithmetic<int128_t, OverflowPolicies::undefined>; // NOLINT
 // using u128 = Arithmetic<uint128_t, OverflowPolicies::undefined>; // NOLINT
 
 using float4 = Arithmetic<float, OverflowPolicies::undefined>;   // NOLINT
 using float8 = Arithmetic<double, OverflowPolicies::undefined>;  // NOLINT
 
-using wrap_int1 = Arithmetic<__INT8_TYPE__, OverflowPolicies::wrap>;     // NOLINT
-using wrap_uint1 = Arithmetic<__UINT8_TYPE__, OverflowPolicies::wrap>;   // NOLINT
-using wrap_int2 = Arithmetic<__INT16_TYPE__, OverflowPolicies::wrap>;    // NOLINT
-using wrap_uint2 = Arithmetic<__UINT16_TYPE__, OverflowPolicies::wrap>;  // NOLINT
-using wrap_int4 = Arithmetic<__INT32_TYPE__, OverflowPolicies::wrap>;    // NOLINT
-using wrap_uint4 = Arithmetic<__UINT32_TYPE__, OverflowPolicies::wrap>;  // NOLINT
-using wrap_int8 = Arithmetic<__INT64_TYPE__, OverflowPolicies::wrap>;    // NOLINT
-using wrap_uint8 = Arithmetic<__UINT64_TYPE__, OverflowPolicies::wrap>;  // NOLINT
+using wrap_int1 = Arithmetic<__INT8_TYPE__, OverflowPolicies::wrap>;  // NOLINT
+using wrap_uint1 =
+    Arithmetic<__UINT8_TYPE__, OverflowPolicies::wrap>;                // NOLINT
+using wrap_int2 = Arithmetic<__INT16_TYPE__, OverflowPolicies::wrap>;  // NOLINT
+using wrap_uint2 =
+    Arithmetic<__UINT16_TYPE__, OverflowPolicies::wrap>;               // NOLINT
+using wrap_int4 = Arithmetic<__INT32_TYPE__, OverflowPolicies::wrap>;  // NOLINT
+using wrap_uint4 =
+    Arithmetic<__UINT32_TYPE__, OverflowPolicies::wrap>;               // NOLINT
+using wrap_int8 = Arithmetic<__INT64_TYPE__, OverflowPolicies::wrap>;  // NOLINT
+using wrap_uint8 =
+    Arithmetic<__UINT64_TYPE__, OverflowPolicies::wrap>;  // NOLINT
 
 // NOLINTNEXTLINE
 using sat_int1 = Arithmetic<__INT8_TYPE__, OverflowPolicies::saturate>;
@@ -124,7 +132,8 @@ using sat_uint8 = Arithmetic<__UINT64_TYPE__, OverflowPolicies::saturate>;
 // NOLINTNEXTLINE
 using usize = Arithmetic<__SIZE_TYPE__, OverflowPolicies::undefined>;
 // NOLINTNEXTLINE
-using ssize = Arithmetic<MakeSigned<__SIZE_TYPE__>, OverflowPolicies::undefined>;
+using ssize =
+    Arithmetic<MakeSigned<__SIZE_TYPE__>, OverflowPolicies::undefined>;
 
 template <typename From, typename To>
 concept is_safe_arithmetic_comparison =
@@ -148,9 +157,11 @@ namespace detail {
             return U{};
         } else {
             if constexpr (sizeof(T) >= sizeof(U)) {
-                return Arithmetic<ToRawArithmetic<T>, OverflowPolicies::undefined>{};
+                return Arithmetic<ToRawArithmetic<T>,
+                                  OverflowPolicies::undefined>{};
             } else {
-                return Arithmetic<ToRawArithmetic<U>, OverflowPolicies::undefined>{};
+                return Arithmetic<ToRawArithmetic<U>,
+                                  OverflowPolicies::undefined>{};
             }
         }
     }
@@ -201,7 +212,7 @@ template <is_integral T, is_integral U>
     // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
     using Type = ToRawArithmetic<MakeUnsigned<Larger<T, U>>>;
     return detail::PromotedArithmetic<T, U>{static_cast<Type>(lhs) +
-                                         static_cast<Type>(rhs)};
+                                            static_cast<Type>(rhs)};
 }
 
 // Subtract two integers with saturating overflow.
@@ -233,7 +244,7 @@ template <is_integral T, is_integral U>
     // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
     using Type = ToRawArithmetic<MakeUnsigned<Larger<T, U>>>;
     return detail::PromotedArithmetic<T, U>{static_cast<Type>(lhs) -
-                                         static_cast<Type>(rhs)};
+                                            static_cast<Type>(rhs)};
 }
 
 // Subtract two integers with saturating overflow.
@@ -265,7 +276,7 @@ template <is_integral T, is_integral U>
     // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
     using Type = ToRawArithmetic<MakeUnsigned<Larger<T, U>>>;
     return detail::PromotedArithmetic<T, U>{static_cast<Type>(lhs) *
-                                         static_cast<Type>(rhs)};
+                                            static_cast<Type>(rhs)};
 }
 
 // Subtract two integers with saturating overflow.
@@ -296,7 +307,7 @@ template <is_integral T, is_integral U>
     // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
     using Type = ToRawArithmetic<MakeUnsigned<Larger<T, U>>>;
     return detail::PromotedArithmetic<T, U>{static_cast<Type>(lhs) /
-                                         static_cast<Type>(rhs)};
+                                            static_cast<Type>(rhs)};
 }
 
 // Left bit-shifting two unsigned integers with saturating overflow.
@@ -426,7 +437,8 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
     constexpr Arithmetic() = default;
 
     template <is_arithmetic U>
-    constexpr explicit(!is_safe_arithmetic_conversion<U, T>) Arithmetic(U other) {
+    constexpr explicit(!is_safe_arithmetic_conversion<U, T>)
+        Arithmetic(U other) {
         this->raw = to_raw_numeral(other);
     }
 
@@ -501,7 +513,8 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         return +(self.raw);
     }
 
-    friend constexpr auto operator++(Arithmetic<T, policy>& self) -> Arithmetic& {
+    friend constexpr auto operator++(Arithmetic<T, policy>& self)
+        -> Arithmetic& {
         self += static_cast<T>(1);
         return self;
     }
@@ -526,7 +539,7 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
             }
             // Making this signed for optimizations causes various problems.
             return detail::PromotedArithmetic<T, U>{self.raw -
-                                                 to_raw_numeral(operand)};
+                                                    to_raw_numeral(operand)};
         } else if constexpr (policy == wrap || policy == wrap_member) {
             return wrap_sub(to_raw_numeral(self), to_raw_numeral(operand));
         } else if constexpr (policy == saturate || policy == saturate_member) {
@@ -560,7 +573,8 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         return -(self.raw);
     }
 
-    friend constexpr auto operator--(Arithmetic<T, policy>& self) -> Arithmetic& {
+    friend constexpr auto operator--(Arithmetic<T, policy>& self)
+        -> Arithmetic& {
         self -= static_cast<T>(1);
         return self;
     }
@@ -585,7 +599,7 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
             }
             // Making this signed for optimizations causes various problems.
             return detail::PromotedArithmetic<T, U>{self.raw *
-                                                 to_raw_numeral(operand)};
+                                                    to_raw_numeral(operand)};
         } else if constexpr (policy == wrap || policy == wrap_member) {
             return wrap_mul(to_raw_numeral(self), to_raw_numeral(operand));
         } else if constexpr (policy == saturate || policy == saturate_member) {
@@ -627,7 +641,7 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
             }
             // Making this signed for optimizations causes various problems.
             return detail::PromotedArithmetic<T, U>{self.raw /
-                                                 to_raw_numeral(operand)};
+                                                    to_raw_numeral(operand)};
         } else if constexpr (policy == wrap || policy == wrap_member) {
             return wrap_mul(to_raw_numeral(self), to_raw_numeral(operand));
         } else if constexpr (policy == saturate || policy == saturate_member) {
@@ -661,7 +675,7 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
                                                   U operand)
         -> detail::PromotedArithmetic<T, U> {
         return detail::PromotedArithmetic<T, U>{self.raw %
-                                             to_raw_numeral(operand)};
+                                                to_raw_numeral(operand)};
     }
 
     template <typename U>
@@ -690,7 +704,7 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
                                                   U operand)
         -> detail::PromotedArithmetic<T, U> {
         return detail::PromotedArithmetic<T, U>{self.raw &
-                                             to_raw_numeral(operand)};
+                                                to_raw_numeral(operand)};
     }
 
     template <typename U>
@@ -719,7 +733,7 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
                                                   U operand)
         -> detail::PromotedArithmetic<T, U> {
         return detail::PromotedArithmetic<T, U>{self.raw |
-                                             to_raw_numeral(operand)};
+                                                to_raw_numeral(operand)};
     }
 
     template <typename U>
@@ -881,8 +895,8 @@ class ArithmeticPtr : public Arithmetic<Storage, policy> {
         return reinterpret_cast<T*>(this->raw);
     }
 
-    // TODO: Streamline out all of these operators by implementing `Arithmetic`'s
-    // with "deducing this".
+    // TODO: Streamline out all of these operators by implementing
+    // `Arithmetic`'s with "deducing this".
 
     // TODO: Cat assignment be `default`?
     // TODO: This redundant assignment operator is required by GCC.
@@ -1144,15 +1158,6 @@ template <typename T>
 [[nodiscard]] constexpr auto count_leading_zeros(T value) -> ssize {
     auto raw_value = to_raw_numeral(value);
     return ssize{__builtin_clz(raw_value)};
-    // if constexpr (sizeof(T) == 2) {
-    //     return ssize{__builtin_ia32_lzcnt_u16(raw_value)};
-    // } else if constexpr (sizeof(T) == 4) {
-    // return ssize{__builtin_clz(raw_value)};
-    // } else if constexpr (sizeof(T) == 8) {
-    //     return ssize{__builtin_clzll(raw_value)};
-    // } else {
-    //     __builtin_unreachable();
-    // }
 }
 
 template <typename T>
@@ -1160,14 +1165,23 @@ template <typename T>
 [[nodiscard]] constexpr auto count_trailing_zeros(T value) -> ssize {
     auto raw_value = to_raw_numeral(value);
     return ssize{__builtin_ctz(raw_value)};
-    // if constexpr (sizeof(T) == 4) {
-    //     return ssize{__builtin_ctz(raw_value)};
-    // } else if constexpr (sizeof(T) == 8) {
-    //     return ssize{__builtin_ctzll(raw_value)};
-    // } else {
-    //     __builtin_unreachable();
-    // }
 }
+
+template <ssize bytes>
+    requires(bytes <= 8 && bytes > 0 &&
+             // Is a power of 2:
+             ((bytes & (bytes - 1)) == 0))
+using IntFixed = Conditional<
+    bytes == 1, int1,
+    Conditional<bytes == 2, int2, Conditional<bytes == 4, int4, int8>>>;
+
+template <ssize bytes>
+    requires(bytes <= 8 && bytes > 0 &&
+             // Is a power of 2:
+             ((bytes & (bytes - 1)) == 0))
+using UintFixed = Conditional<
+    bytes == 1, uint1,
+    Conditional<bytes == 2, uint2, Conditional<bytes == 4, uint4, uint8>>>;
 
 struct bool2 {  // NOLINT
     using Raw = uint2;

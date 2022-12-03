@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/arithmetic>
 #include <cat/iterator>
 
 // TODO: Write tests for math functions.

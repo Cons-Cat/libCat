@@ -81,6 +81,17 @@ TEST(test_numerals) {
     static_assert(cat::is_unsigned_integral<unsigned>);
     static_assert(!cat::is_unsigned_integral<float>);
 
+    // Test `IntFixed` and `UintFixed`.
+    static_assert(cat::is_same<cat::IntFixed<1>, int1>);
+    static_assert(cat::is_same<cat::IntFixed<2>, int2>);
+    static_assert(cat::is_same<cat::IntFixed<4>, int4>);
+    static_assert(cat::is_same<cat::IntFixed<8>, int8>);
+
+    static_assert(cat::is_same<cat::UintFixed<1>, uint1>);
+    static_assert(cat::is_same<cat::UintFixed<2>, uint2>);
+    static_assert(cat::is_same<cat::UintFixed<4>, uint4>);
+    static_assert(cat::is_same<cat::UintFixed<8>, uint8>);
+
     // Test `int4` constructors and assignment.
     int4 test_int4_1 = 1;
     int4 test_int4_2;
