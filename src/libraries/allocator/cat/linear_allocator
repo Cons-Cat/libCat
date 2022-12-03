@@ -22,26 +22,33 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
         }
     };
 
-    LinearAllocator(uintptr<void> p_address, ssize arena_size)
-        : p_arena_begin(p_address + static_cast<usize>(arena_size)),
+    LinearAllocator(uintptr<void> p_address, ssize arena_bytes)
+        : p_arena_begin(p_address + static_cast<usize>(arena_bytes)),
           p_arena_end(p_address){};
 
   public:
-    static auto backed(is_stable_allocator auto& backing, ssize arena_size)
+    // Allocate a `LinearAllocator` from another allocator.
+    static auto backed(is_stable_allocator auto& backing, ssize arena_bytes)
         -> Maybe<LinearAllocator> {
-        Maybe maybe_memory = backing.template alloc_multi<Byte>(arena_size);
+        // `TRY()` cannot be used here due to problems with type deduction in
+        // statement expressions.
+        Maybe maybe_memory = backing.template alloc_multi<Byte>(arena_bytes);
         if (!maybe_memory.has_value()) {
             return nullopt;
         }
-        return LinearAllocator(maybe_memory.value(), arena_size);
+        return LinearAllocator(maybe_memory.value().data(), arena_bytes);
     }
 
+    // Allocate a `LinearAllocator` from another allocator, given a handle to
+    // it.
+    // TODO: Can this return a tuple of the allocator and handle?
     static auto backed_handle(is_stable_allocator auto& backing,
                               mem auto& handle) -> LinearAllocator {
         return LinearAllocator(backing.template p_get(handle),
                                handle.raw_size());
     }
 
+    // TODO: Can this return a tuple of the allocator and handle?
     static auto backed_handle_sized(is_stable_allocator auto& backing,
                                     mem auto& handle, ssize arena_size)
         -> LinearAllocator {
@@ -65,7 +72,7 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
         if (allocation >= p_arena_end) {
             return static_cast<ssize>((this->p_arena_current - allocation).raw);
         }
-        return 0;
+        return nullopt;
     }
 
     // Try to allocate memory and bump the pointer down.

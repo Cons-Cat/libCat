@@ -2411,4 +2411,4 @@ TEST(test_alloc) {
     // Test `inline_unalign_xrescalloc_multi_to`.
     _ = allocator.opq_inline_unalign_xrescalloc_multi_to(allocator, opq_alloc,
                                                          10);
-};
+}

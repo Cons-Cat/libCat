@@ -15,6 +15,10 @@ TEST(test_linear_allocator) {
     auto allocator =
         cat::LinearAllocator::backed_handle_sized(paging_allocator, page, 24);
 
+    [[maybe_unused]] auto allocator_2 =
+        cat::LinearAllocator::backed(allocator, 128);
+    allocator.reset();
+
     // It should not be possible to allocate 7 times here, because 24 bytes can
     // only hold 6 `int4`s.
     for (int i = 0; i < 7; ++i) {
