@@ -119,7 +119,8 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
 
     // In general, memory cannot be deallocated in a linear allocator, so
     // this function is no-op.
-    void deallocate(void const*, ssize){};
+    void deallocate(void const*, ssize) {
+    }
 
     // Produce a handle to allocated memory.
     template <typename T>

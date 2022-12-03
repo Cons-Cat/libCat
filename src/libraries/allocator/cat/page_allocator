@@ -71,7 +71,7 @@ class PageAllocator : public AllocatorFacade<PageAllocator> {
         // anonymous pages. These currently cannot be handled, because `.free()`
         // does not propagate errors.
         _ = nix::sys_munmap(p_storage, allocation_bytes);
-    };
+    }
 
     // Produce a handle to allocated memory.
     template <typename T>
