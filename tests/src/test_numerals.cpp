@@ -154,6 +154,19 @@ TEST(test_numerals) {
     [[maybe_unused]] intptr<void> intptr_3 =
         static_cast<intptr<void>>(uintptr_1);
 
+    // Test `ArithmeticPtr` dereferencing operators.
+    int4 integer = 0;
+    intptr<int4> int_intptr = &integer;
+    *int_intptr = 1;
+    cat::verify(integer == 1);
+    cat::verify(int_intptr->max == integer.max);  // NOLINT
+
+    uint4 uinteger = 0u;
+    intptr<uint4> uint_intptr = &uinteger;
+    *uint_intptr = 1u;
+    cat::verify(uinteger == 1u);
+    cat::verify(uint_intptr->max == uinteger.max);  // NOLINT
+
     // Test `<=>`.
     int4 int_less = 0;
     int4 int_more = 2;

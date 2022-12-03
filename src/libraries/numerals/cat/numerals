@@ -869,7 +869,17 @@ class ArithmeticPtr : public Numeral<Storage, policy> {
         return reinterpret_cast<T const*>(this->raw);
     }
 
-    // TODO: Add a dereference operator.
+    // TODO: GCC 13 does not short-circuit this operator when `T` is `void`, so
+    // this workaround using `Conditional` is needed.
+
+    [[nodiscard]] constexpr auto operator*()
+        -> Conditional<is_void<T>, int, T>& requires(!is_void<T>) {
+        return *(reinterpret_cast<T*>(this->raw));
+    }
+
+    [[nodiscard]] constexpr auto operator->() -> T* requires(!is_void<T>) {
+        return reinterpret_cast<T*>(this->raw);
+    }
 
     // TODO: Streamline out all of these operators by implementing `Numeral`'s
     // with "deducing this".
