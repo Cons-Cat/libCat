@@ -7,7 +7,6 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
 
-// TODO: This doesn't work with a `X* const` type.
 template <typename T, typename U>
 // Optimizing this function counter-intuitively seems to compile faster. It also
 // inlines this function, resulting in a smaller debug binary.
@@ -32,6 +31,20 @@ cat::bit_cast(U& from_value) -> T {
         __builtin_memcpy(p_to, __builtin_addressof(from_value), sizeof(T));
         return *p_to;
     }
+}
+
+template <typename T, typename U>
+// Optimizing this function counter-intuitively seems to compile faster. It also
+// inlines this function, resulting in a smaller debug binary.
+[[gnu::always_inline,
+#ifndef __OPTIMIZED__
+  gnu::optimize(1),
+#endif
+  // Bit-casting a type can violate alignment assumptions, so that UBSan check
+  // is disabled here.
+  gnu::no_sanitize("alignment")]] constexpr inline auto
+cat::bit_cast(U const& from_value) -> T {
+    return bit_cast<T>(unconst(from_value));
 }
 
 #pragma GCC diagnostic pop

@@ -15,6 +15,12 @@ out."),
   gnu::always_inline]] constexpr inline auto
 bit_cast(U& from_value) -> T;
 
+template <typename T, typename U>
+[[gnu::warning("This function is intended to be inlined and constant-folded \
+out."),
+  gnu::always_inline]] constexpr inline auto
+bit_cast(U const& from_value) -> T;
+
 template <typename T>
 constexpr auto unconst(T const& value) -> T& {
     return const_cast<T&>(value);
