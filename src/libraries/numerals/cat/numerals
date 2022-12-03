@@ -126,20 +126,20 @@ using usize = Numeral<__SIZE_TYPE__, OverflowPolicies::undefined>;
 // NOLINTNEXTLINE
 using ssize = Numeral<MakeSigned<__SIZE_TYPE__>, OverflowPolicies::undefined>;
 
+template <typename From, typename To>
+concept is_safe_arithmetic_comparison =
+    // `ToRawNumeral` is needed here to prevent a recursive constraint
+    // in evaluating the `<` operator.
+    ((is_signed<ToRawNumeral<From>> == is_signed<ToRawNumeral<To>>)) &&
+    (is_floating_point<From> == is_floating_point<To>);
+
+// Any numeral can safely convert to a type larger than itself, but not
+// smaller than itself.
+template <typename From, typename To>
+concept is_safe_arithmetic_conversion =
+    (sizeof(From) <= sizeof(To)) && (is_safe_arithmetic_comparison<From, To>);
+
 namespace detail {
-    template <is_arithmetic From, is_arithmetic To>
-    inline constexpr bool is_safe_comparison =
-        // `ToRawNumeral` is needed here to prevent a recursive constraint
-        // in evaluating the `<` operator.
-        ((is_signed<ToRawNumeral<From>> == is_signed<ToRawNumeral<To>>)) &&
-        (is_floating_point<From> == is_floating_point<To>);
-
-    // Any numeral can safely convert to a type larger than itself, but not
-    // smaller than itself.
-    template <is_arithmetic From, is_arithmetic To>
-    inline constexpr bool is_safe_conversion = (sizeof(From) <= sizeof(To)) &&
-                                               (is_safe_comparison<From, To>);
-
     template <typename T, typename U>
     consteval auto promoted_numeral() {
         if constexpr (is_arithmetic_ptr<T>) {
@@ -185,7 +185,7 @@ template <is_raw_integral T>
 
 // Erase redundant type information for `sat_add()`.
 template <is_integral T, is_integral U>
-    requires(detail::is_safe_comparison<T, U>)
+    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard]] constexpr auto sat_add(T lhs, U rhs)
     -> detail::PromotedNumeral<T, U> {
     // Saturating is_arithmetic inputs must be raw and cast to the same size.
@@ -195,7 +195,7 @@ template <is_integral T, is_integral U>
 
 // Add two integers with wrapping overflow.
 template <is_integral T, is_integral U>
-    requires(detail::is_safe_comparison<T, U>)
+    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard]] constexpr auto wrap_add(T lhs, U rhs)
     -> detail::PromotedNumeral<T, U> {
     // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
@@ -217,7 +217,7 @@ template <is_raw_integral T>
 
 // Erase redundant type information for `sat_sub()`.
 template <is_integral T, is_integral U>
-    requires(detail::is_safe_comparison<T, U>)
+    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard]] constexpr auto sat_sub(T lhs, U rhs)
     -> detail::PromotedNumeral<T, U> {
     // Saturating is_arithmetic inputs must be raw and cast to the same size.
@@ -227,7 +227,7 @@ template <is_integral T, is_integral U>
 
 // Subtract two integers with wrapping overflow.
 template <is_integral T, is_integral U>
-    requires(detail::is_safe_comparison<T, U>)
+    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard]] constexpr auto wrap_sub(T lhs, U rhs)
     -> detail::PromotedNumeral<T, U> {
     // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
@@ -249,7 +249,7 @@ template <is_raw_integral T>
 
 // Erase redundant type information for `sat_mul()`.
 template <is_integral T, is_integral U>
-    requires(detail::is_safe_comparison<T, U>)
+    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard]] constexpr auto sat_mul(T lhs, U rhs)
     -> detail::PromotedNumeral<T, U> {
     // Saturating is_arithmetic inputs must be raw and cast to the same size.
@@ -259,7 +259,7 @@ template <is_integral T, is_integral U>
 
 // Multiply two integers with wrapping overflow.
 template <is_integral T, is_integral U>
-    requires(detail::is_safe_comparison<T, U>)
+    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard]] constexpr auto wrap_mul(T lhs, U rhs)
     -> detail::PromotedNumeral<T, U> {
     // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
@@ -280,7 +280,7 @@ template <is_raw_integral T>
 
 // Erase redundant type information for `sat_mul()`.
 template <is_integral T, is_integral U>
-    requires(detail::is_safe_comparison<T, U>)
+    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard]] constexpr auto sat_div(T lhs, U rhs)
     -> detail::PromotedNumeral<T, U> {
     // Saturating is_arithmetic inputs must be raw and cast to the same size.
@@ -290,7 +290,7 @@ template <is_integral T, is_integral U>
 
 // Divide two integers with wrapping overflow.
 template <is_integral T, is_integral U>
-    requires(detail::is_safe_comparison<T, U>)
+    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard]] constexpr auto wrap_div(T lhs, U rhs)
     -> detail::PromotedNumeral<T, U> {
     // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
@@ -313,7 +313,7 @@ template <is_raw_integral T, is_raw_integral U>
 
 // Erase redundant type information for `sat_shl()`.
 template <is_integral T, is_integral U>
-    requires(detail::is_safe_comparison<T, U>)
+    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard]] constexpr auto sat_shl(T value, U bits)
     -> detail::PromotedNumeral<T, U> {
     // Saturating is_arithmetic inputs must be raw and cast to the same size.
@@ -334,7 +334,7 @@ template <is_raw_integral T, is_raw_integral U>
 
 // Erase redundant type information for `sat_shr()`.
 template <is_integral T, is_integral U>
-    requires(detail::is_safe_comparison<T, U>)
+    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard]] constexpr auto sat_shr(T value, U bits)
     -> detail::PromotedNumeral<T, U> {
     // Saturating is_arithmetic inputs must be raw and cast to the same size.
@@ -426,7 +426,7 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     constexpr Numeral() = default;
 
     template <is_arithmetic U>
-    constexpr explicit(!detail::is_safe_conversion<U, T>) Numeral(U other) {
+    constexpr explicit(!is_safe_arithmetic_conversion<U, T>) Numeral(U other) {
         this->raw = to_raw_numeral(other);
     }
 
@@ -436,7 +436,7 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(detail::is_safe_comparison<T, U>)
+        requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]] friend constexpr auto operator<=>(Numeral<T, policy> lhs,
                                                     U rhs) {
         return lhs.raw <=> to_raw_numeral(rhs);
@@ -445,20 +445,20 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     // A `!=` operator is not generated by `<=>`, but overloading `!=` prevents
     // generating `==`. Instead, `==` is explicitly provided to generate `!=`.
     template <is_arithmetic U>
-        requires(detail::is_safe_comparison<T, U>)
+        requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]] friend constexpr auto operator==(Numeral<T, policy> lhs,
                                                    U rhs) -> bool {
         return lhs.raw == to_raw_numeral(rhs);
     }
 
     template <is_arithmetic U>
-        requires(detail::is_safe_comparison<T, U>)
+        requires(is_safe_arithmetic_comparison<T, U>)
     constexpr auto operator=(U operand) {
         this->raw = to_raw_numeral(operand);
     }
 
     template <is_arithmetic U>
-        requires(detail::is_safe_comparison<T, U>)
+        requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]] friend constexpr auto operator+(Numeral<T, policy> self,
                                                   U operand)
         -> detail::PromotedNumeral<T, U> {
@@ -489,7 +489,7 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(detail::is_safe_comparison<U, T>)
+        requires(is_safe_arithmetic_comparison<U, T>)
     friend constexpr auto operator+=(Numeral<T, policy>& self, U operand)
         -> Numeral& {
         self = self + to_raw_numeral(operand);
@@ -513,7 +513,7 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(detail::is_safe_comparison<T, U>)
+        requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]] friend constexpr auto operator-(Numeral<T, policy> self,
                                                   U operand)
         -> detail::PromotedNumeral<T, U> {
@@ -548,7 +548,7 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(detail::is_safe_comparison<T, U>)
+        requires(is_safe_arithmetic_comparison<T, U>)
     friend constexpr auto operator-=(Numeral<T, policy>& self, U operand)
         -> Numeral& {
         self = self - to_raw_numeral(operand);
@@ -572,7 +572,7 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(detail::is_safe_comparison<T, U>)
+        requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]] friend constexpr auto operator*(Numeral<T, policy> self,
                                                   U operand)
         -> detail::PromotedNumeral<T, U> {
@@ -606,7 +606,7 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(detail::is_safe_comparison<U, T>)
+        requires(is_safe_arithmetic_comparison<U, T>)
     friend constexpr auto operator*=(Numeral<T, policy>& self, U operand)
         -> Numeral& {
         self = self * to_raw_numeral(operand);
@@ -614,7 +614,7 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(detail::is_safe_comparison<T, U>)
+        requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]] friend constexpr auto operator/(Numeral<T, policy> self,
                                                   U operand)
         -> detail::PromotedNumeral<T, U> {
@@ -648,7 +648,7 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(detail::is_safe_comparison<U, T>)
+        requires(is_safe_arithmetic_comparison<U, T>)
     friend constexpr auto operator/=(Numeral<T, policy>& self, U operand)
         -> Numeral& {
         self = self / to_raw_numeral(operand);
@@ -656,7 +656,7 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(detail::is_safe_comparison<T, U>)
+        requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]] friend constexpr auto operator%(Numeral<T, policy> self,
                                                   U operand)
         -> detail::PromotedNumeral<T, U> {
@@ -677,7 +677,7 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(detail::is_safe_comparison<U, T>)
+        requires(is_safe_arithmetic_comparison<U, T>)
     friend constexpr auto operator%=(Numeral<T, policy>& self, U operand)
         -> Numeral& {
         self.raw %= to_raw_numeral(operand);
@@ -685,7 +685,7 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(detail::is_safe_comparison<T, U>)
+        requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]] friend constexpr auto operator&(Numeral<T, policy> self,
                                                   U operand)
         -> detail::PromotedNumeral<T, U> {
@@ -706,7 +706,7 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(detail::is_safe_comparison<U, T>)
+        requires(is_safe_arithmetic_comparison<U, T>)
     friend constexpr auto operator&=(Numeral<T, policy>& self, U operand)
         -> Numeral& {
         self.raw &= to_raw_numeral(operand);
@@ -714,7 +714,7 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(detail::is_safe_comparison<U, T>)
+        requires(is_safe_arithmetic_comparison<U, T>)
     [[nodiscard]] friend constexpr auto operator|(Numeral<T, policy> self,
                                                   U operand)
         -> detail::PromotedNumeral<T, U> {
@@ -735,7 +735,7 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(detail::is_safe_comparison<U, T>)
+        requires(is_safe_arithmetic_comparison<U, T>)
     friend constexpr auto operator|=(Numeral<T, policy>& self, U operand)
         -> Numeral& {
         self.raw |= to_raw_numeral(operand);
@@ -743,7 +743,7 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     }
 
     template <typename U>
-        requires(detail::is_safe_comparison<T, U>)
+        requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]] friend constexpr auto operator<<(Numeral<T, policy> self,
                                                    U operand) -> Numeral<T> {
         if constexpr (policy == OverflowPolicies::saturate) {
@@ -766,7 +766,7 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(detail::is_safe_comparison<U, T>)
+        requires(is_safe_arithmetic_comparison<U, T>)
     friend constexpr auto operator<<=(Numeral<T, policy>& self, U operand)
         -> Numeral& {
         self = self << to_raw_numeral(operand);
@@ -774,7 +774,7 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     }
 
     template <typename U>
-        requires(detail::is_safe_comparison<T, U>)
+        requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]] friend constexpr auto operator>>(Numeral<T, policy> self,
                                                    U operand) -> Numeral<T> {
         if constexpr (policy == OverflowPolicies::saturate) {
@@ -797,7 +797,7 @@ struct Numeral : detail::NumeralStorage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(detail::is_safe_comparison<U, T>)
+        requires(is_safe_arithmetic_comparison<U, T>)
     friend constexpr auto operator>>=(Numeral<T, policy>& self, U operand)
         -> Numeral& {
         self = self >> to_raw_numeral(operand);
@@ -845,7 +845,7 @@ class ArithmeticPtr : public Numeral<Storage, policy> {
     constexpr ArithmeticPtr(ArithmeticPtr<T, Storage, policy>&&) = default;
 
     template <is_integral U>
-        requires(detail::is_safe_conversion<U, Storage>)
+        requires(is_safe_arithmetic_conversion<U, Storage>)
     constexpr ArithmeticPtr(U other)
         : Numeral<Storage, policy>(to_raw_numeral(other)){};
 
@@ -893,14 +893,14 @@ class ArithmeticPtr : public Numeral<Storage, policy> {
     }
 
     template <is_integral U>
-        requires(detail::is_safe_conversion<U, Storage>)
+        requires(is_safe_arithmetic_conversion<U, Storage>)
     constexpr auto operator=(U operand) -> ArithmeticPtr& {
         this->raw = to_raw_numeral(operand);
         return *this;
     }
 
     template <typename U>
-        requires(detail::is_safe_comparison<Storage, U>)
+        requires(is_safe_arithmetic_comparison<Storage, U>)
     [[nodiscard]] friend constexpr auto operator<=>(
         ArithmeticPtr<T, Storage, policy> lhs, U rhs) {
         return lhs.raw <=> to_raw_numeral(rhs);
@@ -910,7 +910,7 @@ class ArithmeticPtr : public Numeral<Storage, policy> {
     // prevents generating `==`. Instead, `==` is explicitly provided to
     // generate `!=`.
     template <typename U>
-        requires(detail::is_safe_comparison<Storage, U>)
+        requires(is_safe_arithmetic_comparison<Storage, U>)
     [[nodiscard]] friend constexpr auto operator==(
         ArithmeticPtr<T, Storage, policy> lhs, U rhs) -> bool {
         return lhs.raw == to_raw_numeral(rhs);
