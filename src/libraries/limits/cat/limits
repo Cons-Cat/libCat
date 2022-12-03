@@ -10,9 +10,9 @@ namespace cat {
 template <typename>
 struct Limits {};
 
-// Unwrap all `Numeral`s inside of `NumericLimits`.
+// Unwrap all `Arithmetic`s inside of `NumericLimits`.
 template <typename T, auto policy>
-struct Limits<Numeral<T, policy>> : Limits<T> {};
+struct Limits<Arithmetic<T, policy>> : Limits<T> {};
 
 // TODO: Implement `min` and `max` limits in terms of GCC macros, like
 // `__LONG_LONG_MAX__`.

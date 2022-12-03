@@ -13,10 +13,10 @@ namespace cat {
 
 // TODO: Support formatting 1 and 2 byte integers.
 
-// Erase the type of `cat::Numeral` for redundant template instantiations.
+// Erase the type of `cat::Arithmetic` for redundant template instantiations.
 template <is_integral T, OverflowPolicies policy>
 [[nodiscard]] auto to_chars(is_allocator auto& allocator,
-                            Numeral<T, policy> numeral) -> Maybe<String> {
+                            Arithmetic<T, policy> numeral) -> Maybe<String> {
     return to_chars(allocator, to_raw_numeral(numeral));
 }
 
@@ -111,11 +111,11 @@ template <auto value>
 }
 
 template <is_integral T>
-[[nodiscard]] constexpr auto to_string_at(Numeral<T> value,
+[[nodiscard]] constexpr auto to_string_at(Arithmetic<T> value,
                                           Span<char> output_buffer)
     -> Maybe<String> {
     // Add 1 for a negative sign `-` character.
-    constexpr ssize max_length = to_chars<Numeral<T>::max()>().size() + 1;
+    constexpr ssize max_length = to_chars<Arithmetic<T>::max()>().size() + 1;
     char buffer[max_length.raw];
     if (is_constant_evaluated()) {
         ssize i = 0;
@@ -125,7 +125,7 @@ template <is_integral T>
         }
         for (; i < max_length; ++i) {
             if (value > 0) {
-                Numeral<T> const remainder = value % 10;
+                Arithmetic<T> const remainder = value % 10;
                 buffer[i.raw] = remainder.raw + '0';
                 value /= 10;
             } else {

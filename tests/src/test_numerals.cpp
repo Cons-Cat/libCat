@@ -13,8 +13,8 @@ TEST(test_numerals) {
     // static_assert(cat::detail::arithmeticNonPtr<__INTPTR_TYPE__>);
     // static_assert(!cat::detail::arithmeticNonPtr<intptr<void>>);
 
-    static_assert(cat::is_same<cat::ToRawNumeral<int>, int>);
-    static_assert(cat::is_same<cat::ToRawNumeral<int4>, int4::Raw>);
+    static_assert(cat::is_same<cat::ToRawArithmetic<int>, int>);
+    static_assert(cat::is_same<cat::ToRawArithmetic<int4>, int4::Raw>);
 
     // Test numerals' size,
     static_assert(sizeof(int1) == 1);
@@ -86,7 +86,7 @@ TEST(test_numerals) {
     int4 test_int4_2;
     test_int4_2 = 1;
 
-    // Test `Numeral` operators.
+    // Test `Arithmetic` operators.
     int4 int4_add = 1 + test_int4_1;
     int4_add = 1_i4 + test_int4_1;
     int4 int4_sub = 1 - test_int4_1;
@@ -123,7 +123,7 @@ TEST(test_numerals) {
     intptr<void> intptr_sub_4 = intptr_add_2 - 1_i4;
     cat::verify(intptr_sub_4 == 0);
 
-    // Test `ArithmeticPtr` operators on safe `Numeral`s.
+    // Test `ArithmeticPtr` operators on safe `Arithmetic`s.
     intptr_add_2 = 1_i4 + intptr_add_2;
     intptr_add_2 = intptr_add_2 + 1_i4;
     intptr_sub_2 = 1_i4 - intptr_add_2;

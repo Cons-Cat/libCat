@@ -70,7 +70,7 @@ template <typename... Ts>
 class Variant {
   public:
     using Types = TypeList<Ts...>;
-    // TODO: Use the smallest `Numeral` that can hold at least `sizeof...(Ts)`
+    // TODO: Use the smallest `Arithmetic` that can hold at least `sizeof...(Ts)`
     // values.
     using AlternativeIndex = ssize;
     AlternativeIndex discriminant;

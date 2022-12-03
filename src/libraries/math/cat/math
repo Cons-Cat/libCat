@@ -124,8 +124,8 @@ namespace detail {
 
 template <is_arithmetic T, is_integral U>
 constexpr auto pow(T base, U exponent) -> T {
-    // Type-erase `Numeral`s to prevent redundant code gen.
-    using Raw = ToRawNumeral<T>;
+    // Type-erase `Arithmetic`s to prevent redundant code gen.
+    using Raw = ToRawArithmetic<T>;
     Raw raw_base = to_raw_numeral(base);
     Raw raw_exponent = to_raw_numeral(exponent);
 
