@@ -61,6 +61,26 @@ TEST(test_numerals) {
     static_assert(cat::is_integral<intptr<void>>);
     static_assert(cat::is_integral<uintptr<void>>);
 
+    static_assert(cat::is_signed<int>);
+    static_assert(cat::is_signed<float>);
+    static_assert(cat::is_signed<float4>);
+    static_assert(cat::is_signed<int4>);
+    static_assert(!cat::is_signed<uint4>);
+
+    static_assert(cat::is_unsigned<unsigned>);
+    static_assert(!cat::is_unsigned<float>);
+    static_assert(!cat::is_unsigned<float4>);
+    static_assert(cat::is_unsigned<uint4>);
+    static_assert(!cat::is_unsigned<int4>);
+
+    static_assert(cat::is_signed_integral<int>);
+    static_assert(!cat::is_signed_integral<unsigned>);
+    static_assert(!cat::is_signed_integral<float>);
+
+    static_assert(!cat::is_unsigned_integral<int>);
+    static_assert(cat::is_unsigned_integral<unsigned>);
+    static_assert(!cat::is_unsigned_integral<float>);
+
     // Test `int4` constructors and assignment.
     int4 test_int4_1 = 1;
     int4 test_int4_2;

@@ -455,7 +455,7 @@ concept is_arithmetic = is_integral<T> || is_floating_point<T>;
 namespace detail {
     template <typename T>
     concept has_less_than_operator = requires(T t) {
-        t < 0;
+        t < static_cast<T>(0);
     };
 
     template <typename...>
@@ -472,6 +472,12 @@ concept is_signed = detail::is_signed_detail<T>;
 
 template <typename T>
 concept is_unsigned = !is_signed<T>;
+
+template <typename T>
+concept is_signed_integral = is_signed<T> && is_integral<T>;
+
+template <typename T>
+concept is_unsigned_integral = (!is_signed<T>)&&is_integral<T>;
 
 template <is_integral Sign, is_integral T>
 using CopySignFrom =
