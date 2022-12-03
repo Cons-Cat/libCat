@@ -3,8 +3,8 @@
 #pragma once
 
 #include <cat/match>
-#include <cat/maybe>
 #include <cat/memory>
+#include <cat/maybe>
 #include <cat/type_list>
 
 namespace cat {
@@ -70,15 +70,19 @@ template <typename... Ts>
 class Variant {
   public:
     using Types = TypeList<Ts...>;
-    ssize discriminant;
+    // TODO: Use the smallest `Arithmetic` that can hold at least `sizeof...(Ts)`
+    // values.
+    using AlternativeIndex = ssize;
+    AlternativeIndex discriminant;
 
     // The number of alternatives in this `Variant`.
-    static constexpr ssize variant_size = ssizeof_pack<Ts...>();
+    static constexpr AlternativeIndex variant_size = ssizeof_pack<Ts...>();
+
 
   private:
-    template <typename T, ssize index>
+    template <typename T, AlternativeIndex index>
         requires(index < variant_size)
-    static consteval auto recurse_for_index_of_type() -> ssize {
+    static consteval auto recurse_for_index_of_type() -> AlternativeIndex {
         using ThisAlternative = typename Types::template Get<index>;
         if constexpr (is_same<T, ThisAlternative>) {
             return index;
@@ -146,7 +150,7 @@ class Variant {
     static constexpr auto alternative_index = recurse_for_index_of_type<T, 0>();
 
     // Get the type of an alternative from its index.
-    template <ssize index>
+    template <AlternativeIndex index>
     using Alternative = typename Types::template Get<index>;
 
     constexpr Variant() = default;
@@ -249,13 +253,13 @@ class Variant {
         return this->storage.template get<alternative_index<T>>();
     }
 
-    template <ssize index>
+    template <AlternativeIndex index>
         requires(index >= 0 && index < ssizeof_pack<Ts...>())
     [[nodiscard]] constexpr auto get() & {
         return this->storage.template get<index>();
     }
 
-    template <ssize index>
+    template <AlternativeIndex index>
         requires(index >= 0 && index < ssizeof_pack<Ts...>())
     [[nodiscard]] constexpr auto get() const& -> decltype(auto) {
         return this->storage.template get<index>();
@@ -279,7 +283,7 @@ class Variant {
         return nullopt;
     }
 
-    template <ssize index>
+    template <AlternativeIndex index>
         requires(index >= 0 && index < ssizeof_pack<Ts...>())
     [[nodiscard]] constexpr auto get_if() & {
         using T = typename Types::template Get<index>;
@@ -289,7 +293,7 @@ class Variant {
         return Maybe<T>{nullopt};
     }
 
-    template <ssize index>
+    template <AlternativeIndex index>
         requires(index >= 0 && index < ssizeof_pack<Ts...>())
     [[nodiscard]] constexpr auto get_if() const& {
         using T = typename Types::template Get<index>;
@@ -299,7 +303,7 @@ class Variant {
         return Maybe<T>{nullopt};
     }
 
-    [[nodiscard]] constexpr auto alternative() const -> ssize {
+    [[nodiscard]] constexpr auto alternative() const -> AlternativeIndex {
         return this->discriminant;
     }
 
@@ -316,7 +320,7 @@ class Variant {
 
   private:
     // Base case.
-    template <ssize index, typename T>
+    template <AlternativeIndex index, typename T>
     constexpr auto recurse_converting_equality(auto const& in_value) const
         -> bool {
         if (this->holds_alternative(index)) {
@@ -328,7 +332,7 @@ class Variant {
     // Recurse through every alternative type, and if it is currently the
     // active alternative, convert `in_value` to that type, then check if it
     // is equal to this `Variant`'s value.
-    template <ssize index, typename T, typename... Remaining>
+    template <AlternativeIndex index, typename T, typename... Remaining>
         requires(sizeof...(Remaining) > 0)
     constexpr auto recurse_converting_equality(auto const& in_value) const
         -> bool {
@@ -374,7 +378,7 @@ class Variant {
     // `alternative_index`, which can be retrieved from `.alternative()` or
     // `.alternative_index<T>`.
     [[nodiscard]] constexpr auto holds_alternative(
-        ssize alternative_index) const -> bool {
+        AlternativeIndex alternative_index) const -> bool {
         return this->discriminant.raw == alternative_index;
     }
 
