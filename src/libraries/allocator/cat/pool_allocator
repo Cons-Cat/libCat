@@ -1,0 +1,102 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/allocator>
+
+namespace cat {
+
+template <ssize max_node_bytes>
+class PoolAllocator : public AllocatorFacade<PoolAllocator<max_node_bytes>> {
+  private:
+    template <typename T>
+    struct PoolMemoryHandle : detail::BaseMemoryHandle<T> {
+        T* p_storage;
+
+        // TODO: Simplify with CRTP or deducing-this.
+        auto get() -> decltype(auto) {
+            return *this;
+        }
+
+        auto get() const -> decltype(auto) {
+            return *this;
+        }
+    };
+
+    union Node {
+        Node* p_next = nullptr;
+        Byte storage[max_node_bytes.raw];
+    } node;
+
+  public:
+    // Allocate a `PoolAllocator` from another allocator.
+    static auto backed(is_stable_allocator auto& backing, ssize arena_bytes)
+        -> Maybe<PoolAllocator<max_node_bytes>> {
+        // `TRY()` cannot be used here due to problems with type deduction in
+        // statement expressions.
+        Maybe<Span<Node>> maybe_memory =
+            backing.template alloc_multi<Node>(arena_bytes / ssizeof<Node>());
+        // TODO: Optimize that division.
+        if (!maybe_memory.has_value()) {
+            return nullopt;
+        }
+
+        PoolAllocator<max_node_bytes> pool;
+        Span<Node> nodes = maybe_memory.value();
+
+        pool.p_head = &nodes.front();
+
+        // TODO: The last node can be skipped in this loop. Is it optimized
+        // away?
+        for (Node& node : nodes) {
+            // Set every node's pointer to the node ahead of it.
+            node.p_next = &node + 1;
+        }
+        // Mark the final node.
+        nodes.back().p_next = nullptr;
+
+        return pool;
+    }
+
+    auto allocation_bytes(usize, ssize allocation_bytes)
+        -> MaybeNonZero<ssize> {
+        cat::assert(allocation_bytes <= max_node_bytes,
+                    "Allocation is too large for this pool!");
+        return max_node_bytes;
+    }
+
+    auto allocate(ssize allocation_bytes) -> MaybePtr<void> {
+        cat::assert(allocation_bytes <= max_node_bytes,
+                    "Allocation is too large for this pool!");
+
+        // `storage` decays to a pointer here.
+        return this->p_head->storage;
+    }
+
+    void deallocate(void const*, ssize){};
+
+    // Produce a handle to allocated memory.
+    template <typename T>
+    auto make_handle(T* p_handle_storage) -> PoolMemoryHandle<T> {
+        return PoolMemoryHandle<T>{{}, p_handle_storage};
+    }
+
+    // Access some memory.
+    template <typename T>
+    auto access(PoolMemoryHandle<T>& memory) -> T* {
+        return memory.p_storage;
+    }
+
+    template <typename T>
+    auto access(PoolMemoryHandle<T> const& memory) const -> T const* {
+        return memory.p_storage;
+    }
+
+    static constexpr bool has_pointer_stability = true;
+  private:
+    friend AllocatorFacade<PoolAllocator>;
+
+    Node* p_head;
+};
+
+}  // namespace cat
