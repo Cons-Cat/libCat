@@ -3,8 +3,8 @@
 #pragma once
 
 #include <cat/match>
-#include <cat/memory>
 #include <cat/maybe>
+#include <cat/memory>
 #include <cat/type_list>
 
 namespace cat {
@@ -70,14 +70,12 @@ template <typename... Ts>
 class Variant {
   public:
     using Types = TypeList<Ts...>;
-    // TODO: Use the smallest `Arithmetic` that can hold at least `sizeof...(Ts)`
-    // values.
-    using AlternativeIndex = ssize;
+    using AlternativeIndex = Conditional<Types::size <= int4_max, int4, int8>;
     AlternativeIndex discriminant;
 
     // The number of alternatives in this `Variant`.
-    static constexpr AlternativeIndex variant_size = ssizeof_pack<Ts...>();
-
+    static constexpr AlternativeIndex variant_size =
+        static_cast<AlternativeIndex>(sizeof...(Ts));
 
   private:
     template <typename T, AlternativeIndex index>

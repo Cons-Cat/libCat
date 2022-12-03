@@ -24,6 +24,14 @@ TEST(test_variant) {
     cat::Maybe opt2 = variant.get_if<int>();
     cat::verify(!opt2.has_value());
 
+    // Test variant size.
+    static_assert(sizeof(variant) == 8);
+    static_assert(sizeof(variant.discriminant) == 4);
+
+    cat::Variant<char, int4[3]> big_variant;
+    static_assert(sizeof(big_variant) == 16);
+    static_assert(sizeof(big_variant.discriminant) == 4);
+
     // Test variant subtype constructor and assignment operator.
     cat::Variant<int, char, uint4, int2> variant2 = variant;
     cat::verify(variant2.is<char>());
