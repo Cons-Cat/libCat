@@ -1,5 +1,4 @@
 #include <cat/memory>
-#include <cat/numerals>
 #include <cat/page_allocator>
 
 #include "../unit_tests.hpp"

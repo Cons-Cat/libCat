@@ -11,7 +11,7 @@ constexpr bool is_big_endian = !is_little_endian;
 namespace cat {
 
 [[gnu::const]] constexpr auto invert_endianess(is_integral auto value) {
-    // TODO: Handle `cat::Numeral`.
+    // TODO: Handle `cat::Arithmetic`.
     if constexpr (sizeof(value) == 1) {
         return __builtin_bswap8(value);
     }

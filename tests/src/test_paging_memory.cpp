@@ -1,6 +1,5 @@
 #include <cat/array>
 #include <cat/math>
-#include <cat/numerals>
 #include <cat/page_allocator>
 #include <cat/utility>
 

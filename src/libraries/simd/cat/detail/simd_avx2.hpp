@@ -3,7 +3,6 @@
 #include <cat/detail/simd_avx2_fwd.hpp>
 
 #include <cat/meta>
-#include <cat/numerals>
 #include <cat/simd>
 
 namespace cat {

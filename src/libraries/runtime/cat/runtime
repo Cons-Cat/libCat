@@ -2,8 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/arithmetic>
 #include <cat/meta>
-#include <cat/numerals>
 
 // Name mangling prevents the linker from finding this symbol.
 extern "C"
