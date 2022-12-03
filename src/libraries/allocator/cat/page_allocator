@@ -23,7 +23,6 @@ class PageAllocator : public AllocatorFacade<PageAllocator> {
         }
     };
 
-  public:
     auto allocation_bytes(usize alignment, ssize allocation_bytes)
         -> MaybeNonZero<ssize> {
         // Pages cannot be aligned by greater than 4 kibibytes.
@@ -91,9 +90,10 @@ class PageAllocator : public AllocatorFacade<PageAllocator> {
         return memory.p_storage;
     }
 
+  public:
+    static constexpr bool has_pointer_stability = true;
   private:
     friend AllocatorFacade<PageAllocator>;
-    static constexpr bool has_pointer_stability = true;
 };
 
 }  // namespace cat

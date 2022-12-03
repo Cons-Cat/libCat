@@ -138,9 +138,10 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
         return memory.p_storage;
     }
 
+  public:
+    static constexpr bool has_pointer_stability = true;
   private:
     friend AllocatorFacade<LinearAllocator>;
-    static constexpr bool has_pointer_stability = true;
 
     uintptr<void> const p_arena_begin;
     uintptr<void> const p_arena_end;

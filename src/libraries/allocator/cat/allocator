@@ -2,10 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/bit>
-#include <cat/span>
+#include <cat/string>
 #include <cat/tuple>
-#include <cat/utility>
 
 namespace cat {
 
@@ -250,7 +248,8 @@ namespace detail {
 
 // TODO: Make unstable allocators.
 template <typename AllocatorT>
-concept is_stable_allocator = true;
+concept is_stable_allocator =
+    is_allocator<AllocatorT> && AllocatorT::has_pointer_stability;
 
 template <typename T>
 using SizedAllocation = Tuple<T, ssize>;
@@ -295,6 +294,8 @@ auto allocation =
 return return_val;
 }
 */
+
+// TODO: `_multi` functions should take signed or unsigned integrals.
 
 template <typename Derived>
 class AllocatorFacade {
@@ -5024,6 +5025,7 @@ class AllocatorFacade {
                 __builtin_unreachable();
             }
         } else {  // NOLINT
+            // Non-constexpr code.
             if constexpr (is_inline) {
                 if (allocation_bytes < inline_buffer_size) {
                     // Allocate memory on this stack frame.
@@ -5112,8 +5114,19 @@ class AllocatorFacade {
                         };
                     }
                 } else {
-                    maybe_memory = this->self().aligned_allocate(
-                        allocation_alignment, allocation_bytes);
+                    if constexpr (detail::has_aligned_allocate<Derived>) {
+                        maybe_memory = this->self().aligned_allocate(
+                            allocation_alignment, allocation_bytes);
+                    } else {
+                        // If a `.aligned_allocate()` is not provided, ensure
+                        // alignment with a runtime check.
+                        maybe_memory = this->self().allocate(allocation_bytes);
+                        if (maybe_memory.has_value()) {
+                            cat::assert(cat::is_aligned(maybe_memory.value(),
+                                                        allocation_alignment),
+                                        "Allocation is misaligned!");
+                        }
+                    }
                 }
             } else {
                 if constexpr (has_feedback) {

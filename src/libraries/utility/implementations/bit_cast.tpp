@@ -37,9 +37,6 @@ template <typename T, typename U>
 // Optimizing this function counter-intuitively seems to compile faster. It also
 // inlines this function, resulting in a smaller debug binary.
 [[gnu::always_inline,
-#ifndef __OPTIMIZED__
-  gnu::optimize(1),
-#endif
   // Bit-casting a type can violate alignment assumptions, so that UBSan check
   // is disabled here.
   gnu::no_sanitize("alignment")]] constexpr inline auto
