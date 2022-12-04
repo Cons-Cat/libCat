@@ -74,6 +74,8 @@ class List : public CollectionFacade<List<T>, T> {
         "instead!")]] constexpr List(List<T> const&) = default;
 
   public:
+    // TODO: ValueList constructors/factories were removed elsewhere. Should
+    // this be kept?
     template <typename U, U... initializers>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]] static auto from(is_stable_allocator auto& allocator,

@@ -56,6 +56,20 @@ class Array : public CollectionFacade<Array<T, length>, T> {
         return *this;
     }
 
+    // TODO: `<=>` operator.
+
+    // Construct an `Array` from a variadic argument list.
+    template <typename... Args>
+        requires(ssizeof_pack<Args...>() == length &&
+                 (is_implicitly_convertible<Args, T> && ...))
+    static constexpr auto from(Args&&... arguments) {
+        // Explicitly converting this type allows the first argument to coerce
+        // the type for following arguments.
+        // i.e. `cat::Array shorts = {int2{0}, 1, 2};`
+        Array<T, length> array{static_cast<T>(forward<Args>(arguments))...};
+        return array;
+    }
+
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     static constexpr auto filled(U value) -> Array {

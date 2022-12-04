@@ -127,4 +127,10 @@ TEST(test_arrays) {
     for (ssize i = 0; i < 8; ++i) {
         cat::verify(filled_array[i] == 9);
     }
+
+    // Test from factory.
+    cat::Array from_array = cat::Array<int4, 3>::from(1, 2, 3);
+    cat::verify(from_array[0] == 1);
+    cat::verify(from_array[1] == 2);
+    cat::verify(from_array[2] == 3);
 }
