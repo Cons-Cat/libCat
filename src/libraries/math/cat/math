@@ -17,8 +17,9 @@ constexpr auto min(T const& value) -> T const& {
 }
 
 // Implicit output type `min()`.
-template <typename T, typename... Remaining>
-constexpr auto min(T const& value_1, T const& value_2, Remaining&&... remaining)
+template <typename T, typename U, typename... Remaining>
+    requires(is_implicitly_convertible<U, T>)
+constexpr auto min(T const& value_1, U const& value_2, Remaining&&... remaining)
     -> T const& {
     // Recurse through the list of variadic arguments, discarding the larger
     // element each time.
@@ -55,8 +56,9 @@ constexpr auto max(T const& value) -> T const& {
 }
 
 // Implicit output type `max()`.
-template <typename T, typename... Remaining>
-constexpr auto max(T const& value_1, T const& value_2, Remaining&&... remaining)
+template <typename T, typename U, typename... Remaining>
+    requires(is_implicitly_convertible<U, T>)
+constexpr auto max(T const& value_1, U const& value_2, Remaining&&... remaining)
     -> T const& {
     // Recurse through the list of variadic arguments, discarding the larger
     // element each time.
