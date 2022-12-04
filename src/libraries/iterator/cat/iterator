@@ -410,11 +410,11 @@ concept is_output_iterator = is_input_or_output_iterator<Outputter> &&
 };
 
 template <is_iterable T>
-class AsReverse {
+class ItReverse {
     T& iterable;
 
   public:
-    constexpr explicit AsReverse(T& input_iterable) : iterable{input_iterable} {
+    constexpr explicit ItReverse(T& input_iterable) : iterable{input_iterable} {
     }
 
     constexpr auto begin() {
@@ -435,9 +435,9 @@ class AsReverse {
 };
 
 template <is_iterable T>
-class AsConst {
+class ItConst {
   public:
-    constexpr explicit AsConst(T& input_iterable) : iterable{input_iterable} {};
+    constexpr explicit ItConst(T& input_iterable) : iterable{input_iterable} {};
 
     constexpr auto begin() const {
         return iterable.cbegin();
@@ -452,9 +452,9 @@ class AsConst {
 };
 
 template <is_iterable T>
-class AsConstReverse {
+class ItConstReverse {
   public:
-    constexpr explicit AsConstReverse(T& input_iterable)
+    constexpr explicit ItConstReverse(T& input_iterable)
         : iterable{input_iterable} {};
 
     constexpr auto begin() const {

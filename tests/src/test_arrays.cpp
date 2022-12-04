@@ -9,7 +9,7 @@
 TEST(test_arrays) {
     // Initializing a array:
     cat::Array<int4, 5> array_1 = {0, 1, 2, 3, 4};
-    // Assigning a array:
+    // Itsigning a array:
     array_1 = {5, 6, 7, 8, 9};
     // Default initializing a array:
     cat::Array<int4, 1> array_2;
@@ -46,7 +46,7 @@ TEST(test_arrays) {
         ++count;
     }
 
-    for (int4 const& a : cat::AsReverse(array_1)) {
+    for (int4 const& a : cat::ItReverse(array_1)) {
         --count;
         cat::verify(a == array_1[count]);
     }
@@ -55,13 +55,13 @@ TEST(test_arrays) {
     cat::verify(array_1.back() == 9);
 
     count = 0;
-    for (int4 const& a : cat::AsConst(array_1)) {
+    for (int4 const& a : cat::ItConst(array_1)) {
         cat::verify(a == array_1[count]);
         ++count;
     }
     _ = array_1.cbegin();
 
-    for (int4 const& a : cat::AsConstReverse(array_1)) {
+    for (int4 const& a : cat::ItConstReverse(array_1)) {
         --count;
         cat::verify(a == array_1[count]);
     }
