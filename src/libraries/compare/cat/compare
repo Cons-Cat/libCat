@@ -509,3 +509,11 @@ using common_comparison_category_t =
     typename common_comparison_category<Ts...>::type;
 
 }  // namespace std
+
+namespace cat {
+
+template <typename T>
+concept is_common_comparison_category = is_same<T, std::strong_ordering> &&
+    is_same<T, std::weak_ordering> && is_same<T, std::partial_ordering>;
+
+}  // namespace cat

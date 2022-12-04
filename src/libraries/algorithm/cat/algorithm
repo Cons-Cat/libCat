@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/collection>
+#include <cat/iterator>
 
 namespace cat {
 
@@ -71,6 +72,50 @@ auto relocate(InputIterator source_begin, InputIterator source_end,
             return copy(source_begin, source_end, destination_begin);
         }
     }
+}
+
+template <is_forward_iterator ItLhs, is_forward_iterator ItRhs>
+constexpr auto lexicographical_compare(ItLhs lhs_start, ItLhs lhs_end,
+                                       ItRhs rhs_start, ItRhs rhs_end) -> bool {
+    while (lhs_start != lhs_end) {
+        if (rhs_start == rhs_end || *rhs_start < *lhs_start) {
+            return false;
+        }
+        if (*lhs_start < *rhs_start) {
+            return true;
+        }
+
+        ++lhs_start;
+        ++rhs_start;
+    }
+
+    return (rhs_start != rhs_end);
+}
+
+template <is_forward_iterator ItLhs, is_forward_iterator ItRhs>
+constexpr auto lexicographical_compare_three_way(ItLhs lhs_start, ItLhs lhs_end,
+                                                 ItRhs rhs_start,
+                                                 ItRhs rhs_end)  // Formatting.
+    requires(is_common_comparison_category<decltype((*lhs_start) <=>
+                                                    (*rhs_start))>) {
+    bool exhaust_left = (lhs_start == lhs_end);
+    bool exhaust_right = (rhs_start == rhs_end);
+
+    while (!exhaust_left && !exhaust_right) {
+        auto comparison = (*lhs_start) <=> (*rhs_start);
+
+        if (comparison != 0) {
+            return comparison;
+        }
+
+        exhaust_left = (++lhs_start == lhs_end);
+        exhaust_right = (++rhs_start == rhs_end);
+    }
+
+    using Category = decltype((*lhs_start) <=> (*rhs_start));
+    return Category(!exhaust_left    ? std::strong_ordering::greater
+                    : !exhaust_right ? std::strong_ordering::less
+                                     : std::strong_ordering::equal);
 }
 
 }  // namespace cat
