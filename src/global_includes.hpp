@@ -122,26 +122,28 @@ class String;
 // Unwrap an error-like container such as `cat::Scaredy` or `cat::Maybe` iff
 // it holds a value, otherwise propagate it up the call stack. This works due to
 // a GCC extension, statement expressions.
-#define TRY(container)                                                      \
-    ({                                                                      \
-        using TRY_T = decltype(container);                                  \
-        /* `if constexpr` does not work right in a statement expression. */ \
-        /* If a `nullopt` is returned, this can fail to compile even if */  \
-        /* the constant expression is false. In that case, `NoType` is */   \
-        /* the return type instead, but of course `NoType` will never be */ \
-        /* returned.*/                                                      \
-        using ReturnType =                                                  \
-            cat::Conditional<cat::is_specialization<TRY_T, cat::Maybe>,     \
-                             cat::detail::NullOpt, cat::NoType>;            \
-                                                                            \
-        if (!((container).has_value())) {                                   \
-            if constexpr (cat::is_specialization<TRY_T, cat::Maybe>) {      \
-                return ReturnType{};                                        \
-            } else {                                                        \
-                return (container);                                         \
-            }                                                               \
-        }                                                                   \
-        (container).value();                                                \
+#define TRY(container)                                                        \
+    ({                                                                        \
+        using TRY_T = decltype(container);                                    \
+        /* static_assert(cat::is_maybe<TRY_T>  || cat::is_scaredy<TRY_T>); */ \
+        /* `if constexpr` does not short circuit for the purposes of */       \
+        /* type-deduction within a statement expression. */                   \
+        /* If a `nullopt` is returned, this can fail to compile even if */    \
+        /* the constant expression is false. In that case, `NoType` is */     \
+        /* the return type instead, but of course `NoType` will never be */   \
+        /* returned.*/                                                        \
+        using ReturnType =                                                    \
+            cat::Conditional<cat::is_specialization<TRY_T, cat::Maybe>,       \
+                             cat::detail::NullOpt, cat::NoType>;              \
+                                                                              \
+        if (!((container).has_value())) {                                     \
+            if constexpr (cat::is_maybe<TRY_T>) {                             \
+                return ReturnType{};                                          \
+            } else {                                                          \
+                return (container);                                           \
+            }                                                                 \
+        }                                                                     \
+        (container).value();                                                  \
     })
 
 // Placement `new`.

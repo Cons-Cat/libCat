@@ -1,5 +1,5 @@
-#include <cat/memory>
 #include <cat/maybe>
+#include <cat/memory>
 #include <cat/unique>
 #include <cat/utility>
 
@@ -117,10 +117,10 @@ TEST(test_maybe) {
 
     // `Maybe` with a predicate.
     cat::Maybe<cat::Compact<int4,
-                               [](int4 input) -> bool {
-                                   return input >= 0;
-                               },
-                               -1>>
+                            [](int4 input) -> bool {
+                                return input >= 0;
+                            },
+                            -1>>
         positive(nullopt);
     cat::verify(!positive.has_value());
 
@@ -139,10 +139,10 @@ TEST(test_maybe) {
 
     // `Maybe<void>` with a predicate.
     cat::Maybe<cat::Compact<cat::MonostateStorage<int, 0>,
-                               [](int input) -> bool {
-                                   return input >= 0;
-                               },
-                               -1>>
+                            [](int input) -> bool {
+                                return input >= 0;
+                            },
+                            -1>>
         predicate_void(nullopt);
     cat::verify(!predicate_void.has_value());
     predicate_void = monostate;
@@ -304,19 +304,18 @@ TEST(test_maybe) {
     OptNonTrivial nontrivial_val;
     cat::Maybe<OptNonTrivial&> nontrivial_ref_default;
     nontrivial_ref_default = nontrivial_val;
-    [[maybe_unused]] cat::Maybe<OptNonTrivial&> nontrivial_ref =
-        nontrivial_val;
+    [[maybe_unused]] cat::Maybe<OptNonTrivial&> nontrivial_ref = nontrivial_val;
 
     OptNonTrivial const const_nontrivial_val;
     [[maybe_unused]] cat::Maybe<OptNonTrivial&> const
         mut_const_nontrivial_ref_default;
-    [[maybe_unused]] cat::Maybe<OptNonTrivial&> const
-        mut_const_nontrivial_ref = nontrivial_val;
+    [[maybe_unused]] cat::Maybe<OptNonTrivial&> const mut_const_nontrivial_ref =
+        nontrivial_val;
 
     [[maybe_unused]] cat::Maybe<OptNonTrivial const&>
         const_mut_nontrivial_ref_default;
-    [[maybe_unused]] cat::Maybe<OptNonTrivial const&>
-        const_mut_nontrivial_ref = nontrivial_val;
+    [[maybe_unused]] cat::Maybe<OptNonTrivial const&> const_mut_nontrivial_ref =
+        nontrivial_val;
     [[maybe_unused]] cat::Maybe<OptNonTrivial const&>
         const_mut_nontrivial_ref_2 = const_nontrivial_val;
     const_mut_nontrivial_ref = const_nontrivial_val;
@@ -379,8 +378,8 @@ TEST(test_maybe) {
             OptConstNonTrivial{};
         cat::verify(const_nontrivial.has_value());
 
-        constexpr cat::Maybe<OptConstNonTrivial> const_nontrivial_in_place =
-            {in_place, OptConstNonTrivial{}};
+        constexpr cat::Maybe<OptConstNonTrivial> const_nontrivial_in_place = {
+            in_place, OptConstNonTrivial{}};
         cat::verify(const_nontrivial_in_place.has_value());
 
         // Test `Maybe<Compact<T>>`.
@@ -398,8 +397,7 @@ TEST(test_maybe) {
             const_nontrivial_default_optptr;
         [[maybe_unused]] cat::MaybePtr<OptNonTrivial> nontrivial_optptr =
             nullptr;
-        [[maybe_unused]] cat::MaybePtr<OptNonTrivial>
-            nontrivial_default_optptr;
+        [[maybe_unused]] cat::MaybePtr<OptNonTrivial> nontrivial_default_optptr;
     };
     _ = cat::constant_evaluate(constant);
 
@@ -461,6 +459,13 @@ TEST(test_maybe) {
         matched = true;
     }));
     cat::verify(matched);
+
+    // Test traits.
+    static_assert(cat::is_maybe<cat::Maybe<int>>);
+    static_assert(cat::is_maybe<decltype(opt_original)>);
+
+    static_assert(!cat::is_scaredy<cat::Maybe<int>>);
+    static_assert(!cat::is_scaredy<decltype(opt_original)>);
 
     // Test `TRY` macro.
     _ = maybe_try_success().verify();

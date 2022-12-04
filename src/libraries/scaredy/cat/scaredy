@@ -304,9 +304,11 @@ class Scaredy {
         detail::ScaredyVariantStorage <T, Errors...>>;
     // clang-format on
 
+  public:
     using Value = typename Storage::Value;
     using ErrorsList = TypeList<Errors...>;
 
+  private:
     // These two templates must be declared here to be used in the below atomic
     // constraints.
 
@@ -797,6 +799,16 @@ class Scaredy {
 
   private:
     Storage storage;
+};
+
+template <typename T>
+concept is_scaredy = requires(T t) {
+    // T::Value;
+    // T::ErrorsList;
+    cat::Maybe<decltype(t.value())>();
+}
+&&!requires(T t) {
+    t = cat::nullopt;
 };
 
 }  // namespace cat

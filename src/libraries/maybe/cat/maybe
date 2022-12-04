@@ -1096,26 +1096,26 @@ class Maybe {
 template <typename T>
 Maybe(T) -> Maybe<T>;
 
+template <typename T>
+concept is_maybe = requires(T t) {
+    // T::Value;
+    cat::Maybe<decltype(t.value())>();
+    t = cat::nullopt;
+}
+&&!requires {
+    T::ErrorsList;
+};
+
 // TODO: Support `void*`.
 // Simplify nullable pointers.
 template <typename T>
 using MaybePtr = Maybe<Sentinel<T*, nullptr>>;
-
-// Simplify nullable spans.
-template <typename T>
-class Span;
 
 namespace detail {
     template <is_integral T>
     constexpr auto is_non_negative(T value) -> bool {
         return value >= 0;
     }
-
-    template <typename T>
-    constexpr auto span_is_non_null(Span<T> span) -> bool {
-        return span.data() != nullptr;
-    }
-
 }  // namespace detail
 
 // Simplify non-negative signed integers.

@@ -30,13 +30,8 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
     // Allocate a `LinearAllocator` from another allocator.
     static auto backed(is_stable_allocator auto& backing, ssize arena_bytes)
         -> Maybe<LinearAllocator> {
-        // `TRY()` cannot be used here due to problems with type deduction in
-        // statement expressions.
-        Maybe maybe_memory = backing.template alloc_multi<Byte>(arena_bytes);
-        if (!maybe_memory.has_value()) {
-            return nullopt;
-        }
-        return LinearAllocator(maybe_memory.value().data(), arena_bytes);
+        Span memory = TRY(backing.template alloc_multi<Byte>(arena_bytes));
+        return LinearAllocator(memory.data(), arena_bytes);
     }
 
     // Allocate a `LinearAllocator` from another allocator, given a handle to

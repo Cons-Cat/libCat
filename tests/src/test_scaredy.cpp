@@ -231,6 +231,13 @@ TEST(test_scaredy) {
         }));
     cat::verify(matched);
 
+    // Test traits.
+    static_assert(!cat::is_maybe<cat::Scaredy<int, ErrorOne>>);
+    static_assert(!cat::is_maybe<decltype(result)>);
+
+    static_assert(cat::is_scaredy<cat::Scaredy<int, ErrorOne>>);
+    static_assert(cat::is_scaredy<decltype(result)>);
+
     // Test `TRY` macro.
     _ = scaredy_try_success().verify();
     cat::Scaredy fail = scaredy_try_fail();

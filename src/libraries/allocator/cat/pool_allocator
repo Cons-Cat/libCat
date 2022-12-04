@@ -27,17 +27,13 @@ class PoolAllocator : public AllocatorFacade<PoolAllocator<max_node_bytes>> {
     // Allocate a `PoolAllocator` from another allocator.
     static auto backed(is_stable_allocator auto& backing, ssize arena_bytes)
         -> Maybe<PoolAllocator<max_node_bytes>> {
-        // `TRY()` cannot be used here due to problems with type deduction in
         // statement expressions.
-        Maybe<Span<Node>> maybe_memory =
-            backing.template alloc_multi<Node>(arena_bytes / ssizeof<Node>());
+        Span<Node> memory =
+            TRY(backing.template alloc_multi<Node>(arena_bytes / ssizeof<Node>()));
         // TODO: Optimize that division.
-        if (!maybe_memory.has_value()) {
-            return nullopt;
-        }
 
         PoolAllocator<max_node_bytes> pool;
-        pool.nodes = maybe_memory.value();
+        pool.nodes = memory;
 
         // Initialize the free list.
         pool.reset();
