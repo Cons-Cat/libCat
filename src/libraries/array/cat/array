@@ -13,6 +13,8 @@ namespace cat {
 template <typename T, ssize length>
 class Array : public CollectionFacade<Array<T, length>, T> {
   public:
+    using Value = T;
+
     constexpr Array() = default;
     constexpr Array(Array<T, length> const& other_array) = default;
     constexpr Array(Array<T, length>&& other_array) = default;
@@ -104,7 +106,7 @@ class Array : public CollectionFacade<Array<T, length>, T> {
     }
 
     // Get the number of elements contained in this `Array`.
-    [[nodiscard]] constexpr auto size() const -> ssize {
+    [[nodiscard]] static constexpr auto size() -> ssize {
         return length;
     }
 

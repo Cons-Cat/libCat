@@ -9,7 +9,7 @@
 TEST(test_arrays) {
     // Initializing a array:
     cat::Array<int4, 5> array_1 = {0, 1, 2, 3, 4};
-    // Itsigning a array:
+    // Assigning a array:
     array_1 = {5, 6, 7, 8, 9};
     // Default initializing a array:
     cat::Array<int4, 1> array_2;
