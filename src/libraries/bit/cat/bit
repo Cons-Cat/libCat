@@ -165,16 +165,6 @@ template <cat::is_enum_flag T>
 //     return static_cast<T>(static_cast<U>(flag_1) & flag_2);
 // }
 
-
-
-
-    }
-    }
-
-
-};
-
-
 constexpr auto operator""_ki(unsigned long long input) -> ssize {
     return 1024 * static_cast<signed long long>(input);
 }
