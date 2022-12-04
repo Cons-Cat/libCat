@@ -10,24 +10,22 @@ namespace cat {
 // inclusion errors.
 
 template <typename T>
-constexpr auto min(T const& value) -> T const&;
+constexpr auto min(T value) -> T;
 
 // Implicit output type `min()`.
 
 // Implicit output type `max()`.
 template <typename T, typename U, typename... Remaining>
     requires(is_implicitly_convertible<U, T>)
-constexpr auto min(T const& value_1, U const& value_2, Remaining&&... remaining)
-    -> T const&;
+constexpr auto min(T value_1, U value_2, Remaining... remaining) -> T;
 
 template <typename T>
-constexpr auto max(T const& value) -> T const&;
+constexpr auto max(T value) -> T;
 
 // Implicit output type `max()`.
 template <typename T, typename U, typename... Remaining>
     requires(is_implicitly_convertible<U, T>)
-constexpr auto max(T const& value_1, U const& value_2, Remaining&&... remaining)
-    -> T const&;
+constexpr auto max(T value_1, U value_2, Remaining... remaining) -> T;
 
 template <typename... Ts>
 class TypeList {

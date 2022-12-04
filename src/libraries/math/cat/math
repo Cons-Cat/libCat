@@ -12,20 +12,21 @@ namespace cat {
 // TODO: Explicit output type is ambiguous when given 2 function arguments.
 
 template <typename T>
-constexpr auto min(T const& value) -> T const& {
+constexpr auto min(T value) -> T {
     return value;
 }
 
 // Implicit output type `min()`.
 template <typename T, typename U, typename... Remaining>
     requires(is_implicitly_convertible<U, T>)
-constexpr auto min(T const& value_1, U const& value_2, Remaining&&... remaining)
-    -> T const& {
+constexpr auto min(T value_1, U value_2, Remaining... remaining) -> T {
     // Recurse through the list of variadic arguments, discarding the larger
     // element each time.
-    return (value_1 < value_2) ? min(value_1, forward<Remaining>(remaining)...)
-                               : min(value_2, forward<Remaining>(remaining)...);
+    return (value_1 < value_2) ? min(value_1, remaining...)
+                               : min(value_2, remaining...);
 }
+
+// TODO: These should have different names and be in `<cat/algorithms>`.
 
 constexpr auto min(is_iterable auto&& iterable) {
     auto iterator = iterable.begin();
@@ -51,19 +52,18 @@ constexpr auto min(is_iterable auto&& iterable) {
 }
 
 template <typename T>
-constexpr auto max(T const& value) -> T const& {
+constexpr auto max(T value) -> T {
     return value;
 }
 
 // Implicit output type `max()`.
 template <typename T, typename U, typename... Remaining>
     requires(is_implicitly_convertible<U, T>)
-constexpr auto max(T const& value_1, U const& value_2, Remaining&&... remaining)
-    -> T const& {
+constexpr auto max(T value_1, U value_2, Remaining... remaining) -> T {
     // Recurse through the list of variadic arguments, discarding the larger
     // element each time.
-    return (value_1 > value_2) ? max(value_1, forward<Remaining>(remaining)...)
-                               : max(value_2, forward<Remaining>(remaining)...);
+    return (value_1 > value_2) ? max(value_1, remaining...)
+                               : max(value_2, remaining...);
 }
 
 // TODO: If an `iterable` has `<` and `>` operators, this has unclear intent.
@@ -145,6 +145,30 @@ constexpr auto pow(T base, U exponent) -> T {
 template <is_arithmetic T>
 constexpr auto is_power_of_two(T value) -> bool {
     return (value & (value - T(1))) == T(0);
+}
+
+namespace detail {
+    template <is_unsigned_integral T, usize::Raw shift>
+    [[gnu::always_inline]] constexpr auto round_to_pow2_part(T value) {
+        value |= (value >> shift);
+
+        // Continually shift right until doing so would shift the entire int.
+        // i.e., for `uint4`, shift by 1, then 2, then 4, then 8, then 16, and
+        // stop before 32.
+        // For `uint8`, shift likewise and stop before 64.
+        if constexpr ((shift * 2u) < (sizeof(T) * 8)) {
+            return round_to_pow2_part<T, shift * 2u>(value);
+        } else {
+            return value;
+        }
+    }
+}  // namespace detail
+
+template <is_unsigned_integral T>
+constexpr auto round_to_pow2(T value) {
+    value -= 1u;
+    value = detail::round_to_pow2_part<T, 1u>(value);
+    return value + 1;
 }
 
 template <is_arithmetic T>

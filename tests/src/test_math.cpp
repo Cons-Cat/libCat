@@ -73,6 +73,15 @@ TEST(test_math) {
     cat::verify(cat::is_power_of_two(8u));
     cat::verify(cat::is_power_of_two(256));
 
+    // Test `round_to_pow2()`.
+    cat::round_to_pow2(0u);
+    static_assert(cat::round_to_pow2(0u) == 0u);
+    static_assert(cat::round_to_pow2(1u) == 1u);
+    static_assert(cat::round_to_pow2(2u) == 2u);
+    static_assert(cat::round_to_pow2(3u) == 4u);
+    static_assert(cat::round_to_pow2(4u) == 4u);
+    static_assert(cat::round_to_pow2(5u) == 8u);
+
     // Test `clamp()`.
     cat::verify(cat::clamp(-10, 0, 10) == 0);
     cat::verify(cat::clamp(5, 0, 10) == 5);
