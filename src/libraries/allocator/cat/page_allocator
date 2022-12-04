@@ -46,7 +46,7 @@ class PageAllocator : public AllocatorFacade<PageAllocator> {
                 static_cast<unsigned int>(nix::MemoryFlags::populate) |
                 static_cast<unsigned int>(nix::MemoryFlags::anonymous)),
             // Anonymous pages (non-files) must have `-1`.
-            nix::FileDescriptor{-1},
+            nix::FileDescriptor(-1),
             // Anonymous pages (non-files) must have `0`.
             0);
         if (result.has_value()) {

@@ -25,7 +25,7 @@ template <typename T, typename... Args>
 constexpr auto construct_at(T* p_place, Args&&... arguments) -> decltype(auto) {
     // TODO: Assert that alignment constraints are satisfied.
     return new (const_cast<void*>(static_cast<void const volatile*>(p_place)))
-        T{forward<Args>(arguments)...};
+        T(forward<Args>(arguments)...);
 }
 
 // Call an in-place destructor at any place.

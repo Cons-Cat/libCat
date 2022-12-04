@@ -645,7 +645,7 @@ class Maybe {
     template <typename... Patterns>
         requires(is_specialization<Patterns, detail::PatternCallback>&&...)
     constexpr void match(Patterns&&... patterns) {
-        detail::MatchPatterns{*this}(forward<Patterns>(patterns)...);
+        detail::MatchPatterns(*this)(forward<Patterns>(patterns)...);
     }
 
     // Holds true if this `Maybe` currently has some value convertible and
@@ -952,7 +952,7 @@ class Maybe {
         if constexpr (is_void<U>) {
             return;
         } else {
-            return U{nullopt};
+            return U(nullopt);
         }
     }
 
@@ -974,7 +974,7 @@ class Maybe {
         if constexpr (is_void<U>) {
             return;
         } else {
-            return U{nullopt};
+            return U(nullopt);
         }
     }
 
@@ -996,7 +996,7 @@ class Maybe {
         if constexpr (is_void<U>) {
             return;
         } else {
-            return U{nullopt};
+            return U(nullopt);
         }
     }
 
@@ -1018,7 +1018,7 @@ class Maybe {
         if constexpr (is_void<U>) {
             return;
         } else {
-            return U{nullopt};
+            return U(nullopt);
         }
     }
 

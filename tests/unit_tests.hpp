@@ -23,7 +23,7 @@ namespace cat::detail {
         /* TODO: This will leak. An `InlineAllocator` should be used. */    \
         _ = cat::print(cat::format(pager, "{}", tests_run).value());        \
         /* TODO: Align the whitespace after `:` for 1 and 2 digit tests. */ \
-        auto string = cat::StaticString{": "} + #test_name + "...\n";       \
+        auto string = cat::StaticString(": ") + #test_name + "...\n";       \
         _ = cat::print(string);                                             \
         test_name();                                                        \
     }                                                                       \

@@ -227,7 +227,7 @@ class List : public CollectionFacade<List<T>, T> {
         } else {
             this->place_node(where, node);
         }
-        return Iterator{&node};
+        return Iterator(&node);
     }
 
     // Allocate a node and insert it into this list before the position of
@@ -242,7 +242,7 @@ class List : public CollectionFacade<List<T>, T> {
         }
 
         detail::ListNode<T>& node = *memory.value();
-        new (&node.storage) T{forward<Args>(arguments)...};
+        new (&node.storage) T(forward<Args>(arguments)...);
 
         if (this->length == 0) [[unlikely]] {
             // If this list has nothing in it, `.emplace()` must be
@@ -251,7 +251,7 @@ class List : public CollectionFacade<List<T>, T> {
         } else {
             this->place_node(where, node);
         }
-        return Iterator{&node};
+        return Iterator(&node);
     }
 
     // Remove and deallocate an element from this list.
@@ -259,7 +259,7 @@ class List : public CollectionFacade<List<T>, T> {
         -> Maybe<Iterator> {
         if (this->length == 0) [[unlikely]] {
             // Prevent a segfault when the list is empty.
-            return Iterator{this->p_head};
+            return Iterator(this->p_head);
         }
 
         detail::ListNode<T>& node = *where.p_node;
@@ -279,7 +279,7 @@ class List : public CollectionFacade<List<T>, T> {
         }
         this->length--;
         allocator.free(&node);
-        return Iterator{next};
+        return Iterator(next);
     }
 
     // Allocate a node and insert it at the beginning of this list.
@@ -297,7 +297,7 @@ class List : public CollectionFacade<List<T>, T> {
         node.storage = static_cast<T>(value);
         this->place_node_front(node);
 
-        return Iterator{&node};
+        return Iterator(&node);
     }
 
     // Allocate a node and insert it at the beginning of this list.
@@ -311,10 +311,10 @@ class List : public CollectionFacade<List<T>, T> {
         }
 
         detail::ListNode<T>& node = *memory.value();
-        new (&node.storage) T{forward<Args>(arguments)...};
+        new (&node.storage) T(forward<Args>(arguments)...);
         this->place_node_front(node);
 
-        return Iterator{&node};
+        return Iterator(&node);
     }
 
     // Remove an element from the front of this list.
@@ -347,7 +347,7 @@ class List : public CollectionFacade<List<T>, T> {
         node.storage = static_cast<T>(value);
         this->place_node_back(node);
 
-        return Iterator{&node};
+        return Iterator(&node);
     }
 
     // Allocate a node and insert it at the end of this list.
@@ -361,10 +361,10 @@ class List : public CollectionFacade<List<T>, T> {
         }
 
         detail::ListNode<T>& node = *memory.value();
-        new (&node.storage) T{forward<Args>(arguments)...};
+        new (&node.storage) T(forward<Args>(arguments)...);
         this->place_node_back(node);
 
-        return Iterator{&node};
+        return Iterator(&node);
     }
 
     // Remove and deallocate an element from the back of this list.
@@ -393,11 +393,11 @@ class List : public CollectionFacade<List<T>, T> {
     // Providing these four iterator getters generates the remaining eight
     // through the `CollectionFacade`.
     [[nodiscard]] auto begin() -> Iterator {
-        return Iterator{this->p_head};
+        return Iterator(this->p_head);
     }
 
     [[nodiscard]] auto end() -> Iterator {
-        return Iterator{this->p_tail};
+        return Iterator(this->p_tail);
     }
 
     [[nodiscard]] auto rbegin() {
@@ -572,7 +572,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         } else {
             this->place_node_after(where, node);
         }
-        return Iterator{&node};
+        return Iterator(&node);
     }
 
     template <typename... Args>
@@ -586,7 +586,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         }
 
         detail::ForwardListNode<T>& node = *memory.value();
-        new (&node.storage) T{forward<Args>(arguments)...};
+        new (&node.storage) T(forward<Args>(arguments)...);
 
         if (this->length == 0) [[unlikely]] {
             // If this list has nothing in it, `.insert_after()` must be
@@ -595,7 +595,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         } else {
             this->place_node_after(where, node);
         }
-        return Iterator{&node};
+        return Iterator(&node);
     }
 
     void erase_after(is_stable_allocator auto& allocator, Iterator where) {
@@ -621,7 +621,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         node.storage = static_cast<T>(value);
         this->place_node_front(node);
 
-        return Iterator{&node};
+        return Iterator(&node);
     }
 
     // Allocate a node and insert it at the beginning of this list.
@@ -636,10 +636,10 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         }
 
         detail::ForwardListNode<T>& node = *memory.value();
-        new (&node.storage) T{forward<Args>(arguments)...};
+        new (&node.storage) T(forward<Args>(arguments)...);
         this->place_node_front(node);
 
-        return Iterator{&node};
+        return Iterator(&node);
     }
 
     // Remove an element from the front of this list.
@@ -667,11 +667,11 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     // Providing these two iterator getters generates the remaining four
     // through the `CollectionFacade`.
     [[nodiscard]] auto begin() -> Iterator {
-        return Iterator{this->p_head};
+        return Iterator(this->p_head);
     }
 
     [[nodiscard]] auto end() -> Iterator {
-        return Iterator{this->p_tail};
+        return Iterator(this->p_tail);
     }
 
   private:

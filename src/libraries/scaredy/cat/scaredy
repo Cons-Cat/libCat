@@ -155,7 +155,7 @@ namespace detail {
         // `decltype` adds a reference to it, so that is removed by
         // `RemoveReference`.
         // TODO: Consider `typeof()` instead?
-        using Error = RemoveReference<decltype(Array{Errors{}...}[0])>;
+        using Error = RemoveReference<decltype(Array(Errors()...)[0])>;
 
         constexpr ScaredyCompactStorage() = default;
 
@@ -600,7 +600,7 @@ class Scaredy {
     template <typename... Patterns>
         requires(is_specialization<Patterns, detail::PatternCallback>&&...)
     constexpr void match(Patterns&&... patterns) {
-        detail::MatchPatterns{*this}(forward<Patterns>(patterns)...);
+        detail::MatchPatterns(*this)(forward<Patterns>(patterns)...);
     }
 
     // If this non-`const`-qualified `Scaredy` holds a value, transform it
@@ -609,50 +609,50 @@ class Scaredy {
     [[nodiscard]] constexpr auto transform(Function&& callback) & {
         using This = Scaredy<T, Errors...>;
         if (this->has_value()) {
-            return This{forward<Function>(callback)(this->value())};
+            return This(forward<Function>(callback)(this->value()));
         }
-        return This{this->storage};
+        return This(this->storage);
     }
 
     template <typename Function>
     [[nodiscard]] constexpr auto transform(Function&& callback) const& {
         using This = Scaredy<T, Errors...>;
         if (this->has_value()) {
-            return This{forward<Function>(callback)(this->value())};
+            return This(forward<Function>(callback)(this->value()));
         }
-        return This{this->storage};
+        return This(this->storage);
     }
 
     template <typename Function>
     [[nodiscard]] constexpr auto transform(Function&& callback) && {
         using This = Scaredy<T, Errors...>;
         if (this->has_value()) {
-            return This{forward<Function>(callback)(move(this)->value())};
+            return This(forward<Function>(callback)(move(this)->value()));
         }
-        return This{move(this->storage)};
+        return This(move(this->storage));
     }
 
     template <typename Function>
     [[nodiscard]] constexpr auto transform(Function&& callback) const&& {
         using This = Scaredy<T, Errors...>;
         if (this->has_value()) {
-            return This{forward<Function>(callback)(move(this)->value())};
+            return This(forward<Function>(callback)(move(this)->value()));
         }
-        return This{move(this->storage)};
+        return This(move(this->storage));
     }
 
     template <typename Function>
     [[nodiscard]] constexpr auto and_then(Function&& callback) & {
         using This = Scaredy<T, Errors...>;
         return this->has_value() ? forward<Function>(callback)(this->value())
-                                 : This{this->storage};
+                                 : This(this->storage);
     }
 
     template <typename Function>
     [[nodiscard]] constexpr auto and_then(Function&& callback) const& {
         using This = Scaredy<T, Errors...>;
         return this->has_value() ? forward<Function>(callback)(this->value())
-                                 : This{this->storage};
+                                 : This(this->storage);
     }
 
     template <typename Function>
@@ -660,7 +660,7 @@ class Scaredy {
         using This = Scaredy<T, Errors...>;
         return this->has_value()
                    ? forward<Function>(callback)(move(this)->value())
-                   : This{move(this->storage)};
+                   : This(move(this->storage));
     }
 
     template <typename Function>
@@ -668,7 +668,7 @@ class Scaredy {
         using This = Scaredy<T, Errors...>;
         return this->has_value()
                    ? forward<Function>(callback)(move(this)->value())
-                   : This{move(this->storage)};
+                   : This(move(this->storage));
     }
 
     template <typename Function>

@@ -73,7 +73,7 @@ namespace detail {
         using ReturnType = decltype(maybe_allocation);
 
         if (!maybe_allocation.has_value()) {
-            return ReturnType{nullopt};
+            return ReturnType(nullopt);
         }
 
         char* p_memory = alloc.get(maybe_allocation.value()).data();

@@ -47,7 +47,7 @@ constexpr auto to_raw_numeral(T value) {
 }
 
 template <typename T>
-using ToRawArithmetic = decltype(to_raw_numeral(T{0}));
+using ToRawArithmetic = decltype(to_raw_numeral(T(0)));
 
 template <typename T>
 concept is_raw_numeral = is_same<T, ToRawArithmetic<T>>;
@@ -152,9 +152,9 @@ namespace detail {
     template <typename T, typename U>
     consteval auto promoted_numeral() {
         if constexpr (is_arithmetic_ptr<T>) {
-            return T{};
+            return T();
         } else if constexpr (is_arithmetic_ptr<U>) {
-            return U{};
+            return U();
         } else {
             if constexpr (sizeof(T) >= sizeof(U)) {
                 return Arithmetic<ToRawArithmetic<T>,

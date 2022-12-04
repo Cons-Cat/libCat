@@ -92,7 +92,7 @@ TEST(test_paging_memory) {
     cat::verify(paging_counter_2 == 10);
 
     auto smalltesttype = allocator.opq_inline_alloc<TestType>().or_exit();
-    allocator.get(smalltesttype) = TestType{};
+    allocator.get(smalltesttype) = TestType();
     allocator.free(smalltesttype);
 
     // Aligned memory allocations.

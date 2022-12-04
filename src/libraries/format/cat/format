@@ -42,7 +42,7 @@ template <is_integral T>
         // TODO: Format 1 and 2 byte integers.
         __builtin_unreachable();
     }
-    return String{p_string};
+    return String(p_string);
 }
 
 // Dynamically allocate a floating point value converted to `String`.
@@ -56,7 +56,7 @@ template <typename T>
     }
     char* p_string = result.value().data();
     detail::dragonbox::to_chars(value, p_string);
-    return String{p_string};
+    return String(p_string);
 }
 
 namespace detail {
@@ -91,10 +91,10 @@ template <auto value>
     requires(is_integral<decltype(value)>)
 [[nodiscard]] consteval auto to_chars() {
     if constexpr (value == 0) {
-        return StaticString{"0"};
+        return StaticString("0");
     } else {
         constexpr StaticString string =
-            detail::make_const_string<1, abs(value)>(StaticString{""});
+            detail::make_const_string<1, abs(value)>(StaticString(""));
 
         // Handle a negative sign.
         if constexpr (is_signed<decltype(value)> && value < 0) {
@@ -150,7 +150,7 @@ template <is_integral T>
         copy_memory(buffer, output_buffer.data(), length);
     }
 
-    return String{output_buffer.data(), length};
+    return String(output_buffer.data(), length);
 }
 
 // Formatting
@@ -770,7 +770,7 @@ namespace detail {
         }
 
         ssize const length = string_length(into_buffer.data());
-        return String{into_buffer.p_storage, length};
+        return String(into_buffer.p_storage, length);
     }
 }  // namespace detail
 
@@ -784,7 +784,7 @@ template <is_stable_allocator Allocator, is_output_iterator<String> Outputter,
     return detail::vformat_to(
         allocator, output_iterator, format,
         detail::FormatArguments{
-            detail::FormatArgumentsCompactStorage{move(arguments)...}});
+            detail::FormatArgumentsCompactStorage(move(arguments)...)});
 }
 
 template <is_stable_allocator Allocator, typename... Args>
@@ -793,7 +793,7 @@ template <is_stable_allocator Allocator, typename... Args>
     return detail::vformat(
         allocator, format,
         detail::FormatArguments{
-            detail::FormatArgumentsCompactStorage{move(arguments)...}});
+            detail::FormatArgumentsCompactStorage(move(arguments)...)});
 }
 
 }  // namespace cat

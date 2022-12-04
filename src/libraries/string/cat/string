@@ -101,7 +101,7 @@ class String : public Span<char const> {
 
     [[nodiscard]] constexpr auto substring(ssize position, ssize count)
         -> String {
-        return String{this->p_storage + position, count};
+        return String(this->p_storage + position, count);
     }
 
     [[nodiscard]] constexpr auto remove_prefix(ssize offset) -> String {

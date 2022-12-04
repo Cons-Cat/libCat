@@ -11,8 +11,8 @@ auto main(int argc, char* p_argv[]) -> int {
         }
 
         p_argv[i.raw][length.raw] = ' ';
-        _ = nix::sys_write(nix::FileDescriptor{1}, p_argv[i.raw], length + 1);
+        _ = nix::sys_write(nix::FileDescriptor(1), p_argv[i.raw], length + 1);
     }
 
-    _ = nix::sys_write(nix::FileDescriptor{1}, "\n");
+    _ = nix::sys_write(nix::FileDescriptor(1), "\n");
 }

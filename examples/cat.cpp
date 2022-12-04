@@ -5,8 +5,7 @@
 
 constexpr ssize block_size = 4_ki;
 
-auto get_file_size(nix::FileDescriptor file_descriptor)
-    -> cat::Maybe<ssize> {
+auto get_file_size(nix::FileDescriptor file_descriptor) -> cat::Maybe<ssize> {
     nix::FileStatus status = nix::sys_fstat(file_descriptor).or_exit();
     if (status.is_regular()) {
         return status.file_size;
@@ -22,7 +21,7 @@ void output_to_console(nix::IoVector const& io_vector) {
     // TODO: Make this buffered output to reduce syscalls.
     cat::Byte const* p_buffer = io_vector.data();
     ++p_buffer;
-    _ = nix::sys_write(nix::FileDescriptor{1},
+    _ = nix::sys_write(nix::FileDescriptor(1),
                        cat::bit_cast<char const*>(p_buffer), io_vector.size());
 }
 
@@ -41,9 +40,9 @@ void read_and_print_file(char* p_file_name) {
     cat::PageAllocator allocator;
     cat::Span<nix::IoVector> io_vectors;
 
-    nix::IoVector* p_io_buffer =
-        allocator.alloc_multi<nix::IoVector>(blocks).or_exit(
-            "Failed to allocate memory!", 3);
+    nix::IoVector* p_io_buffer = allocator.alloc_multi<nix::IoVector>(blocks)
+                                     .or_exit("Failed to allocate memory!", 3)
+                                     .data();
     io_vectors = cat::Span<nix::IoVector>{p_io_buffer, blocks};
 
     while (bytes_remaining > 0) {
@@ -51,13 +50,14 @@ void read_and_print_file(char* p_file_name) {
 
         // `MaybePtr` produces an internal compiler error in GCC 12 here.
         cat::Maybe buffer = allocator.alloc_multi<cat::Byte>(block_size);
+        // TODO: Simplify this out with `DEFER()` and `.or_exit()`.
         if (!buffer.has_value()) {
             allocator.free_multi(p_io_buffer, io_vectors.size());
             cat::exit(4);
         }
 
         io_vectors[current_block] =
-            nix::IoVector{buffer.p_value(), current_block_size};
+            nix::IoVector(buffer.value().data(), current_block_size);
         ++current_block;
         bytes_remaining -= current_block_size;
     }

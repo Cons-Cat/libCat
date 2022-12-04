@@ -52,11 +52,11 @@ constexpr auto tuple_cat(Ts&&... tuples) {
 
         // Get the `TypeList` from the inner and outer tuples.
         constexpr TypeList outer_elements_list =
-            detail::get_outer_type_list(OuterTupleTypeMap{});
+            detail::get_outer_type_list(OuterTupleTypeMap());
         constexpr TypeList inner_elements_list =
-            detail::get_inner_type_list(OuterTupleTypeMap{});
+            detail::get_inner_type_list(OuterTupleTypeMap());
 
-        return detail::tuple_cat_detail(OuterTuple{move(tuples)...},
+        return detail::tuple_cat_detail(OuterTuple(move(tuples)...),
                                         outer_elements_list,
                                         inner_elements_list);
     }

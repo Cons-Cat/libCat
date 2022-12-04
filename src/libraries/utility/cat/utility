@@ -101,8 +101,8 @@ namespace detail {
     constexpr auto make_integer_sequence() {
         if constexpr (count > 0) {
             // Recurse, appending `count - 1` to `integers`.
-            return make_integer_sequence<count - 1, T, T{count.raw - 1},
-                                         T{count.raw - 1}, integers...>();
+            return make_integer_sequence<count - 1, T, T(count.raw - 1),
+                                         T(count.raw - 1), integers...>();
         } else {
             return ValueList<T, integers...>();
         }
@@ -117,13 +117,13 @@ using MakeValueList = decltype(value_list<T, value, count>);
 
 template <is_integral T, ssize count>
 constexpr auto integer_sequence =
-    detail::make_integer_sequence<count, T, T{count.raw}>();
+    detail::make_integer_sequence<count, T, T(count.raw)>();
 
 template <is_integral T, ssize count>
-constexpr auto zeros_list = value_list<T, T{0}, count>;
+constexpr auto zeros_list = value_list<T, T(0), count>;
 
 template <is_integral T, ssize count>
-constexpr auto ones_list = value_list<T, T{1}, count>;
+constexpr auto ones_list = value_list<T, T(1), count>;
 
 template <is_integral T, ssize count>
 using MakeIntegerSequence = RemoveCv<decltype(integer_sequence<ssize, count>)>;

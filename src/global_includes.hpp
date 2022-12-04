@@ -143,7 +143,7 @@ class String;
                                                                               \
         if (!((container).has_value())) {                                     \
             if constexpr (cat::is_maybe<TRY_T>) {                             \
-                return ReturnType{};                                          \
+                return ReturnType();                                          \
             } else {                                                          \
                 return (container);                                           \
             }                                                                 \

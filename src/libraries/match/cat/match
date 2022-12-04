@@ -210,7 +210,7 @@ namespace detail {
 
 template <typename T>
 constexpr auto match(T& matching) -> detail::MatchPatterns<T> {
-    return detail::MatchPatterns{matching};
+    return detail::MatchPatterns(matching);
 }
 
 }  // namespace cat

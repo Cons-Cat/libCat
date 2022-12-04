@@ -87,7 +87,7 @@ template <typename T>
 constexpr operator T() const {
     using OtherTypes = typename Decay<T>::Types;
     // Pass in a `TypeList` for its types to be deduced out of.
-    return this->template convert_elements(OtherTypes{});
+    return this->template convert_elements(OtherTypes());
 }
 
 private:

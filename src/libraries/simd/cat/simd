@@ -141,14 +141,16 @@ class alignas(InAbi::alignment.raw) Simd {
         requires(ssizeof_pack<Us...>() > 1 &&
                  ssizeof_pack<Us...>() == InAbi::lanes)
     constexpr Simd(Us&&... values)
+        // GCC 13 requires curly braces here.
         : raw(Raw{static_cast<T>(forward<Us>(values))...}) {
     }
 
     // Construct from a constant list, such as `value_list` or
     // `integer_sequence`.
+    // TODO: Should this be removed, along with `cat::List`'s?
     template <typename U, U... Us>
         requires(ssizeof_pack<U, Us...> == InAbi::lanes)
-    constexpr Simd(ValueList<U, Us...>) : raw(Raw{static_cast<T>(Us)...}) {
+    constexpr Simd(ValueList<U, Us...>) : raw(Raw(static_cast<T>(Us)...)) {
     }
 
     // Any ABI for which this `Simd` is equal to in size and overaligned can
@@ -372,9 +374,9 @@ class alignas(InAbi::alignment.raw) Simd {
         -> Vector& requires(is_implicitly_convertible<U, Scalar>) {
         Scalar fill_value = static_cast<Scalar>(value);
         if constexpr (lanes == 2) {
-            this->raw = Raw{fill_value, fill_value};
+            this->raw = Raw(fill_value, fill_value);
         } else if constexpr (lanes == 4) {
-            this->raw = Raw{fill_value, fill_value, fill_value, fill_value};
+            this->raw = Raw(fill_value, fill_value, fill_value, fill_value);
         } else if constexpr (lanes == 8) {
             this->raw = Raw{fill_value, fill_value, fill_value, fill_value,
                             fill_value, fill_value, fill_value, fill_value};
@@ -400,7 +402,7 @@ class alignas(InAbi::alignment.raw) Simd {
     template <typename U>
     [[nodiscard]] static constexpr auto filled(U value) -> Vector
         requires(is_convertible<U, T>) {
-        return Vector{}.fill(value);
+        return Vector().fill(value);
     }
 
     // Load a vector from `data`, aligned to `Abi::alignment`.
@@ -621,12 +623,12 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
 
     constexpr auto fill(bool value) -> Mask {
         if constexpr (lanes == 2) {
-            this->raw = Raw{value, value};
+            this->raw = Raw(value, value);
         } else if constexpr (lanes == 4) {
-            this->raw = Raw{value, value, value, value};
+            this->raw = Raw(value, value, value, value);
         } else if constexpr (lanes == 8) {
             this->raw =
-                Raw{value, value, value, value, value, value, value, value};
+                Raw(value, value, value, value, value, value, value, value);
         } else if constexpr (lanes == 16) {
             this->raw =
                 Raw{value, value, value, value, value, value, value, value,
@@ -643,7 +645,7 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
 
     // Construct a `Simd` with every lane initialized to `value`.
     [[nodiscard]] static constexpr auto filled(bool const value) -> Mask {
-        return Mask{}.fill(value);
+        return Mask().fill(value);
     }
 
     // Load a vector from `data`, aligned to `Abi<bool>::alignment`.
@@ -655,7 +657,7 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
 
     // Construct a `Simd` loaded from the address `data`.
     [[nodiscard]] static constexpr auto loaded(bool const* p_data) {
-        return Mask{}.load(p_data);
+        return Mask().load(p_data);
     }
 
     Raw raw;

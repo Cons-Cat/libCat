@@ -571,13 +571,13 @@ consteval auto io_request(IoRequests a, IoRequests b) -> IoRequests {
 consteval auto io_request_write(IoRequests a, IoRequests b, IoRequests c)
     -> IoRequests {
     return detail::compose_io_request(IoRequests::write, a, b,
-                                      IoRequests{sizeof(c)});
+                                      IoRequests(sizeof(c)));
 }
 
 consteval auto io_request_read(IoRequests a, IoRequests b, IoRequests c)
     -> IoRequests {
     return detail::compose_io_request(IoRequests::read, a, b,
-                                      IoRequests{sizeof(c)});
+                                      IoRequests(sizeof(c)));
 }
 
 consteval auto io_request_readwrite(IoRequests a, IoRequests b, IoRequests c)
@@ -585,7 +585,7 @@ consteval auto io_request_readwrite(IoRequests a, IoRequests b, IoRequests c)
     return detail::compose_io_request(
         IoRequests{cat::to_underlying(IoRequests::read) |
                    cat::to_underlying(IoRequests::write)},
-        a, b, IoRequests{sizeof(c)});
+        a, b, IoRequests(sizeof(c)));
 }
 
 // TODO: Comment wtf these mean.
@@ -748,7 +748,7 @@ auto sys_write(FileDescriptor file_descriptor, cat::String const string)
 
 // Syscall 2
 auto sys_open(char const* p_file_path, OpenMode file_mode,
-              OpenFlags flags = OpenFlags{0}) -> ScaredyLinux<FileDescriptor>;
+              OpenFlags flags = OpenFlags(0)) -> ScaredyLinux<FileDescriptor>;
 
 // Syscall 3
 auto sys_close(FileDescriptor file_descriptor) -> ScaredyLinux<void>;
@@ -891,17 +891,13 @@ struct IoVector : cat::Span<cat::Byte> {
     constexpr IoVector(IoVector&&) = default;
 
     // Construct from any reasonable pointer type.
-    template <typename T>
-    constexpr IoVector(T* p_in_data, ssize in_length)
-        : cat::Span<cat::Byte>(static_cast<cat::Byte*>(p_in_data), in_length) {
+    constexpr IoVector(cat::Byte* p_in_data, ssize in_length)
+        : cat::Span<cat::Byte>(p_in_data, in_length) {
     }
 
     // Construct from any reasonable pointer type.
-    template <typename T>
-    constexpr IoVector(T* p_start, T* p_end)
-        : cat::Span<cat::Byte>(static_cast<cat::Byte*>(p_start),
-                               static_cast<cat::Byte*>(p_end) -
-                                   static_cast<cat::Byte*>(p_start)) {
+    constexpr IoVector(cat::Byte* p_start, cat::Byte* p_end)
+        : cat::Span<cat::Byte>(p_start, p_end - p_start) {
     }
 
     constexpr auto operator=(IoVector const& io_vector) -> IoVector& {

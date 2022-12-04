@@ -20,7 +20,7 @@ constexpr auto numeric_cast(From from) -> Maybe<To> {
 
         // TODO: Make an `has_same_signedness` trait.
         if constexpr (!has_same_signedness) {
-            if ((to < To{}) != (from < From{})) {
+            if ((to < To()) != (from < From())) {
                 // Overflow occurred.
                 return nullopt;
             }

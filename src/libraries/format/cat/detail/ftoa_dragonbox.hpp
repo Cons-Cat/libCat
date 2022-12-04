@@ -2873,7 +2873,7 @@ small_divisor_case_label:
                             remainings...);
                     }
                 } else {
-                    return get_policy_impl(FoundPolicyInfo{}, remainings...);
+                    return get_policy_impl(FoundPolicyInfo(), remainings...);
                 }
             }
 
@@ -2902,7 +2902,7 @@ small_divisor_case_label:
             return cat::is_base_of<typename FirstBaseDefaultPair::base,
                                    Policy> ||
                    check_policy_validity(
-                       Policy{},
+                       Policy(),
                        base_default_pair_list<RemainingBaseDefaultPairs...>{});
         }
 
@@ -2916,9 +2916,9 @@ small_divisor_case_label:
         constexpr bool check_policy_list_validity(
             BaseDefaultPairList, FirstPolicy,
             RemainingPolicies... remaining_policies) {
-            return check_policy_validity(FirstPolicy{},
-                                         BaseDefaultPairList{}) &&
-                   check_policy_list_validity(BaseDefaultPairList{},
+            return check_policy_validity(FirstPolicy(),
+                                         BaseDefaultPairList()) &&
+                   check_policy_list_validity(BaseDefaultPairList(),
                                               remaining_policies...);
         }
 
@@ -2980,12 +2980,12 @@ small_divisor_case_label:
         constexpr auto make_policy_holder(BaseDefaultPairList,
                                           Policies... policies) {
             static_assert(
-                check_policy_list_validity(BaseDefaultPairList{},
-                                           Policies{}...),
+                check_policy_list_validity(BaseDefaultPairList(),
+                                           Policies()...),
                 "cat::detail::dragonbox: an invalid policy is specified");
 
             using policy_pair_list = decltype(make_policy_holder_impl(
-                BaseDefaultPairList{}, found_policy_pair_list<false>{},
+                BaseDefaultPairList(), found_policy_pair_list<false>{},
                 policies...));
 
             static_assert(!policy_pair_list::repeated,

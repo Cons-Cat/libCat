@@ -361,7 +361,7 @@ class Variant {
     template <typename... Patterns>
         requires(is_specialization<Patterns, detail::PatternCallback>&&...)
     constexpr void match(Patterns&&... patterns) {
-        detail::MatchPatterns{*this}(forward<Patterns>(patterns)...);
+        detail::MatchPatterns(*this)(forward<Patterns>(patterns)...);
     }
 
     // Holds true if this `Variant` currently has some value of the type

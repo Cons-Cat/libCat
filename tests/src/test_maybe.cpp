@@ -269,7 +269,7 @@ TEST(test_maybe) {
     // Test monadic methods on reference types.
     int4 monadic_int_ref = 1;
     cat::Maybe<void> monadic_void_ref =
-        cat::Maybe{monadic_int_ref}.and_then(return_opt_void);
+        cat::Maybe(monadic_int_ref).and_then(return_opt_void);
     // Be sure that this did not assign through.
     cat::verify(monadic_void_ref.has_value());
 
@@ -288,7 +288,7 @@ TEST(test_maybe) {
 
     // Test copying `Maybe`s into other `Maybe`s.
     cat::Maybe<int4> opt_original = 10;
-    cat::Maybe<int4> opt_copy_1 = cat::Maybe{opt_original};
+    cat::Maybe<int4> opt_copy_1 = cat::Maybe(opt_original);
     cat::Maybe<int4> opt_copy_2 = opt_original;
     cat::verify(opt_copy_1.value() == 10);
     cat::verify(opt_copy_2.value() == 10);
@@ -375,11 +375,11 @@ TEST(test_maybe) {
         cat::verify(!const_nontrivial_default.has_value());
 
         constexpr cat::Maybe<OptConstNonTrivial> const_nontrivial =
-            OptConstNonTrivial{};
+            OptConstNonTrivial();
         cat::verify(const_nontrivial.has_value());
 
         constexpr cat::Maybe<OptConstNonTrivial> const_nontrivial_in_place = {
-            in_place, OptConstNonTrivial{}};
+            in_place, OptConstNonTrivial()};
         cat::verify(const_nontrivial_in_place.has_value());
 
         // Test `Maybe<Compact<T>>`.

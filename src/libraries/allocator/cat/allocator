@@ -212,9 +212,9 @@ concept is_allocator = requires(T allocator) {
 
     // TODO: It would be nice if these could make the concept more precise:
     // allocator.free(decltype(allocator.template make_handle<AllocationU>(
-    //     AllocationU{}, sizeof(AllocationU))){});
+    //     AllocationU(), sizeof(AllocationU))){});
     // allocator.get(decltype(allocator.template make_handle<AllocationU>(
-    //     AllocationU{}, sizeof(AllocationU))){});
+    //     AllocationU(), sizeof(AllocationU))){});
 };
 
 namespace detail {
@@ -268,7 +268,7 @@ using MaybeSizedAllocation = Maybe<SizedAllocation<T>>;
                      [](SizedAllocation<T> tuple) -> bool {
                          return (tuple.second() != 0_sz);
                      },
-                     SizedAllocation<T>{T{}, 0_sz}>>;
+                     SizedAllocation<T>{T(), 0_sz}>>;
 */
 
 // TODO: For some reason, this implementation of `opq_salloc()`, this returns an
@@ -298,7 +298,7 @@ auto allocation =
     this->opq_xalloc<T, is_zeroed>(forward<Args>(constructor_arguments)...);
 
 [[maybe_unused]] MaybeSizedAllocation<Alloc> return_val =
-    MaybeSizedAllocation<Alloc>{Alloc{allocation, 0_sz}};
+    MaybeSizedAllocation<Alloc>{Alloc(allocation, 0_sz)};
 return return_val;
 }
 */
@@ -5014,7 +5014,7 @@ class AllocatorFacade {
                 } else {
                     p_allocation =
                         new (std::align_val_t{allocation_alignment.raw})
-                            T{constructor_arguments...};
+                            T(constructor_arguments...);
                 }
 
                 // Data must be default-constructed in `constexpr` code.
@@ -5037,7 +5037,7 @@ class AllocatorFacade {
                         return ReturnHandle{
                             Span<T>{p_allocation, allocation_count}};
                     } else {
-                        return ReturnHandle{p_allocation};
+                        return ReturnHandle(p_allocation);
                     }
                 }
             } else {
@@ -5066,7 +5066,7 @@ class AllocatorFacade {
                         }
                     } else {
                         stack_handle.set_inline_storage(
-                            T{forward<Args>(constructor_arguments)...});
+                            T(forward<Args>(constructor_arguments)...));
                     }
 
                     // Return here to skip error handling, because an
@@ -5075,7 +5075,7 @@ class AllocatorFacade {
                         return ReturnHandle{SizedAllocation<Handle>{
                             move(stack_handle), inline_buffer_size}};
                     } else {
-                        return ReturnHandle{move(stack_handle)};
+                        return ReturnHandle(move(stack_handle));
                     }
                 }
             }
@@ -5213,7 +5213,7 @@ class AllocatorFacade {
             if constexpr (is_fail_safe) {
                 if (!maybe_memory.has_value()) {
                     // Return an empty maybe if this failed to allocate.
-                    return ReturnHandle{nullopt};
+                    return ReturnHandle(nullopt);
                 }
             }
 
@@ -5258,7 +5258,7 @@ class AllocatorFacade {
                         return ReturnHandle{
                             Span<T>{p_allocation, allocation_count}};
                     } else {
-                        return ReturnHandle{p_allocation};
+                        return ReturnHandle(p_allocation);
                     }
                 }
             } else {
@@ -5278,7 +5278,7 @@ class AllocatorFacade {
                     return ReturnHandle(
                         SizedAllocation<Handle>{move(handle), size_feedback});
                 } else {
-                    return ReturnHandle{move(handle)};
+                    return ReturnHandle(move(handle));
                 }
             }
         }

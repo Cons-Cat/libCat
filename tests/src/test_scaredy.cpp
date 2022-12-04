@@ -86,11 +86,11 @@ TEST(test_scaredy) {
     cat::verify(result.is<int8>());
 
     // Test `.error()`.
-    cat::Scaredy<int, ErrorOne> one_error = ErrorOne{1};
+    cat::Scaredy<int, ErrorOne> one_error = ErrorOne(1);
     cat::verify(one_error.error().code == 1);
     cat::verify(one_error.error<ErrorOne>().code == 1);
 
-    cat::Scaredy<int, ErrorOne, ErrorTwo> two_error = ErrorOne{1};
+    cat::Scaredy<int, ErrorOne, ErrorTwo> two_error = ErrorOne(1);
     cat::verify(two_error.error<ErrorOne>().code == 1);
 
     // Test compact optimization.
@@ -114,13 +114,13 @@ TEST(test_scaredy) {
     predicate = 10;
     cat::verify(predicate.has_value());
 
-    predicate = ErrorOne{-1};
+    predicate = ErrorOne(-1);
     cat::verify(!predicate.has_value());
 
     // Test `.value_or()`.
-    cat::Scaredy<int4, ErrorOne> is_error = ErrorOne{};
+    cat::Scaredy<int4, ErrorOne> is_error = ErrorOne();
     cat::Scaredy<int4, ErrorOne> is_value = 2;
-    cat::Scaredy<int4, ErrorOne> const const_is_error = ErrorOne{};
+    cat::Scaredy<int4, ErrorOne> const const_is_error = ErrorOne();
     cat::Scaredy<int4, ErrorOne> const const_is_value = 2;
 
     int4 fallback = is_error.value_or(1);
@@ -184,7 +184,7 @@ TEST(test_scaredy) {
 
     // Match it against `ErrorOne`.
     matched = false;
-    is_variant_scaredy = ErrorOne{};
+    is_variant_scaredy = ErrorOne();
     cat::match(is_variant_scaredy)(  //
         is_a<ErrorOne>().then([&]() {
             matched = true;
@@ -221,7 +221,7 @@ TEST(test_scaredy) {
     cat::verify(matched);
 
     matched = false;
-    predicate = ErrorOne{-1};
+    predicate = ErrorOne(-1);
     cat::match(predicate)(  //
         is_a<int4>().then([&]() {
             cat::exit(1);

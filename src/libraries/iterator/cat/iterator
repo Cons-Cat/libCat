@@ -62,7 +62,7 @@ namespace detail {
 
     template <typename T>
     concept has_advance_to = requires(T it) {
-        it.advance_to(T{});
+        it.advance_to(T());
     };
 
     template <typename T>

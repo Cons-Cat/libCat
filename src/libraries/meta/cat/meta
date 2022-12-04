@@ -725,7 +725,7 @@ concept is_trivially_constructible = __is_trivially_constructible(T, Args...);
 
 template <typename T>
 concept is_default_constructible = requires {
-    T{};
+    T();
 };
 
 template <typename T>

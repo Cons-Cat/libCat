@@ -344,7 +344,7 @@ class CollectionFacade {
         };
 
         // Produce an iterator to have its type deduced later.
-        return Iterator{0, nullptr};
+        return Iterator(0, nullptr);
     }
 
     // Contiguous collections can produce `const` bidirectional iterators.
@@ -375,19 +375,19 @@ class CollectionFacade {
         };
 
         // Produce an iterator to have its type deduced later.
-        return Iterator{0, nullptr};
+        return Iterator(0, nullptr);
     }
 
     // If `Derived` is not contiguous, use a provided iterator.
     static constexpr auto make_iterator() {
         // Produce an iterator to have its type deduced later.
-        return typename Derived::Iterator{};
+        return typename Derived::Iterator();
     }
 };
 
 template <typename T>
 struct CollectionTraits {
-    using Iterator = decltype(T{}.begin());
+    using Iterator = decltype(T().begin());
     using ConstIterator = AddConst<Iterator>;
     using ReversedIterator = cat::ReversedIterator<Iterator>;
     using ConstReversedIterator = cat::ReversedIterator<ConstIterator>;

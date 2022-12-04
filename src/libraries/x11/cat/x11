@@ -404,7 +404,7 @@ struct Connection {
 };
 
 // TODO: Propagate errors instead of panicking.
-auto handshake(cat::allocator auto& allocator,
+auto handshake(cat::is_allocator auto& allocator,
                cat::SocketUnix<cat::SocketType::stream>& socket)
     -> cat::Maybe<x11::Connection> {
     x11::Connection x_connection;
@@ -427,16 +427,11 @@ auto handshake(cat::allocator auto& allocator,
     // A dynamic allocation must be made because the total size of all
     // recieved packets is unknown and potentially a very large amount.
     // TODO: Deallocate this somehow.
-    cat::Maybe memory =
-        allocator.template alloc_multi<ConnectionResponseInfo>(
-            // TODO: Remove `.raw`.
-            x_connection.header.message_length.raw * 4);
-    if (!memory.has_value()) {
-        // return Failure(1);
-        return nullopt;
-    }
+    auto memory = TRY(allocator.template alloc_multi<ConnectionResponseInfo>(
+        // TODO: Remove `.raw`.
+        x_connection.header.message_length.raw * 4));
 
-    x_connection.p_setup = allocator.get(memory.value()).data();
+    x_connection.p_setup = memory.data();
 
     // TODO: Remove `raw`.
     // TODO: Is the return of `.recieve` important here?
@@ -476,7 +471,7 @@ auto handshake(cat::allocator auto& allocator,
 
 // TODO: Improve error handling. Union X11 errors and Linux errors.
 // Attempt to connect to an X server over local sockets.
-auto initiate_connection(cat::allocator auto& allocator)
+auto initiate_connection(cat::is_allocator auto& allocator)
     -> cat::Maybe<x11::Connection> {
     cat::SocketUnix<cat::SocketType::stream> socket;
     socket.path_name = x11::socket_path;
