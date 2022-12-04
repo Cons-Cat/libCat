@@ -37,22 +37,27 @@ class StaticString;
 
 class String : public Span<char const> {
   public:
-    constexpr String() : Span<char const>(){};
+    constexpr String() : Span<char const>() {
+    }
 
     constexpr String(char const* p_string, ssize in_length)
-        : Span<char const>(p_string, in_length){};
+        : Span<char const>(p_string, in_length) {
+    }
 
     constexpr String(String const& string)
-        : Span<char const>(string.p_storage, string.length){};
+        : Span<char const>(string.p_storage, string.length) {
+    }
 
     constexpr String(String&& string)
-        : Span<char const>(string.p_storage, move(string).size()){};
+        : Span<char const>(string.p_storage, move(string).size()) {
+    }
 
     // This weird template deduces lower than the string literal constructor.
     template <typename T>
         requires(is_pointer<T>)
     constexpr String(T p_string)
-        : Span<char const>(p_string, string_length(p_string)){};
+        : Span<char const>(p_string, string_length(p_string)) {
+    }
 
     // clangd emits a false diagnistic if this is `consteval` instead of
     // `constexpr`.
@@ -70,10 +75,12 @@ class String : public Span<char const> {
     }
 
     constexpr String(Span<char> const& span)
-        : Span<char const>(span.data(), span.size()){};
+        : Span<char const>(span.data(), span.size()) {
+    }
 
     constexpr String(Span<char>&& span)
-        : Span<char const>(span.data(), span.size()){};
+        : Span<char const>(span.data(), span.size()) {
+    }
 
     // A `String` consuming `nullptr` would cause undefined behavior.
     constexpr String(decltype(nullptr)) = delete;
@@ -287,7 +294,7 @@ class StaticString : public CollectionFacade<StaticString<length>, char> {
 
 template <typename T>
 [[nodiscard]] auto cat::Maybe<T>::or_exit(cat::String const error_message,
-                                             ssize exit_code) & {
+                                          ssize exit_code) & {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
             return this->value();
@@ -302,7 +309,7 @@ template <typename T>
 
 template <typename T>
 [[nodiscard]] auto cat::Maybe<T>::or_exit(cat::String const error_message,
-                                             ssize exit_code) const& {
+                                          ssize exit_code) const& {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
             return this->value();
@@ -317,7 +324,7 @@ template <typename T>
 
 template <typename T>
 [[nodiscard]] auto cat::Maybe<T>::or_exit(cat::String const error_message,
-                                             ssize exit_code) && {
+                                          ssize exit_code) && {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
             return move(this)->value();
@@ -332,7 +339,7 @@ template <typename T>
 
 template <typename T>
 [[nodiscard]] auto cat::Maybe<T>::or_exit(cat::String const error_message,
-                                             ssize exit_code) const&& {
+                                          ssize exit_code) const&& {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
             return move(this)->value();

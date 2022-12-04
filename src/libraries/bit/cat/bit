@@ -174,13 +174,17 @@ struct BinarySize {
     constexpr BinarySize() = default;
 
     constexpr BinarySize(is_integral auto value)
-        : raw(static_cast<Raw>(value)){};
+        : raw(static_cast<Raw>(value)) {
+    }
 
-    constexpr BinarySize(ssize value) : raw(static_cast<Raw>(value.raw)){};
+    constexpr BinarySize(ssize value) : raw(static_cast<Raw>(value.raw)) {
+    }
 
-    constexpr BinarySize(usize value) : raw(static_cast<Raw>(value.raw)){};
+    constexpr BinarySize(usize value) : raw(static_cast<Raw>(value.raw)) {
+    }
 
-    constexpr BinarySize(long double value) : raw(static_cast<Raw>(value)){};
+    constexpr BinarySize(long double value) : raw(static_cast<Raw>(value)) {
+    }
 
     [[nodiscard]] constexpr operator ssize() const {
         // This macro is provided by GCC.

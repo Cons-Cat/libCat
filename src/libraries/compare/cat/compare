@@ -27,10 +27,12 @@ class partial_ordering {
     signed int order;
 
     constexpr explicit partial_ordering(detail::Order in_order)
-        : order(static_cast<signed int>(in_order)){};
+        : order(static_cast<signed int>(in_order)) {
+    }
 
     constexpr explicit partial_ordering(detail::Unordered in_order)
-        : order(static_cast<signed int>(in_order)){};
+        : order(static_cast<signed int>(in_order)) {
+    }
 
     friend class weak_ordering;
     friend class strong_ordering;
@@ -161,7 +163,8 @@ class weak_ordering {
     signed int order;
 
     constexpr explicit weak_ordering(detail::Order in_order)
-        : order(static_cast<signed int>(in_order)){};
+        : order(static_cast<signed int>(in_order)) {
+    }
 
     friend class strong_ordering;
 
@@ -292,7 +295,8 @@ class strong_ordering {
     signed int order;
 
     constexpr explicit strong_ordering(detail::Order in_order)
-        : order(static_cast<signed int>(in_order)){};
+        : order(static_cast<signed int>(in_order)) {
+    }
 
   public:
     static const strong_ordering less;

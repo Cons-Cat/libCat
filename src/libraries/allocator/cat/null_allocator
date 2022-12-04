@@ -27,7 +27,8 @@ class NullAllocator : public AllocatorFacade<NullAllocator> {
     }
 
     // Deallocation is no-op.
-    void deallocate(void const*, ssize){};
+    void deallocate(void const*, ssize) {
+    }
 
     // Produce a handle to allocated memory.
     template <typename T>

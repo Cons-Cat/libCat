@@ -893,14 +893,16 @@ struct IoVector : cat::Span<cat::Byte> {
     // Construct from any reasonable pointer type.
     template <typename T>
     constexpr IoVector(T* p_in_data, ssize in_length)
-        : cat::Span<cat::Byte>(static_cast<cat::Byte*>(p_in_data), in_length){};
+        : cat::Span<cat::Byte>(static_cast<cat::Byte*>(p_in_data), in_length) {
+    }
 
     // Construct from any reasonable pointer type.
     template <typename T>
     constexpr IoVector(T* p_start, T* p_end)
         : cat::Span<cat::Byte>(static_cast<cat::Byte*>(p_start),
                                static_cast<cat::Byte*>(p_end) -
-                                   static_cast<cat::Byte*>(p_start)){};
+                                   static_cast<cat::Byte*>(p_start)) {
+    }
 
     constexpr auto operator=(IoVector const& io_vector) -> IoVector& {
         this->p_storage = io_vector.p_storage;

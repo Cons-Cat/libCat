@@ -14,7 +14,8 @@ namespace cat {
 namespace detail {
     struct [[maybe_unused]] Unused {
         template <typename T>
-        constexpr void operator=(T const&){};
+        constexpr void operator=(T const&) {
+        }
         // `Unused` cannot be assigned to any variable.
         operator auto() = delete;
         // `Unused` cannot be assigned to itself, i.e. `_ = _`.
@@ -30,16 +31,20 @@ namespace detail {
 // anything or from anything. It has no storage or behavior.
 struct Monostate {
     constexpr Monostate() = default;
-    // constexpr Monostate(auto){};
-    constexpr operator auto(){};
+    // constexpr Monostate(auto){}
+    constexpr operator auto() {
+    }
 };
 
 template <typename T, T state>
 struct MonostateStorage {
     constexpr MonostateStorage() = default;
-    constexpr MonostateStorage(Monostate&) : storage(state){};
-    constexpr MonostateStorage(Monostate const&) : storage(state){};
-    constexpr MonostateStorage(T input) : storage(input){};
+    constexpr MonostateStorage(Monostate&) : storage(state) {
+    }
+    constexpr MonostateStorage(Monostate const&) : storage(state) {
+    }
+    constexpr MonostateStorage(T input) : storage(input) {
+    }
 
     constexpr operator auto() const {
         return this->storage;
@@ -169,9 +174,12 @@ enum class align_val_t : __SIZE_TYPE__ {
 }  // namespace std
 
 // NOLINTNEXTLINE Let this be `inline`.
-inline void operator delete[](void*){};
-inline void operator delete[](void*, unsigned long){};
-inline void operator delete[](void*, unsigned long, std::align_val_t){};
+inline void operator delete[](void*) {
+}
+inline void operator delete[](void*, unsigned long) {
+}
+inline void operator delete[](void*, unsigned long, std::align_val_t) {
+}
 
 // NOLINTNEXTLINE Let this be `inline`.
 [[nodiscard]] inline auto operator new[](unsigned long, std::align_val_t align)

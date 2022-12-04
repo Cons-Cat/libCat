@@ -318,7 +318,8 @@ class CollectionFacade {
 
             // private:
             constexpr Iterator(ssize index, T* p_in_array)
-                : current_index(index), p_array(p_in_array){};
+                : current_index(index), p_array(p_in_array) {
+            }
 
           public:
             constexpr auto dereference() -> T& {
@@ -355,7 +356,8 @@ class CollectionFacade {
 
             constexpr Iterator(Iterator const&) = default;
             constexpr Iterator(ssize index, T const* p_in_array)
-                : current_index(index), p_array(p_in_array){};
+                : current_index(index), p_array(p_in_array) {
+            }
 
             constexpr auto dereference() const -> T const& {
                 return this->p_array[current_index.raw];

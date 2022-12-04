@@ -14,7 +14,8 @@ class NoType {
     constexpr NoType() = default;
 
     constexpr NoType(auto input) requires(sizeof(input) <= sizeof(void*))
-        : p_storage(bit_cast<void*>(input)){};
+        : p_storage(bit_cast<void*>(input)) {
+    }
 
     template <typename T>
         requires(!is_void<T>)
@@ -31,10 +32,12 @@ class NoTypePtr {
   public:
     constexpr NoTypePtr() = default;
 
-    constexpr NoTypePtr(decltype(nullptr)) : p_storage(nullptr){};
+    constexpr NoTypePtr(decltype(nullptr)) : p_storage(nullptr) {
+    }
 
     constexpr NoTypePtr(auto* p_input)
-        : p_storage(const_cast<void*>(static_cast<void const*>(p_input))){};
+        : p_storage(const_cast<void*>(static_cast<void const*>(p_input))) {
+    }
 
     template <typename T>
         requires(is_pointer<T>)

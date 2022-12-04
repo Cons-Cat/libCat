@@ -42,22 +42,27 @@ class Unique {
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     constexpr Unique(Unique<U>&& raii)
-        : storage(static_cast<T>(raii.borrow())){};
+        : storage(static_cast<T>(raii.borrow())) {
+    }
 
     // Copy-construct from any type convertible into `T`.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    constexpr Unique(U const& value) : storage(static_cast<T>(value)){};
+    constexpr Unique(U const& value) : storage(static_cast<T>(value)) {
+    }
 
     // Move-construct from any type convertible into `T`.
     template <rvalue U>
         requires(is_implicitly_convertible<U, T>)
-    constexpr Unique(U&& value) : storage(forward<U>(value)){};  // NOLINT
+    // NOLINTNEXTLINE
+    constexpr Unique(U&& value) : storage(forward<U>(value)) {
+    }
 
     // Forward any possible constructor into `storage`.
     template <typename... Args>
         requires(sizeof...(Args) > 1)
-    Unique(Args&&... args) : storage(forward<Args>(args)...){};
+    Unique(Args&&... args) : storage(forward<Args>(args)...) {
+    }
 
     // Allow move-assignment.
     template <rvalue U>
@@ -126,12 +131,14 @@ class UniqueWeak {
     // Consume any type convertible into `T`.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    constexpr UniqueWeak(U const& value) : storage(static_cast<T>(value)){};
+    constexpr UniqueWeak(U const& value) : storage(static_cast<T>(value)) {
+    }
 
     template <rvalue U>
         requires(is_implicitly_convertible<U, T>)
     constexpr UniqueWeak(U&& value)  // NOLINT
-        : storage(static_cast<T>(forward<U>(value))){};
+        : storage(static_cast<T>(forward<U>(value))) {
+    }
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
@@ -141,7 +148,8 @@ class UniqueWeak {
     };
 
     template <typename... Args>
-    UniqueWeak(Args&&... args) : storage(forward<Args>(args)...){};
+    UniqueWeak(Args&&... args) : storage(forward<Args>(args)...) {
+    }
 
     // Allow move-assignment.
     template <rvalue U>

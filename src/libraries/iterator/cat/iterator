@@ -318,7 +318,8 @@ struct ReversedIterator : IteratorFacade<ReversedIterator<Iterator>> {
     // Forward any constructor to `iterator`.
     template <typename... Args>
     constexpr ReversedIterator(Args&&... args)
-        : iterator(forward<Args>(args)...){};
+        : iterator(forward<Args>(args)...) {
+    }
 
     constexpr auto dereference() {
         return this->iterator.dereference();
@@ -413,8 +414,8 @@ class AsReverse {
     T& iterable;
 
   public:
-    constexpr explicit AsReverse(T& input_iterable)
-        : iterable{input_iterable} {};
+    constexpr explicit AsReverse(T& input_iterable) : iterable{input_iterable} {
+    }
 
     constexpr auto begin() {
         return iterable.rbegin();

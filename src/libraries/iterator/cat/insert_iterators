@@ -13,7 +13,8 @@ class BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
     using Container = T;
 
     constexpr explicit BackInsertIterator(T& input_iterable)
-        : iterable(input_iterable){};
+        : iterable(input_iterable) {
+    }
 
     template <typename U>
     constexpr auto operator=(U& value) = delete;
@@ -101,7 +102,8 @@ class FrontInsertIterator : public IteratorFacade<FrontInsertIterator<T>> {
     using Container = T;
 
     constexpr explicit FrontInsertIterator(T& input_iterable)
-        : iterable(input_iterable){};
+        : iterable(input_iterable) {
+    }
 
     template <typename U>
     constexpr auto operator=(U& value) = delete;

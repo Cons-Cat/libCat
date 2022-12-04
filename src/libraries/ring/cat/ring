@@ -23,7 +23,8 @@ class Ring : public CollectionFacade<Ring<T>, T> {
         : p_storage(nullptr),
           current_index(0),
           current_size(0),
-          current_capacity(0){};
+          current_capacity(0) {
+    }
 
     Ring(Ring&&) = default;
 

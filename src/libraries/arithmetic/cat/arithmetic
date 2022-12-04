@@ -861,7 +861,8 @@ class ArithmeticPtr : public Arithmetic<Storage, policy> {
     template <is_integral U>
         requires(is_safe_arithmetic_conversion<U, Storage>)
     constexpr ArithmeticPtr(U other)
-        : Arithmetic<Storage, policy>(to_raw_numeral(other)){};
+        : Arithmetic<Storage, policy>(to_raw_numeral(other)) {
+    }
 
     constexpr ArithmeticPtr(T* p_input)
         : Arithmetic<Storage, policy>(reinterpret_cast<Storage>(p_input)) {
@@ -871,7 +872,8 @@ class ArithmeticPtr : public Arithmetic<Storage, policy> {
     // `T`.
     template <is_arithmetic U, OverflowPolicies other_policy>
     constexpr explicit ArithmeticPtr(ArithmeticPtr<T, U, other_policy> other)
-        : Arithmetic<Storage, policy>(to_raw_numeral(other)){};
+        : Arithmetic<Storage, policy>(to_raw_numeral(other)) {
+    }
 
     // Only allow casting back into the original pointer type.
     explicit constexpr operator T*() {
@@ -1187,7 +1189,8 @@ struct bool2 {  // NOLINT
     using Raw = uint2;
     uint2 raw;
     constexpr bool2() = default;
-    constexpr bool2(bool input) : raw(static_cast<unsigned char>(input)){};
+    constexpr bool2(bool input) : raw(static_cast<unsigned char>(input)) {
+    }
     constexpr operator bool() const {
         return this->raw != 0u;
     }
@@ -1197,8 +1200,10 @@ struct bool4 {  // NOLINT
     using Raw = uint4;
     uint4 raw;
     constexpr bool4() = default;
-    constexpr bool4(bool input) : raw(static_cast<unsigned char>(input)){};
-    constexpr bool4(bool2 input) : raw(static_cast<unsigned char>(input)){};
+    constexpr bool4(bool input) : raw(static_cast<unsigned char>(input)) {
+    }
+    constexpr bool4(bool2 input) : raw(static_cast<unsigned char>(input)) {
+    }
     constexpr operator bool() const {
         return this->raw != 0u;
     }

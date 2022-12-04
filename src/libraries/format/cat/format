@@ -272,7 +272,8 @@ namespace detail {
                            ssize in_max_length)
             : p_storage(p_in_storage),
               length(in_length),
-              max_length(in_max_length){};
+              max_length(in_max_length) {
+        }
 
         auto data() const -> char* {
             return this->p_storage;
@@ -372,7 +373,8 @@ namespace detail {
         explicit constexpr FormatArguments(
             FormatArgumentsCompactStorage<Ts...> const& storage)
             : p_arguments_indices(&(storage.arguments_indices[0])),
-              argument_count(storage.argument_count){};
+              argument_count(storage.argument_count) {
+        }
 
         // Unpack a formatting argument from the type-erased storage.
         template <typename T>
@@ -409,7 +411,8 @@ namespace detail {
                          ssize in_max_length)
             : p_string(p_in_string),
               length(in_length),
-              max_length(in_max_length){};
+              max_length(in_max_length) {
+        }
 
         auto data() const -> char* {
             return this->p_string;
@@ -468,7 +471,8 @@ namespace detail {
         FormatBufferIterator(Allocator& in_allocator, Outputter iterator)
             : FormatBufferBase<Allocator>(storage, 0, 256),
               allocator(in_allocator),
-              output_iterator(iterator){};
+              output_iterator(iterator) {
+        }
 
         // Flush `storage` when formatting is completed.
         ~FormatBufferIterator() {
@@ -540,7 +544,8 @@ namespace detail {
 
         constexpr FormatParseContext(String const in_format,
                                      ssize in_arguments_count = 0)
-            : format(in_format), arguments_count(in_arguments_count){};
+            : format(in_format), arguments_count(in_arguments_count) {
+        }
 
         constexpr auto begin() const -> Iterator {
             return this->format.cbegin();
@@ -601,7 +606,8 @@ namespace detail {
               output_iterator(iterator),
               format(in_format),
               // p_tempory_buffer(iterator.iterable.data()),
-              arguments(std::move(in_arguments)){};
+              arguments(std::move(in_arguments)) {
+        }
     };
 
     template <is_stable_allocator Allocator>

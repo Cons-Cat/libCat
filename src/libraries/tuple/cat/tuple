@@ -21,12 +21,14 @@ namespace detail {
         template <typename U>
             requires(is_implicitly_convertible<U, T>)
         constexpr TupleElement(U const& input)
-            : storage(static_cast<T>(input)){};
+            : storage(static_cast<T>(input)) {
+        }
 
         template <rvalue U>
             requires(is_implicitly_convertible<U, T>)
         // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
-        constexpr TupleElement(U&& input) : storage(forward<U>(input)){};
+        constexpr TupleElement(U&& input) : storage(forward<U>(input)) {
+        }
 
         // For some reason, this produces ambiguous overload errors if it is
         // implemented as a normal function instead of an operator.

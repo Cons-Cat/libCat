@@ -39,7 +39,8 @@ class List : public CollectionFacade<List<T>, T> {
         using Collection [[maybe_unused]] = List<T>;
 
         Iterator(Iterator const&) = default;
-        Iterator(detail::ListNode<T>* p_input) : p_node(p_input){};
+        Iterator(detail::ListNode<T>* p_input) : p_node(p_input) {
+        }
 
         auto increment() -> Iterator& {
             this->p_node = this->p_node->p_next_node;
@@ -63,7 +64,8 @@ class List : public CollectionFacade<List<T>, T> {
         detail::ListNode<T>* p_node;
     };
 
-    constexpr List() : p_head(nullptr), p_tail(nullptr), length(0){};
+    constexpr List() : p_head(nullptr), p_tail(nullptr), length(0) {
+    }
     constexpr List(List<T>&& list) = default;
 
   private:
@@ -415,7 +417,8 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
   public:
     struct Iterator : IteratorFacade<Iterator> {
         Iterator(Iterator const&) = default;
-        Iterator(detail::ForwardListNode<T>* p_input) : p_node(p_input){};
+        Iterator(detail::ForwardListNode<T>* p_input) : p_node(p_input) {
+        }
 
         auto increment() -> Iterator& {
             this->p_node = this->p_node->p_next_node;
@@ -434,7 +437,8 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
         detail::ForwardListNode<T>* p_node;
     };
 
-    constexpr ForwardList() : p_head(nullptr), p_tail(nullptr), length(0){};
+    constexpr ForwardList() : p_head(nullptr), p_tail(nullptr), length(0) {
+    }
     constexpr ForwardList(ForwardList<T>&& list) = default;
 
   private:

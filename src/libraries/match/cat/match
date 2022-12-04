@@ -74,8 +74,8 @@ namespace detail {
     struct PatternCallback {
         // This isn't needed in C++20, but it prevents a clangd false
         // diagnostic.
-        PatternCallback(Function&& input)
-            : callback(forward<Function>(input)){};
+        PatternCallback(Function&& input) : callback(forward<Function>(input)) {
+        }
 
         // TODO: Add a `.when()` predicate.
 
@@ -119,7 +119,8 @@ namespace detail {
 
     template <typename T>
     struct IsAValue : Pattern {
-        constexpr IsAValue(T&& in_value) : value(forward<T>(in_value)){};
+        constexpr IsAValue(T&& in_value) : value(forward<T>(in_value)) {
+        }
 
         // TODO: Add a `.when()` predicate.
 
@@ -172,7 +173,8 @@ namespace detail {
     struct MatchPatterns {
         // This isn't needed in C++20, but it prevents a clangd false
         // diagnostic.
-        MatchPatterns(T& input) : matching(input){};
+        MatchPatterns(T& input) : matching(input) {
+        }
 
         // Base case.
         template <typename U>

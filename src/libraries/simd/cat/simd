@@ -116,14 +116,18 @@ class alignas(InAbi::alignment.raw) Simd {
     constexpr Simd(Vector&& operand) = default;
 
     // This cannot be passed by reference.
-    constexpr Simd(UnalignedVector operand) : raw(operand.raw){};
+    constexpr Simd(UnalignedVector operand) : raw(operand.raw) {
+    }
 
     constexpr Simd(UnalignedVector&& operand)
-        : raw(forward<UnalignedVector>(operand.raw)){};
+        : raw(forward<UnalignedVector>(operand.raw)) {
+    }
 
-    constexpr Simd(Raw const& values) : raw(values){};
+    constexpr Simd(Raw const& values) : raw(values) {
+    }
 
-    constexpr Simd(Raw&& values) : raw(forward<Raw>(values)){};
+    constexpr Simd(Raw&& values) : raw(forward<Raw>(values)) {
+    }
 
     // Construct all lanes as `value`.
     template <typename U>
@@ -137,13 +141,15 @@ class alignas(InAbi::alignment.raw) Simd {
         requires(ssizeof_pack<Us...>() > 1 &&
                  ssizeof_pack<Us...>() == InAbi::lanes)
     constexpr Simd(Us&&... values)
-        : raw(Raw{static_cast<T>(forward<Us>(values))...}){};
+        : raw(Raw{static_cast<T>(forward<Us>(values))...}) {
+    }
 
     // Construct from a constant list, such as `value_list` or
     // `integer_sequence`.
     template <typename U, U... Us>
         requires(ssizeof_pack<U, Us...> == InAbi::lanes)
-    constexpr Simd(ValueList<U, Us...>) : raw(Raw{static_cast<T>(Us)...}){};
+    constexpr Simd(ValueList<U, Us...>) : raw(Raw{static_cast<T>(Us)...}) {
+    }
 
     // Any ABI for which this `Simd` is equal to in size and overaligned can
     // be explicitly converted to.
@@ -485,9 +491,11 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
 
     constexpr SimdMask(SimdMask<InAbi, T>&& operand) = default;
 
-    constexpr SimdMask(Raw const& value) : raw(value){};
+    constexpr SimdMask(Raw const& value) : raw(value) {
+    }
 
-    constexpr SimdMask(Raw&& value) : raw(move(value)){};
+    constexpr SimdMask(Raw&& value) : raw(move(value)) {
+    }
 
     // Construct all lanes as `value`.
     constexpr SimdMask(bool value) {
@@ -499,14 +507,16 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
     constexpr SimdMask(bools&&... values) requires(sizeof...(values) > 1 &&
                                                    sizeof...(values) ==
                                                        this->lanes.raw)
-        : raw(static_cast<unsigned char>(forward<bool>(values))...){};
+        : raw(static_cast<unsigned char>(forward<bool>(values))...) {
+    }
 
     // Construct from a constant list, such as `value_list` or
     // `integer_sequence`.
     template <bool... bools>
     constexpr SimdMask(ValueList<bool, bools...> const values) requires(
         values.size == this->lanes)
-        : raw(static_cast<unsigned char>(bools)...){};
+        : raw(static_cast<unsigned char>(bools)...) {
+    }
 
     // Any ABI for which this `Simd` is equal to in size and overaligned can
     // be explicitly converted to.

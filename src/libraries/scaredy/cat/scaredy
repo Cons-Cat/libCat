@@ -38,29 +38,34 @@ namespace detail {
         template <typename U>
             requires(is_value<U>)
         constexpr ScaredyVariantStorage(U const& input)
-            : storage(static_cast<Value>(input)){};
+            : storage(static_cast<Value>(input)) {
+        }
 
         // Convert and move-construct a value.
         template <rvalue U>
             requires(is_value<U>)
         // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
         constexpr ScaredyVariantStorage(U&& input)
-            : storage(forward<Value>(input)){};
+            : storage(forward<Value>(input)) {
+        }
 
         // Convert and copy-construct an error.
         template <typename Error>
             requires(is_error<Error>)
-        constexpr ScaredyVariantStorage(Error const& error) : storage(error){};
+        constexpr ScaredyVariantStorage(Error const& error) : storage(error) {
+        }
 
         // Convert and move-construct an error.
         template <rvalue Error>
             requires(is_error<Error>)
         // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
         constexpr ScaredyVariantStorage(Error&& error)
-            : storage(forward<Error>(error)){};
+            : storage(forward<Error>(error)) {
+        }
 
         // Forward `monostate` into `storage`.
-        constexpr ScaredyVariantStorage(Monostate) : storage(monostate){};
+        constexpr ScaredyVariantStorage(Monostate) : storage(monostate) {
+        }
 
         // Copy-assign and convert a value to `storage`.
         template <typename U>
@@ -171,18 +176,22 @@ namespace detail {
         template <typename U>
             requires(is_value<U>)
         constexpr ScaredyCompactStorage(U const& input)
-            : storage(static_cast<Value>(input)){};
+            : storage(static_cast<Value>(input)) {
+        }
 
         template <rvalue U>
             requires(is_value<U>)
         constexpr ScaredyCompactStorage(U&& input)  // NOLINT
-            : storage(forward<Value>(input)){};
+            : storage(forward<Value>(input)) {
+        }
 
         constexpr ScaredyCompactStorage(Error const& error)
-            : error_code(error){};
+            : error_code(error) {
+        }
 
         constexpr ScaredyCompactStorage(Error&& error)
-            : error_code(move(error)){};
+            : error_code(move(error)) {
+        }
 
         // It does not make sense for this class to have a `Monostate`
         // constructor, since `T` cannot be `void`.
@@ -328,8 +337,10 @@ class Scaredy {
 
     // `Storage` constructors are used by the monadic member functions to
     // propagate errors.
-    constexpr Scaredy(Storage const& in_storage) : storage(in_storage){};
-    constexpr Scaredy(Storage&& in_storage) : storage(move(in_storage)){};
+    constexpr Scaredy(Storage const& in_storage) : storage(in_storage) {
+    }
+    constexpr Scaredy(Storage&& in_storage) : storage(move(in_storage)) {
+    }
 
   public:
     constexpr Scaredy() = default;
@@ -340,39 +351,46 @@ class Scaredy {
     template <typename U>
         requires(is_implicitly_convertible<U, Value>)
     constexpr Scaredy(Scaredy<U, Errors...> const& scaredy)
-        : storage(scaredy.storage){};
+        : storage(scaredy.storage) {
+    }
 
     // Move and convert the storage of a convertible `Scaredy`.
     template <typename U>
         requires(is_implicitly_convertible<U, Value>)
     constexpr Scaredy(Scaredy<U, Errors...>&& scaredy)
-        : storage(move(scaredy).storage){};
+        : storage(move(scaredy).storage) {
+    }
 
     // Forward a value into the storage.
     template <typename U>
         requires(is_value<U>)
-    constexpr Scaredy(U const& input) : storage(input){};
+    constexpr Scaredy(U const& input) : storage(input) {
+    }
 
     template <rvalue U>
         requires(is_value<U>)
     // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
-    constexpr Scaredy(U&& input) : storage(input){};
+    constexpr Scaredy(U&& input) : storage(input) {
+    }
 
     // Forward an error into the storage.
     template <typename U>
         requires(is_error<U>)
-    constexpr Scaredy(U const& error) : storage(error){};
+    constexpr Scaredy(U const& error) : storage(error) {
+    }
 
     // Forward an error into the storage.
     template <rvalue U>
         requires(is_error<U>)
     // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
-    constexpr Scaredy(U&& error) : storage(forward<U>(error)){};
+    constexpr Scaredy(U&& error) : storage(forward<U>(error)) {
+    }
 
     // Forward a `monostate` into the storage if there is no value type.
     constexpr Scaredy(Monostate) requires(is_void<Value> ||
                                           is_same<Value, Monostate>)
-        : storage(monostate){};
+        : storage(monostate) {
+    }
 
     // Copy-assign and convert a `Scaredy`.
     template <typename U, typename... OtherErrors>

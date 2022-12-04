@@ -23,11 +23,13 @@ class Span : public CollectionFacade<Span<T>, T> {
     template <typename U>
         requires(is_implicitly_convertible<U*, T*>)
     constexpr Span(U* p_in_data, ssize in_length)
-        : p_storage(static_cast<T*>(p_in_data)), length(in_length){};
+        : p_storage(static_cast<T*>(p_in_data)), length(in_length) {
+    }
 
     // Construct a `Span` with `nullptr`.
     constexpr Span(decltype(nullptr), ssize in_length)
-        : p_storage(nullptr), length(in_length){};
+        : p_storage(nullptr), length(in_length) {
+    }
 
     // Construct a `Span` between two addresses.
     template <typename U, typename V>
@@ -41,13 +43,13 @@ class Span : public CollectionFacade<Span<T>, T> {
     // `CollectionFacade` traits.
     /*
 constexpr Span(auto const& container)
-    : p_storage(container.data()), length(container.size()){};
+    : p_storage(container.data()), length(container.size()){}
 
 template <typename U>
     requires(is_convertible<U, T>)
 constexpr Span(U&& container)
     : p_storage(static_cast<T>(container).data()),
-      length(forward<U>(container).size()){};
+      length(forward<U>(container).size()){}
     */
 
     constexpr auto operator=(Span<T> const&) -> Span<T>& = default;

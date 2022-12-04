@@ -70,7 +70,8 @@ namespace detail {
 
         MultiMemoryHandle() = default;
 
-        MultiMemoryHandle(Handle input_handle) : handle(input_handle){};
+        MultiMemoryHandle(Handle input_handle) : handle(input_handle) {
+        }
 
         // TODO: Variadic emplace.
         void set_inline_storage(Allocation value) {
@@ -141,10 +142,12 @@ namespace detail {
 
         // The default constructor must not initialize data.
         // NOLINTNEXTLINE This would be ill-formed if it is `default`ed.
-        InlineMemoryHandle(){};
+        InlineMemoryHandle() {
+        }
 
         InlineMemoryHandle(Handle input_handle)
-            : handle(input_handle), is_on_stack(handle.is_inline()){};
+            : handle(input_handle), is_on_stack(handle.is_inline()) {
+        }
 
         ~InlineMemoryHandle() {
             if (this->is_on_stack) {

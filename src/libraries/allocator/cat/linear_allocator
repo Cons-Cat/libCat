@@ -24,7 +24,8 @@ class LinearAllocator : public AllocatorFacade<LinearAllocator> {
 
     LinearAllocator(uintptr<void> p_address, ssize arena_bytes)
         : p_arena_begin(p_address + static_cast<usize>(arena_bytes)),
-          p_arena_end(p_address){};
+          p_arena_end(p_address) {
+    }
 
   public:
     // Allocate a `LinearAllocator` from another allocator.

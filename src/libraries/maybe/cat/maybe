@@ -28,7 +28,8 @@ template <typename T>
 struct MaybeValueStorage {
     using Value = T;
 
-    constexpr MaybeValueStorage() : dummy{} {};
+    constexpr MaybeValueStorage() : dummy{} {
+    }
 
     // If `T` is forwarded arguments by the `in_place` `Maybe`
     // constructor, then construct it in-place with those arguments.
@@ -40,7 +41,8 @@ struct MaybeValueStorage {
     // If `T` is trivially copy-constructible, use this simple copy constructor.
     constexpr MaybeValueStorage(T const& in_value) requires(
         is_trivially_copy_constructible<T>)
-        : storage(in_value), has_some(true){};
+        : storage(in_value), has_some(true) {
+    }
 
     // If `T` is not trivially copy-constructible, then manually construct it
     // in-place.
@@ -56,7 +58,8 @@ struct MaybeValueStorage {
     // If `T` is trivially move-constructible, use this simple move constructor.
     constexpr MaybeValueStorage(T&& in_value) requires(
         is_trivially_move_constructible<T>)
-        : storage(forward<T>(in_value)), has_some(true){};
+        : storage(forward<T>(in_value)), has_some(true) {
+    }
 
     // If `T` is not trivially move-constructible, then manually invoke
     // `move` on it.
@@ -72,7 +75,8 @@ struct MaybeValueStorage {
         !is_move_constructible<T>) = delete;
 
     // `nullopt` initializes this without a value.
-    constexpr MaybeValueStorage(detail::NullOpt) : dummy{} {};
+    constexpr MaybeValueStorage(detail::NullOpt) : dummy{} {
+    }
 
     // If other destructors are not conditionally specialized by their
     // `requires`, they should be `default` or deleted.
@@ -205,9 +209,11 @@ struct MaybeReferenceStorage {
 
     template <typename U>
     constexpr MaybeReferenceStorage(U& in_value)
-        : p_storage(addressof(in_value)){};
+        : p_storage(addressof(in_value)) {
+    }
 
-    constexpr MaybeReferenceStorage(detail::NullOpt) : p_storage(nullptr){};
+    constexpr MaybeReferenceStorage(detail::NullOpt) : p_storage(nullptr) {
+    }
 
     // Rebind the reference if this is assigned a new value.
     constexpr auto operator=(Value& option) -> MaybeReferenceStorage& {
@@ -282,7 +288,8 @@ struct MaybeCompactStorage {
     // constructor.
     constexpr MaybeCompactStorage(Value const& in_value) requires(
         is_trivially_copy_constructible<Value>)
-        : storage(in_value){};
+        : storage(in_value) {
+    }
 
     // If `Value` is not trivially copy-constructible, then manually
     // construct it in-place.
@@ -300,7 +307,8 @@ struct MaybeCompactStorage {
     // constructor.
     constexpr MaybeCompactStorage(Value&& in_value) requires(
         is_trivially_move_constructible<Value>)
-        : storage(forward<Value>(in_value)){};
+        : storage(forward<Value>(in_value)) {
+    }
 
     // If `Value` is not trivially move-constructible, then manually invoke
     // `move` on it.
@@ -330,7 +338,8 @@ struct MaybeCompactStorage {
     }
 
     constexpr MaybeCompactStorage(detail::NullOpt)
-        : storage(T::sentinel_value){};
+        : storage(T::sentinel_value) {
+    }
 
     // If other assignment operators are not conditionally specialized by
     // their `requires`, they should be `default` or deleted.
@@ -463,7 +472,8 @@ class Maybe {
     using Value = typename Storage::Value;
 
     // All `Maybe`s are default-constructed as empty.
-    constexpr Maybe() : storage(nullopt){};
+    constexpr Maybe() : storage(nullopt) {
+    }
 
     // `Maybe`s can be constructed with `in_place` to have their storage
     // constructed, unless they are reference types. Without this tag, the
@@ -480,12 +490,14 @@ class Maybe {
     template <typename U>
         requires(!is_reference<Value> && is_implicitly_convertible<U, Value> &&
                  is_copy_constructible<Value>)
-    constexpr Maybe(U& input) : storage(static_cast<Value>(input)){};
+    constexpr Maybe(U& input) : storage(static_cast<Value>(input)) {
+    }
 
     template <typename U>
         requires(!is_reference<Value> && is_implicitly_convertible<U, Value> &&
                  is_copy_constructible<Value>)
-    constexpr Maybe(U const& input) : storage(static_cast<Value>(input)){};
+    constexpr Maybe(U const& input) : storage(static_cast<Value>(input)) {
+    }
 
     // Produce an error message if `Value` is not copy-constructible.
     template <typename U>
@@ -497,13 +509,15 @@ class Maybe {
     template <typename U>
         requires(is_reference<Value>&&
                      is_implicitly_convertible<AddLvalueReference<U>, Value>)
-    constexpr Maybe(U& input) : storage(static_cast<Value>(input)){};
+    constexpr Maybe(U& input) : storage(static_cast<Value>(input)) {
+    }
 
     // Perfect forwarding constructor.
     template <rvalue U>
         requires(!is_reference<Value> && is_implicitly_convertible<U, Value>)
     // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
-    constexpr Maybe(U&& input) : storage(forward<U>(input)){};
+    constexpr Maybe(U&& input) : storage(forward<U>(input)) {
+    }
 
     // `Maybe` can be constructed by another `Maybe`.
     template <typename U>
@@ -525,10 +539,12 @@ class Maybe {
     }
 
     // Consuming `nullopt` is forwarded to `storage`.
-    constexpr Maybe(detail::NullOpt) : storage(nullopt){};
+    constexpr Maybe(detail::NullOpt) : storage(nullopt) {
+    }
 
     // Consuming `monostate` default-initializes the `Maybe`.
-    constexpr Maybe(Monostate) requires(is_void<Value>) : storage(Value()){};
+    constexpr Maybe(Monostate) requires(is_void<Value>) : storage(Value()) {
+    }
 
     // Any `Maybe` can convert into another.
     template <typename U>

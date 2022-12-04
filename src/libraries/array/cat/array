@@ -25,7 +25,8 @@ class Array : public CollectionFacade<Array<T, length>, T> {
         // Explicitly converting this type allows the first argument to coerce
         // the type for following arguments.
         // i.e. `cat::Array shorts = {int2{0}, 1, 2};`
-        : storage(static_cast<T>(forward<Args>(arguments))...){};
+        : storage(static_cast<T>(forward<Args>(arguments))...) {
+    }
 
     constexpr auto operator=(Array<T, length> const& other_array)
         -> Array& = default;
