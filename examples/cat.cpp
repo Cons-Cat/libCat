@@ -37,27 +37,22 @@ void read_and_print_file(char* p_file_name) {
         blocks++;
     }
 
-    cat::PageAllocator allocator;
-    cat::Span<nix::IoVector> io_vectors;
+    cat::PageAllocator pager;
 
-    nix::IoVector* p_io_buffer = allocator.alloc_multi<nix::IoVector>(blocks)
-                                     .or_exit("Failed to allocate memory!", 3)
-                                     .data();
-    io_vectors = cat::Span<nix::IoVector>{p_io_buffer, blocks};
+    cat::Span<nix::IoVector> io_vectors =
+        pager.alloc_multi<nix::IoVector>(blocks).or_exit(
+            "Failed to allocate memory!", 3);
+    DEFER(pager.free_multi(io_vectors.data(), io_vectors.size());)
 
     while (bytes_remaining > 0) {
         ssize current_block_size = cat::min(bytes_remaining, block_size);
 
-        // `MaybePtr` produces an internal compiler error in GCC 12 here.
-        cat::Maybe buffer = allocator.alloc_multi<cat::Byte>(block_size);
-        // TODO: Simplify this out with `DEFER()` and `.or_exit()`.
-        if (!buffer.has_value()) {
-            allocator.free_multi(p_io_buffer, io_vectors.size());
-            cat::exit(4);
-        }
+        // These pages are freed when iterating through the io vectors later.
+        cat::Byte* p_buffer = pager.alloc_multi<cat::Byte>(block_size)
+                                  .or_exit("Failed to allocate memory!", 4)
+                                  .data();
 
-        io_vectors[current_block] =
-            nix::IoVector(buffer.value().data(), current_block_size);
+        io_vectors[current_block] = nix::IoVector(p_buffer, current_block_size);
         ++current_block;
         bytes_remaining -= current_block_size;
     }
@@ -66,8 +61,8 @@ void read_and_print_file(char* p_file_name) {
 
     for (nix::IoVector const& iov : io_vectors) {
         output_to_console(iov);
+        pager.free(iov.data());
     }
-    allocator.free_multi(p_io_buffer, io_vectors.size());
 }
 
 auto main(int argc, char* p_argv[]) -> int {
@@ -75,6 +70,7 @@ auto main(int argc, char* p_argv[]) -> int {
         _ = cat::eprint("At least one file path must be provided!");
         cat::exit(1);
     }
+
     for (int i = 1; i < argc; ++i) {
         read_and_print_file(p_argv[i]);
     }

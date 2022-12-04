@@ -51,13 +51,13 @@ if(CAT_BUILD_EXAMPLE_WINDOW OR CAT_BUILD_ALL_EXAMPLES)
   target_link_options(window PRIVATE ${CAT_LINK_FLAGS})
 endif()
 
-option(CAT_BUILD_EXAMPLE_CAT "Compile cat-examples.cpp." OFF)
+option(CAT_BUILD_EXAMPLE_CAT "Compile cat.cpp." OFF)
 if(CAT_BUILD_EXAMPLE_CAT OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(unixcat cat.cpp)
   target_compile_options(unixcat PRIVATE ${CAT_COMPILE_FLAGS})
   target_link_libraries(unixcat PRIVATE cat-examples)
   target_link_options(unixcat PRIVATE ${CAT_LINK_FLAGS})
-  set_target_properties(unixcat PROPERTIES OUTPUT_NAME cat-examples)
+  set_target_properties(unixcat PROPERTIES OUTPUT_NAME cat)
 endif()
 
 # A dummy project is required to guarantee that the directories are generated.
