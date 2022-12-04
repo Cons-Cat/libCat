@@ -125,7 +125,7 @@ template <typename U>
 [[nodiscard]] constexpr auto align_down(uintptr<U> p_value, usize alignment)
     -> uintptr<U>;
 
-template <typename T>
+template <is_integral T>
 [[nodiscard]] constexpr auto is_power_of_two(T value) -> bool {
     return (value & (value - 1)) == 0;
 }
@@ -165,80 +165,15 @@ template <cat::is_enum_flag T>
 //     return static_cast<T>(static_cast<U>(flag_1) & flag_2);
 // }
 
-namespace cat::detail {
-// `BinaryStorage` is a strongly type integer that can implicitly convert
-// into either a signed or unsigned size type
-struct BinarySize {
-    using Raw = uint8::Raw;
 
-    constexpr BinarySize() = default;
 
-    constexpr BinarySize(is_integral auto value)
-        : raw(static_cast<Raw>(value)) {
+
+    }
     }
 
-    constexpr BinarySize(ssize value) : raw(static_cast<Raw>(value.raw)) {
-    }
 
-    constexpr BinarySize(usize value) : raw(static_cast<Raw>(value.raw)) {
-    }
-
-    constexpr BinarySize(long double value) : raw(static_cast<Raw>(value)) {
-    }
-
-    [[nodiscard]] constexpr operator ssize() const {
-        // This macro is provided by GCC.
-        return static_cast<__INT64_TYPE__>(this->raw);
-    }
-
-    [[nodiscard]] constexpr operator usize() const {
-        return this->raw;
-    }
-
-    [[nodiscard]] constexpr auto operator==(BinarySize operand) const -> bool {
-        return this->raw == operand.raw;
-    }
-
-    [[nodiscard]] constexpr auto operator<(BinarySize operand) const -> bool {
-        return this->raw < operand.raw;
-    }
-
-    [[nodiscard]] constexpr auto operator<=(BinarySize operand) const -> bool {
-        return this->raw <= operand.raw;
-    }
-
-    [[nodiscard]] constexpr auto operator>(BinarySize operand) const -> bool {
-        return this->raw > operand.raw;
-    }
-
-    [[nodiscard]] constexpr auto operator>=(BinarySize operand) const -> bool {
-        return this->raw >= operand.raw;
-    }
-
-    [[nodiscard]] constexpr auto operator+(BinarySize operand) const {
-        return this->raw + operand.raw;
-    }
-
-    [[nodiscard]] constexpr auto operator-(BinarySize operand) const {
-        return this->raw - operand.raw;
-    }
-
-    [[nodiscard]] constexpr auto operator*(BinarySize operand) const {
-        return this->raw * operand.raw;
-    }
-
-    [[nodiscard]] constexpr auto operator&(BinarySize operand) const {
-        return this->raw & operand.raw;
-    }
-
-    [[nodiscard]] constexpr auto operator|(BinarySize operand) const {
-        return this->raw | operand.raw;
-    }
-
-    Raw raw;
 };
 
-}  // namespace cat::detail
 
 constexpr auto operator""_ki(unsigned long long input) -> ssize {
     return 1024 * static_cast<signed long long>(input);
