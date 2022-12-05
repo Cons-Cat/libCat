@@ -36,6 +36,7 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/socket/
   ${CMAKE_SOURCE_DIR}/src/libraries/x11/
   ${CMAKE_SOURCE_DIR}/src/libraries/bit/
+  ${CMAKE_SOURCE_DIR}/src/libraries/bitset/
   ${CMAKE_SOURCE_DIR}/src/libraries/iterator/
   ${CMAKE_SOURCE_DIR}/src/libraries/math/
   ${CMAKE_SOURCE_DIR}/src/libraries/type_list/

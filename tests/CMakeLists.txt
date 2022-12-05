@@ -56,6 +56,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_ring.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_invoke.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_cast.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_bitset.cpp
   )
 
   add_executable(unit_tests unit_tests.cpp)
