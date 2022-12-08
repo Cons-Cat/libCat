@@ -765,7 +765,7 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         if constexpr (policy == OverflowPolicies::saturate) {
             return sat_shl(to_raw_numeral(self), to_raw_numeral(operand));
         } else {
-            return self.raw << to_raw_numeral(operand);
+            return Arithmetic<T>{self.raw << to_raw_numeral(operand)};
         }
     }
 
@@ -796,7 +796,7 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         if constexpr (policy == OverflowPolicies::saturate) {
             return sat_shr(to_raw_numeral(self), to_raw_numeral(operand));
         } else {
-            return self.raw >> to_raw_numeral(operand);
+            return Arithmetic<T>{self.raw >> to_raw_numeral(operand)};
         }
     }
 
@@ -837,10 +837,8 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         return cat::count_trailing_zeros(this->raw);
     }
 
-    // Making these `auto` solves a clang-tidy false diagnostic.
-    // TODO: These should be type `Arithmetic<T>`.
-    static constexpr auto min = Limits<Raw>::min();
-    static constexpr auto max = Limits<Raw>::max();
+    static constexpr Arithmetic<T, policy> min = Limits<Raw>::min();
+    static constexpr Arithmetic<T, policy> max = Limits<Raw>::max();
 
     // `Arithmetic` derives public storage from `detail::ArithmeticStorage`.
 };

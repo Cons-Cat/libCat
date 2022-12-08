@@ -42,6 +42,7 @@ class Bitset {
     static constexpr auto from(Ts... values) -> Bitset
         requires(ssizeof_pack<Ts...>() == Value::size()) {
         // `Value::Value` is some unsigned integer.
+        // TODO: Assert that the input fits in `bits_count`.
         Bitset<bits_count> bitset;
         bitset.storage = {values...};
         return bitset;
@@ -57,6 +58,103 @@ class Bitset {
             bitset.storage[i] = lhs.storage[i] & rhs.storage[i];
         }
         return bitset;
+    }
+
+    friend constexpr auto operator&=(Bitset<bits_count>& self,
+                                     Bitset<bits_count> operand) -> Bitset& {
+        self = self & operand;
+        return self;
+    }
+
+    friend constexpr auto operator|(Bitset<bits_count> lhs,
+                                    Bitset<bits_count> rhs) -> Bitset {
+        Bitset<bits_count> bitset;
+        for (ssize::Raw i = 0; i < lhs.storage_array_size; ++i) {
+            bitset.storage[i] = lhs.storage[i] | rhs.storage[i];
+        }
+        return bitset;
+    }
+
+    friend constexpr auto operator|=(Bitset<bits_count>& self,
+                                     Bitset<bits_count> operand) -> Bitset& {
+        self = self | operand;
+        return self;
+    }
+
+    friend constexpr auto operator^(Bitset<bits_count> lhs,
+                                    Bitset<bits_count> rhs) -> Bitset {
+        Bitset<bits_count> bitset;
+        for (ssize::Raw i = 0; i < lhs.storage_array_size; ++i) {
+            bitset.storage[i] = lhs.storage[i] ^ rhs.storage[i];
+        }
+        return bitset;
+    }
+
+    friend constexpr auto operator^=(Bitset<bits_count>& self,
+                                     Bitset<bits_count> operand) -> Bitset& {
+        self = self ^ operand;
+        return self;
+    }
+
+    friend constexpr auto operator~(Bitset<bits_count> self) -> Bitset& {
+        for (auto& i : self.storage) {
+            ~i;
+        }
+        return self;
+    }
+
+    // Evaluate true if every bit in this bitset is 1.
+    constexpr auto all() -> bool {
+        // There might be leading bytes that are unused.
+        constexpr ssize byte_start =
+            (this->storage_array_size * this->storage_element_size) - bytes;
+
+        for (ssize i = byte_start; i < this->storage_array_size; ++i) {
+            auto it = this->storage[byte_start];
+
+            if (i > byte_start ||
+                constant_evaluate(is_power_of_two(bits_count) ||
+                                  ((bits_count % 64) == 0))) {
+                if (it != it.max) {
+                    // If at least one bit is 0:
+                    return false;
+                }
+            } else {
+                // Leading bits of the leading byte should not be considered
+                // part of the bitset, so they are masked off.
+                constexpr decltype(it) bits_offset{
+                    (this->storage_element_size * 8) -
+                    ((bytes * 8) - bits_count)};
+
+                decltype(it) mask =
+                    (decltype(it){1u} << bits_offset) - decltype(it){1u};
+
+                if (it != mask) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    // Evaluate true if every bit in this bitset is 0.
+    constexpr auto none() -> bool {
+        for (auto i : this->storage) {
+            if (i != 0u) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // Evaluate true if at least one bit in this bitset is 1.
+    constexpr auto any() -> bool {
+        for (auto i : this->storage) {
+            if (i != 0u) {
+                return true;
+            }
+        }
+        return false;
     }
 
   private:
