@@ -829,9 +829,9 @@ struct ArrowProxy {
 };
 
 template <is_invocable Function>
-consteval auto constant_evaluate(auto value);
+consteval auto constant_evaluate(auto value) -> decltype(auto);
 
-consteval auto constant_evaluate(auto value);
+consteval auto constant_evaluate(auto value) -> decltype(auto);
 
 namespace detail {
     template <typename T>
