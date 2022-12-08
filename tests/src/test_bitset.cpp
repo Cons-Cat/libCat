@@ -30,5 +30,9 @@ TEST(test_bitset) {
     static_assert(bits65.storage_element_size == 8);
     static_assert(bits129.storage_element_size == 8);
 
-    // bits7 = cat::Bitset<7>::from({0x0_u1});
+    cat::Bitset<7> bits7_2 = bits7;
+    bits7_2 = cat::Bitset<7>::from(0x0_u1);
+    bits7_2 = cat::Bitset<7>::from(0b1111111_u1);
+
+    cat::Bitset<128> bits128 = cat::Bitset<128>::from(0x0_u8, 0x0_u8);
 }

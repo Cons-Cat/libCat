@@ -436,6 +436,8 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
 
     constexpr Arithmetic() = default;
 
+    // Constructing with safe conversions is implicit, but constructing with
+    // unsafe conversions is explicit.
     template <is_arithmetic U>
     constexpr explicit(!is_safe_arithmetic_conversion<U, T>)
         Arithmetic(U other) {

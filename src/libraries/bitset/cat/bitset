@@ -19,11 +19,13 @@ class Bitset {
     // bytes or fewer, use that many bytes. If it is larger, use an array of
     // 8-byte integers.
     static constexpr ssize bytes = (bits_count + 8 - 1) / 8;
+
     using Value = Conditional<
         bytes <= 8,
         // `UintFixed` will not compile here if it is larger than 8 or it is not
         // a power of 2. This is an `Array` of one element to make it iterable.
         Array<UintFixed<min(
+                  // TODO: Signed int `round_to_pow2()`.
                   make_signed(round_to_pow2(make_unsigned(bytes.raw))), 8)>,
               1>,
         Array<uint8, (bytes.raw + 8 - 1) / 8>>;
@@ -34,30 +36,16 @@ class Bitset {
         ssizeof<typename Value::Value>();
 
     constexpr Bitset() = default;
-    // constexpr Bitset(Bitset<bits_count> const& other) {
-    //     // storage = other.storage;
-    // }
 
-    static constexpr auto from(typename Value::Value value) -> Bitset {
+    template <typename... Ts>
+        requires(is_same<Ts, typename Value::Value>&&...)
+    static constexpr auto from(Ts... values) -> Bitset
+        requires(ssizeof_pack<Ts...>() == Value::size()) {
+        // `Value::Value` is some unsigned integer.
         Bitset<bits_count> bitset;
-        bitset.storage = value;
+        bitset.storage = {values...};
         return bitset;
     }
-
-    static constexpr auto from(Value const value) -> Bitset {
-        Bitset<bits_count> bitset;
-        bitset.storage = value;
-        return bitset;
-    }
-
-    // constexpr auto operator=(Bitset<bits_count> other) -> Bitset& = default;
-
-    // constexpr auto operator=(Bitset<bits_count> const& other) -> Bitset& {
-    //     for (ssize::Raw i = 0; i < this->storage_array_size; ++i) {
-    //         this->storage[i] = other.storage[i];
-    //     }
-    //     return *this;
-    // }
 
     constexpr auto operator==(Bitset<bits_count> const&) const
         -> bool = default;
