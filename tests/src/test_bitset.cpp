@@ -36,7 +36,7 @@ TEST(test_bitset) {
     cat::verify(bits7_2.none());
     cat::verify(!bits7_2.any());
 
-    bits7_2 = cat::Bitset<7>::from(0b1111111_u1);
+    bits7_2 = cat::Bitset<7>::from(0b01111111_u1);
     cat::verify(bits7_2.all());
     cat::verify(!bits7_2.none());
     cat::verify(bits7_2.any());
@@ -56,8 +56,10 @@ TEST(test_bitset) {
     cat::verify(bits127.none());
     cat::verify(!bits127.any());
 
-    bits127 = cat::Bitset<127>::from(uint8::max >> 1u, uint8::max);
-    // cat::verify(bits127.all()); // FAILING
+    // The 128th bit is off, all others are on.
+    bits127 =
+        cat::Bitset<127>::from(cat::uint8_max >> 1u, 0xFFFFFFFFFFFFFFFF_u8);
+    cat::verify(bits127.all());
     cat::verify(!bits127.none());
     cat::verify(bits127.any());
 }

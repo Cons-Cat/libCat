@@ -105,16 +105,12 @@ class Bitset {
 
     // Evaluate true if every bit in this bitset is 1.
     constexpr auto all() -> bool {
-        // There might be leading bytes that are unused.
-        constexpr ssize byte_start =
-            (this->storage_array_size * this->storage_element_size) - bytes;
+        for (ssize i = 0; i < this->storage_array_size; ++i) {
+            auto it = this->storage[i];
+            using T = decltype(it);
 
-        for (ssize i = byte_start; i < this->storage_array_size; ++i) {
-            auto it = this->storage[byte_start];
-
-            if (i > byte_start ||
-                constant_evaluate(is_power_of_two(bits_count) ||
-                                  ((bits_count % 64) == 0))) {
+            if (i > 0 || constant_evaluate(is_power_of_two(bits_count) ||
+                                           !(bits_count & (63)))) {
                 if (it != it.max) {
                     // If at least one bit is 0:
                     return false;
@@ -122,12 +118,13 @@ class Bitset {
             } else {
                 // Leading bits of the leading byte should not be considered
                 // part of the bitset, so they are masked off.
-                constexpr decltype(it) bits_offset{
-                    (this->storage_element_size * 8) -
-                    ((bytes * 8) - bits_count)};
+                constexpr T bits_offset(
+                    // Size of this storage, 64 bits or fewer.
+                    (ssizeof<T>() * 8) -
+                    // Minus the number of unused bits in this bitset.
+                    ((bytes * 8) - bits_count));
 
-                decltype(it) mask =
-                    (decltype(it){1u} << bits_offset) - decltype(it){1u};
+                T mask = (T(1u) << bits_offset) - T(1u);
 
                 if (it != mask) {
                     return false;
