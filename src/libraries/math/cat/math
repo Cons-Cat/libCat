@@ -100,6 +100,14 @@ constexpr auto abs(T value) {
 constexpr auto abs(is_unsigned_integral auto value) {
     return value;
 }
+
+// TODO: Support floating point here.
+constexpr auto div_ceil(is_integral auto dividend, is_integral auto divisor) {
+    return (dividend + divisor - 1) / divisor;
+}
+
+// TODO: `div_floor()`.
+
 namespace detail {
     // TODO: Consider a jump-table implementation.
     template <is_integral T, typename U>

@@ -17,8 +17,8 @@ class Bitset {
   public:
     // Store the smallest number of bytes needed for `bits_count`. If that is 8
     // bytes or fewer, use that many bytes. If it is larger, use an array of
-    // 8-byte integers.
-    static constexpr ssize bytes = (bits_count + 8 - 1) / 8;
+    // 8-byte integers. Divide the bits by 8, rounding up.
+    static constexpr ssize bytes = div_ceil(bits_count, 8);
 
     using Value = Conditional<
         bytes <= 8,
@@ -28,7 +28,7 @@ class Bitset {
                   // TODO: Signed int `round_to_pow2()`.
                   make_signed(round_to_pow2(make_unsigned(bytes.raw))), 8)>,
               1>,
-        Array<uint8, (bytes.raw + 8 - 1) / 8>>;
+        Array<uint8, div_ceil(bytes, 8)>>;
 
     static constexpr ssize storage_array_size = Value::size();
 
