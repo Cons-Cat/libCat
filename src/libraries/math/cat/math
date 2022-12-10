@@ -91,14 +91,20 @@ constexpr auto max(is_iterable auto&& iterable) {
     return static_cast<T>(maximum);
 }
 
-template <is_arithmetic T>
-constexpr auto abs(T value) {
-    // TODO: Check if the builtin `abs()` function family is optimized better.
-    return value < T(0) ? value * T(-1) : value;
+template <is_signed_integral T>
+constexpr auto abs(T value) -> T {
+    // `__builtin_abs()` returns `int`, so its type must be coerced to `T`.
+    return T(__builtin_abs(to_raw_numeral(value)));
 }
 
 constexpr auto abs(is_unsigned_integral auto value) {
     return value;
+}
+
+template <is_floating_point T>
+constexpr auto abs(T value) -> T {
+    // `__builtin_fabs()` returns `double`, so its type must be coerced to `T`.
+    return T(__builtin_fabs(to_raw_numeral(value)));
 }
 
 // TODO: Support floating point here.

@@ -38,15 +38,27 @@ TEST(test_math) {
 
     // Test `abs()`.
     cat::verify(cat::abs(1) == 1);
+    cat::verify(cat::abs(1_i1) == 1_i1);
+    cat::verify(cat::abs(1_i2) == 1_i2);
+    cat::verify(cat::abs(1_i4) == 1_i4);
     cat::verify(cat::abs(1_i8) == 1_i8);
 
     cat::verify(cat::abs(1.f) == 1.f);
     cat::verify(cat::abs(1.) == 1.);
     cat::verify(cat::abs(-1) == 1);
-    cat::verify(cat::abs(-1.f) == 1.f);
-    cat::verify(cat::abs(-1.) == 1.);
+    cat::verify(cat::abs(-1.5f) == 1.5f);
+    cat::verify(cat::abs(-1.5) == 1.5);
+    cat::verify(cat::abs(-1.5_f4) == 1.5_f4);
+    cat::verify(cat::abs(-1.5_f8) == 1.5_f8);
+
+    static_assert(cat::is_same<int, typeof(cat::abs(1))>);
+    static_assert(cat::is_same<float, typeof(cat::abs(1.f))>);
+    static_assert(cat::is_same<double, typeof(cat::abs(1.))>);
 
     cat::verify(cat::abs(1u) == 1);
+    cat::verify(cat::abs(1_u1) == 1_u1);
+    cat::verify(cat::abs(1_u2) == 1_u2);
+    cat::verify(cat::abs(1_u4) == 1_u4);
     cat::verify(cat::abs(1_u8) == 1_u8);
 
     // Test `pow()`.
