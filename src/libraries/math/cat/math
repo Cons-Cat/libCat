@@ -91,14 +91,17 @@ constexpr auto max(is_iterable auto&& iterable) {
     return static_cast<T>(maximum);
 }
 
-// TODO: Use an `is_arithmetic` concept or something, but support safe numerals.
-constexpr auto abs(auto const& value) {
+template <is_arithmetic T>
+constexpr auto abs(T value) {
     // TODO: Check if the builtin `abs()` function family is optimized better.
-    return value < 0 ? value * -1 : value;
+    return value < T(0) ? value * T(-1) : value;
 }
 
+constexpr auto abs(is_unsigned_integral auto value) {
+    return value;
+}
 namespace detail {
-    // TODO: Consider a jump-table implementation, or
+    // TODO: Consider a jump-table implementation.
     template <is_integral T, typename U>
     constexpr auto pow_integral(T base, U exponent) -> T {
         if (exponent < 0) {

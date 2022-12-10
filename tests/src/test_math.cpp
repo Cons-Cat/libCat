@@ -38,12 +38,16 @@ TEST(test_math) {
 
     // Test `abs()`.
     cat::verify(cat::abs(1) == 1);
-    cat::verify(cat::abs(1u) == 1u);
+    cat::verify(cat::abs(1_i8) == 1_i8);
+
     cat::verify(cat::abs(1.f) == 1.f);
     cat::verify(cat::abs(1.) == 1.);
     cat::verify(cat::abs(-1) == 1);
     cat::verify(cat::abs(-1.f) == 1.f);
     cat::verify(cat::abs(-1.) == 1.);
+
+    cat::verify(cat::abs(1u) == 1);
+    cat::verify(cat::abs(1_u8) == 1_u8);
 
     // Test `pow()`.
     cat::verify(cat::pow(2, 2) == 4);
