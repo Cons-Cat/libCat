@@ -1268,13 +1268,23 @@ constexpr auto operator""_uz(unsigned long long input) -> cat::usize {
     return cat::usize{input};
 }
 
+// clang-format off
 constexpr auto operator""_f4(unsigned long long input) -> cat::float4 {
     return cat::float4{input};
 }
-
+ 
+constexpr auto operator""_f4(long double input) -> cat::float4 {
+    return cat::float4{input};
+}
+  
 constexpr auto operator""_f8(unsigned long long input) -> cat::float8 {
     return cat::float8{input};
 }
+  
+constexpr auto operator""_f8(long double input) -> cat::float8 {
+    return cat::float8{input};
+}
+// clang-format on
 
 using cat::bool2;
 using cat::bool4;
