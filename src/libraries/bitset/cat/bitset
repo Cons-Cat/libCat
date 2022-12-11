@@ -38,12 +38,19 @@ class Bitset {
 
     static constexpr ssize storage_element_size = ssizeof(ValueElement);
 
-    // The number of bits counted in the first 1, 2, or 4 bytes of the bitset.
+    // The number of bits NOT counted in the first 1, 2, or 4 bytes of this
+    // bitset.
+    static constexpr ssize leading_skipped_bits =
+        // The number of bits in the entire storage, minus the bits declared for
+        // use.
+        (bytes * 8) - bits_count;
+
+    // The number of bits counted in the first 1, 2, or 4 bytes of this bitset.
     static constexpr ssize leading_bytes_bits =
         // Size of this storage, 64 bits or fewer.
         storage_element_size * 8 -
         // Minus the number of unused bits in this bitset.
-        ((bytes * 8) - bits_count);
+        leading_skipped_bits;
 
     constexpr Bitset() = default;
 
@@ -61,6 +68,25 @@ class Bitset {
 
     [[nodiscard]] constexpr auto operator==(Bitset<bits_count> const&) const
         -> bool = default;
+
+    [[nodiscard]] constexpr auto operator[](ssize index) const -> bool {
+        ValueElement mask;
+        ValueElement bytes;
+
+        if (index <= this->leading_bytes_bits ||
+            (this->storage_array_size == 1)) {
+            bytes = this->storage[0];
+            mask = Limits<ValueElement>::high_bit >>
+                   (index + this->leading_skipped_bits);
+        } else {
+            bytes = this->storage[(index + this->leading_skipped_bits) / 64];
+            mask = Limits<ValueElement>::high_bit >>
+                   ((index - this->leading_skipped_bits) & 63);
+        }
+
+        auto result = mask & bytes;
+        return static_cast<bool>(result);
+    }
 
     [[nodiscard]] friend constexpr auto operator&(Bitset<bits_count> lhs,
                                                   Bitset<bits_count> rhs)
@@ -124,7 +150,7 @@ class Bitset {
             using T = decltype(it);
 
             if (i > 0 || constant_evaluate(has_single_bit(bits_count) ||
-                                           !(bits_count & (63)))) {
+                                           !(bits_count & 63))) {
                 if (it != it.max) {
                     // If at least one bit is 0:
                     return false;
@@ -154,7 +180,7 @@ class Bitset {
 
     // Evaluate true if every bit in this bitset is 0.
     [[nodiscard]] constexpr auto none_of() const -> bool {
-		return !(this->any_of());
+        return !(this->any_of());
     }
 
     [[nodiscard]] constexpr auto countl_zero() const -> ssize {
@@ -180,7 +206,7 @@ class Bitset {
         return count;
     }
 
-	// TODO: `.countl_one()`.
+    // TODO: `.countl_one()`.
 
     [[nodiscard]] constexpr auto countr_zero() const -> ssize {
         ssize count = this->storage[this->storage_array_size - 1].countr_zero();
@@ -200,7 +226,18 @@ class Bitset {
         return count;
     }
 
-	// TODO: `.countr_one()`.
+    // TODO: `.countr_one()`.
+
+    // class Iterator : public IteratorInterface {
+    //   public:
+    //     friend IteratorInterface<Iterator>;
+
+    //     constexpr Iterator(Iterator const&) = default;
+
+    //   private:
+    //     ssize current_index;
+    //     Value bitset;
+    // };
 
   private:
     Value storage;

@@ -180,16 +180,16 @@ template <is_arithmetic T>
     return (value & (value - T(1))) == T(0);
 }
 
-template <is_integral T>
+template <is_unsigned_integral T>
 [[nodiscard]] constexpr auto countl_zero(T value) -> ssize;
 
-template <is_integral T>
+template <is_unsigned_integral T>
 [[nodiscard]] constexpr auto countl_one(T value) -> ssize;
 
-template <is_integral T>
+template <is_unsigned_integral T>
 [[nodiscard]] constexpr auto countr_zero(T value) -> ssize;
 
-template <is_integral T>
+template <is_unsigned_integral T>
 [[nodiscard]] constexpr auto countr_one(T value) -> ssize;
 
 // Overflow intrinsics optimize fairly well in GCC.
@@ -629,6 +629,7 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         -> U* {
         return p_operand * self.raw;
     }
+
     template <typename U>
     [[nodiscard]] friend constexpr auto operator*(Arithmetic<T, policy> self,
                                                   U* p_operand) -> U* {
@@ -672,6 +673,7 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         -> U* {
         return p_operand / self.raw;
     }
+
     template <typename U>
     [[nodiscard]] friend constexpr auto operator/(Arithmetic<T, policy> self,
                                                   U* p_operand) -> U* {
@@ -701,6 +703,7 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         -> U* {
         return p_operand % self.raw;
     }
+
     template <typename U>
     [[nodiscard]] friend constexpr auto operator%(Arithmetic<T, policy> self,
                                                   U* p_operand) -> U* {
@@ -730,6 +733,7 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         -> U* {
         return p_operand & self.raw;
     }
+
     template <typename U>
     [[nodiscard]] friend constexpr auto operator&(Arithmetic<T, policy> self,
                                                   U* p_operand) -> U* {
@@ -759,6 +763,7 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         -> U* {
         return p_operand | self.raw;
     }
+
     template <typename U>
     [[nodiscard]] friend constexpr auto operator|(Arithmetic<T, policy> self,
                                                   U* p_operand) -> U* {
@@ -783,17 +788,26 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         }
     }
 
+    template <is_raw_integral U>
+    [[nodiscard]] friend constexpr auto operator<<(U lhs,
+                                                   Arithmetic<T, policy> rhs)
+        -> U {
+        return lhs << rhs.raw;
+    }
+
     template <typename U>
     [[nodiscard]] friend constexpr auto operator<<(U* p_operand,
                                                    Arithmetic<T, policy> self)
         -> U* {
         return p_operand << self.raw;
     }
+
     template <typename U>
     [[nodiscard]] friend constexpr auto operator<<(Arithmetic<T, policy> self,
                                                    U* p_operand) -> U* {
         return p_operand << self.raw;
     }
+
     template <is_integral U>
     friend constexpr auto operator<<=(Arithmetic<T, policy>& self, U operand)
         -> Arithmetic& {
@@ -811,12 +825,20 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         }
     }
 
+    template <is_raw_integral U>
+    [[nodiscard]] friend constexpr auto operator>>(U lhs,
+                                                   Arithmetic<T, policy> rhs)
+        -> U {
+        return lhs >> rhs.raw;
+    }
+
     template <typename U>
     [[nodiscard]] friend constexpr auto operator>>(U* p_operand,
                                                    Arithmetic<T, policy> self)
         -> U* {
         return p_operand >> self.raw;
     }
+
     template <typename U>
     [[nodiscard]] friend constexpr auto operator>>(Arithmetic<T, policy> self,
                                                    U* p_operand) -> U* {
@@ -844,22 +866,22 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
     }
 
     [[nodiscard]] constexpr auto countl_zero() const -> ssize
-        requires(is_integral<T>) {
+        requires(is_unsigned_integral<T>) {
         return cat::countl_zero(this->raw);
     }
 
     [[nodiscard]] constexpr auto countl_one() const -> ssize
-        requires(is_integral<T>) {
+        requires(is_unsigned_integral<T>) {
         return cat::countl_one(this->raw);
     }
 
     [[nodiscard]] constexpr auto countr_zero() const -> ssize
-        requires(is_integral<T>) {
+        requires(is_unsigned_integral<T>) {
         return cat::countr_zero(this->raw);
     }
 
     [[nodiscard]] constexpr auto countr_one() const -> ssize
-        requires(is_integral<T>) {
+        requires(is_unsigned_integral<T>) {
         return cat::countr_one(this->raw);
     }
 
@@ -1181,7 +1203,7 @@ constexpr auto operator|=(T* p_lhs, Arithmetic<U> rhs) -> T* {
     return p_lhs;
 }
 
-template <is_integral T>
+template <is_unsigned_integral T>
 [[nodiscard]] constexpr auto countl_zero(T value) -> ssize {
     auto raw_value = to_raw_arithmetic(value);
 
@@ -1197,13 +1219,13 @@ template <is_integral T>
     }
 }
 
-template <is_integral T>
+template <is_unsigned_integral T>
 [[nodiscard]] constexpr auto countl_one(T value) -> ssize {
     return value != Limits<T>::max() ? countl_zero(static_cast<T>(~value))
                                      : Limits<T>::digits;
 }
 
-template <is_integral T>
+template <is_unsigned_integral T>
 [[nodiscard]] constexpr auto countr_zero(T value) -> ssize {
     auto raw_value = to_raw_arithmetic(value);
 
@@ -1219,7 +1241,7 @@ template <is_integral T>
     }
 }
 
-template <is_integral T>
+template <is_unsigned_integral T>
 [[nodiscard]] constexpr auto countr_one(T value) -> ssize {
     return value != Limits<T>::max() ? countl_one(static_cast<T>(~value))
                                      : Limits<T>::digits;

@@ -549,13 +549,13 @@ TEST(test_numerals) {
     cat::verify(__builtin_bit_cast(unsigned, 2_i4) == 2u);
 
     // Test clz/ctz.
-    static_assert(cat::countl_zero(0X7FFFFFFFFFFFFFFF) == 1);
-    static_assert(cat::countl_zero(0X7FFFFFFF) == 1);
-    static_assert(cat::countl_one(0X7FFFFFFFFFFFFFFF) == 0);
-    static_assert(cat::countl_one(0X7FFFFFFF) == 0);
+    static_assert(cat::countl_zero(0X7FFFFFFFFFFFFFFFu) == 1);
+    static_assert(cat::countl_zero(0X7FFFFFFFu) == 1);
+    static_assert(cat::countl_one(0X7FFFFFFFFFFFFFFFu) == 0);
+    static_assert(cat::countl_one(0X7FFFFFFFu) == 0);
 
-    static_assert(cat::countr_zero(0XFFFFFFFFFFFFFFFE) == 1);
-    static_assert(cat::countr_zero(0XFFFFFFFE) == 1);
-    static_assert(cat::countr_one(0XFFFFFFFFFFFFFFFE) == 0);
-    static_assert(cat::countr_one(0XFFFFFFFE) == 0);
+    static_assert(cat::countr_zero(0XFFFFFFFFFFFFFFFEu) == 1);
+    static_assert(cat::countr_zero(0XFFFFFFFEu) == 1);
+    static_assert(cat::countr_one(0XFFFFFFFFFFFFFFFEu) == 0);
+    static_assert(cat::countr_one(0XFFFFFFFEu) == 0);
 };

@@ -321,7 +321,7 @@ class CollectionInterface {
                 : current_index(index), p_array(p_in_array) {
             }
 
-          public:
+          // public:
             constexpr auto dereference() -> T& {
                 return unconst(this->p_array[current_index.raw]);
             }

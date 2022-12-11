@@ -58,7 +58,7 @@ TEST(test_bitset) {
 
     // The 128th bit is off, all_of others are on.
     bits127 =
-        cat::Bitset<127>::from(cat::uint8_max >> 1u, 0xFFFFFFFFFFFFFFFF_u8);
+        cat::Bitset<127>::from(cat::uint8_max >> 1u, 0xFFFFFFFF'FFFFFFFF_u8);
     cat::verify(bits127.leading_bytes_bits == 63);
     cat::verify(bits127.all_of());
     cat::verify(!bits127.none_of());
@@ -68,11 +68,43 @@ TEST(test_bitset) {
 
     // The 128th bit is off, all_of others are on.
     bits127 = cat::Bitset<127>::from(cat::uint8_max >> 2u,
-                                     0xFFFFFFFFFFFFFFFF_u8 << 1u);
+                                     0xFFFFFFFF'FFFFFFFF_u8 << 1u);
     cat::verify(bits127.countl_zero() == 1);
     cat::verify(bits127.countr_zero() == 1);
 
     bits127 = cat::Bitset<127>::from(0_u8, cat::uint8_max >> 1u);
     cat::verify(bits127.countl_zero() == 64);
     cat::verify(bits127.countr_zero() == 0);
+
+    // Test const subscripting.
+    constexpr cat::Bitset<15> bits15 =
+        cat::Bitset<15>::from(0b010101010101010_u2);
+    static_assert(!bits15[0]);
+    static_assert(bits15[1]);
+    static_assert(!bits15[2]);
+
+    constexpr cat::Bitset<15> bits15_2 =
+        cat::Bitset<15>::from(0b101010101010101_u2);
+    static_assert(bits15_2[0]);
+    static_assert(!bits15_2[1]);
+    static_assert(bits15_2[2]);
+
+    // Test 16 byte bitset's subscript.
+    constexpr cat::Bitset<128> bits128_2 =
+        cat::Bitset<128>::from(0xFFFFFFFF'FFFFFFFF_u8, 0xFFFFFFFF'FFFFFFFB_u8);
+    static_assert(bits128_2[0]);
+    static_assert(bits128_2[1]);
+    static_assert(bits128_2[2]);
+    static_assert(!bits128_2[125]);
+    static_assert(bits128_2[126]);
+    static_assert(bits128_2[127]);
+
+    // Test 16 byte bitset's subscript with bit offset.
+    constexpr cat::Bitset<127> bits127_2 =
+        cat::Bitset<127>::from(0xFFFFFFFF'FFFFFFFF_u8, 0xFFFFFFFF'FFFFFFFB_u8);
+    static_assert(bits127_2[0]);
+    static_assert(bits127_2[1]);
+    static_assert(bits127_2[2]);
+    static_assert(bits127_2[125]);
+    static_assert(!bits127_2[126]);
 }

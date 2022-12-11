@@ -29,6 +29,9 @@ struct Limits<char> {
 
     static constexpr __INT8_TYPE__ digits = 7;
     static constexpr __INT8_TYPE__ digits10 = 2;
+    static constexpr __INT8_TYPE__ high_bit =
+        static_cast<__INT8_TYPE__>(1 << 8);
+
     static constexpr bool is_iec559 = false;
 };
 
@@ -45,6 +48,9 @@ struct Limits<__INT8_TYPE__> {
     static constexpr __INT8_TYPE__ digits = 7;
     static constexpr __INT8_TYPE__ digits10 = 2;
     static constexpr __INT8_TYPE__ bits = 8;
+    static constexpr __INT8_TYPE__ high_bit =
+        static_cast<__INT8_TYPE__>(1 << 8);
+
     static constexpr bool is_iec559 = false;
 };
 
@@ -61,6 +67,9 @@ struct Limits<__UINT8_TYPE__> {
     static constexpr __INT8_TYPE__ digits = 8;
     static constexpr __INT8_TYPE__ digits10 = 2;
     static constexpr __INT8_TYPE__ bits = 8;
+    static constexpr __UINT8_TYPE__ high_bit =
+        static_cast<__UINT8_TYPE__>(1u << 8u);
+
     static constexpr bool is_iec559 = false;
 };
 
@@ -77,6 +86,9 @@ struct Limits<__INT16_TYPE__> {
     static constexpr __INT8_TYPE__ digits = 15;
     static constexpr __INT8_TYPE__ digits10 = 4;
     static constexpr __INT8_TYPE__ bits = 16;
+    static constexpr __INT16_TYPE__ high_bit =
+        static_cast<__INT16_TYPE__>(1 << 15);
+
     static constexpr bool is_iec559 = false;
 };
 
@@ -93,6 +105,9 @@ struct Limits<__UINT16_TYPE__> {
     static constexpr __INT8_TYPE__ digits = 16;
     static constexpr __INT8_TYPE__ digits10 = 4;
     static constexpr __INT8_TYPE__ bits = 16;
+    static constexpr __UINT16_TYPE__ high_bit =
+        static_cast<__UINT16_TYPE__>(1u << 15u);
+
     static constexpr bool is_iec559 = false;
 };
 
@@ -109,6 +124,8 @@ struct Limits<__INT32_TYPE__> {
     static constexpr __INT8_TYPE__ digits = 31;
     static constexpr __INT8_TYPE__ digits10 = 9;
     static constexpr __INT8_TYPE__ bits = 32;
+    static constexpr __INT32_TYPE__ high_bit = 1 << 8;
+
     static constexpr bool is_iec559 = false;
 };
 
@@ -125,6 +142,8 @@ struct Limits<__UINT32_TYPE__> {
     static constexpr __INT8_TYPE__ digits = 32;
     static constexpr __INT8_TYPE__ digits10 = 9;
     static constexpr __INT8_TYPE__ bits = 32;
+    static constexpr __UINT32_TYPE__ high_bit = 1u << 31u;
+
     static constexpr bool is_iec559 = false;
 };
 
@@ -143,6 +162,9 @@ struct Limits<__INT64_TYPE__> {
     static constexpr __INT8_TYPE__ digits = 63;
     static constexpr __INT8_TYPE__ digits10 = 18;
     static constexpr __INT8_TYPE__ bits = 64;
+    static constexpr __INT64_TYPE__ high_bit = static_cast<__INT64_TYPE__>(1)
+                                               << 63;
+
     static constexpr bool is_iec559 = false;
 };
 
@@ -159,6 +181,9 @@ struct Limits<__UINT64_TYPE__> {
     static constexpr __INT8_TYPE__ digits = 64;
     static constexpr __INT8_TYPE__ digits10 = 19;
     static constexpr __INT8_TYPE__ bits = 64;
+    static constexpr __UINT64_TYPE__ high_bit = static_cast<__UINT64_TYPE__>(1u)
+                                                << 63u;
+
     static constexpr bool is_iec559 = false;
 };
 
