@@ -32,41 +32,41 @@ TEST(test_bitset) {
 
     cat::Bitset<7> bits7_2 = bits7;
     bits7_2 = cat::Bitset<7>::from(0x0_u1);
-    cat::verify(!bits7_2.all());
-    cat::verify(bits7_2.none());
-    cat::verify(!bits7_2.any());
+    cat::verify(!bits7_2.all_of());
+    cat::verify(bits7_2.none_of());
+    cat::verify(!bits7_2.any_of());
 
     bits7_2 = cat::Bitset<7>::from(0b01111111_u1);
-    cat::verify(bits7_2.all());
-    cat::verify(!bits7_2.none());
-    cat::verify(bits7_2.any());
+    cat::verify(bits7_2.all_of());
+    cat::verify(!bits7_2.none_of());
+    cat::verify(bits7_2.any_of());
 
     bits7_2 = cat::Bitset<7>::from(0b01000000_u1);
-    cat::verify(!bits7_2.all());
-    cat::verify(!bits7_2.none());
-    cat::verify(bits7_2.any());
+    cat::verify(!bits7_2.all_of());
+    cat::verify(!bits7_2.none_of());
+    cat::verify(bits7_2.any_of());
 
     bits7_2 = cat::Bitset<7>::from(0b10000000_u1);
-    cat::verify(!bits7_2.all());
-    cat::verify(!bits7_2.none());
-    cat::verify(bits7_2.any());
+    cat::verify(!bits7_2.all_of());
+    cat::verify(!bits7_2.none_of());
+    cat::verify(bits7_2.any_of());
 
     cat::Bitset<127> bits127 = cat::Bitset<127>::from(0x0_u8, 0x0_u8);
-    cat::verify(!bits127.all());
-    cat::verify(bits127.none());
-    cat::verify(!bits127.any());
+    cat::verify(!bits127.all_of());
+    cat::verify(bits127.none_of());
+    cat::verify(!bits127.any_of());
 
-    // The 128th bit is off, all others are on.
+    // The 128th bit is off, all_of others are on.
     bits127 =
         cat::Bitset<127>::from(cat::uint8_max >> 1u, 0xFFFFFFFFFFFFFFFF_u8);
     cat::verify(bits127.leading_bytes_bits == 63);
-    cat::verify(bits127.all());
-    cat::verify(!bits127.none());
-    cat::verify(bits127.any());
+    cat::verify(bits127.all_of());
+    cat::verify(!bits127.none_of());
+    cat::verify(bits127.any_of());
     cat::verify(bits127.countl_zero() == 0);
     cat::verify(bits127.countr_zero() == 0);
 
-    // The 128th bit is off, all others are on.
+    // The 128th bit is off, all_of others are on.
     bits127 = cat::Bitset<127>::from(cat::uint8_max >> 2u,
                                      0xFFFFFFFFFFFFFFFF_u8 << 1u);
     cat::verify(bits127.countl_zero() == 1);
