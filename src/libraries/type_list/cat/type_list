@@ -127,10 +127,10 @@ class TypeList {
     static constexpr ssize size = ssize{sizeof...(Ts)};
 
     // The size of the largest type in this list.
-    static constexpr ssize largest_size = max(ssizeof<Ts>()...);
+    static constexpr ssize largest_size = max(ssizeof(Ts)...);
 
     // The size of the smallest type in this list.
-    static constexpr ssize smallest_size = min(ssizeof<Ts>()...);
+    static constexpr ssize smallest_size = min(ssizeof(Ts)...);
 
     // The smallest alignment of a type in this list.
     static constexpr usize smallest_alignment = min(alignof(Ts)...);

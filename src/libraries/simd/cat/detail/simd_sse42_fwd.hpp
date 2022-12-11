@@ -23,7 +23,7 @@ struct Sse42Abi {
     Sse42Abi() = delete;
 
     static constexpr ssize size = 16;
-    static constexpr ssize lanes = size / ssizeof<T>();
+    static constexpr ssize lanes = size / ssizeof(T);
     static constexpr usize alignment = 16u;
 };
 

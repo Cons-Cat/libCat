@@ -59,9 +59,8 @@ auto relocate(InputIterator source_begin, InputIterator source_end,
                   CollectionTraits<DestinationCollection>::is_array_like &&
                   is_same<SourceElement, DestinationElement> &&
                   is_trivially_relocatable<SourceElement>) {
-        copy_memory(
-            addressof(*source_begin), addressof(*destination_begin),
-            (source_end - source_begin) * ssizeof<decltype(*source_begin)>);
+        copy_memory(addressof(*source_begin), addressof(*destination_begin),
+                    (source_end - source_begin) * ssizeof(*source_begin));
         return destination_begin;
     } else {
         // Otherwise, if the destination can be moved to, do so.

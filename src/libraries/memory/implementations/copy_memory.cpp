@@ -15,7 +15,7 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
     constexpr ssize l3_cache_size = 2_mi;
     ssize padding;
 
-    constexpr ssize step_size = ssizeof<Vector>() * 8;
+    constexpr ssize step_size = ssizeof(Vector) * 8;
 
     if (bytes <= step_size) {
         copy_memory_small(p_source, p_destination, bytes);
@@ -96,7 +96,7 @@ bytes) { using Vector = int8x_;
     constexpr ssize l3_cache_size = 2_mi;
     intptr padding;
 
-    constexpr ssize step_size = ssizeof<Vector>() * 8;
+    constexpr ssize step_size = ssizeof(Vector) * 8;
 
     if (bytes <= step_size) {
         copy_memory_small(p_source, p_destination, bytes);

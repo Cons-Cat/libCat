@@ -33,7 +33,7 @@ class Bitset {
     static constexpr ssize storage_array_size = Value::size();
 
     static constexpr ssize storage_element_size =
-        ssizeof<typename Value::Value>();
+        ssizeof(typename Value::Value);
 
     constexpr Bitset() = default;
 
@@ -120,7 +120,7 @@ class Bitset {
                 // part of the bitset, so they are masked off.
                 constexpr T bits_offset(
                     // Size of this storage, 64 bits or fewer.
-                    (ssizeof<T>() * 8) -
+                    (ssizeof(T) * 8) -
                     // Minus the number of unused bits in this bitset.
                     ((bytes * 8) - bits_count));
 

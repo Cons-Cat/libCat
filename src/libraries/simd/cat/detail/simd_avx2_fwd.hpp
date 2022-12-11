@@ -23,7 +23,7 @@ struct Avx2Abi {
     Avx2Abi() = delete;
 
     static constexpr ssize size = 32;
-    static constexpr ssize lanes = size / ssizeof<T>();
+    static constexpr ssize lanes = size / ssizeof(T);
     static constexpr usize alignment = 32u;
 };
 

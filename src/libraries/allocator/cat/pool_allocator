@@ -28,8 +28,8 @@ class PoolAllocator : public AllocatorFacade<PoolAllocator<max_node_bytes>> {
     static auto backed(is_stable_allocator auto& backing, ssize arena_bytes)
         -> Maybe<PoolAllocator<max_node_bytes>> {
         // statement expressions.
-        Span<Node> memory =
-            TRY(backing.template alloc_multi<Node>(arena_bytes / ssizeof<Node>()));
+        Span<Node> memory = TRY(
+            backing.template alloc_multi<Node>(arena_bytes / ssizeof(Node)));
         // TODO: Optimize that division.
 
         PoolAllocator<max_node_bytes> pool;

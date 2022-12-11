@@ -75,7 +75,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
                 TRY(allocator.template resalloc_multi(
                     this->p_storage, this->current_capacity, minimum_capacity));
 
-            this->current_capacity = alloc_bytes * ssizeof<T>();
+            this->current_capacity = alloc_bytes * ssizeof(T);
             this->p_storage = alloc_span.data();
         }
 
@@ -148,7 +148,7 @@ class Vector : public CollectionFacade<Vector<T>, T> {
                         minimum_capacity));
 
                 p_storage = alloc_span.data();
-                this->current_capacity = alloc_bytes / ssizeof<T>();
+                this->current_capacity = alloc_bytes / ssizeof(T);
             }
         }
 

@@ -4,6 +4,8 @@
 
 #include <cat/meta>
 
+#define ssizeof(argument) cat::ssize(sizeof(argument))
+
 namespace cat {
 
 // TODO: See if moving `bit_cast()` into `std::` improves debuggability without
@@ -33,21 +35,16 @@ constexpr auto unconst(T const* p_value) -> T* {
 
 constexpr auto is_constant_evaluated() -> bool;
 
-constexpr auto ssizeof(auto const& anything) -> ssize;
-
-template <typename T>
-constexpr auto ssizeof() -> ssize;
-
 // Infer the length of a parameter pack from a function argument.
 template <typename... Ts>
 constexpr auto ssizeof_pack(Ts...) -> ssize {
-    return ssize{sizeof...(Ts)};
+    return make_signed(sizeof...(Ts));
 }
 
 // Specify the length of a parameter pack in a template argument.
 template <typename... Ts>
 constexpr auto ssizeof_pack() -> ssize {
-    return ssize{sizeof...(Ts)};
+    return make_signed(sizeof...(Ts));
 }
 
 constexpr auto salignof(auto const& anything) -> ssize {
@@ -193,8 +190,6 @@ namespace detail {
 
 }  // namespace cat
 
-using cat::ssizeof;
-
 // These symbols must be declared in `std::` to enable some useful GCC
 // features, such as move-semantics warnings, and preventing GDB from stepping
 // into the functions.
@@ -240,4 +235,3 @@ using std::move;
 #include "./implementations/forward.tpp"
 #include "./implementations/is_constant_evaluated.tpp"
 #include "./implementations/move.tpp"
-#include "./implementations/ssizeof.tpp"

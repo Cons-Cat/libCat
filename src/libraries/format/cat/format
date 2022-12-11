@@ -330,7 +330,7 @@ namespace detail {
             copy_memory_small(
                 addressof(value),
                 &(this->packed_arguments_storage[0]) + storage_index,
-                ssizeof<T>());
+                ssizeof(T));
 
             // Assign `T` to that storage.
             this->arguments_indices[argument_index.raw].discriminant =

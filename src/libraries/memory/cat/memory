@@ -224,7 +224,7 @@ using std::destroy_at;
 template <typename T>
 auto relocate_at(T* p_source, T* p_destination) -> T* {
     if constexpr (is_trivially_relocatable<T>) {
-        copy_memory(p_source, p_destination, ssizeof<T>());
+        copy_memory(p_source, p_destination, ssizeof(T));
         return launder(p_destination);
     } else {
         T* p_new = construct_at(p_destination, move(*p_source));

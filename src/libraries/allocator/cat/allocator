@@ -45,7 +45,7 @@ namespace detail {
         // Number of bytes allocated. This is always the size of `T` if the call
         // is not intercepted by a `MultiMemoryHandle`.
         constexpr auto raw_size() const -> ssize {
-            return ssizeof<T>();
+            return ssizeof(T);
         }
 
         // `is_inline()` always holds false if the call is not intercepted by an
@@ -94,7 +94,7 @@ namespace detail {
 
         // Intercept a propagating call to `.raw_size()`.
         auto raw_size() const -> ssize {
-            return this->array_length * ssizeof<Allocation>();
+            return this->array_length * ssizeof(Allocation);
         }
 
         constexpr auto is_inline() const -> bool {
@@ -748,28 +748,28 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] constexpr auto opq_align_nalloc(usize alignment)
         -> MaybeNonZero<ssize> {
-        return this->self().allocation_bytes(alignment, ssizeof<T>());
+        return this->self().allocation_bytes(alignment, ssizeof(T));
     }
 
     // Get the number of bytes that allocating a `T` with an alignment
     // guarantee would reserve.
     template <typename T>
     [[nodiscard]] constexpr auto opq_align_xnalloc(usize alignment) -> ssize {
-        return this->self().allocation_bytes(alignment, ssizeof<T>()).value();
+        return this->self().allocation_bytes(alignment, ssizeof(T)).value();
     }
 
     // Try to get the number of bytes that allocating a `T` with no alignment
     // guarantee would reserve.
     template <typename T>
     [[nodiscard]] constexpr auto opq_unalign_nalloc() -> MaybeNonZero<ssize> {
-        return this->self().allocation_bytes(1u, ssizeof<T>());
+        return this->self().allocation_bytes(1u, ssizeof(T));
     }
 
     // Get the number of bytes that allocating a `T` with no alignment
     // guarantee would reserve.
     template <typename T>
     [[nodiscard]] constexpr auto opq_unalign_xnalloc() -> ssize {
-        return this->self().allocation_bytes(1u, ssizeof<T>()).value();
+        return this->self().allocation_bytes(1u, ssizeof(T)).value();
     }
 
     // Try to get the number of bytes that allocating an array of `T` with an
@@ -778,7 +778,7 @@ class AllocatorFacade {
     [[nodiscard]] constexpr auto opq_align_nalloc_multi(usize alignment,
                                                         ssize count)
         -> MaybeNonZero<ssize> {
-        return this->self().allocation_bytes(alignment, ssizeof<T>() * count);
+        return this->self().allocation_bytes(alignment, ssizeof(T) * count);
     }
 
     // Get the number of bytes that allocating an array of `T` with an
@@ -787,7 +787,7 @@ class AllocatorFacade {
     [[nodiscard]] constexpr auto opq_align_xnalloc_multi(usize alignment,
                                                          ssize count) -> ssize {
         return this->self()
-            .allocation_bytes(alignment, ssizeof<T>() * count)
+            .allocation_bytes(alignment, ssizeof(T) * count)
             .value();
     }
 
@@ -796,7 +796,7 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] constexpr auto opq_unalign_nalloc_multi(ssize count)
         -> MaybeNonZero<ssize> {
-        return this->self().allocation_bytes(1u, ssizeof<T>() * count);
+        return this->self().allocation_bytes(1u, ssizeof(T) * count);
     }
 
     // Get the number of bytes that allocating an array of `T` with no
@@ -804,7 +804,7 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] constexpr auto opq_unalign_xnalloc_multi(ssize count)
         -> ssize {
-        return this->self().allocation_bytes(1u, ssizeof<T>() * count).value();
+        return this->self().allocation_bytes(1u, ssizeof(T) * count).value();
     }
 
     // Try to get the number of bytes that allocating a small-size optimized `T`
@@ -842,8 +842,8 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] constexpr auto opq_inline_align_nalloc(usize alignment)
         -> MaybeNonZero<ssize> {
-        if constexpr (ssizeof<T>() > inline_buffer_size) {
-            return this->self().allocation_bytes(alignment, ssizeof<T>());
+        if constexpr (ssizeof(T) > inline_buffer_size) {
+            return this->self().allocation_bytes(alignment, ssizeof(T));
         } else {
             return inline_buffer_size;
         }
@@ -878,9 +878,9 @@ class AllocatorFacade {
     [[nodiscard]] constexpr auto opq_inline_align_nalloc_multi(usize alignment,
                                                                ssize count)
         -> MaybeNonZero<ssize> {
-        if (ssizeof<T>() * count > inline_buffer_size) {
+        if (ssizeof(T) * count > inline_buffer_size) {
             return this->self().allocation_bytes(alignment,
-                                                 ssizeof<T>() * count);
+                                                 ssizeof(T) * count);
         }
         return inline_buffer_size;
     }
@@ -4763,7 +4763,7 @@ class AllocatorFacade {
         requires(detail::is_stable_derived_allocator<Derived>)
     constexpr void free(T* p_memory) {
         if constexpr (detail::has_max_allocation_bytes<Derived>) {
-            static_assert(ssizeof<T>() <= Derived::max_allocation_bytes,
+            static_assert(ssizeof(T) <= Derived::max_allocation_bytes,
                           "This allocation is too large for this allocator!");
         }
 
@@ -4774,7 +4774,7 @@ class AllocatorFacade {
             p_memory->~T();
             // }
             this->self().deallocate(static_cast<void const*>(p_memory),
-                                    ssizeof<T>());
+                                    ssizeof(T));
         }
     }
 
@@ -4784,9 +4784,9 @@ class AllocatorFacade {
         requires(detail::is_stable_derived_allocator<Derived>)
     constexpr void free_multi(T* p_memory, ssize count) {
         if constexpr (detail::has_max_allocation_bytes<Derived>) {
-            static_assert(ssizeof<T>() <= Derived::max_allocation_bytes,
+            static_assert(ssizeof(T) <= Derived::max_allocation_bytes,
                           "This allocation is too large for this allocator!");
-            cat::assert(ssizeof<T>() * count <= Derived::max_allocation_bytes,
+            cat::assert(ssizeof(T) * count <= Derived::max_allocation_bytes,
                         "This allocation is too large for this allocator!");
         }
 
@@ -4803,7 +4803,7 @@ class AllocatorFacade {
             }
             // }
             this->self().deallocate(static_cast<void const*>(p_memory),
-                                    ssizeof<T>() * count);
+                                    ssizeof(T) * count);
         }
     }
 
@@ -4816,13 +4816,13 @@ class AllocatorFacade {
     template <typename T>
     constexpr void cfree(T* p_handle) {
         free(p_handle);
-        zero_memory_explicit(p_handle, ssizeof<T>());
+        zero_memory_explicit(p_handle, ssizeof(T));
     }
 
     template <typename T>
     constexpr void cfree_multi(T* p_handle, ssize count) {
         free(p_handle, count);
-        zero_memory_explicit(p_handle, count * ssizeof<T>());
+        zero_memory_explicit(p_handle, count * ssizeof(T));
     }
 
     // Get a non-`const` handle to the data in any memory handle. If that
@@ -4922,14 +4922,14 @@ class AllocatorFacade {
     meta_alloc(usize allocation_alignment, ssize allocation_count,
                Args&&... constructor_arguments) {
         if constexpr (detail::has_max_allocation_bytes<Derived>) {
-            static_assert(ssizeof<T>() <= Derived::max_allocation_bytes,
+            static_assert(ssizeof(T) <= Derived::max_allocation_bytes,
                           "This allocation is too large for this allocator!");
-            cat::assert(ssizeof<T>() * allocation_count <=
+            cat::assert(ssizeof(T) * allocation_count <=
                             Derived::max_allocation_bytes,
                         "This allocation is too larger for this allocator!");
         }
 
-        ssize const allocation_bytes = allocation_count * ssizeof<T>();
+        ssize const allocation_bytes = allocation_count * ssizeof(T);
 
         // Produce a basic handle for this memory type.
         using UnderlyingHandle =
@@ -5026,10 +5026,10 @@ class AllocatorFacade {
                     if constexpr (is_multiple) {
                         return ReturnHandle{
                             Tuple{Span<T>{p_allocation, allocation_count},
-                                  allocation_count * ssizeof<T>()}};
+                                  allocation_count * ssizeof(T)}};
                     } else {
                         return ReturnHandle{SizedAllocation<T*>{
-                            p_allocation, allocation_count * ssizeof<T>()}};
+                            p_allocation, allocation_count * ssizeof(T)}};
                     }
                 } else {
                     // No size feedback.

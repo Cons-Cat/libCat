@@ -44,7 +44,7 @@ class Ring : public CollectionFacade<Ring<T>, T> {
 
         if constexpr (is_trivially_relocatable<T>) {
             copy_memory(this->p_storage, p_new,
-                        this->current_size * ssizeof<T>());
+                        this->current_size * ssizeof(T));
         } else {
             for (ssize::Raw i = 0; i < this->current_size; ++i) {
                 p_new[i] = move(this->p_storage[i]);
@@ -86,7 +86,7 @@ class Ring : public CollectionFacade<Ring<T>, T> {
             // TODO: Generalize copying from one collectian to another.
             if constexpr (is_trivially_relocatable<T>) {
                 copy_memory(this->p_storage, p_new,
-                            this->current_size * ssizeof<T>());
+                            this->current_size * ssizeof(T));
             } else {
                 for (ssize::Raw i = 0; i < this->current_size; ++i) {
                     p_new[i] = move(this->p_storage[i]);

@@ -35,14 +35,14 @@ struct FixedSizeAbi {
 
     // Produce a similar `FixedSizeAbi` for type `U`.
     template <typename U>
-    using MakeAbi = FixedSizeAbi<U, in_lanes * ssizeof<T>() / ssizeof<U>()>;
+    using MakeAbi = FixedSizeAbi<U, in_lanes * ssizeof(T) / ssizeof(U)>;
 
     FixedSizeAbi() = delete;
 
     // TODO: Select `TargetAbi` portably.
     using TargetAbi = Avx2Abi<T>;
     static constexpr ssize lanes = in_lanes;
-    static constexpr ssize size = lanes * ssizeof<T>();
+    static constexpr ssize size = lanes * ssizeof(T);
     // TODO: Make the alignment generally correct and efficient.
     static constexpr usize alignment = 32u;
 };
