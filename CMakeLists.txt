@@ -1,10 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
 
-# TODO: Make these apply to specific targets, not globally.
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS ON)
-
 project(cat LANGUAGES CXX)
 
 option(CAT_USE_SANITIZERS "Link ASan and UBSan" ON)
@@ -36,6 +31,9 @@ list(
 if(CAT_USE_SANITIZERS)
   list(
     APPEND CAT_FLAGS_COMMON
+	# Enable GCC extensions, and use C++23.
+	# `2b` is used instead of `23` to improve clang tooling.
+	-std=gnu++2b	
     -fno-omit-frame-pointer # Required for UBsan.
     -fsanitize=undefined
     -fsanitize=address
