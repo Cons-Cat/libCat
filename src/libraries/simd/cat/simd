@@ -75,12 +75,6 @@ namespace detail {
     }
 }  // namespace detail
 
-template <typename T>
-[[nodiscard]] auto all_of(SimdMask<NativeAbi<T>, T> const) -> bool;
-
-template <typename T>
-[[nodiscard]] auto any_of(SimdMask<NativeAbi<T>, T> const) -> bool;
-
 template <typename InAbi, typename T>
     requires(is_same<typename InAbi::Scalar, T>)
 class alignas(InAbi::alignment.raw) Simd {
@@ -102,6 +96,7 @@ class alignas(InAbi::alignment.raw) Simd {
   public:
     using Scalar = T;
     using Abi = InAbi;
+    using Mask = SimdMask<Abi, T>;
 
     // `gnu::vector_size` is a GCC attribute that represents SIMD data-types.
     // `gnu::aligned` is a GCC attribute that guarantees alignment for all
@@ -456,12 +451,6 @@ class alignas(InAbi::alignment.raw) Simd {
         }
     }
 
-    // Pack the most significant bit of each lane into the lower bytes of a
-    // `SimdMask`.
-    // [[nodiscard]] auto move_mask() -> SimdMask<Abi, T> {
-    //     return cat::move_mask(*this);
-    // }
-
     static constexpr ssize size = InAbi::size;
     static constexpr ssize lanes = InAbi::lanes;
     static constexpr usize alignment = InAbi::alignment;
@@ -613,12 +602,24 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
         return static_cast<bool&>(this[index]);
     }
 
-    constexpr auto all_of() const -> bool {
-        return cat::all_of(*this);
+    // Evaluate true if any lanes are non-zero.
+    constexpr auto any_of() const -> bool {
+        return simd_any_of(*this);
     }
 
-    constexpr auto any_of() const -> bool {
-        return cat::any_of(*this);
+    // Evaluate true if every lane is non-zero.
+    constexpr auto all_of() const -> bool {
+        return simd_all_of(*this);
+    }
+
+    // Evaluate true if every lane is zero.
+    constexpr auto none_of() const -> bool {
+        return !(this->any_of());
+    }
+
+    // Map every lane in this mask to one bit in a bitset.
+    constexpr auto bitset() const -> Bitset<Abi::size> {
+        return simd_to_bitset(*this);
     }
 
     constexpr auto fill(bool value) -> Mask {
@@ -841,7 +842,6 @@ void prefetch_mid(auto const* p_vector) {
 void prefetch_far(auto const* p_vector) {
     prefetch<PrefetchHint::temporal_2>(p_vector);
 }
-
 void prefetch_for_modify(auto const* p_vector) {
     prefetch<PrefetchHint::temporal_0>(p_vector);
 }
@@ -851,29 +851,22 @@ void stream_in(void* p_destination, T const* p_source);
 
 // Dispatch `all_of()` to the native SIMD ABI.
 template <typename T>
-[[nodiscard]] auto all_of(SimdMask<NativeAbi<T>, T> mask) -> bool {
-    return move_mask(detail::native_cast(mask));
+[[nodiscard]] auto simd_all_of(SimdMask<NativeAbi<T>, T> mask) -> bool {
+    return simd_all_of(detail::native_cast(mask));
 }
 
 // Dispatch `any_of()` to the native SIMD ABI.
 template <typename T>
-[[nodiscard]] auto any_of(SimdMask<NativeAbi<T>, T> mask) -> bool {
-    return move_mask(detail::native_cast(mask));
+[[nodiscard]] auto simd_any_of(SimdMask<NativeAbi<T>, T> mask) -> bool {
+    return simd_all_of(detail::native_cast(mask));
 }
 
-// TODO: Return a `Bitset`.
-// Dispatch `move_mask` to the native SIMD ABI.
-template <typename T>
-[[nodiscard]] auto move_mask(NativeSimd<T> vector) -> int {
-    return move_mask(detail::native_cast(vector));
-}
-
-// TODO: Return a `Bitset`.
 // TODO: Support all ABIs.
-// Dispatch `move_mask` to the native SIMD ABI.
+// Dispatch `simd_to_bitset` to the native SIMD ABI.
 template <typename T>
-[[nodiscard]] auto move_mask(SimdMask<NativeAbi<T>, T> mask) -> int4 {
-    return move_mask(detail::native_cast(mask));
+[[nodiscard]] auto simd_to_bitset(SimdMask<NativeAbi<T>, T> mask)
+    -> Bitset<NativeAbi<T>::size> {
+    return simd_to_bitset(detail::native_cast(mask));
 }
 
 // TODO: __builtin_cpu_init()
@@ -939,9 +932,6 @@ using cat::uint4x_;
 using cat::uint8x2;
 using cat::uint8x4;
 using cat::uint8x_;
-
-#include <cat/detail/simd_avx2.hpp>
-#include <cat/detail/simd_sse42.hpp>
 
 #include "./implementations/compare_implicit_length_strings.tpp"
 #include "./implementations/compare_implicit_length_strings_return_index.tpp"

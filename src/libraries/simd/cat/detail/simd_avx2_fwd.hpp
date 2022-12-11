@@ -47,10 +47,11 @@ template <typename T>
 template <typename T>
 [[nodiscard]] auto any_of(SimdMask<Avx2Abi<T>, T> mask) -> bool;
 
-template <typename T>
-[[nodiscard]] auto move_mask(Avx2Simd<T> vector) -> int4;
+template <ssize bits_count>
+    requires(bits_count > 0)
+class Bitset;
 
 template <typename T>
-[[nodiscard]] auto move_mask(SimdMask<Avx2Abi<T>, T> mask) -> int4;
+[[nodiscard]] auto simd_to_bitset(SimdMask<Avx2Abi<T>, T> mask) -> Bitset<32>;
 
 }  // namespace cat

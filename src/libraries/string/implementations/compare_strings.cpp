@@ -9,31 +9,27 @@ auto cat::compare_strings(String const string_1, String const string_2)
     }
 
     // TODO: Use a type for an ISA-specific widest vector.
-    using Vector = char1x32;
+    using VectorSimd = char1x32;
 
-    Array<Vector, 4> vectors_1;
-    Array<Vector, 4> vectors_2;
-    Array<Vector, 4> vector_comparison;
-    Array<int4, 4> masks;
+    Array<VectorSimd, 4> vectors_1;
+    Array<VectorSimd, 4> vectors_2;
+    Array<VectorSimd::Mask, 4> comparisons;
     ssize length_iterator = string_1.size();
-    ssize vector_size = ssizeof(Vector);
+    ssize vector_size = ssizeof(VectorSimd);
     char const* p_string_1_iterator = string_1.data();
     char const* p_string_2_iterator = string_2.data();
 
     auto loop = [&](ssize size) -> bool {
         while (length_iterator >= vector_size * size) {
-            for (int8::Raw i = 0; i < size; ++i) {
+            for (ssize i = 0; i < size; ++i) {
                 vectors_1[i].load(string_1.data() + (i * size));
                 vectors_2[i].load(string_2.data() + (i * size));
-                // XOR the characters from each other. If any lanes are
-                // identical between the two, that lane is non-zero.
-                vector_comparison[i] = vectors_1[i] ^ vectors_2[i];
-                masks[i] = move_mask(vector_comparison[i]);
+                comparisons[i] = (vectors_1[i] == vectors_2[i]);
             }
 
-            for (ssize::Raw i = 0; i < size; ++i) {
-                // If not every lane of every vector is 0.
-                if (masks[i] != 0) {
+            for (ssize i = 0; i < size; ++i) {
+                // If any lanes are not equal to each other:
+                if (!comparisons[i].all_of()) {
                     return false;
                 }
             }

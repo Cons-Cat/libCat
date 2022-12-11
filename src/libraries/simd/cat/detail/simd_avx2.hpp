@@ -2,7 +2,7 @@
 
 #include <cat/detail/simd_avx2_fwd.hpp>
 
-#include <cat/meta>
+#include <cat/bitset>
 #include <cat/simd>
 
 namespace cat {
@@ -39,53 +39,38 @@ template <typename T>
     }
 }
 
-// Implementation of `all_of()` for AVX2.
+// Implementation of `simd_all_of()` for AVX2.
 template <typename T>
-[[nodiscard]] auto all_of(SimdMask<Avx2Abi<T>, T> mask) -> bool {
+[[nodiscard]] auto simd_all_of(SimdMask<Avx2Abi<T>, T> mask) -> bool {
     return testc(mask, mask == mask) != 0;
 }
 
-// Implementation of `any_of()` for AVX2.
+// Implementation of `simd_any_of()` for AVX2.
 template <typename T>
-[[nodiscard]] auto any_of(SimdMask<Avx2Abi<T>, T> mask) -> bool {
+[[nodiscard]] auto simd_any_of(SimdMask<Avx2Abi<T>, T> mask) -> bool {
     return testz(mask, mask == mask) == 0;
 }
 
-// TODO: Return a `Bitset`.
-// Implementation of `move_mask` for AVX2.
+// Implementation of `simd_to_bitset` for AVX2.
 template <typename T>
-[[nodiscard]] auto move_mask(Avx2Simd<T> vector) -> int4 {
+    // TODO: Support larger integrals than 1.
+    requires(is_floating_point<T> || (sizeof(T) == 1))
+[[nodiscard]] auto simd_to_bitset(SimdMask<Avx2Abi<T>, T> mask) -> Bitset<32> {
     if constexpr (is_same<T, float>) {
         // Create a bitmask from the most significant bit of every `float` in
         // this vector.
-        return __builtin_ia32_movmskps256(vector.raw);
+        return Bitset<32>::from(
+            make_unsigned(__builtin_ia32_movmskps256(mask.raw)));
     } else if constexpr (is_same<T, double>) {
         // Create a bitmask from the most significant bit of every `double` in
         // this vector.
-        return __builtin_ia32_movmskpd256(vector.raw);
+        return Bitset<32>::from(
+            make_unsigned(__builtin_ia32_movmskpd256(mask.raw)));
     } else {
         // Create a bitmask from the most significant bit of every byte in this
         // vector.
-        return __builtin_ia32_pmovmskb256(vector.raw);
-    }
-}
-
-// TODO: Return a `Bitset`.
-// Implementation of `move_mask` for AVX2.
-template <typename T>
-[[nodiscard]] auto move_mask(SimdMask<Avx2Abi<T>, T> mask) -> int4 {
-    if constexpr (is_same<T, float>) {
-        // Create a bitmask from the most significant bit of every `float` in
-        // this vector.
-        return __builtin_ia32_movmskps256(mask.raw);
-    } else if constexpr (is_same<T, double>) {
-        // Create a bitmask from the most significant bit of every `double` in
-        // this vector.
-        return __builtin_ia32_movmskpd256(mask.raw);
-    } else {
-        // Create a bitmask from the most significant bit of every byte in this
-        // vector.
-        return __builtin_ia32_pmovmskb256(mask.raw);
+        return Bitset<32>::from(
+            make_unsigned(__builtin_ia32_pmovmskb256(mask.raw)));
     }
 }
 

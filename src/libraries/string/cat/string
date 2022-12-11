@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/detail/simd_impl.hpp>
 #include <cat/bit>
 #include <cat/simd>
 #include <cat/span>
@@ -133,8 +134,8 @@ class String : public Span<char const> {
             // TODO: Support a native ABI mask here.
             SimdMask<Avx2Abi<char>, char> const compare =
                 (storage == character);
-            int4 const mask = move_mask(compare);
-            if (mask != 0) {
+			Bitset const mask = compare.bitset();
+            if (mask.any_of()) {
                 return i + mask.countr_zero();
             }
         }
