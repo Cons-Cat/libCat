@@ -18,7 +18,7 @@ template <typename T, typename U>
   // is disabled here.
   gnu::no_sanitize("alignment")]] constexpr inline auto
 cat::bit_cast(U& from_value) -> T {
-    if (__builtin_is_constant_evaluated()) {
+    if consteval {
         if constexpr (sizeof(from_value) == sizeof(T)) {
             // Fall back to C++20 bit-casting in a `constexpr` context.
             return __builtin_bit_cast(T, from_value);
