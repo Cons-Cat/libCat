@@ -602,14 +602,14 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
         return static_cast<bool&>(this[index]);
     }
 
-    // Evaluate true if any lanes are non-zero.
-    constexpr auto any_of() const -> bool {
-        return simd_any_of(*this);
-    }
-
     // Evaluate true if every lane is non-zero.
     constexpr auto all_of() const -> bool {
         return simd_all_of(*this);
+    }
+
+    // Evaluate true if any lanes are non-zero.
+    constexpr auto any_of() const -> bool {
+        return simd_any_of(*this);
     }
 
     // Evaluate true if every lane is zero.
@@ -849,15 +849,15 @@ void prefetch_for_modify(auto const* p_vector) {
 template <typename T>
 void stream_in(void* p_destination, T const* p_source);
 
-// Dispatch `all_of()` to the native SIMD ABI.
-template <typename T>
-[[nodiscard]] auto simd_all_of(SimdMask<NativeAbi<T>, T> mask) -> bool {
-    return simd_all_of(detail::native_cast(mask));
-}
-
 // Dispatch `any_of()` to the native SIMD ABI.
 template <typename T>
 [[nodiscard]] auto simd_any_of(SimdMask<NativeAbi<T>, T> mask) -> bool {
+    return simd_all_of(detail::native_cast(mask));
+}
+
+// Dispatch `all_of()` to the native SIMD ABI.
+template <typename T>
+[[nodiscard]] auto simd_all_of(SimdMask<NativeAbi<T>, T> mask) -> bool {
     return simd_all_of(detail::native_cast(mask));
 }
 

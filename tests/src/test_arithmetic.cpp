@@ -551,7 +551,11 @@ TEST(test_numerals) {
     // Test clz/ctz.
     static_assert(cat::countl_zero(0X7FFFFFFFFFFFFFFF) == 1);
     static_assert(cat::countl_zero(0X7FFFFFFF) == 1);
+    static_assert(cat::countl_one(0X7FFFFFFFFFFFFFFF) == 0);
+    static_assert(cat::countl_one(0X7FFFFFFF) == 0);
 
     static_assert(cat::countr_zero(0XFFFFFFFFFFFFFFFE) == 1);
     static_assert(cat::countr_zero(0XFFFFFFFE) == 1);
+    static_assert(cat::countr_one(0XFFFFFFFFFFFFFFFE) == 0);
+    static_assert(cat::countr_one(0XFFFFFFFE) == 0);
 };

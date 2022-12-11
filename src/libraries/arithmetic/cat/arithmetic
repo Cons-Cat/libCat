@@ -174,14 +174,23 @@ namespace detail {
     using PromotedArithmetic = decltype(promoted_arithmetic<T, U>());
 }  // namespace detail
 
+// If `value` is a power of two.
 template <is_arithmetic T>
-constexpr auto has_single_bit(T value) -> bool;
+[[nodiscard]] constexpr auto has_single_bit(T value) -> bool {
+    return (value & (value - T(1))) == T(0);
+}
 
 template <is_integral T>
 [[nodiscard]] constexpr auto countl_zero(T value) -> ssize;
 
 template <is_integral T>
+[[nodiscard]] constexpr auto countl_one(T value) -> ssize;
+
+template <is_integral T>
 [[nodiscard]] constexpr auto countr_zero(T value) -> ssize;
+
+template <is_integral T>
+[[nodiscard]] constexpr auto countr_one(T value) -> ssize;
 
 // Overflow intrinsics optimize fairly well in GCC.
 // `[[gnu::optimize(2)]]` is required because the codegen is awful by default.
@@ -839,9 +848,19 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         return cat::countl_zero(this->raw);
     }
 
+    [[nodiscard]] constexpr auto countl_one() const -> ssize
+        requires(is_integral<T>) {
+        return cat::countl_one(this->raw);
+    }
+
     [[nodiscard]] constexpr auto countr_zero() const -> ssize
         requires(is_integral<T>) {
         return cat::countr_zero(this->raw);
+    }
+
+    [[nodiscard]] constexpr auto countr_one() const -> ssize
+        requires(is_integral<T>) {
+        return cat::countr_one(this->raw);
     }
 
     static constexpr Arithmetic<T, policy> min = Limits<Raw>::min();
@@ -1162,12 +1181,6 @@ constexpr auto operator|=(T* p_lhs, Arithmetic<U> rhs) -> T* {
     return p_lhs;
 }
 
-// If `value` is a power of two.
-template <is_arithmetic T>
-[[nodiscard]] constexpr auto has_single_bit(T value) -> bool {
-    return (value & (value - T(1))) == T(0);
-}
-
 template <is_integral T>
 [[nodiscard]] constexpr auto countl_zero(T value) -> ssize {
     auto raw_value = to_raw_arithmetic(value);
@@ -1182,6 +1195,12 @@ template <is_integral T>
     } else if constexpr (sizeof(raw_value) == 8) {
         return __builtin_clzl(raw_value);
     }
+}
+
+template <is_integral T>
+[[nodiscard]] constexpr auto countl_one(T value) -> ssize {
+    return value != Limits<T>::max() ? countl_zero(static_cast<T>(~value))
+                                     : Limits<T>::digits;
 }
 
 template <is_integral T>
@@ -1200,7 +1219,12 @@ template <is_integral T>
     }
 }
 
-// TODO: Write a `countl/r_one()`.
+template <is_integral T>
+[[nodiscard]] constexpr auto countr_one(T value) -> ssize {
+    return value != Limits<T>::max() ? countl_one(static_cast<T>(~value))
+                                     : Limits<T>::digits;
+}
+
 // TODO: Write a `popcount()`.
 
 template <ssize bytes>

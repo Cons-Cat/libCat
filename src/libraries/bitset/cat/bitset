@@ -142,16 +142,6 @@ class Bitset {
         return true;
     }
 
-    // Evaluate true if every bit in this bitset is 0.
-    [[nodiscard]] constexpr auto none_of() const -> bool {
-        for (auto i : this->storage) {
-            if (i != 0u) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     // Evaluate true if at least one bit in this bitset is 1.
     [[nodiscard]] constexpr auto any_of() const -> bool {
         for (auto i : this->storage) {
@@ -160,6 +150,11 @@ class Bitset {
             }
         }
         return false;
+    }
+
+    // Evaluate true if every bit in this bitset is 0.
+    [[nodiscard]] constexpr auto none_of() const -> bool {
+		return !(this->any_of());
     }
 
     [[nodiscard]] constexpr auto countl_zero() const -> ssize {
@@ -185,6 +180,8 @@ class Bitset {
         return count;
     }
 
+	// TODO: `.countl_one()`.
+
     [[nodiscard]] constexpr auto countr_zero() const -> ssize {
         ssize count = this->storage[this->storage_array_size - 1].countr_zero();
         if (count != ssizeof(ValueElement) * 8) {
@@ -202,6 +199,8 @@ class Bitset {
         }
         return count;
     }
+
+	// TODO: `.countr_one()`.
 
   private:
     Value storage;
