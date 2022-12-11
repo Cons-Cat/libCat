@@ -547,4 +547,11 @@ TEST(test_numerals) {
 
     // Test bit-casts.
     cat::verify(__builtin_bit_cast(unsigned, 2_i4) == 2u);
+
+    // Test clz/ctz.
+    static_assert(cat::countl_zero(0X7FFFFFFFFFFFFFFF) == 1);
+    static_assert(cat::countl_zero(0X7FFFFFFF) == 1);
+
+    static_assert(cat::countr_zero(0XFFFFFFFFFFFFFFFE) == 1);
+    static_assert(cat::countr_zero(0XFFFFFFFE) == 1);
 };

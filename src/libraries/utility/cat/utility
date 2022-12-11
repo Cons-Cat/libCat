@@ -4,8 +4,6 @@
 
 #include <cat/meta>
 
-#define ssizeof(argument) cat::ssize(sizeof(argument))
-
 namespace cat {
 
 // TODO: See if moving `bit_cast()` into `std::` improves debuggability without

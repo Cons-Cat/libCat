@@ -30,15 +30,25 @@ class Bitset {
               1>,
         Array<uint8, div_ceil(bytes, 8)>>;
 
+  private:
+    using ValueElement = typename Value::Value;
+
+  public:
     static constexpr ssize storage_array_size = Value::size();
 
-    static constexpr ssize storage_element_size =
-        ssizeof(typename Value::Value);
+    static constexpr ssize storage_element_size = ssizeof(ValueElement);
+
+    // The number of bits counted in the first 1, 2, or 4 bytes of the bitset.
+    static constexpr ssize leading_bytes_bits =
+        // Size of this storage, 64 bits or fewer.
+        storage_element_size * 8 -
+        // Minus the number of unused bits in this bitset.
+        ((bytes * 8) - bits_count);
 
     constexpr Bitset() = default;
 
     template <typename... Ts>
-        requires(is_same<Ts, typename Value::Value>&&...)
+        requires(is_same<Ts, ValueElement>&&...)
     [[nodiscard]] static constexpr auto from(Ts... values) -> Bitset
         requires(ssizeof_pack<Ts...>() == Value::size()) {
         // `Value::Value` is some unsigned integer.
@@ -121,13 +131,7 @@ class Bitset {
             } else {
                 // Leading bits of the leading byte should not be considered
                 // part of the bitset, so they are masked off.
-                constexpr T bits_offset(
-                    // Size of this storage, 64 bits or fewer.
-                    (ssizeof(T) * 8) -
-                    // Minus the number of unused bits in this bitset.
-                    ((bytes * 8) - bits_count));
-
-                T mask = (T(1u) << bits_offset) - T(1u);
+                T mask = (T(1u) << make_unsigned(leading_bytes_bits)) - T(1u);
 
                 if (it != mask) {
                     return false;
@@ -157,7 +161,46 @@ class Bitset {
         return false;
     }
 
+    [[nodiscard]] constexpr auto countl_zero() -> ssize {
+        constexpr ssize skip_bits =
+            (ssizeof(ValueElement) * 8) - this->leading_bytes_bits;
 
+        ssize count = this->storage[0].countl_zero();
+        if (count != ssizeof(ValueElement) * 8) {
+            return count - skip_bits;
+        }
+
+        count -= skip_bits;
+
+        for (ssize i = 1; i < this->storage_array_size; ++i) {
+            ssize next_count = this->storage[i].countl_zero();
+            count += next_count;
+
+            // If any 1s are found, skip remaining bytes.
+            if (next_count != ssizeof(ValueElement) * 8) {
+                break;
+            }
+        }
+        return count;
+    }
+
+    [[nodiscard]] constexpr auto countr_zero() -> ssize {
+        ssize count = this->storage[this->storage_array_size - 1].countr_zero();
+        if (count != ssizeof(ValueElement) * 8) {
+            return count;
+        }
+
+        for (ssize i = this->storage_array_size - 2; i >= 0; --i) {
+            ssize next_count = this->storage[i].countr_zero();
+            count += next_count;
+
+            // If any 1s are found, skip remaining bytes.
+            if (next_count != ssizeof(ValueElement) * 8) {
+                break;
+            }
+        }
+        return count;
+    }
 
   private:
     Value storage;

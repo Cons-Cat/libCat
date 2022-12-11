@@ -19,6 +19,8 @@
 // This solution is concise, because any constraint broadly applies to all
 // possible type conversions.
 
+#define ssizeof(argument) cat::ssize(sizeof(argument))
+
 namespace cat {
 
 // These policies control the overflow semantics of `Arithmetic`s.
@@ -175,12 +177,10 @@ namespace detail {
 template <is_arithmetic T>
 constexpr auto has_single_bit(T value) -> bool;
 
-template <typename T>
-    requires(is_integral<T>)
+template <is_integral T>
 [[nodiscard]] constexpr auto countl_zero(T value) -> ssize;
 
-template <typename T>
-    requires(is_integral<T>)
+template <is_integral T>
 [[nodiscard]] constexpr auto countr_zero(T value) -> ssize;
 
 // Overflow intrinsics optimize fairly well in GCC.
@@ -1175,18 +1175,36 @@ template <is_arithmetic T>
     return (value & (value - T(1))) == T(0);
 }
 
-template <typename T>
-    requires(is_integral<T>)
+template <is_integral T>
 [[nodiscard]] constexpr auto countl_zero(T value) -> ssize {
-    auto raw_value = to_raw_numeral(value);
-    return ssize{__builtin_clz(raw_value)};
+    auto raw_value = to_raw_arithmetic(value);
+
+    if (raw_value == 0) {
+        // It is undefined behavior to pass 0 into clz.
+        return ssizeof(T) * 8;
+    }
+
+    if constexpr (sizeof(raw_value) == 4) {
+        return __builtin_clz(raw_value);
+    } else if constexpr (sizeof(raw_value) == 8) {
+        return __builtin_clzl(raw_value);
+    }
 }
 
-template <typename T>
-    requires(is_integral<T>)
+template <is_integral T>
 [[nodiscard]] constexpr auto countr_zero(T value) -> ssize {
-    auto raw_value = to_raw_numeral(value);
-    return ssize{__builtin_ctz(raw_value)};
+    auto raw_value = to_raw_arithmetic(value);
+
+    if (value == 0) {
+        // It is undefined behavior to pass 0 into ctz.
+        return ssizeof(T) * 8;
+    }
+
+    if constexpr (sizeof(raw_value) == 4) {
+        return __builtin_ctz(raw_value);
+    } else if constexpr (sizeof(raw_value) == 8) {
+        return __builtin_ctzl(raw_value);
+    }
 }
 
 // TODO: Write a `countl/r_one()`.
