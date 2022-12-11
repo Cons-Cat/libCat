@@ -126,7 +126,7 @@ template <typename U>
     -> uintptr<U>;
 
 template <is_integral T>
-[[nodiscard]] constexpr auto is_power_of_two(T value) -> bool {
+[[nodiscard]] constexpr auto has_single_bit(T value) -> bool {
     return (value & (value - 1)) == 0;
 }
 

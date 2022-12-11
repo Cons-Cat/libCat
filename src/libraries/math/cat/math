@@ -159,11 +159,6 @@ constexpr auto pow(T base, U exponent) -> T {
     }
 }
 
-template <is_arithmetic T>
-constexpr auto is_power_of_two(T value) -> bool {
-    return (value & (value - T(1))) == T(0);
-}
-
 namespace detail {
     template <is_unsigned_integral T, usize::Raw shift>
     [[gnu::always_inline]] constexpr auto round_to_pow2_part(T value) {

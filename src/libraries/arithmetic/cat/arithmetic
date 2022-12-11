@@ -172,13 +172,16 @@ namespace detail {
     using PromotedArithmetic = decltype(promoted_numeral<T, U>());
 }  // namespace detail
 
-template <typename T>
-    requires(is_integral<T>)
-[[nodiscard]] constexpr auto count_leading_zeros(T value) -> ssize;
+template <is_arithmetic T>
+constexpr auto has_single_bit(T value) -> bool;
 
 template <typename T>
     requires(is_integral<T>)
-[[nodiscard]] constexpr auto count_trailing_zeros(T value) -> ssize;
+[[nodiscard]] constexpr auto countl_zero(T value) -> ssize;
+
+template <typename T>
+    requires(is_integral<T>)
+[[nodiscard]] constexpr auto countr_zero(T value) -> ssize;
 
 // Overflow intrinsics optimize fairly well in GCC.
 // `[[gnu::optimize(2)]]` is required because the codegen is awful by default.
@@ -315,7 +318,7 @@ template <is_raw_integral T, is_raw_integral U>
     // TODO: Figure out signed saturating shift semantics.
     requires(is_unsigned<T>)
 [[nodiscard, gnu::optimize(2)]] constexpr auto sat_shl(T value, U bits) {
-    // TODO: Try `cat::count_trailing_zeros()`.
+    // TODO: Try `cat::countr_zero()`.
     if (bits >= Limits<T>::bits - __builtin_ctz(value)) {
         return Limits<T>::max();
     }
@@ -336,7 +339,7 @@ template <is_raw_integral T, is_raw_integral U>
     // TODO: Figure out signed saturating shift semantics.
     requires(is_unsigned<T>)
 [[nodiscard, gnu::optimize(2)]] constexpr auto sat_shr(T value, U bits) {
-    // TODO: Try `cat::count_leading_zeros()`.
+    // TODO: Try `cat::countl_zero()`.
     if (bits >= Limits<T>::bits - __builtin_clz(value)) {
         return Limits<T>::min();
     }
@@ -826,15 +829,21 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
     }
 
     // Member functions for all numerals.
+    // The `cat::` name qualifier is required to prevent recursively calling
+    // these member functions.
 
-    [[nodiscard]] constexpr auto count_leading_zeros() const -> ssize
-        requires(is_integral<T>) {
-        return cat::count_leading_zeros(this->raw);
+    [[nodiscard]] constexpr auto has_single_bit() const -> bool {
+        return cat::has_single_bit(this->raw);
     }
 
-    [[nodiscard]] constexpr auto count_trailing_zeros() const -> ssize
+    [[nodiscard]] constexpr auto countl_zero() const -> ssize
         requires(is_integral<T>) {
-        return cat::count_trailing_zeros(this->raw);
+        return cat::countl_zero(this->raw);
+    }
+
+    [[nodiscard]] constexpr auto countr_zero() const -> ssize
+        requires(is_integral<T>) {
+        return cat::countr_zero(this->raw);
     }
 
     static constexpr Arithmetic<T, policy> min = Limits<Raw>::min();
@@ -1155,19 +1164,28 @@ constexpr auto operator|=(T* p_lhs, Arithmetic<U> rhs) -> T* {
     return p_lhs;
 }
 
+// If `value` is a power of two.
+template <is_arithmetic T>
+[[nodiscard]] constexpr auto has_single_bit(T value) -> bool {
+    return (value & (value - T(1))) == T(0);
+}
+
 template <typename T>
     requires(is_integral<T>)
-[[nodiscard]] constexpr auto count_leading_zeros(T value) -> ssize {
+[[nodiscard]] constexpr auto countl_zero(T value) -> ssize {
     auto raw_value = to_raw_numeral(value);
     return ssize{__builtin_clz(raw_value)};
 }
 
 template <typename T>
     requires(is_integral<T>)
-[[nodiscard]] constexpr auto count_trailing_zeros(T value) -> ssize {
+[[nodiscard]] constexpr auto countr_zero(T value) -> ssize {
     auto raw_value = to_raw_numeral(value);
     return ssize{__builtin_ctz(raw_value)};
 }
+
+// TODO: Write a `countl/r_one()`.
+// TODO: Write a `popcount()`.
 
 template <ssize bytes>
     requires(bytes <= 8 && bytes > 0 &&

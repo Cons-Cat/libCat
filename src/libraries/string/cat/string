@@ -135,7 +135,7 @@ class String : public Span<char const> {
                 (storage == character);
             int4 const mask = move_mask(compare);
             if (mask != 0) {
-                return i + mask.count_trailing_zeros();
+                return i + mask.countr_zero();
             }
         }
         // The last chunk of this string, smaller than `char1x_::lanes`, is

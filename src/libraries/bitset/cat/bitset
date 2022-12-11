@@ -109,7 +109,7 @@ class Bitset {
             auto it = this->storage[i];
             using T = decltype(it);
 
-            if (i > 0 || constant_evaluate(is_power_of_two(bits_count) ||
+            if (i > 0 || constant_evaluate(has_single_bit(bits_count) ||
                                            !(bits_count & (63)))) {
                 if (it != it.max) {
                     // If at least one bit is 0:

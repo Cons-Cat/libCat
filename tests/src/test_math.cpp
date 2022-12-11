@@ -80,14 +80,14 @@ TEST(test_math) {
     // cat::verify(cat::pow(2, 0) == 1.);
     // cat::verify(cat::pow(8, -1) == 0.);
 
-    // Test `is_power_of_two()`.
-    cat::verify(cat::is_power_of_two(0));
-    cat::verify(cat::is_power_of_two(1));
-    cat::verify(cat::is_power_of_two(2));
-    cat::verify(!cat::is_power_of_two(3));
-    cat::verify(cat::is_power_of_two(4));
-    cat::verify(cat::is_power_of_two(8u));
-    cat::verify(cat::is_power_of_two(256));
+    // Test `has_single_bit()`.
+    cat::verify(cat::has_single_bit(0));
+    cat::verify(cat::has_single_bit(1));
+    cat::verify(cat::has_single_bit(2));
+    cat::verify(!cat::has_single_bit(3));
+    cat::verify(cat::has_single_bit(4));
+    cat::verify(cat::has_single_bit(8u));
+    cat::verify(cat::has_single_bit(256));
 
     // Test `round_to_pow2()`.
     cat::round_to_pow2(0u);

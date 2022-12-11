@@ -75,7 +75,7 @@ class Ring : public CollectionInterface<Ring<T>, T> {
     [[nodiscard]] auto reserve(is_stable_allocator auto& allocator,
                                ssize new_capacity) -> Maybe<void> {
         // The capacity of a `Ring` must be a power of two.
-        cat::assert(is_power_of_two(new_capacity));
+        cat::assert(has_single_bit(new_capacity));
 
         if (new_capacity > this->current_capacity) {
             // TODO: Can this be simplified with iterators?
