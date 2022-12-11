@@ -96,7 +96,7 @@ template <typename T>
 template <is_signed_integral T>
 [[nodiscard]] constexpr auto abs(T value) -> T {
     // `__builtin_abs()` returns `int`, so its type must be coerced to `T`.
-    return T(__builtin_abs(to_raw_numeral(value)));
+    return T(__builtin_abs(to_raw_arithmetic(value)));
 }
 
 [[nodiscard]] constexpr auto abs(is_unsigned_integral auto value) {
@@ -106,7 +106,7 @@ template <is_signed_integral T>
 template <is_floating_point T>
 [[nodiscard]] constexpr auto abs(T value) -> T {
     // `__builtin_fabs()` returns `double`, so its type must be coerced to `T`.
-    return T(__builtin_fabs(to_raw_numeral(value)));
+    return T(__builtin_fabs(to_raw_arithmetic(value)));
 }
 
 // TODO: Support floating point here.
@@ -149,8 +149,8 @@ template <is_arithmetic T, is_integral U>
 [[nodiscard]] constexpr auto pow(T base, U exponent) -> T {
     // Type-erase `Arithmetic`s to prevent redundant code gen.
     using Raw = ToRawArithmetic<T>;
-    Raw raw_base = to_raw_numeral(base);
-    Raw raw_exponent = to_raw_numeral(exponent);
+    Raw raw_base = to_raw_arithmetic(base);
+    Raw raw_exponent = to_raw_arithmetic(exponent);
 
     if constexpr (is_integral<Raw>) {
         return detail::pow_integral(raw_base, raw_exponent);

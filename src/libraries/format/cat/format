@@ -17,7 +17,7 @@ namespace cat {
 template <is_integral T, OverflowPolicies policy>
 [[nodiscard]] auto to_chars(is_allocator auto& allocator,
                             Arithmetic<T, policy> numeral) -> Maybe<String> {
-    return to_chars(allocator, to_raw_numeral(numeral));
+    return to_chars(allocator, to_raw_arithmetic(numeral));
 }
 
 // Dynamically allocate an is_integral value converted to `String`.

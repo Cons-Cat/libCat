@@ -90,7 +90,6 @@ TEST(test_math) {
     cat::verify(cat::has_single_bit(256));
 
     // Test `round_to_pow2()`.
-    cat::round_to_pow2(0u);
     static_assert(cat::round_to_pow2(0u) == 0u);
     static_assert(cat::round_to_pow2(1u) == 1u);
     static_assert(cat::round_to_pow2(2u) == 2u);

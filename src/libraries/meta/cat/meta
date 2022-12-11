@@ -423,13 +423,16 @@ namespace detail {
     // TODO: Support 16-byte integers.
     template <typename T>
     inline constexpr bool is_integral_detail =
+        __is_same(RemoveCv<T>, char) ||  //
         __is_same(RemoveCv<T>, signed char) ||
-        __is_same(RemoveCv<T>, unsigned char) || __is_same(RemoveCv<T>, char) ||
-        __is_same(RemoveCv<T>, short) ||
-        __is_same(RemoveCv<T>, unsigned short) || __is_same(RemoveCv<T>, int) ||
-        __is_same(RemoveCv<T>, unsigned int) || __is_same(RemoveCv<T>, long) ||
+        __is_same(RemoveCv<T>, unsigned char) ||
+        __is_same(RemoveCv<T>, signed short) ||
+        __is_same(RemoveCv<T>, unsigned short) ||
+        __is_same(RemoveCv<T>, signed int) ||
+        __is_same(RemoveCv<T>, unsigned int) ||
+        __is_same(RemoveCv<T>, signed long) ||
         __is_same(RemoveCv<T>, unsigned long) ||
-        __is_same(RemoveCv<T>, long long) ||
+        __is_same(RemoveCv<T>, signed long long) ||
         __is_same(RemoveCv<T>, unsigned long long);
 
     template <typename T, auto policy>

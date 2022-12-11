@@ -178,7 +178,7 @@ class CollectionInterface {
             assert(index < this->self().size());
         }
 
-        return this->self_mut().data()[to_raw_numeral(index)];
+        return this->self_mut().data()[to_raw_arithmetic(index)];
     }
 
     template <is_integral U>
@@ -189,7 +189,7 @@ class CollectionInterface {
             assert(index < this->self().size());
         }
 
-        return this->self().data()[to_raw_numeral(index)];
+        return this->self().data()[to_raw_arithmetic(index)];
     }
 
     // `.begin()` and `.end()` can be automatically generated for contiguous
