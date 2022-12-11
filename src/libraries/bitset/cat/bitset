@@ -131,7 +131,7 @@ class Bitset {
             } else {
                 // Leading bits of the leading byte should not be considered
                 // part of the bitset, so they are masked off.
-                T mask = (T(1u) << make_unsigned(leading_bytes_bits)) - T(1u);
+                T mask = (T(1u) << leading_bytes_bits) - T(1u);
 
                 if (it != mask) {
                     return false;

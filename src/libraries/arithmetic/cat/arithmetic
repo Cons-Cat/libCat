@@ -327,7 +327,6 @@ template <is_raw_integral T, is_raw_integral U>
 
 // Erase redundant type information for `sat_shl()`.
 template <is_integral T, is_integral U>
-    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard]] constexpr auto sat_shl(T value, U bits)
     -> detail::PromotedArithmetic<T, U> {
     // Saturating is_arithmetic inputs must be raw and cast to the same size.
@@ -348,7 +347,6 @@ template <is_raw_integral T, is_raw_integral U>
 
 // Erase redundant type information for `sat_shr()`.
 template <is_integral T, is_integral U>
-    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard]] constexpr auto sat_shr(T value, U bits)
     -> detail::PromotedArithmetic<T, U> {
     // Saturating is_arithmetic inputs must be raw and cast to the same size.
@@ -766,8 +764,7 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         return self;
     }
 
-    template <typename U>
-        requires(is_safe_arithmetic_comparison<T, U>)
+    template <is_integral U>
     [[nodiscard]] friend constexpr auto operator<<(Arithmetic<T, policy> self,
                                                    U operand) -> Arithmetic<T> {
         if constexpr (policy == OverflowPolicies::saturate) {
@@ -788,17 +785,14 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
                                                    U* p_operand) -> U* {
         return p_operand << self.raw;
     }
-
-    template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<U, T>)
+    template <is_integral U>
     friend constexpr auto operator<<=(Arithmetic<T, policy>& self, U operand)
         -> Arithmetic& {
         self = self << to_raw_arithmetic(operand);
         return self;
     }
 
-    template <typename U>
-        requires(is_safe_arithmetic_comparison<T, U>)
+    template <is_integral U>
     [[nodiscard]] friend constexpr auto operator>>(Arithmetic<T, policy> self,
                                                    U operand) -> Arithmetic<T> {
         if constexpr (policy == OverflowPolicies::saturate) {
@@ -820,8 +814,7 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         return p_operand >> self.raw;
     }
 
-    template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<U, T>)
+    template <is_integral U>
     friend constexpr auto operator>>=(Arithmetic<T, policy>& self, U operand)
         -> Arithmetic& {
         self = self >> to_raw_arithmetic(operand);
@@ -1069,25 +1062,25 @@ class ArithmeticPtr : public Arithmetic<Storage, policy> {
         return *this;
     }
 
-    template <typename U>
+    template <is_integral U>
     [[nodiscard]] constexpr auto operator<<(U operand) const
         -> ArithmeticPtr<T, Storage, policy> {
         return static_cast<Storage>(this->raw << to_raw_arithmetic(operand));
     }
 
-    template <typename U>
+    template <is_integral U>
     constexpr auto operator<<=(U operand) -> ArithmeticPtr& {
         this->raw = this->raw << to_raw_arithmetic(operand);
         return *this;
     }
 
-    template <typename U>
+    template <is_integral U>
     [[nodiscard]] constexpr auto operator>>(U operand) const
         -> ArithmeticPtr<T, Storage, policy> {
         return static_cast<Storage>(this->raw >> to_raw_arithmetic(operand));
     }
 
-    template <typename U>
+    template <is_integral U>
     constexpr auto operator>>=(U operand) -> ArithmeticPtr& {
         this->raw = this->raw >> to_raw_arithmetic(operand);
         return *this;
@@ -1135,14 +1128,14 @@ constexpr auto operator/=(T* p_lhs, Arithmetic<U> rhs) -> T* {
 }
 
 // Bitwise shift left and assign a `Arithmetic` to a pointer.
-template <typename T, typename U>
+template <typename T, is_integral U>
 constexpr auto operator<<=(T* p_lhs, Arithmetic<U> rhs) -> T* {
     p_lhs <<= rhs.raw;
     return p_lhs;
 }
 
 // Bitwise shift right and assign a `Arithmetic` to a pointer.
-template <typename T, typename U>
+template <typename T, is_integral U>
 constexpr auto operator>>=(T* p_lhs, Arithmetic<U> rhs) -> T* {
     p_lhs >>= rhs.raw;
     return p_lhs;
