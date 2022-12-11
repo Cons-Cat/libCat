@@ -117,7 +117,7 @@ class Bitset {
     }
 
     // Evaluate true if every bit in this bitset is 1.
-    [[nodiscard]] constexpr auto all() -> bool {
+    [[nodiscard]] constexpr auto all() const -> bool {
         for (ssize i = 0; i < this->storage_array_size; ++i) {
             auto it = this->storage[i];
             using T = decltype(it);
@@ -142,7 +142,7 @@ class Bitset {
     }
 
     // Evaluate true if every bit in this bitset is 0.
-    [[nodiscard]] constexpr auto none() -> bool {
+    [[nodiscard]] constexpr auto none() const -> bool {
         for (auto i : this->storage) {
             if (i != 0u) {
                 return false;
@@ -152,7 +152,7 @@ class Bitset {
     }
 
     // Evaluate true if at least one bit in this bitset is 1.
-    [[nodiscard]] constexpr auto any() -> bool {
+    [[nodiscard]] constexpr auto any() const -> bool {
         for (auto i : this->storage) {
             if (i != 0u) {
                 return true;
@@ -161,7 +161,7 @@ class Bitset {
         return false;
     }
 
-    [[nodiscard]] constexpr auto countl_zero() -> ssize {
+    [[nodiscard]] constexpr auto countl_zero() const -> ssize {
         constexpr ssize skip_bits =
             (ssizeof(ValueElement) * 8) - this->leading_bytes_bits;
 
@@ -184,7 +184,7 @@ class Bitset {
         return count;
     }
 
-    [[nodiscard]] constexpr auto countr_zero() -> ssize {
+    [[nodiscard]] constexpr auto countr_zero() const -> ssize {
         ssize count = this->storage[this->storage_array_size - 1].countr_zero();
         if (count != ssizeof(ValueElement) * 8) {
             return count;
