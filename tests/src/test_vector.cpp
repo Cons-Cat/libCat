@@ -23,7 +23,7 @@ TEST(test_vector) {
     paging_allocator.reset();
     auto page =
         paging_allocator.opq_alloc_multi<cat::Byte>(4_ki - 32).or_exit();
-    DEFER(paging_allocator.free(page);)
+    defer(paging_allocator.free(page);)
     auto allocator =
         cat::LinearAllocator::backed_handle(paging_allocator, page);
 

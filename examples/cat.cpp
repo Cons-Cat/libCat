@@ -42,7 +42,7 @@ void read_and_print_file(char* p_file_name) {
     cat::Span<nix::IoVector> io_vectors =
         pager.alloc_multi<nix::IoVector>(blocks).or_exit(
             "Failed to allocate memory!", 3);
-    DEFER(pager.free_multi(io_vectors.data(), io_vectors.size());)
+    defer(pager.free_multi(io_vectors.data(), io_vectors.size());)
 
     while (bytes_remaining > 0) {
         ssize current_block_size = cat::min(bytes_remaining, block_size);

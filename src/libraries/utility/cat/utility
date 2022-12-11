@@ -167,19 +167,19 @@ namespace detail {
 #define LIBCAT_CONCAT2(x, y) x##y
 #define LIBCAT_CONCAT(x, y) LIBCAT_CONCAT2(x, y)
 
-// `DEFER()` is a macro that instantiates a scoped object which executes some
+// `defer()` is a macro that instantiates a scoped object which executes some
 // arbitrary closure in its destructor.
 // For example:
 //     void* p_mem1 = allocator.alloc();
 //     void* p_mem2 = allocator.alloc();
-//     DEFER(allocator.free(p_mem1);
+//     defer(allocator.free(p_mem1);
 //           allocator.free(p_mem2);)
 
 // `__COUNTER__` is defined by GCC, and it expands to a monotonically increasing
 // digit every time it is expanded. This guarantees that every instance of
 // `DeferWrapper` has a unique name.
 
-#define DEFER(deferred_code)                    \
+#define defer(deferred_code)                    \
     auto LIBCAT_CONCAT(_defer__, __COUNTER__) = \
         cat::detail::DeferWrapper([&]() {       \
             deferred_code                       \
