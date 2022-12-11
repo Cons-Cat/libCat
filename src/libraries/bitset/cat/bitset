@@ -39,7 +39,7 @@ class Bitset {
 
     template <typename... Ts>
         requires(is_same<Ts, typename Value::Value>&&...)
-    static constexpr auto from(Ts... values) -> Bitset
+    [[nodiscard]] static constexpr auto from(Ts... values) -> Bitset
         requires(ssizeof_pack<Ts...>() == Value::size()) {
         // `Value::Value` is some unsigned integer.
         // TODO: Assert that the input fits in `bits_count`.
@@ -48,11 +48,12 @@ class Bitset {
         return bitset;
     }
 
-    constexpr auto operator==(Bitset<bits_count> const&) const
+    [[nodiscard]] constexpr auto operator==(Bitset<bits_count> const&) const
         -> bool = default;
 
-    friend constexpr auto operator&(Bitset<bits_count> lhs,
-                                    Bitset<bits_count> rhs) -> Bitset {
+    [[nodiscard]] friend constexpr auto operator&(Bitset<bits_count> lhs,
+                                                  Bitset<bits_count> rhs)
+        -> Bitset {
         Bitset<bits_count> bitset;
         for (ssize::Raw i = 0; i < lhs.storage_array_size; ++i) {
             bitset.storage[i] = lhs.storage[i] & rhs.storage[i];
@@ -66,8 +67,9 @@ class Bitset {
         return self;
     }
 
-    friend constexpr auto operator|(Bitset<bits_count> lhs,
-                                    Bitset<bits_count> rhs) -> Bitset {
+    [[nodiscard]] friend constexpr auto operator|(Bitset<bits_count> lhs,
+                                                  Bitset<bits_count> rhs)
+        -> Bitset {
         Bitset<bits_count> bitset;
         for (ssize::Raw i = 0; i < lhs.storage_array_size; ++i) {
             bitset.storage[i] = lhs.storage[i] | rhs.storage[i];
@@ -81,8 +83,9 @@ class Bitset {
         return self;
     }
 
-    friend constexpr auto operator^(Bitset<bits_count> lhs,
-                                    Bitset<bits_count> rhs) -> Bitset {
+    [[nodiscard]] friend constexpr auto operator^(Bitset<bits_count> lhs,
+                                                  Bitset<bits_count> rhs)
+        -> Bitset {
         Bitset<bits_count> bitset;
         for (ssize::Raw i = 0; i < lhs.storage_array_size; ++i) {
             bitset.storage[i] = lhs.storage[i] ^ rhs.storage[i];
@@ -104,7 +107,7 @@ class Bitset {
     }
 
     // Evaluate true if every bit in this bitset is 1.
-    constexpr auto all() -> bool {
+    [[nodiscard]] constexpr auto all() -> bool {
         for (ssize i = 0; i < this->storage_array_size; ++i) {
             auto it = this->storage[i];
             using T = decltype(it);
@@ -135,7 +138,7 @@ class Bitset {
     }
 
     // Evaluate true if every bit in this bitset is 0.
-    constexpr auto none() -> bool {
+    [[nodiscard]] constexpr auto none() -> bool {
         for (auto i : this->storage) {
             if (i != 0u) {
                 return false;
@@ -145,7 +148,7 @@ class Bitset {
     }
 
     // Evaluate true if at least one bit in this bitset is 1.
-    constexpr auto any() -> bool {
+    [[nodiscard]] constexpr auto any() -> bool {
         for (auto i : this->storage) {
             if (i != 0u) {
                 return true;
@@ -153,6 +156,8 @@ class Bitset {
         }
         return false;
     }
+
+
 
   private:
     Value storage;

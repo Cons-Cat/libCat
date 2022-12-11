@@ -12,14 +12,15 @@ namespace cat {
 // TODO: Explicit output type is ambiguous when given 2 function arguments.
 
 template <typename T>
-constexpr auto min(T value) -> T {
+[[nodiscard]] constexpr auto min(T value) -> T {
     return value;
 }
 
 // Implicit output type `min()`.
 template <typename T, typename U, typename... Remaining>
     requires(is_implicitly_convertible<U, T>)
-constexpr auto min(T value_1, U value_2, Remaining... remaining) -> T {
+[[nodiscard]] constexpr auto min(T value_1, U value_2, Remaining... remaining)
+    -> T {
     // Recurse through the list of variadic arguments, discarding the larger
     // element each time.
     return (value_1 < value_2) ? min(value_1, remaining...)
@@ -28,7 +29,7 @@ constexpr auto min(T value_1, U value_2, Remaining... remaining) -> T {
 
 // TODO: These should have different names and be in `<cat/algorithms>`.
 
-constexpr auto min(is_iterable auto&& iterable) {
+[[nodiscard]] constexpr auto min(is_iterable auto&& iterable) {
     auto iterator = iterable.begin();
     auto maximum = *iterator;
     ++iterator;
@@ -40,7 +41,7 @@ constexpr auto min(is_iterable auto&& iterable) {
 }
 
 template <typename T>
-constexpr auto min(is_iterable auto&& iterable) {
+[[nodiscard]] constexpr auto min(is_iterable auto&& iterable) {
     auto iterator = iterable.begin();
     auto maximum = *iterator;
     ++iterator;
@@ -52,14 +53,15 @@ constexpr auto min(is_iterable auto&& iterable) {
 }
 
 template <typename T>
-constexpr auto max(T value) -> T {
+[[nodiscard]] constexpr auto max(T value) -> T {
     return value;
 }
 
 // Implicit output type `max()`.
 template <typename T, typename U, typename... Remaining>
     requires(is_implicitly_convertible<U, T>)
-constexpr auto max(T value_1, U value_2, Remaining... remaining) -> T {
+[[nodiscard]] constexpr auto max(T value_1, U value_2, Remaining... remaining)
+    -> T {
     // Recurse through the list of variadic arguments, discarding the larger
     // element each time.
     return (value_1 > value_2) ? max(value_1, remaining...)
@@ -68,7 +70,7 @@ constexpr auto max(T value_1, U value_2, Remaining... remaining) -> T {
 
 // TODO: If an `iterable` has `<` and `>` operators, this has unclear intent.
 
-constexpr auto max(is_iterable auto&& iterable) {
+[[nodiscard]] constexpr auto max(is_iterable auto&& iterable) {
     auto iterator = iterable.begin();
     auto maximum = *iterator;
     ++iterator;
@@ -80,7 +82,7 @@ constexpr auto max(is_iterable auto&& iterable) {
 }
 
 template <typename T>
-constexpr auto max(is_iterable auto&& iterable) {
+[[nodiscard]] constexpr auto max(is_iterable auto&& iterable) {
     auto iterator = iterable.begin();
     auto maximum = *iterator;
     ++iterator;
@@ -92,23 +94,24 @@ constexpr auto max(is_iterable auto&& iterable) {
 }
 
 template <is_signed_integral T>
-constexpr auto abs(T value) -> T {
+[[nodiscard]] constexpr auto abs(T value) -> T {
     // `__builtin_abs()` returns `int`, so its type must be coerced to `T`.
     return T(__builtin_abs(to_raw_numeral(value)));
 }
 
-constexpr auto abs(is_unsigned_integral auto value) {
+[[nodiscard]] constexpr auto abs(is_unsigned_integral auto value) {
     return value;
 }
 
 template <is_floating_point T>
-constexpr auto abs(T value) -> T {
+[[nodiscard]] constexpr auto abs(T value) -> T {
     // `__builtin_fabs()` returns `double`, so its type must be coerced to `T`.
     return T(__builtin_fabs(to_raw_numeral(value)));
 }
 
 // TODO: Support floating point here.
-constexpr auto div_ceil(is_integral auto dividend, is_integral auto divisor) {
+[[nodiscard]] constexpr auto div_ceil(is_integral auto dividend,
+                                      is_integral auto divisor) {
     return (dividend + divisor - 1) / divisor;
 }
 
@@ -143,7 +146,7 @@ namespace detail {
 }  // namespace detail
 
 template <is_arithmetic T, is_integral U>
-constexpr auto pow(T base, U exponent) -> T {
+[[nodiscard]] constexpr auto pow(T base, U exponent) -> T {
     // Type-erase `Arithmetic`s to prevent redundant code gen.
     using Raw = ToRawArithmetic<T>;
     Raw raw_base = to_raw_numeral(base);
@@ -177,14 +180,14 @@ namespace detail {
 }  // namespace detail
 
 template <is_unsigned_integral T>
-constexpr auto round_to_pow2(T value) {
+[[nodiscard]] constexpr auto round_to_pow2(T value) {
     value -= 1u;
     value = detail::round_to_pow2_part<T, 1u>(value);
     return value + 1;
 }
 
 template <is_arithmetic T>
-auto clamp(T value, T min, T max) -> T {
+[[nodiscard]] auto clamp(T value, T min, T max) -> T {
     T lower_bound = value < min ? min : value;
     return lower_bound > max ? max : lower_bound;
 }
