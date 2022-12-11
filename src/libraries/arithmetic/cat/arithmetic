@@ -152,7 +152,7 @@ concept is_safe_arithmetic_conversion =
 
 namespace detail {
     template <typename T, typename U>
-    consteval auto promoted_numeral() {
+    consteval auto promoted_arithmetic() {
         if constexpr (is_arithmetic_ptr<T>) {
             return T();
         } else if constexpr (is_arithmetic_ptr<U>) {
@@ -171,7 +171,7 @@ namespace detail {
     template <typename T, typename U>
         requires((is_signed<T> == is_signed<U>)&&(is_floating_point<T> ==
                                                   is_floating_point<U>))
-    using PromotedArithmetic = decltype(promoted_numeral<T, U>());
+    using PromotedArithmetic = decltype(promoted_arithmetic<T, U>());
 }  // namespace detail
 
 template <is_arithmetic T>
