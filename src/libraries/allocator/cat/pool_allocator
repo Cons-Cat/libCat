@@ -7,7 +7,7 @@
 namespace cat {
 
 template <ssize max_node_bytes>
-class PoolAllocator : public AllocatorFacade<PoolAllocator<max_node_bytes>> {
+class PoolAllocator : public AllocatorInterface<PoolAllocator<max_node_bytes>> {
   private:
     template <typename T>
     struct PoolMemoryHandle : detail::BaseMemoryHandle<T> {
@@ -102,7 +102,7 @@ class PoolAllocator : public AllocatorFacade<PoolAllocator<max_node_bytes>> {
     // Do not allocate larger than this size of one node.
     static constexpr ssize max_allocation_bytes = max_node_bytes;
   private:
-    friend AllocatorFacade<PoolAllocator>;
+    friend AllocatorInterface<PoolAllocator>;
 
     union Node {
         Node* p_next = nullptr;

@@ -153,7 +153,7 @@ class String : public Span<char const> {
 // This is `ssize::Raw` because GCC cannot deduce a string literal's
 // length from an `ssize`.
 template <ssize::Raw length>
-class StaticString : public CollectionFacade<StaticString<length>, char> {
+class StaticString : public CollectionInterface<StaticString<length>, char> {
   public:
     constexpr auto data() -> char* {
         return &(this->storage[0]);

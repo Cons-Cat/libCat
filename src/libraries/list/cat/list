@@ -30,12 +30,12 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-class List : public CollectionFacade<List<T>, T> {
+class List : public CollectionInterface<List<T>, T> {
   public:
-    class Iterator : public IteratorFacade<Iterator> {
+    class Iterator : public IteratorInterface<Iterator> {
       public:
         friend List<T>;
-        friend IteratorFacade<Iterator>;
+        friend IteratorInterface<Iterator>;
         using Collection [[maybe_unused]] = List<T>;
 
         Iterator(Iterator const&) = default;
@@ -391,7 +391,7 @@ class List : public CollectionFacade<List<T>, T> {
     }
 
     // Providing these four iterator getters generates the remaining eight
-    // through the `CollectionFacade`.
+    // through the `CollectionInterface`.
     [[nodiscard]] auto begin() -> Iterator {
         return Iterator(this->p_head);
     }
@@ -415,9 +415,9 @@ class List : public CollectionFacade<List<T>, T> {
 };
 
 template <typename T>
-class ForwardList : public CollectionFacade<ForwardList<T>, T> {
+class ForwardList : public CollectionInterface<ForwardList<T>, T> {
   public:
-    struct Iterator : IteratorFacade<Iterator> {
+    struct Iterator : IteratorInterface<Iterator> {
         Iterator(Iterator const&) = default;
         Iterator(detail::ForwardListNode<T>* p_input) : p_node(p_input) {
         }
@@ -665,7 +665,7 @@ class ForwardList : public CollectionFacade<ForwardList<T>, T> {
     }
 
     // Providing these two iterator getters generates the remaining four
-    // through the `CollectionFacade`.
+    // through the `CollectionInterface`.
     [[nodiscard]] auto begin() -> Iterator {
         return Iterator(this->p_head);
     }

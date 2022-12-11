@@ -267,7 +267,7 @@ namespace detail {
     // A buffer that can grow through `.push_back()` and reallocate when its
     // storage is exceeded. This container is used in `vformat()` calls as the
     // default container for `vformat_to()`.
-    struct FormatStringVector : CollectionFacade<FormatStringVector, char> {
+    struct FormatStringVector : CollectionInterface<FormatStringVector, char> {
         FormatStringVector(char* p_in_storage, ssize in_length,
                            ssize in_max_length)
             : p_storage(p_in_storage),
@@ -406,7 +406,7 @@ namespace detail {
     // dispatch in this container.
     template <is_stable_allocator Allocator>
     struct FormatBufferBase
-        : public CollectionFacade<FormatBufferBase<Allocator>, char> {
+        : public CollectionInterface<FormatBufferBase<Allocator>, char> {
         FormatBufferBase(char* p_in_string, ssize in_length,
                          ssize in_max_length)
             : p_string(p_in_string),

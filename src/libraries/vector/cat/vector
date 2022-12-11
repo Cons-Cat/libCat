@@ -19,7 +19,7 @@ namespace cat {
 // TODO: Support `__sanitizer_annotate_contiguous_container`.
 
 template <typename T>
-class Vector : public CollectionFacade<Vector<T>, T> {
+class Vector : public CollectionInterface<Vector<T>, T> {
   public:
     constexpr Vector()
         : p_storage(nullptr), current_size(0), current_capacity(0) {

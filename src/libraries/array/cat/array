@@ -11,7 +11,7 @@ namespace cat {
 // its elements within itself, so this array can be constructed on the stack.
 // It is random-access iterable.
 template <typename T, ssize length>
-class Array : public CollectionFacade<Array<T, length>, T> {
+class Array : public CollectionInterface<Array<T, length>, T> {
   public:
     using Value = T;
 

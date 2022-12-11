@@ -306,7 +306,7 @@ return return_val;
 // TODO: `_multi` functions should take signed or unsigned integrals.
 
 template <typename Derived>
-class AllocatorFacade {
+class AllocatorInterface {
   public:
     // Try to allocate a `T`.
     template <typename T, typename... Args>
@@ -2119,7 +2119,7 @@ class AllocatorFacade {
                                                 mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
-            &AllocatorFacade<Derived>::opq_alloc<T, T>, allocator, handle);
+            &AllocatorInterface<Derived>::opq_alloc<T, T>, allocator, handle);
     }
 
     // Try to move a memory handle from this allocator into itself.
@@ -2131,7 +2131,7 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] constexpr auto realloc_to(auto& allocator, T* p_handle) {
         return this->meta_realloc<true, false>(
-            &AllocatorFacade<Derived>::alloc<T, T>, allocator, p_handle);
+            &AllocatorInterface<Derived>::alloc<T, T>, allocator, p_handle);
     }
 
     // Try to move a pointer handle from this allocator into itself.
@@ -2145,7 +2145,7 @@ class AllocatorFacade {
                                                  mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
-            &AllocatorFacade<Derived>::opq_xalloc<T, T>, allocator, handle);
+            &AllocatorInterface<Derived>::opq_xalloc<T, T>, allocator, handle);
     }
 
     // Move a memory handle from this allocator into itself.
@@ -2157,7 +2157,7 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] constexpr auto xrealloc_to(auto& allocator, T* p_handle) {
         return this->meta_realloc<false, false>(
-            &AllocatorFacade<Derived>::xalloc<T, T>, allocator, p_handle);
+            &AllocatorInterface<Derived>::xalloc<T, T>, allocator, p_handle);
     }
 
     // Move a pointer handle from this allocator into itself.
@@ -2173,7 +2173,7 @@ class AllocatorFacade {
                                                       usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
-            &AllocatorFacade<Derived>::opq_align_alloc<T, T>, allocator, handle,
+            &AllocatorInterface<Derived>::opq_align_alloc<T, T>, allocator, handle,
             alignment);
     }
 
@@ -2191,7 +2191,7 @@ class AllocatorFacade {
                                                        usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
-            &AllocatorFacade<Derived>::opq_align_xalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_align_xalloc<T, T>, allocator,
             handle, alignment);
     }
 
@@ -2207,7 +2207,7 @@ class AllocatorFacade {
                                                         mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
-            &AllocatorFacade<Derived>::opq_unalign_alloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_unalign_alloc<T, T>, allocator,
             handle);
     }
 
@@ -2223,7 +2223,7 @@ class AllocatorFacade {
                                                          mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
-            &AllocatorFacade<Derived>::opq_unalign_xalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_unalign_xalloc<T, T>, allocator,
             handle);
     }
 
@@ -2240,7 +2240,7 @@ class AllocatorFacade {
                                                   usize alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
-            &AllocatorFacade<Derived>::align_alloc<T, T>, allocator, p_handle,
+            &AllocatorInterface<Derived>::align_alloc<T, T>, allocator, p_handle,
             alignment);
     }
 
@@ -2258,7 +2258,7 @@ class AllocatorFacade {
                                                    usize alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
-            &AllocatorFacade<Derived>::align_xalloc<T, T>, allocator, p_handle,
+            &AllocatorInterface<Derived>::align_xalloc<T, T>, allocator, p_handle,
             alignment);
     }
 
@@ -2274,7 +2274,7 @@ class AllocatorFacade {
                                                     auto* p_handle) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
-            &AllocatorFacade<Derived>::unalign_alloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::unalign_alloc<T, T>, allocator,
             p_handle);
     }
 
@@ -2290,7 +2290,7 @@ class AllocatorFacade {
                                                      auto* p_handle) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
-            &AllocatorFacade<Derived>::unalign_xalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::unalign_xalloc<T, T>, allocator,
             p_handle);
     }
 
@@ -2306,7 +2306,7 @@ class AllocatorFacade {
                                                       ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
-            &AllocatorFacade<Derived>::opq_alloc_multi<T>, allocator, handle,
+            &AllocatorInterface<Derived>::opq_alloc_multi<T>, allocator, handle,
             new_count);
     }
 
@@ -2323,7 +2323,7 @@ class AllocatorFacade {
                                                   ssize old_count,
                                                   ssize new_count) {
         return this->meta_realloc_multi<true, false>(
-            &AllocatorFacade<Derived>::alloc_multi<T>, allocator, p_handle,
+            &AllocatorInterface<Derived>::alloc_multi<T>, allocator, p_handle,
             old_count, new_count);
     }
 
@@ -2341,7 +2341,7 @@ class AllocatorFacade {
                                                        ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
-            &AllocatorFacade<Derived>::opq_xalloc_multi<T>, allocator, handle,
+            &AllocatorInterface<Derived>::opq_xalloc_multi<T>, allocator, handle,
             new_count);
     }
 
@@ -2357,7 +2357,7 @@ class AllocatorFacade {
                                                    ssize old_count,
                                                    ssize new_count) {
         return this->meta_realloc_multi<false, false>(
-            &AllocatorFacade<Derived>::xalloc_multi<T>, allocator, p_handle,
+            &AllocatorInterface<Derived>::xalloc_multi<T>, allocator, p_handle,
             old_count, new_count);
     }
 
@@ -2375,7 +2375,7 @@ class AllocatorFacade {
                                                             ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
-            &AllocatorFacade<Derived>::opq_align_alloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_align_alloc_multi<T>, allocator,
             handle, new_count, alignment);
     }
 
@@ -2396,7 +2396,7 @@ class AllocatorFacade {
                                                              ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
-            &AllocatorFacade<Derived>::opq_align_xalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_align_xalloc_multi<T>, allocator,
             handle, new_count, alignment);
     }
 
@@ -2415,7 +2415,7 @@ class AllocatorFacade {
                                                               ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
-            &AllocatorFacade<Derived>::opq_unalign_alloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_unalign_alloc_multi<T>, allocator,
             handle, new_count);
     }
 
@@ -2432,7 +2432,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
-            &AllocatorFacade<Derived>::opq_unalign_xalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_unalign_xalloc_multi<T>, allocator,
             handle, new_count);
     }
 
@@ -2451,7 +2451,7 @@ class AllocatorFacade {
                                                         ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
-            &AllocatorFacade<Derived>::align_alloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::align_alloc_multi<T>, allocator,
             p_handle, old_count, new_count, alignment);
     }
 
@@ -2474,7 +2474,7 @@ class AllocatorFacade {
                                                          ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
-            &AllocatorFacade<Derived>::align_xalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::align_xalloc_multi<T>, allocator,
             p_handle, old_count, new_count, alignment);
     }
 
@@ -2494,7 +2494,7 @@ class AllocatorFacade {
                                                           ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
-            &AllocatorFacade<Derived>::unalign_alloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::unalign_alloc_multi<T>, allocator,
             p_handle, old_count, new_count);
     }
 
@@ -2515,7 +2515,7 @@ class AllocatorFacade {
                                                            ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
-            &AllocatorFacade<Derived>::unalign_xalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::unalign_xalloc_multi<T>, allocator,
             p_handle, old_count, new_count);
     }
 
@@ -2533,7 +2533,7 @@ class AllocatorFacade {
                                                  mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
-            &AllocatorFacade<Derived>::opq_calloc<T, T>, allocator, handle);
+            &AllocatorInterface<Derived>::opq_calloc<T, T>, allocator, handle);
     }
 
     // Try to move a memory handle from this allocator into itself, and zero-out
@@ -2547,7 +2547,7 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] constexpr auto recalloc_to(auto& allocator, T* p_handle) {
         return this->meta_realloc<true, false>(
-            &AllocatorFacade<Derived>::calloc<T, T>, allocator, p_handle);
+            &AllocatorInterface<Derived>::calloc<T, T>, allocator, p_handle);
     }
 
     // Try to move a pointer handle from this allocator into itself, and
@@ -2563,7 +2563,7 @@ class AllocatorFacade {
                                                   mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
-            &AllocatorFacade<Derived>::opq_xcalloc<T, T>, allocator, handle);
+            &AllocatorInterface<Derived>::opq_xcalloc<T, T>, allocator, handle);
     }
 
     // Move a memory handle from this allocator into itself, and zero-out the
@@ -2577,7 +2577,7 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] constexpr auto xrecalloc_to(auto& allocator, T* p_handle) {
         return this->meta_realloc<false, false>(
-            &AllocatorFacade<Derived>::xcalloc<T, T>, allocator, p_handle);
+            &AllocatorInterface<Derived>::xcalloc<T, T>, allocator, p_handle);
     }
 
     // Move a pointer handle from this allocator into itself, and zero-out the
@@ -2594,7 +2594,7 @@ class AllocatorFacade {
                                                        usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
-            &AllocatorFacade<Derived>::opq_align_calloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_align_calloc<T, T>, allocator,
             handle, alignment);
     }
 
@@ -2612,7 +2612,7 @@ class AllocatorFacade {
                                                         usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
-            &AllocatorFacade<Derived>::opq_align_xcalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_align_xcalloc<T, T>, allocator,
             handle, alignment);
     }
 
@@ -2628,7 +2628,7 @@ class AllocatorFacade {
                                                          mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
-            &AllocatorFacade<Derived>::opq_unalign_calloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_unalign_calloc<T, T>, allocator,
             handle);
     }
 
@@ -2644,7 +2644,7 @@ class AllocatorFacade {
                                                           mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
-            &AllocatorFacade<Derived>::opq_unalign_xcalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_unalign_xcalloc<T, T>, allocator,
             handle);
     }
 
@@ -2661,7 +2661,7 @@ class AllocatorFacade {
                                                    usize alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
-            &AllocatorFacade<Derived>::align_calloc<T, T>, allocator, p_handle,
+            &AllocatorInterface<Derived>::align_calloc<T, T>, allocator, p_handle,
             alignment);
     }
 
@@ -2679,7 +2679,7 @@ class AllocatorFacade {
                                                     usize alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
-            &AllocatorFacade<Derived>::align_xcalloc<T, T>, allocator, p_handle,
+            &AllocatorInterface<Derived>::align_xcalloc<T, T>, allocator, p_handle,
             alignment);
     }
 
@@ -2695,7 +2695,7 @@ class AllocatorFacade {
                                                      auto* p_handle) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
-            &AllocatorFacade<Derived>::unalign_calloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::unalign_calloc<T, T>, allocator,
             p_handle);
     }
 
@@ -2711,7 +2711,7 @@ class AllocatorFacade {
                                                       auto* p_handle) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
-            &AllocatorFacade<Derived>::unalign_xcalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::unalign_xcalloc<T, T>, allocator,
             p_handle);
     }
 
@@ -2728,7 +2728,7 @@ class AllocatorFacade {
                                                        ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
-            &AllocatorFacade<Derived>::opq_calloc_multi<T>, allocator, handle,
+            &AllocatorInterface<Derived>::opq_calloc_multi<T>, allocator, handle,
             new_count);
     }
 
@@ -2746,7 +2746,7 @@ class AllocatorFacade {
                                                    ssize old_count,
                                                    ssize new_count) {
         return this->meta_realloc_multi<true, false>(
-            &AllocatorFacade<Derived>::calloc_multi<T>, allocator, p_handle,
+            &AllocatorInterface<Derived>::calloc_multi<T>, allocator, p_handle,
             old_count, new_count);
     }
 
@@ -2765,7 +2765,7 @@ class AllocatorFacade {
                                                         ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
-            &AllocatorFacade<Derived>::opq_xcalloc_multi<T>, allocator, handle,
+            &AllocatorInterface<Derived>::opq_xcalloc_multi<T>, allocator, handle,
             new_count);
     }
 
@@ -2784,7 +2784,7 @@ class AllocatorFacade {
                                                     ssize old_count,
                                                     ssize new_count) {
         return this->meta_realloc_multi<false, false>(
-            &AllocatorFacade<Derived>::xcalloc_multi<T>, allocator, p_handle,
+            &AllocatorInterface<Derived>::xcalloc_multi<T>, allocator, p_handle,
             old_count, new_count);
     }
 
@@ -2804,7 +2804,7 @@ class AllocatorFacade {
                                                              ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
-            &AllocatorFacade<Derived>::opq_align_calloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_align_calloc_multi<T>, allocator,
             handle, new_count, alignment);
     }
 
@@ -2825,7 +2825,7 @@ class AllocatorFacade {
                                                               ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
-            &AllocatorFacade<Derived>::opq_align_xcalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_align_xcalloc_multi<T>, allocator,
             handle, new_count, alignment);
     }
 
@@ -2843,7 +2843,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
-            &AllocatorFacade<Derived>::opq_unalign_calloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_unalign_calloc_multi<T>, allocator,
             handle, new_count);
     }
 
@@ -2860,7 +2860,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
-            &AllocatorFacade<Derived>::opq_unalign_xcalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_unalign_xcalloc_multi<T>, allocator,
             handle, new_count);
     }
 
@@ -2879,7 +2879,7 @@ class AllocatorFacade {
                                                          ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
-            &AllocatorFacade<Derived>::align_calloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::align_calloc_multi<T>, allocator,
             p_handle, old_count, new_count, alignment);
     }
 
@@ -2902,7 +2902,7 @@ class AllocatorFacade {
                                                           ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
-            &AllocatorFacade<Derived>::align_xcalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::align_xcalloc_multi<T>, allocator,
             p_handle, old_count, new_count, alignment);
     }
 
@@ -2922,7 +2922,7 @@ class AllocatorFacade {
                                                            ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
-            &AllocatorFacade<Derived>::unalign_calloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::unalign_calloc_multi<T>, allocator,
             p_handle, old_count, new_count);
     }
 
@@ -2943,7 +2943,7 @@ class AllocatorFacade {
                                                             ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
-            &AllocatorFacade<Derived>::unalign_xcalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::unalign_xcalloc_multi<T>, allocator,
             p_handle, old_count, new_count);
     }
 
@@ -2961,7 +2961,7 @@ class AllocatorFacade {
                                                        mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
-            &AllocatorFacade<Derived>::opq_inline_alloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_inline_alloc<T, T>, allocator,
             handle);
     }
 
@@ -2976,7 +2976,7 @@ class AllocatorFacade {
                                                         mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
-            &AllocatorFacade<Derived>::opq_inline_xalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_inline_xalloc<T, T>, allocator,
             handle);
     }
 
@@ -2992,7 +2992,7 @@ class AllocatorFacade {
                                                              usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
-            &AllocatorFacade<Derived>::opq_inline_align_alloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_inline_align_alloc<T, T>, allocator,
             handle, alignment);
     }
 
@@ -3010,7 +3010,7 @@ class AllocatorFacade {
                                                               usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
-            &AllocatorFacade<Derived>::opq_inline_align_xalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_inline_align_xalloc<T, T>, allocator,
             handle, alignment);
     }
 
@@ -3026,7 +3026,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
-            &AllocatorFacade<Derived>::opq_inline_unalign_alloc<T, T>,
+            &AllocatorInterface<Derived>::opq_inline_unalign_alloc<T, T>,
             allocator, handle);
     }
 
@@ -3042,7 +3042,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
-            &AllocatorFacade<Derived>::opq_inline_unalign_xalloc<T, T>,
+            &AllocatorInterface<Derived>::opq_inline_unalign_xalloc<T, T>,
             allocator, handle);
     }
 
@@ -3059,7 +3059,7 @@ class AllocatorFacade {
                                                              ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
-            &AllocatorFacade<Derived>::opq_inline_alloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_inline_alloc_multi<T>, allocator,
             handle, new_count);
     }
 
@@ -3077,7 +3077,7 @@ class AllocatorFacade {
                                                               ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
-            &AllocatorFacade<Derived>::opq_inline_xalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_inline_xalloc_multi<T>, allocator,
             handle, new_count);
     }
 
@@ -3094,7 +3094,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, usize alignment, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
-            &AllocatorFacade<Derived>::opq_inline_align_alloc_multi<T>,
+            &AllocatorInterface<Derived>::opq_inline_align_alloc_multi<T>,
             allocator, handle, new_count, alignment);
     }
 
@@ -3112,7 +3112,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, usize alignment, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
-            &AllocatorFacade<Derived>::opq_inline_align_xalloc_multi<T>,
+            &AllocatorInterface<Derived>::opq_inline_align_xalloc_multi<T>,
             allocator, handle, new_count, alignment);
     }
 
@@ -3130,7 +3130,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
-            &AllocatorFacade<Derived>::opq_inline_unalign_alloc_multi<T>,
+            &AllocatorInterface<Derived>::opq_inline_unalign_alloc_multi<T>,
             allocator, handle, new_count);
     }
 
@@ -3148,7 +3148,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
-            &AllocatorFacade<Derived>::opq_inline_unalign_xalloc_multi<T>,
+            &AllocatorInterface<Derived>::opq_inline_unalign_xalloc_multi<T>,
             allocator, handle, new_count);
     }
 
@@ -3165,7 +3165,7 @@ class AllocatorFacade {
                                                         mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
-            &AllocatorFacade<Derived>::opq_calloc<T, T>, allocator, handle);
+            &AllocatorInterface<Derived>::opq_calloc<T, T>, allocator, handle);
     }
 
     // Try to move a small-size optimized handle from this allocator into
@@ -3180,7 +3180,7 @@ class AllocatorFacade {
                                                          mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
-            &AllocatorFacade<Derived>::opq_inline_xcalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_inline_xcalloc<T, T>, allocator,
             handle);
     }
 
@@ -3197,7 +3197,7 @@ class AllocatorFacade {
                                                               usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
-            &AllocatorFacade<Derived>::opq_inline_align_calloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_inline_align_calloc<T, T>, allocator,
             handle, alignment);
     }
 
@@ -3214,7 +3214,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
-            &AllocatorFacade<Derived>::opq_inline_align_xcalloc<T, T>,
+            &AllocatorInterface<Derived>::opq_inline_align_xcalloc<T, T>,
             allocator, handle, alignment);
     }
 
@@ -3230,7 +3230,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, false>(
-            &AllocatorFacade<Derived>::opq_inline_unalign_calloc<T, T>,
+            &AllocatorInterface<Derived>::opq_inline_unalign_calloc<T, T>,
             allocator, handle);
     }
 
@@ -3246,7 +3246,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, false>(
-            &AllocatorFacade<Derived>::opq_inline_unalign_xcalloc<T, T>,
+            &AllocatorInterface<Derived>::opq_inline_unalign_xcalloc<T, T>,
             allocator, handle);
     }
 
@@ -3263,7 +3263,7 @@ class AllocatorFacade {
                                                               ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
-            &AllocatorFacade<Derived>::opq_inline_calloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_inline_calloc_multi<T>, allocator,
             handle, new_count);
     }
 
@@ -3280,7 +3280,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
-            &AllocatorFacade<Derived>::opq_inline_xcalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_inline_xcalloc_multi<T>, allocator,
             handle, new_count);
     }
 
@@ -3297,7 +3297,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, usize alignment, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
-            &AllocatorFacade<Derived>::opq_inline_align_calloc_multi<T>,
+            &AllocatorInterface<Derived>::opq_inline_align_calloc_multi<T>,
             allocator, handle, new_count, alignment);
     }
 
@@ -3317,7 +3317,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, usize alignment, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
-            &AllocatorFacade<Derived>::opq_inline_align_xcalloc_multi<T>,
+            &AllocatorInterface<Derived>::opq_inline_align_xcalloc_multi<T>,
             allocator, handle, new_count, alignment);
     }
 
@@ -3337,7 +3337,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, false>(
-            &AllocatorFacade<Derived>::opq_inline_unalign_calloc_multi<T>,
+            &AllocatorInterface<Derived>::opq_inline_unalign_calloc_multi<T>,
             allocator, handle, new_count);
     }
 
@@ -3357,7 +3357,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, false>(
-            &AllocatorFacade<Derived>::opq_inline_unalign_xcalloc_multi<T>,
+            &AllocatorInterface<Derived>::opq_inline_unalign_xcalloc_multi<T>,
             allocator, handle, new_count);
     }
 
@@ -3375,7 +3375,7 @@ class AllocatorFacade {
                                                  mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
-            &AllocatorFacade<Derived>::opq_salloc<T, T>, allocator, handle);
+            &AllocatorInterface<Derived>::opq_salloc<T, T>, allocator, handle);
     }
 
     // Try to move a memory handle from this allocator into itself, and return
@@ -3389,7 +3389,7 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] constexpr auto resalloc_to(auto& allocator, T* p_handle) {
         return this->meta_realloc<true, true>(
-            &AllocatorFacade<Derived>::salloc<T, T>, allocator, p_handle);
+            &AllocatorInterface<Derived>::salloc<T, T>, allocator, p_handle);
     }
 
     // Try to move a pointer handle from this allocator into itself, and return
@@ -3405,7 +3405,7 @@ class AllocatorFacade {
                                                   mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
-            &AllocatorFacade<Derived>::opq_xalloc<T, T>, allocator, handle);
+            &AllocatorInterface<Derived>::opq_xalloc<T, T>, allocator, handle);
     }
 
     // Move a memory handle from this allocator into itself, and return the
@@ -3419,7 +3419,7 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] constexpr auto xresalloc_to(auto& allocator, T* p_handle) {
         return this->meta_realloc<false, true>(
-            &AllocatorFacade<Derived>::xsalloc<T, T>, allocator, p_handle);
+            &AllocatorInterface<Derived>::xsalloc<T, T>, allocator, p_handle);
     }
 
     // Move a pointer handle from this allocator into itself, and return the
@@ -3436,7 +3436,7 @@ class AllocatorFacade {
                                                        usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
-            &AllocatorFacade<Derived>::opq_align_salloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_align_salloc<T, T>, allocator,
             handle, alignment);
     }
 
@@ -3454,7 +3454,7 @@ class AllocatorFacade {
                                                         usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
-            &AllocatorFacade<Derived>::opq_align_xalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_align_xalloc<T, T>, allocator,
             handle, alignment);
     }
 
@@ -3470,7 +3470,7 @@ class AllocatorFacade {
                                                          mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
-            &AllocatorFacade<Derived>::opq_unalign_salloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_unalign_salloc<T, T>, allocator,
             handle);
     }
 
@@ -3486,7 +3486,7 @@ class AllocatorFacade {
                                                           mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
-            &AllocatorFacade<Derived>::opq_unalign_xalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_unalign_xalloc<T, T>, allocator,
             handle);
     }
 
@@ -3503,7 +3503,7 @@ class AllocatorFacade {
                                                    usize alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
-            &AllocatorFacade<Derived>::align_salloc<T, T>, allocator, p_handle,
+            &AllocatorInterface<Derived>::align_salloc<T, T>, allocator, p_handle,
             alignment);
     }
 
@@ -3521,7 +3521,7 @@ class AllocatorFacade {
                                                     usize alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
-            &AllocatorFacade<Derived>::align_xalloc<T, T>, allocator, p_handle,
+            &AllocatorInterface<Derived>::align_xalloc<T, T>, allocator, p_handle,
             alignment);
     }
 
@@ -3537,7 +3537,7 @@ class AllocatorFacade {
                                                      auto* p_handle) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
-            &AllocatorFacade<Derived>::unalign_salloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::unalign_salloc<T, T>, allocator,
             p_handle);
     }
 
@@ -3553,7 +3553,7 @@ class AllocatorFacade {
                                                       auto* p_handle) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
-            &AllocatorFacade<Derived>::unalign_xalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::unalign_xalloc<T, T>, allocator,
             p_handle);
     }
 
@@ -3570,7 +3570,7 @@ class AllocatorFacade {
                                                        ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
-            &AllocatorFacade<Derived>::opq_salloc_multi<T>, allocator, handle,
+            &AllocatorInterface<Derived>::opq_salloc_multi<T>, allocator, handle,
             new_count);
     }
 
@@ -3588,7 +3588,7 @@ class AllocatorFacade {
                                                    ssize old_count,
                                                    ssize new_count) {
         return this->meta_realloc_multi<true, true>(
-            &AllocatorFacade<Derived>::salloc_multi<T>, allocator, p_handle,
+            &AllocatorInterface<Derived>::salloc_multi<T>, allocator, p_handle,
             old_count, new_count);
     }
 
@@ -3607,7 +3607,7 @@ class AllocatorFacade {
                                                         ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
-            &AllocatorFacade<Derived>::opq_xsalloc_multi<T>, allocator, handle,
+            &AllocatorInterface<Derived>::opq_xsalloc_multi<T>, allocator, handle,
             new_count);
     }
 
@@ -3626,7 +3626,7 @@ class AllocatorFacade {
                                                     ssize old_count,
                                                     ssize new_count) {
         return this->meta_realloc_multi<false, true>(
-            &AllocatorFacade<Derived>::xsalloc_multi<T>, allocator, p_handle,
+            &AllocatorInterface<Derived>::xsalloc_multi<T>, allocator, p_handle,
             old_count, new_count);
     }
 
@@ -3646,7 +3646,7 @@ class AllocatorFacade {
                                                              ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
-            &AllocatorFacade<Derived>::opq_align_salloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_align_salloc_multi<T>, allocator,
             handle, new_count, alignment);
     }
 
@@ -3669,7 +3669,7 @@ class AllocatorFacade {
                                                               ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
-            &AllocatorFacade<Derived>::opq_align_xsalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_align_xsalloc_multi<T>, allocator,
             handle, new_count, alignment);
     }
 
@@ -3689,7 +3689,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
-            &AllocatorFacade<Derived>::opq_unalign_salloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_unalign_salloc_multi<T>, allocator,
             handle, new_count);
     }
 
@@ -3708,7 +3708,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
-            &AllocatorFacade<Derived>::opq_unalign_xsalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_unalign_xsalloc_multi<T>, allocator,
             handle, new_count);
     }
 
@@ -3729,7 +3729,7 @@ class AllocatorFacade {
                                                          ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
-            &AllocatorFacade<Derived>::align_salloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::align_salloc_multi<T>, allocator,
             p_handle, old_count, new_count, alignment);
     }
 
@@ -3754,7 +3754,7 @@ class AllocatorFacade {
                                                           ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
-            &AllocatorFacade<Derived>::align_xsalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::align_xsalloc_multi<T>, allocator,
             p_handle, old_count, new_count, alignment);
     }
 
@@ -3776,7 +3776,7 @@ class AllocatorFacade {
                                                            ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
-            &AllocatorFacade<Derived>::unalign_salloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::unalign_salloc_multi<T>, allocator,
             p_handle, old_count, new_count);
     }
 
@@ -3799,7 +3799,7 @@ class AllocatorFacade {
                                                             ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
-            &AllocatorFacade<Derived>::unalign_xsalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::unalign_xsalloc_multi<T>, allocator,
             p_handle, old_count, new_count);
     }
 
@@ -3818,7 +3818,7 @@ class AllocatorFacade {
                                                   mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
-            &AllocatorFacade<Derived>::opq_scalloc<T, T>, allocator, handle);
+            &AllocatorInterface<Derived>::opq_scalloc<T, T>, allocator, handle);
     }
 
     // Try to move a memory handle from this allocator into itself, zero-out
@@ -3832,7 +3832,7 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] constexpr auto rescalloc_to(auto& allocator, T* p_handle) {
         return this->meta_realloc<true, true>(
-            &AllocatorFacade<Derived>::scalloc<T, T>, allocator, p_handle);
+            &AllocatorInterface<Derived>::scalloc<T, T>, allocator, p_handle);
     }
 
     // Try to move a pointer handle from this allocator into itself, zero-out
@@ -3848,7 +3848,7 @@ class AllocatorFacade {
                                                    mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
-            &AllocatorFacade<Derived>::opq_xscalloc<T, T>, allocator, handle);
+            &AllocatorInterface<Derived>::opq_xscalloc<T, T>, allocator, handle);
     }
 
     // Move a memory handle from this allocator into itself, zero-out the
@@ -3862,7 +3862,7 @@ class AllocatorFacade {
     template <typename T>
     [[nodiscard]] constexpr auto xrescalloc_to(auto& allocator, T* p_handle) {
         return this->meta_realloc<false, true>(
-            &AllocatorFacade<Derived>::xscalloc<T, T>, allocator, p_handle);
+            &AllocatorInterface<Derived>::xscalloc<T, T>, allocator, p_handle);
     }
 
     // Move a pointer handle from this allocator into itself, zero-out the
@@ -3880,7 +3880,7 @@ class AllocatorFacade {
                                                         usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
-            &AllocatorFacade<Derived>::opq_align_scalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_align_scalloc<T, T>, allocator,
             handle, alignment);
     }
 
@@ -3900,7 +3900,7 @@ class AllocatorFacade {
                                                          usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
-            &AllocatorFacade<Derived>::opq_align_xscalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_align_xscalloc<T, T>, allocator,
             handle, alignment);
     }
 
@@ -3918,7 +3918,7 @@ class AllocatorFacade {
                                                           mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
-            &AllocatorFacade<Derived>::opq_unalign_scalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_unalign_scalloc<T, T>, allocator,
             handle);
     }
 
@@ -3936,7 +3936,7 @@ class AllocatorFacade {
                                                            mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
-            &AllocatorFacade<Derived>::opq_unalign_xscalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_unalign_xscalloc<T, T>, allocator,
             handle);
     }
 
@@ -3955,7 +3955,7 @@ class AllocatorFacade {
                                                     usize alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
-            &AllocatorFacade<Derived>::align_scalloc<T, T>, allocator, p_handle,
+            &AllocatorInterface<Derived>::align_scalloc<T, T>, allocator, p_handle,
             alignment);
     }
 
@@ -3975,7 +3975,7 @@ class AllocatorFacade {
                                                      usize alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
-            &AllocatorFacade<Derived>::align_xscalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::align_xscalloc<T, T>, allocator,
             p_handle, alignment);
     }
 
@@ -3993,7 +3993,7 @@ class AllocatorFacade {
                                                       auto* p_handle) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
-            &AllocatorFacade<Derived>::unalign_scalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::unalign_scalloc<T, T>, allocator,
             p_handle);
     }
 
@@ -4011,7 +4011,7 @@ class AllocatorFacade {
                                                        auto* p_handle) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
-            &AllocatorFacade<Derived>::unalign_xscalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::unalign_xscalloc<T, T>, allocator,
             p_handle);
     }
 
@@ -4029,7 +4029,7 @@ class AllocatorFacade {
                                                         ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
-            &AllocatorFacade<Derived>::opq_scalloc_multi<T>, allocator, handle,
+            &AllocatorInterface<Derived>::opq_scalloc_multi<T>, allocator, handle,
             new_count);
     }
 
@@ -4050,7 +4050,7 @@ class AllocatorFacade {
                                                     ssize old_count,
                                                     ssize new_count) {
         return this->meta_realloc_multi<true, true>(
-            &AllocatorFacade<Derived>::scalloc_multi<T>, allocator, p_handle,
+            &AllocatorInterface<Derived>::scalloc_multi<T>, allocator, p_handle,
             old_count, new_count);
     }
 
@@ -4071,7 +4071,7 @@ class AllocatorFacade {
                                                          ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
-            &AllocatorFacade<Derived>::opq_xscalloc_multi<T>, allocator, handle,
+            &AllocatorInterface<Derived>::opq_xscalloc_multi<T>, allocator, handle,
             new_count);
     }
 
@@ -4092,7 +4092,7 @@ class AllocatorFacade {
                                                      ssize old_count,
                                                      ssize new_count) {
         return this->meta_realloc_multi<false, true>(
-            &AllocatorFacade<Derived>::xscalloc_multi<T>, allocator, p_handle,
+            &AllocatorInterface<Derived>::xscalloc_multi<T>, allocator, p_handle,
             old_count, new_count);
     }
 
@@ -4114,7 +4114,7 @@ class AllocatorFacade {
                                                               ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
-            &AllocatorFacade<Derived>::opq_align_scalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_align_scalloc_multi<T>, allocator,
             handle, new_count, alignment);
     }
 
@@ -4135,7 +4135,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, usize alignment, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
-            &AllocatorFacade<Derived>::opq_align_xscalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_align_xscalloc_multi<T>, allocator,
             handle, new_count, alignment);
     }
 
@@ -4155,7 +4155,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
-            &AllocatorFacade<Derived>::opq_unalign_scalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_unalign_scalloc_multi<T>, allocator,
             handle, new_count);
     }
 
@@ -4174,7 +4174,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
-            &AllocatorFacade<Derived>::opq_unalign_xscalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_unalign_xscalloc_multi<T>, allocator,
             handle, new_count);
     }
 
@@ -4195,7 +4195,7 @@ class AllocatorFacade {
                                                           ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
-            &AllocatorFacade<Derived>::align_scalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::align_scalloc_multi<T>, allocator,
             p_handle, old_count, new_count, alignment);
     }
 
@@ -4220,7 +4220,7 @@ class AllocatorFacade {
                                                            ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
-            &AllocatorFacade<Derived>::align_xscalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::align_xscalloc_multi<T>, allocator,
             p_handle, old_count, new_count, alignment);
     }
 
@@ -4242,7 +4242,7 @@ class AllocatorFacade {
                                                             ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
-            &AllocatorFacade<Derived>::unalign_scalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::unalign_scalloc_multi<T>, allocator,
             p_handle, old_count, new_count);
     }
 
@@ -4265,7 +4265,7 @@ class AllocatorFacade {
                                                              ssize new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
-            &AllocatorFacade<Derived>::unalign_xscalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::unalign_xscalloc_multi<T>, allocator,
             p_handle, old_count, new_count);
     }
 
@@ -4284,7 +4284,7 @@ class AllocatorFacade {
                                                         mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
-            &AllocatorFacade<Derived>::opq_inline_salloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_inline_salloc<T, T>, allocator,
             handle);
     }
 
@@ -4300,7 +4300,7 @@ class AllocatorFacade {
                                                          mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
-            &AllocatorFacade<Derived>::opq_inline_xalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_inline_xalloc<T, T>, allocator,
             handle);
     }
 
@@ -4318,7 +4318,7 @@ class AllocatorFacade {
                                                               usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
-            &AllocatorFacade<Derived>::opq_inline_align_salloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_inline_align_salloc<T, T>, allocator,
             handle, alignment);
     }
 
@@ -4337,7 +4337,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
-            &AllocatorFacade<Derived>::opq_inline_align_xalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_inline_align_xalloc<T, T>, allocator,
             handle, alignment);
     }
 
@@ -4355,7 +4355,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
-            &AllocatorFacade<Derived>::opq_inline_unalign_salloc<T, T>,
+            &AllocatorInterface<Derived>::opq_inline_unalign_salloc<T, T>,
             allocator, handle);
     }
 
@@ -4373,7 +4373,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
-            &AllocatorFacade<Derived>::opq_inline_unalign_xalloc<T, T>,
+            &AllocatorInterface<Derived>::opq_inline_unalign_xalloc<T, T>,
             allocator, handle);
     }
 
@@ -4391,7 +4391,7 @@ class AllocatorFacade {
                                                               ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
-            &AllocatorFacade<Derived>::opq_inline_salloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_inline_salloc_multi<T>, allocator,
             handle, new_count);
     }
 
@@ -4410,7 +4410,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
-            &AllocatorFacade<Derived>::opq_inline_xsalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_inline_xsalloc_multi<T>, allocator,
             handle, new_count);
     }
 
@@ -4429,7 +4429,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, usize alignment, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
-            &AllocatorFacade<Derived>::opq_inline_align_salloc_multi<T>,
+            &AllocatorInterface<Derived>::opq_inline_align_salloc_multi<T>,
             allocator, handle, new_count, alignment);
     }
 
@@ -4449,7 +4449,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, usize alignment, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
-            &AllocatorFacade<Derived>::opq_inline_align_xsalloc_multi<T>,
+            &AllocatorInterface<Derived>::opq_inline_align_xsalloc_multi<T>,
             allocator, handle, new_count, alignment);
     }
 
@@ -4469,7 +4469,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
-            &AllocatorFacade<Derived>::opq_inline_unalign_salloc_multi<T>,
+            &AllocatorInterface<Derived>::opq_inline_unalign_salloc_multi<T>,
             allocator, handle, new_count);
     }
 
@@ -4489,7 +4489,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
-            &AllocatorFacade<Derived>::opq_inline_unalign_xsalloc_multi<T>,
+            &AllocatorInterface<Derived>::opq_inline_unalign_xsalloc_multi<T>,
             allocator, handle, new_count);
     }
 
@@ -4508,7 +4508,7 @@ class AllocatorFacade {
                                                          mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
-            &AllocatorFacade<Derived>::opq_scalloc<T, T>, allocator, handle);
+            &AllocatorInterface<Derived>::opq_scalloc<T, T>, allocator, handle);
     }
 
     // Try to move a small-size optimized handle from this allocator into
@@ -4525,7 +4525,7 @@ class AllocatorFacade {
                                                           mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
-            &AllocatorFacade<Derived>::opq_inline_xscalloc<T, T>, allocator,
+            &AllocatorInterface<Derived>::opq_inline_xscalloc<T, T>, allocator,
             handle);
     }
 
@@ -4543,7 +4543,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
-            &AllocatorFacade<Derived>::opq_inline_align_scalloc<T, T>,
+            &AllocatorInterface<Derived>::opq_inline_align_scalloc<T, T>,
             allocator, handle, alignment);
     }
 
@@ -4562,7 +4562,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, usize alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
-            &AllocatorFacade<Derived>::opq_inline_align_xscalloc<T, T>,
+            &AllocatorInterface<Derived>::opq_inline_align_xscalloc<T, T>,
             allocator, handle, alignment);
     }
 
@@ -4580,7 +4580,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<true, true>(
-            &AllocatorFacade<Derived>::opq_inline_unalign_scalloc<T, T>,
+            &AllocatorInterface<Derived>::opq_inline_unalign_scalloc<T, T>,
             allocator, handle);
     }
 
@@ -4599,7 +4599,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
-            &AllocatorFacade<Derived>::opq_inline_unalign_xscalloc<T, T>,
+            &AllocatorInterface<Derived>::opq_inline_unalign_xscalloc<T, T>,
             allocator, handle);
     }
 
@@ -4617,7 +4617,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
-            &AllocatorFacade<Derived>::opq_inline_scalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_inline_scalloc_multi<T>, allocator,
             handle, new_count);
     }
 
@@ -4636,7 +4636,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
-            &AllocatorFacade<Derived>::opq_inline_xscalloc_multi<T>, allocator,
+            &AllocatorInterface<Derived>::opq_inline_xscalloc_multi<T>, allocator,
             handle, new_count);
     }
 
@@ -4655,7 +4655,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, usize alignment, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
-            &AllocatorFacade<Derived>::opq_inline_align_scalloc_multi<T>,
+            &AllocatorInterface<Derived>::opq_inline_align_scalloc_multi<T>,
             allocator, handle, new_count, alignment);
     }
 
@@ -4675,7 +4675,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, usize alignment, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
-            &AllocatorFacade<Derived>::opq_inline_align_xscalloc_multi<T>,
+            &AllocatorInterface<Derived>::opq_inline_align_xscalloc_multi<T>,
             allocator, handle, new_count, alignment);
     }
 
@@ -4695,7 +4695,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<true, true>(
-            &AllocatorFacade<Derived>::opq_inline_unalign_scalloc_multi<T>,
+            &AllocatorInterface<Derived>::opq_inline_unalign_scalloc_multi<T>,
             allocator, handle, new_count);
     }
 
@@ -4715,7 +4715,7 @@ class AllocatorFacade {
         auto& allocator, mem auto& handle, ssize new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<false, true>(
-            &AllocatorFacade<Derived>::opq_inline_unalign_xscalloc_multi<T>,
+            &AllocatorInterface<Derived>::opq_inline_unalign_xscalloc_multi<T>,
             allocator, handle, new_count);
     }
 

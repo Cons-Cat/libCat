@@ -17,7 +17,7 @@
 namespace cat {
 
 template <typename T>
-class Ring : public CollectionFacade<Ring<T>, T> {
+class Ring : public CollectionInterface<Ring<T>, T> {
   public:
     Ring()
         : p_storage(nullptr),

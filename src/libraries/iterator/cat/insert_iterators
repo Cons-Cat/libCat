@@ -8,7 +8,7 @@
 namespace cat {
 
 template <is_iterable T>
-class BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
+class BackInsertIterator : public IteratorInterface<BackInsertIterator<T>> {
   public:
     using Container = T;
 
@@ -97,7 +97,7 @@ class BackInsertIterator : public IteratorFacade<BackInsertIterator<T>> {
 };
 
 template <is_iterable T>
-class FrontInsertIterator : public IteratorFacade<FrontInsertIterator<T>> {
+class FrontInsertIterator : public IteratorInterface<FrontInsertIterator<T>> {
   public:
     using Container = T;
 

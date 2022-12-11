@@ -13,7 +13,7 @@ namespace cat {
 // A `Span` is represents an array of `T` with runtime-known length. It stores
 // an address and a length. It is random-access iterable.
 template <typename T>
-class Span : public CollectionFacade<Span<T>, T> {
+class Span : public CollectionInterface<Span<T>, T> {
   public:
     constexpr Span() = default;
     constexpr Span(Span<T> const&) = default;
@@ -40,7 +40,7 @@ class Span : public CollectionFacade<Span<T>, T> {
     }
 
     // TODO: Make an `is_contiguous_container` `concept`. It can use the
-    // `CollectionFacade` traits.
+    // `CollectionInterface` traits.
     /*
 constexpr Span(auto const& container)
     : p_storage(container.data()), length(container.size()){}

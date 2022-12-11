@@ -9,7 +9,7 @@
 namespace cat {
 
 // Forward declarations for containers and algorithms needed by
-// `CollectionFacade`.
+// `CollectionInterface`.
 template <typename T>
 class Span;
 
@@ -52,7 +52,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename Derived, typename T>
-class CollectionFacade {
+class CollectionInterface {
   private:
     // `is_array_like` at the top of this class instead of the bottom prevents
     // clangd false diagnostics.
@@ -309,9 +309,9 @@ class CollectionFacade {
 
     // Contiguous collections can produce non-`const` bidirectional iterators.
     constexpr auto make_iterator() requires(this->is_array_like) {
-        class Iterator : public IteratorFacade<Iterator> {
+        class Iterator : public IteratorInterface<Iterator> {
           public:
-            friend IteratorFacade<Iterator>;
+            friend IteratorInterface<Iterator>;
             using Collection [[maybe_unused]] = Derived;
 
             constexpr Iterator(Iterator const&) = default;
@@ -349,9 +349,9 @@ class CollectionFacade {
 
     // Contiguous collections can produce `const` bidirectional iterators.
     constexpr auto make_iterator() const requires(this->is_array_like) {
-        class Iterator : public IteratorFacade<Iterator> {
+        class Iterator : public IteratorInterface<Iterator> {
           public:
-            friend IteratorFacade<Iterator>;
+            friend IteratorInterface<Iterator>;
             using Collection [[maybe_unused]] = Derived;
 
             constexpr Iterator(Iterator const&) = default;

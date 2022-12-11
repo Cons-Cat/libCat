@@ -87,9 +87,9 @@ using InferDifferenceType = typename detail::InferDifferenceTrait<T>::Type;
 template <typename T>
 using InferValueType = typename detail::InferValueType<T>::Type::Type;
 
-// Every `IteratorFacade` is `indirectly_readable`.
+// Every `IteratorInterface` is `indirectly_readable`.
 template <typename Derived>
-class IteratorFacade {
+class IteratorInterface {
   public:
     // `Type` is needed for reversing this iterator.
     using Type = Derived;
@@ -290,7 +290,7 @@ struct OutputIteratorTag {};
 struct ContiguousIteratorTag {};
 
 template <typename T>
-    requires is_base_of<IteratorFacade<T>, T>
+    requires is_base_of<IteratorInterface<T>, T>
 struct IteratorTraits {
     static T const& iterator;
     using Value = typename InferValueType<T>::Type;
@@ -314,7 +314,7 @@ struct IteratorTraits {
 };
 
 template <typename Iterator>
-struct ReversedIterator : IteratorFacade<ReversedIterator<Iterator>> {
+struct ReversedIterator : IteratorInterface<ReversedIterator<Iterator>> {
     // Forward any constructor to `iterator`.
     template <typename... Args>
     constexpr ReversedIterator(Args&&... args)

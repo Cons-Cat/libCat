@@ -7,7 +7,7 @@
 
 namespace cat {
 
-class PageAllocator : public AllocatorFacade<PageAllocator> {
+class PageAllocator : public AllocatorInterface<PageAllocator> {
   private:
     template <typename T>
     struct PageMemoryHandle : detail::BaseMemoryHandle<T> {
@@ -93,7 +93,7 @@ class PageAllocator : public AllocatorFacade<PageAllocator> {
   public:
     static constexpr bool has_pointer_stability = true;
   private:
-    friend AllocatorFacade<PageAllocator>;
+    friend AllocatorInterface<PageAllocator>;
 };
 
 }  // namespace cat
