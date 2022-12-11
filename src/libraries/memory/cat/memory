@@ -55,7 +55,7 @@ namespace detail {
         // TODO: Type pun this with `start_lifetime_as()` instead.
         T* p_current_byte = static_cast<T*>(p_source);
 
-        if (is_constant_evaluated()) {
+        if consteval {
             // Set this memory through scalar code, because `__builtin_memset()`
             // is not `constexpr` in GCC 12.
             for (ssize i = 0; i < size; ++i) {

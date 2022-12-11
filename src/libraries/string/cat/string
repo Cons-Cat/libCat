@@ -255,7 +255,7 @@ class StaticString : public CollectionInterface<StaticString<length>, char> {
 
   private:
     constexpr void copy_string_data(char const* p_source) {
-        if (is_constant_evaluated()) {
+        if consteval {
             for (ssize::Raw i = 0; i < length; ++i) {
                 this->storage[i] = p_source[i];
             }

@@ -33,8 +33,6 @@ constexpr auto unconst(T const* p_value) -> T* {
     return const_cast<T*>(p_value);
 }
 
-constexpr auto is_constant_evaluated() -> bool;
-
 // Infer the length of a parameter pack from a function argument.
 template <typename... Ts>
 constexpr auto ssizeof_pack(Ts...) -> ssize {
@@ -233,5 +231,4 @@ using std::move;
 
 #include "./implementations/bit_cast.tpp"
 #include "./implementations/forward.tpp"
-#include "./implementations/is_constant_evaluated.tpp"
 #include "./implementations/move.tpp"

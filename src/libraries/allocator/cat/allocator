@@ -4767,7 +4767,7 @@ class AllocatorInterface {
                           "This allocation is too large for this allocator!");
         }
 
-        if (is_constant_evaluated()) {
+        if consteval {
             delete p_memory;
         } else {
             // if constexpr (is_destructible<T>) {
@@ -4790,7 +4790,7 @@ class AllocatorInterface {
                         "This allocation is too large for this allocator!");
         }
 
-        if (is_constant_evaluated()) {
+        if consteval {
             if (p_memory) {
                 // if (count > 0) {
                 delete[] p_memory;
@@ -5002,7 +5002,7 @@ class AllocatorInterface {
                                     Handle>>>;
 
         // In `constexpr` code, unconditionally make an allocation.
-        if (is_constant_evaluated()) {
+        if consteval {
             if constexpr (is_stable) {
                 T* p_allocation = nullptr;
 

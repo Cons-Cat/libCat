@@ -133,7 +133,6 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/linux/implementations/raise_here.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/utility/implementations/move.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/utility/implementations/forward.tpp
-  ${CMAKE_SOURCE_DIR}/src/libraries/utility/implementations/is_constant_evaluated.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/utility/implementations/bit_cast.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/bit/implementations/is_aligned.tpp
   ${CMAKE_SOURCE_DIR}/src/libraries/bit/implementations/align_up.tpp

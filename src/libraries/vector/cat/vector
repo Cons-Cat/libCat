@@ -23,7 +23,7 @@ class Vector : public CollectionInterface<Vector<T>, T> {
   public:
     constexpr Vector()
         : p_storage(nullptr), current_size(0), current_capacity(0) {
-        if (is_constant_evaluated()) {
+        if consteval {
             this->p_storage = nullptr;
         }
     };
@@ -31,7 +31,7 @@ class Vector : public CollectionInterface<Vector<T>, T> {
     constexpr Vector(Vector<T>&& other_vector) = default;
 
     constexpr ~Vector() {
-        if (is_constant_evaluated()) {
+        if consteval {
             delete[] this->p_storage;
         }
     }
@@ -58,7 +58,7 @@ class Vector : public CollectionInterface<Vector<T>, T> {
 
         // TODO: I am fairly certain this is a bug in GCC. This works around
         // that.
-        if (is_constant_evaluated()) {
+        if consteval {
             T* p_new = new T[minimum_capacity.raw];
             for (ssize::Raw i = 0; i < this->current_size; ++i) {
                 construct_at(p_new + i, move(this->p_storage[i]));
@@ -132,7 +132,7 @@ class Vector : public CollectionInterface<Vector<T>, T> {
         if (minimum_capacity > this->current_capacity) {
             // TODO: I am fairly certain this is a bug in GCC. This works around
             // that.
-            if (is_constant_evaluated()) {
+            if consteval {
                 delete[] this->p_storage;
                 this->p_storage = new T[minimum_capacity.raw];
                 this->current_capacity = minimum_capacity;
