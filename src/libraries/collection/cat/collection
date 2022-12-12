@@ -93,7 +93,8 @@ class CollectionInterface {
     [[nodiscard]] constexpr auto at(ssize index) -> Maybe<T&>
         requires(is_array_like)
     {
-        if !consteval {
+        // TODO: `if !consteval {` when using clangd 16.
+        if (!__builtin_is_constant_evaluated()) {
             cat::assert(index >= 0);
         }
         if (index < this->self().capacity()) {
@@ -132,7 +133,8 @@ class CollectionInterface {
         -> Span<T>
         requires(this->is_array_like)
     {
-        if !consteval {
+        // TODO: `if !consteval {` when using clangd 16.
+        if (!__builtin_is_constant_evaluated()) {
             cat::assert(start_index >= 0);
             cat::assert(end_index <= this->self().capacity());
         }
@@ -145,7 +147,8 @@ class CollectionInterface {
                                          ssize end_index) const -> Span<T const>
         requires(this->is_array_like)
     {
-        if !consteval {
+        // TODO: `if !consteval {` when using clangd 16.
+        if (!__builtin_is_constant_evaluated()) {
             cat::assert(start_index >= 0);
             cat::assert(end_index <= this->self().capacity());
         }
@@ -173,7 +176,8 @@ class CollectionInterface {
     template <is_integral U>
         requires(is_array_like)
     [[nodiscard]] constexpr auto operator[](U index) -> T& {
-        if !consteval {
+        // TODO: `if !consteval {` when using clangd 16.
+        if (!__builtin_is_constant_evaluated()) {
             assert(index >= 0);
             assert(index < this->self().size());
         }
@@ -184,7 +188,8 @@ class CollectionInterface {
     template <is_integral U>
         requires(is_array_like)
     [[nodiscard]] constexpr auto operator[](U index) const -> T const& {
-        if !consteval {
+        // TODO: `if !consteval {` when using clangd 16.
+        if (!__builtin_is_constant_evaluated()) {
             assert(index >= 0);
             assert(index < this->self().size());
         }
@@ -321,7 +326,7 @@ class CollectionInterface {
                 : current_index(index), p_array(p_in_array) {
             }
 
-          // public:
+            // public:
             constexpr auto dereference() -> T& {
                 return unconst(this->p_array[current_index.raw]);
             }

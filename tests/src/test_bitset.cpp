@@ -130,4 +130,13 @@ TEST(test_bitset) {
     cat::verify(!bits127[126]);
     bits127[126] = true;
     cat::verify(bits127[126]);
+
+    // Test const `.at()`.
+    _ = bits127_2.at(0).verify();
+    cat::verify(!bits127_2.at(128).has_value());
+
+    // Test mutable `.at()`.
+    bits127.at(0).verify() = true;
+    cat::verify(bits127.at(0).has_value());
+    cat::verify(!bits127.at(128).has_value());
 }

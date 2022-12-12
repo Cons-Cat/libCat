@@ -96,8 +96,10 @@ class Bitset {
 
     [[nodiscard]] constexpr auto operator[](ssize index)
         -> BitReference<ValueElement> {
-        // TODO: Uncomment this when using clangd 16 and add `if !consteval {`.
-        // cat::assert(index < bits_count);
+        // TODO: `if !consteval {` when using clangd 16.
+        if (!__builtin_is_constant_evaluated()) {
+            cat::assert(index < bits_count);
+        }
 
         ValueElement& bytes =
             this->storage[(index + this->leading_skipped_bits) / 64];
@@ -107,8 +109,10 @@ class Bitset {
     }
 
     [[nodiscard]] constexpr auto operator[](ssize index) const -> bool {
-        // TODO: Uncomment this when using clangd 16 and add `if !consteval {`.
-        // cat::assert(index < bits_count);
+        // TODO: `if !consteval {` when using clangd 16.
+        if (!__builtin_is_constant_evaluated()) {
+            cat::assert(index < bits_count);
+        }
 
         ValueElement mask;
         ValueElement bytes;
@@ -126,6 +130,21 @@ class Bitset {
 
         auto result = mask & bytes;
         return static_cast<bool>(result);
+    }
+
+    [[nodiscard]] constexpr auto at(ssize index)
+        -> Maybe<BitReference<ValueElement>> {
+        if (index < bits_count) {
+            return (*this)[index];
+        }
+        return nullopt;
+    }
+
+    [[nodiscard]] constexpr auto at(ssize index) const -> Maybe<bool> {
+        if (index < bits_count) {
+            return (*this)[index];
+        }
+        return nullopt;
     }
 
     [[nodiscard]] friend constexpr auto operator&(Bitset<bits_count> lhs,
