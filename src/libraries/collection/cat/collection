@@ -316,19 +316,16 @@ class CollectionInterface {
     constexpr auto make_iterator() requires(this->is_array_like) {
         class Iterator : public IteratorInterface<Iterator> {
           public:
-            friend IteratorInterface<Iterator>;
             using Collection [[maybe_unused]] = Derived;
 
             constexpr Iterator(Iterator const&) = default;
 
-            // private:
             constexpr Iterator(ssize index, T* p_in_array)
                 : current_index(index), p_array(p_in_array) {
             }
 
-            // public:
             constexpr auto dereference() -> T& {
-                return unconst(this->p_array[current_index.raw]);
+                return this->p_array[current_index.raw];
             }
 
             constexpr auto dereference() const -> T const& {
@@ -345,7 +342,7 @@ class CollectionInterface {
 
           private:
             ssize current_index;
-            T* const p_array;
+            T* p_array;
         };
 
         // Produce an iterator to have its type deduced later.
@@ -356,10 +353,10 @@ class CollectionInterface {
     constexpr auto make_iterator() const requires(this->is_array_like) {
         class Iterator : public IteratorInterface<Iterator> {
           public:
-            friend IteratorInterface<Iterator>;
             using Collection [[maybe_unused]] = Derived;
 
             constexpr Iterator(Iterator const&) = default;
+
             constexpr Iterator(ssize index, T const* p_in_array)
                 : current_index(index), p_array(p_in_array) {
             }
@@ -367,9 +364,11 @@ class CollectionInterface {
             constexpr auto dereference() const -> T const& {
                 return this->p_array[current_index.raw];
             }
+
             constexpr void advance(ssize offset) {
                 this->current_index += offset;
             }
+
             constexpr auto distance(Iterator const& other) const -> ssize {
                 return other.current_index - current_index;
             }
