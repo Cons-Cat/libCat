@@ -9,6 +9,31 @@
 
 namespace cat {
 
+template <is_unsigned_integral T>
+class BitReference {
+  public:
+    constexpr BitReference(T& reference, ssize in_offset)
+        : storage(reference), bit_offset(in_offset){};
+
+    constexpr auto operator=(bool bit_value) -> BitReference& {
+        if (bit_value) {
+            this->storage |= (static_cast<T>(1u) << bit_offset);
+        } else {
+            this->storage &= ~(static_cast<T>(1u) << bit_offset);
+        }
+        return *this;
+    }
+
+    constexpr operator bool() {
+        T mask = (static_cast<T>(1u) << bit_offset);
+        return static_cast<bool>(storage & mask);
+    }
+
+  private:
+    T& storage;
+    ssize bit_offset;
+};
+
 template <ssize bits_count>
     requires(bits_count > 0)
 class Bitset {
@@ -69,7 +94,22 @@ class Bitset {
     [[nodiscard]] constexpr auto operator==(Bitset<bits_count> const&) const
         -> bool = default;
 
+    [[nodiscard]] constexpr auto operator[](ssize index)
+        -> BitReference<ValueElement> {
+        // TODO: Uncomment this when using clangd 16 and add `if !consteval {`.
+        // cat::assert(index < bits_count);
+
+        ValueElement& bytes =
+            this->storage[(index + this->leading_skipped_bits) / 64];
+        ssize bit_offset = (index - this->leading_skipped_bits) & 63;
+
+        return BitReference(bytes, bit_offset);
+    }
+
     [[nodiscard]] constexpr auto operator[](ssize index) const -> bool {
+        // TODO: Uncomment this when using clangd 16 and add `if !consteval {`.
+        // cat::assert(index < bits_count);
+
         ValueElement mask;
         ValueElement bytes;
 

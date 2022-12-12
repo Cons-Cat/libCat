@@ -107,4 +107,27 @@ TEST(test_bitset) {
     static_assert(bits127_2[2]);
     static_assert(bits127_2[125]);
     static_assert(!bits127_2[126]);
+
+    // Test mutable subscript.
+    bits127 = cat::Bitset<127>::from(cat::uint8_max >> 2u,
+                                     0xFFFFFFFF'FFFFFFFF_u8 << 1u);
+    cat::verify(!bits127[0]);
+    cat::verify(bits127[1]);
+
+    bits127[1] = false;
+    cat::verify(!bits127[1]);
+    bits127[1] = true;
+    cat::verify(bits127[1]);
+
+    bits127[0] = true;
+    cat::verify(bits127[0]);
+    bits127[0] = false;
+    cat::verify(!bits127[0]);
+
+    // Test this on the second element of uint8 array.
+    cat::verify(bits127[126]);
+    bits127[126] = false;
+    cat::verify(!bits127[126]);
+    bits127[126] = true;
+    cat::verify(bits127[126]);
 }
