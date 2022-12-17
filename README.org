@@ -4,7 +4,9 @@
 #+STARTUP: fold
 
 libCat is a non-POSIX compliant C++23 runtime. It has no pthreads nor =malloc()=, and by extension no exceptions. It has type-safe arithmetic, SIMD, fast syscalls, interfaces (also known as facades), and value-based error-handling, among many other features.
+
 [[http://wgoo.ch/overflow.html]]
+
 [[https://youtu.be/BrBb0mqoIAc]]
 
 More essays and videos will come in the future.
@@ -12,6 +14,7 @@ More essays and videos will come in the future.
 * Building
 libCat requires a development version of GCC 13. Building appears to fail using =make=, and is only tested using =ninja=.
 #+BEGIN_SRC
-  cmake -B build/ -G 'Ninja Multi-Config'
-  build/tests/Debug/unit_tests
+  $ cmake -B build/ -G 'Ninja Multi-Config'
+  $ ninja -C build/
+  $ build/tests/Debug/unit_tests
 #+END_SRC
