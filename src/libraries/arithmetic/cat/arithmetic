@@ -192,6 +192,9 @@ template <is_unsigned_integral T>
 template <is_unsigned_integral T>
 [[nodiscard]] constexpr auto countr_one(T value) -> ssize;
 
+template <is_unsigned_integral T>
+[[nodiscard]] constexpr auto popcount(T value) -> ssize;
+
 // Overflow intrinsics optimize fairly well in GCC.
 // `[[gnu::optimize(2)]]` is required because the codegen is awful by default.
 
@@ -1247,7 +1250,14 @@ template <is_unsigned_integral T>
                                      : Limits<T>::digits;
 }
 
-// TODO: Write a `popcount()`.
+template <is_unsigned_integral T>
+[[nodiscard]] constexpr auto popcount(T value) -> ssize {
+    if constexpr (ssizeof(value) < 8) {
+        return __builtin_popcount(to_raw_arithmetic(value));
+    } else {
+        return __builtin_popcountll(to_raw_arithmetic(value));
+    }
+}
 
 template <ssize bytes>
     requires(bytes <= 8 && bytes > 0 &&

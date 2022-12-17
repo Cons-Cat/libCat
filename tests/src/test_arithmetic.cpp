@@ -558,4 +558,10 @@ TEST(test_numerals) {
     static_assert(cat::countr_zero(0XFFFFFFFEu) == 1);
     static_assert(cat::countr_one(0XFFFFFFFFFFFFFFFEu) == 0);
     static_assert(cat::countr_one(0XFFFFFFFEu) == 0);
+
+    // Test popcnt.
+    static_assert(cat::popcount(0b0101010011u) == 5);
+    static_assert(cat::popcount(0b010101001ull) == 4);
+    static_assert(cat::popcount(0b010101001_u8) == 4);
+    static_assert(cat::popcount(0b010101011_u1) == 5);
 };
