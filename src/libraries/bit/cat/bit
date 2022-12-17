@@ -11,18 +11,18 @@ constexpr bool is_big_endian = !is_little_endian;
 namespace cat {
 
 [[gnu::const]] constexpr auto invert_endianess(is_integral auto value) {
-    // TODO: Handle `cat::Arithmetic`.
-    if constexpr (sizeof(value) == 1) {
-        return __builtin_bswap8(value);
+    auto raw_value = to_raw_arithmetic(value);
+    if constexpr (sizeof(raw_value) == 1) {
+        return __builtin_bswap8(raw_value);
     }
-    if constexpr (sizeof(value) == 2) {
-        return __builtin_bswap16(value);
+    if constexpr (sizeof(raw_value) == 2) {
+        return __builtin_bswap16(raw_value);
     }
-    if constexpr (sizeof(value) == 4) {
-        return __builtin_bswap32(value);
+    if constexpr (sizeof(raw_value) == 4) {
+        return __builtin_bswap32(raw_value);
     }
-    if constexpr (sizeof(value) == 8) {
-        return __builtin_bswap64(value);
+    if constexpr (sizeof(raw_value) == 8) {
+        return __builtin_bswap64(raw_value);
     }
 }
 
