@@ -39,6 +39,7 @@ class List : public CollectionInterface<List<T>, T> {
         using Collection [[maybe_unused]] = List<T>;
 
         Iterator(Iterator const&) = default;
+
         Iterator(detail::ListNode<T>* p_input) : p_node(p_input) {
         }
 
@@ -46,16 +47,20 @@ class List : public CollectionInterface<List<T>, T> {
             this->p_node = this->p_node->p_next_node;
             return *this;
         }
+
         auto decrement() -> Iterator& {
             this->p_node = this->p_node->p_previous_node;
             return *this;
         }
+
         auto dereference() -> T& {
             return this->p_node->storage;
         }
+
         auto dereference() const -> T const& {
             return this->p_node->storage;
         }
+
         auto equal_to(Iterator const& it) const -> bool {
             return it.p_node == this->p_node;
         }
@@ -66,6 +71,7 @@ class List : public CollectionInterface<List<T>, T> {
 
     constexpr List() : p_head(nullptr), p_tail(nullptr), length(0) {
     }
+
     constexpr List(List<T>&& list) = default;
 
   private:
@@ -419,6 +425,7 @@ class ForwardList : public CollectionInterface<ForwardList<T>, T> {
   public:
     struct Iterator : IteratorInterface<Iterator> {
         Iterator(Iterator const&) = default;
+
         Iterator(detail::ForwardListNode<T>* p_input) : p_node(p_input) {
         }
 
@@ -426,12 +433,15 @@ class ForwardList : public CollectionInterface<ForwardList<T>, T> {
             this->p_node = this->p_node->p_next_node;
             return *this;
         }
+
         auto dereference() -> T& {
             return this->p_node->storage;
         }
+
         auto dereference() const -> T const& {
             return this->p_node->storage;
         }
+
         auto equal_to(Iterator const& it) const -> bool {
             return it.p_node == this->p_node;
         }
