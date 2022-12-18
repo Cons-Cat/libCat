@@ -59,6 +59,36 @@ class Bitset {
     using ValueElement = typename Value::Value;
 
   public:
+    template <typename T>
+    // requires(is_same<Decay<T>, Bitset<bits_count>>)
+    class Iterator : public IteratorInterface<Iterator<T>> {
+      public:
+        constexpr Iterator() = default;
+
+        constexpr Iterator(ssize in_index, T& in_bitset)
+            : current_index(in_index), bitset(in_bitset){};
+
+        constexpr auto dereference() requires(!is_const<T>) {
+            return this->bitset[this->current_index];
+        }
+
+        constexpr auto dereference() const requires(is_const<T>) {
+            return this->bitset[this->current_index];
+        }
+
+        constexpr void advance(ssize offset) {
+            this->current_index += offset;
+        }
+
+        constexpr auto distance(Iterator const& other) const -> ssize {
+            return other.current_index - this->current_index;
+        }
+
+      private:
+        ssize current_index;
+        T& bitset;
+    };
+
     static constexpr ssize storage_array_size = Value::size();
 
     static constexpr ssize storage_element_size = ssizeof(ValueElement);
@@ -246,7 +276,7 @@ class Bitset {
         constexpr ssize skip_bits =
             (ssizeof(ValueElement) * 8) - this->leading_bytes_bits;
 
-        ssize count = this->storage[0].countl_zero();
+        ssize count = cat::countl_zero(this->storage[0]);
         if (count != ssizeof(ValueElement) * 8) {
             return count - skip_bits;
         }
@@ -254,7 +284,7 @@ class Bitset {
         count -= skip_bits;
 
         for (ssize i = 1; i < this->storage_array_size; ++i) {
-            ssize next_count = this->storage[i].countl_zero();
+            ssize next_count = cat::countl_zero(this->storage[i]);
             count += next_count;
 
             // If any 1s are found, skip remaining bytes.
@@ -268,13 +298,14 @@ class Bitset {
     // TODO: `.countl_one()`.
 
     [[nodiscard]] constexpr auto countr_zero() const -> ssize {
-        ssize count = this->storage[this->storage_array_size - 1].countr_zero();
+        ssize count =
+            cat::countr_zero(this->storage[this->storage_array_size - 1]);
         if (count != ssizeof(ValueElement) * 8) {
             return count;
         }
 
         for (ssize i = this->storage_array_size - 2; i >= 0; --i) {
-            ssize next_count = this->storage[i].countr_zero();
+            ssize next_count = cat::countr_zero(this->storage[i]);
             count += next_count;
 
             // If any 1s are found, skip remaining bytes.
@@ -287,16 +318,29 @@ class Bitset {
 
     // TODO: `.countr_one()`.
 
-    // class Iterator : public IteratorInterface {
-    //   public:
-    //     friend IteratorInterface<Iterator>;
+    [[nodiscard]] constexpr auto begin() {
+        return Iterator<decltype(*this)>(0, *this);
+    }
 
-    //     constexpr Iterator(Iterator const&) = default;
+    [[nodiscard]] constexpr auto end() {
+        return Iterator<decltype(*this)>(bits_count - 1, *this);
+    }
 
-    //   private:
-    //     ssize current_index;
-    //     Value bitset;
-    // };
+    [[nodiscard]] constexpr auto begin() const {
+        return Iterator<decltype(*this)>(0, *this);
+    }
+
+    [[nodiscard]] constexpr auto end() const {
+        return Iterator<decltype(*this)>(bits_count - 1, *this);
+    }
+
+    [[nodiscard]] constexpr auto cbegin() const {
+        return Iterator<decltype(*this)>(0, *this);
+    }
+
+    [[nodiscard]] constexpr auto cend() const {
+        return Iterator<decltype(*this)>(bits_count - 1, *this);
+    }
 
   private:
     Value storage;

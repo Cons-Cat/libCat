@@ -124,6 +124,11 @@ TEST(test_bitset) {
     bits127[0] = false;
     cat::verify(!bits127[0]);
 
+    // `const` subscript returns bool.
+    static_assert(cat::is_same<decltype(bits127_2[0]), bool>);
+    // Non-`const` subscript returns a `BitReference`.
+    static_assert(!cat::is_same<decltype(bits127[0]), bool>);
+
     // Test this on the second element of uint8 array.
     cat::verify(bits127[126]);
     bits127[126] = false;
@@ -139,4 +144,17 @@ TEST(test_bitset) {
     bits127.at(0).verify() = true;
     cat::verify(bits127.at(0).has_value());
     cat::verify(!bits127.at(128).has_value());
+
+    // Test const iterator.
+    // for ([[maybe_unused]] bool bit : bits127_2) {
+    // }
+
+    // // Test mutable iterator.
+    // for (cat::BitReference bit : bits127) {
+    //     bit = false;
+    // }
+
+    // for (cat::BitReference bit : bits127) {
+    //     cat::verify(bit == false);
+    // }
 }
