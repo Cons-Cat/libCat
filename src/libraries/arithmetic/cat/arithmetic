@@ -200,7 +200,12 @@ template <is_unsigned_integral T>
 
 // Add two integers with saturating overflow.
 template <is_raw_integral T>
-[[nodiscard, gnu::optimize(2)]] constexpr auto sat_add(T lhs, T rhs) -> T {
+[[nodiscard,
+#ifndef __OPTIMIZED__
+  gnu::optimize(2)
+#endif
+]] constexpr auto
+sat_add(T lhs, T rhs) -> T {
     T sum;
     bool overflow = __builtin_add_overflow(lhs, rhs, &sum);
     if (overflow) {
@@ -232,7 +237,12 @@ template <is_integral T, is_integral U>
 
 // Subtract two integers with saturating overflow.
 template <is_raw_integral T>
-[[nodiscard, gnu::optimize(2)]] constexpr auto sat_sub(T lhs, T rhs) -> T {
+[[nodiscard,
+#ifndef __OPTIMIZED__
+  gnu::optimize(2)
+#endif
+]] constexpr auto
+sat_sub(T lhs, T rhs) -> T {
     T sum;
     bool overflow = __builtin_sub_overflow(lhs, rhs, &sum);
     if (overflow) {
@@ -264,7 +274,12 @@ template <is_integral T, is_integral U>
 
 // Subtract two integers with saturating overflow.
 template <is_raw_integral T>
-[[nodiscard, gnu::optimize(2)]] constexpr auto sat_mul(T lhs, T rhs) -> T {
+[[nodiscard,
+#ifndef __OPTIMIZED__
+  gnu::optimize(2)
+#endif
+]] constexpr auto
+sat_mul(T lhs, T rhs) -> T {
     T sum;
     bool overflow = __builtin_mul_overflow(lhs, rhs, &sum);
     if (overflow) {
@@ -296,7 +311,12 @@ template <is_integral T, is_integral U>
 
 // Subtract two integers with saturating overflow.
 template <is_raw_integral T>
-[[nodiscard, gnu::optimize(2)]] constexpr auto sat_div(T lhs, T rhs) -> T {
+[[nodiscard,
+#ifndef __OPTIMIZED__
+  gnu::optimize(2)
+#endif
+]] constexpr auto
+sat_div(T lhs, T rhs) -> T {
     if constexpr (is_signed<T>) {
         lhs += !((rhs + 1) | (make_unsigned(lhs) + Limits<T>::max()));
     }
@@ -329,7 +349,12 @@ template <is_integral T, is_integral U>
 template <is_raw_integral T, is_raw_integral U>
     // TODO: Figure out signed saturating shift semantics.
     requires(is_unsigned<T>)
-[[nodiscard, gnu::optimize(2)]] constexpr auto sat_shl(T value, U bits) {
+[[nodiscard,
+#ifndef __OPTIMIZED__
+  gnu::optimize(2)
+#endif
+]] constexpr auto
+sat_shl(T value, U bits) {
     // TODO: Try `cat::countr_zero()`.
     if (bits >= Limits<T>::bits - __builtin_ctz(value)) {
         return Limits<T>::max();
@@ -349,7 +374,12 @@ template <is_integral T, is_integral U>
 template <is_raw_integral T, is_raw_integral U>
     // TODO: Figure out signed saturating shift semantics.
     requires(is_unsigned<T>)
-[[nodiscard, gnu::optimize(2)]] constexpr auto sat_shr(T value, U bits) {
+[[nodiscard,
+#ifndef __OPTIMIZED__
+  gnu::optimize(2)
+#endif
+]] constexpr auto
+sat_shr(T value, U bits) {
     // TODO: Try `cat::countl_zero()`.
     if (bits >= Limits<T>::bits - __builtin_clz(value)) {
         return Limits<T>::min();
