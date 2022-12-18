@@ -5,9 +5,9 @@
 #include <cat/meta>
 
 // `__BYTE_ORDER__` and `__ORDER_LITTLE_ENDIAN__` are macros defined by GCC.
-inline constexpr bool is_little_endian =
+inline constexpr bool is_target_little_endian =
     (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
-inline constexpr bool is_big_endian = !is_little_endian;
+inline constexpr bool is_target_big_endian = !is_target_little_endian;
 
 namespace cat {
 
@@ -20,15 +20,17 @@ template <is_unsigned_integral T>
         return ssizeof(T) * 8;
     }
 
+    // `clz()` is a portable intrinsic.
+
     if constexpr (sizeof(raw_value) == 4) {
         return __builtin_clz(raw_value);
     } else if constexpr (sizeof(raw_value) == 8) {
-        return __builtin_clzl(raw_value);
+        return __builtin_clzll(raw_value);
     } else {
         while (raw_value >>= 1) {
             ++raw_value;
         }
-        return Limits<T>::digits - raw_value;
+        return ssizeof(T) - raw_value;
     }
 }
 
@@ -49,10 +51,12 @@ template <is_unsigned_integral T>
         return ssizeof(T) * 8;
     }
 
+    // `ctz()` is a portable intrinsic.
+
     if constexpr (sizeof(raw_value) <= 4) {
         return __builtin_ctz(raw_value);
     } else if constexpr (sizeof(raw_value) == 8) {
-        return __builtin_ctzl(raw_value);
+        return __builtin_ctzll(raw_value);
     }
 }
 
@@ -65,10 +69,21 @@ template <is_unsigned_integral T>
 template <is_unsigned_integral T>
 [[nodiscard]] constexpr auto popcount(T value) -> ssize {
     auto raw_value = to_raw_arithmetic(value);
-    if constexpr (sizeof(value) < 8) {
-        return __builtin_popcount(raw_value);
+    if constexpr (__has_builtin(__builtin_popcount)) {
+        if constexpr (sizeof(T) <= 4) {
+            return __builtin_popcount(raw_value);
+        } else {
+            return __builtin_popcountll(raw_value);
+        }
     } else {
-        return __builtin_popcountll(raw_value);
+        // This should only be used if there is no intrinsic, otherwise integers
+        // promote to `unsigned int` for `__builtin_popcount()`.
+        ssize result = 0;
+        for (; raw_value; raw_value >>= 1) {
+            result += ssize(raw_value & 1u);
+        }
+
+        return result;
     }
 }
 
@@ -84,10 +99,10 @@ template <is_unsigned T>
     auto raw_offset = to_raw_arithmetic(offset);
     auto raw_length = to_raw_arithmetic(length);
 
-    if (sizeof(T) == 4) {
+    if (__has_builtin(__builtin_ia32_bextr_u32) && sizeof(T) == 4) {
         return T(
             __builtin_ia32_bextr_u32(raw_from, raw_offset | (raw_length << 8)));
-    } else if (sizeof(T) == 8) {
+    } else if (__has_builtin(__builtin_ia32_bextr_u64) && sizeof(T) == 8) {
         return T(
             __builtin_ia32_bextr_u64(raw_from, raw_offset | (raw_length << 8)));
     } else {
@@ -97,8 +112,10 @@ template <is_unsigned T>
     }
 }
 
-[[gnu::const]] constexpr auto invert_endianess(is_integral auto value) {
+[[gnu::const]] constexpr auto invert_endianess(
+    is_unsigned_integral auto value) {
     auto raw_value = to_raw_arithmetic(value);
+
     if constexpr (sizeof(raw_value) == 1) {
         return __builtin_bswap8(raw_value);
     }
