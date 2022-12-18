@@ -294,7 +294,7 @@ struct ServerReplyHeader {
 
 // This packet is used to initiate a connection handshake with an X server.
 struct ConnectionRequestInfo {
-    char endianness = is_little_endian ? 'l' : 'B';
+    char endianness = is_target_little_endian ? 'l' : 'B';
   private:
     int1 padding_1;  // NOLINT
   public:
