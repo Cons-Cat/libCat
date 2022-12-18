@@ -5,10 +5,97 @@
 #include <cat/meta>
 
 // `__BYTE_ORDER__` and `__ORDER_LITTLE_ENDIAN__` are macros defined by GCC.
-constexpr bool is_little_endian = (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
-constexpr bool is_big_endian = !is_little_endian;
+inline constexpr bool is_little_endian =
+    (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
+inline constexpr bool is_big_endian = !is_little_endian;
 
 namespace cat {
+
+template <is_unsigned_integral T>
+[[nodiscard]] constexpr auto countl_zero(T value) -> ssize {
+    auto raw_value = to_raw_arithmetic(value);
+
+    if (raw_value == 0) {
+        // It is undefined behavior to pass 0 into clz.
+        return ssizeof(T) * 8;
+    }
+
+    if constexpr (sizeof(raw_value) == 4) {
+        return __builtin_clz(raw_value);
+    } else if constexpr (sizeof(raw_value) == 8) {
+        return __builtin_clzl(raw_value);
+    } else {
+        while (raw_value >>= 1) {
+            ++raw_value;
+        }
+        return Limits<T>::digits - raw_value;
+    }
+}
+
+template <is_unsigned_integral T>
+[[nodiscard]] constexpr auto countl_one(T value) -> ssize {
+    auto raw_value = to_raw_arithmetic(value);
+    return raw_value != Limits<T>::max()
+               ? countl_zero(static_cast<T>(~(raw_value)))
+               : (ssizeof(T) * 8);
+}
+
+template <is_unsigned_integral T>
+[[nodiscard]] constexpr auto countr_zero(T value) -> ssize {
+    auto raw_value = to_raw_arithmetic(value);
+
+    if (raw_value == 0) {
+        // It is undefined behavior to pass 0 into ctz.
+        return ssizeof(T) * 8;
+    }
+
+    if constexpr (sizeof(raw_value) <= 4) {
+        return __builtin_ctz(raw_value);
+    } else if constexpr (sizeof(raw_value) == 8) {
+        return __builtin_ctzl(raw_value);
+    }
+}
+
+template <is_unsigned_integral T>
+[[nodiscard]] constexpr auto countr_one(T value) -> ssize {
+    return value != Limits<T>::max() ? countl_one(static_cast<T>(~value))
+                                     : (ssizeof(T) * 8);
+}
+
+template <is_unsigned_integral T>
+[[nodiscard]] constexpr auto popcount(T value) -> ssize {
+    auto raw_value = to_raw_arithmetic(value);
+    if constexpr (sizeof(value) < 8) {
+        return __builtin_popcount(raw_value);
+    } else {
+        return __builtin_popcountll(raw_value);
+    }
+}
+
+// Extracts `length` number of bits out of `from`, ending at the `offset` of the
+// right-most bit. Those `length` bits are then the right-most bits of the
+// return value.
+template <is_unsigned T>
+[[nodiscard]] constexpr auto extract_bits(T from,
+                                          is_unsigned_integral auto offset,
+                                          is_unsigned_integral auto length)
+    -> T {
+    auto raw_from = to_raw_arithmetic(from);
+    auto raw_offset = to_raw_arithmetic(offset);
+    auto raw_length = to_raw_arithmetic(length);
+
+    if (sizeof(T) == 4) {
+        return T(
+            __builtin_ia32_bextr_u32(raw_from, raw_offset | (raw_length << 8)));
+    } else if (sizeof(T) == 8) {
+        return T(
+            __builtin_ia32_bextr_u64(raw_from, raw_offset | (raw_length << 8)));
+    } else {
+        constexpr unsigned char bits = sizeof(T) * 8u;
+        auto const mask = T((1u << raw_length) * (raw_length < bits) - 1u).raw;
+        return T((raw_from >> raw_offset) & (mask * (raw_offset < bits)));
+    }
+}
 
 [[gnu::const]] constexpr auto invert_endianess(is_integral auto value) {
     auto raw_value = to_raw_arithmetic(value);
@@ -26,8 +113,8 @@ namespace cat {
     }
 }
 
-// `Byte` is a strongly-typed `struct` rather than an `enum class`, as in the
-// STL, so that it can carry member functions.
+// `Byte` is a strongly-typed `struct` rather than an `enum class` so that it
+// has operators.
 // TODO: Add some member functions.
 struct Byte {  // NOLINT
     unsigned char value;

@@ -19,6 +19,7 @@ list(
   -mavx2
   -mfma
   -mlzcnt
+  -mbmi
   -mfsgsbase
   # These flags cause clang-tidy 12 to crash:
   # -fconcepts-diagnostics-depth=2
