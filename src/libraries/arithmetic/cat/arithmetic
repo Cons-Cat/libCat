@@ -150,6 +150,14 @@ template <typename From, typename To>
 concept is_safe_arithmetic_conversion =
     (sizeof(From) <= sizeof(To)) && (is_safe_arithmetic_comparison<From, To>);
 
+template <typename T>
+concept is_safe_arithmetic =
+    is_arithmetic<T> && !__is_same(T, ToRawArithmetic<T>);
+
+template <typename T>
+concept is_unsafe_arithmetic = is_arithmetic<T> &&
+    __is_same(T, ToRawArithmetic<T>);
+
 namespace detail {
     template <typename T, typename U>
     consteval auto promoted_arithmetic() {
@@ -173,27 +181,6 @@ namespace detail {
                                                   is_floating_point<U>))
     using PromotedArithmetic = decltype(promoted_arithmetic<T, U>());
 }  // namespace detail
-
-// If `value` is a power of two.
-template <is_arithmetic T>
-[[nodiscard]] constexpr auto has_single_bit(T value) -> bool {
-    return (value & (value - T(1))) == T(0);
-}
-
-template <is_unsigned_integral T>
-[[nodiscard]] constexpr auto countl_zero(T value) -> ssize;
-
-template <is_unsigned_integral T>
-[[nodiscard]] constexpr auto countl_one(T value) -> ssize;
-
-template <is_unsigned_integral T>
-[[nodiscard]] constexpr auto countr_zero(T value) -> ssize;
-
-template <is_unsigned_integral T>
-[[nodiscard]] constexpr auto countr_one(T value) -> ssize;
-
-template <is_unsigned_integral T>
-[[nodiscard]] constexpr auto popcount(T value) -> ssize;
 
 // Overflow intrinsics optimize fairly well in GCC.
 // `[[gnu::optimize(2)]]` is required because the codegen is awful by default.
@@ -541,6 +528,15 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         return p_operand + numeral.raw;
     }
 
+    // Handle left-hand-side raw operands that are larger than this.
+    template <is_unsafe_arithmetic U>
+        requires(is_safe_arithmetic_comparison<U, T>)
+    [[nodiscard]] friend constexpr auto operator+(U operand,
+                                                  Arithmetic<T, policy> self)
+        -> detail::PromotedArithmetic<T, U> {
+        return cat::Arithmetic<U>(operand) + self;
+    }
+
     template <typename U>
     [[nodiscard]] friend constexpr auto operator+(Arithmetic<T, policy> numeral,
                                                   U* p_operand) -> U* {
@@ -581,10 +577,10 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         if constexpr (policy == undefined) {
             // TODO: See if using `[[assume()]]` actually optimizes this.
             if constexpr (is_unsigned<T>) {
+                // Assume there is no overflow.
                 // NOLINTNEXTLINE This is a C++23 feature.
                 [[assume(self >= operand)]];
             }
-            // Making this signed for optimizations causes various problems.
             return detail::PromotedArithmetic<T, U>{self.raw -
                                                     to_raw_arithmetic(operand)};
         } else if constexpr (policy == wrap || policy == wrap_member) {
@@ -593,6 +589,15 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         } else if constexpr (policy == saturate || policy == saturate_member) {
             return sat_sub(to_raw_arithmetic(self), to_raw_arithmetic(operand));
         }
+    }
+
+    // Handle left-hand-side raw operands that are larger than this.
+    template <is_unsafe_arithmetic U>
+        requires(is_safe_arithmetic_comparison<U, T>)
+    [[nodiscard]] friend constexpr auto operator-(U operand,
+                                                  Arithmetic<T, policy> self)
+        -> detail::PromotedArithmetic<T, U> {
+        return cat::Arithmetic<U>(operand) - self;
     }
 
     template <typename U>
@@ -642,10 +647,10 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         if constexpr (policy == OverflowPolicies::undefined) {
             // TODO: See if using `[[assume()]]` actually optimizes this.
             if constexpr (is_unsigned<T>) {
+                // Assume there is no overflow.
                 // NOLINTNEXTLINE This is a C++23 feature.
                 [[assume(self >= operand)]];
             }
-            // Making this signed for optimizations causes various problems.
             return detail::PromotedArithmetic<T, U>{self.raw *
                                                     to_raw_arithmetic(operand)};
         } else if constexpr (policy == wrap || policy == wrap_member) {
@@ -654,6 +659,15 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         } else if constexpr (policy == saturate || policy == saturate_member) {
             return sat_mul(to_raw_arithmetic(self), to_raw_arithmetic(operand));
         }
+    }
+
+    // Handle left-hand-side raw operands that are larger than this.
+    template <is_unsafe_arithmetic U>
+        requires(is_safe_arithmetic_comparison<U, T>)
+    [[nodiscard]] friend constexpr auto operator*(U operand,
+                                                  Arithmetic<T, policy> self)
+        -> detail::PromotedArithmetic<T, U> {
+        return cat::Arithmetic<U>(operand) * self;
     }
 
     template <typename U>
@@ -686,10 +700,10 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         if constexpr (policy == undefined) {
             // TODO: See if using `[[assume()]]` actually optimizes this.
             if constexpr (is_unsigned<T>) {
+                // Assume there is no overflow.
                 // NOLINTNEXTLINE This is a C++23 feature.
                 [[assume(self >= operand)]];
             }
-            // Making this signed for optimizations causes various problems.
             return detail::PromotedArithmetic<T, U>{self.raw /
                                                     to_raw_arithmetic(operand)};
         } else if constexpr (policy == wrap || policy == wrap_member) {
@@ -698,6 +712,15 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         } else if constexpr (policy == saturate || policy == saturate_member) {
             return sat_mul(to_raw_arithmetic(self), to_raw_arithmetic(operand));
         }
+    }
+
+    // Handle left-hand-side raw operands that are larger than this.
+    template <is_unsafe_arithmetic U>
+        requires(is_safe_arithmetic_comparison<U, T>)
+    [[nodiscard]] friend constexpr auto operator/(U operand,
+                                                  Arithmetic<T, policy> self)
+        -> detail::PromotedArithmetic<T, U> {
+        return cat::Arithmetic<U>(operand) / self;
     }
 
     template <typename U>

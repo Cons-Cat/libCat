@@ -98,13 +98,37 @@ TEST(test_numerals) {
     int4 test_int4_2;
     test_int4_2 = 1;
 
+    // Test `uint4` constructors and assignment.
+    uint4 test_uint4_1 = 1u;
+    uint4 test_uint4_2;
+    test_uint4_2 = 1u;
+
     // Test `Arithmetic` operators.
     int4 int4_add = 1 + test_int4_1;
     int4_add = 1_i4 + test_int4_1;
     int4 int4_sub = 1 - test_int4_1;
     int4_sub = 1_i4 - test_int4_1;
 
+    int8 test_int8 = 100ll - test_int4_1;
+    cat::verify(test_int8 == 99);
+    test_int8 = 100ll + test_int4_1;
+    test_int8 = 100ll * test_int4_1;
+    test_int8 = 100ll / test_int4_1;
+
     cat::verify(int4{1} == int4{1});
+
+    uint4 uint4_add = 1u + test_uint4_1;
+    uint4_add = 1_u4 + test_uint4_1;
+    uint4 uint4_sub = 1u - test_uint4_1;
+    uint4_sub = 1_u4 - test_uint4_1;
+
+    uint8 test_uint8 = 100ull - test_uint4_1;
+    cat::verify(test_uint8 == 99u);
+    test_uint8 = 100ull + test_uint4_1;
+    test_uint8 = 100ull * test_uint4_1;
+    test_uint8 = 100ull / test_uint4_1;
+
+    cat::verify(uint4{1} == uint4{1u});
 
     // Greater than.
     cat::verify(int4{1} > int4{0});
