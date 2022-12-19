@@ -130,10 +130,10 @@ constexpr auto extract_bits_mask(T value, U mask) -> T {
         return T(_pext_u64(raw_value, raw_mask));
     } else {
         ToRawArithmetic<T> count = 0u;
-        while (raw_mask != 0) {
+        while (raw_mask != 0u) {
             if (raw_mask & 1) {
                 result >>= 1;
-                result |= raw_value << (sizeof(T) * T(8u) - T(1u));
+                result |= raw_value << T(sizeof(T) * 8u - 1u);
                 ++count;
             }
             raw_value >>= 1;
@@ -141,6 +141,37 @@ constexpr auto extract_bits_mask(T value, U mask) -> T {
         }
 
         result >>= (sizeof(T) * 8u - count) * (count > 0u);
+        return result;
+    }
+}
+
+// Place the bits set by `mask` into the right-most bits in the return value.
+template <is_unsigned_integral T, is_unsigned_integral U>
+    requires(sizeof(T) == sizeof(U))
+constexpr auto deposit_bits_mask(T value, U mask) -> T {
+    T result = T(0u);
+    auto raw_value = to_raw_arithmetic(value);
+    auto raw_mask = to_raw_arithmetic(mask);
+
+    if constexpr (__has_builtin(_pdep_u32) && sizeof(T) == 4) {
+        // `_pdep_u32()` is a GCC intrinsic.
+        return T(_pdep_u32(raw_value, raw_mask));
+    } else if constexpr (__has_builtin(_pdep_u64) && sizeof(T) == 8) {
+        // `_pdep_u64()` is a GCC intrinsic.
+        return T(_pdep_u64(raw_value, raw_mask));
+    } else {
+        T count = T(0u);
+        while (raw_mask != 0u) {
+            result >>= 1;
+            if (raw_mask & 1) {
+                result |= raw_value << T(sizeof(T) * 8u - 1u);
+                raw_value >>= 1;
+            }
+            raw_mask >>= 1;
+            ++count;
+        }
+
+        result >>= T(sizeof(T) * 8u - count) * T(count > 0u);
         return result;
     }
 }
