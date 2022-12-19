@@ -4,6 +4,8 @@
 
 #include <cat/meta>
 
+#include "cat/arithmetic"
+
 // `__BYTE_ORDER__` and `__ORDER_LITTLE_ENDIAN__` are macros defined by GCC.
 inline constexpr bool is_target_little_endian =
     (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
@@ -112,6 +114,37 @@ template <is_unsigned T>
     }
 }
 
+// Extract the 1 bits from `value` which are also 1 at the same index in `mask`.
+template <is_unsigned_integral T, is_unsigned_integral U>
+    requires(sizeof(T) == sizeof(U))
+constexpr auto extract_bits_mask(T value, U mask) -> T {
+    T result = T(0u);
+    auto raw_value = to_raw_arithmetic(value);
+    auto raw_mask = to_raw_arithmetic(mask);
+
+    if constexpr (__has_builtin(_pext_u32) && sizeof(T) == 4) {
+        // `_pext_u32()` is a GCC intrinsic.
+        return T(_pext_u32(raw_value, raw_mask));
+    } else if constexpr (__has_builtin(_pext_u64) && sizeof(T) == 8) {
+        // `_pext_u64()` is a GCC intrinsic.
+        return T(_pext_u64(raw_value, raw_mask));
+    } else {
+        ToRawArithmetic<T> count = 0u;
+        while (raw_mask != 0) {
+            if (raw_mask & 1) {
+                result >>= 1;
+                result |= raw_value << (sizeof(T) * T(8u) - T(1u));
+                ++count;
+            }
+            raw_value >>= 1;
+            raw_mask >>= 1;
+        }
+
+        result >>= (sizeof(T) * 8u - count) * (count > 0u);
+        return result;
+    }
+}
+
 [[gnu::const]] constexpr auto invert_endianess(
     is_unsigned_integral auto value) {
     auto raw_value = to_raw_arithmetic(value);
@@ -128,6 +161,12 @@ template <is_unsigned T>
     if constexpr (sizeof(raw_value) == 8) {
         return __builtin_bswap64(raw_value);
     }
+}
+
+// If `value` is a power of two.
+template <is_arithmetic T>
+[[nodiscard]] constexpr auto has_single_bit(T value) -> bool {
+    return (value & (value - T(1))) == T(0);
 }
 
 // `Byte` is a strongly-typed `struct` rather than an `enum class` so that it

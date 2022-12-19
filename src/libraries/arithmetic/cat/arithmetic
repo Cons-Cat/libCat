@@ -647,9 +647,10 @@ struct Arithmetic : detail::ArithmeticStorage<T, policy> {
         if constexpr (policy == OverflowPolicies::undefined) {
             // TODO: See if using `[[assume()]]` actually optimizes this.
             if constexpr (is_unsigned<T>) {
+                // TODO: Figure out this overflow check.
                 // Assume there is no overflow.
                 // NOLINTNEXTLINE This is a C++23 feature.
-                [[assume(self >= operand)]];
+                // [[assume(self >= operand)]];
             }
             return detail::PromotedArithmetic<T, U>{self.raw *
                                                     to_raw_arithmetic(operand)};
