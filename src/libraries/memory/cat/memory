@@ -158,12 +158,12 @@ template <typename T = unsigned char>
 }
 
 constexpr void zero_memory_scalar(void* p_source, ssize bytes) {
-    set_memory_scalar(p_source, 0_u1, bytes);
+    set_memory_scalar(p_source, 0u1, bytes);
 }
 
 [[gnu::noinline]] constexpr void zero_memory_scalar_explicit(void* p_source,
                                                              ssize bytes) {
-    set_memory_scalar(p_source, 0_u1, bytes);
+    set_memory_scalar(p_source, 0u1, bytes);
 }
 
 // Set all bytes in a trivial object to `value`.
