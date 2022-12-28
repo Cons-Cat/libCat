@@ -4,8 +4,6 @@
 
 #include <cat/meta>
 
-#include "cat/arithmetic"
-
 // `__BYTE_ORDER__` and `__ORDER_LITTLE_ENDIAN__` are macros defined by GCC.
 inline constexpr bool is_target_little_endian =
     (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
@@ -117,7 +115,7 @@ template <is_unsigned T>
 // Extract the 1 bits from `value` which are also 1 at the same index in `mask`.
 template <is_unsigned_integral T, is_unsigned_integral U>
     requires(sizeof(T) == sizeof(U))
-constexpr auto extract_bits_mask(T value, U mask) -> T {
+[[nodiscard]] constexpr auto extract_bits_mask(T value, U mask) -> T {
     T result = T(0u);
     auto raw_value = to_raw_arithmetic(value);
     auto raw_mask = to_raw_arithmetic(mask);
@@ -148,7 +146,7 @@ constexpr auto extract_bits_mask(T value, U mask) -> T {
 // Place the bits set by `mask` into the right-most bits in the return value.
 template <is_unsigned_integral T, is_unsigned_integral U>
     requires(sizeof(T) == sizeof(U))
-constexpr auto deposit_bits_mask(T value, U mask) -> T {
+[[nodiscard]] constexpr auto deposit_bits_mask(T value, U mask) -> T {
     T result = T(0u);
     auto raw_value = to_raw_arithmetic(value);
     auto raw_mask = to_raw_arithmetic(mask);
@@ -176,8 +174,7 @@ constexpr auto deposit_bits_mask(T value, U mask) -> T {
     }
 }
 
-[[gnu::const]] constexpr auto invert_endianess(
-    is_unsigned_integral auto value) {
+[[nodiscard]] constexpr auto invert_endianess(is_unsigned_integral auto value) {
     auto raw_value = to_raw_arithmetic(value);
 
     if constexpr (sizeof(raw_value) == 1) {
