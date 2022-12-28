@@ -1,7 +1,6 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
 #pragma once
-
 #include <cat/meta>
 
 // `__BYTE_ORDER__` and `__ORDER_LITTLE_ENDIAN__` are macros defined by GCC.
@@ -174,11 +173,28 @@ template <is_unsigned_integral T, is_unsigned_integral U>
     }
 }
 
+template <is_unsigned_integral T>
+[[nodiscard]] constexpr auto zero_high_bits_at(T source, uint4 bit_index) -> T {
+    if constexpr (__has_builtin(__builtin_ia32_bzhi_si) && sizeof(T) == 4) {
+        return __builtin_ia32_bzhi_si(to_raw_arithmetic(source), bit_index.raw);
+    } else if constexpr (__has_builtin(__builtin_ia32_bzhi_di) &&
+                         sizeof(T) == 8) {
+        return __builtin_ia32_bzhi_di(to_raw_arithmetic(source), bit_index.raw);
+    } else {
+        // TODO: Implement this.
+        __builtin_unreachable();
+    }
+}
+
 [[nodiscard]] constexpr auto invert_endianess(is_unsigned_integral auto value) {
     auto raw_value = to_raw_arithmetic(value);
 
     if constexpr (sizeof(raw_value) == 1) {
-        return __builtin_bswap8(raw_value);
+        // This does not exist.
+        // return __builtin_bswap8(raw_value);
+
+        // TODO: Implement this.
+        __builtin_unreachable();
     }
     if constexpr (sizeof(raw_value) == 2) {
         return __builtin_bswap16(raw_value);

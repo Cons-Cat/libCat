@@ -37,4 +37,9 @@ TEST(test_bit) {
     static_assert(cat::extract_bits_mask(uint8::max, 0b1ull) == 0b1ull);
     static_assert(cat::extract_bits_mask(uint4::max, 0b1u) == 0b1u);
     static_assert(cat::extract_bits_mask(uint2::max, 0b1_u2) == 0b1_u2);
+
+    // Test bzhi().
+    // TODO: These only test it compiles. Test that it works correctly.
+    static_assert(cat::zero_high_bits_at(8_u4, 8u));
+    static_assert(cat::zero_high_bits_at(8_u8, 8u));
 }

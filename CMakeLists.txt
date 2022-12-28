@@ -10,7 +10,7 @@ list(
   # Disable linking libC symbols.
   -nostdlib
   -Wno-builtin-declaration-mismatch
-  # These are pessimizations to libCat:
+  # These features are pessimizations to libCat:
   -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
   # `global_includes.hpp` must be available everywhere.
   -include global_includes.hpp
@@ -20,6 +20,7 @@ list(
   -mfma
   -mlzcnt
   -mbmi
+  -mbmi2
   -mfsgsbase
   # These flags cause clang-tidy 12 to crash:
   # -fconcepts-diagnostics-depth=2
