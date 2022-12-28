@@ -4,11 +4,11 @@
 
 TEST(test_pool_allocator) {
     // Initialize an allocator.
-    cat::PageAllocator paging_allocator;
+    cat::page_allocator pager;
     // cat::mem auto page =
-    //     paging_allocator.opq_alloc_multi<cat::Byte>(4_ki).or_exit();
+    //     pager.opq_alloc_multi<cat::byte>(4_ki).or_exit();
     cat::is_stable_allocator auto allocator =
-        cat::PoolAllocator<8>::backed(paging_allocator, 128).value();
+        cat::pool_allocator<8>::backed(pager, 128).value();
 
     // Make an allocation.
     int4* p_int1 = allocator.alloc<int4>(10).value();
@@ -22,7 +22,7 @@ TEST(test_pool_allocator) {
     for (int4 i = 0; i < (128 / 8) - 2; ++i) {
         _ = allocator.alloc<int4>().verify();
     }
-    cat::Maybe failed_allocation = allocator.alloc<int4>();
+    cat::maybe failed_allocation = allocator.alloc<int4>();
     cat::verify(!failed_allocation.has_value());
 
     // Make an allocation after resetting.

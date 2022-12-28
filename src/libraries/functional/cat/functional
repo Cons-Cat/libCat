@@ -8,7 +8,7 @@
 namespace cat {
 namespace detail {
     template <typename T>
-    struct IsReferenceWrapper : FalseTypeTrait {};
+    struct IsReferenceWrapper : false_trait {};
 
     // This is not needed until a reference wrapper is implemented.
     // template <typename U>
@@ -42,9 +42,9 @@ namespace detail {
 
     template <typename T>
     struct InvokeImpl {
-        template <typename Callable, typename... Args>
-        static auto call(Callable&& f, Args&&... args)
-            -> decltype(forward<Callable>(f)(forward<Args>(args)...));
+        template <typename invocable_type, typename... Args>
+        static auto call(invocable_type&& f, Args&&... args)
+            -> decltype(forward<invocable_type>(f)(forward<Args>(args)...));
     };
 
     template <typename B, typename MT>
@@ -72,51 +72,53 @@ namespace detail {
             -> decltype(InvokeImpl::get(forward<T>(t)).*pmd);
     };
 
-    template <typename Callable, typename... Args,
-              typename Fd = typename Decay<Callable>::type>
-    auto invoke_detail(Callable&& f, Args&&... args)
-        -> decltype(InvokeImpl<Fd>::call(forward<Callable>(f),
+    template <typename invocable_type, typename... Args,
+              typename Fd = typename Decay<invocable_type>::type>
+    auto invoke_detail(invocable_type&& f, Args&&... args)
+        -> decltype(InvokeImpl<Fd>::call(forward<invocable_type>(f),
                                          forward<Args>(args)...));
 
-    template <typename AlwaysVoid, typename, typename...>
-    struct InvokeResultTrait {};
-    template <typename Callable, typename... Args>
-    struct InvokeResultTrait<decltype(void(detail::invoke_detail(
-                                 declval<Callable>(), declval<Args>()...))),
-                             Callable, Args...> {
-        using Type = decltype(detail::invoke_detail(declval<Callable>(),
+    template <typename always_void_type, typename, typename...>
+    struct invoke_result_trait {};
+    template <typename invocable_type, typename... Args>
+    struct invoke_result_trait<decltype(void(detail::invoke_detail(
+                                   declval<invocable_type>(),
+                                   declval<Args>()...))),
+                               invocable_type, Args...> {
+        using type = decltype(detail::invoke_detail(declval<invocable_type>(),
                                                     declval<Args>()...));
     };
 }  // namespace detail
 
-template <typename Callable, typename... Args>
-struct InvokeResult : detail::InvokeResultTrait<void, Callable, Args...> {};
+template <typename invocable_type, typename... Args>
+struct invoke_result
+    : detail::invoke_result_trait<void, invocable_type, Args...> {};
 
-template <typename Callable, typename... Args>
-// requires is_invocable<Callable, Args...>
-constexpr auto invoke(Callable&& callable, Args&&... arguments)
-    -> InvokeResult<Callable, Args...>
-// noexcept(is_nothrow_invocable<Callable, Args...>)
+template <typename invocable_type, typename... Args>
+// requires is_invocable<invocable_type, Args...>
+constexpr auto invoke(invocable_type&& callable, Args&&... arguments)
+    -> invoke_result<invocable_type, Args...>
+// noexcept(is_nothrow_invocable<invocable_type, Args...>)
 {
-    if constexpr (is_member_pointer<Decay<Callable>>) {
+    if constexpr (is_member_pointer<Decay<invocable_type>>) {
         // Member functions must be special-cased.
         return detail::invoke_member_function(callable,
                                               forward<Args>(arguments)...);
     } else {
         // Invoke the callable with a call operator.
-        return forward<Callable>(callable)(forward<Args>(arguments)...);
+        return forward<invocable_type>(callable)(forward<Args>(arguments)...);
     }
 }
 
-template <typename ReturnType, typename Callable, typename... Args>
-// requires is_invocable_r<ReturnType, Callable, Args...>
-constexpr auto invoke_r(Callable&& f, Args&&... args) -> ReturnType
-// noexcept(is_nothrow_invocable_r<ReturnType, Callable, Args...>)
+template <typename return_type, typename invocable_type, typename... Args>
+// requires is_invocable_r<return_type, invocable_type, Args...>
+constexpr auto invoke_r(invocable_type&& f, Args&&... args) -> return_type
+// noexcept(is_nothrow_invocable_r<return_type, invocable_type, Args...>)
 {
-    if constexpr (is_void<ReturnType>) {
-        invoke(forward<Callable>(f), forward<Args>(args)...);
+    if constexpr (is_void<return_type>) {
+        invoke(forward<invocable_type>(f), forward<Args>(args)...);
     } else {
-        return invoke(forward<Callable>(f), forward<Args>(args)...);
+        return invoke(forward<invocable_type>(f), forward<Args>(args)...);
     }
 }
 

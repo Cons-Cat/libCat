@@ -5,19 +5,19 @@
 
 // The jump buffer must be constructed in `main()` instead of globally so that
 // it can be guaranteed to occur before any unit tests are called.
-constinit cat::JmpBuffer* p_jump_buffer = nullptr;
+constinit cat::jmp_buffer* p_jump_buffer = nullptr;
 
-void test_fail(cat::SourceLocation const& source_location) {
+void test_fail(cat::source_location const& source_location) {
     cat::detail::print_assert_location(source_location);
     _ = cat::println();
     cat::longjmp(*p_jump_buffer, 2);
     __builtin_unreachable();
 }
 
-using Constructor = void (*)();
+using constructor = void (*)();
 extern "C" {
-extern Constructor __init_array_start;  // NOLINT
-extern Constructor __init_array_end;    // NOLINT
+extern constructor __init_array_start;  // NOLINT
+extern constructor __init_array_end;    // NOLINT
 }
 
 auto main() -> int {
@@ -25,7 +25,7 @@ auto main() -> int {
     cat::assert_handler = &test_fail;
 
     // Set the jump buffer pointer before any constructors are called.
-    cat::JmpBuffer jump_buffer;
+    cat::jmp_buffer jump_buffer;
     p_jump_buffer = &jump_buffer;
 
     int tests_passed = 0;
@@ -33,7 +33,7 @@ auto main() -> int {
 
     // Load and call all functions with the attribute
     // `[[gnu::constructor]]`. The `TEST` macro declares these functions.
-    Constructor* p_func = &__init_array_start;
+    constructor* p_func = &__init_array_start;
 
     // Call all constructor functions, including unit tests:
     for (; p_func < &__init_array_end; ++p_func) {
@@ -55,7 +55,7 @@ auto main() -> int {
         }
     }
 
-    // TODO: This will leak. An `InlineAllocator` should be used.
+    // TODO: This will leak. An `Inlineallocator` should be used.
     _ = cat::print(cat::format(pager, "\n{} tests passed.\n{} tests failed.\n",
                                tests_passed, tests_failed)
                        .or_exit());

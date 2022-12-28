@@ -2,7 +2,7 @@
 
 // TODO: This seems to segfault with optimizations enabled.
 // TODO: Should `__builtin_setjmp_reciever()` be used here?
-[[noreturn, gnu::naked]] void cat::longjmp(JmpBuffer& /* jump_buffer */,
+[[noreturn, gnu::naked]] void cat::longjmp(jmp_buffer& /* jump_buffer */,
                                            int8 /* return_value */) {
     asm volatile(R"(
         # Increment %rax if `return_value` is non-zero.

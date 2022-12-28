@@ -3,24 +3,24 @@
 namespace cat {
 
 // Forward declarations.
-template <typename Abi, typename T>
-    requires(is_same<typename Abi::Scalar, T>)
-class alignas(Abi::alignment.raw) Simd;
+template <typename abi_type, typename T>
+    requires(is_same<typename abi_type::scalar_type, T>)
+class alignas(abi_type::alignment.raw) simd;
 
-template <typename Abi, typename T>
-class alignas(Abi::alignment.raw) SimdMask;
+template <typename abi_type, typename T>
+class alignas(abi_type::alignment.raw) simd_mask;
 
-// `Avx2Abi` is a SIMD ABI that can be expected to work on most reasonable
+// `avx2_abi` is a SIMD ABI that can be expected to work on most reasonable
 // x86-64 build target.
 template <typename T>
-struct Avx2Abi {
-    using Scalar = T;
+struct avx2_abi {
+    using scalar_type = T;
 
-    // Produce a similar `Avx2Abi` for type `U`.
+    // Produce a similar `avx2_abi` for type `U`.
     template <typename U>
-    using MakeAbi = Avx2Abi<U>;
+    using make_abi_type = avx2_abi<U>;
 
-    Avx2Abi() = delete;
+    avx2_abi() = delete;
 
     static constexpr ssize size = 32;
     static constexpr ssize lanes = size / ssizeof(T);
@@ -28,30 +28,30 @@ struct Avx2Abi {
 };
 
 template <typename T>
-using Avx2Simd = Simd<Avx2Abi<T>, T>;
+using avx2_simd = simd<avx2_abi<T>, T>;
 
 template <typename T>
-using Avx2SimdMask = SimdMask<Avx2Abi<T>, T>;
+using avx2_simd_mask = simd_mask<avx2_abi<T>, T>;
 
 template <typename T>
-[[nodiscard]] auto testc(SimdMask<Avx2Abi<T>, T> left,
-                         SimdMask<Avx2Abi<T>, T> right) -> int4;
+[[nodiscard]] auto testc(simd_mask<avx2_abi<T>, T> left,
+                         simd_mask<avx2_abi<T>, T> right) -> int4;
 
 template <typename T>
-[[nodiscard]] auto testz(SimdMask<Avx2Abi<T>, T> left,
-                         SimdMask<Avx2Abi<T>, T> right) -> int4;
+[[nodiscard]] auto testz(simd_mask<avx2_abi<T>, T> left,
+                         simd_mask<avx2_abi<T>, T> right) -> int4;
 
 template <typename T>
-[[nodiscard]] auto all_of(SimdMask<Avx2Abi<T>, T> mask) -> bool;
+[[nodiscard]] auto all_of(simd_mask<avx2_abi<T>, T> mask) -> bool;
 
 template <typename T>
-[[nodiscard]] auto any_of(SimdMask<Avx2Abi<T>, T> mask) -> bool;
+[[nodiscard]] auto any_of(simd_mask<avx2_abi<T>, T> mask) -> bool;
 
 template <ssize bits_count>
     requires(bits_count > 0)
-class Bitset;
+class bitset;
 
 template <typename T>
-[[nodiscard]] auto simd_to_bitset(SimdMask<Avx2Abi<T>, T> mask) -> Bitset<32>;
+[[nodiscard]] auto simd_to_bitset(simd_mask<avx2_abi<T>, T> mask) -> bitset<32>;
 
 }  // namespace cat

@@ -6,10 +6,10 @@
 
 namespace cat {
 
-class NullAllocator : public AllocatorInterface<NullAllocator> {
+class null_allocator : public allocator_interface<null_allocator> {
   private:
     template <typename T>
-    struct NullMemoryHandle : detail::BaseMemoryHandle<T> {
+    struct null_memory_handle : detail::base_memory_handle<T> {
         // TODO: Simplify with CRTP or deducing-this.
         auto get() -> decltype(auto) {
             return *this;
@@ -22,7 +22,7 @@ class NullAllocator : public AllocatorInterface<NullAllocator> {
 
   public:
     // This allocation always fails.
-    auto allocate(ssize) -> MaybePtr<void> {
+    auto allocate(ssize) -> maybePtr<void> {
         return nullptr;
     }
 
@@ -32,13 +32,13 @@ class NullAllocator : public AllocatorInterface<NullAllocator> {
 
     // Produce a handle to allocated memory.
     template <typename T>
-    auto make_handle(T* p_handle_storage) -> NullMemoryHandle<T> {
-        return NullMemoryHandle<T>{{}, p_handle_storage};
+    auto make_handle(T* p_handle_storage) -> null_memory_handle<T> {
+        return null_memory_handle<T>{{}, p_handle_storage};
     }
 
     // Access a page(s) of virtual memory.
     template <typename T>
-    auto access(NullMemoryHandle<T>& memory) -> T* {
+    auto access(null_memory_handle<T>& memory) -> T* {
         return memory.p_storage;
     }
 
@@ -48,7 +48,7 @@ class NullAllocator : public AllocatorInterface<NullAllocator> {
     }
 
   private:
-    friend AllocatorInterface<NullAllocator>;
+    friend allocator_interface<null_allocator>;
     static constexpr bool has_pointer_stability = true;
 };
 

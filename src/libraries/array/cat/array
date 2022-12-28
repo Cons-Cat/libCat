@@ -7,36 +7,36 @@
 
 namespace cat {
 
-// An `Array` represents an array of `T` with a `constexpr` length. It stores
+// An `array` represents an array of `T` with a `constexpr` length. It stores
 // its elements within itself, so this array can be constructed on the stack.
 // It is random-access iterable.
 template <typename T, ssize length>
-class Array : public CollectionInterface<Array<T, length>, T> {
+class array : public collection_interface<array<T, length>, T> {
   public:
-    using Value = T;
+    using value_type = T;
 
-    constexpr Array() = default;
-    constexpr Array(Array<T, length> const& other_array) = default;
-    constexpr Array(Array<T, length>&& other_array) = default;
+    constexpr array() = default;
+    constexpr array(array<T, length> const& other_array) = default;
+    constexpr array(array<T, length>&& other_array) = default;
 
-    // Construct an `Array` from a variadic argument list.
+    // Construct an `array` from a variadic argument list.
     template <typename... Args>
         requires(ssizeof_pack<Args...>() == length &&
                  (is_implicitly_convertible<Args, T> && ...))
-    constexpr Array(Args&&... arguments)
+    constexpr array(Args&&... arguments)
         // Explicitly converting this type allows the first argument to coerce
         // the type for following arguments.
-        // i.e. `cat::Array shorts = {int2{0}, 1, 2};`
+        // i.e. `cat::array shorts = {int2{0}, 1, 2};`
         : storage(static_cast<T>(forward<Args>(arguments))...) {
     }
 
-    constexpr auto operator=(Array<T, length> const& other_array)
-        -> Array& = default;
+    constexpr auto operator=(array<T, length> const& other_array)
+        -> array& = default;
 
     // Converting copy assignment operator.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    constexpr auto operator=(Array<U, length> const& other_array) -> Array& {
+    constexpr auto operator=(array<U, length> const& other_array) -> array& {
         // TODO: Optimize with `copy_memory()` if T and U are relocatable.
         for (ssize i = 0; i < length; ++i) {
             this->storage[i.raw] = static_cast<T>(other_array[i]);
@@ -44,13 +44,13 @@ class Array : public CollectionInterface<Array<T, length>, T> {
         return *this;
     }
 
-    constexpr auto operator=(Array<T, length>&& other_array)
-        -> Array& = default;
+    constexpr auto operator=(array<T, length>&& other_array)
+        -> array& = default;
 
     // Converting move assignment operator.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    constexpr auto operator=(Array<U, length>&& other_array) -> Array& {
+    constexpr auto operator=(array<U, length>&& other_array) -> array& {
         // TODO: Optimize with `copy_memory()` if T and U are relocatable.
         for (ssize i = 0; i < length; ++i) {
             this->storage[i.raw] = static_cast<T>(move(other_array[i]));
@@ -60,52 +60,52 @@ class Array : public CollectionInterface<Array<T, length>, T> {
 
     // TODO: `<=>` operator.
 
-    // Construct an `Array` from a variadic argument list.
+    // Construct an `array` from a variadic argument list.
     template <typename... Args>
         requires(ssizeof_pack<Args...>() == length &&
                  (is_implicitly_convertible<Args, T> && ...))
     static constexpr auto from(Args&&... arguments) {
         // Explicitly converting this type allows the first argument to coerce
         // the type for following arguments.
-        // i.e. `cat::Array shorts = {int2{0}, 1, 2};`
-        Array<T, length> array{static_cast<T>(forward<Args>(arguments))...};
+        // i.e. `cat::array shorts = {int2{0}, 1, 2};`
+        array<T, length> array{static_cast<T>(forward<Args>(arguments))...};
         return array;
     }
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    static constexpr auto filled(U value) -> Array {
-        Array<T, length> array;
+    static constexpr auto filled(U value) -> array {
+        array<T, length> array;
         return array.fill(static_cast<T>(value));
     }
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    constexpr auto fill(U value) -> Array& {
+    constexpr auto fill(U value) -> array& {
         // TODO: This `set_memory()` segfaults with optimizations enabled. Is it
         // even necessary?
         //
         // if (!is_constant_evaluated() && sizeof(T) <= 8) {
         //     // set_memory(this->storage, value, length);
         // } else {
-        for (ssize::Raw i = 0; i < length; ++i) {
+        for (ssize::raw_type i = 0; i < length; ++i) {
             this->storage[i] = static_cast<T>(value);
         }
         // }
         return *this;
     }
 
-    // Get the non-`const` address of this `Array`'s internal array.
+    // Get the non-`const` address of this `array`'s internal array.
     [[nodiscard]] constexpr auto data() -> T* {
         return this->storage;
     }
 
-    // Get the `const` address of this `Array`'s internal array.
+    // Get the `const` address of this `array`'s internal array.
     [[nodiscard]] constexpr auto data() const -> T const* {
         return this->storage;
     }
 
-    // Get the number of elements contained in this `Array`.
+    // Get the number of elements contained in this `array`.
     [[nodiscard]] static constexpr auto size() -> ssize {
         return length;
     }
@@ -114,8 +114,8 @@ class Array : public CollectionInterface<Array<T, length>, T> {
     T storage[length.raw];
 };
 
-// Construct an `Array` as: `Array array = {0, 1, 2};`
+// Construct an `array` as: `array array = {0, 1, 2};`
 template <typename T, typename... Args>
-Array(T, Args...) -> Array<T, ssizeof_pack<Args...>() + 1>;
+array(T, Args...) -> array<T, ssizeof_pack<Args...>() + 1>;
 
 }  // namespace cat

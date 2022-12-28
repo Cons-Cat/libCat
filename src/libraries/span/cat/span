@@ -10,69 +10,69 @@
 
 namespace cat {
 
-// A `Span` is represents an array of `T` with runtime-known length. It stores
+// A `span` is represents an array of `T` with runtime-known length. It stores
 // an address and a length. It is random-access iterable.
 template <typename T>
-class Span : public CollectionInterface<Span<T>, T> {
+class span : public collection_interface<span<T>, T> {
   public:
-    constexpr Span() = default;
-    constexpr Span(Span<T> const&) = default;
-    constexpr Span(Span<T>&&) = default;
+    constexpr span() = default;
+    constexpr span(span<T> const&) = default;
+    constexpr span(span<T>&&) = default;
 
-    // Construct a `Span` as `{address, length}`.
+    // Construct a `span` as `{address, length}`.
     template <typename U>
         requires(is_implicitly_convertible<U*, T*>)
-    constexpr Span(U* p_in_data, ssize in_length)
+    constexpr span(U* p_in_data, ssize in_length)
         : p_storage(static_cast<T*>(p_in_data)), length(in_length) {
     }
 
-    // Construct a `Span` with `nullptr`.
-    constexpr Span(decltype(nullptr), ssize in_length)
+    // Construct a `span` with `nullptr`.
+    constexpr span(decltype(nullptr), ssize in_length)
         : p_storage(nullptr), length(in_length) {
     }
 
-    // Construct a `Span` between two addresses.
+    // Construct a `span` between two addresses.
     template <typename U, typename V>
         requires(
             is_implicitly_convertible<U, T>&& is_implicitly_convertible<V, T>)
     static constexpr auto between(U* p_start, V* p_end) {
-        return Span<T>{static_cast<T*>(p_start), ssize{p_end - p_start}};
+        return span<T>{static_cast<T*>(p_start), ssize{p_end - p_start}};
     }
 
     // TODO: Make an `is_contiguous_container` `concept`. It can use the
-    // `CollectionInterface` traits.
+    // `collection_interface` traits.
     /*
-constexpr Span(auto const& container)
+constexpr span(auto const& container)
     : p_storage(container.data()), length(container.size()){}
 
 template <typename U>
     requires(is_convertible<U, T>)
-constexpr Span(U&& container)
+constexpr span(U&& container)
     : p_storage(static_cast<T>(container).data()),
       length(forward<U>(container).size()){}
     */
 
-    constexpr auto operator=(Span<T> const&) -> Span<T>& = default;
-    constexpr auto operator=(Span<T>&&) -> Span<T>& = default;
+    constexpr auto operator=(span<T> const&) -> span<T>& = default;
+    constexpr auto operator=(span<T>&&) -> span<T>& = default;
 
-    // Get the non-`const` address that this `Span` starts at.
+    // Get the non-`const` address that this `span` starts at.
     [[nodiscard]] constexpr auto data() -> T* {
         return this->p_storage;
     }
 
-    // Get the `const` address that this `Span` starts at.
+    // Get the `const` address that this `span` starts at.
     [[nodiscard]] constexpr auto data() const -> T* {
         return this->p_storage;
     }
 
-    // Get the number of elements owned by this `Span`.
+    // Get the number of elements owned by this `span`.
     [[nodiscard]] constexpr auto size() const -> ssize {
         return this->length;
     }
 
     // The capacity is simply the number of elements owned.
 
-    // These are `protected` instead of `private` so that `cat::String` can
+    // These are `protected` instead of `private` so that `cat::string` can
     // access them.
   protected:
     // This is arranged as pointer, then size, to follow the ABI of Linux

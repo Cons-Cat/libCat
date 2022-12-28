@@ -7,10 +7,11 @@
 namespace cat {
 
 template <ssize max_node_bytes>
-class PoolAllocator : public AllocatorInterface<PoolAllocator<max_node_bytes>> {
+class pool_allocator
+    : public allocator_interface<pool_allocator<max_node_bytes>> {
   private:
     template <typename T>
-    struct PoolMemoryHandle : detail::BaseMemoryHandle<T> {
+    struct pool_memory_handle : detail::base_memory_handle<T> {
         T* p_storage;
 
         // TODO: Simplify with CRTP or deducing-this.
@@ -24,15 +25,15 @@ class PoolAllocator : public AllocatorInterface<PoolAllocator<max_node_bytes>> {
     };
 
   public:
-    // Allocate a `PoolAllocator` from another allocator.
+    // Allocate a `pool_allocator` from another allocator.
     static auto backed(is_stable_allocator auto& backing, ssize arena_bytes)
-        -> Maybe<PoolAllocator<max_node_bytes>> {
+        -> maybe<pool_allocator<max_node_bytes>> {
         // statement expressions.
-        Span<Node> memory = TRY(
-            backing.template alloc_multi<Node>(arena_bytes / ssizeof(Node)));
+        span<node_union> memory = TRY(backing.template alloc_multi<node_union>(
+            arena_bytes / ssizeof(node_union)));
         // TODO: Optimize that division.
 
-        PoolAllocator<max_node_bytes> pool;
+        pool_allocator<max_node_bytes> pool;
         pool.nodes = memory;
 
         // Initialize the free list.
@@ -45,7 +46,7 @@ class PoolAllocator : public AllocatorInterface<PoolAllocator<max_node_bytes>> {
     void reset() {
         // TODO: The last node can be skipped in this loop. Is it optimized
         // away?
-        for (Node& node : this->nodes) {
+        for (node_union& node : this->nodes) {
             // Set every node's pointer to the node ahead of it.
             node.p_next = &node + 1;
         }
@@ -55,18 +56,18 @@ class PoolAllocator : public AllocatorInterface<PoolAllocator<max_node_bytes>> {
     }
 
   private:
-    auto allocation_bytes(usize, ssize) -> MaybeNonZero<ssize> {
+    auto allocation_bytes(usize, ssize) -> maybe_non_zero<ssize> {
         return max_node_bytes;
     }
 
-    auto allocate(ssize) -> MaybePtr<void> {
+    auto allocate(ssize) -> maybePtr<void> {
         // If there is a next node in the free list, make that the head and
         // allocate the current head. Otherwise, do not allocate anything.
         if (this->p_head == nullptr) {
             return nullopt;
         }
 
-        Node* p_alloc = this->p_head;
+        node_union* p_alloc = this->p_head;
         this->p_head = p_head->p_next;
 
         return static_cast<void*>(p_alloc);
@@ -74,25 +75,25 @@ class PoolAllocator : public AllocatorInterface<PoolAllocator<max_node_bytes>> {
 
     void deallocate(void const* p_allocation, ssize) {
         // Swap the head for this newly freed allocation.
-        Node* p_new_head = bit_cast<Node*>(p_allocation);
+        node_union* p_new_head = bit_cast<node_union*>(p_allocation);
         p_new_head->p_next = this->p_head;
         this->p_head = p_new_head;
     }
 
     // Produce a handle to allocated memory.
     template <typename T>
-    auto make_handle(T* p_handle_storage) -> PoolMemoryHandle<T> {
-        return PoolMemoryHandle<T>{{}, p_handle_storage};
+    auto make_handle(T* p_handle_storage) -> pool_memory_handle<T> {
+        return pool_memory_handle<T>{{}, p_handle_storage};
     }
 
     // Access some memory.
     template <typename T>
-    auto access(PoolMemoryHandle<T>& memory) -> T* {
+    auto access(pool_memory_handle<T>& memory) -> T* {
         return memory.p_storage;
     }
 
     template <typename T>
-    auto access(PoolMemoryHandle<T> const& memory) const -> T const* {
+    auto access(pool_memory_handle<T> const& memory) const -> T const* {
         return memory.p_storage;
     }
 
@@ -102,15 +103,15 @@ class PoolAllocator : public AllocatorInterface<PoolAllocator<max_node_bytes>> {
     // Do not allocate larger than this size of one node.
     static constexpr ssize max_allocation_bytes = max_node_bytes;
   private:
-    friend AllocatorInterface<PoolAllocator>;
+    friend allocator_interface<pool_allocator>;
 
-    union Node {
-        Node* p_next = nullptr;
-        Byte storage[max_node_bytes.raw];
+    union node_union {
+        node_union* p_next = nullptr;
+        byte storage[max_node_bytes.raw];
     };
 
-    Span<Node> nodes;
-    Node* p_head;
+    span<node_union> nodes;
+    node_union* p_head;
 };
 
 }  // namespace cat

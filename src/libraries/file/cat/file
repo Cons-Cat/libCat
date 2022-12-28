@@ -8,7 +8,7 @@
 
 namespace cat {
 
-enum class FileOpenMode {
+enum class Fileopen_mode {
     read,
     write,
     append
@@ -20,19 +20,19 @@ enum class FileSeekMode {
     end
 };
 
-class RawFile {
+class raw_typeFile {
   public:
-    constexpr RawFile() = default;
-    constexpr RawFile(RawFile const&) = default;
-    constexpr RawFile(RawFile&&) = default;
+    constexpr raw_typeFile() = default;
+    constexpr raw_typeFile(raw_typeFile const&) = default;
+    constexpr raw_typeFile(raw_typeFile&&) = default;
 
-    auto open(String const path, FileOpenMode mode = FileOpenMode::read)
-        -> Scaredy<void, nix::LinuxError> {
-        nix::OpenMode open_mode = nix::OpenMode::read_write;
-        nix::OpenFlags open_flags = nix::OpenFlags::path;
+    auto open(string const path, Fileopen_mode mode = Fileopen_mode::read)
+        -> scaredy<void, nix::linux_error> {
+        nix::open_mode open_mode = nix::open_mode::read_write;
+        nix::open_flags open_flags = nix::open_flags::path;
 
         // Try to open a file from a path.
-        Scaredy open_result =
+        scaredy open_result =
             nix::sys_open(path.data(), open_flags, open_mode);
         if (!open_result.has_value()) {
             return open_result.error();
@@ -42,8 +42,8 @@ class RawFile {
 
         // TODO: Is this failable?
         // Get the status of that opened file.
-        Scaredy fstat_result = nix::sys_fstat(file_descriptor);
-        nix::FileStatus status = fstat_result.value();
+        scaredy fstat_result = nix::sys_fstat(file_descriptor);
+        nix::file_status status = fstat_result.value();
         this->file_size = status.file_size;
         this->block_size = status.block_size;
     }
@@ -59,20 +59,20 @@ class RawFile {
     constexpr auto is_readable() -> bool {
         // If `open_mode` has either read bitflags set:
         return (to_underlying(this->open_mode) &
-                (to_underlying(nix::OpenMode::read_only) |
-                 to_underlying(nix::OpenMode::read_write))) != 0;
+                (to_underlying(nix::open_mode::read_only) |
+                 to_underlying(nix::open_mode::read_write))) != 0;
     }
 
     constexpr auto is_writeable() -> bool {
         // If `open_mode` has either write bitflags set:
         return (to_underlying(this->open_mode) &
-                (to_underlying(nix::OpenMode::write_only) |
-                 to_underlying(nix::OpenMode::read_write))) != 0;
+                (to_underlying(nix::open_mode::write_only) |
+                 to_underlying(nix::open_mode::read_write))) != 0;
     }
 
   private:
-    nix::FileDescriptor file_descriptor = -1;
-    nix::OpenMode open_mode;
+    nix::file_descriptor file_descriptor = -1;
+    nix::open_mode open_mode;
     int8 file_size;
     int8 block_size;
 };

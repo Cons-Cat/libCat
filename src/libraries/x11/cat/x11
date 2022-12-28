@@ -15,9 +15,9 @@ namespace x11 {
 
 // TODO: Handle `$DISPLAY`.
 constexpr auto socket_path =
-    cat::StaticString<108>::padded("/tmp/.X11-unix/X0");
+    cat::fixed_string<108>::padded("/tmp/.X11-unix/X0");
 
-enum class OperationCode : unsigned char {
+enum class operation_code : unsigned char {
     error = 0,
     create_window = 1,
     change_window_attributes = 2,
@@ -141,7 +141,7 @@ enum class OperationCode : unsigned char {
     no_operation = 120
 };
 
-enum class EventCode : unsigned char {
+enum class event_code : unsigned char {
     key_press = 2,
     key_release = 3,
     button_press = 4,
@@ -177,10 +177,10 @@ enum class EventCode : unsigned char {
     mapping_notify = 34,
 };
 
-enum class KeyCode : unsigned char {
+enum class key_code : unsigned char {
 };
 
-struct [[gnu::packed]] EventMask {
+struct [[gnu::packed]] event_mask {
     bool key_press = false;
     bool key_release = false;
     bool button_press = false;
@@ -209,7 +209,7 @@ struct [[gnu::packed]] EventMask {
     unsigned padding : 7 = 0u;
 };
 
-struct Error {
+struct error_code {
     uint1 response_operation = static_cast<unsigned char>(0);
     enum : unsigned char {
         request = 1,
@@ -233,83 +233,83 @@ struct Error {
     uint2 sequence;
     uint4 resource_resource_id;
     uint2 minor_operation;
-    OperationCode major_operation;
+    operation_code major_operation;
   private:
-    uint1 padding[21];  // NOLINT
+    [[maybe_unused]] uint1 padding[21];
   public:
     uint4 full_sequence;
 };
 
-struct WindowResource {
-    WindowResource() = default;
-    WindowResource(uint4 input) {
+struct window_resource {
+    window_resource() = default;
+    window_resource(uint4 input) {
         this->value = input;
     }
 
     uint4 value;
 };
 
-struct Cookie {
+struct cookie {
     uint4 sequence;
 };
 
-struct Event {
+struct event {
     uint2 response_type;
     uint2 sequence;
     uint4 length;
-    EventCode event_type;
+    event_code event_type;
   private:
-    uint1 padding[23];  // NOLINT
+    [[maybe_unused]] uint1 padding[23];
   public:
     uint4 full_sequence;
 };
 
 // TODO: Make this a span.
-struct IoVirtualization {
+struct io_virtualization {
     void* p_base;
     ssize length;
 };
 
-// Every X client request begins with an `x11::ClientRequestHeader`.
-struct ClientRequestHeader {
-    OperationCode operation;
+// Every X client request begins with an `x11::client_request_header`.
+struct client_request_header {
+    operation_code operation;
     // `message_length` represents a multiple of four bytes.
     uint2 message_length;
 };
 
-// Every X server reply begins with an `x11::ServerReplyHeader`.
-struct ServerReplyHeader {
-    enum class SuccessCode : unsigned char {
+// Every X server reply begins with an `x11::server_reply_header`.
+struct server_reply_header {
+    enum class success_code_type : unsigned char {
         failure = 0,
         success = 1
     } success_code;
   private:
-    int1 padding;  // NOLINT
+    [[maybe_unused]] int1 padding;
   public:
-    // This field is only initialized if `SuccessCode` is `failed`.
-    cat::Array<uint2, 2> x_version;
+    // This field is only initialized if `success_code_type` is `failed`.
+    cat::array<uint2, 2> x_version;
     // `message_length` represents a multiple of four bytes.
     uint2 message_length;
 };
 
 // This packet is used to initiate a connection handshake with an X server.
-struct ConnectionRequestInfo {
+struct connection_request_info {
     char endianness = is_target_little_endian ? 'l' : 'B';
   private:
-    int1 padding_1;  // NOLINT
+    [[maybe_unused]] int1 padding_1;
   public:
     // This should almost always be `{11, 0}`.
-    cat::Array<uint2, 2> x_version = {static_cast<unsigned char>(11),
+    cat::array<uint2, 2> x_version = {static_cast<unsigned char>(11),
                                       static_cast<unsigned char>(0)};
     // No explicit protocol is specified if this is `0`.
     uint2 authorization_protocol_length = static_cast<unsigned char>(0);
     // No explicit protocol is specified if this is `0`.
     uint2 authorization_data_length = static_cast<unsigned char>(0);
   private:
-    int2 padding_2;  // NOLINT
+    [[maybe_unused]] int2 padding_2;
 };
 
-struct ConnectionResponseInfo {
+struct connection_response_info {
     // The version of an X server that has been connected to.
     uint4 release_number;
     // TODO: These should be bitsets.
@@ -320,11 +320,11 @@ struct ConnectionResponseInfo {
     // Maximum length of a request that this server can handle.
     uint2 request_maximum_length;
     // The number of root windows hosted by this server. These are transmitted
-    // as `RootWindowPacket`s imillimetersediately after the pixel map formats.
-    // This can determine the number of screens held by the server.
+    // as `root_window_packet`s imillimetersediately after the pixel map
+    // formats. This can determine the number of screens held by the server.
     uint1 root_windows_count;
     // The number of pixel map formats available for this server. These are
-    // transmitted as `PixelMapFormatPacket`s imillimetersediately after this
+    // transmitted as `pixel_map_format_packet`s imillimetersediately after this
     // struct's data.
     uint1 pixel_map_formats_count;
     // Endianness of images, specified by the server.
@@ -335,25 +335,25 @@ struct ConnectionResponseInfo {
     // These will be `8`, `16`, or `32`.
     uint1 scanline_unit, scanline_padding;
     // This is the smallest key code the server will transmit.
-    KeyCode keycode_minimum;
+    key_code keycode_minimum;
     // This is the largest key code the server will transmit.
-    KeyCode keycode_maximum;
+    key_code keycode_maximum;
   private:
-    int4 padding;  // NOLINT
+    [[maybe_unused]] int4 padding;
 };
 
-struct PixelMapFormatPacket {
+struct pixel_map_format_packet {
     uint1 color_depth;
     uint1 bits_per_pixel;
     uint1 scanline_padding;
   private:
-    uint1 padding[5];  // NOLINT
+    [[maybe_unused]] uint1 padding[5];
 };
 
-// There is one root window per screen, so multiple `RootWindowPacket`s will be
-// recieved if there are multiple screens.
-struct RootWindowPacket {
-    WindowResource window_id;
+// There is one root window per screen, so multiple `root_window_packet`s will
+// be recieved if there are multiple screens.
+struct root_window_packet {
+    window_resource window_id;
     uint4 default_colormap;
     uint4 white_pixel, black_pixel;
     uint4 input_mask;
@@ -366,51 +366,51 @@ struct RootWindowPacket {
     uint1 backing_store_state;
     uint1 save_unders;
     uint1 root_depth;
-    // The number of `DepthPacket`s transmitted imillimetersediately after this
+    // The number of `depth_packet`s transmitted imillimetersediately after this
     // packet.
     uint1 depths_count;
 };
 
-struct DepthPacket {
+struct depth_packet {
     uint1 depth;
   private:
-    uint1 padding_1;  // NOLINT
+    [[maybe_unused]] uint1 padding_1;
   public:
-    // The number of `VisualPacket`s transmitted imillimetersediately after this
-    // packet.
+    // The number of `visual_packet`s transmitted imillimetersediately after
+    // this packet.
     uint2 visuals_count;
   private:
-    uint4 padding_2;  // NOLINT
+    [[maybe_unused]] uint4 padding_2;
 };
 
-struct VisualPacket {
+struct visual_packet {
     uint1 group;
     uint1 bits_per_rgb;
     uint2 colormap_entries;
     uint4 mask_red, mask_green, mask_blue;
   private:
-    uint4 padding;  // NOLINT
+    [[maybe_unused]] uint4 padding;
 };
 
-struct Connection {
-    nix::FileDescriptor socket_descriptor;
-    x11::ServerReplyHeader header;
-    x11::ConnectionResponseInfo* p_setup;
+struct connection {
+    nix::file_descriptor socket_descriptor;
+    x11::server_reply_header header;
+    x11::connection_response_info* p_setup;
     // TODO: A `p_vendor_name` could go here. Consider it?
-    x11::PixelMapFormatPacket* p_pixel_map_formats;
-    x11::RootWindowPacket* p_root_windows;
-    x11::DepthPacket* p_depths;
-    x11::VisualPacket* p_visuals;
+    x11::pixel_map_format_packet* p_pixel_map_formats;
+    x11::root_window_packet* p_root_windows;
+    x11::depth_packet* p_depths;
+    x11::visual_packet* p_visuals;
 };
 
 // TODO: Propagate errors instead of panicking.
 auto handshake(cat::is_allocator auto& allocator,
-               cat::SocketUnix<cat::SocketType::stream>& socket)
-    -> cat::Maybe<x11::Connection> {
-    x11::Connection x_connection;
+               cat::socket_unix<cat::socket_type::stream>& socket)
+    -> cat::maybe<x11::connection> {
+    x11::connection x_connection;
 
     // Send a request with default-initialized fields.
-    socket.send_struct(x11::ConnectionRequestInfo()).or_exit();
+    socket.send_struct(x11::connection_request_info()).or_exit();
 
     x_connection.socket_descriptor = socket.descriptor;
     // TODO: Is the return of `.recieve` important here?
@@ -419,7 +419,7 @@ auto handshake(cat::is_allocator auto& allocator,
 
     // TODO: This will fail if Xauth is enabled. This must handle X11 cookies.
     if (x_connection.header.success_code ==
-        x11::ServerReplyHeader::SuccessCode::failure) {
+        x11::server_reply_header::success_code_type::failure) {
         // return Failure(x_connection.header.success_code);
         return nullopt;
     }
@@ -427,7 +427,7 @@ auto handshake(cat::is_allocator auto& allocator,
     // A dynamic allocation must be made because the total size of all
     // recieved packets is unknown and potentially a very large amount.
     // TODO: Deallocate this somehow.
-    auto memory = TRY(allocator.template alloc_multi<ConnectionResponseInfo>(
+    auto memory = TRY(allocator.template alloc_multi<connection_response_info>(
         // TODO: Remove `.raw`.
         x_connection.header.message_length.raw * 4));
 
@@ -445,26 +445,27 @@ auto handshake(cat::is_allocator auto& allocator,
     // TODO: Use `intptr`.
     char* p_iterator = static_cast<char*>(
         static_cast<void*>(x_connection.p_setup +
-                           sizeof(x11::ConnectionResponseInfo)
+                           sizeof(x11::connection_response_info)
                            // For now, skip past the vendor name string.
                            + x_connection.p_setup->vendor_string_length));
 
     x_connection.p_pixel_map_formats =
-        static_cast<x11::PixelMapFormatPacket*>(static_cast<void*>(p_iterator));
-    p_iterator += sizeof(x11::PixelMapFormatPacket) *
+        static_cast<x11::pixel_map_format_packet*>(
+            static_cast<void*>(p_iterator));
+    p_iterator += sizeof(x11::pixel_map_format_packet) *
                   x_connection.p_setup->pixel_map_formats_count.raw;
 
     x_connection.p_root_windows =
-        static_cast<x11::RootWindowPacket*>(static_cast<void*>(p_iterator));
-    p_iterator += sizeof(x11::RootWindowPacket) *
+        static_cast<x11::root_window_packet*>(static_cast<void*>(p_iterator));
+    p_iterator += sizeof(x11::root_window_packet) *
                   x_connection.p_setup->root_windows_count.raw;
 
     x_connection.p_depths =
-        static_cast<x11::DepthPacket*>(static_cast<void*>(p_iterator));
-    p_iterator += sizeof(x11::DepthPacket);
+        static_cast<x11::depth_packet*>(static_cast<void*>(p_iterator));
+    p_iterator += sizeof(x11::depth_packet);
 
     x_connection.p_visuals =
-        static_cast<x11::VisualPacket*>(static_cast<void*>(p_iterator));
+        static_cast<x11::visual_packet*>(static_cast<void*>(p_iterator));
 
     return x_connection;
 }
@@ -472,16 +473,16 @@ auto handshake(cat::is_allocator auto& allocator,
 // TODO: Improve error handling. Union X11 errors and Linux errors.
 // Attempt to connect to an X server over local sockets.
 auto initiate_connection(cat::is_allocator auto& allocator)
-    -> cat::Maybe<x11::Connection> {
-    cat::SocketUnix<cat::SocketType::stream> socket;
+    -> cat::maybe<x11::connection> {
+    cat::socket_unix<cat::socket_type::stream> socket;
     socket.path_name = x11::socket_path;
 
-    cat::Maybe result_1 = socket.create();
+    cat::maybe result_1 = socket.create();
     if (!result_1.has_value()) {
         return nullopt;
     }
 
-    cat::Maybe result_2 = socket.connect();
+    cat::maybe result_2 = socket.connect();
     if (!result_2.has_value()) {
         return nullopt;
     }
@@ -489,21 +490,25 @@ auto initiate_connection(cat::is_allocator auto& allocator)
     return x11::handshake(allocator, socket);
 }
 
-struct CreateWindowRequestInfo {
-    ClientRequestHeader header = {.operation = OperationCode::create_window,
-                                  .message_length = static_cast<unsigned short>(
-                                      sizeof(CreateWindowRequestInfo) / 4)};
+struct create_window_request_info {
+    client_request_header header = {
+        .operation = operation_code::create_window,
+        .message_length = static_cast<unsigned short>(
+            sizeof(create_window_request_info) / 4)};
+
     uint1 window_depth;
-    WindowResource window_id, parent_id;
+    window_resource window_id, parent_id;
     int2 x, y;
     uint2 width, height, border_thickness;
-    enum class WindowClass : unsigned char {
+
+    enum class window_class_type : unsigned char {
         input_output = 0,
         input_only = 1,
         copy_from_parent = 2
     } window_class;
+
     uint4 visual_resource_id;
-    uint4 value_mask;  // TODO: Make a `Bitset` type.
+    uint4 value_mask;  // TODO: Use a `cat::bitset`.
     // TODO: Confirm that this field should exist.
     uint4 const* p_values;
 };

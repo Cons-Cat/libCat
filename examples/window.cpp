@@ -2,9 +2,9 @@
 #include <cat/x11>
 
 auto main() -> int {
-    cat::PageAllocator allocator;
+    cat::page_allocator allocator;
     // TODO: Work on this more.
-    [[maybe_unused]] x11::Connection connection =
+    [[maybe_unused]] x11::connection x_connection =
         x11::initiate_connection(allocator).or_exit(
             "Failed to create an X context!");
 }

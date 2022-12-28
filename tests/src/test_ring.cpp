@@ -7,12 +7,12 @@
 
 TEST(test_ring) {
     // Initialize an allocator.
-    cat::PageAllocator paging_allocator;
-    paging_allocator.reset();
-    auto page = paging_allocator.opq_alloc_multi<cat::Byte>(4_ki - 32).or_exit();
-    defer(paging_allocator.free(page);)
+    cat::page_allocator pager;
+    pager.reset();
+    auto page = pager.opq_alloc_multi<cat::byte>(4_ki - 32).or_exit();
+    defer(pager.free(page);)
     auto allocator =
-        cat::LinearAllocator::backed_handle(paging_allocator, page);
+        cat::linear_allocator::backed_handle(pager, page);
 
     cat::Ring<int4> ring_int4;
     cat::verify(ring_int4.size() == 0);

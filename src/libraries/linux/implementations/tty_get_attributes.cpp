@@ -1,10 +1,10 @@
 #include <cat/linux>
 
-auto nix::tty_get_attributes(FileDescriptor terminal)
-    -> cat::Scaredy<TtyIoSerial, LinuxError> {
+auto nix::tty_get_attributes(file_descriptor terminal)
+    -> cat::scaredy<TtyIoSerial, linux_error> {
     TtyIoSerial configuration;
-    cat::Scaredy result =
-        sys_ioctl(terminal, IoRequests::tcgets, &configuration);
+    cat::scaredy result =
+        sys_ioctl(terminal, io_requests::tcgets, &configuration);
     if (result.has_value()) {
         return configuration;
     }

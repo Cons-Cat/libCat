@@ -19,18 +19,18 @@ namespace cat {
 // TODO: Support `__sanitizer_annotate_contiguous_container`.
 
 template <typename T>
-class Vector : public CollectionInterface<Vector<T>, T> {
+class vector : public collection_interface<vector<T>, T> {
   public:
-    constexpr Vector()
+    constexpr vector()
         : p_storage(nullptr), current_size(0), current_capacity(0) {
         if consteval {
             this->p_storage = nullptr;
         }
     };
 
-    constexpr Vector(Vector<T>&& other_vector) = default;
+    constexpr vector(vector<T>&& other_vector) = default;
 
-    constexpr ~Vector() {
+    constexpr ~vector() {
         if consteval {
             delete[] this->p_storage;
         }
@@ -41,12 +41,12 @@ class Vector : public CollectionInterface<Vector<T>, T> {
     // factory member functions.
     [[deprecated(
         "The copy-constructor is hidden. Use `.clone()` "
-        "instead!")]] constexpr Vector(Vector<T> const& other_vector) = default;
+        "instead!")]] constexpr vector(vector<T> const& other_vector) = default;
 
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
     // context.
     constexpr auto increase_storage(is_stable_allocator auto& allocator)
-        -> Maybe<void> {
+        -> maybe<void> {
         ssize minimum_capacity;
         if (this->current_capacity > 0) [[likely]] {
             minimum_capacity = this->current_capacity * 2;
@@ -60,7 +60,7 @@ class Vector : public CollectionInterface<Vector<T>, T> {
         // that.
         if consteval {
             T* p_new = new T[minimum_capacity.raw];
-            for (ssize::Raw i = 0; i < this->current_size; ++i) {
+            for (ssize::raw_type i = 0; i < this->current_size; ++i) {
                 construct_at(p_new + i, move(this->p_storage[i]));
             }
             for (ssize i = this->current_size + 1; i < minimum_capacity; ++i) {
@@ -85,17 +85,17 @@ class Vector : public CollectionInterface<Vector<T>, T> {
   public:
     [[nodiscard]] static constexpr auto reserved(
         is_stable_allocator auto& allocator, ssize capacity)
-        -> Maybe<Vector<T>> {
-        Vector<T> new_vector;
+        -> maybe<vector<T>> {
+        vector<T> new_vector;
         TRY(new_vector.reserve(allocator, capacity));
         return new_vector;
     }
 
     [[nodiscard]] static constexpr auto filled(
         is_stable_allocator auto& allocator, ssize count, T const& value)
-        -> Maybe<Vector<T>> {
-        Vector<T> new_vector;
-        Maybe result = new_vector.reserve(allocator, count);
+        -> maybe<vector<T>> {
+        vector<T> new_vector;
+        maybe result = new_vector.reserve(allocator, count);
         if (!result.has_value()) {
             return nullopt;
         }
@@ -107,12 +107,12 @@ class Vector : public CollectionInterface<Vector<T>, T> {
         return new_vector;
     }
 
-    // Get the non-`const` address of this `Vector`'s internal array.
+    // Get the non-`const` address of this `vector`'s internal array.
     [[nodiscard]] constexpr auto data() -> T* {
         return &(this->p_storage[0]);
     }
 
-    // Get the `const` address of this `Vector`'s internal array.
+    // Get the `const` address of this `vector`'s internal array.
     [[nodiscard]] constexpr auto data() const -> T const* {
         return &(this->p_storage[0]);
     }
@@ -128,7 +128,7 @@ class Vector : public CollectionInterface<Vector<T>, T> {
     // Try to allocate storage for at least `minimum_capacity` number of `T`s.
     [[nodiscard]] constexpr auto reserve(is_stable_allocator auto& allocator,
                                          ssize minimum_capacity)
-        -> Maybe<void> {
+        -> maybe<void> {
         if (minimum_capacity > this->current_capacity) {
             // TODO: I am fairly certain this is a bug in GCC. This works around
             // that.
@@ -156,9 +156,9 @@ class Vector : public CollectionInterface<Vector<T>, T> {
         return monostate;
     }
 
-    // Try to change the size of this `Vector`.
+    // Try to change the size of this `vector`.
     [[nodiscard]] constexpr auto resize(is_stable_allocator auto& allocator,
-                                        ssize size) -> Maybe<void> {
+                                        ssize size) -> maybe<void> {
         if (size > this->current_capacity) {
             // This sets `this->current_capacity` and `this->p_storage`.
             TRY(this->reserve(allocator, size));
@@ -170,11 +170,11 @@ class Vector : public CollectionInterface<Vector<T>, T> {
         return monostate;
     }
 
-    // Deep-copy the contents of this `Vector`.
+    // Deep-copy the contents of this `vector`.
     [[nodiscard]] constexpr auto clone(
-        is_stable_allocator auto& allocator) const& -> Maybe<Vector<T>> {
-        Vector<T> new_vector =
-            TRY(Vector<T>::reserved(allocator, this->current_capacity));
+        is_stable_allocator auto& allocator) const& -> maybe<vector<T>> {
+        vector<T> new_vector =
+            TRY(vector<T>::reserved(allocator, this->current_capacity));
         new_vector.current_size = this->current_size;
         relocate(this->begin(), this->end(), new_vector.begin());
 
@@ -187,7 +187,7 @@ class Vector : public CollectionInterface<Vector<T>, T> {
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]] constexpr auto push_back(is_stable_allocator auto& allocator,
-                                           U const& value) -> Maybe<void> {
+                                           U const& value) -> maybe<void> {
         if (this->current_size + 1 > this->current_capacity) {
             TRY(this->increase_storage(allocator));
         }

@@ -65,7 +65,7 @@ namespace to_chars_detail {
     // See https://jk-jeon.github.io/posts/2022/02/jeaiii-algorithm/ for more
     // explanation.
 
-    JKJ_FORCEINLINE static void print_9_digits(uint4::Raw s32, int& exponent,
+    JKJ_FORCEINLINE static void print_9_digits(uint4::raw_type s32, int& exponent,
                                                char*& buffer) noexcept {
         if (s32 < 100) {
             if (s32 < 10) {
@@ -85,7 +85,7 @@ namespace to_chars_detail {
                 if (s32 < 1'0000) {
                     // 3 or 4 digits.
                     // 42949673 = ceil(2^32 / 100)
-                    auto prod = s32 * uint8::Raw(42949673);
+                    auto prod = s32 * uint8::raw_type(42949673);
                     auto two_digits = int(prod >> 32);
 
                     // 3 digits.
@@ -93,7 +93,7 @@ namespace to_chars_detail {
                         buffer[0] = char(two_digits + '0');
                         buffer[1] = '.';
                         exponent += 2;
-                        prod = uint4::Raw(prod) * uint8::Raw(100);
+                        prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
                                           buffer + 2, 2);
                         buffer += 4;
@@ -104,7 +104,7 @@ namespace to_chars_detail {
                         buffer[1] = '.';
                         buffer[2] = radix_100_table[two_digits * 2 + 1];
                         exponent += 3;
-                        prod = uint4::Raw(prod) * uint8::Raw(100);
+                        prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
                                           buffer + 3, 2);
                         buffer += 5;
@@ -112,7 +112,7 @@ namespace to_chars_detail {
                 } else {
                     // 5 or 6 digits.
                     // 429497 = ceil(2^32 / 1'0000)
-                    auto prod = s32 * uint8::Raw(429497);
+                    auto prod = s32 * uint8::raw_type(429497);
                     auto two_digits = int(prod >> 32);
 
                     // 5 digits.
@@ -120,10 +120,10 @@ namespace to_chars_detail {
                         buffer[0] = char(two_digits + '0');
                         buffer[1] = '.';
                         exponent += 4;
-                        prod = uint4::Raw(prod) * uint8::Raw(100);
+                        prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
                                           buffer + 2, 2);
-                        prod = uint4::Raw(prod) * uint8::Raw(100);
+                        prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
                                           buffer + 4, 2);
                         buffer += 6;
@@ -134,10 +134,10 @@ namespace to_chars_detail {
                         buffer[1] = '.';
                         buffer[2] = radix_100_table[two_digits * 2 + 1];
                         exponent += 5;
-                        prod = uint4::Raw(prod) * uint8::Raw(100);
+                        prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
                                           buffer + 3, 2);
-                        prod = uint4::Raw(prod) * uint8::Raw(100);
+                        prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
                                           buffer + 5, 2);
                         buffer += 7;
@@ -147,7 +147,7 @@ namespace to_chars_detail {
                 if (s32 < 1'0000'0000) {
                     // 7 or 8 digits.
                     // 281474978 = ceil(2^48 / 100'0000) + 1
-                    auto prod = s32 * uint8::Raw(281474978);
+                    auto prod = s32 * uint8::raw_type(281474978);
                     prod >>= 16;
                     auto two_digits = int(prod >> 32);
 
@@ -156,13 +156,13 @@ namespace to_chars_detail {
                         buffer[0] = char(two_digits + '0');
                         buffer[1] = '.';
                         exponent += 6;
-                        prod = uint4::Raw(prod) * uint8::Raw(100);
+                        prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
                                           buffer + 2, 2);
-                        prod = uint4::Raw(prod) * uint8::Raw(100);
+                        prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
                                           buffer + 4, 2);
-                        prod = uint4::Raw(prod) * uint8::Raw(100);
+                        prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
                                           buffer + 6, 2);
                         buffer += 8;
@@ -173,13 +173,13 @@ namespace to_chars_detail {
                         buffer[1] = '.';
                         buffer[2] = radix_100_table[two_digits * 2 + 1];
                         exponent += 7;
-                        prod = uint4::Raw(prod) * uint8::Raw(100);
+                        prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
                                           buffer + 3, 2);
-                        prod = uint4::Raw(prod) * uint8::Raw(100);
+                        prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
                                           buffer + 5, 2);
-                        prod = uint4::Raw(prod) * uint8::Raw(100);
+                        prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
                                           buffer + 7, 2);
                         buffer += 9;
@@ -187,22 +187,22 @@ namespace to_chars_detail {
                 } else {
                     // 9 digits.
                     // 1441151882 = ceil(2^57 / 1'0000'0000) + 1
-                    auto prod = s32 * uint8::Raw(1441151882);
+                    auto prod = s32 * uint8::raw_type(1441151882);
                     prod >>= 25;
                     buffer[0] = char(int(prod >> 32) + '0');
                     buffer[1] = '.';
                     exponent += 8;
 
-                    prod = uint4::Raw(prod) * uint8::Raw(100);
+                    prod = uint4::raw_type(prod) * uint8::raw_type(100);
                     copy_memory_small(radix_100_table + int(prod >> 32) * 2,
                                       buffer + 2, 2);
-                    prod = uint4::Raw(prod) * uint8::Raw(100);
+                    prod = uint4::raw_type(prod) * uint8::raw_type(100);
                     copy_memory_small(radix_100_table + int(prod >> 32) * 2,
                                       buffer + 4, 2);
-                    prod = uint4::Raw(prod) * uint8::Raw(100);
+                    prod = uint4::raw_type(prod) * uint8::raw_type(100);
                     copy_memory_small(radix_100_table + int(prod >> 32) * 2,
                                       buffer + 6, 2);
-                    prod = uint4::Raw(prod) * uint8::Raw(100);
+                    prod = uint4::raw_type(prod) * uint8::raw_type(100);
                     copy_memory_small(radix_100_table + int(prod >> 32) * 2,
                                       buffer + 8, 2);
                     buffer += 10;
@@ -212,7 +212,7 @@ namespace to_chars_detail {
     }
 
     template <>
-    char* to_chars<float, default_float_traits<float>>(uint4::Raw s32,
+    char* to_chars<float, default_float_traits<float>>(uint4::raw_type s32,
                                                        int exponent,
                                                        char* buffer) noexcept {
         // Print significand.
@@ -241,16 +241,16 @@ namespace to_chars_detail {
 
     template <>
     char* to_chars<double, default_float_traits<double>>(
-        uint8::Raw const significand, int exponent, char* buffer) noexcept {
-        uint4::Raw first_block, second_block;
+        uint8::raw_type const significand, int exponent, char* buffer) noexcept {
+        uint4::raw_type first_block, second_block;
         bool have_second_block;
 
         if (significand < 10'0000'0000) {
-            first_block = uint4::Raw(significand);
+            first_block = uint4::raw_type(significand);
             have_second_block = false;
         } else {
-            first_block = uint4::Raw(significand / 1'0000'0000);
-            second_block = uint4::Raw(significand) - first_block * 1'0000'0000;
+            first_block = uint4::raw_type(significand / 1'0000'0000);
+            second_block = uint4::raw_type(significand) - first_block * 1'0000'0000;
             have_second_block = true;
         }
 
@@ -260,20 +260,20 @@ namespace to_chars_detail {
         // Print second block if necessary.
         if (have_second_block) {
             // 281474978 = ceil(2^48 / 100'0000) + 1
-            auto prod = second_block * uint8::Raw(281474978);
+            auto prod = second_block * uint8::raw_type(281474978);
             prod >>= 16;
             prod += 1;
             exponent += 8;
 
             copy_memory_small(radix_100_table + int(prod >> 32) * 2, buffer + 0,
                               2);
-            prod = uint4::Raw(prod) * uint8::Raw(100);
+            prod = uint4::raw_type(prod) * uint8::raw_type(100);
             copy_memory_small(radix_100_table + int(prod >> 32) * 2, buffer + 2,
                               2);
-            prod = uint4::Raw(prod) * uint8::Raw(100);
+            prod = uint4::raw_type(prod) * uint8::raw_type(100);
             copy_memory_small(radix_100_table + int(prod >> 32) * 2, buffer + 4,
                               2);
-            prod = uint4::Raw(prod) * uint8::Raw(100);
+            prod = uint4::raw_type(prod) * uint8::raw_type(100);
             copy_memory_small(radix_100_table + int(prod >> 32) * 2, buffer + 6,
                               2);
             buffer += 8;
@@ -292,9 +292,9 @@ namespace to_chars_detail {
         if (exponent >= 100) {
             // d1 = exponent / 10; d2 = exponent % 10;
             // 6554 = ceil(2^16 / 10)
-            auto prod = uint4::Raw(exponent) * uint4::Raw(6554);
+            auto prod = uint4::raw_type(exponent) * uint4::raw_type(6554);
             auto d1 = prod >> 16;
-            prod = uint2::Raw(prod) * uint4::Raw(5);  // * 10
+            prod = uint2::raw_type(prod) * uint4::raw_type(5);  // * 10
             auto d2 = prod >> 15;                     // >> 16
             copy_memory_small(&radix_100_table[d1 * 2], buffer, 2);
             buffer[2] = char('0' + d2);

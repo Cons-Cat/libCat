@@ -5,14 +5,14 @@
 #include <cat/linux>
 
 template <typename T, typename... Args>
-auto nix::syscall(ssize call, Args... parameters) -> nix::ScaredyLinux<T>
+auto nix::syscall(ssize call, Args... parameters) -> nix::scaredy_nix<T>
     requires(sizeof...(Args) < 7)
 {
     static constexpr unsigned long length = sizeof...(Args);
-    cat::NoType arguments[length] = {parameters...};
+    cat::no_type arguments[length] = {parameters...};
 
     // TODO: Make this a `union` of reasonable types.
-    cat::NoType result;
+    cat::no_type result;
 
     if constexpr (length == 0) {
         result = nix::syscall0(call);
@@ -34,7 +34,7 @@ auto nix::syscall(ssize call, Args... parameters) -> nix::ScaredyLinux<T>
     }
 
     if (static_cast<ssize>(result) < 0) {
-        return static_cast<LinuxError>(result);
+        return static_cast<linux_error>(result);
     }
     if constexpr (cat::is_void<T>) {
         return monostate;

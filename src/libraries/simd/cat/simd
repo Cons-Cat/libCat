@@ -21,337 +21,329 @@
 
 namespace cat {
 
-// ABI tags for `Simd`. These are used for providing an extensible API by
-// overloading functions for `Simd` objects with different ABI tags, as well as
-// providing a type-safe API by requiring compatible ABI tags between `Simd`
+// ABI tags for `simd`. These are used for providing an extensible API by
+// overloading functions for `simd` objects with different ABI tags, as well as
+// providing a type-safe API by requiring compatible ABI tags between `simd`
 // operands.
 
-// `FixedSizeAbi` is a portable SIMD ABI that can be expected to work across
+// `fixed_size_abi` is a portable SIMD ABI that can be expected to work across
 // any supported build target, so long as `in_lanes` does not exceed that
 // target's maximum vector size.
 template <typename T, ssize in_lanes>
-struct FixedSizeAbi {
-    using Scalar = T;
+struct fixed_size_abi {
+    using scalar_type = T;
 
-    // Produce a similar `FixedSizeAbi` for type `U`.
+    // Produce a similar `fixed_size_abi` for type `U`.
     template <typename U>
-    using MakeAbi = FixedSizeAbi<U, in_lanes * ssizeof(T) / ssizeof(U)>;
+    using make_abi_type = fixed_size_abi<U, in_lanes * ssizeof(T) / ssizeof(U)>;
 
-    FixedSizeAbi() = delete;
+    fixed_size_abi() = delete;
 
-    // TODO: Select `TargetAbi` portably.
-    using TargetAbi = Avx2Abi<T>;
+    // TODO: Select `target_abi` portably.
+    using target_abi = avx2_abi<T>;
     static constexpr ssize lanes = in_lanes;
     static constexpr ssize size = lanes * ssizeof(T);
     // TODO: Make the alignment generally correct and efficient.
     static constexpr usize alignment = 32u;
 };
 
-// `NativeAbi` is a portable SIMD ABI that can be expected to work on any
+// `native_abi` is a portable SIMD ABI that can be expected to work on any
 // supported build target.
 template <typename T>
-struct NativeAbi {
-    using Scalar = T;
+struct native_abi {
+    using scalar_type = T;
 
-    // Produce a similar `NativeAbi` for type `U`.
+    // Produce a similar `native_abi` for type `U`.
     template <typename U>
-    using MakeAbi = NativeAbi<U>;
+    using make_abi_type = native_abi<U>;
 
-    NativeAbi() = delete;
+    native_abi() = delete;
 
-    // TODO: Select `TargetAbi` portably.
-    using TargetAbi = Avx2Abi<T>;
-    static constexpr ssize size = TargetAbi::size;
-    static constexpr ssize lanes = TargetAbi::lanes;
-    static constexpr usize alignment = TargetAbi::alignment;
+    // TODO: Select `target_abi` portably.
+    using target_abi = avx2_abi<T>;
+    static constexpr ssize size = target_abi::size;
+    static constexpr ssize lanes = target_abi::lanes;
+    static constexpr usize alignment = target_abi::alignment;
 };
 
 namespace detail {
-    // Cast a `NativeAbi` or `FixedSizeAbi` vector into its underlying
+    // Cast a `native_abi` or `fixed_size_abi` vector into its underlying
     // representation.
-    template <typename Abi, typename T>
-    constexpr auto native_cast(Simd<Abi, T> vector) {
-        return static_cast<Simd<typename NativeAbi<T>::TargetAbi, T>>(vector);
+    template <typename abi_type, typename T>
+    constexpr auto native_cast(simd<abi_type, T> vector) {
+        return static_cast<simd<typename native_abi<T>::target_abi, T>>(vector);
     }
 }  // namespace detail
 
-template <typename InAbi, typename T>
-    requires(is_same<typename InAbi::Scalar, T>)
-class alignas(InAbi::alignment.raw) Simd {
-    using Vector = Simd<InAbi, T>;
+template <typename in_abi, typename T>
+    requires(is_same<typename in_abi::scalar_type, T>)
+class alignas(in_abi::alignment.raw) simd {
+    using type = simd<in_abi, T>;
     // GCC does not support `bool` vectors, so it is mapped to `unsigned char`.
-    using MappedT = Conditional<is_same<T, bool>, unsigned char, T>;
+    using mapped_type = conditional<is_same<T, bool>, unsigned char, T>;
 
-    struct UnalignedAbi {
-        using Scalar = T;
-        static constexpr ssize size = InAbi::size;
-        static constexpr ssize lanes = InAbi::lanes;
+    struct unaligned_abi {
+        using scalar_type = T;
+        static constexpr ssize size = in_abi::size;
+        static constexpr ssize lanes = in_abi::lanes;
         // By setting `alignment` to 1 here, and by extension in the definition
-        // of `Simd::Raw` produced by this ABI, GCC produces unaligned SIMD
+        // of `simd::raw_type` produced by this ABI, GCC produces unaligned SIMD
         // instructions for operations on this ABI.
         static constexpr usize alignment = 1u;
     };
-    using UnalignedVector = Simd<UnalignedAbi, T>;
+    using unaligned_vector = simd<unaligned_abi, T>;
 
   public:
-    using Scalar = T;
-    using Abi = InAbi;
-    using Mask = SimdMask<Abi, T>;
+    using scalar_type = T;
+    using abi_type = in_abi;
+    using mask_type = simd_mask<abi_type, T>;
 
     // `gnu::vector_size` is a GCC attribute that represents SIMD data-types.
     // `gnu::aligned` is a GCC attribute that guarantees alignment for all
     // instances of a type.
-    using Raw [[gnu::vector_size(InAbi::size.raw),
-                gnu::aligned(InAbi::alignment.raw)]] = MappedT;
+    using raw_type [[gnu::vector_size(in_abi::size.raw),
+                     gnu::aligned(in_abi::alignment.raw)]] = mapped_type;
 
-    constexpr Simd() = default;
+    constexpr simd() = default;
 
-    constexpr Simd(Vector const& operand) = default;
+    constexpr simd(type const& operand) = default;
 
-    constexpr Simd(Vector&& operand) = default;
+    constexpr simd(type&& operand) = default;
 
     // This cannot be passed by reference.
-    constexpr Simd(UnalignedVector operand) : raw(operand.raw) {
+    constexpr simd(unaligned_vector operand) : raw(operand.raw) {
     }
 
-    constexpr Simd(UnalignedVector&& operand)
-        : raw(forward<UnalignedVector>(operand.raw)) {
+    constexpr simd(unaligned_vector&& operand)
+        : raw(forward<unaligned_vector>(operand.raw)) {
     }
 
-    constexpr Simd(Raw const& values) : raw(values) {
+    constexpr simd(raw_type const& values) : raw(values) {
     }
 
-    constexpr Simd(Raw&& values) : raw(forward<Raw>(values)) {
+    constexpr simd(raw_type&& values) : raw(forward<raw_type>(values)) {
     }
 
     // Construct all lanes as `value`.
     template <typename U>
         requires(is_convertible<U, T>)
-    constexpr Simd(U value) {
+    constexpr simd(U value) {
         this->fill(static_cast<T>(value));
     }
 
     // Construct from a variadic argument list.
     template <typename... Us>
         requires(ssizeof_pack<Us...>() > 1 &&
-                 ssizeof_pack<Us...>() == InAbi::lanes)
-    constexpr Simd(Us&&... values)
+                 ssizeof_pack<Us...>() == in_abi::lanes)
+    constexpr simd(Us&&... values)
         // GCC 13 requires curly braces here.
-        : raw(Raw{static_cast<T>(forward<Us>(values))...}) {
+        : raw(raw_type{static_cast<T>(forward<Us>(values))...}) {
     }
 
     // Construct from a constant list, such as `value_list` or
     // `integer_sequence`.
     // TODO: Should this be removed, along with `cat::List`'s?
     template <typename U, U... Us>
-        requires(ssizeof_pack<U, Us...> == InAbi::lanes)
-    constexpr Simd(ValueList<U, Us...>) : raw(Raw(static_cast<T>(Us)...)) {
+        requires(ssizeof_pack<U, Us...> == in_abi::lanes)
+    constexpr simd(value_type_list<U, Us...>)
+        : raw(raw_type(static_cast<T>(Us)...)) {
     }
 
-    // Any ABI for which this `Simd` is equal to in size and overaligned can
+    // Any ABI for which this `simd` is equal to in size and overaligned can
     // be explicitly converted to.
-    template <typename OtherAbi>
-        requires(OtherAbi::size == Abi::size &&
-                 OtherAbi::alignment <= Abi::alignment &&
-                 OtherAbi::lanes == Abi::lanes)
-    explicit constexpr operator Simd<OtherAbi, T>() {
+    template <typename other_abi_type>
+        requires(other_abi_type::size == abi_type::size &&
+                 other_abi_type::alignment <= abi_type::alignment &&
+                 other_abi_type::lanes == abi_type::lanes)
+    explicit constexpr operator simd<other_abi_type, T>() {
         return this->raw;
     }
 
-    // Any ABI for which this `Simd` is equal to in size and overaligned can
+    // Any ABI for which this `simd` is equal to in size and overaligned can
     // be explicitly converted to, and any underlying type for which this
-    // `Simd`'s is compatible with, can be converted to.
-    template <typename OtherAbi, typename U>
-        requires(is_convertible<U, T>&& OtherAbi::size == Abi::size &&
-                 OtherAbi::alignment <= Abi::alignment &&
-                 OtherAbi::lanes == Abi::lanes)
-    explicit constexpr operator Simd<OtherAbi, U>() {
-        return __builtin_convertvector(this->raw,
-                                       typename Simd<OtherAbi, U>::Raw);
+    // `simd`'s is compatible with, can be converted to.
+    template <typename other_abi_type, typename U>
+        requires(is_convertible<U, T>&& other_abi_type::size ==
+                     abi_type::size &&
+                 other_abi_type::alignment <= abi_type::alignment &&
+                 other_abi_type::lanes == abi_type::lanes)
+    explicit constexpr operator simd<other_abi_type, U>() {
+        return __builtin_convertvector(
+            this->raw, typename simd<other_abi_type, U>::raw_type);
     }
 
-    // Copy-assign the raw value of a `Simd` to this.
-    constexpr auto operator=(Vector const& operand) -> Vector& {
+    // Copy-assign the raw value of a `simd` to this.
+    constexpr auto operator=(type const& operand) -> type& {
         this->raw = operand.raw;
         return *this;
     }
 
-    // Move-assign the raw value of another `Simd` into this.
-    constexpr auto operator=(Vector&& operand) -> Vector& {
+    // Move-assign the raw value of another `simd` into this.
+    constexpr auto operator=(type&& operand) -> type& {
         this->raw = move(operand).raw;
         return *this;
     }
 
-    // Compare equality for each lane to another `Simd`'s lanes, and store the
-    // results in a new `Simd`.
-    [[nodiscard]] constexpr auto operator==(Vector const& operand) const
-        -> SimdMask<Abi, T> {
+    // Compare equality for each lane to another `simd`'s lanes, and store the
+    // results in a new `simd`.
+    [[nodiscard]] constexpr auto operator==(type const& operand) const
+        -> simd_mask<abi_type, T> {
         return this->raw == operand.raw;
     }
 
     // Compare equality for each lane to `value`, and store the results in a new
-    // `Simd`.
+    // `simd`.
     [[nodiscard]] constexpr auto operator==(T const& operand) const
-        -> SimdMask<Abi, T> {
-        return *this == Vector::filled(operand);
+        -> simd_mask<abi_type, T> {
+        return *this == type::filled(operand);
     }
 
-    // Compare non-equality for each lane to another `Simd`'s lanes, and store
-    // the results in a new `Simd`.
-    [[nodiscard]] constexpr auto operator!=(Vector const& operand) const
-        -> SimdMask<Abi, T> {
+    // Compare non-equality for each lane to another `simd`'s lanes, and store
+    // the results in a new `simd`.
+    [[nodiscard]] constexpr auto operator!=(type const& operand) const
+        -> simd_mask<abi_type, T> {
         return this->raw != operand.raw;
     }
 
     // Compare non-equality for each lane to `value`, and store the results in a
-    // new `Simd`.
+    // new `simd`.
     [[nodiscard]] constexpr auto operator!=(T const& operand) const
-        -> SimdMask<Abi, T> {
-        return *this != Vector::filled(operand);
+        -> simd_mask<abi_type, T> {
+        return *this != type::filled(operand);
     }
 
-    // Compare greater-than for each lane to another `Simd`'s lanes, and store
-    // the results in a new `Simd`.
-    [[nodiscard]] constexpr auto operator>(Vector const& operand) const
-        -> SimdMask<Abi, T> {
+    // Compare greater-than for each lane to another `simd`'s lanes, and store
+    // the results in a new `simd`.
+    [[nodiscard]] constexpr auto operator>(type const& operand) const
+        -> simd_mask<abi_type, T> {
         return this->raw > operand.raw;
     }
 
     // Compare greater-than for each lane to `value`, and store the results in a
-    // new `Simd`.
+    // new `simd`.
     [[nodiscard]] constexpr auto operator>(T const& operand) const
-        -> SimdMask<Abi, T> {
-        return *this > Vector::filled(operand);
+        -> simd_mask<abi_type, T> {
+        return *this > type::filled(operand);
     }
 
-    // Compare greater-than-or-equal for each lane to another `Simd`'s lanes,
-    // and store the results in a new `Simd`.
-    constexpr auto operator>=(Vector const& operand) const -> Vector {
+    // Compare greater-than-or-equal for each lane to another `simd`'s lanes,
+    // and store the results in a new `simd`.
+    constexpr auto operator>=(type const& operand) const -> type {
         return this->raw >= operand.raw;
     }
 
     // Compare greater-than-or-equal for each lane to `value`, and store the
-    // results in a new `Simd`.
+    // results in a new `simd`.
     [[nodiscard]] constexpr auto operator>=(T const& operand) const
-        -> SimdMask<Abi, T> {
-        return *this >= Vector::filled(operand);
+        -> simd_mask<abi_type, T> {
+        return *this >= type::filled(operand);
     }
 
-    // Compare less-than for each lane to another `Simd`'s lanes, and store the
-    // results in a new `Simd`.
-    [[nodiscard]] constexpr auto operator<(Vector const& operand) const
-        -> SimdMask<Abi, T> {
+    // Compare less-than for each lane to another `simd`'s lanes, and store the
+    // results in a new `simd`.
+    [[nodiscard]] constexpr auto operator<(type const& operand) const
+        -> simd_mask<abi_type, T> {
         return this->raw < operand.raw;
     }
 
     // Compare less-than for each lane to `value`, and store the results in a
-    // new `Simd`.
+    // new `simd`.
     [[nodiscard]] constexpr auto operator<(T const& operand) const
-        -> SimdMask<Abi, T> {
-        return *this < Vector::filled(operand);
+        -> simd_mask<abi_type, T> {
+        return *this < type::filled(operand);
     }
 
-    // Compare less-than-or-equal for each lane to another `Simd`'s lanes,
-    // and store the results in a new `Simd`.
-    constexpr auto operator<=(Vector const& operand) const -> Vector {
+    // Compare less-than-or-equal for each lane to another `simd`'s lanes,
+    // and store the results in a new `simd`.
+    constexpr auto operator<=(type const& operand) const -> type {
         return this->raw <= operand.raw;
     }
 
     // Compare less-than-or-equal for each lane to `value`, and store the
-    // results in a new `Simd`.
+    // results in a new `simd`.
     [[nodiscard]] constexpr auto operator<=(T const& operand) const
-        -> SimdMask<Abi, T> {
-        return *this <= Vector::filled(operand);
+        -> simd_mask<abi_type, T> {
+        return *this <= type::filled(operand);
     }
 
     // TODO: These should be `friend`.
     // TODO: Add more comments to these operators.
-    [[nodiscard]] constexpr auto operator+(Vector const& operand) const
-        -> Vector {
+    [[nodiscard]] constexpr auto operator+(type const& operand) const -> type {
         return this->raw + operand.raw;
     }
-    constexpr auto operator+=(Vector const& operand) -> Vector& {
+    constexpr auto operator+=(type const& operand) -> type& {
         this->raw = this->raw + operand.raw;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator-(Vector const& operand) const
-        -> Vector {
+    [[nodiscard]] constexpr auto operator-(type const& operand) const -> type {
         return this->raw - operand.raw;
     }
-    constexpr auto operator-=(Vector const& operand) -> Vector& {
+    constexpr auto operator-=(type const& operand) -> type& {
         this->raw = this->raw - operand.raw;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator*(Vector const& operand) const
-        -> Vector {
+    [[nodiscard]] constexpr auto operator*(type const& operand) const -> type {
         return this->raw * operand.raw;
     }
-    constexpr auto operator*=(Vector const& operand) -> Vector& {
+    constexpr auto operator*=(type const& operand) -> type& {
         this->raw = this->raw * operand.raw;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator/(Vector const& operand) const
-        -> Vector {
+    [[nodiscard]] constexpr auto operator/(type const& operand) const -> type {
         return this->raw * operand.raw;
     }
-    constexpr auto operator/=(Vector const& operand) -> Vector& {
+    constexpr auto operator/=(type const& operand) -> type& {
         this->raw = this->raw / operand.raw;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator&(Vector const& operand) const
-        -> Vector {
+    [[nodiscard]] constexpr auto operator&(type const& operand) const -> type {
         return this->raw & operand.raw;
     }
-    constexpr auto operator&=(Vector const& operand) -> Vector& {
+    constexpr auto operator&=(type const& operand) -> type& {
         this->raw = this->raw & operand.raw;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator|(Vector const& operand) const
-        -> Vector {
+    [[nodiscard]] constexpr auto operator|(type const& operand) const -> type {
         return this->raw | operand.raw;
     }
-    constexpr auto operator|=(Vector const& operand) -> Vector& {
+    constexpr auto operator|=(type const& operand) -> type& {
         this->raw = this->raw | operand.raw;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator%(Vector const& operand) const
-        -> Vector {
+    [[nodiscard]] constexpr auto operator%(type const& operand) const -> type {
         return this->raw % operand.raw;
     }
-    constexpr auto operator%=(Vector const& operand) -> Vector& {
+    constexpr auto operator%=(type const& operand) -> type& {
         this->raw = this->raw % operand.raw;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator<<(Vector const& operand) const
-        -> Vector {
+    [[nodiscard]] constexpr auto operator<<(type const& operand) const -> type {
         return this->raw << operand.raw;
     }
-    constexpr auto operator<<=(Vector const& operand) -> Vector& {
+    constexpr auto operator<<=(type const& operand) -> type& {
         this->raw = this->raw << operand.raw;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator>>(Vector const& operand) const
-        -> Vector {
+    [[nodiscard]] constexpr auto operator>>(type const& operand) const -> type {
         return this->raw >> operand.raw;
     }
-    constexpr auto operator>>=(Vector const& operand) -> Vector& {
+    constexpr auto operator>>=(type const& operand) -> type& {
         this->raw = this->raw << operand.raw;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator^(Vector const& operand) const
-        -> Vector {
+    [[nodiscard]] constexpr auto operator^(type const& operand) const -> type {
         return this->raw ^ operand.raw;
     }
-    constexpr auto operator^=(Vector const& operand) -> Vector& {
+    constexpr auto operator^=(type const& operand) -> type& {
         this->raw = this->raw ^ operand.raw;
         return *this;
     }
@@ -366,230 +358,241 @@ class alignas(InAbi::alignment.raw) Simd {
 
     template <typename U>
     constexpr auto fill(U value)
-        -> Vector& requires(is_implicitly_convertible<U, Scalar>) {
-        Scalar fill_value = static_cast<Scalar>(value);
+        -> type& requires(is_implicitly_convertible<U, scalar_type>) {
+        scalar_type fill_value = static_cast<scalar_type>(value);
         if constexpr (lanes == 2) {
-            this->raw = Raw(fill_value, fill_value);
+            this->raw = raw_type(fill_value, fill_value);
         } else if constexpr (lanes == 4) {
-            this->raw = Raw(fill_value, fill_value, fill_value, fill_value);
-        } else if constexpr (lanes == 8) {
-            this->raw = Raw{fill_value, fill_value, fill_value, fill_value,
-                            fill_value, fill_value, fill_value, fill_value};
-        } else if constexpr (lanes == 16) {
-            this->raw = Raw{fill_value, fill_value, fill_value, fill_value,
-                            fill_value, fill_value, fill_value, fill_value,
-                            fill_value, fill_value, fill_value, fill_value,
-                            fill_value, fill_value, fill_value, fill_value};
-        } else if constexpr (lanes == 32) {
             this->raw =
-                Raw{fill_value, fill_value, fill_value, fill_value, fill_value,
-                    fill_value, fill_value, fill_value, fill_value, fill_value,
-                    fill_value, fill_value, fill_value, fill_value, fill_value,
-                    fill_value, fill_value, fill_value, fill_value, fill_value,
-                    fill_value, fill_value, fill_value, fill_value, fill_value,
-                    fill_value, fill_value, fill_value, fill_value, fill_value,
-                    fill_value, fill_value};
+                raw_type(fill_value, fill_value, fill_value, fill_value);
+        } else if constexpr (lanes == 8) {
+            this->raw =
+                raw_type{fill_value, fill_value, fill_value, fill_value,
+                         fill_value, fill_value, fill_value, fill_value};
+        } else if constexpr (lanes == 16) {
+            this->raw =
+                raw_type{fill_value, fill_value, fill_value, fill_value,
+                         fill_value, fill_value, fill_value, fill_value,
+                         fill_value, fill_value, fill_value, fill_value,
+                         fill_value, fill_value, fill_value, fill_value};
+        } else if constexpr (lanes == 32) {
+            this->raw = raw_type{
+                fill_value, fill_value, fill_value, fill_value, fill_value,
+                fill_value, fill_value, fill_value, fill_value, fill_value,
+                fill_value, fill_value, fill_value, fill_value, fill_value,
+                fill_value, fill_value, fill_value, fill_value, fill_value,
+                fill_value, fill_value, fill_value, fill_value, fill_value,
+                fill_value, fill_value, fill_value, fill_value, fill_value,
+                fill_value, fill_value};
         }
         return *this;
     }
 
-    // Construct a `Simd` with every lane initialized to `value`.
+    // Construct a `simd` with every lane initialized to `value`.
     template <typename U>
-    [[nodiscard]] static constexpr auto filled(U value) -> Vector
+    [[nodiscard]] static constexpr auto filled(U value) -> type
         requires(is_convertible<U, T>) {
-        return Vector().fill(value);
+        return type().fill(value);
     }
 
-    // Load a vector from `data`, aligned to `Abi::alignment`.
-    constexpr auto load_aligned(T const* p_data) -> Vector& {
+    // Load a vector from `data`, aligned to `abi_type::alignment`.
+    constexpr auto load_aligned(T const* p_data) -> type& {
         this->raw =
-            static_cast<Vector const*>(static_cast<void const*>(p_data))->raw;
+            static_cast<type const*>(static_cast<void const*>(p_data))->raw;
         return *this;
     }
 
     // Load a vector from `data` with any alignment. This may be slower than
     // `.loaded_aligned()`.
-    constexpr auto load_unaligned(T const* p_data) -> Vector& {
-        this->raw = static_cast<UnalignedVector const*>(
+    constexpr auto load_unaligned(T const* p_data) -> type& {
+        this->raw = static_cast<unaligned_vector const*>(
                         static_cast<void const*>(p_data))
                         ->raw;
         return *this;
     }
 
     // Load a vector from `data`.
-    constexpr auto load(T const* p_data) -> Vector& {
-        if constexpr (Abi::alignment == alignof(T)) {
+    constexpr auto load(T const* p_data) -> type& {
+        if constexpr (abi_type::alignment == alignof(T)) {
             return this->load_aligned(p_data);
         } else {
             return this->load_unaligned(p_data);
         }
     }
 
-    // Construct a `Simd` loaded from the address `data`, aligned to
-    // `Abi::alignment`.
+    // Construct a `simd` loaded from the address `data`, aligned to
+    // `abi_type::alignment`.
     [[nodiscard]] static constexpr auto loaded_aligned(T const* p_data)
-        -> Vector {
-        return *bit_cast<Vector const*>(p_data);
+        -> type {
+        return *bit_cast<type const*>(p_data);
     }
 
-    // Construct a `Simd` loaded from the address `data` with any alignment.
+    // Construct a `simd` loaded from the address `data` with any alignment.
     // This may be slower than `.loaded_aligned()`.
     // Without this `no_sanitize_address` attribute, Asan reports a false
     // positive when loading a `char const*` from the `.strings` segment,
     // because vector loads potentially index out of bounds.
     [[nodiscard, gnu::no_sanitize_address]] static constexpr auto
-    loaded_unaligned(T const* p_data) -> Vector {
-        return *bit_cast<UnalignedVector const*>(p_data);
+    loaded_unaligned(T const* p_data) -> type {
+        return *bit_cast<unaligned_vector const*>(p_data);
     }
 
-    // Construct a `Simd` loaded from the address `data`.
+    // Construct a `simd` loaded from the address `data`.
     [[nodiscard]] static constexpr auto loaded(T const* p_data) {
-        if constexpr (Abi::alignment == alignof(T)) {
+        if constexpr (abi_type::alignment == alignof(T)) {
             return loaded_aligned(p_data);
         } else {
             return loaded_unaligned(p_data);
         }
     }
 
-    static constexpr ssize size = InAbi::size;
-    static constexpr ssize lanes = InAbi::lanes;
-    static constexpr usize alignment = InAbi::alignment;
-    Raw raw;
+    static constexpr ssize size = in_abi::size;
+    static constexpr ssize lanes = in_abi::lanes;
+    static constexpr usize alignment = in_abi::alignment;
+    raw_type raw;
 };
 
-template <typename InAbi, typename T>
-class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
+template <typename in_abi, typename T>
+class alignas(in_abi::template make_abi_type<bool>::alignment.raw) simd_mask {
   public:
-    using Abi = InAbi;
-    using Scalar = bool;
+    using abi_type = in_abi;
+    using scalar_type = bool;
 
     // GCC vectors cannot hold a `bool`, so they must hold `char`.
-    using Vector = Simd<typename Abi::template MakeAbi<char>, char>;
-    using Raw = typename Vector::Raw;
+    using vector = simd<typename abi_type::template make_abi_type<char>, char>;
+    using raw_type = typename vector::raw_type;
 
   private:
-    using Mask = SimdMask<Abi, T>;
+    using mask_type = simd_mask<abi_type, T>;
 
     // clangd produces a false diagnostic if these are declared at the bottom
     // of this struct.
-    static constexpr ssize lanes = Abi::lanes;
-    static constexpr usize alignment = Abi::alignment;
+    static constexpr ssize lanes = abi_type::lanes;
+    static constexpr usize alignment = abi_type::alignment;
 
   public:
-    constexpr SimdMask() = default;
+    constexpr simd_mask() = default;
 
-    constexpr SimdMask(SimdMask<InAbi, T> const& operand) = default;
+    constexpr simd_mask(simd_mask<in_abi, T> const& operand) = default;
 
-    constexpr SimdMask(SimdMask<InAbi, T>&& operand) = default;
+    constexpr simd_mask(simd_mask<in_abi, T>&& operand) = default;
 
-    constexpr SimdMask(Raw const& value) : raw(value) {
+    constexpr simd_mask(raw_type const& value) : raw(value) {
     }
 
-    constexpr SimdMask(Raw&& value) : raw(move(value)) {
+    constexpr simd_mask(raw_type&& value) : raw(move(value)) {
     }
 
     // Construct all lanes as `value`.
-    constexpr SimdMask(bool value) {
+    constexpr simd_mask(bool value) {
         this->fill(value);
     }
 
     // Construct from a variadic argument list.
     template <typename... bools>
-    constexpr SimdMask(bools&&... values) requires(sizeof...(values) > 1 &&
-                                                   sizeof...(values) ==
-                                                       this->lanes.raw)
+    constexpr simd_mask(bools&&... values) requires(sizeof...(values) > 1 &&
+                                                    sizeof...(values) ==
+                                                        this->lanes.raw)
         : raw(static_cast<unsigned char>(forward<bool>(values))...) {
     }
 
     // Construct from a constant list, such as `value_list` or
     // `integer_sequence`.
     template <bool... bools>
-    constexpr SimdMask(ValueList<bool, bools...> const values) requires(
+    constexpr simd_mask(value_type_list<bool, bools...> const values) requires(
         values.size == this->lanes)
         : raw(static_cast<unsigned char>(bools)...) {
     }
 
-    // Any ABI for which this `Simd` is equal to in size and overaligned can
+    // Any ABI for which this `simd` is equal to in size and overaligned can
     // be explicitly converted to.
-    template <typename OtherAbi>
-    explicit constexpr operator SimdMask<OtherAbi, T>() requires(
-        OtherAbi::size == Abi::size && OtherAbi::alignment <= Abi::alignment &&
-        OtherAbi::lanes == Abi::lanes) {
+    template <typename other_abi_type>
+    explicit constexpr operator simd_mask<other_abi_type, T>() requires(
+        other_abi_type::size == abi_type::size &&
+        other_abi_type::alignment <= abi_type::alignment &&
+        other_abi_type::lanes == abi_type::lanes) {
         return this->raw;
     }
 
-    // Any ABI for which this `Simd` is equal to in size and overaligned can
+    // Any ABI for which this `simd` is equal to in size and overaligned can
     // be explicitly converted to, and any underlying type for which this
-    // `Simd`'s is compatible with, can be converted to.
-    template <typename OtherAbi, typename U>
-    explicit constexpr operator SimdMask<OtherAbi, U>() requires(
-        is_convertible<U, T>&& OtherAbi::size == Abi::size &&
-        OtherAbi::alignment <= Abi::alignment &&
-        OtherAbi::lanes == Abi::lanes) {
-        return __builtin_convertvector(this->raw,
-                                       typename SimdMask<OtherAbi, U>::Raw);
+    // `simd`'s is compatible with, can be converted to.
+    template <typename other_abi_type, typename U>
+    explicit constexpr operator simd_mask<other_abi_type, U>() requires(
+        is_convertible<U, T>&& other_abi_type::size == abi_type::size &&
+        other_abi_type::alignment <= abi_type::alignment &&
+        other_abi_type::lanes == abi_type::lanes) {
+        return __builtin_convertvector(
+            this->raw, typename simd_mask<other_abi_type, U>::raw_type);
     }
 
-    // Copy-assign the raw value of a `Simd` to this.
-    constexpr auto operator=(Mask const& operand) -> Mask& {
+    // Copy-assign the raw value of a `simd` to this.
+    constexpr auto operator=(mask_type const& operand) -> mask_type& {
         this->raw = operand.raw;
         return *this;
     }
 
-    // Move-assign the raw value of another `Simd` into this.
-    constexpr auto operator=(Mask&& operand) -> Mask& {
+    // Move-assign the raw value of another `simd` into this.
+    constexpr auto operator=(mask_type&& operand) -> mask_type& {
         this->raw = move(operand).raw;
         return *this;
     }
 
-    // Compare equality for each lane to another `Simd`'s lanes, and store the
-    // results in a new `Simd`.
-    [[nodiscard]] constexpr auto operator==(Mask const& operand) const -> Mask {
+    // Compare equality for each lane to another `simd`'s lanes, and store the
+    // results in a new `simd`.
+    [[nodiscard]] constexpr auto operator==(mask_type const& operand) const
+        -> mask_type {
         return this->raw == operand.raw;
     }
 
-    // Compare non-equality for each lane to another `Simd`'s lanes, and store
-    // the results in a new `Simd`.
-    [[nodiscard]] constexpr auto operator!=(Mask const& operand) const -> Mask {
+    // Compare non-equality for each lane to another `simd`'s lanes, and store
+    // the results in a new `simd`.
+    [[nodiscard]] constexpr auto operator!=(mask_type const& operand) const
+        -> mask_type {
         return this->raw != operand.raw;
     }
 
-    [[nodiscard]] constexpr auto operator&(Mask const& operand) const -> Mask {
+    [[nodiscard]] constexpr auto operator&(mask_type const& operand) const
+        -> mask_type {
         return this->raw & operand.raw;
     }
-    constexpr auto operator&=(Mask const& operand) -> Mask& {
+    constexpr auto operator&=(mask_type const& operand) -> mask_type& {
         this->raw = this->raw & operand.raw;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator|(Mask const& operand) const -> Mask {
+    [[nodiscard]] constexpr auto operator|(mask_type const& operand) const
+        -> mask_type {
         return this->raw | operand.raw;
     }
-    constexpr auto operator|=(Mask const& operand) -> Mask& {
+    constexpr auto operator|=(mask_type const& operand) -> mask_type& {
         this->raw = this->raw | operand.raw;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator%(Mask const& operand) const -> Mask {
+    [[nodiscard]] constexpr auto operator%(mask_type const& operand) const
+        -> mask_type {
         return this->raw % operand.raw;
     }
-    constexpr auto operator%=(Mask const& operand) -> Mask& {
+    constexpr auto operator%=(mask_type const& operand) -> mask_type& {
         this->raw = this->raw % operand.raw;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator<<(Mask const& operand) const -> Mask {
+    [[nodiscard]] constexpr auto operator<<(mask_type const& operand) const
+        -> mask_type {
         return this->raw << operand.raw;
     }
-    constexpr auto operator<<=(Mask const& operand) -> Mask& {
+    constexpr auto operator<<=(mask_type const& operand) -> mask_type& {
         this->raw = this->raw << operand.raw;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator>>(Mask const& operand) const -> Mask {
+    [[nodiscard]] constexpr auto operator>>(mask_type const& operand) const
+        -> mask_type {
         return this->raw >> operand.raw;
     }
-    constexpr auto operator>>=(Mask const& operand) -> Mask& {
+    constexpr auto operator>>=(mask_type const& operand) -> mask_type& {
         this->raw = this->raw << operand.raw;
         return *this;
     }
@@ -618,139 +621,140 @@ class alignas(InAbi::template MakeAbi<bool>::alignment.raw) SimdMask {
     }
 
     // Map every lane in this mask to one bit in a bitset.
-    constexpr auto bitset() const -> Bitset<Abi::size> {
+    constexpr auto bitset() const -> bitset<abi_type::size> {
         return simd_to_bitset(*this);
     }
 
-    constexpr auto fill(bool value) -> Mask {
+    constexpr auto fill(bool value) -> mask_type {
         if constexpr (lanes == 2) {
-            this->raw = Raw(value, value);
+            this->raw = raw_type(value, value);
         } else if constexpr (lanes == 4) {
-            this->raw = Raw(value, value, value, value);
+            this->raw = raw_type(value, value, value, value);
         } else if constexpr (lanes == 8) {
-            this->raw =
-                Raw(value, value, value, value, value, value, value, value);
+            this->raw = raw_type(value, value, value, value, value, value,
+                                 value, value);
         } else if constexpr (lanes == 16) {
-            this->raw =
-                Raw{value, value, value, value, value, value, value, value,
-                    value, value, value, value, value, value, value, value};
+            this->raw = raw_type{value, value, value, value, value, value,
+                                 value, value, value, value, value, value,
+                                 value, value, value, value};
         } else if constexpr (lanes == 32) {
-            this->raw =
-                Raw{value, value, value, value, value, value, value, value,
-                    value, value, value, value, value, value, value, value,
-                    value, value, value, value, value, value, value, value,
-                    value, value, value, value, value, value, value, value};
+            this->raw = raw_type{
+                value, value, value, value, value, value, value, value,
+                value, value, value, value, value, value, value, value,
+                value, value, value, value, value, value, value, value,
+                value, value, value, value, value, value, value, value};
         }
         return *this;
     }
 
-    // Construct a `Simd` with every lane initialized to `value`.
-    [[nodiscard]] static constexpr auto filled(bool const value) -> Mask {
-        return Mask().fill(value);
+    // Construct a `simd` with every lane initialized to `value`.
+    [[nodiscard]] static constexpr auto filled(bool const value) -> mask_type {
+        return mask_type().fill(value);
     }
 
-    // Load a vector from `data`, aligned to `Abi<bool>::alignment`.
-    constexpr auto load(bool const* p_data) -> Mask& {
+    // Load a vector from `data`, aligned to `abi_type<bool>::alignment`.
+    constexpr auto load(bool const* p_data) -> mask_type& {
         this->raw =
-            static_cast<Mask const*>(static_cast<void const*>(p_data))->raw;
+            static_cast<mask_type const*>(static_cast<void const*>(p_data))
+                ->raw;
         return *this;
     }
 
-    // Construct a `Simd` loaded from the address `data`.
+    // Construct a `simd` loaded from the address `data`.
     [[nodiscard]] static constexpr auto loaded(bool const* p_data) {
-        return Mask().load(p_data);
+        return mask_type().load(p_data);
     }
 
-    Raw raw;
+    raw_type raw;
 };
 
-template <typename Abi, typename T>
-constexpr auto raw_simd_cast(Simd<Abi, T> const& value) -> T {
+template <typename abi_type, typename T>
+constexpr auto raw_simd_cast(simd<abi_type, T> const& value) -> T {
     return value.raw;
 }
 
-template <typename Abi, typename T>
-constexpr auto raw_simd_cast(SimdMask<Abi, T> const& value) -> T {
+template <typename abi_type, typename T>
+constexpr auto raw_simd_cast(simd_mask<abi_type, T> const& value) -> T {
     return value.raw;
 }
 
 template <typename T, ssize lanes>
-using FixedSizeSimd = Simd<FixedSizeAbi<T, lanes>, T>;
+using fixed_size_simd = simd<fixed_size_abi<T, lanes>, T>;
 
 template <typename T, ssize lanes>
-using FixedSizeSimdMask = SimdMask<FixedSizeAbi<T, lanes>, T>;
+using fixed_size_simd_mask = simd_mask<fixed_size_abi<T, lanes>, T>;
 
 template <typename T>
-using NativeSimd = Simd<NativeAbi<T>, T>;
+using native_simd = simd<native_abi<T>, T>;
 
 template <typename T>
-using NativeSimdMask = SimdMask<NativeAbi<T>, T>;
+using native_simd_mask = simd_mask<native_abi<T>, T>;
 
 // TODO: Add GCC 13 `__bf16` vectors.
 
-using int1x2 = FixedSizeSimd<int1::Raw, 2>;    // NOLINT
-using int1x4 = FixedSizeSimd<int1::Raw, 4>;    // NOLINT
-using int1x8 = FixedSizeSimd<int1::Raw, 8>;    // NOLINT
-using int1x16 = FixedSizeSimd<int1::Raw, 16>;  // NOLINT
-using int1x32 = FixedSizeSimd<int1::Raw, 32>;  // NOLINT
-using int1x_ = NativeSimd<int1::Raw>;          // NOLINT
+using int1x2 = fixed_size_simd<int1::raw_type, 2>;
+using int1x4 = fixed_size_simd<int1::raw_type, 4>;
+using int1x8 = fixed_size_simd<int1::raw_type, 8>;
+using int1x16 = fixed_size_simd<int1::raw_type, 16>;
+using int1x32 = fixed_size_simd<int1::raw_type, 32>;
+using int1x_ = native_simd<int1::raw_type>;
 
-using uint1x2 = FixedSizeSimd<uint1::Raw, 2>;    // NOLINT
-using uint1x4 = FixedSizeSimd<uint1::Raw, 4>;    // NOLINT
-using uint1x8 = FixedSizeSimd<uint1::Raw, 8>;    // NOLINT
-using uint1x16 = FixedSizeSimd<uint1::Raw, 16>;  // NOLINT
-using uint1x32 = FixedSizeSimd<uint1::Raw, 32>;  // NOLINT
-using uint1x_ = NativeSimd<uint1::Raw>;          // NOLINT
+using uint1x2 = fixed_size_simd<uint1::raw_type, 2>;
+using uint1x4 = fixed_size_simd<uint1::raw_type, 4>;
+using uint1x8 = fixed_size_simd<uint1::raw_type, 8>;
+using uint1x16 = fixed_size_simd<uint1::raw_type, 16>;
+using uint1x32 = fixed_size_simd<uint1::raw_type, 32>;
+using uint1x_ = native_simd<uint1::raw_type>;
 
 // TODO: Think over the string vectorization API.
 // TODO: Support `char2x_` vector family.
-// Strings need their own vectors.
-using char1x16 = Sse42Simd<char>;  // NOLINT
-using char1x32 = Avx2Simd<char>;   // NOLINT
-using char1x_ = Avx2Simd<char>;    // NOLINT
+// strings need their own vectors.
+using char1x16 = sse42_mask<char>;
+using char1x32 = avx2_simd<char>;
+using char1x_ = avx2_simd<char>;
 
-using int2x2 = FixedSizeSimd<int2::Raw, 2>;    // NOLINT
-using int2x4 = FixedSizeSimd<int2::Raw, 4>;    // NOLINT
-using int2x8 = FixedSizeSimd<int2::Raw, 8>;    // NOLINT
-using int2x16 = FixedSizeSimd<int2::Raw, 16>;  // NOLINT
-using int2x_ = NativeSimd<int2::Raw>;          // NOLINT
+using int2x2 = fixed_size_simd<int2::raw_type, 2>;
+using int2x4 = fixed_size_simd<int2::raw_type, 4>;
+using int2x8 = fixed_size_simd<int2::raw_type, 8>;
+using int2x16 = fixed_size_simd<int2::raw_type, 16>;
+using int2x_ = native_simd<int2::raw_type>;
 
-using uint2x2 = FixedSizeSimd<uint2::Raw, 2>;    // NOLINT
-using uint2x4 = FixedSizeSimd<uint2::Raw, 4>;    // NOLINT
-using uint2x8 = FixedSizeSimd<uint2::Raw, 8>;    // NOLINT
-using uint2x16 = FixedSizeSimd<uint2::Raw, 16>;  // NOLINT
-using uint2x_ = NativeSimd<uint2::Raw>;          // NOLINT
+using uint2x2 = fixed_size_simd<uint2::raw_type, 2>;
+using uint2x4 = fixed_size_simd<uint2::raw_type, 4>;
+using uint2x8 = fixed_size_simd<uint2::raw_type, 8>;
+using uint2x16 = fixed_size_simd<uint2::raw_type, 16>;
+using uint2x_ = native_simd<uint2::raw_type>;
 
-using int4x2 = FixedSizeSimd<int4::Raw, 2>;  // NOLINT
-using int4x4 = FixedSizeSimd<int4::Raw, 4>;  // NOLINT
-using int4x8 = FixedSizeSimd<int4::Raw, 8>;  // NOLINT
-using int4x_ = NativeSimd<int4::Raw>;        // NOLINT
+using int4x2 = fixed_size_simd<int4::raw_type, 2>;
+using int4x4 = fixed_size_simd<int4::raw_type, 4>;
+using int4x8 = fixed_size_simd<int4::raw_type, 8>;
+using int4x_ = native_simd<int4::raw_type>;
 
-using uint4x2 = FixedSizeSimd<uint4::Raw, 2>;  // NOLINT
-using uint4x4 = FixedSizeSimd<uint4::Raw, 4>;  // NOLINT
-using uint4x8 = FixedSizeSimd<uint4::Raw, 8>;  // NOLINT
-using uint4x_ = NativeSimd<uint4::Raw>;        // NOLINT
+using uint4x2 = fixed_size_simd<uint4::raw_type, 2>;
+using uint4x4 = fixed_size_simd<uint4::raw_type, 4>;
+using uint4x8 = fixed_size_simd<uint4::raw_type, 8>;
+using uint4x_ = native_simd<uint4::raw_type>;
 
-using int8x2 = FixedSizeSimd<int8::Raw, 2>;  // NOLINT
-using int8x4 = FixedSizeSimd<int8::Raw, 4>;  // NOLINT
-using int8x_ = NativeSimd<int8::Raw>;        // NOLINT
+using int8x2 = fixed_size_simd<int8::raw_type, 2>;
+using int8x4 = fixed_size_simd<int8::raw_type, 4>;
+using int8x_ = native_simd<int8::raw_type>;
 
-using uint8x2 = FixedSizeSimd<uint8::Raw, 2>;  // NOLINT
-using uint8x4 = FixedSizeSimd<uint8::Raw, 4>;  // NOLINT
-using uint8x_ = NativeSimd<uint8::Raw>;        // NOLINT
+using uint8x2 = fixed_size_simd<uint8::raw_type, 2>;
+using uint8x4 = fixed_size_simd<uint8::raw_type, 4>;
+using uint8x_ = native_simd<uint8::raw_type>;
 
-using float4x2 = FixedSizeSimd<float4::Raw, 2>;  // NOLINT
-using float4x4 = FixedSizeSimd<float4::Raw, 4>;  // NOLINT
-using float4x8 = FixedSizeSimd<float4::Raw, 8>;  // NOLINT
-using float4x_ = NativeSimd<float4::Raw>;        // NOLINT
+using float4x2 = fixed_size_simd<float4::raw_type, 2>;
+using float4x4 = fixed_size_simd<float4::raw_type, 4>;
+using float4x8 = fixed_size_simd<float4::raw_type, 8>;
+using float4x_ = native_simd<float4::raw_type>;
 
-using float8x2 = FixedSizeSimd<float8::Raw, 2>;  // NOLINT
-using float8x4 = FixedSizeSimd<float8::Raw, 4>;  // NOLINT
-using float8x_ = NativeSimd<float8::Raw>;        // NOLINT
+using float8x2 = fixed_size_simd<float8::raw_type, 2>;
+using float8x4 = fixed_size_simd<float8::raw_type, 4>;
+using float8x_ = native_simd<float8::raw_type>;
 
 // TODO: Support `bool` family vectors.
 
-enum class StringControl : unsigned char {
+enum class string_control : unsigned char {
     // Unsigned 1-byte characters.
     unsigned_byte = 0x00,
     // Unsigned 2-byte characters.
@@ -785,20 +789,20 @@ enum class StringControl : unsigned char {
 };
 
 // TODO: Generalize this.
-constexpr auto operator|(StringControl flag_1, StringControl flag_2)
-    -> StringControl {
-    return static_cast<StringControl>(static_cast<unsigned char>(flag_1) |
-                                      static_cast<unsigned char>(flag_2));
+constexpr auto operator|(string_control flag_1, string_control flag_2)
+    -> string_control {
+    return static_cast<string_control>(static_cast<unsigned char>(flag_1) |
+                                       static_cast<unsigned char>(flag_2));
 }
 
 // TODO: Use a vector concept.
 auto shuffle(auto in_vector, auto mask);
 
-template <StringControl control_mask>
+template <string_control control_mask>
 constexpr auto compare_implicit_length_strings(auto const& vector_1,
                                                auto const& vector_2) -> bool;
 
-template <StringControl control_mask>
+template <string_control control_mask>
 constexpr auto compare_implicit_length_strings_return_index(
     auto const& vector_1, auto const& vector_2) -> int4;
 
@@ -808,7 +812,7 @@ void zero_avx_registers();
 void zero_upper_avx_registers();
 
 // Constants for prefetch.
-enum class PrefetchHint : int {
+enum class prefetch_hint : int {
     // Prefetch data into non-temporal cache structure and into a location close
     // to the processor, minimizing cache pollution.
     non_temporal = 0,
@@ -821,29 +825,29 @@ enum class PrefetchHint : int {
     temporal_0 = 3,
 };
 
-template <PrefetchHint hint>
+template <prefetch_hint hint>
 void prefetch(void const* p_source) {
     __builtin_prefetch(p_source, static_cast<int>(hint) & 0x4 >> 2,
                        static_cast<int>(hint) & 0x3);
 }
 
 void prefetch_for_one_read(auto const* p_vector) {
-    prefetch<PrefetchHint::non_temporal>(p_vector);
+    prefetch<prefetch_hint::non_temporal>(p_vector);
 }
 
 void prefetch_close(auto const* p_vector) {
-    prefetch<PrefetchHint::temporal_0>(p_vector);
+    prefetch<prefetch_hint::temporal_0>(p_vector);
 }
 
 void prefetch_mid(auto const* p_vector) {
-    prefetch<PrefetchHint::temporal_1>(p_vector);
+    prefetch<prefetch_hint::temporal_1>(p_vector);
 }
 
 void prefetch_far(auto const* p_vector) {
-    prefetch<PrefetchHint::temporal_2>(p_vector);
+    prefetch<prefetch_hint::temporal_2>(p_vector);
 }
 void prefetch_for_modify(auto const* p_vector) {
-    prefetch<PrefetchHint::temporal_0>(p_vector);
+    prefetch<prefetch_hint::temporal_0>(p_vector);
 }
 
 template <typename T>
@@ -851,21 +855,21 @@ void stream_in(void* p_destination, T const* p_source);
 
 // Dispatch `any_of()` to the native SIMD ABI.
 template <typename T>
-[[nodiscard]] auto simd_any_of(SimdMask<NativeAbi<T>, T> mask) -> bool {
+[[nodiscard]] auto simd_any_of(simd_mask<native_abi<T>, T> mask) -> bool {
     return simd_all_of(detail::native_cast(mask));
 }
 
 // Dispatch `all_of()` to the native SIMD ABI.
 template <typename T>
-[[nodiscard]] auto simd_all_of(SimdMask<NativeAbi<T>, T> mask) -> bool {
+[[nodiscard]] auto simd_all_of(simd_mask<native_abi<T>, T> mask) -> bool {
     return simd_all_of(detail::native_cast(mask));
 }
 
 // TODO: Support all ABIs.
 // Dispatch `simd_to_bitset` to the native SIMD ABI.
 template <typename T>
-[[nodiscard]] auto simd_to_bitset(SimdMask<NativeAbi<T>, T> mask)
-    -> Bitset<NativeAbi<T>::size> {
+[[nodiscard]] auto simd_to_bitset(simd_mask<native_abi<T>, T> mask)
+    -> bitset<native_abi<T>::size> {
     return simd_to_bitset(detail::native_cast(mask));
 }
 

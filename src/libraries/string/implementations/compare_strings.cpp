@@ -2,20 +2,20 @@
 #include <cat/simd>
 #include <cat/string>
 
-auto cat::compare_strings(String const string_1, String const string_2)
+auto cat::compare_strings(string const string_1, string const string_2)
     -> bool {
     if (string_1.size() != string_2.size()) {
         return false;
     }
 
     // TODO: Use a type for an ISA-specific widest vector.
-    using VectorSimd = char1x32;
+    using vector_simd = char1x32;
 
-    Array<VectorSimd, 4> vectors_1;
-    Array<VectorSimd, 4> vectors_2;
-    Array<VectorSimd::Mask, 4> comparisons;
+    array<vector_simd, 4> vectors_1;
+    array<vector_simd, 4> vectors_2;
+    array<vector_simd::mask_type, 4> comparisons;
     ssize length_iterator = string_1.size();
-    ssize vector_size = ssizeof(VectorSimd);
+    ssize vector_size = ssizeof(vector_simd);
     char const* p_string_1_iterator = string_1.data();
     char const* p_string_2_iterator = string_2.data();
 

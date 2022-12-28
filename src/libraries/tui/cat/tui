@@ -13,67 +13,67 @@ namespace cat {
 // "Virtual tty" control sequence introducers.
 
 // Font style sequences
-inline constexpr String vt_bold = "\e[1m";
-inline constexpr String vt_italic = "\e[2m";
-inline constexpr String vt_underline = "\e[3m";
-inline constexpr String vt_inverse = "\e[7m";
-inline constexpr String vt_hidden = "\e[8m";
-inline constexpr String vt_strikethrough = "\e[9m";
+inline constexpr string vt_bold = "\e[1m";
+inline constexpr string vt_italic = "\e[2m";
+inline constexpr string vt_underline = "\e[3m";
+inline constexpr string vt_inverse = "\e[7m";
+inline constexpr string vt_hidden = "\e[8m";
+inline constexpr string vt_strikethrough = "\e[9m";
 
 // TODO: Kitty underlines.
 
 // Foreground color escape sequences.
-inline constexpr String vt_fg_default = "\e[39m";
-inline constexpr String vt_fg_black = "\e[30m";
-inline constexpr String vt_fg_red = "\e[31m";
-inline constexpr String vt_fg_green = "\e[32m";
-inline constexpr String vt_fg_yellow = "\e[33m";
-inline constexpr String vt_fg_blue = "\e[34m";
-inline constexpr String vt_fg_magenta = "\e[35m";
-inline constexpr String vt_fg_cyan = "\e[36m";
-inline constexpr String vt_fg_white = "\e[37m";
-inline constexpr String vt_fg_bright_black = "\e[90m";
-inline constexpr String vt_fg_bright_red = "\e[91m";
-inline constexpr String vt_fg_bright_green = "\e[92m";
-inline constexpr String vt_fg_bright_yellow = "\e[93m";
-inline constexpr String vt_fg_bright_blue = "\e[94m";
-inline constexpr String vt_fg_bright_magenta = "\e[95m";
-inline constexpr String vt_fg_bright_cyan = "\e[96m";
-inline constexpr String vt_fg_bright_white = "\e[97m";
+inline constexpr string vt_fg_default = "\e[39m";
+inline constexpr string vt_fg_black = "\e[30m";
+inline constexpr string vt_fg_red = "\e[31m";
+inline constexpr string vt_fg_green = "\e[32m";
+inline constexpr string vt_fg_yellow = "\e[33m";
+inline constexpr string vt_fg_blue = "\e[34m";
+inline constexpr string vt_fg_magenta = "\e[35m";
+inline constexpr string vt_fg_cyan = "\e[36m";
+inline constexpr string vt_fg_white = "\e[37m";
+inline constexpr string vt_fg_bright_black = "\e[90m";
+inline constexpr string vt_fg_bright_red = "\e[91m";
+inline constexpr string vt_fg_bright_green = "\e[92m";
+inline constexpr string vt_fg_bright_yellow = "\e[93m";
+inline constexpr string vt_fg_bright_blue = "\e[94m";
+inline constexpr string vt_fg_bright_magenta = "\e[95m";
+inline constexpr string vt_fg_bright_cyan = "\e[96m";
+inline constexpr string vt_fg_bright_white = "\e[97m";
 
 // TODO: True color fg.
 
 // Background color escape sequences.
-inline constexpr String vt_bg_default = "\e[49m";
-inline constexpr String vt_bg_black = "\e[40m";
-inline constexpr String vt_bg_red = "\e[41m";
-inline constexpr String vt_bg_green = "\e[42m";
-inline constexpr String vt_bg_yello = "\e[43m";
-inline constexpr String vt_bg_blue = "\e[44m";
-inline constexpr String vt_bg_magenta = "\e[45m";
-inline constexpr String vt_bg_cyan = "\e[46m";
-inline constexpr String vt_bg_white = "\e[47m";
-inline constexpr String vt_bg_bright_black = "\e[1090m";
-inline constexpr String vt_bg_bright_red = "\e[101m";
-inline constexpr String vt_bg_bright_green = "\e[102m";
-inline constexpr String vt_bg_bright_yellow = "\e[103m";
-inline constexpr String vt_bg_bright_blue = "\e[104m";
-inline constexpr String vt_bg_bright_magenta = "\[105m";
-inline constexpr String vt_bg_bright_cyan = "\e[106m";
-inline constexpr String vt_bg_bright_white = "\e[107m";
+inline constexpr string vt_bg_default = "\e[49m";
+inline constexpr string vt_bg_black = "\e[40m";
+inline constexpr string vt_bg_red = "\e[41m";
+inline constexpr string vt_bg_green = "\e[42m";
+inline constexpr string vt_bg_yello = "\e[43m";
+inline constexpr string vt_bg_blue = "\e[44m";
+inline constexpr string vt_bg_magenta = "\e[45m";
+inline constexpr string vt_bg_cyan = "\e[46m";
+inline constexpr string vt_bg_white = "\e[47m";
+inline constexpr string vt_bg_bright_black = "\e[1090m";
+inline constexpr string vt_bg_bright_red = "\e[101m";
+inline constexpr string vt_bg_bright_green = "\e[102m";
+inline constexpr string vt_bg_bright_yellow = "\e[103m";
+inline constexpr string vt_bg_bright_blue = "\e[104m";
+inline constexpr string vt_bg_bright_magenta = "\[105m";
+inline constexpr string vt_bg_bright_cyan = "\e[106m";
+inline constexpr string vt_bg_bright_white = "\e[107m";
 
 // TODO: True color bg.
 
 namespace detail {
-    auto style_tty_fg_fg(allocator auto& alloc, String const text,
-                         String const color) {
-        Maybe maybe_allocation = alloc.template alloc_multi<char>(
+    auto style_tty_fg_fg(allocator auto& alloc, string const text,
+                         string const color) {
+        maybe maybe_allocation = alloc.template alloc_multi<char>(
             text.size() + color.size() + vt_fg_default.size());
 
-        using ReturnType = decltype(maybe_allocation);
+        using return_type = decltype(maybe_allocation);
 
         if (!maybe_allocation.has_value()) {
-            return ReturnType(nullopt);
+            return return_type(nullopt);
         }
 
         char* p_memory = alloc.get(maybe_allocation.value()).data();
@@ -90,67 +90,67 @@ namespace detail {
     }
 }  // namespace detail
 
-auto style_tty_fg_black(allocator auto& alloc, String const text) {
+auto style_tty_fg_black(allocator auto& alloc, string const text) {
     return detail::style_tty_fg_fg(alloc, text, vt_fg_black);
 }
 
-auto style_tty_fg_red(allocator auto& alloc, String const text) {
+auto style_tty_fg_red(allocator auto& alloc, string const text) {
     return detail::style_tty_fg_fg(alloc, text, vt_fg_red);
 }
 
-auto style_tty_fg_green(allocator auto& alloc, String const text) {
+auto style_tty_fg_green(allocator auto& alloc, string const text) {
     return detail::style_tty_fg_fg(alloc, text, vt_fg_green);
 }
 
-auto style_tty_fg_yellow(allocator auto& alloc, String const text) {
+auto style_tty_fg_yellow(allocator auto& alloc, string const text) {
     return detail::style_tty_fg_fg(alloc, text, vt_fg_yellow);
 }
 
-auto style_tty_fg_blue(allocator auto& alloc, String const text) {
+auto style_tty_fg_blue(allocator auto& alloc, string const text) {
     return detail::style_tty_fg_fg(alloc, text, vt_fg_blue);
 }
 
-auto style_tty_fg_magenta(allocator auto& alloc, String const text) {
+auto style_tty_fg_magenta(allocator auto& alloc, string const text) {
     return detail::style_tty_fg_fg(alloc, text, vt_fg_magenta);
 }
 
-auto style_tty_fg_cyan(allocator auto& alloc, String const text) {
+auto style_tty_fg_cyan(allocator auto& alloc, string const text) {
     return detail::style_tty_fg_fg(alloc, text, vt_fg_cyan);
 }
 
-auto style_tty_fg_white(allocator auto& alloc, String const text) {
+auto style_tty_fg_white(allocator auto& alloc, string const text) {
     return detail::style_tty_fg_fg(alloc, text, vt_fg_white);
 }
 
-auto style_tty_fg_bright_black(allocator auto& alloc, String const text) {
+auto style_tty_fg_bright_black(allocator auto& alloc, string const text) {
     return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_black);
 }
 
-auto style_tty_fg_bright_red(allocator auto& alloc, String const text) {
+auto style_tty_fg_bright_red(allocator auto& alloc, string const text) {
     return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_red);
 }
 
-auto style_tty_fg_bright_green(allocator auto& alloc, String const text) {
+auto style_tty_fg_bright_green(allocator auto& alloc, string const text) {
     return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_green);
 }
 
-auto style_tty_fg_bright_yellow(allocator auto& alloc, String const text) {
+auto style_tty_fg_bright_yellow(allocator auto& alloc, string const text) {
     return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_yellow);
 }
 
-auto style_tty_fg_bright_blue(allocator auto& alloc, String const text) {
+auto style_tty_fg_bright_blue(allocator auto& alloc, string const text) {
     return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_blue);
 }
 
-auto style_tty_fg_fg_bright_magenta(allocator auto& alloc, String const text) {
+auto style_tty_fg_fg_bright_magenta(allocator auto& alloc, string const text) {
     return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_magenta);
 }
 
-auto style_tty_fg_bright_cyan(allocator auto& alloc, String const text) {
+auto style_tty_fg_bright_cyan(allocator auto& alloc, string const text) {
     return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_cyan);
 }
 
-auto style_tty_fg_bright_white(allocator auto& alloc, String const text) {
+auto style_tty_fg_bright_white(allocator auto& alloc, string const text) {
     return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_white);
 }
 

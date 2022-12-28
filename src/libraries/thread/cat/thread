@@ -7,25 +7,25 @@
 
 namespace cat {
 
-struct Thread {
+struct thread {
   public:
-    Thread() = default;
-    Thread(Thread const&) = delete;
+    thread() = default;
+    thread(thread const&) = delete;
     // TODO: Default or delete a move constructor and assignment operator?
 
     // TODO: Use an `invocable` `concept`.
     auto create(is_allocator auto& allocator, ssize initial_stack_size,
-                auto const& function, void* p_arguments_struct) -> Maybe<void> {
-        Scaredy result = this->process.create(allocator, initial_stack_size,
-                                              function, p_arguments_struct);
+                auto const& function, void* p_args_struct) -> maybe<void> {
+        scaredy result = this->handle.create(allocator, initial_stack_size,
+                                             function, p_args_struct);
         if (result.has_value()) {
             return monostate;
         }
         return nullopt;
     }
 
-    auto join() const -> Maybe<void> {
-        Scaredy result = this->process.wait();
+    auto join() const -> maybe<void> {
+        scaredy result = this->handle.wait();
         if (result.has_value()) {
             return monostate;
         }
@@ -34,7 +34,7 @@ struct Thread {
 
   private:
     // This is platform-specific hidden code.
-    [[maybe_unused]] nix::Process process;
+    [[maybe_unused]] nix::process handle;
 };
 
 void relax_cpu() {

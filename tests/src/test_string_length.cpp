@@ -29,17 +29,17 @@ auto main() -> int {
     cat::verify(len_5 == len_6);
     cat::verify(len_7 == 15);
 
-    // Test `String`s.
-    cat::String string_1 = p_string_1;
+    // Test `string`s.
+    cat::string string_1 = p_string_1;
     cat::verify(string_1.size() == len_1);
     cat::verify(string_1.subspan(1, 4).size() == 3);
     cat::verify(string_1.first(4).size() == 4);
     cat::verify(string_1.last(3).size() == 3);
-    cat::verify(cat::String("Hello!").size() == len_1);
+    cat::verify(cat::string("Hello!").size() == len_1);
 
     // TODO: Remove this and put it in another string unit test.
     char chars[5] = "foo\0";
-    cat::Span<char> span = {chars, 4};
+    cat::span<char> span = {chars, 4};
     span[0] = 'a';
     auto foo = cat::unconst(span).begin();
     *foo = 'a';
@@ -48,7 +48,7 @@ auto main() -> int {
     }
 
     // TODO: Put this in another string unit test.
-    cat::String find_string = "abcdefabcdefabcdefabcdefabcdefabcdef";
+    cat::string find_string = "abcdefabcdefabcdefabcdefabcdefabcdef";
     ssize c = find_string.find('c').or_exit();
     cat::verify(c == 2);
 
@@ -59,7 +59,7 @@ auto main() -> int {
     cat::verify(f == 5);
 
     // `z` is not inside of a 32-byte chunk.
-    cat::String find_string_2 =
+    cat::string find_string_2 =
         "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd"
         "efz";
     ssize z = find_string_2.find('z').or_exit();

@@ -5,16 +5,16 @@
 #include <cat/string>
 
 auto main() -> int {
-    cat::SocketUnix<cat::SocketType::stream> listening_socket;
+    cat::socket_unix<cat::socket_type::stream> listening_socket;
     // A leading null byte puts this path in the abstract namespace.
     listening_socket.path_name =
-        cat::StaticString<108>::padded("\0/tmp/temp.sock");
+        cat::fixed_string<108>::padded("\0/tmp/temp.sock");
     listening_socket.create().or_exit();
     listening_socket.bind().or_exit();
     listening_socket.listen(20).or_exit();
 
-    cat::SocketUnix<cat::SocketType::stream> recieving_socket;
-    cat::StaticString<12> message_buffer;
+    cat::socket_unix<cat::socket_type::stream> recieving_socket;
+    cat::fixed_string<12> message_buffer;
 
     bool exit = false;
     while (!exit) {
@@ -26,8 +26,7 @@ auto main() -> int {
                     .recieve(message_buffer.data(), message_buffer.size())
                     .or_exit();
 
-            cat::String input = {message_buffer.data(),
-                                 message_buffer.size()};
+            cat::string input = {message_buffer.data(), message_buffer.size()};
 
             // TODO: This comparison is always false.
             if (cat::compare_strings(input, "exit")) {

@@ -27,36 +27,34 @@ namespace detail {
     };
 
     template <typename>
-    struct InferDifferenceTrait {
-        using Type = ssize;
+    struct infer_difference_trait {
+        using type = ssize;
     };
 
     // Case when `T` provides `.distance_to()`
     template <detail::has_distance_to T>
-    struct InferDifferenceTrait<T> {
+    struct infer_difference_trait<T> {
         static T const& it;
-        using Type = decltype(it.distance_to(it));
+        using type = decltype(it.distance_to(it));
     };
 
     template <typename...>
-    struct InferValueType {};
+    struct infer_value_type {};
 
     template <typename T>
-    struct InferValueType<T> {
+    struct infer_value_type<T> {
         static const T& it;
-        using Type = RemoveCvRef<decltype(*it)>;
+        using type = remove_cvref<decltype(*it)>;
     };
 
     template <typename T>
-        requires requires {
-            typename T::Value;
-        }
-    struct InferValueType<T> {
-        using Type = typename T::Value;
+        requires(requires { typename T::value_type; })
+    struct infer_value_type<T> {
+        using type = typename T::value_type;
     };
 
     template <typename T>
-    concept has_advance = requires(T it, InferDifferenceTrait<T> offset) {
+    concept has_advance = requires(T it, infer_difference_trait<T> offset) {
         it.advance(offset);
     };
 
@@ -72,32 +70,33 @@ namespace detail {
     concept has_bidirectional = has_random_access<T> || has_decrement<T>;
 
     template <typename T>
-    concept has_single_pass = bool(T::SinglePassIterator);
+    concept has_single_pass = bool(T::SinglePassiterator_type);
 
     template <typename Iter, typename T>
-    concept has_sentinel = is_same<T, typename T::Sentinel>;
+    concept has_sentinel = is_same<T, typename T::sentinel>;
 
-    template <typename Argument, typename Iterator>
+    template <typename Argument, typename iterator_type>
     concept is_difference_type =
-        is_convertible<Argument, typename InferDifferenceTrait<Iterator>::Type>;
+        is_convertible<Argument,
+                       typename infer_difference_trait<iterator_type>::type>;
 }  // namespace detail
 
 template <typename T>
-using InferDifferenceType = typename detail::InferDifferenceTrait<T>::Type;
+using infer_difference_type = typename detail::infer_difference_trait<T>::type;
 template <typename T>
-using InferValueType = typename detail::InferValueType<T>::Type::Type;
+using infer_value_type = typename detail::infer_value_type<T>::type::type;
 
-// Every `IteratorInterface` is `indirectly_readable`.
-template <typename Derived>
-class IteratorInterface {
+// Every `iterator_interface` satisfies 'is_indirectly_writable'.
+template <typename derived_type>
+class iterator_interface {
   public:
-    // `Type` is needed for reversing this iterator.
-    using Type = Derived;
+    // `type` is needed for reversing this iterator.
+    using type = derived_type;
 
     // TODO: Does this work with the reverse iterator adapter?
-    // If `Derived` does not have `.advance_to()`, generate it.
-    constexpr auto advance_to(Derived const& other_iterator)
-        -> Derived const& requires(!detail::has_advance_to<Derived>) {
+    // If `derived_type` does not have `.advance_to()`, generate it.
+    constexpr auto advance_to(derived_type const& other_iterator)
+        -> derived_type const& requires(!detail::has_advance_to<derived_type>) {
         if (other_iterator > this->self()) {
             while (other_iterator > this->self()) {
                 ++(*this);
@@ -121,50 +120,52 @@ class IteratorInterface {
     constexpr auto operator->() const {
         decltype(auto) reference = **this;
         if constexpr (is_reference<decltype(reference)>) {
-            // If `reference` is actually a reference Type, return its
+            // If `reference` is actually a reference type, return its
             // address.
             return addressof(reference);
         } else {
-            return ArrowProxy(move(reference));
+            return arrow_proxy(move(reference));
         }
     }
 
     constexpr friend auto operator<=>(
-        Derived const& left,
-        Derived const& right) /* requires(detail::has_distance_to<Derived>) */ {
+        derived_type const& left,
+        derived_type const&
+            right) /* requires(detail::has_distance_to<derived_type>) */ {
         return (left - right) <=> 0;
     }
 
-    constexpr friend auto operator==(Derived const& left, Derived const& right)
-        -> bool /* requires(detail::has_equal_to<Derived> ||
-                                   detail::has_distance_to<Derived>) */
+    constexpr friend auto operator==(derived_type const& left,
+                                     derived_type const& right)
+        -> bool /* requires(detail::has_equal_to<derived_type> ||
+                                   detail::has_distance_to<derived_type>) */
     {
-        if constexpr (detail::has_equal_to<Derived>) {
+        if constexpr (detail::has_equal_to<derived_type>) {
             return left.equal_to(right);
-        } else if constexpr (detail::has_distance_to<Derived>) {
+        } else if constexpr (detail::has_distance_to<derived_type>) {
             return left.distance_to(right) == 0;
         }
         __builtin_unreachable();
     }
 
-    constexpr friend auto operator!=(Derived const& left, Derived const& right)
-        -> bool {
+    constexpr friend auto operator!=(derived_type const& left,
+                                     derived_type const& right) -> bool {
         return !(left == right);
     }
 
-    // constexpr friend auto operator==(Derived const& self,
-    //                                  detail::has_sentinel<Derived> auto)
+    // constexpr friend auto operator==(derived_type const& self,
+    //                                  detail::has_sentinel<derived_type> auto)
     //     -> bool {
     //     return self.at_end();
     // }
 
     constexpr friend auto operator+(
-        Derived const& left, detail::is_difference_type<Derived> auto offset)
-        -> Derived {
-        if constexpr (detail::has_advance<Derived>) {
+        derived_type const& left,
+        detail::is_difference_type<derived_type> auto offset) -> derived_type {
+        if constexpr (detail::has_advance<derived_type>) {
             return left += offset;
         } else {
-            Derived left_copy = left;
+            derived_type left_copy = left;
             for (ssize i = 0; i < offset; ++i) {
                 ++left_copy;
             }
@@ -173,12 +174,12 @@ class IteratorInterface {
     }
 
     constexpr friend auto operator+(
-        detail::is_difference_type<Derived> auto offset, Derived const& right)
-        -> Derived {
-        if constexpr (detail::has_advance<Derived>) {
+        detail::is_difference_type<derived_type> auto offset,
+        derived_type const& right) -> derived_type {
+        if constexpr (detail::has_advance<derived_type>) {
             return right += offset;
         } else {
-            Derived right_copy = right;
+            derived_type right_copy = right;
             for (ssize i = 0; i < offset; ++i) {
                 ++right_copy;
             }
@@ -187,9 +188,9 @@ class IteratorInterface {
     }
 
     constexpr friend auto operator+=(
-        Derived const& self, detail::is_difference_type<Derived> auto offset)
-        -> Derived& {
-        if constexpr (detail::has_advance<Derived>) {
+        derived_type const& self,
+        detail::is_difference_type<derived_type> auto offset) -> derived_type& {
+        if constexpr (detail::has_advance<derived_type>) {
             self.advance(static_cast<int>(offset));
         } else {
             for (ssize i = 0; i < offset; ++i) {
@@ -200,8 +201,8 @@ class IteratorInterface {
     }
 
     // Increment or advance forwards with prefix notation.
-    constexpr auto operator++() -> Derived& {
-        if constexpr (detail::has_increment<Derived>) {
+    constexpr auto operator++() -> derived_type& {
+        if constexpr (detail::has_increment<derived_type>) {
             this->self().increment();
         } else {
             this->self().advance(1);
@@ -210,16 +211,16 @@ class IteratorInterface {
     }
 
     // Increment or advance forwards with postfix notation.
-    constexpr auto operator++(int) -> Derived {
+    constexpr auto operator++(int) -> derived_type {
         auto copy = this->self();
         ++(*this);
         return copy;
     }
 
     constexpr friend auto operator-(
-        Derived const& left, detail::is_difference_type<Derived> auto offset)
-        -> Derived {
-        if constexpr (detail::has_advance<Derived>) {
+        derived_type const& left,
+        detail::is_difference_type<derived_type> auto offset) -> derived_type {
+        if constexpr (detail::has_advance<derived_type>) {
             return left - offset;
         } else {
             for (ssize i = 0; i < offset; ++i) {
@@ -230,9 +231,9 @@ class IteratorInterface {
     }
 
     constexpr friend auto operator-=(
-        Derived const& left, detail::is_difference_type<Derived> auto offset)
-        -> Derived& {
-        if constexpr (detail::has_advance<Derived>) {
+        derived_type const& left,
+        detail::is_difference_type<derived_type> auto offset) -> derived_type& {
+        if constexpr (detail::has_advance<derived_type>) {
             return left -= offset;
         } else {
             for (ssize i = 0; i < offset; ++i) {
@@ -243,14 +244,15 @@ class IteratorInterface {
     }
 
     // Get the distance between two iterators.
-    constexpr friend auto operator-(Derived const& left, Derived const& right)
-        -> ssize /* requires(detail::has_distance_to<Derived>) */ {
+    constexpr friend auto operator-(derived_type const& left,
+                                    derived_type const& right) -> ssize
+    /* requires(detail::has_distance_to<derived_type>) */ {
         return right.distance_to(left);
     }
 
     // Decrement or advance backwards with prefix notation.
-    constexpr auto operator--() -> Derived& {
-        if constexpr (detail::has_decrement<Derived>) {
+    constexpr auto operator--() -> derived_type& {
+        if constexpr (detail::has_decrement<derived_type>) {
             this->self().decrement();
         } else {
             this->self().advance(-1);
@@ -259,7 +261,7 @@ class IteratorInterface {
     }
 
     // Decrement or advance backwards with postfix notation.
-    constexpr auto operator--(int) -> Derived& {
+    constexpr auto operator--(int) -> derived_type& {
         auto copy = this->self();
         --(*this);
         return copy;
@@ -267,57 +269,58 @@ class IteratorInterface {
 
     // TODO: This seems incorrect.
     // Random-access.
-    constexpr auto operator[](detail::is_difference_type<Derived> auto offset)
-        -> decltype(auto) requires(detail::has_advance<Derived>) {
+    constexpr auto operator[](
+        detail::is_difference_type<derived_type> auto offset)
+        -> decltype(auto) requires(detail::has_advance<derived_type>) {
         return *(this->self() + offset);
     }
 
   private:
-    constexpr auto self() -> Derived& {
-        return static_cast<Derived&>(*this);
+    constexpr auto self() -> derived_type& {
+        return static_cast<derived_type&>(*this);
     }
 
-    constexpr auto self() const -> Derived const& {
-        return static_cast<Derived const&>(*this);
+    constexpr auto self() const -> derived_type const& {
+        return static_cast<derived_type const&>(*this);
     }
 };
 
-struct RandomAccessIteratorTag {};
-struct BidirectionalIteratorTag {};
-struct ForwardIteratorTag {};
-struct InputIteratorTag {};
-struct OutputIteratorTag {};
-struct ContiguousIteratorTag {};
+struct RandomAccessiterator_typeTag {};
+struct Bidirectionaliterator_typeTag {};
+struct Forwarditerator_typeTag {};
+struct input_iterator_typeTag {};
+struct outputter_typeTag {};
+struct Contiguousiterator_typeTag {};
 
 template <typename T>
-    requires is_base_of<IteratorInterface<T>, T>
-struct IteratorTraits {
+    requires is_base_of<iterator_interface<T>, T>
+struct iterator_typeTraits {
     static T const& iterator;
-    using Value = typename InferValueType<T>::Type;
+    using value_type = typename infer_value_type<T>::type;
     using Reference = decltype(*iterator);
     using Pointer = decltype(iterator.operator->());
-    using Difference = InferDifferenceType<T>;
-    using Category = Conditional<
+    using Difference = infer_difference_type<T>;
+    using Category = conditional<
         // If this can be a random access iterator, it always will be.
-        detail::has_random_access<T>, RandomAccessIteratorTag,
-        Conditional<
+        detail::has_random_access<T>, RandomAccessiterator_typeTag,
+        conditional<
             // If this has a `++` and a `--` operator, this is a
             // bidirectional iterator.
-            detail::has_bidirectional<T>, BidirectionalIteratorTag,
-            Conditional<detail::has_single_pass<T>,
+            detail::has_bidirectional<T>, Bidirectionaliterator_typeTag,
+            conditional<detail::has_single_pass<T>,
                         // If it is single-pass, this is a forward
                         // iterator.
-                        InputIteratorTag,
+                        input_iterator_typeTag,
                         // Default to a forward iterator.
-                        ForwardIteratorTag>>>;
-    // using IteratorConcept = Category;
+                        Forwarditerator_typeTag>>>;
+    // using iterator_typeConcept = Category;
 };
 
-template <typename Iterator>
-struct ReversedIterator : IteratorInterface<ReversedIterator<Iterator>> {
+template <typename iterator_type>
+struct reversed_iterator_type : iterator_interface<reversed_iterator_type<iterator_type>> {
     // Forward any constructor to `iterator`.
     template <typename... Args>
-    constexpr ReversedIterator(Args&&... args)
+    constexpr reversed_iterator_type(Args&&... args)
         : iterator(forward<Args>(args)...) {
     }
 
@@ -329,7 +332,7 @@ struct ReversedIterator : IteratorInterface<ReversedIterator<Iterator>> {
         return this->iterator.dereference();
     }
 
-    constexpr void advance(int offset) requires(detail::has_advance<Iterator>) {
+    constexpr void advance(int offset) requires(detail::has_advance<iterator_type>) {
         this->iterator.advance(-offset);
     }
 
@@ -341,12 +344,12 @@ struct ReversedIterator : IteratorInterface<ReversedIterator<Iterator>> {
         ++iterator;
     }
 
-    constexpr auto distance_to(ReversedIterator<Iterator> other) const -> ssize
-    /* requires(detail::has_distance_to<Iterator>) */ {
+    constexpr auto distance_to(reversed_iterator_type<iterator_type> other) const -> ssize
+    /* requires(detail::has_distance_to<iterator_type>) */ {
         return this->iterator.distance_to(other.iterator);
     }
 
-    Iterator iterator;
+    iterator_type iterator;
 };
 
 // TODO: More iterable related `concept`s.
@@ -372,15 +375,15 @@ concept is_incrementable = requires(T it) {
 
 template <typename T>
 concept is_random_access_iterator =
-    is_same<typename IteratorTraits<T>::Category, RandomAccessIteratorTag>;
+    is_same<typename iterator_typeTraits<T>::Category, RandomAccessiterator_typeTag>;
 
 template <typename T>
 concept is_bidirectional_iterator =
-    is_same<typename IteratorTraits<T>::Category, BidirectionalIteratorTag>;
+    is_same<typename iterator_typeTraits<T>::Category, Bidirectionaliterator_typeTag>;
 
 template <typename T>
 concept is_forward_iterator =
-    is_same<typename IteratorTraits<T>::Category, ForwardIteratorTag>;
+    is_same<typename iterator_typeTraits<T>::Category, Forwarditerator_typeTag>;
 
 // clang-format off
 template <typename T>
@@ -390,31 +393,33 @@ concept is_input_or_output_iterator = requires(T it) {
 // clang-format on
 
 template <typename T>
-using IteratorReference = decltype(*declval<T&>());
+using iterator_reference = decltype(*declval<T&>());
 
-template <typename Outputter, typename T>
-concept is_indirectly_writable = requires(Outputter&& outputter, T&& value) {
-    *outputter = forward<T>(value);
-    *forward<Outputter>(outputter) = forward<T>(value);
-    const_cast<IteratorReference<Outputter> const&&>(*outputter) =
+template <typename outputter_type, typename T>
+concept is_indirectly_writable = requires(outputter_type&& output_iterator,
+                                          T&& value) {
+    *output_iterator = forward<T>(value);
+    *forward<outputter_type>(output_iterator) = forward<T>(value);
+    const_cast<iterator_reference<outputter_type> const&&>(*output_iterator) =
         forward<T>(value);
-    const_cast<IteratorReference<Outputter> const&&>(
-        *forward<Outputter>(outputter)) = forward<T>(value);
+    const_cast<iterator_reference<outputter_type> const&&>(
+        *forward<outputter_type>(output_iterator)) = forward<T>(value);
 };
 
-template <typename Outputter, typename T>
-concept is_output_iterator = is_input_or_output_iterator<Outputter> &&
-    is_indirectly_writable<Outputter, T> &&
-    requires(Outputter outputter, T&& value) {
-    *outputter++ = forward<T>(value);
+template <typename output_iterator, typename T>
+concept is_output_iterator = is_input_or_output_iterator<output_iterator> &&
+    is_indirectly_writable<output_iterator, T> &&
+    requires(output_iterator it, T&& value) {
+    *it++ = forward<T>(value);
 };
 
 template <is_iterable T>
-class ItReverse {
+class it_reverse {
     T& iterable;
 
   public:
-    constexpr explicit ItReverse(T& input_iterable) : iterable{input_iterable} {
+    constexpr explicit it_reverse(T& input_iterable)
+        : iterable{input_iterable} {
     }
 
     constexpr auto begin() {
@@ -435,9 +440,10 @@ class ItReverse {
 };
 
 template <is_iterable T>
-class ItConst {
+class it_const {
   public:
-    constexpr explicit ItConst(T& input_iterable) : iterable{input_iterable} {};
+    constexpr explicit it_const(T& input_iterable)
+        : iterable{input_iterable} {};
 
     constexpr auto begin() const {
         return iterable.cbegin();
@@ -452,9 +458,9 @@ class ItConst {
 };
 
 template <is_iterable T>
-class ItConstReverse {
+class it_const_reverse {
   public:
-    constexpr explicit ItConstReverse(T& input_iterable)
+    constexpr explicit it_const_reverse(T& input_iterable)
         : iterable{input_iterable} {};
 
     constexpr auto begin() const {

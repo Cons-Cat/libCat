@@ -25,7 +25,7 @@ struct AllocNonTrivialHugeObject {
 };
 
 consteval void const_test() {
-    cat::PageAllocator allocator;
+    cat::page_allocator allocator;
 
     int4* p_alloc = allocator.alloc<int4>(1).value();
     allocator.free(p_alloc);
@@ -33,7 +33,7 @@ consteval void const_test() {
     int4* p_xalloc = allocator.xalloc<int4>(1);
     allocator.free(p_xalloc);
 
-    cat::Span<int4> alloc_multi = allocator.alloc_multi<int4>(5).value();
+    cat::span<int4> alloc_multi = allocator.alloc_multi<int4>(5).value();
 
     alloc_multi =
         allocator.realloc_multi(alloc_multi.data(), alloc_multi.size(), 10)
@@ -41,7 +41,7 @@ consteval void const_test() {
 
     allocator.free_multi(alloc_multi.data(), alloc_multi.size());
 
-    cat::Span<int4> xalloc_multi = allocator.xalloc_multi<int4>(5);
+    cat::span<int4> xalloc_multi = allocator.xalloc_multi<int4>(5);
     allocator.free_multi(xalloc_multi.data(), xalloc_multi.size());
 }
 
@@ -49,14 +49,14 @@ TEST(test_alloc) {
     const_test();
 
     // Initialize an allocator.
-    cat::PageAllocator paging_allocator;
-    paging_allocator.reset();
+    cat::page_allocator pager;
+    pager.reset();
     // Page the kernel for a linear allocator to test with.
     auto page =
-        paging_allocator.opq_alloc_multi<cat::Byte>(4_ki - 64).or_exit();
-    defer(paging_allocator.free(page);)
+        pager.opq_alloc_multi<cat::byte>(4_ki - 64).or_exit();
+    defer(pager.free(page);)
     auto allocator =
-        cat::LinearAllocator::backed_handle(paging_allocator, page);
+        cat::linear_allocator::backed_handle(pager, page);
 
     // Test `opq_alloc`.
     _ = allocator.opq_alloc<int4>().value();
@@ -473,7 +473,7 @@ TEST(test_alloc) {
     // Test `opq_salloc`.
     _ = allocator.opq_salloc<int4>().value();
     allocator.reset();
-    _ = allocator.opq_alloc<cat::Byte>();  // Offset linear allocator by 1 byte.
+    _ = allocator.opq_alloc<cat::byte>();  // Offset linear allocator by 1 byte.
     auto [salloc, salloc_bytes] = allocator.opq_salloc<int4>(1).value();
     cat::verify(allocator.get(salloc) == 1);
     cat::verify(salloc_bytes == 7);
@@ -484,7 +484,7 @@ TEST(test_alloc) {
     // Test `opq_xsalloc`.
     _ = allocator.opq_xsalloc<int4>();
     allocator.reset();
-    _ = allocator.opq_alloc<cat::Byte>();  // Offset linear allocator by 1 byte.
+    _ = allocator.opq_alloc<cat::byte>();  // Offset linear allocator by 1 byte.
     auto [xsalloc, xsalloc_bytes] = allocator.opq_xsalloc<int4>(1);
     cat::verify(allocator.get(xsalloc) == 1);
     cat::verify(xsalloc_bytes == 7);
@@ -495,7 +495,7 @@ TEST(test_alloc) {
     // Test `salloc`.
     _ = allocator.salloc<int4>().value();
     allocator.reset();
-    _ = allocator.opq_alloc<cat::Byte>();  // Offset linear allocator by 1 byte.
+    _ = allocator.opq_alloc<cat::byte>();  // Offset linear allocator by 1 byte.
     auto [p_salloc, p_salloc_bytes] = allocator.salloc<int4>(1).value();
     cat::verify(*p_salloc == 1);
     cat::verify(p_salloc_bytes == 7);
@@ -506,7 +506,7 @@ TEST(test_alloc) {
     // Test `xsalloc`.
     _ = allocator.xsalloc<int4>();
     allocator.reset();
-    _ = allocator.opq_alloc<cat::Byte>();  // Offset linear allocator by 1 byte.
+    _ = allocator.opq_alloc<cat::byte>();  // Offset linear allocator by 1 byte.
     auto [p_xsalloc, p_xsalloc_bytes] = allocator.xsalloc<int4>(1);
     cat::verify(*p_xsalloc == 1);
     cat::verify(p_xsalloc_bytes == 7);
@@ -516,7 +516,7 @@ TEST(test_alloc) {
 
     // Test `salloc_multi`.
     allocator.reset();
-    _ = allocator.opq_alloc<cat::Byte>();  // Offset linear allocator by 1 byte.
+    _ = allocator.opq_alloc<cat::byte>();  // Offset linear allocator by 1 byte.
     auto [salloc_multi, salloc_multi_bytes] =
         allocator.opq_salloc_multi<int4>(5).value();
     cat::verify(salloc_multi.size() == 5);
@@ -529,7 +529,7 @@ TEST(test_alloc) {
 
     // Test `xsalloc_multi`.
     allocator.reset();
-    _ = allocator.opq_alloc<cat::Byte>();  // Offset linear allocator by 1 byte.
+    _ = allocator.opq_alloc<cat::byte>();  // Offset linear allocator by 1 byte.
     auto [xsalloc_multi, xsalloc_multi_bytes] =
         allocator.opq_xsalloc_multi<int4>(5);
     cat::verify(xsalloc_multi.size() == 5);
@@ -542,7 +542,7 @@ TEST(test_alloc) {
 
     // Test `salloc_multi`.
     allocator.reset();
-    _ = allocator.opq_alloc<cat::Byte>();  // Offset linear allocator by 1 byte.
+    _ = allocator.opq_alloc<cat::byte>();  // Offset linear allocator by 1 byte.
     auto [p_salloc_multi, p_salloc_multi_bytes] =
         allocator.salloc_multi<int4>(5).value();
     cat::verify(p_salloc_multi_bytes == 23);
@@ -553,7 +553,7 @@ TEST(test_alloc) {
 
     // Test `xsalloc_multi`.
     allocator.reset();
-    _ = allocator.opq_alloc<cat::Byte>();  // Offset linear allocator by 1 byte.
+    _ = allocator.opq_alloc<cat::byte>();  // Offset linear allocator by 1 byte.
     auto [p_xsalloc_multi, p_xsalloc_multi_bytes] =
         allocator.xsalloc_multi<int4>(5);
     cat::verify(p_xsalloc_multi_bytes == 23);

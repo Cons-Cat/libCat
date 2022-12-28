@@ -3,7 +3,7 @@
 #include "../unit_tests.hpp"
 
 TEST(test_variant) {
-    cat::Variant<int, char, uint4> variant(int{1});
+    cat::variant<int, char, uint4> variant(int{1});
     cat::verify(variant.is<int>());
     cat::verify(variant.holds_alternative<int>());
     int foo_int = variant.get<int>();
@@ -19,21 +19,21 @@ TEST(test_variant) {
     char foo_char = variant.get<char>();
     cat::verify(foo_char == 'o');
 
-    cat::Maybe<char&> opt1 = variant.get_if<char>();
-    cat::verify(opt1.has_value());
-    cat::Maybe opt2 = variant.get_if<int>();
-    cat::verify(!opt2.has_value());
+    cat::maybe<char&> maybe_1 = variant.get_if<char>();
+    cat::verify(maybe_1.has_value());
+    cat::maybe maybe_2 = variant.get_if<int>();
+    cat::verify(!maybe_2.has_value());
 
     // Test variant size.
     static_assert(sizeof(variant) == 8);
     static_assert(sizeof(variant.discriminant) == 4);
 
-    cat::Variant<char, int4[3]> big_variant;
+    cat::variant<char, int4[3]> big_variant;
     static_assert(sizeof(big_variant) == 16);
     static_assert(sizeof(big_variant.discriminant) == 4);
 
     // Test variant subtype constructor and assignment operator.
-    cat::Variant<int, char, uint4, int2> variant2 = variant;
+    cat::variant<int, char, uint4, int2> variant2 = variant;
     cat::verify(variant2.is<char>());
     cat::verify(variant2.holds_alternative<char>());
     variant2 = 1;
@@ -44,7 +44,7 @@ TEST(test_variant) {
     cat::verify(variant2.holds_alternative<char>());
 
     variant = 1;
-    cat::Variant<int, char, uint4, int2> variant3 = variant;
+    cat::variant<int, char, uint4, int2> variant3 = variant;
     cat::verify(variant3.is<int>());
     cat::verify(variant3.holds_alternative<int>());
     variant3 = int2{10};
@@ -60,8 +60,8 @@ TEST(test_variant) {
     static_assert(cat::is_same<decltype(variant3.get<2>()), uint4>);
     static_assert(cat::is_same<decltype(variant3.get<3>()), int2>);
 
-    // Test constant-evaluating `Variant`.
-    constexpr cat::Variant<int, uint4> const_variant = 1;
+    // Test constant-evaluating `variant`.
+    constexpr cat::variant<int, uint4> const_variant = 1;
     static_assert(const_variant.get<int>() == 1);
 
     // Test `.is()`.

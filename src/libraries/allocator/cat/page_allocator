@@ -7,10 +7,10 @@
 
 namespace cat {
 
-class PageAllocator : public AllocatorInterface<PageAllocator> {
+class page_allocator : public allocator_interface<page_allocator> {
   private:
     template <typename T>
-    struct PageMemoryHandle : detail::BaseMemoryHandle<T> {
+    struct page_memory_handle : detail::base_memory_handle<T> {
         T* p_storage;
 
         // TODO: Simplify with CRTP or deducing-this.
@@ -24,7 +24,7 @@ class PageAllocator : public AllocatorInterface<PageAllocator> {
     };
 
     auto allocation_bytes(usize alignment, ssize allocation_bytes)
-        -> MaybeNonZero<ssize> {
+        -> maybe_non_zero<ssize> {
         // Pages cannot be aligned by greater than 4 kibibytes.
         cat::assert(alignment <= 4_uki);
         // Round `allocation_bytes` up to the nearest 4 kibibytes.
@@ -34,19 +34,19 @@ class PageAllocator : public AllocatorInterface<PageAllocator> {
     // Allocate memory in multiples of a page-size. A page is `4_ki` large
     // on x86-64. If fewer than 4096 bytes are allocated, that amount will
     // be rounded up to 4096.
-    auto allocate(ssize allocation_bytes) -> MaybePtr<void> {
-        Scaredy result = nix::sys_mmap(
+    auto allocate(ssize allocation_bytes) -> maybePtr<void> {
+        scaredy result = nix::sys_mmap(
             0u, allocation_bytes,
             // TODO: Fix bit flags operators.
-            static_cast<nix::MemoryProtectionFlags>(
-                static_cast<unsigned int>(nix::MemoryProtectionFlags::read) |
-                static_cast<unsigned int>(nix::MemoryProtectionFlags::write)),
-            static_cast<nix::MemoryFlags>(
-                static_cast<unsigned int>(nix::MemoryFlags::privately) |
-                static_cast<unsigned int>(nix::MemoryFlags::populate) |
-                static_cast<unsigned int>(nix::MemoryFlags::anonymous)),
+            static_cast<nix::memory_protection_flags>(
+                static_cast<unsigned int>(nix::memory_protection_flags::read) |
+                static_cast<unsigned int>(nix::memory_protection_flags::write)),
+            static_cast<nix::memory_flags>(
+                static_cast<unsigned int>(nix::memory_flags::privately) |
+                static_cast<unsigned int>(nix::memory_flags::populate) |
+                static_cast<unsigned int>(nix::memory_flags::anonymous)),
             // Anonymous pages (non-files) must have `-1`.
-            nix::FileDescriptor(-1),
+            nix::file_descriptor(-1),
             // Anonymous pages (non-files) must have `0`.
             0);
         if (result.has_value()) {
@@ -58,7 +58,7 @@ class PageAllocator : public AllocatorInterface<PageAllocator> {
     // Allocate a page(s) of virtual memory that is guaranteed to align to
     // any power of 2, but less than `4_uki`.
     auto aligned_allocate(usize alignment, ssize allocation_bytes)
-        -> MaybePtr<void> {
+        -> maybePtr<void> {
         // Pages cannot be aligned by greater than 4 kibibytes.
         cat::assert(alignment <= 4_uki);
         // A normal page allocation already has strong alignment guarantees.
@@ -75,25 +75,25 @@ class PageAllocator : public AllocatorInterface<PageAllocator> {
 
     // Produce a handle to allocated memory.
     template <typename T>
-    auto make_handle(T* p_handle_storage) -> PageMemoryHandle<T> {
-        return PageMemoryHandle<T>{{}, p_handle_storage};
+    auto make_handle(T* p_handle_storage) -> page_memory_handle<T> {
+        return page_memory_handle<T>{{}, p_handle_storage};
     }
 
     // Access a page(s) of virtual memory.
     template <typename T>
-    auto access(PageMemoryHandle<T>& memory) -> T* {
+    auto access(page_memory_handle<T>& memory) -> T* {
         return memory.p_storage;
     }
 
     template <typename T>
-    auto access(PageMemoryHandle<T> const& memory) const -> T const* {
+    auto access(page_memory_handle<T> const& memory) const -> T const* {
         return memory.p_storage;
     }
 
   public:
     static constexpr bool has_pointer_stability = true;
   private:
-    friend AllocatorInterface<PageAllocator>;
+    friend allocator_interface<page_allocator>;
 };
 
 }  // namespace cat

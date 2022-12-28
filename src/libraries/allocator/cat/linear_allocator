@@ -6,10 +6,10 @@
 
 namespace cat {
 
-class LinearAllocator : public AllocatorInterface<LinearAllocator> {
+class linear_allocator : public allocator_interface<linear_allocator> {
   private:
     template <typename T>
-    struct LinearMemoryHandle : detail::BaseMemoryHandle<T> {
+    struct linear_memory_handle : detail::base_memory_handle<T> {
         T* p_storage;
 
         // TODO: Simplify with CRTP or deducing-this.
@@ -22,34 +22,34 @@ class LinearAllocator : public AllocatorInterface<LinearAllocator> {
         }
     };
 
-    LinearAllocator(uintptr<void> p_address, ssize arena_bytes)
+    linear_allocator(uintptr<void> p_address, ssize arena_bytes)
         : p_arena_begin(p_address + static_cast<usize>(arena_bytes)),
           p_arena_end(p_address) {
     }
 
   public:
-    // Allocate a `LinearAllocator` from another allocator.
+    // Allocate a `linear_allocator` from another allocator.
     static auto backed(is_stable_allocator auto& backing, ssize arena_bytes)
-        -> Maybe<LinearAllocator> {
-        Span memory = TRY(backing.template alloc_multi<Byte>(arena_bytes));
-        return LinearAllocator(memory.data(), arena_bytes);
+        -> maybe<linear_allocator> {
+        span memory = TRY(backing.template alloc_multi<byte>(arena_bytes));
+        return linear_allocator(memory.data(), arena_bytes);
     }
 
-    // Allocate a `LinearAllocator` from another allocator, given a handle to
+    // Allocate a `linear_allocator` from another allocator, given a handle to
     // it.
     // TODO: Can this return a tuple of the allocator and handle?
     static auto backed_handle(is_stable_allocator auto& backing,
-                              mem auto& handle) -> LinearAllocator {
-        return LinearAllocator(backing.template p_get(handle),
-                               handle.raw_size());
+                              mem auto& handle) -> linear_allocator {
+        return linear_allocator(backing.template p_get(handle),
+                                handle.raw_size());
     }
 
     // TODO: Can this return a tuple of the allocator and handle?
     static auto backed_handle_sized(is_stable_allocator auto& backing,
                                     mem auto& handle, ssize arena_size)
-        -> LinearAllocator {
+        -> linear_allocator {
         cat::assert(arena_size <= handle.raw_size());
-        return LinearAllocator(backing.template p_get(handle), arena_size);
+        return linear_allocator(backing.template p_get(handle), arena_size);
     }
 
     // Reset the bumped pointer to the beginning of this arena.
@@ -59,7 +59,7 @@ class LinearAllocator : public AllocatorInterface<LinearAllocator> {
 
   private:
     auto allocation_bytes(usize alignment, ssize allocation_bytes)
-        -> MaybeNonZero<ssize> {
+        -> maybe_non_zero<ssize> {
         uintptr<void> allocation = align_down(
             this->p_arena_current - usize{allocation_bytes}, alignment);
 
@@ -72,7 +72,7 @@ class LinearAllocator : public AllocatorInterface<LinearAllocator> {
     }
 
     // Try to allocate memory and bump the pointer down.
-    auto allocate(ssize allocation_bytes) -> MaybePtr<void> {
+    auto allocate(ssize allocation_bytes) -> maybePtr<void> {
         if (this->p_arena_current - allocation_bytes >= p_arena_end) {
             this->p_arena_current -= allocation_bytes;
             // Return a pointer that is then used to in-place construct a `T`.
@@ -84,7 +84,7 @@ class LinearAllocator : public AllocatorInterface<LinearAllocator> {
     // Try to allocate memory aligned to some boundary and bump the pointer
     // down.
     auto aligned_allocate(usize alignment, ssize allocation_bytes)
-        -> MaybePtr<void> {
+        -> maybePtr<void> {
         uintptr<void> allocation =
             align_down(this->p_arena_current - allocation_bytes, alignment);
         if (allocation >= p_arena_end) {
@@ -98,7 +98,7 @@ class LinearAllocator : public AllocatorInterface<LinearAllocator> {
     // Try to allocate memory and bump the pointer down, and return the memory
     // with size allocated.
     auto aligned_allocate_feedback(usize alignment, ssize allocation_bytes)
-        -> MaybeSizedAllocation<void*> {
+        -> maybe_sized_allocation<void*> {
         uintptr<void> allocation =
             align_down(this->p_arena_current - allocation_bytes, alignment);
         if (allocation >= p_arena_end) {
@@ -106,7 +106,7 @@ class LinearAllocator : public AllocatorInterface<LinearAllocator> {
                 static_cast<ssize>(this->p_arena_current - allocation);
             this->p_arena_current = allocation;
 
-            return MaybeSizedAllocation<void*>(Tuple{
+            return maybe_sized_allocation<void*>(tuple{
                 // Return a pointer that is then used for in-place construction.
                 static_cast<void*>(this->p_arena_current), bytes_allocated});
         }
@@ -120,25 +120,25 @@ class LinearAllocator : public AllocatorInterface<LinearAllocator> {
 
     // Produce a handle to allocated memory.
     template <typename T>
-    auto make_handle(T* p_handle_storage) -> LinearMemoryHandle<T> {
-        return LinearMemoryHandle<T>{{}, p_handle_storage};
+    auto make_handle(T* p_handle_storage) -> linear_memory_handle<T> {
+        return linear_memory_handle<T>{{}, p_handle_storage};
     }
 
     // Access some memory.
     template <typename T>
-    auto access(LinearMemoryHandle<T>& memory) -> T* {
+    auto access(linear_memory_handle<T>& memory) -> T* {
         return memory.p_storage;
     }
 
     template <typename T>
-    auto access(LinearMemoryHandle<T> const& memory) const -> T const* {
+    auto access(linear_memory_handle<T> const& memory) const -> T const* {
         return memory.p_storage;
     }
 
   public:
     static constexpr bool has_pointer_stability = true;
   private:
-    friend AllocatorInterface<LinearAllocator>;
+    friend allocator_interface<linear_allocator>;
 
     uintptr<void> const p_arena_begin;
     uintptr<void> const p_arena_end;

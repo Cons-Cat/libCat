@@ -24,6 +24,6 @@ TEST(test_cast) {
     static_assert(cat::is_same<decltype(cat::bit_int_cast(TestCast4{})), int4>);
     static_assert(cat::is_same<decltype(cat::bit_int_cast(TestCast8{})), int8>);
     // static_assert(cat::is_same<decltype(cat::reinterpret_int_cast(
-    //                                (cat::AddConst<TestCast8>){})),
+    //                                (cat::add_const<TestCast8>){})),
     //                            int8 const>);
 }

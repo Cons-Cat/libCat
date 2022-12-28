@@ -67,8 +67,8 @@ namespace detail {
 
 template <typename T, T... values>
     requires(is_integral<T>)
-struct ValueList {
-    using Value = T;
+struct value_type_list {
+    using value_type = T;
 
     static constexpr ssize size = ssizeof_pack(values...);
 
@@ -85,7 +85,7 @@ namespace detail {
             // Recurse, appending `value` to `integers`.
             return make_value_list<count - 1, T, value, value, integers...>();
         } else {
-            return ValueList<T, integers...>();
+            return value_type_list<T, integers...>();
         }
     }
 
@@ -97,7 +97,7 @@ namespace detail {
             return make_integer_sequence<count - 1, T, T(count.raw - 1),
                                          T(count.raw - 1), integers...>();
         } else {
-            return ValueList<T, integers...>();
+            return value_type_list<T, integers...>();
         }
     }
 }  // namespace detail
@@ -106,7 +106,7 @@ template <typename T, T value, ssize count>
 constexpr auto value_list = detail::make_value_list<count, T, value>();
 
 template <typename T, T value, ssize count>
-using MakeValueList = decltype(value_list<T, value, count>);
+using make_value_type_list = decltype(value_list<T, value, count>);
 
 template <is_integral T, ssize count>
 constexpr auto integer_sequence =
@@ -119,41 +119,43 @@ template <is_integral T, ssize count>
 constexpr auto ones_list = value_list<T, T(1), count>;
 
 template <is_integral T, ssize count>
-using MakeIntegerSequence = RemoveCv<decltype(integer_sequence<ssize, count>)>;
+using make_integer_sequence =
+    remove_cv<decltype(integer_sequence<ssize, count>)>;
 
+// TODO: What is this?
 template <ssize... indices>
-using IndexList = ValueList<ssize, indices...>;
+using index_list_type = value_type_list<ssize, indices...>;
 
 template <ssize value, ssize count>
 constexpr auto index_list = value_list<ssize, value, count>;
 
 template <ssize value, ssize count>
-using MakeIndexList = MakeValueList<ssize, value, count>;
+using make_index_list = make_value_type_list<ssize, value, count>;
 
 template <ssize count>
 constexpr auto index_sequence = integer_sequence<ssize, count>;
 
 template <ssize count>
-using MakeIndexSequence = MakeIntegerSequence<ssize, count>;
+using make_index_sequence = make_integer_sequence<ssize, count>;
 
 template <typename... Ts>
 // `ssizeof_pack()` here produces an internal compiler error in GCC 12.
-using IndexSequenceFor = MakeIndexSequence<ssize{sizeof...(Ts)}>;
+using index_sequence_for = make_index_sequence<ssize{sizeof...(Ts)}>;
 
 template <typename T>
     requires(is_enum<T>)
 constexpr auto to_underlying(T any_enum) {
-    return static_cast<UnderlyingType<T>>(any_enum);
+    return static_cast<underlying_type<T>>(any_enum);
 }
 
 namespace detail {
     template <typename Closure>
     struct DeferWrapper {
-        Closure callback;
-        DeferWrapper(Closure&& closure) : callback(closure) {
+        Closure invocable;
+        DeferWrapper(Closure&& closure) : invocable(closure) {
         }
         ~DeferWrapper() {
-            this->callback();
+            this->invocable();
         }
     };
 }  // namespace detail
@@ -181,7 +183,7 @@ namespace detail {
             deferred_code                       \
         });
 
-// TODO: Support `cat::ref`, to enable `Variant` and `Tuple` to hold references
+// TODO: Support `cat::ref`, to enable `variant` and `tuple` to hold references
 // more easily.
 
 }  // namespace cat
@@ -192,7 +194,7 @@ namespace detail {
 namespace std {
 
 template <typename T>
-[[nodiscard]] constexpr auto as_const(T& value) -> cat::AddConst<T>& {
+[[nodiscard]] constexpr auto as_const(T& value) -> cat::add_const<T>& {
     return value;
 }
 
@@ -205,14 +207,14 @@ void as_const(const T&&) = delete;
 
 /*
 template <typename T>
-constexpr auto move(T&& input) -> cat::RemoveReference<T>&&;
+constexpr auto move(T&& input) -> cat::remove_reference<T>&&;
 
 template <typename T>
-constexpr auto forward(cat::RemoveReference<T>& input) -> T&&;
+constexpr auto forward(cat::remove_reference<T>& input) -> T&&;
 
 template <typename T>
 requires(!cat::is_lvalue_reference<T>)
-constexpr auto std::forward(cat::RemoveReference<T>&& input) -> T&&;
+constexpr auto std::forward(cat::remove_reference<T>&& input) -> T&&;
 */
 
 // NOLINTEND(readability-redundant-declaration)

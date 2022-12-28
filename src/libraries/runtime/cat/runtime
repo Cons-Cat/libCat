@@ -41,10 +41,10 @@ auto load_base_stack_pointer() -> void*;
 extern "C" [[noreturn]] void __stack_chk_fail();
 
 // NOLINTNEXTLINE `__cxa_atexit()` must begin with a double underscore.
-extern "C" void __cxa_atexit(void (*p_callback)(void*), void* p_arg,
+extern "C" void __cxa_atexit(void (*p_invocable)(void*), void* p_arg,
                              void* p_dso_handle);
 
-class JmpBuffer {
+class jmp_buffer {
     // This buffer layout should vary by all ISAs.
   private:
     // %rbx:
@@ -58,9 +58,9 @@ class JmpBuffer {
     [[maybe_unused]] unsigned long stack_pointer;
 };
 
-[[gnu::naked]] auto setjmp(JmpBuffer& jump_point) -> int;
+[[gnu::naked]] auto setjmp(jmp_buffer& jump_point) -> int;
 
-[[noreturn, gnu::naked]] void longjmp(JmpBuffer& jump_point, int8 return_value);
+[[noreturn, gnu::naked]] void longjmp(jmp_buffer& jump_point, int8 return_value);
 
 }  // namespace cat
 

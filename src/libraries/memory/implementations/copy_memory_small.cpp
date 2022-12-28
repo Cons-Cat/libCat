@@ -10,7 +10,7 @@ cat::copy_memory_small(void const* p_source, void* p_destination, ssize bytes) {
     unsigned char* p_destination_handle =
         static_cast<unsigned char*>(p_destination);
 
-    for (ssize::Raw i = 0; i < bytes; ++i) {
+    for (ssize::raw_type i = 0; i < bytes; ++i) {
         p_destination_handle[i] = p_source_handle[i];
     }
 }

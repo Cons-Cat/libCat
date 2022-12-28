@@ -4,12 +4,12 @@
 
 #include <cat/meta>
 
-// `Unique` wrappers are curiously-recurring-template-pattern types that cannot
+// `unique` wrappers are curiously-recurring-template-pattern types that cannot
 // be copy-constructed. They must be moved to pass into functions. Their
 // destructor will call an `raii()` method on the type they wrap iff that type
 // has an `raii()` method.
 
-// `UniqueWeak` is a similar wrapper that can release ownership of its data, and
+// `unique_weak` is a similar wrapper that can release ownership of its data, and
 // will only invoke that data's destructor if it currently holds ownership.
 
 namespace cat {
@@ -20,54 +20,54 @@ concept has_raii = requires(T it) {
 };
 
 template <typename T>
-class UniqueWeak;
+class unique_weak;
 
 namespace detail {
     template <typename T>
     concept is_non_unique_weak = requires {
-        is_specialization<T, UniqueWeak>;
+        is_specialization<T, unique_weak>;
     };
 }  // namespace detail
 
 template <typename T>
-class Unique {
+class unique {
   public:
     // Delete non-moving constructors.
     template <typename U>
-    constexpr Unique(Unique<U> const&) = delete;
+    constexpr unique(unique<U> const&) = delete;
 
     // Allow default-construction and move-construction.
-    constexpr Unique() = default;
+    constexpr unique() = default;
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    constexpr Unique(Unique<U>&& raii)
+    constexpr unique(unique<U>&& raii)
         : storage(static_cast<T>(raii.borrow())) {
     }
 
     // Copy-construct from any type convertible into `T`.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    constexpr Unique(U const& value) : storage(static_cast<T>(value)) {
+    constexpr unique(U const& value) : storage(static_cast<T>(value)) {
     }
 
     // Move-construct from any type convertible into `T`.
     template <rvalue U>
         requires(is_implicitly_convertible<U, T>)
     // NOLINTNEXTLINE
-    constexpr Unique(U&& value) : storage(forward<U>(value)) {
+    constexpr unique(U&& value) : storage(forward<U>(value)) {
     }
 
     // Forward any possible constructor into `storage`.
     template <typename... Args>
         requires(sizeof...(Args) > 1)
-    Unique(Args&&... args) : storage(forward<Args>(args)...) {
+    unique(Args&&... args) : storage(forward<Args>(args)...) {
     }
 
     // Allow move-assignment.
     template <rvalue U>
         requires(is_implicitly_convertible<U, T>)
-    auto operator=(U&& value) -> Unique& {
+    auto operator=(U&& value) -> unique& {
         this->storage_destructor();
         this->storage = static_cast<T>(forward<U>(value));
         return *this;
@@ -75,7 +75,7 @@ class Unique {
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto operator=(Unique<U>&& raii) -> Unique& {
+    auto operator=(unique<U>&& raii) -> unique& {
         this->storage_destructor();
         this->storage = static_cast<T>(move(raii).borrow());
         return *this;
@@ -83,13 +83,13 @@ class Unique {
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto operator=(UniqueWeak<U>&& raii) -> Unique& {
+    auto operator=(unique_weak<U>&& raii) -> unique& {
         this->storage_destructor();
         this->storage = static_cast<T>(move(raii).borrow());
         return *this;
     }
 
-    ~Unique() {
+    ~unique() {
         if constexpr (has_raii<T>) {
             this->storage.raii();
         }
@@ -116,45 +116,45 @@ class Unique {
 
 // TODO: Why is this needed?
 template <detail::is_non_unique_weak T>
-Unique(T) -> Unique<T>;
+unique(T) -> unique<T>;
 
 template <typename T>
-class UniqueWeak {
+class unique_weak {
   public:
     // Delete non-moving constructors.
     template <typename U>
-    constexpr UniqueWeak(UniqueWeak<U> const&) = delete;
+    constexpr unique_weak(unique_weak<U> const&) = delete;
 
     // Allow default-construction and move-construction.
-    constexpr UniqueWeak() = default;
+    constexpr unique_weak() = default;
 
     // Consume any type convertible into `T`.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    constexpr UniqueWeak(U const& value) : storage(static_cast<T>(value)) {
+    constexpr unique_weak(U const& value) : storage(static_cast<T>(value)) {
     }
 
     template <rvalue U>
         requires(is_implicitly_convertible<U, T>)
-    constexpr UniqueWeak(U&& value)  // NOLINT
+    constexpr unique_weak(U&& value)  // NOLINT
         : storage(static_cast<T>(forward<U>(value))) {
     }
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    constexpr UniqueWeak(UniqueWeak<U>&& raii)
+    constexpr unique_weak(unique_weak<U>&& raii)
         : storage(static_cast<T>(raii.borrow())) {
         raii.owns_data = false;
     };
 
     template <typename... Args>
-    UniqueWeak(Args&&... args) : storage(forward<Args>(args)...) {
+    unique_weak(Args&&... args) : storage(forward<Args>(args)...) {
     }
 
     // Allow move-assignment.
     template <rvalue U>
         requires(is_implicitly_convertible<U, T>)
-    auto operator=(U&& value) -> UniqueWeak<T>& {
+    auto operator=(U&& value) -> unique_weak<T>& {
         this->storage_destructor();
         this->storage = forward<U>(value);
         this->owns_data = true;
@@ -163,7 +163,7 @@ class UniqueWeak {
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto operator=(UniqueWeak<U>&& raii) -> UniqueWeak<T>& {
+    auto operator=(unique_weak<U>&& raii) -> unique_weak<T>& {
         raii.owns_data = false;
         this->storage_destructor();
         this->storage = static_cast<T>(move(raii).borrow());
@@ -180,14 +180,14 @@ class UniqueWeak {
         return forward<T>(this->storage);
     }
 
-    ~UniqueWeak() {
+    ~unique_weak() {
         if constexpr (has_raii<T>) {
             this->storage.raii();
         }
     }
 
   private:
-    // If this `UniqueWeak` owns the data it stores, it will be destroyed.
+    // If this `unique_weak` owns the data it stores, it will be destroyed.
     void storage_destructor() {
         if (this->owns_data) {
             // If `T` holds a `.raii()` method, it will be called before `T`'s
@@ -207,6 +207,6 @@ class UniqueWeak {
 };
 
 template <typename T>
-UniqueWeak(T) -> UniqueWeak<T>;
+unique_weak(T) -> unique_weak<T>;
 
 }  // namespace cat

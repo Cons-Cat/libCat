@@ -5,12 +5,12 @@
 #include <cat/utility>
 
 template <typename T>
-constexpr auto std::forward(cat::RemoveReference<T>& input) -> T&& {
+constexpr auto std::forward(cat::remove_reference<T>& input) -> T&& {
     return static_cast<T&&>(input);
 }
 
 template <typename T>
     requires(!cat::is_lvalue_reference<T>)
-constexpr auto std::forward(cat::RemoveReference<T>&& input) -> T&& {
+constexpr auto std::forward(cat::remove_reference<T>&& input) -> T&& {
     return static_cast<T&&>(input);
 }

@@ -51,8 +51,8 @@ class source_location {
 
 namespace cat {
 
-class String;
-using SourceLocation = std::source_location;
+class string;
+using source_location = std::source_location;
 
 void breakpoint();
 
@@ -60,15 +60,15 @@ void breakpoint();
 // `assert_handler.cpp`.
 namespace detail {
     void print_assert_location(
-        SourceLocation const& callsite = SourceLocation::current());
+        source_location const& callsite = source_location::current());
 
-    using AssertHandler = void (*)(SourceLocation const&);
+    using assert_handler = void (*)(source_location const&);
 }  // namespace detail
 
-void default_assert_handler(SourceLocation const& callsite);
+void default_assert_handler(source_location const& callsite);
 
 // This variable can be mutated to change the default assert handler globally.
-inline detail::AssertHandler assert_handler = default_assert_handler;
+inline detail::assert_handler assert_handler = default_assert_handler;
 
 // TODO: Allow `assert()` and `verify()` in a `constexpr` context, and make them
 // throw if their invariant holds false.
@@ -77,19 +77,19 @@ inline detail::AssertHandler assert_handler = default_assert_handler;
 // TODO: `assert_eq()`, `assert_gt()`, etc.
 
 void verify(bool invariant_expression,
-            void (*p_assert_handler)(SourceLocation const&) = assert_handler,
-            SourceLocation const& callsite = SourceLocation::current());
+            void (*p_assert_handler)(source_location const&) = assert_handler,
+            source_location const& callsite = source_location::current());
 
-void verify(bool invariant_expression, String const error_string,
-            void (*p_assert_handler)(SourceLocation const&) = assert_handler,
-            SourceLocation const& callsite = SourceLocation::current());
+void verify(bool invariant_expression, string const error_string,
+            void (*p_assert_handler)(source_location const&) = assert_handler,
+            source_location const& callsite = source_location::current());
 
 void assert(bool invariant_expression,
-            void (*p_assert_handler)(SourceLocation const&) = assert_handler,
-            SourceLocation const& callsite = SourceLocation::current());
+            void (*p_assert_handler)(source_location const&) = assert_handler,
+            source_location const& callsite = source_location::current());
 
-void assert(bool invariant_expression, String const error_string,
-            void (*p_assert_handler)(SourceLocation const&) = assert_handler,
-            SourceLocation const& callsite = SourceLocation::current());
+void assert(bool invariant_expression, string const error_string,
+            void (*p_assert_handler)(source_location const&) = assert_handler,
+            source_location const& callsite = source_location::current());
 
 }  // namespace cat

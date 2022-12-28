@@ -7,7 +7,7 @@
 namespace std {
 
 namespace detail {
-    enum class Order : signed char {
+    enum class order : signed char {
         less = -1,
         equivalent = 0,
         equal = 0,
@@ -16,21 +16,20 @@ namespace detail {
         nonequal = 1
     };
 
-    enum class Unordered : signed char {
+    enum class unordered : signed char {
         // Any value other than -1, 0, or 1 would be valid here.
         unordered = 2
     };
 }  // namespace detail
 
-// NOLINTNEXTLINE This must be snake_case.
 class partial_ordering {
     signed int order;
 
-    constexpr explicit partial_ordering(detail::Order in_order)
+    constexpr explicit partial_ordering(detail::order in_order)
         : order(static_cast<signed int>(in_order)) {
     }
 
-    constexpr explicit partial_ordering(detail::Unordered in_order)
+    constexpr explicit partial_ordering(detail::unordered in_order)
         : order(static_cast<signed int>(in_order)) {
     }
 
@@ -143,26 +142,25 @@ class partial_ordering {
     // return `less`.
     friend constexpr auto operator<=>(decltype(nullptr), partial_ordering rhs)
         -> partial_ordering {
-        return partial_ordering{static_cast<detail::Order>(-rhs.order)};
+        return partial_ordering{static_cast<detail::order>(-rhs.order)};
     }
 };
 
 // Initializing these values inside of `partial_ordering` is not possible, since
 // it would be an incomplete type in that context. They are initialized
 // afterwards, here, instead.
-inline constexpr partial_ordering partial_ordering::less(detail::Order::less);
+inline constexpr partial_ordering partial_ordering::less(detail::order::less);
 inline constexpr partial_ordering partial_ordering::equivalent(
-    detail::Order::equivalent);
+    detail::order::equivalent);
 inline constexpr partial_ordering partial_ordering::greater(
-    detail::Order::greater);
+    detail::order::greater);
 inline constexpr partial_ordering partial_ordering::unordered(
-    detail::Unordered::unordered);
+    detail::unordered::unordered);
 
-// NOLINTNEXTLINE This must be snake_case.
 class weak_ordering {
     signed int order;
 
-    constexpr explicit weak_ordering(detail::Order in_order)
+    constexpr explicit weak_ordering(detail::order in_order)
         : order(static_cast<signed int>(in_order)) {
     }
 
@@ -175,7 +173,7 @@ class weak_ordering {
 
     // `weak_ordering` must implicitly cast into `partial_ordering`.
     constexpr operator partial_ordering() const {
-        return partial_ordering{static_cast<detail::Order>(this->order)};
+        return partial_ordering{static_cast<detail::order>(this->order)};
     }
 
     friend constexpr auto operator==(weak_ordering, weak_ordering)
@@ -278,23 +276,22 @@ class weak_ordering {
     // return `less`.
     friend constexpr auto operator<=>(decltype(nullptr), weak_ordering rhs)
         -> weak_ordering {
-        return weak_ordering{static_cast<detail::Order>(-rhs.order)};
+        return weak_ordering{static_cast<detail::order>(-rhs.order)};
     }
 };
 
 // Initializing these values inside of `weak_ordering` is not possible, since
 // it would be an incomplete type in that context. They are initialized
 // afterwards, here, instead.
-inline constexpr weak_ordering weak_ordering::less(detail::Order::less);
+inline constexpr weak_ordering weak_ordering::less(detail::order::less);
 inline constexpr weak_ordering weak_ordering::equivalent(
-    detail::Order::equivalent);
-inline constexpr weak_ordering weak_ordering::greater(detail::Order::greater);
+    detail::order::equivalent);
+inline constexpr weak_ordering weak_ordering::greater(detail::order::greater);
 
-// NOLINTNEXTLINE This must be snake_case.
 class strong_ordering {
     signed int order;
 
-    constexpr explicit strong_ordering(detail::Order in_order)
+    constexpr explicit strong_ordering(detail::order in_order)
         : order(static_cast<signed int>(in_order)) {
     }
 
@@ -306,12 +303,12 @@ class strong_ordering {
 
     // `strong_ordering` must implicitly cast into `partial_ordering`.
     constexpr operator partial_ordering() const {
-        return partial_ordering{static_cast<detail::Order>(this->order)};
+        return partial_ordering{static_cast<detail::order>(this->order)};
     }
 
     // `strong_ordering` must implicitly cast into `weak_ordering`.
     constexpr operator weak_ordering() const {
-        return weak_ordering{static_cast<detail::Order>(this->order)};
+        return weak_ordering{static_cast<detail::order>(this->order)};
     }
 
     friend constexpr auto operator==(strong_ordering, strong_ordering)
@@ -414,19 +411,19 @@ class strong_ordering {
     // return `less`.
     friend constexpr auto operator<=>(decltype(nullptr), strong_ordering rhs)
         -> strong_ordering {
-        return strong_ordering{static_cast<detail::Order>(-rhs.order)};
+        return strong_ordering{static_cast<detail::order>(-rhs.order)};
     }
 };
 
 // Initializing these values inside of `strong_ordering` is not possible, since
 // it would be an incomplete type in that context. They are initialized
 // afterwards, here, instead.
-inline constexpr strong_ordering strong_ordering::less(detail::Order::less);
+inline constexpr strong_ordering strong_ordering::less(detail::order::less);
 inline constexpr strong_ordering strong_ordering::equivalent(
-    detail::Order::equivalent);
-inline constexpr strong_ordering strong_ordering::equal(detail::Order::equal);
+    detail::order::equivalent);
+inline constexpr strong_ordering strong_ordering::equal(detail::order::equal);
 inline constexpr strong_ordering strong_ordering::greater(
-    detail::Order::greater);
+    detail::order::greater);
 
 namespace detail {
     template <typename T>
@@ -438,29 +435,29 @@ namespace detail {
     template <>
     inline constexpr int comparison_category_strength<strong_ordering> = 3;
 
-    template <typename T, typename U, typename... Remaining>
-    struct WeakestComparisonCategory {
-        using Weaker = cat::Conditional<(comparison_category_strength<T> <=
+    template <typename T, typename U, typename... remaining>
+    struct weakest_comparison_category {
+        using weaker = cat::conditional<(comparison_category_strength<T> <=
                                          comparison_category_strength<U>),
                                         T, U>;
 
-        using Type =
-            cat::Conditional<(sizeof...(Remaining) > 0) && (!cat::is_void<U>),
+        using type =
+            cat::conditional<(sizeof...(remaining) > 0) && (!cat::is_void<U>),
                              // Recurse through `StrongestComparisonCategory` to
                              // find the strongest type in this list.
-                             WeakestComparisonCategory<
+                             weakest_comparison_category<
                                  // Set the next recursion's `T` to the weaker
                                  // of `T` and `U`.
-                                 Weaker,
+                                 weaker,
                                  // Recurse with the remaining types. Appending
                                  // `void` is required, because this branch is
-                                 // not short-circuited by `Conditional`, and
+                                 // not short-circuited by `conditional`, and
                                  // there must be at least two template
                                  // arguments.
-                                 Remaining..., void>,
+                                 remaining..., void>,
                              // The base case, when there are no types left in
-                             // `Remaining`, is the weaker of `T` and `U`.
-                             Weaker>;
+                             // `remaining`, is the weaker of `T` and `U`.
+                             weaker>;
     };
 }  // namespace detail
 
@@ -469,15 +466,13 @@ template <typename... Ts>
     requires((cat::is_same<Ts, partial_ordering> ||
               cat::is_same<Ts, weak_ordering> ||
               cat::is_same<Ts, strong_ordering>)&&...)
-// NOLINTNEXTLINE This must be snake_case.
 struct common_comparison_category {
-    // NOLINTNEXTLINE
-    using type = typename detail::WeakestComparisonCategory<Ts...>::Type;
+    using type = typename detail::weakest_comparison_category<Ts...>::type;
 };
 
 template <typename T>
 struct common_comparison_category<T> {
-    using type = void;  // NOLINT
+    using type = void;
 };
 
 // These partial-specializations short-circuit single-argument specializations
@@ -485,26 +480,25 @@ struct common_comparison_category<T> {
 
 template <>
 struct common_comparison_category<partial_ordering> {
-    using type = partial_ordering;  // NOLINT
+    using type = partial_ordering;
 };
 
 template <>
 struct common_comparison_category<weak_ordering> {
-    using type = weak_ordering;  // NOLINT
+    using type = weak_ordering;
 };
 
 template <>
 struct common_comparison_category<strong_ordering> {
-    using type = strong_ordering;  // NOLINT
+    using type = strong_ordering;
 };
 
 template <>
 struct common_comparison_category<> {
-    using type = strong_ordering;  // NOLINT
+    using type = strong_ordering;
 };
 
 template <typename... Ts>
-// NOLINTNEXTLINE This must be snake_case.
 using common_comparison_category_t =
     typename common_comparison_category<Ts...>::type;
 

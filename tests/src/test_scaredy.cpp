@@ -2,7 +2,7 @@
 
 #include "../unit_tests.hpp"
 
-// Minimal result types usable for `cat::Scaredy`.
+// Minimal result types usable for `cat::scaredy`.
 struct ErrorOne {
     int4 code;
 
@@ -29,7 +29,7 @@ auto two() -> ErrorTwo {
     return two;
 }
 
-auto union_errors(int4 error) -> cat::Scaredy<int8, ErrorOne, ErrorTwo> {
+auto union_errors(int4 error) -> cat::scaredy<int8, ErrorOne, ErrorTwo> {
     switch (error.raw) {
         case 0:
             return one();
@@ -49,21 +49,21 @@ enum class Err {
     two
 };
 
-auto scaredy_try_success() -> cat::Scaredy<int, Err> {
-    cat::Scaredy<int, Err> error{0};
+auto scaredy_try_success() -> cat::scaredy<int, Err> {
+    cat::scaredy<int, Err> error{0};
     int boo = TRY(error);
     return boo;
 }
 
-auto scaredy_try_fail() -> cat::Scaredy<int, Err> {
-    cat::Scaredy<int, Err> error{Err::one};
+auto scaredy_try_fail() -> cat::scaredy<int, Err> {
+    cat::scaredy<int, Err> error{Err::one};
     int boo = TRY(error);
     return boo;
 }
 
 TEST(test_scaredy) {
-    cat::Scaredy result = union_errors(0);
-    // The `Scaredy` here adds a flag to the `int8`, which is padded out to 16
+    cat::scaredy result = union_errors(0);
+    // The `scaredy` here adds a flag to the `int8`, which is padded out to 16
     // bytes. No storage cost exists for the error types.
     static_assert(sizeof(result) == 16);
 
@@ -86,22 +86,22 @@ TEST(test_scaredy) {
     cat::verify(result.is<int8>());
 
     // Test `.error()`.
-    cat::Scaredy<int, ErrorOne> one_error = ErrorOne(1);
+    cat::scaredy<int, ErrorOne> one_error = ErrorOne(1);
     cat::verify(one_error.error().code == 1);
     cat::verify(one_error.error<ErrorOne>().code == 1);
 
-    cat::Scaredy<int, ErrorOne, ErrorTwo> two_error = ErrorOne(1);
+    cat::scaredy<int, ErrorOne, ErrorTwo> two_error = ErrorOne(1);
     cat::verify(two_error.error<ErrorOne>().code == 1);
 
     // Test compact optimization.
-    cat::Scaredy<cat::CompactScaredy<int4,
+    cat::scaredy<cat::compact_scaredy<int4,
                                      [](int4 input) {
                                          return input >= 0;
                                      }>,
                  ErrorOne>
         predicate = -1;
 
-    // This `Scaredy` adds no storage to an `int4`.
+    // This `scaredy` adds no storage to an `int4`.
     static_assert(sizeof(predicate) == sizeof(int4));
     cat::verify(!predicate.has_value());
 
@@ -118,10 +118,10 @@ TEST(test_scaredy) {
     cat::verify(!predicate.has_value());
 
     // Test `.value_or()`.
-    cat::Scaredy<int4, ErrorOne> is_error = ErrorOne();
-    cat::Scaredy<int4, ErrorOne> is_value = 2;
-    cat::Scaredy<int4, ErrorOne> const const_is_error = ErrorOne();
-    cat::Scaredy<int4, ErrorOne> const const_is_value = 2;
+    cat::scaredy<int4, ErrorOne> is_error = ErrorOne();
+    cat::scaredy<int4, ErrorOne> is_value = 2;
+    cat::scaredy<int4, ErrorOne> const const_is_error = ErrorOne();
+    cat::scaredy<int4, ErrorOne> const const_is_value = 2;
 
     int4 fallback = is_error.value_or(1);
     cat::verify(fallback == 1);
@@ -135,12 +135,12 @@ TEST(test_scaredy) {
     int4 no_const_fallback = const_is_value.value_or(1);
     cat::verify(no_const_fallback == 2);
 
-    // Test monadic member functions on a mutable `Scaredy`.
+    // Test monadic member functions on a mutable `scaredy`.
     auto increment = [](auto input) {
         return input + 1;
     };
 
-    cat::Scaredy<int4, ErrorOne> mut_scaredy = 1;
+    cat::scaredy<int4, ErrorOne> mut_scaredy = 1;
     _ = mut_scaredy.transform(increment).and_then(increment);
 
     // `.transform()` returning `void`.
@@ -152,14 +152,14 @@ TEST(test_scaredy) {
         return decltype(mut_scaredy){};
     });
 
-    // Test monadic member functions on a `const`-qualified `Scaredy`.
-    cat::Scaredy<int4, ErrorOne> const const_scaredy = 1;
+    // Test monadic member functions on a `const`-qualified `scaredy`.
+    cat::scaredy<int4, ErrorOne> const const_scaredy = 1;
     _ = const_scaredy.transform(increment).and_then(increment);
 
-    // Test `.is()` on variant `Scaredy`.
+    // Test `.is()` on variant `scaredy`.
     bool matched = false;
 
-    cat::Scaredy<int4, ErrorOne, ErrorTwo> is_variant_scaredy;
+    cat::scaredy<int4, ErrorOne, ErrorTwo> is_variant_scaredy;
     is_variant_scaredy = 1;
 
     // Match it against `int4`.
@@ -206,7 +206,7 @@ TEST(test_scaredy) {
     }));
     cat::verify(matched);
 
-    // Test `.is()` on `Compact` `Scaredy`.
+    // Test `.is()` on `compact` `scaredy`.
     predicate = 1;
 
     // Test type comparison.
@@ -232,14 +232,14 @@ TEST(test_scaredy) {
     cat::verify(matched);
 
     // Test traits.
-    static_assert(!cat::is_maybe<cat::Scaredy<int, ErrorOne>>);
+    static_assert(!cat::is_maybe<cat::scaredy<int, ErrorOne>>);
     static_assert(!cat::is_maybe<decltype(result)>);
 
-    static_assert(cat::is_scaredy<cat::Scaredy<int, ErrorOne>>);
+    static_assert(cat::is_scaredy<cat::scaredy<int, ErrorOne>>);
     static_assert(cat::is_scaredy<decltype(result)>);
 
     // Test `TRY` macro.
     _ = scaredy_try_success().verify();
-    cat::Scaredy fail = scaredy_try_fail();
+    cat::scaredy fail = scaredy_try_fail();
     cat::verify(!fail.has_value());
 }

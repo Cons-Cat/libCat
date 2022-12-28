@@ -17,14 +17,14 @@ template <typename T>
 }
 
 // Implicit output type `min()`.
-template <typename T, typename U, typename... Remaining>
+template <typename T, typename U, typename... remaining>
     requires(is_implicitly_convertible<U, T>)
-[[nodiscard]] constexpr auto min(T value_1, U value_2, Remaining... remaining)
-    -> T {
+[[nodiscard]] constexpr auto min(T value_1, U value_2,
+                                 remaining... remaining_args) -> T {
     // Recurse through the list of variadic arguments, discarding the larger
     // element each time.
-    return (value_1 < value_2) ? min(value_1, remaining...)
-                               : min(value_2, remaining...);
+    return (value_1 < value_2) ? min(value_1, remaining_args...)
+                               : min(value_2, remaining_args...);
 }
 
 // TODO: These should have different names and be in `<cat/algorithms>`.
@@ -58,14 +58,14 @@ template <typename T>
 }
 
 // Implicit output type `max()`.
-template <typename T, typename U, typename... Remaining>
+template <typename T, typename U, typename... remaining>
     requires(is_implicitly_convertible<U, T>)
-[[nodiscard]] constexpr auto max(T value_1, U value_2, Remaining... remaining)
-    -> T {
+[[nodiscard]] constexpr auto max(T value_1, U value_2,
+                                 remaining... remaining_args) -> T {
     // Recurse through the list of variadic arguments, discarding the larger
     // element each time.
-    return (value_1 > value_2) ? max(value_1, remaining...)
-                               : max(value_2, remaining...);
+    return (value_1 > value_2) ? max(value_1, remaining_args...)
+                               : max(value_2, remaining_args...);
 }
 
 // TODO: If an `iterable` has `<` and `>` operators, this has unclear intent.
@@ -147,23 +147,23 @@ namespace detail {
 
 template <is_arithmetic T, is_integral U>
 [[nodiscard]] constexpr auto pow(T base, U exponent) -> T {
-    // Type-erase `Arithmetic`s to prevent redundant code gen.
-    using Raw = ToRawArithmetic<T>;
-    Raw raw_base = to_raw_arithmetic(base);
-    Raw raw_exponent = to_raw_arithmetic(exponent);
+    // type-erase `arithmetic`s to prevent redundant code gen.
+    using raw_type = to_raw_arithmetic_t<T>;
+    raw_type raw_base = to_raw_arithmetic(base);
+    raw_type raw_exponent = to_raw_arithmetic(exponent);
 
-    if constexpr (is_integral<Raw>) {
+    if constexpr (is_integral<raw_type>) {
         return detail::pow_integral(raw_base, raw_exponent);
         // TODO: Support float and double `pow()` functions.
-    } else if constexpr (is_same<Raw, float>) {
+    } else if constexpr (is_same<raw_type, float>) {
         // return __builtin_powf(raw_base, raw_exponent);
-    } else if constexpr (is_same<Raw, double>) {
+    } else if constexpr (is_same<raw_type, double>) {
         // return __builtin_pow(raw_base, raw_exponent);
     }
 }
 
 namespace detail {
-    template <is_unsigned_integral T, usize::Raw shift>
+    template <is_unsigned_integral T, usize::raw_type shift>
     [[gnu::always_inline]] constexpr auto round_to_pow2_part(T value) {
         value |= (value >> shift);
 

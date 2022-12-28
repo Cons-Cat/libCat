@@ -17,7 +17,7 @@ struct Socket {
     char data[14];
 };
 
-enum class SocketType {
+enum class socket_type {
     stream = 1,
     data_gram = 2,
     raw = 3,
@@ -26,33 +26,33 @@ enum class SocketType {
     datagram_congestion_control = 6
 };
 
-template <int2 Family, SocketType Type, int4 Protocol>
-struct SocketAttributes {
-    int2 const family = Family;
-    static constexpr SocketType type = Type;
-    static constexpr int4 protocol = Protocol;
+template <int2 in_family, socket_type in_type, int4 in_protocol>
+struct socket_attributes {
+    int2 const family = in_family;
+    static constexpr socket_type type = in_type;
+    static constexpr int4 protocol = in_protocol;
 };
 
-template <SocketType Type, int4 Protocol = 0>
-struct SocketUnix {
-    // TODO: Create flags that corresponds to the value of `Protocol`.
+template <socket_type type, int4 protocol = 0>
+struct socket_unix {
+    // TODO: Create flags that corresponds to the value of `protocol`.
 
-    SocketUnix() = default;
+    socket_unix() = default;
 
-    SocketUnix(nix::FileDescriptor in_descriptor) {
+    socket_unix(nix::file_descriptor in_descriptor) {
         this->descriptor = in_descriptor;
     }
 
-    // Get the size of this struct, not considering the `FileDescriptor` that it
+    // Get the size of this struct, not considering the `file_descriptor` that it
     // holds.
     auto get_size() -> ssize {
         return ssizeof(attributes) + ssizeof(path_name);
     }
 
     // Create and return a `Socket`.
-    auto create() -> Maybe<void> {
-        Scaredy result = nix::sys_socket(this->attributes.family,
-                                         static_cast<int>(Type), Protocol);
+    auto create() -> maybe<void> {
+        scaredy result = nix::sys_socket(this->attributes.family,
+                                         static_cast<int>(type), protocol);
         if (result.has_value()) {
             this->descriptor = result.value();
             return monostate;
@@ -61,8 +61,8 @@ struct SocketUnix {
     }
 
     // Connect a `Socket`.
-    auto connect() -> Maybe<void> {
-        Scaredy result =
+    auto connect() -> maybe<void> {
+        scaredy result =
             nix::sys_connect(this->descriptor, this, this->get_size());
         if (result.has_value()) {
             return monostate;
@@ -70,10 +70,10 @@ struct SocketUnix {
         return nullopt;
     }
 
-    auto send_string(String const& message, int8 flags = 0,
+    auto send_string(string const& message, int8 flags = 0,
                      cat::Socket const* p_destination_socket = nullptr,
-                     ssize const addr_length = 0) -> Maybe<void> {
-        Scaredy result =
+                     ssize const addr_length = 0) -> maybe<void> {
+        scaredy result =
             nix::sys_sendto(this->descriptor, message.data(), message.size(),
                             flags, p_destination_socket, addr_length);
         if (result.has_value()) {
@@ -84,8 +84,8 @@ struct SocketUnix {
 
     auto send_struct(auto const& message_struct, int8 flags = 0,
                      cat::Socket const* p_destination_socket = nullptr,
-                     ssize const addr_length = 0) -> Maybe<void> {
-        Scaredy result = nix::sys_sendto(this->descriptor, &message_struct,
+                     ssize const addr_length = 0) -> maybe<void> {
+        scaredy result = nix::sys_sendto(this->descriptor, &message_struct,
                                          ssizeof(message_struct), flags,
                                          p_destination_socket, addr_length);
         if (result.has_value()) {
@@ -94,8 +94,8 @@ struct SocketUnix {
         return nullopt;
     }
 
-    auto bind() -> Maybe<void> {
-        Scaredy result =
+    auto bind() -> maybe<void> {
+        scaredy result =
             nix::sys_bind(this->descriptor, this, this->get_size());
         if (result.has_value()) {
             return monostate;
@@ -103,18 +103,18 @@ struct SocketUnix {
         return nullopt;
     }
 
-    auto listen(int8 backlog) -> Maybe<void> {
-        Scaredy result = nix::sys_listen(this->descriptor, backlog);
+    auto listen(int8 backlog) -> maybe<void> {
+        scaredy result = nix::sys_listen(this->descriptor, backlog);
         if (result.has_value()) {
             return monostate;
         }
         return nullopt;
     }
 
-    auto accept(nix::FileDescriptor listening_socket,
+    auto accept(nix::file_descriptor listening_socket,
                 void const* p_socket = nullptr,
-                ssize const* p_addr_len = nullptr) -> Maybe<void> {
-        Scaredy result =
+                ssize const* p_addr_len = nullptr) -> maybe<void> {
+        scaredy result =
             nix::sys_accept(listening_socket, p_socket, p_addr_len);
         if (result.has_value()) {
             return monostate;
@@ -122,10 +122,10 @@ struct SocketUnix {
         return nullopt;
     }
 
-    auto accept(SocketUnix<Type, Protocol> const& listening_socket,
+    auto accept(socket_unix<type, protocol> const& listening_socket,
                 void const* p_socket = nullptr,
-                ssize const* p_addr_len = nullptr) -> Maybe<void> {
-        Scaredy result =
+                ssize const* p_addr_len = nullptr) -> maybe<void> {
+        scaredy result =
             nix::sys_accept(listening_socket.descriptor, p_socket, p_addr_len);
         if (result.has_value()) {
             this->descriptor = result.value();
@@ -138,9 +138,9 @@ struct SocketUnix {
     auto recieve(void* const p_message_buffer, ssize const buffer_length,
                  Socket const* const __restrict p_socket = nullptr,
                  ssize const* const __restrict p_socket_size = nullptr)
-        -> Maybe<ssize> {
-        // Scaredy const result =
-        nix::ScaredyLinux<ssize> const result =
+        -> maybe<ssize> {
+        // scaredy const result =
+        nix::scaredy_nix<ssize> const result =
             nix::sys_recv(this->descriptor, p_message_buffer, buffer_length,
                           p_socket, p_socket_size);
         if (result.has_value()) {
@@ -149,17 +149,17 @@ struct SocketUnix {
         return nullopt;
     }
 
-    auto close() -> Maybe<void> {
-        Scaredy result = nix::sys_close(this->descriptor);
+    auto close() -> maybe<void> {
+        scaredy result = nix::sys_close(this->descriptor);
         if (result.has_value()) {
             return monostate;
         }
         return nullopt;
     }
 
-    SocketAttributes<static_cast<short>(1), Type, Protocol> const attributes;
-    cat::StaticString<108> path_name;
-    nix::FileDescriptor descriptor;
+    socket_attributes<static_cast<short>(1), type, protocol> const attributes;
+    cat::fixed_string<108> path_name;
+    nix::file_descriptor descriptor;
 };
 
 }  // namespace cat

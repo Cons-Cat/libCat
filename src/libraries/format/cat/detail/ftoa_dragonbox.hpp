@@ -46,12 +46,12 @@
 namespace cat::detail::dragonbox {
 namespace detail {
     template <class T>
-    constexpr usize::Raw physical_bits =
-        sizeof(T) * Limits<unsigned char>::digits;
+    constexpr usize::raw_type physical_bits =
+        sizeof(T) * limits<unsigned char>::digits;
 
     template <class T>
         requires(is_unsigned<T>)
-    inline constexpr usize::Raw value_bits = Limits<T>::digits;
+    inline constexpr usize::raw_type value_bits = limits<T>::digits;
 }  // namespace detail
 
 // These classes expose encoding specs of IEEE-754-like floating-point formats.
@@ -85,7 +85,7 @@ struct default_float_traits {
     // I don't know if there is a truly reliable way of detecting
     // IEEE-754 binary32/binary64 formats; I just did my best here.
     static_assert(
-        Limits<T>::is_iec559 && Limits<T>::radix == 2 &&
+        limits<T>::is_iec559 && limits<T>::radix == 2 &&
             (detail::physical_bits<T> == 32 || detail::physical_bits<T> == 64),
         "default_ieee754_traits only works for 32-bits or 64-bits types "
         "supporting binary32 or binary64 formats!");
@@ -94,13 +94,13 @@ struct default_float_traits {
     using type = T;
 
     // Refers to the format specification class.
-    using format = Conditional<detail::physical_bits<T> == 32, ieee754_binary32,
+    using format = conditional<detail::physical_bits<T> == 32, ieee754_binary32,
                                ieee754_binary64>;
 
     // Defines an unsigned integer type that is large enough to carry a variable
     // of type T. Most of the operations will be done on this integer type.
-    using carrier_uint =
-        Conditional<detail::physical_bits<T> == 32, uint4::Raw, uint8::Raw>;
+    using carrier_uint = conditional<detail::physical_bits<T> == 32,
+                                     uint4::raw_type, uint8::raw_type>;
     static_assert(sizeof(carrier_uint) == sizeof(T));
 
     // Number of bits in the above unsigned integer type.
@@ -351,11 +351,13 @@ namespace detail {
     namespace bits {
         // Most compilers should be able to optimize this into the ROR
         // instruction.
-        inline uint4::Raw rotr(uint4::Raw n, uint4::Raw r) noexcept {
+        inline uint4::raw_type rotr(uint4::raw_type n,
+                                    uint4::raw_type r) noexcept {
             r &= 31;
             return (n >> r) | (n << (32 - r));
         }
-        inline uint8::Raw rotr(uint8::Raw n, uint4::Raw r) noexcept {
+        inline uint8::raw_type rotr(uint8::raw_type n,
+                                    uint4::raw_type r) noexcept {
             r &= 63;
             return (n >> r) | (n << (64 - r));
         }
@@ -386,21 +388,22 @@ namespace detail {
         struct uint128 {
             uint128() = default;
 
-            uint8::Raw high_;
-            uint8::Raw low_;
+            uint8::raw_type high_;
+            uint8::raw_type low_;
 
-            constexpr uint128(uint8::Raw high, uint8::Raw low) noexcept
+            constexpr uint128(uint8::raw_type high,
+                              uint8::raw_type low) noexcept
                 : high_{high}, low_{low} {
             }
 
-            constexpr uint8::Raw high() const noexcept {
+            constexpr uint8::raw_type high() const noexcept {
                 return high_;
             }
-            constexpr uint8::Raw low() const noexcept {
+            constexpr uint8::raw_type low() const noexcept {
                 return low_;
             }
 
-            uint128& operator+=(uint8::Raw n) & noexcept {
+            uint128& operator+=(uint8::raw_type n) & noexcept {
 #if JKJ_DRAGONBOX_HAS_BUILTIN(__builtin_addcll)
                 unsigned long long carry;
                 low_ = __builtin_addcll(low_, n, 0, &carry);
@@ -423,61 +426,64 @@ namespace detail {
             }
         };
 
-        static inline uint8::Raw umul64(uint4::Raw x, uint4::Raw y) noexcept {
+        static inline uint8::raw_type umul64(uint4::raw_type x,
+                                             uint4::raw_type y) noexcept {
 #if defined(_MSC_VER) && defined(_M_IX86)
             return __emulu(x, y);
 #else
-            return x * uint8::Raw(y);
+            return x * uint8::raw_type(y);
 #endif
         }
 
         // Get 128-bit result of multiplication of two 64-bit unsigned integers.
-        JKJ_SAFEBUFFERS inline uint128 umul128(uint8::Raw x,
-                                               uint8::Raw y) noexcept {
+        JKJ_SAFEBUFFERS inline uint128 umul128(uint8::raw_type x,
+                                               uint8::raw_type y) noexcept {
 #if defined(__SIZEOF_INT128__)
             auto result = builtin_uint128_t(x) * builtin_uint128_t(y);
-            return {uint8::Raw(result >> 64), uint8::Raw(result)};
+            return {uint8::raw_type(result >> 64), uint8::raw_type(result)};
 #elif defined(_MSC_VER) && defined(_M_X64)
             uint128 result;
             result.low_ = _umul128(x, y, &result.high_);
             return result;
 #else
-            auto a = uint4::Raw(x >> 32);
-            auto b = uint4::Raw(x);
-            auto c = uint4::Raw(y >> 32);
-            auto d = uint4::Raw(y);
+            auto a = uint4::raw_type(x >> 32);
+            auto b = uint4::raw_type(x);
+            auto c = uint4::raw_type(y >> 32);
+            auto d = uint4::raw_type(y);
 
             auto ac = umul64(a, c);
             auto bc = umul64(b, c);
             auto ad = umul64(a, d);
             auto bd = umul64(b, d);
 
-            auto intermediate = (bd >> 32) + uint4::Raw(ad) + uint4::Raw(bc);
+            auto intermediate =
+                (bd >> 32) + uint4::raw_type(ad) + uint4::raw_type(bc);
 
             return {ac + (intermediate >> 32) + (ad >> 32) + (bc >> 32),
-                    (intermediate << 32) + uint4::Raw(bd)};
+                    (intermediate << 32) + uint4::raw_type(bd)};
 #endif
         }
 
-        JKJ_SAFEBUFFERS inline uint8::Raw umul128_upper64(
-            uint8::Raw x, uint8::Raw y) noexcept {
+        JKJ_SAFEBUFFERS inline uint8::raw_type umul128_upper64(
+            uint8::raw_type x, uint8::raw_type y) noexcept {
 #if defined(__SIZEOF_INT128__)
             auto result = builtin_uint128_t(x) * builtin_uint128_t(y);
-            return uint8::Raw(result >> 64);
+            return uint8::raw_type(result >> 64);
 #elif defined(_MSC_VER) && defined(_M_X64)
             return __umulh(x, y);
 #else
-            auto a = uint4::Raw(x >> 32);
-            auto b = uint4::Raw(x);
-            auto c = uint4::Raw(y >> 32);
-            auto d = uint4::Raw(y);
+            auto a = uint4::raw_type(x >> 32);
+            auto b = uint4::raw_type(x);
+            auto c = uint4::raw_type(y >> 32);
+            auto d = uint4::raw_type(y);
 
             auto ac = umul64(a, c);
             auto bc = umul64(b, c);
             auto ad = umul64(a, d);
             auto bd = umul64(b, d);
 
-            auto intermediate = (bd >> 32) + uint4::Raw(ad) + uint4::Raw(bc);
+            auto intermediate =
+                (bd >> 32) + uint4::raw_type(ad) + uint4::raw_type(bc);
 
             return ac + (intermediate >> 32) + (ad >> 32) + (bc >> 32);
 #endif
@@ -485,7 +491,7 @@ namespace detail {
 
         // Get upper 128-bits of multiplication of a 64-bit unsigned integer and
         // a 128-bit unsigned integer.
-        JKJ_SAFEBUFFERS inline uint128 umul192_upper128(uint8::Raw x,
+        JKJ_SAFEBUFFERS inline uint128 umul192_upper128(uint8::raw_type x,
                                                         uint128 y) noexcept {
             auto r = umul128(x, y.high());
             r += umul128_upper64(x, y.low());
@@ -494,12 +500,13 @@ namespace detail {
 
         // Get upper 64-bits of multiplication of a 32-bit unsigned integer and
         // a 64-bit unsigned integer.
-        inline uint8::Raw umul96_upper64(uint4::Raw x, uint8::Raw y) noexcept {
+        inline uint8::raw_type umul96_upper64(uint4::raw_type x,
+                                              uint8::raw_type y) noexcept {
 #if defined(__SIZEOF_INT128__) || (defined(_MSC_VER) && defined(_M_X64))
-            return umul128_upper64(uint8::Raw(x) << 32, y);
+            return umul128_upper64(uint8::raw_type(x) << 32, y);
 #else
-            auto yh = uint4::Raw(y >> 32);
-            auto yl = uint4::Raw(y);
+            auto yh = uint4::raw_type(y >> 32);
+            auto yl = uint4::raw_type(y);
 
             auto xyh = umul64(x, yh);
             auto xyl = umul64(x, yl);
@@ -510,7 +517,7 @@ namespace detail {
 
         // Get lower 128-bits of multiplication of a 64-bit unsigned integer and
         // a 128-bit unsigned integer.
-        JKJ_SAFEBUFFERS inline uint128 umul192_lower128(uint8::Raw x,
+        JKJ_SAFEBUFFERS inline uint128 umul192_lower128(uint8::raw_type x,
                                                         uint128 y) noexcept {
             auto high = x * y.high();
             auto high_low = umul128(x, y.low());
@@ -519,7 +526,8 @@ namespace detail {
 
         // Get lower 64-bits of multiplication of a 32-bit unsigned integer and
         // a 64-bit unsigned integer.
-        inline uint8::Raw umul96_lower64(uint4::Raw x, uint8::Raw y) noexcept {
+        inline uint8::raw_type umul96_lower64(uint4::raw_type x,
+                                              uint8::raw_type y) noexcept {
             return x * y;
         }
     }  // namespace wuint
@@ -558,23 +566,24 @@ namespace detail {
                       "right-shift for signed integers must be arithmetic");
 
         // Compute floor(e * c - s).
-        enum class multiply : uint4::Raw {
+        enum class multiply : uint4::raw_type {
         };
-        enum class subtract : uint4::Raw {
+        enum class subtract : uint4::raw_type {
         };
-        enum class shift : usize::Raw {
+        enum class shift : usize::raw_type {
         };
-        enum class min_exponent : int4::Raw {
+        enum class min_exponent : int4::raw_type {
         };
-        enum class max_exponent : int4::Raw {
+        enum class max_exponent : int4::raw_type {
         };
 
         template <multiply m, subtract f, shift k, min_exponent e_min,
                   max_exponent e_max>
         constexpr int compute(int e) noexcept {
-            // assert(int4::Raw(e_min) <= e && e <= int4::Raw(e_max));
-            return int((int4::Raw(e) * int4::Raw(m) - int4::Raw(f)) >>
-                       usize::Raw(k));
+            // assert(int4::raw_type(e_min) <= e && e <= int4::raw_type(e_max));
+            return int(
+                (int4::raw_type(e) * int4::raw_type(m) - int4::raw_type(f)) >>
+                usize::raw_type(k));
         }
 
         // For constexpr computation.
@@ -655,28 +664,28 @@ namespace detail {
 
         template <>
         struct divide_by_pow10_info<1> {
-            static constexpr uint4::Raw magic_number = 6554;
+            static constexpr uint4::raw_type magic_number = 6554;
             static constexpr int shift_amount = 16;
         };
 
         template <>
         struct divide_by_pow10_info<2> {
-            static constexpr uint4::Raw magic_number = 656;
+            static constexpr uint4::raw_type magic_number = 656;
             static constexpr int shift_amount = 16;
         };
 
         template <int N>
         constexpr bool check_divisibility_and_divide_by_pow10(
-            uint4::Raw& n) noexcept {
+            uint4::raw_type& n) noexcept {
             // Make sure the computation for max_n does not overflow.
             static_assert(N + 1 <= log::floor_log10_pow2(31));
-            // assert(n <= compute_power<N + 1>(uint4::Raw(10)));
+            // assert(n <= compute_power<N + 1>(uint4::raw_type(10)));
 
             using info = divide_by_pow10_info<N>;
             n *= info::magic_number;
 
             constexpr auto mask =
-                uint4::Raw(uint4::Raw(1) << info::shift_amount) - 1;
+                uint4::raw_type(uint4::raw_type(1) << info::shift_amount) - 1;
             bool result = ((n & mask) < info::magic_number);
 
             n >>= info::shift_amount;
@@ -686,10 +695,11 @@ namespace detail {
         // Compute floor(n / 10^N) for small n and N.
         // Precondition: n <= 10^(N+1)
         template <int N>
-        constexpr uint4::Raw small_division_by_pow10(uint4::Raw n) noexcept {
+        constexpr uint4::raw_type small_division_by_pow10(
+            uint4::raw_type n) noexcept {
             // Make sure the computation for max_n does not overflow.
             static_assert(N + 1 <= log::floor_log10_pow2(31));
-            // assert(n <= compute_power<N + 1>(uint4::Raw(10)));
+            // assert(n <= compute_power<N + 1>(uint4::raw_type(10)));
 
             return (n * divide_by_pow10_info<N>::magic_number) >>
                    divide_by_pow10_info<N>::shift_amount;
@@ -706,16 +716,16 @@ namespace detail {
             // writing "n / 100", but for some reason MSVC generates an
             // inefficient code (mul + mov for no apparent reason, instead of
             // single imul), so we does this manually.
-            if constexpr (cat::is_same<UInt, uint4::Raw> && N == 2) {
-                return uint4::Raw(wuint::umul64(n, uint4::Raw(1374389535)) >>
-                                  37);
+            if constexpr (cat::is_same<UInt, uint4::raw_type> && N == 2) {
+                return uint4::raw_type(
+                    wuint::umul64(n, uint4::raw_type(1374389535)) >> 37);
             }
             // Specialize for 64-bit division by 1000.
             // Ensure that the correctness condition is met.
-            if constexpr (cat::is_same<UInt, uint8::Raw> && N == 3 &&
-                          n_max <= uint8::Raw(15534100272597517998ull)) {
+            if constexpr (cat::is_same<UInt, uint8::raw_type> && N == 3 &&
+                          n_max <= uint8::raw_type(15534100272597517998ull)) {
                 return wuint::umul128_upper64(
-                           n, uint8::Raw(2361183241434822607ull)) >>
+                           n, uint8::raw_type(2361183241434822607ull)) >>
                        7;
             } else {
                 constexpr auto divisor = compute_power<N>(UInt(10));
@@ -784,7 +794,7 @@ namespace detail {
 
     template <>
     struct cache_holder<ieee754_binary32> {
-        using cache_entry_type = uint8::Raw;
+        using cache_entry_type = uint8::raw_type;
         static constexpr int cache_bits = 64;
         static constexpr int min_k = -31;
         static constexpr int max_k = 46;
@@ -1448,7 +1458,7 @@ namespace detail {
     // Compressed cache for double
     struct compressed_cache_detail {
         static constexpr int compression_ratio = 27;
-        static constexpr usize::Raw compressed_table_size =
+        static constexpr usize::raw_type compressed_table_size =
             (cache_holder<ieee754_binary64>::max_k -
              cache_holder<ieee754_binary64>::min_k + compression_ratio) /
             compression_ratio;
@@ -1458,7 +1468,7 @@ namespace detail {
         };
         static constexpr cache_holder_t cache = [] {
             cache_holder_t res{};
-            for (usize::Raw i = 0; i < compressed_table_size; ++i) {
+            for (usize::raw_type i = 0; i < compressed_table_size; ++i) {
                 res.table[i] =
                     cache_holder<ieee754_binary64>::cache[i *
                                                           compression_ratio];
@@ -1467,12 +1477,12 @@ namespace detail {
         }();
 
         struct pow5_holder_t {
-            uint8::Raw table[compression_ratio];
+            uint8::raw_type table[compression_ratio];
         };
         static constexpr pow5_holder_t pow5 = [] {
             pow5_holder_t res{};
-            uint8::Raw p = 1;
-            for (usize::Raw i = 0; i < compression_ratio; ++i) {
+            uint8::raw_type p = 1;
+            for (usize::raw_type i = 0; i < compression_ratio; ++i) {
                 res.table[i] = p;
                 p *= 5;
             }
@@ -1499,9 +1509,9 @@ namespace detail {
                 using sign_policy = ignore;
                 static constexpr bool return_has_sign = false;
 
-                template <class SignedSignificandBits, class ReturnType>
+                template <class SignedSignificandBits, class return_type>
                 static constexpr void handle_sign(SignedSignificandBits,
-                                                  ReturnType&) noexcept {
+                                                  return_type&) noexcept {
                 }
             };
 
@@ -1509,9 +1519,9 @@ namespace detail {
                 using sign_policy = return_sign;
                 static constexpr bool return_has_sign = true;
 
-                template <class SignedSignificandBits, class ReturnType>
+                template <class SignedSignificandBits, class return_type>
                 static constexpr void handle_sign(SignedSignificandBits s,
-                                                  ReturnType& r) noexcept {
+                                                  return_type& r) noexcept {
                     r.is_negative = s.is_negative();
                 }
             };
@@ -1525,12 +1535,12 @@ namespace detail {
                 using trailing_zero_policy = ignore;
                 static constexpr bool report_trailing_zeros = false;
 
-                template <class Impl, class ReturnType>
-                static constexpr void on_trailing_zeros(ReturnType&) noexcept {
+                template <class Impl, class return_type>
+                static constexpr void on_trailing_zeros(return_type&) noexcept {
                 }
 
-                template <class Impl, class ReturnType>
-                static constexpr void no_trailing_zeros(ReturnType&) noexcept {
+                template <class Impl, class return_type>
+                static constexpr void no_trailing_zeros(return_type&) noexcept {
                 }
             };
 
@@ -1538,14 +1548,14 @@ namespace detail {
                 using trailing_zero_policy = remove;
                 static constexpr bool report_trailing_zeros = false;
 
-                template <class Impl, class ReturnType>
+                template <class Impl, class return_type>
                 JKJ_FORCEINLINE static constexpr void on_trailing_zeros(
-                    ReturnType& r) noexcept {
+                    return_type& r) noexcept {
                     r.exponent += Impl::remove_trailing_zeros(r.significand);
                 }
 
-                template <class Impl, class ReturnType>
-                static constexpr void no_trailing_zeros(ReturnType&) noexcept {
+                template <class Impl, class return_type>
+                static constexpr void no_trailing_zeros(return_type&) noexcept {
                 }
             };
 
@@ -1553,15 +1563,15 @@ namespace detail {
                 using trailing_zero_policy = report;
                 static constexpr bool report_trailing_zeros = true;
 
-                template <class Impl, class ReturnType>
+                template <class Impl, class return_type>
                 static constexpr void on_trailing_zeros(
-                    ReturnType& r) noexcept {
+                    return_type& r) noexcept {
                     r.may_have_trailing_zeros = true;
                 }
 
-                template <class Impl, class ReturnType>
+                template <class Impl, class return_type>
                 static constexpr void no_trailing_zeros(
-                    ReturnType& r) noexcept {
+                    return_type& r) noexcept {
                     r.may_have_trailing_zeros = false;
                 }
             };
@@ -1931,9 +1941,9 @@ namespace detail {
                 using binary_to_decimal_rounding_policy = do_not_care;
                 static constexpr auto tag = tag_t::do_not_care;
 
-                template <class ReturnType>
+                template <class return_type>
                 static constexpr bool prefer_round_down(
-                    ReturnType const&) noexcept {
+                    return_type const&) noexcept {
                     return false;
                 }
             };
@@ -1942,9 +1952,9 @@ namespace detail {
                 using binary_to_decimal_rounding_policy = to_even;
                 static constexpr auto tag = tag_t::to_even;
 
-                template <class ReturnType>
+                template <class return_type>
                 static constexpr bool prefer_round_down(
-                    ReturnType const& r) noexcept {
+                    return_type const& r) noexcept {
                     return r.significand % 2 != 0;
                 }
             };
@@ -1953,9 +1963,9 @@ namespace detail {
                 using binary_to_decimal_rounding_policy = to_odd;
                 static constexpr auto tag = tag_t::to_odd;
 
-                template <class ReturnType>
+                template <class return_type>
                 static constexpr bool prefer_round_down(
-                    ReturnType const& r) noexcept {
+                    return_type const& r) noexcept {
                     return r.significand % 2 == 0;
                 }
             };
@@ -1964,9 +1974,9 @@ namespace detail {
                 using binary_to_decimal_rounding_policy = away_from_zero;
                 static constexpr auto tag = tag_t::away_from_zero;
 
-                template <class ReturnType>
+                template <class return_type>
                 static constexpr bool prefer_round_down(
-                    ReturnType const&) noexcept {
+                    return_type const&) noexcept {
                     return false;
                 }
             };
@@ -1975,9 +1985,9 @@ namespace detail {
                 using binary_to_decimal_rounding_policy = toward_zero;
                 static constexpr auto tag = tag_t::toward_zero;
 
-                template <class ReturnType>
+                template <class return_type>
                 static constexpr bool prefer_round_down(
-                    ReturnType const&) noexcept {
+                    return_type const&) noexcept {
                     return true;
                 }
             };
@@ -1995,7 +2005,7 @@ namespace detail {
                     get_cache(int k) noexcept {
                     // assert(k >= cache_holder<FloatFormat>::min_k &&
                     // k <= cache_holder<FloatFormat>::max_k);
-                    return cache_holder<FloatFormat>::cache[usize::Raw(
+                    return cache_holder<FloatFormat>::cache[usize::raw_type(
                         k - cache_holder<FloatFormat>::min_k)];
                 }
             };
@@ -2011,9 +2021,10 @@ namespace detail {
 
                     if constexpr (cat::is_same<FloatFormat, ieee754_binary64>) {
                         // Compute the base index.
-                        auto const cache_index = int(
-                            uint4::Raw(k - cache_holder<FloatFormat>::min_k) /
-                            compressed_cache_detail::compression_ratio);
+                        auto const cache_index =
+                            int(uint4::raw_type(
+                                    k - cache_holder<FloatFormat>::min_k) /
+                                compressed_cache_detail::compression_ratio);
                         auto const kb =
                             cache_index *
                                 compressed_cache_detail::compression_ratio +
@@ -2062,7 +2073,7 @@ namespace detail {
                     } else {
                         // Just use the full cache for anything other
                         // than binary64
-                        return cache_holder<FloatFormat>::cache[usize::Raw(
+                        return cache_holder<FloatFormat>::cache[usize::raw_type(
                             k - cache_holder<FloatFormat>::min_k)];
                     }
                 }
@@ -2236,18 +2247,18 @@ namespace detail {
         //// The main algorithm assumes the input is a normal/subnormal finite
         /// number
 
-        template <class ReturnType, class IntervalType,
+        template <class return_type, class interval_type,
                   class TrailingZeroPolicy, class BinaryToDecimalRoundingPolicy,
                   class CachePolicy, class... AdditionalArgs>
-        JKJ_SAFEBUFFERS static ReturnType compute_nearest_normal(
+        JKJ_SAFEBUFFERS static return_type compute_nearest_normal(
             carrier_uint const two_fc, int const exponent,
             AdditionalArgs... additional_args) noexcept {
             //////////////////////////////////////////////////////////////////////
             // Step 1: Schubfach multiplier calculation
             //////////////////////////////////////////////////////////////////////
 
-            ReturnType ret_value;
-            IntervalType interval_type{additional_args...};
+            return_type ret_value;
+            interval_type interval{additional_args...};
 
             // Compute k and beta.
             int const minus_k = log::floor_log10_pow2(exponent) - kappa;
@@ -2276,8 +2287,9 @@ namespace detail {
             //////////////////////////////////////////////////////////////////////
 
             constexpr auto big_divisor =
-                compute_power<kappa + 1>(uint4::Raw(10));
-            constexpr auto small_divisor = compute_power<kappa>(uint4::Raw(10));
+                compute_power<kappa + 1>(uint4::raw_type(10));
+            constexpr auto small_divisor =
+                compute_power<kappa>(uint4::raw_type(10));
 
             // Using an upper bound on zi, we might be able to optimize the
             // division better than the compiler; we are computing zi /
@@ -2286,12 +2298,12 @@ namespace detail {
                 kappa + 1, carrier_uint,
                 (carrier_uint(1) << (significand_bits + 1)) * big_divisor - 1>(
                 zi);
-            auto r = uint4::Raw(zi - big_divisor * ret_value.significand);
+            auto r = uint4::raw_type(zi - big_divisor * ret_value.significand);
 
             if (r < deltai) {
                 // Exclude the right endpoint if necessary.
                 if (r == 0 &&
-                    (is_z_integer & !interval_type.include_right_endpoint())) {
+                    (is_z_integer & !interval.include_right_endpoint())) {
                     if constexpr (BinaryToDecimalRoundingPolicy::tag ==
                                   policy_impl::binary_to_decimal_rounding::
                                       tag_t::do_not_care) {
@@ -2315,7 +2327,7 @@ namespace detail {
                     compute_mul_parity(two_fc - 1, cache, beta);
 
                 if (!(xi_parity |
-                      (x_is_integer & interval_type.include_left_endpoint()))) {
+                      (x_is_integer & interval.include_left_endpoint()))) {
                     goto small_divisor_case_label;
                 }
             }
@@ -2342,7 +2354,7 @@ small_divisor_case_label:
                 // and return, but we need to take care of the case that the
                 // resulting value is exactly the right endpoint, while that is
                 // not included in the interval.
-                if (!interval_type.include_right_endpoint()) {
+                if (!interval.include_right_endpoint()) {
                     // Is r divisible by 10^kappa?
                     if (is_z_integer &&
                         div::check_divisibility_and_divide_by_pow10<kappa>(r)) {
@@ -2395,13 +2407,13 @@ small_divisor_case_label:
             return ret_value;
         }
 
-        template <class ReturnType, class IntervalType,
+        template <class return_type, class interval_type,
                   class TrailingZeroPolicy, class BinaryToDecimalRoundingPolicy,
                   class CachePolicy, class... AdditionalArgs>
-        JKJ_SAFEBUFFERS static ReturnType compute_nearest_shorter(
+        JKJ_SAFEBUFFERS static return_type compute_nearest_shorter(
             int const exponent, AdditionalArgs... additional_args) noexcept {
-            ReturnType ret_value;
-            IntervalType interval_type{additional_args...};
+            return_type ret_value;
+            interval_type interval{additional_args...};
 
             // Compute k and beta.
             int const minus_k =
@@ -2419,13 +2431,13 @@ small_divisor_case_label:
 
             // If we don't accept the right endpoint and
             // if the right endpoint is an integer, decrease it.
-            if (!interval_type.include_right_endpoint() &&
+            if (!interval.include_right_endpoint() &&
                 is_right_endpoint_integer_shorter_interval(exponent)) {
                 --zi;
             }
             // If we don't accept the left endpoint or
             // if the left endpoint is not an integer, increase it.
-            if (!interval_type.include_left_endpoint() ||
+            if (!interval.include_left_endpoint() ||
                 !is_left_endpoint_integer_shorter_interval(exponent)) {
                 ++xi;
             }
@@ -2457,14 +2469,15 @@ small_divisor_case_label:
             return ret_value;
         }
 
-        template <class ReturnType, class TrailingZeroPolicy, class CachePolicy>
-        JKJ_SAFEBUFFERS static ReturnType compute_left_closed_directed(
+        template <class return_type, class TrailingZeroPolicy,
+                  class CachePolicy>
+        JKJ_SAFEBUFFERS static return_type compute_left_closed_directed(
             carrier_uint const two_fc, int exponent) noexcept {
             //////////////////////////////////////////////////////////////////////
             // Step 1: Schubfach multiplier calculation
             //////////////////////////////////////////////////////////////////////
 
-            ReturnType ret_value;
+            return_type ret_value;
 
             // Compute k and beta.
             int const minus_k = log::floor_log10_pow2(exponent) - kappa;
@@ -2498,7 +2511,7 @@ small_divisor_case_label:
             //////////////////////////////////////////////////////////////////////
 
             constexpr auto big_divisor =
-                compute_power<kappa + 1>(uint4::Raw(10));
+                compute_power<kappa + 1>(uint4::raw_type(10));
 
             // Using an upper bound on xi, we might be able to optimize the
             // division better than the compiler; we are computing xi /
@@ -2507,7 +2520,7 @@ small_divisor_case_label:
                 kappa + 1, carrier_uint,
                 (carrier_uint(1) << (significand_bits + 1)) * big_divisor - 1>(
                 xi);
-            auto r = uint4::Raw(xi - big_divisor * ret_value.significand);
+            auto r = uint4::raw_type(xi - big_divisor * ret_value.significand);
 
             if (r != 0) {
                 ++ret_value.significand;
@@ -2548,15 +2561,16 @@ small_divisor_case_label:
             return ret_value;
         }
 
-        template <class ReturnType, class TrailingZeroPolicy, class CachePolicy>
-        JKJ_SAFEBUFFERS static ReturnType compute_right_closed_directed(
+        template <class return_type, class TrailingZeroPolicy,
+                  class CachePolicy>
+        JKJ_SAFEBUFFERS static return_type compute_right_closed_directed(
             carrier_uint const two_fc, int const exponent,
             bool shorter_interval) noexcept {
             //////////////////////////////////////////////////////////////////////
             // Step 1: Schubfach multiplier calculation
             //////////////////////////////////////////////////////////////////////
 
-            ReturnType ret_value;
+            return_type ret_value;
 
             // Compute k and beta.
             int const minus_k =
@@ -2578,7 +2592,7 @@ small_divisor_case_label:
             //////////////////////////////////////////////////////////////////////
 
             constexpr auto big_divisor =
-                compute_power<kappa + 1>(uint4::Raw(10));
+                compute_power<kappa + 1>(uint4::raw_type(10));
 
             // Using an upper bound on zi, we might be able to optimize the
             // division better than the compiler; we are computing zi /
@@ -2587,7 +2601,8 @@ small_divisor_case_label:
                 kappa + 1, carrier_uint,
                 (carrier_uint(1) << (significand_bits + 1)) * big_divisor - 1>(
                 zi);
-            auto const r = uint4::Raw(zi - big_divisor * ret_value.significand);
+            auto const r =
+                uint4::raw_type(zi - big_divisor * ret_value.significand);
 
             if (r > deltai) {
                 goto small_divisor_case_label;
@@ -2623,13 +2638,13 @@ small_divisor_case_label:
             // assert(n != 0);
 
             if constexpr (cat::is_same<format, ieee754_binary32>) {
-                constexpr auto mod_inv_5 = uint4::Raw(0xcccc'cccd);
+                constexpr auto mod_inv_5 = uint4::raw_type(0xcccc'cccd);
                 constexpr auto mod_inv_25 = mod_inv_5 * mod_inv_5;
 
                 int s = 0;
                 while (true) {
                     auto q = bits::rotr(n * mod_inv_25, 2);
-                    if (q <= Limits<uint4::Raw>::max() / 100) {
+                    if (q <= limits<uint4::raw_type>::max() / 100) {
                         n = q;
                         s += 2;
                     } else {
@@ -2637,7 +2652,7 @@ small_divisor_case_label:
                     }
                 }
                 auto q = bits::rotr(n * mod_inv_5, 1);
-                if (q <= Limits<uint4::Raw>::max() / 10) {
+                if (q <= limits<uint4::raw_type>::max() / 10) {
                     n = q;
                     s |= 1;
                 }
@@ -2652,22 +2667,23 @@ small_divisor_case_label:
 
                 // This magic number is ceil(2^90 / 10^8).
                 constexpr auto magic_number =
-                    uint8::Raw(12379400392853802749ull);
+                    uint8::raw_type(12379400392853802749ull);
                 auto nm = wuint::umul128(n, magic_number);
 
                 // Is n is divisible by 10^8?
-                if ((nm.high() & ((uint8::Raw(1) << (90 - 64)) - 1)) == 0 &&
+                if ((nm.high() & ((uint8::raw_type(1) << (90 - 64)) - 1)) ==
+                        0 &&
                     nm.low() < magic_number) {
                     // If yes, work with the quotient.
-                    auto n32 = uint4::Raw(nm.high() >> (90 - 64));
+                    auto n32 = uint4::raw_type(nm.high() >> (90 - 64));
 
-                    constexpr auto mod_inv_5 = uint4::Raw(0xcccc'cccd);
+                    constexpr auto mod_inv_5 = uint4::raw_type(0xcccc'cccd);
                     constexpr auto mod_inv_25 = mod_inv_5 * mod_inv_5;
 
                     int s = 8;
                     while (true) {
                         auto q = bits::rotr(n32 * mod_inv_25, 2);
-                        if (q <= Limits<uint4::Raw>::max() / 100) {
+                        if (q <= limits<uint4::raw_type>::max() / 100) {
                             n32 = q;
                             s += 2;
                         } else {
@@ -2675,7 +2691,7 @@ small_divisor_case_label:
                         }
                     }
                     auto q = bits::rotr(n32 * mod_inv_5, 1);
-                    if (q <= Limits<uint4::Raw>::max() / 10) {
+                    if (q <= limits<uint4::raw_type>::max() / 10) {
                         n32 = q;
                         s |= 1;
                     }
@@ -2685,13 +2701,14 @@ small_divisor_case_label:
                 }
 
                 // If n is not divisible by 10^8, work with n itself.
-                constexpr auto mod_inv_5 = uint8::Raw(0xcccc'cccc'cccc'cccd);
+                constexpr auto mod_inv_5 =
+                    uint8::raw_type(0xcccc'cccc'cccc'cccd);
                 constexpr auto mod_inv_25 = mod_inv_5 * mod_inv_5;
 
                 int s = 0;
                 while (true) {
                     auto q = bits::rotr(n * mod_inv_25, 2);
-                    if (q <= Limits<uint8::Raw>::max() / 100) {
+                    if (q <= limits<uint8::raw_type>::max() / 100) {
                         n = q;
                         s += 2;
                     } else {
@@ -2699,7 +2716,7 @@ small_divisor_case_label:
                     }
                 }
                 auto q = bits::rotr(n * mod_inv_5, 1);
-                if (q <= Limits<uint8::Raw>::max() / 10) {
+                if (q <= limits<uint8::raw_type>::max() / 10) {
                     n = q;
                     s |= 1;
                 }
@@ -2720,13 +2737,14 @@ small_divisor_case_label:
             }
         }
 
-        static constexpr uint4::Raw compute_delta(cache_entry_type const& cache,
-                                                  int beta) noexcept {
+        static constexpr uint4::raw_type compute_delta(
+            cache_entry_type const& cache, int beta) noexcept {
             if constexpr (cat::is_same<format, ieee754_binary32>) {
-                return uint4::Raw(cache >> (cache_bits - 1 - beta));
+                return uint4::raw_type(cache >> (cache_bits - 1 - beta));
             } else {
                 static_assert(cat::is_same<format, ieee754_binary64>);
-                return uint4::Raw(cache.high() >> (carrier_bits - 1 - beta));
+                return uint4::raw_type(cache.high() >>
+                                       (carrier_bits - 1 - beta));
             }
         }
 
@@ -2739,7 +2757,7 @@ small_divisor_case_label:
             if constexpr (cat::is_same<format, ieee754_binary32>) {
                 auto r = wuint::umul96_lower64(two_f, cache);
                 return {((r >> (64 - beta)) & 1) != 0,
-                        uint4::Raw(r >> (32 - beta)) == 0};
+                        uint4::raw_type(r >> (32 - beta)) == 0};
             } else {
                 static_assert(cat::is_same<format, ieee754_binary64>);
                 auto r = wuint::umul192_lower128(two_f, cache);
@@ -2856,9 +2874,9 @@ small_divisor_case_label:
                 return {};
             }
             template <class FoundPolicyInfo, class FirstPolicy,
-                      class... RemainingPolicies>
+                      class... remainingPolicies>
             static constexpr auto get_policy_impl(
-                FoundPolicyInfo, FirstPolicy, RemainingPolicies... remainings) {
+                FoundPolicyInfo, FirstPolicy, remainingPolicies... remainings) {
                 if constexpr (cat::is_base_of<Base, FirstPolicy>) {
                     if constexpr (FoundPolicyInfo::found_info ==
                                   policy_found_info::not_found) {
@@ -2895,15 +2913,15 @@ small_divisor_case_label:
             return false;
         }
         template <class Policy, class FirstBaseDefaultPair,
-                  class... RemainingBaseDefaultPairs>
+                  class... remainingBaseDefaultPairs>
         constexpr bool check_policy_validity(
             Policy, base_default_pair_list<FirstBaseDefaultPair,
-                                           RemainingBaseDefaultPairs...>) {
+                                           remainingBaseDefaultPairs...>) {
             return cat::is_base_of<typename FirstBaseDefaultPair::base,
                                    Policy> ||
                    check_policy_validity(
                        Policy(),
-                       base_default_pair_list<RemainingBaseDefaultPairs...>{});
+                       base_default_pair_list<remainingBaseDefaultPairs...>{});
         }
 
         template <class BaseDefaultPairList>
@@ -2912,10 +2930,10 @@ small_divisor_case_label:
         }
 
         template <class BaseDefaultPairList, class FirstPolicy,
-                  class... RemainingPolicies>
+                  class... remainingPolicies>
         constexpr bool check_policy_list_validity(
             BaseDefaultPairList, FirstPolicy,
-            RemainingPolicies... remaining_policies) {
+            remainingPolicies... remaining_policies) {
             return check_policy_validity(FirstPolicy(),
                                          BaseDefaultPairList()) &&
                    check_policy_list_validity(BaseDefaultPairList(),
@@ -2940,39 +2958,39 @@ small_divisor_case_label:
         }
 
         template <class FirstBaseDefaultPair,
-                  class... RemainingBaseDefaultPairs, bool repeated,
+                  class... remainingBaseDefaultPairs, bool repeated,
                   class... FoundPolicyPairs, class... Policies>
         constexpr auto make_policy_holder_impl(
             base_default_pair_list<FirstBaseDefaultPair,
-                                   RemainingBaseDefaultPairs...>,
+                                   remainingBaseDefaultPairs...>,
             found_policy_pair_list<repeated, FoundPolicyPairs...>,
             Policies... policies) {
             using new_found_policy_pair =
                 decltype(FirstBaseDefaultPair::get_policy(policies...));
 
             return make_policy_holder_impl(
-                base_default_pair_list<RemainingBaseDefaultPairs...>{},
+                base_default_pair_list<remainingBaseDefaultPairs...>{},
                 found_policy_pair_list < repeated ||
                     new_found_policy_pair::found_info ==
                         policy_found_info::repeated,
                 new_found_policy_pair, FoundPolicyPairs... > {}, policies...);
         }
 
-        template <bool repeated, class... RawPolicies>
+        template <bool repeated, class... raw_typePolicies>
         constexpr auto convert_to_policy_holder(
-            found_policy_pair_list<repeated>, RawPolicies...) {
-            return policy_holder<RawPolicies...>{};
+            found_policy_pair_list<repeated>, raw_typePolicies...) {
+            return policy_holder<raw_typePolicies...>{};
         }
 
         template <bool repeated, class FirstFoundPolicyPair,
-                  class... RemainingFoundPolicyPairs, class... RawPolicies>
+                  class... remainingFoundPolicyPairs, class... raw_typePolicies>
         constexpr auto convert_to_policy_holder(
             found_policy_pair_list<repeated, FirstFoundPolicyPair,
-                                   RemainingFoundPolicyPairs...>,
-            RawPolicies... policies) {
+                                   remainingFoundPolicyPairs...>,
+            raw_typePolicies... policies) {
             return convert_to_policy_holder(
                 found_policy_pair_list<repeated,
-                                       RemainingFoundPolicyPairs...>{},
+                                       remainingFoundPolicyPairs...>{},
                 typename FirstFoundPolicyPair::policy{}, policies...);
         }
 
@@ -3260,7 +3278,7 @@ char* to_chars(Float x, char* buffer, Policies... policies) noexcept {
 
 // Maximum required buffer size (excluding null-terminator)
 template <class FloatFormat>
-inline constexpr usize::Raw max_output_string_length =
+inline constexpr usize::raw_type max_output_string_length =
     cat::is_same<FloatFormat, ieee754_binary32>
         ?
         // sign(1) + significand(9) + decimal_point(1) + exp_marker(1) +

@@ -43,7 +43,7 @@ void copy_memory(void const* p_source, void* p_destination, ssize bytes);
 void copy_memory_small(void const* p_source, void* p_destination, ssize bytes);
 
 namespace detail {
-    // Type-erased `set_memory` function.
+    // type-erased `set_memory` function.
     template <typename T>
     [[gnu::optimize("-fno-tree-loop-distribute-patterns")]]
     // `tree-loop-distribute-patterns` is an optimization that replaces this
@@ -52,7 +52,7 @@ namespace detail {
     // this, but that optimization is useless here.
     constexpr void
     set_memory_detail(void* p_source, T value, ssize size) {
-        // TODO: Type pun this with `start_lifetime_as()` instead.
+        // TODO: type pun this with `start_lifetime_as()` instead.
         T* p_current_byte = static_cast<T*>(p_source);
 
         if consteval {
@@ -64,34 +64,34 @@ namespace detail {
             }
         } else {
             // Fill until `p_current_byte` has proper SIMD alignment.
-            while (!is_aligned(p_current_byte, NativeAbi<T>::alignment)) {
+            while (!is_aligned(p_current_byte, native_abi<T>::alignment)) {
                 *p_current_byte = value;
                 ++p_current_byte;
                 --size;
             }
 
             // Non-type template parameters are not allowed in a lambda's
-            // template parameter list, so the lanes are passed through an
-            // `Constant`.
-            auto vectorized_fill = [&]<typename LanesConstant>(LanesConstant) {
+            // template parameter list, so the lanes are passed through a
+            // `constant`.
+            auto vectorized_fill = [&]<typename lanes_constant>(lanes_constant) {
                 // TODO: Consider optimizing with multiple vector loads to
                 // leverage instruction-level parallelism.
-                constexpr ssize lanes = LanesConstant::value;
-                using Vector = FixedSizeSimd<T, lanes>;
-                Vector* p_vector = bit_cast<Vector*>(p_current_byte);
+                constexpr ssize lanes = lanes_constant::value;
+                using vector_type = fixed_size_simd<T, lanes>;
+                vector_type* p_vector = bit_cast<vector_type*>(p_current_byte);
                 p_vector->fill(value);
                 p_current_byte += lanes;
                 size -= lanes;
             };
 
             // Fill out 32-byte portion.
-            if constexpr (NativeAbi<T>::size >= 32) {
-                vectorized_fill(Constant<32_sz>{});
+            if constexpr (native_abi<T>::size >= 32) {
+                vectorized_fill(constant<32_sz>{});
             }
 
             // Fill out 16-byte portion.
-            if constexpr (NativeAbi<T>::size >= 16) {
-                vectorized_fill(Constant<16_sz>{});
+            if constexpr (native_abi<T>::size >= 16) {
+                vectorized_fill(constant<16_sz>{});
             }
 
             // Fill out remaining portion one byte at a time.
@@ -108,14 +108,14 @@ namespace detail {
 template <typename T = unsigned char>
     requires(sizeof(T) <= 8)
 constexpr void set_memory(void* p_source, T value, ssize size) {
-    // Make a type that `value` can bitcast to, and can be used in a `Simd`.
+    // Make a type that `value` can bitcast to, and can be used in a `simd`.
     // TODO: A size-argument numeral type could simplify this.
-    using Raw = Conditional<
-        sizeof(T) == 1, uint1::Raw,
-        Conditional<sizeof(T) == 2, uint2::Raw,
-                    Conditional<sizeof(T) == 4, uint4::Raw, uint8::Raw>>>;
+    using raw_type = conditional<
+        sizeof(T) == 1, uint1::raw_type,
+        conditional<sizeof(T) == 2, uint2::raw_type,
+                    conditional<sizeof(T) == 4, uint4::raw_type, uint8::raw_type>>>;
 
-    detail::set_memory_detail(p_source, bit_cast<Raw>(value), size);
+    detail::set_memory_detail(p_source, bit_cast<raw_type>(value), size);
 }
 
 // `[[gnu::noinline]]` prevents GCC from constant-folding this function out.

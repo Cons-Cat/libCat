@@ -36,7 +36,7 @@ template <is_unsigned_integral T>
 template <is_unsigned_integral T>
 [[nodiscard]] constexpr auto countl_one(T value) -> ssize {
     auto raw_value = to_raw_arithmetic(value);
-    return raw_value != Limits<T>::max()
+    return raw_value != limits<T>::max()
                ? countl_zero(static_cast<T>(~(raw_value)))
                : (ssizeof(T) * 8);
 }
@@ -61,7 +61,7 @@ template <is_unsigned_integral T>
 
 template <is_unsigned_integral T>
 [[nodiscard]] constexpr auto countr_one(T value) -> ssize {
-    return value != Limits<T>::max() ? countl_one(static_cast<T>(~value))
+    return value != limits<T>::max() ? countl_one(static_cast<T>(~value))
                                      : (ssizeof(T) * 8);
 }
 
@@ -126,7 +126,7 @@ template <is_unsigned_integral T, is_unsigned_integral U>
         // `_pext_u64()` is a GCC intrinsic.
         return T(_pext_u64(raw_value, raw_mask));
     } else {
-        ToRawArithmetic<T> count = 0u;
+        to_raw_arithmetic_t<T> count = 0u;
         while (raw_mask != 0u) {
             if (raw_mask & 1) {
                 result >>= 1;
@@ -213,25 +213,25 @@ template <is_arithmetic T>
     return (value & (value - T(1))) == T(0);
 }
 
-// `Byte` is a strongly-typed `struct` rather than an `enum class` so that it
+// `byte` is a strongly-typed `struct` rather than an `enum class` so that it
 // has operators.
 // TODO: Add some member functions.
-struct Byte {  // NOLINT
+struct byte {
     unsigned char value;
 
-    constexpr Byte() = default;
+    constexpr byte() = default;
 
-    constexpr Byte(auto input) requires(sizeof(input) == 1) {
+    constexpr byte(auto input) requires(sizeof(input) == 1) {
         this->value = input;
     }
 
-    constexpr Byte(auto const& input) requires(sizeof(input) == 1) {
+    constexpr byte(auto const& input) requires(sizeof(input) == 1) {
         this->value = input;
     }
 
     template <typename T>
-    constexpr Byte(T&& input)  // NOLINT
-        requires(sizeof(input) == 1) {
+        requires(sizeof(T) == 1)
+    constexpr byte(T&& input) {
         this->value = forward<T>(input);
     }
 
@@ -252,34 +252,34 @@ struct Byte {  // NOLINT
         return bit_cast<T>(value);
     }
 
-    [[nodiscard]] constexpr auto operator&(is_integral auto from) -> Byte {
+    [[nodiscard]] constexpr auto operator&(is_integral auto from) -> byte {
         return this->value & from;
     }
-    constexpr auto operator&=(is_integral auto from) -> Byte& {
+    constexpr auto operator&=(is_integral auto from) -> byte& {
         this->value = this->value & from;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator|(is_integral auto from) -> Byte {
+    [[nodiscard]] constexpr auto operator|(is_integral auto from) -> byte {
         return this->value | from;
     }
-    constexpr auto operator|=(is_integral auto from) -> Byte& {
+    constexpr auto operator|=(is_integral auto from) -> byte& {
         this->value = this->value | from;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator<<(is_integral auto from) -> Byte {
+    [[nodiscard]] constexpr auto operator<<(is_integral auto from) -> byte {
         return this->value << from;
     }
-    constexpr auto operator<<=(is_integral auto from) -> Byte& {
+    constexpr auto operator<<=(is_integral auto from) -> byte& {
         this->value = this->value << from;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator>>(is_integral auto from) -> Byte {
+    [[nodiscard]] constexpr auto operator>>(is_integral auto from) -> byte {
         return this->value >> from;
     }
-    constexpr auto operator>>=(is_integral auto from) -> Byte& {
+    constexpr auto operator>>=(is_integral auto from) -> byte& {
         this->value = this->value >> from;
         return *this;
     }
@@ -318,37 +318,37 @@ template <is_integral T>
 }
 
 template <typename>
-struct EnumFlagTrait : FalseTypeTrait {};
+struct enum_flag_trait : false_trait {};
 
 template <typename T>
-concept is_enum_flag = EnumFlagTrait<T>::value;
+concept is_enum_flag = enum_flag_trait<T>::value;
 
 }  // namespace cat
 
 template <cat::is_enum_flag T>
 [[nodiscard]] constexpr auto operator|(T flag_1, T flag_2) -> T {
-    using U = cat::UnderlyingType<T>;
+    using U = cat::underlying_type<T>;
     return static_cast<T>(static_cast<U>(flag_1) | static_cast<U>(flag_2));
 }
 
 template <cat::is_enum_flag T>
-[[nodiscard]] constexpr auto operator|(T flag_1, cat::UnderlyingType<T> flag_2)
+[[nodiscard]] constexpr auto operator|(T flag_1, cat::underlying_type<T> flag_2)
     -> T {
-    using U = cat::UnderlyingType<T>;
+    using U = cat::underlying_type<T>;
     return static_cast<T>(static_cast<U>(flag_1) | flag_2);
 }
 
 template <cat::is_enum_flag T>
 [[nodiscard]] constexpr auto operator&(T flag_1, T flag_2) -> T {
-    using U = cat::UnderlyingType<T>;
+    using U = cat::underlying_type<T>;
     return static_cast<T>(static_cast<U>(flag_1) & static_cast<U>(flag_2));
 }
 
 // TODO: Fix bit flag operators.
 // template <EnumFlag T>
-//[[nodiscard]] constexpr auto operator&(T flag_1,UnderlyingType<T>
+//[[nodiscard]] constexpr auto operator&(T flag_1,underlying_type<T>
 // flag_2) -> T {
-//     using U =UnderlyingType<T>;
+//     using U =underlying_type<T>;
 //     return static_cast<T>(static_cast<U>(flag_1) & flag_2);
 // }
 

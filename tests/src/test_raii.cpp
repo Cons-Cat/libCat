@@ -7,11 +7,11 @@
 int4 raii_counter = 0;
 
 struct Foo {
-    cat::String data;
+    cat::string data;
 
     Foo() = default;
 
-    Foo(cat::String string) : data(std::move(string)) {
+    Foo(cat::string string) : data(std::move(string)) {
         // _ = cat::print(data);
         // _ = cat::println(" constructor");
     }
@@ -22,7 +22,7 @@ struct Foo {
         // _ = cat::println(this->data);
     }
 
-    auto operator=(cat::String string) {
+    auto operator=(cat::string string) {
         this->data = std::move(string);
         return *this;
     }
@@ -35,18 +35,18 @@ struct Foo {
 };
 
 // NOLINTNEXTLINE
-void pass_by_value(cat::UniqueWeak<Foo>){};
+void pass_by_value(cat::unique_weak<Foo>){};
 
 TEST(test_raii) {
-    // TODO: Fix `Unique` and re-enable these tests.
+    // TODO: Fix `unique` and re-enable these tests.
     // _ = cat::println("Construct objects.");
     // Test constructor.
-    cat::UniqueWeak<Foo> foo(cat::String("foo"));
+    cat::unique_weak<Foo> foo(cat::string("foo"));
     // Test assignment.
-    foo = cat::String("foo");
+    foo = cat::string("foo");
     cat::verify(foo.has_ownership());
 
-    cat::UniqueWeak<Foo> moo(cat::String("moo"));
+    cat::unique_weak<Foo> moo(cat::string("moo"));
     cat::verify(moo.has_ownership());
 
     // Test move-assignment.
@@ -62,8 +62,8 @@ TEST(test_raii) {
     // This is deliberately ill-formed:
     // func(foo);
 
-    // Default construct `	cat::Unique<Foo>`.
-    cat::UniqueWeak<Foo> goo;
+    // Default construct `	cat::unique<Foo>`.
+    cat::unique_weak<Foo> goo;
     cat::verify(goo.has_ownership());
     // Extract goo.
     _ = goo.borrow();
@@ -73,23 +73,23 @@ TEST(test_raii) {
     cat::verify(raii_counter == 3);
 
     // Deduction guides should work here.
-    cat::UniqueWeak weak = 1;
-    cat::Unique unique = weak.borrow();
+    cat::unique_weak weak = 1;
+    cat::unique unique = weak.borrow();
 
     // Borrowing `weak`'s data makes it lose ownership.
     cat::verify(!weak.has_ownership());
     weak = 2;
     cat::verify(weak.has_ownership());
 
-    // Permanately transferring ownership a `cat::Unique`'s storage is unsafe,
+    // Permanately transferring ownership a `cat::unique`'s storage is unsafe,
     // but possible:
     weak = unique.borrow();
     cat::verify(weak.has_ownership());
 
-    // `cat::Unique` can be assigned over, which will call its old data's
+    // `cat::unique` can be assigned over, which will call its old data's
     // destructor.
     unique = 2;
 
-    cat::Unique<int> original = 0;
-    cat::Unique<int8> into = cat::move(original);
+    cat::unique<int> original = 0;
+    cat::unique<int8> into = cat::move(original);
 }

@@ -3,40 +3,40 @@
 #include "../unit_tests.hpp"
 
 TEST(test_typelist) {
-    using Types = cat::TypeList<int, char>;
-    using Type0 = typename Types::Get<0>;
-    using Type1 = typename Types::Get<1>;
+    using types = cat::type_list<int, char>;
+    using type_0 = typename types::get<0>;
+    using type_1 = typename types::get<1>;
 
-    static_assert(cat::is_same<Type0, int>);
-    static_assert(cat::is_same<Type1, char>);
+    static_assert(cat::is_same<type_0, int>);
+    static_assert(cat::is_same<type_1, char>);
 
-    static_assert(Types::has_type<int>);
-    static_assert(Types::has_type<Type0>);
-    static_assert(Types::has_type<char>);
-    static_assert(!Types::has_type<bool>);
+    static_assert(types::has_type<int>);
+    static_assert(types::has_type<type_0>);
+    static_assert(types::has_type<char>);
+    static_assert(!types::has_type<bool>);
 
-    static_assert(Types::count_type<int> == 1);
-    static_assert(!(Types::count_type<int> == 2));
-    static_assert(Types::count_type<char> == 1);
-    static_assert(Types::count_type<bool> == 0);
+    static_assert(types::count_type<int> == 1);
+    static_assert(!(types::count_type<int> == 2));
+    static_assert(types::count_type<char> == 1);
+    static_assert(types::count_type<bool> == 0);
 
-    static_assert(Types::is_unique<int>);
-    static_assert(Types::is_unique<char>);
-    static_assert(!Types::is_unique<bool>);
+    static_assert(types::is_unique<int>);
+    static_assert(types::is_unique<char>);
+    static_assert(!types::is_unique<bool>);
 
-    using Types2 = cat::TypeList<int, int, char>;
-    static_assert(Types::is_unique_list);
-    static_assert(!Types2::is_unique_list);
-    static_assert(Types2::count_type<int> == 2);
+    using types2 = cat::type_list<int, int, char>;
+    static_assert(types::is_unique_list);
+    static_assert(!types2::is_unique_list);
+    static_assert(types2::count_type<int> == 2);
 
-    using ConcatTypes = Types::Concat<Types2>;
+    using concat_types = types::concat_types<types2>;
     static_assert(
-        cat::is_same<ConcatTypes, cat::TypeList<int, char, int, int, char>>);
+        cat::is_same<concat_types, cat::type_list<int, char, int, int, char>>);
 
-    using MergeTypes = Types::Merge<float, double>;
+    using merge_types = types::merge<float, double>;
     static_assert(
-        cat::is_same<MergeTypes, cat::TypeList<int, char, float, double>>);
+        cat::is_same<merge_types, cat::type_list<int, char, float, double>>);
 
-    using FillTypes = cat::TypeListFilled<int, 3>;
-    static_assert(cat::is_same<FillTypes, cat::TypeList<int, int, int>>);
+    using fill_types = cat::type_list_filled<int, 3>;
+    static_assert(cat::is_same<fill_types, cat::type_list<int, int, int>>);
 }

@@ -17,7 +17,7 @@
 namespace cat {
 
 template <typename T>
-class Ring : public CollectionInterface<Ring<T>, T> {
+class Ring : public collection_interface<Ring<T>, T> {
   public:
     Ring()
         : p_storage(nullptr),
@@ -38,7 +38,7 @@ class Ring : public CollectionInterface<Ring<T>, T> {
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
     // context.
     auto copy_to_new_storage(is_stable_allocator auto& allocator,
-                             ssize new_capacity) -> Maybe<void> {
+                             ssize new_capacity) -> maybe<void> {
         // TODO: `.resalloc_multi()`.
         T* p_new = TRY(allocator.template alloc_multi<T>(new_capacity));
 
@@ -46,7 +46,7 @@ class Ring : public CollectionInterface<Ring<T>, T> {
             copy_memory(this->p_storage, p_new,
                         this->current_size * ssizeof(T));
         } else {
-            for (ssize::Raw i = 0; i < this->current_size; ++i) {
+            for (ssize::raw_type i = 0; i < this->current_size; ++i) {
                 p_new[i] = move(this->p_storage[i]);
             }
         }
@@ -62,18 +62,18 @@ class Ring : public CollectionInterface<Ring<T>, T> {
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]] static auto reserved(is_stable_allocator auto& allocator,
-                                       ssize capacity) -> Maybe<Ring<T>> {
+                                       ssize capacity) -> maybe<Ring<T>> {
     }
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]] static auto filled(is_stable_allocator auto& allocator,
                                      ssize capacity, T value)
-        -> Maybe<Ring<T>> {
+        -> maybe<Ring<T>> {
     }
 
     [[nodiscard]] auto reserve(is_stable_allocator auto& allocator,
-                               ssize new_capacity) -> Maybe<void> {
+                               ssize new_capacity) -> maybe<void> {
         // The capacity of a `Ring` must be a power of two.
         cat::assert(has_single_bit(new_capacity));
 
@@ -88,7 +88,7 @@ class Ring : public CollectionInterface<Ring<T>, T> {
                 copy_memory(this->p_storage, p_new,
                             this->current_size * ssizeof(T));
             } else {
-                for (ssize::Raw i = 0; i < this->current_size; ++i) {
+                for (ssize::raw_type i = 0; i < this->current_size; ++i) {
                     p_new[i] = move(this->p_storage[i]);
                 }
             }
@@ -105,7 +105,7 @@ class Ring : public CollectionInterface<Ring<T>, T> {
     }
 
     [[nodiscard]] auto resize(is_stable_allocator auto& allocator,
-                              ssize new_size) -> Maybe<void> {
+                              ssize new_size) -> maybe<void> {
         if (new_size > this->current_capacity) {
             TRY(this->reserve(allocator, new_size));
 
@@ -125,15 +125,15 @@ class Ring : public CollectionInterface<Ring<T>, T> {
     }
 
     [[nodiscard]] auto clone(is_stable_allocator auto& allocator)
-        -> Maybe<Ring<T>> {
+        -> maybe<Ring<T>> {
     }
 
-    // Get the non-`const` address of this `Vector`'s internal array.
+    // Get the non-`const` address of this `vector`'s internal array.
     [[nodiscard]] constexpr auto data() -> T* {
         return &(this->p_storage[0]);
     }
 
-    // Get the `const` address of this `Vector`'s internal array.
+    // Get the `const` address of this `vector`'s internal array.
     [[nodiscard]] constexpr auto data() const -> T const* {
         return &(this->p_storage[0]);
     }

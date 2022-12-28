@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/detail/simd_impl.hpp>
+
 #include <cat/bit>
 #include <cat/simd>
 #include <cat/span>
@@ -33,88 +34,88 @@ namespace cat {
 
 constexpr auto string_length(char const* p_string) -> ssize;
 
-template <ssize::Raw length>
-class StaticString;
+template <ssize::raw_type length>
+class fixed_string;
 
-class String : public Span<char const> {
+class string : public span<char const> {
   public:
-    constexpr String() : Span<char const>() {
+    constexpr string() : span<char const>() {
     }
 
-    constexpr String(char const* p_string, ssize in_length)
-        : Span<char const>(p_string, in_length) {
+    constexpr string(char const* p_string, ssize in_length)
+        : span<char const>(p_string, in_length) {
     }
 
-    constexpr String(String const& string)
-        : Span<char const>(string.p_storage, string.length) {
+    constexpr string(string const& string)
+        : span<char const>(string.p_storage, string.length) {
     }
 
-    constexpr String(String&& string)
-        : Span<char const>(string.p_storage, move(string).size()) {
+    constexpr string(string&& string)
+        : span<char const>(string.p_storage, move(string).size()) {
     }
 
     // This weird template deduces lower than the string literal constructor.
     template <typename T>
         requires(is_pointer<T>)
-    constexpr String(T p_string)
-        : Span<char const>(p_string, string_length(p_string)) {
+    constexpr string(T p_string)
+        : span<char const>(p_string, string_length(p_string)) {
     }
 
     // clangd emits a false diagnistic if this is `consteval` instead of
     // `constexpr`.
     // Zero-overhead string literal constructor.
-    template <ssize::Raw other_length>
-    constexpr String(char const (&string)[other_length]) {
+    template <ssize::raw_type other_length>
+    constexpr string(char const (&string)[other_length]) {
         this->p_storage = string;
-        this->length = static_cast<ssize::Raw>(other_length);
+        this->length = static_cast<ssize::raw_type>(other_length);
     }
 
-    template <ssize::Raw other_length>
-    constexpr String(StaticString<other_length> const& other_string) {
+    template <ssize::raw_type other_length>
+    constexpr string(fixed_string<other_length> const& other_string) {
         this->p_storage = other_string.data();
         this->length = other_length;
     }
 
-    constexpr String(Span<char> const& span)
-        : Span<char const>(span.data(), span.size()) {
+    constexpr string(span<char> const& span)
+        : span<char const>(span.data(), span.size()) {
     }
 
-    constexpr String(Span<char>&& span)
-        : Span<char const>(span.data(), span.size()) {
+    constexpr string(span<char>&& span)
+        : span<char const>(span.data(), span.size()) {
     }
 
-    // A `String` consuming `nullptr` would cause undefined behavior.
-    constexpr String(decltype(nullptr)) = delete;
+    // A `string` consuming `nullptr` would cause undefined behavior.
+    constexpr string(decltype(nullptr)) = delete;
 
-    constexpr auto operator=(String const& string) -> String& {
-        this->p_storage = string.data();
-        this->length = string.size();
+    constexpr auto operator=(string const& other_string) -> string& {
+        this->p_storage = other_string.data();
+        this->length = other_string.size();
         return *this;
     }
 
-    constexpr auto operator=(String&& string) -> String& {
-        this->p_storage = string.data();
-        this->length = move(string).size();
+    constexpr auto operator=(string&& other_string) -> string& {
+        this->p_storage = other_string.data();
+        this->length = move(other_string).size();
         return *this;
     }
 
     // TODO: Make these member functions `const`.
 
     [[nodiscard]] constexpr auto substring(ssize position, ssize count)
-        -> String {
-        return String(this->p_storage + position, count);
+        -> string {
+        return string(this->p_storage + position, count);
     }
 
-    [[nodiscard]] constexpr auto remove_prefix(ssize offset) -> String {
+    [[nodiscard]] constexpr auto remove_prefix(ssize offset) -> string {
         return this->substring(offset, this->length - offset);
     }
 
-    [[nodiscard]] constexpr auto remove_suffix(ssize offset) -> String {
+    [[nodiscard]] constexpr auto remove_suffix(ssize offset) -> string {
         return this->substring(0, this->length - offset);
     }
 
     constexpr auto find_small(char character, ssize position = 0) const
-        -> Maybe<Sentinel<ssize, -1>> {
+        -> maybe<sentinel<ssize, -1>> {
         for (ssize i = position; i < this->length; ++i) {
             if (this->p_storage[i.raw] == character) {
                 return i;
@@ -126,15 +127,15 @@ class String : public Span<char const> {
     // TODO: Optimize different length strings.
     // TODO: Tile this loop four or eight times.
     constexpr auto find(char character, ssize position = 0) const
-        -> Maybe<Sentinel<ssize, -1>> {
+        -> maybe<sentinel<ssize, -1>> {
         ssize i = position;
         for (; i < this->length - char1x_::lanes; i += char1x_::lanes) {
             // TODO: Consider aligning this load?
             char1x_ const storage = char1x_::loaded(this->p_storage + i);
             // TODO: Support a native ABI mask here.
-            SimdMask<Avx2Abi<char>, char> const compare =
+            simd_mask<avx2_abi<char>, char> const compare =
                 (storage == character);
-			Bitset const mask = compare.bitset();
+            bitset const mask = compare.bitset();
             if (mask.any_of()) {
                 return i + mask.countr_zero();
             }
@@ -145,16 +146,16 @@ class String : public Span<char const> {
     }
 
   private:
-    // `String` inherits:
+    // `string` inherits:
     //
     // `char const* p_storage;`
     // `ssize length;`
 };
 
-// This is `ssize::Raw` because GCC cannot deduce a string literal's
+// This is `ssize::raw_type` because GCC cannot deduce a string literal's
 // length from an `ssize`.
-template <ssize::Raw length>
-class StaticString : public CollectionInterface<StaticString<length>, char> {
+template <ssize::raw_type length>
+class fixed_string : public collection_interface<fixed_string<length>, char> {
   public:
     constexpr auto data() -> char* {
         return &(this->storage[0]);
@@ -168,99 +169,101 @@ class StaticString : public CollectionInterface<StaticString<length>, char> {
         return length;
     }
 
-    constexpr StaticString() = default;
+    constexpr fixed_string() = default;
 
-    // Construct from another `StaticString` of lesser or equal length.
-    constexpr StaticString(StaticString<length> const& string) {
+    // Construct from another `fixed_string` of lesser or equal length.
+    constexpr fixed_string(fixed_string<length> const& string) {
         this->copy_string_data(string.data());
     }
 
     // Construct and deduce length from a string literal.
-    constexpr StaticString(char const (&in)[length]) {
+    constexpr fixed_string(char const (&in)[length]) {
         // This must be copied instead of initialized in-place to guarantee
         // const-correctness.
         this->copy_string_data(in);
     }
 
-    // Create a `StaticString` from a smaller string, and null out the unfilled
+    // Create a `fixed_string` from a smaller string, and null out the unfilled
     // bytes.
-    template <ssize::Raw in_length>
+    template <ssize::raw_type in_length>
         requires(in_length < length)
     static consteval auto padded(char const (&in)[in_length])
-        -> StaticString<length> {
-        StaticString<length> string;
-        for (ssize::Raw i = 0; i < in_length; ++i) {
+        -> fixed_string<length> {
+        fixed_string<length> string;
+        for (ssize::raw_type i = 0; i < in_length; ++i) {
             string[i] = in[i];
         }
-        for (ssize::Raw i = in_length; i < length; ++i) {
+        for (ssize::raw_type i = in_length; i < length; ++i) {
             string[i] = '\0';
         }
         return string;
     }
 
-    // Assign a `StaticString` of lesser or equal length.
-    constexpr auto operator=(StaticString<length> const& string)
-        -> StaticString<length>& {
+    // Assign a `fixed_string` of lesser or equal length.
+    constexpr auto operator=(fixed_string<length> const& string)
+        -> fixed_string<length>& {
         this->copy_string_data(string.data());
         return *this;
     }
 
     // Assign a string literal of lesser or equal length.
     constexpr auto operator=(char const (&in)[length])
-        -> StaticString<length>& {
+        -> fixed_string<length>& {
         this->copy_string_data(in);
         return *this;
     }
 
     // Concatenate constant-evaluated strings.
-    // This is `ssize::Raw` because GCC cannot deduce a string literal's
+    // This is `ssize::raw_type` because GCC cannot deduce a string literal's
     // length from an `ssize`.
-    template <ssize::Raw other_length>
+    template <ssize::raw_type other_length>
     constexpr friend auto operator+(
-        StaticString<length> const& self,
-        StaticString<other_length> const& other_string)
-        -> StaticString<length - 1 + other_length> {
+        fixed_string<length> const& self,
+        fixed_string<other_length> const& other_string)
+        -> fixed_string<length - 1 + other_length> {
         // Add the lengths of two null-terminated strings together:
-        constexpr ssize::Raw new_length = length - 1 + other_length;
+        constexpr ssize::raw_type new_length = length - 1 + other_length;
         char array[new_length];
 
-        for (ssize::Raw i = 0; i < length - 1; ++i) {
+        for (ssize::raw_type i = 0; i < length - 1; ++i) {
             array[i] = self.storage[i];
         }
 
-        for (ssize::Raw i = length - 1; i < new_length - 1; ++i) {
+        for (ssize::raw_type i = length - 1; i < new_length - 1; ++i) {
             array[i] = other_string.data()[i - length + 1];
         }
 
         // Make this new string null-terminated.
         array[new_length - 1] = '\0';
-        StaticString<new_length> new_string = array;
+        fixed_string<new_length> new_string = array;
         return new_string;
     }
 
-    // Concatenate a string literal to a `StaticString`.
-    template <ssize::Raw other_length>
-    constexpr friend auto operator+(StaticString<length> const& self,
+    // Concatenate a string literal to a `fixed_string`.
+    template <ssize::raw_type other_length>
+    constexpr friend auto operator+(fixed_string<length> const& self,
                                     char const (&other_string)[other_length])
-        -> StaticString<length - 1 + other_length> {
-        return self + StaticString<other_length>{other_string};
+        -> fixed_string<length - 1 + other_length> {
+        return self + fixed_string<other_length>{other_string};
     }
 
-    // Concatenate a `StaticString` to a string literal.
-    template <ssize::Raw other_length>
+    // Concatenate a `fixed_string` to a string literal.
+    template <ssize::raw_type other_length>
     constexpr friend auto operator+(char const (&other_string)[other_length],
-                                    StaticString<length> const& self)
-        -> StaticString<length - 1 + other_length> {
-        return StaticString<other_length>{other_string} + self;
+                                    fixed_string<length> const& self)
+        -> fixed_string<length - 1 + other_length> {
+        return fixed_string<other_length>{other_string} + self;
     }
 
   private:
     constexpr void copy_string_data(char const* p_source) {
-        if consteval {
-            for (ssize::Raw i = 0; i < length; ++i) {
-                this->storage[i] = p_source[i];
+        if
+            consteval {
+                for (ssize::raw_type i = 0; i < length; ++i) {
+                    this->storage[i] = p_source[i];
+                }
             }
-        } else {
+        else {
             copy_memory(p_source, this->data(), length);
         }
     }
@@ -268,18 +271,18 @@ class StaticString : public CollectionInterface<StaticString<length>, char> {
     char storage[length];
 };
 
-[[nodiscard]] auto compare_strings(String const string_1, String const string_2)
+[[nodiscard]] auto compare_strings(string const string_1, string const string_2)
     -> bool;
 
-[[nodiscard]] auto print(String const string) -> ssize;
+[[nodiscard]] auto print(string const string) -> ssize;
 
-[[nodiscard]] auto println(String const string) -> ssize;
+[[nodiscard]] auto println(string const string) -> ssize;
 
 [[nodiscard]] auto println() -> ssize;
 
-[[nodiscard]] auto eprint(String const string) -> ssize;
+[[nodiscard]] auto eprint(string const string) -> ssize;
 
-[[nodiscard]] auto eprintln(String const string) -> ssize;
+[[nodiscard]] auto eprintln(string const string) -> ssize;
 
 [[nodiscard]] auto eprintln() -> ssize;
 
@@ -291,10 +294,10 @@ class StaticString : public CollectionInterface<StaticString<length>, char> {
 
 }  // namespace cat
 
-// These must be implemented after both `Maybe` and `String`:
+// These must be implemented after both `maybe` and `string`:
 
 template <typename T>
-[[nodiscard]] auto cat::Maybe<T>::or_exit(cat::String const error_message,
+[[nodiscard]] auto cat::maybe<T>::or_exit(cat::string const error_message,
                                           ssize exit_code) & {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
@@ -309,7 +312,7 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] auto cat::Maybe<T>::or_exit(cat::String const error_message,
+[[nodiscard]] auto cat::maybe<T>::or_exit(cat::string const error_message,
                                           ssize exit_code) const& {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
@@ -324,7 +327,7 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] auto cat::Maybe<T>::or_exit(cat::String const error_message,
+[[nodiscard]] auto cat::maybe<T>::or_exit(cat::string const error_message,
                                           ssize exit_code) && {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
@@ -339,7 +342,7 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] auto cat::Maybe<T>::or_exit(cat::String const error_message,
+[[nodiscard]] auto cat::maybe<T>::or_exit(cat::string const error_message,
                                           ssize exit_code) const&& {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {

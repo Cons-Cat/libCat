@@ -6,15 +6,15 @@ CheckOptions:
   - { key: readability-identifier-naming.MemberCase,                      value: lower_case }
   - { key: readability-identifier-naming.FunctionCase,                    value: lower_case }
   - { key: readability-identifier-naming.NamespaceCase,                   value: lower_case }
+  - { key: readability-identifier-naming.StructCase,                      value: lower_case }
+  - { key: readability-identifier-naming.ClassCase,                       value: lower_case }
+  - { key: readability-identifier-naming.TypeAliasCase,                   value: lower_case }
+  - { key: readability-identifier-naming.TypedefCase,                       value: lower_case }
+
   - { key: readability-identifier-naming.PointerParameterPrefix,          value: p_ }
   - { key: readability-identifier-naming.LocalPointerPrefix,              value: p_ }
   - { key: readability-identifier-naming.LocalConstantPointerPrefix,      value: p_ }
-  - { key: performance-unnecessary-value-param.AllowedTypes,              value: String;Span;IoVector }
-
-# Some structs do not conform to PascalCase, but these are generally favored.
-  - { key: readability-identifier-naming.StructCase,                      value: CamelCase }
-  - { key: readability-identifier-naming.ClassCase,                       value: CamelCase }
-  - { key: readability-identifier-naming.TypeAliasCase,                   value: CamelCase }
+  - { key: performance-unnecessary-value-param.AllowedTypes,              value: string;span;io_vector }
 
 WarningsAsErrors: ''
 HeaderFilterRegex: ^src

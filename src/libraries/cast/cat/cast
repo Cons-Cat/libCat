@@ -8,7 +8,7 @@
 namespace cat {
 
 template <typename From, typename To>
-constexpr auto numeric_cast(From from) -> Maybe<To> {
+constexpr auto numeric_cast(From from) -> maybe<To> {
     To const to = static_cast<To>(from);
     constexpr bool has_same_signedness = is_signed<From> != is_signed<To>;
 
@@ -34,14 +34,13 @@ template <typename From>
     requires(sizeof(From) <= 8 && !is_lvalue_reference<From>)
 constexpr auto bit_int_cast(From from) -> decltype(auto) {
     // TODO: Use a template that makes some integer from a size.
-    using Integer =
-        Conditional<sizeof(from) == 1, int1,
-                    Conditional<sizeof(from) == 2, int2,
-                                Conditional<sizeof(from) == 4, int4, int8>>>;
-    using Return = CopyCvRefFrom<From, Integer>;
+    using integer_type =
+        conditional<sizeof(from) == 1, int1,
+                    conditional<sizeof(from) == 2, int2,
+                                conditional<sizeof(from) == 4, int4, int8>>>;
+    using return_type = copy_cvref_from<From, integer_type>;
 
-    return bit_cast<Return>(from);
-    // return reinterpret_cast<Return>(from);
+    return bit_cast<return_type>(from);
 }
 
 }  // namespace cat

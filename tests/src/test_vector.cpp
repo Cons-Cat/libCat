@@ -4,10 +4,10 @@
 
 #include "../unit_tests.hpp"
 
-// Test that `Vector` works in a `constexpr` context.
+// Test that `vector` works in a `constexpr` context.
 consteval auto const_func() -> int4 {
-    cat::PageAllocator allocator;
-    cat::Vector<int4> vector;
+    cat::page_allocator allocator;
+    cat::vector<int4> vector;
     _ = vector.resize(allocator, 8);
 
     vector[0] = 1;
@@ -19,20 +19,20 @@ consteval auto const_func() -> int4 {
 
 TEST(test_vector) {
     // Initialize an allocator.
-    cat::PageAllocator paging_allocator;
-    paging_allocator.reset();
+    cat::page_allocator pager;
+    pager.reset();
     auto page =
-        paging_allocator.opq_alloc_multi<cat::Byte>(4_ki - 32).or_exit();
-    defer(paging_allocator.free(page);)
+        pager.opq_alloc_multi<cat::byte>(4_ki - 32).or_exit();
+    defer(pager.free(page);)
     auto allocator =
-        cat::LinearAllocator::backed_handle(paging_allocator, page);
+        cat::linear_allocator::backed_handle(pager, page);
 
-    // Test default constructing a `Vector`.
-    cat::Vector<int4> int_vec;
+    // Test default constructing a `vector`.
+    cat::vector<int4> int_vec;
     cat::verify(int_vec.size() == 0);
     cat::verify(int_vec.capacity() >= 0);
 
-    // Test pushing back to a `Vector`.
+    // Test pushing back to a `vector`.
     int_vec.push_back(allocator, 1).or_exit();
     int_vec.push_back(allocator, 2).or_exit();
     int_vec.push_back(allocator, 3).or_exit();
@@ -45,7 +45,7 @@ TEST(test_vector) {
     cat::verify(int_vec.size() == 6);
     cat::verify(int_vec.capacity() >= 8);
 
-    // Test resizing a `Vector`.
+    // Test resizing a `vector`.
     int_vec.resize(allocator, 0).or_exit();
     cat::verify(int_vec.size() == 0);
     cat::verify(int_vec.capacity() >= 8);
@@ -54,19 +54,19 @@ TEST(test_vector) {
     cat::verify(int_vec.size() == 4);
     cat::verify(int_vec.capacity() >= 8);
 
-    // Test reserving storage for a `Vector`.
+    // Test reserving storage for a `vector`.
     int_vec.reserve(allocator, 128).or_exit();
     cat::verify(int_vec.size() == 4);
     cat::verify(int_vec.capacity() >= 128);
 
     // Test reserve constructor.
-    cat::Vector reserved_vec =
-        cat::Vector<int4>::reserved(allocator, 6).or_exit();
+    cat::vector reserved_vec =
+        cat::vector<int4>::reserved(allocator, 6).or_exit();
     cat::verify(reserved_vec.capacity() >= 6);
 
     // Test filled constructor.
-    cat::Vector filled_vec =
-        cat::Vector<int4>::filled(allocator, 8, 1).or_exit();
+    cat::vector filled_vec =
+        cat::vector<int4>::filled(allocator, 8, 1).or_exit();
     cat::verify(filled_vec.size() == 8);
     cat::verify(filled_vec.capacity() >= 8);
     for (int4 integer : filled_vec) {
@@ -74,18 +74,18 @@ TEST(test_vector) {
     }
 
     // Test cloned constructor.
-    cat::Vector cloned_vec = filled_vec.clone(allocator).or_exit();
+    cat::vector cloned_vec = filled_vec.clone(allocator).or_exit();
     cat::verify(cloned_vec.size() == 8);
     cat::verify(cloned_vec.capacity() >= 8);
     for (int4 integer : cloned_vec) {
         cat::verify(integer == 1);
     }
 
-    // Test `Vector` in a `constexpr` context.
+    // Test `vector` in a `constexpr` context.
     static_assert(const_func() == 10);
 
     // Test getters.
-    cat::Vector<int> default_vector;
+    cat::vector<int> default_vector;
     cat::verify(default_vector.is_empty());
 
     _ = default_vector.reserve(allocator, 2);
@@ -107,11 +107,11 @@ TEST(test_vector) {
     // TODO: Test insert iterators.
 
     // Test algorithms.
-    cat::Vector origin_vector =
-        cat::Vector<int>::filled(allocator, 6, 1).verify();
-    auto copy_vector = cat::Vector<int>::filled(allocator, 6, 0).verify();
-    auto move_vector = cat::Vector<int>::filled(allocator, 6, 0).verify();
-    auto relocate_vector = cat::Vector<int>::filled(allocator, 6, 0).verify();
+    cat::vector origin_vector =
+        cat::vector<int>::filled(allocator, 6, 1).verify();
+    auto copy_vector = cat::vector<int>::filled(allocator, 6, 0).verify();
+    auto move_vector = cat::vector<int>::filled(allocator, 6, 0).verify();
+    auto relocate_vector = cat::vector<int>::filled(allocator, 6, 0).verify();
 
     // `copy()`.
     cat::verify(copy_vector[5] == 0);

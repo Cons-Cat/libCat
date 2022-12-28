@@ -6,14 +6,14 @@
 
 namespace cat {
 
-// `NoType`'s purpose is to implicitly cast from any type into `void*`. This is
+// `no_type`'s purpose is to implicitly cast from any type into `void*`. This is
 // useful for low-level type erasure in some cases, such as passing syscall
 // arguments.
-class NoType {
+class no_type {
   public:
-    constexpr NoType() = default;
+    constexpr no_type() = default;
 
-    constexpr NoType(auto input) requires(sizeof(input) <= sizeof(void*))
+    constexpr no_type(auto input) requires(sizeof(input) <= sizeof(void*))
         : p_storage(bit_cast<void*>(input)) {
     }
 
@@ -27,15 +27,15 @@ class NoType {
     void* p_storage;
 };
 
-// `NoTypePtr` is like `NoType`, but it only converts to or from pointers.
-class NoTypePtr {
+// `no_type_ptr` is like `no_type`, but it only converts to or from pointers.
+class no_type_ptr {
   public:
-    constexpr NoTypePtr() = default;
+    constexpr no_type_ptr() = default;
 
-    constexpr NoTypePtr(decltype(nullptr)) : p_storage(nullptr) {
+    constexpr no_type_ptr(decltype(nullptr)) : p_storage(nullptr) {
     }
 
-    constexpr NoTypePtr(auto* p_input)
+    constexpr no_type_ptr(auto* p_input)
         : p_storage(const_cast<void*>(static_cast<void const*>(p_input))) {
     }
 

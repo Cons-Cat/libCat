@@ -8,55 +8,56 @@
 namespace cat {
 
 namespace detail {
-    template <typename... OuterTupleElements>
-    constexpr auto get_outer_type_list(TypeMap<OuterTupleElements...>) {
-        return (TypeListFilled<Decay<OuterTupleElements>,
-                               // `ssizeof_pack` causes an internal compiler
-                               // error in GCC 12 here.
-                               // ssizeof_pack<OuterTupleElements>()>
-                               static_cast<ssize>(
-                                   sizeof...(OuterTupleElements))>{} +
+    template <typename... outer_tuple_elements>
+    constexpr auto get_outer_type_list(type_map<outer_tuple_elements...>) {
+        return (type_list_filled<Decay<outer_tuple_elements>,
+                                 // `ssizeof_pack` causes an internal compiler
+                                 // error in GCC 12 here.
+                                 // ssizeof_pack<outer_tuple_elements>()>
+                                 static_cast<ssize>(
+                                     sizeof...(outer_tuple_elements))>{} +
                 ...);
     }
 
-    template <typename... InnerTupleElements>
-    constexpr auto get_inner_type_list(TypeMap<InnerTupleElements...>) {
-        // Make a `TypeList` from every `TupleElement`, and concatenate the
+    template <typename... inner_tuple_elements>
+    constexpr auto get_inner_type_list(type_map<inner_tuple_elements...>) {
+        // Make a `type_list` from every `tuple_element`, and concatenate the
         // lists together.
-        return (TypeList<Decay<InnerTupleElements>>{} + ...);
+        return (type_list<Decay<inner_tuple_elements>>{} + ...);
     }
 
     // This takes a forwarding tuple as a parameter. The forwarding tuple only
     // contains references, so it should just be taken by value.
-    template <typename OuterTuple, typename... OuterTupleElements,
-              typename... InnerTupleElements>
-    constexpr auto tuple_cat_detail(OuterTuple&& tuple,
-                                    TypeList<OuterTupleElements...>,
-                                    TypeList<InnerTupleElements...>)
-        -> Tuple<typename InnerTupleElements::Element...> {
-        return {// For every tuple passed in through `OuterTuple`, move the n'th
-                // tuple's element storage into a new `Tuple` at the same index.
-                move(tuple.template Identity<OuterTupleElements>::storage)
-                    .template Identity<InnerTupleElements>::storage...};
+    template <typename outer_tuple, typename... outer_tuple_elements,
+              typename... inner_tuple_elements>
+    constexpr auto tuple_cat_detail(outer_tuple&& tuple,
+                                    type_list<outer_tuple_elements...>,
+                                    type_list<inner_tuple_elements...>)
+        -> cat::tuple<typename inner_tuple_elements::element...> {
+        return {
+            // For every tuple passed in through `outer_tuple`, move the n'th
+            // tuple's element storage into a new `tuple` at the same index.
+            move(tuple.template Identity<outer_tuple_elements>::storage)
+                .template Identity<inner_tuple_elements>::storage...};
     }
 }  // namespace detail
 
 template <typename... Ts>
 constexpr auto tuple_cat(Ts&&... tuples) {
     if constexpr (sizeof...(Ts) == 0) {
-        return Tuple<>{};
+        return tuple<>{};
     } else {
-        // Create a `Tuple` out of all the argument tuples.
-        using OuterTuple = Tuple<Decay<Ts>...>;
-        using OuterTupleTypeMap = typename OuterTuple::Map;
+        // Create a `tuple` out of all the argument tuples.
+        using outer_tuple = tuple<Decay<Ts>...>;
+        using outer_tuple_type_map = typename outer_tuple::Map;
 
-        // Get the `TypeList` from the inner and outer tuples.
-        constexpr TypeList outer_elements_list =
-            detail::get_outer_type_list(OuterTupleTypeMap());
-        constexpr TypeList inner_elements_list =
-            detail::get_inner_type_list(OuterTupleTypeMap());
+        // Get the `type_list` from the inner and outer tuples.
+        constexpr type_list outer_elements_list =
+            detail::get_outer_type_list(outer_tuple_type_map());
+        constexpr type_list inner_elements_list =
+            detail::get_inner_type_list(outer_tuple_type_map());
 
-        return detail::tuple_cat_detail(OuterTuple(move(tuples)...),
+        return detail::tuple_cat_detail(outer_tuple(move(tuples)...),
                                         outer_elements_list,
                                         inner_elements_list);
     }

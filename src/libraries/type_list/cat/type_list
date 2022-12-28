@@ -15,43 +15,43 @@ constexpr auto min(T value) -> T;
 // Implicit output type `min()`.
 
 // Implicit output type `max()`.
-template <typename T, typename U, typename... Remaining>
+template <typename T, typename U, typename... remaining>
     requires(is_implicitly_convertible<U, T>)
-constexpr auto min(T value_1, U value_2, Remaining... remaining) -> T;
+constexpr auto min(T value_1, U value_2, remaining... remaining_args) -> T;
 
 template <typename T>
 constexpr auto max(T value) -> T;
 
 // Implicit output type `max()`.
-template <typename T, typename U, typename... Remaining>
+template <typename T, typename U, typename... remaining>
     requires(is_implicitly_convertible<U, T>)
-constexpr auto max(T value_1, U value_2, Remaining... remaining) -> T;
+constexpr auto max(T value_1, U value_2, remaining... remaining_args) -> T;
 
 template <typename... Ts>
-class TypeList {
+class type_list {
     template <typename>
-    struct GetFirstElement;
+    struct get_first_element;
 
-    template <typename Head, typename... Tail>
-    struct GetFirstElement<TypeList<Head, Tail...>> {
-        using Result = Head;
+    template <typename head, typename... tail>
+    struct get_first_element<type_list<head, tail...>> {
+        using result = head;
     };
 
     // Overload for the end of the type list.
     template <typename, ssize>
-    struct RecurseForTypeAtIndex;
+    struct recurse_for_type_at_index;
 
     // Shortcut for accessing the 0th element.
-    template <typename Head, typename... Tail>
-    struct RecurseForTypeAtIndex<TypeList<Head, Tail...>, 0> {
-        using Result = Head;
+    template <typename head, typename... tail>
+    struct recurse_for_type_at_index<type_list<head, tail...>, 0> {
+        using result = head;
     };
 
     // Recurse from the tail down to the index in this list.
-    template <typename Head, typename... Tail, ssize index>
-    struct RecurseForTypeAtIndex<TypeList<Head, Tail...>, index> {
-        using Result = typename RecurseForTypeAtIndex<TypeList<Tail...>,
-                                                      index - 1>::Result;
+    template <typename head, typename... tail, ssize index>
+    struct recurse_for_type_at_index<type_list<head, tail...>, index> {
+        using result = typename recurse_for_type_at_index<type_list<tail...>,
+                                                          index - 1>::result;
     };
 
     // If the last element in this type list is `T`.
@@ -95,28 +95,29 @@ class TypeList {
   public:
     // Produce an alias to the type stored at an index in this type list.
     template <ssize index>
-    using Get = typename RecurseForTypeAtIndex<TypeList<Ts...>, index>::Result;
+    using get =
+        typename recurse_for_type_at_index<type_list<Ts...>, index>::result;
 
     // TODO: Get index of first, last, and N'th occurence of `T`.
 
-    // Append one parameter pack to this `TypeList`.
+    // Append one parameter pack to this `type_list`.
     template <typename... Us>
-    using Merge = TypeList<Ts..., Us...>;
+    using merge = type_list<Ts..., Us...>;
 
     template <typename... Us>
-    static consteval auto concat(TypeList<Us...>) {
-        return TypeList<Ts..., Us...>{};
+    static consteval auto concat(type_list<Us...>) {
+        return type_list<Ts..., Us...>{};
     }
 
-    // Concatenate one `TypeList` to this `TypeList`.
-    template <typename OtherTypeList>
-    using Concat = decltype(concat(OtherTypeList()));
+    // Concatenate one `type_list` to this `type_list`.
+    template <typename Othertype_list>
+    using concat_types = decltype(concat(Othertype_list()));
 
-    // A `+` is required instead of `Concat` to use this inside of fold
+    // A `+` is required instead of `concat_types` to use this inside of fold
     // expressions.
     template <typename... Us>
-    friend constexpr auto operator+(TypeList<Ts...>, TypeList<Us...>) {
-        return TypeList<Ts..., Us...>{};
+    friend constexpr auto operator+(type_list<Ts...>, type_list<Us...>) {
+        return type_list<Ts..., Us...>{};
     }
 
     // Evaluate `true` iff this type list holds a type `T`.
@@ -153,18 +154,18 @@ class TypeList {
 
 namespace detail {
     template <typename T, ssize count, ssize index, typename... Ts>
-    consteval auto type_list_fill(TypeList<Ts...> type_list) {
+    consteval auto type_list_fill(type_list<Ts...> type_list) {
         if constexpr (index == count) {
             return type_list;
         } else {
             return type_list_fill<T, count, index + 1>(
-                typename decltype(type_list)::template Merge<T>());
+                typename decltype(type_list)::template merge<T>());
         }
     }
 }  // namespace detail
 
-// Produce a TypeList filled with `count` of `T`.
+// Produce a type_list filled with `count` of `T`.
 template <typename T, ssize count>
-using TypeListFilled = decltype(detail::type_list_fill<T, count, 0>({}));
+using type_list_filled = decltype(detail::type_list_fill<T, count, 0>({}));
 
 }  // namespace cat

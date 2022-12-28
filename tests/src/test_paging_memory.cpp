@@ -8,22 +8,22 @@
 int4 paging_counter_1 = 0;
 int4 paging_counter_2 = 0;
 
-struct TestType {
-    TestType() {
+struct Testtype {
+    Testtype() {
         ++paging_counter_1;
     }
-    ~TestType() {
+    ~Testtype() {
         ++paging_counter_2;
     }
 };
 
 TEST(test_paging_memory) {
     // Initialize an allocator.
-    cat::PageAllocator allocator;
+    cat::page_allocator allocator;
 
     // Allocate and free a `const` page.
     cat::mem auto const const_memory =
-        allocator.opq_alloc<cat::Byte>().or_exit("Failed to page memory!");
+        allocator.opq_alloc<cat::byte>().or_exit("Failed to page memory!");
     _ = allocator.get(const_memory);
     allocator.free(const_memory);
 
@@ -34,7 +34,7 @@ TEST(test_paging_memory) {
     defer(allocator.free(memory);)
 
     // Write to the page.
-    cat::Span page_span = allocator.get(memory);
+    cat::span page_span = allocator.get(memory);
     page_span[0] = 10;
     cat::verify(allocator.get(memory)[0] == 10);
 
@@ -74,7 +74,7 @@ TEST(test_paging_memory) {
     cat::verify(allocator.get(small_memory_4) == 3);
 
     // Test constructor being called.
-    cat::Maybe testtype = allocator.opq_alloc<TestType>();
+    cat::maybe testtype = allocator.opq_alloc<Testtype>();
     allocator.free(testtype.value());
 
     // That constructor increments `paging_counter_1`.
@@ -83,7 +83,7 @@ TEST(test_paging_memory) {
     cat::verify(paging_counter_2 == 1);
 
     // Test multi-allocations.
-    auto array_memory = allocator.opq_alloc_multi<TestType>(9).or_exit();
+    auto array_memory = allocator.opq_alloc_multi<Testtype>(9).or_exit();
     // Those 9 constructors increment `paging_counter_2`.
     cat::verify(paging_counter_1 == 10);
 
@@ -91,8 +91,8 @@ TEST(test_paging_memory) {
     // Those 9 destructors increment `paging_counter_2`.
     cat::verify(paging_counter_2 == 10);
 
-    auto smalltesttype = allocator.opq_inline_alloc<TestType>().or_exit();
-    allocator.get(smalltesttype) = TestType();
+    auto smalltesttype = allocator.opq_inline_alloc<Testtype>().or_exit();
+    allocator.get(smalltesttype) = Testtype();
     allocator.free(smalltesttype);
 
     // Aligned memory allocations.

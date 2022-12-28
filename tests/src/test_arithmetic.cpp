@@ -14,8 +14,8 @@ TEST(test_numerals) {
     // static_assert(cat::detail::arithmeticNonPtr<__INTPTR_TYPE__>);
     // static_assert(!cat::detail::arithmeticNonPtr<intptr<void>>);
 
-    static_assert(cat::is_same<cat::ToRawArithmetic<int>, int>);
-    static_assert(cat::is_same<cat::ToRawArithmetic<int4>, int4::Raw>);
+    static_assert(cat::is_same<cat::to_raw_arithmetic_t<int>, int>);
+    static_assert(cat::is_same<cat::to_raw_arithmetic_t<int4>, int4::raw_type>);
 
     // Test numerals' size,
     static_assert(sizeof(int1) == 1);
@@ -82,16 +82,16 @@ TEST(test_numerals) {
     static_assert(cat::is_unsigned_integral<unsigned>);
     static_assert(!cat::is_unsigned_integral<float>);
 
-    // Test `IntFixed` and `UintFixed`.
-    static_assert(cat::is_same<cat::IntFixed<1>, int1>);
-    static_assert(cat::is_same<cat::IntFixed<2>, int2>);
-    static_assert(cat::is_same<cat::IntFixed<4>, int4>);
-    static_assert(cat::is_same<cat::IntFixed<8>, int8>);
+    // Test `int_fixed` and `uint_fixed`.
+    static_assert(cat::is_same<cat::int_fixed<1>, int1>);
+    static_assert(cat::is_same<cat::int_fixed<2>, int2>);
+    static_assert(cat::is_same<cat::int_fixed<4>, int4>);
+    static_assert(cat::is_same<cat::int_fixed<8>, int8>);
 
-    static_assert(cat::is_same<cat::UintFixed<1>, uint1>);
-    static_assert(cat::is_same<cat::UintFixed<2>, uint2>);
-    static_assert(cat::is_same<cat::UintFixed<4>, uint4>);
-    static_assert(cat::is_same<cat::UintFixed<8>, uint8>);
+    static_assert(cat::is_same<cat::uint_fixed<1>, uint1>);
+    static_assert(cat::is_same<cat::uint_fixed<2>, uint2>);
+    static_assert(cat::is_same<cat::uint_fixed<4>, uint4>);
+    static_assert(cat::is_same<cat::uint_fixed<8>, uint8>);
 
     // Test `int4` constructors and assignment.
     int4 test_int4_1 = 1;
@@ -103,7 +103,7 @@ TEST(test_numerals) {
     uint4 test_uint4_2;
     test_uint4_2 = 1u;
 
-    // Test `Arithmetic` operators.
+    // Test `arithmetic` operators.
     int4 int4_add = 1 + test_int4_1;
     int4_add = 1i4 + test_int4_1;
     int4 int4_sub = 1 - test_int4_1;
@@ -140,7 +140,7 @@ TEST(test_numerals) {
     cat::verify(int4{0} <= int4{0});
     cat::verify(int4{0} <= int4{1});
 
-    // Test `ArithmeticPtr` operators on raw numerals.
+    // Test `arithmetic_ptr` operators on raw numerals.
     // TODO: This has ambiguous overload resolution:
     // intptr<void> intptr_add_1 = 1 + intptr<void>{0};
     intptr<void> intptr_add_2 = intptr<void>{0} + 1;
@@ -159,13 +159,13 @@ TEST(test_numerals) {
     intptr<void> intptr_sub_4 = intptr_add_2 - 1i4;
     cat::verify(intptr_sub_4 == 0);
 
-    // Test `ArithmeticPtr` operators on safe `Arithmetic`s.
+    // Test `arithmetic_ptr` operators on safe `arithmetic`s.
     intptr_add_2 = 1i4 + intptr_add_2;
     intptr_add_2 = intptr_add_2 + 1i4;
     intptr_sub_2 = 1i4 - intptr_add_2;
     intptr_sub_2 = intptr_add_2 - 1i4;
 
-    // Test `ArithmeticPtr` operators on other `ArithmeticPtr`s.
+    // Test `arithmetic_ptr` operators on other `arithmetic_ptr`s.
     cat::verify((intptr<void>{0} + intptr<void>{1}) == 1);
     cat::verify((intptr<void>{0} - intptr<void>{1}) == -1);
 
@@ -203,14 +203,14 @@ TEST(test_numerals) {
     intptr<void> intptr_2 = nullptr;
     intptr_1 = intptr_1 + intptr_2;
 
-    // Test `ArithmeticPtr` conversions.
+    // Test `arithmetic_ptr` conversions.
     uintptr<void> uintptr_1 = static_cast<uintptr<void>>(intptr_1);
-    [[maybe_unused]] uintptr<void>::Raw raw_uintptr =
-        static_cast<uintptr<void>::Raw>(uintptr_1);
+    [[maybe_unused]] uintptr<void>::raw_type raw_uintptr =
+        static_cast<uintptr<void>::raw_type>(uintptr_1);
     [[maybe_unused]] intptr<void> intptr_3 =
         static_cast<intptr<void>>(uintptr_1);
 
-    // Test `ArithmeticPtr` dereferencing operators.
+    // Test `arithmetic_ptr` dereferencing operators.
     int4 integer = 0;
     intptr<int4> int_intptr = &integer;
     *int_intptr = 1;
@@ -306,11 +306,11 @@ TEST(test_numerals) {
     static_assert(cat::make_sign_from<int4>(1u) == 1i4);
     static_assert(cat::make_sign_from(2, 1u) == 1i4);
 
-    // Test unwrapped numerals in `Limits`.
-    static_assert(cat::Limits<int4>::max() == cat::Limits<int4::Raw>::max());
-    static_assert(cat::Limits<uint8>::max() == cat::Limits<uint8::Raw>::max());
-    static_assert(cat::Limits<float4>::max() ==
-                  cat::Limits<float4::Raw>::max());
+    // Test unwrapped numerals in `limits`.
+    static_assert(cat::limits<int4>::max() == cat::limits<int4::raw_type>::max());
+    static_assert(cat::limits<uint8>::max() == cat::limits<uint8::raw_type>::max());
+    static_assert(cat::limits<float4>::max() ==
+                  cat::limits<float4::raw_type>::max());
 
     // Test unsigned saturating addition.
     static_assert(cat::sat_add(cat::uint1_max - 3u, 1u1) < cat::uint1_max);

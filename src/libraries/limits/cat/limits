@@ -8,18 +8,18 @@ namespace cat {
 // TODO: Implement support for complex floats.
 
 template <typename>
-struct Limits {};
+struct limits {};
 
-// Unwrap all `Arithmetic`s inside of `NumericLimits`.
+// Unwrap all `arithmetic`s inside of `Numericlimits`.
 template <typename T, auto policy>
-struct Limits<Arithmetic<T, policy>> : Limits<T> {};
+struct limits<arithmetic<T, policy>> : limits<T> {};
 
 // TODO: Implement `min` and `max` limits in terms of GCC macros, like
 // `__LONG_LONG_MAX__`.
 
 template <>
-struct Limits<char> {
-    Limits() = delete;
+struct limits<char> {
+    limits() = delete;
     static consteval auto min() -> __INT8_TYPE__ {
         return -128;
     }
@@ -36,8 +36,8 @@ struct Limits<char> {
 };
 
 template <>
-struct Limits<__INT8_TYPE__> {
-    Limits() = delete;
+struct limits<__INT8_TYPE__> {
+    limits() = delete;
     static consteval auto min() -> __INT8_TYPE__ {
         return -128;
     }
@@ -55,8 +55,8 @@ struct Limits<__INT8_TYPE__> {
 };
 
 template <>
-struct Limits<__UINT8_TYPE__> {
-    Limits() = delete;
+struct limits<__UINT8_TYPE__> {
+    limits() = delete;
     static consteval auto min() -> __UINT8_TYPE__ {
         return 0u;
     }
@@ -74,8 +74,8 @@ struct Limits<__UINT8_TYPE__> {
 };
 
 template <>
-struct Limits<__INT16_TYPE__> {
-    Limits() = delete;
+struct limits<__INT16_TYPE__> {
+    limits() = delete;
     static consteval auto min() -> __INT16_TYPE__ {
         return -32'768;
     }
@@ -93,8 +93,8 @@ struct Limits<__INT16_TYPE__> {
 };
 
 template <>
-struct Limits<__UINT16_TYPE__> {
-    Limits() = delete;
+struct limits<__UINT16_TYPE__> {
+    limits() = delete;
     static consteval auto min() -> __UINT16_TYPE__ {
         return 0u;
     }
@@ -112,8 +112,8 @@ struct Limits<__UINT16_TYPE__> {
 };
 
 template <>
-struct Limits<__INT32_TYPE__> {
-    Limits() = delete;
+struct limits<__INT32_TYPE__> {
+    limits() = delete;
     static consteval auto min() -> __INT32_TYPE__ {
         return -2'147'483'648;
     }
@@ -130,8 +130,8 @@ struct Limits<__INT32_TYPE__> {
 };
 
 template <>
-struct Limits<__UINT32_TYPE__> {
-    Limits() = delete;
+struct limits<__UINT32_TYPE__> {
+    limits() = delete;
     static consteval auto min() -> __UINT32_TYPE__ {
         return 0u;
     }
@@ -148,8 +148,8 @@ struct Limits<__UINT32_TYPE__> {
 };
 
 template <>
-struct Limits<__INT64_TYPE__> {
-    Limits() = delete;
+struct limits<__INT64_TYPE__> {
+    limits() = delete;
     static consteval auto min() -> __INT64_TYPE__ {
         // This weird code is required to compile correctly for some reason.
         // It's basically what libstdc++ does, too.
@@ -169,8 +169,8 @@ struct Limits<__INT64_TYPE__> {
 };
 
 template <>
-struct Limits<__UINT64_TYPE__> {
-    Limits() = delete;
+struct limits<__UINT64_TYPE__> {
+    limits() = delete;
     static consteval auto min() -> __UINT64_TYPE__ {
         return 0u;
     }
@@ -187,13 +187,13 @@ struct Limits<__UINT64_TYPE__> {
     static constexpr bool is_iec559 = false;
 };
 
-enum class FloatDenorm {
+enum class float_denorm {
     indeterminate = -1,
     absent = 0,
     present = 1
 };
 
-enum class FloatRound {
+enum class float_round {
     indeterminate = -1,
     toward_zero = 0,
     to_nearest = 1,
@@ -202,8 +202,8 @@ enum class FloatRound {
 };
 
 template <>
-struct Limits<float> {
-    Limits() = delete;
+struct limits<float> {
+    limits() = delete;
     static consteval auto min() -> float {
         return __FLT_MIN__;
     }
@@ -233,8 +233,8 @@ struct Limits<float> {
     static constexpr bool has_quiet_NaN = __FLT_HAS_QUIET_NAN__;
     // NOLINTNEXTLINE Let this weird lettercase be used.
     static constexpr bool has_signaling_NaN = has_quiet_NaN;
-    static constexpr FloatDenorm has_denorm =
-        static_cast<FloatDenorm>(__FLT_HAS_DENORM__);
+    static constexpr float_denorm has_denorm =
+        static_cast<float_denorm>(__FLT_HAS_DENORM__);
 
     static constexpr auto infinity() -> float {
         return __builtin_huge_valf();
@@ -256,12 +256,12 @@ struct Limits<float> {
         return __FLT_DENORM_MIN__;
     }
 
-    static constexpr FloatRound round_style = FloatRound::to_nearest;
+    static constexpr float_round round_style = float_round::to_nearest;
 };
 
 template <>
-struct Limits<double> {
-    Limits() = delete;
+struct limits<double> {
+    limits() = delete;
     static consteval auto min() -> float {
         return __DBL_MIN__;
     }
@@ -291,8 +291,8 @@ struct Limits<double> {
     static constexpr bool has_quiet_NaN = __DBL_HAS_QUIET_NAN__;
     // NOLINTNEXTLINE Let this weird lettercase be used.
     static constexpr bool has_signaling_NaN = has_quiet_NaN;
-    static constexpr FloatDenorm has_denorm =
-        static_cast<FloatDenorm>(__DBL_HAS_DENORM__);
+    static constexpr float_denorm has_denorm =
+        static_cast<float_denorm>(__DBL_HAS_DENORM__);
 
     static constexpr auto infinity() -> double {
         return __builtin_huge_val();
@@ -312,9 +312,9 @@ struct Limits<double> {
         return __DBL_DENORM_MIN__;
     }
 
-    static constexpr FloatRound round_style = FloatRound::to_nearest;
+    static constexpr float_round round_style = float_round::to_nearest;
 };
 
-// TODO: `NumericLimits<long double>`.
+// TODO: `limits<long double>`.
 
 }  // namespace cat

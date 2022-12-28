@@ -8,20 +8,20 @@
 
 TEST(test_linear_allocator) {
     // Initialize an allocator.
-    cat::PageAllocator paging_allocator;
-    auto page = paging_allocator.opq_alloc_multi<cat::Byte>(4_ki).or_exit();
-    defer(paging_allocator.free(page);)
+    cat::page_allocator pager;
+    auto page = pager.opq_alloc_multi<cat::byte>(4_ki).or_exit();
+    defer(pager.free(page);)
     auto allocator =
-        cat::LinearAllocator::backed_handle_sized(paging_allocator, page, 24);
+        cat::linear_allocator::backed_handle_sized(pager, page, 24);
 
     [[maybe_unused]] auto allocator_2 =
-        cat::LinearAllocator::backed(allocator, 128);
+        cat::linear_allocator::backed(allocator, 128);
     allocator.reset();
 
     // It should not be possible to allocate 7 times here, because 24 bytes can
     // only hold 6 `int4`s.
     for (int i = 0; i < 7; ++i) {
-        cat::Maybe handle = allocator.opq_alloc<int4>();
+        cat::maybe handle = allocator.opq_alloc<int4>();
         if (!handle.has_value()) {
             cat::verify(i == 6);
             goto overallocated;
@@ -33,7 +33,7 @@ overallocated:
     // Invalidate all memory handles, and allocate again.
     allocator.reset();
     for (int4 i = 0; i < 4; ++i) {
-        cat::Maybe handle = allocator.opq_alloc<cat::Byte>();
+        cat::maybe handle = allocator.opq_alloc<cat::byte>();
         cat::verify(handle.has_value());
     }
     // This allocated 16 bytes, which is 8-byte-aligned. Another int allocation
@@ -53,7 +53,7 @@ overallocated:
         auto memory = allocator.opq_inline_alloc<int4>();
         cat::verify(memory.has_value());
     }
-    cat::Maybe handle_3 = allocator.opq_alloc<int4>();
+    cat::maybe handle_3 = allocator.opq_alloc<int4>();
     cat::verify(handle_3.has_value());
 
     // Test that allocations are reusable.
@@ -92,7 +92,7 @@ overallocated:
     // Because the allocator is now 2 byte aligned, an extra 2 bytes have to be
     // reserved to allocate a 4-byte aligned value:
     cat::verify(allocator.opq_nalloc<int4>().or_exit() == 6);
-    cat::Tuple alloc_int_size = allocator.opq_salloc<int4>().value();
+    cat::tuple alloc_int_size = allocator.opq_salloc<int4>().value();
     cat::verify(alloc_int_size.second() == 6);
 
     // TODO: Test multi allocations.

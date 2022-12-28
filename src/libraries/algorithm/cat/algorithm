@@ -8,17 +8,17 @@
 namespace cat {
 
 template <typename T>
-struct CollectionTraits;
+struct collection_traits;
 
 // Copy-assign the elements of one collection into another.
-template <typename InputIterator, typename OutputIterator>
-auto copy(InputIterator source_begin, InputIterator source_end,
-          OutputIterator destination_begin) -> OutputIterator {
-    using DestinationElement = decltype(*destination_begin);
+template <typename input_iterator_type, typename outputter_type>
+auto copy(input_iterator_type source_begin, input_iterator_type source_end,
+          outputter_type destination_begin) -> outputter_type {
+    using destination_element = decltype(*destination_begin);
 
     while (source_begin != source_end) {
         // Copy assignment.
-        *destination_begin = static_cast<DestinationElement>(*source_begin);
+        *destination_begin = static_cast<destination_element>(*source_begin);
         ++source_begin;
         ++destination_begin;
     }
@@ -26,15 +26,15 @@ auto copy(InputIterator source_begin, InputIterator source_end,
 }
 
 // Move-assign the elements of one collection into another.
-template <typename InputIterator, typename OutputIterator>
-auto move(InputIterator source_begin, InputIterator source_end,
-          OutputIterator destination_begin) -> OutputIterator {
-    using DestinationElement = decltype(*destination_begin);
+template <typename input_iterator_type, typename outputter_type>
+auto move(input_iterator_type source_begin, input_iterator_type source_end,
+          outputter_type destination_begin) -> outputter_type {
+    using destination_element = decltype(*destination_begin);
 
     while (source_begin != source_end) {
         // Move assignment.
         *destination_begin =
-            move(static_cast<DestinationElement>(*source_begin));
+            move(static_cast<destination_element>(*source_begin));
         ++source_begin;
         ++destination_begin;
     }
@@ -42,29 +42,29 @@ auto move(InputIterator source_begin, InputIterator source_end,
 }
 
 // Optimally relocate the elements of one collection into another.
-template <typename InputIterator, typename OutputIterator>
-auto relocate(InputIterator source_begin, InputIterator source_end,
-              OutputIterator destination_begin) -> OutputIterator {
-    using SourceCollection = typename decltype(source_begin)::Collection;
-    using SourceElement = decltype(*source_begin);
+template <typename input_iterator_type, typename outputter_type>
+auto relocate(input_iterator_type source_begin, input_iterator_type source_end,
+              outputter_type destination_begin) -> outputter_type {
+    using source_collection = typename decltype(source_begin)::collection_type;
+    using source_element = decltype(*source_begin);
 
-    using DestinationCollection =
-        typename decltype(destination_begin)::Collection;
-    using DestinationElement = decltype(*destination_begin);
+    using destination_collection =
+        typename decltype(destination_begin)::collection_type;
+    using destination_element = decltype(*destination_begin);
 
     // If the source and destination containers are contiguous, and they hold
     // the same element type, and that type is trivially relocatable, copy them
     // fast.
-    if constexpr (CollectionTraits<SourceCollection>::is_array_like &&
-                  CollectionTraits<DestinationCollection>::is_array_like &&
-                  is_same<SourceElement, DestinationElement> &&
-                  is_trivially_relocatable<SourceElement>) {
+    if constexpr (collection_traits<source_collection>::is_array_like &&
+                  collection_traits<destination_collection>::is_array_like &&
+                  is_same<source_element, destination_element> &&
+                  is_trivially_relocatable<source_element>) {
         copy_memory(addressof(*source_begin), addressof(*destination_begin),
                     (source_end - source_begin) * ssizeof(*source_begin));
         return destination_begin;
     } else {
         // Otherwise, if the destination can be moved to, do so.
-        if constexpr (is_move_assignable<DestinationElement>) {
+        if constexpr (is_move_assignable<destination_element>) {
             return move(source_begin, source_end, destination_begin);
         } else {
             // Otherwise, copy to the destination.
@@ -111,10 +111,10 @@ constexpr auto lexicographical_compare_three_way(ItLhs lhs_start, ItLhs lhs_end,
         exhaust_right = (++rhs_start == rhs_end);
     }
 
-    using Category = decltype((*lhs_start) <=> (*rhs_start));
-    return Category(!exhaust_left    ? std::strong_ordering::greater
-                    : !exhaust_right ? std::strong_ordering::less
-                                     : std::strong_ordering::equal);
+    using category_type = decltype((*lhs_start) <=> (*rhs_start));
+    return category_type(!exhaust_left    ? std::strong_ordering::greater
+                         : !exhaust_right ? std::strong_ordering::less
+                                          : std::strong_ordering::equal);
 }
 
 }  // namespace cat

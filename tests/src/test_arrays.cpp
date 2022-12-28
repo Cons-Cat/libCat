@@ -8,37 +8,37 @@
 
 TEST(test_arrays) {
     // Initializing a array:
-    cat::Array<int4, 5> array_1 = {0, 1, 2, 3, 4};
+    cat::array<int4, 5> array_1 = {0, 1, 2, 3, 4};
     // Assigning a array:
     array_1 = {5, 6, 7, 8, 9};
     // Default initializing a array:
-    cat::Array<int4, 1> array_2;
+    cat::array<int4, 1> array_2;
     // Move assigning a array:
-    cat::Array<int4, 1> array_3 = {0};
+    cat::array<int4, 1> array_3 = {0};
     array_2 = cat::move(array_3);  // NOLINT
     // Move constructing a array:
     _ = cat::move(array_1);  // NOLINT
 
     // `const` array.
-    cat::Array<int4, 3> const array_const = {0, 1, 2};
+    cat::array<int4, 3> const array_const = {0, 1, 2};
     [[maybe_unused]] int4 const_val = array_const.at(1).or_exit();
 
     // Repeat those tests in a constexpr context.
-    auto constant = []() constexpr {
-        cat::Array<int4, 1> const_array_1;
-        cat::Array<int4, 1> const_array_2 = {1};
+    auto constant_test = []() constexpr {
+        cat::array<int4, 1> const_array_1;
+        cat::array<int4, 1> const_array_2 = {1};
         // NOLINTNEXTLINE Just be explicit about the move here.
         _ = cat::move(const_array_1);
         // NOLINTNEXTLINE Just be explicit about the move here.
         _ = cat::move(const_array_2);
     };
-    _ = cat::constant_evaluate(constant);
+    cat::constant_evaluate(constant_test);
 
     // Test iterable.
-    using It = cat::CollectionTraits<cat::Array<int, 4>>::Iterator;
+    using It = cat::collection_traits<cat::array<int, 4>>::iterator_type;
     static_assert(
-        cat::is_same<It,
-                     cat::RemoveCvRef<decltype(cat::Array<int, 4>{}.begin())>>);
+        cat::is_same<
+            It, cat::remove_cvref<decltype(cat::array<int, 4>{}.begin())>>);
 
     ssize count = 0;
     for (int4& a : array_1) {
@@ -46,7 +46,7 @@ TEST(test_arrays) {
         ++count;
     }
 
-    for (int4 const& a : cat::ItReverse(array_1)) {
+    for (int4 const& a : cat::it_reverse(array_1)) {
         --count;
         cat::verify(a == array_1[count]);
     }
@@ -55,13 +55,13 @@ TEST(test_arrays) {
     cat::verify(array_1.back() == 9);
 
     count = 0;
-    for (int4 const& a : cat::ItConst(array_1)) {
+    for (int4 const& a : cat::it_const(array_1)) {
         cat::verify(a == array_1[count]);
         ++count;
     }
     _ = array_1.cbegin();
 
-    for (int4 const& a : cat::ItConstReverse(array_1)) {
+    for (int4 const& a : cat::it_const_reverse(array_1)) {
         --count;
         cat::verify(a == array_1[count]);
     }
@@ -74,9 +74,9 @@ TEST(test_arrays) {
     cat::verify(!array_1.at(6).has_value());
 
     // Deducing type.
-    cat::Array implicit_array_1 = {0, 1, 2, 3, 4};
-    cat::Array implicit_array_2{0, 1, 2, 3, 4};
-    cat::Array implicit_array_3(0, 1, 2, 3, 4);
+    cat::array implicit_array_1 = {0, 1, 2, 3, 4};
+    cat::array implicit_array_2{0, 1, 2, 3, 4};
+    cat::array implicit_array_3(0, 1, 2, 3, 4);
     static_assert(implicit_array_1.size() == 5);
     static_assert(implicit_array_1.capacity() == 5);
     _ = implicit_array_1.capacity();
@@ -84,42 +84,42 @@ TEST(test_arrays) {
     static_assert(implicit_array_3.size() == 5);
 
     // Max elements.
-    // constexpr cat::Array array_4 = {0, 2, 8, 5};
+    // constexpr cat::array array_4 = {0, 2, 8, 5};
     // constexpr int4 max_1 = cat::max(array_4);
     //         cat::verify(max_1 == 8);
 
     // int4 min_1 = cat::min(array_4);
     //         cat::verify(min_1 == 0);
 
-    // TODO: String deduction:
-    //     cat::Array implicit_string = "Hi, Conscat!";
+    // TODO: string deduction:
+    //     cat::array implicit_string = "Hi, Conscat!";
     // static_assert(implicit_string.size() ==
     //               cat::string_length("Hi, Conscat!"));
 
     // TODO: Test `constexpr`.
 
     // Slicing array.
-    [[maybe_unused]] cat::Span span = array_1.first(1);
+    [[maybe_unused]] cat::span span = array_1.first(1);
     _ = array_1.subspan(0, 2);
     _ = array_1.last(2);
 
-    [[maybe_unused]] cat::Span const span_const = array_1.first(1);
+    [[maybe_unused]] cat::span const span_const = array_1.first(1);
     _ = array_const.subspan(0, 2);
     _ = array_const.last(2);
 
     // Test array copy-assignment.
-    cat::Array base_array = {0, 0, 0, 0};
-    cat::Array copy_array = {1, 2, 3, 4};
-    cat::Array copy_converting_array = {int2{1}, 2, 3, 4};
-    cat::Array move_array = {5, 6, 7, 8};
-    cat::Array move_converting_array = {int2{5}, 6, 7, 8};
+    cat::array base_array = {0, 0, 0, 0};
+    cat::array copy_array = {1, 2, 3, 4};
+    cat::array copy_converting_array = {int2{1}, 2, 3, 4};
+    cat::array move_array = {5, 6, 7, 8};
+    cat::array move_converting_array = {int2{5}, 6, 7, 8};
     base_array = copy_array;
     base_array = copy_converting_array;
     base_array = move(move_array);
     base_array = move(move_converting_array);
 
     // Test array fill.
-    cat::Array filled_array = cat::Array<int4, 8>::filled(6);
+    cat::array filled_array = cat::array<int4, 8>::filled(6);
     for (ssize i = 0; i < 8; ++i) {
         cat::verify(filled_array[i] == 6);
     }
@@ -129,7 +129,7 @@ TEST(test_arrays) {
     }
 
     // Test from factory.
-    cat::Array from_array = cat::Array<int4, 3>::from(1, 2, 3);
+    cat::array from_array = cat::array<int4, 3>::from(1, 2, 3);
     cat::verify(from_array[0] == 1);
     cat::verify(from_array[1] == 2);
     cat::verify(from_array[2] == 3);

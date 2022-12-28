@@ -9,7 +9,7 @@
 // TODO: Handle the type of `char` automatically to make this type-safe.
 // `control_mask` must be constant-evaluated for the intrinsic to work
 // correctly.
-template <cat::StringControl control_mask>
+template <cat::string_control control_mask>
 constexpr auto cat::compare_implicit_length_strings(auto const& vector_1,
                                                     auto const& vector_2)
     -> bool {

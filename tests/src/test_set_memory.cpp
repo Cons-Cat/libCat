@@ -4,7 +4,7 @@
 #include "../unit_tests.hpp"
 
 TEST(test_set_memory) {
-    cat::PageAllocator allocator;
+    cat::page_allocator allocator;
     uint1* p_page = allocator.alloc<uint1>().or_exit();
 
     // TODO: Make a `cat::compare_memory()` or something for this.
