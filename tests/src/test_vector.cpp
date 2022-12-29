@@ -21,11 +21,9 @@ TEST(test_vector) {
     // Initialize an allocator.
     cat::page_allocator pager;
     pager.reset();
-    auto page =
-        pager.opq_alloc_multi<cat::byte>(4_ki - 32).or_exit();
+    cat::mem auto page = pager.opq_alloc_multi<cat::byte>(4_ki - 32).or_exit();
     defer(pager.free(page);)
-    auto allocator =
-        cat::linear_allocator::backed_handle(pager, page);
+    auto allocator = cat::linear_allocator::backed_handle(pager, page);
 
     // Test default constructing a `vector`.
     cat::vector<int4> int_vec;

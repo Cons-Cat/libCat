@@ -6,7 +6,7 @@
 // Copy some bytes from one address to another address.
 // TODO: Make this `constexpr`.
 void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
-    using vector = int8x_;
+    using simd_vector = int8x_;
 
     unsigned char const* p_source_handle =
         static_cast<unsigned char const*>(p_source);
@@ -15,42 +15,43 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
     constexpr ssize l3_cache_size = 2_mi;
     ssize padding;
 
-    constexpr ssize step_size = ssizeof(vector) * 8;
+    constexpr ssize step_size = ssizeof(simd_vector) * 8;
 
     if (bytes <= step_size) {
         copy_memory_small(p_source, p_destination, bytes);
         return;
     }
 
-    // Align source, destination, and bytes to the vector's optimal alignment.
+    // Align source, destination, and bytes to `simd_vector`'s optimal
+    // alignment.
     padding = static_cast<signed int long>(
         // TODO: Use a `uintptr<unsigned char>` here.
-        (alignof(vector) - ((bit_cast<__UINTPTR_TYPE__>(p_destination_handle)) &
-                            (alignof(vector) - 1))) &
-        (alignof(vector) - 1));
+        (alignof(simd_vector) -
+         ((bit_cast<__UINTPTR_TYPE__>(p_destination_handle)) &
+          (alignof(simd_vector) - 1))) &
+        (alignof(simd_vector) - 1));
 
     copy_memory_small(p_source, p_destination, padding);
 
     p_source_handle += padding;
     p_destination_handle += padding;
     bytes -= padding;
-    vector vectors[8];
+    simd_vector vectors[8];
 
     // This routine is optimized for buffers in L3 cache. Streaming is
     // slower there.
     if (bytes <= l3_cache_size) {
         while (bytes >= step_size) {
-            // Load 8 vectors, then increment the source pointer by that
-            // size.
+            // Load 8 vectors, then increment the source pointer by that size.
 #pragma GCC unroll 8
             for (int i = 0; i < 8; ++i) {
-                vectors[i] = bit_cast<vector const*>(p_source_handle)[i];
+                vectors[i] = bit_cast<simd_vector const*>(p_source_handle)[i];
             }
             prefetch_for_one_read(p_source_handle + (step_size * 2));
 
 #pragma GCC unroll 8
             for (int i = 0; i < 8; ++i) {
-                bit_cast<vector*>(p_destination_handle)[i] = vectors[i];
+                bit_cast<simd_vector*>(p_destination_handle)[i] = vectors[i];
             }
             p_source_handle += step_size;
             p_destination_handle += step_size;
@@ -67,7 +68,7 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
         while (bytes >= 256) {
 #pragma GCC unroll 8
             for (int i = 0; i < 8; ++i) {
-                vectors[i] = bit_cast<vector*>(p_source_handle)[i];
+                vectors[i] = bit_cast<simd_vector*>(p_source_handle)[i];
             }
             prefetch_for_one_read(p_source_handle + 512);
             p_source_handle += 256;
@@ -89,33 +90,33 @@ void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
 /*
 // Copy some bytes from one address to another address.
 void copy_memory(void const* p_source, void* p_destination, ssize
-bytes) { using vector = int8x_;
+bytes) { using simd_vector = int8x_;
 
     intptr p_source_handle = p_source;
     intptr p_destination_handle = p_destination;
     constexpr ssize l3_cache_size = 2_mi;
     intptr padding;
 
-    constexpr ssize step_size = ssizeof(vector) * 8;
+    constexpr ssize step_size = ssizeof(simd_vector) * 8;
 
     if (bytes <= step_size) {
         copy_memory_small(p_source, p_destination, bytes);
         return;
     }
 
-    // Align source, destination, and bytes to the vector's optimal
+    // Align source, destination, and bytes to the simd_vector's optimal
 alignment.
     // TODO: Make a `uintptr`.
-    padding = ((intptr(alignof(vector)) -
-                ((p_destination_handle) & (alignof(vector) - 1))) &
-               (alignof(vector) - 1));
+    padding = ((intptr(alignof(simd_vector)) -
+                ((p_destination_handle) & (alignof(simd_vector) - 1))) &
+               (alignof(simd_vector) - 1));
 
     copy_memory_small(p_source, p_destination, ssize{padding});
 
     p_source_handle += padding;
     p_destination_handle += padding;
     bytes -= padding;
-    array<vector, 8> vectors;
+    array<simd_vector, 8> vectors;
 
     // This routine is optimized for buffers in L3 cache. Streaming is
     // slower there.
@@ -125,14 +126,15 @@ alignment.
             // size.
 #pragma GCC unroll 8
             for (int i = 0; i < 8; ++i) {
-                vectors[i] = static_cast<vector const*>(p_source_handle)[i];
+                vectors[i] = static_cast<simd_vector
+const*>(p_source_handle)[i];
             }
             prefetch_for_one_read(
                 static_cast<void*>(p_source_handle + (step_size * 2)));
 
 #pragma GCC unroll 8
             for (int i = 0; i < 8; ++i) {
-                static_cast<vector*>(p_destination_handle)[i] = vectors[i];
+                static_cast<simd_vector*>(p_destination_handle)[i] = vectors[i];
             }
             p_source_handle += step_size;
             p_destination_handle += step_size;
@@ -150,7 +152,7 @@ alignment.
         while (bytes >= 256) {
 #pragma GCC unroll 8
             for (int i = 0; i < 8; ++i) {
-                vectors[i] = static_cast<vector*>((p_source_handle))[i];
+                vectors[i] = static_cast<simd_vector*>((p_source_handle))[i];
             }
             prefetch_for_one_read(
                 static_cast<void*>(p_source_handle + 512));

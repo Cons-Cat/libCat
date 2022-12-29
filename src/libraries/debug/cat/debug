@@ -52,7 +52,7 @@ class source_location {
 namespace cat {
 
 class string;
-using source_location = std::source_location;
+using std::source_location;
 
 void breakpoint();
 

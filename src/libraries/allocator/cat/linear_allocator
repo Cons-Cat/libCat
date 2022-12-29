@@ -72,7 +72,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     }
 
     // Try to allocate memory and bump the pointer down.
-    auto allocate(ssize allocation_bytes) -> maybePtr<void> {
+    auto allocate(ssize allocation_bytes) -> maybe_ptr<void> {
         if (this->p_arena_current - allocation_bytes >= p_arena_end) {
             this->p_arena_current -= allocation_bytes;
             // Return a pointer that is then used to in-place construct a `T`.
@@ -84,7 +84,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     // Try to allocate memory aligned to some boundary and bump the pointer
     // down.
     auto aligned_allocate(usize alignment, ssize allocation_bytes)
-        -> maybePtr<void> {
+        -> maybe_ptr<void> {
         uintptr<void> allocation =
             align_down(this->p_arena_current - allocation_bytes, alignment);
         if (allocation >= p_arena_end) {

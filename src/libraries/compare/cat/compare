@@ -461,13 +461,13 @@ namespace detail {
     };
 }  // namespace detail
 
-template <typename... Ts>
-    // Every type in `Ts` must be a comparison category.
-    requires((cat::is_same<Ts, partial_ordering> ||
-              cat::is_same<Ts, weak_ordering> ||
-              cat::is_same<Ts, strong_ordering>)&&...)
+template <typename... types>
+    // Every type in `types` must be a comparison category.
+    requires((cat::is_same<types, partial_ordering> ||
+              cat::is_same<types, weak_ordering> ||
+              cat::is_same<types, strong_ordering>)&&...)
 struct common_comparison_category {
-    using type = typename detail::weakest_comparison_category<Ts...>::type;
+    using type = typename detail::weakest_comparison_category<types...>::type;
 };
 
 template <typename T>
@@ -498,9 +498,9 @@ struct common_comparison_category<> {
     using type = strong_ordering;
 };
 
-template <typename... Ts>
+template <typename... types>
 using common_comparison_category_t =
-    typename common_comparison_category<Ts...>::type;
+    typename common_comparison_category<types...>::type;
 
 }  // namespace std
 

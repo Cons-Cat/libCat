@@ -22,7 +22,7 @@ class null_allocator : public allocator_interface<null_allocator> {
 
   public:
     // This allocation always fails.
-    auto allocate(ssize) -> maybePtr<void> {
+    auto allocate(ssize) -> maybe_ptr<void> {
         return nullptr;
     }
 

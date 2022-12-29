@@ -21,18 +21,18 @@ namespace detail {
     constexpr auto invoke_member_function(Pointed C::*f, T1&& t1,
                                           Args&&... args) -> decltype(auto) {
         if constexpr (is_function<Pointed>) {
-            if constexpr (is_base_of<C, Decay<T1>>) {
+            if constexpr (is_base_of<C, decay<T1>>) {
                 return (forward<T1>(t1).*f)(forward<Args>(args)...);
-            } else if constexpr (is_reference_wrapper<Decay<T1>>) {
+            } else if constexpr (is_reference_wrapper<decay<T1>>) {
                 return (t1.get().*f)(forward<Args>(args)...);
             } else {
                 return ((*forward<T1>(t1)).*f)(forward<Args>(args)...);
             }
         } else {
             static_assert(is_object<Pointed> && sizeof...(args) == 0);
-            if constexpr (is_base_of<C, Decay<T1>>) {
+            if constexpr (is_base_of<C, decay<T1>>) {
                 return forward<T1>(t1).*f;
-            } else if constexpr (is_reference_wrapper<Decay<T1>>) {
+            } else if constexpr (is_reference_wrapper<decay<T1>>) {
                 return t1.get().*f;
             } else {
                 return (*forward<T1>(t1)).*f;
@@ -49,15 +49,15 @@ namespace detail {
 
     template <typename B, typename MT>
     struct InvokeImpl<MT B::*> {
-        template <typename T, typename Td = Decay<T>>
+        template <typename T, typename Td = decay<T>>
             requires(is_base_of<B, Td>)
         static auto get(T&& t) -> T&&;
 
-        template <typename T, typename Td = Decay<T>>
+        template <typename T, typename Td = decay<T>>
             requires(is_reference_wrapper<Td>)
         static auto get(T&& t) -> decltype(t.get());
 
-        template <typename T, typename Td = Decay<T>>
+        template <typename T, typename Td = decay<T>>
             requires(!is_base_of<B, Td> && !is_reference_wrapper<Td>)
         static auto get(T&& t) -> decltype(*forward<T>(t));
 
@@ -73,7 +73,7 @@ namespace detail {
     };
 
     template <typename invocable_type, typename... Args,
-              typename Fd = typename Decay<invocable_type>::type>
+              typename Fd = typename decay<invocable_type>::type>
     auto invoke_detail(invocable_type&& f, Args&&... args)
         -> decltype(InvokeImpl<Fd>::call(forward<invocable_type>(f),
                                          forward<Args>(args)...));
@@ -100,7 +100,7 @@ constexpr auto invoke(invocable_type&& callable, Args&&... arguments)
     -> invoke_result<invocable_type, Args...>
 // noexcept(is_nothrow_invocable<invocable_type, Args...>)
 {
-    if constexpr (is_member_pointer<Decay<invocable_type>>) {
+    if constexpr (is_member_pointer<decay<invocable_type>>) {
         // Member functions must be special-cased.
         return detail::invoke_member_function(callable,
                                               forward<Args>(arguments)...);

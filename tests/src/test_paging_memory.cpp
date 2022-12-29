@@ -38,7 +38,7 @@ TEST(test_paging_memory) {
     page_span[0] = 10;
     cat::verify(allocator.get(memory)[0] == 10);
 
-    // Allocation with small-size optimization.
+    // allocation_type with small-size optimization.
     int stack_variable;
     auto small_memory_1 = allocator.opq_inline_alloc<int4>().or_exit();
     allocator.get(small_memory_1) = 2;

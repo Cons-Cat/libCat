@@ -19,7 +19,7 @@ namespace detail {
         // A ternary operator yields the most qualified type common to both
         // operands. If there is no common type, then the expression is
         // ill-formed.
-        using type = Decay<decltype(true ? declval<T>() : declval<U>())>;
+        using type = decay<decltype(true ? declval<T>() : declval<U>())>;
     };
 
     template <typename T, typename U, typename... remaining>
@@ -30,8 +30,8 @@ namespace detail {
     };
 }  // namespace detail
 
-template <typename... Ts>
-    requires(sizeof...(Ts) > 0)
-using common_type = typename detail::common_type_trait<Ts...>::type;
+template <typename... types>
+    requires(sizeof...(types) > 0)
+using common_type = typename detail::common_type_trait<types...>::type;
 
 }  // namespace cat

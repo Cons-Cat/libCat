@@ -10,7 +10,7 @@ namespace cat {
 namespace detail {
     template <typename... outer_tuple_elements>
     constexpr auto get_outer_type_list(type_map<outer_tuple_elements...>) {
-        return (type_list_filled<Decay<outer_tuple_elements>,
+        return (type_list_filled<decay<outer_tuple_elements>,
                                  // `ssizeof_pack` causes an internal compiler
                                  // error in GCC 12 here.
                                  // ssizeof_pack<outer_tuple_elements>()>
@@ -23,7 +23,7 @@ namespace detail {
     constexpr auto get_inner_type_list(type_map<inner_tuple_elements...>) {
         // Make a `type_list` from every `tuple_element`, and concatenate the
         // lists together.
-        return (type_list<Decay<inner_tuple_elements>>{} + ...);
+        return (type_list<decay<inner_tuple_elements>>{} + ...);
     }
 
     // This takes a forwarding tuple as a parameter. The forwarding tuple only
@@ -42,13 +42,13 @@ namespace detail {
     }
 }  // namespace detail
 
-template <typename... Ts>
-constexpr auto tuple_cat(Ts&&... tuples) {
-    if constexpr (sizeof...(Ts) == 0) {
+template <typename... types>
+constexpr auto tuple_cat(types&&... tuples) {
+    if constexpr (sizeof...(types) == 0) {
         return tuple<>{};
     } else {
         // Create a `tuple` out of all the argument tuples.
-        using outer_tuple = tuple<Decay<Ts>...>;
+        using outer_tuple = tuple<decay<types>...>;
         using outer_tuple_type_map = typename outer_tuple::Map;
 
         // Get the `type_list` from the inner and outer tuples.

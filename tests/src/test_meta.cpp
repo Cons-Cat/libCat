@@ -86,7 +86,7 @@ TEST(test_meta) {
     static_assert(!is_reference<remove_reference<int const&>>);
     static_assert(!is_reference<remove_reference<int const&&>>);
 
-    // TODO: Test `Decay`.
+    // TODO: Test `decay`.
 
     static_assert(is_reference<add_lvalue_reference<int>>);
     static_assert(is_reference<add_lvalue_reference<int&>>);
@@ -175,7 +175,8 @@ TEST(test_meta) {
     static_assert(is_same<add_volatile<int const>, int const volatile>);
     static_assert(is_same<add_volatile<int const&>, int const volatile&>);
     static_assert(is_same<add_volatile<int const&&>, int const volatile&&>);
-    static_assert(is_same<add_volatile<int const volatile>, int const volatile>);
+    static_assert(
+        is_same<add_volatile<int const volatile>, int const volatile>);
     static_assert(
         is_same<add_volatile<int const volatile&>, int const volatile&>);
     static_assert(
@@ -263,7 +264,7 @@ TEST(test_meta) {
     // static_assert(
     //     is_same<common_reference<tuple<int, double>, tuple<int&, double&>>,
     //             tuple<int, double>>);
-    // using TesttupleCommonRef = common_reference<tuple<int, double>,
+    // using test_tuple_common_ref = common_reference<tuple<int, double>,
     //     tuple<int&, double&>>;
 
     static_assert(

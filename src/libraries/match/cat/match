@@ -14,9 +14,9 @@
 // objects. They are constructed with either function or template arguments,
 // depending on what kind of pattern they represent. Calling `.then()` on them
 // constructs a callable `cat::detail::pattern` object with a predicate that
-// represents the pattern. For instance, `one_of<Ts...>()` generates a predicate
+// represents the pattern. For instance, `one_of<types...>()` generates a predicate
 // that checks if the reference provided to `match()` represents any of the
-// types in `Ts`.
+// types in `types`.
 
 // The constructed `pattern` object is called with an invocable argument, such
 // as a lambda, which itself takes no arguments.
@@ -89,7 +89,7 @@ namespace detail {
         function invocable;
     };
 
-    template <typename... Ts>
+    template <typename... types>
     struct one_of_types : pattern {
         constexpr one_of_types() = default;
 
@@ -101,16 +101,16 @@ namespace detail {
                 using unqualified_matching =
                     remove_const<remove_reference<decltype(matching)>>;
                 if constexpr (has_is<unqualified_matching>) {
-                    // If `matching` currently holds one of `Ts`, then invoke
+                    // If `matching` currently holds one of `types`, then invoke
                     // `invocable`.
-                    if (((matching.template is<Ts>()) || ...)) {
+                    if (((matching.template is<types>()) || ...)) {
                         forward<function>(invocable)();
                         return true;
                     }
                 } else {
                     // If there is no `.is()` method for `matching`, fall back
                     // to a trivial `is_same` check.
-                    if ((is_same<unqualified_matching, Ts> || ...)) {
+                    if ((is_same<unqualified_matching, types> || ...)) {
                         forward<function>(invocable)();
                         return true;
                     }
@@ -155,9 +155,9 @@ namespace detail {
     };
 }  // namespace detail
 
-template <typename... Ts>
-constexpr auto one_of() -> detail::one_of_types<Ts...> {
-    return detail::one_of_types<Ts...>{};
+template <typename... types>
+constexpr auto one_of() -> detail::one_of_types<types...> {
+    return detail::one_of_types<types...>{};
 }
 
 // TODO: `one_of()` overload taking values instead of types.

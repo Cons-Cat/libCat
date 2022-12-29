@@ -708,7 +708,7 @@ namespace detail {
 // Remove `const`/`volatile`-qualifiers, references, and pointers from a
 // type.
 template <typename T>
-using Decay = conditional<
+using decay = conditional<
     // Decay arrays to pointers.
     is_array<remove_reference<T>>, remove_extent<remove_reference<T>>*,
     conditional<

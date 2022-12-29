@@ -60,7 +60,7 @@ class pool_allocator
         return max_node_bytes;
     }
 
-    auto allocate(ssize) -> maybePtr<void> {
+    auto allocate(ssize) -> maybe_ptr<void> {
         // If there is a next node in the free list, make that the head and
         // allocate the current head. Otherwise, do not allocate anything.
         if (this->p_head == nullptr) {

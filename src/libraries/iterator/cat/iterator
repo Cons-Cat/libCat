@@ -285,39 +285,40 @@ class iterator_interface {
     }
 };
 
-struct RandomAccessiterator_typeTag {};
-struct Bidirectionaliterator_typeTag {};
-struct Forwarditerator_typeTag {};
-struct input_iterator_typeTag {};
-struct outputter_typeTag {};
-struct Contiguousiterator_typeTag {};
+struct random_access_iterator_tag {};
+struct bidirectional_iterator_tag {};
+struct forward_iterator_tag {};
+struct input_iterator_tag {};
+struct output_iterator_tag {};
+struct contiguous_iterator_tag {};
 
 template <typename T>
-    requires is_base_of<iterator_interface<T>, T>
-struct iterator_typeTraits {
+    requires(is_base_of<iterator_interface<T>, T>)
+struct iterator_type_traits {
     static T const& iterator;
-    using value_type = typename infer_value_type<T>::type;
-    using Reference = decltype(*iterator);
-    using Pointer = decltype(iterator.operator->());
-    using Difference = infer_difference_type<T>;
-    using Category = conditional<
+    using value = typename infer_value_type<T>::type;
+    using reference = decltype(*iterator);
+    using pointer = decltype(iterator.operator->());
+    using difference = infer_difference_type<T>;
+    using category = conditional<
         // If this can be a random access iterator, it always will be.
-        detail::has_random_access<T>, RandomAccessiterator_typeTag,
+        detail::has_random_access<T>, random_access_iterator_tag,
         conditional<
             // If this has a `++` and a `--` operator, this is a
             // bidirectional iterator.
-            detail::has_bidirectional<T>, Bidirectionaliterator_typeTag,
+            detail::has_bidirectional<T>, bidirectional_iterator_tag,
             conditional<detail::has_single_pass<T>,
                         // If it is single-pass, this is a forward
                         // iterator.
-                        input_iterator_typeTag,
+                        input_iterator_tag,
                         // Default to a forward iterator.
-                        Forwarditerator_typeTag>>>;
-    // using iterator_typeConcept = Category;
+                        forward_iterator_tag>>>;
+    // using iterator_type_concept = category;
 };
 
 template <typename iterator_type>
-struct reversed_iterator_type : iterator_interface<reversed_iterator_type<iterator_type>> {
+struct reversed_iterator_type
+    : iterator_interface<reversed_iterator_type<iterator_type>> {
     // Forward any constructor to `iterator`.
     template <typename... Args>
     constexpr reversed_iterator_type(Args&&... args)
@@ -332,7 +333,8 @@ struct reversed_iterator_type : iterator_interface<reversed_iterator_type<iterat
         return this->iterator.dereference();
     }
 
-    constexpr void advance(int offset) requires(detail::has_advance<iterator_type>) {
+    constexpr void advance(int offset) requires(
+        detail::has_advance<iterator_type>) {
         this->iterator.advance(-offset);
     }
 
@@ -344,7 +346,8 @@ struct reversed_iterator_type : iterator_interface<reversed_iterator_type<iterat
         ++iterator;
     }
 
-    constexpr auto distance_to(reversed_iterator_type<iterator_type> other) const -> ssize
+    constexpr auto distance_to(
+        reversed_iterator_type<iterator_type> other) const -> ssize
     /* requires(detail::has_distance_to<iterator_type>) */ {
         return this->iterator.distance_to(other.iterator);
     }
@@ -361,29 +364,31 @@ concept is_iterable = requires(T it) {
 
 template <typename T>
 concept is_weakly_incrementable = requires(T it) {
-    // TODO: Make this `Movable`.
+    // TODO: Make this `is_movable`.
     { ++it } -> is_same<T&>;
     it++;
 };
 
 template <typename T>
 concept is_incrementable = requires(T it) {
-    // TODO: Make this `Regular` and `Movable`.
+    // TODO: Make this `is_regular` and `is_movable`.
     { ++it } -> is_same<T&>;
     { it++ } -> is_same<T&>;
 };
 
 template <typename T>
 concept is_random_access_iterator =
-    is_same<typename iterator_typeTraits<T>::Category, RandomAccessiterator_typeTag>;
+    is_same<typename iterator_type_traits<T>::Category,
+            random_access_iterator_tag>;
 
 template <typename T>
 concept is_bidirectional_iterator =
-    is_same<typename iterator_typeTraits<T>::Category, Bidirectionaliterator_typeTag>;
+    is_same<typename iterator_type_traits<T>::Category,
+            bidirectional_iterator_tag>;
 
 template <typename T>
 concept is_forward_iterator =
-    is_same<typename iterator_typeTraits<T>::Category, Forwarditerator_typeTag>;
+    is_same<typename iterator_type_traits<T>::Category, forward_iterator_tag>;
 
 // clang-format off
 template <typename T>

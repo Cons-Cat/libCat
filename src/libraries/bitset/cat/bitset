@@ -60,7 +60,7 @@ class bitset {
 
   public:
     template <typename T>
-    // requires(is_same<Decay<T>, bitset<bits_count>>)
+    // requires(is_same<decay<T>, bitset<bits_count>>)
     class iterator_type : public iterator_interface<iterator_type<T>> {
       public:
         constexpr iterator_type() = default;
@@ -109,11 +109,11 @@ class bitset {
 
     constexpr bitset() = default;
 
-    template <typename... Ts>
-        requires((is_same<Ts, value_type_element> ||
-                  is_same<Ts, typename value_type_element::raw_type>)&&...)
-    [[nodiscard]] static constexpr auto from(Ts... values) -> bitset
-        requires(ssizeof_pack<Ts...>() == value_type::size()) {
+    template <typename... types>
+        requires((is_same<types, value_type_element> ||
+                  is_same<types, typename value_type_element::raw_type>)&&...)
+    [[nodiscard]] static constexpr auto from(types... values) -> bitset
+        requires(ssizeof_pack<types...>() == value_type::size()) {
         // `value_type::value_type` is some unsigned integer.
         // TODO: Assert that the input fits in `bits_count`.
         bitset<bits_count> bitset;

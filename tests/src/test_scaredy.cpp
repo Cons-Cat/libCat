@@ -3,7 +3,7 @@
 #include "../unit_tests.hpp"
 
 // Minimal result types usable for `cat::scaredy`.
-struct ErrorOne {
+struct error_typeOne {
     int4 code;
 
     constexpr auto error() const -> int8 {
@@ -11,7 +11,7 @@ struct ErrorOne {
     }
 };
 
-struct ErrorTwo {
+struct error_typeTwo {
     int4 code;
 
     constexpr auto error() const -> int8 {
@@ -19,17 +19,17 @@ struct ErrorTwo {
     }
 };
 
-auto one() -> ErrorOne {
-    ErrorOne one{1};
+auto one() -> error_typeOne {
+    error_typeOne one{1};
     return one;
 }
 
-auto two() -> ErrorTwo {
-    ErrorTwo two{2};
+auto two() -> error_typeTwo {
+    error_typeTwo two{2};
     return two;
 }
 
-auto union_errors(int4 error) -> cat::scaredy<int8, ErrorOne, ErrorTwo> {
+auto union_errors(int4 error) -> cat::scaredy<int8, error_typeOne, error_typeTwo> {
     switch (error.raw) {
         case 0:
             return one();
@@ -68,12 +68,12 @@ TEST(test_scaredy) {
     static_assert(sizeof(result) == 16);
 
     cat::verify(!result.has_value());
-    cat::verify(result.is<ErrorOne>());
+    cat::verify(result.is<error_typeOne>());
     cat::verify(!result.is<int8>());
 
     result = union_errors(1);
     cat::verify(!result.has_value());
-    cat::verify(result.is<ErrorTwo>());
+    cat::verify(result.is<error_typeTwo>());
     cat::verify(!result.is<int8>());
 
     result = union_errors(2);
@@ -86,19 +86,19 @@ TEST(test_scaredy) {
     cat::verify(result.is<int8>());
 
     // Test `.error()`.
-    cat::scaredy<int, ErrorOne> one_error = ErrorOne(1);
+    cat::scaredy<int, error_typeOne> one_error = error_typeOne(1);
     cat::verify(one_error.error().code == 1);
-    cat::verify(one_error.error<ErrorOne>().code == 1);
+    cat::verify(one_error.error<error_typeOne>().code == 1);
 
-    cat::scaredy<int, ErrorOne, ErrorTwo> two_error = ErrorOne(1);
-    cat::verify(two_error.error<ErrorOne>().code == 1);
+    cat::scaredy<int, error_typeOne, error_typeTwo> two_error = error_typeOne(1);
+    cat::verify(two_error.error<error_typeOne>().code == 1);
 
     // Test compact optimization.
     cat::scaredy<cat::compact_scaredy<int4,
                                      [](int4 input) {
                                          return input >= 0;
                                      }>,
-                 ErrorOne>
+                 error_typeOne>
         predicate = -1;
 
     // This `scaredy` adds no storage to an `int4`.
@@ -114,14 +114,14 @@ TEST(test_scaredy) {
     predicate = 10;
     cat::verify(predicate.has_value());
 
-    predicate = ErrorOne(-1);
+    predicate = error_typeOne(-1);
     cat::verify(!predicate.has_value());
 
     // Test `.value_or()`.
-    cat::scaredy<int4, ErrorOne> is_error = ErrorOne();
-    cat::scaredy<int4, ErrorOne> is_value = 2;
-    cat::scaredy<int4, ErrorOne> const const_is_error = ErrorOne();
-    cat::scaredy<int4, ErrorOne> const const_is_value = 2;
+    cat::scaredy<int4, error_typeOne> is_error = error_typeOne();
+    cat::scaredy<int4, error_typeOne> is_value = 2;
+    cat::scaredy<int4, error_typeOne> const const_is_error = error_typeOne();
+    cat::scaredy<int4, error_typeOne> const const_is_value = 2;
 
     int4 fallback = is_error.value_or(1);
     cat::verify(fallback == 1);
@@ -140,7 +140,7 @@ TEST(test_scaredy) {
         return input + 1;
     };
 
-    cat::scaredy<int4, ErrorOne> mut_scaredy = 1;
+    cat::scaredy<int4, error_typeOne> mut_scaredy = 1;
     _ = mut_scaredy.transform(increment).and_then(increment);
 
     // `.transform()` returning `void`.
@@ -153,13 +153,13 @@ TEST(test_scaredy) {
     });
 
     // Test monadic member functions on a `const`-qualified `scaredy`.
-    cat::scaredy<int4, ErrorOne> const const_scaredy = 1;
+    cat::scaredy<int4, error_typeOne> const const_scaredy = 1;
     _ = const_scaredy.transform(increment).and_then(increment);
 
     // Test `.is()` on variant `scaredy`.
     bool matched = false;
 
-    cat::scaredy<int4, ErrorOne, ErrorTwo> is_variant_scaredy;
+    cat::scaredy<int4, error_typeOne, error_typeTwo> is_variant_scaredy;
     is_variant_scaredy = 1;
 
     // Match it against `int4`.
@@ -168,11 +168,11 @@ TEST(test_scaredy) {
             matched = true;
         }));
     cat::match(is_variant_scaredy)(  //
-        is_a<ErrorOne>().then([&]() {
+        is_a<error_typeOne>().then([&]() {
             matched = false;
         }));
     cat::match(is_variant_scaredy)(  //
-        is_a<ErrorTwo>().then([&]() {
+        is_a<error_typeTwo>().then([&]() {
             matched = false;
         }));
     // `float` can never hold true here, but it should compile.
@@ -182,11 +182,11 @@ TEST(test_scaredy) {
         }));
     cat::verify(matched);
 
-    // Match it against `ErrorOne`.
+    // Match it against `error_typeOne`.
     matched = false;
-    is_variant_scaredy = ErrorOne();
+    is_variant_scaredy = error_typeOne();
     cat::match(is_variant_scaredy)(  //
-        is_a<ErrorOne>().then([&]() {
+        is_a<error_typeOne>().then([&]() {
             matched = true;
         }));
     cat::match(is_variant_scaredy)(  //
@@ -194,14 +194,14 @@ TEST(test_scaredy) {
             matched = false;
         }));
     cat::match(is_variant_scaredy)(  //
-        is_a<ErrorTwo>().then([&]() {
+        is_a<error_typeTwo>().then([&]() {
             matched = false;
         }));
     cat::verify(matched);
 
     // Test member access pattern matching syntax.
     matched = false;
-    is_variant_scaredy.match(is_a<ErrorOne>().then([&]() {
+    is_variant_scaredy.match(is_a<error_typeOne>().then([&]() {
         matched = true;
     }));
     cat::verify(matched);
@@ -212,7 +212,7 @@ TEST(test_scaredy) {
     // Test type comparison.
     matched = false;
     cat::match(predicate)(  //
-        is_a<ErrorOne>().then([&]() {
+        is_a<error_typeOne>().then([&]() {
             cat::exit(1);
         }),
         is_a<int4>().then([&]() {
@@ -221,21 +221,21 @@ TEST(test_scaredy) {
     cat::verify(matched);
 
     matched = false;
-    predicate = ErrorOne(-1);
+    predicate = error_typeOne(-1);
     cat::match(predicate)(  //
         is_a<int4>().then([&]() {
             cat::exit(1);
         }),
-        is_a<ErrorOne>().then([&]() {
+        is_a<error_typeOne>().then([&]() {
             matched = true;
         }));
     cat::verify(matched);
 
     // Test traits.
-    static_assert(!cat::is_maybe<cat::scaredy<int, ErrorOne>>);
+    static_assert(!cat::is_maybe<cat::scaredy<int, error_typeOne>>);
     static_assert(!cat::is_maybe<decltype(result)>);
 
-    static_assert(cat::is_scaredy<cat::scaredy<int, ErrorOne>>);
+    static_assert(cat::is_scaredy<cat::scaredy<int, error_typeOne>>);
     static_assert(cat::is_scaredy<decltype(result)>);
 
     // Test `TRY` macro.

@@ -34,7 +34,7 @@ class page_allocator : public allocator_interface<page_allocator> {
     // Allocate memory in multiples of a page-size. A page is `4_ki` large
     // on x86-64. If fewer than 4096 bytes are allocated, that amount will
     // be rounded up to 4096.
-    auto allocate(ssize allocation_bytes) -> maybePtr<void> {
+    auto allocate(ssize allocation_bytes) -> maybe_ptr<void> {
         scaredy result = nix::sys_mmap(
             0u, allocation_bytes,
             // TODO: Fix bit flags operators.
@@ -58,7 +58,7 @@ class page_allocator : public allocator_interface<page_allocator> {
     // Allocate a page(s) of virtual memory that is guaranteed to align to
     // any power of 2, but less than `4_uki`.
     auto aligned_allocate(usize alignment, ssize allocation_bytes)
-        -> maybePtr<void> {
+        -> maybe_ptr<void> {
         // Pages cannot be aligned by greater than 4 kibibytes.
         cat::assert(alignment <= 4_uki);
         // A normal page allocation already has strong alignment guarantees.

@@ -160,9 +160,9 @@ TEST(test_maybe) {
     nonzero = 0;
     cat::verify(!nonzero.has_value());
 
-    // Test `maybePtr`.
+    // Test `maybe_ptr`.
     int4 get_addr = 0;
-    cat::maybePtr<int4> opt_ptr = &get_addr;
+    cat::maybe_ptr<int4> opt_ptr = &get_addr;
     cat::verify(opt_ptr.has_value());
     cat::verify(opt_ptr.value() == &get_addr);
     cat::verify(*opt_ptr.value() == 0);
@@ -387,21 +387,21 @@ TEST(test_maybe) {
         // cat::verify(const_nontrivial_in_place.has_value());
 
         // Test `maybe<compact<T>>`.
-        constexpr cat::maybePtr<void> const_optptr = nullptr;
-        cat::maybePtr<void> optptr = nullptr;
+        constexpr cat::maybe_ptr<void> const_optptr = nullptr;
+        cat::maybe_ptr<void> optptr = nullptr;
         optptr = nullptr;
         optptr = const_optptr;
-        [[maybe_unused]] cat::maybePtr<void> optptr2 = optptr;
-        [[maybe_unused]] cat::maybePtr<void> optptr3 = const_optptr;
-        [[maybe_unused]] cat::maybePtr<void> optptr4;
+        [[maybe_unused]] cat::maybe_ptr<void> optptr2 = optptr;
+        [[maybe_unused]] cat::maybe_ptr<void> optptr3 = const_optptr;
+        [[maybe_unused]] cat::maybe_ptr<void> optptr4;
 
-        [[maybe_unused]] constexpr cat::maybePtr<maybe_non_trivial>
+        [[maybe_unused]] constexpr cat::maybe_ptr<maybe_non_trivial>
             const_nontrivial_optptr = nullptr;
-        [[maybe_unused]] constexpr cat::maybePtr<maybe_non_trivial>
+        [[maybe_unused]] constexpr cat::maybe_ptr<maybe_non_trivial>
             const_nontrivial_default_optptr;
-        [[maybe_unused]] cat::maybePtr<maybe_non_trivial> nontrivial_optptr =
+        [[maybe_unused]] cat::maybe_ptr<maybe_non_trivial> nontrivial_optptr =
             nullptr;
-        [[maybe_unused]] cat::maybePtr<maybe_non_trivial>
+        [[maybe_unused]] cat::maybe_ptr<maybe_non_trivial>
             nontrivial_default_optptr;
     };
     cat::constant_evaluate(constant_test);

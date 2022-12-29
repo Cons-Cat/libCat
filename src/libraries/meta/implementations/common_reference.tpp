@@ -142,7 +142,7 @@ namespace detail {
                                  remaining...> {};
 }  // namespace detail
 
-template <typename... Ts>
-using common_reference = typename detail::common_reference_trait<Ts...>::type;
+template <typename... types>
+using common_reference = typename detail::common_reference_trait<types...>::type;
 
 }  // namespace cat

@@ -329,7 +329,7 @@ enum class memory_flags : unsigned int {
     no_reserve = 0x04000,    // Don't check for reservations.
     populate = 0x08000,      // Populate (prefault) pagetables.
     non_blocking = 0x10000,  // Do not block on IO.
-    stack = 0x20000,         // Allocation is for a stack.
+    stack = 0x20000,         // allocation_type is for a stack.
     hugetlb = 0x40000,       // Create huge page mapping.
     sync = 0x80000,          // Perform synchronous page faults for the mapping.
     fixed_noreplace = 0x100000,  // `mmap_memory_flags::fixed` but do not unmap

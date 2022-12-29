@@ -53,9 +53,9 @@ namespace detail {
 
     // Deriving from a variadic list of types allows `tuple` to be an aggregate
     // type.
-    template <typename... Ts>
-    struct type_map : Ts... {
-        using Ts::operator[]...;
+    template <typename... types>
+    struct type_map : types... {
+        using types::operator[]...;
     };
 
     // This partial specialization is required in order to support two parameter
@@ -64,18 +64,19 @@ namespace detail {
     struct tuple_storage {};
 
     // map a list of indices to a list of types.
-    template <ssize... indices, typename... Ts>
-    struct tuple_storage<index_list_type<indices...>, Ts...> {
-        using type = type_map<tuple_element<indices, Ts>...>;
+    template <ssize... indices, typename... in_types>
+    struct tuple_storage<index_list_type<indices...>, in_types...> {
+        using type = type_map<tuple_element<indices, in_types>...>;
     };
 
 }  // namespace detail
 
-template <typename... Ts>
-struct tuple : detail::tuple_storage<index_sequence_for<Ts...>, Ts...>::type {
-    using types = type_list<Ts...>;
-    using map =
-        typename detail::tuple_storage<index_sequence_for<Ts...>, Ts...>::type;
+template <typename... in_types>
+struct tuple : detail::tuple_storage<index_sequence_for<in_types...>,
+                                     in_types...>::type {
+    using types = type_list<in_types...>;
+    using map = typename detail::tuple_storage<index_sequence_for<in_types...>,
+                                               in_types...>::type;
 
     // clangd 15 produces a false diagnostic if this is declared at the bottom
     // of this struct.
@@ -85,9 +86,9 @@ struct tuple : detail::tuple_storage<index_sequence_for<Ts...>, Ts...>::type {
 // Convert each element of this `tuple` into those of another `tuple`.
 template <typename T>
 constexpr operator T() const {
-    using Othertypes = typename Decay<T>::types;
+    using other_types = typename decay<T>::types;
     // Pass in a `type_list` for its types to be deduced out of.
-    return this->template convert_elements(Othertypes());
+    return this->template convert_elements(other_types());
 }
 
 private:
@@ -130,13 +131,13 @@ constexpr auto concat_rhs(auto const& other_tuple, auto&) const {
 template <ssize index>
 constexpr auto concat_rhs(auto const& other_tuple, auto& rhs_tuple) const
     requires(index < rhs_tuple.this->size) {
-    other_tuple.template get<index + static_cast<ssize>(sizeof...(Ts))>() =
-        rhs_tuple.template get<index>();
-    return concat_rhs<index + 1>(other_tuple, rhs_tuple);
+    other_tuple.template get<index + static_cast<ssize>(sizeof...(in_types))>()
+= rhs_tuple.template get<index>(); return concat_rhs<index + 1>(other_tuple,
+rhs_tuple);
 }
 
 template <ssize index>
-constexpr auto concat_recurse(tuple<Ts...> const& this_tuple,
+constexpr auto concat_recurse(tuple<in_types...> const& this_tuple,
                               auto const& other_tuple,
                               auto const& new_tuple) const {
     if constexpr (index < this->size) {
@@ -149,9 +150,9 @@ public:
 // Concatenate this tuple with another tuple.
 template <typename... Us>
 constexpr auto concat(tuple<Us...> const& other_tuple) const
-    -> tuple<Ts..., Us...> {
+    -> tuple<in_types..., Us...> {
     // TODO: If these tuples are trivially relocatable, optimize this.
-    tuple<Ts..., Us...> new_tuple =
+    tuple<in_types..., Us...> new_tuple =
         this->concat_recurse<0>(*this, other_tuple, tuple<>{});
     // this->concat_lhs<0>(new_tuple);
     return new_tuple;
@@ -288,13 +289,13 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
 };
 
 // This deduction guide is required for variadic type deduction.
-template <typename... Ts>
-tuple(Ts...) -> tuple<Ts...>;
+template <typename... types>
+tuple(types...) -> tuple<types...>;
 
 }  // namespace cat
 
-template <typename... Ts>
-constexpr auto tuple_cat(Ts&&... tuples);
+template <typename... types>
+constexpr auto tuple_cat(types&&... tuples);
 
 namespace std {
 
@@ -304,8 +305,9 @@ namespace std {
 template <typename>
 struct tuple_size;  // NOLINT
 
-template <typename... Ts>
-struct tuple_size<cat::tuple<Ts...>> : cat::constant<sizeof...(Ts)> {};
+template <typename... in_types>
+struct tuple_size<cat::tuple<in_types...>>
+    : cat::constant<sizeof...(in_types)> {};
 
 template <typename T>
 inline constexpr usize::raw_type tuple_size_v = tuple_size<T>::value;
@@ -313,10 +315,11 @@ inline constexpr usize::raw_type tuple_size_v = tuple_size<T>::value;
 template <usize::raw_type, typename>
 struct tuple_element;
 
-template <usize::raw_type index, typename... Ts>
-struct tuple_element<index, cat::tuple<Ts...>> {
+template <usize::raw_type index, typename... in_types>
+struct tuple_element<index, cat::tuple<in_types...>> {
     // NOLINTNEXTLINE
-    using type = decltype(cat::tuple<Ts...>{}.template get<ssize{index}>());
+    using type =
+        decltype(cat::tuple<in_types...>{}.template get<ssize{index}>());
 };
 
 template <usize::raw_type I, typename T>

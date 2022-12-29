@@ -27,7 +27,7 @@ template <typename T, typename U, typename... remaining>
     requires(is_implicitly_convertible<U, T>)
 constexpr auto max(T value_1, U value_2, remaining... remaining_args) -> T;
 
-template <typename... Ts>
+template <typename... types>
 class type_list {
     template <typename>
     struct get_first_element;
@@ -96,17 +96,17 @@ class type_list {
     // Produce an alias to the type stored at an index in this type list.
     template <ssize index>
     using get =
-        typename recurse_for_type_at_index<type_list<Ts...>, index>::result;
+        typename recurse_for_type_at_index<type_list<types...>, index>::result;
 
     // TODO: Get index of first, last, and N'th occurence of `T`.
 
     // Append one parameter pack to this `type_list`.
     template <typename... Us>
-    using merge = type_list<Ts..., Us...>;
+    using merge = type_list<types..., Us...>;
 
     template <typename... Us>
     static consteval auto concat(type_list<Us...>) {
-        return type_list<Ts..., Us...>{};
+        return type_list<types..., Us...>{};
     }
 
     // Concatenate one `type_list` to this `type_list`.
@@ -116,32 +116,32 @@ class type_list {
     // A `+` is required instead of `concat_types` to use this inside of fold
     // expressions.
     template <typename... Us>
-    friend constexpr auto operator+(type_list<Ts...>, type_list<Us...>) {
-        return type_list<Ts..., Us...>{};
+    friend constexpr auto operator+(type_list<types...>, type_list<Us...>) {
+        return type_list<types..., Us...>{};
     }
 
     // Evaluate `true` iff this type list holds a type `T`.
     template <typename T>
-    static constexpr bool has_type = recurse_for_type<T, Ts...>();
+    static constexpr bool has_type = recurse_for_type<T, types...>();
 
     // The number of types in this list.
-    static constexpr ssize size = ssize{sizeof...(Ts)};
+    static constexpr ssize size = ssize{sizeof...(types)};
 
     // The size of the largest type in this list.
-    static constexpr ssize largest_size = max(ssizeof(Ts)...);
+    static constexpr ssize largest_size = max(ssizeof(types)...);
 
     // The size of the smallest type in this list.
-    static constexpr ssize smallest_size = min(ssizeof(Ts)...);
+    static constexpr ssize smallest_size = min(ssizeof(types)...);
 
     // The smallest alignment of a type in this list.
-    static constexpr usize smallest_alignment = min(alignof(Ts)...);
+    static constexpr usize smallest_alignment = min(alignof(types)...);
 
     // The largest alignment of a type in this list.
-    static constexpr usize largest_alignment = max(alignof(Ts)...);
+    static constexpr usize largest_alignment = max(alignof(types)...);
 
     // Sum the number of times that a type is in this type list.
     template <typename T>
-    static constexpr ssize count_type = recurse_for_count<T, 0, Ts...>();
+    static constexpr ssize count_type = recurse_for_count<T, 0, types...>();
 
     // Evaluate `true` iff the type `T` only appears exactly once in this
     // type list.
@@ -149,12 +149,12 @@ class type_list {
     static constexpr bool is_unique = (count_type<T> == 1);
 
     // Evaluate `true` if every type in this type list is unique.
-    static constexpr bool is_unique_list = recurse_for_unique<Ts...>();
+    static constexpr bool is_unique_list = recurse_for_unique<types...>();
 };
 
 namespace detail {
-    template <typename T, ssize count, ssize index, typename... Ts>
-    consteval auto type_list_fill(type_list<Ts...> type_list) {
+    template <typename T, ssize count, ssize index, typename... types>
+    consteval auto type_list_fill(type_list<types...> type_list) {
         if constexpr (index == count) {
             return type_list;
         } else {

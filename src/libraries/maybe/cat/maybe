@@ -1136,13 +1136,13 @@ concept is_maybe = requires(T t) {
     t = cat::nullopt;
 }
 &&!requires {
-    T::ErrorsList;
+    T::error_typesList;
 };
 
 // TODO: Support `void*`.
 // Simplify nullable pointers.
 template <typename T>
-using maybePtr = maybe<sentinel<T*, nullptr>>;
+using maybe_ptr = maybe<sentinel<T*, nullptr>>;
 
 namespace detail {
     template <is_integral T>
@@ -1153,7 +1153,7 @@ namespace detail {
 
 // Simplify non-negative signed integers.
 template <is_integral T>
-using maybeNonNegative =
+using maybe_non_negative =
     // A lambda here causes clangd 14 to crash.
     maybe<compact<T, detail::is_non_negative<T>, -1>>;
 

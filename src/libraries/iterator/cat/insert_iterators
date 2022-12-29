@@ -11,7 +11,7 @@ template <is_iterable T>
 class back_insert_iterator
     : public iterator_interface<back_insert_iterator<T>> {
   public:
-    using Container = T;
+    using container_type = T;
 
     constexpr explicit back_insert_iterator(T& input_iterable)
         : iterable(input_iterable) {
@@ -101,7 +101,7 @@ template <is_iterable T>
 class front_insert_iterator
     : public iterator_interface<front_insert_iterator<T>> {
   public:
-    using Container = T;
+    using container_type = T;
 
     constexpr explicit front_insert_iterator(T& input_iterable)
         : iterable(input_iterable) {

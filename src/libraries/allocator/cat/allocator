@@ -29,7 +29,7 @@ namespace detail {
     struct base_memory_handle {
         static constexpr bool is_inline_handle = false;
         static constexpr bool is_multi_handle = false;
-        using Allocation = T;
+        using allocation_type = T;
 
         // Number of `T`s allocated. This is always 1 if the call is not
         // intercepted by a `multi_memory_handle`.
@@ -62,10 +62,10 @@ namespace detail {
     struct multi_memory_handle {
         static constexpr bool is_inline_handle = handle_type::is_inline_handle;
         static constexpr bool is_multi_handle = true;
-        using Allocation = typename handle_type::Allocation;
+        using allocation_type = typename handle_type::allocation_type;
         handle_type handle;
 
-        // How large this allocation was, in terms of `Allocation`.
+        // How large this allocation was, in terms of `allocation_type`.
         ssize array_length;
 
         multi_memory_handle() = default;
@@ -74,7 +74,7 @@ namespace detail {
         }
 
         // TODO: Variadic emplace.
-        void set_inline_storage(Allocation value) {
+        void set_inline_storage(allocation_type value) {
             this->handle.set_inline_storage(value);
         }
 
@@ -94,7 +94,7 @@ namespace detail {
 
         // Intercept a propagating call to `.raw_size()`.
         auto raw_size() const -> ssize {
-            return this->array_length * ssizeof(Allocation);
+            return this->array_length * ssizeof(allocation_type);
         }
 
         constexpr auto is_inline() const -> bool {
@@ -111,11 +111,11 @@ namespace detail {
             return this->handle.get();
         }
 
-        auto get_inline() & -> Allocation& {
+        auto get_inline() & -> allocation_type& {
             return this->handle.get_inline();
         }
 
-        auto get_inline() const& -> Allocation const& {
+        auto get_inline() const& -> allocation_type const& {
             return this->handle.get_inline();
         }
     };
@@ -129,11 +129,11 @@ namespace detail {
     struct inline_memory_handle {
         static constexpr bool is_inline_handle = true;
         static constexpr bool is_multi_handle = handle_type::is_multi_handle;
-        using Allocation = typename handle_type::Allocation;
+        using allocation_type = typename handle_type::allocation_type;
 
         union {
             handle_type handle;
-            Allocation inline_storage;
+            allocation_type inline_storage;
             // Reserve `inline_buffer_size` bytes to make the size
             // of this handle predictible.
             byte empty[inline_buffer_size.raw];
@@ -151,13 +151,13 @@ namespace detail {
 
         ~inline_memory_handle() {
             if (this->is_on_stack) {
-                this->inline_storage.~Allocation();
+                this->inline_storage.~allocation_type();
             }
         }
 
         // Intercept a propagating call to `.set_inline_storage()`.
         // TODO: Variadic emplace.
-        void set_inline_storage(Allocation value) {
+        void set_inline_storage(allocation_type value) {
             this->inline_storage = value;
         }
 
@@ -193,28 +193,28 @@ namespace detail {
         }
 
         // Intercept calls to `.get_inline()`.
-        auto get_inline() & -> Allocation& {
+        auto get_inline() & -> allocation_type& {
             return this->inline_storage;
         }
 
         // Intercept calls to `.get_inline()`.
-        auto get_inline() const& -> Allocation const& {
+        auto get_inline() const& -> allocation_type const& {
             return this->inline_storage;
         }
     };
 }  // namespace detail
 
-template <typename T, typename Allocation = void*>
+template <typename T, typename allocation_type = void*>
 concept is_allocator = requires(T allocator) {
     // Every allocator has a  `.opq_alloc()` method.
     // One might not have `.alloc()`.
-    allocator.template opq_alloc<Allocation>();
+    allocator.template opq_alloc<allocation_type>();
 
     // TODO: It would be nice if these could make the concept more precise:
-    // allocator.free(decltype(allocator.template make_handle<AllocationU>(
-    //     AllocationU(), sizeof(AllocationU))){});
-    // allocator.get(decltype(allocator.template make_handle<AllocationU>(
-    //     AllocationU(), sizeof(AllocationU))){});
+    // allocator.free(decltype(allocator.template make_handle<allocation_typeU>(
+    //     allocation_typeU(), sizeof(allocation_typeU))){});
+    // allocator.get(decltype(allocator.template make_handle<allocation_typeU>(
+    //     allocation_typeU(), sizeof(allocation_typeU))){});
 };
 
 namespace detail {
@@ -285,11 +285,11 @@ maybe size = this->opq_nalloc<T>().value();
 //
 // `[[maybe_unused]]` is required because GCC 12 can mistakenly think
 // this is uninitialized.
-using Alloc = sized_allocation<decltype(this->opq_xalloc<T, is_zeroed>())>;
+using alloc_type = sized_allocation<decltype(this->opq_xalloc<T, is_zeroed>())>;
 
 if (size.has_value()) {
-    [[maybe_unused]] maybe_sized_allocation<Alloc> return_val =
-        maybe_sized_allocation<Alloc>{nullopt};
+    [[maybe_unused]] maybe_sized_allocation<alloc_type> return_val =
+        maybe_sized_allocation<alloc_type>{nullopt};
     return return_val;
 }
 
@@ -297,8 +297,8 @@ if (size.has_value()) {
 auto allocation =
     this->opq_xalloc<T, is_zeroed>(forward<Args>(constructor_args)...);
 
-[[maybe_unused]] maybe_sized_allocation<Alloc> return_val =
-    maybe_sized_allocation<Alloc>{Alloc(allocation, 0_sz)};
+[[maybe_unused]] maybe_sized_allocation<alloc_type> return_val =
+    maybe_sized_allocation<alloc_type>{alloc_type(allocation, 0_sz)};
 return return_val;
 }
 */
@@ -4746,11 +4746,11 @@ class allocator_interface {
     // Invalidate any memory handle, invoking its data's destructor.
     template <mem T>
     void free(T const& handle) {
-        using Allocation = typename T::Allocation const;
+        using allocation_type = typename T::allocation_type const;
 
         // If this is not a small-size optimized handle:
         if (!handle.is_inline()) {
-            Allocation const* p_memory;
+            allocation_type const* p_memory;
             if constexpr (T::is_multi_handle) {
                 // Get the pointer from a span produced by the
                 // allocator.
@@ -4760,9 +4760,9 @@ class allocator_interface {
                 p_memory = addressof(this->get(handle));
             }
 
-            // if constexpr (is_destructible<Allocation>) {
+            // if constexpr (is_destructible<allocation_type>) {
             for (ssize i = 0; i < handle.size(); ++i) {
-                p_memory[i.raw].~Allocation();
+                p_memory[i.raw].~allocation_type();
             }
             // }
             this->self().deallocate(static_cast<void const*>(p_memory),
@@ -4849,12 +4849,12 @@ class allocator_interface {
     // memory handle is to a multi-allocation, this returns a `span`.
     template <mem T>
     [[nodiscard]] constexpr auto get(T& handle) & -> decltype(auto) {
-        using Allocation = typename T::Allocation;
+        using allocation_type = typename T::allocation_type;
         if constexpr (T::is_inline_handle) {
             // Get small-size optimized data:
             if (handle.is_inline()) {
                 if constexpr (T::is_multi_handle) {
-                    return span<Allocation>{addressof(handle.get_inline()),
+                    return span<allocation_type>{addressof(handle.get_inline()),
                                             handle.size()};
                 } else {
                     return handle.get_inline();
@@ -4864,11 +4864,11 @@ class allocator_interface {
 
         // Get non-small-size optimized data:
         if constexpr (T::is_multi_handle) {
-            return span<Allocation>(
-                this->self().template access<Allocation>(handle.get()),
+            return span<allocation_type>(
+                this->self().template access<allocation_type>(handle.get()),
                 handle.size());
         } else {
-            return *(this->self().template access<Allocation>(handle.get()));
+            return *(this->self().template access<allocation_type>(handle.get()));
         }
     }
 
@@ -4961,7 +4961,7 @@ class allocator_interface {
         // `handle_type`'s constructor.
         using maybe_allocation =
             conditional<has_feedback, maybe_sized_allocation<void*>,
-                        maybePtr<void>>;
+                        maybe_ptr<void>>;
 
         // Produce an appropriate handle type for this allocation.
         using handle_type = conditional<
@@ -4993,7 +4993,7 @@ class allocator_interface {
                                                 // span.
                                                 maybe<span<T>>,
                                                 // Failsafe pointer w/out size.
-                                                maybePtr<T>>>,
+                                                maybe_ptr<T>>>,
                         // Not a pointer:
                         conditional<has_feedback,
                                     // Failsafe opaque handle with size.
@@ -5167,7 +5167,7 @@ class allocator_interface {
                         if (maybe_memory.has_value()) {
                             cat::assert(cat::is_aligned(maybe_memory.value(),
                                                         allocation_alignment),
-                                        "Allocation is misaligned!");
+                                        "allocation_type is misaligned!");
                         }
                     }
                 }
@@ -5313,9 +5313,9 @@ class allocator_interface {
     template <bool is_fail_safe, bool has_feedback, typename... Args>
     constexpr auto meta_realloc(auto function, auto& allocator, auto& handle,
                                 Args&&... arguments) {
-        using Allocation = decltype((&allocator->*function)(
+        using allocation_type = decltype((&allocator->*function)(
             forward<Args>(arguments)..., move(this->get(handle))));
-        Allocation allocation;
+        allocation_type allocation;
         allocation = (&allocator->*function)(
             // Possible alignment and/or count arguments.
             forward<Args>(arguments)...,
@@ -5377,9 +5377,9 @@ class allocator_interface {
     constexpr auto meta_realloc_multi(auto function, auto& allocator,
                                       mem auto& handle, ssize new_count,
                                       Args&&... maybe_alignment) {
-        using Allocation = decltype((&allocator->*function)(
+        using allocation_type = decltype((&allocator->*function)(
             forward<Args>(maybe_alignment)..., new_count));
-        Allocation allocation;
+        allocation_type allocation;
         allocation = (&allocator->*function)(forward<Args>(maybe_alignment)...,
                                              new_count);
 
@@ -5413,10 +5413,10 @@ class allocator_interface {
                                       auto* p_handle, ssize old_count,
                                       ssize new_count,
                                       Args&&... maybe_alignment) {
-        using Allocation = decltype((&allocator->*function)(
+        using allocation_type = decltype((&allocator->*function)(
             forward<Args>(maybe_alignment)..., new_count));
 
-        Allocation allocation = (&allocator->*function)(
+        allocation_type allocation = (&allocator->*function)(
             forward<Args>(maybe_alignment)..., new_count);
 
         if constexpr (is_fail_safe) {

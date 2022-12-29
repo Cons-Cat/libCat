@@ -216,7 +216,7 @@ class list : public collection_interface<list<T>, T> {
         requires(is_implicitly_convertible<U, T>)
     auto insert(is_stable_allocator auto& allocator, iterator_type where,
                 U const& value) -> maybe<iterator_type> {
-        // `cat::maybePtr` at here produces an internal compiler error in
+        // `cat::maybe_ptr` at here produces an internal compiler error in
         // GCC 12.
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
         if (!memory.has_value()) {

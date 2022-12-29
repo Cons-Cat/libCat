@@ -32,15 +32,15 @@ constexpr auto unconst(T const* p_value) -> T* {
 }
 
 // Infer the length of a parameter pack from a function argument.
-template <typename... Ts>
-constexpr auto ssizeof_pack(Ts...) -> ssize {
-    return make_signed(sizeof...(Ts));
+template <typename... types>
+constexpr auto ssizeof_pack(types...) -> ssize {
+    return make_signed(sizeof...(types));
 }
 
 // Specify the length of a parameter pack in a template argument.
-template <typename... Ts>
+template <typename... types>
 constexpr auto ssizeof_pack() -> ssize {
-    return make_signed(sizeof...(Ts));
+    return make_signed(sizeof...(types));
 }
 
 constexpr auto salignof(auto const& anything) -> ssize {
@@ -138,9 +138,9 @@ constexpr auto index_sequence = integer_sequence<ssize, count>;
 template <ssize count>
 using make_index_sequence = make_integer_sequence<ssize, count>;
 
-template <typename... Ts>
+template <typename... types>
 // `ssizeof_pack()` here produces an internal compiler error in GCC 12.
-using index_sequence_for = make_index_sequence<ssize{sizeof...(Ts)}>;
+using index_sequence_for = make_index_sequence<ssize{sizeof...(types)}>;
 
 template <typename T>
     requires(is_enum<T>)

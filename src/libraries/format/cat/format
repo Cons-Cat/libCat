@@ -158,7 +158,7 @@ template <is_integral T>
 }
 
 // Formatting
-enum class FormatErrors {
+enum class format_errors {
     out_of_memory,
     cannot_format_argument,
     argument_type_mismatch,
@@ -170,7 +170,7 @@ enum class FormatErrors {
 
 // TODO: Union this with allocator `scaredy`.
 template <typename T = void>
-using scaredy_format = scaredy<T, FormatErrors>;
+using scaredy_format = scaredy<T, format_errors>;
 
 namespace detail {
     // This represents precisely 16 alternatives to fill 4 bits in
@@ -321,7 +321,7 @@ namespace detail {
     };
 
     // This only exists to be passed into the constructor of `format_args`.
-    template <typename... Ts>
+    template <typename... types>
     class format_args_compact_storage {
       private:
         // For every type passed into the constructor, pack it into the arrays
@@ -342,7 +342,7 @@ namespace detail {
 
             // Set the byte offset for the next argument if there is another.
             if (argument_index + 1 <
-                ssizeof_pack<Ts...>()) {  // TODO: Explore whether `[[likely]]`
+                ssizeof_pack<types...>()) {  // TODO: Explore whether `[[likely]]`
                                           // improves performance here.
                 this->arguments_indices[argument_index.raw + 1].byte_index =
                     storage_index.raw + sizeof(T);
@@ -352,17 +352,17 @@ namespace detail {
         }
 
       public:
-        format_args_compact_storage(Ts&&... types) {
+        format_args_compact_storage(types&&... arguments) {
             this->packed_args_storage[0] = {};
             this->arguments_indices[0] = {};
             this->arguments_indices[0].byte_index = 0;
             ssize argument_index = 0;
-            // TODO: Erase the type of `Ts`.
+            // TODO: Erase the type of `types`.
             // `store_argument()` increments `argument_index`.
-            (this->store_argument(argument_index, forward<Ts>(types)), ...);
+            (this->store_argument(argument_index, forward<types>(arguments)), ...);
         }
 
-        static constexpr ssize::raw_type argument_count = sizeof...(Ts);
+        static constexpr ssize::raw_type argument_count = sizeof...(types);
         format_argument_compact_index arguments_indices[argument_count];
 
         // TODO: This array length might need to be larger if the argument's
@@ -373,9 +373,9 @@ namespace detail {
     // Formatting arguments are packed into a small type-erased array to
     // conserve storage.
     struct format_args {
-        template <typename... Ts>
+        template <typename... types>
         explicit constexpr format_args(
-            format_args_compact_storage<Ts...> const& storage)
+            format_args_compact_storage<types...> const& storage)
             : p_args_indices(&(storage.arguments_indices[0])),
               argument_count(storage.argument_count) {
         }
@@ -465,7 +465,7 @@ namespace detail {
     template <is_stable_allocator allocator_type, typename outputter_type>
     struct format_buffer_iterator<allocator_type, outputter_type>
         : format_buffer_base<allocator_type> {
-        using Container = typename outputter_type::Container;
+        using container_type = typename outputter_type::container_type;
         allocator_type& allocator;
         outputter_type output_iterator;
 
@@ -641,7 +641,7 @@ namespace detail {
                     maybe result = handler.output_iterator.insert(
                         handler.allocator, character);
                     if (!result.has_value()) {
-                        return FormatErrors::out_of_memory;
+                        return format_errors::out_of_memory;
                     }
                 }
                 break;
@@ -654,7 +654,7 @@ namespace detail {
                 maybe result = handler.output_iterator.insert(handler.allocator,
                                                               remainder[i]);
                 if (!result.has_value()) {
-                    return FormatErrors::out_of_memory;
+                    return format_errors::out_of_memory;
                 }
             }
 
@@ -667,7 +667,7 @@ namespace detail {
                     to_chars(handler.allocator,
                              arguments.template get<Argtype>(current_argument));
                 if (!result.has_value()) {
-                    return FormatErrors::out_of_memory;
+                    return format_errors::out_of_memory;
                 }
                 string const int_string = result.value();
 
@@ -708,7 +708,7 @@ namespace detail {
             };
 
             if (!parse_result.has_value()) {
-                return FormatErrors::out_of_memory;
+                return format_errors::out_of_memory;
             }
 
             ++current_argument;
@@ -745,7 +745,7 @@ namespace detail {
             scaredy_format<void> result =
                 parse_format_string(format, move(handler));
             if (!result.has_value()) {
-                return result.error<FormatErrors>();
+                return result.error<format_errors>();
             }
             return buffer.output_iterator;
         }
@@ -760,7 +760,7 @@ namespace detail {
 
         maybe maybe_memory = allocator.template alloc_multi<char>(initial_size);
         if (!maybe_memory.has_value()) {
-            return FormatErrors::out_of_memory;
+            return format_errors::out_of_memory;
         }
 
         char* p_memory = maybe_memory.value().data();
@@ -777,7 +777,7 @@ namespace detail {
             allocator, back_insert_iterator<format_string_vector>{into_buffer},
             format, arguments);
         if (!result.has_value()) {
-            return result.template error<FormatErrors>();
+            return result.template error<format_errors>();
         }
 
         ssize const length = string_length(into_buffer.data());
