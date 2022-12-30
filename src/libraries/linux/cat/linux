@@ -25,7 +25,8 @@ struct signals_mask_set;
 
 namespace nix {
 // TODO: Consider using the names from `std::errc`.
-enum class linux_error {
+enum class linux_error
+{
     // Operation is not permitted.
     perm = -1,
     // No such file or directory.
@@ -300,22 +301,25 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-    requires(sizeof(detail::map_syscall_type<T>) <= sizeof(ssize))
-using scaredy_nix = cat::scaredy<
-    cat::compact_scaredy<detail::map_syscall_type<T>,
-                         // This is a `T` when it is a positive integer.
-                         detail::is_positive<detail::map_syscall_type<T>>>,
-    // When the value is negative, this is some `linux_error`.
-    linux_error>;
+requires(sizeof(detail::map_syscall_type<T>) <=
+         sizeof(ssize)) using scaredy_nix =
+    cat::scaredy<
+        cat::compact_scaredy<detail::map_syscall_type<T>,
+                             // This is a `T` when it is a positive integer.
+                             detail::is_positive<detail::map_syscall_type<T>>>,
+        // When the value is negative, this is some `linux_error`.
+        linux_error>;
 
-enum class memory_protection_flags : unsigned int {
+enum class memory_protection_flags : unsigned int
+{
     none = 0b000,     // Data cannot be accessed at all.
     read = 0b001,     // Data is readable.
     write = 0b010,    // Data is writable.
     execute = 0b100,  // Data can be executed.
 };
 
-enum class memory_flags : unsigned int {
+enum class memory_flags : unsigned int
+{
     shared = 0b1,          // Writes change the underlying object.
     privately = 0b10,      // Writes only change the calling process.
     fixed = 0b10000,       // Map to precisely this address, rather than virtual
@@ -367,7 +371,8 @@ struct group_id {
     int4 value;
 };
 
-enum class wait_id {
+enum class wait_id
+{
     all = 0,
     process_id = 1,
     process_group = 2,
@@ -376,7 +381,8 @@ enum class wait_id {
 
 // TODO: Write comments for these, and simplifiy names.
 // https://linux.die.net/man/2/clone
-enum class CloneFlags : unsigned int {
+enum class CloneFlags : unsigned int
+{
     csignal = 0x000000ff,
     newtime = 0x00000080,
     virtual_memory = 0x00000100,
@@ -404,7 +410,8 @@ enum class CloneFlags : unsigned int {
     io = 0x80000000,
 };
 
-enum class wait_options_flags : long int {
+enum class wait_options_flags : long int
+{
     no_hang = 1,
     untraced = 2,
     stopped = 2,
@@ -416,14 +423,16 @@ enum class wait_options_flags : long int {
     clone = 0x80000000,
 };
 
-enum class open_mode {
+enum class open_mode
+{
     read_only = 00,
     write_only = 01,
     // This flag cannot be use on a FIFO.
     read_write = 02
 };
 
-enum class open_flags {
+enum class open_flags
+{
     // This will create a new file. If that file already exists, it is no-op
     // unless combined with `open_flags::exclusive`.
     create = 0100,
@@ -457,7 +466,8 @@ enum class open_flags {
 };
 
 // TODO: Comment wtf these mean.
-enum class io_requests : unsigned long long {
+enum class io_requests : unsigned long long
+{
     none = 0,
     write = 1,
     read = 2,
@@ -591,7 +601,8 @@ consteval auto io_request_readwrite(io_requests a, io_requests b, io_requests c)
 }
 
 // TODO: Comment wtf these mean.
-enum class tty_configuration_flags : unsigned int {
+enum class tty_configuration_flags : unsigned int
+{
     vintr = 0,
     vquit = 1,
     verase = 2,
@@ -722,16 +733,22 @@ enum class tty_configuration_flags : unsigned int {
 // Enable using these `enum class`es as bit-flags.
 template <>
 struct cat::enum_flag_trait<nix::memory_protection_flags> : cat::true_trait {};
+
 template <>
 struct cat::enum_flag_trait<nix::memory_flags> : cat::true_trait {};
+
 template <>
 struct cat::enum_flag_trait<nix::open_flags> : cat::true_trait {};
+
 template <>
 struct cat::enum_flag_trait<nix::CloneFlags> : cat::true_trait {};
+
 template <>
 struct cat::enum_flag_trait<nix::wait_options_flags> : cat::true_trait {};
+
 template <>
 struct cat::enum_flag_trait<nix::io_requests> : cat::true_trait {};
+
 template <>
 struct cat::enum_flag_trait<nix::tty_configuration_flags> : cat::true_trait {};
 
@@ -770,7 +787,7 @@ struct file_handle {
     char* p_write_base;
 
     usize (*read)(file_handle*, char*, usize);
-    usize (*write)(file_handle*, const char*, usize);
+    usize (*write)(file_handle*, char const*, usize);
     usize (*seek)(file_handle*, usize, int4);
     char* buf;
 
@@ -820,7 +837,8 @@ auto sys_munmap(void const* p_memory, ssize length) -> scaredy_nix<void>;
 
 // TODO: `sys_brk()`
 
-enum class Signal {
+enum class Signal
+{
     hang_up = 1,                    // sighng
     interrupt = 2,                  // sigint
     sigint = interrupt,             // sigquit
@@ -858,7 +876,8 @@ enum class Signal {
     unused = bad_syscall
 };
 
-enum class signal_action {
+enum class signal_action
+{
     // The set of blocked signals is the union of the `p_other_set` and
     // `p_current_set`.
     block = 0,
@@ -1002,8 +1021,7 @@ auto syscall6(ssize, cat::no_type, cat::no_type, cat::no_type, cat::no_type,
 
 template <typename T, typename... Args>
 auto syscall(ssize call, Args... parameters) -> nix::scaredy_nix<T>
-    requires(sizeof...(Args) < 7)
-;
+requires(sizeof...(Args) < 7);
 
 // Create and return a `cat::SocketLocal` (also known as Unix socket).
 auto create_socket_local(int8 type, int8 protocol)
@@ -1038,7 +1056,8 @@ auto is_a_tty(tty_descriptor) -> scaredy_nix<void>;
 auto tty_get_attributes(file_descriptor tty)
     -> cat::scaredy<TtyIoSerial, linux_error>;
 
-enum class TtySetMode {
+enum class TtySetMode
+{
     // Update the tty immediately.
     now = 0x5402,
     // Update the tty once all currently written data has been transmitted.
@@ -1059,6 +1078,7 @@ struct file_status {
     auto is_regular() const -> bool {
         return (this->protections_mode & 0170000u) == 0100000u;
     }
+
     static_assert(!cat::enum_flag_trait<uint4>::value);
 
     auto is_directory() const -> bool {

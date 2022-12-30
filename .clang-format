@@ -4,20 +4,22 @@ Language: Cpp
 IndentWidth: 4
 
 # This is a clang-format 13 feature:
-# BeforeLambdaBodyIndentation: Signature
+LambdaBodyIndentation: Signature
+ReferenceAlignment: Left
 
-# These are clang-format 14 feature:
+# # These are clang-format 14 feature:
 # QualifierAlignment: Custom
 # QualifierOrder: ['static', 'inline', 'constexpr', 'type', 'const', 'volatile' ]
 # SeparateDefinitionBlocks: Always
 # AlignArrayOfStructures: Right
+# SeparateDefinitionBlocks: True
 
-# This is a clang-format 15 feature:
+# # This is a clang-format 15 feature:
 # RequiresClausePosition: OwnLine
 # InsertBraces: true
 
-# In clang-format 15, this is `IndentRequiresClause`.
-IndentRequires: true
+# # In clang-format 15, this is `IndentRequiresClause`.
+# IndentRequiresClause: true
 
 AlignAfterOpenBracket: Align
 AlignConsecutiveAssignments: None
@@ -41,26 +43,7 @@ AlwaysBreakBeforeMultilineStrings: true
 AlwaysBreakTemplateDeclarations: Yes
 BinPackArguments: true
 BinPackParameters: true
-BraceWrapping:
- AfterCaseLabel: false
- AfterClass: false
- AfterControlStatement: Never
- AfterEnum: false
- AfterFunction: false
- AfterNamespace: false
- AfterObjCDeclaration: false
- AfterStruct: false
- AfterUnion: false
- AfterExternBlock: false
- BeforeCatch: false
- BeforeElse: false
- BeforeLambdaBody: false
- BeforeWhile: false
- IndentBraces: false
- SplitEmptyFunction: true
- SplitEmptyRecord: false
- SplitEmptyNamespace: false
-BreakBeforeBinaryOperators: None
+BreakBeforeBinaryOperators: None # This is broken until clang-format 14.
 BreakBeforeConceptDeclarations: true
 BreakBeforeBraces: Attach
 BreakBeforeInheritanceComma: false

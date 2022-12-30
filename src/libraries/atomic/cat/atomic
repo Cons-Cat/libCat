@@ -7,7 +7,8 @@
 
 namespace cat {
 
-enum memory_order : int {
+enum memory_order : int
+{
     relaxed,
     consume,
     acquire,
@@ -17,7 +18,8 @@ enum memory_order : int {
 };
 
 namespace detail {
-    enum memory_order_modifier {
+    enum memory_order_modifier
+    {
         mask = 0x0ffff,
         modifier_mask = 0xffff0000,
         hle_acquire = 0x10000,
@@ -81,6 +83,7 @@ struct atomic {
     atomic(atomic const&) = delete;
     auto operator=(atomic const&) -> atomic& = delete;
     auto operator=(atomic const&) volatile -> atomic& = delete;
+
     constexpr atomic(T initial_value) : value(initial_value) {
     }
 
@@ -187,14 +190,12 @@ struct atomic {
     auto is_lock_free() const -> bool {
         // Use a fake, minimally aligned pointer.
         return __atomic_is_lock_free(sizeof(this->value),
-                                     // NOLINTNEXTLINE
                                      reinterpret_cast<void*>(-alignment));
     }
 
     auto is_lock_free() const volatile -> bool {
         // Use a fake, minimally aligned pointer.
         return __atomic_is_lock_free(sizeof(this->value),
-                                     // NOLINTNEXTLINE
                                      reinterpret_cast<void*>(-alignment));
     }
 

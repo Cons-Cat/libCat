@@ -75,18 +75,17 @@ class list : public collection_interface<list<T>, T> {
     constexpr list(list<T>&& list) = default;
 
   private:
-    [[deprecated(
-        "The copy-constructor is hidden. Use `.clone()` "
-        "instead!")]] constexpr list(list<T> const&) = default;
+    [[deprecated(R"(The copy-constructor is hidden. Use `.clone()` instead!)")]] constexpr list(
+        list<T> const&) = default;
 
   public:
     // TODO: value_type_list constructors/factories were removed elsewhere.
     // Should this be kept?
     template <typename U, U... initializers>
-        requires(is_implicitly_convertible<U, T>)
-    [[nodiscard]] static auto from(is_stable_allocator auto& allocator,
-                                   value_type_list<U, initializers...>)
-        -> maybe<list<T>> {
+    requires(is_implicitly_convertible<U, T>)
+        [[nodiscard]] static auto from(is_stable_allocator auto& allocator,
+                                       value_type_list<U, initializers...>)
+            -> maybe<list<T>> {
         list<T> new_list;
         // TODO: Check if a recursive function is more efficient here.
         array values = {static_cast<T>(initializers)...};
@@ -102,9 +101,10 @@ class list : public collection_interface<list<T>, T> {
     }
 
     template <typename... Args>
-        requires(is_implicitly_convertible<Args, T>&&...)
-    [[nodiscard]] static auto from(is_stable_allocator auto& allocator,
-                                   Args&&... initializers) -> maybe<list<T>> {
+    requires(is_implicitly_convertible<Args, T>&&...)
+        [[nodiscard]] static auto from(is_stable_allocator auto& allocator,
+                                       Args&&... initializers)
+            -> maybe<list<T>> {
         list<T> new_list;
         // TODO: Check if a recursive function is more efficient here.
         array values = {forward<Args>(initializers)...};
@@ -213,9 +213,9 @@ class list : public collection_interface<list<T>, T> {
     // Allocate a node and insert it into this list before the position of
     // `where`.
     template <typename U>
-        requires(is_implicitly_convertible<U, T>)
-    auto insert(is_stable_allocator auto& allocator, iterator_type where,
-                U const& value) -> maybe<iterator_type> {
+    requires(is_implicitly_convertible<U, T>) auto insert(
+        is_stable_allocator auto& allocator, iterator_type where,
+        U const& value) -> maybe<iterator_type> {
         // `cat::maybe_ptr` at here produces an internal compiler error in
         // GCC 12.
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
@@ -291,8 +291,8 @@ class list : public collection_interface<list<T>, T> {
 
     // Allocate a node and insert it at the beginning of this list.
     template <typename U>
-        requires(is_implicitly_convertible<U, T>)
-    auto push_front(is_stable_allocator auto& allocator, U const& value)
+    requires(is_implicitly_convertible<U, T>) auto push_front(
+        is_stable_allocator auto& allocator, U const& value)
         -> maybe<iterator_type> {
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
         if (!memory.has_value()) {
@@ -341,8 +341,8 @@ class list : public collection_interface<list<T>, T> {
 
     // Allocate a node and insert it at the end of this list.
     template <typename U>
-        requires(is_implicitly_convertible<U, T>)
-    auto push_back(is_stable_allocator auto& allocator, U const& value)
+    requires(is_implicitly_convertible<U, T>) auto push_back(
+        is_stable_allocator auto& allocator, U const& value)
         -> maybe<iterator_type> {
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
         if (!memory.has_value()) {
@@ -452,19 +452,18 @@ class forward_list : public collection_interface<forward_list<T>, T> {
 
     constexpr forward_list() : p_head(nullptr), p_tail(nullptr), length(0) {
     }
+
     constexpr forward_list(forward_list<T>&& list) = default;
 
   private:
-    [[deprecated(
-        "The copy-constructor is hidden. Use `.clone()` "
-        "instead!")]] constexpr forward_list(forward_list<T> const&) = default;
+    [[deprecated(R"(The copy-constructor is hidden. Use `.clone()` instead!)")]] constexpr forward_list(
+        forward_list<T> const&) = default;
 
   public:
     template <typename U, U... values>
-        requires(is_implicitly_convertible<U, T>)
-    [[nodiscard]] static auto from(is_stable_allocator auto& allocator,
-                                   value_type_list<U, values...> initializers)
-        -> maybe<forward_list<T>> {
+    requires(is_implicitly_convertible<U, T>) [[nodiscard]] static auto from(
+        is_stable_allocator auto& allocator,
+        value_type_list<U, values...> initializers) -> maybe<forward_list<T>> {
         forward_list<T> new_list;
         // TODO: Check if a recursive function is more efficient here.
         array array = initializers;
@@ -480,10 +479,10 @@ class forward_list : public collection_interface<forward_list<T>, T> {
     }
 
     template <typename... Args>
-        requires(is_implicitly_convertible<Args, T>&&...)
-    [[nodiscard]] static auto from(is_stable_allocator auto& allocator,
-                                   Args&&... initializers)
-        -> maybe<forward_list<T>> {
+    requires(is_implicitly_convertible<Args, T>&&...)
+        [[nodiscard]] static auto from(is_stable_allocator auto& allocator,
+                                       Args&&... initializers)
+            -> maybe<forward_list<T>> {
         forward_list<T> new_list;
         // TODO: Check if a recursive function is more efficient here.
         array array = {forward<Args>(initializers)...};
@@ -566,8 +565,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
     template <typename U>
     auto insert_after(is_stable_allocator auto& allocator, iterator_type where,
                       U const& value) -> maybe<iterator_type>
-        requires(is_implicitly_convertible<U, T>)
-    {
+    requires(is_implicitly_convertible<U, T>) {
         cat::maybe memory =
             allocator.template alloc<detail::forward_list_node<T>>();
         if (!memory.has_value()) {
@@ -620,8 +618,8 @@ class forward_list : public collection_interface<forward_list<T>, T> {
 
     // Allocate a node and insert it at the beginning of this list.
     template <typename U>
-        requires(is_implicitly_convertible<U, T>)
-    auto push_front(is_stable_allocator auto& allocator, U const& value)
+    requires(is_implicitly_convertible<U, T>) auto push_front(
+        is_stable_allocator auto& allocator, U const& value)
         -> maybe<iterator_type> {
         cat::maybe memory =
             allocator.template alloc<detail::forward_list_node<T>>();

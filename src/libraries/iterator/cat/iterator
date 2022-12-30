@@ -43,13 +43,12 @@ namespace detail {
 
     template <typename T>
     struct infer_value_type<T> {
-        static const T& it;
+        static T const& it;
         using type = remove_cvref<decltype(*it)>;
     };
 
     template <typename T>
-        requires(requires { typename T::value_type; })
-    struct infer_value_type<T> {
+    requires(requires { typename T::value_type; }) struct infer_value_type<T> {
         using type = typename T::value_type;
     };
 
@@ -275,8 +274,7 @@ class iterator_interface {
         return *(this->self() + offset);
     }
 
-  private:
-    constexpr auto self() -> derived_type& {
+  private : constexpr auto self() -> derived_type& {
         return static_cast<derived_type&>(*this);
     }
 
@@ -286,15 +284,19 @@ class iterator_interface {
 };
 
 struct random_access_iterator_tag {};
+
 struct bidirectional_iterator_tag {};
+
 struct forward_iterator_tag {};
+
 struct input_iterator_tag {};
+
 struct output_iterator_tag {};
+
 struct contiguous_iterator_tag {};
 
 template <typename T>
-    requires(is_base_of<iterator_interface<T>, T>)
-struct iterator_type_traits {
+requires(is_base_of<iterator_interface<T>, T>) struct iterator_type_traits {
     static T const& iterator;
     using value = typename infer_value_type<T>::type;
     using reference = decltype(*iterator);

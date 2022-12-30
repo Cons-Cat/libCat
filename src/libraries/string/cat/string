@@ -56,8 +56,7 @@ class string : public span<char const> {
 
     // This weird template deduces lower than the string literal constructor.
     template <typename T>
-        requires(is_pointer<T>)
-    constexpr string(T p_string)
+    requires(is_pointer<T>) constexpr string(T p_string)
         : span<char const>(p_string, string_length(p_string)) {
     }
 
@@ -76,12 +75,12 @@ class string : public span<char const> {
         this->length = other_length;
     }
 
-    constexpr string(span<char> const& span)
-        : span<char const>(span.data(), span.size()) {
+    constexpr string(span<char> const& in_span)
+        : span<char const>(in_span.data(), in_span.size()) {
     }
 
-    constexpr string(span<char>&& span)
-        : span<char const>(span.data(), span.size()) {
+    constexpr string(span<char>&& in_span)
+        : span<char const>(in_span.data(), in_span.size()) {
     }
 
     // A `string` consuming `nullptr` would cause undefined behavior.
@@ -186,8 +185,8 @@ class fixed_string : public collection_interface<fixed_string<length>, char> {
     // Create a `fixed_string` from a smaller string, and null out the unfilled
     // bytes.
     template <ssize::raw_type in_length>
-        requires(in_length < length)
-    static consteval auto padded(char const (&in)[in_length])
+    requires(in_length <
+             length) static consteval auto padded(char const (&in)[in_length])
         -> fixed_string<length> {
         fixed_string<length> string;
         for (ssize::raw_type i = 0; i < in_length; ++i) {
@@ -257,13 +256,11 @@ class fixed_string : public collection_interface<fixed_string<length>, char> {
 
   private:
     constexpr void copy_string_data(char const* p_source) {
-        if
-            consteval {
-                for (ssize::raw_type i = 0; i < length; ++i) {
-                    this->storage[i] = p_source[i];
-                }
+        if (__builtin_is_constant_evaluated()) {
+            for (ssize::raw_type i = 0; i < length; ++i) {
+                this->storage[i] = p_source[i];
             }
-        else {
+        } else {
             copy_memory(p_source, this->data(), length);
         }
     }

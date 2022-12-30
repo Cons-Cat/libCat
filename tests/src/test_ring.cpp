@@ -3,7 +3,6 @@
 #include <cat/ring>
 
 #include "../unit_tests.hpp"
-#include "cat/debug"
 
 TEST(test_ring) {
     // Initialize an allocator.
@@ -11,10 +10,9 @@ TEST(test_ring) {
     pager.reset();
     auto page = pager.opq_alloc_multi<cat::byte>(4_ki - 32).or_exit();
     defer(pager.free(page);)
-    auto allocator =
-        cat::linear_allocator::backed_handle(pager, page);
+    auto allocator = cat::linear_allocator::backed_handle(pager, page);
 
-    cat::Ring<int4> ring_int4;
+    cat::ring<int4> ring_int4;
     cat::verify(ring_int4.size() == 0);
     cat::verify(ring_int4.capacity() == 0);
 

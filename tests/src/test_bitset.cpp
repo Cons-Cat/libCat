@@ -126,7 +126,7 @@ TEST(test_bitset) {
 
     // `const` subscript returns bool.
     static_assert(cat::is_same<decltype(bits127_2[0]), bool>);
-    // Non-`const` subscript returns a `BitReference`.
+    // Non-`const` subscript returns a `bit_reference`.
     static_assert(!cat::is_same<decltype(bits127[0]), bool>);
 
     // Test this on the second element of uint8 array.
@@ -150,11 +150,11 @@ TEST(test_bitset) {
     // }
 
     // // Test mutable iterator.
-    // for (cat::BitReference bit : bits127) {
+    // for (cat::bit_reference bit : bits127) {
     //     bit = false;
     // }
 
-    // for (cat::BitReference bit : bits127) {
+    // for (cat::bit_reference bit : bits127) {
     //     cat::verify(bit == false);
     // }
 }

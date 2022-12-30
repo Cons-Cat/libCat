@@ -55,7 +55,7 @@ namespace detail {
         // TODO: type pun this with `start_lifetime_as()` instead.
         T* p_current_byte = static_cast<T*>(p_source);
 
-        if consteval {
+        if (__builtin_is_constant_evaluated()) {
             // Set this memory through scalar code, because `__builtin_memset()`
             // is not `constexpr` in GCC 12.
             for (ssize i = 0; i < size; ++i) {
@@ -73,7 +73,8 @@ namespace detail {
             // Non-type template parameters are not allowed in a lambda's
             // template parameter list, so the lanes are passed through a
             // `constant`.
-            auto vectorized_fill = [&]<typename lanes_constant>(lanes_constant) {
+            auto vectorized_fill = [&]<typename lanes_constant>(
+                                       lanes_constant) {
                 // TODO: Consider optimizing with multiple vector loads to
                 // leverage instruction-level parallelism.
                 constexpr ssize lanes = lanes_constant::value;
@@ -106,14 +107,15 @@ namespace detail {
 
 // Set all bytes at this address to `value`.
 template <typename T = unsigned char>
-    requires(sizeof(T) <= 8)
-constexpr void set_memory(void* p_source, T value, ssize size) {
+requires(sizeof(T) <= 8) constexpr void set_memory(void* p_source, T value,
+                                                   ssize size) {
     // Make a type that `value` can bitcast to, and can be used in a `simd`.
     // TODO: A size-argument numeral type could simplify this.
-    using raw_type = conditional<
-        sizeof(T) == 1, uint1::raw_type,
-        conditional<sizeof(T) == 2, uint2::raw_type,
-                    conditional<sizeof(T) == 4, uint4::raw_type, uint8::raw_type>>>;
+    using raw_type =
+        conditional<sizeof(T) == 1, uint1::raw_type,
+                    conditional<sizeof(T) == 2, uint2::raw_type,
+                                conditional<sizeof(T) == 4, uint4::raw_type,
+                                            uint8::raw_type>>>;
 
     detail::set_memory_detail(p_source, bit_cast<raw_type>(value), size);
 }
@@ -122,9 +124,9 @@ constexpr void set_memory(void* p_source, T value, ssize size) {
 // Set all bytes at this address to `value`. This function cannot be
 // constant-folded out.
 template <typename T = unsigned char>
-    requires(sizeof(T) <= 8)
-[[gnu::noinline]] constexpr void set_memory_explicit(void* p_source, T value,
-                                                     ssize size) {
+requires(sizeof(T) <= 8)
+    [[gnu::noinline]] constexpr void set_memory_explicit(void* p_source,
+                                                         T value, ssize size) {
     set_memory(p_source, value, size);
 }
 
@@ -142,18 +144,18 @@ constexpr void zero_memory(void* p_source, ssize size) {
 }
 
 template <typename T = unsigned char>
-    requires(sizeof(T) <= 8)
-constexpr void set_memory_scalar(void* p_source, T value, ssize size) {
+requires(sizeof(T) <= 8) constexpr void set_memory_scalar(void* p_source,
+                                                          T value, ssize size) {
     for (ssize i = 0; i < size; ++i) {
         *(static_cast<T*>(p_source) + i) = value;
     }
 }
 
 template <typename T = unsigned char>
-    requires(sizeof(T) <= 8)
-[[gnu::noinline]] constexpr void set_memory_scalar_explicit(void* p_source,
-                                                            T value,
-                                                            ssize size) {
+requires(sizeof(T) <= 8)
+    [[gnu::noinline]] constexpr void set_memory_scalar_explicit(void* p_source,
+                                                                T value,
+                                                                ssize size) {
     set_memory_scalar(p_source, value, size);
 }
 
@@ -168,31 +170,30 @@ constexpr void zero_memory_scalar(void* p_source, ssize bytes) {
 
 // Set all bytes in a trivial object to `value`.
 template <typename T, typename U = unsigned char>
-    requires(is_trivial<T> && sizeof(U) == 1)
-constexpr void set_object(T& object, U value) {
+requires(is_trivial<T> && sizeof(U) == 1) constexpr void set_object(T& object,
+                                                                    U value) {
     set_memory(addressof(object), value, ssizeof<T>(object));
 }
 
 // Zero out all bytes in a trivial object. This function cannot be
 // constant-folded out.
 template <typename T, typename U = unsigned char>
-    requires(is_trivial<T> && sizeof(U) == 1)
-constexpr void set_object_explicit(T& object, U value) {
+requires(is_trivial<T> &&
+         sizeof(U) == 1) constexpr void set_object_explicit(T& object,
+                                                            U value) {
     set_memory_explicit(addressof(object), value, ssizeof<T>(object));
 }
 
 // Zero out all bytes in a trivial object.
 template <typename T>
-    requires(is_trivial<T>)
-constexpr void zero_object(T& object) {
+requires(is_trivial<T>) constexpr void zero_object(T& object) {
     zero_memory(addressof(object), ssizeof<T>(object));
 }
 
 // Zero out all bytes in a trivial object. This function cannot be
 // constant-folded out.
 template <typename T>
-    requires(is_trivial<T>)
-constexpr void zero_object_explicit(T& object) {
+requires(is_trivial<T>) constexpr void zero_object_explicit(T& object) {
     zero_memory_explicit(addressof(object), ssizeof<T>(object));
 }
 

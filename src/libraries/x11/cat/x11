@@ -17,7 +17,8 @@ namespace x11 {
 constexpr auto socket_path =
     cat::fixed_string<108>::padded("/tmp/.X11-unix/X0");
 
-enum class operation_code : unsigned char {
+enum class operation_code : unsigned char
+{
     error = 0,
     create_window = 1,
     change_window_attributes = 2,
@@ -141,7 +142,8 @@ enum class operation_code : unsigned char {
     no_operation = 120
 };
 
-enum class event_code : unsigned char {
+enum class event_code : unsigned char
+{
     key_press = 2,
     key_release = 3,
     button_press = 4,
@@ -177,8 +179,8 @@ enum class event_code : unsigned char {
     mapping_notify = 34,
 };
 
-enum class key_code : unsigned char {
-};
+enum class key_code : unsigned char
+{};
 
 struct [[gnu::packed]] event_mask {
     bool key_press = false;
@@ -211,7 +213,9 @@ struct [[gnu::packed]] event_mask {
 
 struct error_code {
     uint1 response_operation = static_cast<unsigned char>(0);
-    enum : unsigned char {
+
+    enum : unsigned char
+    {
         request = 1,
         value = 2,
         window = 3,
@@ -230,6 +234,7 @@ struct error_code {
         length = 16,
         implementation = 17,
     } code;
+
     uint2 sequence;
     uint4 resource_resource_id;
     uint2 minor_operation;
@@ -242,6 +247,7 @@ struct error_code {
 
 struct window_resource {
     window_resource() = default;
+
     window_resource(uint4 input) {
         this->value = input;
     }
@@ -279,7 +285,8 @@ struct client_request_header {
 
 // Every X server reply begins with an `x11::server_reply_header`.
 struct server_reply_header {
-    enum class success_code_type : unsigned char {
+    enum class success_code_type : unsigned char
+    {
         failure = 0,
         success = 1
     } success_code;
@@ -501,7 +508,8 @@ struct create_window_request_info {
     int2 x, y;
     uint2 width, height, border_thickness;
 
-    enum class window_class_type : unsigned char {
+    enum class window_class_type : unsigned char
+    {
         input_output = 0,
         input_only = 1,
         copy_from_parent = 2

@@ -16,6 +16,7 @@ namespace detail {
         template <typename T>
         constexpr void operator=(T const&) {
         }
+
         // `unused_type` cannot be assigned to any variable.
         operator auto() = delete;
         // `unused_type` cannot be assigned to itself, i.e. `_ = _`.
@@ -31,6 +32,7 @@ struct in_place_type {};
 // anything or from anything. It has no storage or behavior.
 struct monostate_type {
     constexpr monostate_type() = default;
+
     // constexpr monostate_type(auto){}
     constexpr operator auto() {
         // Converting `monostate_type` into another type is no-op.
@@ -40,10 +42,13 @@ struct monostate_type {
 template <typename T, T state>
 struct monotype_storage {
     constexpr monotype_storage() = default;
+
     constexpr monotype_storage(monostate_type&) : storage(state) {
     }
+
     constexpr monotype_storage(monostate_type const&) : storage(state) {
     }
+
     constexpr monotype_storage(T input) : storage(input) {
     }
 
@@ -174,8 +179,10 @@ enum class align_val_t : __SIZE_TYPE__ {
 // NOLINTNEXTLINE Let this be `inline`.
 inline void operator delete[](void*) {
 }
+
 inline void operator delete[](void*, unsigned long) {
 }
+
 inline void operator delete[](void*, unsigned long, std::align_val_t) {
 }
 

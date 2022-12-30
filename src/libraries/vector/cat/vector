@@ -25,7 +25,7 @@ class vector : public collection_interface<vector<T>, T> {
 
     constexpr vector()
         : p_storage(nullptr), current_size(0), current_capacity(0) {
-        if consteval {
+        if (__builtin_is_constant_evaluated()) {
             this->p_storage = nullptr;
         }
     };
@@ -33,7 +33,7 @@ class vector : public collection_interface<vector<T>, T> {
     constexpr vector(vector<T>&& other_vector) = default;
 
     constexpr ~vector() {
-        if consteval {
+        if (__builtin_is_constant_evaluated()) {
             delete[] this->p_storage;
         }
     }
@@ -60,7 +60,7 @@ class vector : public collection_interface<vector<T>, T> {
 
         // TODO: I am fairly certain this is a bug in GCC. This works around
         // that.
-        if consteval {
+        if (__builtin_is_constant_evaluated()) {
             T* p_new = new T[minimum_capacity.raw];
             for (ssize::raw_type i = 0; i < this->current_size; ++i) {
                 construct_at(p_new + i, move(this->p_storage[i]));
@@ -134,7 +134,7 @@ class vector : public collection_interface<vector<T>, T> {
         if (minimum_capacity > this->current_capacity) {
             // TODO: I am fairly certain this is a bug in GCC. This works around
             // that.
-            if consteval {
+            if (__builtin_is_constant_evaluated()) {
                 delete[] this->p_storage;
                 this->p_storage = new T[minimum_capacity.raw];
                 this->current_capacity = minimum_capacity;
@@ -187,9 +187,10 @@ class vector : public collection_interface<vector<T>, T> {
     // TODO: `.emplace_back()`.
 
     template <typename U>
-        requires(is_implicitly_convertible<U, T>)
-    [[nodiscard]] constexpr auto push_back(is_stable_allocator auto& allocator,
-                                           U const& value) -> maybe<void> {
+    requires(is_implicitly_convertible<U, T>)
+        [[nodiscard]] constexpr auto push_back(
+            is_stable_allocator auto& allocator, U const& value)
+            -> maybe<void> {
         if (this->current_size + 1 > this->current_capacity) {
             TRY(this->increase_storage(allocator));
         }

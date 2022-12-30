@@ -24,7 +24,8 @@
 namespace cat {
 
 // These policies control the overflow semantics of `arithmetic`s.
-enum class overflow_policies {
+enum class overflow_policies
+{
     undefined,
     wrap,
     saturate,
@@ -35,7 +36,9 @@ enum class overflow_policies {
 };
 
 template <typename T>
-inline constexpr bool is_arithmetic_ptr = requires { T::Ptr; };
+inline constexpr bool is_arithmetic_ptr = requires {
+    T::Ptr;
+};
 
 template <typename T>
 constexpr auto to_raw_arithmetic(T value) {
@@ -81,42 +84,28 @@ constexpr auto make_sign_from(Sign, T value) -> copy_sign_from<Sign, T> {
 }
 
 // These macros are defined by the GCC compiler.
-using int1 = arithmetic<__INT8_TYPE__, overflow_policies::undefined>;  // NOLINT
-using uint1 =
-    arithmetic<__UINT8_TYPE__, overflow_policies::undefined>;          // NOLINT
-using int2 =
-    arithmetic<__INT16_TYPE__, overflow_policies::undefined>;          // NOLINT
-using uint2 =
-    arithmetic<__UINT16_TYPE__, overflow_policies::undefined>;         // NOLINT
-using int4 =
-    arithmetic<__INT32_TYPE__, overflow_policies::undefined>;          // NOLINT
-using uint4 =
-    arithmetic<__UINT32_TYPE__, overflow_policies::undefined>;         // NOLINT
-using int8 =
-    arithmetic<__INT64_TYPE__, overflow_policies::undefined>;          // NOLINT
-using uint8 =
-    arithmetic<__UINT64_TYPE__, overflow_policies::undefined>;         // NOLINT
-// using i128 = arithmetic<int128_t, overflow_policies::undefined>; // NOLINT
-// using u128 = arithmetic<uint128_t, overflow_policies::undefined>; // NOLINT
+using int1 = arithmetic<__INT8_TYPE__, overflow_policies::undefined>;
+using uint1 = arithmetic<__UINT8_TYPE__, overflow_policies::undefined>;
+using int2 = arithmetic<__INT16_TYPE__, overflow_policies::undefined>;
+using uint2 = arithmetic<__UINT16_TYPE__, overflow_policies::undefined>;
+using int4 = arithmetic<__INT32_TYPE__, overflow_policies::undefined>;
+using uint4 = arithmetic<__UINT32_TYPE__, overflow_policies::undefined>;
+using int8 = arithmetic<__INT64_TYPE__, overflow_policies::undefined>;
+using uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::undefined>;
+// using i128 = arithmetic<int128_t, overflow_policies::undefined>;
+// using u128 = arithmetic<uint128_t, overflow_policies::undefined>;
 
-using float4 = arithmetic<float, overflow_policies::undefined>;        // NOLINT
-using float8 = arithmetic<double, overflow_policies::undefined>;       // NOLINT
+using float4 = arithmetic<float, overflow_policies::undefined>;
+using float8 = arithmetic<double, overflow_policies::undefined>;
 
-using wrap_int1 = arithmetic<__INT8_TYPE__, overflow_policies::wrap>;  // NOLINT
-using wrap_uint1 =
-    arithmetic<__UINT8_TYPE__, overflow_policies::wrap>;               // NOLINT
-using wrap_int2 =
-    arithmetic<__INT16_TYPE__, overflow_policies::wrap>;               // NOLINT
-using wrap_uint2 =
-    arithmetic<__UINT16_TYPE__, overflow_policies::wrap>;              // NOLINT
-using wrap_int4 =
-    arithmetic<__INT32_TYPE__, overflow_policies::wrap>;               // NOLINT
-using wrap_uint4 =
-    arithmetic<__UINT32_TYPE__, overflow_policies::wrap>;              // NOLINT
-using wrap_int8 =
-    arithmetic<__INT64_TYPE__, overflow_policies::wrap>;               // NOLINT
-using wrap_uint8 =
-    arithmetic<__UINT64_TYPE__, overflow_policies::wrap>;              // NOLINT
+using wrap_int1 = arithmetic<__INT8_TYPE__, overflow_policies::wrap>;
+using wrap_uint1 = arithmetic<__UINT8_TYPE__, overflow_policies::wrap>;
+using wrap_int2 = arithmetic<__INT16_TYPE__, overflow_policies::wrap>;
+using wrap_uint2 = arithmetic<__UINT16_TYPE__, overflow_policies::wrap>;
+using wrap_int4 = arithmetic<__INT32_TYPE__, overflow_policies::wrap>;
+using wrap_uint4 = arithmetic<__UINT32_TYPE__, overflow_policies::wrap>;
+using wrap_int8 = arithmetic<__INT64_TYPE__, overflow_policies::wrap>;
+using wrap_uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::wrap>;
 
 using sat_int1 = arithmetic<__INT8_TYPE__, overflow_policies::saturate>;
 using sat_uint1 = arithmetic<__UINT8_TYPE__, overflow_policies::saturate>;
@@ -151,7 +140,7 @@ concept is_safe_arithmetic =
 
 template <typename T>
 concept is_unsafe_arithmetic = is_arithmetic<T> &&
-                               __is_same(T, to_raw_arithmetic_type<T>);
+    __is_same(T, to_raw_arithmetic_type<T>);
 
 namespace detail {
     template <typename T, typename U>
@@ -172,9 +161,10 @@ namespace detail {
     }
 
     template <typename T, typename U>
-        requires((is_signed<T> == is_signed<U>) &&
-                 (is_floating_point<T> == is_floating_point<U>))
-    using promoted_type = decltype(promoted_arithmetic<T, U>());
+    requires((is_signed<T> ==
+              is_signed<U>)&&(is_floating_point<T> ==
+                              is_floating_point<U>)) using promoted_type =
+        decltype(promoted_arithmetic<T, U>());
 }  // namespace detail
 
 // Overflow intrinsics optimize fairly well in GCC.
@@ -198,9 +188,9 @@ sat_add(T lhs, T rhs) -> T {
 
 // Erase redundant type information for `sat_add()`.
 template <is_integral T, is_integral U>
-    requires(is_safe_arithmetic_comparison<T, U>)
-[[nodiscard]] constexpr auto sat_add(T lhs, U rhs)
-    -> detail::promoted_type<T, U> {
+requires(is_safe_arithmetic_comparison<T, U>)
+    [[nodiscard]] constexpr auto sat_add(T lhs, U rhs)
+        -> detail::promoted_type<T, U> {
     // Saturating is_arithmetic inputs must be raw and cast to the same size.
     using type = to_raw_arithmetic_type<larger_type<T, U>>;
     return sat_add(static_cast<type>(lhs), static_cast<type>(rhs));
@@ -208,9 +198,9 @@ template <is_integral T, is_integral U>
 
 // Add two integers with wrapping overflow.
 template <is_integral T, is_integral U>
-    requires(is_safe_arithmetic_comparison<T, U>)
-[[nodiscard]] constexpr auto wrap_add(T lhs, U rhs)
-    -> detail::promoted_type<T, U> {
+requires(is_safe_arithmetic_comparison<T, U>)
+    [[nodiscard]] constexpr auto wrap_add(T lhs, U rhs)
+        -> detail::promoted_type<T, U> {
     // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
     using type = to_raw_arithmetic_type<make_unsigned_type<larger_type<T, U>>>;
     return detail::promoted_type<T, U>{static_cast<type>(lhs) +
@@ -235,9 +225,9 @@ sat_sub(T lhs, T rhs) -> T {
 
 // Erase redundant type information for `sat_sub()`.
 template <is_integral T, is_integral U>
-    requires(is_safe_arithmetic_comparison<T, U>)
-[[nodiscard]] constexpr auto sat_sub(T lhs, U rhs)
-    -> detail::promoted_type<T, U> {
+requires(is_safe_arithmetic_comparison<T, U>)
+    [[nodiscard]] constexpr auto sat_sub(T lhs, U rhs)
+        -> detail::promoted_type<T, U> {
     // Saturating is_arithmetic inputs must be raw and cast to the same size.
     using type = to_raw_arithmetic_type<larger_type<T, U>>;
     return sat_sub(static_cast<type>(lhs), static_cast<type>(rhs));
@@ -245,9 +235,9 @@ template <is_integral T, is_integral U>
 
 // Subtract two integers with wrapping overflow.
 template <is_integral T, is_integral U>
-    requires(is_safe_arithmetic_comparison<T, U>)
-[[nodiscard]] constexpr auto wrap_sub(T lhs, U rhs)
-    -> detail::promoted_type<T, U> {
+requires(is_safe_arithmetic_comparison<T, U>)
+    [[nodiscard]] constexpr auto wrap_sub(T lhs, U rhs)
+        -> detail::promoted_type<T, U> {
     // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
     using type = to_raw_arithmetic_type<make_unsigned_type<larger_type<T, U>>>;
     return detail::promoted_type<T, U>{static_cast<type>(lhs) -
@@ -272,9 +262,9 @@ sat_mul(T lhs, T rhs) -> T {
 
 // Erase redundant type information for `sat_mul()`.
 template <is_integral T, is_integral U>
-    requires(is_safe_arithmetic_comparison<T, U>)
-[[nodiscard]] constexpr auto sat_mul(T lhs, U rhs)
-    -> detail::promoted_type<T, U> {
+requires(is_safe_arithmetic_comparison<T, U>)
+    [[nodiscard]] constexpr auto sat_mul(T lhs, U rhs)
+        -> detail::promoted_type<T, U> {
     // Saturating is_arithmetic inputs must be raw and cast to the same size.
     using type = to_raw_arithmetic_type<larger_type<T, U>>;
     return sat_mul(static_cast<type>(lhs), static_cast<type>(rhs));
@@ -282,9 +272,9 @@ template <is_integral T, is_integral U>
 
 // Multiply two integers with wrapping overflow.
 template <is_integral T, is_integral U>
-    requires(is_safe_arithmetic_comparison<T, U>)
-[[nodiscard]] constexpr auto wrap_mul(T lhs, U rhs)
-    -> detail::promoted_type<T, U> {
+requires(is_safe_arithmetic_comparison<T, U>)
+    [[nodiscard]] constexpr auto wrap_mul(T lhs, U rhs)
+        -> detail::promoted_type<T, U> {
     // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
     using type = to_raw_arithmetic_type<make_unsigned_type<larger_type<T, U>>>;
     return detail::promoted_type<T, U>{static_cast<type>(lhs) *
@@ -308,9 +298,9 @@ sat_div(T lhs, T rhs) -> T {
 
 // Erase redundant type information for `sat_mul()`.
 template <is_integral T, is_integral U>
-    requires(is_safe_arithmetic_comparison<T, U>)
-[[nodiscard]] constexpr auto sat_div(T lhs, U rhs)
-    -> detail::promoted_type<T, U> {
+requires(is_safe_arithmetic_comparison<T, U>)
+    [[nodiscard]] constexpr auto sat_div(T lhs, U rhs)
+        -> detail::promoted_type<T, U> {
     // Saturating is_arithmetic inputs must be raw and cast to the same size.
     using type = to_raw_arithmetic_type<larger_type<T, U>>;
     return sat_div(static_cast<type>(lhs), static_cast<type>(rhs));
@@ -318,9 +308,9 @@ template <is_integral T, is_integral U>
 
 // Divide two integers with wrapping overflow.
 template <is_integral T, is_integral U>
-    requires(is_safe_arithmetic_comparison<T, U>)
-[[nodiscard]] constexpr auto wrap_div(T lhs, U rhs)
-    -> detail::promoted_type<T, U> {
+requires(is_safe_arithmetic_comparison<T, U>)
+    [[nodiscard]] constexpr auto wrap_div(T lhs, U rhs)
+        -> detail::promoted_type<T, U> {
     // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
     using type = to_raw_arithmetic_type<make_unsigned_type<larger_type<T, U>>>;
     return detail::promoted_type<T, U>{static_cast<type>(lhs) /
@@ -330,13 +320,11 @@ template <is_integral T, is_integral U>
 // Left bit-shifting two unsigned integers with saturating overflow.
 template <is_raw_integral T, is_raw_integral U>
 // TODO: Figure out signed saturating shift semantics.
-    requires(is_unsigned<T>)
-[[nodiscard,
+requires(is_unsigned<T>) [[nodiscard,
 #ifndef __OPTIMIZED__
-  gnu::optimize(2)
+                           gnu::optimize(2)
 #endif
-]] constexpr auto
-sat_shl(T value, U bits) {
+]] constexpr auto sat_shl(T value, U bits) {
     // TODO: Try `cat::countr_zero()`.
     if (bits >= limits<T>::bits - __builtin_ctz(value)) {
         return limits<T>::max();
@@ -355,13 +343,11 @@ template <is_integral T, is_integral U>
 
 template <is_raw_integral T, is_raw_integral U>
 // TODO: Figure out signed saturating shift semantics.
-    requires(is_unsigned<T>)
-[[nodiscard,
+requires(is_unsigned<T>) [[nodiscard,
 #ifndef __OPTIMIZED__
-  gnu::optimize(2)
+                           gnu::optimize(2)
 #endif
-]] constexpr auto
-sat_shr(T value, U bits) {
+]] constexpr auto sat_shr(T value, U bits) {
     // TODO: Try `cat::countl_zero()`.
     if (bits >= limits<T>::bits - __builtin_clz(value)) {
         return limits<T>::min();
@@ -471,32 +457,32 @@ struct arithmetic : public detail::arithmetic_storage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<T, U>)
-    [[nodiscard]] friend constexpr auto operator<=>(arithmetic<T, policy> lhs,
-                                                    U rhs) {
+    requires(is_safe_arithmetic_comparison<T, U>)
+        [[nodiscard]] friend constexpr auto
+        operator<=>(arithmetic<T, policy> lhs, U rhs) {
         return lhs.raw <=> to_raw_arithmetic(rhs);
     }
 
     // A `!=` operator is not generated by `<=>`, but overloading `!=` prevents
     // generating `==`. Instead, `==` is explicitly provided to generate `!=`.
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<T, U>)
-    [[nodiscard]] friend constexpr auto operator==(arithmetic<T, policy> lhs,
-                                                   U rhs) -> bool {
+    requires(is_safe_arithmetic_comparison<T, U>)
+        [[nodiscard]] friend constexpr auto
+        operator==(arithmetic<T, policy> lhs, U rhs) -> bool {
         return lhs.raw == to_raw_arithmetic(rhs);
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<T, U>)
-    constexpr auto operator=(U operand) {
+    requires(is_safe_arithmetic_comparison<T, U>) constexpr auto operator=(
+        U operand) {
         this->raw = to_raw_arithmetic(operand);
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<T, U>)
-    [[nodiscard]] friend constexpr auto operator+(arithmetic<T, policy> self,
-                                                  U operand)
-        -> detail::promoted_type<T, U> {
+    requires(is_safe_arithmetic_comparison<T, U>)
+        [[nodiscard]] friend constexpr auto
+        operator+(arithmetic<T, policy> self, U operand)
+            -> detail::promoted_type<T, U> {
         using enum overflow_policies;
         if constexpr (policy == undefined) {
             // Make signed to guarantee undefined semantics (unless the
@@ -521,10 +507,10 @@ struct arithmetic : public detail::arithmetic_storage<T, policy> {
 
     // Handle left-hand-side raw operands that are larger than this.
     template <is_unsafe_arithmetic U>
-        requires(is_safe_arithmetic_comparison<U, T>)
-    [[nodiscard]] friend constexpr auto operator+(U operand,
-                                                  arithmetic<T, policy> self)
-        -> detail::promoted_type<T, U> {
+    requires(is_safe_arithmetic_comparison<U, T>)
+        [[nodiscard]] friend constexpr auto
+        operator+(U operand, arithmetic<T, policy> self)
+            -> detail::promoted_type<T, U> {
         return cat::arithmetic<U>(operand) + self;
     }
 
@@ -535,9 +521,8 @@ struct arithmetic : public detail::arithmetic_storage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<U, T>)
-    friend constexpr auto operator+=(arithmetic<T, policy>& self, U operand)
-        -> arithmetic& {
+    requires(is_safe_arithmetic_comparison<U, T>) friend constexpr auto
+    operator+=(arithmetic<T, policy>& self, U operand) -> arithmetic& {
         self = self + to_raw_arithmetic(operand);
         return self;
     }
@@ -560,10 +545,10 @@ struct arithmetic : public detail::arithmetic_storage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<T, U>)
-    [[nodiscard]] friend constexpr auto operator-(arithmetic<T, policy> self,
-                                                  U operand)
-        -> detail::promoted_type<T, U> {
+    requires(is_safe_arithmetic_comparison<T, U>)
+        [[nodiscard]] friend constexpr auto
+        operator-(arithmetic<T, policy> self, U operand)
+            -> detail::promoted_type<T, U> {
         using enum overflow_policies;
         if constexpr (policy == undefined) {
             // TODO: See if using `[[assume()]]` actually optimizes this.
@@ -584,10 +569,10 @@ struct arithmetic : public detail::arithmetic_storage<T, policy> {
 
     // Handle left-hand-side raw operands that are larger than this.
     template <is_unsafe_arithmetic U>
-        requires(is_safe_arithmetic_comparison<U, T>)
-    [[nodiscard]] friend constexpr auto operator-(U operand,
-                                                  arithmetic<T, policy> self)
-        -> detail::promoted_type<T, U> {
+    requires(is_safe_arithmetic_comparison<U, T>)
+        [[nodiscard]] friend constexpr auto
+        operator-(U operand, arithmetic<T, policy> self)
+            -> detail::promoted_type<T, U> {
         return cat::arithmetic<U>(operand) - self;
     }
 
@@ -605,17 +590,14 @@ struct arithmetic : public detail::arithmetic_storage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<T, U>)
-    friend constexpr auto operator-=(arithmetic<T, policy>& self, U operand)
-        -> arithmetic& {
+    requires(is_safe_arithmetic_comparison<T, U>) friend constexpr auto
+    operator-=(arithmetic<T, policy>& self, U operand) -> arithmetic& {
         self = self - to_raw_arithmetic(operand);
         return self;
     }
 
     [[nodiscard]] friend constexpr auto operator-(arithmetic<T, policy> self)
-        -> arithmetic
-        requires(is_signed<T>)
-    {
+        -> arithmetic requires(is_signed<T>) {
         return -(self.raw);
     }
 
@@ -632,10 +614,10 @@ struct arithmetic : public detail::arithmetic_storage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<T, U>)
-    [[nodiscard]] friend constexpr auto operator*(arithmetic<T, policy> self,
-                                                  U operand)
-        -> detail::promoted_type<T, U> {
+    requires(is_safe_arithmetic_comparison<T, U>)
+        [[nodiscard]] friend constexpr auto
+        operator*(arithmetic<T, policy> self, U operand)
+            -> detail::promoted_type<T, U> {
         using enum overflow_policies;
         if constexpr (policy == overflow_policies::undefined) {
             // TODO: See if using `[[assume()]]` actually optimizes this.
@@ -657,10 +639,10 @@ struct arithmetic : public detail::arithmetic_storage<T, policy> {
 
     // Handle left-hand-side raw operands that are larger than this.
     template <is_unsafe_arithmetic U>
-        requires(is_safe_arithmetic_comparison<U, T>)
-    [[nodiscard]] friend constexpr auto operator*(U operand,
-                                                  arithmetic<T, policy> self)
-        -> detail::promoted_type<T, U> {
+    requires(is_safe_arithmetic_comparison<U, T>)
+        [[nodiscard]] friend constexpr auto
+        operator*(U operand, arithmetic<T, policy> self)
+            -> detail::promoted_type<T, U> {
         return cat::arithmetic<U>(operand) * self;
     }
 
@@ -678,18 +660,17 @@ struct arithmetic : public detail::arithmetic_storage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<U, T>)
-    friend constexpr auto operator*=(arithmetic<T, policy>& self, U operand)
-        -> arithmetic& {
+    requires(is_safe_arithmetic_comparison<U, T>) friend constexpr auto
+    operator*=(arithmetic<T, policy>& self, U operand) -> arithmetic& {
         self = self * to_raw_arithmetic(operand);
         return self;
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<T, U>)
-    [[nodiscard]] friend constexpr auto operator/(arithmetic<T, policy> self,
-                                                  U operand)
-        -> detail::promoted_type<T, U> {
+    requires(is_safe_arithmetic_comparison<T, U>)
+        [[nodiscard]] friend constexpr auto
+        operator/(arithmetic<T, policy> self, U operand)
+            -> detail::promoted_type<T, U> {
         using enum overflow_policies;
         if constexpr (policy == undefined) {
             // TODO: See if using `[[assume()]]` actually optimizes this.
@@ -710,10 +691,10 @@ struct arithmetic : public detail::arithmetic_storage<T, policy> {
 
     // Handle left-hand-side raw operands that are larger than this.
     template <is_unsafe_arithmetic U>
-        requires(is_safe_arithmetic_comparison<U, T>)
-    [[nodiscard]] friend constexpr auto operator/(U operand,
-                                                  arithmetic<T, policy> self)
-        -> detail::promoted_type<T, U> {
+    requires(is_safe_arithmetic_comparison<U, T>)
+        [[nodiscard]] friend constexpr auto
+        operator/(U operand, arithmetic<T, policy> self)
+            -> detail::promoted_type<T, U> {
         return cat::arithmetic<U>(operand) / self;
     }
 
@@ -731,18 +712,17 @@ struct arithmetic : public detail::arithmetic_storage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<U, T>)
-    friend constexpr auto operator/=(arithmetic<T, policy>& self, U operand)
-        -> arithmetic& {
+    requires(is_safe_arithmetic_comparison<U, T>) friend constexpr auto
+    operator/=(arithmetic<T, policy>& self, U operand) -> arithmetic& {
         self = self / to_raw_arithmetic(operand);
         return self;
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<T, U>)
-    [[nodiscard]] friend constexpr auto operator%(arithmetic<T, policy> self,
-                                                  U operand)
-        -> detail::promoted_type<T, U> {
+    requires(is_safe_arithmetic_comparison<T, U>)
+        [[nodiscard]] friend constexpr auto
+        operator%(arithmetic<T, policy> self, U operand)
+            -> detail::promoted_type<T, U> {
         return detail::promoted_type<T, U>{self.raw %
                                            to_raw_arithmetic(operand)};
     }
@@ -761,18 +741,17 @@ struct arithmetic : public detail::arithmetic_storage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<U, T>)
-    friend constexpr auto operator%=(arithmetic<T, policy>& self, U operand)
-        -> arithmetic& {
+    requires(is_safe_arithmetic_comparison<U, T>) friend constexpr auto
+    operator%=(arithmetic<T, policy>& self, U operand) -> arithmetic& {
         self.raw %= to_raw_arithmetic(operand);
         return self;
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<T, U>)
-    [[nodiscard]] friend constexpr auto operator&(arithmetic<T, policy> self,
-                                                  U operand)
-        -> detail::promoted_type<T, U> {
+    requires(is_safe_arithmetic_comparison<T, U>)
+        [[nodiscard]] friend constexpr auto
+        operator&(arithmetic<T, policy> self, U operand)
+            -> detail::promoted_type<T, U> {
         return detail::promoted_type<T, U>{self.raw &
                                            to_raw_arithmetic(operand)};
     }
@@ -791,18 +770,17 @@ struct arithmetic : public detail::arithmetic_storage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<U, T>)
-    friend constexpr auto operator&=(arithmetic<T, policy>& self, U operand)
-        -> arithmetic& {
+    requires(is_safe_arithmetic_comparison<U, T>) friend constexpr auto
+    operator&=(arithmetic<T, policy>& self, U operand) -> arithmetic& {
         self.raw &= to_raw_arithmetic(operand);
         return self;
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<U, T>)
-    [[nodiscard]] friend constexpr auto operator|(arithmetic<T, policy> self,
-                                                  U operand)
-        -> detail::promoted_type<T, U> {
+    requires(is_safe_arithmetic_comparison<U, T>)
+        [[nodiscard]] friend constexpr auto
+        operator|(arithmetic<T, policy> self, U operand)
+            -> detail::promoted_type<T, U> {
         return detail::promoted_type<T, U>{self.raw |
                                            to_raw_arithmetic(operand)};
     }
@@ -821,9 +799,8 @@ struct arithmetic : public detail::arithmetic_storage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<U, T>)
-    friend constexpr auto operator|=(arithmetic<T, policy>& self, U operand)
-        -> arithmetic& {
+    requires(is_safe_arithmetic_comparison<U, T>) friend constexpr auto
+    operator|=(arithmetic<T, policy>& self, U operand) -> arithmetic& {
         self.raw |= to_raw_arithmetic(operand);
         return self;
     }
@@ -903,9 +880,7 @@ struct arithmetic : public detail::arithmetic_storage<T, policy> {
     }
 
     [[nodiscard]] friend constexpr auto operator~(arithmetic<T, policy> self)
-        -> arithmetic
-        requires(is_integral<T>)
-    {
+        -> arithmetic requires(is_integral<T>) {
         return ~(self.raw);
     }
 
@@ -939,8 +914,8 @@ class arithmetic_ptr : public arithmetic<storage_type, policy> {
         default;
 
     template <is_integral U>
-        requires(is_safe_arithmetic_conversion<U, storage_type>)
-    constexpr arithmetic_ptr(U other)
+    requires(is_safe_arithmetic_conversion<
+             U, storage_type>) constexpr arithmetic_ptr(U other)
         : arithmetic<storage_type, policy>(to_raw_arithmetic(other)) {
     }
 
@@ -969,38 +944,37 @@ class arithmetic_ptr : public arithmetic<storage_type, policy> {
     // TODO: GCC 13 does not short-circuit this operator when `T` is `void`,
     // so this workaround using `conditional` is needed.
 
-    [[nodiscard]] constexpr auto operator*() -> conditional<is_void<T>, int, T>&
-        requires(!is_void<T>)
-    {
+    [[nodiscard]] constexpr auto operator*()
+        -> conditional<is_void<T>, int, T>& requires(!is_void<T>) {
         return *(reinterpret_cast<T*>(this->raw));
     }
 
-    [[nodiscard]] constexpr auto operator->()
-        -> T* requires(!is_void<T>) { return reinterpret_cast<T*>(this->raw); }
+    [[nodiscard]] constexpr auto operator->() -> T* requires(!is_void<T>) {
+        return reinterpret_cast<T*>(this->raw);
+    }
 
     // TODO: Streamline out all of these operators by implementing
     // `arithmetic`'s with "deducing this".
 
     // TODO: Cat assignment be `default`?
     // TODO: This redundant assignment operator is required by GCC.
-    constexpr auto
-    operator=(arithmetic_ptr<T, storage_type, policy> operand)
+    constexpr auto operator=(arithmetic_ptr<T, storage_type, policy> operand)
         -> arithmetic_ptr& {
         this->raw = operand.raw;
         return *this;
     }
 
     template <is_integral U>
-        requires(is_safe_arithmetic_conversion<U, storage_type>)
-    constexpr auto operator=(U operand) -> arithmetic_ptr& {
+    requires(is_safe_arithmetic_conversion<U, storage_type>) constexpr auto
+    operator=(U operand) -> arithmetic_ptr& {
         this->raw = to_raw_arithmetic(operand);
         return *this;
     }
 
     template <typename U>
-        requires(is_safe_arithmetic_comparison<storage_type, U>)
-    [[nodiscard]] friend constexpr auto operator<=>(
-        arithmetic_ptr<T, storage_type, policy> lhs, U rhs) {
+    requires(is_safe_arithmetic_comparison<storage_type, U>)
+        [[nodiscard]] friend constexpr auto
+        operator<=>(arithmetic_ptr<T, storage_type, policy> lhs, U rhs) {
         return lhs.raw <=> to_raw_arithmetic(rhs);
     }
 
@@ -1008,9 +982,9 @@ class arithmetic_ptr : public arithmetic<storage_type, policy> {
     // prevents generating `==`. Instead, `==` is explicitly provided to
     // generate `!=`.
     template <typename U>
-        requires(is_safe_arithmetic_comparison<storage_type, U>)
-    [[nodiscard]] friend constexpr auto operator==(
-        arithmetic_ptr<T, storage_type, policy> lhs, U rhs) -> bool {
+    requires(is_safe_arithmetic_comparison<storage_type, U>)
+        [[nodiscard]] friend constexpr auto
+        operator==(arithmetic_ptr<T, storage_type, policy> lhs, U rhs) -> bool {
         return lhs.raw == to_raw_arithmetic(rhs);
     }
 
@@ -1244,40 +1218,45 @@ constexpr auto operator|=(T* p_lhs, arithmetic<U> rhs) -> T* {
 }
 
 template <ssize bytes>
-    requires(bytes <= 8 && bytes > 0 &&
-             // Is a power of 2:
-             ((bytes & (bytes - 1)) == 0))
-using int_fixed = conditional<
-    bytes == 1, int1,
-    conditional<bytes == 2, int2, conditional<bytes == 4, int4, int8>>>;
+requires(bytes <= 8 && bytes > 0 &&
+         // Is a power of 2:
+         ((bytes & (bytes - 1)) == 0)) using int_fixed =
+    conditional<
+        bytes == 1, int1,
+        conditional<bytes == 2, int2, conditional<bytes == 4, int4, int8>>>;
 
 template <ssize bytes>
-    requires(bytes <= 8 && bytes > 0 &&
-             // Is a power of 2:
-             ((bytes & (bytes - 1)) == 0))
-using uint_fixed = conditional<
-    bytes == 1, uint1,
-    conditional<bytes == 2, uint2, conditional<bytes == 4, uint4, uint8>>>;
+requires(bytes <= 8 && bytes > 0 &&
+         // Is a power of 2:
+         ((bytes & (bytes - 1)) == 0)) using uint_fixed =
+    conditional<
+        bytes == 1, uint1,
+        conditional<bytes == 2, uint2, conditional<bytes == 4, uint4, uint8>>>;
 
-struct bool2 {  // NOLINT
+struct bool2 {
     using raw_type = uint2;
     uint2 raw;
     constexpr bool2() = default;
+
     constexpr bool2(bool input) : raw(static_cast<unsigned char>(input)) {
     }
+
     constexpr operator bool() const {
         return this->raw != 0u;
     }
 };
 
-struct bool4 {  // NOLINT
+struct bool4 {
     using raw_type = uint4;
     uint4 raw;
     constexpr bool4() = default;
+
     constexpr bool4(bool input) : raw(static_cast<unsigned char>(input)) {
     }
+
     constexpr bool4(bool2 input) : raw(static_cast<unsigned char>(input)) {
     }
+
     constexpr operator bool() const {
         return this->raw != 0u;
     }
@@ -1301,6 +1280,7 @@ inline constexpr uint8 uint8_min = limits<uint8>::min();
 inline constexpr uint8 uint8_max = limits<uint8>::max();
 
 }  // namespace cat
+
 // These suffix operators are reserved for future standardization, but they will
 // be used anyways.
 #pragma GCC diagnostic push
@@ -1381,15 +1361,15 @@ using cat::uint8;
 using cat::usize;
 
 template <typename T>
-using intptr = cat::intptr<T>;    // NOLINT
+using intptr = cat::intptr<T>;
 template <typename T>
-using uintptr = cat::uintptr<T>;  // NOLINT
+using uintptr = cat::uintptr<T>;
 
 // `intptr` and `uintptr` are not trivial, but they can be trivially
 // relocatable.
 template <typename T>
-    requires(cat::is_trivial<T> || cat::is_void<T>)
-constexpr bool cat::is_trivially_relocatable<cat::intptr<T>> = true;
+requires(cat::is_trivial<T> || cat::is_void<T>) constexpr bool cat::
+    is_trivially_relocatable<cat::intptr<T>> = true;
 template <typename T>
-    requires(cat::is_trivial<T> || cat::is_void<T>)
-constexpr bool cat::is_trivially_relocatable<cat::uintptr<T>> = true;
+requires(cat::is_trivial<T> || cat::is_void<T>) constexpr bool cat::
+    is_trivially_relocatable<cat::uintptr<T>> = true;

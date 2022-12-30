@@ -138,6 +138,7 @@ namespace detail {
             // of this handle predictible.
             byte empty[inline_buffer_size.raw];
         };
+
         bool is_on_stack;
 
         // The default constructor must not initialize data.
@@ -264,6 +265,7 @@ using sized_allocation = tuple<T, ssize>;
 
 template <typename T>
 using maybe_sized_allocation = maybe<sized_allocation<T>>;
+
 /* maybe<compact<sized_allocation<T>,
                      [](sized_allocation<T> tuple) -> bool {
                          return (tuple.second() != 0_sz);
@@ -310,8 +312,8 @@ class allocator_interface {
   public:
     // Try to allocate a `T`.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_alloc(Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_alloc(Args&&... constructor_args) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -325,8 +327,8 @@ class allocator_interface {
 
     // Allocate a `T`.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_xalloc(Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_xalloc(Args&&... constructor_args) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -341,9 +343,9 @@ class allocator_interface {
     // If this allocator has pointer stability, try to allocate a `T`, and
     // provide a pointer handle.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>&&
-                     is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto alloc(Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>&&
+                 is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto alloc(Args&&... constructor_args) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -357,9 +359,9 @@ class allocator_interface {
     // If this allocator has pointer stability, allocate a `T`, and
     // provide a pointer handle.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>&&
-                     is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto xalloc(Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>&&
+                 is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto xalloc(Args&&... constructor_args) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -397,8 +399,8 @@ class allocator_interface {
     // If this allocator has pointer stability, try to allocate an array of `T`,
     // and provide a pointer handle.
     template <typename T>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto alloc_multi(ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto alloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -411,8 +413,8 @@ class allocator_interface {
     // If this allocator has pointer stability, allocate an array of `T`, and
     // provide a pointer handle.
     template <typename T>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto xalloc_multi(ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto xalloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -424,9 +426,9 @@ class allocator_interface {
 
     // Try to allocate a `T` with an alignment guarantee.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_align_alloc(usize alignment,
-                                                 Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_align_alloc(
+            usize alignment, Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, true, false, false, false, false>(
                 alignment, 1, forward<Args>(constructor_args)...);
@@ -434,9 +436,9 @@ class allocator_interface {
 
     // Allocate a `T` with an alignment guarantee.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_align_xalloc(usize alignment,
-                                                  Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_align_xalloc(
+            usize alignment, Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, true, false, false, false, false>(
                 alignment, 1, forward<Args>(constructor_args)...);
@@ -445,10 +447,10 @@ class allocator_interface {
     // If this allocator has pointer stability, try to allocate a `T` with an
     // alignment guarantee, and provide a pointer handle.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>&&
-                     is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto align_alloc(usize alignment,
-                                             Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>&&
+                 is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto align_alloc(usize alignment,
+                                                 Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, true, false, true, false, false>(
                 alignment, 1, forward<Args>(constructor_args)...);
@@ -457,10 +459,10 @@ class allocator_interface {
     // If this allocator has pointer stability, allocate a `T` with an
     // alignment guarantee, and provide a pointer handle.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>&&
-                     is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto align_xalloc(usize alignment,
-                                              Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>&&
+                 is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto align_xalloc(usize alignment,
+                                                  Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, true, false, true, false, false>(
                 alignment, 1, forward<Args>(constructor_args)...);
@@ -468,8 +470,9 @@ class allocator_interface {
 
     // Try to allocate a `T` with no alignment guarantee.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_unalign_alloc(Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_unalign_alloc(
+            Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, false, false, false, false, false>(
                 1u, 1, forward<Args>(constructor_args)...);
@@ -477,9 +480,9 @@ class allocator_interface {
 
     // Allocate a `T` with no alignment guarantee.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_unalign_xalloc(
-        Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_unalign_xalloc(
+            Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, false, false, false, false, false>(
                 1u, 1, forward<Args>(constructor_args)...);
@@ -488,9 +491,9 @@ class allocator_interface {
     // If this allocator has pointer stability, try to allocate a `T` with no
     // alignment guarantee, and provide a pointer handle.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>&&
-                     is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto unalign_alloc(Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>&&
+                 is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto unalign_alloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, false, false, true, false, false>(
                 1u, 1, forward<Args>(constructor_args)...);
@@ -499,9 +502,10 @@ class allocator_interface {
     // If this allocator has pointer stability, allocate a `T` with no
     // alignment guarantee, and provide a pointer handle.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>&&
-                     is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto unalign_xalloc(Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>&&
+                 is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto unalign_xalloc(
+            Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, false, false, true, false, false>(
                 1u, 1, forward<Args>(constructor_args)...);
@@ -528,9 +532,9 @@ class allocator_interface {
     // If this allocator has pointer stability, try to allocate an array of `T`
     // with an alignment guarantee, and provide a pointer handle.
     template <typename T>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto align_alloc_multi(usize alignment,
-                                                   ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto align_alloc_multi(usize alignment,
+                                                       ssize count) {
         return this->meta_alloc<T, false, true, true, true, true, false, false>(
             alignment, count);
     }
@@ -538,9 +542,9 @@ class allocator_interface {
     // If this allocator has pointer stability, allocate an array of `T`
     // with an alignment guarantee, and provide a pointer handle.
     template <typename T>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto align_xalloc_multi(usize alignment,
-                                                    ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto align_xalloc_multi(usize alignment,
+                                                        ssize count) {
         return this
             ->meta_alloc<T, false, false, true, true, true, false, false>(
                 alignment, count);
@@ -565,8 +569,8 @@ class allocator_interface {
     // If this allocator has pointer stability, try to allocate an array of `T`
     // with no alignment guarantee, and provide a pointer handle.
     template <typename T>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto unalign_alloc_multi(ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto unalign_alloc_multi(ssize count) {
         return this
             ->meta_alloc<T, false, true, false, true, true, false, false>(
                 1u, count);
@@ -575,8 +579,8 @@ class allocator_interface {
     // If this allocator has pointer stability, allocate an array of `T`
     // with no alignment guarantee, and provide a pointer handle.
     template <typename T>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto unalign_xalloc_multi(ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto unalign_xalloc_multi(ssize count) {
         return this
             ->meta_alloc<T, false, false, false, true, true, false, false>(
                 1u, count);
@@ -584,8 +588,9 @@ class allocator_interface {
 
     // Try to allocate a small-size optimized `T`.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_inline_alloc(Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_inline_alloc(
+            Args&&... constructor_args) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -599,8 +604,9 @@ class allocator_interface {
 
     // Allocate a small-size optimized `T`.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_inline_xalloc(Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_inline_xalloc(
+            Args&&... constructor_args) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -905,8 +911,8 @@ class allocator_interface {
     // Try to allocate a `T`, and return the number of bytes that were
     // allocated.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_salloc(Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_salloc(Args&&... constructor_args) {
         if constexpr (alignof(T) > 1) {
             return this->opq_align_salloc<T>(
                 alignof(T), forward<Args>(constructor_args)...);
@@ -918,8 +924,8 @@ class allocator_interface {
 
     // Allocate a `T`, and return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_xsalloc(Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_xsalloc(Args&&... constructor_args) {
         if constexpr (alignof(T) > 1) {
             return this->opq_align_xsalloc<T>(
                 alignof(T), forward<Args>(constructor_args)...);
@@ -932,9 +938,9 @@ class allocator_interface {
     // If this allocator has pointer stability, try to allocate a `T`, and
     // return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>&&
-                     is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto salloc(Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>&&
+                 is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto salloc(Args&&... constructor_args) {
         if constexpr (alignof(T) > 1) {
             return this->align_salloc<T>(alignof(T),
                                          forward<Args>(constructor_args)...);
@@ -946,9 +952,9 @@ class allocator_interface {
     // If this allocator has pointer stability, allocate a `T`, and
     // return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>&&
-                     is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto xsalloc(Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>&&
+                 is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto xsalloc(Args&&... constructor_args) {
         if constexpr (alignof(T) > 1) {
             return this->align_xsalloc<T>(alignof(T),
                                           forward<Args>(constructor_args)...);
@@ -982,8 +988,8 @@ class allocator_interface {
     // If this allocator has pointer stability, try to allocate an array of `T`,
     // and return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto salloc_multi(ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto salloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             return this->align_salloc_multi<T>(alignof(T), count);
         } else {
@@ -994,8 +1000,8 @@ class allocator_interface {
     // If this allocator has pointer stability, allocate an array of `T`,
     // and return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto xsalloc_multi(ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto xsalloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             return this->align_xsalloc_multi<T>(alignof(T), count);
         } else {
@@ -1006,9 +1012,9 @@ class allocator_interface {
     // Try to allocate a `T` with an alignment guarantee, and return the number
     // of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_align_salloc(usize alignment,
-                                                  Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_align_salloc(
+            usize alignment, Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, true, false, false, false, true>(
                 alignment, 1, forward<Args>(constructor_args)...);
@@ -1017,9 +1023,9 @@ class allocator_interface {
     // Allocate a `T` with an alignment guarantee, and return the number of
     // bytes that were allocated.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_align_xsalloc(usize alignment,
-                                                   Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_align_xsalloc(
+            usize alignment, Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, true, false, false, false, true>(
                 alignment, 1, forward<Args>(constructor_args)...);
@@ -1028,10 +1034,10 @@ class allocator_interface {
     // If this allocator has pointer stability, try to allocate a `T` with an
     // alignment guarantee, and return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>&&
-                     is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto align_salloc(usize alignment,
-                                              Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>&&
+                 is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto align_salloc(usize alignment,
+                                                  Args&&... constructor_args) {
         return this->meta_alloc<T, false, true, true, false, true, false, true>(
             alignment, 1, forward<Args>(constructor_args)...);
     }
@@ -1039,10 +1045,10 @@ class allocator_interface {
     // If this allocator has pointer stability, allocate a `T` with an
     // alignment guarantee, and return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>&&
-                     is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto align_xsalloc(usize alignment,
-                                               Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>&&
+                 is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto align_xsalloc(usize alignment,
+                                                   Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, true, false, true, false, true>(
                 alignment, 1, forward<Args>(constructor_args)...);
@@ -1051,9 +1057,9 @@ class allocator_interface {
     // Try to allocate a `T` with no alignment guarantee, and return the number
     // of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_unalign_salloc(
-        Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_unalign_salloc(
+            Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, false, false, false, false, true>(
                 1u, 1, forward<Args>(constructor_args)...);
@@ -1062,9 +1068,9 @@ class allocator_interface {
     // Allocate a `T` with no alignment guarantee, and return the number of
     // bytes that were allocated.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_unalign_xsalloc(
-        Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_unalign_xsalloc(
+            Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, false, false, false, false, true>(
                 1u, 1, forward<Args>(constructor_args)...);
@@ -1073,9 +1079,10 @@ class allocator_interface {
     // If this allocator has pointer stability, try to allocate a `T` with no
     // alignment guarantee, and return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>&&
-                     is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto unalign_salloc(Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>&&
+                 is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto unalign_salloc(
+            Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, false, false, true, false, true>(
                 1u, 1, forward<Args>(constructor_args)...);
@@ -1084,9 +1091,10 @@ class allocator_interface {
     // If this allocator has pointer stability, allocate a `T` with no
     // alignment guarantee, and return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>&&
-                     is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto unalign_xsalloc(Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>&&
+                 is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto unalign_xsalloc(
+            Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, false, false, true, false, true>(
                 1u, 1, forward<Args>(constructor_args)...);
@@ -1115,9 +1123,9 @@ class allocator_interface {
     // with an alignment guarantee, and return the number of bytes that were
     // allocated.
     template <typename T>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto align_salloc_multi(usize alignment,
-                                                    ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto align_salloc_multi(usize alignment,
+                                                        ssize count) {
         return this->meta_alloc<T, false, true, true, true, true, false, true>(
             alignment, count);
     }
@@ -1125,9 +1133,9 @@ class allocator_interface {
     // If this allocator has pointer stability, allocate an array of `T` with an
     // alignment guarantee, and return the number of bytes that were allocated.
     template <typename T>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto align_xsalloc_multi(usize alignment,
-                                                     ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto align_xsalloc_multi(usize alignment,
+                                                         ssize count) {
         return this->meta_alloc<T, false, false, true, true, true, false, true>(
             alignment, count);
     }
@@ -1153,8 +1161,8 @@ class allocator_interface {
     // with no alignment guarantee, and return the number of bytes that were
     // allocated.
     template <typename T>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto unalign_salloc_multi(ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto unalign_salloc_multi(ssize count) {
         return this->meta_alloc<T, false, true, false, true, true, false, true>(
             1u, count);
     }
@@ -1162,8 +1170,8 @@ class allocator_interface {
     // If this allocator has pointer stability, allocate an array of `T` with no
     // alignment guarantee, and return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto unalign_xsalloc_multi(ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto unalign_xsalloc_multi(ssize count) {
         return this
             ->meta_alloc<T, false, false, false, true, true, false, true>(
                 1u, count);
@@ -1172,8 +1180,9 @@ class allocator_interface {
     // Try to allocate a small-size optimized `T`, and return the number of
     // bytes that were allocated.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_inline_salloc(Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_inline_salloc(
+            Args&&... constructor_args) {
         if constexpr (alignof(T) > 1) {
             return this->opq_inline_align_salloc<T>(
                 alignof(T), forward<Args>(constructor_args)...);
@@ -1186,9 +1195,9 @@ class allocator_interface {
     // Allocate a small-size optimized `T`, and return the number of bytes that
     // were allocated.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_inline_xsalloc(
-        Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_inline_xsalloc(
+            Args&&... constructor_args) {
         if constexpr (alignof(T) > 1) {
             return this->opq_inline_align_xsalloc<T>(
                 alignof(T), forward<Args>(constructor_args)...);
@@ -1223,9 +1232,9 @@ class allocator_interface {
     // Try to allocate a small-size optimized `T` with an alignment guarantee,
     // and return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_inline_align_salloc(
-        usize alignment, Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_inline_align_salloc(
+            usize alignment, Args&&... constructor_args) {
         return this->meta_alloc<T, true, true, true, false, false, false, true>(
             alignment, 1, forward<Args>(constructor_args)...);
     }
@@ -1233,9 +1242,9 @@ class allocator_interface {
     // Allocate a small-size optimized `T` with an alignment guarantee, and
     // return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_inline_align_xsalloc(
-        usize alignment, Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_inline_align_xsalloc(
+            usize alignment, Args&&... constructor_args) {
         return this
             ->meta_alloc<T, true, false, true, false, false, false, true>(
                 alignment, 1, forward<Args>(constructor_args)...);
@@ -1244,9 +1253,9 @@ class allocator_interface {
     // Try to allocate a small-size optimized `T` with no alignment guarantee,
     // and return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_inline_unalign_salloc(
-        Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_inline_unalign_salloc(
+            Args&&... constructor_args) {
         return this
             ->meta_alloc<T, true, true, false, false, false, false, true>(
                 1u, 1, forward<Args>(constructor_args)...);
@@ -1255,9 +1264,9 @@ class allocator_interface {
     // Allocate a small-size optimized `T` with no alignment guarantee, and
     // return the number of bytes that were allocated.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_inline_unalign_xsalloc(
-        Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_inline_unalign_xsalloc(
+            Args&&... constructor_args) {
         return this
             ->meta_alloc<T, true, false, false, false, false, false, true>(
                 1u, 1, forward<Args>(constructor_args)...);
@@ -1300,8 +1309,8 @@ class allocator_interface {
 
     // Try to allocate a `T`.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_calloc(Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_calloc(Args&&... constructor_args) {
         if constexpr (alignof(T) > 1) {
             return this->opq_align_calloc<T>(
                 alignof(T), forward<Args>(constructor_args)...);
@@ -1313,8 +1322,8 @@ class allocator_interface {
 
     // Allocate a `T`.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_xcalloc(Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_xcalloc(Args&&... constructor_args) {
         if constexpr (alignof(T) > 1) {
             return this->opq_align_xcalloc<T>(
                 alignof(T), forward<Args>(constructor_args)...);
@@ -1327,9 +1336,9 @@ class allocator_interface {
     // If this allocator has pointer stability, try to allocate a `T`, and
     // provide a pointer handle.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>&&
-                     is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto calloc(Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>&&
+                 is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto calloc(Args&&... constructor_args) {
         if constexpr (alignof(T) > 1) {
             return this->align_calloc<T>(alignof(T),
                                          forward<Args>(constructor_args)...);
@@ -1341,9 +1350,9 @@ class allocator_interface {
     // If this allocator has pointer stability, allocate a `T`, and
     // provide a pointer handle.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>&&
-                     is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto xcalloc(Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>&&
+                 is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto xcalloc(Args&&... constructor_args) {
         if constexpr (alignof(T) > 1) {
             return this->align_xcalloc<T>(alignof(T),
                                           forward<Args>(constructor_args)...);
@@ -1375,8 +1384,8 @@ class allocator_interface {
     // If this allocator has pointer stability, try to allocate an array of
     // `T`, and provide a pointer handle.
     template <typename T>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto calloc_multi(ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto calloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             return this->align_calloc_multi<T>(alignof(T), count);
         } else {
@@ -1387,8 +1396,8 @@ class allocator_interface {
     // If this allocator has pointer stability, allocate an array of `T`, and
     // provide a pointer handle.
     template <typename T>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto xcalloc_multi(ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto xcalloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             return this->align_xcalloc_multi<T>(alignof(T), count);
         } else {
@@ -1399,9 +1408,9 @@ class allocator_interface {
     // Try to allocate a `T` with an alignment guarantee, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_align_calloc(usize alignment,
-                                                  Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_align_calloc(
+            usize alignment, Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, true, false, false, true, false>(
                 alignment, 1, forward<Args>(constructor_args)...);
@@ -1410,9 +1419,9 @@ class allocator_interface {
     // Allocate a `T` with an alignment guarantee, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_align_xcalloc(usize alignment,
-                                                   Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_align_xcalloc(
+            usize alignment, Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, true, false, false, true, false>(
                 alignment, 1, forward<Args>(constructor_args)...);
@@ -1422,10 +1431,10 @@ class allocator_interface {
     // alignment guarantee, and provide a pointer handle, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>&&
-                     is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto align_calloc(usize alignment,
-                                              Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>&&
+                 is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto align_calloc(usize alignment,
+                                                  Args&&... constructor_args) {
         return this->meta_alloc<T, false, true, true, false, true, true, false>(
             alignment, 1, forward<Args>(constructor_args)...);
     }
@@ -1434,10 +1443,10 @@ class allocator_interface {
     // alignment guarantee, and provide a pointer handle, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>&&
-                     is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto align_xcalloc(usize alignment,
-                                               Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>&&
+                 is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto align_xcalloc(usize alignment,
+                                                   Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, true, false, true, true, false>(
                 alignment, 1, forward<Args>(constructor_args)...);
@@ -1446,9 +1455,9 @@ class allocator_interface {
     // Try to allocate a `T` with no alignment guarantee, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_unalign_calloc(
-        Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_unalign_calloc(
+            Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, false, false, false, true, false>(
                 1u, 1, forward<Args>(constructor_args)...);
@@ -1457,9 +1466,9 @@ class allocator_interface {
     // Allocate a `T` with no alignment guarantee, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_unalign_xcalloc(
-        Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_unalign_xcalloc(
+            Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, false, false, false, true, false>(
                 1u, 1, forward<Args>(constructor_args)...);
@@ -1469,9 +1478,10 @@ class allocator_interface {
     // alignment guarantee, and provide a pointer handle, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>&&
-                     is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto unalign_calloc(Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>&&
+                 is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto unalign_calloc(
+            Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, false, false, true, true, false>(
                 1u, 1, forward<Args>(constructor_args)...);
@@ -1481,9 +1491,10 @@ class allocator_interface {
     // alignment guarantee, and provide a pointer handle, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>&&
-                     is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto unalign_xcalloc(Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>&&
+                 is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto unalign_xcalloc(
+            Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, false, false, true, true, false>(
                 1u, 1, forward<Args>(constructor_args)...);
@@ -1512,9 +1523,9 @@ class allocator_interface {
     // `T` with an alignment guarantee, and provide a pointer handle, and
     // zero-out the allocated memory.
     template <typename T>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto align_calloc_multi(usize alignment,
-                                                    ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto align_calloc_multi(usize alignment,
+                                                        ssize count) {
         return this->meta_alloc<T, false, true, true, true, true, true, false>(
             alignment, count);
     }
@@ -1523,9 +1534,9 @@ class allocator_interface {
     // with an alignment guarantee, and provide a pointer handle, and zero-out
     // the allocated memory.
     template <typename T>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto align_xcalloc_multi(usize alignment,
-                                                     ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto align_xcalloc_multi(usize alignment,
+                                                         ssize count) {
         return this->meta_alloc<T, false, false, true, true, true, true, false>(
             alignment, count);
     }
@@ -1551,8 +1562,8 @@ class allocator_interface {
     // `T` with no alignment guarantee, and provide a pointer handle, and
     // zero-out the allocated memory.
     template <typename T>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto unalign_calloc_multi(ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto unalign_calloc_multi(ssize count) {
         return this->meta_alloc<T, false, true, false, true, true, true, false>(
             1u, count);
     }
@@ -1561,8 +1572,8 @@ class allocator_interface {
     // with no alignment guarantee, and provide a pointer handle, and zero-out
     // the allocated memory.
     template <typename T>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto unalign_xcalloc_multi(ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto unalign_xcalloc_multi(ssize count) {
         return this
             ->meta_alloc<T, false, false, false, true, true, true, false>(
                 1u, count);
@@ -1571,8 +1582,9 @@ class allocator_interface {
     // Try to allocate a small-size optimized `T`, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_inline_calloc(Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_inline_calloc(
+            Args&&... constructor_args) {
         if constexpr (alignof(T) > 1) {
             return this->opq_inline_align_calloc<T>(
                 alignof(T), forward<Args>(constructor_args)...);
@@ -1585,9 +1597,9 @@ class allocator_interface {
     // Allocate a small-size optimized `T`, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_inline_xcalloc(
-        Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_inline_xcalloc(
+            Args&&... constructor_args) {
         if constexpr (alignof(T) > 1) {
             return this->opq_inline_align_xcalloc<T>(
                 alignof(T), forward<Args>(constructor_args)...);
@@ -1622,9 +1634,9 @@ class allocator_interface {
     // Try to allocate a small-size optimized `T` with an alignment guarantee,
     // and zero-out the allocated memory.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_inline_align_calloc(
-        usize alignment, Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_inline_align_calloc(
+            usize alignment, Args&&... constructor_args) {
         return this->meta_alloc<T, true, true, true, false, false, true, false>(
             alignment, 1, forward<Args>(constructor_args)...);
     }
@@ -1632,9 +1644,9 @@ class allocator_interface {
     // Allocate a small-size optimized `T` with an alignment guarantee, and
     // zero-out the allocated memory.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_inline_align_xcalloc(
-        usize alignment, Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_inline_align_xcalloc(
+            usize alignment, Args&&... constructor_args) {
         return this
             ->meta_alloc<T, true, false, true, false, false, true, false>(
                 alignment, 1, forward<Args>(constructor_args)...);
@@ -1643,9 +1655,9 @@ class allocator_interface {
     // Try to allocate a small-size optimized `T` with no alignment guarantee,
     // and zero-out the allocated memory.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_inline_unalign_calloc(
-        Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_inline_unalign_calloc(
+            Args&&... constructor_args) {
         return this
             ->meta_alloc<T, true, true, false, false, false, true, false>(
                 1u, 1, forward<Args>(constructor_args)...);
@@ -1654,9 +1666,9 @@ class allocator_interface {
     // Allocate a small-size optimized `T` with no alignment guarantee, and
     // zero-out the allocated memory.
     template <typename T, typename... Args>
-        requires(is_constructible<T, Args...>)
-    [[nodiscard]] constexpr auto opq_inline_unalign_xcalloc(
-        Args&&... constructor_args) {
+    requires(is_constructible<T, Args...>)
+        [[nodiscard]] constexpr auto opq_inline_unalign_xcalloc(
+            Args&&... constructor_args) {
         return this
             ->meta_alloc<T, true, false, false, false, false, true, false>(
                 1u, 1, forward<Args>(constructor_args)...);
@@ -1727,8 +1739,8 @@ class allocator_interface {
     // return the number of bytes that were allocated, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto scalloc(Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto scalloc(Args&&... constructor_args) {
         if constexpr (alignof(T) > 1) {
             return this->align_scalloc<T>(alignof(T),
                                           forward<Args>(constructor_args)...);
@@ -1741,8 +1753,8 @@ class allocator_interface {
     // return the number of bytes that were allocated, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto xscalloc(Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto xscalloc(Args&&... constructor_args) {
         if constexpr (alignof(T) > 1) {
             return this->align_xscalloc<T>(alignof(T),
                                            forward<Args>(constructor_args)...);
@@ -1778,8 +1790,8 @@ class allocator_interface {
     // `T`, and return the number of bytes that were allocated, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto scalloc_multi(ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto scalloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             return this->align_scalloc_multi<T>(alignof(T), count);
         } else {
@@ -1791,8 +1803,8 @@ class allocator_interface {
     // and return the number of bytes that were allocated, and zero-out the
     // allocated memory.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto xscalloc_multi(ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto xscalloc_multi(ssize count) {
         if constexpr (alignof(T) > 1) {
             return this->align_xscalloc_multi<T>(alignof(T), count);
         } else {
@@ -1823,9 +1835,9 @@ class allocator_interface {
     // alignment guarantee, and return the number of bytes that were allocated,
     // and zero-out the allocated memory.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto align_scalloc(usize alignment,
-                                               Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto align_scalloc(usize alignment,
+                                                   Args&&... constructor_args) {
         return this->meta_alloc<T, false, true, true, false, true, true, true>(
             alignment, 1, forward<Args>(constructor_args)...);
     }
@@ -1834,9 +1846,9 @@ class allocator_interface {
     // alignment guarantee, and return the number of bytes that were allocated,
     // and zero-out the allocated memory.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto align_xscalloc(usize alignment,
-                                                Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto align_xscalloc(
+            usize alignment, Args&&... constructor_args) {
         return this->meta_alloc<T, false, false, true, false, true, true, true>(
             alignment, 1, forward<Args>(constructor_args)...);
     }
@@ -1865,8 +1877,9 @@ class allocator_interface {
     // alignment guarantee, and return the number of bytes that were allocated,
     // and zero-out the allocated memory.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto unalign_scalloc(Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto unalign_scalloc(
+            Args&&... constructor_args) {
         return this->meta_alloc<T, false, true, false, false, true, true, true>(
             1u, 1, forward<Args>(constructor_args)...);
     }
@@ -1875,8 +1888,9 @@ class allocator_interface {
     // alignment guarantee, and return the number of bytes that were allocated,
     // and zero-out the allocated memory.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto unalign_xscalloc(Args&&... constructor_args) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto unalign_xscalloc(
+            Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, false, false, true, true, true>(
                 1u, 1, forward<Args>(constructor_args)...);
@@ -1906,9 +1920,9 @@ class allocator_interface {
     // `T` with an alignment guarantee, and return the number of bytes that were
     // allocated, and zero-out the allocated memory.
     template <typename T>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto align_scalloc_multi(usize alignment,
-                                                     ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto align_scalloc_multi(usize alignment,
+                                                         ssize count) {
         return this->meta_alloc<T, false, true, true, true, true, true, true>(
             alignment, count);
     }
@@ -1917,9 +1931,9 @@ class allocator_interface {
     // an alignment guarantee, and return the number of bytes that were
     // allocated, and zero-out the allocated memory.
     template <typename T>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto align_xscalloc_multi(usize alignment,
-                                                      ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto align_xscalloc_multi(usize alignment,
+                                                          ssize count) {
         return this->meta_alloc<T, false, false, true, true, true, true, true>(
             alignment, count);
     }
@@ -1947,8 +1961,8 @@ class allocator_interface {
     // `T` with no alignment guarantee, and return the number of bytes that were
     // allocated, and zero-out the allocated memory.
     template <typename T>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto unalign_scalloc_multi(ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto unalign_scalloc_multi(ssize count) {
         return this->meta_alloc<T, false, true, false, true, true, true, true>(
             1u, count);
     }
@@ -1957,8 +1971,8 @@ class allocator_interface {
     // no alignment guarantee, and return the number of bytes that were
     // allocated, and zero-out the allocated memory.
     template <typename T, typename... Args>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    [[nodiscard]] constexpr auto unalign_xscalloc_multi(ssize count) {
+    requires(detail::is_stable_derived_allocator<derived_type>)
+        [[nodiscard]] constexpr auto unalign_xscalloc_multi(ssize count) {
         return this->meta_alloc<T, false, false, false, true, true, true, true>(
             1u, count);
     }
@@ -4775,18 +4789,16 @@ class allocator_interface {
     // TODO: This needs unit tests.
     // Invalidate a pointer handle to a `T`, and call its destructor.
     template <typename T>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    constexpr void free(T* p_memory) {
+    requires(detail::is_stable_derived_allocator<
+             derived_type>) constexpr void free(T* p_memory) {
         if constexpr (detail::has_max_allocation_bytes<derived_type>) {
             static_assert(ssizeof(T) <= derived_type::max_allocation_bytes,
                           "This allocation is too large for this allocator!");
         }
 
-        if
-            consteval {
-                delete p_memory;
-            }
-        else {
+        if (__builtin_is_constant_evaluated()) {
+            delete p_memory;
+        } else {
             // if constexpr (is_destructible<T>) {
             p_memory->~T();
             // }
@@ -4798,8 +4810,9 @@ class allocator_interface {
     // Invalidate a pointer handle to an array of `T`, and call its
     // destructors.
     template <typename T>
-        requires(detail::is_stable_derived_allocator<derived_type>)
-    constexpr void free_multi(T* p_memory, ssize count) {
+    requires(detail::is_stable_derived_allocator<
+             derived_type>) constexpr void free_multi(T* p_memory,
+                                                      ssize count) {
         if constexpr (detail::has_max_allocation_bytes<derived_type>) {
             static_assert(ssizeof(T) <= derived_type::max_allocation_bytes,
                           "This allocation is too large for this allocator!");
@@ -4808,15 +4821,13 @@ class allocator_interface {
                 "This allocation is too large for this allocator!");
         }
 
-        if
-            consteval {
-                if (p_memory) {
-                    // if (count > 0) {
-                    delete[] p_memory;
-                    // }
-                }
+        if (__builtin_is_constant_evaluated()) {
+            if (p_memory) {
+                // if (count > 0) {
+                delete[] p_memory;
+                // }
             }
-        else {
+        } else {
             // if constexpr (is_destructible<T>) {
             for (ssize i = 0; i < count; ++i) {
                 p_memory[i.raw].~T();
@@ -4855,7 +4866,7 @@ class allocator_interface {
             if (handle.is_inline()) {
                 if constexpr (T::is_multi_handle) {
                     return span<allocation_type>{addressof(handle.get_inline()),
-                                            handle.size()};
+                                                 handle.size()};
                 } else {
                     return handle.get_inline();
                 }
@@ -4868,7 +4879,8 @@ class allocator_interface {
                 this->self().template access<allocation_type>(handle.get()),
                 handle.size());
         } else {
-            return *(this->self().template access<allocation_type>(handle.get()));
+            return *(
+                this->self().template access<allocation_type>(handle.get()));
         }
     }
 
@@ -4893,8 +4905,8 @@ class allocator_interface {
 
     // Get a pointer to an allocated non-`const` `mem`.
     template <mem T>
-        requires(derived_type::has_pointer_stability)
-    [[nodiscard]] constexpr auto p_get(T& memory) -> auto{
+    requires(derived_type::has_pointer_stability)
+        [[nodiscard]] constexpr auto p_get(T& memory) -> auto {
         decltype(auto) ref = this->get(memory);
         using handle_type = decltype(this->get(memory));
         if constexpr (is_reference<handle_type>) {
@@ -4906,8 +4918,8 @@ class allocator_interface {
 
     // Get a `const` pointer to an allocated `mem`.
     template <mem T>
-        requires(derived_type::has_pointer_stability)
-    [[nodiscard]] constexpr auto p_get(T const& memory) -> auto{
+    requires(derived_type::has_pointer_stability)
+        [[nodiscard]] constexpr auto p_get(T const& memory) -> auto {
         decltype(auto) ref = this->get(memory);
         using handle_type = decltype(this->get(memory));
         if constexpr (is_reference<handle_type>) {
@@ -4930,17 +4942,18 @@ class allocator_interface {
     template <typename T, bool is_inline, bool is_fail_safe, bool is_aligned,
               bool is_multiple, bool is_stable, bool is_zeroed,
               bool has_feedback, typename... Args>
-        requires(
-            // Inline allocations cannot produce pointers.
-            !(is_inline && is_stable)
-            // Multi-allocations must be default-constructed.
-            && !(is_multiple && (sizeof...(Args) > 0))
-            // TODO: Zeroed-out allocations should not have arguments.
-            // Zeroed-out allocations must be trivial.
-            && !(is_zeroed && !is_trivial<T>))
-    [[gnu::optimize("-fno-tree-loop-distribute-patterns")]] constexpr auto
-    meta_alloc(usize allocation_alignment, ssize allocation_count,
-               Args&&... constructor_args) {
+    requires(
+        // Inline allocations cannot produce pointers.
+        !(is_inline && is_stable)
+        // Multi-allocations must be default-constructed.
+        && (!is_multiple || (sizeof...(Args) <= 0))
+        // TODO: Zeroed-out allocations should not have arguments.
+        // Zeroed-out allocations must be trivial.
+        && (!is_zeroed || is_trivial<T>)) [[gnu::optimize(
+        "-fno-tree-loop-distribute-"
+        "patterns")]] constexpr auto meta_alloc(usize allocation_alignment,
+                                                ssize allocation_count,
+                                                Args&&... constructor_args) {
         if constexpr (detail::has_max_allocation_bytes<derived_type>) {
             static_assert(ssizeof(T) <= derived_type::max_allocation_bytes,
                           "This allocation is too large for this allocator!");
@@ -5023,50 +5036,49 @@ class allocator_interface {
                                     handle_type>>>;
 
         // In `constexpr` code, unconditionally make an allocation.
-        if consteval {
-                if constexpr (is_stable) {
-                    T* p_allocation = nullptr;
+        if (__builtin_is_constant_evaluated()) {
+            if constexpr (is_stable) {
+                T* p_allocation = nullptr;
 
-                    // Construct one or multiple `T`s.
+                // Construct one or multiple `T`s.
+                if constexpr (is_multiple) {
+                    p_allocation =
+                        new (std::align_val_t{allocation_alignment.raw})
+                            T[allocation_count.raw];
+                } else {
+                    p_allocation =
+                        new (std::align_val_t{allocation_alignment.raw})
+                            T(constructor_args...);
+                }
+
+                // Data must be default-constructed in `constexpr` code.
+                for (ssize i = 0; i < allocation_count; ++i) {
+                    construct_at(p_allocation + i);
+                }
+
+                if constexpr (has_feedback) {
                     if constexpr (is_multiple) {
-                        p_allocation =
-                            new (std::align_val_t(allocation_alignment.raw))
-                                T[allocation_count.raw];
+                        return return_handle{
+                            tuple{span<T>{p_allocation, allocation_count},
+                                  allocation_count * ssizeof(T)}};
                     } else {
-                        p_allocation =
-                            new (std::align_val_t(allocation_alignment.raw))
-                                T(constructor_args...);
-                    }
-
-                    // Data must be default-constructed in `constexpr` code.
-                    for (ssize i = 0; i < allocation_count; ++i) {
-                        construct_at(p_allocation + i);
-                    }
-
-                    if constexpr (has_feedback) {
-                        if constexpr (is_multiple) {
-                            return return_handle{
-                                tuple{span<T>{p_allocation, allocation_count},
-                                      allocation_count * ssizeof(T)}};
-                        } else {
-                            return return_handle{sized_allocation<T*>{
-                                p_allocation, allocation_count * ssizeof(T)}};
-                        }
-                    } else {
-                        // No size feedback.
-                        if constexpr (is_multiple) {
-                            return return_handle{
-                                span<T>{p_allocation, allocation_count}};
-                        } else {
-                            return return_handle(p_allocation);
-                        }
+                        return return_handle{sized_allocation<T*>{
+                            p_allocation, allocation_count * ssizeof(T)}};
                     }
                 } else {
-                    // TODO: Opaque constexpr allocations.
-                    __builtin_unreachable();
+                    // No size feedback.
+                    if constexpr (is_multiple) {
+                        return return_handle{
+                            span<T>{p_allocation, allocation_count}};
+                    } else {
+                        return return_handle(p_allocation);
+                    }
                 }
+            } else {
+                // TODO: Opaque constexpr allocations.
+                __builtin_unreachable();
             }
-        else {  // NOLINT
+        } else {  // NOLINT
             // Non-constexpr code.
             if constexpr (is_inline) {
                 if (allocation_bytes < inline_buffer_size) {

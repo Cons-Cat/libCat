@@ -12,28 +12,28 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
-// TODO: Make `Ring` be `constexpr`.
+// TODO: Make `ring` be `constexpr`.
 
 namespace cat {
 
 template <typename T>
-class Ring : public collection_interface<Ring<T>, T> {
+class ring : public collection_interface<ring<T>, T> {
   public:
-    Ring()
+    ring()
         : p_storage(nullptr),
           current_index(0),
           current_size(0),
           current_capacity(0) {
     }
 
-    Ring(Ring&&) = default;
+    ring(ring&&) = default;
 
   private:
     // Only allow the shallow copy constructor to be used by these static
     // factory member functions.
     [[deprecated(
         "The copy-constructor is hidden. Use `.clone()` "
-        "instead!")]] Ring(Ring const&) = default;
+        "instead!")]] ring(ring const&) = default;
 
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
     // context.
@@ -62,19 +62,19 @@ class Ring : public collection_interface<Ring<T>, T> {
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]] static auto reserved(is_stable_allocator auto& allocator,
-                                       ssize capacity) -> maybe<Ring<T>> {
+                                       ssize capacity) -> maybe<ring<T>> {
     }
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]] static auto filled(is_stable_allocator auto& allocator,
                                      ssize capacity, T value)
-        -> maybe<Ring<T>> {
+        -> maybe<ring<T>> {
     }
 
     [[nodiscard]] auto reserve(is_stable_allocator auto& allocator,
                                ssize new_capacity) -> maybe<void> {
-        // The capacity of a `Ring` must be a power of two.
+        // The capacity of a `ring` must be a power of two.
         cat::assert(has_single_bit(new_capacity));
 
         if (new_capacity > this->current_capacity) {
@@ -125,7 +125,7 @@ class Ring : public collection_interface<Ring<T>, T> {
     }
 
     [[nodiscard]] auto clone(is_stable_allocator auto& allocator)
-        -> maybe<Ring<T>> {
+        -> maybe<ring<T>> {
     }
 
     // Get the non-`const` address of this `vector`'s internal array.

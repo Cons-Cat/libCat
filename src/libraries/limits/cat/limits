@@ -26,9 +26,11 @@ struct limits<arithmetic<T, policy>> : limits<T> {};
 template <>
 struct limits<char> {
     limits() = delete;
+
     static consteval auto min() -> __INT8_TYPE__ {
         return -128;
     }
+
     static consteval auto max() -> __INT8_TYPE__ {
         return 127;
     }
@@ -44,9 +46,11 @@ struct limits<char> {
 template <>
 struct limits<__INT8_TYPE__> {
     limits() = delete;
+
     static consteval auto min() -> __INT8_TYPE__ {
         return -128;
     }
+
     static consteval auto max() -> __INT8_TYPE__ {
         return 127;
     }
@@ -63,9 +67,11 @@ struct limits<__INT8_TYPE__> {
 template <>
 struct limits<__UINT8_TYPE__> {
     limits() = delete;
+
     static consteval auto min() -> __UINT8_TYPE__ {
         return 0u;
     }
+
     static consteval auto max() -> __UINT8_TYPE__ {
         return 255u;
     }
@@ -82,9 +88,11 @@ struct limits<__UINT8_TYPE__> {
 template <>
 struct limits<__INT16_TYPE__> {
     limits() = delete;
+
     static consteval auto min() -> __INT16_TYPE__ {
         return -32'768;
     }
+
     static consteval auto max() -> __INT16_TYPE__ {
         return 32'767;
     }
@@ -101,9 +109,11 @@ struct limits<__INT16_TYPE__> {
 template <>
 struct limits<__UINT16_TYPE__> {
     limits() = delete;
+
     static consteval auto min() -> __UINT16_TYPE__ {
         return 0u;
     }
+
     static consteval auto max() -> __UINT16_TYPE__ {
         return 65535u;
     }
@@ -120,9 +130,11 @@ struct limits<__UINT16_TYPE__> {
 template <>
 struct limits<__INT32_TYPE__> {
     limits() = delete;
+
     static consteval auto min() -> __INT32_TYPE__ {
         return -2'147'483'648;
     }
+
     static consteval auto max() -> __INT32_TYPE__ {
         return 2'147'483'647;
     }
@@ -138,9 +150,11 @@ struct limits<__INT32_TYPE__> {
 template <>
 struct limits<__UINT32_TYPE__> {
     limits() = delete;
+
     static consteval auto min() -> __UINT32_TYPE__ {
         return 0u;
     }
+
     static consteval auto max() -> __UINT32_TYPE__ {
         return 4'294'967'295;
     }
@@ -156,11 +170,13 @@ struct limits<__UINT32_TYPE__> {
 template <>
 struct limits<__INT64_TYPE__> {
     limits() = delete;
+
     static consteval auto min() -> __INT64_TYPE__ {
         // This weird code is required to compile correctly for some reason.
         // It's basically what libstdc++ does, too.
         return -9'223'372'036'854'775'807 - 1;
     }
+
     static consteval auto max() -> __INT64_TYPE__ {
         return 9'223'372'036'854'775'807;
     }
@@ -177,9 +193,11 @@ struct limits<__INT64_TYPE__> {
 template <>
 struct limits<__UINT64_TYPE__> {
     limits() = delete;
+
     static consteval auto min() -> __UINT64_TYPE__ {
         return 0u;
     }
+
     static consteval auto max() -> __UINT64_TYPE__ {
         return 18'446'744'073'709'551'615u;
     }
@@ -193,13 +211,15 @@ struct limits<__UINT64_TYPE__> {
     static constexpr bool is_iec559 = false;
 };
 
-enum class float_denorm {
+enum class float_denorm
+{
     indeterminate = -1,
     absent = 0,
     present = 1
 };
 
-enum class float_round {
+enum class float_round
+{
     indeterminate = -1,
     toward_zero = 0,
     to_nearest = 1,
@@ -210,9 +230,11 @@ enum class float_round {
 template <>
 struct limits<float> {
     limits() = delete;
+
     static consteval auto min() -> float {
         return __FLT_MIN__;
     }
+
     static consteval auto max() -> float {
         return __FLT_MAX__;
     }
@@ -268,9 +290,11 @@ struct limits<float> {
 template <>
 struct limits<double> {
     limits() = delete;
+
     static consteval auto min() -> float {
         return __DBL_MIN__;
     }
+
     static consteval auto max() -> float {
         return __DBL_MAX__;
     }

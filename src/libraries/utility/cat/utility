@@ -6,18 +6,15 @@
 
 namespace cat {
 
-// TODO: See if moving `bit_cast()` into `std::` improves debuggability without
-// breaking anything.
-
 template <typename T, typename U>
-[[gnu::warning("This function is intended to be inlined and constant-folded \
-out."),
+[[gnu::warning(
+      R"(This function is intended to be inlined and constant-folded out.)"),
   gnu::always_inline]] constexpr inline auto
 bit_cast(U& from_value) -> T;
 
 template <typename T, typename U>
-[[gnu::warning("This function is intended to be inlined and constant-folded \
-out."),
+[[gnu::warning(
+      R"(This function is intended to be inlined and constant-folded out.)"),
   gnu::always_inline]] constexpr inline auto
 bit_cast(U const& from_value) -> T;
 
@@ -55,6 +52,7 @@ constexpr auto salignof() -> ssize {
 }
 
 namespace detail {
+
     template <typename T, ssize index, ssize current, T value, T... values>
     constexpr auto get_value_list_at() -> T {
         if constexpr (current == index) {
@@ -63,11 +61,11 @@ namespace detail {
             return get_value_list_at<T, index, current + 1, values...>();
         }
     }
+
 }  // namespace detail
 
 template <typename T, T... values>
-    requires(is_integral<T>)
-struct value_type_list {
+requires(is_integral<T>) struct value_type_list {
     using value_type = T;
 
     static constexpr ssize size = ssizeof_pack(values...);
@@ -79,6 +77,7 @@ struct value_type_list {
 };
 
 namespace detail {
+
     template <ssize count, typename T, T value, T... integers>
     constexpr auto make_value_list() {
         if constexpr (count > 0) {
@@ -100,6 +99,7 @@ namespace detail {
             return value_type_list<T, integers...>();
         }
     }
+
 }  // namespace detail
 
 template <typename T, T value, ssize count>
@@ -143,21 +143,22 @@ template <typename... types>
 using index_sequence_for = make_index_sequence<ssize{sizeof...(types)}>;
 
 template <typename T>
-    requires(is_enum<T>)
-constexpr auto to_underlying(T any_enum) {
+requires(is_enum<T>) constexpr auto to_underlying(T any_enum) {
     return static_cast<underlying_type<T>>(any_enum);
 }
 
 namespace detail {
-    template <typename Closure>
-    struct DeferWrapper {
-        Closure invocable;
-        DeferWrapper(Closure&& closure) : invocable(closure) {
+
+    template <typename closure_type>
+    struct defer_wrapper {
+        closure_type invocable;
+        defer_wrapper(closure_type&& closure) : invocable(closure) {
         }
-        ~DeferWrapper() {
+        ~defer_wrapper() {
             this->invocable();
         }
     };
+
 }  // namespace detail
 
 // This must be split into two macros, because the `##` is otherwise evaluated
@@ -175,11 +176,11 @@ namespace detail {
 
 // `__COUNTER__` is defined by GCC, and it expands to a monotonically increasing
 // digit every time it is expanded. This guarantees that every instance of
-// `DeferWrapper` has a unique name.
+// `defer_wrapper` has a unique name.
 
 #define defer(deferred_code)                    \
     auto LIBCAT_CONCAT(_defer__, __COUNTER__) = \
-        cat::detail::DeferWrapper([&]() {       \
+        cat::detail::defer_wrapper([&]() {      \
             deferred_code                       \
         });
 
