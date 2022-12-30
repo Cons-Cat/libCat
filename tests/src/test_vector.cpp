@@ -25,9 +25,29 @@ TEST(test_vector) {
     defer(pager.free(page);)
     auto allocator = cat::linear_allocator::backed_handle(pager, page);
 
-    // Test vector types.
-    using iterator [[maybe_unused]] = cat::vector<int>::iterator;
-    using const_iterator [[maybe_unused]] = cat::vector<int>::const_iterator;
+    // Test vector member types.
+    using iterator = cat::vector<int>::iterator;
+    static_assert(cat::is_same<iterator, decltype(cat::vector<int>().begin())>);
+    static_assert(cat::is_same<iterator, decltype(cat::vector<int>().end())>);
+
+    using const_iterator = cat::vector<int>::const_iterator;
+    static_assert(
+        cat::is_same<const_iterator, decltype(cat::vector<int>().cbegin())>);
+    static_assert(
+        cat::is_same<const_iterator, decltype(cat::vector<int>().cend())>);
+
+    using reverse_iterator = cat::vector<int>::reverse_iterator;
+    static_assert(
+        cat::is_same<reverse_iterator, decltype(cat::vector<int>().rbegin())>);
+    static_assert(
+        cat::is_same<reverse_iterator, decltype(cat::vector<int>().rend())>);
+
+    using const_reverse_iterator = cat::vector<int>::const_reverse_iterator;
+    static_assert(cat::is_same<const_reverse_iterator,
+                               decltype(cat::vector<int>().crbegin())>);
+    static_assert(cat::is_same<const_reverse_iterator,
+                               decltype(cat::vector<int>().crend())>);
+
     static_assert(cat::is_same<int, cat::vector<int>::value_type>);
 
     // Test default constructing a `vector`.
