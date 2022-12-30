@@ -7,6 +7,12 @@ namespace cat {
 // TODO: Implement support for GCC 13's `__bf16` type.
 // TODO: Implement support for complex floats.
 
+// Forward declare types. These are implemented in `<numeral>`.
+enum class overflow_policies;
+
+template <typename T, overflow_policies>
+struct arithmetic;
+
 template <typename>
 struct limits {};
 

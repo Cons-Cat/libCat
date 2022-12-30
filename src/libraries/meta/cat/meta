@@ -481,9 +481,7 @@ concept is_arithmetic = is_integral<T> || is_floating_point<T>;
 
 namespace detail {
     template <typename T>
-    concept has_less_than_operator = requires(T t) {
-        t < static_cast<T>(0);
-    };
+    concept has_less_than_operator = requires(T t) { t < static_cast<T>(0); };
 
     template <typename...>
     inline constexpr bool is_signed_detail = false;
@@ -504,7 +502,7 @@ template <typename T>
 concept is_signed_integral = is_signed<T> && is_integral<T>;
 
 template <typename T>
-concept is_unsigned_integral = (!is_signed<T>)&&is_integral<T>;
+concept is_unsigned_integral = (!is_signed<T>) && is_integral<T>;
 
 template <is_integral Sign, is_integral T>
 using copy_sign_from = conditional<is_signed<Sign>, make_signed_type<Sign>,
@@ -532,9 +530,7 @@ namespace detail {
 
     template <typename T>
     inline constexpr bool is_array_detail =
-        !is_pointer_detail<T> && requires(T t) {
-        t[0];
-    };
+        !is_pointer_detail<T> && requires(T t) { t[0]; };
 }  // namespace detail
 
 template <typename T>
@@ -609,7 +605,7 @@ concept is_null_pointer = __is_same(remove_cv<T>, decltype(nullptr));
 
 template <typename T>
 concept is_scalar = is_arithmetic<T> || is_enum<T> || is_pointer<T> ||
-    is_member_pointer<T> || is_null_pointer<T>;
+                    is_member_pointer<T> || is_null_pointer<T>;
 
 template <typename T>
 using add_pointer = conditional<is_referenceable<T>, remove_reference<T>*, T*>;
@@ -624,7 +620,7 @@ template <typename T>
 concept is_lvalue_reference = __is_same(T, remove_reference<T>&);
 
 template <typename T>
-concept is_rvalue_reference = __is_same(T, remove_reference<T>&&);
+concept is_rvalue_reference = __is_same(T, remove_reference<T> &&);
 
 template <typename From, typename To>
 using copy_const_from = conditional<is_const<From>,
@@ -682,9 +678,7 @@ concept is_implicitly_convertible =
 // TODO: Add `__is_nothrow_convertible()` from GCC 13.
 
 template <typename T>
-concept is_sizable = requires {
-    sizeof(T);
-};
+concept is_sizable = requires { sizeof(T); };
 
 template <typename T>
 concept is_scoped_enum = __is_enum(T) && is_sizable<T> &&
@@ -766,13 +760,11 @@ template <typename T, typename... Args>
 concept is_trivially_constructible = __is_trivially_constructible(T, Args...);
 
 template <typename T>
-concept is_default_constructible = requires {
-    T();
-};
+concept is_default_constructible = requires { T(); };
 
 template <typename T>
 concept is_trivially_default_constructible = is_default_constructible<T> &&
-    __is_trivially_constructible(T);
+                                             __is_trivially_constructible(T);
 
 template <typename T>
 concept is_copy_constructible = __is_constructible(T, T const&);
@@ -782,20 +774,20 @@ concept is_trivially_copy_constructible =
     __is_trivially_constructible(T, T const&);
 
 template <typename T>
-concept is_move_constructible = __is_constructible(T, T&&);
+concept is_move_constructible = __is_constructible(T, T &&);
 
 template <typename T>
-concept is_trivially_move_constructible = __is_trivially_constructible(T, T&&);
+concept is_trivially_move_constructible = __is_trivially_constructible(T, T &&);
 
 // There is no `__has_destructor()` GCC builtin.
 template <typename T>
-concept is_destructible = requires {
-    ~T();
-};
+concept is_destructible = requires { ~T(); };
 
 // `__has_trivial_destructor()` is a GNU builtin.
 template <typename T>
-concept is_trivially_destructible = is_destructible<T> &&
+concept is_trivially_destructible =
+    is_destructible<T> &&
+    // NOLINTNEXTLINE This intrinsic is deprecated in Clang, but not GCC.
     __has_trivial_destructor(T);
 
 // `__is_assingable` is a GNU builtin.
@@ -813,10 +805,10 @@ template <typename T>
 concept is_trivially_copy_assignable = __is_trivially_assignable(T, T const&);
 
 template <typename T>
-concept is_move_assignable = __is_assignable(T, T&&);
+concept is_move_assignable = __is_assignable(T, T &&);
 
 template <typename T>
-concept is_trivially_move_assignable = __is_trivially_assignable(T, T&&);
+concept is_trivially_move_assignable = __is_trivially_assignable(T, T &&);
 
 // `__is_trivially_copyable()` is a GNU builtin.
 template <typename T>
@@ -839,6 +831,7 @@ constexpr auto move(T&& input) -> cat::remove_reference<T>&&;
 
 template <typename T>
 constexpr auto forward(cat::remove_reference<T>& input) -> T&&;
+
 template <typename T>
     requires(!cat::is_lvalue_reference<T>)
 constexpr auto forward(cat::remove_reference<T>&& input) -> T&&;
@@ -857,9 +850,8 @@ template <typename T>
 concept rvalue = is_rvalue_reference<T&&> && !is_const<T>;
 
 template <typename Function, typename... Args>
-concept is_invocable = requires(Function func, Args&&... args) {
-    func(forward<Args>(args)...);
-};
+concept is_invocable =
+    requires(Function func, Args&&... args) { func(forward<Args>(args)...); };
 
 // https://quuxplusone.github.io/blog/2019/02/06/arrow-proxy/
 template <typename reference_type>
@@ -882,10 +874,10 @@ namespace detail {
 // boolean_testable is adapted from the exposition-only concept
 // boolean-testable.
 template <typename T>
-concept is_boolean_testable = detail::is_boolean_testable_detail<T> &&
-    requires(T&& b) {
-    { !forward<T>(b) } -> detail::is_boolean_testable_detail;
-};
+concept is_boolean_testable =
+    detail::is_boolean_testable_detail<T> && requires(T&& b) {
+        { !forward<T>(b) } -> detail::is_boolean_testable_detail;
+    };
 
 // `weakly_equality_comparable_with` is adapted from the exposition-only
 // concept `__weakly_equality_comparable_with`.
@@ -893,11 +885,11 @@ namespace detail {
     template <typename T, typename U>
     concept is_weakly_equality_comparable_with =
         requires(remove_reference<T> const& t, remove_reference<U> const& u) {
-        { t == u } -> is_boolean_testable_detail;
-        { t != u } -> is_boolean_testable_detail;
-        { u == t } -> is_boolean_testable_detail;
-        { u != t } -> is_boolean_testable_detail;
-    };
+            { t == u } -> is_boolean_testable_detail;
+            { t != u } -> is_boolean_testable_detail;
+            { u == t } -> is_boolean_testable_detail;
+            { u != t } -> is_boolean_testable_detail;
+        };
 }  // namespace detail
 
 template <typename T>
@@ -906,23 +898,21 @@ concept is_equality_comparable =
 
 namespace detail {
     template <typename T, typename U>
-    concept is_partially_ordered_with = requires(remove_reference<T> const& t,
-                                                 remove_reference<U> const& u) {
-        { t < u } -> is_boolean_testable;
-        { t > u } -> is_boolean_testable;
-        { t <= u } -> is_boolean_testable;
-        { t >= u } -> is_boolean_testable;
-        { u < t } -> is_boolean_testable;
-        { u > t } -> is_boolean_testable;
-        { u <= t } -> is_boolean_testable;
-        { u >= t } -> is_boolean_testable;
-    };
+    concept is_partially_ordered_with =
+        requires(remove_reference<T> const& t, remove_reference<U> const& u) {
+            { t < u } -> is_boolean_testable;
+            { t > u } -> is_boolean_testable;
+            { t <= u } -> is_boolean_testable;
+            { t >= u } -> is_boolean_testable;
+            { u < t } -> is_boolean_testable;
+            { u > t } -> is_boolean_testable;
+            { u <= t } -> is_boolean_testable;
+            { u >= t } -> is_boolean_testable;
+        };
 }  // namespace detail
 
 template <typename T, typename U>
-concept is_narrow_convertible = requires() {
-    U({declval<T>()});
-};
+concept is_narrow_convertible = requires() { U({declval<T>()}); };
 
 // `is_trivially_relocatable` can be overrided by partial template
 // specializations, such as:
@@ -962,11 +952,13 @@ concept has_common_reference_with =
 
 template <typename T, typename U>
 concept has_common_with =
-    is_same<common_type<T, U>, common_type<U, T>> && requires {
-    static_cast<common_type<T, U>>(declval<T>());
-    static_cast<common_type<T, U>>(declval<U>());
-} && has_common_reference_with<add_lvalue_reference<T const>,
-                               add_lvalue_reference<const U>> &&
+    is_same<common_type<T, U>, common_type<U, T>> &&
+    requires {
+        static_cast<common_type<T, U>>(declval<T>());
+        static_cast<common_type<T, U>>(declval<U>());
+    } &&
+    has_common_reference_with<add_lvalue_reference<T const>,
+                              add_lvalue_reference<const U>> &&
     has_common_reference_with<add_lvalue_reference<common_type<T, U>>,
                               common_reference<add_lvalue_reference<const T>,
                                                add_lvalue_reference<const U>>>;

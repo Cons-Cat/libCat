@@ -126,7 +126,7 @@ template <is_unsigned_integral T, is_unsigned_integral U>
         // `_pext_u64()` is a GCC intrinsic.
         return T(_pext_u64(raw_value, raw_mask));
     } else {
-        to_raw_arithmetic_t<T> count = 0u;
+        to_raw_arithmetic_type<T> count = 0u;
         while (raw_mask != 0u) {
             if (raw_mask & 1) {
                 result >>= 1;

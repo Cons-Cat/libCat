@@ -21,6 +21,8 @@ namespace cat {
 template <typename T>
 class vector : public collection_interface<vector<T>, T> {
   public:
+    using value_type = T;
+
     constexpr vector()
         : p_storage(nullptr), current_size(0), current_capacity(0) {
         if consteval {
@@ -38,10 +40,10 @@ class vector : public collection_interface<vector<T>, T> {
 
   private:
     // Only allow the shallow copy constructor to be used by these static
-    // factory member functions.
-    [[deprecated(
-        "The copy-constructor is hidden. Use `.clone()` "
-        "instead!")]] constexpr vector(vector<T> const& other_vector) = default;
+    // factory member functions. This message appears when a user attempts to
+    // implicitly copy.
+    [[deprecated(R"(The copy-constructor is hidden. Use `.clone()` instead!)")]] constexpr vector(
+        vector<T> const& other_vector) = default;
 
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
     // context.

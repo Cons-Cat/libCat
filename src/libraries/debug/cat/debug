@@ -4,8 +4,20 @@
 
 namespace std {
 
-// NOLINTNEXTLINE This must be snake_case.
 class source_location {
+  private:
+    // Clang requires these variables be declared at the top, not the bottom.
+
+    // GCC requires these names be exactly what they are.
+    struct __impl {                    // NOLINT
+        char const* _M_file_name;      // NOLINT
+        char const* _M_function_name;  // NOLINT
+        unsigned long _M_line;         // NOLINT
+        unsigned long _M_column;       // NOLINT
+    };
+
+    __impl const* p_location = nullptr;
+
   public:
     static constexpr auto current(
         decltype(__builtin_source_location()) p_call_site_location =
@@ -34,17 +46,6 @@ class source_location {
                    ? this->p_location->_M_function_name
                    : "";
     }
-
-  private:
-    // GCC requires these names be exactly what they are.
-    struct __impl {                    // NOLINT
-        char const* _M_file_name;      // NOLINT
-        char const* _M_function_name;  // NOLINT
-        unsigned long _M_line;         // NOLINT
-        unsigned long _M_column;       // NOLINT
-    };
-
-    __impl const* p_location = nullptr;
 };
 
 }  // namespace std

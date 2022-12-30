@@ -148,7 +148,7 @@ namespace detail {
 template <is_arithmetic T, is_integral U>
 [[nodiscard]] constexpr auto pow(T base, U exponent) -> T {
     // type-erase `arithmetic`s to prevent redundant code gen.
-    using raw_type = to_raw_arithmetic_t<T>;
+    using raw_type = to_raw_arithmetic_type<T>;
     raw_type raw_base = to_raw_arithmetic(base);
     raw_type raw_exponent = to_raw_arithmetic(exponent);
 

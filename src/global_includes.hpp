@@ -116,13 +116,10 @@ inline constexpr cat::monostate_type monostate;
 // because it contains the `_start` symbol.
 #include <cat/runtime>
 
-// Necessary forward declarations.
-class string;
-
 // `assert()` is used throughout the library.
 #include <cat/debug>
 
-// `no_type` is required for `TRY()`.
+// `no_type` is required for the `TRY()` macro.
 #include <cat/notype>
 
 // Unwrap an error-like container such as `cat::scaredy` or `cat::maybe` iff

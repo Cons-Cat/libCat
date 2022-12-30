@@ -14,8 +14,9 @@ TEST(test_numerals) {
     // static_assert(cat::detail::arithmeticNonPtr<__INTPTR_TYPE__>);
     // static_assert(!cat::detail::arithmeticNonPtr<intptr<void>>);
 
-    static_assert(cat::is_same<cat::to_raw_arithmetic_t<int>, int>);
-    static_assert(cat::is_same<cat::to_raw_arithmetic_t<int4>, int4::raw_type>);
+    static_assert(cat::is_same<cat::to_raw_arithmetic_type<int>, int>);
+    static_assert(
+        cat::is_same<cat::to_raw_arithmetic_type<int4>, int4::raw_type>);
 
     // Test numerals' size,
     static_assert(sizeof(int1) == 1);
@@ -307,8 +308,10 @@ TEST(test_numerals) {
     static_assert(cat::make_sign_from(2, 1u) == 1i4);
 
     // Test unwrapped numerals in `limits`.
-    static_assert(cat::limits<int4>::max() == cat::limits<int4::raw_type>::max());
-    static_assert(cat::limits<uint8>::max() == cat::limits<uint8::raw_type>::max());
+    static_assert(cat::limits<int4>::max() ==
+                  cat::limits<int4::raw_type>::max());
+    static_assert(cat::limits<uint8>::max() ==
+                  cat::limits<uint8::raw_type>::max());
     static_assert(cat::limits<float4>::max() ==
                   cat::limits<float4::raw_type>::max());
 
@@ -527,7 +530,7 @@ TEST(test_numerals) {
     static_assert(cat::wrap_mul(cat::uint4_max, 1u) == cat::uint4_max);
     static_assert(cat::wrap_mul(cat::uint4_max, 2u) == cat::uint4_max - 1u);
 
-    int4 safe_int = int4::max;
+    int4 safe_int = int4::max();
     cat::verify((safe_int.wrap + 100) == cat::int4_min + 99);
 
     safe_int.wrap += 1;
@@ -538,7 +541,7 @@ TEST(test_numerals) {
     cat::verify(safe_int.raw == cat::int4_min + 100);
 
     // Test saturating overflow with member access syntax.
-    safe_int = int4::max;
+    safe_int = int4::max();
     cat::verify((safe_int.sat + 100) == cat::int4_max);
 
     safe_int.sat += 1;
