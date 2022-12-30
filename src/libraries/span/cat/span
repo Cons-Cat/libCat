@@ -13,7 +13,7 @@ namespace cat {
 // A `span` is represents an array of `T` with runtime-known length. It stores
 // an address and a length. It is random-access iterable.
 template <typename T>
-class span : public collection_interface<span<T>, T> {
+class span : public collection_interface<span<T>, T, true> {
   public:
     constexpr span() = default;
     constexpr span(span<T> const&) = default;

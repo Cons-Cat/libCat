@@ -296,7 +296,7 @@ struct output_iterator_tag {};
 struct contiguous_iterator_tag {};
 
 template <typename T>
-requires(is_base_of<iterator_interface<T>, T>) struct iterator_type_traits {
+requires(is_base_of<iterator_interface<T>, T>) struct iterator_traits {
     static T const& iterator;
     using value = typename infer_value_type<T>::type;
     using reference = decltype(*iterator);
@@ -380,17 +380,15 @@ concept is_incrementable = requires(T it) {
 
 template <typename T>
 concept is_random_access_iterator =
-    is_same<typename iterator_type_traits<T>::Category,
-            random_access_iterator_tag>;
+    is_same<typename iterator_traits<T>::category, random_access_iterator_tag>;
 
 template <typename T>
 concept is_bidirectional_iterator =
-    is_same<typename iterator_type_traits<T>::Category,
-            bidirectional_iterator_tag>;
+    is_same<typename iterator_traits<T>::category, bidirectional_iterator_tag>;
 
 template <typename T>
 concept is_forward_iterator =
-    is_same<typename iterator_type_traits<T>::Category, forward_iterator_tag>;
+    is_same<typename iterator_traits<T>::category, forward_iterator_tag>;
 
 // clang-format off
 template <typename T>
@@ -422,8 +420,6 @@ concept is_output_iterator = is_input_or_output_iterator<output_iterator> &&
 
 template <is_iterable T>
 class it_reverse {
-    T& iterable;
-
   public:
     constexpr explicit it_reverse(T& input_iterable)
         : iterable{input_iterable} {
@@ -444,6 +440,9 @@ class it_reverse {
     constexpr auto end() const {
         return iterable.rend();
     }
+
+  private:
+    T& iterable;
 };
 
 template <is_iterable T>

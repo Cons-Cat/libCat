@@ -11,10 +11,10 @@ template <typename T>
 struct collection_traits;
 
 // Copy-assign the elements of one collection into another.
-template <typename input_iterator_type, typename outputter_type>
-auto copy(input_iterator_type source_begin, input_iterator_type source_end,
-          outputter_type destination_begin) -> outputter_type {
-    using destination_element = decltype(*destination_begin);
+template <typename input_iterator, typename output_iterator>
+auto copy(input_iterator source_begin, input_iterator source_end,
+          output_iterator destination_begin) -> output_iterator {
+    using destination_element = remove_reference<decltype(*destination_begin)>;
 
     while (source_begin != source_end) {
         // Copy assignment.
@@ -26,15 +26,15 @@ auto copy(input_iterator_type source_begin, input_iterator_type source_end,
 }
 
 // Move-assign the elements of one collection into another.
-template <typename input_iterator_type, typename outputter_type>
-auto move(input_iterator_type source_begin, input_iterator_type source_end,
-          outputter_type destination_begin) -> outputter_type {
-    using destination_element = decltype(*destination_begin);
+template <typename input_iterator, typename output_iterator>
+auto move(input_iterator source_begin, input_iterator source_end,
+          output_iterator destination_begin) -> output_iterator {
+    using destination_element = remove_reference<decltype(*destination_begin)>;
 
     while (source_begin != source_end) {
         // Move assignment.
         *destination_begin =
-            move(static_cast<destination_element>(*source_begin));
+            static_cast<destination_element>(move(*source_begin));
         ++source_begin;
         ++destination_begin;
     }
@@ -42,11 +42,11 @@ auto move(input_iterator_type source_begin, input_iterator_type source_end,
 }
 
 // Optimally relocate the elements of one collection into another.
-template <typename input_iterator_type, typename outputter_type>
-auto relocate(input_iterator_type source_begin, input_iterator_type source_end,
-              outputter_type destination_begin) -> outputter_type {
+template <typename input_iterator, typename output_iterator>
+auto relocate(input_iterator source_begin, input_iterator source_end,
+              output_iterator destination_begin) -> output_iterator {
     using source_collection = typename decltype(source_begin)::collection_type;
-    using source_element = decltype(*source_begin);
+    using source_element = remove_reference<decltype(*source_begin)>;
 
     using destination_collection =
         typename decltype(destination_begin)::collection_type;

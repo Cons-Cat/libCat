@@ -269,7 +269,7 @@ namespace detail {
     // storage is exceeded. This container is used in `vformat()` calls as the
     // default container for `vformat_to()`.
     struct format_string_vector
-        : collection_interface<format_string_vector, char> {
+        : collection_interface<format_string_vector, char, true> {
         format_string_vector(char* p_in_storage, ssize in_length,
                              ssize in_max_length)
             : p_storage(p_in_storage),
@@ -409,8 +409,8 @@ namespace detail {
     // dispatch in this container.
     template <is_stable_allocator allocator_type>
     struct format_buffer_base
-        : public collection_interface<format_buffer_base<allocator_type>,
-                                      char> {
+        : public collection_interface<format_buffer_base<allocator_type>, char,
+                                      true> {
         format_buffer_base(char* p_in_string, ssize in_length,
                            ssize in_max_length)
             : p_string(p_in_string),
@@ -545,23 +545,23 @@ namespace detail {
       public:
         ssize const arguments_count;
 
-        using iterator_type = decltype(format.begin());
-        using const_iterator_type = decltype(format.cbegin());
+        using iterator = decltype(format.begin());
+        using const_iterator = decltype(format.cbegin());
 
         constexpr format_parse_context(string const in_format,
                                        ssize in_args_count = 0)
             : format(in_format), arguments_count(in_args_count) {
         }
 
-        constexpr auto begin() const -> iterator_type {
+        constexpr auto begin() const -> const_iterator {
             return this->format.cbegin();
         }
 
-        constexpr auto end() const -> iterator_type {
+        constexpr auto end() const -> const_iterator {
             return this->format.cend();
         }
 
-        constexpr void advance_to(iterator_type position) {
+        constexpr void advance_to(iterator position) {
             // this->format.begin().advance(position - this->format.begin());
             this->format.begin().advance(
                 position.distance_to(this->format.begin()));

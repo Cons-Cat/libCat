@@ -24,7 +24,8 @@ concept is_collection = requires(T container) {
 
 namespace detail {
     template <typename T>
-    concept is_contiguous_collection = requires(T collection) {
+    concept is_contiguous_collection =  // is_collection<T> &&
+        requires(T collection) {
         collection.data();
     };
 
@@ -49,10 +50,258 @@ namespace detail {
     concept has_capacity = requires(T t) {
         t.capacity();
     };
+
+    // If `.begin()` is provided.
+    template <typename T>
+    concept has_begin = requires(T t) {
+        t.begin();
+    };
+
+    // If `.end()` is provided.
+    template <typename T>
+    concept has_end = requires(T t) {
+        t.end();
+    };
+
+    // If `.rbegin()` is provided.
+    template <typename T>
+    concept has_rbegin = requires(T t) {
+        t.rbegin();
+    };
+
+    // If `.rend()` is provided.
+    template <typename T>
+    concept has_rend = requires(T t) {
+        t.rend();
+    };
+
+    // If `.cbegin()` is provided.
+    template <typename T>
+    concept has_cbegin = requires(T t) {
+        t.cbegin();
+    };
+
+    // If `.cend()` is provided.
+    template <typename T>
+    concept has_cend = requires(T t) {
+        t.cend();
+    };
+
+    template <typename derived_type, typename T, bool>
+    struct collection_iterator;
+
+    template <typename derived_type, typename T>
+    struct collection_iterator<derived_type, T, false> {
+      private:
+        constexpr auto self() -> derived_type& {
+            return static_cast<derived_type&>(*this);
+        }
+
+        constexpr auto self() const -> derived_type const& {
+            return static_cast<derived_type const&>(*this);
+        }
+
+      public:
+        [[nodiscard]] constexpr auto begin() const
+            requires(has_begin<derived_type>) {
+            return unconst(this)->self().begin();
+        }
+
+        [[nodiscard]] constexpr auto end() const
+            requires(has_end<derived_type>) {
+            return unconst(this)->self().end();
+        }
+
+        [[nodiscard]] constexpr auto cbegin() const
+            requires(has_begin<derived_type>) {
+            return this->begin();
+        }
+
+        [[nodiscard]] constexpr auto cend() const
+            requires(has_end<derived_type>) {
+            return this->end();
+        }
+
+        [[nodiscard]] constexpr auto rbegin() requires(has_end<derived_type>) {
+            return it_reverse(unconst(this)->self()).begin();
+        }
+
+        [[nodiscard]] constexpr auto rend() requires(has_begin<derived_type>) {
+            return it_reverse(unconst(this)->self()).end();
+        }
+
+        [[nodiscard]] constexpr auto rbegin() const
+            requires(has_end<derived_type>) {
+            return it_reverse(unconst(this)->self()).begin();
+        }
+
+        [[nodiscard]] constexpr auto rend() const
+            requires(has_begin<derived_type>) {
+            return it_reverse(unconst(this)->self()).end();
+        }
+
+        [[nodiscard]] constexpr auto crbegin() const
+            requires(has_end<derived_type>) {
+            // TODO: This should return a `const_iterator`.
+            return (it_reverse(unconst(this)->self())).begin();
+        }
+
+        [[nodiscard]] constexpr auto crend() const
+            requires(has_begin<derived_type>) {
+            // TODO: This should return a `const_iterator`.
+            return (it_reverse(unconst(this)->self())).end();
+        }
+    };
+
+    template <typename derived_type, typename T>
+    struct collection_iterator<derived_type, T, true> {
+      private:
+        constexpr auto self_mut() -> derived_type& {
+            return static_cast<derived_type&>(*this);
+        }
+
+        constexpr auto self() -> derived_type& {
+            return static_cast<derived_type&>(*this);
+        }
+
+        constexpr auto self() const -> derived_type const& {
+            return static_cast<derived_type const&>(*this);
+        }
+
+      public:
+        class const_iterator;
+
+        // Contiguous collections can produce non-`const` bidirectional
+        // iterators.
+        class iterator : public iterator_interface<iterator> {
+          public:
+            friend const_iterator;
+
+            // TODO: Remove this entirely.
+            using collection_type [[maybe_unused]] = derived_type;
+
+            constexpr iterator(iterator const&) = default;
+
+            constexpr iterator(ssize index, T* p_in_array)
+                : current_index(index), p_array(p_in_array) {
+            }
+
+            constexpr auto dereference() -> T& {
+                return this->p_array[current_index.raw];
+            }
+
+            constexpr auto dereference() const -> T const& {
+                return this->p_array[current_index.raw];
+            }
+
+            constexpr void advance(ssize offset) {
+                this->current_index += offset;
+            }
+
+            constexpr auto distance_to(iterator const& other) const -> ssize {
+                return other.current_index - current_index;
+            }
+
+          private:
+            ssize current_index;
+            T* p_array;
+        };
+
+        // Contiguous collections can produce `const` bidirectional
+        // iterators.
+        class const_iterator : public iterator_interface<const_iterator> {
+          public:
+            // TODO: Remove this entirely.
+            using collection_type [[maybe_unused]] = derived_type;
+
+            constexpr const_iterator(const_iterator const&) = default;
+
+            constexpr const_iterator(iterator const& other)
+                : current_index(other.current_index), p_array(other.p_array) {
+            }
+
+            constexpr const_iterator(ssize index, T const* p_in_array)
+                : current_index(index), p_array(p_in_array) {
+            }
+
+            constexpr auto dereference() const -> T const& {
+                return this->p_array[current_index.raw];
+            }
+
+            constexpr void advance(ssize offset) {
+                this->current_index += offset;
+            }
+
+            constexpr auto distance_to(const_iterator const& other) const
+                -> ssize {
+                return other.current_index - current_index;
+            }
+
+          private:
+            ssize current_index;
+            T const* p_array;
+        };
+
+        // `.begin()` and `.end()` can be automatically generated for
+        // contiguous collections.
+        [[nodiscard]] constexpr auto begin() {
+            return iterator(0, this->self_mut().data());
+        }
+
+        [[nodiscard]] constexpr auto begin() const {
+            return const_iterator(0, this->self().data());
+        }
+
+        [[nodiscard]] constexpr auto end() {
+            return iterator(this->self_mut().size(), this->self_mut().data());
+        }
+
+        [[nodiscard]] constexpr auto end() const {
+            return const_iterator(this->self().size(), this->self().data());
+        }
+
+        [[nodiscard]] constexpr auto cbegin() const {
+            return this->begin();
+        }
+
+        [[nodiscard]] constexpr auto cend() const {
+            return this->end();
+        }
+
+        [[nodiscard]] constexpr auto rbegin() {
+            return reversed_iterator_type<iterator>(this->self().size() - 1,
+                                                    this->self().data());
+        }
+
+        [[nodiscard]] constexpr auto rbegin() const {
+            return reversed_iterator_type<const_iterator>(
+                this->self().size() - 1, this->self().data());
+        }
+
+        [[nodiscard]] constexpr auto rend() {
+            return reversed_iterator_type<iterator>(0, this->self().data());
+        }
+
+        [[nodiscard]] constexpr auto rend() const {
+            return reversed_iterator_type<const_iterator>(0,
+                                                          this->self().data());
+        }
+
+        [[nodiscard]] constexpr auto crbegin() const {
+            return this->rbegin();
+        }
+
+        [[nodiscard]] constexpr auto crend() const {
+            return this->rend();
+        }
+    };
 }  // namespace detail
 
-template <typename derived_type, typename T>
-class collection_interface {
+template <typename derived_type, typename T,
+          bool generate_bidi_iterator = false>
+class collection_interface
+    : public detail::collection_iterator<derived_type, T,
+                                         generate_bidi_iterator> {
   private:
     // `is_array_like` at the top of this class instead of the bottom prevents
     // clangd false diagnostics.
@@ -93,10 +342,9 @@ class collection_interface {
     // Index into this collection with bounds-checking.
     [[nodiscard]] constexpr auto at(ssize index) -> maybe<T&>
     requires(is_array_like) {
-        if
-            (!__builtin_is_constant_evaluated()) {
-                cat::assert(index >= 0);
-            }
+        if (!__builtin_is_constant_evaluated()) {
+            cat::assert(index >= 0);
+        }
         if (index < this->self().capacity()) {
             return this->self_mut().data()[index.raw];
         }
@@ -132,11 +380,10 @@ class collection_interface {
     [[nodiscard]] constexpr auto subspan(ssize start_index, ssize end_index)
         -> span<T>
     requires(this->is_array_like) {
-        if
-            (!__builtin_is_constant_evaluated()) {
-                cat::assert(start_index >= 0);
-                cat::assert(end_index <= this->self().capacity());
-            }
+        if (!__builtin_is_constant_evaluated()) {
+            cat::assert(start_index >= 0);
+            cat::assert(end_index <= this->self().capacity());
+        }
 
         return span<T>(this->self().data() + start_index,
                        end_index - start_index);
@@ -145,11 +392,10 @@ class collection_interface {
     [[nodiscard]] constexpr auto subspan(ssize start_index,
                                          ssize end_index) const -> span<T const>
     requires(this->is_array_like) {
-        if
-            (!__builtin_is_constant_evaluated()) {
-                cat::assert(start_index >= 0);
-                cat::assert(end_index <= this->self().capacity());
-            }
+        if (!__builtin_is_constant_evaluated()) {
+            cat::assert(start_index >= 0);
+            cat::assert(end_index <= this->self().capacity());
+        }
 
         return span<T const>(this->self().data() + start_index,
                              end_index - start_index);
@@ -178,11 +424,10 @@ class collection_interface {
     template <is_integral U>
     requires(is_array_like) [[nodiscard]] constexpr auto operator[](U index)
         -> T& {
-        if
-            (!__builtin_is_constant_evaluated()) {
-                assert(index >= 0);
-                assert(index < this->self().size());
-            }
+        if (!__builtin_is_constant_evaluated()) {
+            assert(index >= 0);
+            assert(index < this->self().size());
+        }
 
         return this->self_mut().data()[to_raw_arithmetic(index)];
     }
@@ -190,109 +435,30 @@ class collection_interface {
     template <is_integral U>
     requires(is_array_like) [[nodiscard]] constexpr auto operator[](
         U index) const -> T const& {
-        if
-            (!__builtin_is_constant_evaluated()) {
-                assert(index >= 0);
-                assert(index < this->self().size());
-            }
+        if (!__builtin_is_constant_evaluated()) {
+            assert(index >= 0);
+            assert(index < this->self().size());
+        }
 
         return this->self().data()[to_raw_arithmetic(index)];
-    }
-
-    // `.begin()` and `.end()` can be automatically generated for contiguous
-    // collections.
-    [[nodiscard]] constexpr auto begin() requires(this->is_array_like) {
-        return remove_const<decltype(unconst(this)->make_iterator())>{
-            0, this->self_mut().data()};
-    }
-
-    [[nodiscard]] constexpr auto end() requires(this->is_array_like) {
-        return remove_const<decltype(unconst(this)->make_iterator())>{
-            this->self_mut().size(), this->self().data()};
-    }
-
-    // If this collection is not contiguous, get a non-`const` `.begin()` method
-    // from `derived_type`.
-    [[nodiscard]] constexpr auto begin() {
-        return this->self_mut().begin();
-    }
-
-    // If this collection is not contiguous, get a non-`const` `.end()` method
-    // from `derived_type`.
-    [[nodiscard]] constexpr auto end() {
-        return this->self_mut().end();
-    }
-
-    [[nodiscard]] constexpr auto begin() const {
-        return unconst(this)->begin();
-    }
-
-    [[nodiscard]] constexpr auto end() const {
-        return unconst(this)->end();
-    }
-
-    [[nodiscard]] constexpr auto cbegin() const {
-        return this->begin();
-    }
-
-    [[nodiscard]] constexpr auto cend() const {
-        return this->end();
-    }
-
-    [[nodiscard]] constexpr auto rbegin() requires(this->is_array_like) {
-        return reversed_iterator_type<decltype(this->begin())>{
-            this->self().size() - 1, this->self().data()};
-    }
-
-    [[nodiscard]] constexpr auto rend() requires(this->is_array_like) {
-        return reversed_iterator_type<decltype(this->end())>(
-            -1, this->self().data());
-    }
-
-    // If this collection is not contiguous, get a non-`const` `.rbegin()`
-    // method from `derived_type`.
-    [[nodiscard]] constexpr auto rbegin() requires(!this->is_array_like) {
-        return this->self_mut().rbegin();
-    }
-
-    // If this collection is not contiguous, get a non-`const` `.rend()` method
-    // from `derived_type`.
-    [[nodiscard]] constexpr auto rend() requires(!this->is_array_like) {
-        return this->self_mut().rbegin();
-    }
-
-    [[nodiscard]] constexpr auto rbegin() const {
-        return unconst(this)->rbegin();
-    }
-
-    [[nodiscard]] constexpr auto rend() const {
-        return unconst(this)->rend();
-    }
-
-    [[nodiscard]] constexpr auto crbegin() const {
-        return this->rbegin();
-    }
-
-    [[nodiscard]] constexpr auto crend() const {
-        return this->rend();
     }
 
     // Member-access syntax algorithms.
 
     template <is_collection Other>
-    auto copy_to(Other const& destination) const {
+    auto copy_to(Other& destination) const {
         assert(destination.capacity() >= this->capacity());
         return cat::copy(this->begin(), this->end(), destination.begin());
     }
 
     template <is_collection Other>
-    auto move_to(Other const& destination) const {
+    auto move_to(Other& destination) const {
         assert(destination.capacity() >= this->capacity());
         return cat::move(this->begin(), this->end(), destination.begin());
     }
 
     template <is_collection Other>
-    auto relocate_to(Other const& destination) const {
+    auto relocate_to(Other& destination) const {
         assert(destination.capacity() >= this->capacity());
         return cat::relocate(this->begin(), this->end(), destination.begin());
     }
@@ -309,87 +475,6 @@ class collection_interface {
 
     constexpr auto self() const -> derived_type const& {
         return static_cast<derived_type const&>(*this);
-    }
-
-    // If the collection does not define an iterator, then one should be
-    // generated. This function only exists for the purpose of deducing the type
-    // of an iterator as `decltype(make_iterator())`.
-
-    // Contiguous collections can produce non-`const` bidirectional iterators.
-    constexpr auto make_iterator() requires(this->is_array_like) {
-        class iterator_type : public iterator_interface<iterator_type> {
-          public:
-            using collection_type [[maybe_unused]] = derived_type;
-
-            constexpr iterator_type(iterator_type const&) = default;
-
-            constexpr iterator_type(ssize index, T* p_in_array)
-                : current_index(index), p_array(p_in_array) {
-            }
-
-            constexpr auto dereference() -> T& {
-                return this->p_array[current_index.raw];
-            }
-
-            constexpr auto dereference() const -> T const& {
-                return this->p_array[current_index.raw];
-            }
-
-            constexpr void advance(ssize offset) {
-                this->current_index += offset;
-            }
-
-            constexpr auto distance_to(iterator_type const& other) const
-                -> ssize {
-                return other.current_index - current_index;
-            }
-
-          private:
-            ssize current_index;
-            T* p_array;
-        };
-
-        // Produce an iterator to have its type deduced later.
-        return iterator_type(0, nullptr);
-    }
-
-    // Contiguous collections can produce `const` bidirectional iterators.
-    constexpr auto make_iterator() const requires(this->is_array_like) {
-        class iterator_type : public iterator_interface<iterator_type> {
-          public:
-            using collection_type [[maybe_unused]] = derived_type;
-
-            constexpr iterator_type(iterator_type const&) = default;
-
-            constexpr iterator_type(ssize index, T const* p_in_array)
-                : current_index(index), p_array(p_in_array) {
-            }
-
-            constexpr auto dereference() const -> T const& {
-                return this->p_array[current_index.raw];
-            }
-
-            constexpr void advance(ssize offset) {
-                this->current_index += offset;
-            }
-
-            constexpr auto distance(iterator_type const& other) const -> ssize {
-                return other.current_index - current_index;
-            }
-
-          private:
-            ssize current_index;
-            T const* const p_array;
-        };
-
-        // Produce an iterator to have its type deduced later.
-        return iterator_type(0, nullptr);
-    }
-
-    // If `derived_type` is not contiguous, use a provided iterator.
-    static constexpr auto make_iterator() {
-        // Produce an iterator to have its type deduced later.
-        return typename derived_type::iterator_type();
     }
 };
 

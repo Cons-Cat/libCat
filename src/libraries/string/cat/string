@@ -154,7 +154,8 @@ class string : public span<char const> {
 // This is `ssize::raw_type` because GCC cannot deduce a string literal's
 // length from an `ssize`.
 template <ssize::raw_type length>
-class fixed_string : public collection_interface<fixed_string<length>, char> {
+class fixed_string
+    : public collection_interface<fixed_string<length>, char, true> {
   public:
     constexpr auto data() -> char* {
         return &(this->storage[0]);

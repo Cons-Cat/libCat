@@ -19,9 +19,13 @@ namespace cat {
 // TODO: Support `__sanitizer_annotate_contiguous_container`.
 
 template <typename T>
-class vector : public collection_interface<vector<T>, T> {
+class vector : public collection_interface<vector<T>, T, true> {
   public:
     using value_type = T;
+    // using iterator_type = typename
+    // collection_traits<vector<T>>::iterator_type;
+    // using const_iterator_type =
+    //     typename collection_traits<vector<T>>::const_iterator_type;
 
     constexpr vector()
         : p_storage(nullptr), current_size(0), current_capacity(0) {

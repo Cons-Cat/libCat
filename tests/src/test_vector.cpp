@@ -26,9 +26,8 @@ TEST(test_vector) {
     auto allocator = cat::linear_allocator::backed_handle(pager, page);
 
     // Test vector types.
-    // using iterator [[maybe_unused]] = cat::vector<int>::iterator_type;
-    // using const_iterator [[maybe_unused]] =
-    //     cat::vector<int>::const_iterator_type;
+    using iterator [[maybe_unused]] = cat::vector<int>::iterator;
+    using const_iterator [[maybe_unused]] = cat::vector<int>::const_iterator;
     static_assert(cat::is_same<int, cat::vector<int>::value_type>);
 
     // Test default constructing a `vector`.

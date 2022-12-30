@@ -18,7 +18,7 @@ struct bool2;
 struct bool4;
 
 template <typename T, typename storage_type, auto>
-class arithmetic_ptr;
+struct arithmetic_ptr;
 
 // TODO: `make_signed_type` and `make_unsigned_type` must handle cvref
 // qualifiers.

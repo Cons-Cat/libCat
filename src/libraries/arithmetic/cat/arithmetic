@@ -434,7 +434,7 @@ namespace detail {
 // unsafe casts or operations. This is a trivial `struct` so it can be used as a
 // non-type template parameter.
 template <typename T, overflow_policies policy = overflow_policies::undefined>
-struct arithmetic : public detail::arithmetic_storage<T, policy> {
+struct arithmetic : detail::arithmetic_storage<T, policy> {
     using raw_type = T;
 
     // This constraint doesn't need to be SFINAE friendly, and it isn't obvious
@@ -902,7 +902,7 @@ struct arithmetic : public detail::arithmetic_storage<T, policy> {
 // `is_integral` concept.
 template <typename T, typename storage_type,
           auto policy = overflow_policies::undefined>
-class arithmetic_ptr : public arithmetic<storage_type, policy> {
+struct arithmetic_ptr : arithmetic<storage_type, policy> {
   public:
     using raw_type = storage_type;
     using ptr = T*;
