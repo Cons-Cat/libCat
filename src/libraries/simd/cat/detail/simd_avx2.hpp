@@ -5,14 +5,14 @@
 #include <cat/bitset>
 #include <cat/simd>
 
-namespace cat {
+namespace x64 {
 
 template <typename T>
-[[nodiscard]] auto testc(simd_mask<avx2_abi<T>, T> left,
-                         simd_mask<avx2_abi<T>, T> right) -> int4 {
-    if constexpr (is_same<T, float>) {
+[[nodiscard]] auto testc(cat::simd_mask<avx2_abi<T>, T> left,
+                         cat::simd_mask<avx2_abi<T>, T> right) -> int4 {
+    if constexpr (cat::is_same<T, float>) {
         return __builtin_ia32_vtestcps256(left.raw, right.raw);
-    } else if constexpr (is_same<T, double>) {
+    } else if constexpr (cat::is_same<T, double>) {
         return __builtin_ia32_vtestcpd256(left.raw, right.raw);
     } else {
         auto left_raw =
@@ -24,11 +24,11 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] auto testz(simd_mask<avx2_abi<T>, T> left,
-                         simd_mask<avx2_abi<T>, T> right) -> int4 {
-    if constexpr (is_same<T, float>) {
+[[nodiscard]] auto testz(cat::simd_mask<avx2_abi<T>, T> left,
+                         cat::simd_mask<avx2_abi<T>, T> right) -> int4 {
+    if constexpr (cat::is_same<T, float>) {
         return __builtin_ia32_vtestzps256(left.raw, right.raw);
-    } else if constexpr (is_same<T, double>) {
+    } else if constexpr (cat::is_same<T, double>) {
         return __builtin_ia32_vtestzpd256(left.raw, right.raw);
     } else {
         auto left_raw =
@@ -39,23 +39,28 @@ template <typename T>
     }
 }
 
+}  // namespace x64
+
+namespace cat {
+
 // Implementation of `simd_all_of()` for AVX2.
 template <typename T>
-[[nodiscard]] auto simd_all_of(simd_mask<avx2_abi<T>, T> mask) -> bool {
+[[nodiscard]] auto simd_all_of(simd_mask<x64::avx2_abi<T>, T> mask) -> bool {
     return testc(mask, mask == mask) != 0;
 }
 
 // Implementation of `simd_any_of()` for AVX2.
 template <typename T>
-[[nodiscard]] auto simd_any_of(simd_mask<avx2_abi<T>, T> mask) -> bool {
+[[nodiscard]] auto simd_any_of(simd_mask<x64::avx2_abi<T>, T> mask) -> bool {
     return testz(mask, mask == mask) == 0;
 }
 
 // Implementation of `simd_to_bitset` for AVX2.
 template <typename T>
-    // TODO: Support larger integrals than 1.
-    requires(is_floating_point<T> || (sizeof(T) == 1))
-[[nodiscard]] auto simd_to_bitset(simd_mask<avx2_abi<T>, T> mask) -> bitset<32> {
+// TODO: Support larger integrals than 1.
+requires(is_floating_point<T> || (sizeof(T) == 1))
+    [[nodiscard]] auto simd_to_bitset(simd_mask<x64::avx2_abi<T>, T> mask)
+        -> bitset<32> {
     if constexpr (is_same<T, float>) {
         // Create a bitmask from the most significant bit of every `float` in
         // this vector.

@@ -132,7 +132,7 @@ class string : public span<char const> {
             // TODO: Consider aligning this load?
             char1x_ const storage = char1x_::loaded(this->p_storage + i);
             // TODO: Support a native ABI mask here.
-            simd_mask<avx2_abi<char>, char> const compare =
+            simd_mask<x64::avx2_abi<char>, char> const compare =
                 (storage == character);
             bitset const mask = compare.bitset();
             if (mask.any_of()) {

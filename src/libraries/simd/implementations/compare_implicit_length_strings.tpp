@@ -2,15 +2,15 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/simd>
+#include <cat/detail/simd_sse42.hpp>
 
 // TODO: Improve this function's name.
 // TODO: Perfect forwarding the function parameters.
 // TODO: Handle the type of `char` automatically to make this type-safe.
 // `control_mask` must be constant-evaluated for the intrinsic to work
 // correctly.
-template <cat::string_control control_mask>
-constexpr auto cat::compare_implicit_length_strings(auto const& vector_1,
+template <x64::string_control control_mask>
+constexpr auto x64::compare_implicit_length_strings(auto const& vector_1,
                                                     auto const& vector_2)
     -> bool {
     static_assert(cat::is_same<decltype(vector_1), decltype(vector_2)>);

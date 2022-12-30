@@ -40,7 +40,7 @@ struct fixed_size_abi {
     fixed_size_abi() = delete;
 
     // TODO: Select `target_abi` portably.
-    using target_abi = avx2_abi<T>;
+    using target_abi = x64::avx2_abi<T>;
     static constexpr ssize lanes = in_lanes;
     static constexpr ssize size = lanes * ssizeof(T);
     // TODO: Make the alignment generally correct and efficient.
@@ -60,7 +60,7 @@ struct native_abi {
     native_abi() = delete;
 
     // TODO: Select `target_abi` portably.
-    using target_abi = avx2_abi<T>;
+    using target_abi = x64::avx2_abi<T>;
     static constexpr ssize size = target_abi::size;
     static constexpr ssize lanes = target_abi::lanes;
     static constexpr usize alignment = target_abi::alignment;
@@ -720,12 +720,13 @@ using uint1x16 = fixed_size_simd<uint1::raw_type, 16>;
 using uint1x32 = fixed_size_simd<uint1::raw_type, 32>;
 using uint1x_ = native_simd<uint1::raw_type>;
 
+// TODO: Select these types portably.
 // TODO: Think over the string vectorization API.
 // TODO: Support `char2x_` vector family.
 // strings need their own vectors.
-using char1x16 = sse42_mask<char>;
-using char1x32 = avx2_simd<char>;
-using char1x_ = avx2_simd<char>;
+using char1x16 = x64::sse42_mask<char>;
+using char1x32 = x64::avx2_simd<char>;
+using char1x_ = x64::avx2_simd<char>;
 
 using int2x2 = fixed_size_simd<int2::raw_type, 2>;
 using int2x4 = fixed_size_simd<int2::raw_type, 4>;
@@ -768,58 +769,8 @@ using float8x_ = native_simd<float8::raw_type>;
 
 // TODO: Support `bool` family vectors.
 
-enum class string_control : unsigned char
-{
-    // Unsigned 1-byte characters.
-    unsigned_byte = 0x00,
-    // Unsigned 2-byte characters.
-    unsigned_word = 0x01,
-    // Signed 1-byte characters.
-    signed_byte = 0x02,
-    // Signed 2-byte characters.
-    signed_word = 0x03,
-    // Compare if any characters are equal.
-    compare_equal_any = 0x00,
-    // Compare ranges.
-    compare_ranges = 0x04,
-    // Compare if every character is equal.
-    compare_equal_each = 0x08,
-    // Compare equal ordered.
-    compare_equal_ordered = 0x0c,
-    // Polarity.
-    positive_polarity = 0x00,
-    // Negate the results.
-    negative_polarity = 0x10,
-    masked_positive_polarity = 0x20,
-    // Negate the results only before the end of the string.
-    masked_negative_polarity = 0x30,
-    // Return the least significant bit.
-    least_significant = 0x00,
-    // Return the most significant bit.
-    most_significant = 0x40,
-    // Return a bit mask.
-    bit_mask = 0x00,
-    // Return a byte/word mask.
-    unit_mask = 0x40,
-};
-
-// TODO: Generalize this.
-constexpr auto operator|(string_control flag_1, string_control flag_2)
-    -> string_control {
-    return static_cast<string_control>(static_cast<unsigned char>(flag_1) |
-                                       static_cast<unsigned char>(flag_2));
-}
-
 // TODO: Use a vector concept.
 auto shuffle(auto in_vector, auto mask);
-
-template <string_control control_mask>
-constexpr auto compare_implicit_length_strings(auto const& vector_1,
-                                               auto const& vector_2) -> bool;
-
-template <string_control control_mask>
-constexpr auto compare_implicit_length_strings_return_index(
-    auto const& vector_1, auto const& vector_2) -> int4;
 
 // TODO: Add `mfence` and `lfence`.
 void sfence();
