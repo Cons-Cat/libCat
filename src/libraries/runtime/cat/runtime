@@ -60,7 +60,39 @@ class jmp_buffer {
 
 [[gnu::naked]] auto setjmp(jmp_buffer& jump_point) -> int;
 
-[[noreturn, gnu::naked]] void longjmp(jmp_buffer& jump_point, int8 return_value);
+[[noreturn, gnu::naked]] void longjmp(jmp_buffer& jump_point,
+                                      int8 return_value);
+
+#ifdef __SANITIZE_ADDRESS__
+extern "C" {
+// TODO: Comment these with documentation and use safer types.
+void __asan_poison_memory_region(void const volatile* p_address, usize size);
+void __asan_unpoison_memory_region(void const volatile* p_address, usize size);
+
+// These functions are only for debugging.
+void __asan_describe_address(void* p_address);
+auto __asan_address_is_poisoned(void const volatile* p_address) -> int;
+auto __asan_region_is_poisoned(void* p_begin, usize size) -> void*;
+auto __asan_report_present() -> int;
+auto __asan_get_report_pc() -> void*;
+auto __asan_get_report_bp() -> void*;
+auto __asan_get_report_sp() -> void*;
+auto __asan_get_report_address() -> void*;
+auto __asan_get_report_access_type() -> int;
+auto __asan_get_report_access_size() -> __SIZE_TYPE__;
+auto __asan_get_report_description() -> char const*;
+auto __asan_locate_address(void* p_address, char* p_name, usize name_size,
+                           void** p_region_address, usize* region_size)
+    -> char const*;
+auto __asan_get_alloc_stack(void* p_heap, void** pp_trace, usize size,
+                            int* p_thread_id) -> __SIZE_TYPE__;
+auto __asan_get_free_stack(void* p_heap, void** pp_trace, usize size,
+                           int* p_thread_id) -> __SIZE_TYPE__;
+void __asan_get_shadow_mapping(usize* p_shadow_scale, usize* p_shadow_offset);
+}
+#else
+// TODO: Provide no-op implementations of these functions.
+#endif
 
 }  // namespace cat
 
