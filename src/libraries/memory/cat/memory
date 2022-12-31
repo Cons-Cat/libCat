@@ -47,27 +47,27 @@ namespace detail {
     template <typename T>
     [[gnu::optimize("-fno-tree-loop-distribute-patterns")]]
     // `tree-loop-distribute-patterns` is an optimization that replaces this
-    // code with a call to `memset`. `memset` itself calls this function, which
-    // makes a circular reference that ld is unable to link. Mold can link
-    // this, but that optimization is useless here.
+    // code with a call to `memset`. `memset` itself calls this function,
+    // which makes a circular reference that ld is unable to link. Mold can
+    // link this somehow, but that optimization is useless here.
     constexpr void
     set_memory_detail(void* p_source, T value, ssize size) {
-        // TODO: type pun this with `start_lifetime_as()` instead.
-        T* p_current_byte = static_cast<T*>(p_source);
+        // TODO: Assert that these parameters do not index out of bounds.
+        uintptr<T> p_current = uintptr<T>(static_cast<T*>(p_source));
 
         if (__builtin_is_constant_evaluated()) {
             // Set this memory through scalar code, because `__builtin_memset()`
             // is not `constexpr` in GCC 12.
             for (ssize i = 0; i < size; ++i) {
-                *p_current_byte = static_cast<T>(value);
-                ++p_current_byte;
+                *p_current = static_cast<T>(value);
+                p_current += sizeof(T);
             }
         } else {
-            // Fill until `p_current_byte` has proper SIMD alignment.
-            while (!is_aligned(p_current_byte, native_abi<T>::alignment)) {
-                *p_current_byte = value;
-                ++p_current_byte;
-                --size;
+            // Fill until `p_current` has proper SIMD alignment.
+            while (!is_aligned(p_current, native_abi<T>::alignment)) {
+                *p_current = value;
+                p_current += sizeof(T);
+                size -= ssizeof(T);
             }
 
             // Non-type template parameters are not allowed in a lambda's
@@ -79,9 +79,9 @@ namespace detail {
                 // leverage instruction-level parallelism.
                 constexpr ssize lanes = lanes_constant::value;
                 using vector_type = fixed_size_simd<T, lanes>;
-                vector_type* p_vector = bit_cast<vector_type*>(p_current_byte);
+                vector_type* p_vector = bit_cast<vector_type*>(p_current.raw);
                 p_vector->fill(value);
-                p_current_byte += lanes;
+                p_current += lanes;
                 size -= lanes;
             };
 
@@ -97,9 +97,9 @@ namespace detail {
 
             // Fill out remaining portion one byte at a time.
             while (size > 0) {
-                *p_current_byte = value;
-                ++p_current_byte;
-                --size;
+                *p_current = value;
+                p_current += sizeof(T);
+                size -= ssizeof(T);
             }
         }
     }

@@ -5295,11 +5295,11 @@ class allocator_interface {
                 p_allocation = static_cast<T*>(maybe_memory.value());
             }
 
-            // Unpoison memory region.
+            // Permit addressing this memory.
 #ifdef __SANITIZE_ADDRESS__
             __asan_unpoison_memory_region(
                 static_cast<void const volatile*>(p_allocation),
-                make_unsigned(allocation_bytes) + sizeof(T));
+                make_unsigned(allocation_bytes) + sizeof(T) + 8u);
 #endif
 
             // Possibly zero-out the allocation.
