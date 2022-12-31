@@ -3535,7 +3535,7 @@ class allocator_interface {
                                                     usize alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
-            &allocator_interface<derived_type>::align_xalloc<T, T>, allocator,
+            &allocator_interface<derived_type>::align_xsalloc<T, T>, allocator,
             p_handle, alignment);
     }
 
@@ -3567,8 +3567,8 @@ class allocator_interface {
                                                       auto* p_handle) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<false, true>(
-            &allocator_interface<derived_type>::unalign_xalloc<T, T>, allocator,
-            p_handle);
+            &allocator_interface<derived_type>::unalign_xsalloc<T, T>,
+            allocator, p_handle);
     }
 
     // Move a pointer handle from this allocator into itself with no alignment
@@ -4774,6 +4774,15 @@ class allocator_interface {
                 p_memory = addressof(this->get(handle));
             }
 
+// Poison memory region.
+#ifdef __SANITIZE_ADDRESS__
+            //         if (!__builtin_is_constant_evaluated()) {
+            __asan_poison_memory_region(
+                static_cast<void const volatile*>(p_memory),
+                sizeof(allocation_type));
+//         }
+#endif
+
             // if constexpr (is_destructible<allocation_type>) {
             for (ssize i = 0; i < handle.size(); ++i) {
                 p_memory[i.raw].~allocation_type();
@@ -4791,6 +4800,14 @@ class allocator_interface {
     template <typename T>
     requires(detail::is_stable_derived_allocator<
              derived_type>) constexpr void free(T* p_memory) {
+        // Poison memory region.
+#ifdef __SANITIZE_ADDRESS__
+        if (!__builtin_is_constant_evaluated()) {
+            __asan_poison_memory_region(
+                static_cast<void const volatile*>(p_memory), sizeof(T));
+        }
+#endif
+
         if constexpr (detail::has_max_allocation_bytes<derived_type>) {
             static_assert(ssizeof(T) <= derived_type::max_allocation_bytes,
                           "This allocation is too large for this allocator!");
@@ -4816,10 +4833,18 @@ class allocator_interface {
         if constexpr (detail::has_max_allocation_bytes<derived_type>) {
             static_assert(ssizeof(T) <= derived_type::max_allocation_bytes,
                           "This allocation is too large for this allocator!");
-            cat::assert(
-                ssizeof(T) * count <= derived_type::max_allocation_bytes,
-                "This allocation is too large for this allocator!");
+            assert((ssizeof(T) * count) <= derived_type::max_allocation_bytes,
+                   "This allocation is too large for this allocator!");
         }
+
+        // Poison memory region.
+#ifdef __SANITIZE_ADDRESS__
+        if (!__builtin_is_constant_evaluated()) {
+            __asan_poison_memory_region(
+                static_cast<void const volatile*>(p_memory),
+                sizeof(T) * make_unsigned(count));
+        }
+#endif
 
         if (__builtin_is_constant_evaluated()) {
             if (p_memory) {
@@ -4852,7 +4877,7 @@ class allocator_interface {
 
     template <typename T>
     constexpr void cfree_multi(T* p_handle, ssize count) {
-        free(p_handle, count);
+        free_multi(p_handle, count);
         zero_memory_explicit(p_handle, count * ssizeof(T));
     }
 
@@ -4949,17 +4974,20 @@ class allocator_interface {
         && (!is_multiple || (sizeof...(Args) <= 0))
         // TODO: Zeroed-out allocations should not have arguments.
         // Zeroed-out allocations must be trivial.
-        && (!is_zeroed || is_trivial<T>)) [[gnu::optimize(
-        "-fno-tree-loop-distribute-"
-        "patterns")]] constexpr auto meta_alloc(usize allocation_alignment,
-                                                ssize allocation_count,
-                                                Args&&... constructor_args) {
+        && (!is_zeroed || is_trivial<T>))
+        [[gnu::optimize(R"(-fno-tree-loop-distribute-patterns)"),
+          gnu::
+              no_sanitize_address]] constexpr auto meta_alloc(usize
+                                                                  allocation_alignment,
+                                                              ssize
+                                                                  allocation_count,
+                                                              Args&&... constructor_args) {
         if constexpr (detail::has_max_allocation_bytes<derived_type>) {
             static_assert(ssizeof(T) <= derived_type::max_allocation_bytes,
                           "This allocation is too large for this allocator!");
-            cat::assert(ssizeof(T) * allocation_count <=
-                            derived_type::max_allocation_bytes,
-                        "This allocation is too larger for this allocator!");
+            assert(ssizeof(T) * allocation_count <=
+                       derived_type::max_allocation_bytes,
+                   "This allocation is too larger for this allocator!");
         }
 
         ssize const allocation_bytes = allocation_count * ssizeof(T);
@@ -5001,18 +5029,22 @@ class allocator_interface {
                                                 maybe<tuple<span<T>, ssize>>,
                                                 // Failsafe pointer with size.
                                                 maybe_sized_allocation<T*>>,
+
                                     conditional<is_multiple,
-                                                // TODO: Use a `maybe_span<T>`.
-                                                // span.
+                                                // TODO: Use a
+                                                // `maybe_span<T>`. span.
                                                 maybe<span<T>>,
-                                                // Failsafe pointer w/out size.
+                                                // Failsafe pointer w/out
+                                                // size.
                                                 maybe_ptr<T>>>,
+
                         // Not a pointer:
                         conditional<has_feedback,
                                     // Failsafe opaque handle with size.
                                     maybe_sized_allocation<handle_type>,
                                     // Failsafe opaque handle w/out size.
                                     maybe<handle_type>>>,
+
             // Not fail-safe:
             conditional<is_stable,
                         conditional<has_feedback,
@@ -5022,12 +5054,14 @@ class allocator_interface {
                                                 tuple<span<T>, ssize>,
                                                 // Unsafe pointer with size.
                                                 sized_allocation<T*>>,
+
                                     conditional<is_multiple,
                                                 // Unsafe span.
                                                 span<T>,
                                                 // Unsafe pointer w/out
                                                 // size.
                                                 T*>>,
+
                         conditional<has_feedback,
                                     // Unsafe opaque handle with size.
                                     sized_allocation<handle_type>,
@@ -5078,7 +5112,7 @@ class allocator_interface {
                 // TODO: Opaque constexpr allocations.
                 __builtin_unreachable();
             }
-        } else {  // NOLINT
+        } else {
             // Non-constexpr code.
             if constexpr (is_inline) {
                 if (allocation_bytes < inline_buffer_size) {
@@ -5177,9 +5211,9 @@ class allocator_interface {
                         // alignment with a runtime check.
                         maybe_memory = this->self().allocate(allocation_bytes);
                         if (maybe_memory.has_value()) {
-                            cat::assert(cat::is_aligned(maybe_memory.value(),
-                                                        allocation_alignment),
-                                        "allocation_type is misaligned!");
+                            assert(cat::is_aligned(maybe_memory.value(),
+                                                   allocation_alignment),
+                                   "allocation_type is misaligned!");
                         }
                     }
                 }
@@ -5261,6 +5295,14 @@ class allocator_interface {
                 p_allocation = static_cast<T*>(maybe_memory.value());
             }
 
+            // Unpoison memory region.
+#ifdef __SANITIZE_ADDRESS__
+            __asan_unpoison_memory_region(
+                static_cast<void const volatile*>(p_allocation),
+                make_unsigned(allocation_bytes) + sizeof(T));
+#endif
+
+            // Possibly zero-out the allocation.
             if constexpr (is_zeroed) {
                 zero_memory(p_allocation, allocation_bytes);
             }
@@ -5323,12 +5365,12 @@ class allocator_interface {
     // generic memory handle, and free the original handle if that
     // allocation suceeded.
     template <bool is_fail_safe, bool has_feedback, typename... Args>
-    constexpr auto meta_realloc(auto function, auto& allocator, auto& handle,
-                                Args&&... arguments) {
-        using allocation_type = decltype((&allocator->*function)(
+    constexpr auto meta_realloc(auto alloc_function, auto& allocator,
+                                auto& handle, Args&&... arguments) {
+        using allocation_type = decltype((&allocator->*alloc_function)(
             forward<Args>(arguments)..., move(this->get(handle))));
-        allocation_type allocation;
-        allocation = (&allocator->*function)(
+
+        allocation_type allocation = (&allocator->*alloc_function)(
             // Possible alignment and/or count arguments.
             forward<Args>(arguments)...,
             // Move the data from this handle.
