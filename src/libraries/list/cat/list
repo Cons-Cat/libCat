@@ -202,10 +202,9 @@ class list : public collection_interface<list<T>, T> {
     [[nodiscard]] auto clone(is_stable_allocator auto& allocator)
         -> maybe<list<T>> {
         list<T> new_list;
-        iterator_type current =
-            TRY(new_list.push_front(allocator, this->front()));
-        for (iterator_type it = ++this->begin(); it != this->end() + 1; ++it) {
-            current = TRY(this->insert(allocator, current + 1, *it));
+        for (iterator_type it = (this->begin() + 1); it != (this->end() + 1);
+             ++it) {
+            new_list.push_back(allocator, *it);
         }
         return new_list;
     }
@@ -335,6 +334,10 @@ class list : public collection_interface<list<T>, T> {
             this->length--;
             allocator.free(&node);
         }
+
+        if (this->length <= 1) {
+            this->p_tail = this->p_head;
+        }
     }
 
     // TODO: rval-ref overload of `.push_back()`.
@@ -390,11 +393,23 @@ class list : public collection_interface<list<T>, T> {
     // Remove and deallocate all elements from this list. All nodes must have
     // been allocated by the same arena for this function to succeed.
     void clear(is_stable_allocator auto& allocator) {
-        for (iterator_type iterator = this->begin(); iterator != this->end();
-             ++iterator) {
-            allocator.free(iterator.p_node);
+        if (this->length > 0) {
+            iterator_type previous_it = nullptr;
+            iterator_type current_it = this->begin();
+            ssize i = 0;
+
+            while (i < this->length) {
+                if (i > 0) {
+                    allocator.free(previous_it.p_node);
+                }
+                previous_it = current_it;
+                ++current_it;
+                ++i;
+            }
+
+            allocator.free(previous_it.p_node);
+            this->length = 0;
         }
-        this->length = 0;
     }
 
     // Providing these four iterator getters generates the remaining eight
@@ -556,7 +571,8 @@ class forward_list : public collection_interface<forward_list<T>, T> {
         forward_list<T> new_list;
         iterator_type current =
             TRY(new_list.push_front(allocator, this->front()));
-        for (iterator_type it = ++this->begin(); it != this->end() + 1; ++it) {
+        for (iterator_type it = (this->begin() + 1); it != (this->end() + 1);
+             ++it) {
             current = TRY(this->insert_after(allocator, current, *it));
         }
         return new_list;
@@ -668,11 +684,23 @@ class forward_list : public collection_interface<forward_list<T>, T> {
     // Remove and deallocate all elements from this list. All nodes must
     // have been allocated by the same arena for this function to succeed.
     void clear(is_stable_allocator auto& allocator) {
-        for (iterator_type iterator = this->begin(); iterator != this->end();
-             ++iterator) {
-            allocator.free(iterator.p_node);
+        if (this->length > 0) {
+            iterator_type previous_it = nullptr;
+            iterator_type current_it = this->begin();
+            ssize i = 0;
+
+            while (i < this->length) {
+                if (i > 0) {
+                    allocator.free(previous_it.p_node);
+                }
+                previous_it = current_it;
+                ++current_it;
+                ++i;
+            }
+
+            allocator.free(previous_it.p_node);
+            this->length = 0;
         }
-        this->length = 0;
     }
 
     // Providing these two iterator getters generates the remaining four

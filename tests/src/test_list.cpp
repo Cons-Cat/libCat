@@ -80,6 +80,7 @@ TEST(test_list) {
         list_1.pop_front(allocator);
     }
 
+    list_1.clear(allocator);
     list_2.clear(allocator);
 
     // Deep copy a `list`.
