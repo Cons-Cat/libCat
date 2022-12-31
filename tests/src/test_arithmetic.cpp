@@ -208,6 +208,7 @@ TEST(test_numerals) {
     uintptr<void> uintptr_1 = static_cast<uintptr<void>>(intptr_1);
     [[maybe_unused]] uintptr<void>::raw_type raw_uintptr =
         static_cast<uintptr<void>::raw_type>(uintptr_1);
+
     [[maybe_unused]] intptr<void> intptr_3 =
         static_cast<intptr<void>>(uintptr_1);
 

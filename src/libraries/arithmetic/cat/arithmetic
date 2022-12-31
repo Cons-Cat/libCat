@@ -932,12 +932,16 @@ struct arithmetic_ptr : arithmetic<storage_type, policy> {
     }
 
     // Only allow casting back into the original pointer type.
-    explicit constexpr operator T*() {
+    constexpr explicit operator T*() {
         return reinterpret_cast<T*>(this->raw);
     }
 
     // Only allow casting back into the original pointer type.
-    explicit constexpr operator T*() const {
+    constexpr explicit operator T*() const {
+        return reinterpret_cast<T const*>(this->raw);
+    }
+
+    constexpr explicit operator T const*() const {
         return reinterpret_cast<T const*>(this->raw);
     }
 
