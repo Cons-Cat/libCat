@@ -45,6 +45,16 @@ class vector : public collection_interface<vector<T>, T, true> {
     [[deprecated(R"(The copy-constructor is hidden. Use `.clone()` instead!)")]] constexpr vector(
         vector<T> const& other_vector) = default;
 
+    // Reallocate memory, or make an initial allocation.
+    constexpr auto internal_allocate(is_stable_allocator auto& allocator,
+                                     ssize minimum_capacity) {
+        if (this->p_storage == nullptr) {
+            return allocator.template salloc_multi<T>(minimum_capacity);
+        }
+        return allocator.resalloc_multi(this->p_storage, this->current_capacity,
+                                        minimum_capacity);
+    }
+
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
     // context.
     constexpr auto increase_storage(is_stable_allocator auto& allocator)
@@ -58,8 +68,8 @@ class vector : public collection_interface<vector<T>, T, true> {
             minimum_capacity = 4;
         }
 
-        // TODO: I am fairly certain this is a bug in GCC. This works around
-        // that.
+        // TODO: I think there is a bug in GCC constexpr memory. This is a
+        // workaround.
         if (__builtin_is_constant_evaluated()) {
             T* p_new = new T[minimum_capacity.raw];
             for (ssize::raw_type i = 0; i < this->current_size; ++i) {
@@ -74,10 +84,9 @@ class vector : public collection_interface<vector<T>, T, true> {
         } else {
             // Make a new allocation with size feedback.
             auto [alloc_span, alloc_bytes] =
-                TRY(allocator.template resalloc_multi(
-                    this->p_storage, this->current_capacity, minimum_capacity));
+                TRY(internal_allocate(allocator, minimum_capacity));
 
-            this->current_capacity = alloc_bytes * ssizeof(T);
+            this->current_capacity = alloc_bytes / ssizeof(T);
             this->p_storage = alloc_span.data();
         }
 
@@ -132,8 +141,8 @@ class vector : public collection_interface<vector<T>, T, true> {
                                          ssize minimum_capacity)
         -> maybe<void> {
         if (minimum_capacity > this->current_capacity) {
-            // TODO: I am fairly certain this is a bug in GCC. This works around
-            // that.
+            // TODO: I think there is a bug in GCC constexpr memory. This is a
+            // workaround.
             if (__builtin_is_constant_evaluated()) {
                 delete[] this->p_storage;
                 this->p_storage = new T[minimum_capacity.raw];
@@ -145,9 +154,7 @@ class vector : public collection_interface<vector<T>, T, true> {
                 }
             } else {
                 auto [alloc_span, alloc_bytes] =
-                    TRY(allocator.template resalloc_multi(
-                        this->p_storage, this->current_capacity,
-                        minimum_capacity));
+                    TRY(internal_allocate(allocator, minimum_capacity));
 
                 p_storage = alloc_span.data();
                 this->current_capacity = alloc_bytes / ssizeof(T);

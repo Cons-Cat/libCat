@@ -202,8 +202,7 @@ class list : public collection_interface<list<T>, T> {
     [[nodiscard]] auto clone(is_stable_allocator auto& allocator)
         -> maybe<list<T>> {
         list<T> new_list;
-        for (iterator_type it = (this->begin() + 1); it != (this->end() + 1);
-             ++it) {
+        for (iterator_type it = this->begin(); it != (this->end() + 1); ++it) {
             new_list.push_back(allocator, *it);
         }
         return new_list;

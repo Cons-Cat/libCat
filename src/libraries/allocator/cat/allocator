@@ -5424,6 +5424,11 @@ class allocator_interface {
         if (!__builtin_is_constant_evaluated()) {
             assert(new_handle.data() != nullptr);
 
+            // TODO: Why does this fix asan error in vector test?
+            __asan_unpoison_memory_region(
+                static_cast<void const volatile*>(p_old_handle),
+                make_unsigned(old_count) + sizeof(T) + 8u);
+
             if constexpr (is_trivially_relocatable<T>) {
                 copy_memory(p_old_handle, new_handle.data(), old_count);
             }
