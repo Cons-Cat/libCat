@@ -5279,6 +5279,7 @@ class allocator_interface {
                 }
             }
 
+            // Short circuit failed allocations.
             if constexpr (is_fail_safe) {
                 if (!maybe_memory.has_value()) {
                     // Return an empty maybe if this failed to allocate.
@@ -5366,15 +5367,12 @@ class allocator_interface {
     // allocation suceeded.
     template <bool is_fail_safe, bool has_feedback, typename... Args>
     constexpr auto meta_realloc(auto alloc_function, auto& allocator,
-                                auto& handle, Args&&... arguments) {
-        using allocation_type = decltype((&allocator->*alloc_function)(
-            forward<Args>(arguments)..., move(this->get(handle))));
-
-        allocation_type allocation = (&allocator->*alloc_function)(
+                                auto& old_handle, Args&&... arguments) {
+        auto allocation = (&allocator->*alloc_function)(
             // Possible alignment and/or count arguments.
             forward<Args>(arguments)...,
             // Move the data from this handle.
-            move(this->get(handle)));
+            move(this->get(old_handle)));
 
         if constexpr (is_fail_safe) {
             if (!allocation.has_value()) {
@@ -5382,7 +5380,7 @@ class allocator_interface {
             }
         }
 
-        this->free(handle);
+        this->free(old_handle);
         return allocation;
     }
 
@@ -5399,109 +5397,107 @@ class allocator_interface {
         }
     }
 
-    // Copy data from `p_handle` into `p_allocation`.
-    constexpr void relocate_ptr_handle(auto* p_handle, auto* p_allocation,
-                                       ssize count) {
+    // Copy data from `p_old_handle` into `p_new_handle`.
+    template <typename T>
+    constexpr void relocate_ptr_handle(T* p_old_handle, T* p_new_handle,
+                                       ssize old_count) {
         // TODO: Use a `relocate()` function to streamline this.
-        if constexpr (is_trivially_relocatable<decltype(*p_allocation)>) {
-            copy_memory(p_handle, p_allocation, count);
-        } else {
-            for (ssize i = 0; i < count; ++i) {
-                *(p_allocation + i) = move(*(p_handle + i));
+        if (!__builtin_is_constant_evaluated()) {
+            assert(p_new_handle != nullptr);
+            if constexpr (is_trivially_relocatable<T>) {
+                copy_memory(p_old_handle, p_new_handle, old_count);
             }
+            return;
+        }
+        for (ssize i = 0; i < old_count; ++i) {
+            *(p_new_handle + i) = move(*(p_old_handle + i));
         }
     }
 
-    // Copy data from `p_handle` into `allocation`.
+    // Copy data from `p_old_handle` into `allocation`.
     // This `span` overload exists to simplify calling this with the output of
     // both `_multi` and non-`_multi` functions.
     template <typename T>
-    constexpr void relocate_ptr_handle(auto* p_handle, span<T> allocation,
-                                       ssize count) {
+    constexpr void relocate_ptr_handle(auto* p_old_handle, span<T> new_handle,
+                                       ssize old_count) {
         // TODO: Use a `relocate()` function to streamline this.
-        if constexpr (is_trivially_relocatable<decltype(*(
-                          allocation.data()))>) {
-            copy_memory(p_handle, allocation.data(), count);
-        } else {
-            for (ssize i = 0; i < count; ++i) {
-                allocation[i] = move(*(p_handle + i));
+        if (!__builtin_is_constant_evaluated()) {
+            assert(new_handle.data() != nullptr);
+
+            if constexpr (is_trivially_relocatable<T>) {
+                copy_memory(p_old_handle, new_handle.data(), old_count);
             }
+            return;
+        }
+        for (ssize i = 0; i < old_count; ++i) {
+            new_handle[i] = move(*(p_old_handle + i));
         }
     }
 
     // Reallocate opaque memory handles.
     template <bool is_fail_safe, bool has_feedback, typename... Args>
-    constexpr auto opq_meta_realloc_multi(auto function, auto& allocator,
-                                          mem auto& handle, ssize new_count,
-                                          Args&&... maybe_alignment) {
-        using allocation_type = decltype((&allocator->*function)(
-            forward<Args>(maybe_alignment)..., new_count));
-        allocation_type allocation;
-        allocation = (&allocator->*function)(forward<Args>(maybe_alignment)...,
-                                             new_count);
+    requires(sizeof...(Args) <= 1) constexpr auto opq_meta_realloc_multi(
+        auto alloc_function, auto& allocator, mem auto& old_handle,
+        ssize new_count, Args&&... maybe_alignment) {
+        auto new_handle = (allocator.*alloc_function)(
+            forward<Args>(maybe_alignment)..., new_count);
 
         if constexpr (is_fail_safe) {
+            if (!new_handle.has_value()) {
+                return new_handle;
+            }
+
             if constexpr (has_feedback) {
-                if (!allocation.has_value()) {
-                    return allocation;
-                }
-                this->relocate_opq_handle(handle, allocation.value().first());
+                this->relocate_opq_handle(old_handle,
+                                          new_handle.value().first());
             } else {
-                if (!allocation.has_value()) {
-                    return allocation;
-                }
-                this->relocate_opq_handle(handle, allocation.value());
+                this->relocate_opq_handle(old_handle, new_handle.value());
             }
         } else {
             if constexpr (has_feedback) {
-                this->relocate_opq_handle(handle, allocation.first());
+                this->relocate_opq_handle(old_handle, new_handle.first());
             } else {
-                this->relocate_opq_handle(handle, allocation);
+                this->relocate_opq_handle(old_handle, new_handle);
             }
         }
 
         // This can be an opaque handle.
-        this->free(handle);
-        return allocation;
+        this->free(old_handle);
+        return new_handle;
     }
 
     // Reallocate pointer memory handles.
     template <bool is_fail_safe, bool has_feedback, typename... Args>
-    constexpr auto meta_realloc_multi(auto function, auto& allocator,
-                                      auto* p_handle, ssize old_count,
-                                      ssize new_count,
-                                      Args&&... maybe_alignment) {
-        using allocation_type = decltype((&allocator->*function)(
-            forward<Args>(maybe_alignment)..., new_count));
-
-        allocation_type allocation = (&allocator->*function)(
+    requires(sizeof...(Args) <= 1) constexpr auto meta_realloc_multi(
+        auto alloc_function, auto& allocator, auto* p_old_handle,
+        ssize old_count, ssize new_count, Args&&... maybe_alignment) {
+        // `maybe_alignment` expands into zero or one arguments.
+        auto new_handle = (allocator.*alloc_function)(
             forward<Args>(maybe_alignment)..., new_count);
 
         if constexpr (is_fail_safe) {
+            if (!new_handle.has_value()) {
+                return new_handle;
+            }
+
             if constexpr (has_feedback) {
-                if (!allocation.has_value()) {
-                    return allocation;
-                }
-                this->relocate_ptr_handle(p_handle, allocation.value().first(),
-                                          old_count);
+                this->relocate_ptr_handle(
+                    p_old_handle, new_handle.value().first(), old_count);
             } else {
-                if (!allocation.has_value()) {
-                    return allocation;
-                }
-                this->relocate_ptr_handle(p_handle, allocation.value(),
+                this->relocate_ptr_handle(p_old_handle, new_handle.value(),
                                           old_count);
             }
         } else {
             if constexpr (has_feedback) {
-                this->relocate_ptr_handle(p_handle, allocation.first(),
+                this->relocate_ptr_handle(p_old_handle, new_handle.first(),
                                           old_count);
             } else {
-                this->relocate_ptr_handle(p_handle, allocation, old_count);
+                this->relocate_ptr_handle(p_old_handle, new_handle, old_count);
             }
         }
 
-        this->free_multi(p_handle, old_count);
-        return allocation;
+        this->free_multi(p_old_handle, old_count);
+        return new_handle;
     }
 };
 
