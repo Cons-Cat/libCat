@@ -25,6 +25,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     linear_allocator(uintptr<void> p_address, ssize arena_bytes)
         : p_arena_begin(p_address + static_cast<usize>(arena_bytes)),
           p_arena_end(p_address) {
+        this->reset();
     }
 
   public:
@@ -54,6 +55,11 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
     // Reset the bumped pointer to the beginning of this arena.
     void reset() {
+#ifdef __SANITIZE_ADDRESS__
+        __asan_poison_memory_region(
+            static_cast<void const*>(this->p_arena_end),
+            make_unsigned((this->p_arena_begin - this->p_arena_end).raw));
+#endif
         this->p_arena_current = p_arena_begin;
     }
 
@@ -87,6 +93,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
         -> maybe_ptr<void> {
         uintptr<void> allocation =
             align_down(this->p_arena_current - allocation_bytes, alignment);
+
         if (allocation >= p_arena_end) {
             this->p_arena_current = allocation;
             // Return a pointer that is then used for in-place construction.
@@ -101,6 +108,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
         -> maybe_sized_allocation<void*> {
         uintptr<void> allocation =
             align_down(this->p_arena_current - allocation_bytes, alignment);
+
         if (allocation >= p_arena_end) {
             ssize bytes_allocated =
                 static_cast<ssize>(this->p_arena_current - allocation);

@@ -111,7 +111,7 @@ TEST(test_list) {
     list_1.push_front(allocator, 2);
     list_1.push_front(allocator, 1);
     list_1.push_front(allocator, 0);
-    cat::list<int4> list_4 = cat::move(list_1);  // NOLINT
+    cat::list<int4> list_4 = cat::move(list_1);
     cat::verify(list_4.front() == 0);
     cat::verify(*(list_4.begin() + 1) == 1);
     cat::verify(*(list_4.begin() + 2) == 2);
@@ -167,13 +167,13 @@ TEST(test_list) {
     cat::verify(*(forward_list_2.begin() + 3) == 3);
 
     // Test `back_insert_iterator`.
-    list_1.clear(allocator);
-    cat::back_insert_iterator back_iterator(list_1);
-    cat::front_insert_iterator front_iterator(list_1);
+    cat::list<int4> back_list;
+    cat::back_insert_iterator back_iterator(back_list);
+    cat::front_insert_iterator front_iterator(back_list);
     back_iterator.insert(allocator, 10);
-    cat::verify(list_1.front() == 10);
+    cat::verify(back_list.front() == 10);
 
     front_iterator.insert(allocator, 2);
-    cat::verify(list_1.front() == 2);
-    cat::verify(list_1.back() == 10);
+    cat::verify(back_list.front() == 2);
+    cat::verify(back_list.back() == 10);
 }

@@ -1308,6 +1308,8 @@ TEST(test_alloc) {
 
     // The allocator runs out of memory around here.
     allocator.reset();
+    // This poisons `p_alloc`, so reallocate it.
+    p_alloc = allocator.alloc<int4>(1).value();
 
     // Test `opq_recalloc`.
     opq_alloc = allocator.opq_alloc<int4>().value();
@@ -2029,6 +2031,7 @@ TEST(test_alloc) {
     allocator.free(opq_alloc);
 
     // Test `resalloc`.
+	p_alloc = allocator.alloc<int4>(0).value();
     p_alloc = allocator.resalloc(p_alloc).value().first();
 
     // Test `resalloc_to`
@@ -2328,6 +2331,7 @@ TEST(test_alloc) {
     allocator.free(opq_alloc);
 
     // Test `rescalloc`.
+	p_alloc = allocator.alloc<int4>(0).value();
     p_alloc = allocator.rescalloc(p_alloc).value().first();
 
     // Test `rescalloc_to`

@@ -5300,7 +5300,7 @@ class allocator_interface {
 #ifdef __SANITIZE_ADDRESS__
             __asan_unpoison_memory_region(
                 static_cast<void const volatile*>(p_allocation),
-                make_unsigned(allocation_bytes) + sizeof(T) + 8u);
+                make_unsigned(allocation_bytes));
 #endif
 
             // Possibly zero-out the allocation.
