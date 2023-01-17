@@ -9,29 +9,83 @@
 
 namespace cat {
 
-template <is_unsigned_integral T>
+template <is_unsigned_integral storage_type>
 class bit_reference {
-  public:
-    constexpr bit_reference(T& reference, ssize in_offset)
-        : storage(reference), bit_offset(in_offset){};
+  private:
+    // This constructor is only used by the static factory functions.
+    constexpr bit_reference(storage_type& in_storage, storage_type in_mask)
+        : storage(in_storage), bitmask(in_mask){};
 
-    constexpr auto operator=(bool bit_value) -> bit_reference& {
-        if (bit_value) {
-            this->storage |= (static_cast<T>(1u) << bit_offset);
-        } else {
-            this->storage &= ~(static_cast<T>(1u) << bit_offset);
-        }
+  public:
+    constexpr bit_reference(bit_reference<storage_type> const& other)
+        : storage(other.storage), bitmask(other.bitmask){};
+
+    template <is_integral T>
+    static constexpr auto from_offset(storage_type& reference, T offset)
+        -> bit_reference {
+        return bit_reference(reference,
+                             storage_type(1u << make_unsigned(offset)));
+    }
+
+    static constexpr auto from_mask(storage_type& reference, storage_type mask)
+        -> bit_reference {
+        return bit_reference(reference, mask);
+    }
+
+    // Assign a true or false value to this bit.
+    constexpr auto operator=(bool value) -> bit_reference& {
+        return this->assign(value);
+    }
+
+    // Convert this bit to a true or false value.
+    constexpr operator bool() const {
+        return this->is_set();
+    }
+
+    // Assign a true or false value to this bit.
+    constexpr auto assign(bool value) -> bit_reference& {
+        return value ? this->set() : this->unset();
+    }
+
+    // Assign another bit's value to this bit.
+    template <is_unsigned_integral T>
+    constexpr auto assign(bit_reference<T> other) -> bit_reference& {
+        return this->assign(other.is_set());
+    }
+
+    // Flag this bit on.
+    constexpr auto set() -> bit_reference& {
+        this->storage |= this->bitmask;
         return *this;
     }
 
-    constexpr operator bool() {
-        T mask = (static_cast<T>(1u) << bit_offset);
-        return static_cast<bool>(storage & mask);
+    // Flag this bit off.
+    constexpr auto unset() -> bit_reference& {
+        this->storage &= ~(this->bitmask);
+        return *this;
     }
 
+    // Flag this bit as the opposite of its current state.
+    constexpr auto flip() -> bit_reference& {
+        this->storage ^= this->bitmask;
+        return *this;
+    }
+
+    constexpr auto is_set() const -> bool {
+        // These constructors are called explicitly in case `0u` cannot
+        // implicitly convert to `storage_type`.
+        return storage_type(this->storage & this->bitmask) != storage_type(0u);
+    }
+
+    constexpr auto mask() const -> remove_cv<storage_type> {
+        return this->bitmask;
+        return *this;
+    }
+
+
   private:
-    T& storage;
-    ssize bit_offset;
+    storage_type& storage;
+    remove_cv<storage_type> bitmask;
 };
 
 template <ssize bits_count>
@@ -131,9 +185,10 @@ requires(bits_count > 0) class bitset {
 
         value_type_element& bytes =
             this->storage[(index + this->leading_skipped_bits) / 64];
-        ssize bit_offset = (index - this->leading_skipped_bits) & 63;
+        // ssize bit_offset = (index - this->leading_skipped_bits) & 63;
 
-        return bit_reference(bytes, bit_offset);
+        return bit_reference<value_type_element>::from_offset(
+            bytes, index - this->leading_skipped_bits);
     }
 
     [[nodiscard]] constexpr auto operator[](ssize index) const -> bool {
