@@ -9,9 +9,13 @@
 
 namespace cat {
 
+class bit_value;
+
 template <is_unsigned_integral storage_type>
 class bit_reference {
   private:
+    friend bit_value;
+
     // This constructor is only used by the static factory functions.
     constexpr bit_reference(storage_type& in_storage, storage_type in_mask)
         : storage(in_storage), bitmask(in_mask){};
@@ -82,10 +86,126 @@ class bit_reference {
         return *this;
     }
 
-
   private:
     storage_type& storage;
     remove_cv<storage_type> bitmask;
+};
+
+class bit_value {
+  public:
+    template <is_unsigned_integral>
+    friend class bit_reference;
+
+    constexpr bit_value() = default;
+
+    constexpr bit_value(bit_value const& other) : value(other.value) {
+    }
+
+    template <is_unsigned_integral T>
+    constexpr bit_value(bit_reference<T> reference)
+        : value(reference.is_set()) {
+    }
+
+    constexpr bit_value(bool other) : value(other) {
+    }
+
+    constexpr auto operator=(bit_value const& other) -> bit_value& {
+        this->value = other.value;
+        return *this;
+    }
+
+    template <is_unsigned_integral T>
+    constexpr auto operator=(bit_reference<T> other) -> bit_value& {
+        this->value = other.is_set();
+        return *this;
+    }
+
+    constexpr auto operator=(bool other) -> bit_value& {
+        this->value = other;
+        return *this;
+    }
+
+    // Implicitly convert to `bool`.
+    constexpr operator bool() {
+        return this->value;
+    }
+
+    constexpr friend auto operator==(bit_value self, bit_value other) -> bool {
+        return self.value == other.value;
+    }
+
+    constexpr friend auto operator&(bit_value self, bit_value other)
+        -> bit_value {
+        return bit_value(self.value & other.value);
+    }
+
+    constexpr auto operator&=(bit_value other) -> bit_value& {
+        this->value &= other.value;
+        return *this;
+    }
+
+    constexpr friend auto operator|(bit_value self, bit_value other)
+        -> bit_value {
+        return bit_value(self.value | other.value);
+    }
+
+    constexpr auto operator|=(bit_value other) -> bit_value& {
+        this->value |= other.value;
+        return *this;
+    }
+
+    constexpr friend auto operator^(bit_value self, bit_value other)
+        -> bit_value {
+        return bit_value(self.value ^ other.value);
+    }
+
+    constexpr auto operator^=(bit_value other) -> bit_value& {
+        this->value ^= other.value;
+        return *this;
+    }
+
+    constexpr auto operator~() -> bit_value {
+        bit_value bit = !this->value;
+        return bit;
+    }
+
+    constexpr void assign(bit_value input) {
+        this->value = input.value;
+    }
+
+    template <is_unsigned_integral T>
+    constexpr void assign(bit_reference<T> input) {
+        this->value = input.is_set();
+    }
+
+    constexpr void assign(bool input) {
+        this->value = input;
+    }
+
+    // Flag this bit on.
+    constexpr auto set() -> bit_value& {
+        this->value = true;
+        return *this;
+    }
+
+    // Flag this bit off.
+    constexpr auto unset() -> bit_value& {
+        this->value = false;
+        return *this;
+    }
+
+    // Flag this bit as the opposite of its current state.
+    constexpr auto flip() -> bit_value& {
+        this->value = !this->value;
+        return *this;
+    }
+
+    constexpr auto is_set() const -> bool {
+        return this->value;
+    }
+
+  private:
+    bool value;
 };
 
 template <ssize bits_count>
