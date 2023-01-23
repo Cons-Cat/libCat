@@ -1283,26 +1283,21 @@ inline constexpr int8 int8_max = limits<int8>::max();
 inline constexpr uint8 uint8_min = limits<uint8>::min();
 inline constexpr uint8 uint8_max = limits<uint8>::max();
 
-// These suffix operators are reserved for future standardization, but they will
-// be used anyways.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wliteral-suffix"
-
 inline namespace literals {
     inline namespace arithmetic_literals {
-        constexpr auto operator"" i1(unsigned long long input) -> cat::int1 {
+        constexpr auto operator""_i1(unsigned long long input) -> cat::int1 {
             return cat::int1{input};
         }
 
-        constexpr auto operator"" i2(unsigned long long input) -> cat::int2 {
+        constexpr auto operator""_i2(unsigned long long input) -> cat::int2 {
             return cat::int2{input};
         }
 
-        constexpr auto operator"" i4(unsigned long long input) -> cat::int4 {
+        constexpr auto operator""_i4(unsigned long long input) -> cat::int4 {
             return cat::int4{input};
         }
 
-        constexpr auto operator"" i8(unsigned long long input) -> cat::int8 {
+        constexpr auto operator""_i8(unsigned long long input) -> cat::int8 {
             return cat::int8{input};
         }
 
@@ -1310,19 +1305,19 @@ inline namespace literals {
             return cat::ssize{input};
         }
 
-        constexpr auto operator"" u1(unsigned long long input) -> cat::uint1 {
+        constexpr auto operator""_u1(unsigned long long input) -> cat::uint1 {
             return cat::uint1{input};
         }
 
-        constexpr auto operator"" u2(unsigned long long input) -> cat::uint2 {
+        constexpr auto operator""_u2(unsigned long long input) -> cat::uint2 {
             return cat::uint2{input};
         }
 
-        constexpr auto operator"" u4(unsigned long long input) -> cat::uint4 {
+        constexpr auto operator""_u4(unsigned long long input) -> cat::uint4 {
             return cat::uint4{input};
         }
 
-        constexpr auto operator"" u8(unsigned long long input) -> cat::uint8 {
+        constexpr auto operator""_u8(unsigned long long input) -> cat::uint8 {
             return cat::uint8{input};
         }
 
@@ -1330,26 +1325,24 @@ inline namespace literals {
             return cat::usize{input};
         }
 
-        constexpr auto operator"" f4(unsigned long long input) -> cat::float4 {
+        constexpr auto operator""_f4(unsigned long long input) -> cat::float4 {
             return cat::float4{input};
         }
 
-        constexpr auto operator"" f4(long double input) -> cat::float4 {
+        constexpr auto operator""_f4(long double input) -> cat::float4 {
             return cat::float4{input};
         }
 
-        constexpr auto operator"" f8(unsigned long long input) -> cat::float8 {
+        constexpr auto operator""_f8(unsigned long long input) -> cat::float8 {
             return cat::float8{input};
         }
 
-        constexpr auto operator"" f8(long double input) -> cat::float8 {
+        constexpr auto operator""_f8(long double input) -> cat::float8 {
             return cat::float8{input};
         }
     }  // namespace arithmetic_literals
 }  // namespace literals
 }  // namespace cat
-
-#pragma GCC diagnostic push
 
 // Arithmetic wrappers should be in the global namespace for convenience.
 using cat::bool2;

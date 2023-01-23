@@ -33,34 +33,34 @@ TEST(test_bitset) {
     static_assert(bits129.storage_element_size == 8);
 
     cat::bitset<7> bits7_2 = bits7;
-    bits7_2 = cat::bitset<7>::from(0x0u1);
+    bits7_2 = cat::bitset<7>::from(0x0_u1);
     cat::verify(!bits7_2.all_of());
     cat::verify(bits7_2.none_of());
     cat::verify(!bits7_2.any_of());
 
-    bits7_2 = cat::bitset<7>::from(0b01111111u1);
+    bits7_2 = cat::bitset<7>::from(0b01111111_u1);
     cat::verify(bits7_2.all_of());
     cat::verify(!bits7_2.none_of());
     cat::verify(bits7_2.any_of());
 
-    bits7_2 = cat::bitset<7>::from(0b01000000u1);
+    bits7_2 = cat::bitset<7>::from(0b01000000_u1);
     cat::verify(!bits7_2.all_of());
     cat::verify(!bits7_2.none_of());
     cat::verify(bits7_2.any_of());
 
-    bits7_2 = cat::bitset<7>::from(0b10000000u1);
+    bits7_2 = cat::bitset<7>::from(0b10000000_u1);
     cat::verify(!bits7_2.all_of());
     cat::verify(!bits7_2.none_of());
     cat::verify(bits7_2.any_of());
 
-    cat::bitset<127> bits127 = cat::bitset<127>::from(0x0u8, 0x0u8);
+    cat::bitset<127> bits127 = cat::bitset<127>::from(0x0_u8, 0x0_u8);
     cat::verify(!bits127.all_of());
     cat::verify(bits127.none_of());
     cat::verify(!bits127.any_of());
 
     // The 128th bit is off, all_of others are on.
     bits127 =
-        cat::bitset<127>::from(cat::uint8_max >> 1u, 0xFFFFFFFF'FFFFFFFFu8);
+        cat::bitset<127>::from(cat::uint8_max >> 1u, 0xFFFFFFFF'FFFFFFFF_u8);
     cat::verify(bits127.leading_bytes_bits == 63);
     cat::verify(bits127.all_of());
     cat::verify(!bits127.none_of());
@@ -70,30 +70,30 @@ TEST(test_bitset) {
 
     // The 128th bit is off, all_of others are on.
     bits127 = cat::bitset<127>::from(cat::uint8_max >> 2u,
-                                     0xFFFFFFFF'FFFFFFFFu8 << 1u);
+                                     0xFFFFFFFF'FFFFFFFF_u8 << 1u);
     cat::verify(bits127.countl_zero() == 1);
     cat::verify(bits127.countr_zero() == 1);
 
-    bits127 = cat::bitset<127>::from(0u8, cat::uint8_max >> 1u);
+    bits127 = cat::bitset<127>::from(0_u8, cat::uint8_max >> 1u);
     cat::verify(bits127.countl_zero() == 64);
     cat::verify(bits127.countr_zero() == 0);
 
     // Test const subscripting.
     constexpr cat::bitset<15> bits15 =
-        cat::bitset<15>::from(0b010101010101010u2);
+        cat::bitset<15>::from(0b010101010101010_u2);
     static_assert(!bits15[0]);
     static_assert(bits15[1]);
     static_assert(!bits15[2]);
 
     constexpr cat::bitset<15> bits15_2 =
-        cat::bitset<15>::from(0b101010101010101u2);
+        cat::bitset<15>::from(0b101010101010101_u2);
     static_assert(bits15_2[0]);
     static_assert(!bits15_2[1]);
     static_assert(bits15_2[2]);
 
     // Test 16 byte bitset's subscript.
     constexpr cat::bitset<128> bits128_2 =
-        cat::bitset<128>::from(0xFFFFFFFF'FFFFFFFFu8, 0xFFFFFFFF'FFFFFFFBu8);
+        cat::bitset<128>::from(0xFFFFFFFF'FFFFFFFF_u8, 0xFFFFFFFF'FFFFFFFB_u8);
     static_assert(bits128_2[0]);
     static_assert(bits128_2[1]);
     static_assert(bits128_2[2]);
@@ -103,7 +103,7 @@ TEST(test_bitset) {
 
     // Test 16 byte bitset's subscript with bit offset.
     constexpr cat::bitset<127> bits127_2 =
-        cat::bitset<127>::from(0xFFFFFFFF'FFFFFFFFu8, 0xFFFFFFFF'FFFFFFFBu8);
+        cat::bitset<127>::from(0xFFFFFFFF'FFFFFFFF_u8, 0xFFFFFFFF'FFFFFFFB_u8);
     static_assert(bits127_2[0]);
     static_assert(bits127_2[1]);
     static_assert(bits127_2[2]);
@@ -112,7 +112,7 @@ TEST(test_bitset) {
 
     // Test mutable subscript.
     bits127 = cat::bitset<127>::from(cat::uint8_max >> 2u,
-                                     0xFFFFFFFF'FFFFFFFFu8 << 1u);
+                                     0xFFFFFFFF'FFFFFFFF_u8 << 1u);
     cat::verify(!bits127[0]);
     cat::verify(bits127[1]);
 

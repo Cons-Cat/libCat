@@ -28,6 +28,10 @@ list(
   # Enable most warnings.
   -Wall -Wextra
   -Wno-unused-function
+  # Disable some Clang warnings.
+  -Wno-unknown-attributes
+  -Wno-user-defined-literals
+  -Wno-inline-new-delete
 )
 
 if(CAT_USE_SANITIZERS)

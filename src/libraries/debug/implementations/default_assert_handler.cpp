@@ -24,7 +24,7 @@ void cat::default_assert_handler(source_location const& callsite) {
         unsigned char input = nix::read_char().or_exit();
         if (input >= '1' && input <= '3') {
             // ASCII trick that converts an inputted char to a digit.
-            uint1 digit = input - 49u1;
+            uint1 digit = input - 49_u1;
 
             // The value of `digit` is one less than what was inputted.
             switch (digit.raw) {
