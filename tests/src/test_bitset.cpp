@@ -3,6 +3,8 @@
 #include "../unit_tests.hpp"
 
 TEST(test_bitset) {
+    using namespace cat::arithmetic_literals;
+
     constexpr cat::bitset<7> bits7{};
     constexpr cat::bitset<8> bits8{};
     constexpr cat::bitset<16> bits16{};

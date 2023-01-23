@@ -3,6 +3,8 @@
 #include "../unit_tests.hpp"
 
 TEST(test_bit) {
+    using namespace cat::arithmetic_literals;
+
     // Test clz().
     static_assert(cat::countl_zero(0X7FFFFFFFFFFFFFFFu) == 1);
     static_assert(cat::countl_zero(0X7FFFFFFFu) == 1);

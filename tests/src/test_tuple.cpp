@@ -7,6 +7,8 @@ struct tup_non_trivial {
 };
 
 TEST(test_tuple) {
+    using namespace cat::arithmetic_literals;
+
     using intint = cat::tuple<int, int>;
     static_assert(cat::is_trivial<intint>);
     static_assert(sizeof(intint) == 8);

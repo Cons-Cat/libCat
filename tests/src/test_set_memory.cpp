@@ -4,6 +4,8 @@
 #include "../unit_tests.hpp"
 
 TEST(test_set_memory) {
+    using namespace cat::arithmetic_literals;
+
     cat::page_allocator allocator;
     uint1* p_page = allocator.alloc<uint1>().or_exit();
 

@@ -4,6 +4,8 @@
 #include "cat/debug"
 
 TEST(test_math) {
+    using namespace cat::arithmetic_literals;
+
     // Test `min()`.
     cat::verify(cat::min(0) == 0);
     cat::verify(cat::min(0u) == 0u);
