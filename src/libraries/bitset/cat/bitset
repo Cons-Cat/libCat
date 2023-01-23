@@ -211,8 +211,9 @@ requires(bits_count > 0) class bitset {
             auto it = this->storage[i];
             using T = decltype(it);
 
-            if (i > 0 || constant_evaluate(has_single_bit(bits_count) ||
-                                           !(bits_count & 63))) {
+            // TODO: Clang rejects the `constant_evaluate()` call.
+            if (i > 0 ||  // constant_evaluate
+                (has_single_bit(bits_count) || !(bits_count & 63))) {
                 if (it != it.max()) {
                     // If at least one bit is 0:
                     return false;

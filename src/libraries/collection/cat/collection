@@ -360,7 +360,7 @@ class collection_interface
         return unconst(this)->at(index);
     }
 
-    [[nodiscard]] constexpr auto front() -> T& requires(this->is_array_like) {
+    [[nodiscard]] constexpr auto front() -> T& requires(is_array_like) {
         cat::assert(this->self().size() > 0);
         return this->self_mut().data()[0];
     }
@@ -370,7 +370,7 @@ class collection_interface
         return unconst(this)->front();
     }
 
-    [[nodiscard]] constexpr auto back() -> T& requires(this->is_array_like) {
+    [[nodiscard]] constexpr auto back() -> T& requires(is_array_like) {
         cat::assert(this->self().size() > 0);
         return this->self_mut().data()[this->self().size().raw - 1];
     }
@@ -382,7 +382,7 @@ class collection_interface
 
     [[nodiscard]] constexpr auto subspan(ssize start_index, ssize end_index)
         -> span<T>
-    requires(this->is_array_like) {
+    requires(is_array_like) {
         if (!__builtin_is_constant_evaluated()) {
             cat::assert(start_index >= 0);
             cat::assert(end_index <= this->self().capacity());
@@ -394,7 +394,7 @@ class collection_interface
 
     [[nodiscard]] constexpr auto subspan(ssize start_index,
                                          ssize end_index) const -> span<T const>
-    requires(this->is_array_like) {
+    requires(is_array_like) {
         if (!__builtin_is_constant_evaluated()) {
             cat::assert(start_index >= 0);
             cat::assert(end_index <= this->self().capacity());
@@ -405,22 +405,22 @@ class collection_interface
     }
 
     [[nodiscard]] constexpr auto first(ssize count) -> span<T>
-    requires(this->is_array_like) {
+    requires(is_array_like) {
         return this->subspan(0, count);
     }
 
     [[nodiscard]] constexpr auto first(ssize count) const -> span<T const>
-    requires(this->is_array_like) {
+    requires(is_array_like) {
         return this->subspan(0, count);
     }
 
     [[nodiscard]] constexpr auto last(ssize count) -> span<T>
-    requires(this->is_array_like) {
+    requires(is_array_like) {
         return this->subspan(this->self().size() - count, this->self().size());
     }
 
     [[nodiscard]] constexpr auto last(ssize count) const -> span<T const>
-    requires(this->is_array_like) {
+    requires(is_array_like) {
         return this->subspan(this->self().size() - count, this->self().size());
     }
 

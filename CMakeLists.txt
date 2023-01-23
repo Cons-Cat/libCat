@@ -25,13 +25,16 @@ list(
   # These flags cause clang-tidy 12 to crash:
   # -fconcepts-diagnostics-depth=2
   -fmax-errors=4
+  
   # Enable most warnings.
   -Wall -Wextra
   -Wno-unused-function
+  -Wno-unknown-pragmas
   # Disable some Clang warnings.
   -Wno-unknown-attributes
   -Wno-user-defined-literals
   -Wno-inline-new-delete
+  -Wno-unqualified-std-cast-call
 )
 
 if(CAT_USE_SANITIZERS)

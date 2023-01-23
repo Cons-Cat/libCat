@@ -163,127 +163,183 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
     template <ssize index>
         requires(index <= size)
     constexpr auto get() & -> auto& {
-        return (*this)[constant<index>{}];
+        return (*this)[constant<index>()];
+    }
+    template <usize index>
+    constexpr auto get() & -> auto& {
+        return (*this)[constant<make_signed(index)>()];
     }
 
     // Get a `const` reference to the N'th stored variable.
     template <ssize index>
         requires(index <= size)
     constexpr auto get() const& -> auto const& {
-        return (*this)[constant<index>{}];
+        return (*this)[constant<index>()];
+    }
+    template <usize index>
+    constexpr auto get() const& -> auto const& {
+        return (*this)[constant<make_signed(index)>()];
     }
 
     // Move the N'th stored variable.
     template <ssize index>
         requires(index <= size)
     constexpr auto get() && -> auto&& {
-        return move(*this)[constant<index>{}];
+        return move(*this)[constant<index>()];
+    }
+    template <usize index>
+    constexpr auto get() && -> auto&& {
+        return move(*this)[constant<make_signed(index)>()];
     }
 
     // Move the N'th stored variable.
     template <ssize index>
         requires(index <= size)
     constexpr auto get() const&& -> auto&& {
-        return move(*this)[constant<index>{}];
+        return move(*this)[constant<index>()];
+    }
+    template <usize index>
+    constexpr auto get() const&& -> auto&& {
+        return move(*this)[constant<make_signed(index)>()];
     }
 
     // Get a non-`const` reference to the first stored variable.
-    constexpr auto first() & -> auto& requires(size >= 1) {
+    constexpr auto first() & -> auto&
+        requires(size >= 1)
+    {
         return this->get<0>();
     }
 
     // Get a `const` reference to the first stored variable.
-    constexpr auto first() const& -> auto const& requires(size >= 1) {
+    constexpr auto first() const& -> auto const&
+        requires(size >= 1)
+    {
         return this->get<0>();
     }
 
     // Move the first stored variable.
-    constexpr auto first() && -> auto&& requires(size >= 1) {
+    constexpr auto first() && -> auto&&
+        requires(size >= 1)
+    {
         return move(this->get<0>());
     }
 
     // Move the first stored variable.
-    constexpr auto first() const&& -> auto&& requires(size >= 1) {
+    constexpr auto first() const&& -> auto&&
+        requires(size >= 1)
+    {
         return move(this->get<0>());
     }
 
     // Get a non-`const` reference to the second stored variable.
-    constexpr auto second() & -> auto& requires(size >= 2) {
+    constexpr auto second() & -> auto&
+        requires(size >= 2)
+    {
         return this->get<1>();
     }
 
     // Get a `const` reference to the second stored variable.
-    constexpr auto second() const& -> auto const& requires(size >= 2) {
+    constexpr auto second() const& -> auto const&
+        requires(size >= 2)
+    {
         return this->get<1>();
     }
 
     // Move the second stored variable.
-    constexpr auto second() && -> auto&& requires(size >= 2) {
+    constexpr auto second() && -> auto&&
+        requires(size >= 2)
+    {
         return move(this->get<1>());
     }
 
     // Move the second stored variable.
-    constexpr auto second() const&& -> auto&& requires(size >= 2) {
+    constexpr auto second() const&& -> auto&&
+        requires(size >= 2)
+    {
         return move(this->get<1>());
     }
 
     // Get a non-`const` reference to the third stored variable.
-    constexpr auto third() & -> auto& requires(size >= 3) {
+    constexpr auto third() & -> auto&
+        requires(size >= 3)
+    {
         return this->get<2>();
     }
 
     // Get a `const` reference to the third stored variable.
-    constexpr auto third() const& -> auto const& requires(size >= 3) {
+    constexpr auto third() const& -> auto const&
+        requires(size >= 3)
+    {
         return this->get<2>();
     }
 
     // Move the third stored variable.
-    constexpr auto third() && -> auto&& requires(size >= 3) {
+    constexpr auto third() && -> auto&&
+        requires(size >= 3)
+    {
         return move(this->get<2>());
     }
 
     // Move the third stored variable.
-    constexpr auto third() const&& -> auto&& requires(size >= 3) {
+    constexpr auto third() const&& -> auto&&
+        requires(size >= 3)
+    {
         return move(this->get<2>());
     }
 
     // Get a non-`const` reference to the fourth stored variable.
-    constexpr auto fourth() & -> auto& requires(size >= 4) {
+    constexpr auto fourth() & -> auto&
+        requires(size >= 4)
+    {
         return this->get<3>();
     }
 
     // Get a `const` reference to the fourth stored variable.
-    constexpr auto fourth() const& -> auto const& requires(size >= 4) {
+    constexpr auto fourth() const& -> auto const&
+        requires(size >= 4)
+    {
         return this->get<3>();
     }
 
     // Move the fourth stored variable.
-    constexpr auto fourth() && -> auto&& requires(size >= 4) {
+    constexpr auto fourth() && -> auto&&
+        requires(size >= 4)
+    {
         return move(this->get<3>());
     }
 
     // Move the fourth stored variable.
-    constexpr auto fourth() const&& -> auto&& requires(size >= 4) {
+    constexpr auto fourth() const&& -> auto&&
+        requires(size >= 4)
+    {
         return move(this->get<3>());
     }
 
     // Get a non-`const` reference to the fifth stored variable.
-    constexpr auto fifth() & -> auto& requires(size >= 5) {
+    constexpr auto fifth() & -> auto&
+        requires(size >= 5)
+    {
         return this->get<4>();
     }
 
     // Get a `const` reference to the fifth stored variable.
-    constexpr auto fifth() const& -> auto const& requires(size >= 5) {
+    constexpr auto fifth() const& -> auto const&
+        requires(size >= 5)
+    {
         return this->get<4>();
     }
 
     // Move the fifth stored variable.
-    constexpr auto fifth() && -> auto&& requires(size >= 5) {
+    constexpr auto fifth() && -> auto&&
+        requires(size >= 5)
+    {
         return move(this->get<4>());
     }
 
     // Move the fifth stored variable.
-    constexpr auto fifth() const&& -> auto&& requires(size >= 5) {
+    constexpr auto fifth() const&& -> auto&&
+        requires(size >= 5)
+    {
         return move(this->get<4>());
     }
 };
@@ -300,10 +356,10 @@ constexpr auto tuple_cat(types&&... tuples);
 namespace std {
 
 // template <typename...>
-// struct tuple_size {};  // NOLINT
+// struct tuple_size {};
 
 template <typename>
-struct tuple_size;  // NOLINT
+struct tuple_size;
 
 template <typename... in_types>
 struct tuple_size<cat::tuple<in_types...>>
@@ -317,13 +373,13 @@ struct tuple_element;
 
 template <usize::raw_type index, typename... in_types>
 struct tuple_element<index, cat::tuple<in_types...>> {
-    // NOLINTNEXTLINE
     using type =
-        decltype(cat::tuple<in_types...>{}.template get<ssize{index}>());
+        typename cat::type_list<in_types...>::template get<cat::make_signed(
+            index)>;
 };
 
-template <usize::raw_type I, typename T>
-using tuple_element_t = typename tuple_element<I, T>::type;  // NOLINT
+template <usize::raw_type index, typename T>
+using tuple_element_t = typename tuple_element<index, T>::type;
 
 }  // namespace std
 

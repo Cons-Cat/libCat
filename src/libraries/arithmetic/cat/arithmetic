@@ -40,7 +40,7 @@ inline constexpr bool is_arithmetic_ptr = requires {
     T::Ptr;
 };
 
-template <typename T>
+template <is_arithmetic T>
 constexpr auto to_raw_arithmetic(T value) {
     if constexpr (requires { value.raw; }) {
         return value.raw;
@@ -49,17 +49,19 @@ constexpr auto to_raw_arithmetic(T value) {
     }
 }
 
-template <typename T>
+template <is_arithmetic T>
 using to_raw_arithmetic_type = decltype(to_raw_arithmetic(T(0)));
 
+// TODO: Update name.
 template <typename T>
-concept is_raw_numeral = is_same<T, to_raw_arithmetic_type<T>>;
+concept is_raw_arithmetic = is_same<T, to_raw_arithmetic_type<T>>;
 
 template <typename T>
-concept is_raw_integral = is_integral<T> && is_raw_numeral<T>;
+concept is_raw_integral = is_integral<T> && is_raw_arithmetic<T>;
 
+// TODO: Update name.
 template <typename T>
-concept rawFloating = is_floating_point<T> && is_raw_numeral<T>;
+concept is_raw_floating_point = is_floating_point<T> && is_raw_arithmetic<T>;
 
 template <is_integral T>
 constexpr auto make_signed(T value) -> make_signed_type<T> {

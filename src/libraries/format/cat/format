@@ -589,6 +589,8 @@ namespace detail {
 
             // Enable manual indexing in this context.
             this->argument_index = -1;
+
+            return monostate;
         }
     };
 

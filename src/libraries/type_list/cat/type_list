@@ -16,16 +16,16 @@ constexpr auto min(T value) -> T;
 
 // Implicit output type `max()`.
 template <typename T, typename U, typename... remaining>
-    requires(is_implicitly_convertible<U, T>)
-constexpr auto min(T value_1, U value_2, remaining... remaining_args) -> T;
+requires(is_implicitly_convertible<U, T>) constexpr auto min(
+    T value_1, U value_2, remaining... remaining_args) -> T;
 
 template <typename T>
 constexpr auto max(T value) -> T;
 
 // Implicit output type `max()`.
 template <typename T, typename U, typename... remaining>
-    requires(is_implicitly_convertible<U, T>)
-constexpr auto max(T value_1, U value_2, remaining... remaining_args) -> T;
+requires(is_implicitly_convertible<U, T>) constexpr auto max(
+    T value_1, U value_2, remaining... remaining_args) -> T;
 
 template <typename... types>
 class type_list {
@@ -92,12 +92,11 @@ class type_list {
         return is_unique<U> ? recurse_for_unique<Us...>() : false;
     }
 
-  public:
-    // Produce an alias to the type stored at an index in this type list.
-    template <ssize index>
-    using get =
-        typename recurse_for_type_at_index<type_list<types...>, index>::result;
-
+  public :
+      // Produce an alias to the type stored at an index in this type list.
+      template <ssize index>
+      using get = typename recurse_for_type_at_index<type_list<types...>,
+                                                     index>::result;
     // TODO: Get index of first, last, and N'th occurence of `T`.
 
     // Append one parameter pack to this `type_list`.
@@ -125,7 +124,7 @@ class type_list {
     static constexpr bool has_type = recurse_for_type<T, types...>();
 
     // The number of types in this list.
-    static constexpr ssize size = ssize{sizeof...(types)};
+    static constexpr ssize size = ssize(sizeof...(types));
 
     // The size of the largest type in this list.
     static constexpr ssize largest_size = max(ssizeof(types)...);

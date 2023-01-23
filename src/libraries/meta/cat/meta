@@ -461,6 +461,7 @@ namespace detail {
         __is_same(remove_cv<T>, float) || __is_same(remove_cv<T>, double) ||
         __is_same(remove_cv<T>, long double) ||
         __is_same(remove_cv<T>, __float128);
+
     template <typename T, auto policy>
     inline constexpr bool is_floating_point_detail<arithmetic<T, policy>> =
         is_floating_point_detail<T>;
@@ -521,9 +522,12 @@ namespace detail {
     inline constexpr bool is_signed_detail = false;
 
     // This expression only holds true if `T` can be constant-evaluated.
+    // clang-format off
     template <detail::has_less_than_operator T>
-    requires(requires { T(-1); }) inline constexpr bool is_signed_detail<T> =
-        constval<(T(-1) < T(0))>;
+    requires(requires { T{static_cast<signed char>(-1)}; })
+        inline constexpr bool is_signed_detail<T> = constval<(
+            T{static_cast<signed char>(-1)} < T{static_cast<signed char>(0)})>;
+    // clang-format on
 }  // namespace detail
 
 template <typename T>
@@ -828,10 +832,14 @@ concept is_destructible = requires {
 };
 
 // `__has_trivial_destructor()` is a GNU builtin.
+// `__is_trivially_destructible()` is a Clang builtin.
 template <typename T>
 concept is_trivially_destructible = is_destructible<T> &&
-    // NOLINTNEXTLINE This intrinsic is deprecated in Clang, but not GCC.
+#ifdef __clang__
+    __is_trivially_destructible(T);
+#elif __GNUC__
     __has_trivial_destructor(T);
+#endif
 
 // `__is_assingable` is a GNU builtin.
 template <typename T, typename U>

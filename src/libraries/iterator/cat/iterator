@@ -95,7 +95,9 @@ class iterator_interface {
     // TODO: Does this work with the reverse iterator adapter?
     // If `derived_type` does not have `.advance_to()`, generate it.
     constexpr auto advance_to(derived_type const& other_iterator)
-        -> derived_type const& requires(!detail::has_advance_to<derived_type>) {
+        -> derived_type const&
+    // requires(!detail::has_advance_to<derived_type>)
+    {
         if (other_iterator > this->self()) {
             while (other_iterator > this->self()) {
                 ++(*this);

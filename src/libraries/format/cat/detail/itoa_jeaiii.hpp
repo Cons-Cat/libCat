@@ -10,6 +10,9 @@ struct PairJeaiii {
     char t, o;
 };
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-braces"
+
 #define P(T)                                                                   \
     T, '0', T, '1', T, '2', T, '3', T, '4', T, '5', T, '6', T, '7', T, '8', T, \
         '9'
@@ -18,9 +21,10 @@ static const cat::detail::PairJeaiii s_pairs[] = {
     P('5'), P('6'), P('7'), P('8'), P('9')};
 
 #define W(N, I) *(cat::detail::PairJeaiii*)&b[N] = s_pairs[I]
-#define A(N)                                                                \
-    t = (uint8::raw_type(1) << (32 + N / 5 * N * 53 / 16)) / uint4::raw_type(1e##N) + \
-        1 + N / 6 - N / 8,                                                  \
+#define A(N)                                                 \
+    t = (uint8::raw_type(1) << (32 + N / 5 * N * 53 / 16)) / \
+            uint4::raw_type(1e##N) +                         \
+        1 + N / 6 - N / 8,                                   \
     t *= u, t >>= N / 5 * N * 53 / 16, t += N / 6 * 4, W(0, t >> 32)
 #define S(N) b[N] = char(uint8::raw_type(10) * uint4::raw_type(t) >> 32) + '0'
 #define D(N) t = uint8::raw_type(100) * uint4::raw_type(t), W(N, t >> 32)
@@ -54,5 +58,7 @@ auto u32toa_jeaiii(uint4::raw_type i, char* b) -> char*;
 auto i32toa_jeaiii(int4::raw_type i, char* b) -> char*;
 auto u64toa_jeaiii(uint8::raw_type i, char* b) -> char*;
 auto i64toa_jeaiii(int8::raw_type i, char* b) -> char*;
+
+#pragma clang diagnostic pop
 
 }  // namespace cat::detail

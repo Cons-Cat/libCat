@@ -61,9 +61,13 @@
 namespace cat {
 
 template <typename T>
-concept has_is = requires(T t) {
+concept has_member_is_type = requires(T t) {
     t.template is<int>();
-    t.template is(0);
+};
+
+template <typename T>
+concept has_member_is_value = requires(T t) {
+    t.template is(declval<T>());
 };
 
 namespace detail {
@@ -100,7 +104,7 @@ namespace detail {
             return pattern_invocable{[&](auto& matching) -> bool {
                 using unqualified_matching =
                     remove_const<remove_reference<decltype(matching)>>;
-                if constexpr (has_is<unqualified_matching>) {
+                if constexpr (has_member_is_type<unqualified_matching>) {
                     // If `matching` currently holds one of `types`, then invoke
                     // `invocable`.
                     if (((matching.template is<types>()) || ...)) {
@@ -130,9 +134,8 @@ namespace detail {
         template <typename function>
         constexpr auto then(function&& invocable) {
             return pattern_invocable{[&](auto& matching) -> bool {
-                using unqualified_matching =
-                    remove_const<remove_reference<decltype(matching)>>;
-                if constexpr (has_is<unqualified_matching>) {
+                using unqualified_matching = remove_cvref<decltype(matching)>;
+                if constexpr (has_member_is_value<unqualified_matching>) {
                     // If `matching` currently holds a value equivalent to
                     // `this->value`, then invoke `invocable`.
                     if (matching.template is(this->value)) {
@@ -184,7 +187,7 @@ namespace detail {
         // Base case.
         template <typename U>
         constexpr void call_pattern(U&& pattern) {
-            !forward<U>(pattern)(this->matching);
+            (void)!forward<U>(pattern)(this->matching);
         }
 
         // Call every pattern in order.
