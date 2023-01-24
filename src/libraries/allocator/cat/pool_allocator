@@ -56,11 +56,12 @@ class pool_allocator
     }
 
   private:
-    auto allocation_bytes(usize, ssize) -> maybe_non_zero<ssize> {
+    auto allocation_bytes(usize , ssize )
+        -> maybe_non_zero<ssize> {
         return max_node_bytes;
     }
 
-    auto allocate(ssize) -> maybe_ptr<void> {
+    auto allocate(ssize ) -> maybe_ptr<void> {
         // If there is a next node in the free list, make that the head and
         // allocate the current head. Otherwise, do not allocate anything.
         if (this->p_head == nullptr) {
@@ -102,6 +103,7 @@ class pool_allocator
 
     // Do not allocate larger than this size of one node.
     static constexpr ssize max_allocation_bytes = max_node_bytes;
+
   private:
     friend allocator_interface<pool_allocator>;
 

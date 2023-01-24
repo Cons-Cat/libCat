@@ -14,16 +14,17 @@ namespace std {
 // Deprecated call to `memcpy()`. Consider using `cat::copy_buffer()` instead.
 // `memcpy()` exists to enable some GCC optimizations.
 extern "C" [[deprecated(
-    "std::memcpy() is deprecated! Use cat::copy_memory() instead!")]] auto
-memcpy(void* p_destination, void const* p_source, __SIZE_TYPE__ bytes) -> void*;
+    "std::memcpy() is deprecated! Use cat::copy_memory() instead!")]]
+auto memcpy(void* p_destination, void const* p_source, __SIZE_TYPE__ bytes)
+    -> void*;
 
 // Deprecated call to `memset()`. Consider using `cat::set_memory() or
 // cat::zero_memory()` instead. `memset()` exists to enable some GCC
 // optimizations.
 extern "C"
     [[deprecated("std::memset() is deprecated! Use cat::set_memory() or \
-cat::zero_memory() instead!")]] auto
-    memset(void* p_source, int byte_value, __SIZE_TYPE__ bytes) -> void*;
+cat::zero_memory() instead!")]]
+    auto memset(void* p_source, int byte_value, __SIZE_TYPE__ bytes) -> void*;
 
 }  // namespace std
 
@@ -56,7 +57,8 @@ class string : public span<char const> {
 
     // This weird template deduces lower than the string literal constructor.
     template <typename T>
-    requires(is_pointer<T>) constexpr string(T p_string)
+        requires(is_pointer<T>)
+    constexpr string(T p_string)
         : span<char const>(p_string, string_length(p_string)) {
     }
 
@@ -100,19 +102,22 @@ class string : public span<char const> {
 
     // TODO: Make these member functions `const`.
 
-    [[nodiscard]] constexpr auto substring(ssize position, ssize count)
-        -> string {
-        return string(this->p_storage + position, count);
+    [[nodiscard]]
+    constexpr auto substring(ssize position, ssize count) -> string {
+        return {this->p_storage + position, count};
     }
 
-    [[nodiscard]] constexpr auto remove_prefix(ssize offset) -> string {
+    [[nodiscard]]
+    constexpr auto remove_prefix(ssize offset) -> string {
         return this->substring(offset, this->length - offset);
     }
 
-    [[nodiscard]] constexpr auto remove_suffix(ssize offset) -> string {
+    [[nodiscard]]
+    constexpr auto remove_suffix(ssize offset) -> string {
         return this->substring(0, this->length - offset);
     }
 
+    [[nodiscard]]
     constexpr auto find_small(char character, ssize position = 0) const
         -> maybe<sentinel<ssize, -1>> {
         for (ssize i = position; i < this->length; ++i) {
@@ -125,6 +130,7 @@ class string : public span<char const> {
 
     // TODO: Optimize different length strings.
     // TODO: Tile this loop four or eight times.
+    [[nodiscard]]
     constexpr auto find(char character, ssize position = 0) const
         -> maybe<sentinel<ssize, -1>> {
         ssize i = position;
@@ -161,10 +167,12 @@ class fixed_string
         return &(this->storage[0]);
     }
 
+    [[nodiscard]]
     constexpr auto data() const -> char const* {
         return &(this->storage[0]);
     }
 
+    [[nodiscard]]
     constexpr auto size() const -> ssize {
         return length;
     }
@@ -186,8 +194,8 @@ class fixed_string
     // Create a `fixed_string` from a smaller string, and null out the unfilled
     // bytes.
     template <ssize::raw_type in_length>
-    requires(in_length <
-             length) static consteval auto padded(char const (&in)[in_length])
+        requires(in_length < length)
+    static consteval auto padded(char const (&in)[in_length])
         -> fixed_string<length> {
         fixed_string<length> string;
         for (ssize::raw_type i = 0; i < in_length; ++i) {
@@ -269,20 +277,26 @@ class fixed_string
     char storage[length];
 };
 
-[[nodiscard]] auto compare_strings(string const string_1, string const string_2)
-    -> bool;
+[[nodiscard]]
+auto compare_strings(string string_1, string string_2) -> bool;
 
-[[nodiscard]] auto print(string const string) -> ssize;
+[[nodiscard]]
+auto print(string string) -> ssize;
 
-[[nodiscard]] auto println(string const string) -> ssize;
+[[nodiscard]]
+auto println(string string) -> ssize;
 
-[[nodiscard]] auto println() -> ssize;
+[[nodiscard]]
+auto println() -> ssize;
 
-[[nodiscard]] auto eprint(string const string) -> ssize;
+[[nodiscard]]
+auto eprint(string string) -> ssize;
 
-[[nodiscard]] auto eprintln(string const string) -> ssize;
+[[nodiscard]]
+auto eprintln(string string) -> ssize;
 
-[[nodiscard]] auto eprintln() -> ssize;
+[[nodiscard]]
+auto eprintln() -> ssize;
 
 // TODO: Investigate zero-overhead `println` of literals again.
 
@@ -295,8 +309,9 @@ class fixed_string
 // These must be implemented after both `maybe` and `string`:
 
 template <typename T>
-[[nodiscard]] auto cat::maybe<T>::or_exit(cat::string const error_message,
-                                          ssize exit_code) & {
+[[nodiscard]]
+auto cat::maybe<T>::or_exit(cat::string const error_message,
+                            ssize exit_code) & {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
             return this->value();
@@ -310,8 +325,9 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] auto cat::maybe<T>::or_exit(cat::string const error_message,
-                                          ssize exit_code) const& {
+[[nodiscard]]
+auto cat::maybe<T>::or_exit(cat::string const error_message,
+                            ssize exit_code) const& {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
             return this->value();
@@ -325,8 +341,9 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] auto cat::maybe<T>::or_exit(cat::string const error_message,
-                                          ssize exit_code) && {
+[[nodiscard]]
+auto cat::maybe<T>::or_exit(cat::string const error_message,
+                            ssize exit_code) && {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
             return move(this)->value();
@@ -340,8 +357,9 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] auto cat::maybe<T>::or_exit(cat::string const error_message,
-                                          ssize exit_code) const&& {
+[[nodiscard]]
+auto cat::maybe<T>::or_exit(cat::string const error_message,
+                            ssize exit_code) const&& {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
             return move(this)->value();

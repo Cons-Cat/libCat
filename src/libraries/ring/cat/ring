@@ -3,9 +3,8 @@
 #pragma once
 
 #include <cat/allocator>
+#include <cat/bit>
 #include <cat/collection>
-
-#include "cat/bit"
 
 // The deprecated copy constructor is intended must be used internally, so
 // disable deprecated warnings within this file.
@@ -60,20 +59,22 @@ class ring : public collection_interface<ring<T>, T> {
 
   public:
     template <typename U>
-    requires(is_implicitly_convertible<U, T>)
-        [[nodiscard]] static auto reserved(is_stable_allocator auto& allocator,
-                                           ssize capacity) -> maybe<ring<T>> {
+        requires(is_implicitly_convertible<U, T>)
+    [[nodiscard]]
+    static auto reserved(is_stable_allocator auto& allocator, ssize capacity)
+        -> maybe<ring<T>> {
     }
 
     template <typename U>
-    requires(is_implicitly_convertible<U, T>)
-        [[nodiscard]] static auto filled(is_stable_allocator auto& allocator,
-                                         ssize capacity, T value)
-            -> maybe<ring<T>> {
+        requires(is_implicitly_convertible<U, T>)
+    [[nodiscard]]
+    static auto filled(is_stable_allocator auto& allocator, ssize capacity,
+                       T value) -> maybe<ring<T>> {
     }
 
-    [[nodiscard]] auto reserve(is_stable_allocator auto& allocator,
-                               ssize new_capacity) -> maybe<void> {
+    [[nodiscard]]
+    auto reserve(is_stable_allocator auto& allocator, ssize new_capacity)
+        -> maybe<void> {
         // The capacity of a `ring` must be a power of two.
         cat::assert(has_single_bit(new_capacity));
 
@@ -104,8 +105,9 @@ class ring : public collection_interface<ring<T>, T> {
         return monostate;
     }
 
-    [[nodiscard]] auto resize(is_stable_allocator auto& allocator,
-                              ssize new_size) -> maybe<void> {
+    [[nodiscard]]
+    auto resize(is_stable_allocator auto& allocator, ssize new_size)
+        -> maybe<void> {
         if (new_size > this->current_capacity) {
             TRY(this->reserve(allocator, new_size));
 
@@ -124,25 +126,29 @@ class ring : public collection_interface<ring<T>, T> {
         return monostate;
     }
 
-    [[nodiscard]] auto clone(is_stable_allocator auto& allocator)
-        -> maybe<ring<T>> {
+    [[nodiscard]]
+    auto clone(is_stable_allocator auto& allocator) -> maybe<ring<T>> {
     }
 
     // Get the non-`const` address of this `vector`'s internal array.
-    [[nodiscard]] constexpr auto data() -> T* {
+    [[nodiscard]]
+    constexpr auto data() -> T* {
         return &(this->p_storage[0]);
     }
 
     // Get the `const` address of this `vector`'s internal array.
-    [[nodiscard]] constexpr auto data() const -> T const* {
+    [[nodiscard]]
+    constexpr auto data() const -> T const* {
         return &(this->p_storage[0]);
     }
 
-    [[nodiscard]] constexpr auto size() const -> ssize {
+    [[nodiscard]]
+    constexpr auto size() const -> ssize {
         return this->current_size;
     }
 
-    [[nodiscard]] constexpr auto capacity() const -> ssize {
+    [[nodiscard]]
+    constexpr auto capacity() const -> ssize {
         return this->current_capacity;
     }
 
@@ -150,7 +156,8 @@ class ring : public collection_interface<ring<T>, T> {
     // TODO: `.emplace_back()`.
 
     template <typename U>
-    requires(is_implicitly_convertible<U, T>) void push_back(U const& value) {
+        requires(is_implicitly_convertible<U, T>)
+    void push_back(U const& value) {
         cat::assert(this->current_capacity > 0);
         *(this->p_storage + this->current_index) = value;
 

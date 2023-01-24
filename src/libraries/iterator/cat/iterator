@@ -7,24 +7,18 @@
 namespace cat {
 namespace detail {
     template <typename T>
-    concept has_increment = requires(T it) {
-        it.increment();
-    };
+    concept has_increment = requires(T it) { it.increment(); };
 
     template <typename T>
-    concept has_decrement = requires(T it) {
-        it.decrement();
-    };
+    concept has_decrement = requires(T it) { it.decrement(); };
 
     template <typename T>
-    concept has_distance_to = requires(T it) {
-        it.distance_to(it);
-    };
+    concept has_distance_to = requires(T it) { it.distance_to(it); };
 
     template <typename T>
     concept has_equal_to = requires(T it) {
-        { it.equal_to(it) } -> is_convertible<bool>;
-    };
+                               { it.equal_to(it) } -> is_convertible<bool>;
+                           };
 
     template <typename>
     struct infer_difference_trait {
@@ -48,19 +42,18 @@ namespace detail {
     };
 
     template <typename T>
-    requires(requires { typename T::value_type; }) struct infer_value_type<T> {
+        requires(requires { typename T::value_type; })
+    struct infer_value_type<T> {
         using type = typename T::value_type;
     };
 
     template <typename T>
     concept has_advance = requires(T it, infer_difference_trait<T> offset) {
-        it.advance(offset);
-    };
+                              it.advance(offset);
+                          };
 
     template <typename T>
-    concept has_advance_to = requires(T it) {
-        it.advance_to(T());
-    };
+    concept has_advance_to = requires(T it) { it.advance_to(T()); };
 
     template <typename T>
     concept has_random_access = has_advance<T> && has_distance_to<T>;
@@ -271,12 +264,14 @@ class iterator_interface {
     // TODO: This seems incorrect.
     // Random-access.
     constexpr auto operator[](
-        detail::is_difference_type<derived_type> auto offset)
-        -> decltype(auto) requires(detail::has_advance<derived_type>) {
+        detail::is_difference_type<derived_type> auto offset) -> decltype(auto)
+        requires(detail::has_advance<derived_type>)
+    {
         return *(this->self() + offset);
     }
 
-  private : constexpr auto self() -> derived_type& {
+  private:
+    constexpr auto self() -> derived_type& {
         return static_cast<derived_type&>(*this);
     }
 
@@ -298,7 +293,8 @@ struct output_iterator_tag {};
 struct contiguous_iterator_tag {};
 
 template <typename T>
-requires(is_base_of<iterator_interface<T>, T>) struct iterator_traits {
+    requires(is_base_of<iterator_interface<T>, T>)
+struct iterator_traits {
     static T const& iterator;
     using value = typename infer_value_type<T>::type;
     using reference = decltype(*iterator);
@@ -337,8 +333,9 @@ struct reversed_iterator_type
         return this->iterator.dereference();
     }
 
-    constexpr void advance(int offset) requires(
-        detail::has_advance<iterator_type>) {
+    constexpr void advance(int offset)
+        requires(detail::has_advance<iterator_type>)
+    {
         this->iterator.advance(-offset);
     }
 
@@ -362,23 +359,23 @@ struct reversed_iterator_type
 // TODO: More iterable related `concept`s.
 template <typename T>
 concept is_iterable = requires(T it) {
-    it.begin();
-    it.end();
-};
+                          it.begin();
+                          it.end();
+                      };
 
 template <typename T>
 concept is_weakly_incrementable = requires(T it) {
-    // TODO: Make this `is_movable`.
-    { ++it } -> is_same<T&>;
-    it++;
-};
+                                      // TODO: Make this `is_movable`.
+                                      { ++it } -> is_same<T&>;
+                                      it++;
+                                  };
 
 template <typename T>
 concept is_incrementable = requires(T it) {
-    // TODO: Make this `is_regular` and `is_movable`.
-    { ++it } -> is_same<T&>;
-    { it++ } -> is_same<T&>;
-};
+                               // TODO: Make this `is_regular` and `is_movable`.
+                               { ++it } -> is_same<T&>;
+                               { it++ } -> is_same<T&>;
+                           };
 
 template <typename T>
 concept is_random_access_iterator =
@@ -403,22 +400,21 @@ template <typename T>
 using iterator_reference = decltype(*declval<T&>());
 
 template <typename outputter_type, typename T>
-concept is_indirectly_writable = requires(outputter_type&& output_iterator,
-                                          T&& value) {
-    *output_iterator = forward<T>(value);
-    *forward<outputter_type>(output_iterator) = forward<T>(value);
-    const_cast<iterator_reference<outputter_type> const&&>(*output_iterator) =
-        forward<T>(value);
-    const_cast<iterator_reference<outputter_type> const&&>(
-        *forward<outputter_type>(output_iterator)) = forward<T>(value);
-};
+concept is_indirectly_writable =
+    requires(outputter_type&& output_iterator, T&& value) {
+        *output_iterator = forward<T>(value);
+        *forward<outputter_type>(output_iterator) = forward<T>(value);
+        const_cast<iterator_reference<outputter_type> const&&>(
+            *output_iterator) = forward<T>(value);
+        const_cast<iterator_reference<outputter_type> const&&>(
+            *forward<outputter_type>(output_iterator)) = forward<T>(value);
+    };
 
 template <typename output_iterator, typename T>
-concept is_output_iterator = is_input_or_output_iterator<output_iterator> &&
+concept is_output_iterator =
+    is_input_or_output_iterator<output_iterator> &&
     is_indirectly_writable<output_iterator, T> &&
-    requires(output_iterator it, T&& value) {
-    *it++ = forward<T>(value);
-};
+    requires(output_iterator it, T&& value) { *it++ = forward<T>(value); };
 
 template <is_iterable T>
 class it_reverse {

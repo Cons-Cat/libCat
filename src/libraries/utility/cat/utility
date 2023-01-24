@@ -9,14 +9,14 @@ namespace cat {
 template <typename T, typename U>
 [[gnu::warning(
       R"(This function is intended to be inlined and constant-folded out.)"),
-  gnu::always_inline]] constexpr inline auto
-bit_cast(U& from_value) -> T;
+  gnu::always_inline]]
+inline constexpr auto bit_cast(U& from_value) -> T;
 
 template <typename T, typename U>
 [[gnu::warning(
       R"(This function is intended to be inlined and constant-folded out.)"),
-  gnu::always_inline]] constexpr inline auto
-bit_cast(U const& from_value) -> T;
+  gnu::always_inline]]
+inline constexpr auto bit_cast(U const& from_value) -> T;
 
 template <typename T>
 constexpr auto unconst(T const& value) -> T& {
@@ -65,7 +65,8 @@ namespace detail {
 }  // namespace detail
 
 template <typename T, T... values>
-requires(is_integral<T>) struct value_type_list {
+    requires(is_integral<T>)
+struct value_type_list {
     using value_type = T;
 
     static constexpr ssize size = ssizeof_pack(values...);
@@ -143,7 +144,8 @@ template <typename... types>
 using index_sequence_for = make_index_sequence<ssize{sizeof...(types)}>;
 
 template <typename T>
-requires(is_enum<T>) constexpr auto to_underlying(T any_enum) {
+    requires(is_enum<T>)
+constexpr auto to_underlying(T any_enum) {
     return static_cast<underlying_type<T>>(any_enum);
 }
 
@@ -152,8 +154,10 @@ namespace detail {
     template <typename closure_type>
     struct defer_wrapper {
         closure_type invocable;
+
         defer_wrapper(closure_type&& closure) : invocable(closure) {
         }
+
         ~defer_wrapper() {
             this->invocable();
         }
@@ -195,12 +199,13 @@ namespace detail {
 namespace std {
 
 template <typename T>
-[[nodiscard]] constexpr auto as_const(T& value) -> cat::add_const<T>& {
+[[nodiscard]]
+constexpr auto as_const(T& value) -> cat::add_const<T>& {
     return value;
 }
 
 template <typename T>
-void as_const(const T&&) = delete;
+void as_const(T const&&) = delete;
 
 // NOLINTBEGIN(readability-redundant-declaration)
 // The following functions are forward-declared in `<cat/meta>`, but they

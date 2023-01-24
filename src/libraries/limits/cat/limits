@@ -211,15 +211,13 @@ struct limits<__UINT64_TYPE__> {
     static constexpr bool is_iec559 = false;
 };
 
-enum class float_denorm
-{
+enum class float_denorm {
     indeterminate = -1,
     absent = 0,
     present = 1
 };
 
-enum class float_round
-{
+enum class float_round {
     indeterminate = -1,
     toward_zero = 0,
     to_nearest = 1,

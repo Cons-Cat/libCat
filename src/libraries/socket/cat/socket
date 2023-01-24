@@ -43,8 +43,8 @@ struct socket_unix {
         this->descriptor = in_descriptor;
     }
 
-    // Get the size of this struct, not considering the `file_descriptor` that it
-    // holds.
+    // Get the size of this struct, not considering the `file_descriptor` that
+    // it holds.
     auto get_size() -> ssize {
         return ssizeof(attributes) + ssizeof(path_name);
     }

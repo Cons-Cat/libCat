@@ -13,7 +13,8 @@ class no_type {
   public:
     constexpr no_type() = default;
 
-    constexpr no_type(auto input) requires(sizeof(input) <= sizeof(void*))
+    constexpr no_type(auto input)
+        requires(sizeof(input) <= sizeof(void*))
         : p_storage(bit_cast<void*>(input)) {
     }
 

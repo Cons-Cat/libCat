@@ -16,5 +16,7 @@ libCat requires a development version of GCC 13. Building appears to fail using 
 #+BEGIN_SRC
   $ cmake -B build/ -G 'Ninja Multi-Config'
   $ ninja -C build/
-  $ build/tests/Debug/unit_tests
+  $ ./build/tests/Debug/unit_tests
 #+END_SRC
+
+The =.clang-format= and =.clang-tidy= configurations are only compatible with recent versions of Clang 16 tools from 2023.

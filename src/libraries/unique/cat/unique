@@ -9,24 +9,21 @@
 // destructor will call an `raii()` method on the type they wrap iff that type
 // has an `raii()` method.
 
-// `unique_weak` is a similar wrapper that can release ownership of its data, and
-// will only invoke that data's destructor if it currently holds ownership.
+// `unique_weak` is a similar wrapper that can release ownership of its data,
+// and will only invoke that data's destructor if it currently holds ownership.
 
 namespace cat {
 
 template <typename T>
-concept has_raii = requires(T it) {
-    it.raii();
-};
+concept has_raii = requires(T it) { it.raii(); };
 
 template <typename T>
 class unique_weak;
 
 namespace detail {
     template <typename T>
-    concept is_non_unique_weak = requires {
-        is_specialization<T, unique_weak>;
-    };
+    concept is_non_unique_weak =
+        requires { is_specialization<T, unique_weak>; };
 }  // namespace detail
 
 template <typename T>

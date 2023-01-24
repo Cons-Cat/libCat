@@ -21,9 +21,9 @@ class array : public collection_interface<array<T, length>, T, true> {
 
     // Construct an `array` from a variadic argument list.
     template <typename... Args>
-    requires(ssizeof_pack<Args...>() == length &&
-             (is_implicitly_convertible<Args, T> &&
-              ...)) constexpr array(Args&&... arguments)
+        requires(ssizeof_pack<Args...>() == length &&
+                 (is_implicitly_convertible<Args, T> && ...))
+    constexpr array(Args&&... arguments)
         // Explicitly converting this type allows the first argument to coerce
         // the type for following arguments.
         // i.e. `cat::array shorts = {int2{0}, 1, 2};`
@@ -35,8 +35,8 @@ class array : public collection_interface<array<T, length>, T, true> {
 
     // Converting copy assignment operator.
     template <typename U>
-    requires(is_implicitly_convertible<U, T>) constexpr auto operator=(
-        array<U, length> const& other_array) -> array& {
+        requires(is_implicitly_convertible<U, T>)
+    constexpr auto operator=(array<U, length> const& other_array) -> array& {
         // TODO: Optimize with `copy_memory()` if T and U are relocatable.
         for (ssize i = 0; i < length; ++i) {
             this->storage[i.raw] = static_cast<T>(other_array[i]);
@@ -49,8 +49,8 @@ class array : public collection_interface<array<T, length>, T, true> {
 
     // Converting move assignment operator.
     template <typename U>
-    requires(is_implicitly_convertible<U, T>) constexpr auto operator=(
-        array<U, length>&& other_array) -> array& {
+        requires(is_implicitly_convertible<U, T>)
+    constexpr auto operator=(array<U, length>&& other_array) -> array& {
         // TODO: Optimize with `copy_memory()` if T and U are relocatable.
         for (ssize i = 0; i < length; ++i) {
             this->storage[i.raw] = static_cast<T>(move(other_array[i]));
@@ -62,9 +62,9 @@ class array : public collection_interface<array<T, length>, T, true> {
 
     // Construct an `array` from a variadic argument list.
     template <typename... Args>
-    requires(ssizeof_pack<Args...>() == length &&
-             (is_implicitly_convertible<Args, T> &&
-              ...)) static constexpr auto from(Args&&... arguments) {
+        requires(ssizeof_pack<Args...>() == length &&
+                 (is_implicitly_convertible<Args, T> && ...))
+    static constexpr auto from(Args&&... arguments) {
         // Explicitly converting this type allows the first argument to coerce
         // the type for following arguments.
         // i.e. `cat::array shorts = {int2{0}, 1, 2};`
@@ -73,15 +73,15 @@ class array : public collection_interface<array<T, length>, T, true> {
     }
 
     template <typename U>
-    requires(is_implicitly_convertible<U, T>) static constexpr auto filled(
-        U value) -> array {
+        requires(is_implicitly_convertible<U, T>)
+    static constexpr auto filled(U value) -> array {
         array<T, length> array;
         return array.fill(static_cast<T>(value));
     }
 
     template <typename U>
-    requires(is_implicitly_convertible<U, T>) constexpr auto fill(U value)
-        -> array& {
+        requires(is_implicitly_convertible<U, T>)
+    constexpr auto fill(U value) -> array& {
         // TODO: This `set_memory()` segfaults with optimizations enabled. Is it
         // even necessary?
         //
@@ -96,17 +96,20 @@ class array : public collection_interface<array<T, length>, T, true> {
     }
 
     // Get the non-`const` address of this `array`'s internal array.
-    [[nodiscard]] constexpr auto data() -> T* {
+    [[nodiscard]]
+    constexpr auto data() -> T* {
         return this->storage;
     }
 
     // Get the `const` address of this `array`'s internal array.
-    [[nodiscard]] constexpr auto data() const -> T const* {
+    [[nodiscard]]
+    constexpr auto data() const -> T const* {
         return this->storage;
     }
 
     // Get the number of elements contained in this `array`.
-    [[nodiscard]] static constexpr auto size() -> ssize {
+    [[nodiscard]]
+    static constexpr auto size() -> ssize {
         return length;
     }
 

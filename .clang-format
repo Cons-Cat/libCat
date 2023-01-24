@@ -3,24 +3,30 @@
 Language: Cpp
 IndentWidth: 4
 
-# This is a clang-format 13 feature:
+# These are clang-format 13 features:
 LambdaBodyIndentation: Signature
 ReferenceAlignment: Left
 
-# # These are clang-format 14 feature:
-# QualifierAlignment: Custom
-# QualifierOrder: ['static', 'inline', 'constexpr', 'type', 'const', 'volatile' ]
-# SeparateDefinitionBlocks: Always
-# AlignArrayOfStructures: Right
-# SeparateDefinitionBlocks: True
+# These are clang-format 14 feature:
+QualifierAlignment: Custom
+QualifierOrder: ['static', 'inline', 'constexpr', 'type', 'const', 'volatile' ]
+SeparateDefinitionBlocks: Always
+AlignArrayOfStructures: Right
+SeparateDefinitionBlocks: Always
 
-# # This is a clang-format 15 feature:
-# RequiresClausePosition: OwnLine
-# InsertBraces: true
+# These are clang-format 15 features:
+RequiresClausePosition: OwnLine
+InsertBraces: true
+IndentRequiresClause: true
 
-# # In clang-format 15, this is `IndentRequiresClause`.
-# IndentRequiresClause: true
+# These are clang-format 16 features:
+BreakAfterAttributes: Always
+RequiresExpressionIndentation: Keyword
 
+# These work with clang-format 12:
+
+BraceWrapping:
+  AfterEnum: false
 AlignAfterOpenBracket: Align
 AlignConsecutiveAssignments: None
 AlignConsecutiveBitFields: AcrossEmptyLinesAndComments
@@ -59,7 +65,7 @@ ConstructorInitializerAllOnOneLineOrOnePerLine: true
 Cpp11BracedListStyle: true
 DeriveLineEnding: false
 DerivePointerAlignment: false
-EmptyLineBeforeAccessModifier: Leave
+EmptyLineBeforeAccessModifier: Always
 ExperimentalAutoDetectBinPacking: false
 FixNamespaceComments: true
 IncludeBlocks: Regroup

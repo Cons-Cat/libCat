@@ -82,10 +82,10 @@ class list : public collection_interface<list<T>, T> {
     // TODO: value_type_list constructors/factories were removed elsewhere.
     // Should this be kept?
     template <typename U, U... initializers>
-    requires(is_implicitly_convertible<U, T>)
-        [[nodiscard]] static auto from(is_stable_allocator auto& allocator,
-                                       value_type_list<U, initializers...>)
-            -> maybe<list<T>> {
+        requires(is_implicitly_convertible<U, T>)
+    [[nodiscard]]
+    static auto from(is_stable_allocator auto& allocator,
+                     value_type_list<U, initializers...>) -> maybe<list<T>> {
         list<T> new_list;
         // TODO: Check if a recursive function is more efficient here.
         array values = {static_cast<T>(initializers)...};
@@ -101,10 +101,10 @@ class list : public collection_interface<list<T>, T> {
     }
 
     template <typename... Args>
-    requires(is_implicitly_convertible<Args, T>&&...)
-        [[nodiscard]] static auto from(is_stable_allocator auto& allocator,
-                                       Args&&... initializers)
-            -> maybe<list<T>> {
+        requires(is_implicitly_convertible<Args, T> && ...)
+    [[nodiscard]]
+    static auto from(is_stable_allocator auto& allocator,
+                     Args&&... initializers) -> maybe<list<T>> {
         list<T> new_list;
         // TODO: Check if a recursive function is more efficient here.
         array values = {forward<Args>(initializers)...};
@@ -120,20 +120,24 @@ class list : public collection_interface<list<T>, T> {
     }
 
     // Get the count of elements stored in this `List`.
-    [[nodiscard]] auto size() const -> ssize {
+    [[nodiscard]]
+    auto size() const -> ssize {
         return this->length;
     }
 
     // Get the maximum possible count of elements stored in a `List`.
-    [[nodiscard]] constexpr auto capacity() const -> ssize {
+    [[nodiscard]]
+    constexpr auto capacity() const -> ssize {
         return this->length.max();
     }
 
-    [[nodiscard]] auto front() -> T& {
+    [[nodiscard]]
+    auto front() -> T& {
         return this->p_head->storage;
     }
 
-    [[nodiscard]] auto back() -> T& {
+    [[nodiscard]]
+    auto back() -> T& {
         return this->p_tail->storage;
     }
 
@@ -199,8 +203,8 @@ class list : public collection_interface<list<T>, T> {
 
   public:
     // Deep-copy the contents of this `List`.
-    [[nodiscard]] auto clone(is_stable_allocator auto& allocator)
-        -> maybe<list<T>> {
+    [[nodiscard]]
+    auto clone(is_stable_allocator auto& allocator) -> maybe<list<T>> {
         list<T> new_list;
         for (iterator_type it = this->begin(); it != (this->end() + 1); ++it) {
             new_list.push_back(allocator, *it);
@@ -211,9 +215,9 @@ class list : public collection_interface<list<T>, T> {
     // Allocate a node and insert it into this list before the position of
     // `where`.
     template <typename U>
-    requires(is_implicitly_convertible<U, T>) auto insert(
-        is_stable_allocator auto& allocator, iterator_type where,
-        U const& value) -> maybe<iterator_type> {
+        requires(is_implicitly_convertible<U, T>)
+    auto insert(is_stable_allocator auto& allocator, iterator_type where,
+                U const& value) -> maybe<iterator_type> {
         // `cat::maybe_ptr` at here produces an internal compiler error in
         // GCC 12.
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
@@ -289,8 +293,8 @@ class list : public collection_interface<list<T>, T> {
 
     // Allocate a node and insert it at the beginning of this list.
     template <typename U>
-    requires(is_implicitly_convertible<U, T>) auto push_front(
-        is_stable_allocator auto& allocator, U const& value)
+        requires(is_implicitly_convertible<U, T>)
+    auto push_front(is_stable_allocator auto& allocator, U const& value)
         -> maybe<iterator_type> {
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
         if (!memory.has_value()) {
@@ -343,8 +347,8 @@ class list : public collection_interface<list<T>, T> {
 
     // Allocate a node and insert it at the end of this list.
     template <typename U>
-    requires(is_implicitly_convertible<U, T>) auto push_back(
-        is_stable_allocator auto& allocator, U const& value)
+        requires(is_implicitly_convertible<U, T>)
+    auto push_back(is_stable_allocator auto& allocator, U const& value)
         -> maybe<iterator_type> {
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
         if (!memory.has_value()) {
@@ -413,19 +417,23 @@ class list : public collection_interface<list<T>, T> {
 
     // Providing these four iterator getters generates the remaining eight
     // through the `collection_interface`.
-    [[nodiscard]] auto begin() -> iterator_type {
+    [[nodiscard]]
+    auto begin() -> iterator_type {
         return iterator_type(this->p_head);
     }
 
-    [[nodiscard]] auto end() -> iterator_type {
+    [[nodiscard]]
+    auto end() -> iterator_type {
         return iterator_type(this->p_tail);
     }
 
-    [[nodiscard]] auto rbegin() {
+    [[nodiscard]]
+    auto rbegin() {
         return cat::reversed_iterator_type<iterator_type>{this->p_tail};
     }
 
-    [[nodiscard]] auto rend() {
+    [[nodiscard]]
+    auto rend() {
         return cat::reversed_iterator_type<iterator_type>{this->p_head};
     }
 
@@ -475,9 +483,11 @@ class forward_list : public collection_interface<forward_list<T>, T> {
 
   public:
     template <typename U, U... values>
-    requires(is_implicitly_convertible<U, T>) [[nodiscard]] static auto from(
-        is_stable_allocator auto& allocator,
-        value_type_list<U, values...> initializers) -> maybe<forward_list<T>> {
+        requires(is_implicitly_convertible<U, T>)
+    [[nodiscard]]
+    static auto from(is_stable_allocator auto& allocator,
+                     value_type_list<U, values...> initializers)
+        -> maybe<forward_list<T>> {
         forward_list<T> new_list;
         // TODO: Check if a recursive function is more efficient here.
         array array = initializers;
@@ -493,10 +503,10 @@ class forward_list : public collection_interface<forward_list<T>, T> {
     }
 
     template <typename... Args>
-    requires(is_implicitly_convertible<Args, T>&&...)
-        [[nodiscard]] static auto from(is_stable_allocator auto& allocator,
-                                       Args&&... initializers)
-            -> maybe<forward_list<T>> {
+        requires(is_implicitly_convertible<Args, T> && ...)
+    [[nodiscard]]
+    static auto from(is_stable_allocator auto& allocator,
+                     Args&&... initializers) -> maybe<forward_list<T>> {
         forward_list<T> new_list;
         // TODO: Check if a recursive function is more efficient here.
         array array = {forward<Args>(initializers)...};
@@ -512,20 +522,24 @@ class forward_list : public collection_interface<forward_list<T>, T> {
     }
 
     // Get the count of elements stored in this `forward_list`.
-    [[nodiscard]] auto size() const -> ssize {
+    [[nodiscard]]
+    auto size() const -> ssize {
         return this->length;
     }
 
     // Get the maximum possible count of elements stored in a `forward_list`.
-    [[nodiscard]] constexpr auto capacity() const -> ssize {
+    [[nodiscard]]
+    constexpr auto capacity() const -> ssize {
         return this->length.max();
     }
 
-    [[nodiscard]] auto front() -> T& {
+    [[nodiscard]]
+    auto front() -> T& {
         return this->p_head->storage;
     }
 
-    [[nodiscard]] auto back() -> T& {
+    [[nodiscard]]
+    auto back() -> T& {
         return this->p_tail->storage;
     }
 
@@ -565,8 +579,8 @@ class forward_list : public collection_interface<forward_list<T>, T> {
 
   public:
     // Deep-copy the contents of this `forward_list`.
-    [[nodiscard]] auto clone(is_stable_allocator auto& allocator)
-        -> maybe<forward_list<T>> {
+    [[nodiscard]]
+    auto clone(is_stable_allocator auto& allocator) -> maybe<forward_list<T>> {
         forward_list<T> new_list;
         iterator_type current =
             TRY(new_list.push_front(allocator, this->front()));
@@ -580,7 +594,8 @@ class forward_list : public collection_interface<forward_list<T>, T> {
     template <typename U>
     auto insert_after(is_stable_allocator auto& allocator, iterator_type where,
                       U const& value) -> maybe<iterator_type>
-    requires(is_implicitly_convertible<U, T>) {
+        requires(is_implicitly_convertible<U, T>)
+    {
         cat::maybe memory =
             allocator.template alloc<detail::forward_list_node<T>>();
         if (!memory.has_value()) {
@@ -633,8 +648,8 @@ class forward_list : public collection_interface<forward_list<T>, T> {
 
     // Allocate a node and insert it at the beginning of this list.
     template <typename U>
-    requires(is_implicitly_convertible<U, T>) auto push_front(
-        is_stable_allocator auto& allocator, U const& value)
+        requires(is_implicitly_convertible<U, T>)
+    auto push_front(is_stable_allocator auto& allocator, U const& value)
         -> maybe<iterator_type> {
         cat::maybe memory =
             allocator.template alloc<detail::forward_list_node<T>>();
@@ -704,11 +719,13 @@ class forward_list : public collection_interface<forward_list<T>, T> {
 
     // Providing these two iterator getters generates the remaining four
     // through the `collection_interface`.
-    [[nodiscard]] auto begin() -> iterator_type {
+    [[nodiscard]]
+    auto begin() -> iterator_type {
         return iterator_type(this->p_head);
     }
 
-    [[nodiscard]] auto end() -> iterator_type {
+    [[nodiscard]]
+    auto end() -> iterator_type {
         return iterator_type(this->p_tail);
     }
 

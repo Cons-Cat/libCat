@@ -4,8 +4,8 @@ namespace cat {
 
 // Forward declarations.
 template <typename abi_type, typename T>
-requires(is_same<typename abi_type::scalar_type, T>) class alignas(
-    abi_type::alignment.raw) simd;
+    requires(is_same<typename abi_type::scalar_type, T>)
+class alignas(abi_type::alignment.raw) simd;
 
 template <typename abi_type, typename T>
 class alignas(abi_type::alignment.raw) simd_mask;
@@ -37,8 +37,7 @@ using sse42_mask = cat::simd<sse42_abi<T>, T>;
 template <typename T>
 using sse42_simd_mask = cat::simd_mask<sse42_abi<T>, T>;
 
-enum class string_control : unsigned char
-{
+enum class string_control : unsigned char {
     // Unsigned 1-byte characters.
     unsigned_byte = 0x00,
     // Unsigned 2-byte characters.

@@ -15,15 +15,16 @@ namespace cat {
 
 // Erase the type of `cat::arithmetic` for redundant template instantiations.
 template <is_integral T, overflow_policies policy>
-[[nodiscard]] auto to_chars(is_allocator auto& allocator,
-                            arithmetic<T, policy> numeral) -> maybe<string> {
+[[nodiscard]]
+auto to_chars(is_allocator auto& allocator, arithmetic<T, policy> numeral)
+    -> maybe<string> {
     return to_chars(allocator, to_raw_arithmetic(numeral));
 }
 
 // Dynamically allocate an is_integral value converted to `string`.
 template <is_integral T>
-[[nodiscard]] auto to_chars(is_allocator auto& allocator, T integer)
-    -> maybe<string> {
+[[nodiscard]]
+auto to_chars(is_allocator auto& allocator, T integer) -> maybe<string> {
     maybe result = allocator.template alloc_multi<char>(limits<T>::digits10);
     if (!result.has_value()) {
         return nullopt;
@@ -47,9 +48,9 @@ template <is_integral T>
 
 // Dynamically allocate a floating point value converted to `string`.
 template <typename T>
-requires(is_floating_point<T>)
-    [[nodiscard]] auto to_chars(is_allocator auto& alloc, T value)
-        -> maybe<string> {
+    requires(is_floating_point<T>)
+[[nodiscard]]
+auto to_chars(is_allocator auto& alloc, T value) -> maybe<string> {
     maybe result = alloc.template alloc_multi<char>(limits<T>::digits10);
     if (!result.has_value()) {
         return nullopt;
@@ -88,7 +89,9 @@ namespace detail {
 
 // Convert a `constexpr` is_integral to `fixed_string`.
 template <auto value>
-requires(is_integral<decltype(value)>) [[nodiscard]] consteval auto to_chars() {
+    requires(is_integral<decltype(value)>)
+[[nodiscard]]
+consteval auto to_chars() {
     if constexpr (value == 0) {
         return fixed_string("0");
     } else {
@@ -110,8 +113,8 @@ requires(is_integral<decltype(value)>) [[nodiscard]] consteval auto to_chars() {
 }
 
 template <is_integral T>
-[[nodiscard]] constexpr auto to_string_at(arithmetic<T> value,
-                                          span<char> output_buffer)
+[[nodiscard]]
+constexpr auto to_string_at(arithmetic<T> value, span<char> output_buffer)
     -> maybe<string> {
     // Add 1 for a negative sign `-` character.
     constexpr ssize max_length = to_chars<arithmetic<T>::max()>().size() + 1;
@@ -153,8 +156,7 @@ template <is_integral T>
 }
 
 // Formatting
-enum class format_errors
-{
+enum class format_errors {
     out_of_memory,
     cannot_format_argument,
     argument_type_mismatch,
@@ -171,8 +173,7 @@ using scaredy_format = scaredy<T, format_errors>;
 namespace detail {
     // This represents precisely 16 alternatives to fill 4 bits in
     // `format_argument_compact_index`.
-    enum class format_discriminant : unsigned char
-    {
+    enum class format_discriminant : unsigned char {
         automatic_type = 0,  // This type is deduced from a variadic argument.
         // These types are sorted for fast alternative checking.
         int1_type,
@@ -382,8 +383,8 @@ namespace detail {
         // Unpack a formatting argument from the type-erased storage.
         template <typename T>
         // This function loads unaligned data.
-        [[gnu::no_sanitize("alignment")]] auto get(ssize argument_index) const
-            -> T {
+        [[gnu::no_sanitize("alignment")]]
+        auto get(ssize argument_index) const -> T {
             // Get the storage index out from the indices array.
             ssize const storage_index =
                 (this->p_args_indices + argument_index)->byte_index;
@@ -789,9 +790,9 @@ namespace detail {
 // of `char` with those arguments, and push the result into some container.
 template <is_stable_allocator allocator_type,
           is_output_iterator<string> outputter_type, typename... Args>
-[[nodiscard]] auto format_to(allocator_type& allocator,
-                             outputter_type output_iterator,
-                             string const format, Args&&... arguments)
+[[nodiscard]]
+auto format_to(allocator_type& allocator, outputter_type output_iterator,
+               string const format, Args&&... arguments)
     -> scaredy_format<outputter_type> {
     return detail::vformat_to(
         allocator, output_iterator, format,
@@ -800,8 +801,9 @@ template <is_stable_allocator allocator_type,
 }
 
 template <is_stable_allocator allocator_type, typename... Args>
-[[nodiscard]] auto format(allocator_type& allocator, string const format,
-                          Args&&... arguments) -> scaredy_format<string> {
+[[nodiscard]]
+auto format(allocator_type& allocator, string const format, Args&&... arguments)
+    -> scaredy_format<string> {
     return detail::vformat(
         allocator, format,
         detail::format_args{

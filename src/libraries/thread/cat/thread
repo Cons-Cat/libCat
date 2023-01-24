@@ -11,6 +11,7 @@ struct thread {
   public:
     thread() = default;
     thread(thread const&) = delete;
+
     // TODO: Default or delete a move constructor and assignment operator?
 
     // TODO: Use an `invocable` `concept`.
@@ -24,6 +25,7 @@ struct thread {
         return nullopt;
     }
 
+    [[nodiscard]]
     auto join() const -> maybe<void> {
         scaredy result = this->handle.wait();
         if (result.has_value()) {

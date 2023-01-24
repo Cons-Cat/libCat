@@ -17,8 +17,7 @@ namespace x11 {
 constexpr auto socket_path =
     cat::fixed_string<108>::padded("/tmp/.X11-unix/X0");
 
-enum class operation_code : unsigned char
-{
+enum class operation_code : unsigned char {
     error = 0,
     create_window = 1,
     change_window_attributes = 2,
@@ -142,8 +141,7 @@ enum class operation_code : unsigned char
     no_operation = 120
 };
 
-enum class event_code : unsigned char
-{
+enum class event_code : unsigned char {
     key_press = 2,
     key_release = 3,
     button_press = 4,
@@ -179,8 +177,8 @@ enum class event_code : unsigned char
     mapping_notify = 34,
 };
 
-enum class key_code : unsigned char
-{};
+enum class key_code : unsigned char {
+};
 
 struct [[gnu::packed]] event_mask {
     bool key_press = false;
@@ -214,8 +212,7 @@ struct [[gnu::packed]] event_mask {
 struct error_code {
     uint1 response_operation = static_cast<unsigned char>(0);
 
-    enum : unsigned char
-    {
+    enum : unsigned char {
         request = 1,
         value = 2,
         window = 3,
@@ -239,8 +236,10 @@ struct error_code {
     uint4 resource_resource_id;
     uint2 minor_operation;
     operation_code major_operation;
+
   private:
     [[maybe_unused]] uint1 padding[21];
+
   public:
     uint4 full_sequence;
 };
@@ -264,8 +263,10 @@ struct event {
     uint2 sequence;
     uint4 length;
     event_code event_type;
+
   private:
     [[maybe_unused]] uint1 padding[23];
+
   public:
     uint4 full_sequence;
 };
@@ -285,13 +286,14 @@ struct client_request_header {
 
 // Every X server reply begins with an `x11::server_reply_header`.
 struct server_reply_header {
-    enum class success_code_type : unsigned char
-    {
+    enum class success_code_type : unsigned char {
         failure = 0,
         success = 1
     } success_code;
+
   private:
     [[maybe_unused]] int1 padding;
+
   public:
     // This field is only initialized if `success_code_type` is `failed`.
     cat::array<uint2, 2> x_version;
@@ -302,8 +304,10 @@ struct server_reply_header {
 // This packet is used to initiate a connection handshake with an X server.
 struct connection_request_info {
     char endianness = is_target_little_endian ? 'l' : 'B';
+
   private:
     [[maybe_unused]] int1 padding_1;
+
   public:
     // This should almost always be `{11, 0}`.
     cat::array<uint2, 2> x_version = {static_cast<unsigned char>(11),
@@ -312,6 +316,7 @@ struct connection_request_info {
     uint2 authorization_protocol_length = static_cast<unsigned char>(0);
     // No explicit protocol is specified if this is `0`.
     uint2 authorization_data_length = static_cast<unsigned char>(0);
+
   private:
     [[maybe_unused]] int2 padding_2;
 };
@@ -345,6 +350,7 @@ struct connection_response_info {
     key_code keycode_minimum;
     // This is the largest key code the server will transmit.
     key_code keycode_maximum;
+
   private:
     [[maybe_unused]] int4 padding;
 };
@@ -353,6 +359,7 @@ struct pixel_map_format_packet {
     uint1 color_depth;
     uint1 bits_per_pixel;
     uint1 scanline_padding;
+
   private:
     [[maybe_unused]] uint1 padding[5];
 };
@@ -380,12 +387,15 @@ struct root_window_packet {
 
 struct depth_packet {
     uint1 depth;
+
   private:
     [[maybe_unused]] uint1 padding_1;
+
   public:
     // The number of `visual_packet`s transmitted imillimetersediately after
     // this packet.
     uint2 visuals_count;
+
   private:
     [[maybe_unused]] uint4 padding_2;
 };
@@ -395,6 +405,7 @@ struct visual_packet {
     uint1 bits_per_rgb;
     uint2 colormap_entries;
     uint4 mask_red, mask_green, mask_blue;
+
   private:
     [[maybe_unused]] uint4 padding;
 };
@@ -508,8 +519,7 @@ struct create_window_request_info {
     int2 x, y;
     uint2 width, height, border_thickness;
 
-    enum class window_class_type : unsigned char
-    {
+    enum class window_class_type : unsigned char {
         input_output = 0,
         input_only = 1,
         copy_from_parent = 2

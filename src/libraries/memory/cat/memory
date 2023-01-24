@@ -51,8 +51,7 @@ namespace detail {
     // code with a call to `memset`. `memset` itself calls this function,
     // which makes a circular reference that ld is unable to link. Mold can
     // link this somehow, but that optimization is useless here.
-    constexpr void
-    set_memory_detail(void* p_source, T value, ssize size) {
+    constexpr void set_memory_detail(void* p_source, T value, ssize size) {
         // TODO: Assert that these parameters do not index out of bounds or loop
         // infinitely.
         uintptr<T> p_current = uintptr<T>(static_cast<T*>(p_source));
@@ -113,8 +112,8 @@ namespace detail {
 
 // Set all bytes at this address to `value`.
 template <typename T = unsigned char>
-requires(sizeof(T) <= 8) constexpr void set_memory(void* p_source, T value,
-                                                   ssize size) {
+    requires(sizeof(T) <= 8)
+constexpr void set_memory(void* p_source, T value, ssize size) {
     // Make a type that `value` can bitcast to, and can be used in a `simd`.
     // TODO: A size-argument numeral type could simplify this.
     using raw_type =
@@ -130,9 +129,9 @@ requires(sizeof(T) <= 8) constexpr void set_memory(void* p_source, T value,
 // Set all bytes at this address to `value`. This function cannot be
 // constant-folded out.
 template <typename T = unsigned char>
-requires(sizeof(T) <= 8)
-    [[gnu::noinline]] constexpr void set_memory_explicit(void* p_source,
-                                                         T value, ssize size) {
+    requires(sizeof(T) <= 8)
+[[gnu::noinline]]
+constexpr void set_memory_explicit(void* p_source, T value, ssize size) {
     set_memory(p_source, value, size);
 }
 
@@ -144,24 +143,23 @@ constexpr void zero_memory(void* p_source, ssize size) {
 // `[[gnu::noinline]]` prevents GCC from constant-folding this function out.
 // Set all bytes at this address to zero. This function cannot be
 // constant-folded out.
-[[gnu::noinline]] constexpr void zero_memory_explicit(void* p_source,
-                                                      ssize bytes) {
+[[gnu::noinline]]
+constexpr void zero_memory_explicit(void* p_source, ssize bytes) {
     zero_memory(p_source, bytes);
 }
 
 template <typename T = unsigned char>
-requires(sizeof(T) <= 8) constexpr void set_memory_scalar(void* p_source,
-                                                          T value, ssize size) {
+    requires(sizeof(T) <= 8)
+constexpr void set_memory_scalar(void* p_source, T value, ssize size) {
     for (ssize i = 0; i < size; ++i) {
         *(static_cast<T*>(p_source) + i) = value;
     }
 }
 
 template <typename T = unsigned char>
-requires(sizeof(T) <= 8)
-    [[gnu::noinline]] constexpr void set_memory_scalar_explicit(void* p_source,
-                                                                T value,
-                                                                ssize size) {
+    requires(sizeof(T) <= 8)
+[[gnu::noinline]]
+constexpr void set_memory_scalar_explicit(void* p_source, T value, ssize size) {
     set_memory_scalar(p_source, value, size);
 }
 
@@ -169,37 +167,38 @@ constexpr void zero_memory_scalar(void* p_source, ssize bytes) {
     set_memory_scalar(p_source, 0_u1, bytes);
 }
 
-[[gnu::noinline]] constexpr void zero_memory_scalar_explicit(void* p_source,
-                                                             ssize bytes) {
+[[gnu::noinline]]
+constexpr void zero_memory_scalar_explicit(void* p_source, ssize bytes) {
     set_memory_scalar(p_source, 0_u1, bytes);
 }
 
 // Set all bytes in a trivial object to `value`.
 template <typename T, typename U = unsigned char>
-requires(is_trivial<T> && sizeof(U) == 1) constexpr void set_object(T& object,
-                                                                    U value) {
+    requires(is_trivial<T> && sizeof(U) == 1)
+constexpr void set_object(T& object, U value) {
     set_memory(addressof(object), value, ssizeof<T>(object));
 }
 
 // Zero out all bytes in a trivial object. This function cannot be
 // constant-folded out.
 template <typename T, typename U = unsigned char>
-requires(is_trivial<T> &&
-         sizeof(U) == 1) constexpr void set_object_explicit(T& object,
-                                                            U value) {
+    requires(is_trivial<T> && sizeof(U) == 1)
+constexpr void set_object_explicit(T& object, U value) {
     set_memory_explicit(addressof(object), value, ssizeof<T>(object));
 }
 
 // Zero out all bytes in a trivial object.
 template <typename T>
-requires(is_trivial<T>) constexpr void zero_object(T& object) {
+    requires(is_trivial<T>)
+constexpr void zero_object(T& object) {
     zero_memory(addressof(object), ssizeof<T>(object));
 }
 
 // Zero out all bytes in a trivial object. This function cannot be
 // constant-folded out.
 template <typename T>
-requires(is_trivial<T>) constexpr void zero_object_explicit(T& object) {
+    requires(is_trivial<T>)
+constexpr void zero_object_explicit(T& object) {
     zero_memory_explicit(addressof(object), ssizeof<T>(object));
 }
 
@@ -207,7 +206,8 @@ requires(is_trivial<T>) constexpr void zero_object_explicit(T& object) {
 // `p_object` when it shares its location in memory with, but has distinct
 // lifetime from, a separate `const`-qualified object.
 template <typename T>
-[[nodiscard]] constexpr auto launder(T* p_object) -> T* {
+[[nodiscard]]
+constexpr auto launder(T* p_object) -> T* {
     return __builtin_launder(p_object);
 }
 
@@ -246,5 +246,3 @@ auto relocate(T& source, T* p_destination) -> T* {
 }
 
 }  // namespace cat
-
-using std::addressof;

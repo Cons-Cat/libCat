@@ -61,14 +61,10 @@
 namespace cat {
 
 template <typename T>
-concept has_member_is_type = requires(T t) {
-    t.template is<int>();
-};
+concept has_member_is_type = requires(T t) { t.template is<int>(); };
 
 template <typename T>
-concept has_member_is_value = requires(T t) {
-    t.template is(declval<T>());
-};
+concept has_member_is_value = requires(T t) { t.template is(declval<T>()); };
 
 namespace detail {
     struct pattern {};
@@ -192,9 +188,9 @@ namespace detail {
 
         // Call every pattern in order.
         template <typename U, typename... remaining>
-        requires(sizeof...(remaining) >
-                 0) constexpr void call_pattern(U&& pattern,
-                                                remaining&&... remaining_args) {
+            requires(sizeof...(remaining) > 0)
+        constexpr void call_pattern(U&& pattern,
+                                    remaining&&... remaining_args) {
             if (forward<U>(pattern)(this->matching)) {
                 // Short circuit the remaining patterns if this one returns
                 // true.
@@ -205,9 +201,9 @@ namespace detail {
 
         // Every pattern must be either an `is_a` or `one_of`.
         template <typename... patterns>
-        requires(is_specialization<
-                 patterns, detail::pattern_invocable>&&...) constexpr void
-        operator()(patterns&&... pattern_args) {
+            requires(is_specialization<patterns, detail::pattern_invocable> &&
+                     ...)
+        constexpr void operator()(patterns&&... pattern_args) {
             // Recurse through `pattern_args` in order. Invoke the call operator
             // on each of them with `this->matching` as an argument. When one
             // pattern holds true, invoke its invocable and stop recursing.

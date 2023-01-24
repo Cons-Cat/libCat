@@ -145,6 +145,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
   public:
     static constexpr bool has_pointer_stability = true;
+
   private:
     friend allocator_interface<linear_allocator>;
 

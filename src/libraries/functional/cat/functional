@@ -8,14 +8,15 @@
 namespace cat {
 namespace detail {
     template <typename T>
-    struct IsReferenceWrapper : false_trait {};
+    struct is_reference_wrapper_trait : false_trait {};
 
     // This is not needed until a reference wrapper is implemented.
     // template <typename U>
-    // struct IsReferenceWrapper<reference_wrapper<U>> : true_type {};
+    // struct is_reference_wrapper_trait<reference_wrapper<U>> : true_type {};
 
     template <typename T>
-    inline constexpr bool is_reference_wrapper = IsReferenceWrapper<T>::value;
+    inline constexpr bool is_reference_wrapper =
+        is_reference_wrapper_trait<T>::value;
 
     template <typename C, typename Pointed, typename T1, typename... Args>
     constexpr auto invoke_member_function(Pointed C::*f, T1&& t1,
@@ -41,14 +42,14 @@ namespace detail {
     }
 
     template <typename T>
-    struct InvokeImpl {
+    struct invoke_impl_trait {
         template <typename invocable_type, typename... Args>
         static auto call(invocable_type&& f, Args&&... args)
             -> decltype(forward<invocable_type>(f)(forward<Args>(args)...));
     };
 
     template <typename B, typename MT>
-    struct InvokeImpl<MT B::*> {
+    struct invoke_impl_trait<MT B::*> {
         template <typename T, typename Td = decay<T>>
             requires(is_base_of<B, Td>)
         static auto get(T&& t) -> T&&;
@@ -64,22 +65,23 @@ namespace detail {
         template <typename T, typename... Args, typename MT1>
             requires(is_function<MT1>)
         static auto call(MT1 B::*pmf, T&& t, Args&&... args)
-            -> decltype((InvokeImpl::get(forward<T>(t)).*
+            -> decltype((invoke_impl_trait::get(forward<T>(t)).*
                          pmf)(forward<Args>(args)...));
 
         template <typename T>
         static auto call(MT B::*pmd, T&& t)
-            -> decltype(InvokeImpl::get(forward<T>(t)).*pmd);
+            -> decltype(invoke_impl_trait::get(forward<T>(t)).*pmd);
     };
 
     template <typename invocable_type, typename... Args,
               typename Fd = typename decay<invocable_type>::type>
     auto invoke_detail(invocable_type&& f, Args&&... args)
-        -> decltype(InvokeImpl<Fd>::call(forward<invocable_type>(f),
-                                         forward<Args>(args)...));
+        -> decltype(invoke_impl_trait<Fd>::call(forward<invocable_type>(f),
+                                                forward<Args>(args)...));
 
     template <typename always_void_type, typename, typename...>
     struct invoke_result_trait {};
+
     template <typename invocable_type, typename... Args>
     struct invoke_result_trait<decltype(void(detail::invoke_detail(
                                    declval<invocable_type>(),

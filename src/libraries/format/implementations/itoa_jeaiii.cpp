@@ -25,9 +25,10 @@ static const cat::detail::PairJeaiii s_pairs[] = {
     P('5'), P('6'), P('7'), P('8'), P('9')};
 
 #define W(N, I) *(cat::detail::PairJeaiii*)&b[N] = s_pairs[I]
-#define A(N)                                                                \
-    t = (uint8::raw_type(1) << (32 + N / 5 * N * 53 / 16)) / uint4::raw_type(1e##N) + \
-        1 + N / 6 - N / 8,                                                  \
+#define A(N)                                                 \
+    t = (uint8::raw_type(1) << (32 + N / 5 * N * 53 / 16)) / \
+            uint4::raw_type(1e##N) +                         \
+        1 + N / 6 - N / 8,                                   \
     t *= u, t >>= N / 5 * N * 53 / 16, t += N / 6 * 4, W(0, t >> 32)
 #define S(N) b[N] = char(uint8::raw_type(10) * uint4::raw_type(t) >> 32) + '0'
 #define D(N) t = uint8::raw_type(100) * uint4::raw_type(t), W(N, t >> 32)
@@ -46,7 +47,7 @@ static const cat::detail::PairJeaiii s_pairs[] = {
 #define LN(N) (L##N, b += N + 1)
 #define LZ LN
 // if you want to '\0' terminate
-//#define LZ(N) &(L##N, b[N + 1] = '\0')
+// #define LZ(N) &(L##N, b[N + 1] = '\0')
 
 #define LG(F)                                                       \
     (u < 100          ? u < 10 ? F(0) : F(1)                        \
@@ -72,7 +73,9 @@ char* cat::detail::u64toa_jeaiii(uint8::raw_type n, char* b) {
     uint4::raw_type u;
     uint8::raw_type t;
 
-    if (uint4::raw_type(n >> 32) == 0) return u = uint4::raw_type(n), LG(LZ);
+    if (uint4::raw_type(n >> 32) == 0) {
+        return u = uint4::raw_type(n), LG(LZ);
+    }
 
     uint8::raw_type a = n / 100000000;
 

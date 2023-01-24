@@ -16,8 +16,8 @@ template <typename T, typename U>
 #endif
   // Bit-casting a type can violate alignment assumptions, so that UBSan check
   // is disabled here.
-  gnu::no_sanitize("alignment")]] constexpr inline auto
-cat::bit_cast(U& from_value) -> T {
+  gnu::no_sanitize("alignment")]]
+inline constexpr auto cat::bit_cast(U& from_value) -> T {
     if (__builtin_is_constant_evaluated()) {
         if constexpr (sizeof(U) == sizeof(T)) {
             // Fall back to C++20 bit-casting in a `constexpr` context.
@@ -39,8 +39,8 @@ template <typename T, typename U>
 [[gnu::always_inline,
   // Bit-casting a type can violate alignment assumptions, so that UBSan check
   // is disabled here.
-  gnu::no_sanitize("alignment")]] constexpr inline auto
-cat::bit_cast(U const& from_value) -> T {
+  gnu::no_sanitize("alignment")]]
+inline constexpr auto cat::bit_cast(U const& from_value) -> T {
     return bit_cast<T>(unconst(from_value));
 }
 

@@ -7,8 +7,7 @@
 namespace std {
 
 namespace detail {
-    enum class order : signed char
-    {
+    enum class order : signed char {
         less = -1,
         equivalent = 0,
         equal = 0,
@@ -17,8 +16,7 @@ namespace detail {
         nonequal = 1
     };
 
-    enum class unordered : signed char
-    {
+    enum class unordered : signed char {
         // Any value other than -1, 0, or 1 would be valid here.
         unordered = 2
     };
@@ -483,10 +481,11 @@ namespace detail {
 
 template <typename... types>
 // Every type in `types` must be a comparison category.
-requires((cat::is_same<types, partial_ordering> ||
-          cat::is_same<types, weak_ordering> ||
-          cat::is_same<
-              types, strong_ordering>)&&...) struct common_comparison_category {
+    requires((cat::is_same<types, partial_ordering> ||
+              cat::is_same<types, weak_ordering> ||
+              cat::is_same<types, strong_ordering>) &&
+             ...)
+struct common_comparison_category {
     using type = typename detail::weakest_comparison_category<types...>::type;
 };
 
@@ -527,7 +526,8 @@ using common_comparison_category_t =
 namespace cat {
 
 template <typename T>
-concept is_common_comparison_category = is_same<T, std::strong_ordering> &&
-    is_same<T, std::weak_ordering> && is_same<T, std::partial_ordering>;
+concept is_common_comparison_category =
+    is_same<T, std::strong_ordering> && is_same<T, std::weak_ordering> &&
+    is_same<T, std::partial_ordering>;
 
 }  // namespace cat

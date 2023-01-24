@@ -16,16 +16,16 @@ constexpr auto min(T value) -> T;
 
 // Implicit output type `max()`.
 template <typename T, typename U, typename... remaining>
-requires(is_implicitly_convertible<U, T>) constexpr auto min(
-    T value_1, U value_2, remaining... remaining_args) -> T;
+    requires(is_implicitly_convertible<U, T>)
+constexpr auto min(T value_1, U value_2, remaining... remaining_args) -> T;
 
 template <typename T>
 constexpr auto max(T value) -> T;
 
 // Implicit output type `max()`.
 template <typename T, typename U, typename... remaining>
-requires(is_implicitly_convertible<U, T>) constexpr auto max(
-    T value_1, U value_2, remaining... remaining_args) -> T;
+    requires(is_implicitly_convertible<U, T>)
+constexpr auto max(T value_1, U value_2, remaining... remaining_args) -> T;
 
 template <typename... types>
 class type_list {
@@ -62,8 +62,9 @@ class type_list {
 
     // If the any element in this type list is `T`.
     template <typename T, typename U, typename... Us>
-    static consteval auto recurse_for_type()
-        -> bool requires(sizeof...(Us) > 0) {
+    static consteval auto recurse_for_type() -> bool
+        requires(sizeof...(Us) > 0)
+    {
         return is_same<T, U> ? true : recurse_for_type<T, Us...>();
     }
 
@@ -76,7 +77,8 @@ class type_list {
     // Sum the number of occurences of `T` in this type list.
     template <typename T, ssize count, typename U, typename... Us>
     static consteval auto recurse_for_count() -> ssize
-        requires(sizeof...(Us) >= 0) {
+        requires(sizeof...(Us) >= 0)
+    {
         return is_same<T, U> ? recurse_for_count<T, count + 1, Us...>()
                              : recurse_for_count<T, count, Us...>();
     }
@@ -87,16 +89,17 @@ class type_list {
     }
 
     template <typename U, typename... Us>
-    static consteval auto recurse_for_unique()
-        -> bool requires(sizeof...(Us) > 0) {
+    static consteval auto recurse_for_unique() -> bool
+        requires(sizeof...(Us) > 0)
+    {
         return is_unique<U> ? recurse_for_unique<Us...>() : false;
     }
 
-  public :
-      // Produce an alias to the type stored at an index in this type list.
-      template <ssize index>
-      using get = typename recurse_for_type_at_index<type_list<types...>,
-                                                     index>::result;
+  public:
+    // Produce an alias to the type stored at an index in this type list.
+    template <ssize index>
+    using get =
+        typename recurse_for_type_at_index<type_list<types...>, index>::result;
     // TODO: Get index of first, last, and N'th occurence of `T`.
 
     // Append one parameter pack to this `type_list`.

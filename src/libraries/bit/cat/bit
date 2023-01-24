@@ -11,7 +11,8 @@ inline constexpr bool is_target_big_endian = !is_target_little_endian;
 namespace cat {
 
 template <is_unsigned_integral T>
-[[nodiscard]] constexpr auto countl_zero(T value) -> ssize {
+[[nodiscard]]
+constexpr auto countl_zero(T value) -> ssize {
     auto raw_value = to_raw_arithmetic(value);
 
     if (raw_value == 0) {
@@ -34,7 +35,8 @@ template <is_unsigned_integral T>
 }
 
 template <is_unsigned_integral T>
-[[nodiscard]] constexpr auto countl_one(T value) -> ssize {
+[[nodiscard]]
+constexpr auto countl_one(T value) -> ssize {
     auto raw_value = to_raw_arithmetic(value);
     return raw_value != limits<T>::max()
                ? countl_zero(static_cast<T>(~(raw_value)))
@@ -42,7 +44,8 @@ template <is_unsigned_integral T>
 }
 
 template <is_unsigned_integral T>
-[[nodiscard]] constexpr auto countr_zero(T value) -> ssize {
+[[nodiscard]]
+constexpr auto countr_zero(T value) -> ssize {
     auto raw_value = to_raw_arithmetic(value);
 
     if (raw_value == 0) {
@@ -60,13 +63,15 @@ template <is_unsigned_integral T>
 }
 
 template <is_unsigned_integral T>
-[[nodiscard]] constexpr auto countr_one(T value) -> ssize {
+[[nodiscard]]
+constexpr auto countr_one(T value) -> ssize {
     return value != limits<T>::max() ? countl_one(static_cast<T>(~value))
                                      : (ssizeof(T) * 8);
 }
 
 template <is_unsigned_integral T>
-[[nodiscard]] constexpr auto popcount(T value) -> ssize {
+[[nodiscard]]
+constexpr auto popcount(T value) -> ssize {
     auto raw_value = to_raw_arithmetic(value);
     if constexpr (__has_builtin(__builtin_popcount)) {
         if constexpr (sizeof(T) <= 4) {
@@ -93,10 +98,9 @@ namespace x64 {
 // right-most bit. Those `length` bits are then the right-most bits of the
 // return value.
 template <cat::is_unsigned T>
-[[nodiscard]] constexpr auto extract_bits(T from,
-                                          cat::is_unsigned_integral auto offset,
-                                          cat::is_unsigned_integral auto length)
-    -> T {
+[[nodiscard]]
+constexpr auto extract_bits(T from, cat::is_unsigned_integral auto offset,
+                            cat::is_unsigned_integral auto length) -> T {
     auto raw_from = cat::to_raw_arithmetic(from);
     auto raw_offset = cat::to_raw_arithmetic(offset);
     auto raw_length = cat::to_raw_arithmetic(length);
@@ -116,8 +120,9 @@ template <cat::is_unsigned T>
 
 // Extract the 1 bits from `value` which are also 1 at the same index in `mask`.
 template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
-requires(sizeof(T) == sizeof(U))
-    [[nodiscard]] constexpr auto extract_bits_mask(T value, U mask) -> T {
+    requires(sizeof(T) == sizeof(U))
+[[nodiscard]]
+constexpr auto extract_bits_mask(T value, U mask) -> T {
     T result = T(0u);
     auto raw_value = cat::to_raw_arithmetic(value);
     auto raw_mask = cat::to_raw_arithmetic(mask);
@@ -147,8 +152,9 @@ requires(sizeof(T) == sizeof(U))
 
 // Place the bits set by `mask` into the right-most bits in the return value.
 template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
-requires(sizeof(T) == sizeof(U))
-    [[nodiscard]] constexpr auto deposit_bits_mask(T value, U mask) -> T {
+    requires(sizeof(T) == sizeof(U))
+[[nodiscard]]
+constexpr auto deposit_bits_mask(T value, U mask) -> T {
     T result = T(0u);
     auto raw_value = cat::to_raw_arithmetic(value);
     auto raw_mask = cat::to_raw_arithmetic(mask);
@@ -177,7 +183,8 @@ requires(sizeof(T) == sizeof(U))
 }
 
 template <cat::is_unsigned_integral T>
-[[nodiscard]] constexpr auto zero_high_bits_at(T source, uint4 bit_index) -> T {
+[[nodiscard]]
+constexpr auto zero_high_bits_at(T source, uint4 bit_index) -> T {
     if constexpr (__has_builtin(__builtin_ia32_bzhi_si) && sizeof(T) == 4) {
         return __builtin_ia32_bzhi_si(cat::to_raw_arithmetic(source),
                                       bit_index.raw);
@@ -262,6 +269,7 @@ class bit_reference {
         return *this;
     }
 
+    [[nodiscard]]
     constexpr auto is_set() const -> bool {
         // These constructors are called explicitly in case `0u` cannot
         // implicitly convert to `storage_type`.
@@ -285,8 +293,7 @@ class bit_value {
 
     constexpr bit_value() = default;
 
-    constexpr bit_value(bit_value const& other) : value(other.value) {
-    }
+    constexpr bit_value(bit_value const& other) = default;
 
     template <is_unsigned_integral T>
     constexpr bit_value(bit_reference<T> reference)
@@ -296,10 +303,7 @@ class bit_value {
     constexpr bit_value(bool other) : value(other) {
     }
 
-    constexpr auto operator=(bit_value const& other) -> bit_value& {
-        this->value = other.value;
-        return *this;
-    }
+    constexpr auto operator=(bit_value const& other) -> bit_value& = default;
 
     template <is_unsigned_integral T>
     constexpr auto operator=(bit_reference<T> other) -> bit_value& {
@@ -313,50 +317,51 @@ class bit_value {
     }
 
     // Implicitly convert to `bool`.
-    constexpr operator bool() {
+    constexpr operator bool() const {
         return this->value;
     }
 
-    constexpr friend auto operator==(bit_value self, bit_value other) -> bool {
+    constexpr friend auto operator==(bit_value const& self,
+                                     bit_value const& other) -> bool {
         return self.value == other.value;
     }
 
-    constexpr friend auto operator&(bit_value self, bit_value other)
-        -> bit_value {
+    constexpr friend auto operator&(bit_value const& self,
+                                    bit_value const& other) -> bit_value {
         return bit_value(self.value & other.value);
     }
 
-    constexpr auto operator&=(bit_value other) -> bit_value& {
+    constexpr auto operator&=(bit_value const& other) -> bit_value& {
         this->value &= other.value;
         return *this;
     }
 
-    constexpr friend auto operator|(bit_value self, bit_value other)
-        -> bit_value {
+    constexpr friend auto operator|(bit_value const& self,
+                                    bit_value const& other) -> bit_value {
         return bit_value(self.value | other.value);
     }
 
-    constexpr auto operator|=(bit_value other) -> bit_value& {
+    constexpr auto operator|=(bit_value const& other) -> bit_value& {
         this->value |= other.value;
         return *this;
     }
 
-    constexpr friend auto operator^(bit_value self, bit_value other)
-        -> bit_value {
+    constexpr friend auto operator^(bit_value const& self,
+                                    bit_value const& other) -> bit_value {
         return bit_value(self.value ^ other.value);
     }
 
-    constexpr auto operator^=(bit_value other) -> bit_value& {
-        this->value ^= other.value;
+    constexpr auto operator^=(bit_value const& other) -> bit_value& {
+        this->value ^= static_cast<unsigned char>(other.value);
         return *this;
     }
 
-    constexpr auto operator~() -> bit_value {
+    constexpr auto operator~() const -> bit_value {
         bit_value bit = !this->value;
         return bit;
     }
 
-    constexpr void assign(bit_value input) {
+    constexpr void assign(bit_value const& input) {
         this->value = input.value;
     }
 
@@ -387,6 +392,7 @@ class bit_value {
         return *this;
     }
 
+    [[nodiscard]]
     constexpr auto is_set() const -> bool {
         return this->value;
     }
@@ -395,7 +401,8 @@ class bit_value {
     bool value;
 };
 
-[[nodiscard]] constexpr auto invert_endianess(is_unsigned_integral auto value) {
+[[nodiscard]]
+constexpr auto invert_endianess(is_unsigned_integral auto value) {
     auto raw_value = to_raw_arithmetic(value);
 
     if constexpr (sizeof(raw_value) == 1) {
@@ -418,7 +425,8 @@ class bit_value {
 
 // If `value` is a power of two.
 template <is_arithmetic T>
-[[nodiscard]] constexpr auto has_single_bit(T value) -> bool {
+[[nodiscard]]
+constexpr auto has_single_bit(T value) -> bool {
     return (value & (value - T(1))) == T(0);
 }
 
@@ -430,17 +438,19 @@ struct byte {
 
     constexpr byte() = default;
 
-    constexpr byte(auto input) requires(sizeof(input) == 1) {
-        this->value = input;
+    constexpr byte(auto input)
+        requires(sizeof(input) == 1)
+        : value(input) {
     }
 
-    constexpr byte(auto const& input) requires(sizeof(input) == 1) {
-        this->value = input;
+    constexpr byte(auto const& input)
+        requires(sizeof(input) == 1)
+        : value(input) {
     }
 
-    template <typename T>
-    requires(sizeof(T) == 1) constexpr byte(T&& input) {
-        this->value = forward<T>(input);
+    template <rvalue T>
+        requires(sizeof(T) == 1)
+    constexpr byte(T&& input) : value(forward<T>(input)) {  // NOLINT
     }
 
     [[nodiscard]] constexpr operator char() const {
@@ -456,11 +466,15 @@ struct byte {
     }
 
     template <typename T>
-    [[nodiscard]] constexpr explicit operator T() requires(sizeof(T) == 1) {
+    [[nodiscard]] constexpr explicit operator T()
+        requires(sizeof(T) == 1)
+    {
         return bit_cast<T>(value);
     }
 
-    [[nodiscard]] constexpr auto operator&(is_integral auto from) -> byte {
+    [[nodiscard]]
+    constexpr auto
+    operator&(is_integral auto from) -> byte {
         return this->value & from;
     }
 
@@ -469,7 +483,9 @@ struct byte {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator|(is_integral auto from) -> byte {
+    [[nodiscard]]
+    constexpr auto
+    operator|(is_integral auto from) -> byte {
         return this->value | from;
     }
 
@@ -478,7 +494,9 @@ struct byte {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator<<(is_integral auto from) -> byte {
+    [[nodiscard]]
+    constexpr auto
+    operator<<(is_integral auto from) -> byte {
         return this->value << from;
     }
 
@@ -487,7 +505,9 @@ struct byte {
         return *this;
     }
 
-    [[nodiscard]] constexpr auto operator>>(is_integral auto from) -> byte {
+    [[nodiscard]]
+    constexpr auto
+    operator>>(is_integral auto from) -> byte {
         return this->value >> from;
     }
 
@@ -502,30 +522,34 @@ struct byte {
 // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4201.html
 
 template <typename U>
-[[nodiscard]] constexpr auto is_aligned(U* p_value, usize alignment) -> bool;
+[[nodiscard]]
+constexpr auto is_aligned(U* p_value, usize alignment) -> bool;
 
 template <typename U>
-[[nodiscard]] constexpr auto is_aligned(uintptr<U> p_value, usize alignment)
-    -> bool;
+[[nodiscard]]
+constexpr auto is_aligned(uintptr<U> p_value, usize alignment) -> bool;
 
 template <typename U>
-[[nodiscard]] constexpr auto align_up(U* p_value, usize alignment) -> U*;
+[[nodiscard]]
+constexpr auto align_up(U* p_value, usize alignment) -> U*;
 template <typename U>
 constexpr auto align_up(uintptr<U> p_value, usize alignment) -> uintptr<U>;
 
 template <typename U>
-[[nodiscard]] constexpr auto align_down(U* p_value, usize alignment) -> U*;
+[[nodiscard]]
+constexpr auto align_down(U* p_value, usize alignment) -> U*;
 
 template <typename U>
-[[nodiscard]] constexpr auto align_down(intptr<U> p_value, usize alignment)
-    -> intptr<U>;
+[[nodiscard]]
+constexpr auto align_down(intptr<U> p_value, usize alignment) -> intptr<U>;
 
 template <typename U>
-[[nodiscard]] constexpr auto align_down(uintptr<U> p_value, usize alignment)
-    -> uintptr<U>;
+[[nodiscard]]
+constexpr auto align_down(uintptr<U> p_value, usize alignment) -> uintptr<U>;
 
 template <is_integral T>
-[[nodiscard]] constexpr auto has_single_bit(T value) -> bool {
+[[nodiscard]]
+constexpr auto has_single_bit(T value) -> bool {
     return (value & (value - 1)) == 0;
 }
 
@@ -538,20 +562,25 @@ concept is_enum_flag = enum_flag_trait<T>::value;
 }  // namespace cat
 
 template <cat::is_enum_flag T>
-[[nodiscard]] constexpr auto operator|(T flag_1, T flag_2) -> T {
+[[nodiscard]]
+constexpr auto
+operator|(T flag_1, T flag_2) -> T {
     using U = cat::underlying_type<T>;
     return static_cast<T>(static_cast<U>(flag_1) | static_cast<U>(flag_2));
 }
 
 template <cat::is_enum_flag T>
-[[nodiscard]] constexpr auto operator|(T flag_1, cat::underlying_type<T> flag_2)
-    -> T {
+[[nodiscard]]
+constexpr auto
+operator|(T flag_1, cat::underlying_type<T> flag_2) -> T {
     using U = cat::underlying_type<T>;
     return static_cast<T>(static_cast<U>(flag_1) | flag_2);
 }
 
 template <cat::is_enum_flag T>
-[[nodiscard]] constexpr auto operator&(T flag_1, T flag_2) -> T {
+[[nodiscard]]
+constexpr auto
+operator&(T flag_1, T flag_2) -> T {
     using U = cat::underlying_type<T>;
     return static_cast<T>(static_cast<U>(flag_1) & static_cast<U>(flag_2));
 }

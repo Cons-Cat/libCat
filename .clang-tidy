@@ -1,27 +1,43 @@
 ---
-Checks:          'bugprone-*,-bugprone-reserved-identifier,performance-*,-performance-noexcept-move-constructor,modernize-use-trailing-return-type,cppcoreguidelines-narrowing-conversions,readability-braces-around-statements,readability-const-return-type,readability-else-after-return,readability-implicit-bool-conversion,readability-make-member-function-const,readability-non-const-parameter,readability-qualified-auto,readability-redundant-control-flow,readability-redundant-declaration,readability-redundant-function-ptr-dereference,readability-redundant-member-init,readability-simplify-boolean-expr,modernize-pass-by-value,misc-non-copyable-objects,misc-misplaced-const,modernize-use-using,modernize-use-equals-default,misc-definitions-in-headers,cppcoreguidelines-pro-type-cstyle-cast,google-readability-casting,readability-identifier-naming,-bugprone-easily-swappable-parameters'
-
-CheckOptions:
-  - { key: readability-identifier-naming.VariableCase,                    value: lower_case }
-  - { key: readability-identifier-naming.MemberCase,                      value: lower_case }
-  - { key: readability-identifier-naming.FunctionCase,                    value: lower_case }
-  - { key: readability-identifier-naming.NamespaceCase,                   value: lower_case }
-  - { key: readability-identifier-naming.StructCase,                      value: lower_case }
-  - { key: readability-identifier-naming.ClassCase,                       value: lower_case }
-  - { key: readability-identifier-naming.TypeAliasCase,                   value: lower_case }
-  - { key: readability-identifier-naming.TypedefCase,                       value: lower_case }
-  
-  - { key: readability-identifier-naming.TemplateParameterIgnoredRegexp, value: [A-Z]}
-  - { key: readability-identifier-naming.TypeAliasIgnoredRegexp, value: [A-Z]}
-  - { key: readability-identifier-naming.TypedefIgnoredRegexp, value: [A-Z]}
-
-  - { key: readability-identifier-naming.PointerParameterPrefix,          value: p_ }
-  - { key: readability-identifier-naming.LocalPointerPrefix,              value: p_ }
-  - { key: readability-identifier-naming.LocalConstantPointerPrefix,      value: p_ }
-  - { key: performance-unnecessary-value-param.AllowedTypes,              value: string;span;io_vector }
+Checks: "bugprone-*,
+         performance-*,
+		 modernize-*,
+		 readability-*,
+		 misc-*,
+		 # DISABLE SOME CHECKS:
+		 -bugprone-easily-swappable-parameters, # I'm on the fence about this.
+		 -performance-noexcept-move-constructor, # libCat doesn't have exceptions yet.
+		 -modernize-avoid-c-arrays, # They're needed in some low-level code.
+		 -modernize-use-auto, # I rather human judgement.
+		 -readability-magic-numbers, # I rather human judgement.
+		 -readability-identifier-length, # I rather human judgement.
+		 -readability-uppercase-literal-suffix, # I prefer lowercase.
+         -readability-function-cognitive-complexity, # I don't trust this.
+		 -readability-convert-member-functions-to-static, # I rather human judgement.
+		 -readability-named-parameter, # I'm on the fence about this.
+         -misc-non-private-member-variables-in-classes, # This seems very bad.
+		 -misc-unused-using-decls, # This isn't helpful for libraries.
+        "
 
 WarningsAsErrors: ''
 HeaderFilterRegex: ^src
 AnalyzeTemporaryDtors: false
-FormatStyle:     file
+FormatStyle: file
+
+CheckOptions:
+  - { key: readability-identifier-naming.VariableCase,            value: lower_case }
+  - { key: readability-identifier-naming.MemberCase,              value: lower_case }
+  - { key: readability-identifier-naming.FunctionCase,            value: lower_case }
+  - { key: readability-identifier-naming.NamespaceCase,           value: lower_case }
+  - { key: readability-identifier-naming.StructCase,              value: lower_case }
+  - { key: readability-identifier-naming.ClassCase,               value: lower_case }
+  - { key: readability-identifier-naming.TypeAliasCase,           value: lower_case }
+  - { key: readability-identifier-naming.TypedefCase,             value: lower_case }
+  - { key: readability-identifier-naming.PointerParameterPrefix,  value: p_ }
+  - { key: readability-identifier-naming.LocalPointerPrefix,      value: p_ }
+  - { key: readability-identifier-naming.LocalConstantPointerPrefix,     value: p_ }
+  - { key: readability-identifier-naming.TemplateParameterIgnoredRegexp, value: '[A-Z]' }
+  - { key: readability-identifier-naming.TypeAliasIgnoredRegexp, value: '[A-Z]' }
+  - { key: readability-identifier-naming.TypedefIgnoredRegexp, value: '[A-Z]' }
+  - { key: performance-unnecessary-value-param.AllowedTypes,       value: string;span;io_vector }
 ...

@@ -22,12 +22,12 @@ class null_allocator : public allocator_interface<null_allocator> {
 
   public:
     // This allocation always fails.
-    auto allocate(ssize) -> maybe_ptr<void> {
+    auto allocate(ssize ) -> maybe_ptr<void> {
         return nullptr;
     }
 
     // Deallocation is no-op.
-    void deallocate(void const*, ssize) {
+    void deallocate(void const* , ssize ) {
     }
 
     // Produce a handle to allocated memory.
@@ -43,7 +43,7 @@ class null_allocator : public allocator_interface<null_allocator> {
     }
 
     template <typename T>
-    auto access(NullMemoryHandle<T> const&) const -> T const* {
+    auto access(null_memory_handle<T> const& ) const -> T const* {
         return nullptr;
     }
 

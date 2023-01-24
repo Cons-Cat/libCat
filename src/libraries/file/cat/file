@@ -20,11 +20,11 @@ enum class FileSeekMode {
     end
 };
 
-class raw_typeFile {
+class raw_type_file {
   public:
-    constexpr raw_typeFile() = default;
-    constexpr raw_typeFile(raw_typeFile const&) = default;
-    constexpr raw_typeFile(raw_typeFile&&) = default;
+    constexpr raw_type_file() = default;
+    constexpr raw_type_file(raw_type_file const&) = default;
+    constexpr raw_type_file(raw_type_file&&) = default;
 
     auto open(string const path, Fileopen_mode mode = Fileopen_mode::read)
         -> scaredy<void, nix::linux_error> {
@@ -32,8 +32,7 @@ class raw_typeFile {
         nix::open_flags open_flags = nix::open_flags::path;
 
         // Try to open a file from a path.
-        scaredy open_result =
-            nix::sys_open(path.data(), open_flags, open_mode);
+        scaredy open_result = nix::sys_open(path.data(), open_flags, open_mode);
         if (!open_result.has_value()) {
             return open_result.error();
         }
@@ -51,9 +50,10 @@ class raw_typeFile {
     void close() {
     }
 
+    [[nodiscard]]
     constexpr auto is_closed() const -> bool {
         // When closed, `file_descriptor` is set to -1.
-        return this->file_descriptor != -1;
+        return this->file_descriptor.value != -1;
     }
 
     constexpr auto is_readable() -> bool {
@@ -71,7 +71,7 @@ class raw_typeFile {
     }
 
   private:
-    nix::file_descriptor file_descriptor = -1;
+    [[maybe_unused]] nix::file_descriptor file_descriptor{-1};
     nix::open_mode open_mode;
     int8 file_size;
     int8 block_size;

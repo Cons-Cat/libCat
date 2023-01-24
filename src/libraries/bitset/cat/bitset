@@ -10,8 +10,10 @@
 namespace cat {
 
 template <ssize bits_count>
-requires(bits_count > 0) class bitset {
+    requires(bits_count > 0)
+class bitset {
   private:
+
   public:
     // Store the smallest number of bytes needed for `bits_count`. If that is 8
     // bytes or fewer, use that many bytes. If it is larger, use an array of
@@ -42,11 +44,15 @@ requires(bits_count > 0) class bitset {
         constexpr iterator_type(ssize in_index, T& in_bitset)
             : current_index(in_index), bitset(in_bitset){};
 
-        constexpr auto dereference() requires(!is_const<T>) {
+        constexpr auto dereference()
+            requires(!is_const<T>)
+        {
             return this->bitset[this->current_index];
         }
 
-        constexpr auto dereference() const requires(is_const<T>) {
+        constexpr auto dereference() const
+            requires(is_const<T>)
+        {
             return this->bitset[this->current_index];
         }
 
@@ -84,10 +90,13 @@ requires(bits_count > 0) class bitset {
     constexpr bitset() = default;
 
     template <typename... types>
-    requires((is_same<types, value_type_element> ||
-              is_same<types, typename value_type_element::raw_type>)&&...)
-        [[nodiscard]] static constexpr auto from(types... values) -> bitset
-        requires(ssizeof_pack<types...>() == value_type::size()) {
+        requires((is_same<types, value_type_element> ||
+                  is_same<types, typename value_type_element::raw_type>) &&
+                 ...)
+    [[nodiscard]]
+    static constexpr auto from(types... values) -> bitset
+        requires(ssizeof_pack<types...>() == value_type::size())
+    {
         // `value_type::value_type` is some unsigned integer.
         // TODO: Assert that the input fits in `bits_count`.
         bitset<bits_count> bitset;
@@ -95,11 +104,13 @@ requires(bits_count > 0) class bitset {
         return bitset;
     }
 
-    [[nodiscard]] constexpr auto operator==(bitset<bits_count> const&) const
-        -> bool = default;
+    [[nodiscard]]
+    constexpr auto
+    operator==(bitset<bits_count> const&) const -> bool = default;
 
-    [[nodiscard]] constexpr auto operator[](ssize index)
-        -> bit_reference<value_type_element> {
+    [[nodiscard]]
+    constexpr auto
+    operator[](ssize index) -> bit_reference<value_type_element> {
         if (!__builtin_is_constant_evaluated()) {
             cat::assert(index < bits_count);
         }
@@ -112,7 +123,9 @@ requires(bits_count > 0) class bitset {
             bytes, index - this->leading_skipped_bits);
     }
 
-    [[nodiscard]] constexpr auto operator[](ssize index) const -> bool {
+    [[nodiscard]]
+    constexpr auto
+    operator[](ssize index) const -> bool {
         if (!__builtin_is_constant_evaluated()) {
             cat::assert(index < bits_count);
         }
@@ -135,24 +148,25 @@ requires(bits_count > 0) class bitset {
         return static_cast<bool>(result);
     }
 
-    [[nodiscard]] constexpr auto at(ssize index)
-        -> maybe<bit_reference<value_type_element>> {
+    [[nodiscard]]
+    constexpr auto at(ssize index) -> maybe<bit_reference<value_type_element>> {
         if (index < bits_count) {
             return (*this)[index];
         }
         return nullopt;
     }
 
-    [[nodiscard]] constexpr auto at(ssize index) const -> maybe<bool> {
+    [[nodiscard]]
+    constexpr auto at(ssize index) const -> maybe<bool> {
         if (index < bits_count) {
             return (*this)[index];
         }
         return nullopt;
     }
 
-    [[nodiscard]] friend constexpr auto operator&(bitset<bits_count> lhs,
-                                                  bitset<bits_count> rhs)
-        -> bitset {
+    [[nodiscard]]
+    friend constexpr auto
+    operator&(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
         bitset<bits_count> bitset;
         for (ssize::raw_type i = 0; i < lhs.storage_array_size; ++i) {
             bitset.storage[i] = lhs.storage[i] & rhs.storage[i];
@@ -166,9 +180,9 @@ requires(bits_count > 0) class bitset {
         return self;
     }
 
-    [[nodiscard]] friend constexpr auto operator|(bitset<bits_count> lhs,
-                                                  bitset<bits_count> rhs)
-        -> bitset {
+    [[nodiscard]]
+    friend constexpr auto
+    operator|(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
         bitset<bits_count> bitset;
         for (ssize::raw_type i = 0; i < lhs.storage_array_size; ++i) {
             bitset.storage[i] = lhs.storage[i] | rhs.storage[i];
@@ -182,9 +196,9 @@ requires(bits_count > 0) class bitset {
         return self;
     }
 
-    [[nodiscard]] friend constexpr auto operator^(bitset<bits_count> lhs,
-                                                  bitset<bits_count> rhs)
-        -> bitset {
+    [[nodiscard]]
+    friend constexpr auto
+    operator^(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
         bitset<bits_count> bitset;
         for (ssize::raw_type i = 0; i < lhs.storage_array_size; ++i) {
             bitset.storage[i] = lhs.storage[i] ^ rhs.storage[i];
@@ -206,7 +220,8 @@ requires(bits_count > 0) class bitset {
     }
 
     // Evaluate true if every bit in this bitset is 1.
-    [[nodiscard]] constexpr auto all_of() const -> bool {
+    [[nodiscard]]
+    constexpr auto all_of() const -> bool {
         for (ssize i = 0; i < this->storage_array_size; ++i) {
             auto it = this->storage[i];
             using T = decltype(it);
@@ -232,7 +247,8 @@ requires(bits_count > 0) class bitset {
     }
 
     // Evaluate true if at least one bit in this bitset is 1.
-    [[nodiscard]] constexpr auto any_of() const -> bool {
+    [[nodiscard]]
+    constexpr auto any_of() const -> bool {
         for (auto i : this->storage) {
             if (i != 0u) {
                 return true;
@@ -242,11 +258,13 @@ requires(bits_count > 0) class bitset {
     }
 
     // Evaluate true if every bit in this bitset is 0.
-    [[nodiscard]] constexpr auto none_of() const -> bool {
+    [[nodiscard]]
+    constexpr auto none_of() const -> bool {
         return !(this->any_of());
     }
 
-    [[nodiscard]] constexpr auto countl_zero() const -> ssize {
+    [[nodiscard]]
+    constexpr auto countl_zero() const -> ssize {
         constexpr ssize skip_bits =
             (ssizeof(value_type_element) * 8) - this->leading_bytes_bits;
 
@@ -271,7 +289,8 @@ requires(bits_count > 0) class bitset {
 
     // TODO: `.countl_one()`.
 
-    [[nodiscard]] constexpr auto countr_zero() const -> ssize {
+    [[nodiscard]]
+    constexpr auto countr_zero() const -> ssize {
         ssize count =
             cat::countr_zero(this->storage[this->storage_array_size - 1]);
         if (count != ssizeof(value_type_element) * 8) {
@@ -292,27 +311,33 @@ requires(bits_count > 0) class bitset {
 
     // TODO: `.countr_one()`.
 
-    [[nodiscard]] constexpr auto begin() {
+    [[nodiscard]]
+    constexpr auto begin() {
         return iterator_type<decltype(*this)>(0, *this);
     }
 
-    [[nodiscard]] constexpr auto end() {
+    [[nodiscard]]
+    constexpr auto end() {
         return iterator_type<decltype(*this)>(bits_count - 1, *this);
     }
 
-    [[nodiscard]] constexpr auto begin() const {
+    [[nodiscard]]
+    constexpr auto begin() const {
         return iterator_type<decltype(*this)>(0, *this);
     }
 
-    [[nodiscard]] constexpr auto end() const {
+    [[nodiscard]]
+    constexpr auto end() const {
         return iterator_type<decltype(*this)>(bits_count - 1, *this);
     }
 
-    [[nodiscard]] constexpr auto cbegin() const {
+    [[nodiscard]]
+    constexpr auto cbegin() const {
         return iterator_type<decltype(*this)>(0, *this);
     }
 
-    [[nodiscard]] constexpr auto cend() const {
+    [[nodiscard]]
+    constexpr auto cend() const {
         return iterator_type<decltype(*this)>(bits_count - 1, *this);
     }
 

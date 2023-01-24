@@ -52,6 +52,7 @@ namespace to_chars_detail {
         '9', '0', '9', '1', '9', '2', '9', '3', '9', '4',
         '9', '5', '9', '6', '9', '7', '9', '8', '9', '9'
     };
+
     // clang-format on
 
     // These digit generation routines are inspired by James Anhalt's itoa
@@ -65,7 +66,8 @@ namespace to_chars_detail {
     // See https://jk-jeon.github.io/posts/2022/02/jeaiii-algorithm/ for more
     // explanation.
 
-    JKJ_FORCEINLINE static void print_9_digits(uint4::raw_type s32, int& exponent,
+    JKJ_FORCEINLINE static void print_9_digits(uint4::raw_type s32,
+                                               int& exponent,
                                                char*& buffer) noexcept {
         if (s32 < 100) {
             if (s32 < 10) {
@@ -241,7 +243,8 @@ namespace to_chars_detail {
 
     template <>
     char* to_chars<double, default_float_traits<double>>(
-        uint8::raw_type const significand, int exponent, char* buffer) noexcept {
+        uint8::raw_type const significand, int exponent,
+        char* buffer) noexcept {
         uint4::raw_type first_block, second_block;
         bool have_second_block;
 
@@ -250,7 +253,8 @@ namespace to_chars_detail {
             have_second_block = false;
         } else {
             first_block = uint4::raw_type(significand / 1'0000'0000);
-            second_block = uint4::raw_type(significand) - first_block * 1'0000'0000;
+            second_block =
+                uint4::raw_type(significand) - first_block * 1'0000'0000;
             have_second_block = true;
         }
 
@@ -295,7 +299,7 @@ namespace to_chars_detail {
             auto prod = uint4::raw_type(exponent) * uint4::raw_type(6554);
             auto d1 = prod >> 16;
             prod = uint2::raw_type(prod) * uint4::raw_type(5);  // * 10
-            auto d2 = prod >> 15;                     // >> 16
+            auto d2 = prod >> 15;                               // >> 16
             copy_memory_small(&radix_100_table[d1 * 2], buffer, 2);
             buffer[2] = char('0' + d2);
             buffer += 3;

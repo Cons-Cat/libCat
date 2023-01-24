@@ -39,14 +39,15 @@ struct monostate_type {
     }
 };
 
-template <typename T, T state>
+template <typename T, T constant_state>
 struct monotype_storage {
     constexpr monotype_storage() = default;
 
-    constexpr monotype_storage(monostate_type&) : storage(state) {
+    constexpr monotype_storage(monostate_type&) : storage(constant_state) {
     }
 
-    constexpr monotype_storage(monostate_type const&) : storage(state) {
+    constexpr monotype_storage(monostate_type const&)
+        : storage(constant_state) {
     }
 
     constexpr monotype_storage(T input) : storage(input) {
@@ -56,17 +57,19 @@ struct monotype_storage {
         return this->storage;
     };
 
-    constexpr auto operator=(monostate_type) -> monotype_storage<T, state>& {
+    constexpr auto operator=(monostate_type)
+        -> monotype_storage<T, constant_state>& {
         return *this;
     }
 
-    constexpr friend auto operator<=>(monotype_storage<T, state> const& self,
-                                      auto const& rhs) {
+    constexpr friend auto operator<=>(
+        monotype_storage<T, constant_state> const& self, auto const& rhs) {
         return self.storage <=> rhs;
     }
 
-    constexpr friend auto operator==(monotype_storage<T, state> const& self,
-                                     auto const& rhs) -> bool {
+    constexpr friend auto operator==(
+        monotype_storage<T, constant_state> const& self, auto const& rhs)
+        -> bool {
         return self.storage == rhs;
     }
 
@@ -155,19 +158,23 @@ inline constexpr cat::monostate_type monostate;
     })
 
 // Placement `new`.
-[[nodiscard]] inline constexpr auto operator new(unsigned long, void* p_address)
-    -> void* {
+[[nodiscard]]
+inline constexpr auto
+operator new(unsigned long, void* p_address) -> void* {
     return p_address;
 }
 
 // `new[]` and `delete[]` are defined for use in a `constexpr` context.
-[[nodiscard]] inline auto operator new[](unsigned long, void* p_address)
-    -> void* {
+[[nodiscard]]
+inline auto
+operator new[](unsigned long, void* p_address) -> void* {
     return p_address;
 }
 
 // NOLINTNEXTLINE Let this be `inline`.
-[[nodiscard]] inline auto operator new[](unsigned long) -> void* {
+[[nodiscard]]
+inline auto
+operator new[](unsigned long) -> void* {
     return reinterpret_cast<void*>(1ul);
 }
 
@@ -187,7 +194,8 @@ inline void operator delete[](void*, unsigned long, std::align_val_t) {
 }
 
 // NOLINTNEXTLINE Let this be `inline`.
-[[nodiscard]] inline auto operator new[](unsigned long, std::align_val_t align)
-    -> void* {
+[[nodiscard]]
+inline auto
+operator new[](unsigned long, std::align_val_t align) -> void* {
     return reinterpret_cast<void*>(align);
 }
