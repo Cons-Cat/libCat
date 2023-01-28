@@ -44,4 +44,28 @@ TEST(test_bit) {
     // TODO: These only test it compiles. Test that it works correctly.
     static_assert(x64::zero_high_bits_at(8_u4, 8u));
     static_assert(x64::zero_high_bits_at(8_u8, 8u));
+
+    // Test `bit_value`.
+    cat::bit_value bit1 = false;
+    bit1 = true;
+    cat::assert(~bit1 == false);
+    cat::assert(~~bit1 == true);
+    cat::assert(false == ~bit1);
+    // NOLINTNEXTLINE
+    cat::assert(bit1 == bit1);
+
+    // Test `bit_reference`
+    unsigned char number = 0u;
+    cat::bit_reference bit2 =
+        cat::bit_reference<unsigned char>::from_mask(number, 1u);
+    bit2 = true;
+    cat::assert(bit1.is_set());
+    cat::assert(bit1 == true);
+    cat::assert(bit2.is_set());
+    cat::assert(bit2);
+
+    cat::bit_reference bit3 = bit1;
+    bit3.set();
+    cat::assert(bit3 == true);
+    cat::assert(number != 0u);
 }

@@ -1,6 +1,7 @@
 // -*- mode: c++ -*-
 // vim: set ft=cpp:
 #pragma once
+
 #include <cat/meta>
 
 // `__BYTE_ORDER__` and `__ORDER_LITTLE_ENDIAN__` are macros defined by GCC.
@@ -89,6 +90,13 @@ constexpr auto popcount(T value) -> ssize {
 
         return result;
     }
+}
+
+// If `value` is a power of two, or in other words, has exactly one set bit.
+template <is_arithmetic T>
+[[nodiscard]]
+constexpr auto has_single_bit(T value) -> bool {
+    return popcount(value) == 1;
 }
 
 }  // namespace cat
@@ -205,6 +213,11 @@ namespace cat {
 class bit_value;
 class bit_ptr;
 
+namespace detail {
+    constexpr auto get_bit_value(bit_value&) -> unsigned char&;
+    constexpr auto get_bit_value(bit_value const&) -> unsigned char const&;
+}  // namespace detail
+
 template <is_unsigned_integral storage_type>
 class bit_reference {
   private:
@@ -212,11 +225,27 @@ class bit_reference {
 
     // This constructor is only used by the static factory functions.
     constexpr bit_reference(storage_type& in_storage, storage_type in_mask)
-        : storage(in_storage), bitmask(in_mask){};
+        : storage(in_storage), bitmask(in_mask) {
+        if !consteval {
+            cat::assert(has_single_bit(in_mask));
+        }
+    }
 
   public:
     constexpr bit_reference(bit_reference<storage_type> const& other)
-        : storage(other.storage), bitmask(other.bitmask){};
+        : storage(other.storage), bitmask(other.bitmask) {
+    }
+
+    constexpr bit_reference(bit_value& other)
+        : storage(detail::get_bit_value(other)), bitmask(1u) {
+    }
+
+    constexpr bit_reference(bit_value const& other)
+        : storage(detail::get_bit_value(other)), bitmask(1u) {
+    }
+
+    // You cannot take a reference of r-values.
+    constexpr bit_reference(bit_value&& other) = delete;
 
     template <is_integral T>
     static constexpr auto from_offset(storage_type& reference, T offset)
@@ -231,25 +260,40 @@ class bit_reference {
     }
 
     // Assign a true or false value to this bit.
+    constexpr auto operator=(storage_type value) -> bit_reference& {
+        this->assign(value);
+        return *this;
+    }
+
+    // Assign a true or false value to this bit.
     constexpr auto operator=(bool value) -> bit_reference& {
         this->assign(value);
         return *this;
     }
 
-    // Convert this bit to a true or false value.
+    // Because `bit_reference` and `bit_value` convert to bool, this comparison
+    // works between all the above.
+    friend constexpr auto operator==(bit_reference<storage_type> const& self,
+                                     bool other) -> bool {
+        return self.is_set() == other;
+    }
+
+    // Implicitly convert this bit to a true or false value.
     constexpr operator bool() const {
         return this->is_set();
     }
 
     // Assign a true or false value to this bit.
     constexpr auto assign(bool value) -> bit_reference& {
-        return value ? this->set() : this->unset();
+        value ? this->set() : this->unset();
+        return *this;
     }
 
     // Assign another bit's value to this bit.
     template <is_unsigned_integral T>
-    constexpr auto assign(bit_reference<T> other) -> bit_reference& {
-        return this->assign(other.is_set());
+    constexpr auto assign(storage_type value) -> bit_reference& {
+        value & 1u ? set() : unset();
+        return *this;
     }
 
     // Flag this bit on.
@@ -272,11 +316,10 @@ class bit_reference {
 
     [[nodiscard]]
     constexpr auto is_set() const -> bool {
-        // These constructors are called explicitly in case `0u` cannot
-        // implicitly convert to `storage_type`.
-        return storage_type(this->storage & this->bitmask) != storage_type(0u);
+        return static_cast<bool>(this->storage & this->bitmask);
     }
 
+    [[nodiscard]]
     constexpr auto mask() const -> remove_cv<storage_type> {
         return this->bitmask;
         return *this;
@@ -287,7 +330,15 @@ class bit_reference {
     remove_cv<storage_type> bitmask;
 };
 
+template <is_same<bit_value> T>
+bit_reference(T) -> bit_reference<unsigned char>;
+
 class bit_value {
+    friend constexpr auto cat::detail::get_bit_value(bit_value&)
+        -> unsigned char&;
+    friend constexpr auto cat::detail::get_bit_value(bit_value const&)
+        -> unsigned char const&;
+
   public:
     template <is_unsigned_integral>
     friend class bit_reference;
@@ -325,6 +376,11 @@ class bit_value {
     constexpr friend auto operator==(bit_value const& self,
                                      bit_value const& other) -> bool {
         return self.value == other.value;
+    }
+
+    constexpr friend auto operator==(bit_value const& self, bool other)
+        -> bool {
+        return self.value == other;
     }
 
     constexpr friend auto operator&(bit_value const& self,
@@ -405,6 +461,17 @@ class bit_value {
     bool value;
 };
 
+namespace detail {
+    constexpr auto get_bit_value(bit_value& value) -> unsigned char& {
+        return *bit_cast<unsigned char*>(&value.value);
+    }
+
+    constexpr auto get_bit_value(bit_value const& value)
+        -> unsigned char const& {
+        return *bit_cast<unsigned char const*>(&value.value);
+    }
+}  // namespace detail
+
 [[nodiscard]]
 constexpr auto invert_endianess(is_unsigned_integral auto value) {
     auto raw_value = to_raw_arithmetic(value);
@@ -425,13 +492,6 @@ constexpr auto invert_endianess(is_unsigned_integral auto value) {
     if constexpr (sizeof(raw_value) == 8) {
         return __builtin_bswap64(raw_value);
     }
-}
-
-// If `value` is a power of two.
-template <is_arithmetic T>
-[[nodiscard]]
-constexpr auto has_single_bit(T value) -> bool {
-    return (value & (value - T(1))) == T(0);
 }
 
 // `byte` is a strongly-typed `struct` rather than an `enum class` so that it
@@ -554,7 +614,8 @@ constexpr auto align_down(uintptr<U> p_value, usize alignment) -> uintptr<U>;
 template <is_integral T>
 [[nodiscard]]
 constexpr auto has_single_bit(T value) -> bool {
-    return (value & (value - 1)) == 0;
+    auto raw = to_raw_arithmetic(value);
+    return (raw & (raw - 1u)) == 0u;
 }
 
 template <typename>
