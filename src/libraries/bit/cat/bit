@@ -105,17 +105,17 @@ constexpr auto extract_bits(T from, cat::is_unsigned_integral auto offset,
     auto raw_offset = cat::to_raw_arithmetic(offset);
     auto raw_length = cat::to_raw_arithmetic(length);
 
-    if (__has_builtin(__builtin_ia32_bextr_u32) && sizeof(T) == 4) {
+    if constexpr (__has_builtin(__builtin_ia32_bextr_u32) && sizeof(T) == 4) {
         return T(
             __builtin_ia32_bextr_u32(raw_from, raw_offset | (raw_length << 8)));
-    } else if (__has_builtin(__builtin_ia32_bextr_u64) && sizeof(T) == 8) {
+    } else if constexpr (__has_builtin(__builtin_ia32_bextr_u64) &&
+                         sizeof(T) == 8) {
         return T(
             __builtin_ia32_bextr_u64(raw_from, raw_offset | (raw_length << 8)));
-    } else {
-        constexpr unsigned char bits = sizeof(T) * 8u;
-        auto const mask = T((1u << raw_length) * (raw_length < bits) - 1u).raw;
-        return T((raw_from >> raw_offset) & (mask * (raw_offset < bits)));
     }
+    constexpr unsigned char bits = sizeof(T) * 8u;
+    auto const mask = T((1u << raw_length) * (raw_length < bits) - 1u).raw;
+    return T((raw_from >> raw_offset) & (mask * (raw_offset < bits)));
 }
 
 // Extract the 1 bits from `value` which are also 1 at the same index in `mask`.
@@ -232,7 +232,8 @@ class bit_reference {
 
     // Assign a true or false value to this bit.
     constexpr auto operator=(bool value) -> bit_reference& {
-        return this->assign(value);
+        this->assign(value);
+        return *this;
     }
 
     // Convert this bit to a true or false value.
@@ -328,7 +329,8 @@ class bit_value {
 
     constexpr friend auto operator&(bit_value const& self,
                                     bit_value const& other) -> bit_value {
-        return bit_value(self.value & other.value);
+        return static_cast<bool>(static_cast<unsigned char>(self.value) &
+                                 static_cast<unsigned char>(other.value));
     }
 
     constexpr auto operator&=(bit_value const& other) -> bit_value& {
@@ -338,7 +340,8 @@ class bit_value {
 
     constexpr friend auto operator|(bit_value const& self,
                                     bit_value const& other) -> bit_value {
-        return bit_value(self.value | other.value);
+        return static_cast<bool>(static_cast<unsigned char>(self.value) |
+                                 static_cast<unsigned char>(other.value));
     }
 
     constexpr auto operator|=(bit_value const& other) -> bit_value& {
@@ -348,7 +351,8 @@ class bit_value {
 
     constexpr friend auto operator^(bit_value const& self,
                                     bit_value const& other) -> bit_value {
-        return bit_value(self.value ^ other.value);
+        return static_cast<bool>(static_cast<unsigned char>(self.value) ^
+                                 static_cast<unsigned char>(other.value));
     }
 
     constexpr auto operator^=(bit_value const& other) -> bit_value& {

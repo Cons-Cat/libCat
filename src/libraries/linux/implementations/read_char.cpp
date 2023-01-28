@@ -1,8 +1,8 @@
 #include <cat/linux>
 
 auto nix::read_char() -> scaredy_nix<char> {
-    TtyIoSerial old_settings = tty_get_attributes(stdin).value();
-    TtyIoSerial new_settings = old_settings;
+    tty_io_serial old_settings = tty_get_attributes(stdin).value();
+    tty_io_serial new_settings = old_settings;
 
     new_settings.local_flags = tty_configuration_flags{
         cat::to_underlying(new_settings.local_flags) &

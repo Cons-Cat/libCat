@@ -1016,7 +1016,7 @@ auto syscall(ssize call, Args... parameters) -> nix::scaredy_nix<T>
 auto create_socket_local(int8 type, int8 protocol)
     -> scaredy_nix<file_descriptor>;
 
-// `TtyIoSerial` handles a configuration of tty IO, often referred to
+// `tty_io_serial` handles a configuration of tty IO, often referred to
 // as termios.
 struct tty_io_serial {
     tty_configuration_flags input_flags;

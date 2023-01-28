@@ -20,11 +20,11 @@
 #define P(T)                                                                   \
     T, '0', T, '1', T, '2', T, '3', T, '4', T, '5', T, '6', T, '7', T, '8', T, \
         '9'
-static const cat::detail::PairJeaiii s_pairs[] = {
+static const cat::detail::pair_jeaiii s_pairs[] = {
     P('0'), P('1'), P('2'), P('3'), P('4'),
     P('5'), P('6'), P('7'), P('8'), P('9')};
 
-#define W(N, I) *(cat::detail::PairJeaiii*)&b[N] = s_pairs[I]
+#define W(N, I) *(cat::detail::pair_jeaiii*)&b[N] = s_pairs[I]
 #define A(N)                                                 \
     t = (uint8::raw_type(1) << (32 + N / 5 * N * 53 / 16)) / \
             uint4::raw_type(1e##N) +                         \
