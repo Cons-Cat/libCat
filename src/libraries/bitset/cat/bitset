@@ -111,7 +111,7 @@ class bitset {
     [[nodiscard]]
     constexpr auto
     operator[](ssize index) -> bit_reference<value_type_element> {
-        if (!__builtin_is_constant_evaluated()) {
+        if !consteval {
             cat::assert(index < bits_count);
         }
 
@@ -126,7 +126,7 @@ class bitset {
     [[nodiscard]]
     constexpr auto
     operator[](ssize index) const -> bool {
-        if (!__builtin_is_constant_evaluated()) {
+        if !consteval {
             cat::assert(index < bits_count);
         }
 

@@ -371,7 +371,7 @@ class collection_interface
     constexpr auto at(ssize index) -> maybe<T&>
         requires(is_array_like)
     {
-        if (!__builtin_is_constant_evaluated()) {
+        if !consteval {
             cat::assert(index >= 0);
         }
         if (index < this->self().capacity()) {
@@ -419,7 +419,7 @@ class collection_interface
     constexpr auto subspan(ssize start_index, ssize end_index) -> span<T>
         requires(is_array_like)
     {
-        if (!__builtin_is_constant_evaluated()) {
+        if !consteval {
             cat::assert(start_index >= 0);
             cat::assert(end_index <= this->self().capacity());
         }
@@ -433,7 +433,7 @@ class collection_interface
         -> span<T const>
         requires(is_array_like)
     {
-        if (!__builtin_is_constant_evaluated()) {
+        if !consteval {
             cat::assert(start_index >= 0);
             cat::assert(end_index <= this->self().capacity());
         }
@@ -475,7 +475,7 @@ class collection_interface
     [[nodiscard]]
     constexpr auto
     operator[](U index) -> T& {
-        if (!__builtin_is_constant_evaluated()) {
+        if !consteval {
             assert(index >= 0);
             assert(index < this->self().size());
         }
@@ -488,7 +488,7 @@ class collection_interface
     [[nodiscard]]
     constexpr auto
     operator[](U index) const -> T const& {
-        if (!__builtin_is_constant_evaluated()) {
+        if !consteval {
             assert(index >= 0);
             assert(index < this->self().size());
         }

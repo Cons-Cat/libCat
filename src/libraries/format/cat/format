@@ -119,7 +119,7 @@ constexpr auto to_string_at(arithmetic<T> value, span<char> output_buffer)
     // Add 1 for a negative sign `-` character.
     constexpr ssize max_length = to_chars<arithmetic<T>::max()>().size() + 1;
     char buffer[max_length.raw];
-    if (__builtin_is_constant_evaluated()) {
+    if consteval {
         ssize i = 0;
         if (is_signed<T> && value < 0) {
             buffer[0] = '-';
@@ -144,7 +144,7 @@ constexpr auto to_string_at(arithmetic<T> value, span<char> output_buffer)
         return nullopt;
     }
 
-    if (__builtin_is_constant_evaluated()) {
+    if consteval {
         for (ssize i = 0; i < length; ++i) {
             output_buffer[i] = buffer[i.raw];
         }
@@ -575,7 +575,7 @@ namespace detail {
         // Check if a manually indexed argument is within reasonable bounds, and
         // check that this context is not using automatic indexing.
         constexpr auto check_argument_index(ssize index) -> maybe<void> {
-            if (__builtin_is_constant_evaluated()) {
+            if consteval {
                 if (index >= this->arguments_count) {
                     // This index is of range.
                     return nullopt;

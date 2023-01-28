@@ -40,7 +40,7 @@ namespace detail {
 
         // If `.set_count()` is no-op if it is not intercepted by a
         // `multi_memory_handle`.
-        void set_count(ssize ) {
+        void set_count(ssize) {
         }
 
         // Number of bytes allocated. This is always the size of `T` if the call
@@ -5038,7 +5038,7 @@ class allocator_interface {
 
 // Poison memory region.
 #ifdef __SANITIZE_ADDRESS__
-            //         if (!__builtin_is_constant_evaluated()) {
+            //         if !consteval {
             __asan_poison_memory_region(
                 static_cast<void const volatile*>(p_memory),
                 sizeof(allocation_type));
@@ -5064,7 +5064,7 @@ class allocator_interface {
     constexpr void free(T* p_memory) {
         // Poison memory region.
 #ifdef __SANITIZE_ADDRESS__
-        if (!__builtin_is_constant_evaluated()) {
+        if !consteval {
             __asan_poison_memory_region(
                 static_cast<void const volatile*>(p_memory), sizeof(T));
         }
@@ -5075,7 +5075,7 @@ class allocator_interface {
                           "This allocation is too large for this allocator!");
         }
 
-        if (__builtin_is_constant_evaluated()) {
+        if consteval {
             delete p_memory;
         } else {
             // if constexpr (is_destructible<T>) {
@@ -5100,14 +5100,14 @@ class allocator_interface {
 
         // Poison memory region.
 #ifdef __SANITIZE_ADDRESS__
-        if (!__builtin_is_constant_evaluated()) {
+        if !consteval {
             __asan_poison_memory_region(
                 static_cast<void const volatile*>(p_memory),
                 sizeof(T) * make_unsigned(count));
         }
 #endif
 
-        if (__builtin_is_constant_evaluated()) {
+        if consteval {
             // if (count > 0) {
             delete[] p_memory;
             // }
@@ -5333,7 +5333,7 @@ class allocator_interface {
                                     handle_type>>>;
 
         // In `constexpr` code, unconditionally make an allocation.
-        if (__builtin_is_constant_evaluated()) {
+        if consteval {
             if constexpr (is_stable) {
                 T* p_allocation = nullptr;
 
@@ -5675,7 +5675,7 @@ class allocator_interface {
     constexpr void relocate_ptr_handle(T* p_old_handle, T* p_new_handle,
                                        ssize old_count) {
         // TODO: Use a `relocate()` function to streamline this.
-        if (!__builtin_is_constant_evaluated()) {
+        if !consteval {
             assert(p_new_handle != nullptr);
             if constexpr (is_trivially_relocatable<T>) {
                 copy_memory(p_old_handle, p_new_handle, old_count);
@@ -5694,7 +5694,7 @@ class allocator_interface {
     constexpr void relocate_ptr_handle(auto* p_old_handle, span<T> new_handle,
                                        ssize old_count) {
         // TODO: Use a `relocate()` function to streamline this.
-        if (!__builtin_is_constant_evaluated()) {
+        if !consteval {
             assert(new_handle.data() != nullptr);
 
 #ifdef __SANITIZE_ADDRESS__

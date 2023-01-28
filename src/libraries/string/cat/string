@@ -265,7 +265,7 @@ class fixed_string
 
   private:
     constexpr void copy_string_data(char const* p_source) {
-        if (__builtin_is_constant_evaluated()) {
+        if consteval {
             for (ssize::raw_type i = 0; i < length; ++i) {
                 this->storage[i] = p_source[i];
             }

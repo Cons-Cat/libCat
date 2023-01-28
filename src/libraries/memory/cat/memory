@@ -56,7 +56,7 @@ namespace detail {
         // infinitely.
         uintptr<T> p_current = uintptr<T>(static_cast<T*>(p_source));
 
-        if (__builtin_is_constant_evaluated()) {
+        if consteval {
             // Set this memory through scalar code, because `__builtin_memset()`
             // is not `constexpr` in GCC 12.
             for (ssize i = 0; i < size; ++i) {
