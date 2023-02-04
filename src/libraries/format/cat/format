@@ -278,14 +278,17 @@ namespace detail {
               max_length(in_max_length) {
         }
 
+        [[nodiscard]]
         auto data() const -> char* {
             return this->p_storage;
         }
 
+        [[nodiscard]]
         auto size() const -> ssize {
             return this->length;
         }
 
+        [[nodiscard]]
         auto capacity() const -> ssize {
             return this->max_length;
         }
@@ -419,14 +422,17 @@ namespace detail {
               max_length(in_max_length) {
         }
 
+        [[nodiscard]]
         auto data() const -> char* {
             return this->p_string;
         }
 
+        [[nodiscard]]
         auto size() const -> ssize {
             return this->length;
         }
 
+        [[nodiscard]]
         auto capacity() const -> ssize {
             return this->max_length;
         }
@@ -554,10 +560,12 @@ namespace detail {
             : format(in_format), arguments_count(in_args_count) {
         }
 
+        [[nodiscard]]
         constexpr auto begin() const -> const_iterator {
             return this->format.cbegin();
         }
 
+        [[nodiscard]]
         constexpr auto end() const -> const_iterator {
             return this->format.cend();
         }
@@ -616,7 +624,7 @@ namespace detail {
               output_iterator(iterator),
               format(in_format),
               // p_tempory_buffer(iterator.iterable.data()),
-              arguments(std::move(in_args)) {
+              arguments(move(in_args)) {
         }
     };
 

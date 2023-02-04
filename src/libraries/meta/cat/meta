@@ -871,6 +871,8 @@ concept is_trivial =
 // `<cat/utility/detail/...>`.
 namespace std {
 
+// In Clang 17, `[[gnu::artificial]]` needs `inline`, not only `constexpr`.
+
 template <typename T>
 [[nodiscard, gnu::artificial]]
 inline constexpr auto move(T&& input) -> cat::remove_reference<T>&& {

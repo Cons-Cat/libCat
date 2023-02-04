@@ -11,7 +11,7 @@ struct Foo {
 
     Foo() = default;
 
-    Foo(cat::string string) : data(std::move(string)) {
+    Foo(cat::string string) : data(cat::move(string)) {
         // _ = cat::print(data);
         // _ = cat::println(" constructor");
     }
@@ -22,8 +22,8 @@ struct Foo {
         // _ = cat::println(this->data);
     }
 
-    auto operator=(cat::string string) {
-        this->data = std::move(string);
+    auto operator=(cat::string string) -> Foo& {
+        this->data = cat::move(string);
         return *this;
     }
 
