@@ -231,7 +231,7 @@ template <class T, class Traits>
 struct float_bits {
     using type = T;
     using traits_type = Traits;
-    using carrier_uint = typename traits_type::carrier_uint;
+    using carrier_uint = traits_type::carrier_uint;
 
     carrier_uint u;
 
@@ -313,7 +313,7 @@ template <class T, class Traits>
 struct signed_significand_bits {
     using type = T;
     using traits_type = Traits;
-    using carrier_uint = typename traits_type::carrier_uint;
+    using carrier_uint = traits_type::carrier_uint;
 
     carrier_uint u;
 
@@ -2163,8 +2163,8 @@ namespace detail {
 
     template <class Float, class FloatTraits>
     struct impl : private FloatTraits, private FloatTraits::format {
-        using format = typename FloatTraits::format;
-        using carrier_uint = typename FloatTraits::carrier_uint;
+        using format = FloatTraits::format;
+        using carrier_uint = FloatTraits::carrier_uint;
 
         using FloatTraits::carrier_bits;
         using format::decimal_digits;
@@ -3044,7 +3044,7 @@ JKJ_SAFEBUFFERS auto to_decimal(
     return_type ret = policy_holder::delegate(
         signed_significand_bits,
         [exponent_bits, signed_significand_bits](auto interval_type_provider) {
-            using format = typename FloatTraits::format;
+            using format = FloatTraits::format;
             constexpr auto tag = decltype(interval_type_provider)::tag;
 
             auto two_fc = signed_significand_bits.remove_sign_bit_and_shift();

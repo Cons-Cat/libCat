@@ -35,10 +35,10 @@ namespace detail {
         remove_reference<common_reference_detail<T&, U&>>&&;
 
     template <typename T, typename U, typename TQual, typename UQual>
-        requires(requires {
-            typename common_reference_detail_c<TQual, UQual>;
-        } && is_convertible<T&&, common_reference_detail_c<TQual, UQual>> &&
-                 is_convertible<U&&, common_reference_detail_c<TQual, UQual>>)
+        requires(
+            requires { typename common_reference_detail_c<TQual, UQual>; } &&
+            is_convertible<T &&, common_reference_detail_c<TQual, UQual>> &&
+            is_convertible<U &&, common_reference_detail_c<TQual, UQual>>)
     struct common_reference_detail_trait<T&&, U&&, TQual, UQual> {
         using type = common_reference_detail_c<TQual, UQual>;
     };
@@ -47,9 +47,9 @@ namespace detail {
     using common_reference_detail_d = common_reference_detail<T const&, U&>;
 
     template <typename T, typename U, typename TQual, typename UQual>
-        requires(requires {
-            typename common_reference_detail_d<TQual, UQual>;
-        } && is_convertible<T&&, common_reference_detail_d<TQual, UQual>>)
+        requires(
+            requires { typename common_reference_detail_d<TQual, UQual>; } &&
+            is_convertible<T &&, common_reference_detail_d<TQual, UQual>>)
     struct common_reference_detail_trait<T&&, U&, TQual, UQual> {
         using type = common_reference_detail_d<TQual, UQual>;
     };
@@ -63,9 +63,11 @@ namespace detail {
 
     template <typename T, typename U>
     struct common_reference_sub_bullet_3;
+
     template <typename T, typename U>
     struct common_reference_sub_bullet_2 : common_reference_sub_bullet_3<T, U> {
     };
+
     template <typename T, typename U>
     struct common_reference_sub_bullet_1 : common_reference_sub_bullet_2<T, U> {
     };
@@ -73,9 +75,8 @@ namespace detail {
     // Attempt to resolve the common reference of `T` and `U` here, otherwise
     // fall back to `common_reference_sub_bullet_2`.
     template <typename T, typename U>
-        requires(is_reference<T>&& is_reference<U>&& requires {
-            typename common_reference_detail<T, U>;
-        })
+        requires(is_reference<T> && is_reference<U> &&
+                 requires { typename common_reference_detail<T, U>; })
     struct common_reference_sub_bullet_1<T, U> {
         using type = common_reference_detail<T, U>;
     };
@@ -108,9 +109,8 @@ namespace detail {
     // Attempt to resolve the common reference of `T` and `U` here, otherwise
     // fall back to `common_type`.
     template <typename T, typename U>
-        requires(requires {
-            typename conditionally_resolve_common_reference<T, U>;
-        })
+        requires(
+            requires { typename conditionally_resolve_common_reference<T, U>; })
     struct common_reference_sub_bullet_3<T, U> {
         using type = conditionally_resolve_common_reference<T, U>;
     };
@@ -143,6 +143,6 @@ namespace detail {
 }  // namespace detail
 
 template <typename... types>
-using common_reference = typename detail::common_reference_trait<types...>::type;
+using common_reference = detail::common_reference_trait<types...>::type;
 
 }  // namespace cat

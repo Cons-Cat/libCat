@@ -4,8 +4,8 @@
 
 TEST(test_typelist) {
     using types = cat::type_list<int, char>;
-    using type_0 = typename types::get<0>;
-    using type_1 = typename types::get<1>;
+    using type_0 = types::get<0>;
+    using type_1 = types::get<1>;
 
     static_assert(cat::is_same<type_0, int>);
     static_assert(cat::is_same<type_1, char>);

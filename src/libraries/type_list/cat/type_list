@@ -50,8 +50,8 @@ class type_list {
     // Recurse from the tail down to the index in this list.
     template <typename head, typename... tail, ssize index>
     struct recurse_for_type_at_index<type_list<head, tail...>, index> {
-        using result = typename recurse_for_type_at_index<type_list<tail...>,
-                                                          index - 1>::result;
+        using result =
+            recurse_for_type_at_index<type_list<tail...>, index - 1>::result;
     };
 
     // If the last element in this type list is `T`.

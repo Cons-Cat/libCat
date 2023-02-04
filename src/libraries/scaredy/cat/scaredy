@@ -160,7 +160,7 @@ namespace detail {
     // `T` is a `compact_scaredy<type, predicate>`.
     template <typename T, typename... error_types>
     struct scaredy_compact_storage {
-        using value_type = typename T::type;
+        using value_type = T::type;
         // `error_types` can only hold one error in this storage struct. It is
         // variadic merely to simplify overload resolution in `scaredy`.
         // `decltype` adds a reference to it, so that is removed by
@@ -328,7 +328,7 @@ class scaredy {
     // clang-format on
 
   public:
-    using value_type = typename storage_type::value_type;
+    using value_type = storage_type::value_type;
     using errors_list = type_list<error_types...>;
 
   private:

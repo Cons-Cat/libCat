@@ -486,7 +486,7 @@ template <typename... types>
               cat::is_same<types, strong_ordering>) &&
              ...)
 struct common_comparison_category {
-    using type = typename detail::weakest_comparison_category<types...>::type;
+    using type = detail::weakest_comparison_category<types...>::type;
 };
 
 template <typename T>

@@ -32,6 +32,6 @@ namespace detail {
 
 template <typename... types>
     requires(sizeof...(types) > 0)
-using common_type = typename detail::common_type_trait<types...>::type;
+using common_type = detail::common_type_trait<types...>::type;
 
 }  // namespace cat

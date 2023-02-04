@@ -2,7 +2,6 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/bit>
 #include <cat/simd>
 
 namespace std {
@@ -41,6 +40,12 @@ namespace cat {
 void copy_memory(void const* p_source, void* p_destination, ssize bytes);
 
 void copy_memory_small(void const* p_source, void* p_destination, ssize bytes);
+
+// This forward declaration prevents a circular dependency
+// `#include<cat/bit>`.
+template <typename U>
+[[nodiscard]]
+constexpr auto is_aligned(uintptr<U> p_value, usize alignment) -> bool;
 
 namespace detail {
     // Type-erased `set_memory` function.

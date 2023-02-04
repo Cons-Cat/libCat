@@ -75,7 +75,7 @@ template <typename... in_types>
 struct tuple : detail::tuple_storage<index_sequence_for<in_types...>,
                                      in_types...>::type {
     using types = type_list<in_types...>;
-    using map = typename detail::tuple_storage<index_sequence_for<in_types...>,
+    using map = detail::tuple_storage<index_sequence_for<in_types...>,
                                                in_types...>::type;
 
     // clangd 15 produces a false diagnostic if this is declared at the bottom
@@ -86,7 +86,7 @@ struct tuple : detail::tuple_storage<index_sequence_for<in_types...>,
 // Convert each element of this `tuple` into those of another `tuple`.
 template <typename T>
 constexpr operator T() const {
-    using other_types = typename decay<T>::types;
+    using other_types = decay<T>::types;
     // Pass in a `type_list` for its types to be deduced out of.
     return this->template convert_elements(other_types());
 }
@@ -379,7 +379,7 @@ struct tuple_element<index, cat::tuple<in_types...>> {
 };
 
 template <usize::raw_type index, typename T>
-using tuple_element_t = typename tuple_element<index, T>::type;
+using tuple_element_t = tuple_element<index, T>::type;
 
 }  // namespace std
 

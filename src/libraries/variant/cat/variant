@@ -85,7 +85,7 @@ class variant {
     template <typename T, alternative_index_t index>
         requires(index < variant_size)
     static consteval auto recurse_for_index_of_type() -> alternative_index_t {
-        using this_alternative = typename types::template get<index>;
+        using this_alternative = types::template get<index>;
         if constexpr (is_same<T, this_alternative>) {
             return index;
         } else {
@@ -152,7 +152,7 @@ class variant {
 
     // Get the type of an alternative from its index.
     template <alternative_index_t index>
-    using alternative_t = typename types::template get<index>;
+    using alternative_t = types::template get<index>;
 
     constexpr variant() = default;
 
@@ -299,7 +299,7 @@ class variant {
         requires(index >= 0 && index < ssizeof_pack<alternative_types...>())
     [[nodiscard]]
     constexpr auto get_if() & {
-        using T = typename types::template get<index>;
+        using T = types::template get<index>;
         if (this->is<T>()) {
             return maybe<T>{this->get<T>()};
         }
@@ -310,7 +310,7 @@ class variant {
         requires(index >= 0 && index < ssizeof_pack<alternative_types...>())
     [[nodiscard]]
     constexpr auto get_if() const& {
-        using T = typename types::template get<index>;
+        using T = types::template get<index>;
         if (this->is<T>()) {
             return maybe<T>{this->get<T>()};
         }

@@ -32,7 +32,7 @@ class bitset {
         array<uint8, div_ceil(bytes, 8)>>;
 
   private:
-    using value_type_element = typename value_type::value_type;
+    using value_type_element = value_type::value_type;
 
   public:
     template <typename T>

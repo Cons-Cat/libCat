@@ -74,7 +74,7 @@ namespace detail {
     };
 
     template <typename invocable_type, typename... Args,
-              typename Fd = typename decay<invocable_type>::type>
+              typename Fd = decay<invocable_type>::type>
     auto invoke_detail(invocable_type&& f, Args&&... args)
         -> decltype(invoke_impl_trait<Fd>::call(forward<invocable_type>(f),
                                                 forward<Args>(args)...));

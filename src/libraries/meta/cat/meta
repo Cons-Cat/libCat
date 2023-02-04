@@ -89,7 +89,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-using make_signed_type = typename detail::make_signed_trait<T>::type;
+using make_signed_type = detail::make_signed_trait<T>::type;
 
 namespace detail {
     template <typename T>
@@ -152,7 +152,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-using make_unsigned_type = typename detail::make_unsigned_trait<T>::type;
+using make_unsigned_type = detail::make_unsigned_trait<T>::type;
 
 template <typename T, auto policy>
 struct detail::make_unsigned_trait<arithmetic<T, policy>> {
@@ -212,7 +212,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-using add_const = typename detail::add_const_trait<T>::type;
+using add_const = detail::add_const_trait<T>::type;
 
 namespace detail {
     template <typename>
@@ -250,7 +250,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-using add_volatile = typename detail::add_volatile_trait<T>::type;
+using add_volatile = detail::add_volatile_trait<T>::type;
 
 template <typename T>
 using add_cv = T const volatile;
@@ -268,7 +268,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-using remove_const = typename detail::remove_const_trait<T>::type;
+using remove_const = detail::remove_const_trait<T>::type;
 
 namespace detail {
     template <typename T>
@@ -283,7 +283,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-using remove_volatile = typename detail::remove_volatile_trait<T>::type;
+using remove_volatile = detail::remove_volatile_trait<T>::type;
 
 namespace detail {
     template <typename T>
@@ -309,7 +309,7 @@ namespace detail {
 
 // TODO: Use GCC 13's `__remove_cv()`.
 template <typename T>
-using remove_cv = typename detail::remove_cv_trait<T>::type;
+using remove_cv = detail::remove_cv_trait<T>::type;
 
 namespace detail {
     template <typename T>
@@ -330,7 +330,7 @@ namespace detail {
 
 // TODO: Use GCC 13's `__remove_reference()`.
 template <typename T>
-using remove_reference = typename detail::remove_reference_trait<T>::type;
+using remove_reference = detail::remove_reference_trait<T>::type;
 
 namespace detail {
     template <typename T>
@@ -341,7 +341,7 @@ namespace detail {
 
 // TODO: Use GCC 13's `__remove_cvref()`.
 template <typename T>
-using remove_cvref = typename detail::remove_cvref_trait<T>::type::type::type;
+using remove_cvref = detail::remove_cvref_trait<T>::type::type::type;
 
 namespace detail {
     template <typename T>
@@ -374,7 +374,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-using remove_pointer = typename detail::remove_pointer_trait<T>::type;
+using remove_pointer = detail::remove_pointer_trait<T>::type;
 
 template <auto constant_value>
 struct constant {
@@ -401,7 +401,7 @@ namespace detail {
 }  // namespace detail
 
 template <bool condition, typename T, typename U>
-using conditional = typename detail::conditional_trait<condition, T, U>::type;
+using conditional = detail::conditional_trait<condition, T, U>::type;
 
 template <typename T, typename U>
 using larger_type = conditional<(sizeof(T) >= sizeof(U)), T, U>;
@@ -600,7 +600,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-using remove_extent = typename detail::remove_extent_trait<T>::type;
+using remove_extent = detail::remove_extent_trait<T>::type;
 
 namespace detail {
     template <typename T>
@@ -703,7 +703,7 @@ namespace detail {
 // GCC 12 doesn't seem to compile this correctly if `__underlying_type()` is
 // used directly.
 template <typename T>
-using underlying_type = typename detail::underlying_type_trait<T>::type;
+using underlying_type = detail::underlying_type_trait<T>::type;
 
 template <typename From, typename To>
 concept is_convertible = __is_convertible(From, To);
@@ -763,12 +763,12 @@ namespace detail {
 
     template <typename T>
     struct remove_all_extents_trait<T[]> {
-        using type = typename remove_all_extents_trait<T>::type;
+        using type = remove_all_extents_trait<T>::type;
     };
 
     template <typename T, unsigned long long N>
     struct remove_all_extents_trait<T[N]> {
-        using type = typename remove_all_extents_trait<T>::type;
+        using type = remove_all_extents_trait<T>::type;
     };
 }  // namespace detail
 

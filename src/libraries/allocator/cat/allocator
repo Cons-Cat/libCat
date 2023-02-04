@@ -65,7 +65,7 @@ namespace detail {
     struct multi_memory_handle {
         static constexpr bool is_inline_handle = handle_type::is_inline_handle;
         static constexpr bool is_multi_handle = true;
-        using allocation_type = typename handle_type::allocation_type;
+        using allocation_type = handle_type::allocation_type;
         handle_type handle;
 
         // How large this allocation was, in terms of `allocation_type`.
@@ -135,7 +135,7 @@ namespace detail {
     struct inline_memory_handle {
         static constexpr bool is_inline_handle = true;
         static constexpr bool is_multi_handle = handle_type::is_multi_handle;
-        using allocation_type = typename handle_type::allocation_type;
+        using allocation_type = handle_type::allocation_type;
 
         union {
             handle_type handle;
@@ -5022,7 +5022,7 @@ class allocator_interface {
     // Invalidate any memory handle, invoking its data's destructor.
     template <mem T>
     void free(T const& handle) {
-        using allocation_type = typename T::allocation_type const;
+        using allocation_type = T::allocation_type const;
 
         // If this is not a small-size optimized handle:
         if (!handle.is_inline()) {
@@ -5145,7 +5145,7 @@ class allocator_interface {
     template <mem T>
     [[nodiscard]]
     constexpr auto get(T& handle) & -> decltype(auto) {
-        using allocation_type = typename T::allocation_type;
+        using allocation_type = T::allocation_type;
         if constexpr (T::is_inline_handle) {
             // Get small-size optimized data:
             if (handle.is_inline()) {

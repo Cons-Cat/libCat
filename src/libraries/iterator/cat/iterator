@@ -59,7 +59,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-using infer_difference_type = typename detail::infer_difference_trait<T>::type;
+using infer_difference_type = detail::infer_difference_trait<T>::type;
 
 template <typename...>
 class iterator_interface;

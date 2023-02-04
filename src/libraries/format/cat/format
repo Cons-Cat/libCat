@@ -471,7 +471,7 @@ namespace detail {
     template <is_stable_allocator allocator_type, typename outputter_type>
     struct format_buffer_iterator<allocator_type, outputter_type>
         : format_buffer_base<allocator_type> {
-        using container_type = typename outputter_type::container_type;
+        using container_type = outputter_type::container_type;
         allocator_type& allocator;
         outputter_type output_iterator;
 

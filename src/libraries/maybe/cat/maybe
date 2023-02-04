@@ -303,7 +303,7 @@ struct maybe_reference_storage {
 // `T` is a `predicate<type, function, sentinel>`.
 template <typename T>
 struct maybe_compact_storage {
-    using value_type = typename T::type;
+    using value_type = T::type;
 
     constexpr maybe_compact_storage() = default;
 
@@ -515,7 +515,7 @@ class maybe {
     // clang-format on
 
   public:
-    using value_type = typename storage_type::value_type;
+    using value_type = storage_type::value_type;
 
     // All `maybe`s are default-constructed as empty.
     constexpr maybe() : storage(nullopt) {

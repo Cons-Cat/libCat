@@ -49,7 +49,7 @@ constexpr auto tuple_cat(types&&... tuples) {
     } else {
         // Create a `tuple` out of all the argument tuples.
         using outer_tuple = tuple<decay<types>...>;
-        using outer_tuple_type_map = typename outer_tuple::Map;
+        using outer_tuple_type_map = outer_tuple::Map;
 
         // Get the `type_list` from the inner and outer tuples.
         constexpr type_list outer_elements_list =

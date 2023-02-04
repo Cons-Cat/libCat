@@ -508,7 +508,7 @@ class alignas(in_abi::template make_abi_type<bool>::alignment.raw) simd_mask {
 
     // GCC vectors cannot hold a `bool`, so they must hold `char`.
     using vector = simd<typename abi_type::template make_abi_type<char>, char>;
-    using raw_type = typename vector::raw_type;
+    using raw_type = vector::raw_type;
 
   private:
     using mask_type = simd_mask<abi_type, T>;
