@@ -33,9 +33,17 @@ class span : public collection_interface<span<T>, T, true> {
 
     // Implicitly convert a contiguous container into a span.
     template <typename U>
-        requires(is_random_access<U> && is_const<T> == is_const<U>)
+        requires(is_random_access<U>)
     constexpr span(U& collection)
         : p_storage(collection.data()), length(collection.size()) {
+    }
+
+    // If `T` is non-const, conversion to a `const` contiguous container is
+    // explicit.
+    template <typename U>
+        requires(is_random_access<U>)
+    explicit constexpr span(U const& collection)
+        : p_storage(unconst(collection.data())), length(collection.size()) {
     }
 
     // Construct a `span` between two addresses.

@@ -110,8 +110,8 @@ TEST(test_arrays) {
     cat::array move_converting_array = {int2{5}, 6, 7, 8};
     base_array = copy_array;
     base_array = copy_converting_array;
-    base_array = move(move_array);
-    base_array = move(move_converting_array);
+    base_array = move(move_array);             // NOLINT
+    base_array = move(move_converting_array);  // NOLINT
 
     // Test array fill.
     cat::array filled_array = cat::array<int4, 8>::filled(6);
