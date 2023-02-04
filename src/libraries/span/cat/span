@@ -31,6 +31,13 @@ class span : public collection_interface<span<T>, T, true> {
         : p_storage(nullptr), length(in_length) {
     }
 
+    // Implicitly convert a contiguous container into a span.
+    template <typename U>
+        requires(is_random_access<U> && is_const<T> == is_const<U>)
+    constexpr span(U& collection)
+        : p_storage(collection.data()), length(collection.size()) {
+    }
+
     // Construct a `span` between two addresses.
     template <typename U, typename V>
         requires(is_implicitly_convertible<U, T> &&
@@ -38,19 +45,6 @@ class span : public collection_interface<span<T>, T, true> {
     static constexpr auto between(U* p_start, V* p_end) {
         return span<T>{static_cast<T*>(p_start), ssize{p_end - p_start}};
     }
-
-    // TODO: Make an `is_contiguous_container` `concept`. It can use the
-    // `collection_interface` traits.
-    /*
-constexpr span(auto const& container)
-    : p_storage(container.data()), length(container.size()){}
-
-template <typename U>
-    requires(is_convertible<U, T>)
-constexpr span(U&& container)
-    : p_storage(static_cast<T>(container).data()),
-      length(forward<U>(container).size()){}
-    */
 
     constexpr auto operator=(span<T> const&) -> span<T>& = default;
     constexpr auto operator=(span<T>&&) -> span<T>& = default;

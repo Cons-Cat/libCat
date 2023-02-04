@@ -532,16 +532,4 @@ class collection_interface
     }
 };
 
-template <typename T>
-struct collection_traits {
-    using iterator_type = decltype(T().begin());
-    using const_iterator_type = add_const<iterator_type>;
-    using reversed_iterator_type = cat::reversed_iterator_type<iterator_type>;
-    using const_reversed_iterator_type =
-        cat::reversed_iterator_type<const_iterator_type>;
-
-    static constexpr bool is_array_like =
-        detail::is_contiguous_collection<T> && detail::is_bounded_collection<T>;
-};
-
 }  // namespace cat

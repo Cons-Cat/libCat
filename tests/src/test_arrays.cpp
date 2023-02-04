@@ -34,12 +34,7 @@ TEST(test_arrays) {
     };
     cat::constant_evaluate(constant_test);
 
-    // Test iterable.
-    using It = cat::collection_traits<cat::array<int, 4>>::iterator_type;
-    static_assert(
-        cat::is_same<
-            It, cat::remove_cvref<decltype(cat::array<int, 4>{}.begin())>>);
-
+    // Test that the array is iterable.
     ssize count = 0;
     for (int4& a : array_1) {
         cat::verify(a == array_1[count]);

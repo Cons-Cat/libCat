@@ -8,7 +8,10 @@
 namespace cat {
 
 template <typename T>
-struct collection_traits;
+concept is_random_access = requires(T t) {
+                               t.data();
+                               t.size();
+                           };
 
 // Copy-assign the elements of one collection into another.
 template <typename input_iterator, typename output_iterator>
@@ -55,8 +58,8 @@ auto relocate(input_iterator source_begin, input_iterator source_end,
     // If the source and destination containers are contiguous, and they hold
     // the same element type, and that type is trivially relocatable, copy them
     // fast.
-    if constexpr (collection_traits<source_collection>::is_array_like &&
-                  collection_traits<destination_collection>::is_array_like &&
+    if constexpr (is_random_access<source_collection> &&
+                  is_random_access<destination_collection> &&
                   is_same<source_element, destination_element> &&
                   is_trivially_relocatable<source_element>) {
         copy_memory(addressof(*source_begin), addressof(*destination_begin),

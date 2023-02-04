@@ -479,4 +479,6 @@ class it_const_reverse {
     T& iterable;
 };
 
+// TODO: Add an `it_enumerate` iterator adapter.
+
 }  // namespace cat
