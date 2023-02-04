@@ -429,12 +429,12 @@ class list : public collection_interface<list<T>, T> {
 
     [[nodiscard]]
     auto rbegin() {
-        return cat::reversed_iterator_type<iterator_type>{this->p_tail};
+        return cat::reverse_iterator_adaptor<iterator_type>{this->p_tail};
     }
 
     [[nodiscard]]
     auto rend() {
-        return cat::reversed_iterator_type<iterator_type>{this->p_head};
+        return cat::reverse_iterator_adaptor<iterator_type>{this->p_head};
     }
 
   private:

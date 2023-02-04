@@ -30,11 +30,17 @@ TEST(test_vector) {
     static_assert(cat::is_same<iterator, decltype(cat::vector<int>().begin())>);
     static_assert(cat::is_same<iterator, decltype(cat::vector<int>().end())>);
 
+    static_assert(cat::is_same<iterator::value_type, int>);
+    static_assert(cat::is_same<iterator::reference, int&>);
+
     using const_iterator = cat::vector<int>::const_iterator;
     static_assert(
         cat::is_same<const_iterator, decltype(cat::vector<int>().cbegin())>);
     static_assert(
         cat::is_same<const_iterator, decltype(cat::vector<int>().cend())>);
+
+    static_assert(cat::is_same<const_iterator::value_type, int const>);
+    static_assert(cat::is_same<const_iterator::reference, int const&>);
 
     using reverse_iterator = cat::vector<int>::reverse_iterator;
     static_assert(
@@ -42,11 +48,17 @@ TEST(test_vector) {
     static_assert(
         cat::is_same<reverse_iterator, decltype(cat::vector<int>().rend())>);
 
+    static_assert(cat::is_same<reverse_iterator::value_type, int>);
+    static_assert(cat::is_same<reverse_iterator::reference, int&>);
+
     using const_reverse_iterator = cat::vector<int>::const_reverse_iterator;
     static_assert(cat::is_same<const_reverse_iterator,
                                decltype(cat::vector<int>().crbegin())>);
     static_assert(cat::is_same<const_reverse_iterator,
                                decltype(cat::vector<int>().crend())>);
+
+    static_assert(cat::is_same<const_reverse_iterator::value_type, int const>);
+    static_assert(cat::is_same<const_reverse_iterator::reference, int const&>);
 
     static_assert(cat::is_same<int, cat::vector<int>::value_type>);
 

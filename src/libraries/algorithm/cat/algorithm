@@ -48,18 +48,14 @@ auto move(input_iterator source_begin, input_iterator source_end,
 template <typename input_iterator, typename output_iterator>
 auto relocate(input_iterator source_begin, input_iterator source_end,
               output_iterator destination_begin) -> output_iterator {
-    using source_collection = typename decltype(source_begin)::collection_type;
     using source_element = remove_reference<decltype(*source_begin)>;
-
-    using destination_collection =
-        typename decltype(destination_begin)::collection_type;
     using destination_element = decltype(*destination_begin);
 
     // If the source and destination containers are contiguous, and they hold
     // the same element type, and that type is trivially relocatable, copy them
     // fast.
-    if constexpr (is_random_access<source_collection> &&
-                  is_random_access<destination_collection> &&
+    if constexpr (is_random_access_iterator<input_iterator> &&
+                  is_random_access_iterator<output_iterator> &&
                   is_same<source_element, destination_element> &&
                   is_trivially_relocatable<source_element>) {
         copy_memory(addressof(*source_begin), addressof(*destination_begin),

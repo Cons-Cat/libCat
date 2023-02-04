@@ -177,14 +177,11 @@ namespace detail {
 
         // Contiguous collections can produce non-`const` bidirectional
         // iterators.
-        class iterator : public iterator_interface<iterator> {
+        // This type can be accessed as, `cat::vector<int>::iterator`.
+        class iterator : public iterator_interface<iterator, T> {
           public:
-            friend const_iterator;
-
-            // TODO: Remove this entirely.
-            using collection_type [[maybe_unused]] = derived_type;
-
             constexpr iterator(iterator const&) = default;
+            constexpr iterator(iterator&&) = default;
 
             constexpr iterator(ssize index, T* p_in_array)
                 : current_index(index), p_array(p_in_array) {
@@ -213,12 +210,12 @@ namespace detail {
 
         // Contiguous collections can produce `const` bidirectional
         // iterators.
-        class const_iterator : public iterator_interface<const_iterator> {
+        // This type can be accessed as, `cat::vector<int>::const_iterator`.
+        class const_iterator
+            : public iterator_interface<const_iterator, T const> {
           public:
-            // TODO: Remove this entirely.
-            using collection_type [[maybe_unused]] = derived_type;
-
             constexpr const_iterator(const_iterator const&) = default;
+            constexpr const_iterator(const_iterator&&) = default;
 
             constexpr const_iterator(iterator const& other)
                 : current_index(other.current_index), p_array(other.p_array) {
@@ -246,8 +243,9 @@ namespace detail {
             T const* p_array;
         };
 
-        using reverse_iterator = reversed_iterator_type<iterator>;
-        using const_reverse_iterator = reversed_iterator_type<const_iterator>;
+        using reverse_iterator = reverse_iterator_adaptor<iterator, T>;
+        using const_reverse_iterator =
+            reverse_iterator_adaptor<const_iterator, T const>;
 
         // `.begin()` and `.end()` can be automatically generated for
         // contiguous collections.
@@ -283,25 +281,24 @@ namespace detail {
 
         [[nodiscard]]
         constexpr auto rbegin() {
-            return reversed_iterator_type<iterator>(this->self().size() - 1,
-                                                    this->self().data());
+            return reverse_iterator(this->self().size() - 1,
+                                    this->self().data());
         }
 
         [[nodiscard]]
         constexpr auto rbegin() const {
-            return reversed_iterator_type<const_iterator>(
-                this->self().size() - 1, this->self().data());
+            return const_reverse_iterator(this->self().size() - 1,
+                                          this->self().data());
         }
 
         [[nodiscard]]
         constexpr auto rend() {
-            return reversed_iterator_type<iterator>(0, this->self().data());
+            return reverse_iterator(0, this->self().data());
         }
 
         [[nodiscard]]
         constexpr auto rend() const {
-            return reversed_iterator_type<const_iterator>(0,
-                                                          this->self().data());
+            return const_reverse_iterator(0, this->self().data());
         }
 
         [[nodiscard]]

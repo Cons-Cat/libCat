@@ -32,21 +32,6 @@ namespace detail {
         using type = decltype(it.distance_to(it));
     };
 
-    template <typename...>
-    struct infer_value_type {};
-
-    template <typename T>
-    struct infer_value_type<T> {
-        static T const& it;
-        using type = remove_cvref<decltype(*it)>;
-    };
-
-    template <typename T>
-        requires(requires { typename T::value_type; })
-    struct infer_value_type<T> {
-        using type = typename T::value_type;
-    };
-
     template <typename T>
     concept has_advance = requires(T it, infer_difference_trait<T> offset) {
                               it.advance(offset);
@@ -75,12 +60,15 @@ namespace detail {
 
 template <typename T>
 using infer_difference_type = typename detail::infer_difference_trait<T>::type;
-template <typename T>
-using infer_value_type = typename detail::infer_value_type<T>::type::type;
 
+template <typename...>
+class iterator_interface;
+
+// Generate iterator operators automatically.
+// TODO: Document this more thoroughly.
 // Every `iterator_interface` satisfies 'is_indirectly_writable'.
 template <typename derived_type>
-class iterator_interface {
+class iterator_interface<derived_type> {
   public:
     // `type` is needed for reversing this iterator.
     using type = derived_type;
@@ -280,6 +268,17 @@ class iterator_interface {
     }
 };
 
+// If an element type is provided, then the `iterator_interface` can provide
+// type aliases automatically.
+template <typename derived_type, typename T>
+class iterator_interface<derived_type, T>
+    : public iterator_interface<derived_type> {
+  public:
+    using value_type = T;
+    using reference = T&;
+    // TODO: Add more members.
+};
+
 struct random_access_iterator_tag {};
 
 struct bidirectional_iterator_tag {};
@@ -296,7 +295,7 @@ template <typename T>
     requires(is_base_of<iterator_interface<T>, T>)
 struct iterator_traits {
     static T const& iterator;
-    using value = typename infer_value_type<T>::type;
+    using value = remove_reference<decltype(*iterator)>;
     using reference = decltype(*iterator);
     using pointer = decltype(iterator.operator->());
     using difference = infer_difference_type<T>;
@@ -316,44 +315,52 @@ struct iterator_traits {
     // using iterator_type_concept = category;
 };
 
-template <typename iterator_type>
-struct reversed_iterator_type
-    : iterator_interface<reversed_iterator_type<iterator_type>> {
-    // Forward any constructor to `iterator`.
+// `element_type` may or may not be provided to this CRTP class.
+template <typename iterator_type, typename... element_type>
+    requires(sizeof...(element_type) <= 1)
+class reverse_iterator_adaptor
+    : public iterator_interface<
+          reverse_iterator_adaptor<iterator_type, element_type...>,
+          element_type...> {
+  private:
+    using self_type = reverse_iterator_adaptor<iterator_type, element_type...>;
+
+  public:
+    // Forward any constructor to the `internal_iterator`.
     template <typename... Args>
-    constexpr reversed_iterator_type(Args&&... args)
-        : iterator(forward<Args>(args)...) {
+    constexpr reverse_iterator_adaptor(Args&&... args)
+        : internal_iterator(forward<Args>(args)...) {
     }
 
     constexpr auto dereference() {
-        return this->iterator.dereference();
+        return this->internal_iterator.dereference();
     }
 
     constexpr auto dereference() const {
-        return this->iterator.dereference();
+        return this->internal_iterator.dereference();
     }
 
     constexpr void advance(int offset)
         requires(detail::has_advance<iterator_type>)
     {
-        this->iterator.advance(-offset);
+        this->internal_iterator.advance(-offset);
     }
 
     constexpr void increment() {
-        --iterator;
+        --internal_iterator;
     }
 
     constexpr void decrement() {
-        ++iterator;
+        ++internal_iterator;
     }
 
-    constexpr auto distance_to(
-        reversed_iterator_type<iterator_type> other) const -> ssize
-    /* requires(detail::has_distance_to<iterator_type>) */ {
-        return this->iterator.distance_to(other.iterator);
+    constexpr auto distance_to(self_type other) const -> ssize {
+        // Reverse the polarity of `distance_to()`.
+        return -this->internal_iterator.distance_to(other.internal_iterator);
     }
 
-    iterator_type iterator;
+  private:
+    iterator_type internal_iterator;
 };
 
 // TODO: More iterable related `concept`s.
@@ -432,11 +439,11 @@ class it_reverse {
     }
 
     constexpr auto begin() const {
-        return iterable.rbegin();
+        return iterable.crbegin();
     }
 
     constexpr auto end() const {
-        return iterable.rend();
+        return iterable.crend();
     }
 
   private:
