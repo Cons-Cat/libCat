@@ -59,6 +59,8 @@ namespace cat {
 class string;
 using std::source_location;
 
+// TODO: Mark these functions `[[gnu::artificial]]`.
+
 void breakpoint();
 
 // This is exposed so that `unit_tests.hpp` can use it. Its implementation is in

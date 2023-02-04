@@ -432,6 +432,7 @@ namespace detail {
     };
 }  // namespace detail
 
+// TODO: Mark these member functions `[[gnu::artificial]]`.
 // TODO: Implement trapping overflow policy.
 // `arithmetic` can represent an integer or floating point value. It prevents
 // unsafe casts or operations. This is a trivial `struct` so it can be used as a

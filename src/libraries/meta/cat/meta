@@ -864,23 +864,39 @@ concept is_trivial =
 
 }  // namespace cat
 
-// Forward declare these from `<cat/utility>`.
+// These symbols must be declared in `std::` to enable some useful GCC
+// features, such as move-semantics warnings, and preventing GDB from stepping
+// into the functions.
+// These must be declared in `<cat/meta>`, but they are implemented in
+// `<cat/utility/detail/...>`.
 namespace std {
 
 template <typename T>
-constexpr auto move(T&& input) -> cat::remove_reference<T>&&;
+[[nodiscard, gnu::artificial]]
+inline constexpr auto move(T&& input) -> cat::remove_reference<T>&& {
+    return static_cast<cat::remove_reference<T>&&>(input);
+}
 
 template <typename T>
-constexpr auto forward(cat::remove_reference<T>& input) -> T&&;
+[[nodiscard, gnu::artificial]]
+inline constexpr auto forward(cat::remove_reference<T>& input) -> T&& {
+    return static_cast<T&&>(input);
+}
 
 template <typename T>
     requires(!cat::is_lvalue_reference<T>)
-constexpr auto forward(cat::remove_reference<T>&& input) -> T&&;
+[[nodiscard, gnu::artificial]]
+inline constexpr auto forward(cat::remove_reference<T>&& input) -> T&& {
+    return static_cast<T&&>(input);
+}
 
 }  // namespace std
 
 namespace cat {
 
+// `forward()` and `move()` should be usable from within a libCat namespace.
+// Only `std::` scoped versions produce GCC compiler warnings, so this allows
+// `cat::move()` and `cat::forward()` to produce those warnings.
 using std::forward;
 using std::move;
 

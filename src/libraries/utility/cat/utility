@@ -191,50 +191,15 @@ namespace detail {
 // TODO: Support `cat::ref`, to enable `variant` and `tuple` to hold references
 // more easily.
 
-}  // namespace cat
-
-// These symbols must be declared in `std::` to enable some useful GCC
-// features, such as move-semantics warnings, and preventing GDB from stepping
-// into the functions.
-namespace std {
-
 template <typename T>
-[[nodiscard]]
-constexpr auto as_const(T& value) -> cat::add_const<T>& {
+[[nodiscard, gnu::artificial]]
+inline constexpr auto as_const(T& value) -> cat::add_const<T>& {
     return value;
 }
 
 template <typename T>
 void as_const(T const&&) = delete;
 
-// NOLINTBEGIN(readability-redundant-declaration)
-// The following functions are forward-declared in `<cat/meta>`, but they
-// belong to the `<cat/utility>` library.
-
-/*
-template <typename T>
-constexpr auto move(T&& input) -> cat::remove_reference<T>&&;
-
-template <typename T>
-constexpr auto forward(cat::remove_reference<T>& input) -> T&&;
-
-template <typename T>
-requires(!cat::is_lvalue_reference<T>)
-constexpr auto std::forward(cat::remove_reference<T>&& input) -> T&&;
-*/
-
-// NOLINTEND(readability-redundant-declaration)
-
-}  // namespace std
-
-// `forward()` and `move()` should be usable from within a libCat namespace.
-// This apparently does not prevent the aformentioned GCC features from working.
-namespace cat {
-using std::as_const;
-using std::forward;
-using std::move;
 }  // namespace cat
 
 #include "./implementations/bit_cast.tpp"
-#include "./implementations/forward.tpp"
-#include "./implementations/move.tpp"

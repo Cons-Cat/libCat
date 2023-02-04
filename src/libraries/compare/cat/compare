@@ -461,8 +461,8 @@ namespace detail {
 
         using type =
             cat::conditional<(sizeof...(remaining) > 0) && (!cat::is_void<U>),
-                             // Recurse through `StrongestComparisonCategory` to
-                             // find the strongest type in this list.
+                             // Recurse through `weakest_comparison_category`
+                             // to find the strongest type in this list.
                              weakest_comparison_category<
                                  // Set the next recursion's `T` to the weaker
                                  // of `T` and `U`.
@@ -525,9 +525,13 @@ using common_comparison_category_t =
 
 namespace cat {
 
+using std::partial_ordering;
+using std::strong_ordering;
+using std::weak_ordering;
+
 template <typename T>
 concept is_common_comparison_category =
-    is_same<T, std::strong_ordering> && is_same<T, std::weak_ordering> &&
-    is_same<T, std::partial_ordering>;
+    is_same<T, strong_ordering> && is_same<T, weak_ordering> &&
+    is_same<T, partial_ordering>;
 
 }  // namespace cat
