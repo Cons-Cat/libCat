@@ -35,7 +35,7 @@ enum class overflow_policies {
 };
 
 template <typename T>
-inline constexpr bool is_arithmetic_ptr = requires { T::Ptr; };
+inline constexpr bool is_arithmetic_ptr = requires { T::ptr; };
 
 template <is_arithmetic T>
 constexpr auto to_raw_arithmetic(T value) {
@@ -124,9 +124,19 @@ template <typename From, typename To>
 concept is_safe_arithmetic_comparison =
     // `to_raw_arithmetic_type` is needed here to prevent a recursive constraint
     // in evaluating the `<` operator inside `is_signed`.
-    ((is_signed<to_raw_arithmetic_type<From>> ==
-      is_signed<to_raw_arithmetic_type<To>>)) &&
-    (is_floating_point<From> == is_floating_point<To>);
+    (  // If both types have the same signed-ness:
+        (is_signed<to_raw_arithmetic_type<From>> ==
+         is_signed<to_raw_arithmetic_type<To>>)
+        // Or, if From is signed and larger than To:
+        ||
+        (is_signed<to_raw_arithmetic_type<From>> &&
+         !is_signed<to_raw_arithmetic_type<To>> && (sizeof(From) > sizeof(To)))
+        // Or, if To is signed and larger than From.
+        ||
+        (!is_signed<to_raw_arithmetic_type<From>> &&
+         is_signed<to_raw_arithmetic_type<To>> && (sizeof(From) < sizeof(To))))
+    // And both types have the same floating-point-ness.
+    && (is_floating_point<From> == is_floating_point<To>);
 
 // Any numeral can safely convert to a type larger than itself, but not
 // smaller than itself.
@@ -161,7 +171,9 @@ namespace detail {
     }
 
     template <typename T, typename U>
-        requires((is_signed<T> == is_signed<U>) &&
+        requires((is_signed<T> == is_signed<U> ||
+                  (is_signed<T> && !is_signed<U> && sizeof(T) > sizeof(U)) ||
+                  (!is_signed<T> && is_signed<U> && sizeof(T) < sizeof(U))) &&
                  (is_floating_point<T> == is_floating_point<U>))
     using promoted_type = decltype(promoted_arithmetic<T, U>());
 }  // namespace detail

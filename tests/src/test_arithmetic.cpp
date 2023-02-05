@@ -4,7 +4,7 @@
 #include "../unit_tests.hpp"
 
 template <auto value>
-struct Nttp {
+struct nttp {
     static constexpr auto member = value;
 };
 
@@ -188,6 +188,34 @@ TEST(test_numerals) {
     static_assert(cat::is_same<decltype(intptr<void>{} + 1), intptr<void>>);
     static_assert(cat::is_same<decltype(intptr<void>{} - 1), intptr<void>>);
 
+    // Test integer promotion.
+    int1 promote_int1 = 1_i1;
+    int2 promote_int2 = promote_int1;
+    int4 promote_int4 = promote_int2;
+    int8 promote_int8 = promote_int2;
+    promote_int8 = promote_int4;
+    cat::assert(promote_int8 == 1);
+
+    uint1 promote_uint1 = 1_u1;
+    uint2 promote_uint2 = promote_uint1;
+    uint4 promote_uint4 = promote_uint2;
+    uint8 promote_uint8 = promote_uint2;
+    promote_uint8 = promote_uint4;
+    cat::assert(promote_uint8 == 1u);
+
+    // Promote small unsigned ints to larger signed ints.
+    promote_int2 = promote_uint1;
+    promote_int4 = promote_uint2;
+
+    promote_int8 = promote_uint1;
+    promote_int8 = promote_uint2;
+    promote_int8 = promote_uint4;
+
+    // Signed integers cannot be assigned to unsigned integers ever.
+    static_assert(cat::is_assignable<int8, uint4>);
+    static_assert(!cat::is_assignable<uint4, int2>);
+    static_assert(!cat::is_assignable<uint8, int4>);
+
     // `int4` pointer arithmetic.
     char address;
     int* p_int4 = (reinterpret_cast<int*>(&address)) + 1_i4;
@@ -290,16 +318,16 @@ TEST(test_numerals) {
     [[maybe_unused]] int4 negated_int4 = ~1_i4;
 
     // Test using numerals non-type template parameters.
-    [[maybe_unused]] Nttp<1_i1> nttp_int1{};
-    [[maybe_unused]] Nttp<1_u1> nttp_uint1{};
-    [[maybe_unused]] Nttp<1_i2> nttp_int2{};
-    [[maybe_unused]] Nttp<1_u2> nttp_uint2{};
-    [[maybe_unused]] Nttp<1_i4> nttp_int4{};
-    [[maybe_unused]] Nttp<1_u4> nttp_uint4{};
-    [[maybe_unused]] Nttp<1_i8> nttp_int8{};
-    [[maybe_unused]] Nttp<1_u8> nttp_uint8{};
-    [[maybe_unused]] Nttp<1_f4> nttp_float4{};
-    [[maybe_unused]] Nttp<1_f8> nttp_float8{};
+    [[maybe_unused]] nttp<1_i1> nttp_int1{};
+    [[maybe_unused]] nttp<1_u1> nttp_uint1{};
+    [[maybe_unused]] nttp<1_i2> nttp_int2{};
+    [[maybe_unused]] nttp<1_u2> nttp_uint2{};
+    [[maybe_unused]] nttp<1_i4> nttp_int4{};
+    [[maybe_unused]] nttp<1_u4> nttp_uint4{};
+    [[maybe_unused]] nttp<1_i8> nttp_int8{};
+    [[maybe_unused]] nttp<1_u8> nttp_uint8{};
+    [[maybe_unused]] nttp<1_f4> nttp_float4{};
+    [[maybe_unused]] nttp<1_f8> nttp_float8{};
 
     // Test `make_signed()` and `make_unsigned()`.
     static_assert(cat::is_same<decltype(cat::make_unsigned(1)), unsigned int>);
