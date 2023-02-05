@@ -120,29 +120,30 @@ using usize = arithmetic<__SIZE_TYPE__, overflow_policies::undefined>;
 using ssize =
     arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policies::undefined>;
 
-template <typename From, typename To>
+template <typename from_type, typename to_type>
 concept is_safe_arithmetic_comparison =
     // `to_raw_arithmetic_type` is needed here to prevent a recursive constraint
     // in evaluating the `<` operator inside `is_signed`.
     (  // If both types have the same signed-ness:
-        (is_signed<to_raw_arithmetic_type<From>> ==
-         is_signed<to_raw_arithmetic_type<To>>)
-        // Or, if From is signed and larger than To:
-        ||
-        (is_signed<to_raw_arithmetic_type<From>> &&
-         !is_signed<to_raw_arithmetic_type<To>> && (sizeof(From) > sizeof(To)))
-        // Or, if To is signed and larger than From.
-        ||
-        (!is_signed<to_raw_arithmetic_type<From>> &&
-         is_signed<to_raw_arithmetic_type<To>> && (sizeof(From) < sizeof(To))))
+        (is_signed<to_raw_arithmetic_type<from_type>> ==
+         is_signed<to_raw_arithmetic_type<to_type>>)
+        // Or, if from_type is signed and larger than to_type:
+        || (is_signed<to_raw_arithmetic_type<from_type>> &&
+            !is_signed<to_raw_arithmetic_type<to_type>> &&
+            (sizeof(from_type) > sizeof(to_type)))
+        // Or, if to_type is signed and larger than from_type.
+        || (!is_signed<to_raw_arithmetic_type<from_type>> &&
+            is_signed<to_raw_arithmetic_type<to_type>> &&
+            (sizeof(from_type) < sizeof(to_type))))
     // And both types have the same floating-point-ness.
-    && (is_floating_point<From> == is_floating_point<To>);
+    && (is_floating_point<from_type> == is_floating_point<to_type>);
 
 // Any numeral can safely convert to a type larger than itself, but not
 // smaller than itself.
-template <typename From, typename To>
+template <typename from_type, typename to_type>
 concept is_safe_arithmetic_conversion =
-    (sizeof(From) <= sizeof(To)) && (is_safe_arithmetic_comparison<From, To>);
+    (sizeof(from_type) <= sizeof(to_type)) &&
+    (is_safe_arithmetic_comparison<from_type, to_type>);
 
 template <typename T>
 concept is_safe_arithmetic =
@@ -388,8 +389,8 @@ namespace detail {
         T raw;
     };
 
-    // To prevent `arithmetic` holding a member of its own type, only undefined
-    // overflow can access other overflow semantics.
+    // to_type prevent `arithmetic` holding a member of its own type, only
+    // undefined overflow can access other overflow semantics.
 
     template <is_integral T>
     struct arithmetic_storage<T, overflow_policies::undefined> {

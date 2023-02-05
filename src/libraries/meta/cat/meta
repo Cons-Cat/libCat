@@ -659,36 +659,38 @@ concept is_lvalue_reference = __is_same(T, remove_reference<T>&);
 template <typename T>
 concept is_rvalue_reference = __is_same(T, remove_reference<T>&&);
 
-template <typename From, typename To>
-using copy_const_from = conditional<is_const<From>,
-                                    // From is const.
-                                    add_const<To>,
-                                    // From is not const.
-                                    remove_const<To>>;
+template <typename from_type, typename to_type>
+using copy_const_from = conditional<is_const<from_type>,
+                                    // from_type is const.
+                                    add_const<to_type>,
+                                    // from_type is not const.
+                                    remove_const<to_type>>;
 
-template <typename From, typename To>
-using copy_volatile_from = conditional<is_volatile<remove_reference<From>>,
-                                       // From is volatile.
-                                       add_volatile<To>,
-                                       // From is not volatile.
-                                       remove_volatile<To>>;
+template <typename from_type, typename to_type>
+using copy_volatile_from = conditional<is_volatile<remove_reference<from_type>>,
+                                       // from_type is volatile.
+                                       add_volatile<to_type>,
+                                       // from_type is not volatile.
+                                       remove_volatile<to_type>>;
 
-template <typename From, typename To>
+template <typename from_type, typename to_type>
 using copy_ref_from =
-    conditional<is_lvalue_reference<From>,
-                // From is an l-value reference.
-                add_lvalue_reference<remove_reference<To>>,
-                conditional<is_rvalue_reference<From>,
-                            // From is an r-value reference.
-                            add_rvalue_reference<remove_reference<To>>,
-                            // From is not a reference.
-                            remove_reference<To>>>;
+    conditional<is_lvalue_reference<from_type>,
+                // from_type is an l-value reference.
+                add_lvalue_reference<remove_reference<to_type>>,
+                conditional<is_rvalue_reference<from_type>,
+                            // from_type is an r-value reference.
+                            add_rvalue_reference<remove_reference<to_type>>,
+                            // from_type is not a reference.
+                            remove_reference<to_type>>>;
 
-template <typename From, typename To>
-using copy_cv_from = copy_volatile_from<From, copy_const_from<From, To>>;
+template <typename from_type, typename to_type>
+using copy_cv_from =
+    copy_volatile_from<from_type, copy_const_from<from_type, to_type>>;
 
-template <typename From, typename To>
-using copy_cvref_from = copy_ref_from<From, copy_cv_from<From, To>>;
+template <typename from_type, typename to_type>
+using copy_cvref_from =
+    copy_ref_from<from_type, copy_cv_from<from_type, to_type>>;
 
 namespace detail {
     // `__underlying_type` is a GNU builtin.
@@ -703,13 +705,14 @@ namespace detail {
 template <typename T>
 using underlying_type = detail::underlying_type_trait<T>::type;
 
-template <typename From, typename To>
-concept is_convertible = __is_convertible(From, To);
+template <typename from_type, typename to_type>
+concept is_convertible = __is_convertible(from_type, to_type);
 
-template <typename From, typename To>
+template <typename from_type, typename to_type>
 concept is_implicitly_convertible =
-    __is_assignable(To, From) || __is_constructible(To, From) ||
-    is_convertible<From, To> || __is_same(To, From);
+    __is_assignable(to_type, from_type) ||
+    __is_constructible(to_type, from_type) ||
+    is_convertible<from_type, to_type> || __is_same(to_type, from_type);
 
 // TODO: Add `__is_nothrow_convertible()` from GCC 13.
 
