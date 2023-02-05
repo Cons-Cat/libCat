@@ -176,8 +176,6 @@ namespace detail {
         }
 
       public:
-        class const_iterator;
-
         // Contiguous collections can produce non-`const` bidirectional
         // iterators.
         // This type can be accessed as, `cat::vector<int>::iterator`.
