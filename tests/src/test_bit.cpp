@@ -48,24 +48,58 @@ TEST(test_bit) {
     // Test `bit_value`.
     cat::bit_value bit1 = false;
     bit1 = true;
-    cat::assert(~bit1 == false);
-    cat::assert(~~bit1 == true);
-    cat::assert(false == ~bit1);
+    cat::verify(~bit1 == false);
+    cat::verify(~~bit1 == true);
+    cat::verify(false == ~bit1);
     // NOLINTNEXTLINE
-    cat::assert(bit1 == bit1);
+    cat::verify(bit1 == bit1);
 
     // Test `bit_reference`
     unsigned char number = 0u;
     cat::bit_reference bit2 =
         cat::bit_reference<unsigned char>::from_mask(number, 1u);
     bit2 = true;
-    cat::assert(bit1.is_set());
-    cat::assert(bit1 == true);
-    cat::assert(bit2.is_set());
-    cat::assert(bit2);
+    cat::verify(bit1.is_set());
+    cat::verify(bit1 == true);
+    cat::verify(bit2.is_set());
+    cat::verify(bit2);
 
     cat::bit_reference bit3 = bit1;
     bit3.set();
-    cat::assert(bit3 == true);
-    cat::assert(number != 0u);
+    cat::verify(bit3 == true);
+    cat::verify(number != 0u);
+
+    cat::bit_reference bit4 =
+        cat::bit_reference<unsigned char>::from_offset(number, 0);
+    cat::bit_reference bit5 =
+        cat::bit_reference<unsigned char>::from_offset(number, 5);
+    cat::verify(bit4.is_set());
+    cat::verify(!bit5.is_set());
+    number = 0;
+    cat::verify(!bit4.is_set());
+    cat::verify(!bit5.is_set());
+    number = 1 << 5;
+    cat::verify(!bit4.is_set());
+    cat::verify(bit5.is_set());
+
+    // Assign a `bit_reference` to a `bit_value`.
+    bit1 = bit2;
+    bit1 = bit3;
+
+    // Test `bit_iterator`.
+    cat::array<uint4, 4> array{0, cat::uint4_max, 0, 0};
+    cat::bit_iterator it = array.begin();
+    cat::verify(*it == false);
+    cat::verify(*(it + 31) == false);
+    cat::verify(*(it + 32) == true);
+    it += 33;
+    cat::verify(*it == true);
+
+    for (int4 i = 0; i < 30; ++i) {
+        ++it;
+        cat::verify(*it == true);
+    }
+
+    it++;
+    cat::verify(*it == false);
 }

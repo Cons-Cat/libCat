@@ -1,3 +1,4 @@
+#include <cat/bit>
 #include <cat/memory>
 
 // `tree-loop-distribute-patterns` is an optimization that replaces this code

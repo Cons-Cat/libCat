@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/iterator>
 #include <cat/meta>
 
 // `__BYTE_ORDER__` and `__ORDER_LITTLE_ENDIAN__` are macros defined by GCC.
@@ -224,39 +225,49 @@ class bit_reference {
     friend bit_value;
 
     // This constructor is only used by the static factory functions.
+    // A constructor is required to initialize a reference member, such as
+    // `bit_reference::storage`.
     constexpr bit_reference(storage_type& in_storage, storage_type in_mask)
-        : storage(in_storage), bitmask(in_mask) {
+        : storage(in_storage), bit_mask(in_mask) {
         if !consteval {
             cat::assert(has_single_bit(in_mask));
         }
     }
 
   public:
-    constexpr bit_reference(bit_reference<storage_type> const& other)
-        : storage(other.storage), bitmask(other.bitmask) {
-    }
+    constexpr bit_reference(bit_reference<storage_type> const&) = default;
+    constexpr bit_reference(bit_reference<storage_type>&&) = default;
 
     constexpr bit_reference(bit_value& other)
-        : storage(detail::get_bit_value(other)), bitmask(1u) {
+        : storage(detail::get_bit_value(other)), bit_mask(1u) {
     }
 
     constexpr bit_reference(bit_value const& other)
-        : storage(detail::get_bit_value(other)), bitmask(1u) {
+        : storage(detail::get_bit_value(other)), bit_mask(1u) {
     }
 
     // You cannot take a reference of r-values.
     constexpr bit_reference(bit_value&& other) = delete;
 
-    template <is_integral T>
-    static constexpr auto from_offset(storage_type& reference, T offset)
-        -> bit_reference {
-        return bit_reference(reference,
-                             storage_type(1u << make_unsigned(offset)));
-    }
-
+    // Create a `bit_reference` to a bit position specified by `mask` into a
+    // `storage_type`.
     static constexpr auto from_mask(storage_type& reference, storage_type mask)
         -> bit_reference {
+        // Call the internal `private:` constructor.
         return bit_reference(reference, mask);
+    }
+
+    // Create a `bit_reference` to a bit position `offset` bits from the right
+    // of a `storage_type`.
+    static constexpr auto from_offset(storage_type& reference, ssize offset)
+        -> bit_reference {
+        if !consteval {
+            cat::assert(offset < limits<storage_type>::digits);
+        }
+        // Call the internal `private:` constructor.
+        return bit_reference(
+            reference, storage_type(storage_type(1u)
+                                    << storage_type(make_unsigned(offset))));
     }
 
     // Assign a true or false value to this bit.
@@ -298,40 +309,42 @@ class bit_reference {
 
     // Flag this bit on.
     constexpr auto set() -> bit_reference& {
-        this->storage |= this->bitmask;
+        this->storage |= this->bit_mask;
         return *this;
     }
 
     // Flag this bit off.
     constexpr auto unset() -> bit_reference& {
-        this->storage &= ~(this->bitmask);
+        this->storage &= ~(this->bit_mask);
         return *this;
     }
 
     // Flag this bit as the opposite of its current state.
     constexpr auto flip() -> bit_reference& {
-        this->storage ^= this->bitmask;
+        this->storage ^= this->bit_mask;
         return *this;
     }
 
     [[nodiscard]]
     constexpr auto is_set() const -> bool {
-        return static_cast<bool>(this->storage & this->bitmask);
+        return static_cast<bool>(this->storage & this->bit_mask);
     }
 
     [[nodiscard]]
     constexpr auto mask() const -> remove_cv<storage_type> {
-        return this->bitmask;
+        return this->bit_mask;
         return *this;
     }
 
   private:
     storage_type& storage;
-    remove_cv<storage_type> bitmask;
+    remove_cv<storage_type> bit_mask;
 };
 
 template <is_same<bit_value> T>
 bit_reference(T) -> bit_reference<unsigned char>;
+
+// TODO: Add a nullable `bit_ptr` class.
 
 class bit_value {
     friend constexpr auto cat::detail::get_bit_value(bit_value&)
@@ -344,15 +357,20 @@ class bit_value {
     friend class bit_reference;
 
     constexpr bit_value() = default;
+    constexpr bit_value(bit_value const&) = default;
+    constexpr bit_value(bit_value&&) = default;
 
-    constexpr bit_value(bit_value const& other) = default;
-
-    template <is_unsigned_integral T>
-    constexpr bit_value(bit_reference<T> reference)
-        : value(reference.is_set()) {
+    // Implicitly convert from a bool.
+    constexpr bit_value(bool other) : value(other) {
     }
 
-    constexpr bit_value(bool other) : value(other) {
+    // Create a `bit_value` copied from a bit position `offset` bits from the
+    // right of a `storage_type`.
+    template <is_unsigned_integral storage_type>
+    static constexpr auto from_offset(storage_type word, ssize offset) {
+        assert(offset < limits<storage_type>::digits);
+        bit_value bit;
+        bit.value = static_cast<bool>((word >> offset) & 1);
     }
 
     constexpr auto operator=(bit_value const& other) -> bit_value& = default;
@@ -460,6 +478,64 @@ class bit_value {
   private:
     bool value;
 };
+
+struct byte;
+
+template <typename iterator>
+// Only storage types can be iterated bitwise.
+    requires(is_unsigned_integral<typename iterator::value_type>
+             /* || is_same<typename iterator::value_type, byte> */)
+class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
+  private:
+    using type = iterator;
+    using word_type = iterator::value_type;
+    static constexpr ssize word_bits = limits<word_type>::bits;
+
+  public:
+    using value_type = bit_value;
+    using reference = bit_reference<word_type>;
+
+    constexpr bit_iterator() = default;
+    constexpr bit_iterator(bit_iterator const&) = default;
+    constexpr bit_iterator(bit_iterator&&) = default;
+
+    constexpr bit_iterator(iterator const& other, ssize current_bit = 0)
+        : internal_iterator(other), bit_position(current_bit) {
+    }
+
+    constexpr auto dereference() const -> reference {
+        return reference::from_offset(*internal_iterator, this->bit_position);
+    }
+
+    constexpr void advance(ssize offset) {
+        ssize advance_bits = this->bit_position + offset;
+        ssize bytes_overflow = advance_bits / this->word_bits;
+        if (advance_bits < 0 &&
+            ((bytes_overflow * word_bits) != advance_bits)) {
+            --bytes_overflow;
+        }
+        this->internal_iterator += bytes_overflow;
+        this->bit_position = advance_bits - bytes_overflow * word_bits;
+    }
+
+    constexpr auto distance_to(bit_iterator const& other) const -> ssize {
+        ssize const word_difference =
+            this->internal_iterator - other.internal_iterator;
+        // Multiply the number of words between the two iterators by the size of
+        // a word in bits, then add the difference between the iterators'
+        // current bit offset within their word. That gives the total number of
+        // bits between any two bit iterators.
+        return (word_difference * word_bits) +
+               (this->bit_position - other.bit_position);
+    }
+
+  private:
+    iterator internal_iterator;
+    ssize bit_position;
+};
+
+inline constexpr bit_value one_bit = true;
+inline constexpr bit_value zero_bit = false;
 
 namespace detail {
     constexpr auto get_bit_value(bit_value& value) -> unsigned char& {
@@ -591,6 +667,7 @@ constexpr auto is_aligned(U* p_value, usize alignment) -> bool;
 
 template <typename U>
 [[nodiscard]]
+// NOLINTNEXTLINE This is forward-declared in `<cat/memory>`.
 constexpr auto is_aligned(uintptr<U> p_value, usize alignment) -> bool;
 
 template <typename U>
