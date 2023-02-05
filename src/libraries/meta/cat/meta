@@ -503,7 +503,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-concept is_integral = detail::is_integral_detail<T>;
+concept is_integral = detail::is_integral_detail<remove_cv<T>>;
 
 template <typename T>
 concept is_bool =
@@ -521,16 +521,14 @@ namespace detail {
     inline constexpr bool is_signed_detail = false;
 
     // This expression only holds true if `T` can be constant-evaluated.
-    // clang-format off
     template <detail::has_less_than_operator T>
-    requires(requires { T{static_cast<signed char>(-1)}; })
-        inline constexpr bool is_signed_detail<T> = constval<(
-            T{static_cast<signed char>(-1)} < T{static_cast<signed char>(0)})>;
-    // clang-format on
+        requires(requires { T{static_cast<signed char>(-1)}; })
+    inline constexpr bool is_signed_detail<T> = constval<(
+        T{static_cast<signed char>(-1)} < T{static_cast<signed char>(0)})>;
 }  // namespace detail
 
 template <typename T>
-concept is_signed = detail::is_signed_detail<T>;
+concept is_signed = detail::is_signed_detail<remove_cv<T>>;
 
 template <typename T>
 concept is_unsigned = !is_signed<T>;

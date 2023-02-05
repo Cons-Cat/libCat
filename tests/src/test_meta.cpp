@@ -5,6 +5,7 @@
 
 struct members {
     int member_variable;
+
     void member_function() {
     }
 };
@@ -23,12 +24,15 @@ TEST(test_meta) {
     static_assert(is_same<int, int>);
     static_assert(!is_same<int, unsigned int>);
 
-    enum enum_type : int
-    {};
-    enum class enum_class_type : int
-    {};
+    enum enum_type : int {
+    };
+    enum class enum_class_type : int {
+    };
+
     struct struct_type {};
+
     class class_type {};
+
     union union_type {};
 
     static_assert(!is_enum<int>);
@@ -131,23 +135,45 @@ TEST(test_meta) {
     static_assert(!is_const<remove_const<int>>);
     static_assert(!is_const<remove_const<int const>>);
 
-    struct Signed {
+    struct signed_type {
         int data;
-        constexpr Signed(int value) : data(value){};
-        constexpr auto operator<(Signed other) const -> bool {
+        constexpr signed_type(int value) : data(value){};
+
+        constexpr auto operator<(signed_type other) const -> bool {
             return data < other.data;
         }
     };
 
     static_assert(is_signed<int>);
-    static_assert(is_signed<Signed>);
+    static_assert(is_signed<signed_type>);
     static_assert(!is_signed<unsigned int>);
     static_assert(!is_signed<class_type>);
 
     static_assert(is_unsigned<unsigned int>);
     static_assert(is_unsigned<class_type>);
     static_assert(!is_unsigned<int>);
-    static_assert(!is_unsigned<Signed>);
+    static_assert(!is_unsigned<signed_type>);
+
+    static_assert(is_integral<int>);
+    static_assert(is_integral<int4>);
+    static_assert(is_integral<uint8>);
+    static_assert(is_integral<int const>);
+    static_assert(is_integral<int4 const>);
+    static_assert(is_integral<uint8 const>);
+
+    static_assert(is_signed_integral<int>);
+    static_assert(is_signed_integral<int4>);
+    static_assert(!is_signed_integral<uint8>);
+    static_assert(is_signed_integral<int const>);
+    static_assert(is_signed_integral<int4 const>);
+    static_assert(!is_signed_integral<uint8 const>);
+
+    static_assert(!is_unsigned_integral<int>);
+    static_assert(!is_unsigned_integral<int4>);
+    static_assert(is_unsigned_integral<uint8>);
+    static_assert(!is_unsigned_integral<int const>);
+    static_assert(!is_unsigned_integral<int4 const>);
+    static_assert(is_unsigned_integral<uint8 const>);
 
     static_assert(is_same<add_const<int>, int const>);
     static_assert(is_same<add_const<int&>, int const&>);
