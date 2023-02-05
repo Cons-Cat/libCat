@@ -9,11 +9,6 @@
 #include <cat/math>
 #include <cat/utility>
 
-// The deprecated copy constructor is intended must be used internally, so
-// disable deprecated warnings within this file.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-
 namespace cat {
 
 // TODO: Support `__sanitizer_annotate_contiguous_container`.
@@ -38,12 +33,11 @@ class vector : public collection_interface<vector<T>, T, true> {
         }
     }
 
-  private:
+  protected:
+    // Being `protected:` permits derived classes and adaptors to call this.
     // Only allow the shallow copy constructor to be used by these static
-    // factory member functions. This message appears when a user attempts to
-    // implicitly copy.
-    [[deprecated(R"(The copy-constructor is hidden. Use `.clone()` instead!)")]] constexpr vector(
-        vector<T> const& other_vector) = default;
+    // factory member functions. For public copying, `.clone()` should be used.
+    constexpr vector(vector<T> const& other_vector) = default;
 
     // Reallocate memory, or make an initial allocation.
     constexpr auto internal_allocate(is_stable_allocator auto& allocator,
@@ -221,5 +215,3 @@ class vector : public collection_interface<vector<T>, T, true> {
 };
 
 }  // namespace cat
-
-#pragma GCC diagnostic pop

@@ -6,11 +6,6 @@
 #include <cat/bit>
 #include <cat/collection>
 
-// The deprecated copy constructor is intended must be used internally, so
-// disable deprecated warnings within this file.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-
 // TODO: Make `ring` be `constexpr`.
 
 namespace cat {
@@ -27,12 +22,11 @@ class ring : public collection_interface<ring<T>, T> {
 
     ring(ring&&) = default;
 
-  private:
+  protected:
+    // Being `protected:` permits derived classes and adaptors to call this.
     // Only allow the shallow copy constructor to be used by these static
-    // factory member functions.
-    [[deprecated(
-        "The copy-constructor is hidden. Use `.clone()` "
-        "instead!")]] ring(ring const&) = default;
+    // factory member functions. For public copying, `.clone()` should be used.
+    ring(ring const&) = default;
 
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
     // context.
@@ -179,5 +173,3 @@ class ring : public collection_interface<ring<T>, T> {
 };
 
 }  // namespace cat
-
-#pragma GCC diagnostic pop

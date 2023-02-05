@@ -8,11 +8,6 @@
 
 // TODO: Add an `IntrusiveList`.
 
-// The deprecated copy constructors are intended must be used internally, so
-// disable deprecated warnings within this file.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-
 namespace cat {
 namespace detail {
     template <typename T>
@@ -53,11 +48,7 @@ class list : public collection_interface<list<T>, T> {
             return *this;
         }
 
-        auto dereference() -> T& {
-            return this->p_node->storage;
-        }
-
-        auto dereference() const -> T const& {
+        auto dereference() const -> T& {
             return this->p_node->storage;
         }
 
@@ -74,9 +65,11 @@ class list : public collection_interface<list<T>, T> {
 
     constexpr list(list<T>&& list) = default;
 
-  private:
-    [[deprecated(R"(The copy-constructor is hidden. Use `.clone()` instead!)")]] constexpr list(
-        list<T> const&) = default;
+  protected:
+    // Being `protected:` permits derived classes and adaptors to call this.
+    // Only allow the shallow copy constructor to be used by these static
+    // factory member functions. For public copying, `.clone()` should be used.
+    constexpr list(list<T> const&) = default;
 
   public:
     // TODO: value_type_list constructors/factories were removed elsewhere.
@@ -457,11 +450,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
             return *this;
         }
 
-        auto dereference() -> T& {
-            return this->p_node->storage;
-        }
-
-        auto dereference() const -> T const& {
+        auto dereference() const -> T& {
             return this->p_node->storage;
         }
 
@@ -736,5 +725,3 @@ class forward_list : public collection_interface<forward_list<T>, T> {
 };
 
 }  // namespace cat
-
-#pragma GCC diagnostic pop

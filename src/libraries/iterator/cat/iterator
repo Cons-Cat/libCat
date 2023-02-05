@@ -371,6 +371,14 @@ concept is_iterable = requires(T it) {
                       };
 
 template <typename T>
+concept is_bidi_iterable = requires(T it) {
+                               it.begin();
+                               it.end();
+                               it.rbegin();
+                               it.rend();
+                           };
+
+template <typename T>
 concept is_weakly_incrementable = requires(T it) {
                                       // TODO: Make this `is_movable`.
                                       { ++it } -> is_same<T&>;
@@ -423,67 +431,107 @@ concept is_output_iterator =
     is_indirectly_writable<output_iterator, T> &&
     requires(output_iterator it, T&& value) { *it++ = forward<T>(value); };
 
-template <is_iterable T>
-class it_reverse {
-  public:
-    constexpr explicit it_reverse(T& input_iterable)
-        : iterable{input_iterable} {
+// With a similar syntax to `as_const()`, this adaptor take an iterable
+// container and inverts its iterator's forwards and backwards movement.
+template <is_bidi_iterable T>
+struct as_reverse : T {
+    constexpr as_reverse(T const& base) : T(base) {
+    }
+
+    constexpr as_reverse(T&& base) : T(move(base)) {
     }
 
     constexpr auto begin() {
-        return iterable.rbegin();
+        return static_cast<T*>(this)->rbegin();
     }
 
     constexpr auto end() {
-        return iterable.rend();
+        return static_cast<T*>(this)->rend();
     }
 
     constexpr auto begin() const {
-        return iterable.crbegin();
+        return static_cast<T*>(this)->rbegin();
     }
 
     constexpr auto end() const {
-        return iterable.crend();
+        return static_cast<T*>(this)->rend();
     }
 
-  private:
-    T& iterable;
+    constexpr auto cbegin() const {
+        return static_cast<T*>(this)->crbegin();
+    }
+
+    constexpr auto cend() const {
+        return static_cast<T*>(this)->crend();
+    }
+
+    constexpr auto rbegin() {
+        return static_cast<T*>(this)->begin();
+    }
+
+    constexpr auto rend() {
+        return static_cast<T*>(this)->end();
+    }
+
+    constexpr auto rbegin() const {
+        return static_cast<T*>(this)->cbegin();
+    }
+
+    constexpr auto rend() const {
+        return static_cast<T*>(this)->cend();
+    }
+
+    constexpr auto crbegin() const {
+        return static_cast<T*>(this)->cbegin();
+    }
+
+    constexpr auto crend() const {
+        return static_cast<T*>(this)->cend();
+    }
 };
 
-template <is_iterable T>
-class it_const {
-  public:
-    constexpr explicit it_const(T& input_iterable)
-        : iterable{input_iterable} {};
+// With a similar syntax to `as_const()`, this adaptor take an iterable
+// container, makes its iterator `const`, and inverts its forwards and backwards
+// movement.
+template <is_bidi_iterable T>
+struct as_const_reverse : T {
+    constexpr as_const_reverse(T const& base) : T(base) {
+    }
+
+    constexpr as_const_reverse(T&& base) : T(move(base)) {
+    }
 
     constexpr auto begin() const {
-        return iterable.cbegin();
+        return static_cast<T const*>(this)->rbegin();
     }
 
     constexpr auto end() const {
-        return iterable.cend();
+        return static_cast<T const*>(this)->rend();
     }
 
-  private:
-    T& iterable;
-};
-
-template <is_iterable T>
-class it_const_reverse {
-  public:
-    constexpr explicit it_const_reverse(T& input_iterable)
-        : iterable{input_iterable} {};
-
-    constexpr auto begin() const {
-        return iterable.crbegin();
+    constexpr auto cbegin() const {
+        return static_cast<T const*>(this)->crbegin();
     }
 
-    constexpr auto end() const {
-        return iterable.crend();
+    constexpr auto cend() const {
+        return static_cast<T const*>(this)->crend();
     }
 
-  private:
-    T& iterable;
+    constexpr auto rbegin() const {
+        return static_cast<T const*>(this)->cbegin();
+    }
+
+    constexpr auto rend() const {
+        return static_cast<T const*>(this)->cend();
+    }
+
+    constexpr auto crbegin() const {
+        return static_cast<T const*>(this)->cbegin();
+    }
+
+    constexpr auto crend() const {
+        return static_cast<T const*>(this)->cend();
+    }
 };
 
 // TODO: Add an `it_enumerate` iterator adapter.

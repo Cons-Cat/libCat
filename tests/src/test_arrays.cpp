@@ -41,7 +41,7 @@ TEST(test_arrays) {
         ++count;
     }
 
-    for (int4 const& a : cat::it_reverse(array_1)) {
+    for (int4 const& a : cat::as_reverse(array_1)) {
         --count;
         cat::verify(a == array_1[count]);
     }
@@ -50,13 +50,13 @@ TEST(test_arrays) {
     cat::verify(array_1.back() == 9);
 
     count = 0;
-    for (int4 const& a : cat::it_const(array_1)) {
+    for (int4 const& a : cat::as_const(array_1)) {
         cat::verify(a == array_1[count]);
         ++count;
     }
     _ = array_1.cbegin();
 
-    for (int4 const& a : cat::it_const_reverse(array_1)) {
+    for (int4 const& a : cat::as_const_reverse(array_1)) {
         --count;
         cat::verify(a == array_1[count]);
     }

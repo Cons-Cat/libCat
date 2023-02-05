@@ -91,6 +91,7 @@ namespace detail {
             return unconst(this)->self().begin();
         }
 
+        // Generate `const` overload from non-`const` method `end()`.
         [[nodiscard]]
         constexpr auto end() const
             requires(has_end<derived_type>)
@@ -98,6 +99,7 @@ namespace detail {
             return unconst(this)->self().end();
         }
 
+        // Generate `cbegin()` from `begin()`.
         [[nodiscard]]
         constexpr auto cbegin() const
             requires(has_begin<derived_type>)
@@ -105,6 +107,7 @@ namespace detail {
             return this->begin();
         }
 
+        // Generate `cend()` from `end()`.
         [[nodiscard]]
         constexpr auto cend() const
             requires(has_end<derived_type>)
@@ -116,28 +119,28 @@ namespace detail {
         constexpr auto rbegin()
             requires(has_end<derived_type>)
         {
-            return it_reverse(unconst(this)->self()).begin();
+            return as_reverse(unconst(this)->self()).begin();
         }
 
         [[nodiscard]]
         constexpr auto rend()
             requires(has_begin<derived_type>)
         {
-            return it_reverse(unconst(this)->self()).end();
+            return as_reverse(unconst(this)->self()).end();
         }
 
         [[nodiscard]]
         constexpr auto rbegin() const
             requires(has_end<derived_type>)
         {
-            return it_reverse(unconst(this)->self()).begin();
+            return as_reverse(unconst(this)->self()).begin();
         }
 
         [[nodiscard]]
         constexpr auto rend() const
             requires(has_begin<derived_type>)
         {
-            return it_reverse(unconst(this)->self()).end();
+            return as_reverse(unconst(this)->self()).end();
         }
 
         [[nodiscard]]
@@ -145,7 +148,7 @@ namespace detail {
             requires(has_end<derived_type>)
         {
             // TODO: This should return a `const_iterator`.
-            return (it_reverse(unconst(this)->self())).begin();
+            return (as_reverse(unconst(this)->self())).begin();
         }
 
         [[nodiscard]]
@@ -153,7 +156,7 @@ namespace detail {
             requires(has_begin<derived_type>)
         {
             // TODO: This should return a `const_iterator`.
-            return (it_reverse(unconst(this)->self())).end();
+            return (as_reverse(unconst(this)->self())).end();
         }
     };
 
@@ -187,11 +190,7 @@ namespace detail {
                 : current_index(index), p_array(p_in_array) {
             }
 
-            constexpr auto dereference() -> T& {
-                return this->p_array[current_index.raw];
-            }
-
-            constexpr auto dereference() const -> T const& {
+            constexpr auto dereference() const -> T& {
                 return this->p_array[current_index.raw];
             }
 
@@ -244,6 +243,7 @@ namespace detail {
         };
 
         using reverse_iterator = reverse_iterator_adaptor<iterator, T>;
+        // TODO: Generate `const_iterator`.
         using const_reverse_iterator =
             reverse_iterator_adaptor<const_iterator, T const>;
 
