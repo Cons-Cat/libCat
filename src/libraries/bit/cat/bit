@@ -10,6 +10,10 @@ inline constexpr bool is_target_little_endian =
     (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
 inline constexpr bool is_target_big_endian = !is_target_little_endian;
 
+inline constexpr ssize char_bits = ssizeof(unsigned char) * 8;
+inline constexpr ssize word_bits = ssizeof(usize) * 8;
+inline constexpr ssize word_bytes = ssizeof(usize);
+
 namespace cat {
 
 template <is_unsigned_integral T>
@@ -262,7 +266,7 @@ class bit_reference {
     static constexpr auto from_offset(storage_type& reference, ssize offset)
         -> bit_reference {
         if !consteval {
-            cat::assert(offset < limits<storage_type>::digits);
+            cat::assert(offset < limits<storage_type>::bits);
         }
         // Call the internal `private:` constructor.
         return bit_reference(
@@ -368,7 +372,7 @@ class bit_value {
     // right of a `storage_type`.
     template <is_unsigned_integral storage_type>
     static constexpr auto from_offset(storage_type word, ssize offset) {
-        assert(offset < limits<storage_type>::digits);
+        assert(offset < limits<storage_type>::bits);
         bit_value bit;
         bit.value = static_cast<bool>((word >> offset) & 1);
     }

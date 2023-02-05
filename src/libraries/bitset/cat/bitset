@@ -13,72 +13,46 @@ template <ssize bits_count>
     requires(bits_count > 0)
 class bitset {
   private:
+    // public:
 
-  public:
     // Store the smallest number of bytes needed for `bits_count`. If that is 8
     // bytes or fewer, use that many bytes. If it is larger, use an array of
     // 8-byte integers. Divide the bits by 8, rounding up.
-    static constexpr ssize bytes = div_ceil(bits_count, 8);
+    static constexpr ssize total_bytes = div_ceil(bits_count, 8);
 
-    using value_type = conditional<
-        bytes <= 8,
+    using array_type = conditional<
+        total_bytes <= 8,
         // `uint_fixed` will not compile here if it is larger than 8 or it is
         // not a power of 2. This is an `array` of one element to make it
         // iterable.
-        array<uint_fixed<min(
-                  // TODO: Signed int `round_to_pow2()`.
-                  make_signed(round_to_pow2(make_unsigned(bytes.raw))), 8)>,
-              1>,
-        array<uint8, div_ceil(bytes, 8)>>;
+        array<
+            uint_fixed<min(
+                // TODO: Signed int `round_to_pow2()`.
+                make_signed(round_to_pow2(make_unsigned(total_bytes.raw))), 8)>,
+            1>,
+        array<uint8, div_ceil(total_bytes, 8)>>;
 
-  private:
-    using value_type_element = value_type::value_type;
+    // private:
+    using array_type_element = array_type::value_type;
 
   public:
-    template <typename T>
-    // requires(is_same<decay<T>, bitset<bits_count>>)
-    class iterator_type : public iterator_interface<iterator_type<T>> {
-      public:
-        constexpr iterator_type() = default;
+    using iterator = bit_iterator<typename array_type::iterator>;
+    using const_iterator = bit_iterator<typename array_type::const_iterator>;
+    // using reverse_iterator =
+    //     bit_iterator<typename value_type::reverse_iterator>;
+    // using const_reverse_iterator =
+    //     bit_iterator<typename value_type::const_reverse_iterator>;
 
-        constexpr iterator_type(ssize in_index, T& in_bitset)
-            : current_index(in_index), bitset(in_bitset){};
+    static constexpr ssize storage_array_size = array_type::size();
 
-        constexpr auto dereference()
-            requires(!is_const<T>)
-        {
-            return this->bitset[this->current_index];
-        }
-
-        constexpr auto dereference() const
-            requires(is_const<T>)
-        {
-            return this->bitset[this->current_index];
-        }
-
-        constexpr void advance(ssize offset) {
-            this->current_index += offset;
-        }
-
-        constexpr auto distance(iterator_type const& other) const -> ssize {
-            return other.current_index - this->current_index;
-        }
-
-      private:
-        ssize current_index;
-        T& bitset;
-    };
-
-    static constexpr ssize storage_array_size = value_type::size();
-
-    static constexpr ssize storage_element_size = ssizeof(value_type_element);
+    static constexpr ssize storage_element_size = ssizeof(array_type_element);
 
     // The number of bits NOT counted in the first 1, 2, or 4 bytes of this
     // bitset.
     static constexpr ssize leading_skipped_bits =
         // The number of bits in the entire storage, minus the bits declared for
         // use.
-        (bytes * 8) - bits_count;
+        (total_bytes * 8) - bits_count;
 
     // The number of bits counted in the first 1, 2, or 4 bytes of this bitset.
     static constexpr ssize leading_bytes_bits =
@@ -88,14 +62,16 @@ class bitset {
         leading_skipped_bits;
 
     constexpr bitset() = default;
+    constexpr bitset(bitset const&) = default;
+    constexpr bitset(bitset&&) = default;
 
     template <typename... types>
-        requires((is_same<types, value_type_element> ||
-                  is_same<types, typename value_type_element::raw_type>) &&
+        requires((is_same<types, array_type_element> ||
+                  is_same<types, typename array_type_element::raw_type>) &&
                  ...)
     [[nodiscard]]
     static constexpr auto from(types... values) -> bitset
-        requires(ssizeof_pack<types...>() == value_type::size())
+        requires(ssizeof_pack<types...>() == array_type::size())
     {
         // `value_type::value_type` is some unsigned integer.
         // TODO: Assert that the input fits in `bits_count`.
@@ -104,52 +80,47 @@ class bitset {
         return bitset;
     }
 
+    constexpr auto operator=(bitset const&) -> bitset& = default;
+    constexpr auto operator=(bitset&&) -> bitset& = default;
+
     [[nodiscard]]
     constexpr auto
     operator==(bitset<bits_count> const&) const -> bool = default;
 
+    // Index into this bit-set from the right-most bit.
     [[nodiscard]]
     constexpr auto
-    operator[](ssize index) -> bit_reference<value_type_element> {
+    operator[](ssize index_bit) -> bit_reference<array_type_element> {
         if !consteval {
-            cat::assert(index < bits_count);
+            cat::assert(index_bit < bits_count);
         }
 
-        value_type_element& bytes =
-            this->storage[(index + this->leading_skipped_bits) / 64];
-        // ssize bit_offset = (index - this->leading_skipped_bits) & 63;
+        array_type_element& index_byte =
+            this->storage[this->storage.size() - 1 -
+                          ((index_bit + this->leading_skipped_bits) /
+                           word_bits)];
 
-        return bit_reference<value_type_element>::from_offset(
-            bytes, index - this->leading_skipped_bits);
+        ssize bit_offset = index_bit + this->leading_skipped_bits;
+        // TODO: `total_bytes` doesn't compile here in Clang 17 if prefixed by
+        // `this->`.
+        if constexpr (total_bytes > word_bytes) {
+            // If the bitset is larger than a word, Wrap the bit offset by the
+            // size of a word.
+            bit_offset &= word_bits - 1;
+        }
+
+        return bit_reference<array_type_element>::from_offset(index_byte,
+                                                              bit_offset);
     }
 
     [[nodiscard]]
     constexpr auto
-    operator[](ssize index) const -> bool {
-        if !consteval {
-            cat::assert(index < bits_count);
-        }
-
-        value_type_element mask;
-        value_type_element bytes;
-
-        if (index <= this->leading_bytes_bits ||
-            (this->storage_array_size == 1)) {
-            bytes = this->storage[0];
-            mask = limits<value_type_element>::high_bit >>
-                   (index + this->leading_skipped_bits);
-        } else {
-            bytes = this->storage[(index + this->leading_skipped_bits) / 64];
-            mask = limits<value_type_element>::high_bit >>
-                   ((index - this->leading_skipped_bits) & 63);
-        }
-
-        auto result = mask & bytes;
-        return static_cast<bool>(result);
+    operator[](ssize index_bit) const -> bit_reference<array_type_element> {
+        return (*unconst(this))[index_bit];
     }
 
     [[nodiscard]]
-    constexpr auto at(ssize index) -> maybe<bit_reference<value_type_element>> {
+    constexpr auto at(ssize index) -> maybe<bit_reference<array_type_element>> {
         if (index < bits_count) {
             return (*this)[index];
         }
@@ -157,7 +128,8 @@ class bitset {
     }
 
     [[nodiscard]]
-    constexpr auto at(ssize index) const -> maybe<bool> {
+    constexpr auto at(ssize index) const
+        -> maybe<bit_reference<array_type_element>> {
         if (index < bits_count) {
             return (*this)[index];
         }
@@ -265,11 +237,13 @@ class bitset {
 
     [[nodiscard]]
     constexpr auto countl_zero() const -> ssize {
+        // TODO: `leading_bytes_bits` doesn't compile here in Clang 17 if
+        // prefixed by `this->`.
         constexpr ssize skip_bits =
-            (ssizeof(value_type_element) * 8) - this->leading_bytes_bits;
+            (ssizeof(array_type_element) * 8) - leading_bytes_bits;
 
         ssize count = cat::countl_zero(this->storage[0]);
-        if (count != ssizeof(value_type_element) * 8) {
+        if (count != ssizeof(array_type_element) * 8) {
             return count - skip_bits;
         }
 
@@ -280,7 +254,7 @@ class bitset {
             count += next_count;
 
             // If any 1s are found, skip remaining bytes.
-            if (next_count != ssizeof(value_type_element) * 8) {
+            if (next_count != ssizeof(array_type_element) * 8) {
                 break;
             }
         }
@@ -293,7 +267,7 @@ class bitset {
     constexpr auto countr_zero() const -> ssize {
         ssize count =
             cat::countr_zero(this->storage[this->storage_array_size - 1]);
-        if (count != ssizeof(value_type_element) * 8) {
+        if (count != ssizeof(array_type_element) * 8) {
             return count;
         }
 
@@ -302,7 +276,7 @@ class bitset {
             count += next_count;
 
             // If any 1s are found, skip remaining bytes.
-            if (next_count != ssizeof(value_type_element) * 8) {
+            if (next_count != ssizeof(array_type_element) * 8) {
                 break;
             }
         }
@@ -313,36 +287,38 @@ class bitset {
 
     [[nodiscard]]
     constexpr auto begin() {
-        return iterator_type<decltype(*this)>(0, *this);
+        return iterator(storage.begin());
     }
 
     [[nodiscard]]
     constexpr auto end() {
-        return iterator_type<decltype(*this)>(bits_count - 1, *this);
+        return iterator(storage.end(), limits<array_type_element>::bits);
     }
 
     [[nodiscard]]
     constexpr auto begin() const {
-        return iterator_type<decltype(*this)>(0, *this);
+        return const_iterator(storage.begin());
     }
 
     [[nodiscard]]
     constexpr auto end() const {
-        return iterator_type<decltype(*this)>(bits_count - 1, *this);
+        return const_iterator(storage.end(), limits<array_type_element>::bits);
     }
 
     [[nodiscard]]
     constexpr auto cbegin() const {
-        return iterator_type<decltype(*this)>(0, *this);
+        return const_iterator(storage.cbegin());
     }
 
     [[nodiscard]]
     constexpr auto cend() const {
-        return iterator_type<decltype(*this)>(bits_count - 1, *this);
+        return const_iterator(storage.cend(), limits<array_type_element>::bits);
     }
 
+    // TODO: Reverse iterators.
+
   private:
-    value_type storage;
+    array_type storage;
 };
 
 }  // namespace cat

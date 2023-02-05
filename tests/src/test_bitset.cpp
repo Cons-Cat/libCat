@@ -3,7 +3,6 @@
 #include "../unit_tests.hpp"
 
 TEST(test_bitset) {
-    /*
     using namespace cat::arithmetic_literals;
 
     constexpr cat::bitset<7> bits7{};
@@ -81,13 +80,13 @@ TEST(test_bitset) {
 
     // Test const subscripting.
     constexpr cat::bitset<15> bits15 =
-        cat::bitset<15>::from(0b010101010101010_u2);
+        cat::bitset<15>::from(0b0101010101010100_u2);
     static_assert(!bits15[0]);
     static_assert(bits15[1]);
     static_assert(!bits15[2]);
 
     constexpr cat::bitset<15> bits15_2 =
-        cat::bitset<15>::from(0b101010101010101_u2);
+        cat::bitset<15>::from(0b1010101010101010_u2);
     static_assert(bits15_2[0]);
     static_assert(!bits15_2[1]);
     static_assert(bits15_2[2]);
@@ -95,25 +94,27 @@ TEST(test_bitset) {
     // Test 16 byte bitset's subscript.
     constexpr cat::bitset<128> bits128_2 =
         cat::bitset<128>::from(0xFFFFFFFF'FFFFFFFF_u8, 0xFFFFFFFF'FFFFFFFB_u8);
+    // 11111111'11111111'11111111'11111111'11111111'11111111'11111111'11111011
     static_assert(bits128_2[0]);
     static_assert(bits128_2[1]);
-    static_assert(bits128_2[2]);
-    static_assert(!bits128_2[125]);
+    static_assert(!bits128_2[2]);
+    static_assert(bits128_2[125]);
     static_assert(bits128_2[126]);
     static_assert(bits128_2[127]);
 
     // Test 16 byte bitset's subscript with bit offset.
     constexpr cat::bitset<127> bits127_2 =
         cat::bitset<127>::from(0xFFFFFFFF'FFFFFFFF_u8, 0xFFFFFFFF'FFFFFFFB_u8);
+    // 11111111'11111111'11111111'11111111'11111111'11111111'11111111'1111101
     static_assert(bits127_2[0]);
-    static_assert(bits127_2[1]);
+    static_assert(!bits127_2[1]);
     static_assert(bits127_2[2]);
     static_assert(bits127_2[125]);
-    static_assert(!bits127_2[126]);
+    static_assert(bits127_2[126]);
 
     // Test mutable subscript.
-    bits127 = cat::bitset<127>::from(cat::uint8_max >> 2u,
-                                     0xFFFFFFFF'FFFFFFFF_u8 << 1u);
+    bits127 = cat::bitset<127>::from(cat::uint8_max >> 2u, 0b00000100_u8);
+
     cat::verify(!bits127[0]);
     cat::verify(bits127[1]);
 
@@ -127,17 +128,16 @@ TEST(test_bitset) {
     bits127[0] = false;
     cat::verify(!bits127[0]);
 
-    // `const` subscript returns bool.
-    static_assert(cat::is_same<decltype(bits127_2[0]), bool>);
-    // Non-`const` subscript returns a `bit_reference`.
-    static_assert(!cat::is_same<decltype(bits127[0]), bool>);
-
     // Test this on the second element of uint8 array.
-    cat::verify(bits127[126]);
-    bits127[126] = false;
-    cat::verify(!bits127[126]);
-    bits127[126] = true;
-    cat::verify(bits127[126]);
+    // `bitset` is zero-indexed, so the largest addressable bit is 126.
+    // The left-most two bits are unset, so 126 and 125 should be unset, but 124
+    // should be set.
+    cat::verify(!bits127[125]);
+    cat::verify(bits127[124]);
+    bits127[124] = false;
+    cat::verify(!bits127[124]);
+    bits127[124] = true;
+    cat::verify(bits127[124]);
 
     // Test const `.at()`.
     _ = bits127_2.at(0).verify();
@@ -149,16 +149,21 @@ TEST(test_bitset) {
     cat::verify(!bits127.at(128).has_value());
 
     // Test const iterator.
-    // for ([[maybe_unused]] bool bit : bits127_2) {
-    // }
+    for ([[maybe_unused]] auto bit : bits127_2) {
+    }
 
-    // // Test mutable iterator.
-    // for (cat::bit_reference bit : bits127) {
-    //     bit = false;
-    // }
+    // Test mutable iterator.
+    for (cat::bit_reference bit : bits127) {
+        bit = false;
+    }
+    for (cat::bit_reference bit : bits127) {
+        cat::verify(bit == false);
+    }
 
-    // for (cat::bit_reference bit : bits127) {
-    //     cat::verify(bit == false);
-    // }
-    */
+    for (cat::bit_reference bit : bits127) {
+        bit = true;
+    }
+    for (cat::bit_reference bit : bits127) {
+        cat::verify(bit == true);
+    }
 }

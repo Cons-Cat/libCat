@@ -16,9 +16,18 @@ struct arithmetic;
 template <typename>
 struct limits {};
 
-// Unwrap all `arithmetic`s inside of `Numericlimits`.
+// Unwrap all `arithmetic`s inside of `limits`.
 template <typename T, auto policy>
 struct limits<arithmetic<T, policy>> : limits<T> {};
+
+template <typename T, auto policy>
+struct limits<arithmetic<T, policy> const> : limits<T> {};
+
+template <typename T, auto policy>
+struct limits<arithmetic<T const, policy>> : limits<T> {};
+
+template <typename T, auto policy>
+struct limits<arithmetic<T const, policy> const> : limits<T> {};
 
 // TODO: Implement `min` and `max` limits in terms of GCC macros, like
 // `__LONG_LONG_MAX__`.
