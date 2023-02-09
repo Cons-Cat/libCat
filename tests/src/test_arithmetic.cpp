@@ -144,8 +144,7 @@ TEST(test_numerals) {
     cat::verify(int4{0} <= int4{1});
 
     // Test `arithmetic_ptr` operators on raw numerals.
-    // TODO: This has ambiguous overload resolution:
-    // intptr<void> intptr_add_1 = 1 + intptr<void>{0};
+    [[maybe_unused]] intptr<void> intptr_add_1 = 1 + intptr<void>{0};
     intptr<void> intptr_add_2 = intptr<void>{0} + 1;
     cat::verify(intptr_add_2 == 1);
     intptr<void> intptr_add_3 = 1_i4 + intptr<void>{0};
@@ -153,8 +152,7 @@ TEST(test_numerals) {
     intptr<void> intptr_add_4 = intptr<void>{0} + 1_i4;
     cat::verify(intptr_add_4 == 1);
 
-    // TODO: This has ambiguous overload resolution:
-    // intptr<void> intptr_sub_1 = 1 - intptr_add_2;
+    // [[maybe_unused]] intptr<void> intptr_sub_1 = 1 - intptr_add_2;
     intptr<void> intptr_sub_2 = intptr_add_2 - 1;
     cat::verify(intptr_sub_2 == 0);
     intptr<void> intptr_sub_3 = 1_i4 - intptr_add_2;

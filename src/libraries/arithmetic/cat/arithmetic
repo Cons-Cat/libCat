@@ -120,23 +120,23 @@ using iword =
     arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policies::undefined>;
 using uword = arithmetic<__SIZE_TYPE__, overflow_policies::undefined>;
 
-template <typename from_type, typename to_type>
+template <typename left_type, typename right_type>
 concept is_safe_arithmetic_comparison =
     // `to_raw_arithmetic_type` is needed here to prevent a recursive constraint
     // in evaluating the `<` operator inside `is_signed`.
     (  // If both types have the same signed-ness:
-        (is_signed<to_raw_arithmetic_type<from_type>> ==
-         is_signed<to_raw_arithmetic_type<to_type>>)
-        // Or, if from_type is signed and larger than to_type:
-        || (is_signed<to_raw_arithmetic_type<from_type>> &&
-            !is_signed<to_raw_arithmetic_type<to_type>> &&
-            (sizeof(from_type) > sizeof(to_type)))
-        // Or, if to_type is signed and larger than from_type.
-        || (!is_signed<to_raw_arithmetic_type<from_type>> &&
-            is_signed<to_raw_arithmetic_type<to_type>> &&
-            (sizeof(from_type) < sizeof(to_type))))
+        (is_signed<to_raw_arithmetic_type<left_type>> ==
+         is_signed<to_raw_arithmetic_type<right_type>>)
+        // Or, if left_type is signed and larger than right_type:
+        || (is_signed<to_raw_arithmetic_type<left_type>> &&
+            !is_signed<to_raw_arithmetic_type<right_type>> &&
+            (sizeof(left_type) > sizeof(right_type)))
+        // Or, if right_type is signed and larger than left_type.
+        || (!is_signed<to_raw_arithmetic_type<left_type>> &&
+            is_signed<to_raw_arithmetic_type<right_type>> &&
+            (sizeof(left_type) < sizeof(right_type))))
     // And both types have the same floating-point-ness.
-    && (is_floating_point<from_type> == is_floating_point<to_type>);
+    && (is_floating_point<left_type> == is_floating_point<right_type>);
 
 // Any `arithmetic` can safely convert to a type larger than itself, but not
 // smaller than itself.
@@ -161,22 +161,28 @@ namespace detail {
         } else if constexpr (is_arithmetic_ptr<U>) {
             return U();
         } else {
+            // TODO: Propagate overflow semantics.
             if constexpr (sizeof(T) >= sizeof(U)) {
                 return arithmetic<to_raw_arithmetic_type<T>,
-                                  overflow_policies::undefined>{};
+                                  overflow_policies::undefined>();
             } else {
                 return arithmetic<to_raw_arithmetic_type<U>,
-                                  overflow_policies::undefined>{};
+                                  overflow_policies::undefined>();
             }
         }
     }
 
+    // clang-format off
     template <typename T, typename U>
-        requires((is_signed<T> == is_signed<U> ||
-                  (is_signed<T> && !is_signed<U> && sizeof(T) > sizeof(U)) ||
-                  (!is_signed<T> && is_signed<U> && sizeof(T) < sizeof(U))) &&
+        requires( // If their signed-ness is equal:
+				 (is_signed<T> == is_signed<U> ||
+                   // Or the signed type is larger than the unsigned type:
+                   (is_signed<T> && !is_signed<U> && sizeof(T) > sizeof(U)) ||
+                   (!is_signed<T> && is_signed<U> && sizeof(T) < sizeof(U))) &&
+                  // And their float-ness is equal:
                  (is_floating_point<T> == is_floating_point<U>))
     using promoted_type = decltype(promoted_arithmetic<T, U>());
+    // clang-format on
 }  // namespace detail
 
 // Overflow intrinsics optimize fairly well in GCC.
@@ -477,7 +483,7 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
         requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]]
     friend constexpr auto
-    operator<=>(arithmetic<T, policy> lhs, U rhs) {
+    operator<=>(arithmetic lhs, U rhs) {
         return lhs.raw <=> to_raw_arithmetic(rhs);
     }
 
@@ -487,7 +493,7 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
         requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]]
     friend constexpr auto
-    operator==(arithmetic<T, policy> lhs, U rhs) -> bool {
+    operator==(arithmetic lhs, U rhs) -> bool {
         return lhs.raw == to_raw_arithmetic(rhs);
     }
 
@@ -502,8 +508,7 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
         requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]]
     friend constexpr auto
-    operator+(arithmetic<T, policy> self, U operand)
-        -> detail::promoted_type<T, U> {
+    operator+(arithmetic self, U operand) -> detail::promoted_type<T, U> {
         using enum overflow_policies;
         if constexpr (policy == undefined) {
             // Make signed to guarantee undefined semantics (unless the
@@ -519,33 +524,34 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
         }
     }
 
-    template <typename U>
-    [[nodiscard]]
-    friend constexpr auto
-    operator+(U* p_operand, arithmetic<T, policy> self) -> U* {
-        return p_operand + self.raw;
-    }
-
-    // Handle left-hand-side raw operands that are larger than this.
+    // Handle left-hand-side raw operands that are larger than this. Because
+    // `operator+` is a member, the arguments cannot be order-independant
+    // without this overload.
     template <is_unsafe_arithmetic U>
         requires(is_safe_arithmetic_comparison<U, T>)
     [[nodiscard]]
     friend constexpr auto
-    operator+(U operand, arithmetic<T, policy> self)
-        -> detail::promoted_type<T, U> {
+    operator+(U operand, arithmetic self) -> detail::promoted_type<T, U> {
         return cat::arithmetic<U>(operand) + self;
     }
 
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
-    operator+(arithmetic<T, policy> self, U* p_operand) -> U* {
+    operator+(U* p_operand, arithmetic self) -> U* {
+        return p_operand + self.raw;
+    }
+
+    template <typename U>
+    [[nodiscard]]
+    friend constexpr auto
+    operator+(arithmetic self, U* p_operand) -> U* {
         return self.raw + p_operand;
     }
 
     template <is_arithmetic U>
         requires(is_safe_arithmetic_comparison<U, T>)
-    friend constexpr auto operator+=(arithmetic<T, policy>& self, U operand)
+    friend constexpr auto operator+=(arithmetic& self, U operand)
         -> arithmetic& {
         self = self + to_raw_arithmetic(operand);
         return self;
@@ -553,18 +559,16 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
 
     [[nodiscard]]
     friend constexpr auto
-    operator+(arithmetic<T, policy> self) -> arithmetic {
+    operator+(arithmetic self) -> arithmetic {
         return +(self.raw);
     }
 
-    friend constexpr auto operator++(arithmetic<T, policy>& self)
-        -> arithmetic& {
+    friend constexpr auto operator++(arithmetic& self) -> arithmetic& {
         self += static_cast<T>(1);
         return self;
     }
 
-    friend constexpr auto operator++(arithmetic<T, policy>& self, int)
-        -> arithmetic& {
+    friend constexpr auto operator++(arithmetic& self, int) -> arithmetic& {
         self += static_cast<T>(1);
         return self;
     }
@@ -573,8 +577,7 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
         requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]]
     friend constexpr auto
-    operator-(arithmetic<T, policy> self, U operand)
-        -> detail::promoted_type<T, U> {
+    operator-(arithmetic self, U operand) -> detail::promoted_type<T, U> {
         using enum overflow_policies;
         if constexpr (policy == undefined) {
             // TODO: See if using `[[assume()]]` actually optimizes this.
@@ -598,28 +601,27 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
         requires(is_safe_arithmetic_comparison<U, T>)
     [[nodiscard]]
     friend constexpr auto
-    operator-(U operand, arithmetic<T, policy> self)
-        -> detail::promoted_type<T, U> {
+    operator-(U operand, arithmetic self) -> detail::promoted_type<T, U> {
         return cat::arithmetic<U>(operand) - self;
     }
 
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
-    operator-(U* p_operand, arithmetic<T, policy> self) -> U* {
+    operator-(U* p_operand, arithmetic self) -> U* {
         return p_operand - self.raw;
     }
 
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
-    operator-(arithmetic<T, policy> self, U* p_operand) -> U* {
+    operator-(arithmetic self, U* p_operand) -> U* {
         return self.raw - p_operand;
     }
 
     template <is_arithmetic U>
         requires(is_safe_arithmetic_comparison<T, U>)
-    friend constexpr auto operator-=(arithmetic<T, policy>& self, U operand)
+    friend constexpr auto operator-=(arithmetic& self, U operand)
         -> arithmetic& {
         self = self - to_raw_arithmetic(operand);
         return self;
@@ -627,20 +629,18 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
 
     [[nodiscard]]
     friend constexpr auto
-    operator-(arithmetic<T, policy> self) -> arithmetic
+    operator-(arithmetic self) -> arithmetic
         requires(is_signed<T>)
     {
         return -(self.raw);
     }
 
-    friend constexpr auto operator--(arithmetic<T, policy>& self)
-        -> arithmetic& {
+    friend constexpr auto operator--(arithmetic& self) -> arithmetic& {
         self -= static_cast<T>(1);
         return self;
     }
 
-    friend constexpr auto operator--(arithmetic<T, policy>& self, int)
-        -> arithmetic& {
+    friend constexpr auto operator--(arithmetic& self, int) -> arithmetic& {
         self -= static_cast<T>(1);
         return self;
     }
@@ -649,8 +649,7 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
         requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]]
     friend constexpr auto
-    operator*(arithmetic<T, policy> self, U operand)
-        -> detail::promoted_type<T, U> {
+    operator*(arithmetic self, U operand) -> detail::promoted_type<T, U> {
         using enum overflow_policies;
         if constexpr (policy == overflow_policies::undefined) {
             // TODO: See if using `[[assume()]]` actually optimizes this.
@@ -675,28 +674,27 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
         requires(is_safe_arithmetic_comparison<U, T>)
     [[nodiscard]]
     friend constexpr auto
-    operator*(U operand, arithmetic<T, policy> self)
-        -> detail::promoted_type<T, U> {
+    operator*(U operand, arithmetic self) -> detail::promoted_type<T, U> {
         return cat::arithmetic<U>(operand) * self;
     }
 
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
-    operator*(U* p_operand, arithmetic<T, policy> self) -> U* {
+    operator*(U* p_operand, arithmetic self) -> U* {
         return p_operand * self.raw;
     }
 
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
-    operator*(arithmetic<T, policy> self, U* p_operand) -> U* {
+    operator*(arithmetic self, U* p_operand) -> U* {
         return p_operand * self.raw;
     }
 
     template <is_arithmetic U>
         requires(is_safe_arithmetic_comparison<U, T>)
-    friend constexpr auto operator*=(arithmetic<T, policy>& self, U operand)
+    friend constexpr auto operator*=(arithmetic& self, U operand)
         -> arithmetic& {
         self = self * to_raw_arithmetic(operand);
         return self;
@@ -706,8 +704,7 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
         requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]]
     friend constexpr auto
-    operator/(arithmetic<T, policy> self, U operand)
-        -> detail::promoted_type<T, U> {
+    operator/(arithmetic self, U operand) -> detail::promoted_type<T, U> {
         using enum overflow_policies;
         if constexpr (policy == undefined) {
             // TODO: See if using `[[assume()]]` actually optimizes this.
@@ -731,28 +728,27 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
         requires(is_safe_arithmetic_comparison<U, T>)
     [[nodiscard]]
     friend constexpr auto
-    operator/(U operand, arithmetic<T, policy> self)
-        -> detail::promoted_type<T, U> {
+    operator/(U operand, arithmetic self) -> detail::promoted_type<T, U> {
         return cat::arithmetic<U>(operand) / self;
     }
 
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
-    operator/(U* p_operand, arithmetic<T, policy> self) -> U* {
+    operator/(U* p_operand, arithmetic self) -> U* {
         return p_operand / self.raw;
     }
 
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
-    operator/(arithmetic<T, policy> self, U* p_operand) -> U* {
+    operator/(arithmetic self, U* p_operand) -> U* {
         return p_operand / self.raw;
     }
 
     template <is_arithmetic U>
         requires(is_safe_arithmetic_comparison<U, T>)
-    friend constexpr auto operator/=(arithmetic<T, policy>& self, U operand)
+    friend constexpr auto operator/=(arithmetic& self, U operand)
         -> arithmetic& {
         self = self / to_raw_arithmetic(operand);
         return self;
@@ -762,8 +758,7 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
         requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]]
     friend constexpr auto
-    operator%(arithmetic<T, policy> self, U operand)
-        -> detail::promoted_type<T, U> {
+    operator%(arithmetic self, U operand) -> detail::promoted_type<T, U> {
         return detail::promoted_type<T, U>{self.raw %
                                            to_raw_arithmetic(operand)};
     }
@@ -771,20 +766,20 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
-    operator%(U* p_operand, arithmetic<T, policy> self) -> U* {
+    operator%(U* p_operand, arithmetic self) -> U* {
         return p_operand % self.raw;
     }
 
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
-    operator%(arithmetic<T, policy> self, U* p_operand) -> U* {
+    operator%(arithmetic self, U* p_operand) -> U* {
         return p_operand % self.raw;
     }
 
     template <is_arithmetic U>
         requires(is_safe_arithmetic_comparison<U, T>)
-    friend constexpr auto operator%=(arithmetic<T, policy>& self, U operand)
+    friend constexpr auto operator%=(arithmetic& self, U operand)
         -> arithmetic& {
         self.raw %= to_raw_arithmetic(operand);
         return self;
@@ -794,8 +789,7 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
         requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]]
     friend constexpr auto
-    operator&(arithmetic<T, policy> self, U operand)
-        -> detail::promoted_type<T, U> {
+    operator&(arithmetic self, U operand) -> detail::promoted_type<T, U> {
         return detail::promoted_type<T, U>{self.raw &
                                            to_raw_arithmetic(operand)};
     }
@@ -803,20 +797,20 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
-    operator&(U* p_operand, arithmetic<T, policy> self) -> U* {
+    operator&(U* p_operand, arithmetic self) -> U* {
         return p_operand & self.raw;
     }
 
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
-    operator&(arithmetic<T, policy> self, U* p_operand) -> U* {
+    operator&(arithmetic self, U* p_operand) -> U* {
         return p_operand & self.raw;
     }
 
     template <is_arithmetic U>
         requires(is_safe_arithmetic_comparison<U, T>)
-    friend constexpr auto operator&=(arithmetic<T, policy>& self, U operand)
+    friend constexpr auto operator&=(arithmetic& self, U operand)
         -> arithmetic& {
         self.raw &= to_raw_arithmetic(operand);
         return self;
@@ -826,8 +820,7 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
         requires(is_safe_arithmetic_comparison<U, T>)
     [[nodiscard]]
     friend constexpr auto
-    operator|(arithmetic<T, policy> self, U operand)
-        -> detail::promoted_type<T, U> {
+    operator|(arithmetic self, U operand) -> detail::promoted_type<T, U> {
         return detail::promoted_type<T, U>{self.raw |
                                            to_raw_arithmetic(operand)};
     }
@@ -835,20 +828,20 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
-    operator|(U* p_operand, arithmetic<T, policy> self) -> U* {
+    operator|(U* p_operand, arithmetic self) -> U* {
         return p_operand | self.raw;
     }
 
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
-    operator|(arithmetic<T, policy> self, U* p_operand) -> U* {
+    operator|(arithmetic self, U* p_operand) -> U* {
         return p_operand | self.raw;
     }
 
     template <is_arithmetic U>
         requires(is_safe_arithmetic_comparison<U, T>)
-    friend constexpr auto operator|=(arithmetic<T, policy>& self, U operand)
+    friend constexpr auto operator|=(arithmetic& self, U operand)
         -> arithmetic& {
         self.raw |= to_raw_arithmetic(operand);
         return self;
@@ -857,7 +850,7 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
     template <is_integral U>
     [[nodiscard]]
     friend constexpr auto
-    operator<<(arithmetic<T, policy> self, U operand) -> arithmetic<T> {
+    operator<<(arithmetic self, U operand) -> arithmetic<T> {
         if constexpr (policy == overflow_policies::saturate) {
             return sat_shl(to_raw_arithmetic(self), to_raw_arithmetic(operand));
         } else {
@@ -868,26 +861,26 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
     template <is_raw_integral U>
     [[nodiscard]]
     friend constexpr auto
-    operator<<(U lhs, arithmetic<T, policy> rhs) -> U {
+    operator<<(U lhs, arithmetic rhs) -> U {
         return lhs << rhs.raw;
     }
 
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
-    operator<<(U* p_operand, arithmetic<T, policy> self) -> U* {
+    operator<<(U* p_operand, arithmetic self) -> U* {
         return p_operand << self.raw;
     }
 
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
-    operator<<(arithmetic<T, policy> self, U* p_operand) -> U* {
+    operator<<(arithmetic self, U* p_operand) -> U* {
         return p_operand << self.raw;
     }
 
     template <is_integral U>
-    friend constexpr auto operator<<=(arithmetic<T, policy>& self, U operand)
+    friend constexpr auto operator<<=(arithmetic& self, U operand)
         -> arithmetic& {
         self = self << to_raw_arithmetic(operand);
         return self;
@@ -896,7 +889,7 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
     template <is_integral U>
     [[nodiscard]]
     friend constexpr auto
-    operator>>(arithmetic<T, policy> self, U operand) -> arithmetic<T> {
+    operator>>(arithmetic self, U operand) -> arithmetic<T> {
         if constexpr (policy == overflow_policies::saturate) {
             return sat_shr(to_raw_arithmetic(self), to_raw_arithmetic(operand));
         } else {
@@ -907,26 +900,26 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
     template <is_raw_integral U>
     [[nodiscard]]
     friend constexpr auto
-    operator>>(U lhs, arithmetic<T, policy> rhs) -> U {
+    operator>>(U lhs, arithmetic rhs) -> U {
         return lhs >> rhs.raw;
     }
 
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
-    operator>>(U* p_operand, arithmetic<T, policy> self) -> U* {
+    operator>>(U* p_operand, arithmetic self) -> U* {
         return p_operand >> self.raw;
     }
 
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
-    operator>>(arithmetic<T, policy> self, U* p_operand) -> U* {
+    operator>>(arithmetic self, U* p_operand) -> U* {
         return p_operand >> self.raw;
     }
 
     template <is_integral U>
-    friend constexpr auto operator>>=(arithmetic<T, policy>& self, U operand)
+    friend constexpr auto operator>>=(arithmetic& self, U operand)
         -> arithmetic& {
         self = self >> to_raw_arithmetic(operand);
         return self;
@@ -934,7 +927,7 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
 
     [[nodiscard]]
     friend constexpr auto
-    operator~(arithmetic<T, policy> self) -> arithmetic
+    operator~(arithmetic self) -> arithmetic
         requires(is_integral<T>)
     {
         return ~(self.raw);
@@ -964,10 +957,8 @@ struct arithmetic_ptr : arithmetic<storage_type, policy> {
     using ptr = T*;
 
     constexpr arithmetic_ptr() = default;
-    constexpr arithmetic_ptr(arithmetic_ptr<T, storage_type, policy> const&) =
-        default;
-    constexpr arithmetic_ptr(arithmetic_ptr<T, storage_type, policy>&&) =
-        default;
+    constexpr arithmetic_ptr(arithmetic_ptr const&) = default;
+    constexpr arithmetic_ptr(arithmetic_ptr&&) = default;
 
     template <is_integral U>
         requires(is_safe_arithmetic_conversion<U, storage_type>)
@@ -1023,8 +1014,7 @@ struct arithmetic_ptr : arithmetic<storage_type, policy> {
     // TODO: Cat assignment be `default`?
     // TODO: This redundant assignment operator is required by GCC.
     constexpr auto
-    operator=(arithmetic_ptr<T, storage_type, policy> operand)
-        -> arithmetic_ptr& {
+    operator=(arithmetic_ptr operand) -> arithmetic_ptr& {
         this->raw = operand.raw;
         return *this;
     }
@@ -1040,7 +1030,7 @@ struct arithmetic_ptr : arithmetic<storage_type, policy> {
         requires(is_safe_arithmetic_comparison<storage_type, U>)
     [[nodiscard]]
     friend constexpr auto
-    operator<=>(arithmetic_ptr<T, storage_type, policy> lhs, U rhs) {
+    operator<=>(arithmetic_ptr lhs, U rhs) {
         return lhs.raw <=> to_raw_arithmetic(rhs);
     }
 
@@ -1051,18 +1041,25 @@ struct arithmetic_ptr : arithmetic<storage_type, policy> {
         requires(is_safe_arithmetic_comparison<storage_type, U>)
     [[nodiscard]]
     friend constexpr auto
-    operator==(arithmetic_ptr<T, storage_type, policy> lhs, U rhs) -> bool {
+    operator==(arithmetic_ptr lhs, U rhs) -> bool {
         return lhs.raw == to_raw_arithmetic(rhs);
     }
-
-    // TODO: `requires` constraints on these operators makes GCC 13's
-    // argument dependant lookup become ambiguous for some reason.
 
     template <is_integral U>
     [[nodiscard]]
     friend constexpr auto
-    operator+(arithmetic_ptr<T, storage_type, policy> self, U operand)
-        -> arithmetic_ptr {
+    operator+(arithmetic_ptr self, U operand) -> arithmetic_ptr {
+        return self.raw + to_raw_arithmetic(operand);
+    }
+
+    // Handle left-hand-side raw operands that are larger than this. Because
+    // `operator+` is a member, the arguments cannot be order-independant
+    // without this overload.
+    template <is_integral U>
+        requires(is_unsafe_arithmetic<U>)
+    [[nodiscard]]
+    friend constexpr auto
+    operator+(U operand, arithmetic_ptr self) -> arithmetic_ptr {
         return self.raw + to_raw_arithmetic(operand);
     }
 
@@ -1074,25 +1071,23 @@ struct arithmetic_ptr : arithmetic<storage_type, policy> {
 
     [[nodiscard]]
     friend constexpr auto
-    operator+(arithmetic_ptr<T, storage_type, policy> self) -> arithmetic_ptr {
+    operator+(arithmetic_ptr self) -> arithmetic_ptr {
         return +(self.raw);
     }
 
-    friend constexpr auto operator++(
-        arithmetic_ptr<T, storage_type, policy>& self) -> arithmetic_ptr {
+    friend constexpr auto operator++(arithmetic_ptr& self) -> arithmetic_ptr {
         return ++(self.raw);
     }
 
-    friend constexpr auto operator++(
-        arithmetic_ptr<T, storage_type, policy>& self, int) -> arithmetic_ptr {
+    friend constexpr auto operator++(arithmetic_ptr& self, int)
+        -> arithmetic_ptr {
         return (self.raw)++;
     }
 
     template <is_integral U>
     [[nodiscard]]
     friend constexpr auto
-    operator-(arithmetic_ptr<T, storage_type, policy> self, U operand)
-        -> arithmetic_ptr {
+    operator-(arithmetic_ptr self, U operand) -> arithmetic_ptr {
         return self.raw - to_raw_arithmetic(operand);
     }
 
@@ -1105,25 +1100,23 @@ struct arithmetic_ptr : arithmetic<storage_type, policy> {
 
     [[nodiscard]]
     friend constexpr auto
-    operator-(arithmetic_ptr<T, storage_type, policy> self) -> arithmetic_ptr {
+    operator-(arithmetic_ptr self) -> arithmetic_ptr {
         return -(self.raw);
     }
 
-    friend constexpr auto operator--(
-        arithmetic_ptr<T, storage_type, policy>& self) -> arithmetic_ptr& {
+    friend constexpr auto operator--(arithmetic_ptr& self) -> arithmetic_ptr& {
         return --(self.raw);
     }
 
-    friend constexpr auto operator--(
-        arithmetic_ptr<T, storage_type, policy>& self, int) -> arithmetic_ptr& {
+    friend constexpr auto operator--(arithmetic_ptr& self, int)
+        -> arithmetic_ptr& {
         return (self.raw)--;
     }
 
     template <is_integral U>
     [[nodiscard]]
     friend constexpr auto
-    operator*(arithmetic_ptr<T, storage_type, policy> self, U operand)
-        -> arithmetic_ptr {
+    operator*(arithmetic_ptr self, U operand) -> arithmetic_ptr {
         return self.raw * to_raw_arithmetic(operand);
     }
 
@@ -1136,8 +1129,7 @@ struct arithmetic_ptr : arithmetic<storage_type, policy> {
     template <is_integral U>
     [[nodiscard]]
     friend constexpr auto
-    operator/(arithmetic_ptr<T, storage_type, policy> self, U operand)
-        -> arithmetic_ptr {
+    operator/(arithmetic_ptr self, U operand) -> arithmetic_ptr {
         return self.raw / to_raw_arithmetic(operand);
     }
 
@@ -1150,8 +1142,7 @@ struct arithmetic_ptr : arithmetic<storage_type, policy> {
     template <is_integral U>
     [[nodiscard]]
     friend constexpr auto
-    operator%(arithmetic_ptr<T, storage_type, policy> self, U operand)
-        -> arithmetic_ptr<T, storage_type, policy> {
+    operator%(arithmetic_ptr self, U operand) -> arithmetic_ptr {
         return self.raw % to_raw_arithmetic(operand);
     }
 
@@ -1164,8 +1155,7 @@ struct arithmetic_ptr : arithmetic<storage_type, policy> {
     template <is_integral U>
     [[nodiscard]]
     friend constexpr auto
-    operator&(arithmetic_ptr<T, storage_type, policy> self, U operand)
-        -> arithmetic_ptr<T, storage_type, policy> {
+    operator&(arithmetic_ptr self, U operand) -> arithmetic_ptr {
         return self.raw & to_raw_arithmetic(operand);
     }
 
@@ -1178,8 +1168,7 @@ struct arithmetic_ptr : arithmetic<storage_type, policy> {
     template <is_integral U>
     [[nodiscard]]
     friend constexpr auto
-    operator|(arithmetic_ptr<T, storage_type, policy> self, U operand)
-        -> arithmetic_ptr<T, storage_type, policy> {
+    operator|(arithmetic_ptr self, U operand) -> arithmetic_ptr {
         return self.raw | to_raw_arithmetic(operand);
     }
 
@@ -1194,7 +1183,7 @@ struct arithmetic_ptr : arithmetic<storage_type, policy> {
     template <is_integral U>
     [[nodiscard]]
     constexpr auto
-    operator<<(U operand) const -> arithmetic_ptr<T, storage_type, policy> {
+    operator<<(U operand) const -> arithmetic_ptr {
         return static_cast<storage_type>(this->raw
                                          << to_raw_arithmetic(operand));
     }
@@ -1208,7 +1197,7 @@ struct arithmetic_ptr : arithmetic<storage_type, policy> {
     template <is_integral U>
     [[nodiscard]]
     constexpr auto
-    operator>>(U operand) const -> arithmetic_ptr<T, storage_type, policy> {
+    operator>>(U operand) const -> arithmetic_ptr {
         return static_cast<storage_type>(this->raw >>
                                          to_raw_arithmetic(operand));
     }

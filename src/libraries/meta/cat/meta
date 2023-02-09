@@ -459,9 +459,8 @@ namespace detail {
     // TODO: Include halfs, `_Float16`, `__fp16`, `__bf16`, etc.
     template <typename T>
     inline constexpr bool is_floating_point_detail =
-        __is_same(remove_cv<T>, float) || __is_same(remove_cv<T>, double) ||
-        __is_same(remove_cv<T>, long double) ||
-        __is_same(remove_cv<T>, __float128);
+        __is_same(T, float) || __is_same(T, double) ||
+        __is_same(T, long double) || __is_same(T, __float128);
 
     template <typename T, auto policy>
     inline constexpr bool is_floating_point_detail<arithmetic<T, policy>> =
@@ -469,7 +468,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-concept is_floating_point = detail::is_floating_point_detail<T>;
+concept is_floating_point = detail::is_floating_point_detail<remove_cv<T>>;
 
 template <is_floating_point T>
 struct detail::make_signed_trait<T> {
@@ -477,21 +476,14 @@ struct detail::make_signed_trait<T> {
 };
 
 namespace detail {
-    // TODO: Remove references as well. That breaks some traits for some reason.
-    // TODO: Support 16-byte integers.
     template <typename T>
     inline constexpr bool is_integral_detail =
-        __is_same(remove_cv<T>, char) ||  //
-        __is_same(remove_cv<T>, signed char) ||
-        __is_same(remove_cv<T>, unsigned char) ||
-        __is_same(remove_cv<T>, signed short) ||
-        __is_same(remove_cv<T>, unsigned short) ||
-        __is_same(remove_cv<T>, signed int) ||
-        __is_same(remove_cv<T>, unsigned int) ||
-        __is_same(remove_cv<T>, signed long) ||
-        __is_same(remove_cv<T>, unsigned long) ||
-        __is_same(remove_cv<T>, signed long long) ||
-        __is_same(remove_cv<T>, unsigned long long);
+        __is_same(T, char) || __is_same(T, signed char) ||
+        __is_same(T, unsigned char) || __is_same(T, signed short) ||
+        __is_same(T, unsigned short) || __is_same(T, signed int) ||
+        __is_same(T, unsigned int) || __is_same(T, signed long) ||
+        __is_same(T, unsigned long) || __is_same(T, signed long long) ||
+        __is_same(T, unsigned long long);
 
     template <typename T, auto policy>
     inline constexpr bool is_integral_detail<arithmetic<T, policy>> =
@@ -507,8 +499,8 @@ concept is_integral = detail::is_integral_detail<remove_cv<T>>;
 
 template <typename T>
 concept is_bool =
-    __is_same(T, remove_cvref<bool>) || __is_same(T, remove_cvref<bool2>) ||
-    __is_same(T, remove_cvref<bool4>);
+    __is_same(remove_cv<T>, bool) || __is_same(remove_cv<T>, bool2) ||
+    __is_same(remove_cv<T>, bool4);
 
 template <typename T>
 concept is_arithmetic = is_integral<T> || is_floating_point<T>;
