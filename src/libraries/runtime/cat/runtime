@@ -15,30 +15,35 @@ extern "C"
 #ifndef NO_ARGC_ARGV
       gnu::naked
 #endif
-]] void
-    _start();  // NOLINT
+]]
+    void _start();  // NOLINT
 
 namespace cat {
+
 // The `cat::exit()` function is provided globally. This streamlines out the
 // existence of `_exit()`.
-[[noreturn]] void exit(ssize exit_code = 0);
+[[noreturn]]
+void exit(iword exit_code = 0);
 
 auto load_base_stack_pointer() -> void*;
 
 // This must be inlined to align the stack pointer on the stack frame it is
 // called from.
-[[gnu::always_inline]] inline void align_stack_pointer_16() {
+[[gnu::always_inline]]
+inline void align_stack_pointer_16() {
     asm("and $-16, %rsp");
 }
 
 // This must be inlined to align the stack pointer on the stack frame it is
 // called from.
-[[gnu::always_inline]] inline void align_stack_pointer_32() {
+[[gnu::always_inline]]
+inline void align_stack_pointer_32() {
     asm("and $-32, %rsp");
 }
 
+extern "C" [[noreturn]]
 // NOLINTNEXTLINE `__stack_chk_fail()` must begin with a double underscore.
-extern "C" [[noreturn]] void __stack_chk_fail();
+void __stack_chk_fail();
 
 // NOLINTNEXTLINE `__cxa_atexit()` must begin with a double underscore.
 extern "C" void __cxa_atexit(void (*p_invocable)(void*), void* p_arg,
@@ -46,6 +51,7 @@ extern "C" void __cxa_atexit(void (*p_invocable)(void*), void* p_arg,
 
 class jmp_buffer {
     // This buffer layout should vary by all ISAs.
+
   private:
     // %rbx:
     // %rbp:
@@ -58,21 +64,22 @@ class jmp_buffer {
     [[maybe_unused]] unsigned long stack_pointer;
 };
 
-[[gnu::naked]] auto setjmp(jmp_buffer& jump_point) -> int;
+[[gnu::naked]]
+auto setjmp(jmp_buffer& jump_point) -> int;
 
-[[noreturn, gnu::naked]] void longjmp(jmp_buffer& jump_point,
-                                      int8 return_value);
+[[noreturn, gnu::naked]]
+void longjmp(jmp_buffer& jump_point, int8 return_value);
 
 #ifdef __SANITIZE_ADDRESS__
 extern "C" {
 // TODO: Comment these with documentation and use safer types.
-void __asan_poison_memory_region(void const volatile* p_address, usize size);
-void __asan_unpoison_memory_region(void const volatile* p_address, usize size);
+void __asan_poison_memory_region(void const volatile* p_address, uword size);
+void __asan_unpoison_memory_region(void const volatile* p_address, uword size);
 
 // These functions are only for debugging.
 void __asan_describe_address(void* p_address);
 auto __asan_address_is_poisoned(void const volatile* p_address) -> int;
-auto __asan_region_is_poisoned(void* p_begin, usize size) -> void*;
+auto __asan_region_is_poisoned(void* p_begin, uword size) -> void*;
 auto __asan_report_present() -> int;
 auto __asan_get_report_pc() -> void*;
 auto __asan_get_report_bp() -> void*;
@@ -81,14 +88,14 @@ auto __asan_get_report_address() -> void*;
 auto __asan_get_report_access_type() -> int;
 auto __asan_get_report_access_size() -> __SIZE_TYPE__;
 auto __asan_get_report_description() -> char const*;
-auto __asan_locate_address(void* p_address, char* p_name, usize name_size,
-                           void** p_region_address, usize* region_size)
+auto __asan_locate_address(void* p_address, char* p_name, uword name_size,
+                           void** p_region_address, uword* region_size)
     -> char const*;
-auto __asan_get_alloc_stack(void* p_heap, void** pp_trace, usize size,
+auto __asan_get_alloc_stack(void* p_heap, void** pp_trace, uword size,
                             int* p_thread_id) -> __SIZE_TYPE__;
-auto __asan_get_free_stack(void* p_heap, void** pp_trace, usize size,
+auto __asan_get_free_stack(void* p_heap, void** pp_trace, uword size,
                            int* p_thread_id) -> __SIZE_TYPE__;
-void __asan_get_shadow_mapping(usize* p_shadow_scale, usize* p_shadow_offset);
+void __asan_get_shadow_mapping(uword* p_shadow_scale, uword* p_shadow_offset);
 }
 #else
 // TODO: Provide no-op implementations of these functions.

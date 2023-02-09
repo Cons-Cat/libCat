@@ -49,10 +49,10 @@ TEST(test_compare_strings) {
     cat::verify(cat::compare_strings(hello_world, "Hello, world!"));
     cat::verify(cat::compare_strings(const_hello_world, "Hello, world!"));
 
-    ssize const h = const_string_1.find('H').value();
-    ssize const e = const_string_1.find('e').value();
-    ssize const l = const_string_1.find('l').value();
-    ssize const o = const_string_1.find('o').value();
+    iword const h = const_string_1.find('H').value();
+    iword const e = const_string_1.find('e').value();
+    iword const l = const_string_1.find('l').value();
+    iword const o = const_string_1.find('o').value();
     cat::verify(h == 0);
     cat::verify(e == 1);
     cat::verify(l == 2);

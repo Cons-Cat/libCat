@@ -109,11 +109,11 @@ consteval auto cat::to_string(int4 value) -> string {
     // An `int4` string never exceeds 11 characters, excluding the
     // null-terminator.
     char* p_string = new char[11];
-    for (ssize::raw_type i = 0; i < 11; ++i) {
+    for (iword::raw_type i = 0; i < 11; ++i) {
         p_string[i] = '\0';
     }
 
-    ssize::raw_type i = 0;
+    iword::raw_type i = 0;
 
     // Handle a negative sign.
     if (value < 0) {

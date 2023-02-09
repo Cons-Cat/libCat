@@ -14,12 +14,12 @@ namespace detail {
 
     template <typename T>
     struct variant_node<T> {
-        template <ssize>
+        template <iword>
         constexpr auto get() & -> T& {
             return this->storage;
         }
 
-        template <ssize>
+        template <iword>
         constexpr auto get() const& -> T const& {
             return this->storage;
         }
@@ -36,7 +36,7 @@ namespace detail {
         // through the alternative types that many times. Then it returns a
         // reference to the storage of this node it has reached.
 
-        template <ssize remaining_recursions>
+        template <iword remaining_recursions>
         constexpr auto get() & -> auto& {
             if constexpr (remaining_recursions == 0) {
                 return this->storage;
@@ -46,7 +46,7 @@ namespace detail {
             }
         }
 
-        template <ssize remaining_recursions>
+        template <iword remaining_recursions>
         constexpr auto get() const& -> auto& {
             if constexpr (remaining_recursions == 0) {
                 return this->storage;

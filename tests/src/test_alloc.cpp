@@ -307,167 +307,167 @@ TEST(test_alloc) {
 
     // Test `opq_nalloc`.
     allocator.reset();
-    ssize nalloc = allocator.opq_nalloc<int4>().value();
+    iword nalloc = allocator.opq_nalloc<int4>().value();
     cat::verify(nalloc == ssizeof(int4));
 
     // Test `opq_xnalloc`.
     allocator.reset();
-    ssize xnalloc = allocator.opq_xnalloc<int4>();
+    iword xnalloc = allocator.opq_xnalloc<int4>();
     cat::verify(xnalloc == ssizeof(int4));
 
     // Test `nalloc_multi`.
     allocator.reset();
-    ssize nalloc_multi = allocator.opq_nalloc_multi<int4>(5).value();
+    iword nalloc_multi = allocator.opq_nalloc_multi<int4>(5).value();
     cat::verify(nalloc_multi == (ssizeof(int4) * 5));
 
     // Test `xnalloc_multi`.
     allocator.reset();
-    ssize xnalloc_multi = allocator.opq_xnalloc_multi<int4>(5);
+    iword xnalloc_multi = allocator.opq_xnalloc_multi<int4>(5);
     cat::verify(xnalloc_multi == (ssizeof(int4) * 5));
 
     // Test `opq_align_nalloc`.
     allocator.reset();
-    ssize align_nalloc = allocator.opq_align_nalloc<int4>(4u).value();
+    iword align_nalloc = allocator.opq_align_nalloc<int4>(4u).value();
     cat::verify(align_nalloc == ssizeof(int4));
 
     // Test `opq_align_xnalloc`.
     allocator.reset();
-    ssize align_xnalloc = allocator.opq_align_xnalloc<int4>(4u);
+    iword align_xnalloc = allocator.opq_align_xnalloc<int4>(4u);
     cat::verify(align_xnalloc == ssizeof(int4));
 
     // Test `align_nalloc_multi`.
     allocator.reset();
-    ssize align_nalloc_multi =
+    iword align_nalloc_multi =
         allocator.opq_align_nalloc_multi<int4>(4u, 5).value();
     cat::verify(align_nalloc_multi == (ssizeof(int4) * 5));
 
     // Test `align_xnalloc_multi`.
     allocator.reset();
-    ssize align_xnalloc_multi = allocator.opq_align_xnalloc_multi<int4>(4u, 5);
+    iword align_xnalloc_multi = allocator.opq_align_xnalloc_multi<int4>(4u, 5);
     cat::verify(align_xnalloc_multi == (ssizeof(int4) * 5));
 
     // Test `opq_unalign_nalloc`.
     allocator.reset();
-    ssize unalign_nalloc = allocator.opq_unalign_nalloc<int4>().value();
+    iword unalign_nalloc = allocator.opq_unalign_nalloc<int4>().value();
     cat::verify(unalign_nalloc == ssizeof(int4));
 
     // Test `opq_unalign_xnalloc`.
     allocator.reset();
-    ssize unalign_xnalloc = allocator.opq_unalign_xnalloc<int4>();
+    iword unalign_xnalloc = allocator.opq_unalign_xnalloc<int4>();
     cat::verify(unalign_xnalloc == ssizeof(int4));
 
     // Test `unalign_nalloc_multi`.
     allocator.reset();
-    ssize unalign_nalloc_multi =
+    iword unalign_nalloc_multi =
         allocator.opq_unalign_nalloc_multi<int4>(5).value();
     cat::verify(unalign_nalloc_multi == (ssizeof(int4) * 5));
 
     // Test `unalign_xnalloc_multi`.
     allocator.reset();
-    ssize unalign_xnalloc_multi = allocator.opq_unalign_xnalloc_multi<int4>(5);
+    iword unalign_xnalloc_multi = allocator.opq_unalign_xnalloc_multi<int4>(5);
     cat::verify(unalign_xnalloc_multi == (ssizeof(int4) * 5));
 
     // Test `opq_inline_nalloc`.
     allocator.reset();
-    ssize inline_nalloc = allocator.opq_inline_nalloc<int4>().value();
+    iword inline_nalloc = allocator.opq_inline_nalloc<int4>().value();
     cat::verify(inline_nalloc == cat::inline_buffer_size);
-    ssize inline_nalloc_big =
+    iword inline_nalloc_big =
         allocator.opq_inline_nalloc<alloc_huge_object>().value();
     cat::verify(inline_nalloc_big == 257);
 
     // Test `opq_inline_xnalloc`.
     allocator.reset();
-    ssize inline_xnalloc = allocator.opq_inline_xnalloc<int4>();
+    iword inline_xnalloc = allocator.opq_inline_xnalloc<int4>();
     cat::verify(inline_xnalloc == cat::inline_buffer_size);
-    ssize inline_xnalloc_big =
+    iword inline_xnalloc_big =
         allocator.opq_inline_xnalloc<alloc_huge_object>();
     cat::verify(inline_xnalloc_big == 257);
 
     // Test `inline_nalloc_multi`.
     allocator.reset();
-    ssize inline_nalloc_multi =
+    iword inline_nalloc_multi =
         allocator.opq_inline_nalloc_multi<int4>(5).value();
     cat::verify(inline_nalloc_multi == cat::inline_buffer_size);
-    ssize inline_nalloc_multi_big =
+    iword inline_nalloc_multi_big =
         allocator.opq_inline_nalloc_multi<alloc_huge_object>(2).value();
     cat::verify(inline_nalloc_multi_big == (257 * 2));
 
     // Test `inline_xnalloc_multi`.
     allocator.reset();
-    ssize inline_xnalloc_multi = allocator.opq_inline_xnalloc_multi<int4>(5);
+    iword inline_xnalloc_multi = allocator.opq_inline_xnalloc_multi<int4>(5);
     cat::verify(inline_xnalloc_multi == cat::inline_buffer_size);
-    ssize inline_xnalloc_multi_big =
+    iword inline_xnalloc_multi_big =
         allocator.opq_inline_xnalloc_multi<alloc_huge_object>(2);
     cat::verify(inline_xnalloc_multi_big == (257 * 2));
 
     // Test `opq_inline_align_nalloc`.
     allocator.reset();
-    ssize inline_align_nalloc =
+    iword inline_align_nalloc =
         allocator.opq_inline_align_nalloc<int4>(4u).value();
     cat::verify(inline_align_nalloc == cat::inline_buffer_size);
-    ssize inline_align_nalloc_big =
+    iword inline_align_nalloc_big =
         allocator.opq_inline_align_nalloc<alloc_huge_object>(1u).value();
     cat::verify(inline_align_nalloc_big == 257);
 
     // Test `opq_inline_align_xnalloc`.
     allocator.reset();
-    ssize inline_align_xnalloc = allocator.opq_inline_align_xnalloc<int4>(4u);
+    iword inline_align_xnalloc = allocator.opq_inline_align_xnalloc<int4>(4u);
     cat::verify(inline_align_xnalloc == cat::inline_buffer_size);
-    ssize inline_align_xnalloc_big =
+    iword inline_align_xnalloc_big =
         allocator.opq_inline_align_xnalloc<alloc_huge_object>(1u);
     cat::verify(inline_align_xnalloc_big == 257);
 
     // Test `opq_inline_unalign_nalloc`.
     allocator.reset();
-    ssize inline_unalign_nalloc =
+    iword inline_unalign_nalloc =
         allocator.opq_inline_unalign_nalloc<int4>().value();
     cat::verify(inline_unalign_nalloc == cat::inline_buffer_size);
-    ssize inline_unalign_nalloc_big =
+    iword inline_unalign_nalloc_big =
         allocator.opq_inline_unalign_nalloc<alloc_huge_object>().value();
     cat::verify(inline_unalign_nalloc_big == 257);
 
     // Test `opq_inline_unalign_xnalloc`.
     allocator.reset();
-    ssize inline_unalign_xnalloc = allocator.opq_inline_unalign_xnalloc<int4>();
+    iword inline_unalign_xnalloc = allocator.opq_inline_unalign_xnalloc<int4>();
     cat::verify(inline_unalign_xnalloc == cat::inline_buffer_size);
-    ssize inline_unalign_xnalloc_big =
+    iword inline_unalign_xnalloc_big =
         allocator.opq_inline_unalign_xnalloc<alloc_huge_object>();
     cat::verify(inline_unalign_xnalloc_big == 257);
 
     // Test `inline_align_nalloc_multi`.
     allocator.reset();
-    ssize inline_align_nalloc_multi =
+    iword inline_align_nalloc_multi =
         allocator.opq_inline_align_nalloc_multi<int4>(4u, 5).value();
     cat::verify(inline_align_nalloc_multi == cat::inline_buffer_size);
-    ssize inline_align_nalloc_multi_big =
+    iword inline_align_nalloc_multi_big =
         allocator.opq_inline_align_nalloc_multi<alloc_huge_object>(1u, 2)
             .value();
     cat::verify(inline_align_nalloc_multi_big == (257 * 2));
 
     // Test `inline_align_xnalloc_multi`.
     allocator.reset();
-    ssize inline_align_xnalloc_multi =
+    iword inline_align_xnalloc_multi =
         allocator.opq_inline_align_xnalloc_multi<int4>(4u, 5);
     cat::verify(inline_align_xnalloc_multi == cat::inline_buffer_size);
-    ssize inline_align_xnalloc_multi_big =
+    iword inline_align_xnalloc_multi_big =
         allocator.opq_inline_align_xnalloc_multi<alloc_huge_object>(1u, 2);
     cat::verify(inline_align_xnalloc_multi_big == (257 * 2));
 
     // Test `inline_unalign_nalloc_multi`.
     allocator.reset();
-    ssize inline_unalign_nalloc_multi =
+    iword inline_unalign_nalloc_multi =
         allocator.opq_inline_unalign_nalloc_multi<int4>(5).value();
     cat::verify(inline_unalign_nalloc_multi == cat::inline_buffer_size);
-    ssize inline_unalign_nalloc_multi_big =
+    iword inline_unalign_nalloc_multi_big =
         allocator.opq_inline_unalign_nalloc_multi<alloc_huge_object>(2).value();
     cat::verify(inline_unalign_nalloc_multi_big == (257 * 2));
 
     // Test `inline_unalign_xnalloc_multi`.
     allocator.reset();
-    ssize inline_unalign_xnalloc_multi =
+    iword inline_unalign_xnalloc_multi =
         allocator.opq_inline_unalign_xnalloc_multi<int4>(5);
     cat::verify(inline_unalign_xnalloc_multi == cat::inline_buffer_size);
-    ssize inline_unalign_xnalloc_multi_big =
+    iword inline_unalign_xnalloc_multi_big =
         allocator.opq_inline_unalign_xnalloc_multi<alloc_huge_object>(2);
     cat::verify(inline_unalign_xnalloc_multi_big == (257 * 2));
 

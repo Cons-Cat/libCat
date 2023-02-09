@@ -6,19 +6,19 @@
 #include <cat/meta>
 
 // `__BYTE_ORDER__` and `__ORDER_LITTLE_ENDIAN__` are macros defined by GCC.
+namespace cat {
+
 inline constexpr bool is_target_little_endian =
     (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
 inline constexpr bool is_target_big_endian = !is_target_little_endian;
 
-inline constexpr ssize char_bits = ssizeof(unsigned char) * 8;
-inline constexpr ssize word_bits = ssizeof(usize) * 8;
-inline constexpr ssize word_bytes = ssizeof(usize);
-
-namespace cat {
+inline constexpr iword char_bits = ssizeof(unsigned char) * 8;
+inline constexpr iword word_bits = ssizeof(uword) * 8;
+inline constexpr iword word_bytes = ssizeof(uword);
 
 template <is_unsigned_integral T>
 [[nodiscard]]
-constexpr auto countl_zero(T value) -> ssize {
+constexpr auto countl_zero(T value) -> iword {
     auto raw_value = to_raw_arithmetic(value);
 
     if (raw_value == 0) {
@@ -42,7 +42,7 @@ constexpr auto countl_zero(T value) -> ssize {
 
 template <is_unsigned_integral T>
 [[nodiscard]]
-constexpr auto countl_one(T value) -> ssize {
+constexpr auto countl_one(T value) -> iword {
     auto raw_value = to_raw_arithmetic(value);
     return raw_value != limits<T>::max()
                ? countl_zero(static_cast<T>(~(raw_value)))
@@ -51,7 +51,7 @@ constexpr auto countl_one(T value) -> ssize {
 
 template <is_unsigned_integral T>
 [[nodiscard]]
-constexpr auto countr_zero(T value) -> ssize {
+constexpr auto countr_zero(T value) -> iword {
     auto raw_value = to_raw_arithmetic(value);
 
     if (raw_value == 0) {
@@ -70,14 +70,14 @@ constexpr auto countr_zero(T value) -> ssize {
 
 template <is_unsigned_integral T>
 [[nodiscard]]
-constexpr auto countr_one(T value) -> ssize {
+constexpr auto countr_one(T value) -> iword {
     return value != limits<T>::max() ? countl_one(static_cast<T>(~value))
                                      : (ssizeof(T) * 8);
 }
 
 template <is_unsigned_integral T>
 [[nodiscard]]
-constexpr auto popcount(T value) -> ssize {
+constexpr auto popcount(T value) -> iword {
     auto raw_value = to_raw_arithmetic(value);
     if constexpr (__has_builtin(__builtin_popcount)) {
         if constexpr (sizeof(T) <= 4) {
@@ -88,9 +88,9 @@ constexpr auto popcount(T value) -> ssize {
     } else {
         // This should only be used if there is no intrinsic, otherwise integers
         // promote to `unsigned int` for `__builtin_popcount()`.
-        ssize result = 0;
+        iword result = 0;
         for (; raw_value; raw_value >>= 1) {
-            result += ssize(raw_value & 1u);
+            result += iword(raw_value & 1u);
         }
 
         return result;
@@ -263,7 +263,7 @@ class bit_reference {
 
     // Create a `bit_reference` to a bit position `offset` bits from the right
     // of a `storage_type`.
-    static constexpr auto from_offset(storage_type& reference, ssize offset)
+    static constexpr auto from_offset(storage_type& reference, iword offset)
         -> bit_reference {
         if !consteval {
             cat::assert(offset < limits<storage_type>::bits);
@@ -371,7 +371,7 @@ class bit_value {
     // Create a `bit_value` copied from a bit position `offset` bits from the
     // right of a `storage_type`.
     template <is_unsigned_integral storage_type>
-    static constexpr auto from_offset(storage_type word, ssize offset) {
+    static constexpr auto from_offset(storage_type word, iword offset) {
         assert(offset < limits<storage_type>::bits);
         bit_value bit;
         bit.value = static_cast<bool>((word >> offset) & 1);
@@ -493,7 +493,7 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
   private:
     using type = iterator;
     using word_type = iterator::value_type;
-    static constexpr ssize word_bits = limits<word_type>::bits;
+    static constexpr iword word_bits = limits<word_type>::bits;
 
   public:
     using value_type = bit_value;
@@ -503,7 +503,7 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
     constexpr bit_iterator(bit_iterator const&) = default;
     constexpr bit_iterator(bit_iterator&&) = default;
 
-    constexpr bit_iterator(iterator const& other, ssize current_bit = 0)
+    constexpr bit_iterator(iterator const& other, iword current_bit = 0)
         : internal_iterator(other), bit_position(current_bit) {
     }
 
@@ -511,9 +511,9 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
         return reference::from_offset(*internal_iterator, this->bit_position);
     }
 
-    constexpr void advance(ssize offset) {
-        ssize advance_bits = this->bit_position + offset;
-        ssize bytes_overflow = advance_bits / this->word_bits;
+    constexpr void advance(iword offset) {
+        iword advance_bits = this->bit_position + offset;
+        iword bytes_overflow = advance_bits / this->word_bits;
         if (advance_bits < 0 &&
             ((bytes_overflow * word_bits) != advance_bits)) {
             --bytes_overflow;
@@ -522,8 +522,8 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
         this->bit_position = advance_bits - bytes_overflow * word_bits;
     }
 
-    constexpr auto distance_to(bit_iterator const& other) const -> ssize {
-        ssize const word_difference =
+    constexpr auto distance_to(bit_iterator const& other) const -> iword {
+        iword const word_difference =
             this->internal_iterator - other.internal_iterator;
         // Multiply the number of words between the two iterators by the size of
         // a word in bits, then add the difference between the iterators'
@@ -535,7 +535,7 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
 
   private:
     iterator internal_iterator;
-    ssize bit_position;
+    iword bit_position;
 };
 
 inline constexpr bit_value one_bit = true;
@@ -667,30 +667,30 @@ struct byte {
 
 template <typename U>
 [[nodiscard]]
-constexpr auto is_aligned(U* p_value, usize alignment) -> bool;
+constexpr auto is_aligned(U* p_value, uword alignment) -> bool;
 
 template <typename U>
 [[nodiscard]]
 // NOLINTNEXTLINE This is forward-declared in `<cat/memory>`.
-constexpr auto is_aligned(uintptr<U> p_value, usize alignment) -> bool;
+constexpr auto is_aligned(uintptr<U> p_value, uword alignment) -> bool;
 
 template <typename U>
 [[nodiscard]]
-constexpr auto align_up(U* p_value, usize alignment) -> U*;
+constexpr auto align_up(U* p_value, uword alignment) -> U*;
 template <typename U>
-constexpr auto align_up(uintptr<U> p_value, usize alignment) -> uintptr<U>;
+constexpr auto align_up(uintptr<U> p_value, uword alignment) -> uintptr<U>;
 
 template <typename U>
 [[nodiscard]]
-constexpr auto align_down(U* p_value, usize alignment) -> U*;
+constexpr auto align_down(U* p_value, uword alignment) -> U*;
 
 template <typename U>
 [[nodiscard]]
-constexpr auto align_down(intptr<U> p_value, usize alignment) -> intptr<U>;
+constexpr auto align_down(intptr<U> p_value, uword alignment) -> intptr<U>;
 
 template <typename U>
 [[nodiscard]]
-constexpr auto align_down(uintptr<U> p_value, usize alignment) -> uintptr<U>;
+constexpr auto align_down(uintptr<U> p_value, uword alignment) -> uintptr<U>;
 
 template <is_integral T>
 [[nodiscard]]
@@ -740,39 +740,39 @@ operator&(T flag_1, T flag_2) -> T {
 // }
 
 // TODO: Is `<cat/bit>` the right place for these?
-constexpr auto operator""_ki(unsigned long long input) -> ssize {
+constexpr auto operator""_ki(unsigned long long input) -> iword {
     return 1024 * static_cast<signed long long>(input);
 }
 
-constexpr auto operator""_uki(unsigned long long input) -> usize {
+constexpr auto operator""_uki(unsigned long long input) -> uword {
     return 1024u * input;
 }
 
-constexpr auto operator""_ki(long double input) -> ssize {
+constexpr auto operator""_ki(long double input) -> iword {
     return static_cast<signed long long>(1024.f * input);
 }
 
-constexpr auto operator""_mi(unsigned long long input) -> ssize {
+constexpr auto operator""_mi(unsigned long long input) -> iword {
     return 1024ll * 1024ll * static_cast<signed long long>(input);
 }
 
-constexpr auto operator""_umi(unsigned long long input) -> usize {
+constexpr auto operator""_umi(unsigned long long input) -> uword {
     return 1024ull * 1024ull * input;
 }
 
-constexpr auto operator""_mi(long double input) -> ssize {
+constexpr auto operator""_mi(long double input) -> iword {
     return static_cast<signed long long>(1024.f * 1024.f * input);
 }
 
-constexpr auto operator""_gi(unsigned long long input) -> ssize {
+constexpr auto operator""_gi(unsigned long long input) -> iword {
     return 1024ll * 1024ll * 1024ll * static_cast<signed long long>(input);
 }
 
-constexpr auto operator""_ugi(unsigned long long input) -> usize {
+constexpr auto operator""_ugi(unsigned long long input) -> uword {
     return 1024ull * 1024ull * 1024ull * input;
 }
 
-constexpr auto operator""_gi(long double input) -> ssize {
+constexpr auto operator""_gi(long double input) -> iword {
     return static_cast<signed long long>(1024.f * 1024.f * 1024.f * 1024.f *
                                          input);
 }

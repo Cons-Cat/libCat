@@ -23,8 +23,8 @@ class page_allocator : public allocator_interface<page_allocator> {
         }
     };
 
-    auto allocation_bytes(usize alignment, ssize allocation_bytes)
-        -> maybe_non_zero<ssize> {
+    auto allocation_bytes(uword alignment, iword allocation_bytes)
+        -> maybe_non_zero<iword> {
         // Pages cannot be aligned by greater than 4 kibibytes.
         cat::assert(alignment <= 4_uki);
         // Round `allocation_bytes` up to the nearest 4 kibibytes.
@@ -34,7 +34,7 @@ class page_allocator : public allocator_interface<page_allocator> {
     // Allocate memory in multiples of a page-size. A page is `4_ki` large
     // on x86-64. If fewer than 4096 bytes are allocated, that amount will
     // be rounded up to 4096.
-    auto allocate(ssize allocation_bytes) -> maybe_ptr<void> {
+    auto allocate(iword allocation_bytes) -> maybe_ptr<void> {
         scaredy result = nix::sys_mmap(
             0u, allocation_bytes,
             // TODO: Fix bit flags operators.
@@ -57,7 +57,7 @@ class page_allocator : public allocator_interface<page_allocator> {
 
     // Allocate a page(s) of virtual memory that is guaranteed to align to
     // any power of 2, but less than `4_uki`.
-    auto aligned_allocate(usize alignment, ssize allocation_bytes)
+    auto aligned_allocate(uword alignment, iword allocation_bytes)
         -> maybe_ptr<void> {
         // Pages cannot be aligned by greater than 4 kibibytes.
         cat::assert(alignment <= 4_uki);
@@ -66,7 +66,7 @@ class page_allocator : public allocator_interface<page_allocator> {
     }
 
     // Unmap a pointer handle to page(s) of virtual memory.
-    void deallocate(void const* p_storage, ssize allocation_bytes) {
+    void deallocate(void const* p_storage, iword allocation_bytes) {
         // There are some cases where `munmap` might fail even with private
         // anonymous pages. These currently cannot be handled, because `.free()`
         // does not propagate errors.

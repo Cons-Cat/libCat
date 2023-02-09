@@ -26,9 +26,9 @@ struct avx2_abi {
 
     avx2_abi() = delete;
 
-    static constexpr ssize size = 32;
-    static constexpr ssize lanes = size / ssizeof(T);
-    static constexpr usize alignment = 32u;
+    static constexpr iword size = 32;
+    static constexpr iword lanes = size / ssizeof(T);
+    static constexpr uword alignment = 32u;
 };
 
 template <typename T>
@@ -58,7 +58,7 @@ template <typename T>
 [[nodiscard]]
 auto any_of(simd_mask<x64::avx2_abi<T>, T> mask) -> bool;
 
-template <ssize bits_count>
+template <iword bits_count>
     requires(bits_count > 0)
 class bitset;
 

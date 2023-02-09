@@ -274,7 +274,7 @@ struct event {
 // TODO: Make this a span.
 struct io_virtualization {
     void* p_base;
-    ssize length;
+    iword length;
 };
 
 // Every X client request begins with an `x11::client_request_header`.

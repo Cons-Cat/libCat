@@ -5,17 +5,17 @@
 
 // Copy some bytes from one address to another address.
 // TODO: Make this `constexpr`.
-void cat::copy_memory(void const* p_source, void* p_destination, ssize bytes) {
+void cat::copy_memory(void const* p_source, void* p_destination, iword bytes) {
     using simd_vector = int8x_;
 
     unsigned char const* p_source_handle =
         static_cast<unsigned char const*>(p_source);
     unsigned char* p_destination_handle =
         bit_cast<unsigned char*>(p_destination);
-    constexpr ssize l3_cache_size = 2_mi;
-    ssize padding;
+    constexpr iword l3_cache_size = 2_mi;
+    iword padding;
 
-    constexpr ssize step_size = ssizeof(simd_vector) * 8;
+    constexpr iword step_size = ssizeof(simd_vector) * 8;
 
     if (bytes <= step_size) {
         copy_memory_small(p_source, p_destination, bytes);
@@ -94,10 +94,10 @@ bytes) { using simd_vector = int8x_;
 
     intptr p_source_handle = p_source;
     intptr p_destination_handle = p_destination;
-    constexpr ssize l3_cache_size = 2_mi;
+    constexpr iword l3_cache_size = 2_mi;
     intptr padding;
 
-    constexpr ssize step_size = ssizeof(simd_vector) * 8;
+    constexpr iword step_size = ssizeof(simd_vector) * 8;
 
     if (bytes <= step_size) {
         copy_memory_small(p_source, p_destination, bytes);

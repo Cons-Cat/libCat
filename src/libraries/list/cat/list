@@ -84,7 +84,7 @@ class list : public collection_interface<list<T>, T> {
         array values = {static_cast<T>(initializers)...};
         // TODO: Optimize memory allocations with a multiple `.push_back()`
         // overload.
-        for (ssize i = 0; i < ssizeof_pack(initializers...); ++i) {
+        for (iword i = 0; i < ssizeof_pack(initializers...); ++i) {
             maybe result = new_list.push_back(allocator, values[i]);
             if (!result.has_value()) {
                 return nullopt;
@@ -103,7 +103,7 @@ class list : public collection_interface<list<T>, T> {
         array values = {forward<Args>(initializers)...};
         // TODO: Optimize memory allocations with a multiple `.push_back()`
         // overload.
-        for (ssize i = 0; i < ssizeof_pack<Args...>(); ++i) {
+        for (iword i = 0; i < ssizeof_pack<Args...>(); ++i) {
             maybe result = new_list.push_back(allocator, values[i]);
             if (!result.has_value()) {
                 return nullopt;
@@ -114,13 +114,13 @@ class list : public collection_interface<list<T>, T> {
 
     // Get the count of elements stored in this `List`.
     [[nodiscard]]
-    auto size() const -> ssize {
+    auto size() const -> iword {
         return this->length;
     }
 
     // Get the maximum possible count of elements stored in a `List`.
     [[nodiscard]]
-    constexpr auto capacity() const -> ssize {
+    constexpr auto capacity() const -> iword {
         return this->length.max();
     }
 
@@ -392,7 +392,7 @@ class list : public collection_interface<list<T>, T> {
         if (this->length > 0) {
             iterator_type previous_it = nullptr;
             iterator_type current_it = this->begin();
-            ssize i = 0;
+            iword i = 0;
 
             while (i < this->length) {
                 if (i > 0) {
@@ -433,7 +433,7 @@ class list : public collection_interface<list<T>, T> {
   private:
     detail::list_node<T>* p_head;
     detail::list_node<T>* p_tail;
-    ssize length = 0;
+    iword length = 0;
 };
 
 template <typename T>
@@ -482,7 +482,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
         array array = initializers;
         // TODO: Optimize memory allocations with a multiple `.push_back()`
         // overload.
-        for (ssize i = 0; i < ssizeof_pack(values...); ++i) {
+        for (iword i = 0; i < ssizeof_pack(values...); ++i) {
             maybe result = new_list.push_back(allocator, array[i]);
             if (!result.has_value()) {
                 return nullopt;
@@ -501,7 +501,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
         array array = {forward<Args>(initializers)...};
         // TODO: Optimize memory allocations with a multiple `.push_back()`
         // overload.
-        for (ssize i = 0; i < ssizeof_pack<Args...>(); ++i) {
+        for (iword i = 0; i < ssizeof_pack<Args...>(); ++i) {
             maybe result = new_list.push_back(allocator, array[i]);
             if (!result.has_value()) {
                 return nullopt;
@@ -512,13 +512,13 @@ class forward_list : public collection_interface<forward_list<T>, T> {
 
     // Get the count of elements stored in this `forward_list`.
     [[nodiscard]]
-    auto size() const -> ssize {
+    auto size() const -> iword {
         return this->length;
     }
 
     // Get the maximum possible count of elements stored in a `forward_list`.
     [[nodiscard]]
-    constexpr auto capacity() const -> ssize {
+    constexpr auto capacity() const -> iword {
         return this->length.max();
     }
 
@@ -690,7 +690,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
         if (this->length > 0) {
             iterator_type previous_it = nullptr;
             iterator_type current_it = this->begin();
-            ssize i = 0;
+            iword i = 0;
 
             while (i < this->length) {
                 if (i > 0) {
@@ -721,7 +721,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
   private:
     detail::forward_list_node<T>* p_head;
     detail::forward_list_node<T>* p_tail;
-    ssize length = 0;
+    iword length = 0;
 };
 
 }  // namespace cat

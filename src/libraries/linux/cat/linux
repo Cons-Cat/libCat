@@ -9,7 +9,7 @@
 #include <cat/scaredy>
 #include <cat/utility>
 
-inline constexpr ssize page_size = 4096_ki;
+inline constexpr iword page_size = 4096_ki;
 
 // Forward declarations.
 namespace cat {
@@ -300,7 +300,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-    requires(sizeof(detail::map_syscall_type<T>) <= sizeof(ssize))
+    requires(ssizeof(detail::map_syscall_type<T>) <= cat::word_bytes)
 using scaredy_nix = cat::scaredy<
     cat::compact_scaredy<detail::map_syscall_type<T>,
                          // This is a `T` when it is a positive integer.
@@ -356,7 +356,7 @@ struct tty_descriptor : file_descriptor {};
 struct process_id {
     // Linux supports the better part of `8` `cat::byte` process IDs on 64-bit
     // systems, but only up to `4` `cat::byte` process IDs on 32-bit systems.
-    ssize value;
+    iword value;
 };
 
 struct user_id {
@@ -745,14 +745,14 @@ namespace nix {
 
 // Syscall 0
 auto sys_read(file_descriptor file_descriptor, char const* p_string_buffer,
-              ssize length) -> scaredy_nix<ssize>;
+              iword length) -> scaredy_nix<iword>;
 
 // Syscall 1
 auto sys_write(file_descriptor file_descriptor, char const* p_string_buffer,
-               ssize length) -> scaredy_nix<ssize>;
+               iword length) -> scaredy_nix<iword>;
 
 auto sys_write(file_descriptor file_descriptor, cat::string string)
-    -> scaredy_nix<ssize>;
+    -> scaredy_nix<iword>;
 
 // Syscall 2
 auto sys_open(char const* p_file_path, open_mode file_mode,
@@ -775,12 +775,12 @@ struct file_handle {
     unsigned char* mustbezero_1;
     char* p_write_base;
 
-    usize (*read)(file_handle*, char*, usize);
-    usize (*write)(file_handle*, char const*, usize);
-    usize (*seek)(file_handle*, usize, int4);
+    uword (*read)(file_handle*, char*, uword);
+    uword (*write)(file_handle*, char const*, uword);
+    uword (*seek)(file_handle*, uword, int4);
     char* buf;
 
-    usize buf_size;
+    uword buf_size;
     file_handle *prev, *next;
     int4 file_descriptor;
     int4 pipe_pid;
@@ -789,11 +789,11 @@ struct file_handle {
     int4 volatile lock;
     int4 lbf;
     void* cookie;
-    usize off;
+    uword off;
     char* getln_buf;
     void* mustbezero_2;
     char* shend;
-    usize shlim, shcnt;
+    uword shlim, shcnt;
     file_handle* p_prev_locked;
     file_handle* p_next_locked;
     // TODO: Implement locale.
@@ -814,15 +814,15 @@ auto sys_fstat(file_descriptor file_descriptor)
 // TODO: `sys_lseek()`
 
 // Syscall 9
-auto sys_mmap(usize beginning_address, ssize bytes_size,
+auto sys_mmap(uword beginning_address, iword bytes_size,
               memory_protection_flags protections, memory_flags flags,
-              file_descriptor file_descriptor, ssize pages_offset)
+              file_descriptor file_descriptor, iword pages_offset)
     -> scaredy_nix<void*>;
 
 // TODO: `sys_mprotect()`
 
 // Syscall 11
-auto sys_munmap(void const* p_memory, ssize length) -> scaredy_nix<void>;
+auto sys_munmap(void const* p_memory, iword length) -> scaredy_nix<void>;
 
 // TODO: `sys_brk()`
 
@@ -901,7 +901,7 @@ struct io_vector : cat::span<cat::byte> {
     ~io_vector() = default;
 
     // Construct from any reasonable pointer type.
-    constexpr io_vector(cat::byte* p_in_data, ssize in_length)
+    constexpr io_vector(cat::byte* p_in_data, iword in_length)
         : cat::span<cat::byte>(p_in_data, in_length) {
     }
 
@@ -925,11 +925,11 @@ struct io_vector : cat::span<cat::byte> {
 
 // Syscall 19
 auto sys_readv(file_descriptor file_descriptor,
-               cat::span<io_vector> const& vectors) -> scaredy_nix<ssize>;
+               cat::span<io_vector> const& vectors) -> scaredy_nix<iword>;
 
 // Syscall 20
 auto sys_writev(file_descriptor file_descriptor,
-                cat::span<io_vector> const& vectors) -> scaredy_nix<ssize>;
+                cat::span<io_vector> const& vectors) -> scaredy_nix<iword>;
 
 // Syscall 39
 auto sys_getpid() -> process_id;
@@ -940,32 +940,32 @@ auto sys_socket(int8 protocol_family, int8 type, int8 protocol)
 
 // Syscall 42
 auto sys_connect(file_descriptor socket_descriptor, void const* p_socket,
-                 ssize socket_size) -> scaredy_nix<void>;
+                 iword socket_size) -> scaredy_nix<void>;
 
 // Syscall 43
 auto sys_accept(file_descriptor socket_descriptor,
                 void const* __restrict p_socket = nullptr,
-                ssize const* __restrict p_addr_len = nullptr)
+                iword const* __restrict p_addr_len = nullptr)
     -> scaredy_nix<file_descriptor>;
 
 // Syscall 44
 auto sys_sendto(file_descriptor socket_descriptor, void const* p_message_buffer,
-                ssize buffer_length, int8 flags,
+                iword buffer_length, int8 flags,
                 cat::Socket const* p_destination_socket = nullptr,
-                ssize addr_length = 0) -> scaredy_nix<ssize>;
+                iword addr_length = 0) -> scaredy_nix<iword>;
 
 // Syscall 45
 auto sys_recv(file_descriptor socket_descriptor, void* p_message_buffer,
-              ssize buffer_length,
+              iword buffer_length,
               cat::Socket const* __restrict p_addr = nullptr,
-              ssize const* __restrict p_addr_length = nullptr)
-    -> scaredy_nix<ssize>;
+              iword const* __restrict p_addr_length = nullptr)
+    -> scaredy_nix<iword>;
 
 // TODO: More syscalls between here.
 
 // Syscall 49
 auto sys_bind(file_descriptor socket_descriptor, void const* p_socket,
-              ssize p_addr_len) -> scaredy_nix<void>;
+              iword p_addr_len) -> scaredy_nix<void>;
 
 // Syscall 50
 auto sys_listen(file_descriptor socket_descriptor, int8 backlog)
@@ -997,19 +997,19 @@ auto sys_waitid(wait_id type, process_id id, wait_options_flags options)
 auto wait_pid(process_id pid, file_status* p_status, wait_options_flags options)
     -> scaredy_nix<process_id>;
 
-auto syscall0(ssize) -> ssize;
-auto syscall1(ssize, cat::no_type) -> ssize;
-auto syscall2(ssize, cat::no_type, cat::no_type) -> ssize;
-auto syscall3(ssize, cat::no_type, cat::no_type, cat::no_type) -> ssize;
-auto syscall4(ssize, cat::no_type, cat::no_type, cat::no_type, cat::no_type)
-    -> ssize;
-auto syscall5(ssize, cat::no_type, cat::no_type, cat::no_type, cat::no_type,
-              cat::no_type) -> ssize;
-auto syscall6(ssize, cat::no_type, cat::no_type, cat::no_type, cat::no_type,
-              cat::no_type, cat::no_type) -> ssize;
+auto syscall0(iword) -> iword;
+auto syscall1(iword, cat::no_type) -> iword;
+auto syscall2(iword, cat::no_type, cat::no_type) -> iword;
+auto syscall3(iword, cat::no_type, cat::no_type, cat::no_type) -> iword;
+auto syscall4(iword, cat::no_type, cat::no_type, cat::no_type, cat::no_type)
+    -> iword;
+auto syscall5(iword, cat::no_type, cat::no_type, cat::no_type, cat::no_type,
+              cat::no_type) -> iword;
+auto syscall6(iword, cat::no_type, cat::no_type, cat::no_type, cat::no_type,
+              cat::no_type, cat::no_type) -> iword;
 
 template <typename T, typename... Args>
-auto syscall(ssize call, Args... parameters) -> nix::scaredy_nix<T>
+auto syscall(iword call, Args... parameters) -> nix::scaredy_nix<T>
     requires(sizeof...(Args) < 7);
 
 // Create and return a `cat::SocketLocal` (also known as Unix socket).
@@ -1067,40 +1067,47 @@ auto read_char() -> scaredy_nix<char>;
 // TODO: Extract this to an implementation file.
 struct file_status {
   public:
-    [[nodiscard]] auto is_regular() const -> bool {
+    [[nodiscard]]
+    auto is_regular() const -> bool {
         return (this->protections_mode & 0170000u) == 0100000u;
     }
 
     static_assert(!cat::enum_flag_trait<uint4>::value);
 
-    [[nodiscard]] auto is_directory() const -> bool {
+    [[nodiscard]]
+    auto is_directory() const -> bool {
         return (this->protections_mode & 0170000u) == 0040000u;
     }
 
-    [[nodiscard]] auto is_character_device() const -> bool {
+    [[nodiscard]]
+    auto is_character_device() const -> bool {
         return (this->protections_mode & 0170000u) == 0020000u;
     }
 
-    [[nodiscard]] auto is_block_device() const -> bool {
+    [[nodiscard]]
+    auto is_block_device() const -> bool {
         return (this->protections_mode & 0170000u) == 0060000u;
     }
 
-    [[nodiscard]] auto is_fifo() const -> bool {
+    [[nodiscard]]
+    auto is_fifo() const -> bool {
         return (this->protections_mode & 0170000u) == 0010000u;
     }
 
-    [[nodiscard]] auto is_symbolic_link() const -> bool {
+    [[nodiscard]]
+    auto is_symbolic_link() const -> bool {
         return (this->protections_mode & 0170000u) == 0120000u;
     }
 
-    [[nodiscard]] auto is_socket() const -> bool {
+    [[nodiscard]]
+    auto is_socket() const -> bool {
         return (this->protections_mode & 0170000u) == 0140000u;
     }
 
     uint8 device_id;
     // The index node for this file.
     uint8 inode;
-    usize hard_links_count;
+    uword hard_links_count;
 
     uint4 protections_mode;
     user_id user;
@@ -1112,12 +1119,12 @@ struct file_status {
   public:
     uint8 rdev;
     int8 file_size;
-    ssize block_size;
+    iword block_size;
     int8 blocks_count;
 
     using time_spec = struct {
-        ssize seconds;
-        ssize nanoseconds;
+        iword seconds;
+        iword nanoseconds;
     };
 
     time_spec last_access_time;
@@ -1143,7 +1150,7 @@ struct process {
 
     // TODO: Add `cat::invocable` concept.
     auto create(cat::is_allocator auto& allocator,
-                ssize const initial_stack_size, auto const& function,
+                iword const initial_stack_size, auto const& function,
                 void* p_args_struct,
                 // TODO: These flags should largely be encoded into the type.
                 CloneFlags const flags = default_flags) -> scaredy_nix<void> {
@@ -1190,14 +1197,15 @@ struct process {
             : parent_thread);
 
 parent_thread:
-        if (static_cast<ssize>(result) < 0) {
+        if (static_cast<iword>(result) < 0) {
             return static_cast<nix::linux_error>(result);
         }
         // `this->process_id` was initialized by the syscall.
         return monostate;
     }
 
-    [[nodiscard]] auto wait() const -> scaredy_nix<process_id> {
+    [[nodiscard]]
+    auto wait() const -> scaredy_nix<process_id> {
         scaredy_nix<process_id> result =
             sys_waitid(wait_id::process_id, this->id,
                        wait_options_flags::exited | wait_options_flags::clone |
@@ -1207,7 +1215,7 @@ parent_thread:
 
     process_id id;
     void* p_stack;
-    ssize stack_size;
+    iword stack_size;
 };
 
 struct signals_mask_set {

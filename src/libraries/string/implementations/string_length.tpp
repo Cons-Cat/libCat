@@ -7,9 +7,9 @@
 #include <cat/utility>
 
 // This function requires SSE4.2, unless it is used in a `constexpr` context.
-constexpr auto cat::string_length(char const* p_string) -> ssize {
+constexpr auto cat::string_length(char const* p_string) -> iword {
     if consteval {
-        ssize result = 0;
+        iword result = 0;
         while (true) {
             if (p_string[result.raw] == '\0') {
                 return result;
@@ -20,7 +20,7 @@ constexpr auto cat::string_length(char const* p_string) -> ssize {
         // TODO: Implement with portable SIMD, and tune performance.
         constexpr char1x16 zeros = '\0';
 
-        for (ssize i = 0;; i += 16) {
+        for (iword i = 0;; i += 16) {
             char1x16 const data = char1x16::loaded(p_string + i);
             constexpr x64::string_control mask =
                 x64::string_control::unsigned_byte |

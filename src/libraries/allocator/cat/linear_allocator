@@ -22,15 +22,15 @@ class linear_allocator : public allocator_interface<linear_allocator> {
         }
     };
 
-    linear_allocator(uintptr<void> p_address, ssize arena_bytes)
-        : p_arena_begin(p_address + static_cast<usize>(arena_bytes)),
+    linear_allocator(uintptr<void> p_address, iword arena_bytes)
+        : p_arena_begin(p_address + static_cast<uword>(arena_bytes)),
           p_arena_end(p_address) {
         this->reset();
     }
 
   public:
     // Allocate a `linear_allocator` from another allocator.
-    static auto backed(is_stable_allocator auto& backing, ssize arena_bytes)
+    static auto backed(is_stable_allocator auto& backing, iword arena_bytes)
         -> maybe<linear_allocator> {
         span memory = TRY(backing.template alloc_multi<byte>(arena_bytes));
         return linear_allocator(memory.data(), arena_bytes);
@@ -47,7 +47,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
     // TODO: Can this return a tuple of the allocator and handle?
     static auto backed_handle_sized(is_stable_allocator auto& backing,
-                                    mem auto& handle, ssize arena_size)
+                                    mem auto& handle, iword arena_size)
         -> linear_allocator {
         cat::assert(arena_size <= handle.raw_size());
         return linear_allocator(backing.template p_get(handle), arena_size);
@@ -64,21 +64,21 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     }
 
   private:
-    auto allocation_bytes(usize alignment, ssize allocation_bytes)
-        -> maybe_non_zero<ssize> {
+    auto allocation_bytes(uword alignment, iword allocation_bytes)
+        -> maybe_non_zero<iword> {
         uintptr<void> allocation = align_down(
-            this->p_arena_current - usize{allocation_bytes}, alignment);
+            this->p_arena_current - uword{allocation_bytes}, alignment);
 
         // The allocation size is the difference between the current pointer
         // and the new pointer.
         if (allocation >= p_arena_end) {
-            return static_cast<ssize>((this->p_arena_current - allocation).raw);
+            return static_cast<iword>((this->p_arena_current - allocation).raw);
         }
         return nullopt;
     }
 
     // Try to allocate memory and bump the pointer down.
-    auto allocate(ssize allocation_bytes) -> maybe_ptr<void> {
+    auto allocate(iword allocation_bytes) -> maybe_ptr<void> {
         if (this->p_arena_current - allocation_bytes >= p_arena_end) {
             this->p_arena_current -= allocation_bytes;
             // Return a pointer that is then used to in-place construct a `T`.
@@ -89,7 +89,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
     // Try to allocate memory aligned to some boundary and bump the pointer
     // down.
-    auto aligned_allocate(usize alignment, ssize allocation_bytes)
+    auto aligned_allocate(uword alignment, iword allocation_bytes)
         -> maybe_ptr<void> {
         uintptr<void> allocation =
             align_down(this->p_arena_current - allocation_bytes, alignment);
@@ -104,14 +104,14 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
     // Try to allocate memory and bump the pointer down, and return the memory
     // with size allocated.
-    auto aligned_allocate_feedback(usize alignment, ssize allocation_bytes)
+    auto aligned_allocate_feedback(uword alignment, iword allocation_bytes)
         -> maybe_sized_allocation<void*> {
         uintptr<void> allocation =
             align_down(this->p_arena_current - allocation_bytes, alignment);
 
         if (allocation >= p_arena_end) {
-            ssize bytes_allocated =
-                static_cast<ssize>(this->p_arena_current - allocation);
+            iword bytes_allocated =
+                static_cast<iword>(this->p_arena_current - allocation);
             this->p_arena_current = allocation;
 
             return maybe_sized_allocation<void*>(tuple{
@@ -123,7 +123,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
     // In general, memory cannot be deallocated in a linear allocator, so
     // this function is no-op.
-    void deallocate(void const*, ssize) {
+    void deallocate(void const*, iword) {
     }
 
     // Produce a handle to allocated memory.

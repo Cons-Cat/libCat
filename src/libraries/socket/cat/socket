@@ -45,7 +45,7 @@ struct socket_unix {
 
     // Get the size of this struct, not considering the `file_descriptor` that
     // it holds.
-    auto get_size() -> ssize {
+    auto get_size() -> iword {
         return ssizeof(attributes) + ssizeof(path_name);
     }
 
@@ -72,7 +72,7 @@ struct socket_unix {
 
     auto send_string(string const& message, int8 flags = 0,
                      cat::Socket const* p_destination_socket = nullptr,
-                     ssize const addr_length = 0) -> maybe<void> {
+                     iword const addr_length = 0) -> maybe<void> {
         scaredy result =
             nix::sys_sendto(this->descriptor, message.data(), message.size(),
                             flags, p_destination_socket, addr_length);
@@ -84,7 +84,7 @@ struct socket_unix {
 
     auto send_struct(auto const& message_struct, int8 flags = 0,
                      cat::Socket const* p_destination_socket = nullptr,
-                     ssize const addr_length = 0) -> maybe<void> {
+                     iword const addr_length = 0) -> maybe<void> {
         scaredy result = nix::sys_sendto(this->descriptor, &message_struct,
                                          ssizeof(message_struct), flags,
                                          p_destination_socket, addr_length);
@@ -113,7 +113,7 @@ struct socket_unix {
 
     auto accept(nix::file_descriptor listening_socket,
                 void const* p_socket = nullptr,
-                ssize const* p_addr_len = nullptr) -> maybe<void> {
+                iword const* p_addr_len = nullptr) -> maybe<void> {
         scaredy result =
             nix::sys_accept(listening_socket, p_socket, p_addr_len);
         if (result.has_value()) {
@@ -124,7 +124,7 @@ struct socket_unix {
 
     auto accept(socket_unix<type, protocol> const& listening_socket,
                 void const* p_socket = nullptr,
-                ssize const* p_addr_len = nullptr) -> maybe<void> {
+                iword const* p_addr_len = nullptr) -> maybe<void> {
         scaredy result =
             nix::sys_accept(listening_socket.descriptor, p_socket, p_addr_len);
         if (result.has_value()) {
@@ -135,12 +135,12 @@ struct socket_unix {
     }
 
     // TODO: Factor into `.recieve()` and `.recieve_from()`.
-    auto recieve(void* const p_message_buffer, ssize const buffer_length,
+    auto recieve(void* const p_message_buffer, iword const buffer_length,
                  Socket const* const __restrict p_socket = nullptr,
-                 ssize const* const __restrict p_socket_size = nullptr)
-        -> maybe<ssize> {
+                 iword const* const __restrict p_socket_size = nullptr)
+        -> maybe<iword> {
         // scaredy const result =
-        nix::scaredy_nix<ssize> const result =
+        nix::scaredy_nix<iword> const result =
             nix::sys_recv(this->descriptor, p_message_buffer, buffer_length,
                           p_socket, p_socket_size);
         if (result.has_value()) {

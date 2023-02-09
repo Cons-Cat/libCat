@@ -3,8 +3,8 @@
 // TODO: Simplify with `cat::span`.
 // TODO: Make this cross-platform.
 auto main(int argc, char* p_argv[]) -> int {
-    for (ssize i = 1; i < argc; ++i) {
-        ssize length = 0;
+    for (iword i = 1; i < argc; ++i) {
+        iword length = 0;
         // TODO: Use a `string_length_scalar()`.
         while (p_argv[i.raw][length.raw] != 0) {
             ++length;

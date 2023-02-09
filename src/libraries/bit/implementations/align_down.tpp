@@ -8,7 +8,7 @@
 // boundary.
 template <typename U>
 [[nodiscard]]
-constexpr auto cat::align_down(U* p_value, usize alignment) -> U* {
+constexpr auto cat::align_down(U* p_value, uword alignment) -> U* {
     // TODO: Add unary `-` operator to remove `.raw`.
     return uintptr<U>{p_value} & (-alignment.raw);
 }
@@ -17,7 +17,7 @@ constexpr auto cat::align_down(U* p_value, usize alignment) -> U* {
 // boundary. This only works for two's complement arithmetic.
 template <typename U>
 [[nodiscard]]
-constexpr auto cat::align_down(intptr<U> p_value, usize alignment)
+constexpr auto cat::align_down(intptr<U> p_value, uword alignment)
     -> intptr<U> {
     // TODO: Add unary `-` operator to remove `.raw`.
     return p_value & (-alignment.raw);
@@ -27,7 +27,7 @@ constexpr auto cat::align_down(intptr<U> p_value, usize alignment)
 // boundary. This only works for two's complement arithmetic.
 template <typename U>
 [[nodiscard]]
-constexpr auto cat::align_down(uintptr<U> p_value, usize alignment)
+constexpr auto cat::align_down(uintptr<U> p_value, uword alignment)
     -> uintptr<U> {
     // TODO: Add unary `-` operator to remove `.raw`.
     return p_value & (-alignment.raw);

@@ -6,7 +6,7 @@
 
 namespace cat {
 
-template <ssize max_node_bytes>
+template <iword max_node_bytes>
 class pool_allocator
     : public allocator_interface<pool_allocator<max_node_bytes>> {
   private:
@@ -26,7 +26,7 @@ class pool_allocator
 
   public:
     // Allocate a `pool_allocator` from another allocator.
-    static auto backed(is_stable_allocator auto& backing, ssize arena_bytes)
+    static auto backed(is_stable_allocator auto& backing, iword arena_bytes)
         -> maybe<pool_allocator<max_node_bytes>> {
         // statement expressions.
         span<node_union> memory = TRY(backing.template alloc_multi<node_union>(
@@ -56,12 +56,11 @@ class pool_allocator
     }
 
   private:
-    auto allocation_bytes(usize , ssize )
-        -> maybe_non_zero<ssize> {
+    auto allocation_bytes(uword, iword) -> maybe_non_zero<iword> {
         return max_node_bytes;
     }
 
-    auto allocate(ssize ) -> maybe_ptr<void> {
+    auto allocate(iword) -> maybe_ptr<void> {
         // If there is a next node in the free list, make that the head and
         // allocate the current head. Otherwise, do not allocate anything.
         if (this->p_head == nullptr) {
@@ -74,7 +73,7 @@ class pool_allocator
         return static_cast<void*>(p_alloc);
     }
 
-    void deallocate(void const* p_allocation, ssize) {
+    void deallocate(void const* p_allocation, iword) {
         // Swap the head for this newly freed allocation.
         node_union* p_new_head = bit_cast<node_union*>(p_allocation);
         p_new_head->p_next = this->p_head;
@@ -102,7 +101,7 @@ class pool_allocator
     static constexpr bool has_pointer_stability = true;
 
     // Do not allocate larger than this size of one node.
-    static constexpr ssize max_allocation_bytes = max_node_bytes;
+    static constexpr iword max_allocation_bytes = max_node_bytes;
 
   private:
     friend allocator_interface<pool_allocator>;

@@ -16,7 +16,7 @@ concept mem = requires(T handle) {
                   handle.is_inline();
               };
 
-inline constexpr ssize inline_buffer_size = 256;
+inline constexpr iword inline_buffer_size = 256;
 
 // TODO: Handles' `.get()` should be only visible to allocators.
 namespace detail {
@@ -34,19 +34,19 @@ namespace detail {
         // Number of `T`s allocated. This is always 1 if the call is not
         // intercepted by a `multi_memory_handle`.
         [[nodiscard]]
-        constexpr auto size() const -> ssize {
+        constexpr auto size() const -> iword {
             return 1;
         }
 
         // If `.set_count()` is no-op if it is not intercepted by a
         // `multi_memory_handle`.
-        void set_count(ssize) {
+        void set_count(iword) {
         }
 
         // Number of bytes allocated. This is always the size of `T` if the call
         // is not intercepted by a `multi_memory_handle`.
         [[nodiscard]]
-        constexpr auto raw_size() const -> ssize {
+        constexpr auto raw_size() const -> iword {
             return ssizeof(T);
         }
 
@@ -69,7 +69,7 @@ namespace detail {
         handle_type handle;
 
         // How large this allocation was, in terms of `allocation_type`.
-        ssize array_length;
+        iword array_length;
 
         multi_memory_handle() = default;
 
@@ -86,19 +86,19 @@ namespace detail {
         }
 
         // Intercept a propagating call to `.set_count()`.
-        void set_count(ssize count) {
+        void set_count(iword count) {
             this->array_length = count;
         }
 
         // Intercept a propagating call to `.size()`.
         [[nodiscard]]
-        auto size() const -> ssize {
+        auto size() const -> iword {
             return this->array_length;
         }
 
         // Intercept a propagating call to `.raw_size()`.
         [[nodiscard]]
-        auto raw_size() const -> ssize {
+        auto raw_size() const -> iword {
             return this->array_length * ssizeof(allocation_type);
         }
 
@@ -173,17 +173,17 @@ namespace detail {
             this->is_on_stack = inlined;
         }
 
-        void set_count(ssize count) {
+        void set_count(iword count) {
             this->handle.set_count(count);
         }
 
         [[nodiscard]]
-        auto size() const -> ssize {
+        auto size() const -> iword {
             return handle.size();
         }
 
         [[nodiscard]]
-        auto raw_size() const -> ssize {
+        auto raw_size() const -> iword {
             return handle.raw_size();
         }
 
@@ -274,7 +274,7 @@ concept is_stable_allocator =
     is_allocator<allocator_type> && allocator_type::has_pointer_stability;
 
 template <typename T>
-using sized_allocation = tuple<T, ssize>;
+using sized_allocation = tuple<T, iword>;
 
 template <typename T>
 using maybe_sized_allocation = maybe<sized_allocation<T>>;
@@ -392,7 +392,7 @@ class allocator_interface {
     // Try to allocate an array of `T`.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_alloc_multi(ssize count) {
+    constexpr auto opq_alloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -405,7 +405,7 @@ class allocator_interface {
     // Allocate an array of `T`.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_xalloc_multi(ssize count) {
+    constexpr auto opq_xalloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -420,7 +420,7 @@ class allocator_interface {
     template <typename T>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto alloc_multi(ssize count) {
+    constexpr auto alloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -435,7 +435,7 @@ class allocator_interface {
     template <typename T>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto xalloc_multi(ssize count) {
+    constexpr auto xalloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -449,7 +449,7 @@ class allocator_interface {
     template <typename T, typename... Args>
         requires(is_constructible<T, Args...>)
     [[nodiscard]]
-    constexpr auto opq_align_alloc(usize alignment,
+    constexpr auto opq_align_alloc(uword alignment,
                                    Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, true, false, false, false, false>(
@@ -460,7 +460,7 @@ class allocator_interface {
     template <typename T, typename... Args>
         requires(is_constructible<T, Args...>)
     [[nodiscard]]
-    constexpr auto opq_align_xalloc(usize alignment,
+    constexpr auto opq_align_xalloc(uword alignment,
                                     Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, true, false, false, false, false>(
@@ -473,7 +473,7 @@ class allocator_interface {
         requires(detail::is_stable_derived_allocator<derived_type> &&
                  is_constructible<T, Args...>)
     [[nodiscard]]
-    constexpr auto align_alloc(usize alignment, Args&&... constructor_args) {
+    constexpr auto align_alloc(uword alignment, Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, true, false, true, false, false>(
                 alignment, 1, forward<Args>(constructor_args)...);
@@ -485,7 +485,7 @@ class allocator_interface {
         requires(detail::is_stable_derived_allocator<derived_type> &&
                  is_constructible<T, Args...>)
     [[nodiscard]]
-    constexpr auto align_xalloc(usize alignment, Args&&... constructor_args) {
+    constexpr auto align_xalloc(uword alignment, Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, true, false, true, false, false>(
                 alignment, 1, forward<Args>(constructor_args)...);
@@ -538,7 +538,7 @@ class allocator_interface {
     // Try to allocate an array of `T` with alignment guarantee.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_align_alloc_multi(usize alignment, ssize count) {
+    constexpr auto opq_align_alloc_multi(uword alignment, iword count) {
         return this
             ->meta_alloc<T, false, true, true, true, false, false, false>(
                 alignment, count);
@@ -547,7 +547,7 @@ class allocator_interface {
     // Allocate an array of `T` with an alignment guarantee.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_align_xalloc_multi(usize alignment, ssize count) {
+    constexpr auto opq_align_xalloc_multi(uword alignment, iword count) {
         return this
             ->meta_alloc<T, false, false, true, true, false, false, false>(
                 alignment, count);
@@ -558,7 +558,7 @@ class allocator_interface {
     template <typename T>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto align_alloc_multi(usize alignment, ssize count) {
+    constexpr auto align_alloc_multi(uword alignment, iword count) {
         return this->meta_alloc<T, false, true, true, true, true, false, false>(
             alignment, count);
     }
@@ -568,7 +568,7 @@ class allocator_interface {
     template <typename T>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto align_xalloc_multi(usize alignment, ssize count) {
+    constexpr auto align_xalloc_multi(uword alignment, iword count) {
         return this
             ->meta_alloc<T, false, false, true, true, true, false, false>(
                 alignment, count);
@@ -577,7 +577,7 @@ class allocator_interface {
     // Try to allocate an array of `T` with no alignment guarantee.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_unalign_alloc_multi(ssize count) {
+    constexpr auto opq_unalign_alloc_multi(iword count) {
         return this
             ->meta_alloc<T, false, true, false, true, false, false, false>(
                 1u, count);
@@ -586,7 +586,7 @@ class allocator_interface {
     // Allocate an array of `T` with no alignment guarantee.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_unalign_xalloc_multi(ssize count) {
+    constexpr auto opq_unalign_xalloc_multi(iword count) {
         return this
             ->meta_alloc<T, false, false, false, true, false, false, false>(
                 1u, count);
@@ -597,7 +597,7 @@ class allocator_interface {
     template <typename T>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto unalign_alloc_multi(ssize count) {
+    constexpr auto unalign_alloc_multi(iword count) {
         return this
             ->meta_alloc<T, false, true, false, true, true, false, false>(
                 1u, count);
@@ -608,7 +608,7 @@ class allocator_interface {
     template <typename T>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto unalign_xalloc_multi(ssize count) {
+    constexpr auto unalign_xalloc_multi(iword count) {
         return this
             ->meta_alloc<T, false, false, false, true, true, false, false>(
                 1u, count);
@@ -649,7 +649,7 @@ class allocator_interface {
     // Try to allocate a small-size optimized array of `T`.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_alloc_multi(ssize count) {
+    constexpr auto opq_inline_alloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -662,7 +662,7 @@ class allocator_interface {
     // Allocate a small-size optimized array of `T`.
     template <typename T, typename... Args>
     [[nodiscard]]
-    constexpr auto opq_inline_xalloc_multi(ssize count) {
+    constexpr auto opq_inline_xalloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             // If the alignment of `T` is greater than 1, it should have
             // implied strong alignment guarantees.
@@ -675,7 +675,7 @@ class allocator_interface {
     // Try to allocate a small-size optimized `T` with an alignment guarantee.
     template <typename T, typename... Args>
     [[nodiscard]]
-    constexpr auto opq_inline_align_alloc(usize alignment,
+    constexpr auto opq_inline_align_alloc(uword alignment,
                                           Args&&... constructor_args) {
         return this
             ->meta_alloc<T, true, true, true, false, false, false, false>(
@@ -685,7 +685,7 @@ class allocator_interface {
     // Allocate a small-size optimized `T` with an alignment guarantee.
     template <typename T, typename... Args>
     [[nodiscard]]
-    constexpr auto opq_inline_align_xalloc(usize alignment,
+    constexpr auto opq_inline_align_xalloc(uword alignment,
                                            Args&&... constructor_args) {
         return this
             ->meta_alloc<T, true, false, true, false, false, false, false>(
@@ -714,7 +714,7 @@ class allocator_interface {
     // guarantee.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_align_alloc_multi(usize alignment, ssize count) {
+    constexpr auto opq_inline_align_alloc_multi(uword alignment, iword count) {
         return this->meta_alloc<T, true, true, true, true, false, false, false>(
             alignment, count);
     }
@@ -723,7 +723,7 @@ class allocator_interface {
     // guarantee.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_align_xalloc_multi(usize alignment, ssize count) {
+    constexpr auto opq_inline_align_xalloc_multi(uword alignment, iword count) {
         return this
             ->meta_alloc<T, true, false, true, true, false, false, false>(
                 alignment, count);
@@ -733,7 +733,7 @@ class allocator_interface {
     // guarantee.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_unalign_alloc_multi(ssize count) {
+    constexpr auto opq_inline_unalign_alloc_multi(iword count) {
         return this
             ->meta_alloc<T, true, true, false, true, false, false, false>(
                 1u, count);
@@ -743,7 +743,7 @@ class allocator_interface {
     // guarantee.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_unalign_xalloc_multi(ssize count) {
+    constexpr auto opq_inline_unalign_xalloc_multi(iword count) {
         return this
             ->meta_alloc<T, true, false, false, true, false, false, false>(
                 1u, count);
@@ -752,14 +752,14 @@ class allocator_interface {
     // Try to get the number of bytes that allocating a `T` would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_nalloc() -> maybe_non_zero<ssize> {
+    constexpr auto opq_nalloc() -> maybe_non_zero<iword> {
         return this->opq_align_nalloc<T>(alignof(T));
     }
 
     // Get the number of bytes that allocating a `T` would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_xnalloc() -> ssize {
+    constexpr auto opq_xnalloc() -> iword {
         return this->opq_align_xnalloc<T>(alignof(T));
     }
 
@@ -767,7 +767,7 @@ class allocator_interface {
     // reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_nalloc_multi(ssize count) -> maybe_non_zero<ssize> {
+    constexpr auto opq_nalloc_multi(iword count) -> maybe_non_zero<iword> {
         return this->opq_align_nalloc_multi<T>(alignof(T), count);
     }
 
@@ -775,7 +775,7 @@ class allocator_interface {
     // reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_xnalloc_multi(ssize count) -> ssize {
+    constexpr auto opq_xnalloc_multi(iword count) -> iword {
         return this->opq_align_nalloc_multi<T>(alignof(T), count).value();
     }
 
@@ -783,7 +783,7 @@ class allocator_interface {
     // guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_align_nalloc(usize alignment) -> maybe_non_zero<ssize> {
+    constexpr auto opq_align_nalloc(uword alignment) -> maybe_non_zero<iword> {
         return this->self().allocation_bytes(alignment, ssizeof(T));
     }
 
@@ -791,7 +791,7 @@ class allocator_interface {
     // guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_align_xnalloc(usize alignment) -> ssize {
+    constexpr auto opq_align_xnalloc(uword alignment) -> iword {
         return this->self().allocation_bytes(alignment, ssizeof(T)).value();
     }
 
@@ -799,7 +799,7 @@ class allocator_interface {
     // guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_unalign_nalloc() -> maybe_non_zero<ssize> {
+    constexpr auto opq_unalign_nalloc() -> maybe_non_zero<iword> {
         return this->self().allocation_bytes(1u, ssizeof(T));
     }
 
@@ -807,7 +807,7 @@ class allocator_interface {
     // guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_unalign_xnalloc() -> ssize {
+    constexpr auto opq_unalign_xnalloc() -> iword {
         return this->self().allocation_bytes(1u, ssizeof(T)).value();
     }
 
@@ -815,8 +815,8 @@ class allocator_interface {
     // alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_align_nalloc_multi(usize alignment, ssize count)
-        -> maybe_non_zero<ssize> {
+    constexpr auto opq_align_nalloc_multi(uword alignment, iword count)
+        -> maybe_non_zero<iword> {
         return this->self().allocation_bytes(alignment, ssizeof(T) * count);
     }
 
@@ -824,8 +824,8 @@ class allocator_interface {
     // alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_align_xnalloc_multi(usize alignment, ssize count)
-        -> ssize {
+    constexpr auto opq_align_xnalloc_multi(uword alignment, iword count)
+        -> iword {
         return this->self()
             .allocation_bytes(alignment, ssizeof(T) * count)
             .value();
@@ -835,8 +835,8 @@ class allocator_interface {
     // alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_unalign_nalloc_multi(ssize count)
-        -> maybe_non_zero<ssize> {
+    constexpr auto opq_unalign_nalloc_multi(iword count)
+        -> maybe_non_zero<iword> {
         return this->self().allocation_bytes(1u, ssizeof(T) * count);
     }
 
@@ -844,7 +844,7 @@ class allocator_interface {
     // alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_unalign_xnalloc_multi(ssize count) -> ssize {
+    constexpr auto opq_unalign_xnalloc_multi(iword count) -> iword {
         return this->self().allocation_bytes(1u, ssizeof(T) * count).value();
     }
 
@@ -852,7 +852,7 @@ class allocator_interface {
     // would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_nalloc() -> maybe_non_zero<ssize> {
+    constexpr auto opq_inline_nalloc() -> maybe_non_zero<iword> {
         return this->opq_inline_align_nalloc<T>(alignof(T));
     }
 
@@ -860,7 +860,7 @@ class allocator_interface {
     // would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_xnalloc() -> ssize {
+    constexpr auto opq_inline_xnalloc() -> iword {
         return this->opq_inline_align_xnalloc<T>(alignof(T));
     }
 
@@ -868,8 +868,8 @@ class allocator_interface {
     // array of `T` would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_nalloc_multi(ssize count)
-        -> maybe_non_zero<ssize> {
+    constexpr auto opq_inline_nalloc_multi(iword count)
+        -> maybe_non_zero<iword> {
         return this->opq_inline_align_nalloc_multi<T>(alignof(T), count);
     }
 
@@ -877,7 +877,7 @@ class allocator_interface {
     // `T` would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_xnalloc_multi(ssize count) -> ssize {
+    constexpr auto opq_inline_xnalloc_multi(iword count) -> iword {
         return this->opq_inline_align_xnalloc_multi<T>(alignof(T), count);
     }
 
@@ -885,8 +885,8 @@ class allocator_interface {
     // with an alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_align_nalloc(usize alignment)
-        -> maybe_non_zero<ssize> {
+    constexpr auto opq_inline_align_nalloc(uword alignment)
+        -> maybe_non_zero<iword> {
         if constexpr (ssizeof(T) > inline_buffer_size) {
             return this->self().allocation_bytes(alignment, ssizeof(T));
         } else {
@@ -898,7 +898,7 @@ class allocator_interface {
     // an alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_align_xnalloc(usize alignment) -> ssize {
+    constexpr auto opq_inline_align_xnalloc(uword alignment) -> iword {
         return this->opq_inline_align_nalloc<T>(alignment).value();
     }
 
@@ -906,7 +906,7 @@ class allocator_interface {
     // with no alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_unalign_nalloc() -> maybe_non_zero<ssize> {
+    constexpr auto opq_inline_unalign_nalloc() -> maybe_non_zero<iword> {
         return this->opq_inline_align_nalloc<T>(1u);
     }
 
@@ -914,7 +914,7 @@ class allocator_interface {
     // no alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_unalign_xnalloc() -> ssize {
+    constexpr auto opq_inline_unalign_xnalloc() -> iword {
         return this->opq_inline_align_xnalloc<T>(1u);
     }
 
@@ -922,8 +922,8 @@ class allocator_interface {
     // array of `T` with an alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_align_nalloc_multi(usize alignment, ssize count)
-        -> maybe_non_zero<ssize> {
+    constexpr auto opq_inline_align_nalloc_multi(uword alignment, iword count)
+        -> maybe_non_zero<iword> {
         if (ssizeof(T) * count > inline_buffer_size) {
             return this->self().allocation_bytes(alignment, ssizeof(T) * count);
         }
@@ -934,8 +934,8 @@ class allocator_interface {
     // array of `T` with an alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_align_xnalloc_multi(usize alignment, ssize count)
-        -> ssize {
+    constexpr auto opq_inline_align_xnalloc_multi(uword alignment, iword count)
+        -> iword {
         return this->opq_inline_align_nalloc_multi<T>(alignment, count).value();
     }
 
@@ -943,8 +943,8 @@ class allocator_interface {
     // array of `T` with no alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_unalign_nalloc_multi(ssize count)
-        -> maybe_non_zero<ssize> {
+    constexpr auto opq_inline_unalign_nalloc_multi(iword count)
+        -> maybe_non_zero<iword> {
         return this->opq_inline_align_nalloc_multi<T>(1u, count);
     }
 
@@ -952,7 +952,7 @@ class allocator_interface {
     // array of `T` with no alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_unalign_xnalloc_multi(ssize count) -> ssize {
+    constexpr auto opq_inline_unalign_xnalloc_multi(iword count) -> iword {
         return this->opq_inline_align_xnalloc_multi<T>(1u, count);
     }
 
@@ -1019,7 +1019,7 @@ class allocator_interface {
     // allocated.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_salloc_multi(ssize count) {
+    constexpr auto opq_salloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             return this->opq_align_salloc_multi<T>(alignof(T), count);
         } else {
@@ -1031,7 +1031,7 @@ class allocator_interface {
     // allocated.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_xsalloc_multi(ssize count) {
+    constexpr auto opq_xsalloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             return this->opq_align_xsalloc_multi<T>(alignof(T), count);
         } else {
@@ -1044,7 +1044,7 @@ class allocator_interface {
     template <typename T, typename... Args>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto salloc_multi(ssize count) {
+    constexpr auto salloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             return this->align_salloc_multi<T>(alignof(T), count);
         } else {
@@ -1057,7 +1057,7 @@ class allocator_interface {
     template <typename T, typename... Args>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto xsalloc_multi(ssize count) {
+    constexpr auto xsalloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             return this->align_xsalloc_multi<T>(alignof(T), count);
         } else {
@@ -1070,7 +1070,7 @@ class allocator_interface {
     template <typename T, typename... Args>
         requires(is_constructible<T, Args...>)
     [[nodiscard]]
-    constexpr auto opq_align_salloc(usize alignment,
+    constexpr auto opq_align_salloc(uword alignment,
                                     Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, true, false, false, false, true>(
@@ -1082,7 +1082,7 @@ class allocator_interface {
     template <typename T, typename... Args>
         requires(is_constructible<T, Args...>)
     [[nodiscard]]
-    constexpr auto opq_align_xsalloc(usize alignment,
+    constexpr auto opq_align_xsalloc(uword alignment,
                                      Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, true, false, false, false, true>(
@@ -1095,7 +1095,7 @@ class allocator_interface {
         requires(detail::is_stable_derived_allocator<derived_type> &&
                  is_constructible<T, Args...>)
     [[nodiscard]]
-    constexpr auto align_salloc(usize alignment, Args&&... constructor_args) {
+    constexpr auto align_salloc(uword alignment, Args&&... constructor_args) {
         return this->meta_alloc<T, false, true, true, false, true, false, true>(
             alignment, 1, forward<Args>(constructor_args)...);
     }
@@ -1106,7 +1106,7 @@ class allocator_interface {
         requires(detail::is_stable_derived_allocator<derived_type> &&
                  is_constructible<T, Args...>)
     [[nodiscard]]
-    constexpr auto align_xsalloc(usize alignment, Args&&... constructor_args) {
+    constexpr auto align_xsalloc(uword alignment, Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, true, false, true, false, true>(
                 alignment, 1, forward<Args>(constructor_args)...);
@@ -1162,7 +1162,7 @@ class allocator_interface {
     // the number of bytes that were allocated.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_align_salloc_multi(usize alignment, ssize count) {
+    constexpr auto opq_align_salloc_multi(uword alignment, iword count) {
         return this->meta_alloc<T, false, true, true, true, false, false, true>(
             alignment, count);
     }
@@ -1171,7 +1171,7 @@ class allocator_interface {
     // the number of bytes that were allocated.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_align_xsalloc_multi(usize alignment, ssize count) {
+    constexpr auto opq_align_xsalloc_multi(uword alignment, iword count) {
         return this
             ->meta_alloc<T, false, false, true, true, false, false, true>(
                 alignment, count);
@@ -1183,7 +1183,7 @@ class allocator_interface {
     template <typename T>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto align_salloc_multi(usize alignment, ssize count) {
+    constexpr auto align_salloc_multi(uword alignment, iword count) {
         return this->meta_alloc<T, false, true, true, true, true, false, true>(
             alignment, count);
     }
@@ -1193,7 +1193,7 @@ class allocator_interface {
     template <typename T>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto align_xsalloc_multi(usize alignment, ssize count) {
+    constexpr auto align_xsalloc_multi(uword alignment, iword count) {
         return this->meta_alloc<T, false, false, true, true, true, false, true>(
             alignment, count);
     }
@@ -1202,7 +1202,7 @@ class allocator_interface {
     // the number of bytes that were allocated.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_unalign_salloc_multi(ssize count) {
+    constexpr auto opq_unalign_salloc_multi(iword count) {
         return this->meta_alloc<T, false, true, false, true, true, false, true>(
             1u, count);
     }
@@ -1211,7 +1211,7 @@ class allocator_interface {
     // the number of bytes that were allocated.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_unalign_xsalloc_multi(ssize count) {
+    constexpr auto opq_unalign_xsalloc_multi(iword count) {
         return this
             ->meta_alloc<T, false, false, false, true, false, false, true>(
                 1u, count);
@@ -1223,7 +1223,7 @@ class allocator_interface {
     template <typename T>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto unalign_salloc_multi(ssize count) {
+    constexpr auto unalign_salloc_multi(iword count) {
         return this->meta_alloc<T, false, true, false, true, true, false, true>(
             1u, count);
     }
@@ -1233,7 +1233,7 @@ class allocator_interface {
     template <typename T, typename... Args>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto unalign_xsalloc_multi(ssize count) {
+    constexpr auto unalign_xsalloc_multi(iword count) {
         return this
             ->meta_alloc<T, false, false, false, true, true, false, true>(
                 1u, count);
@@ -1273,7 +1273,7 @@ class allocator_interface {
     // number of bytes that were allocated.
     template <typename T, typename... Args>
     [[nodiscard]]
-    constexpr auto opq_inline_salloc_multi(ssize count) {
+    constexpr auto opq_inline_salloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             return this->opq_inline_align_salloc_multi<T>(alignof(T), count);
         } else {
@@ -1285,7 +1285,7 @@ class allocator_interface {
     // bytes that were allocated.
     template <typename T, typename... Args>
     [[nodiscard]]
-    constexpr auto opq_inline_xsalloc_multi(ssize count) {
+    constexpr auto opq_inline_xsalloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             return this->opq_inline_align_xsalloc_multi<T>(alignof(T), count);
         } else {
@@ -1298,7 +1298,7 @@ class allocator_interface {
     template <typename T, typename... Args>
         requires(is_constructible<T, Args...>)
     [[nodiscard]]
-    constexpr auto opq_inline_align_salloc(usize alignment,
+    constexpr auto opq_inline_align_salloc(uword alignment,
                                            Args&&... constructor_args) {
         return this->meta_alloc<T, true, true, true, false, false, false, true>(
             alignment, 1, forward<Args>(constructor_args)...);
@@ -1309,7 +1309,7 @@ class allocator_interface {
     template <typename T, typename... Args>
         requires(is_constructible<T, Args...>)
     [[nodiscard]]
-    constexpr auto opq_inline_align_xsalloc(usize alignment,
+    constexpr auto opq_inline_align_xsalloc(uword alignment,
                                             Args&&... constructor_args) {
         return this
             ->meta_alloc<T, true, false, true, false, false, false, true>(
@@ -1342,7 +1342,7 @@ class allocator_interface {
     // guarantee, and return the number of bytes that were allocated.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_align_salloc_multi(usize alignment, ssize count) {
+    constexpr auto opq_inline_align_salloc_multi(uword alignment, iword count) {
         return this->meta_alloc<T, true, true, false, true, false, false, true>(
             alignment, count);
     }
@@ -1351,8 +1351,8 @@ class allocator_interface {
     // guarantee, and return the number of bytes that were allocated.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_align_xsalloc_multi(usize alignment,
-                                                  ssize count) {
+    constexpr auto opq_inline_align_xsalloc_multi(uword alignment,
+                                                  iword count) {
         return this->meta_alloc<T, true, false, true, true, false, false, true>(
             alignment, count);
     }
@@ -1361,7 +1361,7 @@ class allocator_interface {
     // guarantee, and return the number of bytes that were allocated.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_unalign_salloc_multi(ssize count) {
+    constexpr auto opq_inline_unalign_salloc_multi(iword count) {
         return this->meta_alloc<T, true, true, false, true, false, false, true>(
             1u, count);
     }
@@ -1370,7 +1370,7 @@ class allocator_interface {
     // guarantee, and return the number of bytes that were allocated.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_unalign_xsalloc_multi(ssize count) {
+    constexpr auto opq_inline_unalign_xsalloc_multi(iword count) {
         return this
             ->meta_alloc<T, true, false, false, true, false, false, true>(
                 1u, count);
@@ -1437,7 +1437,7 @@ class allocator_interface {
     // Try to allocate an array of `T`.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_calloc_multi(ssize count) {
+    constexpr auto opq_calloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             return this->opq_align_calloc_multi<T>(alignof(T), count);
         } else {
@@ -1448,7 +1448,7 @@ class allocator_interface {
     // Allocate an array of `T`.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_xcalloc_multi(ssize count) {
+    constexpr auto opq_xcalloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             return this->opq_align_xcalloc_multi<T>(alignof(T), count);
         } else {
@@ -1461,7 +1461,7 @@ class allocator_interface {
     template <typename T>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto calloc_multi(ssize count) {
+    constexpr auto calloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             return this->align_calloc_multi<T>(alignof(T), count);
         } else {
@@ -1474,7 +1474,7 @@ class allocator_interface {
     template <typename T>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto xcalloc_multi(ssize count) {
+    constexpr auto xcalloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             return this->align_xcalloc_multi<T>(alignof(T), count);
         } else {
@@ -1487,7 +1487,7 @@ class allocator_interface {
     template <typename T, typename... Args>
         requires(is_constructible<T, Args...>)
     [[nodiscard]]
-    constexpr auto opq_align_calloc(usize alignment,
+    constexpr auto opq_align_calloc(uword alignment,
                                     Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, true, false, false, true, false>(
@@ -1499,7 +1499,7 @@ class allocator_interface {
     template <typename T, typename... Args>
         requires(is_constructible<T, Args...>)
     [[nodiscard]]
-    constexpr auto opq_align_xcalloc(usize alignment,
+    constexpr auto opq_align_xcalloc(uword alignment,
                                      Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, true, false, false, true, false>(
@@ -1513,7 +1513,7 @@ class allocator_interface {
         requires(detail::is_stable_derived_allocator<derived_type> &&
                  is_constructible<T, Args...>)
     [[nodiscard]]
-    constexpr auto align_calloc(usize alignment, Args&&... constructor_args) {
+    constexpr auto align_calloc(uword alignment, Args&&... constructor_args) {
         return this->meta_alloc<T, false, true, true, false, true, true, false>(
             alignment, 1, forward<Args>(constructor_args)...);
     }
@@ -1525,7 +1525,7 @@ class allocator_interface {
         requires(detail::is_stable_derived_allocator<derived_type> &&
                  is_constructible<T, Args...>)
     [[nodiscard]]
-    constexpr auto align_xcalloc(usize alignment, Args&&... constructor_args) {
+    constexpr auto align_xcalloc(uword alignment, Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, true, false, true, true, false>(
                 alignment, 1, forward<Args>(constructor_args)...);
@@ -1583,7 +1583,7 @@ class allocator_interface {
     // the allocated memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_align_calloc_multi(usize alignment, ssize count) {
+    constexpr auto opq_align_calloc_multi(uword alignment, iword count) {
         return this->meta_alloc<T, false, true, true, true, false, true, false>(
             alignment, count);
     }
@@ -1592,7 +1592,7 @@ class allocator_interface {
     // allocated memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_align_xcalloc_multi(usize alignment, ssize count) {
+    constexpr auto opq_align_xcalloc_multi(uword alignment, iword count) {
         return this
             ->meta_alloc<T, false, false, true, true, false, true, false>(
                 alignment, count);
@@ -1604,7 +1604,7 @@ class allocator_interface {
     template <typename T>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto align_calloc_multi(usize alignment, ssize count) {
+    constexpr auto align_calloc_multi(uword alignment, iword count) {
         return this->meta_alloc<T, false, true, true, true, true, true, false>(
             alignment, count);
     }
@@ -1615,7 +1615,7 @@ class allocator_interface {
     template <typename T>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto align_xcalloc_multi(usize alignment, ssize count) {
+    constexpr auto align_xcalloc_multi(uword alignment, iword count) {
         return this->meta_alloc<T, false, false, true, true, true, true, false>(
             alignment, count);
     }
@@ -1624,7 +1624,7 @@ class allocator_interface {
     // the allocated memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_unalign_calloc_multi(ssize count) {
+    constexpr auto opq_unalign_calloc_multi(iword count) {
         return this->meta_alloc<T, false, true, false, true, true, true, false>(
             1u, count);
     }
@@ -1633,7 +1633,7 @@ class allocator_interface {
     // allocated memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_unalign_xcalloc_multi(ssize count) {
+    constexpr auto opq_unalign_xcalloc_multi(iword count) {
         return this
             ->meta_alloc<T, false, false, false, true, true, true, false>(
                 1u, count);
@@ -1645,7 +1645,7 @@ class allocator_interface {
     template <typename T>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto unalign_calloc_multi(ssize count) {
+    constexpr auto unalign_calloc_multi(iword count) {
         return this->meta_alloc<T, false, true, false, true, true, true, false>(
             1u, count);
     }
@@ -1656,7 +1656,7 @@ class allocator_interface {
     template <typename T>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto unalign_xcalloc_multi(ssize count) {
+    constexpr auto unalign_xcalloc_multi(iword count) {
         return this
             ->meta_alloc<T, false, false, false, true, true, true, false>(
                 1u, count);
@@ -1696,7 +1696,7 @@ class allocator_interface {
     // allocated memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_calloc_multi(ssize count) {
+    constexpr auto opq_inline_calloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             return this->opq_inline_align_calloc_multi<T>(alignof(T), count);
         } else {
@@ -1708,7 +1708,7 @@ class allocator_interface {
     // allocated memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_xcalloc_multi(ssize count) {
+    constexpr auto opq_inline_xcalloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             return this->opq_inline_align_xcalloc_multi<T>(alignof(T), count);
         } else {
@@ -1721,7 +1721,7 @@ class allocator_interface {
     template <typename T, typename... Args>
         requires(is_constructible<T, Args...>)
     [[nodiscard]]
-    constexpr auto opq_inline_align_calloc(usize alignment,
+    constexpr auto opq_inline_align_calloc(uword alignment,
                                            Args&&... constructor_args) {
         return this->meta_alloc<T, true, true, true, false, false, true, false>(
             alignment, 1, forward<Args>(constructor_args)...);
@@ -1732,7 +1732,7 @@ class allocator_interface {
     template <typename T, typename... Args>
         requires(is_constructible<T, Args...>)
     [[nodiscard]]
-    constexpr auto opq_inline_align_xcalloc(usize alignment,
+    constexpr auto opq_inline_align_xcalloc(uword alignment,
                                             Args&&... constructor_args) {
         return this
             ->meta_alloc<T, true, false, true, false, false, true, false>(
@@ -1765,7 +1765,7 @@ class allocator_interface {
     // guarantee, and zero-out the allocated memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_align_calloc_multi(usize alignment, ssize count) {
+    constexpr auto opq_inline_align_calloc_multi(uword alignment, iword count) {
         return this->meta_alloc<T, true, true, true, true, false, true, false>(
             alignment, count);
     }
@@ -1774,8 +1774,8 @@ class allocator_interface {
     // guarantee, and zero-out the allocated memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_align_xcalloc_multi(usize alignment,
-                                                  ssize count) {
+    constexpr auto opq_inline_align_xcalloc_multi(uword alignment,
+                                                  iword count) {
         return this->meta_alloc<T, true, false, true, true, false, true, false>(
             alignment, count);
     }
@@ -1784,7 +1784,7 @@ class allocator_interface {
     // guarantee, and zero-out the allocated memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_unalign_calloc_multi(ssize count) {
+    constexpr auto opq_inline_unalign_calloc_multi(iword count) {
         return this->meta_alloc<T, true, true, false, true, false, true, false>(
             1u, count);
     }
@@ -1793,7 +1793,7 @@ class allocator_interface {
     // guarantee, and zero-out the allocated memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_unalign_xcalloc_multi(ssize count) {
+    constexpr auto opq_inline_unalign_xcalloc_multi(iword count) {
         return this
             ->meta_alloc<T, true, false, false, true, false, true, false>(
                 1u, count);
@@ -1862,7 +1862,7 @@ class allocator_interface {
     // allocated, and zero-out the allocated memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_scalloc_multi(ssize count) {
+    constexpr auto opq_scalloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             return this->opq_align_scalloc_multi<T>(alignof(T), count);
         } else {
@@ -1874,7 +1874,7 @@ class allocator_interface {
     // allocated, and zero-out the allocated memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_xscalloc_multi(ssize count) {
+    constexpr auto opq_xscalloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             return this->opq_align_xscalloc_multi<T>(alignof(T), count);
         } else {
@@ -1888,7 +1888,7 @@ class allocator_interface {
     template <typename T, typename... Args>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto scalloc_multi(ssize count) {
+    constexpr auto scalloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             return this->align_scalloc_multi<T>(alignof(T), count);
         } else {
@@ -1902,7 +1902,7 @@ class allocator_interface {
     template <typename T, typename... Args>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto xscalloc_multi(ssize count) {
+    constexpr auto xscalloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             return this->align_xscalloc_multi<T>(alignof(T), count);
         } else {
@@ -1914,7 +1914,7 @@ class allocator_interface {
     // of bytes that were allocated, and zero-out the allocated memory.
     template <typename T, typename... Args>
     [[nodiscard]]
-    constexpr auto opq_align_scalloc(usize alignment,
+    constexpr auto opq_align_scalloc(uword alignment,
                                      Args&&... constructor_args) {
         return this->meta_alloc<T, false, true, true, false, false, true, true>(
             alignment, 1, forward<Args>(constructor_args)...);
@@ -1924,7 +1924,7 @@ class allocator_interface {
     // bytes that were allocated, and zero-out the allocated memory.
     template <typename T, typename... Args>
     [[nodiscard]]
-    constexpr auto opq_align_xscalloc(usize alignment,
+    constexpr auto opq_align_xscalloc(uword alignment,
                                       Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, true, false, false, true, true>(
@@ -1937,7 +1937,7 @@ class allocator_interface {
     template <typename T, typename... Args>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto align_scalloc(usize alignment, Args&&... constructor_args) {
+    constexpr auto align_scalloc(uword alignment, Args&&... constructor_args) {
         return this->meta_alloc<T, false, true, true, false, true, true, true>(
             alignment, 1, forward<Args>(constructor_args)...);
     }
@@ -1948,7 +1948,7 @@ class allocator_interface {
     template <typename T, typename... Args>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto align_xscalloc(usize alignment, Args&&... constructor_args) {
+    constexpr auto align_xscalloc(uword alignment, Args&&... constructor_args) {
         return this->meta_alloc<T, false, false, true, false, true, true, true>(
             alignment, 1, forward<Args>(constructor_args)...);
     }
@@ -2001,7 +2001,7 @@ class allocator_interface {
     // memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_align_scalloc_multi(usize alignment, ssize count) {
+    constexpr auto opq_align_scalloc_multi(uword alignment, iword count) {
         return this->meta_alloc<T, false, true, true, true, false, true, true>(
             alignment, count);
     }
@@ -2011,7 +2011,7 @@ class allocator_interface {
     // memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_align_xscalloc_multi(usize alignment, ssize count) {
+    constexpr auto opq_align_xscalloc_multi(uword alignment, iword count) {
         return this->meta_alloc<T, false, false, true, true, false, true, true>(
             alignment, count);
     }
@@ -2022,7 +2022,7 @@ class allocator_interface {
     template <typename T>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto align_scalloc_multi(usize alignment, ssize count) {
+    constexpr auto align_scalloc_multi(uword alignment, iword count) {
         return this->meta_alloc<T, false, true, true, true, true, true, true>(
             alignment, count);
     }
@@ -2033,7 +2033,7 @@ class allocator_interface {
     template <typename T>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto align_xscalloc_multi(usize alignment, ssize count) {
+    constexpr auto align_xscalloc_multi(uword alignment, iword count) {
         return this->meta_alloc<T, false, false, true, true, true, true, true>(
             alignment, count);
     }
@@ -2043,7 +2043,7 @@ class allocator_interface {
     // memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_unalign_scalloc_multi(ssize count) {
+    constexpr auto opq_unalign_scalloc_multi(iword count) {
         return this->meta_alloc<T, false, true, false, true, false, true, true>(
             1u, count);
     }
@@ -2053,7 +2053,7 @@ class allocator_interface {
     // memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_unalign_xscalloc_multi(ssize count) {
+    constexpr auto opq_unalign_xscalloc_multi(iword count) {
         return this
             ->meta_alloc<T, false, false, false, true, false, true, true>(
                 1u, count);
@@ -2065,7 +2065,7 @@ class allocator_interface {
     template <typename T>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto unalign_scalloc_multi(ssize count) {
+    constexpr auto unalign_scalloc_multi(iword count) {
         return this->meta_alloc<T, false, true, false, true, true, true, true>(
             1u, count);
     }
@@ -2076,7 +2076,7 @@ class allocator_interface {
     template <typename T, typename... Args>
         requires(detail::is_stable_derived_allocator<derived_type>)
     [[nodiscard]]
-    constexpr auto unalign_xscalloc_multi(ssize count) {
+    constexpr auto unalign_xscalloc_multi(iword count) {
         return this->meta_alloc<T, false, false, false, true, true, true, true>(
             1u, count);
     }
@@ -2113,7 +2113,7 @@ class allocator_interface {
     // number of bytes that were allocated, and zero-out the allocated memory.
     template <typename T, typename... Args>
     [[nodiscard]]
-    constexpr auto opq_inline_scalloc_multi(ssize count) {
+    constexpr auto opq_inline_scalloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             return this->opq_inline_align_scalloc_multi<T>(alignof(T), count);
         } else {
@@ -2125,7 +2125,7 @@ class allocator_interface {
     // bytes that were allocated, and zero-out the allocated memory.
     template <typename T, typename... Args>
     [[nodiscard]]
-    constexpr auto opq_inline_xscalloc_multi(ssize count) {
+    constexpr auto opq_inline_xscalloc_multi(iword count) {
         if constexpr (alignof(T) > 1) {
             return this->opq_inline_align_xscalloc_multi<T>(alignof(T), count);
         } else {
@@ -2138,7 +2138,7 @@ class allocator_interface {
     // allocated memory.
     template <typename T, typename... Args>
     [[nodiscard]]
-    constexpr auto opq_inline_align_scalloc(usize alignment,
+    constexpr auto opq_inline_align_scalloc(uword alignment,
                                             Args&&... constructor_args) {
         return this->meta_alloc<T, true, true, true, false, false, true, true>(
             alignment, 1, forward<Args>(constructor_args)...);
@@ -2149,7 +2149,7 @@ class allocator_interface {
     // allocated memory.
     template <typename T, typename... Args>
     [[nodiscard]]
-    constexpr auto opq_inline_align_xscalloc(usize alignment,
+    constexpr auto opq_inline_align_xscalloc(uword alignment,
                                              Args&&... constructor_args) {
         return this->meta_alloc<T, true, false, true, false, false, true, true>(
             alignment, 1, forward<Args>(constructor_args)...);
@@ -2181,8 +2181,8 @@ class allocator_interface {
     // zero-out the allocated memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_align_scalloc_multi(usize alignment,
-                                                  ssize count) {
+    constexpr auto opq_inline_align_scalloc_multi(uword alignment,
+                                                  iword count) {
         return this->meta_alloc<T, true, true, true, true, false, true, true>(
             alignment, count);
     }
@@ -2192,8 +2192,8 @@ class allocator_interface {
     // zero-out the allocated memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_align_xscalloc_multi(usize alignment,
-                                                   ssize count) {
+    constexpr auto opq_inline_align_xscalloc_multi(uword alignment,
+                                                   iword count) {
         return this->meta_alloc<T, true, false, true, true, false, true, true>(
             alignment, count);
     }
@@ -2203,7 +2203,7 @@ class allocator_interface {
     // zero-out the allocated memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_unalign_scalloc_multi(ssize count) {
+    constexpr auto opq_inline_unalign_scalloc_multi(iword count) {
         return this->meta_alloc<T, true, true, false, true, false, true, true>(
             1u, count);
     }
@@ -2213,7 +2213,7 @@ class allocator_interface {
     // zero-out the allocated memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_unalign_xscalloc_multi(ssize count) {
+    constexpr auto opq_inline_unalign_xscalloc_multi(iword count) {
         return this->meta_alloc<T, true, false, false, true, false, true, true>(
             1u, count);
     }
@@ -2284,7 +2284,7 @@ class allocator_interface {
     // alignment guarantee.
     [[nodiscard]]
     constexpr auto opq_align_realloc_to(auto& allocator, mem auto& handle,
-                                        usize alignment) {
+                                        uword alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::opq_align_alloc<T, T>, true,
@@ -2294,7 +2294,7 @@ class allocator_interface {
     // Try to move a memory handle from this allocator into itself with an
     // alignment guarantee.
     [[nodiscard]]
-    constexpr auto opq_align_realloc(mem auto& handle, usize alignment) {
+    constexpr auto opq_align_realloc(mem auto& handle, uword alignment) {
         return this->opq_align_realloc_to(*this, handle, alignment);
     }
 
@@ -2302,7 +2302,7 @@ class allocator_interface {
     // guarantee.
     [[nodiscard]]
     constexpr auto opq_align_xrealloc_to(auto& allocator, mem auto& handle,
-                                         usize alignment) {
+                                         uword alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::opq_align_xalloc<T, T>, false,
@@ -2311,7 +2311,7 @@ class allocator_interface {
 
     // Move a memory handle from this allocator into itself with an alignment
     // guarantee.
-    auto opq_align_xrealloc(mem auto& handle, usize alignment) {
+    auto opq_align_xrealloc(mem auto& handle, uword alignment) {
         return this->opq_align_xrealloc_to(*this, handle, alignment);
     }
 
@@ -2352,7 +2352,7 @@ class allocator_interface {
     // alignment guarantee.
     [[nodiscard]]
     constexpr auto align_realloc_to(auto& allocator, auto* p_handle,
-                                    usize alignment) {
+                                    uword alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::align_alloc<T, T>, true, false>(
@@ -2362,7 +2362,7 @@ class allocator_interface {
     // Try to move a pointer handle from this allocator into itself with an
     // alignment guarantee.
     [[nodiscard]]
-    constexpr auto align_realloc(auto* p_handle, usize alignment) {
+    constexpr auto align_realloc(auto* p_handle, uword alignment) {
         return this->align_realloc_to(*this, p_handle, alignment);
     }
 
@@ -2370,7 +2370,7 @@ class allocator_interface {
     // guarantee.
     [[nodiscard]]
     constexpr auto align_xrealloc_to(auto& allocator, auto* p_handle,
-                                     usize alignment) {
+                                     uword alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::align_xalloc<T, T>, false,
@@ -2379,7 +2379,7 @@ class allocator_interface {
 
     // Move a pointer handle from this allocator into itself with an alignment
     // guarantee.
-    auto align_xrealloc(auto* p_handle, usize alignment) {
+    auto align_xrealloc(auto* p_handle, uword alignment) {
         return this->align_xrealloc_to(*this, p_handle, alignment);
     }
 
@@ -2419,7 +2419,7 @@ class allocator_interface {
     // Move an array memory handle from this allocator into another.
     [[nodiscard]]
     constexpr auto opq_realloc_multi_to(auto& allocator, mem auto& handle,
-                                        ssize new_count) {
+                                        iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_alloc_multi<T>, true,
@@ -2428,7 +2428,7 @@ class allocator_interface {
 
     // Try to move an array memory handle from this allocator into itself.
     [[nodiscard]]
-    constexpr auto opq_realloc_multi(mem auto& handle, ssize new_count) {
+    constexpr auto opq_realloc_multi(mem auto& handle, iword new_count) {
         return this->opq_realloc_multi_to(*this, handle, new_count);
     }
 
@@ -2437,7 +2437,7 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto realloc_multi_to(auto& allocator, T* p_handle,
-                                    ssize old_count, ssize new_count) {
+                                    iword old_count, iword new_count) {
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::alloc_multi<T>, true, false>(
             allocator, p_handle, old_count, new_count);
@@ -2447,15 +2447,15 @@ class allocator_interface {
     // itself.
     template <typename T>
     [[nodiscard]]
-    constexpr auto realloc_multi(T* p_handle, ssize old_count,
-                                 ssize new_count) {
+    constexpr auto realloc_multi(T* p_handle, iword old_count,
+                                 iword new_count) {
         return this->realloc_multi_to(*this, p_handle, old_count, new_count);
     }
 
     // Move and resize an array memory handle from this allocator into another.
     [[nodiscard]]
     constexpr auto opq_xrealloc_multi_to(auto& allocator, mem auto& handle,
-                                         ssize new_count) {
+                                         iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_xalloc_multi<T>, false,
@@ -2464,7 +2464,7 @@ class allocator_interface {
 
     // Move and resize an array memory handle from this allocator into itself.
     [[nodiscard]]
-    constexpr auto opq_xrealloc_multi(mem auto& handle, ssize new_count) {
+    constexpr auto opq_xrealloc_multi(mem auto& handle, iword new_count) {
         return this->opq_xrealloc_multi_to(*this, handle, new_count);
     }
 
@@ -2472,7 +2472,7 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto xrealloc_multi_to(auto& allocator, T* p_handle,
-                                     ssize old_count, ssize new_count) {
+                                     iword old_count, iword new_count) {
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::xalloc_multi<T>, false, false>(
             allocator, p_handle, old_count, new_count);
@@ -2481,16 +2481,16 @@ class allocator_interface {
     // Move and resize an array pointer handle from this allocator into itself.
     template <typename T>
     [[nodiscard]]
-    constexpr auto xrealloc_multi(T* p_handle, ssize old_count,
-                                  ssize new_count) {
+    constexpr auto xrealloc_multi(T* p_handle, iword old_count,
+                                  iword new_count) {
         return this->xrealloc_multi_to(*this, p_handle, old_count, new_count);
     }
 
     // Move and resize an array memory handle from this allocator into another.
     [[nodiscard]]
     constexpr auto opq_align_realloc_multi_to(auto& allocator, mem auto& handle,
-                                              usize alignment,
-                                              ssize new_count) {
+                                              uword alignment,
+                                              iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_align_alloc_multi<T>, true,
@@ -2500,8 +2500,8 @@ class allocator_interface {
     // Try to move and resize an array memory handle from this allocator into
     // itself with an alignment guarantee.
     [[nodiscard]]
-    constexpr auto opq_align_realloc_multi(mem auto& handle, usize alignment,
-                                           ssize new_count) {
+    constexpr auto opq_align_realloc_multi(mem auto& handle, uword alignment,
+                                           iword new_count) {
         return this->opq_align_realloc_multi_to(*this, handle, alignment,
                                                 new_count);
     }
@@ -2511,8 +2511,8 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_align_xrealloc_multi_to(auto& allocator,
                                                mem auto& handle,
-                                               usize alignment,
-                                               ssize new_count) {
+                                               uword alignment,
+                                               iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_align_xalloc_multi<T>,
@@ -2521,8 +2521,8 @@ class allocator_interface {
 
     // Move and resize an array memory handle from this allocator into itself
     // with an alignment guarantee.
-    auto opq_align_xrealloc_multi(mem auto& handle, usize alignment,
-                                  ssize new_count) {
+    auto opq_align_xrealloc_multi(mem auto& handle, uword alignment,
+                                  iword new_count) {
         return this->opq_align_xrealloc_multi_to(*this, handle, alignment,
                                                  new_count);
     }
@@ -2532,7 +2532,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_unalign_realloc_multi_to(auto& allocator,
                                                 mem auto& handle,
-                                                ssize new_count) {
+                                                iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_unalign_alloc_multi<T>,
@@ -2543,7 +2543,7 @@ class allocator_interface {
     // itself with no alignment guarantee.
     [[nodiscard]]
     constexpr auto opq_unalign_realloc_multi(mem auto& handle,
-                                             ssize new_count) {
+                                             iword new_count) {
         return this->opq_unalign_realloc_multi_to(*this, handle, new_count);
     }
 
@@ -2552,7 +2552,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_unalign_xrealloc_multi_to(auto& allocator,
                                                  mem auto& handle,
-                                                 ssize new_count) {
+                                                 iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_unalign_xalloc_multi<T>,
@@ -2561,7 +2561,7 @@ class allocator_interface {
 
     // Move and resize an array memory handle from this allocator into itself
     // with no alignment guarantee.
-    auto opq_unalign_xrealloc_multi(mem auto& handle, ssize new_count) {
+    auto opq_unalign_xrealloc_multi(mem auto& handle, iword new_count) {
         return this->opq_unalign_xrealloc_multi_to(*this, handle, new_count);
     }
 
@@ -2569,8 +2569,8 @@ class allocator_interface {
     // another with an alignment guarantee.
     [[nodiscard]]
     constexpr auto align_realloc_multi_to(auto& allocator, auto* p_handle,
-                                          usize alignment, ssize old_count,
-                                          ssize new_count) {
+                                          uword alignment, iword old_count,
+                                          iword new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::align_alloc_multi<T>, true,
@@ -2580,8 +2580,8 @@ class allocator_interface {
     // Try to move and resize an array pointer handle from this allocator into
     // itself with an alignment guarantee.
     [[nodiscard]]
-    constexpr auto align_realloc_multi(auto* p_handle, usize alignment,
-                                       ssize old_count, ssize new_count) {
+    constexpr auto align_realloc_multi(auto* p_handle, uword alignment,
+                                       iword old_count, iword new_count) {
         return this->align_realloc_multi_to(*this, p_handle, alignment,
                                             old_count, new_count);
     }
@@ -2590,8 +2590,8 @@ class allocator_interface {
     // with an alignment guarantee.
     [[nodiscard]]
     constexpr auto align_xrealloc_multi_to(auto& allocator, auto* p_handle,
-                                           usize alignment, ssize old_count,
-                                           ssize new_count) {
+                                           uword alignment, iword old_count,
+                                           iword new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::align_xalloc_multi<T>, false,
@@ -2600,8 +2600,8 @@ class allocator_interface {
 
     // Move and resize an array pointer handle from this allocator into itself
     // with an alignment guarantee.
-    auto align_xrealloc_multi(auto* p_handle, usize alignment, ssize old_count,
-                              ssize new_count) {
+    auto align_xrealloc_multi(auto* p_handle, uword alignment, iword old_count,
+                              iword new_count) {
         return this->align_xrealloc_multi_to(*this, p_handle, alignment,
                                              old_count, new_count);
     }
@@ -2610,7 +2610,7 @@ class allocator_interface {
     // another with no alignment guarantee.
     [[nodiscard]]
     constexpr auto unalign_realloc_multi_to(auto& allocator, auto* p_handle,
-                                            ssize old_count, ssize new_count) {
+                                            iword old_count, iword new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::unalign_alloc_multi<T>, true,
@@ -2620,8 +2620,8 @@ class allocator_interface {
     // Try to move and resize an array pointer handle from this allocator into
     // itself with no alignment guarantee.
     [[nodiscard]]
-    constexpr auto unalign_realloc_multi(auto* p_handle, ssize old_count,
-                                         ssize new_count) {
+    constexpr auto unalign_realloc_multi(auto* p_handle, iword old_count,
+                                         iword new_count) {
         return this->unalign_realloc_multi_to(*this, p_handle, old_count,
                                               new_count);
     }
@@ -2630,7 +2630,7 @@ class allocator_interface {
     // with no alignment guarantee.
     [[nodiscard]]
     constexpr auto unalign_xrealloc_multi_to(auto& allocator, auto* p_handle,
-                                             ssize old_count, ssize new_count) {
+                                             iword old_count, iword new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::unalign_xalloc_multi<T>, false,
@@ -2639,8 +2639,8 @@ class allocator_interface {
 
     // Move and resize an array pointer handle from this allocator into itself
     // with no alignment guarantee.
-    auto unalign_xrealloc_multi(auto* p_handle, ssize old_count,
-                                ssize new_count) {
+    auto unalign_xrealloc_multi(auto* p_handle, iword old_count,
+                                iword new_count) {
         return this->unalign_xrealloc_multi_to(*this, p_handle, old_count,
                                                new_count);
     }
@@ -2719,7 +2719,7 @@ class allocator_interface {
     // alignment guarantee, and zero-out the allocated memory.
     [[nodiscard]]
     constexpr auto opq_align_recalloc_to(auto& allocator, mem auto& handle,
-                                         usize alignment) {
+                                         uword alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::opq_align_calloc<T, T>, true,
@@ -2729,7 +2729,7 @@ class allocator_interface {
     // Try to move a memory handle from this allocator into itself with an
     // alignment guarantee, and zero-out the allocated memory.
     [[nodiscard]]
-    constexpr auto opq_align_recalloc(mem auto& handle, usize alignment) {
+    constexpr auto opq_align_recalloc(mem auto& handle, uword alignment) {
         return this->opq_align_recalloc_to(*this, handle, alignment);
     }
 
@@ -2737,7 +2737,7 @@ class allocator_interface {
     // guarantee, and zero-out the allocated memory.
     [[nodiscard]]
     constexpr auto opq_align_xrecalloc_to(auto& allocator, mem auto& handle,
-                                          usize alignment) {
+                                          uword alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::opq_align_xcalloc<T, T>, false,
@@ -2746,7 +2746,7 @@ class allocator_interface {
 
     // Move a memory handle from this allocator into itself with an alignment
     // guarantee, and zero-out the allocated memory.
-    auto opq_align_xrecalloc(mem auto& handle, usize alignment) {
+    auto opq_align_xrecalloc(mem auto& handle, uword alignment) {
         return this->opq_align_xrecalloc_to(*this, handle, alignment);
     }
 
@@ -2787,7 +2787,7 @@ class allocator_interface {
     // alignment guarantee, and zero-out the allocated memory.
     [[nodiscard]]
     constexpr auto align_recalloc_to(auto& allocator, auto* p_handle,
-                                     usize alignment) {
+                                     uword alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::align_calloc<T, T>, true,
@@ -2797,7 +2797,7 @@ class allocator_interface {
     // Try to move a pointer handle from this allocator into itself with an
     // alignment guarantee, and zero-out the allocated memory.
     [[nodiscard]]
-    constexpr auto align_recalloc(auto* p_handle, usize alignment) {
+    constexpr auto align_recalloc(auto* p_handle, uword alignment) {
         return this->align_recalloc_to(*this, p_handle, alignment);
     }
 
@@ -2805,7 +2805,7 @@ class allocator_interface {
     // guarantee, and zero-out the allocated memory.
     [[nodiscard]]
     constexpr auto align_xrecalloc_to(auto& allocator, auto* p_handle,
-                                      usize alignment) {
+                                      uword alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::align_xcalloc<T, T>, false,
@@ -2814,7 +2814,7 @@ class allocator_interface {
 
     // Move a pointer handle from this allocator into itself with an alignment
     // guarantee, and zero-out the allocated memory.
-    auto align_xrecalloc(auto* p_handle, usize alignment) {
+    auto align_xrecalloc(auto* p_handle, uword alignment) {
         return this->align_xrecalloc_to(*this, p_handle, alignment);
     }
 
@@ -2855,7 +2855,7 @@ class allocator_interface {
     // zero-out the allocated memory.
     [[nodiscard]]
     constexpr auto opq_recalloc_multi_to(auto& allocator, mem auto& handle,
-                                         ssize new_count) {
+                                         iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_calloc_multi<T>, true,
@@ -2865,7 +2865,7 @@ class allocator_interface {
     // Try to move an array memory handle from this allocator into itself, and
     // zero-out the allocated memory.
     [[nodiscard]]
-    constexpr auto opq_recalloc_multi(mem auto& handle, ssize new_count) {
+    constexpr auto opq_recalloc_multi(mem auto& handle, iword new_count) {
         return this->opq_recalloc_multi_to(*this, handle, new_count);
     }
 
@@ -2874,7 +2874,7 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto recalloc_multi_to(auto& allocator, T* p_handle,
-                                     ssize old_count, ssize new_count) {
+                                     iword old_count, iword new_count) {
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::calloc_multi<T>, true, false>(
             allocator, p_handle, old_count, new_count);
@@ -2884,8 +2884,8 @@ class allocator_interface {
     // itself, and zero-out the allocated memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto recalloc_multi(T* p_handle, ssize old_count,
-                                  ssize new_count) {
+    constexpr auto recalloc_multi(T* p_handle, iword old_count,
+                                  iword new_count) {
         return this->recalloc_multi_to(*this, p_handle, old_count, new_count);
     }
 
@@ -2893,7 +2893,7 @@ class allocator_interface {
     // and zero-out the allocated memory.
     [[nodiscard]]
     constexpr auto opq_xrecalloc_multi_to(auto& allocator, mem auto& handle,
-                                          ssize new_count) {
+                                          iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_xcalloc_multi<T>, false,
@@ -2903,7 +2903,7 @@ class allocator_interface {
     // Move and resize an array memory handle from this allocator into itself,
     // and zero-out the allocated memory.
     [[nodiscard]]
-    constexpr auto opq_xrecalloc_multi(mem auto& handle, ssize new_count) {
+    constexpr auto opq_xrecalloc_multi(mem auto& handle, iword new_count) {
         return this->opq_xrecalloc_multi_to(*this, handle, new_count);
     }
 
@@ -2912,7 +2912,7 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto xrecalloc_multi_to(auto& allocator, T* p_handle,
-                                      ssize old_count, ssize new_count) {
+                                      iword old_count, iword new_count) {
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::xcalloc_multi<T>, false, false>(
             allocator, p_handle, old_count, new_count);
@@ -2922,8 +2922,8 @@ class allocator_interface {
     // and zero-out the allocated memory.
     template <typename T>
     [[nodiscard]]
-    constexpr auto xrecalloc_multi(T* p_handle, ssize old_count,
-                                   ssize new_count) {
+    constexpr auto xrecalloc_multi(T* p_handle, iword old_count,
+                                   iword new_count) {
         return this->xrecalloc_multi_to(*this, p_handle, old_count, new_count);
     }
 
@@ -2932,8 +2932,8 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_align_recalloc_multi_to(auto& allocator,
                                                mem auto& handle,
-                                               usize alignment,
-                                               ssize new_count) {
+                                               uword alignment,
+                                               iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_align_calloc_multi<T>, true,
@@ -2943,8 +2943,8 @@ class allocator_interface {
     // Try to move and resize an array memory handle from this allocator into
     // itself with an alignment guarantee, and zero-out the allocated memory.
     [[nodiscard]]
-    constexpr auto opq_align_recalloc_multi(mem auto& handle, usize alignment,
-                                            ssize new_count) {
+    constexpr auto opq_align_recalloc_multi(mem auto& handle, uword alignment,
+                                            iword new_count) {
         return this->opq_align_recalloc_multi_to(*this, handle, alignment,
                                                  new_count);
     }
@@ -2954,8 +2954,8 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_align_xrecalloc_multi_to(auto& allocator,
                                                 mem auto& handle,
-                                                usize alignment,
-                                                ssize new_count) {
+                                                uword alignment,
+                                                iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_align_xcalloc_multi<T>,
@@ -2964,8 +2964,8 @@ class allocator_interface {
 
     // Move and resize an array memory handle from this allocator into itself
     // with an alignment guarantee, and zero-out the allocated memory.
-    auto opq_align_xrecalloc_multi(mem auto& handle, usize alignment,
-                                   ssize new_count) {
+    auto opq_align_xrecalloc_multi(mem auto& handle, uword alignment,
+                                   iword new_count) {
         return this->opq_align_xrecalloc_multi_to(*this, handle, alignment,
                                                   new_count);
     }
@@ -2975,7 +2975,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_unalign_recalloc_multi_to(auto& allocator,
                                                  mem auto& handle,
-                                                 ssize new_count) {
+                                                 iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_unalign_calloc_multi<T>,
@@ -2986,7 +2986,7 @@ class allocator_interface {
     // itself with no alignment guarantee, and zero-out the allocated memory.
     [[nodiscard]]
     constexpr auto opq_unalign_recalloc_multi(mem auto& handle,
-                                              ssize new_count) {
+                                              iword new_count) {
         return this->opq_unalign_recalloc_multi_to(*this, handle, new_count);
     }
 
@@ -2995,7 +2995,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_unalign_xrecalloc_multi_to(auto& allocator,
                                                   mem auto& handle,
-                                                  ssize new_count) {
+                                                  iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_unalign_xcalloc_multi<T>,
@@ -3004,7 +3004,7 @@ class allocator_interface {
 
     // Move and resize an array memory handle from this allocator into itself
     // with no alignment guarantee, and zero-out the allocated memory.
-    auto opq_unalign_xrecalloc_multi(mem auto& handle, ssize new_count) {
+    auto opq_unalign_xrecalloc_multi(mem auto& handle, iword new_count) {
         return this->opq_unalign_xrecalloc_multi_to(*this, handle, new_count);
     }
 
@@ -3012,8 +3012,8 @@ class allocator_interface {
     // another with an alignment guarantee, and zero-out the allocated memory.
     [[nodiscard]]
     constexpr auto align_recalloc_multi_to(auto& allocator, auto* p_handle,
-                                           usize alignment, ssize old_count,
-                                           ssize new_count) {
+                                           uword alignment, iword old_count,
+                                           iword new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::align_calloc_multi<T>, true,
@@ -3023,8 +3023,8 @@ class allocator_interface {
     // Try to move and resize an array pointer handle from this allocator into
     // itself with an alignment guarantee, and zero-out the allocated memory.
     [[nodiscard]]
-    constexpr auto align_recalloc_multi(auto* p_handle, usize alignment,
-                                        ssize old_count, ssize new_count) {
+    constexpr auto align_recalloc_multi(auto* p_handle, uword alignment,
+                                        iword old_count, iword new_count) {
         return this->align_recalloc_multi_to(*this, p_handle, alignment,
                                              old_count, new_count);
     }
@@ -3033,8 +3033,8 @@ class allocator_interface {
     // with an alignment guarantee, and zero-out the allocated memory.
     [[nodiscard]]
     constexpr auto align_xrecalloc_multi_to(auto& allocator, auto* p_handle,
-                                            usize alignment, ssize old_count,
-                                            ssize new_count) {
+                                            uword alignment, iword old_count,
+                                            iword new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::align_xcalloc_multi<T>, false,
@@ -3043,8 +3043,8 @@ class allocator_interface {
 
     // Move and resize an array pointer handle from this allocator into itself
     // with an alignment guarantee, and zero-out the allocated memory.
-    auto align_xrecalloc_multi(auto* p_handle, usize alignment, ssize old_count,
-                               ssize new_count) {
+    auto align_xrecalloc_multi(auto* p_handle, uword alignment, iword old_count,
+                               iword new_count) {
         return this->align_xrecalloc_multi_to(*this, p_handle, alignment,
                                               old_count, new_count);
     }
@@ -3053,7 +3053,7 @@ class allocator_interface {
     // another with no alignment guarantee, and zero-out the allocated memory.
     [[nodiscard]]
     constexpr auto unalign_recalloc_multi_to(auto& allocator, auto* p_handle,
-                                             ssize old_count, ssize new_count) {
+                                             iword old_count, iword new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::unalign_calloc_multi<T>, true,
@@ -3063,8 +3063,8 @@ class allocator_interface {
     // Try to move and resize an array pointer handle from this allocator into
     // itself with no alignment guarantee, and zero-out the allocated memory.
     [[nodiscard]]
-    constexpr auto unalign_recalloc_multi(auto* p_handle, ssize old_count,
-                                          ssize new_count) {
+    constexpr auto unalign_recalloc_multi(auto* p_handle, iword old_count,
+                                          iword new_count) {
         return this->unalign_recalloc_multi_to(*this, p_handle, old_count,
                                                new_count);
     }
@@ -3073,8 +3073,8 @@ class allocator_interface {
     // with no alignment guarantee, and zero-out the allocated memory.
     [[nodiscard]]
     constexpr auto unalign_xrecalloc_multi_to(auto& allocator, auto* p_handle,
-                                              ssize old_count,
-                                              ssize new_count) {
+                                              iword old_count,
+                                              iword new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::unalign_xcalloc_multi<T>, false,
@@ -3083,8 +3083,8 @@ class allocator_interface {
 
     // Move and resize an array pointer handle from this allocator into itself
     // with no alignment guarantee, and zero-out the allocated memory.
-    auto unalign_xrecalloc_multi(auto* p_handle, ssize old_count,
-                                 ssize new_count) {
+    auto unalign_xrecalloc_multi(auto* p_handle, iword old_count,
+                                 iword new_count) {
         return this->unalign_xrecalloc_multi_to(*this, p_handle, old_count,
                                                 new_count);
     }
@@ -3126,7 +3126,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_align_realloc_to(auto& allocator,
                                                mem auto& handle,
-                                               usize alignment) {
+                                               uword alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::opq_inline_align_alloc<T, T>,
@@ -3136,7 +3136,7 @@ class allocator_interface {
     // Try to move a small-size optimized handle from this allocator into itself
     // with an alignment guarantee.
     [[nodiscard]]
-    constexpr auto opq_inline_align_realloc(mem auto& handle, usize alignment) {
+    constexpr auto opq_inline_align_realloc(mem auto& handle, uword alignment) {
         return this->opq_inline_align_realloc_to(*this, handle, alignment);
     }
 
@@ -3145,7 +3145,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_align_xrealloc_to(auto& allocator,
                                                 mem auto& handle,
-                                                usize alignment) {
+                                                uword alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::opq_inline_align_xalloc<T, T>,
@@ -3154,7 +3154,7 @@ class allocator_interface {
 
     // Move a small-size optimized handle from this allocator into itself with
     // an alignment guarantee.
-    auto opq_inline_align_xrealloc(mem auto& handle, usize alignment) {
+    auto opq_inline_align_xrealloc(mem auto& handle, uword alignment) {
         return this->opq_inline_align_xrealloc_to(*this, handle, alignment);
     }
 
@@ -3198,7 +3198,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_realloc_multi_to(auto& allocator,
                                                mem auto& handle,
-                                               ssize new_count) {
+                                               iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_inline_alloc_multi<T>, true,
@@ -3208,7 +3208,7 @@ class allocator_interface {
     // Try to move a small-size optimized array memory handle from this
     // allocator into itself.
     [[nodiscard]]
-    constexpr auto opq_inline_realloc_multi(mem auto& handle, ssize new_count) {
+    constexpr auto opq_inline_realloc_multi(mem auto& handle, iword new_count) {
         return this->opq_realloc_multi_to(*this, handle, new_count);
     }
 
@@ -3217,7 +3217,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_xrealloc_multi_to(auto& allocator,
                                                 mem auto& handle,
-                                                ssize new_count) {
+                                                iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_inline_xalloc_multi<T>,
@@ -3228,7 +3228,7 @@ class allocator_interface {
     // allocator into itself.
     [[nodiscard]]
     constexpr auto opq_inline_xrealloc_multi(mem auto& handle,
-                                             ssize new_count) {
+                                             iword new_count) {
         return this->opq_inline_xrealloc_multi_to(*this, handle, new_count);
     }
 
@@ -3237,8 +3237,8 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_align_realloc_multi_to(auto& allocator,
                                                      mem auto& handle,
-                                                     usize alignment,
-                                                     ssize new_count) {
+                                                     uword alignment,
+                                                     iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_inline_align_alloc_multi<T>,
@@ -3249,8 +3249,8 @@ class allocator_interface {
     // this allocator into itself with an alignment guarantee.
     [[nodiscard]]
     constexpr auto opq_inline_align_realloc_multi(mem auto& handle,
-                                                  usize alignment,
-                                                  ssize new_count) {
+                                                  uword alignment,
+                                                  iword new_count) {
         return this->opq_inline_align_realloc_multi_to(*this, handle, alignment,
                                                        new_count);
     }
@@ -3260,8 +3260,8 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_align_xrealloc_multi_to(auto& allocator,
                                                       mem auto& handle,
-                                                      usize alignment,
-                                                      ssize new_count) {
+                                                      uword alignment,
+                                                      iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_inline_align_xalloc_multi<
@@ -3271,8 +3271,8 @@ class allocator_interface {
 
     // Move and resize a small-size optimized array memory handle from this
     // allocator into itself with an alignment guarantee.
-    auto opq_inline_align_xrealloc_multi(mem auto& handle, usize alignment,
-                                         ssize new_count) {
+    auto opq_inline_align_xrealloc_multi(mem auto& handle, uword alignment,
+                                         iword new_count) {
         return this->opq_inline_align_xrealloc_multi_to(*this, handle,
                                                         alignment, new_count);
     }
@@ -3282,7 +3282,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_unalign_realloc_multi_to(auto& allocator,
                                                        mem auto& handle,
-                                                       ssize new_count) {
+                                                       iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this
             ->opq_meta_realloc_multi<&allocator_interface<derived_type>::
@@ -3294,7 +3294,7 @@ class allocator_interface {
     // this allocator into itself with no alignment guarantee.
     [[nodiscard]]
     constexpr auto opq_inline_unalign_realloc_multi(mem auto& handle,
-                                                    ssize new_count) {
+                                                    iword new_count) {
         return this->opq_inline_unalign_realloc_multi_to(*this, handle,
                                                          new_count);
     }
@@ -3304,7 +3304,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_unalign_xrealloc_multi_to(auto& allocator,
                                                         mem auto& handle,
-                                                        ssize new_count) {
+                                                        iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_inline_unalign_xalloc_multi<
@@ -3314,7 +3314,7 @@ class allocator_interface {
 
     // Move and resize a small-size optimized array memory handle from this
     // allocator into itself with no alignment guarantee.
-    auto opq_inline_unalign_xrealloc_multi(mem auto& handle, ssize new_count) {
+    auto opq_inline_unalign_xrealloc_multi(mem auto& handle, iword new_count) {
         return this->opq_inline_unalign_xrealloc_multi_to(*this, handle,
                                                           new_count);
     }
@@ -3358,7 +3358,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_align_recalloc_to(auto& allocator,
                                                 mem auto& handle,
-                                                usize alignment) {
+                                                uword alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::opq_inline_align_calloc<T, T>,
@@ -3369,7 +3369,7 @@ class allocator_interface {
     // with an alignment guarantee, and zero-out the allocated memory.
     [[nodiscard]]
     constexpr auto opq_inline_align_recalloc(mem auto& handle,
-                                             usize alignment) {
+                                             uword alignment) {
         return this->opq_inline_align_recalloc_to(*this, handle, alignment);
     }
 
@@ -3378,7 +3378,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_align_xrecalloc_to(auto& allocator,
                                                  mem auto& handle,
-                                                 usize alignment) {
+                                                 uword alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::opq_inline_align_xcalloc<T, T>,
@@ -3387,7 +3387,7 @@ class allocator_interface {
 
     // Move a small-size optimized handle from this allocator into itself with
     // an alignment guarantee, and zero-out the allocated memory.
-    auto opq_inline_align_xrecalloc(mem auto& handle, usize alignment) {
+    auto opq_inline_align_xrecalloc(mem auto& handle, uword alignment) {
         return this->opq_inline_align_xrecalloc_to(*this, handle, alignment);
     }
 
@@ -3431,7 +3431,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_recalloc_multi_to(auto& allocator,
                                                 mem auto& handle,
-                                                ssize new_count) {
+                                                iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_inline_calloc_multi<T>,
@@ -3442,7 +3442,7 @@ class allocator_interface {
     // allocator into itself, and zero-out the allocated memory.
     [[nodiscard]]
     constexpr auto opq_inline_recalloc_multi(mem auto& handle,
-                                             ssize new_count) {
+                                             iword new_count) {
         return this->opq_inline_recalloc_multi_to(*this, handle, new_count);
     }
 
@@ -3451,7 +3451,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_xrecalloc_multi_to(auto& allocator,
                                                  mem auto& handle,
-                                                 ssize new_count) {
+                                                 iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_inline_xcalloc_multi<T>,
@@ -3462,7 +3462,7 @@ class allocator_interface {
     // allocator into itself, and zero-out the allocated memory.
     [[nodiscard]]
     constexpr auto opq_inline_xrecalloc_multi(mem auto& handle,
-                                              ssize new_count) {
+                                              iword new_count) {
         return this->opq_inline_xrecalloc_multi_to(*this, handle, new_count);
     }
 
@@ -3471,8 +3471,8 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_align_recalloc_multi_to(auto& allocator,
                                                       mem auto& handle,
-                                                      usize alignment,
-                                                      ssize new_count) {
+                                                      uword alignment,
+                                                      iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_inline_align_calloc_multi<
@@ -3485,8 +3485,8 @@ class allocator_interface {
     // allocated memory.
     [[nodiscard]]
     constexpr auto opq_inline_align_recalloc_multi(mem auto& handle,
-                                                   usize alignment,
-                                                   ssize new_count) {
+                                                   uword alignment,
+                                                   iword new_count) {
         return this->opq_inline_align_recalloc_multi_to(*this, handle,
                                                         alignment, new_count);
     }
@@ -3497,8 +3497,8 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_align_xrecalloc_multi_to(auto& allocator,
                                                        mem auto& handle,
-                                                       usize alignment,
-                                                       ssize new_count) {
+                                                       uword alignment,
+                                                       iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_inline_align_xcalloc_multi<
@@ -3509,8 +3509,8 @@ class allocator_interface {
     // Move and resize a small-size optimized array memory handle from this
     // allocator into itself with an alignment guarantee, and zero-out the
     // allocated memory.
-    auto opq_inline_align_xrecalloc_multi(mem auto& handle, usize alignment,
-                                          ssize new_count) {
+    auto opq_inline_align_xrecalloc_multi(mem auto& handle, uword alignment,
+                                          iword new_count) {
         return this->opq_inline_align_xrecalloc_multi_to(*this, handle,
                                                          alignment, new_count);
     }
@@ -3521,7 +3521,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_unalign_recalloc_multi_to(auto& allocator,
                                                         mem auto& handle,
-                                                        ssize new_count) {
+                                                        iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this
             ->opq_meta_realloc_multi<&allocator_interface<derived_type>::
@@ -3534,7 +3534,7 @@ class allocator_interface {
     // allocated memory.
     [[nodiscard]]
     constexpr auto opq_inline_unalign_recalloc_multi(mem auto& handle,
-                                                     ssize new_count) {
+                                                     iword new_count) {
         return this->opq_inline_unalign_recalloc_multi_to(*this, handle,
                                                           new_count);
     }
@@ -3545,7 +3545,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_unalign_xrecalloc_multi_to(auto& allocator,
                                                          mem auto& handle,
-                                                         ssize new_count) {
+                                                         iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<
@@ -3556,7 +3556,7 @@ class allocator_interface {
     // Move and resize a small-size optimized array memory handle from this
     // allocator into itself with no alignment guarantee, and zero-out the
     // allocated memory.
-    auto opq_inline_unalign_xrecalloc_multi(mem auto& handle, ssize new_count) {
+    auto opq_inline_unalign_xrecalloc_multi(mem auto& handle, iword new_count) {
         return this->opq_inline_unalign_xrecalloc_multi_to(*this, handle,
                                                            new_count);
     }
@@ -3635,7 +3635,7 @@ class allocator_interface {
     // alignment guarantee, and return the number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto opq_align_resalloc_to(auto& allocator, mem auto& handle,
-                                         usize alignment) {
+                                         uword alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::opq_align_salloc<T, T>, true,
@@ -3645,7 +3645,7 @@ class allocator_interface {
     // Try to move a memory handle from this allocator into itself with an
     // alignment guarantee, and return the number of bytes that were allocated.
     [[nodiscard]]
-    constexpr auto opq_align_resalloc(mem auto& handle, usize alignment) {
+    constexpr auto opq_align_resalloc(mem auto& handle, uword alignment) {
         return this->opq_align_resalloc_to(*this, handle, alignment);
     }
 
@@ -3653,7 +3653,7 @@ class allocator_interface {
     // guarantee, and return the number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto opq_align_xresalloc_to(auto& allocator, mem auto& handle,
-                                          usize alignment) {
+                                          uword alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::opq_align_xalloc<T, T>, false,
@@ -3662,7 +3662,7 @@ class allocator_interface {
 
     // Move a memory handle from this allocator into itself with an alignment
     // guarantee, and return the number of bytes that were allocated.
-    auto opq_align_xresalloc(mem auto& handle, usize alignment) {
+    auto opq_align_xresalloc(mem auto& handle, uword alignment) {
         return this->opq_align_xresalloc_to(*this, handle, alignment);
     }
 
@@ -3703,7 +3703,7 @@ class allocator_interface {
     // alignment guarantee, and return the number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto align_resalloc_to(auto& allocator, auto* p_handle,
-                                     usize alignment) {
+                                     uword alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::align_salloc<T, T>, true, true>(
@@ -3713,7 +3713,7 @@ class allocator_interface {
     // Try to move a pointer handle from this allocator into itself with an
     // alignment guarantee, and return the number of bytes that were allocated.
     [[nodiscard]]
-    constexpr auto align_resalloc(auto* p_handle, usize alignment) {
+    constexpr auto align_resalloc(auto* p_handle, uword alignment) {
         return this->align_resalloc_to(*this, p_handle, alignment);
     }
 
@@ -3721,7 +3721,7 @@ class allocator_interface {
     // guarantee, and return the number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto align_xresalloc_to(auto& allocator, auto* p_handle,
-                                      usize alignment) {
+                                      uword alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::align_xsalloc<T, T>, false,
@@ -3730,7 +3730,7 @@ class allocator_interface {
 
     // Move a pointer handle from this allocator into itself with an alignment
     // guarantee, and return the number of bytes that were allocated.
-    auto align_xresalloc(auto* p_handle, usize alignment) {
+    auto align_xresalloc(auto* p_handle, uword alignment) {
         return this->align_xresalloc_to(*this, p_handle, alignment);
     }
 
@@ -3771,7 +3771,7 @@ class allocator_interface {
     // the number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto opq_resalloc_multi_to(auto& allocator, mem auto& handle,
-                                         ssize new_count) {
+                                         iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_salloc_multi<T>, true,
@@ -3781,7 +3781,7 @@ class allocator_interface {
     // Try to move an array memory handle from this allocator into itself, and
     // return the number of bytes that were allocated.
     [[nodiscard]]
-    constexpr auto opq_resalloc_multi(mem auto& handle, ssize new_count) {
+    constexpr auto opq_resalloc_multi(mem auto& handle, iword new_count) {
         return this->opq_resalloc_multi_to(*this, handle, new_count);
     }
 
@@ -3790,7 +3790,7 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto resalloc_multi_to(auto& allocator, T* p_handle,
-                                     ssize old_count, ssize new_count) {
+                                     iword old_count, iword new_count) {
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::salloc_multi<T>, true, true>(
             allocator, p_handle, old_count, new_count);
@@ -3800,8 +3800,8 @@ class allocator_interface {
     // itself, and return the number of bytes that were allocated.
     template <typename T>
     [[nodiscard]]
-    constexpr auto resalloc_multi(T* p_handle, ssize old_count,
-                                  ssize new_count) {
+    constexpr auto resalloc_multi(T* p_handle, iword old_count,
+                                  iword new_count) {
         return this->resalloc_multi_to(*this, p_handle, old_count, new_count);
     }
 
@@ -3809,7 +3809,7 @@ class allocator_interface {
     // and return the number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto opq_xresalloc_multi_to(auto& allocator, mem auto& handle,
-                                          ssize new_count) {
+                                          iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_xsalloc_multi<T>, false,
@@ -3819,7 +3819,7 @@ class allocator_interface {
     // Move and resize an array memory handle from this allocator into itself,
     // and return the number of bytes that were allocated.
     [[nodiscard]]
-    constexpr auto opq_xresalloc_multi(mem auto& handle, ssize new_count) {
+    constexpr auto opq_xresalloc_multi(mem auto& handle, iword new_count) {
         return this->opq_xresalloc_multi_to(*this, handle, new_count);
     }
 
@@ -3828,7 +3828,7 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto xresalloc_multi_to(auto& allocator, T* p_handle,
-                                      ssize old_count, ssize new_count) {
+                                      iword old_count, iword new_count) {
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::xsalloc_multi<T>, false, true>(
             allocator, p_handle, old_count, new_count);
@@ -3838,8 +3838,8 @@ class allocator_interface {
     // and return the number of bytes that were allocated.
     template <typename T>
     [[nodiscard]]
-    constexpr auto xresalloc_multi(T* p_handle, ssize old_count,
-                                   ssize new_count) {
+    constexpr auto xresalloc_multi(T* p_handle, iword old_count,
+                                   iword new_count) {
         return this->xresalloc_multi_to(*this, p_handle, old_count, new_count);
     }
 
@@ -3848,8 +3848,8 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_align_resalloc_multi_to(auto& allocator,
                                                mem auto& handle,
-                                               usize alignment,
-                                               ssize new_count) {
+                                               uword alignment,
+                                               iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_align_salloc_multi<T>, true,
@@ -3860,8 +3860,8 @@ class allocator_interface {
     // itself with an alignment guarantee, and return the number of bytes that
     // were allocated.
     [[nodiscard]]
-    constexpr auto opq_align_resalloc_multi(mem auto& handle, usize alignment,
-                                            ssize new_count) {
+    constexpr auto opq_align_resalloc_multi(mem auto& handle, uword alignment,
+                                            iword new_count) {
         return this->opq_align_resalloc_multi_to(*this, handle, alignment,
                                                  new_count);
     }
@@ -3872,8 +3872,8 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_align_xresalloc_multi_to(auto& allocator,
                                                 mem auto& handle,
-                                                usize alignment,
-                                                ssize new_count) {
+                                                uword alignment,
+                                                iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_align_xsalloc_multi<T>,
@@ -3883,8 +3883,8 @@ class allocator_interface {
     // Move and resize an array memory handle from this allocator into itself
     // with an alignment guarantee, and return the number of bytes that were
     // allocated.
-    auto opq_align_xresalloc_multi(mem auto& handle, usize alignment,
-                                   ssize new_count) {
+    auto opq_align_xresalloc_multi(mem auto& handle, uword alignment,
+                                   iword new_count) {
         return this->opq_align_xresalloc_multi_to(*this, handle, alignment,
                                                   new_count);
     }
@@ -3895,7 +3895,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_unalign_resalloc_multi_to(auto& allocator,
                                                  mem auto& handle,
-                                                 ssize new_count) {
+                                                 iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_unalign_salloc_multi<T>,
@@ -3907,7 +3907,7 @@ class allocator_interface {
     // were allocated.
     [[nodiscard]]
     constexpr auto opq_unalign_resalloc_multi(mem auto& handle,
-                                              ssize new_count) {
+                                              iword new_count) {
         return this->opq_unalign_resalloc_multi_to(*this, handle, new_count);
     }
 
@@ -3917,7 +3917,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_unalign_xresalloc_multi_to(auto& allocator,
                                                   mem auto& handle,
-                                                  ssize new_count) {
+                                                  iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_unalign_xsalloc_multi<T>,
@@ -3927,7 +3927,7 @@ class allocator_interface {
     // Move and resize an array memory handle from this allocator into itself
     // with no alignment guarantee, and return the number of bytes that were
     // allocated.
-    auto opq_unalign_xresalloc_multi(mem auto& handle, ssize new_count) {
+    auto opq_unalign_xresalloc_multi(mem auto& handle, iword new_count) {
         return this->opq_unalign_xresalloc_multi_to(*this, handle, new_count);
     }
 
@@ -3936,8 +3936,8 @@ class allocator_interface {
     // were allocated.
     [[nodiscard]]
     constexpr auto align_resalloc_multi_to(auto& allocator, auto* p_handle,
-                                           usize alignment, ssize old_count,
-                                           ssize new_count) {
+                                           uword alignment, iword old_count,
+                                           iword new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::align_salloc_multi<T>, true,
@@ -3948,8 +3948,8 @@ class allocator_interface {
     // itself with an alignment guarantee, and return the number of bytes that
     // were allocated.
     [[nodiscard]]
-    constexpr auto align_resalloc_multi(auto* p_handle, usize alignment,
-                                        ssize old_count, ssize new_count) {
+    constexpr auto align_resalloc_multi(auto* p_handle, uword alignment,
+                                        iword old_count, iword new_count) {
         return this->align_resalloc_multi_to(*this, p_handle, alignment,
                                              old_count, new_count);
     }
@@ -3959,8 +3959,8 @@ class allocator_interface {
     // allocated.
     [[nodiscard]]
     constexpr auto align_xresalloc_multi_to(auto& allocator, auto* p_handle,
-                                            usize alignment, ssize old_count,
-                                            ssize new_count) {
+                                            uword alignment, iword old_count,
+                                            iword new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::align_xsalloc_multi<T>, false,
@@ -3970,8 +3970,8 @@ class allocator_interface {
     // Move and resize an array pointer handle from this allocator into itself
     // with an alignment guarantee, and return the number of bytes that were
     // allocated.
-    auto align_xresalloc_multi(auto* p_handle, usize alignment, ssize old_count,
-                               ssize new_count) {
+    auto align_xresalloc_multi(auto* p_handle, uword alignment, iword old_count,
+                               iword new_count) {
         return this->align_xresalloc_multi_to(*this, p_handle, alignment,
                                               old_count, new_count);
     }
@@ -3981,7 +3981,7 @@ class allocator_interface {
     // were allocated.
     [[nodiscard]]
     constexpr auto unalign_resalloc_multi_to(auto& allocator, auto* p_handle,
-                                             ssize old_count, ssize new_count) {
+                                             iword old_count, iword new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::unalign_salloc_multi<T>, true,
@@ -3992,8 +3992,8 @@ class allocator_interface {
     // itself with no alignment guarantee, and return the number of bytes that
     // were allocated.
     [[nodiscard]]
-    constexpr auto unalign_resalloc_multi(auto* p_handle, ssize old_count,
-                                          ssize new_count) {
+    constexpr auto unalign_resalloc_multi(auto* p_handle, iword old_count,
+                                          iword new_count) {
         return this->unalign_resalloc_multi_to(*this, p_handle, old_count,
                                                new_count);
     }
@@ -4003,8 +4003,8 @@ class allocator_interface {
     // allocated.
     [[nodiscard]]
     constexpr auto unalign_xresalloc_multi_to(auto& allocator, auto* p_handle,
-                                              ssize old_count,
-                                              ssize new_count) {
+                                              iword old_count,
+                                              iword new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::unalign_xsalloc_multi<T>, false,
@@ -4014,8 +4014,8 @@ class allocator_interface {
     // Move and resize an array pointer handle from this allocator into itself
     // with no alignment guarantee, and return the number of bytes that were
     // allocated.
-    auto unalign_xresalloc_multi(auto* p_handle, ssize old_count,
-                                 ssize new_count) {
+    auto unalign_xresalloc_multi(auto* p_handle, iword old_count,
+                                 iword new_count) {
         return this->unalign_xresalloc_multi_to(*this, p_handle, old_count,
                                                 new_count);
     }
@@ -4095,7 +4095,7 @@ class allocator_interface {
     // number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto opq_align_rescalloc_to(auto& allocator, mem auto& handle,
-                                          usize alignment) {
+                                          uword alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::opq_align_scalloc<T, T>, true,
@@ -4106,7 +4106,7 @@ class allocator_interface {
     // alignment guarantee, zero-out the allocated memory, and return the
     // number of bytes that were allocated.
     [[nodiscard]]
-    constexpr auto opq_align_rescalloc(mem auto& handle, usize alignment) {
+    constexpr auto opq_align_rescalloc(mem auto& handle, uword alignment) {
         return this->opq_align_rescalloc_to(*this, handle, alignment);
     }
 
@@ -4115,7 +4115,7 @@ class allocator_interface {
     // bytes that were allocated.
     [[nodiscard]]
     constexpr auto opq_align_xrescalloc_to(auto& allocator, mem auto& handle,
-                                           usize alignment) {
+                                           uword alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::opq_align_xscalloc<T, T>, false,
@@ -4125,7 +4125,7 @@ class allocator_interface {
     // Move a memory handle from this allocator into itself with an alignment
     // guarantee, zero-out the allocated memory, and return the number of
     // bytes that were allocated.
-    auto opq_align_xrescalloc(mem auto& handle, usize alignment) {
+    auto opq_align_xrescalloc(mem auto& handle, uword alignment) {
         return this->opq_align_xrescalloc_to(*this, handle, alignment);
     }
 
@@ -4172,7 +4172,7 @@ class allocator_interface {
     // number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto align_rescalloc_to(auto& allocator, auto* p_handle,
-                                      usize alignment) {
+                                      uword alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::align_scalloc<T, T>, true,
@@ -4183,7 +4183,7 @@ class allocator_interface {
     // alignment guarantee, zero-out the allocated memory, and return the
     // number of bytes that were allocated.
     [[nodiscard]]
-    constexpr auto align_rescalloc(auto* p_handle, usize alignment) {
+    constexpr auto align_rescalloc(auto* p_handle, uword alignment) {
         return this->align_rescalloc_to(*this, p_handle, alignment);
     }
 
@@ -4192,7 +4192,7 @@ class allocator_interface {
     // bytes that were allocated.
     [[nodiscard]]
     constexpr auto align_xrescalloc_to(auto& allocator, auto* p_handle,
-                                       usize alignment) {
+                                       uword alignment) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::align_xscalloc<T, T>, false,
@@ -4202,7 +4202,7 @@ class allocator_interface {
     // Move a pointer handle from this allocator into itself with an alignment
     // guarantee, zero-out the allocated memory, and return the number of
     // bytes that were allocated.
-    auto align_xrescalloc(auto* p_handle, usize alignment) {
+    auto align_xrescalloc(auto* p_handle, uword alignment) {
         return this->align_xrescalloc_to(*this, p_handle, alignment);
     }
 
@@ -4247,7 +4247,7 @@ class allocator_interface {
     // the allocated memory, and return the number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto opq_rescalloc_multi_to(auto& allocator, mem auto& handle,
-                                          ssize new_count) {
+                                          iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_scalloc_multi<T>, true,
@@ -4258,7 +4258,7 @@ class allocator_interface {
     // zero-out the allocated memory, and return the number of bytes that were
     // allocated.
     [[nodiscard]]
-    constexpr auto opq_rescalloc_multi(mem auto& handle, ssize new_count) {
+    constexpr auto opq_rescalloc_multi(mem auto& handle, iword new_count) {
         return this->opq_rescalloc_multi_to(*this, handle, new_count);
     }
 
@@ -4268,7 +4268,7 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto rescalloc_multi_to(auto& allocator, T* p_handle,
-                                      ssize old_count, ssize new_count) {
+                                      iword old_count, iword new_count) {
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::scalloc_multi<T>, true, true>(
             allocator, p_handle, old_count, new_count);
@@ -4279,8 +4279,8 @@ class allocator_interface {
     // that were allocated.
     template <typename T>
     [[nodiscard]]
-    constexpr auto rescalloc_multi(T* p_handle, ssize old_count,
-                                   ssize new_count) {
+    constexpr auto rescalloc_multi(T* p_handle, iword old_count,
+                                   iword new_count) {
         return this->rescalloc_multi_to(*this, p_handle, old_count, new_count);
     }
 
@@ -4289,7 +4289,7 @@ class allocator_interface {
     // were allocated.
     [[nodiscard]]
     constexpr auto opq_xrescalloc_multi_to(auto& allocator, mem auto& handle,
-                                           ssize new_count) {
+                                           iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_xscalloc_multi<T>, false,
@@ -4300,7 +4300,7 @@ class allocator_interface {
     // zero-out the allocated memory, and return the number of bytes that
     // were allocated.
     [[nodiscard]]
-    constexpr auto opq_xrescalloc_multi(mem auto& handle, ssize new_count) {
+    constexpr auto opq_xrescalloc_multi(mem auto& handle, iword new_count) {
         return this->opq_xrescalloc_multi_to(*this, handle, new_count);
     }
 
@@ -4310,7 +4310,7 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto xrescalloc_multi_to(auto& allocator, T* p_handle,
-                                       ssize old_count, ssize new_count) {
+                                       iword old_count, iword new_count) {
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::xscalloc_multi<T>, false, true>(
             allocator, p_handle, old_count, new_count);
@@ -4321,8 +4321,8 @@ class allocator_interface {
     // were allocated.
     template <typename T>
     [[nodiscard]]
-    constexpr auto xrescalloc_multi(T* p_handle, ssize old_count,
-                                    ssize new_count) {
+    constexpr auto xrescalloc_multi(T* p_handle, iword old_count,
+                                    iword new_count) {
         return this->xrescalloc_multi_to(*this, p_handle, old_count, new_count);
     }
 
@@ -4332,8 +4332,8 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_align_rescalloc_multi_to(auto& allocator,
                                                 mem auto& handle,
-                                                usize alignment,
-                                                ssize new_count) {
+                                                uword alignment,
+                                                iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_align_scalloc_multi<T>,
@@ -4344,8 +4344,8 @@ class allocator_interface {
     // itself with an alignment guarantee, zero-out the allocated memory,
     // and return the number of bytes that were allocated.
     [[nodiscard]]
-    constexpr auto opq_align_rescalloc_multi(mem auto& handle, usize alignment,
-                                             ssize new_count) {
+    constexpr auto opq_align_rescalloc_multi(mem auto& handle, uword alignment,
+                                             iword new_count) {
         return this->opq_align_rescalloc_multi_to(*this, handle, alignment,
                                                   new_count);
     }
@@ -4356,8 +4356,8 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_align_xrescalloc_multi_to(auto& allocator,
                                                  mem auto& handle,
-                                                 usize alignment,
-                                                 ssize new_count) {
+                                                 uword alignment,
+                                                 iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_align_xscalloc_multi<T>,
@@ -4367,8 +4367,8 @@ class allocator_interface {
     // Move and resize an array memory handle from this allocator into itself
     // with an alignment guarantee, zero-out the allocated memory, and
     // return the number of bytes that were allocated.
-    auto opq_align_xrescalloc_multi(mem auto& handle, usize alignment,
-                                    ssize new_count) {
+    auto opq_align_xrescalloc_multi(mem auto& handle, uword alignment,
+                                    iword new_count) {
         return this->opq_align_xrescalloc_multi_to(*this, handle, alignment,
                                                    new_count);
     }
@@ -4379,7 +4379,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_unalign_rescalloc_multi_to(auto& allocator,
                                                   mem auto& handle,
-                                                  ssize new_count) {
+                                                  iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_unalign_scalloc_multi<T>,
@@ -4391,7 +4391,7 @@ class allocator_interface {
     // and return the number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto opq_unalign_rescalloc_multi(mem auto& handle,
-                                               ssize new_count) {
+                                               iword new_count) {
         return this->opq_unalign_rescalloc_multi_to(*this, handle, new_count);
     }
 
@@ -4401,7 +4401,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_unalign_xrescalloc_multi_to(auto& allocator,
                                                    mem auto& handle,
-                                                   ssize new_count) {
+                                                   iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_unalign_xscalloc_multi<T>,
@@ -4411,7 +4411,7 @@ class allocator_interface {
     // Move and resize an array memory handle from this allocator into itself
     // with no alignment guarantee, zero-out the allocated memory, and
     // return the number of bytes that were allocated.
-    auto opq_unalign_xrescalloc_multi(mem auto& handle, ssize new_count) {
+    auto opq_unalign_xrescalloc_multi(mem auto& handle, iword new_count) {
         return this->opq_unalign_xrescalloc_multi_to(*this, handle, new_count);
     }
 
@@ -4420,8 +4420,8 @@ class allocator_interface {
     // and return the number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto align_rescalloc_multi_to(auto& allocator, auto* p_handle,
-                                            usize alignment, ssize old_count,
-                                            ssize new_count) {
+                                            uword alignment, iword old_count,
+                                            iword new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::align_scalloc_multi<T>, true,
@@ -4432,8 +4432,8 @@ class allocator_interface {
     // itself with an alignment guarantee, zero-out the allocated memory,
     // and return the number of bytes that were allocated.
     [[nodiscard]]
-    constexpr auto align_rescalloc_multi(auto* p_handle, usize alignment,
-                                         ssize old_count, ssize new_count) {
+    constexpr auto align_rescalloc_multi(auto* p_handle, uword alignment,
+                                         iword old_count, iword new_count) {
         return this->align_rescalloc_multi_to(*this, p_handle, alignment,
                                               old_count, new_count);
     }
@@ -4443,8 +4443,8 @@ class allocator_interface {
     // return the number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto align_xrescalloc_multi_to(auto& allocator, auto* p_handle,
-                                             usize alignment, ssize old_count,
-                                             ssize new_count) {
+                                             uword alignment, iword old_count,
+                                             iword new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::align_xscalloc_multi<T>, false,
@@ -4454,8 +4454,8 @@ class allocator_interface {
     // Move and resize an array pointer handle from this allocator into itself
     // with an alignment guarantee, zero-out the allocated memory, and
     // return the number of bytes that were allocated.
-    auto align_xrescalloc_multi(auto* p_handle, usize alignment,
-                                ssize old_count, ssize new_count) {
+    auto align_xrescalloc_multi(auto* p_handle, uword alignment,
+                                iword old_count, iword new_count) {
         return this->align_xrescalloc_multi_to(*this, p_handle, alignment,
                                                old_count, new_count);
     }
@@ -4465,8 +4465,8 @@ class allocator_interface {
     // and return the number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto unalign_rescalloc_multi_to(auto& allocator, auto* p_handle,
-                                              ssize old_count,
-                                              ssize new_count) {
+                                              iword old_count,
+                                              iword new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::unalign_scalloc_multi<T>, true,
@@ -4477,8 +4477,8 @@ class allocator_interface {
     // itself with no alignment guarantee, zero-out the allocated memory,
     // and return the number of bytes that were allocated.
     [[nodiscard]]
-    constexpr auto unalign_rescalloc_multi(auto* p_handle, ssize old_count,
-                                           ssize new_count) {
+    constexpr auto unalign_rescalloc_multi(auto* p_handle, iword old_count,
+                                           iword new_count) {
         return this->unalign_rescalloc_multi_to(*this, p_handle, old_count,
                                                 new_count);
     }
@@ -4488,8 +4488,8 @@ class allocator_interface {
     // return the number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto unalign_xrescalloc_multi_to(auto& allocator, auto* p_handle,
-                                               ssize old_count,
-                                               ssize new_count) {
+                                               iword old_count,
+                                               iword new_count) {
         using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
         return this->meta_realloc_multi<
             &allocator_interface<derived_type>::unalign_xscalloc_multi<T>,
@@ -4499,8 +4499,8 @@ class allocator_interface {
     // Move and resize an array pointer handle from this allocator into itself
     // with no alignment guarantee, zero-out the allocated memory, and
     // return the number of bytes that were allocated.
-    auto unalign_xrescalloc_multi(auto* p_handle, ssize old_count,
-                                  ssize new_count) {
+    auto unalign_xrescalloc_multi(auto* p_handle, iword old_count,
+                                  iword new_count) {
         return this->unalign_xrescalloc_multi_to(*this, p_handle, old_count,
                                                  new_count);
     }
@@ -4545,7 +4545,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_align_resalloc_to(auto& allocator,
                                                 mem auto& handle,
-                                                usize alignment) {
+                                                uword alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::opq_inline_align_salloc<T, T>,
@@ -4557,7 +4557,7 @@ class allocator_interface {
     // allocated.
     [[nodiscard]]
     constexpr auto opq_inline_align_resalloc(mem auto& handle,
-                                             usize alignment) {
+                                             uword alignment) {
         return this->opq_inline_align_resalloc_to(*this, handle, alignment);
     }
 
@@ -4567,7 +4567,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_align_xresalloc_to(auto& allocator,
                                                  mem auto& handle,
-                                                 usize alignment) {
+                                                 uword alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::opq_inline_align_xalloc<T, T>,
@@ -4577,7 +4577,7 @@ class allocator_interface {
     // Move a small-size optimized handle from this allocator into itself with
     // an alignment guarantee, and return the number of bytes that were
     // allocated.
-    auto opq_inline_align_xresalloc(mem auto& handle, usize alignment) {
+    auto opq_inline_align_xresalloc(mem auto& handle, uword alignment) {
         return this->opq_inline_align_xresalloc_to(*this, handle, alignment);
     }
 
@@ -4625,7 +4625,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_resalloc_multi_to(auto& allocator,
                                                 mem auto& handle,
-                                                ssize new_count) {
+                                                iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_inline_salloc_multi<T>,
@@ -4637,7 +4637,7 @@ class allocator_interface {
     // allocated.
     [[nodiscard]]
     constexpr auto opq_inline_resalloc_multi(mem auto& handle,
-                                             ssize new_count) {
+                                             iword new_count) {
         return this->opq_resalloc_multi_to(*this, handle, new_count);
     }
 
@@ -4647,7 +4647,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_xresalloc_multi_to(auto& allocator,
                                                  mem auto& handle,
-                                                 ssize new_count) {
+                                                 iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_inline_xsalloc_multi<T>,
@@ -4659,7 +4659,7 @@ class allocator_interface {
     // allocated.
     [[nodiscard]]
     constexpr auto opq_inline_xresalloc_multi(mem auto& handle,
-                                              ssize new_count) {
+                                              iword new_count) {
         return this->opq_inline_xresalloc_multi_to(*this, handle, new_count);
     }
 
@@ -4669,8 +4669,8 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_align_resalloc_multi_to(auto& allocator,
                                                       mem auto& handle,
-                                                      usize alignment,
-                                                      ssize new_count) {
+                                                      uword alignment,
+                                                      iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_inline_align_salloc_multi<
@@ -4683,8 +4683,8 @@ class allocator_interface {
     // number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto opq_inline_align_resalloc_multi(mem auto& handle,
-                                                   usize alignment,
-                                                   ssize new_count) {
+                                                   uword alignment,
+                                                   iword new_count) {
         return this->opq_inline_align_resalloc_multi_to(*this, handle,
                                                         alignment, new_count);
     }
@@ -4695,8 +4695,8 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_align_xresalloc_multi_to(auto& allocator,
                                                        mem auto& handle,
-                                                       usize alignment,
-                                                       ssize new_count) {
+                                                       uword alignment,
+                                                       iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_inline_align_xsalloc_multi<
@@ -4707,8 +4707,8 @@ class allocator_interface {
     // Move and resize a small-size optimized array memory handle from this
     // allocator into itself with an alignment guarantee, and return the number
     // of bytes that were allocated.
-    auto opq_inline_align_xresalloc_multi(mem auto& handle, usize alignment,
-                                          ssize new_count) {
+    auto opq_inline_align_xresalloc_multi(mem auto& handle, uword alignment,
+                                          iword new_count) {
         return this->opq_inline_align_xresalloc_multi_to(*this, handle,
                                                          alignment, new_count);
     }
@@ -4719,7 +4719,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_unalign_resalloc_multi_to(auto& allocator,
                                                         mem auto& handle,
-                                                        ssize new_count) {
+                                                        iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this
             ->opq_meta_realloc_multi<&allocator_interface<derived_type>::
@@ -4732,7 +4732,7 @@ class allocator_interface {
     // number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto opq_inline_unalign_resalloc_multi(mem auto& handle,
-                                                     ssize new_count) {
+                                                     iword new_count) {
         return this->opq_inline_unalign_resalloc_multi_to(*this, handle,
                                                           new_count);
     }
@@ -4743,7 +4743,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_unalign_xresalloc_multi_to(auto& allocator,
                                                          mem auto& handle,
-                                                         ssize new_count) {
+                                                         iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this
             ->opq_meta_realloc_multi<&allocator_interface<derived_type>::
@@ -4754,7 +4754,7 @@ class allocator_interface {
     // Move and resize a small-size optimized array memory handle from this
     // allocator into itself with no alignment guarantee, and return the number
     // of bytes that were allocated.
-    auto opq_inline_unalign_xresalloc_multi(mem auto& handle, ssize new_count) {
+    auto opq_inline_unalign_xresalloc_multi(mem auto& handle, iword new_count) {
         return this->opq_inline_unalign_xresalloc_multi_to(*this, handle,
                                                            new_count);
     }
@@ -4803,7 +4803,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_align_rescalloc_to(auto& allocator,
                                                  mem auto& handle,
-                                                 usize alignment) {
+                                                 uword alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::opq_inline_align_scalloc<T, T>,
@@ -4815,7 +4815,7 @@ class allocator_interface {
     // return the number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto opq_inline_align_rescalloc(mem auto& handle,
-                                              usize alignment) {
+                                              uword alignment) {
         return this->opq_inline_align_rescalloc_to(*this, handle, alignment);
     }
 
@@ -4825,7 +4825,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_align_xrescalloc_to(auto& allocator,
                                                   mem auto& handle,
-                                                  usize alignment) {
+                                                  uword alignment) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->meta_realloc<
             &allocator_interface<derived_type>::opq_inline_align_xscalloc<T, T>,
@@ -4835,7 +4835,7 @@ class allocator_interface {
     // Move a small-size optimized handle from this allocator into itself with
     // an alignment guarantee, zero-out the allocated memory, and return the
     // number of bytes that were allocated.
-    auto opq_inline_align_xrescalloc(mem auto& handle, usize alignment) {
+    auto opq_inline_align_xrescalloc(mem auto& handle, uword alignment) {
         return this->opq_inline_align_xrescalloc_to(*this, handle, alignment);
     }
 
@@ -4884,7 +4884,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_rescalloc_multi_to(auto& allocator,
                                                  mem auto& handle,
-                                                 ssize new_count) {
+                                                 iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_inline_scalloc_multi<T>,
@@ -4896,7 +4896,7 @@ class allocator_interface {
     // number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto opq_inline_rescalloc_multi(mem auto& handle,
-                                              ssize new_count) {
+                                              iword new_count) {
         return this->opq_inline_rescalloc_multi_to(*this, handle, new_count);
     }
 
@@ -4906,7 +4906,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_xrescalloc_multi_to(auto& allocator,
                                                   mem auto& handle,
-                                                  ssize new_count) {
+                                                  iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_inline_xscalloc_multi<T>,
@@ -4918,7 +4918,7 @@ class allocator_interface {
     // number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto opq_inline_xrescalloc_multi(mem auto& handle,
-                                               ssize new_count) {
+                                               iword new_count) {
         return this->opq_inline_xrescalloc_multi_to(*this, handle, new_count);
     }
 
@@ -4928,8 +4928,8 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_align_rescalloc_multi_to(auto& allocator,
                                                        mem auto& handle,
-                                                       usize alignment,
-                                                       ssize new_count) {
+                                                       uword alignment,
+                                                       iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_inline_align_scalloc_multi<
@@ -4942,8 +4942,8 @@ class allocator_interface {
     // allocated memory, and return the number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto opq_inline_align_rescalloc_multi(mem auto& handle,
-                                                    usize alignment,
-                                                    ssize new_count) {
+                                                    uword alignment,
+                                                    iword new_count) {
         return this->opq_inline_align_rescalloc_multi_to(*this, handle,
                                                          alignment, new_count);
     }
@@ -4954,8 +4954,8 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_align_xrescalloc_multi_to(auto& allocator,
                                                         mem auto& handle,
-                                                        usize alignment,
-                                                        ssize new_count) {
+                                                        uword alignment,
+                                                        iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this->opq_meta_realloc_multi<
             &allocator_interface<derived_type>::opq_inline_align_xscalloc_multi<
@@ -4966,8 +4966,8 @@ class allocator_interface {
     // Move and resize a small-size optimized array memory handle from this
     // allocator into itself with an alignment guarantee, zero-out the
     // allocated memory, and return the number of bytes that were allocated.
-    auto opq_inline_align_xrescalloc_multi(mem auto& handle, usize alignment,
-                                           ssize new_count) {
+    auto opq_inline_align_xrescalloc_multi(mem auto& handle, uword alignment,
+                                           iword new_count) {
         return this->opq_inline_align_xrescalloc_multi_to(*this, handle,
                                                           alignment, new_count);
     }
@@ -4978,7 +4978,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_unalign_rescalloc_multi_to(auto& allocator,
                                                          mem auto& handle,
-                                                         ssize new_count) {
+                                                         iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this
             ->opq_meta_realloc_multi<&allocator_interface<derived_type>::
@@ -4991,7 +4991,7 @@ class allocator_interface {
     // allocated memory, and return the number of bytes that were allocated.
     [[nodiscard]]
     constexpr auto opq_inline_unalign_rescalloc_multi(mem auto& handle,
-                                                      ssize new_count) {
+                                                      iword new_count) {
         return this->opq_inline_unalign_rescalloc_multi_to(*this, handle,
                                                            new_count);
     }
@@ -5002,7 +5002,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_unalign_xrescalloc_multi_to(auto& allocator,
                                                           mem auto& handle,
-                                                          ssize new_count) {
+                                                          iword new_count) {
         using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
         return this
             ->opq_meta_realloc_multi<&allocator_interface<derived_type>::
@@ -5014,7 +5014,7 @@ class allocator_interface {
     // allocator into itself with no alignment guarantee, zero-out the
     // allocated memory, and return the number of bytes that were allocated.
     auto opq_inline_unalign_xrescalloc_multi(mem auto& handle,
-                                             ssize new_count) {
+                                             iword new_count) {
         return this->opq_inline_unalign_xrescalloc_multi_to(*this, handle,
                                                             new_count);
     }
@@ -5046,7 +5046,7 @@ class allocator_interface {
 #endif
 
             // if constexpr (is_destructible<allocation_type>) {
-            for (ssize i = 0; i < handle.size(); ++i) {
+            for (iword i = 0; i < handle.size(); ++i) {
                 p_memory[i.raw].~allocation_type();
             }
             // }
@@ -5090,7 +5090,7 @@ class allocator_interface {
     // destructors.
     template <typename T>
         requires(detail::is_stable_derived_allocator<derived_type>)
-    constexpr void free_multi(T* p_memory, ssize count) {
+    constexpr void free_multi(T* p_memory, iword count) {
         if constexpr (detail::has_max_allocation_bytes<derived_type>) {
             static_assert(ssizeof(T) <= derived_type::max_allocation_bytes,
                           "This allocation is too large for this allocator!");
@@ -5113,7 +5113,7 @@ class allocator_interface {
             // }
         } else {
             // if constexpr (is_destructible<T>) {
-            for (ssize i = 0; i < count; ++i) {
+            for (iword i = 0; i < count; ++i) {
                 p_memory[i.raw].~T();
             }
             // }
@@ -5135,7 +5135,7 @@ class allocator_interface {
     }
 
     template <typename T>
-    constexpr void cfree_multi(T* p_handle, ssize count) {
+    constexpr void cfree_multi(T* p_handle, iword count) {
         free_multi(p_handle, count);
         zero_memory_explicit(p_handle, count * ssizeof(T));
     }
@@ -5242,8 +5242,8 @@ class allocator_interface {
             && (!is_zeroed || is_trivial<T>))
     [[gnu::optimize(R"(-fno-tree-loop-distribute-patterns)"),
       gnu::no_sanitize_address]]
-    constexpr auto meta_alloc(usize allocation_alignment,
-                              ssize allocation_count,
+    constexpr auto meta_alloc(uword allocation_alignment,
+                              iword allocation_count,
                               Args&&... constructor_args) {
         if constexpr (detail::has_max_allocation_bytes<derived_type>) {
             static_assert(ssizeof(T) <= derived_type::max_allocation_bytes,
@@ -5253,7 +5253,7 @@ class allocator_interface {
                    "This allocation is too larger for this allocator!");
         }
 
-        ssize const allocation_bytes = allocation_count * ssizeof(T);
+        iword const allocation_bytes = allocation_count * ssizeof(T);
 
         // Produce a basic handle for this memory type.
 
@@ -5289,7 +5289,7 @@ class allocator_interface {
                                     conditional<is_multiple,
                                                 // tuple of a span with size
                                                 // feedback.
-                                                maybe<tuple<span<T>, ssize>>,
+                                                maybe<tuple<span<T>, iword>>,
                                                 // Failsafe pointer with size.
                                                 maybe_sized_allocation<T*>>,
 
@@ -5314,7 +5314,7 @@ class allocator_interface {
                                     conditional<is_multiple,
                                                 // Unsafe tuple of a span
                                                 // with size.
-                                                tuple<span<T>, ssize>,
+                                                tuple<span<T>, iword>,
                                                 // Unsafe pointer with size.
                                                 sized_allocation<T*>>,
 
@@ -5349,7 +5349,7 @@ class allocator_interface {
                 }
 
                 // Data must be default-constructed in `constexpr` code.
-                for (ssize i = 0; i < allocation_count; ++i) {
+                for (iword i = 0; i < allocation_count; ++i) {
                     construct_at(p_allocation + i);
                 }
 
@@ -5394,7 +5394,7 @@ class allocator_interface {
                     }
 
                     if constexpr (is_multiple) {
-                        for (ssize i = 0; i < allocation_count; ++i) {
+                        for (iword i = 0; i < allocation_count; ++i) {
                             construct_at(static_cast<T*>(static_cast<void*>(
                                              &stack_handle)) +
                                          i);
@@ -5451,7 +5451,7 @@ class allocator_interface {
                                         .value();
 
                                 maybe_memory = maybe_sized_allocation<void*>(
-                                    tuple<void*, ssize>{
+                                    tuple<void*, iword>{
                                         p_allocation,
                                         actual_allocation_bytes.value()});
                             } else {
@@ -5578,13 +5578,13 @@ class allocator_interface {
             }
 
             // Construct the `T`s inside the allocator.
-            for (ssize i = 0; i < allocation_count; ++i) {
+            for (iword i = 0; i < allocation_count; ++i) {
                 construct_at(p_allocation + i,
                              forward<Args>(constructor_args)...);
             }
 
             // If this allocation has size feedback, store it.
-            ssize size_feedback;
+            iword size_feedback;
             if constexpr (has_feedback) {
                 size_feedback = maybe_memory.value().second();
             }
@@ -5663,7 +5663,7 @@ class allocator_interface {
             copy_memory(addressof(this->get(handle)), addressof(allocation),
                         handle.raw_size());
         } else {
-            for (ssize i = 0; i < handle.size(); ++i) {
+            for (iword i = 0; i < handle.size(); ++i) {
                 *(addressof(this->get(allocation)) + i) =
                     move(*(addressof(this->get(handle)) + i));
             }
@@ -5673,7 +5673,7 @@ class allocator_interface {
     // Copy data from `p_old_handle` into `p_new_handle`.
     template <typename T>
     constexpr void relocate_ptr_handle(T* p_old_handle, T* p_new_handle,
-                                       ssize old_count) {
+                                       iword old_count) {
         // TODO: Use a `relocate()` function to streamline this.
         if !consteval {
             assert(p_new_handle != nullptr);
@@ -5682,7 +5682,7 @@ class allocator_interface {
             }
             return;
         }
-        for (ssize i = 0; i < old_count; ++i) {
+        for (iword i = 0; i < old_count; ++i) {
             *(p_new_handle + i) = move(*(p_old_handle + i));
         }
     }
@@ -5692,7 +5692,7 @@ class allocator_interface {
     // both `_multi` and non-`_multi` functions.
     template <typename T>
     constexpr void relocate_ptr_handle(auto* p_old_handle, span<T> new_handle,
-                                       ssize old_count) {
+                                       iword old_count) {
         // TODO: Use a `relocate()` function to streamline this.
         if !consteval {
             assert(new_handle.data() != nullptr);
@@ -5709,7 +5709,7 @@ class allocator_interface {
             }
             return;
         }
-        for (ssize i = 0; i < old_count; ++i) {
+        for (iword i = 0; i < old_count; ++i) {
             new_handle[i] = move(*(p_old_handle + i));
         }
     }
@@ -5719,7 +5719,7 @@ class allocator_interface {
               typename... Args>
         requires(sizeof...(Args) <= 1)
     constexpr auto opq_meta_realloc_multi(auto& allocator, mem auto& old_handle,
-                                          ssize new_count,
+                                          iword new_count,
                                           Args&&... maybe_alignment) {
         // `maybe_alignment` expands into zero or one arguments.
         auto new_handle = (allocator.*alloc_function)(
@@ -5754,7 +5754,7 @@ class allocator_interface {
               typename... Args>
         requires(sizeof...(Args) <= 1)
     constexpr auto meta_realloc_multi(auto& allocator, auto* p_old_handle,
-                                      ssize old_count, ssize new_count,
+                                      iword old_count, iword new_count,
                                       Args&&... maybe_alignment) {
         // `maybe_alignment` expands into zero or one arguments.
         auto new_handle = (allocator.*alloc_function)(

@@ -31,7 +31,7 @@ class ring : public collection_interface<ring<T>, T> {
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
     // context.
     auto copy_to_new_storage(is_stable_allocator auto& allocator,
-                             ssize new_capacity) -> maybe<void> {
+                             iword new_capacity) -> maybe<void> {
         // TODO: `.resalloc_multi()`.
         T* p_new = TRY(allocator.template alloc_multi<T>(new_capacity));
 
@@ -39,7 +39,7 @@ class ring : public collection_interface<ring<T>, T> {
             copy_memory(this->p_storage, p_new,
                         this->current_size * ssizeof(T));
         } else {
-            for (ssize::raw_type i = 0; i < this->current_size; ++i) {
+            for (iword::raw_type i = 0; i < this->current_size; ++i) {
                 p_new[i] = move(this->p_storage[i]);
             }
         }
@@ -55,19 +55,19 @@ class ring : public collection_interface<ring<T>, T> {
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]]
-    static auto reserved(is_stable_allocator auto& allocator, ssize capacity)
+    static auto reserved(is_stable_allocator auto& allocator, iword capacity)
         -> maybe<ring<T>> {
     }
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]]
-    static auto filled(is_stable_allocator auto& allocator, ssize capacity,
+    static auto filled(is_stable_allocator auto& allocator, iword capacity,
                        T value) -> maybe<ring<T>> {
     }
 
     [[nodiscard]]
-    auto reserve(is_stable_allocator auto& allocator, ssize new_capacity)
+    auto reserve(is_stable_allocator auto& allocator, iword new_capacity)
         -> maybe<void> {
         // The capacity of a `ring` must be a power of two.
         cat::assert(has_single_bit(new_capacity));
@@ -83,7 +83,7 @@ class ring : public collection_interface<ring<T>, T> {
                 copy_memory(this->p_storage, p_new,
                             this->current_size * ssizeof(T));
             } else {
-                for (ssize::raw_type i = 0; i < this->current_size; ++i) {
+                for (iword::raw_type i = 0; i < this->current_size; ++i) {
                     p_new[i] = move(this->p_storage[i]);
                 }
             }
@@ -100,13 +100,13 @@ class ring : public collection_interface<ring<T>, T> {
     }
 
     [[nodiscard]]
-    auto resize(is_stable_allocator auto& allocator, ssize new_size)
+    auto resize(is_stable_allocator auto& allocator, iword new_size)
         -> maybe<void> {
         if (new_size > this->current_capacity) {
             TRY(this->reserve(allocator, new_size));
 
             // Construct `T` at the newly reserved memory.
-            for (ssize i = this->current_size; i < new_size; ++i) {
+            for (iword i = this->current_size; i < new_size; ++i) {
                 construct_at(this->p_storage + i);
             }
 
@@ -137,12 +137,12 @@ class ring : public collection_interface<ring<T>, T> {
     }
 
     [[nodiscard]]
-    constexpr auto size() const -> ssize {
+    constexpr auto size() const -> iword {
         return this->current_size;
     }
 
     [[nodiscard]]
-    constexpr auto capacity() const -> ssize {
+    constexpr auto capacity() const -> iword {
         return this->current_capacity;
     }
 
@@ -167,9 +167,9 @@ class ring : public collection_interface<ring<T>, T> {
 
   private:
     T* p_storage;
-    ssize current_index;
-    ssize current_size;
-    ssize current_capacity;
+    iword current_index;
+    iword current_size;
+    iword current_capacity;
 };
 
 }  // namespace cat

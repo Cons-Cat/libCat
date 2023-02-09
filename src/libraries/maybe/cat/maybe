@@ -1132,7 +1132,7 @@ class maybe {
     // If this `maybe` is empty, terminate the running process
     // immediately. Otherwise, return its value.
     [[nodiscard]]
-    auto or_exit(ssize exit_code = 1) & {
+    auto or_exit(iword exit_code = 1) & {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return this->value();
@@ -1148,7 +1148,7 @@ class maybe {
     // If this `maybe` is empty, terminate the running process
     // immediately. Otherwise, return its value.
     [[nodiscard]]
-    auto or_exit(ssize exit_code = 1) const& {
+    auto or_exit(iword exit_code = 1) const& {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return this->value();
@@ -1164,7 +1164,7 @@ class maybe {
     // If this `maybe` is empty, terminate the running process
     // immediately. Otherwise, move its value.
     [[nodiscard]]
-    auto or_exit(ssize exit_code = 1) && {
+    auto or_exit(iword exit_code = 1) && {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return move(this->value());
@@ -1180,7 +1180,7 @@ class maybe {
     // If this `maybe` is empty, terminate the running process
     // immediately. Otherwise, move its value.
     [[nodiscard]]
-    auto or_exit(ssize exit_code = 1) const&& {
+    auto or_exit(iword exit_code = 1) const&& {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return move(this)->value();
@@ -1197,13 +1197,13 @@ class maybe {
     // running process immediately. Otherwise, return its value.
     // These are implemented in `<cat/string>`.
     [[nodiscard]]
-    auto or_exit(string error_message, ssize exit_code = 1) &;
+    auto or_exit(string error_message, iword exit_code = 1) &;
     [[nodiscard]]
-    auto or_exit(string error_message, ssize exit_code = 1) const&;
+    auto or_exit(string error_message, iword exit_code = 1) const&;
     [[nodiscard]]
-    auto or_exit(string error_message, ssize exit_code = 1) &&;
+    auto or_exit(string error_message, iword exit_code = 1) &&;
     [[nodiscard]]
-    auto or_exit(string error_message, ssize exit_code = 1) const&&;
+    auto or_exit(string error_message, iword exit_code = 1) const&&;
 
     // Construct the value in-place and destroy the held value iff it
     // exists.

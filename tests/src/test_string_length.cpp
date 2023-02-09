@@ -15,13 +15,13 @@ auto main() -> int {
 
     char const* p_string_7 = "/tmp/temp.sock";
 
-    ssize len_1 = cat::string_length(p_string_1);
-    ssize len_2 = cat::string_length(p_string_2);
-    ssize len_3 = cat::string_length(p_string_3);
-    ssize len_4 = cat::string_length(p_string_4);
-    ssize len_5 = cat::string_length(p_string_5);
-    ssize len_6 = cat::string_length(p_string_6);
-    ssize len_7 = cat::string_length(p_string_7);
+    iword len_1 = cat::string_length(p_string_1);
+    iword len_2 = cat::string_length(p_string_2);
+    iword len_3 = cat::string_length(p_string_3);
+    iword len_4 = cat::string_length(p_string_4);
+    iword len_5 = cat::string_length(p_string_5);
+    iword len_6 = cat::string_length(p_string_6);
+    iword len_7 = cat::string_length(p_string_7);
 
     cat::verify(len_1 == len_2);
     cat::verify(len_1 == 7);
@@ -49,19 +49,19 @@ auto main() -> int {
 
     // TODO: Put this in another string unit test.
     cat::string find_string = "abcdefabcdefabcdefabcdefabcdefabcdef";
-    ssize c = find_string.find('c').or_exit();
+    iword c = find_string.find('c').or_exit();
     cat::verify(c == 2);
 
-    ssize a = find_string.find('a').or_exit();
+    iword a = find_string.find('a').or_exit();
     cat::verify(a == 0);
 
-    ssize f = find_string.find('f').or_exit();
+    iword f = find_string.find('f').or_exit();
     cat::verify(f == 5);
 
     // `z` is not inside of a 32-byte chunk.
     cat::string find_string_2 =
         "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd"
         "efz";
-    ssize z = find_string_2.find('z').or_exit();
+    iword z = find_string_2.find('z').or_exit();
     cat::verify(z == 72);
 }

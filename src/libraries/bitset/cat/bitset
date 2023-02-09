@@ -9,7 +9,7 @@
 
 namespace cat {
 
-template <ssize bits_count>
+template <iword bits_count>
     requires(bits_count > 0)
 class bitset {
   private:
@@ -18,7 +18,7 @@ class bitset {
     // Store the smallest number of bytes needed for `bits_count`. If that is 8
     // bytes or fewer, use that many bytes. If it is larger, use an array of
     // 8-byte integers. Divide the bits by 8, rounding up.
-    static constexpr ssize total_bytes = div_ceil(bits_count, 8);
+    static constexpr iword total_bytes = div_ceil(bits_count, 8);
 
     using array_type = conditional<
         total_bytes <= 8,
@@ -43,19 +43,19 @@ class bitset {
     // using const_reverse_iterator =
     //     bit_iterator<typename value_type::const_reverse_iterator>;
 
-    static constexpr ssize storage_array_size = array_type::size();
+    static constexpr iword storage_array_size = array_type::size();
 
-    static constexpr ssize storage_element_size = ssizeof(array_type_element);
+    static constexpr iword storage_element_size = ssizeof(array_type_element);
 
     // The number of bits NOT counted in the first 1, 2, or 4 bytes of this
     // bitset.
-    static constexpr ssize leading_skipped_bits =
+    static constexpr iword leading_skipped_bits =
         // The number of bits in the entire storage, minus the bits declared for
         // use.
         (total_bytes * 8) - bits_count;
 
     // The number of bits counted in the first 1, 2, or 4 bytes of this bitset.
-    static constexpr ssize leading_bytes_bits =
+    static constexpr iword leading_bytes_bits =
         // Size of this storage, 64 bits or fewer.
         storage_element_size * 8 -
         // Minus the number of unused bits in this bitset.
@@ -90,7 +90,7 @@ class bitset {
     // Index into this bit-set from the right-most bit.
     [[nodiscard]]
     constexpr auto
-    operator[](ssize index_bit) -> bit_reference<array_type_element> {
+    operator[](iword index_bit) -> bit_reference<array_type_element> {
         if !consteval {
             cat::assert(index_bit < bits_count);
         }
@@ -100,7 +100,7 @@ class bitset {
                           ((index_bit + this->leading_skipped_bits) /
                            word_bits)];
 
-        ssize bit_offset = index_bit + this->leading_skipped_bits;
+        iword bit_offset = index_bit + this->leading_skipped_bits;
         // TODO: `total_bytes` doesn't compile here in Clang 17 if prefixed by
         // `this->`.
         if constexpr (total_bytes > word_bytes) {
@@ -115,12 +115,12 @@ class bitset {
 
     [[nodiscard]]
     constexpr auto
-    operator[](ssize index_bit) const -> bit_reference<array_type_element> {
+    operator[](iword index_bit) const -> bit_reference<array_type_element> {
         return (*unconst(this))[index_bit];
     }
 
     [[nodiscard]]
-    constexpr auto at(ssize index) -> maybe<bit_reference<array_type_element>> {
+    constexpr auto at(iword index) -> maybe<bit_reference<array_type_element>> {
         if (index < bits_count) {
             return (*this)[index];
         }
@@ -128,7 +128,7 @@ class bitset {
     }
 
     [[nodiscard]]
-    constexpr auto at(ssize index) const
+    constexpr auto at(iword index) const
         -> maybe<bit_reference<array_type_element>> {
         if (index < bits_count) {
             return (*this)[index];
@@ -140,7 +140,7 @@ class bitset {
     friend constexpr auto
     operator&(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
         bitset<bits_count> bitset;
-        for (ssize::raw_type i = 0; i < lhs.storage_array_size; ++i) {
+        for (iword::raw_type i = 0; i < lhs.storage_array_size; ++i) {
             bitset.storage[i] = lhs.storage[i] & rhs.storage[i];
         }
         return bitset;
@@ -156,7 +156,7 @@ class bitset {
     friend constexpr auto
     operator|(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
         bitset<bits_count> bitset;
-        for (ssize::raw_type i = 0; i < lhs.storage_array_size; ++i) {
+        for (iword::raw_type i = 0; i < lhs.storage_array_size; ++i) {
             bitset.storage[i] = lhs.storage[i] | rhs.storage[i];
         }
         return bitset;
@@ -172,7 +172,7 @@ class bitset {
     friend constexpr auto
     operator^(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
         bitset<bits_count> bitset;
-        for (ssize::raw_type i = 0; i < lhs.storage_array_size; ++i) {
+        for (iword::raw_type i = 0; i < lhs.storage_array_size; ++i) {
             bitset.storage[i] = lhs.storage[i] ^ rhs.storage[i];
         }
         return bitset;
@@ -194,7 +194,7 @@ class bitset {
     // Evaluate true if every bit in this bitset is 1.
     [[nodiscard]]
     constexpr auto all_of() const -> bool {
-        for (ssize i = 0; i < this->storage_array_size; ++i) {
+        for (iword i = 0; i < this->storage_array_size; ++i) {
             auto it = this->storage[i];
             using T = decltype(it);
 
@@ -236,21 +236,21 @@ class bitset {
     }
 
     [[nodiscard]]
-    constexpr auto countl_zero() const -> ssize {
+    constexpr auto countl_zero() const -> iword {
         // TODO: `leading_bytes_bits` doesn't compile here in Clang 17 if
         // prefixed by `this->`.
-        constexpr ssize skip_bits =
+        constexpr iword skip_bits =
             (ssizeof(array_type_element) * 8) - leading_bytes_bits;
 
-        ssize count = cat::countl_zero(this->storage[0]);
+        iword count = cat::countl_zero(this->storage[0]);
         if (count != ssizeof(array_type_element) * 8) {
             return count - skip_bits;
         }
 
         count -= skip_bits;
 
-        for (ssize i = 1; i < this->storage_array_size; ++i) {
-            ssize next_count = cat::countl_zero(this->storage[i]);
+        for (iword i = 1; i < this->storage_array_size; ++i) {
+            iword next_count = cat::countl_zero(this->storage[i]);
             count += next_count;
 
             // If any 1s are found, skip remaining bytes.
@@ -264,15 +264,15 @@ class bitset {
     // TODO: `.countl_one()`.
 
     [[nodiscard]]
-    constexpr auto countr_zero() const -> ssize {
-        ssize count =
+    constexpr auto countr_zero() const -> iword {
+        iword count =
             cat::countr_zero(this->storage[this->storage_array_size - 1]);
         if (count != ssizeof(array_type_element) * 8) {
             return count;
         }
 
-        for (ssize i = this->storage_array_size - 2; i >= 0; --i) {
-            ssize next_count = cat::countr_zero(this->storage[i]);
+        for (iword i = this->storage_array_size - 2; i >= 0; --i) {
+            iword next_count = cat::countr_zero(this->storage[i]);
             count += next_count;
 
             // If any 1s are found, skip remaining bytes.

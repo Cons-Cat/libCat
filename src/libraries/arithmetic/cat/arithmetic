@@ -19,7 +19,7 @@
 // This solution is concise, because any constraint broadly applies to all
 // possible type conversions.
 
-#define ssizeof(argument) cat::ssize(sizeof(argument))
+#define ssizeof(argument) cat::iword(sizeof(argument))
 
 namespace cat {
 
@@ -116,9 +116,9 @@ using sat_uint4 = arithmetic<__UINT32_TYPE__, overflow_policies::saturate>;
 using sat_int8 = arithmetic<__INT64_TYPE__, overflow_policies::saturate>;
 using sat_uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::saturate>;
 
-using usize = arithmetic<__SIZE_TYPE__, overflow_policies::undefined>;
-using ssize =
+using iword =
     arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policies::undefined>;
+using uword = arithmetic<__SIZE_TYPE__, overflow_policies::undefined>;
 
 template <typename from_type, typename to_type>
 concept is_safe_arithmetic_comparison =
@@ -138,7 +138,7 @@ concept is_safe_arithmetic_comparison =
     // And both types have the same floating-point-ness.
     && (is_floating_point<from_type> == is_floating_point<to_type>);
 
-// Any numeral can safely convert to a type larger than itself, but not
+// Any `arithmetic` can safely convert to a type larger than itself, but not
 // smaller than itself.
 template <typename from_type, typename to_type>
 concept is_safe_arithmetic_conversion =
@@ -522,8 +522,8 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
-    operator+(U* p_operand, arithmetic<T, policy> numeral) -> U* {
-        return p_operand + numeral.raw;
+    operator+(U* p_operand, arithmetic<T, policy> self) -> U* {
+        return p_operand + self.raw;
     }
 
     // Handle left-hand-side raw operands that are larger than this.
@@ -539,8 +539,8 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
-    operator+(arithmetic<T, policy> numeral, U* p_operand) -> U* {
-        return numeral.raw + p_operand;
+    operator+(arithmetic<T, policy> self, U* p_operand) -> U* {
+        return self.raw + p_operand;
     }
 
     template <is_arithmetic U>
@@ -613,8 +613,8 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
-    operator-(arithmetic<T, policy> numeral, U* p_operand) -> U* {
-        return numeral.raw - p_operand;
+    operator-(arithmetic<T, policy> self, U* p_operand) -> U* {
+        return self.raw - p_operand;
     }
 
     template <is_arithmetic U>
@@ -1297,7 +1297,7 @@ constexpr auto operator|=(T* p_lhs, arithmetic<U> rhs) -> T* {
     return p_lhs;
 }
 
-template <ssize bytes>
+template <iword bytes>
     requires(bytes <= 8 && bytes > 0 &&
              // Is a power of 2:
              ((bytes & (bytes - 1)) == 0))
@@ -1305,7 +1305,7 @@ using int_fixed = conditional<
     bytes == 1, int1,
     conditional<bytes == 2, int2, conditional<bytes == 4, int4, int8>>>;
 
-template <ssize bytes>
+template <iword bytes>
     requires(bytes <= 8 && bytes > 0 &&
              // Is a power of 2:
              ((bytes & (bytes - 1)) == 0))
@@ -1377,8 +1377,8 @@ inline namespace literals {
             return cat::int8{input};
         }
 
-        constexpr auto operator""_sz(unsigned long long input) -> cat::ssize {
-            return cat::ssize{input};
+        constexpr auto operator""_sz(unsigned long long input) -> cat::iword {
+            return cat::iword{input};
         }
 
         constexpr auto operator""_u1(unsigned long long input) -> cat::uint1 {
@@ -1397,8 +1397,8 @@ inline namespace literals {
             return cat::uint8{input};
         }
 
-        constexpr auto operator""_uz(unsigned long long input) -> cat::usize {
-            return cat::usize{input};
+        constexpr auto operator""_uz(unsigned long long input) -> cat::uword {
+            return cat::uword{input};
         }
 
         constexpr auto operator""_f4(unsigned long long input) -> cat::float4 {
@@ -1429,12 +1429,12 @@ using cat::int1;
 using cat::int2;
 using cat::int4;
 using cat::int8;
-using cat::ssize;
+using cat::iword;
 using cat::uint1;
 using cat::uint2;
 using cat::uint4;
 using cat::uint8;
-using cat::usize;
+using cat::uword;
 
 template <typename T>
 using intptr = cat::intptr<T>;

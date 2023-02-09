@@ -14,7 +14,7 @@ namespace detail {
                                  // `ssizeof_pack` causes an internal compiler
                                  // error in GCC 12 here.
                                  // ssizeof_pack<outer_tuple_elements>()>
-                                 static_cast<ssize>(
+                                 static_cast<iword>(
                                      sizeof...(outer_tuple_elements))>{} +
                 ...);
     }

@@ -46,12 +46,12 @@
 namespace cat::detail::dragonbox {
 namespace detail {
     template <class T>
-    constexpr usize::raw_type physical_bits =
+    constexpr uword::raw_type physical_bits =
         sizeof(T) * limits<unsigned char>::digits;
 
     template <class T>
         requires(is_unsigned<T>)
-    inline constexpr usize::raw_type value_bits = limits<T>::digits;
+    inline constexpr uword::raw_type value_bits = limits<T>::digits;
 }  // namespace detail
 
 // These classes expose encoding specs of IEEE-754-like floating-point formats.
@@ -65,6 +65,7 @@ struct ieee754_binary32 {
     static constexpr int exponent_bias = -127;
     static constexpr int decimal_digits = 9;
 };
+
 struct ieee754_binary64 {
     static constexpr int significand_bits = 52;
     static constexpr int exponent_bits = 11;
@@ -194,23 +195,28 @@ struct default_float_traits {
     static constexpr bool is_nonzero(carrier_uint u) noexcept {
         return (u << 1) != 0;
     }
+
     static constexpr bool is_positive(carrier_uint u) noexcept {
         constexpr auto sign_bit = carrier_uint(1) << (format::significand_bits +
                                                       format::exponent_bits);
         return u < sign_bit;
     }
+
     static constexpr bool is_negative(carrier_uint u) noexcept {
         return !is_positive(u);
     }
+
     static constexpr bool is_finite(unsigned int exponent_bits) noexcept {
         constexpr unsigned int exponent_bits_all_set =
             (1u << format::exponent_bits) - 1;
         return exponent_bits != exponent_bits_all_set;
     }
+
     static constexpr bool has_all_zero_significand_bits(
         carrier_uint u) noexcept {
         return (u << 1) == 0;
     }
+
     static constexpr bool has_even_significand_bits(carrier_uint u) noexcept {
         return u % 2 == 0;
     }
@@ -236,9 +242,11 @@ struct float_bits {
     carrier_uint u;
 
     float_bits() = default;
+
     constexpr explicit float_bits(carrier_uint bit_pattern) noexcept
         : u{bit_pattern} {
     }
+
     constexpr explicit float_bits(T float_value) noexcept
         : u{traits_type::float_to_carrier(float_value)} {
     }
@@ -274,6 +282,7 @@ struct float_bits {
     static constexpr int binary_exponent(unsigned int exponent_bits) noexcept {
         return traits_type::binary_exponent(exponent_bits);
     }
+
     constexpr int binary_exponent() const noexcept {
         return binary_exponent(extract_exponent_bits());
     }
@@ -284,6 +293,7 @@ struct float_bits {
         carrier_uint significand_bits, unsigned int exponent_bits) noexcept {
         return traits_type::binary_significand(significand_bits, exponent_bits);
     }
+
     constexpr carrier_uint binary_significand() const noexcept {
         return binary_significand(extract_significand_bits(),
                                   extract_exponent_bits());
@@ -292,18 +302,23 @@ struct float_bits {
     constexpr bool is_nonzero() const noexcept {
         return traits_type::is_nonzero(u);
     }
+
     constexpr bool is_positive() const noexcept {
         return traits_type::is_positive(u);
     }
+
     constexpr bool is_negative() const noexcept {
         return traits_type::is_negative(u);
     }
+
     constexpr bool is_finite(unsigned int exponent_bits) const noexcept {
         return traits_type::is_finite(exponent_bits);
     }
+
     constexpr bool is_finite() const noexcept {
         return traits_type::is_finite(extract_exponent_bits());
     }
+
     constexpr bool has_even_significand_bits() const noexcept {
         return traits_type::has_even_significand_bits(u);
     }
@@ -318,6 +333,7 @@ struct signed_significand_bits {
     carrier_uint u;
 
     signed_significand_bits() = default;
+
     constexpr explicit signed_significand_bits(
         carrier_uint bit_pattern) noexcept
         : u{bit_pattern} {
@@ -332,12 +348,15 @@ struct signed_significand_bits {
     constexpr bool is_positive() const noexcept {
         return traits_type::is_positive(u);
     }
+
     constexpr bool is_negative() const noexcept {
         return traits_type::is_negative(u);
     }
+
     constexpr bool has_all_zero_significand_bits() const noexcept {
         return traits_type::has_all_zero_significand_bits(u);
     }
+
     constexpr bool has_even_significand_bits() const noexcept {
         return traits_type::has_even_significand_bits(u);
     }
@@ -356,6 +375,7 @@ namespace detail {
             r &= 31;
             return (n >> r) | (n << (32 - r));
         }
+
         inline uint8::raw_type rotr(uint8::raw_type n,
                                     uint4::raw_type r) noexcept {
             r &= 63;
@@ -399,6 +419,7 @@ namespace detail {
             constexpr uint8::raw_type high() const noexcept {
                 return high_;
             }
+
             constexpr uint8::raw_type low() const noexcept {
                 return low_;
             }
@@ -570,7 +591,7 @@ namespace detail {
         };
         enum class subtract : uint4::raw_type {
         };
-        enum class shift : usize::raw_type {
+        enum class shift : uword::raw_type {
         };
         enum class min_exponent : int4::raw_type {
         };
@@ -583,7 +604,7 @@ namespace detail {
             // assert(int4::raw_type(e_min) <= e && e <= int4::raw_type(e_max));
             return int(
                 (int4::raw_type(e) * int4::raw_type(m) - int4::raw_type(f)) >>
-                usize::raw_type(k));
+                uword::raw_type(k));
         }
 
         // For constexpr computation.
@@ -600,6 +621,7 @@ namespace detail {
 
         static constexpr int floor_log10_pow2_min_exponent = -2620;
         static constexpr int floor_log10_pow2_max_exponent = 2620;
+
         constexpr int floor_log10_pow2(int e) noexcept {
             using namespace log;
             return compute<multiply(315653), subtract(0), shift(20),
@@ -609,6 +631,7 @@ namespace detail {
 
         static constexpr int floor_log2_pow10_min_exponent = -1233;
         static constexpr int floor_log2_pow10_max_exponent = 1233;
+
         constexpr int floor_log2_pow10(int e) noexcept {
             using namespace log;
             return compute<multiply(1741647), subtract(0), shift(19),
@@ -620,6 +643,7 @@ namespace detail {
             floor_log10_pow2_minus_log10_4_over_3_min_exponent = -2985;
         static constexpr int
             floor_log10_pow2_minus_log10_4_over_3_max_exponent = 2936;
+
         constexpr int floor_log10_pow2_minus_log10_4_over_3(int e) noexcept {
             using namespace log;
             return compute<
@@ -632,6 +656,7 @@ namespace detail {
 
         static constexpr int floor_log5_pow2_min_exponent = -1831;
         static constexpr int floor_log5_pow2_max_exponent = 1831;
+
         constexpr int floor_log5_pow2(int e) noexcept {
             using namespace log;
             return compute<multiply(225799), subtract(0), shift(19),
@@ -641,6 +666,7 @@ namespace detail {
 
         static constexpr int floor_log5_pow2_minus_log5_3_min_exponent = -3543;
         static constexpr int floor_log5_pow2_minus_log5_3_max_exponent = 2427;
+
         constexpr int floor_log5_pow2_minus_log5_3(int e) noexcept {
             using namespace log;
             return compute<
@@ -1452,13 +1478,14 @@ namespace detail {
             {0xfcf62c1dee382c42, 0x46729e03dd9ed7b6},
             {0x9e19db92b4e31ba9, 0x6c07a2c26a8346d2},
             {0xc5a05277621be293, 0xc7098b7305241886},
-            {0xf70867153aa2db38, 0xb8cbee4fc66d1ea8}};
+            {0xf70867153aa2db38, 0xb8cbee4fc66d1ea8}
+        };
     };
 
     // Compressed cache for double
     struct compressed_cache_detail {
         static constexpr int compression_ratio = 27;
-        static constexpr usize::raw_type compressed_table_size =
+        static constexpr uword::raw_type compressed_table_size =
             (cache_holder<ieee754_binary64>::max_k -
              cache_holder<ieee754_binary64>::min_k + compression_ratio) /
             compression_ratio;
@@ -1466,9 +1493,10 @@ namespace detail {
         struct cache_holder_t {
             wuint::uint128 table[compressed_table_size];
         };
+
         static constexpr cache_holder_t cache = [] {
             cache_holder_t res{};
-            for (usize::raw_type i = 0; i < compressed_table_size; ++i) {
+            for (uword::raw_type i = 0; i < compressed_table_size; ++i) {
                 res.table[i] =
                     cache_holder<ieee754_binary64>::cache[i *
                                                           compression_ratio];
@@ -1479,10 +1507,11 @@ namespace detail {
         struct pow5_holder_t {
             uint8::raw_type table[compression_ratio];
         };
+
         static constexpr pow5_holder_t pow5 = [] {
             pow5_holder_t res{};
             uint8::raw_type p = 1;
-            for (usize::raw_type i = 0; i < compression_ratio; ++i) {
+            for (uword::raw_type i = 0; i < compression_ratio; ++i) {
                 res.table[i] = p;
                 p *= 5;
             }
@@ -1586,59 +1615,77 @@ namespace detail {
                 left_closed_directed,
                 right_closed_directed
             };
+
             namespace interval_type {
                 struct symmetric_boundary {
                     static constexpr bool is_symmetric = true;
                     bool is_closed;
+
                     constexpr bool include_left_endpoint() const noexcept {
                         return is_closed;
                     }
+
                     constexpr bool include_right_endpoint() const noexcept {
                         return is_closed;
                     }
                 };
+
                 struct asymmetric_boundary {
                     static constexpr bool is_symmetric = false;
                     bool is_left_closed;
+
                     constexpr bool include_left_endpoint() const noexcept {
                         return is_left_closed;
                     }
+
                     constexpr bool include_right_endpoint() const noexcept {
                         return !is_left_closed;
                     }
                 };
+
                 struct closed {
                     static constexpr bool is_symmetric = true;
+
                     static constexpr bool include_left_endpoint() noexcept {
                         return true;
                     }
+
                     static constexpr bool include_right_endpoint() noexcept {
                         return true;
                     }
                 };
+
                 struct open {
                     static constexpr bool is_symmetric = true;
+
                     static constexpr bool include_left_endpoint() noexcept {
                         return false;
                     }
+
                     static constexpr bool include_right_endpoint() noexcept {
                         return false;
                     }
                 };
+
                 struct left_closed_right_open {
                     static constexpr bool is_symmetric = false;
+
                     static constexpr bool include_left_endpoint() noexcept {
                         return true;
                     }
+
                     static constexpr bool include_right_endpoint() noexcept {
                         return false;
                     }
                 };
+
                 struct right_closed_left_open {
                     static constexpr bool is_symmetric = false;
+
                     static constexpr bool include_left_endpoint() noexcept {
                         return false;
                     }
+
                     static constexpr bool include_right_endpoint() noexcept {
                         return true;
                     }
@@ -1661,12 +1708,14 @@ namespace detail {
                     SignedSignificandBits s, Func&& f) noexcept {
                     return f(s.has_even_significand_bits());
                 }
+
                 template <class SignedSignificandBits, class Func>
                 static constexpr auto invoke_shorter_interval_case(
                     SignedSignificandBits, Func&& f) noexcept {
                     return f();
                 }
             };
+
             struct nearest_to_odd : base {
                 using decimal_to_binary_rounding_policy = nearest_to_odd;
                 static constexpr auto tag = tag_t::to_nearest;
@@ -1683,12 +1732,14 @@ namespace detail {
                     SignedSignificandBits s, Func&& f) noexcept {
                     return f(!s.has_even_significand_bits());
                 }
+
                 template <class SignedSignificandBits, class Func>
                 static constexpr auto invoke_shorter_interval_case(
                     SignedSignificandBits, Func&& f) noexcept {
                     return f();
                 }
             };
+
             struct nearest_toward_plus_infinity : base {
                 using decimal_to_binary_rounding_policy =
                     nearest_toward_plus_infinity;
@@ -1707,12 +1758,14 @@ namespace detail {
                     SignedSignificandBits s, Func&& f) noexcept {
                     return f(!s.is_negative());
                 }
+
                 template <class SignedSignificandBits, class Func>
                 static constexpr auto invoke_shorter_interval_case(
                     SignedSignificandBits s, Func&& f) noexcept {
                     return f(!s.is_negative());
                 }
             };
+
             struct nearest_toward_minus_infinity : base {
                 using decimal_to_binary_rounding_policy =
                     nearest_toward_minus_infinity;
@@ -1731,12 +1784,14 @@ namespace detail {
                     SignedSignificandBits s, Func&& f) noexcept {
                     return f(s.is_negative());
                 }
+
                 template <class SignedSignificandBits, class Func>
                 static constexpr auto invoke_shorter_interval_case(
                     SignedSignificandBits s, Func&& f) noexcept {
                     return f(s.is_negative());
                 }
             };
+
             struct nearest_toward_zero : base {
                 using decimal_to_binary_rounding_policy = nearest_toward_zero;
                 static constexpr auto tag = tag_t::to_nearest;
@@ -1755,12 +1810,14 @@ namespace detail {
                     SignedSignificandBits, Func&& f) noexcept {
                     return f();
                 }
+
                 template <class SignedSignificandBits, class Func>
                 static constexpr auto invoke_shorter_interval_case(
                     SignedSignificandBits, Func&& f) noexcept {
                     return f();
                 }
             };
+
             struct nearest_away_from_zero : base {
                 using decimal_to_binary_rounding_policy =
                     nearest_away_from_zero;
@@ -1780,6 +1837,7 @@ namespace detail {
                     SignedSignificandBits, Func&& f) noexcept {
                     return f();
                 }
+
                 template <class SignedSignificandBits, class Func>
                 static constexpr auto invoke_shorter_interval_case(
                     SignedSignificandBits, Func&& f) noexcept {
@@ -1798,12 +1856,14 @@ namespace detail {
                         SignedSignificandBits, Func&& f) noexcept {
                         return f();
                     }
+
                     template <class SignedSignificandBits, class Func>
                     static constexpr auto invoke_shorter_interval_case(
                         SignedSignificandBits, Func&& f) noexcept {
                         return f();
                     }
                 };
+
                 struct nearest_always_open {
                     static constexpr auto tag = tag_t::to_nearest;
                     using normal_interval_type = interval_type::open;
@@ -1814,6 +1874,7 @@ namespace detail {
                         SignedSignificandBits, Func&& f) noexcept {
                         return f();
                     }
+
                     template <class SignedSignificandBits, class Func>
                     static constexpr auto invoke_shorter_interval_case(
                         SignedSignificandBits, Func&& f) noexcept {
@@ -1825,6 +1886,7 @@ namespace detail {
             struct nearest_to_even_static_boundary : base {
                 using decimal_to_binary_rounding_policy =
                     nearest_to_even_static_boundary;
+
                 template <class SignedSignificandBits, class Func>
                 static auto delegate(SignedSignificandBits s,
                                      Func&& f) noexcept {
@@ -1835,9 +1897,11 @@ namespace detail {
                     }
                 }
             };
+
             struct nearest_to_odd_static_boundary : base {
                 using decimal_to_binary_rounding_policy =
                     nearest_to_odd_static_boundary;
+
                 template <class SignedSignificandBits, class Func>
                 static auto delegate(SignedSignificandBits s,
                                      Func&& f) noexcept {
@@ -1848,9 +1912,11 @@ namespace detail {
                     }
                 }
             };
+
             struct nearest_toward_plus_infinity_static_boundary : base {
                 using decimal_to_binary_rounding_policy =
                     nearest_toward_plus_infinity_static_boundary;
+
                 template <class SignedSignificandBits, class Func>
                 static auto delegate(SignedSignificandBits s,
                                      Func&& f) noexcept {
@@ -1861,9 +1927,11 @@ namespace detail {
                     }
                 }
             };
+
             struct nearest_toward_minus_infinity_static_boundary : base {
                 using decimal_to_binary_rounding_policy =
                     nearest_toward_minus_infinity_static_boundary;
+
                 template <class SignedSignificandBits, class Func>
                 static auto delegate(SignedSignificandBits s,
                                      Func&& f) noexcept {
@@ -1879,6 +1947,7 @@ namespace detail {
                 struct left_closed_directed {
                     static constexpr auto tag = tag_t::left_closed_directed;
                 };
+
                 struct right_closed_directed {
                     static constexpr auto tag = tag_t::right_closed_directed;
                 };
@@ -1886,6 +1955,7 @@ namespace detail {
 
             struct toward_plus_infinity : base {
                 using decimal_to_binary_rounding_policy = toward_plus_infinity;
+
                 template <class SignedSignificandBits, class Func>
                 static auto delegate(SignedSignificandBits s,
                                      Func&& f) noexcept {
@@ -1896,8 +1966,10 @@ namespace detail {
                     }
                 }
             };
+
             struct toward_minus_infinity : base {
                 using decimal_to_binary_rounding_policy = toward_minus_infinity;
+
                 template <class SignedSignificandBits, class Func>
                 static auto delegate(SignedSignificandBits s,
                                      Func&& f) noexcept {
@@ -1908,15 +1980,19 @@ namespace detail {
                     }
                 }
             };
+
             struct toward_zero : base {
                 using decimal_to_binary_rounding_policy = toward_zero;
+
                 template <class SignedSignificandBits, class Func>
                 static auto delegate(SignedSignificandBits, Func&& f) noexcept {
                     return f(detail::left_closed_directed{});
                 }
             };
+
             struct away_from_zero : base {
                 using decimal_to_binary_rounding_policy = away_from_zero;
+
                 template <class SignedSignificandBits, class Func>
                 static auto delegate(SignedSignificandBits, Func&& f) noexcept {
                     return f(detail::right_closed_directed{});
@@ -1999,19 +2075,21 @@ namespace detail {
 
             struct full : base {
                 using cache_policy = full;
+
                 template <class FloatFormat>
                 static constexpr
                     typename cache_holder<FloatFormat>::cache_entry_type
                     get_cache(int k) noexcept {
                     // assert(k >= cache_holder<FloatFormat>::min_k &&
                     // k <= cache_holder<FloatFormat>::max_k);
-                    return cache_holder<FloatFormat>::cache[usize::raw_type(
+                    return cache_holder<FloatFormat>::cache[uword::raw_type(
                         k - cache_holder<FloatFormat>::min_k)];
                 }
             };
 
             struct compact : base {
                 using cache_policy = compact;
+
                 template <class FloatFormat>
                 static constexpr
                     typename cache_holder<FloatFormat>::cache_entry_type
@@ -2073,7 +2151,7 @@ namespace detail {
                     } else {
                         // Just use the full cache for anything other
                         // than binary64
-                        return cache_holder<FloatFormat>::cache[usize::raw_type(
+                        return cache_holder<FloatFormat>::cache[uword::raw_type(
                             k - cache_holder<FloatFormat>::min_k)];
                     }
                 }
@@ -2239,6 +2317,7 @@ namespace detail {
             carrier_uint result;
             bool is_integer;
         };
+
         struct compute_mul_parity_result {
             bool parity;
             bool is_integer;
@@ -2859,6 +2938,7 @@ small_divisor_case_label:
             unique,
             repeated
         };
+
         template <class Policy, policy_found_info info>
         struct found_policy_pair {
             using policy = Policy;
@@ -2873,6 +2953,7 @@ small_divisor_case_label:
             static constexpr FoundPolicyInfo get_policy_impl(FoundPolicyInfo) {
                 return {};
             }
+
             template <class FoundPolicyInfo, class FirstPolicy,
                       class... remainingPolicies>
             static constexpr auto get_policy_impl(
@@ -2903,6 +2984,7 @@ small_divisor_case_label:
                     policies...);
             }
         };
+
         template <class... BaseDefaultPairs>
         struct base_default_pair_list {};
 
@@ -2912,6 +2994,7 @@ small_divisor_case_label:
         constexpr bool check_policy_validity(Policy, base_default_pair_list<>) {
             return false;
         }
+
         template <class Policy, class FirstBaseDefaultPair,
                   class... remainingBaseDefaultPairs>
         constexpr bool check_policy_validity(
@@ -3278,7 +3361,7 @@ char* to_chars(Float x, char* buffer, Policies... policies) noexcept {
 
 // Maximum required buffer size (excluding null-terminator)
 template <class FloatFormat>
-inline constexpr usize::raw_type max_output_string_length =
+inline constexpr uword::raw_type max_output_string_length =
     cat::is_same<FloatFormat, ieee754_binary32>
         ?
         // sign(1) + significand(9) + decimal_point(1) + exp_marker(1) +

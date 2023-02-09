@@ -41,7 +41,7 @@ class vector : public collection_interface<vector<T>, T, true> {
 
     // Reallocate memory, or make an initial allocation.
     constexpr auto internal_allocate(is_stable_allocator auto& allocator,
-                                     ssize minimum_capacity) {
+                                     iword minimum_capacity) {
         if (this->p_storage == nullptr) {
             return allocator.template salloc_multi<T>(minimum_capacity);
         }
@@ -53,7 +53,7 @@ class vector : public collection_interface<vector<T>, T, true> {
     // context.
     constexpr auto increase_storage(is_stable_allocator auto& allocator)
         -> maybe<void> {
-        ssize minimum_capacity;
+        iword minimum_capacity;
         if (this->current_capacity > 0) [[likely]] {
             minimum_capacity = this->current_capacity * 2;
         } else {
@@ -66,10 +66,10 @@ class vector : public collection_interface<vector<T>, T, true> {
         // workaround.
         if consteval {
             T* p_new = new T[minimum_capacity.raw];
-            for (ssize::raw_type i = 0; i < this->current_size; ++i) {
+            for (iword::raw_type i = 0; i < this->current_size; ++i) {
                 construct_at(p_new + i, move(this->p_storage[i]));
             }
-            for (ssize i = this->current_size + 1; i < minimum_capacity; ++i) {
+            for (iword i = this->current_size + 1; i < minimum_capacity; ++i) {
                 construct_at(p_new + i.raw);
             }
             delete[] this->p_storage;
@@ -90,7 +90,7 @@ class vector : public collection_interface<vector<T>, T, true> {
   public:
     [[nodiscard]]
     static constexpr auto reserved(is_stable_allocator auto& allocator,
-                                   ssize capacity) -> maybe<vector<T>> {
+                                   iword capacity) -> maybe<vector<T>> {
         vector<T> new_vector;
         TRY(new_vector.reserve(allocator, capacity));
         return new_vector;
@@ -98,7 +98,7 @@ class vector : public collection_interface<vector<T>, T, true> {
 
     [[nodiscard]]
     static constexpr auto filled(is_stable_allocator auto& allocator,
-                                 ssize count, T const& value)
+                                 iword count, T const& value)
         -> maybe<vector<T>> {
         vector<T> new_vector;
         maybe result = new_vector.reserve(allocator, count);
@@ -126,19 +126,19 @@ class vector : public collection_interface<vector<T>, T, true> {
     }
 
     [[nodiscard]]
-    constexpr auto size() const -> ssize {
+    constexpr auto size() const -> iword {
         return this->current_size;
     }
 
     [[nodiscard]]
-    constexpr auto capacity() const -> ssize {
+    constexpr auto capacity() const -> iword {
         return this->current_capacity;
     }
 
     // Try to allocate storage for at least `minimum_capacity` number of `T`s.
     [[nodiscard]]
     constexpr auto reserve(is_stable_allocator auto& allocator,
-                           ssize minimum_capacity) -> maybe<void> {
+                           iword minimum_capacity) -> maybe<void> {
         if (minimum_capacity > this->current_capacity) {
             // TODO: I think there is a bug in GCC constexpr memory. This is a
             // workaround.
@@ -147,7 +147,7 @@ class vector : public collection_interface<vector<T>, T, true> {
                 this->p_storage = new T[minimum_capacity.raw];
                 this->current_capacity = minimum_capacity;
 
-                for (ssize i = this->current_size + 1;
+                for (iword i = this->current_size + 1;
                      i < this->current_capacity; ++i) {
                     construct_at(this->p_storage + i);
                 }
@@ -166,7 +166,7 @@ class vector : public collection_interface<vector<T>, T, true> {
 
     // Try to change the size of this `vector`.
     [[nodiscard]]
-    constexpr auto resize(is_stable_allocator auto& allocator, ssize size)
+    constexpr auto resize(is_stable_allocator auto& allocator, iword size)
         -> maybe<void> {
         if (size > this->current_capacity) {
             // This sets `this->current_capacity` and `this->p_storage`.
@@ -210,8 +210,8 @@ class vector : public collection_interface<vector<T>, T, true> {
 
   private:
     T* p_storage;
-    ssize current_size;
-    ssize current_capacity;
+    iword current_size;
+    iword current_capacity;
 };
 
 }  // namespace cat

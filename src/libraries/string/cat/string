@@ -33,9 +33,9 @@ using std::memset;
 
 namespace cat {
 
-constexpr auto string_length(char const* p_string) -> ssize;
+constexpr auto string_length(char const* p_string) -> iword;
 
-template <ssize::raw_type length>
+template <iword::raw_type length>
 class fixed_string;
 
 class string : public span<char const> {
@@ -43,7 +43,7 @@ class string : public span<char const> {
     constexpr string() : span<char const>() {
     }
 
-    constexpr string(char const* p_string, ssize in_length)
+    constexpr string(char const* p_string, iword in_length)
         : span<char const>(p_string, in_length) {
     }
 
@@ -65,13 +65,13 @@ class string : public span<char const> {
     // clangd emits a false diagnistic if this is `consteval` instead of
     // `constexpr`.
     // Zero-overhead string literal constructor.
-    template <ssize::raw_type other_length>
+    template <iword::raw_type other_length>
     constexpr string(char const (&string)[other_length]) {
         this->p_storage = string;
-        this->length = static_cast<ssize::raw_type>(other_length);
+        this->length = static_cast<iword::raw_type>(other_length);
     }
 
-    template <ssize::raw_type other_length>
+    template <iword::raw_type other_length>
     constexpr string(fixed_string<other_length> const& other_string) {
         this->p_storage = other_string.data();
         this->length = other_length;
@@ -103,24 +103,24 @@ class string : public span<char const> {
     // TODO: Make these member functions `const`.
 
     [[nodiscard]]
-    constexpr auto substring(ssize position, ssize count) -> string {
+    constexpr auto substring(iword position, iword count) -> string {
         return {this->p_storage + position, count};
     }
 
     [[nodiscard]]
-    constexpr auto remove_prefix(ssize offset) -> string {
+    constexpr auto remove_prefix(iword offset) -> string {
         return this->substring(offset, this->length - offset);
     }
 
     [[nodiscard]]
-    constexpr auto remove_suffix(ssize offset) -> string {
+    constexpr auto remove_suffix(iword offset) -> string {
         return this->substring(0, this->length - offset);
     }
 
     [[nodiscard]]
-    constexpr auto find_small(char character, ssize position = 0) const
-        -> maybe<sentinel<ssize, -1>> {
-        for (ssize i = position; i < this->length; ++i) {
+    constexpr auto find_small(char character, iword position = 0) const
+        -> maybe<sentinel<iword, -1>> {
+        for (iword i = position; i < this->length; ++i) {
             if (this->p_storage[i.raw] == character) {
                 return i;
             }
@@ -131,9 +131,9 @@ class string : public span<char const> {
     // TODO: Optimize different length strings.
     // TODO: Tile this loop four or eight times.
     [[nodiscard]]
-    constexpr auto find(char character, ssize position = 0) const
-        -> maybe<sentinel<ssize, -1>> {
-        ssize i = position;
+    constexpr auto find(char character, iword position = 0) const
+        -> maybe<sentinel<iword, -1>> {
+        iword i = position;
         for (; i < this->length - char1x_::lanes; i += char1x_::lanes) {
             // TODO: Consider aligning this load?
             char1x_ const storage = char1x_::loaded(this->p_storage + i);
@@ -154,12 +154,12 @@ class string : public span<char const> {
     // `string` inherits:
     //
     // `char const* p_storage;`
-    // `ssize length;`
+    // `iword length;`
 };
 
-// This is `ssize::raw_type` because GCC cannot deduce a string literal's
+// This is `iword::raw_type` because GCC cannot deduce a string literal's
 // length from an `ssize`.
-template <ssize::raw_type length>
+template <iword::raw_type length>
 class fixed_string
     : public collection_interface<fixed_string<length>, char, true> {
   public:
@@ -173,7 +173,7 @@ class fixed_string
     }
 
     [[nodiscard]]
-    constexpr auto size() const -> ssize {
+    constexpr auto size() const -> iword {
         return length;
     }
 
@@ -193,15 +193,15 @@ class fixed_string
 
     // Create a `fixed_string` from a smaller string, and null out the unfilled
     // bytes.
-    template <ssize::raw_type in_length>
+    template <iword::raw_type in_length>
         requires(in_length < length)
     static consteval auto padded(char const (&in)[in_length])
         -> fixed_string<length> {
         fixed_string<length> string;
-        for (ssize::raw_type i = 0; i < in_length; ++i) {
+        for (iword::raw_type i = 0; i < in_length; ++i) {
             string[i] = in[i];
         }
-        for (ssize::raw_type i = in_length; i < length; ++i) {
+        for (iword::raw_type i = in_length; i < length; ++i) {
             string[i] = '\0';
         }
         return string;
@@ -222,22 +222,22 @@ class fixed_string
     }
 
     // Concatenate constant-evaluated strings.
-    // This is `ssize::raw_type` because GCC cannot deduce a string literal's
+    // This is `iword::raw_type` because GCC cannot deduce a string literal's
     // length from an `ssize`.
-    template <ssize::raw_type other_length>
+    template <iword::raw_type other_length>
     constexpr friend auto operator+(
         fixed_string<length> const& self,
         fixed_string<other_length> const& other_string)
         -> fixed_string<length - 1 + other_length> {
         // Add the lengths of two null-terminated strings together:
-        constexpr ssize::raw_type new_length = length - 1 + other_length;
+        constexpr iword::raw_type new_length = length - 1 + other_length;
         char array[new_length];
 
-        for (ssize::raw_type i = 0; i < length - 1; ++i) {
+        for (iword::raw_type i = 0; i < length - 1; ++i) {
             array[i] = self.storage[i];
         }
 
-        for (ssize::raw_type i = length - 1; i < new_length - 1; ++i) {
+        for (iword::raw_type i = length - 1; i < new_length - 1; ++i) {
             array[i] = other_string.data()[i - length + 1];
         }
 
@@ -248,7 +248,7 @@ class fixed_string
     }
 
     // Concatenate a string literal to a `fixed_string`.
-    template <ssize::raw_type other_length>
+    template <iword::raw_type other_length>
     constexpr friend auto operator+(fixed_string<length> const& self,
                                     char const (&other_string)[other_length])
         -> fixed_string<length - 1 + other_length> {
@@ -256,7 +256,7 @@ class fixed_string
     }
 
     // Concatenate a `fixed_string` to a string literal.
-    template <ssize::raw_type other_length>
+    template <iword::raw_type other_length>
     constexpr friend auto operator+(char const (&other_string)[other_length],
                                     fixed_string<length> const& self)
         -> fixed_string<length - 1 + other_length> {
@@ -266,7 +266,7 @@ class fixed_string
   private:
     constexpr void copy_string_data(char const* p_source) {
         if consteval {
-            for (ssize::raw_type i = 0; i < length; ++i) {
+            for (iword::raw_type i = 0; i < length; ++i) {
                 this->storage[i] = p_source[i];
             }
         } else {
@@ -281,22 +281,22 @@ class fixed_string
 auto compare_strings(string string_1, string string_2) -> bool;
 
 [[nodiscard]]
-auto print(string string) -> ssize;
+auto print(string string) -> iword;
 
 [[nodiscard]]
-auto println(string string) -> ssize;
+auto println(string string) -> iword;
 
 [[nodiscard]]
-auto println() -> ssize;
+auto println() -> iword;
 
 [[nodiscard]]
-auto eprint(string string) -> ssize;
+auto eprint(string string) -> iword;
 
 [[nodiscard]]
-auto eprintln(string string) -> ssize;
+auto eprintln(string string) -> iword;
 
 [[nodiscard]]
-auto eprintln() -> ssize;
+auto eprintln() -> iword;
 
 // TODO: Investigate zero-overhead `println` of literals again.
 
@@ -311,7 +311,7 @@ auto eprintln() -> ssize;
 template <typename T>
 [[nodiscard]]
 auto cat::maybe<T>::or_exit(cat::string const error_message,
-                            ssize exit_code) & {
+                            iword exit_code) & {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
             return this->value();
@@ -327,7 +327,7 @@ auto cat::maybe<T>::or_exit(cat::string const error_message,
 template <typename T>
 [[nodiscard]]
 auto cat::maybe<T>::or_exit(cat::string const error_message,
-                            ssize exit_code) const& {
+                            iword exit_code) const& {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
             return this->value();
@@ -343,7 +343,7 @@ auto cat::maybe<T>::or_exit(cat::string const error_message,
 template <typename T>
 [[nodiscard]]
 auto cat::maybe<T>::or_exit(cat::string const error_message,
-                            ssize exit_code) && {
+                            iword exit_code) && {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
             return move(this)->value();
@@ -359,7 +359,7 @@ auto cat::maybe<T>::or_exit(cat::string const error_message,
 template <typename T>
 [[nodiscard]]
 auto cat::maybe<T>::or_exit(cat::string const error_message,
-                            ssize exit_code) const&& {
+                            iword exit_code) const&& {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
             return move(this)->value();

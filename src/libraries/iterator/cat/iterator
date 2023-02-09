@@ -22,7 +22,7 @@ namespace detail {
 
     template <typename>
     struct infer_difference_trait {
-        using type = ssize;
+        using type = iword;
     };
 
     // TODO: Get this working:
@@ -152,7 +152,7 @@ class iterator_interface<derived_type> {
         if constexpr (detail::has_advance<derived_type>) {
             new_iterator.advance(offset);
         } else {
-            for (ssize i = 0; i < offset; ++i) {
+            for (iword i = 0; i < offset; ++i) {
                 ++new_iterator;
             }
         }
@@ -165,7 +165,7 @@ class iterator_interface<derived_type> {
         if constexpr (detail::has_advance<derived_type>) {
             left.advance(static_cast<int>(offset));
         } else {
-            for (ssize i = 0; i < offset; ++i) {
+            for (iword i = 0; i < offset; ++i) {
                 left.increment();
             }
         }
@@ -196,7 +196,7 @@ class iterator_interface<derived_type> {
         if constexpr (detail::has_advance<derived_type>) {
             return new_iterator - offset;
         } else {
-            for (ssize i = 0; i < offset; ++i) {
+            for (iword i = 0; i < offset; ++i) {
                 --new_iterator;
             }
         }
@@ -209,7 +209,7 @@ class iterator_interface<derived_type> {
         if constexpr (detail::has_advance<derived_type>) {
             left.advance(-offset);
         } else {
-            for (ssize i = 0; i < offset; ++i) {
+            for (iword i = 0; i < offset; ++i) {
                 --left;
             }
         }
@@ -218,7 +218,7 @@ class iterator_interface<derived_type> {
 
     // Get the distance between two iterators.
     constexpr friend auto operator-(derived_type const& left,
-                                    derived_type const& right) -> ssize
+                                    derived_type const& right) -> iword
     /* requires(detail::has_distance_to<derived_type>) */ {
         return right.distance_to(left);
     }
@@ -345,7 +345,7 @@ class reverse_iterator_adaptor
         ++internal_iterator;
     }
 
-    constexpr auto distance_to(self_type other) const -> ssize {
+    constexpr auto distance_to(self_type other) const -> iword {
         // Reverse the polarity of `distance_to()`.
         return -this->internal_iterator.distance_to(other.internal_iterator);
     }

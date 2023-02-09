@@ -21,7 +21,7 @@ auto main() -> int {
         recieving_socket.accept(listening_socket).or_exit();
 
         while (true) {
-            ssize message_length =
+            iword message_length =
                 recieving_socket
                     .recieve(message_buffer.data(), message_buffer.size())
                     .or_exit();
@@ -37,7 +37,7 @@ auto main() -> int {
 
             if (!cat::compare_strings(input, "")) {
                 // Zero out the message buffer's ending.
-                for (ssize i = message_length; i < input.size(); ++i) {
+                for (iword i = message_length; i < input.size(); ++i) {
                     message_buffer[i] = '\0';
                 }
 

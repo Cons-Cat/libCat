@@ -173,7 +173,7 @@ constexpr auto pow(T base, U exponent) -> T {
 }
 
 namespace detail {
-    template <is_unsigned_integral T, usize::raw_type shift>
+    template <is_unsigned_integral T, uword::raw_type shift>
     [[gnu::always_inline]]
     constexpr auto round_to_pow2_part(T value) {
         value |= (value >> shift);

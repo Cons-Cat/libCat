@@ -3,9 +3,9 @@
 #include <cat/maybe>
 #include <cat/page_allocator>
 
-constexpr ssize block_size = 4_ki;
+constexpr iword block_size = 4_ki;
 
-auto get_file_size(nix::file_descriptor file_descriptor) -> cat::maybe<ssize> {
+auto get_file_size(nix::file_descriptor file_descriptor) -> cat::maybe<iword> {
     nix::file_status status = nix::sys_fstat(file_descriptor).or_exit();
     if (status.is_regular()) {
         return status.file_size;
@@ -29,10 +29,10 @@ void read_and_print_file(char* p_file_name) {
     nix::file_descriptor file_descriptor =
         nix::sys_open(p_file_name, nix::open_mode::read_only)
             .or_exit("No such file or directory!", 2);
-    ssize file_size = get_file_size(file_descriptor).value();
-    ssize bytes_remaining = file_size;
-    ssize blocks = file_size / block_size;
-    ssize current_block = 0;
+    iword file_size = get_file_size(file_descriptor).value();
+    iword bytes_remaining = file_size;
+    iword blocks = file_size / block_size;
+    iword current_block = 0;
     if (file_size % block_size > 0) {
         blocks++;
     }
@@ -45,7 +45,7 @@ void read_and_print_file(char* p_file_name) {
     defer(pager.free_multi(io_vectors.data(), io_vectors.size());)
 
     while (bytes_remaining > 0) {
-        ssize current_block_size = cat::min(bytes_remaining, block_size);
+        iword current_block_size = cat::min(bytes_remaining, block_size);
 
         // These pages are freed when iterating through the io vectors later.
         cat::byte* p_buffer = pager.alloc_multi<cat::byte>(block_size)

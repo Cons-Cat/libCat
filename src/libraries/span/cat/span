@@ -22,12 +22,12 @@ class span : public collection_interface<span<T>, T, true> {
     // Construct a `span` as `{address, length}`.
     template <typename U>
         requires(is_implicitly_convertible<U*, T*>)
-    constexpr span(U* p_in_data, ssize in_length)
+    constexpr span(U* p_in_data, iword in_length)
         : p_storage(static_cast<T*>(p_in_data)), length(in_length) {
     }
 
     // Construct a `span` with `nullptr`.
-    constexpr span(decltype(nullptr), ssize in_length)
+    constexpr span(decltype(nullptr), iword in_length)
         : p_storage(nullptr), length(in_length) {
     }
 
@@ -51,7 +51,7 @@ class span : public collection_interface<span<T>, T, true> {
         requires(is_implicitly_convertible<U, T> &&
                  is_implicitly_convertible<V, T>)
     static constexpr auto between(U* p_start, V* p_end) {
-        return span<T>{static_cast<T*>(p_start), ssize{p_end - p_start}};
+        return span<T>{static_cast<T*>(p_start), iword{p_end - p_start}};
     }
 
     constexpr auto operator=(span<T> const&) -> span<T>& = default;
@@ -71,7 +71,7 @@ class span : public collection_interface<span<T>, T, true> {
 
     // Get the number of elements owned by this `span`.
     [[nodiscard]]
-    constexpr auto size() const -> ssize {
+    constexpr auto size() const -> iword {
         return this->length;
     }
 
@@ -85,7 +85,7 @@ class span : public collection_interface<span<T>, T, true> {
     // standard `iovec`s. Unfortunately, that is opposite of Windws' standard
     // `WSABUF`.
     T* p_storage;
-    ssize length;
+    iword length;
 };
 
 }  // namespace cat

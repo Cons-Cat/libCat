@@ -30,30 +30,30 @@ constexpr auto unconst(T const* p_value) -> T* {
 
 // Infer the length of a parameter pack from a function argument.
 template <typename... types>
-constexpr auto ssizeof_pack(types...) -> ssize {
+constexpr auto ssizeof_pack(types...) -> iword {
     return make_signed(sizeof...(types));
 }
 
 // Specify the length of a parameter pack in a template argument.
 template <typename... types>
-constexpr auto ssizeof_pack() -> ssize {
+constexpr auto ssizeof_pack() -> iword {
     return make_signed(sizeof...(types));
 }
 
-constexpr auto salignof(auto const& anything) -> ssize {
+constexpr auto salignof(auto const& anything) -> iword {
     // `alignof` cannot be given an expression `anything` in ISO C++, so it must
     // take the type `decltype(anything)`.
-    return ssize{alignof(decltype(anything))};
+    return iword{alignof(decltype(anything))};
 }
 
 template <typename T>
-constexpr auto salignof() -> ssize {
-    return ssize{alignof(T)};
+constexpr auto salignof() -> iword {
+    return iword{alignof(T)};
 }
 
 namespace detail {
 
-    template <typename T, ssize index, ssize current, T value, T... values>
+    template <typename T, iword index, iword current, T value, T... values>
     constexpr auto get_value_list_at() -> T {
         if constexpr (current == index) {
             return value;
@@ -69,9 +69,9 @@ template <typename T, T... values>
 struct value_type_list {
     using value_type = T;
 
-    static constexpr ssize size = ssizeof_pack(values...);
+    static constexpr iword size = ssizeof_pack(values...);
 
-    template <ssize index>
+    template <iword index>
     static constexpr auto get() -> T {
         return detail::get_value_list_at<T, index, 0, values...>();
     }
@@ -79,7 +79,7 @@ struct value_type_list {
 
 namespace detail {
 
-    template <ssize count, typename T, T value, T... integers>
+    template <iword count, typename T, T value, T... integers>
     constexpr auto make_value_list() {
         if constexpr (count > 0) {
             // Recurse, appending `value` to `integers`.
@@ -90,7 +90,7 @@ namespace detail {
     }
 
     // TODO: Look into `__integer_pack()`.
-    template <ssize count, typename T, T value, T... integers>
+    template <iword count, typename T, T value, T... integers>
     constexpr auto make_integer_sequence() {
         if constexpr (count > 0) {
             // Recurse, appending `count - 1` to `integers`.
@@ -103,45 +103,45 @@ namespace detail {
 
 }  // namespace detail
 
-template <typename T, T value, ssize count>
+template <typename T, T value, iword count>
 constexpr auto value_list = detail::make_value_list<count, T, value>();
 
-template <typename T, T value, ssize count>
+template <typename T, T value, iword count>
 using make_value_type_list = decltype(value_list<T, value, count>);
 
-template <is_integral T, ssize count>
+template <is_integral T, iword count>
 constexpr auto integer_sequence =
     detail::make_integer_sequence<count, T, T(count.raw)>();
 
-template <is_integral T, ssize count>
+template <is_integral T, iword count>
 constexpr auto zeros_list = value_list<T, T(0), count>;
 
-template <is_integral T, ssize count>
+template <is_integral T, iword count>
 constexpr auto ones_list = value_list<T, T(1), count>;
 
-template <is_integral T, ssize count>
+template <is_integral T, iword count>
 using make_integer_sequence =
-    remove_cv<decltype(integer_sequence<ssize, count>)>;
+    remove_cv<decltype(integer_sequence<iword, count>)>;
 
 // TODO: What is this?
-template <ssize... indices>
-using index_list_type = value_type_list<ssize, indices...>;
+template <iword... indices>
+using index_list_type = value_type_list<iword, indices...>;
 
-template <ssize value, ssize count>
-constexpr auto index_list = value_list<ssize, value, count>;
+template <iword value, iword count>
+constexpr auto index_list = value_list<iword, value, count>;
 
-template <ssize value, ssize count>
-using make_index_list = make_value_type_list<ssize, value, count>;
+template <iword value, iword count>
+using make_index_list = make_value_type_list<iword, value, count>;
 
-template <ssize count>
-constexpr auto index_sequence = integer_sequence<ssize, count>;
+template <iword count>
+constexpr auto index_sequence = integer_sequence<iword, count>;
 
-template <ssize count>
-using make_index_sequence = make_integer_sequence<ssize, count>;
+template <iword count>
+using make_index_sequence = make_integer_sequence<iword, count>;
 
 template <typename... types>
 // `ssizeof_pack()` here produces an internal compiler error in GCC 12.
-using index_sequence_for = make_index_sequence<ssize{sizeof...(types)}>;
+using index_sequence_for = make_index_sequence<iword{sizeof...(types)}>;
 
 template <typename T>
     requires(is_enum<T>)

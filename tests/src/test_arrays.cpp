@@ -35,7 +35,7 @@ TEST(test_arrays) {
     cat::constant_evaluate(constant_test);
 
     // Test that the array is iterable.
-    ssize count = 0;
+    iword count = 0;
     for (int4& a : array_1) {
         cat::verify(a == array_1[count]);
         ++count;
@@ -115,11 +115,11 @@ TEST(test_arrays) {
 
     // Test array fill.
     cat::array filled_array = cat::array<int4, 8>::filled(6);
-    for (ssize i = 0; i < 8; ++i) {
+    for (iword i = 0; i < 8; ++i) {
         cat::verify(filled_array[i] == 6);
     }
     filled_array.fill(9);
-    for (ssize i = 0; i < 8; ++i) {
+    for (iword i = 0; i < 8; ++i) {
         cat::verify(filled_array[i] == 9);
     }
 

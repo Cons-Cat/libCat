@@ -10,7 +10,7 @@ namespace cat {
 // An `array` represents an array of `T` with a `constexpr` length. It stores
 // its elements within itself, so this array can be constructed on the stack.
 // It is random-access iterable.
-template <typename T, ssize length>
+template <typename T, iword length>
 class array : public collection_interface<array<T, length>, T, true> {
   public:
     using value_type = T;
@@ -38,7 +38,7 @@ class array : public collection_interface<array<T, length>, T, true> {
         requires(is_implicitly_convertible<U, T>)
     constexpr auto operator=(array<U, length> const& other_array) -> array& {
         // TODO: Optimize with `copy_memory()` if T and U are relocatable.
-        for (ssize i = 0; i < length; ++i) {
+        for (iword i = 0; i < length; ++i) {
             this->storage[i.raw] = static_cast<T>(other_array[i]);
         }
         return *this;
@@ -52,7 +52,7 @@ class array : public collection_interface<array<T, length>, T, true> {
         requires(is_implicitly_convertible<U, T>)
     constexpr auto operator=(array<U, length>&& other_array) -> array& {
         // TODO: Optimize with `copy_memory()` if T and U are relocatable.
-        for (ssize i = 0; i < length; ++i) {
+        for (iword i = 0; i < length; ++i) {
             this->storage[i.raw] = static_cast<T>(move(other_array[i]));
         }
         return *this;
@@ -88,7 +88,7 @@ class array : public collection_interface<array<T, length>, T, true> {
         // if (!is_constant_evaluated() && sizeof(T) <= 8) {
         //     // set_memory(this->storage, value, length);
         // } else {
-        for (ssize::raw_type i = 0; i < length; ++i) {
+        for (iword::raw_type i = 0; i < length; ++i) {
             this->storage[i] = static_cast<T>(value);
         }
         // }
@@ -109,7 +109,7 @@ class array : public collection_interface<array<T, length>, T, true> {
 
     // Get the number of elements contained in this `array`.
     [[nodiscard]]
-    static constexpr auto size() -> ssize {
+    static constexpr auto size() -> iword {
         return length;
     }
 

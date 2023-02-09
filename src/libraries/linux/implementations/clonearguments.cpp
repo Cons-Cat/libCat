@@ -7,10 +7,10 @@ struct CloneArguments {
     nix::process_id* parent_thread_id;
     int8 exit_code;
     void* p_stack;
-    usize stack_size;
+    uword stack_size;
     // TODO: Deal with these later:
     void* p_tls;
     nix::process_id* set_tid;
-    usize set_tid_size;
+    uword set_tid_size;
     uint8 cgroup;
 };

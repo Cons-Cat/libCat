@@ -184,7 +184,7 @@ namespace detail {
             constexpr iterator(iterator const&) = default;
             constexpr iterator(iterator&&) = default;
 
-            constexpr iterator(ssize index, T* p_in_array)
+            constexpr iterator(iword index, T* p_in_array)
                 : current_index(index), p_array(p_in_array) {
             }
 
@@ -192,16 +192,16 @@ namespace detail {
                 return this->p_array[current_index.raw];
             }
 
-            constexpr void advance(ssize offset) {
+            constexpr void advance(iword offset) {
                 this->current_index += offset;
             }
 
-            constexpr auto distance_to(iterator const& other) const -> ssize {
+            constexpr auto distance_to(iterator const& other) const -> iword {
                 return other.current_index - current_index;
             }
 
           private:
-            ssize current_index;
+            iword current_index;
             T* p_array;
         };
 
@@ -218,7 +218,7 @@ namespace detail {
                 : current_index(other.current_index), p_array(other.p_array) {
             }
 
-            constexpr const_iterator(ssize index, T const* p_in_array)
+            constexpr const_iterator(iword index, T const* p_in_array)
                 : current_index(index), p_array(p_in_array) {
             }
 
@@ -226,17 +226,17 @@ namespace detail {
                 return this->p_array[current_index.raw];
             }
 
-            constexpr void advance(ssize offset) {
+            constexpr void advance(iword offset) {
                 this->current_index += offset;
             }
 
             constexpr auto distance_to(const_iterator const& other) const
-                -> ssize {
+                -> iword {
                 return other.current_index - current_index;
             }
 
           private:
-            ssize current_index;
+            iword current_index;
             T const* p_array;
         };
 
@@ -327,7 +327,7 @@ class collection_interface
     // If `.size()` is not, provided and `.capacity()` is, generate
     // `.size()`.
     [[nodiscard]]
-    constexpr auto size() const -> ssize
+    constexpr auto size() const -> iword
         requires(detail::has_capacity<derived_type> &&
                  !detail::has_size<derived_type>)
     {
@@ -337,7 +337,7 @@ class collection_interface
     // If `.size()` is provided and `.capacity()` is not, generate
     // `.capacity()`.
     [[nodiscard]]
-    constexpr auto capacity() const -> ssize
+    constexpr auto capacity() const -> iword
         requires(detail::has_size<derived_type>)
     {
         return this->self().size();
@@ -363,7 +363,7 @@ class collection_interface
 
     // Index into this collection with bounds-checking.
     [[nodiscard]]
-    constexpr auto at(ssize index) -> maybe<T&>
+    constexpr auto at(iword index) -> maybe<T&>
         requires(is_array_like)
     {
         if !consteval {
@@ -377,7 +377,7 @@ class collection_interface
 
     // Index into this collection with bounds-checking.
     [[nodiscard]]
-    constexpr auto at(ssize index) const -> maybe<T&> {
+    constexpr auto at(iword index) const -> maybe<T&> {
         // `unconst()` allows `.at()` to be safely called in a `const` context.
         return unconst(this)->at(index);
     }
@@ -411,7 +411,7 @@ class collection_interface
     }
 
     [[nodiscard]]
-    constexpr auto subspan(ssize start_index, ssize end_index) -> span<T>
+    constexpr auto subspan(iword start_index, iword end_index) -> span<T>
         requires(is_array_like)
     {
         if !consteval {
@@ -424,7 +424,7 @@ class collection_interface
     }
 
     [[nodiscard]]
-    constexpr auto subspan(ssize start_index, ssize end_index) const
+    constexpr auto subspan(iword start_index, iword end_index) const
         -> span<T const>
         requires(is_array_like)
     {
@@ -438,28 +438,28 @@ class collection_interface
     }
 
     [[nodiscard]]
-    constexpr auto first(ssize count) -> span<T>
+    constexpr auto first(iword count) -> span<T>
         requires(is_array_like)
     {
         return this->subspan(0, count);
     }
 
     [[nodiscard]]
-    constexpr auto first(ssize count) const -> span<T const>
+    constexpr auto first(iword count) const -> span<T const>
         requires(is_array_like)
     {
         return this->subspan(0, count);
     }
 
     [[nodiscard]]
-    constexpr auto last(ssize count) -> span<T>
+    constexpr auto last(iword count) -> span<T>
         requires(is_array_like)
     {
         return this->subspan(this->self().size() - count, this->self().size());
     }
 
     [[nodiscard]]
-    constexpr auto last(ssize count) const -> span<T const>
+    constexpr auto last(iword count) const -> span<T const>
         requires(is_array_like)
     {
         return this->subspan(this->self().size() - count, this->self().size());
