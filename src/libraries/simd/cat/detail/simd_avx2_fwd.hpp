@@ -4,7 +4,7 @@ namespace cat {
 
 // Forward declarations.
 template <typename abi_type, typename T>
-    requires(cat::is_same<typename abi_type::scalar_type, T>)
+    requires(is_same<typename abi_type::scalar_type, T>)
 class alignas(abi_type::alignment.raw) simd;
 
 template <typename abi_type, typename T>
@@ -26,9 +26,9 @@ struct avx2_abi {
 
     avx2_abi() = delete;
 
-    static constexpr iword size = 32;
-    static constexpr iword lanes = size / ssizeof(T);
-    static constexpr uword alignment = 32u;
+    static constexpr cat::iword size = 32;
+    static constexpr cat::iword lanes = size / ssizeof(T);
+    static constexpr cat::uword alignment = 32u;
 };
 
 template <typename T>
@@ -40,12 +40,12 @@ using avx2_simd_mask = cat::simd_mask<avx2_abi<T>, T>;
 template <typename T>
 [[nodiscard]]
 auto testc(cat::simd_mask<avx2_abi<T>, T> left,
-           cat::simd_mask<avx2_abi<T>, T> right) -> int4;
+           cat::simd_mask<avx2_abi<T>, T> right) -> cat::int4;
 
 template <typename T>
 [[nodiscard]]
 auto testz(cat::simd_mask<x64::avx2_abi<T>, T> left,
-           cat::simd_mask<x64::avx2_abi<T>, T> right) -> int4;
+           cat::simd_mask<x64::avx2_abi<T>, T> right) -> cat::int4;
 
 }  // namespace x64
 
@@ -58,7 +58,7 @@ template <typename T>
 [[nodiscard]]
 auto any_of(simd_mask<x64::avx2_abi<T>, T> mask) -> bool;
 
-template <iword bits_count>
+template <cat::iword bits_count>
     requires(bits_count > 0)
 class bitset;
 

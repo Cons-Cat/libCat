@@ -17,15 +17,19 @@ struct maybe_non_trivial {
     maybe_non_trivial() {
         ++maybe_counter;
     }
+
     maybe_non_trivial(maybe_non_trivial const&) {
         ++maybe_counter;
     }
+
     maybe_non_trivial(maybe_non_trivial&&) {
         ++maybe_counter;
     }
+
     ~maybe_non_trivial() {
         ++maybe_counter;
     }
+
     maybe_non_trivial(int, int, char) {
     }
 };
@@ -33,9 +37,11 @@ struct maybe_non_trivial {
 struct maybe_const_non_trivial {
     constexpr maybe_const_non_trivial() {  // NOLINT
     }
+
     constexpr maybe_const_non_trivial(
         maybe_const_non_trivial const&) {  // NOLINT
     }
+
     constexpr maybe_const_non_trivial(maybe_const_non_trivial&&) {
     }
 };

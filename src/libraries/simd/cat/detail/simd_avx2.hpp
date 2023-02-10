@@ -10,7 +10,7 @@ namespace x64 {
 template <typename T>
 [[nodiscard]]
 auto testc(cat::simd_mask<avx2_abi<T>, T> left,
-           cat::simd_mask<avx2_abi<T>, T> right) -> int4 {
+           cat::simd_mask<avx2_abi<T>, T> right) -> cat::int4 {
     if constexpr (cat::is_same<T, float>) {
         return __builtin_ia32_vtestcps256(left.raw, right.raw);
     } else if constexpr (cat::is_same<T, double>) {
@@ -27,7 +27,7 @@ auto testc(cat::simd_mask<avx2_abi<T>, T> left,
 template <typename T>
 [[nodiscard]]
 auto testz(cat::simd_mask<avx2_abi<T>, T> left,
-           cat::simd_mask<avx2_abi<T>, T> right) -> int4 {
+           cat::simd_mask<avx2_abi<T>, T> right) -> cat::int4 {
     if constexpr (cat::is_same<T, float>) {
         return __builtin_ia32_vtestzps256(left.raw, right.raw);
     } else if constexpr (cat::is_same<T, double>) {

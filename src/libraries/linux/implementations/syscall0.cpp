@@ -1,7 +1,7 @@
 #include <cat/linux>
 
-auto nix::syscall0(iword call) -> iword {
-    iword result;
+auto nix::syscall0(cat::iword call) -> cat::iword {
+    cat::iword result;
     asm volatile("syscall"
                  : "=a"(result)
                  : "a"(call)

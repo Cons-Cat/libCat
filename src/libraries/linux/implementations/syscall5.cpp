@@ -1,13 +1,13 @@
 #include <cat/linux>
 
-auto nix::syscall5(iword call, cat::no_type arg1, cat::no_type arg2,
+auto nix::syscall5(cat::iword call, cat::no_type arg1, cat::no_type arg2,
                    cat::no_type arg3, cat::no_type const arg4,
-                   cat::no_type const arg5) -> iword {
+                   cat::no_type const arg5) -> cat::iword {
     // `arg4` and `arg5` must be `const-qualified` for GCC to compile.
     register cat::no_type const r10 asm("r10") = arg4;
     register cat::no_type const r8 asm("r8") = arg5;
 
-    iword result;
+    cat::iword result;
     asm volatile("syscall"
                  : "=a"(result)
                  : "a"(call), "D"(arg1), "S"(arg2), "d"(arg3), "r"(r10), "r"(r8)

@@ -210,7 +210,7 @@ struct [[gnu::packed]] event_mask {
 };
 
 struct error_code {
-    uint1 response_operation = static_cast<unsigned char>(0);
+    cat::uint1 response_operation = static_cast<unsigned char>(0);
 
     enum : unsigned char {
         request = 1,
@@ -232,56 +232,56 @@ struct error_code {
         implementation = 17,
     } code;
 
-    uint2 sequence;
-    uint4 resource_resource_id;
-    uint2 minor_operation;
+    cat::uint2 sequence;
+    cat::uint4 resource_resource_id;
+    cat::uint2 minor_operation;
     operation_code major_operation;
 
   private:
-    [[maybe_unused]] uint1 padding[21];
+    [[maybe_unused]] cat::uint1 padding[21];
 
   public:
-    uint4 full_sequence;
+    cat::uint4 full_sequence;
 };
 
 struct window_resource {
     window_resource() = default;
 
-    window_resource(uint4 input) {
+    window_resource(cat::uint4 input) {
         this->value = input;
     }
 
-    uint4 value;
+    cat::uint4 value;
 };
 
 struct cookie {
-    uint4 sequence;
+    cat::uint4 sequence;
 };
 
 struct event {
-    uint2 response_type;
-    uint2 sequence;
-    uint4 length;
+    cat::uint2 response_type;
+    cat::uint2 sequence;
+    cat::uint4 length;
     event_code event_type;
 
   private:
-    [[maybe_unused]] uint1 padding[23];
+    [[maybe_unused]] cat::uint1 padding[23];
 
   public:
-    uint4 full_sequence;
+    cat::uint4 full_sequence;
 };
 
 // TODO: Make this a span.
 struct io_virtualization {
     void* p_base;
-    iword length;
+    cat::iword length;
 };
 
 // Every X client request begins with an `x11::client_request_header`.
 struct client_request_header {
     operation_code operation;
     // `message_length` represents a multiple of four bytes.
-    uint2 message_length;
+    cat::uint2 message_length;
 };
 
 // Every X server reply begins with an `x11::server_reply_header`.
@@ -292,122 +292,122 @@ struct server_reply_header {
     } success_code;
 
   private:
-    [[maybe_unused]] int1 padding;
+    [[maybe_unused]] cat::int1 padding;
 
   public:
     // This field is only initialized if `success_code_type` is `failed`.
-    cat::array<uint2, 2> x_version;
+    cat::array<cat::uint2, 2> x_version;
     // `message_length` represents a multiple of four bytes.
-    uint2 message_length;
+    cat::uint2 message_length;
 };
 
 // This packet is used to initiate a connection handshake with an X server.
 struct connection_request_info {
-    char endianness = is_target_little_endian ? 'l' : 'B';
+    char endianness = cat::is_target_little_endian ? 'l' : 'B';
 
   private:
-    [[maybe_unused]] int1 padding_1;
+    [[maybe_unused]] cat::int1 padding_1;
 
   public:
     // This should almost always be `{11, 0}`.
-    cat::array<uint2, 2> x_version = {static_cast<unsigned char>(11),
-                                      static_cast<unsigned char>(0)};
+    cat::array<cat::uint2, 2> x_version = {static_cast<unsigned char>(11),
+                                           static_cast<unsigned char>(0)};
     // No explicit protocol is specified if this is `0`.
-    uint2 authorization_protocol_length = static_cast<unsigned char>(0);
+    cat::uint2 authorization_protocol_length = static_cast<unsigned char>(0);
     // No explicit protocol is specified if this is `0`.
-    uint2 authorization_data_length = static_cast<unsigned char>(0);
+    cat::uint2 authorization_data_length = static_cast<unsigned char>(0);
 
   private:
-    [[maybe_unused]] int2 padding_2;
+    [[maybe_unused]] cat::int2 padding_2;
 };
 
 struct connection_response_info {
     // The version of an X server that has been connected to.
-    uint4 release_number;
+    cat::uint4 release_number;
     // TODO: These should be bitsets.
-    uint4 resource_id_base, resource_id_mask;
-    uint4 motion_buffer_size;
+    cat::uint4 resource_id_base, resource_id_mask;
+    cat::uint4 motion_buffer_size;
     // Length of the X server's name.
-    uint2 vendor_string_length;
+    cat::uint2 vendor_string_length;
     // Maximum length of a request that this server can handle.
-    uint2 request_maximum_length;
+    cat::uint2 request_maximum_length;
     // The number of root windows hosted by this server. These are transmitted
     // as `root_window_packet`s imillimetersediately after the pixel map
     // formats. This can determine the number of screens held by the server.
-    uint1 root_windows_count;
+    cat::uint1 root_windows_count;
     // The number of pixel map formats available for this server. These are
     // transmitted as `pixel_map_format_packet`s imillimetersediately after this
     // struct's data.
-    uint1 pixel_map_formats_count;
+    cat::uint1 pixel_map_formats_count;
     // Endianness of images, specified by the server.
-    uint1 image_endianness;
+    cat::uint1 image_endianness;
     // The leftmost bit in the bitmap is either the least significant or most
     // significant bit in the scanline unit, as given by `bitmap_order`.
-    uint1 bitmap_endianness;
+    cat::uint1 bitmap_endianness;
     // These will be `8`, `16`, or `32`.
-    uint1 scanline_unit, scanline_padding;
+    cat::uint1 scanline_unit, scanline_padding;
     // This is the smallest key code the server will transmit.
     key_code keycode_minimum;
     // This is the largest key code the server will transmit.
     key_code keycode_maximum;
 
   private:
-    [[maybe_unused]] int4 padding;
+    [[maybe_unused]] cat::int4 padding;
 };
 
 struct pixel_map_format_packet {
-    uint1 color_depth;
-    uint1 bits_per_pixel;
-    uint1 scanline_padding;
+    cat::uint1 color_depth;
+    cat::uint1 bits_per_pixel;
+    cat::uint1 scanline_padding;
 
   private:
-    [[maybe_unused]] uint1 padding[5];
+    [[maybe_unused]] cat::uint1 padding[5];
 };
 
 // There is one root window per screen, so multiple `root_window_packet`s will
 // be recieved if there are multiple screens.
 struct root_window_packet {
     window_resource window_id;
-    uint4 default_colormap;
-    uint4 white_pixel, black_pixel;
-    uint4 input_mask;
+    cat::uint4 default_colormap;
+    cat::uint4 white_pixel, black_pixel;
+    cat::uint4 input_mask;
     // The window's dimensions in pixels.
-    uint2 width_pixels, height_pixels;
+    cat::uint2 width_pixels, height_pixels;
     // The window's dimensions in millimeters.
-    uint2 width_millimeters, height_millimeters;
-    uint2 minimum_installed_maps, maximum_installed_maps;
-    uint4 root_visual_id;
-    uint1 backing_store_state;
-    uint1 save_unders;
-    uint1 root_depth;
+    cat::uint2 width_millimeters, height_millimeters;
+    cat::uint2 minimum_installed_maps, maximum_installed_maps;
+    cat::uint4 root_visual_id;
+    cat::uint1 backing_store_state;
+    cat::uint1 save_unders;
+    cat::uint1 root_depth;
     // The number of `depth_packet`s transmitted imillimetersediately after this
     // packet.
-    uint1 depths_count;
+    cat::uint1 depths_count;
 };
 
 struct depth_packet {
-    uint1 depth;
+    cat::uint1 depth;
 
   private:
-    [[maybe_unused]] uint1 padding_1;
+    [[maybe_unused]] cat::uint1 padding_1;
 
   public:
     // The number of `visual_packet`s transmitted imillimetersediately after
     // this packet.
-    uint2 visuals_count;
+    cat::uint2 visuals_count;
 
   private:
-    [[maybe_unused]] uint4 padding_2;
+    [[maybe_unused]] cat::uint4 padding_2;
 };
 
 struct visual_packet {
-    uint1 group;
-    uint1 bits_per_rgb;
-    uint2 colormap_entries;
-    uint4 mask_red, mask_green, mask_blue;
+    cat::uint1 group;
+    cat::uint1 bits_per_rgb;
+    cat::uint2 colormap_entries;
+    cat::uint4 mask_red, mask_green, mask_blue;
 
   private:
-    [[maybe_unused]] uint4 padding;
+    [[maybe_unused]] cat::uint4 padding;
 };
 
 struct connection {
@@ -461,11 +461,12 @@ auto handshake(cat::is_allocator auto& allocator,
     // Copy pointers to that recieved data from the allocated buffer into
     // `connection`.
     // TODO: Use `intptr`.
-    char* p_iterator = static_cast<char*>(
-        static_cast<void*>(x_connection.p_setup +
-                           sizeof(x11::connection_response_info)
-                           // For now, skip past the vendor name string.
-                           + x_connection.p_setup->vendor_string_length));
+    char* p_iterator = static_cast<char*>(static_cast<void*>(
+        // TODO: Fix `cat::arithmetic` so that these parentheses around
+        // `(sizeof() + uint2)` are not required.
+        x_connection.p_setup + (sizeof(x11::connection_response_info)
+                                // For now, skip past the vendor name string.
+                                + x_connection.p_setup->vendor_string_length)));
 
     x_connection.p_pixel_map_formats =
         static_cast<x11::pixel_map_format_packet*>(
@@ -514,10 +515,10 @@ struct create_window_request_info {
         .message_length = static_cast<unsigned short>(
             sizeof(create_window_request_info) / 4)};
 
-    uint1 window_depth;
+    cat::uint1 window_depth;
     window_resource window_id, parent_id;
-    int2 x, y;
-    uint2 width, height, border_thickness;
+    cat::int2 x, y;
+    cat::uint2 width, height, border_thickness;
 
     enum class window_class_type : unsigned char {
         input_output = 0,
@@ -525,10 +526,10 @@ struct create_window_request_info {
         copy_from_parent = 2
     } window_class;
 
-    uint4 visual_resource_id;
-    uint4 value_mask;  // TODO: Use a `cat::bitset`.
-    // TODO: Confirm that this field should exist.
-    uint4 const* p_values;
+    cat::uint4 visual_resource_id;
+    cat::uint4 value_mask;  // TODO: Use a `cat::bitset`.
+                            // TODO: Confirm that this field should exist.
+    cat::uint4 const* p_values;
 };
 
 }  // namespace x11

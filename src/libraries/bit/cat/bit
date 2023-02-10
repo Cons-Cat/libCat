@@ -8,6 +8,49 @@
 // `__BYTE_ORDER__` and `__ORDER_LITTLE_ENDIAN__` are macros defined by GCC.
 namespace cat {
 
+inline namespace literals {
+    inline namespace bit_literals {
+        // TODO: Is `<cat/bit>` the right place for these?
+        constexpr auto operator""_ki(unsigned long long input) -> iword {
+            return 1024 * static_cast<signed long long>(input);
+        }
+
+        constexpr auto operator""_uki(unsigned long long input) -> uword {
+            return 1024u * input;
+        }
+
+        constexpr auto operator""_ki(long double input) -> iword {
+            return static_cast<signed long long>(1024.f * input);
+        }
+
+        constexpr auto operator""_mi(unsigned long long input) -> iword {
+            return 1024ll * 1024ll * static_cast<signed long long>(input);
+        }
+
+        constexpr auto operator""_umi(unsigned long long input) -> uword {
+            return 1024ull * 1024ull * input;
+        }
+
+        constexpr auto operator""_mi(long double input) -> iword {
+            return static_cast<signed long long>(1024.f * 1024.f * input);
+        }
+
+        constexpr auto operator""_gi(unsigned long long input) -> iword {
+            return 1024ll * 1024ll * 1024ll *
+                   static_cast<signed long long>(input);
+        }
+
+        constexpr auto operator""_ugi(unsigned long long input) -> uword {
+            return 1024ull * 1024ull * 1024ull * input;
+        }
+
+        constexpr auto operator""_gi(long double input) -> iword {
+            return static_cast<signed long long>(1024.f * 1024.f * 1024.f *
+                                                 1024.f * input);
+        }
+    }  // namespace bit_literals
+}  // namespace literals
+
 inline constexpr bool is_target_little_endian =
     (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
 inline constexpr bool is_target_big_endian = !is_target_little_endian;
@@ -15,6 +58,8 @@ inline constexpr bool is_target_big_endian = !is_target_little_endian;
 inline constexpr iword char_bits = ssizeof(unsigned char) * 8;
 inline constexpr iword word_bits = ssizeof(uword) * 8;
 inline constexpr iword word_bytes = ssizeof(uword);
+
+inline constexpr iword page_size = 4096_ki;
 
 template <is_unsigned_integral T>
 [[nodiscard]]
@@ -197,7 +242,7 @@ constexpr auto deposit_bits_mask(T value, U mask) -> T {
 
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
-constexpr auto zero_high_bits_at(T source, uint4 bit_index) -> T {
+constexpr auto zero_high_bits_at(T source, cat::uint4 bit_index) -> T {
     if constexpr (__has_builtin(__builtin_ia32_bzhi_si) && sizeof(T) == 4) {
         return __builtin_ia32_bzhi_si(cat::to_raw_arithmetic(source),
                                       bit_index.raw);
@@ -738,44 +783,6 @@ operator&(T flag_1, T flag_2) -> T {
 //     using U =underlying_type<T>;
 //     return static_cast<T>(static_cast<U>(flag_1) & flag_2);
 // }
-
-// TODO: Is `<cat/bit>` the right place for these?
-constexpr auto operator""_ki(unsigned long long input) -> iword {
-    return 1024 * static_cast<signed long long>(input);
-}
-
-constexpr auto operator""_uki(unsigned long long input) -> uword {
-    return 1024u * input;
-}
-
-constexpr auto operator""_ki(long double input) -> iword {
-    return static_cast<signed long long>(1024.f * input);
-}
-
-constexpr auto operator""_mi(unsigned long long input) -> iword {
-    return 1024ll * 1024ll * static_cast<signed long long>(input);
-}
-
-constexpr auto operator""_umi(unsigned long long input) -> uword {
-    return 1024ull * 1024ull * input;
-}
-
-constexpr auto operator""_mi(long double input) -> iword {
-    return static_cast<signed long long>(1024.f * 1024.f * input);
-}
-
-constexpr auto operator""_gi(unsigned long long input) -> iword {
-    return 1024ll * 1024ll * 1024ll * static_cast<signed long long>(input);
-}
-
-constexpr auto operator""_ugi(unsigned long long input) -> uword {
-    return 1024ull * 1024ull * 1024ull * input;
-}
-
-constexpr auto operator""_gi(long double input) -> iword {
-    return static_cast<signed long long>(1024.f * 1024.f * 1024.f * 1024.f *
-                                         input);
-}
 
 #include "./implementations/align_down.tpp"
 #include "./implementations/align_up.tpp"

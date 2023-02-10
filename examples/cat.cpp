@@ -3,6 +3,9 @@
 #include <cat/maybe>
 #include <cat/page_allocator>
 
+using namespace cat::literals;
+using namespace cat::integers;
+
 constexpr iword block_size = 4_ki;
 
 auto get_file_size(nix::file_descriptor file_descriptor) -> cat::maybe<iword> {
@@ -52,7 +55,8 @@ void read_and_print_file(char* p_file_name) {
                                   .or_exit("Failed to allocate memory!", 4)
                                   .data();
 
-        io_vectors[current_block] = nix::io_vector(p_buffer, current_block_size);
+        io_vectors[current_block] =
+            nix::io_vector(p_buffer, current_block_size);
         ++current_block;
         bytes_remaining -= current_block_size;
     }

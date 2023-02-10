@@ -28,7 +28,7 @@ auto main() -> int {
     cat::jmp_buffer jump_buffer;
     p_jump_buffer = &jump_buffer;
 
-    int tests_passed = 0;
+    int4 tests_passed = 0;
     int8 tests_failed = 0;
 
     // Load and call all functions with the attribute

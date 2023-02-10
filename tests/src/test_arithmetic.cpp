@@ -9,7 +9,8 @@ struct nttp {
 };
 
 TEST(test_numerals) {
-    using namespace cat::arithmetic_literals;
+    using namespace cat::literals;
+    using namespace cat::integers;
 
     // Test `concept`s.
     // static_assert(cat::detail::arithmeticNonPtr<int4>);

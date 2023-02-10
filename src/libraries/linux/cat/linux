@@ -9,8 +9,6 @@
 #include <cat/scaredy>
 #include <cat/utility>
 
-inline constexpr iword page_size = 4096_ki;
-
 // Forward declarations.
 namespace cat {
 struct Socket;
@@ -287,8 +285,8 @@ enum class linux_error {
 };
 
 namespace detail {
-    // Map `void` to `cat::monotype_storage` and map `T*` to `intptr<T>` so that
-    // these types can both hold `-1`.
+    // Map `void` to `cat::monotype_storage` and map `T*` to `cat::intptr<T>` so
+    // that these types can both hold `-1`.
     template <typename T>
     using map_syscall_type =
         cat::conditional<cat::is_void<T>, cat::monotype_storage<int, 0>, T>;
@@ -339,7 +337,7 @@ enum class memory_flags : unsigned int {
 // TODO: Enforce that `file_descriptor` cannot be constructed with a negative
 // value. This is an index into the kernel's file descriptor table.
 struct file_descriptor {
-    int4 value;
+    cat::int4 value;
 };
 
 constexpr nix::file_descriptor stdin = {0};
@@ -356,15 +354,15 @@ struct tty_descriptor : file_descriptor {};
 struct process_id {
     // Linux supports the better part of `8` `cat::byte` process IDs on 64-bit
     // systems, but only up to `4` `cat::byte` process IDs on 32-bit systems.
-    iword value;
+    cat::iword value;
 };
 
 struct user_id {
-    int4 value;
+    cat::int4 value;
 };
 
 struct group_id {
-    int4 value;
+    cat::int4 value;
 };
 
 enum class wait_id {
@@ -745,14 +743,14 @@ namespace nix {
 
 // Syscall 0
 auto sys_read(file_descriptor file_descriptor, char const* p_string_buffer,
-              iword length) -> scaredy_nix<iword>;
+              cat::iword length) -> scaredy_nix<cat::iword>;
 
 // Syscall 1
 auto sys_write(file_descriptor file_descriptor, char const* p_string_buffer,
-               iword length) -> scaredy_nix<iword>;
+               cat::iword length) -> scaredy_nix<cat::iword>;
 
 auto sys_write(file_descriptor file_descriptor, cat::string string)
-    -> scaredy_nix<iword>;
+    -> scaredy_nix<cat::iword>;
 
 // Syscall 2
 auto sys_open(char const* p_file_path, open_mode file_mode,
@@ -764,36 +762,36 @@ auto sys_close(file_descriptor file_descriptor) -> scaredy_nix<void>;
 // TODO: Flesh this out more.
 // TODO: Extract this to an implementation file.
 struct file_handle {
-    int4 flags;  // TODO: Make this strongly typed.
+    cat::int4 flags;  // TODO: Make this strongly typed.
     char* p_read_position;
     char* p_read_end;
 
-    int4 (*close)(file_handle*);
+    cat::int4 (*close)(file_handle*);
 
     char* p_write_end;
     char* p_write_position;
     unsigned char* mustbezero_1;
     char* p_write_base;
 
-    uword (*read)(file_handle*, char*, uword);
-    uword (*write)(file_handle*, char const*, uword);
-    uword (*seek)(file_handle*, uword, int4);
+    cat::uword (*read)(file_handle*, char*, cat::uword);
+    cat::uword (*write)(file_handle*, char const*, cat::uword);
+    cat::uword (*seek)(file_handle*, cat::uword, cat::int4);
     char* buf;
 
-    uword buf_size;
+    cat::uword buf_size;
     file_handle *prev, *next;
-    int4 file_descriptor;
-    int4 pipe_pid;
+    cat::int4 file_descriptor;
+    cat::int4 pipe_pid;
     long lockcount;
-    int4 mode;
-    int4 volatile lock;
-    int4 lbf;
+    cat::int4 mode;
+    cat::int4 volatile lock;
+    cat::int4 lbf;
     void* cookie;
-    uword off;
+    cat::uword off;
     char* getln_buf;
     void* mustbezero_2;
     char* shend;
-    uword shlim, shcnt;
+    cat::uword shlim, shcnt;
     file_handle* p_prev_locked;
     file_handle* p_next_locked;
     // TODO: Implement locale.
@@ -814,15 +812,15 @@ auto sys_fstat(file_descriptor file_descriptor)
 // TODO: `sys_lseek()`
 
 // Syscall 9
-auto sys_mmap(uword beginning_address, iword bytes_size,
+auto sys_mmap(cat::uword beginning_address, cat::iword bytes_size,
               memory_protection_flags protections, memory_flags flags,
-              file_descriptor file_descriptor, iword pages_offset)
+              file_descriptor file_descriptor, cat::iword pages_offset)
     -> scaredy_nix<void*>;
 
 // TODO: `sys_mprotect()`
 
 // Syscall 11
-auto sys_munmap(void const* p_memory, iword length) -> scaredy_nix<void>;
+auto sys_munmap(void const* p_memory, cat::iword length) -> scaredy_nix<void>;
 
 // TODO: `sys_brk()`
 
@@ -901,7 +899,7 @@ struct io_vector : cat::span<cat::byte> {
     ~io_vector() = default;
 
     // Construct from any reasonable pointer type.
-    constexpr io_vector(cat::byte* p_in_data, iword in_length)
+    constexpr io_vector(cat::byte* p_in_data, cat::iword in_length)
         : cat::span<cat::byte>(p_in_data, in_length) {
     }
 
@@ -925,56 +923,56 @@ struct io_vector : cat::span<cat::byte> {
 
 // Syscall 19
 auto sys_readv(file_descriptor file_descriptor,
-               cat::span<io_vector> const& vectors) -> scaredy_nix<iword>;
+               cat::span<io_vector> const& vectors) -> scaredy_nix<cat::iword>;
 
 // Syscall 20
 auto sys_writev(file_descriptor file_descriptor,
-                cat::span<io_vector> const& vectors) -> scaredy_nix<iword>;
+                cat::span<io_vector> const& vectors) -> scaredy_nix<cat::iword>;
 
 // Syscall 39
 auto sys_getpid() -> process_id;
 
 // Syscall 41
-auto sys_socket(int8 protocol_family, int8 type, int8 protocol)
+auto sys_socket(cat::int8 protocol_family, cat::int8 type, cat::int8 protocol)
     -> scaredy_nix<file_descriptor>;
 
 // Syscall 42
 auto sys_connect(file_descriptor socket_descriptor, void const* p_socket,
-                 iword socket_size) -> scaredy_nix<void>;
+                 cat::iword socket_size) -> scaredy_nix<void>;
 
 // Syscall 43
 auto sys_accept(file_descriptor socket_descriptor,
                 void const* __restrict p_socket = nullptr,
-                iword const* __restrict p_addr_len = nullptr)
+                cat::iword const* __restrict p_addr_len = nullptr)
     -> scaredy_nix<file_descriptor>;
 
 // Syscall 44
 auto sys_sendto(file_descriptor socket_descriptor, void const* p_message_buffer,
-                iword buffer_length, int8 flags,
+                cat::iword buffer_length, cat::int8 flags,
                 cat::Socket const* p_destination_socket = nullptr,
-                iword addr_length = 0) -> scaredy_nix<iword>;
+                cat::iword addr_length = 0) -> scaredy_nix<cat::iword>;
 
 // Syscall 45
 auto sys_recv(file_descriptor socket_descriptor, void* p_message_buffer,
-              iword buffer_length,
+              cat::iword buffer_length,
               cat::Socket const* __restrict p_addr = nullptr,
-              iword const* __restrict p_addr_length = nullptr)
-    -> scaredy_nix<iword>;
+              cat::iword const* __restrict p_addr_length = nullptr)
+    -> scaredy_nix<cat::iword>;
 
 // TODO: More syscalls between here.
 
 // Syscall 49
 auto sys_bind(file_descriptor socket_descriptor, void const* p_socket,
-              iword p_addr_len) -> scaredy_nix<void>;
+              cat::iword p_addr_len) -> scaredy_nix<void>;
 
 // Syscall 50
-auto sys_listen(file_descriptor socket_descriptor, int8 backlog)
+auto sys_listen(file_descriptor socket_descriptor, cat::int8 backlog)
     -> scaredy_nix<void>;
 
 // TODO: `sys_clone()`
 
 // Syscall 61
-auto sys_wait4(process_id waiting_on_id, int4* p_status_output,
+auto sys_wait4(process_id waiting_on_id, cat::int4* p_status_output,
                wait_options_flags options, void* p_resource_usage)
     -> scaredy_nix<process_id>;
 
@@ -997,23 +995,24 @@ auto sys_waitid(wait_id type, process_id id, wait_options_flags options)
 auto wait_pid(process_id pid, file_status* p_status, wait_options_flags options)
     -> scaredy_nix<process_id>;
 
-auto syscall0(iword) -> iword;
-auto syscall1(iword, cat::no_type) -> iword;
-auto syscall2(iword, cat::no_type, cat::no_type) -> iword;
-auto syscall3(iword, cat::no_type, cat::no_type, cat::no_type) -> iword;
-auto syscall4(iword, cat::no_type, cat::no_type, cat::no_type, cat::no_type)
-    -> iword;
-auto syscall5(iword, cat::no_type, cat::no_type, cat::no_type, cat::no_type,
-              cat::no_type) -> iword;
-auto syscall6(iword, cat::no_type, cat::no_type, cat::no_type, cat::no_type,
-              cat::no_type, cat::no_type) -> iword;
+auto syscall0(cat::iword) -> cat::iword;
+auto syscall1(cat::iword, cat::no_type) -> cat::iword;
+auto syscall2(cat::iword, cat::no_type, cat::no_type) -> cat::iword;
+auto syscall3(cat::iword, cat::no_type, cat::no_type, cat::no_type)
+    -> cat::iword;
+auto syscall4(cat::iword, cat::no_type, cat::no_type, cat::no_type,
+              cat::no_type) -> cat::iword;
+auto syscall5(cat::iword, cat::no_type, cat::no_type, cat::no_type,
+              cat::no_type, cat::no_type) -> cat::iword;
+auto syscall6(cat::iword, cat::no_type, cat::no_type, cat::no_type,
+              cat::no_type, cat::no_type, cat::no_type) -> cat::iword;
 
 template <typename T, typename... Args>
-auto syscall(iword call, Args... parameters) -> nix::scaredy_nix<T>
+auto syscall(cat::iword call, Args... parameters) -> nix::scaredy_nix<T>
     requires(sizeof...(Args) < 7);
 
 // Create and return a `cat::SocketLocal` (also known as Unix socket).
-auto create_socket_local(int8 type, int8 protocol)
+auto create_socket_local(cat::int8 type, cat::int8 protocol)
     -> scaredy_nix<file_descriptor>;
 
 // `tty_io_serial` handles a configuration of tty IO, often referred to
@@ -1038,7 +1037,7 @@ struct tty_io_serial {
 };
 
 struct tty_window_size {
-    uint2 rows, columns, width_pixels, height_pixels;
+    cat::uint2 rows, columns, width_pixels, height_pixels;
 };
 
 auto is_a_tty(file_descriptor file_descriptor) -> scaredy_nix<void>;
@@ -1072,7 +1071,7 @@ struct file_status {
         return (this->protections_mode & 0170000u) == 0100000u;
     }
 
-    static_assert(!cat::enum_flag_trait<uint4>::value);
+    static_assert(!cat::enum_flag_trait<cat::uint4>::value);
 
     [[nodiscard]]
     auto is_directory() const -> bool {
@@ -1104,27 +1103,27 @@ struct file_status {
         return (this->protections_mode & 0170000u) == 0140000u;
     }
 
-    uint8 device_id;
+    cat::uint8 device_id;
     // The index node for this file.
-    uint8 inode;
-    uword hard_links_count;
+    cat::uint8 inode;
+    cat::uword hard_links_count;
 
-    uint4 protections_mode;
+    cat::uint4 protections_mode;
     user_id user;
     group_id groud;
 
   private:
-    [[maybe_unused]] uint4 padding;
+    [[maybe_unused]] cat::uint4 padding;
 
   public:
-    uint8 rdev;
-    int8 file_size;
-    iword block_size;
-    int8 blocks_count;
+    cat::uint8 rdev;
+    cat::int8 file_size;
+    cat::iword block_size;
+    cat::int8 blocks_count;
 
     using time_spec = struct {
-        iword seconds;
-        iword nanoseconds;
+        cat::iword seconds;
+        cat::iword nanoseconds;
     };
 
     time_spec last_access_time;
@@ -1132,7 +1131,7 @@ struct file_status {
     time_spec creation_time;
 
   private:
-    [[maybe_unused]] int4 unused[3];
+    [[maybe_unused]] cat::int4 unused[3];
 };
 
 // `process` handles an asynchronous task multitasked by the Linux kernel.
@@ -1150,7 +1149,7 @@ struct process {
 
     // TODO: Add `cat::invocable` concept.
     auto create(cat::is_allocator auto& allocator,
-                iword const initial_stack_size, auto const& function,
+                cat::iword const initial_stack_size, auto const& function,
                 void* p_args_struct,
                 // TODO: These flags should largely be encoded into the type.
                 CloneFlags const flags = default_flags) -> scaredy_nix<void> {
@@ -1168,8 +1167,8 @@ struct process {
 
         // We need the top because memory will be pushed to it downwards on
         // x86-64.
-        void* p_stack_top =
-            static_cast<void*>(intptr<void>{this->p_stack} + this->stack_size);
+        void* p_stack_top = static_cast<void*>(
+            cat::intptr<void>{this->p_stack} + this->stack_size);
 
         // TODO: Use the `cat::scaredy`.
         // scaredy_nix<void> result;
@@ -1197,7 +1196,7 @@ struct process {
             : parent_thread);
 
 parent_thread:
-        if (static_cast<iword>(result) < 0) {
+        if (static_cast<cat::iword>(result) < 0) {
             return static_cast<nix::linux_error>(result);
         }
         // `this->process_id` was initialized by the syscall.
@@ -1215,7 +1214,7 @@ parent_thread:
 
     process_id id;
     void* p_stack;
-    iword stack_size;
+    cat::iword stack_size;
 };
 
 struct signals_mask_set {

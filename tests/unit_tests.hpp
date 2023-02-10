@@ -2,6 +2,9 @@
 #include <cat/format>
 #include <cat/page_allocator>
 
+using namespace cat::literals;
+using namespace cat::integers;
+
 constinit inline int8 tests_run = 0;
 constinit inline bool last_ctor_was_test = false;
 constinit inline cat::page_allocator pager;

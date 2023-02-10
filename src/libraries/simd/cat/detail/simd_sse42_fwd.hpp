@@ -26,9 +26,9 @@ struct sse42_abi {
 
     sse42_abi() = delete;
 
-    static constexpr iword size = 16;
-    static constexpr iword lanes = size / ssizeof(T);
-    static constexpr uword alignment = 16u;
+    static constexpr cat::iword size = 16;
+    static constexpr cat::iword lanes = size / ssizeof(T);
+    static constexpr cat::uword alignment = 16u;
 };
 
 template <typename T>

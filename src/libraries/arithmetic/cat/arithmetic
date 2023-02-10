@@ -83,43 +83,6 @@ constexpr auto make_sign_from(sign_type, T value)
     return static_cast<copy_sign_from<sign_type, T>>(value);
 }
 
-// These macros are defined by the GCC compiler.
-using int1 = arithmetic<__INT8_TYPE__, overflow_policies::undefined>;
-using uint1 = arithmetic<__UINT8_TYPE__, overflow_policies::undefined>;
-using int2 = arithmetic<__INT16_TYPE__, overflow_policies::undefined>;
-using uint2 = arithmetic<__UINT16_TYPE__, overflow_policies::undefined>;
-using int4 = arithmetic<__INT32_TYPE__, overflow_policies::undefined>;
-using uint4 = arithmetic<__UINT32_TYPE__, overflow_policies::undefined>;
-using int8 = arithmetic<__INT64_TYPE__, overflow_policies::undefined>;
-using uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::undefined>;
-// using i128 = arithmetic<int128_t, overflow_policies::undefined>;
-// using u128 = arithmetic<uint128_t, overflow_policies::undefined>;
-
-using float4 = arithmetic<float, overflow_policies::undefined>;
-using float8 = arithmetic<double, overflow_policies::undefined>;
-
-using wrap_int1 = arithmetic<__INT8_TYPE__, overflow_policies::wrap>;
-using wrap_uint1 = arithmetic<__UINT8_TYPE__, overflow_policies::wrap>;
-using wrap_int2 = arithmetic<__INT16_TYPE__, overflow_policies::wrap>;
-using wrap_uint2 = arithmetic<__UINT16_TYPE__, overflow_policies::wrap>;
-using wrap_int4 = arithmetic<__INT32_TYPE__, overflow_policies::wrap>;
-using wrap_uint4 = arithmetic<__UINT32_TYPE__, overflow_policies::wrap>;
-using wrap_int8 = arithmetic<__INT64_TYPE__, overflow_policies::wrap>;
-using wrap_uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::wrap>;
-
-using sat_int1 = arithmetic<__INT8_TYPE__, overflow_policies::saturate>;
-using sat_uint1 = arithmetic<__UINT8_TYPE__, overflow_policies::saturate>;
-using sat_int2 = arithmetic<__INT16_TYPE__, overflow_policies::saturate>;
-using sat_uint2 = arithmetic<__UINT16_TYPE__, overflow_policies::saturate>;
-using sat_int4 = arithmetic<__INT32_TYPE__, overflow_policies::saturate>;
-using sat_uint4 = arithmetic<__UINT32_TYPE__, overflow_policies::saturate>;
-using sat_int8 = arithmetic<__INT64_TYPE__, overflow_policies::saturate>;
-using sat_uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::saturate>;
-
-using iword =
-    arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policies::undefined>;
-using uword = arithmetic<__SIZE_TYPE__, overflow_policies::undefined>;
-
 template <typename left_type, typename right_type>
 concept is_safe_arithmetic_comparison =
     // `to_raw_arithmetic_type` is needed here to prevent a recursive constraint
@@ -1212,14 +1175,6 @@ struct arithmetic_ptr : arithmetic<storage_type, policy> {
     }
 };
 
-// `__INTPTR_TYPE__` is defined by the GCC compiler.
-template <typename T>
-using intptr = arithmetic_ptr<T, __INTPTR_TYPE__>;
-
-// `__UINTPTR_TYPE__` is defined by the GCC compiler.
-template <typename T>
-using uintptr = cat::arithmetic_ptr<T, __UINTPTR_TYPE__>;
-
 // Add and assign an `arithmetic` to a pointer.
 template <typename T, typename U>
 constexpr auto operator+=(T* p_lhs, arithmetic<U> rhs) -> T* {
@@ -1283,67 +1238,114 @@ constexpr auto operator|=(T* p_lhs, arithmetic<U> rhs) -> T* {
     return p_lhs;
 }
 
-template <iword bytes>
-    requires(bytes <= 8 && bytes > 0 &&
-             // Is a power of 2:
-             ((bytes & (bytes - 1)) == 0))
-using int_fixed = conditional<
-    bytes == 1, int1,
-    conditional<bytes == 2, int2, conditional<bytes == 4, int4, int8>>>;
+inline namespace integers {
+    // These macros are defined by the GCC compiler.
+    using int1 = arithmetic<__INT8_TYPE__, overflow_policies::undefined>;
+    using uint1 = arithmetic<__UINT8_TYPE__, overflow_policies::undefined>;
+    using int2 = arithmetic<__INT16_TYPE__, overflow_policies::undefined>;
+    using uint2 = arithmetic<__UINT16_TYPE__, overflow_policies::undefined>;
+    using int4 = arithmetic<__INT32_TYPE__, overflow_policies::undefined>;
+    using uint4 = arithmetic<__UINT32_TYPE__, overflow_policies::undefined>;
+    using int8 = arithmetic<__INT64_TYPE__, overflow_policies::undefined>;
+    using uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::undefined>;
+    // using i128 = arithmetic<int128_t, overflow_policies::undefined>;
+    // using u128 = arithmetic<uint128_t, overflow_policies::undefined>;
 
-template <iword bytes>
-    requires(bytes <= 8 && bytes > 0 &&
-             // Is a power of 2:
-             ((bytes & (bytes - 1)) == 0))
-using uint_fixed = conditional<
-    bytes == 1, uint1,
-    conditional<bytes == 2, uint2, conditional<bytes == 4, uint4, uint8>>>;
+    using iword = arithmetic<make_signed_type<__SIZE_TYPE__>,
+                             overflow_policies::undefined>;
+    using uword = arithmetic<__SIZE_TYPE__, overflow_policies::undefined>;
 
-struct bool2 {
-    using raw_type = uint2;
-    uint2 raw;
-    constexpr bool2() = default;
+    using float4 = arithmetic<float, overflow_policies::undefined>;
+    using float8 = arithmetic<double, overflow_policies::undefined>;
 
-    constexpr bool2(bool input) : raw(static_cast<unsigned char>(input)) {
-    }
+    // `__INTPTR_TYPE__` is defined by the GCC compiler.
+    template <typename T>
+    using intptr = arithmetic_ptr<T, __INTPTR_TYPE__>;
 
-    constexpr operator bool() const {
-        return this->raw != 0u;
-    }
-};
+    // `__UINTPTR_TYPE__` is defined by the GCC compiler.
+    template <typename T>
+    using uintptr = cat::arithmetic_ptr<T, __UINTPTR_TYPE__>;
 
-struct bool4 {
-    using raw_type = uint4;
-    uint4 raw;
-    constexpr bool4() = default;
+    using wrap_int1 = arithmetic<__INT8_TYPE__, overflow_policies::wrap>;
+    using wrap_uint1 = arithmetic<__UINT8_TYPE__, overflow_policies::wrap>;
+    using wrap_int2 = arithmetic<__INT16_TYPE__, overflow_policies::wrap>;
+    using wrap_uint2 = arithmetic<__UINT16_TYPE__, overflow_policies::wrap>;
+    using wrap_int4 = arithmetic<__INT32_TYPE__, overflow_policies::wrap>;
+    using wrap_uint4 = arithmetic<__UINT32_TYPE__, overflow_policies::wrap>;
+    using wrap_int8 = arithmetic<__INT64_TYPE__, overflow_policies::wrap>;
+    using wrap_uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::wrap>;
 
-    constexpr bool4(bool input) : raw(static_cast<unsigned char>(input)) {
-    }
+    using sat_int1 = arithmetic<__INT8_TYPE__, overflow_policies::saturate>;
+    using sat_uint1 = arithmetic<__UINT8_TYPE__, overflow_policies::saturate>;
+    using sat_int2 = arithmetic<__INT16_TYPE__, overflow_policies::saturate>;
+    using sat_uint2 = arithmetic<__UINT16_TYPE__, overflow_policies::saturate>;
+    using sat_int4 = arithmetic<__INT32_TYPE__, overflow_policies::saturate>;
+    using sat_uint4 = arithmetic<__UINT32_TYPE__, overflow_policies::saturate>;
+    using sat_int8 = arithmetic<__INT64_TYPE__, overflow_policies::saturate>;
+    using sat_uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::saturate>;
 
-    constexpr bool4(bool2 input) : raw(static_cast<unsigned char>(input)) {
-    }
+    template <iword bytes>
+        requires(bytes <= 8 && bytes > 0 &&
+                 // Is a power of 2:
+                 ((bytes & (bytes - 1)) == 0))
+    using int_fixed = conditional<
+        bytes == 1, int1,
+        conditional<bytes == 2, int2, conditional<bytes == 4, int4, int8>>>;
 
-    constexpr operator bool() const {
-        return this->raw != 0u;
-    }
-};
+    template <iword bytes>
+        requires(bytes <= 8 && bytes > 0 &&
+                 // Is a power of 2:
+                 ((bytes & (bytes - 1)) == 0))
+    using uint_fixed = conditional<
+        bytes == 1, uint1,
+        conditional<bytes == 2, uint2, conditional<bytes == 4, uint4, uint8>>>;
 
-inline constexpr int1 int1_min = limits<int1>::min();
-inline constexpr int1 int1_max = limits<int1>::max();
-inline constexpr uint1 uint1_min = limits<uint1>::min();
-inline constexpr uint1 uint1_max = limits<uint1>::max();
-inline constexpr int2 int2_min = limits<int2>::min();
-inline constexpr int2 int2_max = limits<int2>::max();
-inline constexpr uint2 uint2_min = limits<uint2>::min();
-inline constexpr uint2 uint2_max = limits<uint2>::max();
-inline constexpr int4 int4_min = limits<int4>::min();
-inline constexpr int4 int4_max = limits<int4>::max();
-inline constexpr uint4 uint4_min = limits<uint4>::min();
-inline constexpr uint4 uint4_max = limits<uint4>::max();
-inline constexpr int8 int8_min = limits<int8>::min();
-inline constexpr int8 int8_max = limits<int8>::max();
-inline constexpr uint8 uint8_min = limits<uint8>::min();
-inline constexpr uint8 uint8_max = limits<uint8>::max();
+    struct bool2 {
+        using raw_type = uint2;
+        uint2 raw;
+        constexpr bool2() = default;
+
+        constexpr bool2(bool input) : raw(static_cast<unsigned char>(input)) {
+        }
+
+        constexpr operator bool() const {
+            return this->raw != 0u;
+        }
+    };
+
+    struct bool4 {
+        using raw_type = uint4;
+        uint4 raw;
+        constexpr bool4() = default;
+
+        constexpr bool4(bool input) : raw(static_cast<unsigned char>(input)) {
+        }
+
+        constexpr bool4(bool2 input) : raw(static_cast<unsigned char>(input)) {
+        }
+
+        constexpr operator bool() const {
+            return this->raw != 0u;
+        }
+    };
+
+    inline constexpr int1 int1_min = limits<int1>::min();
+    inline constexpr int1 int1_max = limits<int1>::max();
+    inline constexpr uint1 uint1_min = limits<uint1>::min();
+    inline constexpr uint1 uint1_max = limits<uint1>::max();
+    inline constexpr int2 int2_min = limits<int2>::min();
+    inline constexpr int2 int2_max = limits<int2>::max();
+    inline constexpr uint2 uint2_min = limits<uint2>::min();
+    inline constexpr uint2 uint2_max = limits<uint2>::max();
+    inline constexpr int4 int4_min = limits<int4>::min();
+    inline constexpr int4 int4_max = limits<int4>::max();
+    inline constexpr uint4 uint4_min = limits<uint4>::min();
+    inline constexpr uint4 uint4_max = limits<uint4>::max();
+    inline constexpr int8 int8_min = limits<int8>::min();
+    inline constexpr int8 int8_max = limits<int8>::max();
+    inline constexpr uint8 uint8_min = limits<uint8>::min();
+    inline constexpr uint8 uint8_max = limits<uint8>::max();
+}  // namespace integers
 
 inline namespace literals {
     inline namespace arithmetic_literals {
@@ -1404,34 +1406,14 @@ inline namespace literals {
         }
     }  // namespace arithmetic_literals
 }  // namespace literals
-}  // namespace cat
-
-// Arithmetic wrappers should be in the global namespace for convenience.
-using cat::bool2;
-using cat::bool4;
-using cat::float4;
-using cat::float8;
-using cat::int1;
-using cat::int2;
-using cat::int4;
-using cat::int8;
-using cat::iword;
-using cat::uint1;
-using cat::uint2;
-using cat::uint4;
-using cat::uint8;
-using cat::uword;
-
-template <typename T>
-using intptr = cat::intptr<T>;
-template <typename T>
-using uintptr = cat::uintptr<T>;
 
 // `intptr` and `uintptr` are not trivial, but they can be trivially
 // relocatable.
 template <typename T>
-    requires(cat::is_trivial<T> || cat::is_void<T>)
-constexpr bool cat::is_trivially_relocatable<cat::intptr<T>> = true;
+    requires(is_trivial<T> || is_void<T>)
+constexpr bool is_trivially_relocatable<cat::intptr<T>> = true;
 template <typename T>
-    requires(cat::is_trivial<T> || cat::is_void<T>)
-constexpr bool cat::is_trivially_relocatable<cat::uintptr<T>> = true;
+    requires(is_trivial<T> || is_void<T>)
+constexpr bool is_trivially_relocatable<cat::uintptr<T>> = true;
+
+}  // namespace cat
