@@ -69,6 +69,9 @@ class list : public collection_interface<list<T>, T> {
     // Being `protected:` permits derived classes and adaptors to call this.
     // Only allow the shallow copy constructor to be used by these static
     // factory member functions. For public copying, `.clone()` should be used.
+    [[deprecated(
+        "Implicit copying of `cat::list` is forbidden. Call `.clone() "
+        "instead!")]]  //
     constexpr list(list<T> const&) = default;
 
   public:
@@ -436,6 +439,7 @@ class list : public collection_interface<list<T>, T> {
     iword length = 0;
 };
 
+// TODO: Move this to a separate file.
 template <typename T>
 class forward_list : public collection_interface<forward_list<T>, T> {
   public:
@@ -466,9 +470,14 @@ class forward_list : public collection_interface<forward_list<T>, T> {
 
     constexpr forward_list(forward_list<T>&& list) = default;
 
-  private:
-    [[deprecated(R"(The copy-constructor is hidden. Use `.clone()` instead!)")]] constexpr forward_list(
-        forward_list<T> const&) = default;
+  protected:
+    // Being `protected:` permits derived classes and adaptors to call this.
+    // Only allow the shallow copy constructor to be used by these static
+    // factory member functions. For public copying, `.clone()` should be used.
+    [[deprecated(
+        "Implicit copying of `cat::forward_list` is forbidden. Call `.clone() "
+        "instead!")]]  //
+    constexpr forward_list(forward_list<T> const&) = default;
 
   public:
     template <typename U, U... values>

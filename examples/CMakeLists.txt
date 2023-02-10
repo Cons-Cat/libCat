@@ -16,47 +16,47 @@ option(CAT_BUILD_ALL_EXAMPLES "Compile all examples unconditionally." ON)
 option(CAT_BUILD_EXAMPLE_HELLO "Compile hello.cpp." OFF)
 if(CAT_BUILD_EXAMPLE_HELLO OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(hello hello.cpp)
-  target_compile_options(hello PRIVATE ${CAT_COMPILE_FLAGS})
+  target_compile_options(hello PRIVATE ${CAT_COMPILE_OPTIONS})
   target_compile_definitions(hello PRIVATE "NO_ARGC_ARGV")
   target_link_libraries(hello PRIVATE cat-examples)
-  target_link_options(hello PRIVATE ${CAT_LINK_FLAGS})
+  target_link_options(hello PRIVATE ${CAT_LINK_OPTIONS})
 endif()
 
 option(CAT_BUILD_EXAMPLE_ECHO "Compile echo.cpp." OFF)
 if(CAT_BUILD_EXAMPLE_ECHO OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(echo echo.cpp)
-  target_compile_options(echo PRIVATE ${CAT_COMPILE_FLAGS})
+  target_compile_options(echo PRIVATE ${CAT_COMPILE_OPTIONS})
   target_link_libraries(echo PRIVATE cat-examples)
-  target_link_options(echo PRIVATE ${CAT_LINK_FLAGS})
+  target_link_options(echo PRIVATE ${CAT_LINK_OPTIONS})
 endif()
 
 option(CAT_BUILD_EXAMPLE_CLIENT_SERVER "Compile client.cpp and server.cpp." OFF)
 if(CAT_BUILD_EXAMPLE_CLIENT_SERVER OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(client client.cpp)
-  target_compile_options(client PRIVATE ${CAT_COMPILE_FLAGS})
+  target_compile_options(client PRIVATE ${CAT_COMPILE_OPTIONS})
   target_link_libraries(client PRIVATE cat-examples)
-  target_link_options(client PRIVATE ${CAT_LINK_FLAGS})
+  target_link_options(client PRIVATE ${CAT_LINK_OPTIONS})
 
   add_executable(server server.cpp)
-  target_compile_options(server PRIVATE ${CAT_COMPILE_FLAGS})
+  target_compile_options(server PRIVATE ${CAT_COMPILE_OPTIONS})
   target_link_libraries(server PRIVATE cat-examples)
-  target_link_options(server PRIVATE ${CAT_LINK_FLAGS})
+  target_link_options(server PRIVATE ${CAT_LINK_OPTIONS})
 endif()
 
 option(CAT_BUILD_EXAMPLE_WINDOW "Compile window.cpp." OFF)
 if(CAT_BUILD_EXAMPLE_WINDOW OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(window window.cpp)
-  target_compile_options(window PRIVATE ${CAT_COMPILE_FLAGS})
+  target_compile_options(window PRIVATE ${CAT_COMPILE_OPTIONS})
   target_link_libraries(window PRIVATE cat-examples)
-  target_link_options(window PRIVATE ${CAT_LINK_FLAGS})
+  target_link_options(window PRIVATE ${CAT_LINK_OPTIONS})
 endif()
 
 option(CAT_BUILD_EXAMPLE_CAT "Compile cat.cpp." OFF)
 if(CAT_BUILD_EXAMPLE_CAT OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(unixcat cat.cpp)
-  target_compile_options(unixcat PRIVATE ${CAT_COMPILE_FLAGS})
+  target_compile_options(unixcat PRIVATE ${CAT_COMPILE_OPTIONS})
   target_link_libraries(unixcat PRIVATE cat-examples)
-  target_link_options(unixcat PRIVATE ${CAT_LINK_FLAGS})
+  target_link_options(unixcat PRIVATE ${CAT_LINK_OPTIONS})
   set_target_properties(unixcat PROPERTIES OUTPUT_NAME cat)
 endif()
 
@@ -74,13 +74,13 @@ if(
 )
   add_executable(dummy echo.cpp)
   target_link_libraries(dummy PRIVATE cat-examples)
-  target_link_options(dummy PRIVATE ${CAT_LINK_FLAGS})
+  target_link_options(dummy PRIVATE ${CAT_LINK_OPTIONS})
 endif()
 
 # libC executables are only configured for Release.
 list(
   APPEND
-  LIBC_RELEASE_FLAGS
+  LIBC_RELEASE_OPTIONS
   -fno-exceptions -fno-rtti -fno-unwind-tables
   -fno-asynchronous-unwind-tables
   -no-pie
@@ -99,20 +99,20 @@ if(CAT_BUILD_LIBC_EXAMPLES)
   add_executable(hello_libc hello_libc.cpp)
   target_compile_options(
     hello_libc PRIVATE
-    ${LIBC_RELEASE_FLAGS}
+    ${LIBC_RELEASE_OPTIONS}
   )
   target_link_options(
     hello_libc PRIVATE
-    ${LIBC_RELEASE_FLAGS}
+    ${LIBC_RELEASE_OPTIONS}
   )
 
   add_executable(memcpy_libc memory_copy_libc.cpp)
   target_compile_options(
     memcpy_libc PRIVATE
-    ${LIBC_RELEASE_FLAGS}
+    ${LIBC_RELEASE_OPTIONS}
   )
   target_link_options(
     memcpy_libc PRIVATE
-    ${LIBC_RELEASE_FLAGS}
+    ${LIBC_RELEASE_OPTIONS}
   )
 endif()

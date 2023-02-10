@@ -26,6 +26,9 @@ class ring : public collection_interface<ring<T>, T> {
     // Being `protected:` permits derived classes and adaptors to call this.
     // Only allow the shallow copy constructor to be used by these static
     // factory member functions. For public copying, `.clone()` should be used.
+    [[deprecated(
+        "Implicit copying of `cat::ring` is forbidden. Call `.clone() "
+        "instead!")]]  //
     ring(ring const&) = default;
 
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`

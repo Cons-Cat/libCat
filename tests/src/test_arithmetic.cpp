@@ -338,9 +338,9 @@ TEST(test_numerals) {
     static_assert(cat::make_sign_from(2, 1u) == 1_i4);
 
     // Test unwrapped numerals in `limits`.
-    static_assert(cat::limits<int4>::max() ==
+    static_assert(cat::limits<int4>::max() ==   // NOLINT
                   cat::limits<int4::raw_type>::max());
-    static_assert(cat::limits<uint8>::max() ==
+    static_assert(cat::limits<uint8>::max() ==  // NOLINT
                   cat::limits<uint8::raw_type>::max());
     static_assert(cat::limits<float4>::max() ==
                   cat::limits<float4::raw_type>::max());

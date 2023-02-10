@@ -1,7 +1,7 @@
-# Collect all of the files needed to build the `cat` library
-# in `../CMakeLists.txt`.
-set(
-  cat-include
+# Collect all of the files needed to build the `cat` library in
+# `../CMakeLists.txt`.
+
+target_include_directories(cat INTERFACE
   ${CMAKE_SOURCE_DIR}/src/
   ${CMAKE_SOURCE_DIR}/src/compatibility/
   ${CMAKE_SOURCE_DIR}/src/libraries/meta/
@@ -44,12 +44,10 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/cast/
   ${CMAKE_SOURCE_DIR}/src/libraries/vector/
   ${CMAKE_SOURCE_DIR}/src/libraries/ring/
-  PARENT_SCOPE
 )
 
 # TODO: Group and annotate these lines by their corresponding header.
-set(
-  cat-cpp
+target_sources(cat INTERFACE
   ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/_start.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/exit.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/__stack_chk_fail.cpp
@@ -140,5 +138,4 @@ set(
   ${CMAKE_SOURCE_DIR}/src/libraries/debug/implementations/default_assert_handler.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/debug/implementations/verify.cpp
   ${CMAKE_SOURCE_DIR}/src/libraries/debug/implementations/assert.cpp
-  PARENT_SCOPE
 )

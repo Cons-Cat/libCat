@@ -1,15 +1,13 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.24)
 
 project(cat LANGUAGES CXX)
 
 option(CAT_USE_SANITIZERS "Link ASan and UBSan" ON)
 
 list(
-  APPEND CAT_FLAGS_COMMON
-  -fdiagnostics-color
+  APPEND CAT_COMPILE_OPTIONS_COMMON
   # Disable linking libC symbols.
   -nostdlib
-  -Wno-builtin-declaration-mismatch
   # These features are pessimizations to libCat:
   -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
   # `global_includes.hpp` must be available everywhere.
@@ -22,7 +20,8 @@ list(
   -mbmi
   -mbmi2
   -mfsgsbase
-  # These flags cause clang-tidy 12 to crash:
+
+  # These flags cause clang-tidy to crash:
   # -fconcepts-diagnostics-depth=2
   -fmax-errors=4
   
@@ -31,18 +30,14 @@ list(
   -Wno-unused-function
   -Wno-unknown-pragmas
   # Disable some Clang warnings.
-  -Wno-unknown-attributes
-  -Wno-user-defined-literals
-  -Wno-inline-new-delete
-  -Wno-unqualified-std-cast-call
+  $<$<CXX_COMPILER_ID:Clang>:-Wno-unknown-attributes>
+  $<$<CXX_COMPILER_ID:Clang>:-Wno-inline-new-delete>
+  $<$<CXX_COMPILER_ID:Clang>:-Wno-unqualified-std-cast-call>
 )
 
 if(CAT_USE_SANITIZERS)
   list(
-    APPEND CAT_FLAGS_COMMON
-	# Enable GCC extensions, and use C++23.
-	# `2b` is used instead of `23` to improve clang tooling.
-	-std=gnu++2b	
+    APPEND CAT_COMPILE_OPTIONS_COMMON
     -fno-omit-frame-pointer # Required for UBsan.
     -fsanitize=undefined
     -fsanitize=address
@@ -53,13 +48,12 @@ if(CAT_USE_SANITIZERS)
 endif()
 
 list(
-  APPEND CAT_FLAGS_DEBUG
+  APPEND CAT_COMPILE_OPTIONS_DEBUG
   -ggdb3 -pipe
 )
 
 list(
-  APPEND CAT_FLAGS_RELEASE
-  -O3
+  APPEND CAT_COMPILE_OPTIONS_RELEASE
   # Remove unused symbols.
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
@@ -67,45 +61,43 @@ list(
 )
 
 list(
-  APPEND CAT_FLAGS_RELWITHDEBINFO
-  ${CAT_FLAGS_DEBUG}
-  ${CAT_FLAGS_RELEASE}
+  APPEND CAT_COMPILE_OPTIONS_RELWITHDEBINFO
+  ${CAT_COMPILE_OPTIONS_DEBUG}
+  ${CAT_COMPILE_OPTIONS_RELEASE}
 )
 
 list(
-  APPEND CAT_COMPILE_FLAGS
-  ${CAT_FLAGS_COMMON}
-  $<$<CONFIG:Debug>:${CAT_FLAGS_DEBUG}>
-  $<$<CONFIG:Release>:${CAT_FLAGS_RELEASE}>
-  $<$<CONFIG:RelWithDebInfo>:${CAT_FLAGS_RELWITHDEBINFO}>
+  APPEND CAT_COMPILE_OPTIONS
+  ${CAT_COMPILE_OPTIONS_COMMON}
+  $<$<CONFIG:Debug>:${CAT_COMPILE_OPTIONS_DEBUG}>
+  $<$<CONFIG:Release>:${CAT_COMPILE_OPTIONS_RELEASE}>
+  $<$<CONFIG:RelWithDebInfo>:${CAT_COMPILE_OPTIONS_RELWITHDEBINFO}>
 )
 
 list(
-  APPEND CAT_COMMON_LINK_FLAGS
+  APPEND CAT_LINK_OPTIONS_COMMON
   # This is required to prevent linking 4 kibibytes of unnecessary symbols.
   -nostdlib
 )
 
 list(
-  APPEND CAT_RELEASE_LINK_FLAGS
-  ${CAT_COMMON_LINK_FLAGS}
+  APPEND CAT_LINK_OPTIONS_RELEASE
+  ${CAT_LINK_OPTIONS_COMMON}
   # Remove unused symbols.
   -Wl,-z,noseparate-code,--gc-sections
 )
 
 list(
-  APPEND CAT_LINK_FLAGS
-  $<$<CONFIG:Debug>:${CAT_COMMON_LINK_FLAGS}>
-  $<$<CONFIG:Release>:${CAT_RELEASE_LINK_FLAGS}>
-  $<$<CONFIG:RelWithDebInfo>:${CAT_RELEASE_LINK_FLAGS}>
+  APPEND CAT_LINK_OPTIONS
+  $<$<CONFIG:Debug>:${CAT_LINK_OPTIONS_COMMON}>
+  $<$<CONFIG:Release>:${CAT_LINK_OPTIONS_RELEASE}>
+  $<$<CONFIG:RelWithDebInfo>:${CAT_LINK_OPTIONS_RELEASE}>
 )
 
 add_library(cat INTERFACE)
-set_target_properties(
-  cat
-  PROPERTIES
-  OUTPUT_NAME "cat"
-)
+
+# Everything building with `cat` should be at least C++23, with GNU extensions.
+target_compile_features(cat INTERFACE cxx_std_23)
 
 # Link the address and undefined behavior sanitizers.
 if(CAT_USE_SANITIZERS)
@@ -116,22 +108,21 @@ if(CAT_USE_SANITIZERS)
   )
 endif()
 
-# `src/CMakeLists.txt` holds the recipes for `cat-cpp` and `cat-include`.
-add_subdirectory(src/)
-
-target_sources(cat INTERFACE ${cat-cpp})
-target_include_directories(cat INTERFACE ${cat-include})
+target_compile_options(cat INTERFACE ${CAT_COMPILE_OPTIONS})
+target_link_options(cat INTERFACE ${CAT_LINK_OPTIONS})
 
 # This is required to link `hello` with lld or mold, but not ld.
 # This is also required to use SIMD intrinsics, even with ld.
 # This adds superfluous code to Hello World.
 target_link_libraries(cat INTERFACE gcc_s)
 
-target_compile_options(cat INTERFACE ${CAT_COMPILE_FLAGS})
-target_link_options(cat INTERFACE ${CAT_LINK_FLAGS})
+# `src/CMakeLists.txt` adds all of the source and headers files to `cat`.
+add_subdirectory(src/)
 
-# Build the tests.
+# Tests can be run using ctest, or by manually running the `unit_tests`
+# executable from your specified build output directory.
 enable_testing()
+# Build the tests.
 add_subdirectory(tests/)
 
 # Build the examples.

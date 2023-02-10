@@ -2,6 +2,11 @@
 // vim: set ft=cpp:
 #pragma once
 
+// Iterator adaptors need access to `protected` copy-constructors, which are
+// marked `[[deprecated]]`.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 #include <cat/maybe>
 
 namespace cat {
@@ -528,3 +533,5 @@ struct as_const_reverse : T {
 // TODO: Add an `it_enumerate` iterator adapter.
 
 }  // namespace cat
+
+#pragma GCC diagnostic pop

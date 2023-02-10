@@ -10,8 +10,10 @@ struct pair_jeaiii {
     char t, o;
 };
 
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-braces"
+#endif
 
 #define P(T)                                                                   \
     T, '0', T, '1', T, '2', T, '3', T, '4', T, '5', T, '6', T, '7', T, '8', T, \
@@ -59,6 +61,8 @@ auto i32toa_jeaiii(int4::raw_type i, char* p_b) -> char*;
 auto u64toa_jeaiii(uint8::raw_type i, char* p_b) -> char*;
 auto i64toa_jeaiii(int8::raw_type i, char* p_b) -> char*;
 
+#ifdef __clang__
 #pragma clang diagnostic pop
+#endif
 
 }  // namespace cat::detail

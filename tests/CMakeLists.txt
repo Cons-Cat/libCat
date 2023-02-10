@@ -8,17 +8,18 @@ add_custom_target(
 )
 add_dependencies(cat cat-gdb-tests)
 
-add_library(cat-tests INTERFACE)
+add_library(cat-tests INTERFACE) # Do not produce a `.so` or `.a` artifact.
 target_link_libraries(cat-tests INTERFACE cat)
 
 list(
   APPEND
-  CAT_COMPILE_FLAGS_TEST
-  ${CAT_COMPILE_FLAGS}
+  CAT_COMPILE_OPTIONS_TEST
+  ${CAT_COMPILE_OPTIONS}
   # Tests should fail if they produce sanitizer warnings.
-  -fno-sanitize-recover=all
+  # TODO: Re-enable this when threads consistently work.
+  # -fno-sanitize-recover=all
   # Tests should be allowed to have unused variables.
-  -Wno-unused-variable
+  # -Wno-unused-variable
 )
 
 # Toggle to disable compiling unit tests.
@@ -61,16 +62,16 @@ if(CAT_BUILD_UNIT_TESTS)
   )
 
   add_executable(unit_tests unit_tests.cpp)
-  # `ctor.ld` is required to set up tests as constructor functions.
+  # `ctor.ld` is required to set up test callbacks as static constructor functions.
   set_target_properties(
     unit_tests PROPERTIES
     LINK_DEPENDS ${CMAKE_SOURCE_DIR}/tests/ctor.ld
   )
   
-  target_compile_options(unit_tests PRIVATE ${CAT_COMPILE_FLAGS})
+  target_compile_options(unit_tests PRIVATE ${CAT_COMPILE_OPTIONS_TEST})
   target_compile_definitions(unit_tests PRIVATE "NO_ARGC_ARGV")
   target_link_libraries(unit_tests PRIVATE cat-tests)
-  target_link_options(unit_tests PRIVATE ${CAT_LINK_FLAGS})
+  target_link_options(unit_tests PRIVATE ${CAT_LINK_OPTIONS})
 
   # Enable running `unit_tests` through `ctest`.
   add_test(NAME UnitTests COMMAND unit_tests)
