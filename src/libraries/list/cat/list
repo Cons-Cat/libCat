@@ -33,7 +33,9 @@ class list : public collection_interface<list<T>, T> {
         friend iterator_interface<iterator_type>;
         using collection_type [[maybe_unused]] = list<T>;
 
-        iterator_type(iterator_type const&) = default;
+        // TODO: This default constructor is deprecated due to the user-defined
+        // constructor. Should this still exist?
+        // iterator_type(iterator_type const&) = default;
 
         iterator_type(detail::list_node<T>* p_input) : p_node(p_input) {
         }
@@ -444,7 +446,9 @@ template <typename T>
 class forward_list : public collection_interface<forward_list<T>, T> {
   public:
     struct iterator_type : iterator_interface<iterator_type> {
-        iterator_type(iterator_type const&) = default;
+        // TODO: This default constructor is deprecated due to the user-defined
+        // constructor. Should this still exist?
+        // iterator_type(iterator_type const&) = default;
 
         iterator_type(detail::forward_list_node<T>* p_input) : p_node(p_input) {
         }

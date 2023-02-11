@@ -102,8 +102,12 @@ constexpr auto max(is_iterable auto&& iterable) {
 template <is_signed_integral T>
 [[nodiscard]]
 constexpr auto abs(T value) -> T {
-    // `__builtin_abs()` returns `int`, so its type must be coerced to `T`.
-    return T(__builtin_abs(to_raw_arithmetic(value)));
+    if constexpr (sizeof(T) == 8) {
+        return __builtin_labs(to_raw_arithmetic(value));
+    } else {
+        // `__builtin_abs()` returns `int`, so its type must be coerced to `T`.
+        return T(__builtin_abs(to_raw_arithmetic(value)));
+    }
 }
 
 [[nodiscard]]

@@ -21,18 +21,17 @@ list(
   -mbmi2
   -mfsgsbase
 
-  # These flags cause clang-tidy to crash:
-  # -fconcepts-diagnostics-depth=2
-  -fmax-errors=4
-  
   # Enable most warnings.
   -Wall -Wextra
   -Wno-unused-function
   -Wno-unknown-pragmas
-  # Disable some Clang warnings.
+  # Disable some Clang warnings. libCat needs to violate these.
   $<$<CXX_COMPILER_ID:Clang>:-Wno-unknown-attributes>
   $<$<CXX_COMPILER_ID:Clang>:-Wno-inline-new-delete>
   $<$<CXX_COMPILER_ID:Clang>:-Wno-unqualified-std-cast-call>
+  $<$<CXX_COMPILER_ID:Clang>:-Wno-main>
+  # This produces many false positives in Clang 17.
+  $<$<CXX_COMPILER_ID:Clang>:-Wno-redundant-consteval-if>
 )
 
 if(CAT_USE_SANITIZERS)
@@ -41,9 +40,11 @@ if(CAT_USE_SANITIZERS)
     -fno-omit-frame-pointer # Required for UBsan.
     -fsanitize=undefined
     -fsanitize=address
+
     # Asan stack overflow checking does not work in libCat.
     # TODO: Explain why.
-    --param asan-stack=0
+	$<$<CXX_COMPILER_ID:GNU>:--param asan-stack=0>
+	$<$<CXX_COMPILER_ID:Clang>:-mllvm -asan-stack=0>
   )
 endif()
 

@@ -163,13 +163,16 @@ constexpr auto extract_bits(T from, cat::is_unsigned_integral auto offset,
     auto raw_offset = cat::to_raw_arithmetic(offset);
     auto raw_length = cat::to_raw_arithmetic(length);
 
-    if constexpr (__has_builtin(__builtin_ia32_bextr_u32) && sizeof(T) == 4) {
-        return T(
-            __builtin_ia32_bextr_u32(raw_from, raw_offset | (raw_length << 8)));
-    } else if constexpr (__has_builtin(__builtin_ia32_bextr_u64) &&
-                         sizeof(T) == 8) {
-        return T(
-            __builtin_ia32_bextr_u64(raw_from, raw_offset | (raw_length << 8)));
+    if !consteval {
+        if constexpr (__has_builtin(__builtin_ia32_bextr_u32) &&
+                      sizeof(T) == 4) {
+            return T(__builtin_ia32_bextr_u32(raw_from,
+                                              raw_offset | (raw_length << 8)));
+        } else if constexpr (__has_builtin(__builtin_ia32_bextr_u64) &&
+                             sizeof(T) == 8) {
+            return T(__builtin_ia32_bextr_u64(raw_from,
+                                              raw_offset | (raw_length << 8)));
+        }
     }
     constexpr unsigned char bits = sizeof(T) * 8u;
     auto const mask = T((1u << raw_length) * (raw_length < bits) - 1u).raw;
@@ -243,17 +246,18 @@ constexpr auto deposit_bits_mask(T value, U mask) -> T {
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto zero_high_bits_at(T source, cat::uint4 bit_index) -> T {
-    if constexpr (__has_builtin(__builtin_ia32_bzhi_si) && sizeof(T) == 4) {
-        return __builtin_ia32_bzhi_si(cat::to_raw_arithmetic(source),
-                                      bit_index.raw);
-    } else if constexpr (__has_builtin(__builtin_ia32_bzhi_di) &&
-                         sizeof(T) == 8) {
-        return __builtin_ia32_bzhi_di(cat::to_raw_arithmetic(source),
-                                      bit_index.raw);
-    } else {
-        // TODO: Implement this.
-        __builtin_unreachable();
+    if !consteval {
+        if constexpr (__has_builtin(__builtin_ia32_bzhi_si) && sizeof(T) == 4) {
+            return __builtin_ia32_bzhi_si(cat::to_raw_arithmetic(source),
+                                          bit_index.raw);
+        } else if constexpr (__has_builtin(__builtin_ia32_bzhi_di) &&
+                             sizeof(T) == 8) {
+            return __builtin_ia32_bzhi_di(cat::to_raw_arithmetic(source),
+                                          bit_index.raw);
+        }
     }
+    // TODO: Implement this.
+    __builtin_unreachable();
 }
 
 }  // namespace x64

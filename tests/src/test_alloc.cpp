@@ -12,6 +12,7 @@ int4 alloc_counter = 0;
 
 struct alloc_non_trivial {
     char storage;
+
     alloc_non_trivial() {
         ++alloc_counter;
     }
@@ -19,6 +20,7 @@ struct alloc_non_trivial {
 
 struct alloc_non_trivial_huge_object {
     [[maybe_unused]] uint1 storage[cat::inline_buffer_size.raw];
+
     alloc_non_trivial_huge_object() {
         ++alloc_counter;
     }
@@ -46,7 +48,10 @@ consteval void const_test() {
 }
 
 TEST(test_alloc) {
+#ifndef __clang__
+    // This does not compile with Clang, currently.
     const_test();
+#endif
 
     // Initialize an allocator.
     cat::page_allocator pager;

@@ -1,0 +1,11 @@
+CompileFlags:
+  Add:
+    - -std=gnu++2b
+    - -Wno-unknown-attributes>
+    - -Wno-inline-new-delete
+    - -Wno-unqualified-std-cast-call
+  Remove:
+    - -fconcepts-diagnostics-depth=*
+    - -std=gnu++23
+Index:
+  StandardLibrary: No

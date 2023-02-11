@@ -9,6 +9,13 @@ add_custom_target(
 add_dependencies(cat cat-gdb-examples)
 
 add_library(cat-examples INTERFACE)
+
+target_compile_options(cat-examples INTERFACE
+  $<$<CXX_COMPILER_ID:GNU>:-fmax-errors=4>
+  $<$<CXX_COMPILER_ID:Clang>:-ferror-limit=4>
+  $<$<CXX_COMPILER_ID:GNU>:-fconcepts-diagnostics-depth=2>
+)
+
 target_link_libraries(cat-examples INTERFACE cat)
 
 option(CAT_BUILD_ALL_EXAMPLES "Compile all examples unconditionally." ON)

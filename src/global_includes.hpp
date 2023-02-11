@@ -14,6 +14,7 @@ namespace cat {
 namespace detail {
     struct [[maybe_unused]] unused_type {
         template <typename T>
+        // NOLINTNEXTLINE Allow this to return void.
         constexpr void operator=(T const&) {
         }
 
@@ -171,8 +172,8 @@ operator new[](unsigned long, void* p_address) -> void* {
     return p_address;
 }
 
-// NOLINTNEXTLINE Let this be `inline`.
 [[nodiscard]]
+// NOLINTNEXTLINE Let this be `inline` for now.
 inline auto
 operator new[](unsigned long) -> void* {
     return reinterpret_cast<void*>(1ul);
@@ -183,7 +184,7 @@ enum class align_val_t : __SIZE_TYPE__ {
 };
 }  // namespace std
 
-// NOLINTNEXTLINE Let this be `inline`.
+// NOLINTNEXTLINE Let this be `inline` for now.
 inline void operator delete[](void*) {
 }
 
@@ -193,9 +194,8 @@ inline void operator delete[](void*, unsigned long) {
 inline void operator delete[](void*, unsigned long, std::align_val_t) {
 }
 
-// NOLINTNEXTLINE Let this be `inline`.
 [[nodiscard]]
 inline auto
 operator new[](unsigned long, std::align_val_t align) -> void* {
-    return reinterpret_cast<void*>(align);
+    return reinterpret_cast<void*>(align);  // NOLINT
 }

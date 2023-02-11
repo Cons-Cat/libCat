@@ -42,8 +42,8 @@ TEST(test_bit) {
 
     // Test bzhi().
     // TODO: These only test it compiles. Test that it works correctly.
-    static_assert(x64::zero_high_bits_at(8_u4, 8u));
-    static_assert(x64::zero_high_bits_at(8_u8, 8u));
+    cat::assert(x64::zero_high_bits_at(8_u4, 8u) != 0u);
+    cat::assert(x64::zero_high_bits_at(8_u8, 8u) != 0u);
 
     // Test `bit_value`.
     cat::bit_value bit1 = false;

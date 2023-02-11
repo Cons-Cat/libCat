@@ -6,6 +6,7 @@ Checks: "bugprone-*,
 		 misc-*,
 		 # DISABLE SOME CHECKS:
 		 -bugprone-easily-swappable-parameters, # I'm on the fence about this.
+         -bugprone-reserved-identifier, # libCat needs to make some of these.
 		 -performance-noexcept-move-constructor, # libCat doesn't have exceptions yet.
 		 -modernize-avoid-c-arrays, # They're needed in some low-level code.
 		 -modernize-use-auto, # I rather human judgement.

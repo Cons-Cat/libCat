@@ -58,15 +58,16 @@ class ring : public collection_interface<ring<T>, T> {
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]]
-    static auto reserved(is_stable_allocator auto& allocator, iword capacity)
-        -> maybe<ring<T>> {
+    static auto reserved([[maybe_unused]] is_stable_allocator auto& allocator,
+                         [[maybe_unused]] iword capacity) -> maybe<ring<T>> {
     }
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]]
-    static auto filled(is_stable_allocator auto& allocator, iword capacity,
-                       T value) -> maybe<ring<T>> {
+    static auto filled([[maybe_unused]] is_stable_allocator auto& allocator,
+                       [[maybe_unused]] iword capacity,
+                       [[maybe_unused]] T value) -> maybe<ring<T>> {
     }
 
     [[nodiscard]]
@@ -124,7 +125,8 @@ class ring : public collection_interface<ring<T>, T> {
     }
 
     [[nodiscard]]
-    auto clone(is_stable_allocator auto& allocator) -> maybe<ring<T>> {
+    auto clone([[maybe_unused]] is_stable_allocator auto& allocator)
+        -> maybe<ring<T>> {
     }
 
     // Get the non-`const` address of this `vector`'s internal array.

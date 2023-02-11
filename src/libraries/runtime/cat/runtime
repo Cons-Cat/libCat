@@ -2,23 +2,19 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/arithmetic>
 #include <cat/meta>
+//
+#include <cat/arithmetic>
+
+namespace cat {
 
 // Name mangling prevents the linker from finding this symbol.
 extern "C"
     // GCC wants to insert a `__asan_handle_no_return()` call, which breaks
     // argument loading.
     [[noreturn, gnu::used, gnu::no_sanitize_address,
-// A `naked` function does not reserve stack space, which otherwise breaks
-// argument loading on low optimization levels.
-#ifndef NO_ARGC_ARGV
-      gnu::naked
-#endif
-]]
+      gnu::force_align_arg_pointer]]
     void _start();  // NOLINT
-
-namespace cat {
 
 // The `cat::exit()` function is provided globally. This streamlines out the
 // existence of `_exit()`.

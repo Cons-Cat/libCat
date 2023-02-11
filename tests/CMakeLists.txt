@@ -15,11 +15,17 @@ list(
   APPEND
   CAT_COMPILE_OPTIONS_TEST
   ${CAT_COMPILE_OPTIONS}
+  
+  $<$<CXX_COMPILER_ID:GNU>:-fmax-errors=4>
+  $<$<CXX_COMPILER_ID:Clang>:-ferror-limit=4>
+  $<$<CXX_COMPILER_ID:GNU>:-fconcepts-diagnostics-depth=2>
+
   # Tests should fail if they produce sanitizer warnings.
   # TODO: Re-enable this when threads consistently work.
   # -fno-sanitize-recover=all
   # Tests should be allowed to have unused variables.
-  # -Wno-unused-variable
+  -Wno-unused-variable
+  $<$<CXX_COMPILER_ID:Clang>:-Wno-self-assign-overloaded>
 )
 
 # Toggle to disable compiling unit tests.

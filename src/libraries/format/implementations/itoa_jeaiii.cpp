@@ -15,14 +15,20 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+// I don't want to edit the macros in this code, so I'm disabling the Clang
+// warning.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-braces"
+
 #include <cat/format>
 
 #define P(T)                                                                   \
     T, '0', T, '1', T, '2', T, '3', T, '4', T, '5', T, '6', T, '7', T, '8', T, \
         '9'
-static const cat::detail::pair_jeaiii s_pairs[] = {
+inline constexpr cat::detail::pair_jeaiii s_pairs[] = {
     P('0'), P('1'), P('2'), P('3'), P('4'),
-    P('5'), P('6'), P('7'), P('8'), P('9')};
+    P('5'), P('6'), P('7'), P('8'), P('9'),
+};
 
 #define W(N, I) *(cat::detail::pair_jeaiii*)&b[N] = s_pairs[I]
 #define A(N)                                                 \
@@ -134,3 +140,5 @@ consteval auto cat::to_string(int4 value) -> string {
     return p_string;
 }
 */
+
+#pragma clang diagnostic pop
