@@ -1,7 +1,7 @@
 CompileFlags:
   Add:
     - -std=gnu++2b
-    - -Wno-unknown-attributes>
+    - -Wno-unknown-attributes
     - -Wno-inline-new-delete
     - -Wno-unqualified-std-cast-call
   Remove:
