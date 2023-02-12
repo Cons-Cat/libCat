@@ -21,8 +21,8 @@ class array : public collection_interface<array<T, length>, T, true> {
 
     // Construct an `array` from a variadic argument list.
     template <typename... Args>
-        requires(ssizeof_pack<Args...>() == length &&
-                 (is_implicitly_convertible<Args, T> && ...))
+        requires(ssizeof_pack<Args...>() == length /* &&
+													  (is_convertible<Args, T> && ...)*/)
     constexpr array(Args&&... arguments)
         // Explicitly converting this type allows the first argument to coerce
         // the type for following arguments.
@@ -35,7 +35,7 @@ class array : public collection_interface<array<T, length>, T, true> {
 
     // Converting copy assignment operator.
     template <typename U>
-        requires(is_implicitly_convertible<U, T>)
+    // requires(is_convertible<U, T>)
     constexpr auto operator=(array<U, length> const& other_array) -> array& {
         // TODO: Optimize with `copy_memory()` if T and U are relocatable.
         for (iword i = 0; i < length; ++i) {

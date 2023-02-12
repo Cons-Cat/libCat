@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/arithmetic_interface>
 #include <cat/compare>
 #include <cat/limits>
 
@@ -116,6 +117,14 @@ template <typename T>
 concept is_unsafe_arithmetic =
     is_arithmetic<T> && __is_same(T, to_raw_arithmetic_type<T>);
 
+template <typename T>
+concept is_safe_integer =
+    is_integral<T> && !__is_same(T, to_raw_arithmetic_type<T>);
+
+template <typename T>
+concept is_unsafe_integer =
+    is_integral<T> && __is_same(T, to_raw_arithmetic_type<T>);
+
 namespace detail {
     template <typename T, typename U>
     consteval auto promoted_arithmetic() {
@@ -135,17 +144,16 @@ namespace detail {
         }
     }
 
-    // clang-format off
     template <typename T, typename U>
-        requires( // If their signed-ness is equal:
-				 (is_signed<T> == is_signed<U> ||
-                   // Or the signed type is larger than the unsigned type:
-                   (is_signed<T> && !is_signed<U> && sizeof(T) > sizeof(U)) ||
-                   (!is_signed<T> && is_signed<U> && sizeof(T) < sizeof(U))) &&
-                  // And their float-ness is equal:
-                 (is_floating_point<T> == is_floating_point<U>))
+        requires(  // If their signed-ness is equal:
+                    (is_signed<T> == is_signed<U> ||
+                     // Or the signed type is larger than the unsigned type:
+                     (is_signed<T> && !is_signed<U> && sizeof(T) > sizeof(U)) ||
+                     (!is_signed<T> && is_signed<U> &&
+                      sizeof(T) < sizeof(U))) &&
+                    // And their float-ness is equal:
+                    (is_floating_point<T> == is_floating_point<U>))
     using promoted_type = decltype(promoted_arithmetic<T, U>());
-    // clang-format on
 }  // namespace detail
 
 // Overflow intrinsics optimize fairly well in GCC.
@@ -467,6 +475,12 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
         return *this;
     }
 
+    // Two `operator+` overloads are required, because it is not possible for a
+    // compiler to resolve `1 + arithmetic(1)` otherwise. It cannot convert that
+    // `1` into an `arithmetic` with an unspecified overflow policy, so a
+    // separate operator overload for left-hand unsafe types is required.
+
+    // Add a left-hand-side `arithmetic` to a right-hand-side operand.
     template <is_arithmetic U>
         requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]]
@@ -486,9 +500,8 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
         }
     }
 
-    // Handle left-hand-side raw operands that are larger than this. Because
-    // `operator+` is a member, the arguments cannot be order-independant
-    // without this overload.
+    // Add a right-hand-side `arithmetic` to a left-hand-side raw operand.
+    // A safe operand will select the above overload instead of this.
     template <is_unsafe_arithmetic U>
         requires(is_safe_arithmetic_comparison<U, T>)
     [[nodiscard]]
@@ -497,13 +510,15 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
         return cat::arithmetic<U>(operand) + self;
     }
 
-    template <typename U>
-    [[nodiscard]]
-    friend constexpr auto
-    operator+(U* p_operand, arithmetic self) -> U* {
-        return p_operand + self.raw;
+    template <is_arithmetic U>
+        requires(is_safe_arithmetic_comparison<U, T>)
+    friend constexpr auto operator+=(arithmetic& self, U operand)
+        -> arithmetic& {
+        self = self + to_raw_arithmetic(operand);
+        return self;
     }
 
+    // Add `arithmetic` to a right-hand-side pointer.
     template <typename U>
     [[nodiscard]]
     friend constexpr auto
@@ -511,12 +526,12 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
         return self.raw + p_operand;
     }
 
-    template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<U, T>)
-    friend constexpr auto operator+=(arithmetic& self, U operand)
-        -> arithmetic& {
-        self = self + to_raw_arithmetic(operand);
-        return self;
+    // Add `arithmetic` to a left-hand-side pointer.
+    template <typename U>
+    [[nodiscard]]
+    friend constexpr auto
+    operator+(U* p_operand, arithmetic self) -> U* {
+        return p_operand + self.raw;
     }
 
     [[nodiscard]]
@@ -1238,6 +1253,70 @@ constexpr auto operator|=(T* p_lhs, arithmetic<U> rhs) -> T* {
     return p_lhs;
 }
 
+template <overflow_policies policy = overflow_policies::undefined>
+struct idx : detail::arithmetic_storage<__SIZE_TYPE__, policy>,
+             // Generate commutative operators.
+             arithmetic_interface<idx<policy>> {
+    using raw_type = __SIZE_TYPE__;
+
+    constexpr idx() = default;
+
+    // Any integral type smaller than `raw_type` can safely implicitly convert
+    // into `idx`.
+    template <is_integral U>
+    constexpr explicit(sizeof(U) >= sizeof(raw_type)) idx(U other) {
+        this->raw = to_raw_arithmetic(other);
+    }
+
+    // Any integral type smaller than `raw_type` can safely be assigned to
+    // `idx`.
+    template <is_integral U>
+        requires(sizeof(U) < sizeof(raw_type))
+    constexpr auto operator=(U other) -> idx& {
+        this->raw = to_raw_arithmetic(other);
+        return *this;
+    }
+
+    // `idx` can safely implictly convert into `iword`, `uword`, or
+    // `arithmetic_ptr`. Other conversions to integers are explicit.
+    template <is_integral U>
+    constexpr explicit((sizeof(U) < sizeof(raw_type))) operator U() const {
+        return static_cast<U>(this->raw);
+    }
+
+    // TODO: Handle type promotion appropriately.
+
+    // Generate `operator+`.
+    template <is_integral T>
+    constexpr auto add(T other) const -> idx {
+        return static_cast<idx>(this->raw + to_raw_arithmetic(other));
+    }
+
+    // Generate unary and binary `operator-`.
+    [[nodiscard]]
+    constexpr auto negate() const {
+        auto negated = -make_signed(this->raw);
+        return arithmetic<decltype(negated), policy>(negated);
+    }
+
+    // Generate `operator*`.
+    template <is_integral T>
+    constexpr auto multiply(T other) const -> idx {
+        return static_cast<idx>(this->raw * to_raw_arithmetic(other));
+    }
+
+    // Generate `operator/`.
+    template <is_integral T>
+    constexpr auto divide_by(T other) const -> idx {
+        return static_cast<idx>(this->raw / to_raw_arithmetic(other));
+    }
+
+    template <is_integral T>
+    constexpr auto divide_into(T other) const -> idx {
+        return static_cast<idx>(to_raw_arithmetic(other) / this->raw);
+    }
+};
+
 inline namespace integers {
     // These macros are defined by the GCC compiler.
     using int1 = arithmetic<__INT8_TYPE__, overflow_policies::undefined>;
@@ -1257,6 +1336,8 @@ inline namespace integers {
 
     using float4 = arithmetic<float, overflow_policies::undefined>;
     using float8 = arithmetic<double, overflow_policies::undefined>;
+
+    using idx = cat::idx<overflow_policies::undefined>;
 
     // `__INTPTR_TYPE__` is defined by the GCC compiler.
     template <typename T>

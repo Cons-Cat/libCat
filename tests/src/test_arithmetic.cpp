@@ -9,14 +9,14 @@ struct nttp {
 };
 
 TEST(test_numerals) {
+    // TODO: Test invalid arithmetic operations with `concept`s like
+    // `cat::is_add_assignable<uint4, int4>`.
+
     using namespace cat::literals;
     using namespace cat::integers;
 
-    // Test `concept`s.
-    // static_assert(cat::detail::arithmeticNonPtr<int4>);
-    // static_assert(cat::detail::arithmeticNonPtr<__INTPTR_TYPE__>);
-    // static_assert(!cat::detail::arithmeticNonPtr<intptr<void>>);
-
+    // Test relationship to raw types.
+    // TODO: Test `is_unsafe_arithmetic` and `to_raw_arithmetic()`.
     static_assert(cat::is_same<cat::to_raw_arithmetic_type<int>, int>);
     static_assert(
         cat::is_same<cat::to_raw_arithmetic_type<int4>, int4::raw_type>);
@@ -187,6 +187,10 @@ TEST(test_numerals) {
     static_assert(cat::is_same<decltype(intptr<void>{} + 1), intptr<void>>);
     static_assert(cat::is_same<decltype(intptr<void>{} - 1), intptr<void>>);
 
+    static_assert(cat::is_convertible<int2, int4>);
+    static_assert(cat::is_convertible<uint2, uint4>);
+    static_assert(cat::is_convertible<uint2, int4>);
+
     // Test integer promotion.
     int1 promote_int1 = 1_i1;
     int2 promote_int2 = promote_int1;
@@ -223,10 +227,10 @@ TEST(test_numerals) {
     p_int4 = p_int4 - 1_i4;
     p_int4 -= 1_i4;
 
-    p_int4 += intptr<void>{0};
-    p_int4 -= intptr<void>{0};
-    p_int4 += uintptr<void>{0};
-    p_int4 -= uintptr<void>{0};
+    p_int4 += intptr<void>{0};   // NOLINT
+    p_int4 -= intptr<void>{0};   // NOLINT
+    p_int4 += uintptr<void>{0};  // NOLINT
+    p_int4 -= uintptr<void>{0};  // NOLINT
 
     // Test `intpr` constructors and assignment.
     intptr<void> intptr_1 = nullptr;
@@ -259,7 +263,7 @@ TEST(test_numerals) {
     int4 int_more = 2;
 
     [[maybe_unused]] bool is_less = (int_less < int_more);
-    is_less = ((0 <=> int_more) < 0);
+    is_less = ((0 <=> int_more) < 0);  // NOLINT
     cat::verify(is_less);
     is_less = (0 < int_more);
     cat::verify(is_less);
@@ -267,7 +271,7 @@ TEST(test_numerals) {
     cat::verify(is_less);
 
     [[maybe_unused]] bool is_more = (int_more > int_less);
-    is_more = ((0 <=> int_less) == 0);
+    is_more = ((0 <=> int_less) == 0);  // NOLINT
     cat::verify(is_more);
     is_more = (0 < int_more);
     cat::verify(is_more);
@@ -605,4 +609,39 @@ TEST(test_numerals) {
 
     // Test bit-casts.
     cat::verify(__builtin_bit_cast(unsigned, 2_i4) == 2u);
+
+    // Test `idx`.
+    idx idx1;
+    idx idx2 = 1;
+    idx2 = 1;
+    idx idx3 = 1u;
+    idx3 = 1u;
+    idx1 = idx2;
+
+    idx1 + idx2;
+    idx1 + 1;
+    1u + idx1;
+    idx1 += 1;
+
+    idx1 - idx2;
+    idx1 - 1;
+    1 - idx1;
+    idx1 -= 1;
+
+    idx1* idx2;
+    idx1 * 1;
+    1 * idx1;
+    idx1 *= 1;
+
+    idx1 / idx2;
+    idx1 / 1;
+    1 / idx1;
+    idx1 /= 1;
+
+    // `idx` is not implicitly convertible to `int`:
+    static_assert(!cat::is_convertible<idx, int>);
+    static_assert(!cat::is_convertible<decltype(idx1), int>);
+
+    [[maybe_unused]] iword index_iword = idx2;
+    [[maybe_unused]] uword index_uword = idx2;
 };
