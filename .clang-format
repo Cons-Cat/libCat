@@ -1,13 +1,14 @@
-# I am using clang-format 12.0, so some features are unavailable.
 ---
 Language: Cpp
 IndentWidth: 4
+ColumnLimit: 80
+MaxEmptyLinesToKeep: 1
 
 # These are clang-format 13 features:
 LambdaBodyIndentation: Signature
 ReferenceAlignment: Left
 
-# These are clang-format 14 feature:
+# These are clang-format 14 features:
 QualifierAlignment: Custom
 QualifierOrder: ['static', 'inline', 'constexpr', 'type', 'const', 'volatile' ]
 SeparateDefinitionBlocks: Always
@@ -27,7 +28,8 @@ RequiresExpressionIndentation: Keyword
 
 BraceWrapping:
   AfterEnum: false
-AlignAfterOpenBracket: Align
+
+AlignAfterOpenBracket: BlockIndent
 AlignConsecutiveAssignments: None
 AlignConsecutiveBitFields: AcrossEmptyLinesAndComments
 AlignConsecutiveDeclarations: None
@@ -57,9 +59,7 @@ BreakInheritanceList: BeforeColon
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializersBeforeComma: false
 BreakConstructorInitializers: BeforeColon
-BreakAfterJavaFieldAnnotations: false
 BreakStringLiterals: true
-ColumnLimit: 80
 CompactNamespaces: false
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 Cpp11BracedListStyle: true
@@ -68,6 +68,7 @@ DerivePointerAlignment: false
 EmptyLineBeforeAccessModifier: Always
 ExperimentalAutoDetectBinPacking: false
 FixNamespaceComments: true
+SortIncludes: true
 IncludeBlocks: Regroup
 IncludeCategories:
  - Regex: '^<ext/.*\.hpp>'
@@ -93,15 +94,11 @@ IncludeCategories:
 IndentCaseLabels: true
 IndentCaseBlocks: true
 IndentGotoLabels: false
-#PPIndentWidth: 0
 IndentPPDirectives: None
 IndentExternBlock: AfterExternBlock
 IndentWrappedFunctionNames: false
 InsertTrailingCommas: None
-JavaScriptQuotes: Leave
-JavaScriptWrapImports: true
 KeepEmptyLinesAtTheStartOfBlocks: false
-MaxEmptyLinesToKeep: 1
 NamespaceIndentation: Inner
 PenaltyBreakAssignment: 2
 PenaltyBreakBeforeFirstCallParameter: 1
@@ -114,7 +111,6 @@ PenaltyReturnTypeOnItsOwnLine: 200
 PenaltyIndentedWhitespace: 0
 PointerAlignment: Left
 ReflowComments: true
-SortIncludes: true
 SortUsingDeclarations: true
 SpaceAfterCStyleCast: false
 SpaceAfterLogicalNot: false
