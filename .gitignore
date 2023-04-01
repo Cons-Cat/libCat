@@ -1,7 +1,8 @@
 *~
 *#*
-build/
+build*/
 compile_commands.json
 .cache/
 .cmake/
 CMakeFiles/
+.dir-locals2.el
