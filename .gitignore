@@ -5,4 +5,4 @@ compile_commands.json
 .cache/
 .cmake/
 CMakeFiles/
-.dir-locals2.el
+.dir-locals-*.el

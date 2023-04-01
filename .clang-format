@@ -11,7 +11,6 @@ ReferenceAlignment: Left
 # These are clang-format 14 features:
 QualifierAlignment: Custom
 QualifierOrder: ['static', 'inline', 'constexpr', 'type', 'const', 'volatile' ]
-SeparateDefinitionBlocks: Always
 AlignArrayOfStructures: Right
 SeparateDefinitionBlocks: Always
 
@@ -23,9 +22,11 @@ IndentRequiresClause: true
 # These are clang-format 16 features:
 BreakAfterAttributes: Always
 RequiresExpressionIndentation: Keyword
+BreakBeforeInlineASMColon: Always
 
-# These work with clang-format 12:
+# These are clang-format 17 features:
 
+# ----------------------------------
 BraceWrapping:
   AfterEnum: false
 

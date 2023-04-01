@@ -3,7 +3,7 @@
 #+OPTIONS: ^:{}
 #+STARTUP: fold
 
-libCat is a non-POSIX compliant C++23 runtime. It has no pthreads nor =malloc()=, and by extension no exceptions. It has type-safe arithmetic, SIMD, fast syscalls, interfaces (also known as facades), and value-based error-handling, among many other features.
+libCat is a non-POSIX compliant C++23 runtime. It has no pthreads nor =malloc()=, and by extension no exceptions. It has type-safe arithmetic, SIMD, fast syscalls, interfaces (also known as facades), hierarchical memory allocators, and value-based error-handling, among many other features.
 
 [[http://wgoo.ch/overflow.html]]
 
@@ -19,4 +19,4 @@ libCat requires a development version of GCC 13. Building appears to fail using 
   $ ./build/tests/Debug/unit_tests
 #+END_SRC
 
-The =.clang-format= and =.clang-tidy= configurations are only compatible with recent versions of Clang 16 tools from 2023.
+The =.clang-format= and =.clang-tidy= configurations are only compatible with recent versions of Clang 17 tools.

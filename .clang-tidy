@@ -38,7 +38,8 @@ CheckOptions:
   - { key: readability-identifier-naming.LocalPointerPrefix,      value: p_ }
   - { key: readability-identifier-naming.LocalConstantPointerPrefix,     value: p_ }
   - { key: readability-identifier-naming.TemplateParameterIgnoredRegexp, value: '[A-Z]' }
-  - { key: readability-identifier-naming.TypeAliasIgnoredRegexp, value: '[A-Z]' }
-  - { key: readability-identifier-naming.TypedefIgnoredRegexp, value: '[A-Z]' }
-  - { key: performance-unnecessary-value-param.AllowedTypes,       value: string;span;io_vector }
+  - { key: readability-identifier-naming.TypeAliasIgnoredRegexp,  value: '[A-Z]' }
+  - { key: readability-identifier-naming.TypedefIgnoredRegexp,    value: '[A-Z]' }
+  - { key: performance-unnecessary-value-param.AllowedTypes,      value: string;span;io_vector }
+  - { key: readability-operators-representation.BinaryOperators,  value: '&&;&=;&;|;~;!;!=;||;|=;^;^=' }
 ...
