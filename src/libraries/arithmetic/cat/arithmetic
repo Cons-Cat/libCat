@@ -141,47 +141,68 @@ concept is_unsafe_integral =
     is_integral<T> && __is_same(T, to_raw_arithmetic_type<T>);
 
 namespace detail {
-    template <typename T, typename U>
+    // The larger the `order` in this hierarchy is, the greater its precedence
+    // is in integer promotion. Any type with a lower `order` can safely convert
+    // to a type with a higher `order`, regardless of signed-ness.
+    template <typename T>
+    struct integer_promotion_hierarchy {
+        static constexpr unsigned long order = sizeof(T);
+    };
+
+    // template <typename T, overflow_policies policy>
+    // struct integer_promotion_hierarchy<arithmetic<T, policy>> {
+    //     static constexpr unsigned long order = sizeof(T);
+    // };
+
+    template <overflow_policies policy>
+    struct integer_promotion_hierarchy<idx<policy>> {
+        // 7 is smaller than 8 from `uword`, but larger than 4 from `uint4`.
+        // uint4 should promote to `idx`, and `idx` should promote to `uword`.
+        static constexpr unsigned long order = 7;
+    };
+
+    template <typename T, typename storage_type, overflow_policies policy>
+    struct integer_promotion_hierarchy<
+        arithmetic_ptr<T, storage_type, policy>> {
+        // 9 is larger than 8 from `uword` and `iword`, so all integers should
+        // promote to `arithmetic_ptr`.
+        static constexpr unsigned long order = 9;
+    };
+
+    // TODO: Propagate overflow semantics.
+    template <typename left, typename right>
     consteval auto promoted_arithmetic() {
-        if constexpr (is_arithmetic_ptr<T>) {         // NOLINT
-            return T();
-        } else if constexpr (is_arithmetic_ptr<U>) {  // NOLINT
-            return U();
-        } else if constexpr (is_idx<T> && sizeof(U) >= sizeof(T)) {
-            // Promote `idx` to an 8-byte `U`.
-            return arithmetic<
-                to_raw_arithmetic_type<U>, overflow_policies::undefined>();
-        } else if constexpr (is_idx<U> && sizeof(T) >= sizeof(U)) {
-            // Promote `idx` to an 8-byte `T`.
-            return arithmetic<
-                to_raw_arithmetic_type<T>, overflow_policies::undefined>();
-        } else {
-            // TODO: Propagate overflow semantics.
-            if constexpr (sizeof(T) >= sizeof(U)) {
-                return arithmetic<
-                    to_raw_arithmetic_type<T>, overflow_policies::undefined>();
+        constexpr bool is_left_unsafe = is_unsafe_arithmetic<left>;
+        constexpr bool is_right_unsafe = is_unsafe_arithmetic<right>;
+
+        if constexpr (integer_promotion_hierarchy<left>::order >= integer_promotion_hierarchy<right>::order) {
+            if constexpr (is_left_unsafe) {
+                return arithmetic<left, overflow_policies::undefined>();
             } else {
-                return arithmetic<
-                    to_raw_arithmetic_type<U>, overflow_policies::undefined>();
+                return left();
+            }
+        } else {
+            if constexpr (is_right_unsafe) {
+                return arithmetic<right, overflow_policies::undefined>();
+            } else {
+                return right();
             }
         }
     }
 
-    template <typename T, typename U>
-        requires(  // If their signed-ness is equal:
-                    (is_signed<T> == is_signed<U> ||
-                     // Or the signed type is larger than the unsigned type:
-                     (is_signed<T> && !is_signed<U> && sizeof(T) > sizeof(U)) ||
-                     (!is_signed<T> && is_signed<U> && sizeof(T) < sizeof(U))
-                     // Or one of the operands is an `idx`:
-                     || (is_idx<T> || is_idx<U>)) &&
-                    // And their float-ness is equal:
-                    (is_floating_point<T> == is_floating_point<U>)
+    template <typename left, typename right>
+        requires(  // Either one type has promotion precedence, or they have the
+                   // same precedence and the same signedness:
+                    (integer_promotion_hierarchy<left>::order !=
+                         integer_promotion_hierarchy<right>::order ||
+                     is_signed<left> == is_signed<right>)
+                    // Both types must have the same float-ness:
+                    && (is_floating_point<left> == is_floating_point<right>)
                 )
-    using promoted_type = decltype(promoted_arithmetic<T, U>());
+    using promoted_type = decltype(promoted_arithmetic<left, right>());
 }  // namespace detail
 
-// Overflow intrinsics optimize fairly well in GCC.
+// Overflow intrinsics optimize wrapping and saturation well in GCC.
 // `[[gnu::optimize(2)]]` is required because the codegen is awful by default.
 
 // Add two integers with saturating overflow.
@@ -963,7 +984,7 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
 // `is_integral` concept.
 template <
     typename T, typename storage_type,
-    auto policy = overflow_policies::undefined>
+    overflow_policies policy = overflow_policies::undefined>
 struct arithmetic_ptr : arithmetic<storage_type, policy> {
   public:
     using raw_type = storage_type;
