@@ -18,8 +18,8 @@ TEST(test_numerals) {
     // Test relationship to raw types.
     // TODO: Test `is_unsafe_arithmetic` and `to_raw_arithmetic()`.
     static_assert(cat::is_same<cat::to_raw_arithmetic_type<int>, int>);
-    static_assert(
-        cat::is_same<cat::to_raw_arithmetic_type<int4>, int4::raw_type>);
+    static_assert(cat::is_same<
+                  cat::to_raw_arithmetic_type<int4>, int4::raw_type>);
 
     // Test numerals' size,
     static_assert(sizeof(int1) == 1);
@@ -85,6 +85,16 @@ TEST(test_numerals) {
     static_assert(!cat::is_unsigned_integral<int>);
     static_assert(cat::is_unsigned_integral<unsigned>);
     static_assert(!cat::is_unsigned_integral<float>);
+
+    static_assert(cat::is_arithmetic<char>);
+    static_assert(cat::is_arithmetic<signed char>);
+    static_assert(cat::is_arithmetic<unsigned char>);
+    static_assert(cat::is_arithmetic<short>);
+    static_assert(cat::is_arithmetic<unsigned short>);
+    static_assert(cat::is_arithmetic<int>);
+    static_assert(cat::is_arithmetic<unsigned int>);
+    static_assert(cat::is_arithmetic<long long>);
+    static_assert(cat::is_arithmetic<unsigned long long>);
 
     // Test `int_fixed` and `uint_fixed`.
     static_assert(cat::is_same<cat::int_fixed<1>, int1>);
@@ -299,7 +309,8 @@ TEST(test_numerals) {
         }),
         is_a<int4>().then([&]() {
             matched = true;
-        }));
+        })
+    );
     cat::verify(matched);
 
     // Match value.
@@ -310,7 +321,8 @@ TEST(test_numerals) {
         }),
         is_a(1).then([&]() {
             matched = true;
-        }));
+        })
+    );
     cat::verify(matched);
 
     // Test unary operators.
@@ -342,12 +354,17 @@ TEST(test_numerals) {
     static_assert(cat::make_sign_from(2, 1u) == 1_i4);
 
     // Test unwrapped numerals in `limits`.
-    static_assert(cat::limits<int4>::max() ==   // NOLINT
-                  cat::limits<int4::raw_type>::max());
-    static_assert(cat::limits<uint8>::max() ==  // NOLINT
-                  cat::limits<uint8::raw_type>::max());
-    static_assert(cat::limits<float4>::max() ==
-                  cat::limits<float4::raw_type>::max());
+    static_assert(
+        cat::limits<int4>::max() ==  // NOLINT
+        cat::limits<int4::raw_type>::max()
+    );
+    static_assert(
+        cat::limits<uint8>::max() ==  // NOLINT
+        cat::limits<uint8::raw_type>::max()
+    );
+    static_assert(
+        cat::limits<float4>::max() == cat::limits<float4::raw_type>::max()
+    );
 
     // Test unsigned saturating addition.
     static_assert(cat::sat_add(cat::uint1_max - 3u, 1_u1) < cat::uint1_max);
@@ -638,10 +655,29 @@ TEST(test_numerals) {
     1 / idx1;
     idx1 /= 1;
 
+    static_assert(cat::is_unsigned<idx>);
+    static_assert(!cat::is_signed<idx>);
+    static_assert(cat::is_arithmetic<idx>);
+    static_assert(cat::is_safe_arithmetic<idx>);
+    static_assert(!cat::is_unsafe_arithmetic<idx>);
+
     // `idx` is not implicitly convertible to `int`:
     static_assert(!cat::is_convertible<idx, int>);
-    static_assert(!cat::is_convertible<decltype(idx1), int>);
+    static_assert(!cat::is_convertible<idx, int4>);
 
+    // `idx` is implicitly convertible to both word types.
     [[maybe_unused]] iword index_iword = idx2;
     [[maybe_unused]] uword index_uword = idx2;
+
+    auto add_idx_iword = idx2 + 1_sz;
+    static_assert(cat::is_same<decltype(add_idx_iword), iword>);
+    auto add_iword_idx = 1_sz + idx2;
+    static_assert(cat::is_same<decltype(add_iword_idx), iword>);
+
+    auto add_idx_uword = idx2 + 1_uz;
+    static_assert(cat::is_same<decltype(add_idx_uword), uword>);
+    auto add_uword_idx = 1_uz + idx2;
+    static_assert(cat::is_same<decltype(add_uword_idx), uword>);
+
+    add_uword_idx += idx2;
 };

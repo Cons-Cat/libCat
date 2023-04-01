@@ -35,6 +35,9 @@ enum class overflow_policies {
     trap_member,
 };
 
+template <overflow_policies>
+struct idx;
+
 template <typename T>
 inline constexpr bool is_arithmetic_ptr = requires { T::ptr; };
 
@@ -60,6 +63,17 @@ concept is_raw_integral = is_integral<T> && is_raw_arithmetic<T>;
 // TODO: Update name.
 template <typename T>
 concept is_raw_floating_point = is_floating_point<T> && is_raw_arithmetic<T>;
+
+namespace detail {
+    template <typename>
+    struct is_idx_trait : false_trait {};
+
+    template <overflow_policies policy>
+    struct is_idx_trait<idx<policy>> : true_trait {};
+
+    template <typename T>
+    concept is_idx = is_idx_trait<T>::value;
+}  // namespace detail
 
 template <is_integral T>
 constexpr auto make_signed(T value) -> make_signed_type<T> {
@@ -98,7 +112,8 @@ concept is_safe_arithmetic_comparison =
         // Or, if right_type is signed and larger than left_type.
         || (!is_signed<to_raw_arithmetic_type<left_type>> &&
             is_signed<to_raw_arithmetic_type<right_type>> &&
-            (sizeof(left_type) < sizeof(right_type))))
+            (sizeof(left_type) < sizeof(right_type)))
+    )
     // And both types have the same floating-point-ness.
     && (is_floating_point<left_type> == is_floating_point<right_type>);
 
@@ -118,28 +133,36 @@ concept is_unsafe_arithmetic =
     is_arithmetic<T> && __is_same(T, to_raw_arithmetic_type<T>);
 
 template <typename T>
-concept is_safe_integer =
+concept is_safe_integral =
     is_integral<T> && !__is_same(T, to_raw_arithmetic_type<T>);
 
 template <typename T>
-concept is_unsafe_integer =
+concept is_unsafe_integral =
     is_integral<T> && __is_same(T, to_raw_arithmetic_type<T>);
 
 namespace detail {
     template <typename T, typename U>
     consteval auto promoted_arithmetic() {
-        if constexpr (is_arithmetic_ptr<T>) {
+        if constexpr (is_arithmetic_ptr<T>) {         // NOLINT
             return T();
-        } else if constexpr (is_arithmetic_ptr<U>) {
+        } else if constexpr (is_arithmetic_ptr<U>) {  // NOLINT
             return U();
+        } else if constexpr (is_idx<T> && sizeof(U) >= sizeof(T)) {
+            // Promote `idx` to an 8-byte `U`.
+            return arithmetic<
+                to_raw_arithmetic_type<U>, overflow_policies::undefined>();
+        } else if constexpr (is_idx<U> && sizeof(T) >= sizeof(U)) {
+            // Promote `idx` to an 8-byte `T`.
+            return arithmetic<
+                to_raw_arithmetic_type<T>, overflow_policies::undefined>();
         } else {
             // TODO: Propagate overflow semantics.
             if constexpr (sizeof(T) >= sizeof(U)) {
-                return arithmetic<to_raw_arithmetic_type<T>,
-                                  overflow_policies::undefined>();
+                return arithmetic<
+                    to_raw_arithmetic_type<T>, overflow_policies::undefined>();
             } else {
-                return arithmetic<to_raw_arithmetic_type<U>,
-                                  overflow_policies::undefined>();
+                return arithmetic<
+                    to_raw_arithmetic_type<U>, overflow_policies::undefined>();
             }
         }
     }
@@ -149,10 +172,12 @@ namespace detail {
                     (is_signed<T> == is_signed<U> ||
                      // Or the signed type is larger than the unsigned type:
                      (is_signed<T> && !is_signed<U> && sizeof(T) > sizeof(U)) ||
-                     (!is_signed<T> && is_signed<U> &&
-                      sizeof(T) < sizeof(U))) &&
+                     (!is_signed<T> && is_signed<U> && sizeof(T) < sizeof(U))
+                     // Or one of the operands is an `idx`:
+                     || (is_idx<T> || is_idx<U>)) &&
                     // And their float-ness is equal:
-                    (is_floating_point<T> == is_floating_point<U>))
+                    (is_floating_point<T> == is_floating_point<U>)
+                )
     using promoted_type = decltype(promoted_arithmetic<T, U>());
 }  // namespace detail
 
@@ -192,8 +217,9 @@ template <is_integral T, is_integral U>
 constexpr auto wrap_add(T lhs, U rhs) -> detail::promoted_type<T, U> {
     // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
     using type = to_raw_arithmetic_type<make_unsigned_type<larger_type<T, U>>>;
-    return detail::promoted_type<T, U>{static_cast<type>(lhs) +
-                                       static_cast<type>(rhs)};
+    return detail::promoted_type<T, U>(
+        static_cast<type>(lhs) + static_cast<type>(rhs)
+    );
 }
 
 // Subtract two integers with saturating overflow.
@@ -229,8 +255,9 @@ template <is_integral T, is_integral U>
 constexpr auto wrap_sub(T lhs, U rhs) -> detail::promoted_type<T, U> {
     // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
     using type = to_raw_arithmetic_type<make_unsigned_type<larger_type<T, U>>>;
-    return detail::promoted_type<T, U>{static_cast<type>(lhs) -
-                                       static_cast<type>(rhs)};
+    return detail::promoted_type<T, U>(
+        static_cast<type>(lhs) - static_cast<type>(rhs)
+    );
 }
 
 // Subtract two integers with saturating overflow.
@@ -266,8 +293,9 @@ template <is_integral T, is_integral U>
 constexpr auto wrap_mul(T lhs, U rhs) -> detail::promoted_type<T, U> {
     // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
     using type = to_raw_arithmetic_type<make_unsigned_type<larger_type<T, U>>>;
-    return detail::promoted_type<T, U>{static_cast<type>(lhs) *
-                                       static_cast<type>(rhs)};
+    return detail::promoted_type<T, U>(
+        static_cast<type>(lhs) * static_cast<type>(rhs)
+    );
 }
 
 // Subtract two integers with saturating overflow.
@@ -302,8 +330,9 @@ template <is_integral T, is_integral U>
 constexpr auto wrap_div(T lhs, U rhs) -> detail::promoted_type<T, U> {
     // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
     using type = to_raw_arithmetic_type<make_unsigned_type<larger_type<T, U>>>;
-    return detail::promoted_type<T, U>{static_cast<type>(lhs) /
-                                       static_cast<type>(rhs)};
+    return detail::promoted_type<T, U>(
+        static_cast<type>(lhs) / static_cast<type>(rhs)
+    );
 }
 
 // Left bit-shifting two unsigned integers with saturating overflow.
@@ -445,6 +474,14 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
         this->raw = to_raw_arithmetic(other);
     }
 
+    // A special constructor is required for `idx`. It can implicitly convert
+    // to an 8 byte `arithmetic`.
+    template <overflow_policies other_policy>
+    // constexpr explicit(sizeof(T) < 8)
+    arithmetic(idx<other_policy> other) {
+        this->raw = other.raw;
+    }
+
     template <typename U>
     constexpr explicit operator U() const {
         return static_cast<U>(this->raw);
@@ -482,17 +519,17 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
 
     // Add a left-hand-side `arithmetic` to a right-hand-side operand.
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]]
     friend constexpr auto
     operator+(arithmetic self, U operand) -> detail::promoted_type<T, U> {
         using enum overflow_policies;
         auto raw_operand = to_raw_arithmetic(operand);
         if constexpr (policy == undefined) {
-            // Make signed to guarantee undefined semantics (unless the
-            // is_arithmetic is floating point).
-            return detail::promoted_type<T, U>{make_signed(self.raw) +
-                                               make_signed(raw_operand)};
+            // Make signed to guarantee undefined semantics (unless `U` is
+            // floating point).
+            return detail::promoted_type<T, U>(
+                make_signed(self.raw) + make_signed(raw_operand)
+            );
         } else if constexpr (policy == wrap || policy == wrap_member) {
             return wrap_add(self.raw, raw_operand);
         } else if constexpr (policy == saturate || policy == saturate_member) {
@@ -551,7 +588,6 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]]
     friend constexpr auto
     operator-(arithmetic self, U operand) -> detail::promoted_type<T, U> {
@@ -622,7 +658,6 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]]
     friend constexpr auto
     operator*(arithmetic self, U operand) -> detail::promoted_type<T, U> {
@@ -676,7 +711,6 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]]
     friend constexpr auto
     operator/(arithmetic self, U operand) -> detail::promoted_type<T, U> {
@@ -729,12 +763,12 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]]
     friend constexpr auto
     operator%(arithmetic self, U operand) -> detail::promoted_type<T, U> {
-        return detail::promoted_type<T, U>{self.raw %
-                                           to_raw_arithmetic(operand)};
+        return detail::promoted_type<T, U>(
+            self.raw % to_raw_arithmetic(operand)
+        );
     }
 
     template <typename U>
@@ -760,12 +794,14 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
     }
 
     template <is_arithmetic U>
+    // TODO: Should this guarantee operands are the same size?
         requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]]
     friend constexpr auto
     operator&(arithmetic self, U operand) -> detail::promoted_type<T, U> {
-        return detail::promoted_type<T, U>{self.raw &
-                                           to_raw_arithmetic(operand)};
+        return detail::promoted_type<T, U>(
+            self.raw & to_raw_arithmetic(operand)
+        );
     }
 
     template <typename U>
@@ -795,8 +831,9 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
     [[nodiscard]]
     friend constexpr auto
     operator|(arithmetic self, U operand) -> detail::promoted_type<T, U> {
-        return detail::promoted_type<T, U>{self.raw |
-                                           to_raw_arithmetic(operand)};
+        return detail::promoted_type<T, U>(
+            self.raw | to_raw_arithmetic(operand)
+        );
     }
 
     template <typename U>
@@ -924,8 +961,9 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
 // It can only convert into `T*`, but it is otherwise interchangeable with
 // integers. It satisfies the `is_integral` type trait and
 // `is_integral` concept.
-template <typename T, typename storage_type,
-          auto policy = overflow_policies::undefined>
+template <
+    typename T, typename storage_type,
+    auto policy = overflow_policies::undefined>
 struct arithmetic_ptr : arithmetic<storage_type, policy> {
   public:
     using raw_type = storage_type;
@@ -943,7 +981,8 @@ struct arithmetic_ptr : arithmetic<storage_type, policy> {
 
     constexpr arithmetic_ptr(T* p_input)
         : arithmetic<storage_type, policy>(
-              reinterpret_cast<storage_type>(p_input)) {
+              reinterpret_cast<storage_type>(p_input)
+          ) {
     }
 
     // Allow explicitly constructing from another `arithmetic_ptr` with the
@@ -1159,8 +1198,9 @@ struct arithmetic_ptr : arithmetic<storage_type, policy> {
     [[nodiscard]]
     constexpr auto
     operator<<(U operand) const -> arithmetic_ptr {
-        return static_cast<storage_type>(this->raw
-                                         << to_raw_arithmetic(operand));
+        return static_cast<storage_type>(
+            this->raw << to_raw_arithmetic(operand)
+        );
     }
 
     template <is_integral U>
@@ -1173,8 +1213,9 @@ struct arithmetic_ptr : arithmetic<storage_type, policy> {
     [[nodiscard]]
     constexpr auto
     operator>>(U operand) const -> arithmetic_ptr {
-        return static_cast<storage_type>(this->raw >>
-                                         to_raw_arithmetic(operand));
+        return static_cast<storage_type>(
+            this->raw >> to_raw_arithmetic(operand)
+        );
     }
 
     template <is_integral U>
@@ -1277,10 +1318,13 @@ struct idx : detail::arithmetic_storage<__SIZE_TYPE__, policy>,
         return *this;
     }
 
-    // `idx` can safely implictly convert into `iword`, `uword`, or
-    // `arithmetic_ptr`. Other conversions to integers are explicit.
-    template <is_integral U>
-    constexpr explicit((sizeof(U) < sizeof(raw_type))) operator U() const {
+    // `idx` can safely implictly convert into `iword` or `intptr`.
+    template <is_safe_integral U>
+    // `uword` and `uintptr` can implicitly construct from `idx`, so a
+    // conversion operator to them would be ambiguous.
+        requires(is_signed<U>)
+    // Conversions to signed integers smaller than `idx` are explicit.
+    constexpr explicit(sizeof(U) >= sizeof(raw_type)) operator U() const {
         return static_cast<U>(this->raw);
     }
 
@@ -1288,11 +1332,23 @@ struct idx : detail::arithmetic_storage<__SIZE_TYPE__, policy>,
 
     // Generate `operator+`.
     template <is_integral T>
+        requires(sizeof(T) < 8)
     constexpr auto add(T other) const -> idx {
         return static_cast<idx>(this->raw + to_raw_arithmetic(other));
     }
 
-    // Generate unary and binary `operator-`.
+    template <is_integral T>
+    constexpr auto add(T other) const -> T {
+        return static_cast<T>(this->raw + to_raw_arithmetic(other));
+    }
+
+    // Generate `operator-`.
+    template <is_integral T>
+    constexpr auto subtract(T other) const -> idx {
+        return static_cast<idx>(this->raw - to_raw_arithmetic(other));
+    }
+
+    // Generate unary `operator-`.
     [[nodiscard]]
     constexpr auto negate() const {
         auto negated = -make_signed(this->raw);
@@ -1315,7 +1371,30 @@ struct idx : detail::arithmetic_storage<__SIZE_TYPE__, policy>,
     constexpr auto divide_into(T other) const -> idx {
         return static_cast<idx>(to_raw_arithmetic(other) / this->raw);
     }
+
+    // Generate `operator%`.
+    template <is_integral T>
+    constexpr auto modulo(T other) const -> idx {
+        return static_cast<idx>(this->raw % to_raw_arithmetic(other));
+    }
+
+    // Generate `operator<<`.
+    template <is_integral T>
+    constexpr auto shift_left(T other) const -> idx {
+        return static_cast<idx>(this->raw << to_raw_arithmetic(other));
+    }
+
+    // Generate `operator>>`.
+    template <is_integral T>
+    constexpr auto shift_right(T other) const -> idx {
+        return static_cast<idx>(this->raw >> to_raw_arithmetic(other));
+    }
 };
+
+namespace detail {
+    template <overflow_policies policy>
+    inline constexpr bool is_integral_detail<idx<policy>> = true;
+}  // namespace detail
 
 inline namespace integers {
     // These macros are defined by the GCC compiler.
@@ -1330,8 +1409,8 @@ inline namespace integers {
     // using i128 = arithmetic<int128_t, overflow_policies::undefined>;
     // using u128 = arithmetic<uint128_t, overflow_policies::undefined>;
 
-    using iword = arithmetic<make_signed_type<__SIZE_TYPE__>,
-                             overflow_policies::undefined>;
+    using iword = arithmetic<
+        make_signed_type<__SIZE_TYPE__>, overflow_policies::undefined>;
     using uword = arithmetic<__SIZE_TYPE__, overflow_policies::undefined>;
 
     using float4 = arithmetic<float, overflow_policies::undefined>;

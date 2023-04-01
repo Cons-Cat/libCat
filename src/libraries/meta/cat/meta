@@ -563,6 +563,9 @@ namespace detail {
     template <typename T, typename storage_type, auto policy>
     inline constexpr bool
         is_integral_detail<arithmetic_ptr<T, storage_type, policy>> = true;
+
+    // Another partial specialization of `is_integral_detail` for `idx` is
+    // defined in `<cat/arithmetic>`.
 }  // namespace detail
 
 template <typename T>
@@ -583,8 +586,8 @@ namespace detail {
     // This expression only holds true if `T` can be constant-evaluated.
     template <is_less_than_comparable T>
         requires(requires { T{static_cast<signed char>(-1)}; })
-    inline constexpr bool is_signed_detail<T> = constval<(
-        T{static_cast<signed char>(-1)} < T{static_cast<signed char>(0)})>;
+    inline constexpr bool is_signed_detail<T> = constval<
+        (T{static_cast<signed char>(-1)} < T{static_cast<signed char>(0)})>;
 }  // namespace detail
 
 template <typename T>
@@ -600,8 +603,8 @@ template <typename T>
 concept is_unsigned_integral = (!is_signed<T>)&&is_integral<T>;
 
 template <is_integral Sign, is_integral T>
-using copy_sign_from = conditional<is_signed<Sign>, make_signed_type<Sign>,
-                                   detail::make_unsigned_trait<Sign>>;
+using copy_sign_from = conditional<
+    is_signed<Sign>, make_signed_type<Sign>, detail::make_unsigned_trait<Sign>>;
 
 template <typename T>
 concept is_void = __is_same(T, void);
@@ -720,29 +723,32 @@ template <typename T>
 concept is_rvalue_reference = __is_same(T, remove_reference<T>&&);
 
 template <typename from_type, typename to_type>
-using copy_const_from = conditional<is_const<from_type>,
-                                    // from_type is const.
-                                    add_const<to_type>,
-                                    // from_type is not const.
-                                    remove_const<to_type>>;
+using copy_const_from = conditional<
+    is_const<from_type>,
+    // from_type is const.
+    add_const<to_type>,
+    // from_type is not const.
+    remove_const<to_type>>;
 
 template <typename from_type, typename to_type>
-using copy_volatile_from = conditional<is_volatile<remove_reference<from_type>>,
-                                       // from_type is volatile.
-                                       add_volatile<to_type>,
-                                       // from_type is not volatile.
-                                       remove_volatile<to_type>>;
+using copy_volatile_from = conditional<
+    is_volatile<remove_reference<from_type>>,
+    // from_type is volatile.
+    add_volatile<to_type>,
+    // from_type is not volatile.
+    remove_volatile<to_type>>;
 
 template <typename from_type, typename to_type>
-using copy_ref_from =
-    conditional<is_lvalue_reference<from_type>,
-                // from_type is an l-value reference.
-                add_lvalue_reference<remove_reference<to_type>>,
-                conditional<is_rvalue_reference<from_type>,
-                            // from_type is an r-value reference.
-                            add_rvalue_reference<remove_reference<to_type>>,
-                            // from_type is not a reference.
-                            remove_reference<to_type>>>;
+using copy_ref_from = conditional<
+    is_lvalue_reference<from_type>,
+    // from_type is an l-value reference.
+    add_lvalue_reference<remove_reference<to_type>>,
+    conditional<
+        is_rvalue_reference<from_type>,
+        // from_type is an r-value reference.
+        add_rvalue_reference<remove_reference<to_type>>,
+        // from_type is not a reference.
+        remove_reference<to_type>>>;
 
 template <typename from_type, typename to_type>
 using copy_cv_from =
@@ -946,7 +952,7 @@ template <typename T, typename U = T>
 concept is_divide_assignable = requires(T t, U u) { t /= u; };
 
 template <typename T, typename U = T>
-concept is_moduloable = requires(T t, U u) { t % u; };
+concept is_modable = requires(T t, U u) { t % u; };
 
 template <typename T, typename U = T>
 concept is_modulo_assignable = requires(T t, U u) { t %= u; };
@@ -1095,10 +1101,11 @@ concept has_common_with =
         static_cast<common_type<T, U>>(declval<T>());
         static_cast<common_type<T, U>>(declval<U>());
     } &&
-    has_common_reference_with<add_lvalue_reference<T const>,
-                              add_lvalue_reference<U const>> &&
-    has_common_reference_with<add_lvalue_reference<common_type<T, U>>,
-                              common_reference<add_lvalue_reference<T const>,
-                                               add_lvalue_reference<U const>>>;
+    has_common_reference_with<
+        add_lvalue_reference<T const>, add_lvalue_reference<U const>> &&
+    has_common_reference_with<
+        add_lvalue_reference<common_type<T, U>>,
+        common_reference<
+            add_lvalue_reference<T const>, add_lvalue_reference<U const>>>;
 
 }  // namespace cat
