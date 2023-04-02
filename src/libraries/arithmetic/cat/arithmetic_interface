@@ -45,20 +45,18 @@ namespace detail {
 
     template <typename T, typename U = T>
     concept has_bit_not = requires(T t, U u) { t.bit_not(u); };
+
+    template <typename T, typename U = T>
+    concept has_bit_complement = requires(T t, U u) { t.bit_complement(u); };
 }  // namespace detail
 
+// CRTP class for generating a commutative `+` operator.
 template <typename derived_type>
-class arithmetic_interface {
-  public:
+struct plus_interface {
     // `+` operator where this is a left-hand-side operand.
     template <typename T>
-    // requires(!is_convertible<derived_type, T>)
-    // !is_convertible<derived_type, T>)
     constexpr friend auto operator+(derived_type const& lhs, T&& other) {
-        // if constexpr (detail::has_add<derived_type, T> &&
-        //               !is_addable<derived_type, T>) {
         return lhs.add(forward<T>(other));
-        // }
     }
 
     // `+` operator where this is a right-hand-side operand.
@@ -67,21 +65,101 @@ class arithmetic_interface {
     // `derived_type`, there is likely an ambiguous overload.
         requires(!is_constructible<derived_type, T>)
     constexpr friend auto operator+(T&& other, derived_type const& rhs) {
-        // `operator+` is considered commutative.
         return rhs.add(forward<T>(other));
     }
 
     // Compound assignment operator.
     template <typename T>
     constexpr friend auto operator+=(derived_type& lhs, T&& other) {
-        // if constexpr (detail::has_add<derived_type, T> &&
-        // !is_add_assignable<derived_type, T>) {
-        lhs = lhs + forward<T>(other);
+        lhs = lhs.add(forward<T>(other));
         return lhs;
-        // }
-        // __builtin_unreachable();
+    }
+};
+
+// CRTP class for generating a commutative `-` operator.
+template <typename derived_type>
+struct minus_interface {
+    // `-` operator where this is a left-hand-side operand.
+    template <typename T>
+    constexpr friend auto operator-(derived_type const& lhs, T&& other) {
+        return lhs.subtract(forward<T>(other));
     }
 
+    // `-` operator where this is a right-hand-side operand.
+    template <typename T>
+    // If the commutative operator's left operand is constructible from the
+    // `derived_type`, there is likely an ambiguous overload.
+        requires(!is_constructible<derived_type, T>)
+    constexpr friend auto operator-(T&& other, derived_type const& rhs) {
+        return rhs.subtract(forward<T>(other));
+    }
+
+    // Compound assignment operator.
+    template <typename T>
+    constexpr friend auto operator-=(derived_type& lhs, T&& other) {
+        lhs = lhs.subtract(forward<T>(other));
+        return lhs;
+    }
+};
+
+// CRTP class for generating a commutative `*` operator.
+template <typename derived_type>
+struct multiply_interface {
+    // `*` operator where this is a left-hand-side operand.
+    template <typename T>
+    constexpr friend auto operator*(derived_type const& lhs, T&& other) {
+        return lhs.multiply(forward<T>(other));
+    }
+
+    // `*` operator where this is a right-hand-side operand.
+    template <typename T>
+    // If the commutative operator's left operand is constructible from the
+    // `derived_type`, there is likely an ambiguous overload.
+        requires(!is_constructible<derived_type, T>)
+    constexpr friend auto operator*(T&& other, derived_type const& rhs) {
+        return rhs.multiply(forward<T>(other));
+    }
+
+    // Compound assignment operator.
+    template <typename T>
+    constexpr friend auto operator*=(derived_type& lhs, T&& other) {
+        lhs = lhs.multiply(forward<T>(other));
+        return lhs;
+    }
+};
+
+// CRTP class for generating a commutative `/` operator.
+template <typename derived_type>
+struct divide_interface {
+    // `/` operator where this is a left-hand-side operand.
+    template <typename T>
+    constexpr friend auto operator/(derived_type const& lhs, T&& other) {
+        return lhs.divide_by(forward<T>(other));
+    }
+
+    // `/` operator where this is a right-hand-side operand.
+    template <typename T>
+    // If the commutative operator's left operand is constructible from the
+    // `derived_type`, there is likely an ambiguous overload.
+        requires(!is_convertible<T, derived_type>)
+    constexpr friend auto operator/(T&& other, derived_type const& rhs) {
+        return rhs.divide_into(forward<T>(other));
+    }
+
+    // Compound division operator.
+    template <typename T>
+    constexpr friend auto operator/=(derived_type& lhs, T&& other) {
+        lhs = lhs.divide_by(forward<T>(other));
+        return lhs;
+    }
+};
+
+template <typename derived_type>
+class arithmetic_interface : plus_interface<derived_type>,
+                             minus_interface<derived_type>,
+                             multiply_interface<derived_type>,
+                             divide_interface<derived_type> {
+  public:
     // No-op unary `+` operator for operand.
     constexpr friend auto operator+(derived_type& self) {
         return self;
@@ -92,134 +170,19 @@ class arithmetic_interface {
         return self;
     }
 
-    // `-` operator where this is a left-hand-side operand.
-    template <typename T>
-    constexpr friend auto operator-(derived_type const& lhs, T&& other) {
-        // if constexpr (!is_subtractable<derived_type, T>) {
-        // If an `operator-` is not provided:
-        if constexpr (detail::has_subtract<derived_type, T>) {
-            // If a `.subtract()` is provided by `derived_type`:
-            return lhs.subtract(forward<T>(other));
-        } else if constexpr (detail::has_add<derived_type, T> && is_unary_minusable<T>) {
-            // If a `.add()` is provided and `T` can be negated:
-            return lhs.add(-forward<T>(other));
-        }
-        // }
-        // __builtin_unreachable();
-    }
-
-    // `-` operator where this is a right-hand-side operand.
-    template <typename T>
-    // Constrain this commutative operator so that overload resolution is not
-    // ambiguous with the above operator.
-        requires(!is_convertible<T, derived_type>)
-    constexpr friend auto operator-(T&& other, derived_type const& lhs) {
-        // if constexpr (!is_subtractable<T, derived_type>) {
-        // If an `operator-` is not provided:
-        if constexpr (detail::has_subtract<derived_type, T> && detail::has_negate<derived_type>) {
-            return -(lhs.subtract(forward<T>(other)));
-        }
-        // }
-        // __builtin_unreachable();
-    }
-
-    // Compound subtract operator.
-    template <typename T>
-    constexpr friend auto operator-=(derived_type& lhs, T&& other) {
-        // if constexpr (detail::has_add<derived_type, T> &&
-        // !is_add_assignable<derived_type, T>) {
-        lhs = lhs - other;
-        return lhs;
-        // }
-        // __builtin_unreachable();
-    }
-
     // Unary `-` operator.
     constexpr friend auto operator-(derived_type const& self) {
-        // if constexpr (!is_unary_minusable<derived_type>) {
-        // If `derived_type` does not have unary `operator-`.
         if constexpr (detail::has_negate<derived_type>) {
             return self.negate();
         } else {
             // Subtract `self` from `0` to negate it.
             return static_cast<derived_type>(0) - self;
         }
-        // }
-        // __builtin_unreachable();
     }
 
-    // `*` operator where this is a left-hand-side operand.
-    template <typename T>
-    constexpr friend auto operator*(derived_type const& lhs, T&& other) {
-        // if constexpr (!is_multipliable<derived_type, T>) {
-        // If an `operator*` is not provided:
-        if constexpr (detail::has_multiply<derived_type, T>) {
-            // If a `.multiply()` is provided by `derived_type`:
-            return lhs.multiply(forward<T>(other));
-        }
-        // }
-        // __builtin_unreachable();
-    }
-
-    // `*` operator where this is a right-hand-side operand.
-    template <typename T>
-    // Constrain this commutative operator so that overload resolution is not
-    // ambiguous with the above operator.
-        requires(!is_convertible<T, derived_type>)
-    constexpr friend auto operator*(T&& other, derived_type const& rhs) {
-        // `operator*` is considered commutative.
-        return rhs * forward<T>(other);
-    }
-
-    // Compound multiply operator.
-    template <typename T>
-    constexpr friend auto operator*=(derived_type& lhs, T&& other) {
-        // if constexpr (detail::has_multiply<derived_type, T> &&
-        // !is_multipliable<derived_type, T>) {
-        lhs = lhs * other;
-        return lhs;
-        // }
-        // __builtin_unreachable();
-    }
-
-    // `/` operator where this is a left-hand-side operand.
-    template <typename T>
-    constexpr friend auto operator/(derived_type const& lhs, T&& other) {
-        // if constexpr (!is_dividable<derived_type, T>) {
-        // If an `operator/` is not provided:
-        if constexpr (detail::has_divide_by<derived_type, T>) {
-            // If a `.divide_by()` is provided by `derived_type`:
-            return lhs.divide_by(forward<T>(other));
-        }
-        // }
-        // __builtin_unreachable();
-    }
-
-    // `/` operator where this is a right-hand-side operand.
-    template <typename T>
-    // Constrain this commutative operator so that overload resolution is not
-    // ambiguous with the above operator.
-        requires(!is_convertible<T, derived_type>)
-    constexpr friend auto operator/(T&& other, derived_type const& rhs) {
-        // if constexpr (!is_dividable<T, derived_type>) {
-        // If an `operator/` is not provided:
-        if constexpr (detail::has_divide_into<derived_type, T>) {
-            // If a `.divide_into()` is provided by `derived_type`:
-            return rhs.divide_into(forward<T>(other));
-        }
-        // }
-        // __builtin_unreachable();
-    }
-
-    // Compound division operator.
-    template <typename T>
-    constexpr friend auto operator/=(derived_type& lhs, T&& other) {
-        // if constexpr (detail::has_divide_by<derived_type, T> &&
-        // !is_dividable<derived_type, T>) {
-        lhs = lhs / other;
-        return lhs;
-        // }
-        // __builtin_unreachable();
+    // Unary complement operator.
+    constexpr friend auto operator~(derived_type& self) {
+        return self.bit_complement();
     }
 
   private:

@@ -655,6 +655,19 @@ TEST(test_numerals) {
     1 / idx1;
     idx1 /= 1;
 
+    idx lesser_idx = 1;
+    idx greater_idx = 2;
+
+    cat::verify(lesser_idx == lesser_idx);
+    cat::verify(lesser_idx < greater_idx);
+    cat::verify(lesser_idx <= greater_idx);
+    cat::verify(lesser_idx <= lesser_idx);
+
+    cat::verify(greater_idx == greater_idx);
+    cat::verify(greater_idx > lesser_idx);
+    cat::verify(greater_idx >= lesser_idx);
+    cat::verify(greater_idx >= greater_idx);
+
     static_assert(cat::is_unsigned<idx>);
     static_assert(!cat::is_signed<idx>);
     static_assert(cat::is_arithmetic<idx>);

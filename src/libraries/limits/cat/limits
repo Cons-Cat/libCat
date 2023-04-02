@@ -2,6 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/arithmetic_interface>
+
 namespace cat {
 
 // TODO: Implement support for GCC 13's `__bf16` type.
@@ -221,10 +223,10 @@ struct limits<__UINT64_TYPE__> {
 };
 
 template <overflow_policies>
-struct idx;
+struct index;
 
 template <overflow_policies policy>
-struct limits<idx<policy>> {
+struct limits<index<policy>> {
     limits() = delete;
 
     static consteval auto min() -> __UINT64_TYPE__ {
