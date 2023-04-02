@@ -4,6 +4,8 @@
 // the target operating system.
 [[noreturn]]
 void cat::exit(iword exit_code) {
-    asm("syscall" : : "D"(exit_code), "a"(60));
+    asm("syscall"
+        :
+        : "D"(exit_code), "a"(60));
     __builtin_unreachable();  // This elides a `ret` instruction.
 }

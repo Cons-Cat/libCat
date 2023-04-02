@@ -22,8 +22,8 @@ auto memcpy(void* p_destination, void const* p_source, __SIZE_TYPE__ bytes)
 // cat::zero_memory()` instead. `memset()` exists to enable some GCC
 // optimizations.
 extern "C"
-    [[deprecated("std::memset() is deprecated! Use cat::set_memory() or \
-cat::zero_memory() instead!")]]
+    [[deprecated("std::memset() is deprecated! Use cat::set_memory() or "
+                 "cat::zero_memory() instead!")]]
     auto memset(void* p_source, int byte_value, __SIZE_TYPE__ bytes) -> void*;
 
 }  // namespace std
