@@ -18,8 +18,8 @@ TEST(test_numerals) {
     // Test relationship to raw types.
     // TODO: Test `is_unsafe_arithmetic` and `to_raw_arithmetic()`.
     static_assert(cat::is_same<cat::to_raw_arithmetic_type<int>, int>);
-    static_assert(cat::is_same<
-                  cat::to_raw_arithmetic_type<int4>, int4::raw_type>);
+    static_assert(
+        cat::is_same<cat::to_raw_arithmetic_type<int4>, int4::raw_type>);
 
     // Test numerals' size,
     static_assert(sizeof(int1) == 1);
@@ -309,8 +309,7 @@ TEST(test_numerals) {
         }),
         is_a<int4>().then([&]() {
             matched = true;
-        })
-    );
+        }));
     cat::verify(matched);
 
     // Match value.
@@ -321,8 +320,7 @@ TEST(test_numerals) {
         }),
         is_a(1).then([&]() {
             matched = true;
-        })
-    );
+        }));
     cat::verify(matched);
 
     // Test unary operators.
@@ -354,17 +352,12 @@ TEST(test_numerals) {
     static_assert(cat::make_sign_from(2, 1u) == 1_i4);
 
     // Test unwrapped numerals in `limits`.
-    static_assert(
-        cat::limits<int4>::max() ==  // NOLINT
-        cat::limits<int4::raw_type>::max()
-    );
-    static_assert(
-        cat::limits<uint8>::max() ==  // NOLINT
-        cat::limits<uint8::raw_type>::max()
-    );
-    static_assert(
-        cat::limits<float4>::max() == cat::limits<float4::raw_type>::max()
-    );
+    static_assert(cat::limits<int4>::max() ==   // NOLINT
+                  cat::limits<int4::raw_type>::max());
+    static_assert(cat::limits<uint8>::max() ==  // NOLINT
+                  cat::limits<uint8::raw_type>::max());
+    static_assert(cat::limits<float4>::max() ==
+                  cat::limits<float4::raw_type>::max());
 
     // Test unsigned saturating addition.
     static_assert(cat::sat_add(cat::uint1_max - 3u, 1_u1) < cat::uint1_max);

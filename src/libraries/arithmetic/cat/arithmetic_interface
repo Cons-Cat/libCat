@@ -74,6 +74,17 @@ struct plus_interface {
         lhs = lhs.add(forward<T>(other));
         return lhs;
     }
+
+    // Unary `++` operators.
+    constexpr friend auto operator++(derived_type& self) -> derived_type {
+        self = self += derived_type(1);
+        return self;
+    }
+
+    constexpr friend auto operator++(derived_type& self, int) -> derived_type {
+        self = self += derived_type(1);
+        return self;
+    }
 };
 
 // CRTP class for generating a commutative `-` operator.
@@ -99,6 +110,17 @@ struct minus_interface {
     constexpr friend auto operator-=(derived_type& lhs, T&& other) {
         lhs = lhs.subtract(forward<T>(other));
         return lhs;
+    }
+
+    // Unary `--` operators.
+    constexpr friend auto operator--(derived_type& self) -> derived_type {
+        self = self -= derived_type(1);
+        return self;
+    }
+
+    constexpr friend auto operator--(derived_type& self, int) -> derived_type {
+        self = self -= derived_type(1);
+        return self;
     }
 };
 
