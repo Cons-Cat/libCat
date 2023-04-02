@@ -18,7 +18,7 @@ template <is_integral T, overflow_policies policy>
 [[nodiscard]]
 auto to_chars(is_allocator auto& allocator, arithmetic<T, policy> numeral)
     -> maybe<string> {
-    return to_chars(allocator, to_raw_arithmetic(numeral));
+    return to_chars(allocator, make_raw_arithmetic(numeral));
 }
 
 // Dynamically allocate an is_integral value converted to `string`.

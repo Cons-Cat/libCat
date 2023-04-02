@@ -475,7 +475,7 @@ class collection_interface
             assert(index < this->self().size());
         }
 
-        return this->self_mut().data()[to_raw_arithmetic(index)];
+        return this->self_mut().data()[make_raw_arithmetic(index)];
     }
 
     template <is_integral U>
@@ -488,7 +488,7 @@ class collection_interface
             assert(index < this->self().size());
         }
 
-        return this->self().data()[to_raw_arithmetic(index)];
+        return this->self().data()[make_raw_arithmetic(index)];
     }
 
     // Member-access syntax algorithms.

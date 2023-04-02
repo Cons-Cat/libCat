@@ -17,9 +17,9 @@ TEST(test_numerals) {
 
     // Test relationship to raw types.
     // TODO: Test `is_unsafe_arithmetic` and `to_raw_arithmetic()`.
-    static_assert(cat::is_same<cat::to_raw_arithmetic_type<int>, int>);
+    static_assert(cat::is_same<cat::make_raw_arithmetic_type<int>, int>);
     static_assert(
-        cat::is_same<cat::to_raw_arithmetic_type<int4>, int4::raw_type>);
+        cat::is_same<cat::make_raw_arithmetic_type<int4>, int4::raw_type>);
 
     // Test numerals' size,
     static_assert(sizeof(int1) == 1);

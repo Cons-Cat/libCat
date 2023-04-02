@@ -64,7 +64,7 @@ inline constexpr iword page_size = 4096_ki;
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto countl_zero(T value) -> iword {
-    auto raw_value = to_raw_arithmetic(value);
+    auto raw_value = make_raw_arithmetic(value);
 
     if (raw_value == 0) {
         // It is undefined behavior to pass 0 into clz.
@@ -88,7 +88,7 @@ constexpr auto countl_zero(T value) -> iword {
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto countl_one(T value) -> iword {
-    auto raw_value = to_raw_arithmetic(value);
+    auto raw_value = make_raw_arithmetic(value);
     return raw_value != limits<T>::max()
                ? countl_zero(static_cast<T>(~(raw_value)))
                : (ssizeof(T) * 8);
@@ -97,7 +97,7 @@ constexpr auto countl_one(T value) -> iword {
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto countr_zero(T value) -> iword {
-    auto raw_value = to_raw_arithmetic(value);
+    auto raw_value = make_raw_arithmetic(value);
 
     if (raw_value == 0) {
         // It is undefined behavior to pass 0 into ctz.
@@ -123,7 +123,7 @@ constexpr auto countr_one(T value) -> iword {
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto popcount(T value) -> iword {
-    auto raw_value = to_raw_arithmetic(value);
+    auto raw_value = make_raw_arithmetic(value);
     if constexpr (__has_builtin(__builtin_popcount)) {
         if constexpr (sizeof(T) <= 4) {
             return __builtin_popcount(raw_value);
@@ -159,9 +159,9 @@ template <cat::is_unsigned T>
 [[nodiscard]]
 constexpr auto extract_bits(T from, cat::is_unsigned_integral auto offset,
                             cat::is_unsigned_integral auto length) -> T {
-    auto raw_from = cat::to_raw_arithmetic(from);
-    auto raw_offset = cat::to_raw_arithmetic(offset);
-    auto raw_length = cat::to_raw_arithmetic(length);
+    auto raw_from = cat::make_raw_arithmetic(from);
+    auto raw_offset = cat::make_raw_arithmetic(offset);
+    auto raw_length = cat::make_raw_arithmetic(length);
 
     if !consteval {
         if constexpr (__has_builtin(__builtin_ia32_bextr_u32) &&
@@ -185,8 +185,8 @@ template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
 [[nodiscard]]
 constexpr auto extract_bits_mask(T value, U mask) -> T {
     T result = T(0u);
-    auto raw_value = cat::to_raw_arithmetic(value);
-    auto raw_mask = cat::to_raw_arithmetic(mask);
+    auto raw_value = cat::make_raw_arithmetic(value);
+    auto raw_mask = cat::make_raw_arithmetic(mask);
 
     if constexpr (__has_builtin(_pext_u32) && sizeof(T) == 4) {
         // `_pext_u32()` is a GCC intrinsic.
@@ -195,7 +195,7 @@ constexpr auto extract_bits_mask(T value, U mask) -> T {
         // `_pext_u64()` is a GCC intrinsic.
         return T(_pext_u64(raw_value, raw_mask));
     } else {
-        cat::to_raw_arithmetic_type<T> count = 0u;
+        cat::make_raw_arithmetic_type<T> count = 0u;
         while (raw_mask != 0u) {
             if (raw_mask & 1) {
                 result >>= 1;
@@ -217,8 +217,8 @@ template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
 [[nodiscard]]
 constexpr auto deposit_bits_mask(T value, U mask) -> T {
     T result = T(0u);
-    auto raw_value = cat::to_raw_arithmetic(value);
-    auto raw_mask = cat::to_raw_arithmetic(mask);
+    auto raw_value = cat::make_raw_arithmetic(value);
+    auto raw_mask = cat::make_raw_arithmetic(mask);
 
     if constexpr (__has_builtin(_pdep_u32) && sizeof(T) == 4) {
         // `_pdep_u32()` is a GCC intrinsic.
@@ -248,11 +248,11 @@ template <cat::is_unsigned_integral T>
 constexpr auto zero_high_bits_at(T source, cat::uint4 bit_index) -> T {
     if !consteval {
         if constexpr (__has_builtin(__builtin_ia32_bzhi_si) && sizeof(T) == 4) {
-            return __builtin_ia32_bzhi_si(cat::to_raw_arithmetic(source),
+            return __builtin_ia32_bzhi_si(cat::make_raw_arithmetic(source),
                                           bit_index.raw);
         } else if constexpr (__has_builtin(__builtin_ia32_bzhi_di) &&
                              sizeof(T) == 8) {
-            return __builtin_ia32_bzhi_di(cat::to_raw_arithmetic(source),
+            return __builtin_ia32_bzhi_di(cat::make_raw_arithmetic(source),
                                           bit_index.raw);
         }
     }
@@ -603,7 +603,7 @@ namespace detail {
 
 [[nodiscard]]
 constexpr auto invert_endianess(is_unsigned_integral auto value) {
-    auto raw_value = to_raw_arithmetic(value);
+    auto raw_value = make_raw_arithmetic(value);
 
     if constexpr (sizeof(raw_value) == 1) {
         // This does not exist.
@@ -744,7 +744,7 @@ constexpr auto align_down(uintptr<U> p_value, uword alignment) -> uintptr<U>;
 template <is_integral T>
 [[nodiscard]]
 constexpr auto has_single_bit(T value) -> bool {
-    auto raw = to_raw_arithmetic(value);
+    auto raw = make_raw_arithmetic(value);
     return (raw & (raw - 1u)) == 0u;
 }
 
