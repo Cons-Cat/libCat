@@ -635,7 +635,7 @@ TEST(test_numerals) {
 
     idx1 - idx2;
     idx1 - 1;
-    1 - idx1;
+    10 - idx1;
     idx1 -= 1;
 
     idx1* idx2;
