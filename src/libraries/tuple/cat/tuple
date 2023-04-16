@@ -9,7 +9,7 @@ namespace detail {
     // Because one type can only be derived from once, types must be binded to
     // their position in a paremeter pack to guarantee their uniqueness. This is
     // required to support `tuple`s with non-uniquely-typed elements.
-    template <iword index, typename T>
+    template <iword in_index, typename T>
     struct tuple_element {
         using element = T;
 
@@ -32,19 +32,19 @@ namespace detail {
 
         // For some reason, this produces ambiguous overload errors if it is
         // implemented as a normal function instead of an operator.
-        constexpr auto operator[](constant<index>) & -> T& {
+        constexpr auto operator[](constant<in_index>) & -> T& {
             return this->storage;
         }
 
-        constexpr auto operator[](constant<index>) const& -> T const& {
+        constexpr auto operator[](constant<in_index>) const& -> T const& {
             return this->storage;
         }
 
-        constexpr auto operator[](constant<index>) && -> T&& {
+        constexpr auto operator[](constant<in_index>) && -> T&& {
             return move(this->storage);
         }
 
-        constexpr auto operator[](constant<index>) const&& -> T&& {
+        constexpr auto operator[](constant<in_index>) const&& -> T&& {
             return move(this->storage);
         }
 
@@ -92,17 +92,17 @@ constexpr operator T() const {
 }
 
 private:
-template <iword index, typename U>
+template <iword in_index, typename U>
 constexpr auto convert_next_element(auto const& new_tuple) const {
-    U converted_value = static_cast<U>(this->get<index>());
+    U converted_value = static_cast<U>(this->get<in_index>());
     return new_tuple.template concat(cat::tuple<U>{converted_value});
 }
 
-template <iword index, typename U, typename... Us>
+template <iword in_index, typename U, typename... Us>
     requires(sizeof...(Us) > 0)
 constexpr auto convert_next_element(auto const& new_tuple) const {
-    U converted_value = static_cast<U>(this->get<index>());
-    return this->convert_next_element<index + 1, Us...>(
+    U converted_value = static_cast<U>(this->get<in_index>());
+    return this->convert_next_element<in_index + 1, Us...>(
         new_tuple.template concat(cat::tuple<U>{converted_value}));
 }
 
@@ -111,37 +111,37 @@ constexpr auto convert_elements(type_list<Us...>) const {
     return this->convert_next_element<0, Us...>(tuple<>{});
 }
 
-template <iword index>
+template <iword in_index>
 constexpr auto concat_lhs(auto& other_tuple) const {
     return other_tuple;
 }
 
-template <iword index>
-    requires(index < this->size)
+template <iword in_index>
+    requires(in_index < this->size)
 constexpr auto concat_lhs(auto& other_tuple) const {
-    other_tuple.template get<index>() = this->get<index>();
-    return concat_lhs<index + 1>(other_tuple);
+    other_tuple.template get<in_index>() = this->get<in_index>();
+    return concat_lhs<in_index + 1>(other_tuple);
 }
 
-template <iword index>
+template <iword in_index>
 constexpr auto concat_rhs(auto const& other_tuple, auto&) const {
     return other_tuple;
 }
 
-template <iword index>
+template <iword in_index>
 constexpr auto concat_rhs(auto const& other_tuple, auto& rhs_tuple) const
-    requires(index < rhs_tuple.this->size) {
-    other_tuple.template get<index + static_cast<iword>(sizeof...(in_types))>()
-= rhs_tuple.template get<index>(); return concat_rhs<index + 1>(other_tuple,
-rhs_tuple);
+    requires(in_index < rhs_tuple.this->size) {
+    other_tuple.template get<in_index +
+static_cast<iword>(sizeof...(in_types))>() = rhs_tuple.template get<in_index>();
+return concat_rhs<in_index + 1>(other_tuple, rhs_tuple);
 }
 
-template <iword index>
+template <iword in_index>
 constexpr auto concat_recurse(tuple<in_types...> const& this_tuple,
                               auto const& other_tuple,
                               auto const& new_tuple) const {
-    if constexpr (index < this->size) {
-        return concat_recurse<index + 1>(this_tuple, other_tuple,
+    if constexpr (in_index < this->size) {
+        return concat_recurse<in_index + 1>(this_tuple, other_tuple,
                                          new_tuple);
     }
 }
@@ -160,51 +160,55 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
     */
 
     // Get a non-`const` reference to the N'th stored variable.
-    template <iword index>
-        requires(index <= size)
+    template <iword in_index>
+        requires(in_index <= size)
     constexpr auto get() & -> auto& {
-        return (*this)[constant<index>()];
+        return (*this)[constant<in_index>()];
     }
 
-    template <uword index>
+    template <uword in_index>
     constexpr auto get() & -> auto& {
-        return (*this)[constant<make_signed(index)>()];
+        return (*this)[constant<make_signed(in_index)>()];
     }
 
     // Get a `const` reference to the N'th stored variable.
-    template <iword index>
-        requires(index <= size)
+    template <iword in_index>
+        requires(in_index <= size)
+    [[nodiscard]]
     constexpr auto get() const& -> auto const& {
-        return (*this)[constant<index>()];
+        return (*this)[constant<in_index>()];
     }
 
-    template <uword index>
+    template <uword in_index>
+    [[nodiscard]]
     constexpr auto get() const& -> auto const& {
-        return (*this)[constant<make_signed(index)>()];
+        return (*this)[constant<make_signed(in_index)>()];
     }
 
     // Move the N'th stored variable.
-    template <iword index>
-        requires(index <= size)
+    template <iword in_index>
+        requires(in_index <= size)
     constexpr auto get() && -> auto&& {
-        return move(*this)[constant<index>()];
+        return move(*this)[constant<in_index>()];
     }
 
-    template <uword index>
+    template <uword in_index>
     constexpr auto get() && -> auto&& {
-        return move(*this)[constant<make_signed(index)>()];
+        return move(*this)[constant<make_signed(in_index)>()];
     }
 
     // Move the N'th stored variable.
-    template <iword index>
-        requires(index <= size)
+    template <iword in_index>
+        requires(in_index <= size)
+    [[nodiscard]]
     constexpr auto get() const&& -> auto&& {
-        return move(*this)[constant<index>()];
+        return move(*this)[constant<in_index>()];
     }
 
-    template <uword index>
+    template <uword in_index>
+    [[nodiscard]]
     constexpr auto get() const&& -> auto&& {
-        return move(*this)[constant<make_signed(index)>()];
+        return move(*this)[constant<make_signed(in_index)>()];
     }
 
     // Get a non-`const` reference to the first stored variable.
@@ -215,6 +219,7 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
     }
 
     // Get a `const` reference to the first stored variable.
+    [[nodiscard]]
     constexpr auto first() const& -> auto const&
         requires(size >= 1)
     {
@@ -229,6 +234,7 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
     }
 
     // Move the first stored variable.
+    [[nodiscard]]
     constexpr auto first() const&& -> auto&&
         requires(size >= 1)
     {
@@ -243,6 +249,7 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
     }
 
     // Get a `const` reference to the second stored variable.
+    [[nodiscard]]
     constexpr auto second() const& -> auto const&
         requires(size >= 2)
     {
@@ -257,6 +264,7 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
     }
 
     // Move the second stored variable.
+    [[nodiscard]]
     constexpr auto second() const&& -> auto&&
         requires(size >= 2)
     {
@@ -271,6 +279,7 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
     }
 
     // Get a `const` reference to the third stored variable.
+    [[nodiscard]]
     constexpr auto third() const& -> auto const&
         requires(size >= 3)
     {
@@ -285,6 +294,7 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
     }
 
     // Move the third stored variable.
+    [[nodiscard]]
     constexpr auto third() const&& -> auto&&
         requires(size >= 3)
     {
@@ -299,6 +309,7 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
     }
 
     // Get a `const` reference to the fourth stored variable.
+    [[nodiscard]]
     constexpr auto fourth() const& -> auto const&
         requires(size >= 4)
     {
@@ -313,6 +324,7 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
     }
 
     // Move the fourth stored variable.
+    [[nodiscard]]
     constexpr auto fourth() const&& -> auto&&
         requires(size >= 4)
     {
@@ -327,6 +339,7 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
     }
 
     // Get a `const` reference to the fifth stored variable.
+    [[nodiscard]]
     constexpr auto fifth() const& -> auto const&
         requires(size >= 5)
     {
@@ -341,6 +354,7 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
     }
 
     // Move the fifth stored variable.
+    [[nodiscard]]
     constexpr auto fifth() const&& -> auto&&
         requires(size >= 5)
     {
@@ -375,15 +389,15 @@ inline constexpr cat::uword::raw_type tuple_size_v = tuple_size<T>::value;
 template <cat::uword::raw_type, typename>
 struct tuple_element;
 
-template <cat::uword::raw_type index, typename... in_types>
-struct tuple_element<index, cat::tuple<in_types...>> {
+template <cat::uword::raw_type in_index, typename... in_types>
+struct tuple_element<in_index, cat::tuple<in_types...>> {
     using type =
         typename cat::type_list<in_types...>::template get<cat::make_signed(
-            index)>;
+            in_index)>;
 };
 
-template <cat::uword::raw_type index, typename T>
-using tuple_element_t = tuple_element<index, T>::type;
+template <cat::uword::raw_type in_index, typename T>
+using tuple_element_t = tuple_element<in_index, T>::type;
 
 }  // namespace std
 
