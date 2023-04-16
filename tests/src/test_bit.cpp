@@ -87,7 +87,7 @@ TEST(test_bit) {
     bit1 = bit3;
 
     // Test `bit_iterator`.
-    cat::array<uint4, 4> array{0, cat::uint4_max, 0, 0};
+    cat::array<uint4, 4u> array(0u, cat::uint4_max, 0u, 0u);
     cat::bit_iterator it = array.begin();
     cat::verify(*it == false);
     cat::verify(*(it + 31) == false);

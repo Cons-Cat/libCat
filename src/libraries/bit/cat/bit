@@ -87,11 +87,11 @@ constexpr auto countl_zero(T value) -> idx {
 
 template <is_unsigned_integral T>
 [[nodiscard]]
-constexpr auto countl_one(T value) -> iword {
+constexpr auto countl_one(T value) -> idx {
     auto raw_value = make_raw_arithmetic(value);
     return raw_value != limits<T>::max()
                ? countl_zero(static_cast<T>(~(raw_value)))
-               : (ssizeof(T) * 8);
+               : idx(sizeof(T) * 8u);
 }
 
 template <is_unsigned_integral T>
@@ -115,9 +115,9 @@ constexpr auto countr_zero(T value) -> idx {
 
 template <is_unsigned_integral T>
 [[nodiscard]]
-constexpr auto countr_one(T value) -> iword {
+constexpr auto countr_one(T value) -> idx {
     return value != limits<T>::max() ? countl_one(static_cast<T>(~value))
-                                     : (ssizeof(T) * 8);
+                                     : idx(sizeof(T) * 8u);
 }
 
 template <is_unsigned_integral T>
