@@ -122,7 +122,7 @@ struct default_float_traits {
     // Same as above.
     static carrier_uint float_to_carrier(T x) noexcept {
         carrier_uint u;
-        copy_memory_small(&x, &u, ssizeof(carrier_uint));
+        copy_memory_small(&x, &u, sizeof(carrier_uint));
         return u;
     }
 
@@ -3315,7 +3315,7 @@ namespace to_chars_detail {
                 return to_chars_detail::to_chars<Float, FloatTraits>(
                     result.significand, result.exponent, buffer);
             }
-            copy_memory_small("0E0", buffer, 3);
+            copy_memory_small("0E0", buffer, 3u);
             return buffer + 3;
         }
         if (s.has_all_zero_significand_bits()) {
@@ -3323,10 +3323,10 @@ namespace to_chars_detail {
                 *buffer = '-';
                 ++buffer;
             }
-            copy_memory_small("Infinity", buffer, 8);
+            copy_memory_small("Infinity", buffer, 8u);
             return buffer + 8;
         } else {
-            copy_memory_small("NaN", buffer, 3);
+            copy_memory_small("NaN", buffer, 3u);
             return buffer + 3;
         }
     }

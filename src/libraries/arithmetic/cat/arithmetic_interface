@@ -77,12 +77,12 @@ struct plus_interface {
 
     // Unary `++` operators.
     constexpr friend auto operator++(derived_type& self) -> derived_type {
-        self = self += derived_type(1);
+        self = self.add(derived_type(1));
         return self;
     }
 
     constexpr friend auto operator++(derived_type& self, int) -> derived_type {
-        self = self += derived_type(1);
+        self = self.add(derived_type(1));
         return self;
     }
 };
@@ -114,12 +114,12 @@ struct minus_interface {
 
     // Unary `--` operators.
     constexpr friend auto operator--(derived_type& self) -> derived_type {
-        self = self -= derived_type(1);
+        self = self - derived_type(1);
         return self;
     }
 
     constexpr friend auto operator--(derived_type& self, int) -> derived_type {
-        self = self -= derived_type(1);
+        self = self - derived_type(1);
         return self;
     }
 };

@@ -61,11 +61,11 @@ auto to_chars(is_allocator auto& alloc, T value) -> maybe<string> {
 }
 
 namespace detail {
-    template <iword::raw_type length, auto value>
+    template <uword::raw_type length, auto value>
     consteval auto make_const_string(fixed_string<length> const& string) {
         // Copy over the string into new, larger, storage.
-        fixed_string<length + 1> new_string;
-        for (iword i = 0; i < length; ++i) {
+        fixed_string<length + 1u> new_string;
+        for (uword i = 0u; i < length; ++i) {
             new_string[i + 1] = string[i];
         }
 
@@ -101,8 +101,8 @@ consteval auto to_chars() {
         // Handle a negative sign.
         if constexpr (is_signed<decltype(value)> && value < 0) {
             fixed_string<string.size().raw + 1> new_string;
-            for (iword i = 0; i < string.size(); ++i) {
-                new_string[i + 1] = string[i];
+            for (uword i = 0u; i < string.size(); ++i) {
+                new_string[i + 1u] = string[i];
             }
             new_string[0] = '-';
             return new_string;
@@ -139,13 +139,13 @@ constexpr auto to_string_at(arithmetic<T> value, span<char> output_buffer)
     }
 
     // TODO: Get the length of this integer faster.
-    iword length = string_length(buffer);
+    uword length = string_length(buffer);
     if (length > output_buffer.size()) {
         return nullopt;
     }
 
     if consteval {
-        for (iword i = 0; i < length; ++i) {
+        for (idx i = 0u; i < length; ++i) {
             output_buffer[i] = buffer[i.raw];
         }
     } else {
@@ -271,8 +271,8 @@ namespace detail {
     // default container for `vformat_to()`.
     struct format_string_vector
         : collection_interface<format_string_vector, char, true> {
-        format_string_vector(char* p_in_storage, iword in_length,
-                             iword in_max_length)
+        format_string_vector(char* p_in_storage, uword in_length,
+                             uword in_max_length)
             : p_storage(p_in_storage),
               length(in_length),
               max_length(in_max_length) {
@@ -284,13 +284,13 @@ namespace detail {
         }
 
         [[nodiscard]]
-        auto size() const -> iword {
-            return this->length;
+        auto size() const -> idx {
+            return idx(this->length);
         }
 
         [[nodiscard]]
-        auto capacity() const -> iword {
-            return this->max_length;
+        auto capacity() const -> idx {
+            return idx(this->max_length);
         }
 
         auto push_back(is_stable_allocator auto& allocator, char character)
@@ -311,8 +311,8 @@ namespace detail {
         }
 
         char* p_storage;
-        iword length;
-        iword max_length;
+        uword length;
+        uword max_length;
     };
 
     // An index into the packed `format_arg_storage`.
@@ -328,24 +328,24 @@ namespace detail {
         // For every type passed into the constructor, pack it into the arrays
         // in-order.
         template <typename T>
-        void store_argument(iword& argument_index, T&& value) {
+        void store_argument(uword& argument_index, T&& value) {
             // Pack `value` into `packed_args_storage`.
             iword const storage_index =
                 this->arguments_indices[argument_index.raw].byte_index;
 
             copy_memory_small(addressof(value),
                               &(this->packed_args_storage[0]) + storage_index,
-                              ssizeof(T));
+                              sizeof(T));
 
             // Assign `T` to that storage.
             this->arguments_indices[argument_index.raw].discriminant =
                 detail::format_type_constant::alternative<T>();
 
             // Set the byte offset for the next argument if there is another.
-            if (argument_index + 1 <
-                ssizeof_pack<types...>()) {  // TODO: Explore whether
-                                             // `[[likely]]`
-                                             // improves performance here.
+            if (argument_index + 1u <
+                sizeof...(types)) {  // TODO: Explore whether
+                                     // `[[likely]]`
+                                     // improves performance here.
                 this->arguments_indices[argument_index.raw + 1].byte_index =
                     storage_index.raw + sizeof(T);
             }
@@ -357,15 +357,14 @@ namespace detail {
         format_args_compact_storage(types&&... arguments) {
             this->packed_args_storage[0] = {};
             this->arguments_indices[0] = {};
-            this->arguments_indices[0].byte_index = 0;
-            iword argument_index = 0;
-            // TODO: Erase the type of `types`.
+            this->arguments_indices[0].byte_index = 0u;
+            uword argument_index = 0u;
             // `store_argument()` increments `argument_index`.
             (this->store_argument(argument_index, forward<types>(arguments)),
              ...);
         }
 
-        static constexpr iword::raw_type argument_count = sizeof...(types);
+        static constexpr uword::raw_type argument_count = sizeof...(types);
         format_argument_compact_index arguments_indices[argument_count];
 
         // TODO: This array length might need to be larger if the argument's
@@ -405,7 +404,7 @@ namespace detail {
         }
 
         format_argument_compact_index const* p_args_indices;
-        iword const argument_count;
+        uword const argument_count;
     };
 
     // To prevent redundant template specializations for a contiguous
@@ -415,8 +414,8 @@ namespace detail {
     struct format_buffer_base
         : public collection_interface<format_buffer_base<allocator_type>, char,
                                       true> {
-        format_buffer_base(char* p_in_string, iword in_length,
-                           iword in_max_length)
+        format_buffer_base(char* p_in_string, uword in_length,
+                           uword in_max_length)
             : p_string(p_in_string),
               length(in_length),
               max_length(in_max_length) {
@@ -428,26 +427,26 @@ namespace detail {
         }
 
         [[nodiscard]]
-        auto size() const -> iword {
-            return this->length;
+        auto size() const -> idx {
+            return idx(this->length);
         }
 
         [[nodiscard]]
-        auto capacity() const -> iword {
-            return this->max_length;
+        auto capacity() const -> idx {
+            return idx(this->max_length);
         }
 
-        virtual auto grow(iword new_size) -> maybe<void> = 0;
+        virtual auto grow(uword new_size) -> maybe<void> = 0;
 
         void clear() {
-            this->length = 0;
+            this->length = 0u;
         }
 
         auto push_back(allocator_type&, char character) -> maybe<void> {
             // If the new length would exceed the current capacity, call
             // `.grow()` to extend the capacity, first.
-            if (this->length + 1 > this->max_length) {
-                maybe<void> result = this->grow(this->length + 1);
+            if (this->length + 1u > this->max_length) {
+                maybe<void> result = this->grow(this->length + 1u);
                 if (!result.has_value()) {
                     return nullopt;
                 }
@@ -459,8 +458,8 @@ namespace detail {
         }
 
         char* p_string;
-        iword length;
-        iword max_length;
+        uword length;
+        uword max_length;
     };
 
     template <typename...>
@@ -481,7 +480,7 @@ namespace detail {
 
         format_buffer_iterator(allocator_type& in_allocator,
                                outputter_type iterator)
-            : format_buffer_base<allocator_type>(storage, 0, 256),
+            : format_buffer_base<allocator_type>(storage, 0u, 256u),
               allocator(in_allocator),
               output_iterator(iterator) {
         }
@@ -497,9 +496,9 @@ namespace detail {
         // Overload the pure virtual `format_buffer_base::grow()` function.
         // Instead of expanding its own memory, this buffer is flushed itself to
         // make more room.
-        auto grow(iword) -> maybe<void> {
+        auto grow(uword) -> maybe<void> {
             // `size()` is derived from `format_buffer_base`.
-            if (this->size() == 256) {
+            if (this->size() == 256u) {
                 this->flush();
             }
             return monostate;
@@ -507,18 +506,18 @@ namespace detail {
 
         auto flush() -> maybe<void> {
             // `size()` is derived from `format_buffer_base`.
-            iword size = this->size();
+            uword size = this->size();
             // char const* p_end = storage + size;
 
             // TODO: Use a multiple `.insert()` overload.
-            for (iword::raw_type i = 0; i < size; ++i) {
+            for (uword::raw_type i = 0u; i < size; ++i) {
                 maybe result = output_iterator.insert(allocator, storage[i]);
                 if (!result.has_value()) {
                     return nullopt;
                 }
             }
 
-            this->length = 0;
+            this->length = 0u;
             return monostate;
         }
     };
@@ -550,13 +549,13 @@ namespace detail {
         iword argument_index = 0;
 
       public:
-        iword const arguments_count;
+        uword const arguments_count;
 
         using iterator = decltype(format.begin());
         using const_iterator = decltype(format.cbegin());
 
         constexpr format_parse_context(string const in_format,
-                                       iword in_args_count = 0)
+                                       uword in_args_count = 0u)
             : format(in_format), arguments_count(in_args_count) {
         }
 
@@ -580,11 +579,11 @@ namespace detail {
             return ++(this->argument_index);
         }
 
-        // Check if a manually indexed argument is within reasonable bounds, and
-        // check that this context is not using automatic indexing.
+        // Check if a manually indexed argument is within reasonable bounds, a
+        // d check that this context is not using automatic indexing.
         constexpr auto check_argument_index(iword index) -> maybe<void> {
             if consteval {
-                if (index >= this->arguments_count) {
+                if (index >= make_signed(this->arguments_count)) {
                     // This index is of range.
                     return nullopt;
                 }
@@ -660,8 +659,8 @@ namespace detail {
             // the next argument.
             for (iword i = 0; i < to_open_brace; ++i) {
                 // TODO: Optimize this with a multiple-insert overload.
-                maybe result = handler.output_iterator.insert(handler.allocator,
-                                                              remainder[i]);
+                maybe result = handler.output_iterator.insert(
+                    handler.allocator, remainder[make_unsigned(i)]);
                 if (!result.has_value()) {
                     return format_errors::out_of_memory;
                 }
@@ -682,7 +681,7 @@ namespace detail {
 
                 // TODO: Optimize this with a multiple-insert
                 // overload.
-                for (iword i = 0; i < int_string.size() - 1; ++i) {
+                for (uword i = 0u; i < int_string.size() - 1u; ++i) {
                     _ = handler.output_iterator.insert(handler.allocator,
                                                        int_string[i]);
                 }
@@ -723,7 +722,8 @@ namespace detail {
             ++current_argument;
 
             // Slice the string past the text that's just been parsed.
-            remainder = remainder.remove_prefix(to_close_brace + 1);
+            remainder =
+                remainder.remove_prefix(make_unsigned(to_close_brace) + 1u);
         }
 
         // No errors occurred.
@@ -765,7 +765,7 @@ namespace detail {
                  format_args arguments) -> scaredy_format<string> {
         // TODO: Estimate the size of the final formatted string, and
         // allocate that much up-front for `output`.
-        iword const initial_size = format.size() + 10;
+        idx const initial_size = format.size() + 10u;
 
         maybe maybe_memory = allocator.template alloc_multi<char>(initial_size);
         if (!maybe_memory.has_value()) {
@@ -779,7 +779,7 @@ namespace detail {
         // `concept` and has a `.push_back()` method for a
         // `back_insert_iterator`. It is used to store the formatted string
         // and reallocates when that string grows beyond `initial_size`.
-        format_string_vector into_buffer = {p_memory, 0, initial_size};
+        format_string_vector into_buffer = {p_memory, 0u, initial_size};
 
         // TODO: Specify which kind of `scaredy_format` this is.
         auto result = vformat_to(
@@ -789,7 +789,7 @@ namespace detail {
             return result.template error<format_errors>();
         }
 
-        iword const length = string_length(into_buffer.data());
+        uword const length = string_length(into_buffer.data());
         return string(into_buffer.p_storage, length);
     }
 }  // namespace detail
@@ -804,8 +804,8 @@ auto format_to(allocator_type& allocator, outputter_type output_iterator,
     -> scaredy_format<outputter_type> {
     return detail::vformat_to(
         allocator, output_iterator, format,
-        detail::format_args{
-            detail::format_args_compact_storage(move(arguments)...)});
+        detail::format_args(
+            detail::format_args_compact_storage(move(arguments)...)));
 }
 
 template <is_stable_allocator allocator_type, typename... Args>
@@ -814,8 +814,8 @@ auto format(allocator_type& allocator, string const format, Args&&... arguments)
     -> scaredy_format<string> {
     return detail::vformat(
         allocator, format,
-        detail::format_args{
-            detail::format_args_compact_storage(move(arguments)...)});
+        detail::format_args(
+            detail::format_args_compact_storage(move(arguments)...)));
 }
 
 }  // namespace cat

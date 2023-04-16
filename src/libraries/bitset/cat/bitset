@@ -9,8 +9,8 @@
 
 namespace cat {
 
-template <iword bits_count>
-    requires(bits_count > 0)
+template <uword bits_count>
+    requires(bits_count > 0u)
 class bitset {
   private:
     // public:
@@ -18,10 +18,10 @@ class bitset {
     // Store the smallest number of bytes needed for `bits_count`. If that is 8
     // bytes or fewer, use that many bytes. If it is larger, use an array of
     // 8-byte integers. Divide the bits by 8, rounding up.
-    static constexpr iword total_bytes = div_ceil(bits_count, 8);
+    static constexpr uword total_bytes = div_ceil(bits_count, 8u);
 
     using array_type = conditional<
-        total_bytes <= 8,
+        total_bytes <= 8u,
         // `uint_fixed` will not compile here if it is larger than 8 or it is
         // not a power of 2. This is an `array` of one element to make it
         // iterable.
@@ -29,8 +29,8 @@ class bitset {
             uint_fixed<min(
                 // TODO: Signed int `round_to_pow2()`.
                 make_signed(round_to_pow2(make_unsigned(total_bytes.raw))), 8)>,
-            1>,
-        array<uint8, div_ceil(total_bytes, 8)>>;
+            1u>,
+        array<uint8, div_ceil(total_bytes, 8u)>>;
 
     // private:
     using array_type_element = array_type::value_type;
@@ -43,21 +43,21 @@ class bitset {
     // using const_reverse_iterator =
     //     bit_iterator<typename value_type::const_reverse_iterator>;
 
-    static constexpr iword storage_array_size = array_type::size();
+    static constexpr idx storage_array_size = array_type::size();
 
-    static constexpr iword storage_element_size = ssizeof(array_type_element);
+    static constexpr idx storage_element_size = idx(sizeof(array_type_element));
 
     // The number of bits NOT counted in the first 1, 2, or 4 bytes of this
     // bitset.
-    static constexpr iword leading_skipped_bits =
+    static constexpr uword leading_skipped_bits =
         // The number of bits in the entire storage, minus the bits declared for
         // use.
         (total_bytes * 8) - bits_count;
 
     // The number of bits counted in the first 1, 2, or 4 bytes of this bitset.
-    static constexpr iword leading_bytes_bits =
+    static constexpr uword leading_bytes_bits =
         // Size of this storage, 64 bits or fewer.
-        storage_element_size * 8 -
+        storage_element_size * 8u -
         // Minus the number of unused bits in this bitset.
         leading_skipped_bits;
 
@@ -71,7 +71,7 @@ class bitset {
                  ...)
     [[nodiscard]]
     static constexpr auto from(types... values) -> bitset
-        requires(ssizeof_pack<types...>() == array_type::size())
+        requires(sizeof...(types) == array_type::size())
     {
         // `value_type::value_type` is some unsigned integer.
         // TODO: Assert that the input fits in `bits_count`.
@@ -90,23 +90,24 @@ class bitset {
     // Index into this bit-set from the right-most bit.
     [[nodiscard]]
     constexpr auto
-    operator[](iword index_bit) -> bit_reference<array_type_element> {
+    operator[](uword index_bit) -> bit_reference<array_type_element> {
         if !consteval {
-            cat::assert(index_bit < bits_count);
+            assert(index_bit < bits_count);
         }
 
         array_type_element& index_byte =
-            this->storage[this->storage.size() - 1 -
+            this->storage[this->storage.size() - 1u -
                           ((index_bit + this->leading_skipped_bits) /
-                           word_bits)];
+                           // TODO: Without `.raw`, this is ambiguous.
+                           word_bits.raw)];
 
-        iword bit_offset = index_bit + this->leading_skipped_bits;
+        uword bit_offset = index_bit + this->leading_skipped_bits;
         // TODO: `total_bytes` doesn't compile here in Clang 17 if prefixed by
         // `this->`.
         if constexpr (total_bytes > word_bytes) {
             // If the bitset is larger than a word, Wrap the bit offset by the
             // size of a word.
-            bit_offset &= word_bits - 1;
+            bit_offset &= word_bits - 1u;
         }
 
         return bit_reference<array_type_element>::from_offset(index_byte,
@@ -115,12 +116,12 @@ class bitset {
 
     [[nodiscard]]
     constexpr auto
-    operator[](iword index_bit) const -> bit_reference<array_type_element> {
+    operator[](uword index_bit) const -> bit_reference<array_type_element> {
         return (*unconst(this))[index_bit];
     }
 
     [[nodiscard]]
-    constexpr auto at(iword index) -> maybe<bit_reference<array_type_element>> {
+    constexpr auto at(uword index) -> maybe<bit_reference<array_type_element>> {
         if (index < bits_count) {
             return (*this)[index];
         }
@@ -128,7 +129,7 @@ class bitset {
     }
 
     [[nodiscard]]
-    constexpr auto at(iword index) const
+    constexpr auto at(uword index) const
         -> maybe<bit_reference<array_type_element>> {
         if (index < bits_count) {
             return (*this)[index];
@@ -140,7 +141,7 @@ class bitset {
     friend constexpr auto
     operator&(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
         bitset<bits_count> bitset;
-        for (iword::raw_type i = 0; i < lhs.storage_array_size; ++i) {
+        for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
             bitset.storage[i] = lhs.storage[i] & rhs.storage[i];
         }
         return bitset;
@@ -156,7 +157,7 @@ class bitset {
     friend constexpr auto
     operator|(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
         bitset<bits_count> bitset;
-        for (iword::raw_type i = 0; i < lhs.storage_array_size; ++i) {
+        for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
             bitset.storage[i] = lhs.storage[i] | rhs.storage[i];
         }
         return bitset;
@@ -172,7 +173,7 @@ class bitset {
     friend constexpr auto
     operator^(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
         bitset<bits_count> bitset;
-        for (iword::raw_type i = 0; i < lhs.storage_array_size; ++i) {
+        for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
             bitset.storage[i] = lhs.storage[i] ^ rhs.storage[i];
         }
         return bitset;
@@ -194,13 +195,12 @@ class bitset {
     // Evaluate true if every bit in this bitset is 1.
     [[nodiscard]]
     constexpr auto all_of() const -> bool {
-        for (iword i = 0; i < this->storage_array_size; ++i) {
+        for (uword i = 0u; i < this->storage_array_size; ++i) {
             auto it = this->storage[i];
             using T = decltype(it);
 
-            // TODO: Clang rejects the `constant_evaluate()` call.
-            if (i > 0 ||  // constant_evaluate
-                (has_single_bit(bits_count) || !(bits_count & 63))) {
+            if (i > 0u || constant_evaluate(has_single_bit(bits_count) ||
+                                            !(bits_count & 63u))) {
                 if (it != it.max()) {
                     // If at least one bit is 0:
                     return false;
@@ -208,7 +208,7 @@ class bitset {
             } else {
                 // Leading bits of the leading byte should not be considered
                 // part of the bitset, so they are masked off.
-                T mask = (T(1u) << leading_bytes_bits) - T(1u);
+                T mask = (T(1) << leading_bytes_bits) - T(1);
 
                 if (it != mask) {
                     return false;
@@ -236,25 +236,25 @@ class bitset {
     }
 
     [[nodiscard]]
-    constexpr auto countl_zero() const -> iword {
+    constexpr auto countl_zero() const -> idx {
         // TODO: `leading_bytes_bits` doesn't compile here in Clang 17 if
         // prefixed by `this->`.
-        constexpr iword skip_bits =
-            (ssizeof(array_type_element) * 8) - leading_bytes_bits;
+        constexpr uword skip_bits =
+            (sizeof(array_type_element) * 8u) - leading_bytes_bits;
 
-        iword count = cat::countl_zero(this->storage[0]);
-        if (count != ssizeof(array_type_element) * 8) {
+        idx count = cat::countl_zero(this->storage[0]);
+        if (count != sizeof(array_type_element) * 8u) {
             return count - skip_bits;
         }
 
         count -= skip_bits;
 
-        for (iword i = 1; i < this->storage_array_size; ++i) {
-            iword next_count = cat::countl_zero(this->storage[i]);
+        for (uword i = 1u; i < this->storage_array_size; ++i) {
+            idx next_count = cat::countl_zero(this->storage[i]);
             count += next_count;
 
             // If any 1s are found, skip remaining bytes.
-            if (next_count != ssizeof(array_type_element) * 8) {
+            if (next_count != sizeof(array_type_element) * 8u) {
                 break;
             }
         }
@@ -264,19 +264,19 @@ class bitset {
     // TODO: `.countl_one()`.
 
     [[nodiscard]]
-    constexpr auto countr_zero() const -> iword {
-        iword count =
-            cat::countr_zero(this->storage[this->storage_array_size - 1]);
-        if (count != ssizeof(array_type_element) * 8) {
+    constexpr auto countr_zero() const -> idx {
+        idx count =
+            cat::countr_zero(this->storage[this->storage_array_size - 1u]);
+        if (count != sizeof(array_type_element) * 8u) {
             return count;
         }
 
-        for (iword i = this->storage_array_size - 2; i >= 0; --i) {
-            iword next_count = cat::countr_zero(this->storage[i]);
+        for (uword i = this->storage_array_size - 2u; i >= 0u; --i) {
+            idx next_count = cat::countr_zero(this->storage[i]);
             count += next_count;
 
-            // If any 1s are found, skip remaining bytes.
-            if (next_count != ssizeof(array_type_element) * 8) {
+            // If any 1's are found, skip remaining bytes.
+            if (next_count != sizeof(array_type_element) * 8u) {
                 break;
             }
         }

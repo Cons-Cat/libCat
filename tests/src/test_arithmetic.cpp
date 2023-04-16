@@ -686,7 +686,8 @@ TEST(test_numerals) {
     static_assert(cat::is_same<decltype(add_uword_idx), uword>);
 
     add_uword_idx += idx2;
-
+    // TODO: `idx` should support += `uword`.
+    
     auto add_int_idx = 1_i4 + idx2;
     static_assert(cat::is_same<decltype(add_int_idx), idx>);
     auto add_idx_int = idx2 + 1_i4;

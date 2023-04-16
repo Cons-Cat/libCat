@@ -26,8 +26,8 @@ struct avx2_abi {
 
     avx2_abi() = delete;
 
-    static constexpr cat::iword size = 32;
-    static constexpr cat::iword lanes = size / ssizeof(T);
+    static constexpr cat::idx size = 32u;
+    static constexpr cat::uword lanes = size / sizeof(T);
     static constexpr cat::uword alignment = 32u;
 };
 
@@ -58,12 +58,12 @@ template <typename T>
 [[nodiscard]]
 auto any_of(simd_mask<x64::avx2_abi<T>, T> mask) -> bool;
 
-template <cat::iword bits_count>
-    requires(bits_count > 0)
+template <cat::uword bits_count>
+    requires(bits_count > 0u)
 class bitset;
 
 template <typename T>
 [[nodiscard]]
-auto simd_to_bitset(simd_mask<x64::avx2_abi<T>, T> mask) -> bitset<32>;
+auto simd_to_bitset(simd_mask<x64::avx2_abi<T>, T> mask) -> bitset<32u>;
 
 }  // namespace cat

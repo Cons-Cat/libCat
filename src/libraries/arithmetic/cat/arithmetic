@@ -21,7 +21,7 @@
 // This solution is concise, because any constraint broadly applies to all
 // possible type conversions.
 
-#define ssizeof(argument) cat::iword(sizeof(argument))
+#define ssizeof(argument) cat::make_signed(sizeof(argument))
 
 namespace cat {
 
@@ -485,6 +485,13 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
 
     constexpr arithmetic() = default;
 
+    // constexpr arithmetic(int input) {
+    //     if constexpr (__builtin_constant_p(input) == 1) {
+    //         this->raw = static_cast<T>(input);
+    //     } else {
+    //     }
+    // }
+
     // Constructing with safe conversions is implicit, but constructing with
     // unsafe conversions is explicit.
     template <is_arithmetic U>
@@ -608,7 +615,7 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
             if constexpr (is_unsigned<T>) {
                 // Assume there is no overflow.
                 // NOLINTNEXTLINE This is a C++23 feature.
-                [[gnu::assume((self >= operand))]];
+                // [[gnu::assume((self.raw >= operand))]];
             }
             return detail::promoted_type<T, U>{self.raw - raw_operand};
         } else if constexpr (policy == wrap || policy == wrap_member) {
@@ -679,7 +686,7 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
                 // TODO: Figure out this overflow check.
                 // Assume there is no overflow.
                 // NOLINTNEXTLINE This is a C++23 feature.
-                // [[gnu::assume((self >= operand))]];
+                // [[gnu::assume((self.raw >= operand))]];
             }
             return detail::promoted_type<T, U>{self.raw * raw_operand};
         } else if constexpr (policy == wrap || policy == wrap_member) {
@@ -1310,12 +1317,14 @@ struct index : detail::arithmetic_storage<__SIZE_TYPE__, policy>,
     // into `index`.
     template <is_integral U>
     constexpr explicit(sizeof(U) >= sizeof(raw_type)) index(U other) {
-        if !consteval {
-            assert(make_raw_arithmetic(other) >= 0);
-            assert(make_unsigned(make_raw_arithmetic(other)) <=
-                   limits<index>::max());
-        }
+        // if !consteval {
+        //     assert(other >= U(0));
+        //     assert(make_raw_arithmetic(other) <= U(limits<index>::max()));
+        // }
+        // [[gnu::assume(make_raw_arithmetic(other) > 0)]];
         this->raw = make_raw_arithmetic(other);
+        // If the conversion was safe, the high bit will be 0.
+        // [[gnu::assume((this->raw & limits<index>::high_bit) == 0u)]];
     }
 
     // `index` can safely implictly convert into `iword` or `intptr`.
@@ -1353,8 +1362,6 @@ struct index : detail::arithmetic_storage<__SIZE_TYPE__, policy>,
     operator<=>(index lhs, U rhs) {
         return lhs.raw <=> make_raw_arithmetic(rhs);
     }
-
-    // TODO: Handle type promotion appropriately.
 
     // Generate `operator+`.
     template <is_integral T>

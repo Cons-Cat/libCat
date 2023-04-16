@@ -8,25 +8,25 @@
 
 TEST(test_arrays) {
     // Initializing a array:
-    cat::array<int4, 5> array_1 = {0, 1, 2, 3, 4};
+    cat::array<int4, 5u> array_1 = {0, 1, 2, 3, 4};
     // Assigning a array:
     array_1 = {5, 6, 7, 8, 9};
     // Default initializing a array:
-    cat::array<int4, 1> array_2;
+    cat::array<int4, 1u> array_2;
     // Move assigning a array:
-    cat::array<int4, 1> array_3 = {0};
+    cat::array<int4, 1u> array_3 = {0};
     array_2 = cat::move(array_3);  // NOLINT
     // Move constructing a array:
     _ = cat::move(array_1);  // NOLINT
 
     // `const` array.
-    cat::array<int4, 3> const array_const = {0, 1, 2};
+    cat::array<int4, 3u> const array_const = {0, 1, 2};
     [[maybe_unused]] int4 const_val = array_const.at(1).or_exit();
 
     // Repeat those tests in a constexpr context.
     auto constant_test = []() constexpr {
-        cat::array<int4, 1> const_array_1;
-        cat::array<int4, 1> const_array_2 = {1};
+        cat::array<int4, 1u> const_array_1;
+        cat::array<int4, 1u> const_array_2 = {1};
         // NOLINTNEXTLINE Just be explicit about the move here.
         _ = cat::move(const_array_1);
         // NOLINTNEXTLINE Just be explicit about the move here.
@@ -35,7 +35,7 @@ TEST(test_arrays) {
     cat::constant_evaluate(constant_test);
 
     // Test that the array is iterable.
-    iword count = 0;
+    idx count = 0u;
     for (int4& a : array_1) {
         cat::verify(a == array_1[count]);
         ++count;
@@ -49,7 +49,7 @@ TEST(test_arrays) {
     cat::verify(array_1.front() == 5);
     cat::verify(array_1.back() == 9);
 
-    count = 0;
+    count = 0u;
     for (int4 const& a : cat::as_const(array_1)) {
         cat::verify(a == array_1[count]);
         ++count;
@@ -72,7 +72,7 @@ TEST(test_arrays) {
     cat::array implicit_array_1 = {0, 1, 2, 3, 4};
     cat::array implicit_array_2{0, 1, 2, 3, 4};
     cat::array implicit_array_3(0, 1, 2, 3, 4);
-    static_assert(implicit_array_1.size() == 5);
+    static_assert(implicit_array_1.size() == 5u);
     static_assert(implicit_array_1.capacity() == 5);
     _ = implicit_array_1.capacity();
     static_assert(implicit_array_2.size() == 5);
@@ -94,13 +94,13 @@ TEST(test_arrays) {
     // TODO: Test `constexpr`.
 
     // Slicing array.
-    [[maybe_unused]] cat::span span = array_1.first(1);
-    _ = array_1.subspan(0, 2);
-    _ = array_1.last(2);
+    [[maybe_unused]] cat::span span = array_1.first(1u);
+    _ = array_1.subspan(0u, 2u);
+    _ = array_1.last(2u);
 
-    [[maybe_unused]] cat::span const span_const = array_1.first(1);
-    _ = array_const.subspan(0, 2);
-    _ = array_const.last(2);
+    [[maybe_unused]] cat::span const span_const = array_1.first(1u);
+    _ = array_const.subspan(0u, 2u);
+    _ = array_const.last(2u);
 
     // Test array copy-assignment.
     cat::array base_array = {0, 0, 0, 0};
@@ -114,18 +114,19 @@ TEST(test_arrays) {
     base_array = move(move_converting_array);  // NOLINT
 
     // Test array fill.
-    cat::array filled_array = cat::array<int4, 8>::filled(6);
-    for (iword i = 0; i < 8; ++i) {
+    cat::array filled_array = cat::array<int4, 8u>::filled(6);
+    for (idx i = 0u; i < 8u; ++i) {
         cat::verify(filled_array[i] == 6);
     }
+
     filled_array.fill(9);
-    for (iword i = 0; i < 8; ++i) {
+    for (idx i = 0u; i < 8u; ++i) {
         cat::verify(filled_array[i] == 9);
     }
 
     // Test from factory.
-    cat::array from_array = cat::array<int4, 3>::from(1, 2, 3);
-    cat::verify(from_array[0] == 1);
-    cat::verify(from_array[1] == 2);
-    cat::verify(from_array[2] == 3);
+    cat::array from_array = cat::array<int4, 3u>::from(1, 2, 3);
+    cat::verify(from_array[0u] == 1);
+    cat::verify(from_array[1u] == 2);
+    cat::verify(from_array[2u] == 3);
 }

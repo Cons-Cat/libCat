@@ -10,7 +10,7 @@ namespace cat {
 // An `array` represents an array of `T` with a `constexpr` length. It stores
 // its elements within itself, so this array can be constructed on the stack.
 // It is random-access iterable.
-template <typename T, iword length>
+template <typename T, uword length>
 class array : public collection_interface<array<T, length>, T, true> {
   public:
     using value_type = T;
@@ -21,7 +21,7 @@ class array : public collection_interface<array<T, length>, T, true> {
 
     // Construct an `array` from a variadic argument list.
     template <typename... Args>
-        requires(ssizeof_pack<Args...>() == length /* &&
+        requires(sizeof...(Args) == length /* &&
 													  (is_convertible<Args, T> && ...)*/)
     constexpr array(Args&&... arguments)
         // Explicitly converting this type allows the first argument to coerce
@@ -38,7 +38,7 @@ class array : public collection_interface<array<T, length>, T, true> {
     // requires(is_convertible<U, T>)
     constexpr auto operator=(array<U, length> const& other_array) -> array& {
         // TODO: Optimize with `copy_memory()` if T and U are relocatable.
-        for (iword i = 0; i < length; ++i) {
+        for (uword i = 0u; i < length; ++i) {
             this->storage[i.raw] = static_cast<T>(other_array[i]);
         }
         return *this;
@@ -52,7 +52,7 @@ class array : public collection_interface<array<T, length>, T, true> {
         requires(is_implicitly_convertible<U, T>)
     constexpr auto operator=(array<U, length>&& other_array) -> array& {
         // TODO: Optimize with `copy_memory()` if T and U are relocatable.
-        for (iword i = 0; i < length; ++i) {
+        for (uword i = 0u; i < length; ++i) {
             this->storage[i.raw] = static_cast<T>(move(other_array[i]));
         }
         return *this;
@@ -62,7 +62,7 @@ class array : public collection_interface<array<T, length>, T, true> {
 
     // Construct an `array` from a variadic argument list.
     template <typename... Args>
-        requires(ssizeof_pack<Args...>() == length &&
+        requires(sizeof...(Args) == length &&
                  (is_implicitly_convertible<Args, T> && ...))
     static constexpr auto from(Args&&... arguments) {
         // Explicitly converting this type allows the first argument to coerce
@@ -88,8 +88,8 @@ class array : public collection_interface<array<T, length>, T, true> {
         // if (!is_constant_evaluated() && sizeof(T) <= 8) {
         //     // set_memory(this->storage, value, length);
         // } else {
-        for (iword::raw_type i = 0; i < length; ++i) {
-            this->storage[i] = static_cast<T>(value);
+        for (uword i = 0u; i < length; ++i) {
+            this->storage[i.raw] = static_cast<T>(value);
         }
         // }
         return *this;
@@ -109,16 +109,16 @@ class array : public collection_interface<array<T, length>, T, true> {
 
     // Get the number of elements contained in this `array`.
     [[nodiscard]]
-    static constexpr auto size() -> iword {
-        return length;
+    static constexpr auto size() -> idx {
+        return static_cast<idx>(length);
     }
 
   private:
     T storage[length.raw];
 };
 
-// Construct an `array` as: `array array = {0, 1, 2};`
+// Construct an `array` as: `array a = {0, 1, 2};`
 template <typename T, typename... Args>
-array(T, Args...) -> array<T, ssizeof_pack<Args...>() + 1>;
+array(T, Args...) -> array<T, sizeof...(Args) + 1u>;
 
 }  // namespace cat

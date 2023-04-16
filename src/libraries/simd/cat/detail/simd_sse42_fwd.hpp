@@ -26,8 +26,8 @@ struct sse42_abi {
 
     sse42_abi() = delete;
 
-    static constexpr cat::iword size = 16;
-    static constexpr cat::iword lanes = size / ssizeof(T);
+    static constexpr cat::idx size = 16u;
+    static constexpr cat::uword lanes = size / sizeof(T);
     static constexpr cat::uword alignment = 16u;
 };
 

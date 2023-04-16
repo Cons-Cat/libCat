@@ -6,13 +6,13 @@
 // produces an infinite loop.
 [[gnu::optimize("-fno-tree-loop-distribute-patterns")]]
 void cat::copy_memory_small(void const* p_source, void* p_destination,
-                            iword bytes) {
+                            uword bytes) {
     unsigned char const* p_source_handle =
         static_cast<unsigned char const*>(p_source);
     unsigned char* p_destination_handle =
         static_cast<unsigned char*>(p_destination);
 
-    for (iword::raw_type i = 0; i < bytes; ++i) {
+    for (uword::raw_type i = 0u; i < bytes; ++i) {
         p_destination_handle[i] = p_source_handle[i];
     }
 }

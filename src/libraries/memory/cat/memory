@@ -37,9 +37,9 @@ constexpr void destroy_at(T* p_place) {
 
 namespace cat {
 
-void copy_memory(void const* p_source, void* p_destination, iword bytes);
+void copy_memory(void const* p_source, void* p_destination, uword bytes);
 
-void copy_memory_small(void const* p_source, void* p_destination, iword bytes);
+void copy_memory_small(void const* p_source, void* p_destination, uword bytes);
 
 // This forward declaration prevents a circular dependency
 // `#include<cat/bit>`.
@@ -56,7 +56,7 @@ namespace detail {
     // code with a call to `memset`. `memset` itself calls this function,
     // which makes a circular reference that ld is unable to link. Mold can
     // link this somehow, but that optimization is useless here.
-    constexpr void set_memory_detail(void* p_source, T value, iword size) {
+    constexpr void set_memory_detail(void* p_source, T value, uword size) {
         // TODO: Assert that these parameters do not index out of bounds or loop
         // infinitely.
         uintptr<T> p_current = uintptr<T>(static_cast<T*>(p_source));
@@ -64,7 +64,7 @@ namespace detail {
         if consteval {
             // Set this memory through scalar code, because `__builtin_memset()`
             // is not `constexpr` in GCC 12.
-            for (iword i = 0; i < size; ++i) {
+            for (uword i = 0u; i < size; ++i) {
                 *p_current = static_cast<T>(value);
                 p_current += sizeof(T);
             }
@@ -73,7 +73,7 @@ namespace detail {
             while (!is_aligned(p_current, native_abi<T>::alignment)) {
                 *p_current = value;
                 p_current += sizeof(T);
-                size -= ssizeof(T);
+                size -= sizeof(T);
             }
 
             // Non-type template parameters are not allowed in a lambda's
@@ -83,9 +83,9 @@ namespace detail {
                 [&]<typename lanes_constant>(lanes_constant) {
                     // TODO: Consider optimizing with multiple vector loads to
                     // leverage instruction-level parallelism.
-                    constexpr iword lanes = lanes_constant::value;
+                    constexpr uword lanes = lanes_constant::value;
                     using vector_type = fixed_size_simd<T, lanes>;
-                    while (size >= ssizeof(vector_type)) {
+                    while (size >= sizeof(vector_type)) {
                         vector_type* p_vector =
                             bit_cast<vector_type*>(p_current.raw);
                         p_vector->fill(value);
@@ -95,21 +95,21 @@ namespace detail {
                 };
 
             // Fill out 32-byte portion.
-            if constexpr (native_abi<T>::size >= 32) {
-                vectorized_fill(constant<32_sz>{});
+            if constexpr (native_abi<T>::size >= 32u) {
+                vectorized_fill(constant<32_uz>{});
             }
 
             // TODO: Support `fill()` on 16-byte x86-64 simd.
             // // Fill out 16-byte portion.
             // if constexpr (native_abi<T>::size >= 16) {
-            //     vectorized_fill(constant<16_sz>{});
+            //     vectorized_fill(constant<16_uz>{});
             // }
 
             // Fill out remaining portion one byte at a time.
-            while (size > 0) {
+            while (size > 0u) {
                 *p_current = value;
                 p_current += sizeof(T);
-                size -= ssizeof(T);
+                size -= sizeof(T);
             }
         }
     }
@@ -118,7 +118,7 @@ namespace detail {
 // Set all bytes at this address to `value`.
 template <typename T = unsigned char>
     requires(sizeof(T) <= 8)
-constexpr void set_memory(void* p_source, T value, iword size) {
+constexpr void set_memory(void* p_source, T value, uword size) {
     // Make a type that `value` can bitcast to, and can be used in a `simd`.
     // TODO: A size-argument numeral type could simplify this.
     using raw_type =
@@ -136,12 +136,12 @@ constexpr void set_memory(void* p_source, T value, iword size) {
 template <typename T = unsigned char>
     requires(sizeof(T) <= 8)
 [[gnu::noinline]]
-constexpr void set_memory_explicit(void* p_source, T value, iword size) {
+constexpr void set_memory_explicit(void* p_source, T value, uword size) {
     set_memory(p_source, value, size);
 }
 
 // Set all bytes at this address to zero.
-constexpr void zero_memory(void* p_source, iword size) {
+constexpr void zero_memory(void* p_source, uword size) {
     detail::set_memory_detail(p_source, static_cast<unsigned char>(0u), size);
 }
 
@@ -149,14 +149,14 @@ constexpr void zero_memory(void* p_source, iword size) {
 // Set all bytes at this address to zero. This function cannot be
 // constant-folded out.
 [[gnu::noinline]]
-constexpr void zero_memory_explicit(void* p_source, iword bytes) {
+constexpr void zero_memory_explicit(void* p_source, uword bytes) {
     zero_memory(p_source, bytes);
 }
 
 template <typename T = unsigned char>
     requires(sizeof(T) <= 8)
-constexpr void set_memory_scalar(void* p_source, T value, iword size) {
-    for (iword i = 0; i < size; ++i) {
+constexpr void set_memory_scalar(void* p_source, T value, uword size) {
+    for (uword i = 0u; i < size; ++i) {
         *(static_cast<T*>(p_source) + i) = value;
     }
 }
@@ -164,16 +164,16 @@ constexpr void set_memory_scalar(void* p_source, T value, iword size) {
 template <typename T = unsigned char>
     requires(sizeof(T) <= 8)
 [[gnu::noinline]]
-constexpr void set_memory_scalar_explicit(void* p_source, T value, iword size) {
+constexpr void set_memory_scalar_explicit(void* p_source, T value, uword size) {
     set_memory_scalar(p_source, value, size);
 }
 
-constexpr void zero_memory_scalar(void* p_source, iword bytes) {
+constexpr void zero_memory_scalar(void* p_source, uword bytes) {
     set_memory_scalar(p_source, 0_u1, bytes);
 }
 
 [[gnu::noinline]]
-constexpr void zero_memory_scalar_explicit(void* p_source, iword bytes) {
+constexpr void zero_memory_scalar_explicit(void* p_source, uword bytes) {
     set_memory_scalar(p_source, 0_u1, bytes);
 }
 

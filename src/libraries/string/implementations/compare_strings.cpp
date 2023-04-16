@@ -11,23 +11,24 @@ auto cat::compare_strings(string const string_1, string const string_2)
     // TODO: Use a type for an ISA-specific widest vector.
     using vector_simd = char1x32;
 
-    array<vector_simd, 4> vectors_1;
-    array<vector_simd, 4> vectors_2;
-    array<vector_simd::mask_type, 4> comparisons;
-    iword length_iterator = string_1.size();
-    iword vector_size = ssizeof(vector_simd);
+    array<vector_simd, 4u> vectors_1;
+    array<vector_simd, 4u> vectors_2;
+    array<vector_simd::mask_type, 4u> comparisons;
+    idx length_iterator = string_1.size();
+    uword vector_size = sizeof(vector_simd);
     char const* p_string_1_iterator = string_1.data();
     char const* p_string_2_iterator = string_2.data();
 
-    auto loop = [&](iword size) -> bool {
+    auto loop = [&](uword size) -> bool {
         while (length_iterator >= vector_size * size) {
-            for (iword i = 0; i < size; ++i) {
-                vectors_1[i].load(string_1.data() + (i * size));
-                vectors_2[i].load(string_2.data() + (i * size));
+            for (idx i = 0u; i < size; ++i) {
+                // TODO: This should work without `.raw`.
+                vectors_1[i].load(string_1.data() + (i * size).raw);
+                vectors_2[i].load(string_2.data() + (i * size).raw);
                 comparisons[i] = (vectors_1[i] == vectors_2[i]);
             }
 
-            for (iword i = 0; i < size; ++i) {
+            for (idx i = 0u; i < size; ++i) {
                 // If any lanes are not equal to each other:
                 if (!comparisons[i].all_of()) {
                     return false;
@@ -43,19 +44,19 @@ auto cat::compare_strings(string const string_1, string const string_2)
     };
 
     // Compare four, two, then one vectors of characters at a time.
-    if (!loop(4)) {
+    if (!loop(4u)) {
         return false;
     }
-    if (!loop(2)) {
+    if (!loop(2u)) {
         return false;
     }
-    if (!loop(1)) {
+    if (!loop(1u)) {
         return false;
     }
 
     // TODO: Extract this to a scalar function.
     // Compare remaining characters individually.
-    for (iword i = 0; i < length_iterator;
+    for (uword i = 0u; i < length_iterator;
          ++i, ++p_string_1_iterator, ++p_string_2_iterator) {
         if (*p_string_1_iterator != *p_string_2_iterator) {
             return false;

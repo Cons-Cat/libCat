@@ -298,7 +298,7 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-    requires(ssizeof(detail::map_syscall_type<T>) <= cat::word_bytes)
+    requires(sizeof(detail::map_syscall_type<T>) <= cat::word_bytes)
 using scaredy_nix = cat::scaredy<
     cat::compact_scaredy<detail::map_syscall_type<T>,
                          // This is a `T` when it is a positive integer.
@@ -812,15 +812,15 @@ auto sys_fstat(file_descriptor file_descriptor)
 // TODO: `sys_lseek()`
 
 // Syscall 9
-auto sys_mmap(cat::uword beginning_address, cat::iword bytes_size,
+auto sys_mmap(cat::uword beginning_address, cat::uword bytes_size,
               memory_protection_flags protections, memory_flags flags,
-              file_descriptor file_descriptor, cat::iword pages_offset)
+              file_descriptor file_descriptor, cat::uword pages_offset)
     -> scaredy_nix<void*>;
 
 // TODO: `sys_mprotect()`
 
 // Syscall 11
-auto sys_munmap(void const* p_memory, cat::iword length) -> scaredy_nix<void>;
+auto sys_munmap(void const* p_memory, cat::uword length) -> scaredy_nix<void>;
 
 // TODO: `sys_brk()`
 
@@ -899,13 +899,14 @@ struct io_vector : cat::span<cat::byte> {
     ~io_vector() = default;
 
     // Construct from any reasonable pointer type.
-    constexpr io_vector(cat::byte* p_in_data, cat::iword in_length)
+    constexpr io_vector(cat::byte* p_in_data, cat::uword in_length)
         : cat::span<cat::byte>(p_in_data, in_length) {
     }
 
     // Construct from any reasonable pointer type.
     constexpr io_vector(cat::byte* p_start, cat::byte* p_end)
-        : cat::span<cat::byte>(p_start, p_end - p_start) {
+        : cat::span<cat::byte>(p_start, cat::uintptr<cat::byte>(p_end) -
+                                            cat::uintptr<cat::byte>(p_start)) {
     }
 
     constexpr auto operator=(io_vector const& io_vector) -> struct io_vector& {
@@ -1219,11 +1220,11 @@ parent_thread:
 
 struct signals_mask_set {
     // TODO: A `cat::bitset` could simplify this.
-    cat::array<unsigned char, 8> bytes;
+    cat::array<unsigned char, 8u> bytes;
 };
 
 inline constexpr signals_mask_set all_signals_mask = {
-    .bytes = cat::array<unsigned char, 8>::filled(-1),
+    .bytes = cat::array<unsigned char, 8u>::filled(-1),
 };
 
 auto block_all_signals() -> signals_mask_set;

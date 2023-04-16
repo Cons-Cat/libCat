@@ -165,9 +165,8 @@ namespace detail {
         // variadic merely to simplify overload resolution in `scaredy`.
         // `decltype` adds a reference to it, so that is removed by
         // `remove_reference`.
-        // TODO: Consider `typeof()` instead?
         using error_type =
-            remove_reference<decltype(array(error_types()...)[0])>;
+            remove_reference<decltype(array(error_types()...)[0u])>;
 
         constexpr scaredy_compact_storage() = default;
 
@@ -462,8 +461,8 @@ class scaredy {
     }
 
     [[nodiscard]]
-        constexpr auto value() &
-            requires(!is_void<T>)
+    constexpr auto value() &
+        requires(!is_void<T>)
     {
         return this->storage.value();
     }
@@ -476,8 +475,8 @@ class scaredy {
     }
 
     [[nodiscard]]
-        constexpr auto value() &&
-            requires(!is_void<T>)
+    constexpr auto value() &&
+        requires(!is_void<T>)
     {
         return move(this->storage.value());
     }

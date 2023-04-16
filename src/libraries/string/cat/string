@@ -21,10 +21,9 @@ auto memcpy(void* p_destination, void const* p_source, __SIZE_TYPE__ bytes)
 // Deprecated call to `memset()`. Consider using `cat::set_memory() or
 // cat::zero_memory()` instead. `memset()` exists to enable some GCC
 // optimizations.
-extern "C"
-    [[deprecated("std::memset() is deprecated! Use cat::set_memory() or "
-                 "cat::zero_memory() instead!")]]
-    auto memset(void* p_source, int byte_value, __SIZE_TYPE__ bytes) -> void*;
+extern "C" [[deprecated("std::memset() is deprecated! Use cat::set_memory() or "
+                        "cat::zero_memory() instead!")]]
+auto memset(void* p_source, int byte_value, __SIZE_TYPE__ bytes) -> void*;
 
 }  // namespace std
 
@@ -33,9 +32,9 @@ using std::memset;
 
 namespace cat {
 
-constexpr auto string_length(char const* p_string) -> iword;
+constexpr auto string_length(char const* p_string) -> idx;
 
-template <iword::raw_type length>
+template <uword::raw_type length>
 class fixed_string;
 
 class string : public span<char const> {
@@ -43,7 +42,7 @@ class string : public span<char const> {
     constexpr string() : span<char const>() {
     }
 
-    constexpr string(char const* p_string, iword in_length)
+    constexpr string(char const* p_string, uword in_length)
         : span<char const>(p_string, in_length) {
     }
 
@@ -65,16 +64,16 @@ class string : public span<char const> {
     // clangd emits a false diagnistic if this is `consteval` instead of
     // `constexpr`.
     // Zero-overhead string literal constructor.
-    template <iword::raw_type other_length>
+    template <uword::raw_type other_length>
     constexpr string(char const (&string)[other_length]) {
         this->p_storage = string;
-        this->length = static_cast<iword::raw_type>(other_length);
+        this->length = idx(other_length);
     }
 
-    template <iword::raw_type other_length>
+    template <uword::raw_type other_length>
     constexpr string(fixed_string<other_length> const& other_string) {
         this->p_storage = other_string.data();
-        this->length = other_length;
+        this->length = idx(other_length);
     }
 
     constexpr string(span<char> const& in_span)
@@ -103,38 +102,42 @@ class string : public span<char const> {
     // TODO: Make these member functions `const`.
 
     [[nodiscard]]
-    constexpr auto substring(iword position, iword count) -> string {
+    constexpr auto substring(uword position, uword count) -> string {
         return {this->p_storage + position, count};
     }
 
     [[nodiscard]]
-    constexpr auto remove_prefix(iword offset) -> string {
+    constexpr auto remove_prefix(uword offset) -> string {
         return this->substring(offset, this->length - offset);
     }
 
     [[nodiscard]]
-    constexpr auto remove_suffix(iword offset) -> string {
-        return this->substring(0, this->length - offset);
+    constexpr auto remove_suffix(uword offset) -> string {
+        return this->substring(0u, this->length - offset);
     }
 
     [[nodiscard]]
-    constexpr auto find_small(char character, iword position = 0) const
+    // TODO: Make this return an `idx`.
+    constexpr auto find_small(char character, uword position = 0u) const
         -> maybe<sentinel<iword, -1>> {
-        for (iword i = position; i < this->length; ++i) {
+        for (uword i = position; i < this->length; ++i) {
             if (this->p_storage[i.raw] == character) {
-                return i;
+                return static_cast<iword>(i);
             }
         }
         return nullopt;
     }
 
     // TODO: Optimize different length strings.
-    // TODO: Tile this loop four or eight times.
     [[nodiscard]]
-    constexpr auto find(char character, iword position = 0) const
+    // TODO: Return an `idx`.
+    constexpr auto find(char character, uword from_position = 0u) const
         -> maybe<sentinel<iword, -1>> {
-        iword i = position;
-        for (; i < this->length - char1x_::lanes; i += char1x_::lanes) {
+        // `i` must be negative, because `length - lanes` might be negative.
+        iword i = static_cast<iword>(from_position);
+        iword lanes = static_cast<iword>(char1x_::lanes);
+        // TODO: Tile this loop four or eight times.
+        for (; i < static_cast<iword>(this->length) - lanes; i += lanes) {
             // TODO: Consider aligning this load?
             char1x_ const storage = char1x_::loaded(this->p_storage + i);
             // TODO: Support a native ABI mask here.
@@ -145,9 +148,10 @@ class string : public span<char const> {
                 return i + mask.countr_zero();
             }
         }
+
         // The last chunk of this string, smaller than `char1x_::lanes`, is
         // stepped through one character at a time.
-        return this->find_small(character, i);
+        return this->find_small(character, static_cast<uword>(i));
     }
 
   private:
@@ -157,9 +161,9 @@ class string : public span<char const> {
     // `iword length;`
 };
 
-// This is `iword::raw_type` because GCC cannot deduce a string literal's
+// This is `uword::raw_type` because GCC cannot deduce a string literal's
 // length from an `ssize`.
-template <iword::raw_type length>
+template <uword::raw_type length>
 class fixed_string
     : public collection_interface<fixed_string<length>, char, true> {
   public:
@@ -173,8 +177,8 @@ class fixed_string
     }
 
     [[nodiscard]]
-    constexpr auto size() const -> iword {
-        return length;
+    constexpr auto size() const -> idx {
+        return idx(length);
     }
 
     constexpr fixed_string() = default;
@@ -193,15 +197,15 @@ class fixed_string
 
     // Create a `fixed_string` from a smaller string, and null out the unfilled
     // bytes.
-    template <iword::raw_type in_length>
+    template <uword::raw_type in_length>
         requires(in_length < length)
     static consteval auto padded(char const (&in)[in_length])
         -> fixed_string<length> {
         fixed_string<length> string;
-        for (iword::raw_type i = 0; i < in_length; ++i) {
+        for (uword::raw_type i = 0u; i < in_length; ++i) {
             string[i] = in[i];
         }
-        for (iword::raw_type i = in_length; i < length; ++i) {
+        for (uword::raw_type i = in_length; i < length; ++i) {
             string[i] = '\0';
         }
         return string;
@@ -222,22 +226,22 @@ class fixed_string
     }
 
     // Concatenate constant-evaluated strings.
-    // This is `iword::raw_type` because GCC cannot deduce a string literal's
+    // This is `uword::raw_type` because GCC cannot deduce a string literal's
     // length from an `ssize`.
-    template <iword::raw_type other_length>
+    template <uword::raw_type other_length>
     constexpr friend auto operator+(
         fixed_string<length> const& self,
         fixed_string<other_length> const& other_string)
         -> fixed_string<length - 1 + other_length> {
         // Add the lengths of two null-terminated strings together:
-        constexpr iword::raw_type new_length = length - 1 + other_length;
+        constexpr uword::raw_type new_length = length - 1u + other_length;
         char array[new_length];
 
-        for (iword::raw_type i = 0; i < length - 1; ++i) {
+        for (uword::raw_type i = 0u; i < length - 1u; ++i) {
             array[i] = self.storage[i];
         }
 
-        for (iword::raw_type i = length - 1; i < new_length - 1; ++i) {
+        for (uword::raw_type i = length - 1; i < new_length - 1u; ++i) {
             array[i] = other_string.data()[i - length + 1];
         }
 
@@ -248,15 +252,15 @@ class fixed_string
     }
 
     // Concatenate a string literal to a `fixed_string`.
-    template <iword::raw_type other_length>
+    template <uword::raw_type other_length>
     constexpr friend auto operator+(fixed_string<length> const& self,
                                     char const (&other_string)[other_length])
-        -> fixed_string<length - 1 + other_length> {
+        -> fixed_string<length - 1u + other_length> {
         return self + fixed_string<other_length>{other_string};
     }
 
     // Concatenate a `fixed_string` to a string literal.
-    template <iword::raw_type other_length>
+    template <uword::raw_type other_length>
     constexpr friend auto operator+(char const (&other_string)[other_length],
                                     fixed_string<length> const& self)
         -> fixed_string<length - 1 + other_length> {
@@ -266,7 +270,7 @@ class fixed_string
   private:
     constexpr void copy_string_data(char const* p_source) {
         if consteval {
-            for (iword::raw_type i = 0; i < length; ++i) {
+            for (uword::raw_type i = 0u; i < length; ++i) {
                 this->storage[i] = p_source[i];
             }
         } else {

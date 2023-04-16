@@ -1250,7 +1250,7 @@ using maybe_non_negative =
 
 // Simplify non-zero numbers.
 template <typename T>
-using maybe_non_zero = maybe<sentinel<T, 0>>;
+using maybe_non_zero = maybe<sentinel<T, T(0)>>;
 
 }  // namespace cat
 

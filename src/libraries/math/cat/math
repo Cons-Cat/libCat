@@ -123,9 +123,11 @@ constexpr auto abs(T value) -> T {
 }
 
 // TODO: Support floating point here.
+template <is_integral T, is_integral U>
 [[nodiscard]]
-constexpr auto div_ceil(is_integral auto dividend, is_integral auto divisor) {
-    return (dividend + divisor - 1) / divisor;
+constexpr auto div_ceil(T dividend, U divisor) {
+    using type = common_type<T, U>;
+    return (dividend + divisor - type(1)) / divisor;
 }
 
 // TODO: `div_floor()`.

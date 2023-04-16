@@ -55,20 +55,20 @@ inline constexpr bool is_target_little_endian =
     (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
 inline constexpr bool is_target_big_endian = !is_target_little_endian;
 
-inline constexpr iword char_bits = ssizeof(unsigned char) * 8;
-inline constexpr iword word_bits = ssizeof(uword) * 8;
-inline constexpr iword word_bytes = ssizeof(uword);
+inline constexpr idx char_bits = idx(sizeof(unsigned char) * 8u);
+inline constexpr idx word_bits = idx(sizeof(uword) * 8u);
+inline constexpr idx word_bytes = idx(sizeof(uword));
 
-inline constexpr iword page_size = 4096_ki;
+inline constexpr idx page_size = idx(4096_uki);
 
 template <is_unsigned_integral T>
 [[nodiscard]]
-constexpr auto countl_zero(T value) -> iword {
+constexpr auto countl_zero(T value) -> idx {
     auto raw_value = make_raw_arithmetic(value);
 
     if (raw_value == 0) {
         // It is undefined behavior to pass 0 into clz.
-        return ssizeof(T) * 8;
+        return idx(sizeof(T) * 8);
     }
 
     // `clz()` is a portable intrinsic.
@@ -81,7 +81,7 @@ constexpr auto countl_zero(T value) -> iword {
         while (raw_value >>= 1) {
             ++raw_value;
         }
-        return ssizeof(T) - raw_value;
+        return idx(sizeof(T) - raw_value);
     }
 }
 
@@ -96,12 +96,12 @@ constexpr auto countl_one(T value) -> iword {
 
 template <is_unsigned_integral T>
 [[nodiscard]]
-constexpr auto countr_zero(T value) -> iword {
+constexpr auto countr_zero(T value) -> idx {
     auto raw_value = make_raw_arithmetic(value);
 
     if (raw_value == 0) {
         // It is undefined behavior to pass 0 into ctz.
-        return ssizeof(T) * 8;
+        return idx(sizeof(T) * 8u);
     }
 
     // `ctz()` is a portable intrinsic.
@@ -109,7 +109,7 @@ constexpr auto countr_zero(T value) -> iword {
     if constexpr (sizeof(raw_value) <= 4) {
         return __builtin_ctz(raw_value);
     } else if constexpr (sizeof(raw_value) == 8) {
-        return __builtin_ctzll(raw_value);
+        return idx(__builtin_ctzll(raw_value));
     }
 }
 

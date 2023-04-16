@@ -97,7 +97,7 @@ namespace to_chars_detail {
                         exponent += 2;
                         prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
-                                          buffer + 2, 2);
+                                          buffer + 2, 2u);
                         buffer += 4;
                     }
                     // 4 digits.
@@ -108,7 +108,7 @@ namespace to_chars_detail {
                         exponent += 3;
                         prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
-                                          buffer + 3, 2);
+                                          buffer + 3, 2u);
                         buffer += 5;
                     }
                 } else {
@@ -124,10 +124,10 @@ namespace to_chars_detail {
                         exponent += 4;
                         prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
-                                          buffer + 2, 2);
+                                          buffer + 2, 2u);
                         prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
-                                          buffer + 4, 2);
+                                          buffer + 4, 2u);
                         buffer += 6;
                     }
                     // 6 digits.
@@ -138,10 +138,10 @@ namespace to_chars_detail {
                         exponent += 5;
                         prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
-                                          buffer + 3, 2);
+                                          buffer + 3, 2u);
                         prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
-                                          buffer + 5, 2);
+                                          buffer + 5, 2u);
                         buffer += 7;
                     }
                 }
@@ -160,13 +160,13 @@ namespace to_chars_detail {
                         exponent += 6;
                         prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
-                                          buffer + 2, 2);
+                                          buffer + 2, 2u);
                         prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
-                                          buffer + 4, 2);
+                                          buffer + 4, 2u);
                         prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
-                                          buffer + 6, 2);
+                                          buffer + 6, 2u);
                         buffer += 8;
                     }
                     // 8 digits.
@@ -177,13 +177,13 @@ namespace to_chars_detail {
                         exponent += 7;
                         prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
-                                          buffer + 3, 2);
+                                          buffer + 3, 2u);
                         prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
-                                          buffer + 5, 2);
+                                          buffer + 5, 2u);
                         prod = uint4::raw_type(prod) * uint8::raw_type(100);
                         copy_memory_small(radix_100_table + int(prod >> 32) * 2,
-                                          buffer + 7, 2);
+                                          buffer + 7, 2u);
                         buffer += 9;
                     }
                 } else {
@@ -197,16 +197,16 @@ namespace to_chars_detail {
 
                     prod = uint4::raw_type(prod) * uint8::raw_type(100);
                     copy_memory_small(radix_100_table + int(prod >> 32) * 2,
-                                      buffer + 2, 2);
+                                      buffer + 2, 2u);
                     prod = uint4::raw_type(prod) * uint8::raw_type(100);
                     copy_memory_small(radix_100_table + int(prod >> 32) * 2,
-                                      buffer + 4, 2);
+                                      buffer + 4, 2u);
                     prod = uint4::raw_type(prod) * uint8::raw_type(100);
                     copy_memory_small(radix_100_table + int(prod >> 32) * 2,
-                                      buffer + 6, 2);
+                                      buffer + 6, 2u);
                     prod = uint4::raw_type(prod) * uint8::raw_type(100);
                     copy_memory_small(radix_100_table + int(prod >> 32) * 2,
-                                      buffer + 8, 2);
+                                      buffer + 8, 2u);
                     buffer += 10;
                 }
             }
@@ -222,7 +222,7 @@ namespace to_chars_detail {
 
         // Print exponent and return
         if (exponent < 0) {
-            copy_memory_small("E-", buffer, 2);
+            copy_memory_small("E-", buffer, 2u);
             buffer += 2;
             exponent = -exponent;
         } else {
@@ -231,7 +231,7 @@ namespace to_chars_detail {
         }
 
         if (exponent >= 10) {
-            copy_memory_small(&radix_100_table[exponent * 2], buffer, 2);
+            copy_memory_small(&radix_100_table[exponent * 2], buffer, 2u);
             buffer += 2;
         } else {
             buffer[0] = (char)('0' + exponent);
@@ -270,22 +270,22 @@ namespace to_chars_detail {
             exponent += 8;
 
             copy_memory_small(radix_100_table + int(prod >> 32) * 2, buffer + 0,
-                              2);
+                              2u);
             prod = uint4::raw_type(prod) * uint8::raw_type(100);
             copy_memory_small(radix_100_table + int(prod >> 32) * 2, buffer + 2,
-                              2);
+                              2u);
             prod = uint4::raw_type(prod) * uint8::raw_type(100);
             copy_memory_small(radix_100_table + int(prod >> 32) * 2, buffer + 4,
-                              2);
+                              2u);
             prod = uint4::raw_type(prod) * uint8::raw_type(100);
             copy_memory_small(radix_100_table + int(prod >> 32) * 2, buffer + 6,
-                              2);
+                              2u);
             buffer += 8;
         }
 
         // Print exponent and return
         if (exponent < 0) {
-            copy_memory_small("E-", buffer, 2);
+            copy_memory_small("E-", buffer, 2u);
             buffer += 2;
             exponent = -exponent;
         } else {
@@ -300,11 +300,11 @@ namespace to_chars_detail {
             auto d1 = prod >> 16;
             prod = uint2::raw_type(prod) * uint4::raw_type(5);  // * 10
             auto d2 = prod >> 15;                               // >> 16
-            copy_memory_small(&radix_100_table[d1 * 2], buffer, 2);
+            copy_memory_small(&radix_100_table[d1 * 2], buffer, 2u);
             buffer[2] = char('0' + d2);
             buffer += 3;
         } else if (exponent >= 10) {
-            copy_memory_small(&radix_100_table[exponent * 2], buffer, 2);
+            copy_memory_small(&radix_100_table[exponent * 2], buffer, 2u);
             buffer += 2;
         } else {
             buffer[0] = char('0' + exponent);

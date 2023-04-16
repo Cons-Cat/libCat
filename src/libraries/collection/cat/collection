@@ -337,7 +337,7 @@ class collection_interface
     // If `.size()` is provided and `.capacity()` is not, generate
     // `.capacity()`.
     [[nodiscard]]
-    constexpr auto capacity() const -> iword
+    constexpr auto capacity() const -> idx
         requires(detail::has_size<derived_type>)
     {
         return this->self().size();
@@ -411,12 +411,11 @@ class collection_interface
     }
 
     [[nodiscard]]
-    constexpr auto subspan(iword start_index, iword end_index) -> span<T>
+    constexpr auto subspan(uword start_index, uword end_index) -> span<T>
         requires(is_array_like)
     {
         if !consteval {
-            cat::assert(start_index >= 0);
-            cat::assert(end_index <= this->self().capacity());
+            assert(end_index <= this->self().capacity());
         }
 
         return span<T>(this->self().data() + start_index,
@@ -424,13 +423,12 @@ class collection_interface
     }
 
     [[nodiscard]]
-    constexpr auto subspan(iword start_index, iword end_index) const
+    constexpr auto subspan(uword start_index, uword end_index) const
         -> span<T const>
         requires(is_array_like)
     {
         if !consteval {
-            cat::assert(start_index >= 0);
-            cat::assert(end_index <= this->self().capacity());
+            assert(end_index <= this->self().capacity());
         }
 
         return span<T const>(this->self().data() + start_index,
@@ -438,53 +436,51 @@ class collection_interface
     }
 
     [[nodiscard]]
-    constexpr auto first(iword count) -> span<T>
+    constexpr auto first(uword count) -> span<T>
         requires(is_array_like)
     {
-        return this->subspan(0, count);
+        return this->subspan(0u, count);
     }
 
     [[nodiscard]]
-    constexpr auto first(iword count) const -> span<T const>
+    constexpr auto first(uword count) const -> span<T const>
         requires(is_array_like)
     {
-        return this->subspan(0, count);
+        return this->subspan(0u, count);
     }
 
     [[nodiscard]]
-    constexpr auto last(iword count) -> span<T>
+    constexpr auto last(uword count) -> span<T>
         requires(is_array_like)
     {
         return this->subspan(this->self().size() - count, this->self().size());
     }
 
     [[nodiscard]]
-    constexpr auto last(iword count) const -> span<T const>
+    constexpr auto last(uword count) const -> span<T const>
         requires(is_array_like)
     {
         return this->subspan(this->self().size() - count, this->self().size());
     }
 
-    template <is_integral U>
-        requires(is_array_like)
     [[nodiscard]]
     constexpr auto
-    operator[](U index) -> T& {
+    operator[](uword index) -> T&
+        requires(is_array_like)
+    {
         if !consteval {
-            assert(index >= 0);
             assert(index < this->self().size());
         }
 
         return this->self_mut().data()[make_raw_arithmetic(index)];
     }
 
-    template <is_integral U>
-        requires(is_array_like)
     [[nodiscard]]
     constexpr auto
-    operator[](U index) const -> T const& {
+    operator[](uword index) const -> T const&
+        requires(is_array_like)
+    {
         if !consteval {
-            assert(index >= 0);
             assert(index < this->self().size());
         }
 

@@ -8,7 +8,7 @@
 consteval auto const_func() -> int4 {
     cat::page_allocator allocator;
     cat::vector<int4> vector;
-    _ = vector.resize(allocator, 8);
+    _ = vector.resize(allocator, 8u);
 
     vector[0] = 1;
     vector[1] = 2;
@@ -21,7 +21,7 @@ TEST(test_vector) {
     // Initialize an allocator.
     cat::page_allocator pager;
     pager.reset();
-    cat::mem auto page = pager.opq_alloc_multi<cat::byte>(4_ki - 32).or_exit();
+    cat::mem auto page = pager.opq_alloc_multi<cat::byte>(4_uki - 32u).or_exit();
     defer(pager.free(page);)
     auto allocator = cat::linear_allocator::backed_handle(pager, page);
 
@@ -81,37 +81,37 @@ TEST(test_vector) {
     cat::verify(int_vec.capacity() >= 8);
 
     // Test resizing a `vector`.
-    int_vec.resize(allocator, 0).or_exit();
-    cat::verify(int_vec.size() == 0);
-    cat::verify(int_vec.capacity() >= 8);
+    int_vec.resize(allocator, 0u).or_exit();
+    cat::verify(int_vec.size() == 0u);
+    cat::verify(int_vec.capacity() >= 8u);
 
-    int_vec.resize(allocator, 4).or_exit();
-    cat::verify(int_vec.size() == 4);
-    cat::verify(int_vec.capacity() >= 8);
+    int_vec.resize(allocator, 4u).or_exit();
+    cat::verify(int_vec.size() == 4u);
+    cat::verify(int_vec.capacity() >= 8u);
 
     // Test reserving storage for a `vector`.
-    int_vec.reserve(allocator, 128).or_exit();
-    cat::verify(int_vec.size() == 4);
-    cat::verify(int_vec.capacity() >= 128);
+    int_vec.reserve(allocator, 128u).or_exit();
+    cat::verify(int_vec.size() == 4u);
+    cat::verify(int_vec.capacity() >= 128u);
 
     // Test reserve constructor.
     cat::vector reserved_vec =
-        cat::vector<int4>::reserved(allocator, 6).or_exit();
-    cat::verify(reserved_vec.capacity() >= 6);
+        cat::vector<int4>::reserved(allocator, 6u).or_exit();
+    cat::verify(reserved_vec.capacity() >= 6u);
 
     // Test filled constructor.
     cat::vector filled_vec =
-        cat::vector<int4>::filled(allocator, 8, 1).or_exit();
-    cat::verify(filled_vec.size() == 8);
-    cat::verify(filled_vec.capacity() >= 8);
+        cat::vector<int4>::filled(allocator, 8u, 1).or_exit();
+    cat::verify(filled_vec.size() == 8u);
+    cat::verify(filled_vec.capacity() >= 8u);
     for (int4 integer : filled_vec) {
         cat::verify(integer == 1);
     }
 
     // Test cloned constructor.
     cat::vector cloned_vec = filled_vec.clone(allocator).or_exit();
-    cat::verify(cloned_vec.size() == 8);
-    cat::verify(cloned_vec.capacity() >= 8);
+    cat::verify(cloned_vec.size() == 8u);
+    cat::verify(cloned_vec.capacity() >= 8u);
     for (int4 integer : cloned_vec) {
         cat::verify(integer == 1);
     }
@@ -123,7 +123,7 @@ TEST(test_vector) {
     cat::vector<int> default_vector;
     cat::verify(default_vector.is_empty());
 
-    _ = default_vector.reserve(allocator, 2);
+    _ = default_vector.reserve(allocator, 2u);
     cat::verify(default_vector.is_empty());
 
     _ = default_vector.push_back(allocator, 0);
@@ -131,22 +131,22 @@ TEST(test_vector) {
     cat::verify(!default_vector.is_empty());
 
     // Resize the vector to be larger, then check it's full.
-    _ = default_vector.resize(allocator, default_vector.capacity() + 1)
+    _ = default_vector.resize(allocator, default_vector.capacity() + 1u)
             .verify();
     cat::verify(default_vector.is_full());
 
     // Resize the vector to be smaller, then check it's not full.
-    _ = default_vector.resize(allocator, 2).verify();
+    _ = default_vector.resize(allocator, 2u).verify();
     cat::verify(!default_vector.is_full());
 
     // TODO: Test insert iterators.
 
     // Test algorithms.
     cat::vector origin_vector =
-        cat::vector<int>::filled(allocator, 6, 1).verify();
-    auto copy_vector = cat::vector<int>::filled(allocator, 6, 0).verify();
-    auto move_vector = cat::vector<int>::filled(allocator, 6, 0).verify();
-    auto relocate_vector = cat::vector<int>::filled(allocator, 6, 0).verify();
+        cat::vector<int>::filled(allocator, 6u, 1).verify();
+    auto copy_vector = cat::vector<int>::filled(allocator, 6u, 0).verify();
+    auto move_vector = cat::vector<int>::filled(allocator, 6u, 0).verify();
+    auto relocate_vector = cat::vector<int>::filled(allocator, 6u, 0).verify();
 
     // `copy()`.
     cat::verify(copy_vector[5] == 0);
