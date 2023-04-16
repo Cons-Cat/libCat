@@ -177,11 +177,10 @@ struct divide_interface {
 };
 
 template <typename derived_type>
-class arithmetic_interface : plus_interface<derived_type>,
-                             minus_interface<derived_type>,
-                             multiply_interface<derived_type>,
-                             divide_interface<derived_type> {
-  public:
+struct arithmetic_interface : plus_interface<derived_type>,
+                              minus_interface<derived_type>,
+                              multiply_interface<derived_type>,
+                              divide_interface<derived_type> {
     // No-op unary `+` operator for operand.
     constexpr friend auto operator+(derived_type& self) {
         return self;
@@ -207,7 +206,6 @@ class arithmetic_interface : plus_interface<derived_type>,
         return self.bit_complement();
     }
 
-  private:
     constexpr auto self() {
         return static_cast<derived_type&>(*this);
     }
