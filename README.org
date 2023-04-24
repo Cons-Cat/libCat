@@ -12,11 +12,11 @@ libCat is a non-POSIX compliant C++23 runtime. It has no pthreads nor =malloc()=
 More essays and videos will come in the future.
 
 * Building
-libCat requires a development version of GCC 13. Building appears to fail using =make=, and is only tested using =ninja=.
+libCat requires a development version of GCC from the =trunk= branch. Compiling libCat is only tested using =ninja=.
 #+BEGIN_SRC
   $ cmake -B build/ -G 'Ninja Multi-Config'
   $ ninja -C build/
   $ ./build/tests/Debug/unit_tests
 #+END_SRC
 
-The =.clang-format= and =.clang-tidy= configurations are only compatible with recent versions of Clang 17 tools.
+The =.clang-format= and =.clang-tidy= configurations are only compatible with recent builds of clang-tools from the =main= branch.
