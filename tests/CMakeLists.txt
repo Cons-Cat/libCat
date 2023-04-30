@@ -47,7 +47,7 @@ if(CAT_BUILD_UNIT_TESTS)
     # ${CMAKE_SOURCE_DIR}/tests/src/test_pool_allocator.cpp
     # ${CMAKE_SOURCE_DIR}/tests/src/test_list.cpp
 	${CMAKE_SOURCE_DIR}/tests/src/test_meta.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_arithmetic.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_arithmetic.cpp
     # ${CMAKE_SOURCE_DIR}/tests/src/test_math.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_maybe.cpp
     # ${CMAKE_SOURCE_DIR}/tests/src/test_paging_memory.cpp
@@ -60,7 +60,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_variant.cpp
     # ${CMAKE_SOURCE_DIR}/tests/src/test_vector.cpp
     # ${CMAKE_SOURCE_DIR}/tests/src/test_ring.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_invoke.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_invoke.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_cast.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bit.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bitset.cpp

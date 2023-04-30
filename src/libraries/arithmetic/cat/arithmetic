@@ -1309,19 +1309,15 @@ struct index : detail::arithmetic_storage<__SIZE_TYPE__, policy>,
 
     constexpr index() = default;
 
-    // Any integral type smaller than `raw_type` can safely implicitly convert
-    // into `index`.
+    // `index` allows unsafe signed-ness conversions.
     template <is_integral U>
-    constexpr explicit(sizeof(U) >= sizeof(raw_type) || is_signed<U>)
-        index(U other) {
-        // if !consteval {
-        //     assert(other >= U(0));
-        //     assert(make_raw_arithmetic(other) <= U(limits<index>::max()));
-        // }
-        // [[gnu::assume(make_raw_arithmetic(other) > 0)]];
+    constexpr explicit(sizeof(raw_type) <= sizeof(U)) index(U other) {
+        if !consteval {
+            assert(other >= U(0));
+            assert(make_unsigned(make_raw_arithmetic(other)) <=
+                   limits<index>::max());
+        }
         this->raw = make_raw_arithmetic(other);
-        // If the conversion was safe, the high bit will be 0.
-        // [[gnu::assume((this->raw & limits<index>::high_bit) == 0u)]];
     }
 
     // `index` can safely implictly convert into `iword` or `intptr`.
