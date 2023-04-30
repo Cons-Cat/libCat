@@ -74,9 +74,9 @@ constexpr auto countl_zero(T value) -> idx {
     // `clz()` is a portable intrinsic.
 
     if constexpr (sizeof(raw_value) == 4) {
-        return __builtin_clz(raw_value);
+        return idx(__builtin_clz(raw_value));
     } else if constexpr (sizeof(raw_value) == 8) {
-        return __builtin_clzll(raw_value);
+        return idx(__builtin_clzll(raw_value));
     } else {
         while (raw_value >>= 1) {
             ++raw_value;
@@ -107,7 +107,7 @@ constexpr auto countr_zero(T value) -> idx {
     // `ctz()` is a portable intrinsic.
 
     if constexpr (sizeof(raw_value) <= 4) {
-        return __builtin_ctz(raw_value);
+        return idx(__builtin_ctz(raw_value));
     } else if constexpr (sizeof(raw_value) == 8) {
         return idx(__builtin_ctzll(raw_value));
     }
