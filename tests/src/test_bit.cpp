@@ -70,9 +70,9 @@ TEST(test_bit) {
     cat::verify(number != 0u);
 
     cat::bit_reference bit4 =
-        cat::bit_reference<unsigned char>::from_offset(number, 0);
+        cat::bit_reference<unsigned char>::from_offset(number, 0u);
     cat::bit_reference bit5 =
-        cat::bit_reference<unsigned char>::from_offset(number, 5);
+        cat::bit_reference<unsigned char>::from_offset(number, 5u);
     cat::verify(bit4.is_set());
     cat::verify(!bit5.is_set());
     number = 0;
@@ -92,7 +92,7 @@ TEST(test_bit) {
     cat::verify(*it == false);
     cat::verify(*(it + 31) == false);
     cat::verify(*(it + 32) == true);
-    it += 33;
+    it += 33u;
     cat::verify(*it == true);
 
     for (int4 i = 0; i < 30; ++i) {

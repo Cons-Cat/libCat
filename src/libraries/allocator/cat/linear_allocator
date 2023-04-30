@@ -64,14 +64,14 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
   private:
     auto allocation_bytes(uword alignment, uword allocation_bytes)
-        -> maybe_non_zero<uword> {
+        -> maybe_non_zero<idx> {
         uintptr<void> allocation = align_down(
             this->p_arena_current - uword{allocation_bytes}, alignment);
 
         // The allocation size is the difference between the current pointer
         // and the new pointer.
         if (allocation >= p_arena_end) {
-            return (this->p_arena_current - allocation).raw;
+            return static_cast<idx>(this->p_arena_current - allocation);
         }
         return nullopt;
     }
@@ -114,7 +114,8 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
             return maybe_sized_allocation<void*>(tuple{
                 // Return a pointer that is then used for in-place construction.
-                static_cast<void*>(this->p_arena_current), bytes_allocated});
+                static_cast<void*>(this->p_arena_current),
+                static_cast<idx>(bytes_allocated)});
         }
         return nullopt;
     }

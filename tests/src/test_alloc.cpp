@@ -35,15 +35,15 @@ consteval void const_test() {
     int4* p_xalloc = allocator.xalloc<int4>(1);
     allocator.free(p_xalloc);
 
-    cat::span<int4> alloc_multi = allocator.alloc_multi<int4>(5).value();
+    cat::span<int4> alloc_multi = allocator.alloc_multi<int4>(5u).value();
 
     alloc_multi =
-        allocator.realloc_multi(alloc_multi.data(), alloc_multi.size(), 10)
+        allocator.realloc_multi(alloc_multi.data(), alloc_multi.size(), 10u)
             .value();
 
     allocator.free_multi(alloc_multi.data(), alloc_multi.size());
 
-    cat::span<int4> xalloc_multi = allocator.xalloc_multi<int4>(5);
+    cat::span<int4> xalloc_multi = allocator.xalloc_multi<int4>(5u);
     allocator.free_multi(xalloc_multi.data(), xalloc_multi.size());
 }
 
@@ -57,7 +57,7 @@ TEST(test_alloc) {
     cat::page_allocator pager;
     pager.reset();
     // Page the kernel for a linear allocator to test with.
-    auto page = pager.opq_alloc_multi<cat::byte>(4_ki - 64).or_exit();
+    auto page = pager.opq_alloc_multi<cat::byte>(4_uki - 64u).or_exit();
     defer(pager.free(page);)
     auto allocator = cat::linear_allocator::backed_handle(pager, page);
 
@@ -85,23 +85,23 @@ TEST(test_alloc) {
     cat::verify(*p_xalloc == 1);
 
     // Test `alloc_multi`.
-    auto alloc_multi = allocator.opq_alloc_multi<int4>(5).value();
+    auto alloc_multi = allocator.opq_alloc_multi<int4>(5u).value();
     cat::verify(alloc_multi.size() == 5);
     cat::verify(alloc_multi.raw_size() == 20);
     alloc_counter = 0;
-    _ = allocator.opq_alloc_multi<alloc_non_trivial>(5);
+    _ = allocator.opq_alloc_multi<alloc_non_trivial>(5u);
     cat::verify(alloc_counter == 5);
 
     // Test `xalloc_multi`.
-    auto xalloc_multi = allocator.opq_xalloc_multi<int4>(5);
+    auto xalloc_multi = allocator.opq_xalloc_multi<int4>(5u);
     cat::verify(xalloc_multi.size() == 5);
     cat::verify(xalloc_multi.raw_size() == 20);
 
     // Test `alloc_multi`.
-    _ = allocator.alloc_multi<int4>(5).value();
+    _ = allocator.alloc_multi<int4>(5u).value();
 
     // Test `xalloc_multi`.
-    _ = allocator.xalloc_multi<int4>(5);
+    _ = allocator.xalloc_multi<int4>(5u);
 
     // Test `opq_align_alloc`.
     _ = allocator.opq_align_alloc<int4>(8u).value();
@@ -149,66 +149,66 @@ TEST(test_alloc) {
 
     // Test `align_alloc_multi`.
     auto align_alloc_multi =
-        allocator.opq_align_alloc_multi<int4>(8u, 5).value();
+        allocator.opq_align_alloc_multi<int4>(8u, 5u).value();
     cat::verify(align_alloc_multi.size() == 5);
     cat::verify(align_alloc_multi.raw_size() == 20);
     cat::verify(cat::is_aligned(allocator.p_get(align_alloc_multi), 8u));
     alloc_counter = 0;
-    _ = allocator.opq_align_alloc_multi<alloc_non_trivial>(8u, 5);
+    _ = allocator.opq_align_alloc_multi<alloc_non_trivial>(8u, 5u);
     cat::verify(alloc_counter == 5);
 
     // Test `align_xalloc_multi`.
-    auto align_xalloc_multi = allocator.opq_align_xalloc_multi<int4>(8u, 5);
+    auto align_xalloc_multi = allocator.opq_align_xalloc_multi<int4>(8u, 5u);
     cat::verify(align_xalloc_multi.size() == 5);
     cat::verify(align_xalloc_multi.raw_size() == 20);
     cat::verify(cat::is_aligned(allocator.p_get(align_xalloc_multi), 8u));
     alloc_counter = 0;
-    _ = allocator.opq_align_xalloc_multi<alloc_non_trivial>(8u, 5);
+    _ = allocator.opq_align_xalloc_multi<alloc_non_trivial>(8u, 5u);
 
     cat::verify(alloc_counter == 5);
 
     // Test `align_alloc_multi`.
     auto p_align_alloc_multi =
-        allocator.align_alloc_multi<int4>(8u, 5).value().data();
+        allocator.align_alloc_multi<int4>(8u, 5u).value().data();
     cat::verify(cat::is_aligned(p_align_alloc_multi, 8u));
     alloc_counter = 0;
-    _ = allocator.align_alloc_multi<alloc_non_trivial>(8u, 5);
+    _ = allocator.align_alloc_multi<alloc_non_trivial>(8u, 5u);
     cat::verify(alloc_counter == 5);
 
     // Test `align_xalloc_multi`.
-    _ = allocator.align_xalloc_multi<int4>(8u, 5);
+    _ = allocator.align_xalloc_multi<int4>(8u, 5u);
     alloc_counter = 0;
-    _ = allocator.align_xalloc_multi<alloc_non_trivial>(8u, 5);
+    _ = allocator.align_xalloc_multi<alloc_non_trivial>(8u, 5u);
     cat::verify(alloc_counter == 5);
 
     // Test `unalign_alloc_multi`.
     auto unalign_alloc_multi =
-        allocator.opq_unalign_alloc_multi<int4>(5).value();
+        allocator.opq_unalign_alloc_multi<int4>(5u).value();
     cat::verify(unalign_alloc_multi.size() == 5);
     cat::verify(unalign_alloc_multi.raw_size() == 20);
     alloc_counter = 0;
-    _ = allocator.opq_unalign_alloc_multi<alloc_non_trivial>(5);
+    _ = allocator.opq_unalign_alloc_multi<alloc_non_trivial>(5u);
     cat::verify(alloc_counter == 5);
 
     // Test `unalign_xalloc_multi`.
-    auto unalign_xalloc_multi = allocator.opq_unalign_xalloc_multi<int1>(5);
+    auto unalign_xalloc_multi = allocator.opq_unalign_xalloc_multi<int1>(5u);
     cat::verify(unalign_xalloc_multi.size() == 5);
     cat::verify(unalign_xalloc_multi.raw_size() == 5);
     alloc_counter = 0;
-    _ = allocator.opq_unalign_xalloc_multi<alloc_non_trivial>(5);
+    _ = allocator.opq_unalign_xalloc_multi<alloc_non_trivial>(5u);
     cat::verify(alloc_counter == 5);
 
     // Test `unalign_alloc_multi`.
-    _ = allocator.unalign_alloc_multi<int1>(5)
+    _ = allocator.unalign_alloc_multi<int1>(5u)
             .value();  // `int4` is 4-byte aligned.
     alloc_counter = 0;
-    _ = allocator.unalign_alloc_multi<alloc_non_trivial>(5);
+    _ = allocator.unalign_alloc_multi<alloc_non_trivial>(5u);
     cat::verify(alloc_counter == 5);
 
     // Test `unalign_xalloc_multi`.
-    _ = allocator.unalign_xalloc_multi<int1>(5);  // `int4` is 4-byte aligned.
+    _ = allocator.unalign_xalloc_multi<int1>(5u);  // `int4` is 4-byte aligned.
     alloc_counter = 0;
-    _ = allocator.unalign_xalloc_multi<alloc_non_trivial>(5);
+    _ = allocator.unalign_xalloc_multi<alloc_non_trivial>(5u);
     cat::verify(alloc_counter == 5);
 
     // Test `opq_inline_alloc`.
@@ -235,17 +235,18 @@ TEST(test_alloc) {
     cat::verify(allocator.get(inline_xalloc) == 1);
 
     // Test `inline_alloc_multi`.
-    auto inline_alloc_multi = allocator.opq_inline_alloc_multi<int4>(5).value();
+    auto inline_alloc_multi =
+        allocator.opq_inline_alloc_multi<int4>(5u).value();
     cat::verify(inline_alloc_multi.size() == 5);
     alloc_counter = 0;
-    _ = allocator.opq_inline_alloc_multi<alloc_non_trivial>(5);
+    _ = allocator.opq_inline_alloc_multi<alloc_non_trivial>(5u);
     cat::verify(alloc_counter == 5);
 
     // Test `inline_xalloc_multi`.
-    auto inline_xalloc_multi = allocator.opq_inline_xalloc_multi<int4>(5);
+    auto inline_xalloc_multi = allocator.opq_inline_xalloc_multi<int4>(5u);
     cat::verify(inline_xalloc_multi.size() == 5);
     alloc_counter = 0;
-    _ = allocator.opq_inline_xalloc_multi<alloc_non_trivial>(5);
+    _ = allocator.opq_inline_xalloc_multi<alloc_non_trivial>(5u);
     cat::verify(alloc_counter == 5);
 
     // Test `opq_inline_align_alloc`.
@@ -273,37 +274,37 @@ TEST(test_alloc) {
 
     // Test `inline_align_alloc_multi`.
     auto inline_align_alloc_multi =
-        allocator.opq_inline_align_alloc_multi<int4>(8u, 5).value();
+        allocator.opq_inline_align_alloc_multi<int4>(8u, 5u).value();
     cat::verify(cat::is_aligned(allocator.p_get(inline_align_alloc_multi), 8u));
     cat::verify(inline_align_alloc_multi.is_inline());
 
     auto inline_align_alloc_multi_big =
-        allocator.opq_inline_align_alloc_multi<int4>(8u, 64).value();
+        allocator.opq_inline_align_alloc_multi<int4>(8u, 64u).value();
     cat::verify(!inline_align_alloc_multi_big.is_inline());
 
     // Test `inline_align_xalloc_multi`.
     auto inline_align_xalloc_multi =
-        allocator.opq_inline_align_xalloc_multi<int4>(8u, 5);
+        allocator.opq_inline_align_xalloc_multi<int4>(8u, 5u);
     cat::verify(
         cat::is_aligned(allocator.p_get(inline_align_xalloc_multi), 8u));
     cat::verify(inline_align_xalloc_multi.is_inline());
 
     // Test `inline_unalign_alloc_multi`.
     auto inline_unalign_alloc_multi =
-        allocator.opq_inline_unalign_alloc_multi<int4>(5).value();
+        allocator.opq_inline_unalign_alloc_multi<int4>(5u).value();
     cat::verify(inline_unalign_alloc_multi.is_inline());
 
     auto inline_unalign_alloc_multi_big =
-        allocator.opq_inline_unalign_alloc_multi<int4>(64).value();
+        allocator.opq_inline_unalign_alloc_multi<int4>(64u).value();
     cat::verify(!inline_unalign_alloc_multi_big.is_inline());
 
     // Test `inline_unalign_xalloc_multi`.
     auto inline_unalign_xalloc_multi =
-        allocator.opq_inline_unalign_xalloc_multi<int4>(5);
+        allocator.opq_inline_unalign_xalloc_multi<int4>(5u);
     cat::verify(inline_unalign_xalloc_multi.is_inline());
 
     auto inline_unalign_xalloc_multi_big =
-        allocator.opq_inline_unalign_xalloc_multi<int4>(64);
+        allocator.opq_inline_unalign_xalloc_multi<int4>(64u);
     cat::verify(!inline_unalign_xalloc_multi_big.is_inline());
 
     // Always reset the allocator so that there are no alignment requirements
@@ -322,12 +323,12 @@ TEST(test_alloc) {
 
     // Test `nalloc_multi`.
     allocator.reset();
-    iword nalloc_multi = allocator.opq_nalloc_multi<int4>(5).value();
+    iword nalloc_multi = allocator.opq_nalloc_multi<int4>(5u).value();
     cat::verify(nalloc_multi == (ssizeof(int4) * 5));
 
     // Test `xnalloc_multi`.
     allocator.reset();
-    iword xnalloc_multi = allocator.opq_xnalloc_multi<int4>(5);
+    iword xnalloc_multi = allocator.opq_xnalloc_multi<int4>(5u);
     cat::verify(xnalloc_multi == (ssizeof(int4) * 5));
 
     // Test `opq_align_nalloc`.
@@ -343,12 +344,12 @@ TEST(test_alloc) {
     // Test `align_nalloc_multi`.
     allocator.reset();
     iword align_nalloc_multi =
-        allocator.opq_align_nalloc_multi<int4>(4u, 5).value();
+        allocator.opq_align_nalloc_multi<int4>(4u, 5u).value();
     cat::verify(align_nalloc_multi == (ssizeof(int4) * 5));
 
     // Test `align_xnalloc_multi`.
     allocator.reset();
-    iword align_xnalloc_multi = allocator.opq_align_xnalloc_multi<int4>(4u, 5);
+    iword align_xnalloc_multi = allocator.opq_align_xnalloc_multi<int4>(4u, 5u);
     cat::verify(align_xnalloc_multi == (ssizeof(int4) * 5));
 
     // Test `opq_unalign_nalloc`.
@@ -364,12 +365,12 @@ TEST(test_alloc) {
     // Test `unalign_nalloc_multi`.
     allocator.reset();
     iword unalign_nalloc_multi =
-        allocator.opq_unalign_nalloc_multi<int4>(5).value();
+        allocator.opq_unalign_nalloc_multi<int4>(5u).value();
     cat::verify(unalign_nalloc_multi == (ssizeof(int4) * 5));
 
     // Test `unalign_xnalloc_multi`.
     allocator.reset();
-    iword unalign_xnalloc_multi = allocator.opq_unalign_xnalloc_multi<int4>(5);
+    iword unalign_xnalloc_multi = allocator.opq_unalign_xnalloc_multi<int4>(5u);
     cat::verify(unalign_xnalloc_multi == (ssizeof(int4) * 5));
 
     // Test `opq_inline_nalloc`.
@@ -391,18 +392,18 @@ TEST(test_alloc) {
     // Test `inline_nalloc_multi`.
     allocator.reset();
     iword inline_nalloc_multi =
-        allocator.opq_inline_nalloc_multi<int4>(5).value();
+        allocator.opq_inline_nalloc_multi<int4>(5u).value();
     cat::verify(inline_nalloc_multi == cat::inline_buffer_size);
     iword inline_nalloc_multi_big =
-        allocator.opq_inline_nalloc_multi<alloc_huge_object>(2).value();
+        allocator.opq_inline_nalloc_multi<alloc_huge_object>(2u).value();
     cat::verify(inline_nalloc_multi_big == (257 * 2));
 
     // Test `inline_xnalloc_multi`.
     allocator.reset();
-    iword inline_xnalloc_multi = allocator.opq_inline_xnalloc_multi<int4>(5);
+    iword inline_xnalloc_multi = allocator.opq_inline_xnalloc_multi<int4>(5u);
     cat::verify(inline_xnalloc_multi == cat::inline_buffer_size);
     iword inline_xnalloc_multi_big =
-        allocator.opq_inline_xnalloc_multi<alloc_huge_object>(2);
+        allocator.opq_inline_xnalloc_multi<alloc_huge_object>(2u);
     cat::verify(inline_xnalloc_multi_big == (257 * 2));
 
     // Test `opq_inline_align_nalloc`.
@@ -442,45 +443,46 @@ TEST(test_alloc) {
     // Test `inline_align_nalloc_multi`.
     allocator.reset();
     iword inline_align_nalloc_multi =
-        allocator.opq_inline_align_nalloc_multi<int4>(4u, 5).value();
+        allocator.opq_inline_align_nalloc_multi<int4>(4u, 5u).value();
     cat::verify(inline_align_nalloc_multi == cat::inline_buffer_size);
     iword inline_align_nalloc_multi_big =
-        allocator.opq_inline_align_nalloc_multi<alloc_huge_object>(1u, 2)
+        allocator.opq_inline_align_nalloc_multi<alloc_huge_object>(1u, 2u)
             .value();
     cat::verify(inline_align_nalloc_multi_big == (257 * 2));
 
     // Test `inline_align_xnalloc_multi`.
     allocator.reset();
     iword inline_align_xnalloc_multi =
-        allocator.opq_inline_align_xnalloc_multi<int4>(4u, 5);
+        allocator.opq_inline_align_xnalloc_multi<int4>(4u, 5u);
     cat::verify(inline_align_xnalloc_multi == cat::inline_buffer_size);
     iword inline_align_xnalloc_multi_big =
-        allocator.opq_inline_align_xnalloc_multi<alloc_huge_object>(1u, 2);
+        allocator.opq_inline_align_xnalloc_multi<alloc_huge_object>(1u, 2u);
     cat::verify(inline_align_xnalloc_multi_big == (257 * 2));
 
     // Test `inline_unalign_nalloc_multi`.
     allocator.reset();
     iword inline_unalign_nalloc_multi =
-        allocator.opq_inline_unalign_nalloc_multi<int4>(5).value();
+        allocator.opq_inline_unalign_nalloc_multi<int4>(5u).value();
     cat::verify(inline_unalign_nalloc_multi == cat::inline_buffer_size);
     iword inline_unalign_nalloc_multi_big =
-        allocator.opq_inline_unalign_nalloc_multi<alloc_huge_object>(2).value();
+        allocator.opq_inline_unalign_nalloc_multi<alloc_huge_object>(2u)
+            .value();
     cat::verify(inline_unalign_nalloc_multi_big == (257 * 2));
 
     // Test `inline_unalign_xnalloc_multi`.
     allocator.reset();
     iword inline_unalign_xnalloc_multi =
-        allocator.opq_inline_unalign_xnalloc_multi<int4>(5);
+        allocator.opq_inline_unalign_xnalloc_multi<int4>(5u);
     cat::verify(inline_unalign_xnalloc_multi == cat::inline_buffer_size);
     iword inline_unalign_xnalloc_multi_big =
-        allocator.opq_inline_unalign_xnalloc_multi<alloc_huge_object>(2);
+        allocator.opq_inline_unalign_xnalloc_multi<alloc_huge_object>(2u);
     cat::verify(inline_unalign_xnalloc_multi_big == (257 * 2));
 
     // Test `opq_salloc`.
     _ = allocator.opq_salloc<int4>().value();
     allocator.reset();
     _ = allocator.opq_alloc<cat::byte>();  // Offset linear allocator by 1 byte.
-    auto [salloc, salloc_bytes] = allocator.opq_salloc<int4>(1).value();
+    auto [salloc, salloc_bytes] = allocator.opq_salloc<int4>(1u).value();
     cat::verify(allocator.get(salloc) == 1);
     cat::verify(salloc_bytes == 7);
     alloc_counter = 0;
@@ -524,48 +526,48 @@ TEST(test_alloc) {
     allocator.reset();
     _ = allocator.opq_alloc<cat::byte>();  // Offset linear allocator by 1 byte.
     auto [salloc_multi, salloc_multi_bytes] =
-        allocator.opq_salloc_multi<int4>(5).value();
+        allocator.opq_salloc_multi<int4>(5u).value();
     cat::verify(salloc_multi.size() == 5);
     cat::verify(salloc_multi_bytes == 23);
     cat::verify(salloc_multi.raw_size() == 20);
 
     alloc_counter = 0;
-    _ = allocator.opq_salloc_multi<alloc_non_trivial>(5);
+    _ = allocator.opq_salloc_multi<alloc_non_trivial>(5u);
     cat::verify(alloc_counter == 5);
 
     // Test `xsalloc_multi`.
     allocator.reset();
     _ = allocator.opq_alloc<cat::byte>();  // Offset linear allocator by 1 byte.
     auto [xsalloc_multi, xsalloc_multi_bytes] =
-        allocator.opq_xsalloc_multi<int4>(5);
+        allocator.opq_xsalloc_multi<int4>(5u);
     cat::verify(xsalloc_multi.size() == 5);
     cat::verify(xsalloc_multi_bytes == 23);
     cat::verify(xsalloc_multi.raw_size() == 20);
 
     alloc_counter = 0;
-    _ = allocator.opq_xsalloc_multi<alloc_non_trivial>(5);
+    _ = allocator.opq_xsalloc_multi<alloc_non_trivial>(5u);
     cat::verify(alloc_counter == 5);
 
     // Test `salloc_multi`.
     allocator.reset();
     _ = allocator.opq_alloc<cat::byte>();  // Offset linear allocator by 1 byte.
     auto [p_salloc_multi, p_salloc_multi_bytes] =
-        allocator.salloc_multi<int4>(5).value();
+        allocator.salloc_multi<int4>(5u).value();
     cat::verify(p_salloc_multi_bytes == 23);
 
     alloc_counter = 0;
-    _ = allocator.salloc_multi<alloc_non_trivial>(5);
+    _ = allocator.salloc_multi<alloc_non_trivial>(5u);
     cat::verify(alloc_counter == 5);
 
     // Test `xsalloc_multi`.
     allocator.reset();
     _ = allocator.opq_alloc<cat::byte>();  // Offset linear allocator by 1 byte.
     auto [p_xsalloc_multi, p_xsalloc_multi_bytes] =
-        allocator.xsalloc_multi<int4>(5);
+        allocator.xsalloc_multi<int4>(5u);
     cat::verify(p_xsalloc_multi_bytes == 23);
 
     alloc_counter = 0;
-    _ = allocator.xsalloc_multi<alloc_non_trivial>(5);
+    _ = allocator.xsalloc_multi<alloc_non_trivial>(5u);
     cat::verify(alloc_counter == 5);
 
     // Test `opq_align_salloc`.
@@ -671,85 +673,85 @@ TEST(test_alloc) {
     // Test `align_salloc_multi`.
     allocator.reset();
     auto [align_salloc_multi, align_salloc_multi_bytes] =
-        allocator.opq_align_salloc_multi<int4>(8u, 5).value();
+        allocator.opq_align_salloc_multi<int4>(8u, 5u).value();
     cat::verify(align_salloc_multi_bytes == 24);
     cat::verify(cat::is_aligned(allocator.p_get(align_salloc_multi), 8u));
 
     alloc_counter = 0;
-    _ = allocator.opq_align_salloc_multi<alloc_non_trivial>(8u, 5);
+    _ = allocator.opq_align_salloc_multi<alloc_non_trivial>(8u, 5u);
     cat::verify(alloc_counter == 5);
 
     // Test `align_xsalloc_multi`.
     allocator.reset();
     auto [align_xsalloc_multi, align_xsalloc_multi_bytes] =
-        allocator.opq_align_xsalloc_multi<int4>(8u, 5);
+        allocator.opq_align_xsalloc_multi<int4>(8u, 5u);
     cat::verify(align_xsalloc_multi_bytes == 24);
     cat::verify(cat::is_aligned(allocator.p_get(align_xsalloc_multi), 8u));
 
     alloc_counter = 0;
-    _ = allocator.opq_align_xsalloc_multi<alloc_non_trivial>(8u, 5);
+    _ = allocator.opq_align_xsalloc_multi<alloc_non_trivial>(8u, 5u);
     cat::verify(alloc_counter == 5);
 
     // Test `align_salloc_multi`.
     allocator.reset();
     auto [p_align_salloc_multi, p_align_salloc_multi_bytes] =
-        allocator.align_salloc_multi<int4>(8u, 5).value();
+        allocator.align_salloc_multi<int4>(8u, 5u).value();
     cat::verify(p_align_salloc_multi_bytes == 24);
     cat::verify(cat::is_aligned(p_align_salloc_multi.data(), 8u));
 
     alloc_counter = 0;
-    _ = allocator.align_salloc_multi<alloc_non_trivial>(8u, 5);
+    _ = allocator.align_salloc_multi<alloc_non_trivial>(8u, 5u);
     cat::verify(alloc_counter == 5);
 
     // Test `align_xsalloc_multi`.
     allocator.reset();
     auto [p_align_xsalloc_multi, p_align_xsalloc_multi_bytes] =
-        allocator.align_xsalloc_multi<int4>(8u, 5);
+        allocator.align_xsalloc_multi<int4>(8u, 5u);
     cat::verify(p_align_xsalloc_multi_bytes == 24);
     cat::verify(cat::is_aligned(p_align_xsalloc_multi.data(), 8u));
 
     alloc_counter = 0;
-    _ = allocator.align_xsalloc_multi<alloc_non_trivial>(8u, 5);
+    _ = allocator.align_xsalloc_multi<alloc_non_trivial>(8u, 5u);
     cat::verify(alloc_counter == 5);
 
     // Test `unalign_salloc_multi`.
     allocator.reset();
     auto [unalign_salloc_multi, unalign_salloc_multi_bytes] =
-        allocator.opq_unalign_salloc_multi<int1>(5).value();
+        allocator.opq_unalign_salloc_multi<int1>(5u).value();
     cat::verify(unalign_salloc_multi_bytes == 5);
 
     alloc_counter = 0;
-    _ = allocator.opq_unalign_salloc_multi<alloc_non_trivial>(5);
+    _ = allocator.opq_unalign_salloc_multi<alloc_non_trivial>(5u);
     cat::verify(alloc_counter == 5);
 
     // Test `unalign_xsalloc_multi`.
     allocator.reset();
     auto [unalign_xsalloc_multi, unalign_xsalloc_multi_bytes] =
-        allocator.opq_unalign_xsalloc_multi<int1>(5);
+        allocator.opq_unalign_xsalloc_multi<int1>(5u);
     cat::verify(unalign_xsalloc_multi_bytes == 5);
 
     alloc_counter = 0;
-    _ = allocator.opq_unalign_xsalloc_multi<alloc_non_trivial>(5);
+    _ = allocator.opq_unalign_xsalloc_multi<alloc_non_trivial>(5u);
     cat::verify(alloc_counter == 5);
 
     // Test `unalign_salloc_multi`.
     allocator.reset();
     auto [p_unalign_salloc_multi, p_unalign_salloc_multi_bytes] =
-        allocator.unalign_salloc_multi<int1>(5).value();
+        allocator.unalign_salloc_multi<int1>(5u).value();
     cat::verify(p_unalign_salloc_multi_bytes == 5);
 
     alloc_counter = 0;
-    _ = allocator.unalign_salloc_multi<alloc_non_trivial>(5);
+    _ = allocator.unalign_salloc_multi<alloc_non_trivial>(5u);
     cat::verify(alloc_counter == 5);
 
     // Test `unalign_xsalloc_multi`.
     allocator.reset();
     auto [p_unalign_xsalloc_multi, p_unalign_xsalloc_multi_bytes] =
-        allocator.unalign_xsalloc_multi<int1>(5);
+        allocator.unalign_xsalloc_multi<int1>(5u);
     cat::verify(p_unalign_xsalloc_multi_bytes == 5);
 
     alloc_counter = 0;
-    _ = allocator.unalign_xsalloc_multi<alloc_non_trivial>(5);
+    _ = allocator.unalign_xsalloc_multi<alloc_non_trivial>(5u);
     cat::verify(alloc_counter == 5);
 
     // Test `opq_inline_salloc`.
@@ -780,12 +782,12 @@ TEST(test_alloc) {
     // Test `inline_salloc_multi`.
     allocator.reset();
     auto [inline_salloc_multi, inline_salloc_multi_bytes] =
-        allocator.opq_inline_salloc_multi<int4>(5).value();
+        allocator.opq_inline_salloc_multi<int4>(5u).value();
     cat::verify(inline_salloc_multi_bytes == cat::inline_buffer_size);
     cat::verify(inline_salloc_multi.is_inline());
 
     auto [inline_salloc_multi_big, inline_salloc_multi_bytes_big] =
-        allocator.opq_inline_salloc_multi<alloc_huge_object>(5).value();
+        allocator.opq_inline_salloc_multi<alloc_huge_object>(5u).value();
     cat::verify(inline_salloc_multi_bytes_big ==
                 ssizeof(alloc_huge_object) * 5);
     cat::verify(!inline_salloc_multi_big.is_inline());
@@ -793,12 +795,12 @@ TEST(test_alloc) {
     // Test `inline_xsalloc_multi`.
     allocator.reset();
     auto [inline_xsalloc_multi, inline_xsalloc_multi_bytes] =
-        allocator.opq_inline_xsalloc_multi<int4>(5);
+        allocator.opq_inline_xsalloc_multi<int4>(5u);
     cat::verify(inline_xsalloc_multi_bytes == cat::inline_buffer_size);
     cat::verify(inline_xsalloc_multi.is_inline());
 
     auto [inline_xsalloc_multi_big, inline_xsalloc_multi_bytes_big] =
-        allocator.opq_inline_xsalloc_multi<alloc_huge_object>(5);
+        allocator.opq_inline_xsalloc_multi<alloc_huge_object>(5u);
     cat::verify(inline_xsalloc_multi_bytes_big ==
                 ssizeof(alloc_huge_object) * 5);
     cat::verify(!inline_xsalloc_multi_big.is_inline());
@@ -858,12 +860,12 @@ TEST(test_alloc) {
     // Test `inline_align_salloc_multi`.
     allocator.reset();
     auto [inline_align_salloc_multi, inline_align_salloc_multi_bytes] =
-        allocator.opq_inline_align_salloc_multi<int4>(8u, 5).value();
+        allocator.opq_inline_align_salloc_multi<int4>(8u, 5u).value();
     cat::verify(inline_align_salloc_multi_bytes >= cat::inline_buffer_size);
     cat::verify(inline_align_salloc_multi.is_inline());
 
     auto [inline_align_salloc_multi_big, inline_align_salloc_multi_bytes_big] =
-        allocator.opq_inline_align_salloc_multi<alloc_huge_object>(8u, 5)
+        allocator.opq_inline_align_salloc_multi<alloc_huge_object>(8u, 5u)
             .value();
     cat::verify(inline_align_salloc_multi_bytes_big >=
                 ssizeof(alloc_huge_object));
@@ -872,13 +874,13 @@ TEST(test_alloc) {
     // Test `inline_align_xsalloc_multi`.
     allocator.reset();
     auto [inline_align_xsalloc_multi, inline_align_xsalloc_multi_bytes] =
-        allocator.opq_inline_align_xsalloc_multi<int4>(8u, 5);
+        allocator.opq_inline_align_xsalloc_multi<int4>(8u, 5u);
     cat::verify(inline_align_xsalloc_multi_bytes >= cat::inline_buffer_size);
     cat::verify(inline_align_xsalloc_multi.is_inline());
 
     auto [inline_align_xsalloc_multi_big,
           inline_align_xsalloc_multi_bytes_big] =
-        allocator.opq_inline_align_xsalloc_multi<alloc_huge_object>(8u, 5);
+        allocator.opq_inline_align_xsalloc_multi<alloc_huge_object>(8u, 5u);
     cat::verify(inline_align_xsalloc_multi_bytes_big >=
                 ssizeof(alloc_huge_object));
     cat::verify(!inline_align_xsalloc_multi_big.is_inline());
@@ -886,13 +888,14 @@ TEST(test_alloc) {
     // Test `inline_unalign_salloc_multi`.
     allocator.reset();
     auto [inline_unalign_salloc_multi, inline_unalign_salloc_multi_bytes] =
-        allocator.opq_inline_unalign_salloc_multi<int4>(5).value();
+        allocator.opq_inline_unalign_salloc_multi<int4>(5u).value();
     cat::verify(inline_unalign_salloc_multi_bytes == cat::inline_buffer_size);
     cat::verify(inline_unalign_salloc_multi.is_inline());
 
     auto [inline_unalign_salloc_multi_big,
           inline_unalign_salloc_multi_bytes_big] =
-        allocator.opq_inline_unalign_salloc_multi<alloc_huge_object>(5).value();
+        allocator.opq_inline_unalign_salloc_multi<alloc_huge_object>(5u)
+            .value();
     cat::verify(inline_unalign_salloc_multi_bytes_big ==
                 ssizeof(alloc_huge_object) * 5);
     cat::verify(!inline_unalign_salloc_multi_big.is_inline());
@@ -900,13 +903,13 @@ TEST(test_alloc) {
     // Test `inline_unalign_xsalloc_multi`.
     allocator.reset();
     auto [inline_unalign_xsalloc_multi, inline_unalign_xsalloc_multi_bytes] =
-        allocator.opq_inline_unalign_xsalloc_multi<int4>(5);
+        allocator.opq_inline_unalign_xsalloc_multi<int4>(5u);
     cat::verify(inline_unalign_xsalloc_multi_bytes == cat::inline_buffer_size);
     cat::verify(inline_unalign_xsalloc_multi.is_inline());
 
     auto [inline_unalign_xsalloc_multi_big,
           inline_unalign_xsalloc_multi_bytes_big] =
-        allocator.opq_inline_unalign_xsalloc_multi<alloc_huge_object>(5);
+        allocator.opq_inline_unalign_xsalloc_multi<alloc_huge_object>(5u);
     cat::verify(inline_unalign_xsalloc_multi_bytes_big ==
                 ssizeof(alloc_huge_object) * 5);
     cat::verify(!inline_unalign_xsalloc_multi_big.is_inline());
@@ -1057,7 +1060,7 @@ TEST(test_alloc) {
 
     // Test `opq_realloc`.
     auto realloc_1 = allocator.opq_alloc<int4>(1).value();
-    auto realloc_2 = allocator.opq_alloc<int4>(2).value();
+    auto realloc_2 = allocator.opq_alloc<int4>(2u).value();
     cat::verify(allocator.get(realloc_1) == 1);
     cat::verify(allocator.get(realloc_2) == 2);
     realloc_1 = allocator.opq_realloc(realloc_2).value();
@@ -1068,7 +1071,7 @@ TEST(test_alloc) {
 
     // Test `realloc`.
     auto p_realloc_1 = allocator.alloc<int4>(1).value();
-    auto p_realloc_2 = allocator.alloc<int4>(2).value();
+    auto p_realloc_2 = allocator.alloc<int4>(2u).value();
     cat::verify(*p_realloc_1 == 1);
     cat::verify(*p_realloc_2 == 2);
     p_realloc_1 = allocator.realloc(p_realloc_2).value();
@@ -1165,151 +1168,151 @@ TEST(test_alloc) {
 
     // Test `opq_realloc_multi`.
     cat::mem auto opq_alloc_multi =
-        allocator.opq_realloc_multi(opq_alloc, 10).value();
+        allocator.opq_realloc_multi(opq_alloc, 10u).value();
 
     // Test `opq_realloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     opq_alloc_multi =
-        allocator.opq_realloc_multi_to(allocator, opq_alloc, 10).value();
+        allocator.opq_realloc_multi_to(allocator, opq_alloc, 10u).value();
 
     // Test `realloc_multi`.
     p_alloc = allocator.alloc<int4>().value();
-    p_alloc = allocator.realloc_multi(p_alloc, 5, 10).value().data();
+    p_alloc = allocator.realloc_multi(p_alloc, 5, 10u).value().data();
     allocator.free(opq_alloc);
 
     // Test `realloc_multi_to`
     p_alloc =
-        allocator.realloc_multi_to(allocator, p_alloc, 5, 10).value().data();
+        allocator.realloc_multi_to(allocator, p_alloc, 5, 10u).value().data();
 
     // Test `opq_xrealloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_xrealloc_multi(opq_alloc, 10);
+    _ = allocator.opq_xrealloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_xrealloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_xrealloc_multi_to(allocator, opq_alloc, 10);
+    _ = allocator.opq_xrealloc_multi_to(allocator, opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `xrealloc_multi`
-    p_alloc = allocator.xrealloc_multi(p_alloc, 5, 10).data();
+    p_alloc = allocator.xrealloc_multi(p_alloc, 5, 10u).data();
 
     // Test `xrealloc_multi_to`
-    p_alloc = allocator.xrealloc_multi_to(allocator, p_alloc, 5, 10).data();
+    p_alloc = allocator.xrealloc_multi_to(allocator, p_alloc, 5, 10u).data();
 
     // Test `opq_align_realloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_realloc_multi(opq_alloc, 8u, 10).value();
+    _ = allocator.opq_align_realloc_multi(opq_alloc, 8u, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_align_realloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_realloc_multi_to(allocator, opq_alloc, 8u, 10)
+    _ = allocator.opq_align_realloc_multi_to(allocator, opq_alloc, 8u, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_align_xrealloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_xrealloc_multi(opq_alloc, 8u, 10);
+    _ = allocator.opq_align_xrealloc_multi(opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_align_xrealloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_xrealloc_multi_to(allocator, opq_alloc, 8u, 10);
+    _ = allocator.opq_align_xrealloc_multi_to(allocator, opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_realloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_realloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_unalign_realloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_realloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_realloc_multi_to(allocator, opq_alloc, 10)
+    _ = allocator.opq_unalign_realloc_multi_to(allocator, opq_alloc, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_xrealloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_xrealloc_multi(opq_alloc, 10);
+    _ = allocator.opq_unalign_xrealloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_xrealloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_xrealloc_multi_to(allocator, opq_alloc, 10);
+    _ = allocator.opq_unalign_xrealloc_multi_to(allocator, opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_align_realloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_realloc_multi(opq_alloc, 8u, 10).value();
+    _ = allocator.opq_align_realloc_multi(opq_alloc, 8u, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_align_realloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_realloc_multi_to(allocator, opq_alloc, 8u, 10)
+    _ = allocator.opq_align_realloc_multi_to(allocator, opq_alloc, 8u, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_align_xrealloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_xrealloc_multi(opq_alloc, 8u, 10);
+    _ = allocator.opq_align_xrealloc_multi(opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_align_xrealloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_xrealloc_multi_to(allocator, opq_alloc, 8u, 10);
+    _ = allocator.opq_align_xrealloc_multi_to(allocator, opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_realloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_realloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_unalign_realloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_realloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_realloc_multi_to(allocator, opq_alloc, 10)
+    _ = allocator.opq_unalign_realloc_multi_to(allocator, opq_alloc, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_xrealloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_xrealloc_multi(opq_alloc, 10);
+    _ = allocator.opq_unalign_xrealloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_xrealloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_xrealloc_multi_to(allocator, opq_alloc, 10);
+    _ = allocator.opq_unalign_xrealloc_multi_to(allocator, opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `align_realloc_multi`.
-    p_alloc = allocator.align_realloc_multi(p_alloc, 8u, 5, 10).value().data();
+    p_alloc = allocator.align_realloc_multi(p_alloc, 8u, 5, 10u).value().data();
 
     // Test `align_realloc_multi_to`.
-    p_alloc = allocator.align_realloc_multi_to(allocator, p_alloc, 8u, 5, 10)
+    p_alloc = allocator.align_realloc_multi_to(allocator, p_alloc, 8u, 5, 10u)
                   .value()
                   .data();
 
     // Test `align_xrealloc_multi`.
-    p_alloc = allocator.align_xrealloc_multi(p_alloc, 8u, 5, 10).data();
+    p_alloc = allocator.align_xrealloc_multi(p_alloc, 8u, 5, 10u).data();
 
     // Test `align_xrealloc_multi_to`.
-    p_alloc =
-        allocator.align_xrealloc_multi_to(allocator, p_alloc, 8u, 5, 10).data();
+    p_alloc = allocator.align_xrealloc_multi_to(allocator, p_alloc, 8u, 5, 10u)
+                  .data();
 
     // Test `unalign_realloc_multi`.
-    p_alloc = allocator.unalign_realloc_multi(p_alloc, 5, 10).value().data();
+    p_alloc = allocator.unalign_realloc_multi(p_alloc, 5, 10u).value().data();
 
     // Test `unalign_realloc_multi_to`.
-    p_alloc = allocator.unalign_realloc_multi_to(allocator, p_alloc, 5, 10)
+    p_alloc = allocator.unalign_realloc_multi_to(allocator, p_alloc, 5, 10u)
                   .value()
                   .data();
 
     // Test `unalign_xrealloc_multi`.
-    p_alloc = allocator.unalign_xrealloc_multi(p_alloc, 5, 10).data();
+    p_alloc = allocator.unalign_xrealloc_multi(p_alloc, 5, 10u).data();
 
     // Test `unalign_xrealloc_multi_to`.
     p_alloc =
-        allocator.unalign_xrealloc_multi_to(allocator, p_alloc, 5, 10).data();
+        allocator.unalign_xrealloc_multi_to(allocator, p_alloc, 5, 10u).data();
 
     // The allocator runs out of memory around here.
     allocator.reset();
@@ -1454,150 +1457,151 @@ TEST(test_alloc) {
 
     // Test `opq_recalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_recalloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_recalloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_recalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_recalloc_multi_to(allocator, opq_alloc, 10).value();
+    _ = allocator.opq_recalloc_multi_to(allocator, opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `recalloc_multi`.
-    p_alloc = allocator.recalloc_multi(p_alloc, 5, 10).value().data();
+    p_alloc = allocator.recalloc_multi(p_alloc, 5, 10u).value().data();
 
     // Test `recalloc_multi_to`
     p_alloc =
-        allocator.recalloc_multi_to(allocator, p_alloc, 5, 10).value().data();
+        allocator.recalloc_multi_to(allocator, p_alloc, 5, 10u).value().data();
 
     // Test `opq_xrecalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_xrecalloc_multi(opq_alloc, 10);
+    _ = allocator.opq_xrecalloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_xrecalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_xrecalloc_multi_to(allocator, opq_alloc, 10);
+    _ = allocator.opq_xrecalloc_multi_to(allocator, opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `xrecalloc_multi`
-    p_alloc = allocator.xrecalloc_multi(p_alloc, 5, 10).data();
+    p_alloc = allocator.xrecalloc_multi(p_alloc, 5, 10u).data();
 
     // Test `xrecalloc_multi_to`
-    p_alloc = allocator.xrecalloc_multi_to(allocator, p_alloc, 5, 10).data();
+    p_alloc = allocator.xrecalloc_multi_to(allocator, p_alloc, 5, 10u).data();
 
     // Test `opq_align_recalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_recalloc_multi(opq_alloc, 8u, 10).value();
+    _ = allocator.opq_align_recalloc_multi(opq_alloc, 8u, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_align_recalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_recalloc_multi_to(allocator, opq_alloc, 8u, 10)
+    _ = allocator.opq_align_recalloc_multi_to(allocator, opq_alloc, 8u, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_align_xrecalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_xrecalloc_multi(opq_alloc, 8u, 10);
+    _ = allocator.opq_align_xrecalloc_multi(opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_align_xrecalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_xrecalloc_multi_to(allocator, opq_alloc, 8u, 10);
+    _ = allocator.opq_align_xrecalloc_multi_to(allocator, opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_recalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_recalloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_unalign_recalloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_recalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_recalloc_multi_to(allocator, opq_alloc, 10)
+    _ = allocator.opq_unalign_recalloc_multi_to(allocator, opq_alloc, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_xrecalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_xrecalloc_multi(opq_alloc, 10);
+    _ = allocator.opq_unalign_xrecalloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_xrecalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_xrecalloc_multi_to(allocator, opq_alloc, 10);
+    _ = allocator.opq_unalign_xrecalloc_multi_to(allocator, opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_align_recalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_recalloc_multi(opq_alloc, 8u, 10).value();
+    _ = allocator.opq_align_recalloc_multi(opq_alloc, 8u, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_align_recalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_recalloc_multi_to(allocator, opq_alloc, 8u, 10)
+    _ = allocator.opq_align_recalloc_multi_to(allocator, opq_alloc, 8u, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_align_xrecalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_xrecalloc_multi(opq_alloc, 8u, 10);
+    _ = allocator.opq_align_xrecalloc_multi(opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_align_xrecalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_xrecalloc_multi_to(allocator, opq_alloc, 8u, 10);
+    _ = allocator.opq_align_xrecalloc_multi_to(allocator, opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_recalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_recalloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_unalign_recalloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_recalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_recalloc_multi_to(allocator, opq_alloc, 10)
+    _ = allocator.opq_unalign_recalloc_multi_to(allocator, opq_alloc, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_xrecalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_xrecalloc_multi(opq_alloc, 10);
+    _ = allocator.opq_unalign_xrecalloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_xrecalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_xrecalloc_multi_to(allocator, opq_alloc, 10);
+    _ = allocator.opq_unalign_xrecalloc_multi_to(allocator, opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `align_recalloc_multi`.
-    p_alloc = allocator.align_recalloc_multi(p_alloc, 8u, 5, 10).value().data();
+    p_alloc =
+        allocator.align_recalloc_multi(p_alloc, 8u, 5, 10u).value().data();
 
     // Test `align_recalloc_multi_to`.
-    p_alloc = allocator.align_recalloc_multi_to(allocator, p_alloc, 8u, 5, 10)
+    p_alloc = allocator.align_recalloc_multi_to(allocator, p_alloc, 8u, 5, 10u)
                   .value()
                   .data();
 
     // Test `align_xrecalloc_multi`.
-    p_alloc = allocator.align_xrecalloc_multi(p_alloc, 8u, 5, 10).data();
+    p_alloc = allocator.align_xrecalloc_multi(p_alloc, 8u, 5, 10u).data();
 
     // Test `align_xrecalloc_multi_to`.
-    p_alloc = allocator.align_xrecalloc_multi_to(allocator, p_alloc, 8u, 5, 10)
+    p_alloc = allocator.align_xrecalloc_multi_to(allocator, p_alloc, 8u, 5, 10u)
                   .data();
 
     // Test `unalign_recalloc_multi`.
-    p_alloc = allocator.unalign_recalloc_multi(p_alloc, 5, 10).value().data();
+    p_alloc = allocator.unalign_recalloc_multi(p_alloc, 5, 10u).value().data();
 
     // Test `unalign_recalloc_multi_to`.
-    p_alloc = allocator.unalign_recalloc_multi_to(allocator, p_alloc, 5, 10)
+    p_alloc = allocator.unalign_recalloc_multi_to(allocator, p_alloc, 5, 10u)
                   .value()
                   .data();
 
     // Test `unalign_xrecalloc_multi`.
-    p_alloc = allocator.unalign_xrecalloc_multi(p_alloc, 5, 10).data();
+    p_alloc = allocator.unalign_xrecalloc_multi(p_alloc, 5, 10u).data();
 
     // Test `unalign_xrecalloc_multi_to`.
     p_alloc =
-        allocator.unalign_xrecalloc_multi_to(allocator, p_alloc, 5, 10).data();
+        allocator.unalign_xrecalloc_multi_to(allocator, p_alloc, 5, 10u).data();
 
     // Test `opq_inline_realloc`.
     opq_alloc = allocator.opq_alloc<int4>().value();
@@ -1701,112 +1705,113 @@ TEST(test_alloc) {
 
     // Test `opq_inline_realloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_realloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_inline_realloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_realloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_realloc_multi_to(allocator, opq_alloc, 10).value();
+    _ = allocator.opq_inline_realloc_multi_to(allocator, opq_alloc, 10u)
+            .value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_xrealloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_xrealloc_multi(opq_alloc, 10);
+    _ = allocator.opq_inline_xrealloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_xrealloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_xrealloc_multi_to(allocator, opq_alloc, 10);
+    _ = allocator.opq_inline_xrealloc_multi_to(allocator, opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_realloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_align_realloc_multi(opq_alloc, 8u, 10).value();
+    _ = allocator.opq_inline_align_realloc_multi(opq_alloc, 8u, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `inline_align_realloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator
-            .opq_inline_align_realloc_multi_to(allocator, opq_alloc, 8u, 10)
+            .opq_inline_align_realloc_multi_to(allocator, opq_alloc, 8u, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_xrealloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_align_xrealloc_multi(opq_alloc, 8u, 10);
+    _ = allocator.opq_inline_align_xrealloc_multi(opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_xrealloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator.opq_inline_align_xrealloc_multi_to(allocator, opq_alloc, 8u,
-                                                     10);
+                                                     10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_realloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_realloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_inline_unalign_realloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_realloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_realloc_multi_to(allocator, opq_alloc, 10)
+    _ = allocator.opq_inline_unalign_realloc_multi_to(allocator, opq_alloc, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_xrealloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_xrealloc_multi(opq_alloc, 10);
+    _ = allocator.opq_inline_unalign_xrealloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_xrealloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator.opq_inline_unalign_xrealloc_multi_to(allocator, opq_alloc,
-                                                       10);
+                                                       10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_realloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_align_realloc_multi(opq_alloc, 8u, 10).value();
+    _ = allocator.opq_inline_align_realloc_multi(opq_alloc, 8u, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `inline_align_realloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator
-            .opq_inline_align_realloc_multi_to(allocator, opq_alloc, 8u, 10)
+            .opq_inline_align_realloc_multi_to(allocator, opq_alloc, 8u, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_xrealloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_align_xrealloc_multi(opq_alloc, 8u, 10);
+    _ = allocator.opq_inline_align_xrealloc_multi(opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_xrealloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator.opq_inline_align_xrealloc_multi_to(allocator, opq_alloc, 8u,
-                                                     10);
+                                                     10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_realloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_realloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_inline_unalign_realloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_realloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_realloc_multi_to(allocator, opq_alloc, 10)
+    _ = allocator.opq_inline_unalign_realloc_multi_to(allocator, opq_alloc, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_xrealloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_xrealloc_multi(opq_alloc, 10);
+    _ = allocator.opq_inline_unalign_xrealloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_xrealloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator.opq_inline_unalign_xrealloc_multi_to(allocator, opq_alloc,
-                                                       10);
+                                                       10u);
     allocator.free(opq_alloc);
 
     // The allocator runs out of memory around here.
@@ -1916,113 +1921,115 @@ TEST(test_alloc) {
 
     // Test `opq_inline_recalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_recalloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_inline_recalloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_recalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_recalloc_multi_to(allocator, opq_alloc, 10)
+    _ = allocator.opq_inline_recalloc_multi_to(allocator, opq_alloc, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_xrecalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_xrecalloc_multi(opq_alloc, 10);
+    _ = allocator.opq_inline_xrecalloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_xrecalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_xrecalloc_multi_to(allocator, opq_alloc, 10);
+    _ = allocator.opq_inline_xrecalloc_multi_to(allocator, opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_recalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_align_recalloc_multi(opq_alloc, 8u, 10).value();
+    _ = allocator.opq_inline_align_recalloc_multi(opq_alloc, 8u, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `inline_align_recalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator
-            .opq_inline_align_recalloc_multi_to(allocator, opq_alloc, 8u, 10)
+            .opq_inline_align_recalloc_multi_to(allocator, opq_alloc, 8u, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_xrecalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_align_xrecalloc_multi(opq_alloc, 8u, 10);
+    _ = allocator.opq_inline_align_xrecalloc_multi(opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_xrecalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator.opq_inline_align_xrecalloc_multi_to(allocator, opq_alloc, 8u,
-                                                      10);
+                                                      10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_recalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_recalloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_inline_unalign_recalloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_recalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_recalloc_multi_to(allocator, opq_alloc, 10)
+    _ = allocator
+            .opq_inline_unalign_recalloc_multi_to(allocator, opq_alloc, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_xrecalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_xrecalloc_multi(opq_alloc, 10);
+    _ = allocator.opq_inline_unalign_xrecalloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_xrecalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator.opq_inline_unalign_xrecalloc_multi_to(allocator, opq_alloc,
-                                                        10);
+                                                        10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_recalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_align_recalloc_multi(opq_alloc, 8u, 10).value();
+    _ = allocator.opq_inline_align_recalloc_multi(opq_alloc, 8u, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `inline_align_recalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator
-            .opq_inline_align_recalloc_multi_to(allocator, opq_alloc, 8u, 10)
+            .opq_inline_align_recalloc_multi_to(allocator, opq_alloc, 8u, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_xrecalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_align_xrecalloc_multi(opq_alloc, 8u, 10);
+    _ = allocator.opq_inline_align_xrecalloc_multi(opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_xrecalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator.opq_inline_align_xrecalloc_multi_to(allocator, opq_alloc, 8u,
-                                                      10);
+                                                      10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_recalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_recalloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_inline_unalign_recalloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_recalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_recalloc_multi_to(allocator, opq_alloc, 10)
+    _ = allocator
+            .opq_inline_unalign_recalloc_multi_to(allocator, opq_alloc, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_xrecalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_xrecalloc_multi(opq_alloc, 10);
+    _ = allocator.opq_inline_unalign_xrecalloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_xrecalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator.opq_inline_unalign_xrecalloc_multi_to(allocator, opq_alloc,
-                                                        10);
+                                                        10u);
     allocator.free(opq_alloc);
 
     // Test `opq_resalloc`.
@@ -2165,160 +2172,162 @@ TEST(test_alloc) {
 
     // Test `opq_resalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_resalloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_resalloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_resalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_resalloc_multi_to(allocator, opq_alloc, 10).value();
+    _ = allocator.opq_resalloc_multi_to(allocator, opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `resalloc_multi`.
-    p_alloc = allocator.resalloc_multi(p_alloc, 5, 10).value().first().data();
+    p_alloc = allocator.resalloc_multi(p_alloc, 5, 10u).value().first().data();
 
     // Test `resalloc_multi_to`
-    p_alloc = allocator.resalloc_multi_to(allocator, p_alloc, 5, 10)
+    p_alloc = allocator.resalloc_multi_to(allocator, p_alloc, 5, 10u)
                   .value()
                   .first()
                   .data();
 
     // Test `opq_xresalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_xresalloc_multi(opq_alloc, 10);
+    _ = allocator.opq_xresalloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_xresalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_xresalloc_multi_to(allocator, opq_alloc, 10);
+    _ = allocator.opq_xresalloc_multi_to(allocator, opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `xresalloc_multi`
-    p_alloc = allocator.xresalloc_multi(p_alloc, 5, 10).first().data();
+    p_alloc = allocator.xresalloc_multi(p_alloc, 5, 10u).first().data();
 
     // Test `xresalloc_multi_to`
     p_alloc =
-        allocator.xresalloc_multi_to(allocator, p_alloc, 5, 10).first().data();
+        allocator.xresalloc_multi_to(allocator, p_alloc, 5, 10u).first().data();
 
     // Test `opq_align_resalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_resalloc_multi(opq_alloc, 8u, 10).value();
+    _ = allocator.opq_align_resalloc_multi(opq_alloc, 8u, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_align_resalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_resalloc_multi_to(allocator, opq_alloc, 8u, 10)
+    _ = allocator.opq_align_resalloc_multi_to(allocator, opq_alloc, 8u, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_align_xresalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_xresalloc_multi(opq_alloc, 8u, 10);
+    _ = allocator.opq_align_xresalloc_multi(opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_align_xresalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_xresalloc_multi_to(allocator, opq_alloc, 8u, 10);
+    _ = allocator.opq_align_xresalloc_multi_to(allocator, opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_resalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_resalloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_unalign_resalloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_resalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_resalloc_multi_to(allocator, opq_alloc, 10)
+    _ = allocator.opq_unalign_resalloc_multi_to(allocator, opq_alloc, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_xresalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_xresalloc_multi(opq_alloc, 10);
+    _ = allocator.opq_unalign_xresalloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_xresalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_xresalloc_multi_to(allocator, opq_alloc, 10);
+    _ = allocator.opq_unalign_xresalloc_multi_to(allocator, opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_align_resalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_resalloc_multi(opq_alloc, 8u, 10).value();
+    _ = allocator.opq_align_resalloc_multi(opq_alloc, 8u, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_align_resalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_resalloc_multi_to(allocator, opq_alloc, 8u, 10)
+    _ = allocator.opq_align_resalloc_multi_to(allocator, opq_alloc, 8u, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_align_xresalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_xresalloc_multi(opq_alloc, 8u, 10);
+    _ = allocator.opq_align_xresalloc_multi(opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_align_xresalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_xresalloc_multi_to(allocator, opq_alloc, 8u, 10);
+    _ = allocator.opq_align_xresalloc_multi_to(allocator, opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_resalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_resalloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_unalign_resalloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_resalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_resalloc_multi_to(allocator, opq_alloc, 10)
+    _ = allocator.opq_unalign_resalloc_multi_to(allocator, opq_alloc, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_xresalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_xresalloc_multi(opq_alloc, 10);
+    _ = allocator.opq_unalign_xresalloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_xresalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_xresalloc_multi_to(allocator, opq_alloc, 10);
+    _ = allocator.opq_unalign_xresalloc_multi_to(allocator, opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `align_resalloc_multi`.
-    p_alloc = allocator.align_resalloc_multi(p_alloc, 8u, 5, 10)
+    p_alloc = allocator.align_resalloc_multi(p_alloc, 8u, 5, 10u)
                   .value()
                   .first()
                   .data();
 
     // Test `align_resalloc_multi_to`.
-    p_alloc = allocator.align_resalloc_multi_to(allocator, p_alloc, 8u, 5, 10)
+    p_alloc = allocator.align_resalloc_multi_to(allocator, p_alloc, 8u, 5, 10u)
                   .value()
                   .first()
                   .data();
 
     // Test `align_xresalloc_multi`.
     p_alloc =
-        allocator.align_xresalloc_multi(p_alloc, 8u, 5, 10).first().data();
+        allocator.align_xresalloc_multi(p_alloc, 8u, 5, 10u).first().data();
 
     // Test `align_xresalloc_multi_to`.
-    p_alloc = allocator.align_xresalloc_multi_to(allocator, p_alloc, 8u, 5, 10)
+    p_alloc = allocator.align_xresalloc_multi_to(allocator, p_alloc, 8u, 5, 10u)
                   .first()
                   .data();
 
     // Test `unalign_resalloc_multi`.
-    p_alloc =
-        allocator.unalign_resalloc_multi(p_alloc, 5, 10).value().first().data();
+    p_alloc = allocator.unalign_resalloc_multi(p_alloc, 5, 10u)
+                  .value()
+                  .first()
+                  .data();
 
     // Test `unalign_resalloc_multi_to`.
-    p_alloc = allocator.unalign_resalloc_multi_to(allocator, p_alloc, 5, 10)
+    p_alloc = allocator.unalign_resalloc_multi_to(allocator, p_alloc, 5, 10u)
                   .value()
                   .first()
                   .data();
 
     // Test `unalign_xresalloc_multi`.
-    p_alloc = allocator.unalign_xresalloc_multi(p_alloc, 5, 10).first().data();
+    p_alloc = allocator.unalign_xresalloc_multi(p_alloc, 5, 10u).first().data();
 
     // Test `unalign_xresalloc_multi_to`.
-    p_alloc = allocator.unalign_xresalloc_multi_to(allocator, p_alloc, 5, 10)
+    p_alloc = allocator.unalign_xresalloc_multi_to(allocator, p_alloc, 5, 10u)
                   .first()
                   .data();
 
@@ -2466,162 +2475,165 @@ TEST(test_alloc) {
 
     // Test `opq_rescalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_rescalloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_rescalloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_rescalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_rescalloc_multi_to(allocator, opq_alloc, 10).value();
+    _ = allocator.opq_rescalloc_multi_to(allocator, opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `rescalloc_multi`.
-    p_alloc = allocator.rescalloc_multi(p_alloc, 5, 10).value().first().data();
+    p_alloc = allocator.rescalloc_multi(p_alloc, 5, 10u).value().first().data();
 
     // Test `rescalloc_multi_to`
-    p_alloc = allocator.rescalloc_multi_to(allocator, p_alloc, 5, 10)
+    p_alloc = allocator.rescalloc_multi_to(allocator, p_alloc, 5, 10u)
                   .value()
                   .first()
                   .data();
 
     // Test `opq_xrescalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_xrescalloc_multi(opq_alloc, 10);
+    _ = allocator.opq_xrescalloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_xrescalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_xrescalloc_multi_to(allocator, opq_alloc, 10);
+    _ = allocator.opq_xrescalloc_multi_to(allocator, opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `xrescalloc_multi`
-    p_alloc = allocator.xrescalloc_multi(p_alloc, 5, 10).first().data();
+    p_alloc = allocator.xrescalloc_multi(p_alloc, 5, 10u).first().data();
 
     // Test `xrescalloc_multi_to`
-    p_alloc =
-        allocator.xrescalloc_multi_to(allocator, p_alloc, 5, 10).first().data();
+    p_alloc = allocator.xrescalloc_multi_to(allocator, p_alloc, 5, 10u)
+                  .first()
+                  .data();
 
     // Test `opq_align_rescalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_rescalloc_multi(opq_alloc, 8u, 10).value();
+    _ = allocator.opq_align_rescalloc_multi(opq_alloc, 8u, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_align_rescalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_rescalloc_multi_to(allocator, opq_alloc, 8u, 10)
+    _ = allocator.opq_align_rescalloc_multi_to(allocator, opq_alloc, 8u, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_align_xrescalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_xrescalloc_multi(opq_alloc, 8u, 10);
+    _ = allocator.opq_align_xrescalloc_multi(opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_align_xrescalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_xrescalloc_multi_to(allocator, opq_alloc, 8u, 10);
+    _ = allocator.opq_align_xrescalloc_multi_to(allocator, opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_rescalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_rescalloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_unalign_rescalloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_rescalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_rescalloc_multi_to(allocator, opq_alloc, 10)
+    _ = allocator.opq_unalign_rescalloc_multi_to(allocator, opq_alloc, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_xrescalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_xrescalloc_multi(opq_alloc, 10);
+    _ = allocator.opq_unalign_xrescalloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_xrescalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_xrescalloc_multi_to(allocator, opq_alloc, 10);
+    _ = allocator.opq_unalign_xrescalloc_multi_to(allocator, opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_align_rescalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_rescalloc_multi(opq_alloc, 8u, 10).value();
+    _ = allocator.opq_align_rescalloc_multi(opq_alloc, 8u, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_align_rescalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_rescalloc_multi_to(allocator, opq_alloc, 8u, 10)
+    _ = allocator.opq_align_rescalloc_multi_to(allocator, opq_alloc, 8u, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_align_xrescalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_xrescalloc_multi(opq_alloc, 8u, 10);
+    _ = allocator.opq_align_xrescalloc_multi(opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_align_xrescalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_align_xrescalloc_multi_to(allocator, opq_alloc, 8u, 10);
+    _ = allocator.opq_align_xrescalloc_multi_to(allocator, opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_rescalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_rescalloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_unalign_rescalloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_rescalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_rescalloc_multi_to(allocator, opq_alloc, 10)
+    _ = allocator.opq_unalign_rescalloc_multi_to(allocator, opq_alloc, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_xrescalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_xrescalloc_multi(opq_alloc, 10);
+    _ = allocator.opq_unalign_xrescalloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_unalign_xrescalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_unalign_xrescalloc_multi_to(allocator, opq_alloc, 10);
+    _ = allocator.opq_unalign_xrescalloc_multi_to(allocator, opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `align_rescalloc_multi`.
-    p_alloc = allocator.align_rescalloc_multi(p_alloc, 8u, 5, 10)
+    p_alloc = allocator.align_rescalloc_multi(p_alloc, 8u, 5, 10u)
                   .value()
                   .first()
                   .data();
 
     // Test `align_rescalloc_multi_to`.
-    p_alloc = allocator.align_rescalloc_multi_to(allocator, p_alloc, 8u, 5, 10)
+    p_alloc = allocator.align_rescalloc_multi_to(allocator, p_alloc, 8u, 5, 10u)
                   .value()
                   .first()
                   .data();
 
     // Test `align_xrescalloc_multi`.
     p_alloc =
-        allocator.align_xrescalloc_multi(p_alloc, 8u, 5, 10).first().data();
+        allocator.align_xrescalloc_multi(p_alloc, 8u, 5, 10u).first().data();
 
     // Test `align_xrescalloc_multi_to`.
-    p_alloc = allocator.align_xrescalloc_multi_to(allocator, p_alloc, 8u, 5, 10)
-                  .first()
-                  .data();
+    p_alloc =
+        allocator.align_xrescalloc_multi_to(allocator, p_alloc, 8u, 5, 10u)
+            .first()
+            .data();
 
     // Test `unalign_rescalloc_multi`.
-    p_alloc = allocator.unalign_rescalloc_multi(p_alloc, 5, 10)
+    p_alloc = allocator.unalign_rescalloc_multi(p_alloc, 5, 10u)
                   .value()
                   .first()
                   .data();
 
     // Test `unalign_rescalloc_multi_to`.
-    p_alloc = allocator.unalign_rescalloc_multi_to(allocator, p_alloc, 5, 10)
+    p_alloc = allocator.unalign_rescalloc_multi_to(allocator, p_alloc, 5, 10u)
                   .value()
                   .first()
                   .data();
 
     // Test `unalign_xrescalloc_multi`.
-    p_alloc = allocator.unalign_xrescalloc_multi(p_alloc, 5, 10).first().data();
+    p_alloc =
+        allocator.unalign_xrescalloc_multi(p_alloc, 5, 10u).first().data();
 
     // Test `unalign_xrescalloc_multi_to`.
-    p_alloc = allocator.unalign_xrescalloc_multi_to(allocator, p_alloc, 5, 10)
+    p_alloc = allocator.unalign_xrescalloc_multi_to(allocator, p_alloc, 5, 10u)
                   .first()
                   .data();
 
@@ -2729,113 +2741,115 @@ TEST(test_alloc) {
 
     // Test `opq_inline_resalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_resalloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_inline_resalloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_resalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_resalloc_multi_to(allocator, opq_alloc, 10)
+    _ = allocator.opq_inline_resalloc_multi_to(allocator, opq_alloc, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_xresalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_xresalloc_multi(opq_alloc, 10);
+    _ = allocator.opq_inline_xresalloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_xresalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_xresalloc_multi_to(allocator, opq_alloc, 10);
+    _ = allocator.opq_inline_xresalloc_multi_to(allocator, opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_resalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_align_resalloc_multi(opq_alloc, 8u, 10).value();
+    _ = allocator.opq_inline_align_resalloc_multi(opq_alloc, 8u, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `inline_align_resalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator
-            .opq_inline_align_resalloc_multi_to(allocator, opq_alloc, 8u, 10)
+            .opq_inline_align_resalloc_multi_to(allocator, opq_alloc, 8u, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_xresalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_align_xresalloc_multi(opq_alloc, 8u, 10);
+    _ = allocator.opq_inline_align_xresalloc_multi(opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_xresalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator.opq_inline_align_xresalloc_multi_to(allocator, opq_alloc, 8u,
-                                                      10);
+                                                      10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_resalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_resalloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_inline_unalign_resalloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_resalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_resalloc_multi_to(allocator, opq_alloc, 10)
+    _ = allocator
+            .opq_inline_unalign_resalloc_multi_to(allocator, opq_alloc, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_xresalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_xresalloc_multi(opq_alloc, 10);
+    _ = allocator.opq_inline_unalign_xresalloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_xresalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator.opq_inline_unalign_xresalloc_multi_to(allocator, opq_alloc,
-                                                        10);
+                                                        10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_resalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_align_resalloc_multi(opq_alloc, 8u, 10).value();
+    _ = allocator.opq_inline_align_resalloc_multi(opq_alloc, 8u, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `inline_align_resalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator
-            .opq_inline_align_resalloc_multi_to(allocator, opq_alloc, 8u, 10)
+            .opq_inline_align_resalloc_multi_to(allocator, opq_alloc, 8u, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_xresalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_align_xresalloc_multi(opq_alloc, 8u, 10);
+    _ = allocator.opq_inline_align_xresalloc_multi(opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_xresalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator.opq_inline_align_xresalloc_multi_to(allocator, opq_alloc, 8u,
-                                                      10);
+                                                      10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_resalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_resalloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_inline_unalign_resalloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_resalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_resalloc_multi_to(allocator, opq_alloc, 10)
+    _ = allocator
+            .opq_inline_unalign_resalloc_multi_to(allocator, opq_alloc, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_xresalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_xresalloc_multi(opq_alloc, 10);
+    _ = allocator.opq_inline_unalign_xresalloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_xresalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator.opq_inline_unalign_xresalloc_multi_to(allocator, opq_alloc,
-                                                        10);
+                                                        10u);
     allocator.free(opq_alloc);
 
     // The allocator runs out of memory around here.
@@ -2945,113 +2959,113 @@ TEST(test_alloc) {
 
     // Test `opq_inline_rescalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_rescalloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_inline_rescalloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_rescalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_rescalloc_multi_to(allocator, opq_alloc, 10)
+    _ = allocator.opq_inline_rescalloc_multi_to(allocator, opq_alloc, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_xrescalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_xrescalloc_multi(opq_alloc, 10);
+    _ = allocator.opq_inline_xrescalloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_xrescalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_xrescalloc_multi_to(allocator, opq_alloc, 10);
+    _ = allocator.opq_inline_xrescalloc_multi_to(allocator, opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_rescalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_align_rescalloc_multi(opq_alloc, 8u, 10).value();
+    _ = allocator.opq_inline_align_rescalloc_multi(opq_alloc, 8u, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `inline_align_rescalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator
-            .opq_inline_align_rescalloc_multi_to(allocator, opq_alloc, 8u, 10)
+            .opq_inline_align_rescalloc_multi_to(allocator, opq_alloc, 8u, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_xrescalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_align_xrescalloc_multi(opq_alloc, 8u, 10);
+    _ = allocator.opq_inline_align_xrescalloc_multi(opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_xrescalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator.opq_inline_align_xrescalloc_multi_to(allocator, opq_alloc, 8u,
-                                                       10);
+                                                       10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_rescalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_rescalloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_inline_unalign_rescalloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `inline_unalign_rescalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator
-            .opq_inline_unalign_rescalloc_multi_to(allocator, opq_alloc, 10)
+            .opq_inline_unalign_rescalloc_multi_to(allocator, opq_alloc, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_nalign_xrescalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_xrescalloc_multi(opq_alloc, 10);
+    _ = allocator.opq_inline_unalign_xrescalloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_xrescalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator.opq_inline_unalign_xrescalloc_multi_to(allocator, opq_alloc,
-                                                         10);
+                                                         10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_rescalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_align_rescalloc_multi(opq_alloc, 8u, 10).value();
+    _ = allocator.opq_inline_align_rescalloc_multi(opq_alloc, 8u, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `inline_align_rescalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator
-            .opq_inline_align_rescalloc_multi_to(allocator, opq_alloc, 8u, 10)
+            .opq_inline_align_rescalloc_multi_to(allocator, opq_alloc, 8u, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_xrescalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_align_xrescalloc_multi(opq_alloc, 8u, 10);
+    _ = allocator.opq_inline_align_xrescalloc_multi(opq_alloc, 8u, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_align_xrescalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator.opq_inline_align_xrescalloc_multi_to(allocator, opq_alloc, 8u,
-                                                       10);
+                                                       10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_rescalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_rescalloc_multi(opq_alloc, 10).value();
+    _ = allocator.opq_inline_unalign_rescalloc_multi(opq_alloc, 10u).value();
     allocator.free(opq_alloc);
 
     // Test `inline_unalign_rescalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator
-            .opq_inline_unalign_rescalloc_multi_to(allocator, opq_alloc, 10)
+            .opq_inline_unalign_rescalloc_multi_to(allocator, opq_alloc, 10u)
             .value();
     allocator.free(opq_alloc);
 
     // Test `opq_inline_nalign_xrescalloc_multi`.
     opq_alloc = allocator.opq_alloc<int4>().value();
-    _ = allocator.opq_inline_unalign_xrescalloc_multi(opq_alloc, 10);
+    _ = allocator.opq_inline_unalign_xrescalloc_multi(opq_alloc, 10u);
     allocator.free(opq_alloc);
 
     // Test `opq_inline_unalign_xrescalloc_multi_to`.
     opq_alloc = allocator.opq_alloc<int4>().value();
     _ = allocator.opq_inline_unalign_xrescalloc_multi_to(allocator, opq_alloc,
-                                                         10);
+                                                         10u);
 }

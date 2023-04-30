@@ -110,7 +110,7 @@ class array : public collection_interface<array<T, length>, T, true> {
     // Get the number of elements contained in this `array`.
     [[nodiscard]]
     static constexpr auto size() -> idx {
-        return static_cast<idx>(length);
+        return idx(length);
     }
 
   private:

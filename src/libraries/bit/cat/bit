@@ -283,7 +283,7 @@ class bit_reference {
     constexpr bit_reference(storage_type& in_storage, storage_type in_mask)
         : storage(in_storage), bit_mask(in_mask) {
         if !consteval {
-            cat::assert(has_single_bit(in_mask));
+            assert(has_single_bit(in_mask));
         }
     }
 
@@ -312,15 +312,14 @@ class bit_reference {
 
     // Create a `bit_reference` to a bit position `offset` bits from the right
     // of a `storage_type`.
-    static constexpr auto from_offset(storage_type& reference, iword offset)
+    static constexpr auto from_offset(storage_type& reference, uword offset)
         -> bit_reference {
         if !consteval {
-            cat::assert(offset < limits<storage_type>::bits);
+            assert(offset < limits<storage_type>::bits);
         }
         // Call the internal `private:` constructor.
         return bit_reference(
-            reference, storage_type(storage_type(1u)
-                                    << storage_type(make_unsigned(offset))));
+            reference, storage_type(storage_type(1u) << storage_type(offset)));
     }
 
     // Assign a true or false value to this bit.
@@ -542,7 +541,7 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
   private:
     using type = iterator;
     using word_type = iterator::value_type;
-    static constexpr iword word_bits = limits<word_type>::bits;
+    static constexpr uword word_bits = limits<word_type>::bits;
 
   public:
     using value_type = bit_value;
@@ -552,7 +551,7 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
     constexpr bit_iterator(bit_iterator const&) = default;
     constexpr bit_iterator(bit_iterator&&) = default;
 
-    constexpr bit_iterator(iterator const& other, iword current_bit = 0)
+    constexpr bit_iterator(iterator const& other, uword current_bit = 0u)
         : internal_iterator(other), bit_position(current_bit) {
     }
 
@@ -561,13 +560,13 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
     }
 
     constexpr void advance(iword offset) {
-        iword advance_bits = this->bit_position + offset;
-        iword bytes_overflow = advance_bits / this->word_bits;
-        if (advance_bits < 0 &&
+        uword advance_bits = this->bit_position + static_cast<uword>(offset);
+        uword bytes_overflow = advance_bits / this->word_bits;
+        if (advance_bits < 0u &&
             ((bytes_overflow * word_bits) != advance_bits)) {
             --bytes_overflow;
         }
-        this->internal_iterator += bytes_overflow;
+        this->internal_iterator += iword(bytes_overflow);
         this->bit_position = advance_bits - bytes_overflow * word_bits;
     }
 
@@ -578,13 +577,13 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
         // a word in bits, then add the difference between the iterators'
         // current bit offset within their word. That gives the total number of
         // bits between any two bit iterators.
-        return (word_difference * word_bits) +
-               (this->bit_position - other.bit_position);
+        return (word_difference * iword(word_bits)) +
+               iword(this->bit_position - other.bit_position);
     }
 
   private:
     iterator internal_iterator;
-    iword bit_position;
+    uword bit_position;
 };
 
 inline constexpr bit_value one_bit = true;

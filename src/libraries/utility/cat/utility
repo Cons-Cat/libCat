@@ -52,7 +52,6 @@ constexpr auto salignof() -> iword {
 }
 
 namespace detail {
-
     template <typename T, iword index, iword current, T value, T... values>
     constexpr auto get_value_list_at() -> T {
         if constexpr (current == index) {
@@ -61,7 +60,6 @@ namespace detail {
             return get_value_list_at<T, index, current + 1, values...>();
         }
     }
-
 }  // namespace detail
 
 template <typename T, T... values>
@@ -78,7 +76,6 @@ struct value_type_list {
 };
 
 namespace detail {
-
     template <iword count, typename T, T value, T... integers>
     constexpr auto make_value_list() {
         if constexpr (count > 0) {
@@ -100,7 +97,6 @@ namespace detail {
             return value_type_list<T, integers...>();
         }
     }
-
 }  // namespace detail
 
 template <typename T, T value, iword count>
@@ -150,7 +146,6 @@ constexpr auto to_underlying(T any_enum) {
 }
 
 namespace detail {
-
     template <typename closure_type>
     struct defer_wrapper {
         closure_type invocable;
@@ -162,7 +157,6 @@ namespace detail {
             this->invocable();
         }
     };
-
 }  // namespace detail
 
 // This must be split into two macros, because the `##` is otherwise evaluated

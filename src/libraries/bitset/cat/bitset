@@ -96,7 +96,7 @@ class bitset {
         }
 
         array_type_element& index_byte =
-            this->storage[this->storage.size() - 1u -
+            this->storage[static_cast<uword>(this->storage.size()) - 1u -
                           ((index_bit + this->leading_skipped_bits) /
                            // TODO: Without `.raw`, this is ambiguous.
                            word_bits.raw)];
@@ -105,9 +105,9 @@ class bitset {
         // TODO: `total_bytes` doesn't compile here in Clang 17 if prefixed by
         // `this->`.
         if constexpr (total_bytes > word_bytes) {
-            // If the bitset is larger than a word, Wrap the bit offset by the
+            // If the bitset is larger than a word, wrap the bit offset by the
             // size of a word.
-            bit_offset &= word_bits - 1u;
+            bit_offset &= static_cast<uword>(word_bits) - 1u;
         }
 
         return bit_reference<array_type_element>::from_offset(index_byte,
@@ -239,10 +239,10 @@ class bitset {
     constexpr auto countl_zero() const -> idx {
         // TODO: `leading_bytes_bits` doesn't compile here in Clang 17 if
         // prefixed by `this->`.
-        constexpr uword skip_bits =
-            (sizeof(array_type_element) * 8u) - leading_bytes_bits;
+        constexpr idx skip_bits = static_cast<idx>(
+            sizeof(array_type_element) * 8u - leading_bytes_bits);
 
-        idx count = cat::countl_zero(this->storage[0]);
+        idx count = cat::countl_zero(this->storage[0u]);
         if (count != sizeof(array_type_element) * 8u) {
             return count - skip_bits;
         }

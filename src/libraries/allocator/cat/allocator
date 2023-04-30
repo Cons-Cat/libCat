@@ -16,7 +16,7 @@ concept mem = requires(T handle) {
                   handle.is_inline();
               };
 
-inline constexpr idx inline_buffer_size = 256;
+inline constexpr idx inline_buffer_size = 256u;
 
 // TODO: Handles' `.get()` should be only visible to allocators.
 namespace detail {
@@ -248,9 +248,9 @@ namespace detail {
                                    };
 
     template <typename allocator_type>
-    concept has_allocation_size = requires(allocator_type allocator) {
-                                      allocator.allocation_bytes(1_uz, 1_sz);
-                                  };
+    concept has_allocation_bytes = requires(allocator_type allocator) {
+                                       allocator.allocation_bytes(1_uz, 1_sz);
+                                   };
 
     template <typename allocator_type>
     concept has_allocate_feedback = requires(allocator_type allocator) {
@@ -274,51 +274,11 @@ concept is_stable_allocator =
     is_allocator<allocator_type> && allocator_type::has_pointer_stability;
 
 template <typename T>
-using sized_allocation = tuple<T, uword>;
+using sized_allocation = tuple<T, idx>;
 
+// Implement compact optimization.
 template <typename T>
 using maybe_sized_allocation = maybe<sized_allocation<T>>;
-
-/* maybe<compact<sized_allocation<T>,
-                     [](sized_allocation<T> tuple) -> bool {
-                         return (tuple.second() != 0_sz);
-                     },
-                     sized_allocation<T>{T(), 0_sz}>>;
-*/
-
-// TODO: For some reason, this implementation of `opq_salloc()`, this returns an
-// `int` in GCC 12. That must be some kind of bug. For now, a less efficient
-// implementation is being used.
-/*
-    template <typename T,  typename... Args>
-[[nodiscard]]constexpr auto opq_salloc(Args&&... constructor_args) {
-maybe size = this->opq_nalloc<T>().value();
-
-// GCC 12 fails to deduce the type of template aliases with a lambda in
-// an unevaluted context, such as compact maybes, so it must be
-// stored in a temporary value `return_val` first.
-//
-// `[[maybe_unused]]` is required because GCC 12 can mistakenly think
-// this is uninitialized.
-using alloc_type = sized_allocation<decltype(this->opq_xalloc<T, is_zeroed>())>;
-
-if (size.has_value()) {
-    [[maybe_unused]] maybe_sized_allocation<alloc_type> return_val =
-        maybe_sized_allocation<alloc_type>{nullopt};
-    return return_val;
-}
-
-// If `opq_nalloc()` did not fail, this cannot fail.
-auto allocation =
-    this->opq_xalloc<T, is_zeroed>(forward<Args>(constructor_args)...);
-
-[[maybe_unused]] maybe_sized_allocation<alloc_type> return_val =
-    maybe_sized_allocation<alloc_type>{alloc_type(allocation, 0_sz)};
-return return_val;
-}
-*/
-
-// TODO: `_multi` functions should take signed or unsigned integrals.
 
 template <typename derived_type>
 class allocator_interface {
@@ -498,7 +458,7 @@ class allocator_interface {
     constexpr auto opq_unalign_alloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, false, false, false, false, false>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // Allocate a `T` with no alignment guarantee.
@@ -508,7 +468,7 @@ class allocator_interface {
     constexpr auto opq_unalign_xalloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, false, false, false, false, false>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // If this allocator has pointer stability, try to allocate a `T` with no
@@ -520,7 +480,7 @@ class allocator_interface {
     constexpr auto unalign_alloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, false, false, true, false, false>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // If this allocator has pointer stability, allocate a `T` with no
@@ -532,7 +492,7 @@ class allocator_interface {
     constexpr auto unalign_xalloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, false, false, true, false, false>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // Try to allocate an array of `T` with alignment guarantee.
@@ -698,7 +658,7 @@ class allocator_interface {
     constexpr auto opq_inline_unalign_alloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, true, true, false, false, false, false, false>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // Allocate a small-size optimized `T` with no alignment guarantee.
@@ -707,7 +667,7 @@ class allocator_interface {
     constexpr auto opq_inline_unalign_xalloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, true, false, false, false, false, false, false>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // Try to allocate a small-size optimized array of `T` with an alignment
@@ -752,14 +712,14 @@ class allocator_interface {
     // Try to get the number of bytes that allocating a `T` would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_nalloc() -> maybe_non_zero<uword> {
+    constexpr auto opq_nalloc() -> maybe_non_zero<idx> {
         return this->opq_align_nalloc<T>(alignof(T));
     }
 
     // Get the number of bytes that allocating a `T` would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_xnalloc() -> uword {
+    constexpr auto opq_xnalloc() -> idx {
         return this->opq_align_xnalloc<T>(alignof(T));
     }
 
@@ -767,7 +727,7 @@ class allocator_interface {
     // reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_nalloc_multi(uword count) -> maybe_non_zero<uword> {
+    constexpr auto opq_nalloc_multi(uword count) -> maybe_non_zero<idx> {
         return this->opq_align_nalloc_multi<T>(alignof(T), count);
     }
 
@@ -775,7 +735,7 @@ class allocator_interface {
     // reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_xnalloc_multi(uword count) -> uword {
+    constexpr auto opq_xnalloc_multi(uword count) -> idx {
         return this->opq_align_nalloc_multi<T>(alignof(T), count).value();
     }
 
@@ -783,7 +743,7 @@ class allocator_interface {
     // guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_align_nalloc(uword alignment) -> maybe_non_zero<uword> {
+    constexpr auto opq_align_nalloc(uword alignment) -> maybe_non_zero<idx> {
         return this->self().allocation_bytes(alignment, sizeof(T));
     }
 
@@ -791,7 +751,7 @@ class allocator_interface {
     // guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_align_xnalloc(uword alignment) -> uword {
+    constexpr auto opq_align_xnalloc(uword alignment) -> idx {
         return this->self().allocation_bytes(alignment, sizeof(T)).value();
     }
 
@@ -799,7 +759,7 @@ class allocator_interface {
     // guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_unalign_nalloc() -> maybe_non_zero<uword> {
+    constexpr auto opq_unalign_nalloc() -> maybe_non_zero<idx> {
         return this->self().allocation_bytes(1u, sizeof(T));
     }
 
@@ -807,7 +767,7 @@ class allocator_interface {
     // guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_unalign_xnalloc() -> uword {
+    constexpr auto opq_unalign_xnalloc() -> idx {
         return this->self().allocation_bytes(1u, sizeof(T)).value();
     }
 
@@ -816,7 +776,7 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto opq_align_nalloc_multi(uword alignment, uword count)
-        -> maybe_non_zero<uword> {
+        -> maybe_non_zero<idx> {
         return this->self().allocation_bytes(alignment, sizeof(T) * count);
     }
 
@@ -825,7 +785,7 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto opq_align_xnalloc_multi(uword alignment, uword count)
-        -> uword {
+        -> idx {
         return this->self()
             .allocation_bytes(alignment, sizeof(T) * count)
             .value();
@@ -836,7 +796,7 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto opq_unalign_nalloc_multi(uword count)
-        -> maybe_non_zero<uword> {
+        -> maybe_non_zero<idx> {
         return this->self().allocation_bytes(1u, sizeof(T) * count);
     }
 
@@ -844,7 +804,7 @@ class allocator_interface {
     // alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_unalign_xnalloc_multi(uword count) -> uword {
+    constexpr auto opq_unalign_xnalloc_multi(uword count) -> idx {
         return this->self().allocation_bytes(1u, sizeof(T) * count).value();
     }
 
@@ -852,7 +812,7 @@ class allocator_interface {
     // would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_nalloc() -> maybe_non_zero<uword> {
+    constexpr auto opq_inline_nalloc() -> maybe_non_zero<idx> {
         return this->opq_inline_align_nalloc<T>(alignof(T));
     }
 
@@ -860,7 +820,7 @@ class allocator_interface {
     // would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_xnalloc() -> uword {
+    constexpr auto opq_inline_xnalloc() -> idx {
         return this->opq_inline_align_xnalloc<T>(alignof(T));
     }
 
@@ -868,8 +828,7 @@ class allocator_interface {
     // array of `T` would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_nalloc_multi(uword count)
-        -> maybe_non_zero<uword> {
+    constexpr auto opq_inline_nalloc_multi(uword count) -> maybe_non_zero<idx> {
         return this->opq_inline_align_nalloc_multi<T>(alignof(T), count);
     }
 
@@ -877,7 +836,7 @@ class allocator_interface {
     // `T` would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_xnalloc_multi(uword count) -> uword {
+    constexpr auto opq_inline_xnalloc_multi(uword count) -> idx {
         return this->opq_inline_align_xnalloc_multi<T>(alignof(T), count);
     }
 
@@ -886,7 +845,7 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto opq_inline_align_nalloc(uword alignment)
-        -> maybe_non_zero<uword> {
+        -> maybe_non_zero<idx> {
         if constexpr (sizeof(T) > inline_buffer_size) {
             return this->self().allocation_bytes(alignment, sizeof(T));
         } else {
@@ -898,7 +857,7 @@ class allocator_interface {
     // an alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_align_xnalloc(uword alignment) -> uword {
+    constexpr auto opq_inline_align_xnalloc(uword alignment) -> idx {
         return this->opq_inline_align_nalloc<T>(alignment).value();
     }
 
@@ -906,7 +865,7 @@ class allocator_interface {
     // with no alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_unalign_nalloc() -> maybe_non_zero<uword> {
+    constexpr auto opq_inline_unalign_nalloc() -> maybe_non_zero<idx> {
         return this->opq_inline_align_nalloc<T>(1u);
     }
 
@@ -914,7 +873,7 @@ class allocator_interface {
     // no alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_unalign_xnalloc() -> uword {
+    constexpr auto opq_inline_unalign_xnalloc() -> idx {
         return this->opq_inline_align_xnalloc<T>(1u);
     }
 
@@ -923,7 +882,7 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto opq_inline_align_nalloc_multi(uword alignment, uword count)
-        -> maybe_non_zero<uword> {
+        -> maybe_non_zero<idx> {
         if (sizeof(T) * count > inline_buffer_size) {
             return this->self().allocation_bytes(alignment, sizeof(T) * count);
         }
@@ -935,7 +894,7 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto opq_inline_align_xnalloc_multi(uword alignment, uword count)
-        -> uword {
+        -> idx {
         return this->opq_inline_align_nalloc_multi<T>(alignment, count).value();
     }
 
@@ -944,7 +903,7 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto opq_inline_unalign_nalloc_multi(uword count)
-        -> maybe_non_zero<uword> {
+        -> maybe_non_zero<idx> {
         return this->opq_inline_align_nalloc_multi<T>(1u, count);
     }
 
@@ -952,7 +911,7 @@ class allocator_interface {
     // array of `T` with no alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto opq_inline_unalign_xnalloc_multi(uword count) -> uword {
+    constexpr auto opq_inline_unalign_xnalloc_multi(uword count) -> idx {
         return this->opq_inline_align_xnalloc_multi<T>(1u, count);
     }
 
@@ -1120,7 +1079,7 @@ class allocator_interface {
     constexpr auto opq_unalign_salloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, false, false, false, false, true>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // Allocate a `T` with no alignment guarantee, and return the number of
@@ -1131,7 +1090,7 @@ class allocator_interface {
     constexpr auto opq_unalign_xsalloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, false, false, false, false, true>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // If this allocator has pointer stability, try to allocate a `T` with no
@@ -1143,7 +1102,7 @@ class allocator_interface {
     constexpr auto unalign_salloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, false, false, true, false, true>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // If this allocator has pointer stability, allocate a `T` with no
@@ -1155,7 +1114,7 @@ class allocator_interface {
     constexpr auto unalign_xsalloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, false, false, true, false, true>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // Try to allocate an array of `T` with an alignment guarantee, and return
@@ -1324,7 +1283,7 @@ class allocator_interface {
     constexpr auto opq_inline_unalign_salloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, true, true, false, false, false, false, true>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // Allocate a small-size optimized `T` with no alignment guarantee, and
@@ -1335,7 +1294,7 @@ class allocator_interface {
     constexpr auto opq_inline_unalign_xsalloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, true, false, false, false, false, false, true>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // Try to allocate a small-size optimized array of `T` with an alignment
@@ -1539,7 +1498,7 @@ class allocator_interface {
     constexpr auto opq_unalign_calloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, false, false, false, true, false>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // Allocate a `T` with no alignment guarantee, and zero-out the
@@ -1550,7 +1509,7 @@ class allocator_interface {
     constexpr auto opq_unalign_xcalloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, false, false, false, true, false>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // If this allocator has pointer stability, try to allocate a `T` with no
@@ -1563,7 +1522,7 @@ class allocator_interface {
     constexpr auto unalign_calloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, false, false, true, true, false>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // If this allocator has pointer stability, allocate a `T` with no
@@ -1576,7 +1535,7 @@ class allocator_interface {
     constexpr auto unalign_xcalloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, false, false, true, true, false>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // Try to allocate an array of `T` with alignment guarantee, and zero-out
@@ -1747,7 +1706,7 @@ class allocator_interface {
     constexpr auto opq_inline_unalign_calloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, true, true, false, false, false, true, false>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // Allocate a small-size optimized `T` with no alignment guarantee, and
@@ -1758,7 +1717,7 @@ class allocator_interface {
     constexpr auto opq_inline_unalign_xcalloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, true, false, false, false, false, true, false>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // Try to allocate a small-size optimized array of `T` with an alignment
@@ -1960,7 +1919,7 @@ class allocator_interface {
     constexpr auto opq_unalign_scalloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, true, false, false, false, true, true>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // Allocate a `T` with no alignment guarantee, and return the number of
@@ -1970,7 +1929,7 @@ class allocator_interface {
     constexpr auto opq_unalign_xscalloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, false, false, false, true, true>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // If this allocator has pointer stability, try to allocate a `T` with no
@@ -1981,7 +1940,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto unalign_scalloc(Args&&... constructor_args) {
         return this->meta_alloc<T, false, true, false, false, true, true, true>(
-            1u, 1, forward<Args>(constructor_args)...);
+            1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // If this allocator has pointer stability, allocate a `T` with no
@@ -1993,7 +1952,7 @@ class allocator_interface {
     constexpr auto unalign_xscalloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, false, false, false, false, true, true, true>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // Try to allocate an array of `T` with an alignment guarantee, and return
@@ -2162,7 +2121,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto opq_inline_unalign_scalloc(Args&&... constructor_args) {
         return this->meta_alloc<T, true, true, false, false, false, true, true>(
-            1u, 1, forward<Args>(constructor_args)...);
+            1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // Allocate a small-size optimized `T` with no alignment guarantee, and
@@ -2173,7 +2132,7 @@ class allocator_interface {
     constexpr auto opq_inline_unalign_xscalloc(Args&&... constructor_args) {
         return this
             ->meta_alloc<T, true, false, false, false, false, true, true>(
-                1u, 1, forward<Args>(constructor_args)...);
+                1u, 1u, forward<Args>(constructor_args)...);
     }
 
     // Try to allocate a small-size optimized array of `T` with an alignment
@@ -5253,7 +5212,8 @@ class allocator_interface {
                    "This allocation is too larger for this allocator!");
         }
 
-        uword const allocation_bytes = allocation_count * sizeof(T);
+        idx const allocation_bytes =
+            static_cast<idx>(allocation_count * sizeof(T));
 
         // Produce a basic handle for this memory type.
 
@@ -5289,7 +5249,7 @@ class allocator_interface {
                                     conditional<is_multiple,
                                                 // tuple of a span with size
                                                 // feedback.
-                                                maybe<tuple<span<T>, uword>>,
+                                                maybe<tuple<span<T>, idx>>,
                                                 // Failsafe pointer with size.
                                                 maybe_sized_allocation<T*>>,
 
@@ -5314,7 +5274,7 @@ class allocator_interface {
                                     conditional<is_multiple,
                                                 // Unsafe tuple of a span
                                                 // with size.
-                                                tuple<span<T>, uword>,
+                                                tuple<span<T>, idx>,
                                                 // Unsafe pointer with size.
                                                 sized_allocation<T*>>,
 
@@ -5340,11 +5300,11 @@ class allocator_interface {
                 // Construct one or multiple `T`s.
                 if constexpr (is_multiple) {
                     p_allocation =
-                        new (std::align_val_t{allocation_alignment.raw})
+                        new (std::align_val_t(allocation_alignment.raw))
                             T[allocation_count.raw];
                 } else {
                     p_allocation =
-                        new (std::align_val_t{allocation_alignment.raw})
+                        new (std::align_val_t(allocation_alignment.raw))
                             T(constructor_args...);
                 }
 
@@ -5355,22 +5315,18 @@ class allocator_interface {
 
                 if constexpr (has_feedback) {
                     if constexpr (is_multiple) {
-                        return return_handle{
-                            tuple{span<T>{p_allocation, allocation_count},
-                                  allocation_count * sizeof(T)}
-                        };
+                        return return_handle(
+                            tuple(span<T>(p_allocation, allocation_count),
+                                  allocation_count * sizeof(T)));
                     } else {
-                        return return_handle{
-                            sized_allocation<T*>{p_allocation,
-                                                 allocation_count * sizeof(T)}
-                        };
+                        return return_handle(sized_allocation<T*>(
+                            p_allocation, allocation_count * sizeof(T)));
                     }
                 } else {
                     // No size feedback.
                     if constexpr (is_multiple) {
-                        return return_handle{
-                            span<T>{p_allocation, allocation_count}
-                        };
+                        return return_handle(
+                            span<T>(p_allocation, allocation_count));
                     } else {
                         return return_handle(p_allocation);
                     }
@@ -5407,10 +5363,8 @@ class allocator_interface {
                     // Return here to skip error handling, because an
                     // on-stack allocation cannot fail.
                     if constexpr (has_feedback) {
-                        return return_handle{
-                            sized_allocation<handle_type>{move(stack_handle),
-                                                          inline_buffer_size}
-                        };
+                        return return_handle(sized_allocation<handle_type>(
+                            move(stack_handle), inline_buffer_size));
                     } else {
                         return return_handle(move(stack_handle));
                     }
@@ -5432,7 +5386,7 @@ class allocator_interface {
                         maybe_memory = this->self().aligned_allocate_feedback(
                             allocation_alignment, allocation_bytes);
                     } else {
-                        if constexpr (detail::has_allocation_size<
+                        if constexpr (detail::has_allocation_bytes<
                                           derived_type>) {
                             // If a `.aligned_allocate_feedback()` is not
                             // provided, use `.allocation_bytes()`.
@@ -5451,9 +5405,9 @@ class allocator_interface {
                                         .value();
 
                                 maybe_memory = maybe_sized_allocation<void*>(
-                                    tuple<void*, uword>{
+                                    sized_allocation<void*>(
                                         p_allocation,
-                                        actual_allocation_bytes.value()});
+                                        actual_allocation_bytes.value()));
                             } else {
                                 maybe_memory = nullopt;
                             }
@@ -5464,8 +5418,9 @@ class allocator_interface {
                             maybe temp_memory = this->self().aligned_allocate(
                                 allocation_alignment, allocation_bytes);
                             if (temp_memory.has_value()) {
-                                maybe_memory = maybe_sized_allocation<void*>{
-                                    temp_memory.value(), allocation_bytes};
+                                maybe_memory = maybe_sized_allocation<void*>(
+                                    sized_allocation<void*>(temp_memory.value(),
+                                                            allocation_bytes));
                             } else {
                                 maybe_memory = nullopt;
                             }
@@ -5502,33 +5457,33 @@ class allocator_interface {
                             maybe_memory =
                                 this->self().aligned_allocate_feedback(
                                     1u, allocation_bytes);
-                        } else if constexpr (detail::has_allocation_size<
+                        } else if constexpr (detail::has_allocation_bytes<
                                                  derived_type>) {
                             // If a `.aligned_allocate_feedback()` is not
-                            // provided, use `.allocation_size`().
+                            // provided, use `.allocation_bytes`().
                             maybe size = this->self().allocation_bytes(
                                 1u, allocation_bytes);
 
                             if (size.has_value()) {
-                                maybe_memory = maybe_sized_allocation<void*>{
+                                maybe_memory = maybe_sized_allocation<void*>(
                                     // If `.allocation_bytes()` succeeded, this
                                     // will not fail.
                                     this->self()
                                         .allocate(allocation_bytes)
                                         .value(),
-                                    size.value()};
+                                    size.value());
                             } else {
                                 maybe_memory = nullopt;
                             }
                         } else {
                             // If a `.allocation_bytes()` is also not
                             // provided, simply assume that it allocates
-                            // `allocation_size`.
+                            // `allocation_bytes`.
                             auto temp_memory = this->self().aligned_allocate(
                                 allocation_alignment, allocation_bytes);
                             if (temp_memory.has_value()) {
-                                maybe_memory = maybe_sized_allocation<void*>{
-                                    temp_memory.value(), allocation_bytes};
+                                maybe_memory = maybe_sized_allocation<void*>(
+                                    temp_memory.value(), allocation_bytes);
                             } else {
                                 maybe_memory = nullopt;
                             }
@@ -5592,14 +5547,12 @@ class allocator_interface {
             if constexpr (is_stable) {
                 if constexpr (has_feedback) {
                     if constexpr (is_multiple) {
-                        return return_handle{
-                            tuple{span<T>{p_allocation, allocation_count},
-                                  size_feedback}
-                        };
+                        return return_handle(
+                            tuple(span<T>(p_allocation, allocation_count),
+                                  size_feedback));
                     } else {
-                        return return_handle{
-                            sized_allocation<T*>{p_allocation, size_feedback}
-                        };
+                        return return_handle(
+                            sized_allocation<T*>(p_allocation, size_feedback));
                     }
                 } else {
                     // No size feedback.
@@ -5614,7 +5567,7 @@ class allocator_interface {
             } else {
                 underlying_handle const raw_handle =
                     this->self().template make_handle<T>(p_allocation);
-                handle_type handle{move(raw_handle)};
+                handle_type handle(move(raw_handle));
 
                 if constexpr (is_inline) {
                     handle.set_inlined(false);
@@ -5625,8 +5578,8 @@ class allocator_interface {
                 }
 
                 if constexpr (has_feedback) {
-                    return return_handle(sized_allocation<handle_type>{
-                        move(handle), size_feedback});
+                    return return_handle(sized_allocation<handle_type>(
+                        move(handle), size_feedback));
                 } else {
                     return return_handle(move(handle));
                 }

@@ -672,8 +672,10 @@ TEST(test_numerals) {
     static_assert(!cat::is_convertible<idx, int4>);
 
     // `idx` is implicitly convertible to both word types.
-    [[maybe_unused]] iword index_iword = idx2;
-    [[maybe_unused]] uword index_uword = idx2;
+    iword index_iword = idx2;
+    index_iword = idx2;
+    uword index_uword = idx2;
+    index_uword = idx2;
 
     auto add_idx_iword = idx2 + 1_sz;
     static_assert(cat::is_same<decltype(add_idx_iword), iword>);

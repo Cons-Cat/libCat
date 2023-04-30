@@ -63,7 +63,7 @@ if(CAT_BUILD_UNIT_TESTS)
     # ${CMAKE_SOURCE_DIR}/tests/src/test_invoke.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_cast.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bit.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_bitset.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_bitset.cpp
     # ${CMAKE_SOURCE_DIR}/tests/src/test_thread.cpp
   )
 

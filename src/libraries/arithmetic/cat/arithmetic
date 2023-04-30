@@ -734,12 +734,6 @@ struct arithmetic : detail::arithmetic_storage<T, policy> {
         using enum overflow_policies;
         auto raw_operand = make_raw_arithmetic(operand);
         if constexpr (policy == undefined) {
-            // TODO: See if using `[[gnu::assume(())]]` actually optimizes this.
-            if constexpr (is_unsigned<T>) {
-                // Assume there is no overflow.
-                // NOLINTNEXTLINE This is a C++23 feature.
-                [[gnu::assume((self >= operand))]];
-            }
             return detail::promoted_type<T, U>{self.raw / raw_operand};
         } else if constexpr (policy == wrap || policy == wrap_member) {
             return wrap_mul(self.raw, raw_operand);

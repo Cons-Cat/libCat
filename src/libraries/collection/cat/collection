@@ -5,6 +5,7 @@
 #include <cat/algorithm>
 #include <cat/iterator>
 #include <cat/math>
+#include <cat/maybe>
 
 namespace cat {
 
@@ -176,6 +177,8 @@ namespace detail {
         }
 
       public:
+        class const_iterator;
+
         // Contiguous collections can produce non-`const` bidirectional
         // iterators.
         // This type can be accessed as, `cat::vector<int>::iterator`.
@@ -197,7 +200,7 @@ namespace detail {
             }
 
             constexpr auto distance_to(iterator const& other) const -> iword {
-                return other.current_index - current_index;
+                return other.current_index - this->current_index;
             }
 
           private:
@@ -222,6 +225,10 @@ namespace detail {
                 : current_index(index), p_array(p_in_array) {
             }
 
+            constexpr operator iterator() const {
+                return iterator(this->current_index, this->p_array);
+            }
+
             constexpr auto dereference() const -> T const& {
                 return this->p_array[current_index.raw];
             }
@@ -232,7 +239,7 @@ namespace detail {
 
             constexpr auto distance_to(const_iterator const& other) const
                 -> iword {
-                return other.current_index - current_index;
+                return other.current_index - this->current_index;
             }
 
           private:
@@ -327,7 +334,7 @@ class collection_interface
     // If `.size()` is not, provided and `.capacity()` is, generate
     // `.size()`.
     [[nodiscard]]
-    constexpr auto size() const -> iword
+    constexpr auto size() const -> idx
         requires(detail::has_capacity<derived_type> &&
                  !detail::has_size<derived_type>)
     {
