@@ -278,7 +278,7 @@ concept is_stable_allocator =
 template <typename T>
 using sized_allocation = tuple<T, idx>;
 
-// Implement compact optimization.
+// TODO: Implement compact optimization.
 template <typename T>
 using maybe_sized_allocation = maybe<sized_allocation<T>>;
 
@@ -5281,11 +5281,11 @@ class allocator_interface {
                 if constexpr (has_feedback) {
                     if constexpr (is_multiple) {
                         return return_handle(
-                            tuple(span<T>(p_allocation, allocation_count),
-                                  allocation_count * sizeof(T)));
+                            tuple{span<T>(p_allocation, allocation_count),
+                                  allocation_count * sizeof(T)});
                     } else {
-                        return return_handle(sized_allocation<T*>(
-                            p_allocation, allocation_count * sizeof(T)));
+                        return return_handle(sized_allocation<T*>{
+                            p_allocation, allocation_count * sizeof(T)});
                     }
                 } else {
                     // No size feedback.
@@ -5328,8 +5328,8 @@ class allocator_interface {
                     // Return here to skip error handling, because an
                     // on-stack allocation cannot fail.
                     if constexpr (has_feedback) {
-                        return return_handle(sized_allocation<handle_type>(
-                            move(stack_handle), inline_buffer_size));
+                        return return_handle(sized_allocation<handle_type>{
+                            move(stack_handle), inline_buffer_size});
                     } else {
                         return return_handle(move(stack_handle));
                     }
@@ -5369,10 +5369,10 @@ class allocator_interface {
                                         // this will not fail.
                                         .value();
 
-                                maybe_memory = maybe_sized_allocation<void*>(
-                                    sized_allocation<void*>(
-                                        p_allocation,
-                                        actual_allocation_bytes.value()));
+                                maybe_memory = maybe_sized_allocation<void*>{
+                                    sized_allocation<void*>{
+                                                            p_allocation, actual_allocation_bytes.value()}
+                                };
                             } else {
                                 maybe_memory = nullopt;
                             }
@@ -5383,9 +5383,10 @@ class allocator_interface {
                             maybe temp_memory = this->self().aligned_allocate(
                                 allocation_alignment, allocation_bytes);
                             if (temp_memory.has_value()) {
-                                maybe_memory = maybe_sized_allocation<void*>(
-                                    sized_allocation<void*>(temp_memory.value(),
-                                                            allocation_bytes));
+                                maybe_memory = maybe_sized_allocation<void*>{
+                                    sized_allocation<void*>{temp_memory.value(),
+                                                            allocation_bytes}
+                                };
                             } else {
                                 maybe_memory = nullopt;
                             }
@@ -5430,13 +5431,13 @@ class allocator_interface {
                                 1u, allocation_bytes);
 
                             if (size.has_value()) {
-                                maybe_memory = maybe_sized_allocation<void*>(
+                                maybe_memory = maybe_sized_allocation<void*>{
                                     // If `.allocation_bytes()` succeeded, this
                                     // will not fail.
                                     this->self()
                                         .allocate(allocation_bytes)
                                         .value(),
-                                    size.value());
+                                    size.value()};
                             } else {
                                 maybe_memory = nullopt;
                             }
@@ -5447,8 +5448,10 @@ class allocator_interface {
                             auto temp_memory = this->self().aligned_allocate(
                                 allocation_alignment, allocation_bytes);
                             if (temp_memory.has_value()) {
-                                maybe_memory = maybe_sized_allocation<void*>(
-                                    temp_memory.value(), allocation_bytes);
+                                maybe_memory = maybe_sized_allocation<void*>{
+                                    sized_allocation<void*>{temp_memory.value(),
+                                                            allocation_bytes}
+                                };
                             } else {
                                 maybe_memory = nullopt;
                             }
@@ -5504,7 +5507,7 @@ class allocator_interface {
             }
 
             // If this allocation has size feedback, store it.
-            uword size_feedback;
+            idx size_feedback;
             if constexpr (has_feedback) {
                 size_feedback = maybe_memory.value().second();
             }
@@ -5513,18 +5516,17 @@ class allocator_interface {
                 if constexpr (has_feedback) {
                     if constexpr (is_multiple) {
                         return return_handle(
-                            tuple(span<T>(p_allocation, allocation_count),
-                                  size_feedback));
+                            tuple{span<T>(p_allocation, allocation_count),
+                                  size_feedback});
                     } else {
                         return return_handle(
-                            sized_allocation<T*>(p_allocation, size_feedback));
+                            sized_allocation<T*>{p_allocation, size_feedback});
                     }
                 } else {
                     // No size feedback.
                     if constexpr (is_multiple) {
-                        return return_handle{
-                            span<T>{p_allocation, allocation_count}
-                        };
+                        return return_handle(
+                            span<T>{p_allocation, allocation_count});
                     } else {
                         return return_handle(p_allocation);
                     }
@@ -5543,8 +5545,8 @@ class allocator_interface {
                 }
 
                 if constexpr (has_feedback) {
-                    return return_handle(sized_allocation<handle_type>(
-                        move(handle), size_feedback));
+                    return return_handle(sized_allocation<handle_type>{
+                        move(handle), size_feedback});
                 } else {
                     return return_handle(move(handle));
                 }

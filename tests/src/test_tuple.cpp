@@ -44,6 +44,7 @@ TEST(test_tuple) {
 
     // Test aggregate assignment.
     intchar = {200, 'b'};
+    cat::tuple<int, char> intchar2{200, 'b'};
     cat::verify(intchar.first() == 200);
     cat::verify(intchar.second() == 'b');
 
@@ -85,6 +86,7 @@ TEST(test_tuple) {
 
     // Test that `tuple` size is zero-overhead.
     static_assert(sizeof(intint) == sizeof(int) * 2);
+
     // This type is 32 bytes due to padding for member alignment.
     struct Five {
         // Eight bytes:
@@ -96,6 +98,7 @@ TEST(test_tuple) {
         void* p;
         uint8 u;
     };
+
     static_assert(sizeof(five_tuple) == sizeof(Five));
 
     // Test empty tuple.

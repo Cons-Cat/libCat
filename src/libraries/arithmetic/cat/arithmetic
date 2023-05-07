@@ -912,6 +912,12 @@ struct arithmetic_ptr
         return this->raw;
     }
 
+    template <is_integral U>
+    constexpr explicit(!is_safe_arithmetic_conversion<storage_type, U>)
+    operator U() const {
+        return U(this->raw);
+    }
+
     // TODO: GCC 13 does not short-circuit this operator when `T` is `void`,
     // so this workaround using `conditional` is needed.
 

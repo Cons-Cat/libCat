@@ -384,19 +384,18 @@ struct tuple_size<cat::tuple<in_types...>>
     : cat::constant<sizeof...(in_types)> {};
 
 template <typename T>
-inline constexpr cat::uword::raw_type tuple_size_v = tuple_size<T>::value;
+inline constexpr __SIZE_TYPE__ tuple_size_v = tuple_size<T>::value;
 
-template <cat::uword::raw_type, typename>
+template <__SIZE_TYPE__, typename>
 struct tuple_element;
 
-template <cat::uword::raw_type in_index, typename... in_types>
+template <__SIZE_TYPE__ in_index, typename... in_types>
 struct tuple_element<in_index, cat::tuple<in_types...>> {
     using type =
-        typename cat::type_list<in_types...>::template get<cat::make_signed(
-            in_index)>;
+        typename cat::type_list<in_types...>::template get<cat::idx(in_index)>;
 };
 
-template <cat::uword::raw_type in_index, typename T>
+template <__SIZE_TYPE__ in_index, typename T>
 using tuple_element_t = tuple_element<in_index, T>::type;
 
 }  // namespace std

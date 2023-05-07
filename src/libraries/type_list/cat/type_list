@@ -38,7 +38,7 @@ class type_list {
     };
 
     // Overload for the end of the type list.
-    template <typename, iword>
+    template <typename, idx>
     struct recurse_for_type_at_index;
 
     // Shortcut for accessing the 0th element.
@@ -48,7 +48,7 @@ class type_list {
     };
 
     // Recurse from the tail down to the index in this list.
-    template <typename head, typename... tail, iword index>
+    template <typename head, typename... tail, idx index>
     struct recurse_for_type_at_index<type_list<head, tail...>, index> {
         using result =
             recurse_for_type_at_index<type_list<tail...>, index - 1>::result;
@@ -69,14 +69,14 @@ class type_list {
     }
 
     // Propagate the final count of occurences of `T` in this type list.
-    template <typename T, iword count>
-    static consteval auto recurse_for_count() -> iword {
+    template <typename T, idx count>
+    static consteval auto recurse_for_count() -> idx {
         return count;
     }
 
     // Sum the number of occurences of `T` in this type list.
-    template <typename T, iword count, typename U, typename... Us>
-    static consteval auto recurse_for_count() -> iword
+    template <typename T, idx count, typename U, typename... Us>
+    static consteval auto recurse_for_count() -> idx
         requires(sizeof...(Us) >= 0)
     {
         return is_same<T, U> ? recurse_for_count<T, count + 1, Us...>()
@@ -97,7 +97,7 @@ class type_list {
 
   public:
     // Produce an alias to the type stored at an index in this type list.
-    template <iword index>
+    template <idx index>
     using get =
         typename recurse_for_type_at_index<type_list<types...>, index>::result;
     // TODO: Get index of first, last, and N'th occurence of `T`.
@@ -127,23 +127,23 @@ class type_list {
     static constexpr bool has_type = recurse_for_type<T, types...>();
 
     // The number of types in this list.
-    static constexpr iword size = iword(sizeof...(types));
+    static constexpr idx size = idx(sizeof...(types));
 
     // The size of the largest type in this list.
-    static constexpr iword largest_size = max(ssizeof(types)...);
+    static constexpr idx largest_size = idx(max(sizeof(types)...));
 
     // The size of the smallest type in this list.
-    static constexpr iword smallest_size = min(ssizeof(types)...);
+    static constexpr idx smallest_size = idx(min(sizeof(types)...));
 
     // The smallest alignment of a type in this list.
-    static constexpr uword smallest_alignment = min(alignof(types)...);
+    static constexpr idx smallest_alignment = idx(min(alignof(types)...));
 
     // The largest alignment of a type in this list.
-    static constexpr uword largest_alignment = max(alignof(types)...);
+    static constexpr idx largest_alignment = idx(max(alignof(types)...));
 
     // Sum the number of times that a type is in this type list.
     template <typename T>
-    static constexpr iword count_type = recurse_for_count<T, 0, types...>();
+    static constexpr idx count_type = recurse_for_count<T, 0, types...>();
 
     // Evaluate `true` iff the type `T` only appears exactly once in this
     // type list.
@@ -155,7 +155,7 @@ class type_list {
 };
 
 namespace detail {
-    template <typename T, iword count, iword index, typename... types>
+    template <typename T, idx count, idx index, typename... types>
     consteval auto type_list_fill(type_list<types...> type_list) {
         if constexpr (index == count) {
             return type_list;
@@ -167,7 +167,7 @@ namespace detail {
 }  // namespace detail
 
 // Produce a type_list filled with `count` of `T`.
-template <typename T, iword count>
+template <typename T, idx count>
 using type_list_filled = decltype(detail::type_list_fill<T, count, 0>({}));
 
 }  // namespace cat
