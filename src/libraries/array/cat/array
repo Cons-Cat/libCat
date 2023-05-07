@@ -88,7 +88,7 @@ class array : public collection_interface<array<T, length>, T, true> {
         // if (!is_constant_evaluated() && sizeof(T) <= 8) {
         //     // set_memory(this->storage, value, length);
         // } else {
-        for (uword i = 0u; i < length; ++i) {
+        for (idx i = 0u; i < length; ++i) {
             this->storage[i.raw] = static_cast<T>(value);
         }
         // }

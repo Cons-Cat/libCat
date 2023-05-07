@@ -7,81 +7,90 @@
 namespace cat {
 
 namespace detail {
-    template <typename T, typename U = T>
-    concept has_add = requires(T t, U u) { t.add(u); };
+    template <typename T, typename U>
+    concept has_add_interface = requires(T t, U u) { t.add(u); };
 
-    template <typename T, typename U = T>
-    concept has_subtract = requires(T t, U u) { t.subtract(u); };
+    template <typename T, typename U>
+    concept has_subtract_by_interface =
+        requires(T t, U u) { t.subtract_by(u); };
+
+    template <typename T, typename U>
+    concept has_subtract_from_interface =
+        requires(T t, U u) { t.subtract_from(u); };
 
     template <typename T>
-    concept has_negate = requires(T t) { t.negate(t); };
+    concept has_negate_interface = requires(T t) { t.negate(t); };
 
-    template <typename T, typename U = T>
-    concept has_multiply = requires(T t, U u) { t.multiply(u); };
+    template <typename T, typename U>
+    concept has_multiply_interface = requires(T t, U u) { t.multiply(u); };
 
-    template <typename T, typename U = T>
-    concept has_divide_by = requires(T t, U u) { t.divide_by(u); };
+    template <typename T, typename U>
+    concept has_divide_by_interface = requires(T t, U u) { t.divide_by(u); };
 
-    template <typename T, typename U = T>
-    concept has_divide_into = requires(T t, U u) { t.divide_into(u); };
+    template <typename T, typename U>
+    concept has_divide_into_interface =
+        requires(T t, U u) { t.divide_into(u); };
 
-    template <typename T, typename U = T>
-    concept has_modulo = requires(T t, U u) { t.modulo(u); };
+    template <typename T, typename U>
+    concept has_modulo_interface = requires(T t, U u) { t.modulo(u); };
 
-    template <typename T, typename U = T>
-    concept has_shift_left = requires(T t, U u) { t.shift_left(u); };
+    template <typename T, typename U>
+    concept has_shift_left_interface = requires(T t, U u) { t.shift_left(u); };
 
-    template <typename T, typename U = T>
-    concept has_shift_right = requires(T t, U u) { t.shift_right(u); };
+    template <typename T, typename U>
+    concept has_shift_right_interface =
+        requires(T t, U u) { t.shift_right(u); };
 
-    template <typename T, typename U = T>
-    concept has_bit_and = requires(T t, U u) { t.bit_and(u); };
+    template <typename T, typename U>
+    concept has_bit_and_interface = requires(T t, U u) { t.bit_and(u); };
 
-    template <typename T, typename U = T>
-    concept has_bit_or = requires(T t, U u) { t.bit_or(u); };
+    template <typename T, typename U>
+    concept has_bit_or_interface = requires(T t, U u) { t.bit_or(u); };
 
-    template <typename T, typename U = T>
-    concept has_bit_xor = requires(T t, U u) { t.bit_xor(u); };
+    template <typename T, typename U>
+    concept has_bit_xor_interface = requires(T t, U u) { t.bit_xor(u); };
 
-    template <typename T, typename U = T>
-    concept has_bit_not = requires(T t, U u) { t.bit_not(u); };
+    template <typename T, typename U>
+    concept has_bit_not_interface = requires(T t, U u) { t.bit_not(u); };
 
-    template <typename T, typename U = T>
-    concept has_bit_complement = requires(T t, U u) { t.bit_complement(u); };
+    template <typename T>
+    concept has_bit_complement = requires(T t) { t.bit_complement(); };
 }  // namespace detail
 
 // CRTP class for generating a commutative `+` operator.
 template <typename derived_type>
 struct plus_interface {
+    using decay_derived_type = remove_cvref<derived_type>;
+
     // `+` operator where this is a left-hand-side operand.
     template <typename T>
-    constexpr friend auto operator+(derived_type const& lhs, T&& other) {
+    constexpr friend auto operator+(derived_type lhs, T&& other) {
         return lhs.add(forward<T>(other));
     }
 
     // `+` operator where this is a right-hand-side operand.
     template <typename T>
-    // If the commutative operator's left operand is constructible from the
-    // `derived_type`, there is likely an ambiguous overload.
-        requires(!is_constructible<derived_type, T>)
-    constexpr friend auto operator+(T&& other, derived_type const& rhs) {
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_add_interface<T, derived_type>)
+    constexpr friend auto operator+(T&& other, decay_derived_type rhs) {
         return rhs.add(forward<T>(other));
     }
 
     // Compound assignment operator.
     template <typename T>
-    constexpr friend auto operator+=(derived_type& lhs, T&& other) {
+    constexpr friend auto operator+=(derived_type& lhs, T&& other) -> auto {
         lhs = lhs.add(forward<T>(other));
         return lhs;
     }
 
     // Unary `++` operators.
-    constexpr friend auto operator++(derived_type& self) -> derived_type {
+    constexpr friend auto operator++(derived_type& self) -> derived_type& {
         self = self.add(derived_type(1));
         return self;
     }
 
-    constexpr friend auto operator++(derived_type& self, int) -> derived_type {
+    constexpr friend auto operator++(derived_type& self, int) -> derived_type& {
         self = self.add(derived_type(1));
         return self;
     }
@@ -90,35 +99,37 @@ struct plus_interface {
 // CRTP class for generating a commutative `-` operator.
 template <typename derived_type>
 struct minus_interface {
+    using decay_derived_type = remove_cvref<derived_type>;
+
     // `-` operator where this is a left-hand-side operand.
     template <typename T>
-    constexpr friend auto operator-(derived_type const& lhs, T&& other) {
-        return lhs.subtract(forward<T>(other));
+    constexpr friend auto operator-(derived_type lhs, T&& other) {
+        return lhs.subtract_by(forward<T>(other));
     }
 
     // `-` operator where this is a right-hand-side operand.
     template <typename T>
-    // If the commutative operator's left operand is constructible from the
-    // `derived_type`, there is likely an ambiguous overload.
-        requires(!is_constructible<derived_type, T>)
-    constexpr friend auto operator-(T&& other, derived_type const& rhs) {
-        return rhs.subtract(forward<T>(other));
+    // If this operator's left operand can subtract_by `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_subtract_by_interface<T, derived_type>)
+    constexpr friend auto operator-(T&& other, decay_derived_type rhs) {
+        return rhs.subtract_from(forward<T>(other));
     }
 
     // Compound assignment operator.
     template <typename T>
-    constexpr friend auto operator-=(derived_type& lhs, T&& other) {
-        lhs = lhs.subtract(forward<T>(other));
+    constexpr friend auto operator-=(derived_type& lhs, T&& other) -> auto& {
+        lhs = lhs.subtract_by(forward<T>(other));
         return lhs;
     }
 
     // Unary `--` operators.
-    constexpr friend auto operator--(derived_type& self) -> derived_type {
+    constexpr friend auto operator--(derived_type& self) -> derived_type& {
         self = self - derived_type(1);
         return self;
     }
 
-    constexpr friend auto operator--(derived_type& self, int) -> derived_type {
+    constexpr friend auto operator--(derived_type& self, int) -> derived_type& {
         self = self - derived_type(1);
         return self;
     }
@@ -127,24 +138,26 @@ struct minus_interface {
 // CRTP class for generating a commutative `*` operator.
 template <typename derived_type>
 struct multiply_interface {
+    using decay_derived_type = remove_cvref<derived_type>;
+
     // `*` operator where this is a left-hand-side operand.
     template <typename T>
-    constexpr friend auto operator*(derived_type const& lhs, T&& other) {
+    constexpr friend auto operator*(derived_type lhs, T&& other) {
         return lhs.multiply(forward<T>(other));
     }
 
     // `*` operator where this is a right-hand-side operand.
     template <typename T>
-    // If the commutative operator's left operand is constructible from the
-    // `derived_type`, there is likely an ambiguous overload.
-        requires(!is_constructible<derived_type, T>)
-    constexpr friend auto operator*(T&& other, derived_type const& rhs) {
+    // If this operator's left operand can multiply `derived_type` as
+    // its right-hand operand, this overload is ambiguous.
+        requires(!detail::has_multiply_interface<T, derived_type>)
+    constexpr friend auto operator*(T&& other, decay_derived_type rhs) {
         return rhs.multiply(forward<T>(other));
     }
 
     // Compound assignment operator.
     template <typename T>
-    constexpr friend auto operator*=(derived_type& lhs, T&& other) {
+    constexpr friend auto operator*=(derived_type& lhs, T&& other) -> auto {
         lhs = lhs.multiply(forward<T>(other));
         return lhs;
     }
@@ -153,24 +166,26 @@ struct multiply_interface {
 // CRTP class for generating a commutative `/` operator.
 template <typename derived_type>
 struct divide_interface {
+    using decay_derived_type = remove_reference<derived_type>;
+
     // `/` operator where this is a left-hand-side operand.
     template <typename T>
-    constexpr friend auto operator/(derived_type const& lhs, T&& other) {
+    constexpr friend auto operator/(derived_type lhs, T&& other) {
         return lhs.divide_by(forward<T>(other));
     }
 
     // `/` operator where this is a right-hand-side operand.
     template <typename T>
-    // If the commutative operator's left operand is constructible from the
-    // `derived_type`, there is likely an ambiguous overload.
-        requires(!is_convertible<T, derived_type>)
-    constexpr friend auto operator/(T&& other, derived_type const& rhs) {
+    // If this operator's left operand can divide by `derived_type`,
+    // this overload is ambiguous.
+        requires(!detail::has_divide_by_interface<T, derived_type>)
+    constexpr friend auto operator/(T&& other, derived_type rhs) {
         return rhs.divide_into(forward<T>(other));
     }
 
     // Compound division operator.
     template <typename T>
-    constexpr friend auto operator/=(derived_type& lhs, T&& other) {
+    constexpr friend auto operator/=(derived_type& lhs, T&& other) -> auto {
         lhs = lhs.divide_by(forward<T>(other));
         return lhs;
     }
@@ -182,18 +197,15 @@ struct arithmetic_interface : plus_interface<derived_type>,
                               multiply_interface<derived_type>,
                               divide_interface<derived_type> {
     // No-op unary `+` operator for operand.
-    constexpr friend auto operator+(derived_type& self) {
-        return self;
-    }
-
-    // No-op unary `+` operator for `const` operand.
-    constexpr friend auto operator+(derived_type const& self) {
+    constexpr friend auto operator+(derived_type self) {
         return self;
     }
 
     // Unary `-` operator.
-    constexpr friend auto operator-(derived_type const& self) {
-        if constexpr (detail::has_negate<derived_type>) {
+    constexpr friend auto operator-(derived_type self)
+        requires(is_signed<derived_type>)
+    {
+        if constexpr (detail::has_negate_interface<derived_type>) {
             return self.negate();
         } else {
             // Subtract `self` from `0` to negate it.
@@ -202,16 +214,16 @@ struct arithmetic_interface : plus_interface<derived_type>,
     }
 
     // Unary complement operator.
-    constexpr friend auto operator~(derived_type& self) {
+    constexpr friend auto operator~(derived_type self) {
         return self.bit_complement();
     }
 
     constexpr auto self() {
-        return static_cast<derived_type&>(*this);
+        return static_cast<derived_type>(*this);
     }
 
     constexpr auto self() const {
-        return static_cast<derived_type const&>(*this);
+        return static_cast<derived_type>(*this);
     }
 };
 

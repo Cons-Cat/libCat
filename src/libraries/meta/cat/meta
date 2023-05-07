@@ -328,6 +328,9 @@ namespace detail {
 template <typename T>
 using remove_reference = detail::remove_reference_trait<T>::type;
 
+template <typename T>
+using remove_constref = remove_const<remove_reference<T>>;
+
 namespace detail {
     template <typename T>
     struct remove_cvref_trait {
@@ -582,15 +585,21 @@ namespace detail {
     template <typename...>
     inline constexpr bool is_signed_detail = false;
 
+    // Special-casing the `is_signed` trait for `arithmetic` is necessary to
+    // prevent a circular template instantiation.
+    template <typename T, overflow_policies policy>
+    inline constexpr bool is_signed_detail<arithmetic<T, policy>> =
+        is_signed_detail<T>;
+
     // This expression only holds true if `T` can be constant-evaluated.
     template <is_less_than_comparable T>
-        requires(requires { T{static_cast<signed char>(-1)}; })
+        requires(is_convertible<signed char, T>)
     inline constexpr bool is_signed_detail<T> = constval<(
-        T{static_cast<signed char>(-1)} < T{static_cast<signed char>(0)})>;
+        T(static_cast<signed char>(-1)) < T(static_cast<signed char>(0)))>;
 }  // namespace detail
 
 template <typename T>
-concept is_signed = detail::is_signed_detail<remove_cv<T>>;
+concept is_signed = detail::is_signed_detail<remove_cvref<T>>;
 
 template <typename T>
 concept is_unsigned = !is_signed<T>;
@@ -745,6 +754,9 @@ using copy_ref_from =
                             add_rvalue_reference<remove_reference<to_type>>,
                             // from_type is not a reference.
                             remove_reference<to_type>>>;
+template <typename from_type, typename to_type>
+using copy_constref_from =
+    copy_ref_from<from_type, copy_const_from<from_type, to_type>>;
 
 template <typename from_type, typename to_type>
 using copy_cv_from =
@@ -844,6 +856,14 @@ inline constexpr bool is_unbounded_array = IsUnBoundedarrayTrait<T>::value;
 // `__is_constructible` is a GNU builtin.
 template <typename T, typename... Args>
 concept is_constructible = __is_constructible(T, Args...);
+
+template <typename T, typename U>
+concept is_explicitly_constructible =
+    is_constructible<T, U> && !is_convertible<U, T>;
+
+template <typename T, typename U>
+concept is_implicitly_constructible =
+    is_constructible<T, U> && !is_explicitly_constructible<T, U>;
 
 // `__is_trivially_constructible` is a GNU builtin.
 template <typename T, typename... Args>

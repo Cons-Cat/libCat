@@ -15,8 +15,8 @@ inline namespace literals {
             return 1024 * static_cast<signed long long>(input);
         }
 
-        constexpr auto operator""_uki(unsigned long long input) -> uword {
-            return 1024u * input;
+        constexpr auto operator""_uki(unsigned long long input) -> idx {
+            return idx(1024u * input);
         }
 
         constexpr auto operator""_ki(long double input) -> iword {
@@ -27,8 +27,8 @@ inline namespace literals {
             return 1024ll * 1024ll * static_cast<signed long long>(input);
         }
 
-        constexpr auto operator""_umi(unsigned long long input) -> uword {
-            return 1024ull * 1024ull * input;
+        constexpr auto operator""_umi(unsigned long long input) -> idx {
+            return idx(1024ull * 1024ull * input);
         }
 
         constexpr auto operator""_mi(long double input) -> iword {
@@ -40,8 +40,8 @@ inline namespace literals {
                    static_cast<signed long long>(input);
         }
 
-        constexpr auto operator""_ugi(unsigned long long input) -> uword {
-            return 1024ull * 1024ull * 1024ull * input;
+        constexpr auto operator""_ugi(unsigned long long input) -> idx {
+            return idx(1024ull * 1024ull * 1024ull * input);
         }
 
         constexpr auto operator""_gi(long double input) -> iword {
@@ -195,7 +195,7 @@ constexpr auto extract_bits_mask(T value, U mask) -> T {
         // `_pext_u64()` is a GCC intrinsic.
         return T(_pext_u64(raw_value, raw_mask));
     } else {
-        cat::make_raw_arithmetic_type<T> count = 0u;
+        cat::raw_arithmetic_type<T> count = 0u;
         while (raw_mask != 0u) {
             if (raw_mask & 1) {
                 result >>= 1;
@@ -560,14 +560,16 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
     }
 
     constexpr void advance(iword offset) {
-        uword advance_bits = this->bit_position + static_cast<uword>(offset);
-        uword bytes_overflow = advance_bits / this->word_bits;
-        if (advance_bits < 0u &&
-            ((bytes_overflow * word_bits) != advance_bits)) {
+        // TODO: Remove this cast so that negative offsets work.
+        iword advance_bits = static_cast<iword>(this->bit_position) + offset;
+        iword iword_bits = iword(this->word_bits);
+        iword bytes_overflow = advance_bits / iword_bits;
+        if (advance_bits < 0 &&
+            ((bytes_overflow * iword_bits) != advance_bits)) {
             --bytes_overflow;
         }
-        this->internal_iterator += iword(bytes_overflow);
-        this->bit_position = advance_bits - bytes_overflow * word_bits;
+        this->internal_iterator += bytes_overflow;
+        this->bit_position = idx(advance_bits - bytes_overflow * iword_bits);
     }
 
     constexpr auto distance_to(bit_iterator const& other) const -> iword {
@@ -578,12 +580,12 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
         // current bit offset within their word. That gives the total number of
         // bits between any two bit iterators.
         return (word_difference * iword(word_bits)) +
-               iword(this->bit_position - other.bit_position);
+               iword(this->bit_position) - iword(other.bit_position);
     }
 
   private:
     iterator internal_iterator;
-    uword bit_position;
+    idx bit_position;
 };
 
 inline constexpr bit_value one_bit = true;

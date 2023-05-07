@@ -8,11 +8,12 @@
 int4 paging_counter_1 = 0;
 int4 paging_counter_2 = 0;
 
-struct Testtype {
-    Testtype() {
+struct test_page_type {
+    test_page_type() {
         ++paging_counter_1;
     }
-    ~Testtype() {
+
+    ~test_page_type() {
         ++paging_counter_2;
     }
 };
@@ -28,15 +29,15 @@ TEST(test_paging_memory) {
     allocator.free(const_memory);
 
     // Allocate a page.
-    cat::mem auto memory = allocator.opq_alloc_multi<int4>(1'000).or_exit(
+    cat::mem auto memory = allocator.opq_alloc_multi<int4>(1'000u).or_exit(
         "Failed to page memory!");
     // Free the page at the end of this program.
     defer(allocator.free(memory);)
 
     // Write to the page.
     cat::span page_span = allocator.get(memory);
-    page_span[0] = 10;
-    cat::verify(allocator.get(memory)[0] == 10);
+    page_span[0u] = 10;
+    cat::verify(allocator.get(memory)[0u] == 10);
 
     // allocation_type with small-size optimization.
     int stack_variable;
@@ -54,7 +55,7 @@ TEST(test_paging_memory) {
     allocator.free(small_memory_1);
 
     auto small_memory_5 =
-        allocator.opq_inline_alloc_multi<int4>(1'000).or_exit();
+        allocator.opq_inline_alloc_multi<int4>(1'000u).or_exit();
     // `small_memory_1` should be in a page, so these addresses are far
     // apart.
     cat::verify(cat::abs(intptr<int>{&stack_variable} -
@@ -74,7 +75,7 @@ TEST(test_paging_memory) {
     cat::verify(allocator.get(small_memory_4) == 3);
 
     // Test constructor being called.
-    cat::maybe testtype = allocator.opq_alloc<Testtype>();
+    cat::maybe testtype = allocator.opq_alloc<test_page_type>();
     allocator.free(testtype.value());
 
     // That constructor increments `paging_counter_1`.
@@ -83,7 +84,7 @@ TEST(test_paging_memory) {
     cat::verify(paging_counter_2 == 1);
 
     // Test multi-allocations.
-    auto array_memory = allocator.opq_alloc_multi<Testtype>(9).or_exit();
+    auto array_memory = allocator.opq_alloc_multi<test_page_type>(9u).or_exit();
     // Those 9 constructors increment `paging_counter_2`.
     cat::verify(paging_counter_1 == 10);
 
@@ -91,13 +92,13 @@ TEST(test_paging_memory) {
     // Those 9 destructors increment `paging_counter_2`.
     cat::verify(paging_counter_2 == 10);
 
-    auto smalltesttype = allocator.opq_inline_alloc<Testtype>().or_exit();
-    allocator.get(smalltesttype) = Testtype();
+    auto smalltesttype = allocator.opq_inline_alloc<test_page_type>().or_exit();
+    allocator.get(smalltesttype) = test_page_type();
     allocator.free(smalltesttype);
 
     // Aligned memory allocations.
-    auto aligned_mem = allocator.opq_align_alloc_multi<int4>(32u, 4).or_exit();
-    allocator.get(aligned_mem)[0] = 10;
-    cat::verify(allocator.get(aligned_mem)[0] == 10);
+    auto aligned_mem = allocator.opq_align_alloc_multi<int4>(32u, 4u).or_exit();
+    allocator.get(aligned_mem)[0u] = 10;
+    cat::verify(allocator.get(aligned_mem)[0u] == 10);
     allocator.free(aligned_mem);
 };

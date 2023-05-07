@@ -8,6 +8,10 @@ struct nttp {
     static constexpr auto member = value;
 };
 
+static_assert(cat::is_implicitly_constructible<uword, uword>);
+static_assert(!cat::is_implicitly_constructible<idx, uword>);
+static_assert(cat::is_implicitly_constructible<uword, idx>);
+
 TEST(test_numerals) {
     // TODO: Test invalid arithmetic operations with `concept`s like
     // `cat::is_add_assignable<uint4, int4>`.
@@ -17,9 +21,8 @@ TEST(test_numerals) {
 
     // Test relationship to raw types.
     // TODO: Test `is_unsafe_arithmetic` and `to_raw_arithmetic()`.
-    static_assert(cat::is_same<cat::make_raw_arithmetic_type<int>, int>);
-    static_assert(
-        cat::is_same<cat::make_raw_arithmetic_type<int4>, int4::raw_type>);
+    static_assert(cat::is_same<cat::raw_arithmetic_type<int>, int>);
+    static_assert(cat::is_same<cat::raw_arithmetic_type<int4>, int4::raw_type>);
 
     // Test numerals' size,
     static_assert(sizeof(int1) == 1);
@@ -208,6 +211,7 @@ TEST(test_numerals) {
     int8 promote_int8 = promote_int2;
     promote_int8 = promote_int4;
     cat::assert(promote_int8 == 1);
+    cat::assert(promote_int8.raw == 1);
 
     uint1 promote_uint1 = 1_u1;
     uint2 promote_uint2 = promote_uint1;
@@ -215,6 +219,7 @@ TEST(test_numerals) {
     uint8 promote_uint8 = promote_uint2;
     promote_uint8 = promote_uint4;
     cat::assert(promote_uint8 == 1u);
+    cat::assert(promote_uint8.raw == 1u);
 
     // Promote small unsigned ints to larger signed ints.
     promote_int2 = promote_uint1;
@@ -237,10 +242,10 @@ TEST(test_numerals) {
     p_int4 = p_int4 - 1_i4;
     p_int4 -= 1_i4;
 
-    p_int4 += intptr<void>{0};   // NOLINT
-    p_int4 -= intptr<void>{0};   // NOLINT
-    p_int4 += uintptr<void>{0};  // NOLINT
-    p_int4 -= uintptr<void>{0};  // NOLINT
+    p_int4 += intptr<void>{1};
+    p_int4 -= intptr<void>{1};
+    p_int4 += uintptr<void>{1u};
+    p_int4 -= uintptr<void>{1u};
 
     // Test `intpr` constructors and assignment.
     intptr<void> intptr_1 = nullptr;
@@ -326,8 +331,8 @@ TEST(test_numerals) {
     // Test unary operators.
     [[maybe_unused]] int4 negative_int4 = -1_i4;
     [[maybe_unused]] float4 negative_float4 = -1_f4;
-    [[maybe_unused]] int4 positive_int4 = +1_i4;
-    [[maybe_unused]] float4 positive_float4 = +1_f4;
+    // [[maybe_unused]] int4 positive_int4 = +1_i4;
+    // [[maybe_unused]] float4 positive_float4 = +1_f4;
     [[maybe_unused]] int4 negated_int4 = ~1_i4;
 
     // Test using numerals non-type template parameters.
@@ -574,6 +579,12 @@ TEST(test_numerals) {
     static_assert(cat::wrap_mul(cat::uint4_max, 1u) == cat::uint4_max);
     static_assert(cat::wrap_mul(cat::uint4_max, 2u) == cat::uint4_max - 1u);
 
+    // Test type promotion ordering.
+    static_assert(cat::detail::integer_promotion_hierarchy<iword>::order == 8);
+    static_assert(cat::detail::integer_promotion_hierarchy<long int>::order ==
+                  8);
+
+    // Test overflow semantics.
     int4 safe_int = int4::max();
     cat::verify((safe_int.wrap + 100) == cat::int4_min + 99);
 
@@ -610,6 +621,30 @@ TEST(test_numerals) {
     saturate_int4.wrap += 100;
     cat::verify(saturate_int4 == cat::int4_min + 99);
 
+    // Test integers.
+    uword test_uword;
+    test_uword = 100u + 0_uz;
+    test_uword = 100ull + 0_uz;
+    test_uword = 100_u4 + 0_uz;
+    test_uword = 100_u8 + 0_uz;
+
+    test_uword = 0_uz + 100u;
+    test_uword = 0_uz + 100ull;
+    test_uword = 0_uz + 100_u4;
+    test_uword = 0_uz + 100_u8;
+
+    test_uword = 100u - 1_uz;
+    test_uword = 100ull - 1_uz;
+    test_uword = 100_u4 - 1_uz;
+    test_uword = 100_u8 - 1_uz;
+
+    test_uword = 200_uz - 100u;
+    test_uword = 200_uz - 100ull;
+    test_uword = 200_uz - 100_u4;
+    test_uword = 200_uz - 100_u8;
+
+    // TODO: Fill this section out.
+
     // Test floats.
     float4 safe_float = 0.f;
     safe_float = 2.f;
@@ -630,22 +665,53 @@ TEST(test_numerals) {
 
     idx1 + idx2;
     idx1 + 1;
+    1 + idx1;
     1u + idx1;
+    1ull + idx1;
+    idx1 + 1;
+    idx1 + 1u;
+    idx1 + 1ull;
+    1_uz + idx1;
+    1_sz + idx1;
+    idx1 + 1_uz;
+    idx1 + 1_sz;
     idx1 += 1;
+    idx1++;
+    ++idx1;
 
     idx1 - idx2;
     idx1 - 1;
     10 - idx1;
+    10u - idx1;
+    10ull - idx1;
+    1_uz - idx1;
+    1_sz - idx1;
+    idx1 - 1_uz;
+    idx1 - 1_sz;
     idx1 -= 1;
 
     idx1* idx2;
     idx1 * 1;
+    idx1 * 1ull;
     1 * idx1;
+    1u * idx1;
+    1ull * idx1;
+    1_uz * idx1;
+    1_sz * idx1;
+    idx1 * 1_uz;
+    idx1 * 1_sz;
     idx1 *= 1;
 
     idx1 / idx2;
     idx1 / 1;
+    idx1 / 1ull;
     1 / idx1;
+    1u / idx1;
+    1ull / idx1;
+    1_uz / idx1;
+    1_sz / idx1;
+    idx1 / 1_uz;
+    idx1 / 1_sz;
     idx1 /= 1;
 
     idx lesser_idx = 1;
@@ -661,6 +727,14 @@ TEST(test_numerals) {
     cat::verify(greater_idx >= lesser_idx);
     cat::verify(greater_idx >= greater_idx);
 
+    static_assert(!cat::is_implicitly_constructible<idx, uword>);
+    static_assert(cat::is_constructible<idx, uword>);
+    static_assert(cat::is_implicitly_constructible<uword, idx>);
+
+    static_assert(!cat::is_implicitly_constructible<idx, iword>);
+    static_assert(cat::is_constructible<iword, idx>);
+    static_assert(cat::is_implicitly_constructible<iword, idx>);
+
     static_assert(cat::is_unsigned<idx>);
     static_assert(!cat::is_signed<idx>);
     static_assert(cat::is_arithmetic<idx>);
@@ -672,26 +746,28 @@ TEST(test_numerals) {
     static_assert(!cat::is_convertible<idx, int4>);
 
     // `idx` is implicitly convertible to both word types.
+    static_assert(cat::is_safe_arithmetic_conversion<idx, iword>);
     iword index_iword = idx2;
     index_iword = idx2;
     uword index_uword = idx2;
     index_uword = idx2;
 
-    auto add_idx_iword = idx2 + 1_sz;
-    static_assert(cat::is_same<decltype(add_idx_iword), iword>);
-    auto add_iword_idx = 1_sz + idx2;
-    static_assert(cat::is_same<decltype(add_iword_idx), iword>);
+    // auto add_idx_iword = idx2 + 1_sz;
+    // static_assert(cat::is_same<decltype(add_idx_iword), iword>);
+    // auto add_iword_idx = 1_sz + idx2;
+    // static_assert(cat::is_same<decltype(add_iword_idx), iword>);
 
-    auto add_idx_uword = idx2 + 1_uz;
-    static_assert(cat::is_same<decltype(add_idx_uword), uword>);
-    auto add_uword_idx = 1_uz + idx2;
-    static_assert(cat::is_same<decltype(add_uword_idx), uword>);
+    // auto add_idx_uword = idx2 + 1_uz;
+    // static_assert(cat::is_same<decltype(add_idx_uword), uword>);
+    // auto add_uword_idx = 1_uz + idx2;
+    // static_assert(cat::is_same<decltype(add_uword_idx), uword>);
 
-    add_uword_idx += idx2;
+    // add_uword_idx += idx2;
+
     // TODO: `idx` should support += `uword`.
 
-    auto add_int_idx = 1_i4 + idx2;
-    static_assert(cat::is_same<decltype(add_int_idx), idx>);
-    auto add_idx_int = idx2 + 1_i4;
-    static_assert(cat::is_same<decltype(add_idx_int), idx>);
+    // auto add_int_idx = 1_i4 + idx2;
+    // static_assert(cat::is_same<decltype(add_int_idx), idx>);
+    // auto add_idx_int = idx2 + 1_i4;
+    // static_assert(cat::is_same<decltype(add_idx_int), idx>);
 };

@@ -905,8 +905,9 @@ struct io_vector : cat::span<cat::byte> {
 
     // Construct from any reasonable pointer type.
     constexpr io_vector(cat::byte* p_start, cat::byte* p_end)
-        : cat::span<cat::byte>(p_start, cat::uintptr<cat::byte>(p_end) -
-                                            cat::uintptr<cat::byte>(p_start)) {
+        : cat::span<cat::byte>(p_start,
+                               cat::uword(cat::uintptr<cat::byte>(p_end) -
+                                          cat::uintptr<cat::byte>(p_start))) {
     }
 
     constexpr auto operator=(io_vector const& io_vector) -> struct io_vector& {
@@ -1150,7 +1151,7 @@ struct process {
 
     // TODO: Add `cat::invocable` concept.
     auto create(cat::is_allocator auto& allocator,
-                cat::iword const initial_stack_size, auto const& function,
+                cat::idx const initial_stack_size, auto const& function,
                 void* p_args_struct,
                 // TODO: These flags should largely be encoded into the type.
                 CloneFlags const flags = default_flags) -> scaredy_nix<void> {
@@ -1169,7 +1170,7 @@ struct process {
         // We need the top because memory will be pushed to it downwards on
         // x86-64.
         void* p_stack_top = static_cast<void*>(
-            cat::intptr<void>{this->p_stack} + this->stack_size);
+            cat::intptr<void>(this->p_stack) + this->stack_size);
 
         // TODO: Use the `cat::scaredy`.
         // scaredy_nix<void> result;

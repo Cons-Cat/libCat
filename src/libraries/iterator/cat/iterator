@@ -138,7 +138,7 @@ class iterator_interface<derived_type> {
         if constexpr (detail::has_equal_to<derived_type>) {
             return left.equal_to(right);
         } else if constexpr (detail::has_distance_to<derived_type>) {
-            return left.distance_to(right) == 0;
+            return left.distance_to(right) == 0u;
         }
         __builtin_unreachable();
     }
@@ -318,8 +318,9 @@ struct iterator_traits {
 
 // `element_type` may or may not be provided to this CRTP class.
 template <typename iterator_type, typename... element_type>
-    requires(sizeof...(element_type) <= 1  // &&
-             // is_signed<typename iterator_type::difference_type> )
+    requires(sizeof...(element_type) <=
+             1  // &&
+                // is_signed<typename iterator_type::difference_type> )
              )
 class reverse_iterator_adaptor
     : public iterator_interface<

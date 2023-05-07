@@ -298,7 +298,7 @@ namespace detail {
             if (this->length + 1 > this->max_length) {
                 // Reallocate double the memory if its capacity is exceeded.
                 maybe result = allocator.template realloc_multi<char>(
-                    this->p_storage, this->max_length, this->max_length * 2);
+                    this->p_storage, this->max_length, this->max_length * 2u);
                 if (!result.has_value()) {
                     return nullopt;
                 }
@@ -311,8 +311,8 @@ namespace detail {
         }
 
         char* p_storage;
-        uword length;
-        uword max_length;
+        idx length;
+        idx max_length;
     };
 
     // An index into the packed `format_arg_storage`.

@@ -50,7 +50,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_arithmetic.cpp
     # ${CMAKE_SOURCE_DIR}/tests/src/test_math.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_maybe.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_paging_memory.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_paging_memory.cpp
     # ${CMAKE_SOURCE_DIR}/tests/src/test_raii.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_typelist.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_scaredy.cpp
@@ -64,10 +64,11 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_cast.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bit.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bitset.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_thread.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_thread.cpp
   )
 
   add_executable(unit_tests unit_tests.cpp)
+  # add_executable(unit_tests ${CMAKE_SOURCE_DIR}/error_test.cpp)
   # `ctor.ld` is required to set up test callbacks as static constructor functions.
   set_target_properties(
     unit_tests PROPERTIES

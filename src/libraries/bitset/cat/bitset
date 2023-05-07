@@ -239,8 +239,8 @@ class bitset {
     constexpr auto countl_zero() const -> idx {
         // TODO: `leading_bytes_bits` doesn't compile here in Clang 17 if
         // prefixed by `this->`.
-        constexpr idx skip_bits = static_cast<idx>(
-            sizeof(array_type_element) * 8u - leading_bytes_bits);
+        constexpr idx skip_bits =
+            idx(sizeof(array_type_element) * 8u - leading_bytes_bits);
 
         idx count = cat::countl_zero(this->storage[0u]);
         if (count != sizeof(array_type_element) * 8u) {
@@ -249,7 +249,7 @@ class bitset {
 
         count -= skip_bits;
 
-        for (uword i = 1u; i < this->storage_array_size; ++i) {
+        for (idx i = 1u; i < this->storage_array_size; ++i) {
             idx next_count = cat::countl_zero(this->storage[i]);
             count += next_count;
 
@@ -271,7 +271,7 @@ class bitset {
             return count;
         }
 
-        for (uword i = this->storage_array_size - 2u; i >= 0u; --i) {
+        for (idx i = this->storage_array_size - 2u; i >= 0u; --i) {
             idx next_count = cat::countr_zero(this->storage[i]);
             count += next_count;
 

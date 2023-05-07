@@ -73,18 +73,19 @@ template <typename... alternative_types>
 class variant {
   public:
     using types = type_list<alternative_types...>;
-    using alternative_index_t =
+    using alternative_index_type =
         conditional<types::size <= int4_max, int4, int8>;
-    alternative_index_t discriminant;
+    alternative_index_type discriminant;
 
     // The number of alternatives in this `variant`.
-    static constexpr alternative_index_t variant_size =
-        static_cast<alternative_index_t>(sizeof...(alternative_types));
+    static constexpr alternative_index_type variant_size =
+        static_cast<alternative_index_type>(sizeof...(alternative_types));
 
   private:
-    template <typename T, alternative_index_t index>
+    template <typename T, alternative_index_type index>
         requires(index < variant_size)
-    static consteval auto recurse_for_index_of_type() -> alternative_index_t {
+    static consteval auto recurse_for_index_of_type()
+        -> alternative_index_type {
         using this_alternative = types::template get<index>;
         if constexpr (is_same<T, this_alternative>) {
             return index;
@@ -151,7 +152,7 @@ class variant {
     static constexpr auto alternative_index = recurse_for_index_of_type<T, 0>();
 
     // Get the type of an alternative from its index.
-    template <alternative_index_t index>
+    template <alternative_index_type index>
     using alternative_t = types::template get<index>;
 
     constexpr variant() = default;
@@ -261,14 +262,14 @@ class variant {
         return this->storage.template get<alternative_index<T>>();
     }
 
-    template <alternative_index_t index>
+    template <alternative_index_type index>
         requires(index >= 0 && index < ssizeof_pack<alternative_types...>())
     [[nodiscard]]
     constexpr auto get() & {
         return this->storage.template get<index>();
     }
 
-    template <alternative_index_t index>
+    template <alternative_index_type index>
         requires(index >= 0 && index < ssizeof_pack<alternative_types...>())
     [[nodiscard]]
     constexpr auto get() const& -> decltype(auto) {
@@ -295,7 +296,7 @@ class variant {
         return nullopt;
     }
 
-    template <alternative_index_t index>
+    template <alternative_index_type index>
         requires(index >= 0 && index < ssizeof_pack<alternative_types...>())
     [[nodiscard]]
     constexpr auto get_if() & {
@@ -306,7 +307,7 @@ class variant {
         return maybe<T>{nullopt};
     }
 
-    template <alternative_index_t index>
+    template <alternative_index_type index>
         requires(index >= 0 && index < ssizeof_pack<alternative_types...>())
     [[nodiscard]]
     constexpr auto get_if() const& {
@@ -318,7 +319,7 @@ class variant {
     }
 
     [[nodiscard]]
-    constexpr auto alternative() const -> alternative_index_t {
+    constexpr auto alternative() const -> alternative_index_type {
         return this->discriminant;
     }
 
@@ -336,7 +337,7 @@ class variant {
 
   private:
     // Base case.
-    template <alternative_index_t index, typename T>
+    template <alternative_index_type index, typename T>
     constexpr auto recurse_converting_equality(auto const& in_value) const
         -> bool {
         if (this->holds_alternative(index)) {
@@ -348,7 +349,7 @@ class variant {
     // Recurse through every alternative type, and if it is currently the
     // active alternative, convert `in_value` to that type, then check if it
     // is equal to this `variant`'s value.
-    template <alternative_index_t index, typename T, typename... remaining>
+    template <alternative_index_type index, typename T, typename... remaining>
         requires(sizeof...(remaining) > 0)
     constexpr auto recurse_converting_equality(auto const& in_value) const
         -> bool {
@@ -398,7 +399,7 @@ class variant {
     // `alternative`, which can be retrieved from `.alternative()` or
     // `.alternative_index<T>`.
     [[nodiscard]]
-    constexpr auto holds_alternative(alternative_index_t alternative) const
+    constexpr auto holds_alternative(alternative_index_type alternative) const
         -> bool {
         return this->discriminant.raw == alternative;
     }

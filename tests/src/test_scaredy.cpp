@@ -6,6 +6,7 @@
 struct error_type_one {
     int4 code;
 
+    [[nodiscard]]
     constexpr auto error() const -> int8 {
         return this->code;
     }
@@ -14,6 +15,7 @@ struct error_type_one {
 struct error_type_two {
     int4 code;
 
+    [[nodiscard]]
     constexpr auto error() const -> int8 {
         return this->code;
     }
@@ -45,20 +47,19 @@ auto union_errors(int4 error)
     }
 }
 
-enum class Err
-{
+enum class error_set {
     one,
     two
 };
 
-auto scaredy_try_success() -> cat::scaredy<int, Err> {
-    cat::scaredy<int, Err> error{0};
+auto scaredy_try_success() -> cat::scaredy<int, error_set> {
+    cat::scaredy<int, error_set> error{0};
     int boo = TRY(error);
     return boo;
 }
 
-auto scaredy_try_fail() -> cat::scaredy<int, Err> {
-    cat::scaredy<int, Err> error{Err::one};
+auto scaredy_try_fail() -> cat::scaredy<int, error_set> {
+    cat::scaredy<int, error_set> error{error_set::one};
     int boo = TRY(error);
     return boo;
 }
