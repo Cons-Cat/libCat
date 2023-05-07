@@ -1218,6 +1218,13 @@ struct index : detail::arithmetic_storage<__SIZE_TYPE__, policy>,
         return index(this->raw - make_raw_arithmetic(other));
     }
 
+    // Subtracting two indices should produce a signed integer.
+    template <is_integral T>
+    constexpr auto subtract_by(index other) const
+        -> arithmetic<make_signed_type<__SIZE_TYPE__>, policy> {
+        return iword(this->raw) - make_raw_arithmetic(other);
+    }
+
     template <is_arithmetic U>
     constexpr auto subtract_from(U other) const {
         return other - this->raw;

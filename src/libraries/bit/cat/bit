@@ -541,7 +541,7 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
   private:
     using type = iterator;
     using word_type = iterator::value_type;
-    static constexpr uword word_bits = limits<word_type>::bits;
+    static constexpr idx word_bits = limits<word_type>::bits;
 
   public:
     using value_type = bit_value;
@@ -560,8 +560,7 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
     }
 
     constexpr void advance(iword offset) {
-        // TODO: Remove this cast so that negative offsets work.
-        iword advance_bits = static_cast<iword>(this->bit_position) + offset;
+        iword advance_bits = this->bit_position + offset;
         iword iword_bits = iword(this->word_bits);
         iword bytes_overflow = advance_bits / iword_bits;
         if (advance_bits < 0 &&
@@ -579,8 +578,8 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
         // a word in bits, then add the difference between the iterators'
         // current bit offset within their word. That gives the total number of
         // bits between any two bit iterators.
-        return (word_difference * iword(word_bits)) +
-               iword(this->bit_position) - iword(other.bit_position);
+        return (word_difference * word_bits) + this->bit_position -
+               other.bit_position;
     }
 
   private:
