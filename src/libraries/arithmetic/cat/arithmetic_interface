@@ -192,10 +192,45 @@ struct divide_interface {
 };
 
 template <typename derived_type>
+struct bit_and_interface {
+    // Binary `&` operator.
+    template <typename T>
+    constexpr friend auto operator&(derived_type self, T other) {
+        return self.bit_and(other);
+    }
+
+    // Binary `&=` operator.
+    template <typename T>
+    constexpr friend auto operator&=(derived_type& self, T other) -> auto& {
+        self = self.bit_and(other);
+        return self;
+    }
+};
+
+template <typename derived_type>
+struct bit_or_interface {
+    // Binary `|` operator.
+    template <typename T>
+        requires(!detail::has_bit_or_interface<T, derived_type>)
+    constexpr friend auto operator|(derived_type self, T other) {
+        return self.bit_or(other);
+    }
+
+    // Binary `|=` operator.
+    template <typename T>
+    constexpr friend auto operator|=(derived_type& self, T other) -> auto& {
+        self = self.bit_or(other);
+        return self;
+    }
+};
+
+template <typename derived_type>
 struct arithmetic_interface : plus_interface<derived_type>,
                               minus_interface<derived_type>,
                               multiply_interface<derived_type>,
-                              divide_interface<derived_type> {
+                              divide_interface<derived_type>,
+                              bit_and_interface<derived_type>,
+                              bit_or_interface<derived_type> {
     // No-op unary `+` operator for operand.
     constexpr friend auto operator+(derived_type self) {
         return self;

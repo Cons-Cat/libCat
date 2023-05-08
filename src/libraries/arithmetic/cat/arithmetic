@@ -707,11 +707,10 @@ struct arithmetic : detail::arithmetic_storage<T, policy>,
     // TODO: Should this guarantee operands are the same size?
         requires(is_safe_arithmetic_comparison<T, U>)
     [[nodiscard]]
-    friend constexpr auto
-    operator&(arithmetic self, U operand)
+    constexpr auto bit_and(U operand) const
         -> detail::promoted_type<arithmetic, U> {
         return detail::promoted_type<arithmetic, U>(
-            self.raw & make_raw_arithmetic(operand));
+            this->raw & make_raw_arithmetic(operand));
     }
 
     template <typename U>
@@ -726,14 +725,6 @@ struct arithmetic : detail::arithmetic_storage<T, policy>,
     friend constexpr auto
     operator&(arithmetic self, U* p_operand) -> U* {
         return p_operand & self.raw;
-    }
-
-    template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<U, T>)
-    friend constexpr auto operator&=(arithmetic& self, U operand)
-        -> arithmetic& {
-        self.raw &= make_raw_arithmetic(operand);
-        return self;
     }
 
     template <is_arithmetic U>
@@ -1001,6 +992,19 @@ struct arithmetic_ptr
         return arithmetic_ptr(make_raw_arithmetic(operand) / this->raw);
     }
 
+    // Generate `operator&`.
+    template <is_integral U>
+    constexpr auto bit_and(U other) const -> arithmetic_ptr {
+        return arithmetic_ptr(this->raw & make_raw_arithmetic(other));
+    }
+
+    template <is_integral U>
+    [[nodiscard]]
+    constexpr auto bit_or(arithmetic_ptr self, U operand) const
+        -> arithmetic_ptr {
+        return arithmetic_ptr(self.raw | make_raw_arithmetic(operand));
+    }
+
     template <is_integral U>
     [[nodiscard]]
     friend constexpr auto
@@ -1014,33 +1018,7 @@ struct arithmetic_ptr
         return *this;
     }
 
-    template <is_integral U>
-    [[nodiscard]]
-    friend constexpr auto
-    operator&(arithmetic_ptr self, U operand) -> arithmetic_ptr {
-        return self.raw & make_raw_arithmetic(operand);
-    }
-
-    template <typename U>
-    constexpr auto operator&=(U operand) -> arithmetic_ptr& {
-        this->raw = this->raw & make_raw_arithmetic(operand);
-        return *this;
-    }
-
-    template <is_integral U>
-    [[nodiscard]]
-    friend constexpr auto
-    operator|(arithmetic_ptr self, U operand) -> arithmetic_ptr {
-        return self.raw | make_raw_arithmetic(operand);
-    }
-
     // TODO: Make more of these hidden `friend`s.
-
-    template <typename U>
-    constexpr auto operator|=(U operand) -> arithmetic_ptr& {
-        this->raw = this->raw | make_raw_arithmetic(operand);
-        return *this;
-    }
 
     template <is_integral U>
     [[nodiscard]]
@@ -1269,6 +1247,12 @@ struct index : detail::arithmetic_storage<__SIZE_TYPE__, policy>,
     template <is_integral T>
     constexpr auto shift_right(T other) const -> index {
         return index(this->raw >> make_raw_arithmetic(other));
+    }
+
+    // Generate `operator&`.
+    template <is_integral T>
+    constexpr auto bit_and(T other) const -> index {
+        return index(this->raw & make_raw_arithmetic(other));
     }
 
     // Generate `operator~`.
