@@ -76,12 +76,12 @@ TEST(test_alloc) {
 
     // Test `alloc`.
     _ = allocator.alloc<int4>().value();
-    auto p_alloc = allocator.alloc<int4>(1).value();
+    auto* p_alloc = allocator.alloc<int4>(1).value();
     cat::verify(*p_alloc == 1);
 
     // Test `xalloc`.
     _ = allocator.xalloc<int4>();
-    auto p_xalloc = allocator.xalloc<int4>(1);
+    auto* p_xalloc = allocator.xalloc<int4>(1);
     cat::verify(*p_xalloc == 1);
 
     // Test `alloc_multi`.
@@ -117,13 +117,13 @@ TEST(test_alloc) {
 
     // Test `align_alloc`.
     _ = allocator.align_alloc<int4>(8u).value();
-    auto p_align_alloc = allocator.align_alloc<int4>(8u, 1).value();
+    auto* p_align_alloc = allocator.align_alloc<int4>(8u, 1).value();
     cat::verify(*p_align_alloc == 1);
     cat::verify(cat::is_aligned(p_align_alloc, 8u));
 
     // Test `align_xalloc`.
     _ = allocator.align_xalloc<int4>(8u);
-    auto p_align_xalloc = allocator.align_xalloc<int4>(8u, 1);
+    auto* p_align_xalloc = allocator.align_xalloc<int4>(8u, 1);
     cat::verify(*p_align_xalloc == 1);
     cat::verify(cat::is_aligned(p_align_xalloc, 8u));
 
@@ -139,12 +139,12 @@ TEST(test_alloc) {
 
     // Test `unalign_alloc`.
     _ = allocator.unalign_alloc<int4>(8u).value();
-    auto p_unalign_alloc = allocator.unalign_alloc<int4>(1).value();
+    auto* p_unalign_alloc = allocator.unalign_alloc<int4>(1).value();
     cat::verify(*p_unalign_alloc == 1);
 
     // Test `unalign_xalloc`.
     _ = allocator.unalign_xalloc<int4>(8u);
-    auto p_unalign_xalloc = allocator.unalign_xalloc<int4>(1);
+    auto* p_unalign_xalloc = allocator.unalign_xalloc<int4>(1);
     cat::verify(*p_unalign_xalloc == 1);
 
     // Test `align_alloc_multi`.
@@ -168,7 +168,7 @@ TEST(test_alloc) {
     cat::verify(alloc_counter == 5);
 
     // Test `align_alloc_multi`.
-    auto p_align_alloc_multi =
+    auto* p_align_alloc_multi =
         allocator.align_alloc_multi<int4>(8u, 5u).value().data();
     cat::verify(cat::is_aligned(p_align_alloc_multi, 8u));
     alloc_counter = 0;
@@ -1070,8 +1070,8 @@ TEST(test_alloc) {
     opq_alloc = allocator.opq_realloc_to(allocator, opq_alloc).value();
 
     // Test `realloc`.
-    auto p_realloc_1 = allocator.alloc<int4>(1).value();
-    auto p_realloc_2 = allocator.alloc<int4>(2u).value();
+    auto* p_realloc_1 = allocator.alloc<int4>(1).value();
+    auto* p_realloc_2 = allocator.alloc<int4>(2u).value();
     cat::verify(*p_realloc_1 == 1);
     cat::verify(*p_realloc_2 == 2);
     p_realloc_1 = allocator.realloc(p_realloc_2).value();
