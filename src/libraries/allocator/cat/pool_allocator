@@ -26,7 +26,7 @@ class pool_allocator
 
   public:
     // Allocate a `pool_allocator` from another allocator.
-    static auto backed(is_stable_allocator auto& backing, iword arena_bytes)
+    static auto backed(is_allocator auto& backing, iword arena_bytes)
         -> maybe<pool_allocator<max_node_bytes>> {
         // statement expressions.
         span<node_union> memory = TRY(backing.template alloc_multi<node_union>(

@@ -38,7 +38,7 @@ class array : public collection_interface<array<T, length>, T, true> {
     // requires(is_convertible<U, T>)
     constexpr auto operator=(array<U, length> const& other_array) -> array& {
         // TODO: Optimize with `copy_memory()` if T and U are relocatable.
-        for (uword i = 0u; i < length; ++i) {
+        for (idx i = 0u; i < length; ++i) {
             this->storage[i.raw] = static_cast<T>(other_array[i]);
         }
         return *this;
@@ -52,7 +52,7 @@ class array : public collection_interface<array<T, length>, T, true> {
         requires(is_implicitly_convertible<U, T>)
     constexpr auto operator=(array<U, length>&& other_array) -> array& {
         // TODO: Optimize with `copy_memory()` if T and U are relocatable.
-        for (uword i = 0u; i < length; ++i) {
+        for (idx i = 0u; i < length; ++i) {
             this->storage[i.raw] = static_cast<T>(move(other_array[i]));
         }
         return *this;

@@ -472,7 +472,7 @@ class collection_interface
 
     [[nodiscard]]
     constexpr auto
-    operator[](uword index) -> T&
+    operator[](idx index) -> T&
         requires(is_array_like)
     {
         if !consteval {
@@ -484,7 +484,7 @@ class collection_interface
 
     [[nodiscard]]
     constexpr auto
-    operator[](uword index) const -> T const&
+    operator[](idx index) const -> T const&
         requires(is_array_like)
     {
         if !consteval {

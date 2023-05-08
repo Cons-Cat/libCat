@@ -22,26 +22,19 @@ TEST(test_paging_memory) {
     // Initialize an allocator.
     cat::page_allocator allocator;
 
-    // Allocate and free a `const` page.
-    cat::mem auto const const_memory =
-        allocator.opq_alloc<cat::byte>().or_exit("Failed to page memory!");
-    _ = allocator.get(const_memory);
-    allocator.free(const_memory);
-
     // Allocate a page.
-    cat::mem auto memory = allocator.opq_alloc_multi<int4>(1'000u).or_exit(
-        "Failed to page memory!");
+    cat::span memory =
+        allocator.alloc_multi<int4>(1'000u).or_exit("Failed to page memory!");
     // Free the page at the end of this program.
     defer(allocator.free(memory);)
 
     // Write to the page.
-    cat::span page_span = allocator.get(memory);
-    page_span[0u] = 10;
-    cat::verify(allocator.get(memory)[0u] == 10);
+    memory[0] = 10;
+    cat::verify(memory[0] == 10);
 
     // allocation_type with small-size optimization.
     int stack_variable;
-    auto small_memory_1 = allocator.opq_inline_alloc<int4>().or_exit();
+    auto small_memory_1 = allocator.inline_alloc<int4>().or_exit();
     allocator.get(small_memory_1) = 2;
     // Both values should be on stack, so these addresses are close
     // together.
@@ -54,8 +47,7 @@ TEST(test_paging_memory) {
 
     allocator.free(small_memory_1);
 
-    auto small_memory_5 =
-        allocator.opq_inline_alloc_multi<int4>(1'000u).or_exit();
+    auto small_memory_5 = allocator.inline_alloc_multi<int4>(1'000u).or_exit();
     // `small_memory_1` should be in a page, so these addresses are far
     // apart.
     cat::verify(cat::abs(intptr<int>{&stack_variable} -
@@ -64,18 +56,18 @@ TEST(test_paging_memory) {
     allocator.free(small_memory_1);
 
     // Small-size handles have unique storage.
-    auto small_memory_2 = allocator.opq_inline_alloc<int4>().or_exit();
+    auto small_memory_2 = allocator.inline_alloc<int4>().or_exit();
     allocator.get(small_memory_2) = 1;
-    auto small_memory_3 = allocator.opq_inline_alloc<int4>().or_exit();
+    auto small_memory_3 = allocator.inline_alloc<int4>().or_exit();
     allocator.get(small_memory_3) = 2;
-    auto small_memory_4 = allocator.opq_inline_alloc<int4>().or_exit();
+    auto small_memory_4 = allocator.inline_alloc<int4>().or_exit();
     allocator.get(small_memory_4) = 3;
     cat::verify(allocator.get(small_memory_2) == 1);
     cat::verify(allocator.get(small_memory_3) == 2);
     cat::verify(allocator.get(small_memory_4) == 3);
 
     // Test constructor being called.
-    cat::maybe testtype = allocator.opq_alloc<test_page_type>();
+    cat::maybe testtype = allocator.alloc<test_page_type>();
     allocator.free(testtype.value());
 
     // That constructor increments `paging_counter_1`.
@@ -84,7 +76,7 @@ TEST(test_paging_memory) {
     cat::verify(paging_counter_2 == 1);
 
     // Test multi-allocations.
-    auto array_memory = allocator.opq_alloc_multi<test_page_type>(9u).or_exit();
+    auto array_memory = allocator.alloc_multi<test_page_type>(9u).or_exit();
     // Those 9 constructors increment `paging_counter_2`.
     cat::verify(paging_counter_1 == 10);
 
@@ -92,13 +84,13 @@ TEST(test_paging_memory) {
     // Those 9 destructors increment `paging_counter_2`.
     cat::verify(paging_counter_2 == 10);
 
-    auto smalltesttype = allocator.opq_inline_alloc<test_page_type>().or_exit();
+    auto smalltesttype = allocator.inline_alloc<test_page_type>().or_exit();
     allocator.get(smalltesttype) = test_page_type();
     allocator.free(smalltesttype);
 
     // Aligned memory allocations.
-    auto aligned_mem = allocator.opq_align_alloc_multi<int4>(32u, 4u).or_exit();
-    allocator.get(aligned_mem)[0u] = 10;
-    cat::verify(allocator.get(aligned_mem)[0u] == 10);
+    auto aligned_mem = allocator.align_alloc_multi<int4>(32u, 4u).or_exit();
+    aligned_mem[0] = 10;
+    cat::verify(aligned_mem[0] == 10);
     allocator.free(aligned_mem);
 };

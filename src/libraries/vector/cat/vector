@@ -43,7 +43,7 @@ class vector : public collection_interface<vector<T>, T, true> {
     constexpr vector(vector<T> const& other_vector) = default;
 
     // Reallocate memory, or make an initial allocation.
-    constexpr auto internal_allocate(is_stable_allocator auto& allocator,
+    constexpr auto internal_allocate(is_allocator auto& allocator,
                                      uword minimum_capacity) {
         if (this->p_storage == nullptr) {
             return allocator.template salloc_multi<T>(minimum_capacity);
@@ -54,7 +54,7 @@ class vector : public collection_interface<vector<T>, T, true> {
 
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
     // context.
-    constexpr auto increase_storage(is_stable_allocator auto& allocator)
+    constexpr auto increase_storage(is_allocator auto& allocator)
         -> maybe<void> {
         uword const minimum_capacity =
             (this->current_capacity > 0u)
@@ -90,7 +90,7 @@ class vector : public collection_interface<vector<T>, T, true> {
 
   public:
     [[nodiscard]]
-    static constexpr auto reserved(is_stable_allocator auto& allocator,
+    static constexpr auto reserved(is_allocator auto& allocator,
                                    iword capacity) -> maybe<vector<T>> {
         vector<T> new_vector;
         TRY(new_vector.reserve(allocator, capacity));
@@ -98,7 +98,7 @@ class vector : public collection_interface<vector<T>, T, true> {
     }
 
     [[nodiscard]]
-    static constexpr auto filled(is_stable_allocator auto& allocator,
+    static constexpr auto filled(is_allocator auto& allocator,
                                  uword count, T const& value)
         -> maybe<vector<T>> {
         vector<T> new_vector;
@@ -138,7 +138,7 @@ class vector : public collection_interface<vector<T>, T, true> {
 
     // Try to allocate storage for at least `minimum_capacity` number of `T`s.
     [[nodiscard]]
-    constexpr auto reserve(is_stable_allocator auto& allocator,
+    constexpr auto reserve(is_allocator auto& allocator,
                            uword minimum_capacity) -> maybe<void> {
         if (minimum_capacity > this->current_capacity) {
             // TODO: I think there is a bug in GCC constexpr memory. This is a
@@ -167,7 +167,7 @@ class vector : public collection_interface<vector<T>, T, true> {
 
     // Try to change the size of this `vector`.
     [[nodiscard]]
-    constexpr auto resize(is_stable_allocator auto& allocator, uword size)
+    constexpr auto resize(is_allocator auto& allocator, uword size)
         -> maybe<void> {
         if (size > this->current_capacity) {
             // This sets `this->current_capacity` and `this->p_storage`.
@@ -183,7 +183,7 @@ class vector : public collection_interface<vector<T>, T, true> {
     // Deep-copy the contents of this `vector`.
     [[nodiscard]]
     constexpr auto clone(
-        is_stable_allocator auto& allocator) const& -> maybe<vector<T>> {
+        is_allocator auto& allocator) const& -> maybe<vector<T>> {
         vector<T> new_vector =
             TRY(vector<T>::reserved(allocator, this->current_capacity));
         new_vector.current_size = this->current_size;
@@ -198,7 +198,7 @@ class vector : public collection_interface<vector<T>, T, true> {
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]]
-    constexpr auto push_back(is_stable_allocator auto& allocator,
+    constexpr auto push_back(is_allocator auto& allocator,
                              U const& value) -> maybe<void> {
         if (this->current_size + 1 > this->current_capacity) {
             TRY(this->increase_storage(allocator));

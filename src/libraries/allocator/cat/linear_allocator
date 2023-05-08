@@ -29,7 +29,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
   public:
     // Allocate a `linear_allocator` from another allocator.
-    static auto backed(is_stable_allocator auto& backing, uword arena_bytes)
+    static auto backed(is_allocator auto& backing, idx arena_bytes)
         -> maybe<linear_allocator> {
         span memory = TRY(backing.template alloc_multi<byte>(arena_bytes));
         return linear_allocator(memory.data(), arena_bytes);
@@ -38,14 +38,14 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     // Allocate a `linear_allocator` from another allocator, given a handle to
     // it.
     // TODO: Can this return a tuple of the allocator and handle?
-    static auto backed_handle(is_stable_allocator auto& backing,
+    static auto backed_handle(is_allocator auto& backing,
                               mem auto& handle) -> linear_allocator {
         return linear_allocator(backing.template p_get(handle),
                                 handle.raw_size());
     }
 
     // TODO: Can this return a tuple of the allocator and handle?
-    static auto backed_handle_sized(is_stable_allocator auto& backing,
+    static auto backed_handle_sized(is_allocator auto& backing,
                                     mem auto& handle, uword arena_size)
         -> linear_allocator {
         assert(arena_size <= handle.raw_size());

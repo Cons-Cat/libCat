@@ -9,7 +9,7 @@
 
 namespace cat {
 
-template <uword bits_count>
+template <idx bits_count>
     requires(bits_count > 0u)
 class bitset {
   private:
@@ -18,7 +18,7 @@ class bitset {
     // Store the smallest number of bytes needed for `bits_count`. If that is 8
     // bytes or fewer, use that many bytes. If it is larger, use an array of
     // 8-byte integers. Divide the bits by 8, rounding up.
-    static constexpr uword total_bytes = div_ceil(bits_count, 8u);
+    static constexpr idx total_bytes = div_ceil(bits_count, 8u);
 
     using array_type = conditional<
         total_bytes <= 8u,
@@ -49,10 +49,10 @@ class bitset {
 
     // The number of bits NOT counted in the first 1, 2, or 4 bytes of this
     // bitset.
-    static constexpr uword leading_skipped_bits =
+    static constexpr idx leading_skipped_bits =
         // The number of bits in the entire storage, minus the bits declared for
         // use.
-        (total_bytes * 8) - bits_count;
+        (total_bytes * 8u) - bits_count;
 
     // The number of bits counted in the first 1, 2, or 4 bytes of this bitset.
     static constexpr uword leading_bytes_bits =
@@ -90,13 +90,13 @@ class bitset {
     // Index into this bit-set from the right-most bit.
     [[nodiscard]]
     constexpr auto
-    operator[](uword index_bit) -> bit_reference<array_type_element> {
+    operator[](idx index_bit) -> bit_reference<array_type_element> {
         if !consteval {
             assert(index_bit < bits_count);
         }
 
         array_type_element& index_byte =
-            this->storage[static_cast<uword>(this->storage.size()) - 1u -
+            this->storage[this->storage.size() - 1u -
                           ((index_bit + this->leading_skipped_bits) /
                            // TODO: Without `.raw`, this is ambiguous.
                            word_bits.raw)];
@@ -116,12 +116,12 @@ class bitset {
 
     [[nodiscard]]
     constexpr auto
-    operator[](uword index_bit) const -> bit_reference<array_type_element> {
+    operator[](idx index_bit) const -> bit_reference<array_type_element> {
         return (*unconst(this))[index_bit];
     }
 
     [[nodiscard]]
-    constexpr auto at(uword index) -> maybe<bit_reference<array_type_element>> {
+    constexpr auto at(idx index) -> maybe<bit_reference<array_type_element>> {
         if (index < bits_count) {
             return (*this)[index];
         }
@@ -129,7 +129,7 @@ class bitset {
     }
 
     [[nodiscard]]
-    constexpr auto at(uword index) const
+    constexpr auto at(idx index) const
         -> maybe<bit_reference<array_type_element>> {
         if (index < bits_count) {
             return (*this)[index];
@@ -195,12 +195,12 @@ class bitset {
     // Evaluate true if every bit in this bitset is 1.
     [[nodiscard]]
     constexpr auto all_of() const -> bool {
-        for (uword i = 0u; i < this->storage_array_size; ++i) {
+        for (idx i = 0u; i < this->storage_array_size; ++i) {
             auto it = this->storage[i];
             using T = decltype(it);
 
             if (i > 0u || constant_evaluate(has_single_bit(bits_count) ||
-                                            !(bits_count & 63u))) {
+                                            ((bits_count & idx(63u)) != 0))) {
                 if (it != it.max()) {
                     // If at least one bit is 0:
                     return false;

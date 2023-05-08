@@ -58,7 +58,7 @@ template <typename T>
 [[nodiscard]]
 auto any_of(simd_mask<x64::avx2_abi<T>, T> mask) -> bool;
 
-template <cat::uword bits_count>
+template <cat::idx bits_count>
     requires(bits_count > 0u)
 class bitset;
 

@@ -33,7 +33,7 @@ class ring : public collection_interface<ring<T>, T> {
 
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
     // context.
-    auto copy_to_new_storage(is_stable_allocator auto& allocator,
+    auto copy_to_new_storage(is_allocator auto& allocator,
                              iword new_capacity) -> maybe<void> {
         // TODO: `.resalloc_multi()`.
         T* p_new = TRY(allocator.template alloc_multi<T>(new_capacity));
@@ -58,20 +58,20 @@ class ring : public collection_interface<ring<T>, T> {
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]]
-    static auto reserved([[maybe_unused]] is_stable_allocator auto& allocator,
+    static auto reserved([[maybe_unused]] is_allocator auto& allocator,
                          [[maybe_unused]] iword capacity) -> maybe<ring<T>> {
     }
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]]
-    static auto filled([[maybe_unused]] is_stable_allocator auto& allocator,
+    static auto filled([[maybe_unused]] is_allocator auto& allocator,
                        [[maybe_unused]] iword capacity,
                        [[maybe_unused]] T value) -> maybe<ring<T>> {
     }
 
     [[nodiscard]]
-    auto reserve(is_stable_allocator auto& allocator, iword new_capacity)
+    auto reserve(is_allocator auto& allocator, iword new_capacity)
         -> maybe<void> {
         // The capacity of a `ring` must be a power of two.
         cat::assert(has_single_bit(new_capacity));
@@ -104,7 +104,7 @@ class ring : public collection_interface<ring<T>, T> {
     }
 
     [[nodiscard]]
-    auto resize(is_stable_allocator auto& allocator, iword new_size)
+    auto resize(is_allocator auto& allocator, iword new_size)
         -> maybe<void> {
         if (new_size > this->current_capacity) {
             TRY(this->reserve(allocator, new_size));
@@ -125,7 +125,7 @@ class ring : public collection_interface<ring<T>, T> {
     }
 
     [[nodiscard]]
-    auto clone([[maybe_unused]] is_stable_allocator auto& allocator)
+    auto clone([[maybe_unused]] is_allocator auto& allocator)
         -> maybe<ring<T>> {
     }
 

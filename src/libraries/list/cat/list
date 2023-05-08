@@ -82,7 +82,7 @@ class list : public collection_interface<list<T>, T> {
     template <typename U, U... initializers>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]]
-    static auto from(is_stable_allocator auto& allocator,
+    static auto from(is_allocator auto& allocator,
                      value_type_list<U, initializers...>) -> maybe<list<T>> {
         list<T> new_list;
         // TODO: Check if a recursive function is more efficient here.
@@ -101,7 +101,7 @@ class list : public collection_interface<list<T>, T> {
     template <typename... Args>
         requires(is_implicitly_convertible<Args, T> && ...)
     [[nodiscard]]
-    static auto from(is_stable_allocator auto& allocator,
+    static auto from(is_allocator auto& allocator,
                      Args&&... initializers) -> maybe<list<T>> {
         list<T> new_list;
         // TODO: Check if a recursive function is more efficient here.
@@ -202,7 +202,7 @@ class list : public collection_interface<list<T>, T> {
   public:
     // Deep-copy the contents of this `List`.
     [[nodiscard]]
-    auto clone(is_stable_allocator auto& allocator) -> maybe<list<T>> {
+    auto clone(is_allocator auto& allocator) -> maybe<list<T>> {
         list<T> new_list;
         for (iterator_type it = this->begin(); it != (this->end() + 1); ++it) {
             new_list.push_back(allocator, *it);
@@ -214,7 +214,7 @@ class list : public collection_interface<list<T>, T> {
     // `where`.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto insert(is_stable_allocator auto& allocator, iterator_type where,
+    auto insert(is_allocator auto& allocator, iterator_type where,
                 U const& value) -> maybe<iterator_type> {
         // `cat::maybe_ptr` at here produces an internal compiler error in
         // GCC 12.
@@ -240,7 +240,7 @@ class list : public collection_interface<list<T>, T> {
     // Allocate a node and insert it into this list before the position of
     // `where`, then construct it with arguments.
     template <typename... Args>
-    auto emplace(is_stable_allocator auto& allocator, iterator_type where,
+    auto emplace(is_allocator auto& allocator, iterator_type where,
                  Args&&... arguments) -> maybe<iterator_type> {
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
         if (!memory.has_value()) {
@@ -262,7 +262,7 @@ class list : public collection_interface<list<T>, T> {
     }
 
     // Remove and deallocate an element from this list.
-    auto erase(is_stable_allocator auto& allocator, iterator_type where)
+    auto erase(is_allocator auto& allocator, iterator_type where)
         -> maybe<iterator_type> {
         if (this->length == 0) [[unlikely]] {
             // Prevent a segfault when the list is empty.
@@ -292,7 +292,7 @@ class list : public collection_interface<list<T>, T> {
     // Allocate a node and insert it at the beginning of this list.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto push_front(is_stable_allocator auto& allocator, U const& value)
+    auto push_front(is_allocator auto& allocator, U const& value)
         -> maybe<iterator_type> {
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
         if (!memory.has_value()) {
@@ -309,7 +309,7 @@ class list : public collection_interface<list<T>, T> {
 
     // Allocate a node and insert it at the beginning of this list.
     template <typename... Args>
-    auto emplace_front(is_stable_allocator auto& allocator, Args&&... arguments)
+    auto emplace_front(is_allocator auto& allocator, Args&&... arguments)
         -> maybe<iterator_type> {
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
         if (!memory.has_value()) {
@@ -325,7 +325,7 @@ class list : public collection_interface<list<T>, T> {
     }
 
     // Remove an element from the front of this list.
-    void pop_front(is_stable_allocator auto& allocator) {
+    void pop_front(is_allocator auto& allocator) {
         if (this->length > 0) [[likely]] {
             detail::list_node<T>& node = *(this->begin().p_node);
             if (node.p_next_node != nullptr) [[likely]] {
@@ -346,7 +346,7 @@ class list : public collection_interface<list<T>, T> {
     // Allocate a node and insert it at the end of this list.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto push_back(is_stable_allocator auto& allocator, U const& value)
+    auto push_back(is_allocator auto& allocator, U const& value)
         -> maybe<iterator_type> {
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
         if (!memory.has_value()) {
@@ -363,7 +363,7 @@ class list : public collection_interface<list<T>, T> {
 
     // Allocate a node and insert it at the end of this list.
     template <typename... Args>
-    auto emplace_back(is_stable_allocator auto& allocator, Args&&... arguments)
+    auto emplace_back(is_allocator auto& allocator, Args&&... arguments)
         -> maybe<iterator_type> {
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
         if (!memory.has_value()) {
@@ -379,7 +379,7 @@ class list : public collection_interface<list<T>, T> {
     }
 
     // Remove and deallocate an element from the back of this list.
-    void pop_back(is_stable_allocator auto& allocator) {
+    void pop_back(is_allocator auto& allocator) {
         if (this->length > 0) [[likely]] {
             detail::list_node<T>& node = *(this->end().p_node);
             if (node.p_previous_node != nullptr) [[likely]] {
@@ -393,7 +393,7 @@ class list : public collection_interface<list<T>, T> {
 
     // Remove and deallocate all elements from this list. All nodes must have
     // been allocated by the same arena for this function to succeed.
-    void clear(is_stable_allocator auto& allocator) {
+    void clear(is_allocator auto& allocator) {
         if (this->length > 0) {
             iterator_type previous_it = nullptr;
             iterator_type current_it = this->begin();
@@ -487,7 +487,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
     template <typename U, U... values>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]]
-    static auto from(is_stable_allocator auto& allocator,
+    static auto from(is_allocator auto& allocator,
                      value_type_list<U, values...> initializers)
         -> maybe<forward_list<T>> {
         forward_list<T> new_list;
@@ -507,7 +507,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
     template <typename... Args>
         requires(is_implicitly_convertible<Args, T> && ...)
     [[nodiscard]]
-    static auto from(is_stable_allocator auto& allocator,
+    static auto from(is_allocator auto& allocator,
                      Args&&... initializers) -> maybe<forward_list<T>> {
         forward_list<T> new_list;
         // TODO: Check if a recursive function is more efficient here.
@@ -582,7 +582,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
   public:
     // Deep-copy the contents of this `forward_list`.
     [[nodiscard]]
-    auto clone(is_stable_allocator auto& allocator) -> maybe<forward_list<T>> {
+    auto clone(is_allocator auto& allocator) -> maybe<forward_list<T>> {
         forward_list<T> new_list;
         iterator_type current =
             TRY(new_list.push_front(allocator, this->front()));
@@ -594,7 +594,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
     }
 
     template <typename U>
-    auto insert_after(is_stable_allocator auto& allocator, iterator_type where,
+    auto insert_after(is_allocator auto& allocator, iterator_type where,
                       U const& value) -> maybe<iterator_type>
         requires(is_implicitly_convertible<U, T>)
     {
@@ -619,7 +619,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
     }
 
     template <typename... Args>
-    auto emplace_after(is_stable_allocator auto& allocator, iterator_type where,
+    auto emplace_after(is_allocator auto& allocator, iterator_type where,
                        Args&&... arguments) -> maybe<iterator_type> {
         cat::maybe memory =
             allocator.template alloc<detail::forward_list_node<T>>();
@@ -641,7 +641,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
         return iterator_type(&node);
     }
 
-    void erase_after(is_stable_allocator auto& allocator, iterator_type where) {
+    void erase_after(is_allocator auto& allocator, iterator_type where) {
         detail::forward_list_node<T>& node = *where.p_node;
         detail::forward_list_node<T>* p_remove = node.p_next_node;
         node.p_next_node = p_remove->p_next_node;
@@ -651,7 +651,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
     // Allocate a node and insert it at the beginning of this list.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto push_front(is_stable_allocator auto& allocator, U const& value)
+    auto push_front(is_allocator auto& allocator, U const& value)
         -> maybe<iterator_type> {
         cat::maybe memory =
             allocator.template alloc<detail::forward_list_node<T>>();
@@ -669,7 +669,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
 
     // Allocate a node and insert it at the beginning of this list.
     template <typename... Args>
-    auto emplace_front(is_stable_allocator auto& allocator, Args&&... arguments)
+    auto emplace_front(is_allocator auto& allocator, Args&&... arguments)
         -> maybe<iterator_type> {
         cat::maybe memory =
             allocator.template alloc<detail::forward_list_node<T>>();
@@ -686,7 +686,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
     }
 
     // Remove an element from the front of this list.
-    void pop_front(is_stable_allocator auto& allocator) {
+    void pop_front(is_allocator auto& allocator) {
         if (this->length > 0) [[likely]] {
             detail::forward_list_node<T>& node = *this->p_head;
             this->p_head = node.p_next_node;
@@ -699,7 +699,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
     //
     // Remove and deallocate all elements from this list. All nodes must
     // have been allocated by the same arena for this function to succeed.
-    void clear(is_stable_allocator auto& allocator) {
+    void clear(is_allocator auto& allocator) {
         if (this->length > 0) {
             iterator_type previous_it = nullptr;
             iterator_type current_it = this->begin();
