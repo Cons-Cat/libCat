@@ -38,15 +38,15 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     // Allocate a `linear_allocator` from another allocator, given a handle to
     // it.
     // TODO: Can this return a tuple of the allocator and handle?
-    static auto backed_handle(is_allocator auto& backing,
-                              mem auto& handle) -> linear_allocator {
+    static auto backed_handle(is_allocator auto& backing, mem auto& handle)
+        -> linear_allocator {
         return linear_allocator(backing.template p_get(handle),
                                 handle.raw_size());
     }
 
     // TODO: Can this return a tuple of the allocator and handle?
     static auto backed_handle_sized(is_allocator auto& backing,
-                                    mem auto& handle, uword arena_size)
+                                    mem auto& handle, idx arena_size)
         -> linear_allocator {
         assert(arena_size <= handle.raw_size());
         return linear_allocator(backing.template p_get(handle), arena_size);
@@ -63,10 +63,10 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     }
 
   private:
-    auto allocation_bytes(uword alignment, uword allocation_bytes)
+    auto allocation_bytes(uword alignment, idx allocation_bytes)
         -> maybe_non_zero<idx> {
         uintptr<void> allocation = align_down(
-            this->p_arena_current - uword{allocation_bytes}, alignment);
+            this->p_arena_current - uword(allocation_bytes), alignment);
 
         // The allocation size is the difference between the current pointer
         // and the new pointer.
@@ -77,7 +77,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     }
 
     // Try to allocate memory and bump the pointer down.
-    auto allocate(uword allocation_bytes) -> maybe_ptr<void> {
+    auto allocate(idx allocation_bytes) -> maybe_ptr<void> {
         if (this->p_arena_current - allocation_bytes >= p_arena_end) {
             this->p_arena_current -= allocation_bytes;
             // Return a pointer that is then used to in-place construct a `T`.
@@ -88,7 +88,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
     // Try to allocate memory aligned to some boundary and bump the pointer
     // down.
-    auto aligned_allocate(uword alignment, uword allocation_bytes)
+    auto aligned_allocate(uword alignment, idx allocation_bytes)
         -> maybe_ptr<void> {
         uintptr<void> allocation =
             align_down(this->p_arena_current - allocation_bytes, alignment);
@@ -103,7 +103,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
     // Try to allocate memory and bump the pointer down, and return the memory
     // with size allocated.
-    auto aligned_allocate_feedback(uword alignment, uword allocation_bytes)
+    auto aligned_allocate_feedback(uword alignment, idx allocation_bytes)
         -> maybe_sized_allocation<void*> {
         uintptr<void> allocation =
             align_down(this->p_arena_current - allocation_bytes, alignment);
