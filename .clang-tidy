@@ -16,6 +16,7 @@ Checks: "bugprone-*,
          -readability-function-cognitive-complexity, # I don't trust this.
 		 -readability-convert-member-functions-to-static, # I rather human judgement.
 		 -readability-named-parameter, # I'm on the fence about this.
+         -readability-function-cognitive-complexity, # I rather human judgement.
          -misc-non-private-member-variables-in-classes, # This seems very bad.
 		 -misc-unused-using-decls, # This isn't helpful for libraries.
         "
