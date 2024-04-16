@@ -41,12 +41,6 @@ void copy_memory(void const* p_source, void* p_destination, uword bytes);
 
 void copy_memory_small(void const* p_source, void* p_destination, uword bytes);
 
-// This forward declaration prevents a circular dependency
-// `#include<cat/bit>`.
-template <typename U>
-[[nodiscard]]
-constexpr auto is_aligned(uintptr<U> p_value, uword alignment) -> bool;
-
 namespace detail {
     // Type-erased `set_memory` function.
     template <typename T>

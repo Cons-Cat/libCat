@@ -158,7 +158,8 @@ TEST(test_numerals) {
     cat::verify(int4{0} <= int4{1});
 
     // Test `arithmetic_ptr` operators on raw numerals.
-    [[maybe_unused]] intptr<void> intptr_add_1 = 1 + intptr<void>{0};
+    [[maybe_unused]]
+    intptr<void> intptr_add_1 = 1 + intptr<void>{0};
     intptr<void> intptr_add_2 = intptr<void>{0} + 1;
     cat::verify(intptr_add_2 == 1);
     intptr<void> intptr_add_3 = 1_i4 + intptr<void>{0};
@@ -254,11 +255,12 @@ TEST(test_numerals) {
 
     // Test `arithmetic_ptr` conversions.
     uintptr<void> uintptr_1 = static_cast<uintptr<void>>(intptr_1);
-    [[maybe_unused]] uintptr<void>::raw_type raw_uintptr =
+    [[maybe_unused]]
+    uintptr<void>::raw_type raw_uintptr =
         static_cast<uintptr<void>::raw_type>(uintptr_1);
 
-    [[maybe_unused]] intptr<void> intptr_3 =
-        static_cast<intptr<void>>(uintptr_1);
+    [[maybe_unused]]
+    intptr<void> intptr_3 = static_cast<intptr<void>>(uintptr_1);
 
     // Test `arithmetic_ptr` dereferencing operators.
     int4 integer = 0;
@@ -277,7 +279,8 @@ TEST(test_numerals) {
     int4 int_less = 0;
     int4 int_more = 2;
 
-    [[maybe_unused]] bool is_less = (int_less < int_more);
+    [[maybe_unused]]
+    bool is_less = (int_less < int_more);
     is_less = ((0 <=> int_more) < 0);  // NOLINT
     cat::verify(is_less);
     is_less = (0 < int_more);
@@ -285,7 +288,8 @@ TEST(test_numerals) {
     is_less = (int_less < 2);
     cat::verify(is_less);
 
-    [[maybe_unused]] bool is_more = (int_more > int_less);
+    [[maybe_unused]]
+    bool is_more = (int_more > int_less);
     is_more = ((0 <=> int_less) == 0);  // NOLINT
     cat::verify(is_more);
     is_more = (0 < int_more);
@@ -329,23 +333,36 @@ TEST(test_numerals) {
     cat::verify(matched);
 
     // Test unary operators.
-    [[maybe_unused]] int4 negative_int4 = -1_i4;
-    [[maybe_unused]] float4 negative_float4 = -1_f4;
+    [[maybe_unused]]
+    int4 negative_int4 = -1_i4;
+    [[maybe_unused]]
+    float4 negative_float4 = -1_f4;
     // [[maybe_unused]] int4 positive_int4 = +1_i4;
     // [[maybe_unused]] float4 positive_float4 = +1_f4;
-    [[maybe_unused]] int4 negated_int4 = ~1_i4;
+    [[maybe_unused]]
+    int4 negated_int4 = ~1_i4;
 
     // Test using numerals non-type template parameters.
-    [[maybe_unused]] nttp<1_i1> nttp_int1{};
-    [[maybe_unused]] nttp<1_u1> nttp_uint1{};
-    [[maybe_unused]] nttp<1_i2> nttp_int2{};
-    [[maybe_unused]] nttp<1_u2> nttp_uint2{};
-    [[maybe_unused]] nttp<1_i4> nttp_int4{};
-    [[maybe_unused]] nttp<1_u4> nttp_uint4{};
-    [[maybe_unused]] nttp<1_i8> nttp_int8{};
-    [[maybe_unused]] nttp<1_u8> nttp_uint8{};
-    [[maybe_unused]] nttp<1_f4> nttp_float4{};
-    [[maybe_unused]] nttp<1_f8> nttp_float8{};
+    [[maybe_unused]]
+    nttp<1_i1> nttp_int1{};
+    [[maybe_unused]]
+    nttp<1_u1> nttp_uint1{};
+    [[maybe_unused]]
+    nttp<1_i2> nttp_int2{};
+    [[maybe_unused]]
+    nttp<1_u2> nttp_uint2{};
+    [[maybe_unused]]
+    nttp<1_i4> nttp_int4{};
+    [[maybe_unused]]
+    nttp<1_u4> nttp_uint4{};
+    [[maybe_unused]]
+    nttp<1_i8> nttp_int8{};
+    [[maybe_unused]]
+    nttp<1_u8> nttp_uint8{};
+    [[maybe_unused]]
+    nttp<1_f4> nttp_float4{};
+    [[maybe_unused]]
+    nttp<1_f8> nttp_float8{};
 
     // Test `make_signed()` and `make_unsigned()`.
     static_assert(cat::is_same<decltype(cat::make_unsigned(1)), unsigned int>);
@@ -356,8 +373,10 @@ TEST(test_numerals) {
     static_assert(cat::make_sign_from<int4>(1u) == 1_i4);
     static_assert(cat::make_sign_from(2, 1u) == 1_i4);
 
+    static_assert(cat::is_same<decltype(make_unsigned(idx(1u))), idx>);
+
     // Test unwrapped numerals in `limits`.
-    static_assert(cat::limits<int4>::max() ==   // NOLINT
+    static_assert(cat::limits<int4>::max() ==  // NOLINT
                   cat::limits<int4::raw_type>::max());
     static_assert(cat::limits<uint8>::max() ==  // NOLINT
                   cat::limits<uint8::raw_type>::max());

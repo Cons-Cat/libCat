@@ -3518,8 +3518,7 @@ class allocator_interface {
 #ifdef __SANITIZE_ADDRESS__
         if !consteval {
             __asan_poison_memory_region(
-                static_cast<void const volatile*>(p_memory),
-                sizeof(T) * make_unsigned(count));
+                static_cast<void const volatile*>(p_memory), sizeof(T) * count);
         }
 #endif
 
@@ -3992,7 +3991,7 @@ class allocator_interface {
 #ifdef __SANITIZE_ADDRESS__
             __asan_unpoison_memory_region(
                 static_cast<void const volatile*>(p_allocation),
-                make_unsigned(allocation_bytes));
+                allocation_bytes);
 #endif
 
             // Possibly zero-out the allocation.
@@ -4121,7 +4120,7 @@ class allocator_interface {
             // TODO: Why does this fix asan error in vector test?
             __asan_unpoison_memory_region(
                 static_cast<void const volatile*>(p_old_handle),
-                make_unsigned(old_count) + sizeof(T) + 8u);
+                old_count + sizeof(T) + 8u);
 #endif
 
             if constexpr (is_trivially_relocatable<T>) {
