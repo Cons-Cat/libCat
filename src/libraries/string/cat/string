@@ -15,8 +15,8 @@ namespace std {
 // `memcpy()` exists to enable some GCC optimizations.
 extern "C" [[deprecated(
     "std::memcpy() is deprecated! Use cat::copy_memory() instead!")]]
-auto memcpy(void* p_destination, void const* p_source, __SIZE_TYPE__ bytes)
-    -> void*;
+auto memcpy(void* p_destination, void const* p_source,
+            __SIZE_TYPE__ bytes) -> void*;
 
 // Deprecated call to `memset()`. Consider using `cat::set_memory() or
 // cat::zero_memory()` instead. `memset()` exists to enable some GCC
@@ -27,8 +27,8 @@ auto memset(void* p_source, int byte_value, __SIZE_TYPE__ bytes) -> void*;
 
 }  // namespace std
 
-using std::memcpy;
-using std::memset;
+using std::memcpy;  // NOLINT
+using std::memset;  // NOLINT
 
 namespace cat {
 
@@ -197,15 +197,16 @@ class fixed_string
 
     // Create a `fixed_string` from a smaller string, and null out the unfilled
     // bytes.
-    template <uword::raw_type in_length>
+    template <idx::raw_type in_length>
         requires(in_length < length)
     static consteval auto padded(char const (&in)[in_length])
         -> fixed_string<length> {
+        idx idx_length = idx(in_length);  // Convert length to `idx`.
         fixed_string<length> string;
-        for (uword::raw_type i = 0u; i < in_length; ++i) {
-            string[i] = in[i];
+        for (idx i = 0u; i < idx_length; ++i) {
+            string[i] = in[i.raw];
         }
-        for (uword::raw_type i = in_length; i < length; ++i) {
+        for (idx i = idx_length; i < length; ++i) {
             string[i] = '\0';
         }
         return string;

@@ -238,7 +238,8 @@ struct error_code {
     operation_code major_operation;
 
   private:
-    [[maybe_unused]] cat::uint1 padding[21];
+    [[maybe_unused]]
+    cat::uint1 padding[21];
 
   public:
     cat::uint4 full_sequence;
@@ -265,7 +266,8 @@ struct event {
     event_code event_type;
 
   private:
-    [[maybe_unused]] cat::uint1 padding[23];
+    [[maybe_unused]]
+    cat::uint1 padding[23];
 
   public:
     cat::uint4 full_sequence;
@@ -292,11 +294,12 @@ struct server_reply_header {
     } success_code;
 
   private:
-    [[maybe_unused]] cat::int1 padding;
+    [[maybe_unused]]
+    cat::int1 padding;
 
   public:
     // This field is only initialized if `success_code_type` is `failed`.
-    cat::array<cat::uint2, 2> x_version;
+    cat::array<cat::uint2, 2u> x_version;
     // `message_length` represents a multiple of four bytes.
     cat::uint2 message_length;
 };
@@ -306,19 +309,21 @@ struct connection_request_info {
     char endianness = cat::is_target_little_endian ? 'l' : 'B';
 
   private:
-    [[maybe_unused]] cat::int1 padding_1;
+    [[maybe_unused]]
+    cat::int1 padding_1;
 
   public:
     // This should almost always be `{11, 0}`.
-    cat::array<cat::uint2, 2> x_version = {static_cast<unsigned char>(11),
-                                           static_cast<unsigned char>(0)};
+    cat::array<cat::uint2, 2u> x_version = {static_cast<unsigned char>(11),
+                                            static_cast<unsigned char>(0)};
     // No explicit protocol is specified if this is `0`.
     cat::uint2 authorization_protocol_length = static_cast<unsigned char>(0);
     // No explicit protocol is specified if this is `0`.
     cat::uint2 authorization_data_length = static_cast<unsigned char>(0);
 
   private:
-    [[maybe_unused]] cat::int2 padding_2;
+    [[maybe_unused]]
+    cat::int2 padding_2;
 };
 
 struct connection_response_info {
@@ -352,7 +357,8 @@ struct connection_response_info {
     key_code keycode_maximum;
 
   private:
-    [[maybe_unused]] cat::int4 padding;
+    [[maybe_unused]]
+    cat::int4 padding;
 };
 
 struct pixel_map_format_packet {
@@ -361,7 +367,8 @@ struct pixel_map_format_packet {
     cat::uint1 scanline_padding;
 
   private:
-    [[maybe_unused]] cat::uint1 padding[5];
+    [[maybe_unused]]
+    cat::uint1 padding[5];
 };
 
 // There is one root window per screen, so multiple `root_window_packet`s will
@@ -389,7 +396,8 @@ struct depth_packet {
     cat::uint1 depth;
 
   private:
-    [[maybe_unused]] cat::uint1 padding_1;
+    [[maybe_unused]]
+    cat::uint1 padding_1;
 
   public:
     // The number of `visual_packet`s transmitted imillimetersediately after
@@ -397,7 +405,8 @@ struct depth_packet {
     cat::uint2 visuals_count;
 
   private:
-    [[maybe_unused]] cat::uint4 padding_2;
+    [[maybe_unused]]
+    cat::uint4 padding_2;
 };
 
 struct visual_packet {
@@ -407,7 +416,8 @@ struct visual_packet {
     cat::uint4 mask_red, mask_green, mask_blue;
 
   private:
-    [[maybe_unused]] cat::uint4 padding;
+    [[maybe_unused]]
+    cat::uint4 padding;
 };
 
 struct connection {
