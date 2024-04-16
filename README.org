@@ -15,7 +15,7 @@ More essays and videos will come in the future.
 libCat requires a development version of GCC from the =trunk= branch. Compiling libCat is only tested using =ninja=.
 #+BEGIN_SRC
   $ cmake -B build/ -G 'Ninja Multi-Config'
-  $ ninja -C build/
+  $ cmake --build build/  #or: ninja -C build/
   $ ./build/tests/Debug/unit_tests
 #+END_SRC
 
