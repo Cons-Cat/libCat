@@ -10,7 +10,7 @@ ReferenceAlignment: Left
 
 # These are clang-format 14 features:
 QualifierAlignment: Custom
-QualifierOrder: ['static', 'inline', 'constexpr', 'type', 'const', 'volatile' ]
+QualifierOrder: ['static', 'inline', 'friend', 'constexpr', 'type', 'const', 'volatile' ]
 AlignArrayOfStructures: Right
 SeparateDefinitionBlocks: Always
 
