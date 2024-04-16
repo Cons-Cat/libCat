@@ -617,8 +617,8 @@ class allocator_interface {
     // alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto align_nalloc_multi(uword alignment, idx count)
-        -> maybe_non_zero<idx> {
+    constexpr auto align_nalloc_multi(uword alignment,
+                                      idx count) -> maybe_non_zero<idx> {
         return this->self().allocation_bytes(alignment, idx(count * sizeof(T)));
     }
 
@@ -720,8 +720,8 @@ class allocator_interface {
     // array of `T` with an alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto inline_align_nalloc_multi(uword alignment, idx count)
-        -> maybe_non_zero<idx> {
+    constexpr auto inline_align_nalloc_multi(uword alignment,
+                                             idx count) -> maybe_non_zero<idx> {
         if (count * sizeof(T) > inline_buffer_size) {
             return this->self().allocation_bytes(alignment, count * sizeof(T));
         }
@@ -732,8 +732,8 @@ class allocator_interface {
     // array of `T` with an alignment guarantee would reserve.
     template <typename T>
     [[nodiscard]]
-    constexpr auto inline_align_xnalloc_multi(uword alignment, idx count)
-        -> idx {
+    constexpr auto inline_align_xnalloc_multi(uword alignment,
+                                              idx count) -> idx {
         return this->inline_align_nalloc_multi<T>(alignment, count).value();
     }
 

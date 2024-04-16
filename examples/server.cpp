@@ -38,7 +38,7 @@ auto main() -> int {
             if (!cat::compare_strings(input, "")) {
                 // Zero out the message buffer's ending.
                 for (cat::iword i = message_length; i < input.size(); ++i) {
-                    message_buffer[i] = '\0';
+                    message_buffer[cat::idx(i)] = '\0';
                 }
 
                 _ = cat::print("Recieved: ");
