@@ -31,7 +31,7 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     // Allocate a `linear_allocator` from another allocator.
     static auto backed(is_allocator auto& backing, idx arena_bytes)
         -> maybe<linear_allocator> {
-        span memory = TRY(backing.template alloc_multi<byte>(arena_bytes));
+        span memory = prop(backing.template alloc_multi<byte>(arena_bytes));
         return linear_allocator(memory.data(), arena_bytes);
     }
 

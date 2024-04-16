@@ -29,7 +29,7 @@ class pool_allocator
     static auto backed(is_allocator auto& backing, iword arena_bytes)
         -> maybe<pool_allocator<max_node_bytes>> {
         // statement expressions.
-        span<node_union> memory = TRY(backing.template alloc_multi<node_union>(
+        span<node_union> memory = prop(backing.template alloc_multi<node_union>(
             arena_bytes / ssizeof(node_union)));
         // TODO: Optimize that division.
 

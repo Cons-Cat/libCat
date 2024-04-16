@@ -54,13 +54,13 @@ enum class error_set {
 
 auto scaredy_try_success() -> cat::scaredy<int, error_set> {
     cat::scaredy<int, error_set> error{0};
-    int boo = TRY(error);
+    int boo = prop(error);
     return boo;
 }
 
 auto scaredy_try_fail() -> cat::scaredy<int, error_set> {
     cat::scaredy<int, error_set> error{error_set::one};
-    int boo = TRY(error);
+    int boo = prop(error);
     return boo;
 }
 
@@ -242,7 +242,7 @@ TEST(test_scaredy) {
     static_assert(cat::is_scaredy<cat::scaredy<int, error_type_one>>);
     static_assert(cat::is_scaredy<decltype(result)>);
 
-    // Test `TRY` macro.
+    // Test `prop` macro.
     _ = scaredy_try_success().verify();
     cat::scaredy fail = scaredy_try_fail();
     cat::verify(!fail.has_value());

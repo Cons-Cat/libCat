@@ -585,10 +585,10 @@ class forward_list : public collection_interface<forward_list<T>, T> {
     auto clone(is_allocator auto& allocator) -> maybe<forward_list<T>> {
         forward_list<T> new_list;
         iterator_type current =
-            TRY(new_list.push_front(allocator, this->front()));
+            prop(new_list.push_front(allocator, this->front()));
         for (iterator_type it = (this->begin() + 1); it != (this->end() + 1);
              ++it) {
-            current = TRY(this->insert_after(allocator, current, *it));
+            current = prop(this->insert_after(allocator, current, *it));
         }
         return new_list;
     }

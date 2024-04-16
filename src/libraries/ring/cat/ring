@@ -36,7 +36,7 @@ class ring : public collection_interface<ring<T>, T> {
     auto copy_to_new_storage(is_allocator auto& allocator,
                              iword new_capacity) -> maybe<void> {
         // TODO: `.resalloc_multi()`.
-        T* p_new = TRY(allocator.template alloc_multi<T>(new_capacity));
+        T* p_new = prop(allocator.template alloc_multi<T>(new_capacity));
 
         if constexpr (is_trivially_relocatable<T>) {
             copy_memory(this->p_storage, p_new,
@@ -80,7 +80,7 @@ class ring : public collection_interface<ring<T>, T> {
             // TODO: Can this be simplified with iterators?
             // TODO: `.resalloc_multi()`.
             T* p_new =
-                TRY(allocator.template alloc_multi<T>(new_capacity)).data();
+                prop(allocator.template alloc_multi<T>(new_capacity)).data();
 
             // TODO: Generalize copying from one collectian to another.
             if constexpr (is_trivially_relocatable<T>) {
@@ -107,7 +107,7 @@ class ring : public collection_interface<ring<T>, T> {
     auto resize(is_allocator auto& allocator, iword new_size)
         -> maybe<void> {
         if (new_size > this->current_capacity) {
-            TRY(this->reserve(allocator, new_size));
+            prop(this->reserve(allocator, new_size));
 
             // Construct `T` at the newly reserved memory.
             for (iword i = this->current_size; i < new_size; ++i) {
