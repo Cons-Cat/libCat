@@ -63,12 +63,12 @@ struct monotype_storage {
         return *this;
     }
 
-    constexpr friend auto operator<=>(
+    friend constexpr auto operator<=>(
         monotype_storage<T, constant_state> const& self, auto const& rhs) {
         return self.storage <=> rhs;
     }
 
-    constexpr friend auto operator==(
+    friend constexpr auto operator==(
         monotype_storage<T, constant_state> const& self, auto const& rhs)
         -> bool {
         return self.storage == rhs;
