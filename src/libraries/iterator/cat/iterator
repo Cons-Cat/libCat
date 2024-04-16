@@ -123,14 +123,14 @@ class iterator_interface<derived_type> {
         }
     }
 
-    constexpr friend auto operator<=>(
+    friend constexpr auto operator<=>(
         derived_type const& left,
         derived_type const&
             right) /* requires(detail::has_distance_to<derived_type>) */ {
         return (left - right) <=> 0;
     }
 
-    constexpr friend auto operator==(derived_type const& left,
+    friend constexpr auto operator==(derived_type const& left,
                                      derived_type const& right)
         -> bool /* requires(detail::has_equal_to<derived_type> ||
                                    detail::has_distance_to<derived_type>) */
@@ -143,18 +143,18 @@ class iterator_interface<derived_type> {
         __builtin_unreachable();
     }
 
-    constexpr friend auto operator!=(derived_type const& left,
+    friend constexpr auto operator!=(derived_type const& left,
                                      derived_type const& right) -> bool {
         return !(left == right);
     }
 
-    // constexpr friend auto operator==(derived_type const& self,
+    // friend constexpr auto operator==(derived_type const& self,
     //                                  detail::has_sentinel<derived_type> auto)
     //     -> bool {
     //     return self.at_end();
     // }
 
-    constexpr friend auto operator+(
+    friend constexpr auto operator+(
         derived_type const& left,
         detail::is_difference_type<derived_type> auto offset) -> derived_type {
         derived_type new_iterator = left;
@@ -168,7 +168,7 @@ class iterator_interface<derived_type> {
         return new_iterator;
     }
 
-    constexpr friend auto operator+=(
+    friend constexpr auto operator+=(
         derived_type& left,
         detail::is_difference_type<derived_type> auto offset) -> derived_type& {
         if constexpr (detail::has_advance<derived_type>) {
@@ -199,7 +199,7 @@ class iterator_interface<derived_type> {
         return copy;
     }
 
-    constexpr friend auto operator-(
+    friend constexpr auto operator-(
         derived_type const& left,
         detail::is_difference_type<derived_type> auto offset) -> derived_type {
         derived_type new_iterator = left;
@@ -213,7 +213,7 @@ class iterator_interface<derived_type> {
         return new_iterator;
     }
 
-    constexpr friend auto operator-=(
+    friend constexpr auto operator-=(
         derived_type& left,
         detail::is_difference_type<derived_type> auto offset) -> derived_type& {
         if constexpr (detail::has_advance<derived_type>) {
@@ -227,7 +227,7 @@ class iterator_interface<derived_type> {
     }
 
     // Get the distance between two iterators.
-    constexpr friend auto operator-(derived_type const& left,
+    friend constexpr auto operator-(derived_type const& left,
                                     derived_type const& right) -> iword
     /* requires(detail::has_distance_to<derived_type>) */ {
         return right.distance_to(left);

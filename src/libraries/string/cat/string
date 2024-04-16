@@ -230,7 +230,7 @@ class fixed_string
     // This is `uword::raw_type` because GCC cannot deduce a string literal's
     // length from an `ssize`.
     template <uword::raw_type other_length>
-    constexpr friend auto operator+(
+    friend constexpr auto operator+(
         fixed_string<length> const& self,
         fixed_string<other_length> const& other_string)
         -> fixed_string<length - 1 + other_length> {
@@ -254,7 +254,7 @@ class fixed_string
 
     // Concatenate a string literal to a `fixed_string`.
     template <uword::raw_type other_length>
-    constexpr friend auto operator+(fixed_string<length> const& self,
+    friend constexpr auto operator+(fixed_string<length> const& self,
                                     char const (&other_string)[other_length])
         -> fixed_string<length - 1u + other_length> {
         return self + fixed_string<other_length>{other_string};
@@ -262,7 +262,7 @@ class fixed_string
 
     // Concatenate a `fixed_string` to a string literal.
     template <uword::raw_type other_length>
-    constexpr friend auto operator+(char const (&other_string)[other_length],
+    friend constexpr auto operator+(char const (&other_string)[other_length],
                                     fixed_string<length> const& self)
         -> fixed_string<length - 1 + other_length> {
         return fixed_string<other_length>{other_string} + self;
