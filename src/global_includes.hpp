@@ -69,8 +69,8 @@ struct monotype_storage {
     }
 
     friend constexpr auto operator==(
-        monotype_storage<T, constant_state> const& self, auto const& rhs)
-        -> bool {
+        monotype_storage<T, constant_state> const& self,
+        auto const& rhs) -> bool {
         return self.storage == rhs;
     }
 
@@ -112,14 +112,15 @@ using sentinel =
 
 // `_` can consume any value to explicitly disregard a `[[nodiscard]]`
 // attribute from a function with side effects.
-[[maybe_unused]] inline cat::detail::unused_type _;
+[[maybe_unused]]
+inline cat::detail::unused_type _;
 
 // `in_place` is consumed by wrapper classes to default-initialize their
 // storage.
-inline constexpr cat::in_place_type in_place;
+constexpr cat::in_place_type in_place;
 
 // `monostate` can be consumed by wrapper classes to represent no storage.
-inline constexpr cat::monostate_type monostate;
+constexpr cat::monostate_type monostate;
 
 // Including the `<cat/runtime>` library is required to link a libCat program,
 // because it contains the `_start` symbol.
@@ -128,13 +129,13 @@ inline constexpr cat::monostate_type monostate;
 // `assert()` is used throughout the library.
 #include <cat/debug>
 
-// `no_type` is required for the `TRY()` macro.
+// `no_type` is required for the `prop()` macro.
 #include <cat/notype>
 
 // Unwrap an error-like container such as `cat::scaredy` or `cat::maybe` iff
 // it holds a value, otherwise propagate it up the call stack. This works due to
 // a GCC extension, statement expressions.
-#define TRY(container)                                                          \
+#define prop(container)                                                          \
     ({                                                                          \
         using try_type = decltype(container);                                   \
         /* static_assert(cat::is_maybe<try_type>||cat::is_scaredy<try_type>);*/ \
@@ -158,24 +159,39 @@ inline constexpr cat::monostate_type monostate;
         (container).value();                                                    \
     })
 
+namespace cat::detail {
+
+inline struct mover {
+    template <typename T>
+    [[nodiscard("A moved-from value should be consumed."), gnu::always_inline,
+      gnu::artificial]]
+    inline friend constexpr decltype(auto) operator*(mover, T&& x) {
+        return ::cat::move(x);
+    }
+
+    // Prevent redundant `mov mov value;` syntax.
+    friend constexpr void operator*(mover, mover) = delete;
+} mover;
+
+}  // namespace cat::detail
+
+#define mov ::cat::detail::mover*
+
 // Placement `new`.
 [[nodiscard]]
-inline constexpr auto
-operator new(unsigned long, void* p_address) -> void* {
+constexpr auto operator new(unsigned long, void* p_address) -> void* {
     return p_address;
 }
 
 // `new[]` and `delete[]` are defined for use in a `constexpr` context.
 [[nodiscard]]
-inline auto
-operator new[](unsigned long, void* p_address) -> void* {
+inline auto operator new[](unsigned long, void* p_address) -> void* {
     return p_address;
 }
 
 [[nodiscard]]
 // NOLINTNEXTLINE Let this be `inline` for now.
-inline auto
-operator new[](unsigned long) -> void* {
+inline auto operator new[](unsigned long) -> void* {
     return reinterpret_cast<void*>(1ul);
 }
 
@@ -196,7 +212,6 @@ inline void operator delete[](void*, unsigned long, std::align_val_t) {
 }
 
 [[nodiscard]]
-inline auto
-operator new[](unsigned long, std::align_val_t align) -> void* {
+inline auto operator new[](unsigned long, std::align_val_t align) -> void* {
     return reinterpret_cast<void*>(align);  // NOLINT
 }

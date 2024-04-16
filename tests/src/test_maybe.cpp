@@ -8,7 +8,7 @@
 struct movable {
     movable() = default;
     movable(movable&&) = default;
-    auto operator=(movable&&){};
+    auto operator=(movable&&) {};
 };
 
 int4 maybe_counter = 0;
@@ -48,13 +48,13 @@ struct maybe_const_non_trivial {
 
 auto maybe_try_success() -> cat::maybe<int> {
     cat::maybe<int> error{0};
-    int boo = TRY(error);
+    int boo = prop(error);
     return boo;
 }
 
 auto maybe_try_fail() -> cat::maybe<int> {
     cat::maybe<int> error{nullopt};
-    int boo = TRY(error);
+    int boo = prop(error);
     return boo;
 }
 
@@ -311,34 +311,42 @@ TEST(test_maybe) {
     maybe_non_trivial nontrivial_val;
     cat::maybe<maybe_non_trivial&> nontrivial_ref_default;
     nontrivial_ref_default = nontrivial_val;
-    [[maybe_unused]] cat::maybe<maybe_non_trivial&> nontrivial_ref =
-        nontrivial_val;
+    [[maybe_unused]]
+    cat::maybe<maybe_non_trivial&> nontrivial_ref = nontrivial_val;
 
     maybe_non_trivial const const_nontrivial_val;
-    [[maybe_unused]] cat::maybe<maybe_non_trivial&> const
-        mut_const_nontrivial_ref_default;
-    [[maybe_unused]] cat::maybe<maybe_non_trivial&> const
-        mut_const_nontrivial_ref = nontrivial_val;
+    [[maybe_unused]]
+    cat::maybe<maybe_non_trivial&> const mut_const_nontrivial_ref_default;
+    [[maybe_unused]]
+    cat::maybe<maybe_non_trivial&> const mut_const_nontrivial_ref =
+        nontrivial_val;
 
-    [[maybe_unused]] cat::maybe<maybe_non_trivial const&>
-        const_mut_nontrivial_ref_default;
-    [[maybe_unused]] cat::maybe<maybe_non_trivial const&>
-        const_mut_nontrivial_ref = nontrivial_val;
-    [[maybe_unused]] cat::maybe<maybe_non_trivial const&>
-        const_mut_nontrivial_ref_2 = const_nontrivial_val;
+    [[maybe_unused]]
+    cat::maybe<maybe_non_trivial const&> const_mut_nontrivial_ref_default;
+    [[maybe_unused]]
+    cat::maybe<maybe_non_trivial const&> const_mut_nontrivial_ref =
+        nontrivial_val;
+    [[maybe_unused]]
+    cat::maybe<maybe_non_trivial const&> const_mut_nontrivial_ref_2 =
+        const_nontrivial_val;
     const_mut_nontrivial_ref = const_nontrivial_val;
 
-    [[maybe_unused]] cat::maybe<maybe_non_trivial const&> const
+    [[maybe_unused]]
+    cat::maybe<maybe_non_trivial const&> const
         const_const_nontrivial_ref_default;
-    [[maybe_unused]] cat::maybe<maybe_non_trivial const&> const
-        const_const_nontrivial_ref = nontrivial_val;
-    [[maybe_unused]] cat::maybe<maybe_non_trivial const&> const
-        const_const_nontrivial_ref_2 = const_nontrivial_val;
+    [[maybe_unused]]
+    cat::maybe<maybe_non_trivial const&> const const_const_nontrivial_ref =
+        nontrivial_val;
+    [[maybe_unused]]
+    cat::maybe<maybe_non_trivial const&> const const_const_nontrivial_ref_2 =
+        const_nontrivial_val;
 
     // `maybe const`
     cat::maybe<int4> const constant_val = 1;
-    [[maybe_unused]] cat::maybe<int4> const constant_null = nullopt;
-    [[maybe_unused]] auto con = constant_val.value();
+    [[maybe_unused]]
+    cat::maybe<int4> const constant_null = nullopt;
+    [[maybe_unused]]
+    auto con = constant_val.value();
 
     // Test constant references.
     int4 nonconstant_int = 10;
@@ -349,8 +357,8 @@ TEST(test_maybe) {
     cat::verify(constant_ref.value() == 10);
 
     // Test move-only types.
-    movable mov;
-    cat::maybe<movable> maybe_movs(cat::move(mov));
+    movable test_move;
+    cat::maybe<movable> maybe_movs(mov test_move);
 
     // Non-trivial constructor and destructor.
     cat::maybe<maybe_non_trivial> nontrivial = maybe_non_trivial();
@@ -377,7 +385,8 @@ TEST(test_maybe) {
 
     // Test `maybe` in a `constexpr` context.
     auto constant_test = []() constexpr {
-        [[maybe_unused]] constexpr cat::maybe<int> const_int_default;
+        [[maybe_unused]]
+        constexpr cat::maybe<int> const_int_default;
 
         // TODO: Enable these `verify()` calls.
 
@@ -397,18 +406,23 @@ TEST(test_maybe) {
         cat::maybe_ptr<void> optptr = nullptr;
         optptr = nullptr;
         optptr = const_optptr;
-        [[maybe_unused]] cat::maybe_ptr<void> optptr2 = optptr;
-        [[maybe_unused]] cat::maybe_ptr<void> optptr3 = const_optptr;
-        [[maybe_unused]] cat::maybe_ptr<void> optptr4;
+        [[maybe_unused]]
+        cat::maybe_ptr<void> optptr2 = optptr;
+        [[maybe_unused]]
+        cat::maybe_ptr<void> optptr3 = const_optptr;
+        [[maybe_unused]]
+        cat::maybe_ptr<void> optptr4;
 
-        [[maybe_unused]] constexpr cat::maybe_ptr<maybe_non_trivial>
-            const_nontrivial_optptr = nullptr;
-        [[maybe_unused]] constexpr cat::maybe_ptr<maybe_non_trivial>
-            const_nontrivial_default_optptr;
-        [[maybe_unused]] cat::maybe_ptr<maybe_non_trivial> nontrivial_optptr =
+        [[maybe_unused]]
+        constexpr cat::maybe_ptr<maybe_non_trivial> const_nontrivial_optptr =
             nullptr;
-        [[maybe_unused]] cat::maybe_ptr<maybe_non_trivial>
-            nontrivial_default_optptr;
+        [[maybe_unused]]
+        constexpr cat::maybe_ptr<maybe_non_trivial>
+            const_nontrivial_default_optptr;
+        [[maybe_unused]]
+        cat::maybe_ptr<maybe_non_trivial> nontrivial_optptr = nullptr;
+        [[maybe_unused]]
+        cat::maybe_ptr<maybe_non_trivial> nontrivial_default_optptr;
     };
     cat::constant_evaluate(constant_test);
 
@@ -478,7 +492,7 @@ TEST(test_maybe) {
     static_assert(!cat::is_scaredy<cat::maybe<int>>);
     static_assert(!cat::is_scaredy<decltype(opt_original)>);
 
-    // Test `TRY` macro.
+    // Test `prop` macro.
     _ = maybe_try_success().verify();
     cat::maybe fail = maybe_try_fail();
     cat::verify(!fail.has_value());

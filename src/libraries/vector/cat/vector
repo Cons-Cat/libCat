@@ -79,7 +79,7 @@ class vector : public collection_interface<vector<T>, T, true> {
         } else {
             // Make a new allocation with size feedback.
             auto [alloc_span, alloc_bytes] =
-                TRY(internal_allocate(allocator, minimum_capacity));
+                prop(internal_allocate(allocator, minimum_capacity));
 
             this->current_capacity = alloc_bytes / ssizeof(T);
             this->p_storage = alloc_span.data();
@@ -93,7 +93,7 @@ class vector : public collection_interface<vector<T>, T, true> {
     static constexpr auto reserved(is_allocator auto& allocator,
                                    iword capacity) -> maybe<vector<T>> {
         vector<T> new_vector;
-        TRY(new_vector.reserve(allocator, capacity));
+        prop(new_vector.reserve(allocator, capacity));
         return new_vector;
     }
 
@@ -154,7 +154,7 @@ class vector : public collection_interface<vector<T>, T, true> {
                 }
             } else {
                 auto [alloc_span, alloc_bytes] =
-                    TRY(internal_allocate(allocator, minimum_capacity));
+                    prop(internal_allocate(allocator, minimum_capacity));
 
                 p_storage = alloc_span.data();
                 this->current_capacity = idx(alloc_bytes / ssizeof(T));
@@ -171,7 +171,7 @@ class vector : public collection_interface<vector<T>, T, true> {
         -> maybe<void> {
         if (size > this->current_capacity) {
             // This sets `this->current_capacity` and `this->p_storage`.
-            TRY(this->reserve(allocator, size));
+            prop(this->reserve(allocator, size));
         }
 
         // If the new size is not larger, simply shrink size and maintain
@@ -185,7 +185,7 @@ class vector : public collection_interface<vector<T>, T, true> {
     constexpr auto clone(
         is_allocator auto& allocator) const& -> maybe<vector<T>> {
         vector<T> new_vector =
-            TRY(vector<T>::reserved(allocator, this->current_capacity));
+            prop(vector<T>::reserved(allocator, this->current_capacity));
         new_vector.current_size = this->current_size;
         relocate(this->begin(), this->end(), new_vector.begin());
 
@@ -201,7 +201,7 @@ class vector : public collection_interface<vector<T>, T, true> {
     constexpr auto push_back(is_allocator auto& allocator,
                              U const& value) -> maybe<void> {
         if (this->current_size + 1 > this->current_capacity) {
-            TRY(this->increase_storage(allocator));
+            prop(this->increase_storage(allocator));
         }
 
         this->p_storage[this->current_size.raw] = static_cast<T>(value);
