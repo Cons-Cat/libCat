@@ -10,6 +10,9 @@ enum class overflow_policies;
 template <typename T, overflow_policies>
 struct arithmetic;
 
+template <overflow_policies>
+struct index;
+
 struct bool2;
 struct bool4;
 
@@ -153,6 +156,11 @@ using make_unsigned_type = detail::make_unsigned_trait<T>::type;
 template <typename T, auto policy>
 struct detail::make_unsigned_trait<arithmetic<T, policy>> {
     using type = arithmetic<typename make_unsigned_trait<T>::type, policy>;
+};
+
+template <auto policy>
+struct detail::make_unsigned_trait<index<policy>> {
+    using type = index<policy>;
 };
 
 namespace detail {
@@ -608,7 +616,7 @@ template <typename T>
 concept is_signed_integral = is_signed<T> && is_integral<T>;
 
 template <typename T>
-concept is_unsigned_integral = (!is_signed<T>)&&is_integral<T>;
+concept is_unsigned_integral = (!is_signed<T>) && is_integral<T>;
 
 template <is_integral Sign, is_integral T>
 using copy_sign_from = conditional<is_signed<Sign>, make_signed_type<Sign>,
