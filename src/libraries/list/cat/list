@@ -71,9 +71,9 @@ class list : public collection_interface<list<T>, T> {
     // Being `protected:` permits derived classes and adaptors to call this.
     // Only allow the shallow copy constructor to be used by these static
     // factory member functions. For public copying, `.clone()` should be used.
-    [[deprecated(
-        "Implicit copying of `cat::list` is forbidden. Call `.clone() "
-        "instead!")]]  //
+    [[deprecated("Implicit copying of `cat::list` is forbidden. Call `.clone() "
+                 "instead!")]]
+    //
     constexpr list(list<T> const&) = default;
 
   public:
@@ -105,7 +105,7 @@ class list : public collection_interface<list<T>, T> {
                      Args&&... initializers) -> maybe<list<T>> {
         list<T> new_list;
         // TODO: Check if a recursive function is more efficient here.
-        array values = {forward<Args>(initializers)...};
+        array values = {fwd(initializers)...};
         // TODO: Optimize memory allocations with a multiple `.push_back()`
         // overload.
         for (iword i = 0; i < ssizeof_pack<Args...>(); ++i) {
@@ -249,7 +249,7 @@ class list : public collection_interface<list<T>, T> {
         }
 
         detail::list_node<T>& node = *memory.value();
-        new (&node.storage) T(forward<Args>(arguments)...);
+        new (&node.storage) T(fwd(arguments)...);
 
         if (this->length == 0) [[unlikely]] {
             // If this list has nothing in it, `.emplace()` must be
@@ -262,8 +262,8 @@ class list : public collection_interface<list<T>, T> {
     }
 
     // Remove and deallocate an element from this list.
-    auto erase(is_allocator auto& allocator, iterator_type where)
-        -> maybe<iterator_type> {
+    auto erase(is_allocator auto& allocator,
+               iterator_type where) -> maybe<iterator_type> {
         if (this->length == 0) [[unlikely]] {
             // Prevent a segfault when the list is empty.
             return iterator_type(this->p_head);
@@ -292,8 +292,8 @@ class list : public collection_interface<list<T>, T> {
     // Allocate a node and insert it at the beginning of this list.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto push_front(is_allocator auto& allocator, U const& value)
-        -> maybe<iterator_type> {
+    auto push_front(is_allocator auto& allocator,
+                    U const& value) -> maybe<iterator_type> {
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -309,8 +309,8 @@ class list : public collection_interface<list<T>, T> {
 
     // Allocate a node and insert it at the beginning of this list.
     template <typename... Args>
-    auto emplace_front(is_allocator auto& allocator, Args&&... arguments)
-        -> maybe<iterator_type> {
+    auto emplace_front(is_allocator auto& allocator,
+                       Args&&... arguments) -> maybe<iterator_type> {
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -318,7 +318,7 @@ class list : public collection_interface<list<T>, T> {
         }
 
         detail::list_node<T>& node = *memory.value();
-        new (&node.storage) T(forward<Args>(arguments)...);
+        new (&node.storage) T(fwd(arguments)...);
         this->place_node_front(node);
 
         return iterator_type(&node);
@@ -346,8 +346,8 @@ class list : public collection_interface<list<T>, T> {
     // Allocate a node and insert it at the end of this list.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto push_back(is_allocator auto& allocator, U const& value)
-        -> maybe<iterator_type> {
+    auto push_back(is_allocator auto& allocator,
+                   U const& value) -> maybe<iterator_type> {
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -363,8 +363,8 @@ class list : public collection_interface<list<T>, T> {
 
     // Allocate a node and insert it at the end of this list.
     template <typename... Args>
-    auto emplace_back(is_allocator auto& allocator, Args&&... arguments)
-        -> maybe<iterator_type> {
+    auto emplace_back(is_allocator auto& allocator,
+                      Args&&... arguments) -> maybe<iterator_type> {
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -372,7 +372,7 @@ class list : public collection_interface<list<T>, T> {
         }
 
         detail::list_node<T>& node = *memory.value();
-        new (&node.storage) T(forward<Args>(arguments)...);
+        new (&node.storage) T(fwd(arguments)...);
         this->place_node_back(node);
 
         return iterator_type(&node);
@@ -480,7 +480,8 @@ class forward_list : public collection_interface<forward_list<T>, T> {
     // factory member functions. For public copying, `.clone()` should be used.
     [[deprecated(
         "Implicit copying of `cat::forward_list` is forbidden. Call `.clone() "
-        "instead!")]]  //
+        "instead!")]]
+    //
     constexpr forward_list(forward_list<T> const&) = default;
 
   public:
@@ -511,7 +512,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
                      Args&&... initializers) -> maybe<forward_list<T>> {
         forward_list<T> new_list;
         // TODO: Check if a recursive function is more efficient here.
-        array array = {forward<Args>(initializers)...};
+        array array = {fwd(initializers)...};
         // TODO: Optimize memory allocations with a multiple `.push_back()`
         // overload.
         for (iword i = 0; i < ssizeof_pack<Args...>(); ++i) {
@@ -629,7 +630,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
         }
 
         detail::forward_list_node<T>& node = *memory.value();
-        new (&node.storage) T(forward<Args>(arguments)...);
+        new (&node.storage) T(fwd(arguments)...);
 
         if (this->length == 0) [[unlikely]] {
             // If this list has nothing in it, `.insert_after()` must be
@@ -651,8 +652,8 @@ class forward_list : public collection_interface<forward_list<T>, T> {
     // Allocate a node and insert it at the beginning of this list.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto push_front(is_allocator auto& allocator, U const& value)
-        -> maybe<iterator_type> {
+    auto push_front(is_allocator auto& allocator,
+                    U const& value) -> maybe<iterator_type> {
         cat::maybe memory =
             allocator.template alloc<detail::forward_list_node<T>>();
         if (!memory.has_value()) {
@@ -669,8 +670,8 @@ class forward_list : public collection_interface<forward_list<T>, T> {
 
     // Allocate a node and insert it at the beginning of this list.
     template <typename... Args>
-    auto emplace_front(is_allocator auto& allocator, Args&&... arguments)
-        -> maybe<iterator_type> {
+    auto emplace_front(is_allocator auto& allocator,
+                       Args&&... arguments) -> maybe<iterator_type> {
         cat::maybe memory =
             allocator.template alloc<detail::forward_list_node<T>>();
         if (!memory.has_value()) {
@@ -679,7 +680,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
         }
 
         detail::forward_list_node<T>& node = *memory.value();
-        new (&node.storage) T(forward<Args>(arguments)...);
+        new (&node.storage) T(fwd(arguments)...);
         this->place_node_front(node);
 
         return iterator_type(&node);

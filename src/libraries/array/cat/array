@@ -27,7 +27,7 @@ class array : public collection_interface<array<T, length>, T, true> {
         // Explicitly converting this type allows the first argument to coerce
         // the type for following arguments.
         // i.e. `cat::array shorts = {int2{0}, 1, 2};`
-        : storage(static_cast<T>(forward<Args>(arguments))...) {
+        : storage(static_cast<T>(fwd(arguments))...) {
     }
 
     constexpr auto operator=(array<T, length> const& other_array)
@@ -44,8 +44,8 @@ class array : public collection_interface<array<T, length>, T, true> {
         return *this;
     }
 
-    constexpr auto operator=(array<T, length>&& other_array)
-        -> array& = default;
+    constexpr auto operator=(array<T, length>&& other_array) -> array& =
+                                                                    default;
 
     // Converting move assignment operator.
     template <typename U>
@@ -68,7 +68,7 @@ class array : public collection_interface<array<T, length>, T, true> {
         // Explicitly converting this type allows the first argument to coerce
         // the type for following arguments.
         // i.e. `cat::array shorts = {int2{0}, 1, 2};`
-        array<T, length> array{static_cast<T>(forward<Args>(arguments))...};
+        array<T, length> array{static_cast<T>(fwd(arguments))...};
         return array;
     }
 

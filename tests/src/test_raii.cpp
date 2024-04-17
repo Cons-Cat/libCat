@@ -11,7 +11,7 @@ struct Foo {
 
     Foo() = default;
 
-    Foo(cat::string string) : data(cat::move(string)) {
+    Foo(cat::string string) : data(mov string) {
         // auto _ = cat::print(data);
         // auto _ = cat::println(" constructor");
     }
@@ -22,12 +22,14 @@ struct Foo {
         // auto _ = cat::println(this->data);
     }
 
-    auto operator=(cat::string string) -> Foo& {
-        this->data = cat::move(string);
+    auto
+    operator=(cat::string string) -> Foo& {
+        this->data = mov string;
         return *this;
     }
 
-    void raii() const {
+    void
+    raii() const {
         // auto _ = cat::print(this->data);
         // auto _ = cat::println(" calls raii()!");
         ++raii_counter;
@@ -51,12 +53,12 @@ TEST(test_raii) {
 
     // Test move-assignment.
     // auto _ = cat::println("Move moo into foo.");
-    foo = cat::move(moo);
+    foo = mov moo;
     cat::verify(!moo.has_ownership());
 
     // auto _ = cat::println("Move foo into func().");
-    // `cat::move()` is required:
-    pass_by_value(move(foo));
+    // `mov()` is required:
+    pass_by_value(mov foo);
     cat::verify(!foo.has_ownership());
 
     // This is deliberately ill-formed:
@@ -91,5 +93,5 @@ TEST(test_raii) {
     unique = 2;
 
     cat::unique<int> original = 0;
-    cat::unique<int8> into = cat::move(original);
+    cat::unique<int8> into = mov original;
 }

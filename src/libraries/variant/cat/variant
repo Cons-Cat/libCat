@@ -179,7 +179,7 @@ class variant {
     // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
     constexpr variant(T&& input) {
         // Construct a new `T` at the address where it will be gotten from.
-        construct_at(addressof(this->get<T>()), forward<T>(input));
+        construct_at(addressof(this->get<T>()), fwd(input));
         this->discriminant = this->alternative_index<T>;
     };
 
@@ -212,10 +212,10 @@ class variant {
             if constexpr (!is_trivially_destructible<T>) {
                 this->get<T>().~T();
             }
-            this->get<T>() = forward<T>(operand);
+            this->get<T>() = fwd(operand);
             this->discriminant = this->alternative_index<T>;
         } else {
-            this->get<T>() = forward<T>(operand);
+            this->get<T>() = fwd(operand);
         }
         return *this;
     }
@@ -244,7 +244,7 @@ class variant {
     template <typename... Us>
     constexpr auto operator=(variant<Us...>&& operand)
         -> variant<alternative_types...>& {
-        this->assign_other_variant<Us...>(forward<variant<Us...>>(operand));
+        this->assign_other_variant<Us...>(mov operand);
         return *this;
     }
 
@@ -373,8 +373,8 @@ class variant {
 
     template <typename T>
     [[nodiscard]]
-    constexpr auto friend
-    operator==(variant<alternative_types...> const& self, T other) -> bool {
+    friend constexpr auto operator==(variant<alternative_types...> const& self,
+                                     T other) -> bool {
         return self.recurse_converting_equality<0, alternative_types...>(other);
     }
 
@@ -382,7 +382,7 @@ class variant {
     template <typename... Patterns>
         requires(is_specialization<Patterns, detail::pattern_invocable> && ...)
     constexpr void match(Patterns&&... patterns) {
-        detail::match_patterns (*this)(forward<Patterns>(patterns)...);
+        detail::match_patterns (*this)(fwd(patterns)...);
     }
 
     // Holds true if this `variant` currently has some value of the type

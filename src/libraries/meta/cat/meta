@@ -301,28 +301,31 @@ template <typename T>
 using remove_volatile = detail::remove_volatile_trait<T>::type;
 #endif
 
+#ifdef __clang__
 template <typename T>
 using remove_cv = __remove_cv(T);
-
-// GCC 13 has this intrinsic but Clang 19 does not.
-#if __has_builtin(__remove_reference)
-template <typename T>
-using remove_reference = __remove_reference(T);
 #else
+// GCC cannot use type trait intrinsics directly inside type aliases.
+namespace detail {
+    template <typename T>
+    struct remove_cv_trait {
+        using type = __remove_cv(T);
+    };
+}  // namespace detail
+
+template <typename T>
+using remove_cv = detail::remove_cv_trait<T>::type;
+#endif
+
+#ifdef __clang__
+template <typename T>
+using remove_reference = __remove_reference_t(T);
+#else
+// GCC cannot use type trait intrinsics directly inside type aliases.
 namespace detail {
     template <typename T>
     struct remove_reference_trait {
-        using type = T;
-    };
-
-    template <typename T>
-    struct remove_reference_trait<T&> {
-        using type = T;
-    };
-
-    template <typename T>
-    struct remove_reference_trait<T&&> {
-        using type = T;
+        using type = __remove_reference(T);
     };
 }  // namespace detail
 
@@ -333,11 +336,37 @@ using remove_reference = detail::remove_reference_trait<T>::type;
 template <typename T>
 using remove_constref = remove_const<remove_reference<T>>;
 
+#ifdef __clang__
 template <typename T>
 using remove_cvref = __remove_cvref(T);
+#else
+// GCC cannot use type trait intrinsics directly inside type aliases.
+namespace detail {
+    template <typename T>
+    struct remove_cvref_trait {
+        using type = __remove_cvref(T);
+    };
+}  // namespace detail
 
 template <typename T>
+using remove_cvref = detail::remove_cvref_trait<T>::type;
+#endif
+
+#ifdef __clang__
+template <typename T>
 using remove_pointer = __remove_pointer(T);
+#else
+// GCC cannot use type trait intrinsics directly inside type aliases.
+namespace detail {
+    template <typename T>
+    struct remove_pointer_trait {
+        using type = __remove_pointer(T);
+    };
+}  // namespace detail
+
+template <typename T>
+using remove_pointer = detail::remove_pointer_trait<T>::type;
+#endif
 
 template <auto constant_value>
 struct constant {
@@ -955,19 +984,10 @@ move(T&& input) -> cat::remove_reference<T>&& {
     return static_cast<cat::remove_reference<T>&&>(input);
 }
 
-// TODO: use identity_type
 template <typename T>
 [[nodiscard, gnu::artificial]]
 inline constexpr auto
-forward(cat::remove_reference<T>& input) -> T&& {
-    return static_cast<T&&>(input);
-}
-
-template <typename T>
-    requires(!cat::is_lvalue_reference<T>)
-[[nodiscard, gnu::artificial]]
-inline constexpr auto
-forward(cat::remove_reference<T>&& input) -> T&& {
+forward(cat::identity_type<T>& input) -> T&& {
     return static_cast<T&&>(input);
 }
 
@@ -982,7 +1002,7 @@ using std::forward;
 using std::move;
 
 namespace detail {
-    inline struct mover {
+    constinit inline struct mover {
         template <typename T>
         [[nodiscard("A moved-from value should be consumed."),
           gnu::always_inline, gnu::artificial]]
