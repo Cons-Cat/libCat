@@ -304,16 +304,16 @@ class bit_reference {
 
     // Create a `bit_reference` to a bit position specified by `mask` into a
     // `storage_type`.
-    static constexpr auto from_mask(storage_type& reference, storage_type mask)
-        -> bit_reference {
+    static constexpr auto from_mask(storage_type& reference,
+                                    storage_type mask) -> bit_reference {
         // Call the internal `private:` constructor.
         return bit_reference(reference, mask);
     }
 
     // Create a `bit_reference` to a bit position `offset` bits from the right
     // of a `storage_type`.
-    static constexpr auto from_offset(storage_type& reference, uword offset)
-        -> bit_reference {
+    static constexpr auto from_offset(storage_type& reference,
+                                      uword offset) -> bit_reference {
         if !consteval {
             assert(offset < limits<storage_type>::bits);
         }
@@ -448,8 +448,8 @@ class bit_value {
         return self.value == other.value;
     }
 
-    friend constexpr auto operator==(bit_value const& self, bool other)
-        -> bool {
+    friend constexpr auto operator==(bit_value const& self,
+                                     bool other) -> bool {
         return self.value == other;
     }
 
@@ -646,28 +646,31 @@ struct byte {
     constexpr byte(T&& input) : value(forward<T>(input)) {  // NOLINT
     }
 
-    [[nodiscard]] constexpr operator char() const {
+    [[nodiscard]]
+    constexpr operator char() const {
         return static_cast<char>(this->value);
     }
 
-    [[nodiscard]] constexpr operator unsigned char() const {
+    [[nodiscard]]
+    constexpr operator unsigned char() const {
         return static_cast<unsigned char>(this->value);
     }
 
-    [[nodiscard]] constexpr operator signed char() const {
+    [[nodiscard]]
+    constexpr operator signed char() const {
         return static_cast<signed char>(this->value);
     }
 
     template <typename T>
-    [[nodiscard]] constexpr explicit operator T()
+    [[nodiscard]]
+    constexpr explicit operator T()
         requires(sizeof(T) == 1)
     {
         return bit_cast<T>(value);
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator&(is_integral auto from) -> byte {
+    constexpr auto operator&(is_integral auto from) -> byte {
         return this->value & from;
     }
 
@@ -677,8 +680,7 @@ struct byte {
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator|(is_integral auto from) -> byte {
+    constexpr auto operator|(is_integral auto from) -> byte {
         return this->value | from;
     }
 
@@ -688,8 +690,7 @@ struct byte {
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator<<(is_integral auto from) -> byte {
+    constexpr auto operator<<(is_integral auto from) -> byte {
         return this->value << from;
     }
 
@@ -699,8 +700,7 @@ struct byte {
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator>>(is_integral auto from) -> byte {
+    constexpr auto operator>>(is_integral auto from) -> byte {
         return this->value >> from;
     }
 
@@ -722,6 +722,10 @@ template <typename U>
 [[nodiscard]]
 // NOLINTNEXTLINE This is forward-declared in `<cat/memory>`.
 constexpr auto is_aligned(uintptr<U> p_value, uword alignment) -> bool;
+
+template <cat::overflow_policies policy>
+[[nodiscard]]
+constexpr auto is_aligned(index<policy> value, uword alignment) -> bool;
 
 template <typename U>
 [[nodiscard]]
@@ -758,24 +762,21 @@ concept is_enum_flag = enum_flag_trait<T>::value;
 
 template <cat::is_enum_flag T>
 [[nodiscard]]
-constexpr auto
-operator|(T flag_1, T flag_2) -> T {
+constexpr auto operator|(T flag_1, T flag_2) -> T {
     using U = cat::underlying_type<T>;
     return static_cast<T>(static_cast<U>(flag_1) | static_cast<U>(flag_2));
 }
 
 template <cat::is_enum_flag T>
 [[nodiscard]]
-constexpr auto
-operator|(T flag_1, cat::underlying_type<T> flag_2) -> T {
+constexpr auto operator|(T flag_1, cat::underlying_type<T> flag_2) -> T {
     using U = cat::underlying_type<T>;
     return static_cast<T>(static_cast<U>(flag_1) | flag_2);
 }
 
 template <cat::is_enum_flag T>
 [[nodiscard]]
-constexpr auto
-operator&(T flag_1, T flag_2) -> T {
+constexpr auto operator&(T flag_1, T flag_2) -> T {
     using U = cat::underlying_type<T>;
     return static_cast<T>(static_cast<U>(flag_1) & static_cast<U>(flag_2));
 }
