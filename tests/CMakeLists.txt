@@ -43,8 +43,8 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_arrays.cpp
     # ${CMAKE_SOURCE_DIR}/tests/src/test_compare_strings.cpp
     # ${CMAKE_SOURCE_DIR}/tests/src/test_format_strings.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_linear_allocator.cpp
-    # ${CMAKE_SOURCE_DIR}/tests/src/test_pool_allocator.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_linear_allocator.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_pool_allocator.cpp
     # ${CMAKE_SOURCE_DIR}/tests/src/test_list.cpp
 	${CMAKE_SOURCE_DIR}/tests/src/test_meta.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_arithmetic.cpp
