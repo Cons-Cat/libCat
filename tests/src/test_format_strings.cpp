@@ -8,7 +8,9 @@ TEST(test_format_strings) {
     // Initialize an allocator.
     cat::page_allocator pager;
     cat::span back = pager.alloc_multi<cat::byte>(4_uki).or_exit();
-    defer(pager.free(back);)
+    defer {
+        pager.free(back);
+    };
     auto allocator = cat::linear_allocator(back.data(), back.size());
 
     // Test `int4` conversion.
@@ -36,24 +38,24 @@ TEST(test_format_strings) {
     // TODO: `formatted_string_int` has an incorrect `.size()`, but the content
     // is correct.
     cat::verify(cat::compare_strings(formatted_string_int, "bb52aa130cc"));
-    // _ = cat::println(formatted_string_int);
+    // auto _ = cat::println(formatted_string_int);
 
     // Test formatting `float`.
     allocator.reset();
     cat::string string_float = cat::to_chars(allocator, 1.234f).or_exit();
     cat::verify(cat::compare_strings(string_float.data(), "1.234E0"),
                 string_float);
-    // _ = cat::println(string_float);
+    // auto _ = cat::println(string_float);
 
     cat::string formatted_string_float =
         cat::format(allocator, "a{}b", 1.234f).or_exit();
     cat::verify(cat::compare_strings(formatted_string_float, "a1.234E0b"));
-    // _ = cat::println(formatted_string_float);
+    // auto _ = cat::println(formatted_string_float);
 
     cat::string formatted_string_double =
         cat::format(allocator, "a{}b", 1.234).or_exit();
     cat::verify(cat::compare_strings(formatted_string_double, "a1.234E0b"));
-    // _ = cat::println(formatted_string_double);
+    // auto _ = cat::println(formatted_string_double);
 
     // Test `cat::to_string_at()`.
     cat::array<char, 100u> array;
@@ -76,7 +78,7 @@ TEST(test_format_strings) {
     // auto make_hi_in_const = [](int4 value) constexpr->cat::string {
     //     cat::array<char, 100> array{};
     //     cat::span<char> array_span{array.data(), array.size()};
-    //     _ = cat::to_string_at(value, array_span).value();
+    //     auto _ = cat::to_string_at(value, array_span).value();
     //     return "Hi";
     // };
     // [[maybe_unused]] constexpr auto hi = make_hi_in_const(1);

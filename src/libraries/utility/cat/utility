@@ -145,43 +145,6 @@ constexpr auto to_underlying(T any_enum) {
     return static_cast<underlying_type<T>>(any_enum);
 }
 
-namespace detail {
-    template <typename closure_type>
-    struct defer_wrapper {
-        closure_type invocable;
-
-        defer_wrapper(closure_type&& closure) : invocable(closure) {
-        }
-
-        ~defer_wrapper() {
-            this->invocable();
-        }
-    };
-}  // namespace detail
-
-// This must be split into two macros, because the `##` is otherwise evaluated
-// at the wrong time.
-#define LIBCAT_CONCAT2(x, y) x##y
-#define LIBCAT_CONCAT(x, y) LIBCAT_CONCAT2(x, y)
-
-// `defer()` is a macro that instantiates a scoped object which executes some
-// arbitrary closure in its destructor.
-// For example:
-//     void* p_mem1 = allocator.alloc();
-//     void* p_mem2 = allocator.alloc();
-//     defer(allocator.free(p_mem1);
-//           allocator.free(p_mem2);)
-
-// `__COUNTER__` is defined by GCC, and it expands to a monotonically increasing
-// digit every time it is expanded. This guarantees that every instance of
-// `defer_wrapper` has a unique name.
-
-#define defer(deferred_code)                    \
-    auto LIBCAT_CONCAT(_defer__, __COUNTER__) = \
-        cat::detail::defer_wrapper([&]() {      \
-            deferred_code                       \
-        });
-
 // TODO: Support `cat::ref`, to enable `variant` and `tuple` to hold references
 // more easily.
 

@@ -37,7 +37,7 @@ auto nix::syscall(cat::iword call, Args... parameters) -> nix::scaredy_nix<T>
         return static_cast<linux_error>(result);
     }
     if constexpr (cat::is_void<T>) {
-        return monostate;
+        return cat::monostate;
     } else {
         return static_cast<T>(result);
     }

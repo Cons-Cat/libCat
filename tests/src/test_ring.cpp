@@ -9,7 +9,9 @@ TEST(test_ring) {
     cat::page_allocator pager;
     pager.reset();
     auto page = pager.opq_alloc_multi<cat::byte>(4_ki - 32).or_exit();
-    defer(pager.free(page);)
+    defer {
+        pager.free(page);
+    };
     auto allocator = cat::linear_allocator::backed_handle(pager, page);
 
     cat::ring<int4> ring_int4;
@@ -17,7 +19,7 @@ TEST(test_ring) {
     cat::verify(ring_int4.capacity() == 0);
 
     // Push onto ring.
-    _ = ring_int4.reserve(allocator, 4).verify();
+    auto _ = ring_int4.reserve(allocator, 4).verify();
     ring_int4.push_back(1);
     ring_int4.push_back(3);
     ring_int4.push_back(2);

@@ -20,7 +20,7 @@ TEST(test_pool_allocator) {
 
     // Test allocation limit is correct.
     for (int4 i = 0; i < (128 / 8) - 2; ++i) {
-        _ = allocator.alloc<int4>().verify();
+        auto _ = allocator.alloc<int4>().verify();
     }
     cat::maybe failed_allocation = allocator.alloc<int4>();
     cat::verify(!failed_allocation.has_value());
@@ -32,7 +32,7 @@ TEST(test_pool_allocator) {
 
     // Test freeing memory.
     for (int4 i = 0; i < (128 / 8) - 1; ++i) {
-        _ = allocator.alloc<int4>().verify();
+        auto _ = allocator.alloc<int4>().verify();
     }
     failed_allocation = allocator.alloc<int4>();
     cat::verify(!failed_allocation.has_value());

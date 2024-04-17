@@ -17,7 +17,7 @@ TEST(test_arrays) {
     cat::array<int4, 1u> array_3 = {0};
     array_2 = cat::move(array_3);  // NOLINT
     // Move constructing a array:
-    _ = cat::move(array_1);  // NOLINT
+    auto _ = cat::move(array_1);  // NOLINT
 
     // `const` array.
     cat::array<int4, 3u> const array_const = {0, 1, 2};
@@ -28,9 +28,9 @@ TEST(test_arrays) {
         cat::array<int4, 1u> const_array_1;
         cat::array<int4, 1u> const_array_2 = {1};
         // NOLINTNEXTLINE Just be explicit about the move here.
-        _ = cat::move(const_array_1);
+        auto _ = cat::move(const_array_1);
         // NOLINTNEXTLINE Just be explicit about the move here.
-        _ = cat::move(const_array_2);
+        auto _ = cat::move(const_array_2);
     };
     cat::constant_evaluate(constant_test);
 
@@ -54,7 +54,7 @@ TEST(test_arrays) {
         cat::verify(a == array_1[count]);
         ++count;
     }
-    _ = array_1.cbegin();
+    auto _ = array_1.cbegin();
 
     for (int4 const& a : cat::as_const_reverse(array_1)) {
         --count;
@@ -74,7 +74,7 @@ TEST(test_arrays) {
     cat::array implicit_array_3(0, 1, 2, 3, 4);
     static_assert(implicit_array_1.size() == 5u);
     static_assert(implicit_array_1.capacity() == 5);
-    _ = implicit_array_1.capacity();
+    auto _ = implicit_array_1.capacity();
     static_assert(implicit_array_2.size() == 5);
     static_assert(implicit_array_3.size() == 5);
 
@@ -95,12 +95,12 @@ TEST(test_arrays) {
 
     // Slicing array.
     [[maybe_unused]] cat::span span = array_1.first(1u);
-    _ = array_1.subspan(0u, 2u);
-    _ = array_1.last(2u);
+    auto _ = array_1.subspan(0u, 2u);
+    auto _ = array_1.last(2u);
 
     [[maybe_unused]] cat::span const span_const = array_1.first(1u);
-    _ = array_const.subspan(0u, 2u);
-    _ = array_const.last(2u);
+    auto _ = array_const.subspan(0u, 2u);
+    auto _ = array_const.last(2u);
 
     // Test array copy-assignment.
     cat::array base_array = {0, 0, 0, 0};

@@ -11,7 +11,7 @@
 
 void function(void*) {
     for (int4 i = 0; i < 15; ++i) {
-        // _ = cat::println("Moo?");
+        // auto _ = cat::println("Moo?");
     }
     cat::exit();
 }
@@ -22,8 +22,8 @@ TEST(test_thread) {
     thread.create(allocator, 2_uki, function, nullptr)
         .or_exit("Failed to make thread!");
     for (int4 i = 0; i < 10; ++i) {
-        // _ = cat::println("Boo!");
+        // auto _ = cat::println("Boo!");
     }
     thread.join().or_exit("Failed to join thread!");
-    // _ = cat::println("Finished!");
+    // auto _ = cat::println("Finished!");
 }

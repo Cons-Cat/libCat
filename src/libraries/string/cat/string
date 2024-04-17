@@ -324,7 +324,7 @@ auto cat::maybe<T>::or_exit(cat::string const error_message,
             return;
         }
     } else {
-        _ = eprintln(error_message);
+        auto _ = eprintln(error_message);
         exit(exit_code);
     }
 }
@@ -340,7 +340,7 @@ auto cat::maybe<T>::or_exit(cat::string const error_message,
             return;
         }
     } else {
-        _ = eprintln(error_message);
+        auto _ = eprintln(error_message);
         exit(exit_code);
     }
 }
@@ -356,7 +356,7 @@ auto cat::maybe<T>::or_exit(cat::string const error_message,
             return;
         }
     } else {
-        _ = eprintln(error_message);
+        auto _ = eprintln(error_message);
         exit(exit_code);
     }
 }
@@ -372,7 +372,7 @@ auto cat::maybe<T>::or_exit(cat::string const error_message,
             return;
         }
     } else {
-        _ = eprintln(error_message);
+        auto _ = eprintln(error_message);
         exit(exit_code);
     }
 }

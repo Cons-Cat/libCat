@@ -8,22 +8,41 @@
 
 #include <cat/compare>
 
-// libCat provides a `_` variable that consumes a function's output, but
-// cannot be assigned to any variable.
-namespace cat {
-namespace detail {
-    struct [[maybe_unused]] unused_type {
-        template <typename T>
-        // NOLINTNEXTLINE Allow this to return void.
-        constexpr void operator=(T const&) {
-        }
+namespace cat::detail {
+template <typename F>
+class deferrer_callback {
+    F callback;
 
-        // `unused_type` cannot be assigned to any variable.
-        operator auto() = delete;
-        // `unused_type` cannot be assigned to itself, i.e. `_ = _`.
-        auto operator=(unused_type) = delete;
-    };
-}  // namespace detail
+  public:
+    template <typename T>
+    deferrer_callback(T&& f) : callback(f) {  // NOLINT
+    }
+
+    ~deferrer_callback() {
+        callback();
+    }
+};
+
+inline constinit struct {
+    template <typename F>
+    auto operator<<(F&& callback) -> deferrer_callback<F> {
+        return deferrer_callback<F>(callback);
+    }
+} deferrer [[maybe_unused]];
+}  // namespace cat::detail
+
+// `defer` is a macro that instantiates a scoped object which executes some
+// arbitrary closure in its destructor.
+// For example:
+//     void* p_mem1 = allocator.alloc();
+//     void* p_mem2 = allocator.alloc();
+//     defer {
+//         allocator.free(p_mem1);
+//         allocator.free(p_mem2);
+//     };
+#define defer auto _ = ::cat::detail::deferrer << [&]
+
+namespace cat {
 
 // `in_place_type` is consumed by wrapper classes to default-initialize their
 // storage.
@@ -108,19 +127,14 @@ template <typename T, T in_sentinel>
 using sentinel =
     compact<T, detail::sentinel_predicate<T, in_sentinel>, in_sentinel>;
 
-}  // namespace cat
-
-// `_` can consume any value to explicitly disregard a `[[nodiscard]]`
-// attribute from a function with side effects.
-[[maybe_unused]]
-inline cat::detail::unused_type _;
-
 // `in_place` is consumed by wrapper classes to default-initialize their
 // storage.
-constexpr cat::in_place_type in_place;
+constexpr in_place_type in_place;
 
 // `monostate` can be consumed by wrapper classes to represent no storage.
 constexpr cat::monostate_type monostate;
+
+}  // namespace cat
 
 // Including the `<cat/runtime>` library is required to link a libCat program,
 // because it contains the `_start` symbol.
@@ -135,7 +149,7 @@ constexpr cat::monostate_type monostate;
 // Unwrap an error-like container such as `cat::scaredy` or `cat::maybe` iff
 // it holds a value, otherwise propagate it up the call stack. This works due to
 // a GCC extension, statement expressions.
-#define prop(container)                                                          \
+#define prop(container)                                                         \
     ({                                                                          \
         using try_type = decltype(container);                                   \
         /* static_assert(cat::is_maybe<try_type>||cat::is_scaredy<try_type>);*/ \

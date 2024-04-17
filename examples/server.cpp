@@ -30,7 +30,7 @@ auto main() -> int {
 
             // TODO: This comparison is always false.
             if (cat::compare_strings(input, "exit")) {
-                _ = cat::println("Exiting.");
+                auto _ = cat::println("Exiting.");
                 exit = true;
                 break;
             }
@@ -41,8 +41,8 @@ auto main() -> int {
                     message_buffer[cat::idx(i)] = '\0';
                 }
 
-                _ = cat::print("Recieved: ");
-                _ = cat::println(message_buffer.data());
+                auto _ = cat::print("Recieved: ");
+                auto _ = cat::println(message_buffer.data());
                 break;
             }
         }
@@ -50,5 +50,5 @@ auto main() -> int {
 
     recieving_socket.close().or_exit();
     listening_socket.close().or_exit();
-    _ = nix::sys_unlink(listening_socket.path_name.data()).or_exit();
+    auto _ = nix::sys_unlink(listening_socket.path_name.data()).or_exit();
 }
