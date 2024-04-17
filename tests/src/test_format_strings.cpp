@@ -7,11 +7,9 @@
 TEST(test_format_strings) {
     // Initialize an allocator.
     cat::page_allocator pager;
-    pager.reset();
-    auto page = pager.opq_alloc_multi<cat::byte>(4_ki - 32).or_exit();
-    defer(pager.free(page);)
-    auto allocator =
-        cat::linear_allocator::backed_handle(pager, page);
+    cat::span back = pager.alloc_multi<cat::byte>(4_uki).or_exit();
+    defer(pager.free(back);)
+    auto allocator = cat::linear_allocator(back.data(), back.size());
 
     // Test `int4` conversion.
     cat::string int_string = cat::to_chars(allocator, 10).or_exit();
@@ -58,7 +56,7 @@ TEST(test_format_strings) {
     // _ = cat::println(formatted_string_double);
 
     // Test `cat::to_string_at()`.
-    cat::array<char, 100> array;
+    cat::array<char, 100u> array;
     cat::span<char> array_span{array.data(), array.size()};
 
     // TODO: This segfaults with optimizations enabled in GCC 13.
