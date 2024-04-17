@@ -119,10 +119,14 @@ class alignas(in_abi::alignment.raw) simd {
         : raw(forward<unaligned_vector>(operand.raw)) {
     }
 
-    constexpr simd(raw_type const& values) : raw(values) {
+    [[gnu::artificial]]
+    inline constexpr simd(raw_type const& values)
+        : raw(values) {
     }
 
-    constexpr simd(raw_type&& values) : raw(forward<raw_type>(values)) {
+    [[gnu::artificial]]
+    inline constexpr simd(raw_type&& values)
+        : raw(forward<raw_type>(values)) {
     }
 
     // Construct all lanes as `value`.
@@ -135,7 +139,7 @@ class alignas(in_abi::alignment.raw) simd {
     // Construct from a variadic argument list.
     template <typename... Us>
         requires(sizeof...(Us) > 1u && sizeof...(Us) == in_abi::lanes)
-    constexpr simd(Us&&... values)
+    [[gnu::artificial]] inline constexpr simd(Us&&... values)
         // GCC 13 requires curly braces here.
         : raw(raw_type{static_cast<T>(forward<Us>(values))...}) {
     }
@@ -145,7 +149,7 @@ class alignas(in_abi::alignment.raw) simd {
     // TODO: Should this be removed, along with `cat::List`'s?
     template <typename U, U... Us>
         requires(ssizeof_pack<U, Us...> == in_abi::lanes)
-    constexpr simd(value_type_list<U, Us...>)
+    [[gnu::artificial]] inline constexpr simd(value_type_list<U, Us...>)
         : raw(raw_type(static_cast<T>(Us)...)) {
     }
 
@@ -187,48 +191,47 @@ class alignas(in_abi::alignment.raw) simd {
     // Compare equality for each lane to another `simd`'s lanes, and store the
     // results in a new `simd`.
     [[nodiscard]]
-    constexpr auto
-    operator==(type const& operand) const -> simd_mask<abi_type, T> {
+    constexpr auto operator==(type const& operand) const
+        -> simd_mask<abi_type, T> {
         return this->raw == operand.raw;
     }
 
     // Compare equality for each lane to `value`, and store the results in a new
     // `simd`.
     [[nodiscard]]
-    constexpr auto
-    operator==(T const& operand) const -> simd_mask<abi_type, T> {
+    constexpr auto operator==(T const& operand) const
+        -> simd_mask<abi_type, T> {
         return *this == type::filled(operand);
     }
 
     // Compare non-equality for each lane to another `simd`'s lanes, and store
     // the results in a new `simd`.
     [[nodiscard]]
-    constexpr auto
-    operator!=(type const& operand) const -> simd_mask<abi_type, T> {
+    constexpr auto operator!=(type const& operand) const
+        -> simd_mask<abi_type, T> {
         return this->raw != operand.raw;
     }
 
     // Compare non-equality for each lane to `value`, and store the results in a
     // new `simd`.
     [[nodiscard]]
-    constexpr auto
-    operator!=(T const& operand) const -> simd_mask<abi_type, T> {
+    constexpr auto operator!=(T const& operand) const
+        -> simd_mask<abi_type, T> {
         return *this != type::filled(operand);
     }
 
     // Compare greater-than for each lane to another `simd`'s lanes, and store
     // the results in a new `simd`.
     [[nodiscard]]
-    constexpr auto
-    operator>(type const& operand) const -> simd_mask<abi_type, T> {
+    constexpr auto operator>(type const& operand) const
+        -> simd_mask<abi_type, T> {
         return this->raw > operand.raw;
     }
 
     // Compare greater-than for each lane to `value`, and store the results in a
     // new `simd`.
     [[nodiscard]]
-    constexpr auto
-    operator>(T const& operand) const -> simd_mask<abi_type, T> {
+    constexpr auto operator>(T const& operand) const -> simd_mask<abi_type, T> {
         return *this > type::filled(operand);
     }
 
@@ -241,24 +244,23 @@ class alignas(in_abi::alignment.raw) simd {
     // Compare greater-than-or-equal for each lane to `value`, and store the
     // results in a new `simd`.
     [[nodiscard]]
-    constexpr auto
-    operator>=(T const& operand) const -> simd_mask<abi_type, T> {
+    constexpr auto operator>=(T const& operand) const
+        -> simd_mask<abi_type, T> {
         return *this >= type::filled(operand);
     }
 
     // Compare less-than for each lane to another `simd`'s lanes, and store the
     // results in a new `simd`.
     [[nodiscard]]
-    constexpr auto
-    operator<(type const& operand) const -> simd_mask<abi_type, T> {
+    constexpr auto operator<(type const& operand) const
+        -> simd_mask<abi_type, T> {
         return this->raw < operand.raw;
     }
 
     // Compare less-than for each lane to `value`, and store the results in a
     // new `simd`.
     [[nodiscard]]
-    constexpr auto
-    operator<(T const& operand) const -> simd_mask<abi_type, T> {
+    constexpr auto operator<(T const& operand) const -> simd_mask<abi_type, T> {
         return *this < type::filled(operand);
     }
 
@@ -271,16 +273,15 @@ class alignas(in_abi::alignment.raw) simd {
     // Compare less-than-or-equal for each lane to `value`, and store the
     // results in a new `simd`.
     [[nodiscard]]
-    constexpr auto
-    operator<=(T const& operand) const -> simd_mask<abi_type, T> {
+    constexpr auto operator<=(T const& operand) const
+        -> simd_mask<abi_type, T> {
         return *this <= type::filled(operand);
     }
 
     // TODO: These should be `friend`.
     // TODO: Add more comments to these operators.
     [[nodiscard]]
-    constexpr auto
-    operator+(type const& operand) const -> type {
+    constexpr auto operator+(type const& operand) const -> type {
         return this->raw + operand.raw;
     }
 
@@ -290,8 +291,7 @@ class alignas(in_abi::alignment.raw) simd {
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator-(type const& operand) const -> type {
+    constexpr auto operator-(type const& operand) const -> type {
         return this->raw - operand.raw;
     }
 
@@ -301,8 +301,7 @@ class alignas(in_abi::alignment.raw) simd {
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator*(type const& operand) const -> type {
+    constexpr auto operator*(type const& operand) const -> type {
         return this->raw * operand.raw;
     }
 
@@ -312,8 +311,7 @@ class alignas(in_abi::alignment.raw) simd {
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator/(type const& operand) const -> type {
+    constexpr auto operator/(type const& operand) const -> type {
         return this->raw * operand.raw;
     }
 
@@ -323,8 +321,7 @@ class alignas(in_abi::alignment.raw) simd {
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator&(type const& operand) const -> type {
+    constexpr auto operator&(type const& operand) const -> type {
         return this->raw & operand.raw;
     }
 
@@ -334,8 +331,7 @@ class alignas(in_abi::alignment.raw) simd {
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator|(type const& operand) const -> type {
+    constexpr auto operator|(type const& operand) const -> type {
         return this->raw | operand.raw;
     }
 
@@ -345,8 +341,7 @@ class alignas(in_abi::alignment.raw) simd {
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator%(type const& operand) const -> type {
+    constexpr auto operator%(type const& operand) const -> type {
         return this->raw % operand.raw;
     }
 
@@ -356,8 +351,7 @@ class alignas(in_abi::alignment.raw) simd {
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator<<(type const& operand) const -> type {
+    constexpr auto operator<<(type const& operand) const -> type {
         return this->raw << operand.raw;
     }
 
@@ -367,8 +361,7 @@ class alignas(in_abi::alignment.raw) simd {
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator>>(type const& operand) const -> type {
+    constexpr auto operator>>(type const& operand) const -> type {
         return this->raw >> operand.raw;
     }
 
@@ -378,8 +371,7 @@ class alignas(in_abi::alignment.raw) simd {
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator^(type const& operand) const -> type {
+    constexpr auto operator^(type const& operand) const -> type {
         return this->raw ^ operand.raw;
     }
 
@@ -389,53 +381,51 @@ class alignas(in_abi::alignment.raw) simd {
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator[](uword index) -> T& {
+    constexpr auto operator[](uword index) -> T& {
         return this[index];
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator[](uword index) const -> T& {
+    constexpr auto operator[](uword index) const -> T& {
         return this[index];
     }
 
     template <typename U>
-    constexpr auto fill(U value)
-        -> type& requires(is_implicitly_convertible<U, scalar_type>) {
-                     scalar_type fill_value = static_cast<scalar_type>(value);
-                     if constexpr (lanes == 2u) {
-                         this->raw = raw_type(fill_value, fill_value);
-                     } else if constexpr (lanes == 4u) {
-                         this->raw = raw_type(fill_value, fill_value,
-                                              fill_value, fill_value);
-                     } else if constexpr (lanes == 8u) {
-                         this->raw = raw_type{
+        requires(is_implicitly_convertible<U, scalar_type>)
+    constexpr auto fill(U value) -> type& {
+        scalar_type fill_value = static_cast<scalar_type>(value);
+        if constexpr (lanes == 2u) {
+            this->raw = raw_type(fill_value, fill_value);
+        } else if constexpr (lanes == 4u) {
+            this->raw =
+                raw_type(fill_value, fill_value, fill_value, fill_value);
+        } else if constexpr (lanes == 8u) {
+            this->raw =
+                raw_type{fill_value, fill_value, fill_value, fill_value,
+                         fill_value, fill_value, fill_value, fill_value};
+        } else if constexpr (lanes == 16u) {
+            this->raw =
+                raw_type{fill_value, fill_value, fill_value, fill_value,
+                         fill_value, fill_value, fill_value, fill_value,
+                         fill_value, fill_value, fill_value, fill_value,
+                         fill_value, fill_value, fill_value, fill_value};
+        } else if constexpr (lanes == 32u) {
+            *this = raw_type{fill_value, fill_value, fill_value, fill_value,
+                             fill_value, fill_value, fill_value, fill_value,
+                             fill_value, fill_value, fill_value, fill_value,
+                             fill_value, fill_value, fill_value, fill_value,
+                             fill_value, fill_value, fill_value, fill_value,
+                             fill_value, fill_value, fill_value, fill_value,
                              fill_value, fill_value, fill_value, fill_value,
                              fill_value, fill_value, fill_value, fill_value};
-                     } else if constexpr (lanes == 16u) {
-                         this->raw = raw_type{
-                             fill_value, fill_value, fill_value, fill_value,
-                             fill_value, fill_value, fill_value, fill_value,
-                             fill_value, fill_value, fill_value, fill_value,
-                             fill_value, fill_value, fill_value, fill_value};
-                     } else if constexpr (lanes == 32u) {
-                         this->raw = raw_type{
-                             fill_value, fill_value, fill_value, fill_value,
-                             fill_value, fill_value, fill_value, fill_value,
-                             fill_value, fill_value, fill_value, fill_value,
-                             fill_value, fill_value, fill_value, fill_value,
-                             fill_value, fill_value, fill_value, fill_value,
-                             fill_value, fill_value, fill_value, fill_value,
-                             fill_value, fill_value, fill_value, fill_value,
-                             fill_value, fill_value, fill_value, fill_value};
-                     }
-                     return *this;
-                 }
+        }
+        return *this;
+    }
 
     // Construct a `simd` with every lane initialized to `value`.
     template <typename U>
-    [[nodiscard]] static constexpr auto filled(U value) -> type
+    [[nodiscard]]
+    static constexpr auto filled(U value) -> type
         requires(is_convertible<U, T>)
     {
         return type().fill(value);
@@ -590,22 +580,19 @@ class alignas(in_abi::template make_abi_type<bool>::alignment.raw) simd_mask {
     // Compare equality for each lane to another `simd`'s lanes, and store the
     // results in a new `simd`.
     [[nodiscard]]
-    constexpr auto
-    operator==(mask_type const& operand) const -> mask_type {
+    constexpr auto operator==(mask_type const& operand) const -> mask_type {
         return this->raw == operand.raw;
     }
 
     // Compare non-equality for each lane to another `simd`'s lanes, and store
     // the results in a new `simd`.
     [[nodiscard]]
-    constexpr auto
-    operator!=(mask_type const& operand) const -> mask_type {
+    constexpr auto operator!=(mask_type const& operand) const -> mask_type {
         return this->raw != operand.raw;
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator&(mask_type const& operand) const -> mask_type {
+    constexpr auto operator&(mask_type const& operand) const -> mask_type {
         return this->raw & operand.raw;
     }
 
@@ -615,8 +602,7 @@ class alignas(in_abi::template make_abi_type<bool>::alignment.raw) simd_mask {
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator|(mask_type const& operand) const -> mask_type {
+    constexpr auto operator|(mask_type const& operand) const -> mask_type {
         return this->raw | operand.raw;
     }
 
@@ -626,8 +612,7 @@ class alignas(in_abi::template make_abi_type<bool>::alignment.raw) simd_mask {
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator%(mask_type const& operand) const -> mask_type {
+    constexpr auto operator%(mask_type const& operand) const -> mask_type {
         return this->raw % operand.raw;
     }
 
@@ -637,8 +622,7 @@ class alignas(in_abi::template make_abi_type<bool>::alignment.raw) simd_mask {
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator<<(mask_type const& operand) const -> mask_type {
+    constexpr auto operator<<(mask_type const& operand) const -> mask_type {
         return this->raw << operand.raw;
     }
 
@@ -648,8 +632,7 @@ class alignas(in_abi::template make_abi_type<bool>::alignment.raw) simd_mask {
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator>>(mask_type const& operand) const -> mask_type {
+    constexpr auto operator>>(mask_type const& operand) const -> mask_type {
         return this->raw >> operand.raw;
     }
 
@@ -659,14 +642,12 @@ class alignas(in_abi::template make_abi_type<bool>::alignment.raw) simd_mask {
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator[](uword index) -> bool& {
+    constexpr auto operator[](uword index) -> bool& {
         return static_cast<bool&>(this[index]);
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator[](uword index) const -> T& {
+    constexpr auto operator[](uword index) const -> T& {
         return static_cast<bool&>(this[index]);
     }
 

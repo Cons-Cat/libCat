@@ -10,7 +10,7 @@ ReferenceAlignment: Left
 
 # These are clang-format 14 features:
 QualifierAlignment: Custom
-QualifierOrder: ['static', 'inline', 'friend', 'constexpr', 'type', 'const', 'volatile' ]
+QualifierOrder: ['friend', 'static', 'inline', 'constexpr', 'type', 'const', 'volatile' ]
 AlignArrayOfStructures: Right
 SeparateDefinitionBlocks: Always
 
@@ -52,7 +52,7 @@ AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: Yes
 BinPackArguments: true
 BinPackParameters: true
-BreakBeforeBinaryOperators: None # This is broken until clang-format 14.
+BreakBeforeBinaryOperators: None
 BreakBeforeConceptDeclarations: true
 BreakBeforeBraces: Attach
 BreakBeforeInheritanceComma: false

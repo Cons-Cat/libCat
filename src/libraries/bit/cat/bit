@@ -23,6 +23,10 @@ inline namespace literals {
             return static_cast<signed long long>(1024.f * input);
         }
 
+        constexpr auto operator""_uki(long double input) -> uword {
+            return static_cast<unsigned long long>(1024.f * input);
+        }
+
         constexpr auto operator""_mi(unsigned long long input) -> iword {
             return 1024ll * 1024ll * static_cast<signed long long>(input);
         }
