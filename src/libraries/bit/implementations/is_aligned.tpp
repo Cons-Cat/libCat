@@ -4,8 +4,6 @@
 
 #include <cat/bit>
 
-#include "cat/arithmetic"
-
 // Returns `true` if `p_value` is aligned to the `alignment` boundary.
 template <typename U>
 [[nodiscard]]

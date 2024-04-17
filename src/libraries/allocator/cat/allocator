@@ -3996,7 +3996,9 @@ class allocator_interface {
 
             // Possibly zero-out the allocation.
             if constexpr (is_zeroed) {
-                zero_memory(p_allocation, allocation_bytes);
+                // TODO: Find a way to efficiently and safely leverage SIMD
+                // here.
+                zero_memory_scalar_explicit(p_allocation, allocation_bytes);
             }
 
             // Construct the `T`s inside the allocator.

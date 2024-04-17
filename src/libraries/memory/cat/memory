@@ -41,6 +41,30 @@ void copy_memory(void const* p_source, void* p_destination, uword bytes);
 
 void copy_memory_small(void const* p_source, void* p_destination, uword bytes);
 
+template <typename T = unsigned char>
+    requires(sizeof(T) <= 8)
+constexpr void set_memory_scalar(T* p_source, T value, uword size) {
+    for (uword i = 0u; i < size; ++i) {
+        *(static_cast<T*>(p_source) + i) = value;
+    }
+}
+
+template <typename T = unsigned char>
+    requires(sizeof(T) <= 8)
+[[gnu::noinline]]
+constexpr void set_memory_scalar_explicit(T* p_source, T value, uword size) {
+    set_memory_scalar(p_source, value, size);
+}
+
+constexpr void zero_memory_scalar(void* p_source, uword bytes) {
+    set_memory_scalar((unsigned char*)p_source, (unsigned char)0, bytes);
+}
+
+[[gnu::noinline]]
+constexpr void zero_memory_scalar_explicit(void* p_source, uword bytes) {
+    set_memory_scalar((unsigned char*)p_source, (unsigned char)0, bytes);
+}
+
 namespace detail {
     // Type-erased `set_memory` function.
     template <typename T>
@@ -75,8 +99,7 @@ namespace detail {
             // `constant`.
             auto vectorized_fill =
                 [&]<typename lanes_constant>(lanes_constant) {
-                    // TODO: Consider optimizing with multiple vector loads to
-                    // leverage instruction-level parallelism.
+                    // TODO: Consider optimizing this by tiling the loop.
                     constexpr uword lanes = lanes_constant::value;
                     using vector_type = fixed_size_simd<T, lanes>;
                     while (size >= sizeof(vector_type)) {
@@ -100,11 +123,7 @@ namespace detail {
             // }
 
             // Fill out remaining portion one byte at a time.
-            while (size > 0u) {
-                *p_current = value;
-                p_current += sizeof(T);
-                size -= sizeof(T);
-            }
+            set_memory_scalar(static_cast<T*>(p_current), value, size);
         }
     }
 }  // namespace detail
@@ -145,30 +164,6 @@ constexpr void zero_memory(void* p_source, uword size) {
 [[gnu::noinline]]
 constexpr void zero_memory_explicit(void* p_source, uword bytes) {
     zero_memory(p_source, bytes);
-}
-
-template <typename T = unsigned char>
-    requires(sizeof(T) <= 8)
-constexpr void set_memory_scalar(void* p_source, T value, uword size) {
-    for (uword i = 0u; i < size; ++i) {
-        *(static_cast<T*>(p_source) + i) = value;
-    }
-}
-
-template <typename T = unsigned char>
-    requires(sizeof(T) <= 8)
-[[gnu::noinline]]
-constexpr void set_memory_scalar_explicit(void* p_source, T value, uword size) {
-    set_memory_scalar(p_source, value, size);
-}
-
-constexpr void zero_memory_scalar(void* p_source, uword bytes) {
-    set_memory_scalar(p_source, 0_u1, bytes);
-}
-
-[[gnu::noinline]]
-constexpr void zero_memory_scalar_explicit(void* p_source, uword bytes) {
-    set_memory_scalar(p_source, 0_u1, bytes);
 }
 
 // Set all bytes in a trivial object to `value`.
@@ -223,9 +218,9 @@ void launder(void const*) = delete;
 void launder(void volatile*) = delete;
 void launder(void const volatile*) = delete;
 
-using std::addressof;
-using std::construct_at;
-using std::destroy_at;
+using std::addressof;     // NOLINT
+using std::construct_at;  // NOLINT
+using std::destroy_at;    // NOLINT
 
 template <typename T>
 auto relocate_at(T* p_source, T* p_destination) -> T* {
