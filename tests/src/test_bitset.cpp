@@ -12,7 +12,7 @@ TEST(test_bitset) {
     constexpr cat::bitset<32u> bits32{};
     constexpr cat::bitset<64u> bits64{};
     constexpr cat::bitset<65u> bits65{};
-    constexpr cat::bitset<129u> bits129{};
+    constexpr cat::bitset<129_u4> bits129{};
 
     static_assert(bits7.storage_array_size == 1);
     static_assert(bits8.storage_array_size == 1);
@@ -31,6 +31,9 @@ TEST(test_bitset) {
     static_assert(bits64.storage_element_size == 8);
     static_assert(bits65.storage_element_size == 8);
     static_assert(bits129.storage_element_size == 8);
+
+    static_assert(bits7.leading_skipped_bits == 1);
+    static_assert(bits7.leading_bytes_bits == 7u);
 
     cat::bitset<7u> bits7_2 = bits7;
     bits7_2 = cat::bitset<7u>::from(0x0_u1);
@@ -149,7 +152,8 @@ TEST(test_bitset) {
     cat::verify(!bits127.at(128u).has_value());
 
     // Test const iterator.
-    for ([[maybe_unused]] auto bit : bits127_2) {
+    for ([[maybe_unused]]
+         auto bit : bits127_2) {
     }
 
     // Test mutable iterator.

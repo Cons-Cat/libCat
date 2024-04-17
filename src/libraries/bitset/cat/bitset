@@ -69,9 +69,9 @@ class bitset {
         requires((is_same<types, array_type_element> ||
                   is_same<types, typename array_type_element::raw_type>) &&
                  ...)
-    [[nodiscard]]
-    static constexpr auto from(types... values) -> bitset
-        requires(sizeof...(types) == array_type::size())
+                [[nodiscard]]
+                static constexpr auto from(types... values) -> bitset
+                    requires(sizeof...(types) == array_type::size())
     {
         // `value_type::value_type` is some unsigned integer.
         // TODO: Assert that the input fits in `bits_count`.
@@ -84,13 +84,13 @@ class bitset {
     constexpr auto operator=(bitset&&) -> bitset& = default;
 
     [[nodiscard]]
-    constexpr auto
-    operator==(bitset<bits_count> const&) const -> bool = default;
+    constexpr auto operator==(bitset<bits_count> const&) const
+        -> bool = default;
 
     // Index into this bit-set from the right-most bit.
     [[nodiscard]]
-    constexpr auto
-    operator[](idx index_bit) -> bit_reference<array_type_element> {
+    constexpr auto operator[](idx index_bit)
+        -> bit_reference<array_type_element> {
         if !consteval {
             assert(index_bit < bits_count);
         }
@@ -115,8 +115,8 @@ class bitset {
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator[](idx index_bit) const -> bit_reference<array_type_element> {
+    constexpr auto operator[](idx index_bit) const
+        -> bit_reference<array_type_element> {
         return (*unconst(this))[index_bit];
     }
 
@@ -138,8 +138,8 @@ class bitset {
     }
 
     [[nodiscard]]
-    friend constexpr auto
-    operator&(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
+    friend constexpr auto operator&(bitset<bits_count> lhs,
+                                    bitset<bits_count> rhs) -> bitset {
         bitset<bits_count> bitset;
         for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
             bitset.storage[i] = lhs.storage[i] & rhs.storage[i];
@@ -154,8 +154,8 @@ class bitset {
     }
 
     [[nodiscard]]
-    friend constexpr auto
-    operator|(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
+    friend constexpr auto operator|(bitset<bits_count> lhs,
+                                    bitset<bits_count> rhs) -> bitset {
         bitset<bits_count> bitset;
         for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
             bitset.storage[i] = lhs.storage[i] | rhs.storage[i];
@@ -170,8 +170,8 @@ class bitset {
     }
 
     [[nodiscard]]
-    friend constexpr auto
-    operator^(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
+    friend constexpr auto operator^(bitset<bits_count> lhs,
+                                    bitset<bits_count> rhs) -> bitset {
         bitset<bits_count> bitset;
         for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
             bitset.storage[i] = lhs.storage[i] ^ rhs.storage[i];
@@ -195,12 +195,14 @@ class bitset {
     // Evaluate true if every bit in this bitset is 1.
     [[nodiscard]]
     constexpr auto all_of() const -> bool {
-        for (idx i = 0u; i < this->storage_array_size; ++i) {
-            auto it = this->storage[i];
+        // Iterate through all bytes:
+        for (idx current_byte = 0u; current_byte < this->storage_array_size;
+             ++current_byte) {
+            auto const it = this->storage[current_byte];
             using T = decltype(it);
 
-            if (i > 0u || constant_evaluate(has_single_bit(bits_count) ||
-                                            ((bits_count & idx(63u)) != 0))) {
+            if (current_byte > 0u ||
+                constant_evaluate(has_single_bit(bits_count))) {
                 if (it != it.max()) {
                     // If at least one bit is 0:
                     return false;
@@ -208,7 +210,7 @@ class bitset {
             } else {
                 // Leading bits of the leading byte should not be considered
                 // part of the bitset, so they are masked off.
-                T mask = (T(1) << leading_bytes_bits) - T(1);
+                T const mask = (T(1) << leading_bytes_bits) - T(1);
 
                 if (it != mask) {
                     return false;
