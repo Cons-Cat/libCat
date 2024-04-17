@@ -159,12 +159,12 @@ constexpr cat::monostate_type monostate;
         /* the constant expression is false. In that case, `no_type` is */      \
         /* the return type instead, but of course `no_type` will never be */    \
         /* returned.*/                                                          \
-        using return_type =                                                     \
-            cat::conditional<cat::is_specialization<try_type, cat::maybe>,      \
-                             cat::detail::nullopt_type, cat::no_type>;          \
+        using return_type = ::cat::conditional<                                 \
+            ::cat::is_specialization<try_type, ::cat::maybe>,                   \
+            ::cat::detail::nullopt_type, ::cat::no_type>;                       \
                                                                                 \
         if (!((container).has_value())) {                                       \
-            if constexpr (cat::is_maybe<try_type>) {                            \
+            if constexpr (::cat::is_maybe<try_type>) {                          \
                 return return_type();                                           \
             } else {                                                            \
                 return (container);                                             \
@@ -172,24 +172,6 @@ constexpr cat::monostate_type monostate;
         }                                                                       \
         (container).value();                                                    \
     })
-
-namespace cat::detail {
-
-inline struct mover {
-    template <typename T>
-    [[nodiscard("A moved-from value should be consumed."), gnu::always_inline,
-      gnu::artificial]]
-    inline friend constexpr decltype(auto) operator*(mover, T&& x) {
-        return ::cat::move(x);
-    }
-
-    // Prevent redundant `mov mov value;` syntax.
-    friend constexpr void operator*(mover, mover) = delete;
-} mover;
-
-}  // namespace cat::detail
-
-#define mov ::cat::detail::mover*
 
 // Placement `new`.
 [[nodiscard]]
