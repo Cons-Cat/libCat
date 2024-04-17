@@ -586,7 +586,7 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto align_nalloc(uword alignment) -> maybe_non_zero<idx> {
-        return this->self().allocation_bytes(alignment, sizeof(T));
+        return this->self().allocation_bytes(alignment, idx(sizeof(T)));
     }
 
     // Get the number of bytes that allocating a `T` with an alignment
@@ -594,7 +594,7 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto align_xnalloc(uword alignment) -> idx {
-        return this->self().allocation_bytes(alignment, sizeof(T)).value();
+        return this->self().allocation_bytes(alignment, idx(sizeof(T))).value();
     }
 
     // Try to get the number of bytes that allocating a `T` with no alignment
@@ -602,7 +602,7 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto unalign_nalloc() -> maybe_non_zero<idx> {
-        return this->self().allocation_bytes(1u, sizeof(T));
+        return this->self().allocation_bytes(1u, idx(sizeof(T)));
     }
 
     // Get the number of bytes that allocating a `T` with no alignment
@@ -610,7 +610,7 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto unalign_xnalloc() -> idx {
-        return this->self().allocation_bytes(1u, sizeof(T)).value();
+        return this->self().allocation_bytes(1u, idx(sizeof(T))).value();
     }
 
     // Try to get the number of bytes that allocating an array of `T` with an
@@ -619,7 +619,8 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto align_nalloc_multi(uword alignment,
                                       idx count) -> maybe_non_zero<idx> {
-        return this->self().allocation_bytes(alignment, idx(count * sizeof(T)));
+        return this->self().allocation_bytes(alignment,
+                                             idx(count * idx(sizeof(T))));
     }
 
     // Get the number of bytes that allocating an array of `T` with an
@@ -628,7 +629,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto align_xnalloc_multi(uword alignment, idx count) -> idx {
         return this->self()
-            .allocation_bytes(alignment, idx(count * sizeof(T)))
+            .allocation_bytes(alignment, idx(count * idx(sizeof(T))))
             .value();
     }
 
@@ -637,7 +638,7 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto unalign_nalloc_multi(idx count) -> maybe_non_zero<idx> {
-        return this->self().allocation_bytes(1u, count * sizeof(T));
+        return this->self().allocation_bytes(1u, count * idx(sizeof(T)));
     }
 
     // Get the number of bytes that allocating an array of `T` with no
@@ -645,7 +646,9 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto unalign_xnalloc_multi(idx count) -> idx {
-        return this->self().allocation_bytes(1u, count * sizeof(T)).value();
+        return this->self()
+            .allocation_bytes(1u, count * idx(sizeof(T)))
+            .value();
     }
 
     // Try to get the number of bytes that allocating a small-size optimized `T`
@@ -3982,12 +3985,12 @@ class allocator_interface {
             }
 
             // Permit addressing this memory.
-            if !consteval{
-            __asan_unpoison_memory_region(
-                static_cast<void const volatile*>(p_allocation),
-                allocation_bytes);
+            if !consteval {
+                __asan_unpoison_memory_region(
+                    static_cast<void const volatile*>(p_allocation),
+                    allocation_bytes);
             }
-            
+
             // Possibly zero-out the allocation.
             if constexpr (is_zeroed) {
                 // TODO: Find a way to efficiently and safely leverage SIMD
