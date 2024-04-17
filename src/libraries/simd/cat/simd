@@ -115,8 +115,7 @@ class alignas(in_abi::alignment.raw) simd {
     constexpr simd(unaligned_vector operand) : raw(operand.raw) {
     }
 
-    constexpr simd(unaligned_vector&& operand)
-        : raw(forward<unaligned_vector>(operand.raw)) {
+    constexpr simd(unaligned_vector&& operand) : raw(fwd(operand.raw)) {
     }
 
     [[gnu::artificial]]
@@ -126,7 +125,7 @@ class alignas(in_abi::alignment.raw) simd {
 
     [[gnu::artificial]]
     inline constexpr simd(raw_type&& values)
-        : raw(forward<raw_type>(values)) {
+        : raw(mov values) {
     }
 
     // Construct all lanes as `value`.
@@ -141,7 +140,7 @@ class alignas(in_abi::alignment.raw) simd {
         requires(sizeof...(Us) > 1u && sizeof...(Us) == in_abi::lanes)
     [[gnu::artificial]] inline constexpr simd(Us&&... values)
         // GCC 13 requires curly braces here.
-        : raw(raw_type{static_cast<T>(forward<Us>(values))...}) {
+        : raw(raw_type{static_cast<T>(fwd(values))...}) {
     }
 
     // Construct from a constant list, such as `value_list` or
@@ -529,7 +528,7 @@ class alignas(in_abi::template make_abi_type<bool>::alignment.raw) simd_mask {
     template <typename... bools>
     constexpr simd_mask(bools&&... values)
         requires(sizeof...(values) > 1 && sizeof...(values) == this->lanes.raw)
-        : raw(static_cast<unsigned char>(forward<bool>(values))...) {
+        : raw(static_cast<unsigned char>(fwd(values))...) {
     }
 
     // Construct from a constant list, such as `value_list` or

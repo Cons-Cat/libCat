@@ -65,7 +65,7 @@ struct plus_interface {
     // `+` operator where this is a left-hand-side operand.
     template <typename T>
     friend constexpr auto operator+(derived_type lhs, T&& other) {
-        return lhs.add(forward<T>(other));
+        return lhs.add(fwd(other));
     }
 
     // `+` operator where this is a right-hand-side operand.
@@ -74,13 +74,13 @@ struct plus_interface {
     // right-hand operand, this overload is ambiguous.
         requires(!detail::has_add_interface<T, derived_type>)
     friend constexpr auto operator+(T&& other, decay_derived_type rhs) {
-        return rhs.add(forward<T>(other));
+        return rhs.add(fwd(other));
     }
 
     // Compound assignment operator.
     template <typename T>
     friend constexpr auto operator+=(derived_type& lhs, T&& other) -> auto {
-        lhs = lhs.add(forward<T>(other));
+        lhs = lhs.add(fwd(other));
         return lhs;
     }
 
@@ -104,7 +104,7 @@ struct minus_interface {
     // `-` operator where this is a left-hand-side operand.
     template <typename T>
     friend constexpr auto operator-(derived_type lhs, T&& other) {
-        return lhs.subtract_by(forward<T>(other));
+        return lhs.subtract_by(fwd(other));
     }
 
     // `-` operator where this is a right-hand-side operand.
@@ -113,13 +113,13 @@ struct minus_interface {
     // right-hand operand, this overload is ambiguous.
         requires(!detail::has_subtract_by_interface<T, derived_type>)
     friend constexpr auto operator-(T&& other, decay_derived_type rhs) {
-        return rhs.subtract_from(forward<T>(other));
+        return rhs.subtract_from(fwd(other));
     }
 
     // Compound assignment operator.
     template <typename T>
     friend constexpr auto operator-=(derived_type& lhs, T&& other) -> auto& {
-        lhs = lhs.subtract_by(forward<T>(other));
+        lhs = lhs.subtract_by(fwd(other));
         return lhs;
     }
 
@@ -143,7 +143,7 @@ struct multiply_interface {
     // `*` operator where this is a left-hand-side operand.
     template <typename T>
     friend constexpr auto operator*(derived_type lhs, T&& other) {
-        return lhs.multiply(forward<T>(other));
+        return lhs.multiply(fwd(other));
     }
 
     // `*` operator where this is a right-hand-side operand.
@@ -152,13 +152,13 @@ struct multiply_interface {
     // its right-hand operand, this overload is ambiguous.
         requires(!detail::has_multiply_interface<T, derived_type>)
     friend constexpr auto operator*(T&& other, decay_derived_type rhs) {
-        return rhs.multiply(forward<T>(other));
+        return rhs.multiply(fwd(other));
     }
 
     // Compound assignment operator.
     template <typename T>
     friend constexpr auto operator*=(derived_type& lhs, T&& other) -> auto {
-        lhs = lhs.multiply(forward<T>(other));
+        lhs = lhs.multiply(fwd(other));
         return lhs;
     }
 };
@@ -171,7 +171,7 @@ struct divide_interface {
     // `/` operator where this is a left-hand-side operand.
     template <typename T>
     friend constexpr auto operator/(derived_type lhs, T&& other) {
-        return lhs.divide_by(forward<T>(other));
+        return lhs.divide_by(fwd(other));
     }
 
     // `/` operator where this is a right-hand-side operand.
@@ -180,13 +180,13 @@ struct divide_interface {
     // this overload is ambiguous.
         requires(!detail::has_divide_by_interface<T, derived_type>)
     friend constexpr auto operator/(T&& other, derived_type rhs) {
-        return rhs.divide_into(forward<T>(other));
+        return rhs.divide_into(fwd(other));
     }
 
     // Compound division operator.
     template <typename T>
     friend constexpr auto operator/=(derived_type& lhs, T&& other) -> auto {
-        lhs = lhs.divide_by(forward<T>(other));
+        lhs = lhs.divide_by(fwd(other));
         return lhs;
     }
 };
@@ -196,14 +196,14 @@ struct bit_and_interface {
     // `&` operator where this is a left-hand-side operand.
     template <typename T>
     friend constexpr auto operator&(derived_type lhs, T&& other) {
-        return lhs.bit_and(forward<T>(other));
+        return lhs.bit_and(fwd(other));
     }
 
     // Binary `&` operator.
     template <typename T>
         requires(!detail::has_bit_and_interface<T, derived_type>)
     friend constexpr auto operator&(derived_type self, T&& other) {
-        return self.bit_and(forward<T>(other));
+        return self.bit_and(fwd(other));
     }
 
     // Binary `&=` operator.
@@ -219,14 +219,14 @@ struct bit_or_interface {
     // `|` operator where this is a left-hand-side operand.
     template <typename T>
     friend constexpr auto operator|(derived_type lhs, T&& other) {
-        return lhs.bit_or(forward<T>(other));
+        return lhs.bit_or(fwd(other));
     }
 
     // Binary `|` operator.
     template <typename T>
         requires(!detail::has_bit_or_interface<T, derived_type>)
     friend constexpr auto operator|(derived_type self, T&& other) {
-        return self.bit_or(forward<T>(other));
+        return self.bit_or(fwd(other));
     }
 
     // Binary `|=` operator.
@@ -242,14 +242,14 @@ struct modulo_interface {
     // `%` operator where this is a left-hand-side operand.
     template <typename T>
     friend constexpr auto operator%(derived_type lhs, T&& other) {
-        return lhs.modulo(forward<T>(other));
+        return lhs.modulo(fwd(other));
     }
 
     // Binary `%` operator.
     template <typename T>
         requires(!detail::has_modulo_interface<T, derived_type>)
     friend constexpr auto operator%(derived_type self, T&& other) {
-        return self.modulo(forward<T>(other));
+        return self.modulo(fwd(other));
     }
 
     // Binary `%=` operator.

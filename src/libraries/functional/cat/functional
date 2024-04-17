@@ -23,20 +23,20 @@ namespace detail {
                                           Args&&... args) -> decltype(auto) {
         if constexpr (is_function<Pointed>) {
             if constexpr (is_base_of<C, decay<T1>>) {
-                return (forward<T1>(t1).*f)(forward<Args>(args)...);
+                return (fwd(t1).*f)(fwd(args)...);
             } else if constexpr (is_reference_wrapper<decay<T1>>) {
-                return (t1.get().*f)(forward<Args>(args)...);
+                return (t1.get().*f)(fwd(args)...);
             } else {
-                return ((*forward<T1>(t1)).*f)(forward<Args>(args)...);
+                return ((*fwd(t1)).*f)(fwd(args)...);
             }
         } else {
             static_assert(is_object<Pointed> && sizeof...(args) == 0);
             if constexpr (is_base_of<C, decay<T1>>) {
-                return forward<T1>(t1).*f;
+                return fwd(t1).*f;
             } else if constexpr (is_reference_wrapper<decay<T1>>) {
                 return t1.get().*f;
             } else {
-                return (*forward<T1>(t1)).*f;
+                return (*fwd(t1)).*f;
             }
         }
     }
@@ -44,8 +44,8 @@ namespace detail {
     template <typename T>
     struct invoke_impl_trait {
         template <typename invocable_type, typename... Args>
-        static auto call(invocable_type&& f, Args&&... args)
-            -> decltype(forward<invocable_type>(f)(forward<Args>(args)...));
+        static auto call(invocable_type&& f,
+                         Args&&... args) -> decltype(fwd(f)(fwd(args)...));
     };
 
     template <typename B, typename MT>
@@ -60,24 +60,23 @@ namespace detail {
 
         template <typename T, typename Td = decay<T>>
             requires(!is_base_of<B, Td> && !is_reference_wrapper<Td>)
-        static auto get(T&& t) -> decltype(*forward<T>(t));
+        static auto get(T&& t) -> decltype(*fwd(t));
 
         template <typename T, typename... Args, typename MT1>
             requires(is_function<MT1>)
         static auto call(MT1 B::*pmf, T&& t, Args&&... args)
-            -> decltype((invoke_impl_trait::get(forward<T>(t)).*
-                         pmf)(forward<Args>(args)...));
+            -> decltype((invoke_impl_trait::get(fwd(t)).*pmf)(fwd(args)...));
 
         template <typename T>
-        static auto call(MT B::*pmd, T&& t)
-            -> decltype(invoke_impl_trait::get(forward<T>(t)).*pmd);
+        static auto call(MT B::*pmd,
+                         T&& t) -> decltype(invoke_impl_trait::get(fwd(t)).*
+                                            pmd);
     };
 
     template <typename invocable_type, typename... Args,
               typename Fd = decay<invocable_type>::type>
     auto invoke_detail(invocable_type&& f, Args&&... args)
-        -> decltype(invoke_impl_trait<Fd>::call(forward<invocable_type>(f),
-                                                forward<Args>(args)...));
+        -> decltype(invoke_impl_trait<Fd>::call(fwd(f), fwd(args)...));
 
     template <typename always_void_type, typename, typename...>
     struct invoke_result_trait {};
@@ -104,11 +103,10 @@ constexpr auto invoke(invocable_type&& callable, Args&&... arguments)
 {
     if constexpr (is_member_pointer<decay<invocable_type>>) {
         // Member functions must be special-cased.
-        return detail::invoke_member_function(callable,
-                                              forward<Args>(arguments)...);
+        return detail::invoke_member_function(callable, fwd(arguments)...);
     } else {
         // Invoke the callable with a call operator.
-        return forward<invocable_type>(callable)(forward<Args>(arguments)...);
+        return fwd(callable)(fwd(arguments)...);
     }
 }
 
@@ -118,9 +116,9 @@ constexpr auto invoke_r(invocable_type&& f, Args&&... args) -> return_type
 // noexcept(is_nothrow_invocable_r<return_type, invocable_type, Args...>)
 {
     if constexpr (is_void<return_type>) {
-        invoke(forward<invocable_type>(f), forward<Args>(args)...);
+        invoke(fwd(f), fwd(args)...);
     } else {
-        return invoke(forward<invocable_type>(f), forward<Args>(args)...);
+        return invoke(fwd(f), fwd(args)...);
     }
 }
 

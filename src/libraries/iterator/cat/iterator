@@ -333,7 +333,7 @@ class reverse_iterator_adaptor
     // Forward any constructor to the `internal_iterator`.
     template <typename... Args>
     constexpr reverse_iterator_adaptor(Args&&... args)
-        : internal_iterator(forward<Args>(args)...) {
+        : internal_iterator(fwd(args)...) {
     }
 
     constexpr auto dereference() {
@@ -423,19 +423,19 @@ using iterator_reference = decltype(*declval<T&>());
 template <typename outputter_type, typename T>
 concept is_indirectly_writable =
     requires(outputter_type&& output_iterator, T&& value) {
-        *output_iterator = forward<T>(value);
-        *forward<outputter_type>(output_iterator) = forward<T>(value);
+        *output_iterator = fwd(value);
+        *fwd(output_iterator) = fwd(value);
         const_cast<iterator_reference<outputter_type> const&&>(
-            *output_iterator) = forward<T>(value);
+            *output_iterator) = fwd(value);
         const_cast<iterator_reference<outputter_type> const&&>(
-            *forward<outputter_type>(output_iterator)) = forward<T>(value);
+            *fwd(output_iterator)) = fwd(value);
     };
 
 template <typename output_iterator, typename T>
 concept is_output_iterator =
     is_input_or_output_iterator<output_iterator> &&
     is_indirectly_writable<output_iterator, T> &&
-    requires(output_iterator it, T&& value) { *it++ = forward<T>(value); };
+    requires(output_iterator it, T&& value) { *it++ = fwd(value); };
 
 // With a similar syntax to `as_const()`, this adaptor take an iterable
 // container and inverts its iterator's forwards and backwards movement.

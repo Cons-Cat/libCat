@@ -75,15 +75,14 @@ namespace detail {
     struct pattern_invocable {
         // This isn't needed in C++20, but it prevents a clangd false
         // diagnostic.
-        pattern_invocable(function&& input)
-            : invocable(forward<function>(input)) {
+        pattern_invocable(function&& input) : invocable(fwd(input)) {
         }
 
         // TODO: Add a `.when()` predicate.
 
         template <typename T>
         constexpr auto operator()(T&& matching) -> decltype(auto) {
-            return this->invocable(forward<T>(matching));
+            return this->invocable(fwd(matching));
         }
 
         function invocable;
@@ -104,14 +103,14 @@ namespace detail {
                     // If `matching` currently holds one of `types`, then invoke
                     // `invocable`.
                     if (((matching.template is<types>()) || ...)) {
-                        forward<function>(invocable)();
+                        fwd(invocable)();
                         return true;
                     }
                 } else {
                     // If there is no `.is()` method for `matching`, fall back
                     // to a trivial `is_same` check.
                     if ((is_same<unqualified_matching, types> || ...)) {
-                        forward<function>(invocable)();
+                        fwd(invocable)();
                         return true;
                     }
                 }
@@ -122,7 +121,7 @@ namespace detail {
 
     template <typename T>
     struct is_a_value_type : pattern {
-        constexpr is_a_value_type(T&& in_value) : value(forward<T>(in_value)) {
+        constexpr is_a_value_type(T&& in_value) : value(fwd(in_value)) {
         }
 
         // TODO: Add a `.when()` predicate.
@@ -135,14 +134,14 @@ namespace detail {
                     // If `matching` currently holds a value equivalent to
                     // `this->value`, then invoke `invocable`.
                     if (matching.template is(this->value)) {
-                        forward<function>(invocable)();
+                        fwd(invocable)();
                         return true;
                     }
                 } else {
                     // If there is no `.is()` method for `matching`, fall back
                     // to a trivial `==` check.
                     if (static_cast<unqualified_matching>(matching) == value) {
-                        forward<function>(invocable)();
+                        fwd(invocable)();
                         return true;
                     }
                 }
@@ -168,7 +167,7 @@ constexpr auto is_a() -> detail::one_of_types<T> {
 
 template <typename T>
 constexpr auto is_a(T&& value) -> detail::is_a_value_type<T> {
-    return detail::is_a_value_type<T>{forward<T>(value)};
+    return detail::is_a_value_type<T>{fwd(value)};
 }
 
 namespace detail {
@@ -183,7 +182,7 @@ namespace detail {
         // Base case.
         template <typename U>
         constexpr void call_pattern(U&& pattern) {
-            (void)!forward<U>(pattern)(this->matching);
+            auto _ = !fwd(pattern)(this->matching);
         }
 
         // Call every pattern in order.
@@ -191,12 +190,12 @@ namespace detail {
             requires(sizeof...(remaining) > 0)
         constexpr void call_pattern(U&& pattern,
                                     remaining&&... remaining_args) {
-            if (forward<U>(pattern)(this->matching)) {
+            if (fwd(pattern)(this->matching)) {
                 // Short circuit the remaining patterns if this one returns
                 // true.
                 return;
             }
-            return call_pattern(forward<remaining>(remaining_args)...);
+            return call_pattern(fwd(remaining_args)...);
         }
 
         // Every pattern must be either an `is_a` or `one_of`.
@@ -207,7 +206,7 @@ namespace detail {
             // Recurse through `pattern_args` in order. Invoke the call operator
             // on each of them with `this->matching` as an argument. When one
             // pattern holds true, invoke its invocable and stop recursing.
-            this->call_pattern(forward<patterns>(pattern_args)...);
+            this->call_pattern(fwd(pattern_args)...);
         }
 
         T& matching;

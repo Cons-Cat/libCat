@@ -24,8 +24,8 @@ class back_insert_iterator
     // need to take an allocator parameter.
 
     template <typename U>
-    constexpr auto insert(/* allocator */ auto& allocator, U& value)
-        -> maybe<back_insert_iterator<T>&> {
+    constexpr auto insert(/* allocator */ auto& allocator,
+                          U& value) -> maybe<back_insert_iterator<T>&> {
         maybe result = this->iterable.push_back(allocator, value);
         if (!result.has_value()) {
             return nullopt;
@@ -40,8 +40,8 @@ class back_insert_iterator
     }
 
     template <typename U>
-    constexpr auto insert(/* allocator */ auto& allocator, U const& value)
-        -> maybe<back_insert_iterator<T>&> {
+    constexpr auto insert(/* allocator */ auto& allocator,
+                          U const& value) -> maybe<back_insert_iterator<T>&> {
         maybe result = this->iterable.push_back(allocator, value);
         if (!result.has_value()) {
             return nullopt;
@@ -62,9 +62,9 @@ class back_insert_iterator
     }
 
     template <typename U>
-    constexpr auto insert(/* allocator */ auto& allocator, U&& value)
-        -> maybe<back_insert_iterator<T>&> {
-        maybe result = this->iterable.push_back(allocator, forward<U>(value));
+    constexpr auto insert(/* allocator */ auto& allocator,
+                          U&& value) -> maybe<back_insert_iterator<T>&> {
+        maybe result = this->iterable.push_back(allocator, fwd(value));
         if (!result.has_value()) {
             return nullopt;
         }
@@ -73,13 +73,13 @@ class back_insert_iterator
 
     template <typename U>
     constexpr auto insert(U&& value) -> back_insert_iterator<T>& {
-        this->iterable.push_back(forward<U>(value));
+        this->iterable.push_back(fwd(value));
         return *this;
     }
 
     template <typename U>
     constexpr auto operator=(U&& value) -> back_insert_iterator<T>& {
-        this->iterable.push_back(forward<U>(value));
+        this->iterable.push_back(fwd(value));
         return *this;
     }
 
@@ -114,8 +114,8 @@ class front_insert_iterator
     // need to take an allocator parameter.
 
     template <typename U>
-    constexpr auto insert(/* allocator */ auto& allocator, U& value)
-        -> maybe<front_insert_iterator<T>&> {
+    constexpr auto insert(/* allocator */ auto& allocator,
+                          U& value) -> maybe<front_insert_iterator<T>&> {
         maybe result = this->iterable.push_front(allocator, value);
         if (!result.has_value()) {
             return nullopt;
@@ -130,8 +130,8 @@ class front_insert_iterator
     }
 
     template <typename U>
-    constexpr auto insert(/* allocator */ auto& allocator, U const& value)
-        -> maybe<front_insert_iterator<T>&> {
+    constexpr auto insert(/* allocator */ auto& allocator,
+                          U const& value) -> maybe<front_insert_iterator<T>&> {
         maybe result = this->iterable.push_front(allocator, value);
         if (!result.has_value()) {
             return nullopt;
@@ -152,9 +152,9 @@ class front_insert_iterator
     }
 
     template <typename U>
-    constexpr auto insert(/* allocator */ auto& allocator, U&& value)
-        -> maybe<front_insert_iterator<T>&> {
-        maybe result = this->iterable.push_front(allocator, forward<U>(value));
+    constexpr auto insert(/* allocator */ auto& allocator,
+                          U&& value) -> maybe<front_insert_iterator<T>&> {
+        maybe result = this->iterable.push_front(allocator, fwd(value));
         if (!result.has_value()) {
             return nullopt;
         }
@@ -163,13 +163,13 @@ class front_insert_iterator
 
     template <typename U>
     constexpr auto insert(U&& value) -> front_insert_iterator<T>& {
-        this->iterable.push_front(forward<U>(value));
+        this->iterable.push_front(fwd(value));
         return *this;
     }
 
     template <typename U>
     constexpr auto operator=(U&& value) -> front_insert_iterator<T>& {
-        this->iterable.push_front(forward<U>(value));
+        this->iterable.push_front(fwd(value));
         return *this;
     }
 

@@ -647,7 +647,7 @@ struct byte {
 
     template <rvalue T>
         requires(sizeof(T) == 1)
-    constexpr byte(T&& input) : value(forward<T>(input)) {  // NOLINT
+    constexpr byte(T&& input) : value(mov input) {
     }
 
     [[nodiscard]]
