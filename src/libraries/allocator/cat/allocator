@@ -3454,14 +3454,12 @@ class allocator_interface {
                 p_memory = addressof(this->get(handle));
             }
 
-// Poison memory region.
-#ifdef __SANITIZE_ADDRESS__
-            //         if !consteval {
-            __asan_poison_memory_region(
-                static_cast<void const volatile*>(p_memory),
-                sizeof(allocation_type));
-//         }
-#endif
+            // Poison memory region.
+            if !consteval {
+                __asan_poison_memory_region(
+                    static_cast<void const volatile*>(p_memory),
+                    sizeof(allocation_type));
+            }
 
             // if constexpr (is_destructible<allocation_type>) {
             for (uword i = 0u; i < handle.size(); ++i) {
@@ -3480,12 +3478,10 @@ class allocator_interface {
     template <typename T>
     constexpr void free(T* p_memory) {
         // Poison memory region.
-#ifdef __SANITIZE_ADDRESS__
         if !consteval {
             __asan_poison_memory_region(
                 static_cast<void const volatile*>(p_memory), sizeof(T));
         }
-#endif
 
         if constexpr (detail::has_max_allocation_bytes<derived_type>) {
             static_assert(sizeof(T) <= derived_type::max_allocation_bytes,
@@ -3515,12 +3511,10 @@ class allocator_interface {
         }
 
         // Poison memory region.
-#ifdef __SANITIZE_ADDRESS__
         if !consteval {
             __asan_poison_memory_region(
                 static_cast<void const volatile*>(p_memory), sizeof(T) * count);
         }
-#endif
 
         if consteval {
             // if (count > 0) {
@@ -3988,12 +3982,12 @@ class allocator_interface {
             }
 
             // Permit addressing this memory.
-#ifdef __SANITIZE_ADDRESS__
+            if !consteval{
             __asan_unpoison_memory_region(
                 static_cast<void const volatile*>(p_allocation),
                 allocation_bytes);
-#endif
-
+            }
+            
             // Possibly zero-out the allocation.
             if constexpr (is_zeroed) {
                 // TODO: Find a way to efficiently and safely leverage SIMD
@@ -4118,12 +4112,10 @@ class allocator_interface {
         if !consteval {
             assert(new_handle.data() != nullptr);
 
-#ifdef __SANITIZE_ADDRESS__
             // TODO: Why does this fix asan error in vector test?
             __asan_unpoison_memory_region(
                 static_cast<void const volatile*>(p_old_handle),
                 old_count + sizeof(T) + 8u);
-#endif
 
             if constexpr (is_trivially_relocatable<T>) {
                 copy_memory(p_old_handle, new_handle.data(), old_count);

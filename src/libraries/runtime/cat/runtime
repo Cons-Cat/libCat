@@ -55,9 +55,11 @@ class jmp_buffer {
     // %r13:
     // %r14:
     // %r15:
-    [[maybe_unused]] unsigned long registers[6];
+    [[maybe_unused]]
+    unsigned long registers[6];
     // %rsp:
-    [[maybe_unused]] unsigned long stack_pointer;
+    [[maybe_unused]]
+    unsigned long stack_pointer;
 };
 
 [[gnu::naked]]
@@ -68,6 +70,7 @@ void longjmp(jmp_buffer& jump_point, int8 return_value);
 
 #ifdef __SANITIZE_ADDRESS__
 extern "C" {
+
 // TODO: Comment these with documentation and use safer types.
 void __asan_poison_memory_region(void const volatile* p_address, uword size);
 void __asan_unpoison_memory_region(void const volatile* p_address, uword size);
@@ -85,8 +88,8 @@ auto __asan_get_report_access_type() -> int;
 auto __asan_get_report_access_size() -> __SIZE_TYPE__;
 auto __asan_get_report_description() -> char const*;
 auto __asan_locate_address(void* p_address, char* p_name, uword name_size,
-                           void** p_region_address, uword* region_size)
-    -> char const*;
+                           void** p_region_address,
+                           uword* region_size) -> char const*;
 auto __asan_get_alloc_stack(void* p_heap, void** pp_trace, uword size,
                             int* p_thread_id) -> __SIZE_TYPE__;
 auto __asan_get_free_stack(void* p_heap, void** pp_trace, uword size,
@@ -94,7 +97,12 @@ auto __asan_get_free_stack(void* p_heap, void** pp_trace, uword size,
 void __asan_get_shadow_mapping(uword* p_shadow_scale, uword* p_shadow_offset);
 }
 #else
-// TODO: Provide no-op implementations of these functions.
+// No-op functions are provided when asan is not available.
+constexpr void __asan_poison_memory_region(void const volatile*, uword) {
+}
+
+constexpr void __asan_unpoison_memory_region(void const volatile*, uword) {
+}
 #endif
 
 }  // namespace cat
