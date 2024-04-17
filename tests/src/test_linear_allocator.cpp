@@ -10,7 +10,9 @@ TEST(test_linear_allocator) {
     // Initialize an allocator.
     cat::page_allocator pager;
     cat::span page = pager.alloc_multi<cat::byte>(4_uki).or_exit();
-    defer(pager.free(page);)
+    defer {
+        pager.free(page);
+    };
     auto allocator = cat::linear_allocator::backed(pager, 24).or_exit();
     allocator.reset();
 
@@ -84,7 +86,7 @@ overallocated:
 
     // Test sized allocations.
     allocator.reset();
-    _ = allocator.alloc<int2>().or_exit();
+    auto _ = allocator.alloc<int2>().or_exit();
     // Because the allocator is now 2 byte aligned, an extra 2 bytes have to be
     // reserved to allocate a 4-byte aligned value:
     cat::verify(allocator.nalloc<int4>().or_exit() == 6u);

@@ -145,20 +145,20 @@ TEST(test_scaredy) {
     };
 
     cat::scaredy<int4, error_type_one> mut_scaredy = 1;
-    _ = mut_scaredy.transform(increment).and_then(increment);
+    auto _ = mut_scaredy.transform(increment).and_then(increment);
 
     // `.transform()` returning `void`.
     mut_scaredy.transform(increment).or_else([]() {
         return;
     });
 
-    _ = mut_scaredy.transform(increment).or_else([]() {
+    auto _ = mut_scaredy.transform(increment).or_else([]() {
         return decltype(mut_scaredy){};
     });
 
     // Test monadic member functions on a `const`-qualified `scaredy`.
     cat::scaredy<int4, error_type_one> const const_scaredy = 1;
-    _ = const_scaredy.transform(increment).and_then(increment);
+    auto _ = const_scaredy.transform(increment).and_then(increment);
 
     // Test `.is()` on variant `scaredy`.
     bool matched = false;
@@ -243,7 +243,7 @@ TEST(test_scaredy) {
     static_assert(cat::is_scaredy<decltype(result)>);
 
     // Test `prop` macro.
-    _ = scaredy_try_success().verify();
+    auto _ = scaredy_try_success().verify();
     cat::scaredy fail = scaredy_try_fail();
     cat::verify(!fail.has_value());
 }

@@ -442,7 +442,7 @@ auto handshake(cat::is_allocator auto& allocator,
 
     x_connection.socket_descriptor = socket.descriptor;
     // TODO: Is the return of `.recieve` important here?
-    _ = socket.recieve(&x_connection.header, ssizeof(x_connection.header))
+    auto _ = socket.recieve(&x_connection.header, ssizeof(x_connection.header))
             .or_exit();
 
     // TODO: This will fail if Xauth is enabled. This must handle X11 cookies.
@@ -463,7 +463,7 @@ auto handshake(cat::is_allocator auto& allocator,
 
     // TODO: Remove `raw`.
     // TODO: Is the return of `.recieve` important here?
-    _ = socket
+    auto _ = socket
             .recieve(x_connection.p_setup,
                      x_connection.header.message_length.raw * 4)
             .or_exit();

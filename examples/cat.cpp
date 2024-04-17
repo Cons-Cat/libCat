@@ -24,7 +24,8 @@ void output_to_console(nix::io_vector const& io_vector) {
     // TODO: Make this buffered output to reduce syscalls.
     cat::byte const* p_buffer = io_vector.data();
     ++p_buffer;
-    _ = nix::sys_write(nix::file_descriptor(1),
+    auto _ =
+        nix::sys_write(nix::file_descriptor(1),
                        cat::bit_cast<char const*>(p_buffer), io_vector.size());
 }
 
@@ -45,7 +46,9 @@ void read_and_print_file(char* p_file_name) {
     cat::span<nix::io_vector> io_vectors =
         pager.alloc_multi<nix::io_vector>(blocks).or_exit(
             "Failed to allocate memory!", 3);
-    defer(pager.free_multi(io_vectors.data(), io_vectors.size());)
+    defer {
+        pager.free_multi(io_vectors.data(), io_vectors.size());
+    };
 
     while (bytes_remaining > 0) {
         idx current_block_size = cat::min(bytes_remaining, block_size);
@@ -61,7 +64,7 @@ void read_and_print_file(char* p_file_name) {
         bytes_remaining -= current_block_size;
     }
 
-    _ = nix::sys_readv(file_descriptor, io_vectors).or_exit(5);
+    auto _ = nix::sys_readv(file_descriptor, io_vectors).or_exit(5);
 
     for (nix::io_vector const& iov : io_vectors) {
         output_to_console(iov);
@@ -71,7 +74,7 @@ void read_and_print_file(char* p_file_name) {
 
 auto main(int argc, char* p_argv[]) -> int {
     if (argc == 1) {
-        _ = cat::eprint("At least one file path must be provided!");
+        auto _ = cat::eprint("At least one file path must be provided!");
         cat::exit(1);
     }
 

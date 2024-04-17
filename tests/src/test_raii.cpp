@@ -12,14 +12,14 @@ struct Foo {
     Foo() = default;
 
     Foo(cat::string string) : data(cat::move(string)) {
-        // _ = cat::print(data);
-        // _ = cat::println(" constructor");
+        // auto _ = cat::print(data);
+        // auto _ = cat::println(" constructor");
     }
 
     // NOLINTNEXTLINE This is a non-trivial destructor.
     ~Foo() {
-        // _ = cat::print("~");
-        // _ = cat::println(this->data);
+        // auto _ = cat::print("~");
+        // auto _ = cat::println(this->data);
     }
 
     auto operator=(cat::string string) -> Foo& {
@@ -28,8 +28,8 @@ struct Foo {
     }
 
     void raii() const {
-        // _ = cat::print(this->data);
-        // _ = cat::println(" calls raii()!");
+        // auto _ = cat::print(this->data);
+        // auto _ = cat::println(" calls raii()!");
         ++raii_counter;
     }
 };
@@ -39,7 +39,7 @@ void pass_by_value(cat::unique_weak<Foo>){};
 
 TEST(test_raii) {
     // TODO: Fix `unique` and re-enable these tests.
-    // _ = cat::println("Construct objects.");
+    // auto _ = cat::println("Construct objects.");
     // Test constructor.
     cat::unique_weak<Foo> foo(cat::string("foo"));
     // Test assignment.
@@ -50,11 +50,11 @@ TEST(test_raii) {
     cat::verify(moo.has_ownership());
 
     // Test move-assignment.
-    // _ = cat::println("Move moo into foo.");
+    // auto _ = cat::println("Move moo into foo.");
     foo = cat::move(moo);
     cat::verify(!moo.has_ownership());
 
-    // _ = cat::println("Move foo into func().");
+    // auto _ = cat::println("Move foo into func().");
     // `cat::move()` is required:
     pass_by_value(move(foo));
     cat::verify(!foo.has_ownership());
@@ -66,7 +66,7 @@ TEST(test_raii) {
     cat::unique_weak<Foo> goo;
     cat::verify(goo.has_ownership());
     // Extract goo.
-    _ = goo.borrow();
+    auto _ = goo.borrow();
     cat::verify(!goo.has_ownership());
 
     // `raii()` should have been called exactly three times.

@@ -831,7 +831,7 @@ class scaredy {
                 return;
             }
         } else {
-            _ = eprintln(error_message);
+            auto _ = eprintln(error_message);
             exit(exit_code);
         }
     }
@@ -845,7 +845,7 @@ class scaredy {
                 return;
             }
         } else {
-            _ = eprintln(error_message);
+            auto _ = eprintln(error_message);
             exit(exit_code);
         }
     }
@@ -859,7 +859,7 @@ class scaredy {
                 return;
             }
         } else {
-            _ = eprintln(error_message);
+            auto _ = eprintln(error_message);
             exit(exit_code);
         }
     }
@@ -873,7 +873,7 @@ class scaredy {
                 return;
             }
         } else {
-            _ = eprintln(error_message);
+            auto _ = eprintln(error_message);
             exit(exit_code);
         }
     }

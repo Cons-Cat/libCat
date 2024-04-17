@@ -1207,7 +1207,7 @@ parent_thread:
             return static_cast<nix::linux_error>(result);
         }
         // `this->process_id` was initialized by the syscall.
-        return monostate;
+        return cat::monostate;
     }
 
     [[nodiscard]]

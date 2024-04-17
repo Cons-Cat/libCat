@@ -7,5 +7,5 @@ auto nix::is_a_tty(file_descriptor file_descriptor) -> scaredy_nix<void> {
 }
 
 auto nix::is_a_tty(tty_descriptor) -> scaredy_nix<void> {
-    return monostate;
+    return cat::monostate;
 }

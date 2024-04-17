@@ -10,14 +10,16 @@ TEST(test_list) {
     cat::page_allocator pager;
     pager.reset();
     cat::mem auto page = pager.opq_alloc_multi<cat::byte>(4_ki - 64).verify();
-    defer(pager.free(page);)
+    defer {
+        pager.free(page);
+    };
     auto allocator = cat::linear_allocator::backed_handle(pager, page);
 
     // Test insert.
     cat::list<int4> list_1;
-    _ = list_1.insert(allocator, list_1.begin(), 3).verify();
-    _ = list_1.insert(allocator, list_1.begin(), 2).verify();
-    _ = list_1.insert(allocator, list_1.begin(), 1).verify();
+    auto _ = list_1.insert(allocator, list_1.begin(), 3).verify();
+    auto _ = list_1.insert(allocator, list_1.begin(), 2).verify();
+    auto _ = list_1.insert(allocator, list_1.begin(), 1).verify();
     cat::verify(list_1.front() == 1);
     cat::verify(list_1.back() == 3);
 
@@ -35,24 +37,25 @@ TEST(test_list) {
 
     // Test push.
     cat::list<int4> list_2;
-    _ = list_2.push_front(allocator, 0).verify();
-    _ = list_2.push_back(allocator, 4).verify();
+    auto _ = list_2.push_front(allocator, 0).verify();
+    auto _ = list_2.push_back(allocator, 4).verify();
     cat::verify(list_2.front() == 0);
     cat::verify(list_2.back() == 4);
-    _ = list_2.insert(allocator, ++list_2.begin(), 1).verify();
+    auto _ = list_2.insert(allocator, ++list_2.begin(), 1).verify();
     cat::verify(list_2.front() == 0);
     cat::verify(*++list_2.begin() == 1);
 
     // Test iteration.
-    for ([[maybe_unused]] int4 _ : list_2) {
+    for ([[maybe_unused]]
+         int4 _ : list_2) {
     }
 
     // Test emplace.
     cat::list<int4> list_3;
-    _ = list_3.emplace_front(allocator, 1).verify();
-    _ = list_3.emplace_front(allocator, 2).verify();
-    _ = list_3.emplace_back(allocator, 3).verify();
-    _ = list_3.emplace(allocator, ++list_3.begin(), 4);
+    auto _ = list_3.emplace_front(allocator, 1).verify();
+    auto _ = list_3.emplace_front(allocator, 2).verify();
+    auto _ = list_3.emplace_back(allocator, 3).verify();
+    auto _ = list_3.emplace(allocator, ++list_3.begin(), 4);
     cat::verify(list_3.front() == 2);
     cat::verify(list_3.back() == 3);
     cat::verify((*(++list_3.begin())) == 4);
@@ -63,13 +66,13 @@ TEST(test_list) {
     }
 
     // Test special iterators.
-    _ = list_1.emplace(allocator, list_1.begin()++, 0);
-    _ = list_1.cbegin();
-    _ = list_1.cend();
-    _ = list_1.rbegin();
-    _ = list_1.rend();
+    auto _ = list_1.emplace(allocator, list_1.begin()++, 0);
+    auto _ = list_1.cbegin();
+    auto _ = list_1.cend();
+    auto _ = list_1.rbegin();
+    auto _ = list_1.rend();
     auto iter = list_1.crbegin();
-    _ = list_1.crend();
+    auto _ = list_1.crend();
     cat::verify(*iter == 2);
     ++iter;
     cat::verify(*iter == 0);
@@ -84,10 +87,10 @@ TEST(test_list) {
     list_2.clear(allocator);
 
     // Deep copy a `list`.
-    _ = list_1.push_front(allocator, 3).verify();
-    _ = list_1.push_front(allocator, 2).verify();
-    _ = list_1.push_front(allocator, 1).verify();
-    _ = list_1.push_front(allocator, 0).verify();
+    auto _ = list_1.push_front(allocator, 3).verify();
+    auto _ = list_1.push_front(allocator, 2).verify();
+    auto _ = list_1.push_front(allocator, 1).verify();
+    auto _ = list_1.push_front(allocator, 0).verify();
     cat::list list_5 = list_1.clone(allocator).verify();
 
     auto list_it_1 = list_1.begin();
@@ -117,8 +120,8 @@ TEST(test_list) {
     cat::verify(*(list_4.begin() + 2) == 2);
 
     // Test initialized `list`.
-    [[maybe_unused]] cat::list list_init_1 =
-        cat::list<int4>::from(allocator, 1, 2, 3).verify();
+    [[maybe_unused]]
+    cat::list list_init_1 = cat::list<int4>::from(allocator, 1, 2, 3).verify();
     cat::list list_init_2 =
         cat::list<int4>::from(allocator, cat::value_list<int4, 0, 4>).verify();
     for (int4 i : list_init_2) {
@@ -128,12 +131,13 @@ TEST(test_list) {
     // Test `forward_list`.
     allocator.reset();
     cat::forward_list<int4> forward_list_1;
-    _ = forward_list_1.push_front(allocator, 0).verify();
-    _ = forward_list_1.emplace_front(allocator, 1).verify();
-    _ = forward_list_1.insert_after(allocator, forward_list_1.begin() + 1, 2)
+    auto _ = forward_list_1.push_front(allocator, 0).verify();
+    auto _ = forward_list_1.emplace_front(allocator, 1).verify();
+    auto _ =
+        forward_list_1.insert_after(allocator, forward_list_1.begin() + 1, 2)
             .verify();
-    _ = forward_list_1.emplace_after(allocator, forward_list_1.end(), 3)
-            .verify();
+    auto _ = forward_list_1.emplace_after(allocator, forward_list_1.end(), 3)
+                 .verify();
 
     cat::verify(*forward_list_1.begin() == 1);
     cat::verify(*(forward_list_1.begin() + 1) == 0);

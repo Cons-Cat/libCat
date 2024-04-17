@@ -26,7 +26,9 @@ TEST(test_paging_memory) {
     cat::span memory =
         allocator.alloc_multi<int4>(1'000u).or_exit("Failed to page memory!");
     // Free the page at the end of this program.
-    defer(allocator.free(memory);)
+    defer {
+        allocator.free(memory);
+    };
 
     // Write to the page.
     memory[0] = 10;

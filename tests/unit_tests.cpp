@@ -9,7 +9,7 @@ constinit cat::jmp_buffer* p_jump_buffer = nullptr;
 
 void test_fail(cat::source_location const& source_location) {
     cat::detail::print_assert_location(source_location);
-    _ = cat::println();
+    auto _ = cat::println();
     cat::longjmp(*p_jump_buffer, 2);
     __builtin_unreachable();
 }
@@ -56,7 +56,7 @@ auto main() -> int {
     }
 
     // TODO: This will leak. An `Inlineallocator` should be used.
-    _ = cat::print(cat::format(pager, "\n{} tests passed.\n{} tests failed.\n",
+    auto _ = cat::print(cat::format(pager, "\n{} tests passed.\n{} tests failed.\n",
                                tests_passed, tests_failed)
                        .or_exit());
 }

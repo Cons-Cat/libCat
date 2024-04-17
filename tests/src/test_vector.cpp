@@ -8,12 +8,12 @@
 consteval auto const_func() -> int4 {
     cat::page_allocator allocator;
     cat::vector<int4> vector;
-    _ = vector.resize(allocator, 8u);
+    auto _ = vector.resize(allocator, 8u);
 
     vector[0] = 1;
     vector[1] = 2;
     vector[7] = 10;
-    _ = vector.push_back(allocator, 10);
+    auto _ = vector.push_back(allocator, 10);
     return vector[8];
 }
 
@@ -21,8 +21,11 @@ TEST(test_vector) {
     // Initialize an allocator.
     cat::page_allocator pager;
     pager.reset();
-    cat::mem auto page = pager.opq_alloc_multi<cat::byte>(4_uki - 32u).or_exit();
-    defer(pager.free(page);)
+    cat::mem auto page =
+        pager.opq_alloc_multi<cat::byte>(4_uki - 32u).or_exit();
+    defer {
+        pager.free(page);
+    };
     auto allocator = cat::linear_allocator::backed_handle(pager, page);
 
     // Test vector member types.
@@ -123,20 +126,20 @@ TEST(test_vector) {
     cat::vector<int> default_vector;
     cat::verify(default_vector.is_empty());
 
-    _ = default_vector.reserve(allocator, 2u);
+    auto _ = default_vector.reserve(allocator, 2u);
     cat::verify(default_vector.is_empty());
 
-    _ = default_vector.push_back(allocator, 0);
-    _ = default_vector.push_back(allocator, 0);
+    auto _ = default_vector.push_back(allocator, 0);
+    auto _ = default_vector.push_back(allocator, 0);
     cat::verify(!default_vector.is_empty());
 
     // Resize the vector to be larger, then check it's full.
-    _ = default_vector.resize(allocator, default_vector.capacity() + 1u)
+    auto _ = default_vector.resize(allocator, default_vector.capacity() + 1u)
             .verify();
     cat::verify(default_vector.is_full());
 
     // Resize the vector to be smaller, then check it's not full.
-    _ = default_vector.resize(allocator, 2u).verify();
+    auto _ = default_vector.resize(allocator, 2u).verify();
     cat::verify(!default_vector.is_full());
 
     // TODO: Test insert iterators.

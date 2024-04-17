@@ -39,7 +39,7 @@ TEST(test_compare_strings) {
     constexpr cat::fixed_string const_string_4 = "world!";
 
     // Test collection operations.
-    _ = const_string_1[1];
+    auto _ = const_string_1[1];
     cat::verify(!const_string_3.at(10).has_value());
 
     // TODO: Make this `constexpr`.

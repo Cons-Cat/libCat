@@ -136,7 +136,7 @@ TEST(test_maybe) {
 
     positive = 0;
     cat::verify(positive.has_value());
-    _ = positive.or_exit();
+    auto _ = positive.or_exit();
 
     positive = 10;
     cat::verify(positive.has_value());
@@ -152,9 +152,9 @@ TEST(test_maybe) {
                             -1>>
         predicate_void(nullopt);
     cat::verify(!predicate_void.has_value());
-    predicate_void = monostate;
+    predicate_void = cat::monostate;
     cat::verify(predicate_void.has_value());
-    _ = predicate_void.or_exit();
+    auto _ = predicate_void.or_exit();
 
     // Test the sentinel predicate.
     cat::maybe<cat::sentinel<int4, 0>> nonzero = nullopt;
@@ -202,7 +202,7 @@ TEST(test_maybe) {
                     })
                      .has_value());
 
-    _ = moo.and_then([](int4 input) -> cat::maybe<int4> {
+    auto _ = moo.and_then([](int4 input) -> cat::maybe<int4> {
         cat::exit(1);
         return input;
     });
@@ -247,7 +247,7 @@ TEST(test_maybe) {
     auto return_void = [](int4) -> void {
     };
     auto return_opt_void = [](int4) -> cat::maybe<void> {
-        return monostate;
+        return cat::monostate;
     };
     auto nothing = []() -> void {
     };
@@ -257,9 +257,9 @@ TEST(test_maybe) {
 
     foo.transform(return_int).and_then(return_opt_void).or_else(nothing);
 
-    _ = foo.transform(return_int)
-            .and_then(return_opt_void)
-            .or_else(maybe_nothing);
+    auto _ = foo.transform(return_int)
+                 .and_then(return_opt_void)
+                 .or_else(maybe_nothing);
 
     cat::maybe<int4> monadic_int;
     monadic_int = return_none(0).and_then(return_opt);
@@ -281,7 +281,7 @@ TEST(test_maybe) {
     cat::verify(monadic_void_ref.has_value());
 
     // The default value of `int4` is `0`.
-    decltype(positive) default_predicate_2{in_place};
+    decltype(positive) default_predicate_2{cat::in_place};
     cat::verify(default_predicate_2.value() == 0);
 
     // Test monadic methods on move-only types.
@@ -367,21 +367,22 @@ TEST(test_maybe) {
     cat::maybe<void> optvoid;
     cat::verify(!optvoid.has_value());
     // `monostate` initializes a value:
-    cat::maybe<void> optvoid_2{monostate};
+    cat::maybe<void> optvoid_2{cat::monostate};
     cat::verify(optvoid_2.has_value());
 
     // `in_place` initializes a value:
-    cat::maybe<void> optvoid_4{in_place};
+    cat::maybe<void> optvoid_4{cat::in_place};
     cat::verify(optvoid_4.has_value());
     // `nullopt` initializes empty:
     cat::maybe<void> optvoid_5{nullopt};
     cat::verify(!optvoid_5.has_value());
 
-    cat::maybe<maybe_non_trivial> in_place_nontrivial_1{in_place};
-    _ = in_place_nontrivial_1.verify();
+    cat::maybe<maybe_non_trivial> in_place_nontrivial_1{cat::in_place};
+    auto _ = in_place_nontrivial_1.verify();
 
-    cat::maybe<maybe_non_trivial> in_place_nontrivial_2{in_place, 1, 2, 'a'};
-    _ = in_place_nontrivial_2.verify();
+    cat::maybe<maybe_non_trivial> in_place_nontrivial_2{cat::in_place, 1, 2,
+                                                        'a'};
+    auto _ = in_place_nontrivial_2.verify();
 
     // Test `maybe` in a `constexpr` context.
     auto constant_test = []() constexpr {
@@ -398,7 +399,8 @@ TEST(test_maybe) {
         // cat::verify(const_nontrivial.has_value());
 
         constexpr cat::maybe<maybe_const_non_trivial>
-            const_nontrivial_in_place = {in_place, maybe_const_non_trivial()};
+            const_nontrivial_in_place = {cat::in_place,
+                                         maybe_const_non_trivial()};
         // cat::verify(const_nontrivial_in_place.has_value());
 
         // Test `maybe<compact<T>>`.
@@ -427,7 +429,7 @@ TEST(test_maybe) {
     cat::constant_evaluate(constant_test);
 
     // Assign value:
-    optvoid = monostate;
+    optvoid = cat::monostate;
     cat::verify(optvoid.has_value());
     // Remove value:
     optvoid = nullopt;
@@ -493,7 +495,7 @@ TEST(test_maybe) {
     static_assert(!cat::is_scaredy<decltype(opt_original)>);
 
     // Test `prop` macro.
-    _ = maybe_try_success().verify();
+    auto _ = maybe_try_success().verify();
     cat::maybe fail = maybe_try_fail();
     cat::verify(!fail.has_value());
 }

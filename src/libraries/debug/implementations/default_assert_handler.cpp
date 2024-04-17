@@ -5,20 +5,20 @@
 void cat::detail::print_assert_location(source_location const& callsite) {
     page_allocator allocator;
     // TODO: This will leak. An `inline_allocator` should be used.
-    _ = eprint(format(allocator, "assert failed on line {}, in:\n    ",
-                      callsite.line())
-                   .or_exit());
+    auto _ = eprint(format(allocator, "assert failed on line {}, in:\n    ",
+                           callsite.line())
+                        .or_exit());
     // TODO: Truncate to only the last one or two directories.
-    _ = eprint(callsite.file_name());
-    _ = eprint("\ncalled from:\n    ");
-    _ = eprintln(callsite.function_name());
+    auto _ = eprint(callsite.file_name());
+    auto _ = eprint("\ncalled from:\n    ");
+    auto _ = eprintln(callsite.function_name());
 }
 
 void cat::default_assert_handler(source_location const& callsite) {
     detail::print_assert_location(callsite);
 
     // TODO: Colorize this input prompt.
-    _ = print("Press: 1 (Continue), 2 (Debug), 3 (Abort)\n");
+    auto _ = print("Press: 1 (Continue), 2 (Debug), 3 (Abort)\n");
 
     while (true) {
         unsigned char input = nix::read_char().or_exit();
@@ -36,15 +36,17 @@ void cat::default_assert_handler(source_location const& callsite) {
                     breakpoint();
                     return;
                 case 2:
-                    // Abort the program.
-                    _ = eprint("Program aborted!\n");
-                    exit(1);
+                    {
+                        // Abort the program.
+                        auto _ = eprint("Program aborted!\n");
+                        exit(1);
+                    }
                 default:
                     __builtin_unreachable();
             }
 
             return;
         }
-        _ = eprint("Invalid input!\n");
+        auto _ = eprint("Invalid input!\n");
     }
 }

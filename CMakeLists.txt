@@ -97,8 +97,10 @@ list(
 
 add_library(cat INTERFACE)
 
-# Everything building with `cat` should be at least C++23, with GNU extensions.
-target_compile_features(cat INTERFACE cxx_std_23)
+# Everything building with `cat` should be at least C++26, with GNU extensions.
+# TODO: GCC 14 does not recognize this flag.
+# target_compile_features(cat INTERFACE cxx_std_26)
+target_compile_options(cat INTERFACE "-std=gnu++2c")
 
 # Link the address and undefined behavior sanitizers.
 if(CAT_USE_SANITIZERS)
