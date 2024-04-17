@@ -6,11 +6,13 @@
 struct members {
     int member_variable;
 
-    void member_function() {
+    void
+    member_function() {
     }
 };
 
-void test_is_function() {
+void
+test_is_function() {
 }
 
 template <typename T>
@@ -137,9 +139,10 @@ TEST(test_meta) {
 
     struct signed_type {
         int data;
-        constexpr signed_type(int value) : data(value){};
+        constexpr signed_type(int value) : data(value) {};
 
-        constexpr auto operator<(signed_type other) const -> bool {
+        constexpr auto
+        operator<(signed_type other) const -> bool {
             return data < other.data;
         }
     };

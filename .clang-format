@@ -6,12 +6,12 @@ MaxEmptyLinesToKeep: 1
 
 # These are clang-format 13 features:
 LambdaBodyIndentation: Signature
-ReferenceAlignment: Left
+ReferenceAlignment: Pointer
 
 # These are clang-format 14 features:
 QualifierAlignment: Custom
 QualifierOrder: ['friend', 'static', 'inline', 'constexpr', 'type', 'const', 'volatile' ]
-AlignArrayOfStructures: Right
+AlignArrayOfStructures: Left
 SeparateDefinitionBlocks: Always
 
 # These are clang-format 15 features:
@@ -23,7 +23,11 @@ IndentRequiresClause: true
 BreakAfterAttributes: Always
 RequiresExpressionIndentation: Keyword
 BreakBeforeInlineASMColon: Always
-
+IntegerLiteralSeparator:
+  Binary: 4
+  Decimal: 3
+  Hex: -1
+  
 # These are clang-format 17 features:
 
 # ----------------------------------
@@ -47,7 +51,7 @@ AllowShortFunctionsOnASingleLine: None
 AllowShortLambdasOnASingleLine: None
 AllowShortIfStatementsOnASingleLine: WithoutElse
 AllowShortLoopsOnASingleLine: false
-AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterDefinitionReturnType: All
 AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: Yes
 BinPackArguments: true
@@ -98,7 +102,7 @@ IndentGotoLabels: false
 IndentPPDirectives: None
 IndentExternBlock: AfterExternBlock
 IndentWrappedFunctionNames: false
-InsertTrailingCommas: None
+#InsertTrailingCommas: None # Incompatible with bin packing.
 KeepEmptyLinesAtTheStartOfBlocks: false
 NamespaceIndentation: Inner
 PenaltyBreakAssignment: 2
@@ -108,7 +112,7 @@ PenaltyBreakFirstLessLess: 120
 PenaltyBreakString: 1000
 PenaltyBreakTemplateDeclaration: 10
 PenaltyExcessCharacter: 1000000
-PenaltyReturnTypeOnItsOwnLine: 200
+PenaltyReturnTypeOnItsOwnLine: 0
 PenaltyIndentedWhitespace: 0
 PointerAlignment: Left
 ReflowComments: true
