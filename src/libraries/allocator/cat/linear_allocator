@@ -22,12 +22,12 @@ class linear_allocator : public allocator_interface<linear_allocator> {
         }
     };
 
+  public:
     linear_allocator(uintptr<void> p_address, uword arena_bytes)
         : p_arena_begin(p_address + arena_bytes), p_arena_end(p_address) {
         this->reset();
     }
 
-  public:
     // Allocate a `linear_allocator` from another allocator.
     static auto backed(is_allocator auto& backing,
                        idx arena_bytes) -> maybe<linear_allocator> {
