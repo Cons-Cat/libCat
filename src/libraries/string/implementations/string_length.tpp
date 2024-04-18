@@ -7,7 +7,8 @@
 #include <cat/utility>
 
 // This function requires SSE4.2, unless it is used in a `constexpr` context.
-constexpr auto cat::string_length(char const* p_string) -> idx {
+constexpr auto
+cat::string_length(char const* p_string) -> idx {
     if consteval {
         idx result = 0u;
         while (true) {

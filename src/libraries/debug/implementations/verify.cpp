@@ -3,9 +3,10 @@
 
 // Check that an expression holds true in all builds. If it holds false, invoke
 // `p_assert_handler`.
-void cat::verify(bool invariant_expression,
-                 void (*p_assert_handler)(source_location const&),
-                 source_location const& callsite) {
+void
+cat::verify(bool invariant_expression,
+            void (*p_assert_handler)(source_location const&),
+            source_location const& callsite) {
     if (invariant_expression) [[likely]] {
         return;
     }
@@ -16,9 +17,10 @@ void cat::verify(bool invariant_expression,
 
 // Check that an expression holds true in all builds. If it holds false, print
 // `error_string` and invoke `p_assert_handler`.
-void cat::verify(bool invariant_expression, string const error_string,
-                 void (*p_assert_handler)(source_location const&),
-                 source_location const& callsite) {
+void
+cat::verify(bool invariant_expression, string const error_string,
+            void (*p_assert_handler)(source_location const&),
+            source_location const& callsite) {
     if (invariant_expression) [[likely]] {
         return;
     }

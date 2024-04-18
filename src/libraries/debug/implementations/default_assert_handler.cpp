@@ -2,7 +2,8 @@
 #include <cat/format>
 #include <cat/page_allocator>
 
-void cat::detail::print_assert_location(source_location const& callsite) {
+void
+cat::detail::print_assert_location(source_location const& callsite) {
     page_allocator allocator;
     // TODO: This will leak. An `inline_allocator` should be used.
     auto _ = eprint(format(allocator, "assert failed on line {}, in:\n    ",
@@ -14,7 +15,8 @@ void cat::detail::print_assert_location(source_location const& callsite) {
     auto _ = eprintln(callsite.function_name());
 }
 
-void cat::default_assert_handler(source_location const& callsite) {
+void
+cat::default_assert_handler(source_location const& callsite) {
     detail::print_assert_location(callsite);
 
     // TODO: Colorize this input prompt.

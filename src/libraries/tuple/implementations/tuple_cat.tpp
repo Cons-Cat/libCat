@@ -9,7 +9,8 @@ namespace cat {
 
 namespace detail {
     template <typename... outer_tuple_elements>
-    constexpr auto get_outer_type_list(type_map<outer_tuple_elements...>) {
+    constexpr auto
+    get_outer_type_list(type_map<outer_tuple_elements...>) {
         return (type_list_filled<decay<outer_tuple_elements>,
                                  // `ssizeof_pack` causes an internal compiler
                                  // error in GCC 12 here.
@@ -19,7 +20,8 @@ namespace detail {
     }
 
     template <typename... inner_tuple_elements>
-    constexpr auto get_inner_type_list(type_map<inner_tuple_elements...>) {
+    constexpr auto
+    get_inner_type_list(type_map<inner_tuple_elements...>) {
         // Make a `type_list` from every `tuple_element`, and concatenate the
         // lists together.
         return (type_list<decay<inner_tuple_elements>>{} + ...);
@@ -29,9 +31,9 @@ namespace detail {
     // contains references, so it should just be taken by value.
     template <typename outer_tuple, typename... outer_tuple_elements,
               typename... inner_tuple_elements>
-    constexpr auto tuple_cat_detail(outer_tuple&& tuple,
-                                    type_list<outer_tuple_elements...>,
-                                    type_list<inner_tuple_elements...>)
+    constexpr auto
+    tuple_cat_detail(outer_tuple&& tuple, type_list<outer_tuple_elements...>,
+                     type_list<inner_tuple_elements...>)
         -> cat::tuple<typename inner_tuple_elements::element...> {
         return {
             // For every tuple passed in through `outer_tuple`, move the n'th
@@ -42,7 +44,8 @@ namespace detail {
 }  // namespace detail
 
 template <typename... types>
-constexpr auto tuple_cat(types&&... tuples) {
+constexpr auto
+tuple_cat(types&&... tuples) {
     if constexpr (sizeof...(types) == 0) {
         return tuple<>{};
     } else {

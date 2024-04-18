@@ -12,7 +12,8 @@ namespace {
   gnu::noinline
 #endif
 ]]
-void call_main() {
+void
+call_main() {
     register int argc asm("rdi");
     register char** p_argv asm("rsi");
     cat::exit(main(argc, p_argv));  // NOLINT
@@ -21,7 +22,8 @@ void call_main() {
 
 }  // namespace
 
-extern "C" void cat::_start() {
+extern "C" void
+cat::_start() {
     // `NO_ARGC_ARGV` can be defined in a build system to skip argument loading.
 #ifndef NO_ARGC_ARGV
     asm(R"(pop %rdi        # Load `int4 argc`.

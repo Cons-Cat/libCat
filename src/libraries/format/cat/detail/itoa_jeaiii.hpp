@@ -47,14 +47,14 @@ static cat::detail::pair_jeaiii const s_pairs[] = {
 // if you want to '\0' terminate
 // #define LZ(N) &(L##N, b[N + 1] = '\0')
 
-#define LG(F)                                                       \
-    (u < 100          ? u < 10 ? F(0) : F(1)                        \
-              : u < 1000000 ? u < 10000    ? u < 1000 ? F(2) : F(3) \
-                                 : u < 100000 ? F(4)                \
-                                           : F(5)                   \
-              : u < 100000000 ? u < 10000000 ? F(6) : F(7)          \
-              : u < 1000000000 ? F(8)                               \
-                      : F(9))
+#define LG(F)                                                              \
+    (u < 100             ? u < 10 ? F(0) : F(1)                            \
+                 : u < 1'000'000 ? u < 10'000    ? u < 1'000 ? F(2) : F(3) \
+                                      : u < 100'000 ? F(4)                 \
+                                                 : F(5)                    \
+                 : u < 100'000'000 ? u < 10'000'000 ? F(6) : F(7)          \
+                 : u < 1'000'000'000 ? F(8)                                \
+                         : F(9))
 
 auto u32toa_jeaiii(uint4::raw_type i, char* p_b) -> char*;
 auto i32toa_jeaiii(int4::raw_type i, char* p_b) -> char*;

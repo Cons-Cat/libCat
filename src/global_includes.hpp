@@ -25,7 +25,8 @@ class deferrer_callback {
 
 inline constinit struct {
     template <typename F>
-    auto operator<<(F&& callback) -> deferrer_callback<F> {
+    auto
+    operator<<(F&& callback) -> deferrer_callback<F> {
         return deferrer_callback<F>(callback);
     }
 } deferrer [[maybe_unused]];
@@ -54,7 +55,8 @@ struct monostate_type {
     constexpr monostate_type() = default;
 
     // constexpr monostate_type(auto){}
-    constexpr operator auto() {
+    constexpr
+    operator auto() {
         // Converting `monostate_type` into another type is no-op.
     }
 };
@@ -73,23 +75,25 @@ struct monotype_storage {
     constexpr monotype_storage(T input) : storage(input) {
     }
 
-    constexpr operator auto() const {
+    constexpr
+    operator auto() const {
         return this->storage;
     };
 
-    constexpr auto operator=(monostate_type)
-        -> monotype_storage<T, constant_state>& {
+    constexpr auto
+    operator=(monostate_type) -> monotype_storage<T, constant_state>& {
         return *this;
     }
 
-    friend constexpr auto operator<=>(
-        monotype_storage<T, constant_state> const& self, auto const& rhs) {
+    friend constexpr auto
+    operator<=>(monotype_storage<T, constant_state> const& self,
+                auto const& rhs) {
         return self.storage <=> rhs;
     }
 
-    friend constexpr auto operator==(
-        monotype_storage<T, constant_state> const& self,
-        auto const& rhs) -> bool {
+    friend constexpr auto
+    operator==(monotype_storage<T, constant_state> const& self,
+               auto const& rhs) -> bool {
         return self.storage == rhs;
     }
 
@@ -118,7 +122,8 @@ struct compact_scaredy {
 namespace detail {
     // This is a function instead of a lambda to fix clangd crashes.
     template <typename T, T in_sentinel>
-    constexpr auto sentinel_predicate(T value) -> bool {
+    constexpr auto
+    sentinel_predicate(T value) -> bool {
         return value != in_sentinel;
     }
 }  // namespace detail
@@ -175,19 +180,22 @@ constexpr cat::monostate_type monostate;
 
 // Placement `new`.
 [[nodiscard]]
-constexpr auto operator new(unsigned long, void* p_address) -> void* {
+constexpr auto
+operator new(unsigned long, void* p_address) -> void* {
     return p_address;
 }
 
 // `new[]` and `delete[]` are defined for use in a `constexpr` context.
 [[nodiscard]]
-inline auto operator new[](unsigned long, void* p_address) -> void* {
+inline auto
+operator new[](unsigned long, void* p_address) -> void* {
     return p_address;
 }
 
 [[nodiscard]]
 // NOLINTNEXTLINE Let this be `inline` for now.
-inline auto operator new[](unsigned long) -> void* {
+inline auto
+operator new[](unsigned long) -> void* {
     return reinterpret_cast<void*>(1ul);
 }
 
@@ -198,16 +206,20 @@ enum class align_val_t : __SIZE_TYPE__ {
 }  // namespace std
 
 // NOLINTNEXTLINE Let this be `inline` for now.
-inline void operator delete[](void*) {
+inline void
+operator delete[](void*) {
 }
 
-inline void operator delete[](void*, unsigned long) {
+inline void
+operator delete[](void*, unsigned long) {
 }
 
-inline void operator delete[](void*, unsigned long, std::align_val_t) {
+inline void
+operator delete[](void*, unsigned long, std::align_val_t) {
 }
 
 [[nodiscard]]
-inline auto operator new[](unsigned long, std::align_val_t align) -> void* {
+inline auto
+operator new[](unsigned long, std::align_val_t align) -> void* {
     return reinterpret_cast<void*>(align);  // NOLINT
 }

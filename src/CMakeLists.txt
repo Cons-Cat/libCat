@@ -3,7 +3,6 @@
 
 target_include_directories(cat INTERFACE
   ${CMAKE_SOURCE_DIR}/src/
-  ${CMAKE_SOURCE_DIR}/src/compatibility/
   ${CMAKE_SOURCE_DIR}/src/libraries/meta/
   ${CMAKE_SOURCE_DIR}/src/libraries/compare/
   ${CMAKE_SOURCE_DIR}/src/libraries/limits

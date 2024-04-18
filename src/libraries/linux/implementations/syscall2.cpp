@@ -1,7 +1,8 @@
 #include <cat/linux>
 
-auto nix::syscall2(cat::iword call, cat::no_type arg1, cat::no_type arg2)
-    -> cat::iword {
+auto
+nix::syscall2(cat::iword call, cat::no_type arg1,
+              cat::no_type arg2) -> cat::iword {
     cat::iword result;
     asm volatile("syscall"
                  : "=a"(result)

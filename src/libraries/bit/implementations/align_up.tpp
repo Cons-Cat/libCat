@@ -8,7 +8,8 @@
 // boundary.
 template <typename U>
 [[nodiscard]]
-constexpr auto cat::align_up(U* p_value, uword alignment) -> U* {
+constexpr auto
+cat::align_up(U* p_value, uword alignment) -> U* {
     return (uintptr<U>{p_value} + (alignment - 1u)) & (~(alignment - 1u));
 }
 
@@ -16,7 +17,7 @@ constexpr auto cat::align_up(U* p_value, uword alignment) -> U* {
 // boundary.
 template <typename U>
 [[nodiscard]]
-constexpr auto cat::align_up(uintptr<U> p_value, uword alignment)
-    -> uintptr<U> {
+constexpr auto
+cat::align_up(uintptr<U> p_value, uword alignment) -> uintptr<U> {
     return (p_value + (alignment - 1u)) & (~(alignment - 1u));
 }

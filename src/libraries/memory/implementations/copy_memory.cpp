@@ -5,7 +5,8 @@
 
 // Copy some bytes from one address to another address.
 // TODO: Make this `constexpr`.
-void cat::copy_memory(void const* p_source, void* p_destination, uword bytes) {
+void
+cat::copy_memory(void const* p_source, void* p_destination, uword bytes) {
     using simd_vector = int8x_;
 
     unsigned char const* p_source_handle =

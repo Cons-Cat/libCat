@@ -1,7 +1,8 @@
 #include <cat/linux>
 #include <cat/string>
 
-auto cat::eprintln(string const string) -> iword {
+auto
+cat::eprintln(string const string) -> iword {
     // There is no reasonable way for a `write` syscall for `nix::stderr` to
     // fail, except by running out of buffer space, which fails gracefully
     // anyways.
@@ -10,6 +11,7 @@ auto cat::eprintln(string const string) -> iword {
     return output_length;
 }
 
-auto cat::eprintln() -> iword {
+auto
+cat::eprintln() -> iword {
     return nix::sys_write(nix::stderr, "\n").value();
 }
