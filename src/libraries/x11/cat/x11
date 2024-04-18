@@ -432,8 +432,9 @@ struct connection {
 };
 
 // TODO: Propagate errors instead of panicking.
-auto handshake(cat::is_allocator auto& allocator,
-               cat::socket_unix<cat::socket_type::stream>& socket)
+auto
+handshake(cat::is_allocator auto& allocator,
+          cat::socket_unix<cat::socket_type::stream>& socket)
     -> cat::maybe<x11::connection> {
     x11::connection x_connection;
 
@@ -443,13 +444,13 @@ auto handshake(cat::is_allocator auto& allocator,
     x_connection.socket_descriptor = socket.descriptor;
     // TODO: Is the return of `.recieve` important here?
     auto _ = socket.recieve(&x_connection.header, ssizeof(x_connection.header))
-            .or_exit();
+                 .or_exit();
 
     // TODO: This will fail if Xauth is enabled. This must handle X11 cookies.
     if (x_connection.header.success_code ==
         x11::server_reply_header::success_code_type::failure) {
         // return Failure(x_connection.header.success_code);
-        return nullopt;
+        return cat::nullopt;
     }
 
     // A dynamic allocation must be made because the total size of all
@@ -464,9 +465,9 @@ auto handshake(cat::is_allocator auto& allocator,
     // TODO: Remove `raw`.
     // TODO: Is the return of `.recieve` important here?
     auto _ = socket
-            .recieve(x_connection.p_setup,
-                     x_connection.header.message_length.raw * 4)
-            .or_exit();
+                 .recieve(x_connection.p_setup,
+                          x_connection.header.message_length.raw * 4)
+                 .or_exit();
 
     // Copy pointers to that recieved data from the allocated buffer into
     // `connection`.
@@ -501,19 +502,20 @@ auto handshake(cat::is_allocator auto& allocator,
 
 // TODO: Improve error handling. Union X11 errors and Linux errors.
 // Attempt to connect to an X server over local sockets.
-auto initiate_connection(cat::is_allocator auto& allocator)
+auto
+initiate_connection(cat::is_allocator auto& allocator)
     -> cat::maybe<x11::connection> {
     cat::socket_unix<cat::socket_type::stream> socket;
     socket.path_name = x11::socket_path;
 
     cat::maybe result_1 = socket.create();
     if (!result_1.has_value()) {
-        return nullopt;
+        return cat::nullopt;
     }
 
     cat::maybe result_2 = socket.connect();
     if (!result_2.has_value()) {
-        return nullopt;
+        return cat::nullopt;
     }
 
     return x11::handshake(allocator, socket);

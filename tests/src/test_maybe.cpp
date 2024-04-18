@@ -46,21 +46,23 @@ struct maybe_const_non_trivial {
     }
 };
 
-auto maybe_try_success() -> cat::maybe<int> {
+auto
+maybe_try_success() -> cat::maybe<int> {
     cat::maybe<int> error{0};
     int boo = prop(error);
     return boo;
 }
 
-auto maybe_try_fail() -> cat::maybe<int> {
-    cat::maybe<int> error{nullopt};
+auto
+maybe_try_fail() -> cat::maybe<int> {
+    cat::maybe<int> error{cat::nullopt};
     int boo = prop(error);
     return boo;
 }
 
 TEST(test_maybe) {
     // Initialize empty.
-    cat::maybe<int4> foo{nullopt};
+    cat::maybe<int4> foo{cat::nullopt};
     cat::verify(!foo.has_value());
 
     cat::maybe<int4> inplace_1{};
@@ -75,7 +77,7 @@ TEST(test_maybe) {
     cat::verify(foo.has_value());
 
     // Remove a value.
-    foo = nullopt;
+    foo = cat::nullopt;
     cat::verify(!foo.has_value());
 
     // Unwrap a value.
@@ -83,12 +85,12 @@ TEST(test_maybe) {
     moo = 2;
     cat::verify(moo.value() == 2);
 
-    moo = nullopt;
+    moo = cat::nullopt;
     cat::verify(moo.value_or(100) == 100);
 
     // `maybe` reference.
-    cat::maybe<int4&> ref(nullopt);
-    cat::maybe<int4&> ref_2 = nullopt;
+    cat::maybe<int4&> ref(cat::nullopt);
+    cat::maybe<int4&> ref_2 = cat::nullopt;
 
     cat::verify(!ref.has_value());
     cat::verify(!ref_2.has_value());
@@ -97,10 +99,10 @@ TEST(test_maybe) {
     int4 goo = 1;
     cat::maybe<int4&> boo = goo;
     ref = boo;
-    boo = nullopt;
+    boo = cat::nullopt;
 
-    // Because `boo` was rebinded when assigned `nullopt`, `ref` should still
-    // hold a value.
+    // Because `boo` was rebinded when assigned `cat::nullopt`, `ref` should
+    // still hold a value.
     cat::verify(ref.has_value());
 
     cat::verify(ref.value() == 1);
@@ -115,7 +117,7 @@ TEST(test_maybe) {
     goo = 0;
     cat::verify(ref.value() == 3);
 
-    ref = nullopt;
+    ref = cat::nullopt;
     cat::verify(!ref.has_value());
 
     ref_2 = goo;
@@ -128,7 +130,7 @@ TEST(test_maybe) {
                                 return input >= 0;
                             },
                             -1>>
-        positive(nullopt);
+        positive(cat::nullopt);
     cat::verify(!positive.has_value());
 
     positive = -10;
@@ -141,7 +143,7 @@ TEST(test_maybe) {
     positive = 10;
     cat::verify(positive.has_value());
 
-    positive = nullopt;
+    positive = cat::nullopt;
     cat::verify(!positive.has_value());
 
     // `maybe<void>` with a predicate.
@@ -150,14 +152,14 @@ TEST(test_maybe) {
                                 return input >= 0;
                             },
                             -1>>
-        predicate_void(nullopt);
+        predicate_void(cat::nullopt);
     cat::verify(!predicate_void.has_value());
     predicate_void = cat::monostate;
     cat::verify(predicate_void.has_value());
     auto _ = predicate_void.or_exit();
 
     // Test the sentinel predicate.
-    cat::maybe<cat::sentinel<int4, 0>> nonzero = nullopt;
+    cat::maybe<cat::sentinel<int4, 0>> nonzero = cat::nullopt;
     cat::verify(!nonzero.has_value());
 
     nonzero = 1;
@@ -174,7 +176,7 @@ TEST(test_maybe) {
     cat::verify(*opt_ptr.value() == 0);
     cat::verify(opt_ptr.p_value() == &get_addr);
 
-    opt_ptr = nullopt;
+    opt_ptr = cat::nullopt;
     cat::verify(!opt_ptr.has_value());
     opt_ptr = nullptr;
     cat::verify(!opt_ptr.has_value());
@@ -196,7 +198,7 @@ TEST(test_maybe) {
         cat::exit(1);
     });
 
-    moo = nullopt;
+    moo = cat::nullopt;
     cat::verify(!moo.transform([](int4 input) {
                         return input * 2;
                     })
@@ -215,7 +217,7 @@ TEST(test_maybe) {
                      })
                      .has_value());
 
-    positive = nullopt;
+    positive = cat::nullopt;
     cat::verify(!positive
                      .transform([](int4 input) -> int4 {
                          return input * 2;
@@ -239,7 +241,7 @@ TEST(test_maybe) {
         return input + 1;
     };
     auto return_none = [](int4) -> cat::maybe<int4> {
-        return nullopt;
+        return cat::nullopt;
     };
     auto return_opt = [](int4 input) -> cat::maybe<int4> {
         return input;
@@ -252,7 +254,7 @@ TEST(test_maybe) {
     auto nothing = []() -> void {
     };
     auto maybe_nothing = []() -> cat::maybe<void> {
-        return nullopt;
+        return cat::nullopt;
     };
 
     foo.transform(return_int).and_then(return_opt_void).or_else(nothing);
@@ -344,7 +346,7 @@ TEST(test_maybe) {
     // `maybe const`
     cat::maybe<int4> const constant_val = 1;
     [[maybe_unused]]
-    cat::maybe<int4> const constant_null = nullopt;
+    cat::maybe<int4> const constant_null = cat::nullopt;
     [[maybe_unused]]
     auto con = constant_val.value();
 
@@ -373,8 +375,8 @@ TEST(test_maybe) {
     // `in_place` initializes a value:
     cat::maybe<void> optvoid_4{cat::in_place};
     cat::verify(optvoid_4.has_value());
-    // `nullopt` initializes empty:
-    cat::maybe<void> optvoid_5{nullopt};
+    // `cat::nullopt` initializes empty:
+    cat::maybe<void> optvoid_5{cat::nullopt};
     cat::verify(!optvoid_5.has_value());
 
     cat::maybe<maybe_non_trivial> in_place_nontrivial_1{cat::in_place};
@@ -385,19 +387,21 @@ TEST(test_maybe) {
     auto _ = in_place_nontrivial_2.verify();
 
     // Test `maybe` in a `constexpr` context.
-    auto constant_test = []() constexpr {
+    constexpr auto constant_test = []() consteval {
         [[maybe_unused]]
         constexpr cat::maybe<int> const_int_default;
 
-        // TODO: Enable these `verify()` calls.
+        // TODO: Enable these `verify()` calls when they support `constexpr`.
 
         constexpr cat::maybe<maybe_const_non_trivial> const_nontrivial_default;
         // cat::verify(!const_nontrivial_default.has_value());
 
+        [[maybe_unused]]
         constexpr cat::maybe<maybe_const_non_trivial> const_nontrivial =
             maybe_const_non_trivial();
         // cat::verify(const_nontrivial.has_value());
 
+        [[maybe_unused]]
         constexpr cat::maybe<maybe_const_non_trivial>
             const_nontrivial_in_place = {cat::in_place,
                                          maybe_const_non_trivial()};
@@ -412,7 +416,6 @@ TEST(test_maybe) {
         cat::maybe_ptr<void> optptr2 = optptr;
         [[maybe_unused]]
         cat::maybe_ptr<void> optptr3 = const_optptr;
-        [[maybe_unused]]
         cat::maybe_ptr<void> optptr4;
 
         [[maybe_unused]]
@@ -432,7 +435,7 @@ TEST(test_maybe) {
     optvoid = cat::monostate;
     cat::verify(optvoid.has_value());
     // Remove value:
-    optvoid = nullopt;
+    optvoid = cat::nullopt;
     cat::verify(!optvoid.has_value());
 
     // Test `.is()`;
@@ -440,7 +443,7 @@ TEST(test_maybe) {
     cat::verify(opt_is.is<int4>());
     cat::verify(!opt_is.is<uint8>());
 
-    opt_is = nullopt;
+    opt_is = cat::nullopt;
     cat::verify(!opt_is.is<int4>());
     cat::verify(!opt_is.is<uint8>());
 
@@ -465,24 +468,24 @@ TEST(test_maybe) {
     }));
     cat::verify(matched);
 
-    // Test matching against `nullopt` when this holds a value.
+    // Test matching against `cat::nullopt` when this holds a value.
     matched = true;
-    cat::match(opt_match)(is_a(nullopt).then([&]() {
+    cat::match(opt_match)(is_a(cat::nullopt).then([&]() {
         matched = false;
     }));
     cat::verify(matched);
 
-    // Test matching against `nullopt` when this does not hold a value.
+    // Test matching against `cat::nullopt` when this does not hold a value.
     matched = false;
-    opt_match = nullopt;
-    cat::match(opt_match)(is_a(nullopt).then([&]() {
+    opt_match = cat::nullopt;
+    cat::match(opt_match)(is_a(cat::nullopt).then([&]() {
         matched = true;
     }));
     cat::verify(matched);
 
     // Test member access pattern matching syntax.
     matched = false;
-    opt_match.match(is_a(nullopt).then([&]() {
+    opt_match.match(is_a(cat::nullopt).then([&]() {
         matched = true;
     }));
     cat::verify(matched);

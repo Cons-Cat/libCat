@@ -8,7 +8,8 @@ using namespace cat::integers;
 
 constexpr idx block_size = 4_uki;
 
-auto get_file_size(nix::file_descriptor file_descriptor) -> cat::maybe<iword> {
+auto
+get_file_size(nix::file_descriptor file_descriptor) -> cat::maybe<iword> {
     nix::file_status status = nix::sys_fstat(file_descriptor).or_exit();
     if (status.is_regular()) {
         return status.file_size;
@@ -16,10 +17,11 @@ auto get_file_size(nix::file_descriptor file_descriptor) -> cat::maybe<iword> {
     if (status.is_block_device()) {
         return status.block_size;
     }
-    return nullopt;
+    return cat::nullopt;
 }
 
-void output_to_console(nix::io_vector const& io_vector) {
+void
+output_to_console(nix::io_vector const& io_vector) {
     // TODO: Create a mutable string type to prevent this undefined behavior.
     // TODO: Make this buffered output to reduce syscalls.
     cat::byte const* p_buffer = io_vector.data();
@@ -29,7 +31,8 @@ void output_to_console(nix::io_vector const& io_vector) {
                        cat::bit_cast<char const*>(p_buffer), io_vector.size());
 }
 
-void read_and_print_file(char* p_file_name) {
+void
+read_and_print_file(char* p_file_name) {
     nix::file_descriptor file_descriptor =
         nix::sys_open(p_file_name, nix::open_mode::read_only)
             .or_exit("No such file or directory!", 2);
@@ -72,7 +75,8 @@ void read_and_print_file(char* p_file_name) {
     }
 }
 
-auto main(int argc, char* p_argv[]) -> int {
+auto
+main(int argc, char* p_argv[]) -> int {
     if (argc == 1) {
         auto _ = cat::eprint("At least one file path must be provided!");
         cat::exit(1);
