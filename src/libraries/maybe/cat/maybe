@@ -1298,5 +1298,3 @@ template <typename T>
 using maybe_non_zero = maybe<sentinel<T, T(0)>>;
 
 }  // namespace cat
-
-using cat::nullopt;
