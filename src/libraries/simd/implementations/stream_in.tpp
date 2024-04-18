@@ -6,7 +6,8 @@
 // TODO: This code can be simplified a lot.
 /* Non-temporally copy a vector into some address. */
 template <typename T>
-void cat::stream_in(void* p_destination, T const* source) {
+void
+cat::stream_in(void* p_destination, T const* source) {
     // TODO: Make an integral-vector concept to simplify this.
     // Streaming 4-byte floats.
     if constexpr (cat::is_same<T, float4x4>) {

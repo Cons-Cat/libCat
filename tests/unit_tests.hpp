@@ -16,15 +16,16 @@ void test_fail(cat::source_location const& source_location);
 // automatically in this program's constructor calls.
 #define TEST(test_name)                                                     \
     void test_name();                                                       \
-    [[gnu::constructor]] void cat_register_##test_name() {                  \
-        auto _ = cat::print("Running test ");                                    \
+    [[gnu::constructor]]                                                    \
+    void cat_register_##test_name() {                                       \
+        auto _ = cat::print("Running test ");                               \
         last_ctor_was_test = true;                                          \
         ++tests_run;                                                        \
         /* TODO: This will leak. An `Inlineallocator` should be used. */    \
-        auto _ = cat::print(cat::format(pager, "{}", tests_run).value());        \
+        auto _ = cat::print(cat::format(pager, "{}", tests_run).value());   \
         /* TODO: Align the whitespace after `:` for 1 and 2 digit tests. */ \
         auto string = ": " #test_name "...\n";                              \
-        auto _ = cat::print(string);                                             \
+        auto _ = cat::print(string);                                        \
         test_name();                                                        \
     }                                                                       \
     void test_name()

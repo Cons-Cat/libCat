@@ -1,6 +1,7 @@
 #include <cat/linux>
 
-auto nix::read_char() -> scaredy_nix<char> {
+auto
+nix::read_char() -> scaredy_nix<char> {
     tty_io_serial old_settings = tty_get_attributes(stdin).value();
     tty_io_serial new_settings = old_settings;
 

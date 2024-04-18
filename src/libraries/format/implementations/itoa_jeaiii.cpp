@@ -55,27 +55,30 @@ inline constexpr cat::detail::pair_jeaiii s_pairs[] = {
 // if you want to '\0' terminate
 // #define LZ(N) &(L##N, b[N + 1] = '\0')
 
-#define LG(F)                                                       \
-    (u < 100          ? u < 10 ? F(0) : F(1)                        \
-              : u < 1000000 ? u < 10000    ? u < 1000 ? F(2) : F(3) \
-                                 : u < 100000 ? F(4)                \
-                                           : F(5)                   \
-              : u < 100000000 ? u < 10000000 ? F(6) : F(7)          \
-              : u < 1000000000 ? F(8)                               \
-                      : F(9))
+#define LG(F)                                                              \
+    (u < 100             ? u < 10 ? F(0) : F(1)                            \
+                 : u < 1'000'000 ? u < 10'000    ? u < 1'000 ? F(2) : F(3) \
+                                      : u < 100'000 ? F(4)                 \
+                                                 : F(5)                    \
+                 : u < 100'000'000 ? u < 10'000'000 ? F(6) : F(7)          \
+                 : u < 1'000'000'000 ? F(8)                                \
+                         : F(9))
 
-char* cat::detail::u32toa_jeaiii(uint4::raw_type u, char* b) {
+char*
+cat::detail::u32toa_jeaiii(uint4::raw_type u, char* b) {
     uint8::raw_type t;
     return LG(LZ);
 }
 
-char* cat::detail::i32toa_jeaiii(int4::raw_type i, char* b) {
+char*
+cat::detail::i32toa_jeaiii(int4::raw_type i, char* b) {
     uint4::raw_type u = i < 0 ? *b++ = '-', 0 - uint4::raw_type(i) : i;
     uint8::raw_type t;
     return LG(LZ);
 }
 
-char* cat::detail::u64toa_jeaiii(uint8::raw_type n, char* b) {
+char*
+cat::detail::u64toa_jeaiii(uint8::raw_type n, char* b) {
     uint4::raw_type u;
     uint8::raw_type t;
 
@@ -83,23 +86,24 @@ char* cat::detail::u64toa_jeaiii(uint8::raw_type n, char* b) {
         return u = uint4::raw_type(n), LG(LZ);
     }
 
-    uint8::raw_type a = n / 100000000;
+    uint8::raw_type a = n / 100'000'000;
 
     if (uint4::raw_type(a >> 32) == 0) {
         u = uint4::raw_type(a);
         LG(LN);
     } else {
-        u = uint4::raw_type(a / 100000000);
+        u = uint4::raw_type(a / 100'000'000);
         LG(LN);
-        u = a % 100000000;
+        u = a % 100'000'000;
         LN(7);
     }
 
-    u = n % 100000000;
+    u = n % 100'000'000;
     return LZ(7);
 }
 
-char* cat::detail::i64toa_jeaiii(int8::raw_type i, char* b) {
+char*
+cat::detail::i64toa_jeaiii(int8::raw_type i, char* b) {
     uint8::raw_type n = i < 0 ? *b++ = '-', 0 - uint8::raw_type(i) : i;
     return u64toa_jeaiii(n, b);
 }

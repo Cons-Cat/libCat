@@ -72,8 +72,8 @@ enum class string_control : unsigned char {
 };
 
 // TODO: Generalize this.
-constexpr auto operator|(string_control flag_1, string_control flag_2)
-    -> string_control {
+constexpr auto
+operator|(string_control flag_1, string_control flag_2) -> string_control {
     return static_cast<string_control>(static_cast<unsigned char>(flag_1) |
                                        static_cast<unsigned char>(flag_2));
 }

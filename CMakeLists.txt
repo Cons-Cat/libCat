@@ -35,7 +35,7 @@ list(
 )
 
 if(CAT_USE_SANITIZERS)
-  list(
+    list(
     APPEND CAT_COMPILE_OPTIONS_COMMON
     -fno-omit-frame-pointer # Required for UBsan.
     -fsanitize=undefined
@@ -43,8 +43,8 @@ if(CAT_USE_SANITIZERS)
 
     # Asan stack overflow checking does not work in libCat.
     # TODO: Explain why.
-	$<$<CXX_COMPILER_ID:GNU>:--param asan-stack=0>
-	$<$<CXX_COMPILER_ID:Clang>:-mllvm -asan-stack=0>
+ $<$<CXX_COMPILER_ID:GNU>:--param asan-stack=0>
+ $<$<CXX_COMPILER_ID:Clang>:-mllvm -asan-stack=0>
   )
 endif()
 
@@ -104,7 +104,7 @@ target_compile_options(cat INTERFACE "-std=gnu++2c")
 
 # Link the address and undefined behavior sanitizers.
 if(CAT_USE_SANITIZERS)
-  target_link_libraries(
+    target_link_libraries(
     cat INTERFACE
     asan
     ubsan
@@ -130,3 +130,16 @@ add_subdirectory(tests/)
 
 # Build the examples.
 add_subdirectory(examples/)
+
+# Find a configurable path to a `clang-format` binary.
+find_program(CAT_CLANG_FORMAT_PATH "clang-format" DOC "`clang-format` binary to use.")
+get_property(CAT_SOURCES TARGET cat PROPERTY INTERFACE_SOURCES)
+# Recursively discover the `.hpp` files.
+get_property(CAT_HEADERS TARGET cat PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+file(GLOB_RECURSE CAT_HEADERS "*.hpp")
+
+# Run `clang-format` on all source files of the `cat` target.
+add_custom_target(cat-format
+  COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/format.cmake ${CAT_CLANG_FORMAT_PATH} \"${CAT_SOURCES} ${CAT_HEADERS}\"
+  DEPENDS ${CAT_SOURCES} ${CAT_HEADERS}
+)
