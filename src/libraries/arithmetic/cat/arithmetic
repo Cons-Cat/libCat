@@ -1163,43 +1163,78 @@ struct index : detail::arithmetic_storage<__SIZE_TYPE__, policy>,
 
     // Generate `operator+`.
     template <is_integral T>
-    constexpr auto add(T other) const -> index {
+    constexpr auto
+    add(T other) const -> index {
         return index(this->raw + make_raw_arithmetic(other));
+    }
+
+    // Generate `operator+` for pointer arithmetic.
+    template <typename T>
+    constexpr auto
+    add(T* p_other) const -> T* {
+        return p_other + this->raw;
     }
 
     // Generate `operator-`.
     template <is_integral T>
-    constexpr auto subtract_by(T other) const -> index {
+    constexpr auto
+    subtract_by(T other) const -> index {
         return index(this->raw - make_raw_arithmetic(other));
     }
 
     // Subtracting two indices should produce a signed integer.
     template <is_integral T>
-    constexpr auto subtract_by(index other) const
+    constexpr auto
+    subtract_by(index other) const
         -> arithmetic<make_signed_type<__SIZE_TYPE__>, policy> {
         return iword(this->raw) - make_raw_arithmetic(other);
     }
 
     template <is_arithmetic U>
-    constexpr auto subtract_from(U other) const {
+    constexpr auto
+    subtract_from(U other) const {
         return other - this->raw;
+    }
+
+    // Generate `operator-` for pointer arithmetic.
+    template <typename T>
+    constexpr auto
+    subtract_from(T* p_other) const -> T* {
+        return p_other - this->raw;
     }
 
     // Generate `operator*`.
     template <is_integral T>
-    constexpr auto multiply(T other) const -> index {
+    constexpr auto
+    multiply(T other) const -> index {
         return index(this->raw * make_raw_arithmetic(other));
+    }
+
+    // Generate `operator*` for pointer arithmetic.
+    template <typename T>
+    constexpr auto
+    multiply(T* p_other) const -> T* {
+        return p_other * this->raw;
     }
 
     // Generate `operator/`.
     template <is_integral T>
-    constexpr auto divide_by(T other) const -> index {
+    constexpr auto
+    divide_by(T other) const -> index {
         return index(this->raw / make_raw_arithmetic(other));
     }
 
     template <is_integral T>
-    constexpr auto divide_into(T other) const -> index {
+    constexpr auto
+    divide_into(T other) const -> index {
         return index(make_raw_arithmetic(other) / this->raw);
+    }
+
+    // Generate `operator/` for pointer arithmetic.
+    template <typename T>
+    constexpr auto
+    divide_into(T* p_other) const -> T* {
+        return p_other / this->raw;
     }
 
     // Generate `operator%`.
@@ -1234,6 +1269,23 @@ struct index : detail::arithmetic_storage<__SIZE_TYPE__, policy>,
         return index(complement);
     }
 };
+
+// TODO: Generate these automatically from `arithmetic_interface`.
+// TODO: Genarete other compound assignment operators for pointer arithmetic.
+
+// Generate `operator+=` for pointer arithmetic.
+template <typename T, overflow_policies policy>
+constexpr auto
+operator+=(T* p_other, index<policy> idx) -> T* {
+    return p_other + idx.raw;
+}
+
+// Generate `operator-=` for pointer arithmetic.
+template <typename T, overflow_policies policy>
+constexpr auto
+operator-=(T* p_other, index<policy> idx) -> T* {
+    return p_other - idx.raw;
+}
 
 namespace detail {
     template <overflow_policies policy>
@@ -1353,7 +1405,13 @@ inline namespace integers {
 
 inline namespace literals {
     inline namespace arithmetic_literals {
-        constexpr auto operator""_i1(unsigned long long input) -> cat::int1 {
+        constexpr auto
+        operator""_idx(unsigned long long input) -> cat::idx {
+            return cat::idx{input};
+        }
+
+        constexpr auto
+        operator""_i1(unsigned long long input) -> cat::int1 {
             return cat::int1{input};
         }
 
