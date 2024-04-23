@@ -7,7 +7,8 @@
 // it can be guaranteed to occur before any unit tests are called.
 constinit cat::jmp_buffer* p_jump_buffer = nullptr;
 
-void test_fail(cat::source_location const& source_location) {
+void
+test_fail(cat::source_location const& source_location) {
     cat::detail::print_assert_location(source_location);
     auto _ = cat::println();
     cat::longjmp(*p_jump_buffer, 2);
@@ -20,7 +21,8 @@ extern constructor __init_array_start;  // NOLINT
 extern constructor __init_array_end;    // NOLINT
 }
 
-auto main() -> int {
+auto
+main() -> int {
     // Change the default assert handler.
     cat::assert_handler = &test_fail;
 
@@ -55,8 +57,9 @@ auto main() -> int {
         }
     }
 
-    // TODO: This will leak. An `Inlineallocator` should be used.
-    auto _ = cat::print(cat::format(pager, "\n{} tests passed.\n{} tests failed.\n",
+    // TODO: This will leak. An `inline_allocator` should be used.
+    auto _ =
+        cat::print(cat::format(pager, "\n{} tests passed.\n{} tests failed.\n",
                                tests_passed, tests_failed)
                        .or_exit());
 }
