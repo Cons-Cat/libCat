@@ -140,6 +140,6 @@ file(GLOB_RECURSE CAT_HEADERS "*.hpp")
 
 # Run `clang-format` on all source files of the `cat` target.
 add_custom_target(cat-format
-  COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/format.cmake ${CAT_CLANG_FORMAT_PATH} \"${CAT_SOURCES} ${CAT_HEADERS}\"
+  COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/format.cmake ${CAT_CLANG_FORMAT_PATH} \"${CAT_SOURCES} ${CAT_HEADERS} ${CAT_HEADER_FILES} \"
   DEPENDS ${CAT_SOURCES} ${CAT_HEADERS}
 )

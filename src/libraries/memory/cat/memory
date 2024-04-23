@@ -11,7 +11,8 @@ namespace std {
 // `&` prefix operator has been overloaded.
 // When this is defined in `std::`, GCC 12 can inline it for GDB.
 template <typename T>
-constexpr auto addressof(T& value) -> T* {
+constexpr auto
+addressof(T& value) -> T* {
     return __builtin_addressof(value);
 }
 
@@ -21,7 +22,8 @@ constexpr auto addressof(T const&& value) -> T const* = delete;
 // When this is defined in `std::`, GCC can constant-evaluate it.
 // Call an in-place constructor at any address.
 template <typename T, typename... Args>
-constexpr auto construct_at(T* p_place, Args&&... arguments) -> decltype(auto) {
+constexpr auto
+construct_at(T* p_place, Args&&... arguments) -> decltype(auto) {
     // TODO: Assert that alignment constraints are satisfied.
     return new (const_cast<void*>(static_cast<void const volatile*>(p_place)))
         T(fwd(arguments)...);
@@ -29,7 +31,8 @@ constexpr auto construct_at(T* p_place, Args&&... arguments) -> decltype(auto) {
 
 // Call an in-place destructor at any place.
 template <typename T>
-constexpr void destroy_at(T* p_place) {
+constexpr void
+destroy_at(T* p_place) {
     p_place->~T();
 }
 
@@ -43,7 +46,8 @@ void copy_memory_small(void const* p_source, void* p_destination, uword bytes);
 
 template <typename T = unsigned char>
     requires(sizeof(T) <= 8)
-constexpr void set_memory_scalar(T* p_source, T value, uword size) {
+constexpr void
+set_memory_scalar(T* p_source, T value, uword size) {
     for (uword i = 0u; i < size; ++i) {
         *(static_cast<T*>(p_source) + i) = value;
     }
@@ -52,16 +56,19 @@ constexpr void set_memory_scalar(T* p_source, T value, uword size) {
 template <typename T = unsigned char>
     requires(sizeof(T) <= 8)
 [[gnu::noinline]]
-constexpr void set_memory_scalar_explicit(T* p_source, T value, uword size) {
+constexpr void
+set_memory_scalar_explicit(T* p_source, T value, uword size) {
     set_memory_scalar(p_source, value, size);
 }
 
-constexpr void zero_memory_scalar(void* p_source, uword bytes) {
+constexpr void
+zero_memory_scalar(void* p_source, uword bytes) {
     set_memory_scalar((unsigned char*)p_source, (unsigned char)0, bytes);
 }
 
 [[gnu::noinline]]
-constexpr void zero_memory_scalar_explicit(void* p_source, uword bytes) {
+constexpr void
+zero_memory_scalar_explicit(void* p_source, uword bytes) {
     set_memory_scalar((unsigned char*)p_source, (unsigned char)0, bytes);
 }
 
@@ -74,7 +81,8 @@ namespace detail {
     // code with a call to `memset`. `memset` itself calls this function,
     // which makes a circular reference that ld is unable to link. Mold can
     // link this somehow, but that optimization is useless here.
-    constexpr void set_memory_detail(void* p_source, T value, uword size) {
+    constexpr void
+    set_memory_detail(void* p_source, T value, uword size) {
         // TODO: Assert that these parameters do not index out of bounds or loop
         // infinitely.
         uintptr<T> p_current = uintptr<T>(static_cast<T*>(p_source));
@@ -131,7 +139,8 @@ namespace detail {
 // Set all bytes at this address to `value`.
 template <typename T = unsigned char>
     requires(sizeof(T) <= 8)
-constexpr void set_memory(void* p_source, T value, uword size) {
+constexpr void
+set_memory(void* p_source, T value, uword size) {
     // Make a type that `value` can bitcast to, and can be used in a `simd`.
     // TODO: A size-argument numeral type could simplify this.
     using raw_type =
@@ -149,12 +158,14 @@ constexpr void set_memory(void* p_source, T value, uword size) {
 template <typename T = unsigned char>
     requires(sizeof(T) <= 8)
 [[gnu::noinline]]
-constexpr void set_memory_explicit(void* p_source, T value, uword size) {
+constexpr void
+set_memory_explicit(void* p_source, T value, uword size) {
     set_memory(p_source, value, size);
 }
 
 // Set all bytes at this address to zero.
-constexpr void zero_memory(void* p_source, uword size) {
+constexpr void
+zero_memory(void* p_source, uword size) {
     detail::set_memory_detail(p_source, static_cast<unsigned char>(0u), size);
 }
 
@@ -162,14 +173,16 @@ constexpr void zero_memory(void* p_source, uword size) {
 // Set all bytes at this address to zero. This function cannot be
 // constant-folded out.
 [[gnu::noinline]]
-constexpr void zero_memory_explicit(void* p_source, uword bytes) {
+constexpr void
+zero_memory_explicit(void* p_source, uword bytes) {
     zero_memory(p_source, bytes);
 }
 
 // Set all bytes in a trivial object to `value`.
 template <typename T, typename U = unsigned char>
     requires(is_trivial<T> && sizeof(U) == 1)
-constexpr void set_object(T& object, U value) {
+constexpr void
+set_object(T& object, U value) {
     set_memory(addressof(object), value, ssizeof<T>(object));
 }
 
@@ -177,14 +190,16 @@ constexpr void set_object(T& object, U value) {
 // constant-folded out.
 template <typename T, typename U = unsigned char>
     requires(is_trivial<T> && sizeof(U) == 1)
-constexpr void set_object_explicit(T& object, U value) {
+constexpr void
+set_object_explicit(T& object, U value) {
     set_memory_explicit(addressof(object), value, ssizeof<T>(object));
 }
 
 // Zero out all bytes in a trivial object.
 template <typename T>
     requires(is_trivial<T>)
-constexpr void zero_object(T& object) {
+constexpr void
+zero_object(T& object) {
     zero_memory(addressof(object), ssizeof<T>(object));
 }
 
@@ -192,7 +207,8 @@ constexpr void zero_object(T& object) {
 // constant-folded out.
 template <typename T>
     requires(is_trivial<T>)
-constexpr void zero_object_explicit(T& object) {
+constexpr void
+zero_object_explicit(T& object) {
     zero_memory_explicit(addressof(object), ssizeof<T>(object));
 }
 
@@ -201,7 +217,8 @@ constexpr void zero_object_explicit(T& object) {
 // lifetime from, a separate `const`-qualified object.
 template <typename T>
 [[nodiscard]]
-constexpr auto launder(T* p_object) -> T* {
+constexpr auto
+launder(T* p_object) -> T* {
     return __builtin_launder(p_object);
 }
 
@@ -223,7 +240,8 @@ using std::construct_at;  // NOLINT
 using std::destroy_at;    // NOLINT
 
 template <typename T>
-auto relocate_at(T* p_source, T* p_destination) -> T* {
+auto
+relocate_at(T* p_source, T* p_destination) -> T* {
     if constexpr (is_trivially_relocatable<T>) {
         copy_memory(p_source, p_destination, ssizeof(T));
         return launder(p_destination);
@@ -235,7 +253,8 @@ auto relocate_at(T* p_source, T* p_destination) -> T* {
 }
 
 template <typename T>
-auto relocate(T& source, T* p_destination) -> T* {
+auto
+relocate(T& source, T* p_destination) -> T* {
     return relocate_at(addressof(source), p_destination);
 }
 

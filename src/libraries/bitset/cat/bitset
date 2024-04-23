@@ -70,7 +70,8 @@ class bitset {
                   is_same<types, typename array_type_element::raw_type>) &&
                  ...)
                 [[nodiscard]]
-                static constexpr auto from(types... values) -> bitset
+                static constexpr auto
+                from(types... values) -> bitset
                     requires(sizeof...(types) == array_type::size())
     {
         // `value_type::value_type` is some unsigned integer.
@@ -84,13 +85,13 @@ class bitset {
     constexpr auto operator=(bitset&&) -> bitset& = default;
 
     [[nodiscard]]
-    constexpr auto operator==(bitset<bits_count> const&) const
-        -> bool = default;
+    constexpr auto
+    operator==(bitset<bits_count> const&) const -> bool = default;
 
     // Index into this bit-set from the right-most bit.
     [[nodiscard]]
-    constexpr auto operator[](idx index_bit)
-        -> bit_reference<array_type_element> {
+    constexpr auto
+    operator[](idx index_bit) -> bit_reference<array_type_element> {
         if !consteval {
             assert(index_bit < bits_count);
         }
@@ -115,13 +116,14 @@ class bitset {
     }
 
     [[nodiscard]]
-    constexpr auto operator[](idx index_bit) const
-        -> bit_reference<array_type_element> {
+    constexpr auto
+    operator[](idx index_bit) const -> bit_reference<array_type_element> {
         return (*unconst(this))[index_bit];
     }
 
     [[nodiscard]]
-    constexpr auto at(idx index) -> maybe<bit_reference<array_type_element>> {
+    constexpr auto
+    at(idx index) -> maybe<bit_reference<array_type_element>> {
         if (index < bits_count) {
             return (*this)[index];
         }
@@ -129,8 +131,8 @@ class bitset {
     }
 
     [[nodiscard]]
-    constexpr auto at(idx index) const
-        -> maybe<bit_reference<array_type_element>> {
+    constexpr auto
+    at(idx index) const -> maybe<bit_reference<array_type_element>> {
         if (index < bits_count) {
             return (*this)[index];
         }
@@ -138,8 +140,8 @@ class bitset {
     }
 
     [[nodiscard]]
-    friend constexpr auto operator&(bitset<bits_count> lhs,
-                                    bitset<bits_count> rhs) -> bitset {
+    friend constexpr auto
+    operator&(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
         bitset<bits_count> bitset;
         for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
             bitset.storage[i] = lhs.storage[i] & rhs.storage[i];
@@ -147,15 +149,16 @@ class bitset {
         return bitset;
     }
 
-    friend constexpr auto operator&=(bitset<bits_count>& self,
-                                     bitset<bits_count> operand) -> bitset& {
+    friend constexpr auto
+    operator&=(bitset<bits_count>& self,
+               bitset<bits_count> operand) -> bitset& {
         self = self & operand;
         return self;
     }
 
     [[nodiscard]]
-    friend constexpr auto operator|(bitset<bits_count> lhs,
-                                    bitset<bits_count> rhs) -> bitset {
+    friend constexpr auto
+    operator|(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
         bitset<bits_count> bitset;
         for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
             bitset.storage[i] = lhs.storage[i] | rhs.storage[i];
@@ -163,15 +166,16 @@ class bitset {
         return bitset;
     }
 
-    friend constexpr auto operator|=(bitset<bits_count>& self,
-                                     bitset<bits_count> operand) -> bitset& {
+    friend constexpr auto
+    operator|=(bitset<bits_count>& self,
+               bitset<bits_count> operand) -> bitset& {
         self = self | operand;
         return self;
     }
 
     [[nodiscard]]
-    friend constexpr auto operator^(bitset<bits_count> lhs,
-                                    bitset<bits_count> rhs) -> bitset {
+    friend constexpr auto
+    operator^(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
         bitset<bits_count> bitset;
         for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
             bitset.storage[i] = lhs.storage[i] ^ rhs.storage[i];
@@ -179,13 +183,15 @@ class bitset {
         return bitset;
     }
 
-    friend constexpr auto operator^=(bitset<bits_count>& self,
-                                     bitset<bits_count> operand) -> bitset& {
+    friend constexpr auto
+    operator^=(bitset<bits_count>& self,
+               bitset<bits_count> operand) -> bitset& {
         self = self ^ operand;
         return self;
     }
 
-    friend constexpr auto operator~(bitset<bits_count> self) -> bitset& {
+    friend constexpr auto
+    operator~(bitset<bits_count> self) -> bitset& {
         for (auto& i : self.storage) {
             ~i;
         }
@@ -194,7 +200,8 @@ class bitset {
 
     // Evaluate true if every bit in this bitset is 1.
     [[nodiscard]]
-    constexpr auto all_of() const -> bool {
+    constexpr auto
+    all_of() const -> bool {
         // Iterate through all bytes:
         for (idx current_byte = 0u; current_byte < this->storage_array_size;
              ++current_byte) {
@@ -222,7 +229,8 @@ class bitset {
 
     // Evaluate true if at least one bit in this bitset is 1.
     [[nodiscard]]
-    constexpr auto any_of() const -> bool {
+    constexpr auto
+    any_of() const -> bool {
         for (auto i : this->storage) {
             if (i != 0u) {
                 return true;
@@ -233,12 +241,14 @@ class bitset {
 
     // Evaluate true if every bit in this bitset is 0.
     [[nodiscard]]
-    constexpr auto none_of() const -> bool {
+    constexpr auto
+    none_of() const -> bool {
         return !(this->any_of());
     }
 
     [[nodiscard]]
-    constexpr auto countl_zero() const -> idx {
+    constexpr auto
+    countl_zero() const -> idx {
         // TODO: `leading_bytes_bits` doesn't compile here in Clang 17 if
         // prefixed by `this->`.
         constexpr idx skip_bits =
@@ -266,7 +276,8 @@ class bitset {
     // TODO: `.countl_one()`.
 
     [[nodiscard]]
-    constexpr auto countr_zero() const -> idx {
+    constexpr auto
+    countr_zero() const -> idx {
         idx count =
             cat::countr_zero(this->storage[this->storage_array_size - 1u]);
         if (count != sizeof(array_type_element) * 8u) {
@@ -288,32 +299,38 @@ class bitset {
     // TODO: `.countr_one()`.
 
     [[nodiscard]]
-    constexpr auto begin() {
+    constexpr auto
+    begin() {
         return iterator(storage.begin());
     }
 
     [[nodiscard]]
-    constexpr auto end() {
+    constexpr auto
+    end() {
         return iterator(storage.end(), limits<array_type_element>::bits);
     }
 
     [[nodiscard]]
-    constexpr auto begin() const {
+    constexpr auto
+    begin() const {
         return const_iterator(storage.begin());
     }
 
     [[nodiscard]]
-    constexpr auto end() const {
+    constexpr auto
+    end() const {
         return const_iterator(storage.end(), limits<array_type_element>::bits);
     }
 
     [[nodiscard]]
-    constexpr auto cbegin() const {
+    constexpr auto
+    cbegin() const {
         return const_iterator(storage.cbegin());
     }
 
     [[nodiscard]]
-    constexpr auto cend() const {
+    constexpr auto
+    cend() const {
         return const_iterator(storage.cend(), limits<array_type_element>::bits);
     }
 

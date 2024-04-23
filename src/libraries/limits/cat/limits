@@ -6,6 +6,7 @@
 
 namespace cat {
 
+// TODO: Implement support for `cat::idx`.
 // TODO: Implement support for GCC 13's `__bf16` type.
 // TODO: Implement support for complex floats.
 
@@ -38,11 +39,13 @@ template <>
 struct limits<char> {
     limits() = delete;
 
-    static consteval auto min() -> __INT8_TYPE__ {
+    static consteval auto
+    min() -> __INT8_TYPE__ {
         return -128;
     }
 
-    static consteval auto max() -> __INT8_TYPE__ {
+    static consteval auto
+    max() -> __INT8_TYPE__ {
         return 127;
     }
 
@@ -58,11 +61,13 @@ template <>
 struct limits<__INT8_TYPE__> {
     limits() = delete;
 
-    static consteval auto min() -> __INT8_TYPE__ {
+    static consteval auto
+    min() -> __INT8_TYPE__ {
         return -128;
     }
 
-    static consteval auto max() -> __INT8_TYPE__ {
+    static consteval auto
+    max() -> __INT8_TYPE__ {
         return 127;
     }
 
@@ -79,11 +84,13 @@ template <>
 struct limits<__UINT8_TYPE__> {
     limits() = delete;
 
-    static consteval auto min() -> __UINT8_TYPE__ {
+    static consteval auto
+    min() -> __UINT8_TYPE__ {
         return 0u;
     }
 
-    static consteval auto max() -> __UINT8_TYPE__ {
+    static consteval auto
+    max() -> __UINT8_TYPE__ {
         return 255u;
     }
 
@@ -100,11 +107,13 @@ template <>
 struct limits<__INT16_TYPE__> {
     limits() = delete;
 
-    static consteval auto min() -> __INT16_TYPE__ {
+    static consteval auto
+    min() -> __INT16_TYPE__ {
         return -32'768;
     }
 
-    static consteval auto max() -> __INT16_TYPE__ {
+    static consteval auto
+    max() -> __INT16_TYPE__ {
         return 32'767;
     }
 
@@ -121,12 +130,14 @@ template <>
 struct limits<__UINT16_TYPE__> {
     limits() = delete;
 
-    static consteval auto min() -> __UINT16_TYPE__ {
+    static consteval auto
+    min() -> __UINT16_TYPE__ {
         return 0u;
     }
 
-    static consteval auto max() -> __UINT16_TYPE__ {
-        return 65535u;
+    static consteval auto
+    max() -> __UINT16_TYPE__ {
+        return 65'535u;
     }
 
     static constexpr __UINT8_TYPE__ digits = 16;
@@ -142,11 +153,13 @@ template <>
 struct limits<__INT32_TYPE__> {
     limits() = delete;
 
-    static consteval auto min() -> __INT32_TYPE__ {
+    static consteval auto
+    min() -> __INT32_TYPE__ {
         return -2'147'483'648;
     }
 
-    static consteval auto max() -> __INT32_TYPE__ {
+    static consteval auto
+    max() -> __INT32_TYPE__ {
         return 2'147'483'647;
     }
 
@@ -162,11 +175,13 @@ template <>
 struct limits<__UINT32_TYPE__> {
     limits() = delete;
 
-    static consteval auto min() -> __UINT32_TYPE__ {
+    static consteval auto
+    min() -> __UINT32_TYPE__ {
         return 0u;
     }
 
-    static consteval auto max() -> __UINT32_TYPE__ {
+    static consteval auto
+    max() -> __UINT32_TYPE__ {
         return 4'294'967'295;
     }
 
@@ -182,13 +197,15 @@ template <>
 struct limits<__INT64_TYPE__> {
     limits() = delete;
 
-    static consteval auto min() -> __INT64_TYPE__ {
+    static consteval auto
+    min() -> __INT64_TYPE__ {
         // This weird code is required to compile correctly for some reason.
         // It's basically what libstdc++ does, too.
         return -9'223'372'036'854'775'807 - 1;
     }
 
-    static consteval auto max() -> __INT64_TYPE__ {
+    static consteval auto
+    max() -> __INT64_TYPE__ {
         return 9'223'372'036'854'775'807;
     }
 
@@ -196,7 +213,7 @@ struct limits<__INT64_TYPE__> {
     static constexpr __UINT8_TYPE__ digits10 = 18;
     static constexpr __UINT8_TYPE__ bits = 64;
     static constexpr __UINT64_TYPE__ high_bit = static_cast<__INT64_TYPE__>(1)
-                                               << 63;
+                                                << 63;
 
     static constexpr bool is_iec559 = false;
 };
@@ -205,11 +222,13 @@ template <>
 struct limits<__UINT64_TYPE__> {
     limits() = delete;
 
-    static consteval auto min() -> __UINT64_TYPE__ {
+    static consteval auto
+    min() -> __UINT64_TYPE__ {
         return 0u;
     }
 
-    static consteval auto max() -> __UINT64_TYPE__ {
+    static consteval auto
+    max() -> __UINT64_TYPE__ {
         return 18'446'744'073'709'551'615u;
     }
 
@@ -229,11 +248,13 @@ template <overflow_policies policy>
 struct limits<index<policy>> {
     limits() = delete;
 
-    static consteval auto min() -> __UINT64_TYPE__ {
+    static consteval auto
+    min() -> __UINT64_TYPE__ {
         return 0u;
     }
 
-    static consteval auto max() -> __UINT64_TYPE__ {
+    static consteval auto
+    max() -> __UINT64_TYPE__ {
         return 9'223'372'036'854'775'807u;
     }
 
@@ -264,11 +285,13 @@ template <>
 struct limits<float> {
     limits() = delete;
 
-    static consteval auto min() -> float {
+    static consteval auto
+    min() -> float {
         return __FLT_MIN__;
     }
 
-    static consteval auto max() -> float {
+    static consteval auto
+    max() -> float {
         return __FLT_MAX__;
     }
 
@@ -278,9 +301,10 @@ struct limits<float> {
     static constexpr __UINT32_TYPE__ digits10 = __FLT_DIG__;
     static constexpr __UINT32_TYPE__ bits = 32;
     static constexpr __INT32_TYPE__ max_digits10 =
-        2 + __FLT_MANT_DIG__ * 643L / 2136;
+        2 + __FLT_MANT_DIG__ * 643L / 2'136;
 
-    static constexpr auto epsilon() -> float {
+    static constexpr auto
+    epsilon() -> float {
         return __FLT_EPSILON__;
     }
 
@@ -297,23 +321,27 @@ struct limits<float> {
     static constexpr float_denorm has_denorm =
         static_cast<float_denorm>(__FLT_HAS_DENORM__);
 
-    static constexpr auto infinity() -> float {
+    static constexpr auto
+    infinity() -> float {
         return __builtin_huge_valf();
     }
 
     // NOLINTNEXTLINE Let this weird lettercase be used.
-    static constexpr auto quiet_NaN() -> float {
+    static constexpr auto
+    quiet_NaN() -> float {
         return __builtin_nanf("");
     }
 
     // NOLINTNEXTLINE Let this weird lettercase be used.
-    static constexpr auto signaling_NaN() -> float {
+    static constexpr auto
+    signaling_NaN() -> float {
         return __builtin_nansf("");
     }
 
     // TODO: Use GCC 13's `__builtin_issignalling()`.
 
-    static constexpr auto denorm_min() -> float {
+    static constexpr auto
+    denorm_min() -> float {
         return __FLT_DENORM_MIN__;
     }
 
@@ -324,11 +352,13 @@ template <>
 struct limits<double> {
     limits() = delete;
 
-    static consteval auto min() -> float {
+    static consteval auto
+    min() -> float {
         return __DBL_MIN__;
     }
 
-    static consteval auto max() -> float {
+    static consteval auto
+    max() -> float {
         return __DBL_MAX__;
     }
 
@@ -338,9 +368,10 @@ struct limits<double> {
     static constexpr __UINT32_TYPE__ digits10 = __DBL_DIG__;
     static constexpr __UINT32_TYPE__ bits = 64;
     static constexpr __INT32_TYPE__ max_digits10 =
-        2 + __DBL_MANT_DIG__ * 643L / 2136;
+        2 + __DBL_MANT_DIG__ * 643L / 2'136;
 
-    static constexpr auto epsilon() -> float {
+    static constexpr auto
+    epsilon() -> float {
         return __DBL_EPSILON__;
     }
 
@@ -357,21 +388,25 @@ struct limits<double> {
     static constexpr float_denorm has_denorm =
         static_cast<float_denorm>(__DBL_HAS_DENORM__);
 
-    static constexpr auto infinity() -> double {
+    static constexpr auto
+    infinity() -> double {
         return __builtin_huge_val();
     }
 
     // NOLINTNEXTLINE Let this weird lettercase be used.
-    static constexpr auto quiet_NaN() -> double {
+    static constexpr auto
+    quiet_NaN() -> double {
         return __builtin_nan("");
     }
 
     // NOLINTNEXTLINE Let this weird lettercase be used.
-    static constexpr auto signaling_NaN() -> double {
+    static constexpr auto
+    signaling_NaN() -> double {
         return __builtin_nans("");
     }
 
-    static constexpr auto denorm_min() -> double {
+    static constexpr auto
+    denorm_min() -> double {
         return __DBL_DENORM_MIN__;
     }
 

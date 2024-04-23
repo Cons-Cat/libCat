@@ -13,7 +13,7 @@ TEST(test_linear_allocator) {
     defer {
         pager.free(page);
     };
-    auto allocator = cat::linear_allocator::backed(pager, 24).or_exit();
+    auto allocator = cat::linear_allocator(page.data(), page.size());
     allocator.reset();
 
     // It should not be possible to allocate 7 times here, because 24 bytes can

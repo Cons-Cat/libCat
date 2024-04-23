@@ -16,15 +16,17 @@ namespace cat {
 // Erase the type of `cat::arithmetic` for redundant template instantiations.
 template <is_integral T, overflow_policies policy>
 [[nodiscard]]
-auto to_chars(is_allocator auto& allocator,
-              arithmetic<T, policy> numeral) -> maybe<string> {
+auto
+to_chars(is_allocator auto& allocator,
+         arithmetic<T, policy> numeral) -> maybe<string> {
     return to_chars(allocator, make_raw_arithmetic(numeral));
 }
 
 // Dynamically allocate an is_integral value converted to `string`.
 template <is_integral T>
 [[nodiscard]]
-auto to_chars(is_allocator auto& allocator, T integer) -> maybe<string> {
+auto
+to_chars(is_allocator auto& allocator, T integer) -> maybe<string> {
     maybe result = allocator.template alloc_multi<char>(limits<T>::digits10);
     if (!result.has_value()) {
         return nullopt;
@@ -50,7 +52,8 @@ auto to_chars(is_allocator auto& allocator, T integer) -> maybe<string> {
 template <typename T>
     requires(is_floating_point<T>)
 [[nodiscard]]
-auto to_chars(is_allocator auto& alloc, T value) -> maybe<string> {
+auto
+to_chars(is_allocator auto& alloc, T value) -> maybe<string> {
     maybe result = alloc.template alloc_multi<char>(limits<T>::digits10);
     if (!result.has_value()) {
         return nullopt;
@@ -62,7 +65,8 @@ auto to_chars(is_allocator auto& alloc, T value) -> maybe<string> {
 
 namespace detail {
     template <uword::raw_type length, auto value>
-    consteval auto make_const_string(fixed_string<length> const& string) {
+    consteval auto
+    make_const_string(fixed_string<length> const& string) {
         // Copy over the string into new, larger, storage.
         fixed_string<length + 1u> new_string;
         for (uword i = 0u; i < length; ++i) {
@@ -91,7 +95,8 @@ namespace detail {
 template <auto value>
     requires(is_integral<decltype(value)>)
 [[nodiscard]]
-consteval auto to_chars() {
+consteval auto
+to_chars() {
     if constexpr (value == 0) {
         return fixed_string("0");
     } else {
@@ -114,8 +119,8 @@ consteval auto to_chars() {
 
 template <is_integral T>
 [[nodiscard]]
-constexpr auto to_string_at(arithmetic<T> value,
-                            span<char> output_buffer) -> maybe<string> {
+constexpr auto
+to_string_at(arithmetic<T> value, span<char> output_buffer) -> maybe<string> {
     // Add 1 for a negative sign `-` character.
     constexpr iword max_length = to_chars<arithmetic<T>::max()>().size() + 1;
     char buffer[max_length.raw];
@@ -202,7 +207,8 @@ namespace detail {
 
         // Get the discriminant value that represents `T`.
         template <typename T>
-        static consteval auto alternative() -> format_discriminant {
+        static consteval auto
+        alternative() -> format_discriminant {
             format_type_constant type;
             type.template set_alternative<T>();
             return type.discriminant;
@@ -210,7 +216,8 @@ namespace detail {
 
         // Set this variant to represent `T`.
         template <typename T>
-        constexpr void set_alternative() {
+        constexpr void
+        set_alternative() {
             using U = remove_cvref<T>;
             if constexpr (is_same<U, int1>) {
                 this->discriminant = format_discriminant::int1_type;
@@ -279,22 +286,25 @@ namespace detail {
         }
 
         [[nodiscard]]
-        auto data() const -> char* {
+        auto
+        data() const -> char* {
             return this->p_storage;
         }
 
         [[nodiscard]]
-        auto size() const -> idx {
+        auto
+        size() const -> idx {
             return idx(this->length);
         }
 
         [[nodiscard]]
-        auto capacity() const -> idx {
+        auto
+        capacity() const -> idx {
             return idx(this->max_length);
         }
 
-        auto push_back(is_allocator auto& allocator,
-                       char character) -> maybe<void> {
+        auto
+        push_back(is_allocator auto& allocator, char character) -> maybe<void> {
             if (this->length + 1 > this->max_length) {
                 // Reallocate double the memory if its capacity is exceeded.
                 maybe result = allocator.template realloc_multi<char>(
@@ -328,7 +338,8 @@ namespace detail {
         // For every type passed into the constructor, pack it into the arrays
         // in-order.
         template <typename T>
-        void store_argument(uword& argument_index, T&& value) {
+        void
+        store_argument(uword& argument_index, T&& value) {
             // Pack `value` into `packed_args_storage`.
             iword const storage_index =
                 this->arguments_indices[argument_index.raw].byte_index;
@@ -385,7 +396,8 @@ namespace detail {
         template <typename T>
         // This function loads unaligned data.
         [[gnu::no_sanitize("alignment")]]
-        auto get(iword argument_index) const -> T {
+        auto
+        get(iword argument_index) const -> T {
             // Get the storage index out from the indices array.
             iword const storage_index =
                 (this->p_args_indices + argument_index)->byte_index;
@@ -421,27 +433,32 @@ namespace detail {
         }
 
         [[nodiscard]]
-        auto data() const -> char* {
+        auto
+        data() const -> char* {
             return this->p_string;
         }
 
         [[nodiscard]]
-        auto size() const -> idx {
+        auto
+        size() const -> idx {
             return idx(this->length);
         }
 
         [[nodiscard]]
-        auto capacity() const -> idx {
+        auto
+        capacity() const -> idx {
             return idx(this->max_length);
         }
 
         virtual auto grow(uword new_size) -> maybe<void> = 0;
 
-        void clear() {
+        void
+        clear() {
             this->length = 0u;
         }
 
-        auto push_back(allocator_type&, char character) -> maybe<void> {
+        auto
+        push_back(allocator_type&, char character) -> maybe<void> {
             // If the new length would exceed the current capacity, call
             // `.grow()` to extend the capacity, first.
             if (this->length + 1u > this->max_length) {
@@ -495,7 +512,8 @@ namespace detail {
         // Overload the pure virtual `format_buffer_base::grow()` function.
         // Instead of expanding its own memory, this buffer is flushed itself to
         // make more room.
-        auto grow(uword) -> maybe<void> {
+        auto
+        grow(uword) -> maybe<void> {
             // `size()` is derived from `format_buffer_base`.
             if (this->size() == 256u) {
                 this->flush();
@@ -503,7 +521,8 @@ namespace detail {
             return monostate;
         }
 
-        auto flush() -> maybe<void> {
+        auto
+        flush() -> maybe<void> {
             // `size()` is derived from `format_buffer_base`.
             uword size = this->size();
             // char const* p_end = storage + size;
@@ -527,7 +546,8 @@ namespace detail {
     struct format_buffer_iterator<allocator_type, T*>
         : format_buffer_base<allocator_type> {
         // `.grow()` for a `T[]` is no-op.
-        auto grow() -> maybe<void> {
+        auto
+        grow() -> maybe<void> {
             return monostate;
         }
     };
@@ -559,28 +579,33 @@ namespace detail {
         }
 
         [[nodiscard]]
-        constexpr auto begin() const -> const_iterator {
+        constexpr auto
+        begin() const -> const_iterator {
             return this->format.cbegin();
         }
 
         [[nodiscard]]
-        constexpr auto end() const -> const_iterator {
+        constexpr auto
+        end() const -> const_iterator {
             return this->format.cend();
         }
 
-        constexpr void advance_to(iterator position) {
+        constexpr void
+        advance_to(iterator position) {
             // this->format.begin().advance(position - this->format.begin());
             this->format.begin().advance(
                 position.distance_to(this->format.begin()));
         }
 
-        constexpr auto next_argument_index() -> iword {
+        constexpr auto
+        next_argument_index() -> iword {
             return ++(this->argument_index);
         }
 
         // Check if a manually indexed argument is within reasonable bounds, a
         // d check that this context is not using automatic indexing.
-        constexpr auto check_argument_index(iword index) -> maybe<void> {
+        constexpr auto
+        check_argument_index(iword index) -> maybe<void> {
             if consteval {
                 if (index >= make_signed(this->arguments_count)) {
                     // This index is of range.
@@ -627,8 +652,9 @@ namespace detail {
     };
 
     template <is_allocator allocator_type>
-    constexpr auto parse_format_string(string const format,
-                                       format_handler<allocator_type>&& handler)
+    constexpr auto
+    parse_format_string(string const format,
+                        format_handler<allocator_type>&& handler)
         -> scaredy_format<void> {
         // char const* p_first = format.data();
         // char const* p_last = format.data() + format.size();
@@ -731,9 +757,10 @@ namespace detail {
 
     // Format a collection of `char` and push it into some container.
     template <is_allocator allocator_type, typename outputter_type>
-    auto vformat_to(allocator_type& allocator, outputter_type output_iterator,
-                    string const format,
-                    format_args arguments) -> scaredy_format<outputter_type> {
+    auto
+    vformat_to(allocator_type& allocator, outputter_type output_iterator,
+               string const format,
+               format_args arguments) -> scaredy_format<outputter_type> {
         if constexpr (is_same<outputter_type, format_contiguous_output_iterator<
                                                   allocator_type>>) {
             // If the type-erased contiguous format buffer is used, then
@@ -760,8 +787,9 @@ namespace detail {
     }
 
     template <is_allocator allocator_type>
-    auto vformat(allocator_type& allocator, string const format,
-                 format_args arguments) -> scaredy_format<string> {
+    auto
+    vformat(allocator_type& allocator, string const format,
+            format_args arguments) -> scaredy_format<string> {
         // TODO: Estimate the size of the final formatted string, and
         // allocate that much up-front for `output`.
         idx const initial_size = format.size() + 10u;
@@ -798,9 +826,10 @@ namespace detail {
 template <is_allocator allocator_type,
           is_output_iterator<string> outputter_type, typename... Args>
 [[nodiscard]]
-auto format_to(allocator_type& allocator, outputter_type output_iterator,
-               string const format,
-               Args&&... arguments) -> scaredy_format<outputter_type> {
+auto
+format_to(allocator_type& allocator, outputter_type output_iterator,
+          string const format,
+          Args&&... arguments) -> scaredy_format<outputter_type> {
     return detail::vformat_to(
         allocator, output_iterator, format,
         detail::format_args(
@@ -809,8 +838,9 @@ auto format_to(allocator_type& allocator, outputter_type output_iterator,
 
 template <is_allocator allocator_type, typename... Args>
 [[nodiscard]]
-auto format(allocator_type& allocator, string const format,
-            Args&&... arguments) -> scaredy_format<string> {
+auto
+format(allocator_type& allocator, string const format,
+       Args&&... arguments) -> scaredy_format<string> {
     return detail::vformat(
         allocator, format,
         detail::format_args(

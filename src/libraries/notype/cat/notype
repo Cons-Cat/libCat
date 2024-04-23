@@ -20,7 +20,9 @@ class no_type {
 
     template <typename T>
         requires(!is_void<T>)
-    [[nodiscard]] constexpr operator T() const {
+    [[nodiscard]]
+    constexpr
+    operator T() const {
         return bit_cast<T>(this->p_storage);
     }
 
@@ -42,7 +44,9 @@ class no_type_ptr {
 
     template <typename T>
         requires(is_pointer<T>)
-    [[nodiscard]] constexpr operator T() const {
+    [[nodiscard]]
+    constexpr
+    operator T() const {
         return static_cast<T>(this->p_storage);
     }
 

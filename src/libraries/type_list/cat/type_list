@@ -56,13 +56,15 @@ class type_list {
 
     // If the last element in this type list is `T`.
     template <typename T, typename U>
-    static consteval auto recurse_for_type() -> bool {
+    static consteval auto
+    recurse_for_type() -> bool {
         return is_same<T, U>;
     }
 
     // If the any element in this type list is `T`.
     template <typename T, typename U, typename... Us>
-    static consteval auto recurse_for_type() -> bool
+    static consteval auto
+    recurse_for_type() -> bool
         requires(sizeof...(Us) > 0)
     {
         return is_same<T, U> ? true : recurse_for_type<T, Us...>();
@@ -70,13 +72,15 @@ class type_list {
 
     // Propagate the final count of occurences of `T` in this type list.
     template <typename T, idx count>
-    static consteval auto recurse_for_count() -> idx {
+    static consteval auto
+    recurse_for_count() -> idx {
         return count;
     }
 
     // Sum the number of occurences of `T` in this type list.
     template <typename T, idx count, typename U, typename... Us>
-    static consteval auto recurse_for_count() -> idx
+    static consteval auto
+    recurse_for_count() -> idx
         requires(sizeof...(Us) >= 0)
     {
         return is_same<T, U> ? recurse_for_count<T, count + 1, Us...>()
@@ -84,12 +88,14 @@ class type_list {
     }
 
     template <typename U>
-    static consteval auto recurse_for_unique() -> bool {
+    static consteval auto
+    recurse_for_unique() -> bool {
         return true;
     }
 
     template <typename U, typename... Us>
-    static consteval auto recurse_for_unique() -> bool
+    static consteval auto
+    recurse_for_unique() -> bool
         requires(sizeof...(Us) > 0)
     {
         return is_unique<U> ? recurse_for_unique<Us...>() : false;
@@ -107,7 +113,8 @@ class type_list {
     using merge = type_list<types..., Us...>;
 
     template <typename... Us>
-    static consteval auto concat(type_list<Us...>) {
+    static consteval auto
+    concat(type_list<Us...>) {
         return type_list<types..., Us...>{};
     }
 
@@ -118,7 +125,8 @@ class type_list {
     // A `+` is required instead of `concat_types` to use this inside of fold
     // expressions.
     template <typename... Us>
-    friend constexpr auto operator+(type_list<types...>, type_list<Us...>) {
+    friend constexpr auto
+    operator+(type_list<types...>, type_list<Us...>) {
         return type_list<types..., Us...>{};
     }
 
@@ -156,7 +164,8 @@ class type_list {
 
 namespace detail {
     template <typename T, idx count, idx index, typename... types>
-    consteval auto type_list_fill(type_list<types...> type_list) {
+    consteval auto
+    type_list_fill(type_list<types...> type_list) {
         if constexpr (index == count) {
             return type_list;
         } else {

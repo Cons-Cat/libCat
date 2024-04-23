@@ -25,26 +25,28 @@ namespace detail {
     };
 }  // namespace detail
 
-constexpr auto operator|(memory_order order,
-                         detail::memory_order_modifier modifier)
-    -> memory_order {
+constexpr auto
+operator|(memory_order order,
+          detail::memory_order_modifier modifier) -> memory_order {
     return memory_order(order | modifier);
 }
 
-constexpr auto operator&(memory_order order,
-                         detail::memory_order_modifier modifier)
-    -> memory_order {
+constexpr auto
+operator&(memory_order order,
+          detail::memory_order_modifier modifier) -> memory_order {
     return memory_order(order & modifier);
 }
 
 namespace detail {
-    constexpr auto cmpexch_failure_order2(memory_order order) -> memory_order {
+    constexpr auto
+    cmpexch_failure_order2(memory_order order) -> memory_order {
         return order == memory_order::acq_rel   ? memory_order::acquire
                : order == memory_order::release ? memory_order::relaxed
                                                 : order;
     }
 
-    constexpr auto cmpexch_failure_order(memory_order order) -> memory_order {
+    constexpr auto
+    cmpexch_failure_order(memory_order order) -> memory_order {
         return memory_order(
             cmpexch_failure_order2(order &
                                    detail::memory_order_modifier::mask) |
@@ -53,11 +55,13 @@ namespace detail {
     }
 }  // namespace detail
 
-void thread_fence(memory_order&& order) {
+void
+thread_fence(memory_order&& order) {
     __atomic_thread_fence(order);
 }
 
-void signal_fence(memory_order&& order) {
+void
+signal_fence(memory_order&& order) {
     __atomic_signal_fence(order);
 }
 
@@ -65,7 +69,8 @@ void signal_fence(memory_order&& order) {
 // atomic load operation does not extend past this return value. `expression`
 // does not carry a dependency into the return value.
 template <typename T>
-auto kill_dependency(T expression) -> T {
+auto
+kill_dependency(T expression) -> T {
     return result(expression);
 }
 
@@ -93,147 +98,170 @@ struct atomic {
         return load();
     }
 
-    auto operator=(T operand) -> T {
+    auto
+    operator=(T operand) -> T {
         store(operand);
         return operand;
     }
 
-    auto operator=(T operand) volatile -> T {
+    auto
+    operator=(T operand) volatile -> T {
         store(operand);
         return operand;
     }
 
     // TODO: This should handle all boolean types, not just `bool`.
-    auto operator++(int) -> T
+    auto
+    operator++(int) -> T
         requires(!is_same<T, bool>)
     {
         return fetch_add(1);
     }
 
-    auto operator++(int) volatile -> T
+    auto
+    operator++(int) volatile -> T
         requires(!is_same<T, bool>)
     {
         return fetch_add(1);
     }
 
-    auto operator--(int) -> T
+    auto
+    operator--(int) -> T
         requires(!is_same<T, bool>)
     {
         return fetch_sub(1);
     }
 
-    auto operator--(int) volatile -> T
+    auto
+    operator--(int) volatile -> T
         requires(!is_same<T, bool>)
     {
         return fetch_sub(1);
     }
 
-    auto operator++() -> T
+    auto
+    operator++() -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_add_fetch(&this->value, 1, memory_order::seq_cst);
     }
 
-    auto operator++() volatile -> T
+    auto
+    operator++() volatile -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_add_fetch(&this->value, 1, memory_order::seq_cst);
     }
 
-    auto operator--() -> T
+    auto
+    operator--() -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_sub_fetch(&this->value, 1, memory_order::seq_cst);
     }
 
-    auto operator--() volatile -> T
+    auto
+    operator--() volatile -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_sub_fetch(&this->value, 1, memory_order::seq_cst);
     }
 
-    auto operator+=(auto operand) -> T
+    auto
+    operator+=(auto operand) -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_add_fetch(&this->value, operand, memory_order::seq_cst);
     }
 
-    auto operator+=(auto operand) volatile -> T
+    auto
+    operator+=(auto operand) volatile -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_add_fetch(&this->value, operand,
                                   int4(memory_order::seq_cst));
     }
 
-    auto operator-=(auto operand) -> T
+    auto
+    operator-=(auto operand) -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_sub_fetch(&this->value, operand,
                                   int4(memory_order::seq_cst));
     }
 
-    auto operator-=(auto operand) volatile -> T
+    auto
+    operator-=(auto operand) volatile -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_sub_fetch(&this->value, operand,
                                   int4(memory_order::seq_cst));
     }
 
-    auto operator&=(auto operand) -> T
+    auto
+    operator&=(auto operand) -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_and_fetch(&this->value, operand,
                                   int4(memory_order::seq_cst));
     }
 
-    auto operator&=(auto operand) volatile -> T
+    auto
+    operator&=(auto operand) volatile -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_and_fetch(&this->value, operand,
                                   int4(memory_order::seq_cst));
     }
 
-    auto operator|=(auto operand) -> T
+    auto
+    operator|=(auto operand) -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_or_fetch(&this->value, operand,
                                  int4(memory_order::seq_cst));
     }
 
-    auto operator|=(auto operand) volatile -> T
+    auto
+    operator|=(auto operand) volatile -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_or_fetch(&this->value, operand,
                                  int4(memory_order::seq_cst));
     }
 
-    auto operator^=(auto operand) -> T
+    auto
+    operator^=(auto operand) -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_xor_fetch(&this->value, operand,
                                   int4(memory_order::seq_cst));
     }
 
-    auto operator^=(auto operand) volatile -> T
+    auto
+    operator^=(auto operand) volatile -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_xor_fetch(&this->value, operand,
                                   int4(memory_order::seq_cst));
     }
 
-    auto is_lock_free() const -> bool {
+    auto
+    is_lock_free() const -> bool {
         // Use a fake, minimally aligned pointer.
         return __atomic_is_lock_free(sizeof(this->value),
                                      reinterpret_cast<void*>(-alignment));
     }
 
-    auto is_lock_free() const volatile -> bool {
+    auto
+    is_lock_free() const volatile -> bool {
         // Use a fake, minimally aligned pointer.
         return __atomic_is_lock_free(sizeof(this->value),
                                      reinterpret_cast<void*>(-alignment));
     }
 
-    void store(auto storing, memory_order operand = memory_order::seq_cst) {
+    void
+    store(auto storing, memory_order operand = memory_order::seq_cst) {
         memory_order test_value = operand & detail::mask;
 
         assert(test_value != memory_order::acquire);
@@ -243,8 +271,8 @@ struct atomic {
         __atomic_store_n(&this->value, storing, operand);
     }
 
-    void store(auto operand,
-               memory_order order = memory_order::seq_cst) volatile {
+    void
+    store(auto operand, memory_order order = memory_order::seq_cst) volatile {
         memory_order test_value = order & detail::mask;
 
         assert(test_value != memory_order::acquire);
@@ -254,7 +282,8 @@ struct atomic {
         __atomic_store_n(&this->value, operand, order);
     }
 
-    auto load(memory_order order = memory_order::seq_cst) const -> T {
+    auto
+    load(memory_order order = memory_order::seq_cst) const -> T {
         memory_order test_value = order & detail::mask;
 
         assert(test_value != memory_order::release);
@@ -263,7 +292,8 @@ struct atomic {
         return __atomic_load_n(&this->value, order);
     }
 
-    auto load(memory_order order = memory_order::seq_cst) const volatile -> T {
+    auto
+    load(memory_order order = memory_order::seq_cst) const volatile -> T {
         memory_order test_value = order & detail::mask;
 
         assert(test_value != memory_order::release);
@@ -272,18 +302,21 @@ struct atomic {
         return __atomic_load_n(&this->value, order);
     }
 
-    auto exchange(T operand, memory_order order = memory_order::seq_cst) -> T {
+    auto
+    exchange(T operand, memory_order order = memory_order::seq_cst) -> T {
         return __atomic_exchange_n(&this->value, operand, order);
     }
 
-    auto exchange(T operand,
-                  memory_order order = memory_order::seq_cst) volatile -> T {
+    auto
+    exchange(T operand,
+             memory_order order = memory_order::seq_cst) volatile -> T {
         return __atomic_exchange_n(&this->value, operand, order);
     }
 
-    auto compare_exchange_weak(T& operand, T success_value,
-                               memory_order success_order,
-                               memory_order failure_order) -> bool {
+    auto
+    compare_exchange_weak(T& operand, T success_value,
+                          memory_order success_order,
+                          memory_order failure_order) -> bool {
         memory_order test_value1 = success_order & detail::mask;
         memory_order test_value2 = failure_order & detail::mask;
 
@@ -296,9 +329,10 @@ struct atomic {
                                            failure_order);
     }
 
-    auto compare_exchange_weak(T& operand, T success_value,
-                               memory_order success_order,
-                               memory_order failure_order) volatile -> bool {
+    auto
+    compare_exchange_weak(T& operand, T success_value,
+                          memory_order success_order,
+                          memory_order failure_order) volatile -> bool {
         memory_order test_value1 = success_order & detail::mask;
         memory_order test_value2 = failure_order & detail::mask;
 
@@ -311,23 +345,25 @@ struct atomic {
                                            failure_order);
     }
 
-    auto compare_exchange_weak(T& operand, T success_value,
-                               memory_order order = memory_order::seq_cst)
+    auto
+    compare_exchange_weak(T& operand, T success_value,
+                          memory_order order = memory_order::seq_cst) -> bool {
+        return compare_exchange_weak(operand, success_value, order,
+                                     detail::cmpexch_failure_order(order));
+    }
+
+    auto
+    compare_exchange_weak(T& operand, T success_value,
+                          memory_order order = memory_order::seq_cst) volatile
         -> bool {
         return compare_exchange_weak(operand, success_value, order,
                                      detail::cmpexch_failure_order(order));
     }
 
-    auto compare_exchange_weak(
-        T& operand, T success_value,
-        memory_order order = memory_order::seq_cst) volatile -> bool {
-        return compare_exchange_weak(operand, success_value, order,
-                                     detail::cmpexch_failure_order(order));
-    }
-
-    auto compare_exchange_strong(T& operand, T success_value,
-                                 memory_order success_order,
-                                 memory_order failure_order) -> bool {
+    auto
+    compare_exchange_strong(T& operand, T success_value,
+                            memory_order success_order,
+                            memory_order failure_order) -> bool {
         memory_order test_value1 = success_order & detail::mask;
         memory_order test_value2 = failure_order & detail::mask;
 
@@ -340,9 +376,10 @@ struct atomic {
                                            failure_order);
     }
 
-    auto compare_exchange_strong(T& operand, T success_value,
-                                 memory_order success_order,
-                                 memory_order failure_order) volatile -> bool {
+    auto
+    compare_exchange_strong(T& operand, T success_value,
+                            memory_order success_order,
+                            memory_order failure_order) volatile -> bool {
         memory_order test_value1 = success_order & detail::mask;
         memory_order test_value2 = failure_order & detail::mask;
 
@@ -355,84 +392,92 @@ struct atomic {
                                            failure_order);
     }
 
-    auto compare_exchange_strong(T& operand, T success_value,
-                                 memory_order order = memory_order::seq_cst)
+    auto
+    compare_exchange_strong(T& operand, T success_value,
+                            memory_order order = memory_order::seq_cst)
         -> bool {
         return compare_exchange_strong(operand, success_value, order,
                                        detail::cmpexch_failure_order(order));
     }
 
-    auto compare_exchange_strong(
-        T& operand, T success_value,
-        memory_order order = memory_order::seq_cst) volatile -> bool {
+    auto
+    compare_exchange_strong(T& operand, T success_value,
+                            memory_order order = memory_order::seq_cst) volatile
+        -> bool {
         return compare_exchange_strong(operand, success_value, order,
                                        detail::cmpexch_failure_order(order));
     }
 
-    auto fetch_add(auto operand, memory_order order = memory_order::seq_cst)
-        -> T
+    auto
+    fetch_add(auto operand, memory_order order = memory_order::seq_cst) -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_fetch_add(&this->value, operand, order);
     }
 
-    auto fetch_add(auto operand,
-                   memory_order order = memory_order::seq_cst) volatile -> T
+    auto
+    fetch_add(auto operand,
+              memory_order order = memory_order::seq_cst) volatile -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_fetch_add(&this->value, operand, order);
     }
 
-    auto fetch_sub(auto operand, memory_order order = memory_order::seq_cst)
-        -> T
+    auto
+    fetch_sub(auto operand, memory_order order = memory_order::seq_cst) -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_fetch_sub(&this->value, operand, order);
     }
 
-    auto fetch_sub(auto operand,
-                   memory_order order = memory_order::seq_cst) volatile -> T
+    auto
+    fetch_sub(auto operand,
+              memory_order order = memory_order::seq_cst) volatile -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_fetch_sub(&this->value, operand, order);
     }
 
-    auto fetch_and(auto operand, memory_order order = memory_order::seq_cst)
-        -> T
+    auto
+    fetch_and(auto operand, memory_order order = memory_order::seq_cst) -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_fetch_and(&this->value, operand, order);
     }
 
-    auto fetch_and(auto operand,
-                   memory_order order = memory_order::seq_cst) volatile -> T
+    auto
+    fetch_and(auto operand,
+              memory_order order = memory_order::seq_cst) volatile -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_fetch_and(&this->value, operand, order);
     }
 
-    auto fetch_or(auto operand, memory_order order = memory_order::seq_cst) -> T
+    auto
+    fetch_or(auto operand, memory_order order = memory_order::seq_cst) -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_fetch_or(&this->value, operand, order);
     }
 
-    auto fetch_or(auto operand,
-                  memory_order order = memory_order::seq_cst) volatile -> T
+    auto
+    fetch_or(auto operand,
+             memory_order order = memory_order::seq_cst) volatile -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_fetch_or(&this->value, operand, order);
     }
 
-    auto fetch_xor(auto operand, memory_order order = memory_order::seq_cst)
-        -> T
+    auto
+    fetch_xor(auto operand, memory_order order = memory_order::seq_cst) -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_fetch_xor(&this->value, operand, order);
     }
 
-    auto fetch_xor(auto operand,
-                   memory_order order = memory_order::seq_cst) volatile -> T
+    auto
+    fetch_xor(auto operand,
+              memory_order order = memory_order::seq_cst) volatile -> T
         requires(!is_same<T, bool>)
     {
         return __atomic_fetch_xor(&this->value, operand, order);
@@ -440,8 +485,8 @@ struct atomic {
 
     // TODO: Add C++20 atomic wait operations.
 
-    static constexpr int4 alignment = sizeof(T) > alignof(T) ? sizeof(T)
-                                                             : alignof(T);
+    static constexpr int4
+        alignment = sizeof(T) > alignof(T) ? sizeof(T) : alignof(T);
 
     // `value` is not intended to be mutated directly. Doing so may be
     // bug-prone.

@@ -292,7 +292,8 @@ namespace detail {
         cat::conditional<cat::is_void<T>, cat::monotype_storage<int, 0>, T>;
 
     // NOLINTNEXTLINE This parameter is not always pointer.
-    auto is_positive(auto input) -> bool {
+    auto
+    is_positive(auto input) -> bool {
         return cat::bit_int_cast(input) >= 0;
     }
 }  // namespace detail
@@ -314,11 +315,11 @@ enum class memory_protection_flags : unsigned int {
 };
 
 enum class memory_flags : unsigned int {
-    shared = 0b1,          // Writes change the underlying object.
-    privately = 0b10,      // Writes only change the calling process.
-    fixed = 0b10000,       // Map to precisely this address, rather than virtual
-                           // memory. This may fail.
-    anonymous = 0b100000,  // Not backed by a file descriptor.
+    shared = 0b1,      // Writes change the underlying object.
+    privately = 0b10,  // Writes only change the calling process.
+    fixed = 0b1'0000,  // Map to precisely this address, rather than virtual
+                       // memory. This may fail.
+    anonymous = 0b10'0000,  // Not backed by a file descriptor.
     // TODO: Make binary/hexa format consistent.
     grows_down = 0x00100,    // Stack-like segment.
     denywrite = 0x00800,     // ETXTBSY.
@@ -554,34 +555,36 @@ enum class io_requests : unsigned long long {
 };
 
 namespace detail {
-    consteval auto compose_io_request(io_requests a, io_requests b,
-                                      io_requests c,
-                                      io_requests d) -> io_requests {
+    consteval auto
+    compose_io_request(io_requests a, io_requests b, io_requests c,
+                       io_requests d) -> io_requests {
         return io_requests{
             (cat::to_underlying(a) << 30) | (cat::to_underlying(b) << 8) |
             cat::to_underlying(c) | (cat::to_underlying(d) << 16)};
     }
 }  // namespace detail
 
-consteval auto io_request(io_requests a, io_requests b) -> io_requests {
+consteval auto
+io_request(io_requests a, io_requests b) -> io_requests {
     return detail::compose_io_request(io_requests::none, a, b,
                                       io_requests::none);
 }
 
-consteval auto io_request_write(io_requests a, io_requests b,
-                                io_requests c) -> io_requests {
+consteval auto
+io_request_write(io_requests a, io_requests b, io_requests c) -> io_requests {
     return detail::compose_io_request(io_requests::write, a, b,
                                       io_requests(sizeof(c)));
 }
 
-consteval auto io_request_read(io_requests a, io_requests b,
-                               io_requests c) -> io_requests {
+consteval auto
+io_request_read(io_requests a, io_requests b, io_requests c) -> io_requests {
     return detail::compose_io_request(io_requests::read, a, b,
                                       io_requests(sizeof(c)));
 }
 
-consteval auto io_request_readwrite(io_requests a, io_requests b,
-                                    io_requests c) -> io_requests {
+consteval auto
+io_request_readwrite(io_requests a, io_requests b,
+                     io_requests c) -> io_requests {
     return detail::compose_io_request(
         io_requests{cat::to_underlying(io_requests::read) |
                     cat::to_underlying(io_requests::write)},
@@ -910,13 +913,15 @@ struct io_vector : cat::span<cat::byte> {
                                           cat::uintptr<cat::byte>(p_start))) {
     }
 
-    constexpr auto operator=(io_vector const& io_vector) -> struct io_vector& {
+    constexpr auto
+    operator=(io_vector const& io_vector) -> struct io_vector& {
         this->p_storage = io_vector.p_storage;
         this->length = io_vector.length;
         return *this;
     }
 
-    constexpr auto operator=(io_vector&& io_vector) -> struct io_vector& {
+    constexpr auto
+    operator=(io_vector&& io_vector) -> struct io_vector& {
         this->p_storage = io_vector.p_storage;
         this->length = cat::move(io_vector).length;
         return *this;
@@ -1062,9 +1067,9 @@ enum class TtySetMode {
     wait_recieve = 0x5404,
 };
 
-auto tty_set_attributes(file_descriptor tty, TtySetMode tty_mode,
-                        tty_io_serial const& configuration)
-    -> scaredy_nix<void>;
+auto
+tty_set_attributes(file_descriptor tty, TtySetMode tty_mode,
+                   tty_io_serial const& configuration) -> scaredy_nix<void>;
 
 auto read_char() -> scaredy_nix<char>;
 
@@ -1072,39 +1077,46 @@ auto read_char() -> scaredy_nix<char>;
 struct file_status {
   public:
     [[nodiscard]]
-    auto is_regular() const -> bool {
+    auto
+    is_regular() const -> bool {
         return (this->protections_mode & 0170000u) == 0100000u;
     }
 
     static_assert(!cat::enum_flag_trait<cat::uint4>::value);
 
     [[nodiscard]]
-    auto is_directory() const -> bool {
+    auto
+    is_directory() const -> bool {
         return (this->protections_mode & 0170000u) == 0040000u;
     }
 
     [[nodiscard]]
-    auto is_character_device() const -> bool {
+    auto
+    is_character_device() const -> bool {
         return (this->protections_mode & 0170000u) == 0020000u;
     }
 
     [[nodiscard]]
-    auto is_block_device() const -> bool {
+    auto
+    is_block_device() const -> bool {
         return (this->protections_mode & 0170000u) == 0060000u;
     }
 
     [[nodiscard]]
-    auto is_fifo() const -> bool {
+    auto
+    is_fifo() const -> bool {
         return (this->protections_mode & 0170000u) == 0010000u;
     }
 
     [[nodiscard]]
-    auto is_symbolic_link() const -> bool {
+    auto
+    is_symbolic_link() const -> bool {
         return (this->protections_mode & 0170000u) == 0120000u;
     }
 
     [[nodiscard]]
-    auto is_socket() const -> bool {
+    auto
+    is_socket() const -> bool {
         return (this->protections_mode & 0170000u) == 0140000u;
     }
 
@@ -1155,11 +1167,11 @@ struct process {
     process(process const&) = delete;
 
     // TODO: Add `cat::invocable` concept.
-    auto create(cat::is_allocator auto& allocator,
-                cat::idx const initial_stack_size, auto const& function,
-                void* p_args_struct,
-                // TODO: These flags should largely be encoded into the type.
-                CloneFlags const flags = default_flags) -> scaredy_nix<void> {
+    auto
+    create(cat::is_allocator auto& allocator, cat::idx const initial_stack_size,
+           auto const& function, void* p_args_struct,
+           // TODO: These flags should largely be encoded into the type.
+           CloneFlags const flags = default_flags) -> scaredy_nix<void> {
         this->stack_size = initial_stack_size;
         // Allocate a stack for this thread, and get an address to the top of
         // it.
@@ -1211,7 +1223,8 @@ parent_thread:
     }
 
     [[nodiscard]]
-    auto wait() const -> scaredy_nix<process_id> {
+    auto
+    wait() const -> scaredy_nix<process_id> {
         scaredy_nix<process_id> result =
             sys_waitid(wait_id::process_id, this->id,
                        wait_options_flags::exited | wait_options_flags::clone |

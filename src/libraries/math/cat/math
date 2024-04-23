@@ -13,7 +13,8 @@ namespace cat {
 
 template <typename T>
 [[nodiscard]]
-constexpr auto min(T value) -> T {
+constexpr auto
+min(T value) -> T {
     return value;
 }
 
@@ -21,7 +22,8 @@ constexpr auto min(T value) -> T {
 template <typename T, typename U, typename... remaining>
     requires(is_implicitly_convertible<U, T>)
 [[nodiscard]]
-constexpr auto min(T value_1, U value_2, remaining... remaining_args) -> T {
+constexpr auto
+min(T value_1, U value_2, remaining... remaining_args) -> T {
     // Recurse through the list of variadic arguments, discarding the larger
     // element each time.
     return (value_1 < value_2) ? min(value_1, remaining_args...)
@@ -31,7 +33,8 @@ constexpr auto min(T value_1, U value_2, remaining... remaining_args) -> T {
 // TODO: These should have different names and be in `<cat/algorithms>`.
 
 [[nodiscard]]
-constexpr auto min(is_iterable auto&& iterable) {
+constexpr auto
+min(is_iterable auto&& iterable) {
     auto iterator = iterable.begin();
     auto maximum = *iterator;
     ++iterator;
@@ -44,7 +47,8 @@ constexpr auto min(is_iterable auto&& iterable) {
 
 template <typename T>
 [[nodiscard]]
-constexpr auto min(is_iterable auto&& iterable) {
+constexpr auto
+min(is_iterable auto&& iterable) {
     auto iterator = iterable.begin();
     auto maximum = *iterator;
     ++iterator;
@@ -57,7 +61,8 @@ constexpr auto min(is_iterable auto&& iterable) {
 
 template <typename T>
 [[nodiscard]]
-constexpr auto max(T value) -> T {
+constexpr auto
+max(T value) -> T {
     return value;
 }
 
@@ -65,7 +70,8 @@ constexpr auto max(T value) -> T {
 template <typename T, typename U, typename... remaining>
     requires(is_implicitly_convertible<U, T>)
 [[nodiscard]]
-constexpr auto max(T value_1, U value_2, remaining... remaining_args) -> T {
+constexpr auto
+max(T value_1, U value_2, remaining... remaining_args) -> T {
     // Recurse through the list of variadic arguments, discarding the larger
     // element each time.
     return (value_1 > value_2) ? max(value_1, remaining_args...)
@@ -75,7 +81,8 @@ constexpr auto max(T value_1, U value_2, remaining... remaining_args) -> T {
 // TODO: If an `iterable` has `<` and `>` operators, this has unclear intent.
 
 [[nodiscard]]
-constexpr auto max(is_iterable auto&& iterable) {
+constexpr auto
+max(is_iterable auto&& iterable) {
     auto iterator = iterable.begin();
     auto maximum = *iterator;
     ++iterator;
@@ -88,7 +95,8 @@ constexpr auto max(is_iterable auto&& iterable) {
 
 template <typename T>
 [[nodiscard]]
-constexpr auto max(is_iterable auto&& iterable) {
+constexpr auto
+max(is_iterable auto&& iterable) {
     auto iterator = iterable.begin();
     auto maximum = *iterator;
     ++iterator;
@@ -101,7 +109,8 @@ constexpr auto max(is_iterable auto&& iterable) {
 
 template <is_signed_integral T>
 [[nodiscard]]
-constexpr auto abs(T value) -> T {
+constexpr auto
+abs(T value) -> T {
     if constexpr (sizeof(T) == 8) {
         return __builtin_labs(make_raw_arithmetic(value));
     } else {
@@ -111,13 +120,15 @@ constexpr auto abs(T value) -> T {
 }
 
 [[nodiscard]]
-constexpr auto abs(is_unsigned_integral auto value) {
+constexpr auto
+abs(is_unsigned_integral auto value) {
     return value;
 }
 
 template <is_floating_point T>
 [[nodiscard]]
-constexpr auto abs(T value) -> T {
+constexpr auto
+abs(T value) -> T {
     // `__builtin_fabs()` returns `double`, so its type must be coerced to `T`.
     return T(__builtin_fabs(make_raw_arithmetic(value)));
 }
@@ -125,7 +136,8 @@ constexpr auto abs(T value) -> T {
 // TODO: Support floating point here.
 template <is_integral T, is_integral U>
 [[nodiscard]]
-constexpr auto div_ceil(T dividend, U divisor) {
+constexpr auto
+div_ceil(T dividend, U divisor) {
     using type = common_type<T, U>;
     return (dividend + divisor - type(1)) / divisor;
 }
@@ -135,7 +147,8 @@ constexpr auto div_ceil(T dividend, U divisor) {
 namespace detail {
     // TODO: Consider a jump-table implementation.
     template <is_integral T, typename U>
-    constexpr auto pow_integral(T base, U exponent) -> T {
+    constexpr auto
+    pow_integral(T base, U exponent) -> T {
         if (exponent < 0) {
             // A negative exponent should always make this floor to 0.
             return 0;
@@ -162,7 +175,8 @@ namespace detail {
 
 template <is_arithmetic T, is_integral U>
 [[nodiscard]]
-constexpr auto pow(T base, U exponent) -> T {
+constexpr auto
+pow(T base, U exponent) -> T {
     // type-erase `arithmetic`s to prevent redundant code gen.
     using raw_type = raw_arithmetic_type<T>;
     raw_type raw_base = make_raw_arithmetic(base);
@@ -181,7 +195,8 @@ constexpr auto pow(T base, U exponent) -> T {
 namespace detail {
     template <is_unsigned_integral T, uword::raw_type shift>
     [[gnu::always_inline]]
-    constexpr auto round_to_pow2_part(T value) {
+    constexpr auto
+    round_to_pow2_part(T value) {
         value |= (value >> shift);
 
         // Continually shift right until doing so would shift the entire int.
@@ -198,7 +213,8 @@ namespace detail {
 
 template <is_unsigned_integral T>
 [[nodiscard]]
-constexpr auto round_to_pow2(T value) {
+constexpr auto
+round_to_pow2(T value) {
     value -= 1u;
     value = detail::round_to_pow2_part<T, 1u>(value);
     return value + 1;
@@ -206,7 +222,8 @@ constexpr auto round_to_pow2(T value) {
 
 template <is_arithmetic T>
 [[nodiscard]]
-auto clamp(T value, T min, T max) -> T {
+auto
+clamp(T value, T min, T max) -> T {
     T lower_bound = value < min ? min : value;
     return lower_bound > max ? max : lower_bound;
 }

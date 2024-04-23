@@ -76,17 +76,20 @@ namespace detail {
     template <typename derived_type, typename T>
     struct collection_iterator<derived_type, T, false> {
       private:
-        constexpr auto self() -> derived_type& {
+        constexpr auto
+        self() -> derived_type& {
             return static_cast<derived_type&>(*this);
         }
 
-        constexpr auto self() const -> derived_type const& {
+        constexpr auto
+        self() const -> derived_type const& {
             return static_cast<derived_type const&>(*this);
         }
 
       public:
         [[nodiscard]]
-        constexpr auto begin() const
+        constexpr auto
+        begin() const
             requires(has_begin<derived_type>)
         {
             return unconst(this)->self().begin();
@@ -94,7 +97,8 @@ namespace detail {
 
         // Generate `const` overload from non-`const` method `end()`.
         [[nodiscard]]
-        constexpr auto end() const
+        constexpr auto
+        end() const
             requires(has_end<derived_type>)
         {
             return unconst(this)->self().end();
@@ -102,7 +106,8 @@ namespace detail {
 
         // Generate `cbegin()` from `begin()`.
         [[nodiscard]]
-        constexpr auto cbegin() const
+        constexpr auto
+        cbegin() const
             requires(has_begin<derived_type>)
         {
             return this->begin();
@@ -110,42 +115,48 @@ namespace detail {
 
         // Generate `cend()` from `end()`.
         [[nodiscard]]
-        constexpr auto cend() const
+        constexpr auto
+        cend() const
             requires(has_end<derived_type>)
         {
             return this->end();
         }
 
         [[nodiscard]]
-        constexpr auto rbegin()
+        constexpr auto
+        rbegin()
             requires(has_end<derived_type>)
         {
             return as_reverse(unconst(this)->self()).begin();
         }
 
         [[nodiscard]]
-        constexpr auto rend()
+        constexpr auto
+        rend()
             requires(has_begin<derived_type>)
         {
             return as_reverse(unconst(this)->self()).end();
         }
 
         [[nodiscard]]
-        constexpr auto rbegin() const
+        constexpr auto
+        rbegin() const
             requires(has_end<derived_type>)
         {
             return as_reverse(unconst(this)->self()).begin();
         }
 
         [[nodiscard]]
-        constexpr auto rend() const
+        constexpr auto
+        rend() const
             requires(has_begin<derived_type>)
         {
             return as_reverse(unconst(this)->self()).end();
         }
 
         [[nodiscard]]
-        constexpr auto crbegin() const
+        constexpr auto
+        crbegin() const
             requires(has_end<derived_type>)
         {
             // TODO: This should return a `const_iterator`.
@@ -153,7 +164,8 @@ namespace detail {
         }
 
         [[nodiscard]]
-        constexpr auto crend() const
+        constexpr auto
+        crend() const
             requires(has_begin<derived_type>)
         {
             // TODO: This should return a `const_iterator`.
@@ -164,15 +176,18 @@ namespace detail {
     template <typename derived_type, typename T>
     struct collection_iterator<derived_type, T, true> {
       private:
-        constexpr auto self_mut() -> derived_type& {
+        constexpr auto
+        self_mut() -> derived_type& {
             return static_cast<derived_type&>(*this);
         }
 
-        constexpr auto self() -> derived_type& {
+        constexpr auto
+        self() -> derived_type& {
             return static_cast<derived_type&>(*this);
         }
 
-        constexpr auto self() const -> derived_type const& {
+        constexpr auto
+        self() const -> derived_type const& {
             return static_cast<derived_type const&>(*this);
         }
 
@@ -191,15 +206,18 @@ namespace detail {
                 : current_index(index), p_array(p_in_array) {
             }
 
-            constexpr auto dereference() const -> T& {
+            constexpr auto
+            dereference() const -> T& {
                 return this->p_array[current_index.raw];
             }
 
-            constexpr void advance(iword offset) {
+            constexpr void
+            advance(iword offset) {
                 this->current_index += offset;
             }
 
-            constexpr auto distance_to(iterator const& other) const -> iword {
+            constexpr auto
+            distance_to(iterator const& other) const -> iword {
                 return other.current_index - this->current_index;
             }
 
@@ -225,20 +243,23 @@ namespace detail {
                 : current_index(index), p_array(p_in_array) {
             }
 
-            constexpr operator iterator() const {
+            constexpr
+            operator iterator() const {
                 return iterator(this->current_index, this->p_array);
             }
 
-            constexpr auto dereference() const -> T const& {
+            constexpr auto
+            dereference() const -> T const& {
                 return this->p_array[current_index.raw];
             }
 
-            constexpr void advance(iword offset) {
+            constexpr void
+            advance(iword offset) {
                 this->current_index += offset;
             }
 
-            constexpr auto distance_to(const_iterator const& other) const
-                -> iword {
+            constexpr auto
+            distance_to(const_iterator const& other) const -> iword {
                 return other.current_index - this->current_index;
             }
 
@@ -255,64 +276,76 @@ namespace detail {
         // `.begin()` and `.end()` can be automatically generated for
         // contiguous collections.
         [[nodiscard]]
-        constexpr auto begin() {
+        constexpr auto
+        begin() {
             return iterator(0, this->self_mut().data());
         }
 
         [[nodiscard]]
-        constexpr auto begin() const {
+        constexpr auto
+        begin() const {
             return const_iterator(0, this->self().data());
         }
 
         [[nodiscard]]
-        constexpr auto end() {
+        constexpr auto
+        end() {
             return iterator(this->self_mut().size(), this->self_mut().data());
         }
 
         [[nodiscard]]
-        constexpr auto end() const {
+        constexpr auto
+        end() const {
             return const_iterator(this->self().size(), this->self().data());
         }
 
         [[nodiscard]]
-        constexpr auto cbegin() const {
+        constexpr auto
+        cbegin() const {
             return this->begin();
         }
 
         [[nodiscard]]
-        constexpr auto cend() const {
+        constexpr auto
+        cend() const {
             return this->end();
         }
 
         [[nodiscard]]
-        constexpr auto rbegin() {
+        constexpr auto
+        rbegin() {
             return reverse_iterator(this->self().size() - 1,
                                     this->self().data());
         }
 
         [[nodiscard]]
-        constexpr auto rbegin() const {
+        constexpr auto
+        rbegin() const {
             return const_reverse_iterator(this->self().size() - 1,
                                           this->self().data());
         }
 
         [[nodiscard]]
-        constexpr auto rend() {
+        constexpr auto
+        rend() {
             return reverse_iterator(0, this->self().data());
         }
 
         [[nodiscard]]
-        constexpr auto rend() const {
+        constexpr auto
+        rend() const {
             return const_reverse_iterator(0, this->self().data());
         }
 
         [[nodiscard]]
-        constexpr auto crbegin() const {
+        constexpr auto
+        crbegin() const {
             return this->rbegin();
         }
 
         [[nodiscard]]
-        constexpr auto crend() const {
+        constexpr auto
+        crend() const {
             return this->rend();
         }
     };
@@ -334,7 +367,8 @@ class collection_interface
     // If `.size()` is not, provided and `.capacity()` is, generate
     // `.size()`.
     [[nodiscard]]
-    constexpr auto size() const -> idx
+    constexpr auto
+    size() const -> idx
         requires(detail::has_capacity<derived_type> &&
                  !detail::has_size<derived_type>)
     {
@@ -344,7 +378,8 @@ class collection_interface
     // If `.size()` is provided and `.capacity()` is not, generate
     // `.capacity()`.
     [[nodiscard]]
-    constexpr auto capacity() const -> idx
+    constexpr auto
+    capacity() const -> idx
         requires(detail::has_size<derived_type>)
     {
         return this->self().size();
@@ -353,7 +388,8 @@ class collection_interface
     // This evaluates true if there are one or more elements currently in this
     // collection.
     [[nodiscard]]
-    constexpr auto is_empty() const -> bool
+    constexpr auto
+    is_empty() const -> bool
         requires(detail::has_size<derived_type>)
     {
         return this->self().size() == 0;
@@ -362,7 +398,8 @@ class collection_interface
     // This evaluates true if there are one or more elements currently in this
     // collection.
     [[nodiscard]]
-    constexpr auto is_full() const -> bool
+    constexpr auto
+    is_full() const -> bool
         requires(detail::has_size<derived_type>)
     {
         return this->self().size() == this->self().capacity();
@@ -370,7 +407,8 @@ class collection_interface
 
     // Index into this collection with bounds-checking.
     [[nodiscard]]
-    constexpr auto at(iword index) -> maybe<T&>
+    constexpr auto
+    at(iword index) -> maybe<T&>
         requires(is_array_like)
     {
         if !consteval {
@@ -384,41 +422,40 @@ class collection_interface
 
     // Index into this collection with bounds-checking.
     [[nodiscard]]
-    constexpr auto at(iword index) const -> maybe<T&> {
+    constexpr auto
+    at(iword index) const -> maybe<T&> {
         // `unconst()` allows `.at()` to be safely called in a `const` context.
         return unconst(this)->at(index);
     }
 
     [[nodiscard]]
-    constexpr auto front() -> T&
-        requires(is_array_like)
-    {
-        cat::assert(this->self().size() > 0);
-        return this->self_mut().data()[0];
-    }
+    constexpr auto
+    front() -> T& requires(is_array_like) {
+                      cat::assert(this->self().size() > 0);
+                      return this->self_mut().data()[0];
+                  }
 
-    [[nodiscard]]
-    constexpr auto front() const -> T const& {
+    [[nodiscard]] constexpr auto front() const -> T const& {
         cat::assert(this->self().size() > 0);
         return unconst(this)->front();
     }
 
     [[nodiscard]]
-    constexpr auto back() -> T&
-        requires(is_array_like)
-    {
-        cat::assert(this->self().size() > 0);
-        return this->self_mut().data()[this->self().size().raw - 1];
-    }
+    constexpr auto
+    back()
+        -> T& requires(is_array_like) {
+                  cat::assert(this->self().size() > 0);
+                  return this->self_mut().data()[this->self().size().raw - 1];
+              }
 
-    [[nodiscard]]
-    constexpr auto back() const -> T const& {
+    [[nodiscard]] constexpr auto back() const -> T const& {
         cat::assert(this->self().size() > 0);
         return unconst(this)->back();
     }
 
     [[nodiscard]]
-    constexpr auto subspan(uword start_index, uword end_index) -> span<T>
+    constexpr auto
+    subspan(uword start_index, uword end_index) -> span<T>
         requires(is_array_like)
     {
         if !consteval {
@@ -430,8 +467,8 @@ class collection_interface
     }
 
     [[nodiscard]]
-    constexpr auto subspan(uword start_index, uword end_index) const
-        -> span<T const>
+    constexpr auto
+    subspan(uword start_index, uword end_index) const -> span<T const>
         requires(is_array_like)
     {
         if !consteval {
@@ -443,28 +480,24 @@ class collection_interface
     }
 
     [[nodiscard]]
-    constexpr auto first(uword count) -> span<T>
+    constexpr auto
+    first(uword count) -> span<T>
         requires(is_array_like)
     {
         return this->subspan(0u, count);
     }
 
     [[nodiscard]]
-    constexpr auto first(uword count) const -> span<T const>
+    constexpr auto
+    first(uword count) const -> span<T const>
         requires(is_array_like)
     {
         return this->subspan(0u, count);
     }
 
     [[nodiscard]]
-    constexpr auto last(uword count) -> span<T>
-        requires(is_array_like)
-    {
-        return this->subspan(this->self().size() - count, this->self().size());
-    }
-
-    [[nodiscard]]
-    constexpr auto last(uword count) const -> span<T const>
+    constexpr auto
+    last(uword count) -> span<T>
         requires(is_array_like)
     {
         return this->subspan(this->self().size() - count, this->self().size());
@@ -472,19 +505,24 @@ class collection_interface
 
     [[nodiscard]]
     constexpr auto
-    operator[](idx index) -> T&
+    last(uword count) const -> span<T const>
         requires(is_array_like)
     {
-        if !consteval {
-            assert(index < this->self().size());
-        }
-
-        return this->self_mut().data()[make_raw_arithmetic(index)];
+        return this->subspan(this->self().size() - count, this->self().size());
     }
 
     [[nodiscard]]
     constexpr auto
-    operator[](idx index) const -> T const&
+    operator[](idx index)
+        -> T& requires(is_array_like) {
+                  if !consteval {
+                      assert(index < this->self().size());
+                  }
+
+                  return this->self_mut().data()[make_raw_arithmetic(index)];
+              }
+
+    [[nodiscard]] constexpr auto operator[](idx index) const -> T const&
         requires(is_array_like)
     {
         if !consteval {
@@ -497,19 +535,22 @@ class collection_interface
     // Member-access syntax algorithms.
 
     template <is_collection Other>
-    auto copy_to(Other& destination) const {
+    auto
+    copy_to(Other& destination) const {
         assert(destination.capacity() >= this->capacity());
         return cat::copy(this->begin(), this->end(), destination.begin());
     }
 
     template <is_collection Other>
-    auto move_to(Other& destination) const {
+    auto
+    move_to(Other& destination) const {
         assert(destination.capacity() >= this->capacity());
         return cat::move(this->begin(), this->end(), destination.begin());
     }
 
     template <is_collection Other>
-    auto relocate_to(Other& destination) const {
+    auto
+    relocate_to(Other& destination) const {
         assert(destination.capacity() >= this->capacity());
         return cat::relocate(this->begin(), this->end(), destination.begin());
     }
@@ -517,15 +558,18 @@ class collection_interface
     // Implementation details for type reflection.
 
   private:
-    constexpr auto self_mut() -> derived_type& {
+    constexpr auto
+    self_mut() -> derived_type& {
         return static_cast<derived_type&>(*this);
     }
 
-    constexpr auto self() -> derived_type& {
+    constexpr auto
+    self() -> derived_type& {
         return static_cast<derived_type&>(*this);
     }
 
-    constexpr auto self() const -> derived_type const& {
+    constexpr auto
+    self() const -> derived_type const& {
         return static_cast<derived_type const&>(*this);
     }
 };

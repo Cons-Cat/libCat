@@ -26,14 +26,16 @@ auto load_base_stack_pointer() -> void*;
 // This must be inlined to align the stack pointer on the stack frame it is
 // called from.
 [[gnu::always_inline]]
-inline void align_stack_pointer_16() {
+inline void
+align_stack_pointer_16() {
     asm("and $-16, %rsp");
 }
 
 // This must be inlined to align the stack pointer on the stack frame it is
 // called from.
 [[gnu::always_inline]]
-inline void align_stack_pointer_32() {
+inline void
+align_stack_pointer_32() {
     asm("and $-32, %rsp");
 }
 
@@ -42,8 +44,8 @@ extern "C" [[noreturn]]
 void __stack_chk_fail();
 
 // NOLINTNEXTLINE `__cxa_atexit()` must begin with a double underscore.
-extern "C" void __cxa_atexit(void (*p_invocable)(void*), void* p_arg,
-                             void* p_dso_handle);
+extern "C" void
+__cxa_atexit(void (*p_invocable)(void*), void* p_arg, void* p_dso_handle);
 
 class jmp_buffer {
     // This buffer layout should vary by all ISAs.
@@ -98,10 +100,12 @@ void __asan_get_shadow_mapping(uword* p_shadow_scale, uword* p_shadow_offset);
 }
 #else
 // No-op functions are provided when asan is not available.
-constexpr void __asan_poison_memory_region(void const volatile*, uword) {
+constexpr void
+__asan_poison_memory_region(void const volatile*, uword) {
 }
 
-constexpr void __asan_unpoison_memory_region(void const volatile*, uword) {
+constexpr void
+__asan_unpoison_memory_region(void const volatile*, uword) {
 }
 #endif
 

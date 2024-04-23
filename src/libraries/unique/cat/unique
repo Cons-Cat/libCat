@@ -64,7 +64,8 @@ class unique {
     // Allow move-assignment.
     template <rvalue U>
         requires(is_implicitly_convertible<U, T>)
-    auto operator=(U&& value) -> unique& {
+    auto
+    operator=(U&& value) -> unique& {
         this->storage_destructor();
         this->storage = static_cast<T>(fwd(value));
         return *this;
@@ -72,7 +73,8 @@ class unique {
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto operator=(unique<U>&& raii) -> unique& {
+    auto
+    operator=(unique<U>&& raii) -> unique& {
         this->storage_destructor();
         this->storage = static_cast<T>(move(raii).borrow());
         return *this;
@@ -80,7 +82,8 @@ class unique {
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto operator=(unique_weak<U>&& raii) -> unique& {
+    auto
+    operator=(unique_weak<U>&& raii) -> unique& {
         this->storage_destructor();
         this->storage = static_cast<T>(move(raii).borrow());
         return *this;
@@ -92,12 +95,14 @@ class unique {
         }
     }
 
-    constexpr auto borrow() -> T&& {
+    constexpr auto
+    borrow() -> T&& {
         return fwd(this->storage);
     }
 
   private:
-    void storage_destructor() {
+    void
+    storage_destructor() {
         // If `T` holds a `.raii()` method, it will be called before `T`'s
         // destructor.
         if constexpr (has_raii<T>) {
@@ -151,7 +156,8 @@ class unique_weak {
     // Allow move-assignment.
     template <rvalue U>
         requires(is_implicitly_convertible<U, T>)
-    auto operator=(U&& value) -> unique_weak<T>& {
+    auto
+    operator=(U&& value) -> unique_weak<T>& {
         this->storage_destructor();
         this->storage = fwd(value);
         this->owns_data = true;
@@ -160,7 +166,8 @@ class unique_weak {
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    auto operator=(unique_weak<U>&& raii) -> unique_weak<T>& {
+    auto
+    operator=(unique_weak<U>&& raii) -> unique_weak<T>& {
         raii.owns_data = false;
         this->storage_destructor();
         this->storage = static_cast<T>(move(raii).borrow());
@@ -168,11 +175,13 @@ class unique_weak {
         return *this;
     }
 
-    constexpr auto has_ownership() -> bool {
+    constexpr auto
+    has_ownership() -> bool {
         return this->owns_data;
     }
 
-    constexpr auto borrow() -> T&& {
+    constexpr auto
+    borrow() -> T&& {
         this->owns_data = false;
         return fwd(this->storage);
     }
@@ -185,7 +194,8 @@ class unique_weak {
 
   private:
     // If this `unique_weak` owns the data it stores, it will be destroyed.
-    void storage_destructor() {
+    void
+    storage_destructor() {
         if (this->owns_data) {
             // If `T` holds a `.raii()` method, it will be called before `T`'s
             // destructor if this object holds ownership of the data.
