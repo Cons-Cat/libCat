@@ -177,7 +177,7 @@ class variant {
         requires(types::template has_type<T>)
     constexpr variant(T const& input) {
         // Construct a new `T` at the address where it will be gotten from.
-        construct_at(addressof(this->get<T>()), input);
+        construct_at(__builtin_addressof(this->get<T>()), input);
         this->discriminant = this->alternative_index<T>;
     };
 
@@ -186,7 +186,7 @@ class variant {
     // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
     constexpr variant(T&& input) {
         // Construct a new `T` at the address where it will be gotten from.
-        construct_at(addressof(this->get<T>()), fwd(input));
+        construct_at(__builtin_addressof(this->get<T>()), fwd(input));
         this->discriminant = this->alternative_index<T>;
     };
 

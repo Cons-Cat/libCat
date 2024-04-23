@@ -3702,7 +3702,7 @@ class allocator_interface {
                 p_memory = this->get(handle).data();
             } else {
                 // Get the pointer from the allocator.
-                p_memory = addressof(this->get(handle));
+                p_memory = __builtin_addressof(this->get(handle));
             }
 
             // Poison memory region.
@@ -3788,7 +3788,8 @@ class allocator_interface {
     constexpr void
     cfree(T& handle) {
         free(handle);
-        zero_memory_explicit(addressof(this->get(handle)), handle.raw_size());
+        zero_memory_explicit(__builtin_addressof(this->get(handle)),
+                             handle.raw_size());
     }
 
     template <typename T>
@@ -3828,8 +3829,9 @@ class allocator_interface {
             // Get small-size optimized data:
             if (handle.is_inline()) {
                 if constexpr (T::is_multi_handle) {
-                    return span<allocation_type>{addressof(handle.get_inline()),
-                                                 handle.size()};
+                    return span<allocation_type>{
+                        __builtin_addressof(handle.get_inline()),
+                        handle.size()};
                 } else {
                     return handle.get_inline();
                 }
@@ -3881,7 +3883,7 @@ class allocator_interface {
         decltype(auto) ref = this->get(memory);
         using handle_type = decltype(this->get(memory));
         if constexpr (is_reference<handle_type>) {
-            return addressof(ref);
+            return __builtin_addressof(ref);
         } else {
             return ref.data();
         }
@@ -3896,7 +3898,7 @@ class allocator_interface {
         decltype(auto) ref = this->get(memory);
         using handle_type = decltype(this->get(memory));
         if constexpr (is_reference<handle_type>) {
-            return addressof(ref);
+            return __builtin_addressof(ref);
         } else {
             return ref.data();
         }
@@ -4070,7 +4072,7 @@ class allocator_interface {
                     stack_handle.set_count(allocation_count);
 
                     if constexpr (is_zeroed) {
-                        zero_memory(addressof(stack_handle),
+                        zero_memory(__builtin_addressof(stack_handle),
                                     inline_buffer_size);
                     }
 
@@ -4342,12 +4344,12 @@ class allocator_interface {
     constexpr void
     relocate_inline_handle(mem auto& handle, auto allocation) {
         if constexpr (is_trivially_relocatable<int>) {
-            copy_memory(addressof(this->get(handle)), addressof(allocation),
-                        handle.raw_size());
+            copy_memory(__builtin_addressof(this->get(handle)),
+                        __builtin_addressof(allocation), handle.raw_size());
         } else {
             for (idx i = 0u; i < handle.size(); ++i) {
-                *(addressof(this->get(allocation)) + i) =
-                    move(*(addressof(this->get(handle)) + i));
+                *(__builtin_addressof(this->get(allocation)) + i) =
+                    move(*(__builtin_addressof(this->get(handle)) + i));
             }
         }
     }

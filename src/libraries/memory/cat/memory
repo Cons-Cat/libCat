@@ -184,7 +184,7 @@ template <typename T, typename U = unsigned char>
     requires(is_trivial<T> && sizeof(U) == 1)
 constexpr void
 set_object(T& object, U value) {
-    set_memory(addressof(object), value, ssizeof<T>(object));
+    set_memory(__builtin_addressof(object), value, ssizeof<T>(object));
 }
 
 // Zero out all bytes in a trivial object. This function cannot be
@@ -193,7 +193,7 @@ template <typename T, typename U = unsigned char>
     requires(is_trivial<T> && sizeof(U) == 1)
 constexpr void
 set_object_explicit(T& object, U value) {
-    set_memory_explicit(addressof(object), value, ssizeof<T>(object));
+    set_memory_explicit(__builtin_addressof(object), value, ssizeof<T>(object));
 }
 
 // Zero out all bytes in a trivial object.
@@ -201,7 +201,7 @@ template <typename T>
     requires(is_trivial<T>)
 constexpr void
 zero_object(T& object) {
-    zero_memory(addressof(object), ssizeof<T>(object));
+    zero_memory(__builtin_addressof(object), ssizeof<T>(object));
 }
 
 // Zero out all bytes in a trivial object. This function cannot be
@@ -210,7 +210,7 @@ template <typename T>
     requires(is_trivial<T>)
 constexpr void
 zero_object_explicit(T& object) {
-    zero_memory_explicit(addressof(object), ssizeof<T>(object));
+    zero_memory_explicit(__builtin_addressof(object), ssizeof<T>(object));
 }
 
 // Prevent a compiler from constant-folding the non-`const`-qualified
@@ -256,7 +256,7 @@ relocate_at(T* p_source, T* p_destination) -> T* {
 template <typename T>
 auto
 relocate(T& source, T* p_destination) -> T* {
-    return relocate_at(addressof(source), p_destination);
+    return relocate_at(__builtin_addressof(source), p_destination);
 }
 
 }  // namespace cat

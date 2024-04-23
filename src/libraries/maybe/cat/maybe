@@ -187,7 +187,7 @@ struct maybe_value_storage {
     template <typename... Args>
     constexpr void
     construct(Args&&... args) {
-        construct_at(addressof(this->storage), fwd(args)...);
+        construct_at(__builtin_addressof(this->storage), fwd(args)...);
         this->has_some = true;
     }
 
@@ -231,7 +231,7 @@ struct maybe_reference_storage {
 
     template <typename U>
     constexpr maybe_reference_storage(U& in_value)
-        : p_storage(addressof(in_value)) {
+        : p_storage(__builtin_addressof(in_value)) {
     }
 
     constexpr maybe_reference_storage(detail::nullopt_type)
@@ -241,7 +241,7 @@ struct maybe_reference_storage {
     // Rebind the reference if this is assigned a new value.
     constexpr auto
     operator=(value_type& option) -> maybe_reference_storage& {
-        this->p_storage = addressof(option);
+        this->p_storage = __builtin_addressof(option);
         return *this;
     }
 
@@ -477,7 +477,7 @@ struct maybe_compact_storage {
     template <typename... Args>
     constexpr void
     construct(Args&&... args) {
-        construct_at(addressof(this->storage), fwd(args)...);
+        construct_at(__builtin_addressof(this->storage), fwd(args)...);
     }
 
     // If this is assigned an `maybe` which wraps a type that can be
@@ -842,27 +842,27 @@ class maybe {
 
     // Get a pointer to the data owned by this `maybe`. If `maybe`
     // holds a raw pointer, this is equivalent to `.value()`, otherwise this
-    // is equivalent to `addressof(maybe.value())`.
+    // is equivalent to `__builtin_addressof(maybe.value())`.
     [[nodiscard]]
     constexpr auto
     p_value() {
         if constexpr (is_pointer<value_type>) {
             return this->storage.value();
         } else {
-            return addressof(this->storage.value());
+            return __builtin_addressof(this->storage.value());
         }
     }
 
     // Get a pointer to the data owned by this `maybe`. If `maybe`
     // holds a raw pointer, this is equivalent to `.value()`, otherwise this
-    // is equivalent to `addressof(maybe.value())`.
+    // is equivalent to `__builtin_addressof(maybe.value())`.
     [[nodiscard]]
     constexpr auto
     p_value() const {
         if constexpr (is_pointer<value_type>) {
             return this->storage.value();
         } else {
-            return addressof(this->storage.value());
+            return __builtin_addressof(this->storage.value());
         }
     }
 
