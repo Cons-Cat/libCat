@@ -5,7 +5,8 @@
 #include "../unit_tests.hpp"
 
 // Test that `vector` works in a `constexpr` context.
-consteval auto const_func() -> int4 {
+consteval auto
+const_func() -> int4 {
     cat::page_allocator allocator;
     cat::vector<int4> vector;
     auto _ = vector.resize(allocator, 8u);
@@ -20,13 +21,11 @@ consteval auto const_func() -> int4 {
 TEST(test_vector) {
     // Initialize an allocator.
     cat::page_allocator pager;
-    pager.reset();
-    cat::mem auto page =
-        pager.opq_alloc_multi<cat::byte>(4_uki - 32u).or_exit();
+    cat::span page = pager.alloc_multi<cat::byte>(4_uki).or_exit();
     defer {
         pager.free(page);
     };
-    auto allocator = cat::linear_allocator::backed_handle(pager, page);
+    auto allocator = cat::linear_allocator(page.data(), page.size());
 
     // Test vector member types.
     using iterator = cat::vector<int>::iterator;
@@ -135,7 +134,7 @@ TEST(test_vector) {
 
     // Resize the vector to be larger, then check it's full.
     auto _ = default_vector.resize(allocator, default_vector.capacity() + 1u)
-            .verify();
+                 .verify();
     cat::verify(default_vector.is_full());
 
     // Resize the vector to be smaller, then check it's not full.

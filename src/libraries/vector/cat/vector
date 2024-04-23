@@ -39,12 +39,12 @@ class vector : public collection_interface<vector<T>, T, true> {
     // factory member functions. For public copying, `.clone()` should be used.
     [[deprecated(
         "Implicit copying of `cat::vector` is forbidden. Call `.clone() "
-        "instead!")]]  //
+        "instead!")]]
     constexpr vector(vector<T> const& other_vector) = default;
 
     // Reallocate memory, or make an initial allocation.
-    constexpr auto internal_allocate(is_allocator auto& allocator,
-                                     uword minimum_capacity) {
+    constexpr auto
+    internal_allocate(is_allocator auto& allocator, idx minimum_capacity) {
         if (this->p_storage == nullptr) {
             return allocator.template salloc_multi<T>(minimum_capacity);
         }
@@ -54,11 +54,11 @@ class vector : public collection_interface<vector<T>, T, true> {
 
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
     // context.
-    constexpr auto increase_storage(is_allocator auto& allocator)
-        -> maybe<void> {
-        uword const minimum_capacity =
+    constexpr auto
+    increase_storage(is_allocator auto& allocator) -> maybe<void> {
+        idx const minimum_capacity =
             (this->current_capacity > 0u)
-                ? minimum_capacity = this->current_capacity * 2u
+                ? this->current_capacity * 2u
                 // If this storage has not been allocated yet, then greedily
                 // allocate its capacity as 4.
                 : 4u;
@@ -67,11 +67,11 @@ class vector : public collection_interface<vector<T>, T, true> {
         // workaround.
         if consteval {
             T* p_new = new T[minimum_capacity.raw];
-            for (uword i = 0u; i < this->current_size; ++i) {
-                construct_at(p_new + i, move(this->p_storage[i]));
+            for (idx i = 0u; i < this->current_size; ++i) {
+                construct_at(p_new + i, move(this->p_storage[i.raw]));
             }
-            for (uword i = this->current_size + 1; i < minimum_capacity; ++i) {
-                construct_at(p_new + i.raw);
+            for (idx i = this->current_size + 1; i < minimum_capacity; ++i) {
+                construct_at(p_new + i);
             }
             delete[] this->p_storage;
             this->p_storage = p_new;
@@ -90,17 +90,17 @@ class vector : public collection_interface<vector<T>, T, true> {
 
   public:
     [[nodiscard]]
-    static constexpr auto reserved(is_allocator auto& allocator,
-                                   iword capacity) -> maybe<vector<T>> {
+    static constexpr auto
+    reserved(is_allocator auto& allocator, idx capacity) -> maybe<vector<T>> {
         vector<T> new_vector;
         prop(new_vector.reserve(allocator, capacity));
         return new_vector;
     }
 
     [[nodiscard]]
-    static constexpr auto filled(is_allocator auto& allocator,
-                                 uword count, T const& value)
-        -> maybe<vector<T>> {
+    static constexpr auto
+    filled(is_allocator auto& allocator, idx count,
+           T const& value) -> maybe<vector<T>> {
         vector<T> new_vector;
         maybe result = new_vector.reserve(allocator, count);
         if (!result.has_value()) {
@@ -116,30 +116,34 @@ class vector : public collection_interface<vector<T>, T, true> {
 
     // Get the non-`const` address of this `vector`'s internal array.
     [[nodiscard]]
-    constexpr auto data() -> T* {
+    constexpr auto
+    data() -> T* {
         return &(this->p_storage[0]);
     }
 
     // Get the `const` address of this `vector`'s internal array.
     [[nodiscard]]
-    constexpr auto data() const -> T const* {
+    constexpr auto
+    data() const -> T const* {
         return &(this->p_storage[0]);
     }
 
     [[nodiscard]]
-    constexpr auto size() const -> idx {
+    constexpr auto
+    size() const -> idx {
         return static_cast<idx>(this->current_size);
     }
 
     [[nodiscard]]
-    constexpr auto capacity() const -> idx {
+    constexpr auto
+    capacity() const -> idx {
         return static_cast<idx>(this->current_capacity);
     }
 
     // Try to allocate storage for at least `minimum_capacity` number of `T`s.
     [[nodiscard]]
-    constexpr auto reserve(is_allocator auto& allocator,
-                           uword minimum_capacity) -> maybe<void> {
+    constexpr auto
+    reserve(is_allocator auto& allocator, idx minimum_capacity) -> maybe<void> {
         if (minimum_capacity > this->current_capacity) {
             // TODO: I think there is a bug in GCC constexpr memory. This is a
             // workaround.
@@ -148,7 +152,7 @@ class vector : public collection_interface<vector<T>, T, true> {
                 this->p_storage = new T[minimum_capacity.raw];
                 this->current_capacity = minimum_capacity;
 
-                for (uword i = this->current_size + 1;
+                for (idx i = this->current_size + 1u;
                      i < this->current_capacity; ++i) {
                     construct_at(this->p_storage + i);
                 }
@@ -157,7 +161,7 @@ class vector : public collection_interface<vector<T>, T, true> {
                     prop(internal_allocate(allocator, minimum_capacity));
 
                 p_storage = alloc_span.data();
-                this->current_capacity = idx(alloc_bytes / ssizeof(T));
+                this->current_capacity = idx(alloc_bytes / sizeof(T));
             }
         }
 
@@ -167,8 +171,8 @@ class vector : public collection_interface<vector<T>, T, true> {
 
     // Try to change the size of this `vector`.
     [[nodiscard]]
-    constexpr auto resize(is_allocator auto& allocator, uword size)
-        -> maybe<void> {
+    constexpr auto
+    resize(is_allocator auto& allocator, idx size) -> maybe<void> {
         if (size > this->current_capacity) {
             // This sets `this->current_capacity` and `this->p_storage`.
             prop(this->reserve(allocator, size));
@@ -182,8 +186,8 @@ class vector : public collection_interface<vector<T>, T, true> {
 
     // Deep-copy the contents of this `vector`.
     [[nodiscard]]
-    constexpr auto clone(
-        is_allocator auto& allocator) const& -> maybe<vector<T>> {
+    constexpr auto
+    clone(is_allocator auto& allocator) const& -> maybe<vector<T>> {
         vector<T> new_vector =
             prop(vector<T>::reserved(allocator, this->current_capacity));
         new_vector.current_size = this->current_size;
@@ -198,21 +202,21 @@ class vector : public collection_interface<vector<T>, T, true> {
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]]
-    constexpr auto push_back(is_allocator auto& allocator,
-                             U const& value) -> maybe<void> {
+    constexpr auto
+    push_back(is_allocator auto& allocator, U&& value) -> maybe<void> {
         if (this->current_size + 1 > this->current_capacity) {
             prop(this->increase_storage(allocator));
         }
 
-        this->p_storage[this->current_size.raw] = static_cast<T>(value);
+        this->p_storage[this->current_size.raw] = static_cast<T>(fwd(value));
         ++(this->current_size);
         return monostate;
     }
 
   private:
     T* p_storage;
-    uword current_size;
-    uword current_capacity;
+    idx current_size;
+    idx current_capacity;
 };
 
 }  // namespace cat
