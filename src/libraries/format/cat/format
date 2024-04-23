@@ -344,7 +344,7 @@ namespace detail {
             iword const storage_index =
                 this->arguments_indices[argument_index.raw].byte_index;
 
-            copy_memory_small(addressof(value),
+            copy_memory_small(__builtin_addressof(value),
                               &(this->packed_args_storage[0]) + storage_index,
                               sizeof(T));
 

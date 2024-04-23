@@ -120,7 +120,7 @@ class iterator_interface<derived_type> {
         if constexpr (is_reference<decltype(reference)>) {
             // If `reference` is actually a reference type, return its
             // address.
-            return addressof(reference);
+            return __builtin_addressof(reference);
         } else {
             return arrow_proxy(move(reference));
         }
