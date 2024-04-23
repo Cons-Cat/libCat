@@ -8,7 +8,8 @@
 namespace cat {
 
 template <typename from_type, typename to_type>
-constexpr auto numeric_cast(from_type from) -> maybe<to_type> {
+constexpr auto
+numeric_cast(from_type from) -> maybe<to_type> {
     to_type const to = static_cast<to_type>(from);
     constexpr bool has_same_signedness =
         is_signed<from_type> != is_signed<to_type>;
@@ -33,7 +34,8 @@ constexpr auto numeric_cast(from_type from) -> maybe<to_type> {
 
 template <typename from_type>
     requires(sizeof(from_type) <= 8 && !is_lvalue_reference<from_type>)
-constexpr auto bit_int_cast(from_type from) -> decltype(auto) {
+constexpr auto
+bit_int_cast(from_type from) -> decltype(auto) {
     // TODO: Use a template that makes some integer from a size.
     using integer_type =
         conditional<sizeof(from) == 1, int1,

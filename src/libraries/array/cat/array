@@ -30,13 +30,14 @@ class array : public collection_interface<array<T, length>, T, true> {
         : storage(static_cast<T>(fwd(arguments))...) {
     }
 
-    constexpr auto operator=(array<T, length> const& other_array)
-        -> array& = default;
+    constexpr auto
+    operator=(array<T, length> const& other_array) -> array& = default;
 
     // Converting copy assignment operator.
     template <typename U>
     // requires(is_convertible<U, T>)
-    constexpr auto operator=(array<U, length> const& other_array) -> array& {
+    constexpr auto
+    operator=(array<U, length> const& other_array) -> array& {
         // TODO: Optimize with `copy_memory()` if T and U are relocatable.
         for (idx i = 0u; i < length; ++i) {
             this->storage[i.raw] = static_cast<T>(other_array[i]);
@@ -44,13 +45,14 @@ class array : public collection_interface<array<T, length>, T, true> {
         return *this;
     }
 
-    constexpr auto operator=(array<T, length>&& other_array) -> array& =
-                                                                    default;
+    constexpr auto
+    operator=(array<T, length>&& other_array) -> array& = default;
 
     // Converting move assignment operator.
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    constexpr auto operator=(array<U, length>&& other_array) -> array& {
+    constexpr auto
+    operator=(array<U, length>&& other_array) -> array& {
         // TODO: Optimize with `copy_memory()` if T and U are relocatable.
         for (idx i = 0u; i < length; ++i) {
             this->storage[i.raw] = static_cast<T>(move(other_array[i]));
@@ -64,7 +66,8 @@ class array : public collection_interface<array<T, length>, T, true> {
     template <typename... Args>
         requires(sizeof...(Args) == length &&
                  (is_implicitly_convertible<Args, T> && ...))
-    static constexpr auto from(Args&&... arguments) {
+    static constexpr auto
+    from(Args&&... arguments) {
         // Explicitly converting this type allows the first argument to coerce
         // the type for following arguments.
         // i.e. `cat::array shorts = {int2{0}, 1, 2};`
@@ -74,14 +77,16 @@ class array : public collection_interface<array<T, length>, T, true> {
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    static constexpr auto filled(U value) -> array {
+    static constexpr auto
+    filled(U value) -> array {
         array<T, length> array;
         return array.fill(static_cast<T>(value));
     }
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    constexpr auto fill(U value) -> array& {
+    constexpr auto
+    fill(U value) -> array& {
         // TODO: This `set_memory()` segfaults with optimizations enabled. Is it
         // even necessary?
         //
@@ -97,19 +102,22 @@ class array : public collection_interface<array<T, length>, T, true> {
 
     // Get the non-`const` address of this `array`'s internal array.
     [[nodiscard]]
-    constexpr auto data() -> T* {
+    constexpr auto
+    data() -> T* {
         return this->storage;
     }
 
     // Get the `const` address of this `array`'s internal array.
     [[nodiscard]]
-    constexpr auto data() const -> T const* {
+    constexpr auto
+    data() const -> T const* {
         return this->storage;
     }
 
     // Get the number of elements contained in this `array`.
     [[nodiscard]]
-    static constexpr auto size() -> idx {
+    static constexpr auto
+    size() -> idx {
         return idx(length);
     }
 

@@ -15,8 +15,9 @@ concept is_random_access = requires(T t) {
 
 // Copy-assign the elements of one collection into another.
 template <typename input_iterator, typename output_iterator>
-auto copy(input_iterator source_begin, input_iterator source_end,
-          output_iterator destination_begin) -> output_iterator {
+auto
+copy(input_iterator source_begin, input_iterator source_end,
+     output_iterator destination_begin) -> output_iterator {
     using destination_element = remove_reference<decltype(*destination_begin)>;
 
     while (source_begin != source_end) {
@@ -30,8 +31,9 @@ auto copy(input_iterator source_begin, input_iterator source_end,
 
 // Move-assign the elements of one collection into another.
 template <typename input_iterator, typename output_iterator>
-auto move(input_iterator source_begin, input_iterator source_end,
-          output_iterator destination_begin) -> output_iterator {
+auto
+move(input_iterator source_begin, input_iterator source_end,
+     output_iterator destination_begin) -> output_iterator {
     using destination_element = remove_reference<decltype(*destination_begin)>;
 
     while (source_begin != source_end) {
@@ -46,8 +48,9 @@ auto move(input_iterator source_begin, input_iterator source_end,
 
 // Optimally relocate the elements of one collection into another.
 template <typename input_iterator, typename output_iterator>
-auto relocate(input_iterator source_begin, input_iterator source_end,
-              output_iterator destination_begin) -> output_iterator {
+auto
+relocate(input_iterator source_begin, input_iterator source_end,
+         output_iterator destination_begin) -> output_iterator {
     using source_element = remove_reference<decltype(*source_begin)>;
     using destination_element = decltype(*destination_begin);
 
@@ -73,8 +76,9 @@ auto relocate(input_iterator source_begin, input_iterator source_end,
 }
 
 template <is_forward_iterator ItLhs, is_forward_iterator ItRhs>
-constexpr auto lexicographical_compare(ItLhs lhs_start, ItLhs lhs_end,
-                                       ItRhs rhs_start, ItRhs rhs_end) -> bool {
+constexpr auto
+lexicographical_compare(ItLhs lhs_start, ItLhs lhs_end, ItRhs rhs_start,
+                        ItRhs rhs_end) -> bool {
     while (lhs_start != lhs_end) {
         if (rhs_start == rhs_end || *rhs_start < *lhs_start) {
             return false;
@@ -91,9 +95,10 @@ constexpr auto lexicographical_compare(ItLhs lhs_start, ItLhs lhs_end,
 }
 
 template <is_forward_iterator ItLhs, is_forward_iterator ItRhs>
-constexpr auto lexicographical_compare_three_way(ItLhs lhs_start, ItLhs lhs_end,
-                                                 ItRhs rhs_start,
-                                                 ItRhs rhs_end)  // Formatting.
+constexpr auto
+lexicographical_compare_three_way(ItLhs lhs_start, ItLhs lhs_end,
+                                  ItRhs rhs_start,
+                                  ItRhs rhs_end)  // Formatting.
     requires(
         is_common_comparison_category<decltype((*lhs_start) <=> (*rhs_start))>)
 {

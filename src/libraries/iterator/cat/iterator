@@ -88,8 +88,8 @@ class iterator_interface<derived_type> {
 
     // TODO: Does this work with the reverse iterator adapter?
     // If `derived_type` does not have `.advance_to()`, generate it.
-    constexpr auto advance_to(derived_type const& other_iterator)
-        -> derived_type const&
+    constexpr auto
+    advance_to(derived_type const& other_iterator) -> derived_type const&
     // requires(!detail::has_advance_to<derived_type>)
     {
         if (other_iterator > this->self()) {
@@ -104,15 +104,18 @@ class iterator_interface<derived_type> {
         return this->self();
     }
 
-    constexpr auto operator*() -> decltype(auto) {
+    constexpr auto
+    operator*() -> decltype(auto) {
         return this->self().dereference();
     }
 
-    constexpr auto operator*() const -> decltype(auto) {
+    constexpr auto
+    operator*() const -> decltype(auto) {
         return this->self().dereference();
     }
 
-    constexpr auto operator->() const {
+    constexpr auto
+    operator->() const {
         decltype(auto) reference = **this;
         if constexpr (is_reference<decltype(reference)>) {
             // If `reference` is actually a reference type, return its
@@ -123,15 +126,16 @@ class iterator_interface<derived_type> {
         }
     }
 
-    friend constexpr auto operator<=>(
+    friend constexpr auto
+    operator<=>(
         derived_type const& left,
         derived_type const&
             right) /* requires(detail::has_distance_to<derived_type>) */ {
         return (left - right) <=> 0;
     }
 
-    friend constexpr auto operator==(derived_type const& left,
-                                     derived_type const& right)
+    friend constexpr auto
+    operator==(derived_type const& left, derived_type const& right)
         -> bool /* requires(detail::has_equal_to<derived_type> ||
                                    detail::has_distance_to<derived_type>) */
     {
@@ -143,8 +147,8 @@ class iterator_interface<derived_type> {
         __builtin_unreachable();
     }
 
-    friend constexpr auto operator!=(derived_type const& left,
-                                     derived_type const& right) -> bool {
+    friend constexpr auto
+    operator!=(derived_type const& left, derived_type const& right) -> bool {
         return !(left == right);
     }
 
@@ -154,9 +158,10 @@ class iterator_interface<derived_type> {
     //     return self.at_end();
     // }
 
-    friend constexpr auto operator+(
-        derived_type const& left,
-        detail::is_difference_type<derived_type> auto offset) -> derived_type {
+    friend constexpr auto
+    operator+(derived_type const& left,
+              detail::is_difference_type<derived_type> auto offset)
+        -> derived_type {
         derived_type new_iterator = left;
         if constexpr (detail::has_advance<derived_type>) {
             new_iterator.advance(offset);
@@ -168,9 +173,10 @@ class iterator_interface<derived_type> {
         return new_iterator;
     }
 
-    friend constexpr auto operator+=(
-        derived_type& left,
-        detail::is_difference_type<derived_type> auto offset) -> derived_type& {
+    friend constexpr auto
+    operator+=(derived_type& left,
+               detail::is_difference_type<derived_type> auto offset)
+        -> derived_type& {
         if constexpr (detail::has_advance<derived_type>) {
             // left.advance(difference_type(offset));
             left.advance(offset);
@@ -183,7 +189,8 @@ class iterator_interface<derived_type> {
     }
 
     // Increment or advance forwards with prefix notation.
-    constexpr auto operator++() -> derived_type& {
+    constexpr auto
+    operator++() -> derived_type& {
         if constexpr (detail::has_increment<derived_type>) {
             this->self().increment();
         } else {
@@ -193,15 +200,17 @@ class iterator_interface<derived_type> {
     }
 
     // Increment or advance forwards with postfix notation.
-    constexpr auto operator++(int) -> derived_type {
+    constexpr auto
+    operator++(int) -> derived_type {
         auto copy = this->self();
         ++(*this);
         return copy;
     }
 
-    friend constexpr auto operator-(
-        derived_type const& left,
-        detail::is_difference_type<derived_type> auto offset) -> derived_type {
+    friend constexpr auto
+    operator-(derived_type const& left,
+              detail::is_difference_type<derived_type> auto offset)
+        -> derived_type {
         derived_type new_iterator = left;
         if constexpr (detail::has_advance<derived_type>) {
             return new_iterator - offset;
@@ -213,9 +222,10 @@ class iterator_interface<derived_type> {
         return new_iterator;
     }
 
-    friend constexpr auto operator-=(
-        derived_type& left,
-        detail::is_difference_type<derived_type> auto offset) -> derived_type& {
+    friend constexpr auto
+    operator-=(derived_type& left,
+               detail::is_difference_type<derived_type> auto offset)
+        -> derived_type& {
         if constexpr (detail::has_advance<derived_type>) {
             left.advance(-offset);
         } else {
@@ -227,14 +237,15 @@ class iterator_interface<derived_type> {
     }
 
     // Get the distance between two iterators.
-    friend constexpr auto operator-(derived_type const& left,
-                                    derived_type const& right) -> iword
+    friend constexpr auto
+    operator-(derived_type const& left, derived_type const& right) -> iword
     /* requires(detail::has_distance_to<derived_type>) */ {
         return right.distance_to(left);
     }
 
     // Decrement or advance backwards with prefix notation.
-    constexpr auto operator--() -> derived_type& {
+    constexpr auto
+    operator--() -> derived_type& {
         if constexpr (detail::has_decrement<derived_type>) {
             this->self().decrement();
         } else {
@@ -244,7 +255,8 @@ class iterator_interface<derived_type> {
     }
 
     // Decrement or advance backwards with postfix notation.
-    constexpr auto operator--(int) -> derived_type& {
+    constexpr auto
+    operator--(int) -> derived_type& {
         auto copy = this->self();
         --(*this);
         return copy;
@@ -252,19 +264,22 @@ class iterator_interface<derived_type> {
 
     // TODO: This seems incorrect.
     // Random-access.
-    constexpr auto operator[](
-        detail::is_difference_type<derived_type> auto offset) -> decltype(auto)
+    constexpr auto
+    operator[](detail::is_difference_type<derived_type> auto offset)
+        -> decltype(auto)
         requires(detail::has_advance<derived_type>)
     {
         return *(this->self() + offset);
     }
 
   private:
-    constexpr auto self() -> derived_type& {
+    constexpr auto
+    self() -> derived_type& {
         return static_cast<derived_type&>(*this);
     }
 
-    constexpr auto self() const -> derived_type const& {
+    constexpr auto
+    self() const -> derived_type const& {
         return static_cast<derived_type const&>(*this);
     }
 };
@@ -336,29 +351,35 @@ class reverse_iterator_adaptor
         : internal_iterator(fwd(args)...) {
     }
 
-    constexpr auto dereference() {
+    constexpr auto
+    dereference() {
         return this->internal_iterator.dereference();
     }
 
-    constexpr auto dereference() const {
+    constexpr auto
+    dereference() const {
         return this->internal_iterator.dereference();
     }
 
-    constexpr void advance(int offset)
+    constexpr void
+    advance(int offset)
         requires(detail::has_advance<iterator_type>)
     {
         this->internal_iterator.advance(-offset);
     }
 
-    constexpr void increment() {
+    constexpr void
+    increment() {
         --internal_iterator;
     }
 
-    constexpr void decrement() {
+    constexpr void
+    decrement() {
         ++internal_iterator;
     }
 
-    constexpr auto distance_to(self_type other) const
+    constexpr auto
+    distance_to(self_type other) const
         requires(detail::has_distance_to<iterator_type>)
     {
         // Reverse the polarity of `distance_to()`.
@@ -447,51 +468,63 @@ struct as_reverse : T {
     constexpr as_reverse(T&& base) : T(move(base)) {
     }
 
-    constexpr auto begin() {
+    constexpr auto
+    begin() {
         return static_cast<T*>(this)->rbegin();
     }
 
-    constexpr auto end() {
+    constexpr auto
+    end() {
         return static_cast<T*>(this)->rend();
     }
 
-    constexpr auto begin() const {
+    constexpr auto
+    begin() const {
         return static_cast<T*>(this)->rbegin();
     }
 
-    constexpr auto end() const {
+    constexpr auto
+    end() const {
         return static_cast<T*>(this)->rend();
     }
 
-    constexpr auto cbegin() const {
+    constexpr auto
+    cbegin() const {
         return static_cast<T*>(this)->crbegin();
     }
 
-    constexpr auto cend() const {
+    constexpr auto
+    cend() const {
         return static_cast<T*>(this)->crend();
     }
 
-    constexpr auto rbegin() {
+    constexpr auto
+    rbegin() {
         return static_cast<T*>(this)->begin();
     }
 
-    constexpr auto rend() {
+    constexpr auto
+    rend() {
         return static_cast<T*>(this)->end();
     }
 
-    constexpr auto rbegin() const {
+    constexpr auto
+    rbegin() const {
         return static_cast<T*>(this)->cbegin();
     }
 
-    constexpr auto rend() const {
+    constexpr auto
+    rend() const {
         return static_cast<T*>(this)->cend();
     }
 
-    constexpr auto crbegin() const {
+    constexpr auto
+    crbegin() const {
         return static_cast<T*>(this)->cbegin();
     }
 
-    constexpr auto crend() const {
+    constexpr auto
+    crend() const {
         return static_cast<T*>(this)->cend();
     }
 };
@@ -507,35 +540,43 @@ struct as_const_reverse : T {
     constexpr as_const_reverse(T&& base) : T(move(base)) {
     }
 
-    constexpr auto begin() const {
+    constexpr auto
+    begin() const {
         return static_cast<T const*>(this)->rbegin();
     }
 
-    constexpr auto end() const {
+    constexpr auto
+    end() const {
         return static_cast<T const*>(this)->rend();
     }
 
-    constexpr auto cbegin() const {
+    constexpr auto
+    cbegin() const {
         return static_cast<T const*>(this)->crbegin();
     }
 
-    constexpr auto cend() const {
+    constexpr auto
+    cend() const {
         return static_cast<T const*>(this)->crend();
     }
 
-    constexpr auto rbegin() const {
+    constexpr auto
+    rbegin() const {
         return static_cast<T const*>(this)->cbegin();
     }
 
-    constexpr auto rend() const {
+    constexpr auto
+    rend() const {
         return static_cast<T const*>(this)->cend();
     }
 
-    constexpr auto crbegin() const {
+    constexpr auto
+    crbegin() const {
         return static_cast<T const*>(this)->cbegin();
     }
 
-    constexpr auto crend() const {
+    constexpr auto
+    crend() const {
         return static_cast<T const*>(this)->cend();
     }
 };

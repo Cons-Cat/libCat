@@ -51,7 +51,8 @@ class span : public collection_interface<span<T>, T, true> {
     // TODO: These should be the same type, instead.
         requires(is_implicitly_convertible<U, T> &&
                  is_implicitly_convertible<V, T>)
-    static constexpr auto between(U* p_start, V* p_end) {
+    static constexpr auto
+    between(U* p_start, V* p_end) {
         return span<T>{static_cast<T*>(p_start), uword(p_end - p_start)};
     }
 
@@ -60,19 +61,22 @@ class span : public collection_interface<span<T>, T, true> {
 
     // Get the non-`const` address that this `span` starts at.
     [[nodiscard]]
-    constexpr auto data() -> T* {
+    constexpr auto
+    data() -> T* {
         return this->p_storage;
     }
 
     // Get the `const` address that this `span` starts at.
     [[nodiscard]]
-    constexpr auto data() const -> T* {
+    constexpr auto
+    data() const -> T* {
         return this->p_storage;
     }
 
     // Get the number of elements owned by this `span`.
     [[nodiscard]]
-    constexpr auto size() const -> idx {
+    constexpr auto
+    size() const -> idx {
         return idx(this->length);
     }
 

@@ -26,15 +26,16 @@ class ring : public collection_interface<ring<T>, T> {
     // Being `protected:` permits derived classes and adaptors to call this.
     // Only allow the shallow copy constructor to be used by these static
     // factory member functions. For public copying, `.clone()` should be used.
-    [[deprecated(
-        "Implicit copying of `cat::ring` is forbidden. Call `.clone() "
-        "instead!")]]  //
+    [[deprecated("Implicit copying of `cat::ring` is forbidden. Call `.clone() "
+                 "instead!")]]
+    //
     ring(ring const&) = default;
 
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
     // context.
-    auto copy_to_new_storage(is_allocator auto& allocator,
-                             iword new_capacity) -> maybe<void> {
+    auto
+    copy_to_new_storage(is_allocator auto& allocator,
+                        iword new_capacity) -> maybe<void> {
         // TODO: `.resalloc_multi()`.
         T* p_new = prop(allocator.template alloc_multi<T>(new_capacity));
 
@@ -58,21 +59,23 @@ class ring : public collection_interface<ring<T>, T> {
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]]
-    static auto reserved([[maybe_unused]] is_allocator auto& allocator,
-                         [[maybe_unused]] iword capacity) -> maybe<ring<T>> {
+    static auto
+    reserved([[maybe_unused]] is_allocator auto& allocator,
+             [[maybe_unused]] iword capacity) -> maybe<ring<T>> {
     }
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]]
-    static auto filled([[maybe_unused]] is_allocator auto& allocator,
-                       [[maybe_unused]] iword capacity,
-                       [[maybe_unused]] T value) -> maybe<ring<T>> {
+    static auto
+    filled([[maybe_unused]] is_allocator auto& allocator,
+           [[maybe_unused]] iword capacity,
+           [[maybe_unused]] T value) -> maybe<ring<T>> {
     }
 
     [[nodiscard]]
-    auto reserve(is_allocator auto& allocator, iword new_capacity)
-        -> maybe<void> {
+    auto
+    reserve(is_allocator auto& allocator, iword new_capacity) -> maybe<void> {
         // The capacity of a `ring` must be a power of two.
         cat::assert(has_single_bit(new_capacity));
 
@@ -104,8 +107,8 @@ class ring : public collection_interface<ring<T>, T> {
     }
 
     [[nodiscard]]
-    auto resize(is_allocator auto& allocator, iword new_size)
-        -> maybe<void> {
+    auto
+    resize(is_allocator auto& allocator, iword new_size) -> maybe<void> {
         if (new_size > this->current_capacity) {
             prop(this->reserve(allocator, new_size));
 
@@ -125,29 +128,33 @@ class ring : public collection_interface<ring<T>, T> {
     }
 
     [[nodiscard]]
-    auto clone([[maybe_unused]] is_allocator auto& allocator)
-        -> maybe<ring<T>> {
+    auto
+    clone([[maybe_unused]] is_allocator auto& allocator) -> maybe<ring<T>> {
     }
 
     // Get the non-`const` address of this `vector`'s internal array.
     [[nodiscard]]
-    constexpr auto data() -> T* {
+    constexpr auto
+    data() -> T* {
         return &(this->p_storage[0]);
     }
 
     // Get the `const` address of this `vector`'s internal array.
     [[nodiscard]]
-    constexpr auto data() const -> T const* {
+    constexpr auto
+    data() const -> T const* {
         return &(this->p_storage[0]);
     }
 
     [[nodiscard]]
-    constexpr auto size() const -> iword {
+    constexpr auto
+    size() const -> iword {
         return this->current_size;
     }
 
     [[nodiscard]]
-    constexpr auto capacity() const -> iword {
+    constexpr auto
+    capacity() const -> iword {
         return this->current_capacity;
     }
 
@@ -156,7 +163,8 @@ class ring : public collection_interface<ring<T>, T> {
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
-    void push_back(U const& value) {
+    void
+    push_back(U const& value) {
         cat::assert(this->current_capacity > 0);
         *(this->p_storage + this->current_index) = value;
 

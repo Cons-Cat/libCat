@@ -19,41 +19,48 @@ template <typename T, typename U>
 inline constexpr auto bit_cast(U const& from_value) -> T;
 
 template <typename T>
-constexpr auto unconst(T const& value) -> T& {
+constexpr auto
+unconst(T const& value) -> T& {
     return const_cast<T&>(value);
 }
 
 template <typename T>
-constexpr auto unconst(T const* p_value) -> T* {
+constexpr auto
+unconst(T const* p_value) -> T* {
     return const_cast<T*>(p_value);
 }
 
 // Infer the length of a parameter pack from a function argument.
 template <typename... types>
-constexpr auto ssizeof_pack(types...) -> iword {
+constexpr auto
+ssizeof_pack(types...) -> iword {
     return make_signed(sizeof...(types));
 }
 
 // Specify the length of a parameter pack in a template argument.
 template <typename... types>
-constexpr auto ssizeof_pack() -> iword {
+constexpr auto
+ssizeof_pack() -> iword {
     return make_signed(sizeof...(types));
 }
 
-constexpr auto salignof(auto const& anything) -> iword {
+constexpr auto
+salignof(auto const& anything) -> iword {
     // `alignof` cannot be given an expression `anything` in ISO C++, so it must
     // take the type `decltype(anything)`.
     return iword{alignof(decltype(anything))};
 }
 
 template <typename T>
-constexpr auto salignof() -> iword {
+constexpr auto
+salignof() -> iword {
     return iword{alignof(T)};
 }
 
 namespace detail {
     template <typename T, iword index, iword current, T value, T... values>
-    constexpr auto get_value_list_at() -> T {
+    constexpr auto
+    get_value_list_at() -> T {
         if constexpr (current == index) {
             return value;
         } else {
@@ -70,14 +77,16 @@ struct value_type_list {
     static constexpr iword size = ssizeof_pack(values...);
 
     template <iword index>
-    static constexpr auto get() -> T {
+    static constexpr auto
+    get() -> T {
         return detail::get_value_list_at<T, index, 0, values...>();
     }
 };
 
 namespace detail {
     template <iword count, typename T, T value, T... integers>
-    constexpr auto make_value_list() {
+    constexpr auto
+    make_value_list() {
         if constexpr (count > 0) {
             // Recurse, appending `value` to `integers`.
             return make_value_list<count - 1, T, value, value, integers...>();
@@ -88,7 +97,8 @@ namespace detail {
 
     // TODO: Look into `__integer_pack()`.
     template <iword count, typename T, T value, T... integers>
-    constexpr auto make_integer_sequence() {
+    constexpr auto
+    make_integer_sequence() {
         if constexpr (count > 0) {
             // Recurse, appending `count - 1` to `integers`.
             return make_integer_sequence<count - 1, T, T(count.raw - 1),
@@ -141,7 +151,8 @@ using index_sequence_for = make_index_sequence<iword{sizeof...(types)}>;
 
 template <typename T>
     requires(is_enum<T>)
-constexpr auto to_underlying(T any_enum) {
+constexpr auto
+to_underlying(T any_enum) {
     return static_cast<underlying_type<T>>(any_enum);
 }
 
@@ -150,7 +161,8 @@ constexpr auto to_underlying(T any_enum) {
 
 template <typename T>
 [[nodiscard, gnu::artificial]]
-inline constexpr auto as_const(T& value) -> cat::add_const<T>& {
+inline constexpr auto
+as_const(T& value) -> cat::add_const<T>& {
     return value;
 }
 

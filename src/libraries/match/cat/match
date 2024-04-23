@@ -81,7 +81,8 @@ namespace detail {
         // TODO: Add a `.when()` predicate.
 
         template <typename T>
-        constexpr auto operator()(T&& matching) -> decltype(auto) {
+        constexpr auto
+        operator()(T&& matching) -> decltype(auto) {
             return this->invocable(fwd(matching));
         }
 
@@ -95,7 +96,8 @@ namespace detail {
         // TODO: Add a `.when()` predicate.
 
         template <typename function>
-        constexpr auto then(function&& invocable) {
+        constexpr auto
+        then(function&& invocable) {
             return pattern_invocable{[&](auto& matching) -> bool {
                 using unqualified_matching =
                     remove_const<remove_reference<decltype(matching)>>;
@@ -127,7 +129,8 @@ namespace detail {
         // TODO: Add a `.when()` predicate.
 
         template <typename function>
-        constexpr auto then(function&& invocable) {
+        constexpr auto
+        then(function&& invocable) {
             return pattern_invocable{[&](auto& matching) -> bool {
                 using unqualified_matching = remove_cvref<decltype(matching)>;
                 if constexpr (has_member_is_value<unqualified_matching>) {
@@ -154,19 +157,22 @@ namespace detail {
 }  // namespace detail
 
 template <typename... types>
-constexpr auto one_of() -> detail::one_of_types<types...> {
+constexpr auto
+one_of() -> detail::one_of_types<types...> {
     return detail::one_of_types<types...>{};
 }
 
 // TODO: `one_of()` overload taking values instead of types.
 
 template <typename T>
-constexpr auto is_a() -> detail::one_of_types<T> {
+constexpr auto
+is_a() -> detail::one_of_types<T> {
     return detail::one_of_types<T>{};
 }
 
 template <typename T>
-constexpr auto is_a(T&& value) -> detail::is_a_value_type<T> {
+constexpr auto
+is_a(T&& value) -> detail::is_a_value_type<T> {
     return detail::is_a_value_type<T>{fwd(value)};
 }
 
@@ -181,15 +187,16 @@ namespace detail {
 
         // Base case.
         template <typename U>
-        constexpr void call_pattern(U&& pattern) {
+        constexpr void
+        call_pattern(U&& pattern) {
             auto _ = !fwd(pattern)(this->matching);
         }
 
         // Call every pattern in order.
         template <typename U, typename... remaining>
             requires(sizeof...(remaining) > 0)
-        constexpr void call_pattern(U&& pattern,
-                                    remaining&&... remaining_args) {
+        constexpr void
+        call_pattern(U&& pattern, remaining&&... remaining_args) {
             if (fwd(pattern)(this->matching)) {
                 // Short circuit the remaining patterns if this one returns
                 // true.
@@ -202,7 +209,8 @@ namespace detail {
         template <typename... patterns>
             requires(is_specialization<patterns, detail::pattern_invocable> &&
                      ...)
-        constexpr void operator()(patterns&&... pattern_args) {
+        constexpr void
+        operator()(patterns&&... pattern_args) {
             // Recurse through `pattern_args` in order. Invoke the call operator
             // on each of them with `this->matching` as an argument. When one
             // pattern holds true, invoke its invocable and stop recursing.
@@ -214,7 +222,8 @@ namespace detail {
 }  // namespace detail
 
 template <typename T>
-constexpr auto match(T& matching) -> detail::match_patterns<T> {
+constexpr auto
+match(T& matching) -> detail::match_patterns<T> {
     return detail::match_patterns(matching);
 }
 

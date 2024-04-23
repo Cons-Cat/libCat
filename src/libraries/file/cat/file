@@ -26,7 +26,8 @@ class raw_type_file {
     constexpr raw_type_file(raw_type_file const&) = default;
     constexpr raw_type_file(raw_type_file&&) = default;
 
-    auto open(string const path, Fileopen_mode mode = Fileopen_mode::read)
+    auto
+    open(string const path, Fileopen_mode mode = Fileopen_mode::read)
         -> scaredy<void, nix::linux_error> {
         nix::open_mode open_mode = nix::open_mode::read_write;
         nix::open_flags open_flags = nix::open_flags::path;
@@ -47,23 +48,27 @@ class raw_type_file {
         this->block_size = status.block_size;
     }
 
-    void close() {
+    void
+    close() {
     }
 
     [[nodiscard]]
-    constexpr auto is_closed() const -> bool {
+    constexpr auto
+    is_closed() const -> bool {
         // When closed, `file_descriptor` is set to -1.
         return this->file_descriptor.value != -1;
     }
 
-    constexpr auto is_readable() -> bool {
+    constexpr auto
+    is_readable() -> bool {
         // If `open_mode` has either read bitflags set:
         return (to_underlying(this->open_mode) &
                 (to_underlying(nix::open_mode::read_only) |
                  to_underlying(nix::open_mode::read_write))) != 0;
     }
 
-    constexpr auto is_writeable() -> bool {
+    constexpr auto
+    is_writeable() -> bool {
         // If `open_mode` has either write bitflags set:
         return (to_underlying(this->open_mode) &
                 (to_underlying(nix::open_mode::write_only) |
@@ -71,7 +76,8 @@ class raw_type_file {
     }
 
   private:
-    [[maybe_unused]] nix::file_descriptor file_descriptor{-1};
+    [[maybe_unused]]
+    nix::file_descriptor file_descriptor{-1};
     nix::open_mode open_mode;
     int8 file_size;
     int8 block_size;
