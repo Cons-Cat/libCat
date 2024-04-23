@@ -21,7 +21,7 @@ void test_fail(cat::source_location const& source_location);
         auto _ = cat::print("Running test ");                               \
         last_ctor_was_test = true;                                          \
         ++tests_run;                                                        \
-        /* TODO: This will leak. An `Inlineallocator` should be used. */    \
+        /* TODO: This will leak. An `inline_allocator` should be used. */   \
         auto _ = cat::print(cat::format(pager, "{}", tests_run).value());   \
         /* TODO: Align the whitespace after `:` for 1 and 2 digit tests. */ \
         auto string = ": " #test_name "...\n";                              \

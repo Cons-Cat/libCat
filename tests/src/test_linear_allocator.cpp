@@ -9,12 +9,11 @@
 TEST(test_linear_allocator) {
     // Initialize an allocator.
     cat::page_allocator pager;
-    cat::span page = pager.alloc_multi<cat::byte>(4_uki).or_exit();
+    cat::span page = pager.alloc_multi<cat::byte>(4_uki).verify();
     defer {
         pager.free(page);
     };
-    auto allocator = cat::linear_allocator(page.data(), page.size());
-    allocator.reset();
+    auto allocator = cat::linear_allocator(page.data(), 24u);
 
     // It should not be possible to allocate 7 times here, because 24 bytes can
     // only hold 6 `int4`s.
@@ -25,7 +24,7 @@ TEST(test_linear_allocator) {
             goto overallocated;
         }
     }
-    cat::exit(1);
+    cat::verify(false);
 
 overallocated:
     // Invalidate all memory handles, and allocate again.
