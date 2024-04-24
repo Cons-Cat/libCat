@@ -15,19 +15,22 @@ class pool_allocator
         T* p_storage;
 
         // TODO: Simplify with CRTP or deducing-this.
-        auto get() -> decltype(auto) {
+        auto
+        get() -> decltype(auto) {
             return *this;
         }
 
-        auto get() const -> decltype(auto) {
+        auto
+        get() const -> decltype(auto) {
             return *this;
         }
     };
 
   public:
     // Allocate a `pool_allocator` from another allocator.
-    static auto backed(is_allocator auto& backing, idx arena_bytes)
-        -> maybe<pool_allocator<max_node_bytes>> {
+    static auto
+    backed(is_allocator auto& backing,
+           idx arena_bytes) -> maybe<pool_allocator<max_node_bytes>> {
         // statement expressions.
         span<node_union> memory = prop(backing.template alloc_multi<node_union>(
             arena_bytes / idx(sizeof(node_union))));
@@ -43,7 +46,8 @@ class pool_allocator
     }
 
     // Reset the bumped pointer to the beginning of this arena.
-    void reset() {
+    void
+    reset() {
         // TODO: The last node can be skipped in this loop. Is it optimized
         // away?
         for (node_union& node : this->nodes) {
@@ -56,11 +60,13 @@ class pool_allocator
     }
 
   private:
-    auto allocation_bytes(uword, idx) -> maybe_non_zero<idx> {
+    auto
+    allocation_bytes(uword, idx) -> maybe_non_zero<idx> {
         return max_node_bytes;
     }
 
-    auto allocate(idx) -> maybe_ptr<void> {
+    auto
+    allocate(idx) -> maybe_ptr<void> {
         // If there is a next node in the free list, make that the head and
         // allocate the current head. Otherwise, do not allocate anything.
         if (this->p_head == nullptr) {
@@ -73,7 +79,8 @@ class pool_allocator
         return static_cast<void*>(p_alloc);
     }
 
-    void deallocate(void const* p_allocation, iword) {
+    void
+    deallocate(void const* p_allocation, iword) {
         // Swap the head for this newly freed allocation.
         node_union* p_new_head = bit_cast<node_union*>(p_allocation);
         p_new_head->p_next = this->p_head;
@@ -82,18 +89,21 @@ class pool_allocator
 
     // Produce a handle to allocated memory.
     template <typename T>
-    auto make_handle(T* p_handle_storage) -> pool_memory_handle<T> {
+    auto
+    make_handle(T* p_handle_storage) -> pool_memory_handle<T> {
         return pool_memory_handle<T>{{}, p_handle_storage};
     }
 
     // Access some memory.
     template <typename T>
-    auto access(pool_memory_handle<T>& memory) -> T* {
+    auto
+    access(pool_memory_handle<T>& memory) -> T* {
         return memory.p_storage;
     }
 
     template <typename T>
-    auto access(pool_memory_handle<T> const& memory) const -> T const* {
+    auto
+    access(pool_memory_handle<T> const& memory) const -> T const* {
         return memory.p_storage;
     }
 

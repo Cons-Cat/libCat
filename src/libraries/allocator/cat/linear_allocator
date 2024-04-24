@@ -13,11 +13,13 @@ class linear_allocator : public allocator_interface<linear_allocator> {
         T* p_storage;
 
         // TODO: Simplify with CRTP or deducing-this.
-        auto get() -> decltype(auto) {
+        auto
+        get() -> decltype(auto) {
             return *this;
         }
 
-        auto get() const -> decltype(auto) {
+        auto
+        get() const -> decltype(auto) {
             return *this;
         }
     };
@@ -29,8 +31,9 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     }
 
     // Allocate a `linear_allocator` from another allocator.
-    static auto backed(is_allocator auto& backing,
-                       idx arena_bytes) -> maybe<linear_allocator> {
+    static auto
+    backed(is_allocator auto& backing,
+           idx arena_bytes) -> maybe<linear_allocator> {
         span memory = prop(backing.template alloc_multi<byte>(arena_bytes));
         return linear_allocator(memory.data(), arena_bytes);
     }
@@ -38,22 +41,24 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     // Allocate a `linear_allocator` from another allocator, given a handle to
     // it.
     // TODO: Can this return a tuple of the allocator and handle?
-    static auto backed_handle(is_allocator auto& backing,
-                              mem auto& handle) -> linear_allocator {
+    static auto
+    backed_handle(is_allocator auto& backing,
+                  mem auto& handle) -> linear_allocator {
         return linear_allocator(backing.template p_get(handle),
                                 handle.raw_size());
     }
 
     // TODO: Can this return a tuple of the allocator and handle?
-    static auto backed_handle_sized(is_allocator auto& backing,
-                                    mem auto& handle,
-                                    idx arena_size) -> linear_allocator {
+    static auto
+    backed_handle_sized(is_allocator auto& backing, mem auto& handle,
+                        idx arena_size) -> linear_allocator {
         assert(arena_size <= handle.raw_size());
         return linear_allocator(backing.template p_get(handle), arena_size);
     }
 
     // Reset the bumped pointer to the beginning of this arena.
-    void reset() {
+    void
+    reset() {
         __asan_poison_memory_region(
             static_cast<void const*>(this->p_arena_end),
             make_unsigned((this->p_arena_begin - this->p_arena_end).raw));
@@ -61,8 +66,9 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     }
 
   private:
-    auto allocation_bytes(uword alignment,
-                          idx allocation_bytes) -> maybe_non_zero<idx> {
+    auto
+    allocation_bytes(uword alignment,
+                     idx allocation_bytes) -> maybe_non_zero<idx> {
         uintptr<void> allocation = align_down(
             this->p_arena_current - uword(allocation_bytes), alignment);
 
@@ -75,7 +81,8 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     }
 
     // Try to allocate memory and bump the pointer down.
-    auto allocate(idx allocation_bytes) -> maybe_ptr<void> {
+    auto
+    allocate(idx allocation_bytes) -> maybe_ptr<void> {
         if (this->p_arena_current - allocation_bytes >= p_arena_end) {
             this->p_arena_current -= allocation_bytes;
             // Return a pointer that is then used to in-place construct a `T`.
@@ -86,8 +93,8 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
     // Try to allocate memory aligned to some boundary and bump the pointer
     // down.
-    auto aligned_allocate(uword alignment,
-                          idx allocation_bytes) -> maybe_ptr<void> {
+    auto
+    aligned_allocate(uword alignment, idx allocation_bytes) -> maybe_ptr<void> {
         uintptr<void> allocation =
             align_down(this->p_arena_current - allocation_bytes, alignment);
 
@@ -101,7 +108,8 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
     // Try to allocate memory and bump the pointer down, and return the memory
     // with size allocated.
-    auto aligned_allocate_feedback(uword alignment, idx allocation_bytes)
+    auto
+    aligned_allocate_feedback(uword alignment, idx allocation_bytes)
         -> maybe_sized_allocation<void*> {
         uintptr<void> allocation =
             align_down(this->p_arena_current - allocation_bytes, alignment);
@@ -120,23 +128,27 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
     // In general, memory cannot be deallocated in a linear allocator, so
     // this function is no-op.
-    void deallocate(void const*, uword) {
+    void
+    deallocate(void const*, uword) {
     }
 
     // Produce a handle to allocated memory.
     template <typename T>
-    auto make_handle(T* p_handle_storage) -> linear_memory_handle<T> {
+    auto
+    make_handle(T* p_handle_storage) -> linear_memory_handle<T> {
         return linear_memory_handle<T>{{}, p_handle_storage};
     }
 
     // Access some memory.
     template <typename T>
-    auto access(linear_memory_handle<T>& memory) -> T* {
+    auto
+    access(linear_memory_handle<T>& memory) -> T* {
         return memory.p_storage;
     }
 
     template <typename T>
-    auto access(linear_memory_handle<T> const& memory) const -> T const* {
+    auto
+    access(linear_memory_handle<T> const& memory) const -> T const* {
         return memory.p_storage;
     }
 

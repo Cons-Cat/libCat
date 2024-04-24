@@ -144,6 +144,10 @@ target_sources(cat INTERFACE
 set(CAT_HEADER_FILES
   ${CATLIB}/algorithm/cat/algorithm
   ${CATLIB}/allocator/cat/allocator
+  ${CATLIB}/allocator/cat/linear_allocator
+  ${CATLIB}/allocator/cat/null_allocator
+  ${CATLIB}/allocator/cat/page_allocator
+  ${CATLIB}/allocator/cat/pool_allocator
   ${CATLIB}/arithmetic/cat/arithmetic
   ${CATLIB}/arithmetic/cat/arithmetic_interface
   ${CATLIB}/array/cat/array
