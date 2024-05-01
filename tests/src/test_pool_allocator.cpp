@@ -5,10 +5,11 @@
 TEST(test_pool_allocator) {
     // Initialize an allocator.
     cat::page_allocator pager;
-    // cat::mem auto page =
-    //     pager.opq_alloc_multi<cat::byte>(4_ki).or_exit();
-    cat::is_allocator auto allocator =
-        cat::pool_allocator<8>::backed(pager, 128u).value();
+    cat::span page = pager.alloc_multi<cat::byte>(128u).verify();
+    defer {
+        pager.free(page);
+    };
+    cat::is_allocator auto allocator = cat::make_pool_allocator<8>(page);
 
     // Make an allocation.
     int4* p_int1 = allocator.alloc<int4>(10).value();

@@ -7,7 +7,10 @@
 
 namespace cat {
 
+// TODO: Support forcably allocating huge pages.
 class page_allocator : public allocator_interface<page_allocator> {
+    friend allocator_interface<page_allocator>;
+
   private:
     template <typename T>
     struct page_memory_handle : detail::base_memory_handle<T> {
@@ -24,6 +27,11 @@ class page_allocator : public allocator_interface<page_allocator> {
             return *this;
         }
     };
+
+  public:
+    constexpr page_allocator() = default;
+    constexpr page_allocator(page_allocator const&) = default;
+    constexpr page_allocator(page_allocator&&) = default;
 
     auto
     allocation_bytes(uword alignment,
@@ -43,12 +51,12 @@ class page_allocator : public allocator_interface<page_allocator> {
             0u, allocation_bytes,
             // TODO: Fix bit flags operators.
             static_cast<nix::memory_protection_flags>(
-                static_cast<unsigned int>(nix::memory_protection_flags::read) |
-                static_cast<unsigned int>(nix::memory_protection_flags::write)),
+                to_underlying(nix::memory_protection_flags::read) |
+                to_underlying(nix::memory_protection_flags::write)),
             static_cast<nix::memory_flags>(
-                static_cast<unsigned int>(nix::memory_flags::privately) |
-                static_cast<unsigned int>(nix::memory_flags::populate) |
-                static_cast<unsigned int>(nix::memory_flags::anonymous)),
+                to_underlying(nix::memory_flags::privately) |
+                to_underlying(nix::memory_flags::populate) |
+                to_underlying(nix::memory_flags::anonymous)),
             // Anonymous pages (non-files) must have `-1`.
             nix::file_descriptor(-1),
             // Anonymous pages (non-files) must have `0`.
@@ -100,9 +108,11 @@ class page_allocator : public allocator_interface<page_allocator> {
 
   public:
     static constexpr bool has_pointer_stability = true;
-
-  private:
-    friend allocator_interface<page_allocator>;
 };
+
+constexpr auto
+make_page_allocator() -> page_allocator {
+    return page_allocator();
+}
 
 }  // namespace cat

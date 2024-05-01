@@ -9,7 +9,30 @@ namespace cat {
 template <idx max_node_bytes>
 class pool_allocator
     : public allocator_interface<pool_allocator<max_node_bytes>> {
+    friend allocator_interface<pool_allocator>;
+
+    // Friend factory functions.
+    template <idx in_max_node_bytes>
+    friend constexpr auto
+        make_pool_allocator(uintptr<void>,
+                            idx) -> pool_allocator<in_max_node_bytes>;
+
+    template <idx in_max_node_bytes>
+    friend constexpr auto
+    make_pool_allocator(span<byte>&) -> pool_allocator<in_max_node_bytes>;
+
   private:
+    // Initialize a `pool_allocator`. This should only be called from
+    // `cat::make_pool_allocator`.
+    constexpr pool_allocator(uintptr<void> p_address, idx arena_bytes)
+        : nodes(span<node_union>(
+              // Pun the opaque `p_address` to the internal `node_union` type.
+              reinterpret_cast<node_union*>(p_address.raw),
+              arena_bytes / sizeof(node_union))) {
+        // Initialize the free list.
+        this->reset();
+    }
+
     template <typename T>
     struct pool_memory_handle : detail::base_memory_handle<T> {
         T* p_storage;
@@ -27,23 +50,9 @@ class pool_allocator
     };
 
   public:
-    // Allocate a `pool_allocator` from another allocator.
-    static auto
-    backed(is_allocator auto& backing,
-           idx arena_bytes) -> maybe<pool_allocator<max_node_bytes>> {
-        // statement expressions.
-        span<node_union> memory = prop(backing.template alloc_multi<node_union>(
-            arena_bytes / idx(sizeof(node_union))));
-        // TODO: Optimize that division.
-
-        pool_allocator<max_node_bytes> pool;
-        pool.nodes = memory;
-
-        // Initialize the free list.
-        pool.reset();
-
-        return pool;
-    }
+    // `pool_allocator` is move-only.
+    constexpr pool_allocator(pool_allocator const&) = delete;
+    constexpr pool_allocator(pool_allocator&&) = default;
 
     // Reset the bumped pointer to the beginning of this arena.
     void
@@ -114,8 +123,6 @@ class pool_allocator
     static constexpr idx max_allocation_bytes = max_node_bytes;
 
   private:
-    friend allocator_interface<pool_allocator>;
-
     union node_union {
         node_union* p_next = nullptr;
         byte storage[max_node_bytes.raw];
@@ -124,5 +131,27 @@ class pool_allocator
     span<node_union> nodes;
     node_union* p_head;
 };
+
+template <idx max_node_bytes>
+constexpr auto
+make_pool_allocator(uintptr<void> p_address,
+                    idx arena_bytes) -> pool_allocator<max_node_bytes> {
+    return pool_allocator<max_node_bytes>(p_address, arena_bytes);
+}
+
+template <idx max_node_bytes>
+constexpr auto
+make_pool_allocator(span<byte>& span) -> pool_allocator<max_node_bytes> {
+    return pool_allocator<max_node_bytes>(span.data(), span.size());
+}
+
+template <idx max_node_bytes>
+[[deprecated(
+    "Creating a `cat::pool_allocator` with a pr-value may "
+    "unintentionally leak memory. Copy an l-value `cat::span` instead.")]]
+constexpr auto
+make_pool_allocator(span<byte>&& span) -> pool_allocator<max_node_bytes> {
+    return make_pool_allocator<max_node_bytes>(span);
+}
 
 }  // namespace cat

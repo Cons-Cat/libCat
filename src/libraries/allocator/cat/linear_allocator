@@ -7,7 +7,23 @@
 namespace cat {
 
 class linear_allocator : public allocator_interface<linear_allocator> {
+    friend allocator_interface<linear_allocator>;
+
+    // Friend factory functions.
+    friend constexpr auto
+        make_linear_allocator(uintptr<void>, idx) -> linear_allocator;
+
+    friend constexpr auto
+    make_linear_allocator(span<byte>&) -> linear_allocator;
+
   private:
+    // Initialize a `linear_allocator`. This should only be called from
+    // `cat::make_linear_allocator`.
+    constexpr linear_allocator(uintptr<void> p_address, idx arena_bytes)
+        : p_arena_begin(p_address + arena_bytes), p_arena_end(p_address) {
+        this->reset();
+    }
+
     template <typename T>
     struct linear_memory_handle : detail::base_memory_handle<T> {
         T* p_storage;
@@ -25,36 +41,9 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     };
 
   public:
-    linear_allocator(uintptr<void> p_address, uword arena_bytes)
-        : p_arena_begin(p_address + arena_bytes), p_arena_end(p_address) {
-        this->reset();
-    }
-
-    // Allocate a `linear_allocator` from another allocator.
-    static auto
-    backed(is_allocator auto& backing,
-           idx arena_bytes) -> maybe<linear_allocator> {
-        span memory = prop(backing.template alloc_multi<byte>(arena_bytes));
-        return linear_allocator(memory.data(), arena_bytes);
-    }
-
-    // Allocate a `linear_allocator` from another allocator, given a handle to
-    // it.
-    // TODO: Can this return a tuple of the allocator and handle?
-    static auto
-    backed_handle(is_allocator auto& backing,
-                  mem auto& handle) -> linear_allocator {
-        return linear_allocator(backing.template p_get(handle),
-                                handle.raw_size());
-    }
-
-    // TODO: Can this return a tuple of the allocator and handle?
-    static auto
-    backed_handle_sized(is_allocator auto& backing, mem auto& handle,
-                        idx arena_size) -> linear_allocator {
-        assert(arena_size <= handle.raw_size());
-        return linear_allocator(backing.template p_get(handle), arena_size);
-    }
+    // `linear_allocator` is move-only.
+    constexpr linear_allocator(linear_allocator const&) = delete;
+    constexpr linear_allocator(linear_allocator&&) = default;
 
     // Reset the bumped pointer to the beginning of this arena.
     void
@@ -156,11 +145,28 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     static constexpr bool has_pointer_stability = true;
 
   private:
-    friend allocator_interface<linear_allocator>;
-
     uintptr<void> const p_arena_begin;
     uintptr<void> const p_arena_end;
     uintptr<void> p_arena_current = p_arena_begin;
 };
+
+constexpr auto
+make_linear_allocator(uintptr<void> p_address,
+                      idx arena_bytes) -> linear_allocator {
+    return linear_allocator(p_address, arena_bytes);
+}
+
+constexpr auto
+make_linear_allocator(span<byte>& span) -> linear_allocator {
+    return linear_allocator(span.data(), span.size());
+}
+
+[[deprecated(
+    "Creating a `cat::linear_allocator` with a pr-value may "
+    "unintentionally leak memory. Copy an l-value `cat::span` instead.")]]
+constexpr auto
+make_linear_allocator(span<byte>&& span) -> linear_allocator {
+    return make_linear_allocator(span);
+}
 
 }  // namespace cat

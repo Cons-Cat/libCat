@@ -741,8 +741,8 @@ TEST(test_numerals) {
     1ull / idx1;
     1_uz / idx1;
     1_sz / idx1;
-    idx1 / 1_uz;
-    idx1 / 1_sz;
+    idx _ = idx1 / 1_uz;
+    iword _ = idx1 / 1_sz;
     idx1 /= 1;
 
     idx lesser_idx = 1;

@@ -28,7 +28,8 @@ struct alloc_non_trivial_huge_object {
     }
 };
 
-consteval void const_test() {
+consteval void
+const_test() {
     cat::page_allocator allocator;
 
     int4* p_alloc = allocator.alloc<int4>(1).value();
@@ -61,10 +62,9 @@ TEST(test_alloc) {
     // Page the kernel for a linear allocator to test with.
     cat::span page = pager.alloc_multi<cat::byte>(4_uki - 64u).or_exit();
     defer {
-        pager.free(page.data());
+        pager.free(page);
     };
-    auto allocator =
-        cat::linear_allocator::backed(pager, page.size()).or_exit();
+    auto allocator = cat::make_linear_allocator(page);
 
     // Test `alloc`.
     auto _ = allocator.alloc<int4>().value();

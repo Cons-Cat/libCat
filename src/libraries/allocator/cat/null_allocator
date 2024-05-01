@@ -7,6 +7,8 @@
 namespace cat {
 
 class null_allocator : public allocator_interface<null_allocator> {
+    friend allocator_interface<null_allocator>;
+
   private:
     template <typename T>
     struct null_memory_handle : detail::base_memory_handle<T> {
@@ -23,6 +25,10 @@ class null_allocator : public allocator_interface<null_allocator> {
     };
 
   public:
+    constexpr null_allocator() = default;
+    constexpr null_allocator(null_allocator const&) = default;
+    constexpr null_allocator(null_allocator&&) = default;
+
     // This allocation always fails.
     auto
     allocate(iword) -> maybe_ptr<void> {
@@ -55,8 +61,12 @@ class null_allocator : public allocator_interface<null_allocator> {
     }
 
   private:
-    friend allocator_interface<null_allocator>;
     static constexpr bool has_pointer_stability = true;
 };
+
+constexpr auto
+make_null_allocator() -> null_allocator {
+    return null_allocator();
+}
 
 }  // namespace cat
