@@ -7,11 +7,11 @@
 TEST(test_format_strings) {
     // Initialize an allocator.
     cat::page_allocator pager;
-    cat::span back = pager.alloc_multi<cat::byte>(4_uki).or_exit();
+    cat::span page = pager.alloc_multi<cat::byte>(4_uki).or_exit();
     defer {
-        pager.free(back);
+        pager.free(page);
     };
-    auto allocator = cat::linear_allocator(back.data(), back.size());
+    auto allocator = make_linear_allocator(page);
 
     // Test `int4` conversion.
     cat::string int_string = cat::to_chars(allocator, 10).or_exit();

@@ -9,14 +9,14 @@
 TEST(test_linear_allocator) {
     // Initialize an allocator.
     cat::page_allocator pager;
-    cat::span page = pager.alloc_multi<cat::byte>(4_uki).verify();
+    cat::span page = pager.alloc_multi<cat::byte>(24u).verify();
     defer {
         pager.free(page);
     };
-    auto allocator = cat::linear_allocator(page.data(), 24u);
+    cat::is_allocator auto allocator = cat::make_linear_allocator(page);
 
-    // It should not be possible to allocate 7 times here, because 24 bytes can
-    // only hold 6 `int4`s.
+    // It should not be possible to allocate 7 times here, because 24 bytes
+    // can only hold 6 `int4`s.
     for (int i = 0; i < 7; ++i) {
         cat::maybe handle = allocator.alloc<int4>();
         if (!handle.has_value()) {

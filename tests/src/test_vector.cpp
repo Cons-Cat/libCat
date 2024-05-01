@@ -25,7 +25,7 @@ TEST(test_vector) {
     defer {
         pager.free(page);
     };
-    auto allocator = cat::linear_allocator(page.data(), page.size());
+    auto allocator = cat::make_linear_allocator(page);
 
     // Test vector member types.
     using iterator = cat::vector<int>::iterator;
