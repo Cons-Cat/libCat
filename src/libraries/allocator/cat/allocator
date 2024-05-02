@@ -3974,15 +3974,14 @@ class allocator_interface {
             conditional<is_stable,
                         conditional<has_feedback,
                                     conditional<is_multiple,
-                                                // tuple of a span with size
+                                                // Tuple of a span with size
                                                 // feedback.
                                                 maybe<tuple<span<T>, idx>>,
                                                 // Failsafe pointer with size.
                                                 maybe_sized_allocation<T*>>,
 
                                     conditional<is_multiple,
-                                                // TODO: Use a
-                                                // `maybe_span<T>`. span.
+                                                // Span of data allocated.
                                                 maybe<span<T>>,
                                                 // Failsafe pointer w/out
                                                 // size.
@@ -4000,23 +3999,23 @@ class allocator_interface {
                         conditional<has_feedback,
                                     conditional<is_multiple,
                                                 // Unsafe tuple of a span
-                                                // with size.
+                                                // with size feedback.
                                                 tuple<span<T>, idx>,
-                                                // Unsafe pointer with size.
+                                                // Unsafe pointer with size
+                                                // feedback.
                                                 sized_allocation<T*>>,
 
                                     conditional<is_multiple,
                                                 // Unsafe span.
                                                 span<T>,
-                                                // Unsafe pointer w/out
-                                                // size.
+                                                // Unsafe pointer.
                                                 T*>>,
 
                         conditional<has_feedback,
-                                    // Unsafe opaque handle with size.
+                                    // Unsafe opaque handle with size feedback.
                                     sized_allocation<handle_type>,
                                     // Unsafe opaque memory handle w/out
-                                    // size.
+                                    // size feedback.
                                     handle_type>>>;
 
         // In `constexpr` code, unconditionally make an allocation.

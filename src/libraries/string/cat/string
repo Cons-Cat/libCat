@@ -27,9 +27,6 @@ auto memset(void* p_source, int byte_value, __SIZE_TYPE__ bytes) -> void*;
 
 }  // namespace std
 
-using std::memcpy;  // NOLINT
-using std::memset;  // NOLINT
-
 namespace cat {
 
 constexpr auto string_length(char const* p_string) -> idx;
@@ -39,19 +36,14 @@ class fixed_string;
 
 class string : public span<char const> {
   public:
-    constexpr string() : span<char const>() {
+    constexpr string() : span<char const>(nullptr) {
     }
 
-    constexpr string(char const* p_string, uword in_length)
+    constexpr string(string const& string) = default;
+    constexpr string(string&& string) = default;
+
+    constexpr string(char const* p_string, idx in_length)
         : span<char const>(p_string, in_length) {
-    }
-
-    constexpr string(string const& string)
-        : span<char const>(string.p_storage, string.length) {
-    }
-
-    constexpr string(string&& string)
-        : span<char const>(string.p_storage, move(string).size()) {
     }
 
     // This weird template deduces lower than the string literal constructor.
@@ -76,12 +68,7 @@ class string : public span<char const> {
         this->length = idx(other_length);
     }
 
-    constexpr string(span<char> const& in_span)
-        : span<char const>(in_span.data(), in_span.size()) {
-    }
-
-    constexpr string(span<char>&& in_span)
-        : span<char const>(in_span.data(), in_span.size()) {
+    constexpr string(span<char> in_span) : span<char const>(in_span) {
     }
 
     // A `string` consuming `nullptr` would cause undefined behavior.
@@ -105,19 +92,19 @@ class string : public span<char const> {
 
     [[nodiscard]]
     constexpr auto
-    substring(uword position, uword count) -> string {
+    substring(idx position, idx count) -> string {
         return {this->p_storage + position, count};
     }
 
     [[nodiscard]]
     constexpr auto
-    remove_prefix(uword offset) -> string {
+    remove_prefix(idx offset) -> string {
         return this->substring(offset, this->length - offset);
     }
 
     [[nodiscard]]
     constexpr auto
-    remove_suffix(uword offset) -> string {
+    remove_suffix(idx offset) -> string {
         return this->substring(0u, this->length - offset);
     }
 
@@ -125,10 +112,10 @@ class string : public span<char const> {
     // TODO: Make this return an `idx`.
     constexpr auto
     find_small(char character,
-               uword position = 0u) const -> maybe<sentinel<iword, -1>> {
-        for (uword i = position; i < this->length; ++i) {
+               idx position = 0u) const -> maybe<sentinel<iword, -1>> {
+        for (idx i = position; i < this->length; ++i) {
             if (this->p_storage[i.raw] == character) {
-                return static_cast<iword>(i);
+                return iword(i);
             }
         }
         return nullopt;
@@ -139,12 +126,13 @@ class string : public span<char const> {
     // TODO: Return an `idx`.
     constexpr auto
     find(char character,
-         uword from_position = 0u) const -> maybe<sentinel<iword, -1>> {
+         idx from_position = 0u) const -> maybe<sentinel<iword, -1>> {
         // `i` must be negative, because `length - lanes` might be negative.
-        iword i = static_cast<iword>(from_position);
-        iword lanes = static_cast<iword>(char1x_::lanes);
+        idx i = from_position;
+        // TODO: `lanes` should be an `idx`.
+        iword lanes = iword(char1x_::lanes);
         // TODO: Tile this loop four or eight times.
-        for (; i < static_cast<iword>(this->length) - lanes; i += lanes) {
+        for (; i < this->length - lanes; i += lanes) {
             // TODO: Consider aligning this load?
             char1x_ const storage = char1x_::loaded(this->p_storage + i);
             // TODO: Support a native ABI mask here.
@@ -158,7 +146,7 @@ class string : public span<char const> {
 
         // The last chunk of this string, smaller than `char1x_::lanes`, is
         // stepped through one character at a time.
-        return this->find_small(character, static_cast<uword>(i));
+        return this->find_small(character, i);
     }
 
   private:
@@ -207,7 +195,7 @@ class fixed_string : public collection_interface<fixed_string<length>, char>,
 
     // Create a `fixed_string` from a smaller string, and null out the unfilled
     // bytes.
-    template <idx::raw_type in_length>
+    template <uword::raw_type in_length>
         requires(in_length < length)
     static consteval auto
     padded(char const (&in)[in_length]) -> fixed_string<length> {

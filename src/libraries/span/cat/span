@@ -21,15 +21,12 @@ class span : public collection_interface<span<T>, T>,
     constexpr span(span<T>&&) = default;
 
     // Construct a `span` as `{address, length}`.
-    template <typename U>
-        requires(is_implicitly_convertible<U*, T*>)
-    constexpr span(U* p_in_data, uword in_length)
-        : p_storage(static_cast<T*>(p_in_data)), length(in_length) {
+    constexpr span(T* p_in_data, idx in_length)
+        : p_storage(p_in_data), length(in_length) {
     }
 
-    // Construct a `span` with `nullptr`.
-    constexpr span(decltype(nullptr), uword in_length)
-        : p_storage(nullptr), length(in_length) {
+    // Construct an empty `span` with `nullptr`.
+    constexpr span(decltype(nullptr)) : p_storage(nullptr), length(0) {
     }
 
     // Implicitly convert a contiguous container into a span.
@@ -45,16 +42,6 @@ class span : public collection_interface<span<T>, T>,
         requires(is_random_access<U>)
     explicit constexpr span(U const& collection)
         : p_storage(unconst(collection.data())), length(collection.size()) {
-    }
-
-    // Construct a `span` between two addresses.
-    template <typename U, typename V>
-    // TODO: These should be the same type, instead.
-        requires(is_implicitly_convertible<U, T> &&
-                 is_implicitly_convertible<V, T>)
-    static constexpr auto
-    between(U* p_start, V* p_end) {
-        return span<T>{static_cast<T*>(p_start), uword(p_end - p_start)};
     }
 
     constexpr auto operator=(span<T> const&) -> span<T>& = default;
@@ -78,20 +65,34 @@ class span : public collection_interface<span<T>, T>,
     [[nodiscard]]
     constexpr auto
     size() const -> idx {
-        return idx(this->length);
+        return this->length;
     }
 
-    // The capacity is simply the number of elements owned.
+    // These data members should be `public` so that this is a structural type.
 
-    // These are `protected` instead of `private` so that `cat::string` can
-    // access them.
-
-  protected:
     // This is arranged as pointer, then size, to follow the ABI of Linux
     // standard `iovec`s. Unfortunately, that is opposite of Windws' standard
     // `WSABUF`.
     T* p_storage;
-    uword length;
+    idx length;
 };
+
+// Create a span between two addresses.
+template <typename T>
+constexpr auto
+make_span_between(T* p_start, T* p_end) {
+    return span(p_start, p_end - p_start);
+}
+
+// Simplify non-negative signed integers.
+template <typename T>
+using maybe_span = maybe<compact<span<T>,
+                                 [](span<T> value) -> bool {
+                                     // This span is `nullopt` if its
+                                     // `.p_storage` is null.
+                                     return value.p_storage;
+                                 },
+                                 // Default to a null span.
+                                 span<T>(nullptr)>>;
 
 }  // namespace cat
