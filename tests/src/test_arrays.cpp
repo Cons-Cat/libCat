@@ -21,7 +21,8 @@ TEST(test_arrays) {
 
     // `const` array.
     cat::array<int4, 3u> const array_const = {0, 1, 2};
-    [[maybe_unused]] int4 const_val = array_const.at(1).or_exit();
+    [[maybe_unused]]
+    int4 const_val = array_const.at(1).or_exit();
 
     // Repeat those tests in a constexpr context.
     auto constant_test = []() constexpr {
@@ -94,11 +95,13 @@ TEST(test_arrays) {
     // TODO: Test `constexpr`.
 
     // Slicing array.
-    [[maybe_unused]] cat::span span = array_1.first(1u);
+    [[maybe_unused]]
+    cat::span span = array_1.first(1u);
     auto _ = array_1.subspan(0u, 2u);
     auto _ = array_1.last(2u);
 
-    [[maybe_unused]] cat::span const span_const = array_1.first(1u);
+    [[maybe_unused]]
+    cat::span const span_const = array_1.first(1u);
     auto _ = array_const.subspan(0u, 2u);
     auto _ = array_const.last(2u);
 

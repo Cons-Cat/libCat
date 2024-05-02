@@ -71,9 +71,9 @@ namespace detail {
     concept has_cend = requires(T t) { t.cend(); };
 
     // `detail::collection_iterator` is shared by all containers that
-    // implement `collection_interface`. Unlike the standard library, this means
-    // that two different containers have the same `iterator` type, so long as
-    // they have the same `value_type`.
+    // implement `iterable_interface`. Unlike the standard library, this means
+    // that two different containers or container specializations can have the
+    // same `iterator` type, so long as they have the same `value_type`.
     //
     // This iterator's type can be accessed as eg.
     // `cat::vec<int4, allocator>::iterator`.
@@ -81,6 +81,11 @@ namespace detail {
     class collection_iterator
         : public iterator_interface<collection_iterator<T>, T> {
       public:
+        using value_type = T;
+        using const_value_type = T const;
+        using reference = T&;
+        using const_reference = T const&;
+
         constexpr collection_iterator(collection_iterator const&) = default;
         constexpr collection_iterator(collection_iterator&&) = default;
 
@@ -108,110 +113,100 @@ namespace detail {
         T* p_array;
     };
 
-    template <typename T, bool>
-    class collection_iterator_storage;
-
-    template <typename T>
-    class collection_iterator_storage<T, true> {
-      public:
-        using iterator = collection_iterator<T>;
-        using const_iterator = collection_iterator<T const>;
-        using reverse_iterator = reverse_iterator_adaptor<iterator>;
-        using const_reverse_iterator = reverse_iterator_adaptor<const_iterator>;
-
-        [[nodiscard]]
-        constexpr auto
-        begin(this auto&& collection) {
-            constexpr bool is_const = cat::is_const<decltype(collection)>;
-            using it = conditional<is_const, const_iterator, iterator>;
-
-            return it(0u, fwd(collection).data());
-        }
-
-        [[nodiscard]]
-        constexpr auto
-        end(this auto&& collection) {
-            constexpr bool is_const = cat::is_const<decltype(collection)>;
-            using it = conditional<is_const, const_iterator, iterator>;
-
-            // `cat::forward` must be called on last use, and because argument
-            // evaluation order is unspecified, it cannot be called inside an
-            // argument list.
-            auto size = collection.size() - 1u;
-            auto* data = fwd(collection).data();
-            return it(size, data);
-        }
-
-        [[nodiscard]]
-        constexpr auto
-        cbegin(this auto const& collection) -> const_iterator {
-            return collection.begin();
-        }
-
-        [[nodiscard]]
-        constexpr auto
-        cend(this auto const& collection) -> const_iterator {
-            return collection.end();
-        }
-
-        // `cat::as_reverse()` cannot be used to streamline this, because that
-        // has a potential dependency upon this code.
-
-        [[nodiscard]]
-        constexpr auto
-        rbegin(this auto&& collection) {
-            constexpr bool is_const = cat::is_const<decltype(collection)>;
-            using it =
-                conditional<is_const, const_reverse_iterator, reverse_iterator>;
-
-            return it(0u, fwd(collection).data());
-        }
-
-        [[nodiscard]]
-        constexpr auto
-        rend(this auto&& collection) {
-            constexpr bool is_const = cat::is_const<decltype(collection)>;
-            using it =
-                conditional<is_const, const_reverse_iterator, reverse_iterator>;
-
-            // `cat::forward` must be called on last use, and because argument
-            // evaluation order is unspecified, it cannot be called inside an
-            // argument list.
-            auto size = collection.size() - 1u;
-            auto* data = fwd(collection).data();
-            return it(size, data);
-        }
-
-        [[nodiscard]]
-        constexpr auto
-        crbegin(this auto const& collection) -> const_reverse_iterator {
-            return collection.rbegin();
-        }
-
-        [[nodiscard]]
-        constexpr auto
-        crend(this auto const& collection) -> const_reverse_iterator {
-            return collection.rend();
-        }
-    };
-
 }  // namespace detail
 
-template <typename derived_type, typename T,
-          bool embed_collection_iterator = false>
-class collection_interface
-    : public detail::collection_iterator_storage<T, embed_collection_iterator> {
+template <typename T>
+class iterable_interface {
+  public:
+    using iterator = detail::collection_iterator<T>;
+    using const_iterator = detail::collection_iterator<T const>;
+    using reverse_iterator = reverse_iterator_adaptor<iterator, T>;
+    using const_reverse_iterator = reverse_iterator_adaptor<const_iterator, T>;
+
+    [[nodiscard]]
+    constexpr auto
+    begin(this auto&& collection) {
+        constexpr bool is_const = cat::is_const<decltype(collection)>;
+        using it = conditional<is_const, const_iterator, iterator>;
+
+        return it(0, fwd(collection).data());
+    }
+
+    [[nodiscard]]
+    constexpr auto
+    end(this auto&& collection) {
+        constexpr bool is_const = cat::is_const<decltype(collection)>;
+        using it = conditional<is_const, const_iterator, iterator>;
+
+        // `cat::forward` must be called on last use, and because argument
+        // evaluation order is unspecified, it cannot be called inside an
+        // argument list.
+        auto size = collection.size();
+        auto* data = fwd(collection).data();
+        return it(size, data);
+    }
+
+    [[nodiscard]]
+    constexpr auto
+    cbegin(this auto const& collection) -> const_iterator {
+        return collection.begin();
+    }
+
+    [[nodiscard]]
+    constexpr auto
+    cend(this auto const& collection) -> const_iterator {
+        return collection.end();
+    }
+
+    // `cat::as_reverse()` cannot be used to streamline this, because that
+    // has a potential dependency upon this code.
+
+    [[nodiscard]]
+    constexpr auto
+    rbegin(this auto&& collection) {
+        constexpr bool is_const = cat::is_const<decltype(collection)>;
+        using it =
+            conditional<is_const, const_reverse_iterator, reverse_iterator>;
+
+        // `cat::forward` must be called on last use, and because argument
+        // evaluation order is unspecified, it cannot be called inside an
+        // argument list.
+        auto size = collection.size() - 1;
+        auto* data = fwd(collection).data();
+        return it(size, data);
+    }
+
+    [[nodiscard]]
+    constexpr auto
+    rend(this auto&& collection) {
+        constexpr bool is_const = cat::is_const<decltype(collection)>;
+        using it =
+            conditional<is_const, const_reverse_iterator, reverse_iterator>;
+
+        return it(0, fwd(collection).data());
+    }
+
+    [[nodiscard]]
+    constexpr auto
+    crbegin(this auto const& collection) -> const_reverse_iterator {
+        return collection.rbegin();
+    }
+
+    [[nodiscard]]
+    constexpr auto
+    crend(this auto const& collection) -> const_reverse_iterator {
+        return collection.rend();
+    }
+};
+
+template <typename derived_type, typename T>
+class collection_interface {
   private:
     // `is_array_like` at the top of this class instead of the bottom prevents
     // clangd false-positive diagnostics.
     static constexpr bool is_array_like =
         detail::is_contiguous_collection<derived_type> &&
         detail::is_bounded_collection<derived_type>;
-
-    // static_assert((embed_collection_iterator && is_array_like) ||
-    //                   !embed_collection_iterator,
-    //               "If `cat::detail::collection_iterator` is embedded, this "
-    //               "container must be contiguous and bounded.");
 
   public:
     using value_type = T;
@@ -388,23 +383,23 @@ class collection_interface
 
     template <is_collection Other>
     auto
-    copy_to(Other& destination) const {
-        assert(destination.capacity() >= this->capacity());
-        return cat::copy(this->begin(), this->end(), destination.begin());
+    copy_to(this auto const& self, Other& destination) {
+        assert(destination.capacity() >= self.capacity());
+        return cat::copy(self.begin(), self.end(), destination.begin());
     }
 
     template <is_collection Other>
     auto
-    move_to(Other& destination) const {
-        assert(destination.capacity() >= this->capacity());
-        return cat::move(this->begin(), this->end(), destination.begin());
+    move_to(this auto const& self, Other& destination) {
+        assert(destination.capacity() >= self.capacity());
+        return cat::move(self.begin(), self.end(), destination.begin());
     }
 
     template <is_collection Other>
     auto
-    relocate_to(Other& destination) const {
-        assert(destination.capacity() >= this->capacity());
-        return cat::relocate(this->begin(), this->end(), destination.begin());
+    relocate_to(this auto const& self, Other& destination) {
+        assert(destination.capacity() >= self.capacity());
+        return cat::relocate(self.begin(), self.end(), destination.begin());
     }
 
     // Implementation details for type reflection.

@@ -11,7 +11,8 @@ namespace cat {
 // its elements within itself, so this array can be constructed on the stack.
 // It is random-access iterable.
 template <typename T, uword length>
-class array : public collection_interface<array<T, length>, T, true> {
+class array : public collection_interface<array<T, length>, T>,
+              public iterable_interface<T> {
   public:
     constexpr array() = default;
     constexpr array(array<T, length> const& other_array) = default;

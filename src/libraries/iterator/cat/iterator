@@ -4,6 +4,7 @@
 
 // Iterator adaptors need access to `protected` copy-constructors, which are
 // marked `[[deprecated]]`.
+#include "cat/meta"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
@@ -333,10 +334,7 @@ struct iterator_traits {
 
 // `element_type` may or may not be provided to this CRTP class.
 template <typename iterator_type, typename... element_type>
-    requires(sizeof...(element_type) <=
-             1  // &&
-                // is_signed<typename iterator_type::difference_type> )
-             )
+    requires(sizeof...(element_type) <= 1)
 class reverse_iterator_adaptor
     : public iterator_interface<
           reverse_iterator_adaptor<iterator_type, element_type...>,
@@ -345,6 +343,12 @@ class reverse_iterator_adaptor
     using self_type = reverse_iterator_adaptor<iterator_type, element_type...>;
 
   public:
+    // TODO: Get these working.
+    // using value_type = __type_pack_element<0u, element_type...>;
+    // using const_value_type = value_type const;
+    // using reference = value_type&;
+    // using const_reference = value_type const&;
+
     // Forward any constructor to the `internal_iterator`.
     template <typename... Args>
     constexpr reverse_iterator_adaptor(Args&&... args)
@@ -362,7 +366,7 @@ class reverse_iterator_adaptor
     }
 
     constexpr void
-    advance(int offset)
+    advance(iword offset)
         requires(detail::has_advance<iterator_type>)
     {
         this->internal_iterator.advance(-offset);
@@ -379,7 +383,7 @@ class reverse_iterator_adaptor
     }
 
     constexpr auto
-    distance_to(self_type other) const
+    distance_to(self_type const& other) const
         requires(detail::has_distance_to<iterator_type>)
     {
         // Reverse the polarity of `distance_to()`.
@@ -462,10 +466,12 @@ concept is_output_iterator =
 // container and inverts its iterator's forwards and backwards movement.
 template <is_bidi_iterable T>
 struct as_reverse : T {
-    constexpr as_reverse(T const& base) : T(base) {
+    constexpr as_reverse(T& base) : T(base) {
     }
 
-    constexpr as_reverse(T&& base) : T(move(base)) {
+    constexpr as_reverse(T&& base)
+        requires(is_rvalue_reference<decltype(base)>)
+        : T(move(base)) {
     }
 
     constexpr auto
@@ -534,10 +540,12 @@ struct as_reverse : T {
 // movement.
 template <is_bidi_iterable T>
 struct as_const_reverse : T {
-    constexpr as_const_reverse(T const& base) : T(base) {
+    constexpr as_const_reverse(T& base) : T(base) {
     }
 
-    constexpr as_const_reverse(T&& base) : T(move(base)) {
+    constexpr as_const_reverse(T&& base)
+        requires(is_rvalue_reference<decltype(base)>)
+        : T(move(base)) {
     }
 
     constexpr auto
