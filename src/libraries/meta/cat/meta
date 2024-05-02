@@ -877,7 +877,7 @@ concept is_trivial = __is_trivial(T);
 
 template <typename S1, typename S2, typename M1, typename M2>
 constexpr bool
-is_corresponding_member(M1 S1::*member_1, M2 S2::*member_2) noexcept {
+is_corresponding_member(M1 S1::* member_1, M2 S2::* member_2) noexcept {
     return __builtin_is_corresponding_member(member_1, member_2);
 }
 
@@ -889,7 +889,7 @@ template <typename base_type, typename derived_type>
 concept is_pointer_interconvertible_base_of =
     __is_pointer_interconvertible_base_of(base_type, derived_type);
 #else
-#warning "No __is_pointer_interconvertible_base_of"
+#warning "No `__is_pointer_interconvertible_base_of`!"
 #endif
 
 // TODO: Add `reference_constructs_from_temporary<>` and

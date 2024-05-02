@@ -44,6 +44,7 @@ struct fixed_size_abi {
     static constexpr uword lanes = in_lanes;
     // TODO: Make the alignment generally correct and efficient.
     static constexpr uword alignment = 32u;
+    // TODO: Make `lanes` an `idx` so that this cast can be removed.
     static constexpr idx size = static_cast<idx>(lanes * sizeof(T));
 };
 

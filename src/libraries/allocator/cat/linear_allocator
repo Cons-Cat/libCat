@@ -42,6 +42,9 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
   public:
     // `linear_allocator` is move-only.
+    // TODO: With C++26, the `delete` reason should be:
+    // ("`cat::linear_allocator` should be constructed using "
+    // "`cat::make_linear_allocator`.");
     constexpr linear_allocator(linear_allocator const&) = delete;
     constexpr linear_allocator(linear_allocator&&) = default;
 

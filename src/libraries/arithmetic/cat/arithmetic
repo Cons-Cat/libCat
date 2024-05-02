@@ -68,7 +68,7 @@ namespace detail {
     struct is_idx_trait : false_trait {};
 
     template <overflow_policies policy>
-    struct is_idx_trait<index<policy>> : true_trait {};
+    struct is_idx_trait<index<policy>> : true_trait{};
 
     template <typename T>
     concept is_idx = is_idx_trait<T>::value;
@@ -502,8 +502,11 @@ namespace detail {
 // unsafe casts or operations. This is a trivial `struct` so it can be used as a
 // non-type template parameter.
 template <typename T, overflow_policies policy = overflow_policies::undefined>
-struct arithmetic : detail::arithmetic_storage<T, policy>,
-                    arithmetic_interface<arithmetic<T, policy>> {
+struct arithmetic :
+    // Generate `.raw`, `.wrap`, `.sat`, etc.
+    detail::arithmetic_storage<T, policy>,
+    // Generate arithmetic operators.
+    arithmetic_interface<arithmetic<T, policy>> {
     using raw_type = T;
 
     constexpr arithmetic() = default;
@@ -1190,14 +1193,16 @@ operator|=(T* p_lhs, arithmetic<U> rhs) -> T* {
 }
 
 template <overflow_policies policy = overflow_policies::undefined>
-struct index : detail::arithmetic_storage<__SIZE_TYPE__, policy>,
-               // Generate commutative operators.
-               arithmetic_interface<index<policy>> {
+struct index :
+    // Generate `.raw`, `.wrap`, `.sat`, etc.
+    detail::arithmetic_storage<__SIZE_TYPE__, policy>,
+    // Generate arithmetic operators.
+    arithmetic_interface<index<policy>> {
     using raw_type = __SIZE_TYPE__;
 
     constexpr index() = default;
 
-    // `index` allows unsafe signed-ness conversions.
+    // `index` allows explicit unsafe signed-ness conversions.
     template <is_integral U>
     constexpr explicit(sizeof(raw_type) <= sizeof(U)) index(U other) {
         if !consteval {
@@ -1206,6 +1211,24 @@ struct index : detail::arithmetic_storage<__SIZE_TYPE__, policy>,
                    limits<index>::max());
         }
         this->raw = make_raw_arithmetic(other);
+    }
+
+    // `index` allows implicit unsafe conversions from `unsigned long` r-values
+    // specifically, for user convenience.
+    constexpr index(unsigned long&& other) {
+        if !consteval {
+            assert(other <= limits<index>::max());
+        }
+        this->raw = other;
+    }
+
+    // `index` allows implicit unsafe conversions from `unsigned long long`
+    // r-values specifically, for user convenience.
+    constexpr index(unsigned long long&& other) {
+        if !consteval {
+            assert(other <= limits<index>::max());
+        }
+        this->raw = other;
     }
 
     // `index` can safely implictly convert into `iword` or `intptr`.
@@ -1476,6 +1499,8 @@ inline namespace integers {
         }
     };
 
+    inline constexpr idx idx_min = limits<idx>::min();
+    inline constexpr idx idx_max = limits<idx>::max();
     inline constexpr int1 int1_min = limits<int1>::min();
     inline constexpr int1 int1_max = limits<int1>::max();
     inline constexpr uint1 uint1_min = limits<uint1>::min();
@@ -1498,77 +1523,77 @@ inline namespace literals {
     inline namespace arithmetic_literals {
         constexpr auto
         operator""_idx(unsigned long long input) -> cat::idx {
-            return cat::idx{input};
+            return cat::idx(input);
         }
 
         constexpr auto
         operator""_i1(unsigned long long input) -> cat::int1 {
-            return cat::int1{input};
+            return cat::int1(input);
         }
 
         constexpr auto
         operator""_i2(unsigned long long input) -> cat::int2 {
-            return cat::int2{input};
+            return cat::int2(input);
         }
 
         constexpr auto
         operator""_i4(unsigned long long input) -> cat::int4 {
-            return cat::int4{input};
+            return cat::int4(input);
         }
 
         constexpr auto
         operator""_i8(unsigned long long input) -> cat::int8 {
-            return cat::int8{input};
+            return cat::int8(input);
         }
 
         constexpr auto
         operator""_sz(unsigned long long input) -> cat::iword {
-            return cat::iword{input};
+            return cat::iword(input);
         }
 
         constexpr auto
         operator""_u1(unsigned long long input) -> cat::uint1 {
-            return cat::uint1{input};
+            return cat::uint1(input);
         }
 
         constexpr auto
         operator""_u2(unsigned long long input) -> cat::uint2 {
-            return cat::uint2{input};
+            return cat::uint2(input);
         }
 
         constexpr auto
         operator""_u4(unsigned long long input) -> cat::uint4 {
-            return cat::uint4{input};
+            return cat::uint4(input);
         }
 
         constexpr auto
         operator""_u8(unsigned long long input) -> cat::uint8 {
-            return cat::uint8{input};
+            return cat::uint8(input);
         }
 
         constexpr auto
         operator""_uz(unsigned long long input) -> cat::uword {
-            return cat::uword{input};
+            return cat::uword(input);
         }
 
         constexpr auto
         operator""_f4(unsigned long long input) -> cat::float4 {
-            return cat::float4{input};
+            return cat::float4(input);
         }
 
         constexpr auto
         operator""_f4(long double input) -> cat::float4 {
-            return cat::float4{input};
+            return cat::float4(input);
         }
 
         constexpr auto
         operator""_f8(unsigned long long input) -> cat::float8 {
-            return cat::float8{input};
+            return cat::float8(input);
         }
 
         constexpr auto
         operator""_f8(long double input) -> cat::float8 {
-            return cat::float8{input};
+            return cat::float8(input);
         }
     }  // namespace arithmetic_literals
 }  // namespace literals

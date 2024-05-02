@@ -395,6 +395,9 @@ TEST(test_numerals) {
     static_assert(cat::limits<float4>::max() ==
                   cat::limits<float4::raw_type>::max());
 
+    // Test shorthand `*_min` and `*_max` constants.
+    static_assert(idx_max == cat::limits<idx>::max());
+
     // Test unsigned saturating addition.
     static_assert(cat::sat_add(cat::uint1_max - 3u, 1_u1) < cat::uint1_max);
     static_assert(cat::sat_add(cat::uint1_max - 1u, 1_u1) == cat::uint1_max);
