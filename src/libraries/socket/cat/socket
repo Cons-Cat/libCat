@@ -144,6 +144,7 @@ struct socket_unix {
     }
 
     // TODO: Factor into `.recieve()` and `.recieve_from()`.
+    // TODO: This should return `maybe<idx>`.
     auto
     recieve(void* const p_message_buffer, iword const buffer_length,
             Socket const* __restrict const p_socket = nullptr,

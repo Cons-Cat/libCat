@@ -43,7 +43,7 @@ target_include_directories(cat INTERFACE
   ${CATLIB}/type_list/
   ${CATLIB}/tuple/
   ${CATLIB}/cast/
-  ${CATLIB}/vector/
+  ${CATLIB}/vec/
   ${CATLIB}/ring/
 )
 
@@ -192,7 +192,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/unique/cat/unique
   ${CATLIB}/utility/cat/utility
   ${CATLIB}/variant/cat/variant
-  ${CATLIB}/vector/cat/vector
+  ${CATLIB}/vec/cat/vec
   ${CATLIB}/x11/cat/x11
   PARENT_SCOPE
 )

@@ -4,7 +4,8 @@
 #include <cat/socket>
 #include <cat/string>
 
-auto main() -> int {
+auto
+main() -> int {
     cat::socket_unix<cat::socket_type::stream> listening_socket;
     // A leading null byte puts this path in the abstract namespace.
     listening_socket.path_name =

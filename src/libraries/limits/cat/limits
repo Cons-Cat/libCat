@@ -6,7 +6,6 @@
 
 namespace cat {
 
-// TODO: Implement support for `cat::idx`.
 // TODO: Implement support for GCC 13's `__bf16` type.
 // TODO: Implement support for complex floats.
 
@@ -248,14 +247,14 @@ template <overflow_policies policy>
 struct limits<index<policy>> {
     limits() = delete;
 
-    static consteval auto
-    min() -> __UINT64_TYPE__ {
+    static constexpr auto
+    min() -> index<policy> {
         return 0u;
     }
 
-    static consteval auto
-    max() -> __UINT64_TYPE__ {
-        return 9'223'372'036'854'775'807u;
+    static constexpr auto
+    max() -> index<policy> {
+        return index<policy>(9'223'372'036'854'775'807ull);
     }
 
     static constexpr __UINT8_TYPE__ digits = 63;

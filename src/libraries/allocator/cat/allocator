@@ -50,7 +50,7 @@ namespace detail {
         [[nodiscard]]
         constexpr auto
         raw_size() const -> idx {
-            return static_cast<idx>(sizeof(T));
+            return sizeof(T);
         }
 
         // `is_inline()` always holds false if the call is not intercepted by an

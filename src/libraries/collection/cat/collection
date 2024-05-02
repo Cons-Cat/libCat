@@ -196,7 +196,7 @@ namespace detail {
 
         // Contiguous collections can produce non-`const` bidirectional
         // iterators.
-        // This type can be accessed as, `cat::vector<int>::iterator`.
+        // This type can be accessed as eg. `cat::vec<int4>::iterator`.
         class iterator : public iterator_interface<iterator, T> {
           public:
             constexpr iterator(iterator const&) = default;
@@ -228,7 +228,7 @@ namespace detail {
 
         // Contiguous collections can produce `const` bidirectional
         // iterators.
-        // This type can be accessed as, `cat::vector<int>::const_iterator`.
+        // This type can be accessed as eg `cat::vec<int4>::const_iterator`.
         class const_iterator
             : public iterator_interface<const_iterator, T const> {
           public:

@@ -51,6 +51,9 @@ class pool_allocator
 
   public:
     // `pool_allocator` is move-only.
+    // TODO: With C++26, the `delete` reason should be:
+    // ("`cat::pool_allocator` should be constructed using "
+    // "`cat::make_pool_allocator`.");
     constexpr pool_allocator(pool_allocator const&) = delete;
     constexpr pool_allocator(pool_allocator&&) = default;
 

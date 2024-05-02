@@ -70,13 +70,12 @@ namespace detail {
 }  // namespace detail
 
 template <typename T, T... values>
-    requires(is_integral<T>)
 struct value_type_list {
     using value_type = T;
 
-    static constexpr iword size = ssizeof_pack(values...);
+    static constexpr idx size = sizeof...(values);
 
-    template <iword index>
+    template <idx index>
     static constexpr auto
     get() -> T {
         return detail::get_value_list_at<T, index, 0, values...>();
@@ -109,15 +108,23 @@ namespace detail {
     }
 }  // namespace detail
 
+// Make a `value_type_list` for any `T`, including non-integer types.
 template <typename T, T value, iword count>
 constexpr auto value_list = detail::make_value_list<count, T, value>();
 
 template <typename T, T value, iword count>
 using make_value_type_list = decltype(value_list<T, value, count>);
 
-template <is_integral T, iword count>
+template <is_integral T, cat::iword count>
 constexpr auto integer_sequence =
+#if __has_builtin(__integer_pack)
+    // TODO: Get `__integer_pack` working for GCC.
     detail::make_integer_sequence<count, T, T(count.raw)>();
+// value_type_list<T, T(__integer_pack(count.raw))...>();
+#else
+    // TODO: Support `__make_integer_seq` for Clang.
+    detail::make_integer_sequence<count, T, T(count.raw)>();
+#endif
 
 template <is_integral T, iword count>
 constexpr auto zeros_list = value_list<T, T(0), count>;

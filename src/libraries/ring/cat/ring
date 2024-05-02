@@ -132,14 +132,14 @@ class ring : public collection_interface<ring<T>, T> {
     clone([[maybe_unused]] is_allocator auto& allocator) -> maybe<ring<T>> {
     }
 
-    // Get the non-`const` address of this `vector`'s internal array.
+    // Get the non-`const` address of this `vec`'s internal array.
     [[nodiscard]]
     constexpr auto
     data() -> T* {
         return &(this->p_storage[0]);
     }
 
-    // Get the `const` address of this `vector`'s internal array.
+    // Get the `const` address of this `vec`'s internal array.
     [[nodiscard]]
     constexpr auto
     data() const -> T const* {
