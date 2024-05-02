@@ -7,24 +7,29 @@
 #include <cat/array>
 #include <cat/collection>
 #include <cat/math>
+#include <cat/null_allocator>
 #include <cat/utility>
 
 namespace cat {
 
 // TODO: Support `__sanitizer_annotate_contiguous_container`.
 
-template <typename T>
-class vec : public collection_interface<vec<T>, T, true> {
+template <typename T, is_allocator allocator_type = null_allocator>
+class vec : public collection_interface<vec<T, allocator_type>, T>,
+            public iterable_interface<T> {
+    template <typename U, is_allocator allocator>
+    friend constexpr auto make_vec_empty(allocator&) -> vec<U, allocator>;
+
+    template <typename U, is_allocator allocator>
+    friend constexpr auto
+    make_vec_reserved(allocator&, idx) -> maybe<vec<U, allocator>>;
+
+    template <typename U, is_allocator allocator>
+    friend constexpr auto
+    make_vec_filled(allocator&, idx, U&&) -> maybe<vec<U, allocator>>;
+
   public:
-    using value_type = T;
-
-    constexpr vec() : p_storage(nullptr), current_size(0), current_capacity(0) {
-        if consteval {
-            this->p_storage = nullptr;
-        }
-    };
-
-    constexpr vec(vec<T>&& other_vector) = default;
+    constexpr vec(vec&& other_vector) = default;
 
     constexpr ~vec() {
         if consteval {
@@ -34,11 +39,20 @@ class vec : public collection_interface<vec<T>, T, true> {
 
   protected:
     // Being `protected:` permits derived classes and adaptors to call this.
-    // Only allow the shallow copy constructor to be used by these static
-    // factory member functions. For public copying, `.clone()` should be used.
-    [[deprecated("Implicit copying of `cat::vec` is forbidden. Call `.clone() "
-                 "instead!")]]
-    constexpr vec(vec<T> const& other_vector) = default;
+
+    [[deprecated("`cat::vec` cannot be created without an allocator. Call "
+                 "`cat::make_vec_empty()` instead!")]]
+    constexpr vec(allocator_type& allocator)
+        : p_storage(nullptr),
+          current_size(0),
+          current_capacity(0),
+          m_allocator(allocator) {
+    }
+
+    [[deprecated(
+        "Implicit copying of `cat::vec` is forbidden. Call `.clone() or move"
+        "instead!")]]
+    constexpr vec(vec const& other_vector) = default;
 
     // Reallocate memory, or make an initial allocation.
     constexpr auto
@@ -87,32 +101,6 @@ class vec : public collection_interface<vec<T>, T, true> {
     }
 
   public:
-    template <typename U>
-    friend constexpr auto make_vec_reserved(is_allocator auto& allocator,
-                                            idx capacity) -> maybe<vec<U>>;
-
-    [[nodiscard]]
-    static constexpr auto
-    reserved(is_allocator auto& allocator, idx capacity) -> maybe<vec<T>> {
-    }
-
-    [[nodiscard]]
-    static constexpr auto
-    filled(is_allocator auto& allocator, idx count,
-           T const& value) -> maybe<vec<T>> {
-        vec<T> new_vector;
-        maybe result = new_vector.reserve(allocator, count);
-        if (!result.has_value()) {
-            return nullopt;
-        }
-        new_vector.current_size = count;
-        // TODO: Call a vectorized fill memory function.
-        for (T& element : new_vector) {
-            element = value;
-        }
-        return new_vector;
-    }
-
     // Get the non-`const` address of this `vec`'s internal array.
     [[nodiscard]]
     constexpr auto
@@ -186,9 +174,10 @@ class vec : public collection_interface<vec<T>, T, true> {
     // Deep-copy the contents of this `vec`.
     [[nodiscard]]
     constexpr auto
-    clone(is_allocator auto& allocator) const& -> maybe<vec<T>> {
-        vec<T> new_vector =
-            prop(vec<T>::reserved(allocator, this->current_capacity));
+    clone(
+        is_allocator auto& allocator) const& -> maybe<vec<T, allocator_type>> {
+        vec<T, allocator_type> new_vector =
+            prop(make_vec_reserved<T>(allocator, this->current_capacity));
         new_vector.current_size = this->current_size;
         relocate(this->begin(), this->end(), new_vector.begin());
 
@@ -216,15 +205,62 @@ class vec : public collection_interface<vec<T>, T, true> {
     T* p_storage;
     idx current_size;
     idx current_capacity;
+    allocator_type& m_allocator;
 };
 
-template <typename T>
+// TODO: Implement this factory function when either GCC gets value pack
+// indexing or I implement `std::initializer_list`.
+//
+// template <typename T, is_convertible<T>... Us>
+// [[nodiscard]]
+// constexpr auto
+// make_vec(is_allocator auto& allocator, Us&&... values) -> maybe<vec<T,
+// allocator_type>> {
+//     vec<T, allocator_type> new_vector;
+//     prop(new_vector.reserve(allocator, sizeof...(Us)));
+//     for (idx i = 0; i < sizeof...(Us); ++i) {
+//         new_vector[i] = ;
+//     }
+//     return new_vector;
+// }
+
+// These factory functions require access to the `protected` constructor, which
+// is marked `[[deprecated]]`.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
+template <typename T, is_allocator allocator_type>
 [[nodiscard]]
 constexpr auto
-make_vec_reserved(is_allocator auto& allocator, idx capacity) -> maybe<vec<T>> {
-    vec<T> new_vector;
+make_vec_empty(allocator_type& allocator) -> vec<T, allocator_type> {
+    return vec<T, allocator_type>(allocator);
+}
+
+template <typename T, is_allocator allocator_type>
+[[nodiscard]]
+constexpr auto
+make_vec_reserved(allocator_type& allocator,
+                  idx capacity) -> maybe<vec<T, allocator_type>> {
+    vec<T, allocator_type> new_vector(allocator);
     prop(new_vector.reserve(allocator, capacity));
     return new_vector;
 }
+
+template <typename T, is_allocator allocator_type>
+[[nodiscard]]
+constexpr auto
+make_vec_filled(allocator_type& allocator, idx count,
+                T&& value) -> maybe<vec<T, allocator_type>> {
+    vec<T, allocator_type> new_vector(allocator);
+    prop(new_vector.reserve(allocator, count));
+    new_vector.current_size = count;
+    // TODO: Call a vectorized fill memory function.
+    for (T& element : new_vector) {
+        element = fwd(value);
+    }
+    return new_vector;
+}
+
+#pragma GCC diagnostic pop
 
 }  // namespace cat
