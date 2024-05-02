@@ -1101,6 +1101,18 @@ struct arithmetic_ptr
     bit_complement() const -> arithmetic_ptr {
         return ~(this->raw);
     }
+
+    [[nodiscard]]
+    consteval auto
+    min() -> arithmetic_ptr {
+        return limits<arithmetic_ptr<T, storage_type, policy>>::min();
+    }
+
+    [[nodiscard]]
+    consteval auto
+    max() -> arithmetic_ptr {
+        return limits<arithmetic_ptr<T, storage_type, policy>>::max();
+    }
 };
 
 // Add and assign an `arithmetic` to a pointer.
@@ -1379,6 +1391,18 @@ struct index :
         // Zero the upper bit so that it remains a 63-bit value.
         complement &= 0ull << 63u;
         return index(complement);
+    }
+
+    [[nodiscard]]
+    consteval auto
+    min() -> index {
+        return limits<index<policy>>::min();
+    }
+
+    [[nodiscard]]
+    consteval auto
+    max() -> index {
+        return limits<index<policy>>::max();
     }
 };
 
