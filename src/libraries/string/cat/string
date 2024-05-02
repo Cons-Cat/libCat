@@ -171,8 +171,8 @@ class string : public span<char const> {
 // This is `uword::raw_type` because GCC cannot deduce a string literal's
 // length from an `ssize`.
 template <uword::raw_type length>
-class fixed_string
-    : public collection_interface<fixed_string<length>, char, true> {
+class fixed_string : public collection_interface<fixed_string<length>, char>,
+                     public iterable_interface<char> {
   public:
     constexpr auto
     data() -> char* {
