@@ -8,7 +8,7 @@
 consteval auto
 const_func() -> int4 {
     cat::page_allocator allocator;
-    cat::vec<int4> vector;
+    cat::vec vector = cat::make_vec_empty<int4>(allocator);
     auto _ = vector.resize(allocator, 8u);
 
     vector[0] = 1;
@@ -27,45 +27,8 @@ TEST(test_vec) {
     };
     auto allocator = cat::make_linear_allocator(page);
 
-    // Test vector member types.
-    using iterator = cat::vec<int>::iterator;
-    static_assert(cat::is_same<iterator, decltype(cat::vec<int>().begin())>);
-    static_assert(cat::is_same<iterator, decltype(cat::vec<int>().end())>);
-
-    static_assert(cat::is_same<iterator::value_type, int>);
-    static_assert(cat::is_same<iterator::reference, int&>);
-
-    using const_iterator = cat::vec<int>::const_iterator;
-    static_assert(
-        cat::is_same<const_iterator, decltype(cat::vec<int>().cbegin())>);
-    static_assert(
-        cat::is_same<const_iterator, decltype(cat::vec<int>().cend())>);
-
-    static_assert(cat::is_same<const_iterator::value_type, int const>);
-    static_assert(cat::is_same<const_iterator::reference, int const&>);
-
-    using reverse_iterator = cat::vec<int>::reverse_iterator;
-    static_assert(
-        cat::is_same<reverse_iterator, decltype(cat::vec<int>().rbegin())>);
-    static_assert(
-        cat::is_same<reverse_iterator, decltype(cat::vec<int>().rend())>);
-
-    static_assert(cat::is_same<reverse_iterator::value_type, int>);
-    static_assert(cat::is_same<reverse_iterator::reference, int&>);
-
-    using const_reverse_iterator = cat::vec<int>::const_reverse_iterator;
-    static_assert(cat::is_same<const_reverse_iterator,
-                               decltype(cat::vec<int>().crbegin())>);
-    static_assert(cat::is_same<const_reverse_iterator,
-                               decltype(cat::vec<int>().crend())>);
-
-    static_assert(cat::is_same<const_reverse_iterator::value_type, int const>);
-    static_assert(cat::is_same<const_reverse_iterator::reference, int const&>);
-
-    static_assert(cat::is_same<int, cat::vec<int>::value_type>);
-
     // Test default constructing a `vector`.
-    cat::vec<int4> int_vec;
+    cat::vec int_vec = cat::make_vec_empty<int4>(allocator);
     cat::verify(int_vec.size() == 0);
     cat::verify(int_vec.capacity() >= 0);
 
@@ -97,11 +60,12 @@ TEST(test_vec) {
     cat::verify(int_vec.capacity() >= 128u);
 
     // Test reserve constructor.
-    cat::vec reserved_vec = cat::vec<int4>::reserved(allocator, 6u).or_exit();
+    cat::vec reserved_vec =
+        cat::make_vec_reserved<int4>(allocator, 6u).or_exit();
     cat::verify(reserved_vec.capacity() >= 6u);
 
     // Test filled constructor.
-    cat::vec filled_vec = cat::vec<int4>::filled(allocator, 8u, 1).or_exit();
+    cat::vec filled_vec = cat::make_vec_filled(allocator, 8u, 1_i4).or_exit();
     cat::verify(filled_vec.size() == 8u);
     cat::verify(filled_vec.capacity() >= 8u);
     for (int4 integer : filled_vec) {
@@ -116,11 +80,45 @@ TEST(test_vec) {
         cat::verify(integer == 1);
     }
 
+    // Test vector member types.
+    using iterator = cat::vec<int4>::iterator;
+    static_assert(cat::is_same<iterator, decltype(int_vec.begin())>);
+    static_assert(cat::is_same<iterator, decltype(int_vec.end())>);
+
+    static_assert(cat::is_same<iterator::value_type, int4>);
+    static_assert(cat::is_same<iterator::reference, int4&>);
+
+    using const_iterator = cat::vec<int4>::const_iterator;
+    static_assert(cat::is_same<const_iterator, decltype(int_vec.cbegin())>);
+    static_assert(cat::is_same<const_iterator, decltype(int_vec.cend())>);
+
+    static_assert(cat::is_same<const_iterator::value_type, int4 const>);
+    static_assert(cat::is_same<const_iterator::reference, int4 const&>);
+
+    using reverse_iterator = cat::vec<int4>::reverse_iterator;
+    static_assert(cat::is_same<reverse_iterator, decltype(int_vec.rbegin())>);
+    static_assert(cat::is_same<reverse_iterator, decltype(int_vec.rend())>);
+
+    static_assert(cat::is_same<reverse_iterator::value_type, int4>);
+    static_assert(cat::is_same<reverse_iterator::reference, int4&>);
+
+    using const_reverse_iterator = cat::vec<int4>::const_reverse_iterator;
+    static_assert(
+        cat::is_same<const_reverse_iterator, decltype(int_vec.crbegin())>);
+    static_assert(
+        cat::is_same<const_reverse_iterator, decltype(int_vec.crend())>);
+
+    // static_assert(cat::is_same<const_reverse_iterator::value_type, int4
+    // const>); static_assert(cat::is_same<const_reverse_iterator::reference,
+    // int4 const&>);
+
+    static_assert(cat::is_same<int, cat::vec<int>::value_type>);
+
     // Test `vector` in a `constexpr` context.
     static_assert(const_func() == 10);
 
     // Test getters.
-    cat::vec<int> default_vector;
+    cat::vec default_vector = cat::make_vec_empty<int>(allocator);
     cat::verify(default_vector.is_empty());
 
     auto _ = default_vector.reserve(allocator, 2u);
@@ -142,10 +140,10 @@ TEST(test_vec) {
     // TODO: Test insert iterators.
 
     // Test algorithms.
-    cat::vec origin_vector = cat::vec<int>::filled(allocator, 6u, 1).verify();
-    auto copy_vector = cat::vec<int>::filled(allocator, 6u, 0).verify();
-    auto move_vector = cat::vec<int>::filled(allocator, 6u, 0).verify();
-    auto relocate_vector = cat::vec<int>::filled(allocator, 6u, 0).verify();
+    cat::vec origin_vector = cat::make_vec_filled(allocator, 6u, 1).verify();
+    auto copy_vector = cat::make_vec_filled(allocator, 6u, 0).verify();
+    auto move_vector = cat::make_vec_filled(allocator, 6u, 0).verify();
+    auto relocate_vector = cat::make_vec_filled(allocator, 6u, 0).verify();
 
     // `copy()`.
     cat::verify(copy_vector[5] == 0);
