@@ -110,6 +110,7 @@ class page_allocator : public allocator_interface<page_allocator> {
     static constexpr bool has_pointer_stability = true;
 };
 
+[[nodiscard]]
 constexpr auto
 make_page_allocator() -> page_allocator {
     return page_allocator();

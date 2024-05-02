@@ -153,20 +153,23 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     uintptr<void> p_arena_current = p_arena_begin;
 };
 
+[[nodiscard]]
 constexpr auto
 make_linear_allocator(uintptr<void> p_address,
                       idx arena_bytes) -> linear_allocator {
     return linear_allocator(p_address, arena_bytes);
 }
 
+[[nodiscard]]
 constexpr auto
 make_linear_allocator(span<byte>& span) -> linear_allocator {
     return linear_allocator(span.data(), span.size());
 }
 
-[[deprecated(
-    "Creating a `cat::linear_allocator` with a pr-value may "
-    "unintentionally leak memory. Copy an l-value `cat::span` instead.")]]
+[[nodiscard,
+  deprecated(
+      "Creating a `cat::linear_allocator` with a pr-value may "
+      "unintentionally leak memory. Copy an l-value `cat::span` instead.")]]
 constexpr auto
 make_linear_allocator(span<byte>&& span) -> linear_allocator {
     return make_linear_allocator(span);

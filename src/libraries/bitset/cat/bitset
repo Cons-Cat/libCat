@@ -13,8 +13,6 @@ template <idx bits_count>
     requires(bits_count > 0u)
 class bitset {
   private:
-    // public:
-
     // Store the smallest number of bytes needed for `bits_count`. If that is 8
     // bytes or fewer, use that many bytes. If it is larger, use an array of
     // 8-byte integers. Divide the bits by 8, rounding up.
@@ -32,7 +30,6 @@ class bitset {
             1u>,
         array<uint8, div_ceil(total_bytes, 8u)>>;
 
-    // private:
     using array_type_element = array_type::value_type;
 
   public:

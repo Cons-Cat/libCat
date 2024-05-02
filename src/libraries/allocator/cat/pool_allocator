@@ -136,6 +136,7 @@ class pool_allocator
 };
 
 template <idx max_node_bytes>
+[[nodiscard]]
 constexpr auto
 make_pool_allocator(uintptr<void> p_address,
                     idx arena_bytes) -> pool_allocator<max_node_bytes> {
@@ -143,15 +144,17 @@ make_pool_allocator(uintptr<void> p_address,
 }
 
 template <idx max_node_bytes>
+[[nodiscard]]
 constexpr auto
 make_pool_allocator(span<byte>& span) -> pool_allocator<max_node_bytes> {
     return pool_allocator<max_node_bytes>(span.data(), span.size());
 }
 
 template <idx max_node_bytes>
-[[deprecated(
-    "Creating a `cat::pool_allocator` with a pr-value may "
-    "unintentionally leak memory. Copy an l-value `cat::span` instead.")]]
+[[nodiscard,
+  deprecated(
+      "Creating a `cat::pool_allocator` with a pr-value may "
+      "unintentionally leak memory. Copy an l-value `cat::span` instead.")]]
 constexpr auto
 make_pool_allocator(span<byte>&& span) -> pool_allocator<max_node_bytes> {
     return make_pool_allocator<max_node_bytes>(span);
