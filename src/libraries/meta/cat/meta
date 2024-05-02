@@ -575,8 +575,8 @@ namespace detail {
     inline constexpr bool is_signed_detail<arithmetic<T, policy>> =
         is_signed_detail<T>;
 
-    // This expression only holds true if `T` can be constant-evaluated.
-    template <is_less_than_comparable T>
+    // Clang 19 rejects the `is_less_than_comparable` constraint here.
+    template <typename T>
         requires(is_convertible<signed char, T>)
     inline constexpr bool is_signed_detail<T> = constval<(
         T(static_cast<signed char>(-1)) < T(static_cast<signed char>(0)))>;
