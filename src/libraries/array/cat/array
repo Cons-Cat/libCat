@@ -13,8 +13,6 @@ namespace cat {
 template <typename T, uword length>
 class array : public collection_interface<array<T, length>, T, true> {
   public:
-    using value_type = T;
-
     constexpr array() = default;
     constexpr array(array<T, length> const& other_array) = default;
     constexpr array(array<T, length>&& other_array) = default;
