@@ -722,25 +722,25 @@ enum class tty_configuration_flags : unsigned int {
 
 // Enable using these `enum class`es as bit-flags.
 template <>
-struct cat::enum_flag_trait<nix::memory_protection_flags> : cat::true_trait {};
+struct cat::enum_flag_trait<nix::memory_protection_flags> : cat::true_trait{};
 
 template <>
-struct cat::enum_flag_trait<nix::memory_flags> : cat::true_trait {};
+struct cat::enum_flag_trait<nix::memory_flags> : cat::true_trait{};
 
 template <>
-struct cat::enum_flag_trait<nix::open_flags> : cat::true_trait {};
+struct cat::enum_flag_trait<nix::open_flags> : cat::true_trait{};
 
 template <>
-struct cat::enum_flag_trait<nix::CloneFlags> : cat::true_trait {};
+struct cat::enum_flag_trait<nix::CloneFlags> : cat::true_trait{};
 
 template <>
-struct cat::enum_flag_trait<nix::wait_options_flags> : cat::true_trait {};
+struct cat::enum_flag_trait<nix::wait_options_flags> : cat::true_trait{};
 
 template <>
-struct cat::enum_flag_trait<nix::io_requests> : cat::true_trait {};
+struct cat::enum_flag_trait<nix::io_requests> : cat::true_trait{};
 
 template <>
-struct cat::enum_flag_trait<nix::tty_configuration_flags> : cat::true_trait {};
+struct cat::enum_flag_trait<nix::tty_configuration_flags> : cat::true_trait{};
 
 namespace nix {
 
@@ -902,15 +902,15 @@ struct io_vector : cat::span<cat::byte> {
     ~io_vector() = default;
 
     // Construct from any reasonable pointer type.
-    constexpr io_vector(cat::byte* p_in_data, cat::uword in_length)
+    constexpr io_vector(cat::byte* p_in_data, cat::idx in_length)
         : cat::span<cat::byte>(p_in_data, in_length) {
     }
 
     // Construct from any reasonable pointer type.
     constexpr io_vector(cat::byte* p_start, cat::byte* p_end)
         : cat::span<cat::byte>(p_start,
-                               cat::uword(cat::uintptr<cat::byte>(p_end) -
-                                          cat::uintptr<cat::byte>(p_start))) {
+                               cat::idx(cat::uintptr<cat::byte>(p_end) -
+                                        cat::uintptr<cat::byte>(p_start))) {
     }
 
     constexpr auto

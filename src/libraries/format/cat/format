@@ -749,7 +749,8 @@ namespace detail {
 
             // Slice the string past the text that's just been parsed.
             remainder =
-                remainder.remove_prefix(make_unsigned(to_close_brace) + 1u);
+                // Casting this to `idx` is guaranteed to be safe by this point.
+                remainder.remove_prefix(idx(to_close_brace) + 1u);
         }
 
         // No errors occurred.
@@ -817,7 +818,7 @@ namespace detail {
             return result.template error<format_errors>();
         }
 
-        uword const length = string_length(into_buffer.data());
+        idx const length = string_length(into_buffer.data());
         return string(into_buffer.p_storage, length);
     }
 }  // namespace detail

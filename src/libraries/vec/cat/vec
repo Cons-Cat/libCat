@@ -38,7 +38,7 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
     }
 
   protected:
-    // Being `protected:` permits derived classes and adaptors to call this.
+    // Being `protected:` permits derived classes and adaptors to call these.
 
     [[deprecated("`cat::vec` cannot be created without an allocator. Call "
                  "`cat::make_vec_empty()` instead!")]]
