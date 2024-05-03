@@ -144,7 +144,7 @@ to_string_at(arithmetic<T> value, span<char> output_buffer) -> maybe<string> {
     }
 
     // TODO: Get the length of this integer faster.
-    uword length = string_length(buffer);
+    idx length = string_length(buffer);
     if (length > output_buffer.size()) {
         return nullopt;
     }
@@ -295,13 +295,13 @@ namespace detail {
         [[nodiscard]]
         auto
         size() const -> idx {
-            return idx(this->length);
+            return this->length;
         }
 
         [[nodiscard]]
         auto
         capacity() const -> idx {
-            return idx(this->max_length);
+            return this->max_length;
         }
 
         auto
@@ -340,7 +340,7 @@ namespace detail {
         // in-order.
         template <typename T>
         void
-        store_argument(uword& argument_index, T&& value) {
+        store_argument(idx& argument_index, T&& value) {
             // Pack `value` into `packed_args_storage`.
             iword const storage_index =
                 this->arguments_indices[argument_index.raw].byte_index;
@@ -366,11 +366,13 @@ namespace detail {
         }
 
       public:
-        format_args_compact_storage(types&&... arguments) {
+        template <typename... Us>
+            requires(sizeof...(types) == sizeof...(Us))
+        format_args_compact_storage(Us&&... arguments) {
             this->packed_args_storage[0] = {};
             this->arguments_indices[0] = {};
             this->arguments_indices[0].byte_index = 0u;
-            uword argument_index = 0u;
+            idx argument_index = 0u;
             // `store_argument()` increments `argument_index`.
             (this->store_argument(argument_index, fwd(arguments)), ...);
         }
@@ -835,7 +837,7 @@ format_to(allocator_type& allocator, outputter_type output_iterator,
     return detail::vformat_to(
         allocator, output_iterator, format,
         detail::format_args(
-            detail::format_args_compact_storage(move(arguments)...)));
+            detail::format_args_compact_storage<Args...>(fwd(arguments)...)));
 }
 
 template <is_allocator allocator_type, typename... Args>
@@ -846,7 +848,7 @@ format(allocator_type& allocator, string const format,
     return detail::vformat(
         allocator, format,
         detail::format_args(
-            detail::format_args_compact_storage(move(arguments)...)));
+            detail::format_args_compact_storage<Args...>(fwd(arguments)...)));
 }
 
 }  // namespace cat

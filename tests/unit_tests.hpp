@@ -24,7 +24,7 @@ void test_fail(cat::source_location const& source_location);
         /* TODO: This will leak. An `inline_allocator` should be used. */   \
         auto _ = cat::print(cat::format(pager, "{}", tests_run).value());   \
         /* TODO: Align the whitespace after `:` for 1 and 2 digit tests. */ \
-        auto string = ": " #test_name "...\n";                              \
+        constexpr auto string = ": " #test_name "...\n";                    \
         auto _ = cat::print(string);                                        \
         test_name();                                                        \
     }                                                                       \
