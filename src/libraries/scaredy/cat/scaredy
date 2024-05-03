@@ -23,7 +23,7 @@ namespace detail {
         template <typename U>
         static constexpr bool is_value =
             // `U` must be converted to the value type.
-            is_implicitly_convertible<U, value_type> &&
+            is_convertible<U, value_type> &&
             // `U` must not be one of the errors.
             !type_list<error_types...>::template has_type<U>;
 
@@ -180,7 +180,7 @@ namespace detail {
         template <typename U>
         static constexpr bool is_value =
             // `U` must be converted to the value type.
-            is_implicitly_convertible<U, value_type> &&
+            is_convertible<U, value_type> &&
             // `U` must not be one of the errors.
             !type_list<error_types...>::template has_type<U>;
 
@@ -353,7 +353,7 @@ class scaredy {
     template <typename U>
     static constexpr bool is_value =
         // `U` must be converted to the value type.
-        is_implicitly_convertible<U, value_type> &&
+        is_convertible<U, value_type> &&
         // `U` must not be one of the errors.
         !type_list<error_types...>::template has_type<U>;
 
@@ -379,14 +379,14 @@ class scaredy {
 
     // Copy and convert the storage of a convertible `scaredy`.
     template <typename U>
-        requires(is_implicitly_convertible<U, value_type>)
+        requires(is_convertible<U, value_type>)
     constexpr scaredy(scaredy<U, error_types...> const& scaredy)
         : storage(scaredy.storage) {
     }
 
     // Move and convert the storage of a convertible `scaredy`.
     template <typename U>
-        requires(is_implicitly_convertible<U, value_type>)
+        requires(is_convertible<U, value_type>)
     constexpr scaredy(scaredy<U, error_types...>&& scaredy)
         : storage(move(scaredy).storage) {
     }

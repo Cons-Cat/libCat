@@ -84,7 +84,7 @@ class list : public collection_interface<list<T>, T> {
     // TODO: value_type_list constructors/factories were removed elsewhere.
     // Should this be kept?
     template <typename U, U... initializers>
-        requires(is_implicitly_convertible<U, T>)
+        requires(is_convertible<U, T>)
     [[nodiscard]]
     static auto
     from(is_allocator auto& allocator,
@@ -104,7 +104,7 @@ class list : public collection_interface<list<T>, T> {
     }
 
     template <typename... Args>
-        requires(is_implicitly_convertible<Args, T> && ...)
+        requires(is_convertible<Args, T> && ...)
     [[nodiscard]]
     static auto
     from(is_allocator auto& allocator,
@@ -228,7 +228,7 @@ class list : public collection_interface<list<T>, T> {
     // Allocate a node and insert it into this list before the position of
     // `where`.
     template <typename U>
-        requires(is_implicitly_convertible<U, T>)
+        requires(is_convertible<U, T>)
     auto
     insert(is_allocator auto& allocator, iterator_type where,
            U const& value) -> maybe<iterator_type> {
@@ -309,7 +309,7 @@ class list : public collection_interface<list<T>, T> {
 
     // Allocate a node and insert it at the beginning of this list.
     template <typename U>
-        requires(is_implicitly_convertible<U, T>)
+        requires(is_convertible<U, T>)
     auto
     push_front(is_allocator auto& allocator,
                U const& value) -> maybe<iterator_type> {
@@ -366,7 +366,7 @@ class list : public collection_interface<list<T>, T> {
 
     // Allocate a node and insert it at the end of this list.
     template <typename U>
-        requires(is_implicitly_convertible<U, T>)
+        requires(is_convertible<U, T>)
     auto
     push_back(is_allocator auto& allocator,
               U const& value) -> maybe<iterator_type> {
@@ -518,7 +518,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
 
   public:
     template <typename U, U... values>
-        requires(is_implicitly_convertible<U, T>)
+        requires(is_convertible<U, T>)
     [[nodiscard]]
     static auto
     from(is_allocator auto& allocator,
@@ -538,7 +538,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
     }
 
     template <typename... Args>
-        requires(is_implicitly_convertible<Args, T> && ...)
+        requires(is_convertible<Args, T> && ...)
     [[nodiscard]]
     static auto
     from(is_allocator auto& allocator,
@@ -638,7 +638,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
     auto
     insert_after(is_allocator auto& allocator, iterator_type where,
                  U const& value) -> maybe<iterator_type>
-        requires(is_implicitly_convertible<U, T>)
+        requires(is_convertible<U, T>)
     {
         cat::maybe memory =
             allocator.template alloc<detail::forward_list_node<T>>();
@@ -694,7 +694,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
 
     // Allocate a node and insert it at the beginning of this list.
     template <typename U>
-        requires(is_implicitly_convertible<U, T>)
+        requires(is_convertible<U, T>)
     auto
     push_front(is_allocator auto& allocator,
                U const& value) -> maybe<iterator_type> {
