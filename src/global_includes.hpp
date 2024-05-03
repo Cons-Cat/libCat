@@ -11,15 +11,15 @@
 namespace cat::detail {
 template <typename F>
 class deferrer_callback {
-    F callback;
+    F m_callback;
 
   public:
     template <typename T>
-    deferrer_callback(T&& f) : callback(f) {  // NOLINT
+    deferrer_callback(T&& f) : m_callback(f) {  // NOLINT
     }
 
     ~deferrer_callback() {
-        callback();
+        m_callback();
     }
 };
 

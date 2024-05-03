@@ -74,7 +74,7 @@ class bitset {
         // `value_type::value_type` is some unsigned integer.
         // TODO: Assert that the input fits in `bits_count`.
         bitset<bits_count> bitset;
-        bitset.storage = {values...};
+        bitset.m_storage = {values...};
         return bitset;
     }
 
@@ -94,10 +94,10 @@ class bitset {
         }
 
         array_type_element& index_byte =
-            this->storage[this->storage.size() - 1u -
-                          ((index_bit + this->leading_skipped_bits) /
-                           // TODO: Without `.raw`, this is ambiguous.
-                           word_bits.raw)];
+            this->m_storage[this->m_storage.size() - 1u -
+                            ((index_bit + this->leading_skipped_bits) /
+                             // TODO: Without `.raw`, this is ambiguous.
+                             word_bits.raw)];
 
         uword bit_offset = index_bit + this->leading_skipped_bits;
         // TODO: `total_bytes` doesn't compile here in Clang 17 if prefixed by
@@ -141,7 +141,7 @@ class bitset {
     operator&(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
         bitset<bits_count> bitset;
         for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
-            bitset.storage[i] = lhs.storage[i] & rhs.storage[i];
+            bitset.m_storage[i] = lhs.m_storage[i] & rhs.m_storage[i];
         }
         return bitset;
     }
@@ -158,7 +158,7 @@ class bitset {
     operator|(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
         bitset<bits_count> bitset;
         for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
-            bitset.storage[i] = lhs.storage[i] | rhs.storage[i];
+            bitset.m_storage[i] = lhs.m_storage[i] | rhs.m_storage[i];
         }
         return bitset;
     }
@@ -175,7 +175,7 @@ class bitset {
     operator^(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
         bitset<bits_count> bitset;
         for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
-            bitset.storage[i] = lhs.storage[i] ^ rhs.storage[i];
+            bitset.m_storage[i] = lhs.m_storage[i] ^ rhs.m_storage[i];
         }
         return bitset;
     }
@@ -189,7 +189,7 @@ class bitset {
 
     friend constexpr auto
     operator~(bitset<bits_count> self) -> bitset& {
-        for (auto& i : self.storage) {
+        for (auto& i : self.m_storage) {
             ~i;
         }
         return self;
@@ -202,7 +202,7 @@ class bitset {
         // Iterate through all bytes:
         for (idx current_byte = 0u; current_byte < this->storage_array_size;
              ++current_byte) {
-            auto const it = this->storage[current_byte];
+            auto const it = this->m_storage[current_byte];
             using T = decltype(it);
 
             if (current_byte > 0u ||
@@ -228,7 +228,7 @@ class bitset {
     [[nodiscard]]
     constexpr auto
     any_of() const -> bool {
-        for (auto i : this->storage) {
+        for (auto i : this->m_storage) {
             if (i != 0u) {
                 return true;
             }
@@ -251,7 +251,7 @@ class bitset {
         constexpr idx skip_bits =
             idx(sizeof(array_type_element) * 8u - leading_bytes_bits);
 
-        idx count = cat::countl_zero(this->storage[0u]);
+        idx count = cat::countl_zero(this->m_storage[0u]);
         if (count != sizeof(array_type_element) * 8u) {
             return count - skip_bits;
         }
@@ -259,7 +259,7 @@ class bitset {
         count -= skip_bits;
 
         for (idx i = 1u; i < this->storage_array_size; ++i) {
-            idx next_count = cat::countl_zero(this->storage[i]);
+            idx next_count = cat::countl_zero(this->m_storage[i]);
             count += next_count;
 
             // If any 1s are found, skip remaining bytes.
@@ -276,13 +276,13 @@ class bitset {
     constexpr auto
     countr_zero() const -> idx {
         idx count =
-            cat::countr_zero(this->storage[this->storage_array_size - 1u]);
+            cat::countr_zero(this->m_storage[this->storage_array_size - 1u]);
         if (count != sizeof(array_type_element) * 8u) {
             return count;
         }
 
         for (idx i = this->storage_array_size - 2u; i >= 0u; --i) {
-            idx next_count = cat::countr_zero(this->storage[i]);
+            idx next_count = cat::countr_zero(this->m_storage[i]);
             count += next_count;
 
             // If any 1's are found, skip remaining bytes.
@@ -298,43 +298,45 @@ class bitset {
     [[nodiscard]]
     constexpr auto
     begin() {
-        return iterator(storage.begin());
+        return iterator(m_storage.begin());
     }
 
     [[nodiscard]]
     constexpr auto
     end() {
-        return iterator(storage.end(), limits<array_type_element>::bits);
+        return iterator(m_storage.end(), limits<array_type_element>::bits);
     }
 
     [[nodiscard]]
     constexpr auto
     begin() const {
-        return const_iterator(storage.begin());
+        return const_iterator(m_storage.begin());
     }
 
     [[nodiscard]]
     constexpr auto
     end() const {
-        return const_iterator(storage.end(), limits<array_type_element>::bits);
+        return const_iterator(m_storage.end(),
+                              limits<array_type_element>::bits);
     }
 
     [[nodiscard]]
     constexpr auto
     cbegin() const {
-        return const_iterator(storage.cbegin());
+        return const_iterator(m_storage.cbegin());
     }
 
     [[nodiscard]]
     constexpr auto
     cend() const {
-        return const_iterator(storage.cend(), limits<array_type_element>::bits);
+        return const_iterator(m_storage.cend(),
+                              limits<array_type_element>::bits);
     }
 
     // TODO: Reverse iterators.
 
   private:
-    array_type storage;
+    array_type m_storage;
 };
 
 }  // namespace cat

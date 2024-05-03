@@ -2,8 +2,8 @@
 
 auto
 cat::load_base_stack_pointer() -> void* {
-    void* rbp;
+    void* p_stack_base;
     asm("mov %%rbp, %[rbp]"
-        : [rbp] "=r"(rbp));
-    return rbp;
+        : [rbp] "=r"(p_stack_base));
+    return p_stack_base;
 }

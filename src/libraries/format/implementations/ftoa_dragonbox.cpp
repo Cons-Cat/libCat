@@ -15,6 +15,8 @@
 // is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 // KIND, either express or implied.
 
+// NOLINTBEGIN
+
 #include <cat/detail/ftoa_dragonbox.hpp>
 
 #include <cat/memory>
@@ -316,3 +318,5 @@ namespace to_chars_detail {
     }
 }  // namespace to_chars_detail
 }  // namespace cat::detail::dragonbox
+
+// NOLINTEND

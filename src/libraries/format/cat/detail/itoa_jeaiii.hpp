@@ -4,6 +4,8 @@
 // use by my string formatting. The implementations, and their copyright notice,
 // are located in `../../implementations/itoa_jeaiii.cpp`.
 
+// NOLINTBEGIN
+
 namespace cat::detail {
 
 struct pair_jeaiii {
@@ -66,3 +68,5 @@ auto i64toa_jeaiii(int8::raw_type i, char* p_b) -> char*;
 #endif
 
 }  // namespace cat::detail
+
+// NOLINTEND

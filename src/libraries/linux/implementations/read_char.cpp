@@ -10,13 +10,13 @@ nix::read_char() -> scaredy_nix<char> {
         ~(cat::to_underlying(tty_configuration_flags::icanon) |
           cat::to_underlying(tty_configuration_flags::echo))};
 
-    auto result = tty_set_attributes(stdin, TtySetMode::now, new_settings);
+    auto result = tty_set_attributes(stdin, tty_set_mode::now, new_settings);
     if (!result.has_value()) {
         return result.error();
     }
 
     char input;
     auto _ = sys_read(stdin, &input, 1);
-    tty_set_attributes(stdin, TtySetMode::now, old_settings);
+    tty_set_attributes(stdin, tty_set_mode::now, old_settings);
     return input;
 }

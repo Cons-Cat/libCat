@@ -15,6 +15,8 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+// NOLINTBEGIN
+
 // I don't want to edit the macros in this code, so I'm disabling the Clang
 // warning.
 #pragma clang diagnostic push
@@ -146,3 +148,5 @@ consteval auto cat::to_string(int4 value) -> string {
 */
 
 #pragma clang diagnostic pop
+
+// NOLINTEND

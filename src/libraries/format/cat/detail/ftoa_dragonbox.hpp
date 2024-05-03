@@ -16,6 +16,8 @@
 // is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 // KIND, either express or implied.
 
+// NOLINTBEGIN
+
 #include <cat/memory>
 #include <cat/string>
 
@@ -3468,3 +3470,5 @@ inline constexpr uword::raw_type max_output_string_length =
         // exp_sign(1) + exp(3)
         (1 + 17 + 1 + 1 + 1 + 3);
 }  // namespace cat::detail::dragonbox
+
+// NOLINTEND

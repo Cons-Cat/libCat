@@ -90,27 +90,27 @@ namespace detail {
         constexpr collection_iterator(collection_iterator&&) = default;
 
         constexpr collection_iterator(idx index, T* p_in_array)
-            : current_index(index), p_array(p_in_array) {
+            : m_current_index(index), m_p_array(p_in_array) {
         }
 
         constexpr auto
         dereference() const -> T& {
-            return this->p_array[current_index.raw];
+            return this->m_p_array[m_current_index.raw];
         }
 
         constexpr void
         advance(iword offset) {
-            this->current_index += offset;
+            this->m_current_index += offset;
         }
 
         constexpr auto
         distance_to(collection_iterator const& other) const -> iword {
-            return other.current_index - this->current_index;
+            return other.m_current_index - this->m_current_index;
         }
 
       private:
-        iword current_index;
-        T* p_array;
+        iword m_current_index;
+        T* m_p_array;
     };
 
 }  // namespace detail
@@ -143,8 +143,8 @@ class iterable_interface {
         // evaluation order is unspecified, it cannot be called inside an
         // argument list.
         auto size = collection.size();
-        auto* data = fwd(collection).data();
-        return it(size, data);
+        auto* p_data = fwd(collection).data();
+        return it(size, p_data);
     }
 
     [[nodiscard]]
@@ -173,8 +173,8 @@ class iterable_interface {
         // evaluation order is unspecified, it cannot be called inside an
         // argument list.
         auto size = collection.size() - 1;
-        auto* data = fwd(collection).data();
-        return it(size, data);
+        auto* p_data = fwd(collection).data();
+        return it(size, p_data);
     }
 
     [[nodiscard]]
