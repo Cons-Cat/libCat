@@ -4,7 +4,7 @@
 
 // Iterator adaptors need access to `protected` copy-constructors, which are
 // marked `[[deprecated]]`.
-#include "cat/meta"
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
@@ -354,34 +354,34 @@ class reverse_iterator_adaptor
     // Forward any constructor to the `internal_iterator`.
     template <typename... Args>
     constexpr reverse_iterator_adaptor(Args&&... args)
-        : internal_iterator(fwd(args)...) {
+        : m_internal_iterator(fwd(args)...) {
     }
 
     constexpr auto
     dereference() {
-        return this->internal_iterator.dereference();
+        return this->m_internal_iterator.dereference();
     }
 
     constexpr auto
     dereference() const {
-        return this->internal_iterator.dereference();
+        return this->m_internal_iterator.dereference();
     }
 
     constexpr void
     advance(iword offset)
         requires(detail::has_advance<iterator_type>)
     {
-        this->internal_iterator.advance(-offset);
+        this->m_internal_iterator.advance(-offset);
     }
 
     constexpr void
     increment() {
-        --internal_iterator;
+        --m_internal_iterator;
     }
 
     constexpr void
     decrement() {
-        ++internal_iterator;
+        ++m_internal_iterator;
     }
 
     constexpr auto
@@ -389,11 +389,12 @@ class reverse_iterator_adaptor
         requires(detail::has_distance_to<iterator_type>)
     {
         // Reverse the polarity of `distance_to()`.
-        return -this->internal_iterator.distance_to(other.internal_iterator);
+        return -this->m_internal_iterator.distance_to(
+            other.m_internal_iterator);
     }
 
   private:
-    iterator_type internal_iterator;
+    iterator_type m_internal_iterator;
 };
 
 // TODO: More iterable related `concept`s.

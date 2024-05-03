@@ -239,7 +239,7 @@ struct error_code {
 
   private:
     [[maybe_unused]]
-    cat::uint1 padding[21];
+    cat::uint1 m_padding[21];
 
   public:
     cat::uint4 full_sequence;
@@ -248,8 +248,7 @@ struct error_code {
 struct window_resource {
     window_resource() = default;
 
-    window_resource(cat::uint4 input) {
-        this->value = input;
+    window_resource(cat::uint4 input) : value(input) {
     }
 
     cat::uint4 value;
@@ -267,7 +266,7 @@ struct event {
 
   private:
     [[maybe_unused]]
-    cat::uint1 padding[23];
+    cat::uint1 m_padding[23];
 
   public:
     cat::uint4 full_sequence;
@@ -295,7 +294,7 @@ struct server_reply_header {
 
   private:
     [[maybe_unused]]
-    cat::int1 padding;
+    cat::int1 m_padding;
 
   public:
     // This field is only initialized if `success_code_type` is `failed`.
@@ -310,7 +309,7 @@ struct connection_request_info {
 
   private:
     [[maybe_unused]]
-    cat::int1 padding_1;
+    cat::int1 m_padding_1;
 
   public:
     // This should almost always be `{11, 0}`.
@@ -323,7 +322,7 @@ struct connection_request_info {
 
   private:
     [[maybe_unused]]
-    cat::int2 padding_2;
+    cat::int2 m_padding_2;
 };
 
 struct connection_response_info {
@@ -358,7 +357,7 @@ struct connection_response_info {
 
   private:
     [[maybe_unused]]
-    cat::int4 padding;
+    cat::int4 m_padding;
 };
 
 struct pixel_map_format_packet {
@@ -368,7 +367,7 @@ struct pixel_map_format_packet {
 
   private:
     [[maybe_unused]]
-    cat::uint1 padding[5];
+    cat::uint1 m_padding[5];  // NOLINT
 };
 
 // There is one root window per screen, so multiple `root_window_packet`s will
@@ -397,7 +396,7 @@ struct depth_packet {
 
   private:
     [[maybe_unused]]
-    cat::uint1 padding_1;
+    cat::uint1 m_padding_1;
 
   public:
     // The number of `visual_packet`s transmitted imillimetersediately after
@@ -406,7 +405,7 @@ struct depth_packet {
 
   private:
     [[maybe_unused]]
-    cat::uint4 padding_2;
+    cat::uint4 m_padding_2;
 };
 
 struct visual_packet {
@@ -417,7 +416,7 @@ struct visual_packet {
 
   private:
     [[maybe_unused]]
-    cat::uint4 padding;
+    cat::uint4 m_padding;
 };
 
 struct connection {
@@ -436,7 +435,7 @@ auto
 handshake(cat::is_allocator auto& allocator,
           cat::socket_unix<cat::socket_type::stream>& socket)
     -> cat::maybe<x11::connection> {
-    x11::connection x_connection;
+    x11::connection x_connection{};
 
     // Send a request with default-initialized fields.
     socket.send_struct(x11::connection_request_info()).or_exit();

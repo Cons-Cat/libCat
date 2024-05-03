@@ -180,11 +180,7 @@ class alignas(in_abi::alignment.raw) simd {
     }
 
     // Copy-assign the raw value of a `simd` to this.
-    constexpr auto
-    operator=(type const& operand) -> type& {
-        this->raw = operand.raw;
-        return *this;
-    }
+    constexpr auto operator=(type const& operand) -> type& = default;
 
     // Move-assign the raw value of another `simd` into this.
     constexpr auto
@@ -422,7 +418,7 @@ class alignas(in_abi::alignment.raw) simd {
     }
 
     template <typename U>
-        requires(is_implicitly_convertible<U, scalar_type>)
+        requires(is_convertible<U, scalar_type>)
     constexpr auto
     fill(U value) -> type& {
         scalar_type fill_value = static_cast<scalar_type>(value);
@@ -607,11 +603,7 @@ class alignas(in_abi::template make_abi_type<bool>::alignment.raw) simd_mask {
     }
 
     // Copy-assign the raw value of a `simd` to this.
-    constexpr auto
-    operator=(mask_type const& operand) -> mask_type& {
-        this->raw = operand.raw;
-        return *this;
-    }
+    constexpr auto operator=(mask_type const& operand) -> mask_type& = default;
 
     // Move-assign the raw value of another `simd` into this.
     constexpr auto
@@ -815,14 +807,14 @@ using int1x4 = fixed_size_simd<int1::raw_type, 4u>;
 using int1x8 = fixed_size_simd<int1::raw_type, 8u>;
 using int1x16 = fixed_size_simd<int1::raw_type, 16u>;
 using int1x32 = fixed_size_simd<int1::raw_type, 32u>;
-using int1x_ = native_simd<int1::raw_type>;
+using int1x_ = native_simd<int1::raw_type>;  // NOLINT
 
 using uint1x2 = fixed_size_simd<uint1::raw_type, 2u>;
 using uint1x4 = fixed_size_simd<uint1::raw_type, 4u>;
 using uint1x8 = fixed_size_simd<uint1::raw_type, 8u>;
 using uint1x16 = fixed_size_simd<uint1::raw_type, 16u>;
 using uint1x32 = fixed_size_simd<uint1::raw_type, 32u>;
-using uint1x_ = native_simd<uint1::raw_type>;
+using uint1x_ = native_simd<uint1::raw_type>;  // NOLINT
 
 // TODO: Select these types portably.
 // TODO: Think over the string vectorization API.
@@ -830,46 +822,46 @@ using uint1x_ = native_simd<uint1::raw_type>;
 // strings need their own vectors.
 using char1x16 = x64::sse42_mask<char>;
 using char1x32 = x64::avx2_simd<char>;
-using char1x_ = x64::avx2_simd<char>;
+using char1x_ = x64::avx2_simd<char>;  // NOLINT
 
 using int2x2 = fixed_size_simd<int2::raw_type, 2u>;
 using int2x4 = fixed_size_simd<int2::raw_type, 4u>;
 using int2x8 = fixed_size_simd<int2::raw_type, 8u>;
 using int2x16 = fixed_size_simd<int2::raw_type, 16u>;
-using int2x_ = native_simd<int2::raw_type>;
+using int2x_ = native_simd<int2::raw_type>;  // NOLINT
 
 using uint2x2 = fixed_size_simd<uint2::raw_type, 2u>;
 using uint2x4 = fixed_size_simd<uint2::raw_type, 4u>;
 using uint2x8 = fixed_size_simd<uint2::raw_type, 8u>;
 using uint2x16 = fixed_size_simd<uint2::raw_type, 16u>;
-using uint2x_ = native_simd<uint2::raw_type>;
+using uint2x_ = native_simd<uint2::raw_type>;  // NOLINT
 
 using int4x2 = fixed_size_simd<int4::raw_type, 2u>;
 using int4x4 = fixed_size_simd<int4::raw_type, 4u>;
 using int4x8 = fixed_size_simd<int4::raw_type, 8u>;
-using int4x_ = native_simd<int4::raw_type>;
+using int4x_ = native_simd<int4::raw_type>;  // NOLINT
 
 using uint4x2 = fixed_size_simd<uint4::raw_type, 2u>;
 using uint4x4 = fixed_size_simd<uint4::raw_type, 4u>;
 using uint4x8 = fixed_size_simd<uint4::raw_type, 8u>;
-using uint4x_ = native_simd<uint4::raw_type>;
+using uint4x_ = native_simd<uint4::raw_type>;  // NOLINT
 
 using int8x2 = fixed_size_simd<int8::raw_type, 2u>;
 using int8x4 = fixed_size_simd<int8::raw_type, 4u>;
-using int8x_ = native_simd<int8::raw_type>;
+using int8x_ = native_simd<int8::raw_type>;  // NOLINT
 
 using uint8x2 = fixed_size_simd<uint8::raw_type, 2u>;
 using uint8x4 = fixed_size_simd<uint8::raw_type, 4u>;
-using uint8x_ = native_simd<uint8::raw_type>;
+using uint8x_ = native_simd<uint8::raw_type>;  // NOLINT
 
 using float4x2 = fixed_size_simd<float4::raw_type, 2u>;
 using float4x4 = fixed_size_simd<float4::raw_type, 4u>;
 using float4x8 = fixed_size_simd<float4::raw_type, 8u>;
-using float4x_ = native_simd<float4::raw_type>;
+using float4x_ = native_simd<float4::raw_type>;  // NOLINT
 
 using float8x2 = fixed_size_simd<float8::raw_type, 2u>;
 using float8x4 = fixed_size_simd<float8::raw_type, 4u>;
-using float8x_ = native_simd<float8::raw_type>;
+using float8x_ = native_simd<float8::raw_type>;  // NOLINT
 
 // TODO: Support `bool` family vectors.
 

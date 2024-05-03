@@ -74,8 +74,8 @@ cat::copy_memory(void const* p_source, void* p_destination, uword bytes) {
             prefetch_for_one_read(p_source_handle + 512);
             p_source_handle += 256u;
 #pragma GCC unroll 8
-            for (uword::raw_type i = 0u; i < 8; ++i) {
-                stream_in(p_destination_handle, &vectors[i]);
+            for (auto& vector : vectors) {
+                stream_in(p_destination_handle, &vector);
             }
             p_destination_handle += 256u;
             bytes -= 256u;

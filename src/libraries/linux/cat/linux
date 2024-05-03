@@ -291,8 +291,8 @@ namespace detail {
     using map_syscall_type =
         cat::conditional<cat::is_void<T>, cat::monotype_storage<int, 0>, T>;
 
-    // NOLINTNEXTLINE This parameter is not always pointer.
     auto
+    // NOLINTNEXTLINE This parameter is not always pointer.
     is_positive(auto input) -> bool {
         return cat::bit_int_cast(input) >= 0;
     }
@@ -801,7 +801,7 @@ struct file_handle {
 
   private:
     [[maybe_unused]]
-    void* locale;
+    void* m_p_locale;
     // Locale* locale;
 };
 
@@ -999,7 +999,7 @@ auto sys_tkill(process_id pid, Signal signal) -> scaredy_nix<void>;
 auto sys_waitid(wait_id type, process_id id,
                 wait_options_flags options) -> scaredy_nix<process_id>;
 
-auto wait_pid(process_id pid, file_status* p_status,
+auto wait_pid(process_id pid, file_status* p_file_status,
               wait_options_flags options) -> scaredy_nix<process_id>;
 
 auto syscall0(cat::iword) -> cat::iword;
@@ -1033,7 +1033,7 @@ struct tty_io_serial {
   private:
     // This is for backwards compatibilty with non-serial termio syscalls.
     [[maybe_unused]]
-    char line_characters;
+    char m_line_characters;
 
   public:
     char special_characters[32];
@@ -1041,9 +1041,9 @@ struct tty_io_serial {
   private:
     // This are for backwards compatibilty with non-serial termio syscalls.
     [[maybe_unused]]
-    unsigned int input_speed;
+    unsigned int m_input_speed;
     [[maybe_unused]]
-    unsigned int output_speed;
+    unsigned int m_output_speed;
 };
 
 struct tty_window_size {
@@ -1057,7 +1057,7 @@ auto is_a_tty(tty_descriptor) -> scaredy_nix<void>;
 auto tty_get_attributes(file_descriptor tty)
     -> cat::scaredy<tty_io_serial, linux_error>;
 
-enum class TtySetMode {
+enum class tty_set_mode {
     // Update the tty immediately.
     now = 0x5402,
     // Update the tty once all currently written data has been transmitted.
@@ -1068,7 +1068,7 @@ enum class TtySetMode {
 };
 
 auto
-tty_set_attributes(file_descriptor tty, TtySetMode tty_mode,
+tty_set_attributes(file_descriptor tty, tty_set_mode tty_mode,
                    tty_io_serial const& configuration) -> scaredy_nix<void>;
 
 auto read_char() -> scaredy_nix<char>;
@@ -1131,7 +1131,7 @@ struct file_status {
 
   private:
     [[maybe_unused]]
-    cat::uint4 padding;
+    cat::uint4 m_padding;
 
   public:
     cat::uint8 rdev;
@@ -1150,7 +1150,7 @@ struct file_status {
 
   private:
     [[maybe_unused]]
-    cat::int4 unused[3];
+    cat::int4 m_unused[3];
 };
 
 // `process` handles an asynchronous task multitasked by the Linux kernel.

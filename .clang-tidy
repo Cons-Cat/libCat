@@ -3,27 +3,36 @@ Checks: "bugprone-*,
          performance-*,
 		 modernize-*,
 		 readability-*,
-		 misc-*,
-		 # DISABLE SOME CHECKS:
-		 -bugprone-easily-swappable-parameters, # I'm on the fence about this.
-         -bugprone-reserved-identifier, # libCat needs to make some of these.
-		 -performance-noexcept-move-constructor, # libCat doesn't have exceptions yet.
-		 -modernize-avoid-c-arrays, # They're needed in some low-level code.
-		 -modernize-use-auto, # I rather human judgement.
-		 -readability-magic-numbers, # I rather human judgement.
-		 -readability-identifier-length, # I rather human judgement.
-		 -readability-uppercase-literal-suffix, # I prefer lowercase.
-         -readability-function-cognitive-complexity, # I don't trust this.
-		 -readability-convert-member-functions-to-static, # I rather human judgement.
-		 -readability-named-parameter, # I'm on the fence about this.
-         -readability-function-cognitive-complexity, # I rather human judgement.
-         -misc-non-private-member-variables-in-classes, # This seems very bad.
-		 -misc-unused-using-decls, # This isn't helpful for libraries.
+         # clang-analyzer-*,
+         # cppcoreguidelines-*,
+         misc-*,
+         # DISABLE SOME CHECKS:
+		 -bugprone-easily-swappable-parameters,
+         -bugprone-reserved-identifier,
+		 -performance-noexcept-move-constructor,
+		 -modernize-avoid-c-arrays,
+		 -modernize-use-auto,
+		 -readability-magic-numbers,
+		 -readability-identifier-length,
+		 -readability-uppercase-literal-suffix,
+         -readability-function-cognitive-complexity,
+		 -readability-convert-member-functions-to-static,
+         -readability-static-accessed-through-instance,
+		 -readability-named-parameter,
+         -readability-function-cognitive-complexity,
+         -readability-else-after-return,
+         -cppcoreguidelines-avoid-magic-numbers,
+         -cppcoreguidelines-pro-type-union-access,
+         -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+         -cppcoreguidelines-pro-type-reinterpret-cast,
+         -cppcoreguidelines-macro-usage,
+         -misc-non-private-member-variables-in-classes,
+		 -misc-unused-using-decls,
+         -misc-unconventional-assign-operator,
         "
 
 WarningsAsErrors: ''
 HeaderFilterRegex: ^src
-AnalyzeTemporaryDtors: false
 FormatStyle: file
 
 CheckOptions:
@@ -38,6 +47,8 @@ CheckOptions:
   - { key: readability-identifier-naming.PointerParameterPrefix,  value: p_ }
   - { key: readability-identifier-naming.LocalPointerPrefix,      value: p_ }
   - { key: readability-identifier-naming.LocalConstantPointerPrefix,     value: p_ }
+  - { key: readability-identifier-naming.PrivateMemberPrefix,     value: m_ }
+  - { key: readability-identifier-length.IgnoredParameterNames,   value: '[tuxy]' }
   - { key: readability-identifier-naming.TemplateParameterIgnoredRegexp, value: '[A-Z]' }
   - { key: readability-identifier-naming.TypeAliasIgnoredRegexp,  value: '[A-Z]' }
   - { key: readability-identifier-naming.TypedefIgnoredRegexp,    value: '[A-Z]' }
