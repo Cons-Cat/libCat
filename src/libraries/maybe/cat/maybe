@@ -550,14 +550,14 @@ class maybe {
     // A reference type cannot be copy-constructed, but other types can.
     template <typename U>
         requires(!is_reference<value_type> &&
-                 is_implicitly_convertible<U, value_type> &&
+                 is_convertible<U, value_type> &&
                  is_copy_constructible<value_type>)
     constexpr maybe(U& input) : storage(static_cast<value_type>(input)) {
     }
 
     template <typename U>
         requires(!is_reference<value_type> &&
-                 is_implicitly_convertible<U, value_type> &&
+                 is_convertible<U, value_type> &&
                  is_copy_constructible<value_type>)
     constexpr maybe(U const& input) : storage(static_cast<value_type>(input)) {
     }
@@ -565,40 +565,40 @@ class maybe {
     // Produce an error message if `value_type` is not copy-constructible.
     template <typename U>
         requires(!is_reference<value_type> &&
-                 is_implicitly_convertible<U, value_type> &&
+                 is_convertible<U, value_type> &&
                  !is_copy_constructible<value_type>)
     constexpr maybe(U const& input) = delete;
 
     // Rebinding converting reference constructor.
     template <typename U>
         requires(is_reference<value_type> &&
-                 is_implicitly_convertible<add_lvalue_reference<U>, value_type>)
+                 is_convertible<add_lvalue_reference<U>, value_type>)
     constexpr maybe(U& input) : storage(static_cast<value_type>(input)) {
     }
 
     // Perfect forwarding constructor.
     template <rvalue U>
         requires(!is_reference<value_type> &&
-                 is_implicitly_convertible<U, value_type>)
+                 is_convertible<U, value_type>)
     // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
     constexpr maybe(U&& input) : storage(move(input)) {
     }
 
     // `maybe` can be constructed by another `maybe`.
     template <typename U>
-        requires(is_implicitly_convertible<U, value_type>)
+        requires(is_convertible<U, value_type>)
     constexpr maybe(maybe<U>& input) {
         this->storage.assign(input);
     }
 
     template <typename U>
-        requires(is_implicitly_convertible<U, value_type>)
+        requires(is_convertible<U, value_type>)
     constexpr maybe(maybe<U> const& input) {
         this->storage.assign(input);
     }
 
     template <typename U>
-        requires(is_implicitly_convertible<U, value_type>)
+        requires(is_convertible<U, value_type>)
     constexpr maybe(maybe<U>&& input) {
         this->storage.assign(move(input));
     }
@@ -615,7 +615,7 @@ class maybe {
 
     // Any `maybe` can convert into another.
     template <typename U>
-        requires(!is_same<U, T> && is_implicitly_convertible<value_type, U>)
+        requires(!is_same<U, T> && is_convertible<value_type, U>)
     constexpr
     operator maybe<U>() {
         if (this->has_value()) {
@@ -635,7 +635,7 @@ class maybe {
 
     // Non-reference converting copy assignment operator.
     template <typename U>
-        requires(is_implicitly_convertible<U, value_type> &&
+        requires(is_convertible<U, value_type> &&
                  !is_reference<value_type> && is_copy_assignable<value_type>)
     constexpr auto
     operator=(U const& value) -> class maybe& {
@@ -645,7 +645,7 @@ class maybe {
 
     // Non-reference converting move assignment operator.
     template <typename U>
-        requires(is_implicitly_convertible<U, value_type> &&
+        requires(is_convertible<U, value_type> &&
                  !is_reference<value_type> && is_move_assignable<value_type>)
     constexpr auto
     operator=(U&& value) -> class maybe& {
@@ -655,7 +655,7 @@ class maybe {
 
     // Rebinding converting reference assignment operator.
     template <typename U>
-        requires((is_implicitly_convertible<add_lvalue_reference<U>,
+        requires((is_convertible<add_lvalue_reference<U>,
                                             value_type>) &&
                  is_reference<value_type>)
     constexpr auto
@@ -666,7 +666,7 @@ class maybe {
 
     // Rebinding converting `maybe` copy assignment operator.
     template <typename U>
-        requires(is_implicitly_convertible<U, value_type> &&
+        requires(is_convertible<U, value_type> &&
                  !is_reference<value_type> && !is_reference<U>)
     constexpr auto
     operator=(maybe<U> const& maybe) -> class maybe& {
@@ -676,7 +676,7 @@ class maybe {
 
     // Rebinding converting `maybe` move assignment operator.
     template <typename U>
-        requires(is_implicitly_convertible<U, value_type> &&
+        requires(is_convertible<U, value_type> &&
                  is_move_assignable<value_type>)
     constexpr auto
     operator=(maybe<U>&& maybe) -> class maybe& {
@@ -686,7 +686,7 @@ class maybe {
 
     // Rebinding converting `maybe` reference assignment operator.
     template <typename U>
-        requires(is_implicitly_convertible<U, value_type>)
+        requires(is_convertible<U, value_type>)
     constexpr auto
     operator=(maybe<U>& maybe) -> class maybe& {
         this->storage.assign(maybe);
@@ -704,7 +704,7 @@ class maybe {
     // https://brevzin.github.io/c++/2018/12/09/mixed-comparisons/
     // Comparison operator.
     template <typename U>
-        requires(is_implicitly_convertible<U, value_type>)
+        requires(is_convertible<U, value_type>)
     [[nodiscard]]
     constexpr auto
     operator==(U const& other) const {

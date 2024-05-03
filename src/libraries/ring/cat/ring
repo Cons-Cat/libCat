@@ -57,7 +57,7 @@ class ring : public collection_interface<ring<T>, T> {
 
   public:
     template <typename U>
-        requires(is_implicitly_convertible<U, T>)
+        requires(is_convertible<U, T>)
     [[nodiscard]]
     static auto
     reserved([[maybe_unused]] is_allocator auto& allocator,
@@ -65,7 +65,7 @@ class ring : public collection_interface<ring<T>, T> {
     }
 
     template <typename U>
-        requires(is_implicitly_convertible<U, T>)
+        requires(is_convertible<U, T>)
     [[nodiscard]]
     static auto
     filled([[maybe_unused]] is_allocator auto& allocator,
@@ -162,7 +162,7 @@ class ring : public collection_interface<ring<T>, T> {
     // TODO: `.emplace_back()`.
 
     template <typename U>
-        requires(is_implicitly_convertible<U, T>)
+        requires(is_convertible<U, T>)
     void
     push_back(U const& value) {
         cat::assert(this->current_capacity > 0);

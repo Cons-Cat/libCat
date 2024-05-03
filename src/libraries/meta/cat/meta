@@ -412,13 +412,6 @@ concept is_same = __is_same(T, U);
 template <typename from_type, typename to_type>
 concept is_convertible = __is_convertible(from_type, to_type);
 
-// TODO: Rename this to something better.
-template <typename from_type, typename to_type>
-concept is_implicitly_convertible =
-    __is_assignable(to_type, from_type) ||
-    __is_constructible(to_type, from_type) ||
-    __is_convertible(from_type, to_type) || __is_same(to_type, from_type);
-
 // TODO: Add `__is_nothrow_convertible()` from GCC 13.
 
 namespace detail {

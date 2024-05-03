@@ -50,7 +50,7 @@ class array : public collection_interface<array<T, length>, T>,
     // TODO: `<=>` operator.
 
     template <typename U>
-        requires(is_implicitly_convertible<U, T>)
+        requires(is_convertible<U, T>)
     constexpr auto
     fill(U value) -> array& {
         // TODO: This `set_memory()` segfaults with optimizations enabled. Is it
@@ -122,13 +122,5 @@ make_array_filled(T const& value) -> array<T, length> {
     }
     return array;
 }
-
-// template <typename U>
-//     requires(is_implicitly_convertible<U, T>)
-// static constexpr auto
-// filled(U value) -> array {
-//     array<T, length> array;
-//     return array.fill(static_cast<T>(value));
-// }
 
 }  // namespace cat
