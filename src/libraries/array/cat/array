@@ -10,7 +10,7 @@ namespace cat {
 // An `array` represents an array of `T` with a `constexpr` length. It stores
 // its elements within itself, so this array can be constructed on the stack.
 // It is random-access iterable.
-template <typename T, uword length>
+template <typename T, idx length>
 class array : public collection_interface<array<T, length>, T>,
               public iterable_interface<T> {
   public:
@@ -32,55 +32,22 @@ class array : public collection_interface<array<T, length>, T>,
     constexpr auto
     operator=(array<T, length> const& other_array) -> array& = default;
 
-    // Converting copy assignment operator.
+    // Converting assignment operator.
     template <typename U>
-    // requires(is_convertible<U, T>)
+        requires(is_convertible<U, T>)
     constexpr auto
-    operator=(array<U, length> const& other_array) -> array& {
+    operator=(this array& self, array<U, length> const& other_array) -> array& {
         // TODO: Optimize with `copy_memory()` if T and U are relocatable.
         for (idx i = 0u; i < length; ++i) {
-            this->storage[i.raw] = static_cast<T>(other_array[i]);
+            self.storage[i.raw] = static_cast<T>(other_array[i]);
         }
-        return *this;
+        return self;
     }
 
     constexpr auto
     operator=(array<T, length>&& other_array) -> array& = default;
 
-    // Converting move assignment operator.
-    template <typename U>
-        requires(is_implicitly_convertible<U, T>)
-    constexpr auto
-    operator=(array<U, length>&& other_array) -> array& {
-        // TODO: Optimize with `copy_memory()` if T and U are relocatable.
-        for (idx i = 0u; i < length; ++i) {
-            this->storage[i.raw] = static_cast<T>(move(other_array[i]));
-        }
-        return *this;
-    }
-
     // TODO: `<=>` operator.
-
-    // Construct an `array` from a variadic argument list.
-    template <typename... Args>
-        requires(sizeof...(Args) == length &&
-                 (is_implicitly_convertible<Args, T> && ...))
-    static constexpr auto
-    from(Args&&... arguments) {
-        // Explicitly converting this type allows the first argument to coerce
-        // the type for following arguments.
-        // i.e. `cat::array shorts = {int2{0}, 1, 2};`
-        array<T, length> array{static_cast<T>(fwd(arguments))...};
-        return array;
-    }
-
-    template <typename U>
-        requires(is_implicitly_convertible<U, T>)
-    static constexpr auto
-    filled(U value) -> array {
-        array<T, length> array;
-        return array.fill(static_cast<T>(value));
-    }
 
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
@@ -117,15 +84,51 @@ class array : public collection_interface<array<T, length>, T>,
     [[nodiscard]]
     static constexpr auto
     size() -> idx {
-        return idx(length);
+        return length;
     }
 
-  private:
+    // `storage` is public so that `cat::array` is a trivial type.
     T storage[length.raw];
 };
 
-// Construct an `array` as: `array a = {0, 1, 2};`
+// Construct an `array<int, 3>` as: `array a = {0, 1, 2};`
 template <typename T, typename... Args>
 array(T, Args...) -> array<T, sizeof...(Args) + 1u>;
+
+// Make a `cat::array` with a deduced `value_type`.
+template <typename... Ts, idx length = sizeof...(Ts)>
+[[nodiscard]]
+constexpr auto
+make_array(Ts&&... ts) -> array<common_type<Ts...>, length> {
+    return array{static_cast<common_type<Ts...>>(ts)...};
+}
+
+// Make a `cat::array<T>`.
+template <typename T, typename... Ts, idx length = sizeof...(Ts)>
+[[nodiscard]]
+constexpr auto
+make_array(Ts&&... ts) -> array<T, length> {
+    return array{static_cast<T>(ts)...};
+}
+
+// Make a `cat::array<T>` initialized with `value`.
+template <idx length, typename T>
+[[nodiscard]]
+constexpr auto
+make_array_filled(T const& value) -> array<T, length> {
+    array<T, length> array;
+    for (idx i = 0; i < length; ++i) {
+        array[i] = value;
+    }
+    return array;
+}
+
+// template <typename U>
+//     requires(is_implicitly_convertible<U, T>)
+// static constexpr auto
+// filled(U value) -> array {
+//     array<T, length> array;
+//     return array.fill(static_cast<T>(value));
+// }
 
 }  // namespace cat

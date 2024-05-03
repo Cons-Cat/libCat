@@ -1243,7 +1243,7 @@ struct signals_mask_set {
 };
 
 inline constexpr signals_mask_set all_signals_mask = {
-    .bytes = cat::array<unsigned char, 8u>::filled(-1),
+    .bytes = cat::make_array_filled<8u, unsigned char>(-1),
 };
 
 auto block_all_signals() -> signals_mask_set;
