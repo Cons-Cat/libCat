@@ -359,19 +359,19 @@ class reverse_iterator_adaptor
 
     constexpr auto
     dereference() {
-        return this->m_internal_iterator.dereference();
+        return m_internal_iterator.dereference();
     }
 
     constexpr auto
     dereference() const {
-        return this->m_internal_iterator.dereference();
+        return m_internal_iterator.dereference();
     }
 
     constexpr void
     advance(iword offset)
         requires(detail::has_advance<iterator_type>)
     {
-        this->m_internal_iterator.advance(-offset);
+        m_internal_iterator.advance(-offset);
     }
 
     constexpr void
@@ -389,8 +389,7 @@ class reverse_iterator_adaptor
         requires(detail::has_distance_to<iterator_type>)
     {
         // Reverse the polarity of `distance_to()`.
-        return -this->m_internal_iterator.distance_to(
-            other.m_internal_iterator);
+        return -m_internal_iterator.distance_to(other.m_internal_iterator);
     }
 
   private:

@@ -52,22 +52,22 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     void
     reset() {
         __asan_poison_memory_region(
-            static_cast<void const*>(this->m_p_arena_end),
-            make_unsigned((this->m_p_arena_begin - this->m_p_arena_end).raw));
-        this->m_p_arena_current = m_p_arena_begin;
+            static_cast<void const*>(m_p_arena_end),
+            make_unsigned((m_p_arena_begin - m_p_arena_end).raw));
+        m_p_arena_current = m_p_arena_begin;
     }
 
   private:
     auto
     allocation_bytes(uword alignment,
                      idx allocation_bytes) -> maybe_non_zero<idx> {
-        uintptr<void> allocation = align_down(
-            this->m_p_arena_current - uword(allocation_bytes), alignment);
+        uintptr<void> allocation =
+            align_down(m_p_arena_current - uword(allocation_bytes), alignment);
 
         // The allocation size is the difference between the current pointer
         // and the new pointer.
         if (allocation >= m_p_arena_end) {
-            return static_cast<idx>(this->m_p_arena_current - allocation);
+            return static_cast<idx>(m_p_arena_current - allocation);
         }
         return nullopt;
     }
@@ -75,10 +75,10 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     // Try to allocate memory and bump the pointer down.
     auto
     allocate(idx allocation_bytes) -> maybe_ptr<void> {
-        if (this->m_p_arena_current - allocation_bytes >= m_p_arena_end) {
-            this->m_p_arena_current -= allocation_bytes;
+        if (m_p_arena_current - allocation_bytes >= m_p_arena_end) {
+            m_p_arena_current -= allocation_bytes;
             // Return a pointer that is then used to in-place construct a `T`.
-            return this->m_p_arena_current;
+            return m_p_arena_current;
         }
         return nullptr;
     }
@@ -88,10 +88,10 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     auto
     aligned_allocate(uword alignment, idx allocation_bytes) -> maybe_ptr<void> {
         uintptr<void> allocation =
-            align_down(this->m_p_arena_current - allocation_bytes, alignment);
+            align_down(m_p_arena_current - allocation_bytes, alignment);
 
         if (allocation >= m_p_arena_end) {
-            this->m_p_arena_current = allocation;
+            m_p_arena_current = allocation;
             // Return a pointer that is then used for in-place construction.
             return static_cast<void*>(allocation);
         }
@@ -104,15 +104,15 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     aligned_allocate_feedback(uword alignment, idx allocation_bytes)
         -> maybe_sized_allocation<void*> {
         uintptr<void> allocation =
-            align_down(this->m_p_arena_current - allocation_bytes, alignment);
+            align_down(m_p_arena_current - allocation_bytes, alignment);
 
         if (allocation >= m_p_arena_end) {
-            uword bytes_allocated = this->m_p_arena_current - allocation;
-            this->m_p_arena_current = allocation;
+            uword bytes_allocated = m_p_arena_current - allocation;
+            m_p_arena_current = allocation;
 
             return maybe_sized_allocation<void*>(tuple{
                 // Return a pointer that is then used for in-place construction.
-                static_cast<void*>(this->m_p_arena_current),
+                static_cast<void*>(m_p_arena_current),
                 static_cast<idx>(bytes_allocated)});
         }
         return nullopt;

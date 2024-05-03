@@ -391,34 +391,34 @@ class bit_reference {
     // Flag this bit on.
     constexpr auto
     set() -> bit_reference& {
-        this->m_storage |= this->m_bit_mask;
+        m_storage |= m_bit_mask;
         return *this;
     }
 
     // Flag this bit off.
     constexpr auto
     unset() -> bit_reference& {
-        this->m_storage &= ~(this->m_bit_mask);
+        m_storage &= ~(m_bit_mask);
         return *this;
     }
 
     // Flag this bit as the opposite of its current state.
     constexpr auto
     flip() -> bit_reference& {
-        this->m_storage ^= this->m_bit_mask;
+        m_storage ^= m_bit_mask;
         return *this;
     }
 
     [[nodiscard]]
     constexpr auto
     is_set() const -> bool {
-        return static_cast<bool>(this->m_storage & this->m_bit_mask);
+        return static_cast<bool>(m_storage & m_bit_mask);
     }
 
     [[nodiscard]]
     constexpr auto
     mask() const -> remove_cv<storage_type> {
-        return this->m_bit_mask;
+        return m_bit_mask;
         return *this;
     }
 
@@ -465,20 +465,20 @@ class bit_value {
     template <is_unsigned_integral T>
     constexpr auto
     operator=(bit_reference<T> other) -> bit_value& {
-        this->m_value = other.is_set();
+        m_value = other.is_set();
         return *this;
     }
 
     constexpr auto
     operator=(bool other) -> bit_value& {
-        this->m_value = other;
+        m_value = other;
         return *this;
     }
 
     // Implicitly convert to `bool`.
     constexpr
     operator bool() const {
-        return this->m_value;
+        return m_value;
     }
 
     friend constexpr auto
@@ -499,7 +499,7 @@ class bit_value {
 
     constexpr auto
     operator&=(bit_value const& other) -> bit_value& {
-        this->m_value &= other.m_value;
+        m_value &= other.m_value;
         return *this;
     }
 
@@ -511,7 +511,7 @@ class bit_value {
 
     constexpr auto
     operator|=(bit_value const& other) -> bit_value& {
-        this->m_value |= other.m_value;
+        m_value |= other.m_value;
         return *this;
     }
 
@@ -523,57 +523,57 @@ class bit_value {
 
     constexpr auto
     operator^=(bit_value const& other) -> bit_value& {
-        this->m_value ^= static_cast<unsigned char>(other.m_value);
+        m_value ^= static_cast<unsigned char>(other.m_value);
         return *this;
     }
 
     constexpr auto
     operator~() const -> bit_value {
-        bit_value bit = !this->m_value;
+        bit_value bit = !m_value;
         return bit;
     }
 
     constexpr void
     assign(bit_value const& input) {
-        this->m_value = input.m_value;
+        m_value = input.m_value;
     }
 
     template <is_unsigned_integral T>
     constexpr void
     assign(bit_reference<T> input) {
-        this->m_value = input.is_set();
+        m_value = input.is_set();
     }
 
     constexpr void
     assign(bool input) {
-        this->m_value = input;
+        m_value = input;
     }
 
     // Flag this bit on.
     constexpr auto
     set() -> bit_value& {
-        this->m_value = true;
+        m_value = true;
         return *this;
     }
 
     // Flag this bit off.
     constexpr auto
     unset() -> bit_value& {
-        this->m_value = false;
+        m_value = false;
         return *this;
     }
 
     // Flag this bit as the opposite of its current state.
     constexpr auto
     flip() -> bit_value& {
-        this->m_value = !this->m_value;
+        m_value = !m_value;
         return *this;
     }
 
     [[nodiscard]]
     constexpr auto
     is_set() const -> bool {
-        return this->m_value;
+        return m_value;
     }
 
   private:
@@ -606,32 +606,31 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
 
     constexpr auto
     dereference() const -> reference {
-        return reference::from_offset(*m_internal_iterator,
-                                      this->m_bit_position);
+        return reference::from_offset(*m_internal_iterator, m_bit_position);
     }
 
     constexpr void
     advance(iword offset) {
-        iword advance_bits = this->m_bit_position + offset;
+        iword advance_bits = m_bit_position + offset;
         iword iword_bits = iword(this->word_bits);
         iword bytes_overflow = advance_bits / iword_bits;
         if (advance_bits < 0 &&
             ((bytes_overflow * iword_bits) != advance_bits)) {
             --bytes_overflow;
         }
-        this->m_internal_iterator += bytes_overflow;
-        this->m_bit_position = idx(advance_bits - bytes_overflow * iword_bits);
+        m_internal_iterator += bytes_overflow;
+        m_bit_position = idx(advance_bits - bytes_overflow * iword_bits);
     }
 
     constexpr auto
     distance_to(bit_iterator const& other) const -> iword {
         iword const word_difference =
-            this->m_internal_iterator - other.m_internal_iterator;
+            m_internal_iterator - other.m_internal_iterator;
         // Multiply the number of words between the two iterators by the size of
         // a word in bits, then add the difference between the iterators'
         // current bit offset within their word. That gives the total number of
         // bits between any two bit iterators.
-        return (word_difference * word_bits) + this->m_bit_position -
+        return (word_difference * word_bits) + m_bit_position -
                other.m_bit_position;
     }
 

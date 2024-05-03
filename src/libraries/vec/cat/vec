@@ -33,7 +33,7 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
 
     constexpr ~vec() {
         if consteval {
-            delete[] this->m_p_storage;
+            delete[] m_p_storage;
         }
     }
 
@@ -57,11 +57,11 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
     // Reallocate memory, or make an initial allocation.
     constexpr auto
     internal_allocate(is_allocator auto& allocator, idx minimum_capacity) {
-        if (this->m_p_storage == nullptr) {
+        if (m_p_storage == nullptr) {
             return allocator.template salloc_multi<T>(minimum_capacity);
         }
-        return allocator.resalloc_multi(
-            this->m_p_storage, this->m_current_capacity, minimum_capacity);
+        return allocator.resalloc_multi(m_p_storage, m_current_capacity,
+                                        minimum_capacity);
     }
 
     // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
@@ -69,8 +69,8 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
     constexpr auto
     increase_storage(is_allocator auto& allocator) -> maybe<void> {
         idx const minimum_capacity =
-            (this->m_current_capacity > 0u)
-                ? this->m_current_capacity * 2u
+            (m_current_capacity > 0u)
+                ? m_current_capacity * 2u
                 // If this storage has not been allocated yet, then greedily
                 // allocate its capacity as 4.
                 : 4u;
@@ -79,22 +79,22 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
         // workaround.
         if consteval {
             T* p_new = new T[minimum_capacity.raw];
-            for (idx i = 0u; i < this->m_current_size; ++i) {
-                construct_at(p_new + i, move(this->m_p_storage[i.raw]));
+            for (idx i = 0u; i < m_current_size; ++i) {
+                construct_at(p_new + i, move(m_p_storage[i.raw]));
             }
-            for (idx i = this->m_current_size + 1; i < minimum_capacity; ++i) {
+            for (idx i = m_current_size + 1; i < minimum_capacity; ++i) {
                 construct_at(p_new + i);
             }
-            delete[] this->m_p_storage;
-            this->m_p_storage = p_new;
-            this->m_current_capacity = minimum_capacity;
+            delete[] m_p_storage;
+            m_p_storage = p_new;
+            m_current_capacity = minimum_capacity;
         } else {
             // Make a new allocation with size feedback.
             auto [alloc_span, alloc_bytes] =
                 prop(internal_allocate(allocator, minimum_capacity));
 
-            this->m_current_capacity = alloc_bytes / ssizeof(T);
-            this->m_p_storage = alloc_span.data();
+            m_current_capacity = alloc_bytes / ssizeof(T);
+            m_p_storage = alloc_span.data();
         }
 
         return monostate;
@@ -105,50 +105,49 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
     [[nodiscard]]
     constexpr auto
     data() -> T* {
-        return &(this->m_p_storage[0]);
+        return &(m_p_storage[0]);
     }
 
     // Get the `const` address of this `vec`'s internal array.
     [[nodiscard]]
     constexpr auto
     data() const -> T const* {
-        return &(this->m_p_storage[0]);
+        return &(m_p_storage[0]);
     }
 
     [[nodiscard]]
     constexpr auto
     size() const -> idx {
-        return static_cast<idx>(this->m_current_size);
+        return static_cast<idx>(m_current_size);
     }
 
     [[nodiscard]]
     constexpr auto
     capacity() const -> idx {
-        return static_cast<idx>(this->m_current_capacity);
+        return static_cast<idx>(m_current_capacity);
     }
 
     // Try to allocate storage for at least `minimum_capacity` number of `T`s.
     [[nodiscard]]
     constexpr auto
     reserve(is_allocator auto& allocator, idx minimum_capacity) -> maybe<void> {
-        if (minimum_capacity > this->m_current_capacity) {
+        if (minimum_capacity > m_current_capacity) {
             // TODO: I think there is a bug in GCC constexpr memory. This is a
             // workaround.
             if consteval {
-                delete[] this->m_p_storage;
-                this->m_p_storage = new T[minimum_capacity.raw];
-                this->m_current_capacity = minimum_capacity;
+                delete[] m_p_storage;
+                m_p_storage = new T[minimum_capacity.raw];
+                m_current_capacity = minimum_capacity;
 
-                for (idx i = this->m_current_size + 1u;
-                     i < this->m_current_capacity; ++i) {
-                    construct_at(this->m_p_storage + i);
+                for (idx i = m_current_size + 1u; i < m_current_capacity; ++i) {
+                    construct_at(m_p_storage + i);
                 }
             } else {
                 auto [alloc_span, alloc_bytes] =
                     prop(internal_allocate(allocator, minimum_capacity));
 
                 m_p_storage = alloc_span.data();
-                this->m_current_capacity = idx(alloc_bytes / sizeof(T));
+                m_current_capacity = idx(alloc_bytes / sizeof(T));
             }
         }
 
@@ -160,14 +159,14 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
     [[nodiscard]]
     constexpr auto
     resize(is_allocator auto& allocator, idx size) -> maybe<void> {
-        if (size > this->m_current_capacity) {
+        if (size > m_current_capacity) {
             // This sets `this->current_capacity` and `this->p_storage`.
             prop(this->reserve(allocator, size));
         }
 
         // If the new size is not larger, simply shrink size and maintain
         // capacity.
-        this->m_current_size = size;
+        m_current_size = size;
         return monostate;
     }
 
@@ -177,8 +176,8 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
     clone(
         is_allocator auto& allocator) const& -> maybe<vec<T, allocator_type>> {
         vec<T, allocator_type> new_vector =
-            prop(make_vec_reserved<T>(allocator, this->m_current_capacity));
-        new_vector.m_current_size = this->m_current_size;
+            prop(make_vec_reserved<T>(allocator, m_current_capacity));
+        new_vector.m_current_size = m_current_size;
         relocate(this->begin(), this->end(), new_vector.begin());
 
         return new_vector;
@@ -192,13 +191,12 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
     [[nodiscard]]
     constexpr auto
     push_back(is_allocator auto& allocator, U&& value) -> maybe<void> {
-        if (this->m_current_size + 1 > this->m_current_capacity) {
+        if (m_current_size + 1 > m_current_capacity) {
             prop(this->increase_storage(allocator));
         }
 
-        this->m_p_storage[this->m_current_size.raw] =
-            static_cast<T>(fwd(value));
-        ++(this->m_current_size);
+        m_p_storage[m_current_size.raw] = static_cast<T>(fwd(value));
+        ++(m_current_size);
         return monostate;
     }
 
