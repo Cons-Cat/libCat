@@ -383,7 +383,7 @@ class variant {
     // `in_value`. This method allows `variant` to be used in `match`
     // statements.
     template <typename T>
-        requires(is_convertible<T, alternative_types> && ...)
+        requires(is_implicitly_convertible<T, alternative_types> && ...)
     [[nodiscard]]
     constexpr auto
     is(T const& in_value) const -> bool {

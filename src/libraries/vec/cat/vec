@@ -188,7 +188,7 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
     // TODO: `.emplace_back()`.
 
     template <typename U>
-        requires(is_convertible<U, T>)
+        requires(is_implicitly_convertible<U, T>)
     [[nodiscard]]
     constexpr auto
     push_back(is_allocator auto& allocator, U&& value) -> maybe<void> {
