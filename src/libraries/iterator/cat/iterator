@@ -289,11 +289,13 @@ class iterator_interface<derived_type> {
 // type aliases automatically.
 template <typename derived_type, typename T>
 class iterator_interface<derived_type, T>
+    // Derive from itself to provide the member functions.
     : public iterator_interface<derived_type> {
   public:
     using value_type = T;
+    using const_value_type = T const;
     using reference = T&;
-    // TODO: Add more members.
+    using const_reference = T const&;
 };
 
 struct random_access_iterator_tag {};

@@ -804,4 +804,6 @@ TEST(test_numerals) {
     // static_assert(cat::is_same<decltype(add_int_idx), idx>);
     // auto add_idx_int = idx2 + 1_i4;
     // static_assert(cat::is_same<decltype(add_idx_int), idx>);
+    static_assert(cat::is_same<cat::common_type<idx, iword>, iword>);
+    static_assert(cat::is_same<cat::common_type<iword, idx>, iword>);
 };

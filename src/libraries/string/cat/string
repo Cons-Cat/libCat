@@ -118,7 +118,7 @@ class string : public span<char const> {
                 return iword(i);
             }
         }
-        return nullopt;
+        return nullopt;  // This is `-1`.
     }
 
     // TODO: Optimize different length strings.
@@ -127,12 +127,15 @@ class string : public span<char const> {
     constexpr auto
     find(char character,
          idx from_position = 0u) const -> maybe<sentinel<iword, -1>> {
-        // `i` must be negative, because `length - lanes` might be negative.
-        idx i = from_position;
         // TODO: `lanes` should be an `idx`.
         iword lanes = iword(char1x_::lanes);
+
         // TODO: Tile this loop four or eight times.
-        for (; i < this->length - lanes; i += lanes) {
+        // `i` must be signed, because `length - lanes` might be negative.
+        // this->length must be cast to an `iword`, because otherwise it might
+        // underflow.
+        iword i;
+        for (i = from_position; i < iword(this->length) - lanes; i += lanes) {
             // TODO: Consider aligning this load?
             char1x_ const storage = char1x_::loaded(this->p_storage + i);
             // TODO: Support a native ABI mask here.
@@ -146,7 +149,8 @@ class string : public span<char const> {
 
         // The last chunk of this string, smaller than `char1x_::lanes`, is
         // stepped through one character at a time.
-        return this->find_small(character, i);
+        // Casting `i` to `idx` is guarenteed to be safe by this point.
+        return this->find_small(character, idx(i));
     }
 
   private:

@@ -108,9 +108,8 @@ TEST(test_vec) {
     static_assert(
         cat::is_same<const_reverse_iterator, decltype(int_vec.crend())>);
 
-    // static_assert(cat::is_same<const_reverse_iterator::value_type, int4
-    // const>); static_assert(cat::is_same<const_reverse_iterator::reference,
-    // int4 const&>);
+    static_assert(cat::is_same<const_reverse_iterator::value_type, int4 const>);
+    static_assert(cat::is_same<const_reverse_iterator::reference, int4 const&>);
 
     static_assert(cat::is_same<int, cat::vec<int>::value_type>);
 
