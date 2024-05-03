@@ -20,7 +20,7 @@ namespace detail {
 
     template <typename C, typename Pointed, typename T1, typename... Args>
     constexpr auto
-    invoke_member_function(Pointed C::*f, T1&& t1,
+    invoke_member_function(Pointed C::* f, T1&& t1,
                            Args&&... args) -> decltype(auto) {
         if constexpr (is_function<Pointed>) {
             if constexpr (is_base_of<C, decay<T1>>) {
@@ -65,12 +65,12 @@ namespace detail {
 
         template <typename T, typename... Args, typename MT1>
             requires(is_function<MT1>)
-        static auto call(MT1 B::*pmf, T&& t, Args&&... args)
+        static auto call(MT1 B::* pmf, T&& t, Args&&... args)
             -> decltype((invoke_impl_trait::get(fwd(t)).*pmf)(fwd(args)...));
 
         template <typename T>
         static auto
-        call(MT B::*pmd,
+        call(MT B::* pmd,
              T&& t) -> decltype(invoke_impl_trait::get(fwd(t)).*pmd);
     };
 

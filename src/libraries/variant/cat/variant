@@ -262,7 +262,7 @@ class variant {
     [[nodiscard]]
     constexpr auto
     get() & -> T& {
-        return this->m_storage.template get<alternative_index<T>>();
+        return m_storage.template get<alternative_index<T>>();
     }
 
     template <typename T>
@@ -270,7 +270,7 @@ class variant {
     [[nodiscard]]
     constexpr auto
     get() const& -> T const& {
-        return this->m_storage.template get<alternative_index<T>>();
+        return m_storage.template get<alternative_index<T>>();
     }
 
     template <alternative_index_type index>
@@ -278,7 +278,7 @@ class variant {
     [[nodiscard]]
     constexpr auto
     get() & {
-        return this->m_storage.template get<index>();
+        return m_storage.template get<index>();
     }
 
     template <alternative_index_type index>
@@ -286,7 +286,7 @@ class variant {
     [[nodiscard]]
     constexpr auto
     get() const& -> decltype(auto) {
-        return this->m_storage.template get<index>();
+        return m_storage.template get<index>();
     }
 
     template <typename T>

@@ -94,10 +94,10 @@ class bitset {
         }
 
         array_type_element& index_byte =
-            this->m_storage[this->m_storage.size() - 1u -
-                            ((index_bit + this->leading_skipped_bits) /
-                             // TODO: Without `.raw`, this is ambiguous.
-                             word_bits.raw)];
+            m_storage[m_storage.size() - 1u -
+                      ((index_bit + this->leading_skipped_bits) /
+                       // TODO: Without `.raw`, this is ambiguous.
+                       word_bits.raw)];
 
         uword bit_offset = index_bit + this->leading_skipped_bits;
         // TODO: `total_bytes` doesn't compile here in Clang 17 if prefixed by
@@ -202,7 +202,7 @@ class bitset {
         // Iterate through all bytes:
         for (idx current_byte = 0u; current_byte < this->storage_array_size;
              ++current_byte) {
-            auto const it = this->m_storage[current_byte];
+            auto const it = m_storage[current_byte];
             using T = decltype(it);
 
             if (current_byte > 0u ||
@@ -228,7 +228,7 @@ class bitset {
     [[nodiscard]]
     constexpr auto
     any_of() const -> bool {
-        for (auto i : this->m_storage) {
+        for (auto i : m_storage) {
             if (i != 0u) {
                 return true;
             }
@@ -251,7 +251,7 @@ class bitset {
         constexpr idx skip_bits =
             idx(sizeof(array_type_element) * 8u - leading_bytes_bits);
 
-        idx count = cat::countl_zero(this->m_storage[0u]);
+        idx count = cat::countl_zero(m_storage[0u]);
         if (count != sizeof(array_type_element) * 8u) {
             return count - skip_bits;
         }
@@ -259,7 +259,7 @@ class bitset {
         count -= skip_bits;
 
         for (idx i = 1u; i < this->storage_array_size; ++i) {
-            idx next_count = cat::countl_zero(this->m_storage[i]);
+            idx next_count = cat::countl_zero(m_storage[i]);
             count += next_count;
 
             // If any 1s are found, skip remaining bytes.
@@ -275,14 +275,13 @@ class bitset {
     [[nodiscard]]
     constexpr auto
     countr_zero() const -> idx {
-        idx count =
-            cat::countr_zero(this->m_storage[this->storage_array_size - 1u]);
+        idx count = cat::countr_zero(m_storage[this->storage_array_size - 1u]);
         if (count != sizeof(array_type_element) * 8u) {
             return count;
         }
 
         for (idx i = this->storage_array_size - 2u; i >= 0u; --i) {
-            idx next_count = cat::countr_zero(this->m_storage[i]);
+            idx next_count = cat::countr_zero(m_storage[i]);
             count += next_count;
 
             // If any 1's are found, skip remaining bytes.
