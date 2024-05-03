@@ -3982,6 +3982,7 @@ class allocator_interface {
 
                                     conditional<is_multiple,
                                                 // Span of data allocated.
+                                                // TODO: Use `maybe_span<T>`.
                                                 maybe<span<T>>,
                                                 // Failsafe pointer w/out
                                                 // size.

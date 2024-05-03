@@ -7,6 +7,7 @@
 #include "../unit_tests.hpp"
 
 TEST(test_arrays) {
+    static_assert(cat::is_trivial<cat::array<int, 1u>>);
     // Initializing a array:
     cat::array<int4, 5u> array_1 = {0, 1, 2, 3, 4};
     // Assigning a array:
@@ -106,7 +107,7 @@ TEST(test_arrays) {
     auto _ = array_const.last(2u);
 
     // Test array copy-assignment.
-    cat::array base_array = {0, 0, 0, 0};
+    cat::array base_array = {0_i4, 0, 0, 0};
     cat::array copy_array = {1, 2, 3, 4};
     cat::array copy_converting_array = {int2{1}, 2, 3, 4};
     cat::array move_array = {5, 6, 7, 8};
@@ -117,7 +118,7 @@ TEST(test_arrays) {
     base_array = move(move_converting_array);  // NOLINT
 
     // Test array fill.
-    cat::array filled_array = cat::array<int4, 8u>::filled(6);
+    cat::array filled_array = cat::make_array_filled<8u>(6_i4);
     for (idx i = 0u; i < 8u; ++i) {
         cat::verify(filled_array[i] == 6);
     }
@@ -127,9 +128,9 @@ TEST(test_arrays) {
         cat::verify(filled_array[i] == 9);
     }
 
-    // Test from factory.
-    cat::array from_array = cat::array<int4, 3u>::from(1, 2, 3);
-    cat::verify(from_array[0u] == 1);
-    cat::verify(from_array[1u] == 2);
-    cat::verify(from_array[2u] == 3);
+    // Test list initialization.
+    cat::array from_array{1, 2, 3};
+    cat::verify(from_array[0] == 1);
+    cat::verify(from_array[1] == 2);
+    cat::verify(from_array[2] == 3);
 }
