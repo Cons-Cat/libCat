@@ -37,20 +37,20 @@ class unique {
     constexpr unique() = default;
 
     template <typename U>
-        requires(is_convertible<U, T>)
+        requires(is_implicitly_convertible<U, T>)
     constexpr unique(unique<U>&& raii)
         : storage(static_cast<T>(raii.borrow())) {
     }
 
     // Copy-construct from any type convertible into `T`.
     template <typename U>
-        requires(is_convertible<U, T>)
+        requires(is_implicitly_convertible<U, T>)
     constexpr unique(U const& value) : storage(static_cast<T>(value)) {
     }
 
     // Move-construct from any type convertible into `T`.
     template <rvalue U>
-        requires(is_convertible<U, T>)
+        requires(is_implicitly_convertible<U, T>)
     // NOLINTNEXTLINE
     constexpr unique(U&& value) : storage(fwd(value)) {
     }
@@ -63,7 +63,7 @@ class unique {
 
     // Allow move-assignment.
     template <rvalue U>
-        requires(is_convertible<U, T>)
+        requires(is_implicitly_convertible<U, T>)
     auto
     operator=(U&& value) -> unique& {
         this->storage_destructor();
@@ -72,7 +72,7 @@ class unique {
     }
 
     template <typename U>
-        requires(is_convertible<U, T>)
+        requires(is_implicitly_convertible<U, T>)
     auto
     operator=(unique<U>&& raii) -> unique& {
         this->storage_destructor();
@@ -81,7 +81,7 @@ class unique {
     }
 
     template <typename U>
-        requires(is_convertible<U, T>)
+        requires(is_implicitly_convertible<U, T>)
     auto
     operator=(unique_weak<U>&& raii) -> unique& {
         this->storage_destructor();
@@ -132,18 +132,18 @@ class unique_weak {
 
     // Consume any type convertible into `T`.
     template <typename U>
-        requires(is_convertible<U, T>)
+        requires(is_implicitly_convertible<U, T>)
     constexpr unique_weak(U const& value) : storage(static_cast<T>(value)) {
     }
 
     template <rvalue U>
-        requires(is_convertible<U, T>)
+        requires(is_implicitly_convertible<U, T>)
     constexpr unique_weak(U&& value)  // NOLINT
         : storage(static_cast<T>(fwd(value))) {
     }
 
     template <typename U>
-        requires(is_convertible<U, T>)
+        requires(is_implicitly_convertible<U, T>)
     constexpr unique_weak(unique_weak<U>&& raii)
         : storage(static_cast<T>(raii.borrow())) {
         raii.owns_data = false;
@@ -155,7 +155,7 @@ class unique_weak {
 
     // Allow move-assignment.
     template <rvalue U>
-        requires(is_convertible<U, T>)
+        requires(is_implicitly_convertible<U, T>)
     auto
     operator=(U&& value) -> unique_weak<T>& {
         this->storage_destructor();
@@ -165,7 +165,7 @@ class unique_weak {
     }
 
     template <typename U>
-        requires(is_convertible<U, T>)
+        requires(is_implicitly_convertible<U, T>)
     auto
     operator=(unique_weak<U>&& raii) -> unique_weak<T>& {
         raii.owns_data = false;

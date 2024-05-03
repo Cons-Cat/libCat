@@ -19,13 +19,13 @@ namespace detail {
         // to remain trivial in some cases:
 
         template <typename U>
-            requires(is_convertible<U, T>)
+            requires(is_implicitly_convertible<U, T>)
         constexpr tuple_element(U const& input)
             : storage(static_cast<T>(input)) {
         }
 
         template <rvalue U>
-            requires(is_convertible<U, T>)
+            requires(is_implicitly_convertible<U, T>)
         // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
         constexpr tuple_element(U&& input) : storage(fwd(input)) {
         }
