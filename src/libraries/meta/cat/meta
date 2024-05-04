@@ -989,16 +989,33 @@ using std::move;
 
 namespace detail {
     constinit inline struct mover {
+        // Move a mutable l-value reference.
         template <typename T>
         [[nodiscard("A moved-from value should be consumed."),
           gnu::always_inline, gnu::artificial]]
         friend inline constexpr auto
-        operator*(mover, T&& x) -> decltype(auto) {
+        operator*(mover, T& x) -> decltype(auto) {
             return move(x);
         }
 
+        // Move an r-value reference.
+        template <is_rvalue_reference T>
+        [[nodiscard("A moved-from value should be consumed."),
+          gnu::always_inline, gnu::artificial]]
+        friend inline constexpr auto
+        operator*(mover, T&& x) -> decltype(auto) {
+            return move(x);  // NOLINT This is always a move.
+        }
+
+        // Prevent moving an immutable l-value reference.
+        template <typename T>
+        friend inline constexpr auto operator*(mover, T const& x) =
+            delete("The `mov` macro cannot move a `const` qualifed operand. "
+                   "Either copy instead, or call `cat::move()`!");
+
         // Prevent redundant `mov mov value;` syntax.
-        friend constexpr void operator*(mover, mover) = delete;
+        friend constexpr void operator*(mover, mover) = delete(
+            "`mov mov ...` syntax is meaningless. Use `mov ...` instead!");
     } mover;
 }  // namespace detail
 

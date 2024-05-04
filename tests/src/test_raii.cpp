@@ -93,5 +93,5 @@ TEST(test_raii) {
     unique = 2;
 
     cat::unique<int> original = 0;
-    cat::unique<int8> into = mov original;
+    cat::unique<int8> const into = mov original;
 }
