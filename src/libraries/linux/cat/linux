@@ -915,15 +915,15 @@ struct io_vector : cat::span<cat::byte> {
 
     constexpr auto
     operator=(io_vector const& io_vector) -> struct io_vector& {
-        this->p_storage = io_vector.p_storage;
-        this->length = io_vector.length;
+        this->m_p_data = io_vector.m_p_data;
+        this->m_size = io_vector.m_size;
         return *this;
     }
 
     constexpr auto
     operator=(io_vector&& io_vector) -> struct io_vector& {
-        this->p_storage = io_vector.p_storage;
-        this->length = cat::move(io_vector).length;
+        this->m_p_data = io_vector.m_p_data;
+        this->m_size = cat::move(io_vector).m_size;
         return *this;
     }
 };

@@ -9,7 +9,6 @@
 #include <cat/span>
 
 namespace std {
-// `__SIZE_TYPE__` is a GCC macro.
 
 // Deprecated call to `memcpy()`. Consider using `cat::copy_buffer()` instead.
 // `memcpy()` exists to enable some GCC optimizations.
@@ -58,14 +57,14 @@ class string : public span<char const> {
     // Zero-overhead string literal constructor.
     template <uword::raw_type other_length>
     constexpr string(char const (&string)[other_length]) {
-        this->p_storage = string;
-        this->length = idx(other_length);
+        this->m_p_data = string;
+        this->m_size = idx(other_length);
     }
 
     template <uword::raw_type other_length>
     constexpr string(fixed_string<other_length> const& other_string) {
-        this->p_storage = other_string.data();
-        this->length = idx(other_length);
+        this->m_p_data = other_string.data();
+        this->m_size = idx(other_length);
     }
 
     constexpr string(span<char> in_span) : span<char const>(in_span) {
@@ -76,15 +75,15 @@ class string : public span<char const> {
 
     constexpr auto
     operator=(string const& other_string) -> string& {
-        this->p_storage = other_string.data();
-        this->length = other_string.size();
+        this->m_p_data = other_string.data();
+        this->m_size = other_string.size();
         return *this;
     }
 
     constexpr auto
     operator=(string&& other_string) -> string& {
-        this->p_storage = other_string.data();
-        this->length = move(other_string).size();
+        this->m_p_data = other_string.data();
+        this->m_size = move(other_string).size();
         return *this;
     }
 
@@ -93,19 +92,19 @@ class string : public span<char const> {
     [[nodiscard]]
     constexpr auto
     substring(idx position, idx count) -> string {
-        return {this->p_storage + position, count};
+        return {this->m_p_data + position, count};
     }
 
     [[nodiscard]]
     constexpr auto
     remove_prefix(idx offset) -> string {
-        return this->substring(offset, this->length - offset);
+        return this->substring(offset, this->m_size - offset);
     }
 
     [[nodiscard]]
     constexpr auto
     remove_suffix(idx offset) -> string {
-        return this->substring(0u, this->length - offset);
+        return this->substring(0u, this->m_size - offset);
     }
 
     [[nodiscard]]
@@ -113,8 +112,8 @@ class string : public span<char const> {
     constexpr auto
     find_small(char character,
                idx position = 0u) const -> maybe<sentinel<iword, -1>> {
-        for (idx i = position; i < this->length; ++i) {
-            if (this->p_storage[i.raw] == character) {
+        for (idx i = position; i < this->m_size; ++i) {
+            if (this->m_p_data[i.raw] == character) {
                 return iword(i);
             }
         }
@@ -135,9 +134,9 @@ class string : public span<char const> {
         // this->length must be cast to an `iword`, because otherwise it might
         // underflow.
         iword i;
-        for (i = from_position; i < iword(this->length) - lanes; i += lanes) {
+        for (i = from_position; i < iword(this->m_size) - lanes; i += lanes) {
             // TODO: Consider aligning this load?
-            char1x_ const storage = char1x_::loaded(this->p_storage + i);
+            char1x_ const storage = char1x_::loaded(this->m_p_data + i);
             // TODO: Support a native ABI mask here.
             simd_mask<x64::avx2_abi<char>, char> const compare =
                 (storage == character);
@@ -168,13 +167,13 @@ class fixed_string : public collection_interface<fixed_string<length>, char>,
   public:
     constexpr auto
     data() -> char* {
-        return &(this->storage[0]);
+        return &(this->m_p_data[0]);
     }
 
     [[nodiscard]]
     constexpr auto
     data() const -> char const* {
-        return &(this->storage[0]);
+        return &(this->m_p_data[0]);
     }
 
     [[nodiscard]]
@@ -216,6 +215,7 @@ class fixed_string : public collection_interface<fixed_string<length>, char>,
 
     // Assign a `fixed_string` of lesser or equal length.
     constexpr auto
+    // NOLINTNEXTLINE This does handle self-assignment.
     operator=(fixed_string<length> const& string) -> fixed_string<length>& {
         this->copy_string_data(string.data());
         return *this;
@@ -241,7 +241,7 @@ class fixed_string : public collection_interface<fixed_string<length>, char>,
         char array[new_length];
 
         for (uword::raw_type i = 0u; i < length - 1u; ++i) {
-            array[i] = self.storage[i];
+            array[i] = self.m_p_data[i];
         }
 
         for (uword::raw_type i = length - 1; i < new_length - 1u; ++i) {
@@ -277,14 +277,14 @@ class fixed_string : public collection_interface<fixed_string<length>, char>,
     copy_string_data(char const* p_source) {
         if consteval {
             for (uword::raw_type i = 0u; i < length; ++i) {
-                this->storage[i] = p_source[i];
+                this->m_p_data[i] = p_source[i];
             }
         } else {
             copy_memory(p_source, this->data(), length);
         }
     }
 
-    char storage[length];
+    char m_p_data[length];
 };
 
 [[nodiscard]]

@@ -28,7 +28,7 @@ template <typename T>
 struct maybe_value_storage {
     using value_type = T;
 
-    constexpr maybe_value_storage() : dummy{} {
+    constexpr maybe_value_storage() : m_dummy{} {
     }
 
     // If `T` is forwarded arguments by the `in_place` `maybe`
@@ -41,7 +41,7 @@ struct maybe_value_storage {
     // If `T` is trivially copy-constructible, use this simple copy constructor.
     constexpr maybe_value_storage(T const& in_value)
         requires(is_trivially_copy_constructible<T>)
-        : storage(in_value), has_some(true) {
+        : m_storage(in_value), m_has_some(true) {
     }
 
     // If `T` is not trivially copy-constructible, then manually construct it
@@ -61,7 +61,7 @@ struct maybe_value_storage {
     // If `T` is trivially move-constructible, use this simple move constructor.
     constexpr maybe_value_storage(T&& in_value)
         requires(is_trivially_move_constructible<T>)
-        : storage(fwd(in_value)), has_some(true) {
+        : m_storage(fwd(in_value)), m_has_some(true) {
     }
 
     // If `T` is not trivially move-constructible, then manually invoke
@@ -72,7 +72,7 @@ struct maybe_value_storage {
     {
         // TODO: Should this be a `move`?
         this->construct(fwd(in_value));
-        this->has_some = true;
+        this->m_has_some = true;
     }
 
     // If `T` is not move-constructible, delete this move constructor.
@@ -81,7 +81,7 @@ struct maybe_value_storage {
     = delete;
 
     // `nullopt` initializes this without a value.
-    constexpr maybe_value_storage(detail::nullopt_type) : dummy{} {
+    constexpr maybe_value_storage(detail::nullopt_type) : m_dummy{} {
     }
 
     // If other destructors are not conditionally specialized by their
@@ -93,10 +93,10 @@ struct maybe_value_storage {
     constexpr ~maybe_value_storage()
         requires(!is_trivially_destructible<T>)
     {
-        if constexpr (requires { this->storage.~T(); }) {
-            if (this->has_some) {
-                this->storage.~T();
-                this->has_some = false;
+        if constexpr (requires { this->m_storage.~T(); }) {
+            if (this->m_has_some) {
+                this->m_storage.~T();
+                this->m_has_some = false;
             }
         }
     }
@@ -104,8 +104,8 @@ struct maybe_value_storage {
     // If `T` is trivially copy-assignable, then forward this value.
     constexpr auto operator=(T const& in_value)
         -> maybe_value_storage& requires(is_trivially_copy_assignable<T>) {
-                                    this->storage = in_value;
-                                    this->has_some = true;
+                                    this->m_storage = in_value;
+                                    this->m_has_some = true;
                                     return *this;
                                 }
 
@@ -126,8 +126,8 @@ struct maybe_value_storage {
     // If `T` is trivially move-assignable, then forward this value.
     constexpr auto operator=(T&& in_value)
         -> maybe_value_storage& requires(is_trivially_move_assignable<T>) {
-                                    this->storage = fwd(in_value);
-                                    this->has_some = true;
+                                    this->m_storage = fwd(in_value);
+                                    this->m_has_some = true;
                                     return *this;
                                 }
 
@@ -149,46 +149,46 @@ struct maybe_value_storage {
     [[nodiscard]]
     constexpr auto
     value() & -> T& {
-        return this->storage;
+        return this->m_storage;
     }
 
     [[nodiscard]]
     constexpr auto
     value() const& -> T const& {
-        return this->storage;
+        return this->m_storage;
     }
 
     [[nodiscard]]
     constexpr auto
     value() && -> T&& {
-        return move(this->storage);
+        return move(this->m_storage);
     }
 
     [[nodiscard]]
     constexpr auto
     value() const&& -> T&& {
-        return move(this->storage);
+        return move(this->m_storage);
     }
 
     [[nodiscard]]
     constexpr auto
     has_value() const -> bool {
-        return has_some;
+        return m_has_some;
     }
 
     // Destroy the storage unconditionally.
     constexpr void
     hard_reset() {
-        this->storage.~T();
-        this->has_some = false;
+        this->m_storage.~T();
+        this->m_has_some = false;
     }
 
     // Construct an object at the address of the held `storage`.
     template <typename... Args>
     constexpr void
     construct(Args&&... args) {
-        construct_at(__builtin_addressof(this->storage), fwd(args)...);
-        this->has_some = true;
+        construct_at(__builtin_addressof(this->m_storage), fwd(args)...);
+        this->m_has_some = true;
     }
 
     // If this is assigned an `maybe` which wraps a type that can be
@@ -198,7 +198,7 @@ struct maybe_value_storage {
     assign(Othermaybe&& maybe) {
         if (this->has_value()) {
             if (maybe.has_value()) {
-                this->storage = fwd(maybe).value();
+                this->m_storage = fwd(maybe).value();
             } else {
                 // If the incoming `maybe` is empty, then empty this one.
                 this->hard_reset();
@@ -218,11 +218,11 @@ struct maybe_value_storage {
         // constructor from being called there. One member must be initialized
         // in a `constexpr` context. If `T` is trivial, a dummy member is not
         // required.
-        monostate_type dummy;
-        T storage;
+        monostate_type m_dummy;
+        T m_storage;
     };
 
-    bool has_some = false;
+    bool m_has_some = false;
 };
 
 template <typename T>

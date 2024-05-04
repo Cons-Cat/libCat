@@ -26,7 +26,7 @@ class array : public collection_interface<array<T, length>, T>,
         // Explicitly converting this type allows the first argument to coerce
         // the type for following arguments.
         // i.e. `cat::array shorts = {int2{0}, 1, 2};`
-        : storage(static_cast<T>(fwd(arguments))...) {
+        : m_data(static_cast<T>(fwd(arguments))...) {
     }
 
     constexpr auto
@@ -39,7 +39,7 @@ class array : public collection_interface<array<T, length>, T>,
     operator=(this array& self, array<U, length> const& other_array) -> array& {
         // TODO: Optimize with `copy_memory()` if T and U are relocatable.
         for (idx i = 0u; i < length; ++i) {
-            self.storage[i.raw] = static_cast<T>(other_array[i]);
+            self.m_data[i.raw] = static_cast<T>(other_array[i]);
         }
         return self;
     }
@@ -60,7 +60,7 @@ class array : public collection_interface<array<T, length>, T>,
         //     // set_memory(this->storage, value, length);
         // } else {
         for (idx i = 0u; i < length; ++i) {
-            this->storage[i.raw] = static_cast<T>(value);
+            this->m_data[i.raw] = static_cast<T>(value);
         }
         // }
         return *this;
@@ -70,14 +70,14 @@ class array : public collection_interface<array<T, length>, T>,
     [[nodiscard]]
     constexpr auto
     data() -> T* {
-        return this->storage;
+        return this->m_data;
     }
 
     // Get the `const` address of this `array`'s internal array.
     [[nodiscard]]
     constexpr auto
     data() const -> T const* {
-        return this->storage;
+        return this->m_data;
     }
 
     // Get the number of elements contained in this `array`.
@@ -88,7 +88,7 @@ class array : public collection_interface<array<T, length>, T>,
     }
 
     // `storage` is public so that `cat::array` is a trivial type.
-    T storage[length.raw];
+    T m_data[length.raw];
 };
 
 // Construct an `array<int, 3>` as: `array a = {0, 1, 2};`
