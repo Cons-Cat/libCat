@@ -413,6 +413,7 @@ template <typename from_type, typename to_type>
 concept is_convertible = __is_convertible(from_type, to_type);
 
 // TODO: Rename this to something better.
+// `is_implicitly_convertible` is more relaxed than `is_convertible`.
 template <typename from_type, typename to_type>
 concept is_implicitly_convertible =
     __is_assignable(to_type, from_type) ||
@@ -601,40 +602,25 @@ using copy_sign_from = conditional<is_signed<Sign>, make_signed_type<Sign>,
 template <typename T>
 concept is_void = __is_same(T, void);
 
-namespace detail {
-    // TODO: For some reason, `__is_same(T, T const)` does not work.
-    template <typename>
-    inline constexpr bool is_const_detail = false;
-    template <typename T>
-    inline constexpr bool is_const_detail<T const> = true;
-    template <typename T>
-    inline constexpr bool is_const_detail<T const&> = true;
-    template <typename T>
-    inline constexpr bool is_const_detail<T const&&> = true;
-
-    template <typename T>
-    inline constexpr bool is_volatile_detail = __is_same(T, T volatile);
-
-    template <typename T>
-    inline constexpr bool is_pointer_detail = !__is_same(T, remove_pointer<T>);
-
-    template <typename T>
-    inline constexpr bool is_array_detail =
-        !is_pointer_detail<T> && requires(T t) { t[0]; };
-}  // namespace detail
-
-// TODO: Use Clang intrinsics here:
 template <typename T>
-concept is_const = detail::is_const_detail<T>;
+concept is_const = __is_const(T);
 
 template <typename T>
-concept is_volatile = detail::is_volatile_detail<T>;
+concept is_const_ref =
+#ifdef __clang__
+    __is_const(__remove_reference_t(T));
+#else
+    __is_const(__remove_reference(T));
+#endif
 
 template <typename T>
-concept is_pointer = detail::is_pointer_detail<T>;
+concept is_volatile = __is_volatile(T);
 
 template <typename T>
-concept is_array = detail::is_array_detail<T>;
+concept is_pointer = __is_pointer(T);
+
+template <typename T>
+concept is_array = !__is_pointer(T) && requires(T t) { t[0]; };
 
 namespace detail {
     template <typename T>
@@ -688,7 +674,7 @@ template <typename T>
 concept is_rvalue_reference = __is_same(T, remove_reference<T>&&);
 
 template <typename from_type, typename to_type>
-using copy_const_from = conditional<is_const<from_type>,
+using copy_const_from = conditional<is_const_ref<from_type>,
                                     // from_type is const.
                                     add_const<to_type>,
                                     // from_type is not const.
@@ -876,8 +862,8 @@ template <typename T>
 concept is_trivial = __is_trivial(T);
 
 template <typename S1, typename S2, typename M1, typename M2>
-constexpr bool
-is_corresponding_member(M1 S1::* member_1, M2 S2::* member_2) noexcept {
+constexpr auto
+is_corresponding_member(M1 S1::* member_1, M2 S2::* member_2) noexcept -> bool {
     return __builtin_is_corresponding_member(member_1, member_2);
 }
 

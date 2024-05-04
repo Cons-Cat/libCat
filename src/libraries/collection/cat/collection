@@ -127,7 +127,7 @@ class iterable_interface {
     [[nodiscard]]
     constexpr auto
     begin(this auto&& collection) {
-        constexpr bool is_const = cat::is_const<decltype(collection)>;
+        constexpr bool is_const = is_const_ref<decltype(collection)>;
         using it = conditional<is_const, const_iterator, iterator>;
 
         return it(0, fwd(collection).data());
@@ -136,7 +136,7 @@ class iterable_interface {
     [[nodiscard]]
     constexpr auto
     end(this auto&& collection) {
-        constexpr bool is_const = cat::is_const<decltype(collection)>;
+        constexpr bool is_const = is_const_ref<decltype(collection)>;
         using it = conditional<is_const, const_iterator, iterator>;
 
         // `cat::forward` must be called on last use, and because argument
@@ -165,7 +165,7 @@ class iterable_interface {
     [[nodiscard]]
     constexpr auto
     rbegin(this auto&& collection) {
-        constexpr bool is_const = cat::is_const<decltype(collection)>;
+        constexpr bool is_const = is_const_ref<decltype(collection)>;
         using it =
             conditional<is_const, const_reverse_iterator, reverse_iterator>;
 
@@ -180,7 +180,7 @@ class iterable_interface {
     [[nodiscard]]
     constexpr auto
     rend(this auto&& collection) {
-        constexpr bool is_const = cat::is_const<decltype(collection)>;
+        constexpr bool is_const = is_const_ref<decltype(collection)>;
         using it =
             conditional<is_const, const_reverse_iterator, reverse_iterator>;
 

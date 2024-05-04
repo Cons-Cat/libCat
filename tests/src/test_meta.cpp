@@ -129,13 +129,24 @@ TEST(test_meta) {
 
     static_assert(is_const<int const>);
     static_assert(!is_const<int>);
-    static_assert(is_const<int const&>);
+    static_assert(!is_const<int const&>);
+    static_assert(!is_const<int&&>);
     static_assert(!is_const<int const*>);
 
     static_assert(is_const<add_const<int>>);
     static_assert(is_const<add_const<int const>>);
     static_assert(!is_const<remove_const<int>>);
     static_assert(!is_const<remove_const<int const>>);
+
+    static_assert(is_const_ref<int const>);
+    static_assert(!is_const_ref<int>);
+    static_assert(is_const_ref<int const&>);
+    static_assert(!is_const_ref<int const*>);
+
+    static_assert(is_const_ref<add_const<int>>);
+    static_assert(is_const_ref<add_const<int const>>);
+    static_assert(!is_const_ref<remove_const<int>>);
+    static_assert(!is_const_ref<remove_const<int const>>);
 
     struct signed_type {
         int data;
@@ -332,7 +343,7 @@ TEST(test_meta) {
     static_assert(!is_member_function_pointer<decltype(&test_is_function)>);
 
     members members;
-    int members::*p_member_variable = &members::member_variable;
+    int members::* p_member_variable = &members::member_variable;
     members.*p_member_variable = 1;
     static_assert(is_member_pointer<decltype(p_member_variable)>);
     static_assert(is_member_object_pointer<decltype(p_member_variable)>);
