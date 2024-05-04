@@ -4,5 +4,6 @@ build*/
 compile_commands.json
 .cache/
 .cmake/
+Testing/
 CMakeFiles/
 .dir-locals-*.el
