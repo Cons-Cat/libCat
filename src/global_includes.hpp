@@ -65,19 +65,19 @@ template <typename T, T constant_state>
 struct monotype_storage {
     constexpr monotype_storage() = default;
 
-    constexpr monotype_storage(monostate_type&) : storage(constant_state) {
+    constexpr monotype_storage(monostate_type&) : m_storage(constant_state) {
     }
 
     constexpr monotype_storage(monostate_type const&)
-        : storage(constant_state) {
+        : m_storage(constant_state) {
     }
 
-    constexpr monotype_storage(T input) : storage(input) {
+    constexpr monotype_storage(T input) : m_storage(input) {
     }
 
     constexpr
     operator auto() const {
-        return this->storage;
+        return this->m_storage;
     };
 
     constexpr auto
@@ -88,16 +88,17 @@ struct monotype_storage {
     friend constexpr auto
     operator<=>(monotype_storage<T, constant_state> const& self,
                 auto const& rhs) {
-        return self.storage <=> rhs;
+        return self.m_storage <=> rhs;
     }
 
     friend constexpr auto
     operator==(monotype_storage<T, constant_state> const& self,
                auto const& rhs) -> bool {
-        return self.storage == rhs;
+        return self.m_storage == rhs;
     }
 
-    T storage;
+    [[no_unique_address]]
+    T m_storage;
 };
 
 // `in_sentinel` should be either a `T` or an error type for `scaredy`s.
@@ -134,10 +135,10 @@ using sentinel =
 
 // `in_place` is consumed by wrapper classes to default-initialize their
 // storage.
-constexpr in_place_type in_place;
+inline constexpr in_place_type in_place;
 
 // `monostate` can be consumed by wrapper classes to represent no storage.
-constexpr cat::monostate_type monostate;
+inline constexpr cat::monostate_type monostate;
 
 }  // namespace cat
 
@@ -221,5 +222,5 @@ operator delete[](void*, unsigned long, std::align_val_t) {
 [[nodiscard]]
 inline auto
 operator new[](unsigned long, std::align_val_t align) -> void* {
-    return reinterpret_cast<void*>(align);  // NOLINT
+    return __builtin_bit_cast(void*, align);
 }

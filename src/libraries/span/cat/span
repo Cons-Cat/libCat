@@ -22,18 +22,18 @@ class span : public collection_interface<span<T>, T>,
 
     // Construct a `span` as `{address, length}`.
     constexpr span(T* p_in_data, idx in_length)
-        : p_storage(p_in_data), length(in_length) {
+        : m_p_data(p_in_data), m_size(in_length) {
     }
 
     // Construct an empty `span` with `nullptr`.
-    constexpr span(decltype(nullptr)) : p_storage(nullptr), length(0) {
+    constexpr span(decltype(nullptr)) : m_p_data(nullptr), m_size(0) {
     }
 
     // Implicitly convert a contiguous container into a span.
     template <typename U>
         requires(is_random_access<U>)
     constexpr span(U& collection)
-        : p_storage(collection.data()), length(collection.size()) {
+        : m_p_data(collection.data()), m_size(collection.size()) {
     }
 
     // If `T` is non-const, conversion to a `const` contiguous container is
@@ -41,7 +41,7 @@ class span : public collection_interface<span<T>, T>,
     template <typename U>
         requires(is_random_access<U>)
     explicit constexpr span(U const& collection)
-        : p_storage(unconst(collection.data())), length(collection.size()) {
+        : m_p_data(unconst(collection.data())), m_size(collection.size()) {
     }
 
     constexpr auto operator=(span<T> const&) -> span<T>& = default;
@@ -51,21 +51,21 @@ class span : public collection_interface<span<T>, T>,
     [[nodiscard]]
     constexpr auto
     data() -> T* {
-        return this->p_storage;
+        return this->m_p_data;
     }
 
     // Get the `const` address that this `span` starts at.
     [[nodiscard]]
     constexpr auto
     data() const -> T* {
-        return this->p_storage;
+        return this->m_p_data;
     }
 
     // Get the number of elements owned by this `span`.
     [[nodiscard]]
     constexpr auto
     size() const -> idx {
-        return this->length;
+        return this->m_size;
     }
 
     // These data members should be `public` so that this is a structural type.
@@ -73,8 +73,8 @@ class span : public collection_interface<span<T>, T>,
     // This is arranged as pointer, then size, to follow the ABI of Linux
     // standard `iovec`s. Unfortunately, that is opposite of Windws' standard
     // `WSABUF`.
-    T* p_storage;
-    idx length;
+    T* m_p_data;
+    idx m_size;
 };
 
 // Create a span between two addresses.
@@ -90,7 +90,7 @@ using maybe_span = maybe<compact<span<T>,
                                  [](span<T> value) -> bool {
                                      // This span is `nullopt` if its
                                      // `.p_storage` is null.
-                                     return value.p_storage;
+                                     return value.m_p_data;
                                  },
                                  // Default to a null span.
                                  span<T>(nullptr)>>;
