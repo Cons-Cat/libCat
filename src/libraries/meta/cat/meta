@@ -1003,13 +1003,13 @@ namespace detail {
         [[nodiscard("A moved-from value should be consumed."),
           gnu::always_inline, gnu::artificial]]
         friend inline constexpr auto
-        operator*(mover, T&& x) -> decltype(auto) {
-            return move(x);  // NOLINT This is always a move.
+        operator*(mover, T&& x) -> T&& {
+            return static_cast<cat::remove_reference<T>&&>(x);
         }
 
         // Prevent moving an immutable l-value reference.
         template <typename T>
-        friend inline constexpr auto operator*(mover, T const& x) =
+        friend constexpr auto operator*(mover, T const& x) =
             delete("The `mov` macro cannot move a `const` qualifed operand. "
                    "Either copy instead, or call `cat::move()`!");
 
