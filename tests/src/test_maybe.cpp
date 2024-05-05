@@ -387,7 +387,7 @@ TEST(test_maybe) {
     auto _ = in_place_nontrivial_2.verify();
 
     // Test `maybe` in a `constexpr` context.
-    constexpr auto constant_test = []() consteval {
+    [] consteval {
         [[maybe_unused]]
         constexpr cat::maybe<int> const_int_default;
 
@@ -428,8 +428,7 @@ TEST(test_maybe) {
         cat::maybe_ptr<maybe_non_trivial> nontrivial_optptr = nullptr;
         [[maybe_unused]]
         cat::maybe_ptr<maybe_non_trivial> nontrivial_default_optptr;
-    };
-    cat::constant_evaluate(constant_test);
+    }();
 
     // Assign value:
     optvoid = cat::monostate;

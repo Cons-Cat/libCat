@@ -172,8 +172,7 @@ namespace detail {
         // variadic merely to simplify overload resolution in `scaredy`.
         // `decltype` adds a reference to it, so that is removed by
         // `remove_reference`.
-        using error_type =
-            remove_reference<decltype(array(error_types()...)[0u])>;
+        using error_type = __type_pack_element<0u, error_types...>;
 
         constexpr scaredy_compact_storage() = default;
 
