@@ -55,6 +55,7 @@ target_sources(cat INTERFACE
   ${CATLIB}/runtime/implementations/__cxa_atexit.cpp
   ${CATLIB}/runtime/implementations/setjmp.cpp
   ${CATLIB}/runtime/implementations/longjmp.cpp
+  ${CATLIB}/new/implementations/new.cpp
   ${CATLIB}/runtime/implementations/load_base_stack_pointer.cpp
   ${CATLIB}/meta/implementations/constant_evaluate.tpp
   ${CATLIB}/meta/implementations/common_type.tpp
