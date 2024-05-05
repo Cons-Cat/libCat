@@ -10,6 +10,7 @@ target_include_directories(cat INTERFACE
   ${CATLIB}/limits
   ${CATLIB}/runtime/
   ${CATLIB}/arithmetic/
+  ${CATLIB}/initializer_list/
   ${CATLIB}/simd/
   ${CATLIB}/algorithm/
   ${CATLIB}/debug/
