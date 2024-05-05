@@ -28,13 +28,13 @@ class initializer_list {
     }
 
     [[nodiscard]]
-    consteval auto
+    constexpr auto
     begin() const -> T* {
         return m_p_data;
     }
 
     [[nodiscard]]
-    consteval auto
+    constexpr auto
     end() const -> T* {
         return m_p_data + m_size;
     }
