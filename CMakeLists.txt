@@ -27,7 +27,6 @@ list(
   -Wno-unknown-pragmas
   # Disable some Clang warnings. libCat needs to violate these.
   $<$<CXX_COMPILER_ID:Clang>:-Wno-unknown-attributes>
-  $<$<CXX_COMPILER_ID:Clang>:-Wno-inline-new-delete>
   $<$<CXX_COMPILER_ID:Clang>:-Wno-unqualified-std-cast-call>
   $<$<CXX_COMPILER_ID:Clang>:-Wno-main>
   # This produces many false positives in Clang 17.

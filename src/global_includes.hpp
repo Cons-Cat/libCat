@@ -179,48 +179,26 @@ inline constexpr cat::monostate_type monostate;
         (container).value();                                                    \
     })
 
-// Placement `new`.
-[[nodiscard]]
-constexpr auto
-operator new(unsigned long, void* p_address) -> void* {
-    return p_address;
-}
-
-// `new[]` and `delete[]` are defined for use in a `constexpr` context.
-[[nodiscard]]
-inline auto
-operator new[](unsigned long, void* p_address) -> void* {
-    return p_address;
-}
-
-[[nodiscard]]
-// NOLINTNEXTLINE Let this be `inline` for now.
-inline auto
-operator new[](unsigned long) -> void* {
-    return reinterpret_cast<void*>(1ul);
-}
-
 // TODO: Does this actually have to be in `std::`?
 namespace std {
 enum class align_val_t : __SIZE_TYPE__ {
 };
 }  // namespace std
 
-// NOLINTNEXTLINE Let this be `inline` for now.
-inline void
-operator delete[](void*) {
-}
+auto operator new(unsigned long, void* p_address) -> void*;
 
-inline void
-operator delete[](void*, unsigned long) {
-}
-
-inline void
-operator delete[](void*, unsigned long, std::align_val_t) {
-}
+// `new[]` and `delete[]` are defined for use in a `constexpr` context.
+[[nodiscard]]
+auto operator new[](unsigned long, void* p_address) -> void*;
 
 [[nodiscard]]
-inline auto
-operator new[](unsigned long, std::align_val_t align) -> void* {
-    return __builtin_bit_cast(void*, align);
-}
+auto operator new[](unsigned long) -> void*;
+
+void operator delete[](void*);
+
+void operator delete[](void*, unsigned long);
+
+void operator delete[](void*, unsigned long, std::align_val_t);
+
+[[nodiscard]]
+auto operator new[](unsigned long, std::align_val_t align) -> void*;
