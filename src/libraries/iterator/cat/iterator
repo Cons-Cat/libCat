@@ -358,12 +358,12 @@ class reverse_iterator_adaptor
     }
 
     constexpr auto
-    dereference() {
+    dereference() -> decltype(auto) {
         return m_internal_iterator.dereference();
     }
 
     constexpr auto
-    dereference() const {
+    dereference() const -> decltype(auto) {
         return m_internal_iterator.dereference();
     }
 

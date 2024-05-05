@@ -8,9 +8,9 @@
 
 TEST(test_arrays) {
     static_assert(cat::is_trivial<cat::array<int, 1u>>);
-    // Initializing a array:
-    cat::array<int4, 5u> array_1 = {0, 1, 2, 3, 4};
-    // Assigning a array:
+    // List-initializing a array:
+    cat::array array_1{0, 1, 2, 3, 4};
+    // List-assigning a array:
     array_1 = {5, 6, 7, 8, 9};
     // Default initializing a array:
     cat::array<int4, 1u> array_2;
@@ -18,7 +18,8 @@ TEST(test_arrays) {
     cat::array<int4, 1u> array_3 = {0};
     array_2 = cat::move(array_3);  // NOLINT
     // Move constructing a array:
-    auto _ = cat::move(array_1);  // NOLINT
+    [[maybe_unused]]
+    cat::array array_moved = cat::move(array_1);  // NOLINT
 
     // `const` array.
     cat::array<int4, 3u> const array_const = {0, 1, 2};
@@ -26,24 +27,23 @@ TEST(test_arrays) {
     int4 const_val = array_const.at(1).or_exit();
 
     // Repeat those tests in a constexpr context.
-    auto constant_test = []() constexpr {
+    [] consteval {
         cat::array<int4, 1u> const_array_1;
         cat::array<int4, 1u> const_array_2 = {1};
         // NOLINTNEXTLINE Just be explicit about the move here.
         auto _ = cat::move(const_array_1);
         // NOLINTNEXTLINE Just be explicit about the move here.
         auto _ = cat::move(const_array_2);
-    };
-    cat::constant_evaluate(constant_test);
+    }();
 
     // Test that the array is iterable.
     idx count = 0u;
-    for (int4& a : array_1) {
+    for (int& a : array_1) {
         cat::verify(a == array_1[count]);
         ++count;
     }
 
-    for (int4 const& a : cat::as_reverse(array_1)) {
+    for (int& a : cat::as_reverse(array_1)) {
         --count;
         cat::verify(a == array_1[count]);
     }
@@ -52,13 +52,13 @@ TEST(test_arrays) {
     cat::verify(array_1.back() == 9);
 
     count = 0u;
-    for (int4 const& a : cat::as_const(array_1)) {
+    for (int const& a : cat::as_const(array_1)) {
         cat::verify(a == array_1[count]);
         ++count;
     }
     auto _ = array_1.cbegin();
 
-    for (int4 const& a : cat::as_const_reverse(array_1)) {
+    for (int const& a : cat::as_const_reverse(array_1)) {
         --count;
         cat::verify(a == array_1[count]);
     }

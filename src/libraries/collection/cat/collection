@@ -112,7 +112,6 @@ namespace detail {
         iword m_current_index;
         T* m_p_array;
     };
-
 }  // namespace detail
 
 template <typename T>
@@ -202,7 +201,7 @@ class iterable_interface {
 
 template <typename derived_type, typename T>
 class collection_interface {
-  private:
+  protected:
     // `is_array_like` at the top of this class instead of the bottom prevents
     // clangd false-positive diagnostics.
     static constexpr bool is_array_like =
@@ -211,6 +210,9 @@ class collection_interface {
 
   public:
     using value_type = T;
+    using const_value_type = T const;
+    using reference = T&;
+    using const_reference = T const&;
 
     // If `.size()` is not, provided and `.capacity()` is, generate
     // `.size()`.
@@ -403,9 +405,8 @@ class collection_interface {
         return cat::relocate(self.begin(), self.end(), destination.begin());
     }
 
-    // Implementation details for type reflection.
-
   private:
+    // TODO: Replace these with explicit object parameters.
     constexpr auto
     self_mut() -> derived_type& {
         return static_cast<derived_type&>(*this);

@@ -5,6 +5,8 @@
 #include <cat/collection>
 #include <cat/memory>
 
+// #include <cat/initializer_list>
+
 namespace cat {
 
 // An `array` represents an array of `T` with a `constexpr` length. It stores
@@ -19,9 +21,10 @@ class array : public collection_interface<array<T, length>, T>,
     constexpr array(array<T, length>&& other_array) = default;
 
     // Construct an `array` from a variadic argument list.
+    // A parameter pack is used instead of `initializer_list` so that arguments
+    // may be moved.
     template <typename... Args>
-        requires(sizeof...(Args) == length /* &&
-													  (is_convertible<Args, T> && ...)*/)
+        requires(sizeof...(Args) == length)
     constexpr array(Args&&... arguments)
         // Explicitly converting this type allows the first argument to coerce
         // the type for following arguments.
@@ -29,23 +32,37 @@ class array : public collection_interface<array<T, length>, T>,
         : m_data(static_cast<T>(fwd(arguments))...) {
     }
 
+    // constexpr array(initializer_list<T> initializers) {
+    //     for (__SIZE_TYPE__ i = 0; i < initializers.size(); ++i) {
+    //         m_data[i] = initializers.begin() + i;
+    //     }
+    // }
+
     constexpr auto
     operator=(array<T, length> const& other_array) -> array& = default;
+
+    constexpr auto
+    operator=(array<T, length>&& other_array) -> array& = default;
 
     // Converting assignment operator.
     template <typename U>
         requires(is_convertible<U, T>)
     constexpr auto
-    operator=(this array& self, array<U, length> const& other_array) -> array& {
+    operator=(array<U, length> const& other_array) -> array& {
         // TODO: Optimize with `copy_memory()` if T and U are relocatable.
-        for (idx i = 0u; i < length; ++i) {
-            self.m_data[i.raw] = static_cast<T>(other_array[i]);
+        for (__SIZE_TYPE__ i = 0u; i < length; ++i) {
+            m_data[i] = static_cast<T>(other_array[i]);
         }
-        return self;
+        return *this;
     }
 
-    constexpr auto
-    operator=(array<T, length>&& other_array) -> array& = default;
+    // constexpr auto
+    // operator=(initializer_list<T> initializers) -> array& {
+    //     for (__SIZE_TYPE__ i = 0; i < initializers.size(); ++i) {
+    //         m_data[i] = initializers.begin()[i];
+    //     }
+    //     return *this;
+    // }
 
     // TODO: `<=>` operator.
 
