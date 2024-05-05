@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/collection>
+#include <cat/initializer_list>
 #include <cat/memory>
 #include <cat/meta>
 
@@ -29,6 +30,12 @@ class span : public collection_interface<span<T>, T>,
     constexpr span(decltype(nullptr)) : m_p_data(nullptr), m_size(0) {
     }
 
+    // Construct a span from a static `initializer_list`.
+    constexpr span(initializer_list<T> initializers)
+        requires(is_const<T>)
+        : m_p_data(initializers.begin()), m_size(initializers.size()) {
+    }
+
     // Implicitly convert a contiguous container into a span.
     template <typename U>
         requires(is_random_access<U>)
@@ -47,10 +54,17 @@ class span : public collection_interface<span<T>, T>,
     constexpr auto operator=(span<T> const&) -> span<T>& = default;
     constexpr auto operator=(span<T>&&) -> span<T>& = default;
 
-    // Get the non-`const` address that this `span` starts at.
-    [[nodiscard]]
+    // Construct a span from a static `initializer_list`.
     constexpr auto
-    data() -> T* {
+    operator=(initializer_list<T> initializers)
+        -> span<T>& requires(is_const<T>) {
+                        m_p_data = initializers.begin();
+                        m_size = initializers.size();
+                        return *this;
+                    }
+
+    // Get the non-`const` address that this `span` starts at.
+    [[nodiscard]] constexpr auto data() -> T* {
         return this->m_p_data;
     }
 
@@ -76,6 +90,9 @@ class span : public collection_interface<span<T>, T>,
     T* m_p_data;
     idx m_size;
 };
+
+template <typename T>
+span(initializer_list<T>) -> span<T const>;
 
 // Create a span between two addresses.
 template <typename T>
