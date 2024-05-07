@@ -2,6 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/bit>
+
 // The Intel-style SIMD syntax is completely arbitrary in GCC. GNU implemented
 // it with wrapper libraries around their own more basic, arguably more
 // reasonable, compiler intrinsics which already understand arithmetic
@@ -117,17 +119,9 @@ class alignas(in_abi::alignment.raw) simd {
     constexpr simd(unaligned_vector operand) : raw(operand.raw) {
     }
 
-    constexpr simd(unaligned_vector&& operand) : raw(fwd(operand.raw)) {
-    }
-
     [[gnu::artificial]]
-    inline constexpr simd(raw_type const& values)
+    inline constexpr simd(raw_type values)
         : raw(values) {
-    }
-
-    [[gnu::artificial]]
-    inline constexpr simd(raw_type&& values)
-        : raw(mov values) {
     }
 
     // Construct all lanes as `value`.
@@ -179,13 +173,10 @@ class alignas(in_abi::alignment.raw) simd {
             this->raw, typename simd<other_abi_type, U>::raw_type);
     }
 
-    // Copy-assign the raw value of a `simd` to this.
-    constexpr auto operator=(type const& operand) -> type& = default;
-
-    // Move-assign the raw value of another `simd` into this.
+    // Assign the raw value of another `simd` into this.
     constexpr auto
-    operator=(type&& operand) -> type& {
-        this->raw = move(operand).raw;
+    operator=(type operand) -> type& {
+        this->raw = operand.raw;
         return *this;
     }
 
@@ -419,14 +410,16 @@ class alignas(in_abi::alignment.raw) simd {
 
     template <typename U>
         requires(is_convertible<U, scalar_type>)
+    // This impedes correct codegen.
+    [[gnu::no_sanitize_address, gnu::no_sanitize_undefined]]
     constexpr auto
     fill(U value) -> type& {
         scalar_type fill_value = static_cast<scalar_type>(value);
         if constexpr (lanes == 2u) {
-            this->raw = raw_type(fill_value, fill_value);
+            this->raw = raw_type{fill_value, fill_value};
         } else if constexpr (lanes == 4u) {
             this->raw =
-                raw_type(fill_value, fill_value, fill_value, fill_value);
+                raw_type{fill_value, fill_value, fill_value, fill_value};
         } else if constexpr (lanes == 8u) {
             this->raw =
                 raw_type{fill_value, fill_value, fill_value, fill_value,
@@ -438,14 +431,14 @@ class alignas(in_abi::alignment.raw) simd {
                          fill_value, fill_value, fill_value, fill_value,
                          fill_value, fill_value, fill_value, fill_value};
         } else if constexpr (lanes == 32u) {
-            *this = raw_type{fill_value, fill_value, fill_value, fill_value,
-                             fill_value, fill_value, fill_value, fill_value,
-                             fill_value, fill_value, fill_value, fill_value,
-                             fill_value, fill_value, fill_value, fill_value,
-                             fill_value, fill_value, fill_value, fill_value,
-                             fill_value, fill_value, fill_value, fill_value,
-                             fill_value, fill_value, fill_value, fill_value,
-                             fill_value, fill_value, fill_value, fill_value};
+            this->raw = raw_type{
+                fill_value, fill_value, fill_value, fill_value, fill_value,
+                fill_value, fill_value, fill_value, fill_value, fill_value,
+                fill_value, fill_value, fill_value, fill_value, fill_value,
+                fill_value, fill_value, fill_value, fill_value, fill_value,
+                fill_value, fill_value, fill_value, fill_value, fill_value,
+                fill_value, fill_value, fill_value, fill_value, fill_value,
+                fill_value, fill_value};
         }
         return *this;
     }
@@ -549,10 +542,7 @@ class alignas(in_abi::template make_abi_type<bool>::alignment.raw) simd_mask {
 
     constexpr simd_mask(simd_mask<in_abi, T>&& operand) = default;
 
-    constexpr simd_mask(raw_type const& value) : raw(value) {
-    }
-
-    constexpr simd_mask(raw_type&& value) : raw(move(value)) {
+    constexpr simd_mask(raw_type value) : raw(value) {
     }
 
     // Construct all lanes as `value`.

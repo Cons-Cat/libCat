@@ -47,10 +47,11 @@ void copy_memory_small(void const* p_source, void* p_destination, uword bytes);
 
 template <typename T = unsigned char>
     requires(sizeof(T) <= 8)
+[[clang::no_builtin]]
 constexpr void
 set_memory_scalar(T* p_source, T value, uword size) {
-    for (uword i = 0u; i < size; ++i) {
-        *(static_cast<T*>(p_source) + i) = value;
+    for (uword::raw_type i = 0u; i < size; ++i) {
+        p_source[i] = value;
     }
 }
 
@@ -76,7 +77,7 @@ zero_memory_scalar_explicit(void* p_source, uword bytes) {
 namespace detail {
     // Type-erased `set_memory` function.
     template <typename T>
-    [[gnu::optimize("-fno-tree-loop-distribute-patterns"),
+    [[gnu::optimize("-fno-tree-loop-distribute-patterns"), clang::no_builtin,
       gnu::no_sanitize_address]]
     // `tree-loop-distribute-patterns` is an optimization that replaces this
     // code with a call to `memset`. `memset` itself calls this function,

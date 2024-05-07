@@ -359,7 +359,7 @@ namespace detail {
                                      // `[[likely]]`
                                      // improves performance here.
                 this->arguments_indices[argument_index.raw + 1].byte_index =
-                    storage_index.raw + sizeof(T);
+                    storage_index.raw + ssizeof(T);
             }
 
             ++argument_index;
