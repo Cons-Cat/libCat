@@ -501,13 +501,16 @@ namespace detail {
 // `arithmetic` can represent an integer or floating point value. It prevents
 // unsafe casts or operations. This is a trivial `struct` so it can be used as a
 // non-type template parameter.
-template <typename T, overflow_policies policy = overflow_policies::undefined>
+template <typename T,
+          overflow_policies overflow_policy = overflow_policies::undefined>
 struct arithmetic :
     // Generate `.raw`, `.wrap`, `.sat`, etc.
-    detail::arithmetic_storage<T, policy>,
+    detail::arithmetic_storage<T, overflow_policy>,
     // Generate arithmetic operators.
-    arithmetic_interface<arithmetic<T, policy>> {
+    arithmetic_interface<arithmetic<T, overflow_policy>> {
     using raw_type = T;
+
+    static constexpr overflow_policies policy = overflow_policy;
 
     constexpr arithmetic() = default;
 
@@ -558,14 +561,16 @@ struct arithmetic :
     add(U other) const -> detail::promoted_type<arithmetic, U> {
         using enum overflow_policies;
         auto raw_other = make_raw_arithmetic(other);
-        if constexpr (policy == undefined) {
+        if constexpr (overflow_policy == undefined) {
             // Make signed to guarantee undefined semantics (unless `U` is
             // floating point).
             return detail::promoted_type<arithmetic, U>(make_signed(this->raw) +
                                                         make_signed(raw_other));
-        } else if constexpr (policy == wrap || policy == wrap_member) {
+        } else if constexpr (overflow_policy == wrap ||
+                             overflow_policy == wrap_member) {
             return wrap_add(this->raw, raw_other);
-        } else if constexpr (policy == saturate || policy == saturate_member) {
+        } else if constexpr (overflow_policy == saturate ||
+                             overflow_policy == saturate_member) {
             return sat_add(this->raw, raw_other);
         }
     }
@@ -575,7 +580,7 @@ struct arithmetic :
     subtract_by(U operand) const -> detail::promoted_type<arithmetic, U> {
         using enum overflow_policies;
         auto raw_operand = make_raw_arithmetic(operand);
-        if constexpr (policy == undefined) {
+        if constexpr (overflow_policy == undefined) {
             // TODO: See if using `[[gnu::assume(())]]` actually optimizes
             // this.
             if constexpr (is_unsigned<T>) {
@@ -587,9 +592,11 @@ struct arithmetic :
                 raw_arithmetic_type<detail::promoted_type<arithmetic, U>>;
             return promoted_raw(static_cast<promoted_raw>(this->raw) -
                                 static_cast<promoted_raw>(raw_operand));
-        } else if constexpr (policy == wrap || policy == wrap_member) {
+        } else if constexpr (overflow_policy == wrap ||
+                             overflow_policy == wrap_member) {
             return wrap_sub(this->raw, raw_operand);
-        } else if constexpr (policy == saturate || policy == saturate_member) {
+        } else if constexpr (overflow_policy == saturate ||
+                             overflow_policy == saturate_member) {
             return sat_sub(this->raw, raw_operand);
         }
     }
@@ -606,7 +613,7 @@ struct arithmetic :
     multiply(U operand) const -> detail::promoted_type<arithmetic, U> {
         using enum overflow_policies;
         auto raw_operand = make_raw_arithmetic(operand);
-        if constexpr (policy == overflow_policies::undefined) {
+        if constexpr (overflow_policy == overflow_policies::undefined) {
             // TODO: See if using `[[gnu::assume(())]]` actually optimizes
             // this.
             if constexpr (is_unsigned<T>) {
@@ -618,9 +625,11 @@ struct arithmetic :
                 raw_arithmetic_type<detail::promoted_type<arithmetic, U>>;
             return promoted_raw(static_cast<promoted_raw>(this->raw) *
                                 static_cast<promoted_raw>(raw_operand));
-        } else if constexpr (policy == wrap || policy == wrap_member) {
+        } else if constexpr (overflow_policy == wrap ||
+                             overflow_policy == wrap_member) {
             return wrap_mul(this->raw, raw_operand);
-        } else if constexpr (policy == saturate || policy == saturate_member) {
+        } else if constexpr (overflow_policy == saturate ||
+                             overflow_policy == saturate_member) {
             return sat_mul(this->raw, raw_operand);
         }
     }
@@ -630,14 +639,16 @@ struct arithmetic :
     divide_by(U operand) const -> detail::promoted_type<arithmetic, U> {
         using enum overflow_policies;
         auto raw_operand = make_raw_arithmetic(operand);
-        if constexpr (policy == undefined) {
+        if constexpr (overflow_policy == undefined) {
             using promoted_raw =
                 raw_arithmetic_type<detail::promoted_type<arithmetic, U>>;
             return promoted_raw(static_cast<promoted_raw>(this->raw) /
                                 static_cast<promoted_raw>(raw_operand));
-        } else if constexpr (policy == wrap || policy == wrap_member) {
+        } else if constexpr (overflow_policy == wrap ||
+                             overflow_policy == wrap_member) {
             return wrap_mul(this->raw, raw_operand);
-        } else if constexpr (policy == saturate || policy == saturate_member) {
+        } else if constexpr (overflow_policy == saturate ||
+                             overflow_policy == saturate_member) {
             return sat_mul(this->raw, raw_operand);
         }
     }
@@ -799,7 +810,7 @@ struct arithmetic :
     [[nodiscard]]
     friend constexpr auto
     operator<<(arithmetic self, U operand) -> arithmetic<T> {
-        if constexpr (policy == overflow_policies::saturate) {
+        if constexpr (overflow_policy == overflow_policies::saturate) {
             return sat_shl(make_raw_arithmetic(self),
                            make_raw_arithmetic(operand));
         } else {
@@ -840,7 +851,7 @@ struct arithmetic :
     friend constexpr auto
     operator>>(arithmetic self, U operand) -> arithmetic<T> {
         auto raw_operand = make_raw_arithmetic(operand);
-        if constexpr (policy == overflow_policies::saturate) {
+        if constexpr (overflow_policy == overflow_policies::saturate) {
             return sat_shr(self.raw, raw_operand);
         } else {
             return arithmetic<T>{self.raw >> raw_operand};
@@ -876,12 +887,12 @@ struct arithmetic :
     }
 
     static constexpr auto
-    min() -> arithmetic<raw_type, policy> {
+    min() -> arithmetic<raw_type, overflow_policy> {
         return limits<raw_type>::min();
     }
 
     static constexpr auto
-    max() -> arithmetic<raw_type, policy> {
+    max() -> arithmetic<raw_type, overflow_policy> {
         return limits<raw_type>::max();
     }
 
@@ -894,12 +905,14 @@ struct arithmetic :
 // integers. It satisfies the `is_integral` type trait and
 // `is_integral` concept.
 template <typename T, typename storage_type,
-          overflow_policies policy = overflow_policies::undefined>
+          overflow_policies overflow_policy = overflow_policies::undefined>
 struct arithmetic_ptr
-    : detail::arithmetic_storage<storage_type, policy>,
-      arithmetic_interface<arithmetic_ptr<T, storage_type, policy>> {
+    : detail::arithmetic_storage<storage_type, overflow_policy>,
+      arithmetic_interface<arithmetic_ptr<T, storage_type, overflow_policy>> {
     using raw_type = storage_type;
     using ptr = T*;
+
+    static constexpr overflow_policies policy = overflow_policy;
 
     // These must be declared explicitly.
     constexpr arithmetic_ptr() = default;
@@ -1114,13 +1127,13 @@ struct arithmetic_ptr
     [[nodiscard]]
     consteval auto
     min() -> arithmetic_ptr {
-        return limits<arithmetic_ptr<T, storage_type, policy>>::min();
+        return limits<arithmetic_ptr<T, storage_type, overflow_policy>>::min();
     }
 
     [[nodiscard]]
     consteval auto
     max() -> arithmetic_ptr {
-        return limits<arithmetic_ptr<T, storage_type, policy>>::max();
+        return limits<arithmetic_ptr<T, storage_type, overflow_policy>>::max();
     }
 };
 
@@ -1213,13 +1226,15 @@ operator|=(T* p_lhs, arithmetic<U> rhs) -> T* {
     return p_lhs;
 }
 
-template <overflow_policies policy = overflow_policies::undefined>
+template <overflow_policies overflow_policy = overflow_policies::undefined>
 struct index :
     // Generate `.raw`, `.wrap`, `.sat`, etc.
-    detail::arithmetic_storage<__SIZE_TYPE__, policy>,
+    detail::arithmetic_storage<__SIZE_TYPE__, overflow_policy>,
     // Generate arithmetic operators.
-    arithmetic_interface<index<policy>> {
+    arithmetic_interface<index<overflow_policy>> {
     using raw_type = __SIZE_TYPE__;
+
+    static constexpr overflow_policies policy = overflow_policy;
 
     constexpr index() = default;
 
@@ -1324,7 +1339,7 @@ struct index :
     constexpr auto
     subtract_by(index other) const
         // Return an `iword`.
-        -> arithmetic<make_signed_type<__SIZE_TYPE__>, policy> {
+        -> arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policy> {
         return iword(this->raw) - make_raw_arithmetic(other);
     }
 
@@ -1418,13 +1433,13 @@ struct index :
     [[nodiscard]]
     consteval auto
     min() -> index {
-        return limits<index<policy>>::min();
+        return limits<index<overflow_policy>>::min();
     }
 
     [[nodiscard]]
     consteval auto
     max() -> index {
-        return limits<index<policy>>::max();
+        return limits<index<overflow_policy>>::max();
     }
 };
 
