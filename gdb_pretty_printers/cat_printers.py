@@ -41,5 +41,38 @@ class MonostatePrinter:
         return 'monostate'
 
 
+@cat_type('arithmetic')
+class ArithmeticPrinter:
+    "Print a `cat::arithmetic`"
+
+    def __init__(self, val):
+        self.raw = val['raw']
+
+        type = val.type.strip_typedefs().name
+        untyped_policy = type[-2:-1]
+        typed_policy = gdb.Value(int(untyped_policy)).cast(
+            gdb.lookup_type('cat::overflow_policies')
+        )
+        stripped_policy = str(typed_policy)[24:]
+        match stripped_policy:
+            case 'undefined':
+                self.policy = 'undefined'
+            case 'wrap' | 'wrap_member':
+                self.policy = 'wrap'
+            case 'saturate' | 'sat_member':
+                self.policy = 'sat'
+            case 'trap' | 'trap_member':
+                self.policy = 'trap'
+            case _:
+                self.policy = 'WTF'
+
+        return
+
+    def to_string(self):
+        if self.policy == 'undefined':
+            return str(self.raw)
+        return str(self.raw) + ' (' + self.policy + ')'
+
+
 # At the end of the script, register all `cat_pretty_printers` simultaneously.
 gdb.printing.register_pretty_printer(None, cat_pretty_printers, replace=True)
