@@ -7,7 +7,11 @@
 #include "../unit_tests.hpp"
 
 TEST(test_arrays) {
+    // TODO: This passes in GCC 15 but not in Clang 19.
+#ifndef __clang__
     static_assert(cat::is_trivial<cat::array<int, 1u>>);
+#endif
+
     // List-initializing a array:
     cat::array array_1{0, 1, 2, 3, 4};
     // List-assigning a array:

@@ -43,7 +43,7 @@ class span : public collection_interface<span<T>, T>,
         : m_p_data(collection.data()), m_size(collection.size()) {
     }
 
-    // If `T` is non-const, conversion to a `const` contiguous container is
+    // If `T` is non-`const`, conversion to a `const` contiguous container is
     // explicit.
     template <typename U>
         requires(is_random_access<U>)

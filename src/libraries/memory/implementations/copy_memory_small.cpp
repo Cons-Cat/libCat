@@ -4,7 +4,8 @@
 // `tree-loop-distribute-patterns` is an optimization that replaces this code
 // with a call to `memcpy`. As this function is called within `memcpy`, that
 // produces an infinite loop.
-[[gnu::optimize("-fno-tree-loop-distribute-patterns")]]
+[[gnu::optimize("-fno-tree-loop-distribute-patterns"),
+  clang::no_builtin("memcpy")]]
 void
 cat::copy_memory_small(void const* p_source, void* p_destination, uword bytes) {
     unsigned char const* p_source_handle =

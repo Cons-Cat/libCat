@@ -516,13 +516,13 @@ struct arithmetic :
     template <is_arithmetic U>
     constexpr explicit(!is_safe_arithmetic_conversion<U, T>)
         arithmetic(U other) {
-        this->raw = make_raw_arithmetic(other);
+        this->raw = static_cast<T>(make_raw_arithmetic(other));
     }
 
     template <typename U>
     constexpr explicit
     operator U() const {
-        return U(this->raw);
+        return static_cast<U>(this->raw);
     }
 
     template <is_arithmetic U>
@@ -583,8 +583,10 @@ struct arithmetic :
                 // NOLINTNEXTLINE This is a C++23 feature.
                 // [[gnu::assume((this->raw >= operand))]];
             }
-            return detail::promoted_type<arithmetic, U>{this->raw -
-                                                        raw_operand};
+            using promoted_raw =
+                raw_arithmetic_type<detail::promoted_type<arithmetic, U>>;
+            return promoted_raw(static_cast<promoted_raw>(this->raw) -
+                                static_cast<promoted_raw>(raw_operand));
         } else if constexpr (policy == wrap || policy == wrap_member) {
             return wrap_sub(this->raw, raw_operand);
         } else if constexpr (policy == saturate || policy == saturate_member) {
@@ -612,8 +614,10 @@ struct arithmetic :
                 // Assume there is no overflow.
                 // [[gnu::assume((this->raw >= operand))]];
             }
-            return detail::promoted_type<arithmetic, U>{this->raw *
-                                                        raw_operand};
+            using promoted_raw =
+                raw_arithmetic_type<detail::promoted_type<arithmetic, U>>;
+            return promoted_raw(static_cast<promoted_raw>(this->raw) *
+                                static_cast<promoted_raw>(raw_operand));
         } else if constexpr (policy == wrap || policy == wrap_member) {
             return wrap_mul(this->raw, raw_operand);
         } else if constexpr (policy == saturate || policy == saturate_member) {
@@ -627,8 +631,10 @@ struct arithmetic :
         using enum overflow_policies;
         auto raw_operand = make_raw_arithmetic(operand);
         if constexpr (policy == undefined) {
-            return detail::promoted_type<arithmetic, U>{this->raw /
-                                                        raw_operand};
+            using promoted_raw =
+                raw_arithmetic_type<detail::promoted_type<arithmetic, U>>;
+            return promoted_raw(static_cast<promoted_raw>(this->raw) /
+                                static_cast<promoted_raw>(raw_operand));
         } else if constexpr (policy == wrap || policy == wrap_member) {
             return wrap_mul(this->raw, raw_operand);
         } else if constexpr (policy == saturate || policy == saturate_member) {
@@ -641,7 +647,10 @@ struct arithmetic :
         requires(is_safe_arithmetic_comparison<U, T>)
     constexpr auto
     divide_into(U operand) -> detail::promoted_type<arithmetic, U> {
-        return detail::promoted_type<arithmetic, U>(operand / this->raw);
+        using promoted_raw =
+            raw_arithmetic_type<detail::promoted_type<arithmetic, U>>;
+        return promoted_raw(static_cast<promoted_raw>(operand) /
+                            static_cast<promoted_raw>(this->raw));
     }
 
     // Generate `operator~`.
@@ -802,7 +811,7 @@ struct arithmetic :
     [[nodiscard]]
     friend constexpr auto
     operator<<(U lhs, arithmetic rhs) -> U {
-        return lhs << rhs.raw;
+        return lhs << static_cast<int>(rhs.raw);
     }
 
     template <typename U>
@@ -1222,7 +1231,7 @@ struct index :
             assert(make_unsigned(make_raw_arithmetic(other)) <=
                    limits<index>::max());
         }
-        this->raw = make_raw_arithmetic(other);
+        this->raw = static_cast<__SIZE_TYPE__>(other);
     }
 
     // `index` allows implicit unsafe conversions from `unsigned long` r-values
@@ -1244,7 +1253,7 @@ struct index :
     }
 
     // `index` can safely implictly convert into `iword` or `intptr`.
-    template <is_safe_integral U>
+    template <is_integral U>
     // `uword` and `uintptr` can implicitly construct from `index`, so a
     // conversion operator to them would be ambiguous.
     // `raw_arithmetic_type` fixes a Clang error here.
@@ -1252,6 +1261,12 @@ struct index :
     // Conversions to signed integers smaller than `index` are explicit.
     constexpr explicit(sizeof(raw_type) > sizeof(U)) operator U() const {
         return static_cast<U>(this->raw);
+    }
+
+    // `index` can explicitly convert into `__SIZE_TYPE__`.
+    constexpr explicit
+    operator __SIZE_TYPE__() const {
+        return this->raw;
     }
 
     // Any integral type smaller than `raw_type` can safely be assigned to
@@ -1284,7 +1299,7 @@ struct index :
     template <is_integral T>
     constexpr auto
     add(T other) const -> index {
-        return index(this->raw + make_raw_arithmetic(other));
+        return index(this->raw + static_cast<__SIZE_TYPE__>(other));
     }
 
     // Generate `operator+` for pointer arithmetic.
@@ -1294,17 +1309,21 @@ struct index :
         return p_other + this->raw;
     }
 
+    // TODO: All `index` subtractions should return `iword`.
+    //
     // Generate `operator-`.
     template <is_integral T>
     constexpr auto
     subtract_by(T other) const -> index {
-        return index(this->raw - make_raw_arithmetic(other));
+        return index(static_cast<signed long long>(this->raw) -
+                     static_cast<signed long long>(make_raw_arithmetic(other)));
     }
 
     // Subtracting two indices should produce a signed integer.
     template <is_integral T>
     constexpr auto
     subtract_by(index other) const
+        // Return an `iword`.
         -> arithmetic<make_signed_type<__SIZE_TYPE__>, policy> {
         return iword(this->raw) - make_raw_arithmetic(other);
     }
@@ -1326,7 +1345,8 @@ struct index :
     template <is_integral T>
     constexpr auto
     multiply(T other) const -> index {
-        return index(this->raw * make_raw_arithmetic(other));
+        return index(static_cast<signed long long>(this->raw) *
+                     static_cast<signed long long>(make_raw_arithmetic(other)));
     }
 
     // Generate `operator*` for pointer arithmetic.
@@ -1340,13 +1360,15 @@ struct index :
     template <is_integral T>
     constexpr auto
     divide_by(T other) const -> index {
-        return index(this->raw / make_raw_arithmetic(other));
+        return index(static_cast<signed long long>(this->raw) /
+                     static_cast<signed long long>(make_raw_arithmetic(other)));
     }
 
     template <is_integral T>
     constexpr auto
     divide_into(T other) const -> index {
-        return index(make_raw_arithmetic(other) / this->raw);
+        return index(static_cast<signed long long>(make_raw_arithmetic(other)) /
+                     static_cast<signed long long>(this->raw));
     }
 
     // Generate `operator/` for pointer arithmetic.

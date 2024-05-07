@@ -14,10 +14,18 @@ namespace {
 ]]
 void
 call_main() {
+    // These `register` variables must be uninitialized to load from the stack.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wuninitialized"
+    [[clang::uninitialized]]
     register int argc asm("rdi");
+
+    [[clang::uninitialized]]
     register char** p_argv asm("rsi");
-    cat::exit(main(argc, p_argv));  // NOLINT
+
+    cat::exit(main(argc, p_argv));
     __builtin_unreachable();
+#pragma clang diagnostic pop
 }
 
 }  // namespace

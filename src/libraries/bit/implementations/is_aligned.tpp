@@ -4,6 +4,8 @@
 
 #include <cat/bit>
 
+// TODO: Guarantee that the inputs have only a single bit set.
+
 // Returns `true` if `p_value` is aligned to the `alignment` boundary.
 template <typename U>
 [[nodiscard]]

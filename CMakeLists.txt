@@ -2,7 +2,11 @@ cmake_minimum_required(VERSION 3.24)
 
 project(cat LANGUAGES CXX)
 
-option(CAT_USE_SANITIZERS "Link ASan and UBSan" ON)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  option(CAT_USE_SANITIZERS "Link ASan and UBSan. This doesn't work in Clang." OFF)
+else()
+  option(CAT_USE_SANITIZERS "Link ASan and UBSan" ON)
+endif()
 
 list(
   APPEND CAT_COMPILE_OPTIONS_COMMON
@@ -12,6 +16,7 @@ list(
   -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
   # `global_includes.hpp` must be available everywhere.
   -include global_includes.hpp
+
   # Enable CPU intrinsics:
   -msse4.2
   -mavx2
@@ -25,8 +30,11 @@ list(
   -Wall -Wextra
   -Wno-unused-function
   -Wno-unknown-pragmas
-  # Disable some Clang warnings. libCat needs to violate these.
+  # Both GCC and Clang attributes are used.
+  # See p2565 "Supporting User-Defined Attributes"
+  $<$<CXX_COMPILER_ID:GNU>:-Wno-attributes>
   $<$<CXX_COMPILER_ID:Clang>:-Wno-unknown-attributes>
+  # Disable some Clang warnings. libCat needs to violate these.
   $<$<CXX_COMPILER_ID:Clang>:-Wno-unqualified-std-cast-call>
   $<$<CXX_COMPILER_ID:Clang>:-Wno-main>
   # This produces many false positives in Clang 17.
@@ -35,21 +43,22 @@ list(
 
 if(CAT_USE_SANITIZERS)
     list(
-    APPEND CAT_COMPILE_OPTIONS_COMMON
+     APPEND CAT_COMPILE_OPTIONS_COMMON
     -fno-omit-frame-pointer # Required for UBsan.
     -fsanitize=undefined
     -fsanitize=address
 
     # Asan stack overflow checking does not work in libCat.
-    # TODO: Explain why.
- $<$<CXX_COMPILER_ID:GNU>:--param asan-stack=0>
- $<$<CXX_COMPILER_ID:Clang>:-mllvm -asan-stack=0>
+    # TODO: Explain why. It has something to do with GLibC runtime.
+    $<$<CXX_COMPILER_ID:GNU>:--param asan-stack=0>
+    $<$<CXX_COMPILER_ID:Clang>:-mllvm -asan-stack=0>
   )
 endif()
 
 list(
   APPEND CAT_COMPILE_OPTIONS_DEBUG
   -ggdb3 -pipe
+  $<$<CXX_COMPILER_ID:Clang>:-glldb -gmodules>
 )
 
 list(
@@ -57,7 +66,8 @@ list(
   # Remove unused symbols.
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
-  -flto=auto -fwhole-file -fno-plt
+  -flto=auto -fno-plt
+  $<$<CXX_COMPILER_ID:GNU>:-fwhole-file>
 )
 
 list(
@@ -76,8 +86,8 @@ list(
 
 list(
   APPEND CAT_LINK_OPTIONS_COMMON
-  # This is required to prevent linking 4 kibibytes of unnecessary symbols.
-  -nostdlib
+  # This is required to prevent duplicate symbols.
+  -nostdlib  
 )
 
 list(
@@ -97,13 +107,19 @@ list(
 add_library(cat INTERFACE)
 
 # Everything building with `cat` should be at least C++26, with GNU extensions.
-# TODO: GCC 14 does not recognize this flag.
+
+# This is broken for Clang 19 until CMake 3.29.2
 # target_compile_features(cat INTERFACE cxx_std_26)
-target_compile_options(cat INTERFACE "-std=gnu++2c")
+target_compile_options(cat INTERFACE "-std=gnu++26")
 
 # Link the address and undefined behavior sanitizers.
 if(CAT_USE_SANITIZERS)
-    target_link_libraries(
+  target_link_options(cat INTERFACE
+    -fsanitize=address
+    -fsanitize=undefined
+  )
+  
+  target_link_libraries(
     cat INTERFACE
     asan
     ubsan
@@ -113,9 +129,7 @@ endif()
 target_compile_options(cat INTERFACE ${CAT_COMPILE_OPTIONS})
 target_link_options(cat INTERFACE ${CAT_LINK_OPTIONS})
 
-# This is required to link `hello` with lld or mold, but not ld.
-# This is also required to use SIMD intrinsics, even with ld.
-# This adds superfluous code to Hello World.
+# TODO: Implement these symbols in libCat directly.
 target_link_libraries(cat INTERFACE gcc_s)
 
 # `src/CMakeLists.txt` adds all of the source and headers files to `cat`.

@@ -5,9 +5,9 @@ break cat::default_assert_handler
 break test_fail
 
 # Skip stepping into uninteresting code.
-skip file meta
-skip file numerals
-skip file utility
-skip file notype
-skip file bit
-skip file compare
+# skip file meta
+# skip file numerals
+# skip file utility
+# skip file notype
+# skip file bit
+# skip file compare
