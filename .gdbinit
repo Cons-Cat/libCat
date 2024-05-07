@@ -4,6 +4,8 @@ break exit
 break cat::default_assert_handler
 break test_fail
 
+source /home/conscat/src/libcat/gdb_pretty_printers/cat_printers.py
+
 # Skip stepping into uninteresting code.
 # skip file meta
 # skip file numerals
