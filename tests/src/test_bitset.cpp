@@ -41,17 +41,17 @@ TEST(test_bitset) {
     cat::verify(bits7_2.none_of());
     cat::verify(!bits7_2.any_of());
 
-    bits7_2 = cat::bitset<7u>::from(0b01111111_u1);
+    bits7_2 = cat::bitset<7u>::from(0b0111'1111_u1);
     cat::verify(bits7_2.all_of());
     cat::verify(!bits7_2.none_of());
     cat::verify(bits7_2.any_of());
 
-    bits7_2 = cat::bitset<7u>::from(0b01000000_u1);
+    bits7_2 = cat::bitset<7u>::from(0b0100'0000_u1);
     cat::verify(!bits7_2.all_of());
     cat::verify(!bits7_2.none_of());
     cat::verify(bits7_2.any_of());
 
-    bits7_2 = cat::bitset<7u>::from(0b10000000_u1);
+    bits7_2 = cat::bitset<7u>::from(0b1000'0000_u1);
     cat::verify(!bits7_2.all_of());
     cat::verify(!bits7_2.none_of());
     cat::verify(bits7_2.any_of());
@@ -83,13 +83,13 @@ TEST(test_bitset) {
 
     // Test const subscripting.
     constexpr cat::bitset<15u> bits15 =
-        cat::bitset<15u>::from(0b0101010101010100_u2);
+        cat::bitset<15u>::from(0b0101'0101'0101'0100_u2);
     static_assert(!bits15[0u]);
     static_assert(bits15[1u]);
     static_assert(!bits15[2u]);
 
     constexpr cat::bitset<15u> bits15_2 =
-        cat::bitset<15u>::from(0b1010101010101010_u2);
+        cat::bitset<15u>::from(0b1010'1010'1010'1010_u2);
     static_assert(bits15_2[0u]);
     static_assert(!bits15_2[1u]);
     static_assert(bits15_2[2u]);
@@ -116,7 +116,7 @@ TEST(test_bitset) {
     static_assert(bits127_2[126u]);
 
     // Test mutable subscript.
-    bits127 = cat::bitset<127u>::from(cat::uint8_max >> 2u, 0b00000100_u8);
+    bits127 = cat::bitset<127u>::from(cat::uint8_max >> 2u, 0b0000'0100_u8);
 
     cat::verify(!bits127[0u]);
     cat::verify(bits127[1u]);

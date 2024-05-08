@@ -26,7 +26,7 @@ BreakBeforeInlineASMColon: Always
 IntegerLiteralSeparator:
   Binary: 4
   Decimal: 3
-  Hex: -1
+  Hex: 8
   
 # These are clang-format 17 features:
 
