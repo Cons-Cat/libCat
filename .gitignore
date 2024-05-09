@@ -6,4 +6,5 @@ compile_commands.json
 .cmake/
 Testing/
 CMakeFiles/
+.gdb_history
 .dir-locals-*.el
