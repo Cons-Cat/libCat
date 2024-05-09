@@ -1131,7 +1131,7 @@ struct file_status {
 
   private:
     [[maybe_unused]]
-    cat::uint4 m_padding;
+    cat::uint4 _;
 
   public:
     cat::uint8 rdev;
@@ -1150,7 +1150,7 @@ struct file_status {
 
   private:
     [[maybe_unused]]
-    cat::int4 m_unused[3];
+    cat::int4 _[3];
 };
 
 // `process` handles an asynchronous task multitasked by the Linux kernel.
