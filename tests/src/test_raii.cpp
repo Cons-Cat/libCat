@@ -6,24 +6,24 @@
 
 int4 raii_counter = 0;
 
-struct Foo {
+struct type {
     cat::string data;
 
-    Foo() = default;
+    type() = default;
 
-    Foo(cat::string string) : data(mov string) {
+    type(cat::string string) : data(mov string) {
         // auto _ = cat::print(data);
         // auto _ = cat::println(" constructor");
     }
 
     // NOLINTNEXTLINE This is a non-trivial destructor.
-    ~Foo() {
+    ~type() {
         // auto _ = cat::print("~");
         // auto _ = cat::println(this->data);
     }
 
     auto
-    operator=(cat::string string) -> Foo& {
+    operator=(cat::string string) -> type& {
         this->data = mov string;
         return *this;
     }
@@ -37,18 +37,18 @@ struct Foo {
 };
 
 // NOLINTNEXTLINE
-void pass_by_value(cat::unique_weak<Foo>){};
+void pass_by_value(cat::unique_weak<type>){};
 
 TEST(test_raii) {
     // TODO: Fix `unique` and re-enable these tests.
     // auto _ = cat::println("Construct objects.");
     // Test constructor.
-    cat::unique_weak<Foo> foo(cat::string("foo"));
+    cat::unique_weak<type> foo(cat::string("foo"));
     // Test assignment.
     foo = cat::string("foo");
     cat::verify(foo.has_ownership());
 
-    cat::unique_weak<Foo> moo(cat::string("moo"));
+    cat::unique_weak<type> moo(cat::string("moo"));
     cat::verify(moo.has_ownership());
 
     // Test move-assignment.
@@ -65,7 +65,7 @@ TEST(test_raii) {
     // func(foo);
 
     // Default construct `	cat::unique<Foo>`.
-    cat::unique_weak<Foo> goo;
+    cat::unique_weak<type> goo;
     cat::verify(goo.has_ownership());
     // Extract goo.
     auto _ = goo.borrow();
