@@ -48,6 +48,7 @@ CheckOptions:
   - { key: readability-identifier-naming.LocalPointerPrefix,      value: p_ }
   - { key: readability-identifier-naming.LocalConstantPointerPrefix,     value: p_ }
   - { key: readability-identifier-naming.PrivateMemberPrefix,     value: m_ }
+  - { key: readability-identifier-naming.PrivateMemberIgnoredRegexp,     value: '_' }
   - { key: readability-identifier-length.IgnoredParameterNames,   value: '[tuxy]' }
   - { key: readability-identifier-naming.TemplateParameterIgnoredRegexp, value: '[A-Z]' }
   - { key: readability-identifier-naming.TypeAliasIgnoredRegexp,  value: '[A-Z]' }

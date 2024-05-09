@@ -206,7 +206,7 @@ struct [[gnu::packed]] event_mask {
     bool property_change = false;
     bool colormap_change = false;
     bool owner_grab_button = false;
-    unsigned padding : 7 = 0u;
+    unsigned _ : 7 = 0u;
 };
 
 struct error_code {
@@ -239,7 +239,7 @@ struct error_code {
 
   private:
     [[maybe_unused]]
-    cat::uint1 m_padding[21];
+    cat::uint1 _[21];
 
   public:
     cat::uint4 full_sequence;
@@ -266,7 +266,7 @@ struct event {
 
   private:
     [[maybe_unused]]
-    cat::uint1 m_padding[23];
+    cat::uint1 _[23];
 
   public:
     cat::uint4 full_sequence;
@@ -294,7 +294,7 @@ struct server_reply_header {
 
   private:
     [[maybe_unused]]
-    cat::int1 m_padding;
+    cat::int1 _;
 
   public:
     // This field is only initialized if `success_code_type` is `failed`.
@@ -309,7 +309,7 @@ struct connection_request_info {
 
   private:
     [[maybe_unused]]
-    cat::int1 m_padding_1;
+    cat::int1 _;
 
   public:
     // This should almost always be `{11, 0}`.
@@ -322,7 +322,7 @@ struct connection_request_info {
 
   private:
     [[maybe_unused]]
-    cat::int2 m_padding_2;
+    cat::int2 _;
 };
 
 struct connection_response_info {
@@ -357,7 +357,7 @@ struct connection_response_info {
 
   private:
     [[maybe_unused]]
-    cat::int4 m_padding;
+    cat::int4 _;
 };
 
 struct pixel_map_format_packet {
@@ -367,7 +367,7 @@ struct pixel_map_format_packet {
 
   private:
     [[maybe_unused]]
-    cat::uint1 m_padding[5];  // NOLINT
+    cat::uint1 _[5];
 };
 
 // There is one root window per screen, so multiple `root_window_packet`s will
@@ -396,7 +396,7 @@ struct depth_packet {
 
   private:
     [[maybe_unused]]
-    cat::uint1 m_padding_1;
+    cat::uint1 _;
 
   public:
     // The number of `visual_packet`s transmitted imillimetersediately after
@@ -405,7 +405,7 @@ struct depth_packet {
 
   private:
     [[maybe_unused]]
-    cat::uint4 m_padding_2;
+    cat::uint4 _;
 };
 
 struct visual_packet {
@@ -416,7 +416,7 @@ struct visual_packet {
 
   private:
     [[maybe_unused]]
-    cat::uint4 m_padding;
+    cat::uint4 _;
 };
 
 struct connection {
