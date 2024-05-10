@@ -145,29 +145,12 @@ struct maybe_value_storage {
     constexpr auto operator=(T&& in_value)
         -> maybe_value_storage& requires(!is_move_assignable<T>) = delete;
 
-    // The following methods are homogenous to all `maybe...storage_type` types.
-    [[nodiscard]]
-    constexpr auto
-    value() & -> T& {
-        return this->m_storage;
-    }
+    // The following methods are homogenous to all `maybe...storage_type`
 
     [[nodiscard]]
     constexpr auto
-    value() const& -> T const& {
-        return this->m_storage;
-    }
-
-    [[nodiscard]]
-    constexpr auto
-    value() && -> T&& {
-        return move(this->m_storage);
-    }
-
-    [[nodiscard]]
-    constexpr auto
-    value() const&& -> T&& {
-        return move(this->m_storage);
+    value(this auto&& self) -> auto&& {
+        return fwd(self).m_storage;
     }
 
     [[nodiscard]]
@@ -213,7 +196,7 @@ struct maybe_value_storage {
 
     // A `union` member will not be default-constructed.
     union {
-        // `dummy` is initialized in a `constexpr` context by both the default
+        // `m_dummy` is initialized in a `constexpr` context by both the default
         // and the `nullopt` constructors. This prevents `T`'s default
         // constructor from being called there. One member must be initialized
         // in a `constexpr` context. If `T` is trivial, a dummy member is not
@@ -248,26 +231,8 @@ struct maybe_reference_storage {
     // The following methods are homogenous to all `maybe...storage_type` types.
     [[nodiscard]]
     constexpr auto
-    value() & -> value_type {
-        return *(this->p_storage);
-    }
-
-    [[nodiscard]]
-    constexpr auto
-    value() const& -> value_type {
-        return *(this->p_storage);
-    }
-
-    [[nodiscard]]
-    constexpr auto
-    value() && -> value_type {
-        return *(move(this->p_storage));
-    }
-
-    [[nodiscard]]
-    constexpr auto
-    value() const&& -> value_type {
-        return *(move(this->p_storage));
+    value(this auto&& self) -> value_type& {
+        return *(self.p_storage);
     }
 
     [[nodiscard]]
@@ -325,7 +290,7 @@ struct maybe_compact_storage {
     // constructor.
     constexpr maybe_compact_storage(value_type const& in_value)
         requires(is_trivially_copy_constructible<value_type>)
-        : storage(in_value) {
+        : m_storage(in_value) {
     }
 
     // If `value_type` is not trivially copy-constructible, then manually
@@ -346,7 +311,7 @@ struct maybe_compact_storage {
     // constructor.
     constexpr maybe_compact_storage(value_type&& in_value)
         requires(is_trivially_move_constructible<value_type>)
-        : storage(move(in_value)) {
+        : m_storage(move(in_value)) {
     }
 
     // If `value_type` is not trivially move-constructible, then manually invoke
@@ -372,15 +337,15 @@ struct maybe_compact_storage {
     constexpr ~maybe_compact_storage()
         requires(!is_trivially_destructible<value_type>)
     {
-        if constexpr (requires { this->storage.~value_type(); }) {
+        if constexpr (requires { this->m_storage.~value_type(); }) {
             if (this->has_value()) {
-                this->storage.~value_type();
+                this->m_storage.~value_type();
             }
         }
     }
 
     constexpr maybe_compact_storage(detail::nullopt_type)
-        : storage(T::sentinel_value) {
+        : m_storage(T::sentinel_value) {
     }
 
     // If other assignment operators are not conditionally specialized by
@@ -390,7 +355,7 @@ struct maybe_compact_storage {
     constexpr auto operator=(value_type const& in_value)
         -> maybe_compact_storage& requires(
             is_trivially_copy_assignable<value_type>) {
-                                      this->storage = in_value;
+                                      this->m_storage = in_value;
                                       return *this;
                                   }
 
@@ -414,7 +379,7 @@ struct maybe_compact_storage {
     constexpr auto operator=(value_type&& in_value)
         -> maybe_compact_storage& requires(
             is_trivially_move_assignable<value_type>) {
-                                      this->storage = fwd(in_value);
+                                      this->m_storage = fwd(in_value);
                                       return *this;
                                   }
 
@@ -438,46 +403,28 @@ struct maybe_compact_storage {
     // types.
     [[nodiscard]]
     constexpr auto
-    value() & -> value_type& {
-        return this->storage;
-    }
-
-    [[nodiscard]]
-    constexpr auto
-    value() const& -> value_type const& {
-        return this->storage;
-    }
-
-    [[nodiscard]]
-    constexpr auto
-    value() && -> value_type&& {
-        return move(this->storage);
-    }
-
-    [[nodiscard]]
-    constexpr auto
-    value() const&& -> value_type&& {
-        return move(this->storage);
+    value(this auto&& self) -> auto&& {
+        return fwd(self).m_storage;
     }
 
     [[nodiscard]]
     constexpr auto
     has_value() const -> bool {
-        return T::predicate_function(this->storage);
+        return T::predicate_function(this->m_storage);
     }
 
     // Destroy the storage unconditionally.
     constexpr void
     hard_reset() {
-        this->storage.~value_type();
-        this->storage = T::sentinel_value;
+        this->m_storage.~value_type();
+        this->m_storage = T::sentinel_value;
     }
 
     // Construct an object at the address of the held `storage`.
     template <typename... Args>
     constexpr void
     construct(Args&&... args) {
-        construct_at(__builtin_addressof(this->storage), fwd(args)...);
+        construct_at(__builtin_addressof(this->m_storage), fwd(args)...);
     }
 
     // If this is assigned an `maybe` which wraps a type that can be
@@ -487,7 +434,7 @@ struct maybe_compact_storage {
     assign(Othermaybe&& maybe) {
         if (this->has_value()) {
             if (maybe.has_value()) {
-                this->storage = fwd(maybe).value();
+                this->m_storage = fwd(maybe).value();
             } else {
                 // If the incoming `maybe` is empty, then empty this one.
                 this->hard_reset();
@@ -502,32 +449,29 @@ struct maybe_compact_storage {
 
     // A `union` member will not be default-constructed.
     union {
-        monostate_type dummy;
-        value_type storage;
+        monostate_type _;
+        value_type m_storage;
     };
 };
 
 template <typename T>
 class maybe {
   private:
-    // clang-format off
-    // Clang Format 12 does not understand how to format this well:
     using storage_type =
         conditional<is_void<T>,
-            // If `T` is `void`:
-            maybe_value_storage<monostate_type>,
-		conditional<requires {
-                   // T::predicate_function(T::type());
-                    T::sentinel_value;
-                },
-                // If `T` is a `predicate`:
-                maybe_compact_storage<T>,
-		conditional<is_reference<T>,
-                    // If `T` is a reference type:
-                    maybe_reference_storage<T>,
-                    // If `T` is a value type:
-                    maybe_value_storage<T>>>>;
-    // clang-format on
+                    // If `T` is `void`:
+                    maybe_value_storage<monostate_type>,
+                    conditional<requires {
+                                    // T::predicate_function(T::type());
+                                    T::sentinel_value;
+                                },
+                                // If `T` is a `predicate`:
+                                maybe_compact_storage<T>,
+                                conditional<is_reference<T>,
+                                            // If `T` is a reference type:
+                                            maybe_reference_storage<T>,
+                                            // If `T` is a value type:
+                                            maybe_value_storage<T>>>>;
 
   public:
     using value_type = storage_type::value_type;
@@ -724,7 +668,7 @@ class maybe {
         return m_storage.has_value();
     }
 
-    // Holds true if this `maybe` currently has some value of the type `T`.
+    // Holds true if this `maybe` currently has some value of the type `U`.
     // This method allows `maybe` to be used in `match` statements.
     template <typename U>
     [[nodiscard]]
@@ -771,318 +715,106 @@ class maybe {
     // Get the `storage` unconditionally.
     [[nodiscard]]
     constexpr auto
-    value() & -> value_type& {
-        return m_storage.value();
+    value(this auto&& self) -> decltype(auto) {
+        return fwd(self).m_storage.value();
     }
 
-    // Get the const-qualified `storage` unconditionally.
+    // Get the value held by a `maybe`, or a fallback value if it does not hold
+    // a value.
     [[nodiscard]]
     constexpr auto
-    value() const& -> value_type const& {
-        return m_storage.value();
-    }
-
-    // Move the `storage` unconditionally. Reference types cannot be moved.
-    [[nodiscard]]
-    constexpr auto
-    value() && -> value_type&& requires(!is_reference<value_type>) {
-                                   return move(m_storage.value());
-                               }
-
-    // Move the const-qualified `storage` unconditionally. Reference types
-    // cannot be moved.
-    [[nodiscard]] constexpr auto value() const&& -> value_type const&&
-        requires(!is_reference<value_type>)
-    {
-        return move(m_storage.value());
-    }
-
-    // Get the value held by a non-`const`-qualified `maybe`, or a
-    // fallback value if it does not hold a value.
-    [[nodiscard]]
-    constexpr auto
-    value_or(value_type fallback) & -> value_type {
-        if (m_storage.has_value()) {
-            return m_storage.value();
+    value_or(this auto&& self, value_type fallback) -> value_type {
+        if (self.m_storage.has_value()) {
+            return fwd(self).m_storage.value();
         }
         return fallback;
     }
 
-    // Get the value held by a `const`-qualified `maybe`, or a fallback
-    // value if it does not hold a value.
+    // Get a pointer to the data owned by this `maybe`. If `maybe` holds a raw
+    // pointer, this is equivalent to `.value()`, otherwise this is equivalent
+    // to `__builtin_addressof(maybe.value())`.
     [[nodiscard]]
     constexpr auto
-    value_or(value_type fallback) const& -> value_type {
-        if (m_storage.has_value()) {
-            return m_storage.value();
-        }
-        return fallback;
-    }
-
-    // Get the value held by a non-`const`-qualified `maybe`, or a
-    // fallback value if it does not hold a value.
-    [[nodiscard]]
-    constexpr auto
-    value_or(value_type&& fallback) && -> value_type&& {
-        if (m_storage.has_value()) {
-            return move(m_storage).value();
-        }
-        return move(fallback);
-    }
-
-    // Get the value held by a `const`-qualified `maybe`, or a fallback
-    // value if it does not hold a value.
-    [[nodiscard]]
-    constexpr auto
-    value_or(value_type&& fallback) const&& -> value_type&& {
-        if (m_storage.has_value()) {
-            return move(m_storage).value();
-        }
-        return move(fallback);
-    }
-
-    // Get a pointer to the data owned by this `maybe`. If `maybe`
-    // holds a raw pointer, this is equivalent to `.value()`, otherwise this
-    // is equivalent to `__builtin_addressof(maybe.value())`.
-    [[nodiscard]]
-    constexpr auto
-    p_value() {
+    p_value(this auto&& self) {
         if constexpr (is_pointer<value_type>) {
-            return m_storage.value();
+            return fwd(self).m_storage.value();
         } else {
-            return __builtin_addressof(m_storage.value());
+            return __builtin_addressof(fwd(self).m_storage.value());
         }
     }
 
-    // Get a pointer to the data owned by this `maybe`. If `maybe`
-    // holds a raw pointer, this is equivalent to `.value()`, otherwise this
-    // is equivalent to `__builtin_addressof(maybe.value())`.
-    [[nodiscard]]
-    constexpr auto
-    p_value() const {
-        if constexpr (is_pointer<value_type>) {
-            return m_storage.value();
-        } else {
-            return __builtin_addressof(m_storage.value());
-        }
-    }
-
-    // TODO: Add `&&` overloads to the `.assert()` and `.verify()` getters.
     // TODO: Make the `.assert()` and `.verify()` getters `constexpr`.
     // TODO: Add overloads which take a `string const` for an error message.
 
+    // Fail a `cat::assert` check if this `maybe` is empty, otherwise return its
+    // value.
     [[nodiscard]]
     auto
-    assert(void (*p_assert_handler)(source_location const&) = assert_handler,
-           source_location const& callsite =
-               source_location::current()) & -> value_type& {
-        cat::assert(this->has_value(), p_assert_handler, callsite);
-        return this->value();
+    assert(this auto&& self,
+           void (*p_assert_handler)(source_location const&) = assert_handler,
+           source_location const& callsite = source_location::current())
+        -> decltype(auto) {
+        cat::assert(self.has_value(), p_assert_handler, callsite);
+        return fwd(self).value();
     }
 
+    // Fail a `cat::verify` check if this `maybe` is empty, otherwise return its
+    // value.
     [[nodiscard]]
     auto
-    assert(void (*p_assert_handler)(source_location const&) = assert_handler,
-           source_location const& callsite =
-               source_location::current()) const& -> value_type const& {
-        cat::assert(this->has_value(), p_assert_handler, callsite);
-        return this->value();
-    }
-
-    [[nodiscard]]
-    auto
-    assert(void (*p_assert_handler)(source_location const&) = assert_handler,
-           source_location const& callsite =
-               source_location::current()) && -> value_type {
-        cat::assert(this->has_value(), p_assert_handler, callsite);
-        return this->value();
-    }
-
-    [[nodiscard]]
-    auto
-    assert(void (*p_assert_handler)(source_location const&) = assert_handler,
-           source_location const& callsite =
-               source_location::current()) const&& -> value_type {
-        cat::assert(this->has_value(), p_assert_handler, callsite);
-        return this->value();
-    }
-
-    [[nodiscard]]
-    auto
-    verify(void (*p_assert_handler)(source_location const&) = assert_handler,
-           source_location const& callsite =
-               source_location::current()) & -> value_type& {
-        cat::verify(this->has_value(), p_assert_handler, callsite);
-        return this->value();
-    }
-
-    [[nodiscard]]
-    auto
-    verify(void (*p_assert_handler)(source_location const&) = assert_handler,
-           source_location const& callsite =
-               source_location::current()) const& -> value_type const& {
-        cat::verify(this->has_value(), p_assert_handler, callsite);
-        return this->value();
-    }
-
-    [[nodiscard]]
-    auto
-    verify(void (*p_assert_handler)(source_location const&) = assert_handler,
-           source_location const& callsite =
-               source_location::current()) && -> value_type {
-        cat::verify(this->has_value(), p_assert_handler, callsite);
-        // `move()` is required when there is a deleted copy-constructor.
-        return move(this->value());
-    }
-
-    [[nodiscard]]
-    auto
-    verify(void (*p_assert_handler)(source_location const&) = assert_handler,
-           source_location const& callsite =
-               source_location::current()) const&& -> value_type {
-        cat::verify(this->has_value(), p_assert_handler, callsite);
-        // `move()` is required when there is a deleted copy-constructor.
-        return move(this->value());
+    verify(this auto&& self,
+           void (*p_assert_handler)(source_location const&) = assert_handler,
+           source_location const& callsite = source_location::current())
+        -> decltype(auto) {
+        cat::verify(self.has_value(), p_assert_handler, callsite);
+        return fwd(self).value();
     }
 
     // Monadic methods:
 
     // TODO: Use an `invocable` `concept`.
 
-    // If this non-`const`-qualified `maybe` holds a value, transform it
-    // by a function. Otherwise, propagate an empty `maybe`.
+    // If this `maybe` holds a value, transform it by a function. Otherwise,
+    // propagate an empty `maybe`.
     template <typename Function>
     [[nodiscard]]
     constexpr auto
-    transform(Function&& invocable) & {
-        using U = decltype(invocable(this->value()));
+    transform(this auto&& self, Function&& invocable) -> decltype(auto) {
+        using U = decltype(invocable(fwd(self).value()));
         static_assert(!is_specialization<U, maybe>);
 
         if constexpr (is_void<U>) {
-            return this->has_value() ? maybe<void>{monostate}
-                                     : maybe<void>{nullopt};
+            return self.has_value() ? maybe<void>{monostate}
+                                    : maybe<void>{nullopt};
         } else {
-            if (this->has_value()) {
-                return maybe<U>{fwd(invocable)(this->value())};
+            if (self.has_value()) {
+                return maybe<U>{fwd(invocable)(fwd(self).value())};
             }
             return maybe<U>{nullopt};
         }
     }
 
-    // If this `const`-qualified `maybe` holds a value, transform it by a
-    // function without side-effects. Otherwise, propagate an empty
-    // `maybe`.
+    // Invoke an invocable returning a `maybe` on the value of this `maybe`, and
+    // propagate the result.
     template <typename Function>
     [[nodiscard]]
     constexpr auto
-    transform(Function&& invocable) const& {
-        using U = decltype(invocable(this->value()));
-        static_assert(!is_specialization<U, maybe>);
-
-        if constexpr (is_void<U>) {
-            return this->has_value() ? maybe<void>{monostate}
-                                     : maybe<void>{nullopt};
-        } else {
-            if (m_storage.has_value()) {
-                return maybe<U>{fwd(invocable)(this->value())};
-            }
-            return maybe<U>{nullopt};
-        }
+    and_then(this auto&& self, Function&& invocable) {
+        return self.has_value() ? fwd(invocable)(fwd(self).value()) : nullopt;
     }
 
-    // If this non-`const`-qualified `maybe` holds a value, transform it
-    // by function. Otherwise, propagate an empty `maybe`.
+    // Invoke an invocable if this `maybe` holds no value. This invocable must
+    // return either `void` or a `maybe`.
     template <typename Function>
     [[nodiscard]]
     constexpr auto
-    transform(Function&& invocable) && {
-        using U = decltype(invocable(this->value()));
-        static_assert(!is_specialization<U, maybe>);
-
-        if constexpr (is_void<U>) {
-            return this->has_value() ? maybe<void>{monostate}
-                                     : maybe<void>{nullopt};
-        } else {
-            if (this->has_value()) {
-                return maybe<U>{fwd(invocable)(move(this)->value())};
-            }
-            return maybe<U>{nullopt};
-        }
-    }
-
-    // If this `const`-qualified `maybe` holds a value, transform it by a
-    // function without side-effects. Otherwise, propagate an empty
-    // `maybe`.
-    template <typename Function>
-    [[nodiscard]]
-    constexpr auto
-    transform(Function&& invocable) const&& {
-        using U = decltype(invocable(this->value()));
-        static_assert(!is_specialization<U, maybe>);
-
-        if constexpr (is_void<U>) {
-            return this->has_value() ? maybe<void>{monostate}
-                                     : maybe<void>{nullopt};
-        } else {
-            if (this->has_value()) {
-                return maybe<U>{fwd(invocable)(move(this)->value())};
-            }
-            return maybe<U>{nullopt};
-        }
-    }
-
-    // Invoke a invocable returning an `maybe` on the value of a
-    // `const`-qualified `maybe` and propagate the result, if it holds a
-    // value.
-    template <typename Function>
-    [[nodiscard]]
-    constexpr auto
-    and_then(Function&& invocable) & {
-        return this->has_value() ? fwd(invocable)(this->value()) : nullopt;
-    }
-
-    // Invoke a invocable returning an `maybe` on the value of a
-    // `const`-qualified `maybe` and propagate the result, if it holds a
-    // value.
-    template <typename Function>
-    [[nodiscard]]
-    constexpr auto
-    and_then(Function&& invocable) const& {
-        return this->has_value() ? fwd(invocable)(this->value()) : nullopt;
-    }
-
-    // Invoke a invocable returning an `maybe` on the value of a
-    // non-`const`-qualified `maybe` and propagate the result, if it
-    // holds a value.
-    template <typename Function>
-    [[nodiscard]]
-    constexpr auto
-    and_then(Function&& invocable) && {
-        return this->has_value() ? fwd(invocable)(move(this)->value())
-                                 : nullopt;
-    }
-
-    // Invoke a invocable returning an `maybe` on the value of a
-    // `const`-qualified `maybe` and propagate the result, if it holds a
-    // value.
-    template <typename Function>
-    [[nodiscard]]
-    constexpr auto
-    and_then(Function&& invocable) const&& {
-        return this->has_value() ? fwd(invocable)(move(this)->value())
-                                 : nullopt;
-    }
-
-    // Invoke a invocable iff a non-`const`-qualified `maybe` holds no
-    // value. This invocable can return `void` or an `maybe`.
-    template <typename Function>
-    [[nodiscard]]
-    constexpr auto
-    or_else(Function&& invocable) & {
+    or_else(this auto&& self, Function&& invocable) {
         using U = decltype(invocable());
-        static_assert(is_void<U> || is_specialization<U, maybe>);
+        static_assert(is_void<U> || is_specialization<U, maybe>,
+                      "The invocable parameter `invocable` must return either "
+                      "`void` or a specialization of `cat::maybe`.");
 
-        if (!m_storage.has_value()) {
+        if (!fwd(self).m_storage.has_value()) {
             if constexpr (is_void<U>) {
                 fwd(invocable)();
             } else {
@@ -1097,137 +829,14 @@ class maybe {
         }
     }
 
-    // Invoke a invocable iff a `const`-qualified `maybe` holds no value.
-    // This invocable can return `void` or an `maybe`.
-    template <typename Function>
-    [[nodiscard]]
-    constexpr auto
-    or_else(Function&& invocable) const& {
-        using U = decltype(invocable());
-        static_assert(is_void<U> || is_specialization<U, maybe>);
-
-        if (!m_storage.has_value()) {
-            if constexpr (is_void<U>) {
-                fwd(invocable)();
-            } else {
-                return fwd(invocable)();
-            }
-        }
-
-        if constexpr (is_void<U>) {
-            return;
-        } else {
-            return U(nullopt);
-        }
-    }
-
-    // Invoke a invocable iff a non-`const`-qualified move-only `maybe`
-    // holds no value. This invocable can return `void` or an `maybe`.
-    template <typename Function>
-    [[nodiscard]]
-    constexpr auto
-    or_else(Function&& invocable) && {
-        using U = decltype(invocable());
-        static_assert(is_void<U> || is_specialization<U, maybe>);
-
-        if (!m_storage.has_value()) {
-            if constexpr (is_void<U>) {
-                fwd(invocable)();
-            } else {
-                return move(fwd(invocable))();
-            }
-        }
-
-        if constexpr (is_void<U>) {
-            return;
-        } else {
-            return U(nullopt);
-        }
-    }
-
-    // Invoke a invocable iff a `const`-qualified move-only `maybe` holds
-    // no value. This invocable can return `void` or an `maybe`.
-    template <typename Function>
-    [[nodiscard]]
-    constexpr auto
-    or_else(Function&& invocable) const&& {
-        using U = decltype(invocable());
-        static_assert(is_void<U> || is_specialization<U, maybe>);
-
-        if (!m_storage.has_value()) {
-            if constexpr (is_void<U>) {
-                fwd(invocable)();
-            } else {
-                return move(fwd(invocable))();
-            }
-        }
-
-        if constexpr (is_void<U>) {
-            return;
-        } else {
-            return U(nullopt);
-        }
-    }
-
     // If this `maybe` is empty, terminate the running process
     // immediately. Otherwise, return its value.
     [[nodiscard]]
     auto
-    or_exit(iword exit_code = 1) & {
-        if (this->has_value()) [[likely]] {
+    or_exit(this auto&& self, iword exit_code = 1) {
+        if (self.has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
-                return this->value();
-            } else {
-                return;
-            }
-        } else {
-            exit(exit_code);
-        }
-        __builtin_unreachable();  // This prevents a build warning.
-    }
-
-    // If this `maybe` is empty, terminate the running process
-    // immediately. Otherwise, return its value.
-    [[nodiscard]]
-    auto
-    or_exit(iword exit_code = 1) const& {
-        if (this->has_value()) [[likely]] {
-            if constexpr (!is_void<T>) {
-                return this->value();
-            } else {
-                return;
-            }
-        } else {
-            exit(exit_code);
-        }
-        __builtin_unreachable();  // This prevents a build warning.
-    }
-
-    // If this `maybe` is empty, terminate the running process
-    // immediately. Otherwise, move its value.
-    [[nodiscard]]
-    auto
-    or_exit(iword exit_code = 1) && {
-        if (this->has_value()) [[likely]] {
-            if constexpr (!is_void<T>) {
-                return move(this->value());
-            } else {
-                return;
-            }
-        } else {
-            exit(exit_code);
-        }
-        __builtin_unreachable();  // This prevents a build warning.
-    }
-
-    // If this `maybe` is empty, terminate the running process
-    // immediately. Otherwise, move its value.
-    [[nodiscard]]
-    auto
-    or_exit(iword exit_code = 1) const&& {
-        if (this->has_value()) [[likely]] {
-            if constexpr (!is_void<T>) {
-                return move(this)->value();
+                return fwd(self).value();
             } else {
                 return;
             }
