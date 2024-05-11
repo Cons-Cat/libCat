@@ -1,11 +1,24 @@
 # Link `.gdbinit` to build directories.
-add_custom_target(
-  cat-gdb-examples ALL
-  COMMAND ${CMAKE_COMMAND} -E create_symlink
-  # This requires CMake 3.20:
-  ${PROJECT_SOURCE_DIR}/.gdbinit ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/.gdbinit
-  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>
-)
+
+# `Ninja Multi-Config` generator:
+if(CMAKE_CONFIGURATION_TYPES)
+  add_custom_target(
+    cat-gdb-examples ALL
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+    # This requires CMake 3.20:
+    ${PROJECT_SOURCE_DIR}/.gdbinit ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/.gdbinit
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>
+  )
+
+# `Ninja` generator:
+else()
+  add_custom_target(
+    cat-gdb-examples ALL
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+    ${PROJECT_SOURCE_DIR}/.gdbinit ${CMAKE_BINARY_DIR}/.gdbinit
+    DEPENDS ${CMAKE_BINARY_DIR}
+  )  
+endif()
 add_dependencies(cat cat-gdb-examples)
 
 add_library(cat-examples INTERFACE)

@@ -1,12 +1,15 @@
 # Link `.gdbinit` to build directories.
-add_custom_target(
-  cat-gdb-tests ALL
-  COMMAND ${CMAKE_COMMAND} -E create_symlink
-  # This requires CMake 3.20:
-  ${PROJECT_SOURCE_DIR}/.gdbinit ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/.gdbinit
-  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>
-)
-add_dependencies(cat cat-gdb-tests)
+
+# `Ninja Multi-Config` generator:
+if(CMAKE_CONFIGURATION_TYPES)
+  add_custom_target(
+    cat-gdb-tests ALL
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+    ${PROJECT_SOURCE_DIR}/.gdbinit ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/.gdbinit
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>
+  )
+  add_dependencies(cat cat-gdb-tests)
+endif() # For `Ninja` generator, this is done by `cat-gdb-examples`.
 
 add_library(cat-tests INTERFACE) # Do not produce a `.so` or `.a` artifact.
 target_link_libraries(cat-tests INTERFACE cat)
