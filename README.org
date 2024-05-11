@@ -18,8 +18,8 @@ More essays and videos will come in the future.
 libCat requires a development version of GCC 15 from the =trunk= branch. Compiling libCat is only tested using =ninja=.
 Configuring the build requires CMake 3.29.
 #+BEGIN_SRC
-  $ cmake -B build/ -G 'Ninja Multi-Config'
-  $ cmake --build build/  #or: ninja -C build/
+  $ cmake -B build/ -G 'Ninja Multi-Config' # or: cmake -B build -GNinja
+  $ cmake --build build/  # or: ninja -C build/
   $ ./build/tests/Debug/unit_tests
 #+END_SRC
 
