@@ -620,27 +620,16 @@ template <typename T>
 concept is_pointer = __is_pointer(T);
 
 template <typename T>
-concept is_array = !__is_pointer(T) && requires(T t) { t[0]; };
-
-namespace detail {
-    template <typename T>
-    struct remove_extent_trait {
-        using type = T;
-    };
-
-    template <typename T, int size>
-    struct remove_extent_trait<T[size]> {
-        using type = T;
-    };
-
-    template <typename T>
-    struct remove_extent_trait<T[]> {
-        using type = T;
-    };
-}  // namespace detail
+concept is_array = __is_array(T);
 
 template <typename T>
-using remove_extent = detail::remove_extent_trait<T>::type;
+concept is_unbounded_array = __is_unbounded_array(T);
+
+template <typename T>
+inline constexpr __SIZE_TYPE__ array_rank = __array_rank(T);
+
+template <typename T>
+using remove_extent = __remove_extent(T);
 
 template <typename T>
 concept is_member_pointer = __is_member_pointer(T);
@@ -659,13 +648,13 @@ concept is_scalar = is_arithmetic<T> || is_enum<T> || is_pointer<T> ||
                     is_member_pointer<T> || is_null_pointer<T>;
 
 template <typename T>
-using add_pointer = conditional<is_referenceable<T>, remove_reference<T>*, T*>;
+using add_pointer = __add_pointer(T);
 
 template <typename T>
-using add_lvalue_reference = T&;
+using add_lvalue_reference = __add_lvalue_reference(T);
 
 template <typename T>
-using add_rvalue_reference = T&&;
+using add_rvalue_reference = __add_rvalue_reference(T);
 
 template <typename T>
 concept is_lvalue_reference = __is_same(T, remove_reference<T>&);
@@ -691,12 +680,13 @@ template <typename from_type, typename to_type>
 using copy_ref_from =
     conditional<is_lvalue_reference<from_type>,
                 // from_type is an l-value reference.
-                add_lvalue_reference<remove_reference<to_type>>,
+                __add_lvalue_reference(remove_reference<to_type>),
                 conditional<is_rvalue_reference<from_type>,
                             // from_type is an r-value reference.
-                            add_rvalue_reference<remove_reference<to_type>>,
+                            __add_rvalue_reference(remove_reference<to_type>),
                             // from_type is not a reference.
                             remove_reference<to_type>>>;
+
 template <typename from_type, typename to_type>
 using copy_constref_from =
     copy_ref_from<from_type, copy_const_from<from_type, to_type>>;
@@ -710,15 +700,13 @@ using copy_cvref_from =
     copy_ref_from<from_type, copy_cv_from<from_type, to_type>>;
 
 namespace detail {
-    // `__underlying_type` is a GNU builtin.
     template <typename T>
     struct underlying_type_trait {
         using type = __underlying_type(T);
     };
 }  // namespace detail
 
-// TODO: GCC 12 doesn't seem to compile this correctly if `__underlying_type()`
-// is used directly.
+// GCC cannot use type trait intrinsics directly inside type aliases.
 template <typename T>
 using underlying_type = detail::underlying_type_trait<T>::type;
 
@@ -737,37 +725,10 @@ concept is_function = __is_function(T);
 // Remove `const`/`volatile`-qualifiers, references, and pointers from a
 // type.
 template <typename T>
-using decay = conditional<
-    // Decay arrays to pointers.
-    is_array<remove_reference<T>>, remove_extent<remove_reference<T>>*,
-    conditional<
-        // Decay functions into function pointers.
-        is_function<remove_reference<T>>, add_pointer<remove_reference<T>>,
-        // Otherwise, remove cv-qualifiers.
-        remove_cv<remove_reference<T>>>>;
+using decay = __decay(T);
 
-namespace detail {
-    template <typename, unsigned = 0>
-    struct extent_trait;
-
-    template <typename>
-    struct remove_all_extents_trait;
-
-    template <typename T>
-    struct remove_all_extents_trait {
-        using type = T;
-    };
-
-    template <typename T>
-    struct remove_all_extents_trait<T[]> {
-        using type = remove_all_extents_trait<T>::type;
-    };
-
-    template <typename T, unsigned long long N>
-    struct remove_all_extents_trait<T[N]> {
-        using type = remove_all_extents_trait<T>::type;
-    };
-}  // namespace detail
+template <typename T>
+using remove_all_extents_trait = __remove_all_extents(T);
 
 // TODO: Figure out how to implement this with concepts.
 /*
@@ -1030,8 +991,10 @@ template <typename T>
 concept rvalue = is_rvalue_reference<T&&> && !is_const<T>;
 
 template <typename Function, typename... Args>
-concept is_invocable =
-    requires(Function func, Args&&... args) { func(fwd(args)...); };
+concept is_invocable = __is_invocable(Function, Args...);
+
+template <typename Function, typename... Args>
+concept is_nothrow_invocable = __is_nothrow_invocable(Function, Args...);
 
 // https://quuxplusone.github.io/blog/2019/02/06/arrow-proxy/
 template <typename reference_type>
