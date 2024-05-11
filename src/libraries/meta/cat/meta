@@ -991,10 +991,23 @@ template <typename T>
 concept rvalue = is_rvalue_reference<T&&> && !is_const<T>;
 
 template <typename Function, typename... Args>
-concept is_invocable = __is_invocable(Function, Args...);
+concept is_invocable =
+// Clang 19 does not support `__is_invocable`.
+#if __has_builtin(__is_invocable)
+    __is_invocable(Function, Args...);
+#else
+    requires(Function func, Args&&... args) { func(fwd(args)...); };
+#endif
 
 template <typename Function, typename... Args>
-concept is_nothrow_invocable = __is_nothrow_invocable(Function, Args...);
+concept is_nothrow_invocable =
+// Clang 19 does not support `__is_nothrow_invocable`.
+#if __has_builtin(__is_nothrow_invocable)
+    __is_nothrow_invocable(Function, Args...);
+#else
+    // TODO: Properly implement `is_nothrow_invocable` for Clang.
+    is_invocable<Function, Args...>;
+#endif
 
 // https://quuxplusone.github.io/blog/2019/02/06/arrow-proxy/
 template <typename reference_type>
