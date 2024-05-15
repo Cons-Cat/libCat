@@ -8,53 +8,67 @@ namespace cat {
 
 namespace detail {
     template <typename T, typename U>
-    concept has_add_interface = requires(T t, U u) { t.add(u); };
+    concept has_add_interface = requires(T lhs, U rhs) { lhs.add(rhs); };
 
     template <typename T, typename U>
     concept has_subtract_by_interface =
-        requires(T t, U u) { t.subtract_by(u); };
+        requires(T lhs, U rhs) { lhs.subtract_by(rhs); };
 
     template <typename T, typename U>
     concept has_subtract_from_interface =
-        requires(T t, U u) { t.subtract_from(u); };
+        requires(T lhs, U rhs) { lhs.subtract_from(rhs); };
 
     template <typename T>
-    concept has_negate_interface = requires(T t) { t.negate(t); };
+    concept has_negate_interface = requires(T lhs) { lhs.negate(lhs); };
 
     template <typename T, typename U>
-    concept has_multiply_interface = requires(T t, U u) { t.multiply(u); };
+    concept has_multiply_interface =
+        requires(T lhs, U rhs) { lhs.multiply(rhs); };
 
     template <typename T, typename U>
-    concept has_divide_by_interface = requires(T t, U u) { t.divide_by(u); };
+    concept has_divide_by_interface =
+        requires(T lhs, U rhs) { lhs.divide_by(rhs); };
 
     template <typename T, typename U>
     concept has_divide_into_interface =
-        requires(T t, U u) { t.divide_into(u); };
+        requires(T lhs, U rhs) { lhs.divide_into(rhs); };
 
     template <typename T, typename U>
-    concept has_modulo_interface = requires(T t, U u) { t.modulo(u); };
+    concept has_modulo_interface = requires(T lhs, U rhs) { lhs.modulo(rhs); };
 
     template <typename T, typename U>
-    concept has_shift_left_interface = requires(T t, U u) { t.shift_left(u); };
+    concept has_shift_left_by_interface =
+        requires(T lhs, U rhs) { lhs.shift_left_by_by(rhs); };
 
     template <typename T, typename U>
-    concept has_shift_right_interface =
-        requires(T t, U u) { t.shift_right(u); };
+    concept has_shift_left_into_interface_interface =
+        requires(T lhs, U rhs) { lhs.shift_left_by_into(rhs); };
 
     template <typename T, typename U>
-    concept has_bit_and_interface = requires(T t, U u) { t.bit_and(u); };
+    concept has_shift_right_by_interface =
+        requires(T lhs, U rhs) { lhs.shift_right_by(rhs); };
 
     template <typename T, typename U>
-    concept has_bit_or_interface = requires(T t, U u) { t.bit_or(u); };
+    concept has_shift_right_into_interface =
+        requires(T lhs, U rhs) { lhs.shift_right_into(rhs); };
 
     template <typename T, typename U>
-    concept has_bit_xor_interface = requires(T t, U u) { t.bit_xor(u); };
+    concept has_bit_and_interface =
+        requires(T lhs, U rhs) { lhs.bit_and(rhs); };
 
     template <typename T, typename U>
-    concept has_bit_not_interface = requires(T t, U u) { t.bit_not(u); };
+    concept has_bit_or_interface = requires(T lhs, U rhs) { lhs.bit_or(rhs); };
+
+    template <typename T, typename U>
+    concept has_bit_xor_interface =
+        requires(T lhs, U rhs) { lhs.bit_xor(rhs); };
+
+    template <typename T, typename U>
+    concept has_bit_not_interface =
+        requires(T lhs, U rhs) { lhs.bit_not(rhs); };
 
     template <typename T>
-    concept has_bit_complement = requires(T t) { t.bit_complement(); };
+    concept has_bit_complement = requires(T lhs) { lhs.bit_complement(); };
 }  // namespace detail
 
 // CRTP class for generating a commutative `+` operator.
@@ -64,40 +78,91 @@ struct plus_interface {
 
     // `+` operator where this is a left-hand-side operand.
     template <typename T>
-    friend constexpr auto
-    operator+(derived_type lhs, T&& other) {
-        return lhs.add(fwd(other));
+    constexpr auto
+    operator+(this auto&& self, T&& other) -> decltype(auto) {
+        return fwd(self).add(fwd(other));
     }
 
-    // `+` operator where this is a right-hand-side operand.
+    // `+` operators where this is a right-hand-side operand.
+
+    // `this` is an l-value.
     template <typename T>
     // If this operator's left operand can add `derived_type` as its
     // right-hand operand, this overload is ambiguous.
         requires(!detail::has_add_interface<T, derived_type>)
     friend constexpr auto
-    operator+(T&& other, decay_derived_type rhs) {
-        return rhs.add(fwd(other));
+    operator+(T&& other, decay_derived_type const& self) -> decltype(auto) {
+        return self.add(fwd(other));
     }
 
-    // Compound assignment operator.
+    // `this` is an r-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_add_interface<T, derived_type>)
+    friend constexpr auto
+    operator+(T&& other, derived_type&& self) -> decltype(auto) {
+        return fwd(self).add(fwd(other));
+    }
+
+    // `+=` operator where this is a left-hand-side operand.
     template <typename T>
     friend constexpr auto
-    operator+=(derived_type& lhs, T&& other) -> auto {
-        lhs = lhs.add(fwd(other));
-        return lhs;
+    operator+=(derived_type& self, T&& other) -> derived_type& {
+        self = self.add(fwd(other));
+        return self;
+    }
+
+    // `+=` operators where this is a right-hand-side operand.
+
+    // `this` is an l-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_add_interface<T, derived_type>)
+    friend constexpr auto
+    operator+=(T& other, derived_type const& self) -> T& {
+        other = self.add(other);
+        return other;
+    }
+
+    // `this` is an r-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_add_interface<T, derived_type>)
+    friend constexpr auto
+    operator+=(T& other, derived_type&& self) -> T& {
+        other = move(self).add(other);
+        return other;
     }
 
     // Unary `++` operators.
+
+    // `this` is an l-value.
     friend constexpr auto
     operator++(derived_type& self) -> derived_type& {
         self = self.add(derived_type(1));
         return self;
     }
 
+    // `this` is an r-value.
+    friend constexpr auto
+    operator++(derived_type&& self) -> derived_type {
+        return move(self).add(derived_type(1));
+    }
+
+    // `this` is an l-value.
     friend constexpr auto
     operator++(derived_type& self, int) -> derived_type& {
         self = self.add(derived_type(1));
         return self;
+    }
+
+    // `this` is an r-value.
+    friend constexpr auto
+    operator++(derived_type&& self, int) -> derived_type {
+        return move(self).add(derived_type(1));
     }
 };
 
@@ -108,40 +173,91 @@ struct minus_interface {
 
     // `-` operator where this is a left-hand-side operand.
     template <typename T>
-    friend constexpr auto
-    operator-(derived_type lhs, T&& other) {
-        return lhs.subtract_by(fwd(other));
+    constexpr auto
+    operator-(this auto&& lhs, T&& other) -> decltype(auto) {
+        return fwd(lhs).subtract_by(fwd(other));
     }
 
-    // `-` operator where this is a right-hand-side operand.
+    // `-` operators where this is a right-hand-side operand.
+
+    // `this` is an l-value.
     template <typename T>
     // If this operator's left operand can subtract_by `derived_type` as its
     // right-hand operand, this overload is ambiguous.
         requires(!detail::has_subtract_by_interface<T, derived_type>)
     friend constexpr auto
-    operator-(T&& other, decay_derived_type rhs) {
-        return rhs.subtract_from(fwd(other));
+    operator-(T&& other, decay_derived_type const& self) -> decltype(auto) {
+        return self.subtract_from(fwd(other));
     }
 
-    // Compound assignment operator.
+    // `this` is an r-value.
+    template <typename T>
+    // If this operator's left operand can subtract_by `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_subtract_by_interface<T, derived_type>)
+    friend constexpr auto
+    operator-(T&& other, derived_type&& self) -> decltype(auto) {
+        return fwd(self).subtract_from(fwd(other));
+    }
+
+    // `-=` operator where this is a left-hand-side operand.
     template <typename T>
     friend constexpr auto
-    operator-=(derived_type& lhs, T&& other) -> auto& {
-        lhs = lhs.subtract_by(fwd(other));
-        return lhs;
+    operator-=(derived_type& self, T&& other) -> derived_type& {
+        self = self.subtract_by(fwd(other));
+        return self;
+    }
+
+    // `-=` operators where this is a right-hand-side operand.
+
+    // `this` is an l-value.
+    template <typename T>
+    // If this operator's left operand can subtract_by `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_subtract_by_interface<T, derived_type>)
+    friend constexpr auto
+    operator-=(T& other, derived_type const& self) -> T& {
+        other = self.subtract_from(other);
+        return other;
+    }
+
+    // `this` is an r-value.
+    template <typename T>
+    // If this operator's left operand can subtract_by `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_subtract_by_interface<T, derived_type>)
+    friend constexpr auto
+    operator-=(T& other, derived_type&& self) -> T& {
+        other = move(self).subtract_from(other);
+        return other;
     }
 
     // Unary `--` operators.
+
+    // `this` is an l-value.
     friend constexpr auto
     operator--(derived_type& self) -> derived_type& {
-        self = self - derived_type(1);
+        self = self.subtract_by(derived_type(1));
         return self;
     }
 
+    // `this` is an r-value.
+    friend constexpr auto
+    operator--(derived_type&& self) -> derived_type {
+        return move(self).subtract_by(derived_type(1));
+    }
+
+    // `this` is an l-value.
     friend constexpr auto
     operator--(derived_type& self, int) -> derived_type& {
-        self = self - derived_type(1);
+        self = self.subtract_by(derived_type(1));
         return self;
+    }
+
+    // `this` is an r-value.
+    friend constexpr auto
+    operator--(derived_type&& self, int) -> derived_type {
+        return move(self).subtract_by(derived_type(1));
     }
 };
 
@@ -152,136 +268,465 @@ struct multiply_interface {
 
     // `*` operator where this is a left-hand-side operand.
     template <typename T>
-    friend constexpr auto
-    operator*(derived_type lhs, T&& other) {
-        return lhs.multiply(fwd(other));
+    constexpr auto
+    operator*(this auto&& self, T&& other) -> decltype(auto) {
+        return fwd(self).multiply(fwd(other));
     }
 
-    // `*` operator where this is a right-hand-side operand.
+    // `*` operators where this is a right-hand-side operand.
+
+    // `this` is an l-value.
     template <typename T>
-    // If this operator's left operand can multiply `derived_type` as
-    // its right-hand operand, this overload is ambiguous.
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
         requires(!detail::has_multiply_interface<T, derived_type>)
     friend constexpr auto
-    operator*(T&& other, decay_derived_type rhs) {
-        return rhs.multiply(fwd(other));
+    operator*(T&& other, decay_derived_type const& self) -> decltype(auto) {
+        return self.multiply(fwd(other));
     }
 
-    // Compound assignment operator.
+    // `this` is an r-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_multiply_interface<T, derived_type>)
+    friend constexpr auto
+    operator*(T&& other, derived_type&& self) -> decltype(auto) {
+        return fwd(self).multiply(fwd(other));
+    }
+
+    // `*=` operator where this is a left-hand-side operand.
     template <typename T>
     friend constexpr auto
-    operator*=(derived_type& lhs, T&& other) -> auto {
-        lhs = lhs.multiply(fwd(other));
-        return lhs;
+    operator*=(derived_type& self, T&& other) -> derived_type& {
+        self = self.multiply(fwd(other));
+        return self;
+    }
+
+    // `*=` operators where this is a right-hand-side operand.
+
+    // `this` is an l-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_multiply_interface<T, derived_type>)
+    friend constexpr auto
+    operator*=(T& other, derived_type const& self) -> T& {
+        other = self.multiply(other);
+        return other;
+    }
+
+    // `this` is an r-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_multiply_interface<T, derived_type>)
+    friend constexpr auto
+    operator*=(T& other, derived_type&& self) -> T& {
+        other = move(self).multiply(other);
+        return other;
     }
 };
 
 // CRTP class for generating a commutative `/` operator.
 template <typename derived_type>
 struct divide_interface {
-    using decay_derived_type = remove_reference<derived_type>;
+    using decay_derived_type = remove_cvref<derived_type>;
 
     // `/` operator where this is a left-hand-side operand.
     template <typename T>
-    friend constexpr auto
-    operator/(derived_type lhs, T&& other) {
-        return lhs.divide_by(fwd(other));
+    constexpr auto
+    operator/(this auto&& self, T&& other) -> decltype(auto) {
+        return fwd(self).divide_by(fwd(other));
     }
 
-    // `/` operator where this is a right-hand-side operand.
+    // `/` operators where this is a right-hand-side operand.
+
+    // `this` is an l-value.
     template <typename T>
-    // If this operator's left operand can divide by `derived_type`,
-    // this overload is ambiguous.
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
         requires(!detail::has_divide_by_interface<T, derived_type>)
     friend constexpr auto
-    operator/(T&& other, derived_type rhs) {
-        return rhs.divide_into(fwd(other));
+    operator/(T&& other, decay_derived_type const& self) -> decltype(auto) {
+        return self.divide_into(fwd(other));
     }
 
-    // Compound division operator.
+    // `this` is an r-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_divide_by_interface<T, derived_type>)
+    friend constexpr auto
+    operator/(T&& other, derived_type&& self) -> decltype(auto) {
+        return fwd(self).divide_into(fwd(other));
+    }
+
+    // `/=` operator where this is a left-hand-side operand.
     template <typename T>
     friend constexpr auto
-    operator/=(derived_type& lhs, T&& other) -> auto {
-        lhs = lhs.divide_by(fwd(other));
-        return lhs;
+    operator/=(derived_type& self, T&& other) -> derived_type& {
+        self = self.divide_by(fwd(other));
+        return self;
+    }
+
+    // `/=` operators where this is a right-hand-side operand.
+
+    // `this` is an l-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_divide_by_interface<T, derived_type>)
+    friend constexpr auto
+    operator/=(T& other, derived_type const& self) -> T& {
+        other = self.divide_into(other);
+        return other;
+    }
+
+    // `this` is an r-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_divide_by_interface<T, derived_type>)
+    friend constexpr auto
+    operator/=(T& other, derived_type&& self) -> T& {
+        other = move(self).divide_into(other);
+        return other;
     }
 };
 
+// CRTP class for generating a commutative `&` operator.
 template <typename derived_type>
 struct bit_and_interface {
+    using decay_derived_type = remove_cvref<derived_type>;
+
     // `&` operator where this is a left-hand-side operand.
     template <typename T>
-    friend constexpr auto
-    operator&(derived_type lhs, T&& other) {
-        return lhs.bit_and(fwd(other));
+    constexpr auto
+    operator&(this auto&& self, T&& other) -> decltype(auto) {
+        return fwd(self).bit_and(fwd(other));
     }
 
-    // Binary `&` operator.
+    // `&` operators where this is a right-hand-side operand.
+
+    // `this` is an l-value.
     template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
         requires(!detail::has_bit_and_interface<T, derived_type>)
     friend constexpr auto
-    operator&(derived_type self, T&& other) {
+    operator&(T&& other, decay_derived_type const& self) -> decltype(auto) {
         return self.bit_and(fwd(other));
     }
 
-    // Binary `&=` operator.
+    // `this` is an r-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_bit_and_interface<T, derived_type>)
+    friend constexpr auto
+    operator&(T&& other, derived_type&& self) -> decltype(auto) {
+        return fwd(self).bit_and(fwd(other));
+    }
+
+    // `&=` operator where this is a left-hand-side operand.
     template <typename T>
     friend constexpr auto
-    operator&=(derived_type& self, T other) -> auto& {
-        self = self.bit_and(other);
+    operator&=(derived_type& self, T&& other) -> derived_type& {
+        self = self.bit_and(fwd(other));
         return self;
+    }
+
+    // `&=` operators where this is a right-hand-side operand.
+
+    // `this` is an l-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_bit_and_interface<T, derived_type>)
+    friend constexpr auto
+    operator&=(T& other, derived_type const& self) -> T& {
+        other = self.bit_and(other);
+        return other;
+    }
+
+    // `this` is an r-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_bit_and_interface<T, derived_type>)
+    friend constexpr auto
+    operator&=(T& other, derived_type&& self) -> T& {
+        other = move(self).bit_and(other);
+        return other;
     }
 };
 
+// CRTP class for generating a commutative `|` operator.
 template <typename derived_type>
 struct bit_or_interface {
+    using decay_derived_type = remove_cvref<derived_type>;
+
     // `|` operator where this is a left-hand-side operand.
     template <typename T>
-    friend constexpr auto
-    operator|(derived_type lhs, T&& other) {
-        return lhs.bit_or(fwd(other));
+    constexpr auto
+    operator|(this auto&& self, T&& other) -> decltype(auto) {
+        return fwd(self).bit_or(fwd(other));
     }
 
-    // Binary `|` operator.
+    // `|` operators where this is a right-hand-side operand.
+
+    // `this` is an l-value.
     template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
         requires(!detail::has_bit_or_interface<T, derived_type>)
     friend constexpr auto
-    operator|(derived_type self, T&& other) {
+    operator|(T&& other, decay_derived_type const& self) -> decltype(auto) {
         return self.bit_or(fwd(other));
     }
 
-    // Binary `|=` operator.
+    // `this` is an r-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_bit_or_interface<T, derived_type>)
+    friend constexpr auto
+    operator|(T&& other, derived_type&& self) -> decltype(auto) {
+        return fwd(self).bit_or(fwd(other));
+    }
+
+    // `|=` operator where this is a left-hand-side operand.
     template <typename T>
     friend constexpr auto
-    operator|=(derived_type& self, T other) -> auto& {
-        self = self.bit_or(other);
+    operator|=(derived_type& self, T&& other) -> derived_type& {
+        self = self.bit_or(fwd(other));
         return self;
+    }
+
+    // `|=` operators where this is a right-hand-side operand.
+
+    // `this` is an l-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_bit_or_interface<T, derived_type>)
+    friend constexpr auto
+    operator|=(T& other, derived_type const& self) -> T& {
+        other = self.bit_or(other);
+        return other;
+    }
+
+    // `this` is an r-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_bit_or_interface<T, derived_type>)
+    friend constexpr auto
+    operator|=(T& other, derived_type&& self) -> T& {
+        other = move(self).bit_or(other);
+        return other;
     }
 };
 
+// CRTP class for generating a commutative `%` operator.
 template <typename derived_type>
 struct modulo_interface {
+    using decay_derived_type = remove_cvref<derived_type>;
+
     // `%` operator where this is a left-hand-side operand.
     template <typename T>
-    friend constexpr auto
-    operator%(derived_type lhs, T&& other) {
-        return lhs.modulo(fwd(other));
+    constexpr auto
+    operator%(this auto&& self, T&& other) -> decltype(auto) {
+        return fwd(self).modulo(fwd(other));
     }
 
-    // Binary `%` operator.
+    // `%` operators where this is a right-hand-side operand.
+
+    // `this` is an l-value.
     template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
         requires(!detail::has_modulo_interface<T, derived_type>)
     friend constexpr auto
-    operator%(derived_type self, T&& other) {
+    operator%(T&& other, decay_derived_type const& self) -> decltype(auto) {
         return self.modulo(fwd(other));
     }
 
-    // Binary `%=` operator.
+    // `this` is an r-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_modulo_interface<T, derived_type>)
+    friend constexpr auto
+    operator%(T&& other, derived_type&& self) -> decltype(auto) {
+        return fwd(self).modulo(fwd(other));
+    }
+
+    // `%=` operator where this is a left-hand-side operand.
     template <typename T>
     friend constexpr auto
-    operator%=(derived_type& self, T other) -> auto& {
-        self = self.modulo(other);
+    operator%=(derived_type& self, T&& other) -> derived_type& {
+        self = self.modulo(fwd(other));
         return self;
+    }
+
+    // `%=` operators where this is a right-hand-side operand.
+
+    // `this` is an l-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_modulo_interface<T, derived_type>)
+    friend constexpr auto
+    operator%=(T& other, derived_type const& self) -> T& {
+        other = self.modulo(other);
+        return other;
+    }
+
+    // `this` is an r-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_modulo_interface<T, derived_type>)
+    friend constexpr auto
+    operator%=(T& other, derived_type&& self) -> T& {
+        other = move(self).modulo(other);
+        return other;
+    }
+};
+
+// CRTP class for generating a commutative `<<` operator.
+template <typename derived_type>
+struct shift_left_interface {
+    using decay_derived_type = remove_cvref<derived_type>;
+
+    // `<<` operator where this is a left-hand-side operand.
+    template <typename T>
+    constexpr auto
+    operator<<(this auto&& self, T&& other) -> decltype(auto) {
+        return fwd(self).shift_left_by(fwd(other));
+    }
+
+    // `<<` operators where this is a right-hand-side operand.
+
+    // `this` is an l-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_shift_left_by_interface<T, derived_type>)
+    friend constexpr auto
+    operator<<(T&& other, decay_derived_type const& self) -> decltype(auto) {
+        return self.shift_left_by(fwd(other));
+    }
+
+    // `this` is an r-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_shift_left_by_interface<T, derived_type>)
+    friend constexpr auto
+    operator<<(T&& other, derived_type&& self) -> decltype(auto) {
+        return fwd(self).shift_left_into(fwd(other));
+    }
+
+    // `<<=` operator where this is a left-hand-side operand.
+    template <typename T>
+    friend constexpr auto
+    operator<<=(derived_type& self, T&& other) -> derived_type& {
+        self = self.shift_left_by(fwd(other));
+        return self;
+    }
+
+    // `<<=` operators where this is a right-hand-side operand.
+
+    // `this` is an l-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_shift_left_by_interface<T, derived_type>)
+    friend constexpr auto
+    operator<<=(T& other, derived_type const& self) -> T& {
+        other = self.shift_left_into(other);
+        return other;
+    }
+
+    // `this` is an r-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_shift_left_by_interface<T, derived_type>)
+    friend constexpr auto
+    operator<<=(T& other, derived_type&& self) -> T& {
+        other = move(self).shift_left_into(other);
+        return other;
+    }
+};
+
+// CRTP class for generating a commutative `>>` operator.
+template <typename derived_type>
+struct shift_right_interface {
+    using decay_derived_type = remove_cvref<derived_type>;
+
+    // `>>` operator where this is a left-hand-side operand.
+    template <typename T>
+    constexpr auto
+    operator>>(this auto&& self, T&& other) -> decltype(auto) {
+        return fwd(self).shift_right_by(fwd(other));
+    }
+
+    // `>>` operators where this is a right-hand-side operand.
+
+    // `this` is an l-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_shift_right_by_interface<T, derived_type>)
+    friend constexpr auto
+    operator>>(T&& other, decay_derived_type const& self) -> decltype(auto) {
+        return self.shift_right_by(fwd(other));
+    }
+
+    // `this` is an r-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_shift_right_by_interface<T, derived_type>)
+    friend constexpr auto
+    operator>>(T&& other, derived_type&& self) -> decltype(auto) {
+        return fwd(self).shift_right_into(fwd(other));
+    }
+
+    // `>>=` operator where this is a left-hand-side operand.
+    template <typename T>
+    friend constexpr auto
+    operator>>=(derived_type& self, T&& other) -> derived_type& {
+        self = self.shift_right_by(fwd(other));
+        return self;
+    }
+
+    // `>>=` operators where this is a right-hand-side operand.
+
+    // `this` is an l-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_shift_right_by_interface<T, derived_type>)
+    friend constexpr auto
+    operator>>=(T& other, derived_type const& self) -> T& {
+        other = self.shift_right_into(other);
+        return other;
+    }
+
+    // `this` is an r-value.
+    template <typename T>
+    // If this operator's left operand can add `derived_type` as its
+    // right-hand operand, this overload is ambiguous.
+        requires(!detail::has_shift_right_by_interface<T, derived_type>)
+    friend constexpr auto
+    operator>>=(T& other, derived_type&& self) -> T& {
+        other = move(self).shift_right_into(other);
+        return other;
     }
 };
 
@@ -292,9 +737,9 @@ struct arithmetic_interface : plus_interface<derived_type>,
                               divide_interface<derived_type>,
                               bit_and_interface<derived_type>,
                               bit_or_interface<derived_type>,
-                              modulo_interface<derived_type>
-// TODO: All remaining interfaces.
-{
+                              modulo_interface<derived_type>,
+                              shift_left_interface<derived_type>,
+                              shift_right_interface<derived_type> {
     // No-op unary `+` operator for operand.
     friend constexpr auto
     operator+(derived_type self) {
@@ -309,7 +754,7 @@ struct arithmetic_interface : plus_interface<derived_type>,
         if constexpr (detail::has_negate_interface<derived_type>) {
             return self.negate();
         } else {
-            // Subtract `self` from `0` to negate it.
+            // Subtract `self` from `0` to negate ilhs.
             return static_cast<derived_type>(0) - self;
         }
     }

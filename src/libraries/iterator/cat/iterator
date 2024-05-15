@@ -167,7 +167,7 @@ class iterator_interface<derived_type> {
         if constexpr (detail::has_advance<derived_type>) {
             new_iterator.advance(offset);
         } else {
-            for (iword i = 0; i < offset; ++i) {
+            for (idx i = 0; i < offset; ++i) {
                 ++new_iterator;
             }
         }
@@ -182,7 +182,7 @@ class iterator_interface<derived_type> {
             // left.advance(difference_type(offset));
             left.advance(offset);
         } else {
-            for (iword i = 0; i < offset; ++i) {
+            for (idx i = 0; i < offset; ++i) {
                 left.increment();
             }
         }
@@ -216,7 +216,7 @@ class iterator_interface<derived_type> {
         if constexpr (detail::has_advance<derived_type>) {
             return new_iterator - offset;
         } else {
-            for (iword i = 0; i < offset; ++i) {
+            for (idx i = 0; i < offset; ++i) {
                 --new_iterator;
             }
         }
@@ -230,7 +230,7 @@ class iterator_interface<derived_type> {
         if constexpr (detail::has_advance<derived_type>) {
             left.advance(-offset);
         } else {
-            for (iword i = 0; i < offset; ++i) {
+            for (idx i = 0; i < offset; ++i) {
                 --left;
             }
         }

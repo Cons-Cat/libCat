@@ -612,14 +612,13 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
     constexpr void
     advance(iword offset) {
         iword advance_bits = m_bit_position + offset;
-        iword iword_bits = iword(this->word_bits);
-        iword bytes_overflow = advance_bits / iword_bits;
+        iword bytes_overflow = advance_bits / word_bits;
         if (advance_bits < 0 &&
-            ((bytes_overflow * iword_bits) != advance_bits)) {
+            ((bytes_overflow * word_bits) != advance_bits)) {
             --bytes_overflow;
         }
-        m_internal_iterator += bytes_overflow;
-        m_bit_position = idx(advance_bits - bytes_overflow * iword_bits);
+        m_internal_iterator += bytes_overflow.raw;  // TODO: Remove `.raw`.
+        m_bit_position = idx(advance_bits - bytes_overflow * word_bits);
     }
 
     constexpr auto
