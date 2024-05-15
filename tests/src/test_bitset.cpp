@@ -156,7 +156,24 @@ TEST(test_bitset) {
          auto bit : bits127_2) {
     }
 
-    // Test mutable iterator.
+    // Test mutable 8-byte aligned iterator.
+    cat::bitset bits128 =
+        cat::bitset<128u>::from(cat::uint8_max >> 2u, 0b0000'0100_u8);
+    for (cat::bit_reference bit : bits128) {
+        bit = false;
+    }
+    for (cat::bit_reference bit : bits128) {
+        cat::verify(bit == false);
+    }
+
+    for (cat::bit_reference bit : bits128) {
+        bit = true;
+    }
+    for (cat::bit_reference bit : bits128) {
+        cat::verify(bit == true);
+    }
+
+    // Test mutable non-8-byte aligned iterator.
     for (cat::bit_reference bit : bits127) {
         bit = false;
     }
