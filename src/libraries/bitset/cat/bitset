@@ -199,6 +199,8 @@ class bitset {
     [[nodiscard]]
     constexpr auto
     all_of() const -> bool {
+        // TODO: Make this branchless where possible.
+
         // Iterate through all bytes:
         for (idx current_byte = 0u; current_byte < this->storage_array_size;
              ++current_byte) {
@@ -214,7 +216,7 @@ class bitset {
             } else {
                 // Leading bits of the leading byte should not be considered
                 // part of the bitset, so they are masked off.
-                T const mask = (T(1) << leading_bytes_bits) - T(1);
+                T const mask = T(1u << leading_bytes_bits) - T(1);
 
                 if (it != mask) {
                     return false;
@@ -228,6 +230,7 @@ class bitset {
     [[nodiscard]]
     constexpr auto
     any_of() const -> bool {
+        // TODO: Make this branchless where possible.
         for (auto i : m_data) {
             if (i != 0u) {
                 return true;

@@ -44,6 +44,8 @@ constexpr auto
 make_raw_arithmetic(T value) {
     if constexpr (requires { value.raw; }) {
         return value.raw;
+    } else if constexpr (__is_pointer(T)) {
+        return reinterpret_cast<__UINTPTR_TYPE__>(value);
     } else {
         return value;
     }
@@ -575,6 +577,14 @@ struct arithmetic :
         }
     }
 
+    template <typename U>
+    [[nodiscard]]
+    constexpr auto
+    add(U* p_operand) const -> U* {
+        return this->raw + p_operand;
+    }
+
+    // Generate `operator-`.
     template <is_arithmetic U>
     constexpr auto
     subtract_by(U operand) const -> detail::promoted_type<arithmetic, U> {
@@ -601,6 +611,13 @@ struct arithmetic :
         }
     }
 
+    template <typename U>
+    [[nodiscard]]
+    constexpr auto
+    subtract_by(U* p_operand) -> U* {
+        return this->raw - p_operand;
+    }
+
     template <is_arithmetic U>
     constexpr auto
     subtract_from(U operand) const -> detail::promoted_type<arithmetic, U> {
@@ -608,6 +625,14 @@ struct arithmetic :
             make_raw_arithmetic(operand) - this->raw);
     }
 
+    template <typename U>
+    [[nodiscard]]
+    constexpr auto
+    subtract_from(U* p_operand) -> U* {
+        return p_operand - this->raw;
+    }
+
+    // Generate `operator*`.
     template <is_arithmetic U>
     constexpr auto
     multiply(U operand) const -> detail::promoted_type<arithmetic, U> {
@@ -634,7 +659,15 @@ struct arithmetic :
         }
     }
 
-    template <is_arithmetic U>
+    template <typename U>
+    [[nodiscard]]
+    constexpr auto
+    multiply(U* p_operand) const -> U* {
+        return this->raw * p_operand;
+    }
+
+    // Generate `operator/`.
+    template <typename U>
     constexpr auto
     divide_by(U operand) const -> detail::promoted_type<arithmetic, U> {
         using enum overflow_policies;
@@ -646,22 +679,38 @@ struct arithmetic :
                                 static_cast<promoted_raw>(raw_operand));
         } else if constexpr (overflow_policy == wrap ||
                              overflow_policy == wrap_member) {
+            // TODO: This looks wrong.
             return wrap_mul(this->raw, raw_operand);
         } else if constexpr (overflow_policy == saturate ||
                              overflow_policy == saturate_member) {
+            // TODO: This looks wrong.
             return sat_mul(this->raw, raw_operand);
         }
     }
 
+    template <typename U>
+    [[nodiscard]]
+    constexpr auto
+    divide_by(U* p_operand) const -> U* {
+        return this->raw / p_operand;
+    }
+
     // Handle left-hand-side raw operands that are larger than this.
     template <is_unsafe_arithmetic U>
-        requires(is_safe_arithmetic_comparison<U, T>)
+        requires(is_safe_arithmetic_comparison<T, U>)
     constexpr auto
-    divide_into(U operand) -> detail::promoted_type<arithmetic, U> {
+    divide_into(U operand) const -> detail::promoted_type<U, arithmetic> {
         using promoted_raw =
-            raw_arithmetic_type<detail::promoted_type<arithmetic, U>>;
+            raw_arithmetic_type<detail::promoted_type<U, arithmetic>>;
         return promoted_raw(static_cast<promoted_raw>(operand) /
                             static_cast<promoted_raw>(this->raw));
+    }
+
+    template <typename U>
+    [[nodiscard]]
+    constexpr auto
+    divide_into(U* p_operand) const -> U* {
+        return p_operand / this->raw;
     }
 
     // Generate `operator~`.
@@ -670,87 +719,23 @@ struct arithmetic :
         return arithmetic(~(this->raw));
     }
 
-    // Add `arithmetic` to a right-hand-side pointer.
-    template <typename U>
-    [[nodiscard]]
-    friend constexpr auto
-    operator+(arithmetic self, U* p_operand) -> U* {
-        return self.raw + p_operand;
-    }
-
-    template <typename U>
-    [[nodiscard]]
-    friend constexpr auto
-    operator-(U* p_operand, arithmetic self) -> U* {
-        return p_operand - self.raw;
-    }
-
-    // Add `arithmetic` to a left-hand-side pointer.
-    template <typename U>
-    [[nodiscard]]
-    friend constexpr auto
-    operator+(U* p_operand, arithmetic self) -> U* {
-        return p_operand + self.raw;
-    }
-
-    template <typename U>
-    [[nodiscard]]
-    friend constexpr auto
-    operator*(U* p_operand, arithmetic self) -> U* {
-        return p_operand * self.raw;
-    }
-
-    template <typename U>
-    [[nodiscard]]
-    friend constexpr auto
-    operator*(arithmetic self, U* p_operand) -> U* {
-        return p_operand * self.raw;
-    }
-
-    template <typename U>
-    [[nodiscard]]
-    friend constexpr auto
-    operator/(U* p_operand, arithmetic self) -> U* {
-        return p_operand / self.raw;
-    }
-
-    template <typename U>
-    [[nodiscard]]
-    friend constexpr auto
-    operator/(arithmetic self, U* p_operand) -> U* {
-        return p_operand / self.raw;
-    }
-
+    // Generate `operator%`.
     template <is_arithmetic U>
     [[nodiscard]]
-    friend constexpr auto
-    operator%(arithmetic self, U operand) -> detail::promoted_type<T, U> {
-        return detail::promoted_type<T, U>(self.raw %
+    constexpr auto
+    modulo(U operand) const -> detail::promoted_type<T, U> {
+        return detail::promoted_type<T, U>(this->raw %
                                            make_raw_arithmetic(operand));
     }
 
     template <typename U>
     [[nodiscard]]
-    friend constexpr auto
-    operator%(U* p_operand, arithmetic self) -> U* {
-        return p_operand % self.raw;
+    constexpr auto
+    modulo(U* p_operand) const -> U* {
+        return this->raw % p_operand;
     }
 
-    template <typename U>
-    [[nodiscard]]
-    friend constexpr auto
-    operator%(arithmetic self, U* p_operand) -> U* {
-        return p_operand % self.raw;
-    }
-
-    template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<U, T>)
-    friend constexpr auto
-    operator%=(arithmetic& self, U operand) -> arithmetic& {
-        self.raw %= make_raw_arithmetic(operand);
-        return self;
-    }
-
+    // Generate `operator&`.
     template <is_arithmetic U>
     // TODO: Should this guarantee operands are the same size?
         requires(is_safe_arithmetic_comparison<T, U>)
@@ -763,128 +748,79 @@ struct arithmetic :
 
     template <typename U>
     [[nodiscard]]
-    friend constexpr auto
-    operator&(U* p_operand, arithmetic self) -> U* {
-        return p_operand & self.raw;
+    constexpr auto
+    bit_and(U* p_operand) const -> U* {
+        return p_operand & this->raw;
     }
 
-    template <typename U>
-    [[nodiscard]]
-    friend constexpr auto
-    operator&(arithmetic self, U* p_operand) -> U* {
-        return p_operand & self.raw;
-    }
-
+    // Generate `operator|`.
     template <is_arithmetic U>
         requires(is_safe_arithmetic_comparison<U, T>)
     [[nodiscard]]
-    friend constexpr auto
-    operator|(arithmetic self, U operand) -> detail::promoted_type<T, U> {
-        return detail::promoted_type<T, U>(self.raw |
+    constexpr auto
+    bit_or(U operand) const -> detail::promoted_type<T, U> {
+        return detail::promoted_type<T, U>(this->raw |
                                            make_raw_arithmetic(operand));
     }
 
     template <typename U>
     [[nodiscard]]
-    friend constexpr auto
-    operator|(U* p_operand, arithmetic self) -> U* {
-        return p_operand | self.raw;
+    constexpr auto
+    bit_or(U* p_operand) const -> U* {
+        return p_operand | this->raw;
     }
 
-    template <typename U>
+    // Generate `operator<<`.
+    template <is_arithmetic U>
     [[nodiscard]]
-    friend constexpr auto
-    operator|(arithmetic self, U* p_operand) -> U* {
-        return p_operand | self.raw;
+    constexpr auto
+    shift_left_by(U operand) const -> arithmetic {
+        if constexpr (overflow_policy == overflow_policies::saturate) {
+            return sat_shl(this->raw, make_raw_arithmetic(operand));
+        } else {
+            return arithmetic<T>{this->raw << make_raw_arithmetic(operand)};
+        }
     }
 
     template <is_arithmetic U>
-        requires(is_safe_arithmetic_comparison<U, T>)
-    friend constexpr auto
-    operator|=(arithmetic& self, U operand) -> arithmetic& {
-        self.raw |= make_raw_arithmetic(operand);
-        return self;
-    }
-
-    template <is_integral U>
     [[nodiscard]]
-    friend constexpr auto
-    operator<<(arithmetic self, U operand) -> arithmetic<T> {
-        if constexpr (overflow_policy == overflow_policies::saturate) {
-            return sat_shl(make_raw_arithmetic(self),
-                           make_raw_arithmetic(operand));
-        } else {
-            return arithmetic<T>{self.raw << make_raw_arithmetic(operand)};
-        }
+    constexpr auto
+    shift_left_into(U other) const -> U {
+        return other << this->raw;
     }
 
-    template <is_raw_integral U>
+    // template <typename U>
+    // [[nodiscard]]
+    // constexpr auto
+    // shift_left_by(U* p_operand) const -> U* {
+    //     return p_operand << this->raw;
+    // }
+
+    // Generate `operator>>`.
+    template <is_arithmetic U>
     [[nodiscard]]
-    friend constexpr auto
-    operator<<(U lhs, arithmetic rhs) -> U {
-        return lhs << static_cast<int>(rhs.raw);
-    }
-
-    template <typename U>
-    [[nodiscard]]
-    friend constexpr auto
-    operator<<(U* p_operand, arithmetic self) -> U* {
-        return p_operand << self.raw;
-    }
-
-    template <typename U>
-    [[nodiscard]]
-    friend constexpr auto
-    operator<<(arithmetic self, U* p_operand) -> U* {
-        return p_operand << self.raw;
-    }
-
-    template <is_integral U>
-    friend constexpr auto
-    operator<<=(arithmetic& self, U operand) -> arithmetic& {
-        self = self << make_raw_arithmetic(operand);
-        return self;
-    }
-
-    template <is_integral U>
-    [[nodiscard]]
-    friend constexpr auto
-    operator>>(arithmetic self, U operand) -> arithmetic<T> {
+    constexpr auto
+    shift_right_by(U operand) const -> arithmetic {
         auto raw_operand = make_raw_arithmetic(operand);
         if constexpr (overflow_policy == overflow_policies::saturate) {
-            return sat_shr(self.raw, raw_operand);
+            return sat_shr(this->raw, raw_operand);
         } else {
-            return arithmetic<T>{self.raw >> raw_operand};
+            return arithmetic<T>{this->raw >> raw_operand};
         }
     }
 
-    template <is_raw_integral U>
-    [[nodiscard]]
-    friend constexpr auto
-    operator>>(U lhs, arithmetic rhs) -> U {
-        return lhs >> rhs.raw;
+    template <is_arithmetic U>
+    constexpr auto
+    shift_right_into(U other) const -> U {
+        return other >> this->raw;
     }
 
-    template <typename U>
-    [[nodiscard]]
-    friend constexpr auto
-    operator>>(U* p_operand, arithmetic self) -> U* {
-        return p_operand >> self.raw;
-    }
-
-    template <typename U>
-    [[nodiscard]]
-    friend constexpr auto
-    operator>>(arithmetic self, U* p_operand) -> U* {
-        return p_operand >> self.raw;
-    }
-
-    template <is_integral U>
-    friend constexpr auto
-    operator>>=(arithmetic& self, U operand) -> arithmetic& {
-        self = self >> make_raw_arithmetic(operand);
-        return self;
-    }
+    // template <typename U>
+    // [[nodiscard]]
+    // constexpr auto
+    // shift_right_by(U* p_operand) const -> U* {
+    //     return p_operand >> this->raw;
+    // }
 
     static constexpr auto
     min() -> arithmetic<raw_type, overflow_policy> {
@@ -1028,10 +964,24 @@ struct arithmetic_ptr
         return arithmetic_ptr(this->raw + make_raw_arithmetic(operand));
     }
 
+    template <typename U>
+    constexpr auto
+    add(U* p_operand) const -> arithmetic_ptr {
+        return this->add(
+            arithmetic_ptr<U, storage_type, overflow_policy>(p_operand));
+    }
+
     template <is_integral U>
     constexpr auto
     subtract_by(U operand) const -> arithmetic_ptr {
         return arithmetic_ptr(this->raw - make_raw_arithmetic(operand));
+    }
+
+    template <typename U>
+    constexpr auto
+    subtract_by(U* p_operand) const -> arithmetic_ptr {
+        return this->subtract_by(
+            arithmetic_ptr<U, storage_type, overflow_policy>(p_operand));
     }
 
     template <is_arithmetic U>
@@ -1040,83 +990,139 @@ struct arithmetic_ptr
         return operand - this->raw;
     }
 
-    template <is_integral U>
+    template <typename U>
+    constexpr auto
+    subtract_from(U* p_operand) const -> arithmetic_ptr {
+        return arithmetic_ptr<U, storage_type, overflow_policy>(p_operand)
+            .subtract_by(this->raw);
+    }
+
+    template <typename U>
     constexpr auto
     multiply(U operand) const -> arithmetic_ptr {
         return arithmetic_ptr(this->raw + make_raw_arithmetic(operand));
     }
 
-    template <is_integral U>
+    template <typename U>
+    constexpr auto
+    multiply(U* p_operand) const -> arithmetic_ptr {
+        return this->multiply(
+            arithmetic_ptr<U, storage_type, overflow_policy>(p_operand));
+    }
+
+    template <typename U>
     constexpr auto
     divide_by(U operand) const -> arithmetic_ptr {
         return arithmetic_ptr(this->raw / make_raw_arithmetic(operand));
     }
 
-    template <is_integral U>
+    template <typename U>
+    constexpr auto
+    divide_by(U* p_operand) const -> arithmetic_ptr {
+        return this->divide_by(
+            arithmetic_ptr<U, storage_type, overflow_policy>(p_operand));
+    }
+
+    template <typename U>
     constexpr auto
     divide_into(U operand) const -> arithmetic_ptr {
-        return arithmetic_ptr(make_raw_arithmetic(operand) / this->raw);
+        return arithmetic_ptr(
+            make_raw_arithmetic(operand).divide_into(this->raw));
+    }
+
+    template <typename U>
+    constexpr auto
+    divide_into(U* p_operand) const -> arithmetic_ptr {
+        return arithmetic_ptr<U, storage_type, overflow_policy>(p_operand)
+            .divide_into(this->raw);
     }
 
     // Generate `operator&`.
-    template <is_integral U>
+    template <typename U>
     constexpr auto
     bit_and(U other) const -> arithmetic_ptr {
         return arithmetic_ptr(this->raw & make_raw_arithmetic(other));
     }
 
-    template <is_integral U>
+    template <typename U>
+    constexpr auto
+    bit_and(U* p_operand) const -> arithmetic_ptr {
+        return this->bit_and(
+            arithmetic_ptr<U, storage_type, overflow_policy>(p_operand));
+    }
+
+    template <typename U>
     [[nodiscard]]
     constexpr auto
     bit_or(arithmetic_ptr self, U operand) const -> arithmetic_ptr {
         return arithmetic_ptr(self.raw | make_raw_arithmetic(operand));
     }
 
-    template <is_integral U>
+    template <typename U>
+    constexpr auto
+    bit_or(U* p_operand) const -> arithmetic_ptr {
+        return this->bit_or(
+            arithmetic_ptr<U, storage_type, overflow_policy>(p_operand));
+    }
+
+    template <typename U>
     [[nodiscard]]
-    friend constexpr auto
-    operator%(arithmetic_ptr self, U operand) -> arithmetic_ptr {
-        return self.raw % make_raw_arithmetic(operand);
+    constexpr auto
+    modulo(U operand) const -> arithmetic_ptr {
+        return this->raw % make_raw_arithmetic(operand);
     }
 
     template <typename U>
     constexpr auto
-    operator%=(U operand) -> arithmetic_ptr& {
-        this->raw = this->raw % make_raw_arithmetic(operand);
-        return *this;
+    modulo(U* p_operand) const -> arithmetic_ptr {
+        return this->modulo(
+            arithmetic_ptr<U, storage_type, overflow_policy>(p_operand));
     }
 
-    // TODO: Make more of these hidden `friend`s.
-
-    template <is_integral U>
+    template <typename U>
     [[nodiscard]]
     constexpr auto
-    operator<<(U operand) const -> arithmetic_ptr {
+    shift_left_by(U operand) const -> arithmetic_ptr {
         return static_cast<storage_type>(this->raw
                                          << make_raw_arithmetic(operand));
     }
 
-    template <is_integral U>
-    constexpr auto
-    operator<<=(U operand) -> arithmetic_ptr& {
-        this->raw = this->raw << make_raw_arithmetic(operand);
-        return *this;
-    }
-
-    template <is_integral U>
+    template <is_arithmetic U>
+        requires(is_integral<T>)
     [[nodiscard]]
     constexpr auto
-    operator>>(U operand) const -> arithmetic_ptr {
+    shift_left_into(U other) const -> U {
+        return other << this->raw;
+    }
+
+    // template <typename U>
+    // constexpr auto
+    // shift_left_by(U* p_operand) const -> arithmetic_ptr {
+    //     return this->shift_left_by(
+    //         arithmetic_ptr<U, storage_type, overflow_policy>(p_operand));
+    // }
+
+    template <typename U>
+    [[nodiscard]]
+    constexpr auto
+    shift_right_by(U operand) const -> arithmetic_ptr {
         return static_cast<storage_type>(this->raw >>
                                          make_raw_arithmetic(operand));
     }
 
-    template <is_integral U>
+    template <is_arithmetic U>
+        requires(is_integral<T>)
     constexpr auto
-    operator>>=(U operand) -> arithmetic_ptr& {
-        this->raw = this->raw >> make_raw_arithmetic(operand);
-        return *this;
+    shift_right_into(U other) const -> U {
+        return other >> this->raw;
     }
+
+    // template <typename U>
+    // constexpr auto
+    // shift_right_by(U* p_operand) const -> arithmetic_ptr {
+    //     return this->shift_right_by(
+    //         arithmetic_ptr<U, storage_type, overflow_policy>(p_operand));
+    // }
 
     // Generate `operator~`.
     constexpr auto
@@ -1136,95 +1142,6 @@ struct arithmetic_ptr
         return limits<arithmetic_ptr<T, storage_type, overflow_policy>>::max();
     }
 };
-
-// Add and assign an `arithmetic` to a pointer.
-template <typename T, typename U>
-constexpr auto
-operator+=(T* p_lhs, arithmetic<U> rhs) -> T* {
-    p_lhs += rhs.raw;
-    return p_lhs;
-}
-
-template <typename T, typename ptr_type, typename ptr_storage,
-          overflow_policies policy>
-constexpr auto
-operator+=(T* p_lhs, arithmetic_ptr<ptr_type, ptr_storage, policy> rhs) -> T* {
-    p_lhs += rhs.raw;
-    return p_lhs;
-}
-
-// Subtract and assign an `arithmetic` to a pointer.
-template <typename T, typename U>
-constexpr auto
-operator-=(T*& p_lhs, arithmetic<U> rhs) -> T*& {
-    p_lhs -= rhs.raw;
-    return p_lhs;
-}
-
-template <typename T, typename ptr_type, typename ptr_storage,
-          overflow_policies policy>
-constexpr auto
-operator-=(T*& p_lhs,
-           arithmetic_ptr<ptr_type, ptr_storage, policy> rhs) -> T*& {
-    p_lhs -= rhs.raw;
-    return p_lhs;
-}
-
-// Multiply and assign an `arithmetic` to a pointer.
-template <typename T, typename U>
-constexpr auto
-operator*=(T* p_lhs, arithmetic<U> rhs) -> T* {
-    p_lhs *= rhs.raw;
-    return p_lhs;
-}
-
-// Divide and assign an `arithmetic` to a pointer.
-template <typename T, typename U>
-constexpr auto
-operator/=(T* p_lhs, arithmetic<U> rhs) -> T* {
-    p_lhs /= rhs.raw;
-    return p_lhs;
-}
-
-// Bitwise shift left and assign an `arithmetic` to a pointer.
-template <typename T, is_integral U>
-constexpr auto
-operator<<=(T* p_lhs, arithmetic<U> rhs) -> T* {
-    p_lhs <<= rhs.raw;
-    return p_lhs;
-}
-
-// Bitwise shift right and assign an `arithmetic` to a pointer.
-template <typename T, is_integral U>
-constexpr auto
-operator>>=(T* p_lhs, arithmetic<U> rhs) -> T* {
-    p_lhs >>= rhs.raw;
-    return p_lhs;
-}
-
-// Bitwise modulo and assign an `arithmetic` to a pointer.
-template <typename T, typename U>
-constexpr auto
-operator%=(T* p_lhs, arithmetic<U> rhs) -> T* {
-    p_lhs %= rhs.raw;
-    return p_lhs;
-}
-
-// Bitwise and and assign an `arithmetic` to a pointer.
-template <typename T, typename U>
-constexpr auto
-operator&=(T* p_lhs, arithmetic<U> rhs) -> T* {
-    p_lhs &= rhs.raw;
-    return p_lhs;
-}
-
-// Bitwise or and assign an `arithmetic` to a pointer.
-template <typename T, typename U>
-constexpr auto
-operator|=(T* p_lhs, arithmetic<U> rhs) -> T* {
-    p_lhs |= rhs.raw;
-    return p_lhs;
-}
 
 template <overflow_policies overflow_policy = overflow_policies::undefined>
 struct index :
@@ -1381,9 +1298,9 @@ struct index :
 
     template <is_integral T>
     constexpr auto
-    divide_into(T other) const -> index {
-        return index(static_cast<signed long long>(make_raw_arithmetic(other)) /
-                     static_cast<signed long long>(this->raw));
+    divide_into(T other) const -> T {
+        return static_cast<T>(make_raw_arithmetic(other)) /
+               static_cast<T>(make_raw_arithmetic(this->raw));
     }
 
     // Generate `operator/` for pointer arithmetic.
@@ -1403,15 +1320,28 @@ struct index :
     // Generate `operator<<`.
     template <is_integral T>
     constexpr auto
-    shift_left(T other) const -> index {
+    shift_left_by(T other) const -> index {
         return index(this->raw << make_raw_arithmetic(other));
+    }
+
+    template <is_arithmetic U>
+    [[nodiscard]]
+    constexpr auto
+    shift_left_into(U other) const -> U {
+        return other << this->raw;
     }
 
     // Generate `operator>>`.
     template <is_integral T>
     constexpr auto
-    shift_right(T other) const -> index {
+    shift_right_by(T other) const -> index {
         return index(this->raw >> make_raw_arithmetic(other));
+    }
+
+    template <is_integral T>
+    constexpr auto
+    shift_right_into(T& other) const -> decltype(auto) {
+        return other >> this->raw;
     }
 
     // Generate `operator&`.
@@ -1419,6 +1349,13 @@ struct index :
     constexpr auto
     bit_and(T other) const -> index {
         return index(this->raw & make_raw_arithmetic(other));
+    }
+
+    // Generate `operator|`.
+    template <is_integral T>
+    constexpr auto
+    bit_or(T other) const -> index {
+        return index(this->raw | make_raw_arithmetic(other));
     }
 
     // Generate `operator~`.
@@ -1443,22 +1380,7 @@ struct index :
     }
 };
 
-// TODO: Generate these automatically from `arithmetic_interface`.
 // TODO: Genarete other compound assignment operators for pointer arithmetic.
-
-// Generate `operator+=` for pointer arithmetic.
-template <typename T, overflow_policies policy>
-constexpr auto
-operator+=(T* p_other, index<policy> idx) -> T* {
-    return p_other + idx.raw;
-}
-
-// Generate `operator-=` for pointer arithmetic.
-template <typename T, overflow_policies policy>
-constexpr auto
-operator-=(T* p_other, index<policy> idx) -> T* {
-    return p_other - idx.raw;
-}
 
 namespace detail {
     template <overflow_policies policy>
