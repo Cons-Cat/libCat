@@ -34,7 +34,7 @@ TEST(test_format_strings) {
     // Test formatting `int`.
     allocator.reset();
     cat::string formatted_string_int =
-        cat::format(allocator, "bb{}aa{}cc", 52, 130).or_exit();
+        cat::fmt(allocator, "bb{}aa{}cc", 52, 130).or_exit();
     // TODO: `formatted_string_int` has an incorrect `.size()`, but the content
     // is correct.
     cat::verify(cat::compare_strings(formatted_string_int, "bb52aa130cc"));
@@ -48,12 +48,12 @@ TEST(test_format_strings) {
     // auto _ = cat::println(string_float);
 
     cat::string formatted_string_float =
-        cat::format(allocator, "a{}b", 1.234f).or_exit();
+        cat::fmt(allocator, "a{}b", 1.234f).or_exit();
     cat::verify(cat::compare_strings(formatted_string_float, "a1.234E0b"));
     // auto _ = cat::println(formatted_string_float);
 
     cat::string formatted_string_double =
-        cat::format(allocator, "a{}b", 1.234).or_exit();
+        cat::fmt(allocator, "a{}b", 1.234).or_exit();
     cat::verify(cat::compare_strings(formatted_string_double, "a1.234E0b"));
     // auto _ = cat::println(formatted_string_double);
 

@@ -59,7 +59,7 @@ main() -> int {
 
     // TODO: This will leak. An `inline_allocator` should be used.
     auto _ =
-        cat::print(cat::format(pager, "\n{} tests passed.\n{} tests failed.\n",
-                               tests_passed, tests_failed)
+        cat::print(cat::fmt(pager, "\n{} tests passed.\n{} tests failed.\n",
+                            tests_passed, tests_failed)
                        .or_exit());
 }
