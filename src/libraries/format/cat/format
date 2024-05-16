@@ -274,8 +274,8 @@ namespace detail {
     };
 
     // A buffer that can grow through `.push_back()` and reallocate when its
-    // storage is exceeded. This container is used in `vformat()` calls as the
-    // default container for `vformat_to()`.
+    // storage is exceeded. This container is used in `vfmt()` calls as the
+    // default container for `vfmt_to()`.
     struct format_string_vector
         : collection_interface<format_string_vector, char>,
           iterable_interface<char> {
@@ -758,72 +758,74 @@ namespace detail {
         // No errors occurred.
         return monostate;
     }
-
-    // Format a collection of `char` and push it into some container.
-    template <is_allocator allocator_type, typename outputter_type>
-    auto
-    vformat_to(allocator_type& allocator, outputter_type output_iterator,
-               string const format,
-               format_args arguments) -> scaredy_format<outputter_type> {
-        if constexpr (is_same<outputter_type, format_contiguous_output_iterator<
-                                                  allocator_type>>) {
-            // If the type-erased contiguous format buffer is used, then
-            // this routine can be slightly streamlined.
-            format_handler<allocator_type> handler = {
-                allocator, output_iterator, format, arguments};
-            return parse_format_string(format, move(handler));
-        } else {
-            // Otherwise, create a type-erased contiguous format buffer to
-            // optimize pushing to this output iterator.
-            format_buffer_iterator<allocator_type, outputter_type> buffer = {
-                allocator, output_iterator};
-            format_handler<allocator_type> handler = {
-                allocator,
-                format_contiguous_output_iterator<allocator_type>{buffer},
-                format, arguments};
-            scaredy_format<void> result =
-                parse_format_string(format, move(handler));
-            if (!result.has_value()) {
-                return result.error<format_errors>();
-            }
-            return buffer.output_iterator;
-        }
-    }
-
-    template <is_allocator allocator_type>
-    auto
-    vformat(allocator_type& allocator, string const format,
-            format_args arguments) -> scaredy_format<string> {
-        // TODO: Estimate the size of the final formatted string, and
-        // allocate that much up-front for `output`.
-        idx const initial_size = format.size() + 10u;
-
-        maybe maybe_memory = allocator.template alloc_multi<char>(initial_size);
-        if (!maybe_memory.has_value()) {
-            return format_errors::out_of_memory;
-        }
-
-        char* p_memory = maybe_memory.value().data();
-        string output{p_memory, initial_size};
-
-        // `format_string_vector` is a container that satisfies the `Iterable`
-        // `concept` and has a `.push_back()` method for a
-        // `back_insert_iterator`. It is used to store the formatted string
-        // and reallocates when that string grows beyond `initial_size`.
-        format_string_vector into_buffer = {p_memory, 0u, initial_size};
-
-        // TODO: Specify which kind of `scaredy_format` this is.
-        auto result = vformat_to(
-            allocator, back_insert_iterator<format_string_vector>{into_buffer},
-            format, arguments);
-        if (!result.has_value()) {
-            return result.template error<format_errors>();
-        }
-
-        idx const length = string_length(into_buffer.data());
-        return string(into_buffer.p_storage, length);
-    }
 }  // namespace detail
+
+// Format a collection of `char` and push it into some container.
+template <is_allocator allocator_type, typename outputter_type>
+auto
+vfmt_to(allocator_type& allocator, outputter_type output_iterator,
+        string const format,
+        detail::format_args arguments) -> scaredy_format<outputter_type> {
+    if constexpr (is_same<outputter_type,
+                          detail::format_contiguous_output_iterator<
+                              allocator_type>>) {
+        // If the type-erased contiguous format buffer is used, then
+        // this routine can be slightly streamlined.
+        detail::format_handler<allocator_type> handler = {
+            allocator, output_iterator, format, arguments};
+        return parse_format_string(format, move(handler));
+    } else {
+        // Otherwise, create a type-erased contiguous format buffer to
+        // optimize pushing to this output iterator.
+        detail::format_buffer_iterator<allocator_type, outputter_type> buffer =
+            {allocator, output_iterator};
+        detail::format_handler<allocator_type> handler = {
+            allocator,
+            detail::format_contiguous_output_iterator<allocator_type>{buffer},
+            format, arguments};
+        scaredy_format<void> result =
+            parse_format_string(format, move(handler));
+        if (!result.has_value()) {
+            return result.error<format_errors>();
+        }
+        return buffer.output_iterator;
+    }
+}
+
+template <is_allocator allocator_type>
+auto
+vfmt(allocator_type& allocator, string const format,
+     detail::format_args arguments) -> scaredy_format<string> {
+    // TODO: Estimate the size of the final formatted string, and
+    // allocate that much up-front for `output`.
+    idx const initial_size = format.size() + 10u;
+
+    maybe maybe_memory = allocator.template alloc_multi<char>(initial_size);
+    if (!maybe_memory.has_value()) {
+        return format_errors::out_of_memory;
+    }
+
+    char* p_memory = maybe_memory.value().data();
+    string output{p_memory, initial_size};
+
+    // `format_string_vector` is a container that satisfies the `Iterable`
+    // `concept` and has a `.push_back()` method for a
+    // `back_insert_iterator`. It is used to store the formatted string
+    // and reallocates when that string grows beyond `initial_size`.
+    detail::format_string_vector into_buffer = {p_memory, 0u, initial_size};
+
+    // TODO: Specify which kind of `scaredy_format` this is.
+    auto result =
+        vfmt_to(allocator,
+                back_insert_iterator<detail::format_string_vector>{into_buffer},
+                format, arguments);
+    if (!result.has_value()) {
+        return result.template error<format_errors>();
+    }
+
+    idx const length = string_length(into_buffer.data());
+    return string(into_buffer.p_storage, length);
+}
 
 // Store `arguments` in a compacted variant object. Then format a collection
 // of `char` with those arguments, and push the result into some container.
@@ -831,10 +833,10 @@ template <is_allocator allocator_type,
           is_output_iterator<string> outputter_type, typename... Args>
 [[nodiscard]]
 auto
-format_to(allocator_type& allocator, outputter_type output_iterator,
-          string const format,
-          Args&&... arguments) -> scaredy_format<outputter_type> {
-    return detail::vformat_to(
+fmt_to(allocator_type& allocator, outputter_type output_iterator,
+       string const format,
+       Args&&... arguments) -> scaredy_format<outputter_type> {
+    return vfmt_to(
         allocator, output_iterator, format,
         detail::format_args(
             detail::format_args_compact_storage<Args...>(fwd(arguments)...)));
@@ -843,9 +845,9 @@ format_to(allocator_type& allocator, outputter_type output_iterator,
 template <is_allocator allocator_type, typename... Args>
 [[nodiscard]]
 auto
-format(allocator_type& allocator, string const format,
-       Args&&... arguments) -> scaredy_format<string> {
-    return detail::vformat(
+fmt(allocator_type& allocator, string const format,
+    Args&&... arguments) -> scaredy_format<string> {
+    return vfmt(
         allocator, format,
         detail::format_args(
             detail::format_args_compact_storage<Args...>(fwd(arguments)...)));
