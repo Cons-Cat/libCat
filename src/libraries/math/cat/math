@@ -220,6 +220,14 @@ round_to_pow2(T value) {
     return value + 1;
 }
 
+template <is_signed_integral T>
+[[nodiscard]]
+constexpr auto
+round_to_pow2(T value) {
+    assert(value >= 0);
+    return round_to_pow2(make_unsigned(value));
+}
+
 template <is_arithmetic T>
 [[nodiscard]]
 auto
