@@ -1198,7 +1198,8 @@ struct index :
         return *this;
     }
 
-    // TODO: Investigate signed comparisons.
+    // `index` can safely compare against any other integer type, including
+    // `iword`.
     template <typename U>
     [[nodiscard]]
     constexpr auto
@@ -1382,13 +1383,13 @@ struct index :
 
     [[nodiscard]]
     consteval auto
-    min() -> index {
+    min() const -> index {
         return limits<index<overflow_policy>>::min();
     }
 
     [[nodiscard]]
     consteval auto
-    max() -> index {
+    max() const -> index {
         return limits<index<overflow_policy>>::max();
     }
 };

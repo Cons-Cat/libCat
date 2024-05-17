@@ -10,7 +10,8 @@ namespace cat {
 
 inline namespace literals {
     inline namespace bit_literals {
-        // TODO: Is `<cat/bit>` the right place for these?
+        // TODO: Reverse the default signed-ness here.
+
         constexpr auto
         operator""_ki(unsigned long long input) -> iword {
             return 1'024 * static_cast<signed long long>(input);
@@ -18,7 +19,7 @@ inline namespace literals {
 
         constexpr auto
         operator""_uki(unsigned long long input) -> idx {
-            return idx(1'024u * input);
+            return 1'024u * input;
         }
 
         constexpr auto
@@ -38,7 +39,7 @@ inline namespace literals {
 
         constexpr auto
         operator""_umi(unsigned long long input) -> idx {
-            return idx(1'024ull * 1'024ull * input);
+            return 1'024ull * 1'024ull * input;
         }
 
         constexpr auto
@@ -54,7 +55,7 @@ inline namespace literals {
 
         constexpr auto
         operator""_ugi(unsigned long long input) -> idx {
-            return idx(1'024ull * 1'024ull * 1'024ull * input);
+            return 1'024ull * 1'024ull * 1'024ull * input;
         }
 
         constexpr auto
