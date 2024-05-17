@@ -7,17 +7,14 @@
 namespace cat {
 
 namespace detail {
-    // TODO: `+` should not be forced into commutativity.
+    // TODO: Commutative operators should support non-commutative operations.
+
     template <typename T, typename U>
     concept has_add_interface = requires(T lhs, U rhs) { lhs.add(rhs); };
 
     template <typename T, typename U>
     concept has_subtract_by_interface =
         requires(T lhs, U rhs) { lhs.subtract_by(rhs); };
-
-    template <typename T, typename U>
-    concept has_subtract_from_interface =
-        requires(T lhs, U rhs) { lhs.subtract_from(rhs); };
 
     template <typename T>
     concept has_negate_interface = requires(T lhs) { lhs.negate(lhs); };
@@ -31,28 +28,16 @@ namespace detail {
         requires(T lhs, U rhs) { lhs.divide_by(rhs); };
 
     template <typename T, typename U>
-    concept has_divide_into_interface =
-        requires(T lhs, U rhs) { lhs.divide_into(rhs); };
-
-    // TODO: `%` is not commutative.
-    template <typename T, typename U>
-    concept has_modulo_interface = requires(T lhs, U rhs) { lhs.modulo(rhs); };
+    concept has_modulo_by_interface =
+        requires(T lhs, U rhs) { lhs.modulo_by(rhs); };
 
     template <typename T, typename U>
     concept has_shift_left_by_interface =
         requires(T lhs, U rhs) { lhs.shift_left_by_by(rhs); };
 
     template <typename T, typename U>
-    concept has_shift_left_into_interface_interface =
-        requires(T lhs, U rhs) { lhs.shift_left_by_into(rhs); };
-
-    template <typename T, typename U>
     concept has_shift_right_by_interface =
         requires(T lhs, U rhs) { lhs.shift_right_by(rhs); };
-
-    template <typename T, typename U>
-    concept has_shift_right_into_interface =
-        requires(T lhs, U rhs) { lhs.shift_right_into(rhs); };
 
     template <typename T, typename U>
     concept has_bit_and_interface =
@@ -540,36 +525,36 @@ struct modulo_interface {
     template <typename T>
     constexpr auto
     operator%(this auto&& self, T&& other) -> decltype(auto) {
-        return fwd(self).modulo(fwd(other));
+        return fwd(self).modulo_by(fwd(other));
     }
 
     // `%` operators where this is a right-hand-side operand.
 
-    // `this` is an l-value.
+    // `this` is an r-value.
     template <typename T>
     // If this operator's left operand can add `derived_type` as its
     // right-hand operand, this overload is ambiguous.
-        requires(!detail::has_modulo_interface<T, derived_type>)
+        requires(!detail::has_modulo_by_interface<T, derived_type>)
     friend constexpr auto
     operator%(T&& other, decay_derived_type const& self) -> decltype(auto) {
-        return self.modulo(fwd(other));
+        return self.modulo_into(fwd(other));
     }
 
     // `this` is an r-value.
     template <typename T>
     // If this operator's left operand can add `derived_type` as its
     // right-hand operand, this overload is ambiguous.
-        requires(!detail::has_modulo_interface<T, derived_type>)
+        requires(!detail::has_modulo_by_interface<T, derived_type>)
     friend constexpr auto
     operator%(T&& other, derived_type&& self) -> decltype(auto) {
-        return fwd(self).modulo(fwd(other));
+        return fwd(self).modulo_into(fwd(other));
     }
 
     // `%=` operator where this is a left-hand-side operand.
     template <typename T>
     friend constexpr auto
     operator%=(derived_type& self, T&& other) -> derived_type& {
-        self = self.modulo(fwd(other));
+        self = self.modulo_by(fwd(other));
         return self;
     }
 
@@ -579,10 +564,10 @@ struct modulo_interface {
     template <typename T>
     // If this operator's left operand can add `derived_type` as its
     // right-hand operand, this overload is ambiguous.
-        requires(!detail::has_modulo_interface<T, derived_type>)
+        requires(!detail::has_modulo_by_interface<T, derived_type>)
     friend constexpr auto
     operator%=(T& other, derived_type const& self) -> T& {
-        other = self.modulo(other);
+        other = self.modulo_into(other);
         return other;
     }
 
@@ -590,10 +575,10 @@ struct modulo_interface {
     template <typename T>
     // If this operator's left operand can add `derived_type` as its
     // right-hand operand, this overload is ambiguous.
-        requires(!detail::has_modulo_interface<T, derived_type>)
+        requires(!detail::has_modulo_by_interface<T, derived_type>)
     friend constexpr auto
     operator%=(T& other, derived_type&& self) -> T& {
-        other = move(self).modulo(other);
+        other = move(self).modulo_into(other);
         return other;
     }
 };
