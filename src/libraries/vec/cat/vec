@@ -118,13 +118,13 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
     [[nodiscard]]
     constexpr auto
     size() const -> idx {
-        return static_cast<idx>(m_current_size);
+        return m_current_size;
     }
 
     [[nodiscard]]
     constexpr auto
     capacity() const -> idx {
-        return static_cast<idx>(m_current_capacity);
+        return m_current_capacity;
     }
 
     // Try to allocate storage for at least `minimum_capacity` number of `T`s.

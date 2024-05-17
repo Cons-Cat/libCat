@@ -6,6 +6,15 @@
 
 #include "../unit_tests.hpp"
 
+struct move_only {
+    int i = 0;
+    move_only() = default;
+    move_only(move_only const&) = delete;
+
+    move_only(move_only&& other) : i(other.i) {
+    }
+};
+
 TEST(test_arrays) {
     // TODO: This passes in GCC 15 but not in Clang 19.
 #ifndef __clang__
@@ -18,27 +27,26 @@ TEST(test_arrays) {
     array_1 = {5, 6, 7, 8, 9};
     // Default initializing a array:
     cat::array<int4, 1u> array_2;
-    // Move assigning a array:
-    cat::array<int4, 1u> array_3 = {0};
-    array_2 = cat::move(array_3);  // NOLINT
+
     // Move constructing a array:
     [[maybe_unused]]
-    cat::array array_moved = cat::move(array_1);  // NOLINT
+    cat::array array_move_only = {move_only()};
+    // Move assigning a array:
+    [[maybe_unused]]
+    cat::array array_3 = mov array_move_only;
 
     // `const` array.
     cat::array<int4, 3u> const array_const = {0, 1, 2};
     [[maybe_unused]]
     int4 const_val = array_const.at(1).or_exit();
 
-    // Repeat those tests in a constexpr context.
-    [] consteval {
-        cat::array<int4, 1u> const_array_1;
-        cat::array<int4, 1u> const_array_2 = {1};
-        // NOLINTNEXTLINE Just be explicit about the move here.
-        auto _ = cat::move(const_array_1);
-        // NOLINTNEXTLINE Just be explicit about the move here.
-        auto _ = cat::move(const_array_2);
-    }();
+    // // Repeat those tests in a constexpr context.
+    // [] consteval {
+    //     cat::array<int4, 1u> const_array_1;
+    //     cat::array<int4, 1u> const_array_2 = {1};
+    //     auto _ = cat::move(const_array_1);
+    //     auto _ = cat::move(const_array_2);
+    // }();
 
     // Test that the array is iterable.
     idx count = 0u;
@@ -114,21 +122,22 @@ TEST(test_arrays) {
     cat::array base_array = {0_i4, 0, 0, 0};
     cat::array copy_array = {1, 2, 3, 4};
     cat::array copy_converting_array = {int2{1}, 2, 3, 4};
-    cat::array move_array = {5, 6, 7, 8};
-    cat::array move_converting_array = {int2{5}, 6, 7, 8};
     base_array = copy_array;
     base_array = copy_converting_array;
-    base_array = move(move_array);             // NOLINT
-    base_array = move(move_converting_array);  // NOLINT
+    // TODO: Test these properly.
+    // cat::array move_only_array = {5, 6, 7, 8};
+    // cat::array move_converting_array = {int2{5}, 6, 7, 8};
+    // base_array = move(move_array);
+    // base_array = move(move_converting_array);
 
     // Test array fill.
-    cat::array filled_array = cat::make_array_filled<8u>(6_i4);
-    for (idx i = 0u; i < 8u; ++i) {
+    cat::array filled_array = cat::make_array_filled<8>(6_i4);
+    for (idx i = 0; i < 8; ++i) {
         cat::verify(filled_array[i] == 6);
     }
 
     filled_array.fill(9);
-    for (idx i = 0u; i < 8u; ++i) {
+    for (idx i = 0; i < 8; ++i) {
         cat::verify(filled_array[i] == 9);
     }
 

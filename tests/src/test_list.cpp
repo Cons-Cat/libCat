@@ -8,12 +8,11 @@
 TEST(test_list) {
     // Initialize an allocator.
     cat::page_allocator pager;
-    pager.reset();
-    cat::mem auto page = pager.opq_alloc_multi<cat::byte>(4_ki - 64).verify();
+    cat::span page = pager.alloc_multi<cat::byte>(4_uki).or_exit();
     defer {
         pager.free(page);
     };
-    auto allocator = cat::linear_allocator::backed_handle(pager, page);
+    auto allocator = cat::make_linear_allocator(page);
 
     // Test insert.
     cat::list<int4> list_1;
@@ -114,7 +113,7 @@ TEST(test_list) {
     list_1.push_front(allocator, 2);
     list_1.push_front(allocator, 1);
     list_1.push_front(allocator, 0);
-    cat::list<int4> list_4 = cat::move(list_1);
+    cat::list<int4> list_4 = mov list_1;
     cat::verify(list_4.front() == 0);
     cat::verify(*(list_4.begin() + 1) == 1);
     cat::verify(*(list_4.begin() + 2) == 2);

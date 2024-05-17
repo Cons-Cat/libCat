@@ -9,7 +9,7 @@ consteval auto
 const_func() -> int4 {
     cat::page_allocator allocator;
     cat::vec vector = cat::make_vec_empty<int4>(allocator);
-    auto _ = vector.resize(allocator, 8u);
+    auto _ = vector.resize(allocator, 8);
 
     vector[0] = 1;
     vector[1] = 2;
@@ -46,36 +46,36 @@ TEST(test_vec) {
     cat::verify(int_vec.capacity() >= 8);
 
     // Test resizing a `vector`.
-    int_vec.resize(allocator, 0u).or_exit();
-    cat::verify(int_vec.size() == 0u);
-    cat::verify(int_vec.capacity() >= 8u);
+    int_vec.resize(allocator, 0).or_exit();
+    cat::verify(int_vec.size() == 0);
+    cat::verify(int_vec.capacity() >= 8);
 
-    int_vec.resize(allocator, 4u).or_exit();
-    cat::verify(int_vec.size() == 4u);
-    cat::verify(int_vec.capacity() >= 8u);
+    int_vec.resize(allocator, 4).or_exit();
+    cat::verify(int_vec.size() == 4);
+    cat::verify(int_vec.capacity() >= 8);
 
     // Test reserving storage for a `vector`.
-    int_vec.reserve(allocator, 128u).or_exit();
-    cat::verify(int_vec.size() == 4u);
-    cat::verify(int_vec.capacity() >= 128u);
+    int_vec.reserve(allocator, 128).or_exit();
+    cat::verify(int_vec.size() == 4);
+    cat::verify(int_vec.capacity() >= 128);
 
     // Test reserve constructor.
     cat::vec reserved_vec =
-        cat::make_vec_reserved<int4>(allocator, 6u).or_exit();
-    cat::verify(reserved_vec.capacity() >= 6u);
+        cat::make_vec_reserved<int4>(allocator, 6).or_exit();
+    cat::verify(reserved_vec.capacity() >= 6);
 
     // Test filled constructor.
-    cat::vec filled_vec = cat::make_vec_filled(allocator, 8u, 1_i4).or_exit();
-    cat::verify(filled_vec.size() == 8u);
-    cat::verify(filled_vec.capacity() >= 8u);
+    cat::vec filled_vec = cat::make_vec_filled(allocator, 8, 1_i4).or_exit();
+    cat::verify(filled_vec.size() == 8);
+    cat::verify(filled_vec.capacity() >= 8);
     for (int4 integer : filled_vec) {
         cat::verify(integer == 1);
     }
 
     // Test cloned constructor.
     cat::vec cloned_vec = filled_vec.clone(allocator).or_exit();
-    cat::verify(cloned_vec.size() == 8u);
-    cat::verify(cloned_vec.capacity() >= 8u);
+    cat::verify(cloned_vec.size() == 8);
+    cat::verify(cloned_vec.capacity() >= 8);
     for (int4 integer : cloned_vec) {
         cat::verify(integer == 1);
     }
@@ -120,7 +120,7 @@ TEST(test_vec) {
     cat::vec default_vector = cat::make_vec_empty<int>(allocator);
     cat::verify(default_vector.is_empty());
 
-    auto _ = default_vector.reserve(allocator, 2u);
+    auto _ = default_vector.reserve(allocator, 2);
     cat::verify(default_vector.is_empty());
 
     auto _ = default_vector.push_back(allocator, 0);
@@ -133,16 +133,16 @@ TEST(test_vec) {
     cat::verify(default_vector.is_full());
 
     // Resize the vector to be smaller, then check it's not full.
-    auto _ = default_vector.resize(allocator, 2u).verify();
+    auto _ = default_vector.resize(allocator, 2).verify();
     cat::verify(!default_vector.is_full());
 
     // TODO: Test insert iterators.
 
     // Test algorithms.
-    cat::vec origin_vector = cat::make_vec_filled(allocator, 6u, 1).verify();
-    auto copy_vector = cat::make_vec_filled(allocator, 6u, 0).verify();
-    auto move_vector = cat::make_vec_filled(allocator, 6u, 0).verify();
-    auto relocate_vector = cat::make_vec_filled(allocator, 6u, 0).verify();
+    cat::vec origin_vector = cat::make_vec_filled(allocator, 6, 1).verify();
+    auto copy_vector = cat::make_vec_filled(allocator, 6, 0).verify();
+    auto move_vector = cat::make_vec_filled(allocator, 6, 0).verify();
+    auto relocate_vector = cat::make_vec_filled(allocator, 6, 0).verify();
 
     // `copy()`.
     cat::verify(copy_vector[5] == 0);
