@@ -789,13 +789,6 @@ struct arithmetic :
         return other << this->raw;
     }
 
-    // template <typename U>
-    // [[nodiscard]]
-    // constexpr auto
-    // shift_left_by(U* p_operand) const -> U* {
-    //     return p_operand << this->raw;
-    // }
-
     // Generate `operator>>`.
     template <is_arithmetic U>
     [[nodiscard]]
@@ -814,13 +807,6 @@ struct arithmetic :
     shift_right_into(U other) const -> U {
         return other >> this->raw;
     }
-
-    // template <typename U>
-    // [[nodiscard]]
-    // constexpr auto
-    // shift_right_by(U* p_operand) const -> U* {
-    //     return p_operand >> this->raw;
-    // }
 
     static constexpr auto
     min() -> arithmetic<raw_type, overflow_policy> {
@@ -1095,13 +1081,6 @@ struct arithmetic_ptr
         return other << this->raw;
     }
 
-    // template <typename U>
-    // constexpr auto
-    // shift_left_by(U* p_operand) const -> arithmetic_ptr {
-    //     return this->shift_left_by(
-    //         arithmetic_ptr<U, storage_type, overflow_policy>(p_operand));
-    // }
-
     template <typename U>
     [[nodiscard]]
     constexpr auto
@@ -1116,13 +1095,6 @@ struct arithmetic_ptr
     shift_right_into(U other) const -> U {
         return other >> this->raw;
     }
-
-    // template <typename U>
-    // constexpr auto
-    // shift_right_by(U* p_operand) const -> arithmetic_ptr {
-    //     return this->shift_right_by(
-    //         arithmetic_ptr<U, storage_type, overflow_policy>(p_operand));
-    // }
 
     // Generate `operator~`.
     constexpr auto
@@ -1340,7 +1312,7 @@ struct index :
 
     template <is_integral T>
     constexpr auto
-    shift_right_into(T& other) const -> decltype(auto) {
+    shift_right_into(T other) const -> decltype(auto) {
         return other >> this->raw;
     }
 

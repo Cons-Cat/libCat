@@ -617,7 +617,7 @@ struct shift_left_interface {
         requires(!detail::has_shift_left_by_interface<T, derived_type>)
     friend constexpr auto
     operator<<(T&& other, decay_derived_type const& self) -> decltype(auto) {
-        return self.shift_left_by(fwd(other));
+        return self.shift_left_into(fwd(other));
     }
 
     // `this` is an r-value.
@@ -684,7 +684,7 @@ struct shift_right_interface {
         requires(!detail::has_shift_right_by_interface<T, derived_type>)
     friend constexpr auto
     operator>>(T&& other, decay_derived_type const& self) -> decltype(auto) {
-        return self.shift_right_by(fwd(other));
+        return self.shift_right_into(fwd(other));
     }
 
     // `this` is an r-value.

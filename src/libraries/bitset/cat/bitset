@@ -52,7 +52,7 @@ class bitset {
         (total_bytes * 8u) - bits_count;
 
     // The number of bits counted in the first 1, 2, or 4 bytes of this bitset.
-    static constexpr uword leading_bytes_bits =
+    static constexpr idx leading_bytes_bits =
         // Size of this storage, 64 bits or fewer.
         storage_element_size * 8u -
         // Minus the number of unused bits in this bitset.
@@ -95,13 +95,11 @@ class bitset {
 
         array_type_element& index_byte =
             m_data[m_data.size() - 1u -
-                   ((index_bit + this->leading_skipped_bits) /
+                   ((index_bit + leading_skipped_bits) /
                     // TODO: Without `.raw`, this is ambiguous.
                     word_bits.raw)];
 
-        uword bit_offset = index_bit + this->leading_skipped_bits;
-        // TODO: `total_bytes` doesn't compile here in Clang 17 if prefixed by
-        // `this->`.
+        uword bit_offset = index_bit + leading_skipped_bits;
         if constexpr (total_bytes > word_bytes) {
             // If the bitset is larger than a word, wrap the bit offset by the
             // size of a word.
@@ -202,10 +200,10 @@ class bitset {
         // TODO: Make this branchless where possible.
 
         // Iterate through all bytes:
-        for (idx current_byte = 0u; current_byte < this->storage_array_size;
+        for (idx current_byte = 0u; current_byte < storage_array_size;
              ++current_byte) {
-            auto const it = m_data[current_byte];
-            using T = decltype(it);
+            auto const& it = m_data[current_byte];
+            using T = array_type_element;
 
             if (current_byte > 0u ||
                 constant_evaluate(has_single_bit(bits_count))) {
@@ -216,7 +214,7 @@ class bitset {
             } else {
                 // Leading bits of the leading byte should not be considered
                 // part of the bitset, so they are masked off.
-                T const mask = T(1u << leading_bytes_bits) - T(1);
+                T const mask = T((T(1u) << leading_bytes_bits) - T(1u));
 
                 if (it != mask) {
                     return false;
@@ -243,14 +241,13 @@ class bitset {
     [[nodiscard]]
     constexpr auto
     none_of() const -> bool {
-        return !(this->any_of());
+        return !(any_of());
     }
 
     [[nodiscard]]
     constexpr auto
     countl_zero() const -> idx {
-        // TODO: `leading_bytes_bits` doesn't compile here in Clang 17 if
-        // prefixed by `this->`.
+        // prefixed by ``.
         constexpr idx skip_bits =
             idx(sizeof(array_type_element) * 8u - leading_bytes_bits);
 
@@ -261,7 +258,7 @@ class bitset {
 
         count -= skip_bits;
 
-        for (idx i = 1u; i < this->storage_array_size; ++i) {
+        for (idx i = 1u; i < storage_array_size; ++i) {
             idx next_count = cat::countl_zero(m_data[i]);
             count += next_count;
 
@@ -278,12 +275,12 @@ class bitset {
     [[nodiscard]]
     constexpr auto
     countr_zero() const -> idx {
-        idx count = cat::countr_zero(m_data[this->storage_array_size - 1u]);
+        idx count = cat::countr_zero(m_data[storage_array_size - 1u]);
         if (count != sizeof(array_type_element) * 8u) {
             return count;
         }
 
-        for (idx i = this->storage_array_size - 2u; i >= 0u; --i) {
+        for (idx i = storage_array_size - 2u; i >= 0u; --i) {
             idx next_count = cat::countr_zero(m_data[i]);
             count += next_count;
 
