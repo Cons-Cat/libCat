@@ -7,6 +7,7 @@
 namespace cat {
 
 namespace detail {
+    // TODO: `+` should not be forced into commutativity.
     template <typename T, typename U>
     concept has_add_interface = requires(T lhs, U rhs) { lhs.add(rhs); };
 
@@ -33,6 +34,7 @@ namespace detail {
     concept has_divide_into_interface =
         requires(T lhs, U rhs) { lhs.divide_into(rhs); };
 
+    // TODO: `%` is not commutative.
     template <typename T, typename U>
     concept has_modulo_interface = requires(T lhs, U rhs) { lhs.modulo(rhs); };
 
