@@ -14,13 +14,13 @@ namespace detail {
 
     template <typename T>
     struct variant_node<T> {
-        template <iword>
+        template <idx>
         constexpr auto
         get() & -> T& {
             return this->storage;
         }
 
-        template <iword>
+        template <idx>
         constexpr auto
         get() const& -> T const& {
             return this->storage;
@@ -38,7 +38,7 @@ namespace detail {
         // through the alternative types that many times. Then it returns a
         // reference to the storage of this node it has reached.
 
-        template <iword remaining_recursions>
+        template <idx remaining_recursions>
         constexpr auto
         get() & -> auto& {
             if constexpr (remaining_recursions == 0) {
@@ -49,7 +49,7 @@ namespace detail {
             }
         }
 
-        template <iword remaining_recursions>
+        template <idx remaining_recursions>
         constexpr auto
         get() const& -> auto& {
             if constexpr (remaining_recursions == 0) {
@@ -78,7 +78,7 @@ class variant {
   public:
     using types = type_list<alternative_types...>;
     using alternative_index_type =
-        conditional<types::size <= int4_max, int4, int8>;
+        conditional<types::size <= uint4_max, uint4, idx>;
     alternative_index_type discriminant;
 
     // The number of alternatives in this `variant`.
@@ -94,7 +94,7 @@ class variant {
         if constexpr (is_same<T, this_alternative>) {
             return index;
         } else {
-            return recurse_for_index_of_type<T, index + 1>();
+            return recurse_for_index_of_type<T, index + 1u>();
         }
     }
 
@@ -156,7 +156,8 @@ class variant {
     // Get the index of an alternative from its type.
     template <typename T>
         requires(types::template has_type<T>)
-    static constexpr auto alternative_index = recurse_for_index_of_type<T, 0>();
+    static constexpr auto alternative_index =
+        recurse_for_index_of_type<T, 0u>();
 
     // Get the type of an alternative from its index.
     template <alternative_index_type index>
@@ -257,6 +258,8 @@ class variant {
         return *this;
     }
 
+    // TODO: Deduplicate member functions with an object parameter.
+
     template <typename T>
         requires(types::template has_type<T>)
     [[nodiscard]]
@@ -273,16 +276,16 @@ class variant {
         return m_storage.template get<alternative_index<T>>();
     }
 
-    template <alternative_index_type index>
-        requires(index >= 0 && index < ssizeof_pack<alternative_types...>())
+    template <idx index>
+        requires(index < sizeof...(alternative_types))
     [[nodiscard]]
     constexpr auto
     get() & {
         return m_storage.template get<index>();
     }
 
-    template <alternative_index_type index>
-        requires(index >= 0 && index < ssizeof_pack<alternative_types...>())
+    template <idx index>
+        requires(index < sizeof...(alternative_types))
     [[nodiscard]]
     constexpr auto
     get() const& -> decltype(auto) {
@@ -311,8 +314,8 @@ class variant {
         return nullopt;
     }
 
-    template <alternative_index_type index>
-        requires(index >= 0 && index < ssizeof_pack<alternative_types...>())
+    template <idx index>
+        requires(index < sizeof...(alternative_types))
     [[nodiscard]]
     constexpr auto
     get_if() & {
@@ -323,8 +326,8 @@ class variant {
         return maybe<T>{nullopt};
     }
 
-    template <alternative_index_type index>
-        requires(index >= 0 && index < ssizeof_pack<alternative_types...>())
+    template <idx index>
+        requires(index < sizeof...(alternative_types))
     [[nodiscard]]
     constexpr auto
     get_if() const& {
@@ -333,6 +336,15 @@ class variant {
             return maybe<T>{this->get<T>()};
         }
         return maybe<T>{nullopt};
+    }
+
+    // Support signed integers as the index, because they cannot implicitly
+    // convert to `uint4`.
+    template <is_signed_integral index>
+    [[nodiscard]]
+    constexpr auto
+    get_if(this auto&& self) -> decltype(auto) {
+        return fwd(self).template get_if<idx(index)>();
     }
 
     [[nodiscard]]
@@ -375,7 +387,7 @@ class variant {
         if (this->holds_alternative(index)) {
             return static_cast<T>(in_value) == this->get<T>();
         }
-        return recurse_converting_equality<index + 1, remaining...>(in_value);
+        return recurse_converting_equality<index + 1u, remaining...>(in_value);
     }
 
   public:
@@ -387,7 +399,7 @@ class variant {
     [[nodiscard]]
     constexpr auto
     is(T const& in_value) const -> bool {
-        return this->recurse_converting_equality<0, alternative_types...>(
+        return this->recurse_converting_equality<0u, alternative_types...>(
             in_value);
     }
 
@@ -395,7 +407,8 @@ class variant {
     [[nodiscard]]
     friend constexpr auto
     operator==(variant<alternative_types...> const& self, T other) -> bool {
-        return self.recurse_converting_equality<0, alternative_types...>(other);
+        return self.recurse_converting_equality<0u, alternative_types...>(
+            other);
     }
 
     // Member access syntax pattern matching for `cat::match()`.

@@ -37,6 +37,6 @@ TEST(test_typelist) {
     static_assert(
         cat::is_same<merge_types, cat::type_list<int, char, float, double>>);
 
-    using fill_types = cat::type_list_filled<int, 3>;
+    using fill_types = cat::type_list_filled<int, 3u>;
     static_assert(cat::is_same<fill_types, cat::type_list<int, int, int>>);
 }

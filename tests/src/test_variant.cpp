@@ -9,9 +9,9 @@ TEST(test_variant) {
     int foo_int = variant.get<int>();
     cat::verify(foo_int == 1);
 
-    static_assert(variant.alternative_index<int> == 0);
-    static_assert(variant.alternative_index<char> == 1);
-    static_assert(variant.alternative_index<uint4> == 2);
+    static_assert(variant.alternative_index<int> == 0u);
+    static_assert(variant.alternative_index<char> == 1u);
+    static_assert(variant.alternative_index<uint4> == 2u);
 
     variant = 'o';
     cat::verify(variant.is<char>());

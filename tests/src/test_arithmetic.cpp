@@ -712,7 +712,7 @@ TEST(test_numerals) {
     1_sz + idx1;
     idx1 + 1_uz;
     idx1 + 1_sz;
-    idx1 += 1;
+    idx1 += 1u;
     idx1++;
     ++idx1;
 
@@ -797,10 +797,10 @@ TEST(test_numerals) {
     static_assert(cat::is_convertible<unsigned int, idx>);
     static_assert(cat::is_convertible<uint4, idx>);
 
-    // auto add_idx_iword = idx2 + 1_sz;
-    // static_assert(cat::is_same<decltype(add_idx_iword), iword>);
-    // auto add_iword_idx = 1_sz + idx2;
-    // static_assert(cat::is_same<decltype(add_iword_idx), iword>);
+    auto add_idx_iword = idx2 + 1_sz;
+    static_assert(cat::is_same<decltype(add_idx_iword), iword>);
+    auto add_iword_idx = 1_sz + idx2;
+    static_assert(cat::is_same<decltype(add_iword_idx), iword>);
 
     // auto add_idx_uword = idx2 + 1_uz;
     // static_assert(cat::is_same<decltype(add_idx_uword), uword>);
