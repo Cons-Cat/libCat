@@ -99,6 +99,13 @@ TEST(test_math) {
     static_assert(cat::round_to_pow2(4u) == 4u);
     static_assert(cat::round_to_pow2(5u) == 8u);
 
+    static_assert(cat::round_to_pow2(0) == 0);
+    static_assert(cat::round_to_pow2(1) == 1);
+    static_assert(cat::round_to_pow2(2) == 2);
+    static_assert(cat::round_to_pow2(3) == 4);
+    static_assert(cat::round_to_pow2(4) == 4);
+    static_assert(cat::round_to_pow2(5) == 8);
+
     // Test `clamp()`.
     cat::verify(cat::clamp(-10, 0, 10) == 0);
     cat::verify(cat::clamp(5, 0, 10) == 5);
