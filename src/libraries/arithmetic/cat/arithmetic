@@ -723,15 +723,23 @@ struct arithmetic :
     template <is_arithmetic U>
     [[nodiscard]]
     constexpr auto
-    modulo(U operand) const -> detail::promoted_type<T, U> {
+    modulo_by(U operand) const -> detail::promoted_type<T, U> {
         return detail::promoted_type<T, U>(this->raw %
                                            make_raw_arithmetic(operand));
+    }
+
+    template <is_integral U>
+    [[nodiscard]]
+    constexpr auto
+    modulo_by(U operand) const -> detail::promoted_type<T, U> {
+        return detail::promoted_type<T, U>(make_raw_arithmetic(operand) %
+                                           this->raw);
     }
 
     template <typename U>
     [[nodiscard]]
     constexpr auto
-    modulo(U* p_operand) const -> U* {
+    modulo_by(U* p_operand) const -> U* {
         return this->raw % p_operand;
     }
 
@@ -1054,15 +1062,22 @@ struct arithmetic_ptr
     template <typename U>
     [[nodiscard]]
     constexpr auto
-    modulo(U operand) const -> arithmetic_ptr {
+    modulo_by(U operand) const -> arithmetic_ptr {
         return this->raw % make_raw_arithmetic(operand);
     }
 
     template <typename U>
     constexpr auto
-    modulo(U* p_operand) const -> arithmetic_ptr {
-        return this->modulo(
+    modulo_by(U* p_operand) const -> arithmetic_ptr {
+        return this->modulo_by(
             arithmetic_ptr<U, storage_type, overflow_policy>(p_operand));
+    }
+
+    template <typename U>
+    [[nodiscard]]
+    constexpr auto
+    modulo_into(U operand) const -> arithmetic_ptr {
+        return make_raw_arithmetic(operand) % this->raw;
     }
 
     template <typename U>
@@ -1285,8 +1300,15 @@ struct index :
     // Generate `operator%`.
     template <is_integral T>
     constexpr auto
-    modulo(T other) const -> index {
+    modulo_by(T other) const -> index {
         return index(this->raw % make_raw_arithmetic(other));
+    }
+
+    template <is_integral T>
+    [[nodiscard]]
+    constexpr auto
+    modulo_into(T operand) const -> index {
+        return make_raw_arithmetic(operand) % this->raw;
     }
 
     // Generate `operator<<`.
