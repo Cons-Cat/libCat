@@ -789,7 +789,13 @@ TEST(test_numerals) {
     uword index_uword = idx2;
     index_uword = idx2;
 
-    // TODO: Fix `uint8` not converting to `idx`.
+    // Unsigned types smaller than `idx` are implicitly convertible.
+    static_assert(cat::is_convertible<unsigned char, idx>);
+    static_assert(cat::is_convertible<uint1, idx>);
+    static_assert(cat::is_convertible<unsigned short, idx>);
+    static_assert(cat::is_convertible<uint2, idx>);
+    static_assert(cat::is_convertible<unsigned int, idx>);
+    static_assert(cat::is_convertible<uint4, idx>);
 
     // auto add_idx_iword = idx2 + 1_sz;
     // static_assert(cat::is_same<decltype(add_idx_iword), iword>);
