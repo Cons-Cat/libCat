@@ -74,5 +74,17 @@ class ArithmeticPrinter:
         return str(self.raw) + ' (' + self.policy + ')'
 
 
+@cat_type('index')
+class IndexPrinter:
+    "Print a `cat::index`"
+
+    def __init__(self, val):
+        self.raw = val['raw']
+        return
+
+    def to_string(self):
+        return str(self.raw)
+
+
 # At the end of the script, register all `cat_pretty_printers` simultaneously.
 gdb.printing.register_pretty_printer(None, cat_pretty_printers, replace=True)
