@@ -6,11 +6,11 @@ TEST(test_bitset) {
     using namespace cat::arithmetic_literals;
 
     constexpr cat::bitset<7u> bits7{};
-    constexpr cat::bitset<8u> bits8{};
+    constexpr cat::bitset<8> bits8{};
     constexpr cat::bitset<16u> bits16{};
-    constexpr cat::bitset<17u> bits17{};
+    constexpr cat::bitset<17> bits17{};
     constexpr cat::bitset<32u> bits32{};
-    constexpr cat::bitset<64u> bits64{};
+    constexpr cat::bitset<64> bits64{};
     constexpr cat::bitset<65u> bits65{};
     constexpr cat::bitset<129_u4> bits129{};
 
@@ -56,14 +56,14 @@ TEST(test_bitset) {
     cat::verify(!bits7_2.none_of());
     cat::verify(bits7_2.any_of());
 
-    cat::bitset<127u> bits127 = cat::bitset<127u>::from(0x0_u8, 0x0_u8);
+    cat::bitset<127> bits127 = cat::bitset<127>::from(0x0_u8, 0x0_u8);
     cat::verify(!bits127.all_of());
     cat::verify(bits127.none_of());
     cat::verify(!bits127.any_of());
 
     // The 128th bit is off, all_of others are on.
     bits127 =
-        cat::bitset<127u>::from(cat::uint8_max >> 1u, 0xFFFFFFFF'FFFFFFFF_u8);
+        cat::bitset<127>::from(cat::uint8_max >> 1u, 0xFFFFFFFF'FFFFFFFF_u8);
     cat::verify(bits127.leading_bytes_bits == 63u);
     cat::verify(bits127.all_of());
     cat::verify(!bits127.none_of());
@@ -72,12 +72,12 @@ TEST(test_bitset) {
     cat::verify(bits127.countr_zero() == 0u);
 
     // The 128th bit is off, all_of others are on.
-    bits127 = cat::bitset<127u>::from(cat::uint8_max >> 2u,
-                                      0xFFFFFFFF'FFFFFFFF_u8 << 1u);
+    bits127 = cat::bitset<127>::from(cat::uint8_max >> 2u,
+                                     0xFFFFFFFF'FFFFFFFF_u8 << 1u);
     cat::verify(bits127.countl_zero() == 1u);
     cat::verify(bits127.countr_zero() == 1u);
 
-    bits127 = cat::bitset<127u>::from(0_u8, cat::uint8_max >> 1u);
+    bits127 = cat::bitset<127>::from(0_u8, cat::uint8_max >> 1u);
     cat::verify(bits127.countl_zero() == 64u);
     cat::verify(bits127.countr_zero() == 0u);
 
@@ -85,18 +85,18 @@ TEST(test_bitset) {
     constexpr cat::bitset<15u> bits15 =
         cat::bitset<15u>::from(0b0101'0101'0101'0100_u2);
     static_assert(!bits15[0u]);
-    static_assert(bits15[1u]);
+    static_assert(bits15[1]);
     static_assert(!bits15[2u]);
 
     constexpr cat::bitset<15u> bits15_2 =
         cat::bitset<15u>::from(0b1010'1010'1010'1010_u2);
     static_assert(bits15_2[0u]);
-    static_assert(!bits15_2[1u]);
-    static_assert(bits15_2[2u]);
+    static_assert(!bits15_2[1]);
+    static_assert(bits15_2[2]);
 
     // Test 16 byte bitset's subscript.
-    constexpr cat::bitset<128u> bits128_2 =
-        cat::bitset<128u>::from(0xFFFFFFFF'FFFFFFFF_u8, 0xFFFFFFFF'FFFFFFFB_u8);
+    constexpr cat::bitset<128> bits128_2 =
+        cat::bitset<128>::from(0xFFFFFFFF'FFFFFFFF_u8, 0xFFFFFFFF'FFFFFFFB_u8);
     // 11111111'11111111'11111111'11111111'11111111'11111111'11111111'11111011
     static_assert(bits128_2[0u]);
     static_assert(bits128_2[1u]);
@@ -106,8 +106,8 @@ TEST(test_bitset) {
     static_assert(bits128_2[127u]);
 
     // Test 16 byte bitset's subscript with bit offset.
-    constexpr cat::bitset<127u> bits127_2 =
-        cat::bitset<127u>::from(0xFFFFFFFF'FFFFFFFF_u8, 0xFFFFFFFF'FFFFFFFB_u8);
+    constexpr cat::bitset<127> bits127_2 =
+        cat::bitset<127>::from(0xFFFFFFFF'FFFFFFFF_u8, 0xFFFFFFFF'FFFFFFFB_u8);
     // 11111111'11111111'11111111'11111111'11111111'11111111'11111111'1111101
     static_assert(bits127_2[0u]);
     static_assert(!bits127_2[1u]);
@@ -116,7 +116,7 @@ TEST(test_bitset) {
     static_assert(bits127_2[126u]);
 
     // Test mutable subscript.
-    bits127 = cat::bitset<127u>::from(cat::uint8_max >> 2u, 0b0000'0100_u8);
+    bits127 = cat::bitset<127>::from(cat::uint8_max >> 2u, 0b0000'0100_u8);
 
     cat::verify(!bits127[0u]);
     cat::verify(bits127[1u]);
@@ -158,7 +158,7 @@ TEST(test_bitset) {
 
     // Test mutable 8-byte aligned iterator.
     cat::bitset bits128 =
-        cat::bitset<128u>::from(cat::uint8_max >> 2u, 0b0000'0100_u8);
+        cat::bitset<128>::from(cat::uint8_max >> 2u, 0b0000'0100_u8);
     for (cat::bit_reference bit : bits128) {
         bit = false;
     }
@@ -173,18 +173,19 @@ TEST(test_bitset) {
         cat::verify(bit == true);
     }
 
+    auto bits127_3 = cat::bitset<127>::from(cat::uint8_min, 0b0000'0100_u8);
     // Test mutable non-8-byte aligned iterator.
-    for (cat::bit_reference bit : bits127) {
+    for (cat::bit_reference bit : bits127_3) {
         bit = false;
     }
-    for (cat::bit_reference bit : bits127) {
+    for (cat::bit_reference bit : bits127_3) {
         cat::verify(bit == false);
     }
 
-    for (cat::bit_reference bit : bits127) {
+    for (cat::bit_reference bit : bits127_3) {
         bit = true;
     }
-    for (cat::bit_reference bit : bits127) {
+    for (cat::bit_reference bit : bits127_3) {
         cat::verify(bit == true);
     }
 }

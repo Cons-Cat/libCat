@@ -10,7 +10,6 @@
 namespace cat {
 
 template <idx bits_count>
-    requires(bits_count > 0u)
 class bitset {
   private:
     // Store the smallest number of bytes needed for `bits_count`. If that is 8
@@ -18,17 +17,13 @@ class bitset {
     // 8-byte integers. Divide the bits by 8, rounding up.
     static constexpr idx total_bytes = div_ceil(bits_count, 8u);
 
-    using array_type = conditional<
-        total_bytes <= 8u,
-        // `uint_fixed` will not compile here if it is larger than 8 or it is
-        // not a power of 2. This is an `array` of one element to make it
-        // iterable.
-        array<
-            uint_fixed<min(
-                // TODO: Signed int `round_to_pow2()`.
-                make_signed(round_to_pow2(make_unsigned(total_bytes.raw))), 8)>,
-            1u>,
-        array<uint8, div_ceil(total_bytes, 8u)>>;
+    using array_type =
+        conditional<total_bytes <= 8u,
+                    // `uint_fixed` will not compile here if it is larger than 8
+                    // or it is not a power of 2. This is an `array` of one
+                    // element to make it iterable.
+                    array<uint_fixed<min(round_to_pow2(total_bytes), 8)>, 1u>,
+                    array<uint8, div_ceil(total_bytes, 8u)>>;
 
     using array_type_element = array_type::value_type;
 

@@ -58,10 +58,10 @@ class jmp_buffer {
     // %r14:
     // %r15:
     [[maybe_unused]]
-    unsigned long registers[6];
+    unsigned long m_registers[6];
     // %rsp:
     [[maybe_unused]]
-    unsigned long stack_pointer;
+    unsigned long m_stack_pointer;
 };
 
 [[gnu::naked]]
