@@ -189,6 +189,7 @@ namespace detail {
         uint4_type,
         int8_type,
         uint8_type,
+        idx_type = uint8_type,
         bool_type,
         integer_sentinel = bool_type,  // types less than this are integers.
         float_type,
@@ -250,6 +251,8 @@ namespace detail {
             } else if constexpr (is_same<U, uint8>) {
                 this->discriminant = format_discriminant::uint8_type;
             } else if constexpr (is_same<U, uint8::raw_type>) {
+                this->discriminant = format_discriminant::uint8_type;
+            } else if constexpr (is_same<U, idx>) {
                 this->discriminant = format_discriminant::uint8_type;
             } else if constexpr (is_same<U, bool>) {
                 this->discriminant = format_discriminant::bool_type;

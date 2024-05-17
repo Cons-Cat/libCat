@@ -789,6 +789,8 @@ TEST(test_numerals) {
     uword index_uword = idx2;
     index_uword = idx2;
 
+    // TODO: Fix `uint8` not converting to `idx`.
+
     // auto add_idx_iword = idx2 + 1_sz;
     // static_assert(cat::is_same<decltype(add_idx_iword), iword>);
     // auto add_iword_idx = 1_sz + idx2;
