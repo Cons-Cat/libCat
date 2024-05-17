@@ -82,7 +82,7 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
             for (idx i = 0u; i < m_current_size; ++i) {
                 construct_at(p_new + i, move(m_p_data[i.raw]));
             }
-            for (idx i = m_current_size + 1; i < minimum_capacity; ++i) {
+            for (idx i = m_current_size + 1u; i < minimum_capacity; ++i) {
                 construct_at(p_new + i);
             }
             delete[] m_p_data;
@@ -93,7 +93,7 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
             auto [alloc_span, alloc_bytes] =
                 prop(internal_allocate(allocator, minimum_capacity));
 
-            m_current_capacity = alloc_bytes / ssizeof(T);
+            m_current_capacity = alloc_bytes / sizeof(T);
             m_p_data = alloc_span.data();
         }
 

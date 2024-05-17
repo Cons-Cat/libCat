@@ -43,7 +43,7 @@ class type_list {
 
     // Shortcut for accessing the 0th element.
     template <typename head, typename... tail>
-    struct recurse_for_type_at_index<type_list<head, tail...>, 0> {
+    struct recurse_for_type_at_index<type_list<head, tail...>, 0u> {
         using result = head;
     };
 
@@ -83,7 +83,7 @@ class type_list {
     recurse_for_count() -> idx
         requires(sizeof...(Us) >= 0)
     {
-        return is_same<T, U> ? recurse_for_count<T, count + 1, Us...>()
+        return is_same<T, U> ? recurse_for_count<T, count + 1u, Us...>()
                              : recurse_for_count<T, count, Us...>();
     }
 
@@ -169,7 +169,7 @@ namespace detail {
         if constexpr (index == count) {
             return type_list;
         } else {
-            return type_list_fill<T, count, index + 1>(
+            return type_list_fill<T, count, index + 1u>(
                 typename decltype(type_list)::template merge<T>());
         }
     }
@@ -177,6 +177,6 @@ namespace detail {
 
 // Produce a type_list filled with `count` of `T`.
 template <typename T, idx count>
-using type_list_filled = decltype(detail::type_list_fill<T, count, 0>({}));
+using type_list_filled = decltype(detail::type_list_fill<T, count, 0u>({}));
 
 }  // namespace cat

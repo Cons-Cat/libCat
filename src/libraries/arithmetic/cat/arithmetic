@@ -1198,6 +1198,7 @@ struct index :
         return *this;
     }
 
+    // TODO: Investigate signed comparisons.
     template <typename U>
     [[nodiscard]]
     constexpr auto
@@ -1215,11 +1216,29 @@ struct index :
     }
 
     // Generate `operator+`.
-    template <is_integral T>
+    template <is_unsigned_integral T>
     constexpr auto
     add(T other) const -> index {
-        return index(this->raw + static_cast<__SIZE_TYPE__>(other));
+        return index(this->raw + make_raw_arithmetic(other));
     }
+
+    // Adding a signed value has the potential of underflowing, so the `index`
+    // should cast to `iword`.
+    template <is_signed_integral T>
+    constexpr auto
+    add(T other) const -> arithmetic<make_signed_type<__SIZE_TYPE__>, policy> {
+        // Return an `iword`.
+        return arithmetic<make_signed_type<__SIZE_TYPE__>, policy>(
+            this->raw + make_raw_arithmetic(other));
+    }
+
+    // TODO: Make `arithmetic_interface` support this.
+    // template <is_signed_integral T>
+    // constexpr auto
+    // operator+=(T) = delete("A signed integer cannot be added to a "
+    //                        "`cat::index` because adding a negative value may
+    //                        " "underflow. Try adding two terms together and "
+    //                        "assigning them to a `cat::iword` instead.");
 
     // Generate `operator+` for pointer arithmetic.
     template <typename T>

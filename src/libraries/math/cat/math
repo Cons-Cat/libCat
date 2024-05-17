@@ -217,7 +217,7 @@ constexpr auto
 round_to_pow2(T value) {
     value -= 1u;
     value = detail::round_to_pow2_part<T, 1u>(value);
-    return value + 1;
+    return value + T(1);
 }
 
 template <is_signed_integral T>

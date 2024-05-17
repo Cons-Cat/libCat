@@ -22,7 +22,7 @@ class bitset {
                     // `uint_fixed` will not compile here if it is larger than 8
                     // or it is not a power of 2. This is an `array` of one
                     // element to make it iterable.
-                    array<uint_fixed<min(round_to_pow2(total_bytes), 8)>, 1u>,
+                    array<uint_fixed<min(round_to_pow2(total_bytes), 8u)>, 1u>,
                     array<uint8, div_ceil(total_bytes, 8u)>>;
 
     using array_type_element = array_type::value_type;
