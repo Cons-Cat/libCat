@@ -100,8 +100,8 @@ namespace detail {
     make_integer_sequence() {
         if constexpr (count > 0) {
             // Recurse, appending `count - 1` to `integers`.
-            return make_integer_sequence<count - 1, T, T(count.get_raw() - 1),
-                                         T(count.get_raw() - 1), integers...>();
+            return make_integer_sequence<count - 1, T, T(count.raw - 1),
+                                         T(count.raw - 1), integers...>();
         } else {
             return value_type_list<T, integers...>();
         }
@@ -123,7 +123,7 @@ constexpr auto integer_sequence =
 // value_type_list<T, T(__integer_pack(count))...>();
 #else
     // TODO: Support `__make_integer_seq` for Clang.
-    detail::make_integer_sequence<count, T, T(count.get_raw())>();
+    detail::make_integer_sequence<count, T, T(count.raw)>();
 #endif
 
 template <is_integral T, idx count>

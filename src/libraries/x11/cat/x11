@@ -456,8 +456,8 @@ handshake(cat::is_allocator auto& allocator,
     // recieved packets is unknown and potentially a very large amount.
     // TODO: Deallocate this somehow.
     auto memory = prop(allocator.template alloc_multi<connection_response_info>(
-        // TODO: Remove `.get_raw()`.
-        x_connection.header.message_length.get_raw() * 4));
+        // TODO: Remove `.raw`.
+        x_connection.header.message_length.raw * 4));
 
     x_connection.p_setup = memory.data();
 
@@ -465,7 +465,7 @@ handshake(cat::is_allocator auto& allocator,
     // TODO: Is the return of `.recieve` important here?
     auto _ = socket
                  .recieve(x_connection.p_setup,
-                          x_connection.header.message_length.get_raw() * 4)
+                          x_connection.header.message_length.raw * 4)
                  .or_exit();
 
     // Copy pointers to that recieved data from the allocated buffer into
@@ -482,12 +482,12 @@ handshake(cat::is_allocator auto& allocator,
         static_cast<x11::pixel_map_format_packet*>(
             static_cast<void*>(p_iterator));
     p_iterator += sizeof(x11::pixel_map_format_packet) *
-                  x_connection.p_setup->pixel_map_formats_count.get_raw();
+                  x_connection.p_setup->pixel_map_formats_count.raw;
 
     x_connection.p_root_windows =
         static_cast<x11::root_window_packet*>(static_cast<void*>(p_iterator));
     p_iterator += sizeof(x11::root_window_packet) *
-                  x_connection.p_setup->root_windows_count.get_raw();
+                  x_connection.p_setup->root_windows_count.raw;
 
     x_connection.p_depths =
         static_cast<x11::depth_packet*>(static_cast<void*>(p_iterator));

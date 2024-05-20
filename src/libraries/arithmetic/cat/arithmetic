@@ -816,24 +816,6 @@ struct arithmetic :
         return other >> this->raw;
     }
 
-    [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_raw() & -> T& {
-        return this->raw;
-    }
-
-    [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_raw() const& -> T const& {
-        return this->raw;
-    }
-
-    [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_raw() && -> T {
-        return move(this)->raw;
-    }
-
     // This is undefined behavior, because it returns an address to a
     // temporary. However, when inlined, this gives the type a fluent API
     // and skips constructor calls in unoptimized builds.
@@ -1214,24 +1196,6 @@ struct arithmetic_ptr
         return ~(this->raw);
     }
 
-    [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_raw() & -> storage_type& {
-        return this->raw;
-    }
-
-    [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_raw() const& -> storage_type const& {
-        return this->raw;
-    }
-
-    [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_raw() && -> storage_type {
-        return this->raw;
-    }
-
     // This is undefined behavior, because it returns an address to a
     // temporary. However, when inlined, this gives the type a fluent API
     // and skips constructor calls in unoptimized builds.
@@ -1586,24 +1550,6 @@ struct index :
         // Zero the upper bit so that it remains a 63-bit value.
         complement &= 0ull << 63u;
         return index(complement);
-    }
-
-    [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_raw() & -> __SIZE_TYPE__& {
-        return this->raw;
-    }
-
-    [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_raw() const& -> __SIZE_TYPE__ const& {
-        return this->raw;
-    }
-
-    [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_raw() && -> __SIZE_TYPE__ {
-        return this->raw;
     }
 
     // This is undefined behavior, because it returns an address to a

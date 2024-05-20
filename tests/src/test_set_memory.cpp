@@ -20,13 +20,13 @@ TEST(test_set_memory) {
     cat::verify(p_page[2] == 1_u1);
     cat::verify(p_page[3] == 2_u1);
     // TODO: Why did this stop working?
-    // cat::verify(p_page[(2_ki - 4).get_raw()] == 2_u1);
-    cat::verify(p_page[(2_ki - 3).get_raw()] == 1_u1);
+    // cat::verify(p_page[(2_ki - 4).raw] == 2_u1);
+    cat::verify(p_page[(2_ki - 3).raw] == 1_u1);
 
     // Test zeroing out memory.
     cat::zero_memory(p_page, 4_uki);
     cat::verify(p_page[0] == 0_u1);
-    cat::verify(p_page[(4_ki).get_raw() - 1] == 0_u1);
+    cat::verify(p_page[(4_ki).raw - 1] == 0_u1);
 
     // Test setting values larger than 1 byte.
     cat::set_memory(p_page, 1_i2, 2_uki);

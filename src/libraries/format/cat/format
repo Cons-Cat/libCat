@@ -105,7 +105,7 @@ to_chars() {
 
         // Handle a negative sign.
         if constexpr (is_signed<decltype(value)> && value < 0) {
-            fixed_string<string.size().get_raw() + 1> new_string;
+            fixed_string<string.size().raw + 1> new_string;
             for (uword i = 0u; i < string.size(); ++i) {
                 new_string[i + 1u] = string[i];
             }
@@ -123,7 +123,7 @@ constexpr auto
 to_string_at(arithmetic<T> value, span<char> output_buffer) -> maybe<string> {
     // Add 1 for a negative sign `-` character.
     constexpr iword max_length = to_chars<arithmetic<T>::max()>().size() + 1;
-    char buffer[max_length.get_raw()];
+    char buffer[max_length.raw];
     if consteval {
         iword i = 0;
         if (is_signed<T> && value < 0) {
@@ -133,14 +133,14 @@ to_string_at(arithmetic<T> value, span<char> output_buffer) -> maybe<string> {
         for (; i < max_length; ++i) {
             if (value > 0) {
                 arithmetic<T> const remainder = value % 10;
-                buffer[i.get_raw()] = remainder.get_raw() + '0';
+                buffer[i.raw] = remainder.raw + '0';
                 value /= 10;
             } else {
-                buffer[i.get_raw()] = '\0';
+                buffer[i.raw] = '\0';
             }
         }
     } else {
-        detail::i32toa_jeaiii(value.get_raw(), buffer);
+        detail::i32toa_jeaiii(value.raw, buffer);
     }
 
     // TODO: Get the length of this integer faster.
@@ -151,7 +151,7 @@ to_string_at(arithmetic<T> value, span<char> output_buffer) -> maybe<string> {
 
     if consteval {
         for (idx i = 0u; i < length; ++i) {
-            output_buffer[i] = buffer[i.get_raw()];
+            output_buffer[i] = buffer[i.raw];
         }
     } else {
         copy_memory(buffer, output_buffer.data(), length);
@@ -319,7 +319,7 @@ namespace detail {
                 this->p_storage = result.value().data();
             }
 
-            this->p_storage[this->length.get_raw()] = character;
+            this->p_storage[this->length.raw] = character;
             ++(this->length);
             return monostate;
         }
@@ -346,14 +346,14 @@ namespace detail {
         store_argument(idx& argument_index, T&& value) {
             // Pack `value` into `packed_args_storage`.
             iword const storage_index =
-                this->arguments_indices[argument_index.get_raw()].byte_index;
+                this->arguments_indices[argument_index.raw].byte_index;
 
             copy_memory_small(__builtin_addressof(value),
                               &(this->packed_args_storage[0]) + storage_index,
                               sizeof(T));
 
             // Assign `T` to that storage.
-            this->arguments_indices[argument_index.get_raw()].discriminant =
+            this->arguments_indices[argument_index.raw].discriminant =
                 detail::format_type_constant::alternative<T>();
 
             // Set the byte offset for the next argument if there is another.
@@ -361,8 +361,8 @@ namespace detail {
                 sizeof...(types)) {  // TODO: Explore whether
                                      // `[[likely]]`
                                      // improves performance here.
-                this->arguments_indices[argument_index.get_raw() + 1].byte_index =
-                    storage_index.get_raw() + ssizeof(T);
+                this->arguments_indices[argument_index.raw + 1].byte_index =
+                    storage_index.raw + ssizeof(T);
             }
 
             ++argument_index;
@@ -474,7 +474,7 @@ namespace detail {
                 }
             }
 
-            this->p_string[this->length.get_raw()] = character;
+            this->p_string[this->length.raw] = character;
             ++(this->length);
             return monostate;
         }
@@ -722,7 +722,7 @@ namespace detail {
             scaredy_format<void> parse_result;
 
             // TODO: Parse all argument types:
-            switch (handler.arguments.p_args_indices[current_argument.get_raw()]
+            switch (handler.arguments.p_args_indices[current_argument.raw]
                         .discriminant) {
                 case format_discriminant::int4_type:
                     parse_result = parse(int4{});

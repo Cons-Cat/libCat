@@ -33,7 +33,7 @@ auto two() -> error_type_two {
 
 auto union_errors(int4 error)
     -> cat::scaredy<int8, error_type_one, error_type_two> {
-    switch (error.get_raw()) {
+    switch (error.raw) {
         case 0:
             return one();
         case 1:
