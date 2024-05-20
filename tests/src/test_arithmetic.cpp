@@ -334,13 +334,17 @@ TEST(test_numerals) {
     intptr<int4> int_intptr = &integer;
     *int_intptr = 1;
     cat::verify(integer == 1);
-    cat::verify(int_intptr->max == integer.max);  // NOLINT
 
     uint4 uinteger = 0u;
     intptr<uint4> uint_intptr = &uinteger;
     *uint_intptr = 1u;
     cat::verify(uinteger == 1u);
-    cat::verify(uint_intptr->max == uinteger.max);  // NOLINT
+
+    cat::verify(int_intptr->min() == integer.min());
+    cat::verify(int_intptr->max() == integer.max());
+
+    cat::verify(uint_intptr->min() == uinteger.min());
+    cat::verify(uint_intptr->max() == uinteger.max());
 
     // Test `<=>`.
     int4 int_less = 0;
@@ -457,8 +461,7 @@ TEST(test_numerals) {
     static_assert(cat::sat_add(cat::uint1_max - 3u, 1_u1) < cat::uint1_max);
     static_assert(cat::sat_add(cat::uint1_max - 1u, 1_u1) == cat::uint1_max);
     static_assert(cat::sat_add(cat::uint1_max - 1_u1, 1_u1) == cat::uint1_max);
-    static_assert(cat::sat_add(cat::uint1_max.raw, 1_u1) ==
-                  cat::uint1_max);
+    static_assert(cat::sat_add(cat::uint1_max.raw, 1_u1) == cat::uint1_max);
     static_assert(cat::sat_add(cat::uint1_max, 100_u1) == cat::uint1_max);
 
     cat::verify(cat::sat_add(cat::uint1_max - 3u, 1_u1) < cat::uint1_max);
@@ -470,8 +473,7 @@ TEST(test_numerals) {
     static_assert(cat::sat_add(cat::uint2_max - 3u, 2_u2) < cat::uint2_max);
     static_assert(cat::sat_add(cat::uint2_max - 2u, 2_u2) == cat::uint2_max);
     static_assert(cat::sat_add(cat::uint2_max - 1_u2, 2_u2) == cat::uint2_max);
-    static_assert(cat::sat_add(cat::uint2_max.raw, 2_u2) ==
-                  cat::uint2_max);
+    static_assert(cat::sat_add(cat::uint2_max.raw, 2_u2) == cat::uint2_max);
     static_assert(cat::sat_add(cat::uint2_max, 100_u2) == cat::uint2_max);
 
     cat::verify(cat::sat_add(cat::uint2_max - 3u, 2_u2) < cat::uint2_max);
@@ -483,8 +485,7 @@ TEST(test_numerals) {
     static_assert(cat::sat_add(cat::uint4_max - 3u, 2_u4) < cat::uint4_max);
     static_assert(cat::sat_add(cat::uint4_max - 2u, 2_u4) == cat::uint4_max);
     static_assert(cat::sat_add(cat::uint4_max - 1u, 2u) == cat::uint4_max);
-    static_assert(cat::sat_add(cat::uint4_max.raw, 2_u4) ==
-                  cat::uint4_max);
+    static_assert(cat::sat_add(cat::uint4_max.raw, 2_u4) == cat::uint4_max);
     static_assert(cat::sat_add(cat::uint4_max, 100u) == cat::uint4_max);
 
     cat::verify(cat::sat_add(cat::uint4_max - 3u, 2_u4) < cat::uint4_max);
@@ -496,8 +497,7 @@ TEST(test_numerals) {
     static_assert(cat::sat_add(cat::uint8_max - 3u, 2_u8) < cat::uint8_max);
     static_assert(cat::sat_add(cat::uint8_max - 2u, 2_u8) == cat::uint8_max);
     static_assert(cat::sat_add(cat::uint8_max - 1u, 2u) == cat::uint8_max);
-    static_assert(cat::sat_add(cat::uint8_max.raw, 2_u8) ==
-                  cat::uint8_max);
+    static_assert(cat::sat_add(cat::uint8_max.raw, 2_u8) == cat::uint8_max);
     static_assert(cat::sat_add(cat::uint8_max, 100u) == cat::uint8_max);
 
     cat::verify(cat::sat_add(cat::uint8_max - 3u, 2_u8) < cat::uint8_max);
@@ -559,8 +559,7 @@ TEST(test_numerals) {
     static_assert(cat::sat_sub(cat::uint1_min + 3u, 1_u1) > cat::uint1_min);
     static_assert(cat::sat_sub(cat::uint1_min + 1u, 1_u1) == cat::uint1_min);
     static_assert(cat::sat_sub(cat::uint1_min + 1_u1, 1_u1) == cat::uint1_min);
-    static_assert(cat::sat_sub(cat::uint1_min.raw, 1_u1) ==
-                  cat::uint1_min);
+    static_assert(cat::sat_sub(cat::uint1_min.raw, 1_u1) == cat::uint1_min);
     static_assert(cat::sat_sub(cat::uint1_min, 100_u1) == cat::uint1_min);
 
     cat::verify(cat::sat_sub(cat::uint1_min + 3u, 1_u1) > cat::uint1_min);
@@ -572,8 +571,7 @@ TEST(test_numerals) {
     static_assert(cat::sat_sub(cat::uint2_min + 3u, 2_u2) > cat::uint2_min);
     static_assert(cat::sat_sub(cat::uint2_min + 2u, 2_u2) == cat::uint2_min);
     static_assert(cat::sat_sub(cat::uint2_min + 1_u2, 2_u2) == cat::uint2_min);
-    static_assert(cat::sat_sub(cat::uint2_min.raw, 2_u2) ==
-                  cat::uint2_min);
+    static_assert(cat::sat_sub(cat::uint2_min.raw, 2_u2) == cat::uint2_min);
     static_assert(cat::sat_sub(cat::uint2_min, 100_u2) == cat::uint2_min);
 
     cat::verify(cat::sat_sub(cat::uint2_min + 3u, 2_u2) > cat::uint2_min);
@@ -585,8 +583,7 @@ TEST(test_numerals) {
     static_assert(cat::sat_sub(cat::uint4_min + 3u, 2_u4) > cat::uint4_min);
     static_assert(cat::sat_sub(cat::uint4_min + 2u, 2_u4) == cat::uint4_min);
     static_assert(cat::sat_sub(cat::uint4_min + 1u, 2u) == cat::uint4_min);
-    static_assert(cat::sat_sub(cat::uint4_min.raw, 2_u4) ==
-                  cat::uint4_min);
+    static_assert(cat::sat_sub(cat::uint4_min.raw, 2_u4) == cat::uint4_min);
     static_assert(cat::sat_sub(cat::uint4_min, 100u) == cat::uint4_min);
 
     cat::verify(cat::sat_sub(cat::uint4_min + 3u, 2_u4) > cat::uint4_min);
@@ -598,8 +595,7 @@ TEST(test_numerals) {
     static_assert(cat::sat_sub(cat::uint8_min + 3u, 2_u8) > cat::uint8_min);
     static_assert(cat::sat_sub(cat::uint8_min + 2u, 2_u8) == cat::uint8_min);
     static_assert(cat::sat_sub(cat::uint8_min + 1u, 2u) == cat::uint8_min);
-    static_assert(cat::sat_sub(cat::uint8_min.raw, 2_u8) ==
-                  cat::uint8_min);
+    static_assert(cat::sat_sub(cat::uint8_min.raw, 2_u8) == cat::uint8_min);
     static_assert(cat::sat_sub(cat::uint8_min, 100u) == cat::uint8_min);
 
     cat::verify(cat::sat_sub(cat::uint8_min + 3u, 2_u8) > cat::uint8_min);
