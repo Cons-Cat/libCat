@@ -763,51 +763,50 @@ struct arithmetic :
     // constructor calls.
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_undefined() & -> arithmetic<T, overflow_policies::undefined>& {
+    inline auto
+    undef() & -> arithmetic<T, overflow_policies::undefined>& {
         return *reinterpret_cast<arithmetic<T, overflow_policies::undefined>*>(
             this);
     };
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_undefined()
-        const& -> arithmetic<T, overflow_policies::undefined> const& {
+    inline auto
+    undef() const& -> arithmetic<T, overflow_policies::undefined> const& {
         return *reinterpret_cast<
             arithmetic<T const, overflow_policies::undefined>*>(this);
     };
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_undefined() && -> arithmetic<T, overflow_policies::undefined> {
+    inline auto
+    undef() && -> arithmetic<T, overflow_policies::undefined> {
         return __builtin_bit_cast(arithmetic<T, overflow_policies::undefined>,
                                   *this);
     };
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_wrap() & -> arithmetic<T, overflow_policies::wrap>& {
+    inline auto
+    wrap() & -> arithmetic<T, overflow_policies::wrap>& {
         return *reinterpret_cast<arithmetic<T, overflow_policies::wrap>*>(this);
     };
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_wrap() const& -> arithmetic<T, overflow_policies::wrap> const& {
+    inline auto
+    wrap() const& -> arithmetic<T, overflow_policies::wrap> const& {
         return *reinterpret_cast<arithmetic<T const, overflow_policies::wrap>*>(
             this);
     };
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_wrap() && -> arithmetic<T, overflow_policies::wrap> {
+    inline auto
+    wrap() && -> arithmetic<T, overflow_policies::wrap> {
         return __builtin_bit_cast(arithmetic<T, overflow_policies::wrap>,
                                   *this);
     };
 
     // clang-format off
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_sat() & -> arithmetic<T, overflow_policies::saturate>&
+    inline auto
+    sat() & -> arithmetic<T, overflow_policies::saturate>&
     {
         return *reinterpret_cast<arithmetic<T, overflow_policies::saturate>*>(
                                    this);
@@ -816,15 +815,15 @@ struct arithmetic :
     // clang-format on
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_sat() const& -> arithmetic<T, overflow_policies::saturate> const& {
+    inline auto
+    sat() const& -> arithmetic<T, overflow_policies::saturate> const& {
         return *reinterpret_cast<
             arithmetic<T const, overflow_policies::saturate>*>(this);
     };
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_sat() && -> arithmetic<T, overflow_policies::saturate> {
+    inline auto
+    sat() && -> arithmetic<T, overflow_policies::saturate> {
         return __builtin_bit_cast(arithmetic<T, overflow_policies::saturate>,
                                   *this);
     };
@@ -1169,78 +1168,75 @@ struct arithmetic_ptr :
     // constructor calls.
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_undefined() & -> arithmetic_ptr<T, storage_type,
-                                        overflow_policies::undefined>& {
+    inline auto
+    undef() & -> arithmetic_ptr<T, storage_type,
+                                overflow_policies::undefined>& {
         return *reinterpret_cast<
             arithmetic_ptr<T, storage_type, overflow_policies::undefined>*>(
             this);
     };
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_undefined()
-        const& -> arithmetic_ptr<T, storage_type,
-                                 overflow_policies::undefined> const& {
+    inline auto
+    undef() const& -> arithmetic_ptr<T, storage_type,
+                                     overflow_policies::undefined> const& {
         return *reinterpret_cast<arithmetic_ptr<T const, storage_type,
                                                 overflow_policies::undefined>*>(
             this);
     };
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_undefined() && -> arithmetic_ptr<T, storage_type,
-                                         overflow_policies::undefined> {
+    inline auto
+    undef() && -> arithmetic_ptr<T, storage_type,
+                                 overflow_policies::undefined> {
         return __builtin_bit_cast(
             arithmetic_ptr<T, storage_type, overflow_policies::undefined>,
             *this);
     };
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_wrap() & -> arithmetic_ptr<T, storage_type, overflow_policies::wrap>& {
+    inline auto
+    wrap() & -> arithmetic_ptr<T, storage_type, overflow_policies::wrap>& {
         return *reinterpret_cast<
             arithmetic_ptr<T, storage_type, overflow_policies::wrap>*>(this);
     };
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_wrap() const& -> arithmetic_ptr<T, storage_type,
-                                        overflow_policies::wrap> const& {
+    inline auto
+    wrap() const& -> arithmetic_ptr<T, storage_type,
+                                    overflow_policies::wrap> const& {
         return *reinterpret_cast<
             arithmetic_ptr<T const, storage_type, overflow_policies::wrap>*>(
             this);
     };
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_wrap() && -> arithmetic_ptr<T, storage_type, overflow_policies::wrap> {
+    inline auto
+    wrap() && -> arithmetic_ptr<T, storage_type, overflow_policies::wrap> {
         return __builtin_bit_cast(
             arithmetic_ptr<T, storage_type, overflow_policies::wrap>, *this);
     };
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_sat() & -> arithmetic_ptr<T, storage_type,
-                                  overflow_policies::saturate>& {
+    inline auto
+    sat() & -> arithmetic_ptr<T, storage_type, overflow_policies::saturate>& {
         return *reinterpret_cast<
             arithmetic_ptr<T, storage_type, overflow_policies::saturate>*>(
             this);
     };
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_sat() const& -> arithmetic_ptr<T, storage_type,
-                                       overflow_policies::saturate> const& {
+    inline auto
+    sat() const& -> arithmetic_ptr<T, storage_type,
+                                   overflow_policies::saturate> const& {
         return *reinterpret_cast<arithmetic_ptr<T const, storage_type,
                                                 overflow_policies::saturate>*>(
             this);
     };
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_sat() && -> arithmetic_ptr<T, storage_type,
-                                   overflow_policies::saturate> {
+    inline auto
+    sat() && -> arithmetic_ptr<T, storage_type, overflow_policies::saturate> {
         return __builtin_bit_cast(
             arithmetic_ptr<T, storage_type, overflow_policies::saturate>,
             *this);
@@ -1546,23 +1542,23 @@ struct index :
     // constructor calls.
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_undefined() & -> index& {
+    inline auto
+    undef() & -> index& {
         return *reinterpret_cast<
             arithmetic<__SIZE_TYPE__, overflow_policies::undefined>*>(this);
     };
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_undefined() const& -> index const& {
+    inline auto
+    undef() const& -> index const& {
         return *reinterpret_cast<
             arithmetic<__SIZE_TYPE__ const, overflow_policies::undefined>*>(
             this);
     };
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_undefined() && -> index {
+    inline auto
+    undef() && -> index {
         return __builtin_bit_cast(
             arithmetic<__SIZE_TYPE__, overflow_policies::undefined>, *this);
     };
@@ -1570,8 +1566,8 @@ struct index :
     // TODO: clang-format 19 is broken here.
     // clang-format off
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_wrap() & ->index&
+    inline auto
+    wrap() & ->index&
     {
         return *reinterpret_cast<arithmetic<__SIZE_TYPE__,
                                             overflow_policies::wrap>*>(this);
@@ -1580,34 +1576,34 @@ struct index :
     // clang-format on
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_wrap() const& -> index const& {
+    inline auto
+    wrap() const& -> index const& {
         return *reinterpret_cast<
             arithmetic<__SIZE_TYPE__ const, overflow_policies::wrap>*>(this);
     };
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_wrap() && -> index {
+    inline auto
+    wrap() && -> index {
         return __builtin_bit_cast(
             arithmetic<__SIZE_TYPE__, overflow_policies::wrap>, *this);
     };
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_sat() & -> index<overflow_policies::saturate>& {
+    inline auto
+    sat() & -> index<overflow_policies::saturate>& {
         return *reinterpret_cast<index<overflow_policies::saturate>*>(this);
     };
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_sat() const& -> index<overflow_policies::saturate> const& {
+    inline auto
+    sat() const& -> index<overflow_policies::saturate> const& {
         return *reinterpret_cast<index<overflow_policies::saturate>*>(this);
     };
 
     [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
-    inline constexpr auto
-    get_sat() && -> index<overflow_policies::saturate> {
+    inline auto
+    sat() && -> index<overflow_policies::saturate> {
         return __builtin_bit_cast(index<overflow_policies::saturate>, *this);
     };
 

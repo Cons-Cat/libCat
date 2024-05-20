@@ -25,50 +25,50 @@ TEST(test_numerals) {
         static_assert(!cat::is_lvalue_reference<decltype(constant_int4)>);
 
         static_assert(cat::is_lvalue_reference<
-                      decltype(constant_int4.get_wrap().get_undefined())>);
+                      decltype(constant_int4.wrap().undef())>);
         static_assert(
-            cat::rvalue<decltype(int4{0}.get_wrap().get_undefined())>);
+            cat::rvalue<decltype(int4{0}.wrap().undef())>);
 
         static_assert(
-            cat::is_lvalue_reference<decltype(constant_int4.get_wrap())>);
-        static_assert(cat::rvalue<decltype(int4{0}.get_wrap())>);
+            cat::is_lvalue_reference<decltype(constant_int4.wrap())>);
+        static_assert(cat::rvalue<decltype(int4{0}.wrap())>);
 
         static_assert(
-            cat::is_lvalue_reference<decltype(constant_int4.get_sat())>);
-        static_assert(cat::rvalue<decltype(int4{0}.get_sat())>);
+            cat::is_lvalue_reference<decltype(constant_int4.sat())>);
+        static_assert(cat::rvalue<decltype(int4{0}.sat())>);
     }
 
     {
         idx const constant_idx = 0;
 
         static_assert(cat::is_lvalue_reference<
-                      decltype(constant_idx.get_wrap().get_undefined())>);
-        static_assert(cat::rvalue<decltype(idx{0}.get_wrap().get_undefined())>);
+                      decltype(constant_idx.wrap().undef())>);
+        static_assert(cat::rvalue<decltype(idx{0}.wrap().undef())>);
 
         static_assert(
-            cat::is_lvalue_reference<decltype(constant_idx.get_wrap())>);
-        static_assert(cat::rvalue<decltype(idx{0}.get_wrap())>);
+            cat::is_lvalue_reference<decltype(constant_idx.wrap())>);
+        static_assert(cat::rvalue<decltype(idx{0}.wrap())>);
 
         static_assert(
-            cat::is_lvalue_reference<decltype(constant_idx.get_sat())>);
-        static_assert(cat::rvalue<decltype(idx{0}.get_sat())>);
+            cat::is_lvalue_reference<decltype(constant_idx.sat())>);
+        static_assert(cat::rvalue<decltype(idx{0}.sat())>);
     }
 
     {
         uintptr<void> const constant_uptr = nullptr;
 
         static_assert(cat::is_lvalue_reference<
-                      decltype(constant_uptr.get_wrap().get_undefined())>);
+                      decltype(constant_uptr.wrap().undef())>);
         static_assert(
-            cat::rvalue<decltype(uintptr<void>{0}.get_wrap().get_undefined())>);
+            cat::rvalue<decltype(uintptr<void>{0}.wrap().undef())>);
 
         static_assert(
-            cat::is_lvalue_reference<decltype(constant_uptr.get_wrap())>);
-        static_assert(cat::rvalue<decltype(uintptr<void>{0}.get_wrap())>);
+            cat::is_lvalue_reference<decltype(constant_uptr.wrap())>);
+        static_assert(cat::rvalue<decltype(uintptr<void>{0}.wrap())>);
 
         static_assert(
-            cat::is_lvalue_reference<decltype(constant_uptr.get_sat())>);
-        static_assert(cat::rvalue<decltype(uintptr<void>{0}.get_sat())>);
+            cat::is_lvalue_reference<decltype(constant_uptr.sat())>);
+        static_assert(cat::rvalue<decltype(uintptr<void>{0}.sat())>);
     }
 
     // Test relationship to raw types.
@@ -679,24 +679,24 @@ TEST(test_numerals) {
 
     // Test overflow semantics.
     int4 safe_int = int4::max();
-    cat::verify((safe_int.get_wrap() + 100) == cat::int4_min + 99);
+    cat::verify((safe_int.wrap() + 100) == cat::int4_min + 99);
 
-    safe_int.get_wrap() += 1;
+    safe_int.wrap() += 1;
     cat::verify(safe_int == cat::int4_min);
-    safe_int.get_wrap() += 100;
-    cat::verify(safe_int.get_wrap() == cat::int4_min + 100);
-    cat::verify(safe_int.get_sat() == cat::int4_min + 100);
+    safe_int.wrap() += 100;
+    cat::verify(safe_int.wrap() == cat::int4_min + 100);
+    cat::verify(safe_int.sat() == cat::int4_min + 100);
     cat::verify(safe_int.raw == cat::int4_min + 100);
 
     // Test saturating overflow with member access syntax.
     safe_int = int4::max();
-    cat::verify((safe_int.get_sat() + 100) == cat::int4_max);
+    cat::verify((safe_int.sat() + 100) == cat::int4_max);
 
-    safe_int.get_sat() += 1;
+    safe_int.sat() += 1;
     cat::verify(safe_int == cat::int4_max);
-    safe_int.get_sat() += 100;
-    cat::verify(safe_int.get_wrap() == cat::int4_max);
-    cat::verify(safe_int.get_sat() == cat::int4_max);
+    safe_int.sat() += 100;
+    cat::verify(safe_int.wrap() == cat::int4_max);
+    cat::verify(safe_int.sat() == cat::int4_max);
     cat::verify(safe_int.raw == cat::int4_max);
 
     // Test overflow strong types.
@@ -704,14 +704,14 @@ TEST(test_numerals) {
     wrap_int4 += 100;
     cat::verify(wrap_int4 == cat::int4_min + 99);
     wrap_int4 = cat::int4_max;
-    wrap_int4.get_sat() += 100;
+    wrap_int4.sat() += 100;
     cat::verify(wrap_int4 == cat::int4_max);
 
     cat::sat_int4 saturate_int4 = cat::int4_max;
     saturate_int4 += 100;
     cat::verify(saturate_int4 == cat::int4_max);
     saturate_int4 = cat::int4_max;
-    saturate_int4.get_wrap() += 100;
+    saturate_int4.wrap() += 100;
     cat::verify(saturate_int4 == cat::int4_min + 99);
 
     // Test integers.
