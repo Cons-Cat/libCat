@@ -10,8 +10,8 @@ template <typename U>
 [[nodiscard]]
 constexpr auto
 cat::align_down(U* p_value, uword alignment) -> U* {
-    // TODO: Add unary `-` operator to remove `.get_raw()`.
-    return uintptr<U>{p_value} & (-alignment.get_raw());
+    // TODO: Add unary `-` operator to remove `.raw`.
+    return uintptr<U>{p_value} & (-alignment.raw);
 }
 
 // Returns a value rounded down from `p_value` to the nearest `alignment`
@@ -20,8 +20,8 @@ template <typename U>
 [[nodiscard]]
 constexpr auto
 cat::align_down(intptr<U> p_value, uword alignment) -> intptr<U> {
-    // TODO: Add unary `-` operator to remove `.get_raw()`.
-    return p_value & (-alignment.get_raw());
+    // TODO: Add unary `-` operator to remove `.raw`.
+    return p_value & (-alignment.raw);
 }
 
 // Returns a value rounded down from `p_value` to the nearest `alignment`
@@ -30,6 +30,6 @@ template <typename U>
 [[nodiscard]]
 constexpr auto
 cat::align_down(uintptr<U> p_value, uword alignment) -> uintptr<U> {
-    // TODO: Add unary `-` operator to remove `.get_raw()`.
-    return p_value & (-alignment.get_raw());
+    // TODO: Add unary `-` operator to remove `.raw`.
+    return p_value & (-alignment.raw);
 }

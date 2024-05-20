@@ -6,7 +6,7 @@
 
 struct alloc_huge_object {
     [[maybe_unused]]
-    uint1 storage[cat::inline_buffer_size.get_raw() + 1];
+    uint1 storage[cat::inline_buffer_size.raw + 1];
 };
 
 int4 alloc_counter = 0;
@@ -21,7 +21,7 @@ struct alloc_non_trivial {
 
 struct alloc_non_trivial_huge_object {
     [[maybe_unused]]
-    uint1 storage[cat::inline_buffer_size.get_raw()];
+    uint1 storage[cat::inline_buffer_size.raw];
 
     alloc_non_trivial_huge_object() {
         ++alloc_counter;

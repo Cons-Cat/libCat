@@ -197,7 +197,7 @@ extract_bits(T from, cat::is_unsigned_integral auto offset,
         }
     }
     constexpr unsigned char bits = sizeof(T) * 8u;
-    auto const mask = T((1u << raw_length) * (raw_length < bits) - 1u).get_raw();
+    auto const mask = T((1u << raw_length) * (raw_length < bits) - 1u).raw;
     return T((raw_from >> raw_offset) & (mask * (raw_offset < bits)));
 }
 
@@ -274,11 +274,11 @@ zero_high_bits_at(T source, cat::uint4 bit_index) -> T {
     if !consteval {
         if constexpr (__has_builtin(__builtin_ia32_bzhi_si) && sizeof(T) == 4) {
             return __builtin_ia32_bzhi_si(cat::make_raw_arithmetic(source),
-                                          bit_index.get_raw());
+                                          bit_index.raw);
         } else if constexpr (__has_builtin(__builtin_ia32_bzhi_di) &&
                              sizeof(T) == 8) {
             return __builtin_ia32_bzhi_di(cat::make_raw_arithmetic(source),
-                                          bit_index.get_raw());
+                                          bit_index.raw);
         }
     }
     // TODO: Implement this.
@@ -618,7 +618,7 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
             ((bytes_overflow * word_bits) != advance_bits)) {
             --bytes_overflow;
         }
-        m_internal_iterator += bytes_overflow.get_raw();  // TODO: Remove `.get_raw()`.
+        m_internal_iterator += bytes_overflow.raw;  // TODO: Remove `.raw`.
         m_bit_position = idx(advance_bits - bytes_overflow * word_bits);
     }
 
