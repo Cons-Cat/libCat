@@ -158,7 +158,7 @@ namespace detail {
             allocation_type inline_storage;
             // Reserve `inline_buffer_size` bytes to make the size
             // of this handle predictible.
-            byte empty[inline_buffer_size.raw];
+            byte empty[inline_buffer_size];
         };
 
         bool is_on_stack;
@@ -3714,7 +3714,7 @@ class allocator_interface {
 
             // if constexpr (is_destructible<allocation_type>) {
             for (uword i = 0u; i < handle.size(); ++i) {
-                p_memory[i.raw].~allocation_type();
+                p_memory[i.get_raw()].~allocation_type();
             }
             // }
             this->self().deallocate(static_cast<void const*>(p_memory),
@@ -3776,7 +3776,7 @@ class allocator_interface {
         } else {
             // if constexpr (is_destructible<T>) {
             for (uword i = 0u; i < count; ++i) {
-                p_memory[i.raw].~T();
+                p_memory[i.get_raw()].~T();
             }
             // }
             this->self().deallocate(static_cast<void const*>(p_memory),
@@ -4027,11 +4027,11 @@ class allocator_interface {
                 // Construct one or multiple `T`s.
                 if constexpr (is_multiple) {
                     p_allocation =
-                        new (std::align_val_t(allocation_alignment.raw))
-                            T[allocation_count.raw];
+                        new (std::align_val_t(allocation_alignment.get_raw()))
+                            T[allocation_count.get_raw()];
                 } else {
                     p_allocation =
-                        new (std::align_val_t(allocation_alignment.raw))
+                        new (std::align_val_t(allocation_alignment.get_raw()))
                             T(constructor_args...);
                 }
 
@@ -4392,7 +4392,7 @@ class allocator_interface {
             return;
         }
         for (idx i = 0u; i < old_count; ++i) {
-            new_handle[i] = move(*(p_old_handle + i.raw));
+            new_handle[i] = move(*(p_old_handle + i.get_raw()));
         }
     }
 

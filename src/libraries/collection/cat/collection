@@ -95,7 +95,7 @@ namespace detail {
 
         constexpr auto
         dereference() const -> T& {
-            return m_p_array[m_current_index.raw];
+            return m_p_array[m_current_index.get_raw()];
         }
 
         constexpr void
@@ -265,7 +265,7 @@ class collection_interface {
             cat::assert(index >= 0);
         }
         if (index < this->self().capacity()) {
-            return this->self_mut().data()[index.raw];
+            return this->self_mut().data()[index.get_raw()];
         }
         return nullopt;
     }
@@ -295,7 +295,7 @@ class collection_interface {
     back()
         -> T& requires(is_array_like) {
                   cat::assert(this->self().size() > 0);
-                  return this->self_mut().data()[this->self().size().raw - 1];
+                  return this->self_mut().data()[this->self().size().get_raw() - 1];
               }
 
     [[nodiscard]] constexpr auto back() const -> T const& {

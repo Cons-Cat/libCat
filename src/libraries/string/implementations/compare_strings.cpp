@@ -22,9 +22,9 @@ cat::compare_strings(string const string_1, string const string_2) -> bool {
     auto loop = [&](uword size) -> bool {
         while (length_iterator >= vector_size * size) {
             for (idx i = 0u; i < size; ++i) {
-                // TODO: This should work without `.raw`.
-                vectors_1[i].load(string_1.data() + (i * size).raw);
-                vectors_2[i].load(string_2.data() + (i * size).raw);
+                // TODO: This should work without `.get_raw()`.
+                vectors_1[i].load(string_1.data() + (i * size).get_raw());
+                vectors_2[i].load(string_2.data() + (i * size).get_raw());
                 comparisons[i] = (vectors_1[i] == vectors_2[i]);
             }
 

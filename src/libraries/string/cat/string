@@ -113,7 +113,7 @@ class string : public span<char const> {
     find_small(char character,
                idx position = 0u) const -> maybe<sentinel<iword, -1>> {
         for (idx i = position; i < this->m_size; ++i) {
-            if (this->m_p_data[i.raw] == character) {
+            if (this->m_p_data[i.get_raw()] == character) {
                 return iword(i);
             }
         }
@@ -205,7 +205,7 @@ class fixed_string : public collection_interface<fixed_string<length>, char>,
         idx idx_length = idx(in_length);  // Convert length to `idx`.
         fixed_string<length> string;
         for (idx i = 0u; i < idx_length; ++i) {
-            string[i] = in[i.raw];
+            string[i] = in[i.get_raw()];
         }
         for (idx i = idx_length; i < length; ++i) {
             string[i] = '\0';

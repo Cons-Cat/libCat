@@ -91,8 +91,8 @@ class bitset {
         array_type_element& index_byte =
             m_data[m_data.size() - 1u -
                    ((index_bit + leading_skipped_bits) /
-                    // TODO: Without `.raw`, this is ambiguous.
-                    word_bits.raw)];
+                    // TODO: Without `.get_raw()`, this is ambiguous.
+                    word_bits.get_raw())];
 
         uword bit_offset = index_bit + leading_skipped_bits;
         if constexpr (total_bytes > word_bytes) {

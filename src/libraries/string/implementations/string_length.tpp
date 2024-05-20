@@ -12,7 +12,7 @@ cat::string_length(char const* p_string) -> idx {
     if consteval {
         idx result = 0u;
         while (true) {
-            if (p_string[result.raw] == '\0') {
+            if (p_string[result.get_raw()] == '\0') {
                 return result;
             }
             result++;
@@ -22,8 +22,8 @@ cat::string_length(char const* p_string) -> idx {
         constexpr char1x16 zeros = '\0';
 
         for (idx i = 0u;; i += 16u) {
-            // TODO: `.raw` should not be necessary here.
-            char1x16 const data = char1x16::loaded(p_string + i.raw);
+            // TODO: `.get_raw()` should not be necessary here.
+            char1x16 const data = char1x16::loaded(p_string + i.get_raw());
             constexpr x64::string_control mask =
                 x64::string_control::unsigned_byte |
                 x64::string_control::compare_equal_each |

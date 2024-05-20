@@ -77,7 +77,7 @@ class array : public collection_interface<array<T, length>, T>,
         //     // set_memory(this->storage, value, length);
         // } else {
         for (idx i = 0u; i < length; ++i) {
-            this->m_data[i.raw] = static_cast<T>(value);
+            this->m_data[i.get_raw()] = static_cast<T>(value);
         }
         // }
         return *this;
@@ -105,7 +105,7 @@ class array : public collection_interface<array<T, length>, T>,
     }
 
     // `storage` is public so that `cat::array` is a trivial type.
-    T m_data[length.raw];
+    T m_data[length];
 };
 
 // Construct an `array<int, 3>` as: `array a = {0, 1, 2};`
