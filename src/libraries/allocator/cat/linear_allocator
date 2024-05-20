@@ -51,9 +51,8 @@ class linear_allocator : public allocator_interface<linear_allocator> {
     // Reset the bumped pointer to the beginning of this arena.
     void
     reset() {
-        __asan_poison_memory_region(
-            static_cast<void const*>(m_p_arena_end),
-            make_unsigned((m_p_arena_begin - m_p_arena_end).raw));
+        __asan_poison_memory_region(static_cast<void const*>(m_p_arena_end),
+                                    m_p_arena_begin - m_p_arena_end);
         m_p_arena_current = m_p_arena_begin;
     }
 

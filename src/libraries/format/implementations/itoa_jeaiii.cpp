@@ -117,7 +117,7 @@ consteval auto cat::to_string(int4 value) -> string {
         return "0";
     }
 
-    int4::raw_type mut_value = value.raw;
+    int4::raw_type mut_value = value.get_raw();
     // An `int4` string never exceeds 11 characters, excluding the
     // null-terminator.
     char* p_string = new char[11];

@@ -29,7 +29,7 @@ cat::default_assert_handler(source_location const& callsite) {
             uint1 digit = input - 49_u1;
 
             // The value of `digit` is one less than what was inputted.
-            switch (digit.raw) {
+            switch (digit.get_raw()) {
                 case 0:
                     // Ignore the assert failure.
                     return;

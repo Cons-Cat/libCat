@@ -436,7 +436,7 @@ class variant {
     [[nodiscard]]
     constexpr auto
     holds_alternative(alternative_index_type alternative) const -> bool {
-        return this->discriminant.raw == alternative;
+        return this->discriminant.get_raw() == alternative;
     }
 
   private:

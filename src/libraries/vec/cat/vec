@@ -78,9 +78,9 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
         // TODO: I think there is a bug in GCC constexpr memory. This is a
         // workaround.
         if consteval {
-            T* p_new = new T[minimum_capacity.raw];
+            T* p_new = new T[minimum_capacity.get_raw()];
             for (idx i = 0u; i < m_current_size; ++i) {
-                construct_at(p_new + i, move(m_p_data[i.raw]));
+                construct_at(p_new + i, move(m_p_data[i.get_raw()]));
             }
             for (idx i = m_current_size + 1u; i < minimum_capacity; ++i) {
                 construct_at(p_new + i);
@@ -136,7 +136,7 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
             // workaround.
             if consteval {
                 delete[] m_p_data;
-                m_p_data = new T[minimum_capacity.raw];
+                m_p_data = new T[minimum_capacity.get_raw()];
                 m_current_capacity = minimum_capacity;
 
                 for (idx i = m_current_size + 1u; i < m_current_capacity; ++i) {
@@ -195,7 +195,7 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
             prop(this->increase_storage(allocator));
         }
 
-        m_p_data[m_current_size.raw] = static_cast<T>(fwd(value));
+        m_p_data[m_current_size.get_raw()] = static_cast<T>(fwd(value));
         ++(m_current_size);
         return monostate;
     }

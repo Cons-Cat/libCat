@@ -100,8 +100,8 @@ namespace detail {
     make_integer_sequence() {
         if constexpr (count > 0) {
             // Recurse, appending `count - 1` to `integers`.
-            return make_integer_sequence<count - 1, T, T(count.raw - 1),
-                                         T(count.raw - 1), integers...>();
+            return make_integer_sequence<count - 1, T, T(count.get_raw() - 1),
+                                         T(count.get_raw() - 1), integers...>();
         } else {
             return value_type_list<T, integers...>();
         }
@@ -109,30 +109,30 @@ namespace detail {
 }  // namespace detail
 
 // Make a `value_type_list` for any `T`, including non-integer types.
-template <typename T, T value, iword count>
+template <typename T, T value, idx count>
 constexpr auto value_list = detail::make_value_list<count, T, value>();
 
-template <typename T, T value, iword count>
+template <typename T, T value, idx count>
 using make_value_type_list = decltype(value_list<T, value, count>);
 
-template <is_integral T, cat::iword count>
+template <is_integral T, idx count>
 constexpr auto integer_sequence =
 #if __has_builtin(__integer_pack)
     // TODO: Get `__integer_pack` working for GCC.
-    detail::make_integer_sequence<count, T, T(count.raw)>();
-// value_type_list<T, T(__integer_pack(count.raw))...>();
+    detail::make_integer_sequence<count, T, count>();
+// value_type_list<T, T(__integer_pack(count))...>();
 #else
     // TODO: Support `__make_integer_seq` for Clang.
-    detail::make_integer_sequence<count, T, T(count.raw)>();
+    detail::make_integer_sequence<count, T, T(count.get_raw())>();
 #endif
 
-template <is_integral T, iword count>
+template <is_integral T, idx count>
 constexpr auto zeros_list = value_list<T, T(0), count>;
 
-template <is_integral T, iword count>
+template <is_integral T, idx count>
 constexpr auto ones_list = value_list<T, T(1), count>;
 
-template <is_integral T, iword count>
+template <is_integral T, idx count>
 using make_integer_sequence =
     remove_cv<decltype(integer_sequence<iword, count>)>;
 
@@ -140,21 +140,21 @@ using make_integer_sequence =
 template <iword... indices>
 using index_list_type = value_type_list<iword, indices...>;
 
-template <iword value, iword count>
+template <iword value, idx count>
 constexpr auto index_list = value_list<iword, value, count>;
 
-template <iword value, iword count>
+template <iword value, idx count>
 using make_index_list = make_value_type_list<iword, value, count>;
 
-template <iword count>
+template <idx count>
 constexpr auto index_sequence = integer_sequence<iword, count>;
 
-template <iword count>
+template <idx count>
 using make_index_sequence = make_integer_sequence<iword, count>;
 
 template <typename... types>
 // `ssizeof_pack()` here produces an internal compiler error in GCC 12.
-using index_sequence_for = make_index_sequence<iword{sizeof...(types)}>;
+using index_sequence_for = make_index_sequence<sizeof...(types)>;
 
 template <typename T>
     requires(is_enum<T>)
