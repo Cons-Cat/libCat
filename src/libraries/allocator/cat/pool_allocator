@@ -25,7 +25,7 @@ class pool_allocator
     // Initialize a `pool_allocator`. This should only be called from
     // `cat::make_pool_allocator`.
     constexpr pool_allocator(uintptr<void> p_address, idx arena_bytes)
-        : nodes(span<node_union>(
+        : m_nodes(span<node_union>(
               // Pun the opaque `p_address` to the internal `node_union` type.
               reinterpret_cast<node_union*>(p_address.raw),
               arena_bytes / sizeof(node_union))) {
@@ -62,13 +62,13 @@ class pool_allocator
     reset() {
         // TODO: The last node can be skipped in this loop. Is it optimized
         // away?
-        for (node_union& node : this->nodes) {
+        for (node_union& node : this->m_nodes) {
             // Set every node's pointer to the node ahead of it.
             node.p_next = &node + 1;
         }
         // Mark the final node.
-        this->nodes.back().p_next = nullptr;
-        this->p_head = &this->nodes.front();
+        this->m_nodes.back().p_next = nullptr;
+        this->m_p_head = &this->m_nodes.front();
     }
 
   private:
@@ -81,12 +81,12 @@ class pool_allocator
     allocate(idx) -> maybe_ptr<void> {
         // If there is a next node in the free list, make that the head and
         // allocate the current head. Otherwise, do not allocate anything.
-        if (this->p_head == nullptr) {
+        if (this->m_p_head == nullptr) {
             return nullopt;
         }
 
-        node_union* p_alloc = this->p_head;
-        this->p_head = p_head->p_next;
+        node_union* p_alloc = this->m_p_head;
+        this->m_p_head = m_p_head->p_next;
 
         return static_cast<void*>(p_alloc);
     }
@@ -95,8 +95,8 @@ class pool_allocator
     deallocate(void const* p_allocation, iword) {
         // Swap the head for this newly freed allocation.
         node_union* p_new_head = bit_cast<node_union*>(p_allocation);
-        p_new_head->p_next = this->p_head;
-        this->p_head = p_new_head;
+        p_new_head->p_next = this->m_p_head;
+        this->m_p_head = p_new_head;
     }
 
     // Produce a handle to allocated memory.
@@ -131,8 +131,8 @@ class pool_allocator
         byte storage[max_node_bytes.raw];
     };
 
-    span<node_union> nodes;
-    node_union* p_head;
+    span<node_union> m_nodes;
+    node_union* m_p_head;
 };
 
 template <idx max_node_bytes>
