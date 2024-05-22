@@ -744,6 +744,8 @@ struct cat::enum_flag_trait<nix::tty_configuration_flags> : cat::true_trait{};
 
 namespace nix {
 
+// TODO: These can return `idx` rather than `iword`.
+
 // Syscall 0
 auto sys_read(file_descriptor file_descriptor, char const* p_string_buffer,
               cat::iword length) -> scaredy_nix<cat::iword>;
@@ -1135,9 +1137,9 @@ struct file_status {
 
   public:
     cat::uint8 rdev;
-    cat::int8 file_size;
-    cat::iword block_size;
-    cat::int8 blocks_count;
+    cat::idx file_size;
+    cat::idx block_size;
+    cat::idx blocks_count;
 
     using time_spec = struct {
         cat::iword seconds;

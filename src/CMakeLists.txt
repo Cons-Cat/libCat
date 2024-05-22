@@ -34,7 +34,7 @@ target_include_directories(cat INTERFACE
   ${CATLIB}/file/
   ${CATLIB}/linux/
   ${CATLIB}/thread/
-  ${CATLIB}/atomic/
+  #${CATLIB}/atomic/
   ${CATLIB}/socket/
   ${CATLIB}/x11/
   ${CATLIB}/bit/
@@ -153,7 +153,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/arithmetic/cat/arithmetic
   ${CATLIB}/arithmetic/cat/arithmetic_interface
   ${CATLIB}/array/cat/array
-  ${CATLIB}/atomic/cat/atomic
+  #${CATLIB}/atomic/cat/atomic
   ${CATLIB}/bit/cat/bit
   ${CATLIB}/bitset/cat/bitset
   ${CATLIB}/cast/cat/cast
