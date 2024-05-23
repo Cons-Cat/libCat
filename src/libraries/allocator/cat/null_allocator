@@ -37,7 +37,7 @@ class null_allocator : public allocator_interface<null_allocator> {
 
     // Deallocation is no-op.
     void
-    deallocate(void const*, iword) {
+    deallocate(void const*, idx) {
     }
 
     // Produce a handle to allocated memory.
