@@ -110,7 +110,7 @@ namespace detail {
         [[nodiscard]]
         auto
         raw_size() const -> idx {
-            return idx(this->array_length * sizeof(allocation_type));
+            return this->array_length * sizeof(allocation_type);
         }
 
         [[nodiscard]]
@@ -614,7 +614,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto
     align_nalloc(uword alignment) -> maybe_non_zero<idx> {
-        return this->self().allocation_bytes(alignment, idx(sizeof(T)));
+        return this->self().allocation_bytes(alignment, sizeof(T));
     }
 
     // Get the number of bytes that allocating a `T` with an alignment
@@ -623,7 +623,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto
     align_xnalloc(uword alignment) -> idx {
-        return this->self().allocation_bytes(alignment, idx(sizeof(T))).value();
+        return this->self().allocation_bytes(alignment, sizeof(T)).value();
     }
 
     // Try to get the number of bytes that allocating a `T` with no alignment
@@ -632,7 +632,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto
     unalign_nalloc() -> maybe_non_zero<idx> {
-        return this->self().allocation_bytes(1u, idx(sizeof(T)));
+        return this->self().allocation_bytes(1u, sizeof(T));
     }
 
     // Get the number of bytes that allocating a `T` with no alignment
@@ -641,7 +641,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto
     unalign_xnalloc() -> idx {
-        return this->self().allocation_bytes(1u, idx(sizeof(T))).value();
+        return this->self().allocation_bytes(1u, sizeof(T)).value();
     }
 
     // Try to get the number of bytes that allocating an array of `T` with an
@@ -650,8 +650,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto
     align_nalloc_multi(uword alignment, idx count) -> maybe_non_zero<idx> {
-        return this->self().allocation_bytes(alignment,
-                                             idx(count * idx(sizeof(T))));
+        return this->self().allocation_bytes(alignment, count * sizeof(T));
     }
 
     // Get the number of bytes that allocating an array of `T` with an
@@ -661,7 +660,7 @@ class allocator_interface {
     constexpr auto
     align_xnalloc_multi(uword alignment, idx count) -> idx {
         return this->self()
-            .allocation_bytes(alignment, idx(count * idx(sizeof(T))))
+            .allocation_bytes(alignment, count * sizeof(T))
             .value();
     }
 
@@ -671,7 +670,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto
     unalign_nalloc_multi(idx count) -> maybe_non_zero<idx> {
-        return this->self().allocation_bytes(1u, count * idx(sizeof(T)));
+        return this->self().allocation_bytes(1u, count * sizeof(T));
     }
 
     // Get the number of bytes that allocating an array of `T` with no
@@ -680,9 +679,7 @@ class allocator_interface {
     [[nodiscard]]
     constexpr auto
     unalign_xnalloc_multi(idx count) -> idx {
-        return this->self()
-            .allocation_bytes(1u, count * idx(sizeof(T)))
-            .value();
+        return this->self().allocation_bytes(1u, count * sizeof(T)).value();
     }
 
     // Try to get the number of bytes that allocating a small-size optimized `T`
@@ -728,7 +725,7 @@ class allocator_interface {
     constexpr auto
     inline_align_nalloc(uword alignment) -> maybe_non_zero<idx> {
         if constexpr (sizeof(T) > inline_buffer_size) {
-            return this->self().allocation_bytes(alignment, idx(sizeof(T)));
+            return this->self().allocation_bytes(alignment, sizeof(T));
         } else {
             return inline_buffer_size;
         }
@@ -3679,7 +3676,7 @@ class allocator_interface {
             p_memory->~T();
             // }
             this->self().deallocate(static_cast<void const*>(p_memory),
-                                    idx(sizeof(T)));
+                                    sizeof(T));
         }
     }
 
@@ -3712,7 +3709,7 @@ class allocator_interface {
             }
             // }
             this->self().deallocate(static_cast<void const*>(p_memory),
-                                    idx(count * sizeof(T)));
+                                    count * sizeof(T));
         }
     }
 
@@ -3869,7 +3866,7 @@ class allocator_interface {
                    "This allocation is too larger for this allocator!");
         }
 
-        idx const allocation_bytes = idx(allocation_count * sizeof(T));
+        idx const allocation_bytes = allocation_count * sizeof(T);
 
         // Produce a basic handle for this memory type.
 

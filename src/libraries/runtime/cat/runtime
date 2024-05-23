@@ -2,8 +2,6 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/meta>
-//
 #include <cat/arithmetic>
 
 namespace cat {
@@ -100,12 +98,12 @@ void __asan_get_shadow_mapping(uword* p_shadow_scale, uword* p_shadow_offset);
 }
 #else
 // No-op functions are provided when asan is not available.
-constexpr void
-__asan_poison_memory_region(void const volatile*, uword) {
+inline void
+__asan_poison_memory_region(void const volatile*, uword) {  // NOLINT
 }
 
-constexpr void
-__asan_unpoison_memory_region(void const volatile*, uword) {
+inline void
+__asan_unpoison_memory_region(void const volatile*, uword) {  // NOLINT
 }
 #endif
 

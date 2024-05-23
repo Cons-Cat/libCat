@@ -62,13 +62,13 @@ class pool_allocator
     reset() {
         // TODO: The last node can be skipped in this loop. Is it optimized
         // away?
-        for (node_union& node : this->m_nodes) {
+        for (node_union& node : m_nodes) {
             // Set every node's pointer to the node ahead of it.
             node.p_next = &node + 1;
         }
         // Mark the final node.
-        this->m_nodes.back().p_next = nullptr;
-        this->m_p_head = &this->m_nodes.front();
+        m_nodes.back().p_next = nullptr;
+        m_p_head = &m_nodes.front();
     }
 
   private:
@@ -81,22 +81,22 @@ class pool_allocator
     allocate(idx) -> maybe_ptr<void> {
         // If there is a next node in the free list, make that the head and
         // allocate the current head. Otherwise, do not allocate anything.
-        if (this->m_p_head == nullptr) {
+        if (m_p_head == nullptr) {
             return nullopt;
         }
 
-        node_union* p_alloc = this->m_p_head;
-        this->m_p_head = m_p_head->p_next;
+        node_union* p_alloc = m_p_head;
+        m_p_head = m_p_head->p_next;
 
         return static_cast<void*>(p_alloc);
     }
 
     void
-    deallocate(void const* p_allocation, iword) {
+    deallocate(void const* p_allocation, idx) {
         // Swap the head for this newly freed allocation.
         node_union* p_new_head = bit_cast<node_union*>(p_allocation);
-        p_new_head->p_next = this->m_p_head;
-        this->m_p_head = p_new_head;
+        p_new_head->p_next = m_p_head;
+        m_p_head = p_new_head;
     }
 
     // Produce a handle to allocated memory.
