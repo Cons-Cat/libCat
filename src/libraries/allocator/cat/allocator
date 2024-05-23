@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/sanitizer>
 #include <cat/string>
 #include <cat/tuple>
 
@@ -3634,12 +3635,7 @@ class allocator_interface {
                 p_memory = __builtin_addressof(this->get(handle));
             }
 
-            // Poison memory region.
-            if !consteval {
-                __asan_poison_memory_region(
-                    static_cast<void const volatile*>(p_memory),
-                    sizeof(allocation_type));
-            }
+            san::poison_memory_region(p_memory, sizeof(allocation_type));
 
             // if constexpr (is_destructible<allocation_type>) {
             for (uword i = 0u; i < handle.size(); ++i) {
@@ -3658,11 +3654,7 @@ class allocator_interface {
     template <typename T>
     constexpr void
     free(T* p_memory) {
-        // Poison memory region.
-        if !consteval {
-            __asan_poison_memory_region(
-                static_cast<void const volatile*>(p_memory), sizeof(T));
-        }
+        san::poison_memory_region(p_memory, sizeof(T));
 
         if constexpr (detail::has_max_allocation_bytes<derived_type>) {
             static_assert(sizeof(T) <= derived_type::max_allocation_bytes,
@@ -3692,11 +3684,7 @@ class allocator_interface {
                    "This allocation is too large for this allocator!");
         }
 
-        // Poison memory region.
-        if !consteval {
-            __asan_poison_memory_region(
-                static_cast<void const volatile*>(p_memory), sizeof(T) * count);
-        }
+        san::poison_memory_region(p_memory, sizeof(T) * count);
 
         if consteval {
             // if (count > 0) {
@@ -4176,12 +4164,7 @@ class allocator_interface {
                 p_allocation = static_cast<T*>(maybe_memory.value());
             }
 
-            // Permit addressing this memory.
-            if !consteval {
-                __asan_unpoison_memory_region(
-                    static_cast<void const volatile*>(p_allocation),
-                    allocation_bytes);
-            }
+            san::unpoison_memory_region(p_allocation, allocation_bytes);
 
             // Possibly zero-out the allocation.
             if constexpr (is_zeroed) {
@@ -4304,13 +4287,13 @@ class allocator_interface {
     constexpr void
     relocate_ptr_handle(auto* p_old_handle, span<T> new_handle, idx old_count) {
         // TODO: Use a `relocate()` function to streamline this.
+        // TODO: Remove the `consteval` requirement here.
         if !consteval {
             assert(new_handle.data() != nullptr);
 
             // TODO: Why does this fix asan error in vector test?
-            __asan_unpoison_memory_region(
-                static_cast<void const volatile*>(p_old_handle),
-                old_count + sizeof(T) + 8u);
+            san::unpoison_memory_region(p_old_handle,
+                                        old_count + sizeof(T) + 8u);
 
             if constexpr (is_trivially_relocatable<T>) {
                 copy_memory(p_old_handle, new_handle.data(), old_count);

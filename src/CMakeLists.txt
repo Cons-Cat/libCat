@@ -9,6 +9,7 @@ target_include_directories(cat INTERFACE
   ${CATLIB}/compare/
   ${CATLIB}/limits
   ${CATLIB}/runtime/
+  ${CATLIB}/sanitizer/
   ${CATLIB}/arithmetic/
   ${CATLIB}/initializer_list/
   ${CATLIB}/simd/
@@ -177,6 +178,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/notype/cat/notype
   ${CATLIB}/ring/cat/ring
   ${CATLIB}/runtime/cat/runtime
+  ${CATLIB}/sanitizer/cat/sanitizer
   ${CATLIB}/scaredy/cat/scaredy
   ${CATLIB}/simd/cat/simd
   ${CATLIB}/simd/cat/detail/simd_impl.hpp
