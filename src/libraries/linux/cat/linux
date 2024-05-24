@@ -375,18 +375,18 @@ enum class wait_id {
 
 // TODO: Write comments for these, and simplifiy names.
 // https://linux.die.net/man/2/clone
-enum class CloneFlags : unsigned int {
+enum class clone_flags : unsigned int {
     csignal = 0x000000ff,
     newtime = 0x00000080,
     virtual_memory = 0x00000100,
     file_system = 0x00000200,
     file_descriptor_table = 0x00000400,
-    sighand = 0x00000800 | CloneFlags::virtual_memory,
+    sighand = 0x00000800 | clone_flags::virtual_memory,
     pid_fd = 0x00001000,
     ptrace = 0x00002000,
     vfork = 0x00004000,
     parent = 0x00008000,
-    thread = 0x00010000 | CloneFlags::sighand,
+    thread = 0x00010000 | clone_flags::sighand,
     newns = 0x00020000,
     sysv_semaphore = 0x00040000,
     set_tls = 0x00080000,
@@ -731,7 +731,7 @@ template <>
 struct cat::enum_flag_trait<nix::open_flags> : cat::true_trait{};
 
 template <>
-struct cat::enum_flag_trait<nix::CloneFlags> : cat::true_trait{};
+struct cat::enum_flag_trait<nix::clone_flags> : cat::true_trait{};
 
 template <>
 struct cat::enum_flag_trait<nix::wait_options_flags> : cat::true_trait{};
@@ -917,15 +917,15 @@ struct io_vector : cat::span<cat::byte> {
 
     constexpr auto
     operator=(io_vector const& io_vector) -> struct io_vector& {
-        this->m_p_data = io_vector.m_p_data;
-        this->m_size = io_vector.m_size;
+        m_p_data = io_vector.m_p_data;
+        m_size = io_vector.m_size;
         return *this;
     }
 
     constexpr auto
     operator=(io_vector&& io_vector) -> struct io_vector& {
-        this->m_p_data = io_vector.m_p_data;
-        this->m_size = cat::move(io_vector).m_size;
+        m_p_data = io_vector.m_p_data;
+        m_size = cat::move(io_vector).m_size;
         return *this;
     }
 };
@@ -978,7 +978,14 @@ auto sys_bind(file_descriptor socket_descriptor, void const* p_socket,
 auto sys_listen(file_descriptor socket_descriptor,
                 cat::int8 backlog) -> scaredy_nix<void>;
 
-// TODO: `sys_clone()`
+// Syscall 56
+namespace detail {
+    using thread_entry_callback = void (*)();
+}
+
+auto sys_clone(clone_flags flags, void* p_stack_entry, process_id* p_parent_id,
+               process_id* p_child_id,
+               void* p_thread_pointer) -> scaredy_nix<process_id>;
 
 // Syscall 61
 auto sys_wait4(process_id waiting_on_id, cat::int4* p_status_output,
@@ -1159,84 +1166,32 @@ struct file_status {
 // TODO: Extract this to an implementation file.
 struct process {
     // TODO: Why does the `tls` flag not work?
-    static constexpr CloneFlags default_flags =
-        CloneFlags::virtual_memory | CloneFlags::file_system |
-        CloneFlags::file_descriptor_table | CloneFlags::io |
-        CloneFlags::parent_set_tid;
+    static constexpr clone_flags default_flags =
+        clone_flags::virtual_memory | clone_flags::file_system |
+        clone_flags::file_descriptor_table | clone_flags::io |
+        clone_flags::parent_set_tid;
 
     process() = default;
     // TODO: Add a move constructor and assignment operator.
     process(process const&) = delete;
 
     // TODO: Add `cat::invocable` concept.
-    auto
-    create(cat::is_allocator auto& allocator, cat::idx const initial_stack_size,
-           auto const& function, void* p_args_struct,
-           // TODO: These flags should largely be encoded into the type.
-           CloneFlags const flags = default_flags) -> scaredy_nix<void> {
-        this->stack_size = initial_stack_size;
-        // Allocate a stack for this thread, and get an address to the top of
-        // it.
-        // TODO: This stack memory should not be owned by the `process`, to
-        // enable simpler memory management patterns.
-        cat::maybe maybe_memory =
-            allocator.template alloc_multi<cat::byte>(initial_stack_size);
-        if (!maybe_memory.has_value()) {
-            return nix::linux_error::inval;
-        }
-        this->p_stack = maybe_memory.value().data();
-
-        // We need the top because memory will be pushed to it downwards on
-        // x86-64.
-        void* p_stack_top = static_cast<void*>(
-            cat::intptr<void>(this->p_stack) + this->stack_size);
-
-        // TODO: Use the `cat::scaredy`.
-        // scaredy_nix<void> result;
-        cat::no_type result;
-        asm goto volatile(
-            R"(sub $8, %%rsi
-               mov %[p_invocable], 0(%%rsi)
-               mov %[p_args], 8(%%rsi)
-               syscall
-
-               # Branch if this is the parent process.
-               mov %%rax, %[result]
-               test %%rax, %%rax
-               jnz %l[parent_thread]
-
-               # Call the function pointer if this is the child process.
-               pop %%rax
-               pop %%rdi
-               call *%%rax)"
-            : /* There are no outputs. */
-            : "a"(56), "D"(flags), "S"(p_stack_top),
-              "d"(&(this->id)), [p_invocable] "r"(&function),
-              [p_args] "r"(p_args_struct), [result] "r"(result)
-            : "rcx", "r8", "r9", "r10", "r11", "memory", "cc"
-            : parent_thread);
-
-parent_thread:
-        if (static_cast<cat::iword>(result) < 0) {
-            return static_cast<nix::linux_error>(result);
-        }
-        // `this->process_id` was initialized by the syscall.
-        return cat::monostate;
-    }
+    auto create(cat::is_allocator auto& allocator, cat::idx initial_stack_size,
+                auto const& function, void* p_args_struct,
+                // TODO: These flags should largely be encoded into the type.
+                clone_flags flags = default_flags) -> scaredy_nix<void>;
 
     [[nodiscard]]
-    auto
-    wait() const -> scaredy_nix<process_id> {
-        scaredy_nix<process_id> result =
-            sys_waitid(wait_id::process_id, this->id,
-                       wait_options_flags::exited | wait_options_flags::clone |
-                           wait_options_flags::no_wait);
-        return result;
-    }
+    auto wait() const -> scaredy_nix<process_id>;
 
-    process_id id;
-    void* p_stack;
-    cat::iword stack_size;
+  private:
+    auto create_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
+                     void* p_function, void* p_args_struct,
+                     clone_flags flags) -> scaredy_nix<void>;
+
+    process_id m_id;
+    void* m_p_stack;
+    cat::idx m_stack_size;
 };
 
 struct signals_mask_set {
@@ -1256,4 +1211,5 @@ auto raise_here(Signal signal) -> scaredy_nix<void>;
 
 }  // namespace nix
 
+#include "implementations/process.tpp"
 #include "implementations/syscall.tpp"

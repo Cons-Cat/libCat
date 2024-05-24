@@ -102,6 +102,7 @@ target_sources(cat INTERFACE
   ${CATLIB}/linux/implementations/sys_wait4.cpp
   ${CATLIB}/linux/implementations/wait_pid.cpp
   ${CATLIB}/linux/implementations/sys_waitid.cpp
+  ${CATLIB}/linux/implementations/sys_clone.cpp
   ${CATLIB}/linux/implementations/sys_socket.cpp
   ${CATLIB}/linux/implementations/create_socket_local.cpp
   ${CATLIB}/linux/implementations/is_a_tty.cpp
@@ -124,6 +125,7 @@ target_sources(cat INTERFACE
   ${CATLIB}/linux/implementations/block_all_signals.cpp
   ${CATLIB}/linux/implementations/raise.cpp
   ${CATLIB}/linux/implementations/raise_here.cpp
+  ${CATLIB}/linux/implementations/process.cpp
   ${CATLIB}/debug/implementations/breakpoint.cpp
   ${CATLIB}/debug/implementations/default_assert_handler.cpp
   ${CATLIB}/debug/implementations/verify.cpp
@@ -185,6 +187,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/vec/cat/vec
   ${CATLIB}/x11/cat/x11
   ${CATLIB}/linux/implementations/syscall.tpp
+  ${CATLIB}/linux/implementations/process.tpp
   ${CATLIB}/meta/implementations/constant_evaluate.tpp
   ${CATLIB}/meta/implementations/common_type.tpp
   ${CATLIB}/meta/implementations/common_reference.tpp
