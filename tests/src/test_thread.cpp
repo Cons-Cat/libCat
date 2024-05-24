@@ -19,6 +19,7 @@ TEST(test_thread) {
     cat::thread thread;
     cat::page_allocator allocator;
     thread.create(allocator, 2_uki, function, nullptr)
+    thread.create(allocator, 2_uki, function)
         .or_exit("Failed to make thread!");
     for (int4 i = 0; i < 10; ++i) {
         // auto _ = cat::println("Boo!");

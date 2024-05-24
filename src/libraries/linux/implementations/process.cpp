@@ -3,8 +3,8 @@
 [[gnu::no_sanitize_address, gnu::no_sanitize_undefined]]
 auto
 nix::process::create_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
-                          void* p_function, void* p_args_struct,
-                          clone_flags const flags) -> scaredy_nix<void> {
+                          void* p_function,
+                          void* p_args_struct) -> scaredy_nix<bool> {
     m_stack_size = initial_stack_size;
     m_p_stack = static_cast<void*>(stack);
 
@@ -26,21 +26,16 @@ nix::process::create_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
         // TODO: This nullptr is where the child thread's ID can be stored.
         &m_id, nullptr, nullptr);
 
-    if (result.value().value !=
-        0) {  // Stay on parent if this is either a PID or an error.
-        goto parent_thread;
+    if (result.value().value == 0) {
+        // The result is 0 iff this is the child thread.
+        return false;
     }
-    // If we are in a new thread, call the function.
-    (reinterpret_cast<detail::thread_entry_callback>(p_function))();
-    // If `p_function` runs successfully, join the parent thread.
-    cat::exit();
 
-parent_thread:
+    // Stay on parent if this is either a PID or an error.
     if (!result.has_value()) {
         return result.error();
     }
-    // `this->process_id` was initialized by the syscall.
-    return cat::monostate;
+    return true;
 }
 
 [[nodiscard]]
