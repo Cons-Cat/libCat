@@ -1175,23 +1175,24 @@ struct process {
     // TODO: Add a move constructor and assignment operator.
     process(process const&) = delete;
 
-    // TODO: Add `cat::invocable` concept.
+    template <typename... Args>
     auto create(cat::is_allocator auto& allocator, cat::idx initial_stack_size,
-                auto const& function, void* p_args_struct,
-                // TODO: These flags should largely be encoded into the type.
-                clone_flags flags = default_flags) -> scaredy_nix<void>;
+                cat::is_invocable<Args...> auto&& function,
+                Args&&... arguments) -> scaredy_nix<void>;
 
     [[nodiscard]]
     auto wait() const -> scaredy_nix<process_id>;
 
   private:
-    auto create_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
-                     void* p_function, void* p_args_struct,
-                     clone_flags flags) -> scaredy_nix<void>;
+    auto
+    create_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
+                void* p_function, void* p_args_struct) -> scaredy_nix<bool>;
 
     process_id m_id;
+    // TODO: Free this later.
     void* m_p_stack;
     cat::idx m_stack_size;
+    clone_flags flags = default_flags;
 };
 
 struct signals_mask_set {

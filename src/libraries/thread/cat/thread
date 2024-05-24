@@ -14,12 +14,14 @@ struct thread {
 
     // TODO: Default or delete a move constructor and assignment operator?
 
-    // TODO: Use an `invocable` `concept`.
+    template <typename... Args>
     auto
     create(is_allocator auto& allocator, idx initial_stack_size,
-           auto const& function, void* p_args_struct) -> maybe<void> {
+           is_invocable<Args...> auto&& function,
+           Args&&... arguments) -> maybe<void> {
         scaredy result = m_handle.create(allocator, initial_stack_size,
-                                         function, p_args_struct);
+                                         fwd(function), fwd(arguments)...);
+        // TODO: A `prop_or` macro can simplify this.
         if (result.has_value()) {
             return monostate;
         }
