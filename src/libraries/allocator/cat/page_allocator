@@ -4,6 +4,7 @@
 
 #include <cat/allocator>
 #include <cat/linux>
+#include <cat/maybe>
 
 namespace cat {
 

@@ -13,7 +13,6 @@ void function(void*) {
     for (int4 i = 0; i < 15; ++i) {
         // auto _ = cat::println("Moo?");
     }
-    cat::exit();
 }
 
 TEST(test_thread) {
