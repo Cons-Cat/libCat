@@ -787,7 +787,7 @@ struct arithmetic :
             arithmetic<T const, overflow_policies::undefined>*>(this);
     };
 
-    [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
+    [[gnu::always_inline, gnu::artificial]]
     inline constexpr auto
     undef() && -> arithmetic<T, overflow_policies::undefined> {
         return __builtin_bit_cast(arithmetic<T, overflow_policies::undefined>,
@@ -807,7 +807,7 @@ struct arithmetic :
             this);
     };
 
-    [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
+    [[gnu::always_inline, gnu::artificial]]
     inline constexpr auto
     wrap() && -> arithmetic<T, overflow_policies::wrap> {
         return __builtin_bit_cast(arithmetic<T, overflow_policies::wrap>,
@@ -828,7 +828,7 @@ struct arithmetic :
             arithmetic<T const, overflow_policies::saturate>*>(this);
     };
 
-    [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
+    [[gnu::always_inline, gnu::artificial]]
     inline constexpr auto
     sat() && -> arithmetic<T, overflow_policies::saturate> {
         return __builtin_bit_cast(arithmetic<T, overflow_policies::saturate>,
@@ -1221,7 +1221,7 @@ struct arithmetic_ptr :
             this);
     }
 
-    [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
+    [[gnu::always_inline, gnu::artificial]]
     inline constexpr auto
     undef() && -> arithmetic_ptr<T, storage_type,
                                  overflow_policies::undefined> {
@@ -1246,7 +1246,7 @@ struct arithmetic_ptr :
             this);
     }
 
-    [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
+    [[gnu::always_inline, gnu::artificial]]
     inline constexpr auto
     wrap() && -> arithmetic_ptr<T, storage_type, overflow_policies::wrap> {
         return __builtin_bit_cast(
@@ -1270,7 +1270,7 @@ struct arithmetic_ptr :
             this);
     }
 
-    [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
+    [[gnu::always_inline, gnu::artificial]]
     inline constexpr auto
     sat() && -> arithmetic_ptr<T, storage_type, overflow_policies::saturate> {
         return __builtin_bit_cast(
@@ -1617,7 +1617,7 @@ struct index :
         return *reinterpret_cast<index<overflow_policies::undefined>*>(this);
     }
 
-    [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
+    [[gnu::always_inline, gnu::artificial]]
     inline constexpr auto
     undef() && -> index<overflow_policies::undefined> {
         return __builtin_bit_cast(index<overflow_policies::undefined>, *this);
@@ -1635,7 +1635,7 @@ struct index :
         return *reinterpret_cast<index<overflow_policies::wrap>*>(this);
     }
 
-    [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
+    [[gnu::always_inline, gnu::artificial]]
     inline constexpr auto
     wrap() && -> index<overflow_policies::wrap> {
         return __builtin_bit_cast(index<overflow_policies::wrap>, *this);
@@ -1653,7 +1653,7 @@ struct index :
         return *reinterpret_cast<index<overflow_policies::saturate>*>(this);
     }
 
-    [[gnu::always_inline, gnu::artificial, gnu::no_sanitize_undefined]]
+    [[gnu::always_inline, gnu::artificial]]
     inline constexpr auto
     sat() && -> index<overflow_policies::saturate> {
         return __builtin_bit_cast(index<overflow_policies::saturate>, *this);
