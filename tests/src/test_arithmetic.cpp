@@ -24,50 +24,42 @@ TEST(test_numerals) {
         int4 const constant_int4 = 0;
         static_assert(!cat::is_lvalue_reference<decltype(constant_int4)>);
 
-        static_assert(cat::is_lvalue_reference<
-                      decltype(constant_int4.wrap().undef())>);
         static_assert(
-            cat::rvalue<decltype(int4{0}.wrap().undef())>);
+            cat::is_lvalue_reference<decltype(constant_int4.wrap().undef())>);
+        static_assert(cat::rvalue<decltype(int4{0}.wrap().undef())>);
 
-        static_assert(
-            cat::is_lvalue_reference<decltype(constant_int4.wrap())>);
+        static_assert(cat::is_lvalue_reference<decltype(constant_int4.wrap())>);
         static_assert(cat::rvalue<decltype(int4{0}.wrap())>);
 
-        static_assert(
-            cat::is_lvalue_reference<decltype(constant_int4.sat())>);
+        static_assert(cat::is_lvalue_reference<decltype(constant_int4.sat())>);
         static_assert(cat::rvalue<decltype(int4{0}.sat())>);
     }
 
     {
         idx const constant_idx = 0;
 
-        static_assert(cat::is_lvalue_reference<
-                      decltype(constant_idx.wrap().undef())>);
+        static_assert(
+            cat::is_lvalue_reference<decltype(constant_idx.wrap().undef())>);
         static_assert(cat::rvalue<decltype(idx{0}.wrap().undef())>);
 
-        static_assert(
-            cat::is_lvalue_reference<decltype(constant_idx.wrap())>);
+        static_assert(cat::is_lvalue_reference<decltype(constant_idx.wrap())>);
         static_assert(cat::rvalue<decltype(idx{0}.wrap())>);
 
-        static_assert(
-            cat::is_lvalue_reference<decltype(constant_idx.sat())>);
+        static_assert(cat::is_lvalue_reference<decltype(constant_idx.sat())>);
         static_assert(cat::rvalue<decltype(idx{0}.sat())>);
     }
 
     {
         uintptr<void> const constant_uptr = nullptr;
 
-        static_assert(cat::is_lvalue_reference<
-                      decltype(constant_uptr.wrap().undef())>);
         static_assert(
-            cat::rvalue<decltype(uintptr<void>{0}.wrap().undef())>);
+            cat::is_lvalue_reference<decltype(constant_uptr.wrap().undef())>);
+        static_assert(cat::rvalue<decltype(uintptr<void>{0}.wrap().undef())>);
 
-        static_assert(
-            cat::is_lvalue_reference<decltype(constant_uptr.wrap())>);
+        static_assert(cat::is_lvalue_reference<decltype(constant_uptr.wrap())>);
         static_assert(cat::rvalue<decltype(uintptr<void>{0}.wrap())>);
 
-        static_assert(
-            cat::is_lvalue_reference<decltype(constant_uptr.sat())>);
+        static_assert(cat::is_lvalue_reference<decltype(constant_uptr.sat())>);
         static_assert(cat::rvalue<decltype(uintptr<void>{0}.sat())>);
     }
 
@@ -866,6 +858,7 @@ TEST(test_numerals) {
     // add_uword_idx += idx2;
 
     // TODO: `idx` should support += `uword`.
+    // TODO: `intptr` should support + `idx`.
 
     // auto add_int_idx = 1_i4 + idx2;
     // static_assert(cat::is_same<decltype(add_int_idx), idx>);
