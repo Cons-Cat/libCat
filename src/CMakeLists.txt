@@ -59,9 +59,6 @@ target_sources(cat INTERFACE
   ${CATLIB}/runtime/implementations/longjmp.cpp
   ${CATLIB}/new/implementations/new.cpp
   ${CATLIB}/runtime/implementations/load_base_stack_pointer.cpp
-  ${CATLIB}/meta/implementations/constant_evaluate.tpp
-  ${CATLIB}/meta/implementations/common_type.tpp
-  ${CATLIB}/meta/implementations/common_reference.tpp
   ${CATLIB}/simd/implementations/is_avx2_supported.cpp
   ${CATLIB}/simd/implementations/is_avx512f_supported.cpp
   ${CATLIB}/simd/implementations/is_avx_supported.cpp
@@ -75,16 +72,11 @@ target_sources(cat INTERFACE
   ${CATLIB}/simd/implementations/sfence.cpp
   ${CATLIB}/simd/implementations/zero_avx_registers.cpp
   ${CATLIB}/simd/implementations/zero_upper_avx_registers.cpp
-  ${CATLIB}/simd/implementations/compare_implicit_length_strings.tpp
-  ${CATLIB}/simd/implementations/compare_implicit_length_strings_return_index.tpp
-  ${CATLIB}/simd/implementations/shuffle.tpp
-  ${CATLIB}/simd/implementations/stream_in.tpp
   ${CATLIB}/memory/implementations/copy_memory.cpp
   ${CATLIB}/memory/implementations/copy_memory_small.cpp
   ${CATLIB}/string/implementations/memcpy.cpp
   ${CATLIB}/string/implementations/memset.cpp
   ${CATLIB}/string/implementations/compare_strings.cpp
-  ${CATLIB}/string/implementations/string_length.tpp
   ${CATLIB}/string/implementations/print.cpp
   ${CATLIB}/string/implementations/println.cpp
   ${CATLIB}/string/implementations/eprint.cpp
@@ -98,7 +90,6 @@ target_sources(cat INTERFACE
   ${CATLIB}/linux/implementations/syscall4.cpp
   ${CATLIB}/linux/implementations/syscall5.cpp
   ${CATLIB}/linux/implementations/syscall6.cpp
-  ${CATLIB}/linux/implementations/syscall.tpp
   ${CATLIB}/linux/implementations/sys_read.cpp
   ${CATLIB}/linux/implementations/sys_write.cpp
   ${CATLIB}/linux/implementations/sys_close.cpp
@@ -133,11 +124,6 @@ target_sources(cat INTERFACE
   ${CATLIB}/linux/implementations/block_all_signals.cpp
   ${CATLIB}/linux/implementations/raise.cpp
   ${CATLIB}/linux/implementations/raise_here.cpp
-  ${CATLIB}/utility/implementations/bit_cast.tpp
-  ${CATLIB}/bit/implementations/is_aligned.tpp
-  ${CATLIB}/bit/implementations/align_up.tpp
-  ${CATLIB}/bit/implementations/align_down.tpp
-  ${CATLIB}/tuple/implementations/tuple_cat.tpp
   ${CATLIB}/debug/implementations/breakpoint.cpp
   ${CATLIB}/debug/implementations/default_assert_handler.cpp
   ${CATLIB}/debug/implementations/verify.cpp
@@ -198,5 +184,19 @@ set(CAT_HEADER_FILES
   ${CATLIB}/variant/cat/variant
   ${CATLIB}/vec/cat/vec
   ${CATLIB}/x11/cat/x11
+  ${CATLIB}/linux/implementations/syscall.tpp
+  ${CATLIB}/meta/implementations/constant_evaluate.tpp
+  ${CATLIB}/meta/implementations/common_type.tpp
+  ${CATLIB}/meta/implementations/common_reference.tpp
+  ${CATLIB}/simd/implementations/compare_implicit_length_strings.tpp
+  ${CATLIB}/simd/implementations/compare_implicit_length_strings_return_index.tpp
+  ${CATLIB}/simd/implementations/shuffle.tpp
+  ${CATLIB}/simd/implementations/stream_in.tpp
+  ${CATLIB}/string/implementations/string_length.tpp
+  ${CATLIB}/utility/implementations/bit_cast.tpp
+  ${CATLIB}/bit/implementations/is_aligned.tpp
+  ${CATLIB}/bit/implementations/align_up.tpp
+  ${CATLIB}/bit/implementations/align_down.tpp
+  ${CATLIB}/tuple/implementations/tuple_cat.tpp
   PARENT_SCOPE
 )
