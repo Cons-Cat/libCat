@@ -22,11 +22,15 @@ nix::process::create_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
     __builtin_memcpy(static_cast<void*>(stack_top), &p_function, 8);
 
     scaredy_nix<nix::process_id> result = nix::sys_clone(
-        flags, static_cast<void*>(stack_top - 8),
-        // TODO: This nullptr is where the child thread's ID can be stored.
-        &m_id, nullptr, nullptr);
+        flags, static_cast<void*>(stack_top - 8), &m_id,
+        // TODO: This `nullptr` is where the child thread's ID can be stored.
+        nullptr,
+        // TODO: This `nullptr` is the thread pointer can be stored.
+        nullptr);
 
     if (result.value().value == 0) {
+        auto _ = cat::print("FOOOOOOOO");
+        cat::exit();
         // The result is 0 iff this is the child thread.
         return false;
     }
@@ -35,6 +39,7 @@ nix::process::create_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
     if (!result.has_value()) {
         return result.error();
     }
+
     return true;
 }
 
