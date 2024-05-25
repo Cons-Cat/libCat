@@ -9,19 +9,19 @@
 
 // TODO: Test this without I/O.
 
-void function(void*) {
+void
+function() {
     for (int4 i = 0; i < 15; ++i) {
         // auto _ = cat::println("Moo?");
     }
+    cat::exit();
 }
 
 TEST(test_thread) {
     cat::thread thread;
     cat::page_allocator allocator;
-    thread.create(allocator, 2_uki, function, nullptr)
-    thread.create(allocator, 2_uki, function)
-        .or_exit("Failed to make thread!");
-    for (int4 i = 0; i < 10; ++i) {
+    thread.create(allocator, 2_uki, function).or_exit("Failed to make thread!");
+    for (idx i = 0; i < 10; ++i) {
         // auto _ = cat::println("Boo!");
     }
     thread.join().or_exit("Failed to join thread!");

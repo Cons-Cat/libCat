@@ -38,9 +38,4 @@ nix::process::create(cat::is_allocator auto& allocator,
     if (on_parent.value()) {
         return cat::monostate;
     }
-
-    // If we are in a child thread, call the function.
-    fwd(function)(fwd(arguments)...);
-    // If `p_function` runs successfully, join the parent thread.
-    cat::exit();
 }
