@@ -1,6 +1,8 @@
 CompileFlags:
   Add:
     - -Wno-unknown-attributes
+    - -Wno-gnu
+    - -Wno-unknown-warning-option
     - -Wno-inline-new-delete
     - -Wno-unqualified-std-cast-call
   Remove:
