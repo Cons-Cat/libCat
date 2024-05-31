@@ -21,14 +21,14 @@ get_file_size(nix::file_descriptor file_descriptor) -> cat::maybe<iword> {
 }
 
 void
-output_to_console(nix::io_vector const& io_vector) {
+output_to_console(nix::io_vector io_vector) {
     // TODO: Create a mutable string type to prevent this undefined behavior.
     // TODO: Make this buffered output to reduce syscalls.
     cat::byte const* p_buffer = io_vector.data();
     ++p_buffer;
     auto _ =
-        nix::sys_write(nix::file_descriptor(1),
-                       cat::bit_cast<char const*>(p_buffer), io_vector.size());
+        nix::sys_write(nix::stdout, __builtin_bit_cast(char const*, p_buffer),
+                       io_vector.size());
 }
 
 void
