@@ -537,15 +537,16 @@ struct arithmetic :
         if constexpr (overflow_policy == undefined) {
             // TODO: See if using `[[gnu::assume(())]]` actually optimizes
             // this.
-            if constexpr (is_unsigned<T>) {
-                // Assume there is no overflow.
-                // NOLINTNEXTLINE This is a C++23 feature.
-                // [[gnu::assume((raw >= operand))]];
-            }
+            // if constexpr (is_unsigned<T>) {
+            // Assume there is no overflow.
+            // NOLINTNEXTLINE This is a C++23 feature.
+            // [[gnu::assume((raw >= operand))]];
+            // }
             using promoted_raw =
                 raw_arithmetic_type<detail::promoted_type<arithmetic, U>>;
-            return promoted_raw(static_cast<promoted_raw>(raw) -
-                                static_cast<promoted_raw>(raw_operand));
+            return detail::promoted_type<arithmetic, U>(
+                static_cast<promoted_raw>(raw) -
+                static_cast<promoted_raw>(raw_operand));
         } else if constexpr (overflow_policy == wrap ||
                              overflow_policy == wrap_member) {
             return wrap_sub(raw, raw_operand);
@@ -886,9 +887,9 @@ struct arithmetic_ptr :
     constexpr arithmetic_ptr(arithmetic_ptr&&) = default;
 
     template <is_integral U>
-        requires(is_safe_arithmetic_conversion<U, storage_type>)
     [[gnu::always_inline, gnu::artificial]]
-    constexpr arithmetic_ptr(U other)
+    explicit(is_safe_arithmetic_conversion<
+             U, storage_type>) constexpr arithmetic_ptr(U other)
         : raw(make_raw_arithmetic(other)) {
     }
 
