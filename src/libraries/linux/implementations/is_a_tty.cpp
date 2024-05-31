@@ -2,7 +2,8 @@
 
 auto
 nix::is_a_tty(file_descriptor file_descriptor) -> scaredy_nix<void> {
-    // `size` must be written into, but it is not returned.
+    // `&size` is an output parameter.
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
     tty_window_size size;
     return sys_ioctl(file_descriptor, io_requests::tiocgwinsz, &size);
 }
