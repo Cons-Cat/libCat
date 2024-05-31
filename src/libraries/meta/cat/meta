@@ -537,11 +537,11 @@ namespace detail {
     template <typename T>
     inline constexpr bool is_integral_detail =
         __is_same(T, char) || __is_same(T, signed char) ||
-        __is_same(T, unsigned char) || __is_same(T, signed short) ||
-        __is_same(T, unsigned short) || __is_same(T, signed int) ||
-        __is_same(T, unsigned int) || __is_same(T, signed long) ||
-        __is_same(T, unsigned long) || __is_same(T, signed long long) ||
-        __is_same(T, unsigned long long);
+        __is_same(T, unsigned char) || __is_same(T, bool) ||
+        __is_same(T, signed short) || __is_same(T, unsigned short) ||
+        __is_same(T, signed int) || __is_same(T, unsigned int) ||
+        __is_same(T, signed long) || __is_same(T, unsigned long) ||
+        __is_same(T, signed long long) || __is_same(T, unsigned long long);
 
     template <typename T, auto policy>
     inline constexpr bool is_integral_detail<arithmetic<T, policy>> =

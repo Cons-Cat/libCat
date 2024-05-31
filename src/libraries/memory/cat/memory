@@ -114,7 +114,7 @@ namespace detail {
                     using vector_type = fixed_size_simd<T, lanes>;
                     while (size >= sizeof(vector_type)) {
                         vector_type* p_vector =
-                            bit_cast<vector_type*>(p_current.raw);
+                            __builtin_bit_cast(vector_type*, p_current);
                         p_vector->fill(value);
                         p_current += lanes;
                         size -= lanes;
@@ -151,7 +151,8 @@ set_memory(void* p_source, T value, uword size) {
                                 conditional<sizeof(T) == 4, uint4::raw_type,
                                             uint8::raw_type>>>;
 
-    detail::set_memory_detail(p_source, bit_cast<raw_type>(value), size);
+    detail::set_memory_detail(p_source, __builtin_bit_cast(raw_type, value),
+                              size);
 }
 
 // `[[gnu::noinline]]` prevents GCC from constant-folding this function out.

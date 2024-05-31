@@ -196,7 +196,6 @@ set(CAT_HEADER_FILES
   ${CATLIB}/simd/implementations/shuffle.tpp
   ${CATLIB}/simd/implementations/stream_in.tpp
   ${CATLIB}/string/implementations/string_length.tpp
-  ${CATLIB}/utility/implementations/bit_cast.tpp
   ${CATLIB}/bit/implementations/is_aligned.tpp
   ${CATLIB}/bit/implementations/align_up.tpp
   ${CATLIB}/bit/implementations/align_down.tpp

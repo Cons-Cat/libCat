@@ -43,7 +43,7 @@ bit_int_cast(from_type from) -> decltype(auto) {
                                 conditional<sizeof(from) == 4, int4, int8>>>;
     using return_type = copy_cvref_from<from_type, integer_type>;
 
-    return bit_cast<return_type>(from);
+    return __builtin_bit_cast(return_type, from);
 }
 
 }  // namespace cat

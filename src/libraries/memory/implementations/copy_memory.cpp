@@ -12,7 +12,7 @@ cat::copy_memory(void const* p_source, void* p_destination, uword bytes) {
     unsigned char const* p_source_handle =
         static_cast<unsigned char const*>(p_source);
     unsigned char* p_destination_handle =
-        bit_cast<unsigned char*>(p_destination);
+        reinterpret_cast<unsigned char*>(p_destination);
     constexpr uword l3_cache_size = 2_umi;
     uword padding;
 
@@ -28,7 +28,7 @@ cat::copy_memory(void const* p_source, void* p_destination, uword bytes) {
     padding = static_cast<uword>(
         // TODO: Use a `uintptr<unsigned char>` here.
         (alignof(simd_vector) -
-         ((bit_cast<__UINTPTR_TYPE__>(p_destination_handle)) &
+         ((reinterpret_cast<__UINTPTR_TYPE__>(p_destination_handle)) &
           (alignof(simd_vector) - 1))) &
         (alignof(simd_vector) - 1));
 
@@ -46,13 +46,15 @@ cat::copy_memory(void const* p_source, void* p_destination, uword bytes) {
             // Load 8 vectors, then increment the source pointer by that size.
 #pragma GCC unroll 8
             for (uword::raw_type i = 0u; i < 8u; ++i) {
-                vectors[i] = bit_cast<simd_vector const*>(p_source_handle)[i];
+                vectors[i] =
+                    __builtin_bit_cast(simd_vector const*, p_source_handle)[i];
             }
             prefetch_for_one_read(p_source_handle + (step_size * 2u));
 
 #pragma GCC unroll 8
             for (int i = 0; i < 8; ++i) {
-                bit_cast<simd_vector*>(p_destination_handle)[i] = vectors[i];
+                __builtin_bit_cast(simd_vector*, p_destination_handle)[i] =
+                    vectors[i];
             }
             p_source_handle += step_size;
             p_destination_handle += step_size;
@@ -69,7 +71,8 @@ cat::copy_memory(void const* p_source, void* p_destination, uword bytes) {
         while (bytes >= 256u) {
 #pragma GCC unroll 8
             for (uword::raw_type i = 0u; i < 8u; ++i) {
-                vectors[i] = bit_cast<simd_vector*>(p_source_handle)[i];
+                vectors[i] =
+                    __builtin_bit_cast(simd_vector*, p_source_handle)[i];
             }
             prefetch_for_one_read(p_source_handle + 512);
             p_source_handle += 256u;

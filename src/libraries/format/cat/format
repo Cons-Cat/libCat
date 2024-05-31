@@ -417,7 +417,7 @@ namespace detail {
                 this->p_args_indices + argument_count);
 
             byte const* p_data = p_storage + storage_index;
-            return *bit_cast<T const*>(p_data);
+            return *reinterpret_cast<T const*>(p_data);
         }
 
         format_argument_compact_index const* p_args_indices;
