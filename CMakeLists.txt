@@ -39,6 +39,8 @@ list(
   $<$<CXX_COMPILER_ID:Clang>:-Wno-main>
   # This produces many false positives in Clang 17.
   $<$<CXX_COMPILER_ID:Clang>:-Wno-redundant-consteval-if>
+  # Use GCC extensions.
+  $<$<CXX_COMPILER_ID:Clang>:-Wno-gnu>
 )
 
 if(CAT_USE_SANITIZERS)
