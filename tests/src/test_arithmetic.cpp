@@ -338,6 +338,13 @@ TEST(test_numerals) {
     cat::verify(uint_intptr->min() == uinteger.min());
     cat::verify(uint_intptr->max() == uinteger.max());
 
+    // Test `intptr` increment and decrement operators.
+    uintptr<void> uincptr{0xdeadbeef};
+    cat::verify(++uincptr == 0xdeadbef0);
+    cat::verify(uincptr++ == 0xdeadbef1);
+    cat::verify(--uincptr == 0xdeadbef0);
+    cat::verify(uincptr-- == 0xdeadbeef);
+
     // Test `<=>`.
     int4 int_less = 0;
     int4 int_more = 2;
