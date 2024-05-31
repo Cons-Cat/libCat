@@ -1,21 +1,20 @@
 #include <cat/runtime>
 
 // TODO: Should `__builtin_setjmp_setup()`/`__builtin_setjmp()` be used here?
-[[gnu::naked]]
 auto
-cat::setjmp(jmp_buffer& /* jump_buffer */) -> int {
+cat::setjmp(jmp_buffer& /* jump_point */) -> int {
     asm volatile(R"(
-        # Put the pointer to `jump_buffer` in %rdi.
+        # Put the pointer to `jump_point` in %rdi.
         mov %rbx, (%rdi)
 
-       # Store various registers into `jump_buffer`.
+       # Store various registers into `jump_point`.
         mov %rbp,    8(%rdi)
         mov %r12,   16(%rdi)
         mov %r13,   24(%rdi)
         mov %r14,   32(%rdi)
         mov %r15,   40(%rdi)
 
-        # Store the stack pointer into `jump_buffer`.
+        # Store the stack pointer into `jump_point`.
         lea 8(%rsp),   %rdx
         mov %rdx,   48(%rdi)
         mov (%rsp),    %rdx
