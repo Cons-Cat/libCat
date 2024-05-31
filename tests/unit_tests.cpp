@@ -33,16 +33,17 @@ main() -> int {
     idx tests_passed = 0;
     idx tests_failed = 0;
 
-    // Load and call all functions with the attribute
-    // `[[gnu::constructor]]`. The `TEST` macro declares these functions.
-    constructor* p_func = &__init_array_start;
+    // Load and call all functions with the attribute `[[gnu::constructor]]`.
+    // The `TEST` macro declares these functions.
 
     // Call all constructor functions, including unit tests:
-    for (; p_func < &__init_array_end; ++p_func) {
+    for (constructor const* pp_ctor_func = &__init_array_start;
+         pp_ctor_func < &__init_array_end; ++pp_ctor_func) {
         last_ctor_was_test = false;
 
+        constructor p_ctor = *pp_ctor_func;
         // If this constructor is a unit test, it sets the previous flags.
-        (*p_func)();
+        p_ctor();
 
         // TODO: The following code block is never reached except on the last
         // test with optimizations enabled.
