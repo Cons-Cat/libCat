@@ -341,9 +341,9 @@ struct file_descriptor {
     cat::int4 value;
 };
 
-constexpr nix::file_descriptor stdin = {0};
-constexpr nix::file_descriptor stdout = {1};
-constexpr nix::file_descriptor stderr = {2};
+inline constexpr nix::file_descriptor stdin = {0};
+inline constexpr nix::file_descriptor stdout = {1};
+inline constexpr nix::file_descriptor stderr = {2};
 
 // Confirm that `scaredy_nix` has no size overhead.
 static_assert(sizeof(scaredy_nix<nix::file_descriptor>) ==
