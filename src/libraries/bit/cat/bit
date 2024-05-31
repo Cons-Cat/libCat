@@ -293,8 +293,8 @@ class bit_value;
 class bit_ptr;
 
 namespace detail {
-    constexpr auto get_bit_value(bit_value&) -> unsigned char&;
-    constexpr auto get_bit_value(bit_value const&) -> unsigned char const&;
+    constexpr auto get_bit_value(bit_value& value) -> bool&;
+    constexpr auto get_bit_value(bit_value const& value) -> bool const&;
 }  // namespace detail
 
 template <is_unsigned_integral storage_type>
@@ -356,10 +356,11 @@ class bit_reference {
 
     // Assign a true or false value to this bit.
     constexpr auto
-    operator=(bool value) -> bit_reference& {
-        this->assign(value);
-        return *this;
-    }
+    operator=(bool value)
+        -> bit_reference& requires(!is_same<storage_type, bool>) {
+                              this->assign(value);
+                              return *this;
+                          }
 
     // Because `bit_reference` and `bit_value` convert to bool, this comparison
     // works between all the above.
@@ -431,13 +432,16 @@ class bit_reference {
 template <is_same<bit_value> T>
 bit_reference(T) -> bit_reference<unsigned char>;
 
+bit_reference(bit_value&) -> bit_reference<bool>;
+
+bit_reference(bit_value const&) -> bit_reference<bool const>;
+
 // TODO: Add a nullable `bit_ptr` class.
 
 class bit_value {
+    friend constexpr auto cat::detail::get_bit_value(bit_value&) -> bool&;
     friend constexpr auto
-    cat::detail::get_bit_value(bit_value&) -> unsigned char&;
-    friend constexpr auto
-    cat::detail::get_bit_value(bit_value const&) -> unsigned char const&;
+    cat::detail::get_bit_value(bit_value const&) -> bool const&;
 
   public:
     template <is_unsigned_integral>
@@ -644,13 +648,13 @@ inline constexpr bit_value zero_bit = false;
 
 namespace detail {
     constexpr auto
-    get_bit_value(bit_value& value) -> unsigned char& {
-        return *bit_cast<unsigned char*>(&value.m_value);
+    get_bit_value(bit_value& value) -> bool& {
+        return value.m_value;
     }
 
     constexpr auto
-    get_bit_value(bit_value const& value) -> unsigned char const& {
-        return *bit_cast<unsigned char const*>(&value.m_value);
+    get_bit_value(bit_value const& value) -> bool const& {
+        return value.m_value;
     }
 }  // namespace detail
 
@@ -724,7 +728,7 @@ struct byte {
     operator T()
         requires(sizeof(T) == 1)
     {
-        return bit_cast<T>(value);
+        return __builtin_bit_cast(T, value);
     }
 
     [[nodiscard]]

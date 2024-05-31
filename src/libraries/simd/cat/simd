@@ -82,6 +82,7 @@ namespace detail {
 template <typename in_abi, typename T>
     requires(is_same<typename in_abi::scalar_type, T>)
 class alignas(in_abi::alignment.raw) simd {
+    // TODO: Name this `simd_type`.
     using type = simd<in_abi, T>;
     // GCC does not support `bool` vectors, so it is mapped to `unsigned char`.
     using mapped_type = conditional<is_same<T, bool>, unsigned char, T>;
@@ -486,7 +487,7 @@ class alignas(in_abi::alignment.raw) simd {
     [[nodiscard]]
     static constexpr auto
     loaded_aligned(T const* p_data) -> type {
-        return *bit_cast<type const*>(p_data);
+        return *reinterpret_cast<type const*>(p_data);
     }
 
     // Construct a `simd` loaded from the address `data` with any alignment.
@@ -497,7 +498,7 @@ class alignas(in_abi::alignment.raw) simd {
     [[nodiscard, gnu::no_sanitize_address]]
     static constexpr auto
     loaded_unaligned(T const* p_data) -> type {
-        return *bit_cast<unaligned_vector const*>(p_data);
+        return *reinterpret_cast<unaligned_vector const*>(p_data);
     }
 
     // Construct a `simd` loaded from the address `data`.

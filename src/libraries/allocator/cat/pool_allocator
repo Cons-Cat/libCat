@@ -94,7 +94,7 @@ class pool_allocator
     void
     deallocate(void const* p_allocation, idx) {
         // Swap the head for this newly freed allocation.
-        node_union* p_new_head = bit_cast<node_union*>(p_allocation);
+        node_union* p_new_head = __builtin_bit_cast(node_union*, p_allocation);
         p_new_head->p_next = m_p_head;
         m_p_head = p_new_head;
     }

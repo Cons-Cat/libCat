@@ -6,18 +6,6 @@
 
 namespace cat {
 
-template <typename T, typename U>
-[[gnu::warning(
-      R"(This function is intended to be inlined and constant-folded out.)"),
-  gnu::always_inline]]
-inline constexpr auto bit_cast(U& from_value) -> T;
-
-template <typename T, typename U>
-[[gnu::warning(
-      R"(This function is intended to be inlined and constant-folded out.)"),
-  gnu::always_inline]]
-inline constexpr auto bit_cast(U const& from_value) -> T;
-
 template <typename T>
 constexpr auto
 unconst(T const& value) -> T& {
@@ -46,9 +34,7 @@ ssizeof_pack() -> iword {
 
 constexpr auto
 salignof(auto const& anything) -> iword {
-    // `alignof` cannot be given an expression `anything` in ISO C++, so it must
-    // take the type `decltype(anything)`.
-    return iword{alignof(decltype(anything))};
+    return iword{alignof(anything)};
 }
 
 template <typename T>
@@ -177,5 +163,3 @@ template <typename T>
 void as_const(T const&&) = delete;
 
 }  // namespace cat
-
-#include "./implementations/bit_cast.tpp"
