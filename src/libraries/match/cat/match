@@ -64,7 +64,7 @@ template <typename T>
 concept has_member_is_type = requires(T t) { t.template is<int>(); };
 
 template <typename T>
-concept has_member_is_value = requires(T t) { t.template is(declval<T>()); };
+concept has_member_is_value = requires(T t) { t.is(declval<T>()); };
 
 namespace detail {
     struct pattern {};
@@ -136,7 +136,7 @@ namespace detail {
                 if constexpr (has_member_is_value<unqualified_matching>) {
                     // If `matching` currently holds a value equivalent to
                     // `this->value`, then invoke `invocable`.
-                    if (matching.template is(this->value)) {
+                    if (matching.is(this->value)) {
                         fwd(invocable)();
                         return true;
                     }
