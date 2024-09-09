@@ -7,14 +7,17 @@
 // it can be guaranteed to occur before any unit tests are called.
 namespace {
 inline constinit cat::jmp_buffer* p_jump_buffer = nullptr;
-}
+}  // namespace
 
+namespace cat {
 void
 test_fail(cat::source_location const& source_location) {
     cat::detail::print_assert_location(source_location);
     auto _ = cat::println();
+    ++tests_failed;
     cat::longjmp(*p_jump_buffer, 2);
 }
+}  // namespace cat
 
 using constructor_fn = void (*const)();
 extern "C" {
@@ -26,7 +29,7 @@ extern constructor_fn __init_array_end[];    // NOLINT
 auto
 main() -> int {
     // Change the default assert handler.
-    cat::assert_handler = &test_fail;
+    cat::assert_handler = &cat::test_fail;
 
     // Set the jump buffer pointer before any constructors are called.
     cat::jmp_buffer jump_buffer;
@@ -47,15 +50,9 @@ main() -> int {
         // TODO: The following code block is never reached except on the last
         // test with optimizations enabled.
 
-        // Increment the success/fail counters.
-        if (last_ctor_was_test) {
-            if (cat::setjmp(jump_buffer) == 0) {
-                // if (__builtin_setjmp((&jmp)) == 0) {
-                ++tests_passed;
-            } else {
-                ++tests_failed;
-            }
-        }
+        // Jump here when a test fails, skipping the rest of a test's
+        // constructor function.
+        cat::setjmp(jump_buffer);
     }
 
     // TODO: This will leak. An `inline_allocator` should be used.
