@@ -31,5 +31,6 @@ void test_fail(cat::source_location const& source_location);
         constexpr char string[] = ": " #test_name "...\n";                  \
         auto _ = ::cat::print(string);                                      \
         test_name();                                                        \
+        ++tests_passed;                                                     \
     }                                                                       \
     void test_name()

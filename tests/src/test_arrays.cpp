@@ -40,13 +40,12 @@ TEST(test_arrays) {
     [[maybe_unused]]
     int4 const_val = array_const.at(1).or_exit();
 
-    // // Repeat those tests in a constexpr context.
-    // [] consteval {
-    //     cat::array<int4, 1u> const_array_1;
-    //     cat::array<int4, 1u> const_array_2 = {1};
-    //     auto _ = cat::move(const_array_1);
-    //     auto _ = cat::move(const_array_2);
-    // }();
+    // Repeat those tests in a constexpr context.
+    [] consteval {
+        cat::array<int4, 1u> const_array_1;
+        cat::array<int4, 1u> const_array_2 = {1};
+        const_array_2 = const_array_1;
+    }();
 
     // Test that the array is iterable.
     idx count = 0u;
