@@ -5,22 +5,24 @@
 
 // The jump buffer must be constructed in `main()` instead of globally so that
 // it can be guaranteed to occur before any unit tests are called.
-constinit cat::jmp_buffer* p_jump_buffer = nullptr;
+namespace {
+inline constinit cat::jmp_buffer* p_jump_buffer = nullptr;
+}
 
 void
 test_fail(cat::source_location const& source_location) {
     cat::detail::print_assert_location(source_location);
     auto _ = cat::println();
     cat::longjmp(*p_jump_buffer, 2);
-    __builtin_unreachable();
 }
 
-using constructor = void (*)();
+using constructor_fn = void (*const)();
 extern "C" {
-extern constructor __init_array_start;  // NOLINT
-extern constructor __init_array_end;    // NOLINT
+extern constructor_fn __init_array_start[];  // NOLINT
+extern constructor_fn __init_array_end[];    // NOLINT
 }
 
+[[gnu::optimize(0)]]
 auto
 main() -> int {
     // Change the default assert handler.
@@ -30,18 +32,15 @@ main() -> int {
     cat::jmp_buffer jump_buffer;
     p_jump_buffer = &jump_buffer;
 
-    idx tests_passed = 0;
-    idx tests_failed = 0;
-
     // Load and call all functions with the attribute `[[gnu::constructor]]`.
     // The `TEST` macro declares these functions.
 
     // Call all constructor functions, including unit tests:
-    for (constructor const* pp_ctor_func = &__init_array_start;
-         pp_ctor_func < &__init_array_end; ++pp_ctor_func) {
+    for (constructor_fn const* pp_ctor_func = __init_array_start;
+         pp_ctor_func < __init_array_end; ++pp_ctor_func) {
         last_ctor_was_test = false;
 
-        constructor p_ctor = *pp_ctor_func;
+        constructor_fn p_ctor = *pp_ctor_func;
         // If this constructor is a unit test, it sets the previous flags.
         p_ctor();
 
@@ -51,6 +50,7 @@ main() -> int {
         // Increment the success/fail counters.
         if (last_ctor_was_test) {
             if (cat::setjmp(jump_buffer) == 0) {
+                // if (__builtin_setjmp((&jmp)) == 0) {
                 ++tests_passed;
             } else {
                 ++tests_failed;

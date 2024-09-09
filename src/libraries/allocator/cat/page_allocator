@@ -8,7 +8,8 @@
 
 namespace cat {
 
-// TODO: Support forcably allocating huge pages.
+// TODO: Support forcibly allocating huge pages.
+// Allocate pages from the kernel in userspace.
 class page_allocator : public allocator_interface<page_allocator> {
     friend allocator_interface<page_allocator>;
 

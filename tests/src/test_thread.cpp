@@ -9,6 +9,8 @@
 
 // TODO: Test this without I/O.
 
+namespace {
+
 void
 function() {
     for (int4 i = 0; i < 15; ++i) {
@@ -16,6 +18,8 @@ function() {
     }
     cat::exit();
 }
+
+}  // namespace
 
 TEST(test_thread) {
     cat::thread thread;
