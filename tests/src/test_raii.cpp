@@ -4,7 +4,7 @@
 
 #include "../unit_tests.hpp"
 
-int4 raii_counter = 0;
+inline constinit int4 raii_counter = 0;
 
 struct type {
     cat::string data;
@@ -57,7 +57,7 @@ TEST(test_raii) {
     cat::verify(!moo.has_ownership());
 
     // auto _ = cat::println("Move foo into func().");
-    // `mov()` is required:
+    // A move is required:
     pass_by_value(mov foo);
     cat::verify(!foo.has_ownership());
 

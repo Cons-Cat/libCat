@@ -9,7 +9,7 @@ struct alloc_huge_object {
     uint1 storage[cat::inline_buffer_size.raw + 1];
 };
 
-int4 alloc_counter = 0;
+constinit int4 alloc_counter = 0;
 
 struct alloc_non_trivial {
     char storage;

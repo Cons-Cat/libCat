@@ -6,17 +6,21 @@
 using namespace cat::literals;
 using namespace cat::integers;
 
-constinit inline int8 tests_run = 0;
+constinit inline idx tests_run = 0;
 constinit inline bool last_ctor_was_test = false;
 constinit inline cat::page_allocator pager;
 
+constinit inline idx tests_passed = 0;
+constinit inline idx tests_failed = 0;
+
+[[noreturn]]
 void test_fail(cat::source_location const& source_location);
 
 // This macro declares a unit test named `test_name`, which is executed
 // automatically in this program's constructor calls.
 #define TEST(test_name)                                                     \
     void test_name();                                                       \
-    [[gnu::constructor]]                                                    \
+    [[gnu::constructor, gnu::optimize(0)]]                                  \
     void cat_register_##test_name() {                                       \
         auto _ = ::cat::print("Running test ");                             \
         last_ctor_was_test = true;                                          \
@@ -24,7 +28,7 @@ void test_fail(cat::source_location const& source_location);
         /* TODO: This will leak. An `inline_allocator` should be used. */   \
         auto _ = ::cat::print(::cat::fmt(pager, "{}", tests_run).value());  \
         /* TODO: Align the whitespace after `:` for 1 and 2 digit tests. */ \
-        constexpr auto string = ": " #test_name "...\n";                    \
+        constexpr char string[] = ": " #test_name "...\n";                  \
         auto _ = ::cat::print(string);                                      \
         test_name();                                                        \
     }                                                                       \
