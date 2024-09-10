@@ -70,7 +70,7 @@ namespace detail {
     struct is_idx_trait : false_trait {};
 
     template <overflow_policies policy>
-    struct is_idx_trait<index<policy>> : true_trait{};
+    struct is_idx_trait<index<policy>> : true_trait {};
 
     template <typename T>
     concept is_idx = is_idx_trait<T>::value;

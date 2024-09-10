@@ -42,7 +42,7 @@ TEST(test_arrays) {
 
     // Repeat those tests in a constexpr context.
     [] consteval {
-        cat::array<int4, 1u> const_array_1;
+        cat::array<int4, 1u> const_array_1{};
         cat::array<int4, 1u> const_array_2 = {1};
         const_array_2 = const_array_1;
     }();
