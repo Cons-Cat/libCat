@@ -4,6 +4,16 @@
 
 #include <cat/meta>
 
+// clang-20 requires that the `inline` specifier is explicitly added onto any
+// functions with the `[[gnu::artificial]]` attribute, even if they are
+// implicitly inline by being `constexpr`. However, because `friend` functions
+// cannot be `inline`, it is impossible for clang to compile artificial
+// hidden-friend functions without a warning.
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wignored-attributes"
+#endif
+
 namespace cat {
 
 namespace detail {
@@ -856,3 +866,7 @@ struct arithmetic_interface : plus_interface<derived_type>,
 };
 
 }  // namespace cat
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
