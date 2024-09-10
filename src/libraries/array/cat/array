@@ -44,13 +44,14 @@ class array : public collection_interface<array<T, length>, T>,
     constexpr auto
     operator=(array<T, length>&& other_array) -> array& = default;
 
+    // TODO: Support move-semantics here.
     // Converting assignment operator.
     template <typename U>
         requires(is_convertible<U, T>)
     constexpr auto
     operator=(array<U, length> const& other_array) -> array& {
         // TODO: Optimize with `copy_memory()` if T and U are relocatable.
-        for (__SIZE_TYPE__ i = 0u; i < length; ++i) {
+        for (unsigned long long i = 0u; i < length; ++i) {
             m_data[i] = static_cast<T>(other_array[i]);
         }
         return *this;
@@ -76,8 +77,8 @@ class array : public collection_interface<array<T, length>, T>,
         // if (!is_constant_evaluated() && sizeof(T) <= 8) {
         //     // set_memory(this->storage, value, length);
         // } else {
-        for (idx i = 0u; i < length; ++i) {
-            this->m_data[i.raw] = static_cast<T>(value);
+        for (unsigned long long i = 0u; i < length; ++i) {
+            this->m_data[i] = static_cast<T>(value);
         }
         // }
         return *this;
