@@ -3,6 +3,9 @@
 
 #include "../unit_tests.hpp"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
+
 template <auto value>
 struct nttp {
     static constexpr auto member = value;
@@ -874,3 +877,7 @@ TEST(test_numerals) {
     static_assert(cat::is_same<cat::common_type<idx, iword>, iword>);
     static_assert(cat::is_same<cat::common_type<iword, idx>, iword>);
 };
+
+#ifdef __clang__
+#pragma GCC diagnostic pop
+#endif
