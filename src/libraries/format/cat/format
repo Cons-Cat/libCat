@@ -17,8 +17,8 @@ namespace cat {
 template <is_integral T, overflow_policies policy>
 [[nodiscard]]
 auto
-to_chars(is_allocator auto& allocator,
-         arithmetic<T, policy> numeral) -> maybe<string> {
+to_chars(is_allocator auto& allocator, arithmetic<T, policy> numeral)
+    -> maybe<string> {
     return to_chars(allocator, make_raw_arithmetic(numeral));
 }
 
@@ -456,7 +456,12 @@ namespace detail {
             return idx(this->max_length);
         }
 
-        virtual auto grow(uword new_size) -> maybe<void> = 0;
+        [[gnu::warning("TODO: Instead of implementing this function, implement "
+                       "`__cxa_pure_virtual()`.")]]
+        virtual auto
+        grow(uword /*new_size*/) -> maybe<void> {
+            return nullopt;
+        };
 
         void
         clear() {
@@ -515,11 +520,11 @@ namespace detail {
             }
         }
 
-        // Overload the pure virtual `format_buffer_base::grow()` function.
-        // Instead of expanding its own memory, this buffer is flushed itself to
-        // make more room.
+        // Overload the pure               virtual `format_buffer_base::grow()`
+        // function. Instead of expanding its own memory, this buffer is flushed
+        // itself to make more room.
         auto
-        grow(uword) -> maybe<void> {
+        grow(uword) -> maybe<void> final {
             // `size()` is derived from `format_buffer_base`.
             if (this->size() == 256u) {
                 this->flush();
@@ -767,8 +772,8 @@ namespace detail {
 template <is_allocator allocator_type, typename outputter_type>
 auto
 vfmt_to(allocator_type& allocator, outputter_type output_iterator,
-        string const format,
-        detail::format_args arguments) -> scaredy_format<outputter_type> {
+        string const format, detail::format_args arguments)
+    -> scaredy_format<outputter_type> {
     if constexpr (is_same<outputter_type,
                           detail::format_contiguous_output_iterator<
                               allocator_type>>) {
@@ -837,8 +842,8 @@ template <is_allocator allocator_type,
 [[nodiscard]]
 auto
 fmt_to(allocator_type& allocator, outputter_type output_iterator,
-       string const format,
-       Args&&... arguments) -> scaredy_format<outputter_type> {
+       string const format, Args&&... arguments)
+    -> scaredy_format<outputter_type> {
     return vfmt_to(
         allocator, output_iterator, format,
         detail::format_args(
@@ -848,8 +853,8 @@ fmt_to(allocator_type& allocator, outputter_type output_iterator,
 template <is_allocator allocator_type, typename... Args>
 [[nodiscard]]
 auto
-fmt(allocator_type& allocator, string const format,
-    Args&&... arguments) -> scaredy_format<string> {
+fmt(allocator_type& allocator, string const format, Args&&... arguments)
+    -> scaredy_format<string> {
     return vfmt(
         allocator, format,
         detail::format_args(

@@ -2,6 +2,16 @@
 // vim: set ft=cpp:
 #pragma once
 
+// clang-20 requires that the `inline` specifier is explicitly added onto any
+// functions with the `[[gnu::artificial]]` attribute, even if they are
+// implicitly inline by being `constexpr`. However, because `friend` functions
+// cannot be `inline`, it is impossible for clang to compile artificial
+// hidden-friend functions without a warning.
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wignored-attributes"
+#endif
+
 #include <cat/arithmetic_interface>
 #include <cat/compare>
 #include <cat/debug>
@@ -1664,24 +1674,14 @@ struct index :
     // `arithmetic_ptr`'s object, when using Clang 19.
 
     [[nodiscard, gnu::always_inline, gnu::artificial]]
-#ifndef __clang__
-    consteval
-#else
-    constexpr
-#endif
-        static auto
-        min() -> index {
+    consteval static auto
+    min() -> index {
         return limits<index<overflow_policy>>::min();
     }
 
     [[nodiscard, gnu::always_inline, gnu::artificial]]
-#ifndef __clang__
-    consteval
-#else
-    constexpr
-#endif
-        static auto
-        max() -> index {
+    consteval static auto
+    max() -> index {
         return limits<index<overflow_policy>>::max();
     }
 };
@@ -1902,3 +1902,7 @@ template <typename T>
 constexpr bool is_trivially_relocatable<cat::uintptr<T>> = true;
 
 }  // namespace cat
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif

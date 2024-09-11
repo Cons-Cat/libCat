@@ -132,7 +132,7 @@ target_compile_options(cat INTERFACE ${CAT_COMPILE_OPTIONS})
 target_link_options(cat INTERFACE ${CAT_LINK_OPTIONS})
 
 # TODO: Implement these symbols in libCat directly.
-target_link_libraries(cat INTERFACE gcc_s)
+target_link_libraries(cat INTERFACE gcc)
 
 # `src/CMakeLists.txt` adds all of the source and headers files to `cat`.
 add_subdirectory(src/)
