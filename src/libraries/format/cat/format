@@ -456,12 +456,7 @@ namespace detail {
             return idx(this->max_length);
         }
 
-        [[gnu::warning("TODO: Instead of implementing this function, implement "
-                       "`__cxa_pure_virtual()`.")]]
-        virtual auto
-        grow(uword /*new_size*/) -> maybe<void> {
-            return nullopt;
-        };
+        virtual auto grow(uword /*new_size*/) -> maybe<void>;
 
         void
         clear() {
@@ -524,7 +519,9 @@ namespace detail {
         // function. Instead of expanding its own memory, this buffer is flushed
         // itself to make more room.
         auto
-        grow(uword) -> maybe<void> final {
+        // Without `override`, clang-20 will attempt to link against the pure
+        // virtual `grow()` function even with the `final` specifier.
+        grow(uword) -> maybe<void> override final {  // NOLINT
             // `size()` is derived from `format_buffer_base`.
             if (this->size() == 256u) {
                 this->flush();
