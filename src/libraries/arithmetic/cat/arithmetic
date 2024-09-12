@@ -1670,9 +1670,6 @@ struct index :
         return __builtin_bit_cast(index<overflow_policies::saturate>, *this);
     }
 
-    // These being `consteval` won't compile if called on a dereferenced
-    // `arithmetic_ptr`'s object, when using Clang 19.
-
     [[nodiscard, gnu::always_inline, gnu::artificial]]
     consteval static auto
     min() -> index {
