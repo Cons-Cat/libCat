@@ -41,9 +41,13 @@ extern "C" [[noreturn]]
 // NOLINTNEXTLINE `__stack_chk_fail()` must begin with a double underscore.
 void __stack_chk_fail();
 
-// NOLINTNEXTLINE `__cxa_atexit()` must begin with a double underscore.
 extern "C" void
+// NOLINTNEXTLINE `__cxa_atexit()` must begin with a double underscore.
 __cxa_atexit(void (*p_invocable)(void*), void* p_arg, void* p_dso_handle);
+
+extern "C" void
+// NOLINTNEXTLINE `__cxa_pure_virtual()` must begin with a double underscore.
+__cxa_pure_virtual();
 
 class jmp_buffer {
     // This buffer layout should vary by all ISAs.
