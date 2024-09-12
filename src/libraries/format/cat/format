@@ -520,7 +520,7 @@ namespace detail {
             }
         }
 
-        // Overload the pure               virtual `format_buffer_base::grow()`
+        // Overload the pure virtual `format_buffer_base::grow()`
         // function. Instead of expanding its own memory, this buffer is flushed
         // itself to make more room.
         auto
