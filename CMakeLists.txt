@@ -70,7 +70,9 @@ list(
   # Remove unused symbols.
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
-  -flto=auto -fno-plt
+  -flto=auto
+  # TODO: Consider why no-plt instead of relro.
+  -fno-plt
 )
 
 list(
@@ -93,6 +95,8 @@ list(
   APPEND CAT_LINK_OPTIONS_COMMON
   # This is required to prevent duplicate symbols.
   -nostdlib  
+  # `lld` is required for LLVM LTO. Bfd and `mold` do not work.
+  $<$<CXX_COMPILER_ID:Clang>:-fuse-ld=lld>
 )
 
 list(
@@ -100,8 +104,6 @@ list(
   ${CAT_LINK_OPTIONS_COMMON}
   # Remove unused symbols.
   -Wl,-z,noseparate-code,--gc-sections
-  # `lld` is required for LLVM LTO. Bfd and `mold` do not work.
-  $<$<CXX_COMPILER_ID:Clang>:-fuse-ld=lld>
 )
 
 list(

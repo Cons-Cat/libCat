@@ -456,7 +456,7 @@ namespace detail {
             return idx(this->max_length);
         }
 
-        virtual auto grow(uword /*new_size*/) -> maybe<void>;
+        virtual auto grow(uword /*new_size*/) -> maybe<void> = 0;
 
         void
         clear() {
