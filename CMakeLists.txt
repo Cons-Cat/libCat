@@ -13,6 +13,8 @@ list(
   # Disable linking libC symbols.
   -nostdlib
   # These features are pessimizations to libCat:
+  # TODO: Exceptions and rtti should have optional support once it's possible to
+  # implement them.
   -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
   # `global_includes.hpp` must be available everywhere.
   -include global_includes.hpp
@@ -69,13 +71,14 @@ list(
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
   -flto=auto -fno-plt
-  $<$<CXX_COMPILER_ID:GNU>:-fwhole-file>
 )
 
 list(
   APPEND CAT_COMPILE_OPTIONS_RELWITHDEBINFO
   ${CAT_COMPILE_OPTIONS_DEBUG}
   ${CAT_COMPILE_OPTIONS_RELEASE}
+  # Use thin LTO for optimized non-release builds.
+  $<$<CXX_COMPILER_ID:Clang>:-flto=thin>
 )
 
 list(
@@ -97,6 +100,8 @@ list(
   ${CAT_LINK_OPTIONS_COMMON}
   # Remove unused symbols.
   -Wl,-z,noseparate-code,--gc-sections
+  # `lld` is required for LLVM LTO. Bfd and `mold` do not work.
+  $<$<CXX_COMPILER_ID:Clang>:-fuse-ld=lld>
 )
 
 list(
