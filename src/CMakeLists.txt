@@ -55,6 +55,7 @@ target_sources(cat INTERFACE
   ${CATLIB}/runtime/implementations/exit.cpp
   ${CATLIB}/runtime/implementations/__stack_chk_fail.cpp
   ${CATLIB}/runtime/implementations/__cxa_atexit.cpp
+  ${CATLIB}/runtime/implementations/__cxa_pure_virtual.cpp
   ${CATLIB}/runtime/implementations/setjmp.cpp
   ${CATLIB}/runtime/implementations/longjmp.cpp
   ${CATLIB}/new/implementations/new.cpp
