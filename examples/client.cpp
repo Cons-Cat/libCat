@@ -6,7 +6,7 @@
 
 auto main(int argc, char* p_argv[]) -> int {
     cat::socket_unix<cat::socket_type::stream> socket;
-    socket.path_name = cat::fixed_string<108>::padded("\0/tmp/temp.sock");
+    socket.path_name = cat::str_inplace<108>::padded("\0/tmp/temp.sock");
 
     socket.create().or_exit();
     socket.connect().or_exit();

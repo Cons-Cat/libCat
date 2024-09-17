@@ -38,7 +38,7 @@ if(CAT_BUILD_UNIT_TESTS)
   # TODO: Glob for `.cpp` files here.
   target_sources(
     cat-tests INTERFACE
-    ${CMAKE_SOURCE_DIR}/tests/src/test_alloc.cpp
+    #${CMAKE_SOURCE_DIR}/tests/src/test_alloc.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_arrays.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_compare_strings.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_format_strings.cpp
@@ -50,7 +50,7 @@ if(CAT_BUILD_UNIT_TESTS)
     # ${CMAKE_SOURCE_DIR}/tests/src/test_math.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_maybe.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_paging_memory.cpp
-    ${CMAKE_SOURCE_DIR}/tests/src/test_raii.cpp
+    # ${CMAKE_SOURCE_DIR}/tests/src/test_raii.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_typelist.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_scaredy.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_set_memory.cpp

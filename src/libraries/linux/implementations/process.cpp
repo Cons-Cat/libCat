@@ -3,8 +3,8 @@
 [[gnu::no_sanitize_address, gnu::no_sanitize_undefined]]
 auto
 nix::process::create_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
-                          void* p_function,
-                          void* p_args_struct) -> scaredy_nix<bool> {
+                          void* p_function, void* p_args_struct)
+    -> scaredy_nix<bool> {
     m_stack_size = initial_stack_size;
     m_p_stack = static_cast<void*>(stack);
 
@@ -15,11 +15,13 @@ nix::process::create_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
 
     // Place a pointer to function arguments on the new stack:
     // TODO: Generate a `cat::tuple` for this.
-    __builtin_memcpy(static_cast<void*>(stack_top + 8), &p_args_struct, 8);
+    __builtin_memcpy(static_cast<void*>(stack_top + 8),
+                     static_cast<void*>(&p_args_struct), 8);
 
     // Place a pointer to function on the new stack:
-    // `8` is the size of a pointer, such as `p_function`.
-    __builtin_memcpy(static_cast<void*>(stack_top), &p_function, 8);
+    // 8 is the size of a pointer, such as `p_function`.
+    __builtin_memcpy(static_cast<void*>(stack_top),
+                     static_cast<void*>(&p_function), 8);
 
     scaredy_nix<nix::process_id> result = nix::sys_clone(
         flags, static_cast<void*>(stack_top - 8), &m_id,
@@ -29,8 +31,6 @@ nix::process::create_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
         nullptr);
 
     if (result.value().value == 0) {
-        auto _ = cat::print("FOOOOOOOO");
-        cat::exit();
         // The result is 0 iff this is the child thread.
         return false;
     }

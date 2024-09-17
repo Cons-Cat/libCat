@@ -31,24 +31,24 @@ namespace cat {
 constexpr auto string_length(char const* p_string) -> idx;
 
 template <uword::raw_type length>
-class fixed_string;
+class str_inplace;
 
-class string : public span<char const> {
+class str_span : public span<char const> {
   public:
-    constexpr string() : span<char const>(nullptr) {
+    constexpr str_span() : span<char const>(nullptr) {
     }
 
-    constexpr string(string const& string) = default;
-    constexpr string(string&& string) = default;
+    constexpr str_span(str_span const& string) = default;
+    constexpr str_span(str_span&& string) = default;
 
-    constexpr string(char const* p_string, idx in_length)
+    constexpr str_span(char const* p_string, idx in_length)
         : span<char const>(p_string, in_length) {
     }
 
     // This weird template deduces lower than the string literal constructor.
     template <typename T>
         requires(is_pointer<T>)
-    constexpr string(T p_string)
+    constexpr str_span(T p_string)
         : span<char const>(p_string, string_length(p_string)) {
     }
 
@@ -56,32 +56,32 @@ class string : public span<char const> {
     // `constexpr`.
     // Zero-overhead string literal constructor.
     template <uword::raw_type other_length>
-    constexpr string(char const (&string)[other_length]) {
+    constexpr str_span(char const (&string)[other_length]) {
         this->m_p_data = string;
         this->m_size = idx(other_length);
     }
 
     template <uword::raw_type other_length>
-    constexpr string(fixed_string<other_length> const& other_string) {
+    constexpr str_span(str_inplace<other_length> const& other_string) {
         this->m_p_data = other_string.data();
         this->m_size = idx(other_length);
     }
 
-    constexpr string(span<char> in_span) : span<char const>(in_span) {
+    constexpr str_span(span<char> in_span) : span<char const>(in_span) {
     }
 
     // A `string` consuming `nullptr` would cause undefined behavior.
-    constexpr string(decltype(nullptr)) = delete;
+    constexpr str_span(decltype(nullptr)) = delete;
 
     constexpr auto
-    operator=(string const& other_string) -> string& {
+    operator=(str_span const& other_string) -> str_span& {
         this->m_p_data = other_string.data();
         this->m_size = other_string.size();
         return *this;
     }
 
     constexpr auto
-    operator=(string&& other_string) -> string& {
+    operator=(str_span&& other_string) -> str_span& {
         this->m_p_data = other_string.data();
         this->m_size = move(other_string).size();
         return *this;
@@ -91,27 +91,27 @@ class string : public span<char const> {
 
     [[nodiscard]]
     constexpr auto
-    substring(idx position, idx count) -> string {
+    substring(idx position, idx count) -> str_span {
         return {this->m_p_data + position, count};
     }
 
     [[nodiscard]]
     constexpr auto
-    remove_prefix(idx offset) -> string {
+    remove_prefix(idx offset) -> str_span {
         return this->substring(offset, this->m_size - offset);
     }
 
     [[nodiscard]]
     constexpr auto
-    remove_suffix(idx offset) -> string {
+    remove_suffix(idx offset) -> str_span {
         return this->substring(0u, this->m_size - offset);
     }
 
     [[nodiscard]]
     // TODO: Make this return an `idx`.
     constexpr auto
-    find_small(char character,
-               idx position = 0u) const -> maybe<sentinel<iword, -1>> {
+    find_small(char character, idx position = 0u) const
+        -> maybe<sentinel<iword, -1>> {
         for (idx i = position; i < this->m_size; ++i) {
             if (this->m_p_data[i.raw] == character) {
                 return iword(i);
@@ -124,8 +124,8 @@ class string : public span<char const> {
     [[nodiscard]]
     // TODO: Return an `idx`.
     constexpr auto
-    find(char character,
-         idx from_position = 0u) const -> maybe<sentinel<iword, -1>> {
+    find(char character, idx from_position = 0u) const
+        -> maybe<sentinel<iword, -1>> {
         // TODO: `lanes` should be an `idx`.
         iword lanes = iword(char1x_::lanes);
 
@@ -153,17 +153,17 @@ class string : public span<char const> {
     }
 
   private:
-    // `string` inherits:
+    // `str_span` inherits:
     //
     // `char const* p_storage;`
     // `iword length;`
 };
 
 // This is `uword::raw_type` because GCC cannot deduce a string literal's
-// length from an `ssize`.
+// length from a `uword`.
 template <uword::raw_type length>
-class fixed_string : public collection_interface<fixed_string<length>, char>,
-                     public iterable_interface<char> {
+class str_inplace : public collection_interface<str_inplace<length>, char>,
+                    public iterable_interface<char> {
   public:
     constexpr auto
     data() -> char* {
@@ -182,28 +182,28 @@ class fixed_string : public collection_interface<fixed_string<length>, char>,
         return idx(length);
     }
 
-    constexpr fixed_string() = default;
+    constexpr str_inplace() = default;
 
-    // Construct from another `fixed_string` of lesser or equal length.
-    constexpr fixed_string(fixed_string<length> const& string) {
+    // Construct from another `str_inplace` of lesser or equal length.
+    constexpr str_inplace(str_inplace<length> const& string) {
         this->copy_string_data(string.data());
     }
 
     // Construct and deduce length from a string literal.
-    constexpr fixed_string(char const (&in)[length]) {
+    constexpr str_inplace(char const (&in)[length]) {
         // This must be copied instead of initialized in-place to guarantee
         // const-correctness.
         this->copy_string_data(in);
     }
 
-    // Create a `fixed_string` from a smaller string, and null out the unfilled
+    // Create a `str_inplace` from a smaller string, and null out the unfilled
     // bytes.
     template <uword::raw_type in_length>
         requires(in_length < length)
     static consteval auto
-    padded(char const (&in)[in_length]) -> fixed_string<length> {
+    padded(char const (&in)[in_length]) -> str_inplace<length> {
         idx idx_length = idx(in_length);  // Convert length to `idx`.
-        fixed_string<length> string;
+        str_inplace<length> string;
         for (idx i = 0u; i < idx_length; ++i) {
             string[i] = in[i.raw];
         }
@@ -213,17 +213,17 @@ class fixed_string : public collection_interface<fixed_string<length>, char>,
         return string;
     }
 
-    // Assign a `fixed_string` of lesser or equal length.
+    // Assign a `str_inplace` of lesser or equal length.
     constexpr auto
     // NOLINTNEXTLINE This does handle self-assignment.
-    operator=(fixed_string<length> const& string) -> fixed_string<length>& {
+    operator=(str_inplace<length> const& string) -> str_inplace<length>& {
         this->copy_string_data(string.data());
         return *this;
     }
 
     // Assign a string literal of lesser or equal length.
     constexpr auto
-    operator=(char const (&in)[length]) -> fixed_string<length>& {
+    operator=(char const (&in)[length]) -> str_inplace<length>& {
         this->copy_string_data(in);
         return *this;
     }
@@ -233,9 +233,9 @@ class fixed_string : public collection_interface<fixed_string<length>, char>,
     // length from an `ssize`.
     template <uword::raw_type other_length>
     friend constexpr auto
-    operator+(fixed_string<length> const& self,
-              fixed_string<other_length> const& other_string)
-        -> fixed_string<length - 1 + other_length> {
+    operator+(str_inplace<length> const& self,
+              str_inplace<other_length> const& other_string)
+        -> str_inplace<length - 1 + other_length> {
         // Add the lengths of two null-terminated strings together:
         constexpr uword::raw_type new_length = length - 1u + other_length;
         char array[new_length];
@@ -250,26 +250,26 @@ class fixed_string : public collection_interface<fixed_string<length>, char>,
 
         // Make this new string null-terminated.
         array[new_length - 1] = '\0';
-        fixed_string<new_length> new_string = array;
+        str_inplace<new_length> new_string = array;
         return new_string;
     }
 
-    // Concatenate a string literal to a `fixed_string`.
+    // Concatenate a string literal to a `str_inplace`.
     template <uword::raw_type other_length>
     friend constexpr auto
-    operator+(fixed_string<length> const& self,
+    operator+(str_inplace<length> const& self,
               char const (&other_string)[other_length])
-        -> fixed_string<length - 1u + other_length> {
-        return self + fixed_string<other_length>{other_string};
+        -> str_inplace<length - 1u + other_length> {
+        return self + str_inplace<other_length>{other_string};
     }
 
-    // Concatenate a `fixed_string` to a string literal.
+    // Concatenate a `str_inplace` to a string literal.
     template <uword::raw_type other_length>
     friend constexpr auto
     operator+(char const (&other_string)[other_length],
-              fixed_string<length> const& self)
-        -> fixed_string<length - 1 + other_length> {
-        return fixed_string<other_length>{other_string} + self;
+              str_inplace<length> const& self)
+        -> str_inplace<length - 1 + other_length> {
+        return str_inplace<other_length>{other_string} + self;
     }
 
   private:
@@ -288,22 +288,22 @@ class fixed_string : public collection_interface<fixed_string<length>, char>,
 };
 
 [[nodiscard]]
-auto compare_strings(string string_1, string string_2) -> bool;
+auto compare_strings(str_span string_1, str_span string_2) -> bool;
 
 [[nodiscard]]
-auto print(string string) -> iword;
+auto print(str_span string) -> iword;
 
 [[nodiscard]]
-auto println(string string) -> iword;
+auto println(str_span string) -> iword;
 
 [[nodiscard]]
 auto println() -> iword;
 
 [[nodiscard]]
-auto eprint(string string) -> iword;
+auto eprint(str_span string) -> iword;
 
 [[nodiscard]]
-auto eprintln(string string) -> iword;
+auto eprintln(str_span string) -> iword;
 
 [[nodiscard]]
 auto eprintln() -> iword;
@@ -321,7 +321,7 @@ auto eprintln() -> iword;
 template <typename T>
 [[nodiscard]]
 auto
-cat::maybe<T>::or_exit(cat::string const error_message, iword exit_code) & {
+cat::maybe<T>::or_exit(cat::str_span const error_message, iword exit_code) & {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
             return this->value();
@@ -337,7 +337,7 @@ cat::maybe<T>::or_exit(cat::string const error_message, iword exit_code) & {
 template <typename T>
 [[nodiscard]]
 auto
-cat::maybe<T>::or_exit(cat::string const error_message,
+cat::maybe<T>::or_exit(cat::str_span const error_message,
                        iword exit_code) const& {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
@@ -354,7 +354,7 @@ cat::maybe<T>::or_exit(cat::string const error_message,
 template <typename T>
 [[nodiscard]]
 auto
-cat::maybe<T>::or_exit(cat::string const error_message, iword exit_code) && {
+cat::maybe<T>::or_exit(cat::str_span const error_message, iword exit_code) && {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {
             return move(this)->value();
@@ -370,7 +370,7 @@ cat::maybe<T>::or_exit(cat::string const error_message, iword exit_code) && {
 template <typename T>
 [[nodiscard]]
 auto
-cat::maybe<T>::or_exit(cat::string const error_message,
+cat::maybe<T>::or_exit(cat::str_span const error_message,
                        iword exit_code) const&& {
     if (this->has_value()) [[likely]] {
         if constexpr (!is_void<T>) {

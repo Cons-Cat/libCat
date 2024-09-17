@@ -14,7 +14,7 @@ TEST(test_format_strings) {
     auto allocator = make_linear_allocator(page);
 
     // Test `int4` conversion.
-    cat::string int_string = cat::to_chars(allocator, 10).or_exit();
+    cat::str_span int_string = cat::to_chars(allocator, 10).or_exit();
     cat::verify(cat::compare_strings(int_string, "10"));
     cat::verify(int_string.size() == 3);
 
@@ -25,15 +25,15 @@ TEST(test_format_strings) {
     // `uint8`.
 
     // TOOD: These stopped working for some reason.
-    // constexpr cat::fixed_string const_int = cat::to_chars<136>();
-    // constexpr cat::fixed_string const_negative = cat::to_chars<-1650>();
+    // constexpr cat::str_inplace const_int = cat::to_chars<136>();
+    // constexpr cat::str_inplace const_negative = cat::to_chars<-1650>();
 
     // cat::verify(cat::compare_strings(const_int.data(), "136"));
     // cat::verify(cat::compare_strings(const_negative.data(), "-1650"));
 
     // Test formatting `int`.
     allocator.reset();
-    cat::string formatted_string_int =
+    cat::str_span formatted_string_int =
         cat::fmt(allocator, "bb{}aa{}cc", 52, 130).or_exit();
     // TODO: `formatted_string_int` has an incorrect `.size()`, but the content
     // is correct.
@@ -42,17 +42,17 @@ TEST(test_format_strings) {
 
     // Test formatting `float`.
     allocator.reset();
-    cat::string string_float = cat::to_chars(allocator, 1.234f).or_exit();
+    cat::str_span string_float = cat::to_chars(allocator, 1.234f).or_exit();
     cat::verify(cat::compare_strings(string_float.data(), "1.234E0"),
                 string_float);
     // auto _ = cat::println(string_float);
 
-    cat::string formatted_string_float =
+    cat::str_span formatted_string_float =
         cat::fmt(allocator, "a{}b", 1.234f).or_exit();
     cat::verify(cat::compare_strings(formatted_string_float, "a1.234E0b"));
     // auto _ = cat::println(formatted_string_float);
 
-    cat::string formatted_string_double =
+    cat::str_span formatted_string_double =
         cat::fmt(allocator, "a{}b", 1.234).or_exit();
     cat::verify(cat::compare_strings(formatted_string_double, "a1.234E0b"));
     // auto _ = cat::println(formatted_string_double);

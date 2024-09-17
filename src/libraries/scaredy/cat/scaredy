@@ -865,7 +865,7 @@ class scaredy {
 
     [[nodiscard]]
     auto
-    or_exit(string const error_message, iword exit_code = 1) & {
+    or_exit(str_span const error_message, iword exit_code = 1) & {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return this->value();
@@ -880,7 +880,7 @@ class scaredy {
 
     [[nodiscard]]
     auto
-    or_exit(string const error_message, iword exit_code = 1) const& {
+    or_exit(str_span const error_message, iword exit_code = 1) const& {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return this->value();
@@ -895,7 +895,7 @@ class scaredy {
 
     [[nodiscard]]
     auto
-    or_exit(string const error_message, iword exit_code = 1) && {
+    or_exit(str_span const error_message, iword exit_code = 1) && {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return move(this)->value();
@@ -910,7 +910,7 @@ class scaredy {
 
     [[nodiscard]]
     auto
-    or_exit(string const error_message, iword exit_code = 1) const&& {
+    or_exit(str_span const error_message, iword exit_code = 1) const&& {
         if (this->has_value()) [[likely]] {
             if constexpr (!is_void<T>) {
                 return move(this)->value();

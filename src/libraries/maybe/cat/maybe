@@ -20,7 +20,7 @@ inline constexpr detail::nullopt_type nullopt;
 template <typename T>
 class maybe;
 
-class string;
+class str_span;
 
 // `maybe_value_storage` holds a non-reference, non-pointer, non-`void` type
 // `T` and a `bool` flag to represent holding a value or not.
@@ -373,7 +373,7 @@ struct maybe_compact_storage {
     // to prevent ambiguous overload resolution.
     constexpr auto operator=(value_type const& in_value)
         -> maybe_compact_storage& requires(!is_copy_assignable<value_type>) =
-               delete;
+            delete;
 
     // If `value_type` is trivially move-assignable, then forward this value.
     constexpr auto operator=(value_type&& in_value)
@@ -397,7 +397,7 @@ struct maybe_compact_storage {
     // to prevent ambiguous overload resolution.
     constexpr auto operator=(value_type&& in_value)
         -> maybe_compact_storage& requires(!is_move_assignable<value_type>) =
-               delete;
+            delete;
 
     // The following methods are homogenous to all `maybe...storage_type`
     // types.
@@ -600,9 +600,9 @@ class maybe {
 
     // Rebinding converting reference assignment operator.
     template <typename U>
-        requires((is_implicitly_convertible<add_lvalue_reference<U>,
-                                            value_type>) &&
-                 is_reference<value_type>)
+        requires(
+            (is_implicitly_convertible<add_lvalue_reference<U>, value_type>) &&
+            is_reference<value_type>)
     constexpr auto
     operator=(U& value) -> class maybe& {
         m_storage = static_cast<value_type&>(value);
@@ -850,13 +850,13 @@ class maybe {
     // running process immediately. Otherwise, return its value.
     // These are implemented in `<cat/string>`.
     [[nodiscard]]
-    auto or_exit(string error_message, iword exit_code = 1) &;
+    auto or_exit(str_span error_message, iword exit_code = 1) &;
     [[nodiscard]]
-    auto or_exit(string error_message, iword exit_code = 1) const&;
+    auto or_exit(str_span error_message, iword exit_code = 1) const&;
     [[nodiscard]]
-    auto or_exit(string error_message, iword exit_code = 1) &&;
+    auto or_exit(str_span error_message, iword exit_code = 1) &&;
     [[nodiscard]]
-    auto or_exit(string error_message, iword exit_code = 1) const&&;
+    auto or_exit(str_span error_message, iword exit_code = 1) const&&;
 
     // Construct the value in-place and destroy the held value iff it
     // exists.
