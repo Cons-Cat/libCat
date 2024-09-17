@@ -155,8 +155,8 @@ class str_span : public span<char const> {
   private:
     // `str_span` inherits:
     //
-    // `char const* p_storage;`
-    // `iword length;`
+    // `char const* m_p_data;`
+    // `iword m_size;`
 };
 
 // This is `uword::raw_type` because GCC cannot deduce a string literal's
@@ -167,13 +167,13 @@ class str_inplace : public collection_interface<str_inplace<length>, char>,
   public:
     constexpr auto
     data() -> char* {
-        return &(this->m_p_data[0]);
+        return m_p_data;
     }
 
     [[nodiscard]]
     constexpr auto
     data() const -> char const* {
-        return &(this->m_p_data[0]);
+        return m_p_data;
     }
 
     [[nodiscard]]
