@@ -461,11 +461,8 @@ class maybe {
         conditional<is_void<T>,
                     // If `T` is `void`:
                     maybe_value_storage<monostate_type>,
-                    conditional<requires {
-                                    // T::predicate_function(T::type());
-                                    T::sentinel_value;
-                                },
-                                // If `T` is a `predicate`:
+                    conditional<requires { T::sentinel_value; },
+                                // If `T` is a `compact`:
                                 maybe_compact_storage<T>,
                                 conditional<is_reference<T>,
                                             // If `T` is a reference type:

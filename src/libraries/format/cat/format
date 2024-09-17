@@ -669,10 +669,10 @@ namespace detail {
         // char const* p_first = format.data();
         // char const* p_last = format.data() + format.size();
         str_span remainder = format;
-        iword current_argument = 0;
+        idx current_argument = 0;
 
         // Parse the entire string:
-        while (true) {
+        while (remainder.size() > 0) {
             iword const to_open_brace = remainder.find('{').value();
             iword const to_close_brace = remainder.find('}').value();
 
@@ -836,8 +836,8 @@ vfmt(allocator_type& allocator, str_span const format,
 
 // Store `arguments` in a compacted variant object. Then format a collection
 // of `char` with those arguments, and push the result into some container.
-template <is_allocator allocator_type, is_output_iterator<str_span> outputter_type,
-          typename... Args>
+template <is_allocator allocator_type,
+          is_output_iterator<str_span> outputter_type, typename... Args>
 [[nodiscard]]
 auto
 fmt_to(allocator_type& allocator, outputter_type output_iterator,
