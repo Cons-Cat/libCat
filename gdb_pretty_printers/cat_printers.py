@@ -34,7 +34,7 @@ def cat_type(type_name: str, namespace: str = 'cat'):
 class MonostatePrinter:
     "Print a `cat::monostate`"
 
-    def __init__(self, val):
+    def __init__(self, val: gdb.Value):
         return
 
     def to_string(self):
@@ -45,7 +45,7 @@ class MonostatePrinter:
 class ArithmeticPrinter:
     "Print a `cat::arithmetic`"
 
-    def __init__(self, val):
+    def __init__(self, val: gdb.Value):
         self.raw = val['raw']
 
         type = val.type.strip_typedefs().name
@@ -78,7 +78,7 @@ class ArithmeticPrinter:
 class IndexPrinter:
     "Print a `cat::index`"
 
-    def __init__(self, val):
+    def __init__(self, val: gdb.Value):
         self.raw = val['raw']
         return
 
@@ -90,7 +90,7 @@ class IndexPrinter:
 class StrSpanPrinter:
     "Print a `cat::str_span`"
 
-    def __init__(self, val):
+    def __init__(self, val: gdb.Value):
         self.m_p_data = val['m_p_data']
         self.m_size = val['m_size']['raw']
         return
