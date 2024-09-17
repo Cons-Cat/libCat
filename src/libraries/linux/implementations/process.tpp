@@ -34,8 +34,5 @@ nix::process::create(cat::is_allocator auto& allocator,
     if (!on_parent.has_value()) {
         return on_parent.error();
     }
-
-    if (on_parent.value()) {
-        return cat::monostate;
-    }
+    return cat::monostate;
 }

@@ -15,7 +15,7 @@ namespace x11 {
 
 // TODO: Handle `$DISPLAY`.
 constexpr auto socket_path =
-    cat::fixed_string<108>::padded("/tmp/.X11-unix/X0");
+    cat::str_inplace<108>::padded("/tmp/.X11-unix/X0");
 
 enum class operation_code : unsigned char {
     error = 0,

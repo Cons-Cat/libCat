@@ -3,7 +3,7 @@
 #include <cat/string>
 
 auto
-cat::compare_strings(string const string_1, string const string_2) -> bool {
+cat::compare_strings(str_span const string_1, str_span const string_2) -> bool {
     if (string_1.size() != string_2.size()) {
         return false;
     }

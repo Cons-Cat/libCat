@@ -583,8 +583,8 @@ io_request_read(io_requests a, io_requests b, io_requests c) -> io_requests {
 }
 
 consteval auto
-io_request_readwrite(io_requests a, io_requests b,
-                     io_requests c) -> io_requests {
+io_request_readwrite(io_requests a, io_requests b, io_requests c)
+    -> io_requests {
     return detail::compose_io_request(
         io_requests{cat::to_underlying(io_requests::read) |
                     cat::to_underlying(io_requests::write)},
@@ -722,25 +722,25 @@ enum class tty_configuration_flags : unsigned int {
 
 // Enable using these `enum class`es as bit-flags.
 template <>
-struct cat::enum_flag_trait<nix::memory_protection_flags> : cat::true_trait{};
+struct cat::enum_flag_trait<nix::memory_protection_flags> : cat::true_trait {};
 
 template <>
-struct cat::enum_flag_trait<nix::memory_flags> : cat::true_trait{};
+struct cat::enum_flag_trait<nix::memory_flags> : cat::true_trait {};
 
 template <>
-struct cat::enum_flag_trait<nix::open_flags> : cat::true_trait{};
+struct cat::enum_flag_trait<nix::open_flags> : cat::true_trait {};
 
 template <>
-struct cat::enum_flag_trait<nix::clone_flags> : cat::true_trait{};
+struct cat::enum_flag_trait<nix::clone_flags> : cat::true_trait {};
 
 template <>
-struct cat::enum_flag_trait<nix::wait_options_flags> : cat::true_trait{};
+struct cat::enum_flag_trait<nix::wait_options_flags> : cat::true_trait {};
 
 template <>
-struct cat::enum_flag_trait<nix::io_requests> : cat::true_trait{};
+struct cat::enum_flag_trait<nix::io_requests> : cat::true_trait {};
 
 template <>
-struct cat::enum_flag_trait<nix::tty_configuration_flags> : cat::true_trait{};
+struct cat::enum_flag_trait<nix::tty_configuration_flags> : cat::true_trait {};
 
 namespace nix {
 
@@ -754,8 +754,8 @@ auto sys_read(file_descriptor file_descriptor, char const* p_string_buffer,
 auto sys_write(file_descriptor file_descriptor, char const* p_string_buffer,
                cat::iword length) -> scaredy_nix<cat::iword>;
 
-auto sys_write(file_descriptor file_descriptor,
-               cat::string string) -> scaredy_nix<cat::iword>;
+auto sys_write(file_descriptor file_descriptor, cat::str_span string)
+    -> scaredy_nix<cat::iword>;
 
 // Syscall 2
 auto sys_open(char const* p_file_path, open_mode file_mode,
@@ -808,7 +808,7 @@ struct file_handle {
 };
 
 // Syscall 4
-auto sys_stat(cat::string file_path) -> cat::scaredy<file_status, linux_error>;
+auto sys_stat(cat::str_span file_path) -> cat::scaredy<file_status, linux_error>;
 
 // Syscall 5
 auto sys_fstat(file_descriptor file_descriptor)
@@ -820,8 +820,8 @@ auto sys_fstat(file_descriptor file_descriptor)
 // Syscall 9
 auto sys_mmap(cat::uword beginning_address, cat::uword bytes_size,
               memory_protection_flags protections, memory_flags flags,
-              file_descriptor file_descriptor,
-              cat::uword pages_offset) -> scaredy_nix<void*>;
+              file_descriptor file_descriptor, cat::uword pages_offset)
+    -> scaredy_nix<void*>;
 
 // TODO: `sys_mprotect()`
 
@@ -880,16 +880,17 @@ enum class signal_action {
 };
 
 // Syscall 14
-auto sys_rt_sigprocmask(
-    signal_action action, signals_mask_set const* __restrict p_other_set,
-    signals_mask_set* __restrict p_current_set) -> scaredy_nix<void>;
+auto sys_rt_sigprocmask(signal_action action,
+                        signals_mask_set const* __restrict p_other_set,
+                        signals_mask_set* __restrict p_current_set)
+    -> scaredy_nix<void>;
 
 // TODO: `sys_rt_sigaction()`
 // TODO: `sys_rt_sigreturn()`
 
 // Syscall 16
-auto sys_ioctl(file_descriptor io_descriptor,
-               io_requests request) -> scaredy_nix<void>;
+auto sys_ioctl(file_descriptor io_descriptor, io_requests request)
+    -> scaredy_nix<void>;
 
 auto sys_ioctl(file_descriptor io_descriptor, io_requests request,
                cat::no_type_ptr p_argument) -> scaredy_nix<void>;
@@ -942,8 +943,8 @@ auto sys_writev(file_descriptor file_descriptor,
 auto sys_getpid() -> process_id;
 
 // Syscall 41
-auto sys_socket(cat::int8 protocol_family, cat::int8 type,
-                cat::int8 protocol) -> scaredy_nix<file_descriptor>;
+auto sys_socket(cat::int8 protocol_family, cat::int8 type, cat::int8 protocol)
+    -> scaredy_nix<file_descriptor>;
 
 // Syscall 42
 auto sys_connect(file_descriptor socket_descriptor, void const* p_socket,
@@ -975,8 +976,8 @@ auto sys_bind(file_descriptor socket_descriptor, void const* p_socket,
               cat::iword p_addr_len) -> scaredy_nix<void>;
 
 // Syscall 50
-auto sys_listen(file_descriptor socket_descriptor,
-                cat::int8 backlog) -> scaredy_nix<void>;
+auto sys_listen(file_descriptor socket_descriptor, cat::int8 backlog)
+    -> scaredy_nix<void>;
 
 // Syscall 56
 namespace detail {
@@ -984,17 +985,17 @@ namespace detail {
 }
 
 auto sys_clone(clone_flags flags, void* p_stack_entry, process_id* p_parent_id,
-               process_id* p_child_id,
-               void* p_thread_pointer) -> scaredy_nix<process_id>;
+               process_id* p_child_id, void* p_thread_pointer)
+    -> scaredy_nix<process_id>;
 
 // Syscall 61
 auto sys_wait4(process_id waiting_on_id, cat::int4* p_status_output,
-               wait_options_flags options,
-               void* p_resource_usage) -> scaredy_nix<process_id>;
+               wait_options_flags options, void* p_resource_usage)
+    -> scaredy_nix<process_id>;
 
 // Syscall 85
-auto sys_creat(char const* p_file_path,
-               open_mode file_mode) -> scaredy_nix<file_descriptor>;
+auto sys_creat(char const* p_file_path, open_mode file_mode)
+    -> scaredy_nix<file_descriptor>;
 
 // TODO: `sys_link()`
 
@@ -1005,8 +1006,8 @@ auto sys_unlink(char const* p_path_name) -> scaredy_nix<void>;
 auto sys_tkill(process_id pid, Signal signal) -> scaredy_nix<void>;
 
 // Syscall 247
-auto sys_waitid(wait_id type, process_id id,
-                wait_options_flags options) -> scaredy_nix<process_id>;
+auto sys_waitid(wait_id type, process_id id, wait_options_flags options)
+    -> scaredy_nix<process_id>;
 
 auto wait_pid(process_id pid, file_status* p_file_status,
               wait_options_flags options) -> scaredy_nix<process_id>;
@@ -1014,8 +1015,8 @@ auto wait_pid(process_id pid, file_status* p_file_status,
 auto syscall0(cat::iword) -> cat::iword;
 auto syscall1(cat::iword, cat::no_type) -> cat::iword;
 auto syscall2(cat::iword, cat::no_type, cat::no_type) -> cat::iword;
-auto syscall3(cat::iword, cat::no_type, cat::no_type,
-              cat::no_type) -> cat::iword;
+auto syscall3(cat::iword, cat::no_type, cat::no_type, cat::no_type)
+    -> cat::iword;
 auto syscall4(cat::iword, cat::no_type, cat::no_type, cat::no_type,
               cat::no_type) -> cat::iword;
 auto syscall5(cat::iword, cat::no_type, cat::no_type, cat::no_type,
@@ -1028,8 +1029,8 @@ auto syscall(cat::iword call, Args... parameters) -> nix::scaredy_nix<T>
     requires(sizeof...(Args) < 7);
 
 // Create and return a `cat::SocketLocal` (also known as Unix socket).
-auto create_socket_local(cat::int8 type,
-                         cat::int8 protocol) -> scaredy_nix<file_descriptor>;
+auto create_socket_local(cat::int8 type, cat::int8 protocol)
+    -> scaredy_nix<file_descriptor>;
 
 // `tty_io_serial` handles a configuration of tty IO, often referred to
 // as termios.
@@ -1177,8 +1178,8 @@ struct process {
 
     template <typename... Args>
     auto create(cat::is_allocator auto& allocator, cat::idx initial_stack_size,
-                cat::is_invocable<Args...> auto&& function,
-                Args&&... arguments) -> scaredy_nix<void>;
+                cat::is_invocable<Args...> auto&& function, Args&&... arguments)
+        -> scaredy_nix<void>;
 
     [[nodiscard]]
     auto wait() const -> scaredy_nix<process_id>;

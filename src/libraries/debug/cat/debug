@@ -60,7 +60,7 @@ class source_location {
 
 namespace cat {
 
-class string;
+class str_span;
 using std::source_location;
 
 // TODO: Mark these functions `[[gnu::artificial]]`.
@@ -91,7 +91,7 @@ void verify(bool invariant_expression,
             void (*p_assert_handler)(source_location const&) = assert_handler,
             source_location const& callsite = source_location::current());
 
-void verify(bool invariant_expression, string error_string,
+void verify(bool invariant_expression, str_span error_string,
             void (*p_assert_handler)(source_location const&) = assert_handler,
             source_location const& callsite = source_location::current());
 
@@ -99,7 +99,7 @@ void assert(bool invariant_expression,
             void (*p_assert_handler)(source_location const&) = assert_handler,
             source_location const& callsite = source_location::current());
 
-void assert(bool invariant_expression, string error_string,
+void assert(bool invariant_expression, str_span error_string,
             void (*p_assert_handler)(source_location const&) = assert_handler,
             source_location const& callsite = source_location::current());
 
