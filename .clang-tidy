@@ -29,6 +29,7 @@ Checks: "bugprone-*,
          -misc-non-private-member-variables-in-classes,
 		 -misc-unused-using-decls,
          -misc-unconventional-assign-operator,
+         -misc-use-internal-linkage,
         "
 
 WarningsAsErrors: ''
