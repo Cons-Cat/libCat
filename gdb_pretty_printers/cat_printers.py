@@ -85,6 +85,23 @@ class IndexPrinter:
     def to_string(self):
         return str(self.raw)
 
+    
+@cat_type('str_span')
+class StrSpanPrinter:
+    "Print a `cat::str_span`"
+
+    def __init__(self, val):
+        self.m_p_data = val['m_p_data']
+        self.m_size = val['m_size']['raw']
+        return
+
+    def to_string(self):
+        p_str = self.m_p_data.cast(self.m_p_data.type
+                                  .target()
+                                  .strip_typedefs()
+                                  .pointer())
+        return p_str.lazy_string(length = self.m_size)
+
 
 # At the end of the script, register all `cat_pretty_printers` simultaneously.
 gdb.printing.register_pretty_printer(None, cat_pretty_printers, replace=True)

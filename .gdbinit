@@ -4,12 +4,11 @@ break exit
 break cat::default_assert_handler
 break test_fail
 
+# TODO: Do not hard-code this path.
 source /home/conscat/src/libcat/gdb_pretty_printers/cat_printers.py
 
 # Skip stepping into uninteresting code.
-# skip file meta
-# skip file numerals
-# skip file utility
-# skip file notype
-# skip file bit
-# skip file compare
+# This is necessary because Clang cannot compile `artificial` methods
+# if they are also `friend`.
+skip file arithmetic
+skip file arithmetic_interface
