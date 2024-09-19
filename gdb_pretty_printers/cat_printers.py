@@ -103,5 +103,37 @@ class StrSpanPrinter:
         return p_str.lazy_string(length = self.m_size)
 
 
+@cat_type('bitset')
+class BitsetPrinter:
+    "Print a `cat::bitset`"
+
+    def __init__(self, val: gdb.Value):
+        self.m_data: gdb.Value = val['m_data']['m_data']
+        # self.bitset_size: int = val['bits_count']
+        self.element_size_bits: int = self.m_data[0].type.sizeof * 8
+        # Extract the length of this internal array.
+        self.size: int = self.m_data.type.range()[1] + 1
+        return
+
+    def _fmt_int(self, bytes_index: int):
+        # Create a bitstring of `element_size_bits` length from the element
+        # at `bytes_index.
+        bitstring: str = format(int(self.m_data[bytes_index]['raw']),
+                                '0' + str(self.element_size_bits) + 'b')
+
+        separated_bytes: str = \
+            '\''.join([bitstring[::-1][i:i+8][::-1]
+                       for i
+                       in range(0, len(bitstring), 8)][::-1])
+        
+        return separated_bytes
+
+    def to_string(self):
+        bitstrings = [self._fmt_int(x)
+                      for x
+                      in range(self.size)]
+        return '[' + str(', '.join(bitstrings)) + '] (' + str(127) + ' bits)'
+
+
 # At the end of the script, register all `cat_pretty_printers` simultaneously.
 gdb.printing.register_pretty_printer(None, cat_pretty_printers, replace=True)
