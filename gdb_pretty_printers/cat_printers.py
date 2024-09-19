@@ -109,10 +109,14 @@ class BitsetPrinter:
 
     def __init__(self, val: gdb.Value):
         self.m_data: gdb.Value = val['m_data']['m_data']
-        # self.bitset_size: int = val['bits_count']
         self.element_size_bits: int = self.m_data[0].type.sizeof * 8
         # Extract the length of this internal array.
-        self.size: int = self.m_data.type.range()[1] + 1
+        self.array_len: int = self.m_data.type.range()[1] + 1
+
+        # The number of leading bits that are ignored by this container.
+        self.leading_skipped_bits: int = \
+            self.array_len * self.element_size_bits \
+            - int(val.type.template_argument(0)['raw'])
         return
 
     def _fmt_int(self, bytes_index: int):
@@ -121,6 +125,7 @@ class BitsetPrinter:
         bitstring: str = format(int(self.m_data[bytes_index]['raw']),
                                 '0' + str(self.element_size_bits) + 'b')
 
+        # Insert ' separators between every 8 bits.
         separated_bytes: str = \
             '\''.join([bitstring[::-1][i:i+8][::-1]
                        for i
@@ -131,8 +136,15 @@ class BitsetPrinter:
     def to_string(self):
         bitstrings = [self._fmt_int(x)
                       for x
-                      in range(self.size)]
-        return '[' + str(', '.join(bitstrings)) + '] (' + str(127) + ' bits)'
+                      in range(self.array_len)]
+        
+        # Truncate leading skipped bits from the last bytes in the array.
+        if self.leading_skipped_bits > 0:
+            bitstrings[-1] = bitstrings[-1][:-self.leading_skipped_bits]
+
+        return '[' + str(', '.join(bitstrings)) + '] (' \
+            + str(self.array_len * self.element_size_bits - self.leading_skipped_bits) \
+            + ' bits)'
 
 
 # At the end of the script, register all `cat_pretty_printers` simultaneously.
