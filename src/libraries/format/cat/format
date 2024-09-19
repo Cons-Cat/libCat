@@ -161,7 +161,7 @@ to_string_at(arithmetic<T> value, span<char> output_buffer) -> maybe<str_span> {
 }
 
 // Formatting
-enum class format_errors {
+enum class format_errors : unsigned char {
     out_of_memory,
     cannot_format_argument,
     argument_type_mismatch,
@@ -282,8 +282,8 @@ namespace detail {
     struct format_string_vector
         : collection_interface<format_string_vector, char>,
           iterable_interface<char> {
-        format_string_vector(char* p_in_storage, uword in_length,
-                             uword in_max_length)
+        format_string_vector(char* p_in_storage, idx in_length,
+                             idx in_max_length)
             : p_storage(p_in_storage),
               length(in_length),
               max_length(in_max_length) {
