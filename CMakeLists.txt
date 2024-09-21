@@ -62,9 +62,9 @@ endif()
 list(
   APPEND CAT_COMPILE_OPTIONS_DEBUG
   -ggdb3 -pipe
-  -fno-eliminate-unused-debug-types
-  $<$<CXX_COMPILER_ID:GNU>:-fno-eliminate-unused-debug-symbols>
-  $<$<CXX_COMPILER_ID:Clang>:-glldb -gmodules>
+  $<$<CXX_COMPILER_ID:GNU>:-fno-eliminate-unused-debug-types
+                           -fno-eliminate-unused-debug-symbols>
+  $<$<CXX_COMPILER_ID:Clang>:-glldb -gmodules -gfull>
 )
 
 list(

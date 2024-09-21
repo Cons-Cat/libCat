@@ -1,4 +1,5 @@
 import gdb
+import re
 
 
 class PrinterControl(gdb.printing.PrettyPrinter):
@@ -114,9 +115,19 @@ class BitsetPrinter:
         self.array_len: int = self.m_data.type.range()[1] + 1
 
         # The number of leading bits that are ignored by this container.
-        self.leading_skipped_bits: int = \
-            self.array_len * self.element_size_bits \
-            - int(val.type.template_argument(0)['raw'])
+        try:
+            self.leading_skipped_bits: int = int(val['leading_skipped_bits']['raw'])
+        except:
+            # If that's optimized out, parse the `ptype` for it.
+            # This happens when compiling with Clang, even with `-gfull`.
+            type: str = val.type.strip_typedefs().tag
+            # Extract all numbers in the type signature.
+            type_numbers = [int(s) for s in re.findall(r'\b\d+\b', type)]
+            # The last number is the bitset's size.
+            bits_count: int = type_numbers[-1]
+            self.leading_skipped_bits: int = \
+                self.array_len * self.element_size_bits - bits_count
+
         return
 
     def _fmt_int(self, bytes_index: int):
