@@ -87,8 +87,8 @@ class list : public collection_interface<list<T>, T> {
         requires(is_implicitly_convertible<U, T>)
     [[nodiscard]]
     static auto
-    from(is_allocator auto& allocator,
-         value_type_list<U, initializers...>) -> maybe<list<T>> {
+    from(is_allocator auto& allocator, value_type_list<U, initializers...>)
+        -> maybe<list<T>> {
         list<T> new_list;
         // TODO: Check if a recursive function is more efficient here.
         array values = {static_cast<T>(initializers)...};
@@ -107,8 +107,8 @@ class list : public collection_interface<list<T>, T> {
         requires(is_implicitly_convertible<Args, T> && ...)
     [[nodiscard]]
     static auto
-    from(is_allocator auto& allocator,
-         Args&&... initializers) -> maybe<list<T>> {
+    from(is_allocator auto& allocator, Args&&... initializers)
+        -> maybe<list<T>> {
         list<T> new_list;
         // TODO: Check if a recursive function is more efficient here.
         array values = {fwd(initializers)...};
@@ -230,8 +230,8 @@ class list : public collection_interface<list<T>, T> {
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     auto
-    insert(is_allocator auto& allocator, iterator_type where,
-           U const& value) -> maybe<iterator_type> {
+    insert(is_allocator auto& allocator, iterator_type where, U const& value)
+        -> maybe<iterator_type> {
         // `cat::maybe_ptr` at here produces an internal compiler error in
         // GCC 12.
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
@@ -280,8 +280,8 @@ class list : public collection_interface<list<T>, T> {
 
     // Remove and deallocate an element from this list.
     auto
-    erase(is_allocator auto& allocator,
-          iterator_type where) -> maybe<iterator_type> {
+    erase(is_allocator auto& allocator, iterator_type where)
+        -> maybe<iterator_type> {
         if (m_length == 0) [[unlikely]] {
             // Prevent a segfault when the list is empty.
             return iterator_type(m_p_head);
@@ -311,8 +311,8 @@ class list : public collection_interface<list<T>, T> {
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     auto
-    push_front(is_allocator auto& allocator,
-               U const& value) -> maybe<iterator_type> {
+    push_front(is_allocator auto& allocator, U const& value)
+        -> maybe<iterator_type> {
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -329,8 +329,8 @@ class list : public collection_interface<list<T>, T> {
     // Allocate a node and insert it at the beginning of this list.
     template <typename... Args>
     auto
-    emplace_front(is_allocator auto& allocator,
-                  Args&&... arguments) -> maybe<iterator_type> {
+    emplace_front(is_allocator auto& allocator, Args&&... arguments)
+        -> maybe<iterator_type> {
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -368,8 +368,8 @@ class list : public collection_interface<list<T>, T> {
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     auto
-    push_back(is_allocator auto& allocator,
-              U const& value) -> maybe<iterator_type> {
+    push_back(is_allocator auto& allocator, U const& value)
+        -> maybe<iterator_type> {
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -386,8 +386,8 @@ class list : public collection_interface<list<T>, T> {
     // Allocate a node and insert it at the end of this list.
     template <typename... Args>
     auto
-    emplace_back(is_allocator auto& allocator,
-                 Args&&... arguments) -> maybe<iterator_type> {
+    emplace_back(is_allocator auto& allocator, Args&&... arguments)
+        -> maybe<iterator_type> {
         cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
         if (!memory.has_value()) {
             // Propagate memory allocation failure.
@@ -542,8 +542,8 @@ class forward_list : public collection_interface<forward_list<T>, T> {
         requires(is_implicitly_convertible<Args, T> && ...)
     [[nodiscard]]
     static auto
-    from(is_allocator auto& allocator,
-         Args&&... initializers) -> maybe<forward_list<T>> {
+    from(is_allocator auto& allocator, Args&&... initializers)
+        -> maybe<forward_list<T>> {
         forward_list<T> new_list;
         // TODO: Check if a recursive function is more efficient here.
         array array = {fwd(initializers)...};
@@ -697,8 +697,8 @@ class forward_list : public collection_interface<forward_list<T>, T> {
     template <typename U>
         requires(is_implicitly_convertible<U, T>)
     auto
-    push_front(is_allocator auto& allocator,
-               U const& value) -> maybe<iterator_type> {
+    push_front(is_allocator auto& allocator, U const& value)
+        -> maybe<iterator_type> {
         cat::maybe memory =
             allocator.template alloc<detail::forward_list_node<T>>();
         if (!memory.has_value()) {
@@ -716,8 +716,8 @@ class forward_list : public collection_interface<forward_list<T>, T> {
     // Allocate a node and insert it at the beginning of this list.
     template <typename... Args>
     auto
-    emplace_front(is_allocator auto& allocator,
-                  Args&&... arguments) -> maybe<iterator_type> {
+    emplace_front(is_allocator auto& allocator, Args&&... arguments)
+        -> maybe<iterator_type> {
         cat::maybe memory =
             allocator.template alloc<detail::forward_list_node<T>>();
         if (!memory.has_value()) {

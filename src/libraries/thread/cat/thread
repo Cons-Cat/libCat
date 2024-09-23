@@ -17,8 +17,8 @@ struct thread {
     template <typename... Args>
     auto
     create(is_allocator auto& allocator, idx initial_stack_size,
-           is_invocable<Args...> auto&& function,
-           Args&&... arguments) -> maybe<void> {
+           is_invocable<Args...> auto&& function, Args&&... arguments)
+        -> maybe<void> {
         scaredy result = m_handle.create(allocator, initial_stack_size,
                                          fwd(function), fwd(arguments)...);
         // TODO: A `prop_or` macro can simplify this.

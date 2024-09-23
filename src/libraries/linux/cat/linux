@@ -808,7 +808,8 @@ struct file_handle {
 };
 
 // Syscall 4
-auto sys_stat(cat::str_span file_path) -> cat::scaredy<file_status, linux_error>;
+auto
+sys_stat(cat::str_span file_path) -> cat::scaredy<file_status, linux_error>;
 
 // Syscall 5
 auto sys_fstat(file_descriptor file_descriptor)

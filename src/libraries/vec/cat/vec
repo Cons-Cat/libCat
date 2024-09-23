@@ -238,8 +238,8 @@ make_vec_empty(allocator_type& allocator) -> vec<T, allocator_type> {
 template <typename T, is_allocator allocator_type>
 [[nodiscard]]
 constexpr auto
-make_vec_reserved(allocator_type& allocator,
-                  idx capacity) -> maybe<vec<T, allocator_type>> {
+make_vec_reserved(allocator_type& allocator, idx capacity)
+    -> maybe<vec<T, allocator_type>> {
     vec<T, allocator_type> new_vector(allocator);
     prop(new_vector.reserve(allocator, capacity));
     return new_vector;
@@ -248,8 +248,8 @@ make_vec_reserved(allocator_type& allocator,
 template <typename T, is_allocator allocator_type>
 [[nodiscard]]
 constexpr auto
-make_vec_filled(allocator_type& allocator, idx count,
-                T&& value) -> maybe<vec<T, allocator_type>> {
+make_vec_filled(allocator_type& allocator, idx count, T&& value)
+    -> maybe<vec<T, allocator_type>> {
     vec<T, allocator_type> new_vector(allocator);
     prop(new_vector.reserve(allocator, count));
     new_vector.m_current_size = count;

@@ -2,8 +2,8 @@
 
 // Control the settings of special files, such as stdin or stdout.
 auto
-nix::sys_ioctl(file_descriptor io_descriptor,
-               io_requests request) -> scaredy_nix<void> {
+nix::sys_ioctl(file_descriptor io_descriptor, io_requests request)
+    -> scaredy_nix<void> {
     return syscall<void>(54, io_descriptor, request);
 }
 

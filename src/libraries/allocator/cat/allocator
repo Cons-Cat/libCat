@@ -764,8 +764,8 @@ class allocator_interface {
     template <typename T>
     [[nodiscard]]
     constexpr auto
-    inline_align_nalloc_multi(uword alignment,
-                              idx count) -> maybe_non_zero<idx> {
+    inline_align_nalloc_multi(uword alignment, idx count)
+        -> maybe_non_zero<idx> {
         if (count * sizeof(T) > inline_buffer_size) {
             return this->self().allocation_bytes(alignment, count * sizeof(T));
         }

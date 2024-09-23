@@ -92,8 +92,8 @@ struct monotype_storage {
     }
 
     friend constexpr auto
-    operator==(monotype_storage<T, constant_state> const& self,
-               auto const& rhs) -> bool {
+    operator==(monotype_storage<T, constant_state> const& self, auto const& rhs)
+        -> bool {
         return self.m_storage == rhs;
     }
 

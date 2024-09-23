@@ -39,8 +39,9 @@ using avx2_simd_mask = cat::simd_mask<avx2_abi<T>, T>;
 
 template <typename T>
 [[nodiscard]]
-auto testc(cat::simd_mask<avx2_abi<T>, T> left,
-           cat::simd_mask<avx2_abi<T>, T> right) -> cat::int4;
+auto
+testc(cat::simd_mask<avx2_abi<T>, T> left, cat::simd_mask<avx2_abi<T>, T> right)
+    -> cat::int4;
 
 template <typename T>
 [[nodiscard]]

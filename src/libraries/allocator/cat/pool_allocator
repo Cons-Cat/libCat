@@ -13,9 +13,8 @@ class pool_allocator
 
     // Friend factory functions.
     template <idx in_max_node_bytes>
-    friend constexpr auto
-        make_pool_allocator(uintptr<void>,
-                            idx) -> pool_allocator<in_max_node_bytes>;
+    friend constexpr auto make_pool_allocator(uintptr<void>, idx)
+        -> pool_allocator<in_max_node_bytes>;
 
     template <idx in_max_node_bytes>
     friend constexpr auto
@@ -138,8 +137,8 @@ class pool_allocator
 template <idx max_node_bytes>
 [[nodiscard]]
 constexpr auto
-make_pool_allocator(uintptr<void> p_address,
-                    idx arena_bytes) -> pool_allocator<max_node_bytes> {
+make_pool_allocator(uintptr<void> p_address, idx arena_bytes)
+    -> pool_allocator<max_node_bytes> {
     return pool_allocator<max_node_bytes>(p_address, arena_bytes);
 }
 
