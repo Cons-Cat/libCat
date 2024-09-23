@@ -41,7 +41,13 @@ inline constinit struct {
 //         allocator.free(p_mem1);
 //         allocator.free(p_mem2);
 //     };
-#define defer auto _ = ::cat::detail::deferrer << [&]
+#define CAT_DEFER auto _ = ::cat::detail::deferrer << [&]
+
+// `CAT_DEFER` should never be `#undef`'d. The redefinable macro `defer` exists
+// to make this macro more ergonomic.
+#pragma clang final(CAT_DEFER)
+
+#define defer CAT_DEFER
 
 namespace cat {
 
@@ -155,7 +161,7 @@ inline constexpr cat::monostate_type monostate;
 // Unwrap an error-like container such as `cat::scaredy` or `cat::maybe` iff
 // it holds a value, otherwise propagate it up the call stack. This works due to
 // a GCC extension, statement expressions.
-#define prop(container)                                                         \
+#define CAT_PROPAGATE(container)                                                \
     ({                                                                          \
         using try_type = decltype(container);                                   \
         /* static_assert(cat::is_maybe<try_type>||cat::is_scaredy<try_type>);*/ \
@@ -178,6 +184,12 @@ inline constexpr cat::monostate_type monostate;
         }                                                                       \
         (container).value();                                                    \
     })
+
+// `CAT_PROPAGATE` should never be `#undef`'d. The redefinable macro `prop`
+// exists to make this macro more ergonomic.
+#pragma clang final(CAT_PROPAGATE)
+
+#define prop(container) CAT_PROPAGATE(container)
 
 // TODO: Does this actually have to be in `std::`?
 namespace std {
