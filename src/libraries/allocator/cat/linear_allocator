@@ -58,8 +58,8 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
   private:
     auto
-    allocation_bytes(uword alignment,
-                     idx allocation_bytes) -> maybe_non_zero<idx> {
+    allocation_bytes(uword alignment, idx allocation_bytes)
+        -> maybe_non_zero<idx> {
         uintptr<void> allocation =
             align_down(m_p_arena_current - uword(allocation_bytes), alignment);
 
@@ -154,8 +154,8 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 
 [[nodiscard]]
 constexpr auto
-make_linear_allocator(uintptr<void> p_address,
-                      idx arena_bytes) -> linear_allocator {
+make_linear_allocator(uintptr<void> p_address, idx arena_bytes)
+    -> linear_allocator {
     return linear_allocator(p_address, arena_bytes);
 }
 

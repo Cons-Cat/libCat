@@ -7,8 +7,9 @@
 namespace x64 {
 
 template <string_control control_mask>
-constexpr auto compare_implicit_length_strings(auto const& vector_1,
-                                               auto const& vector_2) -> bool;
+constexpr auto
+compare_implicit_length_strings(auto const& vector_1, auto const& vector_2)
+    -> bool;
 
 template <string_control control_mask>
 constexpr auto

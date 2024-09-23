@@ -36,8 +36,8 @@ class page_allocator : public allocator_interface<page_allocator> {
     constexpr page_allocator(page_allocator&&) = default;
 
     auto
-    allocation_bytes(uword alignment,
-                     idx allocation_bytes) -> maybe_non_zero<idx> {
+    allocation_bytes(uword alignment, idx allocation_bytes)
+        -> maybe_non_zero<idx> {
         // Pages cannot be aligned by greater than 4 kibibytes.
         assert(alignment <= 4_uki);
         // Round `allocation_bytes` up to the nearest 4 kibibytes.

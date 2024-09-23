@@ -4,7 +4,8 @@
 #include <cat/socket>
 #include <cat/string>
 
-auto main(int argc, char* p_argv[]) -> int {
+auto
+main(int argc, char* p_argv[]) -> int {
     cat::socket_unix<cat::socket_type::stream> socket;
     socket.path_name = cat::str_inplace<108>::padded("\0/tmp/temp.sock");
 

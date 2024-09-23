@@ -240,8 +240,8 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
     first() && -> auto&& requires(size >= 1) { return move(this->get<0>()); }
 
     // Move the first stored variable.
-    [[nodiscard]] constexpr auto first()
-        const&& -> auto&& requires(size >= 1) { return move(this->get<0>()); }
+    [[nodiscard]] constexpr auto first() const&& -> auto&& requires(
+        size >= 1) { return move(this->get<0>()); }
 
     // Get a non-`const` reference to the second stored variable.
     constexpr auto second() & -> auto& requires(size >= 2) {
@@ -260,8 +260,8 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
     second() && -> auto&& requires(size >= 2) { return move(this->get<1>()); }
 
     // Move the second stored variable.
-    [[nodiscard]] constexpr auto second()
-        const&& -> auto&& requires(size >= 2) { return move(this->get<1>()); }
+    [[nodiscard]] constexpr auto second() const&& -> auto&& requires(
+        size >= 2) { return move(this->get<1>()); }
 
     // Get a non-`const` reference to the third stored variable.
     constexpr auto third() & -> auto& requires(size >= 3) {
@@ -280,8 +280,8 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
     third() && -> auto&& requires(size >= 3) { return move(this->get<2>()); }
 
     // Move the third stored variable.
-    [[nodiscard]] constexpr auto third()
-        const&& -> auto&& requires(size >= 3) { return move(this->get<2>()); }
+    [[nodiscard]] constexpr auto third() const&& -> auto&& requires(
+        size >= 3) { return move(this->get<2>()); }
 
     // Get a non-`const` reference to the fourth stored variable.
     constexpr auto fourth() & -> auto& requires(size >= 4) {
@@ -300,8 +300,8 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
     fourth() && -> auto&& requires(size >= 4) { return move(this->get<3>()); }
 
     // Move the fourth stored variable.
-    [[nodiscard]] constexpr auto fourth()
-        const&& -> auto&& requires(size >= 4) { return move(this->get<3>()); }
+    [[nodiscard]] constexpr auto fourth() const&& -> auto&& requires(
+        size >= 4) { return move(this->get<3>()); }
 
     // Get a non-`const` reference to the fifth stored variable.
     constexpr auto fifth() & -> auto& requires(size >= 5) {
@@ -320,8 +320,8 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
     fifth() && -> auto&& requires(size >= 5) { return move(this->get<4>()); }
 
     // Move the fifth stored variable.
-    [[nodiscard]] constexpr auto fifth()
-        const&& -> auto&& requires(size >= 5) { return move(this->get<4>()); }
+    [[nodiscard]] constexpr auto fifth() const&& -> auto&& requires(
+        size >= 5) { return move(this->get<4>()); }
 };
 
 // This deduction guide is required for variadic type deduction.

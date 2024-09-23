@@ -20,8 +20,8 @@ namespace detail {
 
     template <typename C, typename Pointed, typename T1, typename... Args>
     constexpr auto
-    invoke_member_function(Pointed C::* f, T1&& t1,
-                           Args&&... args) -> decltype(auto) {
+    invoke_member_function(Pointed C::* f, T1&& t1, Args&&... args)
+        -> decltype(auto) {
         if constexpr (is_function<Pointed>) {
             if constexpr (is_base_of<C, decay<T1>>) {
                 return (fwd(t1).*f)(fwd(args)...);
@@ -45,8 +45,8 @@ namespace detail {
     template <typename T>
     struct invoke_impl_trait {
         template <typename invocable_type, typename... Args>
-        static auto call(invocable_type&& f,
-                         Args&&... args) -> decltype(fwd(f)(fwd(args)...));
+        static auto call(invocable_type&& f, Args&&... args)
+            -> decltype(fwd(f)(fwd(args)...));
     };
 
     template <typename B, typename MT>
@@ -69,9 +69,8 @@ namespace detail {
             -> decltype((invoke_impl_trait::get(fwd(t)).*pmf)(fwd(args)...));
 
         template <typename T>
-        static auto
-        call(MT B::* pmd,
-             T&& t) -> decltype(invoke_impl_trait::get(fwd(t)).*pmd);
+        static auto call(MT B::* pmd, T&& t)
+            -> decltype(invoke_impl_trait::get(fwd(t)).*pmd);
     };
 
     template <typename invocable_type, typename... Args,
@@ -99,8 +98,8 @@ struct invoke_result
 template <typename invocable_type, typename... Args>
 // requires is_invocable<invocable_type, Args...>
 constexpr auto
-invoke(invocable_type&& callable,
-       Args&&... arguments) -> invoke_result<invocable_type, Args...>
+invoke(invocable_type&& callable, Args&&... arguments)
+    -> invoke_result<invocable_type, Args...>
 // noexcept(is_nothrow_invocable<invocable_type, Args...>)
 {
     if constexpr (is_member_pointer<decay<invocable_type>>) {
