@@ -15,7 +15,7 @@ hierarchical memory allocators, and value-based error-handling, among many other
 More essays and videos will come in the future.
 
 * Building
-libCat requires a development version of GCC 15 from the =trunk= branch. Compiling libCat is only tested using =ninja=.
+libCat requires a development version of GCC 15 or Clang 20 from the =trunk= branch. Compiling libCat is only routinely tested using =ninja=.
 Configuring the build requires CMake 3.29.
 #+BEGIN_SRC
   $ cmake -B build/ -G 'Ninja Multi-Config' # or: cmake -B build -GNinja
