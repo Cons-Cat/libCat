@@ -372,13 +372,22 @@ template <auto constant_value>
 struct constant {
     static constexpr auto value = constant_value;
     using type = decltype(constant_value);
+
+    consteval
+    operator type(this auto&& self) {
+        return fwd(self).value;
+    }
 };
 
 template <auto value>
 inline constexpr auto constval = value;
 
+// Boolean-testable values which can be introspected a compile-time to determine
+// that a function always returns true or false.
 using true_trait = constant<true>;
 using false_trait = constant<false>;
+inline constexpr true_trait true_v = true_trait();
+inline constexpr false_trait false_v = false_trait();
 
 namespace detail {
     template <bool, typename T, typename U>
