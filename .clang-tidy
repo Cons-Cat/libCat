@@ -47,9 +47,9 @@ CheckOptions:
   - { key: readability-identifier-naming.TypedefCase,                       value: lower_case }
   - { key: readability-identifier-naming.PointerParameterIgnoredRegexp,     value: '(p+)_.*' }
   - { key: readability-identifier-naming.PointerParameterPrefix,            value: p_ }
-  - { key: readability-identifier-naming.LocalPointerIgnoredRegexp,         value: '(p+)_.*' }
+  - { key: readability-identifier-naming.LocalPointerIgnoredRegexp,         value: '(_|((p+)_.*))' }
   - { key: readability-identifier-naming.LocalPointerPrefix,                value: p_ }
-  - { key: readability-identifier-naming.LocalConstantPointerIgnoredRegexp, value: '(p+)_.*' }
+  - { key: readability-identifier-naming.LocalConstantPointerIgnoredRegexp, value: '(_|((p+)_.*))' }
   - { key: readability-identifier-naming.LocalConstantPointerPrefix,        value: p_ }
   - { key: readability-identifier-naming.PrivateMemberPrefix,               value: m_ }
   - { key: readability-identifier-naming.PrivateMemberIgnoredRegexp,        value: '_' }
