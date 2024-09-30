@@ -87,6 +87,41 @@ class IndexPrinter:
         return str(self.raw)
 
     
+@cat_type('byte')
+class BytePrinter:
+    "Print a `cat::index`"
+
+    def __init__(self, val: gdb.Value):
+        self.value = val['value']
+        return
+
+    def to_string(self):
+        return str(hex(self.value))
+
+    
+@cat_type('span')
+class SpanPrinter:
+    "Print a `cat::span`"
+
+    def __init__(self, val: gdb.Value):
+        self.m_p_data = val['m_p_data']
+        self.m_size: int = val['m_size']['raw']
+        return
+
+    def to_string(self):
+        p_data = self.m_p_data.cast(self.m_p_data.type
+                                  .target()
+                                  .strip_typedefs()
+                                  .pointer())
+
+        array: str = ',\n'.join(['  ['  + str(x) + '] = ' + str(p_data[x])
+                                for x
+                                in range(self.m_size)])
+        
+        return '{' + str(p_data) + ', ' + str(self.m_size) + '}' + ' [\n' \
+            + array \
+            + '\n]'
+
 @cat_type('str_span')
 class StrSpanPrinter:
     "Print a `cat::str_span`"
@@ -103,6 +138,17 @@ class StrSpanPrinter:
                                   .pointer())
         return p_str.lazy_string(length = self.m_size)
 
+
+@cat_type('bit_value')
+class BitValuePrinter:
+    "Print a `cat::bit_value`"
+
+    def __init__(self, val: gdb.Value):
+        self.m_value: gdb.Value = val['m_value']
+
+    def to_string(self):
+        return "1" if bool(self.m_value) else "0"
+    
 
 @cat_type('bitset')
 class BitsetPrinter:
