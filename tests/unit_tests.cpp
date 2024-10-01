@@ -25,7 +25,6 @@ extern constructor_fn __init_array_start[];  // NOLINT
 extern constructor_fn __init_array_end[];    // NOLINT
 }
 
-[[gnu::optimize(0)]]
 auto
 main() -> int {
     // Change the default assert handler.

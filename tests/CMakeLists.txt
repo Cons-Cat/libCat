@@ -38,6 +38,8 @@ if(CAT_BUILD_UNIT_TESTS)
   # TODO: Glob for `.cpp` files here.
   target_sources(
     cat-tests INTERFACE
+	${CMAKE_SOURCE_DIR}/tests/src/test_meta.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_arithmetic.cpp
     #${CMAKE_SOURCE_DIR}/tests/src/test_alloc.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_arrays.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_compare_strings.cpp
@@ -45,8 +47,6 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_linear_allocator.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_pool_allocator.cpp
     #${CMAKE_SOURCE_DIR}/tests/src/test_list.cpp
-	${CMAKE_SOURCE_DIR}/tests/src/test_meta.cpp
-    ${CMAKE_SOURCE_DIR}/tests/src/test_arithmetic.cpp
     # ${CMAKE_SOURCE_DIR}/tests/src/test_math.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_maybe.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_paging_memory.cpp
