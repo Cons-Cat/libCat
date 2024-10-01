@@ -156,13 +156,13 @@ class linear_allocator : public allocator_interface<linear_allocator> {
 constexpr auto
 make_linear_allocator(uintptr<void> p_address, idx arena_bytes)
     -> linear_allocator {
-    return linear_allocator(p_address, arena_bytes);
+    return {p_address, arena_bytes};
 }
 
 [[nodiscard]]
 constexpr auto
 make_linear_allocator(span<byte>& span) -> linear_allocator {
-    return linear_allocator(span.data(), span.size());
+    return {span.data(), span.size()};
 }
 
 [[nodiscard,

@@ -518,7 +518,7 @@ class maybe {
     constexpr maybe(U& input) : m_storage(static_cast<value_type>(input)) {
     }
 
-    // Perfect forwarding constructor.
+    // Move constructor.
     template <rvalue U>
         requires(!is_reference<value_type> &&
                  is_implicitly_convertible<U, value_type>)
@@ -539,7 +539,7 @@ class maybe {
         m_storage.assign(input);
     }
 
-    template <typename U>
+    template <rvalue U>
         requires(is_implicitly_convertible<U, value_type>)
     constexpr maybe(maybe<U>&& input) {
         m_storage.assign(move(input));

@@ -16,13 +16,16 @@ TEST(test_pool_allocator) {
     cat::verify(*p_int1 == 10);
 
     // Make another allocation.
-    int4* p_int2 = allocator.alloc<int4>(20).value();
+    int8* p_int2 = allocator.alloc<int8>(20).value();
     cat::verify(*p_int2 == 20);
 
     // Test allocation limit is correct.
-    for (int4 i = 0; i < (128 / 8) - 2; ++i) {
-        auto _ = allocator.alloc<int4>().verify();
+    // The allocator owns 128 bytes, divided into 16 sections of 8-bytes.
+    // Two allocations have already been made, so 14 remain.
+    for (idx i = 0; i < 14; ++i) {
+        auto* _ = allocator.alloc<int4>(10).verify();
     }
+    // There should now be no remaining allocations, so this fails.
     cat::maybe failed_allocation = allocator.alloc<int4>();
     cat::verify(!failed_allocation.has_value());
 
@@ -32,8 +35,8 @@ TEST(test_pool_allocator) {
     cat::verify(*p_int3 == 30);
 
     // Test freeing memory.
-    for (int4 i = 0; i < (128 / 8) - 1; ++i) {
-        auto _ = allocator.alloc<int4>().verify();
+    for (idx i = 0; i < 15; ++i) {
+        auto* _ = allocator.alloc<int4>().verify();
     }
     failed_allocation = allocator.alloc<int4>();
     cat::verify(!failed_allocation.has_value());

@@ -315,35 +315,42 @@ class strong_ordering {
     static strong_ordering const greater;
 
     // `strong_ordering` must implicitly cast into `partial_ordering`.
+    [[gnu::always_inline]]
     constexpr
     operator partial_ordering() const {
         return partial_ordering{static_cast<detail::order>(this->order)};
     }
 
     // `strong_ordering` must implicitly cast into `weak_ordering`.
+    [[gnu::always_inline]]
     constexpr
     operator weak_ordering() const {
         return weak_ordering{static_cast<detail::order>(this->order)};
     }
 
+    [[gnu::always_inline]]
     friend constexpr auto
     operator==(strong_ordering, strong_ordering) -> bool = default;
 
+    [[gnu::always_inline]]
     friend constexpr auto
     operator<(strong_ordering lhs, strong_ordering rhs) -> bool {
         return lhs.order < rhs.order;
     }
 
+    [[gnu::always_inline]]
     friend constexpr auto
     operator<=(strong_ordering lhs, strong_ordering rhs) -> bool {
         return lhs.order <= rhs.order;
     }
 
+    [[gnu::always_inline]]
     friend constexpr auto
     operator>(strong_ordering lhs, strong_ordering rhs) -> bool {
         return lhs.order > rhs.order;
     }
 
+    [[gnu::always_inline]]
     friend constexpr auto
     operator>=(strong_ordering lhs, strong_ordering rhs) -> bool {
         return lhs.order >= rhs.order;
@@ -358,67 +365,79 @@ class strong_ordering {
         return partial.order == 0;
     }
 
+    [[gnu::always_inline]]
     friend constexpr auto
     operator==(decltype(nullptr), strong_ordering partial) -> bool {
         return partial.order == 0;
     }
 
     // Check inequality with a `0` literal.
+    [[gnu::always_inline]]
     friend constexpr auto
     operator!=(strong_ordering partial, decltype(nullptr)) -> bool {
         return partial.order != 0;
     }
 
+    [[gnu::always_inline]]
     friend constexpr auto
     operator!=(decltype(nullptr), strong_ordering partial) -> bool {
         return partial.order != 0;
     }
 
     // Check less-than with a `0` literal.
+    [[gnu::always_inline]]
     friend constexpr auto
     operator<(strong_ordering partial, decltype(nullptr)) -> bool {
         return partial.order < 0;
     }
 
+    [[gnu::always_inline]]
     friend constexpr auto
     operator<(decltype(nullptr), strong_ordering partial) -> bool {
         return 0 < partial.order;
     }
 
     // Check less-than-or-equal with a `0` literal.
+    [[gnu::always_inline]]
     friend constexpr auto
     operator<=(strong_ordering partial, decltype(nullptr)) -> bool {
         return partial.order <= 0;
     }
 
+    [[gnu::always_inline]]
     friend constexpr auto
     operator<=(decltype(nullptr), strong_ordering partial) -> bool {
         return 0 <= partial.order;
     }
 
     // Check greater-than with a `0` literal.
+    [[gnu::always_inline]]
     friend constexpr auto
     operator>(strong_ordering partial, decltype(nullptr)) -> bool {
         return partial.order > 0;
     }
 
+    [[gnu::always_inline]]
     friend constexpr auto
     operator>(decltype(nullptr), strong_ordering partial) -> bool {
         return 0 > partial.order;
     }
 
     // Check greater-than with a `0` literal.
+    [[gnu::always_inline]]
     friend constexpr auto
     operator>=(strong_ordering partial, decltype(nullptr)) -> bool {
         return partial.order >= 0;
     }
 
+    [[gnu::always_inline]]
     friend constexpr auto
     operator>=(decltype(nullptr), strong_ordering partial) -> bool {
         return 0 >= partial.order;
     }
 
     // Check threeway-comparison with a `0` literal.
+    [[gnu::always_inline]]
     friend constexpr auto
     operator<=>(strong_ordering lhs, decltype(nullptr)) -> strong_ordering {
         // If the `strong_ordering` is a left-hand operand, this always returns
@@ -430,6 +449,7 @@ class strong_ordering {
     // If the `strong_ordering` is `less`, then this should return
     // `greater`. But if `strong_ordering` is `greater`, then this should
     // return `less`.
+    [[gnu::always_inline]]
     friend constexpr auto
     operator<=>(decltype(nullptr), strong_ordering rhs) -> strong_ordering {
         return strong_ordering{static_cast<detail::order>(-rhs.order)};

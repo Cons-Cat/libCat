@@ -26,7 +26,7 @@ class pool_allocator
     constexpr pool_allocator(uintptr<void> p_address, idx arena_bytes)
         : m_nodes(span<node_union>(
               // Pun the opaque `p_address` to the internal `node_union` type.
-              reinterpret_cast<node_union*>(p_address.raw),
+              __builtin_bit_cast(node_union*, p_address.raw),
               arena_bytes / sizeof(node_union))) {
         // Initialize the free list.
         this->reset();
@@ -59,11 +59,8 @@ class pool_allocator
     // Reset the bumped pointer to the beginning of this arena.
     void
     reset() {
-        // TODO: The last node can be skipped in this loop. Is it optimized
-        // away?
-        for (node_union& node : m_nodes) {
-            // Set every node's pointer to the node ahead of it.
-            node.p_next = &node + 1;
+        for (idx i = 0u; i < m_nodes.size() - 1u; ++i) {
+            m_nodes[i].p_next = &(m_nodes[i + 1u]);
         }
         // Mark the final node.
         m_nodes.back().p_next = nullptr;
@@ -79,7 +76,8 @@ class pool_allocator
     auto
     allocate(idx) -> maybe_ptr<void> {
         // If there is a next node in the free list, make that the head and
-        // allocate the current head. Otherwise, do not allocate anything.
+        // allocate the current head to the user. Otherwise, do not allocate
+        // anything.
         if (m_p_head == nullptr) {
             return nullopt;
         }
@@ -124,12 +122,12 @@ class pool_allocator
     // Do not allocate larger than this size of one node.
     static constexpr idx max_allocation_bytes = max_node_bytes;
 
-  private:
     union node_union {
         node_union* p_next = nullptr;
         byte storage[max_node_bytes.raw];
     };
 
+  private:
     span<node_union> m_nodes;
     node_union* m_p_head;
 };

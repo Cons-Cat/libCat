@@ -89,7 +89,7 @@ class IndexPrinter:
     
 @cat_type('byte')
 class BytePrinter:
-    "Print a `cat::index`"
+    "Print a `cat::byte`"
 
     def __init__(self, val: gdb.Value):
         self.value = val['value']
