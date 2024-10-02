@@ -84,9 +84,10 @@ TEST(test_bit) {
     cat::verify(bit5.is_set());
 
     // Assign a `bit_reference` to a `bit_value`.
+    number = 0b10;
     bit1 = bit2;
     cat::verify(bit1);
-    bit1 = bit3;
+    bit1 = bit5;
     cat::verify(!bit1);
 
     // Test `bit_iterator`.
