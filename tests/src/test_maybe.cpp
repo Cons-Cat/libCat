@@ -283,7 +283,7 @@ TEST(test_maybe) {
     cat::verify(monadic_void_ref.has_value());
 
     // The default value of `int4` is `0`.
-    decltype(positive) default_predicate_2{cat::in_place};
+    decltype(positive) default_predicate_2{cat::in_place, 0};
     cat::verify(default_predicate_2.value() == 0);
 
     // Test monadic methods on move-only types.

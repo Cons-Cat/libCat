@@ -3692,8 +3692,8 @@ class allocator_interface {
             // }
         } else {
             // if constexpr (is_destructible<T>) {
-            for (uword i = 0u; i < count; ++i) {
-                p_memory[i.raw].~T();
+            for (unsigned long i = 0u; i < count; ++i) {
+                p_memory[i].~T();
             }
             // }
             this->self().deallocate(static_cast<void const*>(p_memory),
