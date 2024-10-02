@@ -196,8 +196,9 @@ extract_bits(T from, cat::is_unsigned_integral auto offset,
                                               raw_offset | (raw_length << 8)));
         }
     }
+
     constexpr unsigned char bits = sizeof(T) * 8u;
-    auto const mask = T((1u << raw_length) * (raw_length < bits) - 1u).raw;
+    auto const mask = ((1u << raw_length) * (raw_length < bits)) - 1u;
     return T((raw_from >> raw_offset) & (mask * (raw_offset < bits)));
 }
 
@@ -222,7 +223,7 @@ extract_bits_mask(T value, U mask) -> T {
         while (raw_mask != 0u) {
             if (raw_mask & 1) {
                 result >>= 1;
-                result |= raw_value << T(sizeof(T) * 8u - 1u);
+                result |= raw_value << T((sizeof(T) * 8u) - 1u);
                 ++count;
             }
             raw_value >>= 1;
@@ -255,14 +256,14 @@ deposit_bits_mask(T value, U mask) -> T {
         while (raw_mask != 0u) {
             result >>= 1;
             if (raw_mask & 1) {
-                result |= raw_value << T(sizeof(T) * 8u - 1u);
+                result |= raw_value << T((sizeof(T) * 8u) - 1u);
                 raw_value >>= 1;
             }
             raw_mask >>= 1;
             ++count;
         }
 
-        result >>= T(sizeof(T) * 8u - count) * T(count > 0u);
+        result >>= T((sizeof(T) * 8u) - count) * T(count > 0u);
         return result;
     }
 }
@@ -386,6 +387,7 @@ class bit_reference {
     template <is_unsigned_integral T>
     constexpr auto
     assign(storage_type value) -> bit_reference& {
+        assert(has_single_bit(value));
         value & 1u ? set() : unset();
         return *this;
     }
@@ -400,7 +402,7 @@ class bit_reference {
     // Flag this bit off.
     constexpr auto
     unset() -> bit_reference& {
-        m_storage &= ~(m_bit_mask);
+        m_storage &= ~m_bit_mask;
         return *this;
     }
 
@@ -419,9 +421,8 @@ class bit_reference {
 
     [[nodiscard]]
     constexpr auto
-    mask() const -> remove_cv<storage_type> {
+    mask() const -> storage_type const& {
         return m_bit_mask;
-        return *this;
     }
 
   private:
@@ -605,7 +606,8 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
     constexpr bit_iterator(bit_iterator const&) = default;
     constexpr bit_iterator(bit_iterator&&) = default;
 
-    constexpr bit_iterator(iterator const& other, uword current_bit = 0u)
+    constexpr explicit bit_iterator(iterator const& other,
+                                    uword current_bit = 0u)
         : m_internal_iterator(other), m_bit_position(current_bit) {
     }
 
@@ -779,6 +781,8 @@ struct byte {
         return *this;
     }
 };
+
+static_assert(is_trivial<::cat::byte>);
 
 // TODO: Support `volatile` qualified pointers.
 // TODO: Aligned pointer types and alignment casts.

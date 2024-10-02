@@ -15,7 +15,7 @@ static_assert(cat::is_implicitly_constructible<uword, uword>);
 static_assert(!cat::is_implicitly_constructible<idx, uword>);
 static_assert(cat::is_implicitly_constructible<uword, idx>);
 
-TEST(test_numerals) {
+TEST(test_arithmetic) {
     // TODO: Test invalid arithmetic operations with `concept`s like
     // `cat::is_add_assignable<uint4, int4>`.
 
@@ -159,8 +159,10 @@ TEST(test_numerals) {
 
     // Test `int4` constructors and assignment.
     int4 test_int4_1 = 1;
-    int4 test_int4_2;
+    int4 test_int4_2{};
+    cat::verify(test_int4_2 == 0);
     test_int4_2 = 1;
+    cat::verify(test_int4_2 == 1);
 
     // Test `uint4` constructors and assignment.
     uint4 test_uint4_1 = 1u;
@@ -354,6 +356,7 @@ TEST(test_numerals) {
 
     [[maybe_unused]]
     bool is_less = (int_less < int_more);
+    cat::verify(is_less);
     is_less = ((0 <=> int_more) < 0);  // NOLINT
     cat::verify(is_less);
     is_less = (0 < int_more);
