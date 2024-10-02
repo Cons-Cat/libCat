@@ -486,6 +486,12 @@ class maybe {
         m_storage.construct(args...);
     }
 
+    // template <typename... Args>
+    //     requires(!is_reference<value_type>)
+    // constexpr maybe(in_place_type, initializer_list<Args...> ilist) {
+    //     m_storage.construct(ilist);
+    // }
+
     // Forward all constructors to the `storage` member.
 
     // A reference type cannot be copy-constructed, but other types can.
