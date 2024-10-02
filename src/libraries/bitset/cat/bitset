@@ -98,7 +98,7 @@ class bitset {
         if constexpr (total_bytes > word_bytes) {
             // If the bitset is larger than a word, wrap the bit offset by the
             // size of a word.
-            bit_offset &= static_cast<uword>(word_bits) - 1u;
+            bit_offset &= word_bits - 1u;
         }
 
         return bit_reference<array_type_element>::from_offset(index_byte,

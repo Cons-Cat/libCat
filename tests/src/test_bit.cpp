@@ -6,28 +6,28 @@ TEST(test_bit) {
     using namespace cat::arithmetic_literals;
 
     // Test clz().
-    static_assert(cat::countl_zero(0X7FFFFFFFFFFFFFFFu) == 1);
+    static_assert(cat::countl_zero(0X7FFFFFFF'FFFFFFFFu) == 1);
     static_assert(cat::countl_zero(0X7FFFFFFFu) == 1);
-    static_assert(cat::countl_one(0X7FFFFFFFFFFFFFFFu) == 0);
+    static_assert(cat::countl_one(0X7FFFFFFF'FFFFFFFFu) == 0);
     static_assert(cat::countl_one(0X7FFFFFFFu) == 0);
 
     // Test ctz().
-    static_assert(cat::countr_zero(0XFFFFFFFFFFFFFFFEu) == 1);
+    static_assert(cat::countr_zero(0XFFFFFFFF'FFFFFFFEu) == 1);
     static_assert(cat::countr_zero(0XFFFFFFFEu) == 1);
-    static_assert(cat::countr_one(0XFFFFFFFFFFFFFFFEu) == 0);
+    static_assert(cat::countr_one(0XFFFFFFFF'FFFFFFFEu) == 0);
     static_assert(cat::countr_one(0XFFFFFFFEu) == 0);
 
     // Test popcnt().
-    static_assert(cat::popcount(0b0101010011u) == 5);
-    static_assert(cat::popcount(0b010101001ull) == 4);
-    static_assert(cat::popcount(0b010101001_u8) == 4);
-    static_assert(cat::popcount(0b010101011_u1) == 5);
+    static_assert(cat::popcount(0b01'0101'0011u) == 5);
+    static_assert(cat::popcount(0b0'1010'1001ull) == 4);
+    static_assert(cat::popcount(0b0'1010'1001_u8) == 4);
+    static_assert(cat::popcount(0b0'1010'1011_u1) == 5);
 
     // Test bextr().
     static_assert(x64::extract_bits(uint1::max() >> 1, 4u, 4u) == 0b0111u);
     static_assert(x64::extract_bits(uint1::max(), 4u, 4u) == 0b1111u);
     static_assert(x64::extract_bits(uint1::max() >> 1, 0u, 4u) == 0b1111u);
-    static_assert(x64::extract_bits(uint1::max() >> 1, 0u, 5u) == 0b11111u);
+    static_assert(x64::extract_bits(uint1::max() >> 1, 0u, 5u) == 0b1'1111u);
 
     static_assert(x64::extract_bits(uint4::max() >> 1, 27u, 4u) == 0b1111u);
     static_assert(x64::extract_bits(uint4::max() >> 1, 28u, 4u) == 0b0111u);
@@ -48,6 +48,7 @@ TEST(test_bit) {
     // Test `bit_value`.
     cat::bit_value bit1 = false;
     bit1 = true;
+    cat::verify(bit1.is_set());
     cat::verify(~bit1 == false);
     cat::verify(~~bit1 == true);
     cat::verify(false == ~bit1);
@@ -57,20 +58,20 @@ TEST(test_bit) {
     // Test `bit_reference`
     unsigned char number = 0u;
     cat::bit_reference bit2 =
-        cat::bit_reference<unsigned char>::from_mask(number, 1u);
+        cat::bit_reference<unsigned char>::from_mask(number, 0b0000'0010u);
     bit2 = true;
-    cat::verify(bit1.is_set());
-    cat::verify(bit1 == true);
     cat::verify(bit2.is_set());
+    cat::verify(bit2 == true);
     cat::verify(bit2);
-
-    cat::bit_reference bit3 = bit1;
-    bit3.set();
-    cat::verify(bit3 == true);
     cat::verify(number != 0u);
 
+    cat::bit_reference bit3 = bit1;
+    cat::verify(bit3 == true);
+    bit3.unset();
+    cat::verify(bit3 == false);
+
     cat::bit_reference bit4 =
-        cat::bit_reference<unsigned char>::from_offset(number, 0u);
+        cat::bit_reference<unsigned char>::from_offset(number, 1u);
     cat::bit_reference bit5 =
         cat::bit_reference<unsigned char>::from_offset(number, 5u);
     cat::verify(bit4.is_set());
@@ -84,22 +85,34 @@ TEST(test_bit) {
 
     // Assign a `bit_reference` to a `bit_value`.
     bit1 = bit2;
+    cat::verify(bit1);
     bit1 = bit3;
+    cat::verify(!bit1);
 
     // Test `bit_iterator`.
     cat::array<uint4, 4u> array(0u, cat::uint4_max, 0u, 0u);
-    cat::bit_iterator it = array.begin();
+    cat::bit_iterator it(array.begin());
+
+    // 1st bit of 1st uint4 is 0:
     cat::verify(*it == false);
+
+    // 32nd bit of 1st uint4 is 0:
     cat::verify(*(it + 31) == false);
+
+    // 1st bit of 2nd uint4 is 1:
     cat::verify(*(it + 32) == true);
+
+    // 2nd bit of 2nd uint4 is 1:
     it += 33u;
     cat::verify(*it == true);
 
+    // The next 30 bits are 1:
     for (int4 i = 0; i < 30; ++i) {
         ++it;
         cat::verify(*it == true);
     }
 
+    // 1st bit of 3rd uint4 is 0:
     it++;
     cat::verify(*it == false);
 }
