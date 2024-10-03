@@ -81,24 +81,12 @@ template <is_unsigned_integral T>
 constexpr auto
 countl_zero(T value) -> idx {
     auto raw_value = make_raw_arithmetic(value);
-
     if (raw_value == 0) {
         // It is undefined behavior to pass 0 into clz.
-        return idx(sizeof(T) * 8);
+        return sizeof(T) * 8;
     }
 
-    // `clz()` is a portable intrinsic.
-
-    if constexpr (sizeof(raw_value) == 4) {
-        return idx(__builtin_clz(raw_value));
-    } else if constexpr (sizeof(raw_value) == 8) {
-        return idx(__builtin_clzll(raw_value));
-    } else {
-        while (raw_value >>= 1) {
-            ++raw_value;
-        }
-        return idx(sizeof(T) - raw_value);
-    }
+    return __builtin_clzg(raw_value);
 }
 
 template <is_unsigned_integral T>
@@ -108,7 +96,7 @@ countl_one(T value) -> idx {
     auto raw_value = make_raw_arithmetic(value);
     return raw_value != limits<T>::max()
                ? countl_zero(static_cast<T>(~(raw_value)))
-               : idx(sizeof(T) * 8u);
+               : sizeof(T) * 8u;
 }
 
 template <is_unsigned_integral T>
@@ -116,19 +104,12 @@ template <is_unsigned_integral T>
 constexpr auto
 countr_zero(T value) -> idx {
     auto raw_value = make_raw_arithmetic(value);
-
     if (raw_value == 0) {
         // It is undefined behavior to pass 0 into ctz.
-        return idx(sizeof(T) * 8u);
+        return sizeof(T) * 8;
     }
 
-    // `ctz()` is a portable intrinsic.
-
-    if constexpr (sizeof(raw_value) <= 4) {
-        return idx(__builtin_ctz(raw_value));
-    } else if constexpr (sizeof(raw_value) == 8) {
-        return idx(__builtin_ctzll(raw_value));
-    }
+    return __builtin_ctzg(raw_value);
 }
 
 template <is_unsigned_integral T>
@@ -144,22 +125,7 @@ template <is_unsigned_integral T>
 constexpr auto
 popcount(T value) -> iword {
     auto raw_value = make_raw_arithmetic(value);
-    if constexpr (__has_builtin(__builtin_popcount)) {
-        if constexpr (sizeof(T) <= 4) {
-            return __builtin_popcount(raw_value);
-        } else {
-            return __builtin_popcountll(raw_value);
-        }
-    } else {
-        // This should only be used if there is no intrinsic, otherwise integers
-        // promote to `unsigned int` for `__builtin_popcount()`.
-        iword result = 0;
-        for (; raw_value; raw_value >>= 1) {
-            result += iword(raw_value & 1u);
-        }
-
-        return result;
-    }
+    return __builtin_popcountg(raw_value);
 }
 
 // If `value` is a power of two, or in other words, has exactly one set bit.
