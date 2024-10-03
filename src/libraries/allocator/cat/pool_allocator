@@ -59,7 +59,7 @@ class pool_allocator
     // Reset the bumped pointer to the beginning of this arena.
     void
     reset() {
-        for (idx i = 0u; i < m_nodes.size() - 1u; ++i) {
+        for (idx i; i < m_nodes.size() - 1u; ++i) {
             m_nodes[i].p_next = &(m_nodes[i + 1u]);
         }
         // Mark the final node.

@@ -41,7 +41,7 @@ TEST(test_bitset) {
     cat::verify(bits7_2.none_of());
     cat::verify(!bits7_2.any_of());
 
-    bits7_2 = cat::bitset<7u>::from(0b0111'1111_u1);
+    bits7_2 = cat::bitset<7u>::from(0b1111'1110_u1);
     cat::verify(bits7_2.all_of());
     cat::verify(!bits7_2.none_of());
     cat::verify(bits7_2.any_of());
@@ -61,11 +61,13 @@ TEST(test_bitset) {
     cat::verify(bits127.none_of());
     cat::verify(!bits127.any_of());
 
-    // The 128th bit is off, all_of others are on.
+    // The 128th bit is off, all_of others are on. The lowest bit is off, which
+    // is ignored by a 127-bit bitset.
     bits127 =
-        cat::bitset<127>::from(cat::uint8_max >> 1u, 0xFFFFFFFF'FFFFFFFF_u8);
-    cat::verify(bits127.leading_bytes_bits == 63u);
-    cat::verify(bits127.all_of());
+        cat::bitset<127>::from(cat::uint8_max << 1u, 0xFFFFFFFF'FFFFFFFEul);
+    static_assert(bits127.leading_bytes_bits == 63u);
+    static_assert(bits127.leading_skipped_bits == 1u);
+    cat::verify(!bits127.all_of());
     cat::verify(!bits127.none_of());
     cat::verify(bits127.any_of());
     cat::verify(bits127.countl_zero() == 0u);

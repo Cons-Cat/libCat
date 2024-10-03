@@ -6,12 +6,12 @@
 using namespace cat::literals;
 using namespace cat::integers;
 
-constinit inline idx tests_run = 0;
+constinit inline idx tests_run;
 constinit inline bool last_ctor_was_test = false;
 constinit inline cat::page_allocator pager;
 
-constinit inline idx tests_passed = 0;
-constinit inline idx tests_failed = 0;
+constinit inline idx tests_passed;
+constinit inline idx tests_failed;
 
 [[noreturn]]
 void test_fail(cat::source_location const& source_location);

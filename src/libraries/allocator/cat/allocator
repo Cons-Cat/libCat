@@ -4256,7 +4256,7 @@ class allocator_interface {
             copy_memory(__builtin_addressof(this->get(handle)),
                         __builtin_addressof(allocation), handle.raw_size());
         } else {
-            for (idx i = 0u; i < handle.size(); ++i) {
+            for (idx i; i < handle.size(); ++i) {
                 *(__builtin_addressof(this->get(allocation)) + i) =
                     move(*(__builtin_addressof(this->get(handle)) + i));
             }
@@ -4275,7 +4275,7 @@ class allocator_interface {
             }
             return;
         }
-        for (idx i = 0u; i < old_count; ++i) {
+        for (idx i; i < old_count; ++i) {
             *(p_new_handle + i) = move(*(p_old_handle + i));
         }
     }
@@ -4300,7 +4300,7 @@ class allocator_interface {
             }
             return;
         }
-        for (idx i = 0u; i < old_count; ++i) {
+        for (idx i; i < old_count; ++i) {
             new_handle[i] = move(*(p_old_handle + i.raw));
         }
     }

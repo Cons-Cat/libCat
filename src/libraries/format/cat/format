@@ -150,7 +150,7 @@ to_string_at(arithmetic<T> value, span<char> output_buffer) -> maybe<str_span> {
     }
 
     if consteval {
-        for (idx i = 0u; i < length; ++i) {
+        for (idx i; i < length; ++i) {
             output_buffer[i] = buffer[i.raw];
         }
     } else {
@@ -375,7 +375,7 @@ namespace detail {
             this->packed_args_storage[0] = {};
             this->arguments_indices[0] = {};
             this->arguments_indices[0].byte_index = 0u;
-            idx argument_index = 0u;
+            idx argument_index;
             // `store_argument()` increments `argument_index`.
             (this->store_argument(argument_index, fwd(arguments)), ...);
         }
@@ -669,7 +669,7 @@ namespace detail {
         // char const* p_first = format.data();
         // char const* p_last = format.data() + format.size();
         str_span remainder = format;
-        idx current_argument = 0;
+        idx current_argument;
 
         // Parse the entire string:
         while (remainder.size() > 0) {
@@ -692,7 +692,7 @@ namespace detail {
 
             // If there is an argument, then copy over all text leading up to
             // the next argument.
-            for (idx i = 0; i < to_open_brace; ++i) {
+            for (idx i; i < to_open_brace; ++i) {
                 // TODO: Optimize this with a multiple-insert overload.
                 maybe result = handler.output_iterator.insert(handler.allocator,
                                                               remainder[i]);
@@ -716,7 +716,7 @@ namespace detail {
 
                 // TODO: Optimize this with a multiple-insert
                 // overload.
-                for (idx i = 0u; i < int_string.size() - 1u; ++i) {
+                for (idx i; i < int_string.size() - 1u; ++i) {
                     auto _ = handler.output_iterator.insert(handler.allocator,
                                                             int_string[i]);
                 }

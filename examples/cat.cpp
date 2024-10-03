@@ -39,7 +39,7 @@ read_and_print_file(char* p_file_name) {
     idx const file_size = idx(get_file_size(file_descriptor).value());
     idx bytes_remaining = file_size;
     idx blocks = file_size / block_size;
-    idx current_block = 0;
+    idx current_block;
     if (file_size % block_size > 0) {
         blocks++;
     }

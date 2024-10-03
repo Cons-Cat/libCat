@@ -114,7 +114,7 @@ class list : public collection_interface<list<T>, T> {
         array values = {fwd(initializers)...};
         // TODO: Optimize memory allocations with a multiple `.push_back()`
         // overload.
-        for (idx i = 0; i < sizeof...(Args); ++i) {
+        for (idx i; i < sizeof...(Args); ++i) {
             maybe result = new_list.push_back(allocator, values[i]);
             if (!result.has_value()) {
                 return nullopt;
@@ -467,7 +467,7 @@ class list : public collection_interface<list<T>, T> {
   private:
     detail::list_node<T>* m_p_head;
     detail::list_node<T>* m_p_tail;
-    idx m_length = 0;
+    idx m_length;
 };
 
 // TODO: Move this to a separate file.
@@ -752,7 +752,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
         if (m_length > 0) {
             iterator_type previous_it = nullptr;
             iterator_type current_it = this->begin();
-            idx i = 0u;
+            idx i;
 
             while (i < m_length) {
                 if (i > 0) {
@@ -785,7 +785,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
   private:
     detail::forward_list_node<T>* m_p_head;
     detail::forward_list_node<T>* m_p_tail;
-    idx m_length = 0;
+    idx m_length;
 };
 
 }  // namespace cat

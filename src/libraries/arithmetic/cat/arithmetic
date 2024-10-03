@@ -1325,7 +1325,7 @@ struct index :
 
     static constexpr overflow_policies policy = overflow_policy;
 
-    __SIZE_TYPE__ raw;
+    __SIZE_TYPE__ raw = 0uz;
 
     constexpr index() = default;
     constexpr index(index const&) = default;

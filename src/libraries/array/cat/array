@@ -135,7 +135,7 @@ template <idx length, typename T>
 constexpr auto
 make_array_filled(T const& value) -> array<T, length> {
     array<T, length> array;
-    for (idx i = 0; i < length; ++i) {
+    for (idx i; i < length; ++i) {
         array[i] = value;
     }
     return array;

@@ -25,7 +25,7 @@ TEST(test_thread) {
     cat::thread thread;
     cat::page_allocator allocator;
     thread.create(allocator, 2_uki, function).or_exit("Failed to make thread!");
-    for (idx i = 0; i < 10; ++i) {
+    for (idx i; i < 10; ++i) {
         // auto _ = cat::println("Boo!");
     }
     thread.join().or_exit("Failed to join thread!");

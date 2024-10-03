@@ -79,7 +79,7 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
         // workaround.
         if consteval {
             T* p_new = new T[minimum_capacity.raw];
-            for (idx i = 0u; i < m_current_size; ++i) {
+            for (idx i; i < m_current_size; ++i) {
                 construct_at(p_new + i, move(m_p_data[i.raw]));
             }
             for (idx i = m_current_size + 1u; i < minimum_capacity; ++i) {
@@ -217,7 +217,7 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
 // allocator_type>> {
 //     vec<T, allocator_type> new_vector;
 //     prop(new_vector.reserve(allocator, sizeof...(Us)));
-//     for (idx i = 0; i < sizeof...(Us); ++i) {
+//     for (idx i; i < sizeof...(Us); ++i) {
 //         new_vector[i] = ;
 //     }
 //     return new_vector;
