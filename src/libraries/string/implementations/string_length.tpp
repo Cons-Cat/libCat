@@ -10,7 +10,7 @@
 constexpr auto
 cat::string_length(char const* p_string) -> idx {
     if consteval {
-        idx result = 0u;
+        idx result;
         while (true) {
             if (p_string[result.raw] == '\0') {
                 return result;
@@ -21,7 +21,7 @@ cat::string_length(char const* p_string) -> idx {
         // TODO: Implement with portable SIMD, and tune performance.
         constexpr char1x16 zeros = '\0';
 
-        for (idx i = 0u;; i += 16u) {
+        for (idx i;; i += 16u) {
             // TODO: `.raw` should not be necessary here.
             char1x16 const data = char1x16::loaded(p_string + i.raw);
             constexpr x64::string_control mask =

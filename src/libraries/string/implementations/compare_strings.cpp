@@ -21,14 +21,14 @@ cat::compare_strings(str_span const string_1, str_span const string_2) -> bool {
 
     auto loop = [&](uword size) -> bool {
         while (length_iterator >= vector_size * size) {
-            for (idx i = 0u; i < size; ++i) {
+            for (idx i; i < size; ++i) {
                 // TODO: This should work without `.raw`.
                 vectors_1[i].load(string_1.data() + (i * size).raw);
                 vectors_2[i].load(string_2.data() + (i * size).raw);
                 comparisons[i] = (vectors_1[i] == vectors_2[i]);
             }
 
-            for (idx i = 0u; i < size; ++i) {
+            for (idx i; i < size; ++i) {
                 // If any lanes are not equal to each other:
                 if (!comparisons[i].all_of()) {
                     return false;

@@ -741,6 +741,10 @@ TEST(test_arithmetic) {
     test_uword = 200_uz - 100_u4;
     test_uword = 200_uz - 100_u8;
 
+    test_uword = 0u;
+    test_uword |= 1u;
+    cat::verify(test_uword == 1u);
+
     // TODO: Fill this section out.
 
     // Test floats.

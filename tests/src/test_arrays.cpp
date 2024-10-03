@@ -48,7 +48,7 @@ TEST(test_arrays) {
     }();
 
     // Test that the array is iterable.
-    idx count = 0u;
+    idx count;
     for (int& a : array_1) {
         cat::verify(a == array_1[count]);
         ++count;
@@ -131,12 +131,12 @@ TEST(test_arrays) {
 
     // Test array fill.
     cat::array filled_array = cat::make_array_filled<8>(6_i4);
-    for (idx i = 0; i < 8; ++i) {
+    for (idx i; i < 8; ++i) {
         cat::verify(filled_array[i] == 6);
     }
 
     filled_array.fill(9);
-    for (idx i = 0; i < 8; ++i) {
+    for (idx i; i < 8; ++i) {
         cat::verify(filled_array[i] == 9);
     }
 

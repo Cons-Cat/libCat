@@ -204,7 +204,7 @@ class str_inplace : public collection_interface<str_inplace<length>, char>,
     padded(char const (&in)[in_length]) -> str_inplace<length> {
         idx idx_length = idx(in_length);  // Convert length to `idx`.
         str_inplace<length> string;
-        for (idx i = 0u; i < idx_length; ++i) {
+        for (idx i; i < idx_length; ++i) {
             string[i] = in[i.raw];
         }
         for (idx i = idx_length; i < length; ++i) {
