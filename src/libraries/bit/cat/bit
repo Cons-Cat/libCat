@@ -93,10 +93,7 @@ template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 countl_one(T value) -> idx {
-    auto raw_value = make_raw_arithmetic(value);
-    return raw_value != limits<T>::max()
-               ? countl_zero(static_cast<T>(~(raw_value)))
-               : sizeof(T) * 8u;
+    return countl_zero(~value);
 }
 
 template <is_unsigned_integral T>
@@ -116,8 +113,7 @@ template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 countr_one(T value) -> idx {
-    return value != limits<T>::max() ? countl_one(static_cast<T>(~value))
-                                     : idx(sizeof(T) * 8u);
+    return countr_zero(~value);
 }
 
 template <is_unsigned_integral T>
