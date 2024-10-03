@@ -194,29 +194,19 @@ class bitset {
     all_of() const -> bool {
         // TODO: Make this branchless where possible.
 
-        // Iterate through all bytes:
-        for (idx current_byte = 0u; current_byte < storage_array_size;
-             ++current_byte) {
-            auto const& it = m_data[current_byte];
-            using T = array_type_element;
-
-            if (current_byte > 0u ||
-                constant_evaluate(has_single_bit(bits_count))) {
-                if (it != it.max()) {
-                    // If at least one bit is 0:
-                    return false;
-                }
-            } else {
-                // Leading bits of the leading byte should not be considered
-                // part of the bitset, so they are masked off.
-                T const mask = T((T(1u) << leading_bytes_bits) - T(1u));
-
-                if (it != mask) {
-                    return false;
-                }
+        // For all but the last array element, compare against a full byte.
+        for (idx i; i < m_data.size() - 1; ++i) {
+            if (m_data[i] != array_type_element::max()) {
+                // If at least one bit is 0:
+                return false;
             }
         }
-        return true;
+
+        // On the last array element, compare against a bitmask.
+        // Leading bits of the leading byte should not be considered
+        // part of the bitset, so they are masked on unconditionally.
+        auto const mask = (array_type_element(1u) << (leading_skipped_bits))--;
+        return (m_data[m_data.size() - 1] | mask) == array_type_element::max();
     }
 
     // Evaluate true if at least one bit in this bitset is 1.
@@ -242,19 +232,9 @@ class bitset {
     [[nodiscard]]
     constexpr auto
     countl_zero() const -> idx {
-        // prefixed by ``.
-        constexpr idx skip_bits =
-            idx(sizeof(array_type_element) * 8u - leading_bytes_bits);
-
-        idx count = cat::countl_zero(m_data[0u]);
-        if (count != sizeof(array_type_element) * 8u) {
-            return count - skip_bits;
-        }
-
-        count -= skip_bits;
-
-        for (idx i = 1u; i < storage_array_size; ++i) {
-            idx next_count = cat::countl_zero(m_data[i]);
+        idx count;
+        for (auto&& bytes : m_data) {
+            idx next_count = cat::countl_zero(bytes);
             count += next_count;
 
             // If any 1s are found, skip remaining bytes.
@@ -270,12 +250,27 @@ class bitset {
     [[nodiscard]]
     constexpr auto
     countr_zero() const -> idx {
-        idx count = cat::countr_zero(m_data[storage_array_size - 1u]);
-        if (count != sizeof(array_type_element) * 8u) {
-            return count;
+        idx count;
+
+        // Iff `leading_skipped_bits` is not zero, then the first iteration of
+        // this loop requires special handling to prevent leading bits from
+        // being considered in the ctz.
+        constexpr bool has_prologue = (leading_skipped_bits != 0u);
+        if constexpr (has_prologue) {
+            // This mask is all one bits except for the leading zero bits.
+            constexpr array_type_element mask =
+                ~((array_type_element(1u) << leading_skipped_bits) - 1u);
+            // Set leading bits to zero, and then subtract them from the count.
+            count += cat::countr_zero(m_data[storage_array_size - 1u] & mask) -
+                     leading_skipped_bits;
+
+            // If any zeros were found, return early.
+            if (count != storage_element_size * 8u - leading_skipped_bits) {
+                return count;
+            }
         }
 
-        for (idx i = storage_array_size - 2u; i >= 0u; --i) {
+        for (idx i = storage_array_size - 1u - has_prologue; i >= 0u; --i) {
             idx next_count = cat::countr_zero(m_data[i]);
             count += next_count;
 

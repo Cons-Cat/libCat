@@ -93,7 +93,8 @@ template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 countl_one(T value) -> idx {
-    return countl_zero(~value);
+    // For non-`cat` integers, `~` might cast to `int`.
+    return countl_zero(static_cast<T>(~value));
 }
 
 template <is_unsigned_integral T>
@@ -113,7 +114,8 @@ template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 countr_one(T value) -> idx {
-    return countr_zero(~value);
+    // For non-`cat` integers, `~` might cast to `int`.
+    return countr_zero(static_cast<T>(~value));
 }
 
 template <is_unsigned_integral T>
