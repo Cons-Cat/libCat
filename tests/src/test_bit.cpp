@@ -6,22 +6,46 @@ TEST(test_bit) {
     using namespace cat::arithmetic_literals;
 
     // Test clz().
-    static_assert(cat::countl_zero(0X7FFFFFFF'FFFFFFFFu) == 1);
-    static_assert(cat::countl_zero(0X7FFFFFFFu) == 1);
-    static_assert(cat::countl_one(0X7FFFFFFF'FFFFFFFFu) == 0);
-    static_assert(cat::countl_one(0X7FFFFFFFu) == 0);
+    static_assert(cat::countl_zero(0x7FFFFFFF'FFFFFFFFu) == 1);
+    static_assert(cat::countl_zero(0x7FFFFFFFu) == 1);
+    static_assert(cat::countl_one(0x7FFFFFFF'FFFFFFFFu) == 0);
+    static_assert(cat::countl_one(0x7FFFFFFFu) == 0);
+
+    static_assert(cat::countl_zero(0xFFFFFFFF_u4) == 0);
+    static_assert(cat::countl_zero(0xFFFFFFFF'FFFFFFFF_u8) == 0);
+
+    static_assert(cat::countl_zero(0x0FFFFFFF_u4) == 4);
+    static_assert(cat::countl_zero(0x0FFFFFFF'FFFFFFFF_u8) == 4);
 
     // Test ctz().
-    static_assert(cat::countr_zero(0XFFFFFFFF'FFFFFFFEu) == 1);
-    static_assert(cat::countr_zero(0XFFFFFFFEu) == 1);
-    static_assert(cat::countr_one(0XFFFFFFFF'FFFFFFFEu) == 0);
-    static_assert(cat::countr_one(0XFFFFFFFEu) == 0);
+    static_assert(cat::countr_zero(0xFFFFFFFF'FFFFFFFEu) == 1);
+    static_assert(cat::countr_zero(0xFFFFFFFEu) == 1);
+    static_assert(cat::countr_one(0xFFFFFFFF'FFFFFFFEu) == 0);
+    static_assert(cat::countr_one(0xFFFFFFFEu) == 0);
+
+    // Test small integers.
+    static_assert(cat::countl_zero(0x0F_u1) == 4);
+    cat::verify(cat::countl_zero(0x0F_u1) == 4);
+    static_assert(cat::countr_zero(0x0F_u1) == 0);
+    cat::verify(cat::countr_zero(0x0F_u1) == 0);
+
+    static_assert(cat::countr_zero(0xF0_u1) == 4);
+    cat::verify(cat::countr_zero(0xF0_u1) == 4);
+
+    static_assert(cat::countl_zero(0x0FFF_u2) == 4);
+    cat::verify(cat::countl_zero(0x0FFF_u2) == 4);
+    static_assert(cat::countr_zero(0x0FFF_u2) == 0);
+    cat::verify(cat::countr_zero(0x0FFF_u2) == 0);
+
+    static_assert(cat::countr_zero(0xFFF0_u2) == 4);
+    cat::verify(cat::countr_zero(0xFFF0_u2) == 4);
 
     // Test popcnt().
     static_assert(cat::popcount(0b01'0101'0011u) == 5);
     static_assert(cat::popcount(0b0'1010'1001ull) == 4);
     static_assert(cat::popcount(0b0'1010'1001_u8) == 4);
     static_assert(cat::popcount(0b0'1010'1011_u1) == 5);
+    static_assert(cat::popcount(0b0'1010'1011_u2) == 5);
 
     // Test bextr().
     static_assert(x64::extract_bits(uint1::max() >> 1, 4u, 4u) == 0b0111u);
