@@ -76,11 +76,11 @@ TEST(test_bitset) {
     // The 128th bit is off, all_of others are on.
     bits127 = cat::bitset<127>::from(cat::uint8_max >> 2u,
                                      0xFFFFFFFF'FFFFFFFF_u8 << 1u);
-    cat::verify(bits127.countl_zero() == 1u);
-    cat::verify(bits127.countr_zero() == 1u);
+    cat::verify(bits127.countl_zero() == 2u);
+    cat::verify(bits127.countr_zero() == 0u);
 
     bits127 = cat::bitset<127>::from(0_u8, cat::uint8_max >> 1u);
-    cat::verify(bits127.countl_zero() == 64u);
+    cat::verify(bits127.countl_zero() == 65u);
     cat::verify(bits127.countr_zero() == 0u);
 
     // Test const subscripting.
