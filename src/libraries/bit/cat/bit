@@ -391,7 +391,12 @@ class bit_reference {
 
   private:
     storage_type& m_storage;
-    remove_cv<storage_type> m_bit_mask;
+
+    // If this references a `bit_value`, the type would be `bool`, which can be
+    // problematic and confusing for bit operations such as negation.
+    using mask_integer_type =
+        conditional<is_same<storage_type, bool>, unsigned char, storage_type>;
+    remove_cv<mask_integer_type> m_bit_mask;
 };
 
 template <is_same<bit_value> T>
