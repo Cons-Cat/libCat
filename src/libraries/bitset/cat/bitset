@@ -37,16 +37,17 @@ class bitset {
 
     static constexpr idx storage_array_size = array_type::size();
 
-    static constexpr idx storage_element_size = idx(sizeof(array_type_element));
+    static constexpr idx storage_element_size = sizeof(array_type_element);
 
-    // The number of bits NOT counted in the first 1, 2, or 4 bytes of this
+    // The number of bits NOT counted in the first 1, 2, 4, or 8 bytes of this
     // bitset.
     static constexpr idx leading_skipped_bits =
         // The number of bits in the entire storage, minus the bits declared for
         // use.
-        (total_bytes * 8u) - bits_count;
+        (sizeof(array_type) * 8u) - bits_count;
 
-    // The number of bits counted in the first 1, 2, or 4 bytes of this bitset.
+    // The number of bits counted in the first 1, 2, 4, or 8 bytes of this
+    // bitset.
     static constexpr idx leading_bytes_bits =
         // Size of this storage, 64 bits or fewer.
         storage_element_size * 8u -

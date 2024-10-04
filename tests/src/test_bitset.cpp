@@ -35,6 +35,9 @@ TEST(test_bitset) {
     static_assert(bits7.leading_skipped_bits == 1);
     static_assert(bits7.leading_bytes_bits == 7u);
 
+    static_assert(sizeof(bits129) == 24u);
+    static_assert(bits129.leading_skipped_bits == 63u);
+
     cat::bitset<7u> bits7_2 = bits7;
     bits7_2 = cat::bitset<7u>::from(0x0_u1);
     cat::verify(!bits7_2.all_of());
