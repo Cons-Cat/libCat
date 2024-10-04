@@ -106,6 +106,18 @@ TEST(test_math) {
     static_assert(cat::round_to_pow2(4) == 4);
     static_assert(cat::round_to_pow2(5) == 8);
 
+    // TODO: How should rounding functions handle negative inputs?
+
+    // Test `round_up_to_multiple_of()`.
+    static_assert(cat::round_up_to_multiple_of(5, 2) == 6);
+    static_assert(cat::round_up_to_multiple_of(5u, 1) == 5u);
+    static_assert(cat::round_up_to_multiple_of(5, 8) == 8);
+
+    // Test `round_down_to_multiple_of()`.
+    static_assert(cat::round_down_to_multiple_of(5, 2) == 4);
+    static_assert(cat::round_down_to_multiple_of(5u, 1) == 5u);
+    static_assert(cat::round_down_to_multiple_of(5, 8) == 0);
+
     // Test `clamp()`.
     cat::verify(cat::clamp(-10, 0, 10) == 0);
     cat::verify(cat::clamp(5, 0, 10) == 5);
