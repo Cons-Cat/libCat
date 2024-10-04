@@ -563,20 +563,18 @@ template <typename iterator>
              /* || is_same<typename iterator::value_type, byte> */)
 class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
   private:
-    using type = iterator;
-    using word_type = iterator::value_type;
-    static constexpr idx word_bits = limits<word_type>::bits;
+    static constexpr idx word_bits =
+        limits<typename iterator::value_type>::bits;
 
   public:
     using value_type = bit_value;
-    using reference = bit_reference<word_type>;
+    using reference = bit_reference<typename iterator::value_type>;
 
     constexpr bit_iterator() = default;
     constexpr bit_iterator(bit_iterator const&) = default;
     constexpr bit_iterator(bit_iterator&&) = default;
 
-    constexpr explicit bit_iterator(iterator const& other,
-                                    uword current_bit = 0u)
+    constexpr explicit bit_iterator(iterator const& other, idx current_bit = 0u)
         : m_internal_iterator(other), m_bit_position(current_bit) {
     }
 
@@ -605,8 +603,8 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
         // a word in bits, then add the difference between the iterators'
         // current bit offset within their word. That gives the total number of
         // bits between any two bit iterators.
-        return (word_difference * word_bits) + m_bit_position -
-               other.m_bit_position;
+        return (word_difference * word_bits) + other.m_bit_position -
+               m_bit_position;
     }
 
   private:
