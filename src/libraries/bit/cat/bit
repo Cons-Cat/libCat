@@ -143,23 +143,22 @@ namespace x64 {
 template <cat::is_unsigned T>
 [[nodiscard]]
 constexpr auto
-extract_bits(T from, cat::idx offset, cat::idx length) -> T {
+extract_bits(T from, cat::uint1 offset, cat::idx length) -> T {
     auto raw_from = cat::make_raw_arithmetic(from);
-    auto raw_offset = cat::make_raw_arithmetic(offset);
     auto raw_length = cat::make_raw_arithmetic(length);
 
     if constexpr (__has_builtin(__builtin_ia32_bextr_u32) && sizeof(T) == 4) {
-        return T(
-            __builtin_ia32_bextr_u32(raw_from, raw_offset | (raw_length << 8)));
+        return __builtin_ia32_bextr_u32(raw_from,
+                                        offset.raw | (raw_length << 8));
     } else if constexpr (__has_builtin(__builtin_ia32_bextr_u64) &&
                          sizeof(T) == 8) {
-        return T(
-            __builtin_ia32_bextr_u64(raw_from, raw_offset | (raw_length << 8)));
+        return __builtin_ia32_bextr_u64(raw_from,
+                                        offset.raw | (raw_length << 8));
     }
 
     constexpr unsigned char bits = sizeof(T) * 8u;
     auto const mask = ((1u << raw_length) * (raw_length < bits)) - 1u;
-    return T((raw_from >> raw_offset) & (mask * (raw_offset < bits)));
+    return T((raw_from >> offset.raw) & (mask * (offset.raw < bits)));
 }
 
 // Extract the 1 bits from `value` which are also 1 at the same index in `mask`.

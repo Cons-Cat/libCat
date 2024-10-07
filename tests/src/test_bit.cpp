@@ -48,16 +48,16 @@ TEST(test_bit) {
     static_assert(cat::popcount(0b0'1010'1011_u2) == 5);
 
     // Test bextr.
-    static_assert(x64::extract_bits(uint1::max() >> 1, 4u, 4u) == 0b0111u);
-    static_assert(x64::extract_bits(uint1::max(), 4u, 4u) == 0b1111u);
-    static_assert(x64::extract_bits(uint1::max() >> 1, 0u, 4u) == 0b1111u);
-    static_assert(x64::extract_bits(uint1::max() >> 1, 0u, 5u) == 0b1'1111u);
+    static_assert(x64::extract_bits(uint1::max() >> 1, 4_u1, 4u) == 0b0111u);
+    static_assert(x64::extract_bits(uint1::max(), 4_u1, 4u) == 0b1111u);
+    static_assert(x64::extract_bits(uint1::max() >> 1, 0_u1, 4u) == 0b1111u);
+    static_assert(x64::extract_bits(uint1::max() >> 1, 0_u1, 5u) == 0b1'1111u);
 
-    static_assert(x64::extract_bits(uint4::max() >> 1, 27u, 4u) == 0b1111u);
-    static_assert(x64::extract_bits(uint4::max() >> 1, 28u, 4u) == 0b0111u);
+    static_assert(x64::extract_bits(uint4::max() >> 1, 27_u1, 4u) == 0b1111u);
+    static_assert(x64::extract_bits(uint4::max() >> 1, 28_u1, 4u) == 0b0111u);
 
-    static_assert(x64::extract_bits(uint8::max() >> 1, 59u, 4u) == 0b1111u);
-    static_assert(x64::extract_bits(uint8::max() >> 1, 60u, 4u) == 0b0111u);
+    static_assert(x64::extract_bits(uint8::max() >> 1, 59_u1, 4u) == 0b1111u);
+    static_assert(x64::extract_bits(uint8::max() >> 1, 60_u1, 4u) == 0b0111u);
 
     // Test pext.
     static_assert(x64::parallel_extract_bits(uint8::max(), 0b1ull) == 0b1ull);
