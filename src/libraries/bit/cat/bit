@@ -622,18 +622,15 @@ namespace detail {
     }
 }  // namespace detail
 
+template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-invert_endianess(is_unsigned_integral auto value) {
-    auto raw_value = make_raw_arithmetic(value);
-
-    if constexpr (sizeof(raw_value) == 1) {
-        // This does not exist.
-        // return __builtin_bswap8(raw_value);
-
-        // TODO: Implement this.
-        __builtin_unreachable();
+invert_endianess(T value) -> T {
+    if constexpr (sizeof(value) == 1) {
+        return value;
     }
+
+    auto raw_value = make_raw_arithmetic(value);
     if constexpr (sizeof(raw_value) == 2) {
         return __builtin_bswap16(raw_value);
     }
@@ -644,107 +641,6 @@ invert_endianess(is_unsigned_integral auto value) {
         return __builtin_bswap64(raw_value);
     }
 }
-
-// `byte` is a strongly-typed `struct` rather than an `enum class` so that it
-// has operators.
-// TODO: Add some member functions.
-struct byte {
-    unsigned char value;
-
-    constexpr byte() = default;
-
-    constexpr byte(auto input)
-        requires(sizeof(input) == 1)
-        : value(input) {
-    }
-
-    constexpr byte(auto const& input)
-        requires(sizeof(input) == 1)
-        : value(input) {
-    }
-
-    template <rvalue T>
-        requires(sizeof(T) == 1)
-    constexpr byte(T&& input) : value(mov input) {
-    }
-
-    [[nodiscard]]
-    constexpr
-    operator char() const {
-        return static_cast<char>(this->value);
-    }
-
-    [[nodiscard]]
-    constexpr
-    operator unsigned char() const {
-        return static_cast<unsigned char>(this->value);
-    }
-
-    [[nodiscard]]
-    constexpr
-    operator signed char() const {
-        return static_cast<signed char>(this->value);
-    }
-
-    template <typename T>
-    [[nodiscard]]
-    constexpr explicit
-    operator T()
-        requires(sizeof(T) == 1)
-    {
-        return __builtin_bit_cast(T, value);
-    }
-
-    [[nodiscard]]
-    constexpr auto
-    operator&(is_integral auto from) -> byte {
-        return this->value & from;
-    }
-
-    constexpr auto
-    operator&=(is_integral auto from) -> byte& {
-        this->value = this->value & from;
-        return *this;
-    }
-
-    [[nodiscard]]
-    constexpr auto
-    operator|(is_integral auto from) -> byte {
-        return this->value | from;
-    }
-
-    constexpr auto
-    operator|=(is_integral auto from) -> byte& {
-        this->value = this->value | from;
-        return *this;
-    }
-
-    [[nodiscard]]
-    constexpr auto
-    operator<<(is_integral auto from) -> byte {
-        return this->value << from;
-    }
-
-    constexpr auto
-    operator<<=(is_integral auto from) -> byte& {
-        this->value = this->value << from;
-        return *this;
-    }
-
-    [[nodiscard]]
-    constexpr auto
-    operator>>(is_integral auto from) -> byte {
-        return this->value >> from;
-    }
-
-    constexpr auto
-    operator>>=(is_integral auto from) -> byte& {
-        this->value = this->value >> from;
-        return *this;
-    }
-};
-
-static_assert(is_trivial<::cat::byte>);
 
 // TODO: Support `volatile` qualified pointers.
 // TODO: Aligned pointer types and alignment casts.
@@ -781,12 +677,89 @@ template <typename U>
 [[nodiscard]]
 constexpr auto align_down(uintptr<U> p_value, uword alignment) -> uintptr<U>;
 
+// `byte` is a storage type which enables bitwise operations but not arithmetic.
+// TODO: Add some member functions.
+struct byte : bitwise_interface<byte> {
+    uint1 value;
+
+    template <typename T>
+    [[nodiscard, gnu::always_inline, gnu::artificial]]
+    inline constexpr explicit
+    operator T()
+        requires(sizeof(T) == 1)
+    {
+        return __builtin_bit_cast(T, value);
+    }
+
+    // Generate `operator&`.
+    [[nodiscard, gnu::always_inline, gnu::artificial]]
+    inline constexpr auto
+    bit_and(is_integral auto from) const -> byte {
+        return this->value & from;
+    }
+
+    // Generate `operator|`.
+    [[nodiscard, gnu::always_inline, gnu::artificial]]
+    inline constexpr auto
+    bit_or(is_integral auto from) const -> byte {
+        return this->value | from;
+    }
+
+    // Generate `operator<<`.
+    template <is_arithmetic U>
+    [[nodiscard, gnu::always_inline, gnu::artificial, gnu::always_inline,
+      gnu::artificial]]
+    inline constexpr auto
+    shift_left_by(U operand) const -> byte {
+        return value << operand;
+    }
+
+    template <is_arithmetic U>
+    [[nodiscard, gnu::always_inline, gnu::artificial, gnu::always_inline,
+      gnu::artificial]]
+    inline constexpr auto
+    shift_left_into(U other) const -> U {
+        return other << value;
+    }
+
+    // Generate `operator>>`.
+    template <is_arithmetic U>
+    [[nodiscard, gnu::always_inline, gnu::artificial, gnu::always_inline,
+      gnu::artificial]]
+    inline constexpr auto
+    shift_right_by(U operand) const -> byte {
+        return value >> operand;
+    }
+
+    template <is_arithmetic U>
+    [[nodiscard, gnu::always_inline, gnu::artificial, gnu::always_inline,
+      gnu::artificial]]
+    inline constexpr auto
+    shift_right_into(U other) const -> U {
+        return other >> value;
+    }
+
+    [[nodiscard, gnu::always_inline, gnu::artificial]]
+    inline constexpr auto
+    has_single_bit() const -> bool {
+        return (value & (value - 1u)) == 0u;
+    }
+};
+
+static_assert(is_trivial<::cat::byte>);
+
 template <is_integral T>
 [[nodiscard]]
 constexpr auto
 has_single_bit(T value) -> bool {
     auto raw = make_raw_arithmetic(value);
     return (raw & (raw - 1u)) == 0u;
+}
+
+[[nodiscard]]
+constexpr auto
+has_single_bit(byte value) -> bool {
+    return value.has_single_bit();
 }
 
 template <typename>
