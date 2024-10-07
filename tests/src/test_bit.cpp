@@ -40,14 +40,14 @@ TEST(test_bit) {
     static_assert(cat::countr_zero(0xFFF0_u2) == 4);
     cat::verify(cat::countr_zero(0xFFF0_u2) == 4);
 
-    // Test popcnt().
+    // Test popcnt.
     static_assert(cat::popcount(0b01'0101'0011u) == 5);
     static_assert(cat::popcount(0b0'1010'1001ull) == 4);
     static_assert(cat::popcount(0b0'1010'1001_u8) == 4);
     static_assert(cat::popcount(0b0'1010'1011_u1) == 5);
     static_assert(cat::popcount(0b0'1010'1011_u2) == 5);
 
-    // Test bextr().
+    // Test bextr.
     static_assert(x64::extract_bits(uint1::max() >> 1, 4u, 4u) == 0b0111u);
     static_assert(x64::extract_bits(uint1::max(), 4u, 4u) == 0b1111u);
     static_assert(x64::extract_bits(uint1::max() >> 1, 0u, 4u) == 0b1111u);
@@ -59,12 +59,12 @@ TEST(test_bit) {
     static_assert(x64::extract_bits(uint8::max() >> 1, 59u, 4u) == 0b1111u);
     static_assert(x64::extract_bits(uint8::max() >> 1, 60u, 4u) == 0b0111u);
 
-    // Test pext().
+    // Test pext.
     static_assert(x64::parallel_extract_bits(uint8::max(), 0b1ull) == 0b1ull);
     static_assert(x64::parallel_extract_bits(uint4::max(), 0b1u) == 0b1u);
     static_assert(x64::parallel_extract_bits(uint2::max(), 0b1_u2) == 0b1_u2);
 
-    // Test bzhi().
+    // Test bzhi.
     // TODO: These only test it compiles. Test that it works correctly.
     cat::assert(x64::zero_high_bits_at(8_u4, 8u) != 0u);
     cat::assert(x64::zero_high_bits_at(8_u8, 8u) != 0u);

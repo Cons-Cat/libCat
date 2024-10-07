@@ -790,15 +790,31 @@ struct shift_right_interface {
 };
 
 template <typename derived_type>
+struct bitwise_interface : bit_and_interface<derived_type>,
+                           bit_or_interface<derived_type>,
+                           shift_left_interface<derived_type>,
+                           shift_right_interface<derived_type> {
+    // Unary complement operator.
+    [[gnu::always_inline, gnu::artificial]]
+    friend constexpr auto
+    operator~(derived_type const& self) {
+        return self.bit_complement();
+    }
+
+    [[gnu::always_inline, gnu::artificial]]
+    friend constexpr auto
+    operator~(derived_type&& self) {
+        return move(self).bit_complement();
+    }
+};
+
+template <typename derived_type>
 struct arithmetic_interface : plus_interface<derived_type>,
                               minus_interface<derived_type>,
                               multiply_interface<derived_type>,
                               divide_interface<derived_type>,
-                              bit_and_interface<derived_type>,
-                              bit_or_interface<derived_type>,
                               modulo_interface<derived_type>,
-                              shift_left_interface<derived_type>,
-                              shift_right_interface<derived_type> {
+                              bitwise_interface<derived_type> {
     // No-op unary `+` operator for operand.
     [[nodiscard, gnu::always_inline, gnu::artificial]]
     friend constexpr auto
@@ -836,19 +852,6 @@ struct arithmetic_interface : plus_interface<derived_type>,
             // Subtract `self` from `0` to negate itself.
             return static_cast<derived_type>(0) - move(self);
         }
-    }
-
-    // Unary complement operator.
-    [[gnu::always_inline, gnu::artificial]]
-    friend constexpr auto
-    operator~(derived_type const& self) {
-        return self.bit_complement();
-    }
-
-    [[gnu::always_inline, gnu::artificial]]
-    friend constexpr auto
-    operator~(derived_type&& self) {
-        return move(self).bit_complement();
     }
 
   private:
