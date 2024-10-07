@@ -811,7 +811,7 @@ using uint1x_ = native_simd<uint1::raw_type>;  // NOLINT
 // TODO: Think over the string vectorization API.
 // TODO: Support `char2x_` vector family.
 // strings need their own vectors.
-using char1x16 = x64::sse42_mask<char>;
+using char1x16 = x64::sse42_simd<char>;
 using char1x32 = x64::avx2_simd<char>;
 using char1x_ = x64::avx2_simd<char>;  // NOLINT
 

@@ -32,7 +32,7 @@ struct sse42_abi {
 };
 
 template <typename T>
-using sse42_mask = cat::simd<sse42_abi<T>, T>;
+using sse42_simd = cat::simd<sse42_abi<T>, T>;
 
 template <typename T>
 using sse42_simd_mask = cat::simd_mask<sse42_abi<T>, T>;
