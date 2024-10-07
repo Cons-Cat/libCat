@@ -50,14 +50,13 @@ class pool_allocator
 
   public:
     // `pool_allocator` is move-only.
-    // TODO: With C++26, the `delete` reason should be:
-    // ("`cat::pool_allocator` should be constructed using "
-    // "`cat::make_pool_allocator`.");
-    constexpr pool_allocator(pool_allocator const&) = delete;
+    constexpr pool_allocator(pool_allocator const&) = delete(
+        "cat::pool_allocator` should be constructed using "
+        "`cat::make_pool_allocator`.");
     constexpr pool_allocator(pool_allocator&&) = default;
 
     // Reset the bumped pointer to the beginning of this arena.
-    void
+    constexpr void
     reset() {
         for (idx i; i < m_nodes.size() - 1u; ++i) {
             m_nodes[i].p_next = &(m_nodes[i + 1u]);
