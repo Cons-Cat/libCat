@@ -60,9 +60,9 @@ TEST(test_bit) {
     static_assert(x64::extract_bits(uint8::max() >> 1, 60u, 4u) == 0b0111u);
 
     // Test pext().
-    static_assert(x64::extract_bits_mask(uint8::max(), 0b1ull) == 0b1ull);
-    static_assert(x64::extract_bits_mask(uint4::max(), 0b1u) == 0b1u);
-    static_assert(x64::extract_bits_mask(uint2::max(), 0b1_u2) == 0b1_u2);
+    static_assert(x64::parallel_extract_bits(uint8::max(), 0b1ull) == 0b1ull);
+    static_assert(x64::parallel_extract_bits(uint4::max(), 0b1u) == 0b1u);
+    static_assert(x64::parallel_extract_bits(uint2::max(), 0b1_u2) == 0b1_u2);
 
     // Test bzhi().
     // TODO: These only test it compiles. Test that it works correctly.
