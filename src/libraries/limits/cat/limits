@@ -10,7 +10,7 @@ namespace cat {
 // TODO: Implement support for complex floats.
 
 // Forward declare types. These are implemented in `<numeral>`.
-enum class overflow_policies;
+enum class overflow_policies : unsigned char;
 
 template <typename T, overflow_policies>
 struct arithmetic;
