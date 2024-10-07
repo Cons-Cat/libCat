@@ -36,7 +36,7 @@
 namespace cat {
 
 // These policies control the overflow semantics of `arithmetic`s.
-enum class overflow_policies {
+enum class overflow_policies : unsigned char {
     undefined,
     wrap,
     saturate,

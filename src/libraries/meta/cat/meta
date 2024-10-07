@@ -4,8 +4,8 @@
 
 namespace cat {
 
-// Forward declare numeric types. These are implemented in `<numeral>`.
-enum class overflow_policies;
+// Forward declare numeric types. These are implemented in `<arithmetic>`.
+enum class overflow_policies : unsigned char;
 
 template <typename T, overflow_policies>
 struct arithmetic;
@@ -931,18 +931,18 @@ concept is_bitnotable = requires(T t) { ~t; };
 // `<cat/utility/detail/...>`.
 namespace std {
 
-// In Clang 17, `[[gnu::artificial]]` needs `inline`, not only `constexpr`.
+// These functions are automatically `artificial`.
 
 template <typename T>
-[[nodiscard, gnu::artificial]]
-inline constexpr auto
+[[nodiscard]]
+constexpr auto
 move(T&& input) -> cat::remove_reference<T>&& {
     return static_cast<cat::remove_reference<T>&&>(input);
 }
 
 template <typename T>
-[[nodiscard, gnu::artificial]]
-inline constexpr auto
+[[nodiscard]]
+constexpr auto
 forward(cat::identity_type<T>& input) -> T&& {
     return static_cast<T&&>(input);
 }
