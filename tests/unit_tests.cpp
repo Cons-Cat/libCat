@@ -41,19 +41,18 @@ main() -> int {
     for (constructor_fn const* pp_ctor_func = __init_array_start;
          pp_ctor_func < __init_array_end; ++pp_ctor_func) {
         last_ctor_was_test = false;
+        if (cat::setjmp(jump_buffer)) {
+            // Jump here when a test fails, skipping the rest of a test's
+            // constructor function.
+            continue;
+        }
 
         constructor_fn p_ctor = *pp_ctor_func;
         // If this constructor is a unit test, it sets the previous flags.
         p_ctor();
-
-        // TODO: The following code block is never reached except on the last
-        // test with optimizations enabled.
-
-        // Jump here when a test fails, skipping the rest of a test's
-        // constructor function.
-        cat::setjmp(jump_buffer);
     }
 
+    // `tests_passed` and `tests_failed` are modified within the `TEST` macro.
     // TODO: This will leak. An `inline_allocator` should be used.
     auto _ =
         cat::print(cat::fmt(pager, "\n{} tests passed.\n{} tests failed.\n",
