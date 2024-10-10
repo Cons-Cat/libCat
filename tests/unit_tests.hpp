@@ -20,7 +20,8 @@ void test_fail(cat::source_location const& source_location);
 // automatically in this program's constructor calls.
 #define TEST(test_name)                                                     \
     void test_name();                                                       \
-    [[gnu::constructor, gnu::optimize(0)]]                                  \
+    /* For some reason, optimizations miscompile here. */                   \
+    [[gnu::constructor, gnu::optimize(0), clang::optnone]]                  \
     void cat_register_##test_name() {                                       \
         auto _ = ::cat::print("Running test ");                             \
         last_ctor_was_test = true;                                          \

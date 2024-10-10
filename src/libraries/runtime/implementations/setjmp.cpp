@@ -1,8 +1,9 @@
 #include <cat/runtime>
 
 // TODO: Should `__builtin_setjmp_setup()`/`__builtin_setjmp()` be used here?
+[[gnu::naked, gnu::returns_twice]]
 auto
-cat::setjmp(jmp_buffer& /* jump_point */) -> int {
+cat::setjmp(jmp_buffer& /* jump_point */) -> int4 {
     asm volatile(R"(
         # Put the pointer to `jump_point` in %rdi.
         mov %rbx, (%rdi)

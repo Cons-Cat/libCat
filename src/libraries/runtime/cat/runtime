@@ -68,7 +68,7 @@ class jmp_buffer {
 };
 
 [[gnu::naked, gnu::returns_twice]]
-auto setjmp(jmp_buffer& jump_point) -> int;
+auto setjmp(jmp_buffer& jump_point) -> int4;
 
 [[noreturn, gnu::naked]]
 void longjmp(jmp_buffer& jump_point, int8 return_value);
