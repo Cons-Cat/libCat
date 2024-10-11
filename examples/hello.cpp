@@ -2,5 +2,5 @@
 
 auto
 main() -> int {
-    auto _ = cat::print("Hello, world!\n");
+   auto _ = cat::print("Hello, world!\n");
 }
