@@ -355,12 +355,14 @@ TEST(test_meta) {
 
    // Test signedness traits.
    static_assert(is_signed<make_signed_type<unsigned>>);
+   static_assert(is_signed<make_signed_type<unsigned const>>);
    static_assert(is_signed<make_signed_type<uint4>>);
    static_assert(is_signed<make_signed_type<float>>);
    static_assert(is_signed<make_signed_type<double>>);
 
    static_assert(!is_signed<make_unsigned_type<int>>);
    static_assert(!is_signed<make_unsigned_type<int4>>);
+   static_assert(!is_signed<make_unsigned_type<int4 const>>);
 
    static_assert(is_signed<copy_sign_from<int4, unsigned>>);
    static_assert(is_signed<copy_sign_from<int, uint4>>);
