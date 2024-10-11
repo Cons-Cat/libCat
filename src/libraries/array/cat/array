@@ -105,6 +105,12 @@ class array : public collection_interface<array<T, length>, T>,
       return length;
    }
 
+   template <idx i>
+   constexpr auto
+   get(this auto&& self) -> decltype(auto) {
+      return fwd(self).m_data[i.raw];
+   }
+
    // `storage` is public so that `cat::array` is a trivial type.
    T m_data[length];
 };
@@ -150,3 +156,16 @@ make_array_filled(T const& value) -> array<T, length> {
 // }
 
 }  // namespace cat
+
+// Implement tuple protocol for `cat::array`.
+namespace std {
+
+template <typename T, ::cat::idx length>
+struct tuple_size<::cat::array<T, length>> : ::cat::constant<length.raw> {};
+
+template <__SIZE_TYPE__ in_index, typename T, ::cat::idx length>
+struct tuple_element<in_index, ::cat::array<T, length>> {
+   using type = T;
+};
+
+}  // namespace std
