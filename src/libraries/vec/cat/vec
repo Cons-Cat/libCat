@@ -17,194 +17,194 @@ namespace cat {
 template <typename T, is_allocator allocator_type = null_allocator>
 class vec : public collection_interface<vec<T, allocator_type>, T>,
             public iterable_interface<T> {
-    template <typename U, is_allocator allocator>
-    friend constexpr auto make_vec_empty(allocator&) -> vec<U, allocator>;
+   template <typename U, is_allocator allocator>
+   friend constexpr auto
+   make_vec_empty(allocator&) -> vec<U, allocator>;
 
-    template <typename U, is_allocator allocator>
-    friend constexpr auto
-    make_vec_reserved(allocator&, idx) -> maybe<vec<U, allocator>>;
+   template <typename U, is_allocator allocator>
+   friend constexpr auto
+   make_vec_reserved(allocator&, idx) -> maybe<vec<U, allocator>>;
 
-    template <typename U, is_allocator allocator>
-    friend constexpr auto
-    make_vec_filled(allocator&, idx, U&&) -> maybe<vec<U, allocator>>;
+   template <typename U, is_allocator allocator>
+   friend constexpr auto
+   make_vec_filled(allocator&, idx, U&&) -> maybe<vec<U, allocator>>;
 
-  public:
-    constexpr vec(vec&& other_vector) = default;
+ public:
+   constexpr vec(vec&& other_vector) = default;
 
-    constexpr ~vec() {
-        if consteval {
+   constexpr ~vec() {
+      if consteval {
+         delete[] m_p_data;
+      }
+   }
+
+ protected:
+   // Being `protected:` permits derived classes and adaptors to call these.
+
+   [[deprecated("`cat::vec` cannot be created without an allocator. Call "
+                "`cat::make_vec_empty()` instead!")]]
+   constexpr vec(allocator_type& allocator)
+       : m_p_data(nullptr),
+         m_current_size(0),
+         m_current_capacity(0),
+         m_allocator(allocator) {
+   }
+
+   [[deprecated(
+      "Implicit copying of `cat::vec` is forbidden. Call `.clone() or move"
+      "instead!")]]
+   constexpr vec(vec const& other_vector) = default;
+
+   // Reallocate memory, or make an initial allocation.
+   constexpr auto
+   internal_allocate(is_allocator auto& allocator, idx minimum_capacity) {
+      if (m_p_data == nullptr) {
+         return allocator.template salloc_multi<T>(minimum_capacity);
+      }
+      return allocator.resalloc_multi(m_p_data, m_current_capacity,
+                                      minimum_capacity);
+   }
+
+   // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
+   // context.
+   constexpr auto
+   increase_storage(is_allocator auto& allocator) -> maybe<void> {
+      idx const minimum_capacity =
+         (m_current_capacity > 0u)
+            ? m_current_capacity * 2u
+            // If this storage has not been allocated yet, then greedily
+            // allocate its capacity as 4.
+            : 4u;
+
+      // TODO: I think there is a bug in GCC constexpr memory. This is a
+      // workaround.
+      if consteval {
+         T* p_new = new T[minimum_capacity.raw];
+         for (idx i; i < m_current_size; ++i) {
+            construct_at(p_new + i, move(m_p_data[i.raw]));
+         }
+         for (idx i = m_current_size + 1u; i < minimum_capacity; ++i) {
+            construct_at(p_new + i);
+         }
+         delete[] m_p_data;
+         m_p_data = p_new;
+         m_current_capacity = minimum_capacity;
+      } else {
+         // Make a new allocation with size feedback.
+         auto [alloc_span, alloc_bytes] =
+            prop(internal_allocate(allocator, minimum_capacity));
+
+         m_current_capacity = alloc_bytes / sizeof(T);
+         m_p_data = alloc_span.data();
+      }
+
+      return monostate;
+   }
+
+ public:
+   // Get the non-`const` address of this `vec`'s internal array.
+   [[nodiscard]]
+   constexpr auto
+   data() -> T* {
+      return &(m_p_data[0]);
+   }
+
+   // Get the `const` address of this `vec`'s internal array.
+   [[nodiscard]]
+   constexpr auto
+   data() const -> T const* {
+      return &(m_p_data[0]);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   size() const -> idx {
+      return m_current_size;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   capacity() const -> idx {
+      return m_current_capacity;
+   }
+
+   // Try to allocate storage for at least `minimum_capacity` number of `T`s.
+   [[nodiscard]]
+   constexpr auto
+   reserve(is_allocator auto& allocator, idx minimum_capacity) -> maybe<void> {
+      if (minimum_capacity > m_current_capacity) {
+         // TODO: I think there is a bug in GCC constexpr memory. This is a
+         // workaround.
+         if consteval {
             delete[] m_p_data;
-        }
-    }
-
-  protected:
-    // Being `protected:` permits derived classes and adaptors to call these.
-
-    [[deprecated("`cat::vec` cannot be created without an allocator. Call "
-                 "`cat::make_vec_empty()` instead!")]]
-    constexpr vec(allocator_type& allocator)
-        : m_p_data(nullptr),
-          m_current_size(0),
-          m_current_capacity(0),
-          m_allocator(allocator) {
-    }
-
-    [[deprecated(
-        "Implicit copying of `cat::vec` is forbidden. Call `.clone() or move"
-        "instead!")]]
-    constexpr vec(vec const& other_vector) = default;
-
-    // Reallocate memory, or make an initial allocation.
-    constexpr auto
-    internal_allocate(is_allocator auto& allocator, idx minimum_capacity) {
-        if (m_p_data == nullptr) {
-            return allocator.template salloc_multi<T>(minimum_capacity);
-        }
-        return allocator.resalloc_multi(m_p_data, m_current_capacity,
-                                        minimum_capacity);
-    }
-
-    // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
-    // context.
-    constexpr auto
-    increase_storage(is_allocator auto& allocator) -> maybe<void> {
-        idx const minimum_capacity =
-            (m_current_capacity > 0u)
-                ? m_current_capacity * 2u
-                // If this storage has not been allocated yet, then greedily
-                // allocate its capacity as 4.
-                : 4u;
-
-        // TODO: I think there is a bug in GCC constexpr memory. This is a
-        // workaround.
-        if consteval {
-            T* p_new = new T[minimum_capacity.raw];
-            for (idx i; i < m_current_size; ++i) {
-                construct_at(p_new + i, move(m_p_data[i.raw]));
-            }
-            for (idx i = m_current_size + 1u; i < minimum_capacity; ++i) {
-                construct_at(p_new + i);
-            }
-            delete[] m_p_data;
-            m_p_data = p_new;
+            m_p_data = new T[minimum_capacity.raw];
             m_current_capacity = minimum_capacity;
-        } else {
-            // Make a new allocation with size feedback.
-            auto [alloc_span, alloc_bytes] =
-                prop(internal_allocate(allocator, minimum_capacity));
 
-            m_current_capacity = alloc_bytes / sizeof(T);
-            m_p_data = alloc_span.data();
-        }
-
-        return monostate;
-    }
-
-  public:
-    // Get the non-`const` address of this `vec`'s internal array.
-    [[nodiscard]]
-    constexpr auto
-    data() -> T* {
-        return &(m_p_data[0]);
-    }
-
-    // Get the `const` address of this `vec`'s internal array.
-    [[nodiscard]]
-    constexpr auto
-    data() const -> T const* {
-        return &(m_p_data[0]);
-    }
-
-    [[nodiscard]]
-    constexpr auto
-    size() const -> idx {
-        return m_current_size;
-    }
-
-    [[nodiscard]]
-    constexpr auto
-    capacity() const -> idx {
-        return m_current_capacity;
-    }
-
-    // Try to allocate storage for at least `minimum_capacity` number of `T`s.
-    [[nodiscard]]
-    constexpr auto
-    reserve(is_allocator auto& allocator, idx minimum_capacity) -> maybe<void> {
-        if (minimum_capacity > m_current_capacity) {
-            // TODO: I think there is a bug in GCC constexpr memory. This is a
-            // workaround.
-            if consteval {
-                delete[] m_p_data;
-                m_p_data = new T[minimum_capacity.raw];
-                m_current_capacity = minimum_capacity;
-
-                for (idx i = m_current_size + 1u; i < m_current_capacity; ++i) {
-                    construct_at(m_p_data + i);
-                }
-            } else {
-                auto [alloc_span, alloc_bytes] =
-                    prop(internal_allocate(allocator, minimum_capacity));
-
-                m_p_data = alloc_span.data();
-                m_current_capacity = idx(alloc_bytes / sizeof(T));
+            for (idx i = m_current_size + 1u; i < m_current_capacity; ++i) {
+               construct_at(m_p_data + i);
             }
-        }
+         } else {
+            auto [alloc_span, alloc_bytes] =
+               prop(internal_allocate(allocator, minimum_capacity));
 
-        // If the new capacity is not larger, do nothing.
-        return monostate;
-    }
+            m_p_data = alloc_span.data();
+            m_current_capacity = idx(alloc_bytes / sizeof(T));
+         }
+      }
 
-    // Try to change the size of this `vec`.
-    [[nodiscard]]
-    constexpr auto
-    resize(is_allocator auto& allocator, idx size) -> maybe<void> {
-        if (size > m_current_capacity) {
-            // This sets `this->current_capacity` and `this->p_storage`.
-            prop(this->reserve(allocator, size));
-        }
+      // If the new capacity is not larger, do nothing.
+      return monostate;
+   }
 
-        // If the new size is not larger, simply shrink size and maintain
-        // capacity.
-        m_current_size = size;
-        return monostate;
-    }
+   // Try to change the size of this `vec`.
+   [[nodiscard]]
+   constexpr auto
+   resize(is_allocator auto& allocator, idx size) -> maybe<void> {
+      if (size > m_current_capacity) {
+         // This sets `this->current_capacity` and `this->p_storage`.
+         prop(this->reserve(allocator, size));
+      }
 
-    // Deep-copy the contents of this `vec`.
-    [[nodiscard]]
-    constexpr auto
-    clone(
-        is_allocator auto& allocator) const& -> maybe<vec<T, allocator_type>> {
-        vec<T, allocator_type> new_vector =
-            prop(make_vec_reserved<T>(allocator, m_current_capacity));
-        new_vector.m_current_size = m_current_size;
-        relocate(this->begin(), this->end(), new_vector.begin());
+      // If the new size is not larger, simply shrink size and maintain
+      // capacity.
+      m_current_size = size;
+      return monostate;
+   }
 
-        return new_vector;
-    }
+   // Deep-copy the contents of this `vec`.
+   [[nodiscard]]
+   constexpr auto
+   clone(is_allocator auto& allocator) const& -> maybe<vec<T, allocator_type>> {
+      vec<T, allocator_type> new_vector =
+         prop(make_vec_reserved<T>(allocator, m_current_capacity));
+      new_vector.m_current_size = m_current_size;
+      relocate(this->begin(), this->end(), new_vector.begin());
 
-    // TODO: rval-ref overload of `.push_back()`.
-    // TODO: `.emplace_back()`.
+      return new_vector;
+   }
 
-    template <typename U>
-        requires(is_implicitly_convertible<U, T>)
-    [[nodiscard]]
-    constexpr auto
-    push_back(is_allocator auto& allocator, U&& value) -> maybe<void> {
-        if (m_current_size + 1 > m_current_capacity) {
-            prop(this->increase_storage(allocator));
-        }
+   // TODO: rval-ref overload of `.push_back()`.
+   // TODO: `.emplace_back()`.
 
-        m_p_data[m_current_size.raw] = static_cast<T>(fwd(value));
-        ++(m_current_size);
-        return monostate;
-    }
+   template <typename U>
+      requires(is_implicitly_convertible<U, T>)
+   [[nodiscard]]
+   constexpr auto
+   push_back(is_allocator auto& allocator, U&& value) -> maybe<void> {
+      if (m_current_size + 1 > m_current_capacity) {
+         prop(this->increase_storage(allocator));
+      }
 
-  private:
-    T* m_p_data;
-    idx m_current_size;
-    idx m_current_capacity;
-    allocator_type& m_allocator;
+      m_p_data[m_current_size.raw] = static_cast<T>(fwd(value));
+      ++(m_current_size);
+      return monostate;
+   }
+
+ private:
+   T* m_p_data;
+   idx m_current_size;
+   idx m_current_capacity;
+   allocator_type& m_allocator;
 };
 
 // TODO: Implement this factory function when either GCC gets value pack
@@ -232,32 +232,32 @@ template <typename T, is_allocator allocator_type>
 [[nodiscard]]
 constexpr auto
 make_vec_empty(allocator_type& allocator) -> vec<T, allocator_type> {
-    return vec<T, allocator_type>(allocator);
+   return vec<T, allocator_type>(allocator);
 }
 
 template <typename T, is_allocator allocator_type>
 [[nodiscard]]
 constexpr auto
 make_vec_reserved(allocator_type& allocator, idx capacity)
-    -> maybe<vec<T, allocator_type>> {
-    vec<T, allocator_type> new_vector(allocator);
-    prop(new_vector.reserve(allocator, capacity));
-    return new_vector;
+   -> maybe<vec<T, allocator_type>> {
+   vec<T, allocator_type> new_vector(allocator);
+   prop(new_vector.reserve(allocator, capacity));
+   return new_vector;
 }
 
 template <typename T, is_allocator allocator_type>
 [[nodiscard]]
 constexpr auto
 make_vec_filled(allocator_type& allocator, idx count, T&& value)
-    -> maybe<vec<T, allocator_type>> {
-    vec<T, allocator_type> new_vector(allocator);
-    prop(new_vector.reserve(allocator, count));
-    new_vector.m_current_size = count;
-    // TODO: Call a vectorized fill memory function.
-    for (T& element : new_vector) {
-        element = fwd(value);
-    }
-    return new_vector;
+   -> maybe<vec<T, allocator_type>> {
+   vec<T, allocator_type> new_vector(allocator);
+   prop(new_vector.reserve(allocator, count));
+   new_vector.m_current_size = count;
+   // TODO: Call a vectorized fill memory function.
+   for (T& element : new_vector) {
+      element = fwd(value);
+   }
+   return new_vector;
 }
 
 #pragma GCC diagnostic pop

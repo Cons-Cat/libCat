@@ -4,7 +4,7 @@ namespace cat {
 
 // Forward declarations.
 template <typename abi_type, typename T>
-    requires(is_same<typename abi_type::scalar_type, T>)
+   requires(is_same<typename abi_type::scalar_type, T>)
 class alignas(abi_type::alignment.raw) simd;
 
 template <typename abi_type, typename T>
@@ -18,17 +18,17 @@ namespace x64 {
 // x86-64 build target.
 template <typename T>
 struct avx2_abi {
-    using scalar_type = T;
+   using scalar_type = T;
 
-    // Produce a similar `avx2_abi` for type `U`.
-    template <typename U>
-    using make_abi_type = avx2_abi<U>;
+   // Produce a similar `avx2_abi` for type `U`.
+   template <typename U>
+   using make_abi_type = avx2_abi<U>;
 
-    avx2_abi() = delete;
+   avx2_abi() = delete;
 
-    static constexpr cat::idx size = 32u;
-    static constexpr cat::uword lanes = size / sizeof(T);
-    static constexpr cat::uword alignment = 32u;
+   static constexpr cat::idx size = 32u;
+   static constexpr cat::uword lanes = size / sizeof(T);
+   static constexpr cat::uword alignment = 32u;
 };
 
 template <typename T>
@@ -41,29 +41,33 @@ template <typename T>
 [[nodiscard]]
 auto
 testc(cat::simd_mask<avx2_abi<T>, T> left, cat::simd_mask<avx2_abi<T>, T> right)
-    -> cat::int4;
+   -> cat::int4;
 
 template <typename T>
 [[nodiscard]]
-auto testz(cat::simd_mask<x64::avx2_abi<T>, T> left,
-           cat::simd_mask<x64::avx2_abi<T>, T> right) -> cat::int4;
+auto
+testz(cat::simd_mask<x64::avx2_abi<T>, T> left,
+      cat::simd_mask<x64::avx2_abi<T>, T> right) -> cat::int4;
 
 }  // namespace x64
 
 namespace cat {
 template <typename T>
 [[nodiscard]]
-auto all_of(simd_mask<x64::avx2_abi<T>, T> mask) -> bool;
+auto
+all_of(simd_mask<x64::avx2_abi<T>, T> mask) -> bool;
 
 template <typename T>
 [[nodiscard]]
-auto any_of(simd_mask<x64::avx2_abi<T>, T> mask) -> bool;
+auto
+any_of(simd_mask<x64::avx2_abi<T>, T> mask) -> bool;
 
 template <idx bits_count>
 class bitset;
 
 template <typename T>
 [[nodiscard]]
-auto simd_to_bitset(simd_mask<x64::avx2_abi<T>, T> mask) -> bitset<32u>;
+auto
+simd_to_bitset(simd_mask<x64::avx2_abi<T>, T> mask) -> bitset<32u>;
 
 }  // namespace cat

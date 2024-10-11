@@ -13,7 +13,7 @@ cat::assert(bool invariant_expression,
             void (*p_assert_handler)(source_location const&),
             source_location const& callsite) {
 #ifndef NDEBUG
-    verify(invariant_expression, p_assert_handler, callsite);
+   verify(invariant_expression, p_assert_handler, callsite);
 #endif
 }
 
@@ -24,7 +24,7 @@ cat::assert(bool invariant_expression, str_span const error_string,
             void (*p_assert_handler)(source_location const&),
             source_location const& callsite) {
 #ifndef NDEBUG
-    verify(invariant_expression, error_string, p_assert_handler, callsite);
+   verify(invariant_expression, error_string, p_assert_handler, callsite);
 #endif
 }
 

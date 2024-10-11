@@ -8,930 +8,927 @@
 
 namespace cat {
 namespace detail {
-    template <typename T, typename... error_types>
-    struct scaredy_variant_storage {
-        using value_type = conditional<is_void<T>, monostate_type, T>;
+template <typename T, typename... error_types>
+struct scaredy_variant_storage {
+   using value_type = conditional<is_void<T>, monostate_type, T>;
 
-        constexpr scaredy_variant_storage() = default;
+   constexpr scaredy_variant_storage() = default;
 
-        // value_type and error types must have separate constructors and
-        // operators, because `cat::variant` cannot have implicit conversions in
-        // its own constructors or operators. So an explicit conversion is
-        // required to implicitly convert a value type without accidentally
-        // converting error types.
+   // value_type and error types must have separate constructors and
+   // operators, because `cat::variant` cannot have implicit conversions in
+   // its own constructors or operators. So an explicit conversion is
+   // required to implicitly convert a value type without accidentally
+   // converting error types.
 
-        template <typename U>
-        static constexpr bool is_value =
-            // `U` must be converted to the value type.
-            is_implicitly_convertible<U, value_type> &&
-            // `U` must not be one of the errors.
-            !type_list<error_types...>::template has_type<U>;
+   template <typename U>
+   static constexpr bool is_value =
+      // `U` must be converted to the value type.
+      is_implicitly_convertible<U, value_type> &&
+      // `U` must not be one of the errors.
+      !type_list<error_types...>::template has_type<U>;
 
-        template <typename U>
-        static constexpr bool is_error =
-            // `U` must not be the value type.
-            !is_same<U, value_type> &&
-            // `U` must be one of the errors.
-            type_list<error_types...>::template has_type<U>;
+   template <typename U>
+   static constexpr bool is_error =
+      // `U` must not be the value type.
+      !is_same<U, value_type> &&
+      // `U` must be one of the errors.
+      type_list<error_types...>::template has_type<U>;
 
-        // Convert and copy-construct a value.
-        template <typename U>
-            requires(is_value<U>)
-        constexpr scaredy_variant_storage(U const& input)
-            : storage(static_cast<value_type>(input)) {
-        }
+   // Convert and copy-construct a value.
+   template <typename U>
+      requires(is_value<U>)
+   constexpr scaredy_variant_storage(U const& input)
+       : storage(static_cast<value_type>(input)) {
+   }
 
-        // Convert and move-construct a value.
-        template <rvalue U>
-            requires(is_value<U>)
-        // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
-        constexpr scaredy_variant_storage(U&& input) : storage(move(input)) {
-        }
+   // Convert and move-construct a value.
+   template <rvalue U>
+      requires(is_value<U>)
+   // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
+   constexpr scaredy_variant_storage(U&& input) : storage(move(input)) {
+   }
 
-        // Convert and copy-construct an error.
-        template <typename error_type>
-            requires(is_error<error_type>)
-        constexpr scaredy_variant_storage(error_type const& error)
-            : storage(error) {
-        }
+   // Convert and copy-construct an error.
+   template <typename error_type>
+      requires(is_error<error_type>)
+   constexpr scaredy_variant_storage(error_type const& error) : storage(error) {
+   }
 
-        // Convert and move-construct an error.
-        template <rvalue error_type>
-            requires(is_error<error_type>)
-        constexpr scaredy_variant_storage(error_type&& error)
-            // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
-            : storage(move(error)) {
-        }
+   // Convert and move-construct an error.
+   template <rvalue error_type>
+      requires(is_error<error_type>)
+   constexpr scaredy_variant_storage(error_type&& error)
+       // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
+       : storage(move(error)) {
+   }
 
-        // Forward `monostate` into `storage`.
-        constexpr scaredy_variant_storage(monostate_type) : storage(monostate) {
-        }
+   // Forward `monostate` into `storage`.
+   constexpr scaredy_variant_storage(monostate_type) : storage(monostate) {
+   }
 
-        // Copy-assign and convert a value to `storage`.
-        template <typename U>
-            requires(is_value<U>)
-        constexpr auto
-        operator=(U const& operand)
-            -> scaredy_variant_storage<T, error_types...>& {
-            this->storage = static_cast<T>(operand);
-            return *this;
-        }
+   // Copy-assign and convert a value to `storage`.
+   template <typename U>
+      requires(is_value<U>)
+   constexpr auto
+   operator=(U const& operand) -> scaredy_variant_storage<T, error_types...>& {
+      this->storage = static_cast<T>(operand);
+      return *this;
+   }
 
-        // Move-assign and convert a value to `storage`.
-        template <rvalue U>
-            requires(is_value<U>)
-        constexpr auto
-        operator=(U&& operand) -> scaredy_variant_storage<T, error_types...>& {
-            // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
-            this->storage = move(operand);
-            return *this;
-        }
+   // Move-assign and convert a value to `storage`.
+   template <rvalue U>
+      requires(is_value<U>)
+   constexpr auto
+   operator=(U&& operand) -> scaredy_variant_storage<T, error_types...>& {
+      // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
+      this->storage = move(operand);
+      return *this;
+   }
 
-        // Copy-assign and convert an error to `storage`.
-        template <typename error_type>
-            requires(is_error<error_type>)
-        constexpr auto
-        operator=(error_type const& operand)
-            -> scaredy_variant_storage<T, error_types...>& {
-            this->storage = operand;
-            return *this;
-        }
+   // Copy-assign and convert an error to `storage`.
+   template <typename error_type>
+      requires(is_error<error_type>)
+   constexpr auto
+   operator=(error_type const& operand)
+      -> scaredy_variant_storage<T, error_types...>& {
+      this->storage = operand;
+      return *this;
+   }
 
-        // Move-assign and convert a value to `storage`.
-        template <rvalue error_type>
-            requires(is_error<error_type>)
-        constexpr auto
-        operator=(error_type&& operand)
-            -> scaredy_variant_storage<T, error_types...>& {
-            // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
-            this->storage = move(operand);
-            return *this;
-        }
+   // Move-assign and convert a value to `storage`.
+   template <rvalue error_type>
+      requires(is_error<error_type>)
+   constexpr auto
+   operator=(error_type&& operand)
+      -> scaredy_variant_storage<T, error_types...>& {
+      // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
+      this->storage = move(operand);
+      return *this;
+   }
 
-        [[nodiscard]]
-        constexpr auto
-        has_value() const -> bool {
-            return this->storage.template is<value_type>();
-        }
+   [[nodiscard]]
+   constexpr auto
+   has_value() const -> bool {
+      return this->storage.template is<value_type>();
+   }
 
-        constexpr auto
-        value() & -> value_type& requires(
-            !is_void<T>) { return this->storage.template get<value_type>(); }
+   constexpr auto
+   value() & -> value_type& requires(!is_void<T>) {
+                               return this->storage.template get<value_type>();
+                            }
 
-        constexpr auto value() const& -> value_type const&
-            requires(!is_void<T>)
-        {
-            return as_const(this->storage.template get<value_type>());
-        }
+   constexpr auto value() const& -> value_type const&
+      requires(!is_void<T>)
+   {
+      return as_const(this->storage.template get<value_type>());
+   }
 
-        constexpr auto
-        value() && -> value_type&& requires(!is_void<T>) {
-                                       return move(this)
-                                           ->storage.template get<value_type>();
-                                   }
+   constexpr auto
+   value() && -> value_type&& requires(
+      !is_void<T>) { return move(this)->storage.template get<value_type>(); }
 
-        constexpr auto value() const&& -> value_type const&&
-            requires(!is_void<T>)
-        {
-            return move(this)->storage.template get<value_type>();
-        }
+   constexpr auto value() const&& -> value_type const&&
+      requires(!is_void<T>)
+   {
+      return move(this)->storage.template get<value_type>();
+   }
 
-        template <typename error_type>
-        constexpr auto
-        error() {
-            return this->storage.template get<error_type>();
-        }
+   template <typename error_type>
+   constexpr auto
+   error() {
+      return this->storage.template get<error_type>();
+   }
 
-        template <typename error_type>
-        constexpr auto
-        error() const {
-            return this->storage.template get<error_type>();
-        }
+   template <typename error_type>
+   constexpr auto
+   error() const {
+      return this->storage.template get<error_type>();
+   }
 
-        template <typename U>
-        [[nodiscard]]
-        constexpr auto
-        is() const -> bool {
-            return this->storage.template is<U>();
-        }
+   template <typename U>
+   [[nodiscard]]
+   constexpr auto
+   is() const -> bool {
+      return this->storage.template is<U>();
+   }
 
-        template <typename U>
-        constexpr auto
-        is(U&& in_value) const -> bool {
-            return this->storage.template is<U>(fwd(in_value));
-        }
+   template <typename U>
+   constexpr auto
+   is(U&& in_value) const -> bool {
+      return this->storage.template is<U>(fwd(in_value));
+   }
 
-        variant<value_type, error_types...> storage;
-    };
+   variant<value_type, error_types...> storage;
+};
 
-    // `T` is a `compact_scaredy<type, predicate>`.
-    template <typename T, typename... error_types>
-    struct scaredy_compact_storage {
-        using value_type = T::type;
-        // `error_types` can only hold one error in this storage struct. It is
-        // variadic merely to simplify overload resolution in `scaredy`.
-        // `decltype` adds a reference to it, so that is removed by
-        // `remove_reference`.
-        using error_type = __type_pack_element<0u, error_types...>;
+// `T` is a `compact_scaredy<type, predicate>`.
+template <typename T, typename... error_types>
+struct scaredy_compact_storage {
+   using value_type = T::type;
+   // `error_types` can only hold one error in this storage struct. It is
+   // variadic merely to simplify overload resolution in `scaredy`.
+   // `decltype` adds a reference to it, so that is removed by
+   // `remove_reference`.
+   using error_type = __type_pack_element<0u, error_types...>;
 
-        constexpr scaredy_compact_storage() = default;
+   constexpr scaredy_compact_storage() = default;
 
-        template <typename U>
-        static constexpr bool is_value =
-            // `U` must be converted to the value type.
-            is_implicitly_convertible<U, value_type> &&
-            // `U` must not be one of the errors.
-            !type_list<error_types...>::template has_type<U>;
+   template <typename U>
+   static constexpr bool is_value =
+      // `U` must be converted to the value type.
+      is_implicitly_convertible<U, value_type> &&
+      // `U` must not be one of the errors.
+      !type_list<error_types...>::template has_type<U>;
 
-        template <typename U>
-        static constexpr bool is_error =
-            // `U` must not be the value type.
-            !is_same<U, value_type> &&
-            // `U` must be one of the errors.
-            type_list<error_types...>::template has_type<U>;
+   template <typename U>
+   static constexpr bool is_error =
+      // `U` must not be the value type.
+      !is_same<U, value_type> &&
+      // `U` must be one of the errors.
+      type_list<error_types...>::template has_type<U>;
 
-        template <typename U>
-            requires(is_value<U>)
-        constexpr scaredy_compact_storage(U const& input)
-            : storage(static_cast<value_type>(input)) {
-        }
+   template <typename U>
+      requires(is_value<U>)
+   constexpr scaredy_compact_storage(U const& input)
+       : storage(static_cast<value_type>(input)) {
+   }
 
-        template <rvalue U>
-            requires(is_value<U>)
-        constexpr scaredy_compact_storage(U&& input) : storage(fwd(input)) {
-        }
+   template <rvalue U>
+      requires(is_value<U>)
+   constexpr scaredy_compact_storage(U&& input) : storage(fwd(input)) {
+   }
 
-        constexpr scaredy_compact_storage(error_type const& error)
-            : error_code(error) {
-        }
+   constexpr scaredy_compact_storage(error_type const& error)
+       : error_code(error) {
+   }
 
-        constexpr scaredy_compact_storage(error_type&& error)
-            : error_code(move(error)) {
-        }
+   constexpr scaredy_compact_storage(error_type&& error)
+       : error_code(move(error)) {
+   }
 
-        // It does not make sense for this class to have a `monostate_type`
-        // constructor, since `T` cannot be `void`.
+   // It does not make sense for this class to have a `monostate_type`
+   // constructor, since `T` cannot be `void`.
 
-        template <typename U>
-            requires(is_value<U>)
-        constexpr auto
-        operator=(U const& operand) -> scaredy_compact_storage& {
-            this->storage = static_cast<T>(operand);
-            return *this;
-        }
+   template <typename U>
+      requires(is_value<U>)
+   constexpr auto
+   operator=(U const& operand) -> scaredy_compact_storage& {
+      this->storage = static_cast<T>(operand);
+      return *this;
+   }
 
-        template <typename U>
-            requires(is_value<U>)
-        constexpr auto
-        operator=(U&& operand) -> scaredy_compact_storage& {
-            this->storage = fwd(operand);
-            return *this;
-        }
+   template <typename U>
+      requires(is_value<U>)
+   constexpr auto
+   operator=(U&& operand) -> scaredy_compact_storage& {
+      this->storage = fwd(operand);
+      return *this;
+   }
 
-        constexpr auto
-        operator=(error_type const& operand) -> scaredy_compact_storage& {
-            this->error_code = operand;
-            return *this;
-        }
+   constexpr auto
+   operator=(error_type const& operand) -> scaredy_compact_storage& {
+      this->error_code = operand;
+      return *this;
+   }
 
-        constexpr auto
-        operator=(error_type&& operand) -> scaredy_compact_storage& {
-            this->error_code = move(operand);
-            return *this;
-        }
+   constexpr auto
+   operator=(error_type&& operand) -> scaredy_compact_storage& {
+      this->error_code = move(operand);
+      return *this;
+   }
 
-        constexpr auto
-        value() & -> value_type& {
-            return this->storage;
-        }
+   constexpr auto
+   value() & -> value_type& {
+      return this->storage;
+   }
 
-        constexpr auto
-        value() const& -> value_type const& {
-            return this->storage;
-        }
+   constexpr auto
+   value() const& -> value_type const& {
+      return this->storage;
+   }
 
-        constexpr auto
-        value() && -> value_type&& {
-            return move(this->storage);
-        }
+   constexpr auto
+   value() && -> value_type&& {
+      return move(this->storage);
+   }
 
-        constexpr auto
-        value() const&& -> value_type&& {
-            return move(this->storage);
-        }
+   constexpr auto
+   value() const&& -> value_type&& {
+      return move(this->storage);
+   }
 
-        // this_type is variadic to give it a homogenous interface with other
-        // `scaredy`'s.
-        template <typename...>
-        constexpr auto
-        error() -> error_type {
-            return this->error_code;
-        }
+   // this_type is variadic to give it a homogenous interface with other
+   // `scaredy`'s.
+   template <typename...>
+   constexpr auto
+   error() -> error_type {
+      return this->error_code;
+   }
 
-        // this_type is variadic to give it a homogenous interface with other
-        // `scaredy`'s.
-        template <typename...>
-        constexpr auto
-        error() const -> error_type {
-            return this->error_code;
-        }
+   // this_type is variadic to give it a homogenous interface with other
+   // `scaredy`'s.
+   template <typename...>
+   constexpr auto
+   error() const -> error_type {
+      return this->error_code;
+   }
 
-        [[nodiscard]]
-        constexpr auto
-        has_value() const -> bool {
-            return T::predicate_function(this->storage);
-        }
+   [[nodiscard]]
+   constexpr auto
+   has_value() const -> bool {
+      return T::predicate_function(this->storage);
+   }
 
-        // Compare the type `U` against `value_type` or `error_type`.
-        template <typename U>
-        [[nodiscard]]
-        constexpr auto
-        is() const -> bool {
-            if constexpr (is_same<U, value_type>) {
-                return this->has_value();
-            } else if constexpr (is_same<U, error_type>) {
-                return !this->has_value();
-            } else {
-                // Any type besides `value_type` and `error_type` can never hold
-                // true.
-                return false;
-            }
-        }
+   // Compare the type `U` against `value_type` or `error_type`.
+   template <typename U>
+   [[nodiscard]]
+   constexpr auto
+   is() const -> bool {
+      if constexpr (is_same<U, value_type>) {
+         return this->has_value();
+      } else if constexpr (is_same<U, error_type>) {
+         return !this->has_value();
+      } else {
+         // Any type besides `value_type` and `error_type` can never hold
+         // true.
+         return false;
+      }
+   }
 
-        // value_type comparison against either `this->storage` or
-        // `this->error_code`.
-        template <typename U>
-        constexpr auto
-        is(U&& in_value) const -> bool {
-            if (this->has_value()) {
-                return static_cast<value_type>(fwd(in_value)) == this->storage;
-            }
-            return static_cast<error_type>(fwd(in_value)) == this->error_code;
-        }
+   // value_type comparison against either `this->storage` or
+   // `this->error_code`.
+   template <typename U>
+   constexpr auto
+   is(U&& in_value) const -> bool {
+      if (this->has_value()) {
+         return static_cast<value_type>(fwd(in_value)) == this->storage;
+      }
+      return static_cast<error_type>(fwd(in_value)) == this->error_code;
+   }
 
-        constexpr auto
-        get_index() const {
-            if (this->has_value()) {
-                return 0;
-            }
-            return 1;
-        }
+   constexpr auto
+   get_index() const {
+      if (this->has_value()) {
+         return 0;
+      }
+      return 1;
+   }
 
-        union {
-            value_type storage;
-            error_type error_code;
-        };
-    };
+   union {
+      value_type storage;
+      error_type error_code;
+   };
+};
 }  // namespace detail
 
 // TODO: Support reference types in a `scaredy`.
 
 template <typename T, typename... error_types>
-    requires(
-        // `scaredy` cannot hold C arrays.
-        (!is_array<error_types> && ...) &&
-        // `scaredy` should have at least one error type.
-        sizeof...(error_types) > 0)
+   requires(
+      // `scaredy` cannot hold C arrays.
+      (!is_array<error_types> && ...) &&
+      // `scaredy` should have at least one error type.
+      sizeof...(error_types) > 0)
 class scaredy {
-  private:
-    // clang-format off
+ private:
+   // clang-format off
     using storage_type = conditional <requires {
         T::predicate_function;
     }, detail::scaredy_compact_storage<T, error_types...>,
         detail::scaredy_variant_storage <T, error_types...>>;
-    // clang-format on
+   // clang-format on
 
-  public:
-    using value_type = storage_type::value_type;
-    using errors_list = type_list<error_types...>;
+ public:
+   using value_type = storage_type::value_type;
+   using errors_list = type_list<error_types...>;
 
-  private:
-    // These two templates must be declared here to be used in the below atomic
-    // constraints.
+ private:
+   // These two templates must be declared here to be used in the below atomic
+   // constraints.
 
-    template <typename U>
-    static constexpr bool is_value =
-        // `U` must be converted to the value type.
-        is_implicitly_convertible<U, value_type> &&
-        // `U` must not be one of the errors.
-        !type_list<error_types...>::template has_type<U>;
+   template <typename U>
+   static constexpr bool is_value =
+      // `U` must be converted to the value type.
+      is_implicitly_convertible<U, value_type> &&
+      // `U` must not be one of the errors.
+      !type_list<error_types...>::template has_type<U>;
 
-    template <typename U>
-    static constexpr bool is_error =
-        // `U` must not be the value type.
-        !is_same<U, value_type> &&
-        // `U` must be one of the errors.
-        type_list<error_types...>::template has_type<U>;
+   template <typename U>
+   static constexpr bool is_error =
+      // `U` must not be the value type.
+      !is_same<U, value_type> &&
+      // `U` must be one of the errors.
+      type_list<error_types...>::template has_type<U>;
 
-    // `storage_type` constructors are used by the monadic member functions to
-    // propagate errors.
-    constexpr scaredy(storage_type const& in_storage) : m_storage(in_storage) {
-    }
+   // `storage_type` constructors are used by the monadic member functions to
+   // propagate errors.
+   constexpr scaredy(storage_type const& in_storage) : m_storage(in_storage) {
+   }
 
-    constexpr scaredy(storage_type&& in_storage) : m_storage(move(in_storage)) {
-    }
+   constexpr scaredy(storage_type&& in_storage) : m_storage(move(in_storage)) {
+   }
 
-  public:
-    constexpr scaredy() = default;
+ public:
+   constexpr scaredy() = default;
 
-    // TODO: Construct from a subset of `error_types`.
+   // TODO: Construct from a subset of `error_types`.
 
-    // Copy and convert the storage of a convertible `scaredy`.
-    template <typename U>
-        requires(is_implicitly_convertible<U, value_type>)
-    constexpr scaredy(scaredy<U, error_types...> const& scaredy)
-        : m_storage(scaredy.m_storage) {
-    }
+   // Copy and convert the storage of a convertible `scaredy`.
+   template <typename U>
+      requires(is_implicitly_convertible<U, value_type>)
+   constexpr scaredy(scaredy<U, error_types...> const& scaredy)
+       : m_storage(scaredy.m_storage) {
+   }
 
-    // Move and convert the storage of a convertible `scaredy`.
-    template <typename U>
-        requires(is_implicitly_convertible<U, value_type>)
-    constexpr scaredy(scaredy<U, error_types...>&& scaredy)
-        : m_storage(move(scaredy).storage) {
-    }
+   // Move and convert the storage of a convertible `scaredy`.
+   template <typename U>
+      requires(is_implicitly_convertible<U, value_type>)
+   constexpr scaredy(scaredy<U, error_types...>&& scaredy)
+       : m_storage(move(scaredy).storage) {
+   }
 
-    // Forward a value into the storage.
-    template <typename U>
-        requires(is_value<U>)
-    constexpr scaredy(U const& input) : m_storage(input) {
-    }
+   // Forward a value into the storage.
+   template <typename U>
+      requires(is_value<U>)
+   constexpr scaredy(U const& input) : m_storage(input) {
+   }
 
-    template <rvalue U>
-        requires(is_value<U>)
-    // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
-    constexpr scaredy(U&& input) : m_storage(input) {
-    }
+   template <rvalue U>
+      requires(is_value<U>)
+   // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
+   constexpr scaredy(U&& input) : m_storage(input) {
+   }
 
-    // Forward an error into the storage.
-    template <typename U>
-        requires(is_error<U>)
-    constexpr scaredy(U const& error) : m_storage(error) {
-    }
+   // Forward an error into the storage.
+   template <typename U>
+      requires(is_error<U>)
+   constexpr scaredy(U const& error) : m_storage(error) {
+   }
 
-    // Forward an error into the storage.
-    template <rvalue U>
-        requires(is_error<U>)
-    // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
-    constexpr scaredy(U&& error) : m_storage(fwd(error)) {
-    }
+   // Forward an error into the storage.
+   template <rvalue U>
+      requires(is_error<U>)
+   // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
+   constexpr scaredy(U&& error) : m_storage(fwd(error)) {
+   }
 
-    // Forward a `monostate` into the storage if there is no value type.
-    constexpr scaredy(monostate_type)
-        requires(is_void<value_type> || is_same<value_type, monostate_type>)
-        : m_storage(monostate) {
-    }
+   // Forward a `monostate` into the storage if there is no value type.
+   constexpr scaredy(monostate_type)
+      requires(is_void<value_type> || is_same<value_type, monostate_type>)
+       : m_storage(monostate) {
+   }
 
-    // Copy-assign and convert a `scaredy`.
-    template <typename U, typename... Othererror_types>
-        requires(is_value<U> && (is_error<Othererror_types> && ...))
-    constexpr auto
-    operator=(scaredy<U, error_types...> const& operand) -> scaredy& {
-        this->m_storage = operand.m_storage;
-        return *this;
-    }
+   // Copy-assign and convert a `scaredy`.
+   template <typename U, typename... Othererror_types>
+      requires(is_value<U> && (is_error<Othererror_types> && ...))
+   constexpr auto
+   operator=(scaredy<U, error_types...> const& operand) -> scaredy& {
+      this->m_storage = operand.m_storage;
+      return *this;
+   }
 
-    // Move-assign and convert a `scaredy`.
-    template <typename U, typename... Othererror_types>
-        requires(is_value<U> && (is_error<Othererror_types> && ...))
-    constexpr auto
-    operator=(scaredy<U, error_types...>&& operand) -> scaredy& {
-        this->m_storage = operand.m_storage;
-        return *this;
-    }
+   // Move-assign and convert a `scaredy`.
+   template <typename U, typename... Othererror_types>
+      requires(is_value<U> && (is_error<Othererror_types> && ...))
+   constexpr auto
+   operator=(scaredy<U, error_types...>&& operand) -> scaredy& {
+      this->m_storage = operand.m_storage;
+      return *this;
+   }
 
-    // Copy-assign and convert a value to `storage`.
-    template <typename U>
-        requires(is_value<U>)
-    constexpr auto
-    operator=(U const& operand) -> scaredy& {
-        this->m_storage = static_cast<value_type>(operand);
-        return *this;
-    }
+   // Copy-assign and convert a value to `storage`.
+   template <typename U>
+      requires(is_value<U>)
+   constexpr auto
+   operator=(U const& operand) -> scaredy& {
+      this->m_storage = static_cast<value_type>(operand);
+      return *this;
+   }
 
-    // Move-assign and convert a value to `storage`.
-    template <rvalue U>
-        requires(is_value<U>)
-    constexpr auto
-    operator=(U&& operand) -> scaredy& {
-        this->m_storage = static_cast<value_type&&>(operand);
-        return *this;
-    }
+   // Move-assign and convert a value to `storage`.
+   template <rvalue U>
+      requires(is_value<U>)
+   constexpr auto
+   operator=(U&& operand) -> scaredy& {
+      this->m_storage = static_cast<value_type&&>(operand);
+      return *this;
+   }
 
-    // Copy-assign and convert an error to `storage`.
-    template <typename error_type>
-        requires(is_error<error_type>)
-    constexpr auto
-    operator=(error_type const& operand) -> scaredy& {
-        this->m_storage = operand;
-        return *this;
-    }
+   // Copy-assign and convert an error to `storage`.
+   template <typename error_type>
+      requires(is_error<error_type>)
+   constexpr auto
+   operator=(error_type const& operand) -> scaredy& {
+      this->m_storage = operand;
+      return *this;
+   }
 
-    // Move-assign and convert an error to `storage`.
-    template <rvalue error_type>
-        requires(is_error<error_type>)
-    constexpr auto
-    operator=(error_type&& operand) -> scaredy& {
-        // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
-        this->m_storage = move(operand);
-        return *this;
-    }
+   // Move-assign and convert an error to `storage`.
+   template <rvalue error_type>
+      requires(is_error<error_type>)
+   constexpr auto
+   operator=(error_type&& operand) -> scaredy& {
+      // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
+      this->m_storage = move(operand);
+      return *this;
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    has_value() const -> bool {
-        return this->m_storage.has_value();
-    }
+   [[nodiscard]]
+   constexpr auto
+   has_value() const -> bool {
+      return this->m_storage.has_value();
+   }
 
-    [[nodiscard]]
-        constexpr auto
-        value() &
-        requires(!is_void<T>) { return this->m_storage.value(); }
+   [[nodiscard]]
+      constexpr auto
+      value()
+      & requires(!is_void<T>) { return this->m_storage.value(); }
 
-        [[nodiscard]] constexpr auto value() const&
-            requires(!is_void<T>)
-    {
-        return this->m_storage.value();
-    }
+      [[nodiscard]] constexpr auto value() const&
+         requires(!is_void<T>)
+   {
+      return this->m_storage.value();
+   }
 
-    [[nodiscard]]
-        constexpr auto
-        value() &&
-        requires(!is_void<T>) { return move(this->m_storage.value()); }
+   [[nodiscard]]
+      constexpr auto
+      value()
+      && requires(!is_void<T>) { return move(this->m_storage.value()); }
 
-        [[nodiscard]] constexpr auto value() const&&
-            requires(!is_void<T>)
-    {
-        return move(this->m_storage.value());
-    }
+      [[nodiscard]] constexpr auto value() const&&
+         requires(!is_void<T>)
+   {
+      return move(this->m_storage.value());
+   }
 
-    // Get the value of some error when its type is known to the caller.
-    template <typename error_type>
-    [[nodiscard]]
-    constexpr auto
-    error() {
-        return this->m_storage.template error<error_type>();
-    }
+   // Get the value of some error when its type is known to the caller.
+   template <typename error_type>
+   [[nodiscard]]
+   constexpr auto
+   error() {
+      return this->m_storage.template error<error_type>();
+   }
 
-    // Get the value of some error when its type is known to the caller.
-    template <typename error_type>
-    [[nodiscard]]
-    constexpr auto
-    error() const {
-        return this->m_storage.template error<error_type>();
-    }
+   // Get the value of some error when its type is known to the caller.
+   template <typename error_type>
+   [[nodiscard]]
+   constexpr auto
+   error() const {
+      return this->m_storage.template error<error_type>();
+   }
 
-    // If there is only one error type, a template argument is not required.
-    [[nodiscard]]
-    constexpr auto
-    error()
-        requires(sizeof...(error_types) == 1)
-    {
-        return this->m_storage.template error<error_types...>();
-    }
+   // If there is only one error type, a template argument is not required.
+   [[nodiscard]]
+   constexpr auto
+   error()
+      requires(sizeof...(error_types) == 1)
+   {
+      return this->m_storage.template error<error_types...>();
+   }
 
-    // If there is only one error type, a template argument is not required.
-    [[nodiscard]]
-    constexpr auto
-    error() const
-        requires(sizeof...(error_types) == 1)
-    {
-        return this->m_storage.template error<error_types...>();
-    }
+   // If there is only one error type, a template argument is not required.
+   [[nodiscard]]
+   constexpr auto
+   error() const
+      requires(sizeof...(error_types) == 1)
+   {
+      return this->m_storage.template error<error_types...>();
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    value_or(value_type fallback) & {
-        if (this->m_storage.has_value()) {
-            return this->m_storage.value();
-        }
-        return fallback;
-    }
+   [[nodiscard]]
+   constexpr auto
+   value_or(value_type fallback) & {
+      if (this->m_storage.has_value()) {
+         return this->m_storage.value();
+      }
+      return fallback;
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    value_or(value_type fallback) && {
-        if (this->m_storage.has_value()) {
-            return move(this->m_storage).value();
-        }
-        return fallback;
-    }
+   [[nodiscard]]
+   constexpr auto
+   value_or(value_type fallback) && {
+      if (this->m_storage.has_value()) {
+         return move(this->m_storage).value();
+      }
+      return fallback;
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    value_or(value_type fallback) const& {
-        if (this->m_storage.has_value()) {
-            return this->m_storage.value();
-        }
-        return fallback;
-    }
+   [[nodiscard]]
+   constexpr auto
+   value_or(value_type fallback) const& {
+      if (this->m_storage.has_value()) {
+         return this->m_storage.value();
+      }
+      return fallback;
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    value_or(value_type fallback) const&& {
-        if (this->m_storage.has_value()) {
-            return move(this->m_storage).value();
-        }
-        return fallback;
-    }
+   [[nodiscard]]
+   constexpr auto
+   value_or(value_type fallback) const&& {
+      if (this->m_storage.has_value()) {
+         return move(this->m_storage).value();
+      }
+      return fallback;
+   }
 
-    // TODO: Add `.p_value()` getters, like `cat::maybe`.
+   // TODO: Add `.p_value()` getters, like `cat::maybe`.
 
-    // TODO: Add `&&` overloads to the `.assert()` and `.verify()` getters.
-    // TODO: Make the `.assert()` and `.verify()` getters `constexpr`.
-    // TODO: Add overloads which take a `string const` for an error message.
+   // TODO: Add `&&` overloads to the `.assert()` and `.verify()` getters.
+   // TODO: Make the `.assert()` and `.verify()` getters `constexpr`.
+   // TODO: Add overloads which take a `string const` for an error message.
 
-    [[nodiscard]]
-    auto
-    assert(void (*p_assert_handler)(source_location const&) = assert_handler,
-           source_location const& callsite =
-               source_location::current()) & -> value_type& {
-        cat::assert(this->has_value(), p_assert_handler, callsite);
-        return this->value();
-    }
+   [[nodiscard]]
+   auto
+   assert(void (*p_assert_handler)(source_location const&) = assert_handler,
+          source_location const& callsite =
+             source_location::current()) & -> value_type& {
+      cat::assert(this->has_value(), p_assert_handler, callsite);
+      return this->value();
+   }
 
-    [[nodiscard]]
-    auto
-    assert(void (*p_assert_handler)(source_location const&) = assert_handler,
-           source_location const& callsite =
-               source_location::current()) const& -> value_type& {
-        cat::assert(this->has_value(), p_assert_handler, callsite);
-        return this->value();
-    }
+   [[nodiscard]]
+   auto
+   assert(void (*p_assert_handler)(source_location const&) = assert_handler,
+          source_location const& callsite =
+             source_location::current()) const& -> value_type& {
+      cat::assert(this->has_value(), p_assert_handler, callsite);
+      return this->value();
+   }
 
-    [[nodiscard]]
-    auto
-    assert(void (*p_assert_handler)(source_location const&) = assert_handler,
-           source_location const& callsite =
-               source_location::current()) && -> value_type&& {
-        cat::assert(this->has_value(), p_assert_handler, callsite);
-        return this->value();
-    }
+   [[nodiscard]]
+   auto
+   assert(void (*p_assert_handler)(source_location const&) = assert_handler,
+          source_location const& callsite =
+             source_location::current()) && -> value_type&& {
+      cat::assert(this->has_value(), p_assert_handler, callsite);
+      return this->value();
+   }
 
-    [[nodiscard]]
-    auto
-    assert(void (*p_assert_handler)(source_location const&) = assert_handler,
-           source_location const& callsite =
-               source_location::current()) const&& -> value_type&& {
-        cat::assert(this->has_value(), p_assert_handler, callsite);
-        return this->value();
-    }
+   [[nodiscard]]
+   auto
+   assert(void (*p_assert_handler)(source_location const&) = assert_handler,
+          source_location const& callsite =
+             source_location::current()) const&& -> value_type&& {
+      cat::assert(this->has_value(), p_assert_handler, callsite);
+      return this->value();
+   }
 
-    [[nodiscard]]
-    auto
-    verify(void (*p_assert_handler)(source_location const&) = assert_handler,
-           source_location const& callsite =
-               source_location::current()) & -> value_type& {
-        cat::verify(this->has_value(), p_assert_handler, callsite);
-        return this->value();
-    }
+   [[nodiscard]]
+   auto
+   verify(void (*p_assert_handler)(source_location const&) = assert_handler,
+          source_location const& callsite =
+             source_location::current()) & -> value_type& {
+      cat::verify(this->has_value(), p_assert_handler, callsite);
+      return this->value();
+   }
 
-    [[nodiscard]]
-    auto
-    verify(void (*p_assert_handler)(source_location const&) = assert_handler,
-           source_location const& callsite =
-               source_location::current()) const& -> value_type& {
-        cat::verify(this->has_value(), p_assert_handler, callsite);
-        return this->value();
-    }
+   [[nodiscard]]
+   auto
+   verify(void (*p_assert_handler)(source_location const&) = assert_handler,
+          source_location const& callsite =
+             source_location::current()) const& -> value_type& {
+      cat::verify(this->has_value(), p_assert_handler, callsite);
+      return this->value();
+   }
 
-    [[nodiscard]]
-    auto
-    verify(void (*p_assert_handler)(source_location const&) = assert_handler,
-           source_location const& callsite =
-               source_location::current()) && -> value_type {
-        cat::verify(this->has_value(), p_assert_handler, callsite);
-        return this->value();
-    }
+   [[nodiscard]]
+   auto
+   verify(void (*p_assert_handler)(source_location const&) = assert_handler,
+          source_location const& callsite =
+             source_location::current()) && -> value_type {
+      cat::verify(this->has_value(), p_assert_handler, callsite);
+      return this->value();
+   }
 
-    [[nodiscard]]
-    auto
-    verify(void (*p_assert_handler)(source_location const&) = assert_handler,
-           source_location const& callsite =
-               source_location::current()) const&& -> value_type {
-        cat::verify(this->has_value(), p_assert_handler, callsite);
-        return this->value();
-    }
+   [[nodiscard]]
+   auto
+   verify(void (*p_assert_handler)(source_location const&) = assert_handler,
+          source_location const& callsite =
+             source_location::current()) const&& -> value_type {
+      cat::verify(this->has_value(), p_assert_handler, callsite);
+      return this->value();
+   }
 
-    // Holds true if this `scaredy` currently has some value of the type `U`.
-    // this_type method allows `scaredy` to be used in `match` statements.
-    template <typename U>
-    [[nodiscard]]
-    constexpr auto
-    is() const -> bool {
-        return this->m_storage.template is<U>();
-    }
+   // Holds true if this `scaredy` currently has some value of the type `U`.
+   // this_type method allows `scaredy` to be used in `match` statements.
+   template <typename U>
+   [[nodiscard]]
+   constexpr auto
+   is() const -> bool {
+      return this->m_storage.template is<U>();
+   }
 
-    // Holds true if this `scaredy` currently has some value convertible and
-    // equivalent to `in_value`. this_type method allows `scaredy` to be used in
-    // `match` statements.
-    template <typename U>
-    [[nodiscard]]
-    constexpr auto
-    is(U&& in_value) const -> bool {
-        return this->m_storage.is(fwd(in_value));
-    }
+   // Holds true if this `scaredy` currently has some value convertible and
+   // equivalent to `in_value`. this_type method allows `scaredy` to be used in
+   // `match` statements.
+   template <typename U>
+   [[nodiscard]]
+   constexpr auto
+   is(U&& in_value) const -> bool {
+      return this->m_storage.is(fwd(in_value));
+   }
 
-    // Member access syntax pattern matching for `cat::match()`.
-    template <typename... patterns>
-        requires(is_specialization<patterns, detail::pattern_invocable> && ...)
-    constexpr void
-    match(patterns&&... pattern_args) {
-        detail::match_patterns (*this)(fwd(pattern_args)...);
-    }
+   // Member access syntax pattern matching for `cat::match()`.
+   template <typename... patterns>
+      requires(is_specialization<patterns, detail::pattern_invocable> && ...)
+   constexpr void
+   match(patterns&&... pattern_args) {
+      detail::match_patterns (*this)(fwd(pattern_args)...);
+   }
 
-    // TODO: Use `is_invocable` constraints.
+   // TODO: Use `is_invocable` constraints.
 
-    // If this non-`const`-qualified `scaredy` holds a value, transform it
-    // by a function. Otherwise, propagate the error value.
-    template <typename F>
-    [[nodiscard]]
-    constexpr auto
-    transform(F&& invocable) & {
-        using this_type = scaredy<T, error_types...>;
-        if (this->has_value()) {
-            return this_type(fwd(invocable)(this->value()));
-        }
-        return this_type(this->m_storage);
-    }
+   // If this non-`const`-qualified `scaredy` holds a value, transform it
+   // by a function. Otherwise, propagate the error value.
+   template <typename F>
+   [[nodiscard]]
+   constexpr auto
+   transform(F&& invocable) & {
+      using this_type = scaredy<T, error_types...>;
+      if (this->has_value()) {
+         return this_type(fwd(invocable)(this->value()));
+      }
+      return this_type(this->m_storage);
+   }
 
-    template <typename F>
-    [[nodiscard]]
-    constexpr auto
-    transform(F&& invocable) const& {
-        using this_type = scaredy<T, error_types...>;
-        if (this->has_value()) {
-            return this_type(fwd(invocable)(this->value()));
-        }
-        return this_type(this->m_storage);
-    }
+   template <typename F>
+   [[nodiscard]]
+   constexpr auto
+   transform(F&& invocable) const& {
+      using this_type = scaredy<T, error_types...>;
+      if (this->has_value()) {
+         return this_type(fwd(invocable)(this->value()));
+      }
+      return this_type(this->m_storage);
+   }
 
-    template <typename F>
-    [[nodiscard]]
-    constexpr auto
-    transform(F&& invocable) && {
-        using this_type = scaredy<T, error_types...>;
-        if (this->has_value()) {
-            return this_type(fwd(invocable)(move(this)->value()));
-        }
-        return this_type(move(this->m_storage));
-    }
+   template <typename F>
+   [[nodiscard]]
+   constexpr auto
+   transform(F&& invocable) && {
+      using this_type = scaredy<T, error_types...>;
+      if (this->has_value()) {
+         return this_type(fwd(invocable)(move(this)->value()));
+      }
+      return this_type(move(this->m_storage));
+   }
 
-    template <typename F>
-    [[nodiscard]]
-    constexpr auto
-    transform(F&& invocable) const&& {
-        using this_type = scaredy<T, error_types...>;
-        if (this->has_value()) {
-            return this_type(fwd(invocable)(move(this)->value()));
-        }
-        return this_type(move(this->m_storage));
-    }
+   template <typename F>
+   [[nodiscard]]
+   constexpr auto
+   transform(F&& invocable) const&& {
+      using this_type = scaredy<T, error_types...>;
+      if (this->has_value()) {
+         return this_type(fwd(invocable)(move(this)->value()));
+      }
+      return this_type(move(this->m_storage));
+   }
 
-    template <typename F>
-    [[nodiscard]]
-    constexpr auto
-    and_then(F&& invocable) & {
-        using this_type = scaredy<T, error_types...>;
-        return this->has_value() ? fwd(invocable)(this->value())
-                                 : this_type(this->m_storage);
-    }
+   template <typename F>
+   [[nodiscard]]
+   constexpr auto
+   and_then(F&& invocable) & {
+      using this_type = scaredy<T, error_types...>;
+      return this->has_value() ? fwd(invocable)(this->value())
+                               : this_type(this->m_storage);
+   }
 
-    template <typename F>
-    [[nodiscard]]
-    constexpr auto
-    and_then(F&& invocable) const& {
-        using this_type = scaredy<T, error_types...>;
-        return this->has_value() ? fwd(invocable)(this->value())
-                                 : this_type(this->m_storage);
-    }
+   template <typename F>
+   [[nodiscard]]
+   constexpr auto
+   and_then(F&& invocable) const& {
+      using this_type = scaredy<T, error_types...>;
+      return this->has_value() ? fwd(invocable)(this->value())
+                               : this_type(this->m_storage);
+   }
 
-    template <typename F>
-    [[nodiscard]]
-    constexpr auto
-    and_then(F&& invocable) && {
-        using this_type = scaredy<T, error_types...>;
-        return this->has_value() ? fwd(invocable)(move(this)->value())
-                                 : this_type(move(this->m_storage));
-    }
+   template <typename F>
+   [[nodiscard]]
+   constexpr auto
+   and_then(F&& invocable) && {
+      using this_type = scaredy<T, error_types...>;
+      return this->has_value() ? fwd(invocable)(move(this)->value())
+                               : this_type(move(this->m_storage));
+   }
 
-    template <typename F>
-    [[nodiscard]]
-    constexpr auto
-    and_then(F&& invocable) const&& {
-        using this_type = scaredy<T, error_types...>;
-        return this->has_value() ? fwd(invocable)(move(this)->value())
-                                 : this_type(move(this->m_storage));
-    }
+   template <typename F>
+   [[nodiscard]]
+   constexpr auto
+   and_then(F&& invocable) const&& {
+      using this_type = scaredy<T, error_types...>;
+      return this->has_value() ? fwd(invocable)(move(this)->value())
+                               : this_type(move(this->m_storage));
+   }
 
-    template <typename F>
-    [[nodiscard]]
-    constexpr auto
-    or_else(F&& invocable) & {
-        using U = decltype(invocable());
-        static_assert(is_void<U> || is_specialization<U, scaredy>);
+   template <typename F>
+   [[nodiscard]]
+   constexpr auto
+   or_else(F&& invocable) & {
+      using U = decltype(invocable());
+      static_assert(is_void<U> || is_specialization<U, scaredy>);
 
-        if (!this->has_value()) {
-            if constexpr (is_void<U>) {
-                fwd(invocable)();
-            } else {
-                return fwd(invocable)();
-            }
-        }
+      if (!this->has_value()) {
+         if constexpr (is_void<U>) {
+            fwd(invocable)();
+         } else {
+            return fwd(invocable)();
+         }
+      }
 
-        if constexpr (is_void<U>) {
+      if constexpr (is_void<U>) {
+         return;
+      } else {
+         return *this;
+      }
+   }
+
+   template <typename F>
+   [[nodiscard]]
+   constexpr auto
+   or_else(F&& invocable) const& {
+      using U = decltype(invocable());
+      static_assert(is_void<U> || is_specialization<U, scaredy>);
+
+      if (!this->m_storage.has_value()) {
+         if constexpr (is_void<U>) {
+            fwd(invocable)();
+         } else {
+            return fwd(invocable)();
+         }
+      }
+
+      if constexpr (is_void<U>) {
+         return;
+      } else {
+         return *this;
+      }
+   }
+
+   [[nodiscard]]
+   auto
+   or_exit(iword exit_code = 1) & {
+      if (this->has_value()) [[likely]] {
+         if constexpr (!is_void<T>) {
+            return this->value();
+         } else {
             return;
-        } else {
-            return *this;
-        }
-    }
+         }
+      }
+      exit(exit_code);
+      __builtin_unreachable();
+   }
 
-    template <typename F>
-    [[nodiscard]]
-    constexpr auto
-    or_else(F&& invocable) const& {
-        using U = decltype(invocable());
-        static_assert(is_void<U> || is_specialization<U, scaredy>);
-
-        if (!this->m_storage.has_value()) {
-            if constexpr (is_void<U>) {
-                fwd(invocable)();
-            } else {
-                return fwd(invocable)();
-            }
-        }
-
-        if constexpr (is_void<U>) {
+   [[nodiscard]]
+   auto
+   or_exit(iword exit_code = 1) const& {
+      if (this->has_value()) [[likely]] {
+         if constexpr (!is_void<T>) {
+            return this->value();
+         } else {
             return;
-        } else {
-            return *this;
-        }
-    }
+         }
+      }
+      exit(exit_code);
+      __builtin_unreachable();
+   }
 
-    [[nodiscard]]
-    auto
-    or_exit(iword exit_code = 1) & {
-        if (this->has_value()) [[likely]] {
-            if constexpr (!is_void<T>) {
-                return this->value();
-            } else {
-                return;
-            }
-        }
-        exit(exit_code);
-        __builtin_unreachable();
-    }
+   [[nodiscard]]
+   auto
+   or_exit(iword exit_code = 1) && {
+      if (this->has_value()) [[likely]] {
+         if constexpr (!is_void<T>) {
+            return move(this)->value();
+         } else {
+            return;
+         }
+      }
+      exit(exit_code);
+      __builtin_unreachable();
+   }
 
-    [[nodiscard]]
-    auto
-    or_exit(iword exit_code = 1) const& {
-        if (this->has_value()) [[likely]] {
-            if constexpr (!is_void<T>) {
-                return this->value();
-            } else {
-                return;
-            }
-        }
-        exit(exit_code);
-        __builtin_unreachable();
-    }
+   [[nodiscard]]
+   auto
+   or_exit(iword exit_code = 1) const&& {
+      if (this->has_value()) [[likely]] {
+         if constexpr (!is_void<T>) {
+            return move(this)->value();
+         } else {
+            return;
+         }
+      }
+      exit(exit_code);
+      __builtin_unreachable();
+   }
 
-    [[nodiscard]]
-    auto
-    or_exit(iword exit_code = 1) && {
-        if (this->has_value()) [[likely]] {
-            if constexpr (!is_void<T>) {
-                return move(this)->value();
-            } else {
-                return;
-            }
-        }
-        exit(exit_code);
-        __builtin_unreachable();
-    }
+   [[nodiscard]]
+   auto
+   or_exit(str_span const error_message, iword exit_code = 1) & {
+      if (this->has_value()) [[likely]] {
+         if constexpr (!is_void<T>) {
+            return this->value();
+         } else {
+            return;
+         }
+      } else {
+         auto _ = eprintln(error_message);
+         exit(exit_code);
+      }
+   }
 
-    [[nodiscard]]
-    auto
-    or_exit(iword exit_code = 1) const&& {
-        if (this->has_value()) [[likely]] {
-            if constexpr (!is_void<T>) {
-                return move(this)->value();
-            } else {
-                return;
-            }
-        }
-        exit(exit_code);
-        __builtin_unreachable();
-    }
+   [[nodiscard]]
+   auto
+   or_exit(str_span const error_message, iword exit_code = 1) const& {
+      if (this->has_value()) [[likely]] {
+         if constexpr (!is_void<T>) {
+            return this->value();
+         } else {
+            return;
+         }
+      } else {
+         auto _ = eprintln(error_message);
+         exit(exit_code);
+      }
+   }
 
-    [[nodiscard]]
-    auto
-    or_exit(str_span const error_message, iword exit_code = 1) & {
-        if (this->has_value()) [[likely]] {
-            if constexpr (!is_void<T>) {
-                return this->value();
-            } else {
-                return;
-            }
-        } else {
-            auto _ = eprintln(error_message);
-            exit(exit_code);
-        }
-    }
+   [[nodiscard]]
+   auto
+   or_exit(str_span const error_message, iword exit_code = 1) && {
+      if (this->has_value()) [[likely]] {
+         if constexpr (!is_void<T>) {
+            return move(this)->value();
+         } else {
+            return;
+         }
+      } else {
+         auto _ = eprintln(error_message);
+         exit(exit_code);
+      }
+   }
 
-    [[nodiscard]]
-    auto
-    or_exit(str_span const error_message, iword exit_code = 1) const& {
-        if (this->has_value()) [[likely]] {
-            if constexpr (!is_void<T>) {
-                return this->value();
-            } else {
-                return;
-            }
-        } else {
-            auto _ = eprintln(error_message);
-            exit(exit_code);
-        }
-    }
+   [[nodiscard]]
+   auto
+   or_exit(str_span const error_message, iword exit_code = 1) const&& {
+      if (this->has_value()) [[likely]] {
+         if constexpr (!is_void<T>) {
+            return move(this)->value();
+         } else {
+            return;
+         }
+      } else {
+         auto _ = eprintln(error_message);
+         exit(exit_code);
+      }
+   }
 
-    [[nodiscard]]
-    auto
-    or_exit(str_span const error_message, iword exit_code = 1) && {
-        if (this->has_value()) [[likely]] {
-            if constexpr (!is_void<T>) {
-                return move(this)->value();
-            } else {
-                return;
-            }
-        } else {
-            auto _ = eprintln(error_message);
-            exit(exit_code);
-        }
-    }
-
-    [[nodiscard]]
-    auto
-    or_exit(str_span const error_message, iword exit_code = 1) const&& {
-        if (this->has_value()) [[likely]] {
-            if constexpr (!is_void<T>) {
-                return move(this)->value();
-            } else {
-                return;
-            }
-        } else {
-            auto _ = eprintln(error_message);
-            exit(exit_code);
-        }
-    }
-
-  private:
-    storage_type m_storage;
+ private:
+   storage_type m_storage;
 };
 
 template <typename T>
 concept is_scaredy = requires(T t) {
-                         // T::value_type;
-                         // T::error_types;
-                         cat::maybe<decltype(t.value())>();
+                        // T::value_type;
+                        // T::error_types;
+                        cat::maybe<decltype(t.value())>();
                      } && !requires(T t) { t = cat::nullopt; };
 
 }  // namespace cat

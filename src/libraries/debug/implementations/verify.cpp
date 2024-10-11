@@ -7,12 +7,12 @@ void
 cat::verify(bool invariant_expression,
             void (*p_assert_handler)(source_location const&),
             source_location const& callsite) {
-    if (invariant_expression) [[likely]] {
-        return;
-    }
+   if (invariant_expression) [[likely]] {
+      return;
+   }
 
-    p_assert_handler(callsite);
-    __builtin_unreachable();
+   p_assert_handler(callsite);
+   __builtin_unreachable();
 }
 
 // Check that an expression holds true in all builds. If it holds false, print
@@ -21,12 +21,12 @@ void
 cat::verify(bool invariant_expression, str_span const error_string,
             void (*p_assert_handler)(source_location const&),
             source_location const& callsite) {
-    if (invariant_expression) [[likely]] {
-        return;
-    }
-    auto _ = eprint("\n");
-    auto _ = eprintln(error_string);
+   if (invariant_expression) [[likely]] {
+      return;
+   }
+   auto _ = eprint("\n");
+   auto _ = eprintln(error_string);
 
-    p_assert_handler(callsite);
-    __builtin_unreachable();
+   p_assert_handler(callsite);
+   __builtin_unreachable();
 }

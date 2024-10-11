@@ -65,110 +65,110 @@ inline constexpr string vt_bg_bright_white = "\e[107m";
 // TODO: True color bg.
 
 namespace detail {
-    auto
-    style_tty_fg_fg(is_allocator auto& alloc, string const text,
-                    string const color) {
-        maybe maybe_allocation = alloc.template alloc_multi<char>(
-            text.size() + color.size() + vt_fg_default.size());
+auto
+style_tty_fg_fg(is_allocator auto& alloc, string const text,
+                string const color) {
+   maybe maybe_allocation = alloc.template alloc_multi<char>(
+      text.size() + color.size() + vt_fg_default.size());
 
-        using return_type = decltype(maybe_allocation);
+   using return_type = decltype(maybe_allocation);
 
-        if (!maybe_allocation.has_value()) {
-            return return_type(nullopt);
-        }
+   if (!maybe_allocation.has_value()) {
+      return return_type(nullopt);
+   }
 
-        char* p_memory = alloc.get(maybe_allocation.value()).data();
-        // Add fg color:
-        copy_memory_small(color.data(), p_memory, color.size());
-        // Add text to style:
-        copy_memory(text.data(), p_memory + color.size(), text.size());
-        // Reset fg color:
-        copy_memory_small(vt_fg_default.data(),
-                          p_memory + color.size() + text.size(),
-                          vt_fg_default.size());
+   char* p_memory = alloc.get(maybe_allocation.value()).data();
+   // Add fg color:
+   copy_memory_small(color.data(), p_memory, color.size());
+   // Add text to style:
+   copy_memory(text.data(), p_memory + color.size(), text.size());
+   // Reset fg color:
+   copy_memory_small(vt_fg_default.data(),
+                     p_memory + color.size() + text.size(),
+                     vt_fg_default.size());
 
-        return maybe_allocation;
-    }
+   return maybe_allocation;
+}
 }  // namespace detail
 
 auto
 style_tty_fg_black(is_allocator auto& alloc, string const text) {
-    return detail::style_tty_fg_fg(alloc, text, vt_fg_black);
+   return detail::style_tty_fg_fg(alloc, text, vt_fg_black);
 }
 
 auto
 style_tty_fg_red(is_allocator auto& alloc, string const text) {
-    return detail::style_tty_fg_fg(alloc, text, vt_fg_red);
+   return detail::style_tty_fg_fg(alloc, text, vt_fg_red);
 }
 
 auto
 style_tty_fg_green(is_allocator auto& alloc, string const text) {
-    return detail::style_tty_fg_fg(alloc, text, vt_fg_green);
+   return detail::style_tty_fg_fg(alloc, text, vt_fg_green);
 }
 
 auto
 style_tty_fg_yellow(is_allocator auto& alloc, string const text) {
-    return detail::style_tty_fg_fg(alloc, text, vt_fg_yellow);
+   return detail::style_tty_fg_fg(alloc, text, vt_fg_yellow);
 }
 
 auto
 style_tty_fg_blue(is_allocator auto& alloc, string const text) {
-    return detail::style_tty_fg_fg(alloc, text, vt_fg_blue);
+   return detail::style_tty_fg_fg(alloc, text, vt_fg_blue);
 }
 
 auto
 style_tty_fg_magenta(is_allocator auto& alloc, string const text) {
-    return detail::style_tty_fg_fg(alloc, text, vt_fg_magenta);
+   return detail::style_tty_fg_fg(alloc, text, vt_fg_magenta);
 }
 
 auto
 style_tty_fg_cyan(is_allocator auto& alloc, string const text) {
-    return detail::style_tty_fg_fg(alloc, text, vt_fg_cyan);
+   return detail::style_tty_fg_fg(alloc, text, vt_fg_cyan);
 }
 
 auto
 style_tty_fg_white(is_allocator auto& alloc, string const text) {
-    return detail::style_tty_fg_fg(alloc, text, vt_fg_white);
+   return detail::style_tty_fg_fg(alloc, text, vt_fg_white);
 }
 
 auto
 style_tty_fg_bright_black(is_allocator auto& alloc, string const text) {
-    return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_black);
+   return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_black);
 }
 
 auto
 style_tty_fg_bright_red(is_allocator auto& alloc, string const text) {
-    return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_red);
+   return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_red);
 }
 
 auto
 style_tty_fg_bright_green(is_allocator auto& alloc, string const text) {
-    return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_green);
+   return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_green);
 }
 
 auto
 style_tty_fg_bright_yellow(is_allocator auto& alloc, string const text) {
-    return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_yellow);
+   return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_yellow);
 }
 
 auto
 style_tty_fg_bright_blue(is_allocator auto& alloc, string const text) {
-    return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_blue);
+   return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_blue);
 }
 
 auto
 style_tty_fg_fg_bright_magenta(is_allocator auto& alloc, string const text) {
-    return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_magenta);
+   return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_magenta);
 }
 
 auto
 style_tty_fg_bright_cyan(is_allocator auto& alloc, string const text) {
-    return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_cyan);
+   return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_cyan);
 }
 
 auto
 style_tty_fg_bright_white(is_allocator auto& alloc, string const text) {
-    return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_white);
+   return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_white);
 }
 
 }  // namespace cat

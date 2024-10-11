@@ -7,88 +7,87 @@
 // TODO: Make this `constexpr`.
 void
 cat::copy_memory(void const* p_source, void* p_destination, uword bytes) {
-    using simd_vector = int8x_;
+   using simd_vector = int8x_;
 
-    unsigned char const* p_source_handle =
-        static_cast<unsigned char const*>(p_source);
-    unsigned char* p_destination_handle =
-        reinterpret_cast<unsigned char*>(p_destination);
-    constexpr uword l3_cache_size = 2_umi;
-    uword padding;
+   unsigned char const* p_source_handle =
+      static_cast<unsigned char const*>(p_source);
+   unsigned char* p_destination_handle =
+      reinterpret_cast<unsigned char*>(p_destination);
+   constexpr uword l3_cache_size = 2_umi;
+   uword padding;
 
-    constexpr uword step_size = sizeof(simd_vector) * 8u;
+   constexpr uword step_size = sizeof(simd_vector) * 8u;
 
-    if (bytes <= step_size) {
-        copy_memory_small(p_source, p_destination, bytes);
-        return;
-    }
+   if (bytes <= step_size) {
+      copy_memory_small(p_source, p_destination, bytes);
+      return;
+   }
 
-    // Align source, destination, and bytes to `simd_vector`'s optimal
-    // alignment.
-    padding = static_cast<uword>(
-        // TODO: Use a `uintptr<unsigned char>` here.
-        (alignof(simd_vector) -
-         ((reinterpret_cast<__UINTPTR_TYPE__>(p_destination_handle)) &
-          (alignof(simd_vector) - 1))) &
-        (alignof(simd_vector) - 1));
+   // Align source, destination, and bytes to `simd_vector`'s optimal
+   // alignment.
+   padding = static_cast<uword>(
+      // TODO: Use a `uintptr<unsigned char>` here.
+      (alignof(simd_vector)
+       - ((reinterpret_cast<__UINTPTR_TYPE__>(p_destination_handle))
+          & (alignof(simd_vector) - 1)))
+      & (alignof(simd_vector) - 1));
 
-    copy_memory_small(p_source, p_destination, padding);
+   copy_memory_small(p_source, p_destination, padding);
 
-    p_source_handle += padding;
-    p_destination_handle += padding;
-    bytes -= padding;
-    simd_vector vectors[8];
+   p_source_handle += padding;
+   p_destination_handle += padding;
+   bytes -= padding;
+   simd_vector vectors[8];
 
-    // This routine is optimized for buffers in L3 cache. Streaming is
-    // slower there.
-    if (bytes <= l3_cache_size) {
-        while (bytes >= step_size) {
-            // Load 8 vectors, then increment the source pointer by that size.
+   // This routine is optimized for buffers in L3 cache. Streaming is
+   // slower there.
+   if (bytes <= l3_cache_size) {
+      while (bytes >= step_size) {
+         // Load 8 vectors, then increment the source pointer by that size.
 #pragma GCC unroll 8
-            for (uword::raw_type i = 0u; i < 8u; ++i) {
-                vectors[i] =
-                    __builtin_bit_cast(simd_vector const*, p_source_handle)[i];
-            }
-            prefetch_for_one_read(p_source_handle + (step_size * 2u));
+         for (uword::raw_type i = 0u; i < 8u; ++i) {
+            vectors[i] =
+               __builtin_bit_cast(simd_vector const*, p_source_handle)[i];
+         }
+         prefetch_for_one_read(p_source_handle + (step_size * 2u));
 
 #pragma GCC unroll 8
-            for (int i = 0; i < 8; ++i) {
-                __builtin_bit_cast(simd_vector*, p_destination_handle)[i] =
-                    vectors[i];
-            }
-            p_source_handle += step_size;
-            p_destination_handle += step_size;
-            bytes -= step_size;
-        }
-    }
+         for (int i = 0; i < 8; ++i) {
+            __builtin_bit_cast(simd_vector*, p_destination_handle)[i] =
+               vectors[i];
+         }
+         p_source_handle += step_size;
+         p_destination_handle += step_size;
+         bytes -= step_size;
+      }
+   }
 
-    // This routine is run when the memory source cannot fit in cache.
-    else {
-        prefetch_for_one_read(p_source_handle + 512);
-        // TODO: This code block has fallen far out of date.
-        // TODO: This could be improved by using aligned-streaming when
-        // possible.
-        while (bytes >= 256u) {
+   // This routine is run when the memory source cannot fit in cache.
+   else {
+      prefetch_for_one_read(p_source_handle + 512);
+      // TODO: This code block has fallen far out of date.
+      // TODO: This could be improved by using aligned-streaming when
+      // possible.
+      while (bytes >= 256u) {
 #pragma GCC unroll 8
-            for (uword::raw_type i = 0u; i < 8u; ++i) {
-                vectors[i] =
-                    __builtin_bit_cast(simd_vector*, p_source_handle)[i];
-            }
-            prefetch_for_one_read(p_source_handle + 512);
-            p_source_handle += 256u;
+         for (uword::raw_type i = 0u; i < 8u; ++i) {
+            vectors[i] = __builtin_bit_cast(simd_vector*, p_source_handle)[i];
+         }
+         prefetch_for_one_read(p_source_handle + 512);
+         p_source_handle += 256u;
 #pragma GCC unroll 8
-            for (auto& vector : vectors) {
-                stream_in(p_destination_handle, &vector);
-            }
-            p_destination_handle += 256u;
-            bytes -= 256u;
-        }
+         for (auto& vector : vectors) {
+            stream_in(p_destination_handle, &vector);
+         }
+         p_destination_handle += 256u;
+         bytes -= 256u;
+      }
 
-        sfence();
-    }
+      sfence();
+   }
 
-    copy_memory_small(p_source_handle, p_destination_handle, bytes);
-    zero_upper_avx_registers();
+   copy_memory_small(p_source_handle, p_destination_handle, bytes);
+   zero_upper_avx_registers();
 }
 
 /*

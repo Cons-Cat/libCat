@@ -9,80 +9,82 @@
 namespace cat {
 
 enum class file_open_mode {
-    read,
-    write,
-    append
+   read,
+   write,
+   append
 };
 
 enum class file_seek_mode {
-    set,
-    current,
-    end
+   set,
+   current,
+   end
 };
 
 class raw_type_file {
-  public:
-    constexpr raw_type_file() = default;
-    constexpr raw_type_file(raw_type_file const&) = default;
-    constexpr raw_type_file(raw_type_file&&) = default;
+ public:
+   constexpr raw_type_file() = default;
+   constexpr raw_type_file(raw_type_file const&) = default;
+   constexpr raw_type_file(raw_type_file&&) = default;
 
-    auto
-    open(string const path, file_open_mode mode = file_open_mode::read)
-        -> scaredy<void, nix::linux_error> {
-        nix::open_mode open_mode = nix::open_mode::read_write;
-        nix::open_flags open_flags = nix::open_flags::path;
+   auto
+   open(string const path, file_open_mode mode = file_open_mode::read)
+      -> scaredy<void, nix::linux_error> {
+      nix::open_mode open_mode = nix::open_mode::read_write;
+      nix::open_flags open_flags = nix::open_flags::path;
 
-        // Try to open a file from a path.
-        scaredy open_result = nix::sys_open(path.data(), open_mode, open_flags);
-        if (!open_result.has_value()) {
-            return open_result.error();
-        }
+      // Try to open a file from a path.
+      scaredy open_result = nix::sys_open(path.data(), open_mode, open_flags);
+      if (!open_result.has_value()) {
+         return open_result.error();
+      }
 
-        m_file_descriptor = open_result.value();
+      m_file_descriptor = open_result.value();
 
-        // TODO: Is this failable?
-        // Get the status of that opened file.
-        scaredy fstat_result = nix::sys_fstat(m_file_descriptor);
-        nix::file_status status = fstat_result.value();
-        m_file_size = status.file_size;
-        m_block_size = status.block_size;
+      // TODO: Is this failable?
+      // Get the status of that opened file.
+      scaredy fstat_result = nix::sys_fstat(m_file_descriptor);
+      nix::file_status status = fstat_result.value();
+      m_file_size = status.file_size;
+      m_block_size = status.block_size;
 
-        return {};
-    }
+      return {};
+   }
 
-    void
-    close() {
-    }
+   void
+   close() {
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    is_closed() const -> bool {
-        // When closed, `file_descriptor` is set to -1.
-        return m_file_descriptor.value != -1;
-    }
+   [[nodiscard]]
+   constexpr auto
+   is_closed() const -> bool {
+      // When closed, `file_descriptor` is set to -1.
+      return m_file_descriptor.value != -1;
+   }
 
-    constexpr auto
-    is_readable() -> bool {
-        // If `open_mode` has either read bitflags set:
-        return (to_underlying(m_open_mode) &
-                (to_underlying(nix::open_mode::read_only) |
-                 to_underlying(nix::open_mode::read_write))) != 0;
-    }
+   constexpr auto
+   is_readable() -> bool {
+      // If `open_mode` has either read bitflags set:
+      return (to_underlying(m_open_mode)
+              & (to_underlying(nix::open_mode::read_only)
+                 | to_underlying(nix::open_mode::read_write)))
+             != 0;
+   }
 
-    constexpr auto
-    is_writeable() -> bool {
-        // If `open_mode` has either write bitflags set:
-        return (to_underlying(m_open_mode) &
-                (to_underlying(nix::open_mode::write_only) |
-                 to_underlying(nix::open_mode::read_write))) != 0;
-    }
+   constexpr auto
+   is_writeable() -> bool {
+      // If `open_mode` has either write bitflags set:
+      return (to_underlying(m_open_mode)
+              & (to_underlying(nix::open_mode::write_only)
+                 | to_underlying(nix::open_mode::read_write)))
+             != 0;
+   }
 
-  private:
-    [[maybe_unused]]
-    nix::file_descriptor m_file_descriptor{-1};
-    nix::open_mode m_open_mode;
-    idx m_file_size;
-    idx m_block_size;
+ private:
+   [[maybe_unused]]
+   nix::file_descriptor m_file_descriptor{-1};
+   nix::open_mode m_open_mode;
+   idx m_file_size;
+   idx m_block_size;
 };
 
 }  // namespace cat

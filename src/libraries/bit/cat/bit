@@ -9,65 +9,64 @@
 namespace cat {
 
 inline namespace literals {
-    inline namespace bit_literals {
-        // TODO: Reverse the default signed-ness here.
+inline namespace bit_literals {
+// TODO: Reverse the default signed-ness here.
 
-        constexpr auto
-        operator""_ki(unsigned long long input) -> iword {
-            return 1'024 * static_cast<signed long long>(input);
-        }
+constexpr auto
+operator""_ki(unsigned long long input) -> iword {
+   return 1'024 * static_cast<signed long long>(input);
+}
 
-        constexpr auto
-        operator""_uki(unsigned long long input) -> idx {
-            return 1'024u * input;
-        }
+constexpr auto
+operator""_uki(unsigned long long input) -> idx {
+   return 1'024u * input;
+}
 
-        constexpr auto
-        operator""_ki(long double input) -> iword {
-            return static_cast<signed long long>(1024.f * input);
-        }
+constexpr auto
+operator""_ki(long double input) -> iword {
+   return static_cast<signed long long>(1024.f * input);
+}
 
-        constexpr auto
-        operator""_uki(long double input) -> uword {
-            return static_cast<unsigned long long>(1024.f * input);
-        }
+constexpr auto
+operator""_uki(long double input) -> uword {
+   return static_cast<unsigned long long>(1024.f * input);
+}
 
-        constexpr auto
-        operator""_mi(unsigned long long input) -> iword {
-            return 1'024ll * 1'024ll * static_cast<signed long long>(input);
-        }
+constexpr auto
+operator""_mi(unsigned long long input) -> iword {
+   return 1'024ll * 1'024ll * static_cast<signed long long>(input);
+}
 
-        constexpr auto
-        operator""_umi(unsigned long long input) -> idx {
-            return 1'024ull * 1'024ull * input;
-        }
+constexpr auto
+operator""_umi(unsigned long long input) -> idx {
+   return 1'024ull * 1'024ull * input;
+}
 
-        constexpr auto
-        operator""_mi(long double input) -> iword {
-            return static_cast<signed long long>(1024.f * 1024.f * input);
-        }
+constexpr auto
+operator""_mi(long double input) -> iword {
+   return static_cast<signed long long>(1024.f * 1024.f * input);
+}
 
-        constexpr auto
-        operator""_gi(unsigned long long input) -> iword {
-            return 1'024ll * 1'024ll * 1'024ll *
-                   static_cast<signed long long>(input);
-        }
+constexpr auto
+operator""_gi(unsigned long long input) -> iword {
+   return 1'024ll * 1'024ll * 1'024ll * static_cast<signed long long>(input);
+}
 
-        constexpr auto
-        operator""_ugi(unsigned long long input) -> idx {
-            return 1'024ull * 1'024ull * 1'024ull * input;
-        }
+constexpr auto
+operator""_ugi(unsigned long long input) -> idx {
+   return 1'024ull * 1'024ull * 1'024ull * input;
+}
 
-        constexpr auto
-        operator""_gi(long double input) -> iword {
-            return static_cast<signed long long>(1024.f * 1024.f * 1024.f *
-                                                 1024.f * input);
-        }
-    }  // namespace bit_literals
+constexpr auto
+operator""_gi(long double input) -> iword {
+   return static_cast<signed long long>(1024.f * 1024.f * 1024.f * 1024.f
+                                        * input);
+}
+}  // namespace bit_literals
 }  // namespace literals
 
 inline constexpr bool is_target_little_endian =
-    (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
+   (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
 inline constexpr bool is_target_big_endian = !is_target_little_endian;
 
 inline constexpr idx char_bits = idx(sizeof(unsigned char) * 8u);
@@ -80,50 +79,50 @@ template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 countl_zero(T value) -> idx {
-    auto raw_value = make_raw_arithmetic(value);
-    if (raw_value == 0) {
-        // It is undefined behavior to pass 0 into clz.
-        return sizeof(T) * 8;
-    }
+   auto raw_value = make_raw_arithmetic(value);
+   if (raw_value == 0) {
+      // It is undefined behavior to pass 0 into clz.
+      return sizeof(T) * 8;
+   }
 
-    return __builtin_clzg(raw_value);
+   return __builtin_clzg(raw_value);
 }
 
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 countl_one(T value) -> idx {
-    // For non-`cat` integers, `~` might cast to `int`.
-    return countl_zero(static_cast<T>(~value));
+   // For non-`cat` integers, `~` might cast to `int`.
+   return countl_zero(static_cast<T>(~value));
 }
 
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 countr_zero(T value) -> idx {
-    auto raw_value = make_raw_arithmetic(value);
-    if (raw_value == 0) {
-        // It is undefined behavior to pass 0 into ctz.
-        return sizeof(T) * 8;
-    }
+   auto raw_value = make_raw_arithmetic(value);
+   if (raw_value == 0) {
+      // It is undefined behavior to pass 0 into ctz.
+      return sizeof(T) * 8;
+   }
 
-    return __builtin_ctzg(raw_value);
+   return __builtin_ctzg(raw_value);
 }
 
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 countr_one(T value) -> idx {
-    // For non-`cat` integers, `~` might cast to `int`.
-    return countr_zero(static_cast<T>(~value));
+   // For non-`cat` integers, `~` might cast to `int`.
+   return countr_zero(static_cast<T>(~value));
 }
 
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 popcount(T value) -> iword {
-    auto raw_value = make_raw_arithmetic(value);
-    return __builtin_popcountg(raw_value);
+   auto raw_value = make_raw_arithmetic(value);
+   return __builtin_popcountg(raw_value);
 }
 
 // If `value` is a power of two, or in other words, has exactly one set bit.
@@ -131,7 +130,7 @@ template <is_arithmetic T>
 [[nodiscard]]
 constexpr auto
 has_single_bit(T value) -> bool {
-    return popcount(value) == 1;
+   return popcount(value) == 1;
 }
 
 }  // namespace cat
@@ -144,104 +143,102 @@ template <cat::is_unsigned T>
 [[nodiscard]]
 constexpr auto
 extract_bits(T from, cat::uint1 offset, cat::idx length) -> T {
-    auto raw_from = cat::make_raw_arithmetic(from);
-    auto raw_length = cat::make_raw_arithmetic(length);
+   auto raw_from = cat::make_raw_arithmetic(from);
+   auto raw_length = cat::make_raw_arithmetic(length);
 
-    if constexpr (__has_builtin(__builtin_ia32_bextr_u32) && sizeof(T) == 4) {
-        return __builtin_ia32_bextr_u32(raw_from,
-                                        offset.raw | (raw_length << 8));
-    } else if constexpr (__has_builtin(__builtin_ia32_bextr_u64) &&
-                         sizeof(T) == 8) {
-        return __builtin_ia32_bextr_u64(raw_from,
-                                        offset.raw | (raw_length << 8));
-    }
+   if constexpr (__has_builtin(__builtin_ia32_bextr_u32) && sizeof(T) == 4) {
+      return __builtin_ia32_bextr_u32(raw_from, offset.raw | (raw_length << 8));
+   } else if constexpr (__has_builtin(__builtin_ia32_bextr_u64)
+                        && sizeof(T) == 8) {
+      return __builtin_ia32_bextr_u64(raw_from, offset.raw | (raw_length << 8));
+   }
 
-    constexpr unsigned char bits = sizeof(T) * 8u;
-    auto const mask = ((1u << raw_length) * (raw_length < bits)) - 1u;
-    return T((raw_from >> offset.raw) & (mask * (offset.raw < bits)));
+   constexpr unsigned char bits = sizeof(T) * 8u;
+   auto const mask = ((1u << raw_length) * (raw_length < bits)) - 1u;
+   return T((raw_from >> offset.raw) & (mask * (offset.raw < bits)));
 }
 
 // Extract the 1 bits from `value` which are also 1 at the same index in `mask`.
 template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
-    requires(sizeof(T) == sizeof(U))
+   requires(sizeof(T) == sizeof(U))
 [[nodiscard]]
 constexpr auto
 parallel_extract_bits(T value, U mask) -> T {
-    T result = T(0u);
-    auto raw_value = cat::make_raw_arithmetic(value);
-    auto raw_mask = cat::make_raw_arithmetic(mask);
+   T result = T(0u);
+   auto raw_value = cat::make_raw_arithmetic(value);
+   auto raw_mask = cat::make_raw_arithmetic(mask);
 
-    if constexpr (__has_builtin(_pext_u32) && sizeof(T) == 4) {
-        // `_pext_u32()` is a GCC intrinsic.
-        return T(_pext_u32(raw_value, raw_mask));
-    } else if constexpr (__has_builtin(_pext_u64) && sizeof(T) == 8) {
-        // `_pext_u64()` is a GCC intrinsic.
-        return T(_pext_u64(raw_value, raw_mask));
-    } else {
-        cat::raw_arithmetic_type<T> count = 0u;
-        while (raw_mask != 0u) {
-            if (raw_mask & 1) {
-                result >>= 1;
-                result |= raw_value << T((sizeof(T) * 8u) - 1u);
-                ++count;
-            }
-            raw_value >>= 1;
-            raw_mask >>= 1;
-        }
+   if constexpr (__has_builtin(_pext_u32) && sizeof(T) == 4) {
+      // `_pext_u32()` is a GCC intrinsic.
+      return T(_pext_u32(raw_value, raw_mask));
+   } else if constexpr (__has_builtin(_pext_u64) && sizeof(T) == 8) {
+      // `_pext_u64()` is a GCC intrinsic.
+      return T(_pext_u64(raw_value, raw_mask));
+   } else {
+      cat::raw_arithmetic_type<T> count = 0u;
+      while (raw_mask != 0u) {
+         if (raw_mask & 1) {
+            result >>= 1;
+            result |= raw_value << T((sizeof(T) * 8u) - 1u);
+            ++count;
+         }
+         raw_value >>= 1;
+         raw_mask >>= 1;
+      }
 
-        result >>= (sizeof(T) * 8u - count) * (count > 0u);
-        return result;
-    }
+      result >>= (sizeof(T) * 8u - count) * (count > 0u);
+      return result;
+   }
 }
 
 // Place the bits set by `mask` into the right-most bits in the return value.
 template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
-    requires(sizeof(T) == sizeof(U))
+   requires(sizeof(T) == sizeof(U))
 [[nodiscard]]
 constexpr auto
 deposit_bits_mask(T value, U mask) -> T {
-    T result = T(0u);
-    auto raw_value = cat::make_raw_arithmetic(value);
-    auto raw_mask = cat::make_raw_arithmetic(mask);
+   T result = T(0u);
+   auto raw_value = cat::make_raw_arithmetic(value);
+   auto raw_mask = cat::make_raw_arithmetic(mask);
 
-    if constexpr (__has_builtin(_pdep_u32) && sizeof(T) == 4) {
-        // `_pdep_u32()` is a GCC intrinsic.
-        return T(_pdep_u32(raw_value, raw_mask));
-    } else if constexpr (__has_builtin(_pdep_u64) && sizeof(T) == 8) {
-        // `_pdep_u64()` is a GCC intrinsic.
-        return T(_pdep_u64(raw_value, raw_mask));
-    } else {
-        T count = T(0u);
-        while (raw_mask != 0u) {
-            result >>= 1;
-            if (raw_mask & 1) {
-                result |= raw_value << T((sizeof(T) * 8u) - 1u);
-                raw_value >>= 1;
-            }
-            raw_mask >>= 1;
-            ++count;
-        }
+   if constexpr (__has_builtin(_pdep_u32) && sizeof(T) == 4) {
+      // `_pdep_u32()` is a GCC intrinsic.
+      return T(_pdep_u32(raw_value, raw_mask));
+   } else if constexpr (__has_builtin(_pdep_u64) && sizeof(T) == 8) {
+      // `_pdep_u64()` is a GCC intrinsic.
+      return T(_pdep_u64(raw_value, raw_mask));
+   } else {
+      T count = T(0u);
+      while (raw_mask != 0u) {
+         result >>= 1;
+         if (raw_mask & 1) {
+            result |= raw_value << T((sizeof(T) * 8u) - 1u);
+            raw_value >>= 1;
+         }
+         raw_mask >>= 1;
+         ++count;
+      }
 
-        result >>= T((sizeof(T) * 8u) - count) * T(count > 0u);
-        return result;
-    }
+      result >>= T((sizeof(T) * 8u) - count) * T(count > 0u);
+      return result;
+   }
 }
 
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 zero_high_bits_at(T source, cat::uint4 bit_index) -> T {
-    if constexpr (__has_builtin(__builtin_ia32_bzhi_si) && sizeof(T) == 4) {
-        return __builtin_ia32_bzhi_si(cat::make_raw_arithmetic(source),
-                                      bit_index.raw);
-    } else if constexpr (__has_builtin(__builtin_ia32_bzhi_di) &&
-                         sizeof(T) == 8) {
-        return __builtin_ia32_bzhi_di(cat::make_raw_arithmetic(source),
-                                      bit_index.raw);
-    }
+   if constexpr (__has_builtin(__builtin_ia32_bzhi_si) && sizeof(T) == 4) {
+      return __builtin_ia32_bzhi_si(cat::make_raw_arithmetic(source),
+                                    bit_index.raw);
+   } else if constexpr (__has_builtin(__builtin_ia32_bzhi_di)
+                        && sizeof(T) == 8) {
+      return __builtin_ia32_bzhi_di(cat::make_raw_arithmetic(source),
+                                    bit_index.raw);
+   }
 
-    // TODO: Implement this.
-    __builtin_unreachable();
+   // TODO: Implement this.
+   __builtin_unreachable();
 }
 
 }  // namespace x64
@@ -252,145 +249,147 @@ class bit_value;
 class bit_ptr;
 
 namespace detail {
-    constexpr auto get_bit_value(bit_value& value) -> bool&;
-    constexpr auto get_bit_value(bit_value const& value) -> bool const&;
+constexpr auto
+get_bit_value(bit_value& value) -> bool&;
+constexpr auto
+get_bit_value(bit_value const& value) -> bool const&;
 }  // namespace detail
 
 template <is_unsigned_integral storage_type>
 class bit_reference {
-  private:
-    friend bit_value;
+ private:
+   friend bit_value;
 
-    // This constructor is only used by the static factory functions.
-    // A constructor is required to initialize a reference member, such as
-    // `bit_reference::storage`.
-    constexpr bit_reference(storage_type& in_storage, storage_type in_mask)
-        : m_storage(in_storage), m_bit_mask(in_mask) {
-        if !consteval {
-            assert(has_single_bit(in_mask));
-        }
-    }
+   // This constructor is only used by the static factory functions.
+   // A constructor is required to initialize a reference member, such as
+   // `bit_reference::storage`.
+   constexpr bit_reference(storage_type& in_storage, storage_type in_mask)
+       : m_storage(in_storage), m_bit_mask(in_mask) {
+      if !consteval {
+         assert(has_single_bit(in_mask));
+      }
+   }
 
-  public:
-    constexpr bit_reference(bit_reference<storage_type> const&) = default;
-    constexpr bit_reference(bit_reference<storage_type>&&) = default;
+ public:
+   constexpr bit_reference(bit_reference<storage_type> const&) = default;
+   constexpr bit_reference(bit_reference<storage_type>&&) = default;
 
-    constexpr bit_reference(bit_value& other)
-        : m_storage(detail::get_bit_value(other)), m_bit_mask(1u) {
-    }
+   constexpr bit_reference(bit_value& other)
+       : m_storage(detail::get_bit_value(other)), m_bit_mask(1u) {
+   }
 
-    constexpr bit_reference(bit_value const& other)
-        : m_storage(detail::get_bit_value(other)), m_bit_mask(1u) {
-    }
+   constexpr bit_reference(bit_value const& other)
+       : m_storage(detail::get_bit_value(other)), m_bit_mask(1u) {
+   }
 
-    // You cannot take a reference of r-values.
-    constexpr bit_reference(bit_value&& other) = delete;
+   // You cannot take a reference of r-values.
+   constexpr bit_reference(bit_value&& other) = delete;
 
-    // Create a `bit_reference` to a bit position specified by `mask` into a
-    // `storage_type`.
-    static constexpr auto
-    from_mask(storage_type& reference, storage_type mask) -> bit_reference {
-        // Call the internal `private:` constructor.
-        return bit_reference(reference, mask);
-    }
+   // Create a `bit_reference` to a bit position specified by `mask` into a
+   // `storage_type`.
+   static constexpr auto
+   from_mask(storage_type& reference, storage_type mask) -> bit_reference {
+      // Call the internal `private:` constructor.
+      return bit_reference(reference, mask);
+   }
 
-    // Create a `bit_reference` to a bit position `offset` bits from the right
-    // of a `storage_type`.
-    static constexpr auto
-    from_offset(storage_type& reference, uword offset) -> bit_reference {
-        if !consteval {
-            assert(offset < limits<storage_type>::bits);
-        }
-        // Call the internal `private:` constructor.
-        return bit_reference(
-            reference, storage_type(storage_type(1u) << storage_type(offset)));
-    }
+   // Create a `bit_reference` to a bit position `offset` bits from the right
+   // of a `storage_type`.
+   static constexpr auto
+   from_offset(storage_type& reference, uword offset) -> bit_reference {
+      if !consteval {
+         assert(offset < limits<storage_type>::bits);
+      }
+      // Call the internal `private:` constructor.
+      return bit_reference(
+         reference, storage_type(storage_type(1u) << storage_type(offset)));
+   }
 
-    // Assign a true or false value to this bit.
-    constexpr auto
-    operator=(storage_type value) -> bit_reference& {
-        this->assign(value);
-        return *this;
-    }
+   // Assign a true or false value to this bit.
+   constexpr auto
+   operator=(storage_type value) -> bit_reference& {
+      this->assign(value);
+      return *this;
+   }
 
-    // Assign a true or false value to this bit.
-    constexpr auto
-    operator=(bool value)
-        -> bit_reference& requires(!is_same<storage_type, bool>) {
-                              this->assign(value);
-                              return *this;
-                          }
+   // Assign a true or false value to this bit.
+   constexpr auto
+   operator=(bool value)
+      -> bit_reference& requires(!is_same<storage_type, bool>) {
+                           this->assign(value);
+                           return *this;
+                        }
 
-    // Because `bit_reference` and `bit_value` convert to bool, this comparison
-    // works between all the above.
-    friend constexpr auto
-    operator==(bit_reference<storage_type> const& self, bool other) -> bool {
-        return self.is_set() == other;
-    }
+   // Because `bit_reference` and `bit_value` convert to bool, this comparison
+   // works between all the above.
+   friend constexpr auto
+   operator==(bit_reference<storage_type> const& self, bool other) -> bool {
+      return self.is_set() == other;
+   }
 
-    // Implicitly convert this bit to a true or false value.
-    constexpr
-    operator bool() const {
-        return this->is_set();
-    }
+   // Implicitly convert this bit to a true or false value.
+   constexpr
+   operator bool() const {
+      return this->is_set();
+   }
 
-    // Assign a true or false value to this bit.
-    constexpr auto
-    assign(bool value) -> bit_reference& {
-        value ? this->set() : this->unset();
-        return *this;
-    }
+   // Assign a true or false value to this bit.
+   constexpr auto
+   assign(bool value) -> bit_reference& {
+      value ? this->set() : this->unset();
+      return *this;
+   }
 
-    // Assign another bit's value to this bit.
-    template <is_unsigned_integral T>
-    constexpr auto
-    assign(storage_type value) -> bit_reference& {
-        assert(has_single_bit(value));
-        value & 1u ? set() : unset();
-        return *this;
-    }
+   // Assign another bit's value to this bit.
+   template <is_unsigned_integral T>
+   constexpr auto
+   assign(storage_type value) -> bit_reference& {
+      assert(has_single_bit(value));
+      value & 1u ? set() : unset();
+      return *this;
+   }
 
-    // Flag this bit on.
-    constexpr auto
-    set() -> bit_reference& {
-        m_storage |= m_bit_mask;
-        return *this;
-    }
+   // Flag this bit on.
+   constexpr auto
+   set() -> bit_reference& {
+      m_storage |= m_bit_mask;
+      return *this;
+   }
 
-    // Flag this bit off.
-    constexpr auto
-    unset() -> bit_reference& {
-        m_storage &= ~m_bit_mask;
-        return *this;
-    }
+   // Flag this bit off.
+   constexpr auto
+   unset() -> bit_reference& {
+      m_storage &= ~m_bit_mask;
+      return *this;
+   }
 
-    // Flag this bit as the opposite of its current state.
-    constexpr auto
-    flip() -> bit_reference& {
-        m_storage ^= m_bit_mask;
-        return *this;
-    }
+   // Flag this bit as the opposite of its current state.
+   constexpr auto
+   flip() -> bit_reference& {
+      m_storage ^= m_bit_mask;
+      return *this;
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    is_set() const -> bool {
-        return static_cast<bool>(m_storage & m_bit_mask);
-    }
+   [[nodiscard]]
+   constexpr auto
+   is_set() const -> bool {
+      return static_cast<bool>(m_storage & m_bit_mask);
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    mask() const -> storage_type const& {
-        return m_bit_mask;
-    }
+   [[nodiscard]]
+   constexpr auto
+   mask() const -> storage_type const& {
+      return m_bit_mask;
+   }
 
-  private:
-    storage_type& m_storage;
+ private:
+   storage_type& m_storage;
 
-    // If this references a `bit_value`, the type would be `bool`, which can be
-    // problematic and confusing for bit operations such as negation.
-    using mask_integer_type =
-        conditional<is_same<storage_type, bool>, unsigned char, storage_type>;
-    remove_cv<mask_integer_type> m_bit_mask;
+   // If this references a `bit_value`, the type would be `bool`, which can be
+   // problematic and confusing for bit operations such as negation.
+   using mask_integer_type =
+      conditional<is_same<storage_type, bool>, unsigned char, storage_type>;
+   remove_cv<mask_integer_type> m_bit_mask;
 };
 
 template <is_same<bit_value> T>
@@ -403,242 +402,242 @@ bit_reference(bit_value const&) -> bit_reference<bool const>;
 // TODO: Add a nullable `bit_ptr` class.
 
 class bit_value {
-    friend constexpr auto cat::detail::get_bit_value(bit_value&) -> bool&;
-    friend constexpr auto
-    cat::detail::get_bit_value(bit_value const&) -> bool const&;
+   friend constexpr auto
+   cat::detail::get_bit_value(bit_value&) -> bool&;
+   friend constexpr auto
+   cat::detail::get_bit_value(bit_value const&) -> bool const&;
 
-  public:
-    template <is_unsigned_integral>
-    friend class bit_reference;
+ public:
+   template <is_unsigned_integral>
+   friend class bit_reference;
 
-    constexpr bit_value() = default;
-    constexpr bit_value(bit_value const&) = default;
-    constexpr bit_value(bit_value&&) = default;
+   constexpr bit_value() = default;
+   constexpr bit_value(bit_value const&) = default;
+   constexpr bit_value(bit_value&&) = default;
 
-    // Implicitly convert from a bool.
-    constexpr bit_value(bool other) : m_value(other) {
-    }
+   // Implicitly convert from a bool.
+   constexpr bit_value(bool other) : m_value(other) {
+   }
 
-    // Create a `bit_value` copied from a bit position `offset` bits from the
-    // right of a `storage_type`.
-    template <is_unsigned_integral storage_type>
-    static constexpr auto
-    from_offset(storage_type word, iword offset) {
-        assert(offset < limits<storage_type>::bits);
-        bit_value bit;
-        bit.m_value = static_cast<bool>((word >> offset) & 1);
-    }
+   // Create a `bit_value` copied from a bit position `offset` bits from the
+   // right of a `storage_type`.
+   template <is_unsigned_integral storage_type>
+   static constexpr auto
+   from_offset(storage_type word, iword offset) {
+      assert(offset < limits<storage_type>::bits);
+      bit_value bit;
+      bit.m_value = static_cast<bool>((word >> offset) & 1);
+   }
 
-    constexpr auto operator=(bit_value const& other) -> bit_value& = default;
+   constexpr auto
+   operator=(bit_value const& other) -> bit_value& = default;
 
-    template <is_unsigned_integral T>
-    constexpr auto
-    operator=(bit_reference<T> other) -> bit_value& {
-        m_value = other.is_set();
-        return *this;
-    }
+   template <is_unsigned_integral T>
+   constexpr auto
+   operator=(bit_reference<T> other) -> bit_value& {
+      m_value = other.is_set();
+      return *this;
+   }
 
-    constexpr auto
-    operator=(bool other) -> bit_value& {
-        m_value = other;
-        return *this;
-    }
+   constexpr auto
+   operator=(bool other) -> bit_value& {
+      m_value = other;
+      return *this;
+   }
 
-    // Implicitly convert to `bool`.
-    constexpr
-    operator bool() const {
-        return m_value;
-    }
+   // Implicitly convert to `bool`.
+   constexpr
+   operator bool() const {
+      return m_value;
+   }
 
-    friend constexpr auto
-    operator==(bit_value const& self, bit_value const& other) -> bool {
-        return self.m_value == other.m_value;
-    }
+   friend constexpr auto
+   operator==(bit_value const& self, bit_value const& other) -> bool {
+      return self.m_value == other.m_value;
+   }
 
-    friend constexpr auto
-    operator==(bit_value const& self, bool other) -> bool {
-        return self.m_value == other;
-    }
+   friend constexpr auto
+   operator==(bit_value const& self, bool other) -> bool {
+      return self.m_value == other;
+   }
 
-    friend constexpr auto
-    operator&(bit_value const& self, bit_value const& other) -> bit_value {
-        return static_cast<bool>(static_cast<unsigned char>(self.m_value) &
-                                 static_cast<unsigned char>(other.m_value));
-    }
+   friend constexpr auto
+   operator&(bit_value const& self, bit_value const& other) -> bit_value {
+      return static_cast<bool>(static_cast<unsigned char>(self.m_value)
+                               & static_cast<unsigned char>(other.m_value));
+   }
 
-    constexpr auto
-    operator&=(bit_value const& other) -> bit_value& {
-        m_value &= other.m_value;
-        return *this;
-    }
+   constexpr auto
+   operator&=(bit_value const& other) -> bit_value& {
+      m_value &= other.m_value;
+      return *this;
+   }
 
-    friend constexpr auto
-    operator|(bit_value const& self, bit_value const& other) -> bit_value {
-        return static_cast<bool>(static_cast<unsigned char>(self.m_value) |
-                                 static_cast<unsigned char>(other.m_value));
-    }
+   friend constexpr auto
+   operator|(bit_value const& self, bit_value const& other) -> bit_value {
+      return static_cast<bool>(static_cast<unsigned char>(self.m_value)
+                               | static_cast<unsigned char>(other.m_value));
+   }
 
-    constexpr auto
-    operator|=(bit_value const& other) -> bit_value& {
-        m_value |= other.m_value;
-        return *this;
-    }
+   constexpr auto
+   operator|=(bit_value const& other) -> bit_value& {
+      m_value |= other.m_value;
+      return *this;
+   }
 
-    friend constexpr auto
-    operator^(bit_value const& self, bit_value const& other) -> bit_value {
-        return static_cast<bool>(static_cast<unsigned char>(self.m_value) ^
-                                 static_cast<unsigned char>(other.m_value));
-    }
+   friend constexpr auto
+   operator^(bit_value const& self, bit_value const& other) -> bit_value {
+      return static_cast<bool>(static_cast<unsigned char>(self.m_value)
+                               ^ static_cast<unsigned char>(other.m_value));
+   }
 
-    constexpr auto
-    operator^=(bit_value const& other) -> bit_value& {
-        m_value ^= static_cast<unsigned char>(other.m_value);
-        return *this;
-    }
+   constexpr auto
+   operator^=(bit_value const& other) -> bit_value& {
+      m_value ^= static_cast<unsigned char>(other.m_value);
+      return *this;
+   }
 
-    constexpr auto
-    operator~() const -> bit_value {
-        bit_value bit = !m_value;
-        return bit;
-    }
+   constexpr auto
+   operator~() const -> bit_value {
+      bit_value bit = !m_value;
+      return bit;
+   }
 
-    constexpr void
-    assign(bit_value const& input) {
-        m_value = input.m_value;
-    }
+   constexpr void
+   assign(bit_value const& input) {
+      m_value = input.m_value;
+   }
 
-    template <is_unsigned_integral T>
-    constexpr void
-    assign(bit_reference<T> input) {
-        m_value = input.is_set();
-    }
+   template <is_unsigned_integral T>
+   constexpr void
+   assign(bit_reference<T> input) {
+      m_value = input.is_set();
+   }
 
-    constexpr void
-    assign(bool input) {
-        m_value = input;
-    }
+   constexpr void
+   assign(bool input) {
+      m_value = input;
+   }
 
-    // Flag this bit on.
-    constexpr auto
-    set() -> bit_value& {
-        m_value = true;
-        return *this;
-    }
+   // Flag this bit on.
+   constexpr auto
+   set() -> bit_value& {
+      m_value = true;
+      return *this;
+   }
 
-    // Flag this bit off.
-    constexpr auto
-    unset() -> bit_value& {
-        m_value = false;
-        return *this;
-    }
+   // Flag this bit off.
+   constexpr auto
+   unset() -> bit_value& {
+      m_value = false;
+      return *this;
+   }
 
-    // Flag this bit as the opposite of its current state.
-    constexpr auto
-    flip() -> bit_value& {
-        m_value = !m_value;
-        return *this;
-    }
+   // Flag this bit as the opposite of its current state.
+   constexpr auto
+   flip() -> bit_value& {
+      m_value = !m_value;
+      return *this;
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    is_set() const -> bool {
-        return m_value;
-    }
+   [[nodiscard]]
+   constexpr auto
+   is_set() const -> bool {
+      return m_value;
+   }
 
-  private:
-    bool m_value;
+ private:
+   bool m_value;
 };
 
 struct byte;
 
 template <typename iterator>
 // Only storage types can be iterated bitwise.
-    requires(is_unsigned_integral<typename iterator::value_type>
-             /* || is_same<typename iterator::value_type, byte> */)
+   requires(is_unsigned_integral<typename iterator::value_type>
+            /* || is_same<typename iterator::value_type, byte> */)
 class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
-  private:
-    static constexpr idx word_bits =
-        limits<typename iterator::value_type>::bits;
+ private:
+   static constexpr idx word_bits = limits<typename iterator::value_type>::bits;
 
-  public:
-    using value_type = bit_value;
-    using reference = bit_reference<typename iterator::value_type>;
+ public:
+   using value_type = bit_value;
+   using reference = bit_reference<typename iterator::value_type>;
 
-    constexpr bit_iterator() = default;
-    constexpr bit_iterator(bit_iterator const&) = default;
-    constexpr bit_iterator(bit_iterator&&) = default;
+   constexpr bit_iterator() = default;
+   constexpr bit_iterator(bit_iterator const&) = default;
+   constexpr bit_iterator(bit_iterator&&) = default;
 
-    constexpr explicit bit_iterator(iterator const& other, idx current_bit = 0u)
-        : m_internal_iterator(other), m_bit_position(current_bit) {
-    }
+   constexpr explicit bit_iterator(iterator const& other, idx current_bit = 0u)
+       : m_internal_iterator(other), m_bit_position(current_bit) {
+   }
 
-    constexpr auto
-    dereference() const -> reference {
-        return reference::from_offset(*m_internal_iterator, m_bit_position);
-    }
+   constexpr auto
+   dereference() const -> reference {
+      return reference::from_offset(*m_internal_iterator, m_bit_position);
+   }
 
-    constexpr void
-    advance(iword offset) {
-        iword advance_bits = m_bit_position + offset;
-        iword bytes_overflow = advance_bits / word_bits;
-        if (advance_bits < 0 &&
-            ((bytes_overflow * word_bits) != advance_bits)) {
-            --bytes_overflow;
-        }
-        m_internal_iterator += bytes_overflow.raw;  // TODO: Remove `.raw`.
-        m_bit_position = idx(advance_bits - bytes_overflow * word_bits);
-    }
+   constexpr void
+   advance(iword offset) {
+      iword advance_bits = m_bit_position + offset;
+      iword bytes_overflow = advance_bits / word_bits;
+      if (advance_bits < 0 && ((bytes_overflow * word_bits) != advance_bits)) {
+         --bytes_overflow;
+      }
+      m_internal_iterator += bytes_overflow.raw;  // TODO: Remove `.raw`.
+      m_bit_position = idx(advance_bits - bytes_overflow * word_bits);
+   }
 
-    constexpr auto
-    distance_to(bit_iterator const& other) const -> iword {
-        iword const word_difference =
-            m_internal_iterator - other.m_internal_iterator;
-        // Multiply the number of words between the two iterators by the size of
-        // a word in bits, then add the difference between the iterators'
-        // current bit offset within their word. That gives the total number of
-        // bits between any two bit iterators.
-        return (word_difference * word_bits) + other.m_bit_position -
-               m_bit_position;
-    }
+   constexpr auto
+   distance_to(bit_iterator const& other) const -> iword {
+      iword const word_difference =
+         m_internal_iterator - other.m_internal_iterator;
+      // Multiply the number of words between the two iterators by the size of
+      // a word in bits, then add the difference between the iterators'
+      // current bit offset within their word. That gives the total number of
+      // bits between any two bit iterators.
+      return (word_difference * word_bits) + other.m_bit_position
+             - m_bit_position;
+   }
 
-  private:
-    iterator m_internal_iterator;
-    idx m_bit_position;
+ private:
+   iterator m_internal_iterator;
+   idx m_bit_position;
 };
 
 inline constexpr bit_value one_bit = true;
 inline constexpr bit_value zero_bit = false;
 
 namespace detail {
-    constexpr auto
-    get_bit_value(bit_value& value) -> bool& {
-        return value.m_value;
-    }
+constexpr auto
+get_bit_value(bit_value& value) -> bool& {
+   return value.m_value;
+}
 
-    constexpr auto
-    get_bit_value(bit_value const& value) -> bool const& {
-        return value.m_value;
-    }
+constexpr auto
+get_bit_value(bit_value const& value) -> bool const& {
+   return value.m_value;
+}
 }  // namespace detail
 
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 invert_endianess(T value) -> T {
-    if constexpr (sizeof(value) == 1) {
-        return value;
-    }
+   if constexpr (sizeof(value) == 1) {
+      return value;
+   }
 
-    auto raw_value = make_raw_arithmetic(value);
-    if constexpr (sizeof(raw_value) == 2) {
-        return __builtin_bswap16(raw_value);
-    }
-    if constexpr (sizeof(raw_value) == 4) {
-        return __builtin_bswap32(raw_value);
-    }
-    if constexpr (sizeof(raw_value) == 8) {
-        return __builtin_bswap64(raw_value);
-    }
+   auto raw_value = make_raw_arithmetic(value);
+   if constexpr (sizeof(raw_value) == 2) {
+      return __builtin_bswap16(raw_value);
+   }
+   if constexpr (sizeof(raw_value) == 4) {
+      return __builtin_bswap32(raw_value);
+   }
+   if constexpr (sizeof(raw_value) == 8) {
+      return __builtin_bswap64(raw_value);
+   }
 }
 
 // TODO: Support `volatile` qualified pointers.
@@ -647,102 +646,110 @@ invert_endianess(T value) -> T {
 
 template <typename U>
 [[nodiscard]]
-constexpr auto is_aligned(U* p_value, uword alignment) -> bool;
+constexpr auto
+is_aligned(U* p_value, uword alignment) -> bool;
 
 template <typename U>
 [[nodiscard]]
 // NOLINTNEXTLINE This is forward-declared in `<cat/memory>`.
-constexpr auto is_aligned(uintptr<U> p_value, uword alignment) -> bool;
+constexpr auto
+is_aligned(uintptr<U> p_value, uword alignment) -> bool;
 
 template <cat::overflow_policies policy>
 [[nodiscard]]
-constexpr auto is_aligned(index<policy> value, uword alignment) -> bool;
+constexpr auto
+is_aligned(index<policy> value, uword alignment) -> bool;
 
 template <typename U>
 [[nodiscard]]
-constexpr auto align_up(U* p_value, uword alignment) -> U*;
+constexpr auto
+align_up(U* p_value, uword alignment) -> U*;
 template <typename U>
-constexpr auto align_up(uintptr<U> p_value, uword alignment) -> uintptr<U>;
+constexpr auto
+align_up(uintptr<U> p_value, uword alignment) -> uintptr<U>;
 
 template <typename U>
 [[nodiscard]]
-constexpr auto align_down(U* p_value, uword alignment) -> U*;
+constexpr auto
+align_down(U* p_value, uword alignment) -> U*;
 
 template <typename U>
 [[nodiscard]]
-constexpr auto align_down(intptr<U> p_value, uword alignment) -> intptr<U>;
+constexpr auto
+align_down(intptr<U> p_value, uword alignment) -> intptr<U>;
 
 template <typename U>
 [[nodiscard]]
-constexpr auto align_down(uintptr<U> p_value, uword alignment) -> uintptr<U>;
+constexpr auto
+align_down(uintptr<U> p_value, uword alignment) -> uintptr<U>;
 
 // `byte` is a storage type which enables bitwise operations but not arithmetic.
 // TODO: Add some member functions.
 struct byte : bitwise_interface<byte> {
-    uint1 value;
+   uint1 value;
 
-    template <typename T>
-    [[nodiscard, gnu::always_inline, gnu::artificial]]
-    inline constexpr explicit
-    operator T()
-        requires(sizeof(T) == 1)
-    {
-        return __builtin_bit_cast(T, value);
-    }
+   template <typename T>
+   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   inline constexpr explicit
+   operator T()
+      requires(sizeof(T) == 1)
+   {
+      return __builtin_bit_cast(T, value);
+   }
 
-    // Generate `operator&`.
-    [[nodiscard, gnu::always_inline, gnu::artificial]]
-    inline constexpr auto
-    bit_and(is_integral auto from) const -> byte {
-        return this->value & from;
-    }
+   // Generate `operator&`.
+   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   inline constexpr auto
+   bit_and(is_integral auto from) const -> byte {
+      return this->value & from;
+   }
 
-    // Generate `operator|`.
-    [[nodiscard, gnu::always_inline, gnu::artificial]]
-    inline constexpr auto
-    bit_or(is_integral auto from) const -> byte {
-        return this->value | from;
-    }
+   // Generate `operator|`.
+   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   inline constexpr auto
+   bit_or(is_integral auto from) const -> byte {
+      return this->value | from;
+   }
 
-    // Generate `operator<<`.
-    template <is_arithmetic U>
-    [[nodiscard, gnu::always_inline, gnu::artificial, gnu::always_inline,
-      gnu::artificial]]
-    inline constexpr auto
-    shift_left_by(U operand) const -> byte {
-        return value << operand;
-    }
+   // Generate `operator<<`.
+   template <is_arithmetic U>
+   [[nodiscard, gnu::always_inline, gnu::artificial, gnu::always_inline,
+     gnu::artificial]]
+   inline constexpr auto
+   shift_left_by(U operand) const -> byte {
+      return value << operand;
+   }
 
-    template <is_arithmetic U>
-    [[nodiscard, gnu::always_inline, gnu::artificial, gnu::always_inline,
-      gnu::artificial]]
-    inline constexpr auto
-    shift_left_into(U other) const -> U {
-        return other << value;
-    }
+   template <is_arithmetic U>
+   [[nodiscard, gnu::always_inline, gnu::artificial, gnu::always_inline,
+     gnu::artificial]]
+   inline constexpr auto
+   shift_left_into(U other) const -> U {
+      return other << value;
+   }
 
-    // Generate `operator>>`.
-    template <is_arithmetic U>
-    [[nodiscard, gnu::always_inline, gnu::artificial, gnu::always_inline,
-      gnu::artificial]]
-    inline constexpr auto
-    shift_right_by(U operand) const -> byte {
-        return value >> operand;
-    }
+   // Generate `operator>>`.
+   template <is_arithmetic U>
+   [[nodiscard, gnu::always_inline, gnu::artificial, gnu::always_inline,
+     gnu::artificial]]
+   inline constexpr auto
+   shift_right_by(U operand) const -> byte {
+      return value >> operand;
+   }
 
-    template <is_arithmetic U>
-    [[nodiscard, gnu::always_inline, gnu::artificial, gnu::always_inline,
-      gnu::artificial]]
-    inline constexpr auto
-    shift_right_into(U other) const -> U {
-        return other >> value;
-    }
+   template <is_arithmetic U>
+   [[nodiscard, gnu::always_inline, gnu::artificial, gnu::always_inline,
+     gnu::artificial]]
+   inline constexpr auto
+   shift_right_into(U other) const -> U {
+      return other >> value;
+   }
 
-    [[nodiscard, gnu::always_inline, gnu::artificial]]
-    inline constexpr auto
-    has_single_bit() const -> bool {
-        return (value & (value - 1u)) == 0u;
-    }
+   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   inline constexpr auto
+   has_single_bit() const -> bool {
+      return (value & (value - 1u)) == 0u;
+   }
 };
 
 static_assert(is_trivial<::cat::byte>);
@@ -751,14 +758,14 @@ template <is_integral T>
 [[nodiscard]]
 constexpr auto
 has_single_bit(T value) -> bool {
-    auto raw = make_raw_arithmetic(value);
-    return (raw & (raw - 1u)) == 0u;
+   auto raw = make_raw_arithmetic(value);
+   return (raw & (raw - 1u)) == 0u;
 }
 
 [[nodiscard]]
 constexpr auto
 has_single_bit(byte value) -> bool {
-    return value.has_single_bit();
+   return value.has_single_bit();
 }
 
 template <typename>
@@ -773,8 +780,8 @@ template <cat::is_enum_flag T>
 [[nodiscard]]
 constexpr auto
 operator|(T flag_1, T flag_2) -> T {
-    using U = cat::underlying_type<T>;
-    return static_cast<T>(static_cast<U>(flag_1) | static_cast<U>(flag_2));
+   using U = cat::underlying_type<T>;
+   return static_cast<T>(static_cast<U>(flag_1) | static_cast<U>(flag_2));
 }
 
 // template <cat::is_enum_flag T>
@@ -789,8 +796,8 @@ template <cat::is_enum_flag T>
 [[nodiscard]]
 constexpr auto
 operator&(T flag_1, T flag_2) -> T {
-    using U = cat::underlying_type<T>;
-    return static_cast<T>(static_cast<U>(flag_1) & static_cast<U>(flag_2));
+   using U = cat::underlying_type<T>;
+   return static_cast<T>(static_cast<U>(flag_1) & static_cast<U>(flag_2));
 }
 
 // TODO: Fix bit flag operators.

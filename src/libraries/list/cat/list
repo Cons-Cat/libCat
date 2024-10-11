@@ -10,782 +10,782 @@
 
 namespace cat {
 namespace detail {
-    template <typename T>
-    struct list_node {
-        list_node<T>* p_next_node;
-        list_node<T>* p_previous_node;
-        T storage;
-    };
+template <typename T>
+struct list_node {
+   list_node<T>* p_next_node;
+   list_node<T>* p_previous_node;
+   T storage;
+};
 
-    template <typename T>
-    struct forward_list_node {
-        forward_list_node<T>* p_next_node;
-        T storage;
-    };
+template <typename T>
+struct forward_list_node {
+   forward_list_node<T>* p_next_node;
+   T storage;
+};
 }  // namespace detail
 
 template <typename T>
 class list : public collection_interface<list<T>, T> {
-  public:
-    class iterator_type : public iterator_interface<iterator_type> {
-      public:
-        friend list<T>;
-        friend iterator_interface<iterator_type>;
-        using collection_type [[maybe_unused]] = list<T>;
+ public:
+   class iterator_type : public iterator_interface<iterator_type> {
+    public:
+      friend list<T>;
+      friend iterator_interface<iterator_type>;
+      using collection_type [[maybe_unused]] = list<T>;
 
-        // TODO: This default constructor is deprecated due to the user-defined
-        // constructor. Should this still exist?
-        // iterator_type(iterator_type const&) = default;
+      // TODO: This default constructor is deprecated due to the user-defined
+      // constructor. Should this still exist?
+      // iterator_type(iterator_type const&) = default;
 
-        iterator_type(detail::list_node<T>* p_input) : m_p_node(p_input) {
-        }
+      iterator_type(detail::list_node<T>* p_input) : m_p_node(p_input) {
+      }
 
-        auto
-        increment() -> iterator_type& {
-            m_p_node = m_p_node->p_next_node;
-            return *this;
-        }
+      auto
+      increment() -> iterator_type& {
+         m_p_node = m_p_node->p_next_node;
+         return *this;
+      }
 
-        auto
-        decrement() -> iterator_type& {
-            m_p_node = m_p_node->p_previous_node;
-            return *this;
-        }
+      auto
+      decrement() -> iterator_type& {
+         m_p_node = m_p_node->p_previous_node;
+         return *this;
+      }
 
-        auto
-        dereference() const -> T& {
-            return m_p_node->storage;
-        }
+      auto
+      dereference() const -> T& {
+         return m_p_node->storage;
+      }
 
-        auto
-        equal_to(iterator_type const& it) const -> bool {
-            return it.m_p_node == m_p_node;
-        }
+      auto
+      equal_to(iterator_type const& it) const -> bool {
+         return it.m_p_node == m_p_node;
+      }
 
-      private:
-        detail::list_node<T>* m_p_node;
-    };
+    private:
+      detail::list_node<T>* m_p_node;
+   };
 
-    constexpr list() : m_p_head(nullptr), m_p_tail(nullptr), m_length(0) {
-    }
+   constexpr list() : m_p_head(nullptr), m_p_tail(nullptr), m_length(0) {
+   }
 
-    constexpr list(list<T>&& list) = default;
+   constexpr list(list<T>&& list) = default;
 
-  protected:
-    // Being `protected:` permits derived classes and adaptors to call this.
-    // Only allow the shallow copy constructor to be used by these static
-    // factory member functions. For public copying, `.clone()` should be used.
-    [[deprecated("Implicit copying of `cat::list` is forbidden. Call `.clone() "
-                 "instead!")]]
-    //
-    constexpr list(list<T> const&) = default;
+ protected:
+   // Being `protected:` permits derived classes and adaptors to call this.
+   // Only allow the shallow copy constructor to be used by these static
+   // factory member functions. For public copying, `.clone()` should be used.
+   [[deprecated("Implicit copying of `cat::list` is forbidden. Call `.clone() "
+                "instead!")]]
+   //
+   constexpr list(list<T> const&) = default;
 
-  public:
-    // TODO: value_type_list constructors/factories were removed elsewhere.
-    // Should this be kept?
-    template <typename U, U... initializers>
-        requires(is_implicitly_convertible<U, T>)
-    [[nodiscard]]
-    static auto
-    from(is_allocator auto& allocator, value_type_list<U, initializers...>)
-        -> maybe<list<T>> {
-        list<T> new_list;
-        // TODO: Check if a recursive function is more efficient here.
-        array values = {static_cast<T>(initializers)...};
-        // TODO: Optimize memory allocations with a multiple `.push_back()`
-        // overload.
-        for (iword i = 0; i < ssizeof_pack(initializers...); ++i) {
-            maybe result = new_list.push_back(allocator, values[i]);
-            if (!result.has_value()) {
-                return nullopt;
-            }
-        }
-        return new_list;
-    }
-
-    template <typename... Args>
-        requires(is_implicitly_convertible<Args, T> && ...)
-    [[nodiscard]]
-    static auto
-    from(is_allocator auto& allocator, Args&&... initializers)
-        -> maybe<list<T>> {
-        list<T> new_list;
-        // TODO: Check if a recursive function is more efficient here.
-        array values = {fwd(initializers)...};
-        // TODO: Optimize memory allocations with a multiple `.push_back()`
-        // overload.
-        for (idx i; i < sizeof...(Args); ++i) {
-            maybe result = new_list.push_back(allocator, values[i]);
-            if (!result.has_value()) {
-                return nullopt;
-            }
-        }
-        return new_list;
-    }
-
-    // Get the count of elements stored in this `List`.
-    [[nodiscard]]
-    auto
-    size() const -> idx {
-        return m_length;
-    }
-
-    // Get the maximum possible count of elements stored in a `List`.
-    [[nodiscard]]
-    constexpr auto
-    capacity() const -> idx {
-        return m_length.max();
-    }
-
-    [[nodiscard]]
-    auto
-    front() -> T& {
-        return m_p_head->storage;
-    }
-
-    [[nodiscard]]
-    auto
-    back() -> T& {
-        return m_p_tail->storage;
-    }
-
-  private:
-    void
-    place_initial_node(detail::list_node<T>& node) {
-        node.p_next_node = nullptr;
-        node.p_previous_node = nullptr;
-        m_p_head = &node;
-        m_p_tail = &node;
-        m_length = 1u;
-    }
-
-    void
-    place_node(iterator_type where, detail::list_node<T>& node) {
-        // `.place_node()` should almost always be used for insertions in the
-        // middle.
-        if (where != this->begin() && where != this->end()) [[likely]] {
-            // Place a node in the middle of this list.
-            node.p_next_node = where.m_p_node;
-            node.p_previous_node = where.m_p_node->p_previous_node;
-
-            node.p_next_node->p_previous_node = &node;
-            node.p_previous_node->p_next_node = &node;
-        } else if (where == this->begin()) {
-            // Place a node at the front of this list.
-            node.p_next_node = m_p_head;
-            node.p_previous_node = nullptr;
-            m_p_head->p_previous_node = &node;
-            m_p_head = &node;
-        } else {
-            // Place a node at the back of this list.
-            node.p_previous_node = where.m_p_node->p_previous_node;
-            node.p_next_node = m_p_tail;
-            node.p_previous_node->p_next_node = &node;
-        }
-        m_length++;
-    }
-
-    // Place a node at the front of this list.
-    void
-    place_node_front(detail::list_node<T>& node) {
-        if (m_length > 0) [[likely]] {
-            node.p_next_node = m_p_head;
-            node.p_previous_node = nullptr;
-            node.p_next_node->p_previous_node = &node;
-            m_p_head = &node;
-            m_length++;
-        } else {
-            this->place_initial_node(node);
-        }
-    }
-
-    // Place a node at the back of this list.
-    void
-    place_node_back(detail::list_node<T>& node) {
-        if (m_length == 0) [[unlikely]] {
-            this->place_initial_node(node);
-        } else {
-            node.p_next_node = nullptr;
-            node.p_previous_node = m_p_tail;
-            node.p_previous_node->p_next_node = &node;
-            m_p_tail = &node;
-            m_length++;
-        }
-    }
-
-  public:
-    // Deep-copy the contents of this `List`.
-    [[nodiscard]]
-    auto
-    clone(is_allocator auto& allocator) -> maybe<list<T>> {
-        list<T> new_list;
-        for (iterator_type it = this->begin(); it != (this->end() + 1); ++it) {
-            new_list.push_back(allocator, *it);
-        }
-        return new_list;
-    }
-
-    // Allocate a node and insert it into this list before the position of
-    // `where`.
-    template <typename U>
-        requires(is_implicitly_convertible<U, T>)
-    auto
-    insert(is_allocator auto& allocator, iterator_type where, U const& value)
-        -> maybe<iterator_type> {
-        // `cat::maybe_ptr` at here produces an internal compiler error in
-        // GCC 12.
-        cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
-        if (!memory.has_value()) {
-            // Propagate memory allocation failure.
+ public:
+   // TODO: value_type_list constructors/factories were removed elsewhere.
+   // Should this be kept?
+   template <typename U, U... initializers>
+      requires(is_implicitly_convertible<U, T>)
+   [[nodiscard]]
+   static auto
+   from(is_allocator auto& allocator, value_type_list<U, initializers...>)
+      -> maybe<list<T>> {
+      list<T> new_list;
+      // TODO: Check if a recursive function is more efficient here.
+      array values = {static_cast<T>(initializers)...};
+      // TODO: Optimize memory allocations with a multiple `.push_back()`
+      // overload.
+      for (iword i = 0; i < ssizeof_pack(initializers...); ++i) {
+         maybe result = new_list.push_back(allocator, values[i]);
+         if (!result.has_value()) {
             return nullopt;
-        }
+         }
+      }
+      return new_list;
+   }
 
-        detail::list_node<T>& node = *memory.value();
-        node.storage = static_cast<T>(value);
-
-        if (m_length == 0) [[unlikely]] {
-            // If this list has nothing in it, `.insert()` must be
-            // special-cased.
-            this->place_initial_node(node);
-        } else {
-            this->place_node(where, node);
-        }
-        return iterator_type(&node);
-    }
-
-    // Allocate a node and insert it into this list before the position of
-    // `where`, then construct it with arguments.
-    template <typename... Args>
-    auto
-    emplace(is_allocator auto& allocator, iterator_type where,
-            Args&&... arguments) -> maybe<iterator_type> {
-        cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
-        if (!memory.has_value()) {
-            // Propagate memory allocation failure.
+   template <typename... Args>
+      requires(is_implicitly_convertible<Args, T> && ...)
+   [[nodiscard]]
+   static auto
+   from(is_allocator auto& allocator, Args&&... initializers)
+      -> maybe<list<T>> {
+      list<T> new_list;
+      // TODO: Check if a recursive function is more efficient here.
+      array values = {fwd(initializers)...};
+      // TODO: Optimize memory allocations with a multiple `.push_back()`
+      // overload.
+      for (idx i; i < sizeof...(Args); ++i) {
+         maybe result = new_list.push_back(allocator, values[i]);
+         if (!result.has_value()) {
             return nullopt;
-        }
+         }
+      }
+      return new_list;
+   }
 
-        detail::list_node<T>& node = *memory.value();
-        new (&node.storage) T(fwd(arguments)...);
+   // Get the count of elements stored in this `List`.
+   [[nodiscard]]
+   auto
+   size() const -> idx {
+      return m_length;
+   }
 
-        if (m_length == 0) [[unlikely]] {
-            // If this list has nothing in it, `.emplace()` must be
-            // special-cased.
-            this->place_initial_node(node);
-        } else {
-            this->place_node(where, node);
-        }
-        return iterator_type(&node);
-    }
+   // Get the maximum possible count of elements stored in a `List`.
+   [[nodiscard]]
+   constexpr auto
+   capacity() const -> idx {
+      return m_length.max();
+   }
 
-    // Remove and deallocate an element from this list.
-    auto
-    erase(is_allocator auto& allocator, iterator_type where)
-        -> maybe<iterator_type> {
-        if (m_length == 0) [[unlikely]] {
-            // Prevent a segfault when the list is empty.
-            return iterator_type(m_p_head);
-        }
+   [[nodiscard]]
+   auto
+   front() -> T& {
+      return m_p_head->storage;
+   }
 
-        detail::list_node<T>& node = *where.m_p_node;
-        iterator_type next = node.p_next_node;
-        if (&node != m_p_head && &node != m_p_tail) [[likely]] {
-            // Remove a node from the middle of this list.
-            node.p_next_node->p_previous_node = node.p_previous_node;
-            node.p_previous_node->p_next_node = node.p_next_node;
-        } else if (&node == m_p_head) {
-            // Remove a node from the front of this list.
+   [[nodiscard]]
+   auto
+   back() -> T& {
+      return m_p_tail->storage;
+   }
+
+ private:
+   void
+   place_initial_node(detail::list_node<T>& node) {
+      node.p_next_node = nullptr;
+      node.p_previous_node = nullptr;
+      m_p_head = &node;
+      m_p_tail = &node;
+      m_length = 1u;
+   }
+
+   void
+   place_node(iterator_type where, detail::list_node<T>& node) {
+      // `.place_node()` should almost always be used for insertions in the
+      // middle.
+      if (where != this->begin() && where != this->end()) [[likely]] {
+         // Place a node in the middle of this list.
+         node.p_next_node = where.m_p_node;
+         node.p_previous_node = where.m_p_node->p_previous_node;
+
+         node.p_next_node->p_previous_node = &node;
+         node.p_previous_node->p_next_node = &node;
+      } else if (where == this->begin()) {
+         // Place a node at the front of this list.
+         node.p_next_node = m_p_head;
+         node.p_previous_node = nullptr;
+         m_p_head->p_previous_node = &node;
+         m_p_head = &node;
+      } else {
+         // Place a node at the back of this list.
+         node.p_previous_node = where.m_p_node->p_previous_node;
+         node.p_next_node = m_p_tail;
+         node.p_previous_node->p_next_node = &node;
+      }
+      m_length++;
+   }
+
+   // Place a node at the front of this list.
+   void
+   place_node_front(detail::list_node<T>& node) {
+      if (m_length > 0) [[likely]] {
+         node.p_next_node = m_p_head;
+         node.p_previous_node = nullptr;
+         node.p_next_node->p_previous_node = &node;
+         m_p_head = &node;
+         m_length++;
+      } else {
+         this->place_initial_node(node);
+      }
+   }
+
+   // Place a node at the back of this list.
+   void
+   place_node_back(detail::list_node<T>& node) {
+      if (m_length == 0) [[unlikely]] {
+         this->place_initial_node(node);
+      } else {
+         node.p_next_node = nullptr;
+         node.p_previous_node = m_p_tail;
+         node.p_previous_node->p_next_node = &node;
+         m_p_tail = &node;
+         m_length++;
+      }
+   }
+
+ public:
+   // Deep-copy the contents of this `List`.
+   [[nodiscard]]
+   auto
+   clone(is_allocator auto& allocator) -> maybe<list<T>> {
+      list<T> new_list;
+      for (iterator_type it = this->begin(); it != (this->end() + 1); ++it) {
+         new_list.push_back(allocator, *it);
+      }
+      return new_list;
+   }
+
+   // Allocate a node and insert it into this list before the position of
+   // `where`.
+   template <typename U>
+      requires(is_implicitly_convertible<U, T>)
+   auto
+   insert(is_allocator auto& allocator, iterator_type where, U const& value)
+      -> maybe<iterator_type> {
+      // `cat::maybe_ptr` at here produces an internal compiler error in
+      // GCC 12.
+      cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
+      if (!memory.has_value()) {
+         // Propagate memory allocation failure.
+         return nullopt;
+      }
+
+      detail::list_node<T>& node = *memory.value();
+      node.storage = static_cast<T>(value);
+
+      if (m_length == 0) [[unlikely]] {
+         // If this list has nothing in it, `.insert()` must be
+         // special-cased.
+         this->place_initial_node(node);
+      } else {
+         this->place_node(where, node);
+      }
+      return iterator_type(&node);
+   }
+
+   // Allocate a node and insert it into this list before the position of
+   // `where`, then construct it with arguments.
+   template <typename... Args>
+   auto
+   emplace(is_allocator auto& allocator, iterator_type where,
+           Args&&... arguments) -> maybe<iterator_type> {
+      cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
+      if (!memory.has_value()) {
+         // Propagate memory allocation failure.
+         return nullopt;
+      }
+
+      detail::list_node<T>& node = *memory.value();
+      new (&node.storage) T(fwd(arguments)...);
+
+      if (m_length == 0) [[unlikely]] {
+         // If this list has nothing in it, `.emplace()` must be
+         // special-cased.
+         this->place_initial_node(node);
+      } else {
+         this->place_node(where, node);
+      }
+      return iterator_type(&node);
+   }
+
+   // Remove and deallocate an element from this list.
+   auto
+   erase(is_allocator auto& allocator, iterator_type where)
+      -> maybe<iterator_type> {
+      if (m_length == 0) [[unlikely]] {
+         // Prevent a segfault when the list is empty.
+         return iterator_type(m_p_head);
+      }
+
+      detail::list_node<T>& node = *where.m_p_node;
+      iterator_type next = node.p_next_node;
+      if (&node != m_p_head && &node != m_p_tail) [[likely]] {
+         // Remove a node from the middle of this list.
+         node.p_next_node->p_previous_node = node.p_previous_node;
+         node.p_previous_node->p_next_node = node.p_next_node;
+      } else if (&node == m_p_head) {
+         // Remove a node from the front of this list.
+         node.p_next_node->p_previous_node = nullptr;
+         m_p_head = node.p_next_node;
+      } else {
+         // Remove a node from the back of this list.
+         node.p_previous_node->p_next_node = nullptr;
+         m_p_tail = node.p_previous_node;
+      }
+      m_length--;
+      allocator.free(&node);
+      return iterator_type(next);
+   }
+
+   // Allocate a node and insert it at the beginning of this list.
+   template <typename U>
+      requires(is_implicitly_convertible<U, T>)
+   auto
+   push_front(is_allocator auto& allocator, U const& value)
+      -> maybe<iterator_type> {
+      cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
+      if (!memory.has_value()) {
+         // Propagate memory allocation failure.
+         return nullopt;
+      }
+
+      detail::list_node<T>& node = *memory.value();
+      node.storage = static_cast<T>(value);
+      this->place_node_front(node);
+
+      return iterator_type(&node);
+   }
+
+   // Allocate a node and insert it at the beginning of this list.
+   template <typename... Args>
+   auto
+   emplace_front(is_allocator auto& allocator, Args&&... arguments)
+      -> maybe<iterator_type> {
+      cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
+      if (!memory.has_value()) {
+         // Propagate memory allocation failure.
+         return nullopt;
+      }
+
+      detail::list_node<T>& node = *memory.value();
+      new (&node.storage) T(fwd(arguments)...);
+      this->place_node_front(node);
+
+      return iterator_type(&node);
+   }
+
+   // Remove an element from the front of this list.
+   void
+   pop_front(is_allocator auto& allocator) {
+      if (m_length > 0) [[likely]] {
+         detail::list_node<T>& node = *(this->begin().m_p_node);
+         if (node.p_next_node != nullptr) [[likely]] {
             node.p_next_node->p_previous_node = nullptr;
-            m_p_head = node.p_next_node;
-        } else {
-            // Remove a node from the back of this list.
+         }
+         m_p_head = node.p_next_node;
+         m_length--;
+         allocator.free(&node);
+      }
+
+      if (m_length <= 1) {
+         m_p_tail = m_p_head;
+      }
+   }
+
+   // TODO: rval-ref overload of `.push_back()`.
+
+   // Allocate a node and insert it at the end of this list.
+   template <typename U>
+      requires(is_implicitly_convertible<U, T>)
+   auto
+   push_back(is_allocator auto& allocator, U const& value)
+      -> maybe<iterator_type> {
+      cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
+      if (!memory.has_value()) {
+         // Propagate memory allocation failure.
+         return nullopt;
+      }
+
+      detail::list_node<T>& node = *memory.value();
+      node.storage = static_cast<T>(value);
+      this->place_node_back(node);
+
+      return iterator_type(&node);
+   }
+
+   // Allocate a node and insert it at the end of this list.
+   template <typename... Args>
+   auto
+   emplace_back(is_allocator auto& allocator, Args&&... arguments)
+      -> maybe<iterator_type> {
+      cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
+      if (!memory.has_value()) {
+         // Propagate memory allocation failure.
+         return nullopt;
+      }
+
+      detail::list_node<T>& node = *memory.value();
+      new (&node.storage) T(fwd(arguments)...);
+      this->place_node_back(node);
+
+      return iterator_type(&node);
+   }
+
+   // Remove and deallocate an element from the back of this list.
+   void
+   pop_back(is_allocator auto& allocator) {
+      if (m_length > 0) [[likely]] {
+         detail::list_node<T>& node = *(this->end().m_p_node);
+         if (node.p_previous_node != nullptr) [[likely]] {
             node.p_previous_node->p_next_node = nullptr;
-            m_p_tail = node.p_previous_node;
-        }
-        m_length--;
-        allocator.free(&node);
-        return iterator_type(next);
-    }
+         }
+         m_p_tail = node.p_previous_node;
+         m_length--;
+         allocator.free(&node);
+      }
+   }
 
-    // Allocate a node and insert it at the beginning of this list.
-    template <typename U>
-        requires(is_implicitly_convertible<U, T>)
-    auto
-    push_front(is_allocator auto& allocator, U const& value)
-        -> maybe<iterator_type> {
-        cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
-        if (!memory.has_value()) {
-            // Propagate memory allocation failure.
-            return nullopt;
-        }
+   // Remove and deallocate all elements from this list. All nodes must have
+   // been allocated by the same arena for this function to succeed.
+   void
+   clear(is_allocator auto& allocator) {
+      if (m_length > 0) {
+         iterator_type previous_it = nullptr;
+         iterator_type current_it = this->begin();
+         iword i = 0;
 
-        detail::list_node<T>& node = *memory.value();
-        node.storage = static_cast<T>(value);
-        this->place_node_front(node);
-
-        return iterator_type(&node);
-    }
-
-    // Allocate a node and insert it at the beginning of this list.
-    template <typename... Args>
-    auto
-    emplace_front(is_allocator auto& allocator, Args&&... arguments)
-        -> maybe<iterator_type> {
-        cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
-        if (!memory.has_value()) {
-            // Propagate memory allocation failure.
-            return nullopt;
-        }
-
-        detail::list_node<T>& node = *memory.value();
-        new (&node.storage) T(fwd(arguments)...);
-        this->place_node_front(node);
-
-        return iterator_type(&node);
-    }
-
-    // Remove an element from the front of this list.
-    void
-    pop_front(is_allocator auto& allocator) {
-        if (m_length > 0) [[likely]] {
-            detail::list_node<T>& node = *(this->begin().m_p_node);
-            if (node.p_next_node != nullptr) [[likely]] {
-                node.p_next_node->p_previous_node = nullptr;
+         while (i < m_length) {
+            if (i > 0) {
+               allocator.free(previous_it.m_p_node);
             }
-            m_p_head = node.p_next_node;
-            m_length--;
-            allocator.free(&node);
-        }
+            previous_it = current_it;
+            ++current_it;
+            ++i;
+         }
 
-        if (m_length <= 1) {
-            m_p_tail = m_p_head;
-        }
-    }
+         allocator.free(previous_it.m_p_node);
+         m_length = 0;
+      }
+   }
 
-    // TODO: rval-ref overload of `.push_back()`.
+   // Providing these four iterator getters generates the remaining eight
+   // through the `collection_interface`.
+   [[nodiscard]]
+   auto
+   begin() -> iterator_type {
+      return iterator_type(m_p_head);
+   }
 
-    // Allocate a node and insert it at the end of this list.
-    template <typename U>
-        requires(is_implicitly_convertible<U, T>)
-    auto
-    push_back(is_allocator auto& allocator, U const& value)
-        -> maybe<iterator_type> {
-        cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
-        if (!memory.has_value()) {
-            // Propagate memory allocation failure.
-            return nullopt;
-        }
+   [[nodiscard]]
+   auto
+   end() -> iterator_type {
+      return iterator_type(m_p_tail);
+   }
 
-        detail::list_node<T>& node = *memory.value();
-        node.storage = static_cast<T>(value);
-        this->place_node_back(node);
+   [[nodiscard]]
+   auto
+   rbegin() {
+      return cat::reverse_iterator_adaptor<iterator_type>{m_p_tail};
+   }
 
-        return iterator_type(&node);
-    }
+   [[nodiscard]]
+   auto
+   rend() {
+      return cat::reverse_iterator_adaptor<iterator_type>{m_p_head};
+   }
 
-    // Allocate a node and insert it at the end of this list.
-    template <typename... Args>
-    auto
-    emplace_back(is_allocator auto& allocator, Args&&... arguments)
-        -> maybe<iterator_type> {
-        cat::maybe memory = allocator.template alloc<detail::list_node<T>>();
-        if (!memory.has_value()) {
-            // Propagate memory allocation failure.
-            return nullopt;
-        }
-
-        detail::list_node<T>& node = *memory.value();
-        new (&node.storage) T(fwd(arguments)...);
-        this->place_node_back(node);
-
-        return iterator_type(&node);
-    }
-
-    // Remove and deallocate an element from the back of this list.
-    void
-    pop_back(is_allocator auto& allocator) {
-        if (m_length > 0) [[likely]] {
-            detail::list_node<T>& node = *(this->end().m_p_node);
-            if (node.p_previous_node != nullptr) [[likely]] {
-                node.p_previous_node->p_next_node = nullptr;
-            }
-            m_p_tail = node.p_previous_node;
-            m_length--;
-            allocator.free(&node);
-        }
-    }
-
-    // Remove and deallocate all elements from this list. All nodes must have
-    // been allocated by the same arena for this function to succeed.
-    void
-    clear(is_allocator auto& allocator) {
-        if (m_length > 0) {
-            iterator_type previous_it = nullptr;
-            iterator_type current_it = this->begin();
-            iword i = 0;
-
-            while (i < m_length) {
-                if (i > 0) {
-                    allocator.free(previous_it.m_p_node);
-                }
-                previous_it = current_it;
-                ++current_it;
-                ++i;
-            }
-
-            allocator.free(previous_it.m_p_node);
-            m_length = 0;
-        }
-    }
-
-    // Providing these four iterator getters generates the remaining eight
-    // through the `collection_interface`.
-    [[nodiscard]]
-    auto
-    begin() -> iterator_type {
-        return iterator_type(m_p_head);
-    }
-
-    [[nodiscard]]
-    auto
-    end() -> iterator_type {
-        return iterator_type(m_p_tail);
-    }
-
-    [[nodiscard]]
-    auto
-    rbegin() {
-        return cat::reverse_iterator_adaptor<iterator_type>{m_p_tail};
-    }
-
-    [[nodiscard]]
-    auto
-    rend() {
-        return cat::reverse_iterator_adaptor<iterator_type>{m_p_head};
-    }
-
-  private:
-    detail::list_node<T>* m_p_head;
-    detail::list_node<T>* m_p_tail;
-    idx m_length;
+ private:
+   detail::list_node<T>* m_p_head;
+   detail::list_node<T>* m_p_tail;
+   idx m_length;
 };
 
 // TODO: Move this to a separate file.
 template <typename T>
 class forward_list : public collection_interface<forward_list<T>, T> {
-  public:
-    struct iterator_type : iterator_interface<iterator_type> {
-        // TODO: This default constructor is deprecated due to the user-defined
-        // constructor. Should this still exist?
-        // iterator_type(iterator_type const&) = default;
+ public:
+   struct iterator_type : iterator_interface<iterator_type> {
+      // TODO: This default constructor is deprecated due to the user-defined
+      // constructor. Should this still exist?
+      // iterator_type(iterator_type const&) = default;
 
-        iterator_type(detail::forward_list_node<T>* p_input) : p_node(p_input) {
-        }
+      iterator_type(detail::forward_list_node<T>* p_input) : p_node(p_input) {
+      }
 
-        auto
-        increment() -> iterator_type& {
-            this->p_node = this->p_node->p_next_node;
-            return *this;
-        }
+      auto
+      increment() -> iterator_type& {
+         this->p_node = this->p_node->p_next_node;
+         return *this;
+      }
 
-        auto
-        dereference() const -> T& {
-            return this->p_node->storage;
-        }
+      auto
+      dereference() const -> T& {
+         return this->p_node->storage;
+      }
 
-        auto
-        equal_to(iterator_type const& it) const -> bool {
-            return it.p_node == this->p_node;
-        }
+      auto
+      equal_to(iterator_type const& it) const -> bool {
+         return it.p_node == this->p_node;
+      }
 
-        detail::forward_list_node<T>* p_node;
-    };
+      detail::forward_list_node<T>* p_node;
+   };
 
-    constexpr forward_list()
-        : m_p_head(nullptr), m_p_tail(nullptr), m_length(0) {
-    }
+   constexpr forward_list()
+       : m_p_head(nullptr), m_p_tail(nullptr), m_length(0) {
+   }
 
-    constexpr forward_list(forward_list<T>&& list) = default;
+   constexpr forward_list(forward_list<T>&& list) = default;
 
-  protected:
-    // Being `protected:` permits derived classes and adaptors to call this.
-    // Only allow the shallow copy constructor to be used by these static
-    // factory member functions. For public copying, `.clone()` should be used.
-    [[deprecated(
-        "Implicit copying of `cat::forward_list` is forbidden. Call `.clone() "
-        "instead!")]]
-    //
-    constexpr forward_list(forward_list<T> const&) = default;
+ protected:
+   // Being `protected:` permits derived classes and adaptors to call this.
+   // Only allow the shallow copy constructor to be used by these static
+   // factory member functions. For public copying, `.clone()` should be used.
+   [[deprecated(
+      "Implicit copying of `cat::forward_list` is forbidden. Call `.clone() "
+      "instead!")]]
+   //
+   constexpr forward_list(forward_list<T> const&) = default;
 
-  public:
-    template <typename U, U... values>
-        requires(is_implicitly_convertible<U, T>)
-    [[nodiscard]]
-    static auto
-    from(is_allocator auto& allocator,
-         value_type_list<U, values...> initializers) -> maybe<forward_list<T>> {
-        forward_list<T> new_list;
-        // TODO: Check if a recursive function is more efficient here.
-        array array = initializers;
-        // TODO: Optimize memory allocations with a multiple `.push_back()`
-        // overload.
-        for (iword i = 0; i < ssizeof_pack(values...); ++i) {
-            maybe result = new_list.push_back(allocator, array[i]);
-            if (!result.has_value()) {
-                return nullopt;
+ public:
+   template <typename U, U... values>
+      requires(is_implicitly_convertible<U, T>)
+   [[nodiscard]]
+   static auto
+   from(is_allocator auto& allocator,
+        value_type_list<U, values...> initializers) -> maybe<forward_list<T>> {
+      forward_list<T> new_list;
+      // TODO: Check if a recursive function is more efficient here.
+      array array = initializers;
+      // TODO: Optimize memory allocations with a multiple `.push_back()`
+      // overload.
+      for (iword i = 0; i < ssizeof_pack(values...); ++i) {
+         maybe result = new_list.push_back(allocator, array[i]);
+         if (!result.has_value()) {
+            return nullopt;
+         }
+      }
+      return new_list;
+   }
+
+   template <typename... Args>
+      requires(is_implicitly_convertible<Args, T> && ...)
+   [[nodiscard]]
+   static auto
+   from(is_allocator auto& allocator, Args&&... initializers)
+      -> maybe<forward_list<T>> {
+      forward_list<T> new_list;
+      // TODO: Check if a recursive function is more efficient here.
+      array array = {fwd(initializers)...};
+      // TODO: Optimize memory allocations with a multiple `.push_back()`
+      // overload.
+      for (iword i = 0; i < ssizeof_pack<Args...>(); ++i) {
+         maybe result = new_list.push_back(allocator, array[i]);
+         if (!result.has_value()) {
+            return nullopt;
+         }
+      }
+      return new_list;
+   }
+
+   // Get the count of elements stored in this `forward_list`.
+   [[nodiscard]]
+   auto
+   size() const -> idx {
+      return m_length;
+   }
+
+   // Get the maximum possible count of elements stored in a `forward_list`.
+   [[nodiscard]]
+   constexpr auto
+   capacity() const -> idx {
+      return m_length.max();
+   }
+
+   [[nodiscard]]
+   auto
+   front() -> T& {
+      return m_p_head->storage;
+   }
+
+   [[nodiscard]]
+   auto
+   back() -> T& {
+      return m_p_tail->storage;
+   }
+
+ private:
+   void
+   place_initial_node(detail::forward_list_node<T>& node) {
+      node.p_next_node = nullptr;
+      m_p_head = &node;
+      m_p_tail = &node;
+      m_length = 1u;
+   }
+
+   void
+   place_node_after(iterator_type where, detail::forward_list_node<T>& node) {
+      if (where != this->end()) {
+         // Place a node in the middle of this list.
+         node.p_next_node = where.p_node->p_next_node;
+         where.p_node->p_next_node = &node;
+      } else {
+         // Place a node at the back of this list.
+         where.p_node->p_next_node = &node;
+         node.p_next_node = nullptr;
+         m_p_tail = &node;
+      }
+      m_length++;
+   }
+
+   // Place a node at the front of this list.
+   void
+   place_node_front(detail::forward_list_node<T>& node) {
+      if (m_length > 0) [[likely]] {
+         node.p_next_node = m_p_head;
+         m_p_head = &node;
+         m_length++;
+      } else {
+         this->place_initial_node(node);
+      }
+   }
+
+ public:
+   // Deep-copy the contents of this `forward_list`.
+   [[nodiscard]]
+   auto
+   clone(is_allocator auto& allocator) -> maybe<forward_list<T>> {
+      forward_list<T> new_list;
+      iterator_type current =
+         prop(new_list.push_front(allocator, this->front()));
+      for (iterator_type it = (this->begin() + 1); it != (this->end() + 1);
+           ++it) {
+         current = prop(this->insert_after(allocator, current, *it));
+      }
+      return new_list;
+   }
+
+   template <typename U>
+   auto
+   insert_after(is_allocator auto& allocator, iterator_type where,
+                U const& value) -> maybe<iterator_type>
+      requires(is_implicitly_convertible<U, T>)
+   {
+      cat::maybe memory =
+         allocator.template alloc<detail::forward_list_node<T>>();
+      if (!memory.has_value()) {
+         // Propagate memory allocation failure.
+         return nullopt;
+      }
+
+      detail::forward_list_node<T>& node = *memory.value();
+      node.storage = static_cast<T>(value);
+
+      if (m_length == 0) [[unlikely]] {
+         // If this list has nothing in it, `.insert_after()` must be
+         // special-cased.
+         this->place_initial_node(node);
+      } else {
+         this->place_node_after(where, node);
+      }
+      return iterator_type(&node);
+   }
+
+   template <typename... Args>
+   auto
+   emplace_after(is_allocator auto& allocator, iterator_type where,
+                 Args&&... arguments) -> maybe<iterator_type> {
+      cat::maybe memory =
+         allocator.template alloc<detail::forward_list_node<T>>();
+      if (!memory.has_value()) {
+         // Propagate memory allocation failure.
+         return nullopt;
+      }
+
+      detail::forward_list_node<T>& node = *memory.value();
+      new (&node.storage) T(fwd(arguments)...);
+
+      if (m_length == 0) [[unlikely]] {
+         // If this list has nothing in it, `.insert_after()` must be
+         // special-cased.
+         this->place_initial_node(node);
+      } else {
+         this->place_node_after(where, node);
+      }
+      return iterator_type(&node);
+   }
+
+   void
+   erase_after(is_allocator auto& allocator, iterator_type where) {
+      detail::forward_list_node<T>& node = *where.p_node;
+      detail::forward_list_node<T>* p_remove = node.p_next_node;
+      node.p_next_node = p_remove->p_next_node;
+      allocator.free(p_remove);
+   }
+
+   // Allocate a node and insert it at the beginning of this list.
+   template <typename U>
+      requires(is_implicitly_convertible<U, T>)
+   auto
+   push_front(is_allocator auto& allocator, U const& value)
+      -> maybe<iterator_type> {
+      cat::maybe memory =
+         allocator.template alloc<detail::forward_list_node<T>>();
+      if (!memory.has_value()) {
+         // Propagate memory allocation failure.
+         return nullopt;
+      }
+
+      detail::forward_list_node<T>& node = *memory.value();
+      node.storage = static_cast<T>(value);
+      this->place_node_front(node);
+
+      return iterator_type(&node);
+   }
+
+   // Allocate a node and insert it at the beginning of this list.
+   template <typename... Args>
+   auto
+   emplace_front(is_allocator auto& allocator, Args&&... arguments)
+      -> maybe<iterator_type> {
+      cat::maybe memory =
+         allocator.template alloc<detail::forward_list_node<T>>();
+      if (!memory.has_value()) {
+         // Propagate memory allocation failure.
+         return nullopt;
+      }
+
+      detail::forward_list_node<T>& node = *memory.value();
+      new (&node.storage) T(fwd(arguments)...);
+      this->place_node_front(node);
+
+      return iterator_type(&node);
+   }
+
+   // Remove an element from the front of this list.
+   void
+   pop_front(is_allocator auto& allocator) {
+      if (m_length > 0) [[likely]] {
+         detail::forward_list_node<T>& node = *m_p_head;
+         m_p_head = node.p_next_node;
+         m_length--;
+         allocator.free(&node);
+      }
+   }
+
+   // TODO: Add a `.reset()` to remove elements without deallocating them.
+   //
+   // Remove and deallocate all elements from this list. All nodes must
+   // have been allocated by the same arena for this function to succeed.
+   void
+   clear(is_allocator auto& allocator) {
+      if (m_length > 0) {
+         iterator_type previous_it = nullptr;
+         iterator_type current_it = this->begin();
+         idx i;
+
+         while (i < m_length) {
+            if (i > 0) {
+               allocator.free(previous_it.p_node);
             }
-        }
-        return new_list;
-    }
+            previous_it = current_it;
+            ++current_it;
+            ++i;
+         }
 
-    template <typename... Args>
-        requires(is_implicitly_convertible<Args, T> && ...)
-    [[nodiscard]]
-    static auto
-    from(is_allocator auto& allocator, Args&&... initializers)
-        -> maybe<forward_list<T>> {
-        forward_list<T> new_list;
-        // TODO: Check if a recursive function is more efficient here.
-        array array = {fwd(initializers)...};
-        // TODO: Optimize memory allocations with a multiple `.push_back()`
-        // overload.
-        for (iword i = 0; i < ssizeof_pack<Args...>(); ++i) {
-            maybe result = new_list.push_back(allocator, array[i]);
-            if (!result.has_value()) {
-                return nullopt;
-            }
-        }
-        return new_list;
-    }
+         allocator.free(previous_it.p_node);
+         m_length = 0u;
+      }
+   }
 
-    // Get the count of elements stored in this `forward_list`.
-    [[nodiscard]]
-    auto
-    size() const -> idx {
-        return m_length;
-    }
+   // Providing these two iterator getters generates the remaining four
+   // through the `collection_interface`.
+   [[nodiscard]]
+   auto
+   begin() -> iterator_type {
+      return iterator_type(m_p_head);
+   }
 
-    // Get the maximum possible count of elements stored in a `forward_list`.
-    [[nodiscard]]
-    constexpr auto
-    capacity() const -> idx {
-        return m_length.max();
-    }
+   [[nodiscard]]
+   auto
+   end() -> iterator_type {
+      return iterator_type(m_p_tail);
+   }
 
-    [[nodiscard]]
-    auto
-    front() -> T& {
-        return m_p_head->storage;
-    }
-
-    [[nodiscard]]
-    auto
-    back() -> T& {
-        return m_p_tail->storage;
-    }
-
-  private:
-    void
-    place_initial_node(detail::forward_list_node<T>& node) {
-        node.p_next_node = nullptr;
-        m_p_head = &node;
-        m_p_tail = &node;
-        m_length = 1u;
-    }
-
-    void
-    place_node_after(iterator_type where, detail::forward_list_node<T>& node) {
-        if (where != this->end()) {
-            // Place a node in the middle of this list.
-            node.p_next_node = where.p_node->p_next_node;
-            where.p_node->p_next_node = &node;
-        } else {
-            // Place a node at the back of this list.
-            where.p_node->p_next_node = &node;
-            node.p_next_node = nullptr;
-            m_p_tail = &node;
-        }
-        m_length++;
-    }
-
-    // Place a node at the front of this list.
-    void
-    place_node_front(detail::forward_list_node<T>& node) {
-        if (m_length > 0) [[likely]] {
-            node.p_next_node = m_p_head;
-            m_p_head = &node;
-            m_length++;
-        } else {
-            this->place_initial_node(node);
-        }
-    }
-
-  public:
-    // Deep-copy the contents of this `forward_list`.
-    [[nodiscard]]
-    auto
-    clone(is_allocator auto& allocator) -> maybe<forward_list<T>> {
-        forward_list<T> new_list;
-        iterator_type current =
-            prop(new_list.push_front(allocator, this->front()));
-        for (iterator_type it = (this->begin() + 1); it != (this->end() + 1);
-             ++it) {
-            current = prop(this->insert_after(allocator, current, *it));
-        }
-        return new_list;
-    }
-
-    template <typename U>
-    auto
-    insert_after(is_allocator auto& allocator, iterator_type where,
-                 U const& value) -> maybe<iterator_type>
-        requires(is_implicitly_convertible<U, T>)
-    {
-        cat::maybe memory =
-            allocator.template alloc<detail::forward_list_node<T>>();
-        if (!memory.has_value()) {
-            // Propagate memory allocation failure.
-            return nullopt;
-        }
-
-        detail::forward_list_node<T>& node = *memory.value();
-        node.storage = static_cast<T>(value);
-
-        if (m_length == 0) [[unlikely]] {
-            // If this list has nothing in it, `.insert_after()` must be
-            // special-cased.
-            this->place_initial_node(node);
-        } else {
-            this->place_node_after(where, node);
-        }
-        return iterator_type(&node);
-    }
-
-    template <typename... Args>
-    auto
-    emplace_after(is_allocator auto& allocator, iterator_type where,
-                  Args&&... arguments) -> maybe<iterator_type> {
-        cat::maybe memory =
-            allocator.template alloc<detail::forward_list_node<T>>();
-        if (!memory.has_value()) {
-            // Propagate memory allocation failure.
-            return nullopt;
-        }
-
-        detail::forward_list_node<T>& node = *memory.value();
-        new (&node.storage) T(fwd(arguments)...);
-
-        if (m_length == 0) [[unlikely]] {
-            // If this list has nothing in it, `.insert_after()` must be
-            // special-cased.
-            this->place_initial_node(node);
-        } else {
-            this->place_node_after(where, node);
-        }
-        return iterator_type(&node);
-    }
-
-    void
-    erase_after(is_allocator auto& allocator, iterator_type where) {
-        detail::forward_list_node<T>& node = *where.p_node;
-        detail::forward_list_node<T>* p_remove = node.p_next_node;
-        node.p_next_node = p_remove->p_next_node;
-        allocator.free(p_remove);
-    }
-
-    // Allocate a node and insert it at the beginning of this list.
-    template <typename U>
-        requires(is_implicitly_convertible<U, T>)
-    auto
-    push_front(is_allocator auto& allocator, U const& value)
-        -> maybe<iterator_type> {
-        cat::maybe memory =
-            allocator.template alloc<detail::forward_list_node<T>>();
-        if (!memory.has_value()) {
-            // Propagate memory allocation failure.
-            return nullopt;
-        }
-
-        detail::forward_list_node<T>& node = *memory.value();
-        node.storage = static_cast<T>(value);
-        this->place_node_front(node);
-
-        return iterator_type(&node);
-    }
-
-    // Allocate a node and insert it at the beginning of this list.
-    template <typename... Args>
-    auto
-    emplace_front(is_allocator auto& allocator, Args&&... arguments)
-        -> maybe<iterator_type> {
-        cat::maybe memory =
-            allocator.template alloc<detail::forward_list_node<T>>();
-        if (!memory.has_value()) {
-            // Propagate memory allocation failure.
-            return nullopt;
-        }
-
-        detail::forward_list_node<T>& node = *memory.value();
-        new (&node.storage) T(fwd(arguments)...);
-        this->place_node_front(node);
-
-        return iterator_type(&node);
-    }
-
-    // Remove an element from the front of this list.
-    void
-    pop_front(is_allocator auto& allocator) {
-        if (m_length > 0) [[likely]] {
-            detail::forward_list_node<T>& node = *m_p_head;
-            m_p_head = node.p_next_node;
-            m_length--;
-            allocator.free(&node);
-        }
-    }
-
-    // TODO: Add a `.reset()` to remove elements without deallocating them.
-    //
-    // Remove and deallocate all elements from this list. All nodes must
-    // have been allocated by the same arena for this function to succeed.
-    void
-    clear(is_allocator auto& allocator) {
-        if (m_length > 0) {
-            iterator_type previous_it = nullptr;
-            iterator_type current_it = this->begin();
-            idx i;
-
-            while (i < m_length) {
-                if (i > 0) {
-                    allocator.free(previous_it.p_node);
-                }
-                previous_it = current_it;
-                ++current_it;
-                ++i;
-            }
-
-            allocator.free(previous_it.p_node);
-            m_length = 0u;
-        }
-    }
-
-    // Providing these two iterator getters generates the remaining four
-    // through the `collection_interface`.
-    [[nodiscard]]
-    auto
-    begin() -> iterator_type {
-        return iterator_type(m_p_head);
-    }
-
-    [[nodiscard]]
-    auto
-    end() -> iterator_type {
-        return iterator_type(m_p_tail);
-    }
-
-  private:
-    detail::forward_list_node<T>* m_p_head;
-    detail::forward_list_node<T>* m_p_tail;
-    idx m_length;
+ private:
+   detail::forward_list_node<T>* m_p_head;
+   detail::forward_list_node<T>* m_p_tail;
+   idx m_length;
 };
 
 }  // namespace cat

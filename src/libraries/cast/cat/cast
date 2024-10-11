@@ -10,40 +10,40 @@ namespace cat {
 template <typename from_type, typename to_type>
 constexpr auto
 numeric_cast(from_type from) -> maybe<to_type> {
-    to_type const to = static_cast<to_type>(from);
-    constexpr bool has_same_signedness =
-        is_signed<from_type> != is_signed<to_type>;
+   to_type const to = static_cast<to_type>(from);
+   constexpr bool has_same_signedness =
+      is_signed<from_type> != is_signed<to_type>;
 
-    if constexpr (sizeof(to_type) < (sizeof(from)) && has_same_signedness) {
-        if (static_cast<from_type>(to) != to) {
+   if constexpr (sizeof(to_type) < (sizeof(from)) && has_same_signedness) {
+      if (static_cast<from_type>(to) != to) {
+         // Overflow occurred.
+         return nullopt;
+      }
+
+      // TODO: Make an `has_same_signedness` trait.
+      if constexpr (!has_same_signedness) {
+         if ((to < to_type()) != (from < from_type())) {
             // Overflow occurred.
             return nullopt;
-        }
+         }
+      }
+   }
 
-        // TODO: Make an `has_same_signedness` trait.
-        if constexpr (!has_same_signedness) {
-            if ((to < to_type()) != (from < from_type())) {
-                // Overflow occurred.
-                return nullopt;
-            }
-        }
-    }
-
-    return to;
+   return to;
 }
 
 template <typename from_type>
-    requires(sizeof(from_type) <= 8 && !is_lvalue_reference<from_type>)
+   requires(sizeof(from_type) <= 8 && !is_lvalue_reference<from_type>)
 constexpr auto
 bit_int_cast(from_type from) -> decltype(auto) {
-    // TODO: Use a template that makes some integer from a size.
-    using integer_type =
-        conditional<sizeof(from) == 1, int1,
-                    conditional<sizeof(from) == 2, int2,
-                                conditional<sizeof(from) == 4, int4, int8>>>;
-    using return_type = copy_cvref_from<from_type, integer_type>;
+   // TODO: Use a template that makes some integer from a size.
+   using integer_type =
+      conditional<sizeof(from) == 1, int1,
+                  conditional<sizeof(from) == 2, int2,
+                              conditional<sizeof(from) == 4, int4, int8>>>;
+   using return_type = copy_cvref_from<from_type, integer_type>;
 
-    return __builtin_bit_cast(return_type, from);
+   return __builtin_bit_cast(return_type, from);
 }
 
 }  // namespace cat

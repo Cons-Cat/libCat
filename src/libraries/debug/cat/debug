@@ -5,55 +5,54 @@
 namespace std {
 
 class source_location {
-  private:
-    // Clang requires these variables be declared at the top, not the bottom.
+ private:
+   // Clang requires these variables be declared at the top, not the bottom.
 
-    // GCC requires these names be exactly what they are.
-    struct __impl {                    // NOLINT
-        char const* _M_file_name;      // NOLINT
-        char const* _M_function_name;  // NOLINT
-        unsigned long _M_line;         // NOLINT
-        unsigned long _M_column;       // NOLINT
-    };
+   // GCC requires these names be exactly what they are.
+   struct __impl {                   // NOLINT
+      char const* _M_file_name;      // NOLINT
+      char const* _M_function_name;  // NOLINT
+      unsigned long _M_line;         // NOLINT
+      unsigned long _M_column;       // NOLINT
+   };
 
-    __impl const* p_location = nullptr;
+   __impl const* p_location = nullptr;
 
-  public:
-    static constexpr auto
-    current(decltype(__builtin_source_location()) p_call_site_location =
-                __builtin_source_location()) -> source_location {
-        source_location current_location;
-        current_location.p_location =
-            static_cast<__impl const*>(p_call_site_location);
-        return current_location;
-    }
+ public:
+   static constexpr auto
+   current(decltype(__builtin_source_location()) p_call_site_location =
+              __builtin_source_location()) -> source_location {
+      source_location current_location;
+      current_location.p_location =
+         static_cast<__impl const*>(p_call_site_location);
+      return current_location;
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    line() const -> unsigned long {
-        return (this->p_location != nullptr) ? this->p_location->_M_line : 0u;
-    }
+   [[nodiscard]]
+   constexpr auto
+   line() const -> unsigned long {
+      return (this->p_location != nullptr) ? this->p_location->_M_line : 0u;
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    column() const -> unsigned long {
-        return (this->p_location != nullptr) ? this->p_location->_M_column : 0u;
-    }
+   [[nodiscard]]
+   constexpr auto
+   column() const -> unsigned long {
+      return (this->p_location != nullptr) ? this->p_location->_M_column : 0u;
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    file_name() const -> char const* {
-        return (this->p_location != nullptr) ? this->p_location->_M_file_name
-                                             : "";
-    }
+   [[nodiscard]]
+   constexpr auto
+   file_name() const -> char const* {
+      return (this->p_location != nullptr) ? this->p_location->_M_file_name
+                                           : "";
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    function_name() const -> char const* {
-        return (this->p_location != nullptr)
-                   ? this->p_location->_M_function_name
-                   : "";
-    }
+   [[nodiscard]]
+   constexpr auto
+   function_name() const -> char const* {
+      return (this->p_location != nullptr) ? this->p_location->_M_function_name
+                                           : "";
+   }
 };
 
 }  // namespace std
@@ -65,18 +64,21 @@ using std::source_location;
 
 // TODO: Mark these functions `[[gnu::artificial]]`.
 
-void breakpoint();
+void
+breakpoint();
 
 // This is exposed so that `unit_tests.hpp` can use it. Its implementation is in
 // `assert_handler.cpp`.
 namespace detail {
-    void print_assert_location(
-        source_location const& callsite = source_location::current());
+void
+print_assert_location(
+   source_location const& callsite = source_location::current());
 
-    using assert_handler = void (*)(source_location const&);
+using assert_handler = void (*)(source_location const&);
 }  // namespace detail
 
-void default_assert_handler(source_location const& callsite);
+void
+default_assert_handler(source_location const& callsite);
 
 // This variable can be mutated to change the default assert handler globally.
 inline detail::assert_handler assert_handler = default_assert_handler;
@@ -87,20 +89,24 @@ inline detail::assert_handler assert_handler = default_assert_handler;
 // TODO: Fancier `ASSERT()` macro with expression decomposition.
 // TODO: `assert_eq()`, `assert_gt()`, etc.
 
-void verify(bool invariant_expression,
-            void (*p_assert_handler)(source_location const&) = assert_handler,
-            source_location const& callsite = source_location::current());
+void
+verify(bool invariant_expression,
+       void (*p_assert_handler)(source_location const&) = assert_handler,
+       source_location const& callsite = source_location::current());
 
-void verify(bool invariant_expression, str_span error_string,
-            void (*p_assert_handler)(source_location const&) = assert_handler,
-            source_location const& callsite = source_location::current());
+void
+verify(bool invariant_expression, str_span error_string,
+       void (*p_assert_handler)(source_location const&) = assert_handler,
+       source_location const& callsite = source_location::current());
 
-void assert(bool invariant_expression,
-            void (*p_assert_handler)(source_location const&) = assert_handler,
-            source_location const& callsite = source_location::current());
+void
+assert(bool invariant_expression,
+       void (*p_assert_handler)(source_location const&) = assert_handler,
+       source_location const& callsite = source_location::current());
 
-void assert(bool invariant_expression, str_span error_string,
-            void (*p_assert_handler)(source_location const&) = assert_handler,
-            source_location const& callsite = source_location::current());
+void
+assert(bool invariant_expression, str_span error_string,
+       void (*p_assert_handler)(source_location const&) = assert_handler,
+       source_location const& callsite = source_location::current());
 
 }  // namespace cat

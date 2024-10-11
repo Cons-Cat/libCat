@@ -1,44 +1,34 @@
 ---
 Language: Cpp
-IndentWidth: 4
+IndentWidth: 3
 ColumnLimit: 80
 MaxEmptyLinesToKeep: 1
+ContinuationIndentWidth: 3
 
-# These are clang-format 13 features:
 LambdaBodyIndentation: Signature
 ReferenceAlignment: Pointer
-
-# These are clang-format 14 features:
 QualifierAlignment: Custom
 QualifierOrder: ['friend', 'static', 'inline', 'constexpr', 'type', 'const', 'volatile' ]
 AlignArrayOfStructures: Left
-SeparateDefinitionBlocks: Always
-
-# These are clang-format 15 features:
 RequiresClausePosition: OwnLine
 InsertBraces: true
 IndentRequiresClause: true
-
-# These are clang-format 16 features:
 BreakAfterAttributes: Always
 RequiresExpressionIndentation: Keyword
-BreakBeforeInlineASMColon: Always
 IntegerLiteralSeparator:
   Binary: 4
   Decimal: 3
   Hex: 8
-  
-# These are clang-format 17 features:
 
-# ----------------------------------
-BraceWrapping:
-  AfterEnum: false
+# TODO: This doesn't seem to work in clang-format 20:
+SeparateDefinitionBlocks: Always
 
+Cpp11BracedListStyle: true
 AlignAfterOpenBracket: Align
-AlignConsecutiveAssignments: None
+AlignConsecutiveTableGenCondOperatorColons: None
 AlignConsecutiveBitFields: AcrossEmptyLinesAndComments
-AlignConsecutiveDeclarations: None
 AlignEscapedNewlines: Left
+BreakBeforeBinaryOperators: NonAssignment
 AlignOperands: Align
 AlignTrailingComments: true
 AllowAllArgumentsOnNextLine: true
@@ -49,29 +39,30 @@ AllowShortBlocksOnASingleLine: Never
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: None
 AllowShortLambdasOnASingleLine: None
-AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortCompoundRequirementOnASingleLine: true
 AllowShortLoopsOnASingleLine: false
-AlwaysBreakAfterDefinitionReturnType: All
 AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: Yes
 BinPackArguments: true
-BinPackParameters: true
-BreakBeforeBinaryOperators: None
-BreakBeforeConceptDeclarations: true
+BinPackParameters: BinPack
 BreakBeforeBraces: Attach
+BreakAfterReturnType: All
+BreakBeforeConceptDeclarations: Always
 BreakBeforeInheritanceComma: false
-BreakInheritanceList: BeforeColon
+BreakInheritanceList: AfterComma
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializersBeforeComma: false
 BreakConstructorInitializers: BeforeColon
+BreakBeforeInlineASMColon: Always
 BreakStringLiterals: true
 CompactNamespaces: false
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
-Cpp11BracedListStyle: true
 DeriveLineEnding: false
 DerivePointerAlignment: false
 EmptyLineBeforeAccessModifier: Always
 ExperimentalAutoDetectBinPacking: false
+ShortNamespaceLines: 16
 FixNamespaceComments: true
 SortIncludes: true
 IncludeBlocks: Regroup
@@ -102,9 +93,8 @@ IndentGotoLabels: false
 IndentPPDirectives: None
 IndentExternBlock: AfterExternBlock
 IndentWrappedFunctionNames: false
-#InsertTrailingCommas: None # Incompatible with bin packing.
 KeepEmptyLinesAtTheStartOfBlocks: false
-NamespaceIndentation: Inner
+NamespaceIndentation: None
 PenaltyBreakAssignment: 2
 PenaltyBreakBeforeFirstCallParameter: 1
 PenaltyBreakComment: 300
@@ -116,7 +106,7 @@ PenaltyReturnTypeOnItsOwnLine: 0
 PenaltyIndentedWhitespace: 0
 PointerAlignment: Left
 ReflowComments: true
-SortUsingDeclarations: true
+SortUsingDeclarations: LexicographicNumeric
 SpaceAfterCStyleCast: false
 SpaceAfterLogicalNot: false
 SpaceAfterTemplateKeyword: true

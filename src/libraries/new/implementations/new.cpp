@@ -2,25 +2,25 @@
 [[nodiscard]]
 auto
 operator new(unsigned long, void* p_address) -> void* {
-    return p_address;
+   return p_address;
 }
 
 [[nodiscard]]
 auto
 operator new[](unsigned long, void* p_address) -> void* {
-    return p_address;
+   return p_address;
 }
 
 [[nodiscard]]
 auto
 operator new[](unsigned long) -> void* {
-    return __builtin_bit_cast(void*, 1ul);
+   return __builtin_bit_cast(void*, 1ul);
 }
 
 [[nodiscard]]
 auto
 operator new[](unsigned long, std::align_val_t align) -> void* {
-    return __builtin_bit_cast(void*, align);
+   return __builtin_bit_cast(void*, align);
 }
 
 void

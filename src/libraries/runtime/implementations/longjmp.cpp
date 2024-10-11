@@ -4,7 +4,7 @@
 [[noreturn, gnu::naked]]
 void
 cat::longjmp(jmp_buffer& /* jump_buffer */, int8 /* return_value */) {
-    asm volatile(R"(
+   asm volatile(R"(
         # Increment %rax if `return_value` is non-zero.
         # This code is equivalent to:
         #     %rax = return_value + (!return_value);

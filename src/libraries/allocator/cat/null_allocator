@@ -7,67 +7,67 @@
 namespace cat {
 
 class null_allocator : public allocator_interface<null_allocator> {
-    friend allocator_interface<null_allocator>;
+   friend allocator_interface<null_allocator>;
 
-  private:
-    template <typename T>
-    struct null_memory_handle : detail::base_memory_handle<T> {
-        // TODO: Simplify with CRTP or deducing-this.
-        auto
-        get() -> decltype(auto) {
-            return *this;
-        }
+ private:
+   template <typename T>
+   struct null_memory_handle : detail::base_memory_handle<T> {
+      // TODO: Simplify with CRTP or deducing-this.
+      auto
+      get() -> decltype(auto) {
+         return *this;
+      }
 
-        auto
-        get() const -> decltype(auto) {
-            return *this;
-        }
-    };
+      auto
+      get() const -> decltype(auto) {
+         return *this;
+      }
+   };
 
-  public:
-    constexpr null_allocator() = default;
-    constexpr null_allocator(null_allocator const&) = default;
-    constexpr null_allocator(null_allocator&&) = default;
+ public:
+   constexpr null_allocator() = default;
+   constexpr null_allocator(null_allocator const&) = default;
+   constexpr null_allocator(null_allocator&&) = default;
 
-    // This allocation always fails.
-    auto
-    allocate(iword) -> maybe_ptr<void> {
-        return nullptr;
-    }
+   // This allocation always fails.
+   auto
+   allocate(iword) -> maybe_ptr<void> {
+      return nullptr;
+   }
 
-    // Deallocation is no-op.
-    void
-    deallocate(void const*, idx) {
-    }
+   // Deallocation is no-op.
+   void
+   deallocate(void const*, idx) {
+   }
 
-    // Produce a handle to allocated memory.
-    template <typename T>
-    auto
-    make_handle(T* p_handle_storage) -> null_memory_handle<T> {
-        return null_memory_handle<T>{{}, p_handle_storage};
-    }
+   // Produce a handle to allocated memory.
+   template <typename T>
+   auto
+   make_handle(T* p_handle_storage) -> null_memory_handle<T> {
+      return null_memory_handle<T>{{}, p_handle_storage};
+   }
 
-    // Access a page(s) of virtual memory.
-    template <typename T>
-    auto
-    access(null_memory_handle<T>& memory) -> T* {
-        return memory.p_storage;
-    }
+   // Access a page(s) of virtual memory.
+   template <typename T>
+   auto
+   access(null_memory_handle<T>& memory) -> T* {
+      return memory.p_storage;
+   }
 
-    template <typename T>
-    auto
-    access(null_memory_handle<T> const&) const -> T const* {
-        return nullptr;
-    }
+   template <typename T>
+   auto
+   access(null_memory_handle<T> const&) const -> T const* {
+      return nullptr;
+   }
 
-  private:
-    static constexpr bool has_pointer_stability = true;
+ private:
+   static constexpr bool has_pointer_stability = true;
 };
 
 [[nodiscard]]
 constexpr auto
 make_null_allocator() -> null_allocator {
-    return null_allocator();
+   return null_allocator();
 }
 
 }  // namespace cat

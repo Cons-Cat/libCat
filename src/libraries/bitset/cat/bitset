@@ -11,320 +11,319 @@ namespace cat {
 
 template <idx bits_count>
 class bitset {
-  private:
-    // Store the smallest number of bytes needed for `bits_count`. If that is 8
-    // bytes or fewer, use that many bytes. If it is larger, use an array of
-    // 8-byte integers. Divide the bits by 8, rounding up.
-    static constexpr idx total_bytes = div_ceil(bits_count, 8u);
+ private:
+   // Store the smallest number of bytes needed for `bits_count`. If that is 8
+   // bytes or fewer, use that many bytes. If it is larger, use an array of
+   // 8-byte integers. Divide the bits by 8, rounding up.
+   static constexpr idx total_bytes = div_ceil(bits_count, 8u);
 
-    using array_type =
-        conditional<total_bytes <= 8u,
-                    // `uint_fixed` will not compile here if it is larger than 8
-                    // or it is not a power of 2. This is an `array` of one
-                    // element to make it iterable.
-                    array<uint_fixed<min(round_to_pow2(total_bytes), 8u)>, 1u>,
-                    array<uint8, div_ceil(total_bytes, 8u)>>;
+   using array_type =
+      conditional<total_bytes <= 8u,
+                  // `uint_fixed` will not compile here if it is larger than 8
+                  // or it is not a power of 2. This is an `array` of one
+                  // element to make it iterable.
+                  array<uint_fixed<min(round_to_pow2(total_bytes), 8u)>, 1u>,
+                  array<uint8, div_ceil(total_bytes, 8u)>>;
 
-    using array_type_element = array_type::value_type;
+   using array_type_element = array_type::value_type;
 
-  public:
-    using iterator = bit_iterator<typename array_type::iterator>;
-    using const_iterator = bit_iterator<typename array_type::const_iterator>;
-    // using reverse_iterator =
-    //     bit_iterator<typename value_type::reverse_iterator>;
-    // using const_reverse_iterator =
-    //     bit_iterator<typename value_type::const_reverse_iterator>;
+ public:
+   using iterator = bit_iterator<typename array_type::iterator>;
+   using const_iterator = bit_iterator<typename array_type::const_iterator>;
+   // using reverse_iterator =
+   //     bit_iterator<typename value_type::reverse_iterator>;
+   // using const_reverse_iterator =
+   //     bit_iterator<typename value_type::const_reverse_iterator>;
 
-    static constexpr idx storage_array_size = array_type::size();
+   static constexpr idx storage_array_size = array_type::size();
 
-    static constexpr idx storage_element_size = sizeof(array_type_element);
+   static constexpr idx storage_element_size = sizeof(array_type_element);
 
-    // The number of bits NOT counted in the first 1, 2, 4, or 8 bytes of this
-    // bitset.
-    static constexpr idx leading_skipped_bits =
-        // The number of bits in the entire storage, minus the bits declared for
-        // use.
-        (sizeof(array_type) * 8u) - bits_count;
+   // The number of bits NOT counted in the first 1, 2, 4, or 8 bytes of this
+   // bitset.
+   static constexpr idx leading_skipped_bits =
+      // The number of bits in the entire storage, minus the bits declared for
+      // use.
+      (sizeof(array_type) * 8u) - bits_count;
 
-    // The number of bits counted in the first 1, 2, 4, or 8 bytes of this
-    // bitset.
-    static constexpr idx leading_bytes_bits =
-        // Size of this storage, 64 bits or fewer.
-        storage_element_size * 8u -
-        // Minus the number of unused bits in this bitset.
-        leading_skipped_bits;
+   // The number of bits counted in the first 1, 2, 4, or 8 bytes of this
+   // bitset.
+   static constexpr idx leading_bytes_bits =
+      // Size of this storage, 64 bits or fewer.
+      storage_element_size * 8u -
+      // Minus the number of unused bits in this bitset.
+      leading_skipped_bits;
 
-    constexpr bitset() = default;
-    constexpr bitset(bitset const&) = default;
-    constexpr bitset(bitset&&) = default;
+   constexpr bitset() = default;
+   constexpr bitset(bitset const&) = default;
+   constexpr bitset(bitset&&) = default;
 
-    template <typename... types>
-        requires((is_same<types, array_type_element> ||
-                  is_same<types, typename array_type_element::raw_type>) &&
-                 ...)
-    [[nodiscard]]
-    static constexpr auto
-    from(types... values) -> bitset
-        requires(sizeof...(types) == array_type::size())
-    {
-        // `value_type::value_type` is some unsigned integer.
-        // TODO: Assert that the input fits in `bits_count`.
-        bitset<bits_count> bitset;
-        bitset.m_data = {values...};
-        return bitset;
-    }
+   template <typename... types>
+      requires((is_same<types, array_type_element>
+                || is_same<types, typename array_type_element::raw_type>)
+               && ...)
+   [[nodiscard]]
+   static constexpr auto
+   from(types... values) -> bitset
+      requires(sizeof...(types) == array_type::size())
+   {
+      // `value_type::value_type` is some unsigned integer.
+      // TODO: Assert that the input fits in `bits_count`.
+      bitset<bits_count> bitset;
+      bitset.m_data = {values...};
+      return bitset;
+   }
 
-    constexpr auto operator=(bitset const&) -> bitset& = default;
-    constexpr auto operator=(bitset&&) -> bitset& = default;
+   constexpr auto
+   operator=(bitset const&) -> bitset& = default;
+   constexpr auto
+   operator=(bitset&&) -> bitset& = default;
 
-    [[nodiscard]]
-    constexpr auto
-    operator==(bitset<bits_count> const&) const -> bool = default;
+   [[nodiscard]]
+   constexpr auto
+   operator==(bitset<bits_count> const&) const -> bool = default;
 
-    // Index into this bit-set from the right-most bit.
-    [[nodiscard]]
-    constexpr auto
-    operator[](idx index_bit) -> bit_reference<array_type_element> {
-        if !consteval {
-            assert(index_bit < bits_count);
-        }
+   // Index into this bit-set from the right-most bit.
+   [[nodiscard]]
+   constexpr auto
+   operator[](idx index_bit) -> bit_reference<array_type_element> {
+      if !consteval {
+         assert(index_bit < bits_count);
+      }
 
-        array_type_element& index_byte =
-            m_data[m_data.size() - 1u -
-                   ((index_bit + leading_skipped_bits) /
-                    // TODO: Without `.raw`, this is ambiguous.
-                    word_bits.raw)];
+      array_type_element& index_byte =
+         m_data[m_data.size() - 1u
+                - ((index_bit + leading_skipped_bits) /
+                   // TODO: Without `.raw`, this is ambiguous.
+                   word_bits.raw)];
 
-        uword bit_offset = index_bit + leading_skipped_bits;
-        if constexpr (total_bytes > word_bytes) {
-            // If the bitset is larger than a word, wrap the bit offset by the
-            // size of a word.
-            bit_offset &= word_bits - 1u;
-        }
+      uword bit_offset = index_bit + leading_skipped_bits;
+      if constexpr (total_bytes > word_bytes) {
+         // If the bitset is larger than a word, wrap the bit offset by the
+         // size of a word.
+         bit_offset &= word_bits - 1u;
+      }
 
-        return bit_reference<array_type_element>::from_offset(index_byte,
-                                                              bit_offset);
-    }
+      return bit_reference<array_type_element>::from_offset(index_byte,
+                                                            bit_offset);
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    operator[](idx index_bit) const -> bit_reference<array_type_element> {
-        return (*unconst(this))[index_bit];
-    }
+   [[nodiscard]]
+   constexpr auto
+   operator[](idx index_bit) const -> bit_reference<array_type_element> {
+      return (*unconst(this))[index_bit];
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    at(idx index) -> maybe<bit_reference<array_type_element>> {
-        if (index < bits_count) {
-            return (*this)[index];
-        }
-        return nullopt;
-    }
+   [[nodiscard]]
+   constexpr auto
+   at(idx index) -> maybe<bit_reference<array_type_element>> {
+      if (index < bits_count) {
+         return (*this)[index];
+      }
+      return nullopt;
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    at(idx index) const -> maybe<bit_reference<array_type_element>> {
-        if (index < bits_count) {
-            return (*this)[index];
-        }
-        return nullopt;
-    }
+   [[nodiscard]]
+   constexpr auto
+   at(idx index) const -> maybe<bit_reference<array_type_element>> {
+      if (index < bits_count) {
+         return (*this)[index];
+      }
+      return nullopt;
+   }
 
-    [[nodiscard]]
-    friend constexpr auto
-    operator&(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
-        bitset<bits_count> bitset;
-        for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
-            bitset.m_data[i] = lhs.m_data[i] & rhs.m_data[i];
-        }
-        return bitset;
-    }
+   [[nodiscard]]
+   friend constexpr auto
+   operator&(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
+      bitset<bits_count> bitset;
+      for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
+         bitset.m_data[i] = lhs.m_data[i] & rhs.m_data[i];
+      }
+      return bitset;
+   }
 
-    friend constexpr auto
-    operator&=(bitset<bits_count>& self, bitset<bits_count> operand)
-        -> bitset& {
-        self = self & operand;
-        return self;
-    }
+   friend constexpr auto
+   operator&=(bitset<bits_count>& self, bitset<bits_count> operand) -> bitset& {
+      self = self & operand;
+      return self;
+   }
 
-    [[nodiscard]]
-    friend constexpr auto
-    operator|(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
-        bitset<bits_count> bitset;
-        for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
-            bitset.m_data[i] = lhs.m_data[i] | rhs.m_data[i];
-        }
-        return bitset;
-    }
+   [[nodiscard]]
+   friend constexpr auto
+   operator|(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
+      bitset<bits_count> bitset;
+      for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
+         bitset.m_data[i] = lhs.m_data[i] | rhs.m_data[i];
+      }
+      return bitset;
+   }
 
-    friend constexpr auto
-    operator|=(bitset<bits_count>& self, bitset<bits_count> operand)
-        -> bitset& {
-        self = self | operand;
-        return self;
-    }
+   friend constexpr auto
+   operator|=(bitset<bits_count>& self, bitset<bits_count> operand) -> bitset& {
+      self = self | operand;
+      return self;
+   }
 
-    [[nodiscard]]
-    friend constexpr auto
-    operator^(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
-        bitset<bits_count> bitset;
-        for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
-            bitset.m_data[i] = lhs.m_data[i] ^ rhs.m_data[i];
-        }
-        return bitset;
-    }
+   [[nodiscard]]
+   friend constexpr auto
+   operator^(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
+      bitset<bits_count> bitset;
+      for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
+         bitset.m_data[i] = lhs.m_data[i] ^ rhs.m_data[i];
+      }
+      return bitset;
+   }
 
-    friend constexpr auto
-    operator^=(bitset<bits_count>& self, bitset<bits_count> operand)
-        -> bitset& {
-        self = self ^ operand;
-        return self;
-    }
+   friend constexpr auto
+   operator^=(bitset<bits_count>& self, bitset<bits_count> operand) -> bitset& {
+      self = self ^ operand;
+      return self;
+   }
 
-    friend constexpr auto
-    operator~(bitset<bits_count> self) -> bitset& {
-        for (auto& i : self.m_data) {
-            ~i;
-        }
-        return self;
-    }
+   friend constexpr auto
+   operator~(bitset<bits_count> self) -> bitset& {
+      for (auto& i : self.m_data) {
+         ~i;
+      }
+      return self;
+   }
 
-    // Evaluate true if every bit in this bitset is 1.
-    [[nodiscard]]
-    constexpr auto
-    all_of() const -> bool {
-        // TODO: Make this branchless where possible.
+   // Evaluate true if every bit in this bitset is 1.
+   [[nodiscard]]
+   constexpr auto
+   all_of() const -> bool {
+      // TODO: Make this branchless where possible.
 
-        // For all but the last array element, compare against a full byte.
-        for (idx i; i < m_data.size() - 1; ++i) {
-            if (m_data[i] != array_type_element::max()) {
-                // If at least one bit is 0:
-                return false;
-            }
-        }
+      // For all but the last array element, compare against a full byte.
+      for (idx i; i < m_data.size() - 1; ++i) {
+         if (m_data[i] != array_type_element::max()) {
+            // If at least one bit is 0:
+            return false;
+         }
+      }
 
-        // On the last array element, compare against a bitmask.
-        // Leading bits of the leading byte should not be considered
-        // part of the bitset, so they are masked on unconditionally.
-        auto const mask = (array_type_element(1u) << (leading_skipped_bits))--;
-        return (m_data[m_data.size() - 1] | mask) == array_type_element::max();
-    }
+      // On the last array element, compare against a bitmask.
+      // Leading bits of the leading byte should not be considered
+      // part of the bitset, so they are masked on unconditionally.
+      auto const mask = (array_type_element(1u) << (leading_skipped_bits))--;
+      return (m_data[m_data.size() - 1] | mask) == array_type_element::max();
+   }
 
-    // Evaluate true if at least one bit in this bitset is 1.
-    [[nodiscard]]
-    constexpr auto
-    any_of() const -> bool {
-        // TODO: Make this branchless where possible.
-        for (auto i : m_data) {
-            if (i != 0u) {
-                return true;
-            }
-        }
-        return false;
-    }
+   // Evaluate true if at least one bit in this bitset is 1.
+   [[nodiscard]]
+   constexpr auto
+   any_of() const -> bool {
+      // TODO: Make this branchless where possible.
+      for (auto i : m_data) {
+         if (i != 0u) {
+            return true;
+         }
+      }
+      return false;
+   }
 
-    // Evaluate true if every bit in this bitset is 0.
-    [[nodiscard]]
-    constexpr auto
-    none_of() const -> bool {
-        return !(any_of());
-    }
+   // Evaluate true if every bit in this bitset is 0.
+   [[nodiscard]]
+   constexpr auto
+   none_of() const -> bool {
+      return !(any_of());
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    countl_zero() const -> idx {
-        idx count;
-        for (auto&& bytes : m_data) {
-            idx next_count = cat::countl_zero(bytes);
-            count += next_count;
+   [[nodiscard]]
+   constexpr auto
+   countl_zero() const -> idx {
+      idx count;
+      for (auto&& bytes : m_data) {
+         idx next_count = cat::countl_zero(bytes);
+         count += next_count;
 
-            // If any 1s are found, skip remaining bytes.
-            if (next_count != sizeof(array_type_element) * 8u) {
-                break;
-            }
-        }
-        return count;
-    }
+         // If any 1s are found, skip remaining bytes.
+         if (next_count != sizeof(array_type_element) * 8u) {
+            break;
+         }
+      }
+      return count;
+   }
 
-    // TODO: `.countl_one()`.
+   // TODO: `.countl_one()`.
 
-    [[nodiscard]]
-    constexpr auto
-    countr_zero() const -> idx {
-        idx count;
+   [[nodiscard]]
+   constexpr auto
+   countr_zero() const -> idx {
+      idx count;
 
-        // Iff `leading_skipped_bits` is not zero, then the first iteration of
-        // this loop requires special handling to prevent leading bits from
-        // being considered in the ctz.
-        constexpr bool has_prologue = (leading_skipped_bits != 0u);
-        if constexpr (has_prologue) {
-            // This mask is all one bits except for the leading zero bits.
-            constexpr array_type_element mask =
-                ~((array_type_element(1u) << leading_skipped_bits) - 1u);
-            // Set leading bits to zero, and then subtract them from the count.
-            count += cat::countr_zero(m_data[storage_array_size - 1u] & mask) -
-                     leading_skipped_bits;
+      // Iff `leading_skipped_bits` is not zero, then the first iteration of
+      // this loop requires special handling to prevent leading bits from
+      // being considered in the ctz.
+      constexpr bool has_prologue = (leading_skipped_bits != 0u);
+      if constexpr (has_prologue) {
+         // This mask is all one bits except for the leading zero bits.
+         constexpr array_type_element mask =
+            ~((array_type_element(1u) << leading_skipped_bits) - 1u);
+         // Set leading bits to zero, and then subtract them from the count.
+         count += cat::countr_zero(m_data[storage_array_size - 1u] & mask)
+                  - leading_skipped_bits;
 
-            // If any zeros were found, return early.
-            if (count != storage_element_size * 8u - leading_skipped_bits) {
-                return count;
-            }
-        }
+         // If any zeros were found, return early.
+         if (count != storage_element_size * 8u - leading_skipped_bits) {
+            return count;
+         }
+      }
 
-        for (idx i = storage_array_size - 1u - has_prologue; i >= 0u; --i) {
-            idx next_count = cat::countr_zero(m_data[i]);
-            count += next_count;
+      for (idx i = storage_array_size - 1u - has_prologue; i >= 0u; --i) {
+         idx next_count = cat::countr_zero(m_data[i]);
+         count += next_count;
 
-            // If any 1's are found, skip remaining bytes.
-            if (next_count != sizeof(array_type_element) * 8u) {
-                break;
-            }
-        }
-        return count;
-    }
+         // If any 1's are found, skip remaining bytes.
+         if (next_count != sizeof(array_type_element) * 8u) {
+            break;
+         }
+      }
+      return count;
+   }
 
-    // TODO: `.countr_one()`.
+   // TODO: `.countr_one()`.
 
-    [[nodiscard]]
-    constexpr auto
-    begin() {
-        return iterator(m_data.begin());
-    }
+   [[nodiscard]]
+   constexpr auto
+   begin() {
+      return iterator(m_data.begin());
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    end() {
-        return iterator(m_data.end(), limits<array_type_element>::bits);
-    }
+   [[nodiscard]]
+   constexpr auto
+   end() {
+      return iterator(m_data.end(), limits<array_type_element>::bits);
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    begin() const {
-        return const_iterator(m_data.begin());
-    }
+   [[nodiscard]]
+   constexpr auto
+   begin() const {
+      return const_iterator(m_data.begin());
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    end() const {
-        return const_iterator(m_data.end(), limits<array_type_element>::bits);
-    }
+   [[nodiscard]]
+   constexpr auto
+   end() const {
+      return const_iterator(m_data.end(), limits<array_type_element>::bits);
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    cbegin() const {
-        return const_iterator(m_data.cbegin());
-    }
+   [[nodiscard]]
+   constexpr auto
+   cbegin() const {
+      return const_iterator(m_data.cbegin());
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    cend() const {
-        return const_iterator(m_data.cend(), limits<array_type_element>::bits);
-    }
+   [[nodiscard]]
+   constexpr auto
+   cend() const {
+      return const_iterator(m_data.cend(), limits<array_type_element>::bits);
+   }
 
-    // TODO: Reverse iterators.
+   // TODO: Reverse iterators.
 
-  private:
-    array_type m_data;
+ private:
+   array_type m_data;
 };
 
 }  // namespace cat

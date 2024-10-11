@@ -4,5 +4,5 @@
 auto
 nix::sys_connect(nix::file_descriptor socket_descriptor, void const* p_socket,
                  cat::iword socket_size) -> nix::scaredy_nix<void> {
-    return nix::syscall<void>(42, socket_descriptor, p_socket, socket_size);
+   return nix::syscall<void>(42, socket_descriptor, p_socket, socket_size);
 }

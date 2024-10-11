@@ -8,12 +8,12 @@
   clang::no_builtin("memcpy")]]
 void
 cat::copy_memory_small(void const* p_source, void* p_destination, uword bytes) {
-    unsigned char const* p_source_handle =
-        static_cast<unsigned char const*>(p_source);
-    unsigned char* p_destination_handle =
-        static_cast<unsigned char*>(p_destination);
+   unsigned char const* p_source_handle =
+      static_cast<unsigned char const*>(p_source);
+   unsigned char* p_destination_handle =
+      static_cast<unsigned char*>(p_destination);
 
-    for (uword::raw_type i = 0u; i < bytes; ++i) {
-        p_destination_handle[i] = p_source_handle[i];
-    }
+   for (uword::raw_type i = 0u; i < bytes; ++i) {
+      p_destination_handle[i] = p_source_handle[i];
+   }
 }

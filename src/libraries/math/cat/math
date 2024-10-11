@@ -15,19 +15,19 @@ template <typename T>
 [[nodiscard]]
 constexpr auto
 min(T value) -> T {
-    return value;
+   return value;
 }
 
 // Implicit output type `min()`.
 template <typename T, typename U, typename... remaining>
-    requires(is_implicitly_convertible<U, T>)
+   requires(is_implicitly_convertible<U, T>)
 [[nodiscard]]
 constexpr auto
 min(T value_1, U value_2, remaining... remaining_args) -> T {
-    // Recurse through the list of variadic arguments, discarding the larger
-    // element each time.
-    return (value_1 < value_2) ? min(value_1, remaining_args...)
-                               : min(value_2, remaining_args...);
+   // Recurse through the list of variadic arguments, discarding the larger
+   // element each time.
+   return (value_1 < value_2) ? min(value_1, remaining_args...)
+                              : min(value_2, remaining_args...);
 }
 
 // TODO: These should have different names and be in `<cat/algorithms>`.
@@ -35,47 +35,47 @@ min(T value_1, U value_2, remaining... remaining_args) -> T {
 [[nodiscard]]
 constexpr auto
 min(is_iterable auto&& iterable) {
-    auto iterator = iterable.begin();
-    auto maximum = *iterator;
-    ++iterator;
+   auto iterator = iterable.begin();
+   auto maximum = *iterator;
+   ++iterator;
 
-    for (; iterator != iterable.end(); ++iterator) {
-        maximum = *iterator < maximum ? *iterator : maximum;
-    }
-    return maximum;
+   for (; iterator != iterable.end(); ++iterator) {
+      maximum = *iterator < maximum ? *iterator : maximum;
+   }
+   return maximum;
 }
 
 template <typename T>
 [[nodiscard]]
 constexpr auto
 min(is_iterable auto&& iterable) {
-    auto iterator = iterable.begin();
-    auto maximum = *iterator;
-    ++iterator;
+   auto iterator = iterable.begin();
+   auto maximum = *iterator;
+   ++iterator;
 
-    for (; iterator != iterable.end(); ++iterator) {
-        maximum = *iterator < maximum ? *iterator : maximum;
-    }
-    return static_cast<T>(maximum);
+   for (; iterator != iterable.end(); ++iterator) {
+      maximum = *iterator < maximum ? *iterator : maximum;
+   }
+   return static_cast<T>(maximum);
 }
 
 template <typename T>
 [[nodiscard]]
 constexpr auto
 max(T value) -> T {
-    return value;
+   return value;
 }
 
 // Implicit output type `max()`.
 template <typename T, typename U, typename... remaining>
-    requires(is_implicitly_convertible<U, T>)
+   requires(is_implicitly_convertible<U, T>)
 [[nodiscard]]
 constexpr auto
 max(T value_1, U value_2, remaining... remaining_args) -> T {
-    // Recurse through the list of variadic arguments, discarding the larger
-    // element each time.
-    return (value_1 > value_2) ? max(value_1, remaining_args...)
-                               : max(value_2, remaining_args...);
+   // Recurse through the list of variadic arguments, discarding the larger
+   // element each time.
+   return (value_1 > value_2) ? max(value_1, remaining_args...)
+                              : max(value_2, remaining_args...);
 }
 
 // TODO: If an `iterable` has `<` and `>` operators, this has unclear intent.
@@ -83,54 +83,54 @@ max(T value_1, U value_2, remaining... remaining_args) -> T {
 [[nodiscard]]
 constexpr auto
 max(is_iterable auto&& iterable) {
-    auto iterator = iterable.begin();
-    auto maximum = *iterator;
-    ++iterator;
+   auto iterator = iterable.begin();
+   auto maximum = *iterator;
+   ++iterator;
 
-    for (; iterator != iterable.end(); ++iterator) {
-        maximum = *iterator > maximum ? *iterator : maximum;
-    }
-    return maximum;
+   for (; iterator != iterable.end(); ++iterator) {
+      maximum = *iterator > maximum ? *iterator : maximum;
+   }
+   return maximum;
 }
 
 template <typename T>
 [[nodiscard]]
 constexpr auto
 max(is_iterable auto&& iterable) {
-    auto iterator = iterable.begin();
-    auto maximum = *iterator;
-    ++iterator;
+   auto iterator = iterable.begin();
+   auto maximum = *iterator;
+   ++iterator;
 
-    for (; iterator != iterable.end(); ++iterator) {
-        maximum = *iterator > maximum ? *iterator : maximum;
-    }
-    return static_cast<T>(maximum);
+   for (; iterator != iterable.end(); ++iterator) {
+      maximum = *iterator > maximum ? *iterator : maximum;
+   }
+   return static_cast<T>(maximum);
 }
 
 template <is_signed_integral T>
 [[nodiscard]]
 constexpr auto
 abs(T value) -> T {
-    if constexpr (sizeof(T) == 8) {
-        return __builtin_labs(make_raw_arithmetic(value));
-    } else {
-        // `__builtin_abs()` returns `int`, so its type must be coerced to `T`.
-        return T(__builtin_abs(make_raw_arithmetic(value)));
-    }
+   if constexpr (sizeof(T) == 8) {
+      return __builtin_labs(make_raw_arithmetic(value));
+   } else {
+      // `__builtin_abs()` returns `int`, so its type must be coerced to `T`.
+      return T(__builtin_abs(make_raw_arithmetic(value)));
+   }
 }
 
 [[nodiscard]]
 constexpr auto
 abs(is_unsigned_integral auto value) {
-    return value;
+   return value;
 }
 
 template <is_floating_point T>
 [[nodiscard]]
 constexpr auto
 abs(T value) -> T {
-    // `__builtin_fabs()` returns `double`, so its type must be coerced to `T`.
-    return T(__builtin_fabs(make_raw_arithmetic(value)));
+   // `__builtin_fabs()` returns `double`, so its type must be coerced to `T`.
+   return T(__builtin_fabs(make_raw_arithmetic(value)));
 }
 
 // TODO: Support floating point here.
@@ -138,161 +138,161 @@ template <is_integral T, is_integral U>
 [[nodiscard]]
 constexpr auto
 div_ceil(T dividend, U divisor) {
-    using type = common_type<T, U>;
-    return (dividend + divisor - type(1)) / divisor;
+   using type = common_type<T, U>;
+   return (dividend + divisor - type(1)) / divisor;
 }
 
 // TODO: `div_floor()`.
 
 namespace detail {
-    // TODO: Consider a jump-table implementation.
-    template <is_integral T, typename U>
-    constexpr auto
-    pow_integral(T base, U exponent) -> T {
-        if (exponent < 0) {
-            // A negative exponent should always make this floor to 0.
-            return 0;
-        }
+// TODO: Consider a jump-table implementation.
+template <is_integral T, typename U>
+constexpr auto
+pow_integral(T base, U exponent) -> T {
+   if (exponent < 0) {
+      // A negative exponent should always make this floor to 0.
+      return 0;
+   }
 
-        if constexpr (is_signed<T>) {
-            base = abs(base);
-        }
+   if constexpr (is_signed<T>) {
+      base = abs(base);
+   }
 
-        // "Exponentation by squaring" algorithm.
-        int result = 1;
-        while (exponent) {
-            if (exponent & 1) {
-                result *= base;
-            }
-            // Since this is guaranteed positive, it can bitshift.
-            exponent >>= 1;
-            base *= base;
-        }
+   // "Exponentation by squaring" algorithm.
+   int result = 1;
+   while (exponent) {
+      if (exponent & 1) {
+         result *= base;
+      }
+      // Since this is guaranteed positive, it can bitshift.
+      exponent >>= 1;
+      base *= base;
+   }
 
-        return result;
-    }
+   return result;
+}
 }  // namespace detail
 
 template <is_arithmetic T, is_integral U>
 [[nodiscard]]
 constexpr auto
 pow(T base, U exponent) -> T {
-    // type-erase `arithmetic`s to prevent redundant code gen.
-    using raw_type = raw_arithmetic_type<T>;
-    raw_type raw_base = make_raw_arithmetic(base);
-    raw_type raw_exponent = make_raw_arithmetic(exponent);
+   // type-erase `arithmetic`s to prevent redundant code gen.
+   using raw_type = raw_arithmetic_type<T>;
+   raw_type raw_base = make_raw_arithmetic(base);
+   raw_type raw_exponent = make_raw_arithmetic(exponent);
 
-    if constexpr (is_integral<raw_type>) {
-        return detail::pow_integral(raw_base, raw_exponent);
-        // TODO: Support float and double `pow()` functions.
-    } else if constexpr (is_same<raw_type, float>) {
-        // return __builtin_powf(raw_base, raw_exponent);
-    } else if constexpr (is_same<raw_type, double>) {
-        // return __builtin_pow(raw_base, raw_exponent);
-    }
+   if constexpr (is_integral<raw_type>) {
+      return detail::pow_integral(raw_base, raw_exponent);
+      // TODO: Support float and double `pow()` functions.
+   } else if constexpr (is_same<raw_type, float>) {
+      // return __builtin_powf(raw_base, raw_exponent);
+   } else if constexpr (is_same<raw_type, double>) {
+      // return __builtin_pow(raw_base, raw_exponent);
+   }
 }
 
 namespace detail {
-    template <is_unsigned_integral T, uword::raw_type shift>
-    [[gnu::always_inline]]
-    constexpr auto
-    round_to_pow2_part(T value) {
-        value |= (value >> shift);
+template <is_unsigned_integral T, uword::raw_type shift>
+[[gnu::always_inline]]
+constexpr auto
+round_to_pow2_part(T value) {
+   value |= (value >> shift);
 
-        // Continually shift right until doing so would shift the entire int.
-        // i.e., for `uint4`, shift by 1, then 2, then 4, then 8, then 16, and
-        // stop before 32.
-        // For `uint8`, shift likewise and stop before 64.
-        if constexpr ((shift * 2u) < (sizeof(T) * 8)) {
-            return round_to_pow2_part<T, shift * 2u>(value);
-        } else {
-            return value;
-        }
-    }
+   // Continually shift right until doing so would shift the entire int.
+   // i.e., for `uint4`, shift by 1, then 2, then 4, then 8, then 16, and
+   // stop before 32.
+   // For `uint8`, shift likewise and stop before 64.
+   if constexpr ((shift * 2u) < (sizeof(T) * 8)) {
+      return round_to_pow2_part<T, shift * 2u>(value);
+   } else {
+      return value;
+   }
+}
 }  // namespace detail
 
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 round_to_pow2(T value) {
-    value -= 1u;
-    value = detail::round_to_pow2_part<T, 1u>(value);
-    return value + T(1);
+   value -= 1u;
+   value = detail::round_to_pow2_part<T, 1u>(value);
+   return value + T(1);
 }
 
 template <is_signed_integral T>
 [[nodiscard]]
 constexpr auto
 round_to_pow2(T value) {
-    if !consteval {
-        assert(value >= 0);
-    }
-    return round_to_pow2(make_unsigned(value));
+   if !consteval {
+      assert(value >= 0);
+   }
+   return round_to_pow2(make_unsigned(value));
 }
 
 template <is_integral T, is_implicitly_convertible<T> U>
 [[nodiscard]]
 constexpr auto
 round_up_to_multiple_of(T value, U multiple) -> T {
-    if (multiple == T(0)) {
-        return value;
-    }
+   if (multiple == T(0)) {
+      return value;
+   }
 
-    T remainder = value % multiple;
+   T remainder = value % multiple;
 
-    if (remainder == T(0)) {
-        return value;
-    }
+   if (remainder == T(0)) {
+      return value;
+   }
 
-    return value + (multiple - remainder);
+   return value + (multiple - remainder);
 }
 
 template <is_integral T, is_implicitly_convertible<T> U>
 [[nodiscard]]
 constexpr auto
 round_down_to_multiple_of(T value, U multiple) -> T {
-    if (multiple == T(0)) {
-        return value;
-    }
+   if (multiple == T(0)) {
+      return value;
+   }
 
-    T remainder = value % multiple;
+   T remainder = value % multiple;
 
-    if (remainder == T(0)) {
-        return value;
-    }
+   if (remainder == T(0)) {
+      return value;
+   }
 
-    return value - remainder;
+   return value - remainder;
 }
 
 template <is_integral T, is_implicitly_convertible<T> U>
 [[nodiscard]]
 constexpr auto
 round_to_multiple_of(T value, U multiple) -> T {
-    if (multiple == T(0)) {
-        return value;
-    }
+   if (multiple == T(0)) {
+      return value;
+   }
 
-    T remainder = value % multiple;
+   T remainder = value % multiple;
 
-    if (remainder == T(0)) {
-        return value;
-    }
+   if (remainder == T(0)) {
+      return value;
+   }
 
-    // If remainder is more than or equal to half of multiple, round up, else
-    // round down.
-    if (remainder >= multiple / T(2)) {
-        return value + (multiple - remainder);
-    } else {
-        return value - remainder;
-    }
+   // If remainder is more than or equal to half of multiple, round up, else
+   // round down.
+   if (remainder >= multiple / T(2)) {
+      return value + (multiple - remainder);
+   } else {
+      return value - remainder;
+   }
 }
 
 template <is_arithmetic T>
 [[nodiscard]]
 auto
 clamp(T value, T min, T max) -> T {
-    T lower_bound = value < min ? min : value;
-    return lower_bound > max ? max : lower_bound;
+   T lower_bound = value < min ? min : value;
+   return lower_bound > max ? max : lower_bound;
 }
 
 }  // namespace cat

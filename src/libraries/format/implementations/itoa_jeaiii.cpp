@@ -24,20 +24,20 @@
 
 #include <cat/format>
 
-#define P(T)                                                                   \
-    T, '0', T, '1', T, '2', T, '3', T, '4', T, '5', T, '6', T, '7', T, '8', T, \
-        '9'
+#define P(T)                                                                  \
+   T, '0', T, '1', T, '2', T, '3', T, '4', T, '5', T, '6', T, '7', T, '8', T, \
+      '9'
 inline constexpr cat::detail::pair_jeaiii s_pairs[] = {
-    P('0'), P('1'), P('2'), P('3'), P('4'),
-    P('5'), P('6'), P('7'), P('8'), P('9'),
+   P('0'), P('1'), P('2'), P('3'), P('4'),
+   P('5'), P('6'), P('7'), P('8'), P('9'),
 };
 
 #define W(N, I) *(cat::detail::pair_jeaiii*)&b[N] = s_pairs[I]
-#define A(N)                                                 \
-    t = (uint8::raw_type(1) << (32 + N / 5 * N * 53 / 16)) / \
-            uint4::raw_type(1e##N) +                         \
-        1 + N / 6 - N / 8,                                   \
-    t *= u, t >>= N / 5 * N * 53 / 16, t += N / 6 * 4, W(0, t >> 32)
+#define A(N)                                              \
+   t = (uint8::raw_type(1) << (32 + N / 5 * N * 53 / 16)) \
+          / uint4::raw_type(1e##N)                        \
+       + 1 + N / 6 - N / 8,                               \
+   t *= u, t >>= N / 5 * N * 53 / 16, t += N / 6 * 4, W(0, t >> 32)
 #define S(N) b[N] = char(uint8::raw_type(10) * uint4::raw_type(t) >> 32) + '0'
 #define D(N) t = uint8::raw_type(100) * uint4::raw_type(t), W(N, t >> 32)
 
@@ -57,57 +57,57 @@ inline constexpr cat::detail::pair_jeaiii s_pairs[] = {
 // if you want to '\0' terminate
 // #define LZ(N) &(L##N, b[N + 1] = '\0')
 
-#define LG(F)                                                              \
-    (u < 100             ? u < 10 ? F(0) : F(1)                            \
-                 : u < 1'000'000 ? u < 10'000    ? u < 1'000 ? F(2) : F(3) \
-                                      : u < 100'000 ? F(4)                 \
-                                                 : F(5)                    \
-                 : u < 100'000'000 ? u < 10'000'000 ? F(6) : F(7)          \
-                 : u < 1'000'000'000 ? F(8)                                \
-                         : F(9))
+#define LG(F)                                                             \
+   (u < 100             ? u < 10 ? F(0) : F(1)                            \
+                : u < 1'000'000 ? u < 10'000    ? u < 1'000 ? F(2) : F(3) \
+                                     : u < 100'000 ? F(4)                 \
+                                                : F(5)                    \
+                : u < 100'000'000 ? u < 10'000'000 ? F(6) : F(7)          \
+                : u < 1'000'000'000 ? F(8)                                \
+                        : F(9))
 
 char*
 cat::detail::u32toa_jeaiii(uint4::raw_type u, char* b) {
-    uint8::raw_type t;
-    return LG(LZ);
+   uint8::raw_type t;
+   return LG(LZ);
 }
 
 char*
 cat::detail::i32toa_jeaiii(int4::raw_type i, char* b) {
-    uint4::raw_type u = i < 0 ? *b++ = '-', 0 - uint4::raw_type(i) : i;
-    uint8::raw_type t;
-    return LG(LZ);
+   uint4::raw_type u = i < 0 ? *b++ = '-', 0 - uint4::raw_type(i) : i;
+   uint8::raw_type t;
+   return LG(LZ);
 }
 
 char*
 cat::detail::u64toa_jeaiii(uint8::raw_type n, char* b) {
-    uint4::raw_type u;
-    uint8::raw_type t;
+   uint4::raw_type u;
+   uint8::raw_type t;
 
-    if (uint4::raw_type(n >> 32) == 0) {
-        return u = uint4::raw_type(n), LG(LZ);
-    }
+   if (uint4::raw_type(n >> 32) == 0) {
+      return u = uint4::raw_type(n), LG(LZ);
+   }
 
-    uint8::raw_type a = n / 100'000'000;
+   uint8::raw_type a = n / 100'000'000;
 
-    if (uint4::raw_type(a >> 32) == 0) {
-        u = uint4::raw_type(a);
-        LG(LN);
-    } else {
-        u = uint4::raw_type(a / 100'000'000);
-        LG(LN);
-        u = a % 100'000'000;
-        LN(7);
-    }
+   if (uint4::raw_type(a >> 32) == 0) {
+      u = uint4::raw_type(a);
+      LG(LN);
+   } else {
+      u = uint4::raw_type(a / 100'000'000);
+      LG(LN);
+      u = a % 100'000'000;
+      LN(7);
+   }
 
-    u = n % 100'000'000;
-    return LZ(7);
+   u = n % 100'000'000;
+   return LZ(7);
 }
 
 char*
 cat::detail::i64toa_jeaiii(int8::raw_type i, char* b) {
-    uint8::raw_type n = i < 0 ? *b++ = '-', 0 - uint8::raw_type(i) : i;
-    return u64toa_jeaiii(n, b);
+   uint8::raw_type n = i < 0 ? *b++ = '-', 0 - uint8::raw_type(i) : i;
+   return u64toa_jeaiii(n, b);
 }
 
 // TODO: This code is ill-formed.

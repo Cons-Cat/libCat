@@ -16,79 +16,81 @@ namespace cat {
 template <typename T>
 class span : public collection_interface<span<T>, T>,
              public iterable_interface<T> {
-  public:
-    constexpr span() = default;
-    constexpr span(span<T> const&) = default;
-    constexpr span(span<T>&&) = default;
+ public:
+   constexpr span() = default;
+   constexpr span(span<T> const&) = default;
+   constexpr span(span<T>&&) = default;
 
-    // Construct a `span` as `{address, length}`.
-    constexpr span(T* p_in_data, idx in_length)
-        : m_p_data(p_in_data), m_size(in_length) {
-    }
+   // Construct a `span` as `{address, length}`.
+   constexpr span(T* p_in_data, idx in_length)
+       : m_p_data(p_in_data), m_size(in_length) {
+   }
 
-    // Construct an empty `span` with `nullptr`.
-    constexpr span(decltype(nullptr)) : m_p_data(nullptr), m_size(0) {
-    }
+   // Construct an empty `span` with `nullptr`.
+   constexpr span(decltype(nullptr)) : m_p_data(nullptr), m_size(0) {
+   }
 
-    // Construct a span from a static `initializer_list`.
-    constexpr span(initializer_list<T> initializers)
-        requires(is_const<T>)
-        : m_p_data(initializers.begin()), m_size(initializers.size()) {
-    }
+   // Construct a span from a static `initializer_list`.
+   constexpr span(initializer_list<T> initializers)
+      requires(is_const<T>)
+       : m_p_data(initializers.begin()), m_size(initializers.size()) {
+   }
 
-    // Implicitly convert a contiguous container into a span.
-    template <typename U>
-        requires(is_random_access<U>)
-    constexpr span(U& collection)
-        : m_p_data(collection.data()), m_size(collection.size()) {
-    }
+   // Implicitly convert a contiguous container into a span.
+   template <typename U>
+      requires(is_random_access<U>)
+   constexpr span(U& collection)
+       : m_p_data(collection.data()), m_size(collection.size()) {
+   }
 
-    // If `T` is non-`const`, conversion to a `const` contiguous container is
-    // explicit.
-    template <typename U>
-        requires(is_random_access<U>)
-    explicit constexpr span(U const& collection)
-        : m_p_data(unconst(collection.data())), m_size(collection.size()) {
-    }
+   // If `T` is non-`const`, conversion to a `const` contiguous container is
+   // explicit.
+   template <typename U>
+      requires(is_random_access<U>)
+   explicit constexpr span(U const& collection)
+       : m_p_data(unconst(collection.data())), m_size(collection.size()) {
+   }
 
-    constexpr auto operator=(span<T> const&) -> span<T>& = default;
-    constexpr auto operator=(span<T>&&) -> span<T>& = default;
+   constexpr auto
+   operator=(span<T> const&) -> span<T>& = default;
+   constexpr auto
+   operator=(span<T>&&) -> span<T>& = default;
 
-    // Construct a span from a static `initializer_list`.
-    constexpr auto
-    operator=(initializer_list<T> initializers)
-        -> span<T>& requires(is_const<T>) {
-                        m_p_data = initializers.begin();
-                        m_size = initializers.size();
-                        return *this;
-                    }
+   // Construct a span from a static `initializer_list`.
+   constexpr auto
+   operator=(initializer_list<T> initializers)
+      -> span<T>& requires(is_const<T>) {
+                     m_p_data = initializers.begin();
+                     m_size = initializers.size();
+                     return *this;
+                  }
 
-    // Get the non-`const` address that this `span` starts at.
-    [[nodiscard]] constexpr auto data() -> T* {
-        return this->m_p_data;
-    }
+   // Get the non-`const` address that this `span` starts at.
+   [[nodiscard]] constexpr auto data() -> T* {
+      return this->m_p_data;
+   }
 
-    // Get the `const` address that this `span` starts at.
-    [[nodiscard]]
-    constexpr auto
-    data() const -> T* {
-        return this->m_p_data;
-    }
+   // Get the `const` address that this `span` starts at.
+   [[nodiscard]]
+   constexpr auto
+   data() const -> T* {
+      return this->m_p_data;
+   }
 
-    // Get the number of elements owned by this `span`.
-    [[nodiscard]]
-    constexpr auto
-    size() const -> idx {
-        return this->m_size;
-    }
+   // Get the number of elements owned by this `span`.
+   [[nodiscard]]
+   constexpr auto
+   size() const -> idx {
+      return this->m_size;
+   }
 
-    // These data members should be `public` so that this is a structural type.
+   // These data members should be `public` so that this is a structural type.
 
-    // This is arranged as pointer, then size, to follow the ABI of Linux
-    // standard `iovec`s. Unfortunately, that is opposite of Windws' standard
-    // `WSABUF`.
-    T* m_p_data;
-    idx m_size;
+   // This is arranged as pointer, then size, to follow the ABI of Linux
+   // standard `iovec`s. Unfortunately, that is opposite of Windws' standard
+   // `WSABUF`.
+   T* m_p_data;
+   idx m_size;
 };
 
 template <typename T>
@@ -98,16 +100,16 @@ span(initializer_list<T>) -> span<T const>;
 template <typename T>
 constexpr auto
 make_span_between(T* p_start, T* p_end) {
-    return span(p_start, p_end - p_start);
+   return span(p_start, p_end - p_start);
 }
 
 // Simplify non-negative signed integers.
 template <typename T>
 using maybe_span = maybe<compact<span<T>,
                                  [](span<T> value) -> bool {
-                                     // This span is `nullopt` if its
-                                     // `.p_storage` is null.
-                                     return value.m_p_data;
+                                    // This span is `nullopt` if its
+                                    // `.p_storage` is null.
+                                    return value.m_p_data;
                                  },
                                  // Default to a null span.
                                  span<T>(nullptr)>>;

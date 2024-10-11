@@ -16,19 +16,19 @@ class span;
 
 template <typename T>
 concept is_collection = requires(T container) {
-                            container.begin();
-                            container.end();
-                            container.cbegin();
-                            container.cend();
-                            container.size();
+                           container.begin();
+                           container.end();
+                           container.cbegin();
+                           container.cend();
+                           container.size();
                         };
 
 namespace detail {
-    template <typename T>
-    concept is_contiguous_collection =  // is_collection<T> &&
-        requires(T collection) { collection.data(); };
+template <typename T>
+concept is_contiguous_collection =  // is_collection<T> &&
+   requires(T collection) { collection.data(); };
 
-    // clang-format off
+// clang-format off
     template <typename T>
     // Parentheses are required here to satisfy cppcheck.
     concept is_bounded_collection = (requires(T collection) {
@@ -36,391 +36,390 @@ namespace detail {
     }) || (requires(T collection) {
         collection.capacity();
     });
-    // clang-format on
+// clang-format on
 
-    // If `.size()` is provided.
-    template <typename T>
-    concept has_size = requires(T t) { t.size(); };
+// If `.size()` is provided.
+template <typename T>
+concept has_size = requires(T t) { t.size(); };
 
-    // If `.capacity()` is provided.
-    template <typename T>
-    concept has_capacity = requires(T t) { t.capacity(); };
+// If `.capacity()` is provided.
+template <typename T>
+concept has_capacity = requires(T t) { t.capacity(); };
 
-    // If `.begin()` is provided.
-    template <typename T>
-    concept has_begin = requires(T t) { t.begin(); };
+// If `.begin()` is provided.
+template <typename T>
+concept has_begin = requires(T t) { t.begin(); };
 
-    // If `.end()` is provided.
-    template <typename T>
-    concept has_end = requires(T t) { t.end(); };
+// If `.end()` is provided.
+template <typename T>
+concept has_end = requires(T t) { t.end(); };
 
-    // If `.rbegin()` is provided.
-    template <typename T>
-    concept has_rbegin = requires(T t) { t.rbegin(); };
+// If `.rbegin()` is provided.
+template <typename T>
+concept has_rbegin = requires(T t) { t.rbegin(); };
 
-    // If `.rend()` is provided.
-    template <typename T>
-    concept has_rend = requires(T t) { t.rend(); };
+// If `.rend()` is provided.
+template <typename T>
+concept has_rend = requires(T t) { t.rend(); };
 
-    // If `.cbegin()` is provided.
-    template <typename T>
-    concept has_cbegin = requires(T t) { t.cbegin(); };
+// If `.cbegin()` is provided.
+template <typename T>
+concept has_cbegin = requires(T t) { t.cbegin(); };
 
-    // If `.cend()` is provided.
-    template <typename T>
-    concept has_cend = requires(T t) { t.cend(); };
+// If `.cend()` is provided.
+template <typename T>
+concept has_cend = requires(T t) { t.cend(); };
 
-    // `detail::collection_iterator` is shared by all containers that
-    // implement `iterable_interface`. Unlike the standard library, this means
-    // that two different containers or container specializations can have the
-    // same `iterator` type, so long as they have the same `value_type`.
-    //
-    // This iterator's type can be accessed as eg.
-    // `cat::vec<int4, allocator>::iterator`.
-    template <typename T>
-    class collection_iterator
-        : public iterator_interface<collection_iterator<T>, T> {
-      public:
-        using value_type = T;
-        using const_value_type = T const;
-        using reference = T&;
-        using const_reference = T const&;
+// `detail::collection_iterator` is shared by all containers that
+// implement `iterable_interface`. Unlike the standard library, this means
+// that two different containers or container specializations can have the
+// same `iterator` type, so long as they have the same `value_type`.
+//
+// This iterator's type can be accessed as eg.
+// `cat::vec<int4, allocator>::iterator`.
+template <typename T>
+class collection_iterator
+    : public iterator_interface<collection_iterator<T>, T> {
+ public:
+   using value_type = T;
+   using const_value_type = T const;
+   using reference = T&;
+   using const_reference = T const&;
 
-        constexpr collection_iterator(collection_iterator const&) = default;
-        constexpr collection_iterator(collection_iterator&&) = default;
+   constexpr collection_iterator(collection_iterator const&) = default;
+   constexpr collection_iterator(collection_iterator&&) = default;
 
-        constexpr collection_iterator(idx index, T* p_in_array)
-            : m_current_index(index), m_p_array(p_in_array) {
-        }
+   constexpr collection_iterator(idx index, T* p_in_array)
+       : m_current_index(index), m_p_array(p_in_array) {
+   }
 
-        constexpr auto
-        dereference() const -> T& {
-            return m_p_array[m_current_index.raw];
-        }
+   constexpr auto
+   dereference() const -> T& {
+      return m_p_array[m_current_index.raw];
+   }
 
-        constexpr void
-        advance(iword offset) {
-            m_current_index += offset;
-        }
+   constexpr void
+   advance(iword offset) {
+      m_current_index += offset;
+   }
 
-        constexpr auto
-        distance_to(collection_iterator const& other) const -> iword {
-            return other.m_current_index - m_current_index;
-        }
+   constexpr auto
+   distance_to(collection_iterator const& other) const -> iword {
+      return other.m_current_index - m_current_index;
+   }
 
-      private:
-        iword m_current_index;
-        T* m_p_array;
-    };
+ private:
+   iword m_current_index;
+   T* m_p_array;
+};
 }  // namespace detail
 
 template <typename T>
 class iterable_interface {
-  public:
-    using iterator = detail::collection_iterator<T>;
-    using const_iterator = detail::collection_iterator<T const>;
-    using reverse_iterator = reverse_iterator_adaptor<iterator, T>;
-    using const_reverse_iterator =
-        reverse_iterator_adaptor<const_iterator, T const>;
+ public:
+   using iterator = detail::collection_iterator<T>;
+   using const_iterator = detail::collection_iterator<T const>;
+   using reverse_iterator = reverse_iterator_adaptor<iterator, T>;
+   using const_reverse_iterator =
+      reverse_iterator_adaptor<const_iterator, T const>;
 
-    [[nodiscard]]
-    constexpr auto
-    begin(this auto&& collection) {
-        constexpr bool is_const = is_const_ref<decltype(collection)>;
-        using it = conditional<is_const, const_iterator, iterator>;
+   [[nodiscard]]
+   constexpr auto
+   begin(this auto&& collection) {
+      constexpr bool is_const = is_const_ref<decltype(collection)>;
+      using it = conditional<is_const, const_iterator, iterator>;
 
-        return it(0, fwd(collection).data());
-    }
+      return it(0, fwd(collection).data());
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    end(this auto&& collection) {
-        constexpr bool is_const = is_const_ref<decltype(collection)>;
-        using it = conditional<is_const, const_iterator, iterator>;
+   [[nodiscard]]
+   constexpr auto
+   end(this auto&& collection) {
+      constexpr bool is_const = is_const_ref<decltype(collection)>;
+      using it = conditional<is_const, const_iterator, iterator>;
 
-        // `cat::forward` must be called on last use, and because argument
-        // evaluation order is unspecified, it cannot be called inside an
-        // argument list.
-        auto size = collection.size();
-        auto* p_data = fwd(collection).data();
-        return it(size, p_data);
-    }
+      // `cat::forward` must be called on last use, and because argument
+      // evaluation order is unspecified, it cannot be called inside an
+      // argument list.
+      auto size = collection.size();
+      auto* p_data = fwd(collection).data();
+      return it(size, p_data);
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    cbegin(this auto const& collection) -> const_iterator {
-        return collection.begin();
-    }
+   [[nodiscard]]
+   constexpr auto
+   cbegin(this auto const& collection) -> const_iterator {
+      return collection.begin();
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    cend(this auto const& collection) -> const_iterator {
-        return collection.end();
-    }
+   [[nodiscard]]
+   constexpr auto
+   cend(this auto const& collection) -> const_iterator {
+      return collection.end();
+   }
 
-    // `cat::as_reverse()` cannot be used to streamline this, because that
-    // has a potential dependency upon this code.
+   // `cat::as_reverse()` cannot be used to streamline this, because that
+   // has a potential dependency upon this code.
 
-    [[nodiscard]]
-    constexpr auto
-    rbegin(this auto&& collection) {
-        constexpr bool is_const = is_const_ref<decltype(collection)>;
-        using it =
-            conditional<is_const, const_reverse_iterator, reverse_iterator>;
+   [[nodiscard]]
+   constexpr auto
+   rbegin(this auto&& collection) {
+      constexpr bool is_const = is_const_ref<decltype(collection)>;
+      using it =
+         conditional<is_const, const_reverse_iterator, reverse_iterator>;
 
-        // `cat::forward` must be called on last use, and because argument
-        // evaluation order is unspecified, it cannot be called inside an
-        // argument list.
-        auto size = collection.size() - 1;
-        auto* p_data = fwd(collection).data();
-        return it(size, p_data);
-    }
+      // `cat::forward` must be called on last use, and because argument
+      // evaluation order is unspecified, it cannot be called inside an
+      // argument list.
+      auto size = collection.size() - 1;
+      auto* p_data = fwd(collection).data();
+      return it(size, p_data);
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    rend(this auto&& collection) {
-        constexpr bool is_const = is_const_ref<decltype(collection)>;
-        using it =
-            conditional<is_const, const_reverse_iterator, reverse_iterator>;
+   [[nodiscard]]
+   constexpr auto
+   rend(this auto&& collection) {
+      constexpr bool is_const = is_const_ref<decltype(collection)>;
+      using it =
+         conditional<is_const, const_reverse_iterator, reverse_iterator>;
 
-        return it(0, fwd(collection).data());
-    }
+      return it(0, fwd(collection).data());
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    crbegin(this auto const& collection) -> const_reverse_iterator {
-        return collection.rbegin();
-    }
+   [[nodiscard]]
+   constexpr auto
+   crbegin(this auto const& collection) -> const_reverse_iterator {
+      return collection.rbegin();
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    crend(this auto const& collection) -> const_reverse_iterator {
-        return collection.rend();
-    }
+   [[nodiscard]]
+   constexpr auto
+   crend(this auto const& collection) -> const_reverse_iterator {
+      return collection.rend();
+   }
 };
 
 template <typename derived_type, typename T>
 class collection_interface {
-  protected:
-    // `is_array_like` at the top of this class instead of the bottom prevents
-    // clangd false-positive diagnostics.
-    static constexpr bool is_array_like =
-        detail::is_contiguous_collection<derived_type> &&
-        detail::is_bounded_collection<derived_type>;
+ protected:
+   // `is_array_like` at the top of this class instead of the bottom prevents
+   // clangd false-positive diagnostics.
+   static constexpr bool is_array_like =
+      detail::is_contiguous_collection<derived_type>
+      && detail::is_bounded_collection<derived_type>;
 
-  public:
-    using value_type = T;
-    using const_value_type = T const;
-    using reference = T&;
-    using const_reference = T const&;
+ public:
+   using value_type = T;
+   using const_value_type = T const;
+   using reference = T&;
+   using const_reference = T const&;
 
-    // If `.size()` is not, provided and `.capacity()` is, generate
-    // `.size()`.
-    [[nodiscard]]
-    constexpr auto
-    size() const -> idx
-        requires(detail::has_capacity<derived_type> &&
-                 !detail::has_size<derived_type>)
-    {
-        return this->self().capacity();
-    }
+   // If `.size()` is not, provided and `.capacity()` is, generate
+   // `.size()`.
+   [[nodiscard]]
+   constexpr auto
+   size() const -> idx
+      requires(detail::has_capacity<derived_type>
+               && !detail::has_size<derived_type>)
+   {
+      return this->self().capacity();
+   }
 
-    // If `.size()` is provided and `.capacity()` is not, generate
-    // `.capacity()`.
-    [[nodiscard]]
-    constexpr auto
-    capacity() const -> idx
-        requires(detail::has_size<derived_type>)
-    {
-        return this->self().size();
-    }
+   // If `.size()` is provided and `.capacity()` is not, generate
+   // `.capacity()`.
+   [[nodiscard]]
+   constexpr auto
+   capacity() const -> idx
+      requires(detail::has_size<derived_type>)
+   {
+      return this->self().size();
+   }
 
-    // This evaluates true if there are one or more elements currently in this
-    // collection.
-    [[nodiscard]]
-    constexpr auto
-    is_empty() const -> bool
-        requires(detail::has_size<derived_type>)
-    {
-        return this->self().size() == 0;
-    }
+   // This evaluates true if there are one or more elements currently in this
+   // collection.
+   [[nodiscard]]
+   constexpr auto
+   is_empty() const -> bool
+      requires(detail::has_size<derived_type>)
+   {
+      return this->self().size() == 0;
+   }
 
-    // This evaluates true if there are one or more elements currently in this
-    // collection.
-    [[nodiscard]]
-    constexpr auto
-    is_full() const -> bool
-        requires(detail::has_size<derived_type>)
-    {
-        return this->self().size() == this->self().capacity();
-    }
+   // This evaluates true if there are one or more elements currently in this
+   // collection.
+   [[nodiscard]]
+   constexpr auto
+   is_full() const -> bool
+      requires(detail::has_size<derived_type>)
+   {
+      return this->self().size() == this->self().capacity();
+   }
 
-    // Index into this collection with bounds-checking.
-    [[nodiscard]]
-    constexpr auto
-    at(iword index) -> maybe<T&>
-        requires(is_array_like)
-    {
-        if !consteval {
-            cat::assert(index >= 0);
-        }
-        if (index < this->self().capacity()) {
-            return this->self_mut().data()[index.raw];
-        }
-        return nullopt;
-    }
+   // Index into this collection with bounds-checking.
+   [[nodiscard]]
+   constexpr auto
+   at(iword index) -> maybe<T&>
+      requires(is_array_like)
+   {
+      if !consteval {
+         cat::assert(index >= 0);
+      }
+      if (index < this->self().capacity()) {
+         return this->self_mut().data()[index.raw];
+      }
+      return nullopt;
+   }
 
-    // Index into this collection with bounds-checking.
-    [[nodiscard]]
-    constexpr auto
-    at(iword index) const -> maybe<T&> {
-        // `unconst()` allows `.at()` to be safely called in a `const` context.
-        return unconst(this)->at(index);
-    }
+   // Index into this collection with bounds-checking.
+   [[nodiscard]]
+   constexpr auto
+   at(iword index) const -> maybe<T&> {
+      // `unconst()` allows `.at()` to be safely called in a `const` context.
+      return unconst(this)->at(index);
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    front() -> T& requires(is_array_like) {
-                      cat::assert(this->self().size() > 0);
-                      return this->self_mut().data()[0];
-                  }
+   [[nodiscard]]
+   constexpr auto
+   front() -> T& requires(is_array_like) {
+                    cat::assert(this->self().size() > 0);
+                    return this->self_mut().data()[0];
+                 }
 
-    [[nodiscard]] constexpr auto front() const -> T const& {
-        cat::assert(this->self().size() > 0);
-        return unconst(this)->front();
-    }
+   [[nodiscard]] constexpr auto front() const -> T const& {
+      cat::assert(this->self().size() > 0);
+      return unconst(this)->front();
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    back()
-        -> T& requires(is_array_like) {
-                  cat::assert(this->self().size() > 0);
-                  return this->self_mut().data()[this->self().size().raw - 1];
-              }
+   [[nodiscard]]
+   constexpr auto
+   back() -> T& requires(is_array_like) {
+                   cat::assert(this->self().size() > 0);
+                   return this->self_mut().data()[this->self().size().raw - 1];
+                }
 
-    [[nodiscard]] constexpr auto back() const -> T const& {
-        cat::assert(this->self().size() > 0);
-        return unconst(this)->back();
-    }
+   [[nodiscard]] constexpr auto back() const -> T const& {
+      cat::assert(this->self().size() > 0);
+      return unconst(this)->back();
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    subspan(idx start_index, idx end_index) -> span<T>
-        requires(is_array_like)
-    {
-        if !consteval {
-            assert(end_index <= this->self().capacity());
-        }
+   [[nodiscard]]
+   constexpr auto
+   subspan(idx start_index, idx end_index) -> span<T>
+      requires(is_array_like)
+   {
+      if !consteval {
+         assert(end_index <= this->self().capacity());
+      }
 
-        return span<T>(this->self().data() + start_index,
-                       end_index - start_index);
-    }
+      return span<T>(this->self().data() + start_index,
+                     end_index - start_index);
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    subspan(idx start_index, idx end_index) const -> span<T const>
-        requires(is_array_like)
-    {
-        if !consteval {
-            assert(end_index <= this->self().capacity());
-        }
+   [[nodiscard]]
+   constexpr auto
+   subspan(idx start_index, idx end_index) const -> span<T const>
+      requires(is_array_like)
+   {
+      if !consteval {
+         assert(end_index <= this->self().capacity());
+      }
 
-        return span<T const>(this->self().data() + start_index,
-                             end_index - start_index);
-    }
+      return span<T const>(this->self().data() + start_index,
+                           end_index - start_index);
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    first(idx count) -> span<T>
-        requires(is_array_like)
-    {
-        return this->subspan(0u, count);
-    }
+   [[nodiscard]]
+   constexpr auto
+   first(idx count) -> span<T>
+      requires(is_array_like)
+   {
+      return this->subspan(0u, count);
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    first(idx count) const -> span<T const>
-        requires(is_array_like)
-    {
-        return this->subspan(0u, count);
-    }
+   [[nodiscard]]
+   constexpr auto
+   first(idx count) const -> span<T const>
+      requires(is_array_like)
+   {
+      return this->subspan(0u, count);
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    last(idx count) -> span<T>
-        requires(is_array_like)
-    {
-        return this->subspan(this->self().size() - count, this->self().size());
-    }
+   [[nodiscard]]
+   constexpr auto
+   last(idx count) -> span<T>
+      requires(is_array_like)
+   {
+      return this->subspan(this->self().size() - count, this->self().size());
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    last(idx count) const -> span<T const>
-        requires(is_array_like)
-    {
-        return this->subspan(this->self().size() - count, this->self().size());
-    }
+   [[nodiscard]]
+   constexpr auto
+   last(idx count) const -> span<T const>
+      requires(is_array_like)
+   {
+      return this->subspan(this->self().size() - count, this->self().size());
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    operator[](idx index)
-        -> T& requires(is_array_like) {
-                  if !consteval {
-                      assert(index < this->self().size());
-                  }
+   [[nodiscard]]
+   constexpr auto
+   operator[](idx index)
+      -> T& requires(is_array_like) {
+               if !consteval {
+                  assert(index < this->self().size());
+               }
 
-                  return this->self_mut().data()[make_raw_arithmetic(index)];
-              }
+               return this->self_mut().data()[make_raw_arithmetic(index)];
+            }
 
-    [[nodiscard]] constexpr auto operator[](idx index) const -> T const&
-        requires(is_array_like)
-    {
-        if !consteval {
-            assert(index < this->self().size());
-        }
+   [[nodiscard]] constexpr auto operator[](idx index) const -> T const&
+      requires(is_array_like)
+   {
+      if !consteval {
+         assert(index < this->self().size());
+      }
 
-        return this->self().data()[make_raw_arithmetic(index)];
-    }
+      return this->self().data()[make_raw_arithmetic(index)];
+   }
 
-    // Member-access syntax algorithms.
+   // Member-access syntax algorithms.
 
-    template <is_collection Other>
-    auto
-    copy_to(this auto const& self, Other& destination) {
-        assert(destination.capacity() >= self.capacity());
-        return cat::copy(self.begin(), self.end(), destination.begin());
-    }
+   template <is_collection Other>
+   auto
+   copy_to(this auto const& self, Other& destination) {
+      assert(destination.capacity() >= self.capacity());
+      return cat::copy(self.begin(), self.end(), destination.begin());
+   }
 
-    template <is_collection Other>
-    auto
-    move_to(this auto const& self, Other& destination) {
-        assert(destination.capacity() >= self.capacity());
-        return cat::move(self.begin(), self.end(), destination.begin());
-    }
+   template <is_collection Other>
+   auto
+   move_to(this auto const& self, Other& destination) {
+      assert(destination.capacity() >= self.capacity());
+      return cat::move(self.begin(), self.end(), destination.begin());
+   }
 
-    template <is_collection Other>
-    auto
-    relocate_to(this auto const& self, Other& destination) {
-        assert(destination.capacity() >= self.capacity());
-        return cat::relocate(self.begin(), self.end(), destination.begin());
-    }
+   template <is_collection Other>
+   auto
+   relocate_to(this auto const& self, Other& destination) {
+      assert(destination.capacity() >= self.capacity());
+      return cat::relocate(self.begin(), self.end(), destination.begin());
+   }
 
-  private:
-    // TODO: Replace these with explicit object parameters.
-    constexpr auto
-    self_mut() -> derived_type& {
-        return static_cast<derived_type&>(*this);
-    }
+ private:
+   // TODO: Replace these with explicit object parameters.
+   constexpr auto
+   self_mut() -> derived_type& {
+      return static_cast<derived_type&>(*this);
+   }
 
-    constexpr auto
-    self() -> derived_type& {
-        return static_cast<derived_type&>(*this);
-    }
+   constexpr auto
+   self() -> derived_type& {
+      return static_cast<derived_type&>(*this);
+   }
 
-    constexpr auto
-    self() const -> derived_type const& {
-        return static_cast<derived_type const&>(*this);
-    }
+   constexpr auto
+   self() const -> derived_type const& {
+      return static_cast<derived_type const&>(*this);
+   }
 };
 
 }  // namespace cat
