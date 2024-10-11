@@ -58,8 +58,8 @@ target_sources(cat INTERFACE
   ${CATLIB}/runtime/implementations/__cxa_pure_virtual.cpp
   ${CATLIB}/runtime/implementations/setjmp.cpp
   ${CATLIB}/runtime/implementations/longjmp.cpp
-  ${CATLIB}/new/implementations/new.cpp
   ${CATLIB}/runtime/implementations/load_base_stack_pointer.cpp
+  ${CATLIB}/new/implementations/new.cpp
   ${CATLIB}/simd/implementations/is_avx2_supported.cpp
   ${CATLIB}/simd/implementations/is_avx512f_supported.cpp
   ${CATLIB}/simd/implementations/is_avx_supported.cpp
