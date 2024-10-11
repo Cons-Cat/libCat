@@ -2,14 +2,16 @@
 
 #include "../unit_tests.hpp"
 
-void invoke_fn_void() {
+void
+invoke_fn_void() {
 }
 
-auto invoke_fn_int() -> int {
-    return 1;
+auto
+invoke_fn_int() -> int {
+   return 1;
 }
 
 TEST(test_invoke) {
-    // TODO: This does not compile yet.
-    // auto _ = cat::invoke(&invoke_fn_void);
+   // TODO: This does not compile yet.
+   // auto _ = cat::invoke(&invoke_fn_void);
 }
