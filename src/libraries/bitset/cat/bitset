@@ -59,9 +59,7 @@ class bitset {
    constexpr bitset(bitset&&) = default;
 
    template <typename... types>
-      requires((is_same<types, array_type_element>
-                || is_same<types, typename array_type_element::raw_type>)
-               && ...)
+      requires((is_implicitly_convertible<types, array_type_element>) && ...)
    [[nodiscard]]
    static constexpr auto
    from(types... values) -> bitset
