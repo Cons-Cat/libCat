@@ -13,7 +13,7 @@ namespace std {
 // Deprecated call to `memcpy()`. Consider using `cat::copy_buffer()` instead.
 // `memcpy()` exists to enable some GCC optimizations.
 extern "C" [[deprecated(
-    "std::memcpy() is deprecated! Use cat::copy_memory() instead!")]]
+   "std::memcpy() is deprecated! Use cat::copy_memory() instead!")]]
 auto
 memcpy(void* p_destination, void const* p_source, __SIZE_TYPE__ bytes) -> void*;
 
@@ -22,141 +22,143 @@ memcpy(void* p_destination, void const* p_source, __SIZE_TYPE__ bytes) -> void*;
 // optimizations.
 extern "C" [[deprecated("std::memset() is deprecated! Use cat::set_memory() or "
                         "cat::zero_memory() instead!")]]
-auto memset(void* p_source, int byte_value, __SIZE_TYPE__ bytes) -> void*;
+auto
+memset(void* p_source, int byte_value, __SIZE_TYPE__ bytes) -> void*;
 
 }  // namespace std
 
 namespace cat {
 
-constexpr auto string_length(char const* p_string) -> idx;
+constexpr auto
+string_length(char const* p_string) -> idx;
 
 template <uword::raw_type length>
 class str_inplace;
 
 class str_span : public span<char const> {
-  public:
-    constexpr str_span() : span<char const>(nullptr) {
-    }
+ public:
+   constexpr str_span() : span<char const>(nullptr) {
+   }
 
-    constexpr str_span(str_span const& string) = default;
-    constexpr str_span(str_span&& string) = default;
+   constexpr str_span(str_span const& string) = default;
+   constexpr str_span(str_span&& string) = default;
 
-    constexpr str_span(char const* p_string, idx in_length)
-        : span<char const>(p_string, in_length) {
-    }
+   constexpr str_span(char const* p_string, idx in_length)
+       : span<char const>(p_string, in_length) {
+   }
 
-    // This weird template deduces lower than the string literal constructor.
-    template <typename T>
-        requires(is_pointer<T>)
-    constexpr str_span(T p_string)
-        : span<char const>(p_string, string_length(p_string)) {
-    }
+   // This weird template deduces lower than the string literal constructor.
+   template <typename T>
+      requires(is_pointer<T>)
+   constexpr str_span(T p_string)
+       : span<char const>(p_string, string_length(p_string)) {
+   }
 
-    // clangd emits a false diagnistic if this is `consteval` instead of
-    // `constexpr`.
-    // Zero-overhead string literal constructor.
-    template <uword::raw_type other_length>
-    constexpr str_span(char const (&string)[other_length]) {
-        this->m_p_data = string;
-        this->m_size = idx(other_length);
-    }
+   // clangd emits a false diagnistic if this is `consteval` instead of
+   // `constexpr`.
+   // Zero-overhead string literal constructor.
+   template <uword::raw_type other_length>
+   constexpr str_span(char const (&string)[other_length]) {
+      this->m_p_data = string;
+      this->m_size = idx(other_length);
+   }
 
-    template <uword::raw_type other_length>
-    constexpr str_span(str_inplace<other_length> const& other_string) {
-        this->m_p_data = other_string.data();
-        this->m_size = idx(other_length);
-    }
+   template <uword::raw_type other_length>
+   constexpr str_span(str_inplace<other_length> const& other_string) {
+      this->m_p_data = other_string.data();
+      this->m_size = idx(other_length);
+   }
 
-    constexpr str_span(span<char> in_span) : span<char const>(in_span) {
-    }
+   constexpr str_span(span<char> in_span) : span<char const>(in_span) {
+   }
 
-    // A `string` consuming `nullptr` would cause undefined behavior.
-    constexpr str_span(decltype(nullptr)) = delete;
+   // A `string` consuming `nullptr` would cause undefined behavior.
+   constexpr str_span(decltype(nullptr)) = delete;
 
-    constexpr auto
-    operator=(str_span const& other_string) -> str_span& {
-        this->m_p_data = other_string.data();
-        this->m_size = other_string.size();
-        return *this;
-    }
+   constexpr auto
+   operator=(str_span const& other_string) -> str_span& {
+      this->m_p_data = other_string.data();
+      this->m_size = other_string.size();
+      return *this;
+   }
 
-    constexpr auto
-    operator=(str_span&& other_string) -> str_span& {
-        this->m_p_data = other_string.data();
-        this->m_size = move(other_string).size();
-        return *this;
-    }
+   constexpr auto
+   operator=(str_span&& other_string) -> str_span& {
+      this->m_p_data = other_string.data();
+      this->m_size = move(other_string).size();
+      return *this;
+   }
 
-    // TODO: Make these member functions `const`.
+   // TODO: Make these member functions `const`.
 
-    [[nodiscard]]
-    constexpr auto
-    substring(idx position, idx count) -> str_span {
-        return {this->m_p_data + position, count};
-    }
+   [[nodiscard]]
+   constexpr auto
+   substring(idx position, idx count) -> str_span {
+      return {this->m_p_data + position, count};
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    remove_prefix(idx offset) -> str_span {
-        return this->substring(offset, this->m_size - offset);
-    }
+   [[nodiscard]]
+   constexpr auto
+   remove_prefix(idx offset) -> str_span {
+      return this->substring(offset, this->m_size - offset);
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    remove_suffix(idx offset) -> str_span {
-        return this->substring(0u, this->m_size - offset);
-    }
+   [[nodiscard]]
+   constexpr auto
+   remove_suffix(idx offset) -> str_span {
+      return this->substring(0u, this->m_size - offset);
+   }
 
-    [[nodiscard]]
-    // TODO: Make this return an `idx`.
-    constexpr auto
-    find_small(char character, idx position = 0u) const
-        -> maybe<sentinel<iword, -1>> {
-        for (idx i = position; i < this->m_size; ++i) {
-            if (this->m_p_data[i.raw] == character) {
-                return iword(i);
-            }
-        }
-        return nullopt;  // This is `-1`.
-    }
+   [[nodiscard]]
+   // TODO: Make this return an `idx`.
+   constexpr auto
+   find_small(char character, idx position = 0u) const
+      -> maybe<sentinel<iword, -1>> {
+      for (idx i = position; i < this->m_size; ++i) {
+         if (this->m_p_data[i.raw] == character) {
+            return iword(i);
+         }
+      }
+      return nullopt;  // This is `-1`.
+   }
 
-    // TODO: Optimize different length strings.
-    [[nodiscard]]
-    // TODO: Return an `idx`.
-    constexpr auto
-    find(char character, idx from_position = 0u) const
-        -> maybe<sentinel<iword, -1>> {
-        // TODO: `lanes` should be an `idx`.
-        iword lanes = iword(char1x_::lanes);
+   // TODO: Optimize different length strings.
+   [[nodiscard]]
+   // TODO: Return an `idx`.
+   constexpr auto
+   find(char character, idx from_position = 0u) const
+      -> maybe<sentinel<iword, -1>> {
+      // TODO: `lanes` should be an `idx`.
+      iword lanes = iword(char1x_::lanes);
 
-        // TODO: Tile this loop four or eight times.
-        // `i` must be signed, because `length - lanes` might be negative.
-        // this->length must be cast to an `iword`, because otherwise it might
-        // underflow.
-        iword i;
-        for (i = from_position; i < iword(this->m_size) - lanes; i += lanes) {
-            // TODO: Consider aligning this load?
-            char1x_ const storage = char1x_::loaded(this->m_p_data + i);
-            // TODO: Support a native ABI mask here.
-            simd_mask<x64::avx2_abi<char>, char> const compare =
-                (storage == character);
-            bitset const mask = compare.bitset();
-            if (mask.any_of()) {
-                return i + mask.countr_zero();
-            }
-        }
+      // TODO: Tile this loop four or eight times.
+      // `i` must be signed, because `length - lanes` might be negative.
+      // this->length must be cast to an `iword`, because otherwise it might
+      // underflow.
+      iword i;
+      for (i = from_position; i < iword(this->m_size) - lanes; i += lanes) {
+         // TODO: Consider aligning this load?
+         char1x_ const storage = char1x_::loaded(this->m_p_data + i);
+         // TODO: Support a native ABI mask here.
+         simd_mask<x64::avx2_abi<char>, char> const compare =
+            (storage == character);
+         bitset const mask = compare.bitset();
+         if (mask.any_of()) {
+            return i + mask.countr_zero();
+         }
+      }
 
-        // The last chunk of this string, smaller than `char1x_::lanes`, is
-        // stepped through one character at a time.
-        // Casting `i` to `idx` is guarenteed to be safe by this point.
-        return this->find_small(character, idx(i));
-    }
+      // The last chunk of this string, smaller than `char1x_::lanes`, is
+      // stepped through one character at a time.
+      // Casting `i` to `idx` is guarenteed to be safe by this point.
+      return this->find_small(character, idx(i));
+   }
 
-  private:
-    // `str_span` inherits:
-    //
-    // `char const* m_p_data;`
-    // `iword m_size;`
+ private:
+   // `str_span` inherits:
+   //
+   // `char const* m_p_data;`
+   // `iword m_size;`
 };
 
 // This is `uword::raw_type` because GCC cannot deduce a string literal's
@@ -164,149 +166,156 @@ class str_span : public span<char const> {
 template <uword::raw_type length>
 class str_inplace : public collection_interface<str_inplace<length>, char>,
                     public iterable_interface<char> {
-  public:
-    constexpr auto
-    data() -> char* {
-        return m_p_data;
-    }
+ public:
+   constexpr auto
+   data() -> char* {
+      return m_p_data;
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    data() const -> char const* {
-        return m_p_data;
-    }
+   [[nodiscard]]
+   constexpr auto
+   data() const -> char const* {
+      return m_p_data;
+   }
 
-    [[nodiscard]]
-    constexpr auto
-    size() const -> idx {
-        return idx(length);
-    }
+   [[nodiscard]]
+   constexpr auto
+   size() const -> idx {
+      return idx(length);
+   }
 
-    constexpr str_inplace() = default;
+   constexpr str_inplace() = default;
 
-    // Construct from another `str_inplace` of lesser or equal length.
-    constexpr str_inplace(str_inplace<length> const& string) {
-        this->copy_string_data(string.data());
-    }
+   // Construct from another `str_inplace` of lesser or equal length.
+   constexpr str_inplace(str_inplace<length> const& string) {
+      this->copy_string_data(string.data());
+   }
 
-    // Construct and deduce length from a string literal.
-    constexpr str_inplace(char const (&in)[length]) {
-        // This must be copied instead of initialized in-place to guarantee
-        // const-correctness.
-        this->copy_string_data(in);
-    }
+   // Construct and deduce length from a string literal.
+   constexpr str_inplace(char const (&in)[length]) {
+      // This must be copied instead of initialized in-place to guarantee
+      // const-correctness.
+      this->copy_string_data(in);
+   }
 
-    // Create a `str_inplace` from a smaller string, and null out the unfilled
-    // bytes.
-    template <uword::raw_type in_length>
-        requires(in_length < length)
-    static consteval auto
-    padded(char const (&in)[in_length]) -> str_inplace<length> {
-        idx idx_length = idx(in_length);  // Convert length to `idx`.
-        str_inplace<length> string;
-        for (idx i; i < idx_length; ++i) {
-            string[i] = in[i.raw];
-        }
-        for (idx i = idx_length; i < length; ++i) {
-            string[i] = '\0';
-        }
-        return string;
-    }
+   // Create a `str_inplace` from a smaller string, and null out the unfilled
+   // bytes.
+   template <uword::raw_type in_length>
+      requires(in_length < length)
+   static consteval auto
+   padded(char const (&in)[in_length]) -> str_inplace<length> {
+      idx idx_length = idx(in_length);  // Convert length to `idx`.
+      str_inplace<length> string;
+      for (idx i; i < idx_length; ++i) {
+         string[i] = in[i.raw];
+      }
+      for (idx i = idx_length; i < length; ++i) {
+         string[i] = '\0';
+      }
+      return string;
+   }
 
-    // Assign a `str_inplace` of lesser or equal length.
-    constexpr auto
-    // NOLINTNEXTLINE This does handle self-assignment.
-    operator=(str_inplace<length> const& string) -> str_inplace<length>& {
-        this->copy_string_data(string.data());
-        return *this;
-    }
+   // Assign a `str_inplace` of lesser or equal length.
+   constexpr auto
+   // NOLINTNEXTLINE This does handle self-assignment.
+   operator=(str_inplace<length> const& string) -> str_inplace<length>& {
+      this->copy_string_data(string.data());
+      return *this;
+   }
 
-    // Assign a string literal of lesser or equal length.
-    constexpr auto
-    operator=(char const (&in)[length]) -> str_inplace<length>& {
-        this->copy_string_data(in);
-        return *this;
-    }
+   // Assign a string literal of lesser or equal length.
+   constexpr auto
+   operator=(char const (&in)[length]) -> str_inplace<length>& {
+      this->copy_string_data(in);
+      return *this;
+   }
 
-    // Concatenate constant-evaluated strings.
-    // This is `uword::raw_type` because GCC cannot deduce a string literal's
-    // length from an `ssize`.
-    template <uword::raw_type other_length>
-    friend constexpr auto
-    operator+(str_inplace<length> const& self,
-              str_inplace<other_length> const& other_string)
-        -> str_inplace<length - 1 + other_length> {
-        // Add the lengths of two null-terminated strings together:
-        constexpr uword::raw_type new_length = length - 1u + other_length;
-        char array[new_length];
+   // Concatenate constant-evaluated strings.
+   // This is `uword::raw_type` because GCC cannot deduce a string literal's
+   // length from an `ssize`.
+   template <uword::raw_type other_length>
+   friend constexpr auto
+   operator+(str_inplace<length> const& self,
+             str_inplace<other_length> const& other_string)
+      -> str_inplace<length - 1 + other_length> {
+      // Add the lengths of two null-terminated strings together:
+      constexpr uword::raw_type new_length = length - 1u + other_length;
+      char array[new_length];
 
-        for (uword::raw_type i = 0u; i < length - 1u; ++i) {
-            array[i] = self.m_p_data[i];
-        }
+      for (uword::raw_type i = 0u; i < length - 1u; ++i) {
+         array[i] = self.m_p_data[i];
+      }
 
-        for (uword::raw_type i = length - 1; i < new_length - 1u; ++i) {
-            array[i] = other_string.data()[i - length + 1];
-        }
+      for (uword::raw_type i = length - 1; i < new_length - 1u; ++i) {
+         array[i] = other_string.data()[i - length + 1];
+      }
 
-        // Make this new string null-terminated.
-        array[new_length - 1] = '\0';
-        str_inplace<new_length> new_string = array;
-        return new_string;
-    }
+      // Make this new string null-terminated.
+      array[new_length - 1] = '\0';
+      str_inplace<new_length> new_string = array;
+      return new_string;
+   }
 
-    // Concatenate a string literal to a `str_inplace`.
-    template <uword::raw_type other_length>
-    friend constexpr auto
-    operator+(str_inplace<length> const& self,
-              char const (&other_string)[other_length])
-        -> str_inplace<length - 1u + other_length> {
-        return self + str_inplace<other_length>{other_string};
-    }
+   // Concatenate a string literal to a `str_inplace`.
+   template <uword::raw_type other_length>
+   friend constexpr auto
+   operator+(str_inplace<length> const& self,
+             char const (&other_string)[other_length])
+      -> str_inplace<length - 1u + other_length> {
+      return self + str_inplace<other_length>{other_string};
+   }
 
-    // Concatenate a `str_inplace` to a string literal.
-    template <uword::raw_type other_length>
-    friend constexpr auto
-    operator+(char const (&other_string)[other_length],
-              str_inplace<length> const& self)
-        -> str_inplace<length - 1 + other_length> {
-        return str_inplace<other_length>{other_string} + self;
-    }
+   // Concatenate a `str_inplace` to a string literal.
+   template <uword::raw_type other_length>
+   friend constexpr auto
+   operator+(char const (&other_string)[other_length],
+             str_inplace<length> const& self)
+      -> str_inplace<length - 1 + other_length> {
+      return str_inplace<other_length>{other_string} + self;
+   }
 
-  private:
-    constexpr void
-    copy_string_data(char const* p_source) {
-        if consteval {
-            for (uword::raw_type i = 0u; i < length; ++i) {
-                this->m_p_data[i] = p_source[i];
-            }
-        } else {
-            copy_memory(p_source, this->data(), length);
-        }
-    }
+ private:
+   constexpr void
+   copy_string_data(char const* p_source) {
+      if consteval {
+         for (uword::raw_type i = 0u; i < length; ++i) {
+            this->m_p_data[i] = p_source[i];
+         }
+      } else {
+         copy_memory(p_source, this->data(), length);
+      }
+   }
 
-    char m_p_data[length];
+   char m_p_data[length];
 };
 
 [[nodiscard]]
-auto compare_strings(str_span string_1, str_span string_2) -> bool;
+auto
+compare_strings(str_span string_1, str_span string_2) -> bool;
 
 [[nodiscard]]
-auto print(str_span string) -> iword;
+auto
+print(str_span string) -> iword;
 
 [[nodiscard]]
-auto println(str_span string) -> iword;
+auto
+println(str_span string) -> iword;
 
 [[nodiscard]]
-auto println() -> iword;
+auto
+println() -> iword;
 
 [[nodiscard]]
-auto eprint(str_span string) -> iword;
+auto
+eprint(str_span string) -> iword;
 
 [[nodiscard]]
-auto eprintln(str_span string) -> iword;
+auto
+eprintln(str_span string) -> iword;
 
 [[nodiscard]]
-auto eprintln() -> iword;
+auto
+eprintln() -> iword;
 
 // TODO: Investigate zero-overhead `println` of literals again.
 
@@ -322,16 +331,16 @@ template <typename T>
 [[nodiscard]]
 auto
 cat::maybe<T>::or_exit(cat::str_span const error_message, iword exit_code) & {
-    if (this->has_value()) [[likely]] {
-        if constexpr (!is_void<T>) {
-            return this->value();
-        } else {
-            return;
-        }
-    } else {
-        auto _ = eprintln(error_message);
-        exit(exit_code);
-    }
+   if (this->has_value()) [[likely]] {
+      if constexpr (!is_void<T>) {
+         return this->value();
+      } else {
+         return;
+      }
+   } else {
+      auto _ = eprintln(error_message);
+      exit(exit_code);
+   }
 }
 
 template <typename T>
@@ -339,32 +348,32 @@ template <typename T>
 auto
 cat::maybe<T>::or_exit(cat::str_span const error_message,
                        iword exit_code) const& {
-    if (this->has_value()) [[likely]] {
-        if constexpr (!is_void<T>) {
-            return this->value();
-        } else {
-            return;
-        }
-    } else {
-        auto _ = eprintln(error_message);
-        exit(exit_code);
-    }
+   if (this->has_value()) [[likely]] {
+      if constexpr (!is_void<T>) {
+         return this->value();
+      } else {
+         return;
+      }
+   } else {
+      auto _ = eprintln(error_message);
+      exit(exit_code);
+   }
 }
 
 template <typename T>
 [[nodiscard]]
 auto
 cat::maybe<T>::or_exit(cat::str_span const error_message, iword exit_code) && {
-    if (this->has_value()) [[likely]] {
-        if constexpr (!is_void<T>) {
-            return move(this)->value();
-        } else {
-            return;
-        }
-    } else {
-        auto _ = eprintln(error_message);
-        exit(exit_code);
-    }
+   if (this->has_value()) [[likely]] {
+      if constexpr (!is_void<T>) {
+         return move(this)->value();
+      } else {
+         return;
+      }
+   } else {
+      auto _ = eprintln(error_message);
+      exit(exit_code);
+   }
 }
 
 template <typename T>
@@ -372,16 +381,16 @@ template <typename T>
 auto
 cat::maybe<T>::or_exit(cat::str_span const error_message,
                        iword exit_code) const&& {
-    if (this->has_value()) [[likely]] {
-        if constexpr (!is_void<T>) {
-            return move(this)->value();
-        } else {
-            return;
-        }
-    } else {
-        auto _ = eprintln(error_message);
-        exit(exit_code);
-    }
+   if (this->has_value()) [[likely]] {
+      if constexpr (!is_void<T>) {
+         return move(this)->value();
+      } else {
+         return;
+      }
+   } else {
+      auto _ = eprintln(error_message);
+      exit(exit_code);
+   }
 }
 
 #include "../implementations/string_length.tpp"

@@ -8,8 +8,8 @@ namespace cat {
 
 template <typename T>
 concept is_random_access = requires(T t) {
-                               t.data();
-                               t.size();
+                              t.data();
+                              t.size();
                            };
 
 // Copy-assign the elements of one collection into another.
@@ -17,15 +17,15 @@ template <typename input_iterator, typename output_iterator>
 auto
 copy(input_iterator source_begin, input_iterator source_end,
      output_iterator destination_begin) -> output_iterator {
-    using destination_element = remove_reference<decltype(*destination_begin)>;
+   using destination_element = remove_reference<decltype(*destination_begin)>;
 
-    while (source_begin != source_end) {
-        // Copy assignment.
-        *destination_begin = static_cast<destination_element>(*source_begin);
-        ++source_begin;
-        ++destination_begin;
-    }
-    return destination_begin;
+   while (source_begin != source_end) {
+      // Copy assignment.
+      *destination_begin = static_cast<destination_element>(*source_begin);
+      ++source_begin;
+      ++destination_begin;
+   }
+   return destination_begin;
 }
 
 // Move-assign the elements of one collection into another.
@@ -33,16 +33,16 @@ template <typename input_iterator, typename output_iterator>
 auto
 move(input_iterator source_begin, input_iterator source_end,
      output_iterator destination_begin) -> output_iterator {
-    using destination_element = remove_reference<decltype(*destination_begin)>;
+   using destination_element = remove_reference<decltype(*destination_begin)>;
 
-    while (source_begin != source_end) {
-        // Move assignment.
-        *destination_begin =
-            static_cast<destination_element>(move(*source_begin));
-        ++source_begin;
-        ++destination_begin;
-    }
-    return destination_begin;
+   while (source_begin != source_end) {
+      // Move assignment.
+      *destination_begin =
+         static_cast<destination_element>(move(*source_begin));
+      ++source_begin;
+      ++destination_begin;
+   }
+   return destination_begin;
 }
 
 // Optimally relocate the elements of one collection into another.
@@ -50,48 +50,48 @@ template <typename input_iterator, typename output_iterator>
 auto
 relocate(input_iterator source_begin, input_iterator source_end,
          output_iterator destination_begin) -> output_iterator {
-    using source_element = remove_reference<decltype(*source_begin)>;
-    using destination_element = decltype(*destination_begin);
+   using source_element = remove_reference<decltype(*source_begin)>;
+   using destination_element = decltype(*destination_begin);
 
-    // If the source and destination containers are contiguous, and they hold
-    // the same element type, and that type is trivially relocatable, copy them
-    // fast.
-    if constexpr (is_random_access_iterator<input_iterator> &&
-                  is_random_access_iterator<output_iterator> &&
-                  is_same<source_element, destination_element> &&
-                  is_trivially_relocatable<source_element>) {
-        copy_memory(__builtin_addressof(*source_begin),
-                    __builtin_addressof(*destination_begin),
-                    (source_end - source_begin) * ssizeof(*source_begin));
-        return destination_begin;
-    } else {
-        // Otherwise, if the destination can be moved to, do so.
-        if constexpr (is_move_assignable<destination_element>) {
-            return move(source_begin, source_end, destination_begin);
-        } else {
-            // Otherwise, copy to the destination.
-            return copy(source_begin, source_end, destination_begin);
-        }
-    }
+   // If the source and destination containers are contiguous, and they hold
+   // the same element type, and that type is trivially relocatable, copy them
+   // fast.
+   if constexpr (is_random_access_iterator<input_iterator>
+                 && is_random_access_iterator<output_iterator>
+                 && is_same<source_element, destination_element>
+                 && is_trivially_relocatable<source_element>) {
+      copy_memory(__builtin_addressof(*source_begin),
+                  __builtin_addressof(*destination_begin),
+                  (source_end - source_begin) * ssizeof(*source_begin));
+      return destination_begin;
+   } else {
+      // Otherwise, if the destination can be moved to, do so.
+      if constexpr (is_move_assignable<destination_element>) {
+         return move(source_begin, source_end, destination_begin);
+      } else {
+         // Otherwise, copy to the destination.
+         return copy(source_begin, source_end, destination_begin);
+      }
+   }
 }
 
 template <is_forward_iterator ItLhs, is_forward_iterator ItRhs>
 constexpr auto
 lexicographical_compare(ItLhs lhs_start, ItLhs lhs_end, ItRhs rhs_start,
                         ItRhs rhs_end) -> bool {
-    while (lhs_start != lhs_end) {
-        if (rhs_start == rhs_end || *rhs_start < *lhs_start) {
-            return false;
-        }
-        if (*lhs_start < *rhs_start) {
-            return true;
-        }
+   while (lhs_start != lhs_end) {
+      if (rhs_start == rhs_end || *rhs_start < *lhs_start) {
+         return false;
+      }
+      if (*lhs_start < *rhs_start) {
+         return true;
+      }
 
-        ++lhs_start;
-        ++rhs_start;
-    }
+      ++lhs_start;
+      ++rhs_start;
+   }
 
-    return (rhs_start != rhs_end);
+   return (rhs_start != rhs_end);
 }
 
 template <is_forward_iterator ItLhs, is_forward_iterator ItRhs>
@@ -99,27 +99,27 @@ constexpr auto
 lexicographical_compare_three_way(ItLhs lhs_start, ItLhs lhs_end,
                                   ItRhs rhs_start,
                                   ItRhs rhs_end)  // Formatting.
-    requires(
-        is_common_comparison_category<decltype((*lhs_start) <=> (*rhs_start))>)
+   requires(
+      is_common_comparison_category<decltype((*lhs_start) <=> (*rhs_start))>)
 {
-    bool exhaust_left = (lhs_start == lhs_end);
-    bool exhaust_right = (rhs_start == rhs_end);
+   bool exhaust_left = (lhs_start == lhs_end);
+   bool exhaust_right = (rhs_start == rhs_end);
 
-    while (!exhaust_left && !exhaust_right) {
-        auto comparison = (*lhs_start) <=> (*rhs_start);
+   while (!exhaust_left && !exhaust_right) {
+      auto comparison = (*lhs_start) <=> (*rhs_start);
 
-        if (comparison != 0) {
-            return comparison;
-        }
+      if (comparison != 0) {
+         return comparison;
+      }
 
-        exhaust_left = (++lhs_start == lhs_end);
-        exhaust_right = (++rhs_start == rhs_end);
-    }
+      exhaust_left = (++lhs_start == lhs_end);
+      exhaust_right = (++rhs_start == rhs_end);
+   }
 
-    using category_type = decltype((*lhs_start) <=> (*rhs_start));
-    return category_type(!exhaust_left    ? std::strong_ordering::greater
-                         : !exhaust_right ? std::strong_ordering::less
-                                          : std::strong_ordering::equal);
+   using category_type = decltype((*lhs_start) <=> (*rhs_start));
+   return category_type(!exhaust_left    ? std::strong_ordering::greater
+                        : !exhaust_right ? std::strong_ordering::less
+                                         : std::strong_ordering::equal);
 }
 
 }  // namespace cat

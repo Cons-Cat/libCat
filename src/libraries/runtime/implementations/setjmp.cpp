@@ -4,7 +4,7 @@
 [[gnu::naked, gnu::returns_twice]]
 auto
 cat::setjmp(jmp_buffer& /* jump_point */) -> int4 {
-    asm volatile(R"(
+   asm volatile(R"(
         # Put the pointer to `jump_point` in %rdi.
         mov %rbx, (%rdi)
 

@@ -9,151 +9,151 @@ namespace cat {
 template <idx max_node_bytes>
 class pool_allocator
     : public allocator_interface<pool_allocator<max_node_bytes>> {
-    friend allocator_interface<pool_allocator>;
+   friend allocator_interface<pool_allocator>;
 
-    // Friend factory functions.
-    template <idx in_max_node_bytes>
-    friend constexpr auto make_pool_allocator(uintptr<void>, idx)
-        -> pool_allocator<in_max_node_bytes>;
+   // Friend factory functions.
+   template <idx in_max_node_bytes>
+   friend constexpr auto make_pool_allocator(uintptr<void>, idx)
+      -> pool_allocator<in_max_node_bytes>;
 
-    template <idx in_max_node_bytes>
-    friend constexpr auto
-    make_pool_allocator(span<byte>&) -> pool_allocator<in_max_node_bytes>;
+   template <idx in_max_node_bytes>
+   friend constexpr auto
+   make_pool_allocator(span<byte>&) -> pool_allocator<in_max_node_bytes>;
 
-  private:
-    // Initialize a `pool_allocator`. This should only be called from
-    // `cat::make_pool_allocator`.
-    constexpr pool_allocator(uintptr<void> p_address, idx arena_bytes)
-        : m_nodes(span<node_union>(
-              // Pun the opaque `p_address` to the internal `node_union` type.
-              __builtin_bit_cast(node_union*, p_address.raw),
-              arena_bytes / sizeof(node_union))) {
-        // Initialize the free list.
-        this->reset();
-    }
+ private:
+   // Initialize a `pool_allocator`. This should only be called from
+   // `cat::make_pool_allocator`.
+   constexpr pool_allocator(uintptr<void> p_address, idx arena_bytes)
+       : m_nodes(span<node_union>(
+            // Pun the opaque `p_address` to the internal `node_union` type.
+            __builtin_bit_cast(node_union*, p_address.raw),
+            arena_bytes / sizeof(node_union))) {
+      // Initialize the free list.
+      this->reset();
+   }
 
-    template <typename T>
-    struct pool_memory_handle : detail::base_memory_handle<T> {
-        T* p_storage;
+   template <typename T>
+   struct pool_memory_handle : detail::base_memory_handle<T> {
+      T* p_storage;
 
-        // TODO: Simplify with CRTP or deducing-this.
-        auto
-        get() -> decltype(auto) {
-            return *this;
-        }
+      // TODO: Simplify with CRTP or deducing-this.
+      auto
+      get() -> decltype(auto) {
+         return *this;
+      }
 
-        auto
-        get() const -> decltype(auto) {
-            return *this;
-        }
-    };
+      auto
+      get() const -> decltype(auto) {
+         return *this;
+      }
+   };
 
-  public:
-    // `pool_allocator` is move-only.
-    constexpr pool_allocator(pool_allocator const&) = delete(
-        "cat::pool_allocator` should be constructed using "
-        "`cat::make_pool_allocator`.");
-    constexpr pool_allocator(pool_allocator&&) = default;
+ public:
+   // `pool_allocator` is move-only.
+   constexpr pool_allocator(pool_allocator const&) = delete(
+      "cat::pool_allocator` should be constructed using "
+      "`cat::make_pool_allocator`.");
+   constexpr pool_allocator(pool_allocator&&) = default;
 
-    // Reset the bumped pointer to the beginning of this arena.
-    constexpr void
-    reset() {
-        for (idx i; i < m_nodes.size() - 1u; ++i) {
-            m_nodes[i].p_next = &(m_nodes[i + 1u]);
-        }
-        // Mark the final node.
-        m_nodes.back().p_next = nullptr;
-        m_p_head = &m_nodes.front();
-    }
+   // Reset the bumped pointer to the beginning of this arena.
+   constexpr void
+   reset() {
+      for (idx i; i < m_nodes.size() - 1u; ++i) {
+         m_nodes[i].p_next = &(m_nodes[i + 1u]);
+      }
+      // Mark the final node.
+      m_nodes.back().p_next = nullptr;
+      m_p_head = &m_nodes.front();
+   }
 
-  private:
-    auto
-    allocation_bytes(uword, idx) -> maybe_non_zero<idx> {
-        return max_node_bytes;
-    }
+ private:
+   auto
+   allocation_bytes(uword, idx) -> maybe_non_zero<idx> {
+      return max_node_bytes;
+   }
 
-    auto
-    allocate(idx) -> maybe_ptr<void> {
-        // If there is a next node in the free list, make that the head and
-        // allocate the current head to the user. Otherwise, do not allocate
-        // anything.
-        if (m_p_head == nullptr) {
-            return nullopt;
-        }
+   auto
+   allocate(idx) -> maybe_ptr<void> {
+      // If there is a next node in the free list, make that the head and
+      // allocate the current head to the user. Otherwise, do not allocate
+      // anything.
+      if (m_p_head == nullptr) {
+         return nullopt;
+      }
 
-        node_union* p_alloc = m_p_head;
-        m_p_head = m_p_head->p_next;
+      node_union* p_alloc = m_p_head;
+      m_p_head = m_p_head->p_next;
 
-        return static_cast<void*>(p_alloc);
-    }
+      return static_cast<void*>(p_alloc);
+   }
 
-    void
-    deallocate(void const* p_allocation, idx) {
-        // Swap the head for this newly freed allocation.
-        node_union* p_new_head = __builtin_bit_cast(node_union*, p_allocation);
-        p_new_head->p_next = m_p_head;
-        m_p_head = p_new_head;
-    }
+   void
+   deallocate(void const* p_allocation, idx) {
+      // Swap the head for this newly freed allocation.
+      node_union* p_new_head = __builtin_bit_cast(node_union*, p_allocation);
+      p_new_head->p_next = m_p_head;
+      m_p_head = p_new_head;
+   }
 
-    // Produce a handle to allocated memory.
-    template <typename T>
-    auto
-    make_handle(T* p_handle_storage) -> pool_memory_handle<T> {
-        return pool_memory_handle<T>{{}, p_handle_storage};
-    }
+   // Produce a handle to allocated memory.
+   template <typename T>
+   auto
+   make_handle(T* p_handle_storage) -> pool_memory_handle<T> {
+      return pool_memory_handle<T>{{}, p_handle_storage};
+   }
 
-    // Access some memory.
-    template <typename T>
-    auto
-    access(pool_memory_handle<T>& memory) -> T* {
-        return memory.p_storage;
-    }
+   // Access some memory.
+   template <typename T>
+   auto
+   access(pool_memory_handle<T>& memory) -> T* {
+      return memory.p_storage;
+   }
 
-    template <typename T>
-    auto
-    access(pool_memory_handle<T> const& memory) const -> T const* {
-        return memory.p_storage;
-    }
+   template <typename T>
+   auto
+   access(pool_memory_handle<T> const& memory) const -> T const* {
+      return memory.p_storage;
+   }
 
-  public:
-    static constexpr bool has_pointer_stability = true;
+ public:
+   static constexpr bool has_pointer_stability = true;
 
-    // Do not allocate larger than this size of one node.
-    static constexpr idx max_allocation_bytes = max_node_bytes;
+   // Do not allocate larger than this size of one node.
+   static constexpr idx max_allocation_bytes = max_node_bytes;
 
-    union node_union {
-        node_union* p_next = nullptr;
-        byte storage[max_node_bytes.raw];
-    };
+   union node_union {
+      node_union* p_next = nullptr;
+      byte storage[max_node_bytes.raw];
+   };
 
-  private:
-    span<node_union> m_nodes;
-    node_union* m_p_head;
+ private:
+   span<node_union> m_nodes;
+   node_union* m_p_head;
 };
 
 template <idx max_node_bytes>
 [[nodiscard]]
 constexpr auto
 make_pool_allocator(uintptr<void> p_address, idx arena_bytes)
-    -> pool_allocator<max_node_bytes> {
-    return pool_allocator<max_node_bytes>(p_address, arena_bytes);
+   -> pool_allocator<max_node_bytes> {
+   return pool_allocator<max_node_bytes>(p_address, arena_bytes);
 }
 
 template <idx max_node_bytes>
 [[nodiscard]]
 constexpr auto
 make_pool_allocator(span<byte>& span) -> pool_allocator<max_node_bytes> {
-    return pool_allocator<max_node_bytes>(span.data(), span.size());
+   return pool_allocator<max_node_bytes>(span.data(), span.size());
 }
 
 template <idx max_node_bytes>
 [[nodiscard,
   deprecated(
-      "Creating a `cat::pool_allocator` with a pr-value may "
-      "unintentionally leak memory. Copy an l-value `cat::span` instead.")]]
+     "Creating a `cat::pool_allocator` with a pr-value may "
+     "unintentionally leak memory. Copy an l-value `cat::span` instead.")]]
 constexpr auto
 make_pool_allocator(span<byte>&& span) -> pool_allocator<max_node_bytes> {
-    return make_pool_allocator<max_node_bytes>(span);
+   return make_pool_allocator<max_node_bytes>(span);
 }
 
 }  // namespace cat

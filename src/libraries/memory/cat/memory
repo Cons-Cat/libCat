@@ -14,162 +14,163 @@ namespace std {
 template <typename T>
 constexpr auto
 addressof(T& value) -> T* {
-    return __builtin_addressof(value);
+   return __builtin_addressof(value);
 }
 
 template <typename T>
-constexpr auto addressof(T const&& value) -> T const* = delete;
+constexpr auto
+addressof(T const&& value) -> T const* = delete;
 
 // When this is defined in `std::`, GCC can constant-evaluate it.
 // Call an in-place constructor at any address.
 template <typename T, typename... Args>
 constexpr auto
 construct_at(T* p_place, Args&&... arguments) -> decltype(auto) {
-    // TODO: Assert that alignment constraints are satisfied.
-    return new (const_cast<void*>(static_cast<void const volatile*>(p_place)))
-        T(fwd(arguments)...);
+   // TODO: Assert that alignment constraints are satisfied.
+   return new (const_cast<void*>(static_cast<void const volatile*>(p_place)))
+      T(fwd(arguments)...);
 }
 
 // Call an in-place destructor at any place.
 template <typename T>
 constexpr void
 destroy_at(T* p_place) {
-    p_place->~T();
+   p_place->~T();
 }
 
 }  // namespace std
 
 namespace cat {
 
-void copy_memory(void const* p_source, void* p_destination, uword bytes);
+void
+copy_memory(void const* p_source, void* p_destination, uword bytes);
 
-void copy_memory_small(void const* p_source, void* p_destination, uword bytes);
+void
+copy_memory_small(void const* p_source, void* p_destination, uword bytes);
 
 template <typename T = unsigned char>
-    requires(sizeof(T) <= 8)
+   requires(sizeof(T) <= 8)
 [[clang::no_builtin]]
 constexpr void
 set_memory_scalar(T* p_source, T value, uword size) {
-    for (uword::raw_type i = 0u; i < size; ++i) {
-        p_source[i] = value;
-    }
+   for (uword::raw_type i = 0u; i < size; ++i) {
+      p_source[i] = value;
+   }
 }
 
 template <typename T = unsigned char>
-    requires(sizeof(T) <= 8)
+   requires(sizeof(T) <= 8)
 [[gnu::noinline]]
 constexpr void
 set_memory_scalar_explicit(T* p_source, T value, uword size) {
-    set_memory_scalar(p_source, value, size);
+   set_memory_scalar(p_source, value, size);
 }
 
 constexpr void
 zero_memory_scalar(void* p_source, uword bytes) {
-    set_memory_scalar((unsigned char*)p_source, (unsigned char)0, bytes);
+   set_memory_scalar((unsigned char*)p_source, (unsigned char)0, bytes);
 }
 
 [[gnu::noinline]]
 constexpr void
 zero_memory_scalar_explicit(void* p_source, uword bytes) {
-    set_memory_scalar((unsigned char*)p_source, (unsigned char)0, bytes);
+   set_memory_scalar((unsigned char*)p_source, (unsigned char)0, bytes);
 }
 
 namespace detail {
-    // Type-erased `set_memory` function.
-    template <typename T>
-    [[gnu::optimize("-fno-tree-loop-distribute-patterns"), clang::no_builtin,
-      gnu::no_sanitize_address]]
-    // `tree-loop-distribute-patterns` is an optimization that replaces this
-    // code with a call to `memset`. `memset` itself calls this function,
-    // which makes a circular reference that ld is unable to link. Mold can
-    // link this somehow, but that optimization is useless here.
-    constexpr void
-    set_memory_detail(void* p_source, T value, uword size) {
-        // TODO: Assert that these parameters do not index out of bounds or loop
-        // infinitely.
-        uintptr<T> p_current = uintptr<T>(static_cast<T*>(p_source));
+// Type-erased `set_memory` function.
+template <typename T>
+[[gnu::optimize("-fno-tree-loop-distribute-patterns"), clang::no_builtin,
+  gnu::no_sanitize_address]]
+// `tree-loop-distribute-patterns` is an optimization that replaces this
+// code with a call to `memset`. `memset` itself calls this function,
+// which makes a circular reference that ld is unable to link. Mold can
+// link this somehow, but that optimization is useless here.
+constexpr void
+set_memory_detail(void* p_source, T value, uword size) {
+   // TODO: Assert that these parameters do not index out of bounds or loop
+   // infinitely.
+   uintptr<T> p_current = uintptr<T>(static_cast<T*>(p_source));
 
-        if consteval {
-            // Set this memory through scalar code, because `__builtin_memset()`
-            // is not `constexpr` in GCC 12.
-            for (uword i = 0u; i < size; ++i) {
-                *p_current = static_cast<T>(value);
-                p_current += sizeof(T);
-            }
-        } else {
-            // Fill until `p_current` has proper SIMD alignment.
-            while (!is_aligned(p_current, native_abi<T>::alignment)) {
-                *p_current = value;
-                p_current += sizeof(T);
-                size -= sizeof(T);
-            }
+   if consteval {
+      // Set this memory through scalar code, because `__builtin_memset()`
+      // is not `constexpr` in GCC 12.
+      for (uword i = 0u; i < size; ++i) {
+         *p_current = static_cast<T>(value);
+         p_current += sizeof(T);
+      }
+   } else {
+      // Fill until `p_current` has proper SIMD alignment.
+      while (!is_aligned(p_current, native_abi<T>::alignment)) {
+         *p_current = value;
+         p_current += sizeof(T);
+         size -= sizeof(T);
+      }
 
-            // Non-type template parameters are not allowed in a lambda's
-            // template parameter list, so the lanes are passed through a
-            // `constant`.
-            auto vectorized_fill =
-                [&]<typename lanes_constant>(lanes_constant) {
-                    // TODO: Consider optimizing this by tiling the loop.
-                    constexpr uword lanes = lanes_constant::value;
-                    using vector_type = fixed_size_simd<T, lanes>;
-                    while (size >= sizeof(vector_type)) {
-                        vector_type* p_vector =
-                            __builtin_bit_cast(vector_type*, p_current);
-                        p_vector->fill(value);
-                        p_current += lanes;
-                        size -= lanes;
-                    }
-                };
+      // Non-type template parameters are not allowed in a lambda's
+      // template parameter list, so the lanes are passed through a
+      // `constant`.
+      auto vectorized_fill = [&]<typename lanes_constant>(lanes_constant) {
+         // TODO: Consider optimizing this by tiling the loop.
+         constexpr uword lanes = lanes_constant::value;
+         using vector_type = fixed_size_simd<T, lanes>;
+         while (size >= sizeof(vector_type)) {
+            vector_type* p_vector = __builtin_bit_cast(vector_type*, p_current);
+            p_vector->fill(value);
+            p_current += lanes;
+            size -= lanes;
+         }
+      };
 
-            // Fill out 32-byte portion.
-            if constexpr (native_abi<T>::size >= 32u) {
-                vectorized_fill(constant<32_uz>{});
-            }
+      // Fill out 32-byte portion.
+      if constexpr (native_abi<T>::size >= 32u) {
+         vectorized_fill(constant<32_uz>{});
+      }
 
-            // TODO: Support `fill()` on 16-byte x86-64 simd.
-            // // Fill out 16-byte portion.
-            // if constexpr (native_abi<T>::size >= 16) {
-            //     vectorized_fill(constant<16_uz>{});
-            // }
+      // TODO: Support `fill()` on 16-byte x86-64 simd.
+      // // Fill out 16-byte portion.
+      // if constexpr (native_abi<T>::size >= 16) {
+      //     vectorized_fill(constant<16_uz>{});
+      // }
 
-            // Fill out remaining portion one byte at a time.
-            set_memory_scalar(static_cast<T*>(p_current), value, size);
-        }
-    }
+      // Fill out remaining portion one byte at a time.
+      set_memory_scalar(static_cast<T*>(p_current), value, size);
+   }
+}
 }  // namespace detail
 
 // Set all bytes at this address to `value`.
 template <typename T = unsigned char>
-    requires(sizeof(T) <= 8)
+   requires(sizeof(T) <= 8)
 constexpr void
 set_memory(void* p_source, T value, uword size) {
-    // Make a type that `value` can bitcast to, and can be used in a `simd`.
-    // TODO: A size-argument numeral type could simplify this.
-    using raw_type =
-        conditional<sizeof(T) == 1, uint1::raw_type,
-                    conditional<sizeof(T) == 2, uint2::raw_type,
-                                conditional<sizeof(T) == 4, uint4::raw_type,
-                                            uint8::raw_type>>>;
+   // Make a type that `value` can bitcast to, and can be used in a `simd`.
+   // TODO: A size-argument numeral type could simplify this.
+   using raw_type =
+      conditional<sizeof(T) == 1, uint1::raw_type,
+                  conditional<sizeof(T) == 2, uint2::raw_type,
+                              conditional<sizeof(T) == 4, uint4::raw_type,
+                                          uint8::raw_type>>>;
 
-    detail::set_memory_detail(p_source, __builtin_bit_cast(raw_type, value),
-                              size);
+   detail::set_memory_detail(p_source, __builtin_bit_cast(raw_type, value),
+                             size);
 }
 
 // `[[gnu::noinline]]` prevents GCC from constant-folding this function out.
 // Set all bytes at this address to `value`. This function cannot be
 // constant-folded out.
 template <typename T = unsigned char>
-    requires(sizeof(T) <= 8)
+   requires(sizeof(T) <= 8)
 [[gnu::noinline]]
 constexpr void
 set_memory_explicit(void* p_source, T value, uword size) {
-    set_memory(p_source, value, size);
+   set_memory(p_source, value, size);
 }
 
 // Set all bytes at this address to zero.
 constexpr void
 zero_memory(void* p_source, uword size) {
-    detail::set_memory_detail(p_source, static_cast<unsigned char>(0u), size);
+   detail::set_memory_detail(p_source, static_cast<unsigned char>(0u), size);
 }
 
 // `[[gnu::noinline]]` prevents GCC from constant-folding this function out.
@@ -178,41 +179,41 @@ zero_memory(void* p_source, uword size) {
 [[gnu::noinline]]
 constexpr void
 zero_memory_explicit(void* p_source, uword bytes) {
-    zero_memory(p_source, bytes);
+   zero_memory(p_source, bytes);
 }
 
 // Set all bytes in a trivial object to `value`.
 template <typename T, typename U = unsigned char>
-    requires(is_trivial<T> && sizeof(U) == 1)
+   requires(is_trivial<T> && sizeof(U) == 1)
 constexpr void
 set_object(T& object, U value) {
-    set_memory(__builtin_addressof(object), value, ssizeof<T>(object));
+   set_memory(__builtin_addressof(object), value, ssizeof<T>(object));
 }
 
 // Zero out all bytes in a trivial object. This function cannot be
 // constant-folded out.
 template <typename T, typename U = unsigned char>
-    requires(is_trivial<T> && sizeof(U) == 1)
+   requires(is_trivial<T> && sizeof(U) == 1)
 constexpr void
 set_object_explicit(T& object, U value) {
-    set_memory_explicit(__builtin_addressof(object), value, ssizeof<T>(object));
+   set_memory_explicit(__builtin_addressof(object), value, ssizeof<T>(object));
 }
 
 // Zero out all bytes in a trivial object.
 template <typename T>
-    requires(is_trivial<T>)
+   requires(is_trivial<T>)
 constexpr void
 zero_object(T& object) {
-    zero_memory(__builtin_addressof(object), ssizeof<T>(object));
+   zero_memory(__builtin_addressof(object), ssizeof<T>(object));
 }
 
 // Zero out all bytes in a trivial object. This function cannot be
 // constant-folded out.
 template <typename T>
-    requires(is_trivial<T>)
+   requires(is_trivial<T>)
 constexpr void
 zero_object_explicit(T& object) {
-    zero_memory_explicit(__builtin_addressof(object), ssizeof<T>(object));
+   zero_memory_explicit(__builtin_addressof(object), ssizeof<T>(object));
 }
 
 // Prevent a compiler from constant-folding the non-`const`-qualified
@@ -222,7 +223,7 @@ template <typename T>
 [[nodiscard]]
 constexpr auto
 launder(T* p_object) -> T* {
-    return __builtin_launder(p_object);
+   return __builtin_launder(p_object);
 }
 
 // `launder` cannot be used on functions.
@@ -233,10 +234,14 @@ template <typename FunctionPtrReturn, typename... Args>
 void launder(FunctionPtrReturn (*)(Args..., ...)) = delete;
 
 // `launder` cannot be used on `void*`
-void launder(void*) = delete;
-void launder(void const*) = delete;
-void launder(void volatile*) = delete;
-void launder(void const volatile*) = delete;
+void
+launder(void*) = delete;
+void
+launder(void const*) = delete;
+void
+launder(void volatile*) = delete;
+void
+launder(void const volatile*) = delete;
 
 using std::addressof;     // NOLINT
 using std::construct_at;  // NOLINT
@@ -245,20 +250,20 @@ using std::destroy_at;    // NOLINT
 template <typename T>
 auto
 relocate_at(T* p_source, T* p_destination) -> T* {
-    if constexpr (is_trivially_relocatable<T>) {
-        copy_memory(p_source, p_destination, ssizeof(T));
-        return launder(p_destination);
-    } else {
-        T* p_new = construct_at(p_destination, move(*p_source));
-        p_source->~T();
-        return p_new;
-    }
+   if constexpr (is_trivially_relocatable<T>) {
+      copy_memory(p_source, p_destination, ssizeof(T));
+      return launder(p_destination);
+   } else {
+      T* p_new = construct_at(p_destination, move(*p_source));
+      p_source->~T();
+      return p_new;
+   }
 }
 
 template <typename T>
 auto
 relocate(T& source, T* p_destination) -> T* {
-    return relocate_at(__builtin_addressof(source), p_destination);
+   return relocate_at(__builtin_addressof(source), p_destination);
 }
 
 }  // namespace cat

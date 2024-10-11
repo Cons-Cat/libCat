@@ -18,8 +18,8 @@ template <is_integral T, overflow_policies policy>
 [[nodiscard]]
 auto
 to_chars(is_allocator auto& allocator, arithmetic<T, policy> numeral)
-    -> maybe<str_span> {
-    return to_chars(allocator, make_raw_arithmetic(numeral));
+   -> maybe<str_span> {
+   return to_chars(allocator, make_raw_arithmetic(numeral));
 }
 
 // Dynamically allocate an is_integral value converted to `string`.
@@ -27,148 +27,147 @@ template <is_integral T>
 [[nodiscard]]
 auto
 to_chars(is_allocator auto& allocator, T integer) -> maybe<str_span> {
-    maybe result = allocator.template alloc_multi<char>(limits<T>::digits10);
-    if (!result.has_value()) {
-        return nullopt;
-    }
-    char* p_string = result.value().data();
+   maybe result = allocator.template alloc_multi<char>(limits<T>::digits10);
+   if (!result.has_value()) {
+      return nullopt;
+   }
+   char* p_string = result.value().data();
 
-    if constexpr (is_same<T, int4::raw_type>) {
-        detail::i32toa_jeaiii(integer, p_string);
-    } else if constexpr (is_same<T, uint4::raw_type>) {
-        detail::u32toa_jeaiii(integer, p_string);
-    } else if constexpr (is_same<T, int8::raw_type>) {
-        detail::i64toa_jeaiii(integer, p_string);
-    } else if constexpr (is_same<T, uint8::raw_type>) {
-        detail::u64toa_jeaiii(integer, p_string);
-    } else {
-        // TODO: Format 1 and 2 byte integers.
-        __builtin_unreachable();
-    }
-    return str_span(p_string);
+   if constexpr (is_same<T, int4::raw_type>) {
+      detail::i32toa_jeaiii(integer, p_string);
+   } else if constexpr (is_same<T, uint4::raw_type>) {
+      detail::u32toa_jeaiii(integer, p_string);
+   } else if constexpr (is_same<T, int8::raw_type>) {
+      detail::i64toa_jeaiii(integer, p_string);
+   } else if constexpr (is_same<T, uint8::raw_type>) {
+      detail::u64toa_jeaiii(integer, p_string);
+   } else {
+      // TODO: Format 1 and 2 byte integers.
+      __builtin_unreachable();
+   }
+   return str_span(p_string);
 }
 
 // Dynamically allocate a floating point value converted to `string`.
 template <typename T>
-    requires(is_floating_point<T>)
+   requires(is_floating_point<T>)
 [[nodiscard]]
 auto
 to_chars(is_allocator auto& alloc, T value) -> maybe<str_span> {
-    maybe result = alloc.template alloc_multi<char>(limits<T>::digits10);
-    if (!result.has_value()) {
-        return nullopt;
-    }
-    char* p_string = result.value().data();
-    detail::dragonbox::to_chars(value, p_string);
-    return str_span(p_string);
+   maybe result = alloc.template alloc_multi<char>(limits<T>::digits10);
+   if (!result.has_value()) {
+      return nullopt;
+   }
+   char* p_string = result.value().data();
+   detail::dragonbox::to_chars(value, p_string);
+   return str_span(p_string);
 }
 
 namespace detail {
-    template <uword::raw_type length, auto value>
-    consteval auto
-    make_const_string(str_inplace<length> const& string) {
-        // Copy over the string into new, larger, storage.
-        str_inplace<length + 1u> new_string;
-        for (uword i = 0u; i < length; ++i) {
-            new_string[i + 1] = string[i];
-        }
+template <uword::raw_type length, auto value>
+consteval auto
+make_const_string(str_inplace<length> const& string) {
+   // Copy over the string into new, larger, storage.
+   str_inplace<length + 1u> new_string;
+   for (uword i = 0u; i < length; ++i) {
+      new_string[i + 1] = string[i];
+   }
 
-        // Add a null terminator to the end of the new string.
-        new_string[length] = '\0';
+   // Add a null terminator to the end of the new string.
+   new_string[length] = '\0';
 
-        // Fill in the next digit.
-        constexpr auto remainder = value % 10;
-        new_string[0] =
-            (remainder > 9) ? (remainder - 10) + 'a' : remainder + '0';
-        constexpr auto new_value = value / 10;
+   // Fill in the next digit.
+   constexpr auto remainder = value % 10;
+   new_string[0] = (remainder > 9) ? (remainder - 10) + 'a' : remainder + '0';
+   constexpr auto new_value = value / 10;
 
-        // Recurse through the rest of this integer.
-        if constexpr (new_value == 0) {
-            return new_string;
-        } else {
-            return make_const_string<length + 1, new_value>(new_string);
-        }
-    }
+   // Recurse through the rest of this integer.
+   if constexpr (new_value == 0) {
+      return new_string;
+   } else {
+      return make_const_string<length + 1, new_value>(new_string);
+   }
+}
 }  // namespace detail
 
 // Convert a `constexpr` is_integral to `str_inplace`.
 template <auto value>
-    requires(is_integral<decltype(value)>)
+   requires(is_integral<decltype(value)>)
 [[nodiscard]]
 consteval auto
 to_chars() {
-    if constexpr (value == 0) {
-        return str_inplace("0");
-    } else {
-        constexpr str_inplace string =
-            detail::make_const_string<1, abs(value)>(str_inplace(""));
+   if constexpr (value == 0) {
+      return str_inplace("0");
+   } else {
+      constexpr str_inplace string =
+         detail::make_const_string<1, abs(value)>(str_inplace(""));
 
-        // Handle a negative sign.
-        if constexpr (is_signed<decltype(value)> && value < 0) {
-            str_inplace<string.size().raw + 1> new_string;
-            for (uword i = 0u; i < string.size(); ++i) {
-                new_string[i + 1u] = string[i];
-            }
-            new_string[0] = '-';
-            return new_string;
-        } else {
-            return string;
-        }
-    }
+      // Handle a negative sign.
+      if constexpr (is_signed<decltype(value)> && value < 0) {
+         str_inplace<string.size().raw + 1> new_string;
+         for (uword i = 0u; i < string.size(); ++i) {
+            new_string[i + 1u] = string[i];
+         }
+         new_string[0] = '-';
+         return new_string;
+      } else {
+         return string;
+      }
+   }
 }
 
 template <is_integral T>
 [[nodiscard]]
 constexpr auto
 to_string_at(arithmetic<T> value, span<char> output_buffer) -> maybe<str_span> {
-    // Add 1 for a negative sign `-` character.
-    constexpr iword max_length = to_chars<arithmetic<T>::max()>().size() + 1;
-    char buffer[max_length.raw];
-    if consteval {
-        iword i = 0;
-        if (is_signed<T> && value < 0) {
-            buffer[0] = '-';
-            i = 1;
-        }
-        for (; i < max_length; ++i) {
-            if (value > 0) {
-                arithmetic<T> const remainder = value % 10;
-                buffer[i.raw] = remainder.raw + '0';
-                value /= 10;
-            } else {
-                buffer[i.raw] = '\0';
-            }
-        }
-    } else {
-        detail::i32toa_jeaiii(value.raw, buffer);
-    }
+   // Add 1 for a negative sign `-` character.
+   constexpr iword max_length = to_chars<arithmetic<T>::max()>().size() + 1;
+   char buffer[max_length.raw];
+   if consteval {
+      iword i = 0;
+      if (is_signed<T> && value < 0) {
+         buffer[0] = '-';
+         i = 1;
+      }
+      for (; i < max_length; ++i) {
+         if (value > 0) {
+            arithmetic<T> const remainder = value % 10;
+            buffer[i.raw] = remainder.raw + '0';
+            value /= 10;
+         } else {
+            buffer[i.raw] = '\0';
+         }
+      }
+   } else {
+      detail::i32toa_jeaiii(value.raw, buffer);
+   }
 
-    // TODO: Get the length of this integer faster.
-    idx length = string_length(buffer);
-    if (length > output_buffer.size()) {
-        return nullopt;
-    }
+   // TODO: Get the length of this integer faster.
+   idx length = string_length(buffer);
+   if (length > output_buffer.size()) {
+      return nullopt;
+   }
 
-    if consteval {
-        for (idx i; i < length; ++i) {
-            output_buffer[i] = buffer[i.raw];
-        }
-    } else {
-        copy_memory(buffer, output_buffer.data(), length);
-    }
+   if consteval {
+      for (idx i; i < length; ++i) {
+         output_buffer[i] = buffer[i.raw];
+      }
+   } else {
+      copy_memory(buffer, output_buffer.data(), length);
+   }
 
-    return str_span(output_buffer.data(), length);
+   return str_span(output_buffer.data(), length);
 }
 
 // Formatting
 enum class format_errors : unsigned char {
-    out_of_memory,
-    cannot_format_argument,
-    argument_type_mismatch,
-    inconsistent_argument_indexing,
-    unknown_format_specifier,
-    unmatched_open_brace
-    // TODO: This list is incomplete.
+   out_of_memory,
+   cannot_format_argument,
+   argument_type_mismatch,
+   inconsistent_argument_indexing,
+   unknown_format_specifier,
+   unmatched_open_brace
+   // TODO: This list is incomplete.
 };
 
 // TODO: Union this with allocator `scaredy`.
@@ -176,595 +175,585 @@ template <typename T = void>
 using scaredy_format = scaredy<T, format_errors>;
 
 namespace detail {
-    // This represents precisely 16 alternatives to fill 4 bits in
-    // `format_argument_compact_index`.
-    enum class format_discriminant : unsigned char {
-        automatic_type = 0,  // This type is deduced from a variadic argument.
-        // These types are sorted for fast alternative checking.
-        int1_type,
-        uint1_type,
-        int2_type,
-        uint2_type,
-        int4_type,
-        uint4_type,
-        int8_type,
-        uint8_type,
-        idx_type = uint8_type,
-        bool_type,
-        integer_sentinel = bool_type,  // types less than this are integers.
-        float_type,
-        double_type,
-        float_sentinel = double_type,  // types less than this are floats.
-        raw_string_type,
-        cat_string_type,
-        pointer_type,
-        other_type,
-    };
+// This represents precisely 16 alternatives to fill 4 bits in
+// `format_argument_compact_index`.
+enum class format_discriminant : unsigned char {
+   automatic_type = 0,  // This type is deduced from a variadic argument.
+   // These types are sorted for fast alternative checking.
+   int1_type,
+   uint1_type,
+   int2_type,
+   uint2_type,
+   int4_type,
+   uint4_type,
+   int8_type,
+   uint8_type,
+   idx_type = uint8_type,
+   bool_type,
+   integer_sentinel = bool_type,  // types less than this are integers.
+   float_type,
+   double_type,
+   float_sentinel = double_type,  // types less than this are floats.
+   raw_string_type,
+   cat_string_type,
+   pointer_type,
+   other_type,
+};
 
-    // Specializations of `format_type_constant` map a type to a
-    // `format_discriminant`.
-    struct format_type_constant {
-        format_discriminant discriminant;
+// Specializations of `format_type_constant` map a type to a
+// `format_discriminant`.
+struct format_type_constant {
+   format_discriminant discriminant;
 
-        // Get the discriminant value that represents `T`.
-        template <typename T>
-        static consteval auto
-        alternative() -> format_discriminant {
-            format_type_constant type;
-            type.template set_alternative<T>();
-            return type.discriminant;
-        }
+   // Get the discriminant value that represents `T`.
+   template <typename T>
+   static consteval auto
+   alternative() -> format_discriminant {
+      format_type_constant type;
+      type.template set_alternative<T>();
+      return type.discriminant;
+   }
 
-        // Set this variant to represent `T`.
-        template <typename T>
-        constexpr void
-        set_alternative() {
-            using U = remove_cvref<T>;
-            if constexpr (is_same<U, int1>) {
-                this->discriminant = format_discriminant::int1_type;
-            } else if constexpr (is_same<U, int1::raw_type>) {
-                this->discriminant = format_discriminant::int1_type;
-            } else if constexpr (is_same<U, int2>) {
-                this->discriminant = format_discriminant::int2_type;
-            } else if constexpr (is_same<U, int2::raw_type>) {
-                this->discriminant = format_discriminant::int2_type;
-            } else if constexpr (is_same<U, int4>) {
-                this->discriminant = format_discriminant::int4_type;
-            } else if constexpr (is_same<U, int4::raw_type>) {
-                this->discriminant = format_discriminant::int4_type;
-            } else if constexpr (is_same<U, int8>) {
-                this->discriminant = format_discriminant::int8_type;
-            } else if constexpr (is_same<U, int8::raw_type>) {
-                this->discriminant = format_discriminant::int8_type;
-            } else if constexpr (is_same<U, uint1>) {
-                this->discriminant = format_discriminant::uint1_type;
-            } else if constexpr (is_same<U, uint1::raw_type>) {
-                this->discriminant = format_discriminant::uint1_type;
-            } else if constexpr (is_same<U, uint2>) {
-                this->discriminant = format_discriminant::uint2_type;
-            } else if constexpr (is_same<U, uint2::raw_type>) {
-                this->discriminant = format_discriminant::uint2_type;
-            } else if constexpr (is_same<U, uint4>) {
-                this->discriminant = format_discriminant::uint4_type;
-            } else if constexpr (is_same<U, uint4::raw_type>) {
-                this->discriminant = format_discriminant::uint4_type;
-            } else if constexpr (is_same<U, uint8>) {
-                this->discriminant = format_discriminant::uint8_type;
-            } else if constexpr (is_same<U, uint8::raw_type>) {
-                this->discriminant = format_discriminant::uint8_type;
-            } else if constexpr (is_same<U, idx>) {
-                this->discriminant = format_discriminant::uint8_type;
-            } else if constexpr (is_same<U, bool>) {
-                this->discriminant = format_discriminant::bool_type;
-            } else if constexpr (is_same<U, float4>) {
-                this->discriminant = format_discriminant::float_type;
-            } else if constexpr (is_same<U, float4::raw_type>) {
-                this->discriminant = format_discriminant::float_type;
-            } else if constexpr (is_same<U, float8>) {
-                this->discriminant = format_discriminant::double_type;
-            } else if constexpr (is_same<U, float8::raw_type>) {
-                this->discriminant = format_discriminant::double_type;
-            } else if constexpr (is_same<U, char const*>) {
-                this->discriminant = format_discriminant::raw_string_type;
-            } else if constexpr (is_same<U, str_span>) {
-                this->discriminant = format_discriminant::cat_string_type;
-            } else if constexpr (is_pointer<U>) {
-                this->discriminant = format_discriminant::pointer_type;
-            } else {
-                this->discriminant = format_discriminant::other_type;
+   // Set this variant to represent `T`.
+   template <typename T>
+   constexpr void
+   set_alternative() {
+      using U = remove_cvref<T>;
+      if constexpr (is_same<U, int1>) {
+         this->discriminant = format_discriminant::int1_type;
+      } else if constexpr (is_same<U, int1::raw_type>) {
+         this->discriminant = format_discriminant::int1_type;
+      } else if constexpr (is_same<U, int2>) {
+         this->discriminant = format_discriminant::int2_type;
+      } else if constexpr (is_same<U, int2::raw_type>) {
+         this->discriminant = format_discriminant::int2_type;
+      } else if constexpr (is_same<U, int4>) {
+         this->discriminant = format_discriminant::int4_type;
+      } else if constexpr (is_same<U, int4::raw_type>) {
+         this->discriminant = format_discriminant::int4_type;
+      } else if constexpr (is_same<U, int8>) {
+         this->discriminant = format_discriminant::int8_type;
+      } else if constexpr (is_same<U, int8::raw_type>) {
+         this->discriminant = format_discriminant::int8_type;
+      } else if constexpr (is_same<U, uint1>) {
+         this->discriminant = format_discriminant::uint1_type;
+      } else if constexpr (is_same<U, uint1::raw_type>) {
+         this->discriminant = format_discriminant::uint1_type;
+      } else if constexpr (is_same<U, uint2>) {
+         this->discriminant = format_discriminant::uint2_type;
+      } else if constexpr (is_same<U, uint2::raw_type>) {
+         this->discriminant = format_discriminant::uint2_type;
+      } else if constexpr (is_same<U, uint4>) {
+         this->discriminant = format_discriminant::uint4_type;
+      } else if constexpr (is_same<U, uint4::raw_type>) {
+         this->discriminant = format_discriminant::uint4_type;
+      } else if constexpr (is_same<U, uint8>) {
+         this->discriminant = format_discriminant::uint8_type;
+      } else if constexpr (is_same<U, uint8::raw_type>) {
+         this->discriminant = format_discriminant::uint8_type;
+      } else if constexpr (is_same<U, idx>) {
+         this->discriminant = format_discriminant::uint8_type;
+      } else if constexpr (is_same<U, bool>) {
+         this->discriminant = format_discriminant::bool_type;
+      } else if constexpr (is_same<U, float4>) {
+         this->discriminant = format_discriminant::float_type;
+      } else if constexpr (is_same<U, float4::raw_type>) {
+         this->discriminant = format_discriminant::float_type;
+      } else if constexpr (is_same<U, float8>) {
+         this->discriminant = format_discriminant::double_type;
+      } else if constexpr (is_same<U, float8::raw_type>) {
+         this->discriminant = format_discriminant::double_type;
+      } else if constexpr (is_same<U, char const*>) {
+         this->discriminant = format_discriminant::raw_string_type;
+      } else if constexpr (is_same<U, str_span>) {
+         this->discriminant = format_discriminant::cat_string_type;
+      } else if constexpr (is_pointer<U>) {
+         this->discriminant = format_discriminant::pointer_type;
+      } else {
+         this->discriminant = format_discriminant::other_type;
+      }
+   }
+};
+
+// A buffer that can grow through `.push_back()` and reallocate when its
+// storage is exceeded. This container is used in `vfmt()` calls as the
+// default container for `vfmt_to()`.
+struct format_string_vector : collection_interface<format_string_vector, char>,
+                              iterable_interface<char> {
+   format_string_vector(char* p_in_storage, idx in_length, idx in_max_length)
+       : p_storage(p_in_storage), length(in_length), max_length(in_max_length) {
+   }
+
+   [[nodiscard]]
+   auto
+   data() const -> char* {
+      return this->p_storage;
+   }
+
+   [[nodiscard]]
+   auto
+   size() const -> idx {
+      return this->length;
+   }
+
+   [[nodiscard]]
+   auto
+   capacity() const -> idx {
+      return this->max_length;
+   }
+
+   auto
+   push_back(is_allocator auto& allocator, char character) -> maybe<void> {
+      if (this->length + 1 > this->max_length) {
+         // Reallocate double the memory if its capacity is exceeded.
+         maybe result = allocator.template realloc_multi<char>(
+            this->p_storage, this->max_length, this->max_length * 2u);
+         if (!result.has_value()) {
+            return nullopt;
+         }
+         this->p_storage = result.value().data();
+      }
+
+      this->p_storage[this->length.raw] = character;
+      ++(this->length);
+      return monostate;
+   }
+
+   char* p_storage;
+   idx length;
+   idx max_length;
+};
+
+// An index into the packed `format_arg_storage`.
+struct format_argument_compact_index {
+   iword::raw_type byte_index               : 60;
+   detail::format_discriminant discriminant : 4;
+};
+
+// This only exists to be passed into the constructor of `format_args`.
+template <typename... types>
+class format_args_compact_storage {
+ private:
+   // For every type passed into the constructor, pack it into the arrays
+   // in-order.
+   template <typename T>
+   void
+   store_argument(idx& argument_index, T&& value) {
+      // Pack `value` into `packed_args_storage`.
+      iword const storage_index =
+         this->arguments_indices[argument_index.raw].byte_index;
+
+      copy_memory_small(__builtin_addressof(value),
+                        &(this->packed_args_storage[0]) + storage_index,
+                        sizeof(T));
+
+      // Assign `T` to that storage.
+      this->arguments_indices[argument_index.raw].discriminant =
+         detail::format_type_constant::alternative<T>();
+
+      // Set the byte offset for the next argument if there is another.
+      if (argument_index + 1u
+          < sizeof...(types)) {  // TODO: Explore whether
+                                 // `[[likely]]`
+                                 // improves performance here.
+         this->arguments_indices[argument_index.raw + 1].byte_index =
+            storage_index.raw + ssizeof(T);
+      }
+
+      ++argument_index;
+   }
+
+ public:
+   template <typename... Us>
+      requires(sizeof...(types) == sizeof...(Us))
+   format_args_compact_storage(Us&&... arguments) {
+      this->packed_args_storage[0] = {};
+      this->arguments_indices[0] = {};
+      this->arguments_indices[0].byte_index = 0u;
+      idx argument_index;
+      // `store_argument()` increments `argument_index`.
+      (this->store_argument(argument_index, fwd(arguments)), ...);
+   }
+
+   static constexpr uword::raw_type argument_count = sizeof...(types);
+   format_argument_compact_index arguments_indices[argument_count];
+
+   // TODO: This array length might need to be larger if the argument's
+   // type is `format_discriminant::other_type`.
+   byte packed_args_storage[argument_count * 8];  // Needs work.
+};
+
+// Formatting arguments are packed into a small type-erased array to
+// conserve storage.
+struct format_args {
+   template <typename... types>
+   explicit constexpr format_args(
+      format_args_compact_storage<types...> const& storage)
+       : p_args_indices(&(storage.arguments_indices[0])),
+         argument_count(storage.argument_count) {
+   }
+
+   // Unpack a formatting argument from the type-erased storage.
+   template <typename T>
+   // This function loads unaligned data.
+   [[gnu::no_sanitize("alignment")]]
+   auto
+   get(iword argument_index) const -> T {
+      // Get the storage index out from the indices array.
+      iword const storage_index =
+         (this->p_args_indices + argument_index)->byte_index;
+
+      // TODO: Make this type punning with `bit_cast`, because
+      // this `reinterpret_cast` is undefined behavior. Offset the
+      // pointer to the array of indices by the length of that
+      // array. That produces a pointer to the next struct member,
+      // which happens to be the raw storage array.
+      byte const* const p_storage = reinterpret_cast<byte const* const>(
+         this->p_args_indices + argument_count);
+
+      byte const* p_data = p_storage + storage_index;
+      return *reinterpret_cast<T const*>(p_data);
+   }
+
+   format_argument_compact_index const* p_args_indices;
+   uword const argument_count;
+};
+
+// To prevent redundant template specializations for a contiguous
+// container's `back_insert_iterator`, it is wrapped by virtual function
+// dispatch in this container.
+template <is_allocator allocator_type>
+struct format_buffer_base
+    : collection_interface<format_buffer_base<allocator_type>, char>,
+      iterable_interface<char> {
+   format_buffer_base(char* p_in_string, uword in_length, uword in_max_length)
+       : p_string(p_in_string), length(in_length), max_length(in_max_length) {
+   }
+
+   [[nodiscard]]
+   auto
+   data() const -> char* {
+      return this->p_string;
+   }
+
+   [[nodiscard]]
+   auto
+   size() const -> idx {
+      return idx(this->length);
+   }
+
+   [[nodiscard]]
+   auto
+   capacity() const -> idx {
+      return idx(this->max_length);
+   }
+
+   virtual auto grow(uword /*new_size*/) -> maybe<void> = 0;
+
+   void
+   clear() {
+      this->length = 0u;
+   }
+
+   auto
+   push_back(allocator_type&, char character) -> maybe<void> {
+      // If the new length would exceed the current capacity, call
+      // `.grow()` to extend the capacity, first.
+      if (this->length + 1u > this->max_length) {
+         maybe<void> result = this->grow(this->length + 1u);
+         if (!result.has_value()) {
+            return nullopt;
+         }
+      }
+
+      this->p_string[this->length.raw] = character;
+      ++(this->length);
+      return monostate;
+   }
+
+   char* p_string;
+   uword length;
+   uword max_length;
+};
+
+template <typename...>
+struct format_buffer_iterator {};
+
+// Temporarily store formatted string data on the stack before pushing it to
+// an output-iterator it `.flush()`.
+template <is_allocator allocator_type, typename outputter_type>
+struct format_buffer_iterator<allocator_type, outputter_type>
+    : format_buffer_base<allocator_type> {
+   using container_type = outputter_type::container_type;
+   allocator_type& allocator;
+   outputter_type output_iterator;
+
+   // To optimize common usage, `256` bytes of storage is reserved on
+   // stack.
+   char storage[256];
+
+   format_buffer_iterator(allocator_type& in_allocator, outputter_type iterator)
+       : format_buffer_base<allocator_type>(storage, 0u, 256u),
+         allocator(in_allocator),
+         output_iterator(iterator) {
+   }
+
+   // Flush `storage` when formatting is completed.
+   ~format_buffer_iterator() {
+      // `size()` is derived from `format_buffer_base`.
+      if (this->size() > 0) {
+         this->flush();
+      }
+   }
+
+   // Overload the pure virtual `format_buffer_base::grow()`
+   // function. Instead of expanding its own memory, this buffer is flushed
+   // itself to make more room.
+   auto
+   // Without `override`, clang-20 will attempt to link against the pure
+   // virtual `grow()` function even with the `final` specifier.
+   grow(uword) -> maybe<void> override final {  // NOLINT
+      // `size()` is derived from `format_buffer_base`.
+      if (this->size() == 256u) {
+         this->flush();
+      }
+      return monostate;
+   }
+
+   auto
+   flush() -> maybe<void> {
+      // `size()` is derived from `format_buffer_base`.
+      uword size = this->size();
+      // char const* p_end = storage + size;
+
+      // TODO: Use a multiple `.insert()` overload.
+      for (uword::raw_type i = 0u; i < size; ++i) {
+         maybe result = output_iterator.insert(allocator, storage[i]);
+         if (!result.has_value()) {
+            return nullopt;
+         }
+      }
+
+      this->length = 0u;
+      return monostate;
+   }
+};
+
+// If only a pointer is provided, then assume the buffer can never overflow
+// and skip bounds-checking and buffer growing.
+template <is_allocator allocator_type, typename T>
+struct format_buffer_iterator<allocator_type, T*>
+    : format_buffer_base<allocator_type> {
+   // `.grow()` for a `T[]` is no-op.
+   auto
+   grow() -> maybe<void> {
+      return monostate;
+   }
+};
+
+// One back-insert iterator type should be used, to ensure type-erasure.
+template <is_allocator allocator_type>
+using format_contiguous_output_iterator =
+   back_insert_iterator<format_buffer_base<allocator_type>>;
+
+// Holds the format string parsing state consisting of the string's range
+// and a counter for which arguments have previously been parsed.
+class format_parse_context {
+ private:
+   // These members must be at the top so they can be `decltype`'d.
+   str_span m_format;
+
+   // Iff `argument_index` is less than `0`, the format string has
+   // manually indexed an argument. Otherwise, all arguments are
+   // automatically indexed.
+   iword m_argument_index = 0;
+
+ public:
+   uword const arguments_count;
+
+   using iterator = decltype(m_format.begin());
+   using const_iterator = decltype(m_format.cbegin());
+
+   constexpr format_parse_context(str_span const in_format,
+                                  uword in_args_count = 0u)
+       : m_format(in_format), arguments_count(in_args_count) {
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   begin() const -> const_iterator {
+      return this->m_format.cbegin();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   end() const -> const_iterator {
+      return this->m_format.cend();
+   }
+
+   constexpr void
+   advance_to(iterator position) {
+      // this->format.begin().advance(position - this->format.begin());
+      this->m_format.begin().advance(
+         position.distance_to(this->m_format.begin()));
+   }
+
+   constexpr auto
+   next_argument_index() -> iword {
+      return ++(this->m_argument_index);
+   }
+
+   // Check if a manually indexed argument is within reasonable bounds, a
+   // d check that this context is not using automatic indexing.
+   constexpr auto
+   check_argument_index(iword index) -> maybe<void> {
+      if consteval {
+         if (index >= make_signed(this->arguments_count)) {
+            // This index is of range.
+            return nullopt;
+         }
+      }
+
+      if (this->m_argument_index > 0) {
+         // This argument is manually indexed in a context where
+         // automatic indexing has been used.
+         return nullopt;
+      }
+
+      // Enable manual indexing in this context.
+      this->m_argument_index = -1;
+
+      return monostate;
+   }
+};
+
+// TODO: Store invocable functions for different kind of arguments.
+template <is_allocator allocator_type>
+struct format_handler {
+   allocator_type& allocator;
+   // This holds a reference to a `format_buffer_iterator`.
+   detail::format_contiguous_output_iterator<allocator_type> output_iterator;
+   str_span const format;
+   // char* const p_tempory_buffer;
+   // TODO: A more complex contex object will be needed to support locale
+   // and wide chars:
+   format_args const arguments;
+
+   format_handler(
+      allocator_type& in_allocator,
+      detail::format_contiguous_output_iterator<allocator_type> iterator,
+      str_span const in_format, format_args in_args)
+       : allocator(in_allocator),
+         output_iterator(iterator),
+         format(in_format),
+         // p_tempory_buffer(iterator.iterable.data()),
+         arguments(move(in_args)) {
+   }
+};
+
+template <is_allocator allocator_type>
+constexpr auto
+parse_format_string(str_span const format,
+                    format_handler<allocator_type>&& handler)
+   -> scaredy_format<void> {
+   // char const* p_first = format.data();
+   // char const* p_last = format.data() + format.size();
+   str_span remainder = format;
+   idx current_argument;
+
+   // Parse the entire string:
+   while (remainder.size() > 0) {
+      iword const to_open_brace = remainder.find('{').value();
+      iword const to_close_brace = remainder.find('}').value();
+
+      // This is true iff both are `-1`, or in other words, neither braces
+      // were found. This is the escape condition.
+      if (to_open_brace == to_close_brace) {
+         for (char const& character : remainder) {
+            // TODO: Optimize this with a multiple-insert overload.
+            maybe result =
+               handler.output_iterator.insert(handler.allocator, character);
+            if (!result.has_value()) {
+               return format_errors::out_of_memory;
             }
-        }
-    };
-
-    // A buffer that can grow through `.push_back()` and reallocate when its
-    // storage is exceeded. This container is used in `vfmt()` calls as the
-    // default container for `vfmt_to()`.
-    struct format_string_vector
-        : collection_interface<format_string_vector, char>,
-          iterable_interface<char> {
-        format_string_vector(char* p_in_storage, idx in_length,
-                             idx in_max_length)
-            : p_storage(p_in_storage),
-              length(in_length),
-              max_length(in_max_length) {
-        }
-
-        [[nodiscard]]
-        auto
-        data() const -> char* {
-            return this->p_storage;
-        }
-
-        [[nodiscard]]
-        auto
-        size() const -> idx {
-            return this->length;
-        }
-
-        [[nodiscard]]
-        auto
-        capacity() const -> idx {
-            return this->max_length;
-        }
-
-        auto
-        push_back(is_allocator auto& allocator, char character) -> maybe<void> {
-            if (this->length + 1 > this->max_length) {
-                // Reallocate double the memory if its capacity is exceeded.
-                maybe result = allocator.template realloc_multi<char>(
-                    this->p_storage, this->max_length, this->max_length * 2u);
-                if (!result.has_value()) {
-                    return nullopt;
-                }
-                this->p_storage = result.value().data();
-            }
-
-            this->p_storage[this->length.raw] = character;
-            ++(this->length);
-            return monostate;
-        }
-
-        char* p_storage;
-        idx length;
-        idx max_length;
-    };
-
-    // An index into the packed `format_arg_storage`.
-    struct format_argument_compact_index {
-        iword::raw_type byte_index               : 60;
-        detail::format_discriminant discriminant : 4;
-    };
-
-    // This only exists to be passed into the constructor of `format_args`.
-    template <typename... types>
-    class format_args_compact_storage {
-      private:
-        // For every type passed into the constructor, pack it into the arrays
-        // in-order.
-        template <typename T>
-        void
-        store_argument(idx& argument_index, T&& value) {
-            // Pack `value` into `packed_args_storage`.
-            iword const storage_index =
-                this->arguments_indices[argument_index.raw].byte_index;
-
-            copy_memory_small(__builtin_addressof(value),
-                              &(this->packed_args_storage[0]) + storage_index,
-                              sizeof(T));
-
-            // Assign `T` to that storage.
-            this->arguments_indices[argument_index.raw].discriminant =
-                detail::format_type_constant::alternative<T>();
-
-            // Set the byte offset for the next argument if there is another.
-            if (argument_index + 1u <
-                sizeof...(types)) {  // TODO: Explore whether
-                                     // `[[likely]]`
-                                     // improves performance here.
-                this->arguments_indices[argument_index.raw + 1].byte_index =
-                    storage_index.raw + ssizeof(T);
-            }
-
-            ++argument_index;
-        }
-
-      public:
-        template <typename... Us>
-            requires(sizeof...(types) == sizeof...(Us))
-        format_args_compact_storage(Us&&... arguments) {
-            this->packed_args_storage[0] = {};
-            this->arguments_indices[0] = {};
-            this->arguments_indices[0].byte_index = 0u;
-            idx argument_index;
-            // `store_argument()` increments `argument_index`.
-            (this->store_argument(argument_index, fwd(arguments)), ...);
-        }
-
-        static constexpr uword::raw_type argument_count = sizeof...(types);
-        format_argument_compact_index arguments_indices[argument_count];
-
-        // TODO: This array length might need to be larger if the argument's
-        // type is `format_discriminant::other_type`.
-        byte packed_args_storage[argument_count * 8];  // Needs work.
-    };
-
-    // Formatting arguments are packed into a small type-erased array to
-    // conserve storage.
-    struct format_args {
-        template <typename... types>
-        explicit constexpr format_args(
-            format_args_compact_storage<types...> const& storage)
-            : p_args_indices(&(storage.arguments_indices[0])),
-              argument_count(storage.argument_count) {
-        }
-
-        // Unpack a formatting argument from the type-erased storage.
-        template <typename T>
-        // This function loads unaligned data.
-        [[gnu::no_sanitize("alignment")]]
-        auto
-        get(iword argument_index) const -> T {
-            // Get the storage index out from the indices array.
-            iword const storage_index =
-                (this->p_args_indices + argument_index)->byte_index;
-
-            // TODO: Make this type punning with `bit_cast`, because
-            // this `reinterpret_cast` is undefined behavior. Offset the
-            // pointer to the array of indices by the length of that
-            // array. That produces a pointer to the next struct member,
-            // which happens to be the raw storage array.
-            byte const* const p_storage = reinterpret_cast<byte const* const>(
-                this->p_args_indices + argument_count);
-
-            byte const* p_data = p_storage + storage_index;
-            return *reinterpret_cast<T const*>(p_data);
-        }
-
-        format_argument_compact_index const* p_args_indices;
-        uword const argument_count;
-    };
-
-    // To prevent redundant template specializations for a contiguous
-    // container's `back_insert_iterator`, it is wrapped by virtual function
-    // dispatch in this container.
-    template <is_allocator allocator_type>
-    struct format_buffer_base
-        : collection_interface<format_buffer_base<allocator_type>, char>,
-          iterable_interface<char> {
-        format_buffer_base(char* p_in_string, uword in_length,
-                           uword in_max_length)
-            : p_string(p_in_string),
-              length(in_length),
-              max_length(in_max_length) {
-        }
-
-        [[nodiscard]]
-        auto
-        data() const -> char* {
-            return this->p_string;
-        }
-
-        [[nodiscard]]
-        auto
-        size() const -> idx {
-            return idx(this->length);
-        }
-
-        [[nodiscard]]
-        auto
-        capacity() const -> idx {
-            return idx(this->max_length);
-        }
-
-        virtual auto grow(uword /*new_size*/) -> maybe<void> = 0;
-
-        void
-        clear() {
-            this->length = 0u;
-        }
-
-        auto
-        push_back(allocator_type&, char character) -> maybe<void> {
-            // If the new length would exceed the current capacity, call
-            // `.grow()` to extend the capacity, first.
-            if (this->length + 1u > this->max_length) {
-                maybe<void> result = this->grow(this->length + 1u);
-                if (!result.has_value()) {
-                    return nullopt;
-                }
-            }
-
-            this->p_string[this->length.raw] = character;
-            ++(this->length);
-            return monostate;
-        }
-
-        char* p_string;
-        uword length;
-        uword max_length;
-    };
-
-    template <typename...>
-    struct format_buffer_iterator {};
-
-    // Temporarily store formatted string data on the stack before pushing it to
-    // an output-iterator it `.flush()`.
-    template <is_allocator allocator_type, typename outputter_type>
-    struct format_buffer_iterator<allocator_type, outputter_type>
-        : format_buffer_base<allocator_type> {
-        using container_type = outputter_type::container_type;
-        allocator_type& allocator;
-        outputter_type output_iterator;
-
-        // To optimize common usage, `256` bytes of storage is reserved on
-        // stack.
-        char storage[256];
-
-        format_buffer_iterator(allocator_type& in_allocator,
-                               outputter_type iterator)
-            : format_buffer_base<allocator_type>(storage, 0u, 256u),
-              allocator(in_allocator),
-              output_iterator(iterator) {
-        }
-
-        // Flush `storage` when formatting is completed.
-        ~format_buffer_iterator() {
-            // `size()` is derived from `format_buffer_base`.
-            if (this->size() > 0) {
-                this->flush();
-            }
-        }
-
-        // Overload the pure virtual `format_buffer_base::grow()`
-        // function. Instead of expanding its own memory, this buffer is flushed
-        // itself to make more room.
-        auto
-        // Without `override`, clang-20 will attempt to link against the pure
-        // virtual `grow()` function even with the `final` specifier.
-        grow(uword) -> maybe<void> override final {  // NOLINT
-            // `size()` is derived from `format_buffer_base`.
-            if (this->size() == 256u) {
-                this->flush();
-            }
-            return monostate;
-        }
-
-        auto
-        flush() -> maybe<void> {
-            // `size()` is derived from `format_buffer_base`.
-            uword size = this->size();
-            // char const* p_end = storage + size;
-
-            // TODO: Use a multiple `.insert()` overload.
-            for (uword::raw_type i = 0u; i < size; ++i) {
-                maybe result = output_iterator.insert(allocator, storage[i]);
-                if (!result.has_value()) {
-                    return nullopt;
-                }
-            }
-
-            this->length = 0u;
-            return monostate;
-        }
-    };
-
-    // If only a pointer is provided, then assume the buffer can never overflow
-    // and skip bounds-checking and buffer growing.
-    template <is_allocator allocator_type, typename T>
-    struct format_buffer_iterator<allocator_type, T*>
-        : format_buffer_base<allocator_type> {
-        // `.grow()` for a `T[]` is no-op.
-        auto
-        grow() -> maybe<void> {
-            return monostate;
-        }
-    };
-
-    // One back-insert iterator type should be used, to ensure type-erasure.
-    template <is_allocator allocator_type>
-    using format_contiguous_output_iterator =
-        back_insert_iterator<format_buffer_base<allocator_type>>;
-
-    // Holds the format string parsing state consisting of the string's range
-    // and a counter for which arguments have previously been parsed.
-    class format_parse_context {
-      private:
-        // These members must be at the top so they can be `decltype`'d.
-        str_span m_format;
-
-        // Iff `argument_index` is less than `0`, the format string has
-        // manually indexed an argument. Otherwise, all arguments are
-        // automatically indexed.
-        iword m_argument_index = 0;
-
-      public:
-        uword const arguments_count;
-
-        using iterator = decltype(m_format.begin());
-        using const_iterator = decltype(m_format.cbegin());
-
-        constexpr format_parse_context(str_span const in_format,
-                                       uword in_args_count = 0u)
-            : m_format(in_format), arguments_count(in_args_count) {
-        }
-
-        [[nodiscard]]
-        constexpr auto
-        begin() const -> const_iterator {
-            return this->m_format.cbegin();
-        }
-
-        [[nodiscard]]
-        constexpr auto
-        end() const -> const_iterator {
-            return this->m_format.cend();
-        }
-
-        constexpr void
-        advance_to(iterator position) {
-            // this->format.begin().advance(position - this->format.begin());
-            this->m_format.begin().advance(
-                position.distance_to(this->m_format.begin()));
-        }
-
-        constexpr auto
-        next_argument_index() -> iword {
-            return ++(this->m_argument_index);
-        }
-
-        // Check if a manually indexed argument is within reasonable bounds, a
-        // d check that this context is not using automatic indexing.
-        constexpr auto
-        check_argument_index(iword index) -> maybe<void> {
-            if consteval {
-                if (index >= make_signed(this->arguments_count)) {
-                    // This index is of range.
-                    return nullopt;
-                }
-            }
-
-            if (this->m_argument_index > 0) {
-                // This argument is manually indexed in a context where
-                // automatic indexing has been used.
-                return nullopt;
-            }
-
-            // Enable manual indexing in this context.
-            this->m_argument_index = -1;
-
-            return monostate;
-        }
-    };
-
-    // TODO: Store invocable functions for different kind of arguments.
-    template <is_allocator allocator_type>
-    struct format_handler {
-        allocator_type& allocator;
-        // This holds a reference to a `format_buffer_iterator`.
-        detail::format_contiguous_output_iterator<allocator_type>
-            output_iterator;
-        str_span const format;
-        // char* const p_tempory_buffer;
-        // TODO: A more complex contex object will be needed to support locale
-        // and wide chars:
-        format_args const arguments;
-
-        format_handler(
-            allocator_type& in_allocator,
-            detail::format_contiguous_output_iterator<allocator_type> iterator,
-            str_span const in_format, format_args in_args)
-            : allocator(in_allocator),
-              output_iterator(iterator),
-              format(in_format),
-              // p_tempory_buffer(iterator.iterable.data()),
-              arguments(move(in_args)) {
-        }
-    };
-
-    template <is_allocator allocator_type>
-    constexpr auto
-    parse_format_string(str_span const format,
-                        format_handler<allocator_type>&& handler)
-        -> scaredy_format<void> {
-        // char const* p_first = format.data();
-        // char const* p_last = format.data() + format.size();
-        str_span remainder = format;
-        idx current_argument;
-
-        // Parse the entire string:
-        while (remainder.size() > 0) {
-            iword const to_open_brace = remainder.find('{').value();
-            iword const to_close_brace = remainder.find('}').value();
-
-            // This is true iff both are `-1`, or in other words, neither braces
-            // were found. This is the escape condition.
-            if (to_open_brace == to_close_brace) {
-                for (char const& character : remainder) {
-                    // TODO: Optimize this with a multiple-insert overload.
-                    maybe result = handler.output_iterator.insert(
-                        handler.allocator, character);
-                    if (!result.has_value()) {
-                        return format_errors::out_of_memory;
-                    }
-                }
-                break;
-            }
-
-            // If there is an argument, then copy over all text leading up to
-            // the next argument.
-            for (idx i; i < to_open_brace; ++i) {
-                // TODO: Optimize this with a multiple-insert overload.
-                maybe result = handler.output_iterator.insert(handler.allocator,
-                                                              remainder[i]);
-                if (!result.has_value()) {
-                    return format_errors::out_of_memory;
-                }
-            }
-
-            // Parse an argument:
-            format_args const& arguments = handler.arguments;
-
-            auto parse =
-                [&]<typename Argtype>(Argtype) -> scaredy_format<void> {
-                maybe const result =
-                    to_chars(handler.allocator,
-                             arguments.template get<Argtype>(current_argument));
-                if (!result.has_value()) {
-                    return format_errors::out_of_memory;
-                }
-                str_span const int_string = result.value();
-
-                // TODO: Optimize this with a multiple-insert
-                // overload.
-                for (idx i; i < int_string.size() - 1u; ++i) {
-                    auto _ = handler.output_iterator.insert(handler.allocator,
-                                                            int_string[i]);
-                }
-                return monostate;
-            };
-
-            scaredy_format<void> parse_result;
-
-            // TODO: Parse all argument types:
-            switch (handler.arguments.p_args_indices[current_argument.raw]
-                        .discriminant) {
-                case format_discriminant::int4_type:
-                    parse_result = parse(int4{});
-                    break;
-                case format_discriminant::int8_type:
-                    parse_result = parse(int8{});
-                    break;
-                case format_discriminant::uint4_type:
-                    parse_result = parse(uint4{});
-                    break;
-                case format_discriminant::uint8_type:
-                    parse_result = parse(uint8{});
-                    break;
-                case format_discriminant::float_type:
-                    parse_result = parse(float{});
-                    break;
-                case format_discriminant::double_type:
-                    parse_result = parse(double{});
-                    break;
-                default:
-                    __builtin_unreachable();
-            };
-
-            if (!parse_result.has_value()) {
-                return format_errors::out_of_memory;
-            }
-
-            ++current_argument;
-
-            // Slice the string past the text that's just been parsed.
-            remainder =
-                // Casting this to `idx` is guaranteed to be safe by this point.
-                remainder.remove_prefix(idx(to_close_brace) + 1u);
-        }
-
-        // No errors occurred.
-        return monostate;
-    }
+         }
+         break;
+      }
+
+      // If there is an argument, then copy over all text leading up to
+      // the next argument.
+      for (idx i; i < to_open_brace; ++i) {
+         // TODO: Optimize this with a multiple-insert overload.
+         maybe result =
+            handler.output_iterator.insert(handler.allocator, remainder[i]);
+         if (!result.has_value()) {
+            return format_errors::out_of_memory;
+         }
+      }
+
+      // Parse an argument:
+      format_args const& arguments = handler.arguments;
+
+      auto parse = [&]<typename Argtype>(Argtype) -> scaredy_format<void> {
+         maybe const result =
+            to_chars(handler.allocator,
+                     arguments.template get<Argtype>(current_argument));
+         if (!result.has_value()) {
+            return format_errors::out_of_memory;
+         }
+         str_span const int_string = result.value();
+
+         // TODO: Optimize this with a multiple-insert
+         // overload.
+         for (idx i; i < int_string.size() - 1u; ++i) {
+            auto _ =
+               handler.output_iterator.insert(handler.allocator, int_string[i]);
+         }
+         return monostate;
+      };
+
+      scaredy_format<void> parse_result;
+
+      // TODO: Parse all argument types:
+      switch (
+         handler.arguments.p_args_indices[current_argument.raw].discriminant) {
+         case format_discriminant::int4_type:
+            parse_result = parse(int4{});
+            break;
+         case format_discriminant::int8_type:
+            parse_result = parse(int8{});
+            break;
+         case format_discriminant::uint4_type:
+            parse_result = parse(uint4{});
+            break;
+         case format_discriminant::uint8_type:
+            parse_result = parse(uint8{});
+            break;
+         case format_discriminant::float_type:
+            parse_result = parse(float{});
+            break;
+         case format_discriminant::double_type:
+            parse_result = parse(double{});
+            break;
+         default:
+            __builtin_unreachable();
+      };
+
+      if (!parse_result.has_value()) {
+         return format_errors::out_of_memory;
+      }
+
+      ++current_argument;
+
+      // Slice the string past the text that's just been parsed.
+      remainder =
+         // Casting this to `idx` is guaranteed to be safe by this point.
+         remainder.remove_prefix(idx(to_close_brace) + 1u);
+   }
+
+   // No errors occurred.
+   return monostate;
+}
 }  // namespace detail
 
 // Format a collection of `char` and push it into some container.
@@ -772,66 +761,65 @@ template <is_allocator allocator_type, typename outputter_type>
 auto
 vfmt_to(allocator_type& allocator, outputter_type output_iterator,
         str_span const format, detail::format_args arguments)
-    -> scaredy_format<outputter_type> {
-    if constexpr (is_same<outputter_type,
-                          detail::format_contiguous_output_iterator<
-                              allocator_type>>) {
-        // If the type-erased contiguous format buffer is used, then
-        // this routine can be slightly streamlined.
-        detail::format_handler<allocator_type> handler = {
-            allocator, output_iterator, format, arguments};
-        return parse_format_string(format, move(handler));
-    } else {
-        // Otherwise, create a type-erased contiguous format buffer to
-        // optimize pushing to this output iterator.
-        detail::format_buffer_iterator<allocator_type, outputter_type> buffer =
-            {allocator, output_iterator};
-        detail::format_handler<allocator_type> handler = {
-            allocator,
-            detail::format_contiguous_output_iterator<allocator_type>{buffer},
-            format, arguments};
-        scaredy_format<void> result =
-            parse_format_string(format, move(handler));
-        if (!result.has_value()) {
-            return result.error<format_errors>();
-        }
-        return buffer.output_iterator;
-    }
+   -> scaredy_format<outputter_type> {
+   if constexpr (is_same<outputter_type,
+                         detail::format_contiguous_output_iterator<
+                            allocator_type>>) {
+      // If the type-erased contiguous format buffer is used, then
+      // this routine can be slightly streamlined.
+      detail::format_handler<allocator_type> handler = {
+         allocator, output_iterator, format, arguments};
+      return parse_format_string(format, move(handler));
+   } else {
+      // Otherwise, create a type-erased contiguous format buffer to
+      // optimize pushing to this output iterator.
+      detail::format_buffer_iterator<allocator_type, outputter_type> buffer = {
+         allocator, output_iterator};
+      detail::format_handler<allocator_type> handler = {
+         allocator,
+         detail::format_contiguous_output_iterator<allocator_type>{buffer},
+         format, arguments};
+      scaredy_format<void> result = parse_format_string(format, move(handler));
+      if (!result.has_value()) {
+         return result.error<format_errors>();
+      }
+      return buffer.output_iterator;
+   }
 }
 
 template <is_allocator allocator_type>
 auto
 vfmt(allocator_type& allocator, str_span const format,
      detail::format_args arguments) -> scaredy_format<str_span> {
-    // TODO: Estimate the size of the final formatted string, and
-    // allocate that much up-front for `output`.
-    idx const initial_size = format.size() + 10u;
+   // TODO: Estimate the size of the final formatted string, and
+   // allocate that much up-front for `output`.
+   idx const initial_size = format.size() + 10u;
 
-    maybe maybe_memory = allocator.template alloc_multi<char>(initial_size);
-    if (!maybe_memory.has_value()) {
-        return format_errors::out_of_memory;
-    }
+   maybe maybe_memory = allocator.template alloc_multi<char>(initial_size);
+   if (!maybe_memory.has_value()) {
+      return format_errors::out_of_memory;
+   }
 
-    char* p_memory = maybe_memory.value().data();
-    str_span output{p_memory, initial_size};
+   char* p_memory = maybe_memory.value().data();
+   str_span output{p_memory, initial_size};
 
-    // `format_string_vector` is a container that satisfies the `Iterable`
-    // `concept` and has a `.push_back()` method for a
-    // `back_insert_iterator`. It is used to store the formatted string
-    // and reallocates when that string grows beyond `initial_size`.
-    detail::format_string_vector into_buffer = {p_memory, 0u, initial_size};
+   // `format_string_vector` is a container that satisfies the `Iterable`
+   // `concept` and has a `.push_back()` method for a
+   // `back_insert_iterator`. It is used to store the formatted string
+   // and reallocates when that string grows beyond `initial_size`.
+   detail::format_string_vector into_buffer = {p_memory, 0u, initial_size};
 
-    // TODO: Specify which kind of `scaredy_format` this is.
-    auto result =
-        vfmt_to(allocator,
-                back_insert_iterator<detail::format_string_vector>{into_buffer},
-                format, arguments);
-    if (!result.has_value()) {
-        return result.template error<format_errors>();
-    }
+   // TODO: Specify which kind of `scaredy_format` this is.
+   auto result =
+      vfmt_to(allocator,
+              back_insert_iterator<detail::format_string_vector>{into_buffer},
+              format, arguments);
+   if (!result.has_value()) {
+      return result.template error<format_errors>();
+   }
 
-    idx const length = string_length(into_buffer.data());
-    return str_span(into_buffer.p_storage, length);
+   idx const length = string_length(into_buffer.data());
+   return str_span(into_buffer.p_storage, length);
 }
 
 // Store `arguments` in a compacted variant object. Then format a collection
@@ -842,22 +830,21 @@ template <is_allocator allocator_type,
 auto
 fmt_to(allocator_type& allocator, outputter_type output_iterator,
        str_span const format, Args&&... arguments)
-    -> scaredy_format<outputter_type> {
-    return vfmt_to(
-        allocator, output_iterator, format,
-        detail::format_args(
-            detail::format_args_compact_storage<Args...>(fwd(arguments)...)));
+   -> scaredy_format<outputter_type> {
+   return vfmt_to(
+      allocator, output_iterator, format,
+      detail::format_args(
+         detail::format_args_compact_storage<Args...>(fwd(arguments)...)));
 }
 
 template <is_allocator allocator_type, typename... Args>
 [[nodiscard]]
 auto
 fmt(allocator_type& allocator, str_span const format, Args&&... arguments)
-    -> scaredy_format<str_span> {
-    return vfmt(
-        allocator, format,
-        detail::format_args(
-            detail::format_args_compact_storage<Args...>(fwd(arguments)...)));
+   -> scaredy_format<str_span> {
+   return vfmt(allocator, format,
+               detail::format_args(detail::format_args_compact_storage<Args...>(
+                  fwd(arguments)...)));
 }
 
 }  // namespace cat

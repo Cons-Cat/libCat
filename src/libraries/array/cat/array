@@ -15,98 +15,98 @@ namespace cat {
 template <typename T, idx length>
 class array : public collection_interface<array<T, length>, T>,
               public iterable_interface<T> {
-  public:
-    constexpr array() = default;
-    constexpr array(array<T, length> const& other_array) = default;
-    constexpr array(array<T, length>&& other_array) = default;
+ public:
+   constexpr array() = default;
+   constexpr array(array<T, length> const& other_array) = default;
+   constexpr array(array<T, length>&& other_array) = default;
 
-    // Construct an `array` from a variadic argument list.
-    // A parameter pack is used instead of `initializer_list` so that arguments
-    // may be moved.
-    template <typename... Args>
-        requires(sizeof...(Args) == length)
-    constexpr array(Args&&... arguments)
-        // Explicitly converting this type allows the first argument to coerce
-        // the type for following arguments.
-        // i.e. `cat::array shorts = {int2{0}, 1, 2};`
-        : m_data(static_cast<T>(fwd(arguments))...) {
-    }
+   // Construct an `array` from a variadic argument list.
+   // A parameter pack is used instead of `initializer_list` so that arguments
+   // may be moved.
+   template <typename... Args>
+      requires(sizeof...(Args) == length)
+   constexpr array(Args&&... arguments)
+       // Explicitly converting this type allows the first argument to coerce
+       // the type for following arguments.
+       // i.e. `cat::array shorts = {int2{0}, 1, 2};`
+       : m_data(static_cast<T>(fwd(arguments))...) {
+   }
 
-    // constexpr array(initializer_list<T> initializers) {
-    //     for (__SIZE_TYPE__ i = 0; i < initializers.size(); ++i) {
-    //         m_data[i] = initializers.begin() + i;
-    //     }
-    // }
+   // constexpr array(initializer_list<T> initializers) {
+   //     for (__SIZE_TYPE__ i = 0; i < initializers.size(); ++i) {
+   //         m_data[i] = initializers.begin() + i;
+   //     }
+   // }
 
-    constexpr auto
-    operator=(array<T, length> const& other_array) -> array& = default;
+   constexpr auto
+   operator=(array<T, length> const& other_array) -> array& = default;
 
-    constexpr auto
-    operator=(array<T, length>&& other_array) -> array& = default;
+   constexpr auto
+   operator=(array<T, length>&& other_array) -> array& = default;
 
-    // TODO: Support move-semantics here.
-    // Converting assignment operator.
-    template <typename U>
-        requires(is_convertible<U, T>)
-    constexpr auto
-    operator=(array<U, length> const& other_array) -> array& {
-        // TODO: Optimize with `copy_memory()` if T and U are relocatable.
-        for (unsigned long long i = 0u; i < length; ++i) {
-            m_data[i] = static_cast<T>(other_array[i]);
-        }
-        return *this;
-    }
+   // TODO: Support move-semantics here.
+   // Converting assignment operator.
+   template <typename U>
+      requires(is_convertible<U, T>)
+   constexpr auto
+   operator=(array<U, length> const& other_array) -> array& {
+      // TODO: Optimize with `copy_memory()` if T and U are relocatable.
+      for (unsigned long long i = 0u; i < length; ++i) {
+         m_data[i] = static_cast<T>(other_array[i]);
+      }
+      return *this;
+   }
 
-    // constexpr auto
-    // operator=(initializer_list<T> initializers) -> array& {
-    //     for (__SIZE_TYPE__ i = 0; i < initializers.size(); ++i) {
-    //         m_data[i] = initializers.begin()[i];
-    //     }
-    //     return *this;
-    // }
+   // constexpr auto
+   // operator=(initializer_list<T> initializers) -> array& {
+   //     for (__SIZE_TYPE__ i = 0; i < initializers.size(); ++i) {
+   //         m_data[i] = initializers.begin()[i];
+   //     }
+   //     return *this;
+   // }
 
-    // TODO: `<=>` operator.
+   // TODO: `<=>` operator.
 
-    template <typename U>
-        requires(is_implicitly_convertible<U, T>)
-    constexpr auto
-    fill(U value) -> array& {
-        // TODO: This `set_memory()` segfaults with optimizations enabled. Is it
-        // even necessary?
-        //
-        // if (!is_constant_evaluated() && sizeof(T) <= 8) {
-        //     // set_memory(this->storage, value, length);
-        // } else {
-        for (unsigned long long i = 0u; i < length; ++i) {
-            this->m_data[i] = static_cast<T>(value);
-        }
-        // }
-        return *this;
-    }
+   template <typename U>
+      requires(is_implicitly_convertible<U, T>)
+   constexpr auto
+   fill(U value) -> array& {
+      // TODO: This `set_memory()` segfaults with optimizations enabled. Is it
+      // even necessary?
+      //
+      // if (!is_constant_evaluated() && sizeof(T) <= 8) {
+      //     // set_memory(this->storage, value, length);
+      // } else {
+      for (unsigned long long i = 0u; i < length; ++i) {
+         this->m_data[i] = static_cast<T>(value);
+      }
+      // }
+      return *this;
+   }
 
-    // Get the non-`const` address of this `array`'s internal array.
-    [[nodiscard]]
-    constexpr auto
-    data() -> T* {
-        return this->m_data;
-    }
+   // Get the non-`const` address of this `array`'s internal array.
+   [[nodiscard]]
+   constexpr auto
+   data() -> T* {
+      return this->m_data;
+   }
 
-    // Get the `const` address of this `array`'s internal array.
-    [[nodiscard]]
-    constexpr auto
-    data() const -> T const* {
-        return this->m_data;
-    }
+   // Get the `const` address of this `array`'s internal array.
+   [[nodiscard]]
+   constexpr auto
+   data() const -> T const* {
+      return this->m_data;
+   }
 
-    // Get the number of elements contained in this `array`.
-    [[nodiscard]]
-    static constexpr auto
-    size() -> idx {
-        return length;
-    }
+   // Get the number of elements contained in this `array`.
+   [[nodiscard]]
+   static constexpr auto
+   size() -> idx {
+      return length;
+   }
 
-    // `storage` is public so that `cat::array` is a trivial type.
-    T m_data[length];
+   // `storage` is public so that `cat::array` is a trivial type.
+   T m_data[length];
 };
 
 // Construct an `array<int, 3>` as: `array a = {0, 1, 2};`
@@ -118,7 +118,7 @@ template <typename... Ts, idx length = sizeof...(Ts)>
 [[nodiscard]]
 constexpr auto
 make_array(Ts&&... ts) -> array<common_type<Ts...>, length> {
-    return array{static_cast<common_type<Ts...>>(ts)...};
+   return array{static_cast<common_type<Ts...>>(ts)...};
 }
 
 // Make a `cat::array<T>`.
@@ -126,7 +126,7 @@ template <typename T, typename... Ts, idx length = sizeof...(Ts)>
 [[nodiscard]]
 constexpr auto
 make_array(Ts&&... ts) -> array<T, length> {
-    return array{static_cast<T>(ts)...};
+   return array{static_cast<T>(ts)...};
 }
 
 // Make a `cat::array<T>` initialized with `value`.
@@ -134,11 +134,11 @@ template <idx length, typename T>
 [[nodiscard]]
 constexpr auto
 make_array_filled(T const& value) -> array<T, length> {
-    array<T, length> array;
-    for (idx i; i < length; ++i) {
-        array[i] = value;
-    }
-    return array;
+   array<T, length> array;
+   for (idx i; i < length; ++i) {
+      array[i] = value;
+   }
+   return array;
 }
 
 // template <typename U>

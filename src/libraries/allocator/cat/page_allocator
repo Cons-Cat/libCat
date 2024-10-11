@@ -11,111 +11,111 @@ namespace cat {
 // TODO: Support forcibly allocating huge pages.
 // Allocate pages from the kernel in userspace.
 class page_allocator : public allocator_interface<page_allocator> {
-    friend allocator_interface<page_allocator>;
+   friend allocator_interface<page_allocator>;
 
-  private:
-    template <typename T>
-    struct page_memory_handle : detail::base_memory_handle<T> {
-        T* p_storage;
+ private:
+   template <typename T>
+   struct page_memory_handle : detail::base_memory_handle<T> {
+      T* p_storage;
 
-        // TODO: Simplify with CRTP or deducing-this.
-        auto
-        get() -> decltype(auto) {
-            return *this;
-        }
+      // TODO: Simplify with CRTP or deducing-this.
+      auto
+      get() -> decltype(auto) {
+         return *this;
+      }
 
-        auto
-        get() const -> decltype(auto) {
-            return *this;
-        }
-    };
+      auto
+      get() const -> decltype(auto) {
+         return *this;
+      }
+   };
 
-  public:
-    constexpr page_allocator() = default;
-    constexpr page_allocator(page_allocator const&) = default;
-    constexpr page_allocator(page_allocator&&) = default;
+ public:
+   constexpr page_allocator() = default;
+   constexpr page_allocator(page_allocator const&) = default;
+   constexpr page_allocator(page_allocator&&) = default;
 
-    auto
-    allocation_bytes(uword alignment, idx allocation_bytes)
-        -> maybe_non_zero<idx> {
-        // Pages cannot be aligned by greater than 4 kibibytes.
-        assert(alignment <= 4_uki);
-        // Round `allocation_bytes` up to the nearest 4 kibibytes.
-        return ((allocation_bytes / 4_uki) + 1u) * 4_uki;
-    }
+   auto
+   allocation_bytes(uword alignment, idx allocation_bytes)
+      -> maybe_non_zero<idx> {
+      // Pages cannot be aligned by greater than 4 kibibytes.
+      assert(alignment <= 4_uki);
+      // Round `allocation_bytes` up to the nearest 4 kibibytes.
+      return ((allocation_bytes / 4_uki) + 1u) * 4_uki;
+   }
 
-    // Allocate memory in multiples of a page-size. A page is `4_uki` large
-    // on x86-64. If fewer than 4096 bytes are allocated, that amount will
-    // be rounded up to 4096.
-    auto
-    allocate(idx allocation_bytes) -> maybe_ptr<void> {
-        scaredy result = nix::sys_mmap(
-            0u, allocation_bytes,
-            // TODO: Fix bit flags operators.
-            static_cast<nix::memory_protection_flags>(
-                to_underlying(nix::memory_protection_flags::read) |
-                to_underlying(nix::memory_protection_flags::write)),
-            static_cast<nix::memory_flags>(
-                to_underlying(nix::memory_flags::privately) |
-                to_underlying(nix::memory_flags::populate) |
-                to_underlying(nix::memory_flags::anonymous)),
-            // Anonymous pages (non-files) must have `-1`.
-            nix::file_descriptor(-1),
-            // Anonymous pages (non-files) must have `0`.
-            0u);
-        if (result.has_value()) {
-            return result.value();
-        }
-        return nullptr;
-    }
+   // Allocate memory in multiples of a page-size. A page is `4_uki` large
+   // on x86-64. If fewer than 4096 bytes are allocated, that amount will
+   // be rounded up to 4096.
+   auto
+   allocate(idx allocation_bytes) -> maybe_ptr<void> {
+      scaredy result =
+         nix::sys_mmap(0u, allocation_bytes,
+                       // TODO: Fix bit flags operators.
+                       static_cast<nix::memory_protection_flags>(
+                          to_underlying(nix::memory_protection_flags::read)
+                          | to_underlying(nix::memory_protection_flags::write)),
+                       static_cast<nix::memory_flags>(
+                          to_underlying(nix::memory_flags::privately)
+                          | to_underlying(nix::memory_flags::populate)
+                          | to_underlying(nix::memory_flags::anonymous)),
+                       // Anonymous pages (non-files) must have `-1`.
+                       nix::file_descriptor(-1),
+                       // Anonymous pages (non-files) must have `0`.
+                       0u);
+      if (result.has_value()) {
+         return result.value();
+      }
+      return nullptr;
+   }
 
-    // Allocate a page(s) of virtual memory that is guaranteed to align to
-    // any power of 2, but less than `4_uki`.
-    auto
-    aligned_allocate(uword alignment, idx allocation_bytes) -> maybe_ptr<void> {
-        // Pages cannot be aligned by greater than 4 kibibytes.
-        assert(alignment <= 4_uki);
-        // A normal page allocation already has strong alignment guarantees.
-        return this->allocate(allocation_bytes);
-    }
+   // Allocate a page(s) of virtual memory that is guaranteed to align to
+   // any power of 2, but less than `4_uki`.
+   auto
+   aligned_allocate(uword alignment, idx allocation_bytes) -> maybe_ptr<void> {
+      // Pages cannot be aligned by greater than 4 kibibytes.
+      assert(alignment <= 4_uki);
+      // A normal page allocation already has strong alignment guarantees.
+      return this->allocate(allocation_bytes);
+   }
 
-    // Unmap a pointer handle to page(s) of virtual memory.
-    void
-    deallocate(void const* p_storage, idx allocation_bytes) {
-        // There are some cases where `munmap` might fail even with private
-        // anonymous pages. These currently cannot be handled, because `.free()`
-        // does not propagate errors.
-        auto _ = nix::sys_munmap(p_storage, allocation_bytes);
-    }
+   // Unmap a pointer handle to page(s) of virtual memory.
+   void
+   deallocate(void const* p_storage, idx allocation_bytes) {
+      // There are some cases where `munmap` might fail even with private
+      // anonymous pages. These currently cannot be handled, because `.free()`
+      // does not propagate errors.
+      auto _ = nix::sys_munmap(p_storage, allocation_bytes);
+   }
 
-    // Produce a handle to allocated memory.
-    template <typename T>
-    auto
-    make_handle(T* p_handle_storage) -> page_memory_handle<T> {
-        return page_memory_handle<T>{{}, p_handle_storage};
-    }
+   // Produce a handle to allocated memory.
+   template <typename T>
+   auto
+   make_handle(T* p_handle_storage) -> page_memory_handle<T> {
+      return page_memory_handle<T>{{}, p_handle_storage};
+   }
 
-    // Access a page(s) of virtual memory.
-    template <typename T>
-    auto
-    access(page_memory_handle<T>& memory) -> T* {
-        return memory.p_storage;
-    }
+   // Access a page(s) of virtual memory.
+   template <typename T>
+   auto
+   access(page_memory_handle<T>& memory) -> T* {
+      return memory.p_storage;
+   }
 
-    template <typename T>
-    auto
-    access(page_memory_handle<T> const& memory) const -> T const* {
-        return memory.p_storage;
-    }
+   template <typename T>
+   auto
+   access(page_memory_handle<T> const& memory) const -> T const* {
+      return memory.p_storage;
+   }
 
-  public:
-    static constexpr bool has_pointer_stability = true;
+ public:
+   static constexpr bool has_pointer_stability = true;
 };
 
 [[nodiscard]]
 constexpr auto
 make_page_allocator() -> page_allocator {
-    return page_allocator();
+   return page_allocator();
 }
 
 }  // namespace cat

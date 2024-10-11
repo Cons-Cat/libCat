@@ -8,10 +8,10 @@
 
 consteval auto
 cat::constant_evaluate(is_invocable auto value) -> decltype(auto) {
-    return value();
+   return value();
 }
 
 consteval auto
 cat::constant_evaluate(auto value) -> decltype(auto) {
-    return value;
+   return value;
 }

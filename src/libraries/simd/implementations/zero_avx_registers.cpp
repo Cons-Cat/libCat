@@ -3,5 +3,5 @@
 // TODO: Document.
 void
 cat::zero_avx_registers() {
-    __builtin_ia32_vzeroall();
+   __builtin_ia32_vzeroall();
 }

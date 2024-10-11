@@ -17,529 +17,530 @@ namespace x11 {
 constexpr auto socket_path = cat::str_inplace<108>::padded("/tmp/.X11-unix/X0");
 
 enum class operation_code : unsigned char {
-    error = 0,
-    create_window = 1,
-    change_window_attributes = 2,
-    get_window_attributes = 3,
-    destroy_window = 4,
-    destroy_subwindows = 5,
-    change_save_set = 6,
-    reparent_window = 7,
-    map_window = 8,
-    map_subwindows = 9,
-    unmap_window = 10,
-    unmap_subwindows = 11,
-    configure_window = 12,
-    circulate_window = 13,
-    get_geometry = 14,
-    query_tree = 15,
-    intern_atom = 16,
-    get_atom_name = 17,
-    change_property = 18,
-    delete_property = 19,
-    get_property = 20,
-    list_properties = 21,
-    set_selection_owner = 22,
-    get_selection_owner = 23,
-    convert_selection = 24,
-    send_event = 25,
-    grab_pointer = 26,
-    ungrab_pointer = 27,
-    grab_button = 28,
-    ungrab_button = 29,
-    change_active_pointer_grab = 30,
-    grab_keyboard = 31,
-    ungrab_keyboard = 32,
-    grab_key = 33,
-    ungrab_key = 34,
-    allow_events = 35,
-    grab_server = 36,
-    ungrab_server = 37,
-    query_pointer = 38,
-    get_motion_events = 39,
-    translate_coordinates = 40,
-    warp_pointer = 41,
-    set_input_focus = 42,
-    get_input_focus = 43,
-    query_keymap = 44,
-    open_font = 45,
-    close_font = 46,
-    query_font = 47,
-    query_text_extents = 48,
-    list_fonts = 49,
-    list_fonts_with_info = 50,
-    set_font_path = 51,
-    get_font_path = 52,
-    create_pixmap = 53,
-    free_pixmap = 54,
-    create_gc = 55,
-    change_gc = 56,
-    copy_gc = 57,
-    set_dashes = 58,
-    set_clip_rectangles = 59,
-    gree_gc = 60,
-    clear_area = 61,
-    copy_area = 62,
-    copy_plane = 63,
-    poly_point = 64,
-    poly_line = 65,
-    poly_segment = 66,
-    poly_rectangle = 67,
-    poly_arc = 68,
-    fill_poly = 69,
-    poly_fill_rectangle = 70,
-    poly_fill_arc = 71,
-    put_image = 72,
-    get_image = 73,
-    poly_text8 = 74,
-    poly_text16 = 75,
-    image_text8 = 76,
-    image_text16 = 77,
-    create_colormap = 78,
-    free_Colormap = 79,
-    copy_Colormap_and_free = 80,
-    install_colormap = 81,
-    uninstall_colormap = 82,
-    list_installed_colormaps = 83,
-    alloc_color = 84,
-    alloc_named_color = 85,
-    alloc_color_cells = 86,
-    alloc_color_planes = 87,
-    free_colors = 88,
-    store_colors = 89,
-    store_named_colors = 90,
-    query_colors = 91,
-    lookup_color = 92,
-    create_cursor = 93,
-    create_glyph_cursor = 94,
-    free_cursor = 95,
-    recolor_cursor = 96,
-    query_best_size = 97,
-    query_extension = 98,
-    list_extensions = 99,
-    change_keyboard_mapping = 100,
-    get_keyboard_mapping = 101,
-    change_keyboard_control = 102,
-    get_keyboard_control = 103,
-    bell = 104,
-    change_pointer_control = 105,
-    get_pointer_control = 106,
-    set_screen_saver = 107,
-    get_screen_saver = 108,
-    change_hosts = 109,
-    list_hosts = 110,
-    set_access_control = 111,
-    set_close_down_mode = 112,
-    kill_client = 113,
-    rotate_properties = 114,
-    force_screen_saver = 115,
-    set_pointer_mapping = 116,
-    get_pointer_mapping = 117,
-    set_modifier_mapping = 118,
-    get_modifier_mapping = 119,
-    no_operation = 120
+   error = 0,
+   create_window = 1,
+   change_window_attributes = 2,
+   get_window_attributes = 3,
+   destroy_window = 4,
+   destroy_subwindows = 5,
+   change_save_set = 6,
+   reparent_window = 7,
+   map_window = 8,
+   map_subwindows = 9,
+   unmap_window = 10,
+   unmap_subwindows = 11,
+   configure_window = 12,
+   circulate_window = 13,
+   get_geometry = 14,
+   query_tree = 15,
+   intern_atom = 16,
+   get_atom_name = 17,
+   change_property = 18,
+   delete_property = 19,
+   get_property = 20,
+   list_properties = 21,
+   set_selection_owner = 22,
+   get_selection_owner = 23,
+   convert_selection = 24,
+   send_event = 25,
+   grab_pointer = 26,
+   ungrab_pointer = 27,
+   grab_button = 28,
+   ungrab_button = 29,
+   change_active_pointer_grab = 30,
+   grab_keyboard = 31,
+   ungrab_keyboard = 32,
+   grab_key = 33,
+   ungrab_key = 34,
+   allow_events = 35,
+   grab_server = 36,
+   ungrab_server = 37,
+   query_pointer = 38,
+   get_motion_events = 39,
+   translate_coordinates = 40,
+   warp_pointer = 41,
+   set_input_focus = 42,
+   get_input_focus = 43,
+   query_keymap = 44,
+   open_font = 45,
+   close_font = 46,
+   query_font = 47,
+   query_text_extents = 48,
+   list_fonts = 49,
+   list_fonts_with_info = 50,
+   set_font_path = 51,
+   get_font_path = 52,
+   create_pixmap = 53,
+   free_pixmap = 54,
+   create_gc = 55,
+   change_gc = 56,
+   copy_gc = 57,
+   set_dashes = 58,
+   set_clip_rectangles = 59,
+   gree_gc = 60,
+   clear_area = 61,
+   copy_area = 62,
+   copy_plane = 63,
+   poly_point = 64,
+   poly_line = 65,
+   poly_segment = 66,
+   poly_rectangle = 67,
+   poly_arc = 68,
+   fill_poly = 69,
+   poly_fill_rectangle = 70,
+   poly_fill_arc = 71,
+   put_image = 72,
+   get_image = 73,
+   poly_text8 = 74,
+   poly_text16 = 75,
+   image_text8 = 76,
+   image_text16 = 77,
+   create_colormap = 78,
+   free_Colormap = 79,
+   copy_Colormap_and_free = 80,
+   install_colormap = 81,
+   uninstall_colormap = 82,
+   list_installed_colormaps = 83,
+   alloc_color = 84,
+   alloc_named_color = 85,
+   alloc_color_cells = 86,
+   alloc_color_planes = 87,
+   free_colors = 88,
+   store_colors = 89,
+   store_named_colors = 90,
+   query_colors = 91,
+   lookup_color = 92,
+   create_cursor = 93,
+   create_glyph_cursor = 94,
+   free_cursor = 95,
+   recolor_cursor = 96,
+   query_best_size = 97,
+   query_extension = 98,
+   list_extensions = 99,
+   change_keyboard_mapping = 100,
+   get_keyboard_mapping = 101,
+   change_keyboard_control = 102,
+   get_keyboard_control = 103,
+   bell = 104,
+   change_pointer_control = 105,
+   get_pointer_control = 106,
+   set_screen_saver = 107,
+   get_screen_saver = 108,
+   change_hosts = 109,
+   list_hosts = 110,
+   set_access_control = 111,
+   set_close_down_mode = 112,
+   kill_client = 113,
+   rotate_properties = 114,
+   force_screen_saver = 115,
+   set_pointer_mapping = 116,
+   get_pointer_mapping = 117,
+   set_modifier_mapping = 118,
+   get_modifier_mapping = 119,
+   no_operation = 120
 };
 
 enum class event_code : unsigned char {
-    key_press = 2,
-    key_release = 3,
-    button_press = 4,
-    button_release = 5,
-    motion_notify = 6,
-    enter_notify = 7,
-    leave_notify = 8,
-    focus_in = 9,
-    focus_out = 10,
-    keymap_notify = 11,
-    expose = 12,
-    graphics_exposure = 13,
-    no_exposure = 14,
-    visibility_notify = 15,
-    create_notify = 16,
-    destroy_notify = 17,
-    unmap_notify = 18,
-    map_notify = 19,
-    map_request = 20,
-    reparent_notify = 21,
-    configure_notify = 22,
-    configure_request = 23,
-    gravity_notify = 24,
-    resize_request = 25,
-    circulate_notify = 26,
-    circulate_request = 27,
-    property_notify = 28,
-    selection_clear = 29,
-    selection_request = 30,
-    selection_notify = 31,
-    colormap_notify = 32,
-    client_message = 33,
-    mapping_notify = 34,
+   key_press = 2,
+   key_release = 3,
+   button_press = 4,
+   button_release = 5,
+   motion_notify = 6,
+   enter_notify = 7,
+   leave_notify = 8,
+   focus_in = 9,
+   focus_out = 10,
+   keymap_notify = 11,
+   expose = 12,
+   graphics_exposure = 13,
+   no_exposure = 14,
+   visibility_notify = 15,
+   create_notify = 16,
+   destroy_notify = 17,
+   unmap_notify = 18,
+   map_notify = 19,
+   map_request = 20,
+   reparent_notify = 21,
+   configure_notify = 22,
+   configure_request = 23,
+   gravity_notify = 24,
+   resize_request = 25,
+   circulate_notify = 26,
+   circulate_request = 27,
+   property_notify = 28,
+   selection_clear = 29,
+   selection_request = 30,
+   selection_notify = 31,
+   colormap_notify = 32,
+   client_message = 33,
+   mapping_notify = 34,
 };
 
 enum class key_code : unsigned char {
 };
 
 struct [[gnu::packed]] event_mask {
-    bool key_press = false;
-    bool key_release = false;
-    bool button_press = false;
-    bool button_release = false;
-    bool enter_window = false;
-    bool leave_window = false;
-    bool pointer_motion = false;
-    bool pointer_motion_hint = false;
-    bool button1_motion = false;
-    bool button2_motion = false;
-    bool button3_motion = false;
-    bool button4_motion = false;
-    bool button5_motion = false;
-    bool button_motion = false;
-    bool keymap_state = false;
-    bool exposure = false;
-    bool visibility_change = false;
-    bool structure_notify = false;
-    bool resize_redirect = false;
-    bool substructure_notify = false;
-    bool substructure_redirect = false;
-    bool focus_change = false;
-    bool property_change = false;
-    bool colormap_change = false;
-    bool owner_grab_button = false;
-    unsigned _ : 7 = 0u;
+   bool key_press = false;
+   bool key_release = false;
+   bool button_press = false;
+   bool button_release = false;
+   bool enter_window = false;
+   bool leave_window = false;
+   bool pointer_motion = false;
+   bool pointer_motion_hint = false;
+   bool button1_motion = false;
+   bool button2_motion = false;
+   bool button3_motion = false;
+   bool button4_motion = false;
+   bool button5_motion = false;
+   bool button_motion = false;
+   bool keymap_state = false;
+   bool exposure = false;
+   bool visibility_change = false;
+   bool structure_notify = false;
+   bool resize_redirect = false;
+   bool substructure_notify = false;
+   bool substructure_redirect = false;
+   bool focus_change = false;
+   bool property_change = false;
+   bool colormap_change = false;
+   bool owner_grab_button = false;
+   unsigned _ : 7 = 0u;
 };
 
 struct error_code {
-    cat::uint1 response_operation = static_cast<unsigned char>(0);
+   cat::uint1 response_operation = static_cast<unsigned char>(0);
 
-    enum : unsigned char {
-        request = 1,
-        value = 2,
-        window = 3,
-        pixmap = 4,
-        atom = 5,
-        cursor = 6,
-        font = 7,
-        match = 8,
-        drawable = 9,
-        access = 10,
-        alloc = 11,
-        colormap = 12,
-        g_context = 13,
-        resource_id_choice = 14,
-        name = 15,
-        length = 16,
-        implementation = 17,
-    } code;
+   enum : unsigned char {
+      request = 1,
+      value = 2,
+      window = 3,
+      pixmap = 4,
+      atom = 5,
+      cursor = 6,
+      font = 7,
+      match = 8,
+      drawable = 9,
+      access = 10,
+      alloc = 11,
+      colormap = 12,
+      g_context = 13,
+      resource_id_choice = 14,
+      name = 15,
+      length = 16,
+      implementation = 17,
+   } code;
 
-    cat::uint2 sequence;
-    cat::uint4 resource_resource_id;
-    cat::uint2 minor_operation;
-    operation_code major_operation;
+   cat::uint2 sequence;
+   cat::uint4 resource_resource_id;
+   cat::uint2 minor_operation;
+   operation_code major_operation;
 
-  private:
-    [[maybe_unused]]
-    cat::uint1 _[21];
+ private:
+   [[maybe_unused]]
+   cat::uint1 _[21];
 
-  public:
-    cat::uint4 full_sequence;
+ public:
+   cat::uint4 full_sequence;
 };
 
 struct window_resource {
-    window_resource() = default;
+   window_resource() = default;
 
-    window_resource(cat::uint4 input) : value(input) {
-    }
+   window_resource(cat::uint4 input) : value(input) {
+   }
 
-    cat::uint4 value;
+   cat::uint4 value;
 };
 
 struct cookie {
-    cat::uint4 sequence;
+   cat::uint4 sequence;
 };
 
 struct event {
-    cat::uint2 response_type;
-    cat::uint2 sequence;
-    cat::uint4 length;
-    event_code event_type;
+   cat::uint2 response_type;
+   cat::uint2 sequence;
+   cat::uint4 length;
+   event_code event_type;
 
-  private:
-    [[maybe_unused]]
-    cat::uint1 _[23];
+ private:
+   [[maybe_unused]]
+   cat::uint1 _[23];
 
-  public:
-    cat::uint4 full_sequence;
+ public:
+   cat::uint4 full_sequence;
 };
 
 // TODO: Make this a span.
 struct io_virtualization {
-    void* p_base;
-    cat::iword length;
+   void* p_base;
+   cat::iword length;
 };
 
 // Every X client request begins with an `x11::client_request_header`.
 struct client_request_header {
-    operation_code operation;
-    // `message_length` represents a multiple of four bytes.
-    cat::uint2 message_length;
+   operation_code operation;
+   // `message_length` represents a multiple of four bytes.
+   cat::uint2 message_length;
 };
 
 // Every X server reply begins with an `x11::server_reply_header`.
 struct server_reply_header {
-    enum class success_code_type : unsigned char {
-        failure = 0,
-        success = 1
-    } success_code;
+   enum class success_code_type : unsigned char {
+      failure = 0,
+      success = 1
+   } success_code;
 
-  private:
-    [[maybe_unused]]
-    cat::int1 _;
+ private:
+   [[maybe_unused]]
+   cat::int1 _;
 
-  public:
-    // This field is only initialized if `success_code_type` is `failed`.
-    cat::array<cat::uint2, 2u> x_version;
-    // `message_length` represents a multiple of four bytes.
-    cat::uint2 message_length;
+ public:
+   // This field is only initialized if `success_code_type` is `failed`.
+   cat::array<cat::uint2, 2u> x_version;
+   // `message_length` represents a multiple of four bytes.
+   cat::uint2 message_length;
 };
 
 // This packet is used to initiate a connection handshake with an X server.
 struct connection_request_info {
-    char endianness = cat::is_target_little_endian ? 'l' : 'B';
+   char endianness = cat::is_target_little_endian ? 'l' : 'B';
 
-  private:
-    [[maybe_unused]]
-    cat::int1 _;
+ private:
+   [[maybe_unused]]
+   cat::int1 _;
 
-  public:
-    // This should almost always be `{11, 0}`.
-    cat::array<cat::uint2, 2u> x_version = {static_cast<unsigned char>(11),
-                                            static_cast<unsigned char>(0)};
-    // No explicit protocol is specified if this is `0`.
-    cat::uint2 authorization_protocol_length = static_cast<unsigned char>(0);
-    // No explicit protocol is specified if this is `0`.
-    cat::uint2 authorization_data_length = static_cast<unsigned char>(0);
+ public:
+   // This should almost always be `{11, 0}`.
+   cat::array<cat::uint2, 2u> x_version = {static_cast<unsigned char>(11),
+                                           static_cast<unsigned char>(0)};
+   // No explicit protocol is specified if this is `0`.
+   cat::uint2 authorization_protocol_length = static_cast<unsigned char>(0);
+   // No explicit protocol is specified if this is `0`.
+   cat::uint2 authorization_data_length = static_cast<unsigned char>(0);
 
-  private:
-    [[maybe_unused]]
-    cat::int2 _;
+ private:
+   [[maybe_unused]]
+   cat::int2 _;
 };
 
 struct connection_response_info {
-    // The version of an X server that has been connected to.
-    cat::uint4 release_number;
-    // TODO: These should be bitsets.
-    cat::uint4 resource_id_base, resource_id_mask;
-    cat::uint4 motion_buffer_size;
-    // Length of the X server's name.
-    cat::uint2 vendor_string_length;
-    // Maximum length of a request that this server can handle.
-    cat::uint2 request_maximum_length;
-    // The number of root windows hosted by this server. These are transmitted
-    // as `root_window_packet`s imillimetersediately after the pixel map
-    // formats. This can determine the number of screens held by the server.
-    cat::uint1 root_windows_count;
-    // The number of pixel map formats available for this server. These are
-    // transmitted as `pixel_map_format_packet`s imillimetersediately after this
-    // struct's data.
-    cat::uint1 pixel_map_formats_count;
-    // Endianness of images, specified by the server.
-    cat::uint1 image_endianness;
-    // The leftmost bit in the bitmap is either the least significant or most
-    // significant bit in the scanline unit, as given by `bitmap_order`.
-    cat::uint1 bitmap_endianness;
-    // These will be `8`, `16`, or `32`.
-    cat::uint1 scanline_unit, scanline_padding;
-    // This is the smallest key code the server will transmit.
-    key_code keycode_minimum;
-    // This is the largest key code the server will transmit.
-    key_code keycode_maximum;
+   // The version of an X server that has been connected to.
+   cat::uint4 release_number;
+   // TODO: These should be bitsets.
+   cat::uint4 resource_id_base, resource_id_mask;
+   cat::uint4 motion_buffer_size;
+   // Length of the X server's name.
+   cat::uint2 vendor_string_length;
+   // Maximum length of a request that this server can handle.
+   cat::uint2 request_maximum_length;
+   // The number of root windows hosted by this server. These are transmitted
+   // as `root_window_packet`s imillimetersediately after the pixel map
+   // formats. This can determine the number of screens held by the server.
+   cat::uint1 root_windows_count;
+   // The number of pixel map formats available for this server. These are
+   // transmitted as `pixel_map_format_packet`s imillimetersediately after this
+   // struct's data.
+   cat::uint1 pixel_map_formats_count;
+   // Endianness of images, specified by the server.
+   cat::uint1 image_endianness;
+   // The leftmost bit in the bitmap is either the least significant or most
+   // significant bit in the scanline unit, as given by `bitmap_order`.
+   cat::uint1 bitmap_endianness;
+   // These will be `8`, `16`, or `32`.
+   cat::uint1 scanline_unit, scanline_padding;
+   // This is the smallest key code the server will transmit.
+   key_code keycode_minimum;
+   // This is the largest key code the server will transmit.
+   key_code keycode_maximum;
 
-  private:
-    [[maybe_unused]]
-    cat::int4 _;
+ private:
+   [[maybe_unused]]
+   cat::int4 _;
 };
 
 struct pixel_map_format_packet {
-    cat::uint1 color_depth;
-    cat::uint1 bits_per_pixel;
-    cat::uint1 scanline_padding;
+   cat::uint1 color_depth;
+   cat::uint1 bits_per_pixel;
+   cat::uint1 scanline_padding;
 
-  private:
-    [[maybe_unused]]
-    cat::uint1 _[5];
+ private:
+   [[maybe_unused]]
+   cat::uint1 _[5];
 };
 
 // There is one root window per screen, so multiple `root_window_packet`s will
 // be recieved if there are multiple screens.
 struct root_window_packet {
-    window_resource window_id;
-    cat::uint4 default_colormap;
-    cat::uint4 white_pixel, black_pixel;
-    cat::uint4 input_mask;
-    // The window's dimensions in pixels.
-    cat::uint2 width_pixels, height_pixels;
-    // The window's dimensions in millimeters.
-    cat::uint2 width_millimeters, height_millimeters;
-    cat::uint2 minimum_installed_maps, maximum_installed_maps;
-    cat::uint4 root_visual_id;
-    cat::uint1 backing_store_state;
-    cat::uint1 save_unders;
-    cat::uint1 root_depth;
-    // The number of `depth_packet`s transmitted imillimetersediately after this
-    // packet.
-    cat::uint1 depths_count;
+   window_resource window_id;
+   cat::uint4 default_colormap;
+   cat::uint4 white_pixel, black_pixel;
+   cat::uint4 input_mask;
+   // The window's dimensions in pixels.
+   cat::uint2 width_pixels, height_pixels;
+   // The window's dimensions in millimeters.
+   cat::uint2 width_millimeters, height_millimeters;
+   cat::uint2 minimum_installed_maps, maximum_installed_maps;
+   cat::uint4 root_visual_id;
+   cat::uint1 backing_store_state;
+   cat::uint1 save_unders;
+   cat::uint1 root_depth;
+   // The number of `depth_packet`s transmitted imillimetersediately after this
+   // packet.
+   cat::uint1 depths_count;
 };
 
 struct depth_packet {
-    cat::uint1 depth;
+   cat::uint1 depth;
 
-  private:
-    [[maybe_unused]]
-    cat::uint1 _;
+ private:
+   [[maybe_unused]]
+   cat::uint1 _;
 
-  public:
-    // The number of `visual_packet`s transmitted imillimetersediately after
-    // this packet.
-    cat::uint2 visuals_count;
+ public:
+   // The number of `visual_packet`s transmitted imillimetersediately after
+   // this packet.
+   cat::uint2 visuals_count;
 
-  private:
-    [[maybe_unused]]
-    cat::uint4 _;
+ private:
+   [[maybe_unused]]
+   cat::uint4 _;
 };
 
 struct visual_packet {
-    cat::uint1 group;
-    cat::uint1 bits_per_rgb;
-    cat::uint2 colormap_entries;
-    cat::uint4 mask_red, mask_green, mask_blue;
+   cat::uint1 group;
+   cat::uint1 bits_per_rgb;
+   cat::uint2 colormap_entries;
+   cat::uint4 mask_red, mask_green, mask_blue;
 
-  private:
-    [[maybe_unused]]
-    cat::uint4 _;
+ private:
+   [[maybe_unused]]
+   cat::uint4 _;
 };
 
 struct connection {
-    nix::file_descriptor socket_descriptor;
-    x11::server_reply_header header;
-    x11::connection_response_info* p_setup;
-    // TODO: A `p_vendor_name` could go here. Consider it?
-    x11::pixel_map_format_packet* p_pixel_map_formats;
-    x11::root_window_packet* p_root_windows;
-    x11::depth_packet* p_depths;
-    x11::visual_packet* p_visuals;
+   nix::file_descriptor socket_descriptor;
+   x11::server_reply_header header;
+   x11::connection_response_info* p_setup;
+   // TODO: A `p_vendor_name` could go here. Consider it?
+   x11::pixel_map_format_packet* p_pixel_map_formats;
+   x11::root_window_packet* p_root_windows;
+   x11::depth_packet* p_depths;
+   x11::visual_packet* p_visuals;
 };
 
 // TODO: Propagate errors instead of panicking.
 auto
 handshake(cat::is_allocator auto& allocator,
           cat::socket_unix<cat::socket_type::stream>& socket)
-    -> cat::maybe<x11::connection> {
-    x11::connection x_connection{};
+   -> cat::maybe<x11::connection> {
+   x11::connection x_connection{};
 
-    // Send a request with default-initialized fields.
-    socket.send_struct(x11::connection_request_info()).or_exit();
+   // Send a request with default-initialized fields.
+   socket.send_struct(x11::connection_request_info()).or_exit();
 
-    x_connection.socket_descriptor = socket.descriptor;
-    // TODO: Is the return of `.recieve` important here?
-    auto _ = socket.recieve(&x_connection.header, ssizeof(x_connection.header))
-                 .or_exit();
+   x_connection.socket_descriptor = socket.descriptor;
+   // TODO: Is the return of `.recieve` important here?
+   auto _ = socket.recieve(&x_connection.header, ssizeof(x_connection.header))
+               .or_exit();
 
-    // TODO: This will fail if Xauth is enabled. This must handle X11 cookies.
-    if (x_connection.header.success_code ==
-        x11::server_reply_header::success_code_type::failure) {
-        // return Failure(x_connection.header.success_code);
-        return cat::nullopt;
-    }
+   // TODO: This will fail if Xauth is enabled. This must handle X11 cookies.
+   if (x_connection.header.success_code
+       == x11::server_reply_header::success_code_type::failure) {
+      // return Failure(x_connection.header.success_code);
+      return cat::nullopt;
+   }
 
-    // A dynamic allocation must be made because the total size of all
-    // recieved packets is unknown and potentially a very large amount.
-    // TODO: Deallocate this somehow.
-    auto memory = prop(allocator.template alloc_multi<connection_response_info>(
-        // TODO: Remove `.raw`.
-        x_connection.header.message_length.raw * 4));
+   // A dynamic allocation must be made because the total size of all
+   // recieved packets is unknown and potentially a very large amount.
+   // TODO: Deallocate this somehow.
+   auto memory = prop(allocator.template alloc_multi<connection_response_info>(
+      // TODO: Remove `.raw`.
+      x_connection.header.message_length.raw * 4));
 
-    x_connection.p_setup = memory.data();
+   x_connection.p_setup = memory.data();
 
-    // TODO: Remove `raw`.
-    // TODO: Is the return of `.recieve` important here?
-    auto _ = socket
-                 .recieve(x_connection.p_setup,
-                          x_connection.header.message_length.raw * 4)
-                 .or_exit();
+   // TODO: Remove `raw`.
+   // TODO: Is the return of `.recieve` important here?
+   auto _ = socket
+               .recieve(x_connection.p_setup,
+                        x_connection.header.message_length.raw * 4)
+               .or_exit();
 
-    // Copy pointers to that recieved data from the allocated buffer into
-    // `connection`.
-    // TODO: Use `intptr`.
-    char* p_iterator = static_cast<char*>(static_cast<void*>(
-        // TODO: Fix `cat::arithmetic` so that these parentheses around
-        // `(sizeof() + uint2)` are not required.
-        x_connection.p_setup + (sizeof(x11::connection_response_info)
-                                // For now, skip past the vendor name string.
-                                + x_connection.p_setup->vendor_string_length)));
+   // Copy pointers to that recieved data from the allocated buffer into
+   // `connection`.
+   // TODO: Use `intptr`.
+   char* p_iterator = static_cast<char*>(static_cast<void*>(
+      // TODO: Fix `cat::arithmetic` so that these parentheses around
+      // `(sizeof() + uint2)` are not required.
+      x_connection.p_setup
+      + (sizeof(x11::connection_response_info)
+         // For now, skip past the vendor name string.
+         + x_connection.p_setup->vendor_string_length)));
 
-    x_connection.p_pixel_map_formats =
-        static_cast<x11::pixel_map_format_packet*>(
-            static_cast<void*>(p_iterator));
-    p_iterator += sizeof(x11::pixel_map_format_packet) *
-                  x_connection.p_setup->pixel_map_formats_count.raw;
+   x_connection.p_pixel_map_formats =
+      static_cast<x11::pixel_map_format_packet*>(
+         static_cast<void*>(p_iterator));
+   p_iterator += sizeof(x11::pixel_map_format_packet)
+                 * x_connection.p_setup->pixel_map_formats_count.raw;
 
-    x_connection.p_root_windows =
-        static_cast<x11::root_window_packet*>(static_cast<void*>(p_iterator));
-    p_iterator += sizeof(x11::root_window_packet) *
-                  x_connection.p_setup->root_windows_count.raw;
+   x_connection.p_root_windows =
+      static_cast<x11::root_window_packet*>(static_cast<void*>(p_iterator));
+   p_iterator += sizeof(x11::root_window_packet)
+                 * x_connection.p_setup->root_windows_count.raw;
 
-    x_connection.p_depths =
-        static_cast<x11::depth_packet*>(static_cast<void*>(p_iterator));
-    p_iterator += sizeof(x11::depth_packet);
+   x_connection.p_depths =
+      static_cast<x11::depth_packet*>(static_cast<void*>(p_iterator));
+   p_iterator += sizeof(x11::depth_packet);
 
-    x_connection.p_visuals =
-        static_cast<x11::visual_packet*>(static_cast<void*>(p_iterator));
+   x_connection.p_visuals =
+      static_cast<x11::visual_packet*>(static_cast<void*>(p_iterator));
 
-    return x_connection;
+   return x_connection;
 }
 
 // TODO: Improve error handling. Union X11 errors and Linux errors.
 // Attempt to connect to an X server over local sockets.
 auto
 initiate_connection(cat::is_allocator auto& allocator)
-    -> cat::maybe<x11::connection> {
-    cat::socket_unix<cat::socket_type::stream> socket;
-    socket.path_name = x11::socket_path;
+   -> cat::maybe<x11::connection> {
+   cat::socket_unix<cat::socket_type::stream> socket;
+   socket.path_name = x11::socket_path;
 
-    cat::maybe result_1 = socket.create();
-    if (!result_1.has_value()) {
-        return cat::nullopt;
-    }
+   cat::maybe result_1 = socket.create();
+   if (!result_1.has_value()) {
+      return cat::nullopt;
+   }
 
-    cat::maybe result_2 = socket.connect();
-    if (!result_2.has_value()) {
-        return cat::nullopt;
-    }
+   cat::maybe result_2 = socket.connect();
+   if (!result_2.has_value()) {
+      return cat::nullopt;
+   }
 
-    return x11::handshake(allocator, socket);
+   return x11::handshake(allocator, socket);
 }
 
 struct create_window_request_info {
-    client_request_header header = {
-        .operation = operation_code::create_window,
-        .message_length = static_cast<unsigned short>(
-            sizeof(create_window_request_info) / 4)};
+   client_request_header header = {
+      .operation = operation_code::create_window,
+      .message_length =
+         static_cast<unsigned short>(sizeof(create_window_request_info) / 4)};
 
-    cat::uint1 window_depth;
-    window_resource window_id, parent_id;
-    cat::int2 x, y;
-    cat::uint2 width, height, border_thickness;
+   cat::uint1 window_depth;
+   window_resource window_id, parent_id;
+   cat::int2 x, y;
+   cat::uint2 width, height, border_thickness;
 
-    enum class window_class_type : unsigned char {
-        input_output = 0,
-        input_only = 1,
-        copy_from_parent = 2
-    } window_class;
+   enum class window_class_type : unsigned char {
+      input_output = 0,
+      input_only = 1,
+      copy_from_parent = 2
+   } window_class;
 
-    cat::uint4 visual_resource_id;
-    cat::uint4 value_mask;  // TODO: Use a `cat::bitset`.
-                            // TODO: Confirm that this field should exist.
-    cat::uint4 const* p_values;
+   cat::uint4 visual_resource_id;
+   cat::uint4 value_mask;  // TODO: Use a `cat::bitset`.
+                           // TODO: Confirm that this field should exist.
+   cat::uint4 const* p_values;
 };
 
 }  // namespace x11

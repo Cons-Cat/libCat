@@ -11,10 +11,10 @@ constexpr void
 poison_memory_region([[maybe_unused]] T const volatile* p_address,
                      [[maybe_unused]] cat::uword size) {
 #ifdef __SANITIZE_ADDRESS__
-    if !consteval {
-        __asan_poison_memory_region(
-            reinterpret_cast<void const volatile*>(p_address), size);
-    }
+   if !consteval {
+      __asan_poison_memory_region(
+         reinterpret_cast<void const volatile*>(p_address), size);
+   }
 #endif
 }
 
@@ -23,10 +23,10 @@ constexpr void
 unpoison_memory_region([[maybe_unused]] T const volatile* p_address,
                        [[maybe_unused]] cat::uword size) {
 #ifdef __SANITIZE_ADDRESS__
-    if !consteval {
-        __asan_unpoison_memory_region(
-            reinterpret_cast<void const volatile*>(p_address), size);
-    }
+   if !consteval {
+      __asan_unpoison_memory_region(
+         reinterpret_cast<void const volatile*>(p_address), size);
+   }
 #endif
 }
 

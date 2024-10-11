@@ -23,131 +23,131 @@ struct arithmetic_ptr;
 // qualifiers.
 
 namespace detail {
-    template <typename T>
-    struct make_signed_trait;
+template <typename T>
+struct make_signed_trait;
 
-    template <>
-    struct make_signed_trait<char> {
-        using type = signed char;
-    };
+template <>
+struct make_signed_trait<char> {
+   using type = signed char;
+};
 
-    template <>
-    struct make_signed_trait<signed char> {
-        using type = signed char;
-    };
+template <>
+struct make_signed_trait<signed char> {
+   using type = signed char;
+};
 
-    template <>
-    struct make_signed_trait<unsigned char> {
-        using type = signed char;
-    };
+template <>
+struct make_signed_trait<unsigned char> {
+   using type = signed char;
+};
 
-    template <>
-    struct make_signed_trait<signed short> {
-        using type = signed short;
-    };
+template <>
+struct make_signed_trait<signed short> {
+   using type = signed short;
+};
 
-    template <>
-    struct make_signed_trait<unsigned short> {
-        using type = signed short;
-    };
+template <>
+struct make_signed_trait<unsigned short> {
+   using type = signed short;
+};
 
-    template <>
-    struct make_signed_trait<signed int> {
-        using type = signed int;
-    };
+template <>
+struct make_signed_trait<signed int> {
+   using type = signed int;
+};
 
-    template <>
-    struct make_signed_trait<unsigned int> {
-        using type = signed int;
-    };
+template <>
+struct make_signed_trait<unsigned int> {
+   using type = signed int;
+};
 
-    template <>
-    struct make_signed_trait<signed long> {
-        using type = signed long;
-    };
+template <>
+struct make_signed_trait<signed long> {
+   using type = signed long;
+};
 
-    template <>
-    struct make_signed_trait<unsigned long> {
-        using type = signed long;
-    };
+template <>
+struct make_signed_trait<unsigned long> {
+   using type = signed long;
+};
 
-    template <>
-    struct make_signed_trait<signed long long> {
-        using type = signed long long;
-    };
+template <>
+struct make_signed_trait<signed long long> {
+   using type = signed long long;
+};
 
-    template <>
-    struct make_signed_trait<unsigned long long> {
-        using type = signed long long;
-    };
+template <>
+struct make_signed_trait<unsigned long long> {
+   using type = signed long long;
+};
 
-    template <typename T, auto policy>
-    struct make_signed_trait<arithmetic<T, policy>> {
-        using type = arithmetic<typename make_signed_trait<T>::type, policy>;
-    };
+template <typename T, auto policy>
+struct make_signed_trait<arithmetic<T, policy>> {
+   using type = arithmetic<typename make_signed_trait<T>::type, policy>;
+};
 }  // namespace detail
 
 template <typename T>
 using make_signed_type = detail::make_signed_trait<T>::type;
 
 namespace detail {
-    template <typename T>
-    struct make_unsigned_trait;
+template <typename T>
+struct make_unsigned_trait;
 
-    template <>
-    struct make_unsigned_trait<char> {
-        using type = unsigned char;
-    };
+template <>
+struct make_unsigned_trait<char> {
+   using type = unsigned char;
+};
 
-    template <>
-    struct make_unsigned_trait<signed char> {
-        using type = unsigned char;
-    };
+template <>
+struct make_unsigned_trait<signed char> {
+   using type = unsigned char;
+};
 
-    template <>
-    struct make_unsigned_trait<unsigned char> {
-        using type = unsigned char;
-    };
+template <>
+struct make_unsigned_trait<unsigned char> {
+   using type = unsigned char;
+};
 
-    template <>
-    struct make_unsigned_trait<signed short> {
-        using type = unsigned short;
-    };
+template <>
+struct make_unsigned_trait<signed short> {
+   using type = unsigned short;
+};
 
-    template <>
-    struct make_unsigned_trait<unsigned short> {
-        using type = unsigned short;
-    };
+template <>
+struct make_unsigned_trait<unsigned short> {
+   using type = unsigned short;
+};
 
-    template <>
-    struct make_unsigned_trait<signed int> {
-        using type = unsigned int;
-    };
+template <>
+struct make_unsigned_trait<signed int> {
+   using type = unsigned int;
+};
 
-    template <>
-    struct make_unsigned_trait<unsigned int> {
-        using type = unsigned int;
-    };
+template <>
+struct make_unsigned_trait<unsigned int> {
+   using type = unsigned int;
+};
 
-    template <>
-    struct make_unsigned_trait<signed long> {
-        using type = unsigned long;
-    };
+template <>
+struct make_unsigned_trait<signed long> {
+   using type = unsigned long;
+};
 
-    template <>
-    struct make_unsigned_trait<unsigned long> {
-        using type = unsigned long;
-    };
+template <>
+struct make_unsigned_trait<unsigned long> {
+   using type = unsigned long;
+};
 
-    template <>
-    struct make_unsigned_trait<signed long long> {
-        using type = unsigned long long;
-    };
+template <>
+struct make_unsigned_trait<signed long long> {
+   using type = unsigned long long;
+};
 
-    template <>
-    struct make_unsigned_trait<unsigned long long> {
-        using type = unsigned long long;
-    };
+template <>
+struct make_unsigned_trait<unsigned long long> {
+   using type = unsigned long long;
+};
 }  // namespace detail
 
 template <typename T>
@@ -155,102 +155,105 @@ using make_unsigned_type = detail::make_unsigned_trait<T>::type;
 
 template <typename T, auto policy>
 struct detail::make_unsigned_trait<arithmetic<T, policy>> {
-    using type = arithmetic<typename make_unsigned_trait<T>::type, policy>;
+   using type = arithmetic<typename make_unsigned_trait<T>::type, policy>;
 };
 
 template <auto policy>
 struct detail::make_unsigned_trait<index<policy>> {
-    using type = index<policy>;
+   using type = index<policy>;
 };
 
 namespace detail {
-    template <typename T, typename U = T&&>
-    constexpr auto declval_detail(signed int) -> U;
+template <typename T, typename U = T&&>
+constexpr auto
+declval_detail(signed int) -> U;
 
-    template <typename T>
-    constexpr auto declval_detail(signed long) -> T;
+template <typename T>
+constexpr auto
+declval_detail(signed long) -> T;
 }  // namespace detail
 
 template <typename T>
-auto declval() -> decltype(detail::declval_detail<T>(0));
+auto
+declval() -> decltype(detail::declval_detail<T>(0));
 
 template <typename T>
 using identity_type = T;
 
 namespace detail {
-    template <typename...>
-    using void_type = void;
+template <typename...>
+using void_type = void;
 
-    template <typename>
-    struct add_const_trait;
+template <typename>
+struct add_const_trait;
 
-    template <typename T>
-    struct add_const_trait {
-        using type = T const;
-    };
+template <typename T>
+struct add_const_trait {
+   using type = T const;
+};
 
-    template <typename T>
-    struct add_const_trait<T&> {
-        using type = T const&;
-    };
+template <typename T>
+struct add_const_trait<T&> {
+   using type = T const&;
+};
 
-    template <typename T>
-    struct add_const_trait<T volatile> {
-        using type = T const volatile;
-    };
+template <typename T>
+struct add_const_trait<T volatile> {
+   using type = T const volatile;
+};
 
-    template <typename T>
-    struct add_const_trait<T&&> {
-        using type = T const&&;
-    };
+template <typename T>
+struct add_const_trait<T&&> {
+   using type = T const&&;
+};
 
-    template <typename T>
-    struct add_const_trait<T volatile&> {
-        using type = T const volatile&;
-    };
+template <typename T>
+struct add_const_trait<T volatile&> {
+   using type = T const volatile&;
+};
 
-    template <typename T>
-    struct add_const_trait<T volatile&&> {
-        using type = T const volatile&&;
-    };
+template <typename T>
+struct add_const_trait<T volatile&&> {
+   using type = T const volatile&&;
+};
 }  // namespace detail
 
 template <typename T>
 using add_const = detail::add_const_trait<T>::type;
 
 namespace detail {
-    template <typename>
-    struct add_volatile_trait;
+template <typename>
+struct add_volatile_trait;
 
-    template <typename T>
-    struct add_volatile_trait {
-        using type = T volatile;
-    };
+template <typename T>
+struct add_volatile_trait {
+   using type = T volatile;
+};
 
-    template <typename T>
-    struct add_volatile_trait<T&> {
-        using type = T volatile&;
-    };
+template <typename T>
+struct add_volatile_trait<T&> {
+   using type = T volatile&;
+};
 
-    template <typename T>
-    struct add_volatile_trait<T&&> {
-        using type = T volatile&&;
-    };
+template <typename T>
+struct add_volatile_trait<T&&> {
+   using type = T volatile&&;
+};
 
-    template <typename T>
-    struct add_volatile_trait<T const> {
-        using type = T const volatile;
-    };
+template <typename T>
+struct add_volatile_trait<T const> {
+   using type = T const volatile;
+};
 
-    template <typename T>
-    struct add_volatile_trait<T const&> {
-        using type = T const volatile&;
-    };
+template <typename T>
+struct add_volatile_trait<T const&> {
+   using type = T const volatile&;
+};
 
-    template <typename T>
-    struct add_volatile_trait<T const&&> {
-        using type = T const volatile&&;
-    };
+template <typename T>
+struct add_volatile_trait<T const&&> {
+   using type = T const volatile&&;
+};
 }  // namespace detail
 
 template <typename T>
@@ -265,15 +268,15 @@ template <typename T>
 using remove_const = __remove_const(T);
 #else
 namespace detail {
-    template <typename T>
-    struct remove_const_trait {
-        using type = T;
-    };
+template <typename T>
+struct remove_const_trait {
+   using type = T;
+};
 
-    template <typename T>
-    struct remove_const_trait<T const> {
-        using type = T;
-    };
+template <typename T>
+struct remove_const_trait<T const> {
+   using type = T;
+};
 }  // namespace detail
 
 template <typename T>
@@ -286,15 +289,15 @@ template <typename T>
 using remove_volatile = __remove_volatile(T);
 #else
 namespace detail {
-    template <typename T>
-    struct remove_volatile_trait {
-        using type = T;
-    };
+template <typename T>
+struct remove_volatile_trait {
+   using type = T;
+};
 
-    template <typename T>
-    struct remove_volatile_trait<T volatile> {
-        using type = T;
-    };
+template <typename T>
+struct remove_volatile_trait<T volatile> {
+   using type = T;
+};
 }  // namespace detail
 
 template <typename T>
@@ -307,10 +310,10 @@ using remove_cv = __remove_cv(T);
 #else
 // GCC cannot use type trait intrinsics directly inside type aliases.
 namespace detail {
-    template <typename T>
-    struct remove_cv_trait {
-        using type = __remove_cv(T);
-    };
+template <typename T>
+struct remove_cv_trait {
+   using type = __remove_cv(T);
+};
 }  // namespace detail
 
 template <typename T>
@@ -323,10 +326,10 @@ using remove_reference = __remove_reference_t(T);
 #else
 // GCC cannot use type trait intrinsics directly inside type aliases.
 namespace detail {
-    template <typename T>
-    struct remove_reference_trait {
-        using type = __remove_reference(T);
-    };
+template <typename T>
+struct remove_reference_trait {
+   using type = __remove_reference(T);
+};
 }  // namespace detail
 
 template <typename T>
@@ -342,10 +345,10 @@ using remove_cvref = __remove_cvref(T);
 #else
 // GCC cannot use type trait intrinsics directly inside type aliases.
 namespace detail {
-    template <typename T>
-    struct remove_cvref_trait {
-        using type = __remove_cvref(T);
-    };
+template <typename T>
+struct remove_cvref_trait {
+   using type = __remove_cvref(T);
+};
 }  // namespace detail
 
 template <typename T>
@@ -358,10 +361,10 @@ using remove_pointer = __remove_pointer(T);
 #else
 // GCC cannot use type trait intrinsics directly inside type aliases.
 namespace detail {
-    template <typename T>
-    struct remove_pointer_trait {
-        using type = __remove_pointer(T);
-    };
+template <typename T>
+struct remove_pointer_trait {
+   using type = __remove_pointer(T);
+};
 }  // namespace detail
 
 template <typename T>
@@ -370,13 +373,13 @@ using remove_pointer = detail::remove_pointer_trait<T>::type;
 
 template <auto constant_value>
 struct constant {
-    static constexpr auto value = constant_value;
-    using type = decltype(constant_value);
+   static constexpr auto value = constant_value;
+   using type = decltype(constant_value);
 
-    consteval
-    operator type(this auto&& self) {
-        return fwd(self).value;
-    }
+   consteval
+   operator type(this auto&& self) {
+      return fwd(self).value;
+   }
 };
 
 template <auto value>
@@ -390,15 +393,15 @@ inline constexpr true_trait true_v = true_trait();
 inline constexpr false_trait false_v = false_trait();
 
 namespace detail {
-    template <bool, typename T, typename U>
-    struct conditional_trait {
-        using type = T;
-    };
+template <bool, typename T, typename U>
+struct conditional_trait {
+   using type = T;
+};
 
-    template <typename T, typename U>
-    struct conditional_trait<false, T, U> {
-        using type = U;
-    };
+template <typename T, typename U>
+struct conditional_trait<false, T, U> {
+   using type = U;
+};
 }  // namespace detail
 
 template <bool condition, typename T, typename U>
@@ -425,57 +428,56 @@ concept is_convertible = __is_convertible(from_type, to_type);
 // `is_implicitly_convertible` is more relaxed than `is_convertible`.
 template <typename from_type, typename to_type>
 concept is_implicitly_convertible =
-    __is_assignable(to_type, from_type) ||
-    __is_constructible(to_type, from_type) ||
-    __is_convertible(from_type, to_type) || __is_same(to_type, from_type);
+   __is_assignable(to_type, from_type) || __is_constructible(to_type, from_type)
+   || __is_convertible(from_type, to_type) || __is_same(to_type, from_type);
 
 // TODO: Add `__is_nothrow_convertible()` from GCC 13.
 
 namespace detail {
-    template <typename T>
-    concept is_boolean_testable_detail = is_convertible<T, bool>;
+template <typename T>
+concept is_boolean_testable_detail = is_convertible<T, bool>;
 }
 
 // boolean_testable is adapted from the exposition-only concept
 // boolean-testable.
 template <typename T>
-concept is_boolean_testable = detail::is_boolean_testable_detail<T> &&
-                              requires(T&& b) {
-                                  {
-                                      !forward<T>(b)
-                                  } -> detail::is_boolean_testable_detail;
-                              };
+concept is_boolean_testable = detail::is_boolean_testable_detail<T>
+                              && requires(T&& b) {
+                                    {
+                                       !forward<T>(b)
+                                    } -> detail::is_boolean_testable_detail;
+                                 };
 
 // `weakly_equality_comparable_with` is adapted from the exposition-only
 // concept `__weakly_equality_comparable_with`.
 namespace detail {
-    template <typename T, typename U>
-    concept is_weakly_equality_comparable_with =
-        requires(remove_reference<T> const& t, remove_reference<U> const& u) {
-            { t == u } -> is_boolean_testable_detail;
-            { t != u } -> is_boolean_testable_detail;
-            { u == t } -> is_boolean_testable_detail;
-            { u != t } -> is_boolean_testable_detail;
-        };
+template <typename T, typename U>
+concept is_weakly_equality_comparable_with =
+   requires(remove_reference<T> const& t, remove_reference<U> const& u) {
+      { t == u } -> is_boolean_testable_detail;
+      { t != u } -> is_boolean_testable_detail;
+      { u == t } -> is_boolean_testable_detail;
+      { u != t } -> is_boolean_testable_detail;
+   };
 }  // namespace detail
 
 template <typename T>
 concept is_equality_comparable =
-    detail::is_weakly_equality_comparable_with<T, T>;
+   detail::is_weakly_equality_comparable_with<T, T>;
 
 namespace detail {
-    template <typename T, typename U>
-    concept is_partially_ordered_with =
-        requires(remove_reference<T> const& t, remove_reference<U> const& u) {
-            { t < u } -> is_boolean_testable;
-            { t > u } -> is_boolean_testable;
-            { t <= u } -> is_boolean_testable;
-            { t >= u } -> is_boolean_testable;
-            { u < t } -> is_boolean_testable;
-            { u > t } -> is_boolean_testable;
-            { u <= t } -> is_boolean_testable;
-            { u >= t } -> is_boolean_testable;
-        };
+template <typename T, typename U>
+concept is_partially_ordered_with =
+   requires(remove_reference<T> const& t, remove_reference<U> const& u) {
+      { t < u } -> is_boolean_testable;
+      { t > u } -> is_boolean_testable;
+      { t <= u } -> is_boolean_testable;
+      { t >= u } -> is_boolean_testable;
+      { u < t } -> is_boolean_testable;
+      { u > t } -> is_boolean_testable;
+      { u <= t } -> is_boolean_testable;
+      { u >= t } -> is_boolean_testable;
+   };
 }  // namespace detail
 
 template <typename T, typename U = T>
@@ -507,9 +509,9 @@ concept is_class = __is_class(T);
 
 template <typename T>
 concept is_referenceable = requires {
-                               // Try to substitute a `T&`. If that is
-                               // well-formed, this always holds true.
-                               __is_same(T&, T&);
+                              // Try to substitute a `T&`. If that is
+                              // well-formed, this always holds true.
+                              __is_same(T&, T&);
                            };
 
 template <typename T>
@@ -522,16 +524,16 @@ template <template <typename...> typename Template, typename... Args>
 inline constexpr bool is_specialization<Template<Args...>, Template> = true;
 
 namespace detail {
-    // TODO: Ignore reference in value categories here.
-    // TODO: Include halfs, `_Float16`, `__fp16`, `__bf16`, etc.
-    template <typename T>
-    inline constexpr bool is_floating_point_detail =
-        __is_same(T, float) || __is_same(T, double) ||
-        __is_same(T, long double) || __is_same(T, __float128);
+// TODO: Ignore reference in value categories here.
+// TODO: Include halfs, `_Float16`, `__fp16`, `__bf16`, etc.
+template <typename T>
+inline constexpr bool is_floating_point_detail =
+   __is_same(T, float) || __is_same(T, double) || __is_same(T, long double)
+   || __is_same(T, __float128);
 
-    template <typename T, auto policy>
-    inline constexpr bool is_floating_point_detail<arithmetic<T, policy>> =
-        is_floating_point_detail<T>;
+template <typename T, auto policy>
+inline constexpr bool is_floating_point_detail<arithmetic<T, policy>> =
+   is_floating_point_detail<T>;
 }  // namespace detail
 
 template <typename T>
@@ -539,29 +541,29 @@ concept is_floating_point = detail::is_floating_point_detail<remove_cv<T>>;
 
 template <is_floating_point T>
 struct detail::make_signed_trait<T> {
-    using type = T;
+   using type = T;
 };
 
 namespace detail {
-    template <typename T>
-    inline constexpr bool is_integral_detail =
-        __is_same(T, char) || __is_same(T, signed char) ||
-        __is_same(T, unsigned char) || __is_same(T, bool) ||
-        __is_same(T, signed short) || __is_same(T, unsigned short) ||
-        __is_same(T, signed int) || __is_same(T, unsigned int) ||
-        __is_same(T, signed long) || __is_same(T, unsigned long) ||
-        __is_same(T, signed long long) || __is_same(T, unsigned long long);
+template <typename T>
+inline constexpr bool is_integral_detail =
+   __is_same(T, char) || __is_same(T, signed char)
+   || __is_same(T, unsigned char) || __is_same(T, bool)
+   || __is_same(T, signed short) || __is_same(T, unsigned short)
+   || __is_same(T, signed int) || __is_same(T, unsigned int)
+   || __is_same(T, signed long) || __is_same(T, unsigned long)
+   || __is_same(T, signed long long) || __is_same(T, unsigned long long);
 
-    template <typename T, auto policy>
-    inline constexpr bool is_integral_detail<arithmetic<T, policy>> =
-        is_integral_detail<T>;
+template <typename T, auto policy>
+inline constexpr bool is_integral_detail<arithmetic<T, policy>> =
+   is_integral_detail<T>;
 
-    template <typename T, typename storage_type, auto policy>
-    inline constexpr bool
-        is_integral_detail<arithmetic_ptr<T, storage_type, policy>> = true;
+template <typename T, typename storage_type, auto policy>
+inline constexpr bool
+   is_integral_detail<arithmetic_ptr<T, storage_type, policy>> = true;
 
-    // Another partial specialization of `is_integral_detail` for `idx` is
-    // defined in `<cat/arithmetic>`.
+// Another partial specialization of `is_integral_detail` for `idx` is
+// defined in `<cat/arithmetic>`.
 }  // namespace detail
 
 template <typename T>
@@ -569,27 +571,27 @@ concept is_integral = detail::is_integral_detail<remove_cv<T>>;
 
 template <typename T>
 concept is_bool =
-    __is_same(remove_cv<T>, bool) || __is_same(remove_cv<T>, bool2) ||
-    __is_same(remove_cv<T>, bool4);
+   __is_same(remove_cv<T>, bool) || __is_same(remove_cv<T>, bool2)
+   || __is_same(remove_cv<T>, bool4);
 
 template <typename T>
 concept is_arithmetic = is_integral<T> || is_floating_point<T>;
 
 namespace detail {
-    template <typename...>
-    inline constexpr bool is_signed_detail = false;
+template <typename...>
+inline constexpr bool is_signed_detail = false;
 
-    // Special-casing the `is_signed` trait for `arithmetic` is necessary to
-    // prevent a circular template instantiation.
-    template <typename T, overflow_policies policy>
-    inline constexpr bool is_signed_detail<arithmetic<T, policy>> =
-        is_signed_detail<T>;
+// Special-casing the `is_signed` trait for `arithmetic` is necessary to
+// prevent a circular template instantiation.
+template <typename T, overflow_policies policy>
+inline constexpr bool is_signed_detail<arithmetic<T, policy>> =
+   is_signed_detail<T>;
 
-    // Clang 19 rejects the `is_less_than_comparable` constraint here.
-    template <typename T>
-        requires(is_convertible<signed char, T>)
-    inline constexpr bool is_signed_detail<T> = constval<(
-        T(static_cast<signed char>(-1)) < T(static_cast<signed char>(0)))>;
+// Clang 19 rejects the `is_less_than_comparable` constraint here.
+template <typename T>
+   requires(is_convertible<signed char, T>)
+inline constexpr bool is_signed_detail<T> =
+   constval<(T(static_cast<signed char>(-1)) < T(static_cast<signed char>(0)))>;
 }  // namespace detail
 
 template <typename T>
@@ -617,9 +619,9 @@ concept is_const = __is_const(T);
 template <typename T>
 concept is_const_ref =
 #ifdef __clang__
-    __is_const(__remove_reference_t(T));
+   __is_const(__remove_reference_t(T));
 #else
-    __is_const(__remove_reference(T));
+   __is_const(__remove_reference(T));
 #endif
 
 template <typename T>
@@ -653,8 +655,8 @@ template <typename T>
 concept is_null_pointer = __is_same(remove_cv<T>, decltype(nullptr));
 
 template <typename T>
-concept is_scalar = is_arithmetic<T> || is_enum<T> || is_pointer<T> ||
-                    is_member_pointer<T> || is_null_pointer<T>;
+concept is_scalar = is_arithmetic<T> || is_enum<T> || is_pointer<T>
+                    || is_member_pointer<T> || is_null_pointer<T>;
 
 template <typename T>
 using add_pointer = __add_pointer(T);
@@ -687,32 +689,32 @@ using copy_volatile_from = conditional<is_volatile<remove_reference<from_type>>,
 
 template <typename from_type, typename to_type>
 using copy_ref_from =
-    conditional<is_lvalue_reference<from_type>,
-                // from_type is an l-value reference.
-                __add_lvalue_reference(remove_reference<to_type>),
-                conditional<is_rvalue_reference<from_type>,
-                            // from_type is an r-value reference.
-                            __add_rvalue_reference(remove_reference<to_type>),
-                            // from_type is not a reference.
-                            remove_reference<to_type>>>;
+   conditional<is_lvalue_reference<from_type>,
+               // from_type is an l-value reference.
+               __add_lvalue_reference(remove_reference<to_type>),
+               conditional<is_rvalue_reference<from_type>,
+                           // from_type is an r-value reference.
+                           __add_rvalue_reference(remove_reference<to_type>),
+                           // from_type is not a reference.
+                           remove_reference<to_type>>>;
 
 template <typename from_type, typename to_type>
 using copy_constref_from =
-    copy_ref_from<from_type, copy_const_from<from_type, to_type>>;
+   copy_ref_from<from_type, copy_const_from<from_type, to_type>>;
 
 template <typename from_type, typename to_type>
 using copy_cv_from =
-    copy_volatile_from<from_type, copy_const_from<from_type, to_type>>;
+   copy_volatile_from<from_type, copy_const_from<from_type, to_type>>;
 
 template <typename from_type, typename to_type>
 using copy_cvref_from =
-    copy_ref_from<from_type, copy_cv_from<from_type, to_type>>;
+   copy_ref_from<from_type, copy_cv_from<from_type, to_type>>;
 
 namespace detail {
-    template <typename T>
-    struct underlying_type_trait {
-        using type = __underlying_type(T);
-    };
+template <typename T>
+struct underlying_type_trait {
+   using type = __underlying_type(T);
+};
 }  // namespace detail
 
 // GCC cannot use type trait intrinsics directly inside type aliases.
@@ -762,11 +764,11 @@ concept is_constructible = __is_constructible(T, Args...);
 
 template <typename T, typename U>
 concept is_explicitly_constructible =
-    is_constructible<T, U> && !is_convertible<U, T>;
+   is_constructible<T, U> && !is_convertible<U, T>;
 
 template <typename T, typename U>
 concept is_implicitly_constructible =
-    is_constructible<T, U> && !is_explicitly_constructible<T, U>;
+   is_constructible<T, U> && !is_explicitly_constructible<T, U>;
 
 // `__is_trivially_constructible` is a GNU builtin.
 template <typename T, typename... Args>
@@ -777,14 +779,14 @@ concept is_default_constructible = requires { T(); };
 
 template <typename T>
 concept is_trivially_default_constructible =
-    is_default_constructible<T> && __is_trivially_constructible(T);
+   is_default_constructible<T> && __is_trivially_constructible(T);
 
 template <typename T>
 concept is_copy_constructible = __is_constructible(T, T const&);
 
 template <typename T>
 concept is_trivially_copy_constructible =
-    __is_trivially_constructible(T, T const&);
+   __is_trivially_constructible(T, T const&);
 
 template <typename T>
 concept is_move_constructible = __is_constructible(T, T&&);
@@ -801,9 +803,9 @@ concept is_destructible = requires { ~T(); };
 template <typename T>
 concept is_trivially_destructible =
 #if __has_builtin(__is_trivially_destructible)
-    __is_trivially_destructible(T);
+   __is_trivially_destructible(T);
 #elif __has_builtin(__has_trivial_destructor)
-    __has_trivial_destructor(T);
+   __has_trivial_destructor(T);
 #endif
 
 // Holds true if `declval<T>() = declval<U>()` is well-formed.
@@ -834,7 +836,7 @@ concept is_trivial = __is_trivial(T);
 template <typename S1, typename S2, typename M1, typename M2>
 constexpr auto
 is_corresponding_member(M1 S1::* member_1, M2 S2::* member_2) noexcept -> bool {
-    return __builtin_is_corresponding_member(member_1, member_2);
+   return __builtin_is_corresponding_member(member_1, member_2);
 }
 
 template <typename T, typename U>
@@ -843,7 +845,7 @@ concept is_layout_compatible = __is_layout_compatible(T, U);
 #if __has_builtin(__is_pointer_interconvertible_base_of)
 template <typename base_type, typename derived_type>
 concept is_pointer_interconvertible_base_of =
-    __is_pointer_interconvertible_base_of(base_type, derived_type);
+   __is_pointer_interconvertible_base_of(base_type, derived_type);
 #else
 #warning "No `__is_pointer_interconvertible_base_of`!"
 #endif
@@ -937,14 +939,14 @@ template <typename T>
 [[nodiscard]]
 constexpr auto
 move(T&& input) -> cat::remove_reference<T>&& {
-    return static_cast<cat::remove_reference<T>&&>(input);
+   return static_cast<cat::remove_reference<T>&&>(input);
 }
 
 template <typename T>
 [[nodiscard]]
 constexpr auto
 forward(cat::identity_type<T>& input) -> T&& {
-    return static_cast<T&&>(input);
+   return static_cast<T&&>(input);
 }
 
 }  // namespace std
@@ -958,35 +960,37 @@ using std::forward;
 using std::move;
 
 namespace detail {
-    constinit inline struct mover {
-        // Move a mutable l-value reference.
-        template <typename T>
-        [[nodiscard("A moved-from value should be consumed."),
-          gnu::always_inline, gnu::artificial]]
-        friend inline constexpr auto
-        operator*(mover, T& x) -> decltype(auto) {
-            return move(x);
-        }
+constinit inline struct mover {
+   // Move a mutable l-value reference.
+   template <typename T>
+   [[nodiscard("A moved-from value should be consumed."), gnu::always_inline,
+     gnu::artificial]]
+   friend inline constexpr auto
+   operator*(mover, T& x) -> decltype(auto) {
+      return move(x);
+   }
 
-        // Move an r-value reference.
-        template <is_rvalue_reference T>
-        [[nodiscard("A moved-from value should be consumed."),
-          gnu::always_inline, gnu::artificial]]
-        friend inline constexpr auto
-        operator*(mover, T&& x) -> T&& {
-            return static_cast<cat::remove_reference<T>&&>(x);
-        }
+   // Move an r-value reference.
+   template <is_rvalue_reference T>
+   [[nodiscard("A moved-from value should be consumed."), gnu::always_inline,
+     gnu::artificial]]
+   friend inline constexpr auto
+   operator*(mover, T&& x) -> T&& {
+      return static_cast<cat::remove_reference<T>&&>(x);
+   }
 
-        // Prevent moving an immutable l-value reference.
-        template <typename T>
-        friend constexpr auto operator*(mover, T const& x) =
-            delete("The `mov` macro cannot move a `const` qualifed operand. "
-                   "Either copy instead, or call `cat::move()`!");
+   // Prevent moving an immutable l-value reference.
+   template <typename T>
+   friend constexpr auto
+   operator*(mover, T const& x) =
+      delete("The `mov` macro cannot move a `const` qualifed operand. "
+             "Either copy instead, or call `cat::move()`!");
 
-        // Prevent redundant `mov mov value;` syntax.
-        friend constexpr void operator*(mover, mover) = delete(
-            "`mov mov ...` syntax is meaningless. Use `mov ...` instead!");
-    } mover;
+   // Prevent redundant `mov mov value;` syntax.
+   friend constexpr void
+   operator*(mover, mover) =
+      delete("`mov mov ...` syntax is meaningless. Use `mov ...` instead!");
+} mover;
 }  // namespace detail
 
 #define mov ::cat::detail::mover*
@@ -1003,35 +1007,37 @@ template <typename Function, typename... Args>
 concept is_invocable =
 // Clang 19 does not support `__is_invocable`.
 #if __has_builtin(__is_invocable)
-    __is_invocable(Function, Args...);
+   __is_invocable(Function, Args...);
 #else
-    requires(Function func, Args&&... args) { func(fwd(args)...); };
+   requires(Function func, Args&&... args) { func(fwd(args)...); };
 #endif
 
 template <typename Function, typename... Args>
 concept is_nothrow_invocable =
 // Clang 19 does not support `__is_nothrow_invocable`.
 #if __has_builtin(__is_nothrow_invocable)
-    __is_nothrow_invocable(Function, Args...);
+   __is_nothrow_invocable(Function, Args...);
 #else
-    // TODO: Properly implement `is_nothrow_invocable` for Clang.
-    is_invocable<Function, Args...>;
+   // TODO: Properly implement `is_nothrow_invocable` for Clang.
+   is_invocable<Function, Args...>;
 #endif
 
 // https://quuxplusone.github.io/blog/2019/02/06/arrow-proxy/
 template <typename reference_type>
 struct arrow_proxy {
-    reference_type reference;
+   reference_type reference;
 
-    auto
-    operator->() -> reference_type* {
-        return &reference;
-    }
+   auto
+   operator->() -> reference_type* {
+      return &reference;
+   }
 };
 
-consteval auto constant_evaluate(is_invocable auto value) -> decltype(auto);
+consteval auto
+constant_evaluate(is_invocable auto value) -> decltype(auto);
 
-consteval auto constant_evaluate(auto value) -> decltype(auto);
+consteval auto
+constant_evaluate(auto value) -> decltype(auto);
 
 template <typename T, typename U>
 concept is_narrow_convertible = requires() { U({declval<T>()}); };
@@ -1052,7 +1058,7 @@ inline constexpr bool is_trivially_relocatable = is_trivial<T>;
 // relocatability.
 template <typename T>
 inline constexpr bool is_trivially_relocatable<T const> =
-    is_trivially_relocatable<T>;
+   is_trivially_relocatable<T>;
 
 }  // namespace cat
 
@@ -1069,21 +1075,16 @@ namespace cat {
 
 template <typename T, typename U>
 concept has_common_reference_with =
-    is_same<common_reference<T, U>, common_reference<U, T>> &&
-    is_convertible<T, common_reference<T, U>> &&
-    is_convertible<U, common_reference<T, U>>;
+   is_same<common_reference<T, U>, common_reference<U, T>>
+   && is_convertible<T, common_reference<T, U>>
+   && is_convertible<U, common_reference<T, U>>;
 
 template <typename T, typename U>
 concept has_common_with =
-    is_same<common_type<T, U>, common_type<U, T>> &&
-    requires {
-        static_cast<common_type<T, U>>(declval<T>());
-        static_cast<common_type<T, U>>(declval<U>());
-    } &&
-    has_common_reference_with<add_lvalue_reference<T const>,
-                              add_lvalue_reference<U const>> &&
-    has_common_reference_with<add_lvalue_reference<common_type<T, U>>,
-                              common_reference<add_lvalue_reference<T const>,
-                                               add_lvalue_reference<U const>>>;
+   is_same<common_type<T, U>, common_type<U, T>>
+   && requires {
+         static_cast<common_type<T, U>>(declval<T>());
+         static_cast<common_type<T, U>>(declval<U>());
+      } && has_common_reference_with<add_lvalue_reference<T const>, add_lvalue_reference<U const>> && has_common_reference_with<add_lvalue_reference<common_type<T, U>>, common_reference<add_lvalue_reference<T const>, add_lvalue_reference<U const>>>;
 
 }  // namespace cat

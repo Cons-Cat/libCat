@@ -9,89 +9,89 @@ namespace cat {
 template <typename T>
 constexpr auto
 unconst(T const& value) -> T& {
-    return const_cast<T&>(value);
+   return const_cast<T&>(value);
 }
 
 template <typename T>
 constexpr auto
 unconst(T const* p_value) -> T* {
-    return const_cast<T*>(p_value);
+   return const_cast<T*>(p_value);
 }
 
 // Infer the length of a parameter pack from a function argument.
 template <typename... types>
 constexpr auto
 ssizeof_pack(types...) -> iword {
-    return make_signed(sizeof...(types));
+   return make_signed(sizeof...(types));
 }
 
 // Specify the length of a parameter pack in a template argument.
 template <typename... types>
 constexpr auto
 ssizeof_pack() -> iword {
-    return make_signed(sizeof...(types));
+   return make_signed(sizeof...(types));
 }
 
 constexpr auto
 salignof(auto const& anything) -> iword {
-    return iword{alignof(anything)};
+   return iword{alignof(anything)};
 }
 
 template <typename T>
 constexpr auto
 salignof() -> iword {
-    return iword{alignof(T)};
+   return iword{alignof(T)};
 }
 
 namespace detail {
-    template <typename T, iword index, iword current, T value, T... values>
-    constexpr auto
-    get_value_list_at() -> T {
-        if constexpr (current == index) {
-            return value;
-        } else {
-            return get_value_list_at<T, index, current + 1, values...>();
-        }
-    }
+template <typename T, iword index, iword current, T value, T... values>
+constexpr auto
+get_value_list_at() -> T {
+   if constexpr (current == index) {
+      return value;
+   } else {
+      return get_value_list_at<T, index, current + 1, values...>();
+   }
+}
 }  // namespace detail
 
 template <typename T, T... values>
 struct value_type_list {
-    using value_type = T;
+   using value_type = T;
 
-    static constexpr idx size = sizeof...(values);
+   static constexpr idx size = sizeof...(values);
 
-    template <idx index>
-    static constexpr auto
-    get() -> T {
-        return detail::get_value_list_at<T, index, 0, values...>();
-    }
+   template <idx index>
+   static constexpr auto
+   get() -> T {
+      return detail::get_value_list_at<T, index, 0, values...>();
+   }
 };
 
 namespace detail {
-    template <iword count, typename T, T value, T... integers>
-    constexpr auto
-    make_value_list() {
-        if constexpr (count > 0) {
-            // Recurse, appending `value` to `integers`.
-            return make_value_list<count - 1, T, value, value, integers...>();
-        } else {
-            return value_type_list<T, integers...>();
-        }
-    }
+template <iword count, typename T, T value, T... integers>
+constexpr auto
+make_value_list() {
+   if constexpr (count > 0) {
+      // Recurse, appending `value` to `integers`.
+      return make_value_list<count - 1, T, value, value, integers...>();
+   } else {
+      return value_type_list<T, integers...>();
+   }
+}
 
-    // TODO: Look into `__integer_pack()`.
-    template <iword count, typename T, T value, T... integers>
-    constexpr auto
-    make_integer_sequence() {
-        if constexpr (count > 0) {
-            // Recurse, appending `count - 1` to `integers`.
-            return make_integer_sequence<count - 1, T, T(count.raw - 1),
-                                         T(count.raw - 1), integers...>();
-        } else {
-            return value_type_list<T, integers...>();
-        }
-    }
+// TODO: Look into `__integer_pack()`.
+template <iword count, typename T, T value, T... integers>
+constexpr auto
+make_integer_sequence() {
+   if constexpr (count > 0) {
+      // Recurse, appending `count - 1` to `integers`.
+      return make_integer_sequence<count - 1, T, T(count.raw - 1),
+                                   T(count.raw - 1), integers...>();
+   } else {
+      return value_type_list<T, integers...>();
+   }
+}
 }  // namespace detail
 
 // Make a `value_type_list` for any `T`, including non-integer types.
@@ -104,12 +104,12 @@ using make_value_type_list = decltype(value_list<T, value, count>);
 template <is_integral T, idx count>
 constexpr auto integer_sequence =
 #if __has_builtin(__integer_pack)
-    // TODO: Get `__integer_pack` working for GCC.
-    detail::make_integer_sequence<count, T, count>();
+   // TODO: Get `__integer_pack` working for GCC.
+   detail::make_integer_sequence<count, T, count>();
 // value_type_list<T, T(__integer_pack(count))...>();
 #else
-    // TODO: Support `__make_integer_seq` for Clang.
-    detail::make_integer_sequence<count, T, T(count.raw)>();
+   // TODO: Support `__make_integer_seq` for Clang.
+   detail::make_integer_sequence<count, T, T(count.raw)>();
 #endif
 
 template <is_integral T, idx count>
@@ -120,7 +120,7 @@ constexpr auto ones_list = value_list<T, T(1), count>;
 
 template <is_integral T, idx count>
 using make_integer_sequence =
-    remove_cv<decltype(integer_sequence<iword, count>)>;
+   remove_cv<decltype(integer_sequence<iword, count>)>;
 
 // TODO: What is this?
 template <iword... indices>
@@ -143,10 +143,10 @@ template <typename... types>
 using index_sequence_for = make_index_sequence<sizeof...(types)>;
 
 template <typename T>
-    requires(is_enum<T>)
+   requires(is_enum<T>)
 constexpr auto
 to_underlying(T any_enum) {
-    return static_cast<underlying_type<T>>(any_enum);
+   return static_cast<underlying_type<T>>(any_enum);
 }
 
 // TODO: Support `cat::ref`, to enable `variant` and `tuple` to hold references
@@ -156,10 +156,11 @@ template <typename T>
 [[nodiscard, gnu::artificial]]
 inline constexpr auto
 as_const(T& value) -> cat::add_const<T>& {
-    return value;
+   return value;
 }
 
 template <typename T>
-void as_const(T const&&) = delete;
+void
+as_const(T const&&) = delete;
 
 }  // namespace cat

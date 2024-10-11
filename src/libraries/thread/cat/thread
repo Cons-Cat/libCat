@@ -8,46 +8,46 @@
 namespace cat {
 
 struct thread {
-  public:
-    thread() = default;
-    thread(thread const&) = delete;
+ public:
+   thread() = default;
+   thread(thread const&) = delete;
 
-    // TODO: Default or delete a move constructor and assignment operator?
+   // TODO: Default or delete a move constructor and assignment operator?
 
-    template <typename... Args>
-    auto
-    create(is_allocator auto& allocator, idx initial_stack_size,
-           is_invocable<Args...> auto&& function, Args&&... arguments)
-        -> maybe<void> {
-        scaredy result = m_handle.create(allocator, initial_stack_size,
-                                         fwd(function), fwd(arguments)...);
-        // TODO: A `prop_or` macro can simplify this.
-        if (result.has_value()) {
-            return monostate;
-        }
-        return nullopt;
-    }
+   template <typename... Args>
+   auto
+   create(is_allocator auto& allocator, idx initial_stack_size,
+          is_invocable<Args...> auto&& function, Args&&... arguments)
+      -> maybe<void> {
+      scaredy result = m_handle.create(allocator, initial_stack_size,
+                                       fwd(function), fwd(arguments)...);
+      // TODO: A `prop_or` macro can simplify this.
+      if (result.has_value()) {
+         return monostate;
+      }
+      return nullopt;
+   }
 
-    [[nodiscard]]
-    auto
-    join() const -> maybe<void> {
-        scaredy result = m_handle.wait();
-        if (result.has_value()) {
-            return monostate;
-        }
-        return nullopt;
-    }
+   [[nodiscard]]
+   auto
+   join() const -> maybe<void> {
+      scaredy result = m_handle.wait();
+      if (result.has_value()) {
+         return monostate;
+      }
+      return nullopt;
+   }
 
-  private:
-    // This is platform-specific hidden code.
-    [[maybe_unused]]
-    nix::process m_handle;
+ private:
+   // This is platform-specific hidden code.
+   [[maybe_unused]]
+   nix::process m_handle;
 };
 
 inline void
 relax_cpu() {
-    asm volatile("pause" ::
-                     : "memory");
+   asm volatile("pause" ::
+                   : "memory");
 }
 
 }  // namespace cat
