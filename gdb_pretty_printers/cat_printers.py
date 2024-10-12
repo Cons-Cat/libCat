@@ -122,6 +122,20 @@ class SpanPrinter:
             + array \
             + '\n]'
 
+    
+@cat_type('array')
+class ArrayPrinter:
+    "Print a `cat::array`"
+
+    def __init__(self, val: gdb.Value):
+        self.m_data: gdb.Value = val['m_data']
+        self.size: int = int(str(re.search('[0-9]+\}\>$', str(val.type.strip_typedefs())).group(0))[:-2])
+        return
+
+    def to_string(self):
+        return '[' + str(self.m_data)[1:-1] + '] (size: ' + str(self.size) + ')'
+    
+
 @cat_type('str_span')
 class StrSpanPrinter:
     "Print a `cat::str_span`"
