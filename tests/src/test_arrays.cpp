@@ -145,4 +145,6 @@ TEST(test_arrays) {
    cat::verify(from_array[0] == 1);
    cat::verify(from_array[1] == 2);
    cat::verify(from_array[2] == 3);
+
+   cat::array huge_array{1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3};
 }
