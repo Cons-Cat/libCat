@@ -1,4 +1,6 @@
+#include <cat/cpuid>
 #include <cat/runtime>
+#include <cat/string>
 
 // Attributes on this prototype would have no effect.
 auto
@@ -32,17 +34,20 @@ call_main() {
 }  // namespace
 
 extern "C" void
-cat::_start() {
+cat::detail::_start() {
    // `NO_ARGC_ARGV` can be defined in a build system to skip argument loading.
 #ifndef NO_ARGC_ARGV
    asm(R"(pop %rdi        # Load `int4 argc`.
-           mov %rsp, %rsi  # Load `char* argv[]`.
+          mov %rsp, %rsi  # Load `char* argv[]`.
        )");
 #endif
 
    // The stack pointer must be aligned to prevent SIMD segfaults even in
    // surprisingly simple programs with GCC 12.
    align_stack_pointer_32();
+
+   // Initialize `__cpu_model` and `__cpu_features2` for later use.
+   x64::detail::__cpu_indicator_init();
 
    // `main()` must be wrapped by a function to conditionally prevent inlining.
    call_main();

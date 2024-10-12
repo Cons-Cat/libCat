@@ -9,6 +9,7 @@ target_include_directories(cat INTERFACE
   ${CATLIB}/compare/
   ${CATLIB}/limits
   ${CATLIB}/runtime/
+  ${CATLIB}/cpuid/
   ${CATLIB}/sanitizer/
   ${CATLIB}/arithmetic/
   ${CATLIB}/initializer_list/
