@@ -6,6 +6,7 @@
 
 namespace cat {
 
+namespace detail {
 // Name mangling prevents the linker from finding this symbol.
 extern "C"
    // GCC wants to insert a `__asan_handle_no_return()` call, which breaks
@@ -14,6 +15,7 @@ extern "C"
      gnu::force_align_arg_pointer]]
    void
    _start();  // NOLINT
+}
 
 // The `cat::exit()` function is provided globally. This streamlines out the
 // existence of `_exit()`.

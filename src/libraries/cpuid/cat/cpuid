@@ -1,0 +1,306 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/arithmetic>
+#include <cat/array>
+#include <cat/bitset>
+#include <cat/debug>
+
+namespace x64 {
+
+auto
+cpuid(cat::uint4 leaf, cat::uint4 subleaf = 0u) -> cat::array<cat::uint4, 4> {
+   cat::uint4 ebx;
+   cat::uint4 edx;
+   asm("cpuid;"
+       : "+a"(leaf), "+b"(ebx), "+c"(subleaf), "=d"(edx));
+   return {leaf, ebx, subleaf, edx};
+}
+
+namespace detail {
+
+struct cpu_model {
+   cat::uint4 m_cpu_vendor = 0u;
+   cat::uint4 m_cpu_type = 0u;
+   cat::uint4 m_cpu_subtype = 0u;
+   // TODO: Initialize this with a `consteval` factory function that sets all
+   // feature flags that we assume are present.
+   cat::bitset<32> m_cpu_features{};
+};
+
+extern "C" constinit inline detail::cpu_model __cpu_model{};  // NOLINT
+
+// Extended x86 feature flags, such as AVX2.
+extern "C" constinit inline cat::array<cat::bitset<32>, 3>
+   __cpu_features2{};  // NOLINT
+
+enum class processor_features : unsigned char {
+   cmov = 0,
+   mmx,
+   popcnt,
+   sse,
+   sse2,
+   sse3,
+   ssse3,
+   sse4_1,
+   sse4_2,
+   avx,
+   avx2,
+   sse4_a,
+   fma4,
+   xop,
+   fma,
+   avx512_f,
+   bmi,
+   bmi2,
+   aes,
+   pclmul,
+   avx512_vl,
+   avx512_bw,
+   avx512_dq,
+   avx512_cd,
+   avx512_er,
+   avx512_pf,
+   avx512_vbmi,
+   avx512_ifma,
+   avx5124_vnniw,
+   avx5124_fmaps,
+   avx512_vpopcntdq,
+   avx512_vbmi2,
+   gfni,
+   vpclmulqdq,
+   avx512_vnni,
+   avx512_bitalg,
+   avx512_bf16,
+   avx512_vp2_intersect,
+   adx = 40,
+   cldemote = 42,
+   clflushopt,
+   clwb,
+   clzero,
+   cmpxchg16_b,
+   enqcmd = 48,
+   f16_c,
+   fsgsbase,
+   lahf_lm = 54,
+   lm,
+   lwp,
+   lzcnt,
+   movbe,
+   movdir64_b,
+   movdiri,
+   mwaitx,
+   pconfig = 63,
+   pku,
+   prefetchwt1,
+   prfchw,
+   ptwrite,
+   rdpid,
+   rdrnd,
+   rdseed,
+   rtm,
+   serialize,
+   sgx,
+   sha,
+   shstk,
+   tbm,
+   tsxldtrk,
+   vaes,
+   waitpkg,
+   wbnoinvd,
+   xsave,
+   xsavec,
+   xsaveopt,
+   xsaves,
+   amx_tile,
+   amx_int8,
+   amx_bf16,
+   uintr,
+   hreset,
+   kl,
+   feature_aeskle,
+   widekl = 92,
+   avxvnni,
+   avx512_fp16,
+   x86_64_baseline,
+   x86_64_v2,
+   x86_64_v3,
+   x86_64_v4,
+   avxifma,
+   avxvnniint8,
+   avxneconvert,
+   cmpccxadd,
+   amx_fp16,
+   prefetchi,
+   raoint,
+   amx_complex,
+   avxvnniint16,
+   sm3,
+   sha512,
+   sm4,
+   apxf,
+   usermsr,
+   avx10_1_256,
+   avx10_1_512,
+   avx10_2_256,
+   avx10_2_512,
+};
+
+extern "C" inline void
+__cpu_indicator_init() {  // NOLINT
+   // Get highest value for `%EAX`.
+   auto&& [max_leaf, _, _, _] = cpuid(0u);
+
+   auto&& [eax, ebx, ecx, edx] = cpuid(1u);
+   cat::bitset ecx_bits = cat::bitset<32>::from(ecx);
+   // cat::bitset edx_bits = cat::bitset<32>::from(edx);
+
+   // Use this information to fill out x86 family model and available features.
+
+   // Extract bits 4 through 7.
+   cat::uint4 cpu_model = (eax >> 4u) & 0xfu;
+   // Extract bits 8 through 11.
+   cat::uint4 cpu_family = (eax >> 8u) & 0xfu;
+
+   if (cpu_family == 6u || cpu_family == 0xfu) {
+      // Bits 16 through 19.
+      cpu_model += ((eax >> 16u) & 0xfu) << 4u;
+
+      if (cpu_family == 0xfu) {
+         // Bits 20 through 27.
+         cpu_family += (eax >> 20u) & 0xffu;
+      }
+   }
+
+   // Zero-initialized bitsets.
+   // This is an array of 4 bitsets rather than a single `bitset<128>` to more
+   // directly map to LLVM's ABI.
+   cat::array<cat::bitset<32>, 4> feature_flags{};
+   // This array of bit flags conform to LLVM's `__cpu_features2` ABI.
+
+   auto enable_feature = [&](processor_features const feature) {
+      cat::idx const feature_index = cat::to_underlying(feature);
+      feature_flags[feature_index / 32][feature_index % 32].set();
+   };
+
+   // These flags and bit fields are documented in the EAX=1 table at
+   // https://en.wikipedia.org/wiki/CPUID
+   // As well as in the file:
+   // `llvm-project/compiler-rt/lib/builtins/cpu_model/x86.c`.
+   {
+      using enum processor_features;
+      enable_feature(x86_64_baseline);
+      // TODO: Enable x86_64_v2, x86_64_v3, and x86_64_v4.
+
+      if (ecx_bits[9]) {
+         enable_feature(sse3);
+      }
+      if (ecx_bits[19]) {
+         enable_feature(sse4_1);
+      }
+      if (ecx_bits[20]) {
+         enable_feature(sse4_2);
+      }
+      if (ecx_bits[25]) {
+         enable_feature(aes);
+      }
+      if (ecx_bits[28]) {
+         enable_feature(avx);
+      }
+      if (ecx_bits[29]) {
+         enable_feature(f16_c);
+      }
+   }
+
+   // bool has_avx2 = false;
+   if (max_leaf >= 7u) {
+      auto&& [eax, ebx, ecx, edx] = cpuid(7u);
+
+      cat::bitset ebx_bits = cat::bitset<32u>::from(ebx);
+      cat::bitset ecx_bits = cat::bitset<32u>::from(ecx);
+      cat::bitset edx_bits = cat::bitset<32u>::from(edx);
+
+      using enum processor_features;
+
+      // Enable AVX2.
+      if (ebx_bits[3]) {
+         enable_feature(bmi);
+      }
+      if (ebx_bits[5]) {
+         enable_feature(avx2);
+      }
+      if (ebx_bits[8]) {
+         enable_feature(bmi2);
+      }
+      if (ebx_bits[16]) {
+         enable_feature(avx512_f);
+      }
+      if (ebx_bits[17]) {
+         enable_feature(avx512_dq);
+      }
+      if (ebx_bits[18]) {
+         enable_feature(rdseed);
+      }
+      if (ebx_bits[19]) {
+         enable_feature(adx);
+      }
+      if (ebx_bits[21]) {
+         enable_feature(avx512_ifma);
+      }
+      if (ebx_bits[26]) {
+         enable_feature(avx512_pf);
+      }
+      if (ebx_bits[27]) {
+         enable_feature(avx512_er);
+      }
+      if (ebx_bits[28]) {
+         enable_feature(avx512_cd);
+      }
+      if (ebx_bits[29]) {
+         enable_feature(sha);
+      }
+      if (ebx_bits[30]) {
+         enable_feature(avx512_bw);
+      }
+      if (ebx_bits[31]) {
+         enable_feature(avx512_vl);
+      }
+
+      if (ecx_bits[1]) {
+         enable_feature(avx512_vbmi);
+      }
+      if (ecx_bits[9]) {
+         enable_feature(vaes);
+      }
+
+      if (edx_bits[22]) {
+         enable_feature(amx_bf16);
+      }
+      if (edx_bits[23]) {
+         enable_feature(amx_fp16);
+      }
+      if (edx_bits[24]) {
+         enable_feature(amx_tile);
+      }
+      if (edx_bits[25]) {
+         enable_feature(amx_int8);
+      }
+
+      // TODO: Query subleaf-1 features.
+      // cat::uint4 max_subleaf = eax;
+      // if (max_subleaf >= 1u)
+      //    cpuid(7u, 1u);
+
+      __cpu_features2[1] = feature_flags[2];
+      __cpu_features2[2] = feature_flags[3];
+   }
+
+   __cpu_model.m_cpu_features = feature_flags[0];
+   __cpu_features2[0] = feature_flags[1];
+
+   // Detecting processor and subtype requires special-casing Intel and AMD.
+}
+
+}  // namespace detail
+}  // namespace x64
