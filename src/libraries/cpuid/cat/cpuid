@@ -13,27 +13,12 @@ auto
 cpuid(cat::uint4 leaf, cat::uint4 subleaf = 0u) -> cat::array<cat::uint4, 4> {
    cat::uint4 ebx;
    cat::uint4 edx;
-   asm("cpuid;"
+   asm("cpuid"
        : "+a"(leaf), "+b"(ebx), "+c"(subleaf), "=d"(edx));
    return {leaf, ebx, subleaf, edx};
 }
 
 namespace detail {
-
-struct cpu_model {
-   cat::uint4 m_cpu_vendor = 0u;
-   cat::uint4 m_cpu_type = 0u;
-   cat::uint4 m_cpu_subtype = 0u;
-   // TODO: Initialize this with a `consteval` factory function that sets all
-   // feature flags that we assume are present.
-   cat::bitset<32> m_cpu_features{};
-};
-
-extern "C" constinit inline detail::cpu_model __cpu_model{};  // NOLINT
-
-// Extended x86 feature flags, such as AVX2.
-extern "C" constinit inline cat::array<cat::bitset<32>, 3>
-   __cpu_features2{};  // NOLINT
 
 enum class processor_features : unsigned char {
    cmov = 0,
@@ -147,14 +132,60 @@ enum class processor_features : unsigned char {
    avx10_2_512,
 };
 
+consteval auto
+default_cpu_features() -> cat::bitset<32> {
+   using enum processor_features;
+   cat::bitset<32> features{};
+
+   auto enable_feature = [&](processor_features const feature) {
+      cat::idx const feature_index = cat::to_underlying(feature);
+      features[feature_index].set();
+   };
+
+   enable_feature(cmov);
+   enable_feature(mmx);
+   enable_feature(sse);
+   enable_feature(sse2);
+
+   return features;
+}
+
+consteval auto
+enable_baseline_feature() -> cat::bitset<32> {
+   cat::bitset<32> baseline_flag{};
+   baseline_flag[cat::to_underlying(processor_features::x86_64_baseline) % 32]
+      .set();
+   return baseline_flag;
+}
+
+struct cpu_model {
+   cat::uint4 m_cpu_vendor = 0u;
+   cat::uint4 m_cpu_type = 0u;
+   cat::uint4 m_cpu_subtype = 0u;
+   // Initialize this with all feature flags that are presumed present in any
+   // x86-64 environment.
+   cat::bitset<32> m_cpu_features = default_cpu_features();
+};
+
+extern "C" constinit inline detail::cpu_model __cpu_model{};  // NOLINT
+
+// Extended x86 feature flags, such as AVX2. This is zero-intialized except for
+// a single bit that expresses baseline x86-64 feature support.
+extern "C" constinit inline cat::array<cat::bitset<32>, 3>
+   // NOLINTNEXTLINE
+   __cpu_features2(cat::bitset<32>{}, enable_baseline_feature(),
+                   cat::bitset<32>{});
+
 extern "C" inline void
 __cpu_indicator_init() {  // NOLINT
-   // Get highest value for `%EAX`.
-   auto&& [max_leaf, _, _, _] = cpuid(0u);
+   using enum processor_features;
 
-   auto&& [eax, ebx, ecx, edx] = cpuid(1u);
+   // Get highest values for `%EAX` below and above `0x80000000u`.
+   auto&& [max_leaf, _, _, _] = cpuid(0u);
+   auto&& [max_extended_leaf, _, _, _] = cpuid(0x80000000u);
+
+   auto&& [eax, _, ecx, _] = cpuid(1u);
    cat::bitset ecx_bits = cat::bitset<32>::from(ecx);
-   // cat::bitset edx_bits = cat::bitset<32>::from(edx);
 
    // Use this information to fill out x86 family model and available features.
 
@@ -173,55 +204,108 @@ __cpu_indicator_init() {  // NOLINT
       }
    }
 
-   // Zero-initialized bitsets.
-   // This is an array of 4 bitsets rather than a single `bitset<128>` to more
-   // directly map to LLVM's ABI.
+   // This is an array of 4 zero-initialized bitsets rather than a single
+   // `bitset<128>` to more directly map to LLVM's `__cpu_model` and
+   // `__cpu_features2` ABI.
    cat::array<cat::bitset<32>, 4> feature_flags{};
-   // This array of bit flags conform to LLVM's `__cpu_features2` ABI.
 
    auto enable_feature = [&](processor_features const feature) {
       cat::idx const feature_index = cat::to_underlying(feature);
       feature_flags[feature_index / 32][feature_index % 32].set();
+   };
+   auto has_feature = [&](processor_features const feature) -> bool {
+      cat::idx const feature_index = cat::to_underlying(feature);
+      return feature_flags[feature_index / 32][feature_index % 32].is_set();
    };
 
    // These flags and bit fields are documented in the EAX=1 table at
    // https://en.wikipedia.org/wiki/CPUID
    // As well as in the file:
    // `llvm-project/compiler-rt/lib/builtins/cpu_model/x86.c`.
-   {
-      using enum processor_features;
-      enable_feature(x86_64_baseline);
-      // TODO: Enable x86_64_v2, x86_64_v3, and x86_64_v4.
+   if (ecx_bits[0]) {
+      enable_feature(sse3);
+   }
+   if (ecx_bits[1]) {
+      enable_feature(pclmul);
+   }
+   if (ecx_bits[9]) {
+      enable_feature(ssse3);
+   }
+   if (ecx_bits[12]) {
+      enable_feature(fma);
+   }
+   if (ecx_bits[13]) {
+      enable_feature(cmpxchg16_b);
+   }
+   if (ecx_bits[19]) {
+      enable_feature(sse4_1);
+   }
+   if (ecx_bits[20]) {
+      enable_feature(sse4_2);
+   }
+   if (ecx_bits[22]) {
+      enable_feature(movbe);
+   }
+   if (ecx_bits[23]) {
+      enable_feature(popcnt);
+   }
+   if (ecx_bits[25]) {
+      enable_feature(aes);
+   }
+   if (ecx_bits[27]) {
+      enable_feature(xsave);
 
-      if (ecx_bits[9]) {
-         enable_feature(sse3);
-      }
-      if (ecx_bits[19]) {
-         enable_feature(sse4_1);
-      }
-      if (ecx_bits[20]) {
-         enable_feature(sse4_2);
-      }
-      if (ecx_bits[25]) {
-         enable_feature(aes);
-      }
       if (ecx_bits[28]) {
+         // AVX is only safe to use if `xsave` exists, which kernels use to
+         // preserve SIMD registers between context switches. Supposedly some
+         // environments exist where AVX exists without `xsave` support, so
+         // check it to be sure.
          enable_feature(avx);
       }
+   }
+   if (ecx_bits[29]) {
+      enable_feature(f16_c);
+   }
+
+   if (max_extended_leaf >= 0x80000001u) {
+      auto&& [_, _, ecx, _] = cpuid(0x80000001u);
+      cat::bitset ecx_bits = cat::bitset<32>::from(ecx);
+
+      if (ecx_bits[0]) {
+         enable_feature(lahf_lm);
+      }
+      if (ecx_bits[5]) {
+         enable_feature(lzcnt);
+      }
+      if (ecx_bits[6]) {
+         enable_feature(sse4_a);
+      }
+      if (ecx_bits[8]) {
+         enable_feature(prfchw);
+      }
+      if (ecx_bits[11]) {
+         enable_feature(xop);
+      }
+      if (ecx_bits[15]) {
+         enable_feature(lwp);
+      }
+      if (ecx_bits[16]) {
+         enable_feature(fma4);
+      }
+      if (ecx_bits[21]) {
+         enable_feature(tbm);
+      }
       if (ecx_bits[29]) {
-         enable_feature(f16_c);
+         enable_feature(lm);
       }
    }
 
-   // bool has_avx2 = false;
    if (max_leaf >= 7u) {
-      auto&& [eax, ebx, ecx, edx] = cpuid(7u);
+      auto&& [max_subleaf, ebx, ecx, edx] = cpuid(7u);
 
       cat::bitset ebx_bits = cat::bitset<32u>::from(ebx);
       cat::bitset ecx_bits = cat::bitset<32u>::from(ecx);
       cat::bitset edx_bits = cat::bitset<32u>::from(edx);
-
-      using enum processor_features;
 
       // Enable AVX2.
       if (ebx_bits[3]) {
@@ -288,16 +372,33 @@ __cpu_indicator_init() {  // NOLINT
       }
 
       // TODO: Query subleaf-1 features.
-      // cat::uint4 max_subleaf = eax;
-      // if (max_subleaf >= 1u)
-      //    cpuid(7u, 1u);
-
-      __cpu_features2[1] = feature_flags[2];
-      __cpu_features2[2] = feature_flags[3];
+      // if (max_subleaf >= 1u) {
+      //    auto&& [_, ebx, ecx, _] = cpuid(7u, 1u);
+      // }
    }
 
-   __cpu_model.m_cpu_features = feature_flags[0];
+   // The baseline X86-64 is already set by `default_cpu_features()`.
+   if (has_feature(lahf_lm) && has_feature(cmpxchg16_b) && has_feature(popcnt)
+       && has_feature(sse4_2)) {
+      enable_feature(x86_64_v2);
+
+      if (has_feature(avx2) && has_feature(bmi) && has_feature(bmi2)
+          && has_feature(fma) && has_feature(f16_c) && has_feature(lzcnt)
+          && has_feature(movbe)) {
+         enable_feature(x86_64_v3);
+
+         if (has_feature(avx512_bw) && has_feature(avx512_cd)
+             && has_feature(avx512_dq) && has_feature(avx512_vl)) {
+            enable_feature(x86_64_v4);
+         }
+      }
+   }
+
+   __cpu_model.m_cpu_features |= feature_flags[0];
    __cpu_features2[0] = feature_flags[1];
+   // This is OR'd because it contains `x86_64_baseline` by default:
+   __cpu_features2[1] |= feature_flags[2];
+   __cpu_features2[2] = feature_flags[3];
 
    // Detecting processor and subtype requires special-casing Intel and AMD.
 }
