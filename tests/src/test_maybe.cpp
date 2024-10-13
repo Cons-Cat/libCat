@@ -451,26 +451,26 @@ TEST(test_maybe) {
    cat::maybe<int4> opt_match = 1;
 
    bool matched = false;
-   cat::match(opt_match)(is_a(1).then([&]() {
+   cat::match(opt_match)(is_a(1).then_do([&]() {
       matched = true;
    }));
-   cat::match(opt_match)(is_a(2).then([&]() {
+   cat::match(opt_match)(is_a(2).then_do([&]() {
       matched = false;
    }));
    cat::verify(matched);
 
    matched = false;
-   cat::match(opt_match)(is_a<int4>().then([&]() {
+   cat::match(opt_match)(is_a<int4>().then_do([&]() {
       matched = true;
    }));
-   cat::match(opt_match)(is_a<uint8>().then([&]() {
+   cat::match(opt_match)(is_a<uint8>().then_do([&]() {
       matched = false;
    }));
    cat::verify(matched);
 
    // Test matching against `cat::nullopt` when this holds a value.
    matched = true;
-   cat::match(opt_match)(is_a(cat::nullopt).then([&]() {
+   cat::match(opt_match)(is_a(cat::nullopt).then_do([&]() {
       matched = false;
    }));
    cat::verify(matched);
@@ -478,14 +478,14 @@ TEST(test_maybe) {
    // Test matching against `cat::nullopt` when this does not hold a value.
    matched = false;
    opt_match = cat::nullopt;
-   cat::match(opt_match)(is_a(cat::nullopt).then([&]() {
+   cat::match(opt_match)(is_a(cat::nullopt).then_do([&]() {
       matched = true;
    }));
    cat::verify(matched);
 
    // Test member access pattern matching syntax.
    matched = false;
-   opt_match.match(is_a(cat::nullopt).then([&]() {
+   opt_match.match(is_a(cat::nullopt).then_do([&]() {
       matched = true;
    }));
    cat::verify(matched);

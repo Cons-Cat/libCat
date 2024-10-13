@@ -389,10 +389,10 @@ TEST(test_arithmetic) {
 
    // Match type.
    cat::match(match_int)(  //
-      is_a<uint4>().then([]() {
+      is_a<uint4>().then_do([]() {
          cat::exit(1);
       }),
-      is_a<int4>().then([&]() {
+      is_a<int4>().then_do([&]() {
          matched = true;
       }));
    cat::verify(matched);
@@ -400,10 +400,10 @@ TEST(test_arithmetic) {
    // Match value.
    matched = false;
    cat::match(match_int)(  //
-      is_a(0).then([]() {
+      is_a(0).then_do([]() {
          cat::exit(1);
       }),
-      is_a(1).then([&]() {
+      is_a(1).then_do([&]() {
          matched = true;
       }));
    cat::verify(matched);

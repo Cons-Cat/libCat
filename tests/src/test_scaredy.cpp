@@ -174,20 +174,20 @@ TEST(test_scaredy) {
 
    // Match it against `int4`.
    cat::match(is_variant_scaredy)(  //
-      is_a<int4>().then([&]() {
+      is_a<int4>().then_do([&]() {
          matched = true;
       }));
    cat::match(is_variant_scaredy)(  //
-      is_a<error_type_one>().then([&]() {
+      is_a<error_type_one>().then_do([&]() {
          matched = false;
       }));
    cat::match(is_variant_scaredy)(  //
-      is_a<error_type_two>().then([&]() {
+      is_a<error_type_two>().then_do([&]() {
          matched = false;
       }));
    // `float` can never hold true here, but it should compile.
    cat::match(is_variant_scaredy)(  //
-      is_a<float>().then([&]() {
+      is_a<float>().then_do([&]() {
          matched = false;
       }));
    cat::verify(matched);
@@ -196,22 +196,22 @@ TEST(test_scaredy) {
    matched = false;
    is_variant_scaredy = error_type_one();
    cat::match(is_variant_scaredy)(  //
-      is_a<error_type_one>().then([&]() {
+      is_a<error_type_one>().then_do([&]() {
          matched = true;
       }));
    cat::match(is_variant_scaredy)(  //
-      is_a<int4>().then([&]() {
+      is_a<int4>().then_do([&]() {
          matched = false;
       }));
    cat::match(is_variant_scaredy)(  //
-      is_a<error_type_two>().then([&]() {
+      is_a<error_type_two>().then_do([&]() {
          matched = false;
       }));
    cat::verify(matched);
 
    // Test member access pattern matching syntax.
    matched = false;
-   is_variant_scaredy.match(is_a<error_type_one>().then([&]() {
+   is_variant_scaredy.match(is_a<error_type_one>().then_do([&]() {
       matched = true;
    }));
    cat::verify(matched);
@@ -222,10 +222,10 @@ TEST(test_scaredy) {
    // Test type comparison.
    matched = false;
    cat::match(predicate)(  //
-      is_a<error_type_one>().then([&]() {
+      is_a<error_type_one>().then_do([&]() {
          cat::exit(1);
       }),
-      is_a<int4>().then([&]() {
+      is_a<int4>().then_do([&]() {
          matched = true;
       }));
    cat::verify(matched);
@@ -233,10 +233,10 @@ TEST(test_scaredy) {
    matched = false;
    predicate = error_type_one(-1);
    cat::match(predicate)(  //
-      is_a<int4>().then([&]() {
+      is_a<int4>().then_do([&]() {
          cat::exit(1);
       }),
-      is_a<error_type_one>().then([&]() {
+      is_a<error_type_one>().then_do([&]() {
          matched = true;
       }));
    cat::verify(matched);
