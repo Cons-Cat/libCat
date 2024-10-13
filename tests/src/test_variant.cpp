@@ -81,11 +81,11 @@ TEST(test_variant) {
    variant3 = int{1};
    bool matched = false;
    cat::match(variant3)(  //
-      one_of<double, float>().then([]() {
+      one_of<double, float>().then_do([]() {
          // This should never match.
          cat::exit(1);
       }),
-      one_of<float, int>().then([&]() {
+      one_of<float, int>().then_do([&]() {
          // This should match, because it is an `int`.
          matched = true;
       }));
@@ -93,10 +93,10 @@ TEST(test_variant) {
 
    matched = false;
    cat::match(variant3)(  //
-      is_a<float>().then([&]() {
+      is_a<float>().then_do([&]() {
          cat::exit(1);
       }),
-      is_a<int>().then([&]() {
+      is_a<int>().then_do([&]() {
          matched = true;
       }));
    cat::verify(matched);
@@ -104,10 +104,10 @@ TEST(test_variant) {
    // `variant3` holds an integer, but floats are convertible to integers.
    matched = false;
    cat::match(variant3)(  //
-      is_a(2.f).then([&]() {
+      is_a(2.f).then_do([&]() {
          cat::exit(1);
       }),
-      is_a(1.f).then([&]() {
+      is_a(1.f).then_do([&]() {
          matched = true;
       }));
    cat::verify(matched);
@@ -115,10 +115,10 @@ TEST(test_variant) {
    // Test member access pattern matching syntax.
    matched = false;
    variant3.match(  //
-      is_a(2.f).then([&]() {
+      is_a(2.f).then_do([&]() {
          cat::exit(1);
       }),
-      is_a(1.f).then([&]() {
+      is_a(1.f).then_do([&]() {
          matched = true;
       }));
    cat::verify(matched);

@@ -12,9 +12,9 @@
 
 // This `match_patterns` object can be called with a variadic list of pattern
 // objects. They are constructed with either function or template arguments,
-// depending on what kind of pattern they represent. Calling `.then()` on them
-// constructs a callable `cat::detail::pattern` object with a predicate that
-// represents the pattern. For instance, `one_of<types...>()` generates a
+// depending on what kind of pattern they represent. Calling `.then_do()` on
+// them constructs a callable `cat::detail::pattern` object with a predicate
+// that represents the pattern. For instance, `one_of<types...>()` generates a
 // predicate that checks if the reference provided to `match()` represents any
 // of the types in `types`.
 
@@ -23,7 +23,7 @@
 
 // This variadic list of `pattern` objects are recursed through, and their
 // predicate is called with that reference provided to `cat::match()`. If the
-// predicate holds true, then the invocable argument to `.then()` on that
+// predicate holds true, then the invocable argument to `.then_do()` on that
 // pattern is invoked.
 
 // `pattern` objects are called top-to bottom, in the order provided to the
@@ -40,17 +40,17 @@
 
 // The resulting syntax looks like:
 
-// match(v)(is_a<int>().then([](){
+// match(v)(is_a<int>().then_do([](){
 //              print("int");
 //          }),
-//          is_a(1.f).then([](){
+//          is_a(1.f).then_do([](){
 //              print("1.f");
 //          }),
-//          one_of<int, double>().then([](){
+//          one_of<int, double>().then_do([](){
 //              print("int or double");
 //          }),
 //          TODO:
-//          one_of(2.f, 3).then([](){
+//          one_of(2.f, 3).then_do([](){
 //              print("2.f or 3");
 //          }),
 //          TODO:
@@ -97,7 +97,7 @@ struct one_of_types : pattern {
 
    template <typename function>
    constexpr auto
-   then(function&& invocable) {
+   then_do(function&& invocable) {
       return pattern_invocable{[&](auto& matching) -> bool {
          using unqualified_matching =
             remove_const<remove_reference<decltype(matching)>>;
@@ -130,7 +130,7 @@ struct is_a_value_type : pattern {
 
    template <typename function>
    constexpr auto
-   then(function&& invocable) {
+   then_do(function&& invocable) {
       return pattern_invocable{[&](auto& matching) -> bool {
          using unqualified_matching = remove_cvref<decltype(matching)>;
          if constexpr (has_member_is_value<unqualified_matching>) {
