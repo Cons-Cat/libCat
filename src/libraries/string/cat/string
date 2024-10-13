@@ -169,13 +169,13 @@ class str_inplace : public collection_interface<str_inplace<length>, char>,
  public:
    constexpr auto
    data() -> char* {
-      return m_p_data;
+      return m_data;
    }
 
    [[nodiscard]]
    constexpr auto
    data() const -> char const* {
-      return m_p_data;
+      return m_data;
    }
 
    [[nodiscard]]
@@ -230,6 +230,27 @@ class str_inplace : public collection_interface<str_inplace<length>, char>,
       return *this;
    }
 
+   // Compare two strings of equal length.
+   constexpr auto
+   operator==(str_inplace const& other) const -> bool {
+      for (idx i = 0; i < length; ++i) {
+         if (m_data[i] != other[i]) {
+            return false;
+         }
+      }
+      return true;
+   };
+
+   constexpr auto
+   operator==(char const (&in)[length]) -> bool {
+      for (idx i = 0; i < length; ++i) {
+         if (m_data[i] != in[i]) {
+            return false;
+         }
+      }
+      return true;
+   }
+
    // Concatenate constant-evaluated strings.
    // This is `uword::raw_type` because GCC cannot deduce a string literal's
    // length from an `ssize`.
@@ -243,7 +264,7 @@ class str_inplace : public collection_interface<str_inplace<length>, char>,
       char array[new_length];
 
       for (uword::raw_type i = 0u; i < length - 1u; ++i) {
-         array[i] = self.m_p_data[i];
+         array[i] = self.m_data[i];
       }
 
       for (uword::raw_type i = length - 1; i < new_length - 1u; ++i) {
@@ -279,14 +300,14 @@ class str_inplace : public collection_interface<str_inplace<length>, char>,
    copy_string_data(char const* p_source) {
       if consteval {
          for (uword::raw_type i = 0u; i < length; ++i) {
-            this->m_p_data[i] = p_source[i];
+            this->m_data[i] = p_source[i];
          }
       } else {
          copy_memory(p_source, this->data(), length);
       }
    }
 
-   char m_p_data[length];
+   char m_data[length];
 };
 
 [[nodiscard]]
