@@ -23,12 +23,6 @@ struct tuple_element {
    constexpr tuple_element(U const& input) : storage(static_cast<T>(input)) {
    }
 
-   template <rvalue U>
-      requires(is_implicitly_convertible<U, T>)
-   // NOLINTNEXTLINE `rvalue` sufficiently constrains this constructor.
-   constexpr tuple_element(U&& input) : storage(fwd(input)) {
-   }
-
    // For some reason, this produces ambiguous overload errors if it is
    // implemented as a normal function instead of an operator.
    constexpr auto
