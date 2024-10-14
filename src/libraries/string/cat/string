@@ -242,13 +242,21 @@ class str_inplace : public collection_interface<str_inplace<length>, char>,
    };
 
    constexpr auto
-   operator==(char const (&in)[length]) -> bool {
+   // Add 1 to length to ignore a null terminator.
+   operator==(char const (&in)[length + 1]) -> bool {
       for (idx i = 0; i < length; ++i) {
          if (m_data[i] != in[i]) {
             return false;
          }
       }
       return true;
+   }
+
+   constexpr auto
+   operator==(char const other) -> bool
+      requires(length == 1u)
+   {
+      return m_data[0] == other;
    }
 
    // Concatenate constant-evaluated strings.
