@@ -17,7 +17,7 @@ nix::process::create(cat::is_allocator auto& allocator,
    // TODO: This should union allocator and linux errors.
    // TODO: Use size feedback.
    auto maybe_memory =
-      allocator.template alloc_multi<cat::byte>(initial_stack_size);
+      allocator.template align_alloc_multi<cat::byte>(16u, initial_stack_size);
    if (!maybe_memory.has_value()) {
       return nix::linux_error::inval;
    }
@@ -27,10 +27,12 @@ nix::process::create(cat::is_allocator auto& allocator,
    cat::tuple<Args...> args{fwd(arguments)...};
 
    auto* p_stack_bottom = maybe_memory.value().data();
-   scaredy_nix<bool> on_parent = this->create_impl(
+
+   scaredy_nix<void> on_parent = this->create_impl(
       p_stack_bottom, initial_stack_size, reinterpret_cast<void*>(function),
       reinterpret_cast<void*>(&args));
 
+   // The child thread, if it exists, never reaches this point.
    if (!on_parent.has_value()) {
       return on_parent.error();
    }
