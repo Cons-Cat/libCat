@@ -1223,7 +1223,7 @@ struct process {
  private:
    auto
    create_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
-               void* p_function, void* p_args_struct) -> scaredy_nix<bool>;
+               void* p_function, void* p_args_struct) -> scaredy_nix<void>;
 
    process_id m_id;
    // TODO: Free this later.
