@@ -6,6 +6,7 @@
 #include <cat/array>
 #include <cat/bitset>
 #include <cat/debug>
+#include <cat/string>
 
 namespace x64 {
 
@@ -19,6 +20,68 @@ cpuid(cat::uint4 leaf, cat::uint4 subleaf = 0u) -> cat::array<cat::uint4, 4> {
 }
 
 namespace detail {
+
+enum class cpu_type {
+   intel_bonnell = 1,
+   intel_core2,
+   intel_corei7,
+   amdfam10_h,
+   amdfam15_h,
+   intel_silvermont,
+   intel_knl,
+   amd_btver1,
+   amd_btver2,
+   amdfam17_h,
+   intel_knm,
+   intel_goldmont,
+   intel_goldmont_plus,
+   intel_tremont,
+   amdfam19_h,
+   zhaoxin_fam7_h,
+   intel_sierraforest,
+   intel_grandridge,
+   intel_clearwaterforest,
+   amdfam1_ah,
+   // cpu_type_max
+};
+
+enum class cpu_subtype {
+   intel_corei7_nehalem = 1,
+   intel_corei7_westmere,
+   intel_corei7_sandybridge,
+   amdfam10_h_barcelona,
+   amdfam10_h_shanghai,
+   amdfam10_h_istanbul,
+   amdfam15_h_bdver1,
+   amdfam15_h_bdver2,
+   amdfam15_h_bdver3,
+   amdfam15_h_bdver4,
+   amdfam17_h_znver1,
+   intel_corei7_ivybridge,
+   intel_corei7_haswell,
+   intel_corei7_broadwell,
+   intel_corei7_skylake,
+   intel_corei7_skylake_avx512,
+   intel_corei7_cannonlake,
+   intel_corei7_icelake_client,
+   intel_corei7_icelake_server,
+   amdfam17_h_znver2,
+   intel_corei7_cascadelake,
+   intel_corei7_tigerlake,
+   intel_corei7_cooperlake,
+   intel_corei7_sapphirerapids,
+   intel_corei7_alderlake,
+   amdfam19_h_znver3,
+   intel_corei7_rocketlake,
+   zhaoxin_fam7_h_lujiazui,
+   amdfam19_h_znver4,
+   intel_corei7_graniterapids,
+   intel_corei7_graniterapids_d,
+   intel_corei7_arrowlake,
+   intel_corei7_arrowlake_s,
+   intel_corei7_pantherlake,
+   amdfam1_ah_znver5,
+};
 
 enum class processor_features : unsigned char {
    cmov = 0,
@@ -159,9 +222,9 @@ enable_baseline_feature() -> cat::bitset<32> {
 }
 
 struct cpu_model {
-   cat::uint4 m_cpu_vendor = 0u;
-   cat::uint4 m_cpu_type = 0u;
-   cat::uint4 m_cpu_subtype = 0u;
+   cat::uint4 m_cpu_vendor_id = 0u;
+   cpu_type m_cpu_type;
+   cpu_subtype m_cpu_subtype;
    // Initialize this with all feature flags that are presumed present in any
    // x86-64 environment.
    cat::bitset<32> m_cpu_features = default_cpu_features();
@@ -176,33 +239,303 @@ extern "C" constinit inline cat::array<cat::bitset<32>, 3>
    __cpu_features2(cat::bitset<32>{}, enable_baseline_feature(),
                    cat::bitset<32>{});
 
+void
+set_vendor_model(cat::uint4 vendor_family_model, cat::uint4 vendor1) {
+   // Extract bits 4 through 7.
+   cat::uint4 cpu_model = (vendor_family_model >> 4u) & 0xfu;
+   // Extract bits 8 through 11.
+   cat::uint4 cpu_family = (vendor_family_model >> 8u) & 0xfu;
+
+   if (cpu_family == 6u || cpu_family == 0xfu) {
+      // Bits 16 through 19.
+      cpu_model += ((vendor_family_model >> 16u) & 0xfu) << 4u;
+
+      if (cpu_family == 0xfu) {
+         // Bits 20 through 27.
+         cpu_family += (vendor_family_model >> 20u) & 0xffu;
+      }
+   }
+
+   auto has_feature = [&](processor_features const feature) -> bool {
+      cat::idx const feature_index = cat::to_underlying(feature);
+      return __cpu_features2[2][feature_index % 32].is_set();
+   };
+
+   // Detecting CPU type and subtype requires special-casing Intel and AMD.
+
+   if (vendor1 == 0x756e6547u) {
+      // Intel CPU.
+      __cpu_model.m_cpu_vendor_id = 1u;
+
+      switch (cpu_family.raw) {
+         case 6:
+            switch (cpu_model.raw) {
+               case 0x0f:
+                  [[fallthrough]];
+               case 0x16:
+                  [[fallthrough]];
+               case 0x17:
+                  [[fallthrough]];
+               case 0x1d:
+                  __cpu_model.m_cpu_type = cpu_type::intel_core2;
+                  break;
+               case 0x1a:
+                  [[fallthrough]];
+               case 0x1e:
+                  [[fallthrough]];
+               case 0x1f:
+                  [[fallthrough]];
+               case 0x2e:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype = cpu_subtype::intel_corei7_nehalem;
+                  break;
+               case 0x25:
+                  [[fallthrough]];
+               case 0x2c:
+                  [[fallthrough]];
+               case 0x2f:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_westmere;
+                  break;
+               case 0x2a:
+                  [[fallthrough]];
+               case 0x2d:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_sandybridge;
+                  break;
+               case 0x3a:
+                  [[fallthrough]];
+               case 0x3e:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_ivybridge;
+                  break;
+               case 0x3c:
+                  [[fallthrough]];
+               case 0x3f:
+                  [[fallthrough]];
+               case 0x45:
+                  [[fallthrough]];
+               case 0x46:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype = cpu_subtype::intel_corei7_haswell;
+                  break;
+               case 0x3d:
+                  [[fallthrough]];
+               case 0x47:
+                  [[fallthrough]];
+               case 0x4f:
+                  [[fallthrough]];
+               case 0x56:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_broadwell;
+                  break;
+               case 0x4e:
+                  [[fallthrough]];
+               case 0x5e:
+                  [[fallthrough]];
+               case 0x8e:
+                  [[fallthrough]];
+               case 0x9e:
+                  [[fallthrough]];
+               case 0xa5:
+                  [[fallthrough]];
+               case 0xa6:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype = cpu_subtype::intel_corei7_skylake;
+                  break;
+               case 0xa7:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_rocketlake;
+                  break;
+               case 0x55:
+                  // TODO: Test that this feature detection actually works on an
+                  // AVX-512 cpu.
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  if (has_feature(processor_features::avx512_bf16)) {
+                     __cpu_model.m_cpu_subtype =
+                        cpu_subtype::intel_corei7_cooperlake;
+                  } else if (has_feature(processor_features::avx512_vnni)) {
+                     __cpu_model.m_cpu_subtype =
+                        cpu_subtype::intel_corei7_cascadelake;
+                  } else {
+                     __cpu_model.m_cpu_subtype =
+                        cpu_subtype::intel_corei7_skylake_avx512;
+                  }
+                  break;
+               case 0x7d:
+                  [[fallthrough]];
+               case 0x7e:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_cannonlake;
+                  break;
+               case 0x8c:
+                  [[fallthrough]];
+               case 0x8d:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_tigerlake;
+                  break;
+               case 0x97:
+                  [[fallthrough]];
+               case 0x9a:
+                  [[fallthrough]];
+               case 0xb7:
+                  [[fallthrough]];
+               case 0xba:
+                  [[fallthrough]];
+               case 0xbf:
+                  [[fallthrough]];
+               case 0xaa:
+                  [[fallthrough]];
+               case 0xac:
+                  [[fallthrough]];
+               case 0xbe:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_alderlake;
+                  break;
+               case 0xc5:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_arrowlake;
+                  break;
+               case 0xc6:
+                  [[fallthrough]];
+               case 0xbd:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_arrowlake_s;
+                  break;
+               case 0xcc:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_pantherlake;
+                  break;
+               case 0x6a:
+                  [[fallthrough]];
+               case 0x6c:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_icelake_server;
+                  break;
+               case 0xcf:
+                  [[fallthrough]];
+               case 0x8f:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_sapphirerapids;
+                  break;
+               case 0xad:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_graniterapids;
+                  break;
+               case 0xae:
+                  __cpu_model.m_cpu_type = cpu_type::intel_corei7;
+                  __cpu_model.m_cpu_subtype =
+                     cpu_subtype::intel_corei7_graniterapids_d;
+                  break;
+               case 0x1c:
+                  [[fallthrough]];
+               case 0x26:
+                  [[fallthrough]];
+               case 0x27:
+                  [[fallthrough]];
+               case 0x35:
+                  [[fallthrough]];
+               case 0x36:
+                  __cpu_model.m_cpu_type = cpu_type::intel_bonnell;
+                  break;
+               case 0x37:
+                  [[fallthrough]];
+               case 0x4a:
+                  [[fallthrough]];
+               case 0x4d:
+                  [[fallthrough]];
+               case 0x5a:
+                  [[fallthrough]];
+               case 0x5d:
+                  [[fallthrough]];
+               case 0x4c:
+                  __cpu_model.m_cpu_type = cpu_type::intel_silvermont;
+                  break;
+               case 0x5c:
+                  [[fallthrough]];
+               case 0x5f:
+                  __cpu_model.m_cpu_type = cpu_type::intel_goldmont;
+                  break;
+               case 0x7a:
+                  __cpu_model.m_cpu_type = cpu_type::intel_goldmont_plus;
+                  break;
+               case 0x86:
+                  [[fallthrough]];
+               case 0x8a:
+                  [[fallthrough]];
+               case 0x96:
+                  [[fallthrough]];
+               case 0x9c:
+                  __cpu_model.m_cpu_type = cpu_type::intel_tremont;
+                  break;
+               case 0xaf:
+                  __cpu_model.m_cpu_type = cpu_type::intel_sierraforest;
+                  break;
+               case 0xb6:
+                  __cpu_model.m_cpu_type = cpu_type::intel_grandridge;
+                  break;
+               case 0xdd:
+                  __cpu_model.m_cpu_type = cpu_type::intel_clearwaterforest;
+                  break;
+               case 0x57:
+                  __cpu_model.m_cpu_type = cpu_type::intel_knl;
+                  break;
+               case 0x85:
+                  __cpu_model.m_cpu_type = cpu_type::intel_knm;
+                  break;
+               default:
+                  // Unknown CPU.
+                  break;
+            }
+         // Unknown family.
+         default:
+            break;
+      }
+   } else if (cpu_model == 0x68747541u) {
+      // AMD CPU.
+      __cpu_model.m_cpu_vendor_id = 2u;
+
+      // TODO: Fill this out.
+   } else {
+      //  Other manufacturer.
+      __cpu_model.m_cpu_vendor_id = 3u;
+
+      // TODO: Fill this out.
+   }
+}
+
 extern "C" inline void
 __cpu_indicator_init() {  // NOLINT
    using enum processor_features;
 
    // Get highest values for `%EAX` below and above `0x80000000u`.
-   auto&& [max_leaf, _, _, _] = cpuid(0u);
+   auto&& [max_leaf, vendor1, vendor3, vendor2] = cpuid(0u);
+
+   // Fill out the vendor name from the string stored in `%EBX`, `%ECX`, and
+   // `%EDX`.
+   cat::str_inplace<12u> vendor_name;
+   __builtin_memcpy(vendor_name.data(), &vendor1, 4);
+   __builtin_memcpy(vendor_name.data() + 4, &vendor2, 4);
+   __builtin_memcpy(vendor_name.data() + 8, &vendor3, 4);
+
    auto&& [max_extended_leaf, _, _, _] = cpuid(0x80000000u);
 
-   auto&& [eax, _, ecx, _] = cpuid(1u);
+   auto&& [vendor_family_model, _, ecx, _] = cpuid(1u);
    cat::bitset ecx_bits = cat::bitset<32>::from(ecx);
-
-   // Use this information to fill out x86 family model and available features.
-
-   // Extract bits 4 through 7.
-   cat::uint4 cpu_model = (eax >> 4u) & 0xfu;
-   // Extract bits 8 through 11.
-   cat::uint4 cpu_family = (eax >> 8u) & 0xfu;
-
-   if (cpu_family == 6u || cpu_family == 0xfu) {
-      // Bits 16 through 19.
-      cpu_model += ((eax >> 16u) & 0xfu) << 4u;
-
-      if (cpu_family == 0xfu) {
-         // Bits 20 through 27.
-         cpu_family += (eax >> 20u) & 0xffu;
-      }
-   }
 
    // This is an array of 4 zero-initialized bitsets rather than a single
    // `bitset<128>` to more directly map to LLVM's `__cpu_model` and
@@ -400,7 +733,8 @@ __cpu_indicator_init() {  // NOLINT
    __cpu_features2[1] |= feature_flags[2];
    __cpu_features2[2] = feature_flags[3];
 
-   // Detecting processor and subtype requires special-casing Intel and AMD.
+   // Use this information to fill out x86 family model and available features.
+   set_vendor_model(vendor_family_model, vendor1);
 }
 
 }  // namespace detail
