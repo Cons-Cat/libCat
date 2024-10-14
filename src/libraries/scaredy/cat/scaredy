@@ -480,23 +480,32 @@ class scaredy {
    }
 
    [[nodiscard]]
-      constexpr auto
-      value()
-      & requires(!is_void<T>) { return this->m_storage.value(); }
+   constexpr auto
+   value() & -> decltype(auto)
+      requires(!is_void<T>)
+   {
+      return this->m_storage.value();
+   }
 
-      [[nodiscard]] constexpr auto value() const&
-         requires(!is_void<T>)
+   constexpr auto
+   value() const& -> decltype(auto)
+      requires(!is_void<T>)
    {
       return this->m_storage.value();
    }
 
    [[nodiscard]]
-      constexpr auto
-      value()
-      && requires(!is_void<T>) { return move(this->m_storage.value()); }
+   constexpr auto
+   value() && -> decltype(auto)
+      requires(!is_void<T>)
+   {
+      return move(this->m_storage.value());
+   }
 
-      [[nodiscard]] constexpr auto value() const&&
-         requires(!is_void<T>)
+   [[nodiscard]]
+   constexpr auto
+   value() const&& -> decltype(auto)
+      requires(!is_void<T>)
    {
       return move(this->m_storage.value());
    }
