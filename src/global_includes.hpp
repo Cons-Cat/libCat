@@ -159,8 +159,8 @@ inline constexpr cat::monostate_type monostate;
 #include <cat/notype>
 
 // Unwrap an error-like container such as `cat::scaredy` or `cat::maybe` iff
-// it holds a value, otherwise propagate it up the call stack. This works due to
-// a GCC extension, statement expressions.
+// it holds a value, otherwise propagate it up the call stack, using a statement
+// expression.
 #define CAT_PROPAGATE(container)                                              \
    ({                                                                         \
       using try_type = decltype(container);                                   \
@@ -190,6 +190,38 @@ inline constexpr cat::monostate_type monostate;
 #pragma clang final(CAT_PROPAGATE)
 
 #define prop(container) CAT_PROPAGATE(container)
+
+// Unwrap an error-like container such as `cat::scaredy` or `cat::maybe` iff
+// it holds a value, otherwise propagate an error state `or_value`.
+#define CAT_PROPAGATE_OR(container, or_value)                                 \
+   ({                                                                         \
+      using try_type = decltype(container);                                   \
+      /* static_assert(cat::is_maybe<try_type>||cat::is_scaredy<try_type>);*/ \
+      /* `if constexpr` does not short circuit for the purposes of */         \
+      /* type-deduction within a statement expression. */                     \
+      /* If a `nullopt` is returned, this can fail to compile even if */      \
+      /* the constant expression is false. In that case, `no_type` is */      \
+      /* the return type instead, but of course `no_type` will never be */    \
+      /* returned.*/                                                          \
+      using return_type =                                                     \
+         ::cat::conditional<::cat::is_specialization<try_type, ::cat::maybe>, \
+                            ::cat::detail::nullopt_type, ::cat::no_type>;     \
+                                                                              \
+      if (!((container).has_value())) {                                       \
+         if constexpr (::cat::is_maybe<try_type>) {                           \
+            return return_type();                                             \
+         } else {                                                             \
+            return (container).error();                                       \
+         }                                                                    \
+      }                                                                       \
+      (or_value);                                                             \
+   })
+
+// `CAT_PROPAGATE_OR` should never be `#undef`'d. The redefinable macro
+// `prop_or` exists to make this macro more ergonomic.
+#pragma clang final(CAT_PROPAGATE_OR)
+
+#define prop_or(container, or_value) CAT_PROPAGATE_OR(container, or_value)
 
 namespace std {
 
