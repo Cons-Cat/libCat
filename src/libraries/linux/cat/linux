@@ -1212,7 +1212,7 @@ struct process {
 
    template <typename... Args, cat::is_invocable<Args...> F>
    auto
-   create(cat::is_allocator auto& allocator, cat::idx initial_stack_size,
+   spawn(cat::is_allocator auto& allocator, cat::idx initial_stack_size,
           F&& function, Args&&... arguments) -> scaredy_nix<void>;
 
    [[nodiscard]]
@@ -1221,7 +1221,7 @@ struct process {
 
  private:
    auto
-   create_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
+   spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
                void* p_function, void* p_args_struct) -> scaredy_nix<void>;
 
    process_id m_id;

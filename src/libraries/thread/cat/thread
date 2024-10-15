@@ -16,11 +16,11 @@ struct thread {
 
    template <typename... Args>
    auto
-   create(is_allocator auto& allocator, idx initial_stack_size,
-          is_invocable<Args...> auto&& function, Args&&... arguments)
+   spawn(is_allocator auto& allocator, idx initial_stack_size,
+         is_invocable<Args...> auto&& function, Args&&... arguments)
       -> maybe<void> {
-      scaredy result = m_handle.create(allocator, initial_stack_size,
-                                       fwd(function), fwd(arguments)...);
+      scaredy result = m_handle.spawn(allocator, initial_stack_size,
+                                      fwd(function), fwd(arguments)...);
       if (result.has_value()) {
          return monostate;
       }

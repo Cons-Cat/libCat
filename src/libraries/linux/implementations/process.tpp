@@ -7,9 +7,9 @@
 template <typename... Args, cat::is_invocable<Args...> F>
 [[gnu::no_sanitize_undefined, gnu::no_sanitize_address]]
 auto
-nix::process::create(cat::is_allocator auto& allocator,
-                     cat::idx const initial_stack_size, F&& function,
-                     Args&&... arguments) -> scaredy_nix<void> {
+nix::process::spawn(cat::is_allocator auto& allocator,
+                    cat::idx const initial_stack_size, F&& function,
+                    Args&&... arguments) -> scaredy_nix<void> {
    // Allocate a stack for this thread.
    // TODO: This stack memory should not be owned by the `process`, to
    // enable simpler memory management patterns.
@@ -30,8 +30,8 @@ nix::process::create(cat::is_allocator auto& allocator,
 
    if constexpr (sizeof...(arguments) == 0) {
       // If there are no arguments, `function` can be called almost directly.
-      on_parent = this->create_impl(p_stack_bottom, initial_stack_size,
-                                    reinterpret_cast<void*>(function), nullptr);
+      on_parent = this->spawn_impl(p_stack_bottom, initial_stack_size,
+                                   reinterpret_cast<void*>(function), nullptr);
    } else {
       // If there are arguments, `function` must be wrapped in a lambda that has
       // tuple storage.
@@ -46,9 +46,9 @@ nix::process::create(cat::is_allocator auto& allocator,
          fwd(fn)();
       };
 
-      on_parent = this->create_impl(p_stack_bottom, initial_stack_size,
-                                    reinterpret_cast<void*>(p_entry),
-                                    reinterpret_cast<void*>(&tuple_args));
+      on_parent = this->spawn_impl(p_stack_bottom, initial_stack_size,
+                                   reinterpret_cast<void*>(p_entry),
+                                   reinterpret_cast<void*>(&tuple_args));
    }
 
    // The child thread, if it exists, never reaches this point.
