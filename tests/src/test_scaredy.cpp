@@ -70,6 +70,18 @@ scaredy_try_fail() -> cat::scaredy<int, error_set> {
    return boo;
 }
 
+auto
+scaredy_try_success_2() -> cat::scaredy<uint4, error_set> {
+   cat::scaredy<int, error_set> error{1};
+   return prop_or(error, 2_u4);
+}
+
+auto
+scaredy_try_fail_2() -> cat::scaredy<cat::monostate_type, error_set> {
+   cat::scaredy<int, error_set> error{error_set::one};
+   return prop_or(error, cat::monostate);
+}
+
 TEST(test_scaredy) {
    cat::scaredy result = union_errors(0);
    // The `scaredy` here adds a flag to the `int8`, which is padded out to 16
@@ -252,4 +264,11 @@ TEST(test_scaredy) {
    auto _ = scaredy_try_success().verify();
    cat::scaredy fail = scaredy_try_fail();
    cat::verify(!fail.has_value());
+
+   // Test `prop_or` macro for converting `scaredy` into a different type with a
+   // different value.
+   uint4 non_error = scaredy_try_success_2().verify();
+   cat::verify(non_error == 2u);
+   cat::scaredy fail2 = scaredy_try_fail_2();
+   cat::verify(!fail2.has_value());
 }
