@@ -1,3 +1,4 @@
+#include <cat/atomic>
 #include <cat/bit>
 #include <cat/linux>
 #include <cat/page_allocator>
@@ -11,23 +12,27 @@
 
 namespace {
 
-[[gnu::used]]
+cat::atomic<int> atomic;
+
 void
 function() {
-   for (int4 i = 0; i < 3; ++i) {
-      auto _ = cat::println("Moo?");
+   for (idx i = 0; i < 3; ++i) {
+      ++atomic;
    }
 }
 
 }  // namespace
 
 TEST(test_thread) {
+   atomic.store(0);
    cat::thread thread;
    cat::page_allocator allocator;
+
    thread.create(allocator, 2_uki, function).or_exit("Failed to make thread!");
    for (idx i; i < 3; ++i) {
-      auto _ = cat::println("Boo!");
+      ++atomic;
    }
+   
    thread.join().or_exit("Failed to join thread!");
-   auto _ = cat::println("Finished!");
+   cat::verify(atomic.load() == 6);
 }
