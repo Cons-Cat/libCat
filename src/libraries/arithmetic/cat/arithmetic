@@ -1026,6 +1026,11 @@ struct arithmetic_ptr :
       return lhs.raw == make_raw_arithmetic(rhs);
    }
 
+   auto
+   get() const -> T* {
+      return reinterpret_cast<T*>(raw);
+   }
+
    template <is_integral U>
    [[gnu::always_inline, gnu::artificial]]
    constexpr auto

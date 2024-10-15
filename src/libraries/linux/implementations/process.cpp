@@ -14,14 +14,12 @@ nix::process::create_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
 
    // Place a pointer to function arguments on the new stack:
    stack_top -= 8;
-   __builtin_memcpy(static_cast<void*>(stack_top),
-                    static_cast<void*>(&p_args_struct), 8);
+   __builtin_memcpy(stack_top.get(), &p_args_struct, 8);
 
    // Place a pointer to function on the new stack:
    // 8 is the size of a pointer, such as `p_function`.
    stack_top -= 8;
-   __builtin_memcpy(static_cast<void*>(stack_top),
-                    static_cast<void*>(&p_function), 8);
+   __builtin_memcpy(stack_top.get(), &p_function, 8);
 
    // This syscall is made manually here because it's important to be careful
    // with the stack and registers.
@@ -36,7 +34,7 @@ nix::process::create_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
 
          # Call the function pointer if this is the child process.
          pop %%rax
-         pop %%rdi
+         pop %%rdi # Pass the arguments pointer to the first function parameter.
          call *%%rax)"
       : /* There are no outputs. */
       : "a"(56), "D"(flags), "S"(stack_top),
