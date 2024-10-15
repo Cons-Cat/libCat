@@ -1210,11 +1210,10 @@ struct process {
    // TODO: Add a move constructor and assignment operator.
    process(process const&) = delete;
 
-   template <typename... Args>
+   template <typename... Args, cat::is_invocable<Args...> F>
    auto
    create(cat::is_allocator auto& allocator, cat::idx initial_stack_size,
-          cat::is_invocable<Args...> auto&& function, Args&&... arguments)
-      -> scaredy_nix<void>;
+          F&& function, Args&&... arguments) -> scaredy_nix<void>;
 
    [[nodiscard]]
    auto

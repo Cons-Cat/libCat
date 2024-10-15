@@ -4,12 +4,11 @@
 
 #include <cat/linux>
 
-template <typename... Args>
+template <typename... Args, cat::is_invocable<Args...> F>
 [[gnu::no_sanitize_undefined, gnu::no_sanitize_address]]
 auto
 nix::process::create(cat::is_allocator auto& allocator,
-                     cat::idx const initial_stack_size,
-                     cat::is_invocable<Args...> auto&& function,
+                     cat::idx const initial_stack_size, F&& function,
                      Args&&... arguments) -> scaredy_nix<void> {
    // Allocate a stack for this thread.
    // TODO: This stack memory should not be owned by the `process`, to
@@ -27,10 +26,30 @@ nix::process::create(cat::is_allocator auto& allocator,
    cat::tuple<Args...> args{fwd(arguments)...};
 
    auto* p_stack_bottom = maybe_memory.value().data();
+   scaredy_nix<void> on_parent;
 
-   scaredy_nix<void> on_parent = this->create_impl(
-      p_stack_bottom, initial_stack_size, reinterpret_cast<void*>(function),
-      reinterpret_cast<void*>(&args));
+   if constexpr (sizeof...(arguments) == 0) {
+      // If there are no arguments, `function` can be called almost directly.
+      on_parent = this->create_impl(p_stack_bottom, initial_stack_size,
+                                    reinterpret_cast<void*>(function), nullptr);
+   } else {
+      // If there are arguments, `function` must be wrapped in a lambda that has
+      // tuple storage.
+      cat::tuple tuple_args{function, fwd(arguments)...};
+
+      // Unary `+` converts this lambda to function pointer.
+      static auto* p_entry = +[](cat::tuple<F, Args...>* p_arguments) {
+         // TODO: When supported, try:
+         // auto&& [fn, pack_args...] = *p_arguments;
+
+         auto&& [fn] = *p_arguments;
+         fwd(fn)();
+      };
+
+      on_parent = this->create_impl(p_stack_bottom, initial_stack_size,
+                                    reinterpret_cast<void*>(p_entry),
+                                    reinterpret_cast<void*>(&tuple_args));
+   }
 
    // The child thread, if it exists, never reaches this point.
    if (!on_parent.has_value()) {
