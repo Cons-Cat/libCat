@@ -28,11 +28,11 @@ TEST(test_thread) {
    cat::thread thread;
    cat::page_allocator allocator;
 
-   thread.create(allocator, 2_uki, function).or_exit("Failed to make thread!");
+   thread.spawn(allocator, 2_uki, function).or_exit("Failed to make thread!");
    for (idx i; i < 3; ++i) {
       ++atomic;
    }
-   
+
    thread.join().or_exit("Failed to join thread!");
    cat::verify(atomic.load() == 6);
 }
