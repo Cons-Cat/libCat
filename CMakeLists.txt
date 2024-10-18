@@ -48,14 +48,14 @@ list(
 if(CAT_USE_SANITIZERS)
     list(
      APPEND CAT_COMPILE_OPTIONS_COMMON
-    -fno-omit-frame-pointer # Required for UBsan.
-    -fsanitize=undefined
+    -fomit-frame-pointer # Required for UBsan.
+    #-fsanitize=undefined
     -fsanitize=address
 
     # Asan stack overflow checking does not work in libCat.
     # TODO: Explain why. It has something to do with GLibC runtime.
     $<$<CXX_COMPILER_ID:GNU>:--param asan-stack=0>
-    $<$<CXX_COMPILER_ID:Clang>:-mllvm -asan-stack=0>
+    #$<$<CXX_COMPILER_ID:Clang>:-mllvm -asan-stack=0>
   )
 endif()
 
@@ -127,14 +127,16 @@ target_compile_options(cat INTERFACE "-std=gnu++26")
 if(CAT_USE_SANITIZERS)
   target_link_options(cat INTERFACE
     -fsanitize=address
-    -fsanitize=undefined
+    #-fsanitize=undefined
+    $<$<CXX_COMPILER_ID:Clang>:-shared-libasan>
   )
-  
-  target_link_libraries(
-    cat INTERFACE
-    asan
-    ubsan
-  )
+
+  # TODO: These should be linked for GCC but not Clang.
+  # target_link_libraries(
+  #   cat INTERFACE
+  #   asan
+  #   ubsan
+  # )
 endif()
 
 target_compile_options(cat INTERFACE ${CAT_COMPILE_OPTIONS})

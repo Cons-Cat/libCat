@@ -5,7 +5,6 @@
 #include <cat/linux>
 
 template <typename... Args, cat::is_invocable<Args...> F>
-[[gnu::no_sanitize_undefined, gnu::no_sanitize_address]]
 auto
 nix::process::spawn(cat::is_allocator auto& allocator,
                     cat::idx const initial_stack_size, F&& function,
