@@ -9,6 +9,8 @@ source /home/conscat/src/libcat/gdb_pretty_printers/cat_printers.py
 
 # Skip stepping into uninteresting code.
 # This is necessary because Clang cannot compile `artificial` methods
-# if they are also `friend`.
+# if they are also `friend` or `static`.
+skip file debug
+skip file compare
 skip file arithmetic
 skip file arithmetic_interface

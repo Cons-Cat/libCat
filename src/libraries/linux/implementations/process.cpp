@@ -1,9 +1,8 @@
 #include <cat/linux>
 
-[[gnu::no_sanitize_address, gnu::no_sanitize_undefined]]
 auto
 nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
-                          void* p_function, void* p_args_struct)
+                         void* p_function, void* p_args_struct)
    -> scaredy_nix<void> {
    m_stack_size = initial_stack_size;
    m_p_stack = static_cast<void*>(stack);

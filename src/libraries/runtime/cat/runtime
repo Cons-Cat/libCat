@@ -15,7 +15,7 @@ extern "C"
      gnu::force_align_arg_pointer]]
    void
    _start();  // NOLINT
-}
+}  // namespace detail
 
 // The `cat::exit()` function is provided globally. This streamlines out the
 // existence of `_exit()`.
