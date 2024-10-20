@@ -49,11 +49,7 @@ class ArithmeticPrinter:
     def __init__(self, val: gdb.Value):
         self.raw = val['raw']
 
-        type = val.type.strip_typedefs().name
-        untyped_policy = type[-2:-1]
-        typed_policy = gdb.Value(int(untyped_policy)).cast(
-            gdb.lookup_type('cat::overflow_policies')
-        )
+        typed_policy = val.type.template_argument(1)
         stripped_policy = str(typed_policy)[24:]
         match stripped_policy:
             case 'undefined':
@@ -129,7 +125,7 @@ class ArrayPrinter:
 
     def __init__(self, val: gdb.Value):
         self.m_data: gdb.Value = val['m_data']
-        self.size: int = int(str(re.search('[0-9]+\}\>$', str(val.type.strip_typedefs())).group(0))[:-2])
+        self.size: int = int(str(re.search('[0-9]+}>$', str(val.type.strip_typedefs())).group(0))[:-2])
         return
 
     def to_string(self):
