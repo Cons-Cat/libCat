@@ -88,7 +88,7 @@ class BytePrinter:
     "Print a `cat::byte`"
 
     def __init__(self, val: gdb.Value):
-        self.value = val['value']
+        self.value = val['value']['raw']
         return
 
     def to_string(self):
