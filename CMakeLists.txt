@@ -72,7 +72,6 @@ list(
   # Remove unused symbols.
   -ffunction-sections -fdata-sections
   -fvisibility=hidden -fvisibility-inlines-hidden
-  -flto=auto
   # TODO: Consider why no-plt instead of relro.
   -fno-plt
 )
@@ -81,9 +80,21 @@ list(
   APPEND CAT_COMPILE_OPTIONS_RELWITHDEBINFO
   ${CAT_COMPILE_OPTIONS_DEBUG}
   ${CAT_COMPILE_OPTIONS_RELEASE}
-  # Use thin LTO for optimized non-release builds.
-  $<$<CXX_COMPILER_ID:Clang>:-flto=thin>
 )
+
+# LTO doesn't work with sanitizers in clang, so it's special-cased.
+if (NOT CAT_USE_SANITIZERS)
+  list(
+    APPEND CAT_COMPILE_OPTIONS_RELEASE
+    -flto=auto
+  )
+
+  list(
+    APPEND CAT_COMPILE_OPTIONS_RELEASE
+    # Use thin LTO for optimized non-release builds.
+    -flto=thin
+  )
+endif()
 
 list(
   APPEND CAT_COMPILE_OPTIONS
