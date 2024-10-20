@@ -36,8 +36,7 @@ TEST(test_paging_memory) {
    memory[0] = 10;
    cat::verify(memory[0] == 10);
 
-   // allocation_type with small-size optimization.
-   int stack_variable;
+   // `allocation_type` with small-size optimization.
    auto small_memory_1 = allocator.inline_alloc<int4>().verify();
    allocator.get(small_memory_1) = 2;
    // Both values should be on stack, so these addresses are close
@@ -45,18 +44,15 @@ TEST(test_paging_memory) {
    cat::verify(small_memory_1.is_inline());
    // The handle's address should be the same as the data's if it was
    // allocated on the stack.
-   int4& intref = *static_cast<int4*>(static_cast<void*>(&small_memory_1));
+   int4& intref = *reinterpret_cast<int4*>(&small_memory_1);
    intref = 10;
    cat::verify(allocator.get(small_memory_1) == 10);
 
    allocator.free(small_memory_1);
 
    auto small_memory_5 = allocator.inline_alloc_multi<int4>(1'000u).verify();
-   // `small_memory_1` should be in a page, so these addresses are far
-   // apart.
-   cat::verify(cat::abs(intptr<int>{&stack_variable}
-                        - intptr<int4>{allocator.get(small_memory_5).data()})
-               > 512);
+   // `small_memory_1` should be larger than the small storage buffer.
+   cat::verify(!small_memory_5.is_inline());
    allocator.free(small_memory_1);
 
    // Small-size handles have unique storage.
