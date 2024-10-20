@@ -6,31 +6,9 @@
 
 namespace cat {
 
-template <typename T>
-constexpr void
-poison_memory_region([[maybe_unused]] T const volatile* p_address,
-                     [[maybe_unused]] uword size) {
-#ifdef __SANITIZE_ADDRESS__
-   if !consteval {
-      __asan_poison_memory_region(
-         reinterpret_cast<void const volatile*>(p_address), size);
-   }
-#endif
-}
+// Define either hooks or shims for asan.
 
-template <typename T>
-constexpr void
-unpoison_memory_region([[maybe_unused]] T const volatile* p_address,
-                       [[maybe_unused]] uword size) {
-#ifdef __SANITIZE_ADDRESS__
-   if !consteval {
-      __asan_unpoison_memory_region(
-         reinterpret_cast<void const volatile*>(p_address), size);
-   }
-#endif
-}
-
-#ifdef __SANITIZE_ADDRESS__
+#if __has_feature(address_sanitizer)
 extern "C" {
 
 // TODO: Comment these with documentation and use safer types.
@@ -85,5 +63,29 @@ inline void
 __asan_unpoison_memory_region(void const volatile*, uword) {  // NOLINT
 }
 #endif
+
+template <typename T>
+constexpr void
+poison_memory_region([[maybe_unused]] T const volatile* p_address,
+                     [[maybe_unused]] uword size) {
+#if __has_feature(address_sanitizer)
+   if !consteval {
+      __asan_poison_memory_region(
+         reinterpret_cast<void const volatile*>(p_address), size);
+   }
+#endif
+}
+
+template <typename T>
+constexpr void
+unpoison_memory_region([[maybe_unused]] T const volatile* p_address,
+                       [[maybe_unused]] uword size) {
+#if __has_feature(address_sanitizer)
+   if !consteval {
+      __asan_unpoison_memory_region(
+         reinterpret_cast<void const volatile*>(p_address), size);
+   }
+#endif
+}
 
 }  // namespace cat
