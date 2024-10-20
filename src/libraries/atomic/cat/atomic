@@ -54,12 +54,12 @@ cmpexch_failure_order(memory_order order) -> memory_order {
 }
 }  // namespace detail
 
-void
+inline void
 thread_fence(memory_order&& order) {
    __atomic_thread_fence(order);
 }
 
-void
+inline void
 signal_fence(memory_order&& order) {
    __atomic_signal_fence(order);
 }
