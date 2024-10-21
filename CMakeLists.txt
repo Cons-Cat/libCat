@@ -49,12 +49,10 @@ if(CAT_USE_SANITIZERS)
     list(
      APPEND CAT_COMPILE_OPTIONS_COMMON
     -fomit-frame-pointer # Required for UBsan.
-    #-fsanitize=undefined
+    -fsanitize=undefined
     -fsanitize=address
 
-    # Asan stack overflow checking does not work in libCat.
-    # TODO: Explain why. It has something to do with GLibC runtime.
-    $<$<CXX_COMPILER_ID:GNU>:--param asan-stack=0>
+    #$<$<CXX_COMPILER_ID:GNU>:--param asan-stack=0>
     #$<$<CXX_COMPILER_ID:Clang>:-mllvm -asan-stack=0>
   )
 endif()
