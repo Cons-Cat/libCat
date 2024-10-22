@@ -132,7 +132,7 @@ TEST(test_vec) {
    cat::verify(default_vector.is_full());
 
    // Resize the vector to be smaller, then check it's not full.
-   auto _ = default_vector.resize(allocator, 2).verify();
+   default_vector.resize(allocator, 2).verify();
    cat::verify(!default_vector.is_full());
 
    // TODO: Test insert iterators.

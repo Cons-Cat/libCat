@@ -764,7 +764,7 @@ class maybe {
 
    // Fail a `cat::verify` check if this `maybe` is empty, otherwise return its
    // value.
-   [[nodiscard]]
+   // [[nodiscard]] TODO: Make this conditionally `nodiscard`.
    auto
    verify(this auto&& self,
           void (*p_assert_handler)(source_location const&) = assert_handler,
