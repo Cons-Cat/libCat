@@ -19,7 +19,7 @@ TEST(test_ring) {
    cat::verify(ring_int4.capacity() == 0);
 
    // Push onto ring.
-   auto _ = ring_int4.reserve(allocator, 4).verify();
+   ring_int4.reserve(allocator, 4).verify();
    ring_int4.push_back(1);
    ring_int4.push_back(3);
    ring_int4.push_back(2);
