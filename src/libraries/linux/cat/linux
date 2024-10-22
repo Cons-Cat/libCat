@@ -1204,16 +1204,18 @@ struct process {
    static constexpr clone_flags default_flags =
       clone_flags::virtual_memory | clone_flags::file_system
       | clone_flags::file_descriptor_table | clone_flags::io
-      | clone_flags::parent_set_tid;
+      | clone_flags::parent_set_tid | clone_flags::child_clear_tid;
+   // | clone_flags::set_tls;
 
    process() = default;
-   // TODO: Add a move constructor and assignment operator.
+   // TODO: Add a move constructor and move assignment operator.
    process(process const&) = delete;
 
    template <typename... Args, cat::is_invocable<Args...> F>
    auto
    spawn(cat::is_allocator auto& allocator, cat::idx initial_stack_size,
-         F&& function, Args&&... arguments) -> scaredy_nix<void>;
+         cat::idx thread_local_buffer_size, F&& function, Args&&... arguments)
+      -> scaredy_nix<void>;
 
    [[nodiscard]]
    auto
@@ -1222,13 +1224,14 @@ struct process {
  private:
    auto
    spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
-              void* p_function, void* p_args_struct) -> scaredy_nix<void>;
+              cat::idx thread_local_buffer_size, void* p_function,
+              void* p_args_struct) -> scaredy_nix<void>;
 
-   process_id m_id;
+   process_id m_id{0};
    // TODO: Free this later.
-   void* m_p_stack;
+   void* m_p_stack_bottom;
    cat::idx m_stack_size;
-   clone_flags flags = default_flags;
+   clone_flags m_flags = default_flags;
 };
 
 struct signals_mask_set {
