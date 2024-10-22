@@ -7,29 +7,30 @@
 template <typename... Args, cat::is_invocable<Args...> F>
 auto
 nix::process::spawn(cat::is_allocator auto& allocator,
-                    cat::idx const initial_stack_size, F&& function,
+                    cat::idx const initial_stack_size,
+                    cat::idx const thread_local_buffer_size, F&& function,
                     Args&&... arguments) -> scaredy_nix<void> {
    // Allocate a stack for this thread.
    // TODO: This stack memory should not be owned by the `process`, to
    // enable simpler memory management patterns.
    // TODO: This should union allocator and linux errors.
    // TODO: Use size feedback.
-   auto maybe_memory =
-      allocator.template align_alloc_multi<cat::byte>(16u, initial_stack_size);
+   auto maybe_memory = allocator.template align_alloc_multi<cat::byte>(
+      16u, initial_stack_size + thread_local_buffer_size);
    if (!maybe_memory.has_value()) {
       return nix::linux_error::inval;
    }
 
-   // TODO: A `prop_as` macro or something can simplify this.
    // TODO: Support call operator for functors.
-   cat::tuple<Args...> args{fwd(arguments)...};
+   // cat::tuple<Args...> args{fwd(arguments)...};
 
-   auto* p_stack_bottom = maybe_memory.value().data();
+   cat::byte* p_stack_bottom = maybe_memory.value().data();
    scaredy_nix<void> on_parent;
 
    if constexpr (sizeof...(arguments) == 0) {
       // If there are no arguments, `function` can be called almost directly.
       on_parent = this->spawn_impl(p_stack_bottom, initial_stack_size,
+                                   thread_local_buffer_size,
                                    reinterpret_cast<void*>(function), nullptr);
    } else {
       // If there are arguments, `function` must be wrapped in a lambda that has
@@ -46,10 +47,12 @@ nix::process::spawn(cat::is_allocator auto& allocator,
       };
 
       on_parent = this->spawn_impl(p_stack_bottom, initial_stack_size,
+                                   thread_local_buffer_size,
                                    reinterpret_cast<void*>(p_entry),
                                    reinterpret_cast<void*>(&tuple_args));
    }
 
+   // TODO: A `prop_as` macro or something can simplify this.
    // The child thread, if it exists, never reaches this point.
    if (!on_parent.has_value()) {
       return on_parent.error();
