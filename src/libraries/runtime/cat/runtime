@@ -8,13 +8,14 @@ namespace cat {
 
 namespace detail {
 // Name mangling prevents the linker from finding this symbol.
-extern "C"
-   // GCC wants to insert a `__asan_handle_no_return()` call, which breaks
-   // argument loading.
-   [[noreturn, gnu::used, gnu::no_sanitize_address,
-     gnu::force_align_arg_pointer]]
-   void
-   _start();  // NOLINT
+extern "C" [[gnu::used
+#ifndef NO_ARGC_ARGV
+             ,
+             gnu::naked
+#endif
+]]
+void
+_start();  // NOLINT
 }  // namespace detail
 
 // The `cat::exit()` function is provided globally. This streamlines out the
@@ -31,7 +32,7 @@ load_base_stack_pointer() -> void*;
 [[gnu::always_inline]]
 inline void
 align_stack_pointer_16() {
-   asm("and $-16, %rsp");
+   asm volatile(".att_syntax prefix ;\nand $-16, %rsp");
 }
 
 // This must be inlined to align the stack pointer on the stack frame it is
@@ -39,7 +40,8 @@ align_stack_pointer_16() {
 [[gnu::always_inline]]
 inline void
 align_stack_pointer_32() {
-   asm("and $-32, %rsp");
+   asm volatile(".att_syntax prefix ;\nand $-32, %rsp");
+   // asm("andq %rsp, -32");
 }
 
 extern "C" [[noreturn]]

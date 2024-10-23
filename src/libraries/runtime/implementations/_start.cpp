@@ -8,48 +8,59 @@ main(...) -> int;  // NOLINT Without K&R, `...` is the only way to do this.
 
 namespace {
 
-[[noreturn,
-// `NOINLINE_MAIN` can be defined in the build system to prevent inlining
-// `main()` in `_start()`.
-#ifndef NOINLINE_MAIN
-  gnu::noinline
-#endif
-]]
+extern "C" {
+#ifndef NO_ARGC_ARGV
+[[noreturn, gnu::used, gnu::no_stack_protector, gnu::no_sanitize_address]]
 void
-call_main() {
-   // These `register` variables must be uninitialized to load from the stack.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wuninitialized"
-   [[clang::uninitialized]]
-   register int argc asm("rdi");
-
-   [[clang::uninitialized]]
-   register char** p_argv asm("rsi");
-
+call_main_args(int argc, char** p_argv) {
+   // The stack pointer must be aligned to prevent SIMD segfaults.
+   cat::align_stack_pointer_32();
+   // Initialize `__cpu_model` and `__cpu_features2` for later use.
+   x64::detail::__cpu_indicator_init();
    cat::exit(main(argc, p_argv));
-   __builtin_unreachable();
-#pragma clang diagnostic pop
+}
+#else
+[[noreturn, gnu::no_stack_protector, gnu::no_sanitize_address]]
+void
+call_main_noargs() {
+   // The stack pointer must be aligned to prevent SIMD segfaults.
+   cat::align_stack_pointer_32();
+   // Initialize `__cpu_model` and `__cpu_features2` for later use.
+   x64::detail::__cpu_indicator_init();
+   cat::exit(main());
+}
+#endif
+}
+
+using constructor_fn = void (*const)();
+extern "C" {
+extern constructor_fn __init_array_start[];  // NOLINT
+extern constructor_fn __init_array_end[];    // NOLINT
 }
 
 }  // namespace
 
-extern "C" void
-cat::detail::_start() {
+// clang-format off
+extern "C"
+[[gnu::used
+#ifndef NO_ARGC_ARGV
+   // If arguments are loaded, this must be `naked` to prevent pushing `%rbp`
+   // first, which breaks argument loading. I've tried other solutions, but
+   // none worked yet.
+   , gnu::naked
+#endif
+]]
+   // clang-format on
+   void
+   cat::detail::_start() {
    // `NO_ARGC_ARGV` can be defined in a build system to skip argument loading.
 #ifndef NO_ARGC_ARGV
-   asm(R"(pop %rdi        # Load `int4 argc`.
+   asm(R"(.att_syntax prefix ; # rmsbolt requires this. Try `-masm=att`
+          pop %rdi        # Load `int4 argc`.
           mov %rsp, %rsi  # Load `char* argv[]`.
+          call call_main_args
        )");
+#else
+   [[clang::always_inline]] call_main_noargs();
 #endif
-
-   // The stack pointer must be aligned to prevent SIMD segfaults even in
-   // surprisingly simple programs with GCC 12.
-   align_stack_pointer_32();
-
-   // Initialize `__cpu_model` and `__cpu_features2` for later use.
-   x64::detail::__cpu_indicator_init();
-
-   // `main()` must be wrapped by a function to conditionally prevent inlining.
-   call_main();
-   __builtin_unreachable();
 }
