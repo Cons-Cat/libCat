@@ -68,12 +68,6 @@ if(CAT_BUILD_UNIT_TESTS)
   )
 
   add_executable(unit_tests unit_tests.cpp)
-  # add_executable(unit_tests ${CMAKE_SOURCE_DIR}/error_test.cpp)
-  # `ctor.ld` is required to set up test callbacks as static constructor functions.
-  set_target_properties(
-    unit_tests PROPERTIES
-    LINK_DEPENDS ${CMAKE_SOURCE_DIR}/tests/ctor.ld
-  )
   
   target_compile_options(unit_tests PRIVATE ${CAT_COMPILE_OPTIONS_TEST})
   target_compile_definitions(unit_tests PRIVATE "NO_ARGC_ARGV")

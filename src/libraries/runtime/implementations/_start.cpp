@@ -8,13 +8,28 @@ main(...) -> int;  // NOLINT Without K&R, `...` is the only way to do this.
 
 namespace {
 
+using constructor_fn = void (*const)();
 extern "C" {
+extern constructor_fn __init_array_start[];  // NOLINT
+extern constructor_fn __init_array_end[];    // NOLINT
+
+void
+call_static_constructors() {
+   // Execute all function pointers in `__init_array_start`.
+   for (constructor_fn const* pp_ctor_func = __init_array_start;
+        pp_ctor_func < __init_array_end; ++pp_ctor_func) {
+      constructor_fn p_ctor = *pp_ctor_func;
+      p_ctor();
+   }
+}
+
 #ifndef NO_ARGC_ARGV
 [[noreturn, gnu::used, gnu::no_stack_protector, gnu::no_sanitize_address]]
 void
 call_main_args(int argc, char** p_argv) {
    // The stack pointer must be aligned to prevent SIMD segfaults.
    cat::align_stack_pointer_32();
+   call_static_constructors();
    // Initialize `__cpu_model` and `__cpu_features2` for later use.
    x64::detail::__cpu_indicator_init();
    cat::exit(main(argc, p_argv));
@@ -27,15 +42,10 @@ call_main_noargs() {
    cat::align_stack_pointer_32();
    // Initialize `__cpu_model` and `__cpu_features2` for later use.
    x64::detail::__cpu_indicator_init();
+   call_static_constructors();
    cat::exit(main());
 }
 #endif
-}
-
-using constructor_fn = void (*const)();
-extern "C" {
-extern constructor_fn __init_array_start[];  // NOLINT
-extern constructor_fn __init_array_end[];    // NOLINT
 }
 
 }  // namespace
