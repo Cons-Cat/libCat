@@ -57,18 +57,18 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
 
    // Reallocate memory, or make an initial allocation.
    constexpr auto
-   internal_allocate(is_allocator auto& allocator, idx minimum_capacity) {
+   internal_allocate(idx minimum_capacity) {
       if (m_p_data == nullptr) {
-         return allocator.template salloc_multi<T>(minimum_capacity);
+         return m_allocator.template salloc_multi<T>(minimum_capacity);
       }
-      return allocator.resalloc_multi(m_p_data, m_current_capacity,
-                                      minimum_capacity);
+      return m_allocator.resalloc_multi(m_p_data, m_current_capacity,
+                                        minimum_capacity);
    }
 
    // Reallocate this vector's memory if it is exceeded, in a non-`constexpr`
    // context.
    constexpr auto
-   increase_storage(is_allocator auto& allocator) -> maybe<void> {
+   increase_storage() -> maybe<void> {
       idx const minimum_capacity =
          (m_current_capacity > 0u)
             ? m_current_capacity * 2u
@@ -92,7 +92,7 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
       } else {
          // Make a new allocation with size feedback.
          auto [alloc_span, alloc_bytes] =
-            prop(internal_allocate(allocator, minimum_capacity));
+            prop(internal_allocate(minimum_capacity));
 
          m_current_capacity = alloc_bytes / sizeof(T);
          m_p_data = alloc_span.data();
@@ -131,7 +131,7 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
    // Try to allocate storage for at least `minimum_capacity` number of `T`s.
    [[nodiscard]]
    constexpr auto
-   reserve(is_allocator auto& allocator, idx minimum_capacity) -> maybe<void> {
+   reserve(idx minimum_capacity) -> maybe<void> {
       if (minimum_capacity > m_current_capacity) {
          // TODO: I think there is a bug in GCC constexpr memory. This is a
          // workaround.
@@ -145,7 +145,7 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
             }
          } else {
             auto [alloc_span, alloc_bytes] =
-               prop(internal_allocate(allocator, minimum_capacity));
+               prop(internal_allocate(minimum_capacity));
 
             m_p_data = alloc_span.data();
             m_current_capacity = idx(alloc_bytes / sizeof(T));
@@ -159,10 +159,10 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
    // Try to change the size of this `vec`.
    [[nodiscard]]
    constexpr auto
-   resize(is_allocator auto& allocator, idx size) -> maybe<void> {
+   resize(idx size) -> maybe<void> {
       if (size > m_current_capacity) {
          // This sets `this->current_capacity` and `this->p_storage`.
-         prop(this->reserve(allocator, size));
+         prop(this->reserve(size));
       }
 
       // If the new size is not larger, simply shrink size and maintain
@@ -190,9 +190,9 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
       requires(is_implicitly_convertible<U, T>)
    [[nodiscard]]
    constexpr auto
-   push_back(is_allocator auto& allocator, U&& value) -> maybe<void> {
+   push_back(U&& value) -> maybe<void> {
       if (m_current_size + 1 > m_current_capacity) {
-         prop(this->increase_storage(allocator));
+         prop(this->increase_storage());
       }
 
       m_p_data[m_current_size.raw] = static_cast<T>(fwd(value));
@@ -241,7 +241,7 @@ constexpr auto
 make_vec_reserved(allocator_type& allocator, idx capacity)
    -> maybe<vec<T, allocator_type>> {
    vec<T, allocator_type> new_vector(allocator);
-   prop(new_vector.reserve(allocator, capacity));
+   prop(new_vector.reserve(capacity));
    return new_vector;
 }
 
@@ -251,7 +251,7 @@ constexpr auto
 make_vec_filled(allocator_type& allocator, idx count, T&& value)
    -> maybe<vec<T, allocator_type>> {
    vec<T, allocator_type> new_vector(allocator);
-   prop(new_vector.reserve(allocator, count));
+   prop(new_vector.reserve(count));
    new_vector.m_current_size = count;
    // TODO: Call a vectorized fill memory function.
    for (T& element : new_vector) {
