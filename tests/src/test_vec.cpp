@@ -9,12 +9,12 @@ consteval auto
 const_func() -> int4 {
    cat::page_allocator allocator;
    cat::vec vector = cat::make_vec_empty<int4>(allocator);
-   auto _ = vector.resize(allocator, 8);
+   auto _ = vector.resize(8);
 
    vector[0] = 1;
    vector[1] = 2;
    vector[7] = 10;
-   auto _ = vector.push_back(allocator, 10);
+   auto _ = vector.push_back(10);
    return vector[8];
 }
 
@@ -33,29 +33,29 @@ TEST(test_vec) {
    cat::verify(int_vec.capacity() >= 0);
 
    // Test pushing back to a `vector`.
-   int_vec.push_back(allocator, 1).or_exit();
-   int_vec.push_back(allocator, 2).or_exit();
-   int_vec.push_back(allocator, 3).or_exit();
+   int_vec.push_back(1).or_exit();
+   int_vec.push_back(2).or_exit();
+   int_vec.push_back(3).or_exit();
    cat::verify(int_vec.size() == 3);
    cat::verify(int_vec.capacity() >= 4);
 
-   int_vec.push_back(allocator, 6).or_exit();
-   int_vec.push_back(allocator, 12).or_exit();
-   int_vec.push_back(allocator, 24).or_exit();
+   int_vec.push_back(6).or_exit();
+   int_vec.push_back(12).or_exit();
+   int_vec.push_back(24).or_exit();
    cat::verify(int_vec.size() == 6);
    cat::verify(int_vec.capacity() >= 8);
 
    // Test resizing a `vector`.
-   int_vec.resize(allocator, 0).or_exit();
+   int_vec.resize(0).or_exit();
    cat::verify(int_vec.size() == 0);
    cat::verify(int_vec.capacity() >= 8);
 
-   int_vec.resize(allocator, 4).or_exit();
+   int_vec.resize(4).or_exit();
    cat::verify(int_vec.size() == 4);
    cat::verify(int_vec.capacity() >= 8);
 
    // Test reserving storage for a `vector`.
-   int_vec.reserve(allocator, 128).or_exit();
+   int_vec.reserve(128).or_exit();
    cat::verify(int_vec.size() == 4);
    cat::verify(int_vec.capacity() >= 128);
 
@@ -119,20 +119,19 @@ TEST(test_vec) {
    cat::vec default_vector = cat::make_vec_empty<int>(allocator);
    cat::verify(default_vector.is_empty());
 
-   auto _ = default_vector.reserve(allocator, 2);
+   auto _ = default_vector.reserve(2);
    cat::verify(default_vector.is_empty());
 
-   auto _ = default_vector.push_back(allocator, 0);
-   auto _ = default_vector.push_back(allocator, 0);
+   auto _ = default_vector.push_back(0);
+   auto _ = default_vector.push_back(0);
    cat::verify(!default_vector.is_empty());
 
    // Resize the vector to be larger, then check it's full.
-   auto _ =
-      default_vector.resize(allocator, default_vector.capacity() + 1u).verify();
+   auto _ = default_vector.resize(default_vector.capacity() + 1u).verify();
    cat::verify(default_vector.is_full());
 
    // Resize the vector to be smaller, then check it's not full.
-   default_vector.resize(allocator, 2).verify();
+   default_vector.resize(2).verify();
    cat::verify(!default_vector.is_full());
 
    // TODO: Test insert iterators.
