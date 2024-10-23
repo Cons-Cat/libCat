@@ -27,7 +27,7 @@ list(
   -mbmi
   -mbmi2
   -mfsgsbase
-
+  
   # Enable most warnings.
   -Wall -Wextra
   -Wno-unused-function
