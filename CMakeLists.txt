@@ -133,19 +133,12 @@ add_library(cat INTERFACE)
 target_compile_options(cat INTERFACE "-std=gnu++26")
 
 # Link the address and undefined behavior sanitizers.
-if(CAT_USE_SANITIZERS)
+if (CAT_USE_SANITIZERS)
   target_link_options(cat INTERFACE
     -fsanitize=address
     #-fsanitize=undefined
     $<$<CXX_COMPILER_ID:Clang>:-shared-libasan>
   )
-
-  # TODO: These should be linked for GCC but not Clang.
-  # target_link_libraries(
-  #   cat INTERFACE
-  #   asan
-  #   ubsan
-  # )
 endif()
 
 target_compile_options(cat INTERFACE ${CAT_COMPILE_OPTIONS})

@@ -908,7 +908,7 @@ constinit inline struct mover {
    template <typename T>
    [[nodiscard("A moved-from value should be consumed."), gnu::always_inline,
      gnu::artificial]]
-   friend inline constexpr auto
+   friend inline constexpr auto  // NOLINT
    operator*(mover, T& x) -> decltype(auto) {
       return move(x);
    }
@@ -917,7 +917,7 @@ constinit inline struct mover {
    template <is_rvalue_reference T>
    [[nodiscard("A moved-from value should be consumed."), gnu::always_inline,
      gnu::artificial]]
-   friend inline constexpr auto
+   friend inline constexpr auto  // NOLINT
    operator*(mover, T&& x) -> T&& {
       return static_cast<cat::remove_reference<T>&&>(x);
    }
