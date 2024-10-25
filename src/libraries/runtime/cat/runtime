@@ -87,3 +87,18 @@ longjmp(jmp_buffer& jump_point, int8 return_value);
 
 // NOLINTNEXTLINE `__dso_handle` must begin with a double underscore.
 inline void* __dso_handle = nullptr;
+
+extern "C" [[gnu::used]]
+inline void
+__cxx_global_var_init() {  // NOLINT
+}
+
+extern "C" [[gnu::used]]
+inline void
+__cxa_guard_acquire() {  // NOLINT
+}
+
+extern "C" [[gnu::used]]
+inline void
+__cxa_guard_release() {  // NOLINT
+}

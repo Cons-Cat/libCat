@@ -12,6 +12,7 @@ list(
   APPEND CAT_COMPILE_OPTIONS_COMMON
   # Disable linking libC symbols.
   -nostdlib
+  -nostdlib++
   # These features are pessimizations to libCat:
   # TODO: Exceptions and rtti should have optional support once it's possible to
   # implement them.
@@ -59,7 +60,7 @@ endif()
 
 list(
   APPEND CAT_COMPILE_OPTIONS_DEBUG
-  -ggdb3 -pipe
+  -ggdb3
   $<$<CXX_COMPILER_ID:GNU>:-fno-eliminate-unused-debug-types
                            -fno-eliminate-unused-debug-symbols>
   $<$<CXX_COMPILER_ID:Clang>:-glldb -gmodules -gfull>
@@ -112,7 +113,6 @@ list(
 
 list(
   APPEND CAT_LINK_OPTIONS_RELEASE
-  ${CAT_LINK_OPTIONS_COMMON}
   # Remove unused symbols.
   -Wl,-z,noseparate-code,--gc-sections
 )
