@@ -87,14 +87,14 @@ class array : public collection_interface<array<T, length>, T>,
    // Get the non-`const` address of this `array`'s internal array.
    [[nodiscard]]
    constexpr auto
-   data() -> T* {
+   data() [[clang::lifetimebound]] -> T* {
       return this->m_data;
    }
 
    // Get the `const` address of this `array`'s internal array.
    [[nodiscard]]
    constexpr auto
-   data() const -> T const* {
+   data() const [[clang::lifetimebound]] -> T const* {
       return this->m_data;
    }
 

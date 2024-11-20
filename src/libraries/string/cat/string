@@ -168,13 +168,13 @@ class str_inplace : public collection_interface<str_inplace<length>, char>,
                     public iterable_interface<char> {
  public:
    constexpr auto
-   data() -> char* {
+   data() [[clang::lifetimebound]] -> char* {
       return m_data;
    }
 
    [[nodiscard]]
    constexpr auto
-   data() const -> char const* {
+   data() const [[clang::lifetimebound]] -> char const* {
       return m_data;
    }
 

@@ -44,6 +44,8 @@ list(
   $<$<CXX_COMPILER_ID:Clang>:-Wno-redundant-consteval-if>
   # Use GCC extensions.
   $<$<CXX_COMPILER_ID:Clang>:-Wno-gnu>
+
+  $<$<CXX_COMPILER_ID:Clang>:-Xclang -fexperimental-bounds-safety>
 )
 
 if(CAT_USE_SANITIZERS)
