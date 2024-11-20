@@ -110,14 +110,14 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
    [[nodiscard]]
    constexpr auto
    data() [[clang::lifetimebound]] -> T* {
-      return &(m_p_data[0]);
+      return __builtin_addressof(m_p_data[0]);
    }
 
    // Get the `const` address of this `vec`'s internal array.
    [[nodiscard]]
    constexpr auto
    data() const [[clang::lifetimebound]] -> T const* {
-      return &(m_p_data[0]);
+      return __builtin_addressof(m_p_data[0]);
    }
 
    [[nodiscard]]
