@@ -1,5 +1,7 @@
 #include <cat/linux>
 
+// The child thread exits with a false-positive from asan.
+[[gnu::no_sanitize_address]]
 auto
 nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
                          cat::idx thread_local_buffer_size, void* p_function,
