@@ -134,14 +134,14 @@ class ring : public collection_interface<ring<T>, T> {
    // Get the non-`const` address of this `vec`'s internal array.
    [[nodiscard]]
    constexpr auto
-   data() -> T* {
+   data() [[clang::lifetimebound]] -> T* {
       return &(this->p_storage[0]);
    }
 
    // Get the `const` address of this `vec`'s internal array.
    [[nodiscard]]
    constexpr auto
-   data() const -> T const* {
+   data() const [[clang::lifetimebound]] -> T const* {
       return &(this->p_storage[0]);
    }
 

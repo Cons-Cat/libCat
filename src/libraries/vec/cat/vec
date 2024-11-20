@@ -30,6 +30,10 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
    make_vec_filled(allocator&, idx, U&&) -> maybe<vec<U, allocator>>;
 
  public:
+   vec&
+   operator=(vec const&) = delete;
+   vec&
+   operator=(vec&&) = delete;
    constexpr vec(vec&& other_vector) = default;
 
    constexpr ~vec() {
@@ -105,14 +109,14 @@ class vec : public collection_interface<vec<T, allocator_type>, T>,
    // Get the non-`const` address of this `vec`'s internal array.
    [[nodiscard]]
    constexpr auto
-   data() -> T* {
+   data() [[clang::lifetimebound]] -> T* {
       return &(m_p_data[0]);
    }
 
    // Get the `const` address of this `vec`'s internal array.
    [[nodiscard]]
    constexpr auto
-   data() const -> T const* {
+   data() const [[clang::lifetimebound]] -> T const* {
       return &(m_p_data[0]);
    }
 

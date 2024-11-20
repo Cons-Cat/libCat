@@ -280,24 +280,32 @@ class collection_interface {
 
    [[nodiscard]]
    constexpr auto
-   front() -> T& requires(is_array_like) {
-                    cat::assert(this->self().size() > 0);
-                    return this->self_mut().data()[0];
-                 }
+   front() -> T&
+      requires(is_array_like)
+   {
+      cat::assert(this->self().size() > 0);
+      return this->self_mut().data()[0];
+   }
 
-   [[nodiscard]] constexpr auto front() const -> T const& {
+   [[nodiscard]]
+   constexpr auto
+   front() const -> T const& {
       cat::assert(this->self().size() > 0);
       return unconst(this)->front();
    }
 
    [[nodiscard]]
    constexpr auto
-   back() -> T& requires(is_array_like) {
-                   cat::assert(this->self().size() > 0);
-                   return this->self_mut().data()[this->self().size().raw - 1];
-                }
+   back() -> T&
+      requires(is_array_like)
+   {
+      cat::assert(this->self().size() > 0);
+      return this->self_mut().data()[this->self().size().raw - 1];
+   }
 
-   [[nodiscard]] constexpr auto back() const -> T const& {
+   [[nodiscard]]
+   constexpr auto
+   back() const -> T const& {
       cat::assert(this->self().size() > 0);
       return unconst(this)->back();
    }
@@ -362,16 +370,19 @@ class collection_interface {
 
    [[nodiscard]]
    constexpr auto
-   operator[](idx index)
-      -> T& requires(is_array_like) {
-               if !consteval {
-                  assert(index < this->self().size());
-               }
+   operator[](idx index) -> T&
+      requires(is_array_like)
+   {
+      if !consteval {
+         assert(index < this->self().size());
+      }
 
-               return this->self_mut().data()[make_raw_arithmetic(index)];
-            }
+      return this->self_mut().data()[make_raw_arithmetic(index)];
+   }
 
-   [[nodiscard]] constexpr auto operator[](idx index) const -> T const&
+   [[nodiscard]]
+   constexpr auto
+   operator[](idx index) const -> T const&
       requires(is_array_like)
    {
       if !consteval {
