@@ -107,12 +107,11 @@ TEST(test_arrays) {
    // TODO: Test `constexpr`.
 
    // Slicing array.
-   [[maybe_unused]]
-   cat::span span = array_1.first(1u);
+   cat::span span = array_1;
+   span = array_1.first(1u);
    auto _ = array_1.subspan(0u, 2u);
    auto _ = array_1.last(2u);
 
-   [[maybe_unused]]
    cat::span const span_const = array_1.first(1u);
    auto _ = array_const.subspan(0u, 2u);
    auto _ = array_const.last(2u);

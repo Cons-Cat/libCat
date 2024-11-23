@@ -45,7 +45,8 @@ list(
   # Use GCC extensions.
   $<$<CXX_COMPILER_ID:Clang>:-Wno-gnu>
 
-  $<$<CXX_COMPILER_ID:Clang>:-Xclang -fexperimental-bounds-safety>
+  # Use Clang lifetime analysis.
+  $<$<CXX_COMPILER_ID:Clang>:-Wdangling -Wdangling-gsl -Xclang -fexperimental-bounds-safety>
 )
 
 if(CAT_USE_SANITIZERS)
@@ -160,6 +161,13 @@ add_subdirectory(tests/)
 
 # Build the examples.
 add_subdirectory(examples/)
+
+# # `ctor.ld` is a minimal linker script necessary for thread local storage.
+# target_link_options(cat INTERFACE -T ${CMAKE_SOURCE_DIR}/src/ctor.ld)
+# set_target_properties(
+#   cat PROPERTIES
+#   LINK_DEPENDS ${CMAKE_SOURCE_DIR}/src/ctor.ld
+# )
 
 # Find a configurable path to a `clang-format` binary.
 find_program(CAT_CLANG_FORMAT_PATH "clang-format" DOC "`clang-format` binary to use.")

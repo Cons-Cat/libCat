@@ -3845,6 +3845,9 @@ class allocator_interface {
          conditional<has_feedback, maybe_sized_allocation<void*>,
                      maybe_ptr<void>>;
 
+      // TODO: Consider replacing this huge number of `conditional`
+      // specializations with `_Generic` or `__builtin_choose_expr`.
+
       // Produce an appropriate handle type for this allocation.
       using handle_type = conditional<
          is_multiple,
