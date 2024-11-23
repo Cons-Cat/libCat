@@ -280,7 +280,7 @@ class collection_interface {
 
    [[nodiscard]]
    constexpr auto
-   front() -> T&
+   front() [[clang::lifetimebound]] -> T&
       requires(is_array_like)
    {
       cat::assert(this->self().size() > 0);
@@ -289,14 +289,14 @@ class collection_interface {
 
    [[nodiscard]]
    constexpr auto
-   front() const -> T const& {
+   front() const [[clang::lifetimebound]] -> T const& {
       cat::assert(this->self().size() > 0);
       return unconst(this)->front();
    }
 
    [[nodiscard]]
    constexpr auto
-   back() -> T&
+   back() [[clang::lifetimebound]] -> T&
       requires(is_array_like)
    {
       cat::assert(this->self().size() > 0);
@@ -305,14 +305,14 @@ class collection_interface {
 
    [[nodiscard]]
    constexpr auto
-   back() const -> T const& {
+   back() const [[clang::lifetimebound]] -> T const& {
       cat::assert(this->self().size() > 0);
       return unconst(this)->back();
    }
 
    [[nodiscard]]
    constexpr auto
-   subspan(idx start_index, idx end_index) -> span<T>
+   subspan(idx start_index, idx end_index) [[clang::lifetimebound]] -> span<T>
       requires(is_array_like)
    {
       if !consteval {
@@ -325,7 +325,8 @@ class collection_interface {
 
    [[nodiscard]]
    constexpr auto
-   subspan(idx start_index, idx end_index) const -> span<T const>
+   subspan(idx start_index, idx end_index) const [[clang::lifetimebound]]
+   -> span<T const>
       requires(is_array_like)
    {
       if !consteval {
@@ -338,7 +339,7 @@ class collection_interface {
 
    [[nodiscard]]
    constexpr auto
-   first(idx count) -> span<T>
+   first(idx count) [[clang::lifetimebound]] -> span<T>
       requires(is_array_like)
    {
       return this->subspan(0u, count);
@@ -346,7 +347,7 @@ class collection_interface {
 
    [[nodiscard]]
    constexpr auto
-   first(idx count) const -> span<T const>
+   first(idx count) const [[clang::lifetimebound]] -> span<T const>
       requires(is_array_like)
    {
       return this->subspan(0u, count);
@@ -354,7 +355,7 @@ class collection_interface {
 
    [[nodiscard]]
    constexpr auto
-   last(idx count) -> span<T>
+   last(idx count) [[clang::lifetimebound]] -> span<T>
       requires(is_array_like)
    {
       return this->subspan(this->self().size() - count, this->self().size());
@@ -362,7 +363,7 @@ class collection_interface {
 
    [[nodiscard]]
    constexpr auto
-   last(idx count) const -> span<T const>
+   last(idx count) const [[clang::lifetimebound]] -> span<T const>
       requires(is_array_like)
    {
       return this->subspan(this->self().size() - count, this->self().size());
@@ -370,7 +371,7 @@ class collection_interface {
 
    [[nodiscard]]
    constexpr auto
-   operator[](idx index) -> T&
+   operator[](idx index) [[clang::lifetimebound]] -> T&
       requires(is_array_like)
    {
       if !consteval {
@@ -382,7 +383,7 @@ class collection_interface {
 
    [[nodiscard]]
    constexpr auto
-   operator[](idx index) const -> T const&
+   operator[](idx index) const [[clang::lifetimebound]] -> T const&
       requires(is_array_like)
    {
       if !consteval {

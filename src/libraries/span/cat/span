@@ -14,15 +14,15 @@ namespace cat {
 // A `span` is represents an array of `T` with runtime-known length. It stores
 // an address and a length. It is random-access iterable.
 template <typename T>
-class span : public collection_interface<span<T>, T>,
-             public iterable_interface<T> {
+class [[gsl::Pointer(T)]] span : public collection_interface<span<T>, T>,
+                                 public iterable_interface<T> {
  public:
    constexpr span() = default;
    constexpr span(span<T> const&) = default;
    constexpr span(span<T>&&) = default;
 
    // Construct a `span` as `{address, length}`.
-   constexpr span(T* p_in_data, idx in_length)
+   constexpr span(T* p_in_data [[clang::lifetimebound]], idx in_length)
        : m_p_data(p_in_data), m_size(in_length) {
    }
 
@@ -51,6 +51,11 @@ class span : public collection_interface<span<T>, T>,
        : m_p_data(unconst(collection.data())), m_size(collection.size()) {
    }
 
+   template <is_rvalue_reference U>
+   constexpr span(U&& collection) =
+      delete("A `cat::span` cannot alias a temporary, because the span would"
+             "the become immediately dangling.");
+
    constexpr auto
    operator=(span<T> const&) -> span<T>& = default;
    constexpr auto
@@ -58,15 +63,18 @@ class span : public collection_interface<span<T>, T>,
 
    // Construct a span from a static `initializer_list`.
    constexpr auto
-   operator=(initializer_list<T> initializers)
-      -> span<T>& requires(is_const<T>) {
-                     m_p_data = initializers.begin();
-                     m_size = initializers.size();
-                     return *this;
-                  }
+   operator=(initializer_list<T> initializers) -> span<T>&
+      requires(is_const<T>)
+   {
+      m_p_data = initializers.begin();
+      m_size = initializers.size();
+      return *this;
+   }
 
    // Get the non-`const` address that this `span` starts at.
-   [[nodiscard]] constexpr auto data() -> T* {
+   [[nodiscard]]
+   constexpr auto
+   data() -> T* {
       return this->m_p_data;
    }
 
@@ -95,6 +103,10 @@ class span : public collection_interface<span<T>, T>,
 
 template <typename T>
 span(initializer_list<T>) -> span<T const>;
+
+// Deduce the `value_type` of containers.
+template <typename T>
+span(T) -> span<typename T::value_type>;
 
 // Create a span between two addresses.
 template <typename T>

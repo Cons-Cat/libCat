@@ -13,8 +13,9 @@ namespace cat {
 // its elements within itself, so this array can be constructed on the stack.
 // It is random-access iterable.
 template <typename T, idx length>
-class array : public collection_interface<array<T, length>, T>,
-              public iterable_interface<T> {
+class [[gsl::Owner(T)]]
+array : public collection_interface<array<T, length>, T>,
+        public iterable_interface<T> {
  public:
    constexpr array() = default;
    constexpr array(array<T, length> const& other_array) = default;
