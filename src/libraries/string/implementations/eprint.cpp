@@ -2,7 +2,7 @@
 #include <cat/string>
 
 auto
-cat::eprint(str_span const string) -> iword {
+cat::eprint(str_view const string) -> iword {
    // There is no reasonable way for a `write` syscall for `nix::stderr` to
    // fail, except by running out of buffer space, which fails gracefully
    // anyways.

@@ -59,7 +59,12 @@ class source_location {
 
 namespace cat {
 
-class str_span;
+template <typename char_type>
+   requires(sizeof(char_type) == 1)
+class basic_str_span;
+
+using str_view = basic_str_span<char const>;
+
 using std::source_location;
 
 // TODO: Mark these functions `[[gnu::artificial]]`.
@@ -95,7 +100,7 @@ verify(bool invariant_expression,
        source_location const& callsite = source_location::current());
 
 void
-verify(bool invariant_expression, str_span error_string,
+verify(bool invariant_expression, str_view error_string,
        void (*p_assert_handler)(source_location const&) = assert_handler,
        source_location const& callsite = source_location::current());
 
@@ -105,7 +110,7 @@ assert(bool invariant_expression,
        source_location const& callsite = source_location::current());
 
 void
-assert(bool invariant_expression, str_span error_string,
+assert(bool invariant_expression, str_view error_string,
        void (*p_assert_handler)(source_location const&) = assert_handler,
        source_location const& callsite = source_location::current());
 

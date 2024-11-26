@@ -13,71 +13,65 @@ namespace cat {
 // "Virtual tty" control sequence introducers.
 
 // Font style sequences
-inline constexpr str_span vt_bold = "\e[1m";
-inline constexpr str_span vt_italic = "\e[2m";
-inline constexpr str_span vt_underline = "\e[3m";
-inline constexpr str_span vt_inverse = "\e[7m";
-inline constexpr str_span vt_hidden = "\e[8m";
-inline constexpr str_span vt_strikethrough = "\e[9m";
+inline constexpr str_view vt_bold = "\e[1m";
+inline constexpr str_view vt_italic = "\e[2m";
+inline constexpr str_view vt_underline = "\e[3m";
+inline constexpr str_view vt_inverse = "\e[7m";
+inline constexpr str_view vt_hidden = "\e[8m";
+inline constexpr str_view vt_strikethrough = "\e[9m";
 
 // TODO: Kitty underlines.
 
 // Foreground color escape sequences.
-inline constexpr str_span vt_fg_default = "\e[39m";
-inline constexpr str_span vt_fg_black = "\e[30m";
-inline constexpr str_span vt_fg_red = "\e[31m";
-inline constexpr str_span vt_fg_green = "\e[32m";
-inline constexpr str_span vt_fg_yellow = "\e[33m";
-inline constexpr str_span vt_fg_blue = "\e[34m";
-inline constexpr str_span vt_fg_magenta = "\e[35m";
-inline constexpr str_span vt_fg_cyan = "\e[36m";
-inline constexpr str_span vt_fg_white = "\e[37m";
-inline constexpr str_span vt_fg_bright_black = "\e[90m";
-inline constexpr str_span vt_fg_bright_red = "\e[91m";
-inline constexpr str_span vt_fg_bright_green = "\e[92m";
-inline constexpr str_span vt_fg_bright_yellow = "\e[93m";
-inline constexpr str_span vt_fg_bright_blue = "\e[94m";
-inline constexpr str_span vt_fg_bright_magenta = "\e[95m";
-inline constexpr str_span vt_fg_bright_cyan = "\e[96m";
-inline constexpr str_span vt_fg_bright_white = "\e[97m";
+inline constexpr str_view vt_fg_default = "\e[39m";
+inline constexpr str_view vt_fg_black = "\e[30m";
+inline constexpr str_view vt_fg_red = "\e[31m";
+inline constexpr str_view vt_fg_green = "\e[32m";
+inline constexpr str_view vt_fg_yellow = "\e[33m";
+inline constexpr str_view vt_fg_blue = "\e[34m";
+inline constexpr str_view vt_fg_magenta = "\e[35m";
+inline constexpr str_view vt_fg_cyan = "\e[36m";
+inline constexpr str_view vt_fg_white = "\e[37m";
+inline constexpr str_view vt_fg_bright_black = "\e[90m";
+inline constexpr str_view vt_fg_bright_red = "\e[91m";
+inline constexpr str_view vt_fg_bright_green = "\e[92m";
+inline constexpr str_view vt_fg_bright_yellow = "\e[93m";
+inline constexpr str_view vt_fg_bright_blue = "\e[94m";
+inline constexpr str_view vt_fg_bright_magenta = "\e[95m";
+inline constexpr str_view vt_fg_bright_cyan = "\e[96m";
+inline constexpr str_view vt_fg_bright_white = "\e[97m";
 
 // TODO: True color fg.
 
 // Background color escape sequences.
-inline constexpr str_span vt_bg_default = "\e[49m";
-inline constexpr str_span vt_bg_black = "\e[40m";
-inline constexpr str_span vt_bg_red = "\e[41m";
-inline constexpr str_span vt_bg_green = "\e[42m";
-inline constexpr str_span vt_bg_yello = "\e[43m";
-inline constexpr str_span vt_bg_blue = "\e[44m";
-inline constexpr str_span vt_bg_magenta = "\e[45m";
-inline constexpr str_span vt_bg_cyan = "\e[46m";
-inline constexpr str_span vt_bg_white = "\e[47m";
-inline constexpr str_span vt_bg_bright_black = "\e[1090m";
-inline constexpr str_span vt_bg_bright_red = "\e[101m";
-inline constexpr str_span vt_bg_bright_green = "\e[102m";
-inline constexpr str_span vt_bg_bright_yellow = "\e[103m";
-inline constexpr str_span vt_bg_bright_blue = "\e[104m";
-inline constexpr str_span vt_bg_bright_magenta = "\[105m";
-inline constexpr str_span vt_bg_bright_cyan = "\e[106m";
-inline constexpr str_span vt_bg_bright_white = "\e[107m";
+inline constexpr str_view vt_bg_default = "\e[49m";
+inline constexpr str_view vt_bg_black = "\e[40m";
+inline constexpr str_view vt_bg_red = "\e[41m";
+inline constexpr str_view vt_bg_green = "\e[42m";
+inline constexpr str_view vt_bg_yellow = "\e[43m";
+inline constexpr str_view vt_bg_blue = "\e[44m";
+inline constexpr str_view vt_bg_magenta = "\e[45m";
+inline constexpr str_view vt_bg_cyan = "\e[46m";
+inline constexpr str_view vt_bg_white = "\e[47m";
+inline constexpr str_view vt_bg_bright_black = "\e[1090m";
+inline constexpr str_view vt_bg_bright_red = "\e[101m";
+inline constexpr str_view vt_bg_bright_green = "\e[102m";
+inline constexpr str_view vt_bg_bright_yellow = "\e[103m";
+inline constexpr str_view vt_bg_bright_blue = "\e[104m";
+inline constexpr str_view vt_bg_bright_magenta = "\[105m";
+inline constexpr str_view vt_bg_bright_cyan = "\e[106m";
+inline constexpr str_view vt_bg_bright_white = "\e[107m";
 
 // TODO: True color bg.
 
 namespace detail {
 auto
-style_tty_fg_fg(is_allocator auto& alloc, str_span const text,
-                str_span const color) {
-   maybe maybe_allocation = alloc.template alloc_multi<char>(
-      text.size() + color.size() + vt_fg_default.size());
+style_tty_fg(is_allocator auto& alloc, str_view text,
+             str_view color) -> maybe<str_span> {
+   str_span memory = prop(alloc.template alloc_multi<char>(
+      text.size() + color.size() + vt_fg_default.size()));
 
-   using return_type = decltype(maybe_allocation);
-
-   if (!maybe_allocation.has_value()) {
-      return return_type(nullopt);
-   }
-
-   char* p_memory = alloc.get(maybe_allocation.value()).data();
+   char* p_memory = memory.data();
    // Add fg color:
    copy_memory_small(color.data(), p_memory, color.size());
    // Add text to style:
@@ -87,88 +81,188 @@ style_tty_fg_fg(is_allocator auto& alloc, str_span const text,
                      p_memory + color.size() + text.size(),
                      vt_fg_default.size());
 
-   return maybe_allocation;
+   return memory;
+}
+
+auto
+style_tty_bg(is_allocator auto& alloc, str_view text,
+             str_view color) -> maybe<str_span> {
+   str_span memory = prop(alloc.template alloc_multi<char>(
+      text.size() + color.size() + vt_bg_default.size()));
+
+   char* p_memory = memory.data();
+   // Add bg color:
+   copy_memory_small(color.data(), p_memory, color.size());
+   // Add text to style:
+   copy_memory(text.data(), p_memory + color.size(), text.size());
+   // Reset bg color:
+   copy_memory_small(vt_bg_default.data(),
+                     p_memory + color.size() + text.size(),
+                     vt_bg_default.size());
+
+   return memory;
 }
 }  // namespace detail
 
 auto
-style_tty_fg_black(is_allocator auto& alloc, str_span const text) {
-   return detail::style_tty_fg_fg(alloc, text, vt_fg_black);
+style_tty_fg_black(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_fg(alloc, text, vt_fg_black);
 }
 
 auto
-style_tty_fg_red(is_allocator auto& alloc, str_span const text) {
-   return detail::style_tty_fg_fg(alloc, text, vt_fg_red);
+style_tty_fg_red(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_fg(alloc, text, vt_fg_red);
 }
 
 auto
-style_tty_fg_green(is_allocator auto& alloc, str_span const text) {
-   return detail::style_tty_fg_fg(alloc, text, vt_fg_green);
+style_tty_fg_green(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_fg(alloc, text, vt_fg_green);
 }
 
 auto
-style_tty_fg_yellow(is_allocator auto& alloc, str_span const text) {
-   return detail::style_tty_fg_fg(alloc, text, vt_fg_yellow);
+style_tty_fg_yellow(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_fg(alloc, text, vt_fg_yellow);
 }
 
 auto
-style_tty_fg_blue(is_allocator auto& alloc, str_span const text) {
-   return detail::style_tty_fg_fg(alloc, text, vt_fg_blue);
+style_tty_fg_blue(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_fg(alloc, text, vt_fg_blue);
 }
 
 auto
-style_tty_fg_magenta(is_allocator auto& alloc, str_span const text) {
-   return detail::style_tty_fg_fg(alloc, text, vt_fg_magenta);
+style_tty_fg_magenta(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_fg(alloc, text, vt_fg_magenta);
 }
 
 auto
-style_tty_fg_cyan(is_allocator auto& alloc, str_span const text) {
-   return detail::style_tty_fg_fg(alloc, text, vt_fg_cyan);
+style_tty_fg_cyan(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_fg(alloc, text, vt_fg_cyan);
 }
 
 auto
-style_tty_fg_white(is_allocator auto& alloc, str_span const text) {
-   return detail::style_tty_fg_fg(alloc, text, vt_fg_white);
+style_tty_fg_white(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_fg(alloc, text, vt_fg_white);
 }
 
 auto
-style_tty_fg_bright_black(is_allocator auto& alloc, str_span const text) {
-   return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_black);
+style_tty_fg_bright_black(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_fg(alloc, text, vt_fg_bright_black);
 }
 
 auto
-style_tty_fg_bright_red(is_allocator auto& alloc, str_span const text) {
-   return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_red);
+style_tty_fg_bright_red(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_fg(alloc, text, vt_fg_bright_red);
 }
 
 auto
-style_tty_fg_bright_green(is_allocator auto& alloc, str_span const text) {
-   return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_green);
+style_tty_fg_bright_green(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_fg(alloc, text, vt_fg_bright_green);
 }
 
 auto
-style_tty_fg_bright_yellow(is_allocator auto& alloc, str_span const text) {
-   return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_yellow);
+style_tty_fg_bright_yellow(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_fg(alloc, text, vt_fg_bright_yellow);
 }
 
 auto
-style_tty_fg_bright_blue(is_allocator auto& alloc, str_span const text) {
-   return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_blue);
+style_tty_fg_bright_blue(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_fg(alloc, text, vt_fg_bright_blue);
 }
 
 auto
-style_tty_fg_fg_bright_magenta(is_allocator auto& alloc, str_span const text) {
-   return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_magenta);
+style_tty_fg_bright_magenta(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_fg(alloc, text, vt_fg_bright_magenta);
 }
 
 auto
-style_tty_fg_bright_cyan(is_allocator auto& alloc, str_span const text) {
-   return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_cyan);
+style_tty_fg_bright_cyan(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_fg(alloc, text, vt_fg_bright_cyan);
 }
 
 auto
-style_tty_fg_bright_white(is_allocator auto& alloc, str_span const text) {
-   return detail::style_tty_fg_fg(alloc, text, vt_fg_bright_white);
+style_tty_fg_bright_white(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_fg(alloc, text, vt_fg_bright_white);
+}
+
+// ---
+auto
+style_tty_bg_black(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_bg(alloc, text, vt_bg_black);
+}
+
+auto
+style_tty_bg_red(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_bg(alloc, text, vt_bg_red);
+}
+
+auto
+style_tty_bg_green(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_bg(alloc, text, vt_bg_green);
+}
+
+auto
+style_tty_bg_yellow(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_bg(alloc, text, vt_bg_yellow);
+}
+
+auto
+style_tty_bg_blue(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_bg(alloc, text, vt_bg_blue);
+}
+
+auto
+style_tty_bg_magenta(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_bg(alloc, text, vt_bg_magenta);
+}
+
+auto
+style_tty_bg_cyan(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_bg(alloc, text, vt_bg_cyan);
+}
+
+auto
+style_tty_bg_white(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_bg(alloc, text, vt_bg_white);
+}
+
+auto
+style_tty_bg_bright_black(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_bg(alloc, text, vt_bg_bright_black);
+}
+
+auto
+style_tty_bg_bright_red(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_bg(alloc, text, vt_bg_bright_red);
+}
+
+auto
+style_tty_bg_bright_green(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_bg(alloc, text, vt_bg_bright_green);
+}
+
+auto
+style_tty_bg_bright_yellow(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_bg(alloc, text, vt_bg_bright_yellow);
+}
+
+auto
+style_tty_bg_bright_blue(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_bg(alloc, text, vt_bg_bright_blue);
+}
+
+auto
+style_tty_bg_bright_magenta(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_bg(alloc, text, vt_bg_bright_magenta);
+}
+
+auto
+style_tty_bg_bright_cyan(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_bg(alloc, text, vt_bg_bright_cyan);
+}
+
+auto
+style_tty_bg_bright_white(is_allocator auto& alloc, str_view text) {
+   return detail::style_tty_bg(alloc, text, vt_bg_bright_white);
 }
 
 }  // namespace cat

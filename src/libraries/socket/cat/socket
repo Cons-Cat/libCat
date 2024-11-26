@@ -74,7 +74,7 @@ struct socket_unix {
    }
 
    auto
-   send_string(str_span const message, int8 flags = 0,
+   send_string(str_view const message, int8 flags = 0,
                cat::Socket const* p_destination_socket = nullptr,
                iword const addr_length = 0) -> maybe<void> {
       scaredy result =

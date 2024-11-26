@@ -14,12 +14,13 @@ namespace cat {
 // A `span` is represents an array of `T` with runtime-known length. It stores
 // an address and a length. It is random-access iterable.
 template <typename T>
-class [[gsl::Pointer(T)]] span : public collection_interface<span<T>, T>,
-                                 public iterable_interface<T> {
+class [[clang::trivial_abi, gsl::Pointer(T)]] span
+    : public collection_interface<span<T>, T>,
+      public iterable_interface<T> {
  public:
    constexpr span() = default;
-   constexpr span(span<T> const&) = default;
-   constexpr span(span<T>&&) = default;
+   constexpr span(span<T> const& [[clang::lifetimebound]]) = default;
+   constexpr span(span<T>&& [[clang::lifetimebound]]) = default;
 
    // Construct a `span` as `{address, length}`.
    constexpr span(T* p_in_data [[clang::lifetimebound]], idx in_length)
@@ -39,7 +40,8 @@ class [[gsl::Pointer(T)]] span : public collection_interface<span<T>, T>,
    // Implicitly convert a contiguous container into a span.
    template <typename U>
       requires(is_random_access<U>)
-   constexpr span(U& collection)
+   constexpr span(U& collection [[clang::lifetimebound]]
+                  )
        : m_p_data(collection.data()), m_size(collection.size()) {
    }
 

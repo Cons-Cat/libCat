@@ -18,7 +18,7 @@ template <is_integral T, overflow_policies policy>
 [[nodiscard]]
 auto
 to_chars(is_allocator auto& allocator, arithmetic<T, policy> numeral)
-   -> maybe<str_span> {
+   -> maybe<str_view> {
    return to_chars(allocator, make_raw_arithmetic(numeral));
 }
 
@@ -26,7 +26,7 @@ to_chars(is_allocator auto& allocator, arithmetic<T, policy> numeral)
 template <is_integral T>
 [[nodiscard]]
 auto
-to_chars(is_allocator auto& allocator, T integer) -> maybe<str_span> {
+to_chars(is_allocator auto& allocator, T integer) -> maybe<str_view> {
    maybe result = allocator.template alloc_multi<char>(limits<T>::digits10);
    if (!result.has_value()) {
       return nullopt;
@@ -45,7 +45,7 @@ to_chars(is_allocator auto& allocator, T integer) -> maybe<str_span> {
       // TODO: Format 1 and 2 byte integers.
       __builtin_unreachable();
    }
-   return str_span(p_string);
+   return str_view(p_string);
 }
 
 // Dynamically allocate a floating point value converted to `string`.
@@ -53,14 +53,14 @@ template <typename T>
    requires(is_floating_point<T>)
 [[nodiscard]]
 auto
-to_chars(is_allocator auto& alloc, T value) -> maybe<str_span> {
+to_chars(is_allocator auto& alloc, T value) -> maybe<str_view> {
    maybe result = alloc.template alloc_multi<char>(limits<T>::digits10);
    if (!result.has_value()) {
       return nullopt;
    }
    char* p_string = result.value().data();
    detail::dragonbox::to_chars(value, p_string);
-   return str_span(p_string);
+   return str_view(p_string);
 }
 
 namespace detail {
@@ -119,7 +119,7 @@ to_chars() {
 template <is_integral T>
 [[nodiscard]]
 constexpr auto
-to_string_at(arithmetic<T> value, span<char> output_buffer) -> maybe<str_span> {
+to_string_at(arithmetic<T> value, span<char> output_buffer) -> maybe<str_view> {
    // Add 1 for a negative sign `-` character.
    constexpr iword max_length = to_chars<arithmetic<T>::max()>().size() + 1;
    char buffer[max_length.raw];
@@ -156,7 +156,7 @@ to_string_at(arithmetic<T> value, span<char> output_buffer) -> maybe<str_span> {
       copy_memory(buffer, output_buffer.data(), length);
    }
 
-   return str_span(output_buffer.data(), length);
+   return str_view(output_buffer.data(), length);
 }
 
 // Formatting
@@ -265,7 +265,7 @@ struct format_type_constant {
          this->discriminant = format_discriminant::double_type;
       } else if constexpr (is_same<U, char const*>) {
          this->discriminant = format_discriminant::raw_string_type;
-      } else if constexpr (is_same<U, str_span>) {
+      } else if constexpr (is_same<U, str_view>) {
          this->discriminant = format_discriminant::cat_string_type;
       } else if constexpr (is_pointer<U>) {
          this->discriminant = format_discriminant::pointer_type;
@@ -561,7 +561,7 @@ using format_contiguous_output_iterator =
 class format_parse_context {
  private:
    // These members must be at the top so they can be `decltype`'d.
-   str_span m_format;
+   str_view m_format;
 
    // Iff `argument_index` is less than `0`, the format string has
    // manually indexed an argument. Otherwise, all arguments are
@@ -574,7 +574,7 @@ class format_parse_context {
    using iterator = decltype(m_format.begin());
    using const_iterator = decltype(m_format.cbegin());
 
-   constexpr format_parse_context(str_span const in_format,
+   constexpr format_parse_context(str_view const in_format,
                                   uword in_args_count = 0u)
        : m_format(in_format), arguments_count(in_args_count) {
    }
@@ -633,7 +633,7 @@ struct format_handler {
    allocator_type& allocator;
    // This holds a reference to a `format_buffer_iterator`.
    detail::format_contiguous_output_iterator<allocator_type> output_iterator;
-   str_span const format;
+   str_view const format;
    // char* const p_tempory_buffer;
    // TODO: A more complex contex object will be needed to support locale
    // and wide chars:
@@ -642,7 +642,7 @@ struct format_handler {
    format_handler(
       allocator_type& in_allocator,
       detail::format_contiguous_output_iterator<allocator_type> iterator,
-      str_span const in_format, format_args in_args)
+      str_view const in_format, format_args in_args)
        : allocator(in_allocator),
          output_iterator(iterator),
          format(in_format),
@@ -653,12 +653,12 @@ struct format_handler {
 
 template <is_allocator allocator_type>
 constexpr auto
-parse_format_string(str_span const format,
+parse_format_string(str_view const format,
                     format_handler<allocator_type>&& handler)
    -> scaredy_format<void> {
    // char const* p_first = format.data();
    // char const* p_last = format.data() + format.size();
-   str_span remainder = format;
+   str_view remainder = format;
    idx current_argument;
 
    // Parse the entire string:
@@ -701,7 +701,7 @@ parse_format_string(str_span const format,
          if (!result.has_value()) {
             return format_errors::out_of_memory;
          }
-         str_span const int_string = result.value();
+         str_view const int_string = result.value();
 
          // TODO: Optimize this with a multiple-insert
          // overload.
@@ -760,7 +760,7 @@ parse_format_string(str_span const format,
 template <is_allocator allocator_type, typename outputter_type>
 auto
 vfmt_to(allocator_type& allocator, outputter_type output_iterator,
-        str_span const format, detail::format_args arguments)
+        str_view const format, detail::format_args arguments)
    -> scaredy_format<outputter_type> {
    if constexpr (is_same<outputter_type,
                          detail::format_contiguous_output_iterator<
@@ -789,8 +789,8 @@ vfmt_to(allocator_type& allocator, outputter_type output_iterator,
 
 template <is_allocator allocator_type>
 auto
-vfmt(allocator_type& allocator, str_span const format,
-     detail::format_args arguments) -> scaredy_format<str_span> {
+vfmt(allocator_type& allocator, str_view const format,
+     detail::format_args arguments) -> scaredy_format<str_view> {
    // TODO: Estimate the size of the final formatted string, and
    // allocate that much up-front for `output`.
    idx const initial_size = format.size() + 10u;
@@ -801,7 +801,7 @@ vfmt(allocator_type& allocator, str_span const format,
    }
 
    char* p_memory = maybe_memory.value().data();
-   str_span output{p_memory, initial_size};
+   str_view output{p_memory, initial_size};
 
    // `format_string_vector` is a container that satisfies the `Iterable`
    // `concept` and has a `.push_back()` method for a
@@ -819,17 +819,17 @@ vfmt(allocator_type& allocator, str_span const format,
    }
 
    idx const length = string_length(into_buffer.data());
-   return str_span(into_buffer.p_storage, length);
+   return str_view(into_buffer.p_storage, length);
 }
 
 // Store `arguments` in a compacted variant object. Then format a collection
 // of `char` with those arguments, and push the result into some container.
 template <is_allocator allocator_type,
-          is_output_iterator<str_span> outputter_type, typename... Args>
+          is_output_iterator<str_view> outputter_type, typename... Args>
 [[nodiscard]]
 auto
 fmt_to(allocator_type& allocator, outputter_type output_iterator,
-       str_span const format, Args&&... arguments)
+       str_view const format, Args&&... arguments)
    -> scaredy_format<outputter_type> {
    return vfmt_to(
       allocator, output_iterator, format,
@@ -840,8 +840,8 @@ fmt_to(allocator_type& allocator, outputter_type output_iterator,
 template <is_allocator allocator_type, typename... Args>
 [[nodiscard]]
 auto
-fmt(allocator_type& allocator, str_span const format, Args&&... arguments)
-   -> scaredy_format<str_span> {
+fmt(allocator_type& allocator, str_view const format, Args&&... arguments)
+   -> scaredy_format<str_view> {
    return vfmt(allocator, format,
                detail::format_args(detail::format_args_compact_storage<Args...>(
                   fwd(arguments)...)));

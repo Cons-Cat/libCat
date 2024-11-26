@@ -757,7 +757,7 @@ sys_write(file_descriptor file_descriptor, char const* p_string_buffer,
           cat::iword length) -> scaredy_nix<cat::iword>;
 
 auto
-sys_write(file_descriptor file_descriptor, cat::str_span string)
+sys_write(file_descriptor file_descriptor, cat::str_view string)
    -> scaredy_nix<cat::iword>;
 
 // Syscall 2
@@ -814,7 +814,7 @@ struct file_handle {
 
 // Syscall 4
 auto
-sys_stat(cat::str_span file_path) -> cat::scaredy<file_status, linux_error>;
+sys_stat(cat::str_view file_path) -> cat::scaredy<file_status, linux_error>;
 
 // Syscall 5
 auto

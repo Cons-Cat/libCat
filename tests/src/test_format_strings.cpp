@@ -14,7 +14,7 @@ TEST(test_format_strings) {
    auto allocator = make_linear_allocator(page);
 
    // Test `int4` conversion.
-   cat::str_span int_string = cat::to_chars(allocator, 10).or_exit();
+   cat::str_view int_string = cat::to_chars(allocator, 10).or_exit();
    cat::verify(cat::compare_strings(int_string, "10"));
    cat::verify(int_string.size() == 3);
 
@@ -33,7 +33,7 @@ TEST(test_format_strings) {
 
    // Test formatting `int`.
    allocator.reset();
-   cat::str_span formatted_string_int =
+   cat::str_view formatted_string_int =
       cat::fmt(allocator, "bb{}aa{}cc", 52, 130).or_exit();
    // TODO: `formatted_string_int` has an incorrect `.size()`, but the content
    // is correct.
@@ -42,17 +42,17 @@ TEST(test_format_strings) {
 
    // Test formatting `float`.
    allocator.reset();
-   cat::str_span string_float = cat::to_chars(allocator, 1.234f).or_exit();
+   cat::str_view string_float = cat::to_chars(allocator, 1.234f).or_exit();
    cat::verify(cat::compare_strings(string_float.data(), "1.234E0"),
                string_float);
    // auto _ = cat::println(string_float);
 
-   cat::str_span formatted_string_float =
+   cat::str_view formatted_string_float =
       cat::fmt(allocator, "a{}b", 1.234f).or_exit();
    cat::verify(cat::compare_strings(formatted_string_float, "a1.234E0b"));
    // auto _ = cat::println(formatted_string_float);
 
-   cat::str_span formatted_string_double =
+   cat::str_view formatted_string_double =
       cat::fmt(allocator, "a{}b", 1.234).or_exit();
    cat::verify(cat::compare_strings(formatted_string_double, "a1.234E0b"));
    // auto _ = cat::println(formatted_string_double);
