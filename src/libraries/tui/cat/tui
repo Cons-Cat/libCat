@@ -184,7 +184,6 @@ style_tty_fg_bright_white(is_allocator auto& alloc, str_view text) {
    return detail::style_tty_fg(alloc, text, vt_fg_bright_white);
 }
 
-// ---
 auto
 style_tty_bg_black(is_allocator auto& alloc, str_view text) {
    return detail::style_tty_bg(alloc, text, vt_bg_black);

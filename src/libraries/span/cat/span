@@ -56,7 +56,7 @@ class [[clang::trivial_abi, gsl::Pointer(T)]] span
    template <is_rvalue_reference U>
    constexpr span(U&& collection) =
       delete("A `cat::span` cannot alias a temporary, because the span would"
-             "the become immediately dangling.");
+             "immediately dangle.");
 
    constexpr auto
    operator=(span<T> const&) -> span<T>& = default;
@@ -83,7 +83,7 @@ class [[clang::trivial_abi, gsl::Pointer(T)]] span
    // Get the `const` address that this `span` starts at.
    [[nodiscard]]
    constexpr auto
-   data() const -> T* {
+   data() const -> T const* {
       return this->m_p_data;
    }
 
