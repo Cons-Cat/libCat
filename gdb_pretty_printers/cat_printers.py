@@ -132,9 +132,9 @@ class ArrayPrinter:
         return '[' + str(self.m_data)[1:-1] + '] (size: ' + str(self.size) + ')'
     
 
-@cat_type('str_span')
+@cat_type('str_view')
 class StrSpanPrinter:
-    "Print a `cat::str_span`"
+    "Print a `cat::str_view`"
 
     def __init__(self, val: gdb.Value):
         self.m_p_data = val['m_p_data']

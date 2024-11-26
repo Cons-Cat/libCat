@@ -27,7 +27,7 @@ main() -> int {
                .recieve(message_buffer.data(), message_buffer.size())
                .or_exit();
 
-         cat::str_span const input = {message_buffer.data(),
+         cat::str_view const input = {message_buffer.data(),
                                       message_buffer.size()};
 
          // TODO: This comparison is always false.

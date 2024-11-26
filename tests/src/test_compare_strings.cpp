@@ -6,15 +6,15 @@ TEST(test_compare_strings) {
    char const* p_string_1 = "Hello!";
    char const* const p_string_2 = "Hello!";
 
-   cat::str_span string_1 = "Hello!";
-   cat::str_span const string_2 = "Hello!";
-   cat::str_span string_3 = "Goodbye!";
+   cat::str_view string_1 = "Hello!";
+   cat::str_view const string_2 = "Hello!";
+   cat::str_view string_3 = "Goodbye!";
 
-   cat::str_span long_string_1 =
+   cat::str_view long_string_1 =
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-   cat::str_span long_string_2 =
+   cat::str_view long_string_2 =
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -32,9 +32,9 @@ TEST(test_compare_strings) {
    cat::verify(!cat::compare_strings(string_1, string_3));
 
    [[maybe_unused]]
-   cat::str_span const_string_1 = "Hello, ";
+   cat::str_view const_string_1 = "Hello, ";
    [[maybe_unused]]
-   constexpr cat::str_span const_string_2 = "world!";
+   constexpr cat::str_view const_string_2 = "world!";
 
    // Fixed length strings.
    constexpr cat::str_inplace const_string_3 = "Hello, ";
