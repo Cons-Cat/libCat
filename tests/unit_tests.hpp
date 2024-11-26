@@ -40,3 +40,5 @@ test_fail(cat::source_location const& source_location);
       ++tests_passed;                                                       \
    }                                                                        \
    void test_name()
+
+#pragma clang final(TEST)

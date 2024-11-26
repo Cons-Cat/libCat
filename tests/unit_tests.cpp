@@ -33,8 +33,8 @@ main() -> int {
    cat::jmp_buffer jump_buffer;
    p_jump_buffer = &jump_buffer;
 
-   // Call all constructor functions, including unit tests:
-   // for (constructor_fn const* pp_ctor_func = __init_array_start;
+   // Call all unit test functions that were pushed into `test_fns` by the
+   // `TEST` macro.
    for (cat::idx i = 0; i < test_fns.size(); ++i) {
       auto _ = ::cat::print(::cat::fmt(pager, "Running test {}", i).value());
       if (cat::setjmp(jump_buffer)) {
