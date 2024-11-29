@@ -46,17 +46,14 @@ align_stack_pointer_32() {
 
 extern "C" [[noreturn]]
 void
-// NOLINTNEXTLINE `__stack_chk_fail()` must begin with a double underscore.
 __stack_chk_fail();
 
 extern "C" void
-// NOLINTNEXTLINE `__cxa_atexit()` must begin with a double underscore.
 __cxa_atexit(void (*p_invocable)(void*), void* p_arg, void* p_dso_handle);
 
 extern "C" [[gnu::used]]
 void
-// `__cxa_pure_virtual()` must begin with a double underscore.
-__cxa_pure_virtual();  // NOLINT
+__cxa_pure_virtual();
 
 class jmp_buffer {
    // This buffer layout should vary by all ISAs.
@@ -85,20 +82,19 @@ longjmp(jmp_buffer& jump_point, int8 return_value);
 
 }  // namespace cat
 
-// NOLINTNEXTLINE `__dso_handle` must begin with a double underscore.
 inline void* __dso_handle = nullptr;
 
 extern "C" [[gnu::used]]
 inline void
-__cxx_global_var_init() {  // NOLINT
+__cxx_global_var_init() {
 }
 
 extern "C" [[gnu::used]]
 inline void
-__cxa_guard_acquire() {  // NOLINT
+__cxa_guard_acquire() {
 }
 
 extern "C" [[gnu::used]]
 inline void
-__cxa_guard_release() {  // NOLINT
+__cxa_guard_release() {
 }

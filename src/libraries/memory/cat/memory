@@ -243,9 +243,9 @@ launder(void volatile*) = delete;
 void
 launder(void const volatile*) = delete;
 
-using std::addressof;     // NOLINT
-using std::construct_at;  // NOLINT
-using std::destroy_at;    // NOLINT
+using std::addressof;
+using std::construct_at;
+using std::destroy_at;
 
 template <typename T>
 auto

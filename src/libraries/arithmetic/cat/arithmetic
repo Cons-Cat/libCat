@@ -547,11 +547,10 @@ struct arithmetic :
       using enum overflow_policies;
       auto raw_operand = make_raw_arithmetic(operand);
       if constexpr (overflow_policy == undefined) {
-         // TODO: See if using `[[gnu::assume(())]]` actually optimizes
+         // TODO: See if using `[[gnu::assume]]` actually optimizes
          // this.
          // if constexpr (is_unsigned<T>) {
          // Assume there is no overflow.
-         // NOLINTNEXTLINE This is a C++23 feature.
          // [[gnu::assume((raw >= operand))]];
          // }
          using promoted_raw =

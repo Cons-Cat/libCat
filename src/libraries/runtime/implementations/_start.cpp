@@ -10,8 +10,8 @@ namespace {
 
 using constructor_fn = void (*const)();
 extern "C" {
-extern constructor_fn __init_array_start[];  // NOLINT
-extern constructor_fn __init_array_end[];    // NOLINT
+extern constructor_fn __init_array_start[];
+extern constructor_fn __init_array_end[];
 
 void
 call_static_constructors() {
