@@ -20,8 +20,8 @@ test_fail(cat::source_location const& source_location) {
 }  // namespace cat
 
 extern "C" {
-extern constructor_fn __init_array_start[];  // NOLINT
-extern constructor_fn __init_array_end[];    // NOLINT
+extern constructor_fn __init_array_start[];
+extern constructor_fn __init_array_end[];
 }
 
 auto

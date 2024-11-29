@@ -1,24 +1,24 @@
 ---
 Checks: "bugprone-*,
          performance-*,
-		 modernize-*,
-		 readability-*,
+         modernize-*,
+         readability-*,
          # clang-analyzer-*,
          # cppcoreguidelines-*,
          misc-*,
          # DISABLE SOME CHECKS:
-		 -bugprone-easily-swappable-parameters,
+         -bugprone-easily-swappable-parameters,
          -bugprone-reserved-identifier,
-		 -performance-noexcept-move-constructor,
-		 -modernize-avoid-c-arrays,
-		 -modernize-use-auto,
-		 -readability-magic-numbers,
-		 -readability-identifier-length,
-		 -readability-uppercase-literal-suffix,
+         -performance-noexcept-move-constructor,
+         -modernize-avoid-c-arrays,
+         -modernize-use-auto,
+         -readability-magic-numbers,
+         -readability-identifier-length,
+         -readability-uppercase-literal-suffix,
          -readability-function-cognitive-complexity,
-		 -readability-convert-member-functions-to-static,
+         -readability-convert-member-functions-to-static,
          -readability-static-accessed-through-instance,
-		 -readability-named-parameter,
+         -readability-named-parameter,
          -readability-function-cognitive-complexity,
          -readability-else-after-return,
          -cppcoreguidelines-avoid-magic-numbers,
@@ -27,10 +27,10 @@ Checks: "bugprone-*,
          -cppcoreguidelines-pro-type-reinterpret-cast,
          -cppcoreguidelines-macro-usage,
          -misc-non-private-member-variables-in-classes,
-		 -misc-unused-using-decls,
+         -misc-unused-using-decls,
          -misc-unconventional-assign-operator,
          -misc-use-internal-linkage,
-        "
+         "
 
 WarningsAsErrors: ''
 HeaderFilterRegex: ^src
@@ -38,11 +38,16 @@ FormatStyle: file
 
 CheckOptions:
   - { key: readability-identifier-naming.VariableCase,                      value: lower_case }
+  - { key: readability-identifier-naming.VariableIgnoredRegexp,             value: '_[_(A-Z)].*' }
   - { key: readability-identifier-naming.MemberCase,                        value: lower_case }
+  - { key: readability-identifier-naming.MemberIgnoredRegexp,             value: '_[_(A-Z)].*' }
   - { key: readability-identifier-naming.FunctionCase,                      value: lower_case }
+  - { key: readability-identifier-naming.FunctionIgnoredRegexp,             value: '_[_(A-Z)].*' }
   - { key: readability-identifier-naming.NamespaceCase,                     value: lower_case }
   - { key: readability-identifier-naming.StructCase,                        value: lower_case }
+  - { key: readability-identifier-naming.StructIgnoredRegexp,             value: '_[_(A-Z)].*' }
   - { key: readability-identifier-naming.ClassCase,                         value: lower_case }
+  - { key: readability-identifier-naming.ClassIgnoredRegexp,             value: '_[_(A-Z)].*' }
   - { key: readability-identifier-naming.TypeAliasCase,                     value: lower_case }
   - { key: readability-identifier-naming.TypedefCase,                       value: lower_case }
   - { key: readability-identifier-naming.PointerParameterIgnoredRegexp,     value: '(p+)_.*' }

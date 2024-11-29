@@ -42,7 +42,7 @@ auto
 __asan_get_report_description() -> char const*;
 auto
 __asan_locate_address(void* p_address, char* p_name, uword name_size,
-                      void** p_region_address, uword* region_size)
+                      void** p_region_address, uword* p_region_size)
    -> char const*;
 auto
 __asan_get_alloc_stack(void* p_heap, void** pp_trace, uword size,
@@ -56,11 +56,11 @@ __asan_get_shadow_mapping(uword* p_shadow_scale, uword* p_shadow_offset);
 #else
 // No-op functions are provided when asan is not available.
 inline void
-__asan_poison_memory_region(void const volatile*, uword) {  // NOLINT
+__asan_poison_memory_region(void const volatile*, uword) {
 }
 
 inline void
-__asan_unpoison_memory_region(void const volatile*, uword) {  // NOLINT
+__asan_unpoison_memory_region(void const volatile*, uword) {
 }
 #endif
 

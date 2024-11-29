@@ -314,11 +314,12 @@ class bit_reference {
 
    // Assign a true or false value to this bit.
    constexpr auto
-   operator=(bool value)
-      -> bit_reference& requires(!is_same<storage_type, bool>) {
-                           this->assign(value);
-                           return *this;
-                        }
+   operator=(bool value) -> bit_reference&
+      requires(!is_same<storage_type, bool>)
+   {
+      this->assign(value);
+      return *this;
+   }
 
    // Because `bit_reference` and `bit_value` convert to bool, this comparison
    // works between all the above.
@@ -651,7 +652,6 @@ is_aligned(U* p_value, uword alignment) -> bool;
 
 template <typename U>
 [[nodiscard]]
-// NOLINTNEXTLINE This is forward-declared in `<cat/memory>`.
 constexpr auto
 is_aligned(uintptr<U> p_value, uword alignment) -> bool;
 

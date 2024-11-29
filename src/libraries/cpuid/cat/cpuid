@@ -230,12 +230,11 @@ struct cpu_model {
    cat::bitset<32> m_cpu_features = default_cpu_features();
 };
 
-extern "C" constinit inline detail::cpu_model __cpu_model{};  // NOLINT
+extern "C" constinit inline detail::cpu_model __cpu_model{};
 
 // Extended x86 feature flags, such as AVX2. This is zero-intialized except for
 // a single bit that expresses baseline x86-64 feature support.
 extern "C" constinit inline cat::array<cat::bitset<32>, 3>
-   // NOLINTNEXTLINE
    __cpu_features2(cat::bitset<32>{}, enable_baseline_feature(),
                    cat::bitset<32>{});
 
@@ -519,7 +518,7 @@ set_vendor_model(cat::uint4 vendor_family_model, cat::uint4 vendor1) {
 }
 
 extern "C" inline void
-__cpu_indicator_init() {  // NOLINT
+__cpu_indicator_init() {
    using enum processor_features;
 
    // Get highest values for `%EAX` below and above `0x80000000u`.
