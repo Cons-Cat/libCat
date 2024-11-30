@@ -189,7 +189,7 @@ inline constexpr cat::monostate_type monostate;
 // exists to make this macro more ergonomic.
 #pragma clang final(CAT_PROPAGATE)
 
-#define prop(container) CAT_PROPAGATE(container)
+#define prop CAT_PROPAGATE
 
 // Unwrap an error-like container such as `cat::scaredy` or `cat::maybe` iff
 // it holds a value, otherwise propagate an error state `or_value`.
@@ -221,7 +221,7 @@ inline constexpr cat::monostate_type monostate;
 // `prop_or` exists to make this macro more ergonomic.
 #pragma clang final(CAT_PROPAGATE_OR)
 
-#define prop_or(container, or_value) CAT_PROPAGATE_OR(container, or_value)
+#define prop_or CAT_PROPAGATE_OR
 
 namespace std {
 
