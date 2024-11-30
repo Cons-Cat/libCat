@@ -1022,12 +1022,18 @@ concept has_common_reference_with =
    && is_convertible<T, common_reference<T, U>>
    && is_convertible<U, common_reference<T, U>>;
 
+// clang-format off
 template <typename T, typename U>
 concept has_common_with =
    is_same<common_type<T, U>, common_type<U, T>>
    && requires {
          static_cast<common_type<T, U>>(declval<T>());
          static_cast<common_type<T, U>>(declval<U>());
-      } && has_common_reference_with<add_lvalue_reference<T const>, add_lvalue_reference<U const>> && has_common_reference_with<add_lvalue_reference<common_type<T, U>>, common_reference<add_lvalue_reference<T const>, add_lvalue_reference<U const>>>;
+   } && has_common_reference_with<add_lvalue_reference<T const>,
+                                  add_lvalue_reference<U const>>
+   && has_common_reference_with<add_lvalue_reference<common_type<T, U>>,
+                                common_reference<add_lvalue_reference<T const>,
+                                                 add_lvalue_reference<U const>>>;
+// clang-format on
 
 }  // namespace cat
