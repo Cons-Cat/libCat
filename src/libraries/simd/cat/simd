@@ -120,8 +120,8 @@ class alignas(in_abi::alignment.raw) simd {
    constexpr simd(unaligned_vector operand) : raw(operand.raw) {
    }
 
-   [[gnu::artificial]]
-   inline constexpr simd(raw_type values)
+   [[gnu::nodebug]]
+   constexpr simd(raw_type values)
        : raw(values) {
    }
 
@@ -135,7 +135,7 @@ class alignas(in_abi::alignment.raw) simd {
    // Construct from a variadic argument list.
    template <typename... Us>
       requires(sizeof...(Us) > 1u && sizeof...(Us) == in_abi::lanes)
-   [[gnu::artificial]] inline constexpr simd(Us&&... values)
+   [[gnu::nodebug]] constexpr simd(Us&&... values)
        // GCC 13 requires curly braces here.
        : raw(raw_type{static_cast<T>(fwd(values))...}) {
    }
@@ -145,7 +145,7 @@ class alignas(in_abi::alignment.raw) simd {
    // TODO: Should this be removed, along with `cat::List`'s?
    template <typename U, U... Us>
       requires(ssizeof_pack<U, Us...> == in_abi::lanes)
-   [[gnu::artificial]] inline constexpr simd(value_type_list<U, Us...>)
+   [[gnu::nodebug]] constexpr simd(value_type_list<U, Us...>)
        : raw(raw_type(static_cast<T>(Us)...)) {
    }
 

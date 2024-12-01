@@ -689,8 +689,8 @@ struct byte : bitwise_interface<byte> {
    uint1 value;
 
    template <typename T>
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
-   inline constexpr explicit
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr explicit
    operator T()
       requires(sizeof(T) == 1)
    {
@@ -698,55 +698,55 @@ struct byte : bitwise_interface<byte> {
    }
 
    // Generate `operator&`.
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
-   inline constexpr auto
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
    bit_and(is_integral auto from) const -> byte {
       return this->value & from;
    }
 
    // Generate `operator|`.
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
-   inline constexpr auto
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
    bit_or(is_integral auto from) const -> byte {
       return this->value | from;
    }
 
    // Generate `operator<<`.
    template <is_arithmetic U>
-   [[nodiscard, gnu::always_inline, gnu::artificial, gnu::always_inline,
-     gnu::artificial]]
-   inline constexpr auto
+   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::always_inline,
+     gnu::nodebug]]
+   constexpr auto
    shift_left_by(U operand) const -> byte {
       return value << operand;
    }
 
    template <is_arithmetic U>
-   [[nodiscard, gnu::always_inline, gnu::artificial, gnu::always_inline,
-     gnu::artificial]]
-   inline constexpr auto
+   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::always_inline,
+     gnu::nodebug]]
+   constexpr auto
    shift_left_into(U other) const -> U {
       return other << value;
    }
 
    // Generate `operator>>`.
    template <is_arithmetic U>
-   [[nodiscard, gnu::always_inline, gnu::artificial, gnu::always_inline,
-     gnu::artificial]]
-   inline constexpr auto
+   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::always_inline,
+     gnu::nodebug]]
+   constexpr auto
    shift_right_by(U operand) const -> byte {
       return value >> operand;
    }
 
    template <is_arithmetic U>
-   [[nodiscard, gnu::always_inline, gnu::artificial, gnu::always_inline,
-     gnu::artificial]]
-   inline constexpr auto
+   [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::always_inline,
+     gnu::nodebug]]
+   constexpr auto
    shift_right_into(U other) const -> U {
       return other >> value;
    }
 
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
-   inline constexpr auto
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
    has_single_bit() const -> bool {
       return (value & (value - 1u)) == 0u;
    }

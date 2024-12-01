@@ -69,7 +69,7 @@ using str_view = basic_str_span<char const>;
 
 using std::source_location;
 
-// TODO: Mark these functions `[[gnu::artificial]]`.
+// TODO: Mark these functions `[[gnu::artificial]]` or `[[gnu::nodebug]]`.
 
 void
 breakpoint();

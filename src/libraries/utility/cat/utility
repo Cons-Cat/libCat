@@ -153,8 +153,8 @@ to_underlying(T any_enum) {
 // more easily.
 
 template <typename T>
-[[nodiscard, gnu::artificial]]
-inline constexpr auto
+[[nodiscard, gnu::nodebug]]
+constexpr auto
 as_const(T& value) -> cat::add_const<T>& {
    return value;
 }
