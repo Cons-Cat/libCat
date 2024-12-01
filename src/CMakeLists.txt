@@ -191,7 +191,6 @@ set(CAT_HEADER_FILES
   ${CATLIB}/linux/implementations/syscall.tpp
   ${CATLIB}/linux/implementations/process.tpp
   ${CATLIB}/meta/implementations/constant_evaluate.tpp
-  ${CATLIB}/meta/implementations/common_type.tpp
   ${CATLIB}/meta/implementations/common_reference.tpp
   ${CATLIB}/simd/implementations/compare_implicit_length_strings.tpp
   ${CATLIB}/simd/implementations/compare_implicit_length_strings_return_index.tpp
