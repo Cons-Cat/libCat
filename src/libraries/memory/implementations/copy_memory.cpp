@@ -177,9 +177,10 @@ const*>(p_source_handle)[i];
 */
 
 #if __has_feature(address_sanitizer)
-extern "C" [[nodiscard, clang::no_builtin, gnu::no_sanitize_address]]
-auto
-__asan_memcpy(void* p_to, void const* p_from, __SIZE_TYPE__ size) -> void* {
+extern "C"
+   [[nodiscard, clang::no_builtin, gnu::no_sanitize_address, gnu::nodebug]]
+   auto
+   __asan_memcpy(void* p_to, void const* p_from, __SIZE_TYPE__ size) -> void* {
    for (unsigned long i = 0; i < size; ++i) {
       *((unsigned char*)p_to + i) = *((unsigned char const*)p_from + i);
    }

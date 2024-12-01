@@ -4,16 +4,6 @@
 
 #include <cat/meta>
 
-// clang-20 requires that the `inline` specifier is explicitly added onto any
-// functions with the `[[gnu::artificial]]` attribute, even if they are
-// implicitly inline by being `constexpr`. However, because `friend` functions
-// cannot be `inline`, it is impossible for clang to compile artificial
-// hidden-friend functions without a warning.
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wignored-attributes"
-#endif
-
 namespace cat {
 
 namespace detail {
@@ -71,7 +61,7 @@ struct plus_interface {
 
    // `+` operator where this is a left-hand-side operand.
    template <typename T>
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator+(this auto&& self, T&& other) -> decltype(auto) {
       return fwd(self).add(fwd(other));
@@ -84,7 +74,7 @@ struct plus_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_add_interface<T, derived_type>)
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+(T&& other, decay_derived_type const& self) -> decltype(auto) {
       return self.add(fwd(other));
@@ -95,7 +85,7 @@ struct plus_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_add_interface<T, derived_type>)
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+(T&& other, derived_type&& self) -> decltype(auto) {
       return fwd(self).add(fwd(other));
@@ -103,7 +93,7 @@ struct plus_interface {
 
    // `+=` operator where this is a left-hand-side operand.
    template <typename T>
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+=(derived_type& self, T&& other) -> derived_type& {
       self = self.add(fwd(other));
@@ -117,7 +107,7 @@ struct plus_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_add_interface<T, derived_type>)
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+=(T& other, derived_type const& self) -> T& {
       other = self.add(other);
@@ -129,7 +119,7 @@ struct plus_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_add_interface<T, derived_type>)
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+=(T& other, derived_type&& self) -> T& {
       other = move(self).add(other);
@@ -139,7 +129,7 @@ struct plus_interface {
    // Unary `++` operators.
 
    // `this` is an l-value.
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator++(derived_type& self) -> derived_type& {
       self = self.add(derived_type(1));
@@ -147,14 +137,14 @@ struct plus_interface {
    }
 
    // `this` is an r-value.
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator++(derived_type&& self) -> derived_type {
       return move(self).add(derived_type(1));
    }
 
    // `this` is an l-value.
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator++(derived_type& self, int) -> derived_type& {
       self = self.add(derived_type(1));
@@ -162,7 +152,7 @@ struct plus_interface {
    }
 
    // `this` is an r-value.
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator++(derived_type&& self, int) -> derived_type {
       return move(self).add(derived_type(1));
@@ -176,7 +166,7 @@ struct minus_interface {
 
    // `-` operator where this is a left-hand-side operand.
    template <typename T>
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator-(this auto&& lhs, T&& other) -> decltype(auto) {
       return fwd(lhs).subtract_by(fwd(other));
@@ -189,7 +179,7 @@ struct minus_interface {
    // If this operator's left operand can subtract_by `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_subtract_by_interface<T, derived_type>)
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-(T&& other, decay_derived_type const& self) -> decltype(auto) {
       return self.subtract_from(fwd(other));
@@ -200,7 +190,7 @@ struct minus_interface {
    // If this operator's left operand can subtract_by `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_subtract_by_interface<T, derived_type>)
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-(T&& other, derived_type&& self) -> decltype(auto) {
       return fwd(self).subtract_from(fwd(other));
@@ -208,7 +198,7 @@ struct minus_interface {
 
    // `-=` operator where this is a left-hand-side operand.
    template <typename T>
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-=(derived_type& self, T&& other) -> derived_type& {
       self = self.subtract_by(fwd(other));
@@ -222,7 +212,7 @@ struct minus_interface {
    // If this operator's left operand can subtract_by `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_subtract_by_interface<T, derived_type>)
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-=(T& other, derived_type const& self) -> T& {
       other = self.subtract_from(other);
@@ -234,7 +224,7 @@ struct minus_interface {
    // If this operator's left operand can subtract_by `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_subtract_by_interface<T, derived_type>)
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-=(T& other, derived_type&& self) -> T& {
       other = move(self).subtract_from(other);
@@ -244,7 +234,7 @@ struct minus_interface {
    // Unary `--` operators.
 
    // `this` is an l-value.
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator--(derived_type& self) -> derived_type& {
       self = self.subtract_by(derived_type(1));
@@ -252,14 +242,14 @@ struct minus_interface {
    }
 
    // `this` is an r-value.
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator--(derived_type&& self) -> derived_type {
       return move(self).subtract_by(derived_type(1));
    }
 
    // `this` is an l-value.
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator--(derived_type& self, int) -> derived_type& {
       self = self.subtract_by(derived_type(1));
@@ -267,7 +257,7 @@ struct minus_interface {
    }
 
    // `this` is an r-value.
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator--(derived_type&& self, int) -> derived_type {
       return move(self).subtract_by(derived_type(1));
@@ -281,7 +271,7 @@ struct multiply_interface {
 
    // `*` operator where this is a left-hand-side operand.
    template <typename T>
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator*(this auto&& self, T&& other) -> decltype(auto) {
       return fwd(self).multiply(fwd(other));
@@ -294,7 +284,7 @@ struct multiply_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_multiply_interface<T, derived_type>)
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator*(T&& other, decay_derived_type const& self) -> decltype(auto) {
       return self.multiply(fwd(other));
@@ -305,7 +295,7 @@ struct multiply_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_multiply_interface<T, derived_type>)
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator*(T&& other, derived_type&& self) -> decltype(auto) {
       return fwd(self).multiply(fwd(other));
@@ -313,7 +303,7 @@ struct multiply_interface {
 
    // `*=` operator where this is a left-hand-side operand.
    template <typename T>
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator*=(derived_type& self, T&& other) -> derived_type& {
       self = self.multiply(fwd(other));
@@ -327,7 +317,7 @@ struct multiply_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_multiply_interface<T, derived_type>)
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator*=(T& other, derived_type const& self) -> T& {
       other = self.multiply(other);
@@ -339,7 +329,7 @@ struct multiply_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_multiply_interface<T, derived_type>)
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator*=(T& other, derived_type&& self) -> T& {
       other = move(self).multiply(other);
@@ -354,7 +344,7 @@ struct divide_interface {
 
    // `/` operator where this is a left-hand-side operand.
    template <typename T>
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator/(this auto&& self, T&& other) -> decltype(auto) {
       return fwd(self).divide_by(fwd(other));
@@ -367,7 +357,7 @@ struct divide_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_divide_by_interface<T, derived_type>)
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator/(T&& other, decay_derived_type const& self) -> decltype(auto) {
       return self.divide_into(fwd(other));
@@ -378,7 +368,7 @@ struct divide_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_divide_by_interface<T, derived_type>)
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator/(T&& other, derived_type&& self) -> decltype(auto) {
       return fwd(self).divide_into(fwd(other));
@@ -386,7 +376,7 @@ struct divide_interface {
 
    // `/=` operator where this is a left-hand-side operand.
    template <typename T>
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator/=(derived_type& self, T&& other) -> derived_type& {
       self = self.divide_by(fwd(other));
@@ -400,7 +390,7 @@ struct divide_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_divide_by_interface<T, derived_type>)
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator/=(T& other, derived_type const& self) -> T& {
       other = self.divide_into(other);
@@ -412,7 +402,7 @@ struct divide_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_divide_by_interface<T, derived_type>)
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator/=(T& other, derived_type&& self) -> T& {
       other = move(self).divide_into(other);
@@ -427,7 +417,7 @@ struct bit_and_interface {
 
    // `&` operator where this is a left-hand-side operand.
    template <typename T>
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator&(this auto&& self, T&& other) -> decltype(auto) {
       return fwd(self).bit_and(fwd(other));
@@ -440,7 +430,7 @@ struct bit_and_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_bit_and_interface<T, derived_type>)
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator&(T&& other, decay_derived_type const& self) -> decltype(auto) {
       return self.bit_and(fwd(other));
@@ -451,7 +441,7 @@ struct bit_and_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_bit_and_interface<T, derived_type>)
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator&(T&& other, derived_type&& self) -> decltype(auto) {
       return fwd(self).bit_and(fwd(other));
@@ -459,7 +449,7 @@ struct bit_and_interface {
 
    // `&=` operator where this is a left-hand-side operand.
    template <typename T>
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator&=(derived_type& self, T&& other) -> derived_type& {
       self = self.bit_and(fwd(other));
@@ -473,7 +463,7 @@ struct bit_and_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_bit_and_interface<T, derived_type>)
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator&=(T& other, derived_type const& self) -> T& {
       other = self.bit_and(other);
@@ -485,7 +475,7 @@ struct bit_and_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_bit_and_interface<T, derived_type>)
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator&=(T& other, derived_type&& self) -> T& {
       other = move(self).bit_and(other);
@@ -500,7 +490,7 @@ struct bit_or_interface {
 
    // `|` operator where this is a left-hand-side operand.
    template <typename T>
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator|(this auto&& self, T&& other) -> decltype(auto) {
       return fwd(self).bit_or(fwd(other));
@@ -513,7 +503,7 @@ struct bit_or_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_bit_or_interface<T, derived_type>)
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator|(T&& other, decay_derived_type const& self) -> decltype(auto) {
       return self.bit_or(fwd(other));
@@ -524,7 +514,7 @@ struct bit_or_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_bit_or_interface<T, derived_type>)
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator|(T&& other, derived_type&& self) -> decltype(auto) {
       return fwd(self).bit_or(fwd(other));
@@ -532,7 +522,7 @@ struct bit_or_interface {
 
    // `|=` operator where this is a left-hand-side operand.
    template <typename T>
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator|=(derived_type& self, T&& other) -> derived_type& {
       self = self.bit_or(fwd(other));
@@ -546,7 +536,7 @@ struct bit_or_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_bit_or_interface<T, derived_type>)
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator|=(T& other, derived_type const& self) -> T& {
       other = self.bit_or(other);
@@ -558,7 +548,7 @@ struct bit_or_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_bit_or_interface<T, derived_type>)
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator|=(T& other, derived_type&& self) -> T& {
       other = move(self).bit_or(other);
@@ -573,7 +563,7 @@ struct modulo_interface {
 
    // `%` operator where this is a left-hand-side operand.
    template <typename T>
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator%(this auto&& self, T&& other) -> decltype(auto) {
       return fwd(self).modulo_by(fwd(other));
@@ -586,7 +576,7 @@ struct modulo_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_modulo_by_interface<T, derived_type>)
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator%(T&& other, decay_derived_type const& self) -> decltype(auto) {
       return self.modulo_into(fwd(other));
@@ -597,7 +587,7 @@ struct modulo_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_modulo_by_interface<T, derived_type>)
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator%(T&& other, derived_type&& self) -> decltype(auto) {
       return fwd(self).modulo_into(fwd(other));
@@ -605,7 +595,7 @@ struct modulo_interface {
 
    // `%=` operator where this is a left-hand-side operand.
    template <typename T>
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator%=(derived_type& self, T&& other) -> derived_type& {
       self = self.modulo_by(fwd(other));
@@ -619,7 +609,7 @@ struct modulo_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_modulo_by_interface<T, derived_type>)
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator%=(T& other, derived_type const& self) -> T& {
       other = self.modulo_into(other);
@@ -631,7 +621,7 @@ struct modulo_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_modulo_by_interface<T, derived_type>)
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator%=(T& other, derived_type&& self) -> T& {
       other = move(self).modulo_into(other);
@@ -646,7 +636,7 @@ struct shift_left_interface {
 
    // `<<` operator where this is a left-hand-side operand.
    template <typename T>
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator<<(this auto&& self, T&& other) -> decltype(auto) {
       return fwd(self).shift_left_by(fwd(other));
@@ -659,7 +649,7 @@ struct shift_left_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_shift_left_by_interface<T, derived_type>)
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<<(T&& other, decay_derived_type const& self) -> decltype(auto) {
       return self.shift_left_into(fwd(other));
@@ -670,7 +660,7 @@ struct shift_left_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_shift_left_by_interface<T, derived_type>)
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<<(T&& other, derived_type&& self) -> decltype(auto) {
       return fwd(self).shift_left_into(fwd(other));
@@ -678,7 +668,7 @@ struct shift_left_interface {
 
    // `<<=` operator where this is a left-hand-side operand.
    template <typename T>
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<<=(derived_type& self, T&& other) -> derived_type& {
       self = self.shift_left_by(fwd(other));
@@ -692,7 +682,7 @@ struct shift_left_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_shift_left_by_interface<T, derived_type>)
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<<=(T& other, derived_type const& self) -> T& {
       other = self.shift_left_into(other);
@@ -704,7 +694,7 @@ struct shift_left_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_shift_left_by_interface<T, derived_type>)
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<<=(T& other, derived_type&& self) -> T& {
       other = move(self).shift_left_into(other);
@@ -719,7 +709,7 @@ struct shift_right_interface {
 
    // `>>` operator where this is a left-hand-side operand.
    template <typename T>
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator>>(this auto&& self, T&& other) -> decltype(auto) {
       return fwd(self).shift_right_by(fwd(other));
@@ -732,7 +722,7 @@ struct shift_right_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_shift_right_by_interface<T, derived_type>)
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>>(T&& other, decay_derived_type const& self) -> decltype(auto) {
       return self.shift_right_into(fwd(other));
@@ -743,7 +733,7 @@ struct shift_right_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_shift_right_by_interface<T, derived_type>)
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>>(T&& other, derived_type&& self) -> decltype(auto) {
       return fwd(self).shift_right_into(fwd(other));
@@ -751,7 +741,7 @@ struct shift_right_interface {
 
    // `>>=` operator where this is a left-hand-side operand.
    template <typename T>
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>>=(derived_type& self, T&& other) -> derived_type& {
       self = self.shift_right_by(fwd(other));
@@ -765,7 +755,7 @@ struct shift_right_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_shift_right_by_interface<T, derived_type>)
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>>=(T& other, derived_type const& self) -> T& {
       other = self.shift_right_into(other);
@@ -777,7 +767,7 @@ struct shift_right_interface {
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
       requires(!detail::has_shift_right_by_interface<T, derived_type>)
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>>=(T& other, derived_type&& self) -> T& {
       other = move(self).shift_right_into(other);
@@ -791,13 +781,13 @@ struct bitwise_interface : bit_and_interface<derived_type>,
                            shift_left_interface<derived_type>,
                            shift_right_interface<derived_type> {
    // Unary complement operator.
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator~(derived_type const& self) {
       return self.bit_complement();
    }
 
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator~(derived_type&& self) {
       return move(self).bit_complement();
@@ -812,7 +802,7 @@ struct arithmetic_interface : plus_interface<derived_type>,
                               modulo_interface<derived_type>,
                               bitwise_interface<derived_type> {
    // No-op unary `+` operator for operand.
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+(derived_type const& self) {
       return self;
@@ -824,7 +814,7 @@ struct arithmetic_interface : plus_interface<derived_type>,
    }
 
    // Unary `-` operator for operand.
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-(derived_type const& self)
       requires(is_signed<derived_type>)
@@ -837,7 +827,7 @@ struct arithmetic_interface : plus_interface<derived_type>,
       }
    }
 
-   [[nodiscard, gnu::always_inline, gnu::artificial]]
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-(derived_type&& self)
       requires(is_signed<derived_type>)
@@ -851,13 +841,13 @@ struct arithmetic_interface : plus_interface<derived_type>,
    }
 
  private:
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    self() {
       return static_cast<derived_type>(*this);
    }
 
-   [[gnu::always_inline, gnu::artificial]]
+   [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    self() const {
       return static_cast<derived_type>(*this);
@@ -865,7 +855,3 @@ struct arithmetic_interface : plus_interface<derived_type>,
 };
 
 }  // namespace cat
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif

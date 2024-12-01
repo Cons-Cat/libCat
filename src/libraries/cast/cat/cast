@@ -34,8 +34,8 @@ numeric_cast(from_type from) -> maybe<to_type> {
 
 template <typename from_type>
    requires(sizeof(from_type) <= 8 && !is_lvalue_reference<from_type>)
-[[gnu::always_inline, gnu::artificial]]
-inline constexpr auto
+[[gnu::always_inline, gnu::nodebug]]
+constexpr auto
 bit_int_cast(from_type from) -> decltype(auto) {
    // TODO: Use a template that makes some integer from a size.
    using integer_type =

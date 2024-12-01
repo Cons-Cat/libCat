@@ -876,8 +876,6 @@ concept is_bitnotable = requires(T t) { ~t; };
 // `<cat/utility/detail/...>`.
 namespace std {
 
-// These functions are automatically `artificial`.
-
 template <typename T>
 [[nodiscard]]
 constexpr auto
@@ -907,8 +905,8 @@ constinit inline struct mover {
    // Move a mutable l-value reference.
    template <typename T>
    [[nodiscard("A moved-from value should be consumed."), gnu::always_inline,
-     gnu::artificial]]
-   friend inline constexpr auto  // NOLINT
+     gnu::nodebug]]
+   friend constexpr auto
    operator*(mover, T& x) -> decltype(auto) {
       return move(x);
    }
@@ -916,8 +914,8 @@ constinit inline struct mover {
    // Move an r-value reference.
    template <is_rvalue_reference T>
    [[nodiscard("A moved-from value should be consumed."), gnu::always_inline,
-     gnu::artificial]]
-   friend inline constexpr auto  // NOLINT
+     gnu::nodebug]]
+   friend constexpr auto
    operator*(mover, T&& x) -> T&& {
       return static_cast<cat::remove_reference<T>&&>(x);
    }
