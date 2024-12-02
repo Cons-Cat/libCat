@@ -17,7 +17,7 @@ struct Socket {
    char data[14];
 };
 
-enum class socket_type {
+enum class socket_type : unsigned char {
    stream = 1,
    data_gram = 2,
    raw = 3,

@@ -9,6 +9,6 @@ cat::breakpoint() {
    asm volatile("int3");
 #else
    // Without hardware support, raise SIGILL, which breaks in a debugger.
-   nix::raise_here(nix::Signal::illegal_instruction);
+   nix::raise_here(nix::signal::illegal_instruction);
 #endif
 }

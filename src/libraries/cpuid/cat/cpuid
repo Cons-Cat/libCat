@@ -21,7 +21,8 @@ cpuid(cat::uint4 leaf, cat::uint4 subleaf = 0u) -> cat::array<cat::uint4, 4> {
 
 namespace detail {
 
-enum class cpu_type {
+// NOLINTNEXTLINE The ABI requires this be 4 bytes.
+enum class cpu_type : unsigned int {
    intel_bonnell = 1,
    intel_core2,
    intel_corei7,
@@ -45,7 +46,8 @@ enum class cpu_type {
    // cpu_type_max
 };
 
-enum class cpu_subtype {
+// NOLINTNEXTLINE The ABI requires this be 4 bytes.
+enum class cpu_subtype : unsigned char {
    intel_corei7_nehalem = 1,
    intel_corei7_westmere,
    intel_corei7_sandybridge,

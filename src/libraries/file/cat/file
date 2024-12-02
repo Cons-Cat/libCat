@@ -8,13 +8,13 @@
 
 namespace cat {
 
-enum class file_open_mode {
+enum class file_open_mode : unsigned char {
    read,
    write,
    append
 };
 
-enum class file_seek_mode {
+enum class file_seek_mode : unsigned char {
    set,
    current,
    end

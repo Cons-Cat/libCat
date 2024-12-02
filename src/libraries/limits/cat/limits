@@ -265,13 +265,13 @@ struct limits<index<policy>> {
    static constexpr bool is_iec559 = false;
 };
 
-enum class float_denorm {
+enum class float_denorm : signed char {
    indeterminate = -1,
    absent = 0,
    present = 1
 };
 
-enum class float_round {
+enum class float_round : signed char {
    indeterminate = -1,
    toward_zero = 0,
    to_nearest = 1,
