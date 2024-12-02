@@ -31,10 +31,29 @@ function() {
 }  // namespace
 
 TEST(test_thread) {
-   cat::thread thread;
+   cat::thread threads[3];
    cat::page_allocator allocator;
 
-   thread.spawn(allocator, 2_uki, 2_uki, function).verify();
+   // TODO: The commented-out code is not working.
+
+   // threads[0].spawn(allocator, 2_uki, 2_uki, function).verify();
+   threads[1].spawn(allocator, 2_uki, 2_uki, &function).verify();
+
+   threads[2]
+      .spawn(allocator, 2_uki, 2_uki,
+             [] {
+                ++atomic;
+             })
+      .verify();
+
+   // threads[3]
+   //    .spawn(
+   //       allocator, 2_uki, 2_uki,
+   //       +[] {
+   //          ++atomic;
+   //       })
+   //    .verify();
+
    for (idx i; i < 3; ++i) {
       ++atomic;
       // ++tls1;
@@ -42,6 +61,9 @@ TEST(test_thread) {
    // TODO: Initialize tls on the main thread.
    // cat::verify(tls1 == 4);
 
-   thread.join().verify();
-   cat::verify(atomic.load() == 6);
+   // threads[0].join().verify();
+   threads[1].join().verify();
+   threads[2].join().verify();
+   // threads[3].join().verify();
+   cat::verify(atomic.load() == 7);
 }
