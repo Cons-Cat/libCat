@@ -27,15 +27,16 @@ nix::process::spawn(cat::is_allocator auto& allocator,
    cat::byte* p_stack_bottom = maybe_memory.value().data();
    scaredy_nix<void> on_parent;
 
-   if constexpr (sizeof...(arguments) == 0) {
-      // If there are no arguments, `function` can be called almost directly.
+   if constexpr (sizeof...(arguments) == 0 && __is_pointer(F)) {
+      // If there are no arguments, and `function` is a pointer, it can be
+      // called almost directly.
       on_parent = this->spawn_impl(p_stack_bottom, initial_stack_size,
                                    thread_local_buffer_size,
                                    reinterpret_cast<void*>(function), nullptr);
    } else {
       // If there are arguments, `function` must be wrapped in a lambda that has
       // tuple storage.
-      cat::tuple tuple_args{function, fwd(arguments)...};
+      cat::tuple tuple_args{fwd(function), fwd(arguments)...};
 
       // Unary `+` converts this lambda to function pointer.
       static auto* p_entry = +[](cat::tuple<F, Args...>* p_arguments) {

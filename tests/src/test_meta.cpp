@@ -264,6 +264,14 @@ TEST(test_meta) {
    static_assert(is_function<decltype(test_is_function)>);
    static_assert(!is_function<decltype(lambda)>);
 
+   auto p_decayed_lambda = +[] {
+   };
+   static_assert(is_pointer<decltype(p_decayed_lambda)>);
+   static_assert(is_pointer<decltype(+[] {
+   })>);
+   static_assert(!is_pointer<decltype([] {
+   })>);
+
    static_assert(is_same<underlying_type<enum_type>, int>);
    static_assert(is_same<underlying_type<enum_class_type>, int>);
 
