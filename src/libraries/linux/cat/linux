@@ -1042,15 +1042,23 @@ auto
 wait_pid(process_id pid, file_status* p_file_status, wait_options_flags options)
    -> scaredy_nix<process_id>;
 
+[[gnu::no_sanitize_address]]
 auto syscall0(cat::iword) -> cat::iword;
+[[gnu::no_sanitize_address]]
 auto syscall1(cat::iword, cat::no_type) -> cat::iword;
+[[gnu::no_sanitize_address]]
 auto syscall2(cat::iword, cat::no_type, cat::no_type) -> cat::iword;
+[[gnu::no_sanitize_address]]
 auto
    syscall3(cat::iword, cat::no_type, cat::no_type, cat::no_type) -> cat::iword;
-auto syscall4(cat::iword, cat::no_type, cat::no_type, cat::no_type,
-              cat::no_type) -> cat::iword;
+[[gnu::no_sanitize_address]]
+auto
+   syscall4(cat::iword, cat::no_type, cat::no_type, cat::no_type, cat::no_type)
+      -> cat::iword;
+[[gnu::no_sanitize_address]]
 auto syscall5(cat::iword, cat::no_type, cat::no_type, cat::no_type,
               cat::no_type, cat::no_type) -> cat::iword;
+[[gnu::no_sanitize_address]]
 auto syscall6(cat::iword, cat::no_type, cat::no_type, cat::no_type,
               cat::no_type, cat::no_type, cat::no_type) -> cat::iword;
 

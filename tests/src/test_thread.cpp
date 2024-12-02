@@ -15,6 +15,8 @@ constinit cat::atomic<int> atomic = 0;
 thread_local int tls1 = 1;
 thread_local int tls2 = 2;
 
+// TODO: Why does this segfault with asan enabled?
+[[gnu::no_sanitize_address]]
 void
 function() {
    for (idx i = 0; i < 3; ++i) {

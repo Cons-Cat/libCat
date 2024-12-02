@@ -1,5 +1,6 @@
 #include <cat/linux>
 
+[[gnu::no_sanitize_address]]
 auto
 nix::syscall2(cat::iword call, cat::no_type arg1, cat::no_type arg2)
    -> cat::iword {
