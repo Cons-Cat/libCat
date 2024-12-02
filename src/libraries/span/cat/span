@@ -37,23 +37,15 @@ class [[clang::trivial_abi, gsl::Pointer(T)]] span
        : m_p_data(initializers.begin()), m_size(initializers.size()) {
    }
 
-   // Implicitly convert a contiguous container into a span.
-   template <typename U>
-      requires(is_random_access<U>)
+   // Implicitly convert a contiguous container into a span. Const-correctness
+   // is managed by the deduction guides below.
+   template <is_random_access U>
    constexpr span(U& collection [[clang::lifetimebound]]
                   )
        : m_p_data(collection.data()), m_size(collection.size()) {
    }
 
-   // If `T` is non-`const`, conversion to a `const` contiguous container is
-   // explicit.
    template <typename U>
-      requires(is_random_access<U>)
-   explicit constexpr span(U const& collection)
-       : m_p_data(unconst(collection.data())), m_size(collection.size()) {
-   }
-
-   template <is_rvalue_reference U>
    constexpr span(U&& collection) =
       delete("A `cat::span` cannot alias a temporary, because the span would"
              "immediately dangle.");
@@ -65,7 +57,7 @@ class [[clang::trivial_abi, gsl::Pointer(T)]] span
 
    // Construct a span from a static `initializer_list`.
    constexpr auto
-   operator=(initializer_list<T> initializers) -> span<T>&
+   operator=(initializer_list<T> initializers) -> span&
       requires(is_const<T>)
    {
       m_p_data = initializers.begin();
@@ -73,25 +65,41 @@ class [[clang::trivial_abi, gsl::Pointer(T)]] span
       return *this;
    }
 
+   // Implicitly convert a contiguous container into a span. Const-correctness
+   // is managed by the deduction guides below.
+   template <is_random_access U>
+   auto
+   operator=(U& collection [[clang::lifetimebound]]) -> span& {
+      m_p_data = collection.data();
+      m_size = collection.size();
+      return *this;
+   }
+
+   template <typename U>
+   auto
+   operator=(U&& collection) =
+      delete("A `cat::span` cannot alias a temporary, because the span would"
+             "immediately dangle.");
+
    // Get the non-`const` address that this `span` starts at.
    [[nodiscard]]
    constexpr auto
    data() -> T* {
-      return this->m_p_data;
+      return m_p_data;
    }
 
    // Get the `const` address that this `span` starts at.
    [[nodiscard]]
    constexpr auto
    data() const -> T const* {
-      return this->m_p_data;
+      return m_p_data;
    }
 
    // Get the number of elements owned by this `span`.
    [[nodiscard]]
    constexpr auto
    size() const -> idx {
-      return this->m_size;
+      return m_size;
    }
 
    // These data members should be `public` so that this is a structural type.
@@ -108,7 +116,11 @@ span(initializer_list<T>) -> span<T const>;
 
 // Deduce the `value_type` of containers.
 template <typename T>
-span(T) -> span<typename T::value_type>;
+span(T&) -> span<typename T::value_type>;
+
+// Deduce the `value_type` of containers.
+template <typename T>
+span(T const&) -> span<typename T::value_type const>;
 
 // Create a span between two addresses.
 template <typename T>
@@ -116,6 +128,9 @@ constexpr auto
 make_span_between(T* p_start, T* p_end) {
    return span(p_start, p_end - p_start);
 }
+
+template <typename T>
+using view = span<T const> const;
 
 // Simplify non-negative signed integers.
 template <typename T>

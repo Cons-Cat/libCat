@@ -80,28 +80,29 @@ TEST(test_vec) {
    }
 
    // Test vector member types.
-   using iterator = cat::vec<int4>::iterator;
+   using test_vec_t = cat::vec<int4, cat::page_allocator>;
+   using iterator = test_vec_t::iterator;
    static_assert(cat::is_same<iterator, decltype(int_vec.begin())>);
    static_assert(cat::is_same<iterator, decltype(int_vec.end())>);
 
    static_assert(cat::is_same<iterator::value_type, int4>);
    static_assert(cat::is_same<iterator::reference, int4&>);
 
-   using const_iterator = cat::vec<int4>::const_iterator;
+   using const_iterator = test_vec_t::const_iterator;
    static_assert(cat::is_same<const_iterator, decltype(int_vec.cbegin())>);
    static_assert(cat::is_same<const_iterator, decltype(int_vec.cend())>);
 
    static_assert(cat::is_same<const_iterator::value_type, int4 const>);
    static_assert(cat::is_same<const_iterator::reference, int4 const&>);
 
-   using reverse_iterator = cat::vec<int4>::reverse_iterator;
+   using reverse_iterator = test_vec_t::reverse_iterator;
    static_assert(cat::is_same<reverse_iterator, decltype(int_vec.rbegin())>);
    static_assert(cat::is_same<reverse_iterator, decltype(int_vec.rend())>);
 
    static_assert(cat::is_same<reverse_iterator::value_type, int4>);
    static_assert(cat::is_same<reverse_iterator::reference, int4&>);
 
-   using const_reverse_iterator = cat::vec<int4>::const_reverse_iterator;
+   using const_reverse_iterator = test_vec_t::const_reverse_iterator;
    static_assert(
       cat::is_same<const_reverse_iterator, decltype(int_vec.crbegin())>);
    static_assert(
@@ -110,7 +111,8 @@ TEST(test_vec) {
    static_assert(cat::is_same<const_reverse_iterator::value_type, int4 const>);
    static_assert(cat::is_same<const_reverse_iterator::reference, int4 const&>);
 
-   static_assert(cat::is_same<int, cat::vec<int>::value_type>);
+   static_assert(
+      cat::is_same<int, cat::vec<int, cat::page_allocator>::value_type>);
 
    // Test `vector` in a `constexpr` context.
    static_assert(const_func() == 10);
@@ -169,4 +171,16 @@ TEST(test_vec) {
    relocate_vector[5] = 0;
    origin_vector.relocate_to(relocate_vector);
    cat::verify(relocate_vector[5] == 1);
+
+   // Convert to span.
+   cat::vec v_nonconst = cat::make_vec_empty<int>(pager);
+   cat::vec const v_innerconst = cat::make_vec_empty<int const>(pager);
+   cat::vec const v_outerconst = cat::make_vec_empty<int>(pager);
+   cat::span s_nonconst = v_nonconst;
+   cat::span s_innerconst = v_innerconst;
+   cat::span s_outerconst = v_outerconst;
+
+   cat::span view = v_innerconst;
+   view = v_outerconst;
+   view = v_nonconst;
 }

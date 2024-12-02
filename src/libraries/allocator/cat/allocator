@@ -3615,7 +3615,7 @@ class allocator_interface {
             p_memory = __builtin_addressof(this->get(handle));
          }
 
-         cat::poison_memory_region(p_memory, sizeof(allocation_type));
+         poison_memory_region(p_memory, sizeof(allocation_type));
 
          // if constexpr (is_destructible<allocation_type>) {
          for (uword i = 0u; i < handle.size(); ++i) {
@@ -3634,7 +3634,7 @@ class allocator_interface {
    template <typename T>
    constexpr void
    free(T* p_memory) {
-      cat::poison_memory_region(p_memory, sizeof(T));
+      poison_memory_region(p_memory, sizeof(T));
 
       if constexpr (detail::has_max_allocation_bytes<derived_type>) {
          static_assert(sizeof(T) <= derived_type::max_allocation_bytes,
@@ -3663,7 +3663,7 @@ class allocator_interface {
                 "This allocation is too large for this allocator!");
       }
 
-      cat::poison_memory_region(p_memory, sizeof(T) * count);
+      poison_memory_region(p_memory, sizeof(T) * count);
 
       if consteval {
          // if (count > 0) {
@@ -3818,7 +3818,7 @@ class allocator_interface {
                // TODO: Zeroed-out allocations should not have arguments.
                // Zeroed-out allocations must be trivial.
                && (!is_zeroed || is_trivial<T>))
-   [[gnu::optimize(R"(-fno-tree-loop-distribute-patterns)"),
+   [[gnu::optimize("-fno-tree-loop-distribute-patterns"),
      gnu::no_sanitize_address]]
    constexpr auto
    meta_alloc(uword allocation_alignment, idx allocation_count,
@@ -3976,8 +3976,8 @@ class allocator_interface {
                   stack_handle.set_inline_storage(T(fwd(constructor_args)...));
                }
 
-               // Return here to skip error handling, because an
-               // on-stack allocation cannot fail.
+               // Return here to skip error handling, because an on-stack
+               // allocation cannot fail.
                if constexpr (has_feedback) {
                   return return_handle(sized_allocation<handle_type>{
                      move(stack_handle), inline_buffer_size});
@@ -4134,7 +4134,7 @@ class allocator_interface {
             p_allocation = static_cast<T*>(maybe_memory.value());
          }
 
-         cat::unpoison_memory_region(p_allocation, allocation_bytes);
+         unpoison_memory_region(p_allocation, allocation_bytes);
 
          // Possibly zero-out the allocation.
          if constexpr (is_zeroed) {
@@ -4260,7 +4260,7 @@ class allocator_interface {
          assert(new_handle.data() != nullptr);
 
          // TODO: Why does this fix asan error in vector test?
-         cat::unpoison_memory_region(p_old_handle, old_count + sizeof(T) + 8u);
+         unpoison_memory_region(p_old_handle, old_count + sizeof(T) + 8u);
 
          if constexpr (is_trivially_relocatable<T>) {
             copy_memory(p_old_handle, new_handle.data(), old_count);

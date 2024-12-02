@@ -65,7 +65,7 @@ __asan_unpoison_memory_region(void const volatile*, uword) {
 #endif
 
 template <typename T>
-[[gnu::nodebug]]
+[[gnu::nodebug, gnu::always_inline]]
 constexpr void
 poison_memory_region([[maybe_unused]] T const volatile* p_address,
                      [[maybe_unused]] uword size) {
@@ -78,7 +78,7 @@ poison_memory_region([[maybe_unused]] T const volatile* p_address,
 }
 
 template <typename T>
-[[gnu::nodebug]]
+[[gnu::nodebug, gnu::always_inline]]
 constexpr void
 unpoison_memory_region([[maybe_unused]] T const volatile* p_address,
                        [[maybe_unused]] uword size) {
