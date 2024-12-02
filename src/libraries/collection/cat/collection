@@ -258,13 +258,13 @@ class collection_interface {
    // Index into this collection with bounds-checking.
    [[nodiscard]]
    constexpr auto
-   at(iword index) -> maybe<T&>
+   at(idx index) -> maybe<T&>
       requires(is_array_like)
    {
       if !consteval {
          cat::assert(index >= 0);
       }
-      if (index < this->self().capacity()) {
+      if (index < this->self().size()) {
          return this->self_mut().data()[index.raw];
       }
       return nullopt;
@@ -273,7 +273,7 @@ class collection_interface {
    // Index into this collection with bounds-checking.
    [[nodiscard]]
    constexpr auto
-   at(iword index) const -> maybe<T&> {
+   at(idx index) const -> maybe<T&> {
       // `unconst()` allows `.at()` to be safely called in a `const` context.
       return unconst(this)->at(index);
    }
