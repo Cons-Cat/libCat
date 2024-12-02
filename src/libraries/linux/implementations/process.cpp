@@ -17,7 +17,7 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
    cat::uintptr<void> tls_buffer = stack_top;
    stack_top -= thread_local_buffer_size;
 
-   // 32 byte alignment is required for AVX2 support.
+   // TODO: 32 byte alignment is required for AVX2 support.
    // stack_top = cat::align_down(stack_top - 16, 32u);
 
    // Place a pointer to function arguments on the new stack:
@@ -47,8 +47,7 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
       : /* There are no outputs. */
       : "a"(56), "D"(m_flags), "S"(stack_top),
         "d"(&(m_id)), [tls] "r"(tls_buffer)
-      // TODO: These clobbers can't all be necessary. If they are, explain why.
-      : "rcx", "r8", "r9", "r10", "r11", "memory", "cc"
+      : "rcx", "r11", "memory", "cc"
       : parent_thread);
 
    // Exit the child thread after its entry function returns.
