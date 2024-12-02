@@ -51,7 +51,7 @@ union_errors(int4 error) -> cat::scaredy<int8, error_type_one, error_type_two> {
    }
 }
 
-enum class error_set {
+enum class error_set : unsigned char {
    one,
    two
 };

@@ -23,7 +23,7 @@ struct signals_mask_set;
 
 namespace nix {
 // TODO: Consider using the names from `std::errc`.
-enum class linux_error {
+enum class linux_error : short {
    // Operation is not permitted.
    perm = -1,
    // No such file or directory.
@@ -307,7 +307,7 @@ using scaredy_nix = cat::scaredy<
    // When the value is negative, this is some `linux_error`.
    linux_error>;
 
-enum class memory_protection_flags : unsigned int {
+enum class memory_protection_flags : unsigned char {
    none = 0b000,     // Data cannot be accessed at all.
    read = 0b001,     // Data is readable.
    write = 0b010,    // Data is writable.
@@ -366,7 +366,7 @@ struct group_id {
    cat::int4 value;
 };
 
-enum class wait_id {
+enum class wait_id : unsigned char {
    all = 0,
    process_id = 1,
    process_group = 2,
@@ -403,7 +403,7 @@ enum class clone_flags : unsigned int {
    io = 0x80000000,
 };
 
-enum class wait_options_flags : long int {
+enum class wait_options_flags : unsigned int {
    no_hang = 1,
    untraced = 2,
    stopped = 2,
@@ -415,14 +415,14 @@ enum class wait_options_flags : long int {
    clone = 0x80000000,
 };
 
-enum class open_mode {
+enum class open_mode : unsigned char {
    read_only = 00,
    write_only = 01,
    // This flag cannot be use on a FIFO.
    read_write = 02
 };
 
-enum class open_flags {
+enum class open_flags : unsigned int {
    // This will create a new file. If that file already exists, it is no-op
    // unless combined with `open_flags::exclusive`.
    create = 0100,
@@ -456,7 +456,7 @@ enum class open_flags {
 };
 
 // TODO: Comment wtf these mean.
-enum class io_requests : unsigned long long {
+enum class io_requests : unsigned int {
    none = 0,
    write = 1,
    read = 2,
@@ -592,6 +592,7 @@ io_request_readwrite(io_requests a, io_requests b, io_requests c)
 }
 
 // TODO: Comment wtf these mean.
+// NOLINTNEXTLINE The ABI requires this by 4 bytes.
 enum class tty_configuration_flags : unsigned int {
    vintr = 0,
    vquit = 1,
@@ -839,7 +840,7 @@ sys_munmap(void const* p_memory, cat::uword length) -> scaredy_nix<void>;
 
 // TODO: `sys_brk()`
 
-enum class Signal {
+enum class signal : unsigned char {
    hang_up = 1,                    // sighng
    interrupt = 2,                  // sigint
    sigint = interrupt,             // sigquit
@@ -877,11 +878,11 @@ enum class Signal {
    unused = bad_syscall
 };
 
-enum class signal_action {
+enum class signal_action : unsigned char {
    // The set of blocked signals is the union of the `p_other_set` and
    // `p_current_set`.
    block = 0,
-   // The signals in `p_other_set` are removed from `p_current_set`. Signals in
+   // The signals in `p_other_set` are removed from `p_current_set`. signals in
    // `p_other_set` which are not in `p_current_set` are silently ignored.
    unblock = 1,
    // `p_current_set` is set to `p_other_set`.
@@ -1030,7 +1031,7 @@ sys_unlink(char const* p_path_name) -> scaredy_nix<void>;
 
 // Syscall 200
 auto
-sys_tkill(process_id pid, Signal signal) -> scaredy_nix<void>;
+sys_tkill(process_id pid, signal signal) -> scaredy_nix<void>;
 
 // Syscall 247
 auto
@@ -1100,7 +1101,7 @@ auto
 tty_get_attributes(file_descriptor tty)
    -> cat::scaredy<tty_io_serial, linux_error>;
 
-enum class tty_set_mode {
+enum class tty_set_mode : unsigned short {
    // Update the tty immediately.
    now = 0x5402,
    // Update the tty once all currently written data has been transmitted.
@@ -1249,10 +1250,10 @@ auto
 block_all_signals() -> signals_mask_set;
 
 auto
-raise(Signal signal, process_id pid) -> scaredy_nix<void>;
+raise(signal signal, process_id pid) -> scaredy_nix<void>;
 
 auto
-raise_here(Signal signal) -> scaredy_nix<void>;
+raise_here(signal signal) -> scaredy_nix<void>;
 
 }  // namespace nix
 
