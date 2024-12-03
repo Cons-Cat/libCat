@@ -4079,12 +4079,13 @@ class allocator_interface {
                         this->self().allocation_bytes(1u, allocation_bytes);
 
                      if (size.has_value()) {
-                        maybe_memory = maybe_sized_allocation<void*>{
-                           // If `.allocation_bytes()` succeeded, this
-                           // will not fail.
+                        maybe_memory = maybe_sized_allocation<void*>(tuple{
+                           // If `.allocation_bytes()` succeeded, this will not
+                           // fail.
                            this->self().allocate(allocation_bytes).value(),
-                           size.value()};
+                           size.value()});
                      } else {
+                        // Propagate an error if memory cannot be allocated.
                         maybe_memory = nullopt;
                      }
                   } else {
@@ -4094,10 +4095,9 @@ class allocator_interface {
                      auto temp_memory = this->self().aligned_allocate(
                         allocation_alignment, allocation_bytes);
                      if (temp_memory.has_value()) {
-                        maybe_memory = maybe_sized_allocation<void*>{
+                        maybe_memory = maybe_sized_allocation<void*>(
                            sized_allocation<void*>{temp_memory.value(),
-                                                   allocation_bytes}
-                        };
+                                                   allocation_bytes});
                      } else {
                         maybe_memory = nullopt;
                      }

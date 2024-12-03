@@ -78,7 +78,7 @@ struct tuple : detail::tuple_storage<index_sequence_for<in_types...>,
 
    // clangd 15 produces a false diagnostic if this is declared at the bottom
    // of this struct.
-   static constexpr iword size = types::size;
+   static constexpr idx size = types::size;
 
    /*
 // Convert each element of this `tuple` into those of another `tuple`.
@@ -157,6 +157,8 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
 }
    */
 
+   // TODO: Should these be `idx`?
+
    // Get a non-`const` reference to the N'th stored variable.
    template <iword in_index>
       requires(in_index <= size)
@@ -219,10 +221,16 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
 
    // Get a non-`const` reference to the first stored variable.
    constexpr auto
-   first() & -> auto& requires(size >= 1) { return this->get<0>(); }
+   first() & -> auto&
+      requires(size >= 1)
+   {
+      return this->get<0>();
+   }
 
    // Get a `const` reference to the first stored variable.
-   [[nodiscard]] constexpr auto first() const& -> auto const&
+   [[nodiscard]]
+   constexpr auto
+   first() const& -> auto const&
       requires(size >= 1)
    {
       return this->get<0>();
@@ -239,12 +247,16 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
                                                           }
 
    // Get a non-`const` reference to the second stored variable.
-   constexpr auto second() & -> auto& requires(size >= 2) {
-                                         return this->get<1>();
-                                      }
+   constexpr auto second() & -> auto&
+      requires(size >= 2)
+   {
+      return this->get<1>();
+   }
 
    // Get a `const` reference to the second stored variable.
-   [[nodiscard]] constexpr auto second() const& -> auto const&
+   [[nodiscard]]
+   constexpr auto
+   second() const& -> auto const&
       requires(size >= 2)
    {
       return this->get<1>();
@@ -259,12 +271,16 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
       size >= 2) { return move(this->get<1>()); }
 
    // Get a non-`const` reference to the third stored variable.
-   constexpr auto third() & -> auto& requires(size >= 3) {
-                                        return this->get<2>();
-                                     }
+   constexpr auto third() & -> auto&
+      requires(size >= 3)
+   {
+      return this->get<2>();
+   }
 
    // Get a `const` reference to the third stored variable.
-   [[nodiscard]] constexpr auto third() const& -> auto const&
+   [[nodiscard]]
+   constexpr auto
+   third() const& -> auto const&
       requires(size >= 3)
    {
       return this->get<2>();
@@ -281,12 +297,16 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
                                                           }
 
    // Get a non-`const` reference to the fourth stored variable.
-   constexpr auto fourth() & -> auto& requires(size >= 4) {
-                                         return this->get<3>();
-                                      }
+   constexpr auto fourth() & -> auto&
+      requires(size >= 4)
+   {
+      return this->get<3>();
+   }
 
    // Get a `const` reference to the fourth stored variable.
-   [[nodiscard]] constexpr auto fourth() const& -> auto const&
+   [[nodiscard]]
+   constexpr auto
+   fourth() const& -> auto const&
       requires(size >= 4)
    {
       return this->get<3>();
@@ -301,12 +321,16 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
       size >= 4) { return move(this->get<3>()); }
 
    // Get a non-`const` reference to the fifth stored variable.
-   constexpr auto fifth() & -> auto& requires(size >= 5) {
-                                        return this->get<4>();
-                                     }
+   constexpr auto fifth() & -> auto&
+      requires(size >= 5)
+   {
+      return this->get<4>();
+   }
 
    // Get a `const` reference to the fifth stored variable.
-   [[nodiscard]] constexpr auto fifth() const& -> auto const&
+   [[nodiscard]]
+   constexpr auto
+   fifth() const& -> auto const&
       requires(size >= 5)
    {
       return this->get<4>();
