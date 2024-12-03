@@ -18,9 +18,14 @@ template <typename T, is_allocator allocator_type>
 class [[gsl::Owner]]
 vec : public collection_interface<vec<T, allocator_type>, T>,
       public iterable_interface<T> {
+   template <typename U, is_allocator allocator, typename... Us>
+      requires(sizeof...(Us) > 0u)
+   friend constexpr auto
+   make_vec(allocator&, Us&&...) -> maybe<vec<U, allocator>>;
+
    template <typename U, is_allocator allocator>
    friend constexpr auto
-   make_vec_empty(allocator&) -> vec<U, allocator>;
+   make_vec(allocator&) -> vec<U, allocator>;
 
    template <typename U, is_allocator allocator>
    friend constexpr auto
@@ -28,7 +33,7 @@ vec : public collection_interface<vec<T, allocator_type>, T>,
 
    template <typename U, is_allocator allocator>
    friend constexpr auto
-   make_vec_filled(allocator&, idx, U&&) -> maybe<vec<U, allocator>>;
+   make_vec_filled(allocator&, idx, U const&) -> maybe<vec<U, allocator>>;
 
  public:
    // Empty a vector upon move.
@@ -54,13 +59,16 @@ vec : public collection_interface<vec<T, allocator_type>, T>,
    }
 
    constexpr ~vec() {
-      // TODO: Is this check necessary/successful for the destructor to be
-      // conditionally trivial?
-#if __has_feature(address_sanitizer)
-      poison_memory_region(m_p_data, m_current_size);
-#endif
       if consteval {
          delete[] m_p_data;
+      } else {
+         if constexpr (!is_trivially_destructible<T>) {
+            for (idx i = 0; i < m_current_size; ++i) {
+               m_p_data[i].~T();
+            }
+         }
+
+         poison_memory_region(m_p_data, m_current_size);
       }
    }
 
@@ -68,7 +76,7 @@ vec : public collection_interface<vec<T, allocator_type>, T>,
    // Being `protected:` permits derived classes and adaptors to call these.
 
    [[deprecated("`cat::vec` cannot be created without an allocator. Call "
-                "`cat::make_vec_empty()` instead!")]]
+                "`cat::make_vec()` instead!")]]
    constexpr vec(allocator_type& allocator [[clang::lifetimebound]])
        : m_p_data(nullptr),
          m_current_size(0),
@@ -198,6 +206,8 @@ vec : public collection_interface<vec<T, allocator_type>, T>,
          prop(this->reserve(size));
       }
 
+      // TODO: Initialize the values.
+
       // If the new size is not larger, simply shrink size and maintain
       // capacity.
       m_current_size = size;
@@ -244,28 +254,40 @@ vec : public collection_interface<vec<T, allocator_type>, T>,
 // TODO: Implement this factory function when either GCC gets value pack
 // indexing or I implement `std::initializer_list`.
 //
-// template <typename T, is_convertible<T>... Us>
-// [[nodiscard]]
-// constexpr auto
-// make_vec(is_allocator auto& allocator, Us&&... values) -> maybe<vec<T,
-// allocator_type>> {
-//     vec<T, allocator_type> new_vector;
-//     prop(new_vector.reserve(allocator, sizeof...(Us)));
-//     for (idx i; i < sizeof...(Us); ++i) {
-//         new_vector[i] = ;
-//     }
-//     return new_vector;
-// }
 
 // These factory functions require access to the `protected` constructor, which
 // is marked `[[deprecated]]`.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
+namespace detail {
+template <idx i>
+void
+initialize_vec(auto& vec, auto&& current, auto&&... next) {
+   vec[i] = fwd(current);
+   if constexpr (sizeof...(next) > 0u) {
+      initialize_vec<i + 1u>(vec, fwd(next)...);
+   }
+}
+}
+
+template <typename T, is_allocator allocator_type, typename... Us>
+   requires(sizeof...(Us) > 0u)
+[[nodiscard]]
+constexpr auto
+make_vec(allocator_type& allocator [[clang::lifetimebound]], Us&&... values)
+   -> maybe<vec<T, allocator_type>> {
+   vec<T, allocator_type> new_vector(allocator);
+   prop(new_vector.reserve(sizeof...(Us)));
+   new_vector.m_current_size = sizeof...(Us);
+   detail::initialize_vec<0u>(new_vector, fwd(values)...);
+   return new_vector;
+}
+
 template <typename T, is_allocator allocator_type>
 [[nodiscard]]
 constexpr auto
-make_vec_empty(allocator_type& allocator [[clang::lifetimebound]])
+make_vec(allocator_type& allocator [[clang::lifetimebound]])
    -> vec<T, allocator_type> {
    return vec<T, allocator_type>(allocator);
 }
@@ -284,7 +306,7 @@ template <typename T, is_allocator allocator_type>
 [[nodiscard]]
 constexpr auto
 make_vec_filled(allocator_type& allocator [[clang::lifetimebound]], idx count,
-                T&& value) -> maybe<vec<T, allocator_type>> {
+                T const& value) -> maybe<vec<T, allocator_type>> {
    vec<T, allocator_type> new_vector(allocator);
    prop(new_vector.reserve(count));
    new_vector.m_current_size = count;
