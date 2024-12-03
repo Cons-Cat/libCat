@@ -375,7 +375,8 @@ class collection_interface {
       requires(is_array_like)
    {
       if !consteval {
-         assert(index < this->self().size());
+         assert(index < this->self().size(),
+                "A collection was indexed out of bounds!");
       }
 
       return this->self_mut().data()[make_raw_arithmetic(index)];

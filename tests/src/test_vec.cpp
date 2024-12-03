@@ -4,11 +4,15 @@
 
 #include "../unit_tests.hpp"
 
+namespace {
+inline constinit idx destructor_count = 0u;
+}
+
 // Test that `vec` works in a `constexpr` context.
 consteval auto
 const_func() -> int4 {
    cat::page_allocator allocator;
-   cat::vec vector = cat::make_vec_empty<int4>(allocator);
+   cat::vec vector = cat::make_vec<int4>(allocator);
    auto _ = vector.resize(8);
 
    vector[0] = 1;
@@ -28,7 +32,7 @@ TEST(test_vec) {
    auto allocator = cat::make_linear_allocator(page);
 
    // Test default constructing a `vector`.
-   cat::vec int_vec = cat::make_vec_empty<int4>(allocator);
+   cat::vec int_vec = cat::make_vec<int4>(allocator);
    cat::verify(int_vec.size() == 0);
    cat::verify(int_vec.capacity() >= 0);
 
@@ -118,7 +122,7 @@ TEST(test_vec) {
    static_assert(const_func() == 10);
 
    // Test getters.
-   cat::vec default_vector = cat::make_vec_empty<int>(allocator);
+   cat::vec default_vector = cat::make_vec<int>(allocator);
    cat::verify(default_vector.is_empty());
 
    auto _ = default_vector.reserve(2);
@@ -173,9 +177,9 @@ TEST(test_vec) {
    cat::verify(relocate_vector[5] == 1);
 
    // Convert to span.
-   cat::vec v_nonconst = cat::make_vec_empty<int>(pager);
-   cat::vec const v_innerconst = cat::make_vec_empty<int const>(pager);
-   cat::vec const v_outerconst = cat::make_vec_empty<int>(pager);
+   cat::vec v_nonconst = cat::make_vec<int>(pager);
+   cat::vec const v_innerconst = cat::make_vec<int const>(pager);
+   cat::vec const v_outerconst = cat::make_vec<int>(pager);
    cat::span s_nonconst = v_nonconst;
    cat::span s_innerconst = v_innerconst;
    cat::span s_outerconst = v_outerconst;
@@ -183,4 +187,35 @@ TEST(test_vec) {
    cat::span view = v_innerconst;
    view = v_outerconst;
    view = v_nonconst;
+
+   struct foo {
+      bool live = true;
+
+      foo() = default;
+      foo(foo const&) = delete;
+
+      foo(foo&& other) {
+         other.live = false;
+      }
+
+      auto
+      operator=(foo const&) -> foo& = delete;
+
+      auto
+      operator=(foo&& other) -> foo& {
+         other.live = false;
+         return *this;
+      }
+
+      ~foo() {
+         if (live) {
+            ++destructor_count;
+         }
+      }
+   };
+
+   {
+      cat::vec _ = cat::make_vec<foo>(allocator, foo{}, foo{}, foo{}).verify();
+   }
+   cat::assert(destructor_count == 3);
 }

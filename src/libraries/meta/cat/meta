@@ -310,6 +310,8 @@ struct constant {
    static constexpr auto value = constant_value;
    using type = decltype(constant_value);
 
+   // TODO: Should this have a `consteval` constructor for `type`?
+
    consteval
    operator type(this auto&& self) {
       return fwd(self).value;
