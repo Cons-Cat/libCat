@@ -119,28 +119,29 @@ template <is_integral T, idx count>
 constexpr auto ones_list = value_list<T, T(1), count>;
 
 template <is_integral T, idx count>
-using make_integer_sequence =
-   remove_cv<decltype(integer_sequence<iword, count>)>;
+using make_integer_sequence = remove_cv<decltype(integer_sequence<T, count>)>;
 
 // TODO: What is this?
-template <iword... indices>
-using index_list_type = value_type_list<iword, indices...>;
+template <idx... indices>
+using index_list_type = value_type_list<idx, indices...>;
 
-template <iword value, idx count>
-constexpr auto index_list = value_list<iword, value, count>;
+template <idx value, idx count>
+constexpr auto index_list = value_list<idx, value, count>;
 
-template <iword value, idx count>
-using make_index_list = make_value_type_list<iword, value, count>;
-
-template <idx count>
-constexpr auto index_sequence = integer_sequence<iword, count>;
+template <idx value, idx count>
+using make_index_list = make_value_type_list<idx, value, count>;
 
 template <idx count>
-using make_index_sequence = make_integer_sequence<iword, count>;
+constexpr auto index_sequence = integer_sequence<idx, count>;
+
+template <idx count>
+using make_index_sequence = make_integer_sequence<idx, count>;
 
 template <typename... types>
-// `ssizeof_pack()` here produces an internal compiler error in GCC 12.
-using index_sequence_for = make_index_sequence<sizeof...(types)>;
+using index_sequence_over_types = make_index_sequence<sizeof...(types)>;
+
+template <auto... values>
+using index_sequence_over_values = make_index_sequence<sizeof...(values)>;
 
 template <typename T>
    requires(is_enum<T>)
