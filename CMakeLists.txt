@@ -33,6 +33,8 @@ list(
   -Wall -Wextra
   -Wno-unused-function
   -Wno-unknown-pragmas
+  -Wno-missing-braces # This breaks `cat::tuple`.
+  
   # Both GCC and Clang attributes are used.
   # See p2565 "Supporting User-Defined Attributes"
   $<$<CXX_COMPILER_ID:GNU>:-Wno-attributes>
