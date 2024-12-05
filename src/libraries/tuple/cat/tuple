@@ -13,14 +13,28 @@ template <iword in_index, typename T>
 struct tuple_element {
    using element = T;
 
-   constexpr tuple_element() = default;
+   // Implements comparison for tuples containing reference types
+   constexpr auto
+   operator<=>(tuple_element const&) const = default;
 
-   // conditionally trivial special member functions in C++20 allows these
-   // to remain trivial in some cases:
+   constexpr auto
+   operator==(tuple_element const&) const -> bool = default;
 
-   template <typename U>
-      requires(is_implicitly_convertible<U, T>)
-   constexpr tuple_element(U const& input) : storage(static_cast<T>(input)) {
+   // If the trivial comparison operators are implicitly deleted, fall back to
+   // these implementations:
+
+   constexpr auto
+   operator<=>(tuple_element const& other) const
+      requires(is_reference<T> && is_threeway_comparable<T>)
+   {
+      return storage <=> other.storage;
+   }
+
+   constexpr auto
+   operator==(tuple_element const& other) const -> bool
+      requires(is_reference<T> && is_equality_comparable<T>)
+   {
+      return storage == other.storage;
    }
 
    // For some reason, this produces ambiguous overload errors if it is
@@ -53,6 +67,11 @@ struct tuple_element {
 // type.
 template <typename... types>
 struct type_map : types... {
+   constexpr auto
+   operator<=>(type_map const&) const = default;
+   constexpr auto
+   operator==(type_map const&) const -> bool = default;
+
    using types::operator[]...;
 };
 
@@ -61,7 +80,8 @@ struct type_map : types... {
 template <typename...>
 struct tuple_storage {};
 
-// map a list of indices to a list of types.
+// Map a list of indices to a list of types.
+// TODO: Use `idx` rather than `iword`.
 template <iword... indices, typename... in_types>
 struct tuple_storage<index_list_type<indices...>, in_types...> {
    using type = type_map<tuple_element<indices, in_types>...>;
@@ -79,6 +99,21 @@ struct tuple : detail::tuple_storage<index_sequence_for<in_types...>,
    // clangd 15 produces a false diagnostic if this is declared at the bottom
    // of this struct.
    static constexpr idx size = types::size;
+
+   constexpr auto
+   operator<=>(tuple const&) const = default;
+   constexpr auto
+   operator==(tuple const&) const -> bool = default;
+   constexpr auto
+   operator!=(tuple const&) const -> bool = default;
+   constexpr auto
+   operator<(tuple const&) const -> bool = default;
+   constexpr auto
+   operator>(tuple const&) const -> bool = default;
+   constexpr auto
+   operator<=(tuple const&) const -> bool = default;
+   constexpr auto
+   operator>=(tuple const&) const -> bool = default;
 
    /*
 // Convert each element of this `tuple` into those of another `tuple`.
@@ -130,8 +165,8 @@ template <iword in_index>
 constexpr auto concat_rhs(auto const& other_tuple, auto& rhs_tuple) const
    requires(in_index < rhs_tuple.this->size) {
    other_tuple.template get<in_index +
-static_cast<iword>(sizeof...(in_types))>() = rhs_tuple.template get<in_index>();
-return concat_rhs<in_index + 1>(other_tuple, rhs_tuple);
+static_cast<iword>(sizeof...(in_types))>() = rhs_tuple.template
+get<in_index>(); return concat_rhs<in_index + 1>(other_tuple, rhs_tuple);
 }
 
 template <iword in_index>

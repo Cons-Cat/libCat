@@ -284,12 +284,12 @@ concept has_max_allocation_bytes =
    requires(allocator_type allocator) { allocator.max_allocation_bytes; };
 }  // namespace detail
 
-template <typename T>
+template <is_pointer T>
 using sized_allocation = tuple<T, idx>;
 
-// TODO: Implement compact optimization.
-template <typename T>
-using maybe_sized_allocation = maybe<sized_allocation<T>>;
+template <is_pointer T>
+using maybe_sized_allocation =
+   maybe<sentinel<sized_allocation<T>, sized_allocation<T>{nullptr, idx(0u)}>>;
 
 template <typename derived_type>
 class allocator_interface {
@@ -3885,7 +3885,7 @@ class allocator_interface {
                      // Not a pointer:
                      conditional<has_feedback,
                                  // Failsafe opaque handle with size.
-                                 maybe_sized_allocation<handle_type>,
+                                 maybe<tuple<handle_type, idx>>,
                                  // Failsafe opaque handle w/out size.
                                  maybe<handle_type>>>,
 
@@ -3908,7 +3908,7 @@ class allocator_interface {
 
                      conditional<has_feedback,
                                  // Unsafe opaque handle with size feedback.
-                                 sized_allocation<handle_type>,
+                                 tuple<handle_type, idx>,
                                  // Unsafe opaque memory handle w/out
                                  // size feedback.
                                  handle_type>>>;
@@ -4096,8 +4096,7 @@ class allocator_interface {
                         allocation_alignment, allocation_bytes);
                      if (temp_memory.has_value()) {
                         maybe_memory = maybe_sized_allocation<void*>(
-                           sized_allocation<void*>{temp_memory.value(),
-                                                   allocation_bytes});
+                           tuple{temp_memory.value(), allocation_bytes});
                      } else {
                         maybe_memory = nullopt;
                      }
