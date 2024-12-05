@@ -84,7 +84,7 @@ class [[clang::trivial_abi, gsl::Pointer(T)]] span
    // Get the non-`const` address that this `span` starts at.
    [[nodiscard]]
    constexpr auto
-   data() -> T* {
+   data() [[clang::lifetimebound]] -> T* {
       return m_p_data;
    }
 
