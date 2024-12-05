@@ -6,10 +6,11 @@
 
 namespace cat {
 namespace detail {
-// Because one type can only be derived from once, types must be binded to
+// Because any type can only be derived from once, types must be binded to
 // their position in a paremeter pack to guarantee their uniqueness. This is
 // required to support `tuple`s with non-uniquely-typed elements.
-template <iword in_index, typename T>
+// e.g. `tuple<int, int>`
+template <idx in_index, typename T>
 struct tuple_element {
    using element = T;
 
@@ -82,7 +83,7 @@ struct tuple_storage {};
 
 // Map a list of indices to a list of types.
 // TODO: Use `idx` rather than `iword`.
-template <iword... indices, typename... in_types>
+template <idx... indices, typename... in_types>
 struct tuple_storage<index_list_type<indices...>, in_types...> {
    using type = type_map<tuple_element<indices, in_types>...>;
 };
@@ -90,14 +91,12 @@ struct tuple_storage<index_list_type<indices...>, in_types...> {
 }  // namespace detail
 
 template <typename... in_types>
-struct tuple : detail::tuple_storage<index_sequence_for<in_types...>,
+struct tuple : detail::tuple_storage<index_sequence_over_types<in_types...>,
                                      in_types...>::type {
    using types = type_list<in_types...>;
-   using map =
-      detail::tuple_storage<index_sequence_for<in_types...>, in_types...>::type;
+   using map = detail::tuple_storage<index_sequence_over_types<in_types...>,
+                                     in_types...>::type;
 
-   // clangd 15 produces a false diagnostic if this is declared at the bottom
-   // of this struct.
    static constexpr idx size = types::size;
 
    constexpr auto
@@ -192,194 +191,39 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
 }
    */
 
-   // TODO: Should these be `idx`?
-
    // Get a non-`const` reference to the N'th stored variable.
-   template <iword in_index>
-      requires(in_index <= size)
+   template <idx in_index>
+      requires(in_index < size)
    constexpr auto
-   get() & -> auto& {
-      return (*this)[constant<in_index>()];
+   get(this auto&& self) -> auto&& {
+      return fwd(self)[constant<in_index>()];
    }
 
-   template <uword in_index>
-   constexpr auto
-   get() & -> auto& {
-      return (*this)[constant<make_signed(in_index)>()];
-   }
-
-   // Get a `const` reference to the N'th stored variable.
-   template <iword in_index>
-      requires(in_index <= size)
+   // Get a reference to the first stored variable.
    [[nodiscard]]
    constexpr auto
-   get() const& -> auto const& {
-      return (*this)[constant<in_index>()];
-   }
+   first(this auto&& self)
+      -> auto&& requires(size >= 1) { return fwd(self).template get<0u>(); }
 
-   template <uword in_index>
-   [[nodiscard]]
-   constexpr auto
-   get() const& -> auto const& {
-      return (*this)[constant<make_signed(in_index)>()];
-   }
+   // Get a reference to the fifth stored variable.
+   [[nodiscard]]  //
+   constexpr auto second(this auto&& self)
+      -> auto&& requires(size >= 2) { return fwd(self).template get<1u>(); }
 
-   // Move the N'th stored variable.
-   template <iword in_index>
-      requires(in_index <= size)
-   constexpr auto
-   get() && -> auto&& {
-      return move(*this)[constant<in_index>()];
-   }
+   // Get a reference to the fifth stored variable.
+   [[nodiscard]]  //
+   constexpr auto third(this auto&& self)
+      -> auto&& requires(size >= 3) { return fwd(self).template get<2u>(); }
 
-   template <uword in_index>
-   constexpr auto
-   get() && -> auto&& {
-      return move(*this)[constant<make_signed(in_index)>()];
-   }
+   // Get a reference to the fifth stored variable.
+   [[nodiscard]]  //
+   constexpr auto fourth(this auto&& self)
+      -> auto&& requires(size >= 4) { return fwd(self).template get<3u>(); }
 
-   // Move the N'th stored variable.
-   template <iword in_index>
-      requires(in_index <= size)
-   [[nodiscard]]
-   constexpr auto
-   get() const&& -> auto&& {
-      return move(*this)[constant<in_index>()];
-   }
-
-   template <uword in_index>
-   [[nodiscard]]
-   constexpr auto
-   get() const&& -> auto&& {
-      return move(*this)[constant<make_signed(in_index)>()];
-   }
-
-   // Get a non-`const` reference to the first stored variable.
-   constexpr auto
-   first() & -> auto&
-      requires(size >= 1)
-   {
-      return this->get<0>();
-   }
-
-   // Get a `const` reference to the first stored variable.
-   [[nodiscard]]
-   constexpr auto
-   first() const& -> auto const&
-      requires(size >= 1)
-   {
-      return this->get<0>();
-   }
-
-   // Move the first stored variable.
-   constexpr auto
-   first() && -> auto&& requires(size >= 1) { return move(this->get<0>()); }
-
-   // Move the first stored variable.
-   [[nodiscard]] constexpr auto first() const&& -> auto&& requires(size >= 1) {
-                                                             return move(
-                                                                this->get<0>());
-                                                          }
-
-   // Get a non-`const` reference to the second stored variable.
-   constexpr auto second() & -> auto&
-      requires(size >= 2)
-   {
-      return this->get<1>();
-   }
-
-   // Get a `const` reference to the second stored variable.
-   [[nodiscard]]
-   constexpr auto
-   second() const& -> auto const&
-      requires(size >= 2)
-   {
-      return this->get<1>();
-   }
-
-   // Move the second stored variable.
-   constexpr auto
-   second() && -> auto&& requires(size >= 2) { return move(this->get<1>()); }
-
-   // Move the second stored variable.
-   [[nodiscard]] constexpr auto second() const&& -> auto&& requires(
-      size >= 2) { return move(this->get<1>()); }
-
-   // Get a non-`const` reference to the third stored variable.
-   constexpr auto third() & -> auto&
-      requires(size >= 3)
-   {
-      return this->get<2>();
-   }
-
-   // Get a `const` reference to the third stored variable.
-   [[nodiscard]]
-   constexpr auto
-   third() const& -> auto const&
-      requires(size >= 3)
-   {
-      return this->get<2>();
-   }
-
-   // Move the third stored variable.
-   constexpr auto
-   third() && -> auto&& requires(size >= 3) { return move(this->get<2>()); }
-
-   // Move the third stored variable.
-   [[nodiscard]] constexpr auto third() const&& -> auto&& requires(size >= 3) {
-                                                             return move(
-                                                                this->get<2>());
-                                                          }
-
-   // Get a non-`const` reference to the fourth stored variable.
-   constexpr auto fourth() & -> auto&
-      requires(size >= 4)
-   {
-      return this->get<3>();
-   }
-
-   // Get a `const` reference to the fourth stored variable.
-   [[nodiscard]]
-   constexpr auto
-   fourth() const& -> auto const&
-      requires(size >= 4)
-   {
-      return this->get<3>();
-   }
-
-   // Move the fourth stored variable.
-   constexpr auto
-   fourth() && -> auto&& requires(size >= 4) { return move(this->get<3>()); }
-
-   // Move the fourth stored variable.
-   [[nodiscard]] constexpr auto fourth() const&& -> auto&& requires(
-      size >= 4) { return move(this->get<3>()); }
-
-   // Get a non-`const` reference to the fifth stored variable.
-   constexpr auto fifth() & -> auto&
-      requires(size >= 5)
-   {
-      return this->get<4>();
-   }
-
-   // Get a `const` reference to the fifth stored variable.
-   [[nodiscard]]
-   constexpr auto
-   fifth() const& -> auto const&
-      requires(size >= 5)
-   {
-      return this->get<4>();
-   }
-
-   // Move the fifth stored variable.
-   constexpr auto
-   fifth() && -> auto&& requires(size >= 5) { return move(this->get<4>()); }
-
-   // Move the fifth stored variable.
-   [[nodiscard]] constexpr auto fifth() const&& -> auto&& requires(size >= 5) {
-                                                             return move(
-                                                                this->get<4>());
-                                                          }
+   // Get a reference to the fifth stored variable.
+   [[nodiscard]]  //
+   constexpr auto fifth(this auto&& self)
+      -> auto&& requires(size >= 5) { return fwd(self).template get<4u>(); }
 };
 
 // This deduction guide is required for variadic type deduction.
