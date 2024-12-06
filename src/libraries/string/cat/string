@@ -35,6 +35,8 @@ string_length(char const* p_string) -> idx;
 template <uword::raw_type length>
 class str_inplace;
 
+// TODO: Make a `zstr` family of containers that are null-terminated.
+
 template <typename char_type>
    requires(sizeof(char_type) == 1)  // TODO: Generalize this to wide chars.
 class basic_str_span : public span<char_type> {
@@ -52,34 +54,37 @@ class basic_str_span : public span<char_type> {
    // This weird template deduces lower than the string literal constructor.
    template <typename T>
       requires(is_pointer<T>)
-   constexpr basic_str_span(T p_string)
+   constexpr basic_str_span(T p_string [[clang::lifetimebound]]
+                            )
        : span<char_type>(p_string, string_length(p_string)) {
    }
 
-   // clangd emits a false diagnistic if this is `consteval` instead of
-   // `constexpr`.
    // Zero-overhead string literal constructor.
    template <uword::raw_type other_length>
    constexpr basic_str_span(char_type (&string)[other_length]) {
       this->m_p_data = string;
-      this->m_size = idx(other_length);
+      // Subtract 1 to length to ignore a null terminator.
+      this->m_size = other_length - 1u;
    }
 
    template <uword::raw_type other_length>
-   constexpr basic_str_span(str_inplace<other_length> const& other_string) {
+   constexpr basic_str_span(str_inplace<other_length> const& other_string
+                            [[clang::lifetimebound]]
+   ) {
       this->m_p_data = other_string.data();
-      this->m_size = idx(other_length);
+      this->m_size = other_length;
    }
 
    // Promote `basic_str_span<char>` to `basic_str_span<char const>`.
    template <typename T>
       requires(is_same<char_type, add_const<T>>)
-   constexpr basic_str_span(basic_str_span<T> in_span)
+   constexpr basic_str_span(basic_str_span<T> in_span [[clang::lifetimebound]]
+                            )
        : span<char_type>(in_span) {
    }
 
    // Promote `span<char>` to `basic_str_span<char>`.
-   constexpr basic_str_span(span<char_type> in_span)
+   constexpr basic_str_span(span<char_type> in_span [[clang::lifetimebound]])
        : span<char_type>(in_span) {
    }
 
@@ -90,13 +95,6 @@ class basic_str_span : public span<char_type> {
    operator=(basic_str_span const& other_string) -> basic_str_span& {
       this->m_p_data = other_string.data();
       this->m_size = other_string.size();
-      return *this;
-   }
-
-   constexpr auto
-   operator=(basic_str_span&& other_string) -> basic_str_span& {
-      this->m_p_data = other_string.data();
-      this->m_size = move(other_string).size();
       return *this;
    }
 
@@ -181,52 +179,16 @@ template <uword::raw_type length>
 class str_inplace : public collection_interface<str_inplace<length>, char>,
                     public iterable_interface<char> {
  public:
-   constexpr auto
-   data() [[clang::lifetimebound]] -> char* {
-      return m_data;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   data() const [[clang::lifetimebound]] -> char const* {
-      return m_data;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   size() const -> idx {
-      return idx(length);
-   }
-
    constexpr str_inplace() = default;
 
-   // Construct from another `str_inplace` of lesser or equal length.
-   constexpr str_inplace(str_inplace<length> const& string) {
-      this->copy_string_data(string.data());
-   }
+   constexpr str_inplace(str_inplace<length> const& string) = default;
 
    // Construct and deduce length from a string literal.
-   constexpr str_inplace(char const (&in)[length]) {
+   // Add 1 to length to ignore a null terminator.
+   constexpr str_inplace(char const (&in)[length + 1]) {
       // This must be copied instead of initialized in-place to guarantee
       // const-correctness.
       this->copy_string_data(in);
-   }
-
-   // Create a `str_inplace` from a smaller string, and null out the unfilled
-   // bytes.
-   template <uword::raw_type in_length>
-      requires(in_length < length)
-   static consteval auto
-   padded(char const (&in)[in_length]) -> str_inplace<length> {
-      idx idx_length = idx(in_length);  // Convert length to `idx`.
-      str_inplace<length> string;
-      for (idx i; i < idx_length; ++i) {
-         string[i] = in[i.raw];
-      }
-      for (idx i = idx_length; i < length; ++i) {
-         string[i] = '\0';
-      }
-      return string;
    }
 
    // Assign a `str_inplace` of lesser or equal length.
@@ -273,6 +235,23 @@ class str_inplace : public collection_interface<str_inplace<length>, char>,
       return m_data[0] == other;
    }
 
+   constexpr auto
+   data() [[clang::lifetimebound]] -> char* {
+      return m_data;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   data() const [[clang::lifetimebound]] -> char const* {
+      return m_data;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   size() const -> idx {
+      return length;
+   }
+
    // Concatenate constant-evaluated strings.
    // This is `uword::raw_type` because GCC cannot deduce a string literal's
    // length from an `ssize`.
@@ -280,22 +259,19 @@ class str_inplace : public collection_interface<str_inplace<length>, char>,
    friend constexpr auto
    operator+(str_inplace<length> const& self,
              str_inplace<other_length> const& other_string)
-      -> str_inplace<length - 1 + other_length> {
-      // Add the lengths of two null-terminated strings together:
-      constexpr uword::raw_type new_length = length - 1u + other_length;
-      char array[new_length];
+      -> str_inplace<length + other_length> {
+      constexpr idx new_length = length + other_length;
 
-      for (uword::raw_type i = 0u; i < length - 1u; ++i) {
-         array[i] = self.m_data[i];
+      str_inplace<new_length> new_string;
+
+      for (idx i = 0u; i < length; ++i) {
+         new_string[i] = self.m_data[i];
       }
 
-      for (uword::raw_type i = length - 1; i < new_length - 1u; ++i) {
-         array[i] = other_string.data()[i - length + 1];
+      for (idx i = length; i < new_length; ++i) {
+         new_string[i] = other_string.data()[i - length];
       }
 
-      // Make this new string null-terminated.
-      array[new_length - 1] = '\0';
-      str_inplace<new_length> new_string = array;
       return new_string;
    }
 
@@ -331,6 +307,29 @@ class str_inplace : public collection_interface<str_inplace<length>, char>,
 
    char m_data[length];
 };
+
+// Deduce the length of string literals without a null-terminator.
+template <uword::raw_type len>
+str_inplace(char const (&str)[len]) -> str_inplace<len - 1>;
+
+// Create a `str_inplace` from a smaller string, and null out the unfilled
+// bytes.
+template <idx padded_length, uword::raw_type deduced_length>
+   requires((deduced_length - 1) <= padded_length)
+consteval auto
+make_str_inplace(char const (&in)[deduced_length])
+   -> str_inplace<padded_length> {
+   str_inplace<padded_length> string;
+   // Subtract 1 to skip the string literal's null terminator.
+   for (idx i; i < deduced_length - 1; ++i) {
+      string[i] = in[i.raw];
+   }
+   // Pad the string out with null bytes.
+   for (idx i = deduced_length - 1; i < padded_length; ++i) {
+      string[i] = '\0';
+   }
+   return string;
+}
 
 [[nodiscard]]
 auto

@@ -48,8 +48,15 @@ TEST(test_compare_strings) {
    cat::str_inplace hello_world = (const_string_3 + const_string_4);
    constexpr cat::str_inplace const_hello_world =
       (const_string_3 + const_string_4);
+
+   constexpr cat::str_view const_hello_world_2 = "Hello, world!";
+   constexpr cat::str_view const_hello_world_3 = const_hello_world_2;
+   constexpr cat::str_view const_hello_world_4 = const_hello_world_3;
+
    cat::verify(cat::compare_strings(hello_world, "Hello, world!"));
    cat::verify(cat::compare_strings(const_hello_world, "Hello, world!"));
+   cat::verify(cat::compare_strings(const_hello_world_2, "Hello, world!"));
+   cat::verify(cat::compare_strings(const_hello_world_3, "Hello, world!"));
 
    iword const h = const_string_1.find('H').value();
    iword const e = const_string_1.find('e').value();

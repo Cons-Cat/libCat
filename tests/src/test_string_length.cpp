@@ -24,10 +24,10 @@ TEST(test_string_length) {
    cat::iword len_7 = cat::string_length(p_string_7);
 
    cat::verify(len_1 == len_2);
-   cat::verify(len_1 == 7);
+   cat::verify(len_1 == 6);
    cat::verify(len_3 == len_4);
    cat::verify(len_5 == len_6);
-   cat::verify(len_7 == 15);
+   cat::verify(len_7 == 14);
 
    // Test `string`s.
    cat::str_view string_1 = p_string_1;
@@ -64,4 +64,16 @@ TEST(test_string_length) {
       "efz";
    cat::iword z = find_string_2.find('z').or_exit();
    cat::verify(z == 72);
+
+   auto inplace = cat::make_str_inplace<10u>("Hello");
+   cat::verify(inplace.size() == 10);
+
+   auto inplace_2 = cat::make_str_inplace<5u>("Hello");
+   cat::verify(inplace_2.size() == 5);
+
+   auto inplace_3 = cat::str_inplace("Hello");
+   cat::verify(inplace_3.size() == 5);
+
+   auto strv = cat::str_view("Hello");
+   cat::verify(strv.size() == 5);
 }

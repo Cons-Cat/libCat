@@ -12,8 +12,10 @@
 namespace cat {
 
 // TODO: Support formatting 1 and 2 byte integers.
+// TODO: Functions in this header should return owning-`str_span`, not
+// `str_view`.
 
-// Erase the type of `cat::arithmetic` for redundant template instantiations.
+// Erase the type of `cat::arithmetic` from redundant template instantiations.
 template <is_integral T, overflow_policies policy>
 [[nodiscard]]
 auto
@@ -22,6 +24,7 @@ to_chars(is_allocator auto& allocator, arithmetic<T, policy> numeral)
    return to_chars(allocator, make_raw_arithmetic(numeral));
 }
 
+// TODO: Zero-allocation `str_inplace` version?
 // Dynamically allocate an is_integral value converted to `string`.
 template <is_integral T>
 [[nodiscard]]
@@ -33,6 +36,7 @@ to_chars(is_allocator auto& allocator, T integer) -> maybe<str_view> {
    }
    char* p_string = result.value().data();
 
+   // Modify the allocated string in-place.
    if constexpr (is_same<T, int4::raw_type>) {
       detail::i32toa_jeaiii(integer, p_string);
    } else if constexpr (is_same<T, uint4::raw_type>) {
@@ -45,6 +49,7 @@ to_chars(is_allocator auto& allocator, T integer) -> maybe<str_view> {
       // TODO: Format 1 and 2 byte integers.
       __builtin_unreachable();
    }
+
    return str_view(p_string);
 }
 
@@ -60,6 +65,7 @@ to_chars(is_allocator auto& alloc, T value) -> maybe<str_view> {
    }
    char* p_string = result.value().data();
    detail::dragonbox::to_chars(value, p_string);
+
    return str_view(p_string);
 }
 
@@ -561,7 +567,7 @@ using format_contiguous_output_iterator =
 class format_parse_context {
  private:
    // These members must be at the top so they can be `decltype`'d.
-   str_view m_format;
+   str_view const m_format;
 
    // Iff `argument_index` is less than `0`, the format string has
    // manually indexed an argument. Otherwise, all arguments are
@@ -701,13 +707,13 @@ parse_format_string(str_view const format,
          if (!result.has_value()) {
             return format_errors::out_of_memory;
          }
-         str_view const int_string = result.value();
+         str_view const new_string = result.value();
 
          // TODO: Optimize this with a multiple-insert
          // overload.
-         for (idx i; i < int_string.size() - 1u; ++i) {
+         for (idx i; i < new_string.size(); ++i) {
             auto _ =
-               handler.output_iterator.insert(handler.allocator, int_string[i]);
+               handler.output_iterator.insert(handler.allocator, new_string[i]);
          }
          return monostate;
       };

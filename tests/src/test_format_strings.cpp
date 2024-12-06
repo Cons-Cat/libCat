@@ -16,7 +16,7 @@ TEST(test_format_strings) {
    // Test `int4` conversion.
    cat::str_view int_string = cat::to_chars(allocator, 10).or_exit();
    cat::verify(cat::compare_strings(int_string, "10"));
-   cat::verify(int_string.size() == 3);
+   cat::verify(int_string.size() == 2);
 
    // TODO: `constexpr` string comparison.
    // TODO: Test out of memory error handling.

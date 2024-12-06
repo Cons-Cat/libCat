@@ -132,9 +132,9 @@ class ArrayPrinter:
         return '[' + str(self.m_data)[1:-1] + '] (size: ' + str(self.size) + ')'
     
 
-@cat_type('str_view')
+@cat_type('basic_str_span')
 class StrSpanPrinter:
-    "Print a `cat::str_view`"
+    "Print a `cat::str_span` or `cat::str_view`"
 
     def __init__(self, val: gdb.Value):
         self.m_p_data = val['m_p_data']
@@ -146,7 +146,29 @@ class StrSpanPrinter:
                                   .target()
                                   .strip_typedefs()
                                   .pointer())
-        return p_str.lazy_string(length = self.m_size)
+        return ("\"" + p_str.string(length = self.m_size) + "\""
+            + " (" + str(self.m_size)
+            + " chars, " + str(hex(self.m_p_data))
+            + ")")
+
+@cat_type('str_inplace')
+class StrInplacePrinter:
+    "Print a `cat::str_inplace`"
+
+    def __init__(self, val: gdb.Value):
+        self.m_data = val['m_data']
+        self.m_size = val.type.template_argument(0)
+
+        #self.m_size = val['m_size']['raw']
+        return
+
+    def to_string(self):
+        p_str = self.m_data.cast(self.m_data.type
+                                  .target()
+                                  .strip_typedefs()
+                                  .pointer())
+        return ("\"" + p_str.string(length = self.m_size)
+                + "\"" + " (" + str(self.m_size)+ " chars)")
 
 
 @cat_type('bit_value')

@@ -35,7 +35,7 @@ cat::string_length(char const* p_string) -> idx {
                x64::compare_implicit_length_strings_return_index<mask>(data,
                                                                        zeros);
             // Adding `1` is required to count the null terminator.
-            return idx(i + index + 1u);
+            return idx(i + index);
          }
       }
 
