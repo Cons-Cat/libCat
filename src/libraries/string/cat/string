@@ -32,7 +32,7 @@ namespace cat {
 constexpr auto
 string_length(char const* p_string) -> idx;
 
-template <typename char_type, uword::raw_type length, bool is_null_terminated>
+template <typename char_type, idx length, bool is_null_terminated>
 class basic_str_inplace;
 
 // TODO: Make a `zstr` family of containers that are null-terminated.
@@ -62,21 +62,21 @@ class basic_str_span : public span<char_type> {
    // Zero-overhead string literal constructor.
    // This is `consteval` to discourage passing in `char const[]` instead of a
    // string literal.
-   template <uword::raw_type other_length>
+   template <idx other_length>
    consteval basic_str_span(char_type (&string)[other_length]) {
       this->m_p_data = string;
       // Subtract 1 to length to ignore a null terminator.
       this->m_size = other_length - idx(!is_null_terminated);
    }
 
-   template <uword::raw_type other_length>
+   template <idx other_length>
       requires(!is_const<char_type>)
    consteval basic_str_span(char_type const (&string)[other_length]) =
       delete("Cannot construct a mutable `str_span` over a `char const*` "
              "literal! Consider a `str_view` instead.");
 
    // Make a `str_span` over a `str_inplace`.
-   template <uword::raw_type other_length>
+   template <idx other_length>
    constexpr basic_str_span(basic_str_inplace<char_type, other_length,
                                               is_null_terminated>& other_string
                             [[clang::lifetimebound]]
@@ -86,7 +86,7 @@ class basic_str_span : public span<char_type> {
    }
 
    // Make a `str_view` over a `str_inplace`.
-   template <uword::raw_type other_length>
+   template <idx other_length>
       requires(is_const<char_type>)
    constexpr basic_str_span(
       basic_str_inplace<remove_const<char_type>, other_length,
@@ -98,7 +98,7 @@ class basic_str_span : public span<char_type> {
    }
 
    // Make a `str_span` over a `zstr_inplace`.
-   template <typename T, uword::raw_type other_length>
+   template <typename T, idx other_length>
       requires(!is_null_terminated)
    constexpr basic_str_span(
       basic_str_inplace<T, other_length, true>& other_string
@@ -110,7 +110,7 @@ class basic_str_span : public span<char_type> {
    }
 
    // Make a `str_view` over a `zstr_inplace`.
-   template <typename T, uword::raw_type other_length>
+   template <typename T, idx other_length>
       requires(!is_null_terminated)
    constexpr basic_str_span(
       basic_str_inplace<T, other_length, true> const& other_string
@@ -122,7 +122,7 @@ class basic_str_span : public span<char_type> {
    }
 
    // Make a `str_span` over a `zstr_inplace`.
-   template <uword::raw_type other_length>
+   template <idx other_length>
       requires(is_null_terminated && !is_const<char_type>)
    constexpr basic_str_span(
       basic_str_inplace<char_type, other_length, false> const&) =
@@ -258,9 +258,7 @@ using str_span = basic_str_span<char, false>;
 using zstr_view = basic_str_span<char const, true>;
 using zstr_span = basic_str_span<char, true>;
 
-// This is `uword::raw_type` because GCC cannot deduce a string literal's
-// length from a `uword`.
-template <typename char_type, uword::raw_type length, bool is_null_terminated>
+template <typename char_type, idx length, bool is_null_terminated>
 class basic_str_inplace
     : public collection_interface<
          basic_str_inplace<char_type, length, is_null_terminated>, char>,
@@ -273,7 +271,7 @@ class basic_str_inplace
    // Construct and deduce length from a string literal.
    // Add 1 to length to ignore a null terminator.
    constexpr basic_str_inplace(
-      char const (&in)[length + uword::raw_type(!is_null_terminated)]) {
+      char const (&in)[length + idx(!is_null_terminated)]) {
       // This must be copied instead of initialized in-place to guarantee
       // const-correctness.
       this->copy_string_data(in);
@@ -310,7 +308,7 @@ class basic_str_inplace
 
    constexpr auto
    // Add 1 to length to ignore a null terminator.
-   operator==(char const (&in)[length + 1]) -> bool {
+   operator==(char const (&in)[length + is_null_terminated]) -> bool {
       for (idx i = 0; i < length; ++i) {
          if (m_data[i] != in[i]) {
             return false;
@@ -344,9 +342,9 @@ class basic_str_inplace
    }
 
    // Concatenate constant-evaluated strings.
-   // This is `uword::raw_type` because GCC cannot deduce a string literal's
+   // This is `idx` because GCC cannot deduce a string literal's
    // length from an `ssize`.
-   template <uword::raw_type other_length>
+   template <idx other_length>
    friend constexpr auto
    operator+(
       basic_str_inplace<char_type, length, is_null_terminated> const& self,
@@ -371,7 +369,7 @@ class basic_str_inplace
    }
 
    // Concatenate a string literal to a `basic_str_inplace`.
-   template <uword::raw_type other_length>
+   template <idx other_length>
    friend constexpr auto
    operator+(
       basic_str_inplace<char_type, length, is_null_terminated> const& self,
@@ -385,7 +383,7 @@ class basic_str_inplace
    }
 
    // Concatenate a `basic_str_inplace` to a string literal.
-   template <uword::raw_type other_length>
+   template <idx other_length>
    friend constexpr auto
    operator+(
       char const (&other_string)[other_length],
@@ -402,7 +400,7 @@ class basic_str_inplace
    constexpr void
    copy_string_data(char const* p_source) {
       if consteval {
-         for (uword::raw_type i = 0u; i < length; ++i) {
+         for (idx i = 0u; i < length; ++i) {
             this->m_data[i] = p_source[i];
          }
       } else {
@@ -414,19 +412,19 @@ class basic_str_inplace
 };
 
 // Deduce the length of string literals without a null-terminator.
-template <uword::raw_type len>
+template <idx len>
 basic_str_inplace(char const (&str)[len])
    -> basic_str_inplace<char, len - 1, false>;
 
-template <uword::raw_type deduced_length>
+template <idx deduced_length>
 using str_inplace = basic_str_inplace<char, deduced_length, false>;
 
-template <uword::raw_type deduced_length>
+template <idx deduced_length>
 using zstr_inplace = basic_str_inplace<char, deduced_length, true>;
 
 // Create a `str_inplace` from a smaller string, and null out the unfilled
 // bytes.
-template <idx padded_length, uword::raw_type deduced_length>
+template <idx padded_length, idx deduced_length>
    requires((deduced_length - 1) <= padded_length)
 consteval auto
 make_str_inplace(char const (&in)[deduced_length])
@@ -445,7 +443,7 @@ make_str_inplace(char const (&in)[deduced_length])
 
 // Create a `str_inplace` from a smaller string, and null out the unfilled
 // bytes.
-template <idx padded_length, uword::raw_type deduced_length>
+template <idx padded_length, idx deduced_length>
    requires((deduced_length - 1) <= padded_length)
 consteval auto
 make_zstr_inplace(char const (&in)[deduced_length])
