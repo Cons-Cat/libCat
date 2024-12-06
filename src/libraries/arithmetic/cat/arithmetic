@@ -1318,7 +1318,13 @@ struct index :
    constexpr explicit(sizeof(raw_type) <= sizeof(U)) index(U other)
        : raw(static_cast<__SIZE_TYPE__>(other)) {
       if !consteval {
+         // TODO: These strings would be very helpful to print, but strings
+         // cannot be used with asserts in this header currently.
+
+         // Attempting to construct a `cat::index` from a negative integer!
          assert(other >= U(0));
+         // Attempting to construct a `cat::index` from an integer larger than
+         // it can represent!
          assert(make_unsigned(make_raw_arithmetic(other))
                 <= limits<index>::max());
       }

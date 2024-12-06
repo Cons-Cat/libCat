@@ -359,8 +359,7 @@ class format_args_compact_storage {
 
       // Set the byte offset for the next argument if there is another.
       if (argument_index + 1u
-          < sizeof...(types)) {  // TODO: Explore whether
-                                 // `[[likely]]`
+          < sizeof...(types)) {  // TODO: Explore whether `[[likely]]`
                                  // improves performance here.
          this->arguments_indices[argument_index.raw + 1].byte_index =
             storage_index.raw + ssizeof(T);

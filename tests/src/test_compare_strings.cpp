@@ -58,6 +58,9 @@ TEST(test_compare_strings) {
    cat::verify(cat::compare_strings(const_hello_world_2, "Hello, world!"));
    cat::verify(cat::compare_strings(const_hello_world_3, "Hello, world!"));
 
+   // TODO: Bind a `str_view` to `zstr`  containers.
+   // TODO: Pass `zstr` containers into `cat::compare_strings()`.
+
    iword const h = const_string_1.find('H').value();
    iword const e = const_string_1.find('e').value();
    iword const l = const_string_1.find('l').value();
@@ -66,4 +69,11 @@ TEST(test_compare_strings) {
    cat::verify(e == 1);
    cat::verify(l == 2);
    cat::verify(o == 4);
+
+   // Compare single-character in-place strings to a `char`.
+   cat::str_inplace char_str = "X";
+   cat::verify(char_str == 'X');
+
+   cat::zstr_inplace char_zstr = cat::make_zstr_inplace<2u>("X");
+   cat::verify(char_zstr == 'X');
 }
