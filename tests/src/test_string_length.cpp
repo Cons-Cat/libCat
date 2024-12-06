@@ -61,6 +61,10 @@ TEST(test_string_length) {
 
    cat::page_allocator pager;
    cat::zstr_span mut_zstr = pager.calloc_multi<char>(6).verify();
+   mut_zstr[0] = 'a';
+   mut_zstr[1] = 'b';
+   mut_zstr[2] = 'c';  // A \0 gap is at the 4th byte.
+   mut_zstr[4] = 'd';
    defer {
       pager.free(mut_zstr);
    };
