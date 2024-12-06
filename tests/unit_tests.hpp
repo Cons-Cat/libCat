@@ -34,7 +34,7 @@ test_fail(cat::source_location const& source_location);
                                                                             \
    void test_name##_prologue() {                                            \
       /* TODO: Align the whitespace after `:` for 1 and 2 digit tests. */   \
-      constexpr char string[] = ": " #test_name "...\n";                    \
+      constexpr ::cat::str_view string = ": " #test_name "...\n";           \
       auto _ = ::cat::print(string);                                        \
       test_name();                                                          \
       ++tests_passed;                                                       \

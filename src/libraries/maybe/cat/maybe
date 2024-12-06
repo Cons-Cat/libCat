@@ -20,11 +20,11 @@ inline constexpr detail::nullopt_type nullopt;
 template <typename T>
 class maybe;
 
-template <typename char_type>
+template <typename char_type, bool null_terminated>
    requires(sizeof(char_type) == 1)
 class basic_str_span;
 
-using str_view = basic_str_span<char const>;
+using str_view = basic_str_span<char const, false>;
 
 // `maybe_value_storage` holds a non-reference, non-pointer, non-`void` type
 // `T` and a `bool` flag to represent holding a value or not.
