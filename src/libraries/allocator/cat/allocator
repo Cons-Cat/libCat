@@ -4129,17 +4129,25 @@ class allocator_interface {
             // The `.first()` element of the `sized_allocation` tuple is
             // a `void*`.
             p_allocation = static_cast<T*>(maybe_memory.value().first());
+
+            auto const all_bytes = maybe_memory.value().second();
+            // Unpoison all allocated memory so it can be used.
+            unpoison_memory_region(p_allocation, all_bytes);
+
+            // Possibly zero-out the allocation.
+            if constexpr (is_zeroed) {
+               zero_memory_scalar_explicit(p_allocation, all_bytes);
+            }
          } else {
             p_allocation = static_cast<T*>(maybe_memory.value());
-         }
+            unpoison_memory_region(p_allocation, allocation_bytes);
 
-         unpoison_memory_region(p_allocation, allocation_bytes);
-
-         // Possibly zero-out the allocation.
-         if constexpr (is_zeroed) {
-            // TODO: Find a way to efficiently and safely leverage SIMD
-            // here.
-            zero_memory_scalar_explicit(p_allocation, allocation_bytes);
+            // Possibly zero-out the allocation.
+            if constexpr (is_zeroed) {
+               // TODO: Find a way to efficiently and safely leverage SIMD
+               // here.
+               zero_memory_scalar_explicit(p_allocation, allocation_bytes);
+            }
          }
 
          // Construct the `T`s inside the allocator.
