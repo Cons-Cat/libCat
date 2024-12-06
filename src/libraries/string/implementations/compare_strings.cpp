@@ -2,6 +2,7 @@
 #include <cat/simd>
 #include <cat/string>
 
+// TODO: Make this `constexpr`.
 auto
 cat::compare_strings(str_view const string_1, str_view const string_2) -> bool {
    if (string_1.size() != string_2.size()) {
@@ -9,22 +10,21 @@ cat::compare_strings(str_view const string_1, str_view const string_2) -> bool {
    }
 
    // TODO: Use a type for an ISA-specific widest vector.
-   using vector_simd = char1x32;
+   using vector = char1x32;
 
-   array<vector_simd, 4u> vectors_1;
-   array<vector_simd, 4u> vectors_2;
-   array<vector_simd::mask_type, 4u> comparisons;
+   array<vector, 4u> vectors_1;
+   array<vector, 4u> vectors_2;
+   array<vector::mask_type, 4u> comparisons;
    idx length_iterator = string_1.size();
-   uword vector_size = sizeof(vector_simd);
+   uword vector_size = sizeof(vector);
    char const* p_string_1_iterator = string_1.data();
    char const* p_string_2_iterator = string_2.data();
 
-   auto loop = [&](uword size) -> bool {
+   auto loop = [&](idx size) -> bool {
       while (length_iterator >= vector_size * size) {
          for (idx i; i < size; ++i) {
-            // TODO: This should work without `.raw`.
-            vectors_1[i].load(string_1.data() + (i * size).raw);
-            vectors_2[i].load(string_2.data() + (i * size).raw);
+            vectors_1[i].load(string_1.data() + (i * size));
+            vectors_2[i].load(string_2.data() + (i * size));
             comparisons[i] = (vectors_1[i] == vectors_2[i]);
          }
 
@@ -56,7 +56,7 @@ cat::compare_strings(str_view const string_1, str_view const string_2) -> bool {
 
    // TODO: Extract this to a scalar function.
    // Compare remaining characters individually.
-   for (uword i = 0u; i < length_iterator;
+   for (idx i = 0u; i < length_iterator;
         ++i, ++p_string_1_iterator, ++p_string_2_iterator) {
       if (*p_string_1_iterator != *p_string_2_iterator) {
          return false;
