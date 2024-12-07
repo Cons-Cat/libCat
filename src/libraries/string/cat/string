@@ -334,8 +334,6 @@ class basic_str_inplace
    }
 
    // Concatenate constant-evaluated strings.
-   // This is `idx` because GCC cannot deduce a string literal's
-   // length from an `ssize`.
    template <idx other_length>
    friend constexpr auto
    operator+(

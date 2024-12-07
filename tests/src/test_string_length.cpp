@@ -95,6 +95,7 @@ TEST(test_string_length) {
    cat::str_view arr_view = char_array;
    arr_view = char_array;
    cat::str_inplace arr_inplace = char_array;
+   cat::str_inplace arr_inplace2 = cat::make_str_inplace<4>(char_array);
    cat::zstr_view arr_zview = char_array;
    arr_zview = char_array;
    cat::zstr_inplace arr_zinplac = cat::make_zstr_inplace<4>(char_array);
