@@ -164,17 +164,17 @@ class StrInplacePrinter:
 
     def __init__(self, val: gdb.Value):
         self.m_data = val['m_data']
-        # self.m_size = val.type.template_argument(1)
         
-        # The template parameter can't be found by GDB, unfortunately,
-        # so parse out the last integer in the type signature instead.
-        type_string = val.type.strip_typedefs().name
-        regex = re.compile(r"[0-9]+", re.MULTILINE)
-        self.m_size = int(regex.findall(type_string)[-1])
+        try:
+             self.m_size = val.type.template_argument(1)['raw']
+        except:
+            # If the template parameter can't be found by GDB, parse
+            # out the last integer in the type signature instead.
+            type_string = val.type.strip_typedefs().name
+            regex = re.compile(r"[0-9]+", re.MULTILINE)
+            self.m_size = int(regex.findall(type_string)[-1])
 
         return
-
-
 
     def to_string(self):
         p_str = self.m_data.cast(self.m_data.type
