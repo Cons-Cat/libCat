@@ -12,6 +12,11 @@ namespace cat {
 template <idx bits_count>
 class bitset {
  private:
+   template <idx, is_unsigned_integral... types>
+      requires((sizeof(types...[0]) == sizeof(types)) && ...)
+   friend constexpr auto
+   make_bitset(types... values);
+
    // Store the smallest number of bytes needed for `bits_count`. If that is 8
    // bytes or fewer, use that many bytes. If it is larger, use an array of
    // 8-byte integers. Divide the bits by 8, rounding up.
@@ -57,20 +62,6 @@ class bitset {
    constexpr bitset() = default;
    constexpr bitset(bitset const&) = default;
    constexpr bitset(bitset&&) = default;
-
-   template <typename... types>
-      requires((is_implicitly_convertible<types, array_type_element>) && ...)
-   [[nodiscard]]
-   static constexpr auto
-   from(types... values) -> bitset
-      requires(sizeof...(types) == array_type::size())
-   {
-      // `value_type::value_type` is some unsigned integer.
-      // TODO: Assert that the input fits in `bits_count`.
-      bitset<bits_count> bitset;
-      bitset.m_data = {values...};
-      return bitset;
-   }
 
    constexpr auto
    operator=(bitset const&) -> bitset& = default;
@@ -323,5 +314,22 @@ class bitset {
  private:
    array_type m_data;
 };
+
+template <idx bits_count, is_unsigned_integral... types>
+// Ensure that all `types` are the same size. E.g., `uint4` and `unsigned` are
+// compatible here.
+   requires((sizeof(types...[0]) == sizeof(types)) && ...)
+[[nodiscard]]
+constexpr auto
+make_bitset(types... values) {
+   // TODO: Assert that the input fits in `bits_count`.
+   static_assert(sizeof...(types) == bitset<bits_count>::array_type::size(),
+                 "The values passed into this bitset do not fit within the "
+                 "`bits_count` alloted.");
+
+   bitset<bits_count> bitset;
+   bitset.m_data = {values...};
+   return bitset;
+}
 
 }  // namespace cat
