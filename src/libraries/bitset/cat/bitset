@@ -10,7 +10,8 @@
 namespace cat {
 
 template <idx bits_count>
-class bitset {
+class [[clang::trivial_abi]]
+bitset {
  private:
    template <idx, is_unsigned_integral... types>
       requires((sizeof(types...[0]) == sizeof(types)) && ...)
@@ -67,6 +68,16 @@ class bitset {
    operator=(bitset const&) -> bitset& = default;
    constexpr auto
    operator=(bitset&&) -> bitset& = default;
+
+   // Construct a `bitset` from a bit-string at compile time.
+   template <__SIZE_TYPE__ bitstring_size>
+   consteval bitset(char const (&bitstring)[bitstring_size]) {
+      bitset<bits_count> new_bitset;
+      for (idx i = 0; i < bits_count; ++i) {
+         new_bitset[i] = (bitstring[i] == '1');
+      }
+      *this = new_bitset;
+   }
 
    [[nodiscard]]
    constexpr auto
@@ -312,8 +323,12 @@ class bitset {
    // TODO: Reverse iterators.
 
  private:
-   array_type m_data;
+   array_type m_data = {};
 };
+
+// Subtract 1 to skip the null terminator.
+template <__SIZE_TYPE__ bits_count>
+bitset(char const (&bitstring)[bits_count]) -> bitset<bits_count - 1u>;
 
 template <idx bits_count, is_unsigned_integral... types>
 // Ensure that all `types` are the same size. E.g., `uint4` and `unsigned` are

@@ -13,7 +13,7 @@ namespace cat {
 // its elements within itself, so this array can be constructed on the stack.
 // It is random-access iterable.
 template <typename T, idx length>
-class [[gsl::Owner(T)]]
+class [[clang::trivial_abi, gsl::Owner(T)]]
 array : public collection_interface<array<T, length>, T>,
         public iterable_interface<T> {
  public:
@@ -112,8 +112,8 @@ array : public collection_interface<array<T, length>, T>,
       return fwd(self).m_data[i.raw];
    }
 
-   // `storage` is public so that `cat::array` is a trivial type.
-   T m_data[length];
+ private:
+   T m_data[length]{};
 };
 
 // Construct an `array<int, 3>` as: `array a = {0, 1, 2};`
