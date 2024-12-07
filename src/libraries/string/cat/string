@@ -59,10 +59,11 @@ class basic_str_span : public span<char_type> {
    }
 
    // Zero-overhead string literal constructor.
-   // This is `consteval` to discourage passing in `char const[]` instead of a
-   // string literal.
    template <idx other_length>
    consteval basic_str_span(char_type (&string)[other_length]) {
+      // Verify that the final character is null terminator. This is necessary
+      // if `constexpr char` arrays are passed in rather than string literals.
+      [[assume(string[other_length.raw - 1] == '\0')]];
       this->m_p_data = string;
       // Subtract 1 to length to ignore a null terminator.
       this->m_size = other_length - idx(!is_null_terminated);
@@ -269,11 +270,12 @@ class basic_str_inplace
 
    // Construct and deduce length from a string literal.
    // Add 1 to length to ignore a null terminator.
-   constexpr basic_str_inplace(
-      char const (&in)[length + idx(!is_null_terminated)]) {
+   consteval basic_str_inplace(
+      char_type const (&string)[length + idx(!is_null_terminated)]) {
+      [[assume(string[length.raw - is_null_terminated] == '\0')]];
       // This must be copied instead of initialized in-place to guarantee
       // const-correctness.
-      this->copy_string_data(in);
+      this->copy_string_data(string);
    }
 
    // Assign a `basic_str_inplace` of lesser or equal length.
@@ -286,11 +288,13 @@ class basic_str_inplace
       return *this;
    }
 
+   // TODO: Make this `consteval`.
    // Assign a string literal of lesser or equal length.
-   constexpr auto
-   operator=(char const (&in)[length])
-      -> basic_str_inplace<char_type, length, is_null_terminated>& {
-      this->copy_string_data(in);
+   consteval auto
+   operator=(char_type const (&string)[length - is_null_terminated])
+      -> basic_str_inplace& {
+      [[assume(string[length.raw - 1 + !is_null_terminated] == '\0')]];
+      this->copy_string_data(string);
       return *this;
    }
 
@@ -306,18 +310,7 @@ class basic_str_inplace
    };
 
    constexpr auto
-   // Add 1 to length to ignore a null terminator.
-   operator==(char const (&in)[length + is_null_terminated]) -> bool {
-      for (idx i = 0; i < length; ++i) {
-         if (m_data[i] != in[i]) {
-            return false;
-         }
-      }
-      return true;
-   }
-
-   constexpr auto
-   operator==(char const other) -> bool
+   operator==(char_type const other) -> bool
       requires(length == 1u + static_cast<unsigned>(is_null_terminated))
    {
       return m_data[0] == other;
@@ -372,32 +365,28 @@ class basic_str_inplace
    friend constexpr auto
    operator+(
       basic_str_inplace<char_type, length, is_null_terminated> const& self,
-      char const (&other_string)[other_length])
-      -> basic_str_inplace<char_type,
-                           length + other_length - is_null_terminated,
-                           is_null_terminated> {
+      char_type const (&other_string)[other_length]) {
+      [[assume(other_string[other_length.raw - 1] == '\0')]];
       return self
-             + basic_str_inplace<char_type, other_length, is_null_terminated>{
-                other_string};
+             + basic_str_inplace<char_type, other_length - !is_null_terminated,
+                                 is_null_terminated>{other_string};
    }
 
    // Concatenate a `basic_str_inplace` to a string literal.
    template <idx other_length>
    friend constexpr auto
    operator+(
-      char const (&other_string)[other_length],
-      basic_str_inplace<char_type, length, is_null_terminated> const& self)
-      -> basic_str_inplace<char_type,
-                           length + other_length - is_null_terminated,
-                           is_null_terminated> {
-      return basic_str_inplace<char_type, other_length, is_null_terminated>{
-                other_string}
+      char_type const (&other_string)[other_length],
+      basic_str_inplace<char_type, length, is_null_terminated> const& self) {
+      [[assume(other_string[other_length.raw - 1] == '\0')]];
+      return basic_str_inplace<char_type, other_length - !is_null_terminated,
+                               is_null_terminated>{other_string}
              + self;
    }
 
  private:
    constexpr void
-   copy_string_data(char const* p_source) {
+   copy_string_data(char_type const* p_source) {
       if consteval {
          for (idx i = 0u; i < length; ++i) {
             this->m_data[i] = p_source[i];
@@ -407,7 +396,7 @@ class basic_str_inplace
       }
    }
 
-   char m_data[length];
+   char_type m_data[length];
 };
 
 // Deduce the length of string literals without a null-terminator.
@@ -426,36 +415,39 @@ using zstr_inplace = basic_str_inplace<char, deduced_length, true>;
 template <idx padded_length, idx deduced_length>
    requires((deduced_length - 1) <= padded_length)
 consteval auto
-make_str_inplace(char const (&in)[deduced_length])
+make_str_inplace(char const (&string)[deduced_length])
    -> str_inplace<padded_length> {
-   str_inplace<padded_length> string;
+   [[assume(string[deduced_length.raw - 1] == '\0')]];
+   str_inplace<padded_length> new_string;
    // Subtract 1 to skip the string literal's null terminator.
    for (idx i; i < deduced_length - 1; ++i) {
-      string[i] = in[i.raw];
+      new_string[i] = string[i.raw];
    }
    // Pad the string out with null bytes.
    for (idx i = deduced_length - 1; i < padded_length; ++i) {
-      string[i] = '\0';
+      new_string[i] = '\0';
    }
-   return string;
+   return new_string;
 }
 
+// TODO: Add a variant that doesn't require `padded_length`.
 // Create a `str_inplace` from a smaller string, and null out the unfilled
 // bytes.
 template <idx padded_length, idx deduced_length>
    requires((deduced_length - 1) <= padded_length)
 consteval auto
-make_zstr_inplace(char const (&in)[deduced_length])
+make_zstr_inplace(char const (&string)[deduced_length])
    -> zstr_inplace<padded_length> {
-   zstr_inplace<padded_length> string;
+   [[assume(string[deduced_length.raw - 1] == '\0')]];
+   zstr_inplace<padded_length> new_string;
    for (idx i; i < deduced_length; ++i) {
-      string[i] = in[i.raw];
+      new_string[i] = string[i.raw];
    }
    // Pad the string out with null bytes.
    for (idx i = deduced_length; i < padded_length; ++i) {
-      string[i] = '\0';
+      new_string[i] = '\0';
    }
-   return string;
+   return new_string;
 }
 
 [[nodiscard]]

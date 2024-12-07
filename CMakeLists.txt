@@ -68,7 +68,7 @@ list(
   -ggdb3
   $<$<CXX_COMPILER_ID:GNU>:-fno-eliminate-unused-debug-types
                            -fno-eliminate-unused-debug-symbols>
-  $<$<CXX_COMPILER_ID:Clang>:-ggdb3 -glldb -gmodules -gfull>
+  $<$<CXX_COMPILER_ID:Clang>:-gmodules -gfull>
 )
 
 list(

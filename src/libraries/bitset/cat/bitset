@@ -77,7 +77,8 @@ bitset {
    template <__SIZE_TYPE__ bitstring_size>
    consteval bitset(char const (&bitstring)[bitstring_size]) {
       bitset<bits_count> new_bitset;
-      for (idx i = 0; i < bits_count; ++i) {
+      for (__SIZE_TYPE__ i = 0; i < bits_count; ++i) {
+         [[assume(bitstring[i] == '0' || bitstring[i] == '1')]];
          new_bitset[i] = (bitstring[i] == '1');
       }
       *this = new_bitset;
