@@ -73,17 +73,17 @@ simd_to_bitset(simd_mask<x64::avx2_abi<T>, T> mask) -> bitset<32u> {
    if constexpr (is_same<T, float>) {
       // Create a bitmask from the most significant bit of every `float` in
       // this vector.
-      return bitset<32u>::from(
+      return make_bitset<32u>(
          make_unsigned(__builtin_ia32_movmskps256(mask.raw)));
    } else if constexpr (is_same<T, double>) {
       // Create a bitmask from the most significant bit of every `double` in
       // this vector.
-      return bitset<32u>::from(
+      return make_bitset<32u>(
          make_unsigned(__builtin_ia32_movmskpd256(mask.raw)));
    } else {
       // Create a bitmask from the most significant bit of every byte in this
       // vector.
-      return bitset<32u>::from(
+      return make_bitset<32u>(
          make_unsigned(__builtin_ia32_pmovmskb256(mask.raw)));
    }
 }

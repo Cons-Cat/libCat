@@ -536,7 +536,7 @@ __cpu_indicator_init() {
    auto&& [max_extended_leaf, _, _, _] = cpuid(0x80000000u);
 
    auto&& [vendor_family_model, _, ecx, _] = cpuid(1u);
-   cat::bitset ecx_bits = cat::bitset<32>::from(ecx);
+   cat::bitset ecx_bits = cat::make_bitset<32>(ecx);
 
    // This is an array of 4 zero-initialized bitsets rather than a single
    // `bitset<128>` to more directly map to LLVM's `__cpu_model` and
@@ -603,7 +603,7 @@ __cpu_indicator_init() {
 
    if (max_extended_leaf >= 0x80000001u) {
       auto&& [_, _, ecx, _] = cpuid(0x80000001u);
-      cat::bitset ecx_bits = cat::bitset<32>::from(ecx);
+      cat::bitset ecx_bits = cat::make_bitset<32>(ecx);
 
       if (ecx_bits[0]) {
          enable_feature(lahf_lm);
@@ -637,9 +637,9 @@ __cpu_indicator_init() {
    if (max_leaf >= 7u) {
       auto&& [max_subleaf, ebx, ecx, edx] = cpuid(7u);
 
-      cat::bitset ebx_bits = cat::bitset<32u>::from(ebx);
-      cat::bitset ecx_bits = cat::bitset<32u>::from(ecx);
-      cat::bitset edx_bits = cat::bitset<32u>::from(edx);
+      cat::bitset ebx_bits = cat::make_bitset<32u>(ebx);
+      cat::bitset ecx_bits = cat::make_bitset<32u>(ecx);
+      cat::bitset edx_bits = cat::make_bitset<32u>(edx);
 
       // Enable AVX2.
       if (ebx_bits[3]) {
