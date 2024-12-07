@@ -30,7 +30,7 @@ function() {
 
 }  // namespace
 
-TEST(test_thread) {
+test(thread) {
    cat::thread threads[3];
    cat::page_allocator allocator;
 

@@ -2,7 +2,7 @@
 
 #include "../unit_tests.hpp"
 
-TEST(test_bit) {
+test(bit) {
    using namespace cat::arithmetic_literals;
 
    // Test clz().

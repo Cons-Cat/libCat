@@ -3,7 +3,7 @@
 
 #include "unit_tests.hpp"
 
-TEST(test_string_length) {
+test(string_length) {
    char const* p_string_1 = "Hello!";
    char const* const p_string_2 = "Hello!";
 

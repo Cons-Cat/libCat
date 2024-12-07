@@ -15,7 +15,7 @@ static_assert(cat::is_implicitly_constructible<uword, uword>);
 static_assert(!cat::is_implicitly_constructible<idx, uword>);
 static_assert(cat::is_implicitly_constructible<uword, idx>);
 
-TEST(test_arithmetic) {
+test(arithmetic) {
    // TODO: Test invalid arithmetic operations with `concept`s like
    // `cat::is_add_assignable<uint4, int4>`.
 

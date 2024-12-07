@@ -2,7 +2,7 @@
 
 #include "../unit_tests.hpp"
 
-TEST(test_variant) {
+test(variant) {
    cat::variant<int, char, uint4> variant(int{1});
    cat::verify(variant.is<int>());
    cat::verify(variant.holds_alternative<int>());

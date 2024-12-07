@@ -6,7 +6,7 @@ struct tup_non_trivial {
    tup_non_trivial(int) {};
 };
 
-TEST(test_tuple) {
+test(tuple) {
    using namespace cat::arithmetic_literals;
 
    using intint = cat::tuple<int, int>;

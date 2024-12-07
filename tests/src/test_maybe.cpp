@@ -61,7 +61,7 @@ maybe_try_fail() -> cat::maybe<int> {
    return boo;
 }
 
-TEST(test_maybe) {
+test(maybe) {
    // Initialize empty.
    cat::maybe<int4> foo{cat::nullopt};
    cat::verify(!foo.has_value());

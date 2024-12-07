@@ -20,7 +20,7 @@ struct test_page_type {
 };
 }  // namespace
 
-TEST(test_paging_memory) {
+test(paging_memory) {
    // Initialize an allocator.
    cat::page_allocator allocator;
 

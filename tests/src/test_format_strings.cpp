@@ -4,7 +4,7 @@
 
 #include "../unit_tests.hpp"
 
-TEST(test_format_strings) {
+test(format_strings) {
    // Initialize an allocator.
    cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(4_uki).or_exit();

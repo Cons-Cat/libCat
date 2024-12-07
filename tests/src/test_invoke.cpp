@@ -11,7 +11,7 @@ invoke_fn_int() -> int {
    return 1;
 }
 
-TEST(test_invoke) {
+test(invoke) {
    // TODO: This does not compile yet.
    // auto _ = cat::invoke(&invoke_fn_void);
 }

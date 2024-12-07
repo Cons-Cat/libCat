@@ -2,7 +2,7 @@
 
 #include "../unit_tests.hpp"
 
-TEST(test_pool_allocator) {
+test(pool_allocator) {
    // Initialize an allocator.
    cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(128u).verify();

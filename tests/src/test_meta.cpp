@@ -21,7 +21,7 @@ class templated_one {};
 template <typename T>
 class templated_two {};
 
-TEST(test_meta) {
+test(meta) {
    using namespace cat;
    static_assert(is_same<int, int>);
    static_assert(!is_same<int, unsigned int>);

@@ -1,6 +1,6 @@
 #include "../unit_tests.hpp"
 
-TEST(test_cpuid) {
+test(cpuid) {
    cat::verify(__builtin_cpu_supports("cmov"));
    cat::verify(__builtin_cpu_supports("mmx"));
    cat::verify(__builtin_cpu_supports("sse"));

@@ -2,7 +2,7 @@
 
 #include "../unit_tests.hpp"
 
-TEST(test_compare_strings) {
+test(compare_strings) {
    char const* p_string_1 = "Hello!";
    char const* const p_string_2 = "Hello!";
 
