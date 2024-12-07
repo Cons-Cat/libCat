@@ -82,7 +82,7 @@ scaredy_try_fail_2() -> cat::scaredy<cat::monostate_type, error_set> {
    return prop_or(error, cat::monostate);
 }
 
-TEST(test_scaredy) {
+test(scaredy) {
    cat::scaredy result = union_errors(0);
    // The `scaredy` here adds a flag to the `int8`, which is padded out to 16
    // bytes. No storage cost exists for the error types.

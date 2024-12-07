@@ -50,7 +50,7 @@ const_test() {
    allocator.free_multi(xalloc_multi.data(), xalloc_multi.size());
 }
 
-TEST(test_alloc) {
+test(alloc) {
 #ifndef __clang__
    // This does not compile with Clang, currently.
    const_test();

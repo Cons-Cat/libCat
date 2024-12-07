@@ -3,7 +3,7 @@
 
 #include "../unit_tests.hpp"
 
-TEST(test_set_memory) {
+test(set_memory) {
    using namespace cat::arithmetic_literals;
 
    cat::page_allocator allocator;

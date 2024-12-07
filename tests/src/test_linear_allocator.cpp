@@ -6,7 +6,7 @@
 
 #include "../unit_tests.hpp"
 
-TEST(test_linear_allocator) {
+test(linear_allocator) {
    // Initialize an allocator.
    cat::page_allocator pager;
    cat::span page = pager.alloc_multi<cat::byte>(24u).verify();

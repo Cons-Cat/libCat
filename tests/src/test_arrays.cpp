@@ -15,7 +15,7 @@ struct move_only {
    }
 };
 
-TEST(test_arrays) {
+test(arrays) {
    // TODO: This passes in GCC 15 but not in Clang 19.
 #ifndef __clang__
    static_assert(cat::is_trivial<cat::array<int, 1u>>);

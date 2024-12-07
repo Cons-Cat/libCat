@@ -3,7 +3,7 @@
 #include "../unit_tests.hpp"
 #include "cat/debug"
 
-TEST(test_math) {
+test(math) {
    using namespace cat::arithmetic_literals;
 
    // Test `min()`.

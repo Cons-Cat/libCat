@@ -39,7 +39,7 @@ struct type {
 // NOLINTNEXTLINE
 void pass_by_value(cat::unique_weak<type>){};
 
-TEST(test_raii) {
+test(raii) {
    // TODO: Fix `unique` and re-enable these tests.
    // auto _ = cat::println("Construct objects.");
    // Test constructor.

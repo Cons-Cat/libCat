@@ -18,7 +18,7 @@ struct test_cast8 {
    char storage[8];
 };
 
-TEST(test_cast) {
+test(cast) {
    static_assert(cat::is_same<decltype(cat::bit_int_cast(test_cast1{})), int1>);
    static_assert(cat::is_same<decltype(cat::bit_int_cast(test_cast2{})), int2>);
    static_assert(cat::is_same<decltype(cat::bit_int_cast(test_cast4{})), int4>);

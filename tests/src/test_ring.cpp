@@ -4,7 +4,7 @@
 
 #include "../unit_tests.hpp"
 
-TEST(test_ring) {
+test(ring) {
    // Initialize an allocator.
    cat::page_allocator pager;
    pager.reset();

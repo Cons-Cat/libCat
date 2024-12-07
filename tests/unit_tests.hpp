@@ -22,23 +22,27 @@ test_fail(cat::source_location const& source_location);
 
 // This macro declares a unit test named `test_name`, which is executed
 // automatically in this program's constructor calls.
-#define TEST(test_name)                                                     \
-   void test_name();                                                        \
-   void test_name##_prologue();                                             \
-                                                                            \
-   [[gnu::constructor]]                                                     \
-   void cat_register_##test_name() {                                        \
-      auto _ =                                                              \
-         test_fns.push_back(reinterpret_cast<void*>(test_name##_prologue)); \
-   }                                                                        \
-                                                                            \
-   void test_name##_prologue() {                                            \
-      /* TODO: Align the whitespace after `:` for 1 and 2 digit tests. */   \
-      constexpr ::cat::str_view string = ": " #test_name "...\n";           \
-      auto _ = ::cat::print(string);                                        \
-      test_name();                                                          \
-      ++tests_passed;                                                       \
-   }                                                                        \
-   void test_name()
+#define CAT_TEST(test_name)                                               \
+   void test_##test_name();                                               \
+   void test_##test_name##_prologue();                                    \
+                                                                          \
+   [[gnu::constructor]]                                                   \
+   void cat_register_test##test_name() {                                  \
+      auto _ = test_fns.push_back(                                        \
+         reinterpret_cast<void*>(test_##test_name##_prologue));           \
+   }                                                                      \
+                                                                          \
+   void test_##test_name##_prologue() {                                   \
+      /* TODO: Align the whitespace after `:` for 1 and 2 digit tests. */ \
+      constexpr ::cat::str_view string = ": test_" #test_name "...\n";    \
+      auto _ = ::cat::print(string);                                      \
+      test_##test_name();                                                 \
+      ++tests_passed;                                                     \
+   }                                                                      \
+   void test_##test_name()
 
-#pragma clang final(TEST)
+// `CAT_TEST` should never be `#undef`'d. The redefinable macro `test` exists
+// to make this macro more ergonomic.
+#pragma clang final(CAT_TEST)
+
+#define test CAT_TEST

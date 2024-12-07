@@ -34,7 +34,7 @@ main() -> int {
    p_jump_buffer = &jump_buffer;
 
    // Call all unit test functions that were pushed into `test_fns` by the
-   // `TEST` macro.
+   // `CAT_TEST` macro.
    for (cat::idx i = 0; i < test_fns.size(); ++i) {
       auto _ = ::cat::print(::cat::fmt(pager, "Running test {}", i).value());
       if (cat::setjmp(jump_buffer)) {
@@ -45,7 +45,7 @@ main() -> int {
       (reinterpret_cast<constructor_fn>(test_fns[i]))();
    }
 
-   // `tests_passed` and `tests_failed` are modified within the `TEST` macro.
+   // `tests_passed` and `tests_failed` are modified within the `CAT_TEST` macro.
    // TODO: This will leak. An `inline_allocator` should be used.
    auto _ = cat::print(cat::fmt(pager, "\n{} tests passed.\n{} tests failed.\n",
                                 tests_passed, tests_failed)
