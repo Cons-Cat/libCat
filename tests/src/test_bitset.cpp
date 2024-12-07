@@ -200,4 +200,9 @@ TEST(test_bitset) {
    cat::verify(bitstring[3] == true);
    cat::verify(bitstring[4] == false);
    cat::verify(bitstring[5] == true);
+
+   cat::bitset fullbits = cat::make_bitset_filled<8>(true);
+   cat::verify(fullbits.all_of());
+   cat::bitset nonebits = cat::make_bitset_filled<8>(false);
+   cat::verify(nonebits.none_of());
 }
