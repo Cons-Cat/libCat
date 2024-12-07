@@ -18,6 +18,10 @@ bitset {
    friend constexpr auto
    make_bitset(types... values);
 
+   template <idx>
+   friend constexpr auto
+   make_bitset_filled(bit_value value);
+
    // Store the smallest number of bytes needed for `bits_count`. If that is 8
    // bytes or fewer, use that many bytes. If it is larger, use an array of
    // 8-byte integers. Divide the bits by 8, rounding up.
@@ -342,9 +346,24 @@ make_bitset(types... values) {
                  "The values passed into this bitset do not fit within the "
                  "`bits_count` alloted.");
 
-   bitset<bits_count> bitset;
-   bitset.m_data = {values...};
-   return bitset;
+   bitset<bits_count> new_bitset;
+   new_bitset.m_data = {values...};
+   return new_bitset;
+}
+
+template <idx bits_count>
+[[nodiscard]]
+constexpr auto
+make_bitset_filled(bit_value value) {
+   bitset<bits_count> new_bitset;
+   if (value) {
+      // Set all bits on.
+      for (auto& bytes : new_bitset.m_data) {
+         bytes = -1u;
+      }
+   }
+   // Otherwise, the bitset is zero-initialized.
+   return new_bitset;
 }
 
 }  // namespace cat
