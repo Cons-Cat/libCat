@@ -76,6 +76,7 @@ bitset {
    // Construct a `bitset` from a bit-string at compile time.
    template <__SIZE_TYPE__ bitstring_size>
    consteval bitset(char const (&bitstring)[bitstring_size]) {
+      [[assume(bitstring[bitstring_size - 1] == '\0')]];
       bitset<bits_count> new_bitset;
       for (__SIZE_TYPE__ i = 0; i < bits_count; ++i) {
          [[assume(bitstring[i] == '0' || bitstring[i] == '1')]];
