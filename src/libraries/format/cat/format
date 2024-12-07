@@ -105,13 +105,12 @@ to_chars() {
    if constexpr (value == 0) {
       return str_inplace("0");
    } else {
-      constexpr str_inplace string =
-         detail::make_const_string<1, abs(value)>(str_inplace(""));
+      constexpr str_inplace string("");
 
       // Handle a negative sign.
       if constexpr (is_signed<decltype(value)> && value < 0) {
-         str_inplace<string.size().raw + 1> new_string;
-         for (uword i = 0u; i < string.size(); ++i) {
+         str_inplace<string.size() + 1u> new_string;
+         for (idx i = 0u; i < string.size(); ++i) {
             new_string[i + 1u] = string[i];
          }
          new_string[0] = '-';

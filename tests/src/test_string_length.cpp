@@ -88,4 +88,14 @@ TEST(test_string_length) {
 
    auto inplace_z_3 = inplace_z_2 + inplace_z_2;
    cat::verify(inplace_z_3.size() == 11);  // "HelloHello\0"
+
+   // Binding these containers to this `char` array is only well-formed when the
+   // final element is `\0`.
+   static constexpr char const char_array[] = {'H', 'i', 'a', '\0'};
+   cat::str_view arr_view = char_array;
+   arr_view = char_array;
+   cat::str_inplace arr_inplace = char_array;
+   cat::zstr_view arr_zview = char_array;
+   arr_zview = char_array;
+   cat::zstr_inplace arr_zinplac = cat::make_zstr_inplace<4>(char_array);
 }

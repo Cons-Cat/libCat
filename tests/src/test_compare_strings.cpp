@@ -52,6 +52,17 @@ TEST(test_compare_strings) {
    constexpr cat::str_view const_hello_world_2 = "Hello, world!";
    constexpr cat::str_view const_hello_world_3 = const_hello_world_2;
    constexpr cat::str_view const_hello_world_4 = const_hello_world_3;
+   constexpr cat::str_inplace<13> const_hello_world_5 =
+      cat::str_inplace("Hello, ") + "world!";
+   constexpr cat::zstr_inplace<14> const_hello_world_6 =
+      cat::make_zstr_inplace<8>("Hello, ") + "world!";
+   constexpr cat::str_inplace const_hello_world_7 =
+      "Hello, " + cat::str_inplace("world!");
+   cat::zstr_inplace<14> const_hello_world_8 =
+      "Hello, " + cat::make_zstr_inplace<7>("world!");
+   const_hello_world_8 = "Hello, world!";
+   static_assert(const_hello_world_5 == "Hello, world!");
+   static_assert(const_hello_world_6 == "Hello, world!");
 
    cat::verify(cat::compare_strings(hello_world, "Hello, world!"));
    cat::verify(cat::compare_strings(const_hello_world, "Hello, world!"));
