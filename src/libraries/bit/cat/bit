@@ -583,6 +583,11 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
       return reference::from_offset(*m_internal_iterator, m_bit_position);
    }
 
+   // The `bit_iterator` adaptor moves in a way that may be couner-intuitive at
+   // first. It will travel forwards across the elements of a collection, but
+   // backwards across that element's bits. It cannot move backwards across the
+   // elements, because that would require it adapt to only bidi-iterators and
+   // never forward iterators, which s an unacceptable limitation.
    constexpr void
    advance(iword offset) {
       iword advance_bits = m_bit_position + offset;
