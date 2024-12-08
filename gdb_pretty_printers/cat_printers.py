@@ -219,9 +219,9 @@ class BitsetPrinter:
         except:
             # If that's optimized out, parse the `ptype` for it.
             # This happens when compiling with Clang, even with `-gfull`.
-            type: str = val.type.strip_typedefs().tag
+            type: str = str(val.type.strip_typedefs())
             # Extract all numbers in the type signature.
-            type_numbers = [int(s) for s in re.findall(r'\b\d+\b', type)]
+            type_numbers = [int(s) for s in re.findall(r' \d+\b', type)]
             # The last number is the bitset's size.
             bits_count: int = type_numbers[-1]
             self.leading_skipped_bits: int = \
