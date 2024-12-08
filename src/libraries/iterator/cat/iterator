@@ -210,7 +210,7 @@ class iterator_interface<derived_type> {
       -> derived_type {
       derived_type new_iterator = left;
       if constexpr (detail::has_advance<derived_type>) {
-         return new_iterator - offset;
+         new_iterator.advance(-offset);
       } else {
          for (idx i; i < offset; ++i) {
             --new_iterator;

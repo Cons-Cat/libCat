@@ -193,6 +193,11 @@ test(bitset) {
       cat::verify(bit == true);
    }
 
+   // TODO: Get this working.
+   //  for (cat::bit_reference bit : cat::as_reverse(bits127_3)) {
+   //     cat::verify(bit == true);
+   //  }
+
    cat::bitset bitstring("010101");
    cat::verify(bitstring[0] == false);
    cat::verify(bitstring[1] == true);
