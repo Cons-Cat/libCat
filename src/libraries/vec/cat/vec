@@ -17,7 +17,7 @@ namespace cat {
 template <typename T, is_allocator allocator_type>
 class [[gsl::Owner]]
 vec : public collection_interface<vec<T, allocator_type>, T>,
-      public iterable_interface<T> {
+      public random_access_iterable_interface<T> {
    template <typename U, is_allocator allocator, typename... Us>
       requires(sizeof...(Us) > 0u)
    friend constexpr auto

@@ -262,7 +262,7 @@ template <typename char_type, idx length, bool is_null_terminated>
 class basic_str_inplace
     : public collection_interface<
          basic_str_inplace<char_type, length, is_null_terminated>, char>,
-      public iterable_interface<char> {
+      public random_access_iterable_interface<char> {
  public:
    constexpr basic_str_inplace() = default;
 

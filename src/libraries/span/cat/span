@@ -16,7 +16,7 @@ namespace cat {
 template <typename T>
 class [[clang::trivial_abi, gsl::Pointer(T)]] span
     : public collection_interface<span<T>, T>,
-      public iterable_interface<T> {
+      public random_access_iterable_interface<T> {
  public:
    constexpr span() = default;
    constexpr span(span<T> const& [[clang::lifetimebound]]) = default;

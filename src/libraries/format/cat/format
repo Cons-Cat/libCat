@@ -284,7 +284,7 @@ struct format_type_constant {
 // storage is exceeded. This container is used in `vfmt()` calls as the
 // default container for `vfmt_to()`.
 struct format_string_vector : collection_interface<format_string_vector, char>,
-                              iterable_interface<char> {
+                              random_access_iterable_interface<char> {
    format_string_vector(char* p_in_storage, idx in_length, idx in_max_length)
        : p_storage(p_in_storage), length(in_length), max_length(in_max_length) {
    }
@@ -429,7 +429,7 @@ struct format_args {
 template <is_allocator allocator_type>
 struct format_buffer_base
     : collection_interface<format_buffer_base<allocator_type>, char>,
-      iterable_interface<char> {
+      random_access_iterable_interface<char> {
    format_buffer_base(char* p_in_string, uword in_length, uword in_max_length)
        : p_string(p_in_string), length(in_length), max_length(in_max_length) {
    }

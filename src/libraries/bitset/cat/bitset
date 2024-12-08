@@ -292,37 +292,37 @@ bitset {
 
    [[nodiscard]]
    constexpr auto
-   begin() {
+   begin() -> iterator {
       return iterator(m_data.begin());
    }
 
    [[nodiscard]]
    constexpr auto
-   end() {
+   end() -> iterator {
       return iterator(m_data.end(), limits<array_type_element>::bits);
    }
 
    [[nodiscard]]
    constexpr auto
-   begin() const {
+   begin() const -> const_iterator {
       return const_iterator(m_data.begin());
    }
 
    [[nodiscard]]
    constexpr auto
-   end() const {
+   end() const -> const_iterator {
       return const_iterator(m_data.end(), limits<array_type_element>::bits);
    }
 
    [[nodiscard]]
    constexpr auto
-   cbegin() const {
+   cbegin() const -> const_iterator {
       return const_iterator(m_data.cbegin());
    }
 
    [[nodiscard]]
    constexpr auto
-   cend() const {
+   cend() const -> const_iterator {
       return const_iterator(m_data.cend(), limits<array_type_element>::bits);
    }
 
