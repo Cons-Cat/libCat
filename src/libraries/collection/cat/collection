@@ -50,9 +50,17 @@ concept has_capacity = requires(T t) { t.capacity(); };
 template <typename T>
 concept has_begin = requires(T t) { t.begin(); };
 
+// If `.begin() const` is provided.
+template <typename T>
+concept has_begin_const_qual = requires(T const& t) { t.begin(); };
+
 // If `.end()` is provided.
 template <typename T>
 concept has_end = requires(T t) { t.end(); };
+
+// If `.end() const` is provided.
+template <typename T>
+concept has_end_const_qual = requires(T const& t) { t.end(); };
 
 // If `.rbegin()` is provided.
 template <typename T>
@@ -94,7 +102,12 @@ class collection_iterator
    }
 
    constexpr auto
-   dereference() const -> T& {
+   dereference() -> T& {
+      return m_p_array[m_current_index.raw];
+   }
+
+   constexpr auto
+   dereference() const -> T const& {
       return m_p_array[m_current_index.raw];
    }
 
@@ -112,16 +125,28 @@ class collection_iterator
    iword m_current_index;
    T* m_p_array;
 };
-}  // namespace detail
 
 template <typename T>
+collection_iterator(idx, T*) -> collection_iterator<T>;
+
+template <typename T>
+collection_iterator(idx, T const*) -> collection_iterator<T const>;
+
+}  // namespace detail
+
+template <typename container, template <typename> typename iterator_type,
+          typename T>
 class iterable_interface {
  public:
-   using iterator = detail::collection_iterator<T>;
-   using const_iterator = detail::collection_iterator<T const>;
-   using reverse_iterator = reverse_iterator_adaptor<iterator, T>;
-   using const_reverse_iterator =
-      reverse_iterator_adaptor<const_iterator, T const>;
+   using value_type = T;
+   using const_value_type = T const;
+   using reference = T&;
+   using const_reference = T const&;
+
+   using iterator = iterator_type<T>;
+   using const_iterator = const_iterator_adaptor<iterator_type, T>;
+   using reverse_iterator = reverse_iterator_adaptor<iterator>;
+   using const_reverse_iterator = reverse_iterator_adaptor<const_iterator>;
 
    [[nodiscard]]
    constexpr auto
@@ -148,14 +173,26 @@ class iterable_interface {
 
    [[nodiscard]]
    constexpr auto
-   cbegin(this auto const& collection) -> const_iterator {
-      return collection.begin();
+   cbegin(this auto const& collection) {
+      if constexpr (detail::has_begin_const_qual<decltype(collection)>) {
+         return collection.begin();
+      } else {
+         // If no `const-qualified` `.begin()` method is provided, wrap over the
+         // non-`const` one.
+         return unconst(collection).begin();
+      }
    }
 
    [[nodiscard]]
    constexpr auto
-   cend(this auto const& collection) -> const_iterator {
-      return collection.end();
+   cend(this auto const& collection) {
+      if constexpr (detail::has_end_const_qual<decltype(collection)>) {
+         return collection.end();
+      } else {
+         // If no `const-qualified` `.end()` method is provided, wrap over the
+         // non-`const` one.
+         return unconst(collection).end();
+      }
    }
 
    // `cat::as_reverse()` cannot be used to streamline this, because that
@@ -164,38 +201,56 @@ class iterable_interface {
    [[nodiscard]]
    constexpr auto
    rbegin(this auto&& collection) {
-      constexpr bool is_const = is_const_ref<decltype(collection)>;
-      using it =
-         conditional<is_const, const_reverse_iterator, reverse_iterator>;
-
       // `cat::forward` must be called on last use, and because argument
       // evaluation order is unspecified, it cannot be called inside an
       // argument list.
       auto size = collection.size() - 1;
       auto* p_data = fwd(collection).data();
-      return it(size, p_data);
+      return reverse_iterator_adaptor(
+         detail::collection_iterator(size, p_data));
    }
 
    [[nodiscard]]
    constexpr auto
    rend(this auto&& collection) {
-      constexpr bool is_const = is_const_ref<decltype(collection)>;
-      using it =
-         conditional<is_const, const_reverse_iterator, reverse_iterator>;
-
-      return it(0, fwd(collection).data());
+      return reverse_iterator_adaptor(
+         detail::collection_iterator(0, fwd(collection).data()));
    }
 
    [[nodiscard]]
    constexpr auto
-   crbegin(this auto const& collection) -> const_reverse_iterator {
+   crbegin(this auto const& collection) {
       return collection.rbegin();
    }
 
    [[nodiscard]]
    constexpr auto
-   crend(this auto const& collection) -> const_reverse_iterator {
+   crend(this auto const& collection) {
       return collection.rend();
+   }
+};
+
+template <typename T>
+class random_access_iterable_interface
+    : public iterable_interface<random_access_iterable_interface<T>,
+                                detail::collection_iterator, T> {
+   using iterator_t = detail::collection_iterator<T>;
+
+ public:
+   [[nodiscard]]
+   constexpr auto
+   begin(this auto&& collection) {
+      // `collection_iterator` deduces `const`-ness for us here.
+      return detail::collection_iterator(0u, fwd(collection).data());
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   end(this auto&& collection) {
+      idx size = collection.size();
+      auto* p_data = fwd(collection).data();
+      // `collection_iterator` deduces `const`-ness for us here.
+      return detail::collection_iterator(size, p_data);
    }
 };
 

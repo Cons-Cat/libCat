@@ -574,6 +574,11 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
    }
 
    constexpr auto
+   dereference() -> reference {
+      return reference::from_offset(*m_internal_iterator, m_bit_position);
+   }
+
+   constexpr auto
    dereference() const -> reference {
       return reference::from_offset(*m_internal_iterator, m_bit_position);
    }

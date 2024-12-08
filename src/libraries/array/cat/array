@@ -15,7 +15,7 @@ namespace cat {
 template <typename T, idx length>
 class [[clang::trivial_abi, gsl::Owner(T)]]
 array : public collection_interface<array<T, length>, T>,
-        public iterable_interface<T> {
+        public random_access_iterable_interface<T> {
  public:
    constexpr array() = default;
    constexpr array(array<T, length> const& other_array) = default;

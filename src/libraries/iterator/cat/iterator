@@ -330,22 +330,21 @@ struct iterator_traits {
    // using iterator_type_concept = category;
 };
 
-// `element_type` may or may not be provided to this CRTP class.
-template <typename iterator_type, typename... element_type>
-   requires(sizeof...(element_type) <= 1)
+template <typename iterator_type>
 class reverse_iterator_adaptor
-    : public iterator_interface<
-         reverse_iterator_adaptor<iterator_type, element_type...>,
-         element_type...> {
+    : public iterator_interface<reverse_iterator_adaptor<iterator_type>> {
  private:
-   using self_type = reverse_iterator_adaptor<iterator_type, element_type...>;
+   using self_type = reverse_iterator_adaptor<iterator_type>;
 
  public:
-   // TODO: Get these working.
-   // using value_type = __type_pack_element<0u, element_type...>;
-   // using const_value_type = value_type const;
-   // using reference = value_type&;
-   // using const_reference = value_type const&;
+   using value_type = iterator_type::value_type;
+   using const_value_type = iterator_type::const_value_type;
+   using reference = iterator_type::reference;
+   using const_reference = iterator_type::const_reference;
+
+   constexpr reverse_iterator_adaptor(iterator_type const& other)
+       : m_internal_iterator(other) {
+   }
 
    // Forward any constructor to the `internal_iterator`.
    template <typename... Args>
@@ -391,6 +390,9 @@ class reverse_iterator_adaptor
  private:
    iterator_type m_internal_iterator;
 };
+
+template <template <typename> typename iterator_type, typename T>
+using const_iterator_adaptor = iterator_type<T const>;
 
 // TODO: More iterable related `concept`s.
 template <typename T>
