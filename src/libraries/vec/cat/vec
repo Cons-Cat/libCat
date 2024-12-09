@@ -114,11 +114,11 @@ vec : public collection_interface<vec<T, allocator_type>, T>,
       // workaround.
       if consteval {
          T* p_new = new T[minimum_capacity.raw];
-         for (idx i; i < m_current_size; ++i) {
-            construct_at(p_new + i, move(m_p_data[i.raw]));
+         for (idx i = 0u; i < m_current_size; ++i) {
+            new (p_new + i) T(move(m_p_data[i]));
          }
          for (idx i = m_current_size + 1u; i < minimum_capacity; ++i) {
-            construct_at(p_new + i);
+            new (p_new + i) T;
          }
          delete[] m_p_data;
          m_p_data = p_new;
@@ -182,7 +182,7 @@ vec : public collection_interface<vec<T, allocator_type>, T>,
             m_current_capacity = minimum_capacity;
 
             for (idx i = m_current_size + 1u; i < m_current_capacity; ++i) {
-               construct_at(m_p_data + i);
+               new (m_p_data + i) T();
             }
          } else {
             auto [alloc_span, alloc_bytes] =
