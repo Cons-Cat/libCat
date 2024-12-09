@@ -113,7 +113,7 @@ class ring : public collection_interface<ring<T>, T> {
 
          // Construct `T` at the newly reserved memory.
          for (iword i = this->current_size; i < new_size; ++i) {
-            construct_at(this->p_storage + i);
+            new (this->p_storage) T(i);
          }
 
          this->current_size = new_size;
