@@ -633,4 +633,9 @@ concept is_scaredy = requires(T t) {
                         cat::maybe<decltype(t.value())>();
                      } && !requires(T t) { t = cat::nullopt; };
 
+auto
+propagate_error(is_scaredy auto const& scaredy) {
+   return scaredy.error();
+}
+
 }  // namespace cat
