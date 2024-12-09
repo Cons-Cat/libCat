@@ -94,7 +94,7 @@ if (NOT CAT_USE_SANITIZERS)
   )
 
   list(
-    APPEND CAT_COMPILE_OPTIONS_RELEASE
+    APPEND CAT_COMPILE_OPTIONS_RELWITHDEBINFO
     # Use thin LTO for optimized non-release builds.
     -flto=thin
   )
