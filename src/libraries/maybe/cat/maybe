@@ -74,7 +74,7 @@ struct maybe_value_storage {
    {
       // TODO: Should this be a `move`?
       this->construct(fwd(in_value));
-      this->m_has_some = true;
+      m_has_some = true;
    }
 
    // If `T` is not move-constructible, delete this move constructor.
@@ -95,10 +95,10 @@ struct maybe_value_storage {
    constexpr ~maybe_value_storage()
       requires(!is_trivially_destructible<T>)
    {
-      if constexpr (requires { this->m_storage.~T(); }) {
-         if (this->m_has_some) {
-            this->m_storage.~T();
-            this->m_has_some = false;
+      if constexpr (requires { m_storage.~T(); }) {
+         if (m_has_some) {
+            m_storage.~T();
+            m_has_some = false;
          }
       }
    }
@@ -108,8 +108,8 @@ struct maybe_value_storage {
    operator=(T const& in_value) -> maybe_value_storage&
       requires(is_trivially_copy_assignable<T>)
    {
-      this->m_storage = in_value;
-      this->m_has_some = true;
+      m_storage = in_value;
+      m_has_some = true;
       return *this;
    }
 
@@ -135,8 +135,8 @@ struct maybe_value_storage {
    operator=(T&& in_value) -> maybe_value_storage&
       requires(is_trivially_move_assignable<T>)
    {
-      this->m_storage = fwd(in_value);
-      this->m_has_some = true;
+      m_storage = fwd(in_value);
+      m_has_some = true;
       return *this;
    }
 
@@ -174,16 +174,16 @@ struct maybe_value_storage {
    // Destroy the storage unconditionally.
    constexpr void
    hard_reset() {
-      this->m_storage.~T();
-      this->m_has_some = false;
+      m_storage.~T();
+      m_has_some = false;
    }
 
    // Construct an object at the address of the held `storage`.
    template <typename... Args>
    constexpr void
    construct(Args&&... args) {
-      construct_at(__builtin_addressof(this->m_storage), fwd(args)...);
-      this->m_has_some = true;
+      new (__builtin_addressof(m_storage)) T(fwd(args)...);
+      m_has_some = true;
    }
 
    // If this is assigned an `maybe` which wraps a type that can be
@@ -193,7 +193,7 @@ struct maybe_value_storage {
    assign(Othermaybe&& maybe) {
       if (this->has_value()) {
          if (maybe.has_value()) {
-            this->m_storage = fwd(maybe).value();
+            m_storage = fwd(maybe).value();
          } else {
             // If the incoming `maybe` is empty, then empty this one.
             this->hard_reset();
@@ -264,7 +264,7 @@ struct maybe_reference_storage {
    template <typename... Args>
    constexpr void
    construct(Args&&... args) {
-      construct_at(this->p_storage, fwd(args)...);
+      new (p_storage) T(fwd(args)...);
       cat::assert(this->has_value());
    }
 
@@ -349,9 +349,9 @@ struct maybe_compact_storage {
    constexpr ~maybe_compact_storage()
       requires(!is_trivially_destructible<value_type>)
    {
-      if constexpr (requires { this->m_storage.~value_type(); }) {
+      if constexpr (requires { m_storage.~value_type(); }) {
          if (this->has_value()) {
-            this->m_storage.~value_type();
+            m_storage.~value_type();
          }
       }
    }
@@ -368,7 +368,7 @@ struct maybe_compact_storage {
    operator=(value_type const& in_value) -> maybe_compact_storage&
       requires(is_trivially_copy_assignable<value_type>)
    {
-      this->m_storage = in_value;
+      m_storage = in_value;
       return *this;
    }
 
@@ -395,7 +395,7 @@ struct maybe_compact_storage {
    operator=(value_type&& in_value) -> maybe_compact_storage&
       requires(is_trivially_move_assignable<value_type>)
    {
-      this->m_storage = fwd(in_value);
+      m_storage = fwd(in_value);
       return *this;
    }
 
@@ -428,21 +428,21 @@ struct maybe_compact_storage {
    [[nodiscard]]
    constexpr auto
    has_value() const -> bool {
-      return T::predicate_function(this->m_storage);
+      return T::predicate_function(m_storage);
    }
 
    // Destroy the storage unconditionally.
    constexpr void
    hard_reset() {
-      this->m_storage.~value_type();
-      this->m_storage = T::sentinel_value;
+      m_storage.~value_type();
+      m_storage = T::sentinel_value;
    }
 
    // Construct an object at the address of the held `storage`.
    template <typename... Args>
    constexpr void
    construct(Args&&... args) {
-      construct_at(__builtin_addressof(this->m_storage), fwd(args)...);
+      new (__builtin_addressof(m_storage)) value_type(fwd(args)...);
    }
 
    // If this is assigned an `maybe` which wraps a type that can be
@@ -452,7 +452,7 @@ struct maybe_compact_storage {
    assign(Othermaybe&& maybe) {
       if (this->has_value()) {
          if (maybe.has_value()) {
-            this->m_storage = fwd(maybe).value();
+            m_storage = fwd(maybe).value();
          } else {
             // If the incoming `maybe` is empty, then empty this one.
             this->hard_reset();

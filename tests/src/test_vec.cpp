@@ -12,7 +12,7 @@ inline constinit idx destructor_count = 0u;
 consteval auto
 const_func() -> int4 {
    cat::page_allocator allocator;
-   cat::vec vector = cat::make_vec<int4>(allocator);
+   cat::vec vector = cat::make_vec<int>(allocator);
    auto _ = vector.resize(8);
 
    vector[0] = 1;
