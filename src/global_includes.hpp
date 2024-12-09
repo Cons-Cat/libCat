@@ -191,8 +191,8 @@ inline constexpr cat::monostate_type monostate;
 
 #define prop CAT_PROPAGATE
 
-// Unwrap an error-like container such as `cat::scaredy` or `cat::maybe` iff
-// it holds a value, otherwise propagate an error state `or_value`.
+// Propagate error-like container such as `cat::scaredy` or `cat::maybe` iff
+// it holds an error, otherwise evaluate to a non-error state `or_value`.
 #define CAT_PROPAGATE_OR(container, or_value)                                 \
    ({                                                                         \
       using try_type = decltype(container);                                   \
@@ -209,7 +209,7 @@ inline constexpr cat::monostate_type monostate;
                                                                               \
       if (!((container).has_value())) {                                       \
          if constexpr (::cat::is_maybe<try_type>) {                           \
-            return return_type();                                             \
+            return return_type(); /* This is always `cat::nullopt`. */        \
          } else {                                                             \
             return (container).error();                                       \
          }                                                                    \
@@ -222,6 +222,22 @@ inline constexpr cat::monostate_type monostate;
 #pragma clang final(CAT_PROPAGATE_OR)
 
 #define prop_or CAT_PROPAGATE_OR
+
+// Unwrap an error-like container such as `cat::scaredy` or `cat::maybe` iff
+// it holds a value, otherwise propagate an error-state `error_value`.
+#define CAT_PROPAGATE_AS(container, or_value) \
+   ({                                         \
+      if (!((container).has_value())) {       \
+         return (or_value);                   \
+      }                                       \
+      (container).value();                    \
+   })
+
+// `CAT_PROPAGATE_AS` should never be `#undef`'d. The redefinable macro
+// `prop_as` exists to make this macro more ergonomic.
+#pragma clang final(CAT_PROPAGATE_AS)
+
+#define prop_as CAT_PROPAGATE_AS
 
 namespace std {
 
