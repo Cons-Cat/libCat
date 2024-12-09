@@ -36,47 +36,44 @@ vec : public collection_interface<vec<T, allocator_type>, T>,
    make_vec_filled(allocator&, idx, U const&) -> maybe<vec<U, allocator>>;
 
  public:
+   constexpr vec() = delete("`cat::vec` cannot be created without an "
+                            "allocator. Call `cat::make_vec()` instead!");
+
    // Empty a vector upon move.
    constexpr vec(vec&& other)
        : m_p_data(other.m_p_data),
          m_current_size(other.m_current_size),
          m_current_capacity(other.m_current_capacity),
          m_allocator(other.m_allocator) {
-      other.reset();
+      other.m_p_data = nullptr;
+      other.m_current_size = 0;
+      other.m_current_capacity = 0;
    }
 
    auto
-   operator=(vec const&) -> vec& = delete;
+   operator=(vec const&)
+      -> vec& = delete("Implicit copying of `cat::vec` is forbidden. Call "
+                       "`.clone() or move instead!");
 
    // Empty a vector upon move.
-   auto
+   constexpr auto
    operator=(vec&& other) -> vec& {
       m_p_data = other.m_p_data;
       m_current_size = other.m_current_size;
       m_current_capacity = other.m_current_capacity;
       m_allocator = other.m_allocator;
-      other.reset();
+      other.m_p_data = nullptr;
+      other.m_current_size = 0;
+      other.m_current_capacity = 0;
    }
 
    constexpr ~vec() {
-      if consteval {
-         delete[] m_p_data;
-      } else {
-         if constexpr (!is_trivially_destructible<T>) {
-            for (idx i = 0; i < m_current_size; ++i) {
-               m_p_data[i].~T();
-            }
-         }
-
-         poison_memory_region(m_p_data, m_current_size);
-      }
+      hard_reset();
    }
 
  protected:
    // Being `protected:` permits derived classes and adaptors to call these.
 
-   [[deprecated("`cat::vec` cannot be created without an allocator. Call "
-                "`cat::make_vec()` instead!")]]
    constexpr vec(allocator_type& allocator [[clang::lifetimebound]])
        : m_p_data(nullptr),
          m_current_size(0),
@@ -135,13 +132,6 @@ vec : public collection_interface<vec<T, allocator_type>, T>,
       return monostate;
    }
 
-   void
-   reset() {
-      m_p_data = nullptr;
-      m_current_size = 0;
-      m_current_capacity = 0;
-   }
-
  public:
    // Get the non-`const` address of this `vec`'s internal array.
    [[nodiscard]]
@@ -167,6 +157,36 @@ vec : public collection_interface<vec<T, allocator_type>, T>,
    constexpr auto
    capacity() const -> idx {
       return m_current_capacity;
+   }
+
+   // Destroy, but do not de-allocate, the elements of this `vec`.
+   void
+   clear() {
+      if constexpr (!is_trivially_destructible<T>) {
+         for (idx i = 0; i < m_current_size; ++i) {
+            m_p_data[i].~T();
+         }
+      }
+
+      m_current_size = 0;
+   }
+
+   // Deallocate this vector.
+   constexpr void
+   hard_reset() {
+      if consteval {
+         delete[] m_p_data;
+      } else {
+         // TODO: This should de-allocate `m_current_capacity`, but because
+         // `free_multi` calls their destructors, and `m_p_data` contains
+         // potentially un-initialized data, that would be unsafe.
+         m_allocator.free_multi(m_p_data, m_current_size);
+         poison_memory_region(m_p_data, m_current_capacity);
+      }
+
+      m_p_data = nullptr;
+      m_current_size = 0;
+      m_current_capacity = 0;
    }
 
    // Try to allocate storage for at least `minimum_capacity` number of `T`s.

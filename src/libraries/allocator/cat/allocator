@@ -3636,8 +3636,6 @@ class allocator_interface {
    template <typename T>
    constexpr void
    free(T* p_memory) {
-      poison_memory_region(p_memory, sizeof(T));
-
       if constexpr (detail::has_max_allocation_bytes<derived_type>) {
          static_assert(sizeof(T) <= derived_type::max_allocation_bytes,
                        "This allocation is too large for this allocator!");
@@ -3646,10 +3644,12 @@ class allocator_interface {
       if consteval {
          delete p_memory;
       } else {
-         // if constexpr (is_destructible<T>) {
-         p_memory->~T();
-         // }
+         if constexpr (!is_trivially_destructible<T>) {
+            p_memory->~T();
+         }
+
          this->self().deallocate(static_cast<void const*>(p_memory), sizeof(T));
+         poison_memory_region(p_memory, sizeof(T));
       }
    }
 
@@ -3665,24 +3665,26 @@ class allocator_interface {
                 "This allocation is too large for this allocator!");
       }
 
-      poison_memory_region(p_memory, sizeof(T) * count);
-
       if consteval {
          // if (count > 0) {
          delete[] p_memory;
          // }
       } else {
-         // if constexpr (is_destructible<T>) {
-         for (unsigned long i = 0u; i < count; ++i) {
-            p_memory[i].~T();
+         if constexpr (!is_trivially_destructible<T>) {
+            for (idx i = 0u; i < count; ++i) {
+               p_memory[i].~T();
+            }
          }
-         // }
          this->self().deallocate(static_cast<void const*>(p_memory),
                                  count * sizeof(T));
+
+         poison_memory_region(p_memory, sizeof(T) * count);
       }
    }
 
    template <mem T>
+   // We zero out poisoned memory here.
+   [[gnu::no_sanitize_address]]
    constexpr void
    cfree(T& handle) {
       free(handle);
@@ -3691,6 +3693,8 @@ class allocator_interface {
    }
 
    template <typename T>
+   // We zero out poisoned memory here.
+   [[gnu::no_sanitize_address]]
    constexpr void
    cfree(T* p_handle) {
       free(p_handle);
@@ -3698,6 +3702,8 @@ class allocator_interface {
    }
 
    template <typename T>
+   // We zero out poisoned memory here.
+   [[gnu::no_sanitize_address]]
    constexpr void
    cfree_multi(T* p_handle, idx count) {
       free_multi(p_handle, count);
@@ -4081,7 +4087,8 @@ class allocator_interface {
 
                      if (size.has_value()) {
                         maybe_memory = maybe_sized_allocation<void*>(tuple{
-                           // If `.allocation_bytes()` succeeded, this will not
+                           // If `.allocation_bytes()` succeeded, this will
+                           // not
                            // fail.
                            this->self().allocate(allocation_bytes).value(),
                            size.value()});

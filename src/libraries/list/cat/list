@@ -33,9 +33,7 @@ template <typename T, is_allocator allocator_type>
 class list : public collection_interface<list<T, allocator_type>, T>,
              public iterable_interface<list<T, allocator_type>,
                                        detail::list_iterator, T> {
- public:
    friend detail::list_iterator<T>;
-   using iterator = detail::list_iterator<T>;
 
    template <typename U, is_allocator allocator, is_convertible<U> Arg,
              is_convertible<U>... Args>
@@ -50,11 +48,43 @@ class list : public collection_interface<list<T, allocator_type>, T>,
    friend auto
    make_list_filled(allocator&, idx, U const&) -> maybe<list<U, allocator>>;
 
-   constexpr list(list&& list) = default;
+ public:
+   using iterator = detail::list_iterator<T>;
+
+   constexpr list() = delete("`cat::list` cannot be created without an "
+                             "allocator. Call `cat::make_list()` instead!");
+
+   constexpr list(list&& other_list)
+       : m_p_head(other_list.m_p_head),
+         m_p_tail(other_list.m_p_tail),
+         m_size(other_list.m_size),
+         m_allocator(other_list.m_allocator) {
+      other_list.m_p_head = nullptr;
+      other_list.m_p_tail = nullptr;
+      other_list.m_size = 0u;
+   }
+
+   auto
+   operator=(list const&)
+      -> list& = delete("Implicit copying of `cat::list` is forbidden. Call "
+                        "`.clone() or move instead!");
+
+   constexpr auto
+   operator=(list&& other_list) -> list& {
+      m_p_head = other_list.m_p_head;
+      m_p_tail = other_list.m_p_tail;
+      m_size = other_list.m_size;
+
+      other_list.m_p_head = nullptr;
+      other_list.m_p_tail = nullptr;
+      other_list.m_size = 0u;
+   }
+
+   constexpr ~list() {
+      clear();
+   }
 
  protected:
-   [[deprecated("`cat::list` cannot be created without an allocator. Call "
-                "`cat::make_list()` instead!")]]
    constexpr list(allocator_type& allocator [[clang::lifetimebound]])
        : m_p_head(nullptr), m_p_tail(nullptr), m_allocator(allocator) {
    }
@@ -68,14 +98,14 @@ class list : public collection_interface<list<T, allocator_type>, T>,
    [[nodiscard]]
    auto
    size() const -> idx {
-      return m_length;
+      return m_size;
    }
 
    // Get the maximum possible count of elements stored in a `List`.
    [[nodiscard]]
    constexpr auto
    capacity() const -> idx {
-      return m_length.max();
+      return m_size.max();
    }
 
    [[nodiscard]]
@@ -90,6 +120,19 @@ class list : public collection_interface<list<T, allocator_type>, T>,
       return m_p_tail->storage;
    }
 
+   constexpr void
+   clear() {
+      detail::list_node<T>* p_current = m_p_head;
+      while (p_current) {
+         detail::list_node<T>* p_next = p_current->p_next_node;
+         m_allocator.free(p_current);
+         p_current = p_next;
+      }
+      m_p_head = nullptr;
+      m_p_tail = nullptr;
+      m_size = 0u;
+   }
+
  private:
    void
    place_initial_node(detail::list_node<T>& node) {
@@ -97,7 +140,7 @@ class list : public collection_interface<list<T, allocator_type>, T>,
       node.p_previous_node = nullptr;
       m_p_head = &node;
       m_p_tail = &node;
-      m_length = 1u;
+      m_size = 1u;
    }
 
    void
@@ -123,18 +166,18 @@ class list : public collection_interface<list<T, allocator_type>, T>,
          node.p_next_node = m_p_tail;
          node.p_previous_node->p_next_node = &node;
       }
-      m_length++;
+      m_size++;
    }
 
    // Place a node at the front of this list.
    void
    place_node_front(detail::list_node<T>& node) {
-      if (m_length > 0) [[likely]] {
+      if (m_size > 0) [[likely]] {
          node.p_next_node = m_p_head;
          node.p_previous_node = nullptr;
          node.p_next_node->p_previous_node = &node;
          m_p_head = &node;
-         m_length++;
+         m_size++;
       } else {
          this->place_initial_node(node);
       }
@@ -143,14 +186,14 @@ class list : public collection_interface<list<T, allocator_type>, T>,
    // Place a node at the back of this list.
    void
    place_node_back(detail::list_node<T>& node) {
-      if (m_length == 0) [[unlikely]] {
+      if (m_size == 0) [[unlikely]] {
          this->place_initial_node(node);
       } else {
          node.p_next_node = nullptr;
          node.p_previous_node = m_p_tail;
          node.p_previous_node->p_next_node = &node;
          m_p_tail = &node;
-         m_length++;
+         m_size++;
       }
    }
 
@@ -182,7 +225,7 @@ class list : public collection_interface<list<T, allocator_type>, T>,
       detail::list_node<T>& node = *p_node;
       node.storage = fwd(value);
 
-      if (m_length == 0) [[unlikely]] {
+      if (m_size == 0) [[unlikely]] {
          // If this list has nothing in it, `.insert()` must be
          // special-cased.
          this->place_initial_node(node);
@@ -201,7 +244,7 @@ class list : public collection_interface<list<T, allocator_type>, T>,
       detail::list_node<T>& node = *p_node;
       new (&node.storage) T(fwd(arguments)...);
 
-      if (m_length == 0) [[unlikely]] {
+      if (m_size == 0) [[unlikely]] {
          // If this list has nothing in it, `.emplace()` must be
          // special-cased.
          this->place_initial_node(node);
@@ -214,7 +257,7 @@ class list : public collection_interface<list<T, allocator_type>, T>,
    // Remove and deallocate an element from this list.
    auto
    erase(iterator where) -> maybe<iterator> {
-      if (m_length == 0) [[unlikely]] {
+      if (m_size == 0) [[unlikely]] {
          // Prevent a segfault when the list is empty.
          return iterator(m_p_head);
       }
@@ -234,7 +277,7 @@ class list : public collection_interface<list<T, allocator_type>, T>,
          node.p_previous_node->p_next_node = nullptr;
          m_p_tail = node.p_previous_node;
       }
-      m_length--;
+      m_size--;
       m_allocator.free(&node);
       return iterator(next);
    }
@@ -267,17 +310,17 @@ class list : public collection_interface<list<T, allocator_type>, T>,
    // Remove an element from the front of this list.
    void
    pop_front() {
-      if (m_length > 0) [[likely]] {
+      if (m_size > 0) [[likely]] {
          detail::list_node<T>& node = *(this->begin().m_p_node);
          if (node.p_next_node != nullptr) [[likely]] {
             node.p_next_node->p_previous_node = nullptr;
          }
          m_p_head = node.p_next_node;
-         m_length--;
+         m_size--;
          m_allocator.free(&node);
       }
 
-      if (m_length <= 1) {
+      if (m_size <= 1) {
          m_p_tail = m_p_head;
       }
    }
@@ -313,37 +356,14 @@ class list : public collection_interface<list<T, allocator_type>, T>,
    // Remove and deallocate an element from the back of this list.
    void
    pop_back() {
-      if (m_length > 0) [[likely]] {
+      if (m_size > 0) [[likely]] {
          detail::list_node<T>& node = *(this->end().m_p_node);
          if (node.p_previous_node != nullptr) [[likely]] {
             node.p_previous_node->p_next_node = nullptr;
          }
          m_p_tail = node.p_previous_node;
-         m_length--;
+         m_size--;
          m_allocator.free(&node);
-      }
-   }
-
-   // Remove and deallocate all elements from this list. All nodes must have
-   // been allocated by the same arena for this function to succeed.
-   void
-   clear() {
-      if (m_length > 0) {
-         iterator previous_it = nullptr;
-         iterator current_it = this->begin();
-         iword i = 0;
-
-         while (i < m_length) {
-            if (i > 0) {
-               m_allocator.free(previous_it.m_p_node);
-            }
-            previous_it = current_it;
-            ++current_it;
-            ++i;
-         }
-
-         m_allocator.free(previous_it.m_p_node);
-         m_length = 0;
       }
    }
 
@@ -388,8 +408,7 @@ class list : public collection_interface<list<T, allocator_type>, T>,
  private:
    detail::list_node<T>* m_p_head = nullptr;
    detail::list_node<T>* m_p_tail = nullptr;
-   idx m_length = 0;
-   [[no_unique_address]]
+   idx m_size = 0;
    allocator_type& m_allocator;
 };
 
@@ -577,8 +596,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
       detail::forward_list_node<T>* p_node;
    };
 
-   constexpr forward_list()
-       : m_p_head(nullptr), m_p_tail(nullptr), m_length(0) {
+   constexpr forward_list() : m_p_head(nullptr), m_p_tail(nullptr), m_size(0) {
    }
 
    constexpr forward_list(forward_list<T>&& list) = default;
@@ -637,14 +655,14 @@ class forward_list : public collection_interface<forward_list<T>, T> {
    [[nodiscard]]
    auto
    size() const -> idx {
-      return m_length;
+      return m_size;
    }
 
    // Get the maximum possible count of elements stored in a `forward_list`.
    [[nodiscard]]
    constexpr auto
    capacity() const -> idx {
-      return m_length.max();
+      return m_size.max();
    }
 
    [[nodiscard]]
@@ -665,7 +683,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
       node.p_next_node = nullptr;
       m_p_head = &node;
       m_p_tail = &node;
-      m_length = 1u;
+      m_size = 1u;
    }
 
    void
@@ -680,16 +698,16 @@ class forward_list : public collection_interface<forward_list<T>, T> {
          node.p_next_node = nullptr;
          m_p_tail = &node;
       }
-      m_length++;
+      m_size++;
    }
 
    // Place a node at the front of this list.
    void
    place_node_front(detail::forward_list_node<T>& node) {
-      if (m_length > 0) [[likely]] {
+      if (m_size > 0) [[likely]] {
          node.p_next_node = m_p_head;
          m_p_head = &node;
-         m_length++;
+         m_size++;
       } else {
          this->place_initial_node(node);
       }
@@ -724,7 +742,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
       detail::forward_list_node<T>& node = *memory.value();
       node.storage = static_cast<T>(value);
 
-      if (m_length == 0) [[unlikely]] {
+      if (m_size == 0) [[unlikely]] {
          // If this list has nothing in it, `.insert_after()` must be
          // special-cased.
          this->place_initial_node(node);
@@ -748,7 +766,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
       detail::forward_list_node<T>& node = *memory.value();
       new (&node.storage) T(fwd(arguments)...);
 
-      if (m_length == 0) [[unlikely]] {
+      if (m_size == 0) [[unlikely]] {
          // If this list has nothing in it, `.insert_after()` must be
          // special-cased.
          this->place_initial_node(node);
@@ -807,10 +825,10 @@ class forward_list : public collection_interface<forward_list<T>, T> {
    // Remove an element from the front of this list.
    void
    pop_front(is_allocator auto& allocator) {
-      if (m_length > 0) [[likely]] {
+      if (m_size > 0) [[likely]] {
          detail::forward_list_node<T>& node = *m_p_head;
          m_p_head = node.p_next_node;
-         m_length--;
+         m_size--;
          allocator.free(&node);
       }
    }
@@ -821,12 +839,12 @@ class forward_list : public collection_interface<forward_list<T>, T> {
    // have been allocated by the same arena for this function to succeed.
    void
    clear(is_allocator auto& allocator) {
-      if (m_length > 0) {
+      if (m_size > 0) {
          iterator previous_it = nullptr;
          iterator current_it = this->begin();
          idx i;
 
-         while (i < m_length) {
+         while (i < m_size) {
             if (i > 0) {
                allocator.free(previous_it.p_node);
             }
@@ -836,7 +854,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
          }
 
          allocator.free(previous_it.p_node);
-         m_length = 0u;
+         m_size = 0u;
       }
    }
 
@@ -857,7 +875,7 @@ class forward_list : public collection_interface<forward_list<T>, T> {
  private:
    detail::forward_list_node<T>* m_p_head;
    detail::forward_list_node<T>* m_p_tail;
-   idx m_length;
+   idx m_size;
 };
 
 }  // namespace cat

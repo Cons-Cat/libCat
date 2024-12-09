@@ -72,8 +72,7 @@ struct maybe_value_storage {
    constexpr maybe_value_storage(T&& in_value)
       requires(is_move_constructible<T> && !is_trivially_move_constructible<T>)
    {
-      // TODO: Should this be a `move`?
-      this->construct(fwd(in_value));
+      this->construct(move(in_value));
       m_has_some = true;
    }
 
