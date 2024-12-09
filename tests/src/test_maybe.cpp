@@ -309,7 +309,7 @@ test(maybe) {
    int4 const& ref_foo = foo.value();
    cat::verify(&ref_foo == &foo.value());
    cat::verify(foo.p_value() == &foo.value());
-   cat::verify(foo.p_value() == addressof(foo.value()));
+   cat::verify(foo.p_value() == __builtin_addressof(foo.value()));
 
    // Test non-trivial reference.
    maybe_non_trivial nontrivial_val;
