@@ -1070,6 +1070,8 @@ class allocator_interface {
 
    // If this allocator has pointer stability, try to allocate a `T`, and
    // provide a pointer handle.
+   // TODO: `calloc` functions shouldn't take constructor args, and they should
+   // verify T is a trivial type.
    template <typename T, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
