@@ -9,6 +9,8 @@
 #include <cat/scaredy>
 #include <cat/string>
 
+// TODO: Use `prop` macros to simplify error propagation.
+
 namespace cat {
 
 // TODO: Support formatting 1 and 2 byte integers.
@@ -30,11 +32,9 @@ template <is_integral T>
 [[nodiscard]]
 auto
 to_chars(is_allocator auto& allocator, T integer) -> maybe<str_view> {
-   maybe result = allocator.template alloc_multi<char>(limits<T>::digits10);
-   if (!result.has_value()) {
-      return nullopt;
-   }
-   char* p_string = result.value().data();
+   span string =
+      prop(allocator.template alloc_multi<char>(limits<T>::digits10));
+   char* p_string = string.data();
 
    // Modify the allocated string in-place.
    if constexpr (is_same<T, int4::raw_type>) {
@@ -58,12 +58,11 @@ template <typename T>
    requires(is_floating_point<T>)
 [[nodiscard]]
 auto
-to_chars(is_allocator auto& alloc, T value) -> maybe<str_view> {
-   maybe result = alloc.template alloc_multi<char>(limits<T>::digits10);
-   if (!result.has_value()) {
-      return nullopt;
-   }
-   char* p_string = result.value().data();
+to_chars(is_allocator auto& allocator, T value) -> maybe<str_view> {
+   span string =
+      prop(allocator.template alloc_multi<char>(limits<T>::digits10));
+   char* p_string = string.data();
+
    detail::dragonbox::to_chars(value, p_string);
 
    return str_view(p_string);
@@ -307,6 +306,7 @@ struct format_string_vector : collection_interface<format_string_vector, char>,
       return this->max_length;
    }
 
+   // TODO: Embed the allocator so this isn't dangling.
    auto
    push_back(is_allocator auto& allocator, char character) -> maybe<void> {
       if (this->length + 1 > this->max_length) {
@@ -317,6 +317,12 @@ struct format_string_vector : collection_interface<format_string_vector, char>,
             return nullopt;
          }
          this->p_storage = result.value().data();
+         /*
+         this->p_storage =
+            prop(allocator.template realloc_multi<char>(
+               this->p_storage, this->max_length, this->max_length * 2u))
+            .data();
+          */
       }
 
       this->p_storage[this->length.raw] = character;

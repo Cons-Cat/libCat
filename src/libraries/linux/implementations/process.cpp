@@ -55,9 +55,7 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
    cat::exit();
 
 parent_thread:
-   if (!result.has_value()) {
-      return result.error();
-   }
+   prop(result);
    return cat::monostate;
 }
 

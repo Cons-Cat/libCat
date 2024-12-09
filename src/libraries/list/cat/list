@@ -178,7 +178,7 @@ class list : public collection_interface<list<T, allocator_type>, T>,
    auto
    insert(iterator where, U&& value) -> maybe<iterator> {
       detail::list_node<T>* p_node =
-         prop_as(m_allocator.template alloc<detail::list_node<T>>(), nullopt);
+         prop(m_allocator.template alloc<detail::list_node<T>>());
       detail::list_node<T>& node = *p_node;
       node.storage = fwd(value);
 
@@ -197,8 +197,7 @@ class list : public collection_interface<list<T, allocator_type>, T>,
    template <typename... Args>
    auto
    emplace(iterator where, Args&&... arguments) -> maybe<iterator> {
-      auto* p_node =
-         prop_as(m_allocator.template alloc<detail::list_node<T>>(), nullopt);
+      auto* p_node = prop(m_allocator.template alloc<detail::list_node<T>>());
       detail::list_node<T>& node = *p_node;
       new (&node.storage) T(fwd(arguments)...);
 
@@ -245,8 +244,7 @@ class list : public collection_interface<list<T, allocator_type>, T>,
       requires(is_implicitly_convertible<U, T>)
    auto
    push_front(U const& value) -> maybe<iterator> {
-      auto* p_node =
-         prop_as(m_allocator.template alloc<detail::list_node<T>>(), nullopt);
+      auto* p_node = prop(m_allocator.template alloc<detail::list_node<T>>());
       detail::list_node<T>& node = *p_node;
       node.storage = static_cast<T>(value);
       this->place_node_front(node);
@@ -258,8 +256,7 @@ class list : public collection_interface<list<T, allocator_type>, T>,
    template <typename... Args>
    auto
    emplace_front(Args&&... arguments) -> maybe<iterator> {
-      auto* p_node =
-         prop_as(m_allocator.template alloc<detail::list_node<T>>(), nullopt);
+      auto* p_node = prop(m_allocator.template alloc<detail::list_node<T>>());
       detail::list_node<T>& node = *p_node;
       new (&node.storage) T(fwd(arguments)...);
       this->place_node_front(node);
@@ -292,26 +289,20 @@ class list : public collection_interface<list<T, allocator_type>, T>,
       requires(is_implicitly_convertible<U, T>)
    auto
    push_back(U const& value) -> maybe<iterator> {
-      cat::maybe_ptr memory =
-         m_allocator.template alloc<detail::list_node<T>>();
-      if (!memory.has_value()) {
-         // Propagate memory allocation failure.
-         return nullopt;
-      }
+      detail::list_node<T>* p_node =
+         prop(m_allocator.template alloc<detail::list_node<T>>());
 
-      detail::list_node<T>& node = *memory.value();
-      node.storage = static_cast<T>(value);
-      this->place_node_back(node);
+      p_node->storage = static_cast<T>(value);
+      this->place_node_back(*p_node);
 
-      return iterator(&node);
+      return iterator(p_node);
    }
 
    // Allocate a node and insert it at the end of this list.
    template <typename... Args>
    auto
    emplace_back(Args&&... arguments) -> maybe<iterator> {
-      auto* p_node =
-         prop_as(m_allocator.template alloc<detail::list_node<T>>(), nullopt);
+      auto* p_node = prop(m_allocator.template alloc<detail::list_node<T>>());
       detail::list_node<T>& node = *p_node;
       new (&node.storage) T(fwd(arguments)...);
       this->place_node_back(node);
@@ -503,8 +494,7 @@ make_list(allocator_type& allocator, U&& value, Args&&... remaining)
 
    if constexpr (sizeof...(Args) > 0) {
       cat::span<node> nodes =
-         prop_as(allocator.template alloc_multi<node>(sizeof...(remaining) + 1),
-                 nullopt);
+         prop(allocator.template alloc_multi<node>(sizeof...(remaining) + 1));
 
       // TODO: Test `make_list` with exactly 1 value.
       new_list.m_p_head = nodes.data();
@@ -512,7 +502,7 @@ make_list(allocator_type& allocator, U&& value, Args&&... remaining)
                                              fwd(remaining)...);
    } else {
       // TODO: Is `calloc` more efficient here?
-      node* p_new_node = prop_as(allocator.template calloc<node>(), nullopt);
+      node* p_new_node = prop(allocator.template calloc<node>());
       p_new_node->p_next_node = nullptr;
       p_new_node->p_previous_node = nullptr;
       p_new_node->storage = fwd(value);
@@ -546,8 +536,7 @@ make_list_filled(allocator_type& allocator, idx count, T const& value)
    list<T, allocator_type> new_list(allocator);
 
    using node = detail::list_node<T>;
-   cat::span<node> nodes =
-      prop_as(allocator.template alloc_multi<node>(count), nullopt);
+   cat::span<node> nodes = prop(allocator.template alloc_multi<node>(count));
 
    detail::initialize_list<node>(nodes, nodes.data(), count, value);
    new_list.m_p_head = nodes.data();

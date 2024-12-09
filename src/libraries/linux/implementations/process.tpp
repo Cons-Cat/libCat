@@ -15,24 +15,22 @@ nix::process::spawn(cat::is_allocator auto& allocator,
    // enable simpler memory management patterns.
    // TODO: This should union allocator and linux errors.
    // TODO: Use size feedback.
-   auto maybe_memory = allocator.template align_alloc_multi<cat::byte>(
-      16u, initial_stack_size + thread_local_buffer_size);
-   if (!maybe_memory.has_value()) {
-      return nix::linux_error::inval;
-   }
+   cat::span<cat::byte> memory =
+      prop_as(allocator.template align_alloc_multi<cat::byte>(
+                 16u, initial_stack_size + thread_local_buffer_size),
+              nix::linux_error::inval);
 
    // TODO: Support call operator for functors.
    // cat::tuple<Args...> args{fwd(arguments)...};
 
-   cat::byte* p_stack_bottom = maybe_memory.value().data();
-   scaredy_nix<void> on_parent;
+   cat::byte* p_stack_bottom = memory.data();
 
    if constexpr (sizeof...(arguments) == 0 && __is_pointer(F)) {
       // If there are no arguments, and `function` is a pointer, it can be
       // called almost directly.
-      on_parent = this->spawn_impl(p_stack_bottom, initial_stack_size,
-                                   thread_local_buffer_size,
-                                   reinterpret_cast<void*>(function), nullptr);
+      return this->spawn_impl(p_stack_bottom, initial_stack_size,
+                              thread_local_buffer_size,
+                              reinterpret_cast<void*>(function), nullptr);
    } else {
       // If there are arguments, `function` must be wrapped in a lambda that has
       // tuple storage.
@@ -47,16 +45,9 @@ nix::process::spawn(cat::is_allocator auto& allocator,
          fwd(fn)();
       };
 
-      on_parent = this->spawn_impl(p_stack_bottom, initial_stack_size,
-                                   thread_local_buffer_size,
-                                   reinterpret_cast<void*>(p_entry),
-                                   reinterpret_cast<void*>(&tuple_args));
+      return this->spawn_impl(p_stack_bottom, initial_stack_size,
+                              thread_local_buffer_size,
+                              reinterpret_cast<void*>(p_entry),
+                              reinterpret_cast<void*>(&tuple_args));
    }
-
-   // TODO: A `prop_as` macro or something can simplify this.
-   // The child thread, if it exists, never reaches this point.
-   if (!on_parent.has_value()) {
-      return on_parent.error();
-   }
-   return cat::monostate;
 }

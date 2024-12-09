@@ -507,16 +507,8 @@ initiate_connection(cat::is_allocator auto& allocator)
    cat::socket_unix<cat::socket_type::stream> socket;
    socket.path_name = x11::socket_path;
 
-   cat::maybe result_1 = socket.create();
-   if (!result_1.has_value()) {
-      return cat::nullopt;
-   }
-
-   cat::maybe result_2 = socket.connect();
-   if (!result_2.has_value()) {
-      return cat::nullopt;
-   }
-
+   prop(socket.create());
+   prop(socket.connect());
    return x11::handshake(allocator, socket);
 }
 

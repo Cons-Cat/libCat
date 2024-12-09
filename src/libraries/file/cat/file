@@ -33,12 +33,8 @@ class raw_type_file {
       nix::open_flags open_flags = nix::open_flags::path;
 
       // Try to open a file from a path.
-      scaredy open_result = nix::sys_open(path.data(), open_mode, open_flags);
-      if (!open_result.has_value()) {
-         return open_result.error();
-      }
-
-      m_file_descriptor = open_result.value();
+      auto m_file_descriptor =
+         prop(nix::sys_open(path.data(), open_mode, open_flags));
 
       // TODO: Is this failable?
       // Get the status of that opened file.
