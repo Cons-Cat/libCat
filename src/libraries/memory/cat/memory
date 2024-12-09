@@ -215,7 +215,7 @@ relocate_at(T* p_source, T* p_destination) -> T* {
       copy_memory(p_source, p_destination, ssizeof(T));
       return launder(p_destination);
    } else {
-      T* p_new = construct_at(p_destination, move(*p_source));
+      T* p_new = new (p_destination) T(move(*p_source));
       p_source->~T();
       return p_new;
    }
