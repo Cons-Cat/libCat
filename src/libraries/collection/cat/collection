@@ -200,25 +200,6 @@ class iterable_interface {
 
    [[nodiscard]]
    constexpr auto
-   rbegin(this auto&& collection) {
-      // `cat::forward` must be called on last use, and because argument
-      // evaluation order is unspecified, it cannot be called inside an
-      // argument list.
-      auto size = collection.size() - 1;
-      auto* p_data = fwd(collection).data();
-      return reverse_iterator_adaptor(
-         detail::collection_iterator(size, p_data));
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   rend(this auto&& collection) {
-      return reverse_iterator_adaptor(
-         detail::collection_iterator(0, fwd(collection).data()));
-   }
-
-   [[nodiscard]]
-   constexpr auto
    crbegin(this auto const& collection) {
       return collection.rbegin();
    }
@@ -251,6 +232,25 @@ class random_access_iterable_interface
       auto* p_data = fwd(collection).data();
       // `collection_iterator` deduces `const`-ness for us here.
       return detail::collection_iterator(size, p_data);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   rbegin(this auto&& collection) {
+      // `cat::forward` must be called on last use, and because argument
+      // evaluation order is unspecified, it cannot be called inside an
+      // argument list.
+      auto size = collection.size() - 1;
+      auto* p_data = fwd(collection).data();
+      return reverse_iterator_adaptor(
+         detail::collection_iterator(size, p_data));
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   rend(this auto&& collection) {
+      return reverse_iterator_adaptor(
+         detail::collection_iterator(0, fwd(collection).data()));
    }
 };
 

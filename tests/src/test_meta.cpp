@@ -379,4 +379,8 @@ test(meta) {
    static_assert(!is_signed<copy_sign_from<uint4, int>>);
    static_assert(!is_signed<copy_sign_from<unsigned, int4>>);
    static_assert(!is_signed<copy_sign_from<unsigned, int>>);
+
+   struct default_construct {};
+
+   static_assert(is_copy_constructible<default_construct>);
 };
