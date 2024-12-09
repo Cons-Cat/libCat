@@ -901,12 +901,22 @@ class maybe {
 template <typename T>
 maybe(T) -> maybe<T>;
 
+namespace detail {
 template <typename T>
-concept is_maybe = requires(T t) {
-                      // T::value_type;
-                      cat::maybe<decltype(t.value())>();
-                      t = cat::nullopt;
-                   } && !requires { T::error_typesList; };
+consteval auto
+is_maybe_trait(maybe<T> const&) -> bool {
+   return true;
+}
+
+consteval auto
+is_maybe_trait(auto const&) -> bool {
+   return false;
+}
+
+}
+
+template <typename T>
+concept is_maybe = detail::is_maybe_trait(T{});
 
 // TODO: Support `void*`.
 // Simplify nullable pointers.
