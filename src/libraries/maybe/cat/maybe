@@ -918,6 +918,12 @@ is_maybe_trait(auto const&) -> bool {
 template <typename T>
 concept is_maybe = detail::is_maybe_trait(T{});
 
+template <typename T>
+auto
+propagate_error(maybe<T> const&) -> detail::nullopt_type {
+   return nullopt;
+}
+
 // TODO: Support `void*`.
 // Simplify nullable pointers.
 template <typename T>
