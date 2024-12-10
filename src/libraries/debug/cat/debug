@@ -74,6 +74,17 @@ using std::source_location;
 void
 breakpoint();
 
+// If used at runtime, this inserts a `nop` instruction, which may be useful for
+// sequencing loops or preventing dead code elimination. In a `constexpr`
+// context, this is entirely ignored.
+[[gnu::always_inline]]
+constexpr void
+nop() {
+   if !consteval {
+      asm volatile("nop");
+   }
+}
+
 // This is exposed so that `unit_tests.hpp` can use it. Its implementation is in
 // `assert_handler.cpp`.
 namespace detail {

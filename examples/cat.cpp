@@ -73,6 +73,8 @@ read_and_print_file(char* p_file_name) {
    }
 }
 
+// TODO: This example segfaults when running without sanitizers. This happens
+// with and without optimizations.
 auto
 main(int argc, char* p_argv[]) -> int {
    if (argc == 1) {

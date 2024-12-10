@@ -26,23 +26,17 @@ main() -> int {
                .recieve(message_buffer.data(), message_buffer.size())
                .or_exit();
 
-         cat::str_view const input = {message_buffer.data(),
-                                      message_buffer.size()};
+         cat::str_view const input = message_buffer.data();
 
          // TODO: This comparison is always false.
          if (cat::compare_strings(input, "exit")) {
-            auto _ = cat::println("Exiting.");
+            auto _ = cat::println("Closing the server.");
             exit = true;
             break;
          }
 
-         // Zero out the message buffer's ending.
-         for (cat::iword i = message_length; i < input.size(); ++i) {
-            message_buffer[cat::idx(i)] = '\0';
-         }
-
          auto _ = cat::print("Recieved: ");
-         auto _ = cat::println(message_buffer);
+         auto _ = cat::println(input);
          break;
       }
    }

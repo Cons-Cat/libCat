@@ -181,6 +181,11 @@ class basic_str_span : public span<char_type> {
       return *this;
    }
 
+   // TODO:
+   // constexpr auto
+   // operator==(basic_str_span const& other_string) {
+   // }
+
    // TODO: Make these member functions `const`.
 
    [[nodiscard]]
