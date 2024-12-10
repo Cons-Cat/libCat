@@ -13,85 +13,143 @@ namespace cat {
 namespace detail {
 template <typename T>
 struct list_node {
-   list_node<T>* p_next_node;
-   list_node<T>* p_previous_node;
+   list_node<T>* p_next_node = nullptr;
+   list_node<T>* p_previous_node = nullptr;
    T storage;
 };
 
 template <typename T>
-struct forward_list_node {
-   forward_list_node<T>* p_next_node;
+struct slist_node {
+   slist_node<T>* p_next_node = nullptr;
    T storage;
 };
 
-template <typename T>
+template <typename, bool>
 class list_iterator;
+
+template <typename T>
+struct list_storage {
+   using node = list_node<T>;
+
+   detail::list_node<T>* m_p_head = nullptr;
+   detail::list_node<T>* m_p_tail = nullptr;
+
+   void
+   reset() {
+      m_p_head = nullptr;
+      m_p_tail = nullptr;
+   }
+};
+
+template <typename T>
+struct slist_storage {
+   using node = slist_node<T>;
+
+   detail::slist_node<T>* m_p_head = nullptr;
+
+   void
+   reset() {
+      m_p_head = nullptr;
+   }
+};
 
 }  // namespace detail
 
-template <typename T, is_allocator allocator_type>
-class list : public collection_interface<list<T, allocator_type>, T>,
-             public iterable_interface<list<T, allocator_type>,
-                                       detail::list_iterator, T> {
-   friend detail::list_iterator<T>;
+template <typename T, is_allocator allocator_type, bool is_doubly_linked>
+class basic_list
+    : public collection_interface<
+         basic_list<T, allocator_type, is_doubly_linked>, T>,
+      public iterable_interface<basic_list<T, allocator_type, is_doubly_linked>,
+                                detail::list_iterator, T, is_doubly_linked> {
+   friend detail::list_iterator<T, is_doubly_linked>;
+
+   // Doubly-linked list factory functions:
+   template <typename U, is_allocator allocator>
+   friend auto
+   make_list(allocator&) -> maybe<basic_list<U, allocator, true>>;
 
    template <typename U, is_allocator allocator, is_convertible<U> Arg,
              is_convertible<U>... Args>
    friend auto
-   make_list(allocator&, Arg&&, Args&&...) -> maybe<list<U, allocator>>;
+   make_list(allocator&, Arg&&, Args&&...)
+      -> maybe<basic_list<U, allocator, true>>;
 
    template <typename U, is_allocator allocator>
    friend auto
-   make_list(allocator&) -> maybe<list<U, allocator>>;
+   make_list_filled(allocator&, idx, U const&)
+      -> maybe<basic_list<U, allocator, true>>;
+
+   // Singly-linked list factory functions:
+   template <typename U, is_allocator allocator>
+   friend auto
+   make_slist(allocator&) -> maybe<basic_list<U, allocator, false>>;
+
+   template <typename U, is_allocator allocator, is_convertible<U> Arg,
+             is_convertible<U>... Args>
+   friend auto
+   make_slist(allocator&, Arg&&, Args&&...)
+      -> maybe<basic_list<U, allocator, false>>;
 
    template <typename U, is_allocator allocator>
    friend auto
-   make_list_filled(allocator&, idx, U const&) -> maybe<list<U, allocator>>;
+   make_slist_filled(allocator&, idx, U const&)
+      -> maybe<basic_list<U, allocator, false>>;
+
+   // TODO: Implement `slist_storage`.
+   using storage_type = conditional<is_doubly_linked, detail::list_storage<T>,
+                                    detail::slist_storage<T>>;
+   using node_type = storage_type::node;
 
  public:
-   using iterator = detail::list_iterator<T>;
+   using iterator = detail::list_iterator<T, is_doubly_linked>;
 
-   constexpr list() = delete("`cat::list` cannot be created without an "
-                             "allocator. Call `cat::make_list()` instead!");
+   constexpr basic_list() = delete(
+      "`cat::list` cannot be created without an "
+      "allocator. Call `cat::make_list()` instead!");
 
-   constexpr list(list&& other_list)
-       : m_p_head(other_list.m_p_head),
-         m_p_tail(other_list.m_p_tail),
+   constexpr basic_list(basic_list&& other_list)
+       : m_storage(move(other_list).m_storage),
          m_size(other_list.m_size),
          m_allocator(other_list.m_allocator) {
-      other_list.m_p_head = nullptr;
-      other_list.m_p_tail = nullptr;
+      other_list.m_storage.m_p_head = nullptr;
+      if constexpr (is_doubly_linked) {
+         other_list.m_storage.m_p_tail = nullptr;
+      }
       other_list.m_size = 0u;
    }
 
    auto
-   operator=(list const&)
-      -> list& = delete("Implicit copying of `cat::list` is forbidden. Call "
-                        "`.clone() or move instead!");
+   operator=(basic_list const&) -> basic_list& =
+      delete("Implicit copying of `cat::list` is forbidden. Call "
+             "`.clone() or move instead!");
 
    constexpr auto
-   operator=(list&& other_list) -> list& {
-      m_p_head = other_list.m_p_head;
-      m_p_tail = other_list.m_p_tail;
+   operator=(basic_list&& other_list) -> basic_list& {
+      m_storage = other_list.m_storage;
       m_size = other_list.m_size;
 
-      other_list.m_p_head = nullptr;
-      other_list.m_p_tail = nullptr;
+      other_list.m_storage.m_p_head = nullptr;
+      if constexpr (is_doubly_linked) {
+         other_list.m_storage.m_p_tail = nullptr;
+      }
       other_list.m_size = 0u;
    }
 
-   constexpr ~list() {
+   constexpr ~basic_list() {
       clear();
    }
 
  protected:
-   constexpr list(allocator_type& allocator [[clang::lifetimebound]])
-       : m_p_head(nullptr), m_p_tail(nullptr), m_allocator(allocator) {
+   // Being `protected:` permits derived classes and adaptors to call these.
+
+   constexpr basic_list(allocator_type& allocator [[clang::lifetimebound]])
+       : m_allocator(allocator) {
    }
 
-   [[deprecated("Implicit copying of `cat::list` is forbidden! Consider moving "
-                "or calling `.clone() instead.")]]
-   constexpr list(list const&) = default;
+   [[deprecated(
+      "Implicit copying of `cat::list` is forbidden. Call `.clone() or move"
+      "instead!")]]
+   constexpr basic_list(basic_list const&) = default;
 
  public:
    // Get the count of elements stored in this `List`.
@@ -111,72 +169,90 @@ class list : public collection_interface<list<T, allocator_type>, T>,
    [[nodiscard]]
    auto
    front() -> T& {
-      return m_p_head->storage;
+      return m_storage.m_p_head->storage;
    }
 
    [[nodiscard]]
    auto
-   back() -> T& {
-      return m_p_tail->storage;
+   back() -> T&
+      requires(is_doubly_linked)
+   {
+      return m_storage.m_p_tail->storage;
    }
 
    constexpr void
    clear() {
-      detail::list_node<T>* p_current = m_p_head;
+      node_type* p_current = m_storage.m_p_head;
       while (p_current) {
-         detail::list_node<T>* p_next = p_current->p_next_node;
+         node_type* p_next = p_current->p_next_node;
          m_allocator.free(p_current);
          p_current = p_next;
       }
-      m_p_head = nullptr;
-      m_p_tail = nullptr;
+      m_storage.reset();
       m_size = 0u;
    }
 
  private:
    void
-   place_initial_node(detail::list_node<T>& node) {
+   place_initial_node(node_type& node) {
       node.p_next_node = nullptr;
-      node.p_previous_node = nullptr;
-      m_p_head = &node;
-      m_p_tail = &node;
+      if constexpr (is_doubly_linked) {
+         node.p_previous_node = nullptr;
+      }
+      m_storage.m_p_head = &node;
+      if constexpr (is_doubly_linked) {
+         m_storage.m_p_tail = &node;
+      }
       m_size = 1u;
    }
 
    void
-   place_node(iterator where, detail::list_node<T>& node) {
+   place_node(iterator where, node_type& node) {
       // `.place_node()` should almost always be used for insertions in the
       // middle.
       if (where != this->begin() && where != this->end()) [[likely]] {
          // Place a node in the middle of this list.
          node.p_next_node = where.m_p_node;
-         node.p_previous_node = where.m_p_node->p_previous_node;
+         if constexpr (is_doubly_linked) {
+            node.p_previous_node = where.m_p_node->p_previous_node;
+         }
 
          node.p_next_node->p_previous_node = &node;
-         node.p_previous_node->p_next_node = &node;
+         if constexpr (is_doubly_linked) {
+            node.p_previous_node->p_next_node = &node;
+         }
       } else if (where == this->begin()) {
          // Place a node at the front of this list.
-         node.p_next_node = m_p_head;
+         node.p_next_node = m_storage.m_p_head;
          node.p_previous_node = nullptr;
-         m_p_head->p_previous_node = &node;
-         m_p_head = &node;
+         if constexpr (is_doubly_linked) {
+            m_storage.m_p_head->p_previous_node = &node;
+         }
+         m_storage.m_p_head = &node;
       } else {
          // Place a node at the back of this list.
-         node.p_previous_node = where.m_p_node->p_previous_node;
-         node.p_next_node = m_p_tail;
-         node.p_previous_node->p_next_node = &node;
+         // TODO: Consolidate this.
+         if constexpr (is_doubly_linked) {
+            node.p_previous_node = where.m_p_node->p_previous_node;
+         }
+         node.p_next_node = m_storage.m_p_tail;
+         if constexpr (is_doubly_linked) {
+            node.p_previous_node->p_next_node = &node;
+         }
       }
       m_size++;
    }
 
    // Place a node at the front of this list.
    void
-   place_node_front(detail::list_node<T>& node) {
+   place_node_front(node_type& node) {
       if (m_size > 0) [[likely]] {
-         node.p_next_node = m_p_head;
-         node.p_previous_node = nullptr;
-         node.p_next_node->p_previous_node = &node;
-         m_p_head = &node;
+         node.p_next_node = m_storage.m_p_head;
+         if constexpr (is_doubly_linked) {
+            node.p_previous_node = nullptr;
+            node.p_next_node->p_previous_node = &node;
+         }
+         m_storage.m_p_head = &node;
          m_size++;
       } else {
          this->place_initial_node(node);
@@ -185,33 +261,72 @@ class list : public collection_interface<list<T, allocator_type>, T>,
 
    // Place a node at the back of this list.
    void
-   place_node_back(detail::list_node<T>& node) {
+   place_node_back(node_type& node)
+      requires(is_doubly_linked)
+   {
       if (m_size == 0) [[unlikely]] {
          this->place_initial_node(node);
       } else {
          node.p_next_node = nullptr;
-         node.p_previous_node = m_p_tail;
+         node.p_previous_node = m_storage.m_p_tail;
          node.p_previous_node->p_next_node = &node;
-         m_p_tail = &node;
+         m_storage.m_p_tail = &node;
          m_size++;
       }
    }
 
  public:
-   // Deep-copy the contents of this `List`.
+   // Deep-copy the contents of this `list`.
    template <is_allocator new_allocator_type>
    [[nodiscard]]
    auto
-   clone(new_allocator_type& allocator) -> maybe<list<T, new_allocator_type>> {
-      list<T, new_allocator_type> new_list = prop(make_list<T>(allocator));
-      // TODO: Reserve this memory aggressively.
-      // for (auto&& node : *this) {
-      //    new_list.push_back(node);
-      // }
-      for (iterator it = this->begin(); it != (this->end() + 1u); ++it) {
-         new_list.push_back(*it);
+   clone(new_allocator_type& allocator)
+      -> maybe<basic_list<T, new_allocator_type, is_doubly_linked>> {
+      basic_list new_list =
+         basic_list<T, allocator_type, is_doubly_linked>(allocator);
+      cat::span<node_type> new_nodes =
+         prop(allocator.template alloc_multi<node_type>(m_size));
+
+      new_list.m_storage.m_p_head = new_nodes.data();
+      new_list.m_size = m_size;
+
+      if (new_nodes.size() == 1) [[unlikely]] {
+         node_type& node = new_nodes.front();
+         node.storage = this->front();
+         cat::assert(node.p_next_node == nullptr);
+         if constexpr (is_doubly_linked) {
+            cat::assert(node.p_previous_node == nullptr);
+         }
+         return move(new_list);
       }
-      return new_list;
+
+      node_type* p_current = new_nodes.data();
+      [[maybe_unused]]
+      node_type* p_previous = nullptr;
+      iterator it = this->begin();
+      // We can't use `cat::copy` here because the pointers need new values.
+      for (idx i = 0; i < new_nodes.size() - 1; ++i) {
+         node_type& new_node = new_nodes[i];
+         // Copy over the contained element exactly.
+         new_node.storage = *it;
+
+         new_node.p_next_node = p_current + 1;
+         if constexpr (is_doubly_linked) {
+            new_node.p_previous_node = p_previous;
+         }
+         p_previous = p_current;
+         p_current += 1;
+         ++it;
+      }
+      // Place the final node.
+      node_type& last_node = new_nodes.back();
+      last_node.storage = *it;
+      last_node.p_next_node = nullptr;
+      if constexpr (is_doubly_linked) {
+         last_node.p_previous_node = p_current;
+      }
+
+      return move(new_list);
    }
 
    // Allocate a node and insert it into this list before the position of
@@ -220,9 +335,8 @@ class list : public collection_interface<list<T, allocator_type>, T>,
       requires(is_implicitly_convertible<U, T>)
    auto
    insert(iterator where, U&& value) -> maybe<iterator> {
-      detail::list_node<T>* p_node =
-         prop(m_allocator.template alloc<detail::list_node<T>>());
-      detail::list_node<T>& node = *p_node;
+      node_type* p_node = prop(m_allocator.template alloc<node_type>());
+      node_type& node = *p_node;
       node.storage = fwd(value);
 
       if (m_size == 0) [[unlikely]] {
@@ -240,8 +354,8 @@ class list : public collection_interface<list<T, allocator_type>, T>,
    template <typename... Args>
    auto
    emplace(iterator where, Args&&... arguments) -> maybe<iterator> {
-      auto* p_node = prop(m_allocator.template alloc<detail::list_node<T>>());
-      detail::list_node<T>& node = *p_node;
+      auto* p_node = prop(m_allocator.template alloc<node_type>());
+      node_type& node = *p_node;
       new (&node.storage) T(fwd(arguments)...);
 
       if (m_size == 0) [[unlikely]] {
@@ -256,30 +370,45 @@ class list : public collection_interface<list<T, allocator_type>, T>,
 
    // Remove and deallocate an element from this list.
    auto
-   erase(iterator where) -> maybe<iterator> {
+   erase(iterator where) -> maybe<iterator>
+      requires(is_doubly_linked)
+   {
       if (m_size == 0) [[unlikely]] {
          // Prevent a segfault when the list is empty.
-         return iterator(m_p_head);
+         return iterator(m_storage.m_p_head);
       }
 
-      detail::list_node<T>& node = *where.m_p_node;
+      node_type& node = *where.m_p_node;
       iterator next = node.p_next_node;
-      if (&node != m_p_head && &node != m_p_tail) [[likely]] {
+      if (&node != m_storage.m_p_head && &node != m_storage.m_p_tail)
+         [[likely]] {
          // Remove a node from the middle of this list.
          node.p_next_node->p_previous_node = node.p_previous_node;
          node.p_previous_node->p_next_node = node.p_next_node;
-      } else if (&node == m_p_head) {
+      } else if (&node == m_storage.m_p_head) {
          // Remove a node from the front of this list.
          node.p_next_node->p_previous_node = nullptr;
-         m_p_head = node.p_next_node;
+         m_storage.m_p_head = node.p_next_node;
       } else {
          // Remove a node from the back of this list.
          node.p_previous_node->p_next_node = nullptr;
-         m_p_tail = node.p_previous_node;
+         m_storage.m_p_tail = node.p_previous_node;
       }
       m_size--;
       m_allocator.free(&node);
       return iterator(next);
+   }
+
+   void
+   erase_after(is_allocator auto& allocator, iterator where) {
+      node_type& node = *where.p_node;
+      node_type* p_remove = node.p_next_node;
+      node.p_next_node = p_remove->p_next_node;
+      if constexpr (is_doubly_linked) {
+         node.p_next_node->p_previous_node = &node;
+      }
+
+      allocator.free(p_remove);
    }
 
    // Allocate a node and insert it at the beginning of this list.
@@ -287,8 +416,8 @@ class list : public collection_interface<list<T, allocator_type>, T>,
       requires(is_implicitly_convertible<U, T>)
    auto
    push_front(U const& value) -> maybe<iterator> {
-      auto* p_node = prop(m_allocator.template alloc<detail::list_node<T>>());
-      detail::list_node<T>& node = *p_node;
+      auto* p_node = prop(m_allocator.template alloc<node_type>());
+      node_type& node = *p_node;
       node.storage = static_cast<T>(value);
       this->place_node_front(node);
 
@@ -299,8 +428,8 @@ class list : public collection_interface<list<T, allocator_type>, T>,
    template <typename... Args>
    auto
    emplace_front(Args&&... arguments) -> maybe<iterator> {
-      auto* p_node = prop(m_allocator.template alloc<detail::list_node<T>>());
-      detail::list_node<T>& node = *p_node;
+      auto* p_node = prop(m_allocator.template alloc<node_type>());
+      node_type& node = *p_node;
       new (&node.storage) T(fwd(arguments)...);
       this->place_node_front(node);
 
@@ -311,17 +440,22 @@ class list : public collection_interface<list<T, allocator_type>, T>,
    void
    pop_front() {
       if (m_size > 0) [[likely]] {
-         detail::list_node<T>& node = *(this->begin().m_p_node);
-         if (node.p_next_node != nullptr) [[likely]] {
-            node.p_next_node->p_previous_node = nullptr;
+         node_type& node = *(this->begin().m_p_node);
+         if constexpr (is_doubly_linked) {
+            if (node.p_next_node != nullptr) [[likely]] {
+               node.p_next_node->p_previous_node = nullptr;
+            }
          }
-         m_p_head = node.p_next_node;
+
+         m_storage.m_p_head = node.p_next_node;
          m_size--;
          m_allocator.free(&node);
       }
 
-      if (m_size <= 1) {
-         m_p_tail = m_p_head;
+      if constexpr (is_doubly_linked) {
+         if (m_size <= 1) {
+            m_storage.m_p_tail = m_storage.m_p_head;
+         }
       }
    }
 
@@ -329,11 +463,10 @@ class list : public collection_interface<list<T, allocator_type>, T>,
 
    // Allocate a node and insert it at the end of this list.
    template <typename U>
-      requires(is_implicitly_convertible<U, T>)
+      requires(is_implicitly_convertible<U, T> && is_doubly_linked)
    auto
    push_back(U const& value) -> maybe<iterator> {
-      detail::list_node<T>* p_node =
-         prop(m_allocator.template alloc<detail::list_node<T>>());
+      node_type* p_node = prop(m_allocator.template alloc<node_type>());
 
       p_node->storage = static_cast<T>(value);
       this->place_node_back(*p_node);
@@ -343,10 +476,11 @@ class list : public collection_interface<list<T, allocator_type>, T>,
 
    // Allocate a node and insert it at the end of this list.
    template <typename... Args>
+      requires(is_doubly_linked)
    auto
    emplace_back(Args&&... arguments) -> maybe<iterator> {
-      auto* p_node = prop(m_allocator.template alloc<detail::list_node<T>>());
-      detail::list_node<T>& node = *p_node;
+      auto* p_node = prop(m_allocator.template alloc<node_type>());
+      node_type& node = *p_node;
       new (&node.storage) T(fwd(arguments)...);
       this->place_node_back(node);
 
@@ -355,13 +489,15 @@ class list : public collection_interface<list<T, allocator_type>, T>,
 
    // Remove and deallocate an element from the back of this list.
    void
-   pop_back() {
+   pop_back()
+      requires(is_doubly_linked)
+   {
       if (m_size > 0) [[likely]] {
-         detail::list_node<T>& node = *(this->end().m_p_node);
+         node_type& node = *(this->end().m_p_node);
          if (node.p_previous_node != nullptr) [[likely]] {
             node.p_previous_node->p_next_node = nullptr;
          }
-         m_p_tail = node.p_previous_node;
+         m_storage.m_p_tail = node.p_previous_node;
          m_size--;
          m_allocator.free(&node);
       }
@@ -372,57 +508,75 @@ class list : public collection_interface<list<T, allocator_type>, T>,
    [[nodiscard]]
    auto
    begin() -> iterator {
-      return iterator(m_p_head);
+      return iterator(m_storage.m_p_head);
    }
 
    [[nodiscard]]
    auto
-   end() -> iterator {
-      return iterator(m_p_tail);
+   end() -> iterator
+      requires(is_doubly_linked)
+   {
+      return iterator(m_storage.m_p_tail);
    }
 
    [[nodiscard]]
    auto
-   rbegin() {
-      return cat::reverse_iterator_adaptor<iterator>{m_p_tail};
+   rbegin()
+      requires(is_doubly_linked)
+   {
+      return cat::reverse_iterator_adaptor<iterator>{m_storage.m_p_tail};
    }
 
    [[nodiscard]]
    auto
-   rend() {
-      return cat::reverse_iterator_adaptor<iterator>{m_p_head};
+   rend()
+      requires(is_doubly_linked)
+   {
+      return cat::reverse_iterator_adaptor<iterator>{m_storage.m_p_head};
    }
 
    [[nodiscard]]
    auto
-   rbegin() const {
-      return cat::reverse_iterator_adaptor<iterator>{m_p_tail};
+   rbegin() const
+      requires(is_doubly_linked)
+   {
+      return cat::reverse_iterator_adaptor<iterator>{m_storage.m_p_tail};
    }
 
    [[nodiscard]]
    auto
-   rend() const {
-      return cat::reverse_iterator_adaptor<iterator>{m_p_head};
+   rend() const
+      requires(is_doubly_linked)
+   {
+      return cat::reverse_iterator_adaptor<iterator>{m_storage.m_p_head};
    }
 
  private:
-   detail::list_node<T>* m_p_head = nullptr;
-   detail::list_node<T>* m_p_tail = nullptr;
+   storage_type m_storage;
    idx m_size = 0;
    allocator_type& m_allocator;
 };
 
+template <typename T, is_allocator allocator>
+using list = basic_list<T, allocator, true>;
+
+template <typename T, is_allocator allocator>
+using slist = basic_list<T, allocator, false>;
+
 namespace detail {
 
-template <typename T>
-class list_iterator : public iterator_interface<list_iterator<T>> {
+template <typename T, bool is_doubly_linked>
+class list_iterator
+    : public iterator_interface<list_iterator<T, is_doubly_linked>> {
  public:
-   friend iterator_interface<list_iterator<T>>;
+   friend iterator_interface<list_iterator<T, is_doubly_linked>>;
 
    using value_type = T;
    using const_value_type = T const;
    using reference = T&;
    using const_reference = T const&;
+
+   using node_type = conditional<is_doubly_linked, list_node<T>, slist_node<T>>;
 
    // using collection_type [[maybe_unused]] = list<T>;
 
@@ -430,7 +584,7 @@ class list_iterator : public iterator_interface<list_iterator<T>> {
    // constructor. Should this still exist?
    // iterator(iterator const&) = default;
 
-   list_iterator(detail::list_node<T>* p_input) : m_p_node(p_input) {
+   list_iterator(node_type* p_input) : m_p_node(p_input) {
    }
 
    auto
@@ -440,7 +594,9 @@ class list_iterator : public iterator_interface<list_iterator<T>> {
    }
 
    auto
-   decrement() -> list_iterator& {
+   decrement() -> list_iterator&
+      requires(is_doubly_linked)
+   {
       m_p_node = m_p_node->p_previous_node;
       return *this;
    }
@@ -456,7 +612,7 @@ class list_iterator : public iterator_interface<list_iterator<T>> {
       return it.m_p_node == m_p_node;
    }
 
-   detail::list_node<T>* m_p_node;
+   node_type* m_p_node;
 };
 
 template <typename T>
@@ -479,6 +635,24 @@ initialize_list_variadic(span<T>& list_nodes, T* p_previous, auto&& current,
 
 template <typename T>
 void
+initialize_slist_variadic(span<T>& list_nodes, T* p_previous, auto&& current,
+                          auto&&... next) {
+   if constexpr (sizeof...(next) > 0u) {
+      // Construct a node at this address.
+      T* p_current = list_nodes.data();
+      new (p_current) T(p_current + 1, fwd(current));
+      // Recurse to the next node.
+      list_nodes = list_nodes.last(list_nodes.size() - 1);
+      initialize_list_variadic<T>(list_nodes, p_current, fwd(next)...);
+   } else {
+      // Final node.
+      T* p_current = p_previous + 1;
+      new (p_current) T(nullptr, fwd(current));
+   }
+}
+
+template <typename T>
+void
 initialize_list(span<T>& list_nodes, T* p_previous, idx remaining,
                 decltype(T::storage) const& value) {
    if (remaining > 0u) {
@@ -495,6 +669,24 @@ initialize_list(span<T>& list_nodes, T* p_previous, idx remaining,
    }
 }
 
+template <typename T>
+void
+initialize_slist(span<T>& list_nodes, T* p_previous, idx remaining,
+                 decltype(T::storage) const& value) {
+   if (remaining > 0u) {
+      // Construct a node at this address.
+      T* p_current = list_nodes.data();
+      new (p_current) T(p_current + 1, value);
+      // Recurse to the next node.
+      list_nodes = list_nodes.last(list_nodes.size() - 1);
+      initialize_list<T>(list_nodes, p_current, remaining - 1u, value);
+   } else {
+      // Final node.
+      T* p_current = p_previous + 1;
+      new (p_current) T(nullptr, value);
+   }
+}
+
 }  // namespace detail
 
 // These factory functions require access to the `protected` constructor, which
@@ -502,6 +694,15 @@ initialize_list(span<T>& list_nodes, T* p_previous, idx remaining,
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
+// Make an empty `list`.
+template <typename T, is_allocator allocator_type>
+[[nodiscard]]
+auto
+make_list(allocator_type& allocator) -> maybe<list<T, allocator_type>> {
+   return list<T, allocator_type>(allocator);
+}
+
+// Make a `list` initialized by a pack.
 template <typename T, is_allocator allocator_type, is_convertible<T> U,
           is_convertible<T>... Args>
 [[nodiscard]]
@@ -516,29 +717,22 @@ make_list(allocator_type& allocator, U&& value, Args&&... remaining)
          prop(allocator.template alloc_multi<node>(sizeof...(remaining) + 1));
 
       // TODO: Test `make_list` with exactly 1 value.
-      new_list.m_p_head = nodes.data();
+      new_list.m_storage.m_p_head = nodes.data();
       detail::initialize_list_variadic<node>(nodes, nullptr, value,
                                              fwd(remaining)...);
    } else {
       // TODO: Is `calloc` more efficient here?
-      node* p_new_node = prop(allocator.template calloc<node>());
+      node* p_new_node = prop(allocator.template alloc<node>());
       p_new_node->p_next_node = nullptr;
       p_new_node->p_previous_node = nullptr;
       p_new_node->storage = fwd(value);
-      new_list.m_p_head = p_new_node;
+      new_list.m_storage.m_p_head = p_new_node;
    }
 
    return maybe(move(new_list));
 }
 
-// Make an empty list.
-template <typename T, is_allocator allocator_type>
-[[nodiscard]]
-auto
-make_list(allocator_type& allocator) -> maybe<list<T, allocator_type>> {
-   return list<T, allocator_type>(allocator);
-}
-
+// Make a `list` initialized by a pack.
 template <is_allocator allocator_type, typename... Args>
 [[nodiscard]]
 auto
@@ -547,6 +741,7 @@ make_list(allocator_type& allocator, Args&&... values) {
    return make_list<common>(allocator, static_cast<common>(fwd(values))...);
 }
 
+// Make a `list` initialized to `value`.
 template <typename T, is_allocator allocator_type>
 [[nodiscard]]
 auto
@@ -558,324 +753,75 @@ make_list_filled(allocator_type& allocator, idx count, T const& value)
    cat::span<node> nodes = prop(allocator.template alloc_multi<node>(count));
 
    detail::initialize_list<node>(nodes, nodes.data(), count, value);
-   new_list.m_p_head = nodes.data();
+   new_list.m_storage.m_p_head = nodes.data();
 
    return maybe(move(new_list));
 }
 
+// Make an empty `slist`.
+template <typename T, is_allocator allocator_type>
+[[nodiscard]]
+auto
+make_slist(allocator_type& allocator) -> maybe<slist<T, allocator_type>> {
+   return slist<T, allocator_type>(allocator);
+}
+
+// Make a `slist` initialized by a pack.
+template <typename T, is_allocator allocator_type, is_convertible<T> U,
+          is_convertible<T>... Args>
+[[nodiscard]]
+auto
+make_slist(allocator_type& allocator, U&& value, Args&&... remaining)
+   -> maybe<slist<T, allocator_type>> {
+   slist<T, allocator_type> new_slist(allocator);
+   using node = detail::slist_node<T>;
+
+   if constexpr (sizeof...(Args) > 0) {
+      cat::span<node> nodes =
+         prop(allocator.template alloc_multi<node>(sizeof...(remaining) + 1));
+
+      // TODO: Test `make_slist` with exactly 1 value.
+      new_slist.m_storage.m_p_head = nodes.data();
+      detail::initialize_slist_variadic<node>(nodes, nullptr, value,
+                                              fwd(remaining)...);
+   } else {
+      // TODO: Is `calloc` more efficient here?
+      node* p_new_node = prop(allocator.template alloc<node>());
+      p_new_node->p_next_node = nullptr;
+      p_new_node->p_previous_node = nullptr;
+      p_new_node->storage = fwd(value);
+      new_slist.m_storage.m_p_head = p_new_node;
+   }
+
+   return maybe(move(new_slist));
+}
+
+// Make an `slist` initialized by a pack.
+template <is_allocator allocator_type, typename... Args>
+[[nodiscard]]
+auto
+make_slist(allocator_type& allocator, Args&&... values) {
+   using common = common_type<Args...>;
+   return make_slist<common>(allocator, static_cast<common>(fwd(values))...);
+}
+
+// Make an `slist` initialized to `value`.
+template <typename T, is_allocator allocator_type>
+[[nodiscard]]
+auto
+make_slist_filled(allocator_type& allocator, idx count, T const& value)
+   -> maybe<slist<T, allocator_type>> {
+   slist<T, allocator_type> new_slist(allocator);
+
+   using node = detail::slist_node<T>;
+   cat::span<node> nodes = prop(allocator.template alloc_multi<node>(count));
+
+   detail::initialize_slist<node>(nodes, nodes.data(), count, value);
+   new_slist.m_storage.m_p_head = nodes.data();
+
+   return maybe(move(new_slist));
+}
+
 #pragma GCC diagnostic pop
-
-// TODO: Move this to a separate file.
-template <typename T>
-class forward_list : public collection_interface<forward_list<T>, T> {
- public:
-   struct iterator : iterator_interface<iterator> {
-      // TODO: This default constructor is deprecated due to the user-defined
-      // constructor. Should this still exist?
-      // iterator(iterator const&) = default;
-
-      iterator(detail::forward_list_node<T>* p_input) : p_node(p_input) {
-      }
-
-      auto
-      increment() -> iterator& {
-         this->p_node = this->p_node->p_next_node;
-         return *this;
-      }
-
-      auto
-      dereference() const -> T& {
-         return this->p_node->storage;
-      }
-
-      auto
-      equal_to(iterator const& it) const -> bool {
-         return it.p_node == this->p_node;
-      }
-
-      detail::forward_list_node<T>* p_node;
-   };
-
-   constexpr forward_list() : m_p_head(nullptr), m_p_tail(nullptr), m_size(0) {
-   }
-
-   constexpr forward_list(forward_list<T>&& list) = default;
-
- protected:
-   // Being `protected:` permits derived classes and adaptors to call this.
-   // Only allow the shallow copy constructor to be used by these static
-   // factory member functions. For public copying, `.clone()` should be used.
-   [[deprecated(
-      "Implicit copying of `cat::forward_list` is forbidden. Call `.clone() "
-      "instead!")]]
-   constexpr forward_list(forward_list<T> const&) = default;
-
- public:
-   template <typename U, U... values>
-      requires(is_implicitly_convertible<U, T>)
-   [[nodiscard]]
-   static auto
-   from(is_allocator auto& allocator,
-        value_type_list<U, values...> initializers) -> maybe<forward_list<T>> {
-      forward_list<T> new_list;
-      // TODO: Check if a recursive function is more efficient here.
-      array array = initializers;
-      // TODO: Optimize memory allocations with a multiple `.push_back()`
-      // overload.
-      for (iword i = 0; i < ssizeof_pack(values...); ++i) {
-         maybe result = new_list.push_back(allocator, array[i]);
-         if (!result.has_value()) {
-            return nullopt;
-         }
-      }
-      return new_list;
-   }
-
-   template <typename... Args>
-      requires(is_implicitly_convertible<Args, T> && ...)
-   [[nodiscard]]
-   static auto
-   from(is_allocator auto& allocator, Args&&... initializers)
-      -> maybe<forward_list<T>> {
-      forward_list<T> new_list;
-      // TODO: Check if a recursive function is more efficient here.
-      array array = {fwd(initializers)...};
-      // TODO: Optimize memory allocations with a multiple `.push_back()`
-      // overload.
-      for (iword i = 0; i < ssizeof_pack<Args...>(); ++i) {
-         maybe result = new_list.push_back(allocator, array[i]);
-         if (!result.has_value()) {
-            return nullopt;
-         }
-      }
-      return new_list;
-   }
-
-   // Get the count of elements stored in this `forward_list`.
-   [[nodiscard]]
-   auto
-   size() const -> idx {
-      return m_size;
-   }
-
-   // Get the maximum possible count of elements stored in a `forward_list`.
-   [[nodiscard]]
-   constexpr auto
-   capacity() const -> idx {
-      return m_size.max();
-   }
-
-   [[nodiscard]]
-   auto
-   front() -> T& {
-      return m_p_head->storage;
-   }
-
-   [[nodiscard]]
-   auto
-   back() -> T& {
-      return m_p_tail->storage;
-   }
-
- private:
-   void
-   place_initial_node(detail::forward_list_node<T>& node) {
-      node.p_next_node = nullptr;
-      m_p_head = &node;
-      m_p_tail = &node;
-      m_size = 1u;
-   }
-
-   void
-   place_node_after(iterator where, detail::forward_list_node<T>& node) {
-      if (where != this->end()) {
-         // Place a node in the middle of this list.
-         node.p_next_node = where.p_node->p_next_node;
-         where.p_node->p_next_node = &node;
-      } else {
-         // Place a node at the back of this list.
-         where.p_node->p_next_node = &node;
-         node.p_next_node = nullptr;
-         m_p_tail = &node;
-      }
-      m_size++;
-   }
-
-   // Place a node at the front of this list.
-   void
-   place_node_front(detail::forward_list_node<T>& node) {
-      if (m_size > 0) [[likely]] {
-         node.p_next_node = m_p_head;
-         m_p_head = &node;
-         m_size++;
-      } else {
-         this->place_initial_node(node);
-      }
-   }
-
- public:
-   // Deep-copy the contents of this `forward_list`.
-   [[nodiscard]]
-   auto
-   clone(is_allocator auto& allocator) -> maybe<forward_list<T>> {
-      forward_list<T> new_list;
-      iterator current = prop(new_list.push_front(allocator, this->front()));
-      for (iterator it = (this->begin() + 1); it != (this->end() + 1); ++it) {
-         current = prop(this->insert_after(allocator, current, *it));
-      }
-      return new_list;
-   }
-
-   template <typename U>
-   auto
-   insert_after(is_allocator auto& allocator, iterator where, U const& value)
-      -> maybe<iterator>
-      requires(is_implicitly_convertible<U, T>)
-   {
-      cat::maybe memory =
-         allocator.template alloc<detail::forward_list_node<T>>();
-      if (!memory.has_value()) {
-         // Propagate memory allocation failure.
-         return nullopt;
-      }
-
-      detail::forward_list_node<T>& node = *memory.value();
-      node.storage = static_cast<T>(value);
-
-      if (m_size == 0) [[unlikely]] {
-         // If this list has nothing in it, `.insert_after()` must be
-         // special-cased.
-         this->place_initial_node(node);
-      } else {
-         this->place_node_after(where, node);
-      }
-      return iterator(&node);
-   }
-
-   template <typename... Args>
-   auto
-   emplace_after(is_allocator auto& allocator, iterator where,
-                 Args&&... arguments) -> maybe<iterator> {
-      cat::maybe memory =
-         allocator.template alloc<detail::forward_list_node<T>>();
-      if (!memory.has_value()) {
-         // Propagate memory allocation failure.
-         return nullopt;
-      }
-
-      detail::forward_list_node<T>& node = *memory.value();
-      new (&node.storage) T(fwd(arguments)...);
-
-      if (m_size == 0) [[unlikely]] {
-         // If this list has nothing in it, `.insert_after()` must be
-         // special-cased.
-         this->place_initial_node(node);
-      } else {
-         this->place_node_after(where, node);
-      }
-      return iterator(&node);
-   }
-
-   void
-   erase_after(is_allocator auto& allocator, iterator where) {
-      detail::forward_list_node<T>& node = *where.p_node;
-      detail::forward_list_node<T>* p_remove = node.p_next_node;
-      node.p_next_node = p_remove->p_next_node;
-      allocator.free(p_remove);
-   }
-
-   // Allocate a node and insert it at the beginning of this list.
-   template <typename U>
-      requires(is_implicitly_convertible<U, T>)
-   auto
-   push_front(is_allocator auto& allocator, U const& value) -> maybe<iterator> {
-      cat::maybe memory =
-         allocator.template alloc<detail::forward_list_node<T>>();
-      if (!memory.has_value()) {
-         // Propagate memory allocation failure.
-         return nullopt;
-      }
-
-      detail::forward_list_node<T>& node = *memory.value();
-      node.storage = static_cast<T>(value);
-      this->place_node_front(node);
-
-      return iterator(&node);
-   }
-
-   // Allocate a node and insert it at the beginning of this list.
-   template <typename... Args>
-   auto
-   emplace_front(is_allocator auto& allocator, Args&&... arguments)
-      -> maybe<iterator> {
-      cat::maybe memory =
-         allocator.template alloc<detail::forward_list_node<T>>();
-      if (!memory.has_value()) {
-         // Propagate memory allocation failure.
-         return nullopt;
-      }
-
-      detail::forward_list_node<T>& node = *memory.value();
-      new (&node.storage) T(fwd(arguments)...);
-      this->place_node_front(node);
-
-      return iterator(&node);
-   }
-
-   // Remove an element from the front of this list.
-   void
-   pop_front(is_allocator auto& allocator) {
-      if (m_size > 0) [[likely]] {
-         detail::forward_list_node<T>& node = *m_p_head;
-         m_p_head = node.p_next_node;
-         m_size--;
-         allocator.free(&node);
-      }
-   }
-
-   // TODO: Add a `.reset()` to remove elements without deallocating them.
-   //
-   // Remove and deallocate all elements from this list. All nodes must
-   // have been allocated by the same arena for this function to succeed.
-   void
-   clear(is_allocator auto& allocator) {
-      if (m_size > 0) {
-         iterator previous_it = nullptr;
-         iterator current_it = this->begin();
-         idx i;
-
-         while (i < m_size) {
-            if (i > 0) {
-               allocator.free(previous_it.p_node);
-            }
-            previous_it = current_it;
-            ++current_it;
-            ++i;
-         }
-
-         allocator.free(previous_it.p_node);
-         m_size = 0u;
-      }
-   }
-
-   // Providing these two iterator getters generates the remaining four
-   // through the `collection_interface`.
-   [[nodiscard]]
-   auto
-   begin() -> iterator {
-      return iterator(m_p_head);
-   }
-
-   [[nodiscard]]
-   auto
-   end() -> iterator {
-      return iterator(m_p_tail);
-   }
-
- private:
-   detail::forward_list_node<T>* m_p_head;
-   detail::forward_list_node<T>* m_p_tail;
-   idx m_size;
-};
 
 }  // namespace cat
