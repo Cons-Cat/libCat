@@ -56,11 +56,11 @@ read_and_print_file(char* p_file_name) {
       idx current_block_size = cat::min(bytes_remaining, block_size);
 
       // These pages are freed when iterating through the io vectors later.
-      cat::byte* p_buffer = pager.alloc_multi<cat::byte>(block_size)
-                               .or_exit("Failed to allocate memory!", 4)
-                               .data();
+      cat::span buffer = pager.alloc_multi<cat::byte>(block_size)
+                            .or_exit("Failed to allocate memory!", 4);
 
-      io_vectors[current_block] = nix::io_vector(p_buffer, current_block_size);
+      io_vectors[current_block] =
+         nix::io_vector(buffer.data(), current_block_size);
       ++current_block;
       bytes_remaining -= current_block_size;
    }
