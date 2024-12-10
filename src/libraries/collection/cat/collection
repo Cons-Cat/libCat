@@ -134,8 +134,9 @@ collection_iterator(idx, T const*) -> collection_iterator<T const>;
 
 }  // namespace detail
 
-template <typename container, template <typename> typename iterator_type,
-          typename T>
+template <typename container,
+          template <typename, auto...> typename iterator_type, typename T,
+          auto... args>
 class iterable_interface {
  public:
    using value_type = T;
@@ -143,8 +144,8 @@ class iterable_interface {
    using reference = T&;
    using const_reference = T const&;
 
-   using iterator = iterator_type<T>;
-   using const_iterator = const_iterator_adaptor<iterator_type, T>;
+   using iterator = iterator_type<T, args...>;
+   using const_iterator = const_iterator_adaptor<iterator_type, T, args...>;
    using reverse_iterator = reverse_iterator_adaptor<iterator>;
    using const_reverse_iterator = reverse_iterator_adaptor<const_iterator>;
 
