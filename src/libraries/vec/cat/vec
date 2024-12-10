@@ -244,7 +244,7 @@ vec : public collection_interface<vec<T, allocator_type>, T>,
       new_vector.m_current_size = m_current_size;
       relocate(this->begin(), this->end(), new_vector.begin());
 
-      return new_vector;
+      return move(new_vector);
    }
 
    // TODO: rval-ref overload of `.push_back()`.

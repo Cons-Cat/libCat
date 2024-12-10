@@ -391,8 +391,9 @@ class reverse_iterator_adaptor
    iterator_type m_internal_iterator;
 };
 
-template <template <typename> typename iterator_type, typename T>
-using const_iterator_adaptor = iterator_type<T const>;
+template <template <typename, auto...> typename iterator_type, typename T,
+          auto... args>
+using const_iterator_adaptor = iterator_type<T const, args...>;
 
 // TODO: More iterable related `concept`s.
 template <typename T>
