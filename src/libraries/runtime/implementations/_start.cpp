@@ -24,18 +24,19 @@ call_static_constructors() {
 }
 
 #ifndef NO_ARGC_ARGV
-[[noreturn, gnu::used, gnu::no_stack_protector, gnu::no_sanitize_address]]
+[[noreturn, gnu::used, force_align_arg_pointer(32), gnu::no_stack_protector,
+  gnu::no_sanitize_address]]
 void
-call_main_args(int argc, char** p_argv) {
+call_main_args(int argc, char** pp_argv) {
    // The stack pointer must be aligned to prevent SIMD segfaults.
-   cat::align_stack_pointer_32();
    call_static_constructors();
    // Initialize `__cpu_model` and `__cpu_features2` for later use.
    x64::detail::__cpu_indicator_init();
-   cat::exit(main(argc, p_argv));
+   cat::exit(main(argc, pp_argv));
 }
 #else
-[[noreturn, gnu::no_stack_protector, gnu::no_sanitize_address]]
+[[noreturn, force_align_arg_pointer(32), gnu::no_stack_protector,
+  gnu::no_sanitize_address]]
 void
 call_main_noargs() {
    // The stack pointer must be aligned to prevent SIMD segfaults.

@@ -7,19 +7,18 @@
 auto
 main(int argc, char* p_argv[]) -> int {
    cat::socket_unix<cat::socket_type::stream> socket;
-   socket.path_name = cat::str_inplace<108>::padded("\0/tmp/temp.sock");
+   socket.path_name = cat::make_str_inplace<108>("\0/tmp/temp.sock");
 
-   socket.create().or_exit();
-   socket.connect().or_exit();
+   socket.create().verify();
+   socket.connect().verify();
 
    // Send all command line arguments to the server.
    for (int i = 1; i < argc; ++i) {
-      socket.send_string(p_argv[i]).or_exit();
+      socket.send_string(p_argv[i]).verify();
       if (i < argc - 1) {
-         // TODO: What does this flag `0b1` mean?
-         socket.send_string(" ", 0b1).or_exit();
+         socket.send_string(" ").verify();
       }
    }
 
-   socket.close().or_exit();
+   socket.close().verify();
 }

@@ -32,6 +32,7 @@ load_base_stack_pointer() -> void*;
 [[gnu::always_inline]]
 inline void
 align_stack_pointer_16() {
+   // rmsbolt requires `.att_syntax prefix` here for some reason.
    asm volatile(".att_syntax prefix ;\nand $-16, %rsp");
 }
 
@@ -40,8 +41,8 @@ align_stack_pointer_16() {
 [[gnu::always_inline]]
 inline void
 align_stack_pointer_32() {
+   // rmsbolt requires `.att_syntax prefix` here for some reason.
    asm volatile(".att_syntax prefix ;\nand $-32, %rsp");
-   // asm("andq %rsp, -32");
 }
 
 extern "C" [[noreturn]]
