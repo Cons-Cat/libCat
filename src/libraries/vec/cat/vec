@@ -235,11 +235,12 @@ vec : public collection_interface<vec<T, allocator_type>, T>,
    }
 
    // Deep-copy the contents of this `vec`.
+   template <is_allocator new_allocator_type>
    [[nodiscard]]
    constexpr auto
-   clone(is_allocator auto& allocator
-         [[clang::lifetimebound]]) const& -> maybe<vec<T, allocator_type>> {
-      vec<T, allocator_type> new_vector =
+   clone(new_allocator_type& allocator
+         [[clang::lifetimebound]]) const& -> maybe<vec<T, new_allocator_type>> {
+      vec<T, new_allocator_type> new_vector =
          prop(make_vec_reserved<T>(allocator, m_current_capacity));
       new_vector.m_current_size = m_current_size;
       relocate(this->begin(), this->end(), new_vector.begin());
