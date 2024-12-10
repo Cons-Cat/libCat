@@ -8,8 +8,7 @@ auto
 main() -> int {
    cat::socket_unix<cat::socket_type::stream> listening_socket;
    // A leading null byte puts this path in the abstract namespace.
-   listening_socket.path_name =
-      cat::str_inplace<108>::padded("\0/tmp/temp.sock");
+   listening_socket.path_name = cat::make_str_inplace<108>("\0/tmp/temp.sock");
    listening_socket.create().or_exit();
    listening_socket.bind().or_exit();
    listening_socket.listen(20).or_exit();
@@ -37,20 +36,18 @@ main() -> int {
             break;
          }
 
-         if (!cat::compare_strings(input, "")) {
-            // Zero out the message buffer's ending.
-            for (cat::iword i = message_length; i < input.size(); ++i) {
-               message_buffer[cat::idx(i)] = '\0';
-            }
-
-            auto _ = cat::print("Recieved: ");
-            auto _ = cat::println(message_buffer.data());
-            break;
+         // Zero out the message buffer's ending.
+         for (cat::iword i = message_length; i < input.size(); ++i) {
+            message_buffer[cat::idx(i)] = '\0';
          }
+
+         auto _ = cat::print("Recieved: ");
+         auto _ = cat::println(message_buffer);
+         break;
       }
    }
 
-   recieving_socket.close().or_exit();
-   listening_socket.close().or_exit();
-   auto _ = nix::sys_unlink(listening_socket.path_name.data()).or_exit();
+   recieving_socket.close().verify();
+   listening_socket.close().verify();
+   auto _ = nix::sys_unlink(listening_socket.path_name.data()).verify();
 }

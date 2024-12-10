@@ -130,7 +130,7 @@ bitset {
 
    [[nodiscard]]
    constexpr auto
-   at(idx index) const -> maybe<bit_reference<array_type_element>> {
+   at(idx index) const -> maybe<bit_reference<array_type_element> const> {
       if (index < bits_count) {
          return (*this)[index];
       }
