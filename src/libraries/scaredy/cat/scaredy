@@ -12,13 +12,9 @@ template <typename T, typename... error_types>
 struct scaredy_variant_storage {
    using value_type = conditional<is_void<T>, monostate_type, T>;
 
-   constexpr scaredy_variant_storage() = default;
-
-   // value_type and error types must have separate constructors and
-   // operators, because `cat::variant` cannot have implicit conversions in
-   // its own constructors or operators. So an explicit conversion is
-   // required to implicitly convert a value type without accidentally
-   // converting error types.
+   // `T` might have been provided `monostate_storage`, so we cannot use
+   // `is_void<T>` here.
+   static constexpr bool is_wrapping_void = is_monostate<value_type>;
 
    template <typename U>
    static constexpr bool is_value =
@@ -33,6 +29,14 @@ struct scaredy_variant_storage {
       !is_same<U, value_type> &&
       // `U` must be one of the errors.
       type_list<error_types...>::template has_type<U>;
+
+   // value_type and error types must have separate constructors and
+   // operators, because `cat::variant` cannot have implicit conversions in
+   // its own constructors or operators. So an explicit conversion is
+   // required to implicitly convert a value type without accidentally
+   // converting error types.
+
+   constexpr scaredy_variant_storage() = default;
 
    // Convert and copy-construct a value.
    template <typename U>
@@ -147,30 +151,29 @@ struct scaredy_variant_storage {
 };
 
 // `T` is a `compact_scaredy<type, predicate>`.
-template <typename T, typename... error_types>
+template <typename T, typename error_type>
 struct scaredy_compact_storage {
    using value_type = T::type;
-   // `error_types` can only hold one error in this storage struct. It is
-   // variadic merely to simplify overload resolution in `scaredy`.
-   // `decltype` adds a reference to it, so that is removed by
-   // `remove_reference`.
-   using error_type = __type_pack_element<0u, error_types...>;
 
-   constexpr scaredy_compact_storage() = default;
+   // `T` might have been provided `monostate_storage`, so we cannot use
+   // `is_void<T>` here.
+   static constexpr bool is_wrapping_void = is_monostate<value_type>;
 
    template <typename U>
    static constexpr bool is_value =
       // `U` must be converted to the value type.
       is_implicitly_convertible<U, value_type> &&
       // `U` must not be one of the errors.
-      !type_list<error_types...>::template has_type<U>;
+      !is_same<error_type, U>;
 
    template <typename U>
    static constexpr bool is_error =
       // `U` must not be the value type.
       !is_same<U, value_type> &&
       // `U` must be one of the errors.
-      type_list<error_types...>::template has_type<U>;
+      is_same<error_type, U>;
+
+   constexpr scaredy_compact_storage() = default;
 
    template <typename U>
       requires(is_value<U>)
@@ -299,14 +302,12 @@ template <typename T, typename... error_types>
       (!is_array<error_types> && ...) &&
       // `scaredy` should have at least one error type.
       sizeof...(error_types) > 0)
-class scaredy {
+class [[nodiscard]] scaredy {
  private:
-   // clang-format off
-    using storage_type = conditional <requires {
-        T::predicate_function;
-    }, detail::scaredy_compact_storage<T, error_types...>,
-        detail::scaredy_variant_storage <T, error_types...>>;
-   // clang-format on
+   using storage_type =
+      conditional<requires { T::predicate_function; },
+                  detail::scaredy_compact_storage<T, error_types...[0]>,
+                  detail::scaredy_variant_storage<T, error_types...>>;
 
  public:
    using value_type = storage_type::value_type;
@@ -449,14 +450,27 @@ class scaredy {
       return m_storage.has_value();
    }
 
+   // If the value should be discarded, consume the `maybe` with `auto _ =`
+   // instead.
    [[nodiscard]]
    constexpr auto
-   value(this auto&& self)
-      -> auto&& requires(!is_void<T>) { return fwd(self).m_storage.value(); }
+   value(this auto&& self) -> auto&& requires(!storage_type::is_wrapping_void) {
+                                        return fwd(self).m_storage.value();
+                                     }
+
+   // Special discard-able overload for `maybe<void>`.
+   // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
+   constexpr auto value() const -> monostate_type
+      requires(storage_type::is_wrapping_void)
+   {
+      return monostate;
+   }
 
    // Get the value of some error when its type is known to the caller.
    template <typename error_type>
-   [[nodiscard]] constexpr auto error() {
+   [[nodiscard]]
+   constexpr auto
+   error() {
       return m_storage.template error<error_type>();
    }
 
@@ -500,24 +514,46 @@ class scaredy {
    // TODO: Make the `.assert()` and `.verify()` getters `constexpr`.
    // TODO: Add overloads which take a `string const` for an error message.
 
-   [[nodiscard]]
    auto
    assert(this auto&& self,
           void (*p_assert_handler)(source_location const&) = assert_handler,
           source_location const& callsite = source_location::current())
-      -> auto&& {
-      cat::assert(self.has_value(), p_assert_handler, callsite);
-      return fwd(self).value();
+      -> auto&& requires(!storage_type::is_wrapping_void) {
+                   cat::assert(self.has_value(), p_assert_handler, callsite);
+                   return fwd(self).value();
+                }
+
+   // Special discard-able overload for `maybe<void>`.
+   // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
+   auto assert(
+      void (*p_assert_handler)(source_location const&) = assert_handler,
+      source_location const& callsite = source_location::current()) const
+      -> monostate_type
+      requires(storage_type::is_wrapping_void)
+   {
+      cat::assert(has_value(), p_assert_handler, callsite);
+      return monostate;
    }
 
-   [[nodiscard]]
    auto
    verify(this auto&& self,
           void (*p_assert_handler)(source_location const&) = assert_handler,
           source_location const& callsite = source_location::current())
-      -> auto&& {
-      cat::verify(self.has_value(), p_assert_handler, callsite);
-      return fwd(self).value();
+      -> auto&& requires(!storage_type::is_wrapping_void) {
+                   cat::verify(self.has_value(), p_assert_handler, callsite);
+                   return fwd(self).value();
+                }
+
+   // Special discard-able overload for `maybe<void>`.
+   // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
+   auto verify(
+      void (*p_assert_handler)(source_location const&) = assert_handler,
+      source_location const& callsite = source_location::current()) const
+      -> monostate_type
+      requires(storage_type::is_wrapping_void)
+   {
+      cat::verify(has_value(), p_assert_handler, callsite);
+      return monostate;
    }
 
    // Holds true if this `scaredy` currently has some value of the type `U`.
@@ -547,11 +583,9 @@ class scaredy {
       detail::match_patterns (*this)(fwd(pattern_args)...);
    }
 
-   // TODO: Use `is_invocable` constraints.
-
    // If this non-`const`-qualified `scaredy` holds a value, transform it
    // by a function. Otherwise, propagate the error value.
-   template <typename F>
+   template <is_invocable<value_type> F>
    [[nodiscard]]
    constexpr auto
    transform(this auto&& self, F&& invocable) {
@@ -562,7 +596,7 @@ class scaredy {
       return this_type(fwd(self).m_storage);
    }
 
-   template <typename F>
+   template <is_invocable<value_type> F>
    [[nodiscard]]
    constexpr auto
    and_then(this auto&& self, F&& invocable) {
@@ -571,8 +605,7 @@ class scaredy {
                               : this_type(fwd(self).m_storage);
    }
 
-   template <typename F>
-   [[nodiscard]]
+   template <is_invocable F>
    constexpr auto
    or_else(this auto&& self, F&& invocable) {
       using U = decltype(invocable());
@@ -593,7 +626,6 @@ class scaredy {
       }
    }
 
-   [[nodiscard]]
    auto
    or_exit(this auto&& self, iword exit_code = 1) {
       if (self.has_value()) [[likely]] {
@@ -607,7 +639,6 @@ class scaredy {
       __builtin_unreachable();
    }
 
-   [[nodiscard]]
    auto
    or_exit(this auto&& self, str_view error_message, iword exit_code = 1) {
       if (self.has_value()) [[likely]] {

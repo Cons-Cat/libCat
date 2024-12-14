@@ -12,14 +12,14 @@ struct type {
    type() = default;
 
    type(cat::string string) : data(mov string) {
-      // auto _ = cat::print(data);
-      // auto _ = cat::println(" constructor");
+      // cat::print(data);
+      // cat::println(" constructor");
    }
 
    // NOLINTNEXTLINE This is a non-trivial destructor.
    ~type() {
-      // auto _ = cat::print("~");
-      // auto _ = cat::println(this->data);
+      // cat::print("~");
+      // cat::println(this->data);
    }
 
    auto
@@ -30,8 +30,8 @@ struct type {
 
    void
    raii() const {
-      // auto _ = cat::print(this->data);
-      // auto _ = cat::println(" calls raii()!");
+      // cat::print(this->data);
+      // cat::println(" calls raii()!");
       ++raii_counter;
    }
 };
@@ -41,7 +41,7 @@ void pass_by_value(cat::unique_weak<type>){};
 
 test(raii) {
    // TODO: Fix `unique` and re-enable these tests.
-   // auto _ = cat::println("Construct objects.");
+   // cat::println("Construct objects.");
    // Test constructor.
    cat::unique_weak<type> foo(cat::string("foo"));
    // Test assignment.
@@ -52,11 +52,11 @@ test(raii) {
    cat::verify(moo.has_ownership());
 
    // Test move-assignment.
-   // auto _ = cat::println("Move moo into foo.");
+   // cat::println("Move moo into foo.");
    foo = mov moo;
    cat::verify(!moo.has_ownership());
 
-   // auto _ = cat::println("Move foo into func().");
+   // cat::println("Move foo into func().");
    // A move is required:
    pass_by_value(mov foo);
    cat::verify(!foo.has_ownership());

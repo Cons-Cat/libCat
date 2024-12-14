@@ -13,6 +13,7 @@ consteval auto
 const_func() -> int4 {
    cat::page_allocator allocator;
    cat::vec vector = cat::make_vec<int>(allocator);
+   // TODO: This failure should be checked.
    auto _ = vector.resize(8);
 
    vector[0] = 1;
@@ -133,7 +134,7 @@ test(vec) {
    cat::verify(!default_vector.is_empty());
 
    // Resize the vector to be larger, then check it's full.
-   auto _ = default_vector.resize(default_vector.capacity() + 1u).verify();
+   default_vector.resize(default_vector.capacity() + 1u).verify();
    cat::verify(default_vector.is_full());
 
    // Resize the vector to be smaller, then check it's not full.

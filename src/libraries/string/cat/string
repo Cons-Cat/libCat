@@ -462,27 +462,21 @@ compare_strings(str_view string_1, str_view string_2) -> bool;
 using maybe_idx =
    maybe<sentinel<idx, __builtin_bit_cast(idx, limits<uword>::max())>>;
 
-[[nodiscard]]
 auto
 print(str_view string) -> maybe_idx;
 
-[[nodiscard]]
 auto
 println(str_view string) -> maybe_idx;
 
-[[nodiscard]]
 auto
 println() -> maybe_idx;
 
-[[nodiscard]]
 auto
 eprint(str_view string) -> maybe_idx;
 
-[[nodiscard]]
 auto
 eprintln(str_view string) -> maybe_idx;
 
-[[nodiscard]]
 auto
 eprintln() -> maybe_idx;
 

@@ -9,7 +9,7 @@ main() -> int {
    cat::socket_unix<cat::socket_type::stream> listening_socket;
    // A leading null byte puts this path in the abstract namespace.
    listening_socket.path_name = cat::make_str_inplace<108>("\0/tmp/temp.sock");
-   listening_socket.create().verify();
+   listening_socket.create().value();
    listening_socket.bind().verify();
    listening_socket.listen(20).verify();
 
@@ -29,18 +29,18 @@ main() -> int {
 
          // TODO: This comparison is always false.
          if (cat::compare_strings(input, "exit")) {
-            auto _ = cat::println("Closing the server.");
+            cat::println("Closing the server.").or_exit();
             exit = true;
             break;
          }
 
-         auto _ = cat::print("Recieved: ");
-         auto _ = cat::println(input);
+         cat::print("Recieved: ");
+         cat::println(input);
          break;
       }
    }
 
    recieving_socket.close().verify();
    listening_socket.close().verify();
-   auto _ = nix::sys_unlink(listening_socket.path_name.data()).verify();
+   nix::sys_unlink(listening_socket.path_name.data()).verify();
 }

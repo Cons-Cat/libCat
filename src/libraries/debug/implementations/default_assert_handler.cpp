@@ -12,7 +12,9 @@ cat::detail::print_assert_location(source_location const& callsite) {
    // TODO: Truncate to only the last one or two directories.
    auto _ = eprint(callsite.file_name());
    auto _ = eprint("\ncalled from:\n    ");
-   auto _ = eprintln(callsite.function_name());
+   // Any failures to print text will cascade to the last `eprint()` call, so
+   // only handle failure there.
+   eprintln(callsite.function_name()).or_exit();
 }
 
 void
@@ -20,7 +22,7 @@ cat::default_assert_handler(source_location const& callsite) {
    detail::print_assert_location(callsite);
 
    // TODO: Colorize this input prompt.
-   auto _ = print("Press: 1 (Continue), 2 (Debug), 3 (Abort)\n");
+   print("Press: 1 (Continue), 2 (Debug), 3 (Abort)\n").or_exit();
 
    while (true) {
       unsigned char input = nix::read_char().or_exit();
@@ -40,7 +42,7 @@ cat::default_assert_handler(source_location const& callsite) {
             case 2:
                {
                   // Abort the program.
-                  auto _ = eprint("Program aborted!\n");
+                  eprint("Program aborted!\n").or_exit();
                   exit(1);
                }
             default:
@@ -49,6 +51,6 @@ cat::default_assert_handler(source_location const& callsite) {
 
          return;
       }
-      auto _ = eprint("Invalid input!\n");
+      eprint("Invalid input!\n").or_exit();
    }
 }

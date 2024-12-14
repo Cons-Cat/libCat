@@ -512,7 +512,7 @@ struct format_buffer_iterator<allocator_type, outputter_type>
    ~format_buffer_iterator() {
       // `size()` is derived from `format_buffer_base`.
       if (this->size() > 0) {
-         this->flush();
+         this->flush().assert();
       }
    }
 
@@ -525,7 +525,7 @@ struct format_buffer_iterator<allocator_type, outputter_type>
    grow(uword) -> maybe<void> override final {  // NOLINT
       // `size()` is derived from `format_buffer_base`.
       if (this->size() == 256u) {
-         this->flush();
+         this->flush().assert();
       }
       return monostate;
    }

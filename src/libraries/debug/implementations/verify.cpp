@@ -24,8 +24,8 @@ cat::verify(bool invariant_expression, str_view const error_string,
    if (invariant_expression) [[likely]] {
       return;
    }
-   auto _ = eprint("\n");
-   auto _ = eprintln(error_string);
+   auto _ = eprintln();
+   eprintln(error_string).or_exit();
 
    p_assert_handler(callsite);
    __builtin_unreachable();
