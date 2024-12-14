@@ -889,9 +889,17 @@ move(T&& input) -> cat::remove_reference<T>&& {
 }
 
 template <typename T>
-[[nodiscard]]
+[[nodiscard, gnu::nodebug]]
 constexpr auto
-forward(cat::identity<T>& input) -> T&& {
+forward(cat::remove_reference<T>& input) -> T&& {
+   return static_cast<T&&>(input);
+}
+
+template <typename T>
+   requires(!cat::is_lvalue_reference<T>)
+[[nodiscard, gnu::nodebug]]
+constexpr auto
+forward(cat::remove_reference<T>&& input) -> T&& {
    return static_cast<T&&>(input);
 }
 

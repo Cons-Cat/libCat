@@ -166,12 +166,13 @@ inline constexpr cat::monostate_type monostate;
 // Unwrap an error-like container such as `cat::scaredy` or `cat::maybe` iff
 // it holds a value, otherwise propagate it up the call stack, using a statement
 // expression.
-#define CAT_PROPAGATE(container)                   \
-   ({                                              \
-      if (!((container).has_value())) {            \
-         return ::cat::propagate_error(container); \
-      }                                            \
-      (container).value();                         \
+#define CAT_PROPAGATE(container)                                       \
+   ({                                                                  \
+      auto libcat_temp_expr = (container);                             \
+      if (!libcat_temp_expr.has_value()) {                             \
+         return ::cat::propagate_error(::cat::move(libcat_temp_expr)); \
+      }                                                                \
+      ::cat::move(libcat_temp_expr).value();                           \
    })
 
 // `CAT_PROPAGATE` should never be `#undef`'d. The redefinable macro `prop`
@@ -182,12 +183,13 @@ inline constexpr cat::monostate_type monostate;
 
 // Propagate error-like container such as `cat::scaredy` or `cat::maybe` iff
 // it holds an error, otherwise evaluate to a non-error state `or_value`.
-#define CAT_PROPAGATE_OR(container, or_value)      \
-   ({                                              \
-      if (!((container).has_value())) {            \
-         return ::cat::propagate_error(container); \
-      }                                            \
-      (or_value);                                  \
+#define CAT_PROPAGATE_OR(container, or_value)                          \
+   ({                                                                  \
+      auto libcat_temp_expr = (container);                             \
+      if (!libcat_temp_expr.has_value()) {                             \
+         return ::cat::propagate_error(::cat::move(libcat_temp_expr)); \
+      }                                                                \
+      (or_value);                                                      \
    })
 
 // `CAT_PROPAGATE_OR` should never be `#undef`'d. The redefinable macro
@@ -200,10 +202,11 @@ inline constexpr cat::monostate_type monostate;
 // it holds a value, otherwise propagate an error-state `error_value`.
 #define CAT_PROPAGATE_AS(container, or_value) \
    ({                                         \
-      if (!((container).has_value())) {       \
+      auto libcat_temp_expr = (container);    \
+      if (!libcat_temp_expr.has_value()) {    \
          return (or_value);                   \
       }                                       \
-      (container).value();                    \
+      ::cat::move(libcat_temp_expr).value();  \
    })
 
 // `CAT_PROPAGATE_AS` should never be `#undef`'d. The redefinable macro
