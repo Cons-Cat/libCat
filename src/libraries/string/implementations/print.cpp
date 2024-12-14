@@ -2,9 +2,12 @@
 #include <cat/string>
 
 auto
-cat::print(str_view const string) -> iword {
-   // There is no reasonable way for a `write` syscall for `nix::stdout` to
-   // fail, except by running out of buffer space, which fails gracefully
-   // anyways.
-   return nix::sys_write(nix::stdout, string).value();
+cat::print(str_view const string) -> maybe_idx {
+   // The only way this function can fail is either `sys_write()` returns
+   // `nix::linux_error::nospc`, or it prints fewer characters than intended.
+   idx length = prop_as(nix::sys_write(nix::stdout, string), nullopt);
+   if (length < string.size()) {
+      return nullopt;
+   }
+   return length;
 }

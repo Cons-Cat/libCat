@@ -457,29 +457,34 @@ make_zstr_inplace(char const (&string)[deduced_length])
 auto
 compare_strings(str_view string_1, str_view string_2) -> bool;
 
-[[nodiscard]]
-auto
-print(str_view string) -> iword;
+// `idx` is logically 63-bit, so a 64-bit integer is unrepresentable and suits a
+// sentinel value well.
+using maybe_idx =
+   maybe<sentinel<idx, __builtin_bit_cast(idx, limits<uword>::max())>>;
 
 [[nodiscard]]
 auto
-println(str_view string) -> iword;
+print(str_view string) -> maybe_idx;
 
 [[nodiscard]]
 auto
-println() -> iword;
+println(str_view string) -> maybe_idx;
 
 [[nodiscard]]
 auto
-eprint(str_view string) -> iword;
+println() -> maybe_idx;
 
 [[nodiscard]]
 auto
-eprintln(str_view string) -> iword;
+eprint(str_view string) -> maybe_idx;
 
 [[nodiscard]]
 auto
-eprintln() -> iword;
+eprintln(str_view string) -> maybe_idx;
+
+[[nodiscard]]
+auto
+eprintln() -> maybe_idx;
 
 // TODO: Investigate zero-overhead `println` of literals again.
 

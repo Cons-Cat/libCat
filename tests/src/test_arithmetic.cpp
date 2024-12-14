@@ -745,6 +745,8 @@ test(arithmetic) {
    test_uword |= 1u;
    cat::verify(test_uword == 1u);
 
+   static_assert(uword(-1) == cat::limits<uword>::max());
+
    // TODO: Fill this section out.
 
    // Test floats.
