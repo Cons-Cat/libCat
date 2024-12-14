@@ -38,24 +38,24 @@ test(format_strings) {
    // TODO: `formatted_string_int` has an incorrect `.size()`, but the content
    // is correct.
    cat::verify(cat::compare_strings(formatted_string_int, "bb52aa130cc"));
-   // auto _ = cat::println(formatted_string_int);
+   // cat::println(formatted_string_int);
 
    // Test formatting `float`.
    allocator.reset();
    cat::str_view string_float = cat::to_chars(allocator, 1.234f).or_exit();
    cat::verify(cat::compare_strings(string_float.data(), "1.234E0"),
                string_float);
-   // auto _ = cat::println(string_float);
+   // cat::println(string_float);
 
    cat::str_view formatted_string_float =
       cat::fmt(allocator, "a{}b", 1.234f).or_exit();
    cat::verify(cat::compare_strings(formatted_string_float, "a1.234E0b"));
-   // auto _ = cat::println(formatted_string_float);
+   // cat::println(formatted_string_float);
 
    cat::str_view formatted_string_double =
       cat::fmt(allocator, "a{}b", 1.234).or_exit();
    cat::verify(cat::compare_strings(formatted_string_double, "a1.234E0b"));
-   // auto _ = cat::println(formatted_string_double);
+   // cat::println(formatted_string_double);
 
    // Test `cat::to_string_at()`.
    cat::array<char, 100u> array;

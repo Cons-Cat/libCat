@@ -13,6 +13,7 @@ namespace cat {
 void
 test_fail(cat::source_location const& source_location) {
    cat::detail::print_assert_location(source_location);
+   // Gracefully handle print in tests.
    auto _ = cat::println();
    ++tests_failed;
    cat::longjmp(*p_jump_buffer, 2);
@@ -45,7 +46,8 @@ main() -> int {
       (reinterpret_cast<constructor_fn>(test_fns[i]))();
    }
 
-   // `tests_passed` and `tests_failed` are modified within the `CAT_TEST` macro.
+   // `tests_passed` and `tests_failed` are modified within the `CAT_TEST`
+   // macro.
    // TODO: This will leak. An `inline_allocator` should be used.
    auto _ = cat::print(cat::fmt(pager, "\n{} tests passed.\n{} tests failed.\n",
                                 tests_passed, tests_failed)

@@ -78,7 +78,7 @@ read_and_print_file(char* p_file_name) {
 auto
 main(int argc, char* p_argv[]) -> int {
    if (argc == 1) {
-      auto _ = cat::eprint("At least one file path must be provided!");
+      cat::eprint("At least one file path must be provided!");
       cat::exit(1);
    }
 

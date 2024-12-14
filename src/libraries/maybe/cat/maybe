@@ -20,6 +20,23 @@ inline constexpr detail::nullopt_type nullopt;
 template <typename T>
 class maybe;
 
+namespace detail {
+template <typename T>
+consteval auto
+is_maybe_trait(maybe<T> const&) -> bool {
+   return true;
+}
+
+consteval auto
+is_maybe_trait(auto const&) -> bool {
+   return false;
+}
+
+}
+
+template <typename T>
+concept is_maybe = detail::is_maybe_trait(T{});
+
 template <typename char_type, bool null_terminated>
    requires(sizeof(char_type) == 1)
 class basic_str_span;
@@ -472,7 +489,7 @@ struct maybe_compact_storage {
 };
 
 template <typename T>
-class maybe {
+class [[nodiscard]] maybe {
  private:
    using storage_type =
       conditional<is_void<T>,
@@ -732,10 +749,23 @@ class maybe {
    }
 
    // Get the `storage` unconditionally.
+   // If the value should be discarded, consume the `maybe` with `auto _ =`
+   // instead.
    [[nodiscard]]
    constexpr auto
-   value(this auto&& self) -> decltype(auto) {
+   value(this auto&& self) -> decltype(auto)
+      requires(!is_void<T>)
+   {
       return fwd(self).m_storage.value();
+   }
+
+   // Special discard-able overload for `maybe<void>`.
+   // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
+   constexpr auto
+   value() const -> monostate_type
+      requires(is_void<T>)
+   {
+      return monostate;
    }
 
    // Get the value held by a `maybe`, or a fallback value if it does not hold
@@ -767,35 +797,58 @@ class maybe {
 
    // Fail a `cat::assert` check if this `maybe` is empty, otherwise return its
    // value.
-   [[nodiscard]]
    auto
    assert(this auto&& self,
           void (*p_assert_handler)(source_location const&) = assert_handler,
           source_location const& callsite = source_location::current())
-      -> decltype(auto) {
+      -> decltype(auto)
+      requires(!is_void<value_type>)
+   {
       cat::assert(self.has_value(), p_assert_handler, callsite);
       return fwd(self).value();
    }
 
+   // Special discard-able overload for `maybe<void>`.
+   // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
+   auto
+   assert(void (*p_assert_handler)(source_location const&) = assert_handler,
+          source_location const& callsite = source_location::current()) const
+      -> monostate_type
+      requires(is_void<value_type>)
+   {
+      cat::assert(has_value(), p_assert_handler, callsite);
+      return monostate;
+   }
+
    // Fail a `cat::verify` check if this `maybe` is empty, otherwise return its
    // value.
-   // [[nodiscard]] TODO: Make this conditionally `nodiscard`.
    auto
    verify(this auto&& self,
           void (*p_assert_handler)(source_location const&) = assert_handler,
           source_location const& callsite = source_location::current())
-      -> decltype(auto) {
+      -> decltype(auto)
+      requires(!is_void<value_type>)
+   {
       cat::verify(self.has_value(), p_assert_handler, callsite);
       return fwd(self).value();
    }
 
-   // Monadic methods:
+   // Special discard-able overload for `maybe<void>`.
+   auto
+   verify(void (*p_assert_handler)(source_location const&) = assert_handler,
+          source_location const& callsite = source_location::current()) const
+      -> monostate_type
+      requires(is_void<value_type>)
+   {
+      cat::verify(has_value(), p_assert_handler, callsite);
+      return monostate;
+   }
 
-   // TODO: Use an `invocable` `concept`.
+   // Monadic methods:
 
    // If this `maybe` holds a value, transform it by a function. Otherwise,
    // propagate an empty `maybe`.
-   template <typename Function>
+   template <is_invocable<value_type> Function>
    [[nodiscard]]
    constexpr auto
    transform(this auto&& self, Function&& invocable) -> decltype(auto) {
@@ -815,8 +868,7 @@ class maybe {
 
    // Invoke an invocable returning a `maybe` on the value of this `maybe`, and
    // propagate the result.
-   template <typename Function>
-   [[nodiscard]]
+   template <is_invocable<value_type> Function>
    constexpr auto
    and_then(this auto&& self, Function&& invocable) {
       return self.has_value() ? fwd(invocable)(fwd(self).value()) : nullopt;
@@ -824,35 +876,35 @@ class maybe {
 
    // Invoke an invocable if this `maybe` holds no value. This invocable must
    // return either `void` or a `maybe`.
-   template <typename Function>
-   [[nodiscard]]
+   template <is_invocable Function>
    constexpr auto
    or_else(this auto&& self, Function&& invocable) {
-      using U = decltype(invocable());
-      static_assert(is_void<U> || is_specialization<U, maybe>,
+      using return_type = decltype(invocable());
+      static_assert(is_void<return_type> || is_maybe<return_type>,
                     "The invocable parameter `invocable` must return either "
                     "`void` or a specialization of `cat::maybe`.");
 
       if (!fwd(self).m_storage.has_value()) {
-         if constexpr (is_void<U>) {
+         if constexpr (is_void<return_type>) {
             fwd(invocable)();
          } else {
             return fwd(invocable)();
          }
       }
 
-      if constexpr (is_void<U>) {
+      if constexpr (is_void<return_type>) {
          return;
       } else {
-         return U(nullopt);
+         return return_type(nullopt);
       }
    }
 
    // If this `maybe` is empty, terminate the running process
    // immediately. Otherwise, return its value.
-   [[nodiscard]]
    auto
-   or_exit(this auto&& self, iword exit_code = 1) {
+   or_exit(this auto&& self, iword exit_code = 1)
+      requires(!is_void<T>)
+   {
       if (self.has_value()) [[likely]] {
          if constexpr (!is_void<T>) {
             return fwd(self).value();
@@ -865,19 +917,29 @@ class maybe {
       __builtin_unreachable();  // This prevents a build warning.
    }
 
+   // Special discard-able overload for `maybe<void>`.
+   // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
+   auto
+   or_exit(iword exit_code = 1) const -> monostate_type
+      requires(is_void<T>)
+   {
+      if (!this->has_value()) [[unlikely]] {
+         exit(exit_code);
+      }
+      return monostate;
+   }
+
    // If this `maybe` is empty, print an error message and terminate the
    // running process immediately. Otherwise, return its value.
    // These are implemented in `<cat/string>`.
-   [[nodiscard]]
    auto
    or_exit(str_view error_message, iword exit_code = 1) &;
-   [[nodiscard]]
+   // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
    auto
    or_exit(str_view error_message, iword exit_code = 1) const&;
-   [[nodiscard]]
    auto
    or_exit(str_view error_message, iword exit_code = 1) &&;
-   [[nodiscard]]
+   // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
    auto
    or_exit(str_view error_message, iword exit_code = 1) const&&;
 
@@ -899,23 +961,6 @@ class maybe {
 // This deduction guide is required for deducing references.
 template <typename T>
 maybe(T) -> maybe<T>;
-
-namespace detail {
-template <typename T>
-consteval auto
-is_maybe_trait(maybe<T> const&) -> bool {
-   return true;
-}
-
-consteval auto
-is_maybe_trait(auto const&) -> bool {
-   return false;
-}
-
-}
-
-template <typename T>
-concept is_maybe = detail::is_maybe_trait(T{});
 
 template <typename T>
 auto

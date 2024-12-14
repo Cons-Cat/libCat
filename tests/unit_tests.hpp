@@ -28,6 +28,7 @@ test_fail(cat::source_location const& source_location);
                                                                           \
    [[gnu::constructor]]                                                   \
    void cat_register_test##test_name() {                                  \
+      /* This is memory is pre-reserved, so `push_back` cannot fail. */   \
       auto _ = test_fns.push_back(                                        \
          reinterpret_cast<void*>(test_##test_name##_prologue));           \
    }                                                                      \
@@ -35,6 +36,7 @@ test_fail(cat::source_location const& source_location);
    void test_##test_name##_prologue() {                                   \
       /* TODO: Align the whitespace after `:` for 1 and 2 digit tests. */ \
       constexpr ::cat::str_view string = ": test_" #test_name "...\n";    \
+      /* Gracefully handle print failure in unit tests.*/                 \
       auto _ = ::cat::print(string);                                      \
       test_##test_name();                                                 \
       ++tests_passed;                                                     \

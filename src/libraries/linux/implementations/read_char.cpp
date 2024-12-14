@@ -14,6 +14,6 @@ nix::read_char() -> scaredy_nix<char> {
 
    char input;
    auto _ = sys_read(stdin, &input, 1);
-   tty_set_attributes(stdin, tty_set_mode::now, old_settings);
+   tty_set_attributes(stdin, tty_set_mode::now, old_settings).assert();
    return input;
 }

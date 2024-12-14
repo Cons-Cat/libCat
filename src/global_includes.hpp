@@ -127,6 +127,21 @@ struct compact_scaredy {
 };
 
 namespace detail {
+
+template <typename T, T constant_state>
+consteval auto
+is_monostate_storage_impl(monotype_storage<T, constant_state>) -> bool {
+   return true;
+}
+
+consteval auto
+is_monostate_storage_impl(auto) -> bool {
+   return false;
+}
+
+template <typename T>
+inline constexpr bool is_monostate_storage = is_monostate_storage_impl(T());
+
 // This is a function instead of a lambda to fix clangd crashes.
 template <typename T, T in_sentinel>
 constexpr auto
@@ -145,6 +160,10 @@ inline constexpr in_place_type in_place;
 
 // `monostate` can be consumed by wrapper classes to represent no storage.
 inline constexpr cat::monostate_type monostate;
+
+template <typename T>
+inline constexpr bool is_monostate =
+   is_same<T, monostate_type> || detail::is_monostate_storage<T>;
 
 }  // namespace cat
 
