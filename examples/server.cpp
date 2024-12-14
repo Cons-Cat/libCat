@@ -9,22 +9,21 @@ main() -> int {
    cat::socket_unix<cat::socket_type::stream> listening_socket;
    // A leading null byte puts this path in the abstract namespace.
    listening_socket.path_name = cat::make_str_inplace<108>("\0/tmp/temp.sock");
-   listening_socket.create().or_exit();
-   listening_socket.bind().or_exit();
-   listening_socket.listen(20).or_exit();
+   listening_socket.create().verify();
+   listening_socket.bind().verify();
+   listening_socket.listen(20).verify();
 
    cat::socket_unix<cat::socket_type::stream> recieving_socket;
    cat::str_inplace<12> message_buffer;
 
    bool exit = false;
    while (!exit) {
-      recieving_socket.accept(listening_socket).or_exit();
+      recieving_socket.accept(listening_socket).verify();
 
       while (true) {
-         cat::iword message_length =
-            recieving_socket
-               .recieve(message_buffer.data(), message_buffer.size())
-               .or_exit();
+         auto _ = recieving_socket
+                     .recieve(message_buffer.data(), message_buffer.size())
+                     .verify();
 
          cat::str_view const input = message_buffer.data();
 

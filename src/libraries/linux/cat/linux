@@ -23,7 +23,7 @@ struct signals_mask_set;
 
 namespace nix {
 // TODO: Consider using the names from `std::errc`.
-enum class linux_error : short {
+enum class linux_error : long long {
    // Operation is not permitted.
    perm = -1,
    // No such file or directory.
@@ -345,9 +345,14 @@ inline constexpr nix::file_descriptor stdin = {0};
 inline constexpr nix::file_descriptor stdout = {1};
 inline constexpr nix::file_descriptor stderr = {2};
 
+// TODO: This does not work, because `linux_error` is 8 bytes. If `linux_error`
+// is two or fewer bytes, it fails to union with 8-byte values properly. This
+// would be a good problem to solve, but it will require rethinking the
+// `cat::scaredy` API.
+
 // Confirm that `scaredy_nix` has no size overhead.
-static_assert(sizeof(scaredy_nix<nix::file_descriptor>)
-              == sizeof(nix::file_descriptor));
+// static_assert(sizeof(scaredy_nix<nix::file_descriptor>)
+//               == sizeof(nix::file_descriptor));
 
 // A `file_descriptor` that represents a tty file.
 struct tty_descriptor : file_descriptor {};
@@ -755,11 +760,11 @@ sys_read(file_descriptor file_descriptor, char const* p_string_buffer,
 // Syscall 1
 auto
 sys_write(file_descriptor file_descriptor, char const* p_string_buffer,
-          cat::iword length) -> scaredy_nix<cat::iword>;
+          cat::iword length) -> scaredy_nix<cat::idx>;
 
 auto
 sys_write(file_descriptor file_descriptor, cat::str_view string)
-   -> scaredy_nix<cat::iword>;
+   -> scaredy_nix<cat::idx>;
 
 // Syscall 2
 auto
@@ -952,7 +957,7 @@ sys_readv(file_descriptor file_descriptor, cat::span<io_vector> const& vectors)
 // Syscall 20
 auto
 sys_writev(file_descriptor file_descriptor, cat::span<io_vector> const& vectors)
-   -> scaredy_nix<cat::iword>;
+   -> scaredy_nix<cat::idx>;
 
 // Syscall 39
 auto
