@@ -9,7 +9,7 @@ main() -> int {
    cat::socket_unix<cat::socket_type::stream> listening_socket;
    // A leading null byte puts this path in the abstract namespace.
    listening_socket.path_name = cat::make_str_inplace<108>("\0/tmp/temp.sock");
-   listening_socket.create().value();
+   listening_socket.create().verify();
    listening_socket.bind().verify();
    listening_socket.listen(20).verify();
 
@@ -34,8 +34,8 @@ main() -> int {
             break;
          }
 
-         cat::print("Recieved: ");
-         cat::println(input);
+         auto _ = cat::print("Recieved: ");
+         cat::println(input).or_exit();
          break;
       }
    }
