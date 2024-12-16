@@ -10,181 +10,203 @@ namespace cat {
 template <typename T>
 class back_insert_iterator
     : public iterator_interface<back_insert_iterator<T>> {
-  public:
-    using container_type = T;
+ public:
+   using container_type = T;
 
-    constexpr explicit back_insert_iterator(T& input_iterable)
-        : iterable(input_iterable) {
-    }
+   constexpr explicit back_insert_iterator(T& input_iterable)
+       : m_iterable(input_iterable) {
+   }
 
-    template <typename U>
-    constexpr auto operator=(U& value) = delete;
+   template <typename U>
+   constexpr auto
+   operator=(U& value) = delete;
 
-    // `.insert()` is used instead of an overloaded `=` because it might
-    // need to take an allocator parameter.
+   // `.insert()` is used instead of an overloaded `=` because it might
+   // need to take an allocator parameter.
 
-    template <typename U>
-    constexpr auto insert(/* allocator */ auto& allocator,
-                          U& value) -> maybe<back_insert_iterator<T>&> {
-        maybe result = this->iterable.push_back(allocator, value);
-        if (!result.has_value()) {
-            return nullopt;
-        }
-        return *this;
-    }
+   template <typename U>
+   constexpr auto
+   insert(/* allocator */ auto& allocator, U& value)
+      -> maybe<back_insert_iterator<T>&> {
+      maybe result = m_iterable.push_back(allocator, value);
+      if (!result.has_value()) {
+         return nullopt;
+      }
+      return *this;
+   }
 
-    template <typename U>
-    constexpr auto insert(U& value) -> back_insert_iterator<T>& {
-        this->iterable.push_back(value);
-        return *this;
-    }
+   template <typename U>
+   constexpr auto
+   insert(U& value) -> back_insert_iterator<T>& {
+      m_iterable.push_back(value);
+      return *this;
+   }
 
-    template <typename U>
-    constexpr auto insert(/* allocator */ auto& allocator,
-                          U const& value) -> maybe<back_insert_iterator<T>&> {
-        maybe result = this->iterable.push_back(allocator, value);
-        if (!result.has_value()) {
-            return nullopt;
-        }
-        return *this;
-    }
+   template <typename U>
+   constexpr auto
+   insert(/* allocator */ auto& allocator, U const& value)
+      -> maybe<back_insert_iterator<T>&> {
+      maybe result = m_iterable.push_back(allocator, value);
+      if (!result.has_value()) {
+         return nullopt;
+      }
+      return *this;
+   }
 
-    template <typename U>
-    constexpr auto insert(U const& value) -> back_insert_iterator<T>& {
-        this->iterable.push_back(value);
-        return *this;
-    }
+   template <typename U>
+   constexpr auto
+   insert(U const& value) -> back_insert_iterator<T>& {
+      m_iterable.push_back(value);
+      return *this;
+   }
 
-    template <typename U>
-    constexpr auto operator=(U const& value) -> back_insert_iterator<T>& {
-        this->iterable.push_back(value);
-        return *this;
-    }
+   template <typename U>
+   constexpr auto
+   operator=(U const& value) -> back_insert_iterator<T>& {
+      m_iterable.push_back(value);
+      return *this;
+   }
 
-    template <typename U>
-    constexpr auto insert(/* allocator */ auto& allocator,
-                          U&& value) -> maybe<back_insert_iterator<T>&> {
-        maybe result = this->iterable.push_back(allocator, fwd(value));
-        if (!result.has_value()) {
-            return nullopt;
-        }
-        return *this;
-    }
+   template <typename U>
+   constexpr auto
+   insert(/* allocator */ auto& allocator, U&& value)
+      -> maybe<back_insert_iterator<T>&> {
+      maybe result = m_iterable.push_back(allocator, fwd(value));
+      if (!result.has_value()) {
+         return nullopt;
+      }
+      return *this;
+   }
 
-    template <typename U>
-    constexpr auto insert(U&& value) -> back_insert_iterator<T>& {
-        this->iterable.push_back(fwd(value));
-        return *this;
-    }
+   template <typename U>
+   constexpr auto
+   insert(U&& value) -> maybe<back_insert_iterator<T>&> {
+      prop(m_iterable.push_back(fwd(value)));
+      return *this;
+   }
 
-    template <typename U>
-    constexpr auto operator=(U&& value) -> back_insert_iterator<T>& {
-        this->iterable.push_back(fwd(value));
-        return *this;
-    }
+   template <typename U>
+   constexpr auto
+   operator=(U&& value) -> back_insert_iterator<T>& {
+      m_iterable.push_back(fwd(value));
+      return *this;
+   }
 
-    // Dereference operator is no-op.
-    constexpr auto dereference() -> back_insert_iterator<T>& {
-        return *this;
-    }
+   // Dereference operator is no-op.
+   constexpr auto
+   dereference() -> back_insert_iterator<T>& {
+      return *this;
+   }
 
-    // Increment operators are no-op.
-    constexpr auto increment() -> back_insert_iterator<T>& {
-        return *this;
-    }
+   // Increment operators are no-op.
+   constexpr auto
+   increment() -> back_insert_iterator<T>& {
+      return *this;
+   }
 
-  private:
-    T& iterable;
+ private:
+   T& m_iterable;
 };
 
 template <is_iterable T>
 class front_insert_iterator
     : public iterator_interface<front_insert_iterator<T>> {
-  public:
-    using container_type = T;
+ public:
+   using container_type = T;
 
-    constexpr explicit front_insert_iterator(T& input_iterable)
-        : iterable(input_iterable) {
-    }
+   constexpr explicit front_insert_iterator(T& input_iterable)
+       : m_iterable(input_iterable) {
+   }
 
-    template <typename U>
-    constexpr auto operator=(U& value) = delete;
+   template <typename U>
+   constexpr auto
+   operator=(U& value) = delete;
 
-    // `.insert()` is used instead of an overloaded `=` because it might
-    // need to take an allocator parameter.
+   // `.insert()` is used instead of an overloaded `=` because it might
+   // need to take an allocator parameter.
 
-    template <typename U>
-    constexpr auto insert(/* allocator */ auto& allocator,
-                          U& value) -> maybe<front_insert_iterator<T>&> {
-        maybe result = this->iterable.push_front(allocator, value);
-        if (!result.has_value()) {
-            return nullopt;
-        }
-        return *this;
-    }
+   template <typename U>
+   constexpr auto
+   insert(/* allocator */ auto& allocator, U& value)
+      -> maybe<front_insert_iterator<T>&> {
+      maybe result = m_iterable.push_front(allocator, value);
+      if (!result.has_value()) {
+         return nullopt;
+      }
+      return *this;
+   }
 
-    template <typename U>
-    constexpr auto insert(U& value) -> front_insert_iterator<T>& {
-        this->iterable.push_front(value);
-        return *this;
-    }
+   template <typename U>
+   constexpr auto
+   insert(U& value) -> front_insert_iterator<T>& {
+      m_iterable.push_front(value);
+      return *this;
+   }
 
-    template <typename U>
-    constexpr auto insert(/* allocator */ auto& allocator,
-                          U const& value) -> maybe<front_insert_iterator<T>&> {
-        maybe result = this->iterable.push_front(allocator, value);
-        if (!result.has_value()) {
-            return nullopt;
-        }
-        return *this;
-    }
+   template <typename U>
+   constexpr auto
+   insert(/* allocator */ auto& allocator, U const& value)
+      -> maybe<front_insert_iterator<T>&> {
+      maybe result = m_iterable.push_front(allocator, value);
+      if (!result.has_value()) {
+         return nullopt;
+      }
+      return *this;
+   }
 
-    template <typename U>
-    constexpr auto insert(U const& value) -> front_insert_iterator<T>& {
-        this->iterable.push_front(value);
-        return *this;
-    }
+   template <typename U>
+   constexpr auto
+   insert(U const& value) -> front_insert_iterator<T>& {
+      m_iterable.push_front(value);
+      return *this;
+   }
 
-    template <typename U>
-    constexpr auto operator=(U const& value) -> front_insert_iterator<T>& {
-        this->iterable.push_front(value);
-        return *this;
-    }
+   template <typename U>
+   constexpr auto
+   operator=(U const& value) -> front_insert_iterator<T>& {
+      m_iterable.push_front(value);
+      return *this;
+   }
 
-    template <typename U>
-    constexpr auto insert(/* allocator */ auto& allocator,
-                          U&& value) -> maybe<front_insert_iterator<T>&> {
-        maybe result = this->iterable.push_front(allocator, fwd(value));
-        if (!result.has_value()) {
-            return nullopt;
-        }
-        return *this;
-    }
+   template <typename U>
+   constexpr auto
+   insert(/* allocator */ auto& allocator, U&& value)
+      -> maybe<front_insert_iterator<T>&> {
+      maybe result = m_iterable.push_front(allocator, fwd(value));
+      if (!result.has_value()) {
+         return nullopt;
+      }
+      return *this;
+   }
 
-    template <typename U>
-    constexpr auto insert(U&& value) -> front_insert_iterator<T>& {
-        this->iterable.push_front(fwd(value));
-        return *this;
-    }
+   template <typename U>
+   constexpr auto
+   insert(U&& value) -> maybe<front_insert_iterator<T>&> {
+      prop(m_iterable.push_front(fwd(value)));
+      return *this;
+   }
 
-    template <typename U>
-    constexpr auto operator=(U&& value) -> front_insert_iterator<T>& {
-        this->iterable.push_front(fwd(value));
-        return *this;
-    }
+   template <typename U>
+   constexpr auto
+   operator=(U&& value) -> front_insert_iterator<T>& {
+      m_iterable.push_front(fwd(value));
+      return *this;
+   }
 
-    // Dereference operator is no-op.
-    constexpr auto dereference() -> front_insert_iterator<T>& {
-        return *this;
-    }
+   // Dereference operator is no-op.
+   constexpr auto
+   dereference() -> front_insert_iterator<T>& {
+      return *this;
+   }
 
-    // Increment operators are no-op.
-    constexpr auto increment() -> front_insert_iterator<T>& {
-        return *this;
-    }
+   // Increment operators are no-op.
+   constexpr auto
+   increment() -> front_insert_iterator<T>& {
+      return *this;
+   }
 
-  private:
-    T& iterable;
+ private:
+   T& m_iterable;
 };
 
 }  // namespace cat

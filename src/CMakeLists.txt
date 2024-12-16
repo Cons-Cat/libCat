@@ -157,6 +157,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/format/cat/detail/itoa_jeaiii.hpp
   ${CATLIB}/functional/cat/functional
   ${CATLIB}/iterator/cat/iterator
+  ${CATLIB}/iterator/cat/insert_iterators
   ${CATLIB}/limits/cat/limits
   ${CATLIB}/linux/cat/linux
   ${CATLIB}/list/cat/list
