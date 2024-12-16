@@ -7,6 +7,7 @@
 // `CMakeLists.txt` in this repository's top level directory does this.
 
 #include <cat/compare>
+#include <cat/sanitizer>
 
 namespace cat::detail {
 template <typename F>

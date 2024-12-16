@@ -18,38 +18,67 @@ void
 __asan_unpoison_memory_region(void const volatile* p_address, uword size);
 
 // These functions are only for debugging.
+[[gnu::used]]
 void
 __asan_describe_address(void* p_address);
-auto
+
+[[gnu::used]]
+extern auto
 __asan_address_is_poisoned(void const volatile* p_address) -> int;
+
+[[gnu::used]]
 auto
 __asan_region_is_poisoned(void* p_begin, uword size) -> void*;
+
+[[gnu::used]]
 auto
 __asan_report_present() -> int;
+
+[[gnu::used]]
 auto
 __asan_get_report_pc() -> void*;
+
+[[gnu::used]]
 auto
 __asan_get_report_bp() -> void*;
+
+[[gnu::used]]
 auto
 __asan_get_report_sp() -> void*;
+
+[[gnu::used]]
 auto
 __asan_get_report_address() -> void*;
+
+[[gnu::used]]
 auto
 __asan_get_report_access_type() -> int;
+
+[[gnu::used]]
 auto
 __asan_get_report_access_size() -> __SIZE_TYPE__;
+
+[[gnu::used]]
 auto
 __asan_get_report_description() -> char const*;
+
+[[gnu::used]]
 auto
 __asan_locate_address(void* p_address, char* p_name, uword name_size,
                       void** p_region_address, uword* p_region_size)
    -> char const*;
+
+[[gnu::used]]
 auto
 __asan_get_alloc_stack(void* p_heap, void** pp_trace, uword size,
                        int* p_thread_id) -> __SIZE_TYPE__;
+
+[[gnu::used]]
 auto
 __asan_get_free_stack(void* p_heap, void** pp_trace, uword size,
                       int* p_thread_id) -> __SIZE_TYPE__;
+
+[[gnu::used]]
 void
 __asan_get_shadow_mapping(uword* p_shadow_scale, uword* p_shadow_offset);
 }
