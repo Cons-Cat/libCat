@@ -104,11 +104,11 @@ class basic_list
    using iterator = detail::list_iterator<T, is_doubly_linked>;
 
    constexpr basic_list() = delete(
-      "`cat::list` cannot be created without an "
-      "allocator. Call `cat::make_list()` instead!");
+      "`cat::list` cannot be created without an allocator. Call "
+      "`cat::make_list()` instead!");
 
    constexpr basic_list(basic_list&& other_list)
-       : m_storage(move(other_list).m_storage),
+       : m_storage(other_list.m_storage),
          m_size(other_list.m_size),
          m_allocator(other_list.m_allocator) {
       other_list.m_storage.m_p_head = nullptr;
@@ -119,9 +119,9 @@ class basic_list
    }
 
    auto
-   operator=(basic_list const&) -> basic_list& =
-      delete("Implicit copying of `cat::list` is forbidden. Call "
-             "`.clone() or move instead!");
+   operator=(basic_list const&)
+      -> basic_list& = delete("Implicit copying of `cat::list` is forbidden. "
+                              "Call `.clone() or move instead!");
 
    constexpr auto
    operator=(basic_list&& other_list) -> basic_list& {
@@ -310,7 +310,7 @@ class basic_list
          // Copy over the contained element exactly.
          new_node.storage = *it;
 
-         new_node.p_next_node = p_current + 1;
+         new_node.p_next_node = p_current + 1u;
          if constexpr (is_doubly_linked) {
             new_node.p_previous_node = p_previous;
          }
@@ -370,7 +370,7 @@ class basic_list
 
    // Remove and deallocate an element from this list.
    auto
-   erase(iterator where) -> maybe<iterator>
+   erase(iterator where) -> iterator
       requires(is_doubly_linked)
    {
       if (m_size == 0) [[unlikely]] {
@@ -622,13 +622,13 @@ initialize_list_variadic(span<T>& list_nodes, T* p_previous, auto&& current,
    if constexpr (sizeof...(next) > 0u) {
       // Construct a node at this address.
       T* p_current = list_nodes.data();
-      new (p_current) T(p_current + 1, p_previous, fwd(current));
+      new (p_current) T(p_current + 1u, p_previous, fwd(current));
       // Recurse to the next node.
-      list_nodes = list_nodes.last(list_nodes.size() - 1);
+      list_nodes = list_nodes.last(list_nodes.size() - 1u);
       initialize_list_variadic<T>(list_nodes, p_current, fwd(next)...);
    } else {
       // Final node.
-      T* p_current = p_previous + 1;
+      T* p_current = p_previous + 1u;
       new (p_current) T(nullptr, p_previous, fwd(current));
    }
 }
@@ -640,49 +640,49 @@ initialize_slist_variadic(span<T>& list_nodes, T* p_previous, auto&& current,
    if constexpr (sizeof...(next) > 0u) {
       // Construct a node at this address.
       T* p_current = list_nodes.data();
-      new (p_current) T(p_current + 1, fwd(current));
+      new (p_current) T(p_current + 1u, fwd(current));
       // Recurse to the next node.
-      list_nodes = list_nodes.last(list_nodes.size() - 1);
+      list_nodes = list_nodes.last(list_nodes.size() - 1u);
       initialize_list_variadic<T>(list_nodes, p_current, fwd(next)...);
    } else {
       // Final node.
-      T* p_current = p_previous + 1;
+      T* p_current = p_previous + 1u;
       new (p_current) T(nullptr, fwd(current));
    }
 }
 
 template <typename T>
 void
-initialize_list(span<T>& list_nodes, T* p_previous, idx remaining,
-                decltype(T::storage) const& value) {
-   if (remaining > 0u) {
+initialize_list_filled(span<T> list_nodes, T* p_previous,
+                       decltype(T::storage) const& value) {
+   T* p_current = list_nodes.data();
+
+   if (list_nodes.size() > 1u) {
       // Construct a node at this address.
-      T* p_current = list_nodes.data();
-      new (p_current) T(p_current + 1, p_previous, value);
+      new (p_current) T(p_current + 1u, p_previous, value);
       // Recurse to the next node.
-      list_nodes = list_nodes.last(list_nodes.size() - 1);
-      initialize_list<T>(list_nodes, p_current, remaining - 1u, value);
+      list_nodes = list_nodes.last(list_nodes.size() - 1u);
+      initialize_list_filled<T>(list_nodes, p_current, value);
    } else {
       // Final node.
-      T* p_current = p_previous + 1;
       new (p_current) T(nullptr, p_previous, value);
    }
 }
 
 template <typename T>
 void
-initialize_slist(span<T>& list_nodes, T* p_previous, idx remaining,
-                 decltype(T::storage) const& value) {
-   if (remaining > 0u) {
+initialize_slist_filled(span<T> list_nodes, T* p_previous,
+                        decltype(T::storage) const& value) {
+   if (list_nodes.size() > 1u) {
       // Construct a node at this address.
       T* p_current = list_nodes.data();
-      new (p_current) T(p_current + 1, value);
+      new (p_current) T(p_current + 1u, value);
       // Recurse to the next node.
-      list_nodes = list_nodes.last(list_nodes.size() - 1);
-      initialize_list<T>(list_nodes, p_current, remaining - 1u, value);
+      list_nodes = list_nodes.last(list_nodes.size() - 1u);
+      initialize_slist_filled<T>(list_nodes, p_current, value);
    } else {
       // Final node.
-      T* p_current = p_previous + 1;
+      T* p_current = p_previous + 1u;
       new (p_current) T(nullptr, value);
    }
 }
@@ -718,6 +718,9 @@ make_list(allocator_type& allocator, U&& value, Args&&... remaining)
 
       // TODO: Test `make_list` with exactly 1 value.
       new_list.m_storage.m_p_head = nodes.data();
+      new_list.m_storage.m_p_tail = nodes.data() + nodes.size() - 1u;
+      new_list.m_size = nodes.size();
+
       detail::initialize_list_variadic<node>(nodes, nullptr, value,
                                              fwd(remaining)...);
    } else {
@@ -726,10 +729,12 @@ make_list(allocator_type& allocator, U&& value, Args&&... remaining)
       p_new_node->p_next_node = nullptr;
       p_new_node->p_previous_node = nullptr;
       p_new_node->storage = fwd(value);
+
       new_list.m_storage.m_p_head = p_new_node;
+      new_list.m_size = 1u;
    }
 
-   return maybe(move(new_list));
+   return move(new_list);
 }
 
 // Make a `list` initialized by a pack.
@@ -752,10 +757,13 @@ make_list_filled(allocator_type& allocator, idx count, T const& value)
    using node = detail::list_node<T>;
    cat::span<node> nodes = prop(allocator.template alloc_multi<node>(count));
 
-   detail::initialize_list<node>(nodes, nodes.data(), count, value);
    new_list.m_storage.m_p_head = nodes.data();
+   new_list.m_storage.m_p_tail = nodes.data() + count - 1u;
+   new_list.m_size = count;
 
-   return maybe(move(new_list));
+   detail::initialize_list_filled<node>(nodes, nodes.data(), value);
+
+   return move(new_list);
 }
 
 // Make an empty `slist`.
@@ -782,6 +790,7 @@ make_slist(allocator_type& allocator, U&& value, Args&&... remaining)
 
       // TODO: Test `make_slist` with exactly 1 value.
       new_slist.m_storage.m_p_head = nodes.data();
+      new_slist.m_size = nodes.size();
       detail::initialize_slist_variadic<node>(nodes, nullptr, value,
                                               fwd(remaining)...);
    } else {
@@ -790,10 +799,12 @@ make_slist(allocator_type& allocator, U&& value, Args&&... remaining)
       p_new_node->p_next_node = nullptr;
       p_new_node->p_previous_node = nullptr;
       p_new_node->storage = fwd(value);
+
       new_slist.m_storage.m_p_head = p_new_node;
+      new_slist.m_size = 1u;
    }
 
-   return maybe(move(new_slist));
+   return move(new_slist);
 }
 
 // Make an `slist` initialized by a pack.
@@ -816,10 +827,12 @@ make_slist_filled(allocator_type& allocator, idx count, T const& value)
    using node = detail::slist_node<T>;
    cat::span<node> nodes = prop(allocator.template alloc_multi<node>(count));
 
-   detail::initialize_slist<node>(nodes, nodes.data(), count, value);
    new_slist.m_storage.m_p_head = nodes.data();
+   new_slist.m_size = count;
 
-   return maybe(move(new_slist));
+   detail::initialize_slist_filled<node>(nodes, nodes.data(), value);
+
+   return move(new_slist);
 }
 
 #pragma GCC diagnostic pop

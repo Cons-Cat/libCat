@@ -241,7 +241,7 @@ class random_access_iterable_interface
       // `cat::forward` must be called on last use, and because argument
       // evaluation order is unspecified, it cannot be called inside an
       // argument list.
-      auto size = collection.size() - 1;
+      auto size = collection.size() - 1u;
       auto* p_data = fwd(collection).data();
       return reverse_iterator_adaptor(
          detail::collection_iterator(size, p_data));
@@ -356,7 +356,7 @@ class collection_interface {
       requires(is_array_like)
    {
       cat::assert(this->self().size() > 0);
-      return this->self_mut().data()[this->self().size().raw - 1];
+      return this->self_mut().data()[this->self().size().raw - 1u];
    }
 
    [[nodiscard]]
