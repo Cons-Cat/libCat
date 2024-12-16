@@ -87,6 +87,7 @@ test(list) {
 
    list_1.clear();
    list_2.clear();
+   cat::verify(list_2.size() == 0);
 
    // Deep copy a `list`.
    auto _ = list_1.push_front(3).verify();
@@ -113,33 +114,43 @@ test(list) {
    cat::verify(*(list_5.begin() + 3u) == 3);
 
    // Test moving `list`.
-   list_1.push_front(2);
-   list_1.push_front(1);
-   list_1.push_front(0);
+   list_1.push_front(2).verify();
+   list_1.push_front(1).verify();
+   list_1.push_front(0).verify();
    cat::list list_4 = mov list_1;
+   cat::verify(list_4.size() == 3);
    cat::verify(list_4.front() == 0);
    cat::verify(*(list_4.begin() + 1u) == 1);
    cat::verify(*(list_4.begin() + 2u) == 2);
 
    // Test initialized `list`.
    cat::list list_init_1 = cat::make_list(allocator, 1).verify();
+   cat::verify(list_init_1.size() == 1);
    auto list_it = list_init_1.begin();
    cat::verify(*list_it == 1);
 
    cat::list list_init_2 = cat::make_list(allocator, 1, 2, 3).verify();
+   cat::verify(list_init_2.size() == 3);
    list_it = list_init_2.begin();
    cat::verify(*list_it == 1);
    cat::verify(*++list_it == 2);
    cat::verify(*++list_it == 3);
 
-   cat::list list_init_3 = cat::make_list_filled(allocator, 4u, 1).verify();
-   for (int4 i : list_init_3) {
-      cat::verify(i == 1);
+   // Test filling out a `list`.
+   cat::list list_fill = cat::make_list_filled(allocator, 4u, 1).verify();
+   cat::verify(list_fill.size() == 4);
+   {
+      auto it = list_fill.begin();
+      for (idx i = 0; i < list_fill.size(); ++i) {
+         cat::verify(*it == 1);
+         ++it;
+      }
    }
 
    // Test propagating allocation failure.
    cat::null_allocator null_alloc = cat::make_null_allocator();
    cat::list null_list = cat::make_list<int>(null_alloc).value();
+   cat::verify(null_list.size() == 0);
    cat::verify(!null_list.insert(null_list.begin(), 1).has_value());
    cat::verify(!null_list.push_back(1).has_value());
    cat::verify(!null_list.push_front(1).has_value());
@@ -149,15 +160,28 @@ test(list) {
 
    // Test `slist`.
    cat::slist slist_1 = cat::make_slist<int4>(allocator).verify();
+   cat::verify(slist_1.size() == 0);
    auto _ = slist_1.push_front(0).verify();
    auto _ = slist_1.emplace_front(1).verify();
    // auto _ = slist_1.insert_after(slist_1.begin() + 1, 2).verify();
    // auto _ = slist_1.emplace_after(slist_1.end(), 3).verify();
+   cat::verify(slist_1.size() == 2);
 
    cat::verify(*slist_1.begin() == 1);
    cat::verify(*(slist_1.begin() + 1u) == 0);
    // cat::verify(*(slist_1.begin() + 2) == 2);
    // cat::verify(*(slist_1.begin() + 3) == 3);
+
+   // Test filling out an `slist`.
+   cat::slist slist_fill = cat::make_slist_filled(allocator, 4u, 1).verify();
+   cat::verify(slist_fill.size() == 4);
+   {
+      auto it = slist_fill.begin();
+      for (idx i = 0; i < slist_fill.size(); ++i) {
+         cat::verify(*it == 1);
+         ++it;
+      }
+   }
 
    // Deep copy a `slist`.
    cat::slist slist_2 = slist_1.clone(allocator).verify();
@@ -190,10 +214,10 @@ test(list) {
    cat::list back_list = cat::make_list<int4>(allocator).verify();
    cat::back_insert_iterator back_iterator(back_list);
    cat::front_insert_iterator front_iterator(back_list);
-   back_iterator.insert(10);
+   back_iterator.insert(10).verify();
    cat::verify(back_list.front() == 10);
 
-   front_iterator.insert(2);
+   front_iterator.insert(2).verify();
    cat::verify(back_list.front() == 2);
    cat::verify(back_list.back() == 10);
 }
