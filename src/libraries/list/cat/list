@@ -297,7 +297,7 @@ class basic_list
          if constexpr (is_doubly_linked) {
             cat::assert(node.p_previous_node == nullptr);
          }
-         return move(new_list);
+         return new_list;
       }
 
       node_type* p_current = new_nodes.data();
@@ -326,7 +326,7 @@ class basic_list
          last_node.p_previous_node = p_current;
       }
 
-      return move(new_list);
+      return new_list;
    }
 
    // Allocate a node and insert it into this list before the position of
@@ -734,7 +734,7 @@ make_list(allocator_type& allocator, U&& value, Args&&... remaining)
       new_list.m_size = 1u;
    }
 
-   return move(new_list);
+   return new_list;
 }
 
 // Make a `list` initialized by a pack.
@@ -763,7 +763,7 @@ make_list_filled(allocator_type& allocator, idx count, T const& value)
 
    detail::initialize_list_filled<node>(nodes, nodes.data(), value);
 
-   return move(new_list);
+   return new_list;
 }
 
 // Make an empty `slist`.
@@ -804,7 +804,7 @@ make_slist(allocator_type& allocator, U&& value, Args&&... remaining)
       new_slist.m_size = 1u;
    }
 
-   return move(new_slist);
+   return new_slist;
 }
 
 // Make an `slist` initialized by a pack.
@@ -832,7 +832,7 @@ make_slist_filled(allocator_type& allocator, idx count, T const& value)
 
    detail::initialize_slist_filled<node>(nodes, nodes.data(), value);
 
-   return move(new_slist);
+   return new_slist;
 }
 
 #pragma GCC diagnostic pop
