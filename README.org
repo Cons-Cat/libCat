@@ -6,21 +6,15 @@
 libCat is a non-POSIX compliant C++26 runtime.
 It has no pthreads nor =malloc()=, and by extension no exceptions.
 It has type-safe arithmetic, SIMD, fast syscalls, CRTP interfaces,
-hierarchical memory allocators, and value-based error handling, among many other features.
-
-[[http://wgoo.ch/overflow.html]]
-
-[[https://youtu.be/BrBb0mqoIAc]]
-
-More essays and videos will come in the future.
 
 * Building
-libCat requires a recent development version of GCC 15 or Clang 20 from the =trunk= branch.
+libCat requires a recent development version of Clang 20 from the =trunk= branch.
 Compiling libCat is only routinely tested using =ninja=.
 Configuring the build requires CMake 3.29.
 #+BEGIN_SRC
-  $ cmake -B build/ -G 'Ninja Multi-Config' # or: cmake -B build -GNinja
-  $ cmake --build build/  # or: ninja -C build/
+  $ export CXX=clang # Or any path to a Clang 20 executable
+  $ cmake -B build/ -G 'Ninja Multi-Config'
+  $ cmake --build build/
   $ ./build/tests/Debug/unit_tests
 #+END_SRC
 
