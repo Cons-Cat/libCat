@@ -15,7 +15,7 @@ class no_type {
 
    constexpr no_type(auto input)
       requires(sizeof(input) == 1)
-       : m_q_storage(__builtin_bit_cast(unsigned char, input)) {
+       : m_b_storage(__builtin_bit_cast(unsigned char, input)) {
    }
 
    constexpr no_type(auto input)
