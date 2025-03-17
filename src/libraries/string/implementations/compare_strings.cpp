@@ -2,9 +2,9 @@
 #include <cat/simd>
 #include <cat/string>
 
-// TODO: Make this `constexpr`.
 auto
-cat::compare_strings(str_view const string_1, str_view const string_2) -> bool {
+cat::detail::compare_strings_detail(str_view const string_1,
+                                    str_view const string_2) -> bool {
    if (string_1.size() != string_2.size()) {
       return false;
    }
@@ -54,7 +54,6 @@ cat::compare_strings(str_view const string_1, str_view const string_2) -> bool {
       return false;
    }
 
-   // TODO: Extract this to a scalar function.
    // Compare remaining characters individually.
    for (idx i = 0u; i < length_iterator;
         ++i, ++p_string_1_iterator, ++p_string_2_iterator) {

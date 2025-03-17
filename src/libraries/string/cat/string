@@ -181,10 +181,11 @@ class basic_str_span : public span<char_type> {
       return *this;
    }
 
-   // TODO:
-   // constexpr auto
-   // operator==(basic_str_span const& other_string) {
-   // }
+   friend constexpr auto
+   operator==(basic_str_span const& this_string,
+              basic_str_span const& other_string) {
+      return compare_strings(this_string, other_string);
+   }
 
    // TODO: Make these member functions `const`.
 
@@ -453,9 +454,38 @@ make_zstr_inplace(char const (&string)[deduced_length])
    return new_string;
 }
 
+[[nodiscard, clang::no_builtin]]
+constexpr auto
+compare_strings_scalar(str_view const string_1, str_view const string_2)
+   -> bool {
+   if (string_1.size() != string_2.size()) {
+      return false;
+   }
+
+   for (idx i = 0u; i < string_1.size(); ++i) {
+      if (string_1[i] != string_2[i]) {
+         return false;
+      }
+   }
+
+   return true;
+}
+
+namespace detail {
 [[nodiscard]]
 auto
-compare_strings(str_view string_1, str_view string_2) -> bool;
+compare_strings_detail(str_view string_1, str_view string_2) -> bool;
+}
+
+[[nodiscard]]
+constexpr auto
+compare_strings(str_view string_1, str_view string_2) -> bool {
+   if consteval {
+      return compare_strings_scalar(string_1, string_2);
+   } else {
+      return detail::compare_strings_detail(string_1, string_2);
+   }
+}
 
 // `idx` is logically 63-bit, so a 64-bit integer is unrepresentable and suits a
 // sentinel value well.
