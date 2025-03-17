@@ -48,6 +48,7 @@ target_include_directories(cat INTERFACE
   ${CATLIB}/cast/
   ${CATLIB}/vec/
   ${CATLIB}/ring/
+  ${CATLIB}/enum/
 )
 
 # TODO: Group and annotate these lines by their corresponding header.
@@ -202,5 +203,6 @@ set(CAT_HEADER_FILES
   ${CATLIB}/bit/implementations/align_up.tpp
   ${CATLIB}/bit/implementations/align_down.tpp
   ${CATLIB}/tuple/implementations/tuple_cat.tpp
+  ${CATLIB}/enum/cat/enum
   PARENT_SCOPE
 )

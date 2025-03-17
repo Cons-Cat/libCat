@@ -1,0 +1,54 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/string>
+
+namespace cat {
+
+template <typename T>
+consteval auto
+type_name() -> cat::str_view {
+   char const* p_string = __PRETTY_FUNCTION__;
+   cat::idx size = sizeof(__PRETTY_FUNCTION__) - 2u;
+
+   // Scan backwards from the function signature to find whitespace that
+   // delimits the beginning of this type name.
+   for (cat::idx i = size; i >= 0u; --i) {
+      if (p_string[i] == '=') {
+         // There is a whitespace after the `=` in this signature, so we add 1
+         // to the string pointer to compensate.
+         p_string = p_string + i + 2u;
+         size -= i + 2u;
+         return {p_string, size};
+      }
+   }
+   __builtin_unreachable();
+}
+
+consteval auto
+nameof([[maybe_unused]] auto&& value) -> cat::str_view {
+   return type_name<cat::remove_reference<decltype(value)>>();
+}
+
+template <auto enum_value>
+   requires(cat::is_enum<decltype(enum_value)>)
+consteval auto
+enum_name_from_nttp() -> cat::str_view {
+   char const* p_string = __PRETTY_FUNCTION__ + 34u;
+   cat::idx size = sizeof(__PRETTY_FUNCTION__) - 38u;
+   // Scan backwards from the function signature to find `enum_value`'s word
+   // boundary, and trim everything else from the string. This boundary is
+   // either a scope-resolution operator or whitespace for scoped and unscoped
+   // enums respectively.
+   for (cat::idx i = size; i >= 0u; --i) {
+      if (p_string[i] == ':' || p_string[i] == ' ') {
+         p_string = p_string + i + 1u;
+         size -= i - 1u;
+         return {p_string, size};
+      }
+   }
+   __builtin_unreachable();
+}
+
+}  // namespace cat
