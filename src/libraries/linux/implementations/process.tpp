@@ -38,11 +38,8 @@ nix::process::spawn(cat::is_allocator auto& allocator,
 
       // Unary `+` converts this lambda to function pointer.
       static auto* p_entry = +[](cat::tuple<F, Args...>* p_arguments) {
-         // TODO: When supported, try:
-         // auto&& [fn, pack_args...] = *p_arguments;
-
-         auto&& [fn] = *p_arguments;
-         fwd(fn)();
+         auto&& [fn, ... pack_args] = *p_arguments;
+         fwd(fn)(fwd(pack_args)...);
       };
 
       return this->spawn_impl(p_stack_bottom, initial_stack_size,
