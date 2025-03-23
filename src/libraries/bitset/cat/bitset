@@ -14,7 +14,10 @@ class [[clang::trivial_abi]]
 bitset {
  private:
    template <idx, is_unsigned_integral... types>
-      requires((sizeof(types...[0]) == sizeof(types)) && ...)
+   // TODO: Clang had a regression which broke template equivalence here.
+   // Re-enable this constraint when possible.
+
+   // requires((sizeof(types...[0]) == sizeof(types)) && ...)
    friend constexpr auto
    make_bitset(types... values);
 
@@ -380,7 +383,7 @@ bitset(char const (&bitstring)[bits_count]) -> bitset<bits_count - 1u>;
 template <idx bits_count, is_unsigned_integral... types>
 // Ensure that all `types` are the same size. E.g., `uint4` and `unsigned` are
 // compatible here.
-   requires((sizeof(types...[0]) == sizeof(types)) && ...)
+// requires((sizeof(types...[0]) == sizeof(types)) && ...)
 [[nodiscard]]
 constexpr auto
 make_bitset(types... values) {

@@ -19,8 +19,8 @@ class [[clang::trivial_abi, gsl::Pointer(T)]] span
       public random_access_iterable_interface<T> {
  public:
    constexpr span() = default;
-   constexpr span(span<T> const& [[clang::lifetimebound]]) = default;
-   constexpr span(span<T>&& [[clang::lifetimebound]]) = default;
+   constexpr span(span<T> const&) = default;
+   constexpr span(span<T>&&) = default;
 
    // Construct a `span` as `{address, length}`.
    constexpr span(T* p_in_data [[clang::lifetimebound]], idx in_length)
