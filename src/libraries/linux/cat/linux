@@ -1227,6 +1227,7 @@ struct process {
    process(process const&) = delete;
 
    template <typename... Args, cat::is_invocable<Args...> F>
+   [[gnu::no_sanitize_address, gnu::no_sanitize("undefined")]]
    auto
    spawn(cat::is_allocator auto& allocator, cat::idx initial_stack_size,
          cat::idx thread_local_buffer_size, F&& function, Args&&... arguments)

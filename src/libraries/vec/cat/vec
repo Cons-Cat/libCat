@@ -36,8 +36,8 @@ vec : public collection_interface<vec<T, allocator_type>, T>,
    make_vec_filled(allocator&, idx, U const&) -> maybe<vec<U, allocator>>;
 
  public:
-   constexpr vec() = delete("`cat::vec` cannot be created without an "
-                            "allocator. Call `cat::make_vec()` instead!");
+   constexpr vec() = delete ("`cat::vec` cannot be created without an "
+                             "allocator. Call `cat::make_vec()` instead!");
 
    // Empty a vector upon move.
    constexpr vec(vec&& other)
@@ -52,8 +52,8 @@ vec : public collection_interface<vec<T, allocator_type>, T>,
 
    auto
    operator=(vec const&)
-      -> vec& = delete("Implicit copying of `cat::vec` is forbidden. Call "
-                       "`.clone() or move instead!");
+      -> vec& = delete ("Implicit copying of `cat::vec` is forbidden. Call "
+                        "`.clone() or move instead!");
 
    // Empty a vector upon move.
    constexpr auto
@@ -61,10 +61,12 @@ vec : public collection_interface<vec<T, allocator_type>, T>,
       m_p_data = other.m_p_data;
       m_current_size = other.m_current_size;
       m_current_capacity = other.m_current_capacity;
-      m_allocator = other.m_allocator;
+      // TODO: This line doesn't rebind the allocator reference!
+      // m_allocator = other.m_allocator;
       other.m_p_data = nullptr;
       other.m_current_size = 0;
       other.m_current_capacity = 0;
+      return *this;
    }
 
    constexpr ~vec() {
@@ -87,6 +89,7 @@ vec : public collection_interface<vec<T, allocator_type>, T>,
    constexpr vec(vec const& other_vector) = default;
 
    // Reallocate memory, or make an initial allocation.
+   [[clang::optnone]]
    constexpr auto
    internal_allocate(idx minimum_capacity) {
       if (m_p_data == nullptr) {

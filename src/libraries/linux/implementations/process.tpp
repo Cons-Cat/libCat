@@ -5,6 +5,8 @@
 #include <cat/linux>
 
 template <typename... Args, cat::is_invocable<Args...> F>
+// The child thread exits with a false-positive from asan.
+[[gnu::no_sanitize_address, gnu::no_sanitize("undefined")]]
 auto
 nix::process::spawn(cat::is_allocator auto& allocator,
                     cat::idx const initial_stack_size,
@@ -25,7 +27,9 @@ nix::process::spawn(cat::is_allocator auto& allocator,
 
    cat::byte* p_stack_bottom = memory.data();
 
-   if constexpr (sizeof...(arguments) == 0 && __is_pointer(F)) {
+   if constexpr (sizeof...(arguments) == 0
+                 && (__is_pointer(F)
+                     || __is_function(__remove_reference_t(F)))) {
       // If there are no arguments, and `function` is a pointer, it can be
       // called almost directly.
       return this->spawn_impl(p_stack_bottom, initial_stack_size,
@@ -34,13 +38,15 @@ nix::process::spawn(cat::is_allocator auto& allocator,
    } else {
       // If there are arguments, `function` must be wrapped in a lambda that has
       // tuple storage.
-      cat::tuple tuple_args{fwd(function), fwd(arguments)...};
+      static cat::tuple tuple_args{fwd(function), fwd(arguments)...};
 
       // Unary `+` converts this lambda to function pointer.
-      static auto* p_entry = +[](cat::tuple<F, Args...>* p_arguments) {
-         auto&& [fn, ... pack_args] = *p_arguments;
-         fwd(fn)(fwd(pack_args)...);
-      };
+      static auto* p_entry =
+         +[] [[gnu::no_sanitize_address, gnu::no_sanitize("undefined")]]
+          (cat::tuple<F, Args...> * p_arguments) {
+             auto&& [fn, ... pack_args] = *p_arguments;
+             fwd(fn)(fwd(pack_args)...);
+          };
 
       return this->spawn_impl(p_stack_bottom, initial_stack_size,
                               thread_local_buffer_size,

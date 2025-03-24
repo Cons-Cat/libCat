@@ -47,7 +47,7 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
       : /* There are no outputs. */
       : "a"(56), "D"(m_flags), "S"(stack_top),
         "d"(&(m_id)), [tls] "r"(tls_buffer)
-      : "rcx", "r11", "memory", "cc"
+      :
       : parent_thread);
 
    // Exit the child thread after its entry function returns.
@@ -66,9 +66,7 @@ nix::process::wait() const -> scaredy_nix<process_id> {
    while (m_id.value == 0) {
    }
 
-   scaredy_nix<process_id> result =
-      sys_waitid(wait_id::process_id, m_id,
-                 wait_options_flags::exited | wait_options_flags::clone
-                    | wait_options_flags::no_wait);
-   return result;
+   return sys_waitid(wait_id::process_id, m_id,
+                     wait_options_flags::exited | wait_options_flags::clone
+                        | wait_options_flags::no_wait);
 }
