@@ -223,6 +223,7 @@ struct maybe_value_storage {
    // If this is assigned an `maybe` which wraps a type that can be
    // converted to `T` , then convert that storage to this type implicitly.
    template <typename other_maybe>
+      requires requires(other_maybe m) { m.has_value(); m.value(); }
    constexpr void
    assign(other_maybe&& maybe) {
       if (maybe.has_value()) {
@@ -299,6 +300,7 @@ struct maybe_reference_storage {
    // If this is assigned an `maybe` which wraps a type that can be
    // converted to `T` , then convert that storage to this type implicitly.
    template <typename other_maybe>
+      requires requires(other_maybe m) { m.has_value(); m.value(); }
    constexpr void
    assign(other_maybe&& maybe) {
       if (this->has_value()) {
@@ -476,6 +478,7 @@ struct maybe_compact_storage {
    // If this is assigned an `maybe` which wraps a type that can be
    // converted to `T` , then convert that storage to this type implicitly.
    template <typename other_maybe>
+      requires requires(other_maybe m) { m.has_value(); m.value(); }
    constexpr void
    assign(other_maybe&& maybe) {
       if (this->has_value()) {
