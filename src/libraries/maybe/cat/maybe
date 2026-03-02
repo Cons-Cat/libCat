@@ -204,6 +204,9 @@ struct maybe_value_storage {
 
    constexpr void
    assign(value_type const& maybe) {
+      if (__builtin_addressof(m_storage) == __builtin_addressof(maybe)) {
+         return;
+      }
       if (this->has_value()) {
          this->hard_reset();
       }
@@ -213,6 +216,9 @@ struct maybe_value_storage {
 
    constexpr void
    assign(value_type&& maybe) {
+      if (__builtin_addressof(m_storage) == __builtin_addressof(maybe)) {
+         return;
+      }
       if (this->has_value()) {
          this->hard_reset();
       }
