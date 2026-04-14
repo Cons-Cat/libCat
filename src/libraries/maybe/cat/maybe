@@ -21,21 +21,23 @@ template <typename T>
 class maybe;
 
 namespace detail {
-template <typename T>
-consteval auto
-is_maybe_trait(maybe<T> const&) -> bool {
-   return true;
-}
+template <typename>
+struct is_maybe_impl {
+   static constexpr bool value = false;
+};
 
-consteval auto
-is_maybe_trait(auto const&) -> bool {
-   return false;
-}
-
-}
+template <typename U>
+struct is_maybe_impl<maybe<U>> {
+   static constexpr bool value = true;
+};
+}  // namespace detail
 
 template <typename T>
-concept is_maybe = detail::is_maybe_trait(T{});
+inline constexpr bool is_maybe_v =
+   detail::is_maybe_impl<remove_cvref<T>>::value;
+
+template <typename T>
+concept is_maybe = is_maybe_v<T>;
 
 template <typename char_type, bool null_terminated>
    requires(sizeof(char_type) == 1)
@@ -223,6 +225,7 @@ struct maybe_value_storage {
    // If this is assigned an `maybe` which wraps a type that can be
    // converted to `T` , then convert that storage to this type implicitly.
    template <typename other_maybe>
+      requires(is_maybe_v<other_maybe>)
    constexpr void
    assign(other_maybe&& maybe) {
       if (maybe.has_value()) {
@@ -299,6 +302,7 @@ struct maybe_reference_storage {
    // If this is assigned an `maybe` which wraps a type that can be
    // converted to `T` , then convert that storage to this type implicitly.
    template <typename other_maybe>
+      requires(is_maybe_v<other_maybe>)
    constexpr void
    assign(other_maybe&& maybe) {
       if (this->has_value()) {
@@ -476,6 +480,7 @@ struct maybe_compact_storage {
    // If this is assigned an `maybe` which wraps a type that can be
    // converted to `T` , then convert that storage to this type implicitly.
    template <typename other_maybe>
+      requires(is_maybe_v<other_maybe>)
    constexpr void
    assign(other_maybe&& maybe) {
       if (this->has_value()) {
@@ -736,7 +741,7 @@ class [[nodiscard]] maybe {
       requires(is_specialization<Patterns, detail::pattern_invocable> && ...)
    constexpr void
    match(Patterns&&... patterns) {
-      detail::match_patterns (*this)(fwd(patterns)...);
+      cat::match (*this)(fwd(patterns)...);
    }
 
    // Holds true if this `maybe` currently has some value convertible and

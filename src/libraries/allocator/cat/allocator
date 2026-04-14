@@ -3986,7 +3986,7 @@ class allocator_interface {
                // Return here to skip error handling, because an on-stack
                // allocation cannot fail.
                if constexpr (has_feedback) {
-                  return return_handle(sized_allocation<handle_type>{
+                  return return_handle(tuple<handle_type, idx>{
                      move(stack_handle), inline_buffer_size});
                } else {
                   return return_handle(move(stack_handle));
@@ -4201,7 +4201,7 @@ class allocator_interface {
 
             if constexpr (has_feedback) {
                return return_handle(
-                  sized_allocation<handle_type>{move(handle), size_feedback});
+                  tuple<handle_type, idx>{move(handle), size_feedback});
             } else {
                return return_handle(move(handle));
             }

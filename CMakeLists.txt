@@ -174,18 +174,19 @@ add_subdirectory(examples/)
 # Find a configurable path to a `clang-format` binary.
 find_program(CAT_CLANG_FORMAT_PATH "clang-format" DOC "`clang-format` binary to use.")
 get_property(CAT_SOURCES TARGET cat PROPERTY INTERFACE_SOURCES)
+
 # Recursively discover the `.hpp` files.
 get_property(CAT_HEADERS TARGET cat PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
 file(GLOB_RECURSE CAT_HEADERS "*.hpp")
 
 option(CAT_PCH "Enable precompiled-headers for libCat headers." ON)
 if (CAT_PCH)
-  target_precompile_headers(cat INTERFACE ${CAT_HEADER_FILES})  
+  target_precompile_headers(cat INTERFACE ${CAT_HEADERS})  
 endif()
 set_target_properties(cat PROPERTIES PCH_WARN_INVALID ON)
 
 # Run `clang-format` on all source files of the `cat` target.
 add_custom_target(cat-format
-  COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/format.cmake ${CAT_CLANG_FORMAT_PATH} \"${CAT_SOURCES} ${CAT_HEADERS} ${CAT_HEADER_FILES} \"
+  COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/format.cmake ${CAT_CLANG_FORMAT_PATH} \"${CAT_SOURCES} ${CAT_HEADERS} \"
   DEPENDS ${CAT_SOURCES} ${CAT_HEADERS}
 )
