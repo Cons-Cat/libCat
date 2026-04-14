@@ -125,6 +125,10 @@ target_sources(cat INTERFACE
   ${CATLIB}/linux/implementations/sys_stat.cpp
   ${CATLIB}/linux/implementations/sys_fstat.cpp
   ${CATLIB}/linux/implementations/sys_tkill.cpp
+  ${CATLIB}/linux/implementations/sys_futex.cpp
+  ${CATLIB}/linux/implementations/sys_set_robust_list.cpp
+  ${CATLIB}/linux/implementations/sys_get_robust_list.cpp
+  ${CATLIB}/linux/implementations/sys_futex_waitv.cpp
   ${CATLIB}/linux/implementations/block_all_signals.cpp
   ${CATLIB}/linux/implementations/raise.cpp
   ${CATLIB}/linux/implementations/raise_here.cpp
@@ -192,6 +196,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/x11/cat/x11
   ${CATLIB}/linux/implementations/syscall.tpp
   ${CATLIB}/linux/implementations/process.tpp
+  ${CATLIB}/linux/implementations/futex.tpp
   ${CATLIB}/meta/implementations/constant_evaluate.tpp
   ${CATLIB}/meta/implementations/common_reference.tpp
   ${CATLIB}/simd/implementations/compare_implicit_length_strings.tpp

@@ -3,10 +3,12 @@
 #pragma once
 
 #include <cat/allocator>
+#include <cat/atomic>
 #include <cat/bit>
 #include <cat/cast>
 #include <cat/notype>
 #include <cat/scaredy>
+#include <cat/span>
 #include <cat/utility>
 
 // Forward declarations.
@@ -420,6 +422,147 @@ enum class wait_options_flags : unsigned int {
    clone = 0x80000000,
 };
 
+// Futex command in the low bits of a futex `op` argument.
+enum class futex_command : unsigned char {
+   wait = 0,
+   wake = 1,
+   fd = 2,
+   requeue = 3,
+   compare_requeue = 4,
+   wake_op = 5,
+   lock_pi = 6,
+   unlock_pi = 7,
+   trylock_pi = 8,
+   wait_bitset = 9,
+   wake_bitset = 10,
+   wait_requeue_pi = 11,
+   compare_requeue_pi = 12,
+   lock_pi2 = 13,
+};
+
+// Bit-or this with `futex_command` to build the `op` argument to `sys_futex()`.
+enum class futex_options : unsigned int {
+   none = 0,
+   private_process = 128,
+   clock_realtime = 256,
+};
+
+// Per-wait-entry flags in `struct futex_waitv::flags` (`linux/futex.h`,
+// futex2). Underlying type is `unsigned int` so values like `clock_realtime`
+// (`256`) fit and `struct futex_waitv` exposes a full `__u32`-sized flags word
+// to the kernel.
+enum class futex_wait_flags : unsigned int {
+   word_32 = 2,
+   word_64 = 3,
+   private_process = 128,
+   clock_realtime = 256,
+};
+
+// `flags` argument to `sys_futex_waitv()` (syscall `futex_waitv`, `man 2
+// futex_waitv`).
+enum class futex_waitv_call_flags : unsigned char {
+   none = 0,
+};
+
+// Robust priority-inheritance futex fields use these bits in the 32-bit word.
+inline constexpr cat::uint4 futex_waiters_flag{0x80000000u};
+inline constexpr cat::uint4 futex_owner_died_flag{0x40000000u};
+inline constexpr cat::uint4 futex_tid_mask{0x3fffffffu};
+inline constexpr cat::uint4 futex_bitset_match_any{0xffffffffu};
+
+struct futex_timespec {
+   cat::int8 seconds;
+   cat::int8 nanoseconds;
+};
+
+// Kernel `sys_futex()` only cares about the address of this 32-bit word.
+struct futex_word {
+   cat::atomic<cat::uint4> m_value;
+};
+
+// Selects `basic_futex` behavior. `futex_plain` is an ordinary user-chosen
+// futex word. `futex_robust` marks the same layout as used with the userspace
+// robust list (`set_robust_list` / `get_robust_list`) and owner/waiter bits.
+struct futex_plain {};
+
+struct futex_robust {};
+
+template <class kind = futex_plain>
+class basic_futex : public futex_word {
+ public:
+   // Block only if `value` still equals `expected` (futex_command::wait); otherwise
+   // returns `linux_error::again` without sleeping.
+   [[nodiscard]]
+   auto
+   wait(cat::uint4 expected, futex_timespec const* p_timeout = nullptr)
+      -> scaredy_nix<void>;
+
+   // Wake at most one waiter. Returns the number of waiting threads woken.
+   [[nodiscard]]
+   auto
+   wake() -> scaredy_nix<cat::idx>;
+
+   // Wake as many waiters as possible. Returns the number of waiting threads
+   // woken.
+   [[nodiscard]]
+   auto
+   wake_all() -> scaredy_nix<cat::idx>;
+
+   // TODO: Once timers are implemented, add blocking+timeout variants of
+   // `wake()`.
+
+   // Wake at most `wake_limit` waiters at the source and requeues up to
+   // `requeue_limit` others to `target` only if the source word equals
+   // `expected_source_value`. Otherwise, returns `linux_error::again`.
+   [[nodiscard]]
+   auto
+   compare_requeue(cat::uint4 wake_limit, cat::uint4 requeue_limit,
+                   futex_word& target, cat::uint4 expected_source_value)
+      -> scaredy_nix<cat::idx>;
+
+   // Robust mutex word layout (`futex_waiters_flag`, `futex_owner_died_flag`).
+   [[nodiscard]]
+   static constexpr auto
+   unlocked() -> cat::uint4
+      requires(cat::is_same<kind, futex_robust>)
+   {
+      return 0u;
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   decode_owner_thread_id(cat::uint4 lock_word) -> cat::uint4
+      requires(cat::is_same<kind, futex_robust>)
+   {
+      return lock_word & futex_tid_mask;
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   has_waiters(cat::uint4 lock_word) -> bool
+      requires(cat::is_same<kind, futex_robust>)
+   {
+      return (lock_word & futex_waiters_flag).raw != 0u;
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   owner_exited_abnormally(cat::uint4 lock_word) -> bool
+      requires(cat::is_same<kind, futex_robust>)
+   {
+      return (lock_word & futex_owner_died_flag).raw != 0u;
+   }
+};
+
+using futex = basic_futex<futex_plain>;
+using robust_futex = basic_futex<futex_robust>;
+
+static_assert(sizeof(futex_word) == sizeof(cat::uint4));
+static_assert(alignof(futex_word) == alignof(cat::uint4));
+static_assert(sizeof(futex) == sizeof(cat::uint4));
+static_assert(alignof(futex) == alignof(cat::uint4));
+static_assert(sizeof(robust_futex) == sizeof(cat::uint4));
+
 enum class open_mode : unsigned char {
    read_only = 00,
    write_only = 01,
@@ -743,6 +886,15 @@ template <>
 struct cat::enum_flag_trait<nix::wait_options_flags> : cat::true_trait {};
 
 template <>
+struct cat::enum_flag_trait<nix::futex_options> : cat::true_trait {};
+
+template <>
+struct cat::enum_flag_trait<nix::futex_wait_flags> : cat::true_trait {};
+
+template <>
+struct cat::enum_flag_trait<nix::futex_waitv_call_flags> : cat::true_trait {};
+
+template <>
 struct cat::enum_flag_trait<nix::io_requests> : cat::true_trait {};
 
 template <>
@@ -1038,10 +1190,59 @@ sys_unlink(char const* p_path_name) -> scaredy_nix<void>;
 auto
 sys_tkill(process_id pid, signal signal) -> scaredy_nix<void>;
 
+// Layout-compatible with Linux `struct futex_waitv` (`linux/futex.h`) on
+// targets where `sizeof(futex_word*) == 8` (LP64). `val` is `__u64` in the
+// UAPI; `cat::uint8` here is the `8`-byte unsigned integer type
+// (`__UINT64_TYPE__`).
+struct futex_waitv {
+   cat::uint8 expected_value;
+   futex_word* user_space_address;
+   futex_wait_flags wait_flags;
+   cat::uint4 kernel_reserved;
+};
+
+// Matches Linux `struct robust_list` / `struct robust_list_head`.
+struct robust_list {
+   robust_list* p_next;
+};
+
+struct robust_list_head {
+   robust_list head;
+   cat::iword futex_offset;
+   robust_list* p_list_op_pending;
+};
+
+inline constexpr cat::idx futex_waitv_max_count = 128u;
+
+struct futex_op;
+
+// Syscall 202
+auto
+sys_futex(futex_word* p_futex, futex_op const& operation, cat::uint4 value,
+          futex_timespec const* p_timeout, futex_word* p_second_futex,
+          cat::uint4 value3) -> scaredy_nix<cat::idx>;
+
 // Syscall 247
 auto
 sys_waitid(wait_id type, process_id id, wait_options_flags options)
    -> scaredy_nix<process_id>;
+
+// Syscall 273
+auto
+sys_set_robust_list(robust_list_head* p_head, cat::uword length_bytes)
+   -> scaredy_nix<void>;
+
+// Syscall 274
+auto
+sys_get_robust_list(process_id target, robust_list_head** pp_head,
+                    cat::idx* p_length_bytes) -> scaredy_nix<void>;
+
+// Syscall 449
+auto
+sys_futex_waitv(cat::span<futex_waitv const> waiters,
+                futex_waitv_call_flags call_flags,
+                futex_timespec const* p_timeout, cat::int4 clock_id)
+   -> scaredy_nix<cat::iword>;
 
 auto
 wait_pid(process_id pid, file_status* p_file_status, wait_options_flags options)
@@ -1222,8 +1423,7 @@ struct process {
       | clone_flags::file_descriptor_table | clone_flags::io
       | clone_flags::parent_set_tid | clone_flags::child_clear_tid
       | static_cast<clone_flags>(static_cast<unsigned int>(
-           static_cast<unsigned char>(signal::child_stopped)))
-           ;
+         static_cast<unsigned char>(signal::child_stopped)));
    // TODO: | clone_flags::set_tls
 
    process() = default;
@@ -1275,5 +1475,6 @@ raise_here(signal signal) -> scaredy_nix<void>;
 
 }  // namespace nix
 
+#include "implementations/futex.tpp"
 #include "implementations/process.tpp"
 #include "implementations/syscall.tpp"
