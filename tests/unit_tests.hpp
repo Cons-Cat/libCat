@@ -11,8 +11,8 @@ using namespace cat::integers;
 [[gnu::used]]
 constinit inline cat::page_allocator pager;
 
-constinit inline cat::atomic<int> tests_passed{0};
-constinit inline cat::atomic<int> tests_failed{0};
+constinit inline cat::atomic<int> tests_passed{};
+constinit inline cat::atomic<int> tests_failed{};
 
 using constructor_fn = void (*const)();
 constinit inline cat::maybe<cat::vec<void*, cat::page_allocator>> test_fns;
