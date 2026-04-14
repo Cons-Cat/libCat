@@ -33,7 +33,6 @@ jobs:
           command -v clang++-23
           clang++-23 --version
           command -v lld-23
-          lld-23 --version
 
       - name: Configure
         run: |
@@ -45,4 +44,4 @@ jobs:
         run: cmake --build build/
 
       - name: Test
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --test-dir build --verbose --output-on-failure
