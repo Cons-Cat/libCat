@@ -79,6 +79,7 @@ target_sources(cat INTERFACE
   ${CATLIB}/memory/implementations/copy_memory_small.cpp
   ${CATLIB}/string/implementations/memcpy.cpp
   ${CATLIB}/string/implementations/memset.cpp
+  ${CATLIB}/string/implementations/strlen.cpp
   ${CATLIB}/string/implementations/compare_strings.cpp
   ${CATLIB}/string/implementations/print.cpp
   ${CATLIB}/string/implementations/println.cpp
