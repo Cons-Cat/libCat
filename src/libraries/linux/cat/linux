@@ -1215,12 +1215,16 @@ struct file_status {
 // TODO: Extract this to an implementation file.
 struct process {
    // TODO: Why does the `tls` flag not work?
+   // Low `CSIGNAL` byte must be `signal::child_stopped`, matching `fork(2)`.
+   // Otherwise, `kernel_clone` leaves `exit_signal` at 0.
    static constexpr clone_flags default_flags =
       clone_flags::virtual_memory | clone_flags::file_system
       | clone_flags::file_descriptor_table | clone_flags::io
       | clone_flags::parent_set_tid | clone_flags::child_clear_tid
-      // | clone_flags::set_tls
-      ;
+      | static_cast<clone_flags>(static_cast<unsigned int>(
+           static_cast<unsigned char>(signal::child_stopped)))
+           ;
+   // TODO: | clone_flags::set_tls
 
    process() = default;
    // TODO: Add a move constructor and move assignment operator.

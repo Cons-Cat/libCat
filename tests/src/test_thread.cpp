@@ -64,7 +64,7 @@ test(thread) {
          })
       .verify();
 
-   for (idx i; i < 3; ++i) {
+   for (idx i = 0; i < 3; ++i) {
       ++atomic;
       // ++tls1;
    }

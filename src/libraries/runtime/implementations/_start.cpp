@@ -28,10 +28,12 @@ call_static_constructors() {
   gnu::no_sanitize_address]]
 void
 call_main_args(int argc, char** pp_argv) {
-   // The stack pointer must be aligned to prevent SIMD segfaults.
-   call_static_constructors();
+   // Naked `_start` does not align `%rsp` before the `call` here; match
+   // `call_main_noargs` so SIMD in `__cpu_indicator_init` is safe.
+   cat::align_stack_pointer_32();
    // Initialize `__cpu_model` and `__cpu_features2` for later use.
    x64::detail::__cpu_indicator_init();
+   call_static_constructors();
    cat::exit(main(argc, pp_argv));
 }
 #else
