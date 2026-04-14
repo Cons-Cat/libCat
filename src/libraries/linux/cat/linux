@@ -754,7 +754,7 @@ namespace nix {
 
 // Syscall 0
 auto
-sys_read(file_descriptor file_descriptor, char const* p_string_buffer,
+sys_read(file_descriptor file_descriptor, char* p_string_buffer,
          cat::iword length) -> scaredy_nix<cat::iword>;
 
 // Syscall 1
