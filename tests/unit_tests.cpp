@@ -49,7 +49,12 @@ main() -> int {
    // `tests_passed` and `tests_failed` are modified within the `CAT_TEST`
    // macro.
    // TODO: This will leak. An `inline_allocator` should be used.
+   // `fmt` stores arguments in type-erased storage; pass plain `int`s, not
+   // `atomic` objects.
+   int const n_passed = tests_passed.load(cat::memory_order::relaxed);
+   int const n_failed = tests_failed.load(cat::memory_order::relaxed);
    auto _ = cat::print(cat::fmt(pager, "\n{} tests passed.\n{} tests failed.\n",
-                                tests_passed, tests_failed)
+                               n_passed, n_failed)
                           .or_exit());
+   return n_failed != 0;
 }

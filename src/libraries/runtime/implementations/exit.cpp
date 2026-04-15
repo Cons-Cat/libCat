@@ -7,6 +7,7 @@ void
 cat::exit(iword exit_code) {
    asm("syscall"
        :
-       : "D"(exit_code), "a"(60));
+       : "D"(exit_code.raw), "a"(60)
+       :);
    __builtin_unreachable();  // This elides a `ret` instruction.
 }

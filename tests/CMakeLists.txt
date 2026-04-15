@@ -38,9 +38,9 @@ if(CAT_BUILD_UNIT_TESTS)
   # Specifying each source file individually makes disabling tests convenient.
   target_sources(
     cat-tests INTERFACE
-	${CMAKE_SOURCE_DIR}/tests/src/test_meta.cpp
+	  ${CMAKE_SOURCE_DIR}/tests/src/test_meta.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_arithmetic.cpp
-    #${CMAKE_SOURCE_DIR}/tests/src/test_alloc.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_alloc.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_arrays.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_compare_strings.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_string_length.cpp
@@ -51,6 +51,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_math.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_maybe.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_paging_memory.cpp
+    # TODO: I might remove this feature.
     # ${CMAKE_SOURCE_DIR}/tests/src/test_raii.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_typelist.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_scaredy.cpp
@@ -59,13 +60,17 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_tuple.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_variant.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_vec.cpp
+    # TODO: This container needs a lot of work.
     # ${CMAKE_SOURCE_DIR}/tests/src/test_ring.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_invoke.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_cast.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bit.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bitset.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_stringify.cpp
-    ${CMAKE_SOURCE_DIR}/tests/src/test_cpuid.cpp
+    # TODO: Figure out how to test this.
+    # Naturally, it has different behavior on different architectures.
+    # ${CMAKE_SOURCE_DIR}/tests/src/test_cpuid.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_futex.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_thread.cpp
   )
 

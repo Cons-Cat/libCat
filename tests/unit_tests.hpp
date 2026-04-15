@@ -1,3 +1,6 @@
+#pragma once
+
+#include <cat/atomic>
 #include <cat/debug>
 #include <cat/format>
 #include <cat/page_allocator>
@@ -10,8 +13,8 @@ using namespace cat::integers;
 [[gnu::used]]
 constinit inline cat::page_allocator pager;
 
-constinit inline idx tests_passed;
-constinit inline idx tests_failed;
+constinit inline cat::atomic<int> tests_passed{};
+constinit inline cat::atomic<int> tests_failed{};
 
 using constructor_fn = void (*const)();
 constinit inline cat::maybe<cat::vec<void*, cat::page_allocator>> test_fns;

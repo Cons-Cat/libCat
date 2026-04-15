@@ -10,7 +10,7 @@
 
 namespace {
 
-constinit cat::atomic<int> atomic = 0;
+constinit cat::atomic<int> atomic{};
 
 thread_local int tls1 = 1;
 thread_local int tls2 = 2;
@@ -64,7 +64,7 @@ test(thread) {
          })
       .verify();
 
-   for (idx i; i < 3; ++i) {
+   for (idx i = 0; i < 3; ++i) {
       ++atomic;
       // ++tls1;
    }

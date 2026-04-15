@@ -17,8 +17,8 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
    cat::uintptr<void> tls_buffer = stack_top;
    stack_top -= thread_local_buffer_size;
 
-   // TODO: 32 byte alignment is required for AVX2 support.
-   // stack_top = cat::align_down(stack_top - 16, 32u);
+   // 32 byte alignment is required for AVX2 support.
+   stack_top = cat::align_down(stack_top, 32u);
 
    // Place a pointer to function arguments on the new stack:
    stack_top -= 8;
@@ -31,42 +31,67 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
 
    // This syscall is made manually here because it's important to be careful
    // with the stack and registers and not introduce a new stack frame.
-   nix::scaredy_nix<nix::process_id> result;
+   // Parent and child share `clone_flags::virtual_memory`, so they must not both spill `%rax`
+   // through one C variable. That would race. Only the parent executes the `mov` into `parent_rax_after_clone` (`asm goto`); the child jumps away
+   // before that store.
+   cat::iword parent_rax_after_clone = 0;
    asm goto volatile(
       R"(mov %[tls], %%r8
          xor %%r10, %%r10
          syscall
-         # Branch if this is the parent process.
          test %%rax, %%rax
-         jnz %l[parent_thread]
+         jz %l[clone_child]
+         mov %%rax, %[parent_rax]
+         jmp %l[clone_parent])"
+      : [parent_rax] "=m"(parent_rax_after_clone)
+      : "a"(56), "D"(m_flags), "S"(stack_top), "d"(&(m_id)), [tls] "r"(tls_buffer)
+      : "rcx", "r11", "memory"
+      : clone_child, clone_parent);
 
-         # Call the function pointer if this is the child process.
-         pop %%rax
-         pop %%rdi # Pass the arguments pointer to the first function parameter.
-         call *%%rax)"
-      : /* There are no outputs. */
-      : "a"(56), "D"(m_flags), "S"(stack_top),
-        "d"(&(m_id)), [tls] "r"(tls_buffer)
+clone_child:
+   asm volatile(
+      R"(pop %%rax
+         pop %%rdi
+         call *%%rax
+         mov $60, %%eax
+         xor %%edi, %%edi
+         syscall)"
       :
-      : parent_thread);
+      :
+      : "rax", "rdi", "rsp", "rcx", "r11", "cc", "memory");
+   __builtin_unreachable();
 
-   // Exit the child thread after its entry function returns.
-   // TODO: Support propagating an exit code, like `main()` does.
-   cat::exit();
-
-parent_thread:
-   prop(result);
+clone_parent:
+   if (parent_rax_after_clone < 0) {
+      return static_cast<nix::linux_error>(parent_rax_after_clone);
+   }
    return cat::monostate;
 }
 
 [[nodiscard]]
 auto
 nix::process::wait() const -> scaredy_nix<process_id> {
-   // Spin to ensure that `m_id` is initialized before waiting on it.
-   while (m_id.value == 0) {
+   // Spin until the kernel publishes the child tid via `CLONE_PARENT_SETTID`.
+   // Use an acquire load so this synchronizes with that store; `pause` hints
+   // the spin loop on x86.
+   while (__atomic_load_n(const_cast<cat::iword::raw_type*>(&m_id.value.raw),
+                          __ATOMIC_ACQUIRE) == 0) {
+#if defined(__x86_64__) || defined(__i386__)
+      __builtin_ia32_pause();
+#endif
    }
 
-   return sys_waitid(wait_id::process_id, m_id,
-                     wait_options_flags::exited | wait_options_flags::clone
-                        | wait_options_flags::no_wait);
+   for (;;) {
+      // `__WCLONE` pairs with clone children that omit `SIGCHLD`; libCat sets
+      // `SIGCHLD` in `clone` flags, so only `WEXITED` is correct here.
+      scaredy_nix<process_id> result =
+         sys_waitid(wait_id::process_id, m_id, wait_options_flags::exited);
+      if (result.has_value()) {
+         return result;
+      }
+      if (result.error() == nix::linux_error::intr) {
+         continue;
+      }
+      return result;
+   }
 }
