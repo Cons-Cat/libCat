@@ -1,4 +1,4 @@
-/* libCat: TLS layout constants for `clone` + `CLONE_SETTLS` setup.
+/* libCat: TLS layout constants for `clone` and `clone_flags::set_tls` setup.
    Pass `-Wl,-T,path/to/libcat.ld` (lld or bfd).
 
    We cannot use `SIZEOF(.tdata)` unless the linker output already has a

@@ -52,7 +52,7 @@ test(futex_syscalls) {
 
    nix::futex futex_other{};
    // Source word is `0`; `expected_source_value` `1` fails the kernel compare
-   // for `FUTEX_CMP_REQUEUE` (`linux_error::again`).
+   // for `futex_command::compare_requeue` (`linux_error::again`).
    auto const cmp_requeue_result =
       futex_word.compare_requeue(1u, 1u, futex_other, 1u);
    cat::verify(!cmp_requeue_result.has_value());
