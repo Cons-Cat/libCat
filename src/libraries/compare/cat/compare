@@ -554,7 +554,7 @@ using std::weak_ordering;
 
 template <typename T>
 concept is_common_comparison_category =
-   is_same<T, strong_ordering> && is_same<T, weak_ordering>
-   && is_same<T, partial_ordering>;
+   is_same<T, strong_ordering> || is_same<T, weak_ordering>
+   || is_same<T, partial_ordering>;
 
 }  // namespace cat

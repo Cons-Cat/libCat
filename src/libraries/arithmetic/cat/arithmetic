@@ -625,12 +625,10 @@ struct arithmetic :
                              / static_cast<promoted_raw>(raw_operand));
       } else if constexpr (overflow_policy == wrap
                            || overflow_policy == wrap_member) {
-         // TODO: This looks wrong.
-         return wrap_mul(raw, raw_operand);
+         return wrap_div(raw, raw_operand);
       } else if constexpr (overflow_policy == saturate
                            || overflow_policy == saturate_member) {
-         // TODO: This looks wrong.
-         return sat_mul(raw, raw_operand);
+         return sat_div(raw, raw_operand);
       }
    }
 
