@@ -1415,8 +1415,8 @@ struct file_status {
 // `process` handles an asynchronous task multitasked by the Linux kernel.
 // TODO: Extract this to an implementation file.
 struct process {
-   // Low `CSIGNAL` byte must be `signal::child_stopped`, otherwise `clone`
-   // leaves `exit_signal` at 0. `clone_flags::set_tls` is merged in
+   // `clone_flags::csignal` must carry `signal::child_stopped`, otherwise
+   // `clone` leaves `exit_signal` at 0. `clone_flags::set_tls` is merged in
    // `spawn_impl` when the executable has a `PT_TLS` image so each clone child
    // receives an initialized `%fs` base.
    static constexpr clone_flags default_flags =
@@ -1429,6 +1429,23 @@ struct process {
    process() = default;
    // TODO: Add a move constructor and move assignment operator.
    process(process const&) = delete;
+
+   [[nodiscard]]
+   constexpr auto
+   get_clone_flags() const -> clone_flags {
+      return m_flags;
+   }
+
+   constexpr void
+   set_clone_flags(clone_flags flags) {
+      m_flags = flags;
+   }
+
+   constexpr void
+   add_clone_flag(clone_flags extra) {
+      m_flags = static_cast<clone_flags>(cat::to_underlying(m_flags)
+                                         | cat::to_underlying(extra));
+   }
 
    template <typename... Args, cat::is_invocable<Args...> F>
    [[gnu::no_sanitize_address, gnu::no_sanitize("undefined")]]
@@ -1447,6 +1464,12 @@ struct process {
               void* p_function, void* p_args_struct) -> scaredy_nix<void>;
 
    process_id m_id{0};
+   // `clone_flags::child_clear_tid` must not use `m_id` as the clear-tid word.
+   // The kernel stores the child tid here, clears it to zero at thread exit,
+   // and wakes waiters with `futex_command::wake` and `futex_options::none`;
+   // `wait()` uses `futex_command::wait` with `futex_options::none` on this word
+   // when `clone_flags::thread` and `clone_flags::child_set_tid` are set.
+   alignas(8) futex_word m_clone_child_clear_tid_for_kernel{};
    // TODO: Free this later.
    void* m_p_stack_bottom;
    cat::idx m_stack_size;
@@ -1471,8 +1494,8 @@ raise(signal signal, process_id pid) -> scaredy_nix<void>;
 auto
 raise_here(signal signal) -> scaredy_nix<void>;
 
-// `ARCH_SET_FS` / `ARCH_GET_FS` for x86-64. A custom main-thread TLS block can
-// be installed by copying the `PT_TLS` image with
+// `arch_prctl_request::set_fs_base` / `get_fs_base` for x86-64. A custom main-thread TLS block can
+// be installed by copying the executable TLS image with
 // `detail::install_executable_tls_image_at_thread_pointer` then calling
 // `sys_arch_prctl(arch_prctl_request::set_fs_base, thread_pointer.get())`.
 enum class arch_prctl_request : int {
@@ -1493,7 +1516,7 @@ executable_tls_file_bytes() -> cat::idx;
 auto
 executable_tls_alignment_bytes() -> cat::uword;
 
-// Minimum bytes reserved above the stack for clone TLS (`CLONE_SETTLS`).
+// Minimum bytes reserved above the stack for `clone_flags::set_tls` TLS setup.
 // Covers `p_memsz`, thread-pointer alignment, and a 64-byte line round-up.
 [[nodiscard]]
 auto

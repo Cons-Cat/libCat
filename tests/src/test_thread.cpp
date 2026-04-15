@@ -20,7 +20,7 @@ function_1() {
    for (idx i = 0; i < 3; ++i) {
       ++atomic;
    }
-   
+
    for (idx i = 0; i < 3; ++i) {
       ++tls1;
       ++tls2;
@@ -70,6 +70,15 @@ test(thread) {
          })
       .verify();
 
+   nix::process non_thread_child;
+   non_thread_child
+      .spawn(
+         allocator, 2_uki,
+         +[] {
+            ++atomic;
+         })
+      .verify();
+
    for (idx i = 0; i < 3; ++i) {
       ++atomic;
       ++tls1;
@@ -81,5 +90,7 @@ test(thread) {
    threads[2].join().verify();
    threads[3].join().verify();
    threads[4].join().verify();
-   cat::verify(atomic.load() == 10);
+   non_thread_child.wait().verify();
+   
+   cat::verify(atomic.load() == 11);
 }

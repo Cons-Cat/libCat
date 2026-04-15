@@ -9,7 +9,15 @@ namespace cat {
 
 struct thread {
  public:
-   thread() = default;
+   thread() {
+      m_handle.add_clone_flag(nix::clone_flags::thread);
+      // `clone_flags::child_set_tid` pairs with `clone_flags::child_clear_tid`
+      // (already in `nix::process::default_flags`) so the kernel publishes the
+      // tid into `m_clone_child_clear_tid_for_kernel` before user code runs;
+      // `join` waits on that word with `futex_command::wait`.
+      m_handle.add_clone_flag(nix::clone_flags::child_set_tid);
+   }
+
    thread(thread const&) = delete;
 
    // TODO: Default or delete a move constructor and assignment operator?
@@ -39,7 +47,6 @@ struct thread {
 
  private:
    // This is platform-specific hidden code.
-   [[maybe_unused]]
    nix::process m_handle;
 };
 

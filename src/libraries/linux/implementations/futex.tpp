@@ -106,7 +106,7 @@ basic_futex<kind>::compare_requeue(cat::uint4 const wake_limit,
                                    futex_word& target,
                                    cat::uint4 const expected_source_value)
    -> scaredy_nix<cat::idx> {
-   // For `FUTEX_CMP_REQUEUE`, the kernel `utime` argument slot carries the
+   // For `futex_command::compare_requeue`, the kernel `utime` argument slot carries the
    // requeue count, not a `futex_timespec` pointer.
    futex_timespec const* const p_requeue_slot =
       reinterpret_cast<futex_timespec const*>(
