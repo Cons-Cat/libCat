@@ -805,6 +805,14 @@ operator|(T flag_1, T flag_2) -> T {
 // }
 
 template <cat::is_enum_flag T>
+constexpr auto
+operator|=(T& self, T other) -> T& {
+   self = self | other;
+   return self;
+}
+
+
+template <cat::is_enum_flag T>
 [[nodiscard]]
 constexpr auto
 operator&(T flag_1, T flag_2) -> T {
@@ -819,6 +827,13 @@ operator&(T flag_1, T flag_2) -> T {
 //     using U =underlying_type<T>;
 //     return static_cast<T>(static_cast<U>(flag_1) & flag_2);
 // }
+
+template <cat::is_enum_flag T>
+constexpr auto
+operator&=(T& self, T other) -> T& {
+   self = self & other;
+   return self;
+}
 
 #include "./implementations/align_down.tpp"
 #include "./implementations/align_up.tpp"
