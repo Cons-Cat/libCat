@@ -136,6 +136,8 @@ target_sources(cat INTERFACE
   ${CATLIB}/linux/implementations/sys_stat.cpp
   ${CATLIB}/linux/implementations/sys_fstat.cpp
   ${CATLIB}/linux/implementations/sys_tkill.cpp
+  ${CATLIB}/linux/implementations/sys_sched_yield.cpp
+  ${CATLIB}/linux/implementations/sys_tgkill.cpp
   ${CATLIB}/linux/implementations/sys_futex.cpp
   ${CATLIB}/linux/implementations/sys_set_robust_list.cpp
   ${CATLIB}/linux/implementations/sys_get_robust_list.cpp

@@ -1111,6 +1111,10 @@ auto
 sys_writev(file_descriptor file_descriptor, cat::span<io_vector> const& vectors)
    -> scaredy_nix<cat::idx>;
 
+// Syscall 24
+auto
+sys_sched_yield() -> scaredy_nix<void>;
+
 // Syscall 39
 auto
 sys_getpid() -> process_id;
@@ -1234,11 +1238,12 @@ sys_setrlimit(rlimit_resource resource, rlimit const* p_limits) -> scaredy_nix<v
 auto
 sys_tkill(process_id pid, signal signal) -> scaredy_nix<void>;
 
-// Layout-compatible with Linux `struct futex_waitv` (`linux/futex.h`) on
-// targets where `sizeof(futex_word*) == 8` (LP64). `val` is `__u64` in the
-// UAPI; `cat::uint8` here is the `8`-byte unsigned integer type
-// (`__UINT64_TYPE__`).
-struct futex_waitv {
+// Syscall 234
+auto
+sys_tgkill(process_id thread_group_id, process_id target, signal delivered)
+   -> scaredy_nix<void>;
+
+   struct futex_waitv {
    cat::uint8 expected_value;
    futex_word* user_space_address;
    futex_wait_flags wait_flags;

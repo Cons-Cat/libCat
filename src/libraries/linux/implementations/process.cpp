@@ -30,8 +30,6 @@ wait_clone_thread_through_cleartid_futex(nix::process_id child_id,
                                          nix::futex_word* p_clear_tid)
    -> nix::scaredy_nix<nix::process_id> {
    nix::process_id const thread_group_id = nix::sys_getpid();
-   cat::iword const k_sys_tgkill = 234;
-   cat::iword const k_sys_sched_yield = 24;
    cat::idx spins = 0u;
    for (;;) {
       cat::uint4 const published =
@@ -59,8 +57,8 @@ wait_clone_thread_through_cleartid_futex(nix::process_id child_id,
          }
       }
       if ((spins & 127u) == 0u) {
-         nix::scaredy_nix<void> const poke = nix::syscall<void>(
-            k_sys_tgkill, thread_group_id, child_id, cat::int4{});
+         nix::scaredy_nix<void> const poke = nix::sys_tgkill(
+            thread_group_id, child_id, static_cast<nix::signal>(0));
          if (!poke.has_value()) {
             if (poke.error() == nix::linux_error::srch) {
                return nix::scaredy_nix<nix::process_id>(child_id);
@@ -72,7 +70,7 @@ wait_clone_thread_through_cleartid_futex(nix::process_id child_id,
       }
       ++spins;
       if ((spins & 1'023u) == 0u) {
-         auto _ = nix::syscall0(k_sys_sched_yield);
+         auto _ = nix::sys_sched_yield();
       }
    }
 }
