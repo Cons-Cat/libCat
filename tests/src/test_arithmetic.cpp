@@ -279,10 +279,82 @@ test(arithmetic) {
    promote_int8 = promote_uint2;
    promote_int8 = promote_uint4;
 
-   // Signed integers cannot be assigned to unsigned integers ever.
+   // Signed integers cannot be generally assigned to unsigned integers.
    static_assert(cat::is_assignable<int8, uint4>);
    static_assert(!cat::is_assignable<uint4, int2>);
    static_assert(!cat::is_assignable<uint8, int4>);
+
+   // Raw values that fit convert implicitly when widening or for same-width
+   // 64-bit types: signed to unsigned (`uint8 = 300ll`) and unsigned to signed
+   // (`int8 = 300ull`), with matching `operator==` and `operator<=>` both ways.
+   uint8 from_ll_implicit = 300ll;
+   cat::verify(from_ll_implicit == 300);
+   cat::verify(from_ll_implicit == 300ll);
+   cat::verify(300 == from_ll_implicit);
+   cat::verify(300ll == from_ll_implicit);
+   from_ll_implicit = 300_u8;
+   cat::verify(from_ll_implicit == 300);
+   cat::verify(from_ll_implicit == 300ll);
+   cat::verify(300 == from_ll_implicit);
+   cat::verify(300ll == from_ll_implicit);
+
+   cat::uint1 narrow_unsigned1 = 200;
+   cat::uint1 narrow_unsigned2 = 200u;
+   narrow_unsigned2 = 200_u4;
+   cat::int1 narrow_signed1 = 100;
+   cat::int1 narrow_signed2 = 100u;
+   narrow_signed2 = 100_u4;
+   cat::int1 narrow_signed3 = -100;
+   
+   cat::uint2 narrow_unsigned3 = 2000;
+   cat::uint2 narrow_unsigned4 = 2000u;
+   narrow_unsigned4 = 2000_u4;
+   cat::int2 narrow_signed4 = 1000;
+   cat::int2 narrow_signed5 = 1000u;
+   narrow_signed5 = 1000_u4;
+   cat::int2 narrow_signed6 = -1000;
+
+   // Unsafe implicit raw conversion uses `raw_implicit_storage_shape_ok` and
+   // `raw_source_fits_implicit_storage` so the value-gated overload is not
+   // selected when the shape or value is wrong.
+   static_assert(
+      !cat::detail::raw_implicit_storage_shape_ok<int, cat::uint4::raw_type>());
+   static_assert(
+      !cat::detail::raw_implicit_storage_shape_ok<unsigned int,
+                                                cat::int4::raw_type>());
+   static_assert(
+      cat::detail::raw_source_fits_implicit_storage<cat::uint1::raw_type>(200));
+   static_assert(
+      !cat::detail::raw_source_fits_implicit_storage<cat::uint1::raw_type>(300));
+   static_assert(
+      !cat::detail::raw_source_fits_implicit_storage<cat::uint1::raw_type>(-1));
+   static_assert(
+      cat::detail::raw_source_fits_implicit_storage<cat::int1::raw_type>(100u));
+   static_assert(
+      !cat::detail::raw_source_fits_implicit_storage<cat::int1::raw_type>(300u));
+   static_assert(
+      !cat::detail::raw_source_fits_implicit_storage<cat::uint8::raw_type>(
+         -1ll));
+
+   constexpr cat::iword max_iword = cat::limits<cat::iword>::max();
+   constexpr cat::iword min_iword = cat::limits<cat::iword>::min();
+   constexpr cat::uword max_uword = cat::limits<cat::uword>::max();
+   static_assert(max_iword < max_uword);
+   static_assert(max_uword > max_iword);
+   static_assert(min_iword < max_uword);
+   cat::verify(!(max_iword > max_uword));
+   cat::verify(!(max_uword < max_iword));
+
+   int8 from_ull_implicit = 300ull;
+   cat::verify(from_ll_implicit == 300u);
+   cat::verify(from_ull_implicit == 300ull);
+   cat::verify(300u == from_ull_implicit);
+   cat::verify(300ull == from_ull_implicit);
+   from_ull_implicit = 300_i8;
+   cat::verify(from_ull_implicit == 300u);
+   cat::verify(from_ull_implicit == 300ull);
+   cat::verify(300u == from_ull_implicit);
+   cat::verify(300ull == from_ull_implicit);
 
    // `int4` pointer arithmetic.
    char address;
@@ -456,7 +528,7 @@ test(arithmetic) {
                  cat::limits<int4::raw_type>::max());
    static_assert(cat::limits<uint8>::max() ==  // NOLINT
                  cat::limits<uint8::raw_type>::max());
-   static_assert(cat::limits<float4>::max()
+   static_assert(cat::limits<float4>::max()  // NOLINTNEXTLINE
                  == cat::limits<float4::raw_type>::max());
 
    // Test shorthand `*_min` and `*_max` constants.
