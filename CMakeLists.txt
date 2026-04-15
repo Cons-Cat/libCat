@@ -57,9 +57,12 @@ if(CAT_USE_SANITIZERS)
     -fomit-frame-pointer # Required for UBsan.
     -fsanitize=undefined
     -fsanitize=address
-
+    # `pthread_create` is intercepted so ASan learns each pthread stack. `clone`
+    # with a user stack does not go through that path, so stack instrumentation
+    # still assumes the main thread stack and faults on the mmap stack (e.g.
+    # `nix::process::spawn_impl`). Disable stack ASan while keeping heap ASan.
+    $<$<CXX_COMPILER_ID:Clang>:-mllvm -asan-stack=0>
     #$<$<CXX_COMPILER_ID:GNU>:--param asan-stack=0>
-    #$<$<CXX_COMPILER_ID:Clang>:-mllvm -asan-stack=0>
   )
 endif()
 
@@ -143,6 +146,10 @@ if (CAT_USE_SANITIZERS)
     -fsanitize=address
     #-fsanitize=undefined
     $<$<CXX_COMPILER_ID:Clang>:-shared-libasan>
+    # `libcat.ld` uses `INSERT AFTER .text` for TLS layout symbols. `lld` with
+    # AddressSanitizer and my linker script splits RELRO-backed sections so `lld`
+    # rejects the output unless `RELRO` is disabled for this link.
+    -Wl,-z,norelro
   )
 endif()
 

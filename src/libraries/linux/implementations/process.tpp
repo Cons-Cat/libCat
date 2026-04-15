@@ -5,8 +5,6 @@
 #include <cat/linux>
 
 template <typename... Args, cat::is_invocable<Args...> F>
-// The child thread exits with a false-positive from asan.
-[[gnu::no_sanitize_address, gnu::no_sanitize("undefined")]]
 auto
 nix::process::spawn(cat::is_allocator auto& allocator,
                     cat::idx const initial_stack_size, F&& function,
