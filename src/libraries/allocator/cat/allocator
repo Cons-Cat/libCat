@@ -293,6 +293,10 @@ using maybe_sized_allocation =
 
 template <typename derived_type>
 class allocator_interface {
+ private:
+   constexpr allocator_interface() = default;
+   friend derived_type;
+
  public:
    // If this allocator has pointer stability, try to allocate a `T`, and
    // provide a pointer handle.

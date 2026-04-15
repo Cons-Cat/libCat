@@ -6,6 +6,12 @@
 
 namespace cat {
 
+template <typename T>
+struct arithmetic_interface;
+
+template <typename T>
+struct bitwise_interface;
+
 namespace detail {
 // TODO: Commutative operators should support non-commutative operations.
 
@@ -57,6 +63,12 @@ concept has_bit_complement = requires(T lhs) { lhs.bit_complement(); };
 // CRTP class for generating a commutative `+` operator.
 template <typename derived_type>
 struct plus_interface {
+private:
+   constexpr plus_interface() = default;
+   friend derived_type;
+   friend struct arithmetic_interface<derived_type>;
+
+public:
    using decay_derived_type = remove_cvref<derived_type>;
 
    // `+` operator where this is a left-hand-side operand.
@@ -162,6 +174,12 @@ struct plus_interface {
 // CRTP class for generating a commutative `-` operator.
 template <typename derived_type>
 struct minus_interface {
+private:
+   constexpr minus_interface() = default;
+   friend derived_type;
+   friend struct arithmetic_interface<derived_type>;
+
+public:
    using decay_derived_type = remove_cvref<derived_type>;
 
    // `-` operator where this is a left-hand-side operand.
@@ -267,6 +285,12 @@ struct minus_interface {
 // CRTP class for generating a commutative `*` operator.
 template <typename derived_type>
 struct multiply_interface {
+private:
+   constexpr multiply_interface() = default;
+   friend derived_type;
+   friend struct arithmetic_interface<derived_type>;
+
+public:
    using decay_derived_type = remove_cvref<derived_type>;
 
    // `*` operator where this is a left-hand-side operand.
@@ -340,6 +364,12 @@ struct multiply_interface {
 // CRTP class for generating a commutative `/` operator.
 template <typename derived_type>
 struct divide_interface {
+private:
+   constexpr divide_interface() = default;
+   friend derived_type;
+   friend struct arithmetic_interface<derived_type>;
+
+public:
    using decay_derived_type = remove_cvref<derived_type>;
 
    // `/` operator where this is a left-hand-side operand.
@@ -413,6 +443,12 @@ struct divide_interface {
 // CRTP class for generating a commutative `&` operator.
 template <typename derived_type>
 struct bit_and_interface {
+private:
+   constexpr bit_and_interface() = default;
+   friend derived_type;
+   friend struct bitwise_interface<derived_type>;
+
+public:
    using decay_derived_type = remove_cvref<derived_type>;
 
    // `&` operator where this is a left-hand-side operand.
@@ -486,6 +522,12 @@ struct bit_and_interface {
 // CRTP class for generating a commutative `|` operator.
 template <typename derived_type>
 struct bit_or_interface {
+private:
+   constexpr bit_or_interface() = default;
+   friend derived_type;
+   friend struct bitwise_interface<derived_type>;
+
+public:
    using decay_derived_type = remove_cvref<derived_type>;
 
    // `|` operator where this is a left-hand-side operand.
@@ -559,6 +601,12 @@ struct bit_or_interface {
 // CRTP class for generating a commutative `%` operator.
 template <typename derived_type>
 struct modulo_interface {
+private:
+   constexpr modulo_interface() = default;
+   friend derived_type;
+   friend struct arithmetic_interface<derived_type>;
+
+public:
    using decay_derived_type = remove_cvref<derived_type>;
 
    // `%` operator where this is a left-hand-side operand.
@@ -632,6 +680,12 @@ struct modulo_interface {
 // CRTP class for generating a commutative `<<` operator.
 template <typename derived_type>
 struct shift_left_interface {
+private:
+   constexpr shift_left_interface() = default;
+   friend derived_type;
+   friend struct bitwise_interface<derived_type>;
+
+public:
    using decay_derived_type = remove_cvref<derived_type>;
 
    // `<<` operator where this is a left-hand-side operand.
@@ -705,6 +759,12 @@ struct shift_left_interface {
 // CRTP class for generating a commutative `>>` operator.
 template <typename derived_type>
 struct shift_right_interface {
+private:
+   constexpr shift_right_interface() = default;
+   friend derived_type;
+   friend struct bitwise_interface<derived_type>;
+
+public:
    using decay_derived_type = remove_cvref<derived_type>;
 
    // `>>` operator where this is a left-hand-side operand.
@@ -780,6 +840,12 @@ struct bitwise_interface : bit_and_interface<derived_type>,
                            bit_or_interface<derived_type>,
                            shift_left_interface<derived_type>,
                            shift_right_interface<derived_type> {
+private:
+   constexpr bitwise_interface() = default;
+   friend derived_type;
+   friend struct arithmetic_interface<derived_type>;
+
+public:
    // Unary complement operator.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
@@ -801,6 +867,11 @@ struct arithmetic_interface : plus_interface<derived_type>,
                               divide_interface<derived_type>,
                               modulo_interface<derived_type>,
                               bitwise_interface<derived_type> {
+private:
+   constexpr arithmetic_interface() = default;
+   friend derived_type;
+
+public:
    // No-op unary `+` operator for operand.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
