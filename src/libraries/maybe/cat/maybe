@@ -916,11 +916,7 @@ class [[nodiscard]] maybe {
       requires(!is_void<T>)
    {
       if (self.has_value()) [[likely]] {
-         if constexpr (!is_void<T>) {
-            return fwd(self).value();
-         } else {
-            return;
-         }
+         return fwd(self).value();
       } else {
          exit(exit_code);
       }
