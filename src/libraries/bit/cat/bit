@@ -696,6 +696,8 @@ align_down(uintptr<U> p_value, uword alignment) -> uintptr<U>;
 // `byte` is a storage type which enables bitwise operations but not arithmetic.
 // TODO: Add some member functions.
 struct byte : bitwise_interface<byte> {
+   constexpr byte() = default;
+
    uint1 value;
 
    template <typename T>
