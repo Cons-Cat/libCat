@@ -107,6 +107,8 @@ target_sources(cat INTERFACE
   ${CATLIB}/linux/implementations/sys_open.cpp
   ${CATLIB}/linux/implementations/sys_rt_sigprocmask.cpp
   ${CATLIB}/linux/implementations/sys_unlink.cpp
+  ${CATLIB}/linux/implementations/sys_getrlimit.cpp
+  ${CATLIB}/linux/implementations/sys_setrlimit.cpp
   ${CATLIB}/linux/implementations/sys_mmap.cpp
   ${CATLIB}/linux/implementations/sys_munmap.cpp
   ${CATLIB}/linux/implementations/sys_wait4.cpp

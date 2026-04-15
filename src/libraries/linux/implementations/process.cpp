@@ -7,9 +7,8 @@ auto
 wait_clone_child_through_waitid(nix::process_id child_id)
    -> nix::scaredy_nix<nix::process_id> {
    for (;;) {
-      // `process::default_flags` carries `signal::child_stopped` in
-      // `clone_flags::csignal`, so `sys_waitid` only needs
-      // `wait_options_flags::exited`.
+      // `process::default_flags` carries `signal::child_stopped` in `clone_flags::csignal`,
+      // so `sys_waitid` only needs `wait_options_flags::exited`.
       nix::scaredy_nix<nix::process_id> const result = nix::sys_waitid(
          nix::wait_id::process_id, child_id, nix::wait_options_flags::exited);
       if (result.has_value()) {
@@ -22,10 +21,9 @@ wait_clone_child_through_waitid(nix::process_id child_id)
    }
 }
 
-// `cat::thread` enables `clone_flags::child_set_tid` with
-// `clone_flags::child_clear_tid`; thread exit clears this word and the kernel
-// issues `futex_command::wake` with `futex_options::none`, so join must use
-// `futex_command::wait` with `futex_options::none`.
+// `cat::thread` enables `clone_flags::child_set_tid` with `clone_flags::child_clear_tid`.
+// Thread exit clears this word and the kernel issues `futex_command::wake` with
+// `futex_options::none`, so join must use `futex_command::wait` with `futex_options::none`.
 [[nodiscard]]
 auto
 wait_clone_thread_through_cleartid_futex(nix::process_id child_id,
@@ -34,15 +32,15 @@ wait_clone_thread_through_cleartid_futex(nix::process_id child_id,
    nix::process_id const thread_group_id = nix::sys_getpid();
    cat::iword const k_sys_tgkill = 234;
    cat::iword const k_sys_sched_yield = 24;
-   idx spins = 0;
+   cat::idx spins = 0u;
    for (;;) {
       cat::uint4 const published =
          p_clear_tid->m_value.load(cat::memory_order::acquire);
-      if (published.raw != 0u) {
+      if (published != 0u) {
          for (;;) {
             cat::uint4 const word =
                p_clear_tid->m_value.load(cat::memory_order::acquire);
-            if (word.raw == 0u) {
+            if (word == 0u) {
                return nix::scaredy_nix<nix::process_id>(child_id);
             }
             nix::scaredy_nix<cat::idx> const slept =
@@ -60,7 +58,7 @@ wait_clone_thread_through_cleartid_futex(nix::process_id child_id,
             return nix::scaredy_nix<nix::process_id>(slept.error());
          }
       }
-      if ((spins & 127) == 0) {
+      if ((spins & 127u) == 0u) {
          nix::scaredy_nix<void> const poke = nix::syscall<void>(
             k_sys_tgkill, thread_group_id, child_id, cat::int4{});
          if (!poke.has_value()) {
@@ -73,16 +71,14 @@ wait_clone_thread_through_cleartid_futex(nix::process_id child_id,
          __builtin_ia32_pause();
       }
       ++spins;
-      if ((spins & 1'023) == 0) {
-         static_cast<void>(nix::syscall0(k_sys_sched_yield));
+      if ((spins & 1'023u) == 0u) {
+         auto _ = nix::syscall0(k_sys_sched_yield);
       }
    }
 }
 
 }  // namespace
 
-// The child thread exits with a false-positive from asan.
-[[gnu::no_sanitize_address]]
 auto
 nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
                          void* p_function, void* p_args_struct)
@@ -98,26 +94,29 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
 
    cat::idx const tls_memory_size = nix::detail::executable_tls_memory_bytes();
 
-   cat::uintptr<void> tls_thread_pointer = stack_and_thread_local_buffer_end_exclusive;
+   cat::uintptr<void> tls_thread_pointer =
+      stack_and_thread_local_buffer_end_exclusive;
 
    if (tls_memory_size > 0u) {
       cat::uword align_want = nix::detail::executable_tls_alignment_bytes();
       if (align_want < 32u) {
          align_want = 32u;
       }
-      tls_thread_pointer = cat::align_down(stack_and_thread_local_buffer_end_exclusive,
-                               align_want);
+      tls_thread_pointer = cat::align_down(
+         stack_and_thread_local_buffer_end_exclusive, align_want);
       cat::uintptr<void> const tls_slab_low = stack + m_stack_size;
       if (tls_thread_pointer - tls_memory_size < tls_slab_low) {
          return nix::linux_error::inval;
       }
-      nix::detail::install_executable_tls_image_at_thread_pointer(tls_thread_pointer);
+      nix::detail::install_executable_tls_image_at_thread_pointer(
+         tls_thread_pointer);
 
       // Local-exec TLS lowering loads the thread pointer from `%fs:0`. The
       // copied executable TLS image only covers `.tdata`/`.tbss` strictly below
       // `tls_tp`; the word at `tls_tp` is the TCB self slot and must equal
       // `tls_tp` after `clone_flags::set_tls` installs that base in `%fs`.
-      *reinterpret_cast<void**>(tls_thread_pointer.get()) = tls_thread_pointer.get();
+      *reinterpret_cast<void**>(tls_thread_pointer.get()) =
+         tls_thread_pointer.get();
    }
 
    cat::uintptr<void> stack_top = tls_thread_pointer;
@@ -128,23 +127,22 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
 
    // Place a pointer to function arguments on the new stack:
    stack_top -= 8;
-   __builtin_memcpy(stack_top.get(), &p_args_struct, 8);
+   __builtin_memcpy(stack_top.get(), &p_args_struct, 8);  // NOLINT
 
    // Place a pointer to function on the new stack:
    // 8 is the size of a pointer, such as `p_function`.
    stack_top -= 8;
-   __builtin_memcpy(stack_top.get(), &p_function, 8);
+   __builtin_memcpy(stack_top.get(), &p_function, 8);  // NOLINT
 
    // This syscall is made manually here because it's important to be careful
    // with the stack and registers and not introduce a new stack frame.
    // Parent and child share `clone_flags::virtual_memory`, so they must not
    // both spill `%rax` through one C variable. That would race. Only the parent
-   // executes the `mov` into `parent_rax_after_clone` (`asm goto`); the child
+   // executes the `mov` into `clone_result` (`asm goto`); the child
    // jumps away before that store.
-   unsigned int active_clone_flags = static_cast<unsigned int>(m_flags);
-   if (tls_memory_size > idx(0)) {
-      active_clone_flags |=
-         static_cast<unsigned int>(nix::clone_flags::set_tls);
+   nix::clone_flags active_clone_flags = m_flags;
+   if (tls_memory_size > 0u) {
+      active_clone_flags |= nix::clone_flags::set_tls;
    }
 
    void* p_clear_tid_for_clone = nullptr;
@@ -153,7 +151,7 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
          static_cast<void*>(&m_clone_child_clear_tid_for_kernel.m_value);
    }
 
-   cat::iword parent_rax_after_clone = 0;
+   nix::scaredy_nix<void> clone_result;
    asm goto volatile(
       R"(mov %[cleartid], %%r10
          mov %[tls], %%r8
@@ -162,9 +160,10 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
          jz %l[clone_child]
          mov %%rax, %[parent_rax]
          jmp %l[clone_parent])"
-      : [parent_rax] "=m"(parent_rax_after_clone)
-      : "a"(56), "D"(active_clone_flags), "S"(stack_top), "d"(&(m_id)),
-        [tls] "r"(tls_thread_pointer.get()), [cleartid] "r"(p_clear_tid_for_clone)
+      : [parent_rax] "=m"(clone_result)
+      : "a"(56), "D"(active_clone_flags), "S"(stack_top),
+        "d"(&(m_id)), [tls] "r"(tls_thread_pointer.get()),
+        [cleartid] "r"(p_clear_tid_for_clone)
       : "rcx", "r11", "memory"
       : clone_child, clone_parent);
 
@@ -182,21 +181,17 @@ clone_child:
    __builtin_unreachable();
 
 clone_parent:
-   if (parent_rax_after_clone < 0) {
-      return static_cast<nix::linux_error>(parent_rax_after_clone);
-   }
-   return cat::monostate;
+   return clone_result;
 }
 
 [[nodiscard]]
 auto
 nix::process::wait() const -> scaredy_nix<process_id> {
-   // Spin until the kernel publishes the child tid for `clone_flags::parent_set_tid`.
-   // Use an acquire load so this synchronizes with that store; `pause` hints
-   // the spin loop on x86.
-   while (__atomic_load_n(const_cast<cat::iword::raw_type*>(&m_id.value.raw),
-                          __ATOMIC_ACQUIRE)
-          == 0) {
+   // Spin until the kernel publishes the child tid for
+   // `clone_flags::parent_set_tid`. Use an acquire load so this synchronizes
+   // with that store; `pause` hints the spin loop on x86.
+   // TODO: Implement a high level spin-lock.
+   while (__atomic_load_n(&m_id.value.raw, cat::memory_order::acquire) == 0) {
       __builtin_ia32_pause();
    }
 

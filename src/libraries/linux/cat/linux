@@ -1160,10 +1160,6 @@ sys_listen(file_descriptor socket_descriptor, cat::int8 backlog)
    -> scaredy_nix<void>;
 
 // Syscall 56
-namespace detail {
-using thread_entry_callback = void (*)();
-}
-
 auto
 sys_clone(clone_flags flags, void* p_stack_entry, process_id* p_parent_id,
           process_id* p_child_id, void* p_thread_pointer)
@@ -1185,6 +1181,54 @@ sys_creat(char const* p_file_path, open_mode file_mode)
 // Syscall 87
 auto
 sys_unlink(char const* p_path_name) -> scaredy_nix<void>;
+
+// Syscall 97
+enum class rlimit_resource : unsigned int {
+   // CPU time in seconds.
+   cpu_time_seconds = 0,
+   // Maximum file size.
+   max_file_size = 1,
+   // Maximum data segment size.
+   max_data_segment_size = 2,
+   // Maximum stack size.
+   max_stack_size = 3,
+   // Maximum core dump file size.
+   max_core_file_size = 4,
+   // Maximum resident set size.
+   max_resident_set_size = 5,
+   // Maximum processes and threads for the real user ID.
+   max_processes_and_threads_per_real_user = 6,
+   // Maximum open file descriptors.
+   max_open_files = 7,
+   // Maximum locked-in-memory bytes.
+   max_locked_memory = 8,
+   // Maximum address space.
+   max_address_space = 9,
+   // Maximum file locks held.
+   max_file_locks = 10,
+   // Maximum pending signals.
+   max_pending_signals = 11,
+   // Maximum bytes in POSIX message queues.
+   max_posix_message_queue_bytes = 12,
+   // Maximum nice priority raise.
+   max_nice_priority_ceiling = 13,
+   // Maximum realtime scheduling priority.
+   max_realtime_priority = 14,
+   // Maximum realtime CPU time before SIGXCPU, microseconds.
+   max_realtime_cpu_microseconds = 15,
+};
+
+struct rlimit {
+   cat::uint8 soft;
+   cat::uint8 hard;
+};
+
+auto
+sys_getrlimit(rlimit_resource resource, rlimit* p_limits) -> scaredy_nix<void>;
+
+// Syscall 160
+auto
+sys_setrlimit(rlimit_resource resource, rlimit const* p_limits) -> scaredy_nix<void>;
 
 // Syscall 200
 auto
@@ -1448,7 +1492,6 @@ struct process {
    }
 
    template <typename... Args, cat::is_invocable<Args...> F>
-   [[gnu::no_sanitize_address, gnu::no_sanitize("undefined")]]
    auto
    spawn(cat::is_allocator auto& allocator, cat::idx initial_stack_size,
          F&& function, Args&&... arguments) -> scaredy_nix<void>;
@@ -1458,7 +1501,6 @@ struct process {
    wait() const -> scaredy_nix<process_id>;
 
  private:
-   [[gnu::no_sanitize_address]]
    auto
    spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
               void* p_function, void* p_args_struct) -> scaredy_nix<void>;
