@@ -2,12 +2,6 @@ cmake_minimum_required(VERSION 3.24)
 
 project(cat LANGUAGES CXX)
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  option(CAT_USE_SANITIZERS "Link ASan and UBSan. This doesn't work in Clang." OFF)
-else()
-  option(CAT_USE_SANITIZERS "Link ASan and UBSan" ON)
-endif()
-
 list(
   APPEND CAT_COMPILE_OPTIONS_COMMON
   # Disable linking libC symbols.
@@ -35,9 +29,7 @@ list(
   -Wno-unknown-pragmas
   -Wno-missing-braces # This breaks `cat::tuple`.
   
-  # Both GCC and Clang attributes are used.
   # See p2565 "Supporting User-Defined Attributes"
-  $<$<CXX_COMPILER_ID:GNU>:-Wno-attributes>
   $<$<CXX_COMPILER_ID:Clang>:-Wno-unknown-attributes>
   # Disable some Clang warnings. libCat needs to violate these.
   $<$<CXX_COMPILER_ID:Clang>:-Wno-unqualified-std-cast-call>
@@ -62,16 +54,13 @@ if(CAT_USE_SANITIZERS)
     # still assumes the main thread stack and faults on the mmap stack (e.g.
     # `nix::process::spawn_impl`). Disable stack ASan while keeping heap ASan.
     $<$<CXX_COMPILER_ID:Clang>:-mllvm -asan-stack=0>
-    #$<$<CXX_COMPILER_ID:GNU>:--param asan-stack=0>
   )
 endif()
 
 list(
   APPEND CAT_COMPILE_OPTIONS_DEBUG
   -ggdb3
-  $<$<CXX_COMPILER_ID:GNU>:-fno-eliminate-unused-debug-types
-                           -fno-eliminate-unused-debug-symbols>
-  $<$<CXX_COMPILER_ID:Clang>:-gmodules -gfull>
+  $<$<CXX_COMPILER_ID:Clang>:-gfull>
 )
 
 list(
