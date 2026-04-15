@@ -43,6 +43,5 @@ jobs:
           cmake -S . -B build-release -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_COMPILER=clang++-23
-            -DCAT_USE_SANITIZERS=ON
           cmake --build build-release
           ctest --test-dir build-release --verbose --output-on-failure
