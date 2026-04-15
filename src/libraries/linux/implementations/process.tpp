@@ -9,17 +9,18 @@ template <typename... Args, cat::is_invocable<Args...> F>
 [[gnu::no_sanitize_address, gnu::no_sanitize("undefined")]]
 auto
 nix::process::spawn(cat::is_allocator auto& allocator,
-                    cat::idx const initial_stack_size,
-                    cat::idx const thread_local_buffer_size, F&& function,
+                    cat::idx const initial_stack_size, F&& function,
                     Args&&... arguments) -> scaredy_nix<void> {
    // Allocate a stack for this thread.
    // TODO: This stack memory should not be owned by the `process`, to
    // enable simpler memory management patterns.
    // TODO: This should union allocator and linux errors.
    // TODO: Use size feedback.
+   cat::idx const thread_local_slab_bytes =
+      nix::detail::clone_thread_local_slab_min_bytes();
    cat::span<cat::byte> memory =
       prop_as(allocator.template align_alloc_multi<cat::byte>(
-                 16u, initial_stack_size + thread_local_buffer_size),
+                 16u, initial_stack_size + thread_local_slab_bytes),
               nix::linux_error::inval);
 
    // TODO: Support call operator for functors.
@@ -33,7 +34,6 @@ nix::process::spawn(cat::is_allocator auto& allocator,
       // If there are no arguments, and `function` is a pointer, it can be
       // called almost directly.
       return this->spawn_impl(p_stack_bottom, initial_stack_size,
-                              thread_local_buffer_size,
                               reinterpret_cast<void*>(function), nullptr);
    } else {
       // If there are arguments, `function` must be wrapped in a lambda that has
@@ -49,7 +49,6 @@ nix::process::spawn(cat::is_allocator auto& allocator,
           };
 
       return this->spawn_impl(p_stack_bottom, initial_stack_size,
-                              thread_local_buffer_size,
                               reinterpret_cast<void*>(p_entry),
                               reinterpret_cast<void*>(&tuple_args));
    }

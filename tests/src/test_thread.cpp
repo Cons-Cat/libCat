@@ -19,6 +19,9 @@ void
 function_1() {
    for (idx i = 0; i < 3; ++i) {
       ++atomic;
+   }
+   
+   for (idx i = 0; i < 3; ++i) {
       ++tls1;
       ++tls2;
    }
@@ -37,11 +40,14 @@ test(thread) {
    cat::thread threads[5];
    cat::page_allocator allocator;
 
-   threads[0].spawn(allocator, 2_uki, 2_uki, function_1).verify();
-   threads[1].spawn(allocator, 2_uki, 2_uki, &function_2).verify();
+   cat::verify(nix::detail::clone_thread_local_slab_min_bytes()
+               >= nix::detail::executable_tls_memory_bytes());
+
+   threads[0].spawn(allocator, 2_uki, function_1).verify();
+   threads[1].spawn(allocator, 2_uki, &function_2).verify();
 
    threads[2]
-      .spawn(allocator, 2_uki, 2_uki,
+      .spawn(allocator, 2_uki,
              [] {
                 ++atomic;
              })
@@ -49,7 +55,7 @@ test(thread) {
 
    threads[3]
       .spawn(
-         allocator, 2_uki, 2_uki,
+         allocator, 2_uki,
          [](int) {
             ++atomic;
          },
@@ -58,7 +64,7 @@ test(thread) {
 
    threads[4]
       .spawn(
-         allocator, 2_uki, 2_uki,
+         allocator, 2_uki,
          +[] {
             ++atomic;
          })
@@ -66,10 +72,9 @@ test(thread) {
 
    for (idx i = 0; i < 3; ++i) {
       ++atomic;
-      // ++tls1;
+      ++tls1;
    }
-   // TODO: Initialize tls on the main thread.
-   // cat::verify(tls1 == 4);
+   cat::verify(tls1 == 4);
 
    threads[0].join().verify();
    threads[1].join().verify();
