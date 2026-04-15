@@ -215,6 +215,79 @@ concept is_safe_arithmetic_conversion =
        && is_same<to_type,
                   arithmetic<signed long, overflow_policies::undefined>>);
 
+namespace detail {
+
+template <typename SourceRaw, typename DestStorage>
+consteval auto
+raw_implicit_storage_shape_ok() -> bool {
+   if constexpr (sizeof(SourceRaw) < sizeof(DestStorage)) {
+      return true;
+   } else if constexpr (sizeof(SourceRaw) == sizeof(DestStorage)
+                        && sizeof(DestStorage) >= 8u) {
+      return true;
+   } else if constexpr (sizeof(SourceRaw) > sizeof(DestStorage)) {
+      return true;
+   } else {
+      return false;
+   }
+}
+
+// Wide type for lossless round-trip checks in
+// `raw_source_fits_implicit_storage`. Unsigned `U` into signed `Dest` keeps the
+// comparison in unsigned space so a truncated signed intermediate does not get
+// confused with a huge unsigned.
+template <typename DestStorage, typename RawSource>
+using implicit_raw_compare_wide = conditional<
+   is_unsigned_integral<RawSource> && is_signed_integral<DestStorage>,
+   larger_type<make_unsigned_type<RawSource>, make_unsigned_type<DestStorage>>,
+   conditional<is_unsigned_integral<RawSource>
+                  && is_unsigned_integral<DestStorage>,
+               larger_type<make_unsigned_type<RawSource>, DestStorage>,
+               larger_type<RawSource, DestStorage>>>;
+
+// Value check for the four raw `enable_if` converting constructors. Width
+// and signedness pairing are enforced on the `arithmetic` constructors; this
+// only answers whether the runtime value fits the destination storage.
+template <typename Dest, typename U>
+constexpr auto
+raw_source_fits_implicit_storage(U const& other) -> bool {
+   auto const raw = make_raw_arithmetic(other);
+   using raw_type = decltype(raw);
+   if constexpr (is_signed_integral<U> && is_unsigned_integral<Dest>) {
+      if (raw < 0) {
+         return false;
+      }
+   }
+   using wide_type = implicit_raw_compare_wide<Dest, raw_type>;
+   return static_cast<wide_type>(static_cast<Dest>(raw))
+          == static_cast<wide_type>(raw);
+}
+
+// True when mixed `operator<=>` / `operator==` may use `common_type`: either a
+// negative signed operand is paired with unsigned (handled separately as
+// strictly below or unequal to any unsigned value) or promotion to `C` is
+// lossless for both sides (same round-trip idea as
+// `raw_source_fits_implicit_storage`).
+template <typename RawL, typename RawR>
+constexpr auto
+raw_mixed_integral_compare_sound(RawL const lhs, RawR const rhs) -> bool {
+   using C = common_type<RawL, RawR>;
+   if constexpr (is_signed_integral<RawL> && is_unsigned_integral<RawR>) {
+      if (lhs < 0) {
+         return true;
+      }
+   } else if constexpr (is_unsigned_integral<RawL>
+                        && is_signed_integral<RawR>) {
+      if (rhs < 0) {
+         return true;
+      }
+   }
+   return static_cast<RawL>(static_cast<C>(lhs)) == lhs
+          && static_cast<RawR>(static_cast<C>(rhs)) == rhs;
+}
+
+}  // namespace detail
+
 // Overflow intrinsics optimize wrapping and saturation well in GCC.
 // `[[gnu::optimize(2)]]` is required because the codegen is awful by default.
 
@@ -452,6 +525,19 @@ struct arithmetic :
    constexpr arithmetic(arithmetic const&) = default;
    constexpr arithmetic(arithmetic&&) = default;
 
+   // Implicit raw unsafe integral conversions when the value fits; see
+   // `raw_implicit_storage_shape_ok` for allowed storage shapes.
+   template <is_integral U>
+      requires(
+         is_integral<T>
+         && detail::raw_implicit_storage_shape_ok<raw_arithmetic_type<U>, T>())
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr arithmetic(U other) __attribute__((enable_if(
+      detail::raw_source_fits_implicit_storage<T>(other),
+      "value is out of range for implicit conversion to this arithmetic type")))
+       : raw(static_cast<T>(make_raw_arithmetic(other))) {
+   }
+
    // Constructing with safe conversions is implicit, but constructing with
    // unsafe conversions is explicit.
    template <is_arithmetic U>
@@ -482,6 +568,70 @@ struct arithmetic :
    friend constexpr auto
    operator==(arithmetic lhs, U rhs) -> bool {
       return lhs.raw == make_raw_arithmetic(rhs);
+   }
+
+   template <is_arithmetic U>
+      requires(!is_safe_arithmetic_comparison<T, U>
+               && !detail::is_idx<arithmetic>
+               && sizeof(T) >= sizeof(raw_arithmetic_type<U>)
+               && ((is_unsigned_integral<T> && is_signed_integral<U>)
+                   || (is_signed_integral<T> && is_unsigned_integral<U>)))
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   friend constexpr auto
+   operator<=>(arithmetic lhs, U rhs) __attribute__((enable_if(
+      detail::raw_mixed_integral_compare_sound(lhs.raw,
+                                               make_raw_arithmetic(rhs)),
+      "mixed signed-unsigned comparison is not sound for these values!"))) {
+      auto const rhs_raw = make_raw_arithmetic(rhs);
+      if !consteval {
+         assert(detail::raw_mixed_integral_compare_sound(lhs.raw, rhs_raw));
+      }
+      if constexpr (is_signed_integral<raw_type>
+                    && is_unsigned_integral<raw_arithmetic_type<U>>) {
+         if (lhs.raw < 0) {
+            return std::strong_ordering::less;
+         }
+      }
+      if constexpr (is_unsigned_integral<raw_type>
+                    && is_signed_integral<raw_arithmetic_type<U>>) {
+         if (rhs_raw < 0) {
+            return std::strong_ordering::greater;
+         }
+      }
+      using common = common_type<raw_type, raw_arithmetic_type<U>>;
+      return static_cast<common>(lhs.raw) <=> static_cast<common>(rhs_raw);
+   }
+
+   template <is_arithmetic U>
+      requires(!is_safe_arithmetic_comparison<T, U>
+               && !detail::is_idx<arithmetic>
+               && sizeof(T) >= sizeof(raw_arithmetic_type<U>)
+               && ((is_unsigned_integral<T> && is_signed_integral<U>)
+                   || (is_signed_integral<T> && is_unsigned_integral<U>)))
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   friend constexpr bool  // NOLINTNEXTLINE
+   operator==(arithmetic lhs, U rhs) __attribute__((enable_if(
+      detail::raw_mixed_integral_compare_sound(lhs.raw,
+                                               make_raw_arithmetic(rhs)),
+      "mixed signed-unsigned comparison is not sound for these values!"))) {
+      auto const rhs_raw = make_raw_arithmetic(rhs);
+      if !consteval {
+         verify(detail::raw_mixed_integral_compare_sound(lhs.raw, rhs_raw));
+      }
+      if constexpr (is_signed_integral<raw_type>
+                    && is_unsigned_integral<raw_arithmetic_type<U>>) {
+         if (lhs.raw < 0) {
+            return false;
+         }
+      }
+      if constexpr (is_unsigned_integral<raw_type>
+                    && is_signed_integral<raw_arithmetic_type<U>>) {
+         if (rhs_raw < 0) {
+            return false;
+         }
+      }
+      using common = common_type<raw_type, raw_arithmetic_type<U>>;
+      return static_cast<common>(lhs.raw) == static_cast<common>(rhs_raw);
    }
 
    constexpr auto
@@ -1364,7 +1514,8 @@ struct index :
       requires(is_signed<raw_arithmetic_type<U>>)
    // Conversions to signed integers smaller than `index` are explicit.
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr explicit(sizeof(raw_type) > sizeof(U)) operator U() const {
+   constexpr explicit(sizeof(raw_type) > sizeof(U))
+   operator U() const {
       return static_cast<U>(raw);
    }
 
