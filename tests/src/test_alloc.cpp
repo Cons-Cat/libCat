@@ -706,10 +706,13 @@ test(alloc) {
       allocator.realloc_multi_to(allocator, p_alloc, 5, 10u).value().data();
 
    // Test `xrealloc_multi`
-   p_alloc = allocator.xrealloc_multi(p_alloc, 5, 10u).data();
+   auto xrealloc_multi_handle = allocator.xrealloc_multi(p_alloc, 5, 10u);
+   p_alloc = xrealloc_multi_handle.data();
 
    // Test `xrealloc_multi_to`
-   p_alloc = allocator.xrealloc_multi_to(allocator, p_alloc, 5, 10u).data();
+   auto xrealloc_multi_to_handle =
+      allocator.xrealloc_multi_to(allocator, p_alloc, 5, 10u);
+   p_alloc = xrealloc_multi_to_handle.data();
 
    // Test `align_realloc_multi`.
    p_alloc = allocator.align_realloc_multi(p_alloc, 8u, 5, 10u).value().data();
@@ -720,11 +723,14 @@ test(alloc) {
                 .data();
 
    // Test `align_xrealloc_multi`.
-   p_alloc = allocator.align_xrealloc_multi(p_alloc, 8u, 5, 10u).data();
+   auto align_xrealloc_multi_handle =
+      allocator.align_xrealloc_multi(p_alloc, 8u, 5, 10u);
+   p_alloc = align_xrealloc_multi_handle.data();
 
    // Test `align_xrealloc_multi_to`.
-   p_alloc =
-      allocator.align_xrealloc_multi_to(allocator, p_alloc, 8u, 5, 10u).data();
+   auto align_xrealloc_multi_to_handle =
+      allocator.align_xrealloc_multi_to(allocator, p_alloc, 8u, 5, 10u);
+   p_alloc = align_xrealloc_multi_to_handle.data();
 
    // Test `unalign_realloc_multi`.
    p_alloc = allocator.unalign_realloc_multi(p_alloc, 5, 10u).value().data();
@@ -735,11 +741,14 @@ test(alloc) {
                 .data();
 
    // Test `unalign_xrealloc_multi`.
-   p_alloc = allocator.unalign_xrealloc_multi(p_alloc, 5, 10u).data();
+   auto unalign_xrealloc_multi_handle =
+      allocator.unalign_xrealloc_multi(p_alloc, 5, 10u);
+   p_alloc = unalign_xrealloc_multi_handle.data();
 
    // Test `unalign_xrealloc_multi_to`.
-   p_alloc =
-      allocator.unalign_xrealloc_multi_to(allocator, p_alloc, 5, 10u).data();
+   auto unalign_xrealloc_multi_to_handle =
+      allocator.unalign_xrealloc_multi_to(allocator, p_alloc, 5, 10u);
+   p_alloc = unalign_xrealloc_multi_to_handle.data();
 
    // The allocator runs out of memory around here.
    allocator.reset();
@@ -790,10 +799,13 @@ test(alloc) {
       allocator.recalloc_multi_to(allocator, p_alloc, 5, 10u).value().data();
 
    // Test `xrecalloc_multi`
-   p_alloc = allocator.xrecalloc_multi(p_alloc, 5, 10u).data();
+   auto xrecalloc_multi_handle = allocator.xrecalloc_multi(p_alloc, 5, 10u);
+   p_alloc = xrecalloc_multi_handle.data();
 
    // Test `xrecalloc_multi_to`
-   p_alloc = allocator.xrecalloc_multi_to(allocator, p_alloc, 5, 10u).data();
+   auto xrecalloc_multi_to_handle =
+      allocator.xrecalloc_multi_to(allocator, p_alloc, 5, 10u);
+   p_alloc = xrecalloc_multi_to_handle.data();
 
    // Test `align_recalloc_multi`.
    p_alloc = allocator.align_recalloc_multi(p_alloc, 8u, 5, 10u).value().data();
@@ -804,11 +816,14 @@ test(alloc) {
                 .data();
 
    // Test `align_xrecalloc_multi`.
-   p_alloc = allocator.align_xrecalloc_multi(p_alloc, 8u, 5, 10u).data();
+   auto align_xrecalloc_multi_handle =
+      allocator.align_xrecalloc_multi(p_alloc, 8u, 5, 10u);
+   p_alloc = align_xrecalloc_multi_handle.data();
 
    // Test `align_xrecalloc_multi_to`.
-   p_alloc =
-      allocator.align_xrecalloc_multi_to(allocator, p_alloc, 8u, 5, 10u).data();
+   auto align_xrecalloc_multi_to_handle =
+      allocator.align_xrecalloc_multi_to(allocator, p_alloc, 8u, 5, 10u);
+   p_alloc = align_xrecalloc_multi_to_handle.data();
 
    // Test `unalign_recalloc_multi`.
    p_alloc = allocator.unalign_recalloc_multi(p_alloc, 5, 10u).value().data();
@@ -819,11 +834,14 @@ test(alloc) {
                 .data();
 
    // Test `unalign_xrecalloc_multi`.
-   p_alloc = allocator.unalign_xrecalloc_multi(p_alloc, 5, 10u).data();
+   auto unalign_xrecalloc_multi_handle =
+      allocator.unalign_xrecalloc_multi(p_alloc, 5, 10u);
+   p_alloc = unalign_xrecalloc_multi_handle.data();
 
    // Test `unalign_xrecalloc_multi_to`.
-   p_alloc =
-      allocator.unalign_xrecalloc_multi_to(allocator, p_alloc, 5, 10u).data();
+   auto unalign_xrecalloc_multi_to_handle =
+      allocator.unalign_xrecalloc_multi_to(allocator, p_alloc, 5, 10u);
+   p_alloc = unalign_xrecalloc_multi_to_handle.data();
 
    // Test `inline_realloc`.
    inline_alloc = allocator.inline_alloc<int4>().value();
