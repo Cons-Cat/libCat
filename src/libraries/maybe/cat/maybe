@@ -33,11 +33,7 @@ struct is_maybe_impl<maybe<U>> {
 }  // namespace detail
 
 template <typename T>
-inline constexpr bool is_maybe_v =
-   detail::is_maybe_impl<remove_cvref<T>>::value;
-
-template <typename T>
-concept is_maybe = is_maybe_v<T>;
+concept is_maybe = detail::is_maybe_impl<remove_cvref<T>>::value;
 
 template <typename char_type, bool null_terminated>
    requires(sizeof(char_type) == 1)
@@ -224,8 +220,7 @@ struct maybe_value_storage {
 
    // If this is assigned an `maybe` which wraps a type that can be
    // converted to `T` , then convert that storage to this type implicitly.
-   template <typename other_maybe>
-      requires(is_maybe_v<other_maybe>)
+   template <is_maybe other_maybe>
    constexpr void
    assign(other_maybe&& maybe) {
       if (maybe.has_value()) {
@@ -301,8 +296,7 @@ struct maybe_reference_storage {
 
    // If this is assigned an `maybe` which wraps a type that can be
    // converted to `T` , then convert that storage to this type implicitly.
-   template <typename other_maybe>
-      requires(is_maybe_v<other_maybe>)
+   template <is_maybe other_maybe>
    constexpr void
    assign(other_maybe&& maybe) {
       if (this->has_value()) {
@@ -479,8 +473,7 @@ struct maybe_compact_storage {
 
    // If this is assigned an `maybe` which wraps a type that can be
    // converted to `T` , then convert that storage to this type implicitly.
-   template <typename other_maybe>
-      requires(is_maybe_v<other_maybe>)
+   template <is_maybe other_maybe>
    constexpr void
    assign(other_maybe&& maybe) {
       if (this->has_value()) {
