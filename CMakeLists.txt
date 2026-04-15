@@ -140,6 +140,22 @@ if (CAT_USE_SANITIZERS)
     # rejects the output unless `RELRO` is disabled for this link.
     -Wl,-z,norelro
   )
+
+  # Shared ASan lives next to Clang's resource dir, which is not a default loader
+  # path. RPATH lets every linked executable run from the build tree or shell.
+  execute_process(
+    COMMAND "${CMAKE_CXX_COMPILER}" -print-file-name=libclang_rt.asan-x86_64.so
+    OUTPUT_VARIABLE _cat_asan_so_path
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(IS_ABSOLUTE "${_cat_asan_so_path}" AND EXISTS "${_cat_asan_so_path}")
+    get_filename_component(_cat_asan_rpath_dir "${_cat_asan_so_path}" DIRECTORY)
+    target_link_options(cat INTERFACE "-Wl,-rpath,${_cat_asan_rpath_dir}")
+  else()
+    message(
+      WARNING
+      "Could not resolve libclang_rt.asan-x86_64.so for `${CMAKE_CXX_COMPILER}` "
+      "(`${_cat_asan_so_path}`). Binaries may need LD_LIBRARY_PATH at run time.")
+  endif()
 endif()
 
 target_compile_options(cat INTERFACE ${CAT_COMPILE_OPTIONS})
