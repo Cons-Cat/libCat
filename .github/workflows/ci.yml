@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Debug, Release]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Clang 23 and build tools
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          set -eu
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build wget lsb-release software-properties-common gnupg
+          wget -q https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 23
+          echo "/usr/lib/llvm-23/bin" >> "${GITHUB_PATH}"
+
+      - name: Verify toolchain
+        run: |
+          command -v clang++-23
+          clang++-23 --version
+          command -v lld-23
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_CXX_COMPILER=clang++-23
+
+      - name: Build
+        run: cmake --build build/
+
+      - name: Test
+        run: ctest --test-dir build --verbose --output-on-failure
