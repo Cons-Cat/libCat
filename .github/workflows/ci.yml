@@ -8,11 +8,6 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        build_type: [Debug, Release]
-
     steps:
       - uses: actions/checkout@v4
 
@@ -34,14 +29,20 @@ jobs:
           clang++-23 --version
           command -v lld-23
 
-      - name: Configure
+      - name: Configure, build, and test (Debug)
         run: |
-          cmake -S . -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          cmake -S . -B build-debug -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_COMPILER=clang++-23 \
+            -DCAT_USE_SANITIZERS=ON
+          cmake --build build-debug
+          ctest --test-dir build-debug --verbose --output-on-failure
+
+      - name: Configure, build, and test (Release)
+        run: |
+          cmake -S . -B build-release -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_COMPILER=clang++-23
-
-      - name: Build
-        run: cmake --build build/
-
-      - name: Test
-        run: ctest --test-dir build --verbose --output-on-failure
+            -DCAT_USE_SANITIZERS=ON
+          cmake --build build-release
+          ctest --test-dir build-release --verbose --output-on-failure
