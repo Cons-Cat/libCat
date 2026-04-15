@@ -4,18 +4,37 @@
 [[gnu::no_sanitize_address]]
 auto
 nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
-                         cat::idx thread_local_buffer_size, void* p_function,
-                         void* p_args_struct) -> scaredy_nix<void> {
+                         void* p_function, void* p_args_struct)
+   -> scaredy_nix<void> {
    m_stack_size = initial_stack_size;
    m_p_stack_bottom = stack.get();
 
-   // We need the top because memory will be pushed to it downwards on
-   // x86-64.
-   cat::uintptr<void> stack_top =
-      stack + m_stack_size + thread_local_buffer_size;
+   cat::idx const thread_local_slab_bytes =
+      nix::detail::clone_thread_local_slab_min_bytes();
 
-   cat::uintptr<void> tls_buffer = stack_top;
-   stack_top -= thread_local_buffer_size;
+   cat::uintptr<void> const stack_and_thread_local_buffer_end_exclusive =
+      stack + m_stack_size + thread_local_slab_bytes;
+
+   cat::idx const tls_memory_size = nix::detail::executable_tls_memory_bytes();
+
+   cat::uintptr<void> tls_tp = stack_and_thread_local_buffer_end_exclusive;
+
+   if (tls_memory_size > idx(0)) {
+      cat::uword align_want = nix::detail::executable_tls_alignment_bytes();
+      if (align_want < cat::uword(32u)) {
+         align_want = cat::uword(32u);
+      }
+      tls_tp = cat::align_down(stack_and_thread_local_buffer_end_exclusive,
+                               align_want);
+      cat::uintptr<void> const tls_slab_low = stack + m_stack_size;
+      if (tls_tp - tls_memory_size < tls_slab_low) {
+         return nix::linux_error::inval;
+      }
+      nix::detail::install_executable_tls_image_at_thread_pointer(tls_tp);
+   }
+
+   cat::uintptr<void> stack_top = tls_tp;
+   stack_top -= thread_local_slab_bytes;
 
    // 32 byte alignment is required for AVX2 support.
    stack_top = cat::align_down(stack_top, 32u);
@@ -31,9 +50,16 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
 
    // This syscall is made manually here because it's important to be careful
    // with the stack and registers and not introduce a new stack frame.
-   // Parent and child share `clone_flags::virtual_memory`, so they must not both spill `%rax`
-   // through one C variable. That would race. Only the parent executes the `mov` into `parent_rax_after_clone` (`asm goto`); the child jumps away
-   // before that store.
+   // Parent and child share `clone_flags::virtual_memory`, so they must not
+   // both spill `%rax` through one C variable. That would race. Only the parent
+   // executes the `mov` into `parent_rax_after_clone` (`asm goto`); the child
+   // jumps away before that store.
+   unsigned int active_clone_flags = static_cast<unsigned int>(m_flags);
+   if (tls_memory_size > idx(0)) {
+      active_clone_flags |=
+         static_cast<unsigned int>(nix::clone_flags::set_tls);
+   }
+
    cat::iword parent_rax_after_clone = 0;
    asm goto volatile(
       R"(mov %[tls], %%r8
@@ -44,7 +70,8 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
          mov %%rax, %[parent_rax]
          jmp %l[clone_parent])"
       : [parent_rax] "=m"(parent_rax_after_clone)
-      : "a"(56), "D"(m_flags), "S"(stack_top), "d"(&(m_id)), [tls] "r"(tls_buffer)
+      : "a"(56), "D"(active_clone_flags), "S"(stack_top),
+        "d"(&(m_id)), [tls] "r"(tls_tp.get())
       : "rcx", "r11", "memory"
       : clone_child, clone_parent);
 
@@ -75,10 +102,9 @@ nix::process::wait() const -> scaredy_nix<process_id> {
    // Use an acquire load so this synchronizes with that store; `pause` hints
    // the spin loop on x86.
    while (__atomic_load_n(const_cast<cat::iword::raw_type*>(&m_id.value.raw),
-                          __ATOMIC_ACQUIRE) == 0) {
-#if defined(__x86_64__) || defined(__i386__)
+                          __ATOMIC_ACQUIRE)
+          == 0) {
       __builtin_ia32_pause();
-#endif
    }
 
    for (;;) {

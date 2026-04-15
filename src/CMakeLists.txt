@@ -51,6 +51,12 @@ target_include_directories(cat INTERFACE
   ${CATLIB}/enum/
 )
 
+set(LIBCAT_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/src/libcat.ld")
+target_link_options(cat INTERFACE
+  "-Wl,-T,${LIBCAT_LINKER_SCRIPT}")
+set_property(TARGET cat APPEND PROPERTY INTERFACE_LINK_DEPENDS
+  "${LIBCAT_LINKER_SCRIPT}")
+
 # TODO: Group and annotate these lines by their corresponding header.
 target_sources(cat INTERFACE
   ${CATLIB}/runtime/implementations/_start.cpp
@@ -107,6 +113,7 @@ target_sources(cat INTERFACE
   ${CATLIB}/linux/implementations/wait_pid.cpp
   ${CATLIB}/linux/implementations/sys_waitid.cpp
   ${CATLIB}/linux/implementations/sys_clone.cpp
+  ${CATLIB}/linux/implementations/executable_tls.cpp
   ${CATLIB}/linux/implementations/sys_socket.cpp
   ${CATLIB}/linux/implementations/create_socket_local.cpp
   ${CATLIB}/linux/implementations/is_a_tty.cpp
@@ -116,6 +123,7 @@ target_sources(cat INTERFACE
   ${CATLIB}/linux/implementations/sys_getpid.cpp
   ${CATLIB}/linux/implementations/read_char.cpp
   ${CATLIB}/linux/implementations/sys_accept.cpp
+  ${CATLIB}/linux/implementations/sys_arch_prctl.cpp
   ${CATLIB}/linux/implementations/sys_bind.cpp
   ${CATLIB}/linux/implementations/sys_connect.cpp
   ${CATLIB}/linux/implementations/sys_listen.cpp
