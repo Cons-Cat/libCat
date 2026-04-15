@@ -182,7 +182,26 @@ endif()
 set_target_properties(cat PROPERTIES PCH_WARN_INVALID ON)
 
 # Run `clang-format` on all source files of the `cat` target.
-add_custom_target(cat-format
-  COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/format.cmake ${CAT_CLANG_FORMAT_PATH} \"${CAT_SOURCES} ${CAT_HEADERS} \"
-  DEPENDS ${CAT_SOURCES} ${CAT_HEADERS}
-)
+set(_cat_format_files ${CAT_SOURCES} ${CAT_HEADERS})
+if(CAT_CLANG_FORMAT_PATH)
+  add_custom_target(
+    cat-format
+    COMMAND
+      ${CMAKE_COMMAND}
+      -P
+      ${CMAKE_SOURCE_DIR}/format.cmake
+      ${CAT_CLANG_FORMAT_PATH}
+      ${_cat_format_files}
+    DEPENDS
+      ${CAT_SOURCES}
+      ${CAT_HEADERS})
+else()
+  add_custom_target(
+    cat-format
+    COMMAND
+      ${CMAKE_COMMAND}
+      -E
+      echo
+      "cat-format: cmake did not find a clang-format executable. Install clang-format or configure with -DCAT_CLANG_FORMAT_PATH=/path/to/clang-format"
+    COMMAND ${CMAKE_COMMAND} -E false)
+endif()

@@ -7,8 +7,9 @@ auto
 wait_clone_child_through_waitid(nix::process_id child_id)
    -> nix::scaredy_nix<nix::process_id> {
    for (;;) {
-      // `process::default_flags` carries `signal::child_stopped` in `clone_flags::csignal`,
-      // so `sys_waitid` only needs `wait_options_flags::exited`.
+      // `process::default_flags` carries `signal::child_stopped` in
+      // `clone_flags::csignal`, so `sys_waitid` only needs
+      // `wait_options_flags::exited`.
       nix::scaredy_nix<nix::process_id> const result = nix::sys_waitid(
          nix::wait_id::process_id, child_id, nix::wait_options_flags::exited);
       if (result.has_value()) {
@@ -21,9 +22,10 @@ wait_clone_child_through_waitid(nix::process_id child_id)
    }
 }
 
-// `cat::thread` enables `clone_flags::child_set_tid` with `clone_flags::child_clear_tid`.
-// Thread exit clears this word and the kernel issues `futex_command::wake` with
-// `futex_options::none`, so join must use `futex_command::wait` with `futex_options::none`.
+// `cat::thread` enables `clone_flags::child_set_tid` with
+// `clone_flags::child_clear_tid`. Thread exit clears this word and the kernel
+// issues `futex_command::wake` with `futex_options::none`, so join must use
+// `futex_command::wait` with `futex_options::none`.
 [[nodiscard]]
 auto
 wait_clone_thread_through_cleartid_futex(nix::process_id child_id,
