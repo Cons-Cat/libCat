@@ -41,7 +41,7 @@ inline constinit struct {
 //         allocator.free(p_mem1);
 //         allocator.free(p_mem2);
 //     };
-#define CAT_DEFER auto _ = ::cat::detail::deferrer << [&]
+#define CAT_DEFER auto _ = ::cat::detail::deferrer << [&]->void
 
 // `CAT_DEFER` should never be `#undef`'d. The redefinable macro `defer` exists
 // to make this macro more ergonomic.
