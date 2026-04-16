@@ -241,10 +241,13 @@ class random_access_iterable_interface
       // `cat::forward` must be called on last use, and because argument
       // evaluation order is unspecified, it cannot be called inside an
       // argument list.
-      auto size = collection.size() - 1u;
+      // `rbegin` is only valid on non-empty collections. `assert` enforces
+      // `size >= 1` so `size - 1u` does not wrap in unsigned arithmetic.
+      idx const last =
+         narrow_to_idx(collection.size().raw - 1u).assert();
       auto* p_data = fwd(collection).data();
       return reverse_iterator_adaptor(
-         detail::collection_iterator(size, p_data));
+         detail::collection_iterator(last, p_data));
    }
 
    [[nodiscard]]
@@ -375,8 +378,8 @@ class collection_interface {
          assert(end_index <= this->self().capacity());
       }
 
-      return span<T>(this->self().data() + start_index,
-                     end_index - start_index);
+      return span<T>(
+         this->self().data() + start_index, idx(end_index - start_index));
    }
 
    [[nodiscard]]
@@ -389,8 +392,8 @@ class collection_interface {
          assert(end_index <= this->self().capacity());
       }
 
-      return span<T const>(this->self().data() + start_index,
-                           end_index - start_index);
+      return span<T const>(
+         this->self().data() + start_index, idx(end_index - start_index));
    }
 
    [[nodiscard]]
@@ -414,7 +417,8 @@ class collection_interface {
    last(idx count) [[clang::lifetimebound]] -> span<T>
       requires(is_array_like)
    {
-      return this->subspan(this->self().size() - count, this->self().size());
+      return this->subspan(idx(this->self().size() - count),
+                           this->self().size());
    }
 
    [[nodiscard]]
@@ -422,7 +426,8 @@ class collection_interface {
    last(idx count) const [[clang::lifetimebound]] -> span<T const>
       requires(is_array_like)
    {
-      return this->subspan(this->self().size() - count, this->self().size());
+      return this->subspan(idx(this->self().size() - count),
+                           this->self().size());
    }
 
    [[nodiscard]]

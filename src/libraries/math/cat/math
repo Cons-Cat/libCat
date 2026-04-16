@@ -134,12 +134,23 @@ abs(T value) -> T {
 }
 
 // TODO: Support floating point here.
+// `index - integral` is `signed_distance`, not `index`; keep rounding in raw
+// space so `div_ceil(idx, u)` stays `idx`.
+template <typename T, is_integral U>
+   requires(cat::detail::is_idx<T>)
+[[nodiscard]]
+constexpr auto
+div_ceil(T dividend, U divisor) -> T {
+   auto const dv = make_raw_arithmetic(divisor);
+   return T(static_cast<typename T::raw_type>((dividend.raw + dv - 1u) / dv));
+}
+
 template <is_integral T, is_integral U>
+   requires(!cat::detail::is_idx<T>)
 [[nodiscard]]
 constexpr auto
 div_ceil(T dividend, U divisor) {
-   using type = common_type<T, U>;
-   return (dividend + divisor - type(1)) / divisor;
+   return (dividend + divisor - 1u) / divisor;
 }
 
 // TODO: `div_floor()`.
@@ -212,12 +223,21 @@ round_to_pow2_part(T value) {
 }  // namespace detail
 
 template <is_unsigned_integral T>
+   requires(!cat::detail::is_idx<T>)
 [[nodiscard]]
 constexpr auto
 round_to_pow2(T value) {
    value -= 1u;
    value = detail::round_to_pow2_part<T, 1u>(value);
    return value + T(1);
+}
+
+template <typename T>
+   requires(cat::detail::is_idx<T>)
+[[nodiscard]]
+constexpr auto
+round_to_pow2(T value) -> T {
+   return T(round_to_pow2(value.raw));
 }
 
 template <is_signed_integral T>

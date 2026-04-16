@@ -44,7 +44,10 @@ struct variant_node<T, remaining...> {
       if constexpr (remaining_recursions == 0) {
          return this->storage;
       } else {
-         return this->remaining_nodes.template get<remaining_recursions - 1>();
+         // The `else` branch means `remaining_recursions` is not zero, so the
+         // unsigned decrement cannot wrap before indexing the tail node.
+         return this->remaining_nodes
+            .template get<narrow_to_idx(remaining_recursions.raw - 1uz).value()>();
       }
    }
 
@@ -54,7 +57,9 @@ struct variant_node<T, remaining...> {
       if constexpr (remaining_recursions == 0) {
          return this->storage;
       } else {
-         return this->remaining_nodes.template get<remaining_recursions - 1>();
+         // Same recursion depth reasoning as the non-const overload.
+         return this->remaining_nodes
+            .template get<narrow_to_idx(remaining_recursions.raw - 1uz).value()>();
       }
    }
 
@@ -158,7 +163,7 @@ class variant {
 
    // Get the type of an alternative from its index.
    template <alternative_index_type index>
-   using alternative_t = types::template get<index>;
+   using alternative_t = types::template get<idx(index)>;
 
    constexpr variant() = default;
 

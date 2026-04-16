@@ -36,7 +36,7 @@ read_and_print_file(char* p_file_name) {
       nix::sys_open(p_file_name, nix::open_mode::read_only)
          .or_exit("No such file or directory!", 2);
    idx const file_size = idx(get_file_size(file_descriptor).value());
-   idx bytes_remaining = file_size;
+   iword bytes_remaining = file_size;
    idx blocks = file_size / block_size;
    idx current_block;
    if (file_size % block_size > 0) {
@@ -53,14 +53,14 @@ read_and_print_file(char* p_file_name) {
    };
 
    while (bytes_remaining > 0) {
-      idx current_block_size = cat::min(bytes_remaining, block_size);
+      iword current_block_size = cat::min(bytes_remaining, block_size);
 
       // These pages are freed when iterating through the io vectors later.
       cat::span buffer = pager.alloc_multi<cat::byte>(block_size)
                             .or_exit("Failed to allocate memory!", 4);
 
       io_vectors[current_block] =
-         nix::io_vector(buffer.data(), current_block_size);
+         nix::io_vector(buffer.data(), cat::narrow_to_idx(current_block_size).assert());
       ++current_block;
       bytes_remaining -= current_block_size;
    }

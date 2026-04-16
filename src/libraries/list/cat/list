@@ -394,7 +394,7 @@ class basic_list
          node.p_previous_node->p_next_node = nullptr;
          m_storage.m_p_tail = node.p_previous_node;
       }
-      m_size--;
+      m_size.raw -= 1u;
       m_allocator.free(&node);
       return iterator(next);
    }
@@ -448,7 +448,7 @@ class basic_list
          }
 
          m_storage.m_p_head = node.p_next_node;
-         m_size--;
+         m_size.raw -= 1u;
          m_allocator.free(&node);
       }
 
@@ -498,7 +498,7 @@ class basic_list
             node.p_previous_node->p_next_node = nullptr;
          }
          m_storage.m_p_tail = node.p_previous_node;
-         m_size--;
+         m_size.raw -= 1u;
          m_allocator.free(&node);
       }
    }
@@ -624,7 +624,10 @@ initialize_list_variadic(span<T>& list_nodes, T* p_previous, auto&& current,
       T* p_current = list_nodes.data();
       new (p_current) T(p_current + 1u, p_previous, fwd(current));
       // Recurse to the next node.
-      list_nodes = list_nodes.last(list_nodes.size() - 1u);
+      // `sizeof...(next) > 0` means at least one node remains, so the span has
+      // length at least two and `size - 1u` cannot wrap.
+      list_nodes =
+         list_nodes.last(narrow_to_idx(list_nodes.size().raw - 1u).assert());
       initialize_list_variadic<T>(list_nodes, p_current, fwd(next)...);
    } else {
       // Final node.
@@ -642,8 +645,10 @@ initialize_slist_variadic(span<T>& list_nodes, T* p_previous, auto&& current,
       T* p_current = list_nodes.data();
       new (p_current) T(p_current + 1u, fwd(current));
       // Recurse to the next node.
-      list_nodes = list_nodes.last(list_nodes.size() - 1u);
-      initialize_list_variadic<T>(list_nodes, p_current, fwd(next)...);
+      // Same span-length reasoning as `initialize_list_variadic`.
+      list_nodes =
+         list_nodes.last(narrow_to_idx(list_nodes.size().raw - 1u).assert());
+      initialize_slist_variadic<T>(list_nodes, p_current, fwd(next)...);
    } else {
       // Final node.
       T* p_current = p_previous + 1u;
@@ -661,7 +666,9 @@ initialize_list_filled(span<T> list_nodes, T* p_previous,
       // Construct a node at this address.
       new (p_current) T(p_current + 1u, p_previous, value);
       // Recurse to the next node.
-      list_nodes = list_nodes.last(list_nodes.size() - 1u);
+      // The branch requires `size > 1u`, so `size - 1u` is safe.
+      list_nodes =
+         list_nodes.last(narrow_to_idx(list_nodes.size().raw - 1u).assert());
       initialize_list_filled<T>(list_nodes, p_current, value);
    } else {
       // Final node.
@@ -678,7 +685,9 @@ initialize_slist_filled(span<T> list_nodes, T* p_previous,
       T* p_current = list_nodes.data();
       new (p_current) T(p_current + 1u, value);
       // Recurse to the next node.
-      list_nodes = list_nodes.last(list_nodes.size() - 1u);
+      // Same `size > 1u` guard as `initialize_list_filled`.
+      list_nodes =
+         list_nodes.last(narrow_to_idx(list_nodes.size().raw - 1u).assert());
       initialize_slist_filled<T>(list_nodes, p_current, value);
    } else {
       // Final node.

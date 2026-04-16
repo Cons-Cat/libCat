@@ -161,6 +161,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/allocator/cat/pool_allocator
   ${CATLIB}/arithmetic/cat/arithmetic
   ${CATLIB}/arithmetic/cat/arithmetic_interface
+  ${CATLIB}/arithmetic/cat/implementations/narrow_to_idx.tpp
   ${CATLIB}/array/cat/array
   ${CATLIB}/atomic/cat/atomic
   ${CATLIB}/bit/cat/bit

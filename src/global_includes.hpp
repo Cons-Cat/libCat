@@ -2,12 +2,11 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/meta>
+
 // This file should be implicitly included in all other files. With GCC, this is
 // done using the `--include` flag, as in `--include global_includes.hpp`. The
 // `CMakeLists.txt` in this repository's top level directory does this.
-
-#include <cat/compare>
-#include <cat/sanitizer>
 
 namespace cat::detail {
 template <typename F>
@@ -170,6 +169,7 @@ inline constexpr bool is_monostate =
 
 // Including the `<cat/runtime>` library is required to link a libCat program,
 // because it contains the `_start` symbol.
+#include <cat/maybe>
 #include <cat/runtime>
 
 // `assert()` is used throughout the library.

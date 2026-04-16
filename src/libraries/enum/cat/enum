@@ -10,17 +10,18 @@ template <typename T>
 consteval auto
 type_name() -> cat::str_view {
    char const* p_string = __PRETTY_FUNCTION__;
-   cat::idx size = sizeof(__PRETTY_FUNCTION__) - 2u;
+   iword size = iword(sizeof(__PRETTY_FUNCTION__) - 2);
 
    // Scan backwards from the function signature to find whitespace that
    // delimits the beginning of this type name.
-   for (cat::idx i = size; i >= 0u; --i) {
-      if (p_string[i] == '=') {
+   for (iword i = size - 1;
+        i >= 0; --i) {
+      if (p_string[narrow_to_idx(i).value()] == '=') {
          // There is a whitespace after the `=` in this signature, so we add 1
          // to the string pointer to compensate.
-         p_string = p_string + i + 2u;
-         size -= i + 2u;
-         return {p_string, size};
+         p_string = p_string + cat::idx(i) + 2u;
+         size -= i + 2;
+         return {p_string, cat::narrow_to_idx(size).value()};
       }
    }
    __builtin_unreachable();
@@ -41,10 +42,11 @@ enum_name_from_nttp() -> cat::str_view {
    // boundary, and trim everything else from the string. This boundary is
    // either a scope-resolution operator or whitespace for scoped and unscoped
    // enums respectively.
-   for (cat::idx i = size; i >= 0u; --i) {
-      if (p_string[i] == ':' || p_string[i] == ' ') {
-         p_string = p_string + i + 1u;
-         size -= i - 1u;
+   for (cat::iword i = cat::iword(size) - cat::iword(1);
+        i >= cat::iword(0); --i) {
+      if (p_string[cat::idx(i)] == ':' || p_string[cat::idx(i)] == ' ') {
+         p_string = p_string + cat::idx(i) + 1u;
+         size.raw -= cat::idx(i - cat::iword(1)).raw;
          return {p_string, size};
       }
    }
