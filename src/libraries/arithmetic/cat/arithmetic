@@ -1522,33 +1522,6 @@ struct index :
        : raw(static_cast<__SIZE_TYPE__>(make_raw_arithmetic(other))) {
    }
 
-   // `index` allows implicit unsafe conversions from `unsigned long`
-   // r-values specifically, for user convenience.
-
-   // TODO: Is this necessary?
-   // This is required in addition to the `unsigned long long` constructor,
-   // because implicit conversions from integer literals are not preferred
-   // to the above templated constructor.
-   [[gnu::always_inline, gnu::nodebug]]
-   constexpr index(unsigned long&& other)
-       : raw(other) {
-      if !consteval {
-         assert(other <= limits<index>::max());
-      }
-   }
-
-   // `index` allows implicit unsafe conversions from `unsigned long long`
-   // r-values specifically, for user convenience.
-   [[gnu::always_inline, gnu::nodebug]]
-   constexpr index(unsigned long long&& other)
-       : raw(other) {
-      if !consteval {
-         assert(other <= limits<index>::max());
-      }
-   }
-
-   // TODO: Consolidate these two.
-
    // `index` can safely implictly convert into larger integers than it,
    // including fundamental integers for use as a subscripting index.
    template <is_integral U>

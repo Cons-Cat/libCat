@@ -488,10 +488,10 @@ make_zstr_inplace(char const (&string)[deduced_length])
    [[assume(string[deduced_length.raw - 1uz] == '\0')]];
    zstr_inplace<padded_length> new_string;
    for (idx i; i < deduced_length; ++i) {
-      new_string[i] = string[i.raw];
+      new_string[i] = string[i];
    }
    // Pad the string out with null bytes.
-   for (idx i = deduced_length; i.raw < padded_length.raw; ++i) {
+   for (idx i = deduced_length; i < padded_length; ++i) {
       new_string[i] = '\0';
    }
    return new_string;
