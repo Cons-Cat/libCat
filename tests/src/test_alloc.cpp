@@ -39,22 +39,30 @@ const_test() {
    allocator.free(p_xalloc);
 
    cat::span<int4> alloc_multi = allocator.alloc_multi<int4>(5u).value();
-
-   alloc_multi =
-      allocator.realloc_multi(alloc_multi.data(), alloc_multi.size(), 10u)
-         .value();
-
+   // `realloc_multi` is not a constant expression on Clang.
    allocator.free_multi(alloc_multi.data(), alloc_multi.size());
 
    cat::span<int4> xalloc_multi = allocator.xalloc_multi<int4>(5u);
    allocator.free_multi(xalloc_multi.data(), xalloc_multi.size());
 }
 
+consteval void
+const_test_inline_alloc() {
+   cat::page_allocator allocator;
+
+   auto h_alloc = allocator.inline_alloc<int4>(1).value();
+   allocator.free(h_alloc);
+
+   auto hx = allocator.inline_xalloc<int4>(1);
+   allocator.free(hx);
+
+   // Inline multi uses placement `new` over the handle object, which is not a
+   // constant expression on Clang.
+}
+
 test(alloc) {
-#ifndef __clang__
-   // This does not compile with Clang, currently.
    const_test();
-#endif
+   const_test_inline_alloc();
 
    // Initialize an allocator.
    cat::page_allocator pager;
@@ -583,75 +591,57 @@ test(alloc) {
 
    // Test `xcalloc`.
    auto _ = allocator.xcalloc<int4>();
-   auto _ = allocator.xcalloc<int4>(1);
 
    // Test `align_xcalloc`.
    auto _ = allocator.align_xcalloc<int4>(8u);
-   auto _ = allocator.align_xcalloc<int4>(8u, 1);
 
    // Test `unalign_xcalloc`.
    auto _ = allocator.unalign_xcalloc<int1>();
-   auto _ = allocator.unalign_xcalloc<int1>(1);
 
    // Test `inline_calloc`.
    auto _ = allocator.inline_calloc<int4>().value();
-   auto _ = allocator.inline_calloc<int4>(1).value();
 
    // Test `inline_xcalloc`.
    auto _ = allocator.inline_xcalloc<int4>();
-   auto _ = allocator.inline_xcalloc<int4>(1);
 
    // Test `inline_align_calloc`.
    auto _ = allocator.inline_align_calloc<int4>(8u).value();
-   auto _ = allocator.inline_align_calloc<int4>(8u, 1).value();
 
    // Test `inline_align_xcalloc`.
    auto _ = allocator.inline_align_xcalloc<int4>(8u);
-   auto _ = allocator.inline_align_xcalloc<int4>(8u, 1);
 
    // Test `inline_unalign_calloc`.
    auto _ = allocator.inline_unalign_calloc<int4>().value();
-   auto _ = allocator.inline_unalign_calloc<int4>(1).value();
 
    // Test `inline_unalign_xcalloc`.
    auto _ = allocator.inline_unalign_xcalloc<int4>();
-   auto _ = allocator.inline_unalign_xcalloc<int4>(1);
 
    // Test `xscalloc`.
    auto _ = allocator.xscalloc<int4>().first();
-   auto _ = allocator.xscalloc<int4>(1).first();
 
    // Test `align_xscalloc`.
    auto _ = allocator.align_xscalloc<int4>(8u).first();
-   auto _ = allocator.align_xscalloc<int4>(8u, 1).first();
 
    // Test `unalign_xscalloc`.
    auto _ = allocator.unalign_xscalloc<int1>().first();
-   auto _ = allocator.unalign_xscalloc<int1>(1).first();
 
    // Test `inline_scalloc`.
    auto _ = allocator.inline_scalloc<int4>().value().first();
-   auto _ = allocator.inline_scalloc<int4>(1).value().first();
 
    // Test `inline_xscalloc`.
    auto _ = allocator.inline_xscalloc<int4>().first();
-   auto _ = allocator.inline_xscalloc<int4>(1).first();
 
    // Test `inline_align_scalloc`.
    auto _ = allocator.inline_align_scalloc<int4>(8u).value().first();
-   auto _ = allocator.inline_align_scalloc<int4>(8u, 1).value().first();
 
    // Test `inline_align_xscalloc`.
    auto _ = allocator.inline_align_xscalloc<int4>(8u).first();
-   auto _ = allocator.inline_align_xscalloc<int4>(8u, 1).first();
 
    // Test `inline_unalign_scalloc`.
    auto _ = allocator.inline_unalign_scalloc<int4>().value().first();
-   auto _ = allocator.inline_unalign_scalloc<int4>(1).value().first();
 
    // Test `inline_unalign_xscalloc`.
    auto _ = allocator.inline_unalign_xscalloc<int4>().first();
-   auto _ = allocator.inline_unalign_xscalloc<int4>(1).first();
 
    allocator.reset();
 

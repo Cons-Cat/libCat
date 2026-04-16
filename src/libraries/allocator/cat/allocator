@@ -32,8 +32,8 @@ struct base_memory_handle {
    static constexpr bool is_multi_handle = false;
    using allocation_type = T;
 
-   // Number of `T`s allocated. This is always 1 if the call is not
-   // intercepted by a `multi_memory_handle`.
+   // Number of `T`s allocated. This is always 1 if the call is not intercepted
+   // by a `multi_memory_handle`.
    [[nodiscard]]
    constexpr auto
    size() const -> idx {
@@ -42,12 +42,12 @@ struct base_memory_handle {
 
    // If `.set_count()` is no-op if it is not intercepted by a
    // `multi_memory_handle`.
-   void
+   constexpr void
    set_count(iword) {
    }
 
-   // Number of bytes allocated. This is always the size of `T` if the call
-   // is not intercepted by a `multi_memory_handle`.
+   // Number of bytes allocated. This is always the size of `T` if the call is
+   // not intercepted by a `multi_memory_handle`.
    [[nodiscard]]
    constexpr auto
    raw_size() const -> idx {
@@ -82,18 +82,18 @@ struct multi_memory_handle {
    }
 
    // TODO: Variadic emplace.
-   void
+   constexpr void
    set_inline_storage(allocation_type value) {
       this->handle.set_inline_storage(value);
    }
 
-   void
+   constexpr void
    set_inlined(bool inlined) {
       this->handle.set_inlined(inlined);
    }
 
    // Intercept a propagating call to `.set_count()`.
-   void
+   constexpr void
    set_count(idx count) {
       // This conversion to `idx` is safe, because `count` is always
       // positive.
@@ -164,16 +164,16 @@ struct inline_memory_handle {
 
    bool is_on_stack;
 
-   // The default constructor must not initialize data.
-   // NOLINTNEXTLINE This would be ill-formed if it is `default`ed.
-   inline_memory_handle() {
+   // Value-initialize `handle` so the union has an active member before
+   // `set_count` / other mutators run; required for constant evaluation.
+   constexpr inline_memory_handle() : handle(), is_on_stack(false) {
    }
 
-   inline_memory_handle(handle_type input_handle)
+   constexpr inline_memory_handle(handle_type input_handle)
        : handle(input_handle), is_on_stack(handle.is_inline()) {
    }
 
-   ~inline_memory_handle() {
+   constexpr ~inline_memory_handle() {
       if (this->is_on_stack) {
          inline_storage.~allocation_type();
       }
@@ -181,18 +181,18 @@ struct inline_memory_handle {
 
    // Intercept a propagating call to `.set_inline_storage()`.
    // TODO: Variadic emplace.
-   void
+   constexpr void
    set_inline_storage(allocation_type value) {
       inline_storage = value;
    }
 
    // Intercept a propagating call to `.set_inlined()`.
-   void
+   constexpr void
    set_inlined(bool inlined) {
       this->is_on_stack = inlined;
    }
 
-   void
+   constexpr void
    set_count(idx count) {
       this->handle.set_count(count);
    }
@@ -314,8 +314,8 @@ class allocator_interface {
       }
    }
 
-   // If this allocator has pointer stability, allocate a `T`, and
-   // provide a pointer handle.
+   // If this allocator has pointer stability, allocate a `T`, and provide a
+   // pointer handle.
    template <typename T, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
@@ -371,8 +371,8 @@ class allocator_interface {
          alignment, 1u, fwd(constructor_args)...);
    }
 
-   // If this allocator has pointer stability, allocate a `T` with an
-   // alignment guarantee, and provide a pointer handle.
+   // If this allocator has pointer stability, allocate a `T` with an alignment
+   // guarantee, and provide a pointer handle.
    template <typename T, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
@@ -393,8 +393,8 @@ class allocator_interface {
          1u, 1u, fwd(constructor_args)...);
    }
 
-   // If this allocator has pointer stability, allocate a `T` with no
-   // alignment guarantee, and provide a pointer handle.
+   // If this allocator has pointer stability, allocate a `T` with no alignment
+   // guarantee, and provide a pointer handle.
    template <typename T, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
@@ -414,8 +414,8 @@ class allocator_interface {
                                                                   count);
    }
 
-   // If this allocator has pointer stability, allocate an array of `T`
-   // with an alignment guarantee, and provide a pointer handle.
+   // If this allocator has pointer stability, allocate an array of `T` with an
+   // alignment guarantee, and provide a pointer handle.
    template <typename T>
    [[nodiscard]]
    constexpr auto
@@ -433,8 +433,8 @@ class allocator_interface {
       return meta_alloc<T, false, true, false, true, false, false>(1u, count);
    }
 
-   // If this allocator has pointer stability, allocate an array of `T`
-   // with no alignment guarantee, and provide a pointer handle.
+   // If this allocator has pointer stability, allocate an array of `T` with no
+   // alignment guarantee, and provide a pointer handle.
    template <typename T>
    [[nodiscard]]
    constexpr auto
@@ -546,8 +546,7 @@ class allocator_interface {
                                                                  count);
    }
 
-   // Allocate a small-size optimized array of `T` with an alignment
-   // guarantee.
+   // Allocate a small-size optimized array of `T` with an alignment guarantee.
    template <typename T>
    [[nodiscard]]
    constexpr auto
@@ -565,8 +564,7 @@ class allocator_interface {
       return meta_alloc<T, true, true, false, true, false, false>(1u, count);
    }
 
-   // Allocate a small-size optimized array of `T` with no alignment
-   // guarantee.
+   // Allocate a small-size optimized array of `T` with no alignment guarantee.
    template <typename T>
    [[nodiscard]]
    constexpr auto
@@ -599,8 +597,7 @@ class allocator_interface {
       return align_nalloc_multi<T>(alignof(T), count);
    }
 
-   // Get the number of bytes that allocating an array of `T` would
-   // reserve.
+   // Get the number of bytes that allocating an array of `T` would reserve.
    template <typename T>
    [[nodiscard]]
    constexpr auto
@@ -617,8 +614,8 @@ class allocator_interface {
       return this->self().allocation_bytes(alignment, sizeof(T));
    }
 
-   // Get the number of bytes that allocating a `T` with an alignment
-   // guarantee would reserve.
+   // Get the number of bytes that allocating a `T` with an alignment guarantee
+   // would reserve.
    template <typename T>
    [[nodiscard]]
    constexpr auto
@@ -635,8 +632,8 @@ class allocator_interface {
       return this->self().allocation_bytes(1u, sizeof(T));
    }
 
-   // Get the number of bytes that allocating a `T` with no alignment
-   // guarantee would reserve.
+   // Get the number of bytes that allocating a `T` with no alignment guarantee
+   // would reserve.
    template <typename T>
    [[nodiscard]]
    constexpr auto
@@ -653,8 +650,8 @@ class allocator_interface {
       return this->self().allocation_bytes(alignment, count * sizeof(T));
    }
 
-   // Get the number of bytes that allocating an array of `T` with an
-   // alignment guarantee would reserve.
+   // Get the number of bytes that allocating an array of `T` with an alignment
+   // guarantee would reserve.
    template <typename T>
    [[nodiscard]]
    constexpr auto
@@ -673,8 +670,8 @@ class allocator_interface {
       return this->self().allocation_bytes(1u, count * sizeof(T));
    }
 
-   // Get the number of bytes that allocating an array of `T` with no
-   // alignment guarantee would reserve.
+   // Get the number of bytes that allocating an array of `T` with no alignment
+   // guarantee would reserve.
    template <typename T>
    [[nodiscard]]
    constexpr auto
@@ -691,8 +688,8 @@ class allocator_interface {
       return inline_align_nalloc<T>(alignof(T));
    }
 
-   // Get the number of bytes that allocating a small-size optimized `T`
-   // would reserve.
+   // Get the number of bytes that allocating a small-size optimized `T` would
+   // reserve.
    template <typename T>
    [[nodiscard]]
    constexpr auto
@@ -731,8 +728,8 @@ class allocator_interface {
       }
    }
 
-   // Get the number of bytes that allocating a small-size optimized `T` with
-   // an alignment guarantee would reserve.
+   // Get the number of bytes that allocating a small-size optimized `T` with an
+   // alignment guarantee would reserve.
    template <typename T>
    [[nodiscard]]
    constexpr auto
@@ -749,8 +746,8 @@ class allocator_interface {
       return inline_align_nalloc<T>(1u);
    }
 
-   // Get the number of bytes that allocating a small-size optimized `T` with
-   // no alignment guarantee would reserve.
+   // Get the number of bytes that allocating a small-size optimized `T` with no
+   // alignment guarantee would reserve.
    template <typename T>
    [[nodiscard]]
    constexpr auto
@@ -771,8 +768,8 @@ class allocator_interface {
       return inline_buffer_size;
    }
 
-   // Get the number of bytes that allocating a small-size optimized
-   // array of `T` with an alignment guarantee would reserve.
+   // Get the number of bytes that allocating a small-size optimized array of
+   // `T` with an alignment guarantee would reserve.
    template <typename T>
    [[nodiscard]]
    constexpr auto
@@ -789,8 +786,8 @@ class allocator_interface {
       return inline_align_nalloc_multi<T>(1u, count);
    }
 
-   // Get the number of bytes that allocating a small-size optimized
-   // array of `T` with no alignment guarantee would reserve.
+   // Get the number of bytes that allocating a small-size optimized array of
+   // `T` with no alignment guarantee would reserve.
    template <typename T>
    [[nodiscard]]
    constexpr auto
@@ -798,8 +795,8 @@ class allocator_interface {
       return inline_align_xnalloc_multi<T>(1u, count);
    }
 
-   // If this allocator has pointer stability, try to allocate a `T`, and
-   // return the number of bytes that were allocated.
+   // If this allocator has pointer stability, try to allocate a `T`, and return
+   // the number of bytes that were allocated.
    template <typename T, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
@@ -812,8 +809,8 @@ class allocator_interface {
       }
    }
 
-   // If this allocator has pointer stability, allocate a `T`, and
-   // return the number of bytes that were allocated.
+   // If this allocator has pointer stability, allocate a `T`, and return the
+   // number of bytes that were allocated.
    template <typename T, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
@@ -839,8 +836,8 @@ class allocator_interface {
       }
    }
 
-   // If this allocator has pointer stability, allocate an array of `T`,
-   // and return the number of bytes that were allocated.
+   // If this allocator has pointer stability, allocate an array of `T`, and
+   // return the number of bytes that were allocated.
    template <typename T, typename... Args>
    [[nodiscard]]
    constexpr auto
@@ -863,8 +860,8 @@ class allocator_interface {
          alignment, 1u, fwd(constructor_args)...);
    }
 
-   // If this allocator has pointer stability, allocate a `T` with an
-   // alignment guarantee, and return the number of bytes that were allocated.
+   // If this allocator has pointer stability, allocate a `T` with an alignment
+   // guarantee, and return the number of bytes that were allocated.
    template <typename T, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
@@ -885,8 +882,8 @@ class allocator_interface {
          1u, 1u, fwd(constructor_args)...);
    }
 
-   // If this allocator has pointer stability, allocate a `T` with no
-   // alignment guarantee, and return the number of bytes that were allocated.
+   // If this allocator has pointer stability, allocate a `T` with no alignment
+   // guarantee, and return the number of bytes that were allocated.
    template <typename T, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
@@ -936,8 +933,8 @@ class allocator_interface {
       return meta_alloc<T, false, false, false, true, false, true>(1u, count);
    }
 
-   // Try to allocate a small-size optimized `T`, and return the number of
-   // bytes that were allocated.
+   // Try to allocate a small-size optimized `T`, and return the number of bytes
+   // that were allocated.
    template <typename T, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
@@ -964,8 +961,8 @@ class allocator_interface {
       }
    }
 
-   // Try to allocate a small-size optimized array of `T`, and return the
-   // number of bytes that were allocated.
+   // Try to allocate a small-size optimized array of `T`, and return the number
+   // of bytes that were allocated.
    template <typename T, typename... Args>
    [[nodiscard]]
    constexpr auto
@@ -1040,12 +1037,12 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_salloc_multi(uword alignment, idx count) {
-      return meta_alloc<T, true, true, false, true, false, true>(alignment,
-                                                                 count);
+      return meta_alloc<T, true, true, true, true, false, true>(alignment,
+                                                                count);
    }
 
-   // Allocate a small-size optimized array of `T` with an alignment
-   // guarantee, and return the number of bytes that were allocated.
+   // Allocate a small-size optimized array of `T` with an alignment guarantee,
+   // and return the number of bytes that were allocated.
    template <typename T>
    [[nodiscard]]
    constexpr auto
@@ -1063,8 +1060,8 @@ class allocator_interface {
       return meta_alloc<T, true, true, false, true, false, true>(1u, count);
    }
 
-   // Allocate a small-size optimized array of `T` with no alignment
-   // guarantee, and return the number of bytes that were allocated.
+   // Allocate a small-size optimized array of `T` with no alignment guarantee,
+   // and return the number of bytes that were allocated.
    template <typename T>
    [[nodiscard]]
    constexpr auto
@@ -1074,37 +1071,33 @@ class allocator_interface {
 
    // If this allocator has pointer stability, try to allocate a `T`, and
    // provide a pointer handle.
-   // TODO: `calloc` functions shouldn't take constructor args, and they should
-   // verify T is a trivial type.
-   template <typename T, typename... Args>
-      requires(is_constructible<T, Args...>)
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   calloc(Args&&... constructor_args) {
+   calloc() {
       if constexpr (alignof(T) > 1) {
-         return align_calloc<T>(alignof(T), fwd(constructor_args)...);
+         return align_calloc<T>(alignof(T));
       } else {
-         return unalign_calloc<T>(fwd(constructor_args)...);
+         return unalign_calloc<T>();
       }
    }
 
-   // If this allocator has pointer stability, allocate a `T`, and
-   // provide a pointer handle.
-   template <typename T, typename... Args>
-      requires(is_constructible<T, Args...>)
+   // If this allocator has pointer stability, allocate a `T`, and provide a
+   // pointer handle.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   xcalloc(Args&&... constructor_args) {
+   xcalloc() {
       if constexpr (alignof(T) > 1) {
-         return align_xcalloc<T>(alignof(T), fwd(constructor_args)...);
+         return align_xcalloc<T>(alignof(T));
       } else {
-         return unalign_xcalloc<T>(fwd(constructor_args)...);
+         return unalign_xcalloc<T>();
       }
    }
 
-   // If this allocator has pointer stability, try to allocate an array of
-   // `T`, and provide a pointer handle.
-   template <typename T>
+   // If this allocator has pointer stability, try to allocate an array of `T`,
+   // and provide a pointer handle.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    calloc_multi(idx count) {
@@ -1117,7 +1110,7 @@ class allocator_interface {
 
    // If this allocator has pointer stability, allocate an array of `T`, and
    // provide a pointer handle.
-   template <typename T>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    xcalloc_multi(idx count) {
@@ -1131,55 +1124,49 @@ class allocator_interface {
    // If this allocator has pointer stability, try to allocate a `T` with an
    // alignment guarantee, and provide a pointer handle, and zero-out the
    // allocated memory.
-   template <typename T, typename... Args>
-      requires(is_constructible<T, Args...>)
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   align_calloc(uword alignment, Args&&... constructor_args) {
-      return meta_alloc<T, false, true, true, false, true, false>(
-         alignment, 1u, fwd(constructor_args)...);
+   align_calloc(uword alignment) {
+      return meta_alloc<T, false, true, true, false, true, false>(alignment,
+                                                                  1u);
    }
 
-   // If this allocator has pointer stability, allocate a `T` with an
-   // alignment guarantee, and provide a pointer handle, and zero-out the
-   // allocated memory.
-   template <typename T, typename... Args>
-      requires(is_constructible<T, Args...>)
+   // If this allocator has pointer stability, allocate a `T` with an alignment
+   // guarantee, and provide a pointer handle, and zero-out the allocated
+   // memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   align_xcalloc(uword alignment, Args&&... constructor_args) {
-      return meta_alloc<T, false, false, true, false, true, false>(
-         alignment, 1u, fwd(constructor_args)...);
+   align_xcalloc(uword alignment) {
+      return meta_alloc<T, false, false, true, false, true, false>(alignment,
+                                                                   1u);
    }
 
    // If this allocator has pointer stability, try to allocate a `T` with no
    // alignment guarantee, and provide a pointer handle, and zero-out the
    // allocated memory.
-   template <typename T, typename... Args>
-      requires(is_constructible<T, Args...>)
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   unalign_calloc(Args&&... constructor_args) {
-      return meta_alloc<T, false, true, false, false, true, false>(
-         1u, 1u, fwd(constructor_args)...);
+   unalign_calloc() {
+      return meta_alloc<T, false, true, false, false, true, false>(1u, 1u);
    }
 
-   // If this allocator has pointer stability, allocate a `T` with no
-   // alignment guarantee, and provide a pointer handle, and zero-out the
-   // allocated memory.
-   template <typename T, typename... Args>
-      requires(is_constructible<T, Args...>)
+   // If this allocator has pointer stability, allocate a `T` with no alignment
+   // guarantee, and provide a pointer handle, and zero-out the allocated
+   // memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   unalign_xcalloc(Args&&... constructor_args) {
-      return meta_alloc<T, false, false, false, false, true, false>(
-         1u, 1u, fwd(constructor_args)...);
+   unalign_xcalloc() {
+      return meta_alloc<T, false, false, false, false, true, false>(1u, 1u);
    }
 
-   // If this allocator has pointer stability, try to allocate an array of
-   // `T` with an alignment guarantee, and provide a pointer handle, and
-   // zero-out the allocated memory.
-   template <typename T>
+   // If this allocator has pointer stability, try to allocate an array of `T`
+   // with an alignment guarantee, and provide a pointer handle, and zero-out
+   // the allocated memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    align_calloc_multi(uword alignment, idx count) {
@@ -1187,10 +1174,10 @@ class allocator_interface {
                                                                  count);
    }
 
-   // If this allocator has pointer stability, allocate an array of `T`
-   // with an alignment guarantee, and provide a pointer handle, and zero-out
-   // the allocated memory.
-   template <typename T>
+   // If this allocator has pointer stability, allocate an array of `T` with an
+   // alignment guarantee, and provide a pointer handle, and zero-out the
+   // allocated memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    align_xcalloc_multi(uword alignment, idx count) {
@@ -1198,57 +1185,54 @@ class allocator_interface {
                                                                   count);
    }
 
-   // If this allocator has pointer stability, try to allocate an array of
-   // `T` with no alignment guarantee, and provide a pointer handle, and
-   // zero-out the allocated memory.
-   template <typename T>
+   // If this allocator has pointer stability, try to allocate an array of `T`
+   // with no alignment guarantee, and provide a pointer handle, and zero-out
+   // the allocated memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    unalign_calloc_multi(idx count) {
       return meta_alloc<T, false, true, false, true, true, false>(1u, count);
    }
 
-   // If this allocator has pointer stability, allocate an array of `T`
-   // with no alignment guarantee, and provide a pointer handle, and zero-out
-   // the allocated memory.
-   template <typename T>
+   // If this allocator has pointer stability, allocate an array of `T` with no
+   // alignment guarantee, and provide a pointer handle, and zero-out the
+   // allocated memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    unalign_xcalloc_multi(idx count) {
       return meta_alloc<T, false, false, false, true, true, false>(1u, count);
    }
 
-   // Try to allocate a small-size optimized `T`, and zero-out the
-   // allocated memory.
-   template <typename T, typename... Args>
-      requires(is_constructible<T, Args...>)
+   // Try to allocate a small-size optimized `T`, and zero-out the allocated
+   // memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   inline_calloc(Args&&... constructor_args) {
+   inline_calloc() {
       if constexpr (alignof(T) > 1) {
-         return inline_align_calloc<T>(alignof(T), fwd(constructor_args)...);
+         return inline_align_calloc<T>(alignof(T));
       } else {
-         return inline_unalign_calloc<T>(fwd(constructor_args)...);
+         return inline_unalign_calloc<T>();
       }
    }
 
-   // Allocate a small-size optimized `T`, and zero-out the
-   // allocated memory.
-   template <typename T, typename... Args>
-      requires(is_constructible<T, Args...>)
+   // Allocate a small-size optimized `T`, and zero-out the allocated memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   inline_xcalloc(Args&&... constructor_args) {
+   inline_xcalloc() {
       if constexpr (alignof(T) > 1) {
-         return inline_align_xcalloc<T>(alignof(T), fwd(constructor_args)...);
+         return inline_align_xcalloc<T>(alignof(T));
       } else {
-         return inline_unalign_xcalloc<T>(fwd(constructor_args)...);
+         return inline_unalign_xcalloc<T>();
       }
    }
 
    // Try to allocate a small-size optimized array of `T`, and zero-out the
    // allocated memory.
-   template <typename T>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    inline_calloc_multi(idx count) {
@@ -1259,9 +1243,9 @@ class allocator_interface {
       }
    }
 
-   // Allocate a small-size optimized array of `T`, and zero-out the
-   // allocated memory.
-   template <typename T>
+   // Allocate a small-size optimized array of `T`, and zero-out the allocated
+   // memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    inline_xcalloc_multi(idx count) {
@@ -1274,51 +1258,44 @@ class allocator_interface {
 
    // Try to allocate a small-size optimized `T` with an alignment guarantee,
    // and zero-out the allocated memory.
-   template <typename T, typename... Args>
-      requires(is_constructible<T, Args...>)
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   inline_align_calloc(uword alignment, Args&&... constructor_args) {
-      return meta_alloc<T, true, true, true, false, true, false>(
-         alignment, 1u, fwd(constructor_args)...);
+   inline_align_calloc(uword alignment) {
+      return meta_alloc<T, true, true, true, false, true, false>(alignment, 1u);
    }
 
    // Allocate a small-size optimized `T` with an alignment guarantee, and
    // zero-out the allocated memory.
-   template <typename T, typename... Args>
-      requires(is_constructible<T, Args...>)
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   inline_align_xcalloc(uword alignment, Args&&... constructor_args) {
-      return meta_alloc<T, true, false, true, false, true, false>(
-         alignment, 1u, fwd(constructor_args)...);
+   inline_align_xcalloc(uword alignment) {
+      return meta_alloc<T, true, false, true, false, true, false>(alignment,
+                                                                  1u);
    }
 
    // Try to allocate a small-size optimized `T` with no alignment guarantee,
    // and zero-out the allocated memory.
-   template <typename T, typename... Args>
-      requires(is_constructible<T, Args...>)
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   inline_unalign_calloc(Args&&... constructor_args) {
-      return meta_alloc<T, true, true, false, false, true, false>(
-         1u, 1u, fwd(constructor_args)...);
+   inline_unalign_calloc() {
+      return meta_alloc<T, true, true, false, false, true, false>(1u, 1u);
    }
 
    // Allocate a small-size optimized `T` with no alignment guarantee, and
    // zero-out the allocated memory.
-   template <typename T, typename... Args>
-      requires(is_constructible<T, Args...>)
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   inline_unalign_xcalloc(Args&&... constructor_args) {
-      return meta_alloc<T, true, false, false, false, true, false>(
-         1u, 1u, fwd(constructor_args)...);
+   inline_unalign_xcalloc() {
+      return meta_alloc<T, true, false, false, false, true, false>(1u, 1u);
    }
 
    // Try to allocate a small-size optimized array of `T` with an alignment
    // guarantee, and zero-out the allocated memory.
-   template <typename T>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    inline_align_calloc_multi(uword alignment, idx count) {
@@ -1326,9 +1303,9 @@ class allocator_interface {
                                                                 count);
    }
 
-   // Allocate a small-size optimized array of `T` with an alignment
-   // guarantee, and zero-out the allocated memory.
-   template <typename T>
+   // Allocate a small-size optimized array of `T` with an alignment guarantee,
+   // and zero-out the allocated memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    inline_align_xcalloc_multi(uword alignment, idx count) {
@@ -1338,54 +1315,53 @@ class allocator_interface {
 
    // Try to allocate a small-size optimized array of `T` with no alignment
    // guarantee, and zero-out the allocated memory.
-   template <typename T>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    inline_unalign_calloc_multi(idx count) {
       return meta_alloc<T, true, true, false, true, true, false>(1u, count);
    }
 
-   // Allocate a small-size optimized array of `T` with no alignment
-   // guarantee, and zero-out the allocated memory.
-   template <typename T>
+   // Allocate a small-size optimized array of `T` with no alignment guarantee,
+   // and zero-out the allocated memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    inline_unalign_xcalloc_multi(idx count) {
       return meta_alloc<T, true, false, false, true, true, false>(1u, count);
    }
 
-   // If this allocator has pointer stability, try to allocate a `T`, and
-   // return the number of bytes that were allocated, and zero-out the
-   // allocated memory.
-   template <typename T, typename... Args>
+   // If this allocator has pointer stability, try to allocate a `T`, and return
+   // the number of bytes that were allocated, and zero-out the allocated
+   // memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   scalloc(Args&&... constructor_args) {
+   scalloc() {
       if constexpr (alignof(T) > 1) {
-         return align_scalloc<T>(alignof(T), fwd(constructor_args)...);
+         return align_scalloc<T>(alignof(T));
       } else {
-         return unalign_scalloc<T>(fwd(constructor_args)...);
+         return unalign_scalloc<T>();
       }
    }
 
-   // If this allocator has pointer stability, allocate a `T`, and
-   // return the number of bytes that were allocated, and zero-out the
-   // allocated memory.
-   template <typename T, typename... Args>
+   // If this allocator has pointer stability, allocate a `T`, and return the
+   // number of bytes that were allocated, and zero-out the allocated memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   xscalloc(Args&&... constructor_args) {
+   xscalloc() {
       if constexpr (alignof(T) > 1) {
-         return align_xscalloc<T>(alignof(T), fwd(constructor_args)...);
+         return align_xscalloc<T>(alignof(T));
       } else {
-         return unalign_xscalloc<T>(fwd(constructor_args)...);
+         return unalign_xscalloc<T>();
       }
    }
 
-   // If this allocator has pointer stability, try to allocate an array of
-   // `T`, and return the number of bytes that were allocated, and zero-out the
+   // If this allocator has pointer stability, try to allocate an array of `T`,
+   // and return the number of bytes that were allocated, and zero-out the
    // allocated memory.
-   template <typename T, typename... Args>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    scalloc_multi(idx count) {
@@ -1396,10 +1372,10 @@ class allocator_interface {
       }
    }
 
-   // If this allocator has pointer stability, allocate an array of `T`,
-   // and return the number of bytes that were allocated, and zero-out the
-   // allocated memory.
-   template <typename T, typename... Args>
+   // If this allocator has pointer stability, allocate an array of `T`, and
+   // return the number of bytes that were allocated, and zero-out the allocated
+   // memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    xscalloc_multi(idx count) {
@@ -1413,51 +1389,48 @@ class allocator_interface {
    // If this allocator has pointer stability, try to allocate a `T` with an
    // alignment guarantee, and return the number of bytes that were allocated,
    // and zero-out the allocated memory.
-   template <typename T, typename... Args>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   align_scalloc(uword alignment, Args&&... constructor_args) {
-      return meta_alloc<T, false, true, true, false, true, true>(
-         alignment, 1u, fwd(constructor_args)...);
+   align_scalloc(uword alignment) {
+      return meta_alloc<T, false, true, true, false, true, true>(alignment, 1u);
    }
 
-   // If this allocator has pointer stability, allocate a `T` with an
-   // alignment guarantee, and return the number of bytes that were allocated,
-   // and zero-out the allocated memory.
-   template <typename T, typename... Args>
+   // If this allocator has pointer stability, allocate a `T` with an alignment
+   // guarantee, and return the number of bytes that were allocated, and
+   // zero-out the allocated memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   align_xscalloc(uword alignment, Args&&... constructor_args) {
-      return meta_alloc<T, false, false, true, false, true, true>(
-         alignment, 1u, fwd(constructor_args)...);
+   align_xscalloc(uword alignment) {
+      return meta_alloc<T, false, false, true, false, true, true>(alignment,
+                                                                  1u);
    }
 
    // If this allocator has pointer stability, try to allocate a `T` with no
    // alignment guarantee, and return the number of bytes that were allocated,
    // and zero-out the allocated memory.
-   template <typename T, typename... Args>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   unalign_scalloc(Args&&... constructor_args) {
-      return meta_alloc<T, false, true, false, false, true, true>(
-         1u, 1u, fwd(constructor_args)...);
+   unalign_scalloc() {
+      return meta_alloc<T, false, true, false, false, true, true>(1u, 1u);
    }
 
-   // If this allocator has pointer stability, allocate a `T` with no
-   // alignment guarantee, and return the number of bytes that were allocated,
-   // and zero-out the allocated memory.
-   template <typename T, typename... Args>
+   // If this allocator has pointer stability, allocate a `T` with no alignment
+   // guarantee, and return the number of bytes that were allocated, and
+   // zero-out the allocated memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   unalign_xscalloc(Args&&... constructor_args) {
-      return meta_alloc<T, false, false, false, false, true, true>(
-         1u, 1u, fwd(constructor_args)...);
+   unalign_xscalloc() {
+      return meta_alloc<T, false, false, false, false, true, true>(1u, 1u);
    }
 
-   // If this allocator has pointer stability, try to allocate an array of
-   // `T` with an alignment guarantee, and return the number of bytes that were
+   // If this allocator has pointer stability, try to allocate an array of `T`
+   // with an alignment guarantee, and return the number of bytes that were
    // allocated, and zero-out the allocated memory.
-   template <typename T>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    align_scalloc_multi(uword alignment, idx count) {
@@ -1465,10 +1438,10 @@ class allocator_interface {
                                                                 count);
    }
 
-   // If this allocator has pointer stability, allocate an array of `T` with
-   // an alignment guarantee, and return the number of bytes that were
-   // allocated, and zero-out the allocated memory.
-   template <typename T>
+   // If this allocator has pointer stability, allocate an array of `T` with an
+   // alignment guarantee, and return the number of bytes that were allocated,
+   // and zero-out the allocated memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    align_xscalloc_multi(uword alignment, idx count) {
@@ -1476,55 +1449,55 @@ class allocator_interface {
                                                                  count);
    }
 
-   // If this allocator has pointer stability, try to allocate an array of
-   // `T` with no alignment guarantee, and return the number of bytes that were
+   // If this allocator has pointer stability, try to allocate an array of `T`
+   // with no alignment guarantee, and return the number of bytes that were
    // allocated, and zero-out the allocated memory.
-   template <typename T>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    unalign_scalloc_multi(idx count) {
       return meta_alloc<T, false, true, false, true, true, true>(1u, count);
    }
 
-   // If this allocator has pointer stability, allocate an array of `T` with
-   // no alignment guarantee, and return the number of bytes that were
-   // allocated, and zero-out the allocated memory.
-   template <typename T, typename... Args>
+   // If this allocator has pointer stability, allocate an array of `T` with no
+   // alignment guarantee, and return the number of bytes that were allocated,
+   // and zero-out the allocated memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    unalign_xscalloc_multi(idx count) {
       return meta_alloc<T, false, false, false, true, true, true>(1u, count);
    }
 
-   // Try to allocate a small-size optimized `T`, and return the number of
-   // bytes that were allocated, and zero-out the allocated memory.
-   template <typename T, typename... Args>
+   // Try to allocate a small-size optimized `T`, and return the number of bytes
+   // that were allocated, and zero-out the allocated memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   inline_scalloc(Args&&... constructor_args) {
+   inline_scalloc() {
       if constexpr (alignof(T) > 1) {
-         return inline_align_scalloc<T>(alignof(T), fwd(constructor_args)...);
+         return inline_align_scalloc<T>(alignof(T));
       } else {
-         return inline_unalign_scalloc<T>(fwd(constructor_args)...);
+         return inline_unalign_scalloc<T>();
       }
    }
 
    // Allocate a small-size optimized `T`, and return the number of bytes that
    // were allocated, and zero-out the allocated memory.
-   template <typename T, typename... Args>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   inline_xscalloc(Args&&... constructor_args) {
+   inline_xscalloc() {
       if constexpr (alignof(T) > 1) {
-         return inline_align_xscalloc<T>(alignof(T), fwd(constructor_args)...);
+         return inline_align_xscalloc<T>(alignof(T));
       } else {
-         return inline_unalign_xscalloc<T>(fwd(constructor_args)...);
+         return inline_unalign_xscalloc<T>();
       }
    }
 
-   // Try to allocate a small-size optimized array of `T`, and return the
-   // number of bytes that were allocated, and zero-out the allocated memory.
-   template <typename T, typename... Args>
+   // Try to allocate a small-size optimized array of `T`, and return the number
+   // of bytes that were allocated, and zero-out the allocated memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    inline_scalloc_multi(idx count) {
@@ -1537,7 +1510,7 @@ class allocator_interface {
 
    // Allocate a small-size optimized array of `T`, and return the number of
    // bytes that were allocated, and zero-out the allocated memory.
-   template <typename T, typename... Args>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    inline_xscalloc_multi(idx count) {
@@ -1551,51 +1524,47 @@ class allocator_interface {
    // Try to allocate a small-size optimized `T` with an alignment guarantee,
    // and return the number of bytes that were allocated, and zero-out the
    // allocated memory.
-   template <typename T, typename... Args>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   inline_align_scalloc(uword alignment, Args&&... constructor_args) {
-      return meta_alloc<T, true, true, true, false, true, true>(
-         alignment, 1u, fwd(constructor_args)...);
+   inline_align_scalloc(uword alignment) {
+      return meta_alloc<T, true, true, true, false, true, true>(alignment, 1u);
    }
 
    // Allocate a small-size optimized `T` with an alignment guarantee, and
-   // return the number of bytes that were allocated, and zero-out the
-   // allocated memory.
-   template <typename T, typename... Args>
+   // return the number of bytes that were allocated, and zero-out the allocated
+   // memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   inline_align_xscalloc(uword alignment, Args&&... constructor_args) {
-      return meta_alloc<T, true, false, true, false, true, true>(
-         alignment, 1u, fwd(constructor_args)...);
+   inline_align_xscalloc(uword alignment) {
+      return meta_alloc<T, true, false, true, false, true, true>(alignment, 1u);
    }
 
    // Try to allocate a small-size optimized `T` with no alignment guarantee,
    // and return the number of bytes that were allocated, and zero-out the
    // allocated memory.
-   template <typename T, typename... Args>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   inline_unalign_scalloc(Args&&... constructor_args) {
-      return meta_alloc<T, true, true, false, false, true, true>(
-         1u, 1u, fwd(constructor_args)...);
+   inline_unalign_scalloc() {
+      return meta_alloc<T, true, true, false, false, true, true>(1u, 1u);
    }
 
    // Allocate a small-size optimized `T` with no alignment guarantee, and
-   // return the number of bytes that were allocated, and zero-out the
-   // allocated memory.
-   template <typename T, typename... Args>
+   // return the number of bytes that were allocated, and zero-out the allocated
+   // memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
-   inline_unalign_xscalloc(Args&&... constructor_args) {
-      return meta_alloc<T, true, false, false, false, true, true>(
-         1u, 1u, fwd(constructor_args)...);
+   inline_unalign_xscalloc() {
+      return meta_alloc<T, true, false, false, false, true, true>(1u, 1u);
    }
 
    // Try to allocate a small-size optimized array of `T` with an alignment
    // guarantee, and return the number of bytes that were allocated, and
    // zero-out the allocated memory.
-   template <typename T>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    inline_align_scalloc_multi(uword alignment, idx count) {
@@ -1603,10 +1572,10 @@ class allocator_interface {
                                                                count);
    }
 
-   // Allocate a small-size optimized array of `T` with an alignment
-   // guarantee, and return the number of bytes that were allocated, and
-   // zero-out the allocated memory.
-   template <typename T>
+   // Allocate a small-size optimized array of `T` with an alignment guarantee,
+   // and return the number of bytes that were allocated, and zero-out the
+   // allocated memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    inline_align_xscalloc_multi(uword alignment, idx count) {
@@ -1617,17 +1586,17 @@ class allocator_interface {
    // Try to allocate a small-size optimized array of `T` with no alignment
    // guarantee, and return the number of bytes that were allocated, and
    // zero-out the allocated memory.
-   template <typename T>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    inline_unalign_scalloc_multi(idx count) {
       return meta_alloc<T, true, true, false, true, true, true>(1u, count);
    }
 
-   // Allocate a small-size optimized array of `T` with no alignment
-   // guarantee, and return the number of bytes that were allocated, and
-   // zero-out the allocated memory.
-   template <typename T>
+   // Allocate a small-size optimized array of `T` with no alignment guarantee,
+   // and return the number of bytes that were allocated, and zero-out the
+   // allocated memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    inline_unalign_xscalloc_multi(idx count) {
@@ -1868,17 +1837,17 @@ class allocator_interface {
 
    // Try to move a pointer handle from this allocator into another, and
    // zero-out the allocated memory.
-   template <typename T>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    recalloc_to(auto& allocator, T* p_handle) {
-      return meta_realloc<&allocator_interface<derived_type>::calloc<T, T>,
-                          true, false>(allocator, p_handle);
+      return meta_realloc<&allocator_interface<derived_type>::calloc<T>, true,
+                          false, false>(allocator, p_handle);
    }
 
-   // Try to move a pointer handle from this allocator into itself, and
-   // zero-out the allocated memory.
-   template <typename T>
+   // Try to move a pointer handle from this allocator into itself, and zero-out
+   // the allocated memory.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    recalloc(T* p_handle) {
@@ -1887,17 +1856,17 @@ class allocator_interface {
 
    // Move a pointer handle from this allocator into another, and zero-out the
    // allocated memory.
-   template <typename T>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    xrecalloc_to(auto& allocator, T* p_handle) {
-      return meta_realloc<&allocator_interface<derived_type>::xcalloc<T, T>,
+      return meta_realloc<&allocator_interface<derived_type>::xcalloc<T>, false,
                           false, false>(allocator, p_handle);
    }
 
    // Move a pointer handle from this allocator into itself, and zero-out the
    // allocated memory.
-   template <typename T>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    xrecalloc(T* p_handle) {
@@ -1910,9 +1879,8 @@ class allocator_interface {
    constexpr auto
    align_recalloc_to(auto& allocator, auto* p_handle, uword alignment) {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
-      return meta_realloc<
-         &allocator_interface<derived_type>::align_calloc<T, T>, true, false>(
-         allocator, p_handle, alignment);
+      return meta_realloc<&allocator_interface<derived_type>::align_calloc<T>,
+                          true, false, false>(allocator, p_handle, alignment);
    }
 
    // Try to move a pointer handle from this allocator into itself with an
@@ -1929,9 +1897,8 @@ class allocator_interface {
    constexpr auto
    align_xrecalloc_to(auto& allocator, auto* p_handle, uword alignment) {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
-      return meta_realloc<
-         &allocator_interface<derived_type>::align_xcalloc<T, T>, false, false>(
-         allocator, p_handle, alignment);
+      return meta_realloc<&allocator_interface<derived_type>::align_xcalloc<T>,
+                          false, false, false>(allocator, p_handle, alignment);
    }
 
    // Move a pointer handle from this allocator into itself with an alignment
@@ -1948,9 +1915,8 @@ class allocator_interface {
    constexpr auto
    unalign_recalloc_to(auto& allocator, auto* p_handle) {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
-      return meta_realloc<
-         &allocator_interface<derived_type>::unalign_calloc<T, T>, true, false>(
-         allocator, p_handle);
+      return meta_realloc<&allocator_interface<derived_type>::unalign_calloc<T>,
+                          true, false, false>(allocator, p_handle);
    }
 
    // Try to move a pointer handle from this allocator into itself with no
@@ -1968,7 +1934,7 @@ class allocator_interface {
    unalign_xrecalloc_to(auto& allocator, auto* p_handle) {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc<
-         &allocator_interface<derived_type>::unalign_xcalloc<T, T>, false,
+         &allocator_interface<derived_type>::unalign_xcalloc<T>, false, false,
          false>(allocator, p_handle);
    }
 
@@ -1982,7 +1948,7 @@ class allocator_interface {
 
    // Try to move and resize an array pointer handle from this allocator into
    // another, and zero-out the allocated memory.
-   template <typename T>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    recalloc_multi_to(auto& allocator, T* p_handle, idx old_count,
@@ -1994,7 +1960,7 @@ class allocator_interface {
 
    // Try to move and resize array pointer handle from this allocator into
    // itself, and zero-out the allocated memory.
-   template <typename T>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    recalloc_multi(T* p_handle, idx old_count, idx new_count) {
@@ -2003,7 +1969,7 @@ class allocator_interface {
 
    // Move and resize an array pointer handle from this allocator into another,
    // and zero-out the allocated memory.
-   template <typename T>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    xrecalloc_multi_to(auto& allocator, T* p_handle, idx old_count,
@@ -2015,7 +1981,7 @@ class allocator_interface {
 
    // Move and resize an array pointer handle from this allocator into itself,
    // and zero-out the allocated memory.
-   template <typename T>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    xrecalloc_multi(T* p_handle, idx old_count, idx new_count) {
@@ -2117,8 +2083,7 @@ class allocator_interface {
          allocator, handle);
    }
 
-   // Try to move a small-size optimized handle from this allocator into
-   // itself.
+   // Try to move a small-size optimized handle from this allocator into itself.
    [[nodiscard]]
    constexpr auto
    inline_realloc(mem auto& handle) {
@@ -2142,8 +2107,8 @@ class allocator_interface {
       return inline_xrealloc_to(*this, handle);
    }
 
-   // Try to move a small-size optimized handle from this allocator into
-   // another with an alignment guarantee.
+   // Try to move a small-size optimized handle from this allocator into another
+   // with an alignment guarantee.
    [[nodiscard]]
    constexpr auto
    inline_align_realloc_to(auto& allocator, mem auto& handle, uword alignment) {
@@ -2173,16 +2138,16 @@ class allocator_interface {
          false>(allocator, handle, alignment);
    }
 
-   // Move a small-size optimized handle from this allocator into itself with
-   // an alignment guarantee.
+   // Move a small-size optimized handle from this allocator into itself with an
+   // alignment guarantee.
    [[nodiscard]]
    auto
    inline_align_xrealloc(mem auto& handle, uword alignment) {
       return inline_align_xrealloc_to(*this, handle, alignment);
    }
 
-   // Try to move a small-size optimized handle from this allocator into
-   // another with no alignment guarantee.
+   // Try to move a small-size optimized handle from this allocator into another
+   // with no alignment guarantee.
    [[nodiscard]]
    constexpr auto
    inline_unalign_realloc_to(auto& allocator, mem auto& handle) {
@@ -2211,8 +2176,8 @@ class allocator_interface {
          false>(allocator, handle);
    }
 
-   // Move a small-size optimized handle from this allocator into itself with
-   // no alignment guarantee.
+   // Move a small-size optimized handle from this allocator into itself with no
+   // alignment guarantee.
    [[nodiscard]]
    auto
    inline_unalign_xrealloc(mem auto& handle) {
@@ -2230,8 +2195,8 @@ class allocator_interface {
          false>(allocator, handle, new_count);
    }
 
-   // Try to move a small-size optimized array memory handle from this
-   // allocator into itself.
+   // Try to move a small-size optimized array memory handle from this allocator
+   // into itself.
    [[nodiscard]]
    constexpr auto
    inline_realloc_multi(mem auto& handle, idx new_count) {
@@ -2346,13 +2311,12 @@ class allocator_interface {
    constexpr auto
    inline_recalloc_to(auto& allocator, mem auto& handle) {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
-      return meta_realloc<
-         &allocator_interface<derived_type>::inline_calloc<T, T>, true, false>(
-         allocator, handle);
+      return meta_realloc<&allocator_interface<derived_type>::inline_calloc<T>,
+                          true, false, false>(allocator, handle);
    }
 
-   // Try to move a small-size optimized handle from this allocator into
-   // itself, and zero-out the allocated memory.
+   // Try to move a small-size optimized handle from this allocator into itself,
+   // and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
    inline_recalloc(mem auto& handle) {
@@ -2365,9 +2329,8 @@ class allocator_interface {
    constexpr auto
    inline_xrecalloc_to(auto& allocator, mem auto& handle) {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
-      return meta_realloc<
-         &allocator_interface<derived_type>::inline_xcalloc<T, T>, false,
-         false>(allocator, handle);
+      return meta_realloc<&allocator_interface<derived_type>::inline_xcalloc<T>,
+                          false, false, false>(allocator, handle);
    }
 
    // Move a small-size optimized handle from this allocator into itself, and
@@ -2378,16 +2341,16 @@ class allocator_interface {
       return inline_xrecalloc_to(*this, handle);
    }
 
-   // Try to move a small-size optimized handle from this allocator into
-   // another with an alignment guarantee, and zero-out the allocated memory.
+   // Try to move a small-size optimized handle from this allocator into another
+   // with an alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
    inline_align_recalloc_to(auto& allocator, mem auto& handle,
                             uword alignment) {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
       return meta_realloc<
-         &allocator_interface<derived_type>::inline_align_calloc<T, T>, true,
-         false>(allocator, handle, alignment);
+         &allocator_interface<derived_type>::inline_align_calloc<T>, true,
+         false, false>(allocator, handle, alignment);
    }
 
    // Try to move a small-size optimized handle from this allocator into itself
@@ -2406,26 +2369,26 @@ class allocator_interface {
                              uword alignment) {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
       return meta_realloc<
-         &allocator_interface<derived_type>::inline_align_xcalloc<T, T>, false,
-         false>(allocator, handle, alignment);
+         &allocator_interface<derived_type>::inline_align_xcalloc<T>, false,
+         false, false>(allocator, handle, alignment);
    }
 
-   // Move a small-size optimized handle from this allocator into itself with
-   // an alignment guarantee, and zero-out the allocated memory. [[nodiscard]]
+   // Move a small-size optimized handle from this allocator into itself with an
+   // alignment guarantee, and zero-out the allocated memory. [[nodiscard]]
    auto
    inline_align_xrecalloc(mem auto& handle, uword alignment) {
       return inline_align_xrecalloc_to(*this, handle, alignment);
    }
 
-   // Try to move a small-size optimized handle from this allocator into
-   // another with no alignment guarantee, and zero-out the allocated memory.
+   // Try to move a small-size optimized handle from this allocator into another
+   // with no alignment guarantee, and zero-out the allocated memory.
    [[nodiscard]]
    constexpr auto
    inline_unalign_recalloc_to(auto& allocator, mem auto& handle) {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
       return meta_realloc<
-         &allocator_interface<derived_type>::inline_unalign_calloc<T, T>, true,
-         false>(allocator, handle);
+         &allocator_interface<derived_type>::inline_unalign_calloc<T>, true,
+         false, false>(allocator, handle);
    }
 
    // Try to move a small-size optimized handle from this allocator into itself
@@ -2442,12 +2405,12 @@ class allocator_interface {
    inline_unalign_xrecalloc_to(auto& allocator, mem auto& handle) {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
       return meta_realloc<
-         &allocator_interface<derived_type>::inline_unalign_xcalloc<T, T>,
+         &allocator_interface<derived_type>::inline_unalign_xcalloc<T>, false,
          false, false>(allocator, handle);
    }
 
-   // Move a small-size optimized handle from this allocator into itself with
-   // no alignment guarantee, and zero-out the allocated memory. [[nodiscard]]
+   // Move a small-size optimized handle from this allocator into itself with no
+   // alignment guarantee, and zero-out the allocated memory. [[nodiscard]]
    auto
    inline_unalign_xrecalloc(mem auto& handle) {
       return inline_unalign_xrecalloc_to(*this, handle);
@@ -2464,8 +2427,8 @@ class allocator_interface {
          false>(allocator, handle, new_count);
    }
 
-   // Try to move a small-size optimized array memory handle from this
-   // allocator into itself, and zero-out the allocated memory. [[nodiscard]]
+   // Try to move a small-size optimized array memory handle from this allocator
+   // into itself, and zero-out the allocated memory. [[nodiscard]]
    constexpr auto
    inline_recalloc_multi(mem auto& handle, idx new_count) {
       return inline_recalloc_multi_to(*this, handle, new_count);
@@ -2828,17 +2791,17 @@ class allocator_interface {
 
    // Try to move a pointer handle from this allocator into another, zero-out
    // the allocated memory, and return the number of bytes that were allocated.
-   template <typename T>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    rescalloc_to(auto& allocator, T* p_handle) {
-      return meta_realloc<&allocator_interface<derived_type>::scalloc<T, T>,
-                          true, true>(allocator, p_handle);
+      return meta_realloc<&allocator_interface<derived_type>::scalloc<T>, true,
+                          true, false>(allocator, p_handle);
    }
 
-   // Try to move a pointer handle from this allocator into itself, zero-out
-   // the allocated memory, and return the number of bytes that were allocated.
-   template <typename T>
+   // Try to move a pointer handle from this allocator into itself, zero-out the
+   // allocated memory, and return the number of bytes that were allocated.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    rescalloc(T* p_handle) {
@@ -2847,17 +2810,17 @@ class allocator_interface {
 
    // Move a pointer handle from this allocator into another, zero-out the
    // allocated memory, and return the number of bytes that were allocated.
-   template <typename T>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    xrescalloc_to(auto& allocator, T* p_handle) {
-      return meta_realloc<&allocator_interface<derived_type>::xscalloc<T, T>,
-                          false, true>(allocator, p_handle);
+      return meta_realloc<&allocator_interface<derived_type>::xscalloc<T>,
+                          false, true, false>(allocator, p_handle);
    }
 
    // Move a pointer handle from this allocator into itself, zero-out the
    // allocated memory, and return the number of bytes that were allocated.
-   template <typename T>
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    xrescalloc(T* p_handle) {
@@ -2865,20 +2828,19 @@ class allocator_interface {
    }
 
    // Try to move a pointer handle from this allocator into another with an
-   // alignment guarantee, zero-out the allocated memory, and return the
-   // number of bytes that were allocated.
+   // alignment guarantee, zero-out the allocated memory, and return the number
+   // of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    align_rescalloc_to(auto& allocator, auto* p_handle, uword alignment) {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
-      return meta_realloc<
-         &allocator_interface<derived_type>::align_scalloc<T, T>, true, true>(
-         allocator, p_handle, alignment);
+      return meta_realloc<&allocator_interface<derived_type>::align_scalloc<T>,
+                          true, true, false>(allocator, p_handle, alignment);
    }
 
    // Try to move a pointer handle from this allocator into itself with an
-   // alignment guarantee, zero-out the allocated memory, and return the
-   // number of bytes that were allocated.
+   // alignment guarantee, zero-out the allocated memory, and return the number
+   // of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    align_rescalloc(auto* p_handle, uword alignment) {
@@ -2886,40 +2848,39 @@ class allocator_interface {
    }
 
    // Move a pointer handle from this allocator into another with an alignment
-   // guarantee, zero-out the allocated memory, and return the number of
-   // bytes that were allocated.
+   // guarantee, zero-out the allocated memory, and return the number of bytes
+   // that were allocated.
    [[nodiscard]]
    constexpr auto
    align_xrescalloc_to(auto& allocator, auto* p_handle, uword alignment) {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
-      return meta_realloc<
-         &allocator_interface<derived_type>::align_xscalloc<T, T>, false, true>(
-         allocator, p_handle, alignment);
+      return meta_realloc<&allocator_interface<derived_type>::align_xscalloc<T>,
+                          false, true, false>(allocator, p_handle, alignment);
    }
 
    // Move a pointer handle from this allocator into itself with an alignment
-   // guarantee, zero-out the allocated memory, and return the number of
-   // bytes that were allocated.
+   // guarantee, zero-out the allocated memory, and return the number of bytes
+   // that were allocated.
    auto
    align_xrescalloc(auto* p_handle, uword alignment) {
       return align_xrescalloc_to(*this, p_handle, alignment);
    }
 
    // Try to move a pointer handle from this allocator into another with no
-   // alignment guarantee, zero-out the allocated memory, and return the
-   // number of bytes that were allocated.
+   // alignment guarantee, zero-out the allocated memory, and return the number
+   // of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    unalign_rescalloc_to(auto& allocator, auto* p_handle) {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc<
-         &allocator_interface<derived_type>::unalign_scalloc<T, T>, true, true>(
-         allocator, p_handle);
+         &allocator_interface<derived_type>::unalign_scalloc<T>, true, true,
+         false>(allocator, p_handle);
    }
 
    // Try to move a pointer handle from this allocator into itself with no
-   // alignment guarantee, zero-out the allocated memory, and return the
-   // number of bytes that were allocated.
+   // alignment guarantee, zero-out the allocated memory, and return the number
+   // of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    unalign_rescalloc(auto* p_handle) {
@@ -2927,29 +2888,29 @@ class allocator_interface {
    }
 
    // Move a pointer handle from this allocator into another with no alignment
-   // guarantee, zero-out the allocated memory, and return the number of
-   // bytes that were allocated.
+   // guarantee, zero-out the allocated memory, and return the number of bytes
+   // that were allocated.
    [[nodiscard]]
    constexpr auto
    unalign_xrescalloc_to(auto& allocator, auto* p_handle) {
       using T = typeof(this->get(p_handle));  // `typeof` is a decaying alias.
       return meta_realloc<
-         &allocator_interface<derived_type>::unalign_xscalloc<T, T>, false,
-         true>(allocator, p_handle);
+         &allocator_interface<derived_type>::unalign_xscalloc<T>, false, true,
+         false>(allocator, p_handle);
    }
 
    // Move a pointer handle from this allocator into itself with no alignment
-   // guarantee, zero-out the allocated memory, and return the number of
-   // bytes that were allocated.
+   // guarantee, zero-out the allocated memory, and return the number of bytes
+   // that were allocated.
    auto
    unalign_xrescalloc(auto* p_handle) {
       return unalign_xrescalloc_to(*this, p_handle);
    }
 
    // Try to move and resize an array pointer handle from this allocator into
-   // another, zero-out the allocated memory, and return the number of
-   // bytes that were allocated.
-   template <typename T>
+   // another, zero-out the allocated memory, and return the number of bytes
+   // that were allocated.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    rescalloc_multi_to(auto& allocator, T* p_handle, idx old_count,
@@ -2959,10 +2920,10 @@ class allocator_interface {
          allocator, p_handle, old_count, new_count);
    }
 
-   // Try to move and resize array pointer handle from this allocator into
-   // itself, zero-out the allocated memory, and return the number of bytes
-   // that were allocated.
-   template <typename T>
+   // Try to move and resize an array pointer handle from this allocator into
+   // itself, zero-out the allocated memory, and return the number of bytes that
+   // were allocated.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    rescalloc_multi(T* p_handle, idx old_count, idx new_count) {
@@ -2970,9 +2931,9 @@ class allocator_interface {
    }
 
    // Move and resize an array pointer handle from this allocator into another,
-   // zero-out the allocated memory, and return the number of bytes that
-   // were allocated.
-   template <typename T>
+   // zero-out the allocated memory, and return the number of bytes that were
+   // allocated.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    xrescalloc_multi_to(auto& allocator, T* p_handle, idx old_count,
@@ -2983,9 +2944,9 @@ class allocator_interface {
    }
 
    // Move and resize an array pointer handle from this allocator into itself,
-   // zero-out the allocated memory, and return the number of bytes that
-   // were allocated.
-   template <typename T>
+   // zero-out the allocated memory, and return the number of bytes that were
+   // allocated.
+   template <is_trivial T>
    [[nodiscard]]
    constexpr auto
    xrescalloc_multi(T* p_handle, idx old_count, idx new_count) {
@@ -2993,8 +2954,8 @@ class allocator_interface {
    }
 
    // Try to move and resize an array pointer handle from this allocator into
-   // another with an alignment guarantee, zero-out the allocated memory,
-   // and return the number of bytes that were allocated.
+   // another with an alignment guarantee, zero-out the allocated memory, and
+   // return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    align_rescalloc_multi_to(auto& allocator, auto* p_handle, uword alignment,
@@ -3006,8 +2967,8 @@ class allocator_interface {
    }
 
    // Try to move and resize an array pointer handle from this allocator into
-   // itself with an alignment guarantee, zero-out the allocated memory,
-   // and return the number of bytes that were allocated.
+   // itself with an alignment guarantee, zero-out the allocated memory, and
+   // return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    align_rescalloc_multi(auto* p_handle, uword alignment, idx old_count,
@@ -3017,8 +2978,8 @@ class allocator_interface {
    }
 
    // Move and resize an array pointer handle from this allocator into another
-   // with an alignment guarantee, zero-out the allocated memory, and
-   // return the number of bytes that were allocated.
+   // with an alignment guarantee, zero-out the allocated memory, and return the
+   // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    align_xrescalloc_multi_to(auto& allocator, auto* p_handle, uword alignment,
@@ -3030,8 +2991,8 @@ class allocator_interface {
    }
 
    // Move and resize an array pointer handle from this allocator into itself
-   // with an alignment guarantee, zero-out the allocated memory, and
-   // return the number of bytes that were allocated.
+   // with an alignment guarantee, zero-out the allocated memory, and return the
+   // number of bytes that were allocated.
    [[nodiscard]]
    auto
    align_xrescalloc_multi(auto* p_handle, uword alignment, idx old_count,
@@ -3041,8 +3002,8 @@ class allocator_interface {
    }
 
    // Try to move and resize an array pointer handle from this allocator into
-   // another with no alignment guarantee, zero-out the allocated memory,
-   // and return the number of bytes that were allocated.
+   // another with no alignment guarantee, zero-out the allocated memory, and
+   // return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    unalign_rescalloc_multi_to(auto& allocator, auto* p_handle, idx old_count,
@@ -3054,8 +3015,8 @@ class allocator_interface {
    }
 
    // Try to move and resize an array pointer handle from this allocator into
-   // itself with no alignment guarantee, zero-out the allocated memory,
-   // and return the number of bytes that were allocated.
+   // itself with no alignment guarantee, zero-out the allocated memory, and
+   // return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    unalign_rescalloc_multi(auto* p_handle, idx old_count, idx new_count) {
@@ -3063,8 +3024,8 @@ class allocator_interface {
    }
 
    // Move and resize an array pointer handle from this allocator into another
-   // with no alignment guarantee, zero-out the allocated memory, and
-   // return the number of bytes that were allocated.
+   // with no alignment guarantee, zero-out the allocated memory, and return the
+   // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    unalign_xrescalloc_multi_to(auto& allocator, auto* p_handle, idx old_count,
@@ -3076,8 +3037,8 @@ class allocator_interface {
    }
 
    // Move and resize an array pointer handle from this allocator into itself
-   // with no alignment guarantee, zero-out the allocated memory, and
-   // return the number of bytes that were allocated.
+   // with no alignment guarantee, zero-out the allocated memory, and return the
+   // number of bytes that were allocated.
    [[nodiscard]]
    auto
    unalign_xrescalloc_multi(auto* p_handle, idx old_count, idx new_count) {
@@ -3095,8 +3056,9 @@ class allocator_interface {
          allocator, handle);
    }
 
-   // Try to move a small-size optimized handle from this allocator into
-   // itself, and return the number of bytes that were allocated. [[nodiscard]]
+   // Try to move a small-size optimized handle from this allocator into itself,
+   // and return the number of bytes that were allocated.
+   [[nodiscard]]
    constexpr auto
    inline_resalloc(mem auto& handle) {
       return inline_resalloc_to(*this, handle);
@@ -3109,7 +3071,7 @@ class allocator_interface {
    inline_xresalloc_to(auto& allocator, mem auto& handle) {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
       return meta_realloc<
-         &allocator_interface<derived_type>::inline_xalloc<T, T>, false, true>(
+         &allocator_interface<derived_type>::inline_xsalloc<T, T>, false, true>(
          allocator, handle);
    }
 
@@ -3121,9 +3083,9 @@ class allocator_interface {
       return inline_xresalloc_to(*this, handle);
    }
 
-   // Try to move a small-size optimized handle from this allocator into
-   // another with an alignment guarantee, and return the number of bytes that
-   // were allocated.
+   // Try to move a small-size optimized handle from this allocator into another
+   // with an alignment guarantee, and return the number of bytes that were
+   // allocated.
    [[nodiscard]]
    constexpr auto
    inline_align_resalloc_to(auto& allocator, mem auto& handle,
@@ -3152,22 +3114,21 @@ class allocator_interface {
                              uword alignment) {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
       return meta_realloc<
-         &allocator_interface<derived_type>::inline_align_xalloc<T, T>, false,
+         &allocator_interface<derived_type>::inline_align_xsalloc<T, T>, false,
          true>(allocator, handle, alignment);
    }
 
-   // Move a small-size optimized handle from this allocator into itself with
-   // an alignment guarantee, and return the number of bytes that were
-   // allocated.
+   // Move a small-size optimized handle from this allocator into itself with an
+   // alignment guarantee, and return the number of bytes that were allocated.
    [[nodiscard]]
    auto
    inline_align_xresalloc(mem auto& handle, uword alignment) {
       return inline_align_xresalloc_to(*this, handle, alignment);
    }
 
-   // Try to move a small-size optimized handle from this allocator into
-   // another with no alignment guarantee, and return the number of bytes that
-   // were allocated.
+   // Try to move a small-size optimized handle from this allocator into another
+   // with no alignment guarantee, and return the number of bytes that were
+   // allocated.
    [[nodiscard]]
    constexpr auto
    inline_unalign_resalloc_to(auto& allocator, mem auto& handle) {
@@ -3194,21 +3155,21 @@ class allocator_interface {
    inline_unalign_xresalloc_to(auto& allocator, mem auto& handle) {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
       return meta_realloc<
-         &allocator_interface<derived_type>::inline_unalign_xalloc<T, T>, false,
-         true>(allocator, handle);
+         &allocator_interface<derived_type>::inline_unalign_xsalloc<T, T>,
+         false, true>(allocator, handle);
    }
 
-   // Move a small-size optimized handle from this allocator into itself with
-   // no alignment guarantee, and return the number of bytes that were
-   // allocated.
+   // Move a small-size optimized handle from this allocator into itself with no
+   // alignment guarantee, and return the number of bytes that were allocated.
    [[nodiscard]]
    auto
    inline_unalign_xresalloc(mem auto& handle) {
       return inline_unalign_xresalloc_to(*this, handle);
    }
 
-   // Move a small-size optimized array memory handle from this allocator into
-   // another, and return the number of bytes that were allocated.
+   // Try to move and resize a small-size optimized array memory handle from
+   // this allocator into another, and return the number of bytes that were
+   // allocated.
    [[nodiscard]]
    constexpr auto
    inline_resalloc_multi_to(auto& allocator, mem auto& handle, idx new_count) {
@@ -3218,9 +3179,8 @@ class allocator_interface {
          true>(allocator, handle, new_count);
    }
 
-   // Try to move a small-size optimized array memory handle from this
-   // allocator into itself, and return the number of bytes that were
-   // allocated.
+   // Try to move a small-size optimized array memory handle from this allocator
+   // into itself, and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    inline_resalloc_multi(mem auto& handle, idx new_count) {
@@ -3240,17 +3200,16 @@ class allocator_interface {
    }
 
    // Move and resize a small-size optimized array memory handle from this
-   // allocator into itself, and return the number of bytes that were
-   // allocated.
+   // allocator into itself, and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    inline_xresalloc_multi(mem auto& handle, idx new_count) {
       return inline_xresalloc_multi_to(*this, handle, new_count);
    }
 
-   // Move and resize a small-size optimized array memory handle from this
-   // allocator into another, and return the number of bytes that were
-   // allocated.
+   // Try to move and resize a small-size optimized array memory handle from
+   // this allocator into another with an alignment guarantee, and return the
+   // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    inline_align_resalloc_multi_to(auto& allocator, mem auto& handle,
@@ -3341,20 +3300,19 @@ class allocator_interface {
    }
 
    // Try to move a small-size optimized handle from this allocator into
-   // another, zero-out the allocated memory, and return the number of
-   // bytes that were allocated.
+   // another, zero-out the allocated memory, and return the number of bytes
+   // that were allocated.
    [[nodiscard]]
    constexpr auto
    inline_rescalloc_to(auto& allocator, mem auto& handle) {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
-      return meta_realloc<
-         &allocator_interface<derived_type>::inline_scalloc<T, T>, true, true>(
-         allocator, handle);
+      return meta_realloc<&allocator_interface<derived_type>::inline_scalloc<T>,
+                          true, true, false>(allocator, handle);
    }
 
-   // Try to move a small-size optimized handle from this allocator into
-   // itself, zero-out the allocated memory, and return the number of bytes
-   // that were allocated.
+   // Try to move a small-size optimized handle from this allocator into itself,
+   // zero-out the allocated memory, and return the number of bytes that were
+   // allocated.
    [[nodiscard]]
    constexpr auto
    inline_rescalloc(mem auto& handle) {
@@ -3369,8 +3327,8 @@ class allocator_interface {
    inline_xrescalloc_to(auto& allocator, mem auto& handle) {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
       return meta_realloc<
-         &allocator_interface<derived_type>::inline_xscalloc<T, T>, false,
-         true>(allocator, handle);
+         &allocator_interface<derived_type>::inline_xscalloc<T>, false, true,
+         false>(allocator, handle);
    }
 
    // Move a small-size optimized handle from this allocator into itself,
@@ -3382,22 +3340,22 @@ class allocator_interface {
       return inline_xrescalloc_to(*this, handle);
    }
 
-   // Try to move a small-size optimized handle from this allocator into
-   // another with an alignment guarantee, zero-out the allocated memory,
-   // and return the number of bytes that were allocated.
+   // Try to move a small-size optimized handle from this allocator into another
+   // with an alignment guarantee, zero-out the allocated memory, and return the
+   // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    inline_align_rescalloc_to(auto& allocator, mem auto& handle,
                              uword alignment) {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
       return meta_realloc<
-         &allocator_interface<derived_type>::inline_align_scalloc<T, T>, true,
-         true>(allocator, handle, alignment);
+         &allocator_interface<derived_type>::inline_align_scalloc<T>, true,
+         true, false>(allocator, handle, alignment);
    }
 
    // Try to move a small-size optimized handle from this allocator into itself
-   // with an alignment guarantee, zero-out the allocated memory, and
-   // return the number of bytes that were allocated.
+   // with an alignment guarantee, zero-out the allocated memory, and return the
+   // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    inline_align_rescalloc(mem auto& handle, uword alignment) {
@@ -3413,34 +3371,34 @@ class allocator_interface {
                               uword alignment) {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
       return meta_realloc<
-         &allocator_interface<derived_type>::inline_align_xscalloc<T, T>, false,
-         true>(allocator, handle, alignment);
+         &allocator_interface<derived_type>::inline_align_xscalloc<T>, false,
+         true, false>(allocator, handle, alignment);
    }
 
-   // Move a small-size optimized handle from this allocator into itself with
-   // an alignment guarantee, zero-out the allocated memory, and return the
-   // number of bytes that were allocated.
+   // Move a small-size optimized handle from this allocator into itself with an
+   // alignment guarantee, zero-out the allocated memory, and return the number
+   // of bytes that were allocated.
    [[nodiscard]]
    auto
    inline_align_xrescalloc(mem auto& handle, uword alignment) {
       return inline_align_xrescalloc_to(*this, handle, alignment);
    }
 
-   // Try to move a small-size optimized handle from this allocator into
-   // another with no alignment guarantee, zero-out the allocated memory,
-   // and return the number of bytes that were allocated.
+   // Try to move a small-size optimized handle from this allocator into another
+   // with no alignment guarantee, zero-out the allocated memory, and return the
+   // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    inline_unalign_rescalloc_to(auto& allocator, mem auto& handle) {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
       return meta_realloc<
-         &allocator_interface<derived_type>::inline_unalign_scalloc<T, T>, true,
-         true>(allocator, handle);
+         &allocator_interface<derived_type>::inline_unalign_scalloc<T>, true,
+         true, false>(allocator, handle);
    }
 
    // Try to move a small-size optimized handle from this allocator into itself
-   // with no alignment guarantee, zero-out the allocated memory, and
-   // return the number of bytes that were allocated.
+   // with no alignment guarantee, zero-out the allocated memory, and return the
+   // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    inline_unalign_rescalloc(mem auto& handle) {
@@ -3455,22 +3413,22 @@ class allocator_interface {
    inline_unalign_xrescalloc_to(auto& allocator, mem auto& handle) {
       using T = typeof(this->get(handle));  // `typeof` is a decaying alias.
       return meta_realloc<
-         &allocator_interface<derived_type>::inline_unalign_xscalloc<T, T>,
-         false, true>(allocator, handle);
+         &allocator_interface<derived_type>::inline_unalign_xscalloc<T>, false,
+         true, false>(allocator, handle);
    }
 
-   // Move a small-size optimized handle from this allocator into itself with
-   // no alignment guarantee, zero-out the allocated memory, and return the
-   // number of bytes that were allocated.
+   // Move a small-size optimized handle from this allocator into itself with no
+   // alignment guarantee, zero-out the allocated memory, and return the number
+   // of bytes that were allocated.
    [[nodiscard]]
    auto
    inline_unalign_xrescalloc(mem auto& handle) {
       return inline_unalign_xrescalloc_to(*this, handle);
    }
 
-   // Move a small-size optimized array memory handle from this allocator into
-   // another, zero-out the allocated memory, and return the number of
-   // bytes that were allocated.
+   // Try to move and resize a small-size optimized array memory handle from
+   // this allocator into another, zero-out the allocated memory, and return the
+   // number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    inline_rescalloc_multi_to(auto& allocator, mem auto& handle, idx new_count) {
@@ -3480,9 +3438,9 @@ class allocator_interface {
          true>(allocator, handle, new_count);
    }
 
-   // Try to move a small-size optimized array memory handle from this
-   // allocator into itself, zero-out the allocated memory, and return the
-   // number of bytes that were allocated.
+   // Try to move a small-size optimized array memory handle from this allocator
+   // into itself, zero-out the allocated memory, and return the number of bytes
+   // that were allocated.
    [[nodiscard]]
    constexpr auto
    inline_rescalloc_multi(mem auto& handle, idx new_count) {
@@ -3511,9 +3469,9 @@ class allocator_interface {
       return inline_xrescalloc_multi_to(*this, handle, new_count);
    }
 
-   // Move and resize a small-size optimized array memory handle from this
-   // allocator into another, zero-out the allocated memory, and return the
-   // number of bytes that were allocated.
+   // Try to move and resize a small-size optimized array memory handle from
+   // this allocator into another with an alignment guarantee, zero-out the
+   // allocated memory, and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    inline_align_rescalloc_multi_to(auto& allocator, mem auto& handle,
@@ -3536,8 +3494,8 @@ class allocator_interface {
    }
 
    // Move and resize a small-size optimized array memory handle from this
-   // allocator into another with an alignment guarantee, zero-out the
-   // allocated memory, and return the number of bytes that were allocated.
+   // allocator into another with an alignment guarantee, zero-out the allocated
+   // memory, and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    inline_align_xrescalloc_multi_to(auto& allocator, mem auto& handle,
@@ -3549,8 +3507,8 @@ class allocator_interface {
    }
 
    // Move and resize a small-size optimized array memory handle from this
-   // allocator into itself with an alignment guarantee, zero-out the
-   // allocated memory, and return the number of bytes that were allocated.
+   // allocator into itself with an alignment guarantee, zero-out the allocated
+   // memory, and return the number of bytes that were allocated.
    [[nodiscard]]
    auto
    inline_align_xrescalloc_multi(mem auto& handle, uword alignment,
@@ -3582,8 +3540,8 @@ class allocator_interface {
    }
 
    // Move and resize a small-size optimized array memory handle from this
-   // allocator into another with no alignment guarantee, zero-out the
-   // allocated memory, and return the number of bytes that were allocated.
+   // allocator into another with no alignment guarantee, zero-out the allocated
+   // memory, and return the number of bytes that were allocated.
    [[nodiscard]]
    constexpr auto
    inline_unalign_xrescalloc_multi_to(auto& allocator, mem auto& handle,
@@ -3595,8 +3553,8 @@ class allocator_interface {
    }
 
    // Move and resize a small-size optimized array memory handle from this
-   // allocator into itself with no alignment guarantee, zero-out the
-   // allocated memory, and return the number of bytes that were allocated.
+   // allocator into itself with no alignment guarantee, zero-out the allocated
+   // memory, and return the number of bytes that were allocated.
    [[nodiscard]]
    auto
    inline_unalign_xrescalloc_multi(mem auto& handle, idx new_count) {
@@ -3605,7 +3563,7 @@ class allocator_interface {
 
    // Invalidate any memory handle, invoking its data's destructor.
    template <mem T>
-   void
+   constexpr void
    free(T const& handle) {
       using allocation_type = T::allocation_type const;
 
@@ -3631,8 +3589,8 @@ class allocator_interface {
          this->self().deallocate(static_cast<void const*>(p_memory),
                                  handle.raw_size());
       }
-      // If this is not small-size optimized, it will be freed at the
-      // end of the stack frame, so this function call is no-op.
+      // If this is small-size optimized, storage lives in the handle and is
+      // released when the handle is destroyed, so this call is a no-op.
    };
 
    // TODO: This needs unit tests.
@@ -3657,8 +3615,7 @@ class allocator_interface {
       }
    }
 
-   // Invalidate a pointer handle to an array of `T`, and call its
-   // destructors.
+   // Invalidate a pointer handle to an array of `T`, and call its destructors.
    template <typename T>
    constexpr void
    free_multi(T* p_memory, idx count) {
@@ -3726,8 +3683,8 @@ class allocator_interface {
       cfree_multi(handle.data(), handle.size());
    }
 
-   // Get a non-`const` handle to the data in any memory handle. If that
-   // memory handle is to a multi-allocation, this returns a `span`.
+   // Get a non-`const` handle to the data in any memory handle. If that memory
+   // handle is to a multi-allocation, this returns a `span`.
    template <mem T>
    [[nodiscard]]
    constexpr auto
@@ -3810,8 +3767,7 @@ class allocator_interface {
       }
    }
 
-   // If the allocator does not over-ride a `.reset()` method, produce a
-   // no-op.
+   // If the allocator does not over-ride a `.reset()` method, produce a no-op.
    constexpr void
    reset() {
    }
@@ -3823,15 +3779,478 @@ class allocator_interface {
    }
 
    template <typename T, bool is_inline, bool is_fail_safe, bool is_aligned,
+             bool is_multiple, bool is_zeroed, bool has_feedback>
+   struct meta_alloc_alias_types {
+      using underlying_handle =
+         decltype(declval<derived_type&>().template make_handle<T>(
+            declval<T*>()));
+
+      using maybe_allocation =
+         conditional<has_feedback, maybe_sized_allocation<void*>,
+                     maybe_ptr<void>>;
+
+      using handle_type = conditional<
+         is_multiple,
+         detail::multi_memory_handle<conditional<
+            is_inline, detail::inline_memory_handle<underlying_handle>,
+            underlying_handle>>,
+         conditional<is_inline, detail::inline_memory_handle<underlying_handle>,
+                     underlying_handle>>;
+
+      using return_handle = conditional<
+         is_fail_safe,
+         conditional<
+            !is_inline,
+            conditional<has_feedback,
+                        conditional<is_multiple, maybe<tuple<span<T>, idx>>,
+                                    maybe_sized_allocation<T*>>,
+                        conditional<is_multiple, maybe<span<T>>, maybe_ptr<T>>>,
+            conditional<has_feedback, maybe<tuple<handle_type, idx>>,
+                        maybe<handle_type>>>,
+         conditional<
+            !is_inline,
+            conditional<has_feedback,
+                        conditional<is_multiple, tuple<span<T>, idx>,
+                                    sized_allocation<T*>>,
+                        conditional<is_multiple, span<T>, T*>>,
+            conditional<has_feedback, tuple<handle_type, idx>, handle_type>>>;
+   };
+
+   template <bool has_feedback>
+   using meta_alloc_raw_maybe_allocation =
+      conditional<has_feedback, maybe_sized_allocation<void*>, maybe_ptr<void>>;
+
+   // Only called from `meta_alloc` when `is_inline` is true; alias_types always use
+   // `true` for the inline slot so this is not instantiated per `is_inline`.
+   template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
+             bool is_zeroed, bool has_feedback, typename... Args>
+   [[gnu::no_sanitize_address]]
+   constexpr auto
+   meta_alloc_inline_stack_allocate(idx allocation_bytes, idx allocation_count,
+                                    Args&&... constructor_args) {
+      using alias_types =
+         meta_alloc_alias_types<T, true, is_fail_safe, is_aligned, is_multiple,
+                            is_zeroed, has_feedback>;
+      using return_handle = typename alias_types::return_handle;
+      using handle_type = typename alias_types::handle_type;
+
+      if (allocation_bytes < inline_buffer_size) {
+         // Allocate memory on this stack frame.
+         handle_type stack_handle;
+         stack_handle.set_inlined(true);
+         stack_handle.set_count(allocation_count);
+
+         if constexpr (is_zeroed) {
+            zero_memory(__builtin_addressof(stack_handle), inline_buffer_size);
+         }
+
+         if constexpr (is_multiple) {
+            for (unsigned long i = 0u; i < allocation_count; ++i) {
+               new (reinterpret_cast<T*>(&stack_handle) + i) T;
+            }
+         } else {
+            if constexpr (is_zeroed) {
+               stack_handle.set_inline_storage(T{});
+            } else {
+               stack_handle.set_inline_storage(T(fwd(constructor_args)...));
+            }
+         }
+
+         // Return here to skip error handling, because an on-stack allocation
+         // cannot fail.
+         if constexpr (has_feedback) {
+            return return_handle(
+               tuple<handle_type, idx>{move(stack_handle), inline_buffer_size});
+         } else {
+            return return_handle(move(stack_handle));
+         }
+      }
+      __builtin_unreachable();
+   }
+
+   template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
+             bool is_zeroed, bool has_feedback, typename... Args>
+   consteval auto
+   meta_alloc_consteval_inline_allocate(idx allocation_bytes,
+                                        idx allocation_count,
+                                        Args&&... constructor_args) {
+      using alias_types =
+         meta_alloc_alias_types<T, true, is_fail_safe, is_aligned, is_multiple,
+                            is_zeroed, has_feedback>;
+      using return_handle = typename alias_types::return_handle;
+      using handle_type = typename alias_types::handle_type;
+
+      if (allocation_bytes < inline_buffer_size) {
+         handle_type stack_handle;
+         stack_handle.set_inlined(true);
+         stack_handle.set_count(allocation_count);
+
+         if constexpr (is_zeroed) {
+            zero_memory(__builtin_addressof(stack_handle), inline_buffer_size);
+         }
+
+         if constexpr (is_multiple) {
+            for (unsigned long i = 0u; i < allocation_count; ++i) {
+               new (reinterpret_cast<T*>(&stack_handle) + i) T;
+            }
+         } else {
+            if constexpr (is_zeroed) {
+               stack_handle.set_inline_storage(T{});
+            } else {
+               stack_handle.set_inline_storage(T(fwd(constructor_args)...));
+            }
+         }
+
+         if constexpr (has_feedback) {
+            return return_handle(
+               tuple<handle_type, idx>{move(stack_handle), inline_buffer_size});
+         } else {
+            return return_handle(move(stack_handle));
+         }
+      }
+      __builtin_unreachable();
+   }
+
+   [[gnu::no_sanitize_address]]
+   constexpr auto
+   meta_alloc_obtain_maybe_memory_aligned_with_feedback(uword allocation_alignment,
+                                                        idx allocation_bytes)
+      -> maybe_sized_allocation<void*> {
+      maybe_sized_allocation<void*> maybe_memory;
+
+      if constexpr (detail::has_aligned_allocate_feedback<derived_type>) {
+         maybe_memory = this->self().aligned_allocate_feedback(
+            allocation_alignment, allocation_bytes);
+      } else {
+         if constexpr (detail::has_allocation_bytes<derived_type>) {
+            maybe actual_allocation_bytes = this->self().allocation_bytes(
+               allocation_alignment, allocation_bytes);
+
+            if (actual_allocation_bytes.has_value()) {
+               void* p_allocation =
+                  this->self()
+                     .aligned_allocate(allocation_alignment,
+                                       actual_allocation_bytes.value())
+                     .value();
+
+               maybe_memory = maybe_sized_allocation<void*>{
+                  sized_allocation<void*>{
+                                          p_allocation, actual_allocation_bytes.value()}
+               };
+            } else {
+               maybe_memory = nullopt;
+            }
+         } else {
+            maybe temp_memory = this->self().aligned_allocate(
+               allocation_alignment, allocation_bytes);
+            if (temp_memory.has_value()) {
+               maybe_memory = maybe_sized_allocation<void*>{
+                  sized_allocation<void*>{temp_memory.value(), allocation_bytes}
+               };
+            } else {
+               maybe_memory = nullopt;
+            }
+         }
+      }
+
+      return maybe_memory;
+   }
+
+   [[gnu::no_sanitize_address]]
+   constexpr auto
+   meta_alloc_obtain_maybe_memory_aligned_no_feedback(uword allocation_alignment,
+                                                      idx allocation_bytes)
+      -> maybe_ptr<void> {
+      maybe_ptr<void> maybe_memory;
+
+      if constexpr (detail::has_aligned_allocate<derived_type>) {
+         maybe_memory = this->self().aligned_allocate(allocation_alignment,
+                                                      allocation_bytes);
+      } else {
+         maybe_memory = this->self().allocate(allocation_bytes);
+         if (maybe_memory.has_value()) {
+            assert(cat::is_aligned(maybe_memory.value(), allocation_alignment),
+                   "allocation_type is misaligned!");
+         }
+      }
+
+      return maybe_memory;
+   }
+
+   [[gnu::no_sanitize_address]]
+   constexpr auto
+   meta_alloc_obtain_maybe_memory_unaligned_with_feedback(uword allocation_alignment,
+                                                          idx allocation_bytes)
+      -> maybe_sized_allocation<void*> {
+      maybe_sized_allocation<void*> maybe_memory;
+
+      if constexpr (detail::has_allocate_feedback<derived_type>) {
+         maybe_memory = this->self().allocate_feedback(allocation_bytes);
+      } else {
+         if constexpr (detail::has_aligned_allocate_feedback<derived_type>) {
+            maybe_memory = this->self().aligned_allocate_feedback(
+               1u, allocation_bytes);
+         } else if constexpr (detail::has_allocation_bytes<derived_type>) {
+            maybe size = this->self().allocation_bytes(1u, allocation_bytes);
+
+            if (size.has_value()) {
+               maybe_memory = maybe_sized_allocation<void*>(tuple{
+                  this->self().allocate(allocation_bytes).value(), size.value()});
+            } else {
+               maybe_memory = nullopt;
+            }
+         } else {
+            auto temp_memory = this->self().aligned_allocate(
+               allocation_alignment, allocation_bytes);
+            if (temp_memory.has_value()) {
+               maybe_memory = maybe_sized_allocation<void*>(
+                  tuple{temp_memory.value(), allocation_bytes});
+            } else {
+               maybe_memory = nullopt;
+            }
+         }
+      }
+
+      return maybe_memory;
+   }
+
+   [[gnu::no_sanitize_address]]
+   constexpr auto
+   meta_alloc_obtain_maybe_memory_unaligned_no_feedback(uword allocation_alignment,
+                                                        idx allocation_bytes)
+      -> maybe_ptr<void> {
+      maybe_ptr<void> maybe_memory;
+
+      if constexpr (detail::has_allocate<derived_type>) {
+         maybe_memory = this->self().allocate(allocation_bytes);
+      } else {
+         maybe_memory = this->self().aligned_allocate(1u, allocation_bytes);
+      }
+
+      return maybe_memory;
+   }
+
+   template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
+             bool is_zeroed, bool has_feedback, typename... Args>
+   [[gnu::optimize("-fno-tree-loop-distribute-patterns"),
+     gnu::no_sanitize_address]]
+   constexpr auto
+   meta_alloc_finish_non_inline(
+      meta_alloc_raw_maybe_allocation<has_feedback> maybe_memory,
+      idx allocation_bytes, idx allocation_count, Args&&... constructor_args) {
+      using alias_types =
+         meta_alloc_alias_types<T, false, is_fail_safe, is_aligned, is_multiple,
+                            is_zeroed, has_feedback>;
+      using return_handle = typename alias_types::return_handle;
+      using handle_type = typename alias_types::handle_type;
+      T* p_allocation;
+      if constexpr (has_feedback) {
+         // The `.first()` element of the `sized_allocation` tuple is
+         // a `void*`.
+         p_allocation = static_cast<T*>(maybe_memory.value().first());
+
+         auto const all_bytes = maybe_memory.value().second();
+         // Unpoison all allocated memory so it can be used.
+         unpoison_memory_region(p_allocation, all_bytes);
+
+         // Possibly zero-out the allocation.
+         if constexpr (is_zeroed) {
+            zero_memory_scalar_explicit(p_allocation, all_bytes);
+         }
+      } else {
+         p_allocation = static_cast<T*>(maybe_memory.value());
+         unpoison_memory_region(p_allocation, allocation_bytes);
+
+         // Possibly zero-out the allocation.
+         if constexpr (is_zeroed) {
+            // TODO: Find a way to efficiently and safely leverage SIMD
+            // here.
+            zero_memory_scalar_explicit(p_allocation, allocation_bytes);
+         }
+      }
+
+      // Construct the `T`s inside the allocator.
+      for (auto i = 0ull; i < allocation_count; ++i) {
+         if constexpr (is_zeroed) {
+            new (p_allocation + i) T;
+         } else {
+            new (p_allocation + i) T(fwd(constructor_args)...);
+         }
+      }
+
+      // If this allocation has size feedback, store it.
+      idx size_feedback;
+      if constexpr (has_feedback) {
+         size_feedback = maybe_memory.value().second();
+      }
+
+      if constexpr (has_feedback) {
+         if constexpr (is_multiple) {
+            return return_handle(tuple{
+               span<T>(p_allocation, allocation_count), size_feedback});
+         } else {
+            return return_handle(
+               sized_allocation<T*>{p_allocation, size_feedback});
+         }
+      } else {
+         // No size feedback.
+         if constexpr (is_multiple) {
+            return return_handle(span<T>{p_allocation, allocation_count});
+         } else {
+            return return_handle(p_allocation);
+         }
+      }
+   }
+
+   template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
+             bool is_zeroed, bool has_feedback, typename... Args>
+   [[gnu::no_sanitize_address]]
+   constexpr auto
+   meta_alloc_finish_inline_overflow(
+      meta_alloc_raw_maybe_allocation<has_feedback> maybe_memory,
+      idx allocation_bytes, idx allocation_count, Args&&... constructor_args) {
+      using alias_types =
+         meta_alloc_alias_types<T, true, is_fail_safe, is_aligned, is_multiple,
+                            is_zeroed, has_feedback>;
+      using return_handle = typename alias_types::return_handle;
+      using handle_type = typename alias_types::handle_type;
+      using underlying_handle = typename alias_types::underlying_handle;
+      T* p_allocation;
+      if constexpr (has_feedback) {
+         // The `.first()` element of the `sized_allocation` tuple is
+         // a `void*`.
+         p_allocation = static_cast<T*>(maybe_memory.value().first());
+
+         auto const all_bytes = maybe_memory.value().second();
+         // Unpoison all allocated memory so it can be used.
+         unpoison_memory_region(p_allocation, all_bytes);
+
+         // Possibly zero-out the allocation.
+         if constexpr (is_zeroed) {
+            zero_memory_scalar_explicit(p_allocation, all_bytes);
+         }
+      } else {
+         p_allocation = static_cast<T*>(maybe_memory.value());
+         unpoison_memory_region(p_allocation, allocation_bytes);
+
+         // Possibly zero-out the allocation.
+         if constexpr (is_zeroed) {
+            // TODO: Find a way to efficiently and safely leverage SIMD
+            // here.
+            zero_memory_scalar_explicit(p_allocation, allocation_bytes);
+         }
+      }
+
+      // Construct the `T`s inside the allocator.
+      for (auto i = 0ull; i < allocation_count; ++i) {
+         if constexpr (is_zeroed) {
+            new (p_allocation + i) T;
+         } else {
+            new (p_allocation + i) T(fwd(constructor_args)...);
+         }
+      }
+
+      // If this allocation has size feedback, store it.
+      idx size_feedback;
+      if constexpr (has_feedback) {
+         size_feedback = maybe_memory.value().second();
+      }
+
+      underlying_handle const raw_handle =
+         this->self().template make_handle<T>(p_allocation);
+      handle_type handle(move(raw_handle));
+
+      handle.set_inlined(false);
+
+      if constexpr (is_multiple) {
+         handle.set_count(allocation_count);
+      }
+
+      if constexpr (has_feedback) {
+         return return_handle(
+            tuple<handle_type, idx>{move(handle), size_feedback});
+      } else {
+         return return_handle(move(handle));
+      }
+   }
+
+   template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
+             bool is_zeroed, bool has_feedback, typename... Args>
+   consteval auto
+   meta_alloc_consteval_allocate(uword allocation_alignment,
+                                 idx allocation_count,
+                                 Args&&... constructor_args) {
+      using alias_types = meta_alloc_alias_types<T, false, is_fail_safe, is_aligned,
+                                         is_multiple, is_zeroed, has_feedback>;
+      using return_handle = typename alias_types::return_handle;
+
+      T* p_allocation = nullptr;
+
+      // Clang rejects `new (std::align_val_t(...))` in constant expressions for
+      // many cases. Default `new` is enough when the requested alignment is 1
+      // (unalign path) or matches `alignof(T)` (align path for normal types).
+      bool const plain_new_ok =
+         (allocation_alignment == uword(1))
+         || (allocation_alignment == uword(alignof(T)));
+
+      if constexpr (is_multiple) {
+         if (plain_new_ok) {
+            p_allocation =
+               new T[static_cast<unsigned long>(allocation_count.raw)];
+         } else {
+            p_allocation = new (std::align_val_t(allocation_alignment.raw))
+               T[allocation_count.raw];
+         }
+      } else {
+         if constexpr (is_zeroed) {
+            if (plain_new_ok) {
+               p_allocation = new T;
+            } else {
+               p_allocation =
+                  new (std::align_val_t(allocation_alignment.raw)) T;
+            }
+         } else {
+            if (plain_new_ok) {
+               p_allocation = new T(constructor_args...);
+            } else {
+               p_allocation =
+                  new (std::align_val_t(allocation_alignment.raw))
+                     T(constructor_args...);
+            }
+         }
+      }
+
+      for (unsigned long i = 0u; i < allocation_count; ++i) {
+         new (p_allocation + i) T;
+      }
+
+      if constexpr (has_feedback) {
+         if constexpr (is_multiple) {
+            return return_handle(
+               tuple{span<T>(p_allocation, allocation_count),
+                     allocation_count * sizeof(T)});
+         } else {
+            return return_handle(sized_allocation<T*>{
+               p_allocation, allocation_count * sizeof(T)});
+         }
+      } else {
+         if constexpr (is_multiple) {
+            return return_handle(span<T>(p_allocation, allocation_count));
+         } else {
+            return return_handle(p_allocation);
+         }
+      }
+   }
+
+   template <typename T, bool is_inline, bool is_fail_safe, bool is_aligned,
              bool is_multiple, bool is_zeroed, bool has_feedback,
              typename... Args>
       requires((!is_multiple || (sizeof...(Args) <= 0))
-               // TODO: Multi-allocations must be default-constructed.
-               // TODO: Zeroed-out allocations should not have arguments.
-               // Zeroed-out allocations must be trivial.
+               // Multi-allocations must be default-constructed.
+               // Zeroed-out allocations must not take constructor arguments and
+               // must use a trivial object type.
+               && (!is_zeroed || (sizeof...(Args) == 0))
                && (!is_zeroed || is_trivial<T>))
-   [[gnu::optimize("-fno-tree-loop-distribute-patterns"),
-     gnu::no_sanitize_address]]
    constexpr auto
    meta_alloc(uword allocation_alignment, idx allocation_count,
               Args&&... constructor_args) {
@@ -3845,390 +4264,126 @@ class allocator_interface {
 
       idx const allocation_bytes = allocation_count * sizeof(T);
 
-      // Produce a basic handle for this memory type.
-
-      using underlying_handle =
-         decltype(this->self().template make_handle<T>(declval<T*>()));
-
-      // Get the return value of a user-supplied `.allocate()`. This must
-      // be some kind of `maybe`. It holds some data that can pass into a
-      // `handle_type`'s constructor.
-      using maybe_allocation =
-         conditional<has_feedback, maybe_sized_allocation<void*>,
-                     maybe_ptr<void>>;
-
-      // TODO: Consider replacing this huge number of `conditional`
-      // specializations with `_Generic` or `__builtin_choose_expr`.
-
-      // Produce an appropriate handle type for this allocation.
-      using handle_type = conditional<
-         is_multiple,
-         detail::multi_memory_handle<
-            conditional<is_inline,
-                        // If this an array of small-size optimized `T`:
-                        detail::inline_memory_handle<underlying_handle>,
-                        // If this is an array of not small-size optimized `T`:
-                        underlying_handle>>,
-         conditional<is_inline,
-                     // If this a small-size optimized `T`:
-                     detail::inline_memory_handle<underlying_handle>,
-                     // If this is not a small-size optimized `T`:
-                     underlying_handle>>;
-
-      using return_handle = conditional<
-         is_fail_safe,
-         conditional<!is_inline,
-                     conditional<has_feedback,
-                                 conditional<is_multiple,
-                                             // Tuple of a span with size
-                                             // feedback.
-                                             maybe<tuple<span<T>, idx>>,
-                                             // Failsafe pointer with size.
-                                             maybe_sized_allocation<T*>>,
-
-                                 conditional<is_multiple,
-                                             // Span of data allocated.
-                                             // TODO: Use `maybe_span<T>`.
-                                             maybe<span<T>>,
-                                             // Failsafe pointer w/out
-                                             // size.
-                                             maybe_ptr<T>>>,
-
-                     // Not a pointer:
-                     conditional<has_feedback,
-                                 // Failsafe opaque handle with size.
-                                 maybe<tuple<handle_type, idx>>,
-                                 // Failsafe opaque handle w/out size.
-                                 maybe<handle_type>>>,
-
-         // Not fail-safe:
-         conditional<!is_inline,
-                     conditional<has_feedback,
-                                 conditional<is_multiple,
-                                             // Unsafe tuple of a span
-                                             // with size feedback.
-                                             tuple<span<T>, idx>,
-                                             // Unsafe pointer with size
-                                             // feedback.
-                                             sized_allocation<T*>>,
-
-                                 conditional<is_multiple,
-                                             // Unsafe span.
-                                             span<T>,
-                                             // Unsafe pointer.
-                                             T*>>,
-
-                     conditional<has_feedback,
-                                 // Unsafe opaque handle with size feedback.
-                                 tuple<handle_type, idx>,
-                                 // Unsafe opaque memory handle w/out
-                                 // size feedback.
-                                 handle_type>>>;
-
-      // In `constexpr` code, unconditionally make an allocation.
       if consteval {
          if constexpr (!is_inline) {
-            T* p_allocation = nullptr;
-
-            // Construct one or multiple `T`s.
-            if constexpr (is_multiple) {
-               p_allocation = new (std::align_val_t(allocation_alignment.raw))
-                  T[allocation_count.raw];
-            } else {
-               p_allocation = new (std::align_val_t(allocation_alignment.raw))
-                  T(constructor_args...);
-            }
-
-            // Data must be default-constructed in `constexpr` code.
-            for (unsigned long i = 0u; i < allocation_count; ++i) {
-               new (p_allocation + i) T;
-            }
-
-            if constexpr (has_feedback) {
-               if constexpr (is_multiple) {
-                  return return_handle(
-                     tuple{span<T>(p_allocation, allocation_count),
-                           allocation_count * sizeof(T)});
-               } else {
-                  return return_handle(sized_allocation<T*>{
-                     p_allocation, allocation_count * sizeof(T)});
-               }
-            } else {
-               // No size feedback.
-               if constexpr (is_multiple) {
-                  return return_handle(span<T>(p_allocation, allocation_count));
-               } else {
-                  return return_handle(p_allocation);
-               }
-            }
+            return this->template meta_alloc_consteval_allocate<
+               T, is_fail_safe, is_aligned, is_multiple, is_zeroed, has_feedback>(
+               allocation_alignment, allocation_count,
+               fwd(constructor_args)...);
          } else {
-            // TODO: Opaque constexpr allocations.
-            __builtin_unreachable();
+            return this->template meta_alloc_consteval_inline_allocate<
+               T, is_fail_safe, is_aligned, is_multiple, is_zeroed, has_feedback>(
+               allocation_bytes, allocation_count, fwd(constructor_args)...);
          }
       } else {
-         // Non-constexpr code.
+         using alias_types = meta_alloc_alias_types<T, is_inline, is_fail_safe, is_aligned,
+                                            is_multiple, is_zeroed, has_feedback>;
          if constexpr (is_inline) {
             if (allocation_bytes < inline_buffer_size) {
-               // Allocate memory on this stack frame.
-               handle_type stack_handle;
-               stack_handle.set_inlined(true);
-               stack_handle.set_count(allocation_count);
-
-               if constexpr (is_zeroed) {
-                  zero_memory(__builtin_addressof(stack_handle),
-                              inline_buffer_size);
-               }
-
-               if constexpr (is_multiple) {
-                  for (unsigned long i = 0u; i < allocation_count; ++i) {
-                     new (reinterpret_cast<T*>(&stack_handle) + i) T;
-                  }
-               } else {
-                  stack_handle.set_inline_storage(T(fwd(constructor_args)...));
-               }
-
-               // Return here to skip error handling, because an on-stack
-               // allocation cannot fail.
-               if constexpr (has_feedback) {
-                  return return_handle(tuple<handle_type, idx>{
-                     move(stack_handle), inline_buffer_size});
-               } else {
-                  return return_handle(move(stack_handle));
-               }
+               return this->template meta_alloc_inline_stack_allocate<
+                  T, is_fail_safe, is_aligned, is_multiple, is_zeroed,
+                  has_feedback>(allocation_bytes, allocation_count,
+                                fwd(constructor_args)...);
             }
          }
 
-         // If this allocation is not small-size optimized, or is larger
-         // than `inline_buffer_size`:
-
-         // Make an allocation.
-         maybe_allocation maybe_memory;
+         meta_alloc_raw_maybe_allocation<has_feedback> maybe_memory;
 
          if constexpr (is_aligned) {
             if constexpr (has_feedback) {
-               if constexpr (detail::has_aligned_allocate_feedback<
-                                derived_type>) {
-                  // Call `.aligned_allocate_feedback()` function for
-                  // optimized size-feedback.
-                  maybe_memory = this->self().aligned_allocate_feedback(
+               maybe_memory =
+                  this->meta_alloc_obtain_maybe_memory_aligned_with_feedback(
                      allocation_alignment, allocation_bytes);
-               } else {
-                  if constexpr (detail::has_allocation_bytes<derived_type>) {
-                     // If a `.aligned_allocate_feedback()` is not
-                     // provided, use `.allocation_bytes()`.
-                     maybe actual_allocation_bytes =
-                        this->self().allocation_bytes(allocation_alignment,
-                                                      allocation_bytes);
-
-                     if (actual_allocation_bytes.has_value()) {
-                        void* p_allocation =
-                           this->self()
-                              .aligned_allocate(allocation_alignment,
-                                                actual_allocation_bytes.value())
-                              // If `.allocation_bytes()` succeeded,
-                              // this will not fail.
-                              .value();
-
-                        maybe_memory = maybe_sized_allocation<void*>{
-                           sized_allocation<void*>{
-                                                   p_allocation, actual_allocation_bytes.value()}
-                        };
-                     } else {
-                        maybe_memory = nullopt;
-                     }
-                  } else {
-                     // If a `.allocation_bytes()` is not provided,
-                     // simply assume that it allocates
-                     // `allocation_bytes`.
-                     maybe temp_memory = this->self().aligned_allocate(
-                        allocation_alignment, allocation_bytes);
-                     if (temp_memory.has_value()) {
-                        maybe_memory = maybe_sized_allocation<void*>{
-                           sized_allocation<void*>{temp_memory.value(),
-                                                   allocation_bytes}
-                        };
-                     } else {
-                        maybe_memory = nullopt;
-                     }
-                  };
-               }
             } else {
-               if constexpr (detail::has_aligned_allocate<derived_type>) {
-                  maybe_memory = this->self().aligned_allocate(
+               maybe_memory =
+                  this->meta_alloc_obtain_maybe_memory_aligned_no_feedback(
                      allocation_alignment, allocation_bytes);
-               } else {
-                  // If a `.aligned_allocate()` is not provided, ensure
-                  // alignment with a runtime check.
-                  maybe_memory = this->self().allocate(allocation_bytes);
-                  if (maybe_memory.has_value()) {
-                     assert(cat::is_aligned(maybe_memory.value(),
-                                            allocation_alignment),
-                            "allocation_type is misaligned!");
-                  }
-               }
             }
          } else {
             if constexpr (has_feedback) {
-               if constexpr (detail::has_allocate_feedback<derived_type>) {
-                  // Call `.allocate_feedback()` function for
-                  // optimized size-feedback.
-                  maybe_memory =
-                     this->self().allocate_feedback(allocation_bytes);
-               } else {
-                  if constexpr (detail::has_aligned_allocate_feedback<
-                                   derived_type>) {
-                     // If `.allocate_feedback()` is not provided,
-                     // but `.aligned_allocate_feedback()` is, fall back
-                     // to that with alignment of `1u`.
-                     maybe_memory = this->self().aligned_allocate_feedback(
-                        1u, allocation_bytes);
-                  } else if constexpr (detail::has_allocation_bytes<
-                                          derived_type>) {
-                     // If a `.aligned_allocate_feedback()` is not
-                     // provided, use `.allocation_bytes`().
-                     maybe size =
-                        this->self().allocation_bytes(1u, allocation_bytes);
-
-                     if (size.has_value()) {
-                        maybe_memory = maybe_sized_allocation<void*>(tuple{
-                           // If `.allocation_bytes()` succeeded, this will
-                           // not
-                           // fail.
-                           this->self().allocate(allocation_bytes).value(),
-                           size.value()});
-                     } else {
-                        // Propagate an error if memory cannot be allocated.
-                        maybe_memory = nullopt;
-                     }
-                  } else {
-                     // If a `.allocation_bytes()` is also not
-                     // provided, simply assume that it allocates
-                     // `allocation_bytes`.
-                     auto temp_memory = this->self().aligned_allocate(
-                        allocation_alignment, allocation_bytes);
-                     if (temp_memory.has_value()) {
-                        maybe_memory = maybe_sized_allocation<void*>(
-                           tuple{temp_memory.value(), allocation_bytes});
-                     } else {
-                        maybe_memory = nullopt;
-                     }
-                  };
-               }
+               maybe_memory =
+                  this->meta_alloc_obtain_maybe_memory_unaligned_with_feedback(
+                     allocation_alignment, allocation_bytes);
             } else {
-               // Otherwise, make an allocation without size feedback.
-               if constexpr (detail::has_allocate<derived_type>) {
-                  maybe_memory = this->self().allocate(allocation_bytes);
-               } else {
-                  // If `.allocate` is not provided, implement it in
-                  // terms of
-                  // `.aligned_allocate()`.
-                  maybe_memory =
-                     this->self().aligned_allocate(1u, allocation_bytes);
-               }
+               maybe_memory =
+                  this->meta_alloc_obtain_maybe_memory_unaligned_no_feedback(
+                     allocation_alignment, allocation_bytes);
             }
          }
-
-         // Short circuit failed allocations.
          if constexpr (is_fail_safe) {
             if (!maybe_memory.has_value()) {
-               // Return an empty maybe if this failed to allocate.
+               using return_handle = typename alias_types::return_handle;
                return return_handle(nullopt);
             }
          }
-
-         T* p_allocation;
-         if constexpr (has_feedback) {
-            // The `.first()` element of the `sized_allocation` tuple is
-            // a `void*`.
-            p_allocation = static_cast<T*>(maybe_memory.value().first());
-
-            auto const all_bytes = maybe_memory.value().second();
-            // Unpoison all allocated memory so it can be used.
-            unpoison_memory_region(p_allocation, all_bytes);
-
-            // Possibly zero-out the allocation.
-            if constexpr (is_zeroed) {
-               zero_memory_scalar_explicit(p_allocation, all_bytes);
-            }
-         } else {
-            p_allocation = static_cast<T*>(maybe_memory.value());
-            unpoison_memory_region(p_allocation, allocation_bytes);
-
-            // Possibly zero-out the allocation.
-            if constexpr (is_zeroed) {
-               // TODO: Find a way to efficiently and safely leverage SIMD
-               // here.
-               zero_memory_scalar_explicit(p_allocation, allocation_bytes);
-            }
-         }
-
-         // Construct the `T`s inside the allocator.
-         for (auto i = 0ull; i < allocation_count; ++i) {
-            new (p_allocation + i) T(fwd(constructor_args)...);
-         }
-
-         // If this allocation has size feedback, store it.
-         idx size_feedback;
-         if constexpr (has_feedback) {
-            size_feedback = maybe_memory.value().second();
-         }
-
          if constexpr (!is_inline) {
-            if constexpr (has_feedback) {
-               if constexpr (is_multiple) {
-                  return return_handle(tuple{
-                     span<T>(p_allocation, allocation_count), size_feedback});
-               } else {
-                  return return_handle(
-                     sized_allocation<T*>{p_allocation, size_feedback});
-               }
-            } else {
-               // No size feedback.
-               if constexpr (is_multiple) {
-                  return return_handle(span<T>{p_allocation, allocation_count});
-               } else {
-                  return return_handle(p_allocation);
-               }
-            }
+            return this->template meta_alloc_finish_non_inline<
+               T, is_fail_safe, is_aligned, is_multiple, is_zeroed, has_feedback>(
+               move(maybe_memory), allocation_bytes, allocation_count,
+               fwd(constructor_args)...);
          } else {
-            underlying_handle const raw_handle =
-               this->self().template make_handle<T>(p_allocation);
-            handle_type handle(move(raw_handle));
-
-            if constexpr (is_inline) {
-               handle.set_inlined(false);
-            }
-
-            if constexpr (is_multiple) {
-               handle.set_count(allocation_count);
-            }
-
-            if constexpr (has_feedback) {
-               return return_handle(
-                  tuple<handle_type, idx>{move(handle), size_feedback});
-            } else {
-               return return_handle(move(handle));
-            }
+            return this->template meta_alloc_finish_inline_overflow<
+               T, is_fail_safe, is_aligned, is_multiple, is_zeroed, has_feedback>(
+               move(maybe_memory), allocation_bytes, allocation_count,
+               fwd(constructor_args)...);
          }
       }
    }
 
-   // Take a generic allocation method, invoke it on an allocator with a
-   // generic memory handle, and free the original handle if that
-   // allocation suceeded.
+   // Take a generic allocation method, invoke it on an allocator with a generic
+   // memory handle, and free the original handle if that allocation suceeded.
    template <auto alloc_function, bool is_fail_safe, bool has_feedback,
-             typename... Args>
+             bool pass_old_to_alloc = true, typename... Args>
    constexpr auto
    meta_realloc(auto& allocator, auto& old_handle, Args&&... arguments) {
-      auto allocation = (allocator.*alloc_function)(
-         // Possible alignment and/or count arguments.
-         fwd(arguments)...,
-         // Move the data from this handle.
-         move(this->get(old_handle)));
+      auto allocation = [&]() -> decltype(auto) {
+         if constexpr (pass_old_to_alloc) {
+            return (allocator.*alloc_function)(
+               // Possible alignment and/or count arguments.
+               fwd(arguments)...,
+               // Move the data from this handle.
+               move(this->get(old_handle)));
+         } else {
+            return (allocator.*alloc_function)(fwd(arguments)...);
+         }
+      }();
 
       if constexpr (is_fail_safe) {
          if (!allocation.has_value()) {
             return allocation;
+         }
+      }
+
+      if constexpr (!pass_old_to_alloc) {
+         if constexpr (mem<typeof(old_handle)>) {
+            if constexpr (is_fail_safe) {
+               if constexpr (has_feedback) {
+                  this->relocate_inline_handle(old_handle,
+                                               allocation.value().first());
+               } else {
+                  this->relocate_inline_handle(old_handle, allocation.value());
+               }
+            } else {
+               if constexpr (has_feedback) {
+                  this->relocate_inline_handle(old_handle, allocation.first());
+               } else {
+                  this->relocate_inline_handle(old_handle, allocation);
+               }
+            }
+         } else {
+            if constexpr (is_fail_safe) {
+               if constexpr (has_feedback) {
+                  *allocation.value().first() = move(this->get(old_handle));
+               } else {
+                  *allocation.value() = move(this->get(old_handle));
+               }
+            } else {
+               if constexpr (has_feedback) {
+                  *allocation.first() = move(this->get(old_handle));
+               } else {
+                  *allocation = move(this->get(old_handle));
+               }
+            }
          }
       }
 
@@ -4267,9 +4422,9 @@ class allocator_interface {
       }
    }
 
-   // Copy data from `p_old_handle` into `allocation`.
-   // This `span` overload exists to simplify calling this with the output of
-   // both `_multi` and non-`_multi` functions.
+   // Copy data from `p_old_handle` into `allocation`. This `span` overload
+   // exists to simplify calling this with the output of both `_multi` and
+   // non-`_multi` functions.
    template <typename T>
    constexpr void
    relocate_ptr_handle(auto* p_old_handle, span<T> new_handle, idx old_count) {
