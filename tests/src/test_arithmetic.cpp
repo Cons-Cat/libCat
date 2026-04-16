@@ -305,14 +305,14 @@ test(arithmetic) {
    cat::int1 narrow_signed2 = 100u;
    narrow_signed2 = 100_u4;
    cat::int1 narrow_signed3 = -100;
-   
-   cat::uint2 narrow_unsigned3 = 2000;
-   cat::uint2 narrow_unsigned4 = 2000u;
-   narrow_unsigned4 = 2000_u4;
-   cat::int2 narrow_signed4 = 1000;
-   cat::int2 narrow_signed5 = 1000u;
-   narrow_signed5 = 1000_u4;
-   cat::int2 narrow_signed6 = -1000;
+
+   cat::uint2 narrow_unsigned3 = 2'000;
+   cat::uint2 narrow_unsigned4 = 2'000u;
+   narrow_unsigned4 = 2'000_u4;
+   cat::int2 narrow_signed4 = 1'000;
+   cat::int2 narrow_signed5 = 1'000u;
+   narrow_signed5 = 1'000_u4;
+   cat::int2 narrow_signed6 = -1'000;
 
    // Unsafe implicit raw conversion uses `raw_implicit_storage_shape_ok` and
    // `raw_source_fits_implicit_storage` so the value-gated overload is not
@@ -321,20 +321,50 @@ test(arithmetic) {
       !cat::detail::raw_implicit_storage_shape_ok<int, cat::uint4::raw_type>());
    static_assert(
       !cat::detail::raw_implicit_storage_shape_ok<unsigned int,
-                                                cat::int4::raw_type>());
+                                                  cat::int4::raw_type>());
    static_assert(
       cat::detail::raw_source_fits_implicit_storage<cat::uint1::raw_type>(200));
    static_assert(
-      !cat::detail::raw_source_fits_implicit_storage<cat::uint1::raw_type>(300));
+      !cat::detail::raw_source_fits_implicit_storage<cat::uint1::raw_type>(
+         300));
    static_assert(
       !cat::detail::raw_source_fits_implicit_storage<cat::uint1::raw_type>(-1));
    static_assert(
       cat::detail::raw_source_fits_implicit_storage<cat::int1::raw_type>(100u));
    static_assert(
-      !cat::detail::raw_source_fits_implicit_storage<cat::int1::raw_type>(300u));
+      !cat::detail::raw_source_fits_implicit_storage<cat::int1::raw_type>(
+         300u));
    static_assert(
       !cat::detail::raw_source_fits_implicit_storage<cat::uint8::raw_type>(
          -1ll));
+
+   // `cat::index` and `cat::arithmetic_ptr` use the same `enable_if` integral
+   // constructor split as `cat::arithmetic`.
+   static_assert(
+      cat::detail::raw_implicit_storage_shape_ok<cat::uint4::raw_type,
+                                                 cat::idx::raw_type>());
+   static_assert(
+      cat::detail::raw_source_fits_implicit_storage<cat::idx::raw_type>(200));
+   static_assert(
+      !cat::detail::raw_source_fits_implicit_storage<cat::idx::raw_type>(-1));
+   static_assert(
+      !cat::detail::raw_source_fits_implicit_storage<cat::idx::raw_type>(-1ll));
+
+   static_assert(cat::detail::raw_implicit_storage_shape_ok<
+                 cat::uint4::raw_type, cat::uintptr<void>::raw_type>());
+   static_assert(cat::detail::raw_source_fits_implicit_storage<
+                 cat::uintptr<void>::raw_type>(200));
+   static_assert(!cat::detail::raw_source_fits_implicit_storage<
+                 cat::uintptr<void>::raw_type>(-1));
+   static_assert(!cat::detail::raw_source_fits_implicit_storage<
+                 cat::uintptr<void>::raw_type>(-1ll));
+
+   static_assert(cat::detail::raw_implicit_storage_shape_ok<
+                 cat::uint4::raw_type, cat::intptr<void>::raw_type>());
+   static_assert(cat::detail::raw_source_fits_implicit_storage<
+                 cat::intptr<void>::raw_type>(100));
+   static_assert(cat::detail::raw_source_fits_implicit_storage<
+                 cat::intptr<void>::raw_type>(-1));
 
    constexpr cat::iword max_iword = cat::limits<cat::iword>::max();
    constexpr cat::iword min_iword = cat::limits<cat::iword>::min();
@@ -864,7 +894,6 @@ test(arithmetic) {
    1_sz - idx1;
    idx1 - 1_uz;
    idx1 - 1_sz;
-   idx1 -= 1;
 
    idx1* idx2;
    idx1 * 1;

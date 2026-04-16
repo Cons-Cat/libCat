@@ -55,7 +55,8 @@ clone_thread_local_slab_min_bytes() -> cat::idx {
    if (align_want < 32u) {
       align_want = 32u;
    }
-   cat::idx const for_thread_pointer_alignment = memory_size + align_want - 1u;
+   cat::idx const for_thread_pointer_alignment =
+      cat::idx(memory_size.raw + align_want.raw - 1u);
    cat::idx const for_cache_line = (memory_size + 63u).raw & ~63ull;
    return for_thread_pointer_alignment > for_cache_line
              ? for_thread_pointer_alignment
@@ -79,7 +80,7 @@ install_executable_tls_image_at_thread_pointer(
    void const* const p_source = __cat_tls_initial_image;
    __builtin_memcpy(p_destination, p_source, file_size.raw);
    if (memory_size > file_size) {
-      cat::idx const zero_initialized_size = memory_size - file_size;
+      cat::idx const zero_initialized_size = cat::idx(memory_size - file_size);
       __builtin_memset(p_destination + file_size.raw, 0,
                        zero_initialized_size.raw);
    }

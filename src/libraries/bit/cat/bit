@@ -82,10 +82,10 @@ countl_zero(T value) -> idx {
    auto raw_value = make_raw_arithmetic(value);
    if (raw_value == 0) {
       // It is undefined behavior to pass 0 into clz.
-      return sizeof(T) * 8;
+      return idx(sizeof(T) * 8u);
    }
 
-   return __builtin_clzg(raw_value);
+   return idx(__builtin_clzg(raw_value));
 }
 
 template <is_unsigned_integral T>
@@ -103,10 +103,10 @@ countr_zero(T value) -> idx {
    auto raw_value = make_raw_arithmetic(value);
    if (raw_value == 0) {
       // It is undefined behavior to pass 0 into ctz.
-      return sizeof(T) * 8;
+      return idx(sizeof(T) * 8u);
    }
 
-   return __builtin_ctzg(raw_value);
+   return idx(__builtin_ctzg(raw_value));
 }
 
 template <is_unsigned_integral T>

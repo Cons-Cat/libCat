@@ -35,7 +35,7 @@ cat::detail::compare_strings_detail(str_view const string_1,
             }
          }
 
-         length_iterator -= vector_size * size;
+         length_iterator.raw -= vector_size.raw * size.raw;
          p_string_1_iterator += vector_size * size;
          p_string_2_iterator += vector_size * size;
       }

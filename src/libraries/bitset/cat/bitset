@@ -6,6 +6,7 @@
 #include <cat/bit>
 #include <cat/math>
 #include <cat/meta>
+#include <cat/maybe>
 
 namespace cat {
 
@@ -56,15 +57,15 @@ bitset {
    static constexpr idx leading_skipped_bits =
       // The number of bits in the entire storage, minus the bits declared for
       // use.
-      (sizeof(array_type) * 8u) - bits_count;
+      sizeof(array_type) * 8u - bits_count;
 
    // The number of bits counted in the first 1, 2, 4, or 8 bytes of this
    // bitset.
    static constexpr idx leading_bytes_bits =
       // Size of this storage, 64 bits or fewer.
-      storage_element_size * 8u -
+      idx(storage_element_size * 8u -
       // Minus the number of unused bits in this bitset.
-      leading_skipped_bits;
+      leading_skipped_bits);
 
    constexpr bitset() = default;
    constexpr bitset(bitset const&) = default;
@@ -99,17 +100,16 @@ bitset {
          assert(index_bit < bits_count);
       }
 
-      array_type_element& index_byte =
-         m_data[m_data.size() - 1u
-                - ((index_bit + leading_skipped_bits) /
-                   // TODO: Without `.raw`, this is ambiguous.
-                   word_bits.raw)];
+      idx const array_word = idx(
+         m_data.size() - 1u
+         - ((index_bit + leading_skipped_bits) / word_bits));
+      array_type_element& index_byte = m_data[array_word];
 
       uword bit_offset = index_bit + leading_skipped_bits;
       if constexpr (total_bytes > word_bytes) {
          // If the bitset is larger than a word, wrap the bit offset by the
          // size of a word.
-         bit_offset &= word_bits - 1u;
+         bit_offset.raw &= word_bits.raw - 1u;
       }
 
       return bit_reference<array_type_element>::from_offset(index_byte,
@@ -214,7 +214,8 @@ bitset {
       // Leading bits of the leading byte should not be considered
       // part of the bitset, so they are masked on unconditionally.
       auto const mask = (array_type_element(1u) << (leading_skipped_bits))--;
-      return (m_data[m_data.size() - 1] | mask) == array_type_element::max();
+      return (m_data[m_data.size().raw - 1u] | mask)
+             == array_type_element::max();
    }
 
    // Evaluate true if at least one bit in this bitset is 1.
@@ -269,8 +270,12 @@ bitset {
          constexpr array_type_element mask =
             ~((array_type_element(1u) << leading_skipped_bits) - 1u);
          // Set leading bits to zero, and then subtract them from the count.
-         count += cat::countr_zero(m_data[storage_array_size - 1u] & mask)
-                  - leading_skipped_bits;
+         // `array_type` always holds at least one element, so the last storage
+         // index is `storage_array_size - 1u` without unsigned wrap.
+         count += cat::countr_zero(
+            m_data[narrow_to_idx(storage_array_size.raw - 1u).value()]
+            & mask);
+         count.raw -= leading_skipped_bits.raw;
 
          // If any zeros were found, return early.
          if (count != storage_element_size * 8u - leading_skipped_bits) {
@@ -278,8 +283,14 @@ bitset {
          }
       }
 
-      for (idx i = storage_array_size - 1u - has_prologue; i >= 0u; --i) {
-         idx next_count = cat::countr_zero(m_data[i]);
+      // `i` is signed so the prologue case can start at `-1` when the backing
+      // store is a single element and the first byte was already scanned.
+      // `to_idx` is only called after `i >= 0`, so the value fits `idx`.
+      for (iword i = iword(storage_array_size.raw - 1u)
+                   - iword(static_cast<unsigned>(has_prologue));
+           i >= iword(0); --i) {
+         idx const byte_index = i.to_idx().value();
+         idx next_count = cat::countr_zero(m_data[byte_index]);
          count += next_count;
 
          // If any 1's are found, skip remaining bytes.
@@ -378,7 +389,7 @@ bitset {
 
 // Subtract 1 to skip the null terminator.
 template <__SIZE_TYPE__ bits_count>
-bitset(char const (&bitstring)[bits_count]) -> bitset<bits_count - 1u>;
+bitset(char const (&bitstring)[bits_count]) -> bitset<idx(bits_count - 1u)>;
 
 template <idx bits_count, is_unsigned_integral... types>
 // Ensure that all `types` are the same size. E.g., `uint4` and `unsigned` are

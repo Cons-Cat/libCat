@@ -455,8 +455,7 @@ handshake(cat::is_allocator auto& allocator,
    // recieved packets is unknown and potentially a very large amount.
    // TODO: Deallocate this somehow.
    auto memory = prop(allocator.template alloc_multi<connection_response_info>(
-      // TODO: Remove `.raw`.
-      x_connection.header.message_length.raw * 4));
+      cat::idx(x_connection.header.message_length.raw * 4u)));
 
    x_connection.p_setup = memory.data();
 

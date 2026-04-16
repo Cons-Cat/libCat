@@ -25,6 +25,9 @@
 
 namespace cat {
 
+template <typename T>
+class maybe;
+
 // These policies control the overflow semantics of `arithmetic`s.
 enum class overflow_policies : unsigned char {
    undefined,
@@ -1006,6 +1009,16 @@ struct arithmetic :
       return limits<raw_type>::max();
    }
 
+   // `iword` and `uword` are aliases for these `arithmetic` parameterizations.
+   // `to_idx()` is defined at the end of `<cat/maybe>` (via
+   // `<cat/implementations/narrow_to_idx.tpp>`).
+   [[nodiscard]]
+   constexpr maybe<index<overflow_policies::undefined>>
+   to_idx() const
+      requires(is_integral<T> && overflow_policy == overflow_policies::undefined
+               && (is_same<T, __SIZE_TYPE__>
+                   || is_same<T, make_signed_type<__SIZE_TYPE__>>));
+
    // `arithmetic` derives public storage from
    // `detail::arithmetic_storage`.
 };
@@ -1031,10 +1044,26 @@ struct arithmetic_ptr :
    constexpr arithmetic_ptr(arithmetic_ptr const&) = default;
    constexpr arithmetic_ptr(arithmetic_ptr&&) = default;
 
+   // Implicit raw unsafe integral conversions when the value fits; see
+   // `raw_implicit_storage_shape_ok` for allowed storage shapes.
    template <is_integral U>
+      requires(is_integral<storage_type>
+               && detail::raw_implicit_storage_shape_ok<raw_arithmetic_type<U>,
+                                                        storage_type>())
    [[gnu::always_inline, gnu::nodebug]]
-   explicit(is_safe_arithmetic_conversion<
-            U, storage_type>) constexpr arithmetic_ptr(U other)
+   constexpr arithmetic_ptr(U other) __attribute__((
+      enable_if(detail::raw_source_fits_implicit_storage<storage_type>(other),
+                "value is out of range for implicit conversion to this pointer "
+                "integer")))
+       : raw(make_raw_arithmetic(other)) {
+   }
+
+   // Constructing with safe conversions is implicit, but constructing with
+   // unsafe conversions is explicit.
+   template <is_arithmetic U>
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr explicit(!is_safe_arithmetic_conversion<U, storage_type>)
+      arithmetic_ptr(U other)
        : raw(make_raw_arithmetic(other)) {
    }
 
@@ -1446,6 +1475,15 @@ struct arithmetic_ptr :
    }
 };
 
+namespace detail {
+template <typename T>
+inline constexpr bool explicit_word_for_index_ctor =
+   is_same<remove_cvref<T>,
+           arithmetic<__SIZE_TYPE__, overflow_policies::undefined>>
+   || is_same<remove_cvref<T>, arithmetic<make_signed_type<__SIZE_TYPE__>,
+                                          overflow_policies::undefined>>;
+}  // namespace detail
+
 template <overflow_policies overflow_policy = overflow_policies::undefined>
 struct index :
     // Generate arithmetic operators.
@@ -1460,22 +1498,28 @@ struct index :
    constexpr index(index const&) = default;
    constexpr index(index&&) = default;
 
-   // `index` allows explicit unsafe signed-ness conversions.
+   // Implicit raw unsafe integral conversions when the value fits; see
+   // `raw_implicit_storage_shape_ok` for allowed storage shapes.
    template <is_integral U>
+      requires(detail::raw_implicit_storage_shape_ok<raw_arithmetic_type<U>,
+                                                     raw_type>()
+               && !detail::explicit_word_for_index_ctor<remove_cvref<U>>)
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr explicit(sizeof(raw_type) <= sizeof(U)) index(U other)
-       : raw(static_cast<__SIZE_TYPE__>(other)) {
-      if !consteval {
-         // TODO: These strings would be very helpful to print, but strings
-         // cannot be used with asserts in this header currently.
+   constexpr index(U other) __attribute__((enable_if(
+      detail::raw_source_fits_implicit_storage<raw_type>(other),
+      "value is out of range for implicit conversion to this index type")))
+       : raw(static_cast<__SIZE_TYPE__>(make_raw_arithmetic(other))) {
+   }
 
-         // Attempting to construct a `cat::index` from a negative integer!
-         assert(other >= U(0));
-         // Attempting to construct a `cat::index` from an integer larger than
-         // it can represent!
-         assert(make_unsigned(make_raw_arithmetic(other))
-                <= limits<index>::max());
-      }
+   // Constructing with safe conversions is implicit, but constructing with
+   // unsafe conversions is explicit. `uword` / `iword` stay explicit even when
+   // the conversion is otherwise considered safe.
+   template <is_arithmetic U>
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr explicit(!is_safe_arithmetic_conversion<U, raw_type>
+                      || detail::explicit_word_for_index_ctor<remove_cvref<U>>)
+      index(U other)
+       : raw(static_cast<__SIZE_TYPE__>(make_raw_arithmetic(other))) {
    }
 
    // `index` allows implicit unsafe conversions from `unsigned long`
@@ -1532,13 +1576,15 @@ struct index :
    constexpr auto
    operator=(index&&) -> index& = default;
 
-   // Any integral type smaller than `raw_type` can safely be assigned to
-   // `index`.
+   // Any integral type smaller than `raw_type` can be assigned when the value
+   // fits unsigned storage.
    template <is_integral U>
       requires(sizeof(U) < sizeof(raw_type))
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   operator=(U other) -> index& {
+   constexpr index&  // NOLINTNEXTLINE
+   operator=(U other) __attribute__((
+      enable_if(detail::raw_source_fits_implicit_storage<raw_type>(other),
+                "value is out of range for assignment to cat::index"))) {
       raw = make_raw_arithmetic(other);
       return *this;
    }
@@ -1597,25 +1643,29 @@ struct index :
       return p_other + raw;
    }
 
-   // TODO: All `index` subtractions should return `iword`.
-   //
+   // Signed distance; same representation as `cat::iword` when
+   // `overflow_policy` is `undefined`. There is no `operator-=`: an `index` is
+   // an unsigned extent.
+   using signed_distance =
+      arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policy>;
+
    // Generate `operator-`.
    template <is_integral T>
+      requires(!is_same<remove_cvref<T>, index>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(T other) const -> index {
-      return index(static_cast<signed long long>(raw)
-                   - static_cast<signed long long>(make_raw_arithmetic(other)));
+   subtract_by(T other) const -> signed_distance {
+      return signed_distance(
+         static_cast<signed long long>(raw)
+         - static_cast<signed long long>(make_raw_arithmetic(other)));
    }
 
-   // Subtracting two indices should produce a signed integer.
-   template <is_integral T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(index other) const
-      // Return an `iword`.
-      -> arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policy> {
-      return static_cast<__SIZE_TYPE__>(raw) - make_raw_arithmetic(other);
+   subtract_by(index other) const -> signed_distance {
+      return signed_distance(
+         static_cast<signed long long>(raw)
+         - static_cast<signed long long>(make_raw_arithmetic(other)));
    }
 
    template <is_arithmetic U>
@@ -1844,14 +1894,14 @@ using uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::undefined>;
 // using i128 = arithmetic<int128_t, overflow_policies::undefined>;
 // using u128 = arithmetic<uint128_t, overflow_policies::undefined>;
 
-using iword =
-   arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policies::undefined>;
-using uword = arithmetic<__SIZE_TYPE__, overflow_policies::undefined>;
-
 using float4 = arithmetic<float, overflow_policies::undefined>;
 using float8 = arithmetic<double, overflow_policies::undefined>;
 
 using idx = cat::index<overflow_policies::undefined>;
+
+using iword =
+   arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policies::undefined>;
+using uword = arithmetic<__SIZE_TYPE__, overflow_policies::undefined>;
 
 // `__INTPTR_TYPE__` is defined by the GCC compiler.
 template <typename T>

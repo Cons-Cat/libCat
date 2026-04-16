@@ -55,7 +55,7 @@ test(arrays) {
    }
 
    for (int& a : cat::as_reverse(array_1)) {
-      --count;
+      count.raw -= 1u;
       cat::verify(a == array_1[count]);
    }
 
@@ -70,7 +70,7 @@ test(arrays) {
    auto _ = array_1.cbegin();
 
    for (int const& a : cat::as_const_reverse(array_1)) {
-      --count;
+      count.raw -= 1u;
       cat::verify(a == array_1[count]);
    }
 

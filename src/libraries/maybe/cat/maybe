@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/runtime>
 #include <cat/match>
 #include <cat/memory>
 #include <cat/utility>
@@ -998,3 +999,5 @@ template <typename T>
 using maybe_non_zero = maybe<sentinel<T, T(0)>>;
 
 }  // namespace cat
+
+#include <cat/implementations/narrow_to_idx.tpp>

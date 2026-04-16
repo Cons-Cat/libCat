@@ -58,6 +58,78 @@ concept has_bit_not_interface = requires(T lhs, U rhs) { lhs.bit_not(rhs); };
 
 template <typename T>
 concept has_bit_complement = requires(T lhs) { lhs.bit_complement(); };
+
+// `operator++` / `operator--` assign `add(1)` / `subtract_by(1)` back to the
+// operand. They exist only when those calls preserve the operand type (for
+// example `cat::index` subtraction against another `index` widens to
+// `cat::iword`, so decrement is not generated).
+template <typename D>
+concept arithmetic_unary_increment_ok =
+   is_same<remove_cvref<D>,
+            remove_cvref<decltype(declval<remove_cvref<D> const&>().add(
+               remove_cvref<D>(1)))>>;
+
+template <typename D>
+concept arithmetic_unary_decrement_ok =
+   is_same<remove_cvref<D>,
+            remove_cvref<decltype(declval<remove_cvref<D> const&>().subtract_by(
+               remove_cvref<D>(1)))>>;
+
+// Left-hand compound assignments exist only when the corresponding member
+// (`add`, `subtract_by`, …) returns the same type as the operand, matching the
+// binary operator result type.
+template <typename D, typename T>
+concept arithmetic_plus_assign_ok =
+   is_same<remove_cvref<D>,
+            remove_cvref<decltype(declval<remove_cvref<D>&>().add(declval<T>()))>>;
+
+template <typename D, typename T>
+concept arithmetic_minus_assign_ok =
+   is_same<remove_cvref<D>,
+            remove_cvref<decltype(declval<remove_cvref<D>&>().subtract_by(
+               declval<T>()))>>;
+
+template <typename D, typename T>
+concept arithmetic_multiply_assign_ok =
+   is_same<remove_cvref<D>,
+            remove_cvref<decltype(declval<remove_cvref<D>&>().multiply(
+               declval<T>()))>>;
+
+template <typename D, typename T>
+concept arithmetic_divide_assign_ok =
+   is_same<remove_cvref<D>,
+            remove_cvref<decltype(declval<remove_cvref<D>&>().divide_by(
+               declval<T>()))>>;
+
+template <typename D, typename T>
+concept arithmetic_modulo_assign_ok =
+   is_same<remove_cvref<D>,
+            remove_cvref<decltype(declval<remove_cvref<D>&>().modulo_by(
+               declval<T>()))>>;
+
+template <typename D, typename T>
+concept arithmetic_bit_and_assign_ok =
+   is_same<remove_cvref<D>,
+            remove_cvref<decltype(declval<remove_cvref<D>&>().bit_and(
+               declval<T>()))>>;
+
+template <typename D, typename T>
+concept arithmetic_bit_or_assign_ok =
+   is_same<remove_cvref<D>,
+            remove_cvref<decltype(declval<remove_cvref<D>&>().bit_or(
+               declval<T>()))>>;
+
+template <typename D, typename T>
+concept arithmetic_shift_left_assign_ok =
+   is_same<remove_cvref<D>,
+            remove_cvref<decltype(declval<remove_cvref<D>&>().shift_left_by(
+               declval<T>()))>>;
+
+template <typename D, typename T>
+concept arithmetic_shift_right_assign_ok =
+   is_same<remove_cvref<D>,
+            remove_cvref<decltype(declval<remove_cvref<D>&>().shift_right_by(
+               declval<T>()))>>;
 }  // namespace detail
 
 // CRTP class for generating a commutative `+` operator.
@@ -105,6 +177,7 @@ public:
 
    // `+=` operator where this is a left-hand-side operand.
    template <typename T>
+      requires(detail::arithmetic_plus_assign_ok<decay_derived_type, T>)
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+=(derived_type& self, T&& other) -> derived_type& {
@@ -143,7 +216,8 @@ public:
    // `this` is an l-value.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator++(derived_type& self) -> derived_type& {
+   operator++(derived_type& self) -> derived_type&
+      requires(detail::arithmetic_unary_increment_ok<derived_type>) {
       self = self.add(derived_type(1));
       return self;
    }
@@ -151,14 +225,16 @@ public:
    // `this` is an r-value.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator++(derived_type&& self) -> derived_type {
+   operator++(derived_type&& self) -> derived_type
+      requires(detail::arithmetic_unary_increment_ok<derived_type>) {
       return move(self).add(derived_type(1));
    }
 
    // `this` is an l-value.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator++(derived_type& self, int) -> derived_type& {
+   operator++(derived_type& self, int) -> derived_type&
+      requires(detail::arithmetic_unary_increment_ok<derived_type>) {
       self = self.add(derived_type(1));
       return self;
    }
@@ -166,7 +242,8 @@ public:
    // `this` is an r-value.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator++(derived_type&& self, int) -> derived_type {
+   operator++(derived_type&& self, int) -> derived_type
+      requires(detail::arithmetic_unary_increment_ok<derived_type>) {
       return move(self).add(derived_type(1));
    }
 };
@@ -216,6 +293,7 @@ public:
 
    // `-=` operator where this is a left-hand-side operand.
    template <typename T>
+      requires(detail::arithmetic_minus_assign_ok<decay_derived_type, T>)
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-=(derived_type& self, T&& other) -> derived_type& {
@@ -254,7 +332,8 @@ public:
    // `this` is an l-value.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator--(derived_type& self) -> derived_type& {
+   operator--(derived_type& self) -> derived_type&
+      requires(detail::arithmetic_unary_decrement_ok<derived_type>) {
       self = self.subtract_by(derived_type(1));
       return self;
    }
@@ -262,14 +341,16 @@ public:
    // `this` is an r-value.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator--(derived_type&& self) -> derived_type {
+   operator--(derived_type&& self) -> derived_type
+      requires(detail::arithmetic_unary_decrement_ok<derived_type>) {
       return move(self).subtract_by(derived_type(1));
    }
 
    // `this` is an l-value.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator--(derived_type& self, int) -> derived_type& {
+   operator--(derived_type& self, int) -> derived_type&
+      requires(detail::arithmetic_unary_decrement_ok<derived_type>) {
       self = self.subtract_by(derived_type(1));
       return self;
    }
@@ -277,7 +358,8 @@ public:
    // `this` is an r-value.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator--(derived_type&& self, int) -> derived_type {
+   operator--(derived_type&& self, int) -> derived_type
+      requires(detail::arithmetic_unary_decrement_ok<derived_type>) {
       return move(self).subtract_by(derived_type(1));
    }
 };
@@ -327,6 +409,7 @@ public:
 
    // `*=` operator where this is a left-hand-side operand.
    template <typename T>
+      requires(detail::arithmetic_multiply_assign_ok<decay_derived_type, T>)
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator*=(derived_type& self, T&& other) -> derived_type& {
@@ -406,6 +489,7 @@ public:
 
    // `/=` operator where this is a left-hand-side operand.
    template <typename T>
+      requires(detail::arithmetic_divide_assign_ok<decay_derived_type, T>)
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator/=(derived_type& self, T&& other) -> derived_type& {
@@ -485,6 +569,7 @@ public:
 
    // `&=` operator where this is a left-hand-side operand.
    template <typename T>
+      requires(detail::arithmetic_bit_and_assign_ok<decay_derived_type, T>)
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator&=(derived_type& self, T&& other) -> derived_type& {
@@ -564,6 +649,7 @@ public:
 
    // `|=` operator where this is a left-hand-side operand.
    template <typename T>
+      requires(detail::arithmetic_bit_or_assign_ok<decay_derived_type, T>)
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator|=(derived_type& self, T&& other) -> derived_type& {
@@ -643,6 +729,7 @@ public:
 
    // `%=` operator where this is a left-hand-side operand.
    template <typename T>
+      requires(detail::arithmetic_modulo_assign_ok<decay_derived_type, T>)
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator%=(derived_type& self, T&& other) -> derived_type& {
@@ -722,6 +809,7 @@ public:
 
    // `<<=` operator where this is a left-hand-side operand.
    template <typename T>
+      requires(detail::arithmetic_shift_left_assign_ok<decay_derived_type, T>)
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator<<=(derived_type& self, T&& other) -> derived_type& {
@@ -801,6 +889,7 @@ public:
 
    // `>>=` operator where this is a left-hand-side operand.
    template <typename T>
+      requires(detail::arithmetic_shift_right_assign_ok<decay_derived_type, T>)
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator>>=(derived_type& self, T&& other) -> derived_type& {
