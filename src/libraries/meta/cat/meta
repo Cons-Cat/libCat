@@ -531,6 +531,13 @@ struct make_signed_trait {
    using type = T;
 };
 
+// Identity on the type `make_signed` / `make_signed_type`. Leave floats unchanged.
+template <typename T>
+   requires(is_floating_point<T>)
+struct make_signed_trait<T> {
+   using type = T;
+};
+
 template <>
 struct make_signed_trait<char> {
    using type = signed char;
@@ -567,6 +574,7 @@ struct make_signed_trait<arithmetic<T, policy>> {
 };
 }  // namespace detail
 
+// floating-point types it is the identity (the type is unchanged).
 template <is_arithmetic T>
 using make_signed_type =
    copy_cv_from<T, typename detail::make_signed_trait<remove_cv<T>>::type>;
