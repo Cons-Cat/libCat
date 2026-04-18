@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.24)
 
 project(cat LANGUAGES CXX)
 
+option(CAT_USE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer." ON)
+
 list(
   APPEND CAT_COMPILE_OPTIONS_COMMON
   # Disable linking libC symbols.

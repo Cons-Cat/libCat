@@ -51,10 +51,10 @@ main() -> int {
    // TODO: This will leak. An `inline_allocator` should be used.
    // `fmt` stores arguments in type-erased storage; pass plain `int`s, not
    // `atomic` objects.
-   int const n_passed = tests_passed.load(cat::memory_order::relaxed);
-   int const n_failed = tests_failed.load(cat::memory_order::relaxed);
-   auto _ = cat::print(cat::fmt(pager, "\n{} tests passed.\n{} tests failed.\n",
-                               n_passed, n_failed)
-                          .or_exit());
-   return n_failed != 0;
+   cat::idx const n_passed = tests_passed.load(cat::memory_order::relaxed);
+   cat::idx const n_failed = tests_failed.load(cat::memory_order::relaxed);
+   auto _ = cat::print(
+      cat::fmt(pager, "\n{} tests passed.\n{} tests failed.\n", n_passed, n_failed)
+         .or_exit());
+   return static_cast<int>(n_failed != 0u); // Return 0 or 1.
 }

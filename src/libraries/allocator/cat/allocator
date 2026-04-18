@@ -4016,8 +4016,7 @@ class allocator_interface {
 
    [[gnu::no_sanitize_address]]
    constexpr auto
-   meta_alloc_obtain_maybe_memory_unaligned_no_feedback(uword allocation_alignment,
-                                                        idx allocation_bytes)
+   meta_alloc_obtain_maybe_memory_unaligned_no_feedback(idx allocation_bytes)
       -> maybe_ptr<void> {
       maybe_ptr<void> maybe_memory;
 
@@ -4042,7 +4041,6 @@ class allocator_interface {
          meta_alloc_alias_types<T, false, is_fail_safe, is_aligned, is_multiple,
                             is_zeroed, has_feedback>;
       using return_handle = typename alias_types::return_handle;
-      using handle_type = typename alias_types::handle_type;
       T* p_allocation;
       if constexpr (has_feedback) {
          // The `.first()` element of the `sized_allocation` tuple is
@@ -4307,7 +4305,7 @@ class allocator_interface {
             } else {
                maybe_memory =
                   this->meta_alloc_obtain_maybe_memory_unaligned_no_feedback(
-                     allocation_alignment, allocation_bytes);
+                     allocation_bytes);
             }
          }
          if constexpr (is_fail_safe) {

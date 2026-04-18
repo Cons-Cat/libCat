@@ -77,7 +77,7 @@ set_memory_detail(void* p_source, T value, uword size) {
       // `constant`.
       auto vectorized_fill = [&]<typename lanes_constant>(lanes_constant) {
          // TODO: Consider optimizing this by tiling the loop.
-         constexpr uword lanes = lanes_constant::value;
+         constexpr idx lanes = lanes_constant::value;
          using vector_type = fixed_size_simd<T, lanes>;
          while (size >= sizeof(vector_type)) {
             vector_type* p_vector = __builtin_bit_cast(vector_type*, p_current);
@@ -89,13 +89,13 @@ set_memory_detail(void* p_source, T value, uword size) {
 
       // Fill out 32-byte portion.
       if constexpr (native_abi<T>::size >= 32u) {
-         vectorized_fill(constant<32_uz>{});
+         vectorized_fill(constant<32_idx>{});
       }
 
       // TODO: Support `fill()` on 16-byte x86-64 simd.
       // // Fill out 16-byte portion.
       // if constexpr (native_abi<T>::size >= 16) {
-      //     vectorized_fill(constant<16_uz>{});
+      //     vectorized_fill(constant<16_idx>{});
       // }
 
       // Fill out remaining portion one byte at a time.
@@ -193,19 +193,19 @@ launder(T* p_object) -> T* {
 
 // `launder` cannot be used on functions.
 template <typename FunctionPtrReturn, typename... Args>
-void launder(FunctionPtrReturn (*)(Args...)) = delete;
+constexpr void launder(FunctionPtrReturn (*)(Args...)) = delete;
 
 template <typename FunctionPtrReturn, typename... Args>
-void launder(FunctionPtrReturn (*)(Args..., ...)) = delete;
+constexpr void launder(FunctionPtrReturn (*)(Args..., ...)) = delete;
 
 // `launder` cannot be used on `void*`
-void
+constexpr void
 launder(void*) = delete;
-void
+constexpr void
 launder(void const*) = delete;
-void
+constexpr void
 launder(void volatile*) = delete;
-void
+constexpr void
 launder(void const volatile*) = delete;
 
 template <typename T>

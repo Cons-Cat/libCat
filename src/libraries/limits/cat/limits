@@ -15,6 +15,10 @@ enum class overflow_policies : unsigned char;
 template <typename T, overflow_policies>
 struct arithmetic;
 
+template <typename T, typename storage_type,
+          overflow_policies overflow_policy>
+struct arithmetic_ptr;
+
 template <typename>
 struct limits {};
 
@@ -31,12 +35,21 @@ struct limits<arithmetic<T const, policy>> : limits<T> {};
 template <typename T, auto policy>
 struct limits<arithmetic<T const, policy> const> : limits<T> {};
 
+// Unwrap `arithmetic_ptr` to its storage type (same role as `arithmetic` above).
+template <typename T, typename storage_type, overflow_policies policy>
+struct limits<arithmetic_ptr<T, storage_type, policy>>
+   : limits<storage_type> {};
+
+template <typename T, typename storage_type, overflow_policies policy>
+struct limits<arithmetic_ptr<T, storage_type, policy> const>
+   : limits<storage_type> {};
+
 // TODO: Implement `min` and `max` limits in terms of GCC macros, like
 // `__LONG_LONG_MAX__`.
 
 template <>
 struct limits<char> {
-   limits() = delete;
+   constexpr limits() = delete;
 
    static consteval auto
    min() -> __INT8_TYPE__ {
@@ -58,7 +71,7 @@ struct limits<char> {
 
 template <>
 struct limits<__INT8_TYPE__> {
-   limits() = delete;
+   constexpr limits() = delete;
 
    static consteval auto
    min() -> __INT8_TYPE__ {
@@ -81,7 +94,7 @@ struct limits<__INT8_TYPE__> {
 
 template <>
 struct limits<__UINT8_TYPE__> {
-   limits() = delete;
+   constexpr limits() = delete;
 
    static consteval auto
    min() -> __UINT8_TYPE__ {
@@ -104,7 +117,7 @@ struct limits<__UINT8_TYPE__> {
 
 template <>
 struct limits<__INT16_TYPE__> {
-   limits() = delete;
+   constexpr limits() = delete;
 
    static consteval auto
    min() -> __INT16_TYPE__ {
@@ -127,7 +140,7 @@ struct limits<__INT16_TYPE__> {
 
 template <>
 struct limits<__UINT16_TYPE__> {
-   limits() = delete;
+   constexpr limits() = delete;
 
    static consteval auto
    min() -> __UINT16_TYPE__ {
@@ -150,7 +163,7 @@ struct limits<__UINT16_TYPE__> {
 
 template <>
 struct limits<__INT32_TYPE__> {
-   limits() = delete;
+   constexpr limits() = delete;
 
    static consteval auto
    min() -> __INT32_TYPE__ {
@@ -172,7 +185,7 @@ struct limits<__INT32_TYPE__> {
 
 template <>
 struct limits<__UINT32_TYPE__> {
-   limits() = delete;
+   constexpr limits() = delete;
 
    static consteval auto
    min() -> __UINT32_TYPE__ {
@@ -194,7 +207,7 @@ struct limits<__UINT32_TYPE__> {
 
 template <>
 struct limits<__INT64_TYPE__> {
-   limits() = delete;
+   constexpr limits() = delete;
 
    static consteval auto
    min() -> __INT64_TYPE__ {
@@ -218,7 +231,7 @@ struct limits<__INT64_TYPE__> {
 
 template <>
 struct limits<__UINT64_TYPE__> {
-   limits() = delete;
+   constexpr limits() = delete;
 
    static consteval auto
    min() -> __UINT64_TYPE__ {
@@ -244,7 +257,7 @@ struct index;
 
 template <overflow_policies policy>
 struct limits<index<policy>> {
-   limits() = delete;
+   constexpr limits() = delete;
 
    static consteval auto
    min() -> __UINT64_TYPE__ {
@@ -281,7 +294,7 @@ enum class float_round : signed char {
 
 template <>
 struct limits<float> {
-   limits() = delete;
+   constexpr limits() = delete;
 
    static consteval auto
    min() -> float {
@@ -348,7 +361,7 @@ struct limits<float> {
 
 template <>
 struct limits<double> {
-   limits() = delete;
+   constexpr limits() = delete;
 
    static consteval auto
    min() -> double {

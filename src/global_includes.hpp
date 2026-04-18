@@ -167,10 +167,31 @@ inline constexpr bool is_monostate =
 
 }  // namespace cat
 
+namespace std {
+
+template <typename>
+struct tuple_size;
+
+template <typename T>
+inline constexpr __SIZE_TYPE__ tuple_size_v = tuple_size<T>::value;
+
+template <__SIZE_TYPE__, typename>
+struct tuple_element;
+
+template <__SIZE_TYPE__ in_index, typename T>
+using tuple_element_t = tuple_element<in_index, T>::type;
+
+// TODO: Does this actually have to be in `std::`?
+enum class align_val_t : __SIZE_TYPE__ {
+};
+}  // namespace std
+
 // Including the `<cat/runtime>` library is required to link a libCat program,
 // because it contains the `_start` symbol.
 #include <cat/maybe>
 #include <cat/runtime>
+
+#include "implementations/simd_mask_bitset.tpp"
 
 // `assert()` is used throughout the library.
 #include <cat/debug>
@@ -234,25 +255,6 @@ inline constexpr bool is_monostate =
 #pragma clang final(CAT_PROPAGATE_AS)
 
 #define prop_as CAT_PROPAGATE_AS
-
-namespace std {
-
-template <typename>
-struct tuple_size;
-
-template <typename T>
-inline constexpr __SIZE_TYPE__ tuple_size_v = tuple_size<T>::value;
-
-template <__SIZE_TYPE__, typename>
-struct tuple_element;
-
-template <__SIZE_TYPE__ in_index, typename T>
-using tuple_element_t = tuple_element<in_index, T>::type;
-
-// TODO: Does this actually have to be in `std::`?
-enum class align_val_t : __SIZE_TYPE__ {
-};
-}  // namespace std
 
 auto
 operator new(unsigned long, void* p_address) -> void*;

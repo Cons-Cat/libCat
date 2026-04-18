@@ -61,8 +61,8 @@ CheckOptions:
   - { key: readability-identifier-naming.PrivateMemberIgnoredRegexp,        value: '_' }
   - { key: readability-identifier-length.IgnoredParameterNames,             value: '[tuxy]' }
   - { key: readability-identifier-naming.TemplateParameterIgnoredRegexp,    value: '[A-Z]' }
-  - { key: readability-identifier-naming.TypeAliasIgnoredRegexp,            value: '[A-Z]' }
-  - { key: readability-identifier-naming.TypedefIgnoredRegexp,              value: '[A-Z]' }
+  - { key: readability-identifier-naming.TypeAliasIgnoredRegexp,            value: '.*[A-Z].*|[a-z0-9_]_$' }
+  - { key: readability-identifier-naming.TypedefIgnoredRegexp,              value: '.*[A-Z].*|[a-z0-9_]_$' }
   - { key: performance-unnecessary-value-param.AllowedTypes,                value: string;span;io_vector }
   - { key: readability-operators-representation.BinaryOperators,            value: '&&;&=;&;|;~;!;!=;||;|=;^;^=' }
 ...
