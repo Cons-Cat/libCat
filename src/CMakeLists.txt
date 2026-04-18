@@ -78,9 +78,8 @@ target_sources(cat INTERFACE
   ${CATLIB}/simd/implementations/is_sse4_1_supported.cpp
   ${CATLIB}/simd/implementations/is_sse4_2_supported.cpp
   ${CATLIB}/simd/implementations/is_sse3_supported.cpp
-  ${CATLIB}/simd/implementations/sfence.cpp
-  ${CATLIB}/simd/implementations/zero_avx_registers.cpp
-  ${CATLIB}/simd/implementations/zero_upper_avx_registers.cpp
+  ${CATLIB}/math/implementations/pow.cpp
+  ${CATLIB}/math/implementations/sqrt.cpp
   ${CATLIB}/memory/implementations/copy_memory.cpp
   ${CATLIB}/memory/implementations/copy_memory_small.cpp
   ${CATLIB}/string/implementations/memcpy.cpp
