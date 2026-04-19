@@ -66,8 +66,8 @@ inline constexpr str_view vt_bg_bright_white = "\e[107m";
 
 namespace detail {
 auto
-style_tty_fg(is_allocator auto& alloc, str_view text,
-             str_view color) -> maybe<str_span> {
+style_tty_fg(is_allocator auto& alloc, str_view text, str_view color)
+   -> maybe<str_span> {
    str_span memory = prop(alloc.template alloc_multi<char>(
       text.size() + color.size() + vt_fg_default.size()));
 
@@ -85,8 +85,8 @@ style_tty_fg(is_allocator auto& alloc, str_view text,
 }
 
 auto
-style_tty_bg(is_allocator auto& alloc, str_view text,
-             str_view color) -> maybe<str_span> {
+style_tty_bg(is_allocator auto& alloc, str_view text, str_view color)
+   -> maybe<str_span> {
    str_span memory = prop(alloc.template alloc_multi<char>(
       text.size() + color.size() + vt_bg_default.size()));
 

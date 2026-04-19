@@ -69,8 +69,9 @@ make_futex_op(futex_command const command,
                               | detail::futex_options_bits(options)};
 }
 
-template<class kind>
-[[nodiscard]] inline auto
+template <class kind>
+[[nodiscard]]
+inline auto
 basic_futex<kind>::wait(cat::uint4 const expected,
                         futex_timespec const* const p_timeout)
    -> scaredy_nix<void> {
@@ -83,31 +84,34 @@ basic_futex<kind>::wait(cat::uint4 const expected,
    return scaredy_nix<void>(cat::monostate);
 }
 
-template<class kind>
-[[nodiscard]] inline auto
+template <class kind>
+[[nodiscard]]
+inline auto
 basic_futex<kind>::wake() -> scaredy_nix<cat::idx> {
    return sys_futex(
       this, make_futex_op(futex_command::wake, futex_options::private_process),
       1u, nullptr, nullptr, 0u);
 }
 
-template<class kind>
-[[nodiscard]] inline auto
+template <class kind>
+[[nodiscard]]
+inline auto
 basic_futex<kind>::wake_all() -> scaredy_nix<cat::idx> {
    return sys_futex(
       this, make_futex_op(futex_command::wake, futex_options::private_process),
       futex_bitset_match_any, nullptr, nullptr, 0u);
 }
 
-template<class kind>
-[[nodiscard]] inline auto
+template <class kind>
+[[nodiscard]]
+inline auto
 basic_futex<kind>::compare_requeue(cat::uint4 const wake_limit,
                                    cat::uint4 const requeue_limit,
                                    futex_word& target,
                                    cat::uint4 const expected_source_value)
    -> scaredy_nix<cat::idx> {
-   // For `futex_command::compare_requeue`, the kernel `utime` argument slot carries the
-   // requeue count, not a `futex_timespec` pointer.
+   // For `futex_command::compare_requeue`, the kernel `utime` argument slot
+   // carries the requeue count, not a `futex_timespec` pointer.
    futex_timespec const* const p_requeue_slot =
       reinterpret_cast<futex_timespec const*>(
          static_cast<unsigned long long>(requeue_limit.raw));

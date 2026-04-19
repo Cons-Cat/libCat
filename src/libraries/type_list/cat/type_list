@@ -2,8 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/utility>
 #include <cat/maybe>
+#include <cat/utility>
 
 namespace cat {
 
@@ -57,10 +57,8 @@ class type_list {
    struct recurse_for_type_at_index<type_list<head, tail...>, index> {
       // Index `0` is handled by the partial specialization above, so `index`
       // is never zero here and `index.raw - 1uz` cannot wrap.
-      using result =
-         recurse_for_type_at_index<type_list<tail...>,
-                                    narrow_to_idx(index.raw - 1uz).value()>::
-            result;
+      using result = recurse_for_type_at_index<
+         type_list<tail...>, narrow_to_idx(index.raw - 1uz).value()>::result;
    };
 
    // If the last element in this type list is `T`.

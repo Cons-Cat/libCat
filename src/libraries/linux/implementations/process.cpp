@@ -102,8 +102,14 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
       if (align_want < 32u) {
          align_want = 32u;
       }
-      tls_thread_pointer = cat::align_down(
-         stack_and_thread_local_buffer_end_exclusive, align_want);
+      // The buffer end (exclusive) can be a multiple of the requested
+      // alignment. Rounding that end down with `align_down` can return the same
+      // address. The TCB self slot at that address is then one past the span.
+      // Take the last in-bounds address and round that down.
+      cat::uintptr<void> const stack_region_last_inclusive =
+         stack_and_thread_local_buffer_end_exclusive - cat::uword{1u};
+      tls_thread_pointer =
+         cat::align_down(stack_region_last_inclusive, align_want);
       cat::uintptr<void> const tls_slab_low = stack + m_stack_size;
       if (tls_thread_pointer - tls_memory_size < tls_slab_low) {
          return nix::linux_error::inval;
@@ -112,7 +118,7 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
          tls_thread_pointer);
 
       // Local-exec TLS lowering loads the thread pointer from `%fs:0`. The
-      // copied executable TLS image only covers `.tdata`/`.tbss` strictly below
+      // copied executable TLS image only covers `.tdata/.tbss` strictly below
       // `tls_tp`; the word at `tls_tp` is the TCB self slot and must equal
       // `tls_tp` after `clone_flags::set_tls` installs that base in `%fs`.
       *reinterpret_cast<void**>(tls_thread_pointer.get()) =

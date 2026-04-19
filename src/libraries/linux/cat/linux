@@ -1232,7 +1232,8 @@ sys_getrlimit(rlimit_resource resource, rlimit* p_limits) -> scaredy_nix<void>;
 
 // Syscall 160
 auto
-sys_setrlimit(rlimit_resource resource, rlimit const* p_limits) -> scaredy_nix<void>;
+sys_setrlimit(rlimit_resource resource, rlimit const* p_limits)
+   -> scaredy_nix<void>;
 
 // Syscall 200
 auto
@@ -1243,7 +1244,7 @@ auto
 sys_tgkill(process_id thread_group_id, process_id target, signal delivered)
    -> scaredy_nix<void>;
 
-   struct futex_waitv {
+struct futex_waitv {
    cat::uint8 expected_value;
    futex_word* user_space_address;
    futex_wait_flags wait_flags;
@@ -1514,8 +1515,8 @@ struct process {
    // `clone_flags::child_clear_tid` must not use `m_id` as the clear-tid word.
    // The kernel stores the child tid here, clears it to zero at thread exit,
    // and wakes waiters with `futex_command::wake` and `futex_options::none`;
-   // `wait()` uses `futex_command::wait` with `futex_options::none` on this word
-   // when `clone_flags::thread` and `clone_flags::child_set_tid` are set.
+   // `wait()` uses `futex_command::wait` with `futex_options::none` on this
+   // word when `clone_flags::thread` and `clone_flags::child_set_tid` are set.
    alignas(8) futex_word m_clone_child_clear_tid_for_kernel{};
    // TODO: Free this later.
    void* m_p_stack_bottom;
@@ -1541,9 +1542,9 @@ raise(signal signal, process_id pid) -> scaredy_nix<void>;
 auto
 raise_here(signal signal) -> scaredy_nix<void>;
 
-// `arch_prctl_request::set_fs_base` / `get_fs_base` for x86-64. A custom main-thread TLS block can
-// be installed by copying the executable TLS image with
-// `detail::install_executable_tls_image_at_thread_pointer` then calling
+// `arch_prctl_request::set_fs_base` / `get_fs_base` for x86-64. A custom
+// main-thread TLS block can be installed by copying the executable TLS image
+// with `detail::install_executable_tls_image_at_thread_pointer` then calling
 // `sys_arch_prctl(arch_prctl_request::set_fs_base, thread_pointer.get())`.
 enum class arch_prctl_request : int {
    set_fs_base = 0x1002,

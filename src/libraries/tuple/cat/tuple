@@ -202,28 +202,51 @@ constexpr auto concat(tuple<Us...> const& other_tuple) const
    // Get a reference to the first stored variable.
    [[nodiscard]]
    constexpr auto
-   first(this auto&& self)
-      -> auto&& requires(size >= 1) { return fwd(self).template get<0u>(); }
+   first(this auto&& self) -> auto&&
+      requires(size >= 1)
+   {
+      return fwd(self).template get<0u>();
+   }
 
    // Get a reference to the fifth stored variable.
-   [[nodiscard]]  //
-   constexpr auto second(this auto&& self)
-      -> auto&& requires(size >= 2) { return fwd(self).template get<1u>(); }
+   [[nodiscard]]
+   //
+   constexpr auto
+   second(this auto&& self) -> auto&&
+      requires(size >= 2)
+   {
+      return fwd(self).template get<1u>();
+   }
 
    // Get a reference to the fifth stored variable.
-   [[nodiscard]]  //
-   constexpr auto third(this auto&& self)
-      -> auto&& requires(size >= 3) { return fwd(self).template get<2u>(); }
+   [[nodiscard]]
+   //
+   constexpr auto
+   third(this auto&& self) -> auto&&
+      requires(size >= 3)
+   {
+      return fwd(self).template get<2u>();
+   }
 
    // Get a reference to the fifth stored variable.
-   [[nodiscard]]  //
-   constexpr auto fourth(this auto&& self)
-      -> auto&& requires(size >= 4) { return fwd(self).template get<3u>(); }
+   [[nodiscard]]
+   //
+   constexpr auto
+   fourth(this auto&& self) -> auto&&
+      requires(size >= 4)
+   {
+      return fwd(self).template get<3u>();
+   }
 
    // Get a reference to the fifth stored variable.
-   [[nodiscard]]  //
-   constexpr auto fifth(this auto&& self)
-      -> auto&& requires(size >= 5) { return fwd(self).template get<4u>(); }
+   [[nodiscard]]
+   //
+   constexpr auto
+   fifth(this auto&& self) -> auto&&
+      requires(size >= 5)
+   {
+      return fwd(self).template get<4u>();
+   }
 };
 
 // This deduction guide is required for variadic type deduction.

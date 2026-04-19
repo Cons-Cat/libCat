@@ -190,11 +190,18 @@ set(CAT_HEADER_FILES
   ${CATLIB}/sanitizer/cat/sanitizer
   ${CATLIB}/scaredy/cat/scaredy
   ${CATLIB}/simd/cat/simd
-  ${CATLIB}/simd/cat/detail/simd_impl.hpp
+  ${CATLIB}/simd/cat/simd_ops
+  ${CATLIB}/simd/cat/simd_iterator
+  ${CATLIB}/simd/implementations/simd_mask_bitset.tpp
+  ${CATLIB}/simd/cat/detail/simd_broadcast_traits.hpp
+  ${CATLIB}/simd/cat/detail/simd_range_iterator.hpp
   ${CATLIB}/simd/cat/detail/simd_avx2.hpp
+  ${CATLIB}/simd/cat/detail/simd_avx2_mask_ops.hpp
   ${CATLIB}/simd/cat/detail/simd_avx2_fwd.hpp
+  ${CATLIB}/simd/cat/detail/simd_mask_lane_packed_x64.hpp
   ${CATLIB}/simd/cat/detail/simd_sse42.hpp
   ${CATLIB}/simd/cat/detail/simd_sse42_fwd.hpp
+  ${CATLIB}/simd/cat/detail/simd_sse2.hpp
   ${CATLIB}/socket/cat/socket
   ${CATLIB}/span/cat/span
   ${CATLIB}/string/cat/string
@@ -214,7 +221,6 @@ set(CAT_HEADER_FILES
   ${CATLIB}/meta/implementations/common_reference.tpp
   ${CATLIB}/simd/implementations/compare_implicit_length_strings.tpp
   ${CATLIB}/simd/implementations/compare_implicit_length_strings_return_index.tpp
-  ${CATLIB}/simd/implementations/shuffle.tpp
   ${CATLIB}/simd/implementations/stream_in.tpp
   ${CATLIB}/string/implementations/string_length.tpp
   ${CATLIB}/bit/implementations/is_aligned.tpp

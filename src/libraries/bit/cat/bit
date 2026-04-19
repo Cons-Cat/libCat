@@ -92,7 +92,7 @@ template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 countl_one(T value) -> idx {
-   // For non-`cat` integers, `~` might cast to `int`.
+   // For non-`cat` integers, ~ might cast to `int`.
    return countl_zero(static_cast<T>(~value));
 }
 
@@ -113,7 +113,7 @@ template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 countr_one(T value) -> idx {
-   // For non-`cat` integers, `~` might cast to `int`.
+   // For non-`cat` integers, ~ might cast to `int`.
    return countr_zero(static_cast<T>(~value));
 }
 
@@ -565,9 +565,9 @@ class bit_iterator : public proxy_iterator_interface<
 
  public:
    using value_type = bit_value;
-using const_value_type = bit_value const;
+   using const_value_type = bit_value const;
    using reference = bit_reference<typename iterator::value_type>;
-using const_reference =
+   using const_reference =
       bit_reference<remove_cvref<typename iterator::value_type> const>;
 
    constexpr bit_iterator() = default;
@@ -715,21 +715,21 @@ struct byte : bitwise_interface<byte> {
       return __builtin_bit_cast(T, value);
    }
 
-   // Generate `operator&`.
+   // Generate operator&.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_and(is_integral auto from) const -> byte {
       return this->value & from;
    }
 
-   // Generate `operator|`.
+   // Generate operator|.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_or(is_integral auto from) const -> byte {
       return this->value | from;
    }
 
-   // Generate `operator<<`.
+   // Generate operator<<.
    template <is_arithmetic U>
    [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::always_inline,
      gnu::nodebug]]
@@ -746,7 +746,7 @@ struct byte : bitwise_interface<byte> {
       return other << value;
    }
 
-   // Generate `operator>>`.
+   // Generate operator>>.
    template <is_arithmetic U>
    [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::always_inline,
      gnu::nodebug]]
@@ -816,7 +816,6 @@ operator|=(T& self, T other) -> T& {
    self = self | other;
    return self;
 }
-
 
 template <cat::is_enum_flag T>
 [[nodiscard]]

@@ -74,7 +74,7 @@ vec : public collection_interface<vec<T, allocator_type>, T>,
    }
 
  protected:
-   // Being `protected:` permits derived classes and adaptors to call these.
+   // Being `protected:` permits derived classes and friends to call these.
 
    constexpr vec(allocator_type& allocator [[clang::lifetimebound]])
        : m_p_data(nullptr),

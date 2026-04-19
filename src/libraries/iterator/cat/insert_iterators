@@ -214,16 +214,14 @@ class front_insert_iterator
 template <is_iterable T>
 [[nodiscard]]
 constexpr auto
-as_back_inserter(T& container)
-   -> back_insert_iterator<T> {
+as_back_inserter(T& container) -> back_insert_iterator<T> {
    return back_insert_iterator<T>(container);
 }
 
 template <is_iterable T>
 [[nodiscard]]
 constexpr auto
-as_front_inserter(T& container)
-   -> front_insert_iterator<T> {
+as_front_inserter(T& container) -> front_insert_iterator<T> {
    return front_insert_iterator<T>(container);
 }
 

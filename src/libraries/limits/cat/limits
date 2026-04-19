@@ -15,8 +15,7 @@ enum class overflow_policies : unsigned char;
 template <typename T, overflow_policies>
 struct arithmetic;
 
-template <typename T, typename storage_type,
-          overflow_policies overflow_policy>
+template <typename T, typename storage_type, overflow_policies overflow_policy>
 struct arithmetic_ptr;
 
 template <typename>
@@ -35,14 +34,15 @@ struct limits<arithmetic<T const, policy>> : limits<T> {};
 template <typename T, auto policy>
 struct limits<arithmetic<T const, policy> const> : limits<T> {};
 
-// Unwrap `arithmetic_ptr` to its storage type (same role as `arithmetic` above).
+// Unwrap `arithmetic_ptr` to its storage type (same role as `arithmetic`
+// above).
 template <typename T, typename storage_type, overflow_policies policy>
-struct limits<arithmetic_ptr<T, storage_type, policy>>
-   : limits<storage_type> {};
+struct limits<arithmetic_ptr<T, storage_type, policy>> : limits<storage_type> {
+};
 
 template <typename T, typename storage_type, overflow_policies policy>
 struct limits<arithmetic_ptr<T, storage_type, policy> const>
-   : limits<storage_type> {};
+    : limits<storage_type> {};
 
 // TODO: Implement `min` and `max` limits in terms of GCC macros, like
 // `__LONG_LONG_MAX__`.
