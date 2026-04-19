@@ -19,11 +19,11 @@ cat::string_length(char const* p_string) -> idx {
       }
    } else {
       // TODO: Implement with portable SIMD, and tune performance.
-      constexpr char1x16 zeros = '\0';
+      constexpr x64::sse2_unaligned_simd<char> zeros = '\0';
 
       for (idx i;; i += 16u) {
-         // TODO: `.raw` should not be necessary here.
-         char1x16 const data = char1x16::loaded(p_string + i.raw);
+         x64::sse2_unaligned_simd<char> const data =
+            make_simd_loaded<x64::sse2_unaligned_simd<char>>(p_string + i);
          constexpr x64::string_control mask =
             x64::string_control::unsigned_byte
             | x64::string_control::compare_equal_each
@@ -31,11 +31,13 @@ cat::string_length(char const* p_string) -> idx {
 
          // If there are one or more `0` bytes in `data`:
          if (x64::compare_implicit_length_strings<mask>(data, zeros)) {
-            int4 const index =
+            uint4 const index =
                x64::compare_implicit_length_strings_return_index<mask>(data,
                                                                        zeros);
-            // Adding `1` is required to count the null terminator.
-            return idx(i + index);
+            // `index` is the in-chunk offset of the first 0 from `pcmpistri`.
+            // `i + index` is that byte's offset from `p_string`, which is the
+            // count of `char` before the terminator.
+            return i + index;
          }
       }
 

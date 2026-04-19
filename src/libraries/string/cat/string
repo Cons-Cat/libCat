@@ -77,7 +77,7 @@ class basic_str_span : public span<char_type> {
       requires(!is_const<char_type>)
    consteval basic_str_span(char_type const (&string)[other_length]) =
       delete ("Cannot construct a mutable `str_span` over a `char const*` "
-             "literal! Consider a `str_view` instead.");
+              "literal! Consider a `str_view` instead.");
 
    // Make a `str_span` over a `str_inplace`.
    template <idx other_length>
@@ -131,7 +131,7 @@ class basic_str_span : public span<char_type> {
    constexpr basic_str_span(
       basic_str_inplace<char_type, other_length, false> const&) =
       delete ("Cannot bind a null-terminated `zstr_span` over a "
-             "non null-terminated `str_inplace`!");
+              "non null-terminated `str_inplace`!");
 
    // Promote `basic_str_span<char>` to `basic_str_span<char const>`.
    template <typename T>
@@ -168,7 +168,7 @@ class basic_str_span : public span<char_type> {
    constexpr basic_str_span(basic_str_span<char_type, false> const&)
       requires(is_null_terminated)
    = delete ("Cannot bind a null-terminated `zstr_span` over a "
-            "non null-terminated `str_span`!");
+             "non null-terminated `str_span`!");
 
    // Promote `span<char>` to `basic_str_span<char>`.
    constexpr basic_str_span(span<char_type> in_span [[clang::lifetimebound]])
@@ -231,22 +231,17 @@ class basic_str_span : public span<char_type> {
    find(char character, idx from_position = 0u) const
       -> maybe<sentinel<iword, -1>> {
       // TODO: `lanes` should be an `idx`.
-      iword lanes = iword(char1x_::lanes);
+      idx lanes = char1x16::size();
 
       // TODO: Tile this loop four or eight times.
-      // `i` must be signed, because `length - lanes` might be negative.
-      // this->length must be cast to an `iword`, because otherwise it might
-      // underflow.
       iword i;
-      for (i = from_position; i < iword(this->m_size) - lanes; i += lanes) {
+      for (i = from_position; i < this->m_size - lanes; i += lanes) {
          // TODO: Consider aligning this load?
-         char1x_ const storage = char1x_::loaded(this->m_p_data + i);
+         char1x_ const storage = make_simd_loaded<char1x_>(this->m_p_data + i);
          // TODO: Support a native ABI mask here.
-         simd_mask<x64::avx2_abi<char>, char> const compare =
-            (storage == character);
-         bitset const mask = compare.bitset();
+         auto const mask = storage.equal_lanes(character);
          if (mask.any_of()) {
-            return i + mask.countr_zero();
+            return i + mask.find_if_true();
          }
       }
 
@@ -284,7 +279,7 @@ class basic_str_inplace
       char_type const (&string)[idx(length.raw + !is_null_terminated)]) {
       [[assume(
          string[length.raw - static_cast<__SIZE_TYPE__>(is_null_terminated)]
-               == '\0')]];
+         == '\0')]];
       // This must be copied instead of initialized in-place to guarantee
       // const-correctness.
       this->copy_string_data(string);
@@ -356,22 +351,22 @@ class basic_str_inplace
       basic_str_inplace<char_type, other_length, is_null_terminated> const&
          other_string)
       -> basic_str_inplace<
-            char_type,
-            narrow_to_idx(length.raw + other_length.raw
-                   - static_cast<__SIZE_TYPE__>(is_null_terminated))
-               .value(),
-            is_null_terminated> {
+         char_type,
+         narrow_to_idx(length.raw + other_length.raw
+                       - static_cast<__SIZE_TYPE__>(is_null_terminated))
+            .value(),
+         is_null_terminated> {
       // `zstr_inplace` stores a trailing null in `length`, so `length` is at
       // least one when `is_null_terminated` subtracts one. Otherwise the
       // subtrahend is zero. The concatenated size drops at most one duplicate
       // null, never more than `length + other_length`.
       constexpr idx const self_useful =
          narrow_to_idx(length.raw
-                - static_cast<__SIZE_TYPE__>(is_null_terminated))
+                       - static_cast<__SIZE_TYPE__>(is_null_terminated))
             .value();
       constexpr idx const new_length =
          narrow_to_idx(length.raw + other_length.raw
-                - static_cast<__SIZE_TYPE__>(is_null_terminated))
+                       - static_cast<__SIZE_TYPE__>(is_null_terminated))
             .value();
 
       basic_str_inplace<char_type, new_length, is_null_terminated> new_string;
@@ -399,11 +394,11 @@ class basic_str_inplace
       // the subtrahend is zero.
       return self
              + basic_str_inplace<char_type,
-                  narrow_to_idx(other_length.raw
+                                 narrow_to_idx(other_length.raw
                                                - static_cast<__SIZE_TYPE__>(
                                                   !is_null_terminated))
-                     .value(),
-                  is_null_terminated>{other_string};
+                                    .value(),
+                                 is_null_terminated>{other_string};
    }
 
    // Concatenate a `basic_str_inplace` to a string literal.
@@ -415,11 +410,11 @@ class basic_str_inplace
       [[assume(other_string[other_length.raw - 1] == '\0')]];
       // Same reasoning as `operator+` from `basic_str_inplace` to a literal.
       return basic_str_inplace<char_type,
-                narrow_to_idx(other_length.raw
+                               narrow_to_idx(other_length.raw
                                              - static_cast<__SIZE_TYPE__>(
                                                 !is_null_terminated))
-                   .value(),
-                is_null_terminated>{other_string}
+                                  .value(),
+                               is_null_terminated>{other_string}
              + self;
    }
 

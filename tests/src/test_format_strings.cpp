@@ -83,3 +83,45 @@ test(format_strings) {
    // };
    // [[maybe_unused]] constexpr auto hi = make_hi_in_const(1);
 }
+
+test(fmt_long_pattern_substitutes) {
+   cat::page_allocator local_pager;
+   cat::span page = local_pager.alloc_multi<cat::byte>(16_uki).or_exit();
+   defer {
+      local_pager.free(page);
+   };
+   auto allocator = make_linear_allocator(page);
+
+   cat::str_view const formatted = cat::fmt(allocator,
+                                            "{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:"
+                                            "{}:{}:{}:{}:{}:{}:{}:{}",
+                                            0,
+                                            1,
+                                            2,
+                                            3,
+                                            4,
+                                            5,
+                                            6,
+                                            7,
+                                            8,
+                                            9,
+                                            10,
+                                            11,
+                                            12,
+                                            13,
+                                            14,
+                                            15,
+                                            16,
+                                            17,
+                                            18,
+                                            19,
+                                            20,
+                                            21,
+                                            22,
+                                            23)
+                               .or_exit();
+
+   cat::verify(cat::compare_strings(
+      formatted,
+      "0:1:2:3:4:5:6:7:8:9:10:11:12:13:14:15:16:17:18:19:20:21:22:23"));
+}

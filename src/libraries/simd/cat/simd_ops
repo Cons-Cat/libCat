@@ -1,0 +1,3169 @@
+// -*- mode: c++ -*-
+#pragma once
+
+// SIMD callable objects (`simd_sqrt`, `make_simd_loaded`, …) and their
+// `detail::*_impl` machinery. Include `<cat/simd_ops>` when you need these
+// APIs.
+//
+// Helpers here follow `cat::simd` and prefer `__builtin_elementwise_*` where it
+// fits. After `namespace detail` closes, mask-free factories and lane helpers
+// (`make_simd_filled`, `make_simd_mask_filled`, `iota`, `simd_fma_lane`, …)
+// repeat one scalar per lane unless a lane-mask subscript says otherwise.
+//
+// Functor templates `simd_filled`, `simd_mask_filled`, `simd_iota`, and the
+// `make_simd_loaded*` family support both `operator()` and
+// `operator[](lane_blend_mask)`, written `functor[mask](passthrough, …)`.
+// Elementwise builtins (`simd_sqrt`, …) follow EVE-style `fn(args…)` and
+// `fn[mask](args…)`. Masked loads use `simd_load_aligned[mask]` and mirror
+// `make_simd_loaded_aligned[mask]`.
+//
+// Documentation often calls vector loads gather and vector stores scatter.
+// Masked forms blend inactive lanes in the destination register or memory.
+
+#include <cat/arithmetic>
+#include <cat/bit>
+#include <cat/math>
+#include <cat/maybe>
+#include <cat/utility>
+
+#include "cat/detail/simd_abi_hooks.hpp"
+
+namespace cat {
+
+template <typename V>
+concept is_simd_integral = is_simd<V> && is_integral<typename V::scalar_type>;
+
+template <typename V>
+concept vec_floating_point =
+   is_simd<V> && is_floating_point<typename V::scalar_type>;
+
+template <typename V, typename T>
+concept is_simd_of = is_simd<V> && is_same<typename V::scalar_type, T>;
+
+// EVE-style elementwise functors: `fn(input…)` unmasked, `fn[mask](input…)`
+// applies per lane where the mask is true. Inactive lanes keep the first simd
+// argument (`input`, or `left` for two-vector ops). CRTP bases are
+// `simd_elementwise_*_interface`.
+
+enum class simd_memory_kind : unsigned char {
+   aligned,
+   unaligned,
+   dispatch
+};
+
+namespace detail {
+
+template <typename T>
+using simd_abi_scalar =
+   conditional<is_same<T, bool>, T, raw_arithmetic_type<T>>;
+
+template <typename T, typename Abi>
+   requires(is_same<T, bool> || requires {
+               typename Abi::template make_abi_type<simd_abi_scalar<T>>;
+            })
+using simd_abi_vec =
+   simd<simd_abi_scalar<T>,
+        typename Abi::template make_abi_type<simd_abi_scalar<T>>>;
+
+template <typename T, typename Abi>
+using simd_abi_mask_vec =
+   simd_mask<simd_abi_scalar<T>,
+             typename Abi::template make_abi_type<simd_abi_scalar<T>>>;
+
+template <typename OpTag, typename T, typename Abi>
+concept has_simd_abi_unary_full =
+   requires(simd_abi_vec<T, Abi> input) {
+      simd_abi::unary_full<
+         OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+         typename simd_abi_vec<T, Abi>::abi_type>::invoke(input);
+   };
+
+template <typename OpTag, typename T, typename Abi>
+concept has_simd_abi_unary_int =
+   requires(simd_abi_vec<T, Abi> input, iword n) {
+      simd_abi::unary_int<
+         OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+         typename simd_abi_vec<T, Abi>::abi_type>::invoke(input, n);
+   };
+
+template <typename T, typename Abi>
+concept has_simd_abi_compress =
+   requires(simd_abi_vec<T, Abi> input, simd_abi_mask_vec<T, Abi> selector) {
+      simd_abi::compress<
+         typename simd_abi_vec<T, Abi>::scalar_type,
+         typename simd_abi_vec<T, Abi>::abi_type>::invoke(input, selector);
+   };
+
+template <typename T, typename Abi>
+concept has_simd_abi_expand =
+   requires(simd_abi_vec<T, Abi> packed, simd_abi_mask_vec<T, Abi> selector,
+            simd_abi_vec<T, Abi> background) {
+      simd_abi::expand<
+         typename simd_abi_vec<T, Abi>::scalar_type,
+         typename simd_abi_vec<T, Abi>::abi_type>::invoke(packed, selector,
+                                                          background);
+   };
+
+template <typename OpTag, typename T, typename Abi>
+concept has_simd_abi_binary_full =
+   requires(simd_abi_vec<T, Abi> left, simd_abi_vec<T, Abi> right) {
+      simd_abi::binary_full<
+         OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+         typename simd_abi_vec<T, Abi>::abi_type>::invoke(left, right);
+   };
+
+template <typename OpTag, typename T, typename Abi>
+concept has_simd_abi_ternary_full =
+   requires(simd_abi_vec<T, Abi> x, simd_abi_vec<T, Abi> y,
+            simd_abi_vec<T, Abi> z) {
+      simd_abi::ternary_full<
+         OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+         typename simd_abi_vec<T, Abi>::abi_type>::invoke(x, y, z);
+   };
+
+template <typename OpTag, typename T, typename IntT, typename Abi>
+concept has_simd_abi_binary_mixed =
+   requires(simd_abi_vec<T, Abi> x, simd_abi_vec<IntT, Abi> y) {
+      simd_abi::binary_mixed<
+         OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+         typename simd_abi_vec<IntT, Abi>::scalar_type,
+         typename simd_abi_vec<T, Abi>::abi_type>::invoke(x, y);
+   };
+
+template <typename OpTag, typename T, typename Abi>
+concept has_simd_abi_binary_masked =
+   requires(simd_abi_vec<T, Abi> left, simd_abi_vec<T, Abi> right,
+            simd_abi_mask_vec<T, Abi> mask) {
+      simd_abi::binary_masked<
+         OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+         typename simd_abi_vec<T, Abi>::abi_type>::invoke(left, right, mask);
+   };
+
+template <typename OpTag, typename T, typename Abi>
+concept has_simd_abi_ternary_masked =
+   requires(simd_abi_vec<T, Abi> x, simd_abi_vec<T, Abi> y,
+            simd_abi_vec<T, Abi> z, simd_abi_mask_vec<T, Abi> mask) {
+      simd_abi::ternary_masked<
+         OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+         typename simd_abi_vec<T, Abi>::abi_type>::invoke(x, y, z, mask);
+   };
+
+template <typename T, typename Abi>
+concept has_simd_abi_fill_masked =
+   requires(simd_abi_vec<T, Abi> passthrough,
+            typename simd_abi_vec<T, Abi>::scalar_type fill,
+            simd_abi_mask_vec<T, Abi> lane_mask) {
+      simd_abi::fill_masked<T, Abi>::invoke(passthrough, fill, lane_mask);
+   };
+
+template <typename OpTag, typename T, typename Abi>
+[[nodiscard]]
+constexpr auto
+simd_abi_apply_unary_full(simd<T, Abi> const& input) -> simd<T, Abi> {
+   return simd<T, Abi>(
+      simd_abi::invoke<
+         simd_abi_vec<T, Abi>,
+         simd_abi::unary_full<OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+                              typename simd_abi_vec<T, Abi>::abi_type>>(
+         simd_abi_vec<T, Abi>(input.raw))
+         .raw);
+}
+
+template <typename OpTag, typename T, typename Abi>
+[[nodiscard]]
+constexpr auto
+simd_abi_apply_unary_int(simd<T, Abi> const& input, iword n) -> simd<T, Abi> {
+   return simd<T, Abi>(
+      simd_abi::invoke<
+         simd_abi_vec<T, Abi>,
+         simd_abi::unary_int<OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+                             typename simd_abi_vec<T, Abi>::abi_type>>(
+         simd_abi_vec<T, Abi>(input.raw), n)
+         .raw);
+}
+
+template <typename OpTag, typename T, typename Abi>
+[[nodiscard]]
+constexpr auto
+simd_abi_apply_binary_full(simd<T, Abi> const& left, simd<T, Abi> const& right)
+   -> simd<T, Abi> {
+   return simd<T, Abi>(
+      simd_abi::invoke<simd_abi_vec<T, Abi>,
+                       simd_abi::binary_full<
+                          OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+                          typename simd_abi_vec<T, Abi>::abi_type>>(
+         simd_abi_vec<T, Abi>(left.raw), simd_abi_vec<T, Abi>(right.raw))
+         .raw);
+}
+
+template <typename OpTag, typename T, typename Abi>
+[[nodiscard]]
+constexpr auto
+simd_abi_apply_binary_masked(simd<T, Abi> const& left,
+                             simd<T, Abi> const& right,
+                             simd_mask<T, Abi> const& mask) -> simd<T, Abi> {
+   return simd<T, Abi>(
+      simd_abi::invoke<simd_abi_vec<T, Abi>,
+                       simd_abi::binary_masked<
+                          OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+                          typename simd_abi_vec<T, Abi>::abi_type>>(
+         simd_abi_vec<T, Abi>(left.raw), simd_abi_vec<T, Abi>(right.raw),
+         simd_abi_mask_vec<T, Abi>(mask.raw))
+         .raw);
+}
+
+template <typename OpTag, typename T, typename Abi>
+[[nodiscard]]
+constexpr auto
+simd_abi_apply_ternary_full(simd<T, Abi> const& x, simd<T, Abi> const& y,
+                            simd<T, Abi> const& z) -> simd<T, Abi> {
+   return simd<T, Abi>(
+      simd_abi::invoke<simd_abi_vec<T, Abi>,
+                       simd_abi::ternary_full<
+                          OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+                          typename simd_abi_vec<T, Abi>::abi_type>>(
+         simd_abi_vec<T, Abi>(x.raw), simd_abi_vec<T, Abi>(y.raw),
+         simd_abi_vec<T, Abi>(z.raw))
+         .raw);
+}
+
+template <typename OpTag, typename T, typename Abi>
+[[nodiscard]]
+constexpr auto
+simd_abi_apply_ternary_masked(simd<T, Abi> const& x, simd<T, Abi> const& y,
+                              simd<T, Abi> const& z,
+                              simd_mask<T, Abi> const& mask) -> simd<T, Abi> {
+   return simd<T, Abi>(
+      simd_abi::invoke<simd_abi_vec<T, Abi>,
+                       simd_abi::ternary_masked<
+                          OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+                          typename simd_abi_vec<T, Abi>::abi_type>>(
+         simd_abi_vec<T, Abi>(x.raw), simd_abi_vec<T, Abi>(y.raw),
+         simd_abi_vec<T, Abi>(z.raw), simd_abi_mask_vec<T, Abi>(mask.raw))
+         .raw);
+}
+
+template <typename T, typename Abi>
+[[nodiscard]]
+constexpr auto
+simd_abi_apply_fill_masked(simd<T, Abi> const& passthrough,
+                           typename simd_abi_vec<T, Abi>::scalar_type fill,
+                           simd_mask<T, Abi> const& mask) -> simd<T, Abi> {
+   return simd<T, Abi>(
+      simd_abi::invoke<simd_abi_vec<T, Abi>, simd_abi::fill_masked<T, Abi>>(
+         simd_abi_vec<T, Abi>(passthrough.raw), fill,
+         simd_abi_mask_vec<T, Abi>(mask.raw))
+         .raw);
+}
+
+template <typename OpTag, typename T, typename IntT, typename Abi>
+[[nodiscard]]
+constexpr auto
+simd_abi_apply_binary_mixed(simd<T, Abi> const& x, simd<IntT, Abi> const& y)
+   -> simd<T, Abi> {
+   return simd<T, Abi>(
+      simd_abi::invoke<simd_abi_vec<T, Abi>,
+                       simd_abi::binary_mixed<
+                          OpTag, typename simd_abi_vec<T, Abi>::scalar_type,
+                          typename simd_abi_vec<IntT, Abi>::scalar_type,
+                          typename simd_abi_vec<T, Abi>::abi_type>>(
+         simd_abi_vec<T, Abi>(x.raw), simd_abi_vec<IntT, Abi>(y.raw))
+         .raw);
+}
+
+template <typename T, typename Abi>
+[[nodiscard]]
+constexpr auto
+simd_abi_apply_compress(simd<T, Abi> const& input,
+                        simd_mask<T, Abi> const& selector) -> simd<T, Abi> {
+   return simd<T, Abi>(
+      simd_abi::invoke<
+         simd_abi_vec<T, Abi>,
+         simd_abi::compress<typename simd_abi_vec<T, Abi>::scalar_type,
+                            typename simd_abi_vec<T, Abi>::abi_type>>(
+         simd_abi_vec<T, Abi>(input.raw),
+         simd_abi_mask_vec<T, Abi>(selector.raw))
+         .raw);
+}
+
+template <typename T, typename Abi>
+[[nodiscard]]
+constexpr auto
+simd_abi_apply_expand(simd<T, Abi> const& packed_values,
+                      simd_mask<T, Abi> const& selector,
+                      simd<T, Abi> const& background) -> simd<T, Abi> {
+   return simd<T, Abi>(
+      simd_abi::invoke<
+         simd_abi_vec<T, Abi>,
+         simd_abi::expand<typename simd_abi_vec<T, Abi>::scalar_type,
+                          typename simd_abi_vec<T, Abi>::abi_type>>(
+         simd_abi_vec<T, Abi>(packed_values.raw),
+         simd_abi_mask_vec<T, Abi>(selector.raw),
+         simd_abi_vec<T, Abi>(background.raw))
+         .raw);
+}
+
+template <typename Derived, typename T, typename Abi>
+[[nodiscard]]
+constexpr auto
+simd_binary_masked_lanewise_fallback(Derived const& derived, simd<T, Abi> left,
+                                     simd<T, Abi> right, simd_mask<T, Abi> mask)
+   -> simd<T, Abi> {
+   simd<T, Abi> result{};
+#pragma clang loop vectorize_predicate(enable)
+   for (idx i = 0u; i < Abi::lanes; ++i) {
+      result.set_lane(
+         i, mask[i] ? derived.invoke_lanewise(left[i], right[i]) : left[i]);
+   }
+   return result;
+}
+
+template <typename Derived, typename T, typename Abi>
+[[nodiscard]]
+constexpr auto
+simd_ternary_masked_lanewise_fallback(Derived const& derived, simd<T, Abi> x,
+                                      simd<T, Abi> y, simd<T, Abi> z,
+                                      simd_mask<T, Abi> mask) -> simd<T, Abi> {
+   simd<T, Abi> result{};
+#pragma clang loop vectorize_predicate(enable)
+   for (idx i = 0u; i < Abi::lanes; ++i) {
+      result.set_lane(
+         i, mask[i] ? derived.invoke_lanewise(x[i], y[i], z[i]) : x[i]);
+   }
+   return result;
+}
+
+template <typename Derived, typename Mask>
+struct simd_unary_masked_impl {
+   Derived const& self;
+   Mask mask;
+
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> input) const -> simd<T, Abi> {
+      simd<T, Abi> result{};
+#pragma clang loop vectorize_predicate(enable)
+      for (idx i = 0u; i < Abi::lanes; ++i) {
+         result.set_lane(i,
+                         mask[i] ? self.invoke_lanewise(input[i]) : input[i]);
+      }
+      return result;
+   }
+};
+
+template <typename Derived, typename Mask>
+struct simd_binary_masked_impl {
+   Derived const& self;
+   Mask mask;
+
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+      return self.invoke_masked(left, right, mask);
+   }
+};
+
+template <typename Derived, typename Mask>
+struct simd_ternary_masked_impl {
+   Derived const& self;
+   Mask mask;
+
+   template <typename T, typename Abi>
+      requires(is_same<Mask, simd_mask<T, Abi>>)
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z) const
+      -> simd<T, Abi> {
+      return self.invoke_masked(x, y, z, mask);
+   }
+};
+
+template <typename Derived, typename Mask>
+struct simd_binary_mixed_masked_impl {
+   Derived const& self;
+   Mask mask;
+
+   template <typename T, typename IntT, typename Abi>
+      requires(is_floating_point<T> && is_integral<IntT>
+               && is_same<Mask, simd_mask<T, Abi>>)
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> x, simd<IntT, Abi> y) const -> simd<T, Abi> {
+      simd<T, Abi> result{};
+#pragma clang loop vectorize_predicate(enable)
+      for (idx i = 0u; i < Abi::lanes; ++i) {
+         result.set_lane(i, mask[i] ? self.invoke_lanewise(x[i], y[i]) : x[i]);
+      }
+      return result;
+   }
+};
+
+template <typename Derived, typename Mask>
+struct simd_unary_int_masked_impl {
+   Derived const& self;
+   Mask mask;
+
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> input, iword count) const -> simd<T, Abi> {
+      simd<T, Abi> result{};
+#pragma clang loop vectorize_predicate(enable)
+      for (idx i = 0u; i < Abi::lanes; ++i) {
+         result.set_lane(
+            i, mask[i] ? self.invoke_lanewise(input[i], count) : input[i]);
+      }
+      return result;
+   }
+};
+
+// Masked gather from contiguous `source`, blending into `passthrough`.
+template <typename Mask>
+struct simd_load_blend_masked_impl {
+   Mask mask;
+
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> passthrough,
+              typename simd<T, Abi>::memory_lane const* source) const
+      -> simd<T, Abi> {
+      simd<T, Abi> result = passthrough;
+#pragma clang loop vectorize_predicate(enable)
+      for (idx i = 0u; i < Abi::lanes; ++i) {
+         if (mask[i]) {
+            result.set_lane(i, static_cast<T>(source[i]));
+         }
+      }
+      return result;
+   }
+};
+
+// Masked gather from aligned contiguous `source`, blending into `passthrough`.
+template <typename Mask>
+struct simd_load_aligned_blend_masked_impl {
+   Mask mask;
+
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> passthrough,
+              typename simd<T, Abi>::memory_lane const* source) const
+      -> maybe<simd<T, Abi>> {
+      if (!is_aligned(unconst(source), simd<T, Abi>::abi_type::alignment)) {
+         return maybe<simd<T, Abi>>{};
+      }
+      simd<T, Abi> result = passthrough;
+#pragma clang loop vectorize_predicate(enable)
+      for (idx i = 0u; i < Abi::lanes; ++i) {
+         if (mask[i]) {
+            result.set_lane(i, static_cast<T>(source[i]));
+         }
+      }
+      return result;
+   }
+};
+
+// Masked scatter: `simd_store_*[lane_mask](values, p)` binds this functor;
+// `values` is a `simd`, `p` is contiguous scalars. Lanes where `lane_mask[i]`
+// is false leave `p[i]` unchanged. `simd_store_to<T, Abi>[lane_mask](base,
+// indices, values)` binds the same type for indexed scatter; inactive lanes
+// leave `base[indices[i]]` unchanged.
+template <typename Mask>
+struct simd_store_to_masked_impl {
+   Mask mask;
+
+   template <typename T, typename Abi>
+   constexpr void
+   operator()(simd<T, Abi> values,
+              typename simd<T, Abi>::memory_lane* destination) const {
+#pragma clang loop vectorize_predicate(enable)
+      for (idx i = 0u; i < Abi::lanes; ++i) {
+         if (mask[i]) {
+            destination[i] = simd_lane_to_storage(values[i]);
+         }
+      }
+   }
+
+   template <typename T, typename Abi, typename IdxAbi, typename Idx>
+   constexpr void
+   operator()(T* base, simd<Idx, IdxAbi> indices, simd<T, Abi> values) const {
+#pragma clang loop vectorize_predicate(enable)
+      for (idx i = 0u; i < Abi::lanes; ++i) {
+         if (mask[i]) {
+            base[idx(static_cast<idx::raw_type>(indices[i]))] = values[i];
+         }
+      }
+   }
+};
+
+template <typename Mask>
+struct simd_partial_load_blend_masked_impl {
+   Mask mask;
+
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> passthrough,
+              typename simd<T, Abi>::memory_lane const* source, idx count) const
+      -> simd<T, Abi> {
+      simd<T, Abi> result = passthrough;
+      idx const active_lane_count = count < Abi::lanes ? count : Abi::lanes;
+#pragma clang loop vectorize_predicate(enable)
+      for (idx i = 0u; i < Abi::lanes; ++i) {
+         if (mask[i]) {
+            result.set_lane(
+               i, i < active_lane_count ? static_cast<T>(source[i]) : T{});
+         }
+      }
+      return result;
+   }
+};
+
+template <typename Mask>
+struct simd_fill_blend_masked_impl {
+   Mask mask;
+
+   template <typename T, typename Abi, typename U>
+      requires(is_convertible<U, T>)
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> passthrough, U value) const -> simd<T, Abi> {
+      T const fill = static_cast<T>(value);
+      if constexpr (is_same<Mask, simd_mask<T, Abi>>
+                    && has_simd_abi_fill_masked<T, Abi>) {
+         return simd_abi_apply_fill_masked<T, Abi>(passthrough, fill, mask);
+      }
+      simd<T, Abi> result = passthrough;
+#pragma clang loop vectorize_predicate(enable)
+      for (idx i = 0u; i < Abi::lanes; ++i) {
+         if (mask[i]) {
+            result.set_lane(i, fill);
+         }
+      }
+      return result;
+   }
+};
+
+template <typename Mask>
+struct simd_iota_blend_masked_impl {
+   Mask mask;
+
+   template <typename V, typename U>
+      requires(is_simd<V> && is_arithmetic<typename V::scalar_type>
+               && !is_same<typename V::scalar_type, bool>
+               && is_implicitly_convertible<U, typename V::scalar_type>)
+   [[nodiscard]]
+   constexpr auto
+   operator()(V passthrough, U start) const -> V {
+      using T = typename V::scalar_type;
+      T const base = static_cast<T>(start);
+      V result = passthrough;
+#pragma clang loop vectorize_predicate(enable)
+      for (idx i = 0u; i < V::abi_type::lanes; ++i) {
+         if (mask[i]) {
+            result.set_lane(i, static_cast<T>(base + static_cast<T>(i.raw)));
+         }
+      }
+      return result;
+   }
+};
+
+// Masked indexed gather from `base` using per-lane indices, blending into
+// `passthrough`.
+template <typename Mask>
+struct simd_load_from_blend_masked_impl {
+   Mask mask;
+
+   template <typename T, typename Abi, typename IdxAbi, typename Idx>
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> passthrough, T const* base,
+              simd<Idx, IdxAbi> indices) const -> simd<T, Abi> {
+      simd<T, Abi> result = passthrough;
+#pragma clang loop vectorize_predicate(enable)
+      for (idx i = 0u; i < Abi::lanes; ++i) {
+         if (mask[i]) {
+            result.set_lane(i,
+                            base[idx(static_cast<idx::raw_type>(indices[i]))]);
+         }
+      }
+      return result;
+   }
+};
+
+// Same EVE-style split as `simd_elementwise_interface` (`simd_sqrt`, …):
+// unmasked `operator()` and `operator[]` returning a lane-masked helper.
+// Load factories take `memory_lane const*` (`invoke` / `bind_masked`)
+// instead of `simd` input / `invoke_full` / `invoke_lanewise`. `V` is repeated
+// on the base so signatures do not depend on `Derived` while it is incomplete.
+template <typename Derived, is_simd V>
+class simd_elementwise_factory_interface {
+   friend Derived;
+
+ public:
+   using simd_vector = V;
+
+   [[nodiscard]]
+   constexpr auto
+   operator()(typename V::memory_lane const* source) const -> decltype(auto) {
+      return static_cast<Derived const*>(this)->invoke(source);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator[](
+      simd_mask<typename V::scalar_type, typename V::abi_type> lane_mask) const
+      -> decltype(auto) {
+      return static_cast<Derived const*>(this)->bind_masked(lane_mask);
+   }
+
+ private:
+   constexpr simd_elementwise_factory_interface() = default;
+};
+
+// Builds a vector by loading from memory (gather-style transfer into lane
+// registers).
+template <is_simd V>
+struct make_simd_loaded_aligned_impl
+    : simd_elementwise_factory_interface<make_simd_loaded_aligned_impl<V>, V> {
+   using simd_vector = V;
+
+   constexpr make_simd_loaded_aligned_impl() = default;
+
+   [[nodiscard]]
+   constexpr auto
+   invoke(typename V::memory_lane const* source) const -> maybe<V> {
+      if (!is_aligned(unconst(source), V::abi_type::alignment)) {
+         return maybe<V>{};
+      }
+      V result{};
+      result.load_aligned(source);
+      return result;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   bind_masked(simd_mask<typename V::scalar_type, typename V::abi_type> mask)
+      const -> simd_load_aligned_blend_masked_impl<
+         simd_mask<typename V::scalar_type, typename V::abi_type>> {
+      return {mask};
+   }
+};
+
+// Builds a vector by loading from memory (gather-style transfer into lane
+// registers).
+template <is_simd V>
+struct make_simd_loaded_unaligned_impl
+    : simd_elementwise_factory_interface<make_simd_loaded_unaligned_impl<V>,
+                                         V> {
+   using simd_vector = V;
+
+   constexpr make_simd_loaded_unaligned_impl() = default;
+
+   [[nodiscard, gnu::no_sanitize_address]]
+   constexpr auto
+   invoke(typename V::memory_lane const* source) const -> V {
+      V result{};
+      result.load_unaligned(source);
+      return result;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   bind_masked(simd_mask<typename V::scalar_type, typename V::abi_type> mask)
+      const -> simd_load_blend_masked_impl<
+         simd_mask<typename V::scalar_type, typename V::abi_type>> {
+      return {mask};
+   }
+};
+
+// Builds a vector by loading from memory (gather-style transfer into lane
+// registers).
+template <is_simd V>
+struct make_simd_loaded_impl
+    : simd_elementwise_factory_interface<make_simd_loaded_impl<V>, V> {
+   using simd_vector = V;
+
+   constexpr make_simd_loaded_impl() = default;
+
+   [[nodiscard]]
+   constexpr auto
+   invoke(typename V::memory_lane const* source) const -> V {
+      V result{};
+      result.load(source);
+      return result;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   bind_masked(simd_mask<typename V::scalar_type, typename V::abi_type> mask)
+      const -> simd_load_blend_masked_impl<
+         simd_mask<typename V::scalar_type, typename V::abi_type>> {
+      return {mask};
+   }
+};
+
+// Partial contiguous load from memory into lanes (gather-style transfer).
+template <is_simd V>
+struct make_simd_partial_loaded_impl {
+   [[nodiscard]]
+   constexpr auto
+   operator()(typename V::memory_lane const* source, idx count) const -> V {
+      V result{};
+      result.partial_load(source, count);
+      return result;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator[](simd_mask<typename V::scalar_type, typename V::abi_type> mask)
+      const -> simd_partial_load_blend_masked_impl<
+         simd_mask<typename V::scalar_type, typename V::abi_type>> {
+      return {mask};
+   }
+};
+
+template <is_simd V>
+struct make_simd_filled_impl {
+   template <typename U>
+      requires(is_convertible<U, typename V::scalar_type>)
+   [[nodiscard]]
+   constexpr auto
+   operator()(U value) const -> V {
+      V result{};
+      result.fill(value);
+      return result;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator[](simd_mask<typename V::scalar_type, typename V::abi_type> mask)
+      const -> simd_fill_blend_masked_impl<
+         simd_mask<typename V::scalar_type, typename V::abi_type>> {
+      return {mask};
+   }
+};
+
+template <is_simd V>
+struct simd_iota_impl {
+   template <typename U>
+      requires(is_arithmetic<typename V::scalar_type>
+               && !is_same<typename V::scalar_type, bool>
+               && is_implicitly_convertible<U, typename V::scalar_type>)
+   [[nodiscard]]
+   constexpr auto
+   operator()(U start) const -> V {
+      // P2638R0 §1.15 lane `iota` ramp without a scalar index loop off-pack.
+      // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
+      using T = typename V::scalar_type;
+      T const base = static_cast<T>(start);
+      V result{};
+      for (idx i = 0u; i < V::abi_type::lanes; ++i) {
+         result.set_lane(i, static_cast<T>(base + static_cast<T>(i.raw)));
+      }
+      return result;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator[](
+      simd_mask<typename V::scalar_type, typename V::abi_type> lane_mask) const
+      -> simd_iota_blend_masked_impl<
+         simd_mask<typename V::scalar_type, typename V::abi_type>> {
+      return {lane_mask};
+   }
+};
+
+template <typename LaneBlendMask>
+struct simd_mask_load_blend_masked_impl {
+   LaneBlendMask lane_blend_mask;
+
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd_mask<T, Abi> passthrough, bool const* lane_bools) const
+      -> simd_mask<T, Abi> {
+      simd_mask<T, Abi> result = passthrough;
+#pragma clang loop vectorize_predicate(enable)
+      for (idx i = 0u; i < simd_mask<T, Abi>::abi_type::lanes; ++i) {
+         if (lane_blend_mask[i]) {
+            result.set_lane(i, lane_bools[i.raw]);
+         }
+      }
+      return result;
+   }
+};
+
+template <typename LaneBlendMask>
+struct simd_mask_fill_blend_masked_impl {
+   LaneBlendMask lane_blend_mask;
+
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd_mask<T, Abi> passthrough, bool value) const
+      -> simd_mask<T, Abi> {
+      simd_mask<T, Abi> result = passthrough;
+#pragma clang loop vectorize_predicate(enable)
+      for (idx i = 0u; i < simd_mask<T, Abi>::abi_type::lanes; ++i) {
+         if (lane_blend_mask[i]) {
+            result.set_lane(i, value);
+         }
+      }
+      return result;
+   }
+};
+
+// Same split as `simd_elementwise_factory_interface`: unmasked `operator()`
+// reads from `bool const*`, `operator[]` returns a blend functor for
+// `make_simd_mask_loaded`.
+template <typename Derived, is_simd_mask M>
+class simd_elementwise_mask_factory_interface {
+   friend Derived;
+
+ public:
+   using mask_type = M;
+
+   [[nodiscard]]
+   constexpr auto
+   operator()(bool const* lane_bools) const -> decltype(auto) {
+      return static_cast<Derived const*>(this)->invoke(lane_bools);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator[](M lane_blend_mask) const -> decltype(auto) {
+      return static_cast<Derived const*>(this)->bind_masked(lane_blend_mask);
+   }
+
+ private:
+   constexpr simd_elementwise_mask_factory_interface() = default;
+};
+
+template <is_simd_mask M>
+struct make_simd_mask_filled_impl {
+   [[nodiscard]]
+   constexpr auto
+   operator()(bool value) const -> M {
+      M mask{};
+      mask.fill(value);
+      return mask;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator[](M lane_blend_mask) const -> simd_mask_fill_blend_masked_impl<M> {
+      return {lane_blend_mask};
+   }
+};
+
+// Builds a mask by loading lane booleans from memory (gather-style transfer).
+template <is_simd_mask M>
+struct make_simd_mask_loaded_impl
+    : simd_elementwise_mask_factory_interface<make_simd_mask_loaded_impl<M>,
+                                              M> {
+   using mask_type = M;
+
+   constexpr make_simd_mask_loaded_impl() = default;
+
+   [[nodiscard]]
+   constexpr auto
+   invoke(bool const* p_data) const -> M {
+      M mask{};
+      mask.load(p_data);
+      return mask;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   bind_masked(M lane_blend_mask) const -> simd_mask_load_blend_masked_impl<M> {
+      return {lane_blend_mask};
+   }
+};
+
+// Subscript yields masked gather-style loads from a contiguous base pointer.
+template <simd_memory_kind Kind>
+struct simd_load_impl {
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator[](simd_mask<T, Abi> lane_mask) const {
+      if constexpr (Kind == simd_memory_kind::aligned) {
+         return simd_load_aligned_blend_masked_impl<simd_mask<T, Abi>>{
+            lane_mask};
+      } else {
+         return simd_load_blend_masked_impl<simd_mask<T, Abi>>{lane_mask};
+      }
+   }
+};
+
+// Subscript yields masked scatter-style stores to a contiguous base pointer.
+//
+// `simd_store_aligned` / `simd_store_unaligned` / `simd_store` name the memory
+// contract for symmetry with `simd_load_*`; each is only a subscript entry
+// that returns `simd_store_to_masked_impl`, like `simd_load_impl` returning
+// `simd_load_blend_masked_impl` / `simd_load_aligned_blend_masked_impl`.
+struct simd_store_impl {
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator[](simd_mask<T, Abi> lane_mask) const
+      -> simd_store_to_masked_impl<simd_mask<T, Abi>> {
+      return {lane_mask};
+   }
+};
+
+template <typename T, typename Abi>
+[[nodiscard]]
+constexpr auto
+simd_if_else_apply(simd_mask<T, Abi> mask, simd<T, Abi> on_true,
+                   simd<T, Abi> on_false) -> simd<T, Abi> {
+   // P2638R0 §1.3 masked lane pick (readable `where`/`select` style blend).
+   // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
+   simd<T, Abi> result{};
+#pragma clang loop vectorize_predicate(enable)
+   for (idx i = 0u; i < Abi::lanes; ++i) {
+      result.set_lane(i, mask[i] ? on_true[i] : on_false[i]);
+   }
+   return result;
+}
+
+// Indexed gather: each lane reads from `base[indices[i]]`.
+template <typename T, typename Abi>
+struct simd_load_from_impl {
+   template <typename IdxAbi, typename Idx>
+   [[nodiscard]]
+   constexpr auto
+   operator()(T const* base, simd<Idx, IdxAbi> indices) const -> simd<T, Abi> {
+      simd<T, Abi> result{};
+      for (idx i = 0u; i < Abi::lanes; ++i) {
+         result.set_lane(i, base[idx(static_cast<idx::raw_type>(indices[i]))]);
+      }
+      return result;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator[](simd_mask<T, Abi> lane_mask) const
+      -> simd_load_from_blend_masked_impl<simd_mask<T, Abi>> {
+      return {lane_mask};
+   }
+};
+
+// Indexed scatter: each lane writes to `base[indices[i]]`.
+template <typename T, typename Abi>
+struct simd_store_to_impl {
+   template <typename IdxAbi, typename Idx>
+   constexpr void
+   operator()(T* base, simd<Idx, IdxAbi> indices, simd<T, Abi> values) const {
+      for (idx i = 0u; i < Abi::lanes; ++i) {
+         base[idx(static_cast<idx::raw_type>(indices[i]))] = values[i];
+      }
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator[](simd_mask<T, Abi> lane_mask) const
+      -> simd_store_to_masked_impl<simd_mask<T, Abi>> {
+      return {lane_mask};
+   }
+};
+
+template <typename Derived>
+struct simd_elementwise_interface {
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> input) const -> decltype(auto) {
+      return self().invoke_full(input);
+   }
+
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator[](simd_mask<T, Abi> lane_mask) const
+      -> simd_unary_masked_impl<Derived, simd_mask<T, Abi>> {
+      return {self(), lane_mask};
+   }
+
+ private:
+   constexpr simd_elementwise_interface() = default;
+   friend Derived;
+
+   [[nodiscard]]
+   constexpr Derived const&
+   self() const {
+      return static_cast<Derived const&>(*this);
+   }
+};
+
+// If `Derived` defines its own `invoke_masked`, add
+// `using simd_binary_derived_supplies_invoke_masked = void;` so this base does
+// not declare `invoke_masked` (avoids an ill-formed duplicate member).
+template <typename Derived>
+concept simd_binary_derived_supplies_invoke_masked =
+   requires { typename Derived::simd_binary_derived_supplies_invoke_masked; };
+
+template <typename Derived>
+concept simd_ternary_derived_supplies_invoke_masked =
+   requires { typename Derived::simd_ternary_derived_supplies_invoke_masked; };
+
+// Optional `AbiBinaryMaskedOpTag` names a `simd_abi::binary_masked<OpTag, T,
+// Abi>` hook when present, else `invoke_full` blended with `left` on inactive
+// lanes (same contract as `simd_binary_masked_lanewise_fallback` when
+// `invoke_full` is lane-wise equivalent). When defaulted to `void`, masked
+// dispatch stays on `invoke_lanewise` only (constexpr-friendly lane path).
+template <typename Derived, typename AbiBinaryMaskedOpTag = void>
+struct simd_elementwise_binary_interface {
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> left, simd<T, Abi> right) const -> decltype(auto) {
+      return self().invoke_full(left, right);
+   }
+
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator[](simd_mask<T, Abi> lane_mask) const
+      -> simd_binary_masked_impl<Derived, simd_mask<T, Abi>> {
+      return {self(), lane_mask};
+   }
+
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   invoke_masked(simd<T, Abi> left, simd<T, Abi> right,
+                 simd_mask<T, Abi> mask) const -> simd<T, Abi>
+      requires(!simd_binary_derived_supplies_invoke_masked<Derived>)
+   {
+      if constexpr (!is_void<AbiBinaryMaskedOpTag>) {
+         if constexpr (has_simd_abi_binary_masked<AbiBinaryMaskedOpTag, T,
+                                                  Abi>) {
+            return simd_abi_apply_binary_masked<AbiBinaryMaskedOpTag, T, Abi>(
+               left, right, mask);
+         }
+         return simd_if_else_apply(mask, self().invoke_full(left, right), left);
+      } else {
+         return simd_binary_masked_lanewise_fallback(self(), left, right, mask);
+      }
+   }
+
+ private:
+   constexpr simd_elementwise_binary_interface() = default;
+   friend Derived;
+
+   [[nodiscard]]
+   constexpr Derived const&
+   self() const {
+      return static_cast<Derived const&>(*this);
+   }
+};
+
+// Optional `AbiTernaryMaskedOpTag` names `simd_abi::ternary_masked<OpTag, T,
+// Abi>` when present; else `invoke_full` blended with `x` on inactive lanes.
+template <typename Derived, typename AbiTernaryMaskedOpTag = void>
+struct simd_elementwise_ternary_interface {
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z) const
+      -> decltype(auto) {
+      return self().invoke_full(x, y, z);
+   }
+
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator[](simd_mask<T, Abi> lane_mask) const
+      -> simd_ternary_masked_impl<Derived, simd_mask<T, Abi>> {
+      return {self(), lane_mask};
+   }
+
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   invoke_masked(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z,
+                 simd_mask<T, Abi> mask) const -> simd<T, Abi>
+      requires(!simd_ternary_derived_supplies_invoke_masked<Derived>)
+   {
+      if constexpr (!is_void<AbiTernaryMaskedOpTag>) {
+         if constexpr (has_simd_abi_ternary_masked<AbiTernaryMaskedOpTag, T,
+                                                   Abi>) {
+            return simd_abi_apply_ternary_masked<AbiTernaryMaskedOpTag, T, Abi>(
+               x, y, z, mask);
+         }
+         return simd_if_else_apply(mask, self().invoke_full(x, y, z), x);
+      } else {
+         return simd_ternary_masked_lanewise_fallback(self(), x, y, z, mask);
+      }
+   }
+
+ private:
+   constexpr simd_elementwise_ternary_interface() = default;
+   friend Derived;
+
+   [[nodiscard]]
+   constexpr Derived const&
+   self() const {
+      return static_cast<Derived const&>(*this);
+   }
+};
+
+template <typename Derived>
+struct simd_elementwise_binary_mixed_interface {
+   template <typename T, typename IntT, typename Abi>
+      requires(is_floating_point<T> && is_integral<IntT>)
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> x, simd<IntT, Abi> y) const -> decltype(auto) {
+      return self().invoke_full(x, y);
+   }
+
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator[](simd_mask<T, Abi> lane_mask) const
+      -> simd_binary_mixed_masked_impl<Derived, simd_mask<T, Abi>> {
+      return {self(), lane_mask};
+   }
+
+ private:
+   constexpr simd_elementwise_binary_mixed_interface() = default;
+   friend Derived;
+
+   [[nodiscard]]
+   constexpr Derived const&
+   self() const {
+      return static_cast<Derived const&>(*this);
+   }
+};
+
+template <typename Derived>
+struct simd_elementwise_unary_int_interface {
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> input, iword count) const -> decltype(auto) {
+      return self().invoke_full(input, count);
+   }
+
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator[](simd_mask<T, Abi> lane_mask) const
+      -> simd_unary_int_masked_impl<Derived, simd_mask<T, Abi>> {
+      return {self(), lane_mask};
+   }
+
+ private:
+   constexpr simd_elementwise_unary_int_interface() = default;
+   friend Derived;
+
+   [[nodiscard]]
+   constexpr Derived const&
+   self() const {
+      return static_cast<Derived const&>(*this);
+   }
+};
+
+struct simd_sin_impl : simd_elementwise_interface<simd_sin_impl> {
+   constexpr simd_sin_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_sin, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_sin, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_sin(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_sinf(static_cast<R>(make_raw_arithmetic(x))));
+      }
+      return T(__builtin_sin(static_cast<R>(make_raw_arithmetic(x))));
+   }
+};
+
+struct simd_cos_impl : simd_elementwise_interface<simd_cos_impl> {
+   constexpr simd_cos_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_cos, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_cos, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_cos(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_cosf(static_cast<R>(make_raw_arithmetic(x))));
+      }
+      return T(__builtin_cos(static_cast<R>(make_raw_arithmetic(x))));
+   }
+};
+
+struct simd_tan_impl : simd_elementwise_interface<simd_tan_impl> {
+   constexpr simd_tan_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_tan, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_tan, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_tan(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_tanf(static_cast<R>(make_raw_arithmetic(x))));
+      }
+      return T(__builtin_tan(static_cast<R>(make_raw_arithmetic(x))));
+   }
+};
+
+struct simd_asin_impl : simd_elementwise_interface<simd_asin_impl> {
+   constexpr simd_asin_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_asin, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_asin, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_asin(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_asinf(static_cast<R>(make_raw_arithmetic(x))));
+      }
+      return T(__builtin_asin(static_cast<R>(make_raw_arithmetic(x))));
+   }
+};
+
+struct simd_acos_impl : simd_elementwise_interface<simd_acos_impl> {
+   constexpr simd_acos_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_acos, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_acos, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_acos(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_acosf(static_cast<R>(make_raw_arithmetic(x))));
+      }
+      return T(__builtin_acos(static_cast<R>(make_raw_arithmetic(x))));
+   }
+};
+
+struct simd_atan_impl : simd_elementwise_interface<simd_atan_impl> {
+   constexpr simd_atan_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_atan, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_atan, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_atan(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_atanf(static_cast<R>(make_raw_arithmetic(x))));
+      }
+      return T(__builtin_atan(static_cast<R>(make_raw_arithmetic(x))));
+   }
+};
+
+struct simd_sinh_impl : simd_elementwise_interface<simd_sinh_impl> {
+   constexpr simd_sinh_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_sinh, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_sinh, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_sinh(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_sinhf(static_cast<R>(make_raw_arithmetic(x))));
+      }
+      return T(__builtin_sinh(static_cast<R>(make_raw_arithmetic(x))));
+   }
+};
+
+struct simd_cosh_impl : simd_elementwise_interface<simd_cosh_impl> {
+   constexpr simd_cosh_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_cosh, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_cosh, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_cosh(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_coshf(static_cast<R>(make_raw_arithmetic(x))));
+      }
+      return T(__builtin_cosh(static_cast<R>(make_raw_arithmetic(x))));
+   }
+};
+
+struct simd_tanh_impl : simd_elementwise_interface<simd_tanh_impl> {
+   constexpr simd_tanh_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_tanh, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_tanh, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_tanh(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_tanhf(static_cast<R>(make_raw_arithmetic(x))));
+      }
+      return T(__builtin_tanh(static_cast<R>(make_raw_arithmetic(x))));
+   }
+};
+
+struct simd_ceil_impl : simd_elementwise_interface<simd_ceil_impl> {
+   constexpr simd_ceil_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_ceil, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_ceil, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_ceil(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_ceilf(static_cast<R>(make_raw_arithmetic(x))));
+      } else {
+         return T(__builtin_ceil(static_cast<R>(make_raw_arithmetic(x))));
+      }
+   }
+};
+
+struct simd_floor_impl : simd_elementwise_interface<simd_floor_impl> {
+   constexpr simd_floor_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_floor, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_floor, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_floor(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_floorf(static_cast<R>(make_raw_arithmetic(x))));
+      } else {
+         return T(__builtin_floor(static_cast<R>(make_raw_arithmetic(x))));
+      }
+   }
+};
+
+struct simd_log_impl : simd_elementwise_interface<simd_log_impl> {
+   constexpr simd_log_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_log, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_log, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_log(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_logf(static_cast<R>(make_raw_arithmetic(x))));
+      } else {
+         return T(__builtin_log(static_cast<R>(make_raw_arithmetic(x))));
+      }
+   }
+};
+
+struct simd_log2_impl : simd_elementwise_interface<simd_log2_impl> {
+   constexpr simd_log2_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_log2, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_log2, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_log2(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_log2f(static_cast<R>(make_raw_arithmetic(x))));
+      } else {
+         return T(__builtin_log2(static_cast<R>(make_raw_arithmetic(x))));
+      }
+   }
+};
+
+struct simd_log10_impl : simd_elementwise_interface<simd_log10_impl> {
+   constexpr simd_log10_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_log10, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_log10, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_log10(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_log10f(static_cast<R>(make_raw_arithmetic(x))));
+      } else {
+         return T(__builtin_log10(static_cast<R>(make_raw_arithmetic(x))));
+      }
+   }
+};
+
+struct simd_exp_impl : simd_elementwise_interface<simd_exp_impl> {
+   constexpr simd_exp_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_exp, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_exp, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_exp(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_expf(static_cast<R>(make_raw_arithmetic(x))));
+      } else {
+         return T(__builtin_exp(static_cast<R>(make_raw_arithmetic(x))));
+      }
+   }
+};
+
+struct simd_exp2_impl : simd_elementwise_interface<simd_exp2_impl> {
+   constexpr simd_exp2_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_exp2, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_exp2, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_exp2(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_exp2f(static_cast<R>(make_raw_arithmetic(x))));
+      } else {
+         return T(__builtin_exp2(static_cast<R>(make_raw_arithmetic(x))));
+      }
+   }
+};
+
+struct simd_exp10_impl : simd_elementwise_interface<simd_exp10_impl> {
+   constexpr simd_exp10_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_exp10, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_exp10, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_exp10(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_exp10f(static_cast<R>(make_raw_arithmetic(x))));
+      }
+      return T(__builtin_exp10(static_cast<R>(make_raw_arithmetic(x))));
+   }
+};
+
+struct simd_roundeven_impl : simd_elementwise_interface<simd_roundeven_impl> {
+   constexpr simd_roundeven_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_roundeven, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_roundeven, T, Abi>(
+            input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_roundeven(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_roundevenf(static_cast<R>(make_raw_arithmetic(x))));
+      }
+      return T(__builtin_roundeven(static_cast<R>(make_raw_arithmetic(x))));
+   }
+};
+
+struct simd_round_impl : simd_elementwise_interface<simd_round_impl> {
+   constexpr simd_round_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_round, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_round, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_round(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_roundf(static_cast<R>(make_raw_arithmetic(x))));
+      }
+      return T(__builtin_round(static_cast<R>(make_raw_arithmetic(x))));
+   }
+};
+
+struct simd_trunc_impl : simd_elementwise_interface<simd_trunc_impl> {
+   constexpr simd_trunc_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_trunc, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_trunc, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_trunc(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_truncf(static_cast<R>(make_raw_arithmetic(x))));
+      }
+      return T(__builtin_trunc(static_cast<R>(make_raw_arithmetic(x))));
+   }
+};
+
+struct simd_nearbyint_impl : simd_elementwise_interface<simd_nearbyint_impl> {
+   constexpr simd_nearbyint_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_nearbyint, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_nearbyint, T, Abi>(
+            input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_nearbyint(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_nearbyintf(static_cast<R>(make_raw_arithmetic(x))));
+      }
+      return T(__builtin_nearbyint(static_cast<R>(make_raw_arithmetic(x))));
+   }
+};
+
+struct simd_rint_impl : simd_elementwise_interface<simd_rint_impl> {
+   constexpr simd_rint_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_rint, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_rint, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_rint(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_rintf(static_cast<R>(make_raw_arithmetic(x))));
+      }
+      return T(__builtin_rint(static_cast<R>(make_raw_arithmetic(x))));
+   }
+};
+
+struct simd_canonicalize_impl
+    : simd_elementwise_interface<simd_canonicalize_impl> {
+   constexpr simd_canonicalize_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_canonicalize, T,
+                                            Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_canonicalize, T, Abi>(
+            input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_canonicalize(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(
+            __builtin_canonicalizef(static_cast<R>(make_raw_arithmetic(x))));
+      }
+      return T(__builtin_canonicalize(static_cast<R>(make_raw_arithmetic(x))));
+   }
+};
+
+struct simd_abs_impl : simd_elementwise_interface<simd_abs_impl> {
+   constexpr simd_abs_impl() = default;
+
+   template <typename T, typename Abi>
+      requires((is_integral<T> && is_signed<T>) || is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_abs, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_abs, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_abs(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires((is_integral<T> && is_signed<T>) || is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      if constexpr (is_floating_point<T>) {
+         using R = raw_arithmetic_type<T>;
+         if constexpr (is_same<R, float>) {
+            return T(__builtin_fabsf(static_cast<R>(make_raw_arithmetic(x))));
+         }
+         return T(__builtin_fabs(static_cast<R>(make_raw_arithmetic(x))));
+      }
+      if (x < T(0)) {
+         return static_cast<T>(-static_cast<make_unsigned_type<T>>(x));
+      }
+      return x;
+   }
+};
+
+struct simd_bitreverse_impl : simd_elementwise_interface<simd_bitreverse_impl> {
+   constexpr simd_bitreverse_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_integral<T> && !is_same<T, bool>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      // P2638R0 §1.18 / §1.20 per-lane bit-reverse on integral lanes.
+      // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_bitreverse, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_bitreverse, T, Abi>(
+            input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_bitreverse(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_integral<T> && !is_same<T, bool>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      // P2638R0 §1.18 / §1.20 per-lane bit-reverse (fallback lane hook).
+      // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
+      using U = make_unsigned_type<T>;
+      U const u = static_cast<U>(x);
+      U reversed{};
+      if constexpr (sizeof(U) == 1) {
+         reversed = static_cast<U>(static_cast<unsigned char>(
+            __builtin_bitreverse32(static_cast<unsigned int>(u)) >> 24u));
+      } else if constexpr (sizeof(U) == 2) {
+         reversed = static_cast<U>(__builtin_bitreverse16(
+            static_cast<unsigned short>(static_cast<unsigned>(u))));
+      } else if constexpr (sizeof(U) == 4) {
+         reversed = static_cast<U>(
+            __builtin_bitreverse32(static_cast<unsigned int>(u)));
+      } else {
+         reversed = static_cast<U>(
+            __builtin_bitreverse64(static_cast<unsigned long long>(
+               static_cast<unsigned long long>(u))));
+      }
+      return static_cast<T>(reversed);
+   }
+};
+
+struct simd_pow_impl : simd_elementwise_binary_interface<simd_pow_impl> {
+   constexpr simd_pow_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_binary_full<simd_abi::op_pow, T, Abi>) {
+         return simd_abi_apply_binary_full<simd_abi::op_pow, T, Abi>(left,
+                                                                     right);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_pow(left.raw, right.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T left, T right) const -> T {
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_powf(static_cast<R>(make_raw_arithmetic(left)),
+                                 static_cast<R>(make_raw_arithmetic(right))));
+      }
+      return T(__builtin_pow(static_cast<R>(make_raw_arithmetic(left)),
+                             static_cast<R>(make_raw_arithmetic(right))));
+   }
+};
+
+#define CAT_DETAIL_SIMD_BINARY_FLOAT(Stem, VecSuffix, LaneStem)             \
+   struct simd_##Stem##_impl                                                \
+       : simd_elementwise_binary_interface<simd_##Stem##_impl> {            \
+      constexpr simd_##Stem##_impl() = default;                             \
+      template <typename T, typename Abi>                                   \
+         requires(is_floating_point<T>)                                     \
+      [[nodiscard]]                                                         \
+      constexpr auto                                                        \
+      invoke_full(simd<T, Abi> left, simd<T, Abi> right) const              \
+         -> simd<T, Abi> {                                                  \
+         if constexpr (has_simd_abi_binary_full<simd_abi::op_##Stem, T,     \
+                                                Abi>) {                     \
+            return simd_abi_apply_binary_full<simd_abi::op_##Stem, T, Abi>( \
+               left, right);                                                \
+         } else {                                                           \
+            return simd<T, Abi>(                                            \
+               __builtin_elementwise_##VecSuffix(left.raw, right.raw));     \
+         }                                                                  \
+      }                                                                     \
+      template <typename T>                                                 \
+         requires(is_floating_point<T>)                                     \
+      [[nodiscard]]                                                         \
+      constexpr auto                                                        \
+      invoke_lanewise(T left, T right) const -> T {                         \
+         using R = raw_arithmetic_type<T>;                                  \
+         if constexpr (is_same<R, float>) {                                 \
+            return T(__builtin_##LaneStem##f(                               \
+               static_cast<R>(make_raw_arithmetic(left)),                   \
+               static_cast<R>(make_raw_arithmetic(right))));                \
+         } else {                                                           \
+            return T(__builtin_##LaneStem(                                  \
+               static_cast<R>(make_raw_arithmetic(left)),                   \
+               static_cast<R>(make_raw_arithmetic(right))));                \
+         }                                                                  \
+      }                                                                     \
+   };
+
+CAT_DETAIL_SIMD_BINARY_FLOAT(atan2, atan2, atan2)
+CAT_DETAIL_SIMD_BINARY_FLOAT(copysign, copysign, copysign)
+CAT_DETAIL_SIMD_BINARY_FLOAT(fmod, fmod, fmod)
+CAT_DETAIL_SIMD_BINARY_FLOAT(minnum, minnum, fmin)
+CAT_DETAIL_SIMD_BINARY_FLOAT(maxnum, maxnum, fmax)
+
+#undef CAT_DETAIL_SIMD_BINARY_FLOAT
+
+struct simd_minimumnum_impl
+    : simd_elementwise_binary_interface<simd_minimumnum_impl> {
+   constexpr simd_minimumnum_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_binary_full<simd_abi::op_minimumnum, T, Abi>) {
+         return simd_abi_apply_binary_full<simd_abi::op_minimumnum, T, Abi>(
+            left, right);
+      } else {
+         return simd<T, Abi>(
+            __builtin_elementwise_minimumnum(left.raw, right.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T left, T right) const -> T {
+      using R = raw_arithmetic_type<T>;
+      return T(
+         __builtin_fminimum_num(static_cast<R>(make_raw_arithmetic(left)),
+                                static_cast<R>(make_raw_arithmetic(right))));
+   }
+};
+
+struct simd_maximumnum_impl
+    : simd_elementwise_binary_interface<simd_maximumnum_impl> {
+   constexpr simd_maximumnum_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_binary_full<simd_abi::op_maximumnum, T, Abi>) {
+         return simd_abi_apply_binary_full<simd_abi::op_maximumnum, T, Abi>(
+            left, right);
+      } else {
+         return simd<T, Abi>(
+            __builtin_elementwise_maximumnum(left.raw, right.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T left, T right) const -> T {
+      using R = raw_arithmetic_type<T>;
+      return T(
+         __builtin_fmaximum_num(static_cast<R>(make_raw_arithmetic(left)),
+                                static_cast<R>(make_raw_arithmetic(right))));
+   }
+};
+
+struct simd_add_sat_impl
+    : simd_elementwise_binary_interface<simd_add_sat_impl,
+                                        simd_abi::op_add_sat> {
+   constexpr simd_add_sat_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_integral<T> && !is_same<T, bool>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_binary_full<simd_abi::op_add_sat, T, Abi>) {
+         return simd_abi_apply_binary_full<simd_abi::op_add_sat, T, Abi>(left,
+                                                                         right);
+      } else {
+         return simd<T, Abi>(
+            __builtin_elementwise_add_sat(left.raw, right.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_integral<T> && !is_same<T, bool>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T left, T right) const -> T {
+      return static_cast<T>(
+         __builtin_add_sat(static_cast<T>(left), static_cast<T>(right)));
+   }
+};
+
+struct simd_sub_sat_impl
+    : simd_elementwise_binary_interface<simd_sub_sat_impl,
+                                        simd_abi::op_sub_sat> {
+   constexpr simd_sub_sat_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_integral<T> && !is_same<T, bool>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_binary_full<simd_abi::op_sub_sat, T, Abi>) {
+         return simd_abi_apply_binary_full<simd_abi::op_sub_sat, T, Abi>(left,
+                                                                         right);
+      } else {
+         return simd<T, Abi>(
+            __builtin_elementwise_sub_sat(left.raw, right.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_integral<T> && !is_same<T, bool>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T left, T right) const -> T {
+      return static_cast<T>(
+         __builtin_sub_sat(static_cast<T>(left), static_cast<T>(right)));
+   }
+};
+
+template <typename M, typename A>
+struct make_simd_mask_else;
+
+struct simd_if_else_impl {
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd_mask<T, Abi> mask, simd<T, Abi> on_true,
+              simd<T, Abi> on_false) const -> simd<T, Abi> {
+      // P2638R0 §1.3 see `simd_if_else_apply`.
+      // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
+      return detail::simd_if_else_apply(mask, on_true, on_false);
+   }
+
+   template <typename T, typename Abi, typename A>
+   [[nodiscard]]
+   constexpr auto
+   operator()(make_simd_mask_else<simd_mask<T, Abi>, A> const& else_branch,
+              simd<T, Abi> on_true) const -> simd<T, Abi> {
+      // P2638R0 §1.3 see `simd_if_else_apply`.
+      // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
+      simd<T, Abi> on_false{};
+      if constexpr (is_same<remove_cvref<A>, simd<T, Abi>>) {
+         on_false = else_branch.otherwise;
+      } else {
+         on_false.fill(static_cast<T>(else_branch.otherwise));
+      }
+      return detail::simd_if_else_apply(else_branch.lane_mask, on_true,
+                                        on_false);
+   }
+};
+
+struct simd_select_impl {
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd_mask<T, Abi> mask, simd<T, Abi> on_true,
+              simd<T, Abi> on_false) const -> simd<T, Abi> {
+      // P2638R0 §1.3 see `simd_if_else_apply`.
+      // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
+      return detail::simd_if_else_apply(mask, on_true, on_false);
+   }
+};
+
+template <typename M, typename A>
+struct make_simd_mask_else {
+   M lane_mask;
+   A otherwise;
+};
+
+template <typename M>
+struct make_simd_mask_if_builder {
+   M lane_mask;
+
+   template <typename Alt>
+   [[nodiscard]]
+   constexpr auto
+   else_(Alt&& alt) const -> make_simd_mask_else<M, remove_cvref<Alt>> {
+      return {lane_mask, static_cast<remove_cvref<Alt>>(fwd(alt))};
+   }
+};
+
+struct make_simd_mask_if_impl {
+   template <typename M>
+   [[nodiscard]]
+   constexpr auto
+   operator()(M lane_mask) const -> make_simd_mask_if_builder<M> {
+      return {lane_mask};
+   }
+};
+
+// Builds a lane mask whose first `active_lanes` lanes are true and the rest
+// false. Use this when the last SIMD iteration only has a partial block (tail
+// remainder shorter than one vector).
+template <typename Simd>
+struct make_simd_mask_from_count_impl {
+   [[nodiscard]]
+   constexpr auto
+   operator()(idx active_lanes) const -> typename Simd::mask_type {
+      // Same lane rule as the standard `basic_simd_mask::n_elements(count)`
+      // (P3440).
+      // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3440r0.html
+      using Abi = typename Simd::abi_type;
+      typename Simd::mask_type lane_mask{};
+      for (idx i = 0u; i < Abi::lanes; ++i) {
+         lane_mask.set_lane(i, i < active_lanes);
+      }
+      return lane_mask;
+   }
+};
+
+template <typename Simd>
+struct make_simd_mask_ignore_first_impl {
+   [[nodiscard]]
+   constexpr auto
+   operator()(idx ignore_head_count) const -> typename Simd::mask_type {
+      typename Simd::mask_type lane_mask{};
+      for (idx i = 0u; i < Simd::abi_type::lanes; ++i) {
+         lane_mask.set_lane(i, i >= ignore_head_count);
+      }
+      return lane_mask;
+   }
+};
+
+template <typename Simd>
+struct make_simd_mask_ignore_last_impl {
+   [[nodiscard]]
+   constexpr auto
+   operator()(idx ignore_tail_count) const -> typename Simd::mask_type {
+      idx const width = Simd::abi_type::lanes;
+      typename Simd::mask_type lane_mask{};
+      for (idx i = 0u; i < width; ++i) {
+         lane_mask.set_lane(i, i < width - ignore_tail_count);
+      }
+      return lane_mask;
+   }
+};
+
+template <typename Simd>
+struct make_simd_mask_keep_between_impl {
+   [[nodiscard]]
+   constexpr auto
+   operator()(idx first, idx last_exclusive) const -> typename Simd::mask_type {
+      typename Simd::mask_type lane_mask{};
+      for (idx i = 0u; i < Simd::abi_type::lanes; ++i) {
+         lane_mask.set_lane(i, i >= first && i < last_exclusive);
+      }
+      return lane_mask;
+   }
+};
+
+struct simd_sqrt_impl : simd_elementwise_interface<simd_sqrt_impl> {
+   constexpr simd_sqrt_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_sqrt, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_sqrt, T, Abi>(input);
+      } else {
+         return simd<T, Abi>(__builtin_elementwise_sqrt(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      using R = raw_arithmetic_type<T>;
+      return T(cat::sqrt(static_cast<R>(make_raw_arithmetic(x))));
+   }
+};
+
+template <typename T>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+simd_rsqrt_lane(T x) -> T {
+   using R = raw_arithmetic_type<T>;
+   R const rx = static_cast<R>(make_raw_arithmetic(x));
+   return T(static_cast<R>(1) / cat::sqrt(rx));
+}
+
+struct simd_rsqrt_impl : simd_elementwise_interface<simd_rsqrt_impl> {
+   constexpr simd_rsqrt_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_full<simd_abi::op_rsqrt, T, Abi>) {
+         return simd_abi_apply_unary_full<simd_abi::op_rsqrt, T, Abi>(input);
+      } else {
+         simd<T, Abi> one{};
+         one.fill(T(1));
+         return simd<T, Abi>(one.raw / __builtin_elementwise_sqrt(input.raw));
+      }
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      return simd_rsqrt_lane(x);
+   }
+};
+
+template <typename T>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+simd_nroot_lane(T x, iword n) -> T {
+   if (n <= 1) {
+      return x;
+   }
+   if (x == T(0)) {
+      return x;
+   }
+   T abs_x = x < T(0) ? static_cast<T>(-x) : x;
+   T const root_magnitude = [&]() -> T {
+      auto const abs_raw = make_raw_arithmetic(abs_x);
+      if constexpr (is_same<raw_arithmetic_type<T>, float>) {
+         return static_cast<T>(
+            emulated_powf(abs_raw, 1.f / static_cast<float>(n.raw)));
+      } else {
+         return static_cast<T>(emulated_pow(static_cast<double>(abs_raw),
+                                            1. / static_cast<double>(n.raw)));
+      }
+   }();
+   if (x < T(0)) {
+      if ((n.raw & 1u) != 0u) {
+         return static_cast<T>(-root_magnitude);
+      }
+      if constexpr (is_same<raw_arithmetic_type<T>, float>) {
+         return static_cast<T>(__builtin_nanf(""));
+      } else {
+         return static_cast<T>(__builtin_nan(""));
+      }
+   }
+   return root_magnitude;
+}
+
+template <typename T>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+simd_rnroot_lane(T x, iword n) -> T {
+   if (n <= 0) {
+      return x;
+   }
+   if (n == 1) {
+      using R = raw_arithmetic_type<T>;
+      R const rx = static_cast<R>(make_raw_arithmetic(x));
+      return T(static_cast<R>(1) / rx);
+   }
+   using R = raw_arithmetic_type<T>;
+   R const root = static_cast<R>(make_raw_arithmetic(simd_nroot_lane(x, n)));
+   return T(static_cast<R>(1) / root);
+}
+
+template <typename T>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+simd_rcbrt_lane(T x) -> T {
+   return simd_rnroot_lane(x, iword(3));
+}
+
+template <typename T, typename Abi>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+simd_nroot_generic(simd<T, Abi> input, iword n) -> simd<T, Abi> {
+   if (n <= 1) {
+      return input;
+   }
+   simd<T, Abi> abs_x(__builtin_elementwise_abs(input.raw));
+   simd<T, Abi> reciprocal_root{};
+   reciprocal_root.fill(T(1) / static_cast<T>(n.raw));
+   simd<T, Abi> root_magnitude(
+      __builtin_elementwise_pow(abs_x.raw, reciprocal_root.raw));
+   simd<T, Abi> zeros{};
+   zeros.fill(T(0));
+   if ((n.raw & 1u) != 0u) {
+      return simd_if_else_impl{}(input < zeros, zeros - root_magnitude,
+                                 root_magnitude);
+   }
+   simd<T, Abi> quiet_nans{};
+   if constexpr (is_same<raw_arithmetic_type<T>, float>) {
+      quiet_nans.fill(static_cast<T>(__builtin_nanf("")));
+   } else {
+      quiet_nans.fill(static_cast<T>(__builtin_nan("")));
+   }
+   return simd_if_else_impl{}(input < zeros, quiet_nans, root_magnitude);
+}
+
+struct simd_nroot_impl : simd_elementwise_unary_int_interface<simd_nroot_impl> {
+   constexpr simd_nroot_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input, iword n) const -> simd<T, Abi> {
+      return simd_nroot_generic(input, n);
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x, iword n) const -> T {
+      return simd_nroot_lane(x, n);
+   }
+};
+
+struct simd_cbrt_impl : simd_elementwise_interface<simd_cbrt_impl> {
+   constexpr simd_cbrt_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      return simd_nroot_impl{}.invoke_full(input, iword(3));
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      return simd_nroot_lane(x, iword(3));
+   }
+};
+
+struct simd_rcbrt_impl : simd_elementwise_interface<simd_rcbrt_impl> {
+   constexpr simd_rcbrt_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      simd<T, Abi> const cbrt = simd_cbrt_impl{}.invoke_full(input);
+      simd<T, Abi> one{};
+      one.fill(T(1));
+      return simd<T, Abi>(one.raw / cbrt.raw);
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      return simd_rcbrt_lane(x);
+   }
+};
+
+struct simd_rnroot_impl
+    : simd_elementwise_unary_int_interface<simd_rnroot_impl> {
+   constexpr simd_rnroot_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input, iword n) const -> simd<T, Abi> {
+      if (n <= 0) {
+         return input;
+      }
+      if (n == 1) {
+         simd<T, Abi> one{};
+         one.fill(T(1));
+         return simd<T, Abi>(one.raw / input.raw);
+      }
+      simd<T, Abi> const root = simd_nroot_impl{}.invoke_full(input, n);
+      simd<T, Abi> one{};
+      one.fill(T(1));
+      return simd<T, Abi>(one.raw / root.raw);
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x, iword n) const -> T {
+      return simd_rnroot_lane(x, n);
+   }
+};
+
+template <typename T>
+   requires(is_integral<T> && !is_same<T, bool>)
+[[nodiscard]]
+constexpr auto
+simd_popcount_lane(T x) -> T {
+   auto const unsigned_bits = static_cast<make_unsigned_type<T>>(x);
+   return static_cast<T>(__builtin_popcountg(unsigned_bits));
+}
+
+struct simd_popcount_impl : simd_elementwise_interface<simd_popcount_impl> {
+   constexpr simd_popcount_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_integral<T> && !is_same<T, bool>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+      return input.popcount();
+   }
+
+   template <typename T>
+      requires(is_integral<T> && !is_same<T, bool>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x) const -> T {
+      return simd_popcount_lane(x);
+   }
+};
+
+template <typename NewT>
+struct simd_bit_cast_as_impl {
+   template <typename T, typename Abi>
+      requires(sizeof(NewT) == sizeof(T) && Abi::lanes > 0
+               && (sizeof(NewT) * Abi::lanes.raw
+                   == sizeof(typename simd<T, Abi>::raw_type)))
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> const& input) const {
+      using out_abi =
+         fixed_size_abi<NewT, idx{Abi::lanes.raw * sizeof(T) / sizeof(NewT)}>;
+      return simd<NewT, out_abi>(
+         __builtin_bit_cast(typename simd<NewT, out_abi>::raw_type, input.raw));
+   }
+};
+
+struct simd_permute_impl {
+   template <typename T, typename Abi, typename IdxAbi, typename Idx>
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> input, simd<Idx, IdxAbi> indices) const {
+      // P2638R0 lane gather / permute from lane index `simd`.
+      // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
+      if constexpr (IdxAbi::lanes == Abi::lanes) {
+         simd<T, Abi> result{};
+         idx::raw_type const width = Abi::lanes.raw;
+
+#pragma clang loop vectorize(enable)
+         for (idx lane_i = 0u; lane_i < Abi::lanes; ++lane_i) {
+            idx::raw_type const requested_index =
+               static_cast<idx::raw_type>(indices[lane_i]);
+            idx::raw_type const wrapped_lane_index = requested_index % width;
+            result.set_lane(lane_i, input[idx(wrapped_lane_index)]);
+         }
+         return result;
+      } else {
+         simd<T, fixed_size_abi<T, IdxAbi::lanes>> result{};
+         idx::raw_type const width = Abi::lanes.raw;
+
+#pragma clang loop vectorize(enable)
+         for (idx lane_i = 0u; lane_i < IdxAbi::lanes; ++lane_i) {
+            idx::raw_type const requested_index =
+               static_cast<idx::raw_type>(indices[lane_i]);
+            idx::raw_type const wrapped_lane_index = requested_index % width;
+            result.set_lane(lane_i, input[idx(wrapped_lane_index)]);
+         }
+         return result;
+      }
+   }
+};
+
+template <int... Idx>
+struct simd_shuffle_impl {
+   template <typename T, typename Abi>
+      requires(sizeof...(Idx) == Abi::lanes.raw)
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> input) const -> simd<T, Abi> {
+      return simd<T, Abi>(
+         __builtin_shufflevector(input.raw, input.raw, Idx...));
+   }
+};
+
+}  // namespace detail
+
+namespace detail {
+
+struct simd_compress_impl {
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> input, simd_mask<T, Abi> selector) const
+      -> simd<T, Abi> {
+      if constexpr (has_simd_abi_compress<T, Abi>) {
+         return simd_abi_apply_compress<T, Abi>(input, selector);
+      } else {
+         simd<T, Abi> result{};
+         idx next_packed_lane = 0u;
+#pragma clang loop vectorize_predicate(enable)
+         for (idx i = 0u; i < Abi::lanes; ++i) {
+            if (selector[i]) {
+               result.set_lane(next_packed_lane, input[i]);
+               ++next_packed_lane;
+            }
+         }
+         for (; next_packed_lane < Abi::lanes; ++next_packed_lane) {
+            result.set_lane(next_packed_lane, T{});
+         }
+         return result;
+      }
+   }
+};
+
+struct simd_expand_impl {
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> packed_values, simd_mask<T, Abi> selector,
+              simd<T, Abi> background = {}) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_expand<T, Abi>) {
+         return simd_abi_apply_expand<T, Abi>(packed_values, selector,
+                                              background);
+      } else {
+         simd<T, Abi> result = background;
+         idx packed_read_index = 0u;
+#pragma clang loop vectorize_predicate(enable)
+         for (idx i = 0u; i < Abi::lanes; ++i) {
+            if (selector[i]) {
+               result.set_lane(i, packed_values[packed_read_index]);
+               ++packed_read_index;
+            }
+         }
+         return result;
+      }
+   }
+};
+
+template <typename T>
+   requires(is_integral<T> && !is_same<T, bool>)
+[[nodiscard]]
+constexpr auto
+simd_rotate_left_lane(T operand, iword count) -> T {
+   iword const w = iword(sizeof(T) * 8u);
+   auto const w_r = w.raw;
+   auto c_r = count.raw % w_r;
+   if (c_r < 0) {
+      c_r += w_r;
+   }
+   if (c_r == 0) {
+      return operand;
+   }
+   auto const unsigned_bits = static_cast<make_unsigned_type<T>>(operand);
+   idx::raw_type const cu = static_cast<idx::raw_type>(c_r);
+   idx::raw_type const ws = static_cast<idx::raw_type>(w_r);
+   return static_cast<T>((unsigned_bits << cu) | (unsigned_bits >> (ws - cu)));
+}
+
+template <typename T>
+   requires(is_integral<T> && !is_same<T, bool>)
+[[nodiscard]]
+constexpr auto
+simd_rotate_right_lane(T operand, iword count) -> T {
+   iword const w = iword(sizeof(T) * 8u);
+   auto const w_r = w.raw;
+   auto c_r = count.raw % w_r;
+   if (c_r < 0) {
+      c_r += w_r;
+   }
+   if (c_r == 0) {
+      return operand;
+   }
+   auto const unsigned_bits = static_cast<make_unsigned_type<T>>(operand);
+   idx::raw_type const cu = static_cast<idx::raw_type>(c_r);
+   idx::raw_type const ws = static_cast<idx::raw_type>(w_r);
+   return static_cast<T>((unsigned_bits >> cu) | (unsigned_bits << (ws - cu)));
+}
+
+template <typename T, typename Abi>
+   requires(is_integral<T> && !is_same<T, bool>)
+[[nodiscard]]
+constexpr auto
+simd_rotate_left_generic(simd<T, Abi> input, iword count) -> simd<T, Abi> {
+   simd<T, Abi> result{};
+   for (idx i = 0u; i < Abi::lanes; ++i) {
+      result.set_lane(i, simd_rotate_left_lane(input[i], count));
+   }
+   return result;
+}
+
+template <typename T, typename Abi>
+   requires(is_integral<T> && !is_same<T, bool>)
+[[nodiscard]]
+constexpr auto
+simd_rotate_right_generic(simd<T, Abi> input, iword count) -> simd<T, Abi> {
+   simd<T, Abi> result{};
+   for (idx i = 0u; i < Abi::lanes; ++i) {
+      result.set_lane(i, simd_rotate_right_lane(input[i], count));
+   }
+   return result;
+}
+
+struct simd_rotate_left_impl
+    : simd_elementwise_unary_int_interface<simd_rotate_left_impl> {
+   constexpr simd_rotate_left_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_integral<T> && !is_same<T, bool>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input, iword count) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_int<simd_abi::op_rotate_left, T, Abi>) {
+         return simd_abi_apply_unary_int<simd_abi::op_rotate_left, T, Abi>(
+            input, count);
+      } else {
+         return simd_rotate_left_generic(input, count);
+      }
+   }
+
+   template <typename T>
+      requires(is_integral<T> && !is_same<T, bool>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T operand, iword count) const -> T {
+      return simd_rotate_left_lane(operand, count);
+   }
+};
+
+struct simd_rotate_right_impl
+    : simd_elementwise_unary_int_interface<simd_rotate_right_impl> {
+   constexpr simd_rotate_right_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_integral<T> && !is_same<T, bool>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> input, iword count) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_unary_int<simd_abi::op_rotate_right, T, Abi>) {
+         return simd_abi_apply_unary_int<simd_abi::op_rotate_right, T, Abi>(
+            input, count);
+      } else {
+         return simd_rotate_right_generic(input, count);
+      }
+   }
+
+   template <typename T>
+      requires(is_integral<T> && !is_same<T, bool>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T operand, iword count) const -> T {
+      return simd_rotate_right_lane(operand, count);
+   }
+};
+
+struct simd_min_impl : simd_elementwise_binary_interface<simd_min_impl> {
+   constexpr simd_min_impl() = default;
+
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+      if constexpr (is_floating_point<T>) {
+         if constexpr (has_simd_abi_binary_full<simd_abi::op_minimum, T, Abi>) {
+            return simd_abi_apply_binary_full<simd_abi::op_minimum, T, Abi>(
+               left, right);
+         } else {
+            return simd<T, Abi>(
+               __builtin_elementwise_minimum(left.raw, right.raw));
+         }
+      } else {
+         simd<T, Abi> result{};
+         for (idx i = 0u; i < Abi::lanes; ++i) {
+            result.set_lane(i, left[i] < right[i] ? left[i] : right[i]);
+         }
+         return result;
+      }
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T left, T right) const -> T {
+      if constexpr (is_floating_point<T>) {
+         using R = raw_arithmetic_type<T>;
+         if constexpr (is_same<R, float>) {
+            return T(
+               __builtin_fminf(static_cast<R>(make_raw_arithmetic(left)),
+                               static_cast<R>(make_raw_arithmetic(right))));
+         }
+         return T(__builtin_fmin(static_cast<R>(make_raw_arithmetic(left)),
+                                 static_cast<R>(make_raw_arithmetic(right))));
+      } else {
+         return left < right ? left : right;
+      }
+   }
+};
+
+struct simd_max_impl : simd_elementwise_binary_interface<simd_max_impl> {
+   constexpr simd_max_impl() = default;
+
+   template <typename T, typename Abi>
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+      if constexpr (is_floating_point<T>) {
+         if constexpr (has_simd_abi_binary_full<simd_abi::op_maximum, T, Abi>) {
+            return simd_abi_apply_binary_full<simd_abi::op_maximum, T, Abi>(
+               left, right);
+         } else {
+            return simd<T, Abi>(
+               __builtin_elementwise_maximum(left.raw, right.raw));
+         }
+      } else {
+         simd<T, Abi> result{};
+         for (idx i = 0u; i < Abi::lanes; ++i) {
+            result.set_lane(i, left[i] > right[i] ? left[i] : right[i]);
+         }
+         return result;
+      }
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T left, T right) const -> T {
+      if constexpr (is_floating_point<T>) {
+         using R = raw_arithmetic_type<T>;
+         if constexpr (is_same<R, float>) {
+            return T(
+               __builtin_fmaxf(static_cast<R>(make_raw_arithmetic(left)),
+                               static_cast<R>(make_raw_arithmetic(right))));
+         }
+         return T(__builtin_fmax(static_cast<R>(make_raw_arithmetic(left)),
+                                 static_cast<R>(make_raw_arithmetic(right))));
+      } else {
+         return left > right ? left : right;
+      }
+   }
+};
+
+struct simd_fma_impl
+    : simd_elementwise_ternary_interface<simd_fma_impl, simd_abi::op_fma> {
+   constexpr simd_fma_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z) const
+      -> simd<T, Abi> {
+      // P2638R0 §1.19 fused multiply-add on every lane.
+      // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
+      if constexpr (has_simd_abi_ternary_full<simd_abi::op_fma, T, Abi>) {
+         return simd_abi_apply_ternary_full<simd_abi::op_fma, T, Abi>(x, y, z);
+      }
+      return simd<T, Abi>(__builtin_elementwise_fma(x.raw, y.raw, z.raw));
+   }
+
+   template <typename T>
+      requires(is_floating_point<T>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x, T y, T z) const -> T {
+      // P2638R0 §1.19 fused multiply-add (scalar lane hook).
+      // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
+      using R = raw_arithmetic_type<T>;
+      if constexpr (is_same<R, float>) {
+         return T(__builtin_fmaf(static_cast<R>(make_raw_arithmetic(x)),
+                                 static_cast<R>(make_raw_arithmetic(y)),
+                                 static_cast<R>(make_raw_arithmetic(z))));
+      }
+      return T(__builtin_fma(static_cast<R>(make_raw_arithmetic(x)),
+                             static_cast<R>(make_raw_arithmetic(y)),
+                             static_cast<R>(make_raw_arithmetic(z))));
+   }
+};
+
+struct simd_fshl_impl
+    : simd_elementwise_ternary_interface<simd_fshl_impl, simd_abi::op_fshl> {
+   constexpr simd_fshl_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_integral<T> && !is_same<T, bool>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z) const
+      -> simd<T, Abi> {
+      if constexpr (has_simd_abi_ternary_full<simd_abi::op_fshl, T, Abi>) {
+         return simd_abi_apply_ternary_full<simd_abi::op_fshl, T, Abi>(x, y, z);
+      }
+      return simd<T, Abi>(__builtin_elementwise_fshl(x.raw, y.raw, z.raw));
+   }
+
+   template <typename T>
+      requires(is_integral<T> && !is_same<T, bool>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x, T y, T z) const -> T {
+      using U = make_unsigned_type<T>;
+      U const hi = static_cast<U>(x);
+      U const lo = static_cast<U>(y);
+      unsigned int const count =
+         static_cast<unsigned int>(make_raw_arithmetic(z))
+         % static_cast<unsigned int>(sizeof(T) * 8u);
+      return static_cast<T>(__builtin_fshl(hi, lo, count));
+   }
+};
+
+struct simd_fshr_impl
+    : simd_elementwise_ternary_interface<simd_fshr_impl, simd_abi::op_fshr> {
+   constexpr simd_fshr_impl() = default;
+
+   template <typename T, typename Abi>
+      requires(is_integral<T> && !is_same<T, bool>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z) const
+      -> simd<T, Abi> {
+      if constexpr (has_simd_abi_ternary_full<simd_abi::op_fshr, T, Abi>) {
+         return simd_abi_apply_ternary_full<simd_abi::op_fshr, T, Abi>(x, y, z);
+      }
+      return simd<T, Abi>(__builtin_elementwise_fshr(x.raw, y.raw, z.raw));
+   }
+
+   template <typename T>
+      requires(is_integral<T> && !is_same<T, bool>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x, T y, T z) const -> T {
+      using U = make_unsigned_type<T>;
+      U const hi = static_cast<U>(x);
+      U const lo = static_cast<U>(y);
+      unsigned int const count =
+         static_cast<unsigned int>(make_raw_arithmetic(z))
+         % static_cast<unsigned int>(sizeof(T) * 8u);
+      return static_cast<T>(__builtin_fshr(hi, lo, count));
+   }
+};
+
+struct simd_ldexp_impl
+    : simd_elementwise_binary_mixed_interface<simd_ldexp_impl> {
+   constexpr simd_ldexp_impl() = default;
+
+   template <typename T, typename IntT, typename Abi>
+      requires(is_floating_point<T> && is_integral<IntT>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_full(simd<T, Abi> x, simd<IntT, Abi> y) const -> simd<T, Abi> {
+      if constexpr (has_simd_abi_binary_mixed<simd_abi::op_ldexp, T, IntT,
+                                              Abi>) {
+         return simd_abi_apply_binary_mixed<simd_abi::op_ldexp, T, IntT, Abi>(
+            x, y);
+      }
+      return simd<T, Abi>(__builtin_elementwise_ldexp(x.raw, y.raw));
+   }
+
+   template <typename T, typename IntT>
+      requires(is_floating_point<T> && is_integral<IntT>)
+   [[nodiscard]]
+   constexpr auto
+   invoke_lanewise(T x, IntT y) const -> T {
+      using R = raw_arithmetic_type<T>;
+      int const exp = static_cast<int>(make_raw_arithmetic(y));
+      if constexpr (is_same<R, float>) {
+         return T(
+            __builtin_ldexpf(static_cast<R>(make_raw_arithmetic(x)), exp));
+      }
+      return T(__builtin_ldexp(static_cast<R>(make_raw_arithmetic(x)), exp));
+   }
+};
+
+}  // namespace detail
+
+// Free wrappers and mask-free broadcasts (`iota`, `make_simd_filled`, lane
+// helpers).
+
+template <typename T>
+   requires(is_floating_point<T>)
+[[nodiscard]]
+constexpr auto
+simd_fma_lane(T x, T y, T z) -> T {
+   return detail::simd_fma_impl{}.invoke_lanewise(x, y, z);
+}
+
+template <typename T>
+   requires(is_integral<T> && !is_same<T, bool>)
+[[nodiscard]]
+constexpr auto
+simd_fshl_lane(T x, T y, T z) -> T {
+   return detail::simd_fshl_impl{}.invoke_lanewise(x, y, z);
+}
+
+template <typename T>
+   requires(is_integral<T> && !is_same<T, bool>)
+[[nodiscard]]
+constexpr auto
+simd_fshr_lane(T x, T y, T z) -> T {
+   return detail::simd_fshr_impl{}.invoke_lanewise(x, y, z);
+}
+
+template <typename T, typename IntT>
+   requires(is_floating_point<T> && is_integral<IntT>)
+[[nodiscard]]
+constexpr auto
+simd_ldexp_lane(T x, IntT y) -> T {
+   return detail::simd_ldexp_impl{}.invoke_lanewise(x, y);
+}
+
+// Mask-free lane ramp only. Blended updates use
+// `simd_iota<V>[lane_blend_mask](passthrough, start)`.
+template <typename V, typename U>
+   requires(is_simd<V> && is_arithmetic<typename V::scalar_type>
+            && !is_same<typename V::scalar_type, bool>
+            && is_implicitly_convertible<U, typename V::scalar_type>)
+[[nodiscard]]
+constexpr auto
+iota(U start) -> V {
+   return detail::simd_iota_impl<V>{}(start);
+}
+
+// Broadcasts `value` to every lane with no lane blend mask. Blended fills use
+// `simd_filled<V>[lane_blend_mask](passthrough, value)`.
+template <is_simd V, typename U>
+   requires(is_convertible<U, typename V::scalar_type>)
+[[nodiscard]]
+constexpr auto
+make_simd_filled(U value) -> V {
+   return detail::make_simd_filled_impl<V>{}(static_cast<U&&>(value));
+}
+
+template <is_simd_mask M>
+[[nodiscard]]
+constexpr auto
+make_simd_mask_filled(bool value) -> M {
+   return detail::make_simd_mask_filled_impl<M>{}(value);
+}
+
+// Factory exports. Mask-free `make_simd_*` / `iota` pairs sit next to each
+// `simd_*` functor above.
+
+// Gather-style loads into a new `simd` from a contiguous buffer.
+template <is_simd V>
+inline constexpr detail::make_simd_loaded_aligned_impl<V>
+   make_simd_loaded_aligned{};
+
+template <is_simd V>
+inline constexpr detail::make_simd_loaded_unaligned_impl<V>
+   make_simd_loaded_unaligned{};
+
+template <is_simd V>
+inline constexpr detail::make_simd_loaded_impl<V> make_simd_loaded{};
+
+// Partial gather-style load from a contiguous prefix of `source`.
+template <is_simd V>
+inline constexpr detail::make_simd_partial_loaded_impl<V>
+   make_simd_partial_loaded{};
+
+// Lane blend `simd_filled<V>[lane_blend_mask](passthrough, value)`. Mask-free
+// broadcast `make_simd_filled<V>(value)` is the free function above.
+template <is_simd V>
+inline constexpr detail::make_simd_filled_impl<V> simd_filled{};
+
+// Lane blend `simd_iota<V>[lane_blend_mask](passthrough, start)`. Mask-free
+// lane ramp `iota<V>(start)` is the free function above.
+template <is_simd V>
+inline constexpr detail::simd_iota_impl<V> simd_iota{};
+
+// Lane blend `simd_mask_filled<M>[lane_blend_mask](passthrough, bit)`.
+// Mask-free broadcast `make_simd_mask_filled<M>(bit)` is the free function
+// above.
+template <is_simd_mask M>
+inline constexpr detail::make_simd_mask_filled_impl<M> simd_mask_filled{};
+
+// Gather-style load of mask lanes from a `bool` buffer.
+template <is_simd_mask M>
+inline constexpr detail::make_simd_mask_loaded_impl<M> make_simd_mask_loaded{};
+
+// Gather-style masked loads (vector←memory).
+inline constexpr detail::simd_load_impl<simd_memory_kind::aligned>
+   simd_load_aligned{};
+inline constexpr detail::simd_load_impl<simd_memory_kind::unaligned>
+   simd_load_unaligned{};
+inline constexpr detail::simd_load_impl<simd_memory_kind::dispatch> simd_load{};
+
+// Scatter-style masked stores (memory←vector).
+inline constexpr detail::simd_store_impl simd_store_aligned{};
+inline constexpr detail::simd_store_impl simd_store_unaligned{};
+inline constexpr detail::simd_store_impl simd_store{};
+
+// Indexed gather from `base` using per-lane indices.
+template <typename T, typename Abi>
+inline constexpr detail::simd_load_from_impl<T, Abi> simd_load_from{};
+
+// Indexed scatter to `base` using per-lane indices.
+template <typename T, typename Abi>
+inline constexpr detail::simd_store_to_impl<T, Abi> simd_store_to{};
+
+inline constexpr detail::simd_if_else_impl simd_if_else{};
+inline constexpr detail::simd_select_impl simd_select{};
+
+inline constexpr detail::make_simd_mask_if_impl make_simd_mask_if{};
+
+template <typename Simd>
+inline constexpr detail::make_simd_mask_from_count_impl<Simd>
+   make_simd_mask_from_count{};
+
+template <typename Simd>
+inline constexpr detail::make_simd_mask_ignore_first_impl<Simd>
+   make_simd_mask_ignore_first{};
+
+template <typename Simd>
+inline constexpr detail::make_simd_mask_ignore_last_impl<Simd>
+   make_simd_mask_ignore_last{};
+
+template <typename Simd>
+inline constexpr detail::make_simd_mask_keep_between_impl<Simd>
+   make_simd_mask_keep_between{};
+
+inline constexpr detail::simd_sqrt_impl simd_sqrt{};
+inline constexpr detail::simd_rsqrt_impl simd_rsqrt{};
+inline constexpr detail::simd_nroot_impl simd_nroot{};
+inline constexpr detail::simd_cbrt_impl simd_cbrt{};
+inline constexpr detail::simd_rcbrt_impl simd_rcbrt{};
+inline constexpr detail::simd_rnroot_impl simd_rnroot{};
+inline constexpr detail::simd_popcount_impl simd_popcount{};
+
+template <typename NewT>
+inline constexpr detail::simd_bit_cast_as_impl<NewT> simd_bit_cast_as{};
+
+inline constexpr detail::simd_permute_impl simd_permute{};
+
+template <int... Idx>
+inline constexpr detail::simd_shuffle_impl<Idx...> simd_shuffle{};
+
+inline constexpr detail::simd_compress_impl simd_compress{};
+inline constexpr detail::simd_expand_impl simd_expand{};
+
+inline constexpr detail::simd_rotate_left_impl simd_rotate_left{};
+inline constexpr detail::simd_rotate_right_impl simd_rotate_right{};
+inline constexpr detail::simd_min_impl simd_min{};
+inline constexpr detail::simd_max_impl simd_max{};
+
+inline constexpr detail::simd_abs_impl simd_abs{};
+inline constexpr detail::simd_sin_impl simd_sin{};
+inline constexpr detail::simd_cos_impl simd_cos{};
+inline constexpr detail::simd_tan_impl simd_tan{};
+inline constexpr detail::simd_asin_impl simd_asin{};
+inline constexpr detail::simd_acos_impl simd_acos{};
+inline constexpr detail::simd_atan_impl simd_atan{};
+inline constexpr detail::simd_sinh_impl simd_sinh{};
+inline constexpr detail::simd_cosh_impl simd_cosh{};
+inline constexpr detail::simd_tanh_impl simd_tanh{};
+inline constexpr detail::simd_ceil_impl simd_ceil{};
+inline constexpr detail::simd_floor_impl simd_floor{};
+inline constexpr detail::simd_log_impl simd_log{};
+inline constexpr detail::simd_log2_impl simd_log2{};
+inline constexpr detail::simd_log10_impl simd_log10{};
+inline constexpr detail::simd_exp_impl simd_exp{};
+inline constexpr detail::simd_exp2_impl simd_exp2{};
+inline constexpr detail::simd_exp10_impl simd_exp10{};
+inline constexpr detail::simd_roundeven_impl simd_roundeven{};
+inline constexpr detail::simd_round_impl simd_round{};
+inline constexpr detail::simd_trunc_impl simd_trunc{};
+inline constexpr detail::simd_nearbyint_impl simd_nearbyint{};
+inline constexpr detail::simd_rint_impl simd_rint{};
+inline constexpr detail::simd_canonicalize_impl simd_canonicalize{};
+inline constexpr detail::simd_bitreverse_impl simd_bitreverse{};
+inline constexpr detail::simd_pow_impl simd_pow{};
+inline constexpr detail::simd_atan2_impl simd_atan2{};
+inline constexpr detail::simd_copysign_impl simd_copysign{};
+inline constexpr detail::simd_fmod_impl simd_fmod{};
+inline constexpr detail::simd_minnum_impl simd_minnum{};
+inline constexpr detail::simd_maxnum_impl simd_maxnum{};
+inline constexpr detail::simd_minimumnum_impl simd_minimumnum{};
+inline constexpr detail::simd_maximumnum_impl simd_maximumnum{};
+inline constexpr detail::simd_add_sat_impl simd_add_sat{};
+inline constexpr detail::simd_sub_sat_impl simd_sub_sat{};
+inline constexpr detail::simd_fma_impl simd_fma{};
+inline constexpr detail::simd_fshl_impl simd_fshl{};
+inline constexpr detail::simd_fshr_impl simd_fshr{};
+inline constexpr detail::simd_ldexp_impl simd_ldexp{};
+}  // namespace cat

@@ -9,8 +9,7 @@ cat::detail::compare_strings_detail(str_view const string_1,
       return false;
    }
 
-   // TODO: Use a type for an ISA-specific widest vector.
-   using vector = char1x32;
+   using vector = char1x_;
 
    array<vector, 4u> vectors_1;
    array<vector, 4u> vectors_2;
@@ -20,37 +19,41 @@ cat::detail::compare_strings_detail(str_view const string_1,
    char const* p_string_1_iterator = string_1.data();
    char const* p_string_2_iterator = string_2.data();
 
-   auto loop = [&](idx size) -> bool {
-      while (length_iterator >= vector_size * size) {
-         for (idx i; i < size; ++i) {
-            vectors_1[i].load(string_1.data() + (i * size));
-            vectors_2[i].load(string_2.data() + (i * size));
-            comparisons[i] = (vectors_1[i] == vectors_2[i]);
+   auto loop = [&](idx batch_count) -> bool {
+      while (length_iterator >= vector_size * batch_count) {
+         for (idx i = 0u; i < batch_count; ++i) {
+            char const* const chunk_1 =
+               p_string_1_iterator + i.raw * vector_size.raw;
+            char const* const chunk_2 =
+               p_string_2_iterator + i.raw * vector_size.raw;
+            vectors_1[i].load_unaligned(chunk_1);
+            vectors_2[i].load_unaligned(chunk_2);
+            comparisons[i] = vectors_1[i].equal_lanes(vectors_2[i]);
          }
 
-         for (idx i; i < size; ++i) {
+         for (idx i = 0u; i < batch_count; ++i) {
             // If any lanes are not equal to each other:
             if (!comparisons[i].all_of()) {
                return false;
             }
          }
 
-         length_iterator.raw -= vector_size.raw * size.raw;
-         p_string_1_iterator += vector_size * size;
-         p_string_2_iterator += vector_size * size;
+         length_iterator.raw -= vector_size.raw * batch_count.raw;
+         p_string_1_iterator += vector_size.raw * batch_count.raw;
+         p_string_2_iterator += vector_size.raw * batch_count.raw;
       }
 
       return true;
    };
 
    // Compare four, two, then one vectors of characters at a time.
-   if (!loop(4u)) {
+   if (!loop(4_idx)) {
       return false;
    }
-   if (!loop(2u)) {
+   if (!loop(2_idx)) {
       return false;
    }
-   if (!loop(1u)) {
+   if (!loop(1_idx)) {
       return false;
    }
 
