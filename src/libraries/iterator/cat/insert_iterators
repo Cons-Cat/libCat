@@ -9,7 +9,8 @@ namespace cat {
 
 template <typename T>
 class back_insert_iterator
-    : public iterator_interface<back_insert_iterator<T>> {
+    : public iterator_interface<output_iterator_tag, void,
+                                back_insert_iterator<T>&, void> {
  public:
    using container_type = T;
 
@@ -21,7 +22,7 @@ class back_insert_iterator
    constexpr auto
    operator=(U& value) = delete;
 
-   // `.insert()` is used instead of an overloaded `=` because it might
+   // `.insert()` is used instead of an overloaded = because it might
    // need to take an allocator parameter.
 
    template <typename U>
@@ -110,7 +111,8 @@ class back_insert_iterator
 
 template <is_iterable T>
 class front_insert_iterator
-    : public iterator_interface<front_insert_iterator<T>> {
+    : public iterator_interface<output_iterator_tag, void,
+                                front_insert_iterator<T>&, void> {
  public:
    using container_type = T;
 
@@ -122,7 +124,7 @@ class front_insert_iterator
    constexpr auto
    operator=(U& value) = delete;
 
-   // `.insert()` is used instead of an overloaded `=` because it might
+   // `.insert()` is used instead of an overloaded = because it might
    // need to take an allocator parameter.
 
    template <typename U>
@@ -208,5 +210,21 @@ class front_insert_iterator
  private:
    T& m_iterable;
 };
+
+template <is_iterable T>
+[[nodiscard]]
+constexpr auto
+as_back_inserter(T& container)
+   -> back_insert_iterator<T> {
+   return back_insert_iterator<T>(container);
+}
+
+template <is_iterable T>
+[[nodiscard]]
+constexpr auto
+as_front_inserter(T& container)
+   -> front_insert_iterator<T> {
+   return front_insert_iterator<T>(container);
+}
 
 }  // namespace cat

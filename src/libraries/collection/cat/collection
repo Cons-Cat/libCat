@@ -87,7 +87,7 @@ concept has_cend = requires(T t) { t.cend(); };
 // `cat::vec<int4, allocator>::iterator`.
 template <typename T>
 class collection_iterator
-    : public iterator_interface<collection_iterator<T>, T> {
+    : public iterator_interface<random_access_iterator_tag, T> {
  public:
    using value_type = T;
    using const_value_type = T const;
@@ -145,9 +145,9 @@ class iterable_interface {
    using const_reference = T const&;
 
    using iterator = iterator_type<T, args...>;
-   using const_iterator = const_iterator_adaptor<iterator_type, T, args...>;
-   using reverse_iterator = reverse_iterator_adaptor<iterator>;
-   using const_reverse_iterator = reverse_iterator_adaptor<const_iterator>;
+   using const_iterator = const_proxy_iterator<iterator_type, T, args...>;
+   using reverse_iterator = reverse_proxy_iterator<iterator>;
+   using const_reverse_iterator = reverse_proxy_iterator<const_iterator>;
 
    [[nodiscard]]
    constexpr auto
@@ -246,14 +246,13 @@ class random_access_iterable_interface
       idx const last =
          narrow_to_idx(collection.size().raw - 1u).assert();
       auto* p_data = fwd(collection).data();
-      return reverse_iterator_adaptor(
-         detail::collection_iterator(last, p_data));
+      return reverse_proxy_iterator(detail::collection_iterator(last, p_data));
    }
 
    [[nodiscard]]
    constexpr auto
    rend(this auto&& collection) {
-      return reverse_iterator_adaptor(
+      return reverse_proxy_iterator(
          detail::collection_iterator(0, fwd(collection).data()));
    }
 };

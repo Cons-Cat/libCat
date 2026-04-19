@@ -212,8 +212,8 @@ test(list) {
 
    // Test `back_insert_iterator`.
    cat::list back_list = cat::make_list<int4>(allocator).verify();
-   cat::back_insert_iterator back_iterator(back_list);
-   cat::front_insert_iterator front_iterator(back_list);
+   auto back_iterator = cat::as_back_inserter(back_list);
+   auto front_iterator = cat::as_front_inserter(back_list);
    back_iterator.insert(10).verify();
    cat::verify(back_list.front() == 10);
 

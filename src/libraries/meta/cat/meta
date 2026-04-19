@@ -4,6 +4,11 @@
 
 namespace cat {
 
+// Tag for `cat::iterator_interface` specializations. `arithmetic_interface`
+// uses it to keep `iterator + iword` on `iterator_interface` operators
+// instead of `plus_interface` on the `iword` type.
+struct iterator_interface_base {};
+
 // Forward declare numeric types. These are implemented in `<arithmetic>`.
 enum class overflow_policies : unsigned char;
 
@@ -531,7 +536,8 @@ struct make_signed_trait {
    using type = T;
 };
 
-// Identity on the type `make_signed` / `make_signed_type`. Leave floats unchanged.
+// Identity on the type `make_signed` / `make_signed_type`. Leave floats
+// unchanged.
 template <typename T>
    requires(is_floating_point<T>)
 struct make_signed_trait<T> {
@@ -574,6 +580,7 @@ struct make_signed_trait<arithmetic<T, policy>> {
 };
 }  // namespace detail
 
+// `make_signed_type` maps unsigned integers to their signed width. For
 // floating-point types it is the identity (the type is unchanged).
 template <is_arithmetic T>
 using make_signed_type =
@@ -830,7 +837,7 @@ concept is_unary_minusable = requires(T t) { -t; };
 // TODO: Add `++` and `--` operator concepts.
 
 template <typename T, typename U = T>
-concept is_multipliable = requires(T t, U u) { t* u; };
+concept is_multipliable = requires(T t, U u) { t * u; };
 
 template <typename T, typename U = T>
 concept is_multiply_assignable = requires(T t, U u) { t *= u; };
@@ -984,14 +991,30 @@ concept is_nothrow_invocable =
    is_invocable<Function, Args...>;
 #endif
 
+// P2727R4 [iterator.interface] proxy_arrow_result; same idea as
 // https://quuxplusone.github.io/blog/2019/02/06/arrow-proxy/
-template <typename reference_type>
-struct arrow_proxy {
-   reference_type reference;
+template <typename T>
+struct proxy_arrow_result {
+ private:
+   T value_;
 
-   auto
-   operator->() -> reference_type* {
-      return &reference;
+ public:
+   constexpr proxy_arrow_result(T const& value) noexcept(noexcept(T(value)))
+       : value_(value) {
+   }
+
+   constexpr proxy_arrow_result(T&& value) noexcept(noexcept(T(fwd(value))))
+       : value_(fwd(value)) {
+   }
+
+   constexpr T const*
+   operator->() const noexcept {
+      return &value_;
+   }
+
+   constexpr T*
+   operator->() noexcept {
+      return &value_;
    }
 };
 

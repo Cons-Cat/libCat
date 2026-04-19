@@ -557,13 +557,18 @@ template <typename iterator>
 // Only storage types can be iterated bitwise.
    requires(is_unsigned_integral<typename iterator::value_type>
             /* || is_same<typename iterator::value_type, byte> */)
-class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
+class bit_iterator : public proxy_iterator_interface<
+                        random_access_iterator_tag, bit_value,
+                        bit_reference<typename iterator::value_type>, iword> {
  private:
    static constexpr idx word_bits = limits<typename iterator::value_type>::bits;
 
  public:
    using value_type = bit_value;
+using const_value_type = bit_value const;
    using reference = bit_reference<typename iterator::value_type>;
+using const_reference =
+      bit_reference<remove_cvref<typename iterator::value_type> const>;
 
    constexpr bit_iterator() = default;
    constexpr bit_iterator(bit_iterator const&) = default;
@@ -579,15 +584,16 @@ class bit_iterator : public iterator_interface<bit_iterator<iterator>> {
    }
 
    constexpr auto
-   dereference() const -> reference {
-      return reference::from_offset(*m_internal_iterator, m_bit_position);
+   dereference() const -> const_reference {
+      return const_reference::from_offset(*m_internal_iterator, m_bit_position);
    }
 
-   // The `bit_iterator` adaptor moves in a way that may be couner-intuitive at
-   // first. It will travel forwards across the elements of a collection, but
-   // backwards across that element's bits. It cannot move backwards across the
-   // elements, because that would require it adapt to only bidi-iterators and
-   // never forward iterators, which s an unacceptable limitation.
+   // The `bit_iterator` proxy iterator moves in a way that may be
+   // couner-intuitive at first. It will travel forwards across the elements of
+   // a collection, but backwards across that element's bits. It cannot move
+   // backwards across the elements, because that would require it adapt to only
+   // bidi-iterators and never forward iterators, which s an unacceptable
+   // limitation.
    constexpr void
    advance(iword offset) {
       iword advance_bits = m_bit_position + offset;
