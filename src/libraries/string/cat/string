@@ -5,9 +5,9 @@
 #include <cat/detail/simd_impl.hpp>
 
 #include <cat/bit>
+#include <cat/maybe>
 #include <cat/simd>
 #include <cat/span>
-#include <cat/maybe>
 
 namespace std {
 
@@ -76,15 +76,14 @@ class basic_str_span : public span<char_type> {
    template <idx other_length>
       requires(!is_const<char_type>)
    consteval basic_str_span(char_type const (&string)[other_length]) =
-      delete("Cannot construct a mutable `str_span` over a `char const*` "
+      delete ("Cannot construct a mutable `str_span` over a `char const*` "
              "literal! Consider a `str_view` instead.");
 
    // Make a `str_span` over a `str_inplace`.
    template <idx other_length>
    constexpr basic_str_span(basic_str_inplace<char_type, other_length,
                                               is_null_terminated>& other_string
-                            [[clang::lifetimebound]]
-   ) {
+                            [[clang::lifetimebound]]) {
       this->m_p_data = other_string.data();
       this->m_size = other_length;
    }
@@ -131,7 +130,7 @@ class basic_str_span : public span<char_type> {
       requires(is_null_terminated && !is_const<char_type>)
    constexpr basic_str_span(
       basic_str_inplace<char_type, other_length, false> const&) =
-      delete("Cannot bind a null-terminated `zstr_span` over a "
+      delete ("Cannot bind a null-terminated `zstr_span` over a "
              "non null-terminated `str_inplace`!");
 
    // Promote `basic_str_span<char>` to `basic_str_span<char const>`.
@@ -168,7 +167,7 @@ class basic_str_span : public span<char_type> {
    // Prevent binding a `zstr_span` over a `str_span`.
    constexpr basic_str_span(basic_str_span<char_type, false> const&)
       requires(is_null_terminated)
-   = delete("Cannot bind a null-terminated `zstr_span` over a "
+   = delete ("Cannot bind a null-terminated `zstr_span` over a "
             "non null-terminated `str_span`!");
 
    // Promote `span<char>` to `basic_str_span<char>`.
@@ -282,10 +281,9 @@ class basic_str_inplace
    // Construct and deduce length from a string literal.
    // Add 1 to length to ignore a null terminator.
    consteval basic_str_inplace(
-      char_type const (&string)[idx(
-         length.raw + !is_null_terminated)]) {
-      [[assume(string[length.raw
-                      - static_cast<__SIZE_TYPE__>(is_null_terminated)]
+      char_type const (&string)[idx(length.raw + !is_null_terminated)]) {
+      [[assume(
+         string[length.raw - static_cast<__SIZE_TYPE__>(is_null_terminated)]
                == '\0')]];
       // This must be copied instead of initialized in-place to guarantee
       // const-correctness.
@@ -308,8 +306,8 @@ class basic_str_inplace
    operator=(char_type const (&string)[idx(
       length.raw - static_cast<__SIZE_TYPE__>(is_null_terminated))])
       -> basic_str_inplace& {
-      [[assume(string[length.raw - 1uz + static_cast<__SIZE_TYPE__>(
-                  !is_null_terminated)]
+      [[assume(string[length.raw - 1uz
+                      + static_cast<__SIZE_TYPE__>(!is_null_terminated)]
                == '\0')]];
       this->copy_string_data(string);
       return *this;
@@ -400,10 +398,10 @@ class basic_str_inplace
       // treated as null-terminated (`!is_null_terminated` is false). Otherwise
       // the subtrahend is zero.
       return self
-             + basic_str_inplace<
-                  char_type,
+             + basic_str_inplace<char_type,
                   narrow_to_idx(other_length.raw
-                         - static_cast<__SIZE_TYPE__>(!is_null_terminated))
+                                               - static_cast<__SIZE_TYPE__>(
+                                                  !is_null_terminated))
                      .value(),
                   is_null_terminated>{other_string};
    }
@@ -416,10 +414,10 @@ class basic_str_inplace
       basic_str_inplace<char_type, length, is_null_terminated> const& self) {
       [[assume(other_string[other_length.raw - 1] == '\0')]];
       // Same reasoning as `operator+` from `basic_str_inplace` to a literal.
-      return basic_str_inplace<
-                char_type,
+      return basic_str_inplace<char_type,
                 narrow_to_idx(other_length.raw
-                       - static_cast<__SIZE_TYPE__>(!is_null_terminated))
+                                             - static_cast<__SIZE_TYPE__>(
+                                                !is_null_terminated))
                    .value(),
                 is_null_terminated>{other_string}
              + self;
@@ -444,7 +442,7 @@ class basic_str_inplace
 template <idx len>
 basic_str_inplace(char const (&str)[len])
    // A string literal includes a trailing null, so `len` is at least one.
-   -> basic_str_inplace<char, narrow_to_idx(len.raw - 1uz).value(), false>;
+   ->basic_str_inplace<char, narrow_to_idx(len.raw - 1uz).value(), false>;
 
 template <idx deduced_length>
 using str_inplace = basic_str_inplace<char, deduced_length, false>;
@@ -468,8 +466,8 @@ make_str_inplace(char const (&string)[deduced_length])
       new_string[i] = string[i.raw];
    }
    // Pad the string out with null bytes. Padding starts at the same index as
-   // the literal's trailing null slot, so the `narrow_to_idx` call matches the copy
-   // loop bound above.
+   // the literal's trailing null slot, so the `narrow_to_idx` call matches the
+   // copy loop bound above.
    for (idx i = narrow_to_idx(deduced_length.raw - 1uz).value();
         i < padded_length; ++i) {
       new_string[i] = '\0';

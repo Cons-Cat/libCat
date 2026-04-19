@@ -124,7 +124,7 @@ template <is_integral T>
 [[nodiscard]]
 constexpr auto
 to_string_at(arithmetic<T> value, span<char> output_buffer) -> maybe<str_view> {
-   // Add 1 for a negative sign `-` character.
+   // Add 1 for a negative sign - character.
    constexpr iword max_length = to_chars<arithmetic<T>::max()>().size() + 1;
    char buffer[max_length.raw];
    if consteval {
@@ -814,16 +814,15 @@ vfmt(allocator_type& allocator, str_view const format,
    str_view output{p_memory, initial_size};
 
    // `format_string_vector` is a container that satisfies the `Iterable`
-   // `concept` and has a `.push_back()` method for a
-   // `back_insert_iterator`. It is used to store the formatted string
-   // and reallocates when that string grows beyond `initial_size`.
+   // `concept` and has a `.push_back()` method for
+   // `as_back_inserter` / `back_insert_iterator`. It is used to store the
+   // formatted string and reallocates when that string grows beyond
+   // `initial_size`.
    detail::format_string_vector into_buffer = {p_memory, 0u, initial_size};
 
    // TODO: Specify which kind of `scaredy_format` this is.
    auto result =
-      vfmt_to(allocator,
-              back_insert_iterator<detail::format_string_vector>{into_buffer},
-              format, arguments);
+      vfmt_to(allocator, as_back_inserter(into_buffer), format, arguments);
    if (!result.has_value()) {
       return result.template error<format_errors>();
    }

@@ -580,7 +580,7 @@ struct make_signed_trait<arithmetic<T, policy>> {
 };
 }  // namespace detail
 
-// `make_signed_type` maps unsigned integers to their signed width. For
+// `make_signed_type` maps unsigned integers to their signed width; for
 // floating-point types it is the identity (the type is unchanged).
 template <is_arithmetic T>
 using make_signed_type =
@@ -696,7 +696,7 @@ inline constexpr bool is_object = __is_object(T);
 template <typename T>
 concept is_function = __is_function(T);
 
-// Remove `const`/`volatile`-qualifiers, references, and pointers from a
+// Remove `const/volatile`-qualifiers, references, and pointers from a
 // type.
 template <typename T>
 using decay = __decay(T);
@@ -834,7 +834,7 @@ concept is_subtract_assignable = requires(T t, U u) { t += u; };
 template <typename T>
 concept is_unary_minusable = requires(T t) { -t; };
 
-// TODO: Add `++` and `--` operator concepts.
+// TODO: Add ++ and -- operator concepts.
 
 template <typename T, typename U = T>
 concept is_multipliable = requires(T t, U u) { t * u; };
@@ -952,13 +952,13 @@ constinit inline struct mover {
    template <typename T>
    friend constexpr auto
    operator*(mover, T const& x) =
-      delete("The `mov` macro cannot move a `const` qualifed operand. "
-             "Either copy instead, or call `cat::move()`!");
+      delete ("The `mov` macro cannot move a `const` qualifed operand. "
+              "Either copy instead, or call `cat::move()`!");
 
    // Prevent redundant `mov mov value;` syntax.
    friend constexpr void
    operator*(mover, mover) =
-      delete("`mov mov ...` syntax is meaningless. Use `mov ...` instead!");
+      delete ("`mov mov ...` syntax is meaningless. Use `mov ...` instead!");
 } mover;
 }  // namespace detail
 
@@ -968,7 +968,7 @@ constinit inline struct mover {
 
 // `rvalue` binds r-value references and excludes any other references. This
 // is useful for perfect-forwarding parameter functions which could
-// otherwise hide `const&` or `&&` overloads.
+// otherwise hide `const&` or && overloads.
 template <typename T>
 concept rvalue = is_rvalue_reference<T&&> && !is_const<T>;
 
@@ -991,7 +991,6 @@ concept is_nothrow_invocable =
    is_invocable<Function, Args...>;
 #endif
 
-// P2727R4 [iterator.interface] proxy_arrow_result; same idea as
 // https://quuxplusone.github.io/blog/2019/02/06/arrow-proxy/
 template <typename T>
 struct proxy_arrow_result {

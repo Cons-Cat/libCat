@@ -87,9 +87,11 @@ make_signed(T value) -> make_signed_type<T> {
    return static_cast<make_signed_type<T>>(value);
 }
 
-// Identity on the value; pairs with `make_signed_type` for floating-point types.
+// Identity on the value; pairs with `make_signed_type` for floating-point
+// types.
 template <is_floating_point T>
-[[gnu::always_inline, gnu::nodebug]] constexpr auto
+[[gnu::always_inline, gnu::nodebug]]
+constexpr auto
 make_signed(T value) -> T {
    return value;
 }
@@ -667,7 +669,8 @@ struct arithmetic :
       auto raw_other = make_raw_arithmetic(other);
       if constexpr (overflow_policy == undefined) {
          // `make_signed` is the identity on floating-point `raw_type`.
-         // For integers, it widens to signed to match undefined overflow semantics.
+         // For integers, it widens to signed to match undefined overflow
+         // semantics.
          return detail::promoted_type<arithmetic, U>(make_signed(raw)
                                                      + make_signed(raw_other));
       } else if constexpr (overflow_policy == wrap

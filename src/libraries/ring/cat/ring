@@ -23,7 +23,7 @@ class ring : public collection_interface<ring<T>, T> {
    ring(ring&&) = default;
 
  protected:
-   // Being `protected:` permits derived classes and adaptors to call this.
+   // Being `protected:` permits derived classes and friends to call this.
    // Only allow the shallow copy constructor to be used by these static
    // factory member functions. For public copying, `.clone()` should be used.
    [[deprecated("Implicit copying of `cat::ring` is forbidden. Call `.clone() "

@@ -4,7 +4,7 @@
    We cannot use `SIZEOF(.tdata)` unless the linker output already has a
    `.tdata` section. Executables with no `thread_local` never create one, so
    `SIZEOF` and `ADDR` would fail. `INSERT AFTER .text` adds output sections
-   that collect the usual TLS input sections; they may be empty, but
+   that collect the usual TLS input sections they may be empty, but
    `SIZEOF(.tdata)` and `SIZEOF(.tbss)` are then always defined. */
 
 SECTIONS {

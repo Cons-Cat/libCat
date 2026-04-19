@@ -81,7 +81,7 @@ kill_dependency(T expression) -> T {
 // wraps a `bool`, it does not have fetch methods or operators.
 template <typename T>
 class atomic {
-  public:
+ public:
    using value_type = T;
    using raw_value = raw_arithmetic_type<T>;
 
@@ -178,8 +178,7 @@ class atomic {
    operator+=(auto operand) -> T
       requires(!is_same<T, bool>)
    {
-      return T(__atomic_add_fetch(storage_ptr(),
-                                  make_raw_arithmetic(operand),
+      return T(__atomic_add_fetch(storage_ptr(), make_raw_arithmetic(operand),
                                   memory_order::seq_cst));
    }
 
@@ -187,8 +186,7 @@ class atomic {
    operator+=(auto operand) volatile -> T
       requires(!is_same<T, bool>)
    {
-      return T(__atomic_add_fetch(storage_ptr(),
-                                  make_raw_arithmetic(operand),
+      return T(__atomic_add_fetch(storage_ptr(), make_raw_arithmetic(operand),
                                   int(memory_order::seq_cst)));
    }
 
@@ -196,8 +194,7 @@ class atomic {
    operator-=(auto operand) -> T
       requires(!is_same<T, bool>)
    {
-      return T(__atomic_sub_fetch(storage_ptr(),
-                                  make_raw_arithmetic(operand),
+      return T(__atomic_sub_fetch(storage_ptr(), make_raw_arithmetic(operand),
                                   int(memory_order::seq_cst)));
    }
 
@@ -205,8 +202,7 @@ class atomic {
    operator-=(auto operand) volatile -> T
       requires(!is_same<T, bool>)
    {
-      return T(__atomic_sub_fetch(storage_ptr(),
-                                  make_raw_arithmetic(operand),
+      return T(__atomic_sub_fetch(storage_ptr(), make_raw_arithmetic(operand),
                                   int(memory_order::seq_cst)));
    }
 
@@ -214,8 +210,7 @@ class atomic {
    operator&=(auto operand) -> T
       requires(!is_same<T, bool>)
    {
-      return T(__atomic_and_fetch(storage_ptr(),
-                                  make_raw_arithmetic(operand),
+      return T(__atomic_and_fetch(storage_ptr(), make_raw_arithmetic(operand),
                                   int(memory_order::seq_cst)));
    }
 
@@ -223,8 +218,7 @@ class atomic {
    operator&=(auto operand) volatile -> T
       requires(!is_same<T, bool>)
    {
-      return T(__atomic_and_fetch(storage_ptr(),
-                                  make_raw_arithmetic(operand),
+      return T(__atomic_and_fetch(storage_ptr(), make_raw_arithmetic(operand),
                                   int(memory_order::seq_cst)));
    }
 
@@ -232,8 +226,7 @@ class atomic {
    operator|=(auto operand) -> T
       requires(!is_same<T, bool>)
    {
-      return T(__atomic_or_fetch(storage_ptr(),
-                                 make_raw_arithmetic(operand),
+      return T(__atomic_or_fetch(storage_ptr(), make_raw_arithmetic(operand),
                                  int(memory_order::seq_cst)));
    }
 
@@ -241,8 +234,7 @@ class atomic {
    operator|=(auto operand) volatile -> T
       requires(!is_same<T, bool>)
    {
-      return T(__atomic_or_fetch(storage_ptr(),
-                                 make_raw_arithmetic(operand),
+      return T(__atomic_or_fetch(storage_ptr(), make_raw_arithmetic(operand),
                                  int(memory_order::seq_cst)));
    }
 
@@ -250,8 +242,7 @@ class atomic {
    operator^=(auto operand) -> T
       requires(!is_same<T, bool>)
    {
-      return T(__atomic_xor_fetch(storage_ptr(),
-                                  make_raw_arithmetic(operand),
+      return T(__atomic_xor_fetch(storage_ptr(), make_raw_arithmetic(operand),
                                   int(memory_order::seq_cst)));
    }
 
@@ -259,8 +250,7 @@ class atomic {
    operator^=(auto operand) volatile -> T
       requires(!is_same<T, bool>)
    {
-      return T(__atomic_xor_fetch(storage_ptr(),
-                                  make_raw_arithmetic(operand),
+      return T(__atomic_xor_fetch(storage_ptr(), make_raw_arithmetic(operand),
                                   int(memory_order::seq_cst)));
    }
 
@@ -480,7 +470,7 @@ class atomic {
       requires(!is_same<T, bool>)
    {
       return T(__atomic_fetch_and(storage_ptr(), make_raw_arithmetic(operand),
-                                 order));
+                                  order));
    }
 
    auto
@@ -489,15 +479,15 @@ class atomic {
       requires(!is_same<T, bool>)
    {
       return T(__atomic_fetch_and(storage_ptr(), make_raw_arithmetic(operand),
-                                 order));
+                                  order));
    }
 
    auto
    fetch_or(auto operand, memory_order order = memory_order::seq_cst) -> T
       requires(!is_same<T, bool>)
    {
-      return T(__atomic_fetch_or(storage_ptr(), make_raw_arithmetic(operand),
-                                order));
+      return T(
+         __atomic_fetch_or(storage_ptr(), make_raw_arithmetic(operand), order));
    }
 
    auto
@@ -505,8 +495,8 @@ class atomic {
       -> T
       requires(!is_same<T, bool>)
    {
-      return T(__atomic_fetch_or(storage_ptr(), make_raw_arithmetic(operand),
-                                order));
+      return T(
+         __atomic_fetch_or(storage_ptr(), make_raw_arithmetic(operand), order));
    }
 
    auto
@@ -529,7 +519,8 @@ class atomic {
    // TODO: Add C++20 atomic wait operations.
 
  private:
-   [[nodiscard]] constexpr auto
+   [[nodiscard]]
+   constexpr auto
    storage_ptr(this auto& self) noexcept {
       if constexpr (requires { self.m_value.raw; }) {
          return &self.m_value.raw;

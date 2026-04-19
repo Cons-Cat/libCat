@@ -103,7 +103,7 @@ class basic_list
  public:
    using iterator = detail::list_iterator<T, is_doubly_linked>;
 
-   constexpr basic_list() = delete(
+   constexpr basic_list() = delete (
       "`cat::list` cannot be created without an allocator. Call "
       "`cat::make_list()` instead!");
 
@@ -120,8 +120,8 @@ class basic_list
 
    auto
    operator=(basic_list const&)
-      -> basic_list& = delete("Implicit copying of `cat::list` is forbidden. "
-                              "Call `.clone() or move instead!");
+      -> basic_list& = delete ("Implicit copying of `cat::list` is forbidden. "
+                               "Call `.clone() or move instead!");
 
    constexpr auto
    operator=(basic_list&& other_list) -> basic_list& {
@@ -140,7 +140,7 @@ class basic_list
    }
 
  protected:
-   // Being `protected:` permits derived classes and adaptors to call these.
+   // Being `protected:` permits derived classes and friends to call these.
 
    constexpr basic_list(allocator_type& allocator [[clang::lifetimebound]])
        : m_allocator(allocator) {

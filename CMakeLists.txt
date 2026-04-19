@@ -189,8 +189,8 @@ add_subdirectory(examples/)
 find_program(CAT_CLANG_FORMAT_PATH "clang-format" DOC "`clang-format` binary to use.")
 get_property(CAT_SOURCES TARGET cat PROPERTY INTERFACE_SOURCES)
 
-# Recursively discover the `.hpp` files.
-get_property(CAT_HEADERS TARGET cat PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+# Precompiled headers use `.hpp` files only; extensionless `#include <cat/...>` API files are listed in
+# `CAT_HEADER_FILES` from `src/CMakeLists.txt`.
 file(GLOB_RECURSE CAT_HEADERS "*.hpp")
 
 option(CAT_PCH "Enable precompiled-headers for libCat headers." ON)
@@ -199,8 +199,8 @@ if (CAT_PCH)
 endif()
 set_target_properties(cat PROPERTIES PCH_WARN_INVALID ON)
 
-# Run `clang-format` on all source files of the `cat` target.
-set(_cat_format_files ${CAT_SOURCES} ${CAT_HEADERS})
+# Run `clang-format` on implementation sources plus every public header (including extensionless names).
+set(_cat_format_files ${CAT_SOURCES} ${CAT_HEADER_FILES})
 if(CAT_CLANG_FORMAT_PATH)
   add_custom_target(
     cat-format
@@ -212,7 +212,7 @@ if(CAT_CLANG_FORMAT_PATH)
       ${_cat_format_files}
     DEPENDS
       ${CAT_SOURCES}
-      ${CAT_HEADERS})
+      ${CAT_HEADER_FILES})
 else()
   add_custom_target(
     cat-format

@@ -14,8 +14,7 @@ type_name() -> cat::str_view {
 
    // Scan backwards from the function signature to find whitespace that
    // delimits the beginning of this type name.
-   for (iword i = size - 1;
-        i >= 0; --i) {
+   for (iword i = size - 1; i >= 0; --i) {
       if (p_string[narrow_to_idx(i).value()] == '=') {
          // There is a whitespace after the `=` in this signature, so we add 1
          // to the string pointer to compensate.
@@ -42,8 +41,8 @@ enum_name_from_nttp() -> cat::str_view {
    // boundary, and trim everything else from the string. This boundary is
    // either a scope-resolution operator or whitespace for scoped and unscoped
    // enums respectively.
-   for (cat::iword i = cat::iword(size) - cat::iword(1);
-        i >= cat::iword(0); --i) {
+   for (cat::iword i = cat::iword(size) - cat::iword(1); i >= cat::iword(0);
+        --i) {
       if (p_string[cat::idx(i)] == ':' || p_string[cat::idx(i)] == ' ') {
          p_string = p_string + cat::idx(i) + 1u;
          size.raw -= cat::idx(i - cat::iword(1)).raw;

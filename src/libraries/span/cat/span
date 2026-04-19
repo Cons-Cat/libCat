@@ -40,15 +40,14 @@ class [[clang::trivial_abi, gsl::Pointer(T)]] span
    // Implicitly convert a contiguous container into a span. Const-correctness
    // is managed by the deduction guides below.
    template <is_random_access U>
-   constexpr span(U& collection [[clang::lifetimebound]]
-                  )
+   constexpr span(U& collection [[clang::lifetimebound]])
        : m_p_data(collection.data()), m_size(collection.size()) {
    }
 
    template <typename U>
    constexpr span(U&& collection) =
-      delete("A `cat::span` cannot alias a temporary, because the span would"
-             "immediately dangle.");
+      delete ("A `cat::span` cannot alias a temporary, because the span would"
+              "immediately dangle.");
 
    constexpr auto
    operator=(span<T> const&) -> span<T>& = default;
@@ -78,8 +77,8 @@ class [[clang::trivial_abi, gsl::Pointer(T)]] span
    template <typename U>
    auto
    operator=(U&& collection) =
-      delete("A `cat::span` cannot alias a temporary, because the span would"
-             "immediately dangle.");
+      delete ("A `cat::span` cannot alias a temporary, because the span would"
+              "immediately dangle.");
 
    // Get the non-`const` address that this `span` starts at.
    [[nodiscard]]

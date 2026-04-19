@@ -59,105 +59,102 @@ concept has_bit_not_interface = requires(T lhs, U rhs) { lhs.bit_not(rhs); };
 template <typename T>
 concept has_bit_complement = requires(T lhs) { lhs.bit_complement(); };
 
-// `operator++` / `operator--` assign `add(1)` / `subtract_by(1)` back to the
+// operator++ / operator-- assign `add(1)` / `subtract_by(1)` back to the
 // operand. They exist only when those calls preserve the operand type (for
 // example `cat::index` subtraction against another `index` widens to
 // `cat::iword`, so decrement is not generated).
 template <typename D>
 concept arithmetic_unary_increment_ok =
    is_same<remove_cvref<D>,
-            remove_cvref<decltype(declval<remove_cvref<D> const&>().add(
-               remove_cvref<D>(1)))>>;
+           remove_cvref<decltype(declval<remove_cvref<D> const&>().add(
+              remove_cvref<D>(1)))>>;
 
 template <typename D>
 concept arithmetic_unary_decrement_ok =
    is_same<remove_cvref<D>,
-            remove_cvref<decltype(declval<remove_cvref<D> const&>().subtract_by(
-               remove_cvref<D>(1)))>>;
+           remove_cvref<decltype(declval<remove_cvref<D> const&>().subtract_by(
+              remove_cvref<D>(1)))>>;
 
 // Left-hand compound assignments exist only when the corresponding member
 // (`add`, `subtract_by`, …) returns the same type as the operand, matching the
 // binary operator result type.
 template <typename D, typename T>
-concept arithmetic_plus_assign_ok =
-   is_same<remove_cvref<D>,
-            remove_cvref<decltype(declval<remove_cvref<D>&>().add(declval<T>()))>>;
+concept arithmetic_plus_assign_ok = is_same<
+   remove_cvref<D>,
+   remove_cvref<decltype(declval<remove_cvref<D>&>().add(declval<T>()))>>;
 
 template <typename D, typename T>
 concept arithmetic_minus_assign_ok =
    is_same<remove_cvref<D>,
-            remove_cvref<decltype(declval<remove_cvref<D>&>().subtract_by(
-               declval<T>()))>>;
+           remove_cvref<decltype(declval<remove_cvref<D>&>().subtract_by(
+              declval<T>()))>>;
 
 template <typename D, typename T>
-concept arithmetic_multiply_assign_ok =
-   is_same<remove_cvref<D>,
-            remove_cvref<decltype(declval<remove_cvref<D>&>().multiply(
-               declval<T>()))>>;
+concept arithmetic_multiply_assign_ok = is_same<
+   remove_cvref<D>,
+   remove_cvref<decltype(declval<remove_cvref<D>&>().multiply(declval<T>()))>>;
 
 template <typename D, typename T>
-concept arithmetic_divide_assign_ok =
-   is_same<remove_cvref<D>,
-            remove_cvref<decltype(declval<remove_cvref<D>&>().divide_by(
-               declval<T>()))>>;
+concept arithmetic_divide_assign_ok = is_same<
+   remove_cvref<D>,
+   remove_cvref<decltype(declval<remove_cvref<D>&>().divide_by(declval<T>()))>>;
 
 template <typename D, typename T>
-concept arithmetic_modulo_assign_ok =
-   is_same<remove_cvref<D>,
-            remove_cvref<decltype(declval<remove_cvref<D>&>().modulo_by(
-               declval<T>()))>>;
+concept arithmetic_modulo_assign_ok = is_same<
+   remove_cvref<D>,
+   remove_cvref<decltype(declval<remove_cvref<D>&>().modulo_by(declval<T>()))>>;
 
 template <typename D, typename T>
-concept arithmetic_bit_and_assign_ok =
-   is_same<remove_cvref<D>,
-            remove_cvref<decltype(declval<remove_cvref<D>&>().bit_and(
-               declval<T>()))>>;
+concept arithmetic_bit_and_assign_ok = is_same<
+   remove_cvref<D>,
+   remove_cvref<decltype(declval<remove_cvref<D>&>().bit_and(declval<T>()))>>;
 
 template <typename D, typename T>
-concept arithmetic_bit_or_assign_ok =
-   is_same<remove_cvref<D>,
-            remove_cvref<decltype(declval<remove_cvref<D>&>().bit_or(
-               declval<T>()))>>;
+concept arithmetic_bit_or_assign_ok = is_same<
+   remove_cvref<D>,
+   remove_cvref<decltype(declval<remove_cvref<D>&>().bit_or(declval<T>()))>>;
 
 template <typename D, typename T>
 concept arithmetic_shift_left_assign_ok =
    is_same<remove_cvref<D>,
-            remove_cvref<decltype(declval<remove_cvref<D>&>().shift_left_by(
-               declval<T>()))>>;
+           remove_cvref<decltype(declval<remove_cvref<D>&>().shift_left_by(
+              declval<T>()))>>;
 
 template <typename D, typename T>
 concept arithmetic_shift_right_assign_ok =
    is_same<remove_cvref<D>,
-            remove_cvref<decltype(declval<remove_cvref<D>&>().shift_right_by(
-               declval<T>()))>>;
+           remove_cvref<decltype(declval<remove_cvref<D>&>().shift_right_by(
+              declval<T>()))>>;
 }  // namespace detail
 
-// CRTP class for generating a commutative `+` operator.
+// CRTP class for generating a commutative + operator.
 template <typename derived_type>
 struct plus_interface {
-private:
+ private:
    constexpr plus_interface() = default;
    friend derived_type;
    friend struct arithmetic_interface<derived_type>;
 
-public:
+ public:
    using decay_derived_type = remove_cvref<derived_type>;
 
-   // `+` operator where this is a left-hand-side operand.
+   // + operator where this is a left-hand-side operand.
    template <typename T>
+      requires(!is_base_of<iterator_interface_base, remove_cvref<T>>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator+(this auto&& self, T&& other) -> decltype(auto) {
       return fwd(self).add(fwd(other));
    }
 
-   // `+` operators where this is a right-hand-side operand.
+   // + operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
    template <typename T>
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
-      requires(!detail::has_add_interface<T, derived_type>)
+      requires(!detail::has_add_interface<T, derived_type>
+               && !is_base_of<iterator_interface_base, remove_cvref<T>>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+(T&& other, decay_derived_type const& self) -> decltype(auto) {
@@ -168,14 +165,15 @@ public:
    template <typename T>
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
-      requires(!detail::has_add_interface<T, derived_type>)
+      requires(!detail::has_add_interface<T, derived_type>
+               && !is_base_of<iterator_interface_base, remove_cvref<T>>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+(T&& other, derived_type&& self) -> decltype(auto) {
       return fwd(self).add(fwd(other));
    }
 
-   // `+=` operator where this is a left-hand-side operand.
+   // += operator where this is a left-hand-side operand.
    template <typename T>
       requires(detail::arithmetic_plus_assign_ok<decay_derived_type, T>)
    [[gnu::always_inline, gnu::nodebug]]
@@ -185,13 +183,14 @@ public:
       return self;
    }
 
-   // `+=` operators where this is a right-hand-side operand.
+   // += operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
    template <typename T>
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
-      requires(!detail::has_add_interface<T, derived_type>)
+      requires(!detail::has_add_interface<T, derived_type>
+               && !is_base_of<iterator_interface_base, remove_cvref<T>>)
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+=(T& other, derived_type const& self) -> T& {
@@ -203,7 +202,8 @@ public:
    template <typename T>
    // If this operator's left operand can add `derived_type` as its
    // right-hand operand, this overload is ambiguous.
-      requires(!detail::has_add_interface<T, derived_type>)
+      requires(!detail::has_add_interface<T, derived_type>
+               && !is_base_of<iterator_interface_base, remove_cvref<T>>)
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+=(T& other, derived_type&& self) -> T& {
@@ -211,13 +211,14 @@ public:
       return other;
    }
 
-   // Unary `++` operators.
+   // Unary ++ operators.
 
    // `this` is an l-value.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator++(derived_type& self) -> derived_type&
-      requires(detail::arithmetic_unary_increment_ok<derived_type>) {
+      requires(detail::arithmetic_unary_increment_ok<derived_type>)
+   {
       self = self.add(derived_type(1));
       return self;
    }
@@ -226,7 +227,8 @@ public:
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator++(derived_type&& self) -> derived_type
-      requires(detail::arithmetic_unary_increment_ok<derived_type>) {
+      requires(detail::arithmetic_unary_increment_ok<derived_type>)
+   {
       return move(self).add(derived_type(1));
    }
 
@@ -234,7 +236,8 @@ public:
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator++(derived_type& self, int) -> derived_type&
-      requires(detail::arithmetic_unary_increment_ok<derived_type>) {
+      requires(detail::arithmetic_unary_increment_ok<derived_type>)
+   {
       self = self.add(derived_type(1));
       return self;
    }
@@ -243,23 +246,24 @@ public:
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator++(derived_type&& self, int) -> derived_type
-      requires(detail::arithmetic_unary_increment_ok<derived_type>) {
+      requires(detail::arithmetic_unary_increment_ok<derived_type>)
+   {
       return move(self).add(derived_type(1));
    }
 };
 
-// CRTP class for generating a commutative `-` operator.
+// CRTP class for generating a commutative - operator.
 template <typename derived_type>
 struct minus_interface {
-private:
+ private:
    constexpr minus_interface() = default;
    friend derived_type;
    friend struct arithmetic_interface<derived_type>;
 
-public:
+ public:
    using decay_derived_type = remove_cvref<derived_type>;
 
-   // `-` operator where this is a left-hand-side operand.
+   // - operator where this is a left-hand-side operand.
    template <typename T>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -267,7 +271,7 @@ public:
       return fwd(lhs).subtract_by(fwd(other));
    }
 
-   // `-` operators where this is a right-hand-side operand.
+   // - operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
    template <typename T>
@@ -291,7 +295,7 @@ public:
       return fwd(self).subtract_from(fwd(other));
    }
 
-   // `-=` operator where this is a left-hand-side operand.
+   // -= operator where this is a left-hand-side operand.
    template <typename T>
       requires(detail::arithmetic_minus_assign_ok<decay_derived_type, T>)
    [[gnu::always_inline, gnu::nodebug]]
@@ -301,7 +305,7 @@ public:
       return self;
    }
 
-   // `-=` operators where this is a right-hand-side operand.
+   // -= operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
    template <typename T>
@@ -327,13 +331,14 @@ public:
       return other;
    }
 
-   // Unary `--` operators.
+   // Unary -- operators.
 
    // `this` is an l-value.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator--(derived_type& self) -> derived_type&
-      requires(detail::arithmetic_unary_decrement_ok<derived_type>) {
+      requires(detail::arithmetic_unary_decrement_ok<derived_type>)
+   {
       self = self.subtract_by(derived_type(1));
       return self;
    }
@@ -342,7 +347,8 @@ public:
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator--(derived_type&& self) -> derived_type
-      requires(detail::arithmetic_unary_decrement_ok<derived_type>) {
+      requires(detail::arithmetic_unary_decrement_ok<derived_type>)
+   {
       return move(self).subtract_by(derived_type(1));
    }
 
@@ -350,7 +356,8 @@ public:
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator--(derived_type& self, int) -> derived_type&
-      requires(detail::arithmetic_unary_decrement_ok<derived_type>) {
+      requires(detail::arithmetic_unary_decrement_ok<derived_type>)
+   {
       self = self.subtract_by(derived_type(1));
       return self;
    }
@@ -359,23 +366,24 @@ public:
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator--(derived_type&& self, int) -> derived_type
-      requires(detail::arithmetic_unary_decrement_ok<derived_type>) {
+      requires(detail::arithmetic_unary_decrement_ok<derived_type>)
+   {
       return move(self).subtract_by(derived_type(1));
    }
 };
 
-// CRTP class for generating a commutative `*` operator.
+// CRTP class for generating a commutative * operator.
 template <typename derived_type>
 struct multiply_interface {
-private:
+ private:
    constexpr multiply_interface() = default;
    friend derived_type;
    friend struct arithmetic_interface<derived_type>;
 
-public:
+ public:
    using decay_derived_type = remove_cvref<derived_type>;
 
-   // `*` operator where this is a left-hand-side operand.
+   // * operator where this is a left-hand-side operand.
    template <typename T>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -383,7 +391,7 @@ public:
       return fwd(self).multiply(fwd(other));
    }
 
-   // `*` operators where this is a right-hand-side operand.
+   // * operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
    template <typename T>
@@ -407,7 +415,7 @@ public:
       return fwd(self).multiply(fwd(other));
    }
 
-   // `*=` operator where this is a left-hand-side operand.
+   // *= operator where this is a left-hand-side operand.
    template <typename T>
       requires(detail::arithmetic_multiply_assign_ok<decay_derived_type, T>)
    [[gnu::always_inline, gnu::nodebug]]
@@ -417,7 +425,7 @@ public:
       return self;
    }
 
-   // `*=` operators where this is a right-hand-side operand.
+   // *= operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
    template <typename T>
@@ -444,18 +452,18 @@ public:
    }
 };
 
-// CRTP class for generating a commutative `/` operator.
+// CRTP class for generating a commutative / operator.
 template <typename derived_type>
 struct divide_interface {
-private:
+ private:
    constexpr divide_interface() = default;
    friend derived_type;
    friend struct arithmetic_interface<derived_type>;
 
-public:
+ public:
    using decay_derived_type = remove_cvref<derived_type>;
 
-   // `/` operator where this is a left-hand-side operand.
+   // / operator where this is a left-hand-side operand.
    template <typename T>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -463,7 +471,7 @@ public:
       return fwd(self).divide_by(fwd(other));
    }
 
-   // `/` operators where this is a right-hand-side operand.
+   // / operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
    template <typename T>
@@ -487,7 +495,7 @@ public:
       return fwd(self).divide_into(fwd(other));
    }
 
-   // `/=` operator where this is a left-hand-side operand.
+   // /= operator where this is a left-hand-side operand.
    template <typename T>
       requires(detail::arithmetic_divide_assign_ok<decay_derived_type, T>)
    [[gnu::always_inline, gnu::nodebug]]
@@ -497,7 +505,7 @@ public:
       return self;
    }
 
-   // `/=` operators where this is a right-hand-side operand.
+   // /= operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
    template <typename T>
@@ -524,18 +532,18 @@ public:
    }
 };
 
-// CRTP class for generating a commutative `&` operator.
+// CRTP class for generating a commutative & operator.
 template <typename derived_type>
 struct bit_and_interface {
-private:
+ private:
    constexpr bit_and_interface() = default;
    friend derived_type;
    friend struct bitwise_interface<derived_type>;
 
-public:
+ public:
    using decay_derived_type = remove_cvref<derived_type>;
 
-   // `&` operator where this is a left-hand-side operand.
+   // & operator where this is a left-hand-side operand.
    template <typename T>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -543,7 +551,7 @@ public:
       return fwd(self).bit_and(fwd(other));
    }
 
-   // `&` operators where this is a right-hand-side operand.
+   // & operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
    template <typename T>
@@ -567,7 +575,7 @@ public:
       return fwd(self).bit_and(fwd(other));
    }
 
-   // `&=` operator where this is a left-hand-side operand.
+   // &= operator where this is a left-hand-side operand.
    template <typename T>
       requires(detail::arithmetic_bit_and_assign_ok<decay_derived_type, T>)
    [[gnu::always_inline, gnu::nodebug]]
@@ -577,7 +585,7 @@ public:
       return self;
    }
 
-   // `&=` operators where this is a right-hand-side operand.
+   // &= operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
    template <typename T>
@@ -604,18 +612,18 @@ public:
    }
 };
 
-// CRTP class for generating a commutative `|` operator.
+// CRTP class for generating a commutative | operator.
 template <typename derived_type>
 struct bit_or_interface {
-private:
+ private:
    constexpr bit_or_interface() = default;
    friend derived_type;
    friend struct bitwise_interface<derived_type>;
 
-public:
+ public:
    using decay_derived_type = remove_cvref<derived_type>;
 
-   // `|` operator where this is a left-hand-side operand.
+   // | operator where this is a left-hand-side operand.
    template <typename T>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -623,7 +631,7 @@ public:
       return fwd(self).bit_or(fwd(other));
    }
 
-   // `|` operators where this is a right-hand-side operand.
+   // | operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
    template <typename T>
@@ -647,7 +655,7 @@ public:
       return fwd(self).bit_or(fwd(other));
    }
 
-   // `|=` operator where this is a left-hand-side operand.
+   // |= operator where this is a left-hand-side operand.
    template <typename T>
       requires(detail::arithmetic_bit_or_assign_ok<decay_derived_type, T>)
    [[gnu::always_inline, gnu::nodebug]]
@@ -657,7 +665,7 @@ public:
       return self;
    }
 
-   // `|=` operators where this is a right-hand-side operand.
+   // |= operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
    template <typename T>
@@ -684,18 +692,18 @@ public:
    }
 };
 
-// CRTP class for generating a commutative `%` operator.
+// CRTP class for generating a commutative % operator.
 template <typename derived_type>
 struct modulo_interface {
-private:
+ private:
    constexpr modulo_interface() = default;
    friend derived_type;
    friend struct arithmetic_interface<derived_type>;
 
-public:
+ public:
    using decay_derived_type = remove_cvref<derived_type>;
 
-   // `%` operator where this is a left-hand-side operand.
+   // % operator where this is a left-hand-side operand.
    template <typename T>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -703,7 +711,7 @@ public:
       return fwd(self).modulo_by(fwd(other));
    }
 
-   // `%` operators where this is a right-hand-side operand.
+   // % operators where this is a right-hand-side operand.
 
    // `this` is an r-value.
    template <typename T>
@@ -764,18 +772,18 @@ public:
    }
 };
 
-// CRTP class for generating a commutative `<<` operator.
+// CRTP class for generating a commutative << operator.
 template <typename derived_type>
 struct shift_left_interface {
-private:
+ private:
    constexpr shift_left_interface() = default;
    friend derived_type;
    friend struct bitwise_interface<derived_type>;
 
-public:
+ public:
    using decay_derived_type = remove_cvref<derived_type>;
 
-   // `<<` operator where this is a left-hand-side operand.
+   // << operator where this is a left-hand-side operand.
    template <typename T>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -783,7 +791,7 @@ public:
       return fwd(self).shift_left_by(fwd(other));
    }
 
-   // `<<` operators where this is a right-hand-side operand.
+   // << operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
    template <typename T>
@@ -807,7 +815,7 @@ public:
       return fwd(self).shift_left_into(fwd(other));
    }
 
-   // `<<=` operator where this is a left-hand-side operand.
+   // <<= operator where this is a left-hand-side operand.
    template <typename T>
       requires(detail::arithmetic_shift_left_assign_ok<decay_derived_type, T>)
    [[gnu::always_inline, gnu::nodebug]]
@@ -817,7 +825,7 @@ public:
       return self;
    }
 
-   // `<<=` operators where this is a right-hand-side operand.
+   // <<= operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
    template <typename T>
@@ -844,18 +852,18 @@ public:
    }
 };
 
-// CRTP class for generating a commutative `>>` operator.
+// CRTP class for generating a commutative >> operator.
 template <typename derived_type>
 struct shift_right_interface {
-private:
+ private:
    constexpr shift_right_interface() = default;
    friend derived_type;
    friend struct bitwise_interface<derived_type>;
 
-public:
+ public:
    using decay_derived_type = remove_cvref<derived_type>;
 
-   // `>>` operator where this is a left-hand-side operand.
+   // >> operator where this is a left-hand-side operand.
    template <typename T>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -863,7 +871,7 @@ public:
       return fwd(self).shift_right_by(fwd(other));
    }
 
-   // `>>` operators where this is a right-hand-side operand.
+   // >> operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
    template <typename T>
@@ -887,7 +895,7 @@ public:
       return fwd(self).shift_right_into(fwd(other));
    }
 
-   // `>>=` operator where this is a left-hand-side operand.
+   // >>= operator where this is a left-hand-side operand.
    template <typename T>
       requires(detail::arithmetic_shift_right_assign_ok<decay_derived_type, T>)
    [[gnu::always_inline, gnu::nodebug]]
@@ -897,7 +905,7 @@ public:
       return self;
    }
 
-   // `>>=` operators where this is a right-hand-side operand.
+   // >>= operators where this is a right-hand-side operand.
 
    // `this` is an l-value.
    template <typename T>
@@ -929,12 +937,12 @@ struct bitwise_interface : bit_and_interface<derived_type>,
                            bit_or_interface<derived_type>,
                            shift_left_interface<derived_type>,
                            shift_right_interface<derived_type> {
-private:
+ private:
    constexpr bitwise_interface() = default;
    friend derived_type;
    friend struct arithmetic_interface<derived_type>;
 
-public:
+ public:
    // Unary complement operator.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
@@ -956,12 +964,12 @@ struct arithmetic_interface : plus_interface<derived_type>,
                               divide_interface<derived_type>,
                               modulo_interface<derived_type>,
                               bitwise_interface<derived_type> {
-private:
+ private:
    constexpr arithmetic_interface() = default;
    friend derived_type;
 
-public:
-   // No-op unary `+` operator for operand.
+ public:
+   // No-op unary + operator for operand.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+(derived_type const& self) {
@@ -973,7 +981,7 @@ public:
       return self;
    }
 
-   // Unary `-` operator for operand.
+   // Unary - operator for operand.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-(derived_type const& self)

@@ -3820,8 +3820,9 @@ class allocator_interface {
    using meta_alloc_raw_maybe_allocation =
       conditional<has_feedback, maybe_sized_allocation<void*>, maybe_ptr<void>>;
 
-   // Only called from `meta_alloc` when `is_inline` is true; alias_types always use
-   // `true` for the inline slot so this is not instantiated per `is_inline`.
+   // Only called from `meta_alloc` when `is_inline` is true; alias_types always
+   // use `true` for the inline slot so this is not instantiated per
+   // `is_inline`.
    template <typename T, bool is_fail_safe, bool is_aligned, bool is_multiple,
              bool is_zeroed, bool has_feedback, typename... Args>
    [[gnu::no_sanitize_address]]
@@ -3830,7 +3831,7 @@ class allocator_interface {
                                     Args&&... constructor_args) {
       using alias_types =
          meta_alloc_alias_types<T, true, is_fail_safe, is_aligned, is_multiple,
-                            is_zeroed, has_feedback>;
+                                is_zeroed, has_feedback>;
       using return_handle = typename alias_types::return_handle;
       using handle_type = typename alias_types::handle_type;
 
@@ -3876,7 +3877,7 @@ class allocator_interface {
                                         Args&&... constructor_args) {
       using alias_types =
          meta_alloc_alias_types<T, true, is_fail_safe, is_aligned, is_multiple,
-                            is_zeroed, has_feedback>;
+                                is_zeroed, has_feedback>;
       using return_handle = typename alias_types::return_handle;
       using handle_type = typename alias_types::handle_type;
 
@@ -3913,8 +3914,8 @@ class allocator_interface {
 
    [[gnu::no_sanitize_address]]
    constexpr auto
-   meta_alloc_obtain_maybe_memory_aligned_with_feedback(uword allocation_alignment,
-                                                        idx allocation_bytes)
+   meta_alloc_obtain_maybe_memory_aligned_with_feedback(
+      uword allocation_alignment, idx allocation_bytes)
       -> maybe_sized_allocation<void*> {
       maybe_sized_allocation<void*> maybe_memory;
 
@@ -3934,8 +3935,8 @@ class allocator_interface {
                      .value();
 
                maybe_memory = maybe_sized_allocation<void*>{
-                  sized_allocation<void*>{
-                                          p_allocation, actual_allocation_bytes.value()}
+                  sized_allocation<void*>{p_allocation,
+                                          actual_allocation_bytes.value()}
                };
             } else {
                maybe_memory = nullopt;
@@ -3945,7 +3946,8 @@ class allocator_interface {
                allocation_alignment, allocation_bytes);
             if (temp_memory.has_value()) {
                maybe_memory = maybe_sized_allocation<void*>{
-                  sized_allocation<void*>{temp_memory.value(), allocation_bytes}
+                  sized_allocation<void*>{temp_memory.value(),
+                                          allocation_bytes}
                };
             } else {
                maybe_memory = nullopt;
@@ -3958,9 +3960,8 @@ class allocator_interface {
 
    [[gnu::no_sanitize_address]]
    constexpr auto
-   meta_alloc_obtain_maybe_memory_aligned_no_feedback(uword allocation_alignment,
-                                                      idx allocation_bytes)
-      -> maybe_ptr<void> {
+   meta_alloc_obtain_maybe_memory_aligned_no_feedback(
+      uword allocation_alignment, idx allocation_bytes) -> maybe_ptr<void> {
       maybe_ptr<void> maybe_memory;
 
       if constexpr (detail::has_aligned_allocate<derived_type>) {
@@ -3979,8 +3980,8 @@ class allocator_interface {
 
    [[gnu::no_sanitize_address]]
    constexpr auto
-   meta_alloc_obtain_maybe_memory_unaligned_with_feedback(uword allocation_alignment,
-                                                          idx allocation_bytes)
+   meta_alloc_obtain_maybe_memory_unaligned_with_feedback(
+      uword allocation_alignment, idx allocation_bytes)
       -> maybe_sized_allocation<void*> {
       maybe_sized_allocation<void*> maybe_memory;
 
@@ -3988,14 +3989,15 @@ class allocator_interface {
          maybe_memory = this->self().allocate_feedback(allocation_bytes);
       } else {
          if constexpr (detail::has_aligned_allocate_feedback<derived_type>) {
-            maybe_memory = this->self().aligned_allocate_feedback(
-               1u, allocation_bytes);
+            maybe_memory =
+               this->self().aligned_allocate_feedback(1u, allocation_bytes);
          } else if constexpr (detail::has_allocation_bytes<derived_type>) {
             maybe size = this->self().allocation_bytes(1u, allocation_bytes);
 
             if (size.has_value()) {
-               maybe_memory = maybe_sized_allocation<void*>(tuple{
-                  this->self().allocate(allocation_bytes).value(), size.value()});
+               maybe_memory = maybe_sized_allocation<void*>(
+                  tuple{this->self().allocate(allocation_bytes).value(),
+                        size.value()});
             } else {
                maybe_memory = nullopt;
             }
@@ -4039,7 +4041,7 @@ class allocator_interface {
       idx allocation_bytes, idx allocation_count, Args&&... constructor_args) {
       using alias_types =
          meta_alloc_alias_types<T, false, is_fail_safe, is_aligned, is_multiple,
-                            is_zeroed, has_feedback>;
+                                is_zeroed, has_feedback>;
       using return_handle = typename alias_types::return_handle;
       T* p_allocation;
       if constexpr (has_feedback) {
@@ -4084,8 +4086,8 @@ class allocator_interface {
 
       if constexpr (has_feedback) {
          if constexpr (is_multiple) {
-            return return_handle(tuple{
-               span<T>(p_allocation, allocation_count), size_feedback});
+            return return_handle(
+               tuple{span<T>(p_allocation, allocation_count), size_feedback});
          } else {
             return return_handle(
                sized_allocation<T*>{p_allocation, size_feedback});
@@ -4109,7 +4111,7 @@ class allocator_interface {
       idx allocation_bytes, idx allocation_count, Args&&... constructor_args) {
       using alias_types =
          meta_alloc_alias_types<T, true, is_fail_safe, is_aligned, is_multiple,
-                            is_zeroed, has_feedback>;
+                                is_zeroed, has_feedback>;
       using return_handle = typename alias_types::return_handle;
       using handle_type = typename alias_types::handle_type;
       using underlying_handle = typename alias_types::underlying_handle;
@@ -4178,8 +4180,9 @@ class allocator_interface {
    meta_alloc_consteval_allocate(uword allocation_alignment,
                                  idx allocation_count,
                                  Args&&... constructor_args) {
-      using alias_types = meta_alloc_alias_types<T, false, is_fail_safe, is_aligned,
-                                         is_multiple, is_zeroed, has_feedback>;
+      using alias_types =
+         meta_alloc_alias_types<T, false, is_fail_safe, is_aligned, is_multiple,
+                                is_zeroed, has_feedback>;
       using return_handle = typename alias_types::return_handle;
 
       T* p_allocation = nullptr;
@@ -4187,9 +4190,8 @@ class allocator_interface {
       // Clang rejects `new (std::align_val_t(...))` in constant expressions for
       // many cases. Default `new` is enough when the requested alignment is 1
       // (unalign path) or matches `alignof(T)` (align path for normal types).
-      bool const plain_new_ok =
-         (allocation_alignment == uword(1))
-         || (allocation_alignment == uword(alignof(T)));
+      bool const plain_new_ok = (allocation_alignment == uword(1))
+                                || (allocation_alignment == uword(alignof(T)));
 
       if constexpr (is_multiple) {
          if (plain_new_ok) {
@@ -4211,9 +4213,8 @@ class allocator_interface {
             if (plain_new_ok) {
                p_allocation = new T(constructor_args...);
             } else {
-               p_allocation =
-                  new (std::align_val_t(allocation_alignment.raw))
-                     T(constructor_args...);
+               p_allocation = new (std::align_val_t(allocation_alignment.raw))
+                  T(constructor_args...);
             }
          }
       }
@@ -4224,9 +4225,8 @@ class allocator_interface {
 
       if constexpr (has_feedback) {
          if constexpr (is_multiple) {
-            return return_handle(
-               tuple{span<T>(p_allocation, allocation_count),
-                     allocation_count * sizeof(T)});
+            return return_handle(tuple{span<T>(p_allocation, allocation_count),
+                                       allocation_count * sizeof(T)});
          } else {
             return return_handle(sized_allocation<T*>{
                p_allocation, allocation_count * sizeof(T)});
@@ -4265,17 +4265,19 @@ class allocator_interface {
       if consteval {
          if constexpr (!is_inline) {
             return this->template meta_alloc_consteval_allocate<
-               T, is_fail_safe, is_aligned, is_multiple, is_zeroed, has_feedback>(
-               allocation_alignment, allocation_count,
-               fwd(constructor_args)...);
+               T, is_fail_safe, is_aligned, is_multiple, is_zeroed,
+               has_feedback>(allocation_alignment, allocation_count,
+                             fwd(constructor_args)...);
          } else {
             return this->template meta_alloc_consteval_inline_allocate<
-               T, is_fail_safe, is_aligned, is_multiple, is_zeroed, has_feedback>(
-               allocation_bytes, allocation_count, fwd(constructor_args)...);
+               T, is_fail_safe, is_aligned, is_multiple, is_zeroed,
+               has_feedback>(allocation_bytes, allocation_count,
+                             fwd(constructor_args)...);
          }
       } else {
-         using alias_types = meta_alloc_alias_types<T, is_inline, is_fail_safe, is_aligned,
-                                            is_multiple, is_zeroed, has_feedback>;
+         using alias_types =
+            meta_alloc_alias_types<T, is_inline, is_fail_safe, is_aligned,
+                                   is_multiple, is_zeroed, has_feedback>;
          if constexpr (is_inline) {
             if (allocation_bytes < inline_buffer_size) {
                return this->template meta_alloc_inline_stack_allocate<
@@ -4316,14 +4318,14 @@ class allocator_interface {
          }
          if constexpr (!is_inline) {
             return this->template meta_alloc_finish_non_inline<
-               T, is_fail_safe, is_aligned, is_multiple, is_zeroed, has_feedback>(
-               move(maybe_memory), allocation_bytes, allocation_count,
-               fwd(constructor_args)...);
+               T, is_fail_safe, is_aligned, is_multiple, is_zeroed,
+               has_feedback>(move(maybe_memory), allocation_bytes,
+                             allocation_count, fwd(constructor_args)...);
          } else {
             return this->template meta_alloc_finish_inline_overflow<
-               T, is_fail_safe, is_aligned, is_multiple, is_zeroed, has_feedback>(
-               move(maybe_memory), allocation_bytes, allocation_count,
-               fwd(constructor_args)...);
+               T, is_fail_safe, is_aligned, is_multiple, is_zeroed,
+               has_feedback>(move(maybe_memory), allocation_bytes,
+                             allocation_count, fwd(constructor_args)...);
          }
       }
    }

@@ -243,8 +243,7 @@ class random_access_iterable_interface
       // argument list.
       // `rbegin` is only valid on non-empty collections. `assert` enforces
       // `size >= 1` so `size - 1u` does not wrap in unsigned arithmetic.
-      idx const last =
-         narrow_to_idx(collection.size().raw - 1u).assert();
+      idx const last = narrow_to_idx(collection.size().raw - 1u).assert();
       auto* p_data = fwd(collection).data();
       return reverse_proxy_iterator(detail::collection_iterator(last, p_data));
    }
@@ -377,8 +376,8 @@ class collection_interface {
          assert(end_index <= this->self().capacity());
       }
 
-      return span<T>(
-         this->self().data() + start_index, idx(end_index - start_index));
+      return span<T>(this->self().data() + start_index,
+                     idx(end_index - start_index));
    }
 
    [[nodiscard]]
@@ -391,8 +390,8 @@ class collection_interface {
          assert(end_index <= this->self().capacity());
       }
 
-      return span<T const>(
-         this->self().data() + start_index, idx(end_index - start_index));
+      return span<T const>(this->self().data() + start_index,
+                           idx(end_index - start_index));
    }
 
    [[nodiscard]]

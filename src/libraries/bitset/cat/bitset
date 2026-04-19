@@ -5,8 +5,8 @@
 #include <cat/array>
 #include <cat/bit>
 #include <cat/math>
-#include <cat/meta>
 #include <cat/maybe>
+#include <cat/meta>
 
 namespace cat {
 
@@ -64,8 +64,8 @@ bitset {
    static constexpr idx leading_bytes_bits =
       // Size of this storage, 64 bits or fewer.
       idx(storage_element_size * 8u -
-      // Minus the number of unused bits in this bitset.
-      leading_skipped_bits);
+          // Minus the number of unused bits in this bitset.
+          leading_skipped_bits);
 
    constexpr bitset() = default;
    constexpr bitset(bitset const&) = default;
@@ -101,8 +101,7 @@ bitset {
       }
 
       idx const array_word = idx(
-         m_data.size() - 1u
-         - ((index_bit + leading_skipped_bits) / word_bits));
+         m_data.size() - 1u - ((index_bit + leading_skipped_bits) / word_bits));
       array_type_element& index_byte = m_data[array_word];
 
       uword bit_offset = index_bit + leading_skipped_bits;
@@ -273,8 +272,7 @@ bitset {
          // `array_type` always holds at least one element, so the last storage
          // index is `storage_array_size - 1u` without unsigned wrap.
          count += cat::countr_zero(
-            m_data[narrow_to_idx(storage_array_size.raw - 1u).value()]
-            & mask);
+            m_data[narrow_to_idx(storage_array_size.raw - 1u).value()] & mask);
          count.raw -= leading_skipped_bits.raw;
 
          // If any zeros were found, return early.
@@ -287,7 +285,7 @@ bitset {
       // store is a single element and the first byte was already scanned.
       // `to_idx` is only called after `i >= 0`, so the value fits `idx`.
       for (iword i = iword(storage_array_size.raw - 1u)
-                   - iword(static_cast<unsigned>(has_prologue));
+                     - iword(static_cast<unsigned>(has_prologue));
            i >= iword(0); --i) {
          idx const byte_index = i.to_idx().value();
          idx next_count = cat::countr_zero(m_data[byte_index]);
