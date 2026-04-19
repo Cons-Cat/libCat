@@ -77,7 +77,6 @@ target_sources(cat INTERFACE
   ${CATLIB}/simd/implementations/is_sse3_supported.cpp
   ${CATLIB}/simd/implementations/is_sse4_1_supported.cpp
   ${CATLIB}/simd/implementations/is_sse4_2_supported.cpp
-  ${CATLIB}/simd/implementations/is_sse3_supported.cpp
   ${CATLIB}/math/implementations/pow.cpp
   ${CATLIB}/math/implementations/sqrt.cpp
   ${CATLIB}/memory/implementations/copy_memory.cpp
@@ -197,11 +196,14 @@ set(CAT_HEADER_FILES
   ${CATLIB}/simd/cat/detail/simd_range_iterator.hpp
   ${CATLIB}/simd/cat/detail/simd_avx2.hpp
   ${CATLIB}/simd/cat/detail/simd_avx2_mask_ops.hpp
-  ${CATLIB}/simd/cat/detail/simd_avx2_fwd.hpp
-  ${CATLIB}/simd/cat/detail/simd_mask_lane_packed_x64.hpp
+  ${CATLIB}/simd/cat/detail/simd_width_aliases.hpp
+  ${CATLIB}/simd/cat/detail/simd_unaligned_abi.hpp
+  ${CATLIB}/simd/cat/detail/simd_mask_lane_sseavx.hpp
   ${CATLIB}/simd/cat/detail/simd_sse42.hpp
-  ${CATLIB}/simd/cat/detail/simd_sse42_fwd.hpp
   ${CATLIB}/simd/cat/detail/simd_sse2.hpp
+  ${CATLIB}/simd/cat/detail/simd_sse2_movmsk.hpp
+  ${CATLIB}/simd/cat/detail/simd_sse2_unary_full.hpp
+  ${CATLIB}/simd/cat/detail/simd_avx2_unary_full.hpp
   ${CATLIB}/socket/cat/socket
   ${CATLIB}/span/cat/span
   ${CATLIB}/string/cat/string
@@ -219,8 +221,6 @@ set(CAT_HEADER_FILES
   ${CATLIB}/linux/implementations/futex.tpp
   ${CATLIB}/meta/implementations/constant_evaluate.tpp
   ${CATLIB}/meta/implementations/common_reference.tpp
-  ${CATLIB}/simd/implementations/compare_implicit_length_strings.tpp
-  ${CATLIB}/simd/implementations/compare_implicit_length_strings_return_index.tpp
   ${CATLIB}/simd/implementations/stream_in.tpp
   ${CATLIB}/string/implementations/string_length.tpp
   ${CATLIB}/bit/implementations/is_aligned.tpp

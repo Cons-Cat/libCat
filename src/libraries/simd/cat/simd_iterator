@@ -1,0 +1,122 @@
+// -*- mode: c++ -*-
+#pragma once
+
+// Chunk iterator over scalar buffers as `simd<Lane, fixed_size_abi<Lane,
+// Width>>`. Implemented with `iterator_interface`, parallel to
+// `cat::reverse_proxy_iterator`.
+
+#include <cat/arithmetic>
+#include <cat/iterator>
+#include <cat/simd>
+#include <cat/utility>
+
+namespace cat {
+
+template <typename T>
+concept vectorizable_element = is_trivially_copyable<T> && (sizeof(T) <= 32u);
+
+template <typename Lane, idx Width>
+struct as_vectorized_chunk_reference {
+   using value_type = simd<Lane, fixed_size_abi<Lane, Width>>;
+   using raw_pointer = raw_arithmetic_type<Lane>*;
+
+   raw_pointer p_data = nullptr;
+
+   [[nodiscard]]
+   constexpr
+   operator value_type() const {
+      value_type chunk{};
+      chunk.load(p_data);
+      return chunk;
+   }
+
+   constexpr auto
+   operator=(value_type const& chunk) -> as_vectorized_chunk_reference& {
+      chunk.store(p_data);
+      return *this;
+   }
+};
+
+template <typename Lane, idx Width, bool IsConst>
+class as_vectorized_iterator
+    : public proxy_iterator_interface<
+         random_access_iterator_tag, simd<Lane, fixed_size_abi<Lane, Width>>,
+         conditional<IsConst, simd<Lane, fixed_size_abi<Lane, Width>>,
+                     as_vectorized_chunk_reference<Lane, Width>>> {
+   using self_type = as_vectorized_iterator<Lane, Width, IsConst>;
+
+ public:
+   using value_type = simd<Lane, fixed_size_abi<Lane, Width>>;
+   using raw_pointer_element = raw_arithmetic_type<Lane>;
+   using storage_pointer =
+      conditional<IsConst, raw_pointer_element const*, raw_pointer_element*>;
+
+   storage_pointer p = nullptr;
+
+   constexpr as_vectorized_iterator() = default;
+   constexpr as_vectorized_iterator(self_type const&) = default;
+   constexpr as_vectorized_iterator(self_type&&) = default;
+
+   constexpr explicit as_vectorized_iterator(storage_pointer ptr) : p(ptr) {
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   size() -> idx {
+      return Width;
+   }
+
+   constexpr void
+   advance(iword offset) {
+      p += static_cast<decltype(p - p)>(offset * iword(Width.raw));
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   distance_to(self_type const& other) const -> iword {
+      return iword((other.p - p)
+                   / static_cast<decltype(other.p - p)>(Width.raw));
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   dereference() -> as_vectorized_chunk_reference<Lane, Width>
+      requires(!IsConst)
+   {
+      return {p};
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   dereference() const {
+      if constexpr (IsConst) {
+         value_type chunk{};
+         chunk.load(p);
+         return chunk;
+      } else {
+         return as_vectorized_chunk_reference<Lane, Width>{p};
+      }
+   }
+};
+
+template <typename Lane, idx Width>
+[[nodiscard]]
+constexpr auto
+as_vectorized(raw_arithmetic_type<Lane> const* ptr)
+   -> as_vectorized_iterator<Lane, Width, true>
+   requires(vectorizable_element<Lane> && is_arithmetic<Lane>)
+{
+   return as_vectorized_iterator<Lane, Width, true>(ptr);
+}
+
+template <typename Lane, idx Width>
+[[nodiscard]]
+constexpr auto
+as_vectorized(raw_arithmetic_type<Lane>* ptr)
+   -> as_vectorized_iterator<Lane, Width, false>
+   requires(vectorizable_element<Lane> && is_arithmetic<Lane>)
+{
+   return as_vectorized_iterator<Lane, Width, false>(ptr);
+}
+
+}  // namespace cat

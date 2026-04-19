@@ -42,6 +42,8 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_arithmetic.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_alloc.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_arrays.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_simd.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_simd_sse_avx.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_compare_strings.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_string_length.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_format_strings.cpp
@@ -56,7 +58,6 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_typelist.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_scaredy.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_set_memory.cpp
-    ${CMAKE_SOURCE_DIR}/tests/src/test_simd.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_tuple.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_variant.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_vec.cpp

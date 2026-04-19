@@ -1,91 +1,107 @@
 #pragma once
 
-#include <cat/detail/simd_avx2_fwd.hpp>
+#include <cat/detail/simd_unaligned_abi.hpp>
 
-#include <cat/bitset>
-#include <cat/simd>
+namespace cat {
+
+// Forward declarations. Element type parameter before ABI tag.
+template <typename T, typename abi_type>
+   requires(is_same<typename abi_type::scalar_type, T>)
+class alignas(abi_type::alignment.raw) simd;
+
+template <typename T, typename abi_type>
+class alignas(abi_type::alignment.raw) simd_mask;
+
+namespace simd_abi {
+template <typename AbiTag, typename ElementT>
+struct mask_lane;
+}
+
+}  // namespace cat
 
 namespace x64 {
 
+// `avx2_abi` is a SIMD ABI that can be expected to work on most reasonable
+// x86-64 build target.
 template <typename T>
-[[nodiscard]]
-auto
-testc(cat::simd_mask<avx2_abi<T>, T> left, cat::simd_mask<avx2_abi<T>, T> right)
-   -> cat::int4 {
-   if constexpr (cat::is_same<T, float>) {
-      return __builtin_ia32_vtestcps256(left.raw, right.raw);
-   } else if constexpr (cat::is_same<T, double>) {
-      return __builtin_ia32_vtestcpd256(left.raw, right.raw);
-   } else {
-      auto left_raw =
-         reinterpret_cast<avx2_simd<long long int>::raw_type>(left.raw);
-      auto right_raw =
-         reinterpret_cast<avx2_simd<long long int>::raw_type>(right.raw);
-      return __builtin_ia32_ptestc256(left_raw, right_raw);
-   }
-}
+struct avx2_abi {
+   using scalar_type = T;
+
+   template <typename U>
+   using make_abi_type = avx2_abi<U>;
+
+   constexpr avx2_abi() = delete;
+
+   static constexpr cat::idx size = 32u;
+   static constexpr cat::idx lanes{size.raw / sizeof(T)};
+   static constexpr cat::uword alignment = 32u;
+
+   // Physical storage and lane truth encoding for `simd_mask` (see
+   // `simd_abi::mask_lane` and `simd_mask_lane_sseavx.hpp`).
+   template <typename ElementT>
+   using simd_mask_lane =
+      cat::simd_abi::mask_lane<avx2_abi<ElementT>, ElementT>;
+};
 
 template <typename T>
-[[nodiscard]]
-auto
-testz(cat::simd_mask<avx2_abi<T>, T> left, cat::simd_mask<avx2_abi<T>, T> right)
-   -> cat::int4 {
-   if constexpr (cat::is_same<T, float>) {
-      return __builtin_ia32_vtestzps256(left.raw, right.raw);
-   } else if constexpr (cat::is_same<T, double>) {
-      return __builtin_ia32_vtestzpd256(left.raw, right.raw);
-   } else {
-      auto left_raw =
-         reinterpret_cast<avx2_simd<long long int>::raw_type>(left.raw);
-      auto right_raw =
-         reinterpret_cast<avx2_simd<long long int>::raw_type>(right.raw);
-      return __builtin_ia32_ptestz256(left_raw, right_raw);
-   }
+using avx2_simd = cat::simd<T, avx2_abi<T>>;
+
+template <typename T>
+using avx2_simd_mask = cat::simd_mask<T, avx2_abi<T>>;
+
+template <typename T>
+using avx2_unaligned_abi = cat::unaligned_abi<avx2_abi<T>>;
+
+template <typename T>
+using avx2_unaligned_simd = cat::simd<T, avx2_unaligned_abi<T>>;
+
+template <typename T>
+using avx2_unaligned_simd_mask = cat::simd_mask<T, avx2_unaligned_abi<T>>;
+
+}  // namespace x64
+
+namespace x64 {
+
+// Store fence. Use after non-temporal (`movnt*`) stores so later loads see
+// them.
+[[gnu::always_inline]]
+inline void
+sfence() {
+   __builtin_ia32_sfence();
+}
+
+// Full memory fence. Orders prior stores and loads against later stores and
+// loads.
+[[gnu::always_inline]]
+inline void
+mfence() {
+   __builtin_ia32_mfence();
+}
+
+// Load fence. Orders prior loads against later loads (and with
+// `lfence/mfence` pairs).
+[[gnu::always_inline]]
+inline void
+lfence() {
+   __builtin_ia32_lfence();
+}
+
+// `vzeroall`. Zeros all ymm registers (and zmm when applicable).
+[[gnu::always_inline]]
+inline void
+zero_avx_registers() {
+   __builtin_ia32_vzeroall();
+}
+
+// `vzeroupper`. Zeros the upper 128 bits of each ymm register for AVX-to-SSE
+// transitions.
+[[gnu::always_inline]]
+inline void
+zero_upper_avx_registers() {
+   __builtin_ia32_vzeroupper();
 }
 
 }  // namespace x64
 
-namespace cat {
-
-// Implementation of `simd_all_of()` for AVX2.
-template <typename T>
-[[nodiscard]]
-auto
-simd_all_of(simd_mask<x64::avx2_abi<T>, T> mask) -> bool {
-   return testc(mask, mask == mask) != 0;
-}
-
-// Implementation of `simd_any_of()` for AVX2.
-template <typename T>
-[[nodiscard]]
-auto
-simd_any_of(simd_mask<x64::avx2_abi<T>, T> mask) -> bool {
-   return testz(mask, mask == mask) == 0;
-}
-
-// Implementation of `simd_to_bitset` for AVX2.
-template <typename T>
-// TODO: Support larger integrals than 1.
-   requires(is_floating_point<T> || (sizeof(T) == 1))
-[[nodiscard]]
-auto
-simd_to_bitset(simd_mask<x64::avx2_abi<T>, T> mask) -> bitset<32u> {
-   if constexpr (is_same<T, float>) {
-      // Create a bitmask from the most significant bit of every `float` in
-      // this vector.
-      return make_bitset<32u>(
-         make_unsigned(__builtin_ia32_movmskps256(mask.raw)));
-   } else if constexpr (is_same<T, double>) {
-      // Create a bitmask from the most significant bit of every `double` in
-      // this vector.
-      return make_bitset<32u>(
-         make_unsigned(__builtin_ia32_movmskpd256(mask.raw)));
-   } else {
-      // Create a bitmask from the most significant bit of every byte in this
-      // vector.
-      return make_bitset<32u>(
-         make_unsigned(__builtin_ia32_pmovmskb256(mask.raw)));
-   }
-}
-
-}  // namespace cat
+// AVX2 and AVX2-unaligned `simd_abi::mask_lane` share the xmm and ymm packed
+// lane mask encoding in `simd_mask_lane_sseavx.hpp`.

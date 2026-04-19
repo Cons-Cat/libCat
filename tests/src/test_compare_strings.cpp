@@ -1,3 +1,4 @@
+#include <cat/simd>
 #include <cat/string>
 
 #include "../unit_tests.hpp"
@@ -87,4 +88,43 @@ test(compare_strings) {
 
    cat::zstr_inplace char_zstr = cat::make_zstr_inplace<2u>("X");
    cat::verify(char_zstr == 'X');
+}
+
+test(compare_strings_long_misaligned_equal_and_diff) {
+   idx const len = 200_idx;
+   idx const skew = 11_idx;
+   alignas(128) char buf_a[320]{};
+   alignas(128) char buf_b[320]{};
+   for (idx i = 0_idx; i < len; ++i) {
+      char const c = static_cast<char>('a' + (i.raw % 23));
+      buf_a[skew.raw + i.raw] = c;
+      buf_b[skew.raw + i.raw] = c;
+   }
+   cat::str_view const va{buf_a + skew.raw, len};
+   cat::str_view const vb{buf_b + skew.raw, len};
+   cat::verify(cat::compare_strings(va, vb));
+   buf_b[skew.raw + 170] = 'z';
+   cat::verify(!cat::compare_strings(va, vb));
+}
+
+test(str_view_find_past_first_simd_chunk) {
+   idx const lanes = cat::char1x16::size();
+
+   char buffer[128]{};
+   for (idx i = 0u; i < lanes; ++i) {
+      buffer[i.raw] = 'a';
+   }
+   idx const past_first_chunk = lanes + 7u;
+   buffer[past_first_chunk.raw] = 'Z';
+
+   cat::str_view const haystack_past_chunk{
+      buffer, past_first_chunk + 1u};
+   cat::verify(haystack_past_chunk.find('Z').value()
+               == past_first_chunk);
+   cat::verify(!haystack_past_chunk.find('q').has_value());
+
+   char buffer2[128]{};
+   buffer2[4] = 'm';
+   cat::str_view const haystack_first_chunk(buffer2, 48u);
+   cat::verify(haystack_first_chunk.find('m').value() == 4);
 }

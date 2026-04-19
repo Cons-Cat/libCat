@@ -83,11 +83,11 @@ cat::copy_memory(void const* p_source, void* p_destination, uword bytes) {
          bytes -= 256u;
       }
 
-      sfence();
+      x64::sfence();
    }
 
    copy_memory_small(p_source_handle, p_destination_handle, bytes);
-   zero_upper_avx_registers();
+   x64::zero_upper_avx_registers();
 }
 
 /*
