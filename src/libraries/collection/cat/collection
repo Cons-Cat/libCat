@@ -318,9 +318,6 @@ class collection_interface {
    at(idx index) -> maybe<T&>
       requires(is_array_like)
    {
-      if !consteval {
-         cat::assert(index >= 0);
-      }
       if (index < this->self().size()) {
          return this->self_mut().data()[index.raw];
       }
