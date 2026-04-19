@@ -211,8 +211,8 @@ struct limits<__INT64_TYPE__> {
 
    static consteval auto
    min() -> __INT64_TYPE__ {
-      // This weird code is required to compile correctly for some reason.
-      // It's basically what libstdc++ does, too.
+      // `9223372036854775808` does not fit in signed 64-bit literals on this
+      // model, so build `INT64_MIN` as `-INT64_MAX - 1` from literals that fit
       return -9'223'372'036'854'775'807 - 1;
    }
 
@@ -241,6 +241,66 @@ struct limits<__UINT64_TYPE__> {
    static consteval auto
    max() -> __UINT64_TYPE__ {
       return 18'446'744'073'709'551'615u;
+   }
+
+   static constexpr __UINT8_TYPE__ digits = 64;
+   static constexpr __UINT8_TYPE__ digits10 = 19;
+   static constexpr __UINT8_TYPE__ bits = 64;
+   static constexpr __UINT64_TYPE__ high_bit = static_cast<__UINT64_TYPE__>(1u)
+                                               << 63u;
+
+   static constexpr bool is_iec559 = false;
+};
+
+// `__INT64_TYPE__` / `__UINT64_TYPE__` are not always the same spelling as
+// `long long` / `unsigned long long` (for example `__INT64_TYPE__` may be
+// `long` on LP64 targets). These partial specializations cover that case.
+//
+// When `sizeof(long) != 8` (for example LLP64), `__INT64_TYPE__` is typically
+// `long long`, so `limits<__INT64_TYPE__>` already defines `limits<long long>`;
+// omit these partials in that case. Also omit when `long long` is spelled
+// `__INT64_TYPE__` even if `sizeof(long) == 8`.
+
+template <typename T>
+// On LP64, `limits<long long> needs explicit specialization.
+   requires(is_same<T, long long> && sizeof(long) == 8)
+struct limits<T> {
+   constexpr limits() = delete;
+
+   static consteval auto
+   min() -> long long {
+      // `9223372036854775808` does not fit in signed 64-bit literals on this
+      // model, so build `INT64_MIN` as `-INT64_MAX - 1` from literals that fit
+      return -9'223'372'036'854'775'807ll - 1;
+   }
+
+   static consteval auto
+   max() -> long long {
+      return 9'223'372'036'854'775'807ll;
+   }
+
+   static constexpr __UINT8_TYPE__ digits = 63;
+   static constexpr __UINT8_TYPE__ digits10 = 18;
+   static constexpr __UINT8_TYPE__ bits = 64;
+   static constexpr __UINT64_TYPE__ high_bit = 1ull << 63ull;
+
+   static constexpr bool is_iec559 = false;
+};
+
+template <typename T>
+// On LP64, `limits<long long> needs explicit specialization.
+   requires(is_same<T, unsigned long long> && sizeof(long) == 8)
+struct limits<T> {
+   constexpr limits() = delete;
+
+   static consteval auto
+   min() -> unsigned long long {
+      return 0ull;
+   }
+
+   static consteval auto
+   max() -> unsigned long long {
+      return 18'446'744'073'709'551'615ull;
    }
 
    static constexpr __UINT8_TYPE__ digits = 64;
