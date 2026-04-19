@@ -524,7 +524,7 @@ class basic_list
    rbegin()
       requires(is_doubly_linked)
    {
-      return cat::reverse_iterator_adaptor<iterator>{m_storage.m_p_tail};
+      return cat::reverse_proxy_iterator<iterator>{m_storage.m_p_tail};
    }
 
    [[nodiscard]]
@@ -532,7 +532,7 @@ class basic_list
    rend()
       requires(is_doubly_linked)
    {
-      return cat::reverse_iterator_adaptor<iterator>{m_storage.m_p_head};
+      return cat::reverse_proxy_iterator<iterator>{m_storage.m_p_head};
    }
 
    [[nodiscard]]
@@ -540,7 +540,7 @@ class basic_list
    rbegin() const
       requires(is_doubly_linked)
    {
-      return cat::reverse_iterator_adaptor<iterator>{m_storage.m_p_tail};
+      return cat::reverse_proxy_iterator<iterator>{m_storage.m_p_tail};
    }
 
    [[nodiscard]]
@@ -548,7 +548,7 @@ class basic_list
    rend() const
       requires(is_doubly_linked)
    {
-      return cat::reverse_iterator_adaptor<iterator>{m_storage.m_p_head};
+      return cat::reverse_proxy_iterator<iterator>{m_storage.m_p_head};
    }
 
  private:
@@ -567,10 +567,11 @@ namespace detail {
 
 template <typename T, bool is_doubly_linked>
 class list_iterator
-    : public iterator_interface<list_iterator<T, is_doubly_linked>> {
+    : public iterator_interface<
+         conditional<is_doubly_linked, bidirectional_iterator_tag,
+                     forward_iterator_tag>,
+         T> {
  public:
-   friend iterator_interface<list_iterator<T, is_doubly_linked>>;
-
    using value_type = T;
    using const_value_type = T const;
    using reference = T&;
