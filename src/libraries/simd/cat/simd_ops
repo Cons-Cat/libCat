@@ -20,13 +20,15 @@
 // Documentation often calls vector loads gather and vector stores scatter.
 // Masked forms blend inactive lanes in the destination register or memory.
 
+#include <cat/detail/simd_abi_hooks.hpp>
+#include <cat/detail/simd_broadcast_traits.hpp>
+
 #include <cat/arithmetic>
 #include <cat/bit>
 #include <cat/math>
 #include <cat/maybe>
+#include <cat/meta>
 #include <cat/utility>
-
-#include "cat/detail/simd_abi_hooks.hpp"
 
 namespace cat {
 
@@ -53,12 +55,20 @@ enum class simd_memory_kind : unsigned char {
 
 namespace detail {
 
-template <typename T>
-using simd_abi_scalar =
-   conditional<is_same<T, bool>, T, raw_arithmetic_type<T>>;
+template <typename>
+struct simd_mask_pack_parameters {};
 
 template <typename T, typename Abi>
-   requires(is_same<T, bool> || requires {
+struct simd_mask_pack_parameters<simd_mask<T, Abi>> {
+   using lane = T;
+   using abi = Abi;
+};
+
+template <typename T>
+using simd_abi_scalar = conditional<is_bool<T>, T, raw_arithmetic_type<T>>;
+
+template <typename T, typename Abi>
+   requires(is_bool<T> || requires {
                typename Abi::template make_abi_type<simd_abi_scalar<T>>;
             })
 using simd_abi_vec =
@@ -439,6 +449,28 @@ struct simd_load_blend_masked_impl {
       }
       return result;
    }
+
+   template <typename U>
+      requires(is_simd_mask<Mask>
+               && is_constructible<
+                  typename detail::simd_mask_pack_parameters<Mask>::lane,
+                  remove_cvref<U>>
+               && detail::simd_broadcast_really_convertible_to<
+                  remove_cvref<U>,
+                  typename detail::simd_mask_pack_parameters<Mask>::lane>())
+   [[nodiscard]]
+   constexpr auto
+   operator()(
+      U&& passthrough_fill,
+      typename simd<typename detail::simd_mask_pack_parameters<Mask>::lane,
+                    typename detail::simd_mask_pack_parameters<Mask>::abi>::
+         memory_lane const* source) const
+      -> simd<typename detail::simd_mask_pack_parameters<Mask>::lane,
+              typename detail::simd_mask_pack_parameters<Mask>::abi> {
+      using lane = typename detail::simd_mask_pack_parameters<Mask>::lane;
+      using abi = typename detail::simd_mask_pack_parameters<Mask>::abi;
+      return (*this)(simd<lane, abi>(fwd(passthrough_fill)), source);
+   }
 };
 
 // Masked gather from aligned contiguous `source`, blending into `passthrough`.
@@ -463,6 +495,28 @@ struct simd_load_aligned_blend_masked_impl {
          }
       }
       return result;
+   }
+
+   template <typename U>
+      requires(is_simd_mask<Mask>
+               && is_constructible<
+                  typename detail::simd_mask_pack_parameters<Mask>::lane,
+                  remove_cvref<U>>
+               && detail::simd_broadcast_really_convertible_to<
+                  remove_cvref<U>,
+                  typename detail::simd_mask_pack_parameters<Mask>::lane>())
+   [[nodiscard]]
+   constexpr auto
+   operator()(
+      U&& passthrough_fill,
+      typename simd<typename detail::simd_mask_pack_parameters<Mask>::lane,
+                    typename detail::simd_mask_pack_parameters<Mask>::abi>::
+         memory_lane const* source) const
+      -> maybe<simd<typename detail::simd_mask_pack_parameters<Mask>::lane,
+                    typename detail::simd_mask_pack_parameters<Mask>::abi>> {
+      using lane = typename detail::simd_mask_pack_parameters<Mask>::lane;
+      using abi = typename detail::simd_mask_pack_parameters<Mask>::abi;
+      return (*this)(simd<lane, abi>(fwd(passthrough_fill)), source);
    }
 };
 
@@ -551,20 +605,17 @@ template <typename Mask>
 struct simd_iota_blend_masked_impl {
    Mask mask;
 
-   template <typename V, typename U>
-      requires(is_simd<V> && is_arithmetic<typename V::scalar_type>
-               && !is_same<typename V::scalar_type, bool>
-               && is_implicitly_convertible<U, typename V::scalar_type>)
+   template <is_simd V>
    [[nodiscard]]
    constexpr auto
-   operator()(V passthrough, U start) const -> V {
+   operator()(V passthrough, V::scalar_type start) const -> V {
       using T = typename V::scalar_type;
       T const base = static_cast<T>(start);
       V result = passthrough;
 #pragma clang loop vectorize_predicate(enable)
       for (idx i = 0u; i < V::abi_type::lanes; ++i) {
          if (mask[i]) {
-            result.set_lane(i, static_cast<T>(base + static_cast<T>(i.raw)));
+            result.set_lane(i, static_cast<T>(base + static_cast<T>(i)));
          }
       }
       return result;
@@ -580,14 +631,14 @@ struct simd_load_from_blend_masked_impl {
    template <typename T, typename Abi, typename IdxAbi, typename Idx>
    [[nodiscard]]
    constexpr auto
-   operator()(simd<T, Abi> passthrough, T const* base,
+   operator()(simd<T, Abi> passthrough, T const* p_base,
               simd<Idx, IdxAbi> indices) const -> simd<T, Abi> {
       simd<T, Abi> result = passthrough;
 #pragma clang loop vectorize_predicate(enable)
       for (idx i = 0u; i < Abi::lanes; ++i) {
          if (mask[i]) {
-            result.set_lane(i,
-                            base[idx(static_cast<idx::raw_type>(indices[i]))]);
+            result.set_lane(
+               i, p_base[idx(static_cast<idx::raw_type>(indices[i]))]);
          }
       }
       return result;
@@ -749,18 +800,14 @@ struct make_simd_filled_impl {
 
 template <is_simd V>
 struct simd_iota_impl {
-   template <typename U>
-      requires(is_arithmetic<typename V::scalar_type>
-               && !is_same<typename V::scalar_type, bool>
-               && is_implicitly_convertible<U, typename V::scalar_type>)
    [[nodiscard]]
    constexpr auto
-   operator()(U start) const -> V {
-      // P2638R0 §1.15 lane `iota` ramp without a scalar index loop off-pack.
+   operator()(V::scalar_type start) const -> V {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       using T = typename V::scalar_type;
       T const base = static_cast<T>(start);
       V result{};
+#pragma clang loop vectorize(enable)
       for (idx i = 0u; i < V::abi_type::lanes; ++i) {
          result.set_lane(i, static_cast<T>(base + static_cast<T>(i.raw)));
       }
@@ -769,10 +816,8 @@ struct simd_iota_impl {
 
    [[nodiscard]]
    constexpr auto
-   operator[](
-      simd_mask<typename V::scalar_type, typename V::abi_type> lane_mask) const
-      -> simd_iota_blend_masked_impl<
-         simd_mask<typename V::scalar_type, typename V::abi_type>> {
+   operator[](V::mask_type lane_mask) const -> simd_iota_blend_masked_impl<
+      simd_mask<typename V::scalar_type, typename V::abi_type>> {
       return {lane_mask};
    }
 };
@@ -1865,7 +1910,7 @@ struct simd_bitreverse_impl : simd_elementwise_interface<simd_bitreverse_impl> {
    constexpr simd_bitreverse_impl() = default;
 
    template <typename T, typename Abi>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
@@ -1880,7 +1925,7 @@ struct simd_bitreverse_impl : simd_elementwise_interface<simd_bitreverse_impl> {
    }
 
    template <typename T>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
@@ -2049,7 +2094,7 @@ struct simd_add_sat_impl
    constexpr simd_add_sat_impl() = default;
 
    template <typename T, typename Abi>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
@@ -2063,7 +2108,7 @@ struct simd_add_sat_impl
    }
 
    template <typename T>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T left, T right) const -> T {
@@ -2078,7 +2123,7 @@ struct simd_sub_sat_impl
    constexpr simd_sub_sat_impl() = default;
 
    template <typename T, typename Abi>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
@@ -2092,7 +2137,7 @@ struct simd_sub_sat_impl
    }
 
    template <typename T>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T left, T right) const -> T {
@@ -2113,6 +2158,17 @@ struct simd_if_else_impl {
       // P2638R0 §1.3 see `simd_if_else_apply`.
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       return detail::simd_if_else_apply(mask, on_true, on_false);
+   }
+
+   template <typename T, typename Abi, typename U>
+      requires(
+         is_constructible<T, remove_cvref<U>>
+         && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd_mask<T, Abi> mask, simd<T, Abi> on_true, U&& on_false) const
+      -> simd<T, Abi> {
+      return (*this)(mask, on_true, simd<T, Abi>(fwd(on_false)));
    }
 
    template <typename T, typename Abi, typename A>
@@ -2478,7 +2534,7 @@ struct simd_rnroot_impl
 };
 
 template <typename T>
-   requires(is_integral<T> && !is_same<T, bool>)
+   requires(is_integral<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
 simd_popcount_lane(T x) -> T {
@@ -2490,7 +2546,7 @@ struct simd_popcount_impl : simd_elementwise_interface<simd_popcount_impl> {
    constexpr simd_popcount_impl() = default;
 
    template <typename T, typename Abi>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
@@ -2498,7 +2554,7 @@ struct simd_popcount_impl : simd_elementwise_interface<simd_popcount_impl> {
    }
 
    template <typename T>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
@@ -2624,7 +2680,7 @@ struct simd_expand_impl {
 };
 
 template <typename T>
-   requires(is_integral<T> && !is_same<T, bool>)
+   requires(is_integral<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
 simd_rotate_left_lane(T operand, iword count) -> T {
@@ -2644,7 +2700,7 @@ simd_rotate_left_lane(T operand, iword count) -> T {
 }
 
 template <typename T>
-   requires(is_integral<T> && !is_same<T, bool>)
+   requires(is_integral<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
 simd_rotate_right_lane(T operand, iword count) -> T {
@@ -2664,7 +2720,7 @@ simd_rotate_right_lane(T operand, iword count) -> T {
 }
 
 template <typename T, typename Abi>
-   requires(is_integral<T> && !is_same<T, bool>)
+   requires(is_integral<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
 simd_rotate_left_generic(simd<T, Abi> input, iword count) -> simd<T, Abi> {
@@ -2676,7 +2732,7 @@ simd_rotate_left_generic(simd<T, Abi> input, iword count) -> simd<T, Abi> {
 }
 
 template <typename T, typename Abi>
-   requires(is_integral<T> && !is_same<T, bool>)
+   requires(is_integral<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
 simd_rotate_right_generic(simd<T, Abi> input, iword count) -> simd<T, Abi> {
@@ -2692,7 +2748,7 @@ struct simd_rotate_left_impl
    constexpr simd_rotate_left_impl() = default;
 
    template <typename T, typename Abi>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_full(simd<T, Abi> input, iword count) const -> simd<T, Abi> {
@@ -2705,7 +2761,7 @@ struct simd_rotate_left_impl
    }
 
    template <typename T>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T operand, iword count) const -> T {
@@ -2718,7 +2774,7 @@ struct simd_rotate_right_impl
    constexpr simd_rotate_right_impl() = default;
 
    template <typename T, typename Abi>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_full(simd<T, Abi> input, iword count) const -> simd<T, Abi> {
@@ -2731,7 +2787,7 @@ struct simd_rotate_right_impl
    }
 
    template <typename T>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T operand, iword count) const -> T {
@@ -2867,7 +2923,7 @@ struct simd_fshl_impl
    constexpr simd_fshl_impl() = default;
 
    template <typename T, typename Abi>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_full(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z) const
@@ -2879,7 +2935,7 @@ struct simd_fshl_impl
    }
 
    template <typename T>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x, T y, T z) const -> T {
@@ -2898,7 +2954,7 @@ struct simd_fshr_impl
    constexpr simd_fshr_impl() = default;
 
    template <typename T, typename Abi>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_full(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z) const
@@ -2910,7 +2966,7 @@ struct simd_fshr_impl
    }
 
    template <typename T>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x, T y, T z) const -> T {
@@ -2970,7 +3026,7 @@ simd_fma_lane(T x, T y, T z) -> T {
 }
 
 template <typename T>
-   requires(is_integral<T> && !is_same<T, bool>)
+   requires(is_integral<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
 simd_fshl_lane(T x, T y, T z) -> T {
@@ -2978,7 +3034,7 @@ simd_fshl_lane(T x, T y, T z) -> T {
 }
 
 template <typename T>
-   requires(is_integral<T> && !is_same<T, bool>)
+   requires(is_integral<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
 simd_fshr_lane(T x, T y, T z) -> T {
@@ -2996,9 +3052,6 @@ simd_ldexp_lane(T x, IntT y) -> T {
 // Mask-free lane ramp only. Blended updates use
 // `simd_iota<V>[lane_blend_mask](passthrough, start)`.
 template <typename V, typename U>
-   requires(is_simd<V> && is_arithmetic<typename V::scalar_type>
-            && !is_same<typename V::scalar_type, bool>
-            && is_implicitly_convertible<U, typename V::scalar_type>)
 [[nodiscard]]
 constexpr auto
 iota(U start) -> V {

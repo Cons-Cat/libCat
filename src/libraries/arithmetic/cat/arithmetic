@@ -285,8 +285,8 @@ raw_source_fits_implicit_storage(U const& other) -> bool {
    using raw_value = remove_cvref<decltype(raw)>;
    if constexpr (is_floating_point<Dest>) {
       if constexpr (is_integral<raw_value>) {
-         // Integral to float. `implicit_raw_compare_wide` does not support `float`
-         // `Dest`.
+         // Integral to float. `implicit_raw_compare_wide` does not support
+         // `float` `Dest`.
          Dest const fd = static_cast<Dest>(raw);
          if (!__builtin_isfinite(fd)) {
             return false;

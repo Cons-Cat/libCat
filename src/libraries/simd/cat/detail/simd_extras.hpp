@@ -143,7 +143,7 @@ simd_reverse_blocks(V input, idx block_lanes) -> V {
 }
 
 template <typename T, typename Abi>
-   requires(is_integral<T> && !is_same<T, bool>)
+   requires(is_integral<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
 simd_clz(simd<T, Abi> x) -> simd<T, Abi> {
@@ -151,7 +151,7 @@ simd_clz(simd<T, Abi> x) -> simd<T, Abi> {
 }
 
 template <typename T, typename Abi>
-   requires(is_integral<T> && !is_same<T, bool>)
+   requires(is_integral<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
 simd_clz(simd<T, Abi> x, simd<T, Abi> if_zero) -> simd<T, Abi> {
@@ -159,7 +159,7 @@ simd_clz(simd<T, Abi> x, simd<T, Abi> if_zero) -> simd<T, Abi> {
 }
 
 template <typename T, typename Abi>
-   requires(is_integral<T> && !is_same<T, bool>)
+   requires(is_integral<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
 simd_ctz(simd<T, Abi> x) -> simd<T, Abi> {
@@ -167,7 +167,7 @@ simd_ctz(simd<T, Abi> x) -> simd<T, Abi> {
 }
 
 template <typename T, typename Abi>
-   requires(is_integral<T> && !is_same<T, bool>)
+   requires(is_integral<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
 simd_ctz(simd<T, Abi> x, simd<T, Abi> if_zero) -> simd<T, Abi> {

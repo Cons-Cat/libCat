@@ -24,6 +24,16 @@ using float_lane = cat::float4::raw_type;
 using double_lane = cat::float8::raw_type;
 using mask_lane = cat::uint1::raw_type;
 
+template <typename WideBoolSimd>
+void
+verify_widened_bool_simd_matches_bool4(cat::fixed_size_simd<bool, 4u> const ref,
+                                      WideBoolSimd const v) {
+   cat::verify(ref.size() == v.size());
+   for (cat::idx i = 0u; i < 4u; ++i) {
+      cat::verify(v[i] == ref[i]);
+   }
+}
+
 }  // namespace
 
 test(simd) {
@@ -409,7 +419,7 @@ test(simd_if_else_mask_from_count) {
 
 test(simd_masked_increment) {
    int4x4 v = {1, -2, 3, -4};
-   auto m = v >= int4x4(0);
+   auto m = v >= 0;
    int4x4 inc = {10, 10, 10, 10};
    int4x4 r = cat::simd_if_else(m, v + inc, v);
    cat::verify(r[0] == 11);
@@ -418,7 +428,7 @@ test(simd_masked_increment) {
    cat::verify(r[3] == -4);
 
    float4x4 fv = {1_f4, -2_f4, 3_f4, -4_f4};
-   auto fm = fv >= float4x4(0_f4);
+   auto fm = fv >= 0_f4;
    float4x4 finc = {10_f4, 10_f4, 10_f4, 10_f4};
    float4x4 fr = cat::simd_if_else(fm, fv + finc, fv);
    cat::verify(fr[0] == 11_f4);
@@ -444,7 +454,7 @@ test(simd_mask_pattern_and_if_else_builder) {
    M m{5u};
    cat::verify(m.to_uword() == 5_uz);
    int4x4 v = {1, 2, 3, 4};
-   int4x4 r = cat::simd_if_else(cat::make_simd_mask_if(m).else_(0), v + int4x4(100));
+   int4x4 r = cat::simd_if_else(cat::make_simd_mask_if(m).else_(0), v + 100);
    cat::verify(r[0] == 101);
    cat::verify(r[1] == 0);
    cat::verify(r[2] == 103);
@@ -455,7 +465,7 @@ test(simd_mask_pattern_and_if_else_builder) {
    cat::verify(mf.to_uword() == 5_uz);
    float4x4 fv = {1_f4, 2_f4, 3_f4, 4_f4};
    float4x4 fr =
-      cat::simd_if_else(cat::make_simd_mask_if(mf).else_(0_f4), fv + float4x4(100_f4));
+      cat::simd_if_else(cat::make_simd_mask_if(mf).else_(0_f4), fv + 100_f4);
    cat::verify(fr[0] == 101_f4);
    cat::verify(fr[1] == 0_f4);
    cat::verify(fr[2] == 103_f4);
@@ -528,7 +538,7 @@ test(simd_eve_mask_subscript_load_store_aligned) {
    int4x4 const r = cat::simd_load_aligned[m](pass, src).verify();
    cat::verify(r[0] == 11 && r[1] == 22 && r[2] == 30 && r[3] == 40);
 
-   int4x4 const z = cat::simd_load_aligned[m](int4x4(0), src).verify();
+   int4x4 const z = cat::simd_load_aligned[m](0, src).verify();
    cat::verify(z[0] == 11 && z[1] == 22 && z[2] == 0 && z[3] == 0);
 
    alignas(int4x4::abi_type::alignment.raw) int_lane dst[] = {-1, -1, -1, -1};
@@ -548,7 +558,7 @@ test(simd_eve_mask_subscript_load_store_aligned) {
    float4x4 const fr = cat::simd_load_aligned[mf](fpass, fsrc).verify();
    cat::verify(fr[0] == 1.1f && fr[1] == 2.2f && fr[2] == 30_f4 && fr[3] == 40_f4);
    float4x4 const fz =
-      cat::simd_load_aligned[mf](float4x4(0_f4), fsrc).verify();
+      cat::simd_load_aligned[mf](0_f4, fsrc).verify();
    cat::verify(fz[0] == 1.1f && fz[1] == 2.2f && fz[2] == 0_f4 && fz[3] == 0_f4);
    alignas(float4x4::abi_type::alignment.raw) float_lane fdst[] = {-1.f, -1.f, -1.f, -1.f};
    float4x4 const fv = {100_f4, 200_f4, 300_f4, 400_f4};
@@ -876,6 +886,46 @@ test(simd_int_binary_ops) {
    cat::verify(m[3] == 7);
 }
 
+test(simd_scalar_on_left_ops) {
+   int4x4 const v = {2, 4, 10, -5};
+   int_lane const hundred = 100;
+
+   int4x4 const sum_left = hundred + v;
+   cat::verify(sum_left == int4x4{102, 104, 110, 95});
+   cat::verify(sum_left == v + hundred);
+
+   int4x4 const diff_left = hundred - v;
+   cat::verify(diff_left == int4x4{98, 96, 90, 105});
+
+   int_lane const three = 3;
+   int4x4 const prod_left = three * v;
+   cat::verify(prod_left == v * three);
+   cat::verify(prod_left == int4x4{6, 12, 30, -15});
+
+   int_lane const twenty_four = 24;
+   int4x4 const quot_left = twenty_four / v;
+   cat::verify(quot_left[0] == 24 / 2);
+   cat::verify(quot_left[1] == 24 / 4);
+   cat::verify(quot_left[2] == 24 / 10);
+   cat::verify(quot_left[3] == 24 / -5);
+
+   float4x4 const fv = {2_f4, 4_f4, 10_f4, 5_f4};
+   float_lane const ten_f = 10.f;
+   float4x4 const fsum_left = ten_f + fv;
+   cat::verify(fsum_left == fv + ten_f);
+   cat::verify(fsum_left[0] == 12_f4);
+
+   float4x4 const fdiff_left = ten_f - fv;
+   cat::verify(fdiff_left[0] == 8_f4);
+
+   float_lane const three_f = 3.f;
+   cat::verify(three_f * fv == fv * three_f);
+
+   float_lane const hundred_f = 100.f;
+   float4x4 const fquot_left = hundred_f / fv;
+   cat::verify(fquot_left[0] == 50_f4);
+}
+
 test(simd_int_compound_assign) {
    int4x4 v = {1, 2, 3, 4};
    v += int4x4{10, 10, 10, 10};
@@ -919,7 +969,7 @@ test(simd_int_bitwise_and_shifts) {
    u ^= int4x4{15, 15, 15, 15};
    cat::verify(u[2] == 7);
 
-   int4x4 one = int4x4(1);
+   int4x4 const one = 1;
    int4x4 sh = int4x4{1, 2, 4, 8} << one;
    cat::verify(sh[0] == 2);
    int4x4 shr = int4x4{8, 16, 32, 64} >> one;
@@ -1817,7 +1867,7 @@ test(simd_as_vectorized_random_access_and_mutation) {
    cat::verify(sum4(*bconst) == sum4(ref0));
 
    float4x4 const ref_last =
-      float4x4(4_f4) - cat::iota<float4x4>(0_f4);
+      4.f - cat::iota<float4x4>(0_f4);
    cat::verify(sum4(*(e - 1)) == sum4(ref_last));
    cat::verify(sum4(*(e - 1)) == sum4(ref_last));
 
@@ -1865,8 +1915,8 @@ test(simd_as_vectorized_random_access_and_mutation) {
          float4x4(ref_hi) - cat::iota<float4x4>(0_f4);
       cat::verify(sum4(x) == sum4(ref));
       cat::verify(sum4(*cur) == sum4(ref));
-      *cur = x + float4x4(1_f4);
-      cat::verify(sum4(*cur) == sum4(ref + float4x4(1_f4)));
+      *cur = x + 1_f4;
+      cat::verify(sum4(*cur) == sum4(ref + 1_f4));
    }
 
    ref_hi = float_lane(static_cast<float>(k_extent.raw)) + 1.f;
@@ -1891,8 +1941,8 @@ test(simd_as_vectorized_random_access_and_mutation) {
       cat::verify(sum4(*cit) == sum4(ref));
    }
 
-   float4x4 const ref0_after = ref0 + float4x4(1_f4);
-   float4x4 const ref_second_after = ref_second_chunk + float4x4(1_f4);
+   float4x4 const ref0_after = ref0 + 1_f4;
+   float4x4 const ref_second_after = ref_second_chunk + 1_f4;
    cat::verify(sum4(b[0]) == sum4(ref0_after));
    cat::verify(sum4(b[1]) == sum4(ref_second_after));
 }
@@ -2011,26 +2061,26 @@ test(simd_list_iterator_vectorization_float) {
    float4x4 reference =
       float4x4(float_lane(static_cast<float>(list.size().raw)))
       - cat::iota<float4x4>(0_f4);
-   for (; b != e; ++b, reference = reference - float4x4(4_f4)) {
+   for (; b != e; ++b, reference = reference - 4_f4) {
       float4x4 const x = *b;
       verify_float4x4_eq(x, reference);
       verify_float4x4_eq(*b, reference);
-      *b = x + float4x4(1_f4);
-      verify_float4x4_eq(*b, reference + float4x4(1_f4));
+      *b = x + 1_f4;
+      verify_float4x4_eq(*b, reference + 1_f4);
       auto&& ref = *b;
-      ref = x + float4x4(2_f4);
-      verify_float4x4_eq(*b, reference + float4x4(2_f4));
+      ref = x + 2_f4;
+      verify_float4x4_eq(*b, reference + 2_f4);
       verify_float4x4_eq(static_cast<float4x4>(ref),
-                         reference + float4x4(2_f4));
-      ref = x + float4x4(1_f4);
-      verify_float4x4_eq(*b, reference + float4x4(1_f4));
+                         reference + 2_f4);
+      ref = x + 1_f4;
+      verify_float4x4_eq(*b, reference + 1_f4);
       verify_float4x4_eq(static_cast<float4x4>(ref),
-                         reference + float4x4(1_f4));
+                         reference + 1_f4);
    }
 
    reference = float4x4(float_lane(static_cast<float>(list.size().raw)))
-               - cat::iota<float4x4>(0_f4) + float4x4(1_f4);
-   for (b = list.begin(); b != e; ++b, reference = reference - float4x4(4_f4)) {
+               - cat::iota<float4x4>(0_f4) + 1_f4;
+   for (b = list.begin(); b != e; ++b, reference = reference - 4_f4) {
       float4x4 const x = *b;
       verify_float4x4_eq(x, reference);
       verify_float4x4_eq(*b, reference);
@@ -2059,7 +2109,7 @@ test(simd_ignore_first_last_keep_between) {
 test(simd_mask_compose_and_if_else) {
    int4x4 v = {1, 2, 3, 4};
    auto m = cat::make_simd_mask_ignore_first<int4x4>(1u) & cat::make_simd_mask_from_count<int4x4>(3u);
-   int4x4 r = cat::simd_if_else(m, v * int4x4(10), v);
+   int4x4 r = cat::simd_if_else(m, v * 10, v);
    cat::verify(r[0] == 1);
    cat::verify(r[1] == 20);
    cat::verify(r[2] == 30);
@@ -2068,7 +2118,7 @@ test(simd_mask_compose_and_if_else) {
    float4x4 fv = {1_f4, 2_f4, 3_f4, 4_f4};
    auto fm = cat::make_simd_mask_ignore_first<float4x4>(1u)
              & cat::make_simd_mask_from_count<float4x4>(3u);
-   float4x4 fr = cat::simd_if_else(fm, fv * float4x4(10_f4), fv);
+   float4x4 fr = cat::simd_if_else(fm, fv * 10_f4, fv);
    cat::verify(fr[0] == 1_f4);
    cat::verify(fr[1] == 20_f4);
    cat::verify(fr[2] == 30_f4);
@@ -2078,17 +2128,17 @@ test(simd_mask_compose_and_if_else) {
 test(simd_if_else_builder_vs_factory) {
    int4x4 v = {1, 2, 3, 4};
    auto m = cat::make_simd_mask_from_count<int4x4>(2u);
-   int4x4 factory = cat::simd_if_else(m, v + int4x4(100), int4x4(0));
-   int4x4 r = cat::simd_if_else(cat::make_simd_mask_if(m).else_(0), v + int4x4(100));
+   int4x4 factory = cat::simd_if_else(m, v + 100, 0);
+   int4x4 r = cat::simd_if_else(cat::make_simd_mask_if(m).else_(0), v + 100);
    cat::verify(r[0] == factory[0]);
    cat::verify(r[3] == factory[3]);
 
    float4x4 fv = {1_f4, 2_f4, 3_f4, 4_f4};
    auto fm = cat::make_simd_mask_from_count<float4x4>(2u);
    float4x4 ffactory =
-      cat::simd_if_else(fm, fv + float4x4(100_f4), float4x4(0_f4));
+      cat::simd_if_else(fm, fv + 100_f4, 0_f4);
    float4x4 fr =
-      cat::simd_if_else(cat::make_simd_mask_if(fm).else_(0_f4), fv + float4x4(100_f4));
+      cat::simd_if_else(cat::make_simd_mask_if(fm).else_(0_f4), fv + 100_f4);
    cat::verify(fr[0] == ffactory[0]);
    cat::verify(fr[3] == ffactory[3]);
 }
@@ -2181,4 +2231,189 @@ test(simd_sub_sat_masked_native_int1) {
    cat::verify(add_r[0] == 127);
    cat::verify(add_r[1] == -40);
    cat::verify(add_r[2] == 100);
+}
+
+test(simd_overflow_accessor_views) {
+   using sat4 = cat::sat_int4;
+   using sat4x4 = cat::fixed_size_simd<sat4, 4u>;
+
+   sat4 const lane_max = cat::sat_int4::max();
+   sat4x4 vmax{};
+   for (cat::idx i = 0u; i < 4u; ++i) {
+      vmax.set_lane(i, lane_max);
+   }
+   sat4x4 const bump(cat::sat_int4(1));
+
+   cat::verify((vmax + bump)[0] == lane_max);
+   cat::verify((vmax.sat() + bump)[0] == lane_max);
+
+   sat4 const lane_wrap =
+      sat4(cat::wrap_add(lane_max.raw, typename sat4::raw_type(1)));
+   cat::verify((vmax.undef() + bump)[0] == lane_wrap);
+   cat::verify((vmax.wrap() + bump)[0] == lane_wrap);
+
+   cat::int4 const scalar_max = cat::int4::max();
+   cat::int4x4 u{};
+   for (cat::idx i = 0u; i < 4u; ++i) {
+      u.set_lane(i, scalar_max);
+   }
+   cat::int4x4 const bump_i(cat::int4(1));
+
+   cat::verify((u.sat() + bump_i)[0] == scalar_max);
+
+   cat::int4 const lane_expected =
+      cat::int4(cat::wrap_add(scalar_max.raw, typename cat::int4::raw_type(1)));
+   cat::verify((u + bump_i)[0] == lane_expected);
+   cat::verify((u.undef() + bump_i)[0] == lane_expected);
+   cat::verify((u.wrap() + bump_i)[0] == lane_expected);
+}
+
+test(simd_bool_lanes) {
+   using simd_four_bool = cat::fixed_size_simd<bool, 4u>;
+
+   simd_four_bool const f(true, false, true, false);
+   simd_four_bool const g(false, false, true, true);
+
+   cat::verify(f[0u] && !f[1u] && f[2u] && !f[3u]);
+   cat::verify(!g[0u] && !g[1u] && g[2u] && g[3u]);
+
+   cat::verify(f == f);
+   cat::verify(!(f == g));
+
+   auto const lane_eq = f.equal_lanes(g);
+   cat::verify(!lane_eq[0u] && lane_eq[1u] && lane_eq[2u] && !lane_eq[3u]);
+
+   simd_four_bool const ba = f & g;
+   cat::verify(!ba[0u] && !ba[1u] && ba[2u] && !ba[3u]);
+
+   simd_four_bool const bo = f | g;
+   cat::verify(bo[0u] && !bo[1u] && bo[2u] && bo[3u]);
+
+   simd_four_bool const bx = f ^ g;
+   cat::verify(bx[0u] && !bx[1u] && !bx[2u] && bx[3u]);
+
+   simd_four_bool splat(false);
+   cat::verify(!(splat == true));
+   splat.fill(true);
+   cat::verify(splat == true);
+
+   idx iter_n = 0u;
+   for (bool lane : f) {
+      cat::verify(lane == f[iter_n]);
+      ++iter_n;
+   }
+   cat::verify(iter_n == f.size());
+
+   cat::uint4x4 const pop_lane(15_u4);
+   cat::verify(pop_lane.popcount()[0u] == 4_u4);
+
+   cat::int4x4 const reduce_lane(3_i4);
+   cat::verify(reduce_lane.reduce_add()[0u] == 12_i4);
+
+   cat::sat_int4 const lane_max = cat::sat_int4::max();
+   cat::fixed_size_simd<cat::sat_int4, 4u> vmax{};
+   vmax.set_lane(0u, lane_max);
+   cat::fixed_size_simd<cat::sat_int4, 4u> const bump(cat::sat_int4(1));
+   cat::verify((vmax.sat() + bump)[0u] == lane_max);
+}
+
+test(simd_bool2_bool4_lanes_match_bool) {
+   using simd_four_bool = cat::fixed_size_simd<bool, 4u>;
+   using simd_four_bool2 = cat::fixed_size_simd<cat::bool2, 4u>;
+   using simd_four_bool4 = cat::fixed_size_simd<cat::bool4, 4u>;
+
+   simd_four_bool const f(true, false, true, false);
+   simd_four_bool2 const f2(cat::bool2(true), cat::bool2(false), cat::bool2(true),
+                           cat::bool2(false));
+   simd_four_bool4 const f4(cat::bool4(true), cat::bool4(false), cat::bool4(true),
+                           cat::bool4(false));
+
+   verify_widened_bool_simd_matches_bool4(f, f2);
+   verify_widened_bool_simd_matches_bool4(f, f4);
+
+   simd_four_bool const g(false, false, true, true);
+   simd_four_bool2 const g2(cat::bool2(false), cat::bool2(false), cat::bool2(true),
+                           cat::bool2(true));
+   simd_four_bool4 const g4(cat::bool4(false), cat::bool4(false), cat::bool4(true),
+                           cat::bool4(true));
+
+   verify_widened_bool_simd_matches_bool4(g, g2);
+   verify_widened_bool_simd_matches_bool4(g, g4);
+
+   cat::verify(f == f);
+   cat::verify(f2 == f2);
+   cat::verify(f4 == f4);
+   cat::verify(!(f == g));
+
+   simd_four_bool const lane_and = f & g;
+   simd_four_bool2 const lane_and2 = f2 & g2;
+   simd_four_bool4 const lane_and4 = f4 & g4;
+   verify_widened_bool_simd_matches_bool4(lane_and, lane_and2);
+   verify_widened_bool_simd_matches_bool4(lane_and, lane_and4);
+
+   simd_four_bool const lane_or = f | g;
+   simd_four_bool2 const lane_or2 = f2 | g2;
+   simd_four_bool4 const lane_or4 = f4 | g4;
+   verify_widened_bool_simd_matches_bool4(lane_or, lane_or2);
+   verify_widened_bool_simd_matches_bool4(lane_or, lane_or4);
+
+   simd_four_bool const lane_xor = f ^ g;
+   simd_four_bool2 const lane_xor2 = f2 ^ g2;
+   simd_four_bool4 const lane_xor4 = f4 ^ g4;
+   verify_widened_bool_simd_matches_bool4(lane_xor, lane_xor2);
+   verify_widened_bool_simd_matches_bool4(lane_xor, lane_xor4);
+
+   simd_four_bool2 splat2(false);
+   simd_four_bool4 splat4(false);
+   simd_four_bool splat(false);
+   verify_widened_bool_simd_matches_bool4(splat, splat2);
+   verify_widened_bool_simd_matches_bool4(splat, splat4);
+   cat::verify(!(splat == true));
+
+   splat.fill(false);
+   splat2.fill(cat::bool2(false));
+   splat4.fill(cat::bool4(false));
+   verify_widened_bool_simd_matches_bool4(splat, splat2);
+   verify_widened_bool_simd_matches_bool4(splat, splat4);
+
+   splat.fill(true);
+   splat2.fill(cat::bool2(true));
+   splat4.fill(cat::bool4(true));
+   verify_widened_bool_simd_matches_bool4(splat, splat2);
+   verify_widened_bool_simd_matches_bool4(splat, splat4);
+   cat::verify(splat == true);
+   cat::verify(splat4 == true);
+
+   cat::simd_mask<bool, simd_four_bool::abi_type> const eq_ref =
+      f.equal_lanes(g);
+   cat::simd_mask<cat::bool2, simd_four_bool2::abi_type> const eq_2 =
+      f2.equal_lanes(g2);
+   cat::simd_mask<cat::bool4, simd_four_bool4::abi_type> const eq_4 =
+      f4.equal_lanes(g4);
+
+   for (cat::idx i = 0u; i < 4u; ++i) {
+      cat::verify(eq_ref[i] == eq_2[i]);
+      cat::verify(eq_ref[i] == eq_4[i]);
+   }
+
+   idx iter_b = 0u;
+   for (bool lane : f) {
+      cat::verify(lane == f[iter_b]);
+      ++iter_b;
+   }
+   cat::verify(iter_b == f.size());
+
+   idx iter_2 = 0u;
+   for (cat::bool2 lane : f2) {
+      cat::verify(lane == f[iter_2]);
+      ++iter_2;
+   }
+   cat::verify(iter_2 == f2.size());
+
+   idx iter_4 = 0u;
+   for (cat::bool4 lane : f4) {
+      cat::verify(lane == f[iter_4]);
+      ++iter_4;
+   }
+   cat::verify(iter_4 == f4.size());
 }
