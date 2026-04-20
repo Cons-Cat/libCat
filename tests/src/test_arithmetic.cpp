@@ -319,6 +319,22 @@ test(arithmetic) {
    static_assert(
       !cat::detail::raw_implicit_storage_shape_ok<unsigned int,
                                                   cat::int4::raw_type>());
+   static_assert(cat::detail::raw_implicit_storage_shape_ok<int, float>());
+   constexpr int int_into_float_zero = 0;
+   constexpr int int_into_float_small = 42;
+   constexpr int int_into_float_last_exact = 16'777'216;
+   constexpr int int_into_float_first_inexact = 16'777'217;
+   static_assert(cat::detail::raw_source_fits_implicit_storage<float>(
+      int_into_float_zero));
+   static_assert(cat::detail::raw_source_fits_implicit_storage<float>(
+      int_into_float_small));
+   static_assert(cat::detail::raw_source_fits_implicit_storage<float>(
+      int_into_float_last_exact));
+   static_assert(
+      !cat::detail::raw_source_fits_implicit_storage<float>(
+         int_into_float_first_inexact));
+   static_assert(float4(int_into_float_small).raw
+                 == static_cast<float>(int_into_float_small));
    static_assert(
       cat::detail::raw_source_fits_implicit_storage<cat::uint1::raw_type>(200));
    static_assert(
@@ -858,11 +874,22 @@ test(arithmetic) {
    // TODO: Fill this section out.
 
    // Test floats.
+   static_assert(!cat::is_implicitly_constructible<float4, int>);
+   static_assert(cat::is_explicitly_constructible<float4, int>);
    float4 safe_float = 0.f;
    safe_float = 2.f;
    cat::verify(safe_float == 2.f);
    safe_float.raw = 1.f;
    cat::verify(safe_float == 1.f);
+
+   int const int_into_float_1 = -2'024;
+   float4 from_int{int_into_float_1};
+   cat::verify(from_int == static_cast<float>(int_into_float_1));
+   cat::verify(float4(int_into_float_1).raw == static_cast<float>(int_into_float_1));
+   int const int_into_float_2 = 16'777'216;
+   from_int = float4{int_into_float_2};
+   cat::verify(from_int == static_cast<float>(int_into_float_2));
+   cat::verify(float4(int_into_float_2).raw == static_cast<float>(int_into_float_2));
 
    // Test bit-casts.
    cat::verify(__builtin_bit_cast(unsigned, 2_i4) == 2u);

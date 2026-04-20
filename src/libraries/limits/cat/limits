@@ -48,6 +48,29 @@ struct limits<arithmetic_ptr<T, storage_type, policy> const>
 // `__LONG_LONG_MAX__`.
 
 template <>
+struct limits<bool> {
+   constexpr limits() = delete;
+
+   static consteval auto
+   min() -> bool {
+      return false;
+   }
+
+   static consteval auto
+   max() -> bool {
+      return true;
+   }
+
+   static constexpr __UINT8_TYPE__ digits = 1;
+   static constexpr __UINT8_TYPE__ digits10 = 1;
+   static constexpr __UINT8_TYPE__ bits = 1;
+   static constexpr __UINT8_TYPE__ high_bit =
+      static_cast<__UINT8_TYPE__>(1u << 1u);
+
+   static constexpr bool is_iec559 = false;
+};
+
+template <>
 struct limits<char> {
    constexpr limits() = delete;
 
