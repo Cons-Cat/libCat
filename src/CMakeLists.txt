@@ -190,6 +190,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/sanitizer/cat/sanitizer
   ${CATLIB}/scaredy/cat/scaredy
   ${CATLIB}/simd/cat/simd
+  ${CATLIB}/simd/cat/detail/simd_overflow_reference.hpp
   ${CATLIB}/simd/cat/simd_ops
   ${CATLIB}/simd/cat/simd_iterator
   ${CATLIB}/simd/implementations/simd_mask_bitset.tpp

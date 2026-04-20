@@ -21,9 +21,9 @@
 // masked SIMD forms from unmasked SIMD forms using CRTP. This is inspired by
 // the EVE library. For example:
 //
-//    cat::float4x4 v{1_f4, 4_f4, 9_f4, 16_f4};
+//    cat::float4x4 v{1, 4, 9, 16};
 //    cat::float4x4 const unmasked = cat::simd_sqrt(v);
-//    cat::float4x4 const masked = cat::simd_sqrt[v < 5.f](v);
+//    cat::float4x4 const masked = cat::simd_sqrt[v < 5](v);
 //
 // The CRTP generates blends automatically, but both masked and unmasked functor
 // invocations can be overridden per-ABI by partial template specializations in
@@ -266,11 +266,20 @@ template <typename X>
 concept is_simd_or_mask = is_simd<X> || is_simd_mask<X>;
 
 // Element type stored in `simd::raw` (`GNU` vector lanes). `T` is the logical
-// lane type (`int`, `cat::int4`, …). `bool` lanes still use `unsigned char`
-// storage because GCC has no `bool` vector type.
+// lane type (`int`, `cat::int4`, …). Raw `bool` uses `unsigned char` storage
+// because GCC has no `bool` vector type. Other lanes use `make_raw_arithmetic`
 template <typename T>
-using simd_vector_element =
-   conditional<is_same<T, bool>, unsigned char, raw_arithmetic_type<T>>;
+struct simd_vector_element_trait {
+   using type = raw_arithmetic_type<T>;
+};
+
+template <>
+struct simd_vector_element_trait<bool> {
+   using type = unsigned char;
+};
+
+template <typename T>
+using simd_vector_element = simd_vector_element_trait<T>::type;
 
 namespace detail {
 
@@ -286,16 +295,12 @@ using simd_mask_lane_bits_t =
 }  // namespace detail
 
 // Logical lane value to an element of `simd<T, Abi>::raw_type`.
-// Only `bool` needs a separate branch; Clang `_Generic`-style discrimination
-// can wrongly associate other lane types (for example `cat::idx`,
-// `cat::uintptr`, `cat::intptr`) with `bool`, so this stays `if constexpr`.
 template <typename T>
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 simd_lane_to_storage(T lane) -> simd_vector_element<T> {
    if constexpr (is_same<T, bool>) {
-      return static_cast<simd_vector_element<T>>(
-         static_cast<unsigned char>(lane));
+      return static_cast<unsigned char>(lane ? 1u : 0u);
    }
    return static_cast<simd_vector_element<T>>(make_raw_arithmetic(lane));
 }
@@ -310,20 +315,55 @@ simd_lane_from_raw(simd_vector_element<T> slot) -> T {
    if constexpr (is_same<T, bool>) {
       return static_cast<bool>(slot);
    }
+   if constexpr (is_same<T, bool2>) {
+      return bool2(slot);
+   }
+   if constexpr (is_same<T, bool4>) {
+      return bool4(slot);
+   }
    return static_cast<T>(static_cast<raw_arithmetic_type<T>>(slot));
 }
+
+template <typename T, typename Abi>
+   requires(is_same<typename Abi::scalar_type, T>)
+class simd;
+
+namespace detail {
+template <typename T, typename Abi, overflow_policies Semantics>
+class simd_overflow_reference;
+
+template <typename T, typename Abi>
+constexpr auto
+simd_integral_add_follow_storage(simd<T, Abi> const& left,
+                                 simd<T, Abi> const& right) -> simd<T, Abi>;
+
+template <typename T, typename Abi>
+constexpr auto
+simd_integral_sub_follow_storage(simd<T, Abi> const& left,
+                                 simd<T, Abi> const& right) -> simd<T, Abi>;
+
+template <typename T, typename Abi>
+constexpr auto
+simd_integral_mul_follow_storage(simd<T, Abi> const& left,
+                                 simd<T, Abi> const& right) -> simd<T, Abi>;
+
+template <typename T, typename Abi>
+constexpr auto
+simd_integral_shl_follow_storage(simd<T, Abi> const& left,
+                                 simd<T, Abi> const& right) -> simd<T, Abi>;
+
+template <typename T, typename Abi>
+constexpr auto
+simd_integral_shr_follow_storage(simd<T, Abi> const& left,
+                                 simd<T, Abi> const& right) -> simd<T, Abi>;
+}  // namespace detail
 
 template <typename T, typename in_abi>
    requires(is_same<typename in_abi::scalar_type, T>)
 class alignas(in_abi::alignment.raw) simd {
-   // We use `mapped_type` for internal APIs for two reasons. Firstly,
-   // `gnu::vector_size` does not support `bool`, so we must convert it
-   // internally to `unsigned char`. `clang::ext_vector_type` supports that,
-   // however it doesn't generate unaligned instructions when `gnu::aligned` is
-   // set below the optimal alignment. Secondly, this erases cat::arithmetic
-   // from T so that we only process fundamental types. This makes implementing
-   // `cat::simd_abi` hooks simpler, because hardware intrinsics require
-   // fundamental types.
+   // `mapped_type` is the fundamental storage shape for each lane (`T` may be
+   // `cat::arithmetic`). That keeps `cat::simd_abi` hooks aligned with hardware
+   // intrinsics.
    using mapped_type = simd_vector_element<T>;
 
    struct unaligned_abi {
@@ -463,11 +503,9 @@ class alignas(in_abi::alignment.raw) simd {
 
    // Value equality: true only if every lane compares equal (`NaN` lanes
    // behave like scalar floating-point compare).
-   template <typename Other>
-      requires(is_same<Other, simd>)
    [[nodiscard]]
-   constexpr bool
-   operator==(Other const& operand) const {
+   constexpr auto
+   operator==(simd const& operand) const -> bool {
       for (idx i = 0u; i < in_abi::lanes; ++i) {
          if ((*this)[i] != operand[i]) {
             return false;
@@ -476,306 +514,307 @@ class alignas(in_abi::alignment.raw) simd {
       return true;
    }
 
-   [[nodiscard]]
-   constexpr bool
-   operator==(T const& operand) const {
-      return *this == simd(operand);
-   }
-
-   [[nodiscard]]
-   friend constexpr bool
-   operator==(T const& left, simd const& right) {
-      return right == left;
-   }
-
-   template <typename Other>
-      requires(is_same<Other, simd>)
-   [[nodiscard]]
-   constexpr bool
-   operator!=(Other const& operand) const {
-      return !(*this == operand);
-   }
-
-   [[nodiscard]]
-   constexpr bool
-   operator!=(T const& operand) const {
-      return !(*this == operand);
-   }
-
-   [[nodiscard]]
-   friend constexpr bool
-   operator!=(T const& left, simd const& right) {
-      return !(right == left);
-   }
-
-   // Per-lane equality / inequality (`simd_mask`); use operator== for value
-   // equality (`bool`).
-   template <typename Other>
-      requires(is_same<Other, simd>)
-   [[nodiscard]]
-   constexpr auto
-   equal_lanes(Other const& operand) const -> simd_mask<T, abi_type> {
-      return this->raw == operand.raw;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   equal_lanes(T const& operand) const -> simd_mask<T, abi_type> {
-      return equal_lanes(simd(operand));
-   }
-
-   template <typename Other>
-      requires(is_same<Other, simd>)
-   [[nodiscard]]
-   constexpr auto
-   unequal_lanes(Other const& operand) const -> simd_mask<T, abi_type> {
-      return this->raw != operand.raw;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   unequal_lanes(T const& operand) const -> simd_mask<T, abi_type> {
-      return unequal_lanes(simd(operand));
-   }
-
    // Compare greater-than for each lane to another `simd`'s lanes, and store
    // the results in a new `simd`.
-   template <typename Other>
-      requires(is_same<Other, simd>)
    [[nodiscard]]
    constexpr auto
-   operator>(Other const& operand) const -> simd_mask<T, abi_type> {
+   operator>(simd const& operand) const -> simd_mask<T, abi_type> {
       return this->raw > operand.raw;
-   }
-
-   // Compare greater-than for each lane to `value`, and store the results in a
-   // new `simd`.
-   [[nodiscard]]
-   constexpr auto
-   operator>(T const& operand) const -> simd_mask<T, abi_type> {
-      return *this > simd(operand);
    }
 
    // Compare greater-than-or-equal for each lane to another `simd`'s lanes,
    // and store the results in a new `simd`.
-   template <typename Other>
-      requires(is_same<Other, simd>)
    [[nodiscard]]
    constexpr auto
-   operator>=(Other const& operand) const -> simd_mask<T, abi_type> {
+   operator>=(simd const& operand) const -> simd_mask<T, abi_type> {
       return this->raw >= operand.raw;
-   }
-
-   // Compare greater-than-or-equal for each lane to `value`, and store the
-   // results in a new `simd`.
-   [[nodiscard]]
-   constexpr auto
-   operator>=(T const& operand) const -> simd_mask<T, abi_type> {
-      return *this >= simd(operand);
    }
 
    // Compare less-than for each lane to another `simd`'s lanes, and store the
    // results in a new `simd`.
-   template <typename Other>
-      requires(is_same<Other, simd>)
    [[nodiscard]]
    constexpr auto
-   operator<(Other const& operand) const -> simd_mask<T, abi_type> {
+   operator<(simd const& operand) const -> simd_mask<T, abi_type> {
       return this->raw < operand.raw;
-   }
-
-   // Compare less-than for each lane to `value`, and store the results in a
-   // new `simd`.
-   [[nodiscard]]
-   constexpr auto
-   operator<(T const& operand) const -> simd_mask<T, abi_type> {
-      return *this < simd(operand);
    }
 
    // Compare less-than-or-equal for each lane to another `simd`'s lanes,
    // and store the results in a new `simd`.
-   template <typename Other>
-      requires(is_same<Other, simd>)
    [[nodiscard]]
    constexpr auto
-   operator<=(Other const& operand) const -> simd_mask<T, abi_type> {
+   operator<=(simd const& operand) const -> simd_mask<T, abi_type> {
       return this->raw <= operand.raw;
    }
 
-   // Compare less-than-or-equal for each lane to `value`, and store the
-   // results in a new `simd`.
-   [[nodiscard]]
+   // Overflow accessors mirror `cat::arithmetic`: `undef` and `wrap` both
+   // select wrapping vector operations; `sat` forces saturating forms. Integer
+   // lanes with `T::policy == saturate` use the same by default on `simd`
+   // without an accessor.
    constexpr auto
-   operator<=(T const& operand) const -> simd_mask<T, abi_type> {
-      return *this <= simd(operand);
-   }
+   undef() & -> detail::simd_overflow_reference<T, in_abi,
+                                                overflow_policies::wrap>
+      requires(!is_bool<T>);
+   constexpr auto
+   wrap() & -> detail::simd_overflow_reference<T, in_abi,
+                                               overflow_policies::wrap>
+      requires(!is_bool<T>);
+   constexpr auto
+   sat() & -> detail::simd_overflow_reference<T, in_abi,
+                                              overflow_policies::saturate>
+      requires(!is_bool<T>);
 
    // TODO: These should be `friend`.
-   // TODO: Add more comments to these operators.
-   template <typename Other>
-      requires(is_same<Other, simd>)
+
    [[nodiscard]]
    constexpr auto
-   operator+(Other const& operand) const -> simd {
-      return this->raw + operand.raw;
+   operator+(simd const& operand) const -> simd
+      requires(!is_bool<T>)
+   {
+      return detail::simd_integral_add_follow_storage(*this, operand);
    }
 
-   template <typename Other>
-      requires(is_same<Other, simd>)
    constexpr auto
-   operator+=(Other const& operand) -> simd& {
-      this->raw = this->raw + operand.raw;
+   operator+=(simd const& operand) -> simd&
+      requires(!is_bool<T>)
+   {
+      *this = detail::simd_integral_add_follow_storage(*this, operand);
       return *this;
    }
 
-   template <typename Other>
-      requires(is_same<Other, simd>)
    [[nodiscard]]
    constexpr auto
-   operator-(Other const& operand) const -> simd {
-      return this->raw - operand.raw;
+   operator-(simd const& operand) const -> simd
+      requires(!is_bool<T>)
+   {
+      return detail::simd_integral_sub_follow_storage(*this, operand);
    }
 
-   template <typename Other>
-      requires(is_same<Other, simd>)
    constexpr auto
-   operator-=(Other const& operand) -> simd& {
-      this->raw = this->raw - operand.raw;
+   operator-=(simd const& operand) -> simd&
+      requires(!is_bool<T>)
+   {
+      *this = detail::simd_integral_sub_follow_storage(*this, operand);
       return *this;
    }
 
-   template <typename Other>
-      requires(is_same<Other, simd>)
    [[nodiscard]]
    constexpr auto
-   operator*(Other const& operand) const -> simd {
-      return this->raw * operand.raw;
+   operator*(simd const& operand) const -> simd
+      requires(!is_bool<T>)
+   {
+      return detail::simd_integral_mul_follow_storage(*this, operand);
    }
 
-   template <typename Other>
-      requires(is_same<Other, simd>)
    constexpr auto
-   operator*=(Other const& operand) -> simd& {
-      this->raw = this->raw * operand.raw;
+   operator*=(simd const& operand) -> simd&
+      requires(!is_bool<T>)
+   {
+      *this = detail::simd_integral_mul_follow_storage(*this, operand);
       return *this;
    }
 
-   template <typename Other>
-      requires(is_same<Other, simd>)
    [[nodiscard]]
    constexpr auto
-   operator/(Other const& operand) const -> simd {
+   operator/(simd const& operand) const -> simd
+      requires(!is_bool<T>)
+   {
       return this->raw / operand.raw;
    }
 
-   template <typename Other>
-      requires(is_same<Other, simd>)
    constexpr auto
-   operator/=(Other const& operand) -> simd& {
+   operator/=(simd const& operand) -> simd&
+      requires(!is_bool<T>)
+   {
       this->raw = this->raw / operand.raw;
       return *this;
    }
 
-   template <typename Other>
-      requires(is_same<Other, simd>)
+   template <typename U>
+      requires(
+         !is_bool<T> && is_constructible<T, remove_cvref<U>>
+         && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
    [[nodiscard]]
    constexpr auto
-   operator&(Other const& operand) const -> simd {
+   operator+(U&& operand) const -> simd {
+      return *this + simd(fwd(operand));
+   }
+
+   template <typename U>
+      requires(
+         !is_bool<T> && is_constructible<T, remove_cvref<U>>
+         && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+   constexpr auto
+   operator+=(U&& operand) -> simd& {
+      *this += simd(fwd(operand));
+      return *this;
+   }
+
+   template <typename U>
+      requires(
+         !is_bool<T> && is_constructible<T, remove_cvref<U>>
+         && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+   [[nodiscard]]
+   constexpr auto
+   operator-(U&& operand) const -> simd {
+      return *this - simd(fwd(operand));
+   }
+
+   template <typename U>
+      requires(
+         !is_bool<T> && is_constructible<T, remove_cvref<U>>
+         && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+   constexpr auto
+   operator-=(U&& operand) -> simd& {
+      *this -= simd(fwd(operand));
+      return *this;
+   }
+
+   template <typename U>
+      requires(
+         !is_bool<T> && is_constructible<T, remove_cvref<U>>
+         && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+   [[nodiscard]]
+   constexpr auto
+   operator*(U&& operand) const -> simd {
+      return *this * simd(fwd(operand));
+   }
+
+   template <typename U>
+      requires(
+         !is_bool<T> && is_constructible<T, remove_cvref<U>>
+         && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+   constexpr auto
+   operator*=(U&& operand) -> simd& {
+      *this *= simd(fwd(operand));
+      return *this;
+   }
+
+   template <typename U>
+      requires(
+         !is_bool<T> && is_constructible<T, remove_cvref<U>>
+         && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+   [[nodiscard]]
+   constexpr auto
+   operator/(U&& operand) const -> simd {
+      return *this / simd(fwd(operand));
+   }
+
+   template <typename U>
+      requires(
+         !is_bool<T> && is_constructible<T, remove_cvref<U>>
+         && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+   constexpr auto
+   operator/=(U&& operand) -> simd& {
+      *this /= simd(fwd(operand));
+      return *this;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator&(simd const& operand) const -> simd {
       return this->raw & operand.raw;
    }
 
-   template <typename Other>
-      requires(is_same<Other, simd>)
    constexpr auto
-   operator&=(Other const& operand) -> simd& {
+   operator&=(simd const& operand) -> simd& {
       this->raw = this->raw & operand.raw;
       return *this;
    }
 
-   template <typename Other>
-      requires(is_same<Other, simd>)
    [[nodiscard]]
    constexpr auto
-   operator|(Other const& operand) const -> simd {
+   operator|(simd const& operand) const -> simd {
       return this->raw | operand.raw;
    }
 
-   template <typename Other>
-      requires(is_same<Other, simd>)
    constexpr auto
-   operator|=(Other const& operand) -> simd& {
+   operator|=(simd const& operand) -> simd& {
       this->raw = this->raw | operand.raw;
       return *this;
    }
 
-   template <typename Other>
-      requires(is_same<Other, simd>)
    [[nodiscard]]
    constexpr auto
-   operator%(Other const& operand) const -> simd {
+   operator%(simd const& operand) const -> simd
+      requires(!is_bool<T>)
+   {
       return this->raw % operand.raw;
    }
 
-   template <typename Other>
-      requires(is_same<Other, simd>)
    constexpr auto
-   operator%=(Other const& operand) -> simd& {
+   operator%=(simd const& operand) -> simd&
+      requires(!is_bool<T>)
+   {
       this->raw = this->raw % operand.raw;
       return *this;
    }
 
-   template <typename Other>
-      requires(is_same<Other, simd>)
    [[nodiscard]]
    constexpr auto
-   operator<<(Other const& operand) const -> simd {
-      return this->raw << operand.raw;
+   operator<<(simd const& operand) const -> simd
+      requires(!is_bool<T>)
+   {
+      return detail::simd_integral_shl_follow_storage(*this, operand);
    }
 
-   template <typename Other>
-      requires(is_same<Other, simd>)
    constexpr auto
-   operator<<=(Other const& operand) -> simd& {
-      this->raw = this->raw << operand.raw;
+   operator<<=(simd const& operand) -> simd&
+      requires(!is_bool<T>)
+   {
+      *this = detail::simd_integral_shl_follow_storage(*this, operand);
       return *this;
    }
 
-   template <typename Other>
-      requires(is_same<Other, simd>)
    [[nodiscard]]
    constexpr auto
-   operator>>(Other const& operand) const -> simd {
-      return this->raw >> operand.raw;
+   operator>>(simd const& operand) const -> simd
+      requires(!is_bool<T>)
+   {
+      return detail::simd_integral_shr_follow_storage(*this, operand);
    }
 
-   template <typename Other>
-      requires(is_same<Other, simd>)
    constexpr auto
-   operator>>=(Other const& operand) -> simd& {
-      this->raw = this->raw >> operand.raw;
+   operator>>=(simd const& operand) -> simd&
+      requires(!is_bool<T>)
+   {
+      *this = detail::simd_integral_shr_follow_storage(*this, operand);
       return *this;
    }
 
-   template <typename Other>
-      requires(is_same<Other, simd>)
    [[nodiscard]]
    constexpr auto
-   operator^(Other const& operand) const -> simd {
+   operator^(simd const& operand) const -> simd {
       return this->raw ^ operand.raw;
    }
 
-   template <typename Other>
-      requires(is_same<Other, simd>)
    constexpr auto
-   operator^=(Other const& operand) -> simd& {
+   operator^=(simd const& operand) -> simd& {
       this->raw = this->raw ^ operand.raw;
       return *this;
    }
 
+   // Indexing a `simd` returns the lane at `index`.
+   // `cat::simd` may only index values, never references.
    [[nodiscard, gnu::no_sanitize("bounds")]]
    constexpr auto
    operator[](idx index) const -> T {
       return simd_lane_from_raw<T>(raw[index.raw]);
+   }
+
+   // Per-lane equality producing a `simd_mask`.
+   // Use `operator==` for value equality (`bool`).
+   [[nodiscard]]
+   constexpr auto
+   equal_lanes(simd const& operand) const -> simd_mask<T, abi_type> {
+      return this->raw == operand.raw;
+   }
+
+   // Per-lane inequality producing a `simd_mask`.
+   // Use `operator!=` for value inequality (`bool`).
+   [[nodiscard]]
+   constexpr auto
+   unequal_lanes(simd const& operand) const -> simd_mask<T, abi_type> {
+      return this->raw != operand.raw;
    }
 
    constexpr auto
@@ -801,7 +840,7 @@ class alignas(in_abi::alignment.raw) simd {
    [[nodiscard]]
    constexpr auto
    popcount() const -> simd
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    {
       return simd(__builtin_elementwise_popcount(this->raw));
    }
@@ -809,7 +848,7 @@ class alignas(in_abi::alignment.raw) simd {
    [[nodiscard]]
    constexpr auto
    reduce_add() const -> simd<T, fixed_size_abi<T, 1u>>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       simd<T, fixed_size_abi<T, 1u>> out{};
@@ -820,7 +859,7 @@ class alignas(in_abi::alignment.raw) simd {
    [[nodiscard]]
    constexpr auto
    reduce_mul() const -> simd<T, fixed_size_abi<T, 1u>>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    {
       // P0918R1 parallel reductions on vector packs.
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
@@ -832,7 +871,7 @@ class alignas(in_abi::alignment.raw) simd {
    [[nodiscard]]
    constexpr auto
    reduce_and() const -> simd<T, fixed_size_abi<T, 1u>>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       simd<T, fixed_size_abi<T, 1u>> out{};
@@ -843,7 +882,7 @@ class alignas(in_abi::alignment.raw) simd {
    [[nodiscard]]
    constexpr auto
    reduce_or() const -> simd<T, fixed_size_abi<T, 1u>>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       simd<T, fixed_size_abi<T, 1u>> out{};
@@ -854,7 +893,7 @@ class alignas(in_abi::alignment.raw) simd {
    [[nodiscard]]
    constexpr auto
    reduce_xor() const -> simd<T, fixed_size_abi<T, 1u>>
-      requires(is_integral<T> && !is_same<T, bool>)
+      requires(is_integral<T> && !is_bool<T>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       simd<T, fixed_size_abi<T, 1u>> out{};
@@ -865,7 +904,7 @@ class alignas(in_abi::alignment.raw) simd {
    [[nodiscard]]
    constexpr auto
    reduce_max() const -> simd<T, fixed_size_abi<T, 1u>>
-      requires(is_arithmetic<T> && !is_same<T, bool>)
+      requires(is_arithmetic<T> && !is_bool<T>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       simd<T, fixed_size_abi<T, 1u>> out{};
@@ -876,7 +915,7 @@ class alignas(in_abi::alignment.raw) simd {
    [[nodiscard]]
    constexpr auto
    reduce_min() const -> simd<T, fixed_size_abi<T, 1u>>
-      requires(is_arithmetic<T> && !is_same<T, bool>)
+      requires(is_arithmetic<T> && !is_bool<T>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       simd<T, fixed_size_abi<T, 1u>> out{};
@@ -1102,6 +1141,81 @@ class alignas(in_abi::alignment.raw) simd {
 
    raw_type raw;
 };
+
+// `operator+` where `cat::simd` is the right-hand side operand.
+template <is_arithmetic U, typename T, typename Abi>
+   requires(detail::simd_broadcast_really_convertible_to<U, T>())
+[[nodiscard]]
+constexpr auto
+operator+(U lhs, simd<T, Abi> const& rhs) -> simd<T, Abi> {
+   return rhs + lhs;
+}
+
+// `operator-` where `cat::simd` is the right-hand side operand.
+template <is_arithmetic U, typename T, typename Abi>
+   requires(detail::simd_broadcast_really_convertible_to<U, T>())
+[[nodiscard]]
+constexpr auto
+operator-(U lhs, simd<T, Abi> const& rhs) -> simd<T, Abi> {
+   return simd<T, Abi>(lhs) - rhs;
+}
+
+// `operator*` where `cat::simd` is the right-hand side operand.
+template <is_arithmetic U, typename T, typename Abi>
+   requires(detail::simd_broadcast_really_convertible_to<U, T>())
+[[nodiscard]]
+constexpr auto
+operator*(U lhs, simd<T, Abi> const& rhs) -> simd<T, Abi> {
+   return simd<T, Abi>(lhs) * rhs;
+}
+
+// `operator/` where `cat::simd` is the right-hand side operand.
+template <is_arithmetic U, typename T, typename Abi>
+   requires(detail::simd_broadcast_really_convertible_to<U, T>())
+[[nodiscard]]
+constexpr auto
+operator/(U lhs, simd<T, Abi> const& rhs) -> simd<T, Abi> {
+   return simd<T, Abi>(lhs) / rhs;
+}
+
+}  // namespace cat
+
+#include <cat/detail/simd_overflow_reference.hpp>
+
+namespace cat {
+
+template <typename T, typename in_abi>
+   requires(is_same<typename in_abi::scalar_type, T>)
+constexpr auto
+simd<T, in_abi>::undef() & -> detail::simd_overflow_reference<
+   T, in_abi, overflow_policies::wrap>
+   requires(!is_bool<T>)
+{
+   return detail::simd_overflow_reference<T, in_abi, overflow_policies::wrap>(
+      *this);
+}
+
+template <typename T, typename in_abi>
+   requires(is_same<typename in_abi::scalar_type, T>)
+constexpr auto
+simd<T, in_abi>::wrap() & -> detail::simd_overflow_reference<
+   T, in_abi, overflow_policies::wrap>
+   requires(!is_bool<T>)
+{
+   return detail::simd_overflow_reference<T, in_abi, overflow_policies::wrap>(
+      *this);
+}
+
+template <typename T, typename in_abi>
+   requires(is_same<typename in_abi::scalar_type, T>)
+constexpr auto
+simd<T, in_abi>::sat() & -> detail::simd_overflow_reference<
+   T, in_abi, overflow_policies::saturate>
+   requires(!is_bool<T>)
+{
+   return detail::simd_overflow_reference<T, in_abi,
+                                          overflow_policies::saturate>(*this);
+}
 
 }  // namespace cat
 
@@ -1561,7 +1675,7 @@ class alignas(in_abi::alignment.raw) simd_mask {
    }
 
    template <typename UInt>
-      requires(is_unsigned_integral<UInt> && !is_same<UInt, bool>)
+      requires(is_unsigned_integral<UInt> && !is_bool<UInt>)
    explicit constexpr simd_mask(UInt pattern_bits) {
       this->raw = raw_type{};
       uword const bits = static_cast<uword>(pattern_bits);
@@ -1673,7 +1787,7 @@ struct simd_reduce_add_impl {
    constexpr auto
    operator()(V const& v) const -> decltype(v.reduce_add())
       requires(is_simd<V> && is_integral<typename V::scalar_type>
-               && !is_same<typename V::scalar_type, bool>)
+               && !is_bool<typename V::scalar_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_add();
@@ -1686,7 +1800,7 @@ struct simd_reduce_mul_impl {
    constexpr auto
    operator()(V const& v) const -> decltype(v.reduce_mul())
       requires(is_simd<V> && is_integral<typename V::scalar_type>
-               && !is_same<typename V::scalar_type, bool>)
+               && !is_bool<typename V::scalar_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_mul();
@@ -1699,7 +1813,7 @@ struct simd_reduce_and_impl {
    constexpr auto
    operator()(V const& v) const -> decltype(v.reduce_and())
       requires(is_simd<V> && is_integral<typename V::scalar_type>
-               && !is_same<typename V::scalar_type, bool>)
+               && !is_bool<typename V::scalar_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_and();
@@ -1712,7 +1826,7 @@ struct simd_reduce_or_impl {
    constexpr auto
    operator()(V const& v) const -> decltype(v.reduce_or())
       requires(is_simd<V> && is_integral<typename V::scalar_type>
-               && !is_same<typename V::scalar_type, bool>)
+               && !is_bool<typename V::scalar_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_or();
@@ -1725,7 +1839,7 @@ struct simd_reduce_xor_impl {
    constexpr auto
    operator()(V const& v) const -> decltype(v.reduce_xor())
       requires(is_simd<V> && is_integral<typename V::scalar_type>
-               && !is_same<typename V::scalar_type, bool>)
+               && !is_bool<typename V::scalar_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_xor();
@@ -1738,7 +1852,7 @@ struct simd_reduce_max_impl {
    constexpr auto
    operator()(V const& v) const -> decltype(v.reduce_max())
       requires(is_simd<V> && is_arithmetic<typename V::scalar_type>
-               && !is_same<typename V::scalar_type, bool>)
+               && !is_bool<typename V::scalar_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_max();
@@ -1751,7 +1865,7 @@ struct simd_reduce_min_impl {
    constexpr auto
    operator()(V const& v) const -> decltype(v.reduce_min())
       requires(is_simd<V> && is_arithmetic<typename V::scalar_type>
-               && !is_same<typename V::scalar_type, bool>)
+               && !is_bool<typename V::scalar_type>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
       return v.reduce_min();
