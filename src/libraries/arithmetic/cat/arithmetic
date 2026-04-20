@@ -6,6 +6,7 @@
 #include <cat/compare>
 #include <cat/debug>
 #include <cat/limits>
+#include <cat/meta>
 
 // `arithmetic` and `arithmetic_ptr` are containers for numeric data types which
 // prevents unsafe implicit type casts.
@@ -50,7 +51,9 @@ struct index;
 template <typename T>
 inline constexpr bool is_arithmetic_ptr = requires { T::ptr; };
 
-template <is_arithmetic T>
+// Unwraps `cat::arithmetic`, `cat::index`, `cat::arithmetic_ptr`, `cat::bool2`,
+// and `cat::bool4` into their `raw` values.
+template <typename T>
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_raw_arithmetic(T value) {
@@ -63,17 +66,17 @@ make_raw_arithmetic(T value) {
    }
 }
 
-template <is_arithmetic T>
-using raw_arithmetic_type = decltype(make_raw_arithmetic(T(0)));
+// Unwraps `cat::arithmetic`, `cat::index`, `cat::arithmetic_ptr`, `cat::bool2`,
+// and `cat::bool4` into their `raw` types.
+template <typename T>
+using raw_arithmetic_type = decltype(make_raw_arithmetic(T{}));
 
-// TODO: Update name.
 template <typename T>
 concept is_raw_arithmetic = is_same<T, raw_arithmetic_type<T>>;
 
 template <typename T>
 concept is_raw_integral = is_integral<T> && is_raw_arithmetic<T>;
 
-// TODO: Update name.
 template <typename T>
 concept is_raw_floating_point = is_floating_point<T> && is_raw_arithmetic<T>;
 
@@ -95,7 +98,7 @@ make_signed(T value) -> make_signed_type<T> {
    return static_cast<make_signed_type<T>>(value);
 }
 
-// Identity on the value; pairs with `make_signed_type` for floating-point
+// Identity on the value. Works with `cat::make_signed_type` for floating-point
 // types.
 template <is_floating_point T>
 [[gnu::always_inline, gnu::nodebug]]
@@ -125,7 +128,8 @@ make_sign_from(sign_type, T value) -> copy_sign_from<sign_type, T> {
 
 template <typename T>
 concept is_safe_arithmetic =
-   is_arithmetic<T> && !__is_same(T, raw_arithmetic_type<T>);
+   detail::is_idx<remove_cvref<T>> || is_arithmetic_ptr<remove_cvref<T>>
+   || (is_arithmetic<T> && !__is_same(T, raw_arithmetic_type<T>));
 
 template <typename T>
 concept is_unsafe_arithmetic =
@@ -133,7 +137,8 @@ concept is_unsafe_arithmetic =
 
 template <typename T>
 concept is_safe_integral =
-   is_integral<T> && !__is_same(T, raw_arithmetic_type<T>);
+   detail::is_idx<remove_cvref<T>> || is_arithmetic_ptr<remove_cvref<T>>
+   || (is_integral<T> && !__is_same(T, raw_arithmetic_type<T>));
 
 template <typename T>
 concept is_unsafe_integral =
@@ -240,6 +245,9 @@ namespace detail {
 template <typename SourceRaw, typename DestStorage>
 consteval auto
 raw_implicit_storage_shape_ok() -> bool {
+   if constexpr (is_integral<SourceRaw> && is_floating_point<DestStorage>) {
+      return true;
+   }
    if constexpr (sizeof(SourceRaw) < sizeof(DestStorage)) {
       return true;
    } else if constexpr (sizeof(SourceRaw) == sizeof(DestStorage)
@@ -255,7 +263,8 @@ raw_implicit_storage_shape_ok() -> bool {
 // Wide type for lossless round-trip checks in
 // `raw_source_fits_implicit_storage`. Unsigned `U` into signed `Dest` keeps the
 // comparison in unsigned space so a truncated signed intermediate does not get
-// confused with a huge unsigned.
+// confused with a huge unsigned. Integral into floating storage is handled in
+// `raw_source_fits_implicit_storage` before this alias is used.
 template <typename DestStorage, typename RawSource>
 using implicit_raw_compare_wide = conditional<
    is_unsigned_integral<RawSource> && is_signed_integral<DestStorage>,
@@ -268,19 +277,49 @@ using implicit_raw_compare_wide = conditional<
 // Value check for the four raw `enable_if` converting constructors. Width
 // and signedness pairing are enforced on the `arithmetic` constructors; this
 // only answers whether the runtime value fits the destination storage.
+// This is `constexpr` rather than `consteval`
 template <typename Dest, typename U>
 constexpr auto
 raw_source_fits_implicit_storage(U const& other) -> bool {
    auto const raw = make_raw_arithmetic(other);
-   using raw_type = decltype(raw);
-   if constexpr (is_signed_integral<U> && is_unsigned_integral<Dest>) {
-      if (raw < 0) {
+   using raw_value = remove_cvref<decltype(raw)>;
+   if constexpr (is_floating_point<Dest>) {
+      if constexpr (is_integral<raw_value>) {
+         // Integral to float. `implicit_raw_compare_wide` does not support `float`
+         // `Dest`.
+         Dest const fd = static_cast<Dest>(raw);
+         if (!__builtin_isfinite(fd)) {
+            return false;
+         }
+         return static_cast<U>(fd) == other;
+      }
+      // Floating to floating in floating storage only, avoiding
+      // `implicit_raw_compare_wide`.
+      Dest const narrowed = static_cast<Dest>(raw);
+      if (!__builtin_isfinite(narrowed)) {
          return false;
       }
+      return static_cast<long double>(narrowed)
+             == static_cast<long double>(raw);
+   } else {
+      if constexpr (is_floating_point<raw_value>) {
+         Dest const to_dest = static_cast<Dest>(raw);
+         if (!__builtin_isfinite(static_cast<double>(to_dest))) {
+            return false;
+         }
+         return static_cast<long double>(to_dest)
+                == static_cast<long double>(raw);
+      } else {
+         if constexpr (is_signed_integral<U> && is_unsigned_integral<Dest>) {
+            if (raw < 0) {
+               return false;
+            }
+         }
+         using wide_type = implicit_raw_compare_wide<Dest, raw_value>;
+         return static_cast<wide_type>(static_cast<Dest>(raw))
+                == static_cast<wide_type>(raw);
+      }
    }
-   using wide_type = implicit_raw_compare_wide<Dest, raw_type>;
-   return static_cast<wide_type>(static_cast<Dest>(raw))
-          == static_cast<wide_type>(raw);
 }
 
 // True when mixed `operator<=>` / `operator==` may use `common_type`: either a
@@ -289,7 +328,7 @@ raw_source_fits_implicit_storage(U const& other) -> bool {
 // lossless for both sides (same round-trip idea as
 // `raw_source_fits_implicit_storage`).
 template <typename RawL, typename RawR>
-constexpr auto
+consteval auto
 raw_mixed_integral_compare_sound(RawL const lhs, RawR const rhs) -> bool {
    using C = common_type<RawL, RawR>;
    if constexpr (is_signed_integral<RawL> && is_unsigned_integral<RawR>) {
@@ -545,12 +584,12 @@ struct arithmetic :
    constexpr arithmetic(arithmetic const&) = default;
    constexpr arithmetic(arithmetic&&) = default;
 
-   // Implicit raw unsafe integral conversions when the value fits; see
-   // `raw_implicit_storage_shape_ok` for allowed storage shapes.
-   template <is_integral U>
+   // Implicit raw conversions when the shape and value fit (`enable_if`),
+   // including integral sources into floating storage when the value is exactly
+   // representable.
+   template <is_arithmetic U>
       requires(
-         is_integral<T>
-         && detail::raw_implicit_storage_shape_ok<raw_arithmetic_type<U>, T>())
+         detail::raw_implicit_storage_shape_ok<raw_arithmetic_type<U>, T>())
    [[gnu::always_inline, gnu::nodebug]]
    constexpr arithmetic(U other) __attribute__((enable_if(
       detail::raw_source_fits_implicit_storage<T>(other),
@@ -2040,36 +2079,53 @@ using uint_fixed = conditional<
    conditional<bytes == 2, uint2, conditional<bytes == 4, uint4, uint8>>>;
 
 struct bool2 {
-   using raw_type = uint2;
-   uint2 raw;
+   using raw_type = __UINT16_TYPE__;
+   raw_type raw;
    constexpr bool2() = default;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr bool2(bool input)
-       : raw(static_cast<unsigned char>(input)) {
+       : raw(static_cast<raw_type>(static_cast<unsigned char>(input))) {
+   }
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr explicit bool2(raw_type input)
+       : raw(input) {
+   }
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr explicit bool2(uint2 input)
+       : raw(make_raw_arithmetic(input)) {
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr
    operator bool() const {
-      return raw != 0u;
+      return raw != raw_type{};
    }
 };
 
 struct bool4 {
-   using raw_type = uint4;
-   uint4 raw;
+   using raw_type = __UINT32_TYPE__;
+   raw_type raw;
    constexpr bool4() = default;
 
-   constexpr bool4(bool input) : raw(static_cast<unsigned char>(input)) {
+   constexpr bool4(bool input)
+       : raw(static_cast<raw_type>(static_cast<unsigned char>(input))) {
    }
 
-   constexpr bool4(bool2 input) : raw(static_cast<unsigned char>(input)) {
+   constexpr bool4(bool2 input) : raw(static_cast<raw_type>(input ? 1u : 0u)) {
+   }
+
+   constexpr explicit bool4(raw_type input) : raw(input) {
+   }
+
+   constexpr explicit bool4(uint4 input) : raw(make_raw_arithmetic(input)) {
    }
 
    constexpr
    operator bool() const {
-      return raw != 0u;
+      return raw != raw_type{};
    }
 };
 
@@ -2092,6 +2148,18 @@ inline constexpr int8 int8_max = limits<int8>::max();
 inline constexpr uint8 uint8_min = limits<uint8>::min();
 inline constexpr uint8 uint8_max = limits<uint8>::max();
 }  // namespace integers
+
+[[gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_raw_arithmetic(bool2 value) -> bool2::raw_type {
+   return value.raw;
+}
+
+[[gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_raw_arithmetic(bool4 value) -> bool4::raw_type {
+   return value.raw;
+}
 
 inline namespace literals {
 inline namespace arithmetic_literals {
