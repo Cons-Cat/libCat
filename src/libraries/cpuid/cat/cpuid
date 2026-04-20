@@ -545,11 +545,11 @@ __cpu_indicator_init() {
 
    auto enable_feature = [&](processor_features const feature) {
       cat::idx const feature_index = cat::to_underlying(feature);
-      feature_flags[feature_index / 32][feature_index % 32].set();
+      feature_flags[feature_index / 32u][feature_index % 32u].set();
    };
    auto has_feature = [&](processor_features const feature) -> bool {
       cat::idx const feature_index = cat::to_underlying(feature);
-      return feature_flags[feature_index / 32][feature_index % 32].is_set();
+      return feature_flags[feature_index / 32u][feature_index % 32u].is_set();
    };
 
    // These flags and bit fields are documented in the EAX=1 table at

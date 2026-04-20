@@ -22,47 +22,44 @@ test(arithmetic) {
    using namespace cat::literals;
    using namespace cat::integers;
 
-   // Test accessor value categories.
+   // Test overflow accessor value categories and constexpr support.
    {
       int4 const constant_int4 = 0;
       static_assert(!cat::is_lvalue_reference<decltype(constant_int4)>);
 
-      static_assert(
-         cat::is_lvalue_reference<decltype(constant_int4.wrap().undef())>);
+      static_assert(cat::rvalue<decltype(constant_int4.wrap().undef())>);
       static_assert(cat::rvalue<decltype(int4{0}.wrap().undef())>);
 
-      static_assert(cat::is_lvalue_reference<decltype(constant_int4.wrap())>);
+      static_assert(cat::rvalue<decltype(constant_int4.wrap())>);
       static_assert(cat::rvalue<decltype(int4{0}.wrap())>);
 
-      static_assert(cat::is_lvalue_reference<decltype(constant_int4.sat())>);
+      static_assert(cat::rvalue<decltype(constant_int4.sat())>);
       static_assert(cat::rvalue<decltype(int4{0}.sat())>);
    }
 
    {
       idx const constant_idx = 0;
 
-      static_assert(
-         cat::is_lvalue_reference<decltype(constant_idx.wrap().undef())>);
+      static_assert(cat::rvalue<decltype(constant_idx.wrap().undef())>);
       static_assert(cat::rvalue<decltype(idx{0}.wrap().undef())>);
 
-      static_assert(cat::is_lvalue_reference<decltype(constant_idx.wrap())>);
+      static_assert(cat::rvalue<decltype(constant_idx.wrap())>);
       static_assert(cat::rvalue<decltype(idx{0}.wrap())>);
 
-      static_assert(cat::is_lvalue_reference<decltype(constant_idx.sat())>);
+      static_assert(cat::rvalue<decltype(constant_idx.sat())>);
       static_assert(cat::rvalue<decltype(idx{0}.sat())>);
    }
 
    {
       uintptr<void> const constant_uptr = nullptr;
 
-      static_assert(
-         cat::is_lvalue_reference<decltype(constant_uptr.wrap().undef())>);
+      static_assert(cat::rvalue<decltype(constant_uptr.wrap().undef())>);
       static_assert(cat::rvalue<decltype(uintptr<void>{0}.wrap().undef())>);
 
-      static_assert(cat::is_lvalue_reference<decltype(constant_uptr.wrap())>);
+      static_assert(cat::rvalue<decltype(constant_uptr.wrap())>);
       static_assert(cat::rvalue<decltype(uintptr<void>{0}.wrap())>);
 
-      static_assert(cat::is_lvalue_reference<decltype(constant_uptr.sat())>);
+      static_assert(cat::rvalue<decltype(constant_uptr.sat())>);
       static_assert(cat::rvalue<decltype(uintptr<void>{0}.sat())>);
    }
 
@@ -779,6 +776,15 @@ test(arithmetic) {
    static_assert(cat::wrap_mul(cat::uint4_max, 1u) == cat::uint4_max);
    static_assert(cat::wrap_mul(cat::uint4_max, 2u) == cat::uint4_max - 1u);
 
+   // Overflow reference views (`wrap()`, `sat()`, …) use `wrap_add`, `sat_add`,
+   // and related helpers in `constexpr` the same way as at runtime.
+   static_assert((cat::int4_max.wrap() + 100) == cat::int4_min + 99);
+   static_assert((cat::int4_max.sat() + 100) == cat::int4_max);
+   static_assert((cat::int4_min.wrap() - 1) == cat::int4_max);
+   static_assert((cat::uint4_max.wrap() + 1u) == cat::uint4_min);
+   static_assert((cat::int4_max.sat() + 1) == cat::int4_max);
+   static_assert((cat::int4_min.sat() - 1) == cat::int4_min);
+
    // Test type promotion ordering.
    static_assert(cat::detail::integer_promotion_hierarchy<iword>::order == 8);
    static_assert(cat::detail::integer_promotion_hierarchy<long int>::order
@@ -917,7 +923,7 @@ test(arithmetic) {
    1_sz / idx1;
    idx _ = idx1 / 1_uz;
    iword _ = idx1 / 1_sz;
-   idx1 /= 1;
+   idx1 /= 1_uz;
 
    idx lesser_idx = 1;
    idx greater_idx = 2;

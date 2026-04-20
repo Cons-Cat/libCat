@@ -54,11 +54,11 @@ class ArithmeticPrinter:
         match stripped_policy:
             case 'undefined':
                 self.policy = 'undefined'
-            case 'wrap' | 'wrap_member':
+            case 'wrap':
                 self.policy = 'wrap'
-            case 'saturate' | 'sat_member':
+            case 'saturate':
                 self.policy = 'sat'
-            case 'trap' | 'trap_member':
+            case 'trap':
                 self.policy = 'trap'
             case _:
                 self.policy = 'WTF'
