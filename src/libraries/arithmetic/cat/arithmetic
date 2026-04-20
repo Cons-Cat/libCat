@@ -34,10 +34,18 @@ enum class overflow_policies : unsigned char {
    wrap,
    saturate,
    trap,
-   wrap_member,
-   saturate_member,
-   trap_member,
 };
+
+namespace detail {
+template <typename WrappedQual, overflow_policies Semantics>
+class overflow_reference;
+}  // namespace detail
+
+template <typename T, typename storage_type, overflow_policies overflow_policy>
+struct arithmetic_ptr;
+
+template <overflow_policies overflow_policy>
+struct index;
 
 template <typename T>
 inline constexpr bool is_arithmetic_ptr = requires { T::ptr; };
@@ -673,11 +681,9 @@ struct arithmetic :
          // semantics.
          return detail::promoted_type<arithmetic, U>(make_signed(raw)
                                                      + make_signed(raw_other));
-      } else if constexpr (overflow_policy == wrap
-                           || overflow_policy == wrap_member) {
+      } else if constexpr (overflow_policy == wrap) {
          return wrap_add(raw, raw_other);
-      } else if constexpr (overflow_policy == saturate
-                           || overflow_policy == saturate_member) {
+      } else if constexpr (overflow_policy == saturate) {
          return sat_add(raw, raw_other);
       }
    }
@@ -708,11 +714,9 @@ struct arithmetic :
          return detail::promoted_type<arithmetic, U>(
             static_cast<promoted_raw>(raw)
             - static_cast<promoted_raw>(raw_operand));
-      } else if constexpr (overflow_policy == wrap
-                           || overflow_policy == wrap_member) {
+      } else if constexpr (overflow_policy == wrap) {
          return wrap_sub(raw, raw_operand);
-      } else if constexpr (overflow_policy == saturate
-                           || overflow_policy == saturate_member) {
+      } else if constexpr (overflow_policy == saturate) {
          return sat_sub(raw, raw_operand);
       }
    }
@@ -758,11 +762,9 @@ struct arithmetic :
             raw_arithmetic_type<detail::promoted_type<arithmetic, U>>;
          return promoted_raw(static_cast<promoted_raw>(raw)
                              * static_cast<promoted_raw>(raw_operand));
-      } else if constexpr (overflow_policy == wrap
-                           || overflow_policy == wrap_member) {
+      } else if constexpr (overflow_policy == wrap) {
          return wrap_mul(raw, raw_operand);
-      } else if constexpr (overflow_policy == saturate
-                           || overflow_policy == saturate_member) {
+      } else if constexpr (overflow_policy == saturate) {
          return sat_mul(raw, raw_operand);
       }
    }
@@ -786,11 +788,9 @@ struct arithmetic :
             raw_arithmetic_type<detail::promoted_type<arithmetic, U>>;
          return promoted_raw(static_cast<promoted_raw>(raw)
                              / static_cast<promoted_raw>(raw_operand));
-      } else if constexpr (overflow_policy == wrap
-                           || overflow_policy == wrap_member) {
+      } else if constexpr (overflow_policy == wrap) {
          return wrap_div(raw, raw_operand);
-      } else if constexpr (overflow_policy == saturate
-                           || overflow_policy == saturate_member) {
+      } else if constexpr (overflow_policy == saturate) {
          return sat_div(raw, raw_operand);
       }
    }
@@ -923,76 +923,47 @@ struct arithmetic :
       return other >> raw;
    }
 
-   // This is undefined behavior, because it returns an address to a
-   // temporary. However, when inlined, this gives the type a fluent API
-   // and skips constructor calls in unoptimized builds.
-   // This could be made well-defined by properly constructing and destructing
-   // these as members of a union, but that makes the expanded types in error
-   // messages and debuggers far more convoluted.
+   constexpr auto
+   undef() & -> detail::overflow_reference<arithmetic,
+                                           overflow_policies::undefined>;
 
-   // reinterpret_casts are used instead of type casts because to skip
-   // constructor calls.
-
-   [[gnu::always_inline, gnu::nodebug, gnu::no_sanitize_undefined]]
-   auto
-   undef() & -> arithmetic<T, overflow_policies::undefined>& {
-      return *reinterpret_cast<arithmetic<T, overflow_policies::undefined>*>(
-         this);
-   };
-
-   [[gnu::always_inline, gnu::nodebug, gnu::no_sanitize_undefined]]
-   auto
-   undef() const& -> arithmetic<T, overflow_policies::undefined> const& {
-      return *reinterpret_cast<
-         arithmetic<T const, overflow_policies::undefined>*>(this);
-   };
+   constexpr auto
+   undef() const& -> detail::overflow_reference<arithmetic const,
+                                                overflow_policies::undefined>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    undef() && -> arithmetic<T, overflow_policies::undefined> {
-      return __builtin_bit_cast(arithmetic<T, overflow_policies::undefined>,
-                                *this);
-   };
+      return arithmetic<T, overflow_policies::undefined>(raw);
+   }
 
-   [[gnu::always_inline, gnu::nodebug, gnu::no_sanitize_undefined]]
-   auto
-   wrap() & -> arithmetic<T, overflow_policies::wrap>& {
-      return *reinterpret_cast<arithmetic<T, overflow_policies::wrap>*>(this);
-   };
+   constexpr auto
+   wrap() & -> detail::overflow_reference<arithmetic<T, overflow_policy>,
+                                          overflow_policies::wrap>;
 
-   [[gnu::always_inline, gnu::nodebug, gnu::no_sanitize_undefined]]
-   auto
-   wrap() const& -> arithmetic<T, overflow_policies::wrap> const& {
-      return *reinterpret_cast<arithmetic<T const, overflow_policies::wrap>*>(
-         this);
-   };
+   constexpr auto
+   wrap() const& -> detail::overflow_reference<
+      arithmetic<T, overflow_policy> const, overflow_policies::wrap>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    wrap() && -> arithmetic<T, overflow_policies::wrap> {
-      return __builtin_bit_cast(arithmetic<T, overflow_policies::wrap>, *this);
-   };
+      return arithmetic<T, overflow_policies::wrap>(raw);
+   }
 
-   [[gnu::always_inline, gnu::nodebug, gnu::no_sanitize_undefined]]
-   auto
-   sat() & -> arithmetic<T, overflow_policies::saturate>& {
-      return *reinterpret_cast<arithmetic<T, overflow_policies::saturate>*>(
-         this);
-   };
+   constexpr auto
+   sat() & -> detail::overflow_reference<arithmetic<T, overflow_policy>,
+                                         overflow_policies::saturate>;
 
-   [[gnu::always_inline, gnu::nodebug, gnu::no_sanitize_undefined]]
-   auto
-   sat() const& -> arithmetic<T, overflow_policies::saturate> const& {
-      return *reinterpret_cast<
-         arithmetic<T const, overflow_policies::saturate>*>(this);
-   };
+   constexpr auto
+   sat() const& -> detail::overflow_reference<
+      arithmetic<T, overflow_policy> const, overflow_policies::saturate>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    sat() && -> arithmetic<T, overflow_policies::saturate> {
-      return __builtin_bit_cast(arithmetic<T, overflow_policies::saturate>,
-                                *this);
-   };
+      return arithmetic<T, overflow_policies::saturate>(raw);
+   }
 
    // These being `consteval` won't compile if called on a dereferenced
    // `arithmetic_ptr`'s object, when using Clang 19.
@@ -1023,8 +994,8 @@ struct arithmetic :
    // `to_idx()` is defined at the end of `<cat/maybe>` (via
    // `<cat/implementations/narrow_to_idx.tpp>`).
    [[nodiscard]]
-   constexpr maybe<index<overflow_policies::undefined>>
-   to_idx() const
+   constexpr auto
+   to_idx() const -> maybe<index<overflow_policies::undefined>>
       requires(is_integral<T> && overflow_policy == overflow_policies::undefined
                && (is_same<T, __SIZE_TYPE__>
                    || is_same<T, make_signed_type<__SIZE_TYPE__>>));
@@ -1032,6 +1003,60 @@ struct arithmetic :
    // `arithmetic` derives public storage from
    // `detail::arithmetic_storage`.
 };
+
+}  // namespace cat
+
+#include <cat/detail/overflow_reference.hpp>
+
+namespace cat {
+
+template <typename T, overflow_policies overflow_policy>
+constexpr auto
+arithmetic<T, overflow_policy>::undef() & -> detail::overflow_reference<
+   arithmetic<T, overflow_policy>, overflow_policies::undefined> {
+   return detail::overflow_reference<arithmetic<T, overflow_policy>,
+                                     overflow_policies::undefined>{*this};
+}
+
+template <typename T, overflow_policies overflow_policy>
+constexpr auto
+arithmetic<T, overflow_policy>::undef() const& -> detail::overflow_reference<
+   arithmetic<T, overflow_policy> const, overflow_policies::undefined> {
+   return detail::overflow_reference<arithmetic<T, overflow_policy> const,
+                                     overflow_policies::undefined>{*this};
+}
+
+template <typename T, overflow_policies overflow_policy>
+constexpr auto
+arithmetic<T, overflow_policy>::wrap() & -> detail::overflow_reference<
+   arithmetic<T, overflow_policy>, overflow_policies::wrap> {
+   return detail::overflow_reference<arithmetic<T, overflow_policy>,
+                                     overflow_policies::wrap>{*this};
+}
+
+template <typename T, overflow_policies overflow_policy>
+constexpr auto
+arithmetic<T, overflow_policy>::wrap() const& -> detail::overflow_reference<
+   arithmetic<T, overflow_policy> const, overflow_policies::wrap> {
+   return detail::overflow_reference<arithmetic<T, overflow_policy> const,
+                                     overflow_policies::wrap>{*this};
+}
+
+template <typename T, overflow_policies overflow_policy>
+constexpr auto
+arithmetic<T, overflow_policy>::sat() & -> detail::overflow_reference<
+   arithmetic<T, overflow_policy>, overflow_policies::saturate> {
+   return detail::overflow_reference<arithmetic<T, overflow_policy>,
+                                     overflow_policies::saturate>{*this};
+}
+
+template <typename T, overflow_policies overflow_policy>
+constexpr auto
+arithmetic<T, overflow_policy>::sat() const& -> detail::overflow_reference<
+   arithmetic<T, overflow_policy> const, overflow_policies::saturate> {
+   return detail::overflow_reference<arithmetic<T, overflow_policy> const,
+                                     overflow_policies::saturate>{*this};
+}
 
 // `arithmetic_ptr` can be constructed from any integer type or any pointer.
 // It can only convert into `T*`, but it is otherwise interchangeable with
@@ -1381,82 +1406,52 @@ struct arithmetic_ptr :
       return ~(raw);
    }
 
-   // This is undefined behavior, because it returns an address to a
-   // temporary. However, when inlined, this gives the type a fluent API
-   // and skips constructor calls in unoptimized builds.
-   // This could be made well-defined by properly constructing and destructing
-   // these as members of a union, but that makes the expanded types in error
-   // messages and debuggers far more convoluted.
+   constexpr auto
+   undef() & -> detail::overflow_reference<
+      arithmetic_ptr<T, storage_type, overflow_policy>,
+      overflow_policies::undefined>;
 
-   // reinterpret_casts are used instead of type casts because to skip
-   // constructor calls.
-
-   [[gnu::always_inline, gnu::nodebug, gnu::no_sanitize_undefined]]
-   auto
-   undef() & -> arithmetic_ptr<T, storage_type, overflow_policies::undefined>& {
-      return *reinterpret_cast<
-         arithmetic_ptr<T, storage_type, overflow_policies::undefined>*>(this);
-   }
-
-   [[gnu::always_inline, gnu::nodebug, gnu::no_sanitize_undefined]]
-   auto
-   undef() const& -> arithmetic_ptr<T, storage_type,
-                                    overflow_policies::undefined> const& {
-      return *reinterpret_cast<
-         arithmetic_ptr<T const, storage_type, overflow_policies::undefined>*>(
-         this);
-   }
+   constexpr auto
+   undef() const& -> detail::overflow_reference<
+      arithmetic_ptr<T, storage_type, overflow_policy> const,
+      overflow_policies::undefined>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    undef() && -> arithmetic_ptr<T, storage_type, overflow_policies::undefined> {
-      return __builtin_bit_cast(
-         arithmetic_ptr<T, storage_type, overflow_policies::undefined>, *this);
+      return arithmetic_ptr<T, storage_type, overflow_policies::undefined>(raw);
    }
 
-   [[gnu::always_inline, gnu::nodebug, gnu::no_sanitize_undefined]]
-   auto
-   wrap() & -> arithmetic_ptr<T, storage_type, overflow_policies::wrap>& {
-      return *reinterpret_cast<
-         arithmetic_ptr<T, storage_type, overflow_policies::wrap>*>(this);
-   }
+   constexpr auto
+   wrap() & -> detail::overflow_reference<
+      arithmetic_ptr<T, storage_type, overflow_policy>,
+      overflow_policies::wrap>;
 
-   [[gnu::always_inline, gnu::nodebug, gnu::no_sanitize_undefined]]
-   auto
-   wrap() const& -> arithmetic_ptr<T, storage_type,
-                                   overflow_policies::wrap> const& {
-      return *reinterpret_cast<
-         arithmetic_ptr<T const, storage_type, overflow_policies::wrap>*>(this);
-   }
+   constexpr auto
+   wrap() const& -> detail::overflow_reference<
+      arithmetic_ptr<T, storage_type, overflow_policy> const,
+      overflow_policies::wrap>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    wrap() && -> arithmetic_ptr<T, storage_type, overflow_policies::wrap> {
-      return __builtin_bit_cast(
-         arithmetic_ptr<T, storage_type, overflow_policies::wrap>, *this);
+      return arithmetic_ptr<T, storage_type, overflow_policies::wrap>(raw);
    }
 
-   [[gnu::always_inline, gnu::nodebug, gnu::no_sanitize_undefined]]
-   auto
-   sat() & -> arithmetic_ptr<T, storage_type, overflow_policies::saturate>& {
-      return *reinterpret_cast<
-         arithmetic_ptr<T, storage_type, overflow_policies::saturate>*>(this);
-   }
+   constexpr auto
+   sat() & -> detail::overflow_reference<
+      arithmetic_ptr<T, storage_type, overflow_policy>,
+      overflow_policies::saturate>;
 
-   [[gnu::always_inline, gnu::nodebug, gnu::no_sanitize_undefined]]
-   auto
-   sat() const& -> arithmetic_ptr<T, storage_type,
-                                  overflow_policies::saturate> const& {
-      return *reinterpret_cast<
-         arithmetic_ptr<T const, storage_type, overflow_policies::saturate>*>(
-         this);
-   }
+   constexpr auto
+   sat() const& -> detail::overflow_reference<
+      arithmetic_ptr<T, storage_type, overflow_policy> const,
+      overflow_policies::saturate>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    sat() && -> arithmetic_ptr<T, storage_type, overflow_policies::saturate> {
-      return __builtin_bit_cast(
-         arithmetic_ptr<T, storage_type, overflow_policies::saturate>, *this);
+      return arithmetic_ptr<T, storage_type, overflow_policies::saturate>(raw);
    }
 
    // These being `consteval` won't compile if called on a dereferenced
@@ -1484,6 +1479,66 @@ struct arithmetic_ptr :
       return limits<arithmetic_ptr<T, storage_type, overflow_policy>>::max();
    }
 };
+
+template <typename T, typename storage_type, overflow_policies overflow_policy>
+constexpr auto
+arithmetic_ptr<T, storage_type, overflow_policy>::undef() & -> detail::
+   overflow_reference<arithmetic_ptr<T, storage_type, overflow_policy>,
+                      overflow_policies::undefined> {
+   return detail::overflow_reference<
+      arithmetic_ptr<T, storage_type, overflow_policy>,
+      overflow_policies::undefined>{*this};
+}
+
+template <typename T, typename storage_type, overflow_policies overflow_policy>
+constexpr auto
+arithmetic_ptr<T, storage_type, overflow_policy>::undef() const& -> detail::
+   overflow_reference<arithmetic_ptr<T, storage_type, overflow_policy> const,
+                      overflow_policies::undefined> {
+   return detail::overflow_reference<
+      arithmetic_ptr<T, storage_type, overflow_policy> const,
+      overflow_policies::undefined>{*this};
+}
+
+template <typename T, typename storage_type, overflow_policies overflow_policy>
+constexpr auto
+arithmetic_ptr<T, storage_type, overflow_policy>::wrap() & -> detail::
+   overflow_reference<arithmetic_ptr<T, storage_type, overflow_policy>,
+                      overflow_policies::wrap> {
+   return detail::overflow_reference<
+      arithmetic_ptr<T, storage_type, overflow_policy>,
+      overflow_policies::wrap>{*this};
+}
+
+template <typename T, typename storage_type, overflow_policies overflow_policy>
+constexpr auto
+arithmetic_ptr<T, storage_type, overflow_policy>::wrap() const& -> detail::
+   overflow_reference<arithmetic_ptr<T, storage_type, overflow_policy> const,
+                      overflow_policies::wrap> {
+   return detail::overflow_reference<
+      arithmetic_ptr<T, storage_type, overflow_policy> const,
+      overflow_policies::wrap>{*this};
+}
+
+template <typename T, typename storage_type, overflow_policies overflow_policy>
+constexpr auto
+arithmetic_ptr<T, storage_type, overflow_policy>::sat() & -> detail::
+   overflow_reference<arithmetic_ptr<T, storage_type, overflow_policy>,
+                      overflow_policies::saturate> {
+   return detail::overflow_reference<
+      arithmetic_ptr<T, storage_type, overflow_policy>,
+      overflow_policies::saturate>{*this};
+}
+
+template <typename T, typename storage_type, overflow_policies overflow_policy>
+constexpr auto
+arithmetic_ptr<T, storage_type, overflow_policy>::sat() const& -> detail::
+   overflow_reference<arithmetic_ptr<T, storage_type, overflow_policy> const,
+                      overflow_policies::saturate> {
+   return detail::overflow_reference<
+      arithmetic_ptr<T, storage_type, overflow_policy> const,
+      overflow_policies::saturate>{*this};
+}
 
 namespace detail {
 template <typename T>
@@ -1684,20 +1739,50 @@ struct index :
    }
 
    // Generate `operator/`.
-   template <is_integral T>
+   // `divide_by(unsigned)`: non-negative quotient; keep `cat::index`.
+   //
+   // `divide_by(signed)`: usual arithmetic conversions would mix
+   // `__SIZE_TYPE__` with a signed divisor so a negative `other` becomes a huge
+   // unsigned value. Evaluate in `signed long long`, same as `multiply` /
+   // `subtract_by`. The quotient may be negative, so return `signed_distance`
+   // (same as `add` with a signed operand), not `index`.
+   template <is_unsigned_integral T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    divide_by(T other) const -> index {
-      return index(static_cast<signed long long>(raw)
-                   / static_cast<signed long long>(make_raw_arithmetic(other)));
+      return index(raw / make_raw_arithmetic(other));
    }
 
-   template <is_integral T>
+   template <is_signed_integral T>
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   divide_by(T other) const -> signed_distance {
+      return signed_distance(
+         static_cast<signed long long>(raw)
+         / static_cast<signed long long>(make_raw_arithmetic(other)));
+   }
+
+   // `divide_into(unsigned)`: quotient fits the usual unsigned story; narrow
+   // `T` still truncates the result like any explicit cast.
+   //
+   // `divide_into(signed)`: do not cast `raw` to `T` (narrowing and mixed
+   // promotion with `T`). Use the same wide signed division as
+   // `divide_by(signed)` and return `signed_distance` so negative quotients are
+   // representable.
+   template <is_unsigned_integral T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    divide_into(T other) const -> T {
-      return static_cast<T>(make_raw_arithmetic(other))
-             / static_cast<T>(make_raw_arithmetic(raw));
+      return static_cast<T>(make_raw_arithmetic(other) / raw);
+   }
+
+   template <is_signed_integral T>
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   divide_into(T other) const -> signed_distance {
+      return signed_distance(
+         static_cast<signed long long>(make_raw_arithmetic(other))
+         / static_cast<signed long long>(raw));
    }
 
    // Generate `operator/` for pointer arithmetic.
@@ -1779,68 +1864,46 @@ struct index :
       return index(complement);
    }
 
-   // This is undefined behavior, because it returns an address to a
-   // temporary. However, when inlined, this gives the type a fluent API
-   // and skips constructor calls in unoptimized builds.
-   // This could be made well-defined by properly constructing and
-   // destructing these as members of a union, but that makes the expanded
-   // types in error messages and debuggers far more convoluted.
+   constexpr auto
+   undef() & -> detail::overflow_reference<index<overflow_policy>,
+                                           overflow_policies::undefined>;
 
-   // reinterpret_casts are used instead of type casts because to skip
-   // constructor calls.
-
-   [[gnu::always_inline, gnu::nodebug, gnu::no_sanitize_undefined]]
-   auto
-   undef() & -> index<overflow_policies::undefined>& {
-      return *reinterpret_cast<index<overflow_policies::undefined>*>(this);
-   }
-
-   [[gnu::always_inline, gnu::nodebug, gnu::no_sanitize_undefined, nodiscard]]
-   inline auto
-   undef() const& -> index<overflow_policies::undefined> const& {
-      return *reinterpret_cast<index<overflow_policies::undefined>*>(this);
-   }
+   constexpr auto
+   undef() const& -> detail::overflow_reference<index<overflow_policy> const,
+                                                overflow_policies::undefined>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    undef() && -> index<overflow_policies::undefined> {
-      return __builtin_bit_cast(index<overflow_policies::undefined>, *this);
+      return index<overflow_policies::undefined>(raw);
    }
 
-   [[gnu::always_inline, gnu::nodebug, gnu::no_sanitize_undefined]]
-   auto
-   wrap() & -> index<overflow_policies::wrap>& {
-      return *reinterpret_cast<index<overflow_policies::wrap>*>(this);
-   }
+   constexpr auto
+   wrap() & -> detail::overflow_reference<index<overflow_policy>,
+                                          overflow_policies::wrap>;
 
-   [[gnu::always_inline, gnu::nodebug, gnu::no_sanitize_undefined, nodiscard]]
-   auto
-   wrap() const& -> index<overflow_policies::wrap> const& {
-      return *reinterpret_cast<index<overflow_policies::wrap>*>(this);
-   }
+   constexpr auto
+   wrap() const& -> detail::overflow_reference<index<overflow_policy> const,
+                                               overflow_policies::wrap>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    wrap() && -> index<overflow_policies::wrap> {
-      return __builtin_bit_cast(index<overflow_policies::wrap>, *this);
+      return index<overflow_policies::wrap>(raw);
    }
 
-   [[gnu::always_inline, gnu::nodebug, gnu::no_sanitize_undefined]]
-   auto
-   sat() & -> index<overflow_policies::saturate>& {
-      return *reinterpret_cast<index<overflow_policies::saturate>*>(this);
-   }
+   constexpr auto
+   sat() & -> detail::overflow_reference<index<overflow_policy>,
+                                         overflow_policies::saturate>;
 
-   [[gnu::always_inline, gnu::nodebug, gnu::no_sanitize_undefined, nodiscard]]
-   auto
-   sat() const& -> index<overflow_policies::saturate> const& {
-      return *reinterpret_cast<index<overflow_policies::saturate>*>(this);
-   }
+   constexpr auto
+   sat() const& -> detail::overflow_reference<index<overflow_policy> const,
+                                              overflow_policies::saturate>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    sat() && -> index<overflow_policies::saturate> {
-      return __builtin_bit_cast(index<overflow_policies::saturate>, *this);
+      return index<overflow_policies::saturate>(raw);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -1855,6 +1918,54 @@ struct index :
       return limits<index<overflow_policy>>::max();
    }
 };
+
+template <overflow_policies overflow_policy>
+constexpr auto
+index<overflow_policy>::undef() & -> detail::overflow_reference<
+   index<overflow_policy>, overflow_policies::undefined> {
+   return detail::overflow_reference<index<overflow_policy>,
+                                     overflow_policies::undefined>{*this};
+}
+
+template <overflow_policies overflow_policy>
+constexpr auto
+index<overflow_policy>::undef() const& -> detail::overflow_reference<
+   index<overflow_policy> const, overflow_policies::undefined> {
+   return detail::overflow_reference<index<overflow_policy> const,
+                                     overflow_policies::undefined>{*this};
+}
+
+template <overflow_policies overflow_policy>
+constexpr auto
+index<overflow_policy>::wrap() & -> detail::overflow_reference<
+   index<overflow_policy>, overflow_policies::wrap> {
+   return detail::overflow_reference<index<overflow_policy>,
+                                     overflow_policies::wrap>{*this};
+}
+
+template <overflow_policies overflow_policy>
+constexpr auto
+index<overflow_policy>::wrap() const& -> detail::overflow_reference<
+   index<overflow_policy> const, overflow_policies::wrap> {
+   return detail::overflow_reference<index<overflow_policy> const,
+                                     overflow_policies::wrap>{*this};
+}
+
+template <overflow_policies overflow_policy>
+constexpr auto
+index<overflow_policy>::sat() & -> detail::overflow_reference<
+   index<overflow_policy>, overflow_policies::saturate> {
+   return detail::overflow_reference<index<overflow_policy>,
+                                     overflow_policies::saturate>{*this};
+}
+
+template <overflow_policies overflow_policy>
+constexpr auto
+index<overflow_policy>::sat() const& -> detail::overflow_reference<
+   index<overflow_policy> const, overflow_policies::saturate> {
+   return detail::overflow_reference<index<overflow_policy> const,
+                                     overflow_policies::saturate>{*this};
+}
 
 // TODO: Genarete other compound assignment operators for pointer
 // arithmetic.
@@ -1912,19 +2023,18 @@ using sat_uint4 = arithmetic<__UINT32_TYPE__, overflow_policies::saturate>;
 using sat_int8 = arithmetic<__INT64_TYPE__, overflow_policies::saturate>;
 using sat_uint8 = arithmetic<__UINT64_TYPE__, overflow_policies::saturate>;
 
-template <iword bytes>
-   requires(bytes <= 8 && bytes > 0 &&
+template <uword bytes>
+   requires(bytes <= 8u &&
             // Is a power of 2:
-            ((bytes & (bytes - 1)) == 0))
+            ((bytes & (bytes - 1u)) == 0u))
 using int_fixed = conditional<
    bytes == 1, int1,
    conditional<bytes == 2, int2, conditional<bytes == 4, int4, int8>>>;
 
-// TODO: Make `bytes` be an `idx`.
-template <iword bytes>
-   requires(bytes <= 8 && bytes > 0 &&
+template <uword bytes>
+   requires(bytes <= 8u &&
             // Is a power of 2:
-            ((bytes & (bytes - 1)) == 0))
+            ((bytes & (bytes - 1u)) == 0u))
 using uint_fixed = conditional<
    bytes == 1, uint1,
    conditional<bytes == 2, uint2, conditional<bytes == 4, uint4, uint8>>>;
@@ -1985,77 +2095,77 @@ inline constexpr uint8 uint8_max = limits<uint8>::max();
 
 inline namespace literals {
 inline namespace arithmetic_literals {
-constexpr auto
+consteval auto
 operator""_idx(unsigned long long input) -> cat::idx {
    return cat::idx(input);
 }
 
-constexpr auto
+consteval auto
 operator""_i1(unsigned long long input) -> cat::int1 {
    return cat::int1(input);
 }
 
-constexpr auto
+consteval auto
 operator""_i2(unsigned long long input) -> cat::int2 {
    return cat::int2(input);
 }
 
-constexpr auto
+consteval auto
 operator""_i4(unsigned long long input) -> cat::int4 {
    return cat::int4(input);
 }
 
-constexpr auto
+consteval auto
 operator""_i8(unsigned long long input) -> cat::int8 {
    return cat::int8(input);
 }
 
-constexpr auto
+consteval auto
 operator""_sz(unsigned long long input) -> cat::iword {
    return cat::iword(input);
 }
 
-constexpr auto
+consteval auto
 operator""_u1(unsigned long long input) -> cat::uint1 {
    return cat::uint1(input);
 }
 
-constexpr auto
+consteval auto
 operator""_u2(unsigned long long input) -> cat::uint2 {
    return cat::uint2(input);
 }
 
-constexpr auto
+consteval auto
 operator""_u4(unsigned long long input) -> cat::uint4 {
    return cat::uint4(input);
 }
 
-constexpr auto
+consteval auto
 operator""_u8(unsigned long long input) -> cat::uint8 {
    return cat::uint8(input);
 }
 
-constexpr auto
+consteval auto
 operator""_uz(unsigned long long input) -> cat::uword {
    return cat::uword(input);
 }
 
-constexpr auto
+consteval auto
 operator""_f4(unsigned long long input) -> cat::float4 {
    return cat::float4(input);
 }
 
-constexpr auto
+consteval auto
 operator""_f4(long double input) -> cat::float4 {
    return cat::float4(input);
 }
 
-constexpr auto
+consteval auto
 operator""_f8(unsigned long long input) -> cat::float8 {
    return cat::float8(input);
 }
 
-constexpr auto
+consteval auto
 operator""_f8(long double input) -> cat::float8 {
    return cat::float8(input);
 }

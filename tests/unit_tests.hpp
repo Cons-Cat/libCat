@@ -36,7 +36,7 @@ test_fail(cat::source_location const& source_location);
        * doesn't work. This hacky check works around it.                       \
        */                                                                      \
       if (!test_fns.has_value()) {                                             \
-         test_fns = cat::make_vec_reserved<void*>(pager, 4_uki / 8).value();   \
+         test_fns = cat::make_vec_reserved<void*>(pager, 4_uki / 8u).value(); \
       }                                                                        \
       /* This is memory is pre-reserved, so `push_back` cannot fail. */        \
       auto _ = test_fns.verify().push_back(                                    \
