@@ -8,7 +8,7 @@ It has no pthreads nor =malloc()=, and by extension no exceptions.
 It has type-safe arithmetic, SIMD, fast syscalls, CRTP interfaces,
 
 * Building
-libCat requires a recent development version of Clang 20 from the =trunk= branch.
+libCat requires a recent development version of Clang 23 from the =trunk= branch.
 Compiling libCat is only routinely tested using =ninja=.
 Configuring the build requires CMake 3.29.
 #+BEGIN_SRC

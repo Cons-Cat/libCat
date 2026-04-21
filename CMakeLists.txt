@@ -4,6 +4,31 @@ project(cat LANGUAGES CXX)
 
 option(CAT_USE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer." ON)
 
+# Optional sccache-based compiler caching. Auto-enabled when `sccache` is on
+# PATH; silently skipped otherwise. Pass `-DCAT_USE_SCCACHE=OFF` to disable
+# explicitly, or `-DCAT_USE_SCCACHE=ON` to require it (configure fails if
+# missing). Combined with the `-Xclang -fno-pch-timestamp` flag added below for
+# PCH-enabled Clang builds, this yields near-100% hit rates across build
+# directories and fresh checkouts.
+find_program(CAT_SCCACHE_EXECUTABLE sccache DOC "Path to the sccache binary.")
+if (CAT_SCCACHE_EXECUTABLE)
+  set(_cat_sccache_default ON)
+else()
+  set(_cat_sccache_default OFF)
+endif()
+option(CAT_USE_SCCACHE "Use sccache as the compiler launcher for C and C++." ${_cat_sccache_default})
+unset(_cat_sccache_default)
+
+if (CAT_USE_SCCACHE)
+  if (NOT CAT_SCCACHE_EXECUTABLE)
+    message(FATAL_ERROR
+      "CAT_USE_SCCACHE=ON but `sccache` was not found on PATH. "
+      "Install it to path or pass -DCAT_SCCACHE_EXECUTABLE=/path/to/sccache.")
+  endif()
+  message(STATUS "sccache: using ${CAT_SCCACHE_EXECUTABLE} as compiler launcher")
+  set(CMAKE_CXX_COMPILER_LAUNCHER "${CAT_SCCACHE_EXECUTABLE}")
+endif()
+
 list(
   APPEND CAT_COMPILE_OPTIONS_COMMON
   # Disable linking libC symbols.
@@ -195,7 +220,15 @@ file(GLOB_RECURSE CAT_HEADERS "*.hpp")
 
 option(CAT_PCH "Enable precompiled-headers for libCat headers." ON)
 if (CAT_PCH)
-  target_precompile_headers(cat INTERFACE ${CAT_HEADERS})  
+  target_precompile_headers(cat INTERFACE ${CAT_HEADERS})
+  # Make Clang PCHs content-addressable by stripping the embedded mtime. Without
+  # this, every PCH rebuild gets a new hash and compiler-cache tools (sccache,
+  # ccache) cannot reuse PCH-consuming TUs across builds. The `SHELL:` prefix
+  # keeps `-Xclang` paired with its argument and prevents CMake from de-duping
+  # the `-Xclang` token against the one already used for `-fexperimental-bounds-safety`.
+  target_compile_options(cat INTERFACE
+    "$<$<CXX_COMPILER_ID:Clang>:SHELL:-Xclang -fno-pch-timestamp>"
+  )
 endif()
 set_target_properties(cat PROPERTIES PCH_WARN_INVALID ON)
 
