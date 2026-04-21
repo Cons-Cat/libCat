@@ -13,13 +13,14 @@ struct iterator_interface_base {};
 enum class overflow_policies : unsigned char;
 
 template <typename T, overflow_policies>
-struct arithmetic;
+class arithmetic;
 
 template <overflow_policies>
-struct index;
+class index;
 
-template <typename T, typename storage_type, overflow_policies>
-struct arithmetic_ptr;
+template <typename T, typename storage_type, overflow_policies overflow_policy>
+   requires(sizeof(storage_type) == sizeof(void*))
+class arithmetic_ptr;
 
 namespace detail {
 template <typename T, typename U = T&&>
@@ -182,67 +183,23 @@ template <typename T>
 using remove_volatile = detail::remove_volatile_trait<T>::type;
 #endif
 
-#ifdef __clang__
 template <typename T>
 using remove_cv = __remove_cv(T);
-#else
-// GCC cannot use type trait intrinsics directly inside type aliases.
-namespace detail {
-template <typename T>
-struct remove_cv_trait {
-   using type = __remove_cv(T);
-};
-}  // namespace detail
 
-template <typename T>
-using remove_cv = detail::remove_cv_trait<T>::type;
-#endif
-
-#ifdef __clang__
 template <typename T>
 using remove_reference = __remove_reference_t(T);
-#else
-// GCC cannot use type trait intrinsics directly inside type aliases.
-namespace detail {
-template <typename T>
-struct remove_reference_trait {
-   using type = __remove_reference(T);
-};
-}  // namespace detail
-
-template <typename T>
-using remove_reference = detail::remove_reference_trait<T>::type;
-#endif
 
 template <typename T>
 using remove_constref = remove_const<remove_reference<T>>;
 
-#ifdef __clang__
 template <typename T>
 using remove_cvref = __remove_cvref(T);
-#else
-// GCC cannot use type trait intrinsics directly inside type aliases.
-namespace detail {
-template <typename T>
-struct remove_cvref_trait {
-   using type = __remove_cvref(T);
-};
-}  // namespace detail
-
-template <typename T>
-using remove_cvref = detail::remove_cvref_trait<T>::type;
-#endif
 
 template <typename T>
 concept is_const = __is_const(T);
 
 template <typename T>
-concept is_const_ref =
-#ifdef __clang__
-   __is_const(__remove_reference_t(T));
-#else
-   __is_const(__remove_reference(T));
-#endif
+concept is_const_ref = __is_const(__remove_reference_t(T));
 
 template <typename T>
 concept is_volatile = __is_volatile(T);
@@ -296,21 +253,8 @@ template <typename from_type, typename to_type>
 using copy_cvref_from =
    copy_ref_from<from_type, copy_cv_from<from_type, to_type>>;
 
-#ifdef __clang__
 template <typename T>
 using remove_pointer = __remove_pointer(T);
-#else
-// GCC cannot use type trait intrinsics directly inside type aliases.
-namespace detail {
-template <typename T>
-struct remove_pointer_trait {
-   using type = __remove_pointer(T);
-};
-}  // namespace detail
-
-template <typename T>
-using remove_pointer = detail::remove_pointer_trait<T>::type;
-#endif
 
 template <auto constant_value>
 struct constant {
@@ -510,6 +454,11 @@ inline constexpr bool is_signed_detail = false;
 template <typename T, overflow_policies policy>
 inline constexpr bool is_signed_detail<arithmetic<T, policy>> =
    is_signed_detail<T>;
+
+template <typename T, typename storage_type, auto policy>
+inline constexpr bool
+   is_signed_detail<arithmetic_ptr<T, storage_type, policy>> =
+      is_signed_detail<storage_type>;
 
 // Clang 19 rejects the `is_less_than_comparable` constraint here.
 template <typename T>
