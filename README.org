@@ -9,13 +9,34 @@ It has type-safe arithmetic, SIMD, fast syscalls, CRTP interfaces,
 
 * Building
 libCat requires a recent development version of Clang 23 from the =trunk= branch.
-Compiling libCat is only routinely tested using =ninja=.
-Configuring the build requires CMake 3.29.
-#+BEGIN_SRC
-  $ export CXX=clang # Or any path to a Clang 20 executable
-  $ cmake -B build/ -G 'Ninja Multi-Config'
+It is tested on GitHub using the [official nightly](https://apt.llvm.org/) distribution,
+so this is certainly servicable for any local or downstream development.
+Compiling libCat is only routinely tested using =ninja=, but other build systems may work.
+The ="Ninja Multi-Config"= generator is also supported.
+A reasonably recent version of CMake is required (at least 3.28 is recommended).
+
+#+BEGIN_SRC sh
+  $ export CXX=clang++-23
+  $ cmake -B build/ -G 'Ninja'
   $ cmake --build build/
-  $ ./build/tests/Debug/unit_tests
+  $ ./build/tests/unit_tests # or ctest --test-dir/build --output-on-failure
 #+END_SRC
 
+The =.clang-format= and =.clang-tidy= configurations are only compatible with correspondingly
+recent builds of clang-tools.
+
+* Tools
+libCat provides several developer utilities. They are organized in the =cmake/=
+subdirectory.
+
+** =cat-format=
+#+BEGIN_SRC
+  $ cmake --build build/ --target cat-format
+#+END_SRC
+Runs =clang-format= in place on every libCat implementation source and public
+header. The files which changed are reported afterwards.
+
+CMake auto-discovers an appropriate version of =clang-format= on =PATH=,
+if one exists. Override its choice=-DCAT_CLANG_FORMAT_PATH=/path/to/clang-format=
+at configure time.
 The =.clang-format= and =.clang-tidy= configurations are only compatible with recent builds of clang-tools from the =main= branch.
