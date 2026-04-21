@@ -4,7 +4,7 @@
 
 #include <cat/arithmetic_interface>
 
-// Included by <cat/arithmetic> immediately after `struct arithmetic` closes.
+// Included by <cat/arithmetic> immediately after `arithmetic` is defined.
 
 namespace cat::detail {
 
@@ -15,20 +15,21 @@ namespace cat::detail {
 // In the past, we had expressed overflow accessors through `union` punning and
 // `reinterpret_cast`. These approaches violated lifetime semantics and were not
 // `constexpr`-friendly.
-template <typename WrappedQual, overflow_policies Semantics>
+template <typename WrappedQual, overflow_policies overflow_policy>
 class overflow_reference
     : public arithmetic_interface<
-         detail::overflow_reference<WrappedQual, Semantics>> {
+         detail::overflow_reference<WrappedQual, overflow_policy>> {
  public:
    constexpr explicit overflow_reference(WrappedQual& w)
        : m_wrapped(__builtin_addressof(w)) {
    }
 
+   using raw_type = typename remove_cvref<WrappedQual>::raw_type;
+
  private:
    using wrapper_type = remove_cvref<WrappedQual>;
-   using raw_type = typename wrapper_type::raw_type;
 
-   static constexpr overflow_policies policy = Semantics;
+   static constexpr overflow_policies policy = overflow_policy;
 
    WrappedQual* m_wrapped;
 
@@ -37,11 +38,12 @@ class overflow_reference
    view() const {
       if constexpr (is_arithmetic_ptr<wrapper_type>) {
          using pointee = remove_pointer<typename wrapper_type::ptr>;
-         return arithmetic_ptr<pointee, raw_type, Semantics>(m_wrapped->raw);
+         return arithmetic_ptr<pointee, raw_type, overflow_policy>(
+            m_wrapped->raw);
       } else if constexpr (detail::is_idx<wrapper_type>) {
-         return index<Semantics>(m_wrapped->raw);
+         return index<overflow_policy>(m_wrapped->raw);
       } else {
-         return arithmetic<raw_type, Semantics>(m_wrapped->raw);
+         return arithmetic<raw_type, overflow_policy>(m_wrapped->raw);
       }
    }
 
@@ -373,7 +375,7 @@ class overflow_reference
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    add(U other) const
-      -> detail::promoted_type<arithmetic<raw_type, Semantics>, U> {
+      -> detail::promoted_type<arithmetic<raw_type, overflow_policy>, U> {
       return view().add(other);
    }
 
@@ -389,7 +391,7 @@ class overflow_reference
       requires(detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(T_int other) const -> index<Semantics> {
+   add(T_int other) const -> detail::promoted_type<wrapper_type, T_int> {
       return view().add(other);
    }
 
@@ -398,7 +400,7 @@ class overflow_reference
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    add(T_int other) const
-      -> arithmetic<make_signed_type<__SIZE_TYPE__>, Semantics> {
+      -> arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policy> {
       return view().add(other);
    }
 
@@ -415,7 +417,7 @@ class overflow_reference
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_by(U operand) const
-      -> detail::promoted_type<arithmetic<raw_type, Semantics>, U> {
+      -> detail::promoted_type<arithmetic<raw_type, overflow_policy>, U> {
       return view().subtract_by(operand);
    }
 
@@ -428,19 +430,19 @@ class overflow_reference
    }
 
    template <is_integral T_int>
-      requires(!is_same<remove_cvref<T_int>, index<Semantics>>
+      requires(!is_same<remove_cvref<T_int>, index<overflow_policy>>
                && detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_by(T_int other) const
-      -> arithmetic<make_signed_type<__SIZE_TYPE__>, Semantics> {
+      -> arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policy> {
       return view().subtract_by(other);
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(index<Semantics> other) const
-      -> arithmetic<make_signed_type<__SIZE_TYPE__>, Semantics>
+   subtract_by(index<overflow_policy> other) const
+      -> arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policy>
       requires(detail::is_idx<wrapper_type>)
    {
       return view().subtract_by(other);
@@ -459,7 +461,7 @@ class overflow_reference
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_from(U operand) const
-      -> detail::promoted_type<arithmetic<raw_type, Semantics>, U> {
+      -> detail::promoted_type<arithmetic<raw_type, overflow_policy>, U> {
       return view().subtract_from(operand);
    }
 
@@ -492,7 +494,7 @@ class overflow_reference
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    multiply(U operand) const
-      -> detail::promoted_type<arithmetic<raw_type, Semantics>, U> {
+      -> detail::promoted_type<arithmetic<raw_type, overflow_policy>, U> {
       return view().multiply(operand);
    }
 
@@ -508,7 +510,7 @@ class overflow_reference
       requires(detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(T_int other) const -> index<Semantics> {
+   multiply(T_int other) const -> index<overflow_policy> {
       return view().multiply(other);
    }
 
@@ -525,7 +527,7 @@ class overflow_reference
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    divide_by(U operand) const
-      -> detail::promoted_type<arithmetic<raw_type, Semantics>, U> {
+      -> detail::promoted_type<arithmetic<raw_type, overflow_policy>, U> {
       return view().divide_by(operand);
    }
 
@@ -559,7 +561,7 @@ class overflow_reference
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    divide_into(U operand) const
-      -> detail::promoted_type<U, arithmetic<raw_type, Semantics>> {
+      -> detail::promoted_type<U, arithmetic<raw_type, overflow_policy>> {
       return view().divide_into(operand);
    }
 
@@ -613,7 +615,7 @@ class overflow_reference
       requires(detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(T_int other) const -> index<Semantics> {
+   modulo_by(T_int other) const -> index<overflow_policy> {
       return view().modulo_by(other);
    }
 
@@ -636,7 +638,7 @@ class overflow_reference
       requires(detail::is_idx<wrapper_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_into(T_int operand) const -> index<Semantics> {
+   modulo_into(T_int operand) const -> index<overflow_policy> {
       return view().modulo_into(operand);
    }
 
@@ -647,7 +649,7 @@ class overflow_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_and(U operand) const
-      -> detail::promoted_type<arithmetic<raw_type, Semantics>, U> {
+      -> detail::promoted_type<arithmetic<raw_type, overflow_policy>, U> {
       return view().bit_and(operand);
    }
 
@@ -663,7 +665,7 @@ class overflow_reference
       requires(detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(T_int other) const -> index<Semantics> {
+   bit_and(T_int other) const -> index<overflow_policy> {
       return view().bit_and(other);
    }
 
@@ -703,7 +705,7 @@ class overflow_reference
       requires(detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(T_int other) const -> index<Semantics> {
+   bit_or(T_int other) const -> index<overflow_policy> {
       return view().bit_or(other);
    }
 
@@ -712,7 +714,7 @@ class overflow_reference
                && !detail::is_idx<wrapper_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_by(U operand) const -> arithmetic<raw_type, Semantics> {
+   shift_left_by(U operand) const -> arithmetic<raw_type, overflow_policy> {
       return view().shift_left_by(operand);
    }
 
@@ -728,7 +730,7 @@ class overflow_reference
       requires(detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_by(T_int other) const -> index<Semantics> {
+   shift_left_by(T_int other) const -> index<overflow_policy> {
       return view().shift_left_by(other);
    }
 
@@ -762,7 +764,7 @@ class overflow_reference
                && !detail::is_idx<wrapper_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_by(U operand) const -> arithmetic<raw_type, Semantics> {
+   shift_right_by(U operand) const -> arithmetic<raw_type, overflow_policy> {
       return view().shift_right_by(operand);
    }
 
@@ -778,7 +780,7 @@ class overflow_reference
       requires(detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_by(T_int other) const -> index<Semantics> {
+   shift_right_by(T_int other) const -> index<overflow_policy> {
       return view().shift_right_by(other);
    }
 

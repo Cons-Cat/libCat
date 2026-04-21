@@ -87,7 +87,7 @@ simd_broadcast_really_convertible_to() -> bool {
 
 template <typename From, typename ToLane>
 consteval auto
-simd_broadcast_consteval_value_ok(From f) -> bool {
+has_simd_broadcast_consteval_value(From f) -> bool {
    using ToR = simd_broadcast_lane_raw<ToLane>;
    ToR const tr = static_cast<ToR>(f);
    return static_cast<long double>(f) == static_cast<long double>(tr);

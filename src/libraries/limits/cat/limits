@@ -13,10 +13,11 @@ namespace cat {
 enum class overflow_policies : unsigned char;
 
 template <typename T, overflow_policies>
-struct arithmetic;
+class arithmetic;
 
 template <typename T, typename storage_type, overflow_policies overflow_policy>
-struct arithmetic_ptr;
+   requires(sizeof(storage_type) == sizeof(void*))
+class arithmetic_ptr;
 
 template <typename>
 struct limits {};
@@ -336,7 +337,7 @@ struct limits<T> {
 };
 
 template <overflow_policies>
-struct index;
+class index;
 
 template <overflow_policies policy>
 struct limits<index<policy>> {

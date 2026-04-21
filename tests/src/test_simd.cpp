@@ -98,7 +98,7 @@ test(simd) {
 }
 
 test(simd_broadcast_traits) {
-   using cat::detail::simd_broadcast_consteval_value_ok;
+   using cat::detail::has_simd_broadcast_consteval_value;
    using cat::detail::simd_broadcast_really_convertible_to;
    using cat::detail::simd_consteval_broadcast_arg;
 
@@ -113,9 +113,9 @@ test(simd_broadcast_traits) {
    static_assert(!simd_consteval_broadcast_arg<unsigned int, uint4>);
    static_assert(!simd_consteval_broadcast_arg<float, float4>);
 
-   cat::verify(simd_broadcast_consteval_value_ok<int, float4>(0));
-   cat::verify(simd_broadcast_consteval_value_ok<int, float4>(42));
-   cat::verify(simd_broadcast_consteval_value_ok<unsigned int, float4>(7u));
+   cat::verify(has_simd_broadcast_consteval_value<int, float4>(0));
+   cat::verify(has_simd_broadcast_consteval_value<int, float4>(42));
+   cat::verify(has_simd_broadcast_consteval_value<unsigned int, float4>(7u));
 
    int4x4 const from_int_lane(123);
    cat::verify(from_int_lane == int4x4{123, 123, 123, 123});
@@ -2242,15 +2242,14 @@ test(simd_overflow_accessor_views) {
    for (cat::idx i = 0u; i < 4u; ++i) {
       vmax.set_lane(i, lane_max);
    }
-   sat4x4 const bump(cat::sat_int4(1));
 
-   cat::verify((vmax + bump)[0] == lane_max);
-   cat::verify((vmax.sat() + bump)[0] == lane_max);
+   cat::verify((vmax + 1)[0] == lane_max);
+   cat::verify((vmax.sat() + 1)[0] == lane_max);
 
    sat4 const lane_wrap =
       sat4(cat::wrap_add(lane_max.raw, typename sat4::raw_type(1)));
-   cat::verify((vmax.undef() + bump)[0] == lane_wrap);
-   cat::verify((vmax.wrap() + bump)[0] == lane_wrap);
+   cat::verify((vmax.undef() + 1)[0] == lane_wrap);
+   cat::verify((vmax.wrap() + 1)[0] == lane_wrap);
 
    cat::int4 const scalar_max = cat::int4::max();
    cat::int4x4 u{};

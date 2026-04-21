@@ -433,7 +433,7 @@ class alignas(in_abi::alignment.raw) simd {
    consteval simd(U value) {
       // These semantics are described by P3844R2.
       bool const broadcast_ok =
-         detail::simd_broadcast_consteval_value_ok<remove_cvref<U>, T>(value);
+         detail::has_simd_broadcast_consteval_value<remove_cvref<U>, T>(value);
       [[assume(broadcast_ok)]];
       this->fill(static_cast<scalar_type>(value));
    }
