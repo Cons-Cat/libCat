@@ -84,6 +84,29 @@ test(arithmetic_traits_common_type) {
    static_assert(cat::is_same<cat::common_type<iword, idx>, iword>);
 }
 
+test(arithmetic_integers_are_implicit_lifetime) {
+   static_assert(cat::is_implicit_lifetime<int1>);
+   static_assert(cat::is_implicit_lifetime<uint1>);
+   static_assert(cat::is_implicit_lifetime<int2>);
+   static_assert(cat::is_implicit_lifetime<uint2>);
+   static_assert(cat::is_implicit_lifetime<int4>);
+   static_assert(cat::is_implicit_lifetime<uint4>);
+   static_assert(cat::is_implicit_lifetime<int8>);
+   static_assert(cat::is_implicit_lifetime<uint8>);
+   static_assert(cat::is_implicit_lifetime<idx>);
+   static_assert(cat::is_implicit_lifetime<iword>);
+   static_assert(cat::is_implicit_lifetime<uword>);
+   static_assert(cat::is_implicit_lifetime<float4>);
+   static_assert(cat::is_implicit_lifetime<float8>);
+   static_assert(cat::is_implicit_lifetime<intptr<void>>);
+   static_assert(cat::is_implicit_lifetime<uintptr<void>>);
+   static_assert(cat::is_implicit_lifetime<intptr<int>>);
+   static_assert(cat::is_implicit_lifetime<uintptr<int>>);
+   static_assert(cat::is_implicit_lifetime<intptr<float>>);
+   static_assert(cat::is_implicit_lifetime<uintptr<float>>);
+   static_assert(cat::is_implicit_lifetime<intptr<double>>);
+}
+
 test(arithmetic_traits_is_arithmetic) {
    static_assert(cat::is_arithmetic<char>);
    static_assert(cat::is_arithmetic<signed char>);
@@ -240,17 +263,27 @@ test(arithmetic_traits_is_signed_integral) {
    static_assert(!cat::is_signed_integral<float>);
 }
 
-test(arithmetic_traits_is_trivial) {
-   static_assert(cat::is_trivial<int1>);
-   static_assert(cat::is_trivial<uint1>);
-   static_assert(cat::is_trivial<int2>);
-   static_assert(cat::is_trivial<uint2>);
-   static_assert(cat::is_trivial<int4>);
-   static_assert(cat::is_trivial<uint4>);
-   static_assert(cat::is_trivial<int8>);
-   static_assert(cat::is_trivial<uint8>);
-   static_assert(cat::is_trivial<float4>);
-   static_assert(cat::is_trivial<float8>);
+test(arithmetic_traits_is_trivially_copyable_and_default_constructible) {
+   static_assert(cat::is_trivially_copyable<int1>
+                 && cat::is_trivially_default_constructible<int1>);
+   static_assert(cat::is_trivially_copyable<uint1>
+                 && cat::is_trivially_default_constructible<uint1>);
+   static_assert(cat::is_trivially_copyable<int2>
+                 && cat::is_trivially_default_constructible<int2>);
+   static_assert(cat::is_trivially_copyable<uint2>
+                 && cat::is_trivially_default_constructible<uint2>);
+   static_assert(cat::is_trivially_copyable<int4>
+                 && cat::is_trivially_default_constructible<int4>);
+   static_assert(cat::is_trivially_copyable<uint4>
+                 && cat::is_trivially_default_constructible<uint4>);
+   static_assert(cat::is_trivially_copyable<int8>
+                 && cat::is_trivially_default_constructible<int8>);
+   static_assert(cat::is_trivially_copyable<uint8>
+                 && cat::is_trivially_default_constructible<uint8>);
+   static_assert(cat::is_trivially_copyable<float4>
+                 && cat::is_trivially_default_constructible<float4>);
+   static_assert(cat::is_trivially_copyable<float8>
+                 && cat::is_trivially_default_constructible<float8>);
 }
 
 test(arithmetic_traits_is_trivially_copyable) {

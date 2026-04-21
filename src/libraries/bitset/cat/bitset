@@ -95,7 +95,8 @@ bitset {
    // Index into this bit-set from the right-most bit.
    [[nodiscard]]
    constexpr auto
-   operator[](idx index_bit) -> bit_reference<array_type_element> {
+   operator[](idx index_bit) [[clang::lifetimebound]]
+   -> bit_reference<array_type_element> {
       if !consteval {
          assert(index_bit < bits_count);
       }
@@ -117,13 +118,15 @@ bitset {
 
    [[nodiscard]]
    constexpr auto
-   operator[](idx index_bit) const -> bit_reference<array_type_element> {
+   operator[](idx index_bit) const [[clang::lifetimebound]]
+   -> bit_reference<array_type_element> {
       return (*unconst(this))[index_bit];
    }
 
    [[nodiscard]]
    constexpr auto
-   at(idx index) -> maybe<bit_reference<array_type_element>> {
+   at(idx index) [[clang::lifetimebound]]
+   -> maybe<bit_reference<array_type_element>> {
       if (index < bits_count) {
          return (*this)[index];
       }
@@ -132,7 +135,8 @@ bitset {
 
    [[nodiscard]]
    constexpr auto
-   at(idx index) const -> maybe<bit_reference<array_type_element> const> {
+   at(idx index) const [[clang::lifetimebound]]
+   -> maybe<bit_reference<array_type_element> const> {
       if (index < bits_count) {
          return (*this)[index];
       }

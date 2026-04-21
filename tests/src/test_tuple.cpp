@@ -1,26 +1,34 @@
+#include <cat/meta>
 #include <cat/tuple>
 
 #include "../unit_tests.hpp"
 
 struct tup_non_trivial {
-   tup_non_trivial(int) {};
+   tup_non_trivial(int) {}
+
+   ~tup_non_trivial() {}
 };
+static_assert(!cat::is_implicit_lifetime<tup_non_trivial>);
 
 test(tuple) {
    using namespace cat::arithmetic_literals;
 
    using intint = cat::tuple<int, int>;
-   static_assert(cat::is_trivial<intint>);
+   static_assert(cat::is_trivially_copyable<intint>
+                 && cat::is_trivially_default_constructible<intint>);
+   static_assert(cat::is_implicit_lifetime<intint>);
    static_assert(sizeof(intint) == 8);
 
    using floatfloat = cat::tuple<float, float>;
-   static_assert(cat::is_trivial<floatfloat>);
+   static_assert(cat::is_trivially_copyable<floatfloat>
+                 && cat::is_trivially_default_constructible<floatfloat>);
+   static_assert(cat::is_implicit_lifetime<floatfloat>);
    static_assert(sizeof(floatfloat) == 8);
 
    using non_and_int4 = cat::tuple<tup_non_trivial, int4>;
    [[maybe_unused]]
    non_and_int4 test_intint4{1, int4{0}};
-   static_assert(!cat::is_trivial<non_and_int4>);
+   static_assert(!cat::is_implicit_lifetime<cat::array<non_and_int4, 1>>);
    static_assert(sizeof(non_and_int4) == 4);
 
    // Test `tuple` storage.
@@ -70,6 +78,8 @@ test(tuple) {
    static_assert(cat::is_same<decltype(deduced.get<2>()), float&>);
 
    // Test `tuple` auto-generated getters.
+   static_assert(cat::is_implicit_lifetime<
+                 cat::tuple<char, int4, bool, void*, uint8>>);
    cat::tuple<char, int4, bool, void*, uint8> five_tuple;
    static_assert(cat::is_same<decltype(five_tuple.first()), char&>);
    static_assert(cat::is_same<decltype(five_tuple.second()), int4&>);
@@ -103,12 +113,15 @@ test(tuple) {
    static_assert(sizeof(five_tuple) == sizeof(Five));
 
    // Test empty tuple.
+   static_assert(cat::is_implicit_lifetime<cat::tuple<>>);
    [[maybe_unused]]
    cat::tuple<> empty_tuple;
    [[maybe_unused]]
    cat::tuple<> empty_tuple_2{};
 
    // tuple of tuples.
+   static_assert(cat::is_implicit_lifetime<
+                 cat::tuple<cat::tuple<int, int>, cat::tuple<int, char>>>);
    cat::tuple<cat::tuple<int, int>, cat::tuple<int, char>> tuple_of_tuple = {
       tuple, intchar};
    cat::tuple tuple_of_tuple_ctad = {tuple, intchar};

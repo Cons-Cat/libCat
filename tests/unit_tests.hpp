@@ -25,6 +25,8 @@ test_fail(cat::source_location const& source_location);
 
 // This macro declares a unit test named `test_name`, which is executed
 // automatically in this program's constructor calls.
+// Attributes can be placed before an instantiation of the macro to modify its
+// behavior.
 #define CAT_TEST(test_name)                                                    \
    void test_##test_name();                                                    \
    void test_##test_name##_prologue();                                         \
@@ -36,7 +38,8 @@ test_fail(cat::source_location const& source_location);
        * doesn't work. This hacky check works around it.                       \
        */                                                                      \
       if (!test_fns.has_value()) {                                             \
-         test_fns = cat::make_vec_reserved<void*>(pager, 4_uki / 8u).value(); \
+         /* TODO: `.or_exit() on failure.*/                                    \
+         test_fns = cat::make_vec_reserved<void*>(pager, 4_uki / 8u).value();  \
       }                                                                        \
       /* This is memory is pre-reserved, so `push_back` cannot fail. */        \
       auto _ = test_fns.verify().push_back(                                    \

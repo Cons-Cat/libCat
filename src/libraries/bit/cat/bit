@@ -770,7 +770,7 @@ struct byte : bitwise_interface<byte> {
    }
 };
 
-static_assert(is_trivial<::cat::byte>);
+static_assert(is_implicit_lifetime<cat::byte>);
 
 template <is_integral T>
 [[nodiscard]]

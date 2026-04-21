@@ -941,14 +941,16 @@ class [[nodiscard]] maybe {
    // These are implemented in `<cat/string>`.
    auto
    or_exit(str_view error_message, iword exit_code = 1) &;
-   // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
+   // This should not be `[[nodiscard]]`, because it might return a `void`
+   // wrapper.
    auto
-   or_exit(str_view error_message, iword exit_code = 1) const&;
+   or_exit(str_view error_message, iword exit_code = 1) const&;  // NOLINT
    auto
    or_exit(str_view error_message, iword exit_code = 1) &&;
-   // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
+   // This should not be `[[nodiscard]]`, because it might return a `void`
+   // wrapper.
    auto
-   or_exit(str_view error_message, iword exit_code = 1) const&&;
+   or_exit(str_view error_message, iword exit_code = 1) const&&;  // NOLINT
 
    // Construct the value in-place and destroy the held value iff it
    // exists.

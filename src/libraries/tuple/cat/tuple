@@ -41,22 +41,22 @@ struct tuple_element {
    // For some reason, this produces ambiguous overload errors if it is
    // implemented as a normal function instead of an operator.
    constexpr auto
-   operator[](constant<in_index>) & -> T& {
+   operator[](constant<in_index>) & [[clang::lifetimebound]] -> T& {
       return this->storage;
    }
 
    constexpr auto
-   operator[](constant<in_index>) const& -> T const& {
+   operator[](constant<in_index>) const& [[clang::lifetimebound]] -> T const& {
       return this->storage;
    }
 
    constexpr auto
-   operator[](constant<in_index>) && -> T&& {
+   operator[](constant<in_index>) && [[clang::lifetimebound]] -> T&& {
       return move(this->storage);
    }
 
    constexpr auto
-   operator[](constant<in_index>) const&& -> T&& {
+   operator[](constant<in_index>) const&& [[clang::lifetimebound]] -> T&& {
       return move(this->storage);
    }
 

@@ -94,8 +94,13 @@ class collection_iterator
    using reference = T&;
    using const_reference = T const&;
 
+   constexpr collection_iterator() = default;
    constexpr collection_iterator(collection_iterator const&) = default;
    constexpr collection_iterator(collection_iterator&&) = default;
+   constexpr auto
+   operator=(collection_iterator const&) -> collection_iterator& = default;
+   constexpr auto
+   operator=(collection_iterator&&) -> collection_iterator& = default;
 
    constexpr collection_iterator(idx index, T* p_in_array)
        : m_current_index(index), m_p_array(p_in_array) {
@@ -122,8 +127,8 @@ class collection_iterator
    }
 
  private:
-   iword m_current_index;
-   T* m_p_array;
+   iword m_current_index{};
+   T* m_p_array{};
 };
 
 template <typename T>
@@ -275,51 +280,51 @@ class collection_interface {
    // `.size()`.
    [[nodiscard]]
    constexpr auto
-   size() const -> idx
+   size(this derived_type const& self) -> idx
       requires(detail::has_capacity<derived_type>
                && !detail::has_size<derived_type>)
    {
-      return this->self().capacity();
+      return self.capacity();
    }
 
    // If `.size()` is provided and `.capacity()` is not, generate
    // `.capacity()`.
    [[nodiscard]]
    constexpr auto
-   capacity() const -> idx
+   capacity(this derived_type const& self) -> idx
       requires(detail::has_size<derived_type>)
    {
-      return this->self().size();
+      return self.size();
    }
 
    // This evaluates true if there are one or more elements currently in this
    // collection.
    [[nodiscard]]
    constexpr auto
-   is_empty() const -> bool
+   is_empty(this derived_type const& self) -> bool
       requires(detail::has_size<derived_type>)
    {
-      return this->self().size() == 0;
+      return self.size() == 0;
    }
 
    // This evaluates true if there are one or more elements currently in this
    // collection.
    [[nodiscard]]
    constexpr auto
-   is_full() const -> bool
+   is_full(this derived_type const& self) -> bool
       requires(detail::has_size<derived_type>)
    {
-      return this->self().size() == this->self().capacity();
+      return self.size() == self.capacity();
    }
 
    // Index into this collection with bounds-checking.
    [[nodiscard]]
    constexpr auto
-   at(idx index) -> maybe<T&>
-      requires(is_array_like)
+   at(this auto&& self [[clang::lifetimebound]], idx index) -> maybe<T&>
+      requires(is_array_like && !is_const_ref<decltype(self)>)
    {
-      if (index < this->self().size()) {
-         return this->self_mut().data()[index.raw];
+      if (index < fwd(self).size()) {
+         return fwd(self).data()[index.raw];
       }
       return nullopt;
    }
@@ -327,127 +332,127 @@ class collection_interface {
    // Index into this collection with bounds-checking.
    [[nodiscard]]
    constexpr auto
-   at(idx index) const -> maybe<T&> {
+   at(this derived_type const& self [[clang::lifetimebound]], idx index)
+      -> maybe<T&> {
       // `unconst()` allows `.at()` to be safely called in a `const` context.
-      return unconst(this)->at(index);
+      return unconst(self).at(index);
    }
 
    [[nodiscard]]
    constexpr auto
-   front() [[clang::lifetimebound]] -> T&
-      requires(is_array_like)
+   front(this auto&& self) -> T&
+      requires(is_array_like && !is_const_ref<decltype(self)>)
    {
-      cat::assert(this->self().size() > 0);
-      return this->self_mut().data()[0];
+      cat::assert(fwd(self).size() > 0);
+      return fwd(self).data()[0];
    }
 
    [[nodiscard]]
    constexpr auto
-   front() const [[clang::lifetimebound]] -> T const& {
-      cat::assert(this->self().size() > 0);
-      return unconst(this)->front();
+   front(this derived_type const& self) -> T const& {
+      cat::assert(self.size() > 0);
+      return unconst(self).front();
    }
 
    [[nodiscard]]
    constexpr auto
-   back() [[clang::lifetimebound]] -> T&
-      requires(is_array_like)
+   back(this auto&& self) -> T&
+      requires(is_array_like && !is_const_ref<decltype(self)>)
    {
-      cat::assert(this->self().size() > 0);
-      return this->self_mut().data()[this->self().size().raw - 1u];
+      cat::assert(fwd(self).size() > 0);
+      return fwd(self).data()[fwd(self).size().raw - 1u];
    }
 
    [[nodiscard]]
    constexpr auto
-   back() const [[clang::lifetimebound]] -> T const& {
-      cat::assert(this->self().size() > 0);
-      return unconst(this)->back();
+   back(this derived_type const& self) -> T const& {
+      cat::assert(self.size() > 0);
+      return unconst(self).back();
    }
 
    [[nodiscard]]
    constexpr auto
-   subspan(idx start_index, idx end_index) [[clang::lifetimebound]] -> span<T>
-      requires(is_array_like)
+   subspan(this auto&& self, idx start_index, idx end_index) -> span<T>
+      requires(is_array_like && !is_const_ref<decltype(self)>)
    {
       if !consteval {
-         assert(end_index <= this->self().capacity());
+         assert(end_index <= fwd(self).capacity());
       }
 
-      return span<T>(this->self().data() + start_index,
+      return span<T>(fwd(self).data() + start_index,
                      idx(end_index - start_index));
    }
 
    [[nodiscard]]
    constexpr auto
-   subspan(idx start_index, idx end_index) const [[clang::lifetimebound]]
-   -> span<T const>
+   subspan(this derived_type const& self, idx start_index, idx end_index)
+      -> span<T const>
       requires(is_array_like)
    {
       if !consteval {
-         assert(end_index <= this->self().capacity());
+         assert(end_index <= self.capacity());
       }
 
-      return span<T const>(this->self().data() + start_index,
+      return span<T const>(self.data() + start_index,
                            idx(end_index - start_index));
    }
 
    [[nodiscard]]
    constexpr auto
-   first(idx count) [[clang::lifetimebound]] -> span<T>
-      requires(is_array_like)
+   first(this auto&& self, idx count) -> span<T>
+      requires(is_array_like && !is_const_ref<decltype(self)>)
    {
-      return this->subspan(0u, count);
+      return fwd(self).subspan(0u, count);
    }
 
    [[nodiscard]]
    constexpr auto
-   first(idx count) const [[clang::lifetimebound]] -> span<T const>
+   first(this derived_type const& self, idx count) -> span<T const>
       requires(is_array_like)
    {
-      return this->subspan(0u, count);
+      return self.subspan(0u, count);
    }
 
    [[nodiscard]]
    constexpr auto
-   last(idx count) [[clang::lifetimebound]] -> span<T>
-      requires(is_array_like)
+   last(this auto&& self, idx count) -> span<T>
+      requires(is_array_like && !is_const_ref<decltype(self)>)
    {
-      return this->subspan(idx(this->self().size() - count),
-                           this->self().size());
+      return fwd(self).subspan(idx(fwd(self).size() - count), fwd(self).size());
    }
 
    [[nodiscard]]
    constexpr auto
-   last(idx count) const [[clang::lifetimebound]] -> span<T const>
+   last(this derived_type const& self, idx count) -> span<T const>
       requires(is_array_like)
    {
-      return this->subspan(idx(this->self().size() - count),
-                           this->self().size());
+      return self.subspan(idx(self.size() - count), self.size());
    }
 
    [[nodiscard]]
    constexpr auto
-   operator[](idx index) [[clang::lifetimebound]] -> T&
-      requires(is_array_like)
+   operator[](this auto&& self [[clang::lifetimebound]], idx index) -> T&
+      requires(is_array_like && !is_const_ref<decltype(self)>)
    {
       if !consteval {
-         assert(index < this->self().size(),
+         assert(index < fwd(self).size(),
                 "A collection was indexed out of bounds!");
       }
 
-      return this->self_mut().data()[make_raw_arithmetic(index)];
+      return fwd(self).data()[make_raw_arithmetic(index)];
    }
 
    [[nodiscard]]
    constexpr auto
-   operator[](idx index) const [[clang::lifetimebound]] -> T const&
+   operator[](this derived_type const& self [[clang::lifetimebound]], idx index)
+      -> T const&
       requires(is_array_like)
    {
       if !consteval {
-         assert(index < this->self().size());
+         assert(index < self.size());
       }
 
-      return this->self().data()[make_raw_arithmetic(index)];
+      return self.data()[make_raw_arithmetic(index)];
    }
 
    // Member-access syntax algorithms.
@@ -471,23 +476,6 @@ class collection_interface {
    relocate_to(this auto const& self, Other& destination) {
       assert(destination.capacity() >= self.capacity());
       return cat::relocate(self.begin(), self.end(), destination.begin());
-   }
-
- private:
-   // TODO: Replace these with explicit object parameters.
-   constexpr auto
-   self_mut() -> derived_type& {
-      return static_cast<derived_type&>(*this);
-   }
-
-   constexpr auto
-   self() -> derived_type& {
-      return static_cast<derived_type&>(*this);
-   }
-
-   constexpr auto
-   self() const -> derived_type const& {
-      return static_cast<derived_type const&>(*this);
    }
 };
 

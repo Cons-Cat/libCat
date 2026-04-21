@@ -4,12 +4,43 @@
 
 // `cat::iterator_interface` is a mixin class for generating conventional
 // iterator boilerplate from a minimal set of user-written functions. It is
-// closely based on the proposed P2727r4 `std::iterator_interface`. You can also
+// closely based on the proposed P2727R4 `std::iterator_interface`. You can also
 // generate proxy iterators with `cat::proxy_iterator_interface`.
 //
 // We also provide helpers for generating reverse and const iterators, as well
 // as simple adaptors for iterating over ranges like `cat::as_reverse` and
 // `cat::as_const_reverse`. With this model, problems such as P2836 disappear.
+//
+// Iterator `concept`s mirror C++20 iterator concepts. Several refinement
+// hierarchies apply:
+//
+// Incrementability refinements:
+//    `cat::is_weakly_incrementable`
+//    `cat::is_incrementable`
+//
+// Shared floor for iterators with `*` and `++`:
+//    `cat::is_input_or_output_iterator`
+//
+// Readable traversal refinements (`is_forward_iterator` also requires
+// `is_incrementable`):
+//    `cat::is_indirectly_readable`
+//    `cat::is_input_iterator`
+//    `cat::is_forward_iterator`
+//    `cat::is_bidirectional_iterator`
+//    `cat::is_random_access_iterator`
+//    `cat::is_contiguous_iterator`
+//
+// Writable traversal refinements:
+//    `cat::is_indirectly_writable`
+//    `cat::is_output_iterator`
+//
+// Raw pointers can model random access or contiguous iterators without forward
+// or bidirectional `iterator_interface` tags
+//
+// Iterable containers:
+//    `cat::is_iterable`
+//    `cat::is_bidi_iterable`
+//
 
 namespace cat {
 struct iterator_interface_access {
@@ -48,6 +79,10 @@ concept has_equal_to = requires(iterator it) {
                           { it.equal_to(it) } -> is_convertible<bool>;
                        };
 
+template <typename T>
+concept is_object_pointer_iterator =
+   is_pointer<remove_cvref<T>> && __is_object(remove_pointer<remove_cvref<T>>);
+
 // If `.distance_to()` is not provided, default the `difference_type` to
 // `iword`:
 template <typename>
@@ -61,6 +96,11 @@ template <detail::has_distance_to iterator>
 struct infer_difference_trait<iterator> {
    static iterator const& it;
    using type = decltype(it.distance_to(it));
+};
+
+template <detail::is_object_pointer_iterator T>
+struct infer_difference_trait<T> {
+   using type = iword;
 };
 
 template <typename iterator>
@@ -127,6 +167,38 @@ struct default_sentinel_t {
 
 inline constexpr default_sentinel_t default_sentinel{};
 
+namespace detail {
+
+template <typename I>
+concept iter_has_member_value_type =
+   requires { typename remove_cvref<I>::value_type; };
+
+template <typename I>
+struct iter_value_trait;
+
+template <typename I>
+   requires(is_object_pointer_iterator<I>)
+struct iter_value_trait<I> {
+   using type = remove_cvref<remove_pointer<remove_cvref<I>>>;
+};
+
+template <typename I>
+   requires(!is_object_pointer_iterator<I> && iter_has_member_value_type<I>)
+struct iter_value_trait<I> {
+   using type = remove_cvref<typename remove_cvref<I>::value_type>;
+};
+
+template <typename I>
+   requires(!is_object_pointer_iterator<I> && !iter_has_member_value_type<I>)
+struct iter_value_trait<I> {
+   using type = void;
+};
+
+}  // namespace detail
+
+template <typename I>
+using iter_value_t = typename detail::iter_value_trait<I>::type;
+
 // `cat::iterator_interface` is a mixin class for generating conventional
 // iterator boilerplate from a minimal set of user-written functions. It is
 // closely based on the proposed P2727r4 `std::iterator_interface`. Derived
@@ -154,7 +226,7 @@ inline constexpr default_sentinel_t default_sentinel{};
 // it is fundamentally bidirectional or forward for algorithms to utilize
 // performantly.
 //
-// `element_type` supplies `value_type`; `reference_type`, `pointer_type`, and
+// `element_type` supplies `value_type`, `reference_type`, `pointer_type`, and
 // `difference` default from it. Override them when `reference` or `pointer` are
 // proxy types.
 template <typename iterator_concept_tag, typename element_type,
@@ -272,7 +344,8 @@ class iterator_interface : public iterator_interface_base {
    }
 
    constexpr auto
-   operator[](this auto const& self, auto offset) -> decltype(auto)
+   operator[](this auto const& self [[clang::lifetimebound]], auto offset)
+      -> decltype(auto)
       requires(detail::has_advance<remove_cvref<decltype(self)>>
                && detail::is_difference_type<decltype(offset),
                                              remove_cvref<decltype(self)>>)
@@ -495,33 +568,89 @@ concept is_weakly_incrementable =
 
 template <typename T>
 concept is_incrementable =
-   detail::is_iterator_regular<remove_cvref<T>> && is_weakly_incrementable<T>
+   is_weakly_incrementable<T>
    && requires(remove_cvref<T> it) {
          { it++ } -> is_same<remove_cvref<T>>;
-      };
+      } && (detail::is_object_pointer_iterator<T> || detail::is_iterator_regular<remove_cvref<T>>);
 
 template <typename T>
-concept is_random_access_iterator =
-   is_base_of<iterator_interface_base, remove_cvref<T>>
-   && is_same<typename remove_cvref<T>::iterator_concept,
-              random_access_iterator_tag>;
+using iterator_reference = decltype(*declval<T&>());
 
 template <typename T>
-concept is_bidirectional_iterator =
-   is_base_of<iterator_interface_base, remove_cvref<T>>
-   && is_same<typename remove_cvref<T>::iterator_concept,
-              bidirectional_iterator_tag>;
+using iter_reference_t = iterator_reference<T>;
 
 template <typename T>
-concept is_forward_iterator =
-   is_base_of<iterator_interface_base, remove_cvref<T>>
-   && is_same<typename remove_cvref<T>::iterator_concept, forward_iterator_tag>;
+using iter_rvalue_reference_t = decltype(move(*declval<T&>()));
+
+template <typename T>
+using iter_difference_t = iterator_difference_type<T>;
+
 template <typename T>
 concept is_input_or_output_iterator =
    requires(T it) { *it; } && is_weakly_incrementable<T>;
 
+// [iterator.concept.readable]
+template <typename In>
+concept is_indirectly_readable = requires(remove_cvref<In> const in) {
+                                    typename iter_value_t<remove_cvref<In>>;
+                                    { *in };
+                                 };
+
+// [iterator.concept.input]
 template <typename T>
-using iterator_reference = decltype(*declval<T&>());
+concept is_input_iterator =
+   is_input_or_output_iterator<T> && is_indirectly_readable<T>
+   && is_equality_comparable<T>;
+
+template <typename T>
+concept is_random_access_iterator =
+   detail::is_object_pointer_iterator<T>
+   || (is_base_of<iterator_interface_base, remove_cvref<T>>
+       && is_same<typename remove_cvref<T>::iterator_concept,
+                  random_access_iterator_tag>);
+
+template <typename T>
+concept is_contiguous_iterator =
+   is_random_access_iterator<T>
+   && (detail::is_object_pointer_iterator<T>
+       || (is_base_of<iterator_interface_base, remove_cvref<T>>
+           && is_same<typename remove_cvref<T>::iterator_concept,
+                      contiguous_iterator_tag>));
+
+template <typename T>
+concept is_bidirectional_iterator =
+   is_random_access_iterator<T>
+   || (is_base_of<iterator_interface_base, remove_cvref<T>>
+       && is_same<typename remove_cvref<T>::iterator_concept,
+                  bidirectional_iterator_tag>);
+
+namespace detail {
+
+template <typename T>
+concept iter_has_forward_capacity_tag =
+   is_base_of<iterator_interface_base, remove_cvref<T>>
+   && (is_same<typename remove_cvref<T>::iterator_concept, forward_iterator_tag>
+       || is_same<typename remove_cvref<T>::iterator_concept,
+                  bidirectional_iterator_tag>
+       || is_same<typename remove_cvref<T>::iterator_concept,
+                  random_access_iterator_tag>
+       || is_same<typename remove_cvref<T>::iterator_concept,
+                  contiguous_iterator_tag>);
+
+template <typename T>
+concept iter_is_pure_input_interface_iterator =
+   is_base_of<iterator_interface_base, remove_cvref<T>>
+   && is_same<typename remove_cvref<T>::iterator_concept, input_iterator_tag>;
+
+}  // namespace detail
+
+// [iterator.concept.forward]
+template <typename T>
+concept is_forward_iterator =
+   is_input_iterator<T> && is_incrementable<T>
+   && (detail::is_object_pointer_iterator<T>
+       || (detail::iter_has_forward_capacity_tag<T>
+           && !detail::iter_is_pure_input_interface_iterator<T>));
 
 template <typename outputter, typename value_type>
 concept is_indirectly_writable =
