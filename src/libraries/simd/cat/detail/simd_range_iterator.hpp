@@ -13,10 +13,11 @@
 //
 // Preconditions from C++26. After `advance`, `lane_index()` lies in
 // `[0, pack_type::size()]`. `distance_to`, ordering, and iterator difference
-// need the same underlying pack pointer (`data_`). Violations trap
-// (`__builtin_trap`).
+// need the same underlying pack pointer (`data_`). Violations use `cat::assert`
+// in debug builds
 
 #include <cat/arithmetic>
+#include <cat/debug>
 #include <cat/iterator>
 #include <cat/meta>
 
@@ -43,75 +44,65 @@ class simd_range_iterator
    using value_type = typename pack_type::value_type;
 
  private:
-   Pack* data_ = nullptr;
-   idx offset_{};
+   Pack* m_data = nullptr;
+   idx m_offset = 0u;
 
  public:
    constexpr simd_range_iterator() = default;
 
    constexpr simd_range_iterator(simd_range_iterator const&) = default;
 
-   constexpr simd_range_iterator(Pack* data_in, idx offset_in)
-       : data_(data_in), offset_(offset_in) {
+   constexpr simd_range_iterator(Pack* p_data_in, idx offset_in)
+       : m_data(p_data_in), m_offset(offset_in) {
    }
 
    constexpr simd_range_iterator(simd_range_iterator<pack_type> const& other)
       requires(is_const<Pack>)
-       : data_(other.data_), offset_(other.offset_) {
+       : m_data(other.m_data), m_offset(other.m_offset) {
    }
 
    [[nodiscard]]
    constexpr auto
    lane_index() const -> idx {
-      return offset_;
+      return m_offset;
    }
 
    [[nodiscard]]
    constexpr auto
    dereference() -> value_type {
-      if (data_ == nullptr || offset_ >= pack_type::size()) {
-         __builtin_trap();
-      }
+      cat::assert(m_data != nullptr && m_offset < pack_type::size());
       using plain = remove_const<Pack>;
-      return (*static_cast<plain const*>(data_))[offset_];
+      return (*static_cast<plain const*>(m_data))[m_offset];
    }
 
    [[nodiscard]]
    constexpr auto
    dereference() const -> value_type {
-      if (data_ == nullptr || offset_ >= pack_type::size()) {
-         __builtin_trap();
-      }
+      cat::assert(m_data != nullptr && m_offset < pack_type::size());
       using plain = remove_const<Pack>;
-      return (*static_cast<plain const*>(data_))[offset_];
+      return (*static_cast<plain const*>(m_data))[m_offset];
    }
 
    constexpr void
    advance(iword offset) {
-      if (data_ == nullptr) {
-         __builtin_trap();
-      }
-      iword const new_off = iword(offset_) + offset;
+      cat::assert(m_data != nullptr);
+      iword const new_off = iword(m_offset) + offset;
       iword const sz = iword(pack_type::size());
-      if (new_off < iword(0) || new_off > sz) {
-         __builtin_trap();
-      }
-      offset_ = idx(new_off);
+      cat::assert(new_off >= iword(0) && new_off <= sz);
+      m_offset = idx(new_off);
    }
 
    [[nodiscard]]
    constexpr auto
    distance_to(self_type const& other) const -> iword {
-      if (data_ != other.data_) {
-         __builtin_trap();
-      }
-      return iword(other.offset_) - iword(offset_);
+      cat::assert(m_data == other.m_data);
+      return iword(other.m_offset) - iword(m_offset);
    }
 
    [[nodiscard]]
    constexpr auto
    equal_to(self_type const& other) const -> bool {
-      return data_ == other.data_ && offset_ == other.offset_;
+      return m_data == other.m_data && m_offset == other.m_offset;
    }
 };
 

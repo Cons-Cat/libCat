@@ -2,7 +2,9 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/algorithm>
 #include <cat/collection>
+#include <cat/compare>
 #include <cat/memory>
 
 // #include <cat/initializer_list>
@@ -17,56 +19,36 @@ class [[clang::trivial_abi, gsl::Owner(T)]]
 array : public collection_interface<array<T, length>, T>,
         public random_access_iterable_interface<T> {
  public:
+   // Implicit copy/move (rule of Zero), except `array()` defaulted because this
+   // forwarding constructor suppresses implicit default construction
    constexpr array() = default;
-   constexpr array(array<T, length> const& other_array) = default;
-   constexpr array(array<T, length>&& other_array) = default;
 
-   // Construct an `array` from a variadic argument list.
-   // A parameter pack is used instead of `initializer_list` so that arguments
-   // may be moved.
    template <typename... Args>
       requires(sizeof...(Args) == length)
    constexpr array(Args&&... arguments)
-       // Explicitly converting this type allows the first argument to coerce
-       // the type for following arguments.
-       // i.e. `cat::array shorts = {int2{0}, 1, 2};`
        : m_data(static_cast<T>(fwd(arguments))...) {
    }
 
-   // constexpr array(initializer_list<T> initializers) {
-   //     for (__SIZE_TYPE__ i = 0; i < initializers.size(); ++i) {
-   //         m_data[i] = initializers.begin() + i;
-   //     }
-   // }
-
+   // Lexicographic ordering and element-wise equality, matching `std::array`.
+   [[nodiscard]]
    constexpr auto
-   operator=(array<T, length> const& other_array) -> array& = default;
-
-   constexpr auto
-   operator=(array<T, length>&& other_array) -> array& = default;
-
-   // TODO: Support move-semantics here.
-   // Converting assignment operator.
-   template <typename U>
-      requires(is_convertible<U, T>)
-   constexpr auto
-   operator=(array<U, length> const& other_array) -> array& {
-      // TODO: Optimize with `copy_memory()` if T and U are relocatable.
-      for (unsigned long long i = 0u; i < length; ++i) {
-         m_data[i] = static_cast<T>(other_array[i]);
-      }
-      return *this;
+   operator<=>(array const& other) const -> auto {
+      return cat::lexicographical_compare_three_way(this->begin(), this->end(),
+                                                    other.begin(), other.end());
    }
 
-   // constexpr auto
-   // operator=(initializer_list<T> initializers) -> array& {
-   //     for (__SIZE_TYPE__ i = 0; i < initializers.size(); ++i) {
-   //         m_data[i] = initializers.begin()[i];
-   //     }
-   //     return *this;
-   // }
-
-   // TODO: `<=>` operator.
+   [[nodiscard]]
+   constexpr auto
+   operator==(array const& other) const -> bool
+      requires(is_equality_comparable<T>)
+   {
+      for (idx i; i < length; ++i) {
+         if (!(m_data[i.raw] == other.m_data[i.raw])) {
+            return false;
+         }
+      }
+      return true;
+   }
 
    template <typename U>
       requires(is_implicitly_convertible<U, T>)
@@ -108,12 +90,12 @@ array : public collection_interface<array<T, length>, T>,
 
    template <idx i>
    constexpr auto
-   get(this auto&& self) -> decltype(auto) {
+   get(this auto&& self [[clang::lifetimebound]]) -> decltype(auto) {
       return fwd(self).m_data[i.raw];
    }
 
  private:
-   T m_data[length]{};
+   T m_data[length];
 };
 
 // Construct an `array<int, 3>` as: `array a = {0, 1, 2};`
@@ -148,14 +130,6 @@ make_array_filled(T const& value) -> array<T, length> {
    return array;
 }
 
-// template <typename U>
-//     requires(is_implicitly_convertible<U, T>)
-// static constexpr auto
-// filled(U value) -> array {
-//     array<T, length> array;
-//     return array.fill(static_cast<T>(value));
-// }
-
 }  // namespace cat
 
 // Implement tuple protocol for `cat::array`.
@@ -164,9 +138,52 @@ namespace std {
 template <typename T, ::cat::idx length>
 struct tuple_size<::cat::array<T, length>> : ::cat::constant<length.raw> {};
 
+template <typename T, ::cat::idx length>
+struct tuple_size<::cat::array<T, length> const>
+   : tuple_size<::cat::array<T, length>> {};
+
 template <__SIZE_TYPE__ in_index, typename T, ::cat::idx length>
 struct tuple_element<in_index, ::cat::array<T, length>> {
    using type = T;
 };
+
+template <__SIZE_TYPE__ in_index, typename T, ::cat::idx length>
+struct tuple_element<in_index, ::cat::array<T, length> const> {
+   using type = T const;
+};
+
+template <__SIZE_TYPE__ in_index, typename T, ::cat::idx length>
+struct tuple_element<in_index, ::cat::array<T, length> volatile> {
+   using type = T volatile;
+};
+
+template <__SIZE_TYPE__ in_index, typename T, ::cat::idx length>
+struct tuple_element<in_index, ::cat::array<T, length> const volatile> {
+   using type = T const volatile;
+};
+
+template <__SIZE_TYPE__ in_index, typename T, ::cat::idx length>
+   requires(in_index < length.raw)
+[[nodiscard]]
+constexpr auto
+get(::cat::array<T, length>& a) noexcept -> T& {
+   return a[::cat::idx{in_index}];
+}
+
+template <__SIZE_TYPE__ in_index, typename T, ::cat::idx length>
+   requires(in_index < length.raw)
+[[nodiscard]]
+constexpr auto
+get(::cat::array<T, length> const& a) noexcept -> T const& {
+   return a[::cat::idx{in_index}];
+}
+
+template <__SIZE_TYPE__ in_index, typename T, ::cat::idx length>
+   requires(in_index < length.raw)
+[[nodiscard]]
+constexpr auto
+get(::cat::array<T, length>&& a) noexcept -> T&& {
+   return mov(a[::cat::idx{in_index}]);
+}
 
 }  // namespace std

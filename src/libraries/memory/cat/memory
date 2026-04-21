@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/bit>
+#include <cat/meta>
 #include <cat/simd>
 
 namespace cat {
@@ -175,7 +176,7 @@ zero_object(T& object) {
 // Zero out all bytes in a trivial object. This function cannot be
 // constant-folded out.
 template <typename T>
-   requires(is_trivial<T>)
+   requires(is_implicit_lifetime<T>)
 constexpr void
 zero_object_explicit(T& object) {
    zero_memory_explicit(__builtin_addressof(object), ssizeof<T>(object));

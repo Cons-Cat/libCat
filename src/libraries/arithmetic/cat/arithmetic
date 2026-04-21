@@ -2302,10 +2302,10 @@ operator""_f8(long double input) -> cat::float8 {
 // `intptr` and `uintptr` are not trivial, but they can be trivially
 // relocatable.
 template <typename T>
-   requires(is_trivial<T> || is_void<T>)
+   requires(is_implicit_lifetime<T> || is_void<T>)
 constexpr bool is_trivially_relocatable<cat::intptr<T>> = true;
 template <typename T>
-   requires(is_trivial<T> || is_void<T>)
+   requires(is_implicit_lifetime<T> || is_void<T>)
 constexpr bool is_trivially_relocatable<cat::uintptr<T>> = true;
 
 }  // namespace cat

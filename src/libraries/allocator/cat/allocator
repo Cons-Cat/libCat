@@ -1071,7 +1071,7 @@ class allocator_interface {
 
    // If this allocator has pointer stability, try to allocate a `T`, and
    // provide a pointer handle.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    calloc() {
@@ -1084,7 +1084,7 @@ class allocator_interface {
 
    // If this allocator has pointer stability, allocate a `T`, and provide a
    // pointer handle.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    xcalloc() {
@@ -1097,7 +1097,7 @@ class allocator_interface {
 
    // If this allocator has pointer stability, try to allocate an array of `T`,
    // and provide a pointer handle.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    calloc_multi(idx count) {
@@ -1110,7 +1110,7 @@ class allocator_interface {
 
    // If this allocator has pointer stability, allocate an array of `T`, and
    // provide a pointer handle.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    xcalloc_multi(idx count) {
@@ -1124,7 +1124,7 @@ class allocator_interface {
    // If this allocator has pointer stability, try to allocate a `T` with an
    // alignment guarantee, and provide a pointer handle, and zero-out the
    // allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    align_calloc(uword alignment) {
@@ -1135,7 +1135,7 @@ class allocator_interface {
    // If this allocator has pointer stability, allocate a `T` with an alignment
    // guarantee, and provide a pointer handle, and zero-out the allocated
    // memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    align_xcalloc(uword alignment) {
@@ -1146,7 +1146,7 @@ class allocator_interface {
    // If this allocator has pointer stability, try to allocate a `T` with no
    // alignment guarantee, and provide a pointer handle, and zero-out the
    // allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    unalign_calloc() {
@@ -1156,7 +1156,7 @@ class allocator_interface {
    // If this allocator has pointer stability, allocate a `T` with no alignment
    // guarantee, and provide a pointer handle, and zero-out the allocated
    // memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    unalign_xcalloc() {
@@ -1166,7 +1166,7 @@ class allocator_interface {
    // If this allocator has pointer stability, try to allocate an array of `T`
    // with an alignment guarantee, and provide a pointer handle, and zero-out
    // the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    align_calloc_multi(uword alignment, idx count) {
@@ -1177,7 +1177,7 @@ class allocator_interface {
    // If this allocator has pointer stability, allocate an array of `T` with an
    // alignment guarantee, and provide a pointer handle, and zero-out the
    // allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    align_xcalloc_multi(uword alignment, idx count) {
@@ -1188,7 +1188,7 @@ class allocator_interface {
    // If this allocator has pointer stability, try to allocate an array of `T`
    // with no alignment guarantee, and provide a pointer handle, and zero-out
    // the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    unalign_calloc_multi(idx count) {
@@ -1198,7 +1198,7 @@ class allocator_interface {
    // If this allocator has pointer stability, allocate an array of `T` with no
    // alignment guarantee, and provide a pointer handle, and zero-out the
    // allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    unalign_xcalloc_multi(idx count) {
@@ -1207,7 +1207,7 @@ class allocator_interface {
 
    // Try to allocate a small-size optimized `T`, and zero-out the allocated
    // memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_calloc() {
@@ -1219,7 +1219,7 @@ class allocator_interface {
    }
 
    // Allocate a small-size optimized `T`, and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_xcalloc() {
@@ -1232,7 +1232,7 @@ class allocator_interface {
 
    // Try to allocate a small-size optimized array of `T`, and zero-out the
    // allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_calloc_multi(idx count) {
@@ -1245,7 +1245,7 @@ class allocator_interface {
 
    // Allocate a small-size optimized array of `T`, and zero-out the allocated
    // memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_xcalloc_multi(idx count) {
@@ -1258,7 +1258,7 @@ class allocator_interface {
 
    // Try to allocate a small-size optimized `T` with an alignment guarantee,
    // and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_align_calloc(uword alignment) {
@@ -1267,7 +1267,7 @@ class allocator_interface {
 
    // Allocate a small-size optimized `T` with an alignment guarantee, and
    // zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_align_xcalloc(uword alignment) {
@@ -1277,7 +1277,7 @@ class allocator_interface {
 
    // Try to allocate a small-size optimized `T` with no alignment guarantee,
    // and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_unalign_calloc() {
@@ -1286,7 +1286,7 @@ class allocator_interface {
 
    // Allocate a small-size optimized `T` with no alignment guarantee, and
    // zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_unalign_xcalloc() {
@@ -1295,7 +1295,7 @@ class allocator_interface {
 
    // Try to allocate a small-size optimized array of `T` with an alignment
    // guarantee, and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_align_calloc_multi(uword alignment, idx count) {
@@ -1305,7 +1305,7 @@ class allocator_interface {
 
    // Allocate a small-size optimized array of `T` with an alignment guarantee,
    // and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_align_xcalloc_multi(uword alignment, idx count) {
@@ -1315,7 +1315,7 @@ class allocator_interface {
 
    // Try to allocate a small-size optimized array of `T` with no alignment
    // guarantee, and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_unalign_calloc_multi(idx count) {
@@ -1324,7 +1324,7 @@ class allocator_interface {
 
    // Allocate a small-size optimized array of `T` with no alignment guarantee,
    // and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_unalign_xcalloc_multi(idx count) {
@@ -1334,7 +1334,7 @@ class allocator_interface {
    // If this allocator has pointer stability, try to allocate a `T`, and return
    // the number of bytes that were allocated, and zero-out the allocated
    // memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    scalloc() {
@@ -1347,7 +1347,7 @@ class allocator_interface {
 
    // If this allocator has pointer stability, allocate a `T`, and return the
    // number of bytes that were allocated, and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    xscalloc() {
@@ -1361,7 +1361,7 @@ class allocator_interface {
    // If this allocator has pointer stability, try to allocate an array of `T`,
    // and return the number of bytes that were allocated, and zero-out the
    // allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    scalloc_multi(idx count) {
@@ -1375,7 +1375,7 @@ class allocator_interface {
    // If this allocator has pointer stability, allocate an array of `T`, and
    // return the number of bytes that were allocated, and zero-out the allocated
    // memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    xscalloc_multi(idx count) {
@@ -1389,7 +1389,7 @@ class allocator_interface {
    // If this allocator has pointer stability, try to allocate a `T` with an
    // alignment guarantee, and return the number of bytes that were allocated,
    // and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    align_scalloc(uword alignment) {
@@ -1399,7 +1399,7 @@ class allocator_interface {
    // If this allocator has pointer stability, allocate a `T` with an alignment
    // guarantee, and return the number of bytes that were allocated, and
    // zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    align_xscalloc(uword alignment) {
@@ -1410,7 +1410,7 @@ class allocator_interface {
    // If this allocator has pointer stability, try to allocate a `T` with no
    // alignment guarantee, and return the number of bytes that were allocated,
    // and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    unalign_scalloc() {
@@ -1420,7 +1420,7 @@ class allocator_interface {
    // If this allocator has pointer stability, allocate a `T` with no alignment
    // guarantee, and return the number of bytes that were allocated, and
    // zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    unalign_xscalloc() {
@@ -1430,7 +1430,7 @@ class allocator_interface {
    // If this allocator has pointer stability, try to allocate an array of `T`
    // with an alignment guarantee, and return the number of bytes that were
    // allocated, and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    align_scalloc_multi(uword alignment, idx count) {
@@ -1441,7 +1441,7 @@ class allocator_interface {
    // If this allocator has pointer stability, allocate an array of `T` with an
    // alignment guarantee, and return the number of bytes that were allocated,
    // and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    align_xscalloc_multi(uword alignment, idx count) {
@@ -1452,7 +1452,7 @@ class allocator_interface {
    // If this allocator has pointer stability, try to allocate an array of `T`
    // with no alignment guarantee, and return the number of bytes that were
    // allocated, and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    unalign_scalloc_multi(idx count) {
@@ -1462,7 +1462,7 @@ class allocator_interface {
    // If this allocator has pointer stability, allocate an array of `T` with no
    // alignment guarantee, and return the number of bytes that were allocated,
    // and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    unalign_xscalloc_multi(idx count) {
@@ -1471,7 +1471,7 @@ class allocator_interface {
 
    // Try to allocate a small-size optimized `T`, and return the number of bytes
    // that were allocated, and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_scalloc() {
@@ -1484,7 +1484,7 @@ class allocator_interface {
 
    // Allocate a small-size optimized `T`, and return the number of bytes that
    // were allocated, and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_xscalloc() {
@@ -1497,7 +1497,7 @@ class allocator_interface {
 
    // Try to allocate a small-size optimized array of `T`, and return the number
    // of bytes that were allocated, and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_scalloc_multi(idx count) {
@@ -1510,7 +1510,7 @@ class allocator_interface {
 
    // Allocate a small-size optimized array of `T`, and return the number of
    // bytes that were allocated, and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_xscalloc_multi(idx count) {
@@ -1524,7 +1524,7 @@ class allocator_interface {
    // Try to allocate a small-size optimized `T` with an alignment guarantee,
    // and return the number of bytes that were allocated, and zero-out the
    // allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_align_scalloc(uword alignment) {
@@ -1534,7 +1534,7 @@ class allocator_interface {
    // Allocate a small-size optimized `T` with an alignment guarantee, and
    // return the number of bytes that were allocated, and zero-out the allocated
    // memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_align_xscalloc(uword alignment) {
@@ -1544,7 +1544,7 @@ class allocator_interface {
    // Try to allocate a small-size optimized `T` with no alignment guarantee,
    // and return the number of bytes that were allocated, and zero-out the
    // allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_unalign_scalloc() {
@@ -1554,7 +1554,7 @@ class allocator_interface {
    // Allocate a small-size optimized `T` with no alignment guarantee, and
    // return the number of bytes that were allocated, and zero-out the allocated
    // memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_unalign_xscalloc() {
@@ -1564,7 +1564,7 @@ class allocator_interface {
    // Try to allocate a small-size optimized array of `T` with an alignment
    // guarantee, and return the number of bytes that were allocated, and
    // zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_align_scalloc_multi(uword alignment, idx count) {
@@ -1575,7 +1575,7 @@ class allocator_interface {
    // Allocate a small-size optimized array of `T` with an alignment guarantee,
    // and return the number of bytes that were allocated, and zero-out the
    // allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_align_xscalloc_multi(uword alignment, idx count) {
@@ -1586,7 +1586,7 @@ class allocator_interface {
    // Try to allocate a small-size optimized array of `T` with no alignment
    // guarantee, and return the number of bytes that were allocated, and
    // zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_unalign_scalloc_multi(idx count) {
@@ -1596,7 +1596,7 @@ class allocator_interface {
    // Allocate a small-size optimized array of `T` with no alignment guarantee,
    // and return the number of bytes that were allocated, and zero-out the
    // allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    inline_unalign_xscalloc_multi(idx count) {
@@ -1837,7 +1837,7 @@ class allocator_interface {
 
    // Try to move a pointer handle from this allocator into another, and
    // zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    recalloc_to(auto& allocator, T* p_handle) {
@@ -1847,7 +1847,7 @@ class allocator_interface {
 
    // Try to move a pointer handle from this allocator into itself, and zero-out
    // the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    recalloc(T* p_handle) {
@@ -1856,7 +1856,7 @@ class allocator_interface {
 
    // Move a pointer handle from this allocator into another, and zero-out the
    // allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    xrecalloc_to(auto& allocator, T* p_handle) {
@@ -1866,7 +1866,7 @@ class allocator_interface {
 
    // Move a pointer handle from this allocator into itself, and zero-out the
    // allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    xrecalloc(T* p_handle) {
@@ -1948,7 +1948,7 @@ class allocator_interface {
 
    // Try to move and resize an array pointer handle from this allocator into
    // another, and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    recalloc_multi_to(auto& allocator, T* p_handle, idx old_count,
@@ -1960,7 +1960,7 @@ class allocator_interface {
 
    // Try to move and resize array pointer handle from this allocator into
    // itself, and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    recalloc_multi(T* p_handle, idx old_count, idx new_count) {
@@ -1969,7 +1969,7 @@ class allocator_interface {
 
    // Move and resize an array pointer handle from this allocator into another,
    // and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    xrecalloc_multi_to(auto& allocator, T* p_handle, idx old_count,
@@ -1981,7 +1981,7 @@ class allocator_interface {
 
    // Move and resize an array pointer handle from this allocator into itself,
    // and zero-out the allocated memory.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    xrecalloc_multi(T* p_handle, idx old_count, idx new_count) {
@@ -2791,7 +2791,7 @@ class allocator_interface {
 
    // Try to move a pointer handle from this allocator into another, zero-out
    // the allocated memory, and return the number of bytes that were allocated.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    rescalloc_to(auto& allocator, T* p_handle) {
@@ -2801,7 +2801,7 @@ class allocator_interface {
 
    // Try to move a pointer handle from this allocator into itself, zero-out the
    // allocated memory, and return the number of bytes that were allocated.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    rescalloc(T* p_handle) {
@@ -2810,7 +2810,7 @@ class allocator_interface {
 
    // Move a pointer handle from this allocator into another, zero-out the
    // allocated memory, and return the number of bytes that were allocated.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    xrescalloc_to(auto& allocator, T* p_handle) {
@@ -2820,7 +2820,7 @@ class allocator_interface {
 
    // Move a pointer handle from this allocator into itself, zero-out the
    // allocated memory, and return the number of bytes that were allocated.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    xrescalloc(T* p_handle) {
@@ -2910,7 +2910,7 @@ class allocator_interface {
    // Try to move and resize an array pointer handle from this allocator into
    // another, zero-out the allocated memory, and return the number of bytes
    // that were allocated.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    rescalloc_multi_to(auto& allocator, T* p_handle, idx old_count,
@@ -2923,7 +2923,7 @@ class allocator_interface {
    // Try to move and resize an array pointer handle from this allocator into
    // itself, zero-out the allocated memory, and return the number of bytes that
    // were allocated.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    rescalloc_multi(T* p_handle, idx old_count, idx new_count) {
@@ -2933,7 +2933,7 @@ class allocator_interface {
    // Move and resize an array pointer handle from this allocator into another,
    // zero-out the allocated memory, and return the number of bytes that were
    // allocated.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    xrescalloc_multi_to(auto& allocator, T* p_handle, idx old_count,
@@ -2946,7 +2946,7 @@ class allocator_interface {
    // Move and resize an array pointer handle from this allocator into itself,
    // zero-out the allocated memory, and return the number of bytes that were
    // allocated.
-   template <is_trivial T>
+   template <is_implicit_lifetime T>
    [[nodiscard]]
    constexpr auto
    xrescalloc_multi(T* p_handle, idx old_count, idx new_count) {
@@ -4248,7 +4248,7 @@ class allocator_interface {
                // Zeroed-out allocations must not take constructor arguments and
                // must use a trivial object type.
                && (!is_zeroed || (sizeof...(Args) == 0))
-               && (!is_zeroed || is_trivial<T>))
+               && (!is_zeroed || is_implicit_lifetime<T>))
    constexpr auto
    meta_alloc(uword allocation_alignment, idx allocation_count,
               Args&&... constructor_args) {
@@ -4391,12 +4391,16 @@ class allocator_interface {
       return allocation;
    }
 
-   // Copy data from `handle` into `allocation`.
+   // Move data from `handle` into `allocation`. Well-formed reallocations use
+   // disjoint regions. `move_memory` still matches `memmove` when a layout
+   // overlaps
    constexpr void
-   relocate_inline_handle(mem auto& handle, auto allocation) {
-      if constexpr (is_trivially_relocatable<int>) {
-         copy_memory(__builtin_addressof(this->get(handle)),
-                     __builtin_addressof(allocation), handle.raw_size());
+   relocate_inline_handle(mem auto& handle, mem auto& allocation) {
+      using allocation_type =
+         typename remove_cvref<decltype(handle)>::allocation_type;
+      if constexpr (is_trivially_relocatable<allocation_type>) {
+         move_memory(this->p_get(handle), this->p_get(allocation),
+                     handle.raw_size());
       } else {
          for (idx i; i < handle.size(); ++i) {
             *(__builtin_addressof(this->get(allocation)) + i) =
@@ -4413,7 +4417,7 @@ class allocator_interface {
       if !consteval {
          assert(p_new_handle != nullptr);
          if constexpr (is_trivially_relocatable<T>) {
-            copy_memory(p_old_handle, p_new_handle, old_count);
+            move_memory(p_old_handle, p_new_handle, old_count * sizeof(T));
          }
          return;
       }
@@ -4433,11 +4437,11 @@ class allocator_interface {
       if !consteval {
          assert(new_handle.data() != nullptr);
 
-         // TODO: Why does this fix asan error in vector test?
-         unpoison_memory_region(p_old_handle, old_count + sizeof(T) + 8u);
+         unpoison_memory_region(p_old_handle, uword(old_count.raw * sizeof(T)));
 
          if constexpr (is_trivially_relocatable<T>) {
-            copy_memory(p_old_handle, new_handle.data(), old_count);
+            move_memory(p_old_handle, new_handle.data(),
+                        uword(old_count.raw * sizeof(T)));
          }
          return;
       }
