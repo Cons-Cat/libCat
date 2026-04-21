@@ -2209,6 +2209,7 @@ test(simd_iota) {
 }
 
 test(simd_sub_sat_masked_native_int1) {
+   // TODO: Something in here isn't vectorizing, and we get warnings.
    cat::int1x_ a{};
    cat::int1x_ b{};
    constexpr cat::idx n = cat::int1x_::abi_type::lanes;

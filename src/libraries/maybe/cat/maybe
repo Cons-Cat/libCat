@@ -2,11 +2,6 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/match>
-#include <cat/memory>
-#include <cat/runtime>
-#include <cat/utility>
-
 namespace cat {
 namespace detail {
 // A `nullopt_type` is consumed by an `maybe` constructor to prevent
@@ -16,7 +11,14 @@ struct nullopt_type {};
 
 // `nullopt` is consumed by `maybe` to represent an empty value.
 inline constexpr detail::nullopt_type nullopt;
+}  // namespace cat
 
+#include <cat/match>
+#include <cat/memory>
+#include <cat/runtime>
+#include <cat/utility>
+
+namespace cat {
 // Forward declarations.
 template <typename T>
 class maybe;

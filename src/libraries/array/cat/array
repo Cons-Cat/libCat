@@ -140,7 +140,7 @@ struct tuple_size<::cat::array<T, length>> : ::cat::constant<length.raw> {};
 
 template <typename T, ::cat::idx length>
 struct tuple_size<::cat::array<T, length> const>
-   : tuple_size<::cat::array<T, length>> {};
+    : tuple_size<::cat::array<T, length>> {};
 
 template <__SIZE_TYPE__ in_index, typename T, ::cat::idx length>
 struct tuple_element<in_index, ::cat::array<T, length>> {

@@ -50,6 +50,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_format_strings.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_linear_allocator.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_pool_allocator.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_reallocation_disjoint.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_list.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_math.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_maybe.cpp
@@ -66,6 +67,7 @@ if(CAT_BUILD_UNIT_TESTS)
     # ${CMAKE_SOURCE_DIR}/tests/src/test_ring.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_invoke.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_cast.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_copy_memory.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bit.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bitset.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_stringify.cpp

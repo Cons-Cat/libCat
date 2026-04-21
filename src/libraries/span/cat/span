@@ -104,7 +104,7 @@ class [[clang::trivial_abi, gsl::Pointer(T)]] span
    // These data members should be `public` so that this is a structural type.
 
    // This is arranged as pointer, then size, to follow the ABI of Linux
-   // standard `iovec`s. Unfortunately, that is opposite of Windws' standard
+   // standard `iovec`s. Unfortunately, that is opposite of Windows' standard
    // `WSABUF`.
    T* m_p_data;
    idx m_size;
@@ -128,9 +128,6 @@ make_span_between(T* p_start, T* p_end) {
    return span(p_start, p_end - p_start);
 }
 
-template <typename T>
-using view = span<T const> const;
-
 // Simplify non-negative signed integers.
 template <typename T>
 using maybe_span = maybe<compact<span<T>,
@@ -141,5 +138,35 @@ using maybe_span = maybe<compact<span<T>,
                                  },
                                  // Default to a null span.
                                  span<T>(nullptr)>>;
+
+}  // namespace cat
+
+// We implement these functions here instead of in `cat::memory` because they
+// have circular dependencies.
+namespace cat {
+
+template <typename T>
+[[nodiscard]]
+constexpr auto
+is_memory_overlapping(span<T const> const first, span<T const> const second)
+   -> bool {
+   return is_memory_overlapping(first.data(), first.size() * sizeof(T),
+                                second.data(), second.size() * sizeof(T));
+}
+
+template <typename T>
+   requires(is_implicit_lifetime<T>)
+constexpr void
+copy_memory(span<T const> const source, span<T> destination) {
+   copy_memory(source.data(), destination.data(), source.size() * sizeof(T));
+}
+
+template <typename T>
+   requires(is_implicit_lifetime<T>)
+constexpr void
+copy_memory_backward(span<T const> const source, span<T> destination) {
+   copy_memory_backward(source.data(), destination.data(),
+                        source.size() * sizeof(T));
+}
 
 }  // namespace cat
