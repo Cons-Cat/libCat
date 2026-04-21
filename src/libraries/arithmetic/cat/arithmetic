@@ -520,7 +520,14 @@ template <is_raw_integral T, is_raw_integral U>
 ]]
 constexpr auto
 sat_shl(T value, U bits) {
-   // TODO: Try `cat::countr_zero()`.
+   if (value == 0) {
+      return T(0);
+   }
+   // TODO: Swap back to `__builtin_stdc_trailing_zeros` once the
+   // apt.llvm.org Clang 23 nightly picks up PR #185978 (merged 2026-04-17).
+   // The early `value == 0` return above makes single-arg `__builtin_ctzg`
+   // safe here.
+   // if (bits >= limits<T>::bits - __builtin_stdc_trailing_zeros(value)) {
    if (bits >= limits<T>::bits - __builtin_ctzg(value)) {
       return limits<T>::max();
    }
@@ -547,7 +554,11 @@ template <is_raw_integral T, is_raw_integral U>
 ]]
 constexpr auto
 sat_shr(T value, U bits) {
-   // TODO: Try `cat::countl_zero()`.
+   if (value == 0) {
+      return T(0);
+   }
+   // TODO: See PR #185978 note in `sat_shl` above.
+   // if (bits >= limits<T>::bits - __builtin_stdc_leading_zeros(value)) {
    if (bits >= limits<T>::bits - __builtin_clzg(value)) {
       return limits<T>::min();
    }
