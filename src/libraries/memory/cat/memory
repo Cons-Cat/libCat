@@ -8,11 +8,51 @@
 
 namespace cat {
 
-void
+// `memcpy`-class copy: the `[p_source, p_source+bytes)` and
+// `[p_destination, p_destination+bytes)` intervals must not overlap (including
+// a single shared byte). Violations are rejected by `assert`
+constexpr void
 copy_memory(void const* p_source, void* p_destination, uword bytes);
 
-void
-copy_memory_small(void const* p_source, void* p_destination, uword bytes);
+template <typename T>
+class span;
+
+[[nodiscard]]
+constexpr auto
+is_memory_overlapping(void const* p_first, uword first_bytes,
+                      void const* p_second, uword second_bytes) -> bool;
+
+// This is implemented in `<cat/span>`.
+template <typename T>
+[[nodiscard]]
+constexpr auto
+is_memory_overlapping(span<T const> first, span<T const> second) -> bool;
+
+constexpr void
+copy_memory_scalar(void const* p_source, void* p_destination, uword bytes);
+
+// This is implemented in `<cat/span>`.
+template <typename T>
+   requires(is_implicit_lifetime<T>)
+constexpr void
+copy_memory(span<T const> source, span<T> destination);
+
+template <typename T>
+   requires(is_implicit_lifetime<T>)
+constexpr void
+copy_memory_backward(span<T const> source, span<T> destination);
+
+// `memmove`-class scalar copy: overlapping intervals are allowed. When they
+// overlap, copies forward when `p_destination <= p_source` and backward
+// otherwise so every source byte is read before it can be overwritten
+constexpr void
+copy_memory_backward_scalar(void const* p_source, void* p_destination,
+                            uword bytes);
+
+// `memmove`-class copy for arbitrary length. Overlapping source and destination
+// intervals are allowed
+constexpr void
+copy_memory_backward(void const* p_source, void* p_destination, uword bytes);
 
 template <typename T = unsigned char>
    requires(sizeof(T) <= 8)
@@ -26,6 +66,8 @@ set_memory_scalar(T* p_source, T value, uword size) {
 
 template <typename T = unsigned char>
    requires(sizeof(T) <= 8)
+// This function cannot be constant-folded out by a compiler. The
+// `[[gnu::noinline]]` attribute prevents this.
 [[gnu::noinline]]
 constexpr void
 set_memory_scalar_explicit(T* p_source, T value, uword size) {
@@ -37,6 +79,8 @@ zero_memory_scalar(void* p_source, uword bytes) {
    set_memory_scalar((unsigned char*)p_source, (unsigned char)0, bytes);
 }
 
+// This function cannot be constant-folded out by a compiler. The
+// `[[gnu::noinline]]` attribute prevents this.
 [[gnu::noinline]]
 constexpr void
 zero_memory_scalar_explicit(void* p_source, uword bytes) {
@@ -44,14 +88,19 @@ zero_memory_scalar_explicit(void* p_source, uword bytes) {
 }
 
 namespace detail {
+
+void
+copy_memory_impl(void const* p_source, void* p_destination, uword bytes);
+
+void
+copy_memory_backward_impl(void const* p_source, void* p_destination,
+                          uword bytes);
+
 // Type-erased `set_memory` function.
 template <typename T>
-[[gnu::optimize("-fno-tree-loop-distribute-patterns"), clang::no_builtin,
-  gnu::no_sanitize_address]]
-// `tree-loop-distribute-patterns` is an optimization that replaces this
-// code with a call to `memset`. `memset` itself calls this function,
-// which makes a circular reference that ld is unable to link. Mold can
-// link this somehow, but that optimization is useless here.
+[[clang::no_builtin, gnu::no_sanitize_address]]
+// Clang may still replace this loop with `memset`. `memset` can call back into
+// this route, which makes a circular reference some linkers reject.
 constexpr void
 set_memory_detail(void* p_source, T value, uword size) {
    // TODO: Assert that these parameters do not index out of bounds or loop
@@ -150,7 +199,7 @@ zero_memory_explicit(void* p_source, uword bytes) {
 
 // Set all bytes in a trivial object to `value`.
 template <typename T, typename U = unsigned char>
-   requires(is_trivial<T> && sizeof(U) == 1)
+   requires(is_implicit_lifetime<T> && sizeof(U) == 1)
 constexpr void
 set_object(T& object, U value) {
    set_memory(__builtin_addressof(object), value, ssizeof<T>(object));
@@ -159,7 +208,10 @@ set_object(T& object, U value) {
 // Zero out all bytes in a trivial object. This function cannot be
 // constant-folded out.
 template <typename T, typename U = unsigned char>
-   requires(is_trivial<T> && sizeof(U) == 1)
+   requires(is_implicit_lifetime<T> && sizeof(U) == 1)
+// This function cannot be constant-folded out by a compiler. The
+// `[[gnu::noinline]]` attribute prevents this.
+[[gnu::noinline]]
 constexpr void
 set_object_explicit(T& object, U value) {
    set_memory_explicit(__builtin_addressof(object), value, ssizeof<T>(object));
@@ -167,7 +219,7 @@ set_object_explicit(T& object, U value) {
 
 // Zero out all bytes in a trivial object.
 template <typename T>
-   requires(is_trivial<T>)
+   requires(is_implicit_lifetime<T>)
 constexpr void
 zero_object(T& object) {
    zero_memory(__builtin_addressof(object), ssizeof<T>(object));
@@ -177,6 +229,9 @@ zero_object(T& object) {
 // constant-folded out.
 template <typename T>
    requires(is_implicit_lifetime<T>)
+// This function cannot be constant-folded out by a compiler. The
+// `[[gnu::noinline]]` attribute prevents this.
+[[gnu::noinline]]
 constexpr void
 zero_object_explicit(T& object) {
    zero_memory_explicit(__builtin_addressof(object), ssizeof<T>(object));
@@ -213,7 +268,10 @@ template <typename T>
 auto
 relocate_at(T* p_source, T* p_destination) -> T* {
    if constexpr (is_trivially_relocatable<T>) {
-      copy_memory(p_source, p_destination, ssizeof(T));
+      if (p_source == p_destination) {
+         return launder(p_destination);
+      }
+      __builtin_memcpy_inline(p_destination, p_source, sizeof(T));
       return launder(p_destination);
    } else {
       T* p_new = new (p_destination) T(move(*p_source));
@@ -229,3 +287,7 @@ relocate(T& source, T* p_destination) -> T* {
 }
 
 }  // namespace cat
+
+#include "../implementations/copy_memory.tpp"
+#include "../implementations/copy_memory_backward.tpp"
+#include "../implementations/is_memory_overlapping.tpp"

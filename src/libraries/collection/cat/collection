@@ -248,7 +248,8 @@ class random_access_iterable_interface
       // argument list.
       // `rbegin` is only valid on non-empty collections. `assert` enforces
       // `size >= 1` so `size - 1u` does not wrap in unsigned arithmetic.
-      idx const last = narrow_to_idx(collection.size().raw - 1u).assert();
+      cat::assert(collection.size().raw > 0u);
+      idx const last{collection.size().raw - 1u};
       auto* p_data = fwd(collection).data();
       return reverse_proxy_iterator(detail::collection_iterator(last, p_data));
    }

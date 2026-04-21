@@ -73,13 +73,13 @@ style_tty_fg(is_allocator auto& alloc, str_view text, str_view color)
 
    char* p_memory = memory.data();
    // Add fg color:
-   copy_memory_small(color.data(), p_memory, color.size());
+   copy_memory_scalar(color.data(), p_memory, color.size());
    // Add text to style:
    copy_memory(text.data(), p_memory + color.size(), text.size());
    // Reset fg color:
-   copy_memory_small(vt_fg_default.data(),
-                     p_memory + color.size() + text.size(),
-                     vt_fg_default.size());
+   copy_memory_scalar(vt_fg_default.data(),
+                      p_memory + color.size() + text.size(),
+                      vt_fg_default.size());
 
    return memory;
 }
@@ -92,13 +92,13 @@ style_tty_bg(is_allocator auto& alloc, str_view text, str_view color)
 
    char* p_memory = memory.data();
    // Add bg color:
-   copy_memory_small(color.data(), p_memory, color.size());
+   copy_memory_scalar(color.data(), p_memory, color.size());
    // Add text to style:
    copy_memory(text.data(), p_memory + color.size(), text.size());
    // Reset bg color:
-   copy_memory_small(vt_bg_default.data(),
-                     p_memory + color.size() + text.size(),
-                     vt_bg_default.size());
+   copy_memory_scalar(vt_bg_default.data(),
+                      p_memory + color.size() + text.size(),
+                      vt_bg_default.size());
 
    return memory;
 }

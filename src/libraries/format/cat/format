@@ -354,9 +354,9 @@ class format_args_compact_storage {
       iword const storage_index =
          this->arguments_indices[argument_index.raw].byte_index;
 
-      copy_memory_small(__builtin_addressof(value),
-                        &(this->packed_args_storage[0]) + storage_index,
-                        sizeof(T));
+      copy_memory_scalar(__builtin_addressof(value),
+                         &(this->packed_args_storage[0]) + storage_index,
+                         sizeof(T));
 
       // Assign `T` to that storage.
       this->arguments_indices[argument_index.raw].discriminant =

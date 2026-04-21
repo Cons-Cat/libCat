@@ -2,7 +2,9 @@
 
 auto
 nix::read_char() -> scaredy_nix<char> {
-   tty_io_serial old_settings = tty_get_attributes(stdin).value();
+   // This is functionally similar to POSIX `getchar()`.
+   // TODO: A buffered implementation could be much more efficient.
+   tty_io_serial const old_settings = prop(tty_get_attributes(nix::stdin));
    tty_io_serial new_settings = old_settings;
 
    new_settings.local_flags = tty_configuration_flags{
@@ -10,10 +12,12 @@ nix::read_char() -> scaredy_nix<char> {
       & ~(cat::to_underlying(tty_configuration_flags::icanon)
           | cat::to_underlying(tty_configuration_flags::echo))};
 
-   prop(tty_set_attributes(stdin, tty_set_mode::now, new_settings));
+   prop(tty_set_attributes(nix::stdin, tty_set_mode::now, new_settings));
 
-   char input;
-   auto _ = sys_read(stdin, &input, 1);
-   tty_set_attributes(stdin, tty_set_mode::now, old_settings).assert();
+   char input{};
+   prop(sys_read(nix::stdin, &input, 1));
+
+   prop(tty_set_attributes(nix::stdin, tty_set_mode::now, old_settings));
+
    return input;
 }

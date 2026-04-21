@@ -1,5 +1,6 @@
 #include <cat/debug>
 #include <cat/format>
+#include <cat/linux>
 #include <cat/page_allocator>
 
 void
@@ -23,6 +24,11 @@ void
 cat::default_assert_handler(source_location const& callsite) {
    detail::print_assert_location(callsite);
 
+   if (!nix::is_a_tty(nix::stdin).has_value()) {
+      eprint("assert failed with stdin not a tty; exiting.\n").or_exit();
+      exit(1);
+   }
+
    // TODO: Colorize this input prompt.
    print("Press: 1 (Continue), 2 (Debug), 3 (Abort)\n").or_exit();
 
@@ -38,9 +44,11 @@ cat::default_assert_handler(source_location const& callsite) {
                // Ignore the assert failure.
                return;
             case 1:
-               // Break in a debugger.
-               breakpoint();
-               return;
+               // Historically this called `breakpoint()` (`int3`). That surfaces
+               // as SIGTRAP under Release plus sanitizers or ambiguous stdin.
+               // Attach a debugger at `default_assert_handler` instead.
+               eprint("Debug trap is disabled; exiting.\n").or_exit();
+               exit(1);
             case 2:
                {
                   // Abort the program.

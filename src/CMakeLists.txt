@@ -80,7 +80,7 @@ target_sources(cat INTERFACE
   ${CATLIB}/math/implementations/pow.cpp
   ${CATLIB}/math/implementations/sqrt.cpp
   ${CATLIB}/memory/implementations/copy_memory.cpp
-  ${CATLIB}/memory/implementations/copy_memory_small.cpp
+  ${CATLIB}/memory/implementations/copy_memory_backward.cpp
   ${CATLIB}/string/implementations/memcpy.cpp
   ${CATLIB}/string/implementations/memset.cpp
   ${CATLIB}/string/implementations/strlen.cpp
@@ -153,6 +153,9 @@ target_sources(cat INTERFACE
 set(CAT_HEADER_FILES
   ${CATLIB}/algorithm/cat/algorithm
   ${CATLIB}/allocator/cat/allocator
+  ${CATLIB}/allocator/implementations/meta_alloc.tpp
+  ${CATLIB}/allocator/implementations/get.tpp
+  ${CATLIB}/allocator/implementations/free.tpp
   ${CATLIB}/allocator/cat/linear_allocator
   ${CATLIB}/allocator/cat/null_allocator
   ${CATLIB}/allocator/cat/page_allocator
@@ -183,6 +186,9 @@ set(CAT_HEADER_FILES
   ${CATLIB}/math/cat/math
   ${CATLIB}/maybe/cat/maybe
   ${CATLIB}/memory/cat/memory
+  ${CATLIB}/memory/implementations/copy_memory.tpp
+  ${CATLIB}/memory/implementations/copy_memory_backward.tpp
+  ${CATLIB}/memory/implementations/is_memory_overlapping.tpp
   ${CATLIB}/meta/cat/meta
   ${CATLIB}/notype/cat/notype
   ${CATLIB}/ring/cat/ring

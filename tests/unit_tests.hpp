@@ -28,6 +28,7 @@ test_fail(cat::source_location const& source_location);
 // Attributes can be placed before an instantiation of the macro to modify its
 // behavior.
 #define CAT_TEST(test_name)                                                    \
+   [[clang::optnone]]                                                          \
    void test_##test_name();                                                    \
    void test_##test_name##_prologue();                                         \
                                                                                \
@@ -53,7 +54,13 @@ test_fail(cat::source_location const& source_location);
       auto _ = ::cat::print(string);                                           \
       test_##test_name();                                                      \
       ++tests_passed;                                                          \
+      return;                                                                  \
    }                                                                           \
+   /* AddressSanitizer with O3 can mis-treat a large test body */              \
+   /* as `noreturn` and instrument the test with `__asan_handle_no_return` */  \
+   /* so the return path hits a trap. `[[clang::nomerge]]` keeps each test */  \
+   /* distinct. `[[clang::optnone]]` on the body fixes this. */   \
+   /* TODO: Debug IR passes. */ \
    void test_##test_name()
 
 // `CAT_TEST` should never be `#undef`'d. The redefinable macro `test` exists

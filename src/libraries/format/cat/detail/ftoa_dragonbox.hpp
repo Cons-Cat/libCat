@@ -117,7 +117,7 @@ struct default_float_traits {
    static T
    carrier_to_float(carrier_uint u) noexcept {
       T x;
-      copy_memory_small(&u, &x, sizeof(carrier_uint));
+      copy_memory_scalar(&u, &x, sizeof(carrier_uint));
       return x;
    }
 
@@ -125,7 +125,7 @@ struct default_float_traits {
    static carrier_uint
    float_to_carrier(T x) noexcept {
       carrier_uint u;
-      copy_memory_small(&x, &u, sizeof(carrier_uint));
+      copy_memory_scalar(&x, &u, sizeof(carrier_uint));
       return u;
    }
 
@@ -3286,7 +3286,7 @@ to_chars_n_impl(float_bits<Float, FloatTraits> br, char* buffer) noexcept {
          return to_chars_detail::to_chars<Float, FloatTraits>(
             result.significand, result.exponent, buffer);
       }
-      copy_memory_small("0E0", buffer, 3u);
+      copy_memory_scalar("0E0", buffer, 3u);
       return buffer + 3;
    }
    if (s.has_all_zero_significand_bits()) {
@@ -3294,10 +3294,10 @@ to_chars_n_impl(float_bits<Float, FloatTraits> br, char* buffer) noexcept {
          *buffer = '-';
          ++buffer;
       }
-      copy_memory_small("Infinity", buffer, 8u);
+      copy_memory_scalar("Infinity", buffer, 8u);
       return buffer + 8;
    } else {
-      copy_memory_small("NaN", buffer, 3u);
+      copy_memory_scalar("NaN", buffer, 3u);
       return buffer + 3;
    }
 }
