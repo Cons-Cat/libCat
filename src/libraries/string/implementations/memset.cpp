@@ -1,8 +1,14 @@
 #include <cat/string>
 
-extern "C" [[clang::no_builtin]]
-auto
-std::memset(void* p_source, int byte_value, __SIZE_TYPE__ bytes) -> void* {
+extern "C"
+#if __has_feature(address_sanitizer)
+   // asan has its own `memset` shim that interposes the libc one. We should
+   // prefer that.
+   [[gnu::visibility("hidden")]]
+#endif
+   [[clang::no_builtin]]
+   auto
+   std::memset(void* p_source, int byte_value, __SIZE_TYPE__ bytes) -> void* {
 #ifdef __clang__
    // TODO: Clang inserts `memset()` calls as some structs' `default`
    // assignment operators. The vectorized `set_memory` causes some

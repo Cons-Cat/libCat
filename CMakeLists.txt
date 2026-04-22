@@ -1,15 +1,31 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(cat LANGUAGES CXX)
+project(cat
+  VERSION 0.1.0
+  LANGUAGES CXX)
+
+# libCat is Clang-only and uses Clang 23 features. Bail early instead of failing later
+# with cryptic flag or intrinsic errors.
+if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  message(FATAL_ERROR
+    "libCat only supports Clang. Detected `${CMAKE_CXX_COMPILER_ID}` "
+    "(`${CMAKE_CXX_COMPILER}`). Pass `-DCMAKE_CXX_COMPILER=clang++-23` "
+    "when configuring.")
+endif()
+if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 23)
+  message(FATAL_ERROR
+    "libCat requires Clang 23+. Detected Clang ${CMAKE_CXX_COMPILER_VERSION} "
+    "(`${CMAKE_CXX_COMPILER}`).")
+endif()
 
 option(CAT_USE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer." ON)
 
-# Optional sccache-based compiler caching. Auto-enabled when `sccache` is on
-# PATH; silently skipped otherwise. Pass `-DCAT_USE_SCCACHE=OFF` to disable
-# explicitly, or `-DCAT_USE_SCCACHE=ON` to require it (configure fails if
-# missing). Combined with the `-Xclang -fno-pch-timestamp` flag added below for
-# PCH-enabled Clang builds, this yields near-100% hit rates across build
-# directories and fresh checkouts.
+option(CAT_INSTALL
+  "Generate install / export rules so other CMake projects can find_package(cat)." OFF)
+
+# Optional sccache compiler-launcher. Auto-on when `sccache` is on PATH.
+# `-DCAT_USE_SCCACHE=ON` makes it required. Pairs with `-fno-pch-timestamp`
+# below for ~100% hit rates across build dirs.
 find_program(CAT_SCCACHE_EXECUTABLE sccache DOC "Path to the sccache binary.")
 if (CAT_SCCACHE_EXECUTABLE)
   set(_cat_sccache_default ON)
@@ -29,8 +45,16 @@ if (CAT_USE_SCCACHE)
   set(CMAKE_CXX_COMPILER_LAUNCHER "${CAT_SCCACHE_EXECUTABLE}")
 endif()
 
+# Bitcode-aware AR/RANLIB so `libcat.a` stays loadable by LTO and clang-repl.
+include(${CMAKE_SOURCE_DIR}/cmake/llvm_archivers.cmake)
+
+# Two flag tiers: `ESSENTIAL` = usage requirements every consumer must honor
+# (on `cat` `INTERFACE`). `INTERNAL` = libCat's own warnings/diagnostics/per-
+# config codegen (`PRIVATE` on `cat-impl`, re-propagated to in-tree tests/
+# examples via `cat-tests` / `cat-examples`). External users only inherit
+# `ESSENTIAL`.
 list(
-  APPEND CAT_COMPILE_OPTIONS_COMMON
+  APPEND CAT_COMPILE_OPTIONS_ESSENTIAL
   # Disable linking libC symbols.
   -nostdlib
   -nostdlib++
@@ -41,7 +65,8 @@ list(
   # `global_includes.hpp` must be available everywhere.
   -include global_includes.hpp
 
-  # Enable CPU intrinsics:
+  # Enable CPU intrinsics required by the SIMD headers:
+  # TODO: These should be optional.
   -msse4.2
   -mavx2
   -mfma
@@ -49,30 +74,33 @@ list(
   -mbmi
   -mbmi2
   -mfsgsbase
-  
+)
+
+list(
+  APPEND CAT_COMPILE_OPTIONS_INTERNAL_COMMON
   # Enable most warnings.
   -Wall -Wextra
   -Wno-unused-function
   -Wno-unknown-pragmas
   -Wno-missing-braces # This breaks `cat::tuple`.
-  
-  # See p2565 "Supporting User-Defined Attributes"
-  $<$<CXX_COMPILER_ID:Clang>:-Wno-unknown-attributes>
-  # Disable some Clang warnings. libCat needs to violate these.
-  $<$<CXX_COMPILER_ID:Clang>:-Wno-unqualified-std-cast-call>
-  $<$<CXX_COMPILER_ID:Clang>:-Wno-main>
-  # This produces many false positives in Clang 17.
-  $<$<CXX_COMPILER_ID:Clang>:-Wno-redundant-consteval-if>
-  # Use GCC extensions.
-  $<$<CXX_COMPILER_ID:Clang>:-Wno-gnu>
 
-  # Use Clang lifetime analysis.
-  $<$<CXX_COMPILER_ID:Clang>:-Wdangling -Wdangling-gsl -Xclang -fexperimental-bounds-safety>
+  # libCat needs to violate these.
+  -Wno-unqualified-std-cast-call
+  -Wno-main
+  -Wno-redundant-consteval-if # TODO: Do we need this? Remove if not.
+  # Use GCC extensions.
+  -Wno-gnu
+
+  # Lifetime analysis and bounds-safety.
+  -Wdangling
+  -Wdangling-gsl
+  "SHELL:-Xclang -fexperimental-bounds-safety"
 )
 
 if(CAT_USE_SANITIZERS)
-    list(
-     APPEND CAT_COMPILE_OPTIONS_COMMON
+  # Whole-program. Rides with the essentials.
+  list(
+    APPEND CAT_COMPILE_OPTIONS_ESSENTIAL
     -fomit-frame-pointer # Required for UBsan.
     -fsanitize=undefined
     -fsanitize=address
@@ -80,21 +108,20 @@ if(CAT_USE_SANITIZERS)
     # with a user stack does not go through that path, so stack instrumentation
     # still assumes the main thread stack and faults on the mmap stack (e.g.
     # `nix::process::spawn_impl`). Disable stack ASan while keeping heap ASan.
-    $<$<CXX_COMPILER_ID:Clang>:-mllvm -asan-stack=0>
+    "SHELL:-mllvm -asan-stack=0"
   )
 endif()
 
 list(
   APPEND CAT_COMPILE_OPTIONS_DEBUG
   -ggdb3
-  $<$<CXX_COMPILER_ID:Clang>:-gfull>
+  -gfull
 )
 
 list(
   APPEND CAT_COMPILE_OPTIONS_RELEASE
   # Remove unused symbols.
   -ffunction-sections -fdata-sections
-  -fvisibility=hidden -fvisibility-inlines-hidden
   # TODO: Consider why no-plt instead of relro.
   -fno-plt
 )
@@ -105,11 +132,15 @@ list(
   ${CAT_COMPILE_OPTIONS_RELEASE}
 )
 
-# LTO doesn't work with sanitizers in clang, so it's special-cased.
+# LTO breaks under clang with sanitizers, so it's special-cased. Same conditional
+# adds `-fvisibility=hidden` only to `Release` (`RelWithDebInfo` already captured
+# the list above), keeping `RelWithDebInfo` inspectable in tools like `nm` or
+# debuggers.
 if (NOT CAT_USE_SANITIZERS)
   list(
     APPEND CAT_COMPILE_OPTIONS_RELEASE
     -flto=auto
+    -fvisibility=hidden -fvisibility-inlines-hidden
   )
 
   list(
@@ -120,19 +151,26 @@ if (NOT CAT_USE_SANITIZERS)
 endif()
 
 list(
-  APPEND CAT_COMPILE_OPTIONS
-  ${CAT_COMPILE_OPTIONS_COMMON}
+  APPEND CAT_COMPILE_OPTIONS_INTERNAL
+  ${CAT_COMPILE_OPTIONS_INTERNAL_COMMON}
   $<$<CONFIG:Debug>:${CAT_COMPILE_OPTIONS_DEBUG}>
   $<$<CONFIG:Release>:${CAT_COMPILE_OPTIONS_RELEASE}>
   $<$<CONFIG:RelWithDebInfo>:${CAT_COMPILE_OPTIONS_RELWITHDEBINFO}>
 )
 
+# Kept for tooling (format target, opt-report) that wants the full set.
+list(
+  APPEND CAT_COMPILE_OPTIONS
+  ${CAT_COMPILE_OPTIONS_ESSENTIAL}
+  ${CAT_COMPILE_OPTIONS_INTERNAL}
+)
+
 list(
   APPEND CAT_LINK_OPTIONS_COMMON
   # This is required to prevent duplicate symbols.
-  -nostdlib  
+  -nostdlib
   # `lld` is required for LLVM LTO. Bfd and `mold` do not work.
-  $<$<CXX_COMPILER_ID:Clang>:-fuse-ld=lld>
+  -fuse-ld=lld
 )
 
 list(
@@ -148,23 +186,25 @@ list(
   $<$<CONFIG:RelWithDebInfo>:${CAT_LINK_OPTIONS_RELEASE}>
 )
 
+# Two-target setup: `cat` (`INTERFACE`) carries usage requirements. `cat-impl`
+# (`STATIC`) owns the .cpp sources and produces `libcat.a`. `cat` `INTERFACE`-
+# links `cat-impl` (or `cat-impl-shared`, see `CAT_USE_SHARED` below). The
+# wiring happens further down once both targets exist. `_start.cpp` is the one
+# source that stays on `cat` `INTERFACE` because its body switches on the per-
+# consumer `NO_ARGC_ARGV` define.
 add_library(cat INTERFACE)
 
-# Everything building with `cat` should be at least C++26, with GNU extensions.
-
-# This is broken for Clang 19 until CMake 3.29.2
-# target_compile_features(cat INTERFACE cxx_std_26)
+# C++26 + GNU extensions. Raw flag instead of `cxx_std_26` because that's
+# broken for Clang 19 until CMake 3.29.2.
 target_compile_options(cat INTERFACE "-std=gnu++26")
 
-# Link the address and undefined behavior sanitizers.
 if (CAT_USE_SANITIZERS)
   target_link_options(cat INTERFACE
     -fsanitize=address
     #-fsanitize=undefined
-    $<$<CXX_COMPILER_ID:Clang>:-shared-libasan>
-    # `libcat.ld` uses `INSERT AFTER .text` for TLS layout symbols. `lld` with
-    # AddressSanitizer and my linker script splits RELRO-backed sections so `lld`
-    # rejects the output unless `RELRO` is disabled for this link.
+    -shared-libasan
+    # `libcat.ld`'s `INSERT AFTER .text` splits RELRO sections under ASan + lld,
+    # which lld rejects unless RELRO is disabled for this link.
     -Wl,-z,norelro
   )
 
@@ -185,22 +225,114 @@ if (CAT_USE_SANITIZERS)
   endif()
 endif()
 
-target_compile_options(cat INTERFACE ${CAT_COMPILE_OPTIONS})
+target_compile_options(cat INTERFACE ${CAT_COMPILE_OPTIONS_ESSENTIAL})
 target_link_options(cat INTERFACE ${CAT_LINK_OPTIONS})
 
 # TODO: Implement these symbols in libCat directly.
 # target_link_libraries(cat INTERFACE gcc)
 
-# `src/CMakeLists.txt` adds all of the source and headers files to `cat`.
+# `cat-impl` deliberately does NOT link `cat`. That would drag `_start.cpp`
+# (`cat`'s `INTERFACE_SOURCES`) into the archive with the wrong `NO_ARGC_ARGV`
+# setting. Its actual usage requirements come in via generator expressions so
+# there is still one source of truth on `cat`.
+add_library(cat-impl STATIC)
+set_target_properties(cat-impl PROPERTIES OUTPUT_NAME cat)
+target_compile_options(cat-impl PRIVATE
+  $<TARGET_PROPERTY:cat,INTERFACE_COMPILE_OPTIONS>
+  ${CAT_COMPILE_OPTIONS_INTERNAL}
+)
+target_include_directories(cat-impl PRIVATE
+  $<TARGET_PROPERTY:cat,INTERFACE_INCLUDE_DIRECTORIES>
+)
+
 add_subdirectory(src/)
 
-# Tests can be run using ctest, or by manually running the `unit_tests`
-# executable from your specified build output directory.
-enable_testing()
-# Build the tests.
-add_subdirectory(tests/)
+# PCH uses `.hpp` only (extensionless API headers go through the regular
+# include path via `CAT_HEADER_FILES` in `src/CMakeLists.txt`). Glob is scoped
+# to `src/` so the PCH never picks up `tests/unit_tests.hpp`.
+file(GLOB_RECURSE CAT_HEADERS "src/*.hpp")
 
-# Build the examples.
+option(CAT_PCH "Enable precompiled-headers for libCat headers." ON)
+if (CAT_PCH)
+  # `PRIVATE` on `cat-impl` so external consumers of `cat::cat` don't inherit
+  # PCH machinery. In-tree tests/examples opt in via `REUSE_FROM cat-impl`.
+  target_precompile_headers(cat-impl PRIVATE ${CAT_HEADERS})
+  # Strip the PCH's embedded mtime so sccache / ccache can reuse PCH-consuming
+  # TUs across rebuilds. `SHELL:` keeps `-Xclang` glued to its argument.
+  target_compile_options(cat-impl PRIVATE
+    "SHELL:-Xclang -fno-pch-timestamp"
+  )
+endif()
+set_target_properties(cat-impl PROPERTIES PCH_WARN_INVALID ON)
+# Tripwire (deferred): fail configure if `INTERFACE_PRECOMPILE_HEADERS` is
+# ever set on `cat`, `cat-impl`, or `cat-impl-shared`. That would export PCH
+# usage requirements through `cat::cat[-impl[-shared]]` and bake `cat-impl`'s
+# default `gnu::naked` `_start` declaration into every consumer — fatal for
+# any TU that defines `NO_ARGC_ARGV` (`unit_tests`, `hello`, external no-args
+# programs), which would then hit "non-ASM statement in naked function" on the
+# call to `call_main_noargs()`. `REUSE_FROM cat-impl` is unaffected: it writes
+# on the consumer target, not on `cat-impl`'s `INTERFACE`.
+function(_cat_assert_no_interface_pch)
+  set(_targets cat cat-impl)
+  if (TARGET cat-impl-shared)
+    list(APPEND _targets cat-impl-shared)
+  endif()
+  foreach(_t IN LISTS _targets)
+    get_target_property(_pch ${_t} INTERFACE_PRECOMPILE_HEADERS)
+    if (_pch)
+      message(FATAL_ERROR
+        "libCat PCH isolation broken: target `${_t}` has "
+        "INTERFACE_PRECOMPILE_HEADERS set (value: ${_pch}). Keep PCH on "
+        "cat-impl PRIVATE and use `target_precompile_headers(<consumer> "
+        "REUSE_FROM cat-impl)` for in-tree opt-in. See the comment block "
+        "above this assertion in the top-level CMakeLists.txt.")
+    endif()
+  endforeach()
+endfunction()
+cmake_language(DEFER DIRECTORY "${CMAKE_SOURCE_DIR}"
+  CALL _cat_assert_no_interface_pch)
+
+# Optional `libcat.so` (`cat-impl-shared`), linkable as `cat::cat-impl-shared`
+# from `find_package(cat)` and consumed by `clang-repl-libcat`. Off by default.
+option(CAT_BUILD_SHARED
+  "Build libcat.so (cat-impl-shared) and the clang-repl-libcat wrapper." OFF)
+
+# Switches `cat`'s `INTERFACE`-linked impl to `cat-impl-shared`, so every
+# `cat`-linker transparently picks up `libcat.so`. Implies `CAT_BUILD_SHARED`.
+option(CAT_USE_SHARED
+  "Make `cat` link libcat.so instead of libcat.a (implies CAT_BUILD_SHARED)." OFF)
+if (CAT_USE_SHARED AND NOT CAT_BUILD_SHARED)
+  set(CAT_BUILD_SHARED ON CACHE BOOL
+    "Build libcat.so (cat-impl-shared) and the clang-repl-libcat wrapper." FORCE)
+  message(STATUS "CAT_USE_SHARED=ON: forcing CAT_BUILD_SHARED on.")
+endif()
+
+if (CAT_BUILD_SHARED)
+  include(${CMAKE_SOURCE_DIR}/cmake/cat_shared.cmake)
+else()
+  # Give the user an actionable error message when they try to run `cat-repl`
+  # without `CAT_BUILD_SHARED=ON`.
+  add_custom_target(cat-repl
+    COMMAND ${CMAKE_COMMAND} -E echo
+      "cat-repl: requires -DCAT_BUILD_SHARED=ON. Reconfigure with:"
+    COMMAND ${CMAKE_COMMAND} -E echo
+      "  cmake -B ${CMAKE_BINARY_DIR} -DCAT_BUILD_SHARED=ON"
+    COMMAND ${CMAKE_COMMAND} -E false
+    COMMENT "cat-repl unavailable: CAT_BUILD_SHARED is OFF.")
+endif()
+
+# Pick which impl `cat` `INTERFACE`-links. Default is `cat-impl` (`libcat.a`).
+if (CAT_USE_SHARED)
+  target_link_libraries(cat INTERFACE cat-impl-shared)
+else()
+  target_link_libraries(cat INTERFACE cat-impl)
+endif()
+
+# `.gdbinit` symlink helper, shared by `tests/` and `examples/`.
+include(${CMAKE_SOURCE_DIR}/cmake/gdb_symlink.cmake)
+
+enable_testing()
+add_subdirectory(tests/)
 add_subdirectory(examples/)
 
 # # `ctor.ld` is a minimal linker script necessary for thread local storage.
@@ -210,49 +342,18 @@ add_subdirectory(examples/)
 #   LINK_DEPENDS ${CMAKE_SOURCE_DIR}/src/ctor.ld
 # )
 
-# Find a configurable path to a `clang-format` binary.
-find_program(CAT_CLANG_FORMAT_PATH "clang-format" DOC "`clang-format` binary to use.")
-get_property(CAT_SOURCES TARGET cat PROPERTY INTERFACE_SOURCES)
+# Source-formatting targets (`cat-format`, `cat-format-check`).
+include(${CMAKE_SOURCE_DIR}/cmake/format.cmake)
 
-# Precompiled headers use `.hpp` files only; extensionless `#include <cat/...>` API files are listed in
-# `CAT_HEADER_FILES` from `src/CMakeLists.txt`.
-file(GLOB_RECURSE CAT_HEADERS "*.hpp")
+# Compiler optimization report target (`cat-opt-report`).
+include(${CMAKE_SOURCE_DIR}/cmake/opt_report.cmake)
 
-option(CAT_PCH "Enable precompiled-headers for libCat headers." ON)
-if (CAT_PCH)
-  target_precompile_headers(cat INTERFACE ${CAT_HEADERS})
-  # Make Clang PCHs content-addressable by stripping the embedded mtime. Without
-  # this, every PCH rebuild gets a new hash and compiler-cache tools (sccache,
-  # ccache) cannot reuse PCH-consuming TUs across builds. The `SHELL:` prefix
-  # keeps `-Xclang` paired with its argument and prevents CMake from de-duping
-  # the `-Xclang` token against the one already used for `-fexperimental-bounds-safety`.
-  target_compile_options(cat INTERFACE
-    "$<$<CXX_COMPILER_ID:Clang>:SHELL:-Xclang -fno-pch-timestamp>"
-  )
-endif()
-set_target_properties(cat PROPERTIES PCH_WARN_INVALID ON)
+# Compiler-intermediaries target (`cat-intermediaries`).
+include(${CMAKE_SOURCE_DIR}/cmake/cat_intermediaries.cmake)
 
-# Run `clang-format` on implementation sources plus every public header (including extensionless names).
-set(_cat_format_files ${CAT_SOURCES} ${CAT_HEADER_FILES})
-if(CAT_CLANG_FORMAT_PATH)
-  add_custom_target(
-    cat-format
-    COMMAND
-      ${CMAKE_COMMAND}
-      -P
-      ${CMAKE_SOURCE_DIR}/format.cmake
-      ${CAT_CLANG_FORMAT_PATH}
-      ${_cat_format_files}
-    DEPENDS
-      ${CAT_SOURCES}
-      ${CAT_HEADER_FILES})
-else()
-  add_custom_target(
-    cat-format
-    COMMAND
-      ${CMAKE_COMMAND}
-      -E
-      echo
-      "cat-format: cmake did not find a clang-format executable. Install clang-format or configure with -DCAT_CLANG_FORMAT_PATH=/path/to/clang-format"
-    COMMAND ${CMAKE_COMMAND} -E false)
+# Syntax-only check target (`cat-syntax`).
+include(${CMAKE_SOURCE_DIR}/cmake/cat_syntax.cmake)
+
+if (CAT_INSTALL)
+  include(${CMAKE_SOURCE_DIR}/cmake/cat_install.cmake)
 endif()
