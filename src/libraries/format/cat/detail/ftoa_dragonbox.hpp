@@ -400,13 +400,13 @@ namespace bits {
 inline uint4::raw_type
 rotr(uint4::raw_type n, uint4::raw_type r) noexcept {
    r &= 31;
-   return (n >> r) | (n << (32 - r));
+   return __builtin_stdc_rotate_right(n, r);
 }
 
 inline uint8::raw_type
 rotr(uint8::raw_type n, uint4::raw_type r) noexcept {
    r &= 63;
-   return (n >> r) | (n << (64 - r));
+   return __builtin_stdc_rotate_right(n, r);
 }
 }  // namespace bits
 

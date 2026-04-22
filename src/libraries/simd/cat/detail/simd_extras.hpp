@@ -2,7 +2,7 @@
 #pragma once
 
 // Layered SIMD helpers on `<cat/simd>`. Elementwise functors and factories
-// (`simd_sqrt`, `make_simd_loaded`, `simd_filled`, …) live in `<cat/simd_ops>`.
+// (`simd_sqrt`, `make_simd_loaded`, `simd_filled`, ...) live in `<cat/simd_ops>`.
 // Include that header when you need them. `<cat/simd>` does not pull it in.
 //
 // Chunk iterators (`as_vectorized`) live in `<cat/simd_iterator>`. Per-lane
@@ -10,7 +10,7 @@
 // `default_sentinel_t`).
 //
 // This header keeps lane algorithms (`simd_concat`, `simd_resize`, `simd_insert`,
-// `simd_extract`, …), lane builtins (`simd_clz`, …), P3299 pointer helpers,
+// `simd_extract`, ...), lane builtins (`simd_clz`, ...), P3299 pointer helpers,
 // `simd_chunked_invoke`, and includes x86 ABI specialization headers at the end.
 
 namespace cat {
@@ -224,5 +224,5 @@ simd_chunked_invoke(Fn&& fn, simd<T, Abi> const& pack, Args&&... rest) {
 }  // namespace cat
 
 // x86 helpers ship with `<cat/simd>` (`simd_sse2_movmsk.hpp`,
-// `simd_avx2_mask_ops.hpp`, …). SSE4.2 string helpers live in `simd_sse42.hpp`.
+// `simd_avx2_mask_ops.hpp`, ...). SSE4.2 string helpers live in `simd_sse42.hpp`.
 #include <cat/detail/simd_sse42.hpp>

@@ -32,7 +32,7 @@ wait_clone_thread_through_cleartid_futex(nix::process_id child_id,
                                          nix::futex_word* p_clear_tid)
    -> nix::scaredy_nix<nix::process_id> {
    nix::process_id const thread_group_id = nix::sys_getpid();
-   cat::idx spins = 0u;
+   cat::uword spins = 0u;
    for (;;) {
       cat::uint4 const published =
          p_clear_tid->m_value.load(cat::memory_order::acquire);

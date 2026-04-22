@@ -441,53 +441,6 @@ sqrt(double argument) -> double {
    return detail::emulated_sqrt(argument);
 }
 
-namespace detail {
-template <is_unsigned_integral T, uword::raw_type shift>
-[[gnu::always_inline]]
-constexpr auto
-round_to_pow2_part(T value) {
-   value |= (value >> shift);
-
-   // Continually shift right until doing so would shift the entire int.
-   // i.e., for `uint4`, shift by 1, then 2, then 4, then 8, then 16, and
-   // stop before 32.
-   // For `uint8`, shift likewise and stop before 64.
-   if constexpr ((shift * 2u) < (sizeof(T) * 8)) {
-      return round_to_pow2_part<T, shift * 2u>(value);
-   } else {
-      return value;
-   }
-}
-}  // namespace detail
-
-template <is_unsigned_integral T>
-   requires(!cat::detail::is_idx<T>)
-[[nodiscard]]
-constexpr auto
-round_to_pow2(T value) {
-   value -= 1u;
-   value = detail::round_to_pow2_part<T, 1u>(value);
-   return value + T(1);
-}
-
-template <typename T>
-   requires(cat::detail::is_idx<T>)
-[[nodiscard]]
-constexpr auto
-round_to_pow2(T value) -> T {
-   return T(round_to_pow2(value.raw));
-}
-
-template <is_signed_integral T>
-[[nodiscard]]
-constexpr auto
-round_to_pow2(T value) {
-   if !consteval {
-      assert(value >= 0);
-   }
-   return round_to_pow2(make_unsigned(value));
-}
-
 template <is_integral T, is_implicitly_convertible<T> U>
 [[nodiscard]]
 constexpr auto

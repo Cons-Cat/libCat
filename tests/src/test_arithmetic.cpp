@@ -738,17 +738,22 @@ test(arithmetic_match_on_type_and_value) {
    cat::verify(matched);
 }
 
-test(arithmetic_unary_operators_and_nttp_numerals) {
+test(arithmetic_unary_operators) {
    // Test unary operators.
    [[maybe_unused]]
    int4 negative_int4 = -1_i4;
    [[maybe_unused]]
    float4 negative_float4 = -1_f4;
-   // [[maybe_unused]] int4 positive_int4 = +1_i4;
-   // [[maybe_unused]] float4 positive_float4 = +1_f4;
    [[maybe_unused]]
-   int4 negated_int4 = ~1_i4;
+   int4 positive_int4 = +1_i4;
+   [[maybe_unused]]
+   float4 positive_float4 = +1_f4;
+   // `operator~` is only generated for unsigned integral `arithmetic<T>`.
+   [[maybe_unused]]
+   uint4 negated_uint4 = ~1_u4;
+}
 
+test(arithmetic_nttp_numerals) {
    // Test using numerals non-type template parameters.
    [[maybe_unused]]
    nttp<1_i1> nttp_int1{};
@@ -996,7 +1001,7 @@ test(arithmetic_wrap_add_mul_and_overflow_reference_constexpr) {
    static_assert(cat::wrap_mul(cat::uint4_max, 1u) == cat::uint4_max);
    static_assert(cat::wrap_mul(cat::uint4_max, 2u) == cat::uint4_max - 1u);
 
-   // Overflow reference views (`wrap()`, `sat()`, …) use `wrap_add`, `sat_add`,
+   // Overflow reference views (`wrap()`, `sat()`, ...) use `wrap_add`, `sat_add`,
    // and related helpers in `constexpr` the same way as at runtime.
    static_assert((cat::int4_max.wrap() + 100) == cat::int4_min + 99);
    static_assert((cat::int4_max.sat() + 100) == cat::int4_max);

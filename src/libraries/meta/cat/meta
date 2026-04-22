@@ -443,7 +443,10 @@ template <typename T>
 concept is_bool = detail::is_bool_detail<T>;
 
 template <typename T>
-concept is_arithmetic = is_integral<T> || is_floating_point<T>;
+// __is_arithmetic will short-circuit, but we need the others for
+// `cat::arithmetic`.
+concept is_arithmetic =
+   __is_arithmetic(T) || is_integral<T> || is_floating_point<T>;
 
 namespace detail {
 template <typename...>

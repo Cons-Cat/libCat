@@ -86,6 +86,8 @@ simd_broadcast_really_convertible_to() -> bool {
 }
 
 template <typename From, typename ToLane>
+[[gnu::const]]
+// Clang needs this to use it in `[[assume]]`.
 consteval auto
 has_simd_broadcast_consteval_value(From f) -> bool {
    using ToR = simd_broadcast_lane_raw<ToLane>;

@@ -1692,11 +1692,11 @@ test(simd_popcount_rotate_left_rotate_right) {
    mi4 mb{true, false, true, false};
    cat::verify(cat::popcount(mb) == 2);
 
-   int4x4 x = {1, 2, 4, 8};
-   int4x4 rotated_left = cat::simd_rotate_left(x, 1);
-   cat::verify(rotated_left[0] == 2);
-   int4x4 rotated_right = cat::simd_rotate_right(x, 1);
-   cat::verify(rotated_right[3] == 4);
+   uint4x4 rx = {1u, 2u, 4u, 8u};
+   uint4x4 rotated_left = cat::simd_rotate_left(rx, 1);
+   cat::verify(rotated_left[0] == 2u);
+   uint4x4 rotated_right = cat::simd_rotate_right(rx, 1);
+   cat::verify(rotated_right[3] == 4u);
 }
 
 // --- EVE-style mask subscript: `fn[mask](args?)` applies `fn` only where the mask
@@ -1770,18 +1770,19 @@ test(simd_eve_mask_subscript_min_max_popcount_rotate_left_rotate_right) {
    cat::verify(pc[2] == 15u);
    cat::verify(pc[3] == 0xffffffffu);
 
-   int4x4 x = {1, 2, 4, 8};
-   int4x4 rotated_left = cat::simd_rotate_left[m](x, 1);
-   cat::verify(rotated_left[0] == 2);
-   cat::verify(rotated_left[1] == 4);
-   cat::verify(rotated_left[2] == 4);
-   cat::verify(rotated_left[3] == 8);
-   int4x4 y = {8, 4, 2, 1};
-   int4x4 rotated_right = cat::simd_rotate_right[m](y, 1);
-   cat::verify(rotated_right[0] == 4);
-   cat::verify(rotated_right[1] == 2);
-   cat::verify(rotated_right[2] == 2);
-   cat::verify(rotated_right[3] == 1);
+   uint4x4 rx = {1u, 2u, 4u, 8u};
+   auto rm = cat::make_simd_mask_from_count<uint4x4>(2u);
+   uint4x4 rotated_left = cat::simd_rotate_left[rm](rx, 1);
+   cat::verify(rotated_left[0] == 2u);
+   cat::verify(rotated_left[1] == 4u);
+   cat::verify(rotated_left[2] == 4u);
+   cat::verify(rotated_left[3] == 8u);
+   uint4x4 ry = {8u, 4u, 2u, 1u};
+   uint4x4 rotated_right = cat::simd_rotate_right[rm](ry, 1);
+   cat::verify(rotated_right[0] == 4u);
+   cat::verify(rotated_right[1] == 2u);
+   cat::verify(rotated_right[2] == 2u);
+   cat::verify(rotated_right[3] == 1u);
 }
 
 // --- ?15 chunked_invoke, vectorizable_element ---
