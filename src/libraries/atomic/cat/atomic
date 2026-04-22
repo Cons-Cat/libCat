@@ -5,7 +5,6 @@
 #include <cat/arithmetic>
 
 // TODO: This needs tests and lots of fixes.
-// Every function in this file that is prefixed with `__` is a GCC built-in.
 
 namespace cat {
 

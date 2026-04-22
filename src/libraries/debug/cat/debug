@@ -8,7 +8,7 @@ class source_location {
  private:
    // Clang requires these variables be declared at the top, not the bottom.
 
-   // GCC requires these names be exactly what they are.
+   // Clang requires these names be exactly what they are.
    struct __impl {
       char const* _M_file_name;
       char const* _M_function_name;

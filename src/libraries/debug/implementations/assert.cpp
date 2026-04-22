@@ -3,8 +3,8 @@
 
 // Because `assert()`'s arguments are not passed into `verify()` when `NDEBUG`
 // is defined, the compiler should not warn when they are unused.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
 
 // Check that an expression holds true when `NDEBUG` is not defined. If it holds
 // false, invoke `p_assert_handler`.
@@ -28,4 +28,4 @@ cat::assert(bool invariant_expression, str_view const error_string,
 #endif
 }
 
-#pragma GCC diagnostic pop
+#pragma clang diagnostic pop

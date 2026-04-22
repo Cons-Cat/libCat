@@ -1,6 +1,5 @@
 #include <cat/string>
 
-// `__SIZE_TYPE__` is a GCC macro.
 extern "C"
 #if __has_feature(address_sanitizer)
    // asan has its own `memcpy` shim that interposes the libc one. We should

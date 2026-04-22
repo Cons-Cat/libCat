@@ -3,9 +3,8 @@
 [[gnu::no_sanitize_address]]
 auto
 nix::syscall4(cat::iword call, cat::no_type arg1, cat::no_type arg2,
-              cat::no_type arg3, cat::no_type const arg4) -> cat::iword {
-   // `arg4` must be `const-qualified` for GCC to compile.
-   register cat::no_type const r10 asm("r10") = arg4;
+              cat::no_type arg3, cat::no_type arg4) -> cat::iword {
+   register cat::no_type r10 asm("r10") = arg4;
 
    cat::iword result;
    asm volatile("syscall"

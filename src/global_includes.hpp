@@ -4,7 +4,7 @@
 
 #include <cat/meta>
 
-// This file should be implicitly included in all other files. With GCC, this is
+// This file should be implicitly included in all other files. With Clang, this is
 // done using the `--include` flag, as in `--include global_includes.hpp`. The
 // `CMakeLists.txt` in this repository's top level directory does this.
 

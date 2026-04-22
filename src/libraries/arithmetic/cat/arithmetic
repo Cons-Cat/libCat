@@ -2028,7 +2028,7 @@ inline constexpr bool is_integral_detail<index<policy>> = true;
 }  // namespace detail
 
 inline namespace integers {
-// These macros are defined by the GCC compiler.
+// These macros are defined by the Clang compiler.
 using int1 = arithmetic<__INT8_TYPE__, overflow_policies::undefined>;
 using uint1 = arithmetic<__UINT8_TYPE__, overflow_policies::undefined>;
 using int2 = arithmetic<__INT16_TYPE__, overflow_policies::undefined>;
@@ -2049,11 +2049,11 @@ using iword =
    arithmetic<make_signed_type<__SIZE_TYPE__>, overflow_policies::undefined>;
 using uword = arithmetic<__SIZE_TYPE__, overflow_policies::undefined>;
 
-// `__INTPTR_TYPE__` is defined by the GCC compiler.
+// `__INTPTR_TYPE__` is defined by the Clang compiler.
 template <typename T>
 using intptr = arithmetic_ptr<T, __INTPTR_TYPE__>;
 
-// `__UINTPTR_TYPE__` is defined by the GCC compiler.
+// `__UINTPTR_TYPE__` is defined by the Clang compiler.
 template <typename T>
 using uintptr = cat::arithmetic_ptr<T, __UINTPTR_TYPE__>;
 

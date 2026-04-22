@@ -12,14 +12,14 @@
 namespace std {
 
 // Deprecated call to `memcpy()`. Consider using `cat::copy_buffer()` instead.
-// `memcpy()` exists to enable some GCC optimizations.
+// `memcpy()` exists to enable some Clang optimizations.
 extern "C" [[deprecated("`std::memcpy()` should not be used directly! Consider "
                         "`cat::copy_memory()` instead.")]]
 auto
 memcpy(void* p_destination, void const* p_source, __SIZE_TYPE__ bytes) -> void*;
 
 // Deprecated call to `memset()`. Consider using `cat::set_memory() or
-// cat::zero_memory()` instead. `memset()` exists to enable some GCC
+// cat::zero_memory()` instead. `memset()` exists to enable some Clang
 // optimizations.
 extern "C" [[deprecated("`std::memset()` should not be used directly! Consider "
                         "`cat::set_memory()` or "

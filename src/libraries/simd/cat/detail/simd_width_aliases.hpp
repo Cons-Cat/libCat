@@ -3,7 +3,7 @@
 // Lane-width sugar for `simd<T, Abi>`, included only from `<cat/simd>` inside
 // `namespace cat`.
 
-// TODO: Add GCC 13 `__bf16` vectors.
+// TODO: Add Clang `__bf16` vectors.
 
 using int1x2 = fixed_size_simd<int1, 2u>;
 using int1x4 = fixed_size_simd<int1, 4u>;
