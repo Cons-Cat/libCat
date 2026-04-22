@@ -9,29 +9,29 @@ It has type-safe arithmetic, SIMD, fast syscalls, CRTP interfaces,
 
 * Building
 libCat requires a recent development version of Clang 23 from the =trunk= branch.
-It is tested on GitHub using the [official nightly](https://apt.llvm.org/) distribution,
+It is tested on GitHub using the [[https://apt.llvm.org/][official nightly]] distribution,
 so this is certainly servicable for any local or downstream development.
 Compiling libCat is only routinely tested using =ninja=, but other build systems may work.
 The ="Ninja Multi-Config"= generator is also supported.
 A reasonably recent version of CMake is required (at least 3.28 is recommended).
 
 #+BEGIN_SRC sh
-  $ export CXX=clang++-23
-  $ cmake -B build/ -G 'Ninja'
-  $ cmake --build build/
-  $ ./build/tests/unit_tests # or ctest --test-dir/build --output-on-failure
+  export CXX=clang++-23
+  cmake -B build/ -G 'Ninja'
+  cmake --build build/
+  ./build/tests/unit_tests # or ctest --test-dir/build --output-on-failure
 #+END_SRC
 
 The =.clang-format= and =.clang-tidy= configurations are only compatible with correspondingly
 recent builds of clang-tools.
 
 Currently, running libCat requires AVX2. On x86 microarchitectures lacking that, the
-[Intel Software Development Emulator](https://www.intel.com/content/www/us/en/developer/articles/tool/software-development-emulator.html)
+[[https://www.intel.com/content/www/us/en/developer/articles/tool/software-development-emulator.html][Intel Software Development Emulator]]
 is known to work for libCat binaries.
 
-Developers are encouraged to set =CAT_USE_SANITIZERS= (default is =ON= if =asan= is easily found=).
+Developers are encouraged to set =CAT_USE_SANITIZERS= (default =OFF=).
 #+BEGIN_SRC sh
-  $ cmake -B build/ -DCAT_USE_SANITIZERS=ON
+  cmake -B build/ -DCAT_USE_SANITIZERS=ON
 #+END_SRC
 
 This will compile every translation unit with
@@ -42,9 +42,9 @@ time optimization. Turning this off in =Release= / =RelWithDebInfo= will enable 
 libCat provides several developer utilities. They are organized in the =cmake/=
 subdirectory.
 
-** =cat-format=intermediaries
+** =cat-format=
 #+BEGIN_SRC sh
-  $ cmake --build build/ --target cat-format
+  cmake --build build/ --target cat-format
 #+END_SRC
 Runs =clang-format= in place on every libCat implementation source and public
 header. The files which changed are reported afterwards.
@@ -55,7 +55,7 @@ at configure time.
 
 ** =cat-format-check=
 #+BEGIN_SRC sh
-  $ cmake --build build/ --target cat-format-check
+  cmake --build build/ --target cat-format-check
 #+END_SRC
 The read-only variant of =cat-format= primarily intended for CI. Performs the
 same comparison as =cat-format=, but instead of rewriting, it reports every
@@ -64,7 +64,7 @@ exits with an error code.
 
 ** =cat-opt-report=
 #+BEGIN_SRC sh
-  $ cmake --build build/ --target cat-opt-report
+  cmake --build build/ --target cat-opt-report
 #+END_SRC
 Compiles a Clang optimization report and prints the =opt-viewer.py= invocation required
 to render the resulting record into an interactive HTML document.
@@ -72,31 +72,30 @@ Optview2 is not distributed with LLVM, but it may be preferred with this output.
 
 ** =cat-intermediaries=
 #+BEGIN_SRC sh
-  $ cmake --build build/ --target cat-intermediaries
+  cmake --build build/ --target cat-intermediaries
 #+END_SRC
-Saves compilation byproducts to the build directories.
+Saves compilation byproducts to the build directories. For example:
 
 #+BEGIN_SRC
   build/runtime/_start.ii
   build/string/memset.ii
   build/string/memset.bc
   build/string/memset.s
-  build/math/sqrt.ii
   build/linux/syscall0.ii
-  ...
+  build/tests/test_alloc.ii
+  build/examples/hello.ii
 #+END_SRC
 
 - =<file>.ii= - preprocessed C++ headers and translation units.
 - =<file>.bc= - LLVM IR bitcode handed to the optimizer.
-- =<file>.s= - target assembly emitted by codegen, equivalent to generated
-machine code in =.o= files.
+- =<file>.s= - target assembly emitted by codegen, equivalent to generated machine code in =.o= files.
 
 This is useful for manually inspecting macro expansion and optimization,
 among other purposes.
 
 ** =cat-syntax=
 #+BEGIN_SRC sh
-  $ cmake --build build/ --target cat-syntax
+  cmake --build build/ --target cat-syntax
 #+END_SRC
 Compiles a libCat with =-fsyntax-only=. This is useful for quickly checking if
 code can compile, without bothering to enter deep LLVM. It will reuse existing
@@ -104,20 +103,19 @@ precompiled headers, if they are enabled, further accelerating the development l
 
 ** =cat-repl=
 #+BEGIN_SRC sh
-  $ cmake -B build/ -DCAT_BUILD_SHARED=ON
-  $ cmake --build build/ --target cat-repl
+  cmake -B build/ -DCAT_BUILD_SHARED=ON
+  cmake --build build/ --target cat-repl
 #+END_SRC
-Launches =clang-repl= with libCat preloaded so its out-of-line
-implementations (=cat::println=, syscalls, allocators, ...) resolve at JIT
-time. The wrapper reads the matching compile flags from the build's
-=compile_commands.json= so the REPL parses the same C++26 / freestanding
-/ SIMD-intrinsic dialect libCat was built against, and pre-loads the
-ASan runtime when sanitizers are on.
+Launches =clang-repl= with libCat preloaded so its headers and external
+linkage symbols resolve at JIT time. The wrapper reads the matching compile flags
+from the build's =compile_commands.json= so the REPL parses the same C++26 / freestanding
+/ SIMD-intrinsic dialect libCat was built against, and pre-loads the ASan runtime when
+sanitizers are on.
 
 For scripted use, the wrapper script also accepts a one-shot =--eval= /
 =--eval-file= flag that runs the supplied snippets and exits, e.g.
 #+BEGIN_SRC sh
-  $ ./build/clang-repl-libcat -eval \
+  ./build/clang-repl-libcat -eval \
       '#include <cat/string>
        auto _ = cat::println("Meow world!);'
 
@@ -127,7 +125,9 @@ For scripted use, the wrapper script also accepts a one-shot =--eval= /
 Piping code on stdin works the same way
 
 #+BEGIN_SRC sh
-  $ echo "1 + 1" | ./build/clang-repl-libcat
+  echo "1 + 1" | ./build/clang-repl-libcat
+
+  # 2
 #+END_SRC
 
 Note this requires =CAT_BUILD_SHARED=ON=. Pass extra =clang-repl= arguments at the
@@ -143,10 +143,10 @@ with =set auto-load local-gdbinit on=.
 All build options are CMake cache variables; pass them with =-D= at configure time.
 
 ** PCH and caching
-- =CAT_PCH= (default =ON=) — Enable precompiled headers for libCat's
+- =CAT_PCH= (default =ON=) - Enable precompiled headers for libCat's
   internal build. Private to libCat; downstream consumers of =cat= keep
   their own PCH strategy intact whether this is on or off.
-- =CAT_USE_SCCACHE= (default: =ON= if =sccache= is on =PATH=, else =OFF=) —
+- =CAT_USE_SCCACHE= (default: =ON= if =sccache= is on =PATH=, else =OFF=)
   Use [[https://github.com/mozilla/sccache][sccache]] as the C++ compiler
   launcher. Combined with =-Xclang -fno-pch-timestamp= (added automatically
   for Clang + PCH builds), this gives near-100% hit rates across build
@@ -154,34 +154,33 @@ All build options are CMake cache variables; pass them with =-D= at configure ti
   =-DCAT_SCCACHE_EXECUTABLE=/path/to/sccache=.
 
 ** Library output
-- =CAT_BUILD_SHARED= (default =OFF=) — Also build libCat as a shared
+- =CAT_BUILD_SHARED= (default =OFF=) - Also build libCat as a shared
   library alongside the default static archive. Required for the
   =cat-repl= target. Off by default so the build stays cheap when nobody
   needs the shared form.
-- =CAT_USE_SHARED= (default =OFF=) — Link =cat= against the shared
+- =CAT_USE_SHARED= (default =OFF=) - Link =cat= against the shared
   library instead of the static archive, so every in-tree consumer and
   downstream =find_package(cat)= user that links =cat= transparently
   picks it up. Implies =CAT_BUILD_SHARED=.
-- =CAT_INSTALL= (default =OFF=) — Generate the install / export rules so
+- =CAT_INSTALL= (default =OFF=) - Generate the install / export rules so
   =cmake --install <build>= lays out a sysroot that other CMake projects can
-  consume via =find_package(cat)= and =target_link_libraries(my_target
-  cat::cat)=. Off by default keeps the in-tree dev loop minimal.
+  consume via =find_package(cat)= and =target_link_libraries(my_target cat::cat)=.
 
 ** Tests and examples
-- =CAT_BUILD_UNIT_TESTS= (default =ON=) — Compile the =unit_tests= binary
+- =CAT_BUILD_UNIT_TESTS= (default =ON=) - Compile the =unit_tests= binary
   registered with =ctest= as =UnitTests=.
-- =CAT_BUILD_ALL_EXAMPLES= (default =ON=) — Shortcut that compiles every
+- =CAT_BUILD_ALL_EXAMPLES= (default =ON=) - Shortcut that compiles every
   individual example below.
 - =CAT_BUILD_EXAMPLE_HELLO= / =_ECHO= / =_CLIENT_SERVER= / =_WINDOW= /
-  =_CAT= (default =OFF=) — Per-example opt-ins for fine-grained selection
+  =_CAT= (default =OFF=) - Per-example opt-ins for fine-grained selection
   when =CAT_BUILD_ALL_EXAMPLES=OFF=.
-- =CAT_BUILD_LIBC_EXAMPLES= (default =OFF=) — Build the libc-linked
+- =CAT_BUILD_LIBC_EXAMPLES= (default =OFF=) - Build the libc-linked
   comparison binaries (=hello_libc=, =memcpy_libc=, ...) used to A/B
   performance against the freestanding libCat versions.
 
 ** Tooling overrides
-- =CAT_CLANG_FORMAT_PATH= — Path to a specific =clang-format= binary
+- =CAT_CLANG_FORMAT_PATH= - Path to a specific =clang-format= binary
   (defaults to whatever cmake auto-discovers on =PATH=). Only consulted by
   the =cat-format= / =cat-format-check= targets.
-- =CAT_SCCACHE_EXECUTABLE= — Path to a specific =sccache= binary (defaults
+- =CAT_SCCACHE_EXECUTABLE= - Path to a specific =sccache= binary (defaults
   to =find_program= on =PATH=). Only consulted when =CAT_USE_SCCACHE=ON=.

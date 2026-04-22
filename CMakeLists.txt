@@ -18,7 +18,33 @@ if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 23)
     "(`${CMAKE_CXX_COMPILER}`).")
 endif()
 
-option(CAT_USE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer." ON)
+# Unconditional ASan-runtime probe. One source of truth for the opt-in check
+# below, the RPATH block further down, and `cat_shared.cmake`'s REPL preload.
+# `-print-file-name` echoes the bare filename on miss, so `IS_ABSOLUTE` is the
+# "found" test.
+execute_process(
+  COMMAND "${CMAKE_CXX_COMPILER}" -print-file-name=libclang_rt.asan-x86_64.so
+  OUTPUT_VARIABLE _cat_asan_runtime
+  OUTPUT_STRIP_TRAILING_WHITESPACE)
+if (IS_ABSOLUTE "${_cat_asan_runtime}" AND EXISTS "${_cat_asan_runtime}")
+  set(CAT_ASAN_RUNTIME_PATH "${_cat_asan_runtime}")
+else()
+  set(CAT_ASAN_RUNTIME_PATH "")
+endif()
+unset(_cat_asan_runtime)
+
+option(CAT_USE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer." OFF)
+
+if (CAT_USE_SANITIZERS)
+  if (NOT CAT_ASAN_RUNTIME_PATH)
+    message(FATAL_ERROR
+      "CAT_USE_SANITIZERS=ON but `libclang_rt.asan-x86_64.so` could not be "
+      "located for `${CMAKE_CXX_COMPILER}`. Install the Clang ASan runtime "
+      "(apt: `libclang-rt-<MAJOR>-dev`) or reconfigure with "
+      "`-DCAT_USE_SANITIZERS=OFF`.")
+  endif()
+  message(STATUS "CAT_USE_SANITIZERS: using ${CAT_ASAN_RUNTIME_PATH}")
+endif()
 
 option(CAT_INSTALL
   "Generate install / export rules so other CMake projects can find_package(cat)." OFF)
@@ -210,19 +236,10 @@ if (CAT_USE_SANITIZERS)
 
   # Shared ASan lives next to Clang's resource dir, which is not a default loader
   # path. RPATH lets every linked executable run from the build tree or shell.
-  execute_process(
-    COMMAND "${CMAKE_CXX_COMPILER}" -print-file-name=libclang_rt.asan-x86_64.so
-    OUTPUT_VARIABLE _cat_asan_so_path
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-  if(IS_ABSOLUTE "${_cat_asan_so_path}" AND EXISTS "${_cat_asan_so_path}")
-    get_filename_component(_cat_asan_rpath_dir "${_cat_asan_so_path}" DIRECTORY)
-    target_link_options(cat INTERFACE "-Wl,-rpath,${_cat_asan_rpath_dir}")
-  else()
-    message(
-      WARNING
-      "Could not resolve libclang_rt.asan-x86_64.so for `${CMAKE_CXX_COMPILER}` "
-      "(`${_cat_asan_so_path}`). Binaries may need LD_LIBRARY_PATH at run time.")
-  endif()
+  # `CAT_ASAN_RUNTIME_PATH` was populated and verified at the top of this file.
+  get_filename_component(_cat_asan_rpath_dir "${CAT_ASAN_RUNTIME_PATH}" DIRECTORY)
+  target_link_options(cat INTERFACE "-Wl,-rpath,${_cat_asan_rpath_dir}")
+  unset(_cat_asan_rpath_dir)
 endif()
 
 target_compile_options(cat INTERFACE ${CAT_COMPILE_OPTIONS_ESSENTIAL})
