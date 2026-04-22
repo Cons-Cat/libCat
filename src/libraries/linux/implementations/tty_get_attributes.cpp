@@ -4,7 +4,8 @@ auto
 nix::tty_get_attributes(file_descriptor tty)
    -> cat::scaredy<tty_io_serial, linux_error> {
    // `&configuration` is an output parameter.
-   tty_io_serial const configuration;
+   // TODO: Syscalls should be consistent on whether they do or don't have output parameters.
+   tty_io_serial configuration;
    cat::scaredy result = sys_ioctl(tty, io_requests::tcgets, &configuration);
 
    if (result.has_value()) {

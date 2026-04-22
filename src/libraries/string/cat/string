@@ -230,7 +230,6 @@ class basic_str_span : public span<char_type> {
    constexpr auto
    find(char character, idx from_position = 0u) const
       -> maybe<sentinel<iword, -1>> {
-      // TODO: `lanes` should be an `idx`.
       idx lanes = char1x16::size();
 
       // TODO: Tile this loop four or eight times.

@@ -2225,12 +2225,12 @@ operator""_u4(unsigned long long input) -> cat::uint4 {
 
 consteval auto
 operator""_u8(unsigned long long input) -> cat::uint8 {
-   return cat::uint8(input);
+   return input;
 }
 
 consteval auto
 operator""_uz(unsigned long long input) -> cat::uword {
-   return cat::uword(input);
+   return input;
 }
 
 consteval auto
