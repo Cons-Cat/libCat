@@ -191,24 +191,12 @@ endif()
 # (`__asan_init`, `__asan_register_elf_globals`, ...). `clang-repl` itself
 # is not asanified, so those references stay unresolved unless the ASan
 # runtime is `LD_PRELOAD`'d into the REPL process. The wrapper handles
-# this automatically when `CAT_ASAN_RUNTIME_PATH` is non-empty.
-set(CAT_ASAN_RUNTIME_PATH "")
-if (CAT_USE_SANITIZERS)
-  execute_process(
-    COMMAND "${CMAKE_CXX_COMPILER}" -print-file-name=libclang_rt.asan-x86_64.so
-    OUTPUT_VARIABLE _cat_asan_runtime
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-  if (IS_ABSOLUTE "${_cat_asan_runtime}" AND EXISTS "${_cat_asan_runtime}")
-    set(CAT_ASAN_RUNTIME_PATH "${_cat_asan_runtime}")
-  else()
-    message(WARNING
-      "CAT_BUILD_SHARED + CAT_USE_SANITIZERS: could not locate "
-      "libclang_rt.asan-x86_64.so for `${CMAKE_CXX_COMPILER}` "
-      "(`${_cat_asan_runtime}`). clang-repl-libcat will fail with "
-      "undefined `__asan_*` symbols at JIT time; export LD_PRELOAD "
-      "manually as a workaround.")
-  endif()
-  unset(_cat_asan_runtime)
+# this automatically when `CAT_ASAN_RUNTIME_PATH` is non-empty. The path
+# is already probed and verified at the top of the root CMakeLists.txt;
+# clear it here when sanitizers are off so the generated wrapper does
+# not preload asan into a non-asanified `libcat.so`.
+if (NOT CAT_USE_SANITIZERS)
+  set(CAT_ASAN_RUNTIME_PATH "")
 endif()
 
 configure_file(

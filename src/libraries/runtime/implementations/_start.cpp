@@ -24,12 +24,12 @@ call_static_constructors() {
 }
 
 #ifndef NO_ARGC_ARGV
-[[noreturn, gnu::used, force_align_arg_pointer(32), gnu::no_stack_protector,
-  gnu::no_sanitize_address]]
+[[noreturn, gnu::used, gnu::no_stack_protector, gnu::no_sanitize_address]]
 void
 call_main_args(int argc, char** pp_argv) {
-   // Naked `_start` does not align `%rsp` before the `call` here; match
-   // `call_main_noargs` so SIMD in `__cpu_indicator_init` is safe.
+   // Naked `_start` does not align `%rsp` before the `call` here.
+   // `__cpu_indicator_init`, among other things, require 32-byte alignment.
+   // TODO: Make the alignment architecture dependent.
    cat::align_stack_pointer_32();
    // Initialize `__cpu_model` and `__cpu_features2` for later use.
    x64::detail::__cpu_indicator_init();
@@ -37,8 +37,8 @@ call_main_args(int argc, char** pp_argv) {
    cat::exit(main(argc, pp_argv));
 }
 #else
-[[noreturn, gnu::always_inline, force_align_arg_pointer(32),
-  gnu::no_stack_protector, gnu::no_sanitize_address]]
+[[noreturn, gnu::always_inline, gnu::no_stack_protector,
+  gnu::no_sanitize_address]]
 inline void
 call_main_noargs() {
    // The stack pointer must be aligned to prevent SIMD segfaults.
