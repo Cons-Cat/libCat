@@ -4,7 +4,7 @@ auto
 nix::tty_get_attributes(file_descriptor tty)
    -> cat::scaredy<tty_io_serial, linux_error> {
    // `&configuration` is an output parameter.
-   tty_io_serial configuration;
+   tty_io_serial const configuration;
    cat::scaredy result = sys_ioctl(tty, io_requests::tcgets, &configuration);
 
    if (result.has_value()) {

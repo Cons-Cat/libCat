@@ -151,7 +151,7 @@ nix::process::spawn_impl(cat::uintptr<void> stack, cat::idx initial_stack_size,
       active_clone_flags |= nix::clone_flags::set_tls;
    }
 
-   void* p_clear_tid_for_clone = nullptr;
+   void const* p_clear_tid_for_clone = nullptr;
    if (cat::to_underlying(m_flags & nix::clone_flags::child_set_tid) != 0u) {
       p_clear_tid_for_clone =
          static_cast<void*>(&m_clone_child_clear_tid_for_kernel.m_value);

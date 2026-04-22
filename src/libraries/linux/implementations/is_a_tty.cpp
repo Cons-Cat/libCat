@@ -3,11 +3,11 @@
 auto
 nix::is_a_tty(file_descriptor file_descriptor) -> scaredy_nix<void> {
    // `&size` is an output parameter.
-   tty_window_size size;
+   tty_window_size const size;
    return sys_ioctl(file_descriptor, io_requests::tiocgwinsz, &size);
 }
 
 auto
-nix::is_a_tty(tty_descriptor) -> scaredy_nix<void> {
+nix::is_a_tty(tty_descriptor /*unused*/) -> scaredy_nix<void> {
    return cat::monostate;
 }

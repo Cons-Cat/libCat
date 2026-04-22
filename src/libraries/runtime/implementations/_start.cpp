@@ -26,7 +26,7 @@ call_static_constructors() {
 #ifndef NO_ARGC_ARGV
 [[noreturn, gnu::used, gnu::no_stack_protector, gnu::no_sanitize_address]]
 void
-call_main_args(int argc, char** pp_argv) {
+call_main_args(int argc, char* const* pp_argv) {
    // Naked `_start` does not align `%rsp` before the `call` here.
    // `__cpu_indicator_init`, among other things, require 32-byte alignment.
    // TODO: Make the alignment architecture dependent.
