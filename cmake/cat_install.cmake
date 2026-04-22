@@ -23,9 +23,9 @@
 #   <prefix>/include/libcat/global_includes.hpp  force-included header
 #   <prefix>/share/libcat/libcat.ld              custom linker script
 #
-# Disabled by default to keep the configure step quiet for hack-and-
-# build users. Flip on for distro packaging or an installed-consumer
-# smoke test.
+# Registering these rules unconditionally has no cost on a regular
+# build -- CMake only executes them on `cmake --install` / `ninja
+# install`. Consumers who never install pay nothing.
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)

@@ -164,11 +164,12 @@ jobs:
 
       - name: Configure, build, install, and consume (CAT_USE_SHARED=ON, Debug)
         # `CAT_USE_SHARED=ON` swaps `cat`'s INTERFACE-linked impl to
-        # `cat-impl-shared`. `CAT_INSTALL=ON` exposes the install
-        # rules from `cmake/cat_install.cmake`. The downstream smoke
-        # binary's "Hello from find_package(cat)!" output confirms
-        # `_start.cpp`, `libcat.ld`, `global_includes.hpp`, headers,
-        # and the .so were all installed and located correctly.
+        # `cat-impl-shared`. Install rules from `cmake/cat_install.cmake`
+        # are registered unconditionally, so `cmake --install` just
+        # works. The downstream smoke binary's "Hello from
+        # find_package(cat)!" output confirms `_start.cpp`, `libcat.ld`,
+        # `global_includes.hpp`, headers, and the .so were all installed
+        # and located correctly.
         run: |
           set -eu
 
@@ -177,7 +178,6 @@ jobs:
             -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCAT_USE_SANITIZERS=ON \
             -DCAT_USE_SHARED=ON \
-            -DCAT_INSTALL=ON \
             -DCMAKE_INSTALL_PREFIX="${PWD}/install-shared"
           cmake --build build-shared
           ctest --test-dir build-shared --verbose --output-on-failure
