@@ -5,32 +5,31 @@ Checks: "bugprone-*,
          readability-*,
          # clang-analyzer-*,
          # cppcoreguidelines-*,
+         cppcoreguidelines-macro-usage,
          misc-*,
          # DISABLE SOME CHECKS:
          -bugprone-easily-swappable-parameters,
          -bugprone-reserved-identifier,
-         -performance-noexcept-move-constructor,
+         -performance-noexcept-move-constructor, # TODO: Enable this when exceptions work.
          -modernize-avoid-c-arrays,
-         -modernize-use-auto,
+         -modernize-use-auto, # TODO: Configure this.
          -readability-magic-numbers,
-         -readability-enum-initial-value,
          -readability-identifier-length,
          -readability-uppercase-literal-suffix,
-         -readability-function-cognitive-complexity,
          -readability-convert-member-functions-to-static,
          -readability-static-accessed-through-instance,
-         -readability-named-parameter,
          -readability-function-cognitive-complexity,
-         -readability-else-after-return,
+         -readability-redundant-parentheses, # This doesn't work reliably.
          -cppcoreguidelines-avoid-magic-numbers,
          -cppcoreguidelines-pro-type-union-access,
          -cppcoreguidelines-pro-bounds-pointer-arithmetic,
          -cppcoreguidelines-pro-type-reinterpret-cast,
-         -cppcoreguidelines-macro-usage,
          -misc-non-private-member-variables-in-classes,
          -misc-unused-using-decls,
          -misc-unconventional-assign-operator,
          -misc-use-internal-linkage,
+         -misc-header-include-cycle,
+         -misc-include-cleaner,
          "
 
 WarningsAsErrors: ''
@@ -63,6 +62,8 @@ CheckOptions:
   - { key: readability-identifier-naming.TemplateParameterIgnoredRegexp,    value: '[A-Z]' }
   - { key: readability-identifier-naming.TypeAliasIgnoredRegexp,            value: '.*[A-Z].*|[a-z0-9_]_$' }
   - { key: readability-identifier-naming.TypedefIgnoredRegexp,              value: '.*[A-Z].*|[a-z0-9_]_$' }
-  - { key: performance-unnecessary-value-param.AllowedTypes,                value: string;span;io_vector }
+  - { key: performance-unnecessary-value-param.AllowedTypes,                value: basic_str_span;span;io_vector }
   - { key: readability-operators-representation.BinaryOperators,            value: '&&;&=;&;|;~;!;!=;||;|=;^;^=' }
+  - { key: cppcoreguidelines-macro-usage.AllowedRegexp,                     value: '^(CAT_.*|JKJ_.*|mov|fwd|ssizeof|defer|prop|prop_or|prop_as|test|[PWASD]|L[0-9NZG])$' }
+  - { key: readability-named-parameter.InsertPlainNamesInForwardDecls,      value: 'true' }
 ...

@@ -63,6 +63,31 @@ same comparison as =cat-format=, but instead of rewriting, it reports every
 file that would be reformatted. If one or more files are reported, then the script
 exits with an error code.
 
+** =cat-tidy=
+#+BEGIN_SRC sh
+  cmake --build build/ --target cat-tidy
+#+END_SRC
+Runs =clang-tidy= across every libCat translation unit via the =run-clang-tidy=
+driver, applying fix-its in place and re-formatting touched lines with the
+project's =.clang-format= rules. Uses the build directory's
+=compile_commands.json=, which the tidy target forces CMake to emit.
+
+CMake automatically attempts to find an appropriate version of =clang-tidy=
+and =run-clang-tidy= on =PATH= (both ship together in the =clang-tools-<N>=
+apt package). Override either with =-DCAT_CLANG_TIDY_PATH=/path/to/clang-tidy=
+or =-DCAT_RUN_CLANG_TIDY_PATH=/path/to/run-clang-tidy=. These are only applied
+to libCat sources, so it is not recommended to configure them unless discovery
+failed.
+
+** =cat-tidy-check=
+#+BEGIN_SRC sh
+  cmake --build build/ --target cat-tidy-check
+#+END_SRC
+The read-only variant of =cat-tidy= primarily intended for CI. Runs the same
+=clang-tidy= pass with =-warnings-as-errors=*= so any diagnostic exits the
+script with an error code. Fix the reported issues (or run =cat-tidy= to apply
+the auto-fixable subset).
+
 ** =cat-opt-report=
 #+BEGIN_SRC sh
   cmake --build build/ --target cat-opt-report
@@ -180,5 +205,8 @@ All build options are CMake cache variables; pass them with =-D= at configure ti
 - =CAT_CLANG_FORMAT_PATH= - Path to a specific =clang-format= binary
   (defaults to whatever cmake auto-discovers on =PATH=). Only consulted by
   the =cat-format= / =cat-format-check= targets.
+- =CAT_CLANG_TIDY_PATH= / =CAT_RUN_CLANG_TIDY_PATH= - Paths to specific
+  =clang-tidy= and =run-clang-tidy= binaries (default to auto-discovery on
+  =PATH=). Only consulted by the =cat-tidy= / =cat-tidy-check= targets.
 - =CAT_SCCACHE_EXECUTABLE= - Path to a specific =sccache= binary (defaults
   to =find_program= on =PATH=). Only consulted when =CAT_USE_SCCACHE=ON=.

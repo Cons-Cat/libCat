@@ -22,12 +22,12 @@ cat::detail::compare_strings_detail(str_view const string_1,
    auto loop = [&](idx batch_count) -> bool {
       while (length_iterator >= vector_size * batch_count) {
          for (idx i = 0u; i < batch_count; ++i) {
-            char const* const chunk_1 =
-               p_string_1_iterator + i.raw * vector_size.raw;
-            char const* const chunk_2 =
-               p_string_2_iterator + i.raw * vector_size.raw;
-            vectors_1[i].load_unaligned(chunk_1);
-            vectors_2[i].load_unaligned(chunk_2);
+            char const* const p_chunk_1 =
+               p_string_1_iterator + (i.raw * vector_size.raw);
+            char const* const p_chunk_2 =
+               p_string_2_iterator + (i.raw * vector_size.raw);
+            vectors_1[i].load_unaligned(p_chunk_1);
+            vectors_2[i].load_unaligned(p_chunk_2);
             comparisons[i] = vectors_1[i].equal_lanes(vectors_2[i]);
          }
 

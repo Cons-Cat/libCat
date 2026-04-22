@@ -925,7 +925,7 @@ sys_open(char const* p_file_path, open_mode file_mode,
 
 // Syscall 3
 auto
-sys_close(file_descriptor file_descriptor) -> scaredy_nix<void>;
+sys_close(file_descriptor descriptor) -> scaredy_nix<void>;
 
 // TODO: Flesh this out more.
 // TODO: Extract this to an implementation file.

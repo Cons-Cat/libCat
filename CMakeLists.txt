@@ -111,7 +111,7 @@ list(
   -Wno-unqualified-std-cast-call
   -Wno-main
   -Wno-redundant-consteval-if # TODO: Do we need this? Remove if not.
-  # Use GCC extensions.
+  # Use Clang extensions.
   -Wno-gnu
 
   # Lifetime analysis and bounds-safety.
@@ -358,6 +358,9 @@ add_subdirectory(examples/)
 
 # Source-formatting targets (`cat-format`, `cat-format-check`).
 include(${CMAKE_SOURCE_DIR}/cmake/format.cmake)
+
+# Source-tidying targets (`cat-tidy`, `cat-tidy-check`).
+include(${CMAKE_SOURCE_DIR}/cmake/tidy.cmake)
 
 # Compiler optimization report target (`cat-opt-report`).
 include(${CMAKE_SOURCE_DIR}/cmake/opt_report.cmake)

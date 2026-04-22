@@ -33,10 +33,10 @@ cat::default_assert_handler(source_location const& callsite) {
    print("Press: 1 (Continue), 2 (Debug), 3 (Abort)\n").or_exit();
 
    while (true) {
-      unsigned char input = nix::read_char().or_exit();
+      unsigned char const input = nix::read_char().or_exit();
       if (input >= '1' && input <= '3') {
          // ASCII trick that converts an inputted char to a digit.
-         uint1 digit = input - 49_u1;
+         uint1 const digit = input - 49_u1;
 
          // The value of `digit` is one less than what was inputted.
          switch (digit.raw) {
