@@ -6,42 +6,15 @@ on:
   pull_request:
 
 jobs:
-  lint:
-    # Lightweight static checks on the source tree. No toolchain
-    # needed; runs in parallel with the heavier compile / test jobs to
-    # gate invariants that don't require a build.
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Verify unique basenames under src/
-        # Every file under `src/` must have a unique name. This makes searching
-        # the codebase easier and is important for the `cat-intermediaries` target.
-        continue-on-error: true
-        run: |
-          set -eu
-          dups=$(find src -type f \
-            ! -name 'CMakeLists.txt' \
-            ! -name '*.ld' \
-            -printf '%f\n' \
-            | sort | uniq -d)
-          if [ -n "${dups}" ]; then
-            echo 'WARNING: duplicate basenames under src/:'
-            while IFS= read -r name; do
-              printf '\n  %s:\n' "${name}"
-              find src -type f -name "${name}" -printf '    %p\n'
-            done <<< "${dups}"
-            exit 1
-          fi
-          count=$(find src -type f \
-            ! -name 'CMakeLists.txt' \
-            ! -name '*.ld' \
-            | wc -l)
-          printf 'OK: %d files under src/ have unique basenames\n' "${count}"
-
-  debug:
-    # Debug + sanitizers. Owns `system specs` since sanitizers are
-    # the most likely place to land a CPU-dependent failure.
+  lscpu:
+    # Log host CPU and ISA up front so a CPU-dependent failure
+    # anywhere in the matrix is diagnosable from the run log. The
+    # `ubuntu-24.04` label does not pin a microarchitecture. In
+    # practice based on previous runs, the Azure SKU rotates
+    # across Intel Ice Lake-SP (Xeon Platinum 8370C) and AMD
+    # EPYC (Milan-era 7763, Genoa-era 9V74) within the same
+    # hour, with no advance notice and with materially different
+    # feature flags (AVX-512, AVX-VNNI, GFNI-on-VEX, etc.).
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -49,11 +22,6 @@ jobs:
       - uses: ./.github/actions/setup-toolchain
 
       - name: System specs
-        # Log host CPU and ISA so a CPU-dependent failure is
-        # diagnosable from the run log. The `ubuntu-24.04` image
-        # cycles between Skylake / Ice Lake / Sapphire Rapids
-        # without notice. `::group::` blocks collapse the long flag
-        # lists by default in the Actions UI.
         run: |
           set -eu
 
@@ -97,6 +65,47 @@ jobs:
             | grep -E '^#define __(SSE|AVX|F16C|FMA|XOP|BMI|LZCNT|POPCNT|MOVBE|AES|VAES|SHA|PCLMUL|VPCLMULQDQ|GFNI|ADX|RDRND|RDSEED|CLFLUSHOPT|CLWB|FSGSBASE|MWAIT|MWAITX|CLDEMOTE|RDTSCP|MOVDIR|WAITPKG|SERIALIZE)' \
             | sort
           echo "::endgroup::"
+
+  lint:
+    # Lightweight static checks on the source tree. No toolchain
+    # needed; runs in parallel with the heavier compile / test jobs to
+    # gate invariants that don't require a build.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify unique basenames under src/
+        # Every file under `src/` must have a unique name. This makes searching
+        # the codebase easier and is important for the `cat-intermediaries` target.
+        continue-on-error: true
+        run: |
+          set -eu
+          dups=$(find src -type f \
+            ! -name 'CMakeLists.txt' \
+            ! -name '*.ld' \
+            -printf '%f\n' \
+            | sort | uniq -d)
+          if [ -n "${dups}" ]; then
+            echo 'WARNING: duplicate basenames under src/:'
+            while IFS= read -r name; do
+              printf '\n  %s:\n' "${name}"
+              find src -type f -name "${name}" -printf '    %p\n'
+            done <<< "${dups}"
+            exit 1
+          fi
+          count=$(find src -type f \
+            ! -name 'CMakeLists.txt' \
+            ! -name '*.ld' \
+            | wc -l)
+          printf 'OK: %d files under src/ have unique basenames\n' "${count}"
+
+  debug:
+    # Debug build with sanitizers.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-toolchain
 
       - name: Configure, build, and test (Debug)
         run: |
