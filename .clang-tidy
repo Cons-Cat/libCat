@@ -6,12 +6,12 @@ Checks: "bugprone-*,
          # clang-analyzer-*,
          # cppcoreguidelines-*,
          cppcoreguidelines-macro-usage,
+         cppcoreguidelines-avoid-non-const-global-variables,
          misc-*,
          # DISABLE SOME CHECKS:
          -bugprone-easily-swappable-parameters,
          -bugprone-reserved-identifier,
          -performance-noexcept-move-constructor, # TODO: Enable this when exceptions work.
-         -modernize-avoid-c-arrays,
          -modernize-use-auto, # TODO: Configure this.
          -readability-magic-numbers,
          -readability-identifier-length,
@@ -63,6 +63,9 @@ CheckOptions:
   - { key: readability-identifier-naming.TypeAliasIgnoredRegexp,            value: '.*[A-Z].*|[a-z0-9_]_$' }
   - { key: readability-identifier-naming.TypedefIgnoredRegexp,              value: '.*[A-Z].*|[a-z0-9_]_$' }
   - { key: performance-unnecessary-value-param.AllowedTypes,                value: basic_str_span;span;io_vector }
+  - { key: modernize-avoid-c-arrays.AllowStringArrays,                      value: 'true' }
+  - { key: cppcoreguidelines-avoid-non-const-global-variables.AllowThreadLocal, value: 'true' }
+  - { key: misc-const-correctness.TransformValues,                          value: 'false' } # Does not trace mutable values through output parameters.
   - { key: readability-operators-representation.BinaryOperators,            value: '&&;&=;&;|;~;!;!=;||;|=;^;^=' }
   - { key: cppcoreguidelines-macro-usage.AllowedRegexp,                     value: '^(CAT_.*|JKJ_.*|mov|fwd|ssizeof|defer|prop|prop_or|prop_as|test|[PWASD]|L[0-9NZG])$' }
   - { key: readability-named-parameter.InsertPlainNamesInForwardDecls,      value: 'true' }
