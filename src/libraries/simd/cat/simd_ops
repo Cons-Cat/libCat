@@ -1,20 +1,20 @@
 // -*- mode: c++ -*-
 #pragma once
 
-// SIMD callable objects (`simd_sqrt`, `make_simd_loaded`, …) and their
+// SIMD callable objects (`simd_sqrt`, `make_simd_loaded`, ...) and their
 // `detail::*_impl` machinery. Include `<cat/simd_ops>` when you need these
 // APIs.
 //
 // Helpers here follow `cat::simd` and prefer `__builtin_elementwise_*` where it
 // fits. After `namespace detail` closes, mask-free factories and lane helpers
-// (`make_simd_filled`, `make_simd_mask_filled`, `iota`, `simd_fma_lane`, …)
+// (`make_simd_filled`, `make_simd_mask_filled`, `iota`, `simd_fma_lane`, ...)
 // repeat one scalar per lane unless a lane-mask subscript says otherwise.
 //
 // Functor templates `simd_filled`, `simd_mask_filled`, `simd_iota`, and the
 // `make_simd_loaded*` family support both `operator()` and
-// `operator[](lane_blend_mask)`, written `functor[mask](passthrough, …)`.
-// Elementwise builtins (`simd_sqrt`, …) follow EVE-style `fn(args…)` and
-// `fn[mask](args…)`. Masked loads use `simd_load_aligned[mask]` and mirror
+// `operator[](lane_blend_mask)`, written `functor[mask](passthrough, ...)`.
+// Elementwise builtins (`simd_sqrt`, ...) follow EVE-style `fn(args...)` and
+// `fn[mask](args...)`. Masked loads use `simd_load_aligned[mask]` and mirror
 // `make_simd_loaded_aligned[mask]`.
 //
 // Documentation often calls vector loads gather and vector stores scatter.
@@ -42,7 +42,7 @@ concept vec_floating_point =
 template <typename V, typename T>
 concept is_simd_of = is_simd<V> && is_same<typename V::scalar_type, T>;
 
-// EVE-style elementwise functors: `fn(input…)` unmasked, `fn[mask](input…)`
+// EVE-style elementwise functors: `fn(input...)` unmasked, `fn[mask](input...)`
 // applies per lane where the mask is true. Inactive lanes keep the first simd
 // argument (`input`, or `left` for two-vector ops). CRTP bases are
 // `simd_elementwise_*_interface`.
@@ -645,7 +645,7 @@ struct simd_load_from_blend_masked_impl {
    }
 };
 
-// Same EVE-style split as `simd_elementwise_interface` (`simd_sqrt`, …):
+// Same EVE-style split as `simd_elementwise_interface` (`simd_sqrt`, ...):
 // unmasked `operator()` and `operator[]` returning a lane-masked helper.
 // Load factories take `memory_lane const*` (`invoke` / `bind_masked`)
 // instead of `simd` input / `invoke_full` / `invoke_lanewise`. `V` is repeated
@@ -966,7 +966,7 @@ template <typename T, typename Abi>
 constexpr auto
 simd_if_else_apply(simd_mask<T, Abi> mask, simd<T, Abi> on_true,
                    simd<T, Abi> on_false) -> simd<T, Abi> {
-   // P2638R0 §1.3 masked lane pick (readable `where`/`select` style blend).
+   // P2638R0 masked lane pick (readable `where`/`select` style blend).
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
    simd<T, Abi> result{};
 #pragma clang loop vectorize_predicate(enable)
@@ -1914,7 +1914,7 @@ struct simd_bitreverse_impl : simd_elementwise_interface<simd_bitreverse_impl> {
    [[nodiscard]]
    constexpr auto
    invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
-      // P2638R0 §1.18 / §1.20 per-lane bit-reverse on integral lanes.
+      // P2638R0 per-lane bit-reverse on integral lanes.
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       if constexpr (has_simd_abi_unary_full<simd_abi::op_bitreverse, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_bitreverse, T, Abi>(
@@ -1925,28 +1925,23 @@ struct simd_bitreverse_impl : simd_elementwise_interface<simd_bitreverse_impl> {
    }
 
    template <typename T>
-      requires(is_integral<T> && !is_bool<T>)
+      requires(is_unsigned_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x) const -> T {
-      // P2638R0 §1.18 / §1.20 per-lane bit-reverse (fallback lane hook).
+      // P2638R0 Per-lane bit-reverse (fallback lane hook).
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       using U = make_unsigned_type<T>;
       U const u = static_cast<U>(x);
       U reversed{};
       if constexpr (sizeof(U) == 1) {
-         reversed = static_cast<U>(static_cast<unsigned char>(
-            __builtin_bitreverse32(static_cast<unsigned int>(u)) >> 24u));
+         reversed = __builtin_bitreverse8(static_cast<unsigned char>(u));
       } else if constexpr (sizeof(U) == 2) {
-         reversed = static_cast<U>(__builtin_bitreverse16(
-            static_cast<unsigned short>(static_cast<unsigned>(u))));
+         reversed = __builtin_bitreverse16(static_cast<unsigned short>(u));
       } else if constexpr (sizeof(U) == 4) {
-         reversed = static_cast<U>(
-            __builtin_bitreverse32(static_cast<unsigned int>(u)));
+         reversed = __builtin_bitreverse32(static_cast<unsigned int>(u));
       } else {
-         reversed = static_cast<U>(
-            __builtin_bitreverse64(static_cast<unsigned long long>(
-               static_cast<unsigned long long>(u))));
+         reversed = __builtin_bitreverse64(static_cast<unsigned long long>(u));
       }
       return static_cast<T>(reversed);
    }
@@ -2155,7 +2150,7 @@ struct simd_if_else_impl {
    constexpr auto
    operator()(simd_mask<T, Abi> mask, simd<T, Abi> on_true,
               simd<T, Abi> on_false) const -> simd<T, Abi> {
-      // P2638R0 §1.3 see `simd_if_else_apply`.
+      // P2638R0 see `simd_if_else_apply`.
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       return detail::simd_if_else_apply(mask, on_true, on_false);
    }
@@ -2176,7 +2171,7 @@ struct simd_if_else_impl {
    constexpr auto
    operator()(make_simd_mask_else<simd_mask<T, Abi>, A> const& else_branch,
               simd<T, Abi> on_true) const -> simd<T, Abi> {
-      // P2638R0 §1.3 see `simd_if_else_apply`.
+      // P2638R0 see `simd_if_else_apply`.
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       simd<T, Abi> on_false{};
       if constexpr (is_same<remove_cvref<A>, simd<T, Abi>>) {
@@ -2195,7 +2190,7 @@ struct simd_select_impl {
    constexpr auto
    operator()(simd_mask<T, Abi> mask, simd<T, Abi> on_true,
               simd<T, Abi> on_false) const -> simd<T, Abi> {
-      // P2638R0 §1.3 see `simd_if_else_apply`.
+      // P2638R0 see `simd_if_else_apply`.
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       return detail::simd_if_else_apply(mask, on_true, on_false);
    }
@@ -2539,6 +2534,9 @@ template <typename T>
 constexpr auto
 simd_popcount_lane(T x) -> T {
    auto const unsigned_bits = static_cast<make_unsigned_type<T>>(x);
+   // TODO: Swap back to `__builtin_stdc_count_ones` once the apt.llvm.org
+   // Clang 23 nightly picks up PR #185978 (merged 2026-04-17).
+   // return static_cast<T>(__builtin_stdc_count_ones(unsigned_bits));
    return static_cast<T>(__builtin_popcountg(unsigned_bits));
 }
 
@@ -2679,48 +2677,22 @@ struct simd_expand_impl {
    }
 };
 
-template <typename T>
-   requires(is_integral<T> && !is_bool<T>)
+template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 simd_rotate_left_lane(T operand, iword count) -> T {
-   iword const w = iword(sizeof(T) * 8u);
-   auto const w_r = w.raw;
-   auto c_r = count.raw % w_r;
-   if (c_r < 0) {
-      c_r += w_r;
-   }
-   if (c_r == 0) {
-      return operand;
-   }
-   auto const unsigned_bits = static_cast<make_unsigned_type<T>>(operand);
-   idx::raw_type const cu = static_cast<idx::raw_type>(c_r);
-   idx::raw_type const ws = static_cast<idx::raw_type>(w_r);
-   return static_cast<T>((unsigned_bits << cu) | (unsigned_bits >> (ws - cu)));
+   return rotate_left(operand, count);
 }
 
-template <typename T>
-   requires(is_integral<T> && !is_bool<T>)
+template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 simd_rotate_right_lane(T operand, iword count) -> T {
-   iword const w = iword(sizeof(T) * 8u);
-   auto const w_r = w.raw;
-   auto c_r = count.raw % w_r;
-   if (c_r < 0) {
-      c_r += w_r;
-   }
-   if (c_r == 0) {
-      return operand;
-   }
-   auto const unsigned_bits = static_cast<make_unsigned_type<T>>(operand);
-   idx::raw_type const cu = static_cast<idx::raw_type>(c_r);
-   idx::raw_type const ws = static_cast<idx::raw_type>(w_r);
-   return static_cast<T>((unsigned_bits >> cu) | (unsigned_bits << (ws - cu)));
+   return rotate_right(operand, count);
 }
 
 template <typename T, typename Abi>
-   requires(is_integral<T> && !is_bool<T>)
+   requires(is_unsigned_integral<T>)
 [[nodiscard]]
 constexpr auto
 simd_rotate_left_generic(simd<T, Abi> input, iword count) -> simd<T, Abi> {
@@ -2732,7 +2704,7 @@ simd_rotate_left_generic(simd<T, Abi> input, iword count) -> simd<T, Abi> {
 }
 
 template <typename T, typename Abi>
-   requires(is_integral<T> && !is_bool<T>)
+   requires(is_unsigned_integral<T>)
 [[nodiscard]]
 constexpr auto
 simd_rotate_right_generic(simd<T, Abi> input, iword count) -> simd<T, Abi> {
@@ -2748,7 +2720,7 @@ struct simd_rotate_left_impl
    constexpr simd_rotate_left_impl() = default;
 
    template <typename T, typename Abi>
-      requires(is_integral<T> && !is_bool<T>)
+      requires(is_unsigned_integral<T>)
    [[nodiscard]]
    constexpr auto
    invoke_full(simd<T, Abi> input, iword count) const -> simd<T, Abi> {
@@ -2760,8 +2732,7 @@ struct simd_rotate_left_impl
       }
    }
 
-   template <typename T>
-      requires(is_integral<T> && !is_bool<T>)
+   template <is_unsigned_integral T>
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T operand, iword count) const -> T {
@@ -2774,7 +2745,7 @@ struct simd_rotate_right_impl
    constexpr simd_rotate_right_impl() = default;
 
    template <typename T, typename Abi>
-      requires(is_integral<T> && !is_bool<T>)
+      requires(is_unsigned_integral<T>)
    [[nodiscard]]
    constexpr auto
    invoke_full(simd<T, Abi> input, iword count) const -> simd<T, Abi> {
@@ -2786,8 +2757,7 @@ struct simd_rotate_right_impl
       }
    }
 
-   template <typename T>
-      requires(is_integral<T> && !is_bool<T>)
+   template <is_unsigned_integral T>
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T operand, iword count) const -> T {
@@ -2891,7 +2861,7 @@ struct simd_fma_impl
    constexpr auto
    invoke_full(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z) const
       -> simd<T, Abi> {
-      // P2638R0 §1.19 fused multiply-add on every lane.
+      // P2638R0 fused multiply-add on every lane.
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       if constexpr (has_simd_abi_ternary_full<simd_abi::op_fma, T, Abi>) {
          return simd_abi_apply_ternary_full<simd_abi::op_fma, T, Abi>(x, y, z);
@@ -2904,7 +2874,7 @@ struct simd_fma_impl
    [[nodiscard]]
    constexpr auto
    invoke_lanewise(T x, T y, T z) const -> T {
-      // P2638R0 §1.19 fused multiply-add (scalar lane hook).
+      // P2638R0 fused multiply-add (scalar lane hook).
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       using R = raw_arithmetic_type<T>;
       if constexpr (is_same<R, float>) {

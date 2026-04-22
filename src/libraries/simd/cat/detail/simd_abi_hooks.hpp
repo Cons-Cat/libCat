@@ -9,17 +9,17 @@
 // header after `<cat/simd>`. Each specialization provides `static constexpr`
 // `invoke` with the signature expected by `simd_extras.hpp`.
 //
-// Call sites use `if constexpr (requires { unary_full<…>::invoke(...) })` and
-// `invoke<Expected, Hook, …>(...)`. Mismatched return types fail `static_assert`
+// Call sites use `if constexpr (requires { unary_full<...>::invoke(...) })` and
+// `invoke<Expected, Hook, ...>(...)`. Mismatched return types fail `static_assert`
 // with an explicit message instead of a terse concept error.
 //
 // `mask_to_bitset<T, Abi>` specializations for x86 ABIs live in
 // `implementations/simd_mask_bitset.tpp` beside `simd_to_bitset` (after
-// `<cat/bitset>`). Each `invoke(simd_mask<…>)` returns an unsigned lane-bit
+// `<cat/bitset>`). Each `invoke(simd_mask<...>)` returns an unsigned lane-bit
 // pattern (movmsk-style encoding), not `cat::bitset`, so the bitset header does
 // not create a cycle. `simd_to_bitset` passes `Expected` =
 // `decltype(mask_to_bitset<T, Abi>::invoke(declval<simd_mask<T, Abi>>()))` into
-// `invoke<Expected, …>`.
+// `invoke<Expected, ...>`.
 //
 // Operation tags name optional ISA fast paths. When `invoke` exists,
 // `simd_extras.hpp` prefers it over `__builtin_elementwise_*`, which do not

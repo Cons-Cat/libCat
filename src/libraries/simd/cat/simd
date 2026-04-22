@@ -266,7 +266,7 @@ template <typename X>
 concept is_simd_or_mask = is_simd<X> || is_simd_mask<X>;
 
 // Element type stored in `simd::raw` (`GNU` vector lanes). `T` is the logical
-// lane type (`int`, `cat::int4`, …). Raw `bool` uses `unsigned char` storage
+// lane type (`int`, `cat::int4`, ...). Raw `bool` uses `unsigned char` storage
 // because GCC has no `bool` vector type. Other lanes use `make_raw_arithmetic`
 template <typename T>
 struct simd_vector_element_trait {
@@ -432,9 +432,8 @@ class alignas(in_abi::alignment.raw) simd {
       requires detail::simd_consteval_broadcast_arg<remove_cvref<U>, T>
    consteval simd(U value) {
       // These semantics are described by P3844R2.
-      bool const broadcast_ok =
-         detail::has_simd_broadcast_consteval_value<remove_cvref<U>, T>(value);
-      [[assume(broadcast_ok)]];
+      [[assume(detail::has_simd_broadcast_consteval_value<remove_cvref<U>, T>(
+         value))]];
       this->fill(static_cast<scalar_type>(value));
    }
 
@@ -466,7 +465,7 @@ class alignas(in_abi::alignment.raw) simd {
                  typename AbiM::template make_abi_type<
                     detail::simd_unary_signed_integer_from_element_t<U>>>>)
        : simd(+k) {
-      // P3922R1. `+k` is the standard mask to `simd` bridge.
+      // P3922R1 `+k` is the standard mask to `simd` bridge.
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3922r1.pdf
    }
 
@@ -823,13 +822,13 @@ class alignas(in_abi::alignment.raw) simd {
    }
 
    // P2664R11 permuting subscript `v[indices]` and C++26
-   // multi-subscript `v[i0, i1, …]` (implemented via `simd_permute`).
+   // multi-subscript `v[i0, i1, ...]` (implemented via `simd_permute`).
    template <typename Idx, typename IdxAbi>
    [[nodiscard]]
    constexpr auto
    operator[](simd<Idx, IdxAbi> const& indices) const;
 
-   // P2664R11 multi-subscript `v[i0, i1, …]` (implemented via
+   // P2664R11 multi-subscript `v[i0, i1, ...]` (implemented via
    // `simd_permute`).
    template <typename... Ts>
       requires(sizeof...(Ts) >= 2)
@@ -986,8 +985,8 @@ class alignas(in_abi::alignment.raw) simd {
    // Fill all lanes with `value`. This is also known as a "splat" operation.
    template <typename U>
       requires(is_constructible<scalar_type, U>)
-   // This impedes correct codegen.
-   [[gnu::no_sanitize_address, gnu::no_sanitize_undefined]]
+   // This impedes correct codegen. TODO: Why?
+   [[gnu::no_sanitize_address]]
    constexpr auto
    fill(U value) -> simd& {
       scalar_type const fill_value = static_cast<scalar_type>(value);

@@ -347,16 +347,9 @@ raw_mixed_integral_compare_sound(RawL const lhs, RawR const rhs) -> bool {
 
 }  // namespace detail
 
-// Overflow intrinsics optimize wrapping and saturation well in GCC.
-// `[[gnu::optimize(2)]]` is required because the codegen is awful by default.
-
 // Add two integers with saturating overflow.
 template <is_raw_integral T>
-[[nodiscard,
-#ifndef __OPTIMIZED__
-  gnu::optimize(2)
-#endif
-]]
+[[nodiscard]]
 constexpr auto
 sat_add(T lhs, T rhs) -> T {
    T sum;
@@ -392,11 +385,7 @@ wrap_add(T lhs, U rhs) -> detail::promoted_type<T, U> {
 
 // Subtract two integers with saturating overflow.
 template <is_raw_integral T>
-[[nodiscard,
-#ifndef __OPTIMIZED__
-  gnu::optimize(2)
-#endif
-]]
+[[nodiscard]]
 constexpr auto
 sat_sub(T lhs, T rhs) -> T {
    T sum;
@@ -432,11 +421,7 @@ wrap_sub(T lhs, U rhs) -> detail::promoted_type<T, U> {
 
 // Subtract two integers with saturating overflow.
 template <is_raw_integral T>
-[[nodiscard,
-#ifndef __OPTIMIZED__
-  gnu::optimize(2)
-#endif
-]]
+[[nodiscard]]
 constexpr auto
 sat_mul(T lhs, T rhs) -> T {
    T sum;
@@ -472,11 +457,7 @@ wrap_mul(T lhs, U rhs) -> detail::promoted_type<T, U> {
 
 // Subtract two integers with saturating overflow.
 template <is_raw_integral T>
-[[nodiscard,
-#ifndef __OPTIMIZED__
-  gnu::optimize(2)
-#endif
-]]
+[[nodiscard]]
 constexpr auto
 sat_div(T lhs, T rhs) -> T {
    if constexpr (is_signed<T>) {
@@ -513,11 +494,7 @@ wrap_div(T lhs, U rhs) -> detail::promoted_type<T, U> {
 template <is_raw_integral T, is_raw_integral U>
 // TODO: Figure out signed saturating shift semantics.
    requires(is_unsigned<T>)
-[[nodiscard,
-#ifndef __OPTIMIZED__
-  gnu::optimize(2)
-#endif
-]]
+[[nodiscard]]
 constexpr auto
 sat_shl(T value, U bits) {
    if (value == 0) {
@@ -547,11 +524,7 @@ sat_shl(T value, U bits) -> detail::promoted_type<T, U> {
 template <is_raw_integral T, is_raw_integral U>
 // TODO: Figure out signed saturating shift semantics.
    requires(is_unsigned<T>)
-[[nodiscard,
-#ifndef __OPTIMIZED__
-  gnu::optimize(2)
-#endif
-]]
+[[nodiscard]]
 constexpr auto
 sat_shr(T value, U bits) {
    if (value == 0) {
@@ -912,10 +885,12 @@ class arithmetic :
       return p_operand / raw;
    }
 
-   // Generate `operator~`.
+   // Generate `operator~`. Only available for unsigned integral storage.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_complement() const -> arithmetic {
+   bit_complement() const -> arithmetic
+      requires(is_unsigned_integral<T>)
+   {
       return arithmetic(~(raw));
    }
 
@@ -941,10 +916,10 @@ class arithmetic :
       return raw % p_operand;
    }
 
-   // Generate `operator&`.
+   // Generate `operator&`. Only available for unsigned integral storage.
    template <is_arithmetic U>
    // TODO: Should this guarantee operands are the same size?
-      requires(is_safe_arithmetic_comparison<T, U>)
+      requires(is_unsigned_integral<T> && is_safe_arithmetic_comparison<T, U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_and(U operand) const -> detail::promoted_type<arithmetic, U> {
@@ -953,15 +928,16 @@ class arithmetic :
    }
 
    template <typename U>
+      requires(is_unsigned_integral<T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_and(U* p_operand) const -> U* {
       return p_operand & raw;
    }
 
-   // Generate `operator|`.
+   // Generate `operator|`. Only available for unsigned integral storage.
    template <is_arithmetic U>
-      requires(is_safe_arithmetic_comparison<U, T>)
+      requires(is_unsigned_integral<T> && is_safe_arithmetic_comparison<U, T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_or(U operand) const -> detail::promoted_type<T, U> {
@@ -969,14 +945,16 @@ class arithmetic :
    }
 
    template <typename U>
+      requires(is_unsigned_integral<T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_or(U* p_operand) const -> U* {
       return p_operand | raw;
    }
 
-   // Generate `operator<<`.
+   // Generate `operator<<`. Only available for unsigned integral storage.
    template <is_arithmetic U>
+      requires(is_unsigned_integral<T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_left_by(U operand) const -> arithmetic {
@@ -988,14 +966,16 @@ class arithmetic :
    }
 
    template <is_arithmetic U>
+      requires(is_unsigned_integral<T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_left_into(U other) const -> U {
       return other << raw;
    }
 
-   // Generate `operator>>`.
+   // Generate `operator>>`. Only available for unsigned integral storage.
    template <is_arithmetic U>
+      requires(is_unsigned_integral<T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_right_by(U operand) const -> arithmetic {
@@ -1008,6 +988,7 @@ class arithmetic :
    }
 
    template <is_arithmetic U>
+      requires(is_unsigned_integral<T>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_right_into(U other) const -> U {
@@ -1407,8 +1388,10 @@ class arithmetic_ptr :
          .divide_into(raw);
    }
 
-   // Generate `operator&`.
+   // Generate `operator&`. Only available for unsigned pointer storage
+   // (e.g. `uintptr<T>`); `intptr<T>` intentionally opts out of bitwise.
    template <typename U>
+      requires(is_unsigned_integral<storage_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_and(U other) const -> arithmetic_ptr {
@@ -1416,6 +1399,7 @@ class arithmetic_ptr :
    }
 
    template <typename U>
+      requires(is_unsigned_integral<storage_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_and(U* p_operand) const -> arithmetic_ptr {
@@ -1423,7 +1407,9 @@ class arithmetic_ptr :
          arithmetic_ptr<U, storage_type, overflow_policy>(p_operand));
    }
 
+   // Generate `operator|`. Only available for unsigned pointer storage.
    template <typename U>
+      requires(is_unsigned_integral<storage_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_or(arithmetic_ptr self, U operand) const -> arithmetic_ptr {
@@ -1431,6 +1417,7 @@ class arithmetic_ptr :
    }
 
    template <typename U>
+      requires(is_unsigned_integral<storage_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_or(U* p_operand) const -> arithmetic_ptr {
@@ -1460,7 +1447,9 @@ class arithmetic_ptr :
       return make_raw_arithmetic(operand) % raw;
    }
 
+   // Generate `operator<<`. Only available for unsigned pointer storage.
    template <typename U>
+      requires(is_unsigned_integral<storage_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_left_by(U operand) const -> arithmetic_ptr {
@@ -1468,14 +1457,16 @@ class arithmetic_ptr :
    }
 
    template <is_arithmetic U>
-      requires(is_integral<T>)
+      requires(is_unsigned_integral<storage_type> && is_integral<T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_left_into(U other) const -> U {
       return other << raw;
    }
 
+   // Generate `operator>>`. Only available for unsigned pointer storage.
    template <typename U>
+      requires(is_unsigned_integral<storage_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_right_by(U operand) const -> arithmetic_ptr {
@@ -1483,17 +1474,19 @@ class arithmetic_ptr :
    }
 
    template <is_arithmetic U>
-      requires(is_integral<T>)
+      requires(is_unsigned_integral<storage_type> && is_integral<T>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_right_into(U other) const -> U {
       return other >> raw;
    }
 
-   // Generate `operator~`.
+   // Generate `operator~`. Only available for unsigned pointer storage.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_complement() const -> arithmetic_ptr {
+   bit_complement() const -> arithmetic_ptr
+      requires(is_unsigned_integral<storage_type>)
+   {
       return ~(raw);
    }
 
@@ -1918,61 +1911,13 @@ class index :
       return make_raw_arithmetic(operand) % raw;
    }
 
-   // Generate `operator<<`.
-   template <is_integral T>
-   [[gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   shift_left_by(T other) const -> index {
-      return index(raw << make_raw_arithmetic(other));
-   }
-
-   template <is_arithmetic U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   shift_left_into(U other) const -> U {
-      return other << raw;
-   }
-
-   // Generate `operator>>`.
-   template <is_integral T>
-   [[gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   shift_right_by(T other) const -> index {
-      return index(raw >> make_raw_arithmetic(other));
-   }
-
-   template <is_integral T>
-   [[gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   shift_right_into(T other) const -> decltype(auto) {
-      return other >> raw;
-   }
-
-   // Generate `operator&`.
-   template <is_integral T>
-   [[gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   bit_and(T other) const -> index {
-      return index(raw & make_raw_arithmetic(other));
-   }
-
-   // Generate `operator|`.
-   template <is_integral T>
-   [[gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   bit_or(T other) const -> index {
-      return index(raw | make_raw_arithmetic(other));
-   }
-
-   // Generate `operator~`.
-   [[gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   bit_complement() const -> index {
-      auto complement = ~(raw);
-      // Zero the upper bit so that it remains a 63-bit value.
-      complement &= 0ull << 63u;
-      return index(complement);
-   }
+   // `cat::index` does not provide bitwise operators because, like signed type,
+   // it has a high bit with semantics that are confusing in a bitwise context.
+   // (`&`, `|`, `~`, `<<`, `>>`). Treat an index as an opaque count-like
+   // value; unwrap it via `.raw` for any bit manipulation. Because the
+   // arithmetic interfaces are opt-in via member-function presence, simply
+   // omitting the `bit_*` / `shift_*` members disables the corresponding
+   // operators.
 
    constexpr auto
    undef() & -> detail::overflow_reference<index<overflow_policy>,

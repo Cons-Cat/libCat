@@ -44,9 +44,9 @@ cat::default_assert_handler(source_location const& callsite) {
                // Ignore the assert failure.
                return;
             case 1:
-               // Historically this called `breakpoint()` (`int3`). That surfaces
-               // as SIGTRAP under Release plus sanitizers or ambiguous stdin.
-               // Attach a debugger at `default_assert_handler` instead.
+               // Historically this called `breakpoint()` (`int3`). That
+               // surfaces as SIGTRAP under Release plus sanitizers or ambiguous
+               // stdin. Attach a debugger at `default_assert_handler` instead.
                eprint("Debug trap is disabled; exiting.\n").or_exit();
                exit(1);
             case 2:

@@ -37,9 +37,9 @@ call_main_args(int argc, char** pp_argv) {
    cat::exit(main(argc, pp_argv));
 }
 #else
-[[noreturn, force_align_arg_pointer(32), gnu::no_stack_protector,
-  gnu::no_sanitize_address]]
-void
+[[noreturn, gnu::always_inline, force_align_arg_pointer(32),
+  gnu::no_stack_protector, gnu::no_sanitize_address]]
+inline void
 call_main_noargs() {
    // The stack pointer must be aligned to prevent SIMD segfaults.
    cat::align_stack_pointer_32();
@@ -66,7 +66,10 @@ extern "C"
    // clang-format on
    void
    cat::detail::_start() {
-   // `NO_ARGC_ARGV` can be defined in a build system to skip argument loading.
+   // `NO_ARGC_ARGV` can defined from a CMake target to skip argument loading.
+   // The argument loading version must stay in `asm`. `_start` is `gnu::naked`
+   // so the prologue won't push `%rbp` before reading `argc` / `argv` off the
+   // kernel-supplied stack.
 #ifndef NO_ARGC_ARGV
    asm(R"(.att_syntax prefix ; # rmsbolt requires this. Try `-masm=att`
           pop %rdi        # Load `int4 argc`.
@@ -74,6 +77,6 @@ extern "C"
           call call_main_args
        )");
 #else
-   [[clang::always_inline]] call_main_noargs();
+   call_main_noargs();
 #endif
 }

@@ -47,6 +47,32 @@ test(bit) {
    static_assert(cat::popcount(0b0'1010'1011_u1) == 5);
    static_assert(cat::popcount(0b0'1010'1011_u2) == 5);
 
+   // Test `has_single_bit()`. Matches C23 `stdc_has_single_bit`, so zero is
+   // not a single-bit value.
+   cat::verify(!cat::has_single_bit(0));
+   cat::verify(cat::has_single_bit(1));
+   cat::verify(cat::has_single_bit(2));
+   cat::verify(!cat::has_single_bit(3));
+   cat::verify(cat::has_single_bit(4));
+   cat::verify(cat::has_single_bit(8u));
+   cat::verify(cat::has_single_bit(256uz));
+
+   // Test `bit_ceil()`.
+   static_assert(cat::bit_ceil(0u) == 1u);
+   static_assert(cat::bit_ceil(1u) == 1u);
+   static_assert(cat::bit_ceil(2u) == 2u);
+   static_assert(cat::bit_ceil(3u) == 4u);
+   static_assert(cat::bit_ceil(4u) == 4u);
+   static_assert(cat::bit_ceil(5u) == 8u);
+
+   // Test `bit_floor()`.
+   static_assert(cat::bit_floor(0u) == 0u);
+   static_assert(cat::bit_floor(1u) == 1u);
+   static_assert(cat::bit_floor(2u) == 2u);
+   static_assert(cat::bit_floor(3u) == 2u);
+   static_assert(cat::bit_floor(4u) == 4u);
+   static_assert(cat::bit_floor(5u) == 4u);
+
    // Test bextr.
    static_assert(x64::extract_bits(uint1::max() >> 1, 4_u1, 4u) == 0b0111u);
    static_assert(x64::extract_bits(uint1::max(), 4_u1, 4u) == 0b1111u);

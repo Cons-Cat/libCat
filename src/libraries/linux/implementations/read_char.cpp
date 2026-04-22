@@ -17,7 +17,8 @@ nix::read_char() -> scaredy_nix<char> {
    char input{};
    prop(sys_read(nix::stdin, &input, 1));
 
-   prop(tty_set_attributes(nix::stdin, tty_set_mode::now, old_settings));
+   // If we fail to reset the TTY mode, we're in trouble.
+   tty_set_attributes(nix::stdin, tty_set_mode::now, old_settings).assert();
 
    return input;
 }

@@ -103,6 +103,9 @@ namespace cat::detail::simd_abi {
 // same customary AVX2 approach as MOVMSKPS plus BSF or BSR style operations in
 // assembly references.
 
+// TODO: Swap the fallbacks below back to the commented `__builtin_stdc_*`
+// instrinsics once the Clang distribution at apt.llvm.org updates.
+
 template <typename T, typename Abi>
    requires(cat::is_same<Abi, x64::avx2_abi<T>>
             || cat::is_same<Abi, x64::avx2_unaligned_abi<T>>)
@@ -110,11 +113,10 @@ struct mask_count_if_true<T, Abi> {
    [[nodiscard]]
    static constexpr auto
    invoke(simd_mask<T, Abi> const& mask) -> idx {
-      // `__builtin_popcount` on the movmsk lane-bit map
+      // `popcount` on the movmsk lane-bit map
       __UINT32_TYPE__ const masked_logical_lane_bits =
          ::x64::detail::avx2_abi_masked_lane_bits(mask);
-      return idx{
-         static_cast<uword>(__builtin_popcount(masked_logical_lane_bits))};
+      return idx{__builtin_popcountg(masked_logical_lane_bits)};
    }
 };
 
@@ -125,11 +127,12 @@ struct mask_find_if_true<T, Abi> {
    [[nodiscard]]
    static constexpr auto
    invoke(simd_mask<T, Abi> const& mask) -> idx {
-      // Precondition: at least one true lane (`ctz` needs a set bit in the
-      // movmsk word)
+      // At least one true lane (`ctz` is well-defined when the movmsk word is
+      // non-zero).
       __UINT32_TYPE__ const masked_logical_lane_bits =
          ::x64::detail::avx2_abi_masked_lane_bits(mask);
-      return idx{static_cast<uword>(__builtin_ctz(masked_logical_lane_bits))};
+      // return __builtin_stdc_trailing_zeros(masked_logical_lane_bits);
+      return static_cast<unsigned>(__builtin_ctzg(masked_logical_lane_bits));
    }
 };
 
@@ -140,12 +143,11 @@ struct mask_find_last_if_true<T, Abi> {
    [[nodiscard]]
    static constexpr auto
    invoke(simd_mask<T, Abi> const& mask) -> idx {
-      // Precondition: at least one true lane (lane-bit word is non-zero)
+      // Precondition: at least one true lane (lane-bit word is non-zero).
       __UINT32_TYPE__ const masked_logical_lane_bits =
          ::x64::detail::avx2_abi_masked_lane_bits(mask);
-      unsigned const index_of_most_significant_set_lane_bit =
-         31u - static_cast<unsigned>(__builtin_clz(masked_logical_lane_bits));
-      return idx{static_cast<uword>(index_of_most_significant_set_lane_bit)};
+      // return __builtin_stdc_bit_width(masked_logical_lane_bits) - 1u;
+      return 31u - __builtin_clzg(masked_logical_lane_bits);
    }
 };
 

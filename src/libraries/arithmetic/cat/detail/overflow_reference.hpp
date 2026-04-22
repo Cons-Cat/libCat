@@ -588,9 +588,14 @@ class overflow_reference
       return view().divide_into(p_operand);
    }
 
+   // Bitwise implementations. Only generate when the wrapped type supports
+   // bitwise operators. `cat::index` and signed/floating-point `arithmetic<T>`
+   // / `intptr<T>` are all disabled.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_complement() const {
+   bit_complement() const
+      requires(!detail::is_idx<wrapper_type> && is_unsigned_integral<raw_type>)
+   {
       return view().bit_complement();
    }
 
@@ -642,10 +647,12 @@ class overflow_reference
       return view().modulo_into(operand);
    }
 
+   // `bit_and` forwarders. Only for wrappers with unsigned storage.
    template <is_arithmetic U>
       requires(is_safe_arithmetic_comparison<raw_type, U>
                && !is_arithmetic_ptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+               && !detail::is_idx<wrapper_type>
+               && is_unsigned_integral<raw_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_and(U operand) const
@@ -654,32 +661,28 @@ class overflow_reference
    }
 
    template <typename U>
-      requires(is_arithmetic_ptr<wrapper_type>)
+      requires(is_arithmetic_ptr<wrapper_type>
+               && is_unsigned_integral<raw_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_and(U other) const {
       return view().bit_and(other);
    }
 
-   template <is_integral T_int>
-      requires(detail::is_idx<wrapper_type>)
-   [[gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   bit_and(T_int other) const -> index<overflow_policy> {
-      return view().bit_and(other);
-   }
-
    template <typename U>
+      requires(!detail::is_idx<wrapper_type> && is_unsigned_integral<raw_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_and(U* p_operand) const -> U* {
       return view().bit_and(p_operand);
    }
 
+   // `bit_or` forwarders. Only for wrappers with unsigned storage.
    template <is_arithmetic U>
       requires(is_safe_arithmetic_comparison<U, raw_type>
                && !is_arithmetic_ptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+               && !detail::is_idx<wrapper_type>
+               && is_unsigned_integral<raw_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_or(U operand) const -> detail::promoted_type<raw_type, U> {
@@ -687,7 +690,8 @@ class overflow_reference
    }
 
    template <typename Self, typename U>
-      requires(is_arithmetic_ptr<wrapper_type>)
+      requires(is_arithmetic_ptr<wrapper_type>
+               && is_unsigned_integral<raw_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_or(Self self, U operand) const {
@@ -695,23 +699,17 @@ class overflow_reference
    }
 
    template <typename U>
+      requires(!detail::is_idx<wrapper_type> && is_unsigned_integral<raw_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    bit_or(U* p_operand) const -> U* {
       return view().bit_or(p_operand);
    }
 
-   template <is_integral T_int>
-      requires(detail::is_idx<wrapper_type>)
-   [[gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   bit_or(T_int other) const -> index<overflow_policy> {
-      return view().bit_or(other);
-   }
-
+   // `shift_left_by` forwarders. Only for wrappers with unsigned storage.
    template <is_arithmetic U>
-      requires(!is_arithmetic_ptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+      requires(!is_arithmetic_ptr<wrapper_type> && !detail::is_idx<wrapper_type>
+               && is_unsigned_integral<raw_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_left_by(U operand) const -> arithmetic<raw_type, overflow_policy> {
@@ -719,24 +717,18 @@ class overflow_reference
    }
 
    template <typename U>
-      requires(is_arithmetic_ptr<wrapper_type>)
+      requires(is_arithmetic_ptr<wrapper_type>
+               && is_unsigned_integral<raw_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_left_by(U operand) const {
       return view().shift_left_by(operand);
    }
 
-   template <is_integral T_int>
-      requires(detail::is_idx<wrapper_type>)
-   [[gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   shift_left_by(T_int other) const -> index<overflow_policy> {
-      return view().shift_left_by(other);
-   }
-
+   // `shift_left_into` forwarders.
    template <is_arithmetic U>
-      requires(!is_arithmetic_ptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+      requires(!is_arithmetic_ptr<wrapper_type> && !detail::is_idx<wrapper_type>
+               && is_unsigned_integral<raw_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_left_into(U other) const -> U {
@@ -744,24 +736,18 @@ class overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(is_arithmetic_ptr<wrapper_type>)
+      requires(is_arithmetic_ptr<wrapper_type>
+               && is_unsigned_integral<raw_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_left_into(U other) const -> U {
       return view().shift_left_into(other);
    }
 
+   // `shift_right_by` forwarders. Only for wrappers with unsigned storage.
    template <is_arithmetic U>
-      requires(detail::is_idx<wrapper_type>)
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   shift_left_into(U other) const -> U {
-      return view().shift_left_into(other);
-   }
-
-   template <is_arithmetic U>
-      requires(!is_arithmetic_ptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+      requires(!is_arithmetic_ptr<wrapper_type> && !detail::is_idx<wrapper_type>
+               && is_unsigned_integral<raw_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_right_by(U operand) const -> arithmetic<raw_type, overflow_policy> {
@@ -769,24 +755,18 @@ class overflow_reference
    }
 
    template <typename U>
-      requires(is_arithmetic_ptr<wrapper_type>)
+      requires(is_arithmetic_ptr<wrapper_type>
+               && is_unsigned_integral<raw_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_right_by(U operand) const {
       return view().shift_right_by(operand);
    }
 
-   template <is_integral T_int>
-      requires(detail::is_idx<wrapper_type>)
-   [[gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   shift_right_by(T_int other) const -> index<overflow_policy> {
-      return view().shift_right_by(other);
-   }
-
+   // `shift_right_into` forwarders.
    template <is_arithmetic U>
-      requires(!is_arithmetic_ptr<wrapper_type>
-               && !detail::is_idx<wrapper_type>)
+      requires(!is_arithmetic_ptr<wrapper_type> && !detail::is_idx<wrapper_type>
+               && is_unsigned_integral<raw_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_right_into(U other) const -> U {
@@ -794,18 +774,11 @@ class overflow_reference
    }
 
    template <is_arithmetic U>
-      requires(is_arithmetic_ptr<wrapper_type>)
+      requires(is_arithmetic_ptr<wrapper_type>
+               && is_unsigned_integral<raw_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    shift_right_into(U other) const -> U {
-      return view().shift_right_into(other);
-   }
-
-   template <is_integral T_int>
-      requires(detail::is_idx<wrapper_type>)
-   [[gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   shift_right_into(T_int other) const -> decltype(auto) {
       return view().shift_right_into(other);
    }
 };

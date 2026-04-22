@@ -29,7 +29,9 @@
 //
 // These are each wrapped by conventional operator overloading, so to add an
 // overload of both `operator+` and `operator+=` simultaneously, you need only
-// implement an overload or template specialization of `.add()`.
+// implement an overload or template specialization of `.add()`. If any are
+// absent, they are gracefully ignored and corresponding operators are not
+// generated.
 //
 // These are all aggregated by the `arithmetic_interface` template, but they
 // may be selected granularly by the smaller CRTP classes:
@@ -123,8 +125,8 @@ concept has_unary_decrement =
               static_cast<typename remove_cvref<D>::raw_type>(1)))>>;
 
 // Left-hand compound assignments exist only when the corresponding member
-// (`add`, `subtract_by`, …) returns the same type as the operand, matching the
-// binary operator result type.
+// (`add`, `subtract_by`, ...) returns the same type as the operand, matching
+// the binary operator result type.
 template <typename D, typename T>
 concept has_plus_assign = is_same<
    remove_cvref<D>,
@@ -274,7 +276,8 @@ struct plus_interface {
    constexpr auto
    operator+(this derived_type const& self, decay_derived_type const& other)
       -> decltype(auto)
-      requires(is_constructible<derived_type, decay_derived_type const&>)
+      requires(detail::has_binary_plus<derived_type, decay_derived_type const&>
+               && is_constructible<derived_type, decay_derived_type const&>)
    {
       return self.add(other);
    }
@@ -283,7 +286,8 @@ struct plus_interface {
    constexpr auto
    operator+(this derived_type const& self, decay_derived_type&& other)
       -> decltype(auto)
-      requires(is_constructible<derived_type, decay_derived_type &&>)
+      requires(detail::has_binary_plus<derived_type, decay_derived_type &&>
+               && is_constructible<derived_type, decay_derived_type &&>)
    {
       return self.add(move(other));
    }
@@ -443,7 +447,9 @@ struct minus_interface {
    constexpr auto
    operator-(this derived_type const& lhs, decay_derived_type const& other)
       -> decltype(auto)
-      requires(is_constructible<derived_type, decay_derived_type const&>)
+      requires(
+         detail::has_binary_subtract_by<derived_type, decay_derived_type const&>
+         && is_constructible<derived_type, decay_derived_type const&>)
    {
       return lhs.subtract_by(other);
    }
@@ -452,7 +458,9 @@ struct minus_interface {
    constexpr auto
    operator-(this derived_type const& lhs, decay_derived_type&& other)
       -> decltype(auto)
-      requires(is_constructible<derived_type, decay_derived_type &&>)
+      requires(
+         detail::has_binary_subtract_by<derived_type, decay_derived_type &&>
+         && is_constructible<derived_type, decay_derived_type &&>)
    {
       return lhs.subtract_by(move(other));
    }
@@ -618,7 +626,9 @@ struct multiply_interface {
    constexpr auto
    operator*(this derived_type const& self, decay_derived_type const& other)
       -> decltype(auto)
-      requires(is_constructible<derived_type, decay_derived_type const&>)
+      requires(
+         detail::has_binary_multiply<derived_type, decay_derived_type const&>
+         && is_constructible<derived_type, decay_derived_type const&>)
    {
       return self.multiply(other);
    }
@@ -627,7 +637,8 @@ struct multiply_interface {
    constexpr auto
    operator*(this derived_type const& self, decay_derived_type&& other)
       -> decltype(auto)
-      requires(is_constructible<derived_type, decay_derived_type &&>)
+      requires(detail::has_binary_multiply<derived_type, decay_derived_type &&>
+               && is_constructible<derived_type, decay_derived_type &&>)
    {
       return self.multiply(move(other));
    }
@@ -751,7 +762,9 @@ struct divide_interface {
    constexpr auto
    operator/(this derived_type const& self, decay_derived_type const& other)
       -> decltype(auto)
-      requires(is_constructible<derived_type, decay_derived_type const&>)
+      requires(
+         detail::has_binary_divide_by<derived_type, decay_derived_type const&>
+         && is_constructible<derived_type, decay_derived_type const&>)
    {
       return self.divide_by(other);
    }
@@ -760,7 +773,8 @@ struct divide_interface {
    constexpr auto
    operator/(this derived_type const& self, decay_derived_type&& other)
       -> decltype(auto)
-      requires(is_constructible<derived_type, decay_derived_type &&>)
+      requires(detail::has_binary_divide_by<derived_type, decay_derived_type &&>
+               && is_constructible<derived_type, decay_derived_type &&>)
    {
       return self.divide_by(move(other));
    }
@@ -882,7 +896,9 @@ struct bit_and_interface {
    constexpr auto
    operator&(this derived_type const& self, decay_derived_type const& other)
       -> decltype(auto)
-      requires(is_constructible<derived_type, decay_derived_type const&>)
+      requires(
+         detail::has_binary_bit_and<derived_type, decay_derived_type const&>
+         && is_constructible<derived_type, decay_derived_type const&>)
    {
       return self.bit_and(other);
    }
@@ -891,7 +907,8 @@ struct bit_and_interface {
    constexpr auto
    operator&(this derived_type const& self, decay_derived_type&& other)
       -> decltype(auto)
-      requires(is_constructible<derived_type, decay_derived_type &&>)
+      requires(detail::has_binary_bit_and<derived_type, decay_derived_type &&>
+               && is_constructible<derived_type, decay_derived_type &&>)
    {
       return self.bit_and(move(other));
    }
@@ -1015,7 +1032,9 @@ struct bit_or_interface {
    constexpr auto
    operator|(this derived_type const& self, decay_derived_type const& other)
       -> decltype(auto)
-      requires(is_constructible<derived_type, decay_derived_type const&>)
+      requires(
+         detail::has_binary_bit_or<derived_type, decay_derived_type const&>
+         && is_constructible<derived_type, decay_derived_type const&>)
    {
       return self.bit_or(other);
    }
@@ -1024,7 +1043,8 @@ struct bit_or_interface {
    constexpr auto
    operator|(this derived_type const& self, decay_derived_type&& other)
       -> decltype(auto)
-      requires(is_constructible<derived_type, decay_derived_type &&>)
+      requires(detail::has_binary_bit_or<derived_type, decay_derived_type &&>
+               && is_constructible<derived_type, decay_derived_type &&>)
    {
       return self.bit_or(move(other));
    }
@@ -1146,7 +1166,9 @@ struct modulo_interface {
    constexpr auto
    operator%(this derived_type const& self, decay_derived_type const& other)
       -> decltype(auto)
-      requires(is_constructible<derived_type, decay_derived_type const&>)
+      requires(
+         detail::has_binary_modulo_by<derived_type, decay_derived_type const&>
+         && is_constructible<derived_type, decay_derived_type const&>)
    {
       return self.modulo_by(other);
    }
@@ -1155,7 +1177,8 @@ struct modulo_interface {
    constexpr auto
    operator%(this derived_type const& self, decay_derived_type&& other)
       -> decltype(auto)
-      requires(is_constructible<derived_type, decay_derived_type &&>)
+      requires(detail::has_binary_modulo_by<derived_type, decay_derived_type &&>
+               && is_constructible<derived_type, decay_derived_type &&>)
    {
       return self.modulo_by(move(other));
    }
@@ -1277,7 +1300,9 @@ struct shift_left_interface {
    constexpr auto
    operator<<(this derived_type const& self, decay_derived_type const& other)
       -> decltype(auto)
-      requires(is_constructible<derived_type, decay_derived_type const&>)
+      requires(detail::has_binary_shift_left_by<derived_type,
+                                                decay_derived_type const&>
+               && is_constructible<derived_type, decay_derived_type const&>)
    {
       return self.shift_left_by(other);
    }
@@ -1286,7 +1311,9 @@ struct shift_left_interface {
    constexpr auto
    operator<<(this derived_type const& self, decay_derived_type&& other)
       -> decltype(auto)
-      requires(is_constructible<derived_type, decay_derived_type &&>)
+      requires(
+         detail::has_binary_shift_left_by<derived_type, decay_derived_type &&>
+         && is_constructible<derived_type, decay_derived_type &&>)
    {
       return self.shift_left_by(move(other));
    }
@@ -1410,7 +1437,9 @@ struct shift_right_interface {
    constexpr auto
    operator>>(this derived_type const& self, decay_derived_type const& other)
       -> decltype(auto)
-      requires(is_constructible<derived_type, decay_derived_type const&>)
+      requires(detail::has_binary_shift_right_by<derived_type,
+                                                 decay_derived_type const&>
+               && is_constructible<derived_type, decay_derived_type const&>)
    {
       return self.shift_right_by(other);
    }
@@ -1419,7 +1448,9 @@ struct shift_right_interface {
    constexpr auto
    operator>>(this derived_type const& self, decay_derived_type&& other)
       -> decltype(auto)
-      requires(is_constructible<derived_type, decay_derived_type &&>)
+      requires(
+         detail::has_binary_shift_right_by<derived_type, decay_derived_type &&>
+         && is_constructible<derived_type, decay_derived_type &&>)
    {
       return self.shift_right_by(move(other));
    }
@@ -1538,16 +1569,21 @@ struct bitwise_interface : bit_and_interface<derived_type>,
    friend struct arithmetic_interface<derived_type>;
 
  public:
-   // Unary complement operator.
+   // Unary complement operator. Only generated when the derived type exposes
+   // a `.bit_complement()` member.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator~(derived_type const& self) {
+   operator~(derived_type const& self)
+      requires(detail::has_bit_complement<derived_type>)
+   {
       return self.bit_complement();
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator~(derived_type&& self) {
+   operator~(derived_type&& self)
+      requires(detail::has_bit_complement<derived_type>)
+   {
       return move(self).bit_complement();
    }
 };

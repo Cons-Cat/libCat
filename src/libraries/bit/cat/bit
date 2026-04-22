@@ -75,62 +75,117 @@ inline constexpr idx word_bytes = idx(sizeof(uword));
 
 inline constexpr idx page_size = idx(4'096_uki);
 
+// TODO: Swap the fallbacks below back to the commented `__builtin_stdc_*`
+// calls once the `apt.llvm.org` Clang 23 distribution updates to a version
+// with C23 bitwise intrinsics.
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 countl_zero(T value) -> idx {
-   auto raw_value = make_raw_arithmetic(value);
-   if (raw_value == 0) {
-      // It is undefined behavior to pass 0 into clz.
-      return idx(sizeof(T) * 8u);
-   }
-
-   return idx(__builtin_clzg(raw_value));
+   // return __builtin_stdc_leading_zeros(make_raw_arithmetic(value));
+   return static_cast<unsigned>(
+      __builtin_clzg(make_raw_arithmetic(value), limits<T>::bits));
 }
 
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 countl_one(T value) -> idx {
-   // For non-`cat` integers, ~ might cast to `int`.
-   return countl_zero(static_cast<T>(~value));
+   // return __builtin_stdc_leading_ones(make_raw_arithmetic(value));
+   return static_cast<unsigned>(__builtin_clzg(
+      raw_arithmetic_type<T>(~make_raw_arithmetic(value)), limits<T>::bits));
 }
 
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 countr_zero(T value) -> idx {
-   auto raw_value = make_raw_arithmetic(value);
-   if (raw_value == 0) {
-      // It is undefined behavior to pass 0 into ctz.
-      return idx(sizeof(T) * 8u);
-   }
-
-   return idx(__builtin_ctzg(raw_value));
+   // return __builtin_stdc_trailing_zeros(make_raw_arithmetic(value));
+   return static_cast<unsigned>(
+      __builtin_ctzg(make_raw_arithmetic(value), limits<T>::bits));
 }
 
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 countr_one(T value) -> idx {
-   // For non-`cat` integers, ~ might cast to `int`.
-   return countr_zero(static_cast<T>(~value));
+   // return __builtin_stdc_trailing_ones(make_raw_arithmetic(value));
+   return static_cast<unsigned>(__builtin_ctzg(
+      raw_arithmetic_type<T>(~make_raw_arithmetic(value)), limits<T>::bits));
 }
 
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-popcount(T value) -> iword {
-   auto raw_value = make_raw_arithmetic(value);
-   return __builtin_popcountg(raw_value);
+popcount(T value) -> idx {
+   return static_cast<unsigned>(
+      __builtin_popcountg(make_raw_arithmetic(value)));
 }
 
 // If `value` is a power of two, or in other words, has exactly one set bit.
-template <is_arithmetic T>
+template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
 has_single_bit(T value) -> bool {
-   return popcount(value) == 1;
+   // return __builtin_stdc_has_single_bit(make_raw_arithmetic(value));
+   return __builtin_popcountg(make_raw_arithmetic(value)) == 1;
+}
+
+// Largest power of two `<= value`. Matches C23 `stdc_bit_floor`, so
+// `bit_floor(0) == 0`.
+template <is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+bit_floor(T value) -> T {
+   // return T(__builtin_stdc_bit_floor(make_raw_arithmetic(value)));
+   auto const raw_value = make_raw_arithmetic(value);
+   if (raw_value == 0) {
+      return T(0);
+   }
+   return T(raw_arithmetic_type<T>(1)
+            << (limits<T>::bits - 1u - __builtin_clzg(raw_value)));
+}
+
+// Smallest power of two `>= value`. Matches C23 `stdc_bit_ceil`, so
+// `bit_ceil(0) == 1`. Undefined behavior if the result is not representable.
+template <is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+bit_ceil(T value) -> T {
+   // return __builtin_stdc_bit_ceil(make_raw_arithmetic(value));
+   auto const raw_value = make_raw_arithmetic(value);
+   if (raw_value <= 1u) {
+      return T(1);
+   }
+   return T(raw_arithmetic_type<T>(1)
+            << (limits<T>::bits
+                - __builtin_clzg(raw_arithmetic_type<T>(raw_value - 1u))));
+}
+
+// Bitwise rotate left by `shift` positions. `shift` is reduced mod the bit
+// width of `T`; negative shifts rotate in the opposite direction.
+template <is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+rotate_left(T value, iword shift) -> T {
+   auto s = shift.raw % iword::raw_type(limits<T>::bits);
+   if (s < 0) {
+      s += iword::raw_type(limits<T>::bits);
+   }
+   return T(__builtin_stdc_rotate_left(make_raw_arithmetic(value), s));
+}
+
+// Bitwise rotate right by `shift` positions. `shift` is reduced mod the bit
+// width of `T`; negative shifts rotate in the opposite direction.
+template <is_unsigned_integral T>
+[[nodiscard]]
+constexpr auto
+rotate_right(T value, iword shift) -> T {
+   auto s = shift.raw % iword::raw_type(limits<T>::bits);
+   if (s < 0) {
+      s += iword::raw_type(limits<T>::bits);
+   }
+   return T(__builtin_stdc_rotate_right(make_raw_arithmetic(value), s));
 }
 
 }  // namespace cat
@@ -766,7 +821,8 @@ struct byte : bitwise_interface<byte> {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    has_single_bit() const -> bool {
-      return (value & (value - 1u)) == 0u;
+      // return __builtin_stdc_has_single_bit(make_raw_arithmetic(value));
+      return __builtin_popcountg(make_raw_arithmetic(value)) == 1;
    }
 };
 
@@ -776,8 +832,11 @@ template <is_integral T>
 [[nodiscard]]
 constexpr auto
 has_single_bit(T value) -> bool {
-   auto raw = make_raw_arithmetic(value);
-   return (raw & (raw - 1u)) == 0u;
+   // return __builtin_stdc_has_single_bit(make_raw_arithmetic(value));
+   return __builtin_popcountg(
+             static_cast<make_unsigned_type<raw_arithmetic_type<T>>>(
+                make_raw_arithmetic(value)))
+          == 1;
 }
 
 [[nodiscard]]

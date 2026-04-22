@@ -12,7 +12,7 @@ namespace cat {
 
 template <idx bits_count>
 class [[clang::trivial_abi]]
-bitset {
+bitset : public bitwise_interface<bitset<bits_count>> {
  private:
    template <idx, is_unsigned_integral... types>
    // TODO: Clang had a regression which broke template equivalence here.
@@ -21,10 +21,6 @@ bitset {
    // requires((sizeof(types...[0]) == sizeof(types)) && ...)
    friend constexpr auto
    make_bitset(types... values);
-
-   template <idx>
-   friend constexpr auto
-   make_bitset_filled(bit_value value);
 
    // Store the smallest number of bytes needed for `bits_count`. If that is 8
    // bytes or fewer, use that many bytes. If it is larger, use an array of
@@ -36,7 +32,7 @@ bitset {
                   // `uint_fixed` will not compile here if it is larger than 8
                   // or it is not a power of 2. This is an `array` of one
                   // element to make it iterable.
-                  array<uint_fixed<min(round_to_pow2(total_bytes), 8u)>, 1u>,
+                  array<uint_fixed<min(bit_ceil(total_bytes), 8u)>, 1u>,
                   array<uint8, div_ceil(total_bytes, 8u)>>;
 
    using array_type_element = array_type::value_type;
@@ -88,9 +84,13 @@ bitset {
       *this = new_bitset;
    }
 
+   // `= default` cannot be used because `bitwise_interface` is a base class
+   // without a viable `operator==`. Compare the storage array directly.
    [[nodiscard]]
    constexpr auto
-   operator==(bitset<bits_count> const&) const -> bool = default;
+   operator==(bitset const& other) const -> bool {
+      return m_data == other.m_data;
+   }
 
    // Index into this bit-set from the right-most bit.
    [[nodiscard]]
@@ -143,59 +143,57 @@ bitset {
       return nullopt;
    }
 
+   // `bitwise_interface` generates `operator&` and `operator&=` from this.
+   [[nodiscard]]
+   constexpr auto
+   bit_and(bitset const& other) const -> bitset {
+      bitset result;
+      for (idx i; i < storage_array_size; ++i) {
+         result.m_data[i] = m_data[i] & other.m_data[i];
+      }
+      return result;
+   }
+
+   // `bitwise_interface` generates `operator|` and `operator|=` from this.
+   [[nodiscard]]
+   constexpr auto
+   bit_or(bitset const& other) const -> bitset {
+      bitset result;
+      for (idx i; i < storage_array_size; ++i) {
+         result.m_data[i] = m_data[i] | other.m_data[i];
+      }
+      return result;
+   }
+
+   // `bitwise_interface` generates `operator~` from this. Padding bits are
+   // reset to zero afterwards to preserve the class invariant.
+   [[nodiscard]]
+   constexpr auto
+   bit_complement() const -> bitset {
+      bitset result;
+      for (idx i; i < storage_array_size; ++i) {
+         result.m_data[i] = ~m_data[i];
+      }
+      result.clear_padding_bits();
+      return result;
+   }
+
+   // XOR is not part of `bitwise_interface` and `cat::arithmetic` does not
+   // define `operator^`, so compute on the raw underlying integers.
    [[nodiscard]]
    friend constexpr auto
-   operator&(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
-      bitset<bits_count> bitset;
-      for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
-         bitset.m_data[i] = lhs.m_data[i] & rhs.m_data[i];
+   operator^(bitset const& lhs, bitset const& rhs) -> bitset {
+      bitset result;
+      for (idx i; i < storage_array_size; ++i) {
+         result.m_data[i] =
+            array_type_element(lhs.m_data[i].raw ^ rhs.m_data[i].raw);
       }
-      return bitset;
+      return result;
    }
 
    friend constexpr auto
-   operator&=(bitset<bits_count>& self, bitset<bits_count> operand) -> bitset& {
-      self = self & operand;
-      return self;
-   }
-
-   [[nodiscard]]
-   friend constexpr auto
-   operator|(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
-      bitset<bits_count> bitset;
-      for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
-         bitset.m_data[i] = lhs.m_data[i] | rhs.m_data[i];
-      }
-      return bitset;
-   }
-
-   friend constexpr auto
-   operator|=(bitset<bits_count>& self, bitset<bits_count> operand) -> bitset& {
-      self = self | operand;
-      return self;
-   }
-
-   [[nodiscard]]
-   friend constexpr auto
-   operator^(bitset<bits_count> lhs, bitset<bits_count> rhs) -> bitset {
-      bitset<bits_count> bitset;
-      for (uword::raw_type i = 0u; i < lhs.storage_array_size; ++i) {
-         bitset.m_data[i] = lhs.m_data[i] ^ rhs.m_data[i];
-      }
-      return bitset;
-   }
-
-   friend constexpr auto
-   operator^=(bitset<bits_count>& self, bitset<bits_count> operand) -> bitset& {
-      self = self ^ operand;
-      return self;
-   }
-
-   friend constexpr auto
-   operator~(bitset<bits_count> self) -> bitset& {
-      for (auto& i : self.m_data) {
-         ~i;
-      }
+   operator^=(bitset& self, bitset const& other) -> bitset& {
+      self = self ^ other;
       return self;
    }
 
@@ -305,6 +303,147 @@ bitset {
 
    // TODO: `.countr_one()`.
 
+   // Clear every bit (all logical indices 0..bits_count) to 0.
+   constexpr auto
+   clear() -> bitset& {
+      for (auto& word : m_data) {
+         word = array_type_element(0u);
+      }
+      return *this;
+   }
+
+   // Set every bit (all logical indices 0..bits_count) to `value`. Padding
+   // bits are left at 0 so the class invariant holds.
+   constexpr auto
+   fill(bit_value value = true) -> bitset& {
+      if (value) {
+         if constexpr (bits_count != 0u) {
+            for (auto& word : m_data) {
+               word = array_type_element::max();
+            }
+            clear_padding_bits();
+         }
+      } else {
+         clear();
+      }
+      return *this;
+   }
+
+   // Set every even-indexed bit (logical indices 0, 2, 4, ...) to 1. Bits at
+   // odd logical indices are left unchanged.
+   constexpr auto
+   set_even() -> bitset& {
+      if constexpr (bits_count != 0u) {
+         for (auto& word : m_data) {
+            word |= even_bits_pattern;
+         }
+         clear_padding_bits();
+      }
+      return *this;
+   }
+
+   // Set every odd-indexed bit (logical indices 1, 3, 5, ...) to 1. Bits at
+   // even logical indices are left unchanged.
+   constexpr auto
+   set_odd() -> bitset& {
+      if constexpr (bits_count != 0u) {
+         for (auto& word : m_data) {
+            word |= odd_bits_pattern;
+         }
+         clear_padding_bits();
+      }
+      return *this;
+   }
+
+   // Clear every even-indexed bit (logical indices 0, 2, 4, ...) to 0. Bits at
+   // odd logical indices are left unchanged.
+   constexpr auto
+   unset_even() -> bitset& {
+      if constexpr (bits_count != 0u) {
+         // AND cannot set padding bits, so no post-clear is needed.
+         for (auto& word : m_data) {
+            word &= ~even_bits_pattern;
+         }
+      }
+      return *this;
+   }
+
+   // Clear every odd-indexed bit (logical indices 1, 3, 5, ...) to 0. Bits at
+   // even logical indices are left unchanged.
+   constexpr auto
+   unset_odd() -> bitset& {
+      if constexpr (bits_count != 0u) {
+         for (auto& word : m_data) {
+            word &= ~odd_bits_pattern;
+         }
+      }
+      return *this;
+   }
+
+   // Bitwise rotate left by `shift` positions, across all `bits_count` bits.
+   // `shift` is reduced mod `bits_count`; negative shifts rotate the other way.
+   [[nodiscard]]
+   constexpr auto
+   rotate_left(iword shift) const -> bitset {
+      if constexpr (bits_count == 0u) {
+         return *this;
+      } else if constexpr (storage_array_size == 1u
+                           && leading_skipped_bits == 0u) {
+         // The bitset exactly fills one storage word, so `cat::rotate_left`
+         // on the element is the rotation of the whole bitset.
+         bitset result;
+         result.m_data[0] = cat::rotate_left(m_data[0], shift);
+         return result;
+      } else {
+         // TODO: For the padded single-word case, delegate to
+         // `cat::rotate_left` plus masking to rotate within `bits_count` bits.
+         // For the multi-word case, use per-word shifts + carries. The current
+         // loop is `O(bits_count)` bit copies.
+         bitset result;
+         constexpr auto bw = iword::raw_type(bits_count);
+         auto s = shift.raw % bw;
+         if (s < 0) {
+            s += bw;
+         }
+         // Rotating left by `s` is equivalent to indexing backward by `s`,
+         // which is forward by `bw - s` under unsigned modular arithmetic.
+         idx const backward_shift = idx(bw - s);
+         for (idx i = 0u; i < bits_count; ++i) {
+            idx const src = (i + backward_shift) % bits_count;
+            result[i] = bool((*this)[src]);
+         }
+         return result;
+      }
+   }
+
+   // Bitwise rotate right by `shift` positions, across all `bits_count` bits.
+   // `shift` is reduced mod `bits_count`; negative shifts rotate the other way.
+   [[nodiscard]]
+   constexpr auto
+   rotate_right(iword shift) const -> bitset {
+      if constexpr (bits_count == 0u) {
+         return *this;
+      } else if constexpr (storage_array_size == 1u
+                           && leading_skipped_bits == 0u) {
+         bitset result;
+         result.m_data[0] = cat::rotate_right(m_data[0], shift);
+         return result;
+      } else {
+         bitset result;
+         constexpr auto bw = iword::raw_type(bits_count);
+         auto s = shift.raw % bw;
+         if (s < 0) {
+            s += bw;
+         }
+         idx const forward_shift = idx(s);
+         for (idx i = 0u; i < bits_count; ++i) {
+            idx const src = (i + forward_shift) % bits_count;
+            result[i] = bool((*this)[src]);
+         }
+         return result;
+      }
+   }
+
    // Because `bit_iterator` produces proxy-references, the `iterable_interface`
    // cannot generate these iterator methods automatically.
 
@@ -386,6 +525,33 @@ bitset {
    }
 
  private:
+   // Base pattern `0x55...55`: every other bit set starting at physical bit 0.
+   static constexpr array_type_element every_other_bit_pattern =
+      array_type_element::max() / array_type_element(3u);
+
+   // Pattern for even logical indices. Logical index `i` corresponds to
+   // physical bit position `i + leading_skipped_bits` (mod word size), so when
+   // `leading_skipped_bits` is odd, even logical bits sit at odd physical
+   // positions and the base pattern is inverted.
+   static constexpr array_type_element even_bits_pattern =
+      (leading_skipped_bits % 2u == 1u) ? ~every_other_bit_pattern
+                                        : every_other_bit_pattern;
+
+   static constexpr array_type_element odd_bits_pattern = ~even_bits_pattern;
+
+   // Reset the low `leading_skipped_bits` bits of `m_data.back()` to zero.
+   // Used to restore the class invariant after a bitwise-OR that may have set
+   // padding bits.
+   constexpr auto
+   clear_padding_bits() -> void {
+      if constexpr (leading_skipped_bits != 0u) {
+         constexpr array_type_element keep_mask = ~array_type_element(
+            (array_type_element(1u) << leading_skipped_bits) - 1u);
+         // Simply & mask the bits off the end of the bitset.
+         m_data[storage_array_size.raw - 1u] &= keep_mask;
+      }
+   }
+
    array_type m_data = {};
 };
 
@@ -415,13 +581,29 @@ template <idx bits_count>
 constexpr auto
 make_bitset_filled(bit_value value) {
    bitset<bits_count> new_bitset;
-   if (value) {
-      // Set all bits on.
-      for (auto& bytes : new_bitset.m_data) {
-         bytes = -1u;
-      }
-   }
-   // Otherwise, the bitset is zero-initialized.
+   new_bitset.fill(value);
+   return new_bitset;
+}
+
+// Construct a bitset with only the even-indexed bits (logical indices 0, 2,
+// 4, ...) set. Odd-indexed bits are 0.
+template <idx bits_count>
+[[nodiscard]]
+constexpr auto
+make_bitset_even() {
+   bitset<bits_count> new_bitset;
+   new_bitset.set_even();
+   return new_bitset;
+}
+
+// Construct a bitset with only the odd-indexed bits (logical indices 1, 3,
+// 5, ...) set. Even-indexed bits are 0.
+template <idx bits_count>
+[[nodiscard]]
+constexpr auto
+make_bitset_odd() {
+   bitset<bits_count> new_bitset;
+   new_bitset.set_odd();
    return new_bitset;
 }
 

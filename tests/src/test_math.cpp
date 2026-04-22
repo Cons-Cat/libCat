@@ -82,30 +82,6 @@ test(math) {
    // cat::verify(cat::pow(2, 0) == 1.);
    // cat::verify(cat::pow(8, -1) == 0.);
 
-   // Test `has_single_bit()`.
-   cat::verify(cat::has_single_bit(0));
-   cat::verify(cat::has_single_bit(1));
-   cat::verify(cat::has_single_bit(2));
-   cat::verify(!cat::has_single_bit(3));
-   cat::verify(cat::has_single_bit(4));
-   cat::verify(cat::has_single_bit(8u));
-   cat::verify(cat::has_single_bit(256));
-
-   // Test `round_to_pow2()`.
-   static_assert(cat::round_to_pow2(0u) == 0u);
-   static_assert(cat::round_to_pow2(1u) == 1u);
-   static_assert(cat::round_to_pow2(2u) == 2u);
-   static_assert(cat::round_to_pow2(3u) == 4u);
-   static_assert(cat::round_to_pow2(4u) == 4u);
-   static_assert(cat::round_to_pow2(5u) == 8u);
-
-   static_assert(cat::round_to_pow2(0) == 0);
-   static_assert(cat::round_to_pow2(1) == 1);
-   static_assert(cat::round_to_pow2(2) == 2);
-   static_assert(cat::round_to_pow2(3) == 4);
-   static_assert(cat::round_to_pow2(4) == 4);
-   static_assert(cat::round_to_pow2(5) == 8);
-
    // TODO: How should rounding functions handle negative inputs?
 
    // Test `round_up_to_multiple_of()`.
