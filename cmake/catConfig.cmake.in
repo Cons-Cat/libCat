@@ -1,0 +1,18 @@
+@PACKAGE_INIT@
+
+# `find_package(cat REQUIRED)` lands here. The exported targets
+# (`cat::cat`, `cat::cat-impl`, optionally `cat::cat-impl-shared`) carry
+# every usage requirement libCat needs at compile and link time, so a
+# downstream project just does
+#
+#   find_package(cat REQUIRED)
+#   target_link_libraries(my_target PRIVATE cat::cat)
+#
+# `cat::cat` automatically resolves to either `cat::cat-impl` (libcat.a)
+# or `cat::cat-impl-shared` (libcat.so) depending on which one was
+# enabled at libCat's own configure time (`-DCAT_USE_SHARED=ON` makes
+# libCat install with the shared variant as the default).
+
+include("${CMAKE_CURRENT_LIST_DIR}/catTargets.cmake")
+
+check_required_components(cat)

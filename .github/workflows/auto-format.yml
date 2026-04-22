@@ -1,0 +1,64 @@
+name: Auto-format
+
+# Companion to `ci.yml`'s advisory `cat-format-check`: when a PR has
+# formatting drift, run `cat-format` (in-place) and push the fix back
+# as a commit on the PR branch. The advisory check in `ci.yml` remains
+# the source of truth for fork PRs (which this workflow cannot push to,
+# see the `if:` gate below).
+#
+# Loop safety: pushes authored with `GITHUB_TOKEN` do not create new
+# workflow runs, so the auto-format commit cannot re-trigger this
+# workflow or `ci.yml`.
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  auto-format:
+    # `GITHUB_TOKEN` is read-only on `pull_request` events from forks,
+    # so `git push` would fail. Skip cleanly. The advisory check in
+    # `ci.yml` still surfaces drift for those PRs.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # `actions/checkout` defaults to a detached merge ref on
+          # `pull_request`, which cannot be pushed to. Check out the
+          # PR's head branch directly.
+          ref: ${{ github.head_ref }}
+
+      - uses: ./.github/actions/setup-toolchain
+        # Shares the `ci.yml` cache. The composite includes
+        # `clang-format-23`, which `cmake/format.cmake` requires.
+
+      - name: Configure
+        # Configure-only. `cat-format`'s `DEPENDS` are source files,
+        # so `--target cat-format` runs the formatter alone with no
+        # `cat` / `cat-impl` compilation.
+        run: |
+          cmake -S . -B build-format -G Ninja \
+            -DCMAKE_CXX_COMPILER=clang++-23
+
+      - name: Run cat-format
+        run: cmake --build build-format --target cat-format
+
+      - name: Commit and push fix-up if anything changed
+        # `git diff --quiet` exits 0 on a clean tree, so the
+        # no-drift case short-circuits before any git config side
+        # effects. The committer identity is the canonical
+        # `github-actions[bot]` user.
+        run: |
+          set -eu
+          if git diff --quiet; then
+            echo "No formatting changes."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Run `clang-format`."
+          git push
