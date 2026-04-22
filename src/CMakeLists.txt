@@ -2,64 +2,53 @@
 # `../CMakeLists.txt`.
 
 set(CATLIB ${CMAKE_SOURCE_DIR}/src/libraries)
+include(GNUInstallDirs)
 
+# Per-library subdirs on the include path. Hoisted (and re-exposed to parent
+# scope) so `cat_install.cmake`'s `install(DIRECTORY)` uses the same list.
+set(CAT_INCLUDE_SUBDIRS
+  meta compare limits runtime cpuid sanitizer arithmetic initializer_list
+  simd algorithm debug variant scaredy maybe match notype unique collection
+  array span list string tui format memory allocator utility functional file
+  linux thread atomic socket x11 bit bitset iterator math type_list tuple cast
+  vec ring enum)
+set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
+
+# Each entry has `BUILD_INTERFACE` (in-tree path) and `INSTALL_INTERFACE`
+# (installed path) so `cat::cat` works for both `add_subdirectory` and
+# `find_package(cat)` consumers.
 target_include_directories(cat INTERFACE
-  ${CMAKE_SOURCE_DIR}/src/
-  ${CATLIB}/meta/
-  ${CATLIB}/compare/
-  ${CATLIB}/limits
-  ${CATLIB}/runtime/
-  ${CATLIB}/cpuid/
-  ${CATLIB}/sanitizer/
-  ${CATLIB}/arithmetic/
-  ${CATLIB}/initializer_list/
-  ${CATLIB}/simd/
-  ${CATLIB}/algorithm/
-  ${CATLIB}/debug/
-  ${CATLIB}/variant/
-  ${CATLIB}/scaredy/
-  ${CATLIB}/maybe/
-  ${CATLIB}/match/
-  ${CATLIB}/notype/
-  ${CATLIB}/unique/
-  ${CATLIB}/collection/
-  ${CATLIB}/array/
-  ${CATLIB}/span/
-  ${CATLIB}/list/
-  ${CATLIB}/string/
-  ${CATLIB}/tui/
-  ${CATLIB}/format/
-  ${CATLIB}/memory/
-  ${CATLIB}/allocator/
-  ${CATLIB}/utility/
-  ${CATLIB}/functional/
-  ${CATLIB}/file/
-  ${CATLIB}/linux/
-  ${CATLIB}/thread/
-  ${CATLIB}/atomic/
-  ${CATLIB}/socket/
-  ${CATLIB}/x11/
-  ${CATLIB}/bit/
-  ${CATLIB}/bitset/
-  ${CATLIB}/iterator/
-  ${CATLIB}/math/
-  ${CATLIB}/type_list/
-  ${CATLIB}/tuple/
-  ${CATLIB}/cast/
-  ${CATLIB}/vec/
-  ${CATLIB}/ring/
-  ${CATLIB}/enum/
+  "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/>"
+  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/libcat>")
+foreach(_cat_subdir IN LISTS CAT_INCLUDE_SUBDIRS)
+  target_include_directories(cat INTERFACE
+    "$<BUILD_INTERFACE:${CATLIB}/${_cat_subdir}/>"
+    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/libcat/libraries/${_cat_subdir}>")
+endforeach()
+unset(_cat_subdir)
+
+# `libcat.ld` defines `__cat_tls_*` symbols against the linkee's own TLS, so
+# `.a` consumers need `-Wl,-T,libcat.ld` at link time. `.so` bakes the same
+# definitions in during its own link, so its consumers don't. Hanging this on
+# `cat-impl` (rather than `cat`) means `CAT_USE_SHARED` automatically swaps
+# the `-T` along with the impl.
+set(LIBCAT_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/src/libcat.ld")
+target_link_options(cat-impl INTERFACE
+  "$<BUILD_INTERFACE:-Wl,-T,${LIBCAT_LINKER_SCRIPT}>"
+  "$<INSTALL_INTERFACE:-Wl,-T,${CMAKE_INSTALL_FULL_DATADIR}/libcat/libcat.ld>")
+set_property(TARGET cat-impl APPEND PROPERTY INTERFACE_LINK_DEPENDS
+  "$<BUILD_INTERFACE:${LIBCAT_LINKER_SCRIPT}>")
+
+# `_start.cpp` stays on `cat` `INTERFACE` because consumers select between its
+# argc/argv vs. no-args branches via `NO_ARGC_ARGV`. All other impls are
+# flag-independent and live in `cat-impl` (`libcat.a`).
+target_sources(cat INTERFACE
+  "$<BUILD_INTERFACE:${CATLIB}/runtime/implementations/_start.cpp>"
+  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/libcat/libraries/runtime/implementations/_start.cpp>"
 )
 
-set(LIBCAT_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/src/libcat.ld")
-target_link_options(cat INTERFACE
-  "-Wl,-T,${LIBCAT_LINKER_SCRIPT}")
-set_property(TARGET cat APPEND PROPERTY INTERFACE_LINK_DEPENDS
-  "${LIBCAT_LINKER_SCRIPT}")
-
 # TODO: Group and annotate these lines by their corresponding header.
-target_sources(cat INTERFACE
-  ${CATLIB}/runtime/implementations/_start.cpp
+target_sources(cat-impl PRIVATE
   ${CATLIB}/runtime/implementations/exit.cpp
   ${CATLIB}/runtime/implementations/__stack_chk_fail.cpp
   ${CATLIB}/runtime/implementations/__cxa_atexit.cpp

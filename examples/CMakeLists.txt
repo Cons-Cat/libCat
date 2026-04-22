@@ -1,32 +1,14 @@
-# Link `.gdbinit` to build directories.
-
-# `Ninja Multi-Config` generator:
-if(CMAKE_CONFIGURATION_TYPES)
-  add_custom_target(
-    cat-gdb-examples ALL
-    COMMAND ${CMAKE_COMMAND} -E create_symlink
-    # This requires CMake 3.20:
-    ${PROJECT_SOURCE_DIR}/.gdbinit ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/.gdbinit
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>
-  )
-
-# `Ninja` generator:
-else()
-  add_custom_target(
-    cat-gdb-examples ALL
-    COMMAND ${CMAKE_COMMAND} -E create_symlink
-    ${PROJECT_SOURCE_DIR}/.gdbinit ${CMAKE_BINARY_DIR}/.gdbinit
-    DEPENDS ${CMAKE_BINARY_DIR}
-  )  
-endif()
-add_dependencies(cat cat-gdb-examples)
+# `.gdbinit` symlink for examples. `SINGLE_CONFIG` also claims the top-level
+# `${CMAKE_BINARY_DIR}/.gdbinit` for single-config generators.
+cat_gdb_symlink(cat-gdb-examples SINGLE_CONFIG)
 
 add_library(cat-examples INTERFACE)
 
+# In-tree examples need `cat-impl`'s `INTERNAL` flags so `REUSE_FROM cat-impl`
+# below passes the PCH validator.
 target_compile_options(cat-examples INTERFACE
-  $<$<CXX_COMPILER_ID:GNU>:-fmax-errors=4>
-  $<$<CXX_COMPILER_ID:Clang>:-ferror-limit=4>
-  $<$<CXX_COMPILER_ID:GNU>:-fconcepts-diagnostics-depth=2>
+  ${CAT_COMPILE_OPTIONS_INTERNAL}
+  -ferror-limit=4
 )
 
 target_link_libraries(cat-examples INTERFACE cat)
@@ -36,47 +18,62 @@ option(CAT_BUILD_ALL_EXAMPLES "Compile all examples unconditionally." ON)
 option(CAT_BUILD_EXAMPLE_HELLO "Compile hello.cpp." OFF)
 if(CAT_BUILD_EXAMPLE_HELLO OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(hello hello.cpp)
-  target_compile_options(hello PRIVATE ${CAT_COMPILE_OPTIONS})
-  target_compile_definitions(hello PRIVATE "NO_ARGC_ARGV")
+  # `NO_ARGC_ARGV` pinned to `_start.cpp` and gated on the `hello` target so
+  # it doesn't contaminate sibling examples that share `TARGET_DIRECTORY`. See
+  # `tests/CMakeLists.txt` for the `SKIP_PRECOMPILE_HEADERS` rationale.
+  set_source_files_properties(
+    ${CMAKE_SOURCE_DIR}/src/libraries/runtime/implementations/_start.cpp
+    TARGET_DIRECTORY hello
+    PROPERTIES
+      COMPILE_DEFINITIONS
+        "$<$<STREQUAL:$<TARGET_PROPERTY:NAME>,hello>:NO_ARGC_ARGV>"
+      SKIP_PRECOMPILE_HEADERS ON)
   target_link_libraries(hello PRIVATE cat-examples)
-  target_link_options(hello PRIVATE ${CAT_LINK_OPTIONS})
+  if(CAT_PCH)
+    target_precompile_headers(hello REUSE_FROM cat-impl)
+  endif()
 endif()
 
 option(CAT_BUILD_EXAMPLE_ECHO "Compile echo.cpp." OFF)
 if(CAT_BUILD_EXAMPLE_ECHO OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(echo echo.cpp)
-  target_compile_options(echo PRIVATE ${CAT_COMPILE_OPTIONS})
   target_link_libraries(echo PRIVATE cat-examples)
-  target_link_options(echo PRIVATE ${CAT_LINK_OPTIONS})
+  if(CAT_PCH)
+    target_precompile_headers(echo REUSE_FROM cat-impl)
+  endif()
 endif()
 
 option(CAT_BUILD_EXAMPLE_CLIENT_SERVER "Compile client.cpp and server.cpp." OFF)
 if(CAT_BUILD_EXAMPLE_CLIENT_SERVER OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(client client.cpp)
-  target_compile_options(client PRIVATE ${CAT_COMPILE_OPTIONS})
   target_link_libraries(client PRIVATE cat-examples)
-  target_link_options(client PRIVATE ${CAT_LINK_OPTIONS})
+  if(CAT_PCH)
+    target_precompile_headers(client REUSE_FROM cat-impl)
+  endif()
 
   add_executable(server server.cpp)
-  target_compile_options(server PRIVATE ${CAT_COMPILE_OPTIONS})
   target_link_libraries(server PRIVATE cat-examples)
-  target_link_options(server PRIVATE ${CAT_LINK_OPTIONS})
+  if(CAT_PCH)
+    target_precompile_headers(server REUSE_FROM cat-impl)
+  endif()
 endif()
 
 option(CAT_BUILD_EXAMPLE_WINDOW "Compile window.cpp." OFF)
 if(CAT_BUILD_EXAMPLE_WINDOW OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(window window.cpp)
-  target_compile_options(window PRIVATE ${CAT_COMPILE_OPTIONS})
   target_link_libraries(window PRIVATE cat-examples)
-  target_link_options(window PRIVATE ${CAT_LINK_OPTIONS})
+  if(CAT_PCH)
+    target_precompile_headers(window REUSE_FROM cat-impl)
+  endif()
 endif()
 
 option(CAT_BUILD_EXAMPLE_CAT "Compile cat.cpp." OFF)
 if(CAT_BUILD_EXAMPLE_CAT OR CAT_BUILD_ALL_EXAMPLES)
   add_executable(unixcat cat.cpp)
-  target_compile_options(unixcat PRIVATE ${CAT_COMPILE_OPTIONS})
   target_link_libraries(unixcat PRIVATE cat-examples)
-  target_link_options(unixcat PRIVATE ${CAT_LINK_OPTIONS})
+  if(CAT_PCH)
+    target_precompile_headers(unixcat REUSE_FROM cat-impl)
+  endif()
   set_target_properties(unixcat PROPERTIES OUTPUT_NAME cat)
 endif()
 
@@ -94,7 +91,9 @@ if(
 )
   add_executable(dummy echo.cpp)
   target_link_libraries(dummy PRIVATE cat-examples)
-  target_link_options(dummy PRIVATE ${CAT_LINK_OPTIONS})
+  if(CAT_PCH)
+    target_precompile_headers(dummy REUSE_FROM cat-impl)
+  endif()
 endif()
 
 # libC executables are only configured for Release.
