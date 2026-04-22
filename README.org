@@ -49,9 +49,10 @@ subdirectory.
 Runs =clang-format= in place on every libCat implementation source and public
 header. The files which changed are reported afterwards.
 
-CMake auto-discovers an appropriate version of =clang-format= on =PATH=,
-if one exists. Override its choice=-DCAT_CLANG_FORMAT_PATH=/path/to/clang-format=
-at configure time.
+CMake automatically attempts to find an appropriate version of =clang-format= on =PATH=.
+Override its choice with =-DCAT_CLANG_FORMAT_PATH=/path/to/clang-format=. This is only
+applied to libCat sources, so it is not recommended to configure this unless it failed
+to find a suitable version.
 
 ** =cat-format-check=
 #+BEGIN_SRC sh
@@ -115,9 +116,9 @@ sanitizers are on.
 For scripted use, the wrapper script also accepts a one-shot =--eval= /
 =--eval-file= flag that runs the supplied snippets and exits, e.g.
 #+BEGIN_SRC sh
-  ./build/clang-repl-libcat -eval \
+  ./build/clang-repl-libcat --eval \
       '#include <cat/string>
-       auto _ = cat::println("Meow world!);'
+       auto _ = cat::println("Meow world!");'
 
   # Meow world!
 #+END_SRC
@@ -162,9 +163,6 @@ All build options are CMake cache variables; pass them with =-D= at configure ti
   library instead of the static archive, so every in-tree consumer and
   downstream =find_package(cat)= user that links =cat= transparently
   picks it up. Implies =CAT_BUILD_SHARED=.
-- =CAT_INSTALL= (default =OFF=) - Generate the install / export rules so
-  =cmake --install <build>= lays out a sysroot that other CMake projects can
-  consume via =find_package(cat)= and =target_link_libraries(my_target cat::cat)=.
 
 ** Tests and examples
 - =CAT_BUILD_UNIT_TESTS= (default =ON=) - Compile the =unit_tests= binary

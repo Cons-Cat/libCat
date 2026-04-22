@@ -46,9 +46,6 @@ if (CAT_USE_SANITIZERS)
   message(STATUS "CAT_USE_SANITIZERS: using ${CAT_ASAN_RUNTIME_PATH}")
 endif()
 
-option(CAT_INSTALL
-  "Generate install / export rules so other CMake projects can find_package(cat)." OFF)
-
 # Optional sccache compiler-launcher. Auto-on when `sccache` is on PATH.
 # `-DCAT_USE_SCCACHE=ON` makes it required. Pairs with `-fno-pch-timestamp`
 # below for ~100% hit rates across build dirs.
@@ -371,6 +368,5 @@ include(${CMAKE_SOURCE_DIR}/cmake/cat_intermediaries.cmake)
 # Syntax-only check target (`cat-syntax`).
 include(${CMAKE_SOURCE_DIR}/cmake/cat_syntax.cmake)
 
-if (CAT_INSTALL)
-  include(${CMAKE_SOURCE_DIR}/cmake/cat_install.cmake)
-endif()
+# Install / export rules (`cmake --install build/` = `find_package(cat)` sysroot).
+include(${CMAKE_SOURCE_DIR}/cmake/cat_install.cmake)
