@@ -50,8 +50,7 @@ test(meta) {
    static_assert(!is_scoped_enum<class_type>);
    static_assert(!is_scoped_enum<union_type>);
    static_assert(!is_scoped_enum<enum_type>);
-   // TODO: This stopped working. GCC 13 regression?
-   // static_assert(is_scoped_enum<enum_class_type>);
+   static_assert(is_scoped_enum<enum_class_type>);
 
    static_assert(!is_class<int>);
    static_assert(!is_class<enum_type>);

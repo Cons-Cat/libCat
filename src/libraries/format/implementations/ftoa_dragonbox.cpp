@@ -21,13 +21,7 @@
 
 #include <cat/memory>
 
-#if defined(__GNUC__) || defined(__clang__)
 #define JKJ_FORCEINLINE inline __attribute__((always_inline))
-#elif defined(_MSC_VER)
-#define JKJ_FORCEINLINE __forceinline
-#else
-#define JKJ_FORCEINLINE inline
-#endif
 
 namespace cat::detail::dragonbox {
 namespace to_chars_detail {

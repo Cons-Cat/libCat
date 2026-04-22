@@ -21,19 +21,8 @@
 #include <cat/memory>
 #include <cat/string>
 
-// Suppress additional buffer overrun check.
-// I have no idea why MSVC thinks some functions here are vulnerable to the
-// buffer overrun attacks. No, they aren't.
-#if defined(__GNUC__) || defined(__clang__)
 #define JKJ_SAFEBUFFERS
 #define JKJ_FORCEINLINE inline __attribute__((always_inline))
-#elif defined(_MSC_VER)
-#define JKJ_SAFEBUFFERS __declspec(safebuffers)
-#define JKJ_FORCEINLINE __forceinline
-#else
-#define JKJ_SAFEBUFFERS
-#define JKJ_FORCEINLINE inline
-#endif
 
 #if defined(__has_builtin)
 #define JKJ_DRAGONBOX_HAS_BUILTIN(x) __has_builtin(x)
@@ -425,9 +414,7 @@ namespace wuint {
     #if defined(__SIZEOF_INT128__)
             // To silence "error: ISO C++ does not support '__int128' for 'type name'
             // [-Wpedantic]"
-        #if defined(__GNUC__)
             __extension__
-        #endif
             using builtin_uint128_t = unsigned __int128;
     #endif
 // clang-format on

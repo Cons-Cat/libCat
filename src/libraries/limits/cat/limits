@@ -6,7 +6,7 @@
 
 namespace cat {
 
-// TODO: Implement support for GCC 13's `__bf16` type.
+// TODO: Implement support for Clang's `__bf16` type.
 // TODO: Implement support for complex floats.
 
 // Forward declare types. These are implemented in `<numeral>`.
@@ -45,7 +45,7 @@ template <typename T, typename storage_type, overflow_policies policy>
 struct limits<arithmetic_ptr<T, storage_type, policy> const>
     : limits<storage_type> {};
 
-// TODO: Implement `min` and `max` limits in terms of GCC macros, like
+// TODO: Implement `min` and `max` limits in terms of Clang macros, like
 // `__LONG_LONG_MAX__`.
 
 template <>
@@ -276,15 +276,6 @@ struct limits<__UINT64_TYPE__> {
    static constexpr bool is_iec559 = false;
 };
 
-// `__INT64_TYPE__` / `__UINT64_TYPE__` are not always the same spelling as
-// `long long` / `unsigned long long` (for example `__INT64_TYPE__` may be
-// `long` on LP64 targets). These partial specializations cover that case.
-//
-// When `sizeof(long) != 8` (for example LLP64), `__INT64_TYPE__` is typically
-// `long long`, so `limits<__INT64_TYPE__>` already defines `limits<long long>`;
-// omit these partials in that case. Also omit when `long long` is spelled
-// `__INT64_TYPE__` even if `sizeof(long) == 8`.
-
 template <typename T>
 // On LP64, `limits<long long> needs explicit specialization.
    requires(is_same<T, long long> && sizeof(long) == 8)
@@ -433,7 +424,7 @@ struct limits<float> {
       return __builtin_nansf("");
    }
 
-   // TODO: Use GCC 13's `__builtin_issignalling()`.
+   // TODO: Use Clang's `__builtin_issignaling()`.
 
    static constexpr auto
    denorm_min() -> float {

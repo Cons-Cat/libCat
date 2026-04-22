@@ -61,7 +61,7 @@ test(format_strings) {
    cat::array<char, 100u> array;
    cat::span<char> array_span{array.data(), array.size()};
 
-   // TODO: This segfaults with optimizations enabled in GCC 13.
+   // TODO: This segfaulted with optimizations enabled.
    // cat::string string_int_13 =
    //     cat::to_string_at(int4{13}, array_span).verify();
    // cat::verify(string_int_13.size() == 4);

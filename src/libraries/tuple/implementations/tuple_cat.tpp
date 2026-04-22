@@ -12,9 +12,6 @@ template <typename... outer_tuple_elements>
 constexpr auto
 get_outer_type_list(type_map<outer_tuple_elements...>) {
    return (type_list_filled<decay<outer_tuple_elements>,
-                            // `ssizeof_pack` causes an internal compiler
-                            // error in GCC 12 here.
-                            // ssizeof_pack<outer_tuple_elements>()>
                             idx(sizeof...(outer_tuple_elements))>{}
            + ...);
 }

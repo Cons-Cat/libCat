@@ -81,7 +81,7 @@ copy_memory_impl(void const* p_source, void* p_destination, uword bytes) {
    if (bytes_wider <= l3_cache_size) {
       while (bytes_wider >= step_size) {
          // Load 8 vectors, then increment the source pointer by that size.
-#pragma GCC unroll 8
+#pragma unroll 8
          for (idx i = 0u; i < 8u; ++i) {
             unsigned char const* const p_byte =
                p_source_handle.get() + (i * sizeof(simd_vector));
@@ -92,13 +92,13 @@ copy_memory_impl(void const* p_source, void* p_destination, uword bytes) {
          prefetch_for_one_read(p_source_handle.get() + (step_size * 2u));
 
          if (dest_simd_aligned) {
-#pragma GCC unroll 8
+#pragma unroll 8
             for (idx i = 0u; i < 8u; ++i) {
                __builtin_bit_cast(simd_vector*, p_destination_handle.get())[i] =
                   vectors[i];
             }
          } else {
-#pragma GCC unroll 8
+#pragma unroll 8
             for (idx i = 0u; i < 8u; ++i) {
                vectors[i].store_unaligned(
                   reinterpret_cast<simd_vector::memory_lane*>(
@@ -118,7 +118,7 @@ copy_memory_impl(void const* p_source, void* p_destination, uword bytes) {
       // TODO: This could be improved by using aligned-streaming when
       // possible.
       while (bytes_wider >= step_size) {
-#pragma GCC unroll 8
+#pragma unroll 8
          for (idx i = 0u; i < 8u; ++i) {
             unsigned char const* const p_byte =
                p_source_handle.get() + (i * sizeof(simd_vector));
@@ -128,7 +128,7 @@ copy_memory_impl(void const* p_source, void* p_destination, uword bytes) {
          }
          prefetch_for_one_read(p_source_handle.get() + (step_size * 2u));
          p_source_handle += step_size;
-#pragma GCC unroll 8
+#pragma unroll 8
          for (idx i = 0u; i < 8u; ++i) {
             stream_in(p_destination_handle.get() + (i * sizeof(simd_vector)),
                       &vectors[i]);
@@ -141,7 +141,7 @@ copy_memory_impl(void const* p_source, void* p_destination, uword bytes) {
    } else {
       prefetch_for_one_read(p_source_handle.get() + (step_size * 2u));
       while (bytes_wider >= step_size) {
-#pragma GCC unroll 8
+#pragma unroll 8
          for (idx i = 0u; i < 8u; ++i) {
             unsigned char const* const p_byte =
                p_source_handle.get() + (i * sizeof(simd_vector));
@@ -151,7 +151,7 @@ copy_memory_impl(void const* p_source, void* p_destination, uword bytes) {
          }
          prefetch_for_one_read(p_source_handle.get() + (step_size * 2u));
 
-#pragma GCC unroll 8
+#pragma unroll 8
          for (idx i = 0u; i < 8u; ++i) {
             vectors[i].store_unaligned(
                reinterpret_cast<simd_vector::memory_lane*>(

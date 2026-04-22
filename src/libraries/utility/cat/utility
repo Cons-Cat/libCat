@@ -104,14 +104,8 @@ using make_value_type_list = decltype(value_list<T, value, count>);
 
 template <is_integral T, idx count>
 constexpr auto integer_sequence =
-#if __has_builtin(__integer_pack)
-   // TODO: Get `__integer_pack` working for GCC.
-   detail::make_integer_sequence<count, T, count>();
-// value_type_list<T, T(__integer_pack(count))...>();
-#else
    // TODO: Support `__make_integer_seq` for Clang.
    detail::make_integer_sequence<count, T, T(count.raw)>();
-#endif
 
 template <is_integral T, idx count>
 constexpr auto zeros_list = value_list<T, T(0), count>;

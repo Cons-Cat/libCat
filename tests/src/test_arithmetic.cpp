@@ -5,8 +5,8 @@
 
 #include "../unit_tests.hpp"
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-result"
 
 template <auto value>
 struct nttp {
@@ -1379,4 +1379,5 @@ static_assert(promotion_grid(promotion_arithmetic_types{}));
 
 }  // namespace
 
-#pragma GCC diagnostic pop
+#pragma clang diagnostic pop
+

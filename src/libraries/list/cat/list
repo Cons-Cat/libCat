@@ -701,8 +701,8 @@ initialize_slist_filled(span<T> list_nodes, T* p_previous,
 
 // These factory functions require access to the `protected` constructor, which
 // is marked `[[deprecated]]`.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 // Make an empty `list`.
 template <typename T, is_allocator allocator_type>
@@ -845,6 +845,6 @@ make_slist_filled(allocator_type& allocator, idx count, T const& value)
    return new_slist;
 }
 
-#pragma GCC diagnostic pop
+#pragma clang diagnostic pop
 
 }  // namespace cat

@@ -5,7 +5,7 @@
 #include <cat/iterator>
 #include <cat/meta>
 
-// `__BYTE_ORDER__` and `__ORDER_LITTLE_ENDIAN__` are macros defined by GCC.
+// `__BYTE_ORDER__` and `__ORDER_LITTLE_ENDIAN__` are macros defined by Clang.
 namespace cat {
 
 inline namespace literals {
@@ -224,10 +224,10 @@ parallel_extract_bits(T value, U mask) -> T {
    auto raw_mask = cat::make_raw_arithmetic(mask);
 
    if constexpr (__has_builtin(_pext_u32) && sizeof(T) == 4) {
-      // `_pext_u32()` is a GCC intrinsic.
+      // `_pext_u32()` is a Clang intrinsic.
       return T(_pext_u32(raw_value, raw_mask));
    } else if constexpr (__has_builtin(_pext_u64) && sizeof(T) == 8) {
-      // `_pext_u64()` is a GCC intrinsic.
+      // `_pext_u64()` is a Clang intrinsic.
       return T(_pext_u64(raw_value, raw_mask));
    } else {
       cat::raw_arithmetic_type<T> count = 0u;
@@ -257,10 +257,10 @@ deposit_bits_mask(T value, U mask) -> T {
    auto raw_mask = cat::make_raw_arithmetic(mask);
 
    if constexpr (__has_builtin(_pdep_u32) && sizeof(T) == 4) {
-      // `_pdep_u32()` is a GCC intrinsic.
+      // `_pdep_u32()` is a Clang intrinsic.
       return T(_pdep_u32(raw_value, raw_mask));
    } else if constexpr (__has_builtin(_pdep_u64) && sizeof(T) == 8) {
-      // `_pdep_u64()` is a GCC intrinsic.
+      // `_pdep_u64()` is a Clang intrinsic.
       return T(_pdep_u64(raw_value, raw_mask));
    } else {
       T count = T(0u);
