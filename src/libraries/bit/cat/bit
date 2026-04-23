@@ -210,7 +210,7 @@ extract_bits(T from, cat::uint1 offset, cat::idx length) -> T {
 
    constexpr unsigned char bits = sizeof(T) * 8u;
    auto const mask = ((1u << raw_length) * (raw_length < bits)) - 1u;
-   return T((raw_from >> offset.raw) & (mask * (offset.raw < bits)));
+   return T((raw_from >> offset.raw) & (mask * (offset < bits)));
 }
 
 // Extract the 1 bits from `value` which are also 1 at the same index in `mask`.

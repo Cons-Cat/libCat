@@ -4,7 +4,8 @@
 
 // TODO: Constrain parameter with a vector concept.
 // TODO: This code can be simplified a lot.
-/* Non-temporally copy a vector into some address. */
+// TODO: Clang has non-temporal intrinsics.
+// Non-temporally copy a vector into some address.
 template <typename T>
 void
 cat::stream_in(void* p_destination, T const* source) {

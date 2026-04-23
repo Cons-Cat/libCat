@@ -73,7 +73,7 @@ avx2_abi_mask_to_bitset(cat::simd_mask<T, Abi> mask) -> __UINT32_TYPE__ {
 [[nodiscard]]
 inline auto
 avx2_movmsk_full_lane_mask(cat::idx lane_count) -> __UINT32_TYPE__ {
-   if (lane_count.raw >= 32u) {
+   if (lane_count >= 32u) {
       return static_cast<__UINT32_TYPE__>(~0u);
    }
    return static_cast<__UINT32_TYPE__>((1ull << lane_count.raw) - 1ull);

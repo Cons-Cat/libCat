@@ -33,7 +33,7 @@ simd_concat(V const& lower_lanes_first, V const& upper_lanes_second) {
 }
 
 template <idx NewLanes, typename V>
-   requires((is_simd<V> || is_simd_mask<V>) && NewLanes.raw != 0)
+   requires((is_simd<V> || is_simd_mask<V>) && NewLanes != 0)
 [[nodiscard]]
 constexpr auto
 simd_resize(V const& v) -> resize_simd<NewLanes, V> {
@@ -48,8 +48,8 @@ simd_resize(V const& v) -> resize_simd<NewLanes, V> {
 }
 
 template <idx Begin, idx End, typename V>
-   requires(is_simd_or_mask<V> && End.raw > Begin.raw
-            && End.raw <= V::abi_type::lanes.raw)
+   requires(is_simd_or_mask<V> && End > Begin
+            && End <= V::abi_type::lanes)
 [[nodiscard]]
 constexpr auto
 simd_extract(V const& parent)
@@ -128,7 +128,7 @@ template <is_simd V>
 constexpr auto
 simd_reverse_blocks(V input, idx block_lanes) -> V {
    using Abi = typename V::abi_type;
-   if (block_lanes.raw == 0u || (Abi::lanes.raw % block_lanes.raw) != 0u) {
+   if (block_lanes == 0u || (Abi::lanes % block_lanes) != 0u) {
       return input;
    }
    V result{};
