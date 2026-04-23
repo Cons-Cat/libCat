@@ -542,7 +542,7 @@ class basic_futex : public futex_word {
    has_waiters(cat::uint4 lock_word) -> bool
       requires(cat::is_same<kind, futex_robust>)
    {
-      return (lock_word & futex_waiters_flag).raw != 0u;
+      return (lock_word & futex_waiters_flag) != 0u;
    }
 
    [[nodiscard]]
@@ -550,7 +550,7 @@ class basic_futex : public futex_word {
    owner_exited_abnormally(cat::uint4 lock_word) -> bool
       requires(cat::is_same<kind, futex_robust>)
    {
-      return (lock_word & futex_owner_died_flag).raw != 0u;
+      return (lock_word & futex_owner_died_flag) != 0u;
    }
 };
 

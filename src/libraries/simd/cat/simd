@@ -79,7 +79,7 @@ namespace detail {
 consteval auto
 simd_memory_alignment_for_fixed_size(idx object_size, uword native_cap,
                                      uword element_align) -> uword {
-   uword const bounded = object_size.raw <= native_cap.raw
+   uword const bounded = object_size <= native_cap
                             ? static_cast<uword>(object_size.raw)
                             : native_cap;
    if (bounded == 0u) {
@@ -193,7 +193,7 @@ struct scalar_abi {
 
    static_assert(sizeof(T) > 0 && size.raw % sizeof(T) == 0,
                  "`scalar_abi` element size must divide 16 bytes");
-   static_assert(lanes.raw > 0,
+   static_assert(lanes > 0,
                  "`scalar_abi` lane count derived from sizeof(T) must be "
                  "positive");
 
@@ -992,16 +992,16 @@ class alignas(in_abi::alignment.raw) simd {
    fill(U value) -> simd& {
       scalar_type const fill_value = static_cast<scalar_type>(value);
       mapped_type const lane = simd_lane_to_storage(fill_value);
-      if constexpr (abi_type::lanes.raw == 2uz) {
+      if constexpr (abi_type::lanes == 2uz) {
          this->raw = raw_type{lane, lane};
-      } else if constexpr (abi_type::lanes.raw == 4uz) {
+      } else if constexpr (abi_type::lanes == 4uz) {
          this->raw = raw_type{lane, lane, lane, lane};
-      } else if constexpr (abi_type::lanes.raw == 8uz) {
+      } else if constexpr (abi_type::lanes == 8uz) {
          this->raw = raw_type{lane, lane, lane, lane, lane, lane, lane, lane};
-      } else if constexpr (abi_type::lanes.raw == 16uz) {
+      } else if constexpr (abi_type::lanes == 16uz) {
          this->raw = raw_type{lane, lane, lane, lane, lane, lane, lane, lane,
                               lane, lane, lane, lane, lane, lane, lane, lane};
-      } else if constexpr (abi_type::lanes.raw == 32uz) {
+      } else if constexpr (abi_type::lanes == 32uz) {
          this->raw = raw_type{lane, lane, lane, lane, lane, lane, lane, lane,
                               lane, lane, lane, lane, lane, lane, lane, lane,
                               lane, lane, lane, lane, lane, lane, lane, lane,

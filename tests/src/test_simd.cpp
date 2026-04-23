@@ -354,12 +354,12 @@ test(simd_resize_insert_extract) {
    int4x4 const v = {10, 11, 12, 13};
 
    auto const shr = cat::simd_resize<2u>(v);
-   static_assert(decltype(shr)::abi_type::lanes.raw == 2);
+   static_assert(decltype(shr)::abi_type::lanes == 2);
    cat::verify(shr[0] == 10);
    cat::verify(shr[1] == 11);
 
    auto const grow = cat::simd_resize<6u>(v);
-   static_assert(decltype(grow)::abi_type::lanes.raw == 6);
+   static_assert(decltype(grow)::abi_type::lanes == 6);
    cat::verify(grow[0] == 10);
    cat::verify(grow[1] == 11);
    cat::verify(grow[2] == 12);
@@ -368,7 +368,7 @@ test(simd_resize_insert_extract) {
    cat::verify(grow[5].raw == 0);
 
    auto const slice = cat::simd_extract<1u, 3u>(v);
-   static_assert(decltype(slice)::abi_type::lanes.raw == 2);
+   static_assert(decltype(slice)::abi_type::lanes == 2);
    cat::verify(slice[0] == 11);
    cat::verify(slice[1] == 12);
 

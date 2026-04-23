@@ -427,9 +427,14 @@ inline constexpr bool
    is_signed_detail<arithmetic_ptr<T, storage_type, policy>> =
       is_signed_detail<storage_type>;
 
-// Clang 19 rejects the `is_less_than_comparable` constraint here.
+// A signed type is less-than-comparable with a `bool` result. For example,
+// this holds true for `cat::arithmetic` and false for `cat::simd`. We use
+// `decltype(a < b)` instead of:
+//    `requires { { a < b } -> is_convertible<bool>; }`
+// because that operator lookup causes unbounded recursion on some libCat types.
 template <typename T>
-   requires(is_convertible<signed char, T>)
+   requires(is_convertible<signed char, T>
+            && is_convertible<decltype(declval<T>() < declval<T>()), bool>)
 inline constexpr bool is_signed_detail<T> =
    constval<(T(static_cast<signed char>(-1)) < T(static_cast<signed char>(0)))>;
 }  // namespace detail

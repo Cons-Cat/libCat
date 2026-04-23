@@ -9,8 +9,8 @@ Checks: "bugprone-*,
          cppcoreguidelines-avoid-non-const-global-variables,
          misc-*,
          # DISABLE SOME CHECKS:
-         -bugprone-easily-swappable-parameters,
-         -bugprone-reserved-identifier,
+         -bugprone-easily-swappable-parameters, # This is excessively constraining.
+         -bugprone-reserved-identifier, # These are needed to build the runtime.
          -performance-noexcept-move-constructor, # TODO: Enable this when exceptions work.
          -modernize-use-auto, # TODO: Configure this.
          -readability-magic-numbers,

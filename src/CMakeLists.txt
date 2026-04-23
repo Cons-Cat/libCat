@@ -150,7 +150,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/allocator/cat/page_allocator
   ${CATLIB}/allocator/cat/pool_allocator
   ${CATLIB}/arithmetic/cat/arithmetic
-  ${CATLIB}/arithmetic/cat/detail/overflow_reference.hpp
+  ${CATLIB}/arithmetic/cat/overflow_reference.hpp
   ${CATLIB}/arithmetic/cat/arithmetic_interface
   ${CATLIB}/arithmetic/cat/implementations/narrow_to_idx.tpp
   ${CATLIB}/array/cat/array
