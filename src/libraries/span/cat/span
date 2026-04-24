@@ -158,7 +158,8 @@ template <typename T>
    requires(is_implicit_lifetime<T>)
 constexpr void
 copy_memory(span<T const> const source, span<T> destination) {
-   copy_memory(source.data(), destination.data(), source.size() * sizeof(T));
+   copy_memory(source.data(), destination.data(),
+               (source.size() * sizeof(T)).to_idx().assert());
 }
 
 template <typename T>
@@ -166,7 +167,7 @@ template <typename T>
 constexpr void
 copy_memory_backward(span<T const> const source, span<T> destination) {
    copy_memory_backward(source.data(), destination.data(),
-                        source.size() * sizeof(T));
+                        (source.size() * sizeof(T)).to_idx().assert());
 }
 
 }  // namespace cat
