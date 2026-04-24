@@ -70,7 +70,8 @@ class basic_str_span : public span<char_type> {
       // assume forces a trailing null so `other_length` is at least one and
       // subtracting one cannot wrap. For `str_span` the subtrahend is zero.
       this->m_size =
-         narrow_to_idx(other_length.raw - !is_null_terminated).value();
+         narrow_cast<idx>(other_length - (is_null_terminated ? 0u : 1u))
+            .value();
    }
 
    template <idx other_length>
@@ -109,8 +110,8 @@ class basic_str_span : public span<char_type> {
    ) {
       this->m_p_data = other_string.data();
       // `zstr_inplace` storage length counts the trailing null, so it is never
-      // zero and `other_length.raw - 1u` cannot wrap in unsigned arithmetic.
-      this->m_size = narrow_to_idx(other_length.raw - 1u).value();
+      // zero and `other_length - 1u` cannot wrap for a non-empty string.
+      this->m_size = narrow_cast<idx>(other_length - 1u).value();
    }
 
    // Make a `str_view` over a `zstr_inplace`.
@@ -122,7 +123,7 @@ class basic_str_span : public span<char_type> {
    ) {
       this->m_p_data = other_string.data();
       // Same bound as the mutable overload above.
-      this->m_size = narrow_to_idx(other_length.raw - 1u).value();
+      this->m_size = narrow_cast<idx>(other_length - 1u).value();
    }
 
    // Make a `str_span` over a `zstr_inplace`.
@@ -150,7 +151,7 @@ class basic_str_span : public span<char_type> {
    ) {
       this->m_p_data = in_span.data();
       // `zstr_span` size counts the trailing null, so it is never zero here.
-      this->m_size = narrow_to_idx(in_span.size().raw - 1u).value();
+      this->m_size = narrow_cast<idx>(in_span.size() - 1u).value();
    }
 
    // Promote `zstr_span<char>` to `str_span<char const>`.
@@ -161,7 +162,7 @@ class basic_str_span : public span<char_type> {
    ) {
       this->m_p_data = in_span.data();
       // Same as the non-const promotion above.
-      this->m_size = narrow_to_idx(in_span.size().raw - 1u).value();
+      this->m_size = narrow_cast<idx>(in_span.size() - 1u).value();
    }
 
    // Prevent binding a `zstr_span` over a `str_span`.
@@ -349,23 +350,21 @@ class basic_str_inplace
       basic_str_inplace<char_type, length, is_null_terminated> const& self,
       basic_str_inplace<char_type, other_length, is_null_terminated> const&
          other_string)
-      -> basic_str_inplace<
-         char_type,
-         narrow_to_idx(length.raw + other_length.raw
-                       - static_cast<__SIZE_TYPE__>(is_null_terminated))
-            .value(),
-         is_null_terminated> {
+      -> basic_str_inplace<char_type,
+                           narrow_cast<idx>(uword{length} + uword{other_length}
+                                            - (is_null_terminated ? 1u : 0u))
+                              .value(),
+                           is_null_terminated> {
       // `zstr_inplace` stores a trailing null in `length`, so `length` is at
       // least one when `is_null_terminated` subtracts one. Otherwise the
       // subtrahend is zero. The concatenated size drops at most one duplicate
       // null, never more than `length + other_length`.
       constexpr idx const self_useful =
-         narrow_to_idx(length.raw
-                       - static_cast<__SIZE_TYPE__>(is_null_terminated))
+         narrow_cast<idx>(uword{length} - (is_null_terminated ? 1u : 0u))
             .value();
       constexpr idx const new_length =
-         narrow_to_idx(length.raw + other_length.raw
-                       - static_cast<__SIZE_TYPE__>(is_null_terminated))
+         narrow_cast<idx>(uword{length} + uword{other_length}
+                          - (is_null_terminated ? 1u : 0u))
             .value();
 
       basic_str_inplace<char_type, new_length, is_null_terminated> new_string;
@@ -392,12 +391,11 @@ class basic_str_inplace
       // treated as null-terminated (`!is_null_terminated` is false). Otherwise
       // the subtrahend is zero.
       return self
-             + basic_str_inplace<char_type,
-                                 narrow_to_idx(other_length.raw
-                                               - static_cast<__SIZE_TYPE__>(
-                                                  !is_null_terminated))
-                                    .value(),
-                                 is_null_terminated>{other_string};
+             + basic_str_inplace<
+                char_type,
+                narrow_cast<idx>(other_length - (is_null_terminated ? 0u : 1u))
+                   .value(),
+                is_null_terminated>{other_string};
    }
 
    // Concatenate a `basic_str_inplace` to a string literal.
@@ -409,9 +407,8 @@ class basic_str_inplace
       [[assume(other_string[other_length.raw - 1] == '\0')]];
       // Same reasoning as `operator+` from `basic_str_inplace` to a literal.
       return basic_str_inplace<char_type,
-                               narrow_to_idx(other_length.raw
-                                             - static_cast<__SIZE_TYPE__>(
-                                                !is_null_terminated))
+                               narrow_cast<idx>(
+                                  other_length - (is_null_terminated ? 0u : 1u))
                                   .value(),
                                is_null_terminated>{other_string}
              + self;
@@ -436,7 +433,7 @@ class basic_str_inplace
 template <idx len>
 basic_str_inplace(char const (&str)[len])
    // A string literal includes a trailing null, so `len` is at least one.
-   ->basic_str_inplace<char, narrow_to_idx(len.raw - 1uz).value(), false>;
+   ->basic_str_inplace<char, narrow_cast<idx>(len - 1u).value(), false>;
 
 template <idx deduced_length>
 using str_inplace = basic_str_inplace<char, deduced_length, false>;
@@ -447,22 +444,22 @@ using zstr_inplace = basic_str_inplace<char, deduced_length, true>;
 // Create a `str_inplace` from a smaller string, and null out the unfilled
 // bytes.
 template <idx padded_length, idx deduced_length>
-   requires(deduced_length.raw - 1uz <= padded_length.raw)
+   requires((deduced_length - 1u) <= padded_length)
 consteval auto
 make_str_inplace(char const (&string)[deduced_length])
    -> str_inplace<padded_length> {
    [[assume(string[deduced_length.raw - 1uz] == '\0')]];
    str_inplace<padded_length> new_string;
    // The assume matches a normal string literal, so `deduced_length` is at
-   // least one and `deduced_length.raw - 1uz` is the last character index,
-   // not an underflowed length.
-   for (idx i; i < narrow_to_idx(deduced_length.raw - 1uz).value(); ++i) {
+   // least one and `deduced_length - 1u` is the last character index, not an
+   // underflowed length.
+   for (idx i; i < narrow_cast<idx>(deduced_length - 1u).value(); ++i) {
       new_string[i] = string[i.raw];
    }
    // Pad the string out with null bytes. Padding starts at the same index as
-   // the literal's trailing null slot, so the `narrow_to_idx` call matches the
+   // the literal's trailing null slot, so the starting index matches the
    // copy loop bound above.
-   for (idx i = narrow_to_idx(deduced_length.raw - 1uz).value();
+   for (idx i = narrow_cast<idx>(deduced_length - 1u).value();
         i < padded_length; ++i) {
       new_string[i] = '\0';
    }
@@ -473,7 +470,7 @@ make_str_inplace(char const (&string)[deduced_length])
 // Create a `str_inplace` from a smaller string, and null out the unfilled
 // bytes.
 template <idx padded_length, idx deduced_length>
-   requires(deduced_length.raw - 1uz <= padded_length.raw)
+   requires((deduced_length - 1u) <= padded_length)
 consteval auto
 make_zstr_inplace(char const (&string)[deduced_length])
    -> zstr_inplace<padded_length> {
@@ -521,11 +518,6 @@ compare_strings(str_view string_1, str_view string_2) -> bool {
       return detail::compare_strings_detail(string_1, string_2);
    }
 }
-
-// `idx` is logically 63-bit, so a 64-bit integer is unrepresentable and suits a
-// sentinel value well.
-using maybe_idx =
-   maybe<sentinel<idx, __builtin_bit_cast(idx, limits<uword>::max())>>;
 
 auto
 print(str_view string) -> maybe_idx;

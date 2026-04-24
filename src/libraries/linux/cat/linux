@@ -5,7 +5,6 @@
 #include <cat/allocator>
 #include <cat/atomic>
 #include <cat/bit>
-#include <cat/cast>
 #include <cat/notype>
 #include <cat/scaredy>
 #include <cat/span>
@@ -296,7 +295,8 @@ using map_syscall_type =
 auto
 // NOLINTNEXTLINE This parameter is not always pointer.
 is_positive(auto input) -> bool {
-   return cat::bit_int_cast(input) >= 0;
+   // TODO: Use intptr for the cast.
+   return __builtin_bit_cast(cat::int_fixed<sizeof(input)>, input) >= 0;
 }
 }  // namespace detail
 

@@ -60,7 +60,7 @@ read_and_print_file(char* p_file_name) {
                             .or_exit("Failed to allocate memory!", 4);
 
       io_vectors[current_block] =
-         nix::io_vector(buffer.data(), cat::narrow_to_idx(current_block_size).assert());
+         nix::io_vector(buffer.data(), cat::narrow_cast<idx>(current_block_size).assert());
       ++current_block;
       bytes_remaining -= current_block_size;
    }
