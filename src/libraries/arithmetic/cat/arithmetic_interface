@@ -1300,9 +1300,9 @@ struct shift_left_interface {
    constexpr auto
    operator<<(this derived_type const& self, decay_derived_type const& other)
       -> decltype(auto)
-      requires(detail::has_shift_left_by<derived_type,
-                                                decay_derived_type const&>
-               && is_constructible<derived_type, decay_derived_type const&>)
+      requires(
+         detail::has_shift_left_by<derived_type, decay_derived_type const&>
+         && is_constructible<derived_type, decay_derived_type const&>)
    {
       return self.shift_left_by(other);
    }
@@ -1311,9 +1311,8 @@ struct shift_left_interface {
    constexpr auto
    operator<<(this derived_type const& self, decay_derived_type&& other)
       -> decltype(auto)
-      requires(
-         detail::has_shift_left_by<derived_type, decay_derived_type &&>
-         && is_constructible<derived_type, decay_derived_type &&>)
+      requires(detail::has_shift_left_by<derived_type, decay_derived_type &&>
+               && is_constructible<derived_type, decay_derived_type &&>)
    {
       return self.shift_left_by(move(other));
    }
@@ -1437,9 +1436,9 @@ struct shift_right_interface {
    constexpr auto
    operator>>(this derived_type const& self, decay_derived_type const& other)
       -> decltype(auto)
-      requires(detail::has_shift_right_by<derived_type,
-                                                 decay_derived_type const&>
-               && is_constructible<derived_type, decay_derived_type const&>)
+      requires(
+         detail::has_shift_right_by<derived_type, decay_derived_type const&>
+         && is_constructible<derived_type, decay_derived_type const&>)
    {
       return self.shift_right_by(other);
    }
@@ -1448,9 +1447,8 @@ struct shift_right_interface {
    constexpr auto
    operator>>(this derived_type const& self, decay_derived_type&& other)
       -> decltype(auto)
-      requires(
-         detail::has_shift_right_by<derived_type, decay_derived_type &&>
-         && is_constructible<derived_type, decay_derived_type &&>)
+      requires(detail::has_shift_right_by<derived_type, decay_derived_type &&>
+               && is_constructible<derived_type, decay_derived_type &&>)
    {
       return self.shift_right_by(move(other));
    }
