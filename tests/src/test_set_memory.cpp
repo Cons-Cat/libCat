@@ -16,18 +16,17 @@ test(set_memory) {
    cat::verify(p_page[1'000] == 1_u1);
 
    // Test that unaligned memory still sets correctly.
-   cat::set_memory(p_page + 3, 2_u1, 2_uki - 6);
+   cat::set_memory(p_page + 3, 2_u1, 2_uki - 6u);
    cat::verify(p_page[0] == 1_u1);
    cat::verify(p_page[2] == 1_u1);
    cat::verify(p_page[3] == 2_u1);
-   // TODO: Why did this stop working?
-   // cat::verify(p_page[(2_ki - 4).raw] == 2_u1);
-   cat::verify(p_page[(2_ki - 3).raw] == 1_u1);
+   cat::verify(p_page[2_uki - 4u] == 2_u1);
+   cat::verify(p_page[2_uki - 3u] == 1_u1);
 
    // Test zeroing out memory.
    cat::zero_memory(p_page, 4_uki);
    cat::verify(p_page[0] == 0_u1);
-   cat::verify(p_page[(4_ki).raw - 1] == 0_u1);
+   cat::verify(p_page[4_uki - 1u] == 0_u1);
 
    // Test setting values larger than 1 byte.
    cat::set_memory(p_page, 1_i2, 2_uki);

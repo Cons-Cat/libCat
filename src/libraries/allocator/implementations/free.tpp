@@ -28,8 +28,8 @@ allocator_interface<derived_type>::free(T const& handle) {
       poison_memory_region(p_memory, sizeof(allocation_type));
 
       // if constexpr (is_destructible<allocation_type>) {
-      for (uword i = 0u; i < handle.size(); ++i) {
-         p_memory[i.raw].~allocation_type();
+      for (idx i = 0u; i < handle.size(); ++i) {
+         p_memory[i].~allocation_type();
       }
       // }
       this->self().deallocate(static_cast<void const*>(p_memory),
@@ -107,17 +107,17 @@ allocator_interface<derived_type>::cfree(T& handle) {
 
       poison_memory_region(p_memory, sizeof(allocation_type));
 
-      for (uword i = 0u; i < handle.size(); ++i) {
-         p_memory[i.raw].~allocation_type();
+      for (idx i = 0u; i < handle.size(); ++i) {
+         p_memory[i].~allocation_type();
       }
       zero_memory_explicit(
          static_cast<void*>(const_cast<allocation_type*>(p_memory)),
-         static_cast<uword>(handle.raw_size()));
+         handle.raw_size());
       this->self().deallocate(static_cast<void const*>(p_memory),
                               handle.raw_size());
    } else {
       zero_memory_explicit(__builtin_addressof(this->get(handle)),
-                           static_cast<uword>(handle.raw_size()));
+                           handle.raw_size());
    }
 }
 
@@ -134,13 +134,13 @@ allocator_interface<derived_type>::cfree(T* p_memory) {
       if constexpr (!is_trivially_destructible<T>) {
          p_memory->~T();
       }
-      zero_memory_explicit(p_memory, static_cast<uword>(sizeof(T)));
+      zero_memory_explicit(p_memory, sizeof(T));
       delete p_memory;
    } else {
       if constexpr (!is_trivially_destructible<T>) {
          p_memory->~T();
       }
-      zero_memory_explicit(p_memory, static_cast<uword>(sizeof(T)));
+      zero_memory_explicit(p_memory, sizeof(T));
       this->self().deallocate(static_cast<void const*>(p_memory), sizeof(T));
       poison_memory_region(p_memory, sizeof(T));
    }
