@@ -254,8 +254,9 @@ promoted_arithmetic() {
 }
 
 template <typename left, typename right>
-   requires(  // Both types must have the same float-ness. Floating point implicit conversions are subtly pessimizing:
-            is_floating_point<left> == is_floating_point<right>)
+   requires(  // Both types must have the same float-ness. Floating point
+              // implicit conversions are subtly pessimizing:
+              is_floating_point<left> == is_floating_point<right>)
 using promoted_type = decltype(promoted_arithmetic<remove_constref<left>,
                                                    remove_constref<right>>());
 
@@ -499,8 +500,8 @@ wrap_sub(T lhs, U rhs) -> remove_constref<T> {
    // Two's-complement truncation back to the LHS width preserves wrap.
    using wide = raw_arithmetic_type<make_unsigned_type<larger_type<T, U>>>;
    using lhs_raw = raw_arithmetic_type<T>;
-   return remove_constref<T>(static_cast<lhs_raw>(
-      static_cast<wide>(lhs) - static_cast<wide>(rhs)));
+   return remove_constref<T>(
+      static_cast<lhs_raw>(static_cast<wide>(lhs) - static_cast<wide>(rhs)));
 }
 
 // Multiply two integers with saturating overflow.
@@ -741,8 +742,8 @@ template <is_raw_integral T, is_raw_integral U>
 constexpr auto
 wrap_shl(T value, U bits) -> T {
    using utype = make_unsigned_type<T>;
-   return __builtin_bit_cast(
-      T, wrap_shl(__builtin_bit_cast(utype, value), bits));
+   return __builtin_bit_cast(T,
+                             wrap_shl(__builtin_bit_cast(utype, value), bits));
 }
 
 // Erase redundant type information for `wrap_shl`. Result keeps the
@@ -782,8 +783,8 @@ template <is_raw_integral T, is_raw_integral U>
 constexpr auto
 wrap_shr(T value, U bits) -> T {
    using utype = make_unsigned_type<T>;
-   return __builtin_bit_cast(
-      T, wrap_shr(__builtin_bit_cast(utype, value), bits));
+   return __builtin_bit_cast(T,
+                             wrap_shr(__builtin_bit_cast(utype, value), bits));
 }
 
 // Erase redundant type information for `wrap_shr`.
@@ -899,10 +900,10 @@ class arithmetic :
       requires(!is_safe_arithmetic_conversion<U, T>
                && overflow_policy == overflow_policies::undefined)
    [[gnu::always_inline, gnu::nodebug]]
-   consteval arithmetic(U other) __attribute__((enable_if(
-      !detail::raw_source_fits_implicit_storage<T>(other),
-      "value is out of range for implicit conversion to this arithmetic type")))
-      = delete;
+   consteval arithmetic(U other) __attribute__((
+      enable_if(!detail::raw_source_fits_implicit_storage<T>(other),
+                "value is out of range for implicit conversion to this "
+                "arithmetic type"))) = delete;
 
    // Constructing with safe conversions is implicit, but constructing with
    // unsafe conversions is explicit.
@@ -1089,13 +1090,12 @@ class arithmetic :
    }
 
    template <is_arithmetic U>
-      requires(
-         (overflow_policy == overflow_policies::undefined
-          || is_safe_arithmetic_comparison<T, raw_arithmetic_type<U>>)
-         // Excluded: same-signedness-integer cases handled above.
-         && !(is_unsigned_integral<T> && is_unsigned_integral<U>)
-         && !(is_signed_integral<T> && is_signed_integral<U>
-              && overflow_policy == overflow_policies::undefined))
+      requires((overflow_policy == overflow_policies::undefined
+                || is_safe_arithmetic_comparison<T, raw_arithmetic_type<U>>)
+               // Excluded: same-signedness-integer cases handled above.
+               && !(is_unsigned_integral<T> && is_unsigned_integral<U>)
+               && !(is_signed_integral<T> && is_signed_integral<U>
+                    && overflow_policy == overflow_policies::undefined))
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_by(U operand) const -> arithmetic {
@@ -2367,8 +2367,8 @@ class index :
       } else {
          using signed_size = make_signed_type<__SIZE_TYPE__>;
          auto const signed_value = __builtin_bit_cast(signed_size, raw);
-         return index(__builtin_bit_cast(__SIZE_TYPE__,
-                                         signed_value << raw_operand));
+         return index(
+            __builtin_bit_cast(__SIZE_TYPE__, signed_value << raw_operand));
       }
    }
 
@@ -2399,8 +2399,8 @@ class index :
       } else {
          using signed_size = make_signed_type<__SIZE_TYPE__>;
          auto const signed_value = __builtin_bit_cast(signed_size, raw);
-         return index(__builtin_bit_cast(__SIZE_TYPE__,
-                                         signed_value >> raw_operand));
+         return index(
+            __builtin_bit_cast(__SIZE_TYPE__, signed_value >> raw_operand));
       }
    }
 
@@ -2530,8 +2530,8 @@ sat_shl(index<P> value, U bits) -> index<P> {
    using signed_size = make_signed_type<__SIZE_TYPE__>;
    auto const raw_bits = make_raw_arithmetic(bits);
    auto const signed_value = __builtin_bit_cast(signed_size, value.raw);
-   return index<P>(__builtin_bit_cast(__SIZE_TYPE__,
-                                      sat_shl(signed_value, raw_bits)));
+   return index<P>(
+      __builtin_bit_cast(__SIZE_TYPE__, sat_shl(signed_value, raw_bits)));
 }
 
 // Saturating right shift of a `cat::index`. Because the high bit is
@@ -2545,8 +2545,8 @@ sat_shr(index<P> value, U bits) -> index<P> {
    using signed_size = make_signed_type<__SIZE_TYPE__>;
    auto const raw_bits = make_raw_arithmetic(bits);
    auto const signed_value = __builtin_bit_cast(signed_size, value.raw);
-   return index<P>(__builtin_bit_cast(__SIZE_TYPE__,
-                                      sat_shr(signed_value, raw_bits)));
+   return index<P>(
+      __builtin_bit_cast(__SIZE_TYPE__, sat_shr(signed_value, raw_bits)));
 }
 
 // Left bit-rotation of a `cat::index`. Rotation happens over the lower
@@ -2565,8 +2565,7 @@ wrap_shl(index<P> value, U bits) -> index<P> {
    if (norm == 0) {
       return index<P>(value.raw & ring_mask);
    }
-   return index<P>(((value.raw << norm)
-                    | (value.raw >> (ring_bits - norm)))
+   return index<P>(((value.raw << norm) | (value.raw >> (ring_bits - norm)))
                    & ring_mask);
 }
 
@@ -2585,8 +2584,7 @@ wrap_shr(index<P> value, U bits) -> index<P> {
    if (norm == 0) {
       return index<P>(value.raw & ring_mask);
    }
-   return index<P>(((value.raw >> norm)
-                    | (value.raw << (ring_bits - norm)))
+   return index<P>(((value.raw >> norm) | (value.raw << (ring_bits - norm)))
                    & ring_mask);
 }
 

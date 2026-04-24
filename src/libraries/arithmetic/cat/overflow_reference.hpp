@@ -588,8 +588,7 @@ class overflow_reference
                && !detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(U operand) const
-      -> remove_constref<U> {
+   subtract_from(U operand) const -> remove_constref<U> {
       return view().subtract_from(operand);
    }
 
@@ -654,8 +653,7 @@ class overflow_reference
                && !detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U operand) const
-      -> arithmetic<raw_type, overflow_policy> {
+   divide_by(U operand) const -> arithmetic<raw_type, overflow_policy> {
       return view().divide_by(operand);
    }
 
@@ -688,8 +686,7 @@ class overflow_reference
                && !detail::is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(U operand) const
-      -> remove_constref<U> {
+   divide_into(U operand) const -> remove_constref<U> {
       return view().divide_into(operand);
    }
 
@@ -732,8 +729,7 @@ class overflow_reference
                && !detail::is_idx<wrapper_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(U operand) const
-      -> arithmetic<raw_type, overflow_policy> {
+   modulo_by(U operand) const -> arithmetic<raw_type, overflow_policy> {
       return view().modulo_by(operand);
    }
 
@@ -785,8 +781,7 @@ class overflow_reference
                && sizeof(raw_type) >= sizeof(U))
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(U operand) const
-      -> arithmetic<raw_type, overflow_policy> {
+   bit_and(U operand) const -> arithmetic<raw_type, overflow_policy> {
       return view().bit_and(operand);
    }
 
@@ -815,8 +810,7 @@ class overflow_reference
                && sizeof(raw_type) >= sizeof(U))
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(U operand) const
-      -> arithmetic<raw_type, overflow_policy> {
+   bit_or(U operand) const -> arithmetic<raw_type, overflow_policy> {
       return view().bit_or(operand);
    }
 
