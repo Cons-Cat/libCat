@@ -1,3 +1,4 @@
+#include <cat/array>
 #include <cat/linear_allocator>
 #include <cat/math>
 #include <cat/page_allocator>
@@ -8,12 +9,27 @@
 
 #include "../unit_tests.hpp"
 
+using cat::compatible_abi;
+using cat::fixed_size_abi;
+using cat::fixed_size_simd;
+using cat::float4;
 using cat::float4x4;
 using cat::float4x8;
+using cat::float8;
 using cat::float8x2;
+using cat::int1;
+using cat::int2;
+using cat::int4;
 using cat::int4x4;
 using cat::int4x8;
+using cat::int8;
+using cat::is_simd_array_like;
+using cat::native_abi;
+using cat::scalar_abi;
+using cat::uint1;
+using cat::uint4;
 using cat::uint4x4;
+using cat::unaligned_abi;
 
 using namespace cat::literals;
 
@@ -247,6 +263,83 @@ test(fixed_size_simd_alignment) {
    cat::verify(alignof(float4x8) == 32u);
    cat::verify(alignof(int4x4) == 16u);
    cat::verify(alignof(int4x8) == 32u);
+}
+
+test(simd_is_array_like_v) {
+   // P3983R1 §4 mandates array-like layout for `_native-abi_`. cat::native_abi
+   // satisfies it for every supported lane type today.
+   static_assert(is_simd_array_like<int1, native_abi<int1>>);
+   static_assert(is_simd_array_like<int2, native_abi<int2>>);
+   static_assert(is_simd_array_like<int4, native_abi<int4>>);
+   static_assert(is_simd_array_like<int8, native_abi<int8>>);
+   static_assert(is_simd_array_like<uint1, native_abi<uint1>>);
+   static_assert(is_simd_array_like<uint4, native_abi<uint4>>);
+   static_assert(is_simd_array_like<float4, native_abi<float4>>);
+   static_assert(is_simd_array_like<float8, native_abi<float8>>);
+   static_assert(is_simd_array_like<bool, native_abi<bool>>);
+   static_assert(is_simd_array_like<char, native_abi<char>>);
+
+   // compatible_abi shares native_abi storage today.
+   static_assert(is_simd_array_like<int4, compatible_abi<int4>>);
+   static_assert(is_simd_array_like<float4, compatible_abi<float4>>);
+
+   // scalar_abi is always 16 bytes, a power of two divisible by every
+   // supported scalar size.
+   static_assert(is_simd_array_like<int1, scalar_abi<int1>>);
+   static_assert(is_simd_array_like<int4, scalar_abi<int4>>);
+   static_assert(is_simd_array_like<int8, scalar_abi<int8>>);
+   static_assert(is_simd_array_like<float4, scalar_abi<float4>>);
+
+   // fixed_size_abi where lanes * sizeof(T) is itself a power of two has no
+   // trailing padding.
+   static_assert(is_simd_array_like<float4, fixed_size_abi<float4, 1u>>);
+   static_assert(is_simd_array_like<float4, fixed_size_abi<float4, 2u>>);
+   static_assert(is_simd_array_like<float4, fixed_size_abi<float4, 4u>>);
+   static_assert(is_simd_array_like<float4, fixed_size_abi<float4, 8u>>);
+   static_assert(is_simd_array_like<float8, fixed_size_abi<float8, 2u>>);
+   static_assert(is_simd_array_like<float8, fixed_size_abi<float8, 4u>>);
+   static_assert(is_simd_array_like<int4, fixed_size_abi<int4, 4u>>);
+   static_assert(is_simd_array_like<int4, fixed_size_abi<int4, 8u>>);
+   static_assert(is_simd_array_like<int8, fixed_size_abi<int8, 2u>>);
+   static_assert(is_simd_array_like<int8, fixed_size_abi<int8, 4u>>);
+   static_assert(is_simd_array_like<int1, fixed_size_abi<int1, 16u>>);
+   static_assert(is_simd_array_like<int1, fixed_size_abi<int1, 32u>>);
+
+   // fixed_size_abi where lanes * sizeof(T) is not a power of two: Clang
+   // gnu::vector_size rounds the storage up which leaves trailing padding,
+   // so the layout is not array-like. P3983R1 §4.3 anticipates this for
+   // `fixed_size`.
+   static_assert(!is_simd_array_like<float4, fixed_size_abi<float4, 3u>>);
+   static_assert(!is_simd_array_like<float4, fixed_size_abi<float4, 5u>>);
+   static_assert(!is_simd_array_like<float4, fixed_size_abi<float4, 6u>>);
+   static_assert(!is_simd_array_like<float4, fixed_size_abi<float4, 7u>>);
+   static_assert(!is_simd_array_like<int8, fixed_size_abi<int8, 3u>>);
+
+   // The unaligned wrapper preserves the base ABI's storage size, so it
+   // inherits its array-likeness.
+   static_assert(
+      is_simd_array_like<float4, unaligned_abi<native_abi<float4>>>);
+   static_assert(
+      is_simd_array_like<float4,
+                           unaligned_abi<fixed_size_abi<float4, 4u>>>);
+   static_assert(
+      !is_simd_array_like<float4,
+                            unaligned_abi<fixed_size_abi<float4, 3u>>>);
+
+   // P3983R1 §10.2 note: when the trait is `true`, `bit_cast` between
+   // `simd<T, Abi>` and the corresponding `array<T, N>` is well-defined and
+   // preserves lane order.
+   using simd_4f = fixed_size_simd<float4, 4u>;
+   using array_4f = cat::array<float4, 4u>;
+   static_assert(is_simd_array_like<float4, simd_4f::abi_type>);
+   static_assert(sizeof(simd_4f) == sizeof(array_4f));
+   static_assert(cat::is_trivially_copyable<simd_4f>);
+   simd_4f const v{1_f4, 2_f4, 3_f4, 4_f4};
+   auto const lanes = __builtin_bit_cast(array_4f, v);
+   cat::verify(lanes[0] == 1_f4);
+   cat::verify(lanes[1] == 2_f4);
+   cat::verify(lanes[2] == 3_f4);
+   cat::verify(lanes[3] == 4_f4);
 }
 
 test(simd_abi_compatible_alias) {

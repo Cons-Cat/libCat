@@ -16,6 +16,7 @@
 // P3844R2   Broadcast constructor.
 // P3922R1   `simd_mask` unary operators and mask-to-`simd` conversions.
 // P2638R0   Intel feedback on `std::simd`.
+// P3983R1   Object representation. Array-like layout query trait.
 //
 // However, SIMD functions are implemented in the form of functors that generate
 // masked SIMD forms from unmasked SIMD forms using CRTP. This is inspired by
@@ -494,12 +495,13 @@ class alignas(in_abi::alignment.raw) simd {
          this->raw, typename simd<U, other_abi_type>::raw_type);
    }
 
-   // Assign the raw value of another `simd` into this.
+   // Copy-assign the raw value of a `simd` to this.
    constexpr auto
-   operator=(simd operand) -> simd& {
-      this->raw = operand.raw;
-      return *this;
-   }
+   operator=(simd const& operand) -> simd& = default;
+
+   // Move-assign the raw value of another `simd` into this.
+   constexpr auto
+   operator=(simd&& operand) -> simd& = default;
 
    // Value equality: true only if every lane compares equal (`NaN` lanes
    // behave like scalar floating-point compare).
@@ -2102,6 +2104,12 @@ using rebind_simd = typename detail::rebind_simd_impl<T, V>::type;
 
 template <idx N, typename V>
 using resize_simd = typename detail::resize_simd_impl<N, V>::type;
+
+// P3983R1 array-like object representation query for `simd<T, Abi>`.
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2026/p3983r1.html
+template <typename T, typename Abi>
+inline constexpr bool is_simd_array_like =
+   sizeof(simd<T, Abi>) == Abi::lanes.raw * sizeof(T);
 
 #include "cat/detail/simd_width_aliases.hpp"
 
