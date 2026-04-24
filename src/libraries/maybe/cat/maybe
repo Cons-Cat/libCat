@@ -1002,6 +1002,68 @@ using maybe_non_negative =
 template <typename T>
 using maybe_non_zero = maybe<sentinel<T, T(0)>>;
 
+namespace detail {
+// `idx` only consumes 63 bits, so any `idx` whose high bit is set is outside
+// of the valid index range and can stand in for `nullopt` without growing the
+// storage past `sizeof(idx)`.
+constexpr auto
+is_idx_high_bit_unset(idx value) -> bool {
+   return (value.raw & limits<idx>::high_bit) == 0u;
+}
+}  // namespace detail
+
+// Niche-using `maybe<idx>`: stores the empty state in `idx`'s otherwise unused
+// high bit, so `sizeof(maybe_idx) == sizeof(idx)`.
+using maybe_idx =
+   maybe<compact<idx, detail::is_idx_high_bit_unset,
+                 __builtin_bit_cast(
+                    idx, static_cast<__SIZE_TYPE__>(limits<idx>::high_bit))>>;
+
+static_assert(sizeof(maybe_idx) == sizeof(idx));
+
+namespace detail {
+// `narrow_cast<idx>` returns `maybe_idx` so callers benefit from the high-bit
+// niche; every other target type still gets a regular `maybe<T>`.
+template <typename T>
+using narrow_cast_return = conditional<is_same<T, idx>, maybe_idx, maybe<T>>;
+}  // namespace detail
+
+// `narrow_cast` is defined in
+// `<cat/../implementations/narrow_cast.tpp>`, which is included after `maybe`
+// is fully defined so the function body can wrap the conversion result.
+template <is_integral T, is_integral U>
+[[nodiscard]]
+constexpr auto
+narrow_cast(U value) -> detail::narrow_cast_return<T>;
+
 }  // namespace cat
 
-#include <cat/implementations/narrow_to_idx.tpp>
+// `narrow_cast`'s body needs the complete `maybe` (and the full `arithmetic`
+// machinery) to wrap the conversion result, so its definition lives in this
+// `.tpp` and is pulled in after `maybe` has been defined above. The
+// `to_idx()` specializations below call `narrow_cast`, so this include must
+// precede them.
+#include "../implementations/narrow_cast.tpp"
+
+namespace cat {
+
+// `arithmetic<>::to_idx()` is declared in `<cat/arithmetic>` with a deduced
+// return type so its signature does not need to name `maybe_idx` while
+// `maybe` is only forward-declared there. The bodies below deduce
+// `maybe_idx`, which carries the high-bit niche.
+template <>
+[[nodiscard]]
+constexpr auto
+arithmetic<make_signed_type<__SIZE_TYPE__>,
+           overflow_policies::undefined>::to_idx() const {
+   return narrow_cast<idx>(*this);
+}
+
+template <>
+[[nodiscard]]
+constexpr auto
+arithmetic<__SIZE_TYPE__, overflow_policies::undefined>::to_idx() const {
+   return narrow_cast<idx>(*this);
+}
+
+}  // namespace cat

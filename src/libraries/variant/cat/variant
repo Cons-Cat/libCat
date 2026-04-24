@@ -47,7 +47,7 @@ struct variant_node<T, remaining...> {
          // The `else` branch means `remaining_recursions` is not zero, so the
          // unsigned decrement cannot wrap before indexing the tail node.
          return this->remaining_nodes.template get<
-            narrow_to_idx(remaining_recursions.raw - 1uz).value()>();
+            narrow_cast<idx>(remaining_recursions - 1u).value()>();
       }
    }
 
@@ -59,7 +59,7 @@ struct variant_node<T, remaining...> {
       } else {
          // Same recursion depth reasoning as the non-const overload.
          return this->remaining_nodes.template get<
-            narrow_to_idx(remaining_recursions.raw - 1uz).value()>();
+            narrow_cast<idx>(remaining_recursions - 1u).value()>();
       }
    }
 

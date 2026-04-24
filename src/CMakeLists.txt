@@ -10,7 +10,7 @@ set(CAT_INCLUDE_SUBDIRS
   meta compare limits runtime cpuid sanitizer arithmetic initializer_list
   simd algorithm debug variant scaredy maybe match notype unique collection
   array span list string tui format memory allocator utility functional file
-  linux thread atomic socket x11 bit bitset iterator math type_list tuple cast
+  linux thread atomic socket x11 bit bitset iterator math type_list tuple
   vec ring enum)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
 
@@ -152,12 +152,10 @@ set(CAT_HEADER_FILES
   ${CATLIB}/arithmetic/cat/arithmetic
   ${CATLIB}/arithmetic/cat/overflow_reference.hpp
   ${CATLIB}/arithmetic/cat/arithmetic_interface
-  ${CATLIB}/arithmetic/cat/implementations/narrow_to_idx.tpp
   ${CATLIB}/array/cat/array
   ${CATLIB}/atomic/cat/atomic
   ${CATLIB}/bit/cat/bit
   ${CATLIB}/bitset/cat/bitset
-  ${CATLIB}/cast/cat/cast
   ${CATLIB}/collection/cat/collection
   ${CATLIB}/compare/cat/compare
   ${CATLIB}/debug/cat/debug
@@ -174,6 +172,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/match/cat/match
   ${CATLIB}/math/cat/math
   ${CATLIB}/maybe/cat/maybe
+  ${CATLIB}/maybe/implementations/narrow_cast.tpp
   ${CATLIB}/memory/cat/memory
   ${CATLIB}/memory/implementations/copy_memory.tpp
   ${CATLIB}/memory/implementations/copy_memory_backward.tpp

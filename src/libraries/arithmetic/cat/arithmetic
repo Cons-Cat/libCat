@@ -26,6 +26,10 @@
 
 namespace cat {
 
+// `maybe` is forward-declared here so other headers that include
+// `<cat/arithmetic>` (for example `<cat/simd_ops>`, `<cat/collection>`, and
+// `<cat/span>`) can name `maybe<T>` in declarations without pulling in the
+// full `<cat/maybe>` (which would be a circular include from this file).
 template <typename T>
 class maybe;
 
@@ -1426,11 +1430,12 @@ class arithmetic :
    }
 
    // `iword` and `uword` are aliases for these `arithmetic` parameterizations.
-   // `to_idx()` is defined at the end of `<cat/maybe>` (via
-   // `<cat/implementations/narrow_to_idx.tpp>`).
+   // `to_idx()` is defined at the end of `<cat/maybe>` so its body has access
+   // to the complete `maybe` (and `maybe_idx`) types. The return type is
+   // deduced there so this declaration does not need to name `maybe_idx`.
    [[nodiscard]]
    constexpr auto
-   to_idx() const -> maybe<index<overflow_policies::undefined>>
+   to_idx() const
       requires(is_integral<T> && overflow_policy == overflow_policies::undefined
                && (is_same<T, __SIZE_TYPE__>
                    || is_same<T, make_signed_type<__SIZE_TYPE__>>));

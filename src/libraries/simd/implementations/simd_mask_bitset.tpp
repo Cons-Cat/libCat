@@ -3,16 +3,16 @@
 #pragma once
 
 // Included from `global_includes.hpp` only after `<cat/maybe>` and
-// `<cat/runtime>` so `bitset` and `narrow_to_idx` are available. Do not include
-// from `<cat/simd>` to avoid pulling `bitset` while `maybe` is still being
-// parsed.
+// `<cat/runtime>` so `bitset` and `arithmetic<>::to_idx()` are available. Do
+// not include from `<cat/simd>` to avoid pulling `bitset` while `maybe` is
+// still being parsed.
 //
 // `mask_to_bitset` for x86 ABIs lives here so `<cat/simd>` does not pull
 // `<cat/bitset>` during its initial parse. Movmsk helpers live in
 // `simd_avx2_mask_ops.hpp` / `simd_sse2_movmsk.hpp`. That keeps
 // `<cat/memory>` → `<cat/simd>` → `implementations/simd_abi_*.tpp` from
 // reaching `collection` while outer `<cat/maybe>` has not finished defining
-// `nullopt` / `narrow_to_idx`.
+// `nullopt` / `to_idx()`.
 
 #include <cat/detail/simd_abi_hooks.hpp>
 

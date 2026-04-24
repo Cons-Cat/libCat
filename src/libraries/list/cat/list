@@ -628,7 +628,7 @@ initialize_list_variadic(span<T>& list_nodes, T* p_previous, auto&& current,
       // `sizeof...(next) > 0` means at least one node remains, so the span has
       // length at least two and `size - 1u` cannot wrap.
       list_nodes =
-         list_nodes.last(narrow_to_idx(list_nodes.size().raw - 1u).assert());
+         list_nodes.last(narrow_cast<idx>(list_nodes.size() - 1u).assert());
       initialize_list_variadic<T>(list_nodes, p_current, fwd(next)...);
    } else {
       // Final node.
@@ -648,7 +648,7 @@ initialize_slist_variadic(span<T>& list_nodes, T* p_previous, auto&& current,
       // Recurse to the next node.
       // Same span-length reasoning as `initialize_list_variadic`.
       list_nodes =
-         list_nodes.last(narrow_to_idx(list_nodes.size().raw - 1u).assert());
+         list_nodes.last(narrow_cast<idx>(list_nodes.size() - 1u).assert());
       initialize_slist_variadic<T>(list_nodes, p_current, fwd(next)...);
    } else {
       // Final node.
@@ -669,7 +669,7 @@ initialize_list_filled(span<T> list_nodes, T* p_previous,
       // Recurse to the next node.
       // The branch requires `size > 1u`, so `size - 1u` is safe.
       list_nodes =
-         list_nodes.last(narrow_to_idx(list_nodes.size().raw - 1u).assert());
+         list_nodes.last(narrow_cast<idx>(list_nodes.size() - 1u).assert());
       initialize_list_filled<T>(list_nodes, p_current, value);
    } else {
       // Final node.
@@ -688,7 +688,7 @@ initialize_slist_filled(span<T> list_nodes, T* p_previous,
       // Recurse to the next node.
       // Same `size > 1u` guard as `initialize_list_filled`.
       list_nodes =
-         list_nodes.last(narrow_to_idx(list_nodes.size().raw - 1u).assert());
+         list_nodes.last(narrow_cast<idx>(list_nodes.size() - 1u).assert());
       initialize_slist_filled<T>(list_nodes, p_current, value);
    } else {
       // Final node.

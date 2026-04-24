@@ -62,8 +62,7 @@ foreach(_cat_subdir IN LISTS CAT_INCLUDE_SUBDIRS)
       # the simplest way to grab them without sweeping in `.cpp` sources.
       PATTERN "cat/*" EXCLUDE)
   # The `cat/` directory is installed wholesale: extension-less public
-  # API headers, plus a handful of subdirectories like `cat/detail/` and
-  # the lone `cat/implementations/narrow_to_idx.tpp`.
+  # API headers plus subdirectories like `cat/detail/` and `cat/implementations/`.
   install(DIRECTORY "${CMAKE_SOURCE_DIR}/src/libraries/${_cat_subdir}/cat"
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/libcat/libraries/${_cat_subdir}")
 endforeach()
