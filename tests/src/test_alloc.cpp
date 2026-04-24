@@ -69,7 +69,7 @@ test(alloc) {
    pager.reset();
    // Page the kernel for a linear allocator to test with.
    cat::span page =
-      pager.alloc_multi<cat::byte>(idx(4_uki - 64u)).or_exit();
+      pager.alloc_multi<cat::byte>(4_uki - 64u).or_exit();
    defer {
       pager.free(page);
    };

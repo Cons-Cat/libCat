@@ -798,7 +798,7 @@ test(arithmetic_unsigned_fixed_width_all_operators_constexpr_const) {
    static_assert(cat::is_same<decltype(u1_six % signed_const_two), uint1>);
 
    // `uint8` (widest width). Mixing with same-width signed `long` keeps the
-   // `uint8` LHS storage; smaller signed `int` similarly loses to `uint8`.
+   // `uint8` LHS storage. Smaller signed `int` similarly loses to `uint8`.
    uint8 u8 = 12_u8;
    u8 += signed_two;
    u8 -= signed_const_two;
@@ -1016,7 +1016,7 @@ test(arithmetic_signed_fixed_width_all_operators_constexpr_const) {
    static_assert(cat::is_same<decltype(i1_six % unsigned_const_two), int1>);
 
    // `int8` (widest width). Mixing with same-width unsigned `long` keeps the
-   // `int8` LHS storage; smaller `unsigned int` similarly loses to `int8`.
+   // `int8` LHS storage. Smaller `unsigned int` similarly loses to `int8`.
    int8 i8 = 12_i8;
    i8 += unsigned_two;
    i8 -= unsigned_const_two;
@@ -1202,7 +1202,7 @@ test(arithmetic_word_all_operators_constexpr_const) {
 
    // Cross-sign constant binary operators on `iword` and their return types.
    // `promoted_type<iword, U>` keeps the LHS storage when the right operand has
-   // the same promotion order (same width); `iword` wins same-order ties since
+   // the same promotion order (same width). `iword` wins same-order ties since
    // it is the LHS of `promoted_arithmetic`.
    iword iw_six = 6_sz;
    cat::verify((iw_six + unsigned_two) == 8_sz);
@@ -1241,7 +1241,7 @@ test(arithmetic_word_all_operators_constexpr_const) {
 
    // Bitwise and shift on `uword` with cross-signedness constants
    // (smaller-width signed operand stays in `is_safe_arithmetic_comparison`).
-   // `&` and `|` keep the wider of the two operand types via `promoted_type`;
+   // `&` and `|` keep the wider of the two operand types via `promoted_type`.
    // `<<` and `>>` always keep the LHS storage type.
    uword uw_mask = 0b1100_uz;
    cat::verify((uw_mask & signed_two) == 0_uz);
@@ -1274,7 +1274,7 @@ test(arithmetic_word_all_operators_constexpr_const) {
 // `uword` are also implicitly constructible at compile time when their value
 // fits the storage. Same-signedness `iword` / `uword` (e.g. `iword` ->
 // `intptr`) further stay implicit at runtime via the safe arithmetic
-// conversion path; cross-signedness operands stay `explicit` at runtime.
+// conversion path. Cross-signedness operands stay `explicit` at runtime.
 test(arithmetic_implicit_intptr_uintptr_constexpr_const) {
    constexpr int signed_fit = 0;
    int const signed_const_fit = 0;
@@ -1449,7 +1449,7 @@ test(arithmetic_implicit_intptr_uintptr_constexpr_const) {
    // Runtime conversions follow the generic constructor's
    // `is_safe_arithmetic_conversion` predicate. For `intptr<void>` (signed
    // long storage) any same-sign or smaller-unsigned source is safe, so it
-   // stays implicit; for `uintptr<void>` (unsigned long storage) only
+   // stays implicit. For `uintptr<void>` (unsigned long storage) only
    // unsigned, equal-or-narrower sources stay implicit. Sources that fail
    // the safety predicate fall to the `explicit` catch-all and only
    // convert when their compile-time value fits.
@@ -1484,7 +1484,7 @@ test(arithmetic_implicit_intptr_uintptr_constexpr_const) {
 // Compile-time-known cross-signedness constant operands work for the
 // offset-style arithmetic operators on `intptr` / `uintptr` (`+=`, `-=`, `+`,
 // `-`).
-// Multiplicative and modulo operators are intentionally not tested here;
+// Multiplicative and modulo operators are intentionally not tested here.
 // `arithmetic_ptr` predates the relaxed `promoted_type` and would need a
 // separate cleanup to participate.
 test(arithmetic_intptr_uintptr_all_operators_constexpr_const) {
@@ -1640,7 +1640,7 @@ test(arithmetic_implicit_idx_constexpr_const) {
    cat::verify(ix_sum_uword_const == 0_idx);
 
    // Runtime `iword` / `uword` operands must still require an `explicit`
-   // construction; only compile-time-known values that fit may convert
+   // construction. Only compile-time-known values that fit may convert
    // implicitly. `is_convertible` checks the implicit path.
    static_assert(!cat::is_convertible<iword, idx>);
    static_assert(!cat::is_convertible<uword, idx>);
@@ -1650,7 +1650,7 @@ test(arithmetic_implicit_idx_constexpr_const) {
 }
 
 // `idx` provides `+`, `-`, `*`, `/`, `%` (no bitwise). `-=` and `--` are
-// deleted because subtraction can underflow an `index`; subtraction yields the
+// deleted because subtraction can underflow an `index`. Subtraction yields the
 // signed distance (`iword`) instead. `/=` only works with an unsigned right
 // operand (signed division returns `iword`). Cross-signedness compile-time
 // constants flow through the supported operators via the implicit `enable_if`
@@ -2378,7 +2378,7 @@ test(arithmetic_implicit_idx_wrap_constexpr_const) {
 // passing it to a function, and reading/writing through it.
 test(arithmetic_overflow_reference_public_type) {
    // The accessors return `cat::overflow_reference` instances. Mutable lvalues
-   // produce a non-const reference to the wrapped type; const lvalues produce
+   // produce a non-const reference to the wrapped type. Const lvalues produce
    // a const reference.
    uint4 u4 = 5_u4;
    uint4 const u4_const = 5_u4;
@@ -2455,7 +2455,7 @@ test(arithmetic_overflow_reference_public_type) {
    uptr_wrap_ref += 1u;
    cat::verify(uptr_storage == 0xdeaeul);
 
-   // A const wrapped value yields a read-only proxy. Reads work; writes are
+   // A const wrapped value yields a read-only proxy. Reads work. Writes are
    // not part of the public surface for const wrappers.
    uint4 const u4_read_only = 42_u4;
    cat::overflow_reference<uint4 const, cat::overflow_policies::wrap>
@@ -3277,7 +3277,7 @@ test(arithmetic_sat_shl_signed_fixed_width) {
 }
 
 test(arithmetic_sat_shr_unsigned_fixed_width) {
-   // Right shift never overflows; saturation only guards the count >= width
+   // Right shift never overflows. Saturation only guards the count >= width
    // case (and equivalently the count >= bit_width(value) case, where the
    // result is mathematically zero anyway).
 
@@ -4102,8 +4102,8 @@ test(arithmetic_binary_ops_take_lhs_overflow_policy) {
    // `wrap_idx` never promotes either: stay at the index-shape of the LHS.
    static_assert(is_same<decltype(wrap_idx() + 0ul), wrap_idx>);
 
-   // Bitwise `&` / `|` keep the LHS's type (and therefore the LHS's policy);
-   // a narrower RHS zero-extends into the LHS width, but a wider RHS would
+   // Bitwise `&` / `|` keep the LHS's type (and therefore the LHS's policy).
+   // A narrower RHS zero-extends into the LHS width, but a wider RHS would
    // have to silently truncate so it is rejected.
    static_assert(
       is_same<decltype(cat::wrap_uint4() & cat::uint4()), cat::wrap_uint4>);
@@ -4163,7 +4163,7 @@ test(arithmetic_binary_ops_width_rules) {
    static_assert(is_same<decltype(cat::uint4() << cat::uword()), cat::uint4>);
    static_assert(is_same<decltype(cat::uword() >> cat::uint4()), cat::uword>);
 
-   // `&` / `|` accept any RHS that is at most as wide as the LHS; the RHS
+   // `&` / `|` accept any RHS that is at most as wide as the LHS. The RHS
    // zero-extends into the LHS width and the result keeps the LHS's type.
    static_assert(is_same<decltype(cat::uint4() & cat::uint4()), cat::uint4>);
    static_assert(is_same<decltype(cat::uword() | cat::uword()), cat::uword>);
@@ -4259,7 +4259,7 @@ test(arithmetic_compound_ops_match_non_compound_return_type) {
    }
 
    // RHS wider than LHS. `-=`, `/=`, `%=` stay LHS-shape so they are still
-   // defined; `+=` / `*=` would silently truncate the wider binary result
+   // defined. `+=` / `*=` would silently truncate the wider binary result
    // and are correctly rejected entirely (so they are not asserted here).
    {
       cat::wrap_int4 a;
@@ -4323,13 +4323,7 @@ test(arithmetic_compound_ops_match_non_compound_return_type) {
 // `idx` shifts go through a signed-bitcast trick because `idx` always keeps
 // its high bit zero.
 test(arithmetic_signed_and_idx_arithmetic_shift) {
-   using cat::idx;
-   using cat::int1;
-   using cat::int4;
    using cat::is_same;
-   using cat::iword;
-   using cat::uint4;
-   using cat::uword;
 
    // Signed `>>` is the arithmetic right shift: it sign-extends a negative
    // value rather than shifting in zeros like the unsigned version would.
@@ -4352,7 +4346,7 @@ test(arithmetic_signed_and_idx_arithmetic_shift) {
       cat::verify((a >> 1) == 1_i4);
    }
 
-   // `<<=` / `>>=` work on signed `arithmetic`; the result preserves the LHS
+   // `<<=` / `>>=` work on signed `arithmetic`. The result preserves the LHS
    // type (and therefore its overflow policy).
    {
       int4 a = 5_i4;
@@ -4383,7 +4377,7 @@ test(arithmetic_signed_and_idx_arithmetic_shift) {
 
    // Width keeps the LHS type for both signed and `idx` shifts. Shift
    // operators on signed `arithmetic` pick the LHS storage just like the
-   // unsigned ones; `idx` shifts always come back as `idx`.
+   // unsigned ones. `idx` shifts always come back as `idx`.
    static_assert(is_same<decltype(int4() << uint4()), int4>);
    static_assert(is_same<decltype(int4() >> uint4()), int4>);
    static_assert(is_same<decltype(int4() << uword()), int4>);
@@ -4434,11 +4428,7 @@ test(arithmetic_signed_and_idx_arithmetic_shift) {
 // `>>` only adds a guard against shift counts at or above the bit width
 // (the C++ shift would otherwise be undefined).
 test(arithmetic_saturating_shift) {
-   using cat::idx;
    using cat::is_same;
-   using cat::sat_int4;
-   using cat::sat_uint1;
-   using cat::sat_uint4;
    using sat_idx = cat::index<cat::overflow_policies::saturate>;
 
    // Unsigned `<<` saturating: shifting a high bit out of the type clamps
@@ -4508,8 +4498,8 @@ test(arithmetic_saturating_shift) {
       // bit still zero: `(1 << (bits - 1)) - 1`.
       auto const idx_max = sat_idx(cat::limits<idx>::max());
       cat::verify((i << 4_u4) == sat_idx(16_idx));
-      // Shifting a 1 all the way to bit `bits - 1` would set the high bit;
-      // the `sat_idx` clamps to its `max()` instead.
+      // Shifting a 1 all the way to bit `bits - 1` would set the high bit.
+      // The `sat_idx` clamps to its `max()` instead.
       cat::verify((i << cat::limits<idx>::bits - 1) == idx_max);
       cat::verify((i << cat::limits<idx>::bits) == idx_max);
       cat::verify((sat_idx(0_idx) << 1_u4) == sat_idx(0_idx));
@@ -4552,15 +4542,8 @@ test(arithmetic_saturating_shift) {
 // arithmetic conversions, turn `-7` into a huge unsigned, and yield `0`
 // instead of `-1`.
 test(arithmetic_signed_modulo_is_remainder) {
-   using cat::int1;
-   using cat::int4;
-   using cat::int8;
-   using cat::iword;
-   using cat::uint4;
-   using cat::uword;
-
    // Same-signed remainders. C++'s built-in `%` already gives the right
-   // answer here; this just pins the contract.
+   // answer here. This just pins the contract.
    {
       int4 a = -7_i4;
       cat::verify((a % int4(3)) == -1_i4);
@@ -4946,7 +4929,7 @@ test(arithmetic_idx_operations_traits_and_word_conversions) {
    add_uword_idx += idx2;
 }
 
-// Helpers for the property-style semantics tests below. `requires { T{V}; }`
+// Helpers for the semantics tests below. `requires { T{V}; }`
 // inside a `static_assert` is a hard error if `T`'s constructor is disabled
 // via `enable_if`, so the SFINAE check must be hidden behind a concept.
 namespace semantics_helpers {
@@ -4963,7 +4946,7 @@ template <typename L, typename R>
 concept can_times_assign = requires(L lhs, R rhs) { lhs *= rhs; };
 }  // namespace semantics_helpers
 
-// Property #1: constructors implicitly accept sound (in-range) integer
+// Constructors implicitly accept sound (in-range) integer
 // constants and reject unsound (out-of-range) constants. Non-constant
 // values that may be unsound require an explicit cast.
 test(arithmetic_semantics_constructor_rejects_unsound_constants) {
@@ -4991,18 +4974,11 @@ test(arithmetic_semantics_constructor_rejects_unsound_constants) {
    static_assert(cat::is_constructible<int1, int4>);
 }
 
-// Property #2: implicit construction into wrap/sat types is well-defined
+// Implicit construction into wrap/sat types is well-defined
 // regardless of the source value -- choosing wrap/sat is itself the opt-in
 // to that semantics. Casting to an `undefined` type is unsafe and stays
 // explicit.
 test(arithmetic_semantics_implicit_construction_into_wrap_sat) {
-   using cat::sat_int1;
-   using cat::sat_int8;
-   using cat::sat_uint1;
-   using cat::sat_uint4;
-   using cat::wrap_int1;
-   using cat::wrap_uint1;
-
    // Saturating: clamps to destination range.
    static_assert(sat_int1{cat::int4{500}} == sat_int1::max());
    static_assert(sat_int1{cat::int4{-500}} == sat_int1::min());
@@ -5026,7 +5002,7 @@ test(arithmetic_semantics_implicit_construction_into_wrap_sat) {
    static_assert(!cat::is_convertible<cat::int4, int1>);
 }
 
-// Property #3: arithmetic propagates the LHS overflow policy through the
+// Arithmetic propagates the LHS overflow policy through the
 // result. `wrap` LHS plus `undefined` RHS yields a `wrap` result, etc.
 test(arithmetic_semantics_overflow_policy_propagates_via_lhs) {
    // LHS policy wins.
@@ -5054,7 +5030,7 @@ test(arithmetic_semantics_overflow_policy_propagates_via_lhs) {
                               cat::sat_uint4>);
 }
 
-// Property #4: promotion rules.
+// Promotion rules.
 //   * `wrap` / `saturate` LHS NEVER promote -- the result keeps LHS shape,
 //     regardless of RHS width.
 //   * `undefined` LHS may promote to a wider RHS for `+` and `*`.
@@ -5113,7 +5089,7 @@ test(arithmetic_semantics_promotion_rules) {
    static_assert(cat::is_same<decltype(uint4{} >> uint1{}), uint4>);
 }
 
-// Property #5: compound assignment never silently narrows. The compound op
+// Compound assignment never silently narrows. The compound op
 // is only available when the corresponding binary op preserves the LHS
 // shape, so a promoted result on a narrow LHS is rejected. Sound implicit
 // constructors from constant RHS are still allowed.
@@ -5151,7 +5127,7 @@ test(arithmetic_semantics_compound_assignment_rejects_narrowing) {
    static_assert(!can_minus_assign<int4, iword>);
 }
 
-// Property #6: `overflow_reference` (`.undef()`, `.wrap()`, `.sat()`)
+// `overflow_reference` (`.undef()`, `.wrap()`, `.sat()`)
 // observes the same rules as the materialized type at its policy.
 test(arithmetic_semantics_overflow_reference_view_types) {
    using semantics_helpers::can_minus_assign;
@@ -5176,8 +5152,8 @@ test(arithmetic_semantics_overflow_reference_view_types) {
    (void)b;
 }
 
-// Property #7: signed `%` is C-style remainder (sign of LHS is preserved);
-// unsigned `%` is mathematical modulo (result in `[0, |rhs|)`). The
+// Signed `%` is C-style remainder (sign of LHS is preserved).
+// Unsigned `%` is mathematical modulo (result in `[0, |rhs|)`). The
 // discriminating case is unsigned LHS with negative signed RHS, which must
 // take `|rhs|` first so the result stays non-negative.
 test(arithmetic_semantics_signed_remainder_unsigned_modulo) {
@@ -5198,22 +5174,41 @@ test(arithmetic_semantics_signed_remainder_unsigned_modulo) {
    static_assert((uint4{8} % int4{-3}) == uint4{2});
 }
 
-// Property #8: `index` (idx) follows the same rules as the comparable
+namespace {
+// Non-constexpr identity. Wrapping a literal in this strips its
+// constant-expression-ness without changing its type, which hides it from
+// the `consteval` `idx::operator-` overload's `enable_if` predicate. Lets
+// us keep type-trait checks on the runtime / iword-widening path while
+// still spelling literals at the call site.
+auto
+deconst_number(auto i) {
+   return i;
+}
+}  // namespace
+
+// `index` (idx) follows the same rules as the comparable
 // `arithmetic`, but `idx - idx` (and `idx - signed`) returns an `iword`
 // (signed distance) so an underflowed difference is representable. Wrap /
-// sat `idx` never promote.
+// sat `idx` never promote. The compile-time non-underflow fast path that
+// keeps `idx` is covered by
+// `arithmetic_semantics_idx_subtract_constexpr_preserves_idx`.
 test(arithmetic_semantics_idx_subtract_returns_signed_distance) {
-   using cat::idx;
    using wrap_idx = cat::index<cat::overflow_policies::wrap>;
    using sat_idx = cat::index<cat::overflow_policies::saturate>;
 
-   // `idx + idx -> idx`; `idx - idx -> iword` (signed distance).
+   // `idx + idx -> idx`. `idx - idx -> iword` (signed distance).
    static_assert(cat::is_same<decltype(idx{} + idx{}), idx>);
    static_assert(cat::is_same<decltype(idx{} - idx{}), iword>);
 
-   // `idx + signed -> iword` (signed_distance).
+   // `idx + signed -> iword` (signed_distance). For `idx - signed` we
+   // launder the RHS through `deconst_number` so it is no longer a
+   // constant expression. That hides it from the constexpr non-underflow
+   // overload's `enable_if` and exercises the genuine iword widening.
    static_assert(cat::is_same<decltype(idx{} + int4{}), iword>);
-   static_assert(cat::is_same<decltype(idx{} - int4{}), iword>);
+   static_assert(
+      cat::is_same<decltype(idx{} - deconst_number(int4{})), iword>);
+   static_assert(cat::is_same<decltype(idx{} - deconst_number(1)), iword>);
+   static_assert(cat::is_same<decltype(idx{} - deconst_number(1u)), iword>);
 
    // wrap_idx / sat_idx never promote.
    static_assert(cat::is_same<decltype(wrap_idx{} + idx{}), wrap_idx>);
@@ -5222,16 +5217,79 @@ test(arithmetic_semantics_idx_subtract_returns_signed_distance) {
    static_assert(cat::is_same<decltype(sat_idx{} - idx{}), sat_idx>);
 }
 
-// Property #9: `wrap`-policy `<<` and `>>` ROTATE the underlying bit
+// `idx - integer` keeps the `idx` shape (no widening to
+// `iword`) when the subtraction is a constant expression that is provably
+// non-underflowing. Runtime operands and would-underflow constants still
+// fall through to the iword-returning overload (validated in
+// `arithmetic_semantics_idx_subtract_returns_signed_distance` above).
+test(arithmetic_semantics_idx_subtract_constexpr_preserves_idx) {
+   // Non-underflowing constant operands stay as `idx`. Both signed and
+   // unsigned RHS, and the boundary case `lhs == rhs` (result is zero).
+   static_assert(cat::is_same<decltype(idx{5} - 3u), idx>);
+   static_assert(cat::is_same<decltype(idx{5} - 5u), idx>);
+   static_assert(cat::is_same<decltype(idx{5} - int4{3}), idx>);
+   static_assert(cat::is_same<decltype(idx{1} - 1), idx>);
+
+   // Values are correct and the result feeds back through the implicit
+   // `idx -> __SIZE_TYPE__` conversion (the original motivation for this
+   // overload, to make `pointer[idx_expr]` work without `.raw`).
+   static_assert((idx{5} - 3u) == 2_idx);
+   static_assert((idx{5} - 5u) == 0_idx);
+   static_assert((idx{5} - int4{3}) == 2_idx);
+   static_assert((idx{4_uki} - 1u) == idx{4095});
+
+   // The constexpr-preserved `idx` implicitly converts to `__SIZE_TYPE__`
+   // for raw-pointer subscripting, which is the whole point of keeping
+   // the `idx` shape.
+   constexpr __SIZE_TYPE__ subscript = idx{5} - 3u;
+   static_assert(subscript == 2u);
+
+   // Same-type `idx - idx` is unaffected: the non-template member from
+   // `minus_interface` wins overload resolution against the templated
+   // friend, so the result type is still `iword`.
+   static_assert(cat::is_same<decltype(idx{5} - idx{3}), iword>);
+}
+
+// With genuine constant operands, an underflowing
+// subtraction (`lhs < rhs`) is detected by the `enable_if(self.raw >=
+// other)` predicate on the new `idx`-preserving `operator-`. The
+// predicate evaluates to `false`, the overload drops out of the
+// candidate set, and resolution falls through to the `subtract_by`
+// member that widens to `iword` so the negative result is
+// representable. This is the same path runtime operands take, but
+// reached through compile-time evaluation rather than through
+// non-constant operands disabling `enable_if` entirely.
+test(arithmetic_semantics_idx_subtract_constexpr_underflow_widens_to_iword) {
+   // Smallest underflow (`0 - 1`), three-element underflow, and signed
+   // RHS underflow. All three are constant expressions. Only the
+   // would-underflow predicate forces the iword fall-through.
+   static_assert(cat::is_same<decltype(idx{} - 1u), iword>);
+   static_assert(cat::is_same<decltype(idx{3} - 5u), iword>);
+   static_assert(cat::is_same<decltype(idx{0} - int4{1}), iword>);
+   static_assert(cat::is_same<decltype(idx{0} - 1), iword>);
+
+   // The negative result round-trips correctly through `iword`, which
+   // is the whole point of widening on a would-underflow.
+   static_assert((idx{} - 1u) == iword{-1});
+   static_assert((idx{3} - 5u) == iword{-2});
+   static_assert((idx{0} - int4{1}) == iword{-1});
+   static_assert((idx{0} - 1) == iword{-1});
+
+   // Boundary: `lhs == rhs` is exactly the predicate's `>=` edge and
+   // stays on the `idx`-preserving path (covered in
+   // `arithmetic_semantics_idx_subtract_constexpr_preserves_idx`). The
+   // first underflow value past it (`lhs == rhs - 1`) widens here.
+   static_assert(cat::is_same<decltype(idx{5} - 6u), iword>);
+   static_assert((idx{5} - 6u) == iword{-1});
+}
+
+// `wrap`-policy `<<` and `>>` ROTATE the underlying bit
 // pattern instead of shifting bits off the end. For `arithmetic<T>` the
 // rotation modulus is `sizeof(T) * 8`. For `wrap_idx` the rotation modulus
 // is `sizeof(__SIZE_TYPE__) * 8 - 1` so the high bit stays zero (preserving
 // the `index` invariant). Any non-negative shift count is valid (taken
 // modulo the bit width).
 test(arithmetic_semantics_wrap_shift_rotates_bits) {
-   using cat::wrap_int1;
-   using cat::wrap_uint1;
-   using cat::wrap_uint4;
    using wrap_idx = cat::index<cat::overflow_policies::wrap>;
 
    // Result keeps LHS shape (no promotion).
@@ -5277,7 +5335,7 @@ test(arithmetic_semantics_wrap_shift_rotates_bits) {
    // bit rotates around to bit 0. Result is `wrap_int1{1}`.
    static_assert((wrap_int1{wrap_int1::min()} << 1) == wrap_int1{1});
 
-   // `wrap_idx`: rotation is over the lower 63 bits; the high bit stays
+   // `wrap_idx`: rotation is over the lower 63 bits. The high bit stays
    // zero so the `index` high-bit-zero invariant is preserved. Bit 62 (the
    // highest usable bit) rotates around to bit 0 under `<< 1`.
    constexpr __SIZE_TYPE__ idx_high_bit = static_cast<__SIZE_TYPE__>(1) << 62u;
@@ -5290,24 +5348,22 @@ test(arithmetic_semantics_wrap_shift_rotates_bits) {
 
    // `wrap_idx` rotation never sets the high bit, regardless of input. The
    // constructor would normally reject a value with the high bit set, so
-   // the runtime check below catches that; here we prove the static type
+   // the runtime check below catches that. Here we prove the static type
    // does not lose the LHS shape.
    static_assert(cat::is_same<decltype(wrap_idx{} << 1u), wrap_idx>);
    static_assert(cat::is_same<decltype(wrap_idx{} >> 1u), wrap_idx>);
 }
 
-// Runtime side of the property tests above. The `static_assert`s above
-// catch type-level regressions; the assertions here catch value-level
+// Runtime side of the semantics tests above. The `static_assert`s above
+// catch type-level regressions. The assertions here catch value-level
 // regressions for the cases that involve actual computation (saturation
 // clamps, wrap-around values, mathematical modulo, signed-undefined
 // widening sub, wrap-shift rotation through the optimizer pipeline).
 test(arithmetic_semantics_runtime) {
-   using cat::wrap_uint1;
-   using cat::wrap_uint4;
    using wrap_idx = cat::index<cat::overflow_policies::wrap>;
    using sat_idx = cat::index<cat::overflow_policies::saturate>;
 
-   // Property #2: saturating construction clamps; wrapping construction
+   // Saturating construction clamps. Wrapping construction
    // applies modular reduction. These bypass the compile-time `enable_if`
    // path by going through runtime values, so they exercise the
    // `policy_cast` catch-all constructor.
@@ -5323,7 +5379,7 @@ test(arithmetic_semantics_runtime) {
       cat::verify(sat_clamped_zero == cat::sat_uint1{0});
    }
 
-   // Property #4: signed undefined `-` widens to a wider RHS so an
+   // Signed undefined `-` widens to a wider RHS so an
    // underflow stays representable, and the widened value is the
    // mathematically-correct difference.
    {
@@ -5334,7 +5390,7 @@ test(arithmetic_semantics_runtime) {
       cat::verify(diff == -200);
    }
 
-   // Property #4: wrap/sat LHS keeps shape, even with a wider RHS, and the
+   // wrap/sat LHS keeps shape, even with a wider RHS, and the
    // policy is applied to the full operation.
    {
       cat::wrap_int1 lhs = cat::wrap_int1::max();
@@ -5351,7 +5407,7 @@ test(arithmetic_semantics_runtime) {
       cat::verify(sum == cat::sat_int1::max());
    }
 
-   // Property #7: unsigned LHS modulo with a signed RHS takes the absolute
+   // Unsigned LHS modulo with a signed RHS takes the absolute
    // value of the RHS first, so the result is in `[0, |rhs|)`.
    {
       cat::uint4 lhs = 7;
@@ -5361,7 +5417,7 @@ test(arithmetic_semantics_runtime) {
       cat::verify(result == cat::uint4{1});
    }
 
-   // Property #8: `wrap_idx` / `sat_idx` subtract preserves shape and
+   // `wrap_idx` / `sat_idx` subtract preserves shape and
    // applies the policy.
    {
       wrap_idx lhs{0u};
@@ -5378,7 +5434,7 @@ test(arithmetic_semantics_runtime) {
       cat::verify(diff == sat_idx{0u});
    }
 
-   // Property #9: wrap-policy `<<`/`>>` rotate. Runtime values exercise the
+   // Wrap-policy `<<`/`>>` rotate. Runtime values exercise the
    // non-constant-evaluated path (so `wrap_shl`/`wrap_shr` run through the
    // regular optimizer pipeline, not the constexpr evaluator).
    {
@@ -5399,7 +5455,7 @@ test(arithmetic_semantics_runtime) {
       cat::verify(r == original);
    }
 
-   // Property #9: wrap_idx rotation cycles within the lower 63 bits and
+   // `wrap_idx` rotation cycles within the lower 63 bits and
    // never sets the high bit.
    {
       wrap_idx v{1u};
@@ -5416,21 +5472,16 @@ test(arithmetic_semantics_runtime) {
    }
 }
 
-// Property #10: every member operator on a `wrap` / `saturate` LHS
+// Every member operator on a `wrap` / `saturate` LHS
 // produces the same `.raw` storage value as the corresponding free
 // function called on the raw operands. Concretely:
 //   `(wrap_T{a} OP wrap_T{b}).raw == wrap_X(a, b)`
 //   `(sat_T{a}  OP sat_T{b} ).raw == sat_X(a, b)`
 // for every supported `(OP, X)` pair. This is the contract that lets
-// users mix free and member calls freely; if a future refactor wires a
+// users mix free and member calls freely. If a future refactor wires a
 // member to a different impl than its free function, this test catches
 // the divergence at both compile time and run time.
 test(arithmetic_semantics_member_matches_free_function) {
-   using cat::sat_int4;
-   using cat::sat_uint4;
-   using cat::wrap_int4;
-   using cat::wrap_uint4;
-
    // Pick operands that exercise overflow for each operator so the
    // equivalence test is meaningful (not just identity).
    {
@@ -5531,7 +5582,7 @@ test(arithmetic_semantics_member_matches_free_function) {
    }
    {
       // wrap_idx / sat_idx shifts go through the index-specific free
-      // overloads; the equivalence must still hold.
+      // overloads. The equivalence must still hold.
       using wrap_idx = cat::index<cat::overflow_policies::wrap>;
       using sat_idx = cat::index<cat::overflow_policies::saturate>;
       constexpr __SIZE_TYPE__ bit_62 = static_cast<__SIZE_TYPE__>(1) << 62u;

@@ -215,7 +215,7 @@ bitset : public bitwise_interface<bitset<bits_count>> {
       // Leading bits of the leading byte should not be considered
       // part of the bitset, so they are masked on unconditionally.
       auto const mask = (array_type_element(1u) << (leading_skipped_bits))--;
-      return (m_data[m_data.size().raw - 1u] | mask)
+      return (m_data[storage_array_size - 1u] | mask)
              == array_type_element::max();
    }
 
@@ -273,8 +273,7 @@ bitset : public bitwise_interface<bitset<bits_count>> {
          // Set leading bits to zero, and then subtract them from the count.
          // `array_type` always holds at least one element, so the last storage
          // index is `storage_array_size - 1u` without unsigned wrap.
-         count += cat::countr_zero(
-            m_data[narrow_to_idx(storage_array_size.raw - 1u).value()] & mask);
+         count += cat::countr_zero(m_data[storage_array_size - 1u] & mask);
          count.raw -= leading_skipped_bits.raw;
 
          // If any zeros were found, return early.
@@ -548,7 +547,7 @@ bitset : public bitwise_interface<bitset<bits_count>> {
          constexpr array_type_element keep_mask = ~array_type_element(
             (array_type_element(1u) << leading_skipped_bits) - 1u);
          // Simply & mask the bits off the end of the bitset.
-         m_data[storage_array_size.raw - 1u] &= keep_mask;
+         m_data[storage_array_size - 1u] &= keep_mask;
       }
    }
 

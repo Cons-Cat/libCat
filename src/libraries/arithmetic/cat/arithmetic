@@ -1690,6 +1690,10 @@ class arithmetic_ptr :
          .get();
    }
 
+   // Subtracting `arithmetic_ptr` from `arithmetic_ptr` returns the distance
+   // between them, not another pointer.
+
+   // Subtraction between two pointers returns the distance between them.
    // When this is `uintptr`, perform a simple subtraction.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -2205,6 +2209,17 @@ class index :
       } else if constexpr (policy == saturate) {
          return index(sat_sub(raw, other.raw));
       }
+   }
+
+   // When a subtraction is known to be sound, rather than convert to `iword`,
+   // we can keep the `index` shape. This is necessary to use certain
+   // expressions in subscripting, such as `array[10_idx - 1]`.
+   template <is_integral T>
+   [[gnu::always_inline, gnu::nodebug]]
+   friend constexpr index
+   operator-(index self, T other)
+      __attribute__((enable_if(self.raw >= other, ""))) {
+      return index(self.raw - make_raw_arithmetic(other));
    }
 
    template <is_arithmetic U>
