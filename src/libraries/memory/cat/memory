@@ -12,15 +12,15 @@ namespace cat {
 // `[p_destination, p_destination+bytes)` intervals must not overlap (including
 // a single shared byte). Violations are rejected by `assert`
 constexpr void
-copy_memory(void const* p_source, void* p_destination, uword bytes);
+copy_memory(void const* p_source, void* p_destination, idx bytes);
 
 template <typename T>
 class span;
 
 [[nodiscard]]
 constexpr auto
-is_memory_overlapping(void const* p_first, uword first_bytes,
-                      void const* p_second, uword second_bytes) -> bool;
+is_memory_overlapping(void const* p_first, idx first_bytes,
+                      void const* p_second, idx second_bytes) -> bool;
 
 // This is implemented in `<cat/span>`.
 template <typename T>
@@ -29,7 +29,7 @@ constexpr auto
 is_memory_overlapping(span<T const> first, span<T const> second) -> bool;
 
 constexpr void
-copy_memory_scalar(void const* p_source, void* p_destination, uword bytes);
+copy_memory_scalar(void const* p_source, void* p_destination, idx bytes);
 
 // This is implemented in `<cat/span>`.
 template <typename T>
@@ -47,19 +47,19 @@ copy_memory_backward(span<T const> source, span<T> destination);
 // otherwise so every source byte is read before it can be overwritten
 constexpr void
 copy_memory_backward_scalar(void const* p_source, void* p_destination,
-                            uword bytes);
+                            idx bytes);
 
 // `memmove`-class copy for arbitrary length. Overlapping source and destination
 // intervals are allowed
 constexpr void
-copy_memory_backward(void const* p_source, void* p_destination, uword bytes);
+copy_memory_backward(void const* p_source, void* p_destination, idx bytes);
 
 template <typename T = unsigned char>
    requires(sizeof(T) <= 8)
 [[clang::no_builtin]]
 constexpr void
-set_memory_scalar(T* p_source, T value, uword size) {
-   for (uword::raw_type i = 0u; i < size; ++i) {
+set_memory_scalar(T* p_source, T value, idx size) {
+   for (idx i = 0u; i < size; ++i) {
       p_source[i] = value;
    }
 }
@@ -70,12 +70,12 @@ template <typename T = unsigned char>
 // `[[gnu::noinline]]` attribute prevents this.
 [[gnu::noinline]]
 constexpr void
-set_memory_scalar_explicit(T* p_source, T value, uword size) {
+set_memory_scalar_explicit(T* p_source, T value, idx size) {
    set_memory_scalar(p_source, value, size);
 }
 
 constexpr void
-zero_memory_scalar(void* p_source, uword bytes) {
+zero_memory_scalar(void* p_source, idx bytes) {
    set_memory_scalar((unsigned char*)p_source, (unsigned char)0, bytes);
 }
 
@@ -83,18 +83,17 @@ zero_memory_scalar(void* p_source, uword bytes) {
 // `[[gnu::noinline]]` attribute prevents this.
 [[gnu::noinline]]
 constexpr void
-zero_memory_scalar_explicit(void* p_source, uword bytes) {
+zero_memory_scalar_explicit(void* p_source, idx bytes) {
    set_memory_scalar((unsigned char*)p_source, (unsigned char)0, bytes);
 }
 
 namespace detail {
 
 void
-copy_memory_impl(void const* p_source, void* p_destination, uword bytes);
+copy_memory_impl(void const* p_source, void* p_destination, idx bytes);
 
 void
-copy_memory_backward_impl(void const* p_source, void* p_destination,
-                          uword bytes);
+copy_memory_backward_impl(void const* p_source, void* p_destination, idx bytes);
 
 // Type-erased `set_memory` function.
 template <typename T>
@@ -102,14 +101,17 @@ template <typename T>
 // Clang may still replace this loop with `memset`. `memset` can call back into
 // this route, which makes a circular reference some linkers reject.
 constexpr void
-set_memory_detail(void* p_source, T value, uword size) {
+set_memory_detail(void* p_source, T value, idx const size) {
    // TODO: Assert that these parameters do not index out of bounds or loop
    // infinitely.
-   uintptr<T> p_current = uintptr<T>(static_cast<T*>(p_source));
+
+   // Unsafe cast `p_source` to a `T*`.
+   uintptr<T> p_current = __builtin_bit_cast(T*, p_source);
+   iword remaining_bytes = size;
 
    if consteval {
-      for (uword i = 0u; i < size; ++i) {
-         *p_current = static_cast<T>(value);
+      for (idx i = 0u; i < size; ++i) {
+         *p_current = value;
          p_current += sizeof(T);
       }
    } else {
@@ -117,7 +119,7 @@ set_memory_detail(void* p_source, T value, uword size) {
       while (!is_aligned(p_current, native_abi<T>::alignment)) {
          *p_current = value;
          p_current += sizeof(T);
-         size -= sizeof(T);
+         remaining_bytes -= sizeof(T);
       }
 
       // Non-type template parameters are not allowed in a lambda's
@@ -127,11 +129,11 @@ set_memory_detail(void* p_source, T value, uword size) {
          // TODO: Consider optimizing this by tiling the loop.
          constexpr idx lanes = lanes_constant::value;
          using vector_type = fixed_size_simd<T, lanes>;
-         while (size >= sizeof(vector_type)) {
-            vector_type* p_vector = __builtin_bit_cast(vector_type*, p_current);
+         while (remaining_bytes >= sizeof(vector_type)) {
+            auto* p_vector = __builtin_bit_cast(vector_type*, p_current);
             p_vector->fill(value);
             p_current += lanes;
-            size -= lanes;
+            remaining_bytes -= lanes;
          }
       };
 
@@ -147,7 +149,8 @@ set_memory_detail(void* p_source, T value, uword size) {
       // }
 
       // Fill out remaining portion one byte at a time.
-      set_memory_scalar(static_cast<T*>(p_current), value, size);
+      set_memory_scalar(static_cast<T*>(p_current), value,
+                        idx(remaining_bytes));
    }
 }
 }  // namespace detail
@@ -156,17 +159,8 @@ set_memory_detail(void* p_source, T value, uword size) {
 template <typename T = unsigned char>
    requires(sizeof(T) <= 8)
 constexpr void
-set_memory(void* p_source, T value, uword size) {
-   // Make a type that `value` can bitcast to, and can be used in a `simd`.
-   // TODO: A size-argument numeral type could simplify this.
-   using raw_type =
-      conditional<sizeof(T) == 1, uint1::raw_type,
-                  conditional<sizeof(T) == 2, uint2::raw_type,
-                              conditional<sizeof(T) == 4, uint4::raw_type,
-                                          uint8::raw_type>>>;
-
-   detail::set_memory_detail(p_source, __builtin_bit_cast(raw_type, value),
-                             size);
+set_memory(void* p_source, T value, idx size) {
+   detail::set_memory_detail(p_source, make_raw_arithmetic(value), size);
 }
 
 // `[[gnu::noinline]]` prevents Clang from constant-folding this function out.
@@ -176,13 +170,13 @@ template <typename T = unsigned char>
    requires(sizeof(T) <= 8)
 [[gnu::noinline]]
 constexpr void
-set_memory_explicit(void* p_source, T value, uword size) {
+set_memory_explicit(void* p_source, T value, idx size) {
    set_memory(p_source, value, size);
 }
 
 // Set all bytes at this address to zero.
 constexpr void
-zero_memory(void* p_source, uword size) {
+zero_memory(void* p_source, idx size) {
    detail::set_memory_detail(p_source, static_cast<unsigned char>(0u), size);
 }
 
@@ -191,7 +185,7 @@ zero_memory(void* p_source, uword size) {
 // constant-folded out.
 [[gnu::noinline]]
 constexpr void
-zero_memory_explicit(void* p_source, uword bytes) {
+zero_memory_explicit(void* p_source, idx bytes) {
    zero_memory(p_source, bytes);
 }
 
@@ -200,7 +194,7 @@ template <typename T, typename U = unsigned char>
    requires(is_implicit_lifetime<T> && sizeof(U) == 1)
 constexpr void
 set_object(T& object, U value) {
-   set_memory(__builtin_addressof(object), value, ssizeof<T>(object));
+   set_memory(__builtin_addressof(object), value, sizeof(T));
 }
 
 // Zero out all bytes in a trivial object. This function cannot be
@@ -212,7 +206,7 @@ template <typename T, typename U = unsigned char>
 [[gnu::noinline]]
 constexpr void
 set_object_explicit(T& object, U value) {
-   set_memory_explicit(__builtin_addressof(object), value, ssizeof<T>(object));
+   set_memory_explicit(__builtin_addressof(object), value, sizeof(T));
 }
 
 // Zero out all bytes in a trivial object.
@@ -220,7 +214,7 @@ template <typename T>
    requires(is_implicit_lifetime<T>)
 constexpr void
 zero_object(T& object) {
-   zero_memory(__builtin_addressof(object), ssizeof<T>(object));
+   zero_memory(__builtin_addressof(object), sizeof(T));
 }
 
 // Zero out all bytes in a trivial object. This function cannot be
@@ -232,7 +226,7 @@ template <typename T>
 [[gnu::noinline]]
 constexpr void
 zero_object_explicit(T& object) {
-   zero_memory_explicit(__builtin_addressof(object), ssizeof<T>(object));
+   zero_memory_explicit(__builtin_addressof(object), sizeof(T));
 }
 
 // Prevent a compiler from constant-folding the non-`const`-qualified

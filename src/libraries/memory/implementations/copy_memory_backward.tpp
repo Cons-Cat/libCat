@@ -10,13 +10,13 @@ namespace cat {
 // Unlinke `cat::copy_memory`, this function allows the source and destination
 // ranges to overlap.
 constexpr void
-copy_memory_backward(void const* p_source, void* p_destination, uword bytes) {
+copy_memory_backward(void const* p_source, void* p_destination, idx bytes) {
    if (bytes == 0u) {
       return;
    }
 
    if consteval {
-      __builtin_memmove(p_destination, p_source, bytes.raw);
+      __builtin_memmove(p_destination, p_source, bytes);
    } else {
       // Vectorized implementation for runtime.
       detail::copy_memory_backward_impl(p_source, p_destination, bytes);
@@ -26,22 +26,20 @@ copy_memory_backward(void const* p_source, void* p_destination, uword bytes) {
 [[clang::no_builtin("memmove")]]
 constexpr void
 copy_memory_backward_scalar(void const* p_source, void* p_destination,
-                            uword bytes) {
-   unsigned char const* const p_src =
-      static_cast<unsigned char const*>(p_source);
-   unsigned char* const p_dest = static_cast<unsigned char*>(p_destination);
+                            idx bytes) {
+   auto const* const p_src = static_cast<unsigned char const*>(p_source);
+   auto* const p_dest = static_cast<unsigned char*>(p_destination);
 
    if (p_dest <= p_src) {
-#pragma clang vectorize(disable)
-      for (idx i = 0u; i < bytes; ++i) {
-         p_dest[i] = p_src[i];
-      }
+      // When the copy is forwards, we wrap `copy_memory` instead.
+      copy_memory(p_src, p_dest, bytes);
    } else {
-#pragma clang vectorize(disable)
-      for (uword k = bytes; k > 0u;) {
+#pragma clang vectorize(disable) interleave(enable)
+      for (iword k = bytes; k > 0u;) {
          k -= 1u;
-         idx const i{k};
-         p_dest[i] = p_src[i];
+         // Because `k > 0u` here, we don't check a cast to `idx`.
+         idx const subscript = idx{k};
+         p_dest[subscript] = p_src[subscript];
       }
    }
 }

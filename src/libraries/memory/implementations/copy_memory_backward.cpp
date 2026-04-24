@@ -5,7 +5,7 @@ namespace cat::detail {
 
 void
 copy_memory_backward_impl(void const* p_source, void* p_destination,
-                          uword bytes) {
+                          idx bytes) {
    // TODO: Provide a high throughput implementation of this function.
    copy_memory_backward_scalar(p_source, p_destination, bytes);
 }
