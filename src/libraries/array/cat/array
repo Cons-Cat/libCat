@@ -14,6 +14,7 @@ namespace cat {
 // It is random-access iterable.
 template <typename T, idx length>
 class [[clang::trivial_abi, gsl::Owner(T)]]
+// It is not possible to make this an aggregate class while using CRTP classes.
 array : public collection_interface<array<T, length>, T>,
         public random_access_iterable_interface<T> {
  public:
@@ -93,7 +94,7 @@ array : public collection_interface<array<T, length>, T>,
    }
 
  private:
-   T m_data[length];
+   T m_data[length]; // NOLINT We need a raw array to implement this.
 };
 
 // Construct an `array<int, 3>` as: `array a = {0, 1, 2};`
