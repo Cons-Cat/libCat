@@ -373,3 +373,11 @@ include(${CMAKE_SOURCE_DIR}/cmake/cat_syntax.cmake)
 
 # Install / export rules (`cmake --install build/` = `find_package(cat)` sysroot).
 include(${CMAKE_SOURCE_DIR}/cmake/cat_install.cmake)
+
+# Optional configure-time `try_compile` negative checks for
+# `cat::arithmetic` / `cat::index` / `cat::arithmetic_ptr` (see
+# `cmake/cat_arithmetic_negative.cmake`). Off by default; the
+# `arithmetic-negative.yml` workflow opts in via
+# `CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS=ON`. Included after
+# `add_subdirectory(src/)` so include paths are available.
+include(${CMAKE_SOURCE_DIR}/cmake/cat_arithmetic_negative.cmake)
