@@ -3,7 +3,6 @@
 #pragma once
 
 #include <cat/collection>
-#include <cat/initializer_list>
 #include <cat/memory>
 #include <cat/meta>
 
@@ -14,7 +13,7 @@ namespace cat {
 // A `span` is represents an array of `T` with runtime-known length. It stores
 // an address and a length. It is random-access iterable.
 template <typename T>
-class [[clang::trivial_abi, gsl::Pointer(T)]] span
+class [[gsl::Pointer(T)]] span
     : public collection_interface<span<T>, T>,
       public random_access_iterable_interface<T> {
  public:

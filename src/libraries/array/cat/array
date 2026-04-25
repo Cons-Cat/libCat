@@ -7,10 +7,6 @@
 #include <cat/compare>
 #include <cat/memory>
 
-#include "cat/arithmetic"
-
-// #include <cat/initializer_list>
-
 namespace cat {
 
 // An `array` represents an array of `T` with a `constexpr` length. It stores
