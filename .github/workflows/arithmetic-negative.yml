@@ -50,27 +50,57 @@ jobs:
             -DCAT_BUILD_ALL_EXAMPLES=OFF \
             -DCAT_BUILD_ARITHMETIC_NEGATIVE_TESTS=ON
 
-      - name: Per-probe compiler output (excerpt; full file is an artifact)
+      - name: Per-probe compiler output
         if: always()
         run: |
           set -euxo pipefail
           f=build-arith-negative/CMakeFiles/cat_arithmetic_neg/compile_diagnostics.log
-          if test -f "$f"; then
-            echo "First 80 lines of $f (one block per -fsyntax-only probe):"
-            head -n 80 "$f"
-            echo "…"
-            wc -l "$f" || true
-          else
-            echo "No $f (configure may have failed before the log was written). Check the configure step log."
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          echo "==================================================================="
+          echo "compile_diagnostics.log — full stderr/stdout (entire file below, no truncation)"
+          echo "==================================================================="
+          echo
+          echo "This workflow run: $run_url"
+          echo
+          echo "A later step zips the same file to **Artifacts** as"
+          echo "  \`arithmetic-negative-compile_diagnostics\` (see artifact link step)."
+          echo
+
+          if ! test -f "$f"; then
+            echo "Log not found: $f (configure may have failed before probes ran). See the Configure step log."
+            exit 0
           fi
 
-      - name: Upload compile_diagnostics.log
+          lines=$(wc -l < "$f" | tr -d ' ')
+          blks=$(grep -c '^====' "$f" || :)
+          size=$(du -h "$f" | cut -f1)
+          echo "Summary: $size, $lines lines, $blks '====' probe block(s)."
+          echo
+          echo "----- begin compile_diagnostics.log -----"
+          cat "$f"
+          echo "----- end compile_diagnostics.log -----"
+
+      - name: Upload compile_diagnostics.log (zip on run summary; link below)
         if: always() && (success() || failure())
+        id: upload_compile_diagnostics
         uses: actions/upload-artifact@v4
         with:
           name: arithmetic-negative-compile_diagnostics
           path: build-arith-negative/CMakeFiles/cat_arithmetic_neg/compile_diagnostics.log
           if-no-files-found: ignore
+          # Run summary: Artifacts. Optional step output: artifact url (upload-artifact v4.4+)
+
+      - name: Artifact download link
+        if: always() && (success() || failure())
+        run: |
+          url="${{ steps.upload_compile_diagnostics.outputs.artifact-url }}"
+          if [ -n "$url" ]; then
+            echo "Artifact URL: $url"
+          else
+            run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "Open this run's **Artifacts** section: $run_url#artifacts (direct URL may be unavailable in this action version.)"
+          fi
 
       - name: List generated probe TUs
         run: |
@@ -78,5 +108,5 @@ jobs:
           test -d "$d"
           echo "Probe count (expect match for CAT_BUILD_ARITHMETIC_NEGATIVE_TESTS line above):"
           find "$d" -maxdepth 1 -name '*.cpp' -print | sort | wc -l
-          ls -1 "$d" 2>/dev/null | head -5
-          echo "…(full tree under the build dir, configure-only, no .o from this job)"
+          echo "Probe .cpp files (full list):"
+          find "$d" -maxdepth 1 -name '*.cpp' -print | sort
